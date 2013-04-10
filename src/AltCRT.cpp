@@ -1,0 +1,712 @@
+/* Copyright (C) 2012,2013 IBM Corp.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+
+#include "AltCRT.h"
+#include "DoubleCRT.h"
+#include "timing.h"
+
+NTL_CLIENT
+
+
+bool AltCRT::dryRun = false;
+
+void AltCRT::verify()
+{
+  assert(map.getIndexSet() <= (context.specialPrimes | context.ctxtPrimes));
+}
+
+
+
+
+
+// Arithmetic operations. Only the "destructive" versions are used,
+// i.e., a += b is implemented but not a + b.
+
+template<class Fun>
+AltCRT& AltCRT::Op(const AltCRT &other, Fun fun,
+			 bool matchIndexSets)
+{
+  if (dryRun) return *this;
+
+  if (&context != &other.context)
+    Error("AltCRT::Op: incompatible objects");
+
+  // Match the index sets, if needed
+  if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet()))
+    addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
+
+  // If you need to mod-up the other, do it on a temporary scratch copy
+  AltCRT tmp(context, IndexSet()); 
+  const IndexMap<zz_pX>* other_map = &other.map;
+  if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
+    tmp = other;
+    tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
+    other_map = &tmp.map;
+  }
+
+  const IndexSet& s = map.getIndexSet();
+
+  zz_pBak bak; bak.save();
+
+  // add/sub/mul the data, element by element, modulo the respective primes
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
+    fun.apply(map[i], (*other_map)[i], phimx);
+  }
+
+  return *this;
+}
+
+template
+AltCRT& AltCRT::Op<AltCRT::MulFun>(const AltCRT &other, MulFun fun,
+			 bool matchIndexSets);
+
+template
+AltCRT& AltCRT::Op<AltCRT::AddFun>(const AltCRT &other, AddFun fun,
+			 bool matchIndexSets);
+
+template
+AltCRT& AltCRT::Op<AltCRT::SubFun>(const AltCRT &other, SubFun fun,
+			 bool matchIndexSets);
+
+
+
+
+
+template<class Fun>
+AltCRT& AltCRT::Op(const ZZ &num, Fun fun)
+{
+  if (dryRun) return *this;
+
+  const IndexSet& s = map.getIndexSet();
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    zz_p n;
+    conv(n, num);
+    fun.apply(map[i], n);
+  }
+
+  return *this;
+}
+
+template
+AltCRT& AltCRT::Op<AltCRT::MulFun>(const ZZ &num, MulFun fun);
+
+template
+AltCRT& AltCRT::Op<AltCRT::AddFun>(const ZZ &num, AddFun fun);
+
+template
+AltCRT& AltCRT::Op<AltCRT::SubFun>(const ZZ &num, SubFun fun);
+
+
+
+AltCRT& AltCRT::Negate(const AltCRT& other)
+{
+  if (dryRun) return *this;
+
+  if (&context != &other.context) 
+    Error("AltCRT Negate: incompatible contexts");
+
+  if (map.getIndexSet() != other.map.getIndexSet()) {
+    map = other.map; // copy the data
+  }
+  const IndexSet& s = map.getIndexSet();
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    NTL::negate(map[i], other.map[i]);
+  }
+
+  return *this;
+}
+
+
+
+// The following is identical to definition in DoubleCRT
+
+template<class Fun>
+AltCRT& AltCRT::Op(const ZZX &poly, Fun fun)
+{
+  if (dryRun) return *this;
+
+  const IndexSet& s = map.getIndexSet();
+  AltCRT other(poly, context, s); // other defined wrt same primes as *this
+
+  return Op(other, fun);
+}
+
+
+template
+AltCRT& AltCRT::Op<AltCRT::MulFun>(const ZZX &poly, MulFun fun);
+
+template
+AltCRT& AltCRT::Op<AltCRT::AddFun>(const ZZX &poly, AddFun fun);
+
+template
+AltCRT& AltCRT::Op<AltCRT::SubFun>(const ZZX &poly, SubFun fun);
+
+
+
+
+// The following is identical to definition in DoubleCRT
+
+// break *this into n digits,according to the primeSets in context.digits
+void AltCRT::breakIntoDigits(vector<AltCRT>& digits, long n) const
+{
+  FHE_TIMER_START;
+  IndexSet allPrimes = getIndexSet() | context.specialPrimes;
+  assert(n <= (long)context.digits.size());
+
+  digits.resize(n, AltCRT(context, IndexSet::emptySet()));
+  if (dryRun) return;
+
+  for (long i=0; i<(long)digits.size(); i++) {
+    digits[i]=*this;
+    IndexSet notInDigit = digits[i].getIndexSet()/context.digits[i];
+    digits[i].removePrimes(notInDigit); // reduce modulo the digit primes
+  }
+  
+  for (long i=0; i<(long)digits.size(); i++) {
+    IndexSet notInDigit = allPrimes / digits[i].getIndexSet();
+    digits[i].addPrimes(notInDigit); // add back all the primes
+
+    // subtract this digits from all the others, then divide by pi
+    ZZ pi = context.productOfPrimes(context.digits[i]);
+    for (long j=i+1; j<(long)digits.size(); j++) {
+      digits[j].Sub(digits[i], /*matchIndexSets=*/false);
+      digits[j] /= pi;
+    }
+  }
+#if 0
+  dgts.resize(n, AltCRT(context, IndexSet::emptySet()));
+  for (long i=0; i<n; i++) // copy only the primes for this digit
+    dgts[i].partialCopy(*this, context.digits[i]);
+
+  IndexSet allPrimes = getIndexSet() | context.specialPrimes;
+  for (long i=0; i<n; i++) {
+    IndexSet notInDigit = allPrimes / dgts[i].getIndexSet();
+    dgts[i].addPrimes(notInDigit); // add back all the primes
+
+    // subtract this digits from all the others, then divide by pi
+    ZZ pi = context.productOfPrimes(context.digits[i]);
+    for (long j=i+1; j<n; j++) {
+      dgts[j].Sub(dgts[i], /*matchIndexSets=*/false);
+      dgts[j] /= pi;
+    }
+  }
+#endif
+  FHE_TIMER_STOP;
+}
+
+
+
+
+// expand index set by s1.
+// it is assumed that s1 is disjoint from the current index set.
+void AltCRT::addPrimes(const IndexSet& s1)
+{
+  if (empty(s1)) return; // nothing to do
+  assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
+
+  ZZX poly;
+  toPoly(poly); // recover in coefficient representation
+
+  map.insert(s1);  // add new rows to the map
+  if (dryRun) return;
+
+
+  zz_pBak bak; bak.save();
+
+  // fill in new rows
+  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    conv(map[i], poly);
+  }
+}
+
+
+
+
+
+
+// Expand index set by s1, and multiply by \prod{q \in s1}. s1 is assumed to
+// be disjoint from the current index set. Returns the logarithm of product.
+double AltCRT::addPrimesAndScale(const IndexSet& s1)
+{
+  if (empty(s1)) return 0.0; // nothing to do
+  assert(empty(s1 & map.getIndexSet())); // s1 is disjoint from *this
+
+  // compute factor to scale existing rows
+  ZZ factor = to_ZZ(1);
+  double logFactor = 0.0;
+  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
+    long qi = context.ithPrime(i);
+    factor *= qi;
+    logFactor += log((double)qi);
+  }
+
+
+  zz_pBak bak; bak.save();
+
+  // scale existing rows
+  const IndexSet& iSet = map.getIndexSet();
+  for (long i = iSet.first(); i <= iSet.last(); i = iSet.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    zz_p f;
+    conv(f, factor);
+    map[i] *= f;
+  }
+
+  // insert new rows and fill them with zeros
+  map.insert(s1);  // add new rows to the map
+  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    clear(map[i]);
+  }
+
+  return logFactor;
+}
+
+
+
+
+
+AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
+: context(_context), map(new AltCRTHelper(_context))
+{
+  assert(s.last() < context.numPrimes());
+
+  map.insert(s);
+  if (dryRun) return;
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    conv(map[i], poly);
+  }
+}
+
+
+
+
+
+AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context)
+: context(_context), map(new AltCRTHelper(_context))
+{
+  IndexSet s = IndexSet(0, context.numPrimes()-1);
+
+  map.insert(s);
+  if (dryRun) return;
+
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    conv(map[i], poly);
+  }
+}
+
+
+
+
+
+AltCRT::AltCRT(const ZZX& poly)
+: context(*activeContext), map(new AltCRTHelper(*activeContext))
+{
+  IndexSet s = IndexSet(0, context.numPrimes()-1);
+
+  map.insert(s);
+  if (dryRun) return;
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    conv(map[i], poly);
+  }
+}
+
+
+
+
+
+AltCRT::AltCRT(const FHEcontext &_context, const IndexSet& s)
+: context(_context), map(new AltCRTHelper(_context))
+{
+  assert(s.last() < context.numPrimes());
+
+  map.insert(s);
+  if (dryRun) return;
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    clear(map[i]);
+  }
+}
+
+
+
+
+
+AltCRT::AltCRT(const FHEcontext &_context)
+: context(_context), map(new AltCRTHelper(_context))
+{
+  IndexSet s = IndexSet(0, context.numPrimes()-1);
+
+  map.insert(s);
+  if (dryRun) return;
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    clear(map[i]);
+  }
+}
+
+
+
+
+AltCRT& AltCRT::operator=(const AltCRT& other)
+// optimized for the case of matching index sets
+{
+   if (this == &other) return *this;
+
+   if (&context != &other.context) 
+      Error("AltCRT assignment: incompatible contexts");
+
+   if (map.getIndexSet() != other.map.getIndexSet()) {
+      map = other.map; // copy the data
+   }
+   else {
+      const IndexSet& s = map.getIndexSet();
+      zz_pBak bak; bak.save(); 
+
+      for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+         context.ithModulus(i).restoreModulus();
+         map[i] = other.map[i];
+      }
+   }
+   return *this;
+}
+
+
+
+
+AltCRT& AltCRT::operator=(const ZZX&poly)
+{
+  if (dryRun) return *this;
+
+  const IndexSet& s = map.getIndexSet();
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) { 
+    context.ithModulus(i).restoreModulus();
+    conv(map[i], poly);
+  }
+
+  return *this;
+}
+
+
+
+
+
+AltCRT& AltCRT::operator=(const ZZ& num)
+{
+  if (dryRun) return *this;
+
+  const IndexSet& s = map.getIndexSet();
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) { 
+    context.ithModulus(i).restoreModulus();
+    conv(map[i], num);
+  }
+
+  return *this;
+}
+
+
+
+// DIRT: I am not sure if this function behaves the same
+// as in DoubleCRT if the prime 2 is allowed: the endpoints
+// of the interval [-P/2,P/2] may be handled differently.
+// But all primes should be odd (in fact, it is required
+// that p = 1 (mod 2m)), so the point is academic (VJS)
+
+void AltCRT::toPoly(ZZX& poly, const IndexSet& s,
+		       bool positive) const
+{
+  if (dryRun) return;
+
+  IndexSet s1 = map.getIndexSet() & s;
+
+  if (empty(s1)) {
+    clear(poly);
+    return;
+  }
+
+  clear(poly);
+  ZZ prod;
+  prod = 1;
+
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    CRT(poly, prod, map[i]);  // NTL :-)
+  }
+
+  if (positive) {
+    long d = deg(poly);
+    for (long j = 0; j <= d; j++) 
+      if (poly.rep[j] < 0)
+        poly.rep[j] += prod;   
+
+    // no need to normalize poly here
+  }
+}
+
+
+
+
+
+// The following is identical to definition in DoubleCRT
+
+void AltCRT::toPoly(ZZX& p, bool positive) const
+{
+  const IndexSet& s = map.getIndexSet();
+  toPoly(p, s, positive);
+}
+
+
+
+
+// Division by constant
+AltCRT& AltCRT::operator/=(const ZZ &num)
+{
+  if (dryRun) return *this;
+
+  const IndexSet& s = map.getIndexSet();
+  zz_pBak bak; bak.save();
+  
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    zz_p n;
+    conv(n, num);
+    map[i] /= n;
+  }
+  return *this;
+}
+
+
+
+
+// Small-exponent polynomial exponentiation
+void AltCRT::Exp(long e)
+{
+  if (dryRun) return;
+
+  const IndexSet& s = map.getIndexSet();
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
+    PowerMod(map[i], map[i], e, phimx);
+  }
+}
+
+
+
+
+// Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
+void AltCRT::automorph(long k)
+{
+  if (dryRun) return;
+
+  const PAlgebra& zMStar = context.zMStar;
+  if (!zMStar.inZmStar(k))
+    Error("AltCRT::automorph: k not in Zm*");
+
+  long m = zMStar.getM();
+
+  const IndexSet& s = map.getIndexSet();
+  zz_pBak bak; bak.save();
+
+  // go over the rows, permute them one at a time
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
+    zz_pX& tmp = context.ithModulus(i).getScratch();
+    zz_pX& row = map[i];
+    long d = deg(row);
+
+    tmp.rep.SetLength(m);
+    for (long j = 0; j < m; j++) tmp.rep[j] = 0;
+
+    for (long j = 0; j <= d; j++) 
+      tmp.rep[MulMod(j, k, m)] = row.rep[j];
+
+    tmp.normalize();
+
+    rem(row, tmp, phimx);
+  }
+}
+
+
+
+
+
+
+
+
+// FIXME: there is a potential incompatibilty here
+// with DoubleCRT -- starting from the same seed,
+// we will get different polynomials.  This may lead
+// to trouble if we start mixing DoubleCRT's and AltCRT's,
+// especially with respect to the way we currently do 
+// key switching (VJS)
+
+// fills each row i with random numbers
+void AltCRT::randomize(const ZZ* seed) 
+{
+  if (dryRun) return;
+
+  if (seed != NULL) SetSeed(*seed);
+
+  const IndexSet& s = map.getIndexSet();
+  long phim = context.zMStar.getPhiM();
+  zz_pBak bak; bak.save();
+  
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    random(map[i], phim);
+  }
+}
+
+
+
+
+AltCRT& AltCRT::operator=(const SingleCRT& scrt)
+{
+   assert(0); // not implemented
+}
+
+
+void AltCRT::toSingleCRT(SingleCRT& scrt, const IndexSet& s) const 
+{
+   assert(0); // not implemented
+}
+
+
+
+// The following is identical to definition in DoubleCRT
+
+void AltCRT::toSingleCRT(SingleCRT& scrt) const 
+{
+  const IndexSet& s = map.getIndexSet();
+  toSingleCRT(scrt, s);
+}
+
+
+
+
+// The following is identical to definition in DoubleCRT
+
+
+void AltCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
+{
+  assert(ptxtSpace >= 2);
+  assert(!(getIndexSet()<=s)); // cannot mod-down to the empty set
+
+  IndexSet diff = getIndexSet() / s;
+  if (empty(diff)) return;     // nothing to do
+
+  if (dryRun) {
+    removePrimes(diff);// remove the primes from consideration
+    return;
+  }
+
+  ZZX delta;
+  ZZ diffProd = context.productOfPrimes(diff); // mod-down by this factor
+  toPoly(delta, diff); // convert to coeff-representation modulo diffProd
+
+  long delta_len = delta.rep.length();
+  if (ptxtSpace == 2) { // simpler handling for plaintext space mod 2
+    for (long i = 0; i < delta_len; i++) {
+      if (IsOdd(delta.rep[i])) { // add or subtract diffProd to make it even
+	if (sign(delta.rep[i]) < 0) delta.rep[i] += diffProd;
+	else                        delta.rep[i] -= diffProd;
+      }
+    }
+  }
+  // The general case of plaintext space modulo some p > 2, we need to
+  // subtract from each coefficient delta[i] the ineteger
+  //               diffProd * (delta[i] * diffProd^{-1} mod ptxtSpace).
+  // This does not change delta modulo diffProd, but makes it divisible
+  // by ptxtSpace.
+  else {
+    long p_over_2 = ptxtSpace/2;
+    long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
+    for (long i = 0; i < delta_len; i++) {
+      long delta_i_modP = rem(delta.rep[i],ptxtSpace);
+      if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
+	delta_i_modP = MulMod(delta_i_modP, prodInv, ptxtSpace);
+	if (delta_i_modP > p_over_2) delta_i_modP -= ptxtSpace;
+	delta.rep[i] -= diffProd * delta_i_modP;
+      }
+    }
+  }
+  delta.normalize(); // need to normalize after working directly on then coeffs
+
+  removePrimes(diff);// remove the primes from consideration
+  *this -= delta;    // convert delta to AltCRT, then subtract
+  *this /= diffProd; // *this is divisible by diffProd, so this operation actually scales it down
+}
+
+
+
+
+
+
+
+
+ostream& operator<< (ostream &str, const AltCRT &d)
+{
+  assert(0); // not implemented
+}
+
+istream& operator>> (istream &str, AltCRT &d)
+{
+  assert(0); // not implemented
+}
+
+
+
