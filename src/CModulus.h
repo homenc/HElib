@@ -15,30 +15,24 @@
  */
 #ifndef _CModulus_H_
 #define _CModulus_H_
-/* CModulus.h - supports forward and backward length-m FFT transformations
+/**
+ * @file CModulus.h
+ * @brief Supports forward and backward length-m FFT transformations
  *
  * This is a wrapper around the bluesteinFFT routines, for one modulus q.
  * Two classes are defined here, Cmodulus for a small moduli (long) and
  * CModulus for a large ones (ZZ). These classes are otherwise identical
  * hence they are implemented using a class template.
- *
- * On initialization, it initizlies NTL's zz_pContext/ZZ_pContext for this q
- * and computes a 2m-th root of unity r mod q and also r^{-1} mod q.
- * Thereafter this class provides FFT and iFFT routines that converts between
- * time & frequency domains. Some tables are computed the first time that
- * each dierctions is called, which are then used in subsequent computations.
- * 
- * The "time domain" polynomials are represented as ZZX, whic are reduced
- * modulo Phi_m(X). The "frequency domain" are jusr vectors of integers
- * (vec_long or vec_ZZ), that store only the evaluation in primitive m-th
- * roots of unity.
- */
+ **/
 #include "PAlgebra.h"
 #include "bluestein.h"
 #include "cloned_ptr.h"
-
 //NTL_CLIENT
 
+/**
+ * @class CMOD_zz_p
+ * @brief typedefs for smallint Cmodulus
+ **/
 class CMOD_zz_p {
 public:
   typedef long zz;
@@ -52,6 +46,10 @@ public:
 
 };
 
+/**
+* @class CMOD_ZZ_p
+* @brief typedefs for bigint CModulus
+**/
 class CMOD_ZZ_p {
 public:
   typedef ZZ zz;
@@ -66,6 +64,27 @@ public:
 
 #define INJECT_TYPE(type,subtype) typedef typename type::subtype subtype
 
+
+/**
+* @class Cmod
+* @brief template class for both bigint and smallint implementations
+*
+* This is a wrapper around the bluesteinFFT routines, for one modulus q.
+* Two classes are defined here, Cmodulus for a small moduli (long) and
+* CModulus for a large ones (ZZ). These classes are otherwise identical
+* hence they are implemented using a class template.
+*
+* On initialization, it initizlies NTL's zz_pContext/ZZ_pContext for this q
+* and computes a 2m-th root of unity r mod q and also r^{-1} mod q.
+* Thereafter this class provides FFT and iFFT routines that converts between
+* time & frequency domains. Some tables are computed the first time that
+* each dierctions is called, which are then used in subsequent computations.
+* 
+* The "time domain" polynomials are represented as ZZX, whic are reduced
+* modulo Phi_m(X). The "frequency domain" are jusr vectors of integers
+* (vec_long or vec_ZZ), that store only the evaluation in primitive m-th
+* roots of unity.
+**/
 template <class type>
 class Cmod {
   INJECT_TYPE(type,zz);
@@ -77,10 +96,8 @@ class Cmod {
   INJECT_TYPE(type,zpBak);
   INJECT_TYPE(type,zpxModulus);
 
-
   zz          q;       // the modulus
   zpContext   context; // NTL's tables for this modulus
-
 
   const PAlgebra* zMStar;  // points to the Zm* structure, m is FFT size
 
@@ -147,7 +164,8 @@ class Cmod {
   const zpxModulus& getPhimX() const  { return *phimx; }
   zpx& getScratch() const { return *scratch; }
 
-  void restoreModulus() const {context.restore();} // restore NTL's current modulus
+  //! @brief Restore NTL's current modulus
+  void restoreModulus() const {context.restore();}
 
   // FFT routines
 

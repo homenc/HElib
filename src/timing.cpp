@@ -13,8 +13,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/* timing.cpp - utility functions for measuering time
- */
 #include <ctime>
 #include <iostream>
 #include "timing.h"
@@ -23,9 +21,11 @@
 #include <algorithm>
 #include <utility>
 #include <cmath>
+#include <cstring>
 
 using namespace std;
 
+//! A simple class to toggle timing information on and off
 class FHEtimer {
 public:
   bool isOn;  // a broken semaphore
@@ -36,18 +36,17 @@ public:
   FHEtimer() { isOn=false; counter=0; numCalls=0; }
 };
 
-
 bool string_compare(const char *a, const char *b)
 {
   return strcmp(a, b) < 0;
 }
-
 
 bool FHEtimersOn=false;
 
 typedef tr1::unordered_map<const char*,FHEtimer>timerMap;
 static timerMap timers;
 
+// Reset a timer for some label to zero
 void resetFHEtimer(const char *fncName)
 {
   FHEtimer& t = timers[fncName];   // insert to map if not aready there
@@ -56,6 +55,7 @@ void resetFHEtimer(const char *fncName)
   if (t.isOn) t.counter -= std::clock();
 }
 
+// Start a timer
 void startFHEtimer(const char *fncName)
 {
   FHEtimer& t = timers[fncName];   // insert to map if not aready there
@@ -66,6 +66,7 @@ void startFHEtimer(const char *fncName)
   }
 }
 
+// Stop a timer
 void stopFHEtimer(const char *fncName)
 {
   FHEtimer& t = timers[fncName];   // insert to map if not aready there
@@ -75,6 +76,7 @@ void stopFHEtimer(const char *fncName)
   }
 }
 
+// Read the value of a timer (in seconds)
 double getTime4func(const char *fncName) // returns time in seconds
 {
   FHEtimer& t = timers[fncName];   // insert to map if not aready there
@@ -84,7 +86,8 @@ double getTime4func(const char *fncName) // returns time in seconds
   return ((double)c)/CLOCKS_PER_SEC;
 }
 
-long getNumCalls4func(const char *fncName) // returns number of calls
+// Returns number of calls for that timer
+long getNumCalls4func(const char *fncName) 
 {
     FHEtimer& t = timers[fncName];   // insert to map if not aready there
     return t.numCalls;
@@ -96,6 +99,7 @@ void resetAllTimers()
     resetFHEtimer(it->first);
 }
 
+// Print the value of all timers to stream
 void printAllTimers(std::ostream& str)
 {
   vector<const char *> vec;

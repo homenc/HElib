@@ -13,16 +13,61 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#if 0
+/**
+ * @file DoubleCRT.h
+ * @brief Implementatigs polynomials (elements in the ring R_Q) in double-CRT form
+ **/
+
+#if 0 // change to #if 1 to get an alternative implementation
 
 #define DoubleCRT AltCRT
 #include "AltCRT.h"
-
 #else
-
 #ifndef _DoubleCRT_H_
 #define _DoubleCRT_H_
-/* DoubleCRT.h - This class holds an integer polynomial in double-CRT form
+
+#include <vector>
+#include <NTL/ZZX.h>
+#include <NTL/vec_vec_long.h>
+#include "NumbTh.h"
+#include "IndexMap.h"
+#include "FHEContext.h"
+NTL_CLIENT
+
+class SingleCRT;
+
+/**
+* @class DoubleCRTHelper
+* @brief A helper class to enforce consistency within an DoubleCRTHelper object
+*
+* See Section 2.6.2 of the design document (IndexMap)
+*/
+class DoubleCRTHelper : public IndexMapInit<vec_long> {
+private: 
+  long val;
+
+public:
+  DoubleCRTHelper(const FHEcontext& context) { 
+    val = context.zMStar.getPhiM(); 
+  }
+
+  /** @brief the init method ensures that all rows have the same size */
+  virtual void init(vec_long& v) { 
+    v.FixLength(val); 
+  }
+
+  /** @brief clone allocates a new object and copies the content */
+  virtual IndexMapInit<vec_long> * clone() const { 
+    return new DoubleCRTHelper(*this); 
+  }
+private:
+  DoubleCRTHelper(); // disable default constructor
+};
+
+
+/**
+ * @class DoubleCRT
+ * @brief Implementatigs polynomials (elements in the ring R_Q) in double-CRT form
  *
  * Double-CRT form is a matrix of L rows and phi(m) columns. The i'th row
  * contains the FFT of the element wrt the ith prime, i.e. the evaluations
@@ -39,56 +84,15 @@
  * and also modulo Phi_m(X). Arithmetic operations can only be applied to
  * DoubleCRT objects relative to the same context, trying to add/multiply
  * objects that have different FHEContext objects will raise an error.
- */
-
-
-#include <vector>
-#include <NTL/ZZX.h>
-#include <NTL/vec_vec_long.h>
-#include "NumbTh.h"
-#include "IndexMap.h"
-#include "FHEContext.h"
-
-NTL_CLIENT
-
-
-class SingleCRT;
-
-
-
-class DoubleCRTHelper : public IndexMapInit<vec_long> {
-private: 
-  long val;
-
-public:
-
-  DoubleCRTHelper(const FHEcontext& context) { 
-    val = context.zMStar.getPhiM(); 
-  }
-
-  virtual void init(vec_long& v) { 
-    v.FixLength(val); 
-  }
-
-  virtual IndexMapInit<vec_long> * clone() const { 
-    return new DoubleCRTHelper(*this); 
-  }
-
-private:
-  DoubleCRTHelper(); // disable default constructor
-};
-
-
-
+ **/
 class DoubleCRT {
   const FHEcontext& context; // the context
   IndexMap<vec_long> map; // the data itself: if the i'th prime is in use then
                           // map[i] is the vector of evaluations wrt this prime
 
-  // a "sanity check" function, verifies consistency of the map with current
-  // moduli chain, an error is raised if they are not consistent
+  //! a "sanity check" method, verifies consistency of the map with
+  //! current moduli chain, an error is raised if they are not consistent
   void verify();
-
 
   // Generic operators. 
   // The behavior when *this and other use different primes depends on the flag
@@ -135,23 +139,24 @@ public:
 
   // copy constructor: default
 
+  //! @brief Initializing AltCRT from a ZZX polynomial
+  //! @param poly The ring element itself, zero if not specified
+  //! @param _context The context for this AltCRT object, use "current active context" if not specified
+  //! @param indexSet Which primes to use for this object, if not specified then use all of them
   DoubleCRT(const ZZX&poly, const FHEcontext& _context, const IndexSet& indexSet);
   DoubleCRT(const ZZX&poly, const FHEcontext& _context);
 
+  //! @brief Context is not specified, use the "active context"
+  //  (run-time error if active context is NULL)
+  //  declared "explicit" to avoid implicit type conversion
   explicit DoubleCRT(const ZZX&poly); 
-  // uses the "active context", run-time error if it is NULL
-  // declare "explicit" to avoid implicit type conversion
 
  // Without specifying a ZZX, we get the zero polynomial
-
-  DoubleCRT(const FHEcontext &_context, const IndexSet& indexSet);
-
   explicit DoubleCRT(const FHEcontext &_context);
   // declare "explicit" to avoid implicit type conversion
 
-  //  DoubleCRT(); 
-  // uses the "active context", run-time error if it is NULL
-
+  //! @brief Also specify the IndexSet explicitly
+  DoubleCRT(const FHEcontext &_context, const IndexSet& indexSet);
 
   // Assignment operator, the following two lines are equivalent:
   //    DoubleCRT dCRT(poly, context, indexSet);
@@ -168,13 +173,12 @@ public:
   DoubleCRT& operator=(const ZZ& num);
   DoubleCRT& operator=(const long num) { *this = to_ZZ(num); return *this; }
 
-  // Recovering the polynomial in coefficient representation. This yields an
-  // integer polynomial with coefficients in [-P/2,P/2], unless the positive
-  // flag is set to true, in which case we get coefficients in [0,P-1] (P is
-  // the product of all moduli used). Using the optional IndexSet param
-  // we compute the polynomial reduced modulo the product of only the ptimes
-  // in that set.
-
+  //! @brief Recovering the polynomial in coefficient representation.
+  //! This yields an integer polynomial with coefficients in [-P/2,P/2],
+  //! unless the positive flag is set to true, in which case we get
+  //! coefficients in [0,P-1] (P is the product of all moduli used).
+  //! Using the optional IndexSet param we compute the polynomial
+  //! reduced modulo the product of only the ptimes in that set.
   void toPoly(ZZX& p, const IndexSet& s, bool positive=false) const;
   void toPoly(ZZX& p, bool positive=false) const;
 
@@ -195,36 +199,42 @@ public:
     return !(*this==other);
   }
 
-  // Set to zero, one
+  // @brief Set to zero
   DoubleCRT& SetZero() { 
     *this = ZZ::zero(); 
     return *this; 
   }
 
+  // @brief Set to one
   DoubleCRT& SetOne()  { 
     *this = 1; 
     return *this; 
   }
 
-  // break into n digits,according to the primeSets in context.digits
+  //! @brief Break into n digits,according to the primeSets in context.digits.
+  //! See Section 3.1.6 of the design document (re-linearization)
   void breakIntoDigits(vector<DoubleCRT>& dgts, long n) const;
 
-  // expand the index set by s1.
-  // it is assumed that s1 is disjoint from the current index set.
+  //! @brief Expand the index set by s1.
+  //! It is assumed that s1 is disjoint from the current index set.
   void addPrimes(const IndexSet& s1);
 
-  // Expand index set by s1, and multiply by \prod{q \in s1}. s1 is assumed to
-  // be disjoint from the current index set. Returns the logarithm of product.
+  //! @brief Expand index set by s1, and multiply by Prod_{q in s1}.
+  //! s1 is disjoint from the current index set, returns log(product).
   double addPrimesAndScale(const IndexSet& s1);
 
-  // remove s1 from the index set
+  //! @brief Remove s1 from the index set
   void removePrimes(const IndexSet& s1) {
     map.remove(s1);
   }
 
 
-  // Arithmetic operations. Only the "destructive" versions are used,
-  // i.e., a += b is implemented but not a + b.
+  /**
+   * @name Arithmetic operation
+   * @brief Only the "destructive" versions are used,
+   * i.e., a += b is implemented but not a + b.
+   **/
+  ///@{
 
   // Addition, negation, subtraction
   DoubleCRT& Negate(const DoubleCRT& other);
@@ -307,15 +317,13 @@ public:
   DoubleCRT& operator/=(const ZZ &num);
   DoubleCRT& operator/=(long num) { return (*this /= to_ZZ(num)); }
 
-
-  // Small-exponent polynomial exponentiation
+  //! @brief Small-exponent polynomial exponentiation
   void Exp(long k);
-
 
   // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
   void automorph(long k);
   DoubleCRT& operator>>=(long k) { automorph(k); return *this; }
-
+  ///@}
 
   // Utilities
 
@@ -326,24 +334,24 @@ public:
   // Choose random DoubleCRT's, either at random or with small/Gaussian
   // coefficients. 
 
-  // fills each row i w/ random ints mod pi, uses NTL's PRG
+  //! @brief Fills each row i with random ints mod pi, uses NTL's PRG
   void randomize(const ZZ* seed=NULL);
 
-  // Coefficients are -1/0/1, Prob[0]=1/2
+  //! @brief Coefficients are -1/0/1, Prob[0]=1/2
   void sampleSmall() {
     ZZX poly; 
     ::sampleSmall(poly,context.zMStar.getPhiM()); // degree-(phi(m)-1) polynomial
     *this = poly; // convert to DoubleCRT
   }
 
-  // Coefficients are -1/0/1 with pre-specified number of nonzeros
+  //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
   void sampleHWt(long Hwt) {
     ZZX poly; 
     ::sampleHWt(poly,Hwt,context.zMStar.getPhiM());
     *this = poly; // convert to DoubleCRT
   }
 
-  // Coefficients are Gaussians
+  //! @brief Coefficients are Gaussians
   void sampleGaussian(double stdev=0.0) {
     if (stdev==0.0) stdev=to_double(context.stdev); 
     ZZX poly; 
@@ -352,8 +360,8 @@ public:
   }
 
 
-  // makes a corresponding SingleCRT object, restricted to
-  // the given index set, if specified
+  //! @brief Makes a corresponding SingleCRT object.
+  // Restricted to the given index set, if specified
   void toSingleCRT(SingleCRT& scrt, const IndexSet& s) const;
   void toSingleCRT(SingleCRT& scrt) const;
 
@@ -366,6 +374,10 @@ public:
   friend ostream& operator<< (ostream &s, const DoubleCRT &d);
   friend istream& operator>> (istream &s, DoubleCRT &d);
 
+  //! @brief Used for testing/debugging
+  //! The dry-run option disables most operations, to save time. This lets
+  //! us quickly go over the evaluation of a circuit and estimate the
+  //! resulting noise magnitude, without having to actually compute anything. 
   static bool setDryRun(bool toWhat=true) { dryRun=toWhat; return dryRun; }
 };
 
@@ -387,4 +399,4 @@ inline void conv(DoubleCRT& d, const SingleCRT& s) { d=s; }
 
 #endif // #ifndef _DoubleCRT_H_
 
-#endif
+#endif // DoubleCRT or AltCRT

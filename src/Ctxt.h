@@ -13,22 +13,14 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/* Ctxt.h - declerations of a BGV-type cipehrtext and key-switching matrices
-*/ 
 #ifndef _Ctxt_H_
 #define _Ctxt_H_
-#include <vector>
-#include <NTL/xdouble.h>
-#include "DoubleCRT.h"
-
-class KeySwitch;
-class FHEPubKey;
-class FHESecKey;
-
-/* 1. Classes SKHandle and CtxtPart:
+/**
+ * @file Ctxt.h
+ * @brief Declerations of a BGV-type cipehrtext and key-switching matrices
  *
  * A ciphertext is a vector of "ciphertext parts", each part consists of
- * a polynomial (in double-CRT representation) and a "handle" describing
+ * a polynomial (element of polynomial ring R_Q) and a "handle" describing
  * the secret-key polynomial that this part multiplies during decryption.
  * For example:
  * + A "canonical" ciphertext has two parts, the first part multiplies 1
@@ -56,22 +48,28 @@ class FHESecKey;
  * ones that are defined with respect to different keys, and the result will
  * be defined with respect to the tensor product of the two keys. 
  *
- * FIXME: there's debate about whether these restrictions will be enforced....
- * 
  * The current implementation is more restrictive, however. It requires that
- * a ciphertext has one part wrt 1, exactly one part wrt s(X^t) for some t,
- * and for every r>1 at most one part wrt s^r(X^t) for the same t. Moreover,
- * the r's have to be consecutive (e.g., you cannot have parts wrt (1,s,s^3)
- * without having a part wrt s^2).
+ * a ciphertext has one part wrt 1, that for every r>=1 there is at most one
+ * part wrt to s^r(X^t) (for some t), and that the r's are consecutive. For
+ * example you cannot have parts wrt (1,s,s^3) without having a part wrt s^2.
  *
  * It follows that you can only add/multiply ciphertexts if one of the two
  * lists of handles is a prefix of the other. For example, one can add a
  * ciphertext wrt (1,s(X^2)) to another wrt (1,s(X^2),s^2(X^2)), but not
  * to another ciphertext wrt (1,s).
- ********************************************************************/
+ **/ 
+#include <vector>
+#include <NTL/xdouble.h>
+#include "DoubleCRT.h"
 
-// A handle, describing the secret polynomial to be multiplied by a part
-// The general form of secret polynomial that we allow is s^r(X^t)
+class KeySwitch;
+class FHEPubKey;
+class FHESecKey;
+
+/**
+ * @class SKHandle
+ * @brief A handle, describing the secret-key element that "matches" a part, of the form s^r(X^t).
+ **/
 class SKHandle {
   long powerOfS, powerOfX, secretKeyID;
 
@@ -85,6 +83,7 @@ public:
     secretKeyID = newSecretKeyID;
   }
 
+  //! @brief Set powerOfS=powerOfX=1
   void setBase(long newSecretKeyID=-1) 
   {
     powerOfS = 1;
@@ -92,6 +91,7 @@ public:
     if (newSecretKeyID >= 0) secretKeyID = newSecretKeyID;
   }
  
+  //! @brief Is powerOfS==powerOfX==1?
   bool isBase(long ofKeyID=0) const
   {
     // If ofKeyID<0, only check that this is base of some key,
@@ -100,6 +100,7 @@ public:
       (ofKeyID<0 || secretKeyID == ofKeyID);
   }
 
+  //! @brief Set powerOfS=0, powerOfX=1
   void setOne(long newSecretKeyID=-1) 
   {
     powerOfS = 0;
@@ -107,6 +108,7 @@ public:
     if (newSecretKeyID >= 0) secretKeyID = newSecretKeyID;
   }
 
+  //! @brief Is powerOfS==0?
   bool isOne() const
   {
     return powerOfS == 0;
@@ -128,18 +130,18 @@ public:
   long getPowerOfX() const { return powerOfX; }
   long getSecretKeyID() const { return secretKeyID; }
 
-  /* mul(a, b) computes the "product" of the two handles.
-     secret key ID's and power of X's must match...otherwise
-     an error state arises, which is represented using a 
-     secret key ID of -1 and returning false.
-     Also, note that inputs may alias outputs.
-
-     To detremine if a key switching matrix exists to transform
-     a given handle into a "canonical" one, use the method
-     pubKey.haveKeySWmatrix(handle,handle.secretKeyID), from
-     the class FHEPubKey in FHE.h
+  /**
+   * @brief Computes the "product" of two handles.
+   *
+   * The key-ID's and powers of X must match, else an error state arises,
+   * which is represented using a key-ID of -1 and returning false. Also,
+   * note that inputs may alias outputs.
+   * 
+   * To detremine if the resulting handle canbe re-liearized using
+   * some key-switchingmatrices from the public key, use the method
+   * pubKey.haveKeySWmatrix(handle,handle.secretKeyID), from the class
+   * FHEPubKey in FHE.h
   */
-
   bool mul(const SKHandle& a, const SKHandle& b) 
   {
     // If either of the inputs is one, the output equals to the other input
@@ -181,11 +183,16 @@ inline ostream& operator<<(ostream& s, const SKHandle& handle)
 	   << " " << handle.getSecretKeyID() << "]";
 }
 
-// A single ciphertext-part, consisting of a polynomial in Double-CRT form
-// (from the base class), and a handle to the corresponding secret-key
-// polynomial.
+/**
+ * @class CtxtPart
+ * @brief One entry in a ciphertext vector
+ * 
+ * A cipehrtext part consists of a polynomial (element of the ring R_Q)
+ * and a handle to the corresponding secret-key polynomial.
+ **/
 class CtxtPart: public DoubleCRT {
 public:
+  //! @brief The handle is a public data member
   SKHandle skHandle; // The secret-key polynomial corresponding to this part
 
   bool operator==(const CtxtPart& other) const;
@@ -213,7 +220,9 @@ public:
 istream& operator>>(istream& s, CtxtPart& p);
 ostream& operator<<(ostream& s, const CtxtPart& p);
 
-/* 2. Class Ctxt:
+/**
+ * @class Ctxt
+ * @brief A Ctxt object holds a single cipehrtext
  *
  * The class Ctxt includes a vector<CtxtPart>: For a Ctxt c, c[i] is the i'th
  * ciphertext part, which can be used also as a DoubleCRT object (since
@@ -236,7 +245,7 @@ ostream& operator<<(ostream& s, const CtxtPart& p);
  * with some added factor, and similarly scaled up by key-switching with some
  * added factor. The noiseVar data member of the class keeps the esitmated
  * variance.
- ********************************************************************/
+ **/
 class Ctxt {
   friend class FHEPubKey;
   friend class FHESecKey;
@@ -300,7 +309,8 @@ public:
 
   // Encryption and decryption are done by the friends FHE[Pub|Sec]Key
 
-  // Ciphertext arithmetic
+  //! @name Ciphertext arithmetic
+  ///@{
   void negate();
 
  // Add/subtract aonther ciphertext
@@ -312,10 +322,11 @@ public:
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
   Ctxt& operator>>=(long k) { automorph(k); return *this; }
 
+  //! @brief automorphism with re-lienarization
+  void smartAutomorph(long k);
   // Apply F(X)->F(X^k) followed by re-liearization. The automorphism is
   // possibly evaluated via a sequence of steps, to ensure that we can
   // re-linearize the result of every step.
-  void smartAutomorph(long k);
 
   // Add a constant polynomial. If the size is not given, we use
   // phi(m)*ptxtSpace^2 as the default value.
@@ -334,32 +345,42 @@ public:
   void multiplyBy2(const Ctxt& other1, const Ctxt& other2);
   void square() { multiplyBy(*this); }
   void cube() { multiplyBy2(*this, *this); }
+  ///@}
 
-  // Ciphertext maintenance
-
+  //! @name Ciphertext maintenance
+  ///@{
   void reLinearize(long keyIdx=0);
           // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
-  xdouble modSwitchAddedNoiseVar() const; // estimate added noise variance
+  //! @brief Estimate the added noise variance
+  xdouble modSwitchAddedNoiseVar() const;
 
-  // mod-switch up, we much have primeSet <= s, and s must contain
-  // either all the special primes or none of them.
+  //! @brief Modulus-switching up (to a larger modulus).
+  //! Must have primeSet <= s, and s must contain
+  //! either all the special primes or none of them.
   void modUpToSet(const IndexSet &s);
 
-  // mod-switch down to primeSet \intersect s, after this call we have
-  // primeSet<=s. s must contain either all special primes or none of them
+  //! @brief Modulus-switching down (to a smaller modulus).
+  //! mod-switch down to primeSet \intersect s, after this call we have
+  //! primeSet<=s. s must contain either all special primes or none of them
   void modDownToSet(const IndexSet &s);
 
-  // Find the IndexSet such that modDown to that set of primes the
-  // dominant noise term is the additive term due to rounding
+  //! @brief Fidn the "natural level" of a cipehrtext.
+  //! Find the highest IndexSet so that mod-switching down to that set results
+  //! in the dominant noise term being the additive term due to rounding
   void findBaseSet(IndexSet& s) const;
+  ///@}
 
-  // Utility methods
+  //! @name Utility methods
+  ///@{
 
+  //! @brief A canonical ciphertext has handles pointing to (1,s)
   bool inCanonicalForm(long keyID=0) const {
     return (parts.size()==2 && 
 	    parts[0].skHandle.isOne() && parts[1].skHandle.isBase(keyID));
   }
+
+  //! @brief Would this ciphertext be decrypted without errors?
   bool isCorrect() const {
     ZZ q = context.productOfPrimes(primeSet);
     return (to_xdouble(q) > sqrt(noiseVar)*2);
@@ -371,14 +392,17 @@ public:
   const long getPtxtSpace() const      { return ptxtSpace;}
   const long getKeyID() const;
 
+  //! @brief How many primes in the "base-set" for that ciphertext
   const long getLevel() const { 
     IndexSet s;
     findBaseSet(s);
     return card(s);
   }
+
+  //! @brief Returns log(noise-variance)/2 - log(q)
   double log_of_ratio() const
   {return (log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet()));}
-
+  ///@}
   friend istream& operator>>(istream& str, Ctxt& ctxt);
   friend ostream& operator<<(ostream& str, const Ctxt& ctxt);
 };

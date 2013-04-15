@@ -1,0 +1,9 @@
+/**
+   @mainpage HElib Documentation
+   HElib is a software library that implements the
+   Brakerski-Gentry-Vaikuntanathan (BGV) homomorphic encryption scheme, along
+   with many optimizations to make homomorphic evaluation runs faster, focusing
+   mostly on effective use of the Smart-Vercauteren ciphertext packing
+   techniques. HElib is written in C++ and uses the NTL mathematical library.
+   It is distributed under the terms of the GNU General Public License (GPL).
+ **/

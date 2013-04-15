@@ -398,11 +398,13 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
 ostream& operator<<(ostream& str, const FHEPubKey& pk)
 {
    assert(false);
+   return str;
 }
 
 istream& operator>>(istream& str, FHEPubKey& pk)
 {
    assert(false);
+   return str;
 }
 
 #if 0

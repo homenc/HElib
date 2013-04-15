@@ -128,7 +128,7 @@ void SelectRange(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi)
 }
 
 
-
+//! @cond FALSE (make doxygen ignore this class)
 class RepAux {
 private:
   vector< copied_ptr<DoubleCRT> > _tab;
@@ -139,7 +139,7 @@ public:
     return _tab[i];
   }
 };
-
+//! @endcond
 
 
 // recursiveReplicate:
@@ -308,6 +308,7 @@ void SelectRangeDim(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi,
 
 
 
+//! @cond FALSE (make doxygen ignore this class)
 class RepAuxDim {
 private:
   vector< vector< copied_ptr<DoubleCRT> > > _tab, _tab1;
@@ -324,9 +325,8 @@ public:
     if (i >= lsize(_tab1[d])) _tab1[d].resize(i+1);
     return _tab1[d][i];
   }
-
-  
 };
+//! @endcond
 
 
 

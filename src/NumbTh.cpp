@@ -39,8 +39,7 @@ bool parseArgs(int argc,  char *argv[], argmap_t& argmap)
   return true;
 }
 
-// return multiplicative order of p modulo m, or 0
-// if GCD(p, m) != 1
+// return multiplicative order of p modulo m, or 0 if GCD(p, m) != 1
 long multOrd(long p, long m)
 {
   if (GCD(p, m) != 1) return 0;
@@ -513,9 +512,18 @@ void seekPastChar(istream& str, int cc)
 }
 
 
-
 // stuff added relating to linearized polynomials and support routines
 
+
+// Builds the matrix defining the linearized polynomial transformation.
+//
+// NTL's current smallint modulus, zz_p::modulus(), is assumed to be p^r,
+// for p prime, r >= 1 integer.
+//
+// After calling this function, one can call ppsolve(C, L, M, p, r) to get
+// the coeffecients C for the linearized polynomial represented the linear
+// map defined by its action on the standard basis for zz_pE over zz_p:
+// for i = 0..zz_pE::degree()-1: x^i -> L[i], where x = (X mod zz_pE::modulus())
 
 void buildLinPolyMatrix(mat_zz_pE& M, long p)
 {

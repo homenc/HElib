@@ -15,6 +15,10 @@
  */
 #ifndef _IndexSet
 #define _IndexSet
+/**
+ * @file IndexSet.h
+ * @brief A dynamic set of integers
+ **/
 
 #include <vector>
 #include <iostream>
@@ -22,6 +26,13 @@
 
 using namespace std;
 
+//! @brief A dynamic set of non-negative integers.
+//!
+//! You can iterate through a set as follows:
+//! \code 
+//!    for (long i = s.first(); i <= s.last(); i = s.next(i)) ...
+//!    for (long i = s.last(); i >= s.first(); i = s.prev(i)) ...
+//! \endcode
 class IndexSet {
 
   vector<bool> rep;
@@ -44,17 +55,17 @@ public:
 
   /*** constructors ***/
 
-  // no-arg constructor - creates empty set
+  // @brief No-argument constructor, creates empty set
   IndexSet() {
     _first = 0;  _last = -1; _card = 0;
   }
 
-  // constructs an interval, low to high
+  // @brief Constructs an interval, low to high
   IndexSet(long low, long high) {
     intervalConstructor(low, high);
   }
 
-  // constructs a singleton set
+  // @brief Constructs a singleton set
   explicit
   IndexSet(long j) {
     intervalConstructor(j, j);
@@ -66,31 +77,28 @@ public:
 
   // assignment: use the built-in assignment operator
 
-  /*** access methods ***/
-
+  //! @brief Returns the first element, 0 if the set is empty
   long first() const { return _first; }
+
+  //! @brief Returns the last element, -1 if the set is empty
   long last() const { return _last; }
-  long card() const { return _card; }
 
-  // return the next element after j, if any;
-  // otherwise j+1
-
+  //! @brief Returns the next element after j, if any; otherwise j+1
   long next(long j) const;
 
-  // return the previous element before j, if any;
-  // otherwise j-1
+  // @brief Returns the previous element before j, if any; otherwise j-1
   long prev(long j) const;
 
-  // NOTE: you can iterate through a set as follows:
-  //    for (long i = s.first(); i <= s.last(); i = s.next(i)) ...
+  //! @brief The cardinality of the set
+  long card() const { return _card; }
 
-  // returns true iff the set contains j
+  //! @brief Returns true iff the set contains j
   bool contains(long j) const;
 
-  // returns true iff the set contains s
+  //! @brief Returns true iff the set contains s
   bool contains(const IndexSet& s) const;
 
-  // returns true iff the set is disjoint from s
+  //! @brief Returns true iff the set is disjoint from s
   bool disjointFrom(const IndexSet& s) const;
 
   /*** comparison ***/
@@ -103,62 +111,65 @@ public:
 
   /*** update methods ***/
 
-  // set to the empty set
+  //! @brief Set to the empty set
   void clear();
 
-  // add j to the set
+  //! @brief Add j to the set
   void insert(long j);
 
-  // remove j from the set
+  //! @brief Remove j from the set
   void remove(long j);
 
-  // add s to the set (union)
+  //! @brief Add s to the set (union)
   void insert(const IndexSet& s);
 
-  // remove s from the set (set minus)
+  //! @brief Remove s from the set (set minus)
   void remove(const IndexSet& s);
 
-  // retain only those elements that are also in s (intersection)
+  //! @brief Retains only those elements that are also in s (intersection)
   void retain(const IndexSet& s);
 
-  // read-only access to an empty set
+  //! @brief Read-only access to an empty set
   static const IndexSet& emptySet();
 };
 
 // some high-level convenience methods...not very efficient...
 // not sure if we really need these
 
-// union
+//! @brief union
 IndexSet operator|(const IndexSet& s, const IndexSet& t);
 
-// intersection
+//! @brief intersection
 IndexSet operator&(const IndexSet& s, const IndexSet& t);
 
-// exclusive-or
+//! @brief exclusive-or
 IndexSet operator^(const IndexSet& s, const IndexSet& t);
 
-// set minus
+//! @brief set minus
 IndexSet operator/(const IndexSet& s, const IndexSet& t);
 
 // I/O operator
 ostream& operator << (ostream& str, const IndexSet& set);
 istream& operator >> (istream& str, IndexSet& set);
 
-// functional card
+//! @brief Functional cardinality
 long card(const IndexSet& s);
 
 inline bool empty(const IndexSet& s) { return s.card()==0; }
 
-// functional "contains"
+//! @brief Is s1 subset or equal to s2
 bool operator<=(const IndexSet& s1, const IndexSet& s2);
 
+//! @brief Is s1 strict subset of s2
 bool operator<(const IndexSet& s1, const IndexSet& s2);
 
+//! @brief Is s2 subset or equal to s2
 bool operator>=(const IndexSet& s1, const IndexSet& s2);
 
+//! @brief Is s2 strict subset of s1
 bool operator>(const IndexSet& s1, const IndexSet& s2);
 
-// functional disjoint
+//! @brief Functional disjoint
 inline bool disjoint(const IndexSet& s1, const IndexSet& s2)
 { return s1.disjointFrom(s2); }
 

@@ -312,7 +312,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
 {
-  assert(i >= 0 && i < context.zMStar.getNSlots());
+  assert(i >= 0 && i < (long)context.zMStar.getNSlots());
   const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
   RBak bak; bak.save(); tab.restoreContext();
   RX res;

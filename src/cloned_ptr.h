@@ -13,61 +13,64 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/*****
-
-Downloaded from:
-
-  http://github.com/yonat/smart_ptr/blob/master/cloned_ptr.h
-
-This seems like a very useful template class for smart
-pointers with "deep cloning" semantics and class heirarchies.
-
-To work, a class needs a "clone" method that creates a new copy.
-
-NOTES:
-
-this did not compile...had to change the definition of the
-class clone<X> 
-
-added boolean operators
-
-added assign operation set_ptr(X* p)
-removed get(), introduced public method get_ptr()...
-these names chosen to make it easier to hunt down "loopholes"
-
-added noclone<X> template
-
-Made "const"-ness apply to both the pointer and the object
-pointed to.  For this kind of "deep copy" semantics, this makes
-the most sense.
-
-
-Made a corresponding class copied_ptr, with "shallow" cloning...
-To bad this can't really be done with templates... C++11 defines
-the concept of "template aliases", which would do the trick...
-unfortunately, gcc does not yet implement this...
-
-Changed the name "clone" to avoid conflicts...
-*****/
-
-
-/*
- * cloned_ptr - clone-on-create/assign pointer.
- * Useful as a class member to get deep copy semantics.
- */
-
 #ifndef CLONED_PTR_H
 #define CLONED_PTR_H
+/**
+* @file cloned_ptr.h
+* @brief Implemenation of smart pointers with "deep cloning" semantics
+*
+* Based (loosely) on code from
+*
+*  http://github.com/yonat/smart_ptr/blob/master/cloned_ptr.h
+**/
+/*
+* This seems like a very useful template class for smart
+* pointers with "deep cloning" semantics and class heirarchies.
+* 
+* To work, a class needs a "clone" method that creates a new copy.
+* 
+* NOTES:
+* 
+* this did not compile...had to change the definition of the class clone<X> 
+* 
+* added boolean operators
+* 
+* added assign operation set_ptr(X* p) removed get(), introduced public
+* method get_ptr()... these names chosen to make it easier to hunt down
+* "loopholes"
+* 
+* added noclone<X> template
+* 
+* Made "const"-ness apply to both the pointer and the object pointed to.
+* For this kind of "deep copy" semantics, this makes the most sense.
+* 
+* Made a corresponding class copied_ptr, with "shallow" cloning...
+* To bad this can't really be done with templates... C++11 defines
+* the concept of "template aliases", which would do the trick...
+* unfortunately, gcc does not yet implement this...
+* 
+* Changed the name "clone" to avoid conflicts...
+*****/
 
-/* For ANSI-challenged compilers, you may want to #define
- * NO_MEMBER_TEMPLATES or explicit */
+/* For ANSI-challenged compilers, you may want to
+ * #define NO_MEMBER_TEMPLATES or explicit */
 
+/**
+* @class deep_clone
+* @brief Deep copy: initialize with clone
+* @tparam X The class to which this points
+**/
 template <class X> class deep_clone
 {
 public:
     static X* apply(const X* x) {return x->clone();}
 };
 
+/**
+* @class shallow_clone
+* @brief Shallow copy: initialize with copy constructor
+* @tparam X The class to which this points
+**/
 template <class X> class shallow_clone
 {
 public:

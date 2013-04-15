@@ -85,8 +85,8 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
     {84672, 92837, 56, 38520}  // gens=18(126),1886(6),3(!2)
   };
 
-  long m;
-  size_t i;
+  long m = 0;
+  size_t i=0;
 
   // find the first m satisfying phi(m)>=N and d | ord(p) in Z_m^*
   // and phi(m)/ord(p) >= s
@@ -100,7 +100,6 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
     }
   }
   else {
-    m = 0;
     for (i=0; i<sizeof(ms)/sizeof(long[4]); i++) { 
       if (ms[i][0] < N || GCD(p, ms[i][1]) != 1) continue;
       long ordP = multOrd(p, ms[i][1]);

@@ -13,9 +13,15 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+/**
+ * @file SingleCRT.h
+ * @brief Decleration for the helper SingleCRT class
+ **/
 #ifndef _SingleCRT_H_
 #define _SingleCRT_H_
-/* SingleCRT.h - This class hold integer polynomials modulo many small primes
+/**
+ * @class SingleCRT
+ * @brief This class hold integer polynomials modulo many small primes
  *
  * SingleCRT form is a map from an index set to (ZZX) polynomials, where the
  * i'th polynomial contains the coefficients wrt the ith prime in the chain of
@@ -35,7 +41,6 @@
 #include "FHEContext.h"
 #include "IndexMap.h"
 #include "DoubleCRT.h"
-
 
 class SingleCRT {
   const FHEcontext& context;
