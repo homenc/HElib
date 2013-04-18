@@ -182,6 +182,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 void usage() 
 {
   cerr << "Usage: Test_PAlgebra_x [ optional parameters ]...\n";
+  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cerr << "  e.g, 'R=4 L=6 k=80'\n\n";
   cerr << "  R is the number of rounds\n";
   cerr << "  p is the plaintext base [default=2]" << endl;
   cerr << "  r is the lifting [default=1]" << endl;
@@ -189,7 +191,7 @@ void usage()
   cerr << "    (d == 0 => factors[0] defined the extension)\n";
   cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
   cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  z is the # of primes per round [default=4]\n";
+  cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
   cerr << "  s is the minimum number of slots [default=4]\n";
   cerr << "  m is a specific modulus\n";
   exit(0);
@@ -205,7 +207,7 @@ int main(int argc, char *argv[])
   argmap["d"] = "1";
   argmap["c"] = "2";
   argmap["k"] = "80";
-  argmap["z"] = "4";
+  argmap["L"] = "4";
   argmap["s"] = "0";
   argmap["m"] = "0";
 
@@ -217,12 +219,13 @@ int main(int argc, char *argv[])
   long d = atoi(argmap["d"]);
   long c = atoi(argmap["c"]);
   long k = atoi(argmap["k"]);
-  long z = atoi(argmap["z"]);
+  //  long z = atoi(argmap["z"]);
+  long L = atoi(argmap["L"]);
   long s = atoi(argmap["s"]);
   long chosen_m = atoi(argmap["m"]);
 
   long w = 64; // Hamming weight of secret key
-  long L = z*R; // number of levels
+  //  long L = z*R; // number of levels
 
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
