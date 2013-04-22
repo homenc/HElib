@@ -183,7 +183,7 @@ void usage()
 {
   cerr << "Usage: Test_PAlgebra_x [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'R=4 L=6 k=80'\n\n";
+  cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
   cerr << "  R is the number of rounds\n";
   cerr << "  p is the plaintext base [default=2]" << endl;
   cerr << "  r is the lifting [default=1]" << endl;
@@ -207,10 +207,11 @@ int main(int argc, char *argv[])
   argmap["d"] = "1";
   argmap["c"] = "2";
   argmap["k"] = "80";
-  argmap["L"] = "4";
+  argmap["L"] = "0";
   argmap["s"] = "0";
   argmap["m"] = "0";
 
+  // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage();
 
   long R = atoi(argmap["R"]);
@@ -221,6 +222,10 @@ int main(int argc, char *argv[])
   long k = atoi(argmap["k"]);
   //  long z = atoi(argmap["z"]);
   long L = atoi(argmap["L"]);
+  if (L==0) { // determine L based on R,r
+    if (r==1) L = 2*R+2;
+    else      L = 4*R;
+  }
   long s = atoi(argmap["s"]);
   long chosen_m = atoi(argmap["m"]);
 
