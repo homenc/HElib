@@ -79,8 +79,6 @@ void DoubleCRT::verify()
   }
 }
 
-
-
 // Arithmetic operations. Only the "destructive" versions are used,
 // i.e., a += b is implemented but not a + b.
 
@@ -161,8 +159,6 @@ DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const ZZ &num, AddFun fun);
 template
 DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const ZZ &num, SubFun fun);
 
-
-
 DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
 {
   if (dryRun) return *this;
@@ -185,7 +181,6 @@ DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
   return *this;
 }
 
-
 template<class Fun>
 DoubleCRT& DoubleCRT::Op(const ZZX &poly, Fun fun)
 {
@@ -197,7 +192,6 @@ DoubleCRT& DoubleCRT::Op(const ZZX &poly, Fun fun)
   return Op(other, fun);
 }
 
-
 template
 DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const ZZX &poly, MulFun fun);
 
@@ -206,8 +200,6 @@ DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const ZZX &poly, AddFun fun);
 
 template
 DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const ZZX &poly, SubFun fun);
-
-
 
 // break *this into n digits,according to the primeSets in context.digits
 void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
@@ -256,7 +248,6 @@ void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
 #endif
   FHE_TIMER_STOP;
 }
-
 
 // expand index set by s1.
 // it is assumed that s1 is disjoint from the current index set.
@@ -316,8 +307,6 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
   return logFactor;
 }
 
-
-
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
@@ -332,7 +321,6 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet
     pi.FFT(map[i], poly); // reduce mod pi and store FFT image
   }
 }
-
 
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
@@ -350,8 +338,6 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
   }
 }
 
-
-
 DoubleCRT::DoubleCRT(const ZZX& poly)
 : context(*activeContext), map(new DoubleCRTHelper(*activeContext))
 {
@@ -368,8 +354,6 @@ DoubleCRT::DoubleCRT(const ZZX& poly)
   }
 }
 
-
-
 DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
@@ -385,7 +369,6 @@ DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
     for (long j = 0; j < phim; j++) row[j] = 0;
   }
 }
-
 
 DoubleCRT::DoubleCRT(const FHEcontext &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
@@ -498,7 +481,6 @@ FHE_TIMER_START
   ZZ prod;
   prod = 1;
 
-
   zz_pBak bak; bak.save();
 
   for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
@@ -518,8 +500,6 @@ FHE_TIMER_START
   }
 FHE_TIMER_STOP
 }
-
-
 
 #if 0
 {
@@ -616,8 +596,6 @@ void DoubleCRT::Exp(long e)
   }
 }
 
-
-
 // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
 void DoubleCRT::automorph(long k)
 {
@@ -666,7 +644,6 @@ void DoubleCRT::randomize(const ZZ* seed)
       row[j] = RandomBnd(pi);   // RandomBnd is defined in NTL's module ZZ
   }
 }
-
 
 DoubleCRT& DoubleCRT::operator=(const SingleCRT& scrt)
 {
@@ -799,6 +776,5 @@ istream& operator>> (istream &str, DoubleCRT &d)
   //  cerr << "]";
   return str;
 }
-
-
 #endif
+

@@ -90,7 +90,6 @@ void rotate(DoubleCRT& d, long amt,
 
   DoubleCRT tmp(context, d.getIndexSet());
 
-
   for (i--; i >= 0; i--) {
     v = coordinate(al, i, amt);
 
@@ -106,14 +105,8 @@ void rotate(DoubleCRT& d, long amt,
       mask = ((mask * (maskTable[i][v] - maskTable[i][v+1])) % al2.PhimXMod())
              + maskTable[i][v+1];
     }
-    
   }
-
-
 }
-
-
-
 
 //evaluate f at e^{2 pi i/m}, returning a complex number
 
@@ -174,8 +167,6 @@ double canonEmbedMax(const ZZX& f, const FHEcontext& context)
 
   return res;
 }
-
-
 
 #define sigma 3.2  /* 3.2 is a nice round number */
 #define pSize 18   /* empirical average size of small primes */
@@ -298,10 +289,7 @@ int main(int argc, char *argv[])
 
   exit(0);
 
-
 #endif
-
-
 
   // find the first m satisfying phi(m)>=N and d | ord(2) in Z_m^*
   long m = 0;
@@ -322,7 +310,6 @@ int main(int argc, char *argv[])
 
   context.zMstar.printout();
   cout << endl;
-
 
   // Set the modulus chain
 
@@ -425,7 +412,6 @@ int main(int argc, char *argv[])
   /**                      TESTS BEGIN HERE                       ***/
   /******************************************************************/
 
-
   cout << "ptxtSpace = " << ptxtSpace << endl;
 
   GF2X G;          // G is the AES polynomial, G(X)= X^8 +X^4 +X^3 +X +1
@@ -471,8 +457,6 @@ int main(int argc, char *argv[])
        maskTable[i][j] = ptxt;
       }
     }
-
-
 
   vector<GF2X> maps;
   al2.mapToSlots(maps, G);
@@ -525,12 +509,8 @@ int main(int argc, char *argv[])
   }
 #endif
 
-
   return 0;
-  
-
   }
-
 
 #endif
 

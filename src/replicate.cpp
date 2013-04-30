@@ -40,9 +40,6 @@ void replicate(const EncryptedArray& ea, Ctxt& ctxt, long pos)
   replicate0(ea, ctxt, pos);
 }
 
-
-
-
 // Assumes all slots are zero except slot #pos,
 // which is duplicated in all other slots
 
@@ -86,7 +83,6 @@ void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos)
 // algorithm for replications
 
 
-
 // returns greatest integer k such that 2^k <= n
 static
 long GreatestPowerOfTwo(long n)
@@ -117,7 +113,6 @@ void SelectRange(const EncryptedArray& ea, ZZX& mask, long lo, long hi)
   ea.encode(mask, maskArray);
 }
 
-
 // selects range of slots [lo..hi)
 static
 void SelectRange(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi)
@@ -126,7 +121,6 @@ void SelectRange(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi)
   SelectRange(ea, mask, lo, hi);
   ctxt.multByConstant(mask);
 }
-
 
 //! @cond FALSE (make doxygen ignore this class)
 class RepAux {
@@ -140,7 +134,6 @@ public:
   }
 };
 //! @endcond
-
 
 // recursiveReplicate:
 //   n = GreatestPowerOfTwo(ea.size())
@@ -266,7 +259,6 @@ void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt,
     
 }
 
-
 // The following code is based on the same logic as the
 // recursive, O(1)-amortized algorithm, but works one
 // dimension at a time, which allows us to use "native"
@@ -295,7 +287,6 @@ void SelectRangeDim(const EncryptedArray& ea, ZZX& mask, long lo, long hi,
   ea.encode(mask, maskArray);
 }
 
-
 // selects range of slots [lo..hi)
 static
 void SelectRangeDim(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi,
@@ -305,8 +296,6 @@ void SelectRangeDim(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi,
   SelectRangeDim(ea, mask, lo, hi, d);
   ctxt.multByConstant(mask);
 }
-
-
 
 //! @cond FALSE (make doxygen ignore this class)
 class RepAuxDim {
@@ -328,15 +317,11 @@ public:
 };
 //! @endcond
 
-
-
-
 // replicateOneBlock: assumes that all slots are zero,
 // except for those in the "block" whose coordinate
 // in dimension d lies in the interval [ pos*blockSize .. pos*(blockSize+1) )
 // This block is then replicated throught the range 
 // [ 0.. floor(dSize/blockSize)*blockSize )
-
 
 static
 void replicateOneBlock(const EncryptedArray& ea, Ctxt& ctxt, 
@@ -425,7 +410,6 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
       repAux.tab(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext()));
     }
 
-
     Ctxt ctxt_tmp = ctxt;
     ctxt_tmp.multByConstant(*repAux.tab(d, 0));
 
@@ -434,7 +418,6 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
     replicateAllNextDim(ea, ctxt_tmp, d+1, dimProd, recBound, repAux, handler);
     return;
   }
-
 
   k--;
 
@@ -506,7 +489,6 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     handler->handle(ctxt);
     return;
   }
-
   
   long dSize = ea.sizeOfDimension(d);
   long n = GreatestPowerOfTwo(dSize);
@@ -547,8 +529,6 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     ctxt1.multByConstant(*repAux.tab1(d, 0));
   }
 
-  
-
   if (numBlocks == 1) {
     recursiveReplicateDim(ea, ctxt1, d, extent, k, 0, extent, 
                           dimProd, recBound, repAux, handler);
@@ -560,7 +540,6 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
       replicateOneBlock(ea, ctxt2, pos, blockSize, d);
       recursiveReplicateDim(ea, ctxt2, d, extent, k, 0, extent, 
                             dimProd, recBound, repAux, handler);
-      
     }
   }
 
@@ -595,4 +574,3 @@ void replicateAll(const EncryptedArray& ea, const Ctxt& ctxt,
   replicateAllNextDim(ea, ctxt, 0, 1, recBound, repAux, handler);
 }
 
-  
