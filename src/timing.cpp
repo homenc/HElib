@@ -49,7 +49,7 @@ static timerMap timers;
 // Reset a timer for some label to zero
 void resetFHEtimer(const char *fncName)
 {
-  FHEtimer& t = timers[fncName];   // insert to map if not aready there
+  FHEtimer& t = timers[fncName];   // insert to map if not already there
   t.numCalls = 0;
   t.counter = 0;
   if (t.isOn) t.counter -= std::clock();
@@ -58,7 +58,7 @@ void resetFHEtimer(const char *fncName)
 // Start a timer
 void startFHEtimer(const char *fncName)
 {
-  FHEtimer& t = timers[fncName];   // insert to map if not aready there
+  FHEtimer& t = timers[fncName];   // insert to map if not already there
   if (!t.isOn) {
     t.isOn = true;
     t.numCalls++;
@@ -69,7 +69,7 @@ void startFHEtimer(const char *fncName)
 // Stop a timer
 void stopFHEtimer(const char *fncName)
 {
-  FHEtimer& t = timers[fncName];   // insert to map if not aready there
+  FHEtimer& t = timers[fncName];   // insert to map if not already there
   if (t.isOn) {
     t.isOn = false;
     t.counter += std::clock();
@@ -79,7 +79,7 @@ void stopFHEtimer(const char *fncName)
 // Read the value of a timer (in seconds)
 double getTime4func(const char *fncName) // returns time in seconds
 {
-  FHEtimer& t = timers[fncName];   // insert to map if not aready there
+  FHEtimer& t = timers[fncName];   // insert to map if not already there
 
   // If the counter is currently counting, add the clock() value
   clock_t c = t.isOn? (t.counter + std::clock()) : t.counter;
@@ -89,7 +89,7 @@ double getTime4func(const char *fncName) // returns time in seconds
 // Returns number of calls for that timer
 long getNumCalls4func(const char *fncName) 
 {
-    FHEtimer& t = timers[fncName];   // insert to map if not aready there
+    FHEtimer& t = timers[fncName];   // insert to map if not already there
     return t.numCalls;
 }
 

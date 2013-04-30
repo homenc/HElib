@@ -179,8 +179,6 @@ SingleCRT::SingleCRT(const ZZX&poly)
   *this = poly;           // convert polynomial to singleCRT representation
 }
 
-
-
 // Without specifying a ZZX, we get the zero polynomial
 SingleCRT::SingleCRT(const FHEcontext &_context, const IndexSet& s)
 : context(_context)
@@ -212,8 +210,7 @@ SingleCRT::SingleCRT(): context(*activeContext)
   // default constructor for ZZX creates the zero polynomial
 }
 
-
-  // Assignment operators
+// Assignment operators
 
 SingleCRT& SingleCRT::operator=(const SingleCRT& other) 
 {
@@ -223,7 +220,6 @@ SingleCRT& SingleCRT::operator=(const SingleCRT& other)
   map = other.map;
   return *this;
 }
-
 
 SingleCRT& SingleCRT::operator=(const DoubleCRT& other)
 {
@@ -265,7 +261,6 @@ void SingleCRT::addPrimes(const IndexSet& s1)
   }
 }
 
-
 // Division by constant
 // FIXME: this is not alias friendly
 SingleCRT& SingleCRT::operator/=(const ZZ &num)
@@ -289,6 +284,7 @@ SingleCRT& SingleCRT::operator/=(const ZZ &num)
 // integer polynomial with coefficients in [-P/2,P/2] (P is the product of
 // all moduli used). The polynomial is reduced modulo the product of only
 // the primes in the IndexSet parameter.
+
 void SingleCRT::toPoly(ZZX& poly, const IndexSet& s) const
 {
   IndexSet s1 = map.getIndexSet() & s;
@@ -323,7 +319,6 @@ void SingleCRT::toPoly(ZZX& poly, const IndexSet& s) const
   }
   poly.normalize(); // need to call this after we work on the coeffs
 }
-
 
 void SingleCRT::toPoly(ZZX& p) const
 {
