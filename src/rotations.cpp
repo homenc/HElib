@@ -112,7 +112,6 @@ Cube simpleRotate(const Cube& c, int offset) {
    }
 
    return c1;
-
 }
 
 Cube rotate1D(const Cube& c, int d, int offset) {
@@ -128,7 +127,6 @@ Cube rotate1D(const Cube& c, int d, int offset) {
    }
 
    return c1;
-
 }
 
 Cube operator+(const Cube& c1, const Cube& c2) {
