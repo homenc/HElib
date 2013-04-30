@@ -1,1 +1,1 @@
-An empty stub for docuemtnation
+An empty stub for documentation
