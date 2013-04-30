@@ -106,8 +106,6 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   FHE_TIMER_STOP;
 }
 
-
-
 // Shift k positions along the i'th dimension with zero fill.
 // Negative shift amount denotes shift in the opposite direction.
 template<class type>
@@ -152,7 +150,6 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   FHE_TIMER_STOP;
 }
 
-
 template<class type>
 void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 {
@@ -178,7 +175,6 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   amt %= (long) al.getNSlots();
   if (amt == 0) return;
   if (amt < 0) amt += al.getNSlots();
-
 
   // rotate the ciphertext, one dimension at a time
   long i = al.numOfGens()-1;
@@ -239,7 +235,6 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   }
   FHE_TIMER_STOP;
 }
-
 
 template<class type>
 void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
@@ -307,8 +302,6 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   FHE_TIMER_STOP;
 }
 
-
-
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
 {
@@ -321,7 +314,6 @@ void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
   conv(ptxt, res);
 }
 
-
 template<class type>
 void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) const
 {
@@ -331,7 +323,6 @@ void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) c
   tab.embedInSlots(pp, array, mappingData); 
   ptxt = conv<ZZX>(pp); 
 }
-
 
 template<class type>
 void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) const
@@ -343,8 +334,6 @@ void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) c
   tab.decodePlaintext(array, pp, mappingData); 
 }
 
-
-
 template<class type>
 void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const PlaintextArray& array) const
 {
@@ -355,7 +344,6 @@ void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const PlaintextArray& array)
   RBak bak; bak.save(); context.alMod.restoreContext();
   encode(ptxt, arr.getData());
 }
-
 
 template<class type>
 void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt) const
@@ -370,7 +358,6 @@ void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt)
   arr.setData(array1);
 }
 
-
 template<class type>
 void EncryptedArrayDerived<type>::
 buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
@@ -383,10 +370,6 @@ buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
   tab.buildLinPolyCoeffs(CC, LL, mappingData);
   convert(C, LL);
 }
-
-
-
-
 
 PlaintextArrayBase* buildPlaintextArray(const EncryptedArray& ea)
 {
@@ -401,9 +384,6 @@ PlaintextArrayBase* buildPlaintextArray(const EncryptedArray& ea)
   }
 }
 
-
-
-
 // Explicit instantiation
 
 template class EncryptedArrayDerived<PA_GF2>;
@@ -411,5 +391,4 @@ template class EncryptedArrayDerived<PA_zz_p>;
 
 template class PlaintextArrayDerived<PA_GF2>;
 template class PlaintextArrayDerived<PA_zz_p>;
-
 

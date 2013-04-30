@@ -182,7 +182,6 @@ void KeySwitch::verify(FHESecKey& sk)
   }
 
   cout << "error ratio: " << ((double) nb)/((double) NumBits(Q)) << "\n";
-    
 }
 
 const KeySwitch& KeySwitch::dummy()
@@ -368,7 +367,6 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace) const
   return ptxtSpace;
 }
 
-
 bool FHEPubKey::operator==(const FHEPubKey& other) const
 {
   if (this == &other) return true;
@@ -524,7 +522,6 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt, long ptxtSpace)
 
   return keyID; // return the index where this key is stored
 }
-
 
 // Generate a key-switching matrix and store it in the public key.
 // The argument p denotes the plaintext space
