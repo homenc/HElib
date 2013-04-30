@@ -201,7 +201,6 @@ long PAlgebra::coordinate(long i, long k) const
   return dLog(t)[i];
 }
 
-
 unsigned PAlgebra::exponentiate(const vector<unsigned>& exps,
 				bool onlySameOrd) const
 {
@@ -293,7 +292,6 @@ PAlgebra::PAlgebra(unsigned mm, unsigned pp)
   nSlots = qGrpOrd();
   phiM = ordP * nSlots;
 
-
   // Allocate space for the various arrays
   T.resize(nSlots);
   dLogT.resize(nSlots*gens.size());
@@ -321,8 +319,6 @@ PAlgebra::PAlgebra(unsigned mm, unsigned pp)
 
   PhimX = Cyclotomic(m); // compute and store Phi_m(X)
 }
-
-
 
 /***********************************************************************
 
@@ -434,15 +430,11 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
     pPowRContext.save();
   }
 
-
   // set factorsOverZZ
   factorsOverZZ.resize(nSlots);
   for (long i = 0; i < nSlots; i++)
     conv(factorsOverZZ[i], factors[i]);
 }
-
-
-
 
 // Assumes current zz_p modulus is p^r
 // computes S = F^{-1} mod G via Hensel lifting
@@ -487,7 +479,6 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
   S = to_zz_pX(ss);
 
   assert((S*F) % G == 1);
-
 }
 
 template<class T> 
@@ -537,7 +528,6 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
 
 }
 
-
 // Returns a vector crt[] such that crt[i] = p mod Ft (with t = T[i])
 template<class type> 
 void PAlgebraModDerived<type>::CRT_decompose(vector<RX>& crt, const RX& H) const
@@ -548,7 +538,6 @@ void PAlgebraModDerived<type>::CRT_decompose(vector<RX>& crt, const RX& H) const
   for (unsigned i=0; i<nSlots; i++)
     rem(crt[i], H, factors[i]); // crt[i] = H % factors[i]
 }
-
 
 template<class type>
 void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha, 
@@ -610,7 +599,6 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
   CRT_reconstruct(H,crt); // interpolate to get p
 }
 
-
 template<class type>
 void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
 {
@@ -626,7 +614,6 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
     H += allBut_i;
   }
 }
-
 
 template<class type>
 void PAlgebraModDerived<type>::mapToFt(RX& w,
@@ -684,7 +671,6 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
     exit(0);    
   }*******************************************************************/
 }
-
 
 template<class type> 
 void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const RX& G) const 
@@ -819,9 +805,6 @@ void PAlgebraModDerived<type>::decodePlaintext(
   }
 }
 
-
-
-
 template<class type> 
 void PAlgebraModDerived<type>::
 buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
@@ -848,11 +831,8 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
     C[i] = rep(CC[i]);
 }
 
-
-
 // code for generating mask tables
 // the tables are generated "on demand"
-
 
 template<class type> 
 void PAlgebraModDerived<type>::genMaskTable() const
@@ -888,14 +868,8 @@ void PAlgebraModDerived<type>::genMaskTable() const
   }
 }
 
-
-
 // Explicit instantiation
 
 template class PAlgebraModDerived<PA_GF2>;
 template class PAlgebraModDerived<PA_zz_p>;
-
-
-
-   
 

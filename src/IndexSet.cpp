@@ -22,7 +22,7 @@ const IndexSet& IndexSet::emptySet()
    return empty;
 }
 
-  // constructs an interval, low to high
+// constructs an interval, low to high
 void IndexSet::intervalConstructor(long low, long high) {
   assert(low >= 0);
 
@@ -70,7 +70,6 @@ bool IndexSet::contains(const IndexSet& s) const {
   return true;
 }
 
-
 bool IndexSet::disjointFrom(const IndexSet& s) const
 {
   // quick tests for some common cases
@@ -81,8 +80,6 @@ bool IndexSet::disjointFrom(const IndexSet& s) const
     if (contains(i)) return false;
   return true;
 }
-
-
 
 bool IndexSet::operator==(const IndexSet& s) const {
   if (this == &s) return true;

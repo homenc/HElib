@@ -224,8 +224,6 @@ int mobius(int n)
   return -1;
 }
 
-
-
 /* Compute cyclotomic polynomial */
 ZZX Cyclotomic(int N)
 {
@@ -244,8 +242,6 @@ ZZX Cyclotomic(int N)
   F=Num/Den;
   return F;
 }
-
-
 
 /* Find a primitive root modulo N */
 int primroot(int N,int phiN)
@@ -270,7 +266,6 @@ int primroot(int N,int phiN)
   return g;
 }
 
-
 int ord(int N,int p)
 {
   int o=0;
@@ -281,9 +276,6 @@ int ord(int N,int p)
   return o;
 }
 
-
-
-
 ZZX RandPoly(int n,const ZZ& p)
 { 
   ZZX F; F.SetMaxLength(n);
@@ -292,7 +284,6 @@ ZZX RandPoly(int n,const ZZ& p)
     { SetCoeff(F,i,RandomBnd(p)-p2); }
   return F;
 }
-
 
 /* When q=2 maintains the same sign as the input */
 void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs)
@@ -319,7 +310,6 @@ void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs)
       SetCoeff(out,i,c);
     }
 }
-
 
 void PolyRed(ZZX& out, const ZZX& in, int q, bool abs)
 {
@@ -357,7 +347,6 @@ void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs/*default=true*/)
     SetCoeff(out,i,c);
   }
 }
-
 
 int is_in(int x,int* X,int sz)
 {
@@ -538,9 +527,7 @@ void seekPastChar(istream& str, int cc)
    assert (c == cc);
 }
 
-
 // stuff added relating to linearized polynomials and support routines
-
 
 // Builds the matrix defining the linearized polynomial transformation.
 //
@@ -581,8 +568,6 @@ void buildLinPolyMatrix(mat_GF2E& M, long p)
       for (long j = 0; j < d; j++)
          M[i][j] = power(M[i-1][j], p);
 }
-
-
 
 // some auxilliary conversion routines
 
@@ -653,7 +638,6 @@ void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b)
    for (long i = 0; i < n; i++)
       add(x[i], a[i], b[i]);
 }
-
 
 // prime power solver
 // zz_p::modulus() is assumed to be p^r, for p prime, r >= 1
@@ -770,7 +754,6 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
    assert(x*A == b);
 }
 
-
 void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
              long p, long r) 
 {
@@ -780,10 +763,6 @@ void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
    solve(det, x, A, b);
    if (det == 0) Error("ppsolve: matrix not invertible");
 }
-
-
-
-
 
 void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
 {
@@ -795,7 +774,6 @@ void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
 
    C_out = C;
 }
-
 
 void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
 {
@@ -809,7 +787,6 @@ void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
 
    C_out = C;
 }
-
 
 void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p)
 {
@@ -844,6 +821,4 @@ void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p)
 
    beta = res;
 }
-
-
 

@@ -69,7 +69,6 @@ zz_pContext BuildContext(long p, long maxroot)
   { return zz_pContext(p, maxroot); }
 
 
-
 // Constructor: it is assumed that zms is already set with m>1
 template <class type> Cmod<type>::
 Cmod(const PAlgebra &zms, const zz &qq, const zz &rt)
@@ -171,7 +170,6 @@ void Cmod<type>::FFT(zzv &y, const ZZX& x) const
   FHE_TIMER_STOP;
 }
 
-
 template <class type>
 void Cmod<type>::iFFT(zpx &x, const zzv& y)const
 {
@@ -192,7 +190,6 @@ void Cmod<type>::iFFT(zpx &x, const zzv& y)const
 
   BluesteinFFT(x, m, rt, *ipowers, ipowers_aux, *iRb, iRb_aux, *Ra); // call the FFT routine
 
-
   // reduce the result mod (Phi_m(X),q) and copy to the output polynomial x
 FHE_NTIMER_START("iFFT:division")
   rem(x, x, *phimx); // out %= (Phi_m(X),q)
@@ -207,7 +204,7 @@ FHE_NTIMER_STOP("iFFT:division")
   FHE_TIMER_STOP;
 }
 
-
 // instantiating the template classes
 template class Cmod<CMOD_zz_p>; // small q
 template class Cmod<CMOD_ZZ_p>; // large q
+

@@ -89,7 +89,6 @@ public:
       int i1 = i + (i_d1 - i_d) * prods.at(d+1);
 
       return i1;
-
    }
 
    int& at(int i) { return data.at(i); }
@@ -97,8 +96,6 @@ public:
    const int& at(int i) const { return data.at(i); }
 
 };
-
-
 
 Cube simpleRotate(const Cube& c, int offset) {
 
@@ -112,7 +109,6 @@ Cube simpleRotate(const Cube& c, int offset) {
    }
 
    return c1;
-
 }
 
 Cube rotate1D(const Cube& c, int d, int offset) {
@@ -128,7 +124,6 @@ Cube rotate1D(const Cube& c, int d, int offset) {
    }
 
    return c1;
-
 }
 
 Cube operator+(const Cube& c1, const Cube& c2) {
@@ -145,7 +140,6 @@ Cube operator+(const Cube& c1, const Cube& c2) {
    return c;
 }
 
-
 Cube operator*(const Cube& c1, const Cube& c2) {
    const vector<int>& dims1 = c1.getDims();
    const vector<int>& dims2 = c2.getDims();
@@ -159,7 +153,6 @@ Cube operator*(const Cube& c1, const Cube& c2) {
    
    return c;
 }
-
 
 Cube operator!(const Cube& c1) {
    const vector<int>& dims1 = c1.getDims();
@@ -185,7 +178,6 @@ Cube computeMask(const vector<int>& dims, int d, int k) {
    return c;
 }
 
-
 void print3D(const Cube& c) {
    const vector<int>& dims = c.getDims();
    assert(dims.size() == 3);
@@ -199,14 +191,12 @@ void print3D(const Cube& c) {
    }
 }
 
-
 Cube fancyRotate(const Cube& c, int offset) {
 
    const vector<int>& dims = c.getDims();
 
    assert(offset >= 0);
    offset = offset % c.getSize();
-
 
    Cube c1 = c;
    Cube mask = !Cube(dims); // the all-1 cube
@@ -221,8 +211,6 @@ Cube fancyRotate(const Cube& c, int offset) {
    return c1;
 }
 
-
-
 int main()
 {
    vector<int> dims(5);
@@ -231,7 +219,6 @@ int main()
    dims[2] = 3;
    dims[3] = 3;
    dims[4] = 4;
-
 
    Cube c(dims);
    int size = c.getSize();

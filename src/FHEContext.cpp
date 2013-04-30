@@ -119,19 +119,16 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
   }
 
   return m;
-
 }
 
 // A global variable, pointing to the "current" context
 FHEcontext* activeContext = NULL;
-
 
 void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
 {
   p = 1;
   for (long i = s.first(); i <= s.last(); i = s.next(i))
     p *= ithPrime(i);
-
 }
 
 void FHEcontext::AddPrime(long p, bool special)
@@ -146,7 +143,6 @@ void FHEcontext::AddPrime(long p, bool special)
     specialPrimes.insert(i);
   else
     ctxtPrimes.insert(i);
-
 }
 
 // Adds to the chain primes whose product is at least totalSize bits
@@ -178,7 +174,6 @@ double AddPrimesBySize(FHEcontext& context, double totalSize, bool special)
   }
   return totalSize-sizeLeft;
 }
-
 
 // Adds nPrimes primes to the chain, returns the bitsize of the product of
 // all primes in the chain.
@@ -260,7 +255,6 @@ void buildModChain(FHEcontext &context, long nLvls, long nDgts)
   AddPrimesBySize(context, sizeOfSpecialPrimes, true);
 }
 
-
 bool FHEcontext::operator==(const FHEcontext& other) const
 {
   if (zMStar != other.zMStar) return false;
@@ -307,7 +301,6 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   for (long i=0; i<(long)context.moduli.size(); i++)
     str << context.moduli[i].getQ() << " ";
   str << "\n ";
-
 
   // output the digits
   str << context.digits.size() << "\n";
