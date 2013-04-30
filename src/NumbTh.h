@@ -97,6 +97,11 @@ inline double log2(const double x){ return log(x) * 1.442695040889; }
 void factorize(vector<long> &factors, long N);
 void factorize(vector<ZZ> &factors, const ZZ& N);
 
+
+//! @brief Factoring by trial division, only works for N<2^{60}
+//! primes and multiplicities are recorded
+void factorize(Vec< Pair<long, long> > &factors, long N);
+
 //! Compute Phi(N) and also factorize N.
 void phiN(long &phiN, vector<long> &facts, long N);
 void phiN(ZZ &phiN, vector<ZZ> &facts, const ZZ &N);

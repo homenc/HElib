@@ -86,6 +86,33 @@ template<class zz> static void factorT(vector<zz> &factors, const zz &N)
 void factorize(vector<long> &factors, long N) { factorT<long>(factors, N);}
 void factorize(vector<ZZ> &factors, const ZZ& N) {factorT<ZZ>(factors, N);}
 
+void factorize(Vec< Pair<long, long> > &factors, long N)
+{
+  factors.SetLength(0);
+
+  if (N < 2) return;
+
+  PrimeSeq s;
+  long n = N;
+  while (n > 1) {
+    if (ProbPrime(n)) {
+      append(factors, cons(n, 1L));
+      return;
+    }
+
+    long p = s.next();
+    if ((n % p) == 0) {
+      long e = 1;
+      n = n/p;
+      while ((n % p) == 0) {
+        n = n/p;
+        e++;
+      }
+      append(factors, cons(p, e));
+    }
+  }
+}
+
 template<class zz> static void phiNT(zz &phin, vector<zz> &facts, const zz &N)
 {
   if (facts.size()==0) factorize(facts,N);
