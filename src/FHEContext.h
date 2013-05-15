@@ -140,7 +140,7 @@ public:
 
   // FIXME: run-time error when ithPrime(i) returns 0
   //! @brief Returns the natural logarithm of the ith prime
-  double logOfPrime(unsigned i) const { return log(ithPrime(i)); }
+  double logOfPrime(unsigned i) const { return log((double)ithPrime(i)); }
 
   //! @brief Returns the natural logarithm of productOfPrimes(s)
   double logOfProduct(const IndexSet& s) const {

@@ -32,7 +32,14 @@
 #include <NTL/mat_GF2E.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <NTL/GF2XFactoring.h>
-#include <tr1/unordered_map>
+
+/* MSVC++ 2010 = 1600 */
+#if _MSC_VER >= 1600
+	#include <unordered_map>
+#else
+	#include <tr1/unordered_map>
+#endif
+
 #include <string>
 NTL_CLIENT
 

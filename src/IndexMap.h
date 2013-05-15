@@ -21,7 +21,14 @@
  **/
 
 #include "IndexSet.h"
-#include <tr1/unordered_map>
+
+/* MSVC++ 2010 = 1600 */
+#if _MSC_VER >= 1600
+	#include <unordered_map>
+#else
+	#include <tr1/unordered_map>
+#endif
+
 #include <iostream>
 #include <cassert>
 #include "cloned_ptr.h"

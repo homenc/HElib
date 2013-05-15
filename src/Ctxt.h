@@ -383,7 +383,7 @@ public:
   //! @brief Would this ciphertext be decrypted without errors?
   bool isCorrect() const {
     ZZ q = context.productOfPrimes(primeSet);
-    return (to_xdouble(q) > sqrt(noiseVar)*2);
+    return (to_xdouble(q) > sqrt(noiseVar)*2) != 0;
   }
   const FHEcontext& getContext() const { return context; }
   const FHEPubKey& getPubKey() const   { return pubKey; }

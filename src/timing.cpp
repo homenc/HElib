@@ -16,7 +16,14 @@
 #include <ctime>
 #include <iostream>
 #include "timing.h"
-#include <tr1/unordered_map>
+
+/* MSVC++ 2010 = 1600 */
+#if _MSC_VER >= 1600
+	#include <unordered_map>
+#else
+	#include <tr1/unordered_map>
+#endif
+
 #include <vector>
 #include <algorithm>
 #include <utility>
@@ -24,6 +31,11 @@
 #include <cstring>
 
 using namespace std;
+
+#ifndef NAN
+	static const unsigned long __nan_value[2] = {0xffffffff, 0x7fffffff};
+	#define NAN	 (*(double*)(__nan_value))
+#endif
 
 //! A simple class to toggle timing information on and off
 class FHEtimer {

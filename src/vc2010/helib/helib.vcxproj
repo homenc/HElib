@@ -1,0 +1,114 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\bluestein.h" />
+    <ClInclude Include="..\..\CModulus.h" />
+    <ClInclude Include="..\..\Ctxt.h" />
+    <ClInclude Include="..\..\DoubleCRT.h" />
+    <ClInclude Include="..\..\EncryptedArray.h" />
+    <ClInclude Include="..\..\FHE.h" />
+    <ClInclude Include="..\..\FHEContext.h" />
+    <ClInclude Include="..\..\IndexMap.h" />
+    <ClInclude Include="..\..\IndexSet.h" />
+    <ClInclude Include="..\..\NumbTh.h" />
+    <ClInclude Include="..\..\PAlgebra.h" />
+    <ClInclude Include="..\..\replicate.h" />
+    <ClInclude Include="..\..\SingleCRT.h" />
+    <ClInclude Include="..\..\timing.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\bluestein.cpp" />
+    <ClCompile Include="..\..\CModulus.cpp" />
+    <ClCompile Include="..\..\Ctxt.cpp" />
+    <ClCompile Include="..\..\DoubleCRT.cpp" />
+    <ClCompile Include="..\..\EncryptedArray.cpp" />
+    <ClCompile Include="..\..\FHE.cpp" />
+    <ClCompile Include="..\..\FHEContext.cpp" />
+    <ClCompile Include="..\..\IndexSet.cpp" />
+    <ClCompile Include="..\..\KeySwitching.cpp" />
+    <ClCompile Include="..\..\NumbTh.cpp" />
+    <ClCompile Include="..\..\PAlgebra.cpp" />
+    <ClInclude Include="..\..\PAlgebraMod.cpp" />
+    <ClCompile Include="..\..\replicate.cpp" />
+    <ClCompile Include="..\..\SingleCRT.cpp" />
+    <ClCompile Include="..\..\timing.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\ntl\ntl.vcxproj">
+      <Project>{14579e6b-cb4a-4ef9-bdcd-e92f55eebf65}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{6D7E52A5-7E65-4452-B496-0AED249BD5B0}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>helib</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalIncludeDirectories>($SolutionDir)\..\..\..\..\..\ntl\include</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>
+      </PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

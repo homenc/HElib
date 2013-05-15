@@ -57,8 +57,14 @@ void resetAllTimers();
 //! Print the value of all timers to stream
 void printAllTimers(std::ostream& str=std::cerr);
 
-#define FHE_TIMER_START {if (areTimersOn()) startFHEtimer(__func__);}
-#define FHE_TIMER_STOP  {if (areTimersOn()) stopFHEtimer(__func__);}
+/* __func__ may not exist on all compilers */
+#ifdef __func__
+	#define FHE_TIMER_START {if (areTimersOn()) startFHEtimer(__func__);}
+	#define FHE_TIMER_STOP  {if (areTimersOn()) stopFHEtimer(__func__);}
+#else
+	#define FHE_TIMER_START
+	#define FHE_TIMER_STOP
+#endif
 
 #define FHE_NTIMER_START(n) {if (areTimersOn()) startFHEtimer(n);}
 #define FHE_NTIMER_STOP(n)  {if (areTimersOn()) stopFHEtimer(n);}
