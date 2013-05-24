@@ -183,7 +183,7 @@ void usage()
 {
   cerr << "Usage: Test_PAlgebra_x [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'R=4 L=6 k=80'\n\n";
+  cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
   cerr << "  R is the number of rounds\n";
   cerr << "  p is the plaintext base [default=2]" << endl;
   cerr << "  r is the lifting [default=1]" << endl;
