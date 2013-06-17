@@ -68,6 +68,9 @@ class PAlgebra {
   vector<long> ords; // ords[i] is the order of gens[i] in quotient group kept
                      // with a negative sign if different than order in (Z/mZ)*
 
+
+  vector<long> prods; // \prods[i] = \prod_{j=i}^{gens.size()-1} |ords[i]|
+
   ZZX PhimX;   // Holds the integer polynomial Phi_m(X)
   double cM;   // the ring constant c_m for Z[X]/Phi_m(X)
 
@@ -159,6 +162,9 @@ class PAlgebra {
   //! @brief Returns ith coordinate of index k along the i'th dimension.
   //! See Section 2.4 in the design document.
   long coordinate(long i, long k) const;
+ 
+  //! @brief adds offset to index k in the i'th dimension
+  long addCoord(long i, long k, long offset) const;
 
   //! @brief Returns prod_i gi^{exps[i]} mod m. If onlySameOrd=true,
   //! use only generators that have the same order as in (Z/mZ)^*.

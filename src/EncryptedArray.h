@@ -127,19 +127,44 @@ public:
   /* some non-virtual convenience functions */
 
   //! @brief Total size (# of slots) of hypercube
-  long size() const { return getContext().zMStar.getNSlots(); } 
+  long size() const { 
+    return getContext().zMStar.getNSlots(); 
+  } 
 
   //! @brief Number of dimensions of hypercube
-  long dimension() const { return getContext().zMStar.numOfGens(); }
+  long dimension() const { 
+    return getContext().zMStar.numOfGens(); 
+  }
 
   //! @brief Size of given dimension
-  long sizeOfDimension(long i) const {return getContext().zMStar.OrderOf(i);}
+  long sizeOfDimension(long i) const {
+    return getContext().zMStar.OrderOf(i);
+  }
 
   //! @brief Is rotations in given dimension a "native" operation?
-  long nativeDimension(long i) const {return getContext().zMStar.SameOrd(i);}
+  bool nativeDimension(long i) const {
+    return getContext().zMStar.SameOrd(i);
+  }
 
   //! @brief returns coordinate of index k along the i'th dimension
-  long coordinate(long i, long k) const {return getContext().zMStar.coordinate(i, k); }
+  long coordinate(long i, long k) const {
+    return getContext().zMStar.coordinate(i, k); 
+  }
+ 
+  //! @brief adds offset to index k in the i'th dimension
+  long addCoord(long i, long k, long offset) const {
+    return getContext().zMStar.addCoord(i, k, offset);
+  }
+
+  //! @brief rotate an array by offset in the i'th dimension
+  //! (output should not alias input)
+  template<class U> void rotate1D(vector<U>& out, const vector<U>& in,
+                                  long i, long offset) {
+    assert(lsize(in) == size());
+    out.resize(in.size());
+    for (long j = 0; j < size(); j++)
+      out[addCoord(i, j, offset)] = in[j]; 
+  }
 };
 
 /**
@@ -402,6 +427,15 @@ public:
   long sizeOfDimension(long i) const { return rep->sizeOfDimension(i); }
   long nativeDimension(long i) const {return rep->nativeDimension(i); }
   long coordinate(long i, long k) const { return rep->coordinate(i, k); }
+  long addCoord(long i, long k, long offset) const { return rep->addCoord(i, k, offset); }
+
+
+  //! @brief rotate an array by offset in the i'th dimension
+  //! (output should not alias input)
+  template<class U> void rotate1D(vector<U>& out, const vector<U>& in,
+                                  long i, long offset) {
+    rep->rotate1D(out, in, i, offset);
+  }
   ///@}
 };
 

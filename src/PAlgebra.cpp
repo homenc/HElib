@@ -201,6 +201,23 @@ long PAlgebra::coordinate(long i, long k) const
   return dLog(t)[i];
 }
 
+long PAlgebra::addCoord(long i, long k, long offset) const
+{
+  assert(k >= 0 && k < nSlots);
+  assert(i >= 0 && i < (long) gens.size());
+  
+  offset = offset % ((long) OrderOf(i));
+  if (offset < 0) offset += OrderOf(i);
+  
+  long k_i = coordinate(i, k);
+  long k_i1 = (k_i + offset) % OrderOf(i);
+  
+  long k1 = k + (k_i1 - k_i) * prods[i+1];
+  
+  return k1;
+  
+}
+
 unsigned PAlgebra::exponentiate(const vector<unsigned>& exps,
 				bool onlySameOrd) const
 {
@@ -318,6 +335,14 @@ PAlgebra::PAlgebra(unsigned mm, unsigned pp)
   } while (nextExpVector(buffer)); // until we cover all the group
 
   PhimX = Cyclotomic(m); // compute and store Phi_m(X)
+
+  // initialize prods array
+  long ndims = gens.size();
+  prods.resize(ndims+1);
+  prods[ndims] = 1;
+  for (long j = ndims-1; j >= 0; j--) {
+    prods[j] = OrderOf(j) * prods[j+1];
+  } 
 }
 
 /***********************************************************************
