@@ -1,0 +1,235 @@
+/* Copyright (C) 2012,2013 IBM Corp.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+#include "FHE.h"
+#include "timing.h"
+#include "EncryptedArray.h"
+#include <NTL/lzz_pXFactoring.h>
+
+#include <cassert>
+
+/**************
+
+1. c1.multiplyBy(c0)
+2. c0 += random constant
+3. c2 *= random constant
+4. tmp = c1
+5. ea.shift(tmp, random amount in [-nSlots/2, nSlots/2])
+6. c2 += tmp
+7. ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
+8. c1.negate()
+9. c3.multiplyBy(c2) 
+10. c0 -= c3
+
+**************/
+
+
+ZZX makeIrredPoly(long p, long d)
+{
+  assert(d >= 1);
+  assert(ProbPrime(p));
+
+  if (d == 1) return ZZX(1, 1); // the monomial X
+
+  zz_pBak bak; bak.save();
+  zz_p::init(p);
+  return to_ZZX(BuildIrred_zz_pX(d));
+}
+
+
+template<class type> 
+class RunningSumMatrix : public  PlaintextMatrixInterface<type> {
+private:
+  const EncryptedArray& ea;
+
+public:
+  PA_INJECT(type) 
+
+  ~RunningSumMatrix() { cerr << "destructor: running sum matrix\n"; }
+
+  RunningSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual void get(RX& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    if (j >= i)
+      out = 1;
+    else
+      out = 0;
+  }
+};
+
+
+PlaintextMatrixBaseInterface *
+buildRunningSumMatrix(const EncryptedArray& ea)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new RunningSumMatrix<PA_GF2>(ea);
+    }
+
+    case PA_zz_p_tag: {
+      return new RunningSumMatrix<PA_zz_p>(ea);
+    }
+
+    default: return 0;
+  }
+}
+
+
+
+
+
+void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
+               long L, long m)
+{
+  cerr << "*** TestIt: R=" << R 
+       << ", p=" << p
+       << ", r=" << r
+       << ", d=" << d
+       << ", c=" << c
+       << ", k=" << k
+       << ", w=" << w
+       << ", L=" << L
+       << ", m=" << m
+       << endl;
+
+  FHEcontext context(m, p, r);
+  buildModChain(context, L, c);
+
+  context.zMStar.printout();
+  cerr << endl;
+
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+
+
+  ZZX G;
+
+  if (d == 0)
+    G = context.alMod.getFactorsOverZZ()[0];
+  else
+    G = makeIrredPoly(p, d); 
+
+  cerr << "G = " << G << "\n";
+  cerr << "generating key-switching matrices... ";
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  cerr << "done\n";
+
+  printAllTimers();
+  resetAllTimers();
+
+  cerr << "computing masks and tables for rotation...";
+  EncryptedArray ea(context, G);
+  cerr << "done\n";
+
+
+  double t = GetTime();
+
+  long nslots = ea.size();
+
+  PlaintextMatrixBaseInterface *ptr =
+    buildRunningSumMatrix(ea);
+
+  PlaintextMatrixInterface<PA_GF2> *ptr1 = 
+    dynamic_cast< PlaintextMatrixInterface<PA_GF2> * > (ptr);
+
+  PlaintextMatrixInterface<PA_zz_p> *ptr2 = 
+    dynamic_cast< PlaintextMatrixInterface<PA_zz_p> * > (ptr);
+
+  if (ptr1)
+    cout << "*** good\n";
+  else
+    cout << "*** bad\n";
+
+  if (ptr2)
+    cout << "*** good\n";
+  else
+    cout << "*** bad\n";
+
+  delete ptr;
+
+
+}
+
+void usage() 
+{
+  cerr << "Usage: Test_PAlgebra_x [ optional parameters ]...\n";
+  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
+  cerr << "  R is the number of rounds\n";
+  cerr << "  p is the plaintext base [default=2]" << endl;
+  cerr << "  r is the lifting [default=1]" << endl;
+  cerr << "  d is the degree of the field extension [default==1]\n";
+  cerr << "    (d == 0 => factors[0] defined the extension)\n";
+  cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
+  cerr << "  k is the security parameter [default=80]\n";
+  cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
+  cerr << "  s is the minimum number of slots [default=4]\n";
+  cerr << "  m is a specific modulus\n";
+  exit(0);
+}
+
+
+int main(int argc, char *argv[]) 
+{
+  argmap_t argmap;
+  argmap["R"] = "1";
+  argmap["p"] = "2";
+  argmap["r"] = "1";
+  argmap["d"] = "1";
+  argmap["c"] = "2";
+  argmap["k"] = "80";
+  argmap["L"] = "0";
+  argmap["s"] = "0";
+  argmap["m"] = "0";
+
+  // get parameters from the command line
+  if (!parseArgs(argc, argv, argmap)) usage();
+
+  long R = atoi(argmap["R"]);
+  long p = atoi(argmap["p"]);
+  long r = atoi(argmap["r"]);
+  long d = atoi(argmap["d"]);
+  long c = atoi(argmap["c"]);
+  long k = atoi(argmap["k"]);
+  //  long z = atoi(argmap["z"]);
+  long L = atoi(argmap["L"]);
+  if (L==0) { // determine L based on R,r
+    if (r==1) L = 2*R+2;
+    else      L = 4*R;
+  }
+  long s = atoi(argmap["s"]);
+  long chosen_m = atoi(argmap["m"]);
+
+  long w = 64; // Hamming weight of secret key
+  //  long L = z*R; // number of levels
+
+  long m = FindM(k, L, c, p, d, s, chosen_m, true);
+
+  setTimersOn();
+  TestIt(R, p, r, d, c, k, w, L, m);
+
+  cerr << endl;
+  printAllTimers();
+  cerr << endl;
+
+}
+
