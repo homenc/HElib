@@ -203,7 +203,7 @@ public:
   //! @brief rotate an array by offset in the i'th dimension
   //! (output should not alias input)
   template<class U> void rotate1D(vector<U>& out, const vector<U>& in,
-                                  long i, long offset) {
+                                  long i, long offset) const {
     assert(lsize(in) == size());
     out.resize(in.size());
     for (long j = 0; j < size(); j++)
@@ -477,7 +477,7 @@ public:
   //! @brief rotate an array by offset in the i'th dimension
   //! (output should not alias input)
   template<class U> void rotate1D(vector<U>& out, const vector<U>& in,
-                                  long i, long offset) {
+                                  long i, long offset) const {
     rep->rotate1D(out, in, i, offset);
   }
   ///@}
@@ -546,6 +546,10 @@ public:
   virtual void sub(const PlaintextArrayBase& other) = 0;
   virtual void mul(const PlaintextArrayBase& other) = 0;
   virtual void negate() = 0;
+
+  // linear algebra
+  virtual void mul(const PlaintextMatrixBaseInterface& mat) = 0;
+  virtual void alt_mul(const PlaintextMatrixBaseInterface& mat) = 0;
 
   //! Replicate coordinate i at all coordinates
   virtual void replicate(long i) = 0;
@@ -731,6 +735,13 @@ public:
   }
 
 
+  virtual void negate() 
+  {
+    RBak bak; bak.save(); tab.restoreContext();
+    for (long i = 0; i < n; i++) 
+      NTL::negate(data[i], data[i]);
+  }
+
   virtual void mul(const PlaintextArrayBase& other) 
   {
     RBak bak; bak.save(); tab.restoreContext();
@@ -744,11 +755,82 @@ public:
   }
 
 
-  virtual void negate() 
+
+  virtual void mul(const PlaintextMatrixBaseInterface& mat) 
   {
+    assert(&ea == &mat.getEA());
+
     RBak bak; bak.save(); tab.restoreContext();
-    for (long i = 0; i < n; i++) 
-      NTL::negate(data[i], data[i]);
+    const PlaintextMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+    vector<RX> res;
+    res.resize(n);
+    for (long j = 0; j < n; j++) {
+      RX acc, val, tmp; 
+      acc = 0;
+      for (long i = 0; i < n; i++) {
+         mat1.get(val, i, j);
+         NTL::mul(tmp, data[i], val);
+         NTL::add(acc, acc, tmp);
+      }
+      rem(acc, acc, G);
+      res[j] = acc;
+    }
+
+    data = res;
+  }
+
+  static
+  void rec_mul(long dim, const EncryptedArray& ea,
+               vector<RX>& res, 
+               const vector<RX>& pdata, const vector<long>& idx,
+               const PlaintextMatrixInterface<type>& mat)
+  {
+    long ndims = ea.dimension();
+
+    if (dim >= ndims) {
+      for (long j = 0; j < ea.size(); j++) {
+        long i = idx[j];
+        RX val;
+        mat.get(val, i, j);
+        res[j] += pdata[j] * val;
+      }
+    }
+    else {
+
+      vector<RX> pdata1;
+      vector<long> idx1;
+
+      for (long offset = 0; offset < ea.sizeOfDimension(dim); offset++) {
+        ea.rotate1D(pdata1, pdata, dim, offset);
+        ea.rotate1D(idx1, idx, dim, offset);
+        rec_mul(dim+1, ea, res, pdata1, idx1, mat);
+      }
+    }
+  }
+
+  virtual void alt_mul(const PlaintextMatrixBaseInterface& mat) 
+  {
+    assert(&ea == &mat.getEA());
+
+    RBak bak; bak.save(); tab.restoreContext();
+    const PlaintextMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+    vector<RX> res, pdata;
+    vector<long> idx;
+
+    res.resize(n);
+    pdata = data;
+    idx.resize(n);
+    for (long i = 0; i < n; i++)
+       idx[i] = i;
+
+    rec_mul(0, ea, res, pdata, idx, mat1);
+
+    for (long i = 0; i < n; i++)
+       data[i] = res[i] % G;
   }
 
   virtual void replicate(long i)
@@ -854,8 +936,11 @@ public:
 
   void add(const PlaintextArray& other) { rep->add(*other.rep); }
   void sub(const PlaintextArray& other) { rep->sub(*other.rep); }
-  void mul(const PlaintextArray& other) { rep->mul(*other.rep); }
   void negate() { rep->negate(); }
+  void mul(const PlaintextArray& other) { rep->mul(*other.rep); }
+
+  void mul(const PlaintextMatrixBaseInterface& mat) { rep->mul(mat); }
+  void alt_mul(const PlaintextMatrixBaseInterface& mat) { rep->alt_mul(mat); }
 
   //! Replicate coordinate i at all coordinates
   void replicate(long i) { rep->replicate(i); }
