@@ -13,27 +13,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cassert>
-
-/**************
-
-1. c1.multiplyBy(c0)
-2. c0 += random constant
-3. c2 *= random constant
-4. tmp = c1
-5. ea.shift(tmp, random amount in [-nSlots/2, nSlots/2])
-6. c2 += tmp
-7. ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
-8. c1.negate()
-9. c3.multiplyBy(c2) 
-10. c0 -= c3
-
-**************/
 
 
 ZZX makeIrredPoly(long p, long d)
