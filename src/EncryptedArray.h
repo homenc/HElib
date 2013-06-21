@@ -128,6 +128,10 @@ public:
   //! @brief Shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
+
+  //! @multiply ctx by plaintext matrix
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
+
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
@@ -257,6 +261,15 @@ public:
   virtual void shift(Ctxt& ctxt, long k) const;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
+
+
+  // helper routine for mat_mul
+  void rec_mul(long dim, 
+               Ctxt& res, 
+               const Ctxt& pdata, const vector<long>& idx,
+               const PlaintextMatrixInterface<type>& mat) const;
+
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array); }
@@ -422,6 +435,8 @@ public:
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
 
+  void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const 
+  { rep->mat_mul(ctxt, mat); }
 
   void encode(ZZX& ptxt, const vector< long >& array) const 
     { rep->encode(ptxt, array); }
@@ -548,7 +563,7 @@ public:
   virtual void negate() = 0;
 
   // linear algebra
-  virtual void mul(const PlaintextMatrixBaseInterface& mat) = 0;
+  virtual void mat_mul(const PlaintextMatrixBaseInterface& mat) = 0;
   virtual void alt_mul(const PlaintextMatrixBaseInterface& mat) = 0;
 
   //! Replicate coordinate i at all coordinates
@@ -756,7 +771,7 @@ public:
 
 
 
-  virtual void mul(const PlaintextMatrixBaseInterface& mat) 
+  virtual void mat_mul(const PlaintextMatrixBaseInterface& mat) 
   {
     assert(&ea == &mat.getEA());
 
@@ -818,16 +833,15 @@ public:
     const PlaintextMatrixInterface<type>& mat1 = 
       dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
 
-    vector<RX> res, pdata;
+    vector<RX> res;
     vector<long> idx;
 
     res.resize(n);
-    pdata = data;
     idx.resize(n);
     for (long i = 0; i < n; i++)
        idx[i] = i;
 
-    rec_mul(0, ea, res, pdata, idx, mat1);
+    rec_mul(0, ea, res, data, idx, mat1);
 
     for (long i = 0; i < n; i++)
        data[i] = res[i] % G;
@@ -939,7 +953,7 @@ public:
   void negate() { rep->negate(); }
   void mul(const PlaintextArray& other) { rep->mul(*other.rep); }
 
-  void mul(const PlaintextMatrixBaseInterface& mat) { rep->mul(mat); }
+  void mat_mul(const PlaintextMatrixBaseInterface& mat) { rep->mat_mul(mat); }
   void alt_mul(const PlaintextMatrixBaseInterface& mat) { rep->alt_mul(mat); }
 
   //! Replicate coordinate i at all coordinates

@@ -213,18 +213,26 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 */
 
   v.random();
-  v.print(cout); cout << "\n";
+  // v.print(cout); cout << "\n";
 
   PlaintextArray v1(ea);
   v1 = v;
 
-  v.mul(*ptr);
-  v1.mul(*ptr);
+  Ctxt ctxt(publicKey);
+  ea.encrypt(ctxt, publicKey, v);
 
-  v.print(cout); cout << "\n";
-  v1.print(cout); cout << "\n";
+  v.mat_mul(*ptr);
 
+  ea.mat_mul(ctxt, *ptr);
+  ea.decrypt(ctxt, secretKey, v1);
 
+  // v.print(cout); cout << "\n";
+  // v1.print(cout); cout << "\n";
+
+  if (v.equals(v1))
+    cout << "Nice!!\n";
+  else
+    cout << "Grrr...\n";
 
 }
 
