@@ -129,7 +129,8 @@ public:
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
 
-  //! @multiply ctx by plaintext matrix
+  //! @multiply ctx by plaintext matrix: Ctxt is treated as
+  //! a row matrix v, and replaced by en encryption of v * mat
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
 
   ///@{
