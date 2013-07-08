@@ -222,11 +222,11 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
 }
 
-void usage() 
+void usage(char *prog) 
 {
-  cerr << "Usage: Test_PAlgebra_x [ optional parameters ]...\n";
+  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
+  cerr << "  e.g, 'R=1 p=2 k=80'\n\n";
   cerr << "  R is the number of rounds\n";
   cerr << "  p is the plaintext base [default=2]" << endl;
   cerr << "  r is the lifting [default=1]" << endl;
@@ -236,7 +236,7 @@ void usage()
   cerr << "  k is the security parameter [default=80]\n";
   cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
   cerr << "  s is the minimum number of slots [default=4]\n";
-  cerr << "  m is a specific modulus\n";
+  cerr << "  m defined the cyclotomic polynomial Phi_m(X)\n";
   exit(0);
 }
 
@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
   argmap["m"] = "0";
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage();
+  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
   long R = atoi(argmap["R"]);
   long p = atoi(argmap["p"]);

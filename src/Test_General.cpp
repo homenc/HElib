@@ -179,9 +179,9 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 }
 
 
-void usage() 
+void usage(char *prog) 
 {
-  cerr << "Usage: Test_PAlgebra_x [ optional parameters ]...\n";
+  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
   cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
   cerr << "  R is the number of rounds\n";
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
   argmap["m"] = "0";
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage();
+  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
   long R = atoi(argmap["R"]);
   long p = atoi(argmap["p"]);
