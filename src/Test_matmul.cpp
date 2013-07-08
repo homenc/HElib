@@ -183,43 +183,37 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   EncryptedArray ea(context, G);
   cerr << "done\n";
 
-  PlaintextMatrixBaseInterface *ptr =
-    buildRandomMatrix(ea);
+  // choose a random plaintext square matrix
+  PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
 
+  // choose a random plaintext vector
   PlaintextArray v(ea);
 
-/*
-  v.encode(1);
-  
-  v.print(cout); cout << "\n";
-
-  v.alt_mul(*ptr);
-
-  v.print(cout); cout << "\n";
+/* v.encode(1);  
+   v.print(cout); cout << "\n";
+   v.alt_mul(*ptr);
 */
-
   v.random();
   // v.print(cout); cout << "\n";
 
-  PlaintextArray v1(ea);
-  v1 = v;
-
+  // encrypt the random vector
   Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, v);
 
-  v.mat_mul(*ptr);
+  v.mat_mul(*ptr);         // multiply the plaintext vector
+  ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
 
-  ea.mat_mul(ctxt, *ptr);
-  ea.decrypt(ctxt, secretKey, v1);
+  PlaintextArray v1(ea);
+  //  v1 = v;
+  ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
 
-  // v.print(cout); cout << "\n";
-  // v1.print(cout); cout << "\n";
-
-  if (v.equals(v1))
+  if (v.equals(v1))        // check that we've got the right answer
     cout << "Nice!!\n";
   else
     cout << "Grrr...\n";
 
+  // v.print(cout); cout << "\n";
+  // v1.print(cout); cout << "\n";
 }
 
 void usage(char *prog) 
