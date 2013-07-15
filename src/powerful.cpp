@@ -12,6 +12,10 @@ using namespace std;
 using namespace NTL;
 
 
+// class CubSignature: such an object is initialized
+// with a vector of dimensions for a hypercube, and
+// some auxilliary data is computed
+
 class CubeSignature {
 private:
    Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
@@ -39,9 +43,16 @@ public:
       size = prods[0];
    }
 
+   // total size of cube
    long getSize() const { return size; }
+
+   // number of dimensions
    long getNumDims() const { return ndims; }
+
+   // size of dimension d
    long getDim(long d) const { return dims.at(d); }
+
+   // product of sizes of dimensions d, d+1, ...
    long getProd(long d) const { return prods.at(d);}
 
    // get coordinate in dimension d of index i
@@ -76,7 +87,7 @@ class HyperCube;  // forward reference
 
 // A ConstCubeSlice acts like a pointer to a lower dimensional
 // constant subcube of a hypercube.  It is initialized using a reference
-// to a hypercube, which must remain alive duriring the lifetime
+// to a hypercube, which must remain alive during the lifetime
 // of the slice, to prevent dangling pointers.
 
 // The subclass CubeSlice works with non-constant cubes and subcubes.
@@ -106,14 +117,28 @@ public:
    // the following mimic the corresponding methods
    // in the HyperCube class, restricted to the slice
 
+   // total size 
    long getSize() const;
+
+   // number of dimensions 
    long getNumDims() const;
+
+   // size of dimension d
    long getDim(long d) const;
+
+   // product of sizes of dimensions d, d+1, ...
    long getProd(long d) const;
+
+   // get coordinate in dimension d of index i
    long getCoord(long i, long d) const;
+
+   // add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const;
 
+   // read-only reference to element at position i, with bounds check 
    const T& at(long i) const;
+
+   // read-only reference to element at position i, without bounds check 
    const T& operator[](long i) const;
 
 };
@@ -127,15 +152,27 @@ public:
    // initialize the slice to the full cube
    explicit CubeSlice(HyperCube<T>& _cube);
 
+   // initialize the slice to point to the i-th subcube
+   // of the cube pointed to by other
    CubeSlice(const CubeSlice<T>& other, long i);
 
-   // deep copy of a slice 
+   // deep copy of a slice: copies other into this 
    void copy(const ConstCubeSlice<T>& other) const;
 
+   // reference to element at position i, with bounds check 
    T& at(long i) const;
+
+   // reference to element at position i, without bounds check 
    T& operator[](long i) const;
 
 };
+
+// The class HyperCube<T> represents a multi-dimensional cube.
+// Such an object is initialzied with a CubeSignature: a reference
+// to the signature is stored with the cube, and so the signature
+// must remain alive during the lifetime of the cube, to
+// prevent dangling pointers.
+
 
 
 template<class T>
@@ -147,12 +184,14 @@ private:
    HyperCube(); // disable default constructor
 
 public:
+   // initialzie a HyperCube with a CubeSignature
    HyperCube(const CubeSignature& _sig) : sig(_sig) {
       data.SetLength(sig.getSize());
    }
 
    // use default copy constructor 
 
+   // assignment: signatures must be the same
    HyperCube& operator=(const HyperCube<T>& other)
    {
       assert(&this->sig == &other.sig);
@@ -160,19 +199,37 @@ public:
    }
 
 
+   // const ref to signature
    const CubeSignature& getSig() const { return sig; }
 
+   // total size of cube
    long getSize() const { return sig.getSize(); }
+
+   // number of dimensions
    long getNumDims() const { return sig.getNumDims(); }
+
+   // size of dimension d
    long getDim(long d) const { return sig.getDim(d); }
+
+   // product of sizes of dimensions d, d+1, ...
    long getProd(long d) const { return sig.getProd(d);}
+
+   // get coordinate in dimension d of index i
    long getCoord(long i, long d) const { return sig.getCoord(i, d); }
+
+   // add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const { return sig.addCoord(i, d, offset); }
 
+   // reference to element at position i, with bounds check 
    T& at(long i) { return data.at(i); }
+
+   // reference to element at position i, without bounds check 
    T& operator[](long i) { return data[i]; }
 
+   // read-only reference to element at position i, with bounds check 
    const T& at(long i) const { return data.at(i); }
+
+   // read-only reference to element at position i, without bounds check 
    const T& operator[](long i) const { return data[i]; }
 
 };
@@ -363,6 +420,8 @@ void print3D(const HyperCube<T>& c)
 
 
 
+// if x represents the prime factorization of m, then computePhi(x)
+// returns phi(m)
 long computePhi(const Pair<long, long>& x)
 {
   long p = x.a;
@@ -370,6 +429,7 @@ long computePhi(const Pair<long, long>& x)
   return power_long(p, e - 1) * (p-1);
 }
 
+// if x is the pair (p, e), computePow(x) return p^e
 long computePow(const Pair<long, long>& x)
 {
   long p = x.a;
@@ -378,6 +438,7 @@ long computePow(const Pair<long, long>& x)
 }
 
 
+// computeProd(vec) returns the product of the entries of vec
 long computeProd(const Vec<long>& vec)
 {
   long prod = 1;
@@ -387,6 +448,8 @@ long computeProd(const Vec<long>& vec)
   return prod;
 }
 
+// if vec is a vector of pairs (p_i, e_i), then computeProd(vec)
+// returns \prod_i p_i^{e_i}
 long computeProd(const Vec< Pair<long, long> >& vec)
 {
   long prod = 1;
@@ -397,6 +460,8 @@ long computeProd(const Vec< Pair<long, long> >& vec)
   return prod;
 }
 
+// if factors represents the prime factorization \prod_{i=1}^k p_i^{e_i},
+// phiVec is initialied to the vector ( phi(p_i^{e_i}) )_{i=1}^k
 void computePhiVec(Vec<long>& phiVec, 
                    const Vec< Pair<long, long> >& factors)
 {
