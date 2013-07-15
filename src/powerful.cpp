@@ -3,6 +3,7 @@
  */
 
 #include "NumbTh.h"
+#include <NTL/lzz_pX.h>
 
 #include <cassert>
 #include <iomanip>
@@ -326,7 +327,7 @@ void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos)
    long n = s.getDim(0);
 
    assert(pos >= 0 && pos < m);
-   assert(v.length() == n);
+   if (v.length() < n) n = v.length();
 
    for (long i = 0; i < n; i++)
       s[pos + i*m] = v[i];
@@ -439,6 +440,170 @@ void computeInvVec(Vec<long>& invVec,
   }
 }
 
+void computeCycVec(Vec<zz_pX>& cycVec, const Vec<long>& powVec)
+{
+  long k = powVec.length();
+  cycVec.SetLength(k);
+
+  for (long i = 0; i < k; i++) {
+    ZZX PhimX = Cyclotomic(powVec[i]);
+    cycVec[i] = conv<zz_pX>(PhimX);
+  }
+}
+
+
+void computePowerToCubeMap(Vec<long>& polyToCubeMap,
+                           Vec<long>& cubeToPolyMap,
+                           long m,
+                           const Vec<long>& powVec,
+                           const Vec<long>& invVec,
+                           const CubeSignature& longSig)
+{
+   long k = powVec.length();
+
+   polyToCubeMap.SetLength(m);
+   cubeToPolyMap.SetLength(m);
+
+   for (long i = 0; i < m; i++) {
+      long j = 0;
+      for (long d = 0; d < k; d++) {
+         long i_d = MulMod((i % powVec[d]), invVec[d], powVec[d]);
+         j += i_d * longSig.getProd(d+1);
+      }
+      polyToCubeMap[i] = j;
+      cubeToPolyMap[j] = i;
+   }
+}
+
+
+void computeShortToLongMap(Vec<long>& shortToLongMap, 
+                           const CubeSignature& shortSig, 
+                           const CubeSignature& longSig) 
+{
+   long phim = shortSig.getSize();
+   long k = shortSig.getNumDims();
+
+   shortToLongMap.SetLength(phim);
+
+   for (long i = 0; i < phim; i++) {
+      long j = 0;
+      for (long d = 0; d < k; d++) {
+         long i_d = shortSig.getCoord(i, d);
+         j += i_d * longSig.getProd(d+1);
+      }
+
+      shortToLongMap[i] = j;
+   }
+}
+
+
+void computeLongToShortMap(Vec<long>& longToShortMap,
+                           long m,
+                           const Vec<long>& shortToLongMap)
+{
+   long n = shortToLongMap.length();
+
+   longToShortMap.SetLength(m);
+
+   for (long i = 0; i < m; i++) longToShortMap[i] = -1;
+
+   for (long j = 0; j < n; j++) {
+      long i = shortToLongMap[j];
+      longToShortMap[i] = j;
+   }
+}
+
+
+
+void recursiveReduce(const CubeSlice<zz_p>& s, 
+                     const Vec<zz_pX>& cycVec, 
+                     long d,
+                     zz_pX& tmp1,
+                     zz_pX& tmp2)
+{
+   long numDims = s.getNumDims();
+   assert(numDims > 0);
+
+   long deg0 = deg(cycVec[d]);
+
+   long posBnd = s.getProd(1);
+   for (long pos = 0; pos < posBnd; pos++) {
+      getHyperColumn(tmp1.rep, s, pos);
+      tmp1.normalize();
+
+      // tmp2 may not be normalized, so clear it first
+      clear(tmp2); 
+
+      rem(tmp2, tmp1, cycVec[d]);
+
+      // now pad tmp2.rep with zeros to length deg0...
+      // tmp2 may not be normalized
+      long len = tmp2.rep.length();
+      tmp2.rep.SetLength(deg0);
+      for (long i = len; i < deg0; i++) tmp2.rep[i] = 0;
+
+      setHyperColumn(tmp2.rep, s, pos);
+   }
+
+   if (numDims == 1) return;
+
+   for (long i = 0; i < deg0; i++) 
+      recursiveReduce(CubeSlice<zz_p>(s, i), cycVec, d+1, tmp1, tmp2);
+
+}
+
+void convertPolyToPowerful(HyperCube<zz_p>& cube, 
+                           HyperCube<zz_p>& tmpCube, 
+                           const zz_pX& poly,
+                           const Vec<zz_pX>& cycVec,
+                           const Vec<long>& polyToCubeMap,
+                           const Vec<long>& shortToLongMap)
+{
+   long m = tmpCube.getSize();
+   long phim = cube.getSize();
+   long n = deg(poly);
+ 
+   assert(n < m);
+
+   for (long i = 0; i <= n; i++)
+      tmpCube[polyToCubeMap[i]] = poly[i];
+
+   for (long i = n+1; i < m; i++)
+      tmpCube[polyToCubeMap[i]] = 0;
+
+   zz_pX tmp1, tmp2;
+   recursiveReduce(CubeSlice<zz_p>(tmpCube), cycVec, 0, tmp1, tmp2);
+
+   for (long i = 0; i < phim; i++)
+      cube[i] = tmpCube[shortToLongMap[i]];
+}
+
+
+void convertPowerfulToPoly(zz_pX& poly,
+                           const HyperCube<zz_p>& cube,
+                           long m,
+                           const Vec<long>& shortToLongMap,
+                           const Vec<long>& cubeToPolyMap,
+                           const zz_pX& phimX)
+{
+   long phim = cube.getSize();
+
+   zz_pX tmp;
+
+   tmp.SetLength(m);
+  
+   for (long i = 0; i < m; i++)
+      tmp[i] = 0;
+
+   for (long i = 0; i < phim; i++) 
+      tmp[cubeToPolyMap[shortToLongMap[i]]] = cube[i];
+      // FIXME: these two maps could be composed into a single map
+
+   tmp.normalize();
+
+   rem(poly, tmp, phimX);
+}
+
         
 void mapIndexToPowerful(Vec<long>& pow, long j, const Vec<long>& phiVec)
 // this maps an index j in [phi(m)] to a vector
@@ -487,40 +652,6 @@ void usage()
 int main(int argc, char *argv[])
 {
 
-   Vec<long> dims;
-   dims.SetLength(3);
-
-   dims[0] = 3;
-   dims[1] = 4;
-   dims[2] = 5;
-
-   CubeSignature sig(dims);
-
-   HyperCube<double> c(sig);
-
-   for (long i = 0; i < c.getSize(); i++)
-      c.at(i) = i;
-
-   print3D(c);
-
-   CubeSlice<double> s0(c);
-
-   CubeSlice<double> s1(s0, 0);
-   CubeSlice<double> s2(s0, 2);
-
-   Vec<double> v;
-   getHyperColumn(v, s0, 1);
-   setHyperColumn(v, s0, 7);
-
-   print3D(c);
-   
-
-
-   
-
-
-
-
   argmap_t argmap;
 
   argmap["q"] = "101";
@@ -561,15 +692,57 @@ int main(int argc, char *argv[])
   cout << invVec << "\n";
 
 
-  ZZX phimX = Cyclotomic(m);
+  CubeSignature shortSig(phiVec);
+  CubeSignature longSig(powVec);
+
+  Vec<long> polyToCubeMap;
+  Vec<long> cubeToPolyMap;
+  computePowerToCubeMap(polyToCubeMap, cubeToPolyMap, m, powVec, invVec, longSig);
+  cout << polyToCubeMap << "\n";
+  cout << cubeToPolyMap << "\n";
+
+  Vec<long> shortToLongMap;
+  computeShortToLongMap(shortToLongMap, shortSig, longSig);
+  cout << shortToLongMap << "\n";
+
+  Vec<long> longToShortMap;
+  computeLongToShortMap(longToShortMap, m, shortToLongMap);
+  cout << longToShortMap << "\n";
+  
+
+  zz_p::init(q);
+
+  Vec<zz_pX> cycVec;
+  computeCycVec(cycVec, powVec);
+  cout << cycVec << "\n";
 
 
-  for (long j = 0; j < phim; j++) {
-    Vec<long> pow;
-    mapIndexToPowerful(pow, j, phiVec);
-    ZZX poly;
-    mapPowerfulToPoly(poly, pow, divVec, m, phimX);
-    cout << pow << "  " << poly << "\n";
+  ZZX PhimX = Cyclotomic(m);
+  zz_pX phimX = conv<zz_pX>(PhimX);
+
+  cout << phimX << "\n";
+
+  zz_pX poly;
+  random(poly, phim);
+
+  HyperCube<zz_p> cube(shortSig);
+  HyperCube<zz_p> tmpCube(longSig);
+
+  zz_pX tmp1, tmp2;
+
+  convertPolyToPowerful(cube, tmpCube, poly, cycVec, 
+                        polyToCubeMap, shortToLongMap);
+
+  zz_pX poly1;
+
+  convertPowerfulToPoly(poly1, cube, m, shortToLongMap, cubeToPolyMap, phimX);
+
+  if (poly == poly1)
+    cout << ":-)\n";
+  else {
+    cout << ":-(\n";
+    cout << poly << "\n";
+    cout << poly1 << "\n";
   }
 
 }
