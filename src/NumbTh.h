@@ -107,27 +107,27 @@ void phiN(long &phiN, vector<long> &facts, long N);
 void phiN(ZZ &phiN, vector<ZZ> &facts, const ZZ &N);
 
 //! Compute Phi(N).
-int phi_N(int N);
+long phi_N(long N);
 
 //! Find e-th root of unity modulo the current modulus.
-void FindPrimitiveRoot(zz_p &r, unsigned e);
-void FindPrimitiveRoot(ZZ_p &r, unsigned e);
+void FindPrimitiveRoot(zz_p &r, unsigned long e);
+void FindPrimitiveRoot(ZZ_p &r, unsigned long e);
 
 //! Compute mobius function (naive method as n is small).
-int mobius(int n);
+long mobius(long n);
 
 //! Compute cyclotomic polynomial.
-ZZX Cyclotomic(int N);
+ZZX Cyclotomic(long N);
 
 //! Find a primitive root modulo N.
-int primroot(int N,int phiN);
+long primroot(long N,long phiN);
 
 //! Compute the highest power of p that divides N.
-int ord(int N,int p);
+long ord(long N,long p);
 
 
-// Rand mod p poly of degree < n
-ZZX RandPoly(int n,const ZZ& p);
+// Returns a random mod p polynomial of degree < n
+ZZX RandPoly(long n,const ZZ& p);
 
 ///@{
 /**
@@ -136,9 +136,9 @@ ZZX RandPoly(int n,const ZZ& p);
  * When abs=false reduce to interval (-q/2,...,q/2), when abs=true reduce
  * to [0,q). When abs=false and q=2, maintains the same sign as the input.
  */
-void PolyRed(ZZX& out, const ZZX& in,       int q, bool abs=false);
+void PolyRed(ZZX& out, const ZZX& in,       long q, bool abs=false);
 void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs=false);
-inline void PolyRed(ZZX& F, int q, bool abs=false) { PolyRed(F,F,q,abs); }
+inline void PolyRed(ZZX& F, long q, bool abs=false) { PolyRed(F,F,q,abs); }
 inline void PolyRed(ZZX& F, const ZZ& q, bool abs=false)
 { PolyRed(F,F,q,abs); }
 ///@}
@@ -192,7 +192,7 @@ void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b);
 
 //! @brief Finds whether x is an element of the set X of size sz,
 //! Returns -1 it not and the location if true
-int is_in(int x,int* X,int sz);
+long is_in(long x,int* X,long sz);
 
 /**
  * @brief Incremental integer CRT for vectors.
@@ -225,9 +225,9 @@ template <class T, bool maxFlag>
 long argminmax(vector<T>& v)
 {
   if (v.size()<1) return -1; // error: this is an empty array
-  unsigned idx = 0;
+  unsigned long idx = 0;
   T target = v[0];
-  for (unsigned i=1; i<v.size(); i++)
+  for (unsigned long i=1; i<v.size(); i++)
     if (maxFlag) { if (v[i] > target) { target = v[i]; idx = i;} }
     else         { if (v[i] < target) { target = v[i]; idx = i;} }
   return (long) idx;
