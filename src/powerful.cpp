@@ -1,5 +1,5 @@
-/* a prelimary test program for playing around
- * with Peikert's "powerful" basis.
+/* a prelimary test program for playing around with Peikert's "powerful" basis.
+ * EXPERIMENTAL CODE, not usable yet
  */
 
 #include "NumbTh.h"
