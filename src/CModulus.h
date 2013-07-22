@@ -157,8 +157,8 @@ class Cmod {
   // utility methods
 
   const PAlgebra &getZMStar() const { return *zMStar; }
-  unsigned getM() const    { return zMStar->getM(); }
-  unsigned getPhiM() const { return zMStar->getPhiM(); }
+  unsigned long getM() const    { return zMStar->getM(); }
+  unsigned long getPhiM() const { return zMStar->getPhiM(); }
   const zz& getQ() const          { return q; }
   const zz& getRoot() const       { return root; }
   const zpxModulus& getPhimX() const  { return *phimx; }

@@ -287,7 +287,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // Add the columns in, one by one
   DoubleCRT tmp(context, IndexSet::emptySet());
   
-  for (unsigned i=0; i<polyDigits.size(); i++) {
+  for (unsigned long i=0; i<polyDigits.size(); i++) {
     ai.randomize();
     tmp = polyDigits[i];
   

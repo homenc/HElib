@@ -39,20 +39,20 @@ int main(int argc, char *argv[])
 
   if (!parseArgs(argc, argv, argmap)) usage();
 
-  unsigned m = atoi(argmap["m"]);
+  unsigned long m = atoi(argmap["m"]);
 
   if (!m) usage();
 
-  unsigned p = atoi(argmap["p"]);
+  unsigned long p = atoi(argmap["p"]);
 
-  unsigned r = atoi(argmap["r"]);
+  unsigned long r = atoi(argmap["r"]);
 
   cout << "m = " << m << ", p = " << p <<  ", r = " << r << endl;
 
   vector<long> f;
   factorize(f,m);
   cout << "factoring "<<m<<" gives [";
-  for (unsigned i=0; i<f.size(); i++)
+  for (unsigned long i=0; i<f.size(); i++)
     cout << f[i] << " ";
   cout << "]\n";
 
@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
 
   stringstream s3(s2);
 
-  unsigned m1, p1, r1;
+  unsigned long m1, p1, r1;
   readContextBase(s3, m1, p1, r1);
 
   FHEcontext c1(m1, p1, r1);
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
   //  cout << "Factors = " << Fs << endl;
 
   //  GF2X Q = Fs[0];
-  //  for (int i=1; i<Fs.length(); i++) Q *= Fs[i];
+  //  for (long i=1; i<Fs.length(); i++) Q *= Fs[i];
   //  cout << "mult of factors = " << Q << endl;
 
   GF2X G;          // G is the AES polynomial, G(X)= X^8 +X^4 +X^3 +X +1
@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
   vector<GF2X> maps;
   al2.mapToSlots(maps, G);
   //  cout << "maps = [";
-  //  for (unsigned i=0; i<maps.size(); i++)
+  //  for (unsigned long i=0; i<maps.size(); i++)
   //    cout << maps[i] << " ";
   //  cout << "]\n";
 
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
   //  vector<GF2X> crt;
   //  al2.CRT_decompose(crt,ptxt);
   //  cout << "ptxt mod factors = [";
-  //  for (unsigned i=0; i<crt.size(); i++) cout << crt[i] << " ";
+  //  for (unsigned long i=0; i<crt.size(); i++) cout << crt[i] << " ";
   //  cout << "]\n";
 
   // Decode the plaintext back to a vector of elements,
@@ -154,19 +154,19 @@ int main(int argc, char *argv[])
   al2.decodePlaintext(alphas, ptxt, G, maps);
   cout << "done\n";
   //  cout << "alphas = [";
-  //  for (unsigned i=0; i<alphas.size(); i++)
+  //  for (unsigned long i=0; i<alphas.size(); i++)
   //    cout << alphas[i] << " ";
   //  cout << "]\n";
 
   cout << "comparing " << alphas.size() << " plaintext slots to X... ";
-  for (unsigned i=0; i<alphas.size(); i++) if (alphas[i] != X) {
+  for (unsigned long i=0; i<alphas.size(); i++) if (alphas[i] != X) {
       cout << "\n  alphas["<<i<<"] = "<<alphas[i]<<" != X\n\n";
       exit(0);
   }
   cout << "all tests completed successfully\n\n";
 
   // encode and decode random polynomials
-  for (unsigned i=0; i<alphas.size(); i++) 
+  for (unsigned long i=0; i<alphas.size(); i++) 
     random(alphas[i], 8); // random degree-7 polynomial mod 2
 
   cout << "embedding random GF(2^8) elements in plaintext slots... ";
@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
   if (alphas.size() != betas.size()) Error("wrong number of slots decoded");
 
   cout << "comparing decoded plaintext slots... ";
-  for (unsigned i=0; i<alphas.size(); i++) {
+  for (unsigned long i=0; i<alphas.size(); i++) {
     SqrMod(alphas[i],alphas[i],G); // should get alpha[i]^2 mod G
     if (alphas[i] != betas[i]) {
       cout << "\n  alphas["<<i<<"] = "<<alphas[i]

@@ -26,9 +26,9 @@ using namespace std;
 
 bool parseArgs(int argc,  char *argv[], argmap_t& argmap)
 {
-  for (int i = 1; i < argc; i++) {
+  for (long i = 1; i < argc; i++) {
     char *x = argv[i];
-    int j = 0;
+    long j = 0;
     while (x[j] != '=' && x[j] != '\0') j++; 
     if (x[j] == '\0') return false;
     string arg(x, j);
@@ -119,7 +119,7 @@ template<class zz> static void phiNT(zz &phin, vector<zz> &facts, const zz &N)
 
   zz n = N;
   conv(phin,1); // initialize phiN=1
-  for (unsigned i=0; i<facts.size(); i++) {
+  for (unsigned long i=0; i<facts.size(); i++) {
     zz p = facts[i];
     phin *= (p-1); // first factor of p
     for (n /= p; (n%p)==0; n /= p) phin *= p; // multiple factors of p
@@ -130,9 +130,9 @@ void phiN(long &pN, vector<long> &fs, long N)  { phiNT<long>(pN,fs,N); }
 void phiN(ZZ &pN, vector<ZZ> &fs, const ZZ &N) { phiNT<ZZ>(pN,fs,N);   }
 
 /* Compute Phi(N) */
-int phi_N(int N)
+long phi_N(long N)
 {
-  int phiN=1,p,e;
+  long phiN=1,p,e;
   PrimeSeq s;
   while (N!=1)
     { p=s.next();
@@ -148,7 +148,7 @@ int phi_N(int N)
 // VJS: rewritten to be both faster and deterministic,
 //  and assumes that current modulus is prime
 
-template<class zp,class zz> void FindPrimRootT(zp &root, unsigned e)
+template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
 {
   zz qm1 = zp::modulus()-1;
 
@@ -159,7 +159,7 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned e)
 
   root = 1;
 
-  for (unsigned i = 0; i < facts.size(); i++) {
+  for (unsigned long i = 0; i < facts.size(); i++) {
     long p = facts[i];
     long pp = p;
     long ee = e/p;
@@ -196,7 +196,7 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned e)
     if (s != 1) Error("FindPrimitiveRoot: internal error (1)");
 
     // check that s^{e/p} != 1 for any prime divisor p of e
-    for (unsigned i=0; i<facts.size(); i++) {
+    for (unsigned long i=0; i<facts.size(); i++) {
       long e2 = e/facts[i];
       power(s, root, e2);   // s = root^{e/p}
       if (s == 1) 
@@ -205,13 +205,13 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned e)
   }
 }
 // instantiations of the template
-void FindPrimitiveRoot(zz_p &r, unsigned e) {FindPrimRootT<zz_p,long>(r,e);}
-void FindPrimitiveRoot(ZZ_p &r, unsigned e) {FindPrimRootT<ZZ_p,ZZ>(r,e);}
+void FindPrimitiveRoot(zz_p &r, unsigned long e){FindPrimRootT<zz_p,long>(r,e);}
+void FindPrimitiveRoot(ZZ_p &r, unsigned long e){FindPrimRootT<ZZ_p,ZZ>(r,e);}
 
 /* Compute mobius function (naive method as n is small) */
-int mobius(int n)
+long mobius(long n)
 {
-  int p,e,arity=0;
+  long p,e,arity=0;
   PrimeSeq s;
   while (n!=1)
     { p=s.next();
@@ -225,11 +225,11 @@ int mobius(int n)
 }
 
 /* Compute cyclotomic polynomial */
-ZZX Cyclotomic(int N)
+ZZX Cyclotomic(long N)
 {
   ZZX Num,Den,G,F;
   set(Num); set(Den);
-  int m,d;
+  long m,d;
   for (d=1; d<=N; d++)
     { if ((N%d)==0)
          { clear(G);
@@ -244,9 +244,9 @@ ZZX Cyclotomic(int N)
 }
 
 /* Find a primitive root modulo N */
-int primroot(int N,int phiN)
+long primroot(long N,long phiN)
 {
-  int g=2,p;
+  long g=2,p;
   PrimeSeq s;
   bool flag=false;
 
@@ -266,9 +266,9 @@ int primroot(int N,int phiN)
   return g;
 }
 
-int ord(int N,int p)
+long ord(long N,long p)
 {
-  int o=0;
+  long o=0;
   while ((N%p)==0)
     { o++;
       N/=p;
@@ -276,11 +276,11 @@ int ord(int N,int p)
   return o;
 }
 
-ZZX RandPoly(int n,const ZZ& p)
+ZZX RandPoly(long n,const ZZ& p)
 { 
   ZZX F; F.SetMaxLength(n);
   ZZ p2;  p2=p>>1;
-  for (int i=0; i<n; i++)
+  for (long i=0; i<n; i++)
     { SetCoeff(F,i,RandomBnd(p)-p2); }
   return F;
 }
@@ -293,7 +293,7 @@ void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs)
   if (deg(out)>deg(in)) trunc(out,out,deg(in)+1); // remove high degrees
 
   ZZ q2; q2=q>>1;
-  for (int i=0; i<=deg(in); i++)
+  for (long i=0; i<=deg(in); i++)
     { ZZ c=coeff(in,i);
       c %= q;
       if (abs) {
@@ -311,15 +311,15 @@ void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs)
     }
 }
 
-void PolyRed(ZZX& out, const ZZX& in, int q, bool abs)
+void PolyRed(ZZX& out, const ZZX& in, long q, bool abs)
 {
   // ensure that out has the same degree as in
   out.SetMaxLength(deg(in)+1);               // allocate space if needed
   if (deg(out)>deg(in)) trunc(out,out,deg(in)+1); // remove high degrees
 
-  int q2; q2=q>>1;
-  for (int i=0; i<=deg(in); i++)
-    { int c=coeff(in,i)%q;
+  long q2; q2=q>>1;
+  for (long i=0; i<=deg(in); i++)
+    { long c=coeff(in,i)%q;
       if (abs)
         { if (c<0) { c=c+q; } }
       else if (q==2)
@@ -339,8 +339,8 @@ void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs/*default=true*/)
   out.SetMaxLength(deg(f)+1);               // allocate space if needed
   if (deg(out)>deg(f)) trunc(out,out,deg(f)+1); // remove high degrees
 
-  for (int i=0; i<=deg(f); i++) { 
-    int c = rem(coeff(f,i), q);
+  for (long i=0; i<=deg(f); i++) { 
+    long c = rem(coeff(f,i), q);
     c = MulMod(c, a, q); // returns c \in [0,q-1]
     if (!abs && c >= q/2)
       c -= q;
@@ -348,9 +348,9 @@ void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs/*default=true*/)
   }
 }
 
-int is_in(int x,int* X,int sz)
+long is_in(long x,int* X,long sz)
 {
-  for (int i=0; i<sz; i++)
+  for (long i=0; i<sz; i++)
     { if (x==X[i]) { return i; } }
   return -1;
 }
@@ -437,7 +437,7 @@ void sampleSmall(ZZX &poly, long n)
   if (n<=0) n=deg(poly)+1; if (n<=0) return;
   poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
 
-  for (int i=0; i<n; i++) {    // Chosse coefficients, one by one
+  for (long i=0; i<n; i++) {    // Chosse coefficients, one by one
     long u = lrand48();
     if (u&1) {                 // with prob. 1/2 choose between -1 and +1
       u = (u & 2) -1;
@@ -455,10 +455,10 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
 
   if (n<=0) n=deg(poly)+1; if (n<=0) return;
   poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
-  for (int i=0; i<n; i++) SetCoeff(poly, i, ZZ::zero());
+  for (long i=0; i<n; i++) SetCoeff(poly, i, ZZ::zero());
 
   // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
-  for (int i=0; i<n; i+=2) {
+  for (long i=0; i<n; i+=2) {
     double r1 = (1+RandomBnd(bignum))/((double)bignum+1);
     double r2 = (1+RandomBnd(bignum))/((double)bignum+1);
     double theta=2*Pi*r1;

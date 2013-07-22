@@ -304,7 +304,7 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
 
   // output the digits
   str << context.digits.size() << "\n";
-  for (int i=0; i<(long)context.digits.size(); i++)
+  for (long i=0; i<(long)context.digits.size(); i++)
     str << context.digits[i] << " ";
 
   str <<"\n";
@@ -314,7 +314,7 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   return str;
 }
 
-void readContextBase(istream& str, unsigned& m, unsigned& p, unsigned& r)
+void readContextBase(istream& str, unsigned long& m, unsigned long& p, unsigned long& r)
 {
   // Advance str beyond first '[' 
   seekPastChar(str, '[');  // this function is defined in NumbTh.cpp

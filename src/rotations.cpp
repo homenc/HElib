@@ -31,20 +31,20 @@ private:
    vector<int> dims;  // dims[i] is the size along the i'th diemnsion
    vector<int> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
    vector<int> data;
-   int size;
+   long size;
 
    Cube();
 
 public:
    Cube(const vector<int>& idims) {
       dims = idims;
-      int n = dims.size();
+      long n = dims.size();
       assert(n > 0);
 
       
       prods.resize(n+1);
       prods[n] = 1;
-      for (int i = n-1; i >= 0; i--) {
+      for (long i = n-1; i >= 0; i--) {
          assert(dims[i] > 0);
          prods[i] = dims[i]*prods[i+1];
       }
@@ -52,7 +52,7 @@ public:
 
       size = prods[0];
       data.resize(size);
-      for (int i = 0; i < size; i++) data[i] = 0; 
+      for (long i = 0; i < size; i++) data[i] = 0; 
    }
 
    bool operator==(const Cube& that) const {
@@ -65,61 +65,61 @@ public:
 
    const vector<int>& getDims() const { return dims; }
 
-   int getSize() const { return size; }
+   long getSize() const { return size; }
 
-   int getNumDims() const { return dims.size(); }
+   long getNumDims() const { return dims.size(); }
 
-   int getDim(int d) const { return dims.at(d); }
+   long getDim(long d) const { return dims.at(d); }
 
-   int getCoord(int i, int d) const {
+   long getCoord(long i, long d) const {
       assert(i >= 0 && i < size);
    
       return (i % prods.at(d)) / prods.at(d+1); 
    }
 
-   int addCoord(int i, int d, int offset) const {
+   long addCoord(long i, long d, long offset) const {
       assert(i >= 0 && i < size);
       
       offset = offset % dims.at(d);
       if (offset < 0) offset += dims.at(d);
 
-      int i_d = getCoord(i, d);
-      int i_d1 = (i_d + offset) % dims.at(d);
+      long i_d = getCoord(i, d);
+      long i_d1 = (i_d + offset) % dims.at(d);
 
-      int i1 = i + (i_d1 - i_d) * prods.at(d+1);
+      long i1 = i + (i_d1 - i_d) * prods.at(d+1);
 
       return i1;
    }
 
-   int& at(int i) { return data.at(i); }
+   int& at(long i) { return data.at(i); }
 
-   const int& at(int i) const { return data.at(i); }
+   const int& at(long i) const { return data.at(i); }
 
 };
 
-Cube simpleRotate(const Cube& c, int offset) {
+Cube simpleRotate(const Cube& c, long offset) {
 
    assert(offset >= 0);
    Cube c1(c.getDims());
 
-   int size = c.getSize();
+   long size = c.getSize();
 
-   for (int i = 0; i < size; i++) {
+   for (long i = 0; i < size; i++) {
       c1.at((i+offset)%size) = c.at(i);
    }
 
    return c1;
 }
 
-Cube rotate1D(const Cube& c, int d, int offset) {
+Cube rotate1D(const Cube& c, long d, long offset) {
 
    assert(offset >= 0);
 
    Cube c1(c.getDims());
 
-   int size = c.getSize();
+   long size = c.getSize();
 
-   for (int i = 0; i < size; i++) {
+   for (long i = 0; i < size; i++) {
       c1.at(c.addCoord(i, d, offset)) = c.at(i);
    }
 
@@ -132,9 +132,9 @@ Cube operator+(const Cube& c1, const Cube& c2) {
    assert(dims1 == dims2);
 
    Cube c(dims1);
-   int size = c.getSize();
+   long size = c.getSize();
 
-   for (int i = 0; i < size; i++) 
+   for (long i = 0; i < size; i++) 
       c.at(i) = c1.at(i) + c2.at(i); 
    
    return c;
@@ -146,9 +146,9 @@ Cube operator*(const Cube& c1, const Cube& c2) {
    assert(dims1 == dims2);
 
    Cube c(dims1);
-   int size = c.getSize();
+   long size = c.getSize();
 
-   for (int i = 0; i < size; i++) 
+   for (long i = 0; i < size; i++) 
       c.at(i) = c1.at(i) * c2.at(i); 
    
    return c;
@@ -158,19 +158,19 @@ Cube operator!(const Cube& c1) {
    const vector<int>& dims1 = c1.getDims();
 
    Cube c(dims1);
-   int size = c.getSize();
+   long size = c.getSize();
 
-   for (int i = 0; i < size; i++) 
+   for (long i = 0; i < size; i++) 
       c.at(i) = c1.at(i) == 0 ? 1 : 0;
    
    return c;
 }
 
-Cube computeMask(const vector<int>& dims, int d, int k) {
+Cube computeMask(const vector<int>& dims, long d, long k) {
    Cube c(dims);
-   int size = c.getSize();
+   long size = c.getSize();
 
-   for (int i = 0; i < size; i++) {
+   for (long i = 0; i < size; i++) {
       if (c.getCoord(i, d) >= k)
          c.at(i) = 1;
    }
@@ -182,16 +182,16 @@ void print3D(const Cube& c) {
    const vector<int>& dims = c.getDims();
    assert(dims.size() == 3);
 
-   int size = c.getSize();
+   long size = c.getSize();
 
-   for (int i = 0; i < size; i++) {
+   for (long i = 0; i < size; i++) {
       cout << setw(3) << c.at(i);
       if ((i+1) % dims.at(2) == 0) cout << endl;
       if ((i+1) % (dims.at(1)*dims.at(2)) == 0) cout << endl;
    }
 }
 
-Cube fancyRotate(const Cube& c, int offset) {
+Cube fancyRotate(const Cube& c, long offset) {
 
    const vector<int>& dims = c.getDims();
 
@@ -201,8 +201,8 @@ Cube fancyRotate(const Cube& c, int offset) {
    Cube c1 = c;
    Cube mask = !Cube(dims); // the all-1 cube
 
-   for (int d = dims.size()-1; d >= 0; d--) {
-      int k = c.getCoord(offset, d);
+   for (long d = dims.size()-1; d >= 0; d--) {
+      long k = c.getCoord(offset, d);
 
       c1 = (rotate1D(c1, d, k)*mask) + (rotate1D(c1, d, k+1)*(!mask));
       mask = computeMask(dims, d, k)*mask + computeMask(dims, d, k+1)*(!mask); 
@@ -221,11 +221,11 @@ int main()
    dims[4] = 4;
 
    Cube c(dims);
-   int size = c.getSize();
-   for (int i = 0; i < size; i++) c.at(i) = i;
+   long size = c.getSize();
+   for (long i = 0; i < size; i++) c.at(i) = i;
 
    bool fail=false;
-   for (int offset = 1; offset < size; offset++) {
+   for (long offset = 1; offset < size; offset++) {
       Cube c1 = simpleRotate(c, offset);
       Cube c2 = fancyRotate(c, offset);
       if (c1 != c2) { 

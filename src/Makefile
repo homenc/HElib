@@ -16,7 +16,7 @@
 CC = g++
 #CFLAGS = -g -Wall -O3 -I/usr/local/include
 #CFLAGS = -g -Wall -I/usr/local/include
-CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+CFLAGS = -g -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
 #CFLAGS = -pg -Wall -I/usr/local/include
 LD = g++
 
