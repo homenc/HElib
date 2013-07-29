@@ -22,10 +22,15 @@
 NTL_CLIENT
 
 
-void usage()
+void usage(char *prog)
 {
-   cerr << "bad command line\n";
-   exit(0);
+  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
+  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cerr << "  e.g, 'p=5 r=1 m=101'\n\n";
+  cerr << "  p is the plaintext base [default=5]" << endl;
+  cerr << "  r is the lifting [default=1]" << endl;
+  cerr << "  m defines the cyclotomic polynomial Phi_m(X) [default=101]"<< endl;
+  exit(0);
 }
 
 int main(int argc, char *argv[])
@@ -35,7 +40,7 @@ int main(int argc, char *argv[])
    argmap["m"] = "101";
    argmap["r"] = "1";
 
-   if (!parseArgs(argc, argv, argmap)) usage();
+   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
    long p = atoi(argmap["p"]);
    long m = atoi(argmap["m"]);

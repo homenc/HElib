@@ -13,27 +13,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cassert>
-
-/**************
-
-1. c1.multiplyBy(c0)
-2. c0 += random constant
-3. c2 *= random constant
-4. tmp = c1
-5. ea.shift(tmp, random amount in [-nSlots/2, nSlots/2])
-6. c2 += tmp
-7. ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
-8. c1.negate()
-9. c3.multiplyBy(c2) 
-10. c0 -= c3
-
-**************/
 
 
 ZZX makeIrredPoly(long p, long d)
@@ -47,6 +33,110 @@ ZZX makeIrredPoly(long p, long d)
   zz_p::init(p);
   return to_ZZX(BuildIrred_zz_pX(d));
 }
+
+
+template<class type> 
+class RunningSumMatrix : public  PlaintextMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+public:
+  ~RunningSumMatrix() { cerr << "destructor: running sum matrix\n"; }
+
+  RunningSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual void get(RX& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    if (j >= i)
+      out = 1;
+    else
+      out = 0;
+  }
+};
+
+
+PlaintextMatrixBaseInterface *
+buildRunningSumMatrix(const EncryptedArray& ea)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new RunningSumMatrix<PA_GF2>(ea);
+    }
+
+    case PA_zz_p_tag: {
+      return new RunningSumMatrix<PA_zz_p>(ea);
+    }
+
+    default: return 0;
+  }
+}
+
+
+template<class type> 
+class RandomMatrix : public  PlaintextMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+  vector< vector< RX > > data;
+
+public:
+  ~RandomMatrix() { cerr << "destructor: random matrix\n"; }
+
+  RandomMatrix(const EncryptedArray& _ea) : ea(_ea) { 
+    long n = ea.size();
+    long d = ea.getDegree();
+
+    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+
+    data.resize(n);
+    for (long i = 0; i < n; i++) {
+      data[i].resize(n);
+      for (long j = 0; j < n; j++)
+        random(data[i][j], d);
+    }
+  }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual void get(RX& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    out = data[i][j];
+  }
+};
+
+
+PlaintextMatrixBaseInterface *
+buildRandomMatrix(const EncryptedArray& ea)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMatrix<PA_GF2>(ea);
+    }
+
+    case PA_zz_p_tag: {
+      return new RandomMatrix<PA_zz_p>(ea);
+    }
+
+    default: return 0;
+  }
+}
+
+
+
 
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
@@ -68,7 +158,6 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   context.zMStar.printout();
   cerr << endl;
-  cerr << context << endl;
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
@@ -94,97 +183,44 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   EncryptedArray ea(context, G);
   cerr << "done\n";
 
+  // choose a random plaintext square matrix
+  PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
 
-  double t = GetTime();
+  // choose a random plaintext vector
+  PlaintextArray v(ea);
 
-  long nslots = ea.size();
+/* v.encode(1);  
+   v.print(cout); cout << "\n";
+   v.alt_mul(*ptr);
+*/
+  v.random();
+  // v.print(cout); cout << "\n";
 
-  PlaintextArray p0(ea);
-  PlaintextArray p1(ea);
-  PlaintextArray p2(ea);
-  PlaintextArray p3(ea);
+  // encrypt the random vector
+  Ctxt ctxt(publicKey);
+  ea.encrypt(ctxt, publicKey, v);
 
-  p0.random();
-  p1.random();
-  p2.random();
-  p3.random();
+  v.mat_mul(*ptr);         // multiply the plaintext vector
+  ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
 
-  Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
-  ea.encrypt(c0, publicKey, p0);
-  ea.encrypt(c1, publicKey, p1);
-  ea.encrypt(c2, publicKey, p2);
-  ea.encrypt(c3, publicKey, p3);
+  PlaintextArray v1(ea);
+  //  v1 = v;
+  ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
 
-  for (long i = 0; i < R; i++) {
+  if (v.equals(v1))        // check that we've got the right answer
+    cout << "Nice!!\n";
+  else
+    cout << "Grrr...\n";
 
-    cerr << "*** round " << i << "..."<<endl;
-
-     long shamt = RandomBnd(2*(nslots/2) + 1) - (nslots/2);
-                  // random number in [-nslots/2..nslots/2]
-     long rotamt = RandomBnd(2*nslots - 1) - (nslots - 1);
-                  // random number in [-(nslots-1)..nslots-1]
-
-     // two random constants
-     PlaintextArray const1(ea);
-     PlaintextArray const2(ea);
-     const1.random();
-     const2.random();
-
-     p1.mul(p0); // c1.multiplyBy(c0)
-     p0.add(const1); // c0 += random constant
-     p2.mul(const2); // c2 *= random constant
-     PlaintextArray tmp_p(p1); // tmp = c1
-     tmp_p.shift(shamt); // ea.shift(tmp, random amount in [-nSlots/2, nSlots/2])
-     p2.add(tmp_p); // c2 += tmp
-     p2.rotate(rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
-     p1.negate(); // c1.negate()
-     p3.mul(p2); // c3.multiplyBy(c2) 
-     p0.sub(p3); // c0 -= c3
-
-     ZZX const1_poly, const2_poly;
-     ea.encode(const1_poly, const1);
-     ea.encode(const2_poly, const2);
-
-     c1.multiplyBy(c0);              CheckCtxt(c1, "c1*=c0");
-     c0.addConstant(const1_poly);    CheckCtxt(c0, "c0+=k0");
-     c2.multByConstant(const2_poly); CheckCtxt(c2, "c2*=k0");
-     Ctxt tmp(c1);
-     ea.shift(tmp, shamt);           CheckCtxt(tmp, "tmp=c1>>$");
-     c2 += tmp;                      CheckCtxt(c2, "c2+=tmp");
-     ea.rotate(c2, rotamt);          CheckCtxt(c2, "c2>>>=$");
-     c1.negate();                    CheckCtxt(c1, "c1=-c1");
-     c3.multiplyBy(c2);              CheckCtxt(c3, "c3*=c2");
-     c0 -= c3;                       CheckCtxt(c0, "c0=-c3");
-
-     PlaintextArray pp0(ea);
-     PlaintextArray pp1(ea);
-     PlaintextArray pp2(ea);
-     PlaintextArray pp3(ea);
-
-     ea.decrypt(c0, secretKey, pp0);
-     ea.decrypt(c1, secretKey, pp1);
-     ea.decrypt(c2, secretKey, pp2);
-     ea.decrypt(c3, secretKey, pp3);
-
-     cerr << "\n";
-
-     if (!pp0.equals(p0)) cerr << "oops 0\n";
-     if (!pp1.equals(p1)) cerr << "oops 1\n";
-     if (!pp2.equals(p2)) cerr << "oops 2\n";
-     if (!pp3.equals(p3)) cerr << "oops 3\n";
-  }
-
-  t = GetTime() - t;
-
-  cerr << "time for circuit: " << t << "\n";
+  // v.print(cout); cout << "\n";
+  // v1.print(cout); cout << "\n";
 }
-
 
 void usage(char *prog) 
 {
   cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
+  cerr << "  e.g, 'R=1 p=2 k=80'\n\n";
   cerr << "  R is the number of rounds\n";
   cerr << "  p is the plaintext base [default=2]" << endl;
   cerr << "  r is the lifting [default=1]" << endl;
@@ -194,7 +230,7 @@ void usage(char *prog)
   cerr << "  k is the security parameter [default=80]\n";
   cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
   cerr << "  s is the minimum number of slots [default=4]\n";
-  cerr << "  m is a specific modulus\n";
+  cerr << "  m defined the cyclotomic polynomial Phi_m(X)\n";
   exit(0);
 }
 

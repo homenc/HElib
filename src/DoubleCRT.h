@@ -18,11 +18,19 @@
  * @brief Implementatigs polynomials (elements in the ring R_Q) in double-CRT form
  **/
 
-#if 0 // change to #if 1 to get an alternative implementation
+// change to #if 1 to get an alternative implementation
+#if 0 
 
+#define USE_ALT_CRT
 #define DoubleCRT AltCRT
 #include "AltCRT.h"
+
+
+
 #else
+
+
+
 #ifndef _DoubleCRT_H_
 #define _DoubleCRT_H_
 

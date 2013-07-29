@@ -99,32 +99,32 @@ public:
   // Constructors must ensure that alMod points to zMStar
 
   // constructor
-  FHEcontext(unsigned m, unsigned p, unsigned r): zMStar(m, p), alMod(zMStar, r)
+  FHEcontext(unsigned long m, unsigned long p, unsigned long r): zMStar(m, p), alMod(zMStar, r)
   { stdev=3.2; }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }
 
   //! @brief The ith small prime in the modulus chain
-  long ithPrime(unsigned i) const 
+  long ithPrime(unsigned long i) const 
   { return (i<moduli.size())? moduli[i].getQ() :0; }
 
   //! @brief Cmodulus object corresponding to ith small prime in the chain
-  const Cmodulus& ithModulus(unsigned i) const { return moduli[i]; }
+  const Cmodulus& ithModulus(unsigned long i) const { return moduli[i]; }
 
   //! @brief Total number of small prime in the chain
   long numPrimes() const { return moduli.size(); }
 
   //! @brief Is num divisible by any of the primes in the chain?
   bool isZeroDivisor(const ZZ& num) const {
-    for (unsigned i=0; i<moduli.size(); i++) 
+    for (unsigned long i=0; i<moduli.size(); i++) 
       if (divide(num,moduli[i].getQ())) return true;
     return false;
   }
 
   //! @brief Is p already in the chain?
   bool inChain(long p) const {
-    for (unsigned i=0; i<moduli.size(); i++) 
+    for (unsigned long i=0; i<moduli.size(); i++) 
       if (p==moduli[i].getQ()) return true;
     return false;
   }
@@ -141,7 +141,7 @@ public:
 
   // FIXME: run-time error when ithPrime(i) returns 0
   //! @brief Returns the natural logarithm of the ith prime
-  double logOfPrime(unsigned i) const { return log(ithPrime(i)); }
+  double logOfPrime(unsigned long i) const { return log(ithPrime(i)); }
 
   //! @brief Returns the natural logarithm of productOfPrimes(s)
   double logOfProduct(const IndexSet& s) const {
@@ -156,6 +156,10 @@ public:
 
   //! @brief Add p to the chain, if it's not already there
   void AddPrime(long p, bool special); 
+
+  //! @brief Add an FFT prime to the chain, if it's not already there
+  //! returns the value of the prime
+  long AddFFTPrime(bool special); 
 
 
   ///@{
@@ -179,7 +183,7 @@ public:
   To read in all the data associated with a context, do the following:
 
   \code
-    unsigned m, p, r;
+    unsigned long m, p, r;
     readContextBase(str, m, p, r);
 
     FHEcontext context(m, p, r);
@@ -199,7 +203,7 @@ public:
   friend ostream& operator<< (ostream &str, const FHEcontext& context);
 
   //! @brief read [m p r] data, needed to construct context
-  friend void readContextBase(istream& str, unsigned& m, unsigned& p, unsigned& r);
+  friend void readContextBase(istream& str, unsigned long& m, unsigned long& p, unsigned long& r);
 
   //! @brief read all other data associated with context
   friend istream& operator>> (istream &str, FHEcontext& context);
@@ -209,7 +213,7 @@ public:
 //! @brief write [m p r] data
 void writeContextBase(ostream& s, const FHEcontext& context);
 //! @brief read [m p r] data, needed to construct context
-void readContextBase(istream& s, unsigned& m, unsigned& p, unsigned& r);
+void readContextBase(istream& s, unsigned long& m, unsigned long& p, unsigned long& r);
 
 // VJS: compiler seems to need these declarations out here...wtf...
 

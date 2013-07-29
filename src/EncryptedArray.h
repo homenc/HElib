@@ -26,6 +26,50 @@
 
 class PlaintextArray; // forward reference
 
+class EncryptedArray; // forward reference
+
+//! @class PlaintextMatrixBaseInterface
+//! @brief An abstract interface for plaintext arrays.
+//! Any class implementing this interface should
+//! be linked to a specific EncryptedArray object,
+//! a reference to which is returned by the getEA()
+//! method -- this method will generally be invoked
+//! by an EncryptedArray object to verify consistent use.
+
+class PlaintextMatrixBaseInterface {
+public:
+  virtual const EncryptedArray& getEA() const = 0;
+
+  virtual ~PlaintextMatrixBaseInterface() {}
+
+};
+
+
+//! @class PlaintextMatrixInterface<type>
+//! @brief A somewhat less abstract interface for plaintext
+//! arrays. The method get(out, i, j) copies the element
+//! at row i column j of a matrix into the variable out.
+//! The type of out is RX, which is GF2X if type is PA_GF2,
+//! and zz_pX if type is PA_zz_p.
+
+template<class type> 
+class  PlaintextMatrixInterface : public PlaintextMatrixBaseInterface {
+public:
+  PA_INJECT(type)
+
+  virtual void get(RX& out, long i, long j) const = 0;
+};
+
+  
+
+  
+
+  
+
+
+
+
+
 /**
  * @class EncryptedArrayBase
  * @brief virtual class for data-movement operations on arrays of slots
@@ -84,6 +128,11 @@ public:
   //! @brief Shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
+
+  //! @multiply ctx by plaintext matrix: Ctxt is treated as
+  //! a row matrix v, and replaced by en encryption of v * mat
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
+
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
@@ -127,19 +176,44 @@ public:
   /* some non-virtual convenience functions */
 
   //! @brief Total size (# of slots) of hypercube
-  long size() const { return getContext().zMStar.getNSlots(); } 
+  long size() const { 
+    return getContext().zMStar.getNSlots(); 
+  } 
 
   //! @brief Number of dimensions of hypercube
-  long dimension() const { return getContext().zMStar.numOfGens(); }
+  long dimension() const { 
+    return getContext().zMStar.numOfGens(); 
+  }
 
   //! @brief Size of given dimension
-  long sizeOfDimension(long i) const {return getContext().zMStar.OrderOf(i);}
+  long sizeOfDimension(long i) const {
+    return getContext().zMStar.OrderOf(i);
+  }
 
   //! @brief Is rotations in given dimension a "native" operation?
-  long nativeDimension(long i) const {return getContext().zMStar.SameOrd(i);}
+  bool nativeDimension(long i) const {
+    return getContext().zMStar.SameOrd(i);
+  }
 
   //! @brief returns coordinate of index k along the i'th dimension
-  long coordinate(long i, long k) const {return getContext().zMStar.coordinate(i, k); }
+  long coordinate(long i, long k) const {
+    return getContext().zMStar.coordinate(i, k); 
+  }
+ 
+  //! @brief adds offset to index k in the i'th dimension
+  long addCoord(long i, long k, long offset) const {
+    return getContext().zMStar.addCoord(i, k, offset);
+  }
+
+  //! @brief rotate an array by offset in the i'th dimension
+  //! (output should not alias input)
+  template<class U> void rotate1D(vector<U>& out, const vector<U>& in,
+                                  long i, long offset) const {
+    assert(lsize(in) == size());
+    out.resize(in.size());
+    for (long j = 0; j < size(); j++)
+      out[addCoord(i, j, offset)] = in[j]; 
+  }
 };
 
 /**
@@ -188,6 +262,15 @@ public:
   virtual void shift(Ctxt& ctxt, long k) const;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
+
+
+  // helper routine for mat_mul
+  void rec_mul(long dim, 
+               Ctxt& res, 
+               const Ctxt& pdata, const vector<long>& idx,
+               const PlaintextMatrixInterface<type>& mat) const;
+
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array); }
@@ -353,6 +436,8 @@ public:
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
 
+  void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const 
+  { rep->mat_mul(ctxt, mat); }
 
   void encode(ZZX& ptxt, const vector< long >& array) const 
     { rep->encode(ptxt, array); }
@@ -402,6 +487,15 @@ public:
   long sizeOfDimension(long i) const { return rep->sizeOfDimension(i); }
   long nativeDimension(long i) const {return rep->nativeDimension(i); }
   long coordinate(long i, long k) const { return rep->coordinate(i, k); }
+  long addCoord(long i, long k, long offset) const { return rep->addCoord(i, k, offset); }
+
+
+  //! @brief rotate an array by offset in the i'th dimension
+  //! (output should not alias input)
+  template<class U> void rotate1D(vector<U>& out, const vector<U>& in,
+                                  long i, long offset) const {
+    rep->rotate1D(out, in, i, offset);
+  }
   ///@}
 };
 
@@ -468,6 +562,10 @@ public:
   virtual void sub(const PlaintextArrayBase& other) = 0;
   virtual void mul(const PlaintextArrayBase& other) = 0;
   virtual void negate() = 0;
+
+  // linear algebra
+  virtual void mat_mul(const PlaintextMatrixBaseInterface& mat) = 0;
+  virtual void alt_mul(const PlaintextMatrixBaseInterface& mat) = 0;
 
   //! Replicate coordinate i at all coordinates
   virtual void replicate(long i) = 0;
@@ -653,6 +751,13 @@ public:
   }
 
 
+  virtual void negate() 
+  {
+    RBak bak; bak.save(); tab.restoreContext();
+    for (long i = 0; i < n; i++) 
+      NTL::negate(data[i], data[i]);
+  }
+
   virtual void mul(const PlaintextArrayBase& other) 
   {
     RBak bak; bak.save(); tab.restoreContext();
@@ -666,11 +771,81 @@ public:
   }
 
 
-  virtual void negate() 
+
+  virtual void mat_mul(const PlaintextMatrixBaseInterface& mat) 
   {
+    assert(&ea == &mat.getEA());
+
     RBak bak; bak.save(); tab.restoreContext();
-    for (long i = 0; i < n; i++) 
-      NTL::negate(data[i], data[i]);
+    const PlaintextMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+    vector<RX> res;
+    res.resize(n);
+    for (long j = 0; j < n; j++) {
+      RX acc, val, tmp; 
+      acc = 0;
+      for (long i = 0; i < n; i++) {
+         mat1.get(val, i, j);
+         NTL::mul(tmp, data[i], val);
+         NTL::add(acc, acc, tmp);
+      }
+      rem(acc, acc, G);
+      res[j] = acc;
+    }
+
+    data = res;
+  }
+
+  static
+  void rec_mul(long dim, const EncryptedArray& ea,
+               vector<RX>& res, 
+               const vector<RX>& pdata, const vector<long>& idx,
+               const PlaintextMatrixInterface<type>& mat)
+  {
+    long ndims = ea.dimension();
+
+    if (dim >= ndims) {
+      for (long j = 0; j < ea.size(); j++) {
+        long i = idx[j];
+        RX val;
+        mat.get(val, i, j);
+        res[j] += pdata[j] * val;
+      }
+    }
+    else {
+
+      vector<RX> pdata1;
+      vector<long> idx1;
+
+      for (long offset = 0; offset < ea.sizeOfDimension(dim); offset++) {
+        ea.rotate1D(pdata1, pdata, dim, offset);
+        ea.rotate1D(idx1, idx, dim, offset);
+        rec_mul(dim+1, ea, res, pdata1, idx1, mat);
+      }
+    }
+  }
+
+  virtual void alt_mul(const PlaintextMatrixBaseInterface& mat) 
+  {
+    assert(&ea == &mat.getEA());
+
+    RBak bak; bak.save(); tab.restoreContext();
+    const PlaintextMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+    vector<RX> res;
+    vector<long> idx;
+
+    res.resize(n);
+    idx.resize(n);
+    for (long i = 0; i < n; i++)
+       idx[i] = i;
+
+    rec_mul(0, ea, res, data, idx, mat1);
+
+    for (long i = 0; i < n; i++)
+       data[i] = res[i] % G;
   }
 
   virtual void replicate(long i)
@@ -776,8 +951,11 @@ public:
 
   void add(const PlaintextArray& other) { rep->add(*other.rep); }
   void sub(const PlaintextArray& other) { rep->sub(*other.rep); }
-  void mul(const PlaintextArray& other) { rep->mul(*other.rep); }
   void negate() { rep->negate(); }
+  void mul(const PlaintextArray& other) { rep->mul(*other.rep); }
+
+  void mat_mul(const PlaintextMatrixBaseInterface& mat) { rep->mat_mul(mat); }
+  void alt_mul(const PlaintextMatrixBaseInterface& mat) { rep->alt_mul(mat); }
 
   //! Replicate coordinate i at all coordinates
   void replicate(long i) { rep->replicate(i); }

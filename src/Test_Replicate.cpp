@@ -203,9 +203,9 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
 }
 
 
-void usage() 
+void usage(char *prog) 
 {
-  cerr << "Usage: Test_PAlgebra_x [ optional parameters ]...\n";
+  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  p is the plaintext base [default=2]" << endl;
   cerr << "  r is the lifting [default=1]" << endl;
   cerr << "  d is the degree of the field extension [default==1]\n";
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
   argmap["M"] = "0";
   argmap["v"] = "0";
 
-  if (!parseArgs(argc, argv, argmap)) usage();
+  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
   long p = atoi(argmap["p"]);
   long r = atoi(argmap["r"]);

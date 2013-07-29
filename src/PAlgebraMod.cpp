@@ -80,15 +80,15 @@ void PAlgebraModTwo::init(const GF2X& factor)
 
   GF2XModulus F1(factors[0]); // We arbitrarily choose factors[0] as F1
   for (long i=1; i<nSlots; i++) {
-    unsigned t =zmStar.ith_rep(i); // Ft is minimal polynomial of x^{1/t} mod F1
-    unsigned tInv = rep(inv(to_zz_p(t))); // tInv = t^{-1} mod m
+    unsigned long t =zmStar.ith_rep(i); // Ft is minimal polynomial of x^{1/t} mod F1
+    unsigned long tInv = rep(inv(to_zz_p(t))); // tInv = t^{-1} mod m
     GF2X X2tInv = PowerXMod(tInv,F1);     // X2tInv = X^{1/t} mod F1
     IrredPolyMod(factors[i], X2tInv, F1);
   }
   /* Debugging sanity-check #1: we should have Ft= GCD(F1(X^t),Phi_m(X))
   GF2XModulus Pm2(*PhimXmod);
   for (i=1; i<nSlots; i++) {
-    unsigned t = T[i];
+    unsigned long t = T[i];
     GF2X X2t = PowerXMod(t,*PhimXmod);  // X2t = X^t mod Phi_m(X)
     GF2X Ft = GCD(CompMod(F1,X2t,Pm2),Pm2);
     if (Ft != factors[i]) {
@@ -154,7 +154,7 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
 
 }
 
-void PAlgebraMod2r::init(unsigned r)
+void PAlgebraMod2r::init(unsigned long r)
 {
   zz_pBak bak;
   bak.save();
@@ -191,7 +191,7 @@ void PAlgebraMod2r::init(unsigned r)
 
   // Compute the zz_pContext object for mod-2^r arithmetic
   rr = r;
-  unsigned two2r = 1UL << r; // compute 2^r
+  unsigned long two2r = 1UL << r; // compute 2^r
   zz_p::init(two2r);
   mod2rContext.save();
 
@@ -218,11 +218,11 @@ void PAlgebraMod2r::init(unsigned r)
 template<class RX, class vec_RX, class RXM> void
 PAlgebraModTmpl<RX,vec_RX,RXM>::CRT_decompose(vector<RX>&crt, const RX&p) const
 {
-  unsigned nSlots = zmStar.NSlots();
+  unsigned long nSlots = zmStar.NSlots();
   if (nSlots==0) { crt.resize(0); return; }
 
   crt.resize(nSlots);
-  for (unsigned i=0; i<nSlots; i++)
+  for (unsigned long i=0; i<nSlots; i++)
     rem(crt[i], p, factors[i]); // crt[i] = p % factors[i]
 }
 // explicit instantiations
@@ -253,7 +253,7 @@ template<class RX, class vec_RX, class RXM>
 void PAlgebraModTmpl<RX,vec_RX,RXM>::embedInAllSlots(RX& p, const RX& alpha,
 						 const vector<RX>& maps) const
 {
-  unsigned nSlots = zmStar.NSlots();
+  unsigned long nSlots = zmStar.NSlots();
   if (nSlots==0 || maps.size()!=nSlots) { p=RX::zero(); return; }
 
   vector<RX> crt(nSlots); // alloate space for CRT components
@@ -261,7 +261,7 @@ void PAlgebraModTmpl<RX,vec_RX,RXM>::embedInAllSlots(RX& p, const RX& alpha,
   // The i'th CRT component is (p mod F_t) = alpha(maps[i]) mod F_t,
   // where with t=T[i].
 
-  for (unsigned i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
+  for (unsigned long i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
     CompMod(crt[i], alpha, maps[i], factors[i]);
 
   CRT_reconstruct(p,crt); // interpolate to get p
@@ -279,7 +279,7 @@ template<class RX, class vec_RX, class RXM>
 void PAlgebraModTmpl<RX,vec_RX,RXM>::embedInSlots(RX& p, const vector<RX>& alphas,
 					      const vector<RX>& maps) const
 {
-  unsigned nSlots = zmStar.NSlots();
+  unsigned long nSlots = zmStar.NSlots();
   if (nSlots==0 || maps.size()!=nSlots || alphas.size()!= nSlots) {
     p=RX::zero(); return;
   }
@@ -288,7 +288,7 @@ void PAlgebraModTmpl<RX,vec_RX,RXM>::embedInSlots(RX& p, const vector<RX>& alpha
   // The i'th CRT component is (p mod F_t) = alphas[i](maps[i]) mod F_t,
   // where with t=T[i].
 
-  for (unsigned i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
+  for (unsigned long i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
     CompMod(crt[i], alphas[i], maps[i], factors[i]);
 
   CRT_reconstruct(p,crt); // interpolate to get p
@@ -304,12 +304,12 @@ template void PAlgebraModTmpl<zz_pX,vec_zz_pX,zz_pXModulus>::embedInSlots(
 template<class RX, class vec_RX, class RXM> 
 void PAlgebraModTmpl<RX,vec_RX,RXM>::CRT_reconstruct(RX&p,vector<RX>&crt) const
 {
-  unsigned nSlots = zmStar.NSlots();
+  unsigned long nSlots = zmStar.NSlots();
   if (nSlots==0) { p=RX::zero(); return; }
 
   // Recall that we have crtCoeffs[i] = \prod_{j \ne i} Fj^{-1} mod Fi
   p = RX::zero();
-  for (unsigned i=0; i<nSlots; i++) {
+  for (unsigned long i=0; i<nSlots; i++) {
     RX allBut_i = *PhimXmod/ factors[i]; // = \prod_{j \ne i} Fj
     allBut_i *= crtCoeffs[i];      // =1 mod Fi and =0 mod Fj for j \ne i
     MulMod(allBut_i, allBut_i, crt[i], *PhimXmod);
@@ -334,9 +334,9 @@ template void PAlgebraModTmpl<zz_pX,vec_zz_pX,zz_pXModulus>::CRT_reconstruct(
 // optional rF1 contains the output of mapToF1, to speed this operation.
 template<> void 
 PAlgebraModTmpl<GF2X,vec_GF2X,GF2XModulus>::mapToFt(GF2X& r,
-			     const GF2X& G,unsigned t,const GF2X* rF1) const
+			     const GF2X& G,unsigned long t,const GF2X* rF1) const
 {
-  int i = zmStar.indexOfRep(t);
+  long i = zmStar.indexOfRep(t);
   if (i < 0) { r=GF2X::zero(); return; }
 
   if (rF1==NULL) {               // Compute the representation "from scratch"
@@ -363,9 +363,9 @@ PAlgebraModTmpl<GF2X,vec_GF2X,GF2XModulus>::mapToFt(GF2X& r,
 }
 template<> void 
 PAlgebraModTmpl<zz_pX,vec_zz_pX,zz_pXModulus>::mapToFt(zz_pX& r,
-			     const zz_pX& G,unsigned t,const zz_pX* rF1) const
+			     const zz_pX& G,unsigned long t,const zz_pX* rF1) const
 {
-  int i = zmStar.indexOfRep(t);
+  long i = zmStar.indexOfRep(t);
   if (i < 0) { r=zz_pX::zero(); return; }
 
   if (rF1==NULL) {              // Compute the representation "from scratch"
@@ -400,7 +400,7 @@ template<> void PAlgebraModTmpl<GF2X,vec_GF2X,GF2XModulus>::decodePlaintext(
    vector<GF2X>& alphas, const GF2X& ptxt, const GF2X &G, 
    const vector<GF2X>& maps) const
 {
-  unsigned nSlots = zmStar.NSlots();
+  unsigned long nSlots = zmStar.NSlots();
   if (nSlots==0 || maps.size()!= nSlots ||deg(G)<1|| zmStar.OrdTwo()%deg(G)!=0){
     alphas.resize(0); return;
   }
@@ -420,13 +420,13 @@ template<> void PAlgebraModTmpl<GF2X,vec_GF2X,GF2XModulus>::decodePlaintext(
 
   alphas.resize(nSlots);
   GF2E::init(G); // the extension field R[X]/G(X)
-  for (unsigned i=0; i<nSlots; i++) {
+  for (unsigned long i=0; i<nSlots; i++) {
     // We need to lift Fi from R[Y] to (R[X]/G(X))[Y]
     GF2EX Qi; conv(Qi,(GF2X&)factors[i]);
     vec_GF2EX FRts=SFBerlekamp(Qi); // factor Fi over Z_2[X]/G(X)
 
     // need to choose the right factor, the one that gives us back X
-    int j;
+    long j;
     for (j=0; j<FRts.length(); j++) { 
       // lift maps[i] to (R[X]/G(X))[Y] and reduce mod j'th factor of Fi
       GF2EX GRti = to_GF2EX((GF2X&)maps[i]);
@@ -450,7 +450,7 @@ template<> void PAlgebraModTmpl<zz_pX,vec_zz_pX,zz_pXModulus>::decodePlaintext(
    vector<zz_pX>& alphas, const zz_pX& ptxt, const zz_pX &G,
    const vector<zz_pX>& maps) const
 {
-  unsigned nSlots = zmStar.NSlots();
+  unsigned long nSlots = zmStar.NSlots();
   if (nSlots==0 || maps.size()!= nSlots ||deg(G)<1|| zmStar.OrdTwo()%deg(G)!=0){
     alphas.resize(0); return;
   }
@@ -478,13 +478,13 @@ template<> void PAlgebraModTmpl<zz_pX,vec_zz_pX,zz_pXModulus>::decodePlaintext(
 
   alphas.resize(nSlots);
   zz_pE::init(G); // the extension field R[X]/G(X)
-  for (unsigned i=0; i<nSlots; i++) {
+  for (unsigned long i=0; i<nSlots; i++) {
     // We need to lift Fi from R[Y] to (R[X]/G(X))[Y]
     zz_pEX Qi; conv(Qi,(zz_pX&)factors[i]);
     vec_zz_pEX FRts=SFCanZass(Qi); // factor Fi over Z_2[X]/G(X)
 
     // need to choose the right factor, the one that gives us back X
-    int j;
+    long j;
     for (j=0; j<FRts.length(); j++) { 
       // lift maps[i] to (R[X]/G(X))[Y] and reduce mod j'th factor of Fi
       zz_pEX GRti = to_zz_pEX((zz_pX&)maps[i]);
