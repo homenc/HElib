@@ -23,21 +23,21 @@
  * a vector of Cmodulus objects. 
  */
 
+#include "DoubleCRT.h"
 
-#if 0
+#ifdef USE_ALT_CRT
 
-#define DoubleCRT AltCRT
+#warning "using AltCRT..."
+
 #include "AltCRT.cpp"
 
 #else
 
 
 #include <NTL/ZZX.h>
-//NTL_CLIENT
 #include "NumbTh.h"
 #include "PAlgebra.h"
 #include "CModulus.h"
-#include "DoubleCRT.h"
 #include "SingleCRT.h"
 #include "timing.h"
 

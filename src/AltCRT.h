@@ -15,72 +15,56 @@
  */
 #ifndef _AltCRT_H_
 #define _AltCRT_H_
-/**
-* @file AltCRT.h
-* @brief An alternative representation of ring elements
-*
-* The AltCRT module offers a drop-in replacement to DoubleCRT, it exposes
-* the same interface but internally uses a single-CRT representation. That
-* is, polynomials are stored in coefficient representation, modulo each of
-* the small primes in our chain. Currently this class is used only for
-* testing and debugging purposes.
-**/
+
+
 #include <vector>
 #include <NTL/ZZX.h>
 #include <NTL/lzz_pX.h>
 #include "NumbTh.h"
 #include "IndexMap.h"
 #include "FHEContext.h"
+
+
 NTL_CLIENT
+
+
 class SingleCRT;
 
-/**
-* @class AltCRTHelper
-* @brief A helper class to enforce consistency within an AltCRT object
-*
-* See Section 2.6.2 of the design document (IndexMap)
-*/
 class AltCRTHelper : public IndexMapInit<zz_pX> {
 private: 
   long val;
 
 public:
+
   AltCRTHelper(const FHEcontext& context) { 
     val = context.zMStar.getPhiM(); 
   }
 
-  /** @brief the init method ensures that all rows have the same size */
   virtual void init(zz_pX& v) { 
     v.rep.SetMaxLength(val); 
   }
 
-  /** @brief clone allocates a new object and copies the content */
   virtual IndexMapInit<zz_pX> * clone() const { 
     return new AltCRTHelper(*this); 
   }
+
 private:
   AltCRTHelper(); // disable default constructor
 };
 
 
-/**
-* @class AltCRT
-* @brief A single-CRT representation of a ring element
-* 
-* AltCRT offers the same interface as DoubleCRT, but with a different
-* internal representation. That is, polynomials are stored in
-* coefficient representation, modulo each of the small primes in our
-* chain. Currently this class is used only for testing and debugging
-* purposes.
-*/
-class AltCRT {
-  const FHEcontext& context; //! the context of this ring element
-  IndexMap<zz_pX> map; //! the data itself: if the i'th prime is in use then
-                       //! map[i] is the vector of evaluations wrt this prime
 
-  //! a "sanity check" function, verifies consistency of the map with
-  //! current moduli chain, an error is raised if they are not consistent
+
+
+class AltCRT {
+  const FHEcontext& context; // the context
+  IndexMap<zz_pX> map; // the data itself: if the i'th prime is in use then
+                          // map[i] is the vector of evaluations wrt this prime
+
+  // a "sanity check" function, verifies consistency of the map with current
+  // moduli chain, an error is raised if they are not consistent
   void verify();
+
 
   // Generic operators. 
   // The behavior when *this and other use different primes depends on the flag
@@ -139,25 +123,22 @@ public:
 
   // copy constructor: default
 
-  //! @brief Initializing AltCRT from a ZZX polynomial
+  AltCRT(const ZZX&poly, const FHEcontext& _context, const IndexSet& indexSet);
   AltCRT(const ZZX&poly, const FHEcontext& _context);
 
-  //! @param poly The ring element itself, zero if not specified
-  //! @param _context The context for this AltCRT object, use "current active context" if not specified
-  //! @param indexSet Which primes to use for this object, if not specified then use all of them
-  AltCRT(const ZZX&poly, const FHEcontext& _context, const IndexSet& indexSet);
+  explicit AltCRT(const ZZX&poly); 
+  // uses the "active context", run-time error if it is NULL
+  // declare "explicit" to avoid implicit type conversion
 
-  //! @brief Context is not specified, use the "active context"
-  //  (run-time error if active context is NULL)
-  //  declared "explicit" to avoid implicit type conversion
-  explicit AltCRT(const ZZX&poly);
+ // Without specifying a ZZX, we get the zero polynomial
 
-  //! @brief Without specifying a ZZX, we get the zero polynomial
-  //  declared "explicit" to avoid implicit type conversion
-  explicit AltCRT(const FHEcontext &_context);
-
-  //! @brief Also specify the IndexSet explicitly
   AltCRT(const FHEcontext &_context, const IndexSet& indexSet);
+
+  explicit AltCRT(const FHEcontext &_context);
+  // declare "explicit" to avoid implicit type conversion
+
+  //  AltCRT(); 
+  // uses the "active context", run-time error if it is NULL
 
 
   // Assignment operator, the following two lines are equivalent:
@@ -166,21 +147,24 @@ public:
   //    AltCRT dCRT(context, indexSet); dCRT = poly;
 
   AltCRT& operator=(const AltCRT& other);
+
+  // Copy only the primes in s \intersect other.getIndexSet()
+  //  void partialCopy(const AltCRT& other, const IndexSet& s);
+
   AltCRT& operator=(const SingleCRT& other);
   AltCRT& operator=(const ZZX& poly);
   AltCRT& operator=(const ZZ& num);
   AltCRT& operator=(const long num) { *this = to_ZZ(num); return *this; }
 
-  //! @brief Recovering the polynomial in coefficient representation.
-  void toPoly(ZZX& p, bool positive=false) const;
+  // Recovering the polynomial in coefficient representation. This yields an
+  // integer polynomial with coefficients in [-P/2,P/2], unless the positive
+  // flag is set to true, in which case we get coefficients in [0,P-1] (P is
+  // the product of all moduli used). Using the optional IndexSet param
+  // we compute the polynomial reduced modulo the product of only the ptimes
+  // in that set.
 
-  //! @brief Recovering the polynomial in coefficient representation.
-  //! This yields an integer polynomial with coefficients in [-P/2,P/2],
-  //! unless the positive flag is set to true, in which case we get
-  //! coefficients in [0,P-1] (P is the product of all moduli used).
-  //! Using the optional IndexSet param we compute the polynomial
-  //! reduced modulo the product of only the ptimes in that set.
   void toPoly(ZZX& p, const IndexSet& s, bool positive=false) const;
+  void toPoly(ZZX& p, bool positive=false) const;
 
   // The variant toPolyMod has another argument, which is a modulus Q, and it
   // computes toPoly() mod Q. This is offerred as a separate function in the
@@ -199,40 +183,36 @@ public:
     return !(*this==other);
   }
 
-  // @brief Set to zero
+  // Set to zero, one
   AltCRT& SetZero() { 
     *this = ZZ::zero(); 
     return *this; 
   }
-  // @brief Set to one
+
   AltCRT& SetOne()  { 
     *this = 1; 
     return *this; 
   }
 
-  //! @brief Break into n digits,according to the primeSets in context.digits.
-  //! See Section 3.1.6 of the design document (re-linearization)
+  // break into n digits,according to the primeSets in context.digits
   void breakIntoDigits(vector<AltCRT>& dgts, long n) const;
 
-  //! @brief Expand the index set by s1.
-  //! It is assumed that s1 is disjoint from the current index set.
+  // expand the index set by s1.
+  // it is assumed that s1 is disjoint from the current index set.
   void addPrimes(const IndexSet& s1);
 
-  //! @brief Expand index set by s1, and multiply by Prod_{q in s1}.
-  //! s1 is disjoint from the current index set, returns log(product).
+  // Expand index set by s1, and multiply by \prod{q \in s1}. s1 is assumed to
+  // be disjoint from the current index set. Returns the logarithm of product.
   double addPrimesAndScale(const IndexSet& s1);
 
-  //! @brief Remove s1 from the index set
+  // remove s1 from the index set
   void removePrimes(const IndexSet& s1) {
     map.remove(s1);
   }
 
-  /**
-   * @name Arithmetic operation
-   * @brief Only the "destructive" versions are used,
-   * i.e., a += b is implemented but not a + b.
-   **/
-  ///@{
+
+  // Arithmetic operations. Only the "destructive" versions are used,
+  // i.e., a += b is implemented but not a + b.
 
   // Addition, negation, subtraction
   AltCRT& Negate(const AltCRT& other);
@@ -316,14 +296,14 @@ public:
   AltCRT& operator/=(long num) { return (*this /= to_ZZ(num)); }
 
 
-  //! @brief Small-exponent polynomial exponentiation
+  // Small-exponent polynomial exponentiation
   void Exp(long k);
 
 
   // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
   void automorph(long k);
   AltCRT& operator>>=(long k) { automorph(k); return *this; }
-  ///@}
+
 
   // Utilities
 
@@ -334,24 +314,24 @@ public:
   // Choose random AltCRT's, either at random or with small/Gaussian
   // coefficients. 
 
-  //! @brief Fills each row i with random ints mod pi, uses NTL's PRG
+  // fills each row i w/ random ints mod pi, uses NTL's PRG
   void randomize(const ZZ* seed=NULL);
 
-  //! @brief Coefficients are -1/0/1, Prob[0]=1/2
+  // Coefficients are -1/0/1, Prob[0]=1/2
   void sampleSmall() {
     ZZX poly; 
     ::sampleSmall(poly,context.zMStar.getPhiM()); // degree-(phi(m)-1) polynomial
     *this = poly; // convert to AltCRT
   }
 
-  //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
+  // Coefficients are -1/0/1 with pre-specified number of nonzeros
   void sampleHWt(long Hwt) {
     ZZX poly; 
     ::sampleHWt(poly,Hwt,context.zMStar.getPhiM());
     *this = poly; // convert to AltCRT
   }
 
-  //! @brief Coefficients are Gaussians
+  // Coefficients are Gaussians
   void sampleGaussian(double stdev=0.0) {
     if (stdev==0.0) stdev=to_double(context.stdev); 
     ZZX poly; 
@@ -360,8 +340,8 @@ public:
   }
 
 
-  //! @brief Makes a corresponding SingleCRT object.
-  // Restricted to the given index set, if specified
+  // makes a corresponding SingleCRT object, restricted to
+  // the given index set, if specified
   void toSingleCRT(SingleCRT& scrt, const IndexSet& s) const;
   void toSingleCRT(SingleCRT& scrt) const;
 
@@ -374,12 +354,10 @@ public:
   friend ostream& operator<< (ostream &s, const AltCRT &d);
   friend istream& operator>> (istream &s, AltCRT &d);
 
-  //! @brief Used for testing/debugging
-  //! The dry-run option disables most operations, to save time. This lets
-  //! us quickly go over the evaluation of a circuit and estimate the
-  //! resulting noise magnitude, without having to actually compute anything. 
   static bool setDryRun(bool toWhat=true) { dryRun=toWhat; return dryRun; }
 };
+
+
 
 
 inline void conv(AltCRT &d, const ZZX &p) { d=p; }
