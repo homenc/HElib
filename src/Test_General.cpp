@@ -68,6 +68,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   context.zMStar.printout();
   cerr << endl;
+  cerr << context << endl;
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
