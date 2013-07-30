@@ -97,7 +97,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   cerr << "G = " << G << "\n";
   cerr << "generating key-switching matrices... ";
-  addSome1DMatrices(secretKey,2); // compute key-switching matrices that we need
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   cerr << "done\n";
 
   printAllTimers();

@@ -225,8 +225,8 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     tmp.multByConstant(m1); // only the slots in which mask=1
     ctxt -= tmp;            // only the slots in which mask=0
 
-    rotate1D(tmp, 0, v); 
-    rotate1D(ctxt, 0, v+1);
+    rotate1D(tmp, i, v); 
+    rotate1D(ctxt, i, v+1);
     ctxt += tmp;
     if (i>0) {
       mask = ((mask * (maskTable[i][v] - maskTable[i][v+1])) % PhimXmod)
