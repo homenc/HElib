@@ -17,8 +17,15 @@
 #include "NumbTh.h"
 #include "FHEContext.h"
 
+#include "DoubleCRT.h" // include this to pick up USE_ALT_CRT macro
+
+#ifdef USE_ALT_CRT
+#define pSize NTL_SP_NBITS   /* empirical average size of small primes */
+#define p0Size NTL_SP_NBITS  /* size of first 1-2 small primes */
+#else
 #define pSize 16   /* empirical average size of small primes */
 #define p0Size 29  /* size of first 1-2 small primes */
+#endif
 
 NTL_CLIENT
 
@@ -145,12 +152,37 @@ void FHEcontext::AddPrime(long p, bool special)
     ctxtPrimes.insert(i);
 }
 
+long FHEcontext::AddFFTPrime(bool special)
+{
+  long i = moduli.size();
+  zz_pBak bak; bak.save();
+  zz_p::FFTInit(i);
+  long p = zz_p::modulus();
+
+  moduli.push_back( Cmodulus(zMStar, 0, 1) );
+
+  if (special)
+    specialPrimes.insert(i);
+  else
+    ctxtPrimes.insert(i);
+
+  return p;
+}
+
 // Adds to the chain primes whose product is at least totalSize bits
 double AddPrimesBySize(FHEcontext& context, double totalSize, bool special)
 {
   if (!context.zMStar.getM() || context.zMStar.getM() > (1<<20)) // sanity checks
     Error("AddModuli1: m undefined or larger than 2^20");
 
+#ifdef USE_ALT_CRT
+  double sizeLeft = totalSize;
+  while (sizeLeft > 0.0) {
+    long p = context.AddFFTPrime(special);
+    sizeLeft -= log((double)p);
+  }
+  return totalSize-sizeLeft;
+#else
   long p = (1UL << NTL_SP_NBITS)-1;   // Start from as large prime as possible
   long twoM = 2 * context.zMStar.getM(); // make p-1 divisible by 2m
   p -= (p%twoM); // 0 mod 2m
@@ -173,6 +205,7 @@ double AddPrimesBySize(FHEcontext& context, double totalSize, bool special)
     }
   }
   return totalSize-sizeLeft;
+#endif
 }
 
 // Adds nPrimes primes to the chain, returns the bitsize of the product of
@@ -183,6 +216,15 @@ double AddPrimesByNumber(FHEcontext& context, long nPrimes,
   if (!context.zMStar.getM() || context.zMStar.getM() > (1<<20))  // sanity checks
     Error("FHEcontext::AddModuli2: m undefined or larger than 2^20");
 
+#ifdef USE_ALT_CRT
+  double sizeSoFar = 0.0;
+  while (nPrimes > 0) {
+    long pp = context.AddFFTPrime(special);
+    nPrimes -= 1;
+    sizeSoFar += log((double)pp);
+  }
+  return sizeSoFar;
+#else
   long twoM = 2 * context.zMStar.getM();
 
   // make sure that p>0 and that p-1 is divisible by m
@@ -199,12 +241,13 @@ double AddPrimesByNumber(FHEcontext& context, long nPrimes,
     }
   }
   return sizeSoFar;
+#endif
 }
 
 void buildModChain(FHEcontext &context, long nLvls, long nDgts)
 {
   // The first 1-2 primes of total p0size bits
-  #if (NTL_SP_NBITS > p0Size)
+  #if (defined(USE_ALT_CRT) || NTL_SP_NBITS > p0Size)
     AddPrimesByNumber(context, 1, 1UL<<p0Size); // add a single prime
   #else
     AddPrimesByNumber(context, 2, 1UL<<(p0Size/2)); // add two primes

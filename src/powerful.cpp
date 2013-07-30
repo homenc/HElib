@@ -416,12 +416,8 @@ void print3D(const HyperCube<T>& c)
 }
 
 
-
-
-
-
-// if x represents the prime factorization of m, then computePhi(x)
-// returns phi(m)
+// x = p^e
+// returns phi(p^e) = (p-1) p^{e-1}
 long computePhi(const Pair<long, long>& x)
 {
   long p = x.a;
@@ -429,7 +425,8 @@ long computePhi(const Pair<long, long>& x)
   return power_long(p, e - 1) * (p-1);
 }
 
-// if x is the pair (p, e), computePow(x) return p^e
+// x = (p, e)
+// returns p^e
 long computePow(const Pair<long, long>& x)
 {
   long p = x.a;
@@ -438,85 +435,104 @@ long computePow(const Pair<long, long>& x)
 }
 
 
-// computeProd(vec) returns the product of the entries of vec
+// returns \prod_d vec[d]
 long computeProd(const Vec<long>& vec)
 {
   long prod = 1;
   long k = vec.length();
-  for (long i = 0; i < k; i++)
-    prod = prod * vec[i];
+  for (long d = 0; d < k; d++)
+    prod = prod * vec[d];
   return prod;
 }
 
-// if vec is a vector of pairs (p_i, e_i), then computeProd(vec)
-// returns \prod_i p_i^{e_i}
+// vec[d] = (a_d , b_d)
+// returns \prod_d a_d^{b_d}
 long computeProd(const Vec< Pair<long, long> >& vec)
 {
   long prod = 1;
   long k = vec.length();
-  for (long i = 0; i < k; i++) {
-    prod = prod * computePow(vec[i]);
+  for (long d = 0; d < k; d++) {
+    prod = prod * computePow(vec[d]);
   }
   return prod;
 }
 
-// if factors represents the prime factorization \prod_{i=1}^k p_i^{e_i},
-// phiVec is initialied to the vector ( phi(p_i^{e_i}) )_{i=1}^k
+// factors[d] = (p_d, e_d)
+// computes phiVec[d] = phi(p_d^{e_d}) = (p_d-1) p_i{e_d-1}
 void computePhiVec(Vec<long>& phiVec, 
                    const Vec< Pair<long, long> >& factors)
 {
   long k = factors.length();
   phiVec.SetLength(k);
 
-  for (long i = 0; i < k; i++) 
-    phiVec[i] = computePhi(factors[i]);
+  for (long d = 0; d < k; d++) 
+    phiVec[d] = computePhi(factors[d]);
 }
 
+// factors[d] = (p_d, e_d)
+// computes powVec[d] = p_d^{e_d}
 void computePowVec(Vec<long>& powVec, 
                    const Vec< Pair<long, long> >& factors)
 {
   long k = factors.length();
   powVec.SetLength(k);
-  for (long i = 0; i < k; i++)
-    powVec[i] = computePow(factors[i]);
+  for (long d = 0; d < k; d++)
+    powVec[d] = computePow(factors[d]);
 }
 
+
+// powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}
+// computes divVec[d] = m/p_d^{e_d}
 void computeDivVec(Vec<long>& divVec, long m,
                    const Vec<long>& powVec)
 {
   long k = powVec.length();
   divVec.SetLength(k);
 
-  for (long i = 0; i < k; i++)
-    divVec[i] = m/powVec[i];
+  for (long d = 0; d < k; d++)
+    divVec[d] = m/powVec[d];
 }
 
 
+// divVec[d] = m/p_d^{e_d}, powVec[d] = p^{e_d}
+// computes invVec[d] = divVec[d]^{-1} mod powVec[d]
 void computeInvVec(Vec<long>& invVec,
                    const Vec<long>& divVec, const Vec<long>& powVec)
 {
   long k = divVec.length();
   invVec.SetLength(k);
 
-  for (long i = 0; i < k; i++) {
-    long t1 = divVec[i] % powVec[i];
-    long t2 = InvMod(t1, powVec[i]);
-    invVec[i] = t2;
+  for (long d = 0; d < k; d++) {
+    long t1 = divVec[d] % powVec[d];
+    long t2 = InvMod(t1, powVec[d]);
+    invVec[d] = t2;
   }
 }
 
+// powVec[d] = p_d^{e_d}
+// cycVec[d] = Phi_{p_d^{e_d}}(X) mod p
 void computeCycVec(Vec<zz_pX>& cycVec, const Vec<long>& powVec)
 {
   long k = powVec.length();
   cycVec.SetLength(k);
 
-  for (long i = 0; i < k; i++) {
-    ZZX PhimX = Cyclotomic(powVec[i]);
-    cycVec[i] = conv<zz_pX>(PhimX);
+  for (long d = 0; d < k; d++) {
+    ZZX PhimX = Cyclotomic(powVec[d]);
+    cycVec[d] = conv<zz_pX>(PhimX);
   }
 }
 
 
+// m = m_1 ... m_k, m_d = p_d^{e_d} 
+// powVec[d] = m_d
+// invVec[d] = (m/m_d)^{-1} mod m_d
+// computes polyToCubeMap[i] and cubeToPolyMap[i] 
+//   where polyToCubeMap[i] is the index of (i_1, ..., i_k)
+//   in the cube with CubeSignature longSig = (m_1, ..., m_k),
+//   and (i_1, ..., i_k) is the unique tuple satistifying
+//   i = i_1 (m/m_1) + ... + i_k (m/m_k) mod m
+// and
+//   cubeToPolyMap is the inverse map.
 void computePowerToCubeMap(Vec<long>& polyToCubeMap,
                            Vec<long>& cubeToPolyMap,
                            long m,
@@ -541,6 +557,11 @@ void computePowerToCubeMap(Vec<long>& polyToCubeMap,
 }
 
 
+// shortSig is a CubeSignature for (phi(m_1), .., phi(m_k)),
+// longSig is a CubeSignature for (m_1, ..., m_k).
+// computes shortToLongMap[i] that maps an index i 
+// with respect to shortSig to the corresponding index
+// with respect to longSig.
 void computeShortToLongMap(Vec<long>& shortToLongMap, 
                            const CubeSignature& shortSig, 
                            const CubeSignature& longSig) 
@@ -562,6 +583,8 @@ void computeShortToLongMap(Vec<long>& shortToLongMap,
 }
 
 
+// Computes the inverse of the shortToLongMap, computed above.
+// "undefined" entries are initialzed to -1.
 void computeLongToShortMap(Vec<long>& longToShortMap,
                            long m,
                            const Vec<long>& shortToLongMap)
@@ -580,6 +603,13 @@ void computeLongToShortMap(Vec<long>& longToShortMap,
 
 
 
+// This routine recursively reduces each hypercolumn
+// in dimension d (viewed as a coeff vector) by Phi_{m_d}(X)
+// If one starts with a cube of dimension (m_1, ..., m_k),
+// one ends up with a cube that is effectively of dimension
+// phi(m_1, ..., m_k). Viewed as an element of the ring
+// F_p[X_1,...,X_k]/(Phi_{m_1}(X_1), ..., Phi_{m_k}(X_k)),
+// the cube remains unchanged.
 void recursiveReduce(const CubeSlice<zz_p>& s, 
                      const Vec<zz_pX>& cycVec, 
                      long d,
@@ -617,6 +647,12 @@ void recursiveReduce(const CubeSlice<zz_p>& s,
 
 }
 
+// This routine implements the isomorphism from
+// F_p[X]/(Phi_m(X)) to F_p[X_1, ..., X_k]/(Phi_{m_1}(X_1), ..., Phi_{m_k}(X_k))
+// The input is poly, which must be of degree < m, and the
+// output is cube, which is a HyperCube of dimension (phi(m_1), ..., phi(m_k)).
+// The caller is responsible to supply "scratch space" in the
+// form of a HyperCube tmpCube of dimension (m_1, ..., m_k).
 void convertPolyToPowerful(HyperCube<zz_p>& cube, 
                            HyperCube<zz_p>& tmpCube, 
                            const zz_pX& poly,
@@ -644,6 +680,7 @@ void convertPolyToPowerful(HyperCube<zz_p>& cube,
 }
 
 
+// This implements the inverse of the above isomorphism.
 void convertPowerfulToPoly(zz_pX& poly,
                            const HyperCube<zz_p>& cube,
                            long m,
@@ -668,6 +705,156 @@ void convertPowerfulToPoly(zz_pX& poly,
 
    rem(poly, tmp, phimX);
 }
+
+
+
+// powVec[d] = m_d = p_d^{e_d}
+// computes multiEvalPoints[d] as a vector of length phi(m_d)
+//   containing base^{(m/m_d) j} for j in Z_{m_d}^*
+void computeMultiEvalPoints(Vec< Vec<zz_p> >& multiEvalPoints,
+                            const zz_p& base,
+                            long m,
+                            const Vec<long>& powVec,
+                            const Vec<long>& phiVec)
+{
+   long k = powVec.length();
+
+   multiEvalPoints.SetLength(k);
+
+   for (long d = 0; d < k; d++) {
+      long m_d = powVec[d];
+      long phi_d = phiVec[d];
+      long count = 0;
+
+      zz_p pow = conv<zz_p>(1);
+      zz_p mult = power(base, m/m_d);
+
+      multiEvalPoints[d].SetLength(phi_d);
+
+      for (long j = 0; j < m_d; j++) {
+         if (GCD(j, m_d) == 1) {
+            multiEvalPoints[d][count] = pow;
+            count++;
+         }
+         pow = pow * mult;
+      }
+   }
+}
+
+
+// computes linearEvalPoints[i] = base^i, i = 0..m-1
+void computeLinearEvalPoints(Vec<zz_p>& linearEvalPoints,
+                             const zz_p& base,
+                             long m)
+{
+   linearEvalPoints.SetLength(m);
+   zz_p pow = conv<zz_p>(1);
+
+   for (long i = 0; i < m; i++) {
+      linearEvalPoints[i] = pow;
+      pow = pow * base;
+   }
+}
+
+// powVec[d] = m_d = p_d^{e_d}
+// computes compressedIndex[d] as a vector of length m_d,
+//   where compressedIndex[d][j] = -1 if GCD(j, m_d) != 1,
+//   and otherwise is set to the relative numerical position
+//   of j among Z_{m_d}^*
+void computeCompressedIndex(Vec< Vec<long> >& compressedIndex,
+                            const Vec<long>& powVec)
+{
+   long k = powVec.length();
+
+   compressedIndex.SetLength(k);
+
+   for (long d = 0; d < k; d++) {
+      long m_d = powVec[d];
+      long count = 0;
+      compressedIndex[d].SetLength(m_d);
+      for (long j = 0; j < m_d; j++) {
+         if (GCD(j, m_d) == 1) {
+            compressedIndex[d][j] = count;
+            count++;
+         }
+         else {
+            compressedIndex[d][j] = -1;
+         }
+      }
+   }
+}
+
+
+// computes powToCompressedIndexMap[i] as 
+//   -1 if GCD(i, m) != 1, 
+//   and otherwise as the index of the point (j_1, ..., j_k)
+//   relative to a a cube of dimension (phi(m_1), ..., phi(m_k)),
+//   where each j_d is the compressed index of i_d = i mod m_d.
+
+void computePowToCompressedIndexMap(Vec<long>& powToCompressedIndexMap,
+                                    long m,
+                                    const Vec<long>& powVec,
+                                    const Vec< Vec<long> >& compressedIndex,
+                                    const CubeSignature& shortSig
+                                   )
+{
+   long k = powVec.length();
+   powToCompressedIndexMap.SetLength(m);
+
+   for (long i = 0; i < m; i++) {
+      if (GCD(i, m) != 1) 
+         powToCompressedIndexMap[i] = -1;
+      else {
+         long j = 0;
+         for (long d = 0; d < k; d++) {
+            long i_d = i % powVec[d];
+            long j_d = compressedIndex[d][i_d];
+            j += j_d * shortSig.getProd(d+1);
+         }
+         powToCompressedIndexMap[i] = j;
+      }
+   }
+}
+
+
+void recursiveEval(const CubeSlice<zz_p>& s,
+                   const Vec< Vec<zz_p> >& multiEvalPoints,
+                   long d,
+                   zz_pX& tmp1,
+                   Vec<zz_p>& tmp2)
+{
+   long numDims = s.getNumDims();
+   assert(numDims > 0);
+
+   if (numDims > 1) {
+      long dim0 = s.getDim(0);
+      for (long i = 0; i < dim0; i++)
+         recursiveEval(CubeSlice<zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
+   }
+
+   long posBnd = s.getProd(1);
+   for (long pos = 0; pos < posBnd; pos++) {
+      getHyperColumn(tmp1.rep, s, pos);
+      tmp1.normalize();
+      eval(tmp2, tmp1, multiEvalPoints[d]);
+      setHyperColumn(tmp2, s, pos);
+   }
+
+}
+
+
+void eval(HyperCube<zz_p>& cube,
+          const Vec< Vec<zz_p> >& multiEvalPoints)
+{
+   zz_pX tmp1;
+   Vec<zz_p> tmp2;
+
+   recursiveEval(CubeSlice<zz_p>(cube), multiEvalPoints, 0, tmp1, tmp2);
+} 
+
+
+
+// -------------------------------------
 
         
 void mapIndexToPowerful(Vec<long>& pow, long j, const Vec<long>& phiVec)
@@ -809,6 +996,46 @@ int main(int argc, char *argv[])
     cout << poly << "\n";
     cout << poly1 << "\n";
   }
+
+  long lbase = 1;
+  while (lbase < q && multOrd(lbase, q) != m) lbase++;
+
+  assert(lbase < q);
+
+  zz_p base = conv<zz_p>(lbase);
+
+  Vec< Vec<zz_p> > multiEvalPoints;
+  computeMultiEvalPoints(multiEvalPoints, base, m, powVec, phiVec);
+
+  Vec<zz_p> linearEvalPoints;
+  computeLinearEvalPoints(linearEvalPoints, base, m);
+
+  Vec< Vec<long> > compressedIndex;
+  computeCompressedIndex(compressedIndex, powVec);
+
+  Vec<long> powToCompressedIndexMap;
+  computePowToCompressedIndexMap(powToCompressedIndexMap, m, powVec, 
+                                 compressedIndex, shortSig);
+
+  eval(cube, multiEvalPoints);
+
+  Vec<zz_p> res;
+  eval(res, poly, linearEvalPoints);
+
+  bool eval_ok = true;
+
+  for (long i = 0; i < m; i++) {
+    if (GCD(i, m) == 1) {
+      long j = powToCompressedIndexMap[i];
+      if (cube[j] != res[i]) eval_ok = false;
+    }
+  } 
+
+
+  if (eval_ok)
+    cout << "eval ok\n";
+  else
+    cout << "eval not ok\n";
 
 }
 

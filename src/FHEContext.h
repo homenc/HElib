@@ -157,6 +157,10 @@ public:
   //! @brief Add p to the chain, if it's not already there
   void AddPrime(long p, bool special); 
 
+  //! @brief Add an FFT prime to the chain, if it's not already there
+  //! returns the value of the prime
+  long AddFFTPrime(bool special); 
+
 
   ///@{
   /**

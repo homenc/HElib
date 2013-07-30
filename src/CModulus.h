@@ -149,6 +149,7 @@ class Cmod {
   { *this = other; }
 
   // Specify m and q, and optionally also the root
+  // if q == 0, then the current context is used
   Cmod(const PAlgebra &zms, const zz &qq, const zz &rt);
 
   // Copy operator
