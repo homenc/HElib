@@ -291,6 +291,12 @@ class Ctxt {
     return -1;
   }
 
+  // Sanity-check: Check that prime-set is "valid":
+  //  i. The set contains either all the special primes or none of them;
+  // ii. The regular primes in this set consists of a contiguous nonempty
+  //    interval, starting at 0.
+  bool verifyPrimeSet() const;
+
 public:
   Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace=2); // constructor
   Ctxt& operator=(const Ctxt& other);  // assignment
@@ -355,6 +361,11 @@ public:
   //! @brief Estimate the added noise variance
   xdouble modSwitchAddedNoiseVar() const;
 
+  //! @brief Find the "natural level" of a cipehrtext.
+  // Find the level such that modDown to that level makes the
+  // additive term due to rounding into the dominant noise term 
+  long findBaseLevel() const;
+
   //! @brief Modulus-switching up (to a larger modulus).
   //! Must have primeSet <= s, and s must contain
   //! either all the special primes or none of them.
@@ -365,7 +376,10 @@ public:
   //! primeSet<=s. s must contain either all special primes or none of them
   void modDownToSet(const IndexSet &s);
 
-  //! @brief Fidn the "natural level" of a cipehrtext.
+  //! @brief Modulus-switching down.
+  void modDownToLevel(long lvl, bool keepSpecial=false);
+
+  //! @brief Find the "natural prime-set" of a cipehrtext.
   //! Find the highest IndexSet so that mod-switching down to that set results
   //! in the dominant noise term being the additive term due to rounding
   void findBaseSet(IndexSet& s) const;
@@ -393,7 +407,7 @@ public:
   const long getKeyID() const;
 
   //! @brief How many primes in the "base-set" for that ciphertext
-  const long getLevel() const { 
+  const long getBaseLevel() const { 
     IndexSet s;
     findBaseSet(s);
     return card(s);
