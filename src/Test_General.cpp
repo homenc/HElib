@@ -20,6 +20,17 @@
 
 #include <cassert>
 
+#ifdef DEBUG
+#define debugCompare(ea,sk,p,c) {\
+  PlaintextArray pp(ea);\
+  ea.decrypt(c, sk, pp);\
+  if (!pp.equals(p)) { cerr << "oops\n"; exit(0); }\
+  }
+#else
+#define debugCompare(ea,sk,p,c)
+#endif
+
+
 /**************
 
 1. c1.multiplyBy(c0)
@@ -68,7 +79,9 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   context.zMStar.printout();
   cerr << endl;
+#ifdef DEBUG
   cerr << context << endl;
+#endif
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
@@ -84,7 +97,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   cerr << "G = " << G << "\n";
   cerr << "generating key-switching matrices... ";
-  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  addSome1DMatrices(secretKey,2); // compute key-switching matrices that we need
   cerr << "done\n";
 
   printAllTimers();
@@ -130,31 +143,49 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      const1.random();
      const2.random();
 
-     p1.mul(p0); // c1.multiplyBy(c0)
-     p0.add(const1); // c0 += random constant
-     p2.mul(const2); // c2 *= random constant
-     PlaintextArray tmp_p(p1); // tmp = c1
-     tmp_p.shift(shamt); // ea.shift(tmp, random amount in [-nSlots/2, nSlots/2])
-     p2.add(tmp_p); // c2 += tmp
-     p2.rotate(rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
-     p1.negate(); // c1.negate()
-     p3.mul(p2); // c3.multiplyBy(c2) 
-     p0.sub(p3); // c0 -= c3
-
      ZZX const1_poly, const2_poly;
      ea.encode(const1_poly, const1);
      ea.encode(const2_poly, const2);
 
+     p1.mul(p0);     // c1.multiplyBy(c0)
      c1.multiplyBy(c0);              CheckCtxt(c1, "c1*=c0");
-     c0.addConstant(const1_poly);    CheckCtxt(c0, "c0+=k0");
-     c2.multByConstant(const2_poly); CheckCtxt(c2, "c2*=k0");
+     debugCompare(ea,secretKey,p1,c1);
+
+     p0.add(const1); // c0 += random constant
+     c0.addConstant(const1_poly);    CheckCtxt(c0, "c0+=k1");
+     debugCompare(ea,secretKey,p0,c0);
+
+     p2.mul(const2); // c2 *= random constant
+     c2.multByConstant(const2_poly); CheckCtxt(c2, "c2*=k2");
+     debugCompare(ea,secretKey,p2,c2);
+
+     PlaintextArray tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
+     cerr << "  shift by "<< shamt<<",";
+     tmp_p.shift(shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
      ea.shift(tmp, shamt);           CheckCtxt(tmp, "tmp=c1>>$");
+     debugCompare(ea,secretKey,tmp_p,tmp);
+
+     p2.add(tmp_p);  // c2 += tmp
      c2 += tmp;                      CheckCtxt(c2, "c2+=tmp");
+     debugCompare(ea,secretKey,p2,c2);
+
+     cerr << "  rotate by "<< rotamt<<",";
+     p2.rotate(rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
      ea.rotate(c2, rotamt);          CheckCtxt(c2, "c2>>>=$");
+     debugCompare(ea,secretKey,p2,c2);
+
+     p1.negate(); // c1.negate()
      c1.negate();                    CheckCtxt(c1, "c1=-c1");
+     debugCompare(ea,secretKey,p1,c1);
+
+     p3.mul(p2); // c3.multiplyBy(c2) 
      c3.multiplyBy(c2);              CheckCtxt(c3, "c3*=c2");
+     debugCompare(ea,secretKey,p1,c3);
+
+     p0.sub(p3); // c0 -= c3
      c0 -= c3;                       CheckCtxt(c0, "c0=-c3");
+     debugCompare(ea,secretKey,p0,c0);
 
      PlaintextArray pp0(ea);
      PlaintextArray pp1(ea);
