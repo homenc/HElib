@@ -41,6 +41,7 @@ TESTPROGS = Test_General_x Test_Replicate_x Test_LinPoly_x Test_matmul_x
 all: fhe.a
 
 check: Test_General_x
+	./Test_General_x R=1 m=255
 	./Test_General_x R=1 k=10 p=2 r=1 d=1
 	./Test_General_x R=1 k=10 p=2 r=2 d=1
 	./Test_General_x R=1 k=10 p=2 r=1 d=2
