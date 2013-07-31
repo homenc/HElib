@@ -26,16 +26,30 @@ NTL_CLIENT
 // Sanity-check: Check that prime-set is "valid":
 //  i. The set contains either all the special primes or none of them;
 // ii. The regular primes in this set consists of a contiguous nonempty
-//    interval, starting at 0.
+//    interval, starting at either 0 or 1.
 bool Ctxt::verifyPrimeSet() const
 {
   IndexSet s = primeSet & context.specialPrimes; // special primes in primeSet
   if (!empty(s) && s!=context.specialPrimes) return false;
 
   s = primeSet / s;                              // ctxt primes in primeSet
-  return (s.isInterval() && s.first()==0 && !empty(s));
+  return (s.isInterval() && s.first()<=1 && !empty(s));
 }
 
+
+//! @brief How many levels in the "base-set" for that ciphertext
+long Ctxt::findBaseLevel() const 
+{
+  IndexSet s;
+  findBaseSet(s);
+  if (context.containsSmallPrime()) {
+    if (s.contains(context.ctxtPrimes.first()))
+      return 2*card(s) -1; // 1st prime is half size
+    else
+      return 2*card(s);
+  }
+  else return card(s);     // one prime per level
+}
 
 bool CtxtPart::operator==(const CtxtPart& other) const
 {
@@ -156,16 +170,40 @@ void Ctxt::modDownToSet(const IndexSet &s)
 
 
 // Modulus-switching down
-void Ctxt::modDownToLevel(long lvl, bool keepSpecial)
+void Ctxt::modDownToLevel(long lvl)
+
 {
-  IndexSet targetSet(0,lvl-1); // mod-switch to the interval [0,lvl-1]
+  long currentLvl;
+  IndexSet targetSet;
+  IndexSet currentSet = primeSet & context.ctxtPrimes;
+  if (context.containsSmallPrime()) {
+    currentLvl = 2*card(currentSet);
+    if (currentSet.contains(0))
+      currentLvl--;  // first prime is half the size
+
+    if (lvl & 1) {   // odd level, includes the half-size prime
+      targetSet = IndexSet(0,(lvl-1)/2);
+    } else {
+      targetSet = IndexSet(1,lvl/2);
+    }
+  }
+  else {
+    currentLvl = card(currentSet);
+
+    targetSet = IndexSet(0,lvl-1);    // one prime per level
+  }
+
+  // If target is not below the current level, nothing to do
+  if (lvl >= currentLvl) return;
 
   // sanity-check: interval does not contain special primes
   assert(targetSet.disjointFrom(context.specialPrimes));
 
-  if (keepSpecial) // Don't remove the special primes if they are there
-    targetSet.insert(primeSet & context.specialPrimes);
-  modDownToSet(targetSet);
+  // may need to mod-UP to include the smallest prime
+  if (targetSet.contains(0) && !currentSet.contains(0))
+    modUpToSet(targetSet); // adds the primes in targetSet / primeSet
+
+  modDownToSet(targetSet); // removes the primes in primeSet / targetSet
 }
 
 // key-switch to (1,s_i), s_i is the base key with index keyID. If
@@ -310,22 +348,15 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   FHE_TIMER_STOP;
 } // restore random state upon destruction of the RandomState, see NumbTh.h
 
-// Find the level such that modDown to that level makes the
-// additive term due to rounding into the dominant noise term 
-long Ctxt::findBaseLevel() const
-{
-  IndexSet s;
-  findBaseSet(s);
-  return s.card();
-}
-
 // Find the IndexSet such that modDown to that set of primes makes the
 // additive term due to rounding into the dominant noise term 
 void Ctxt::findBaseSet(IndexSet& s) const
 {
   assert(verifyPrimeSet());
+  bool halfSize = context.containsSmallPrime();
   double addedNoise = log(modSwitchAddedNoiseVar())/2;
   double curNoise = log(getNoiseVar())/2;
+  double firstNoise = context.logOfPrime(0);
 
   // remove special primes, if they are included in this->primeSet
   s = getPrimeSet();
@@ -335,11 +366,33 @@ void Ctxt::findBaseSet(IndexSet& s) const
     s.remove(context.specialPrimes);
   }
 
+  if (curNoise<=addedNoise) return; // no need to mod down
+
+  // if the first prime in half size, begin by removing it
+  if (halfSize && s.contains(0)) {
+    curNoise -= firstNoise;
+    s.remove(0);
+  }
+
   // while noise is larger than added term, scale down by the next prime
   while (curNoise>addedNoise && card(s)>1) {
     curNoise -= context.logOfPrime(s.last());
     s.remove(s.last());
   }
+
+  if (halfSize) {
+    // If noise is still too big, drop last big prime and insert half-size prime
+    if (curNoise>addedNoise) {
+      curNoise = firstNoise;
+      s = IndexSet(0);
+    } 
+    // Otherwise check if you can add back the half-size prime
+    else if (curNoise+firstNoise <= addedNoise) {
+      curNoise += firstNoise;
+      s.insert(0);
+    }
+  }
+
   if (curNoise>addedNoise)
     cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
 }
@@ -545,8 +598,8 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
     this->ptxtSpace = g;
 
     // Match the levels, mod-DOWN the arguments if needed
-    long lvl = getBaseLevel();
-    long otherLvl = other.getBaseLevel();
+    long lvl = findBaseLevel();
+    long otherLvl = other.findBaseLevel();
     if (lvl > otherLvl) lvl = otherLvl; // the smallest of the two
 
     // mod-DOWN *this, if needed (also removes special primes, if any)
@@ -582,9 +635,9 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 {
   FHE_TIMER_START;
 
-  long lvl = getBaseLevel();
-  long lvl1 = other1.getBaseLevel();
-  long lvl2 = other2.getBaseLevel();
+  long lvl = findBaseLevel();
+  long lvl1 = other1.findBaseLevel();
+  long lvl2 = other2.findBaseLevel();
 
   if (lvl<lvl1 && lvl<lvl2){ // if both others at higher levels than this,
     Ctxt tmp = other1;       // multiply others by each other, then by this
@@ -772,6 +825,6 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  cerr << "  "<<label << ", level=" << c.getBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
+  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
 }
 

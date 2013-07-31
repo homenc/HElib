@@ -66,9 +66,11 @@ public:
    *
    * The public encryption key and "fresh" ciphertexts are encrypted relative
    * to only a subset of the primes, to allow for mod-UP during key-switching.
-   * See section 3.1.6 in the design document (key-switching).
+   * See section 3.1.6 in the design document (key-switching). 
    * In ctxtPrimes we keep the indexes of this subset. Namely, for a ciphertext
    * part p in a fresh ciphertext we have p.getMap().getIndexSet()==ctxtPrimes.
+   * It is assumed that all the "ciphertext primes" are roughly the same size,
+   * except perhaps the first one (with index 0), which could be smaller.
    **/
   IndexSet ctxtPrimes;
 
@@ -161,7 +163,16 @@ public:
   //! returns the value of the prime
   long AddFFTPrime(bool special); 
 
-
+  //! @brief Test if the chain contains a "half-size" ciphertext prime
+  // If it exists, the half-size prime must be the first cipehrtext prime.
+  // All other primes are assumed to have roughly the same size.
+  bool containsSmallPrime() const {
+    if (card(ctxtPrimes)<2) return false;
+    long fst = ctxtPrimes.first();
+    long scnd= ctxtPrimes.next(fst);
+    return (logOfPrime(fst) < (0.75 * logOfPrime(scnd)));
+  }
+  
   ///@{
   /**
      @name I/O routines

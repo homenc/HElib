@@ -377,7 +377,7 @@ public:
   void modDownToSet(const IndexSet &s);
 
   //! @brief Modulus-switching down.
-  void modDownToLevel(long lvl, bool keepSpecial=false);
+  void modDownToLevel(long lvl);
 
   //! @brief Find the "natural prime-set" of a cipehrtext.
   //! Find the highest IndexSet so that mod-switching down to that set results
@@ -405,13 +405,6 @@ public:
   const xdouble& getNoiseVar() const   { return noiseVar; }
   const long getPtxtSpace() const      { return ptxtSpace;}
   const long getKeyID() const;
-
-  //! @brief How many primes in the "base-set" for that ciphertext
-  const long getBaseLevel() const { 
-    IndexSet s;
-    findBaseSet(s);
-    return card(s);
-  }
 
   //! @brief Returns log(noise-variance)/2 - log(q)
   double log_of_ratio() const
