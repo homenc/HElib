@@ -216,6 +216,11 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
 
 void buildModChain(FHEcontext &context, long nLvls, long nDgts)
 {
+  long morePrimes = nLvls/2;    // how many more primes to choose
+
+#ifdef NO_HALF_SIZE_PRIME
+  morePrimes = nLvls+1;
+#else
   // The first prime should be of half the size. The code below tries to find
   // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
   // Then if the plaintext space is a power of two it tries to choose the
@@ -230,7 +235,6 @@ void buildModChain(FHEcontext &context, long nLvls, long nDgts)
   long q0 = context.AddPrime(bound, twoM); // add next prime to chain
   assert(q0 != 0);
 
-  long morePrimes = nLvls/2;    // how many more primes to choose
 
 #if 0
   // The choice of the 2nd prime is an optimization for the case of
@@ -265,6 +269,7 @@ void buildModChain(FHEcontext &context, long nLvls, long nDgts)
       if (q1) morePrimes--;             // a prime was found
     }
   }
+#endif
 #endif
 
   // Choose the next primes as large as possible
