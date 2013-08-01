@@ -625,16 +625,12 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
 
 void Ctxt::multiplyBy(const Ctxt& other)
 {
-  FHE_TIMER_START;
   *this *= other;  // perform the multiplication
   reLinearize();   // re-linearize
-  FHE_TIMER_STOP;
 }
 
 void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 {
-  FHE_TIMER_START;
-
   long lvl = findBaseLevel();
   long lvl1 = other1.findBaseLevel();
   long lvl2 = other2.findBaseLevel();
@@ -655,7 +651,6 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
     *this *= other2;
   }
   reLinearize(); // re-linearize after all the multiplications
-  FHE_TIMER_STOP;
 }
 
 // Multiply-by-constant
