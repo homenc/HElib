@@ -77,7 +77,7 @@ public:
 
     cerr << "*** " << pos << " t=" << t_elapsed 
          << ", t_total=" << t_total 
-         << ", level=" << ctxt.getLevel() 
+         << ", level=" << ctxt.findBaseLevel() 
          << ", log(noise/modulus)~" << ctxt.log_of_ratio() 
          << "\n";
     

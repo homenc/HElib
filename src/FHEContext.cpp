@@ -19,13 +19,7 @@
 
 #include "DoubleCRT.h" // include this to pick up USE_ALT_CRT macro
 
-#ifdef USE_ALT_CRT
-#define pSize NTL_SP_NBITS   /* empirical average size of small primes */
-#define p0Size NTL_SP_NBITS  /* size of first 1-2 small primes */
-#else
-#define pSize 16   /* empirical average size of small primes */
-#define p0Size 29  /* size of first 1-2 small primes */
-#endif
+#define pSize (NTL_SP_NBITS/2) /* The size of levels in the chain */
 
 NTL_CLIENT
 
@@ -35,27 +29,27 @@ NTL_CLIENT
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
   // get a lower-bound on the parameter N=phi(m):
-  // 1. Empirically, we use ~20-bit small primes in the modulus chain (the main
-  //    constraints is that 2m must divide p-1 for every prime p). The first
-  //    prime is larger, a 40-bit prime. (If this is a 32-bit machine then we
-  //    use two 20-bit primes instead.)
+  // 1. Each level in the modulus chain corresponds to pSize=NTL_SP_NBITS/2
+  //    bits (where we have one prime of this size, and all the others are of
+  //    size NTL_SP_NBITS).
+  //    When using DoubleCRT, we need 2m to divide q-1 for every prime q.
   // 2. With L levels, the largest modulus for "fresh ciphertexts" has size
-  //          q0 ~ p0 * p^{L} ~ 2^{40+20L}
+  //          Q0 ~ p^{L+1} ~ 2^{(L+1)*pSize}
   // 3. We break each ciphertext into upto c digits, do each digit is as large
-  //    as    D=2^{(40+20L)/c}
+  //    as    D=2^{(L+1)*pSize/c}
   // 4. The added noise variance term from the key-switching operation is
   //    c*N*sigma^2*D^2, and this must be mod-switched down to w*N (so it is
-  //    on part with the added noise from modulus-switching). Hence the ratio
+  //    on par with the added noise from modulus-switching). Hence the ratio
   //    P that we use for mod-switching must satisfy c*N*sigma^2*D^2/P^2<w*N,
-  //    or    P > sqrt(c/w) * sigma * 2^{(40+20L)/c}
+  //    or    P > sqrt(c/w) * sigma * 2^{(L+1)*pSize/c}
   // 5. With this extra P factor, the key-switching matrices are defined
   //    relative to a modulus of size
-  //          Q0 = q0*P ~ sqrt{c/w} sigma 2^{(40+20L)(1+1/c)}
+  //          Q0 = q0*P ~ sqrt{c/w} sigma 2^{(L+1)*pSize*(1+1/c)}
   // 6. To get k-bit security we need N>log(Q0/sigma)(k+110)/7.2, i.e. roughly
-  //          N > (40+20L)(1+1/c)(k+110) / 7.2
+  //          N > (L+1)*pSize*(1+1/c)(k+110) / 7.2
 
   double cc = 1.0+(1.0/(double)c);
-  long N = (long) ceil((pSize*L+p0Size)*cc*(k+110)/7.2);
+  long N = (long) ceil((L+1)*pSize*cc*(k+110)/7.2);
 
   // pre-computed values of [phi(m),m,d]
   long ms[][4] = {
@@ -138,28 +132,20 @@ void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
     p *= ithPrime(i);
 }
 
-void FHEcontext::AddPrime(long p, bool special)
+// Find the next prime and add it to the chain
+long FHEcontext::AddPrime(long initialP, long delta, bool special)
 {
-  long twoM = 2 * zMStar.getM();  // ensure p-1 is divisible by 2m
-  assert( ProbPrime(p) && p % twoM == 1 && !inChain(p) );
+  long twoM = 2 * zMStar.getM();
+  assert((initialP % twoM == 1) && (delta % twoM == 0));
 
-  long i = moduli.size();
+  long p = initialP;
+  do { p += delta; } // delta could be positive or negative
+  while (p>initialP/16 && p<NTL_SP_BOUND && !(ProbPrime(p) && !inChain(p)));
+
+  if (p<=initialP/16 || p>=NTL_SP_BOUND) return 0; // no prime found
+
+  long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back( Cmodulus(zMStar, p, 0) );
-
-  if (special)
-    specialPrimes.insert(i);
-  else
-    ctxtPrimes.insert(i);
-}
-
-long FHEcontext::AddFFTPrime(bool special)
-{
-  long i = moduli.size();
-  zz_pBak bak; bak.save();
-  zz_p::FFTInit(i);
-  long p = zz_p::modulus();
-
-  moduli.push_back( Cmodulus(zMStar, 0, 1) );
 
   if (special)
     specialPrimes.insert(i);
@@ -169,92 +155,120 @@ long FHEcontext::AddFFTPrime(bool special)
   return p;
 }
 
-// Adds to the chain primes whose product is at least totalSize bits
-double AddPrimesBySize(FHEcontext& context, double totalSize, bool special)
+long FHEcontext::AddFFTPrime(bool special)
 {
-  if (!context.zMStar.getM() || context.zMStar.getM() > (1<<20)) // sanity checks
-    Error("AddModuli1: m undefined or larger than 2^20");
+  zz_pBak bak; bak.save(); // Backup the NTL context
 
-#ifdef USE_ALT_CRT
-  double sizeLeft = totalSize;
-  while (sizeLeft > 0.0) {
-    long p = context.AddFFTPrime(special);
-    sizeLeft -= log((double)p);
-  }
-  return totalSize-sizeLeft;
-#else
-  long p = (1UL << NTL_SP_NBITS)-1;   // Start from as large prime as possible
-  long twoM = 2 * context.zMStar.getM(); // make p-1 divisible by 2m
-  p -= (p%twoM); // 0 mod 2m
-  p += twoM +1;  // 1 mod 2m, a 2m quantity is subtracted below
+  long i = moduli.size(); // The index of the new prime in the list
+  zz_p::FFTInit(i);
+  long p = zz_p::modulus();
 
-  bool lastPrime = false;
-  double sizeLeft = totalSize; // how much is left to do
-  while (sizeLeft > 0.0) {
-    // A bit of convoluted logic attempting not to overshoot totalSize by much
-    if (sizeLeft < log((double)p) && !lastPrime) { // decrease p
-      lastPrime = true;
-      p = ceil(exp(sizeLeft));
-      p -= (p%twoM)-1; // make p-1 divisible by 2m
-      twoM = -twoM;    // increase p below, rather than decreasing it
-    }
-    do { p -= twoM; } while (!ProbPrime(p)); // next prime
-    if (!context.inChain(p)) {
-      context.AddPrime(p, special);
-      sizeLeft -= log((double)p);
-    }
-  }
-  return totalSize-sizeLeft;
-#endif
+  moduli.push_back( Cmodulus(zMStar, 0, 1) ); // a dummy Cmodulus object
+
+  if (special)
+    specialPrimes.insert(i);
+  else
+    ctxtPrimes.insert(i);
+
+  return p;
 }
 
-// Adds nPrimes primes to the chain, returns the bitsize of the product of
-// all primes in the chain.
-double AddPrimesByNumber(FHEcontext& context, long nPrimes, 
-			 long p/*=starting point*/, bool special)
+// Adds several primes to the chain. If byNumber=true then totalSize specifies
+// the number of primes to add. If byNumber=false then totalSize specifies the
+// target total bitsize of all the added primes.
+// The function returns the total bitsize of all the added primes.
+double AddManyPrimes(FHEcontext& context, double totalSize, 
+		     bool byNumber, bool special)
 {
-  if (!context.zMStar.getM() || context.zMStar.getM() > (1<<20))  // sanity checks
-    Error("FHEcontext::AddModuli2: m undefined or larger than 2^20");
+  double nBits = 0.0;     // How many bits added so far
+  double sizeSoFar = 0.0;
+  if (!context.zMStar.getM() || context.zMStar.getM()>(1<<20))// sanity checks
+    Error("AddManyPrimes: m undefined or larger than 2^20");
 
 #ifdef USE_ALT_CRT
-  double sizeSoFar = 0.0;
-  while (nPrimes > 0) {
-    long pp = context.AddFFTPrime(special);
-    nPrimes -= 1;
-    sizeSoFar += log((double)pp);
+  while (sizeSoFar < totalSize) {
+    long p = context.AddFFTPrime(special);
+    nBits += log((double)p);
+    sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
   }
-  return sizeSoFar;
 #else
+  // make p-1 divisible by m*2^k for as large k as possible
   long twoM = 2 * context.zMStar.getM();
+  while (twoM < NTL_SP_BOUND/(NTL_SP_NBITS*2)) twoM *= 2;
 
-  // make sure that p>0 and that p-1 is divisible by m
-  if (p<1) p = 1;
-  p -= (p % twoM) -1;
+  long bigP = NTL_SP_BOUND - (NTL_SP_BOUND%twoM) +1; // 1 mod 2m
+  long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
 
-  double sizeSoFar = 0.0;
-  while (nPrimes>0) {
-    do { p += twoM; } while (!ProbPrime(p)); // next prime
-    if (!context.inChain(p)) {
-      context.AddPrime(p, special);
-      nPrimes -= 1;
-      sizeSoFar += log((double)p);
+  while (sizeSoFar < totalSize) {
+    if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
+      nBits += log((double)p);
+      sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
+    }
+    else { // we ran out of primes, try a lower power of two
+      twoM /= 2;
+      assert(twoM > (long)context.zMStar.getM()); // can we go lower?
+      p = bigP;
     }
   }
-  return sizeSoFar;
 #endif
+  return nBits;
 }
 
 void buildModChain(FHEcontext &context, long nLvls, long nDgts)
 {
-  // The first 1-2 primes of total p0size bits
-  #if (defined(USE_ALT_CRT) || NTL_SP_NBITS > p0Size)
-    AddPrimesByNumber(context, 1, 1UL<<p0Size); // add a single prime
-  #else
-    AddPrimesByNumber(context, 2, 1UL<<(p0Size/2)); // add two primes
-  #endif
+  // The first prime should be of half the size. The code below tries to find
+  // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
+  // Then if the plaintext space is a power of two it tries to choose the
+  // second prime q1 so that q0*q1 = 1 mod ptxtSpace. All the other primes are
+  // chosen so that qi-1 is divisible by 2^k * m for as large k as possible.
+  long twoM = 2 * context.zMStar.getM();
+  long bound = (1 << (pSize-1));
+  while (twoM < bound/(2*pSize))
+    twoM *= 2; // divisible by 2^k * m  for a larger k
 
-  // The next nLvls primes, as small as possible
-  AddPrimesByNumber(context, nLvls);
+  bound = bound - (bound % twoM) +1; // = 1 mod 2m
+  long q0 = context.AddPrime(bound, twoM); // add next prime to chain
+  assert(q0 != 0);
+
+  long morePrimes = nLvls/2;    // how many more primes to choose
+
+#if 0
+  // The choice of the 2nd prime is an optimization for the case of
+  // plaintext space mod 2^r for moderate r's (e.g., 2^32).
+  if (context.zMStar.getP() == 2 && context.alMod.getR()>1) {
+    long qmodp = q0 % context.alMod.getPPowR();
+    long nBits = NTL::NumBits(context.zMStar.getM()) + context.alMod.getR();
+
+    // If q0 != 1 mod p^r, try to choose 2nd prime q1 s.t. q0*q1 = 1 mod p^r.
+    // Since q1 should be 1 mod m and q0^{-1} mod p^r, and it needs to be a
+    // prime smaller than NTL_SP_BOUND, then we only attempt it if p^r*m is no
+    // more than NTL_SP_BOUND/128. (The nubmer 128 is chosen since NTL_SP_BOUND
+    // is either 2^30 or 2^50, for 32- or 64-bit machines, respectively.)
+    if (qmodp != 1 && nBits <= NTL_SP_NBITS-7) {
+      // (p^r){-1} mod m
+      long prInv = InvMod(context.alMod.getPPowR(), context.zMStar.getM());
+
+      // (q0*m)^{-1} mod p^r
+      qmodp *= context.zMStar.getM();
+      qmodp %= context.alMod.getPPowR();
+      long qmInv = InvMod(qmodp, context.alMod.getPPowR());
+      // q1 = m*((q0*m)^{-1} mod p^r) + p^r*((p^r)^{-1} mod m)
+      //    = 1 mod m, and also = q0^{-1} mod p^r
+      long q1 = context.zMStar.getM()*qmInv + context.alMod.getPPowR()*prInv;
+      long delta = context.zMStar.getM() * context.alMod.getPPowR();
+
+      bound = NTL_SP_BOUND -(NTL_SP_BOUND%delta) +q1; // = q1 mod  m * p^r
+      while (bound-delta>=NTL_SP_BOUND) 
+	bound -= delta;// ensure that bound-delta < NTL_SP_BOUND
+
+      q1=context.AddPrime(bound,-delta);// add next prime to the chain
+      if (q1) morePrimes--;             // a prime was found
+    }
+  }
+#endif
+
+  // Choose the next primes as large as possible
+  if (morePrimes>0) AddPrimesByNumber(context, morePrimes);
 
   // calculate the size of the digits
 
@@ -282,9 +296,15 @@ void buildModChain(FHEcontext &context, long nLvls, long nDgts)
       target += dsize;
     }
     IndexSet s = context.ctxtPrimes / s1; // all the remaining primes
-    context.digits[nDgts-1] = s;
-    double thisDigitSize = context.logOfProduct(s);
-    if (maxDigitSize < thisDigitSize) maxDigitSize = thisDigitSize;
+    if (!empty(s)) {
+      context.digits[nDgts-1] = s;
+      double thisDigitSize = context.logOfProduct(s);
+      if (maxDigitSize < thisDigitSize) maxDigitSize = thisDigitSize;
+    }
+    else { // If last digit is empty, remove it
+      nDgts--;
+      context.digits.resize(nDgts);
+    }
   }
   else { 
     maxDigitSize = context.logOfProduct(context.ctxtPrimes);

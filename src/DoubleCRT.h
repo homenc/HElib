@@ -20,17 +20,14 @@
 
 // change to #if 1 to get an alternative implementation
 #if 0 
-
 #define USE_ALT_CRT
+#endif
+
+#ifdef USE_ALT_CRT
 #define DoubleCRT AltCRT
 #include "AltCRT.h"
 
-
-
 #else
-
-
-
 #ifndef _DoubleCRT_H_
 #define _DoubleCRT_H_
 

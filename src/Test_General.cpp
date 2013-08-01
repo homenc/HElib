@@ -63,6 +63,7 @@ ZZX makeIrredPoly(long p, long d)
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
                long L, long m)
 {
+  char buffer[32];
   cerr << "*** TestIt: R=" << R 
        << ", p=" << p
        << ", r=" << r
@@ -100,7 +101,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   cerr << "done\n";
 
-  printAllTimers();
+  //  printAllTimers();
   resetAllTimers();
 
   cerr << "computing masks and tables for rotation...";
@@ -161,18 +162,18 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
      PlaintextArray tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
-     cerr << "  shift by "<< shamt<<",";
+     sprintf(buffer, "c2>>=%d", (int)shamt);
      tmp_p.shift(shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
-     ea.shift(tmp, shamt);           CheckCtxt(tmp, "tmp=c1>>$");
+     ea.shift(tmp, shamt);           CheckCtxt(tmp, buffer);
      debugCompare(ea,secretKey,tmp_p,tmp);
 
      p2.add(tmp_p);  // c2 += tmp
      c2 += tmp;                      CheckCtxt(c2, "c2+=tmp");
      debugCompare(ea,secretKey,p2,c2);
 
-     cerr << "  rotate by "<< rotamt<<",";
+     sprintf(buffer, "c2>>>=%d", (int)rotamt);
      p2.rotate(rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
-     ea.rotate(c2, rotamt);          CheckCtxt(c2, "c2>>>=$");
+     ea.rotate(c2, rotamt);          CheckCtxt(c2, buffer);
      debugCompare(ea,secretKey,p2,c2);
 
      p1.negate(); // c1.negate()
@@ -255,8 +256,11 @@ int main(int argc, char *argv[])
   //  long z = atoi(argmap["z"]);
   long L = atoi(argmap["L"]);
   if (L==0) { // determine L based on R,r
-    if (r==1) L = 2*R+2;
-    else      L = 4*R;
+    L = 3*R+3;
+    if (p>2 || r>1) { // add some more primes for each round
+      long addPerRound = 2*ceil(log((double)p)*r*3)/(log(2.0)*NTL_SP_NBITS) +1;
+      L += R * addPerRound;
+    }
   }
   long s = atoi(argmap["s"]);
   long chosen_m = atoi(argmap["m"]);

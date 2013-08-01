@@ -14,9 +14,9 @@
 # 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 # 
 CC = g++
-#CFLAGS = -g -Wall -O3 -I/usr/local/include
 #CFLAGS = -g -Wall -I/usr/local/include
-CFLAGS = -g -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+#CFLAGS= -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DUSE_ALT_CRT
 #CFLAGS = -pg -Wall -I/usr/local/include
 LD = g++
 
@@ -46,8 +46,8 @@ check: Test_General_x
 	./Test_General_x R=1 k=10 p=2 r=2 d=1
 	./Test_General_x R=1 k=10 p=2 r=1 d=2
 	./Test_General_x R=1 k=10 p=3 r=1 d=1
-	./Test_General_x R=1 k=10 p=3 r=2 d=1
-	./Test_General_x R=1 k=10 p=3 r=1 d=2
+	./Test_General_x R=2 k=10 p=3 r=2 d=1 c=3
+	./Test_General_x R=1 k=10 p=3 r=1 d=2 c=3
 
 test: $(TESTPROGS)
 
