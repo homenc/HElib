@@ -411,7 +411,11 @@ istream& operator>> (istream &str, FHEcontext& context)
   for (long i=0; i<nPrimes; i++) {
     long p;
     str >> p; 
-    context.AddPrime(p, s.contains(i));
+    context.moduli.push_back(Cmodulus(context.zMStar, p, 0));
+    if (s.contains(i))
+      context.specialPrimes.insert(i); // special prime
+    else
+      context.ctxtPrimes.insert(i);    // ciphertext prime
   }
 
   // read in the partition to digits
