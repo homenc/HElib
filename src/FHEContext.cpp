@@ -115,7 +115,7 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
 
   if (m==0) Error("Cannot support these parameters");
   if (verbose) {
-    cerr << "*** Bound N="<<N<<", choosing m="<<m <<", phi(m)="<< ms[i][0]
+    cerr << "*** Bound N="<<N<<", choosing m="<<m <<", phi(m)="<< phi_N(m)
          << endl;
   }
 

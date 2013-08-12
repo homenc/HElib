@@ -184,6 +184,7 @@ void Cmod<type>::FFT(zzv &y, const ZZX& x) const
   FHE_TIMER_STOP;
 }
 
+
 template <class type>
 void Cmod<type>::iFFT(zpx &x, const zzv& y)const
 {

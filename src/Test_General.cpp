@@ -19,6 +19,7 @@
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cassert>
+#include <cstdio>
 
 #ifdef DEBUG
 #define debugCompare(ea,sk,p,c) {\

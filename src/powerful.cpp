@@ -3,6 +3,8 @@
  */
 
 #include "NumbTh.h"
+
+
 #include <NTL/lzz_pX.h>
 
 #include <cassert>
@@ -906,8 +908,8 @@ int main(int argc, char *argv[])
 
   argmap_t argmap;
 
-  argmap["q"] = "101";
-  argmap["m"] = "100";
+  argmap["q"] = "1801"; // 1801 = 225*8+1
+  argmap["m"] = "225"; // 225 = 5^2*3^2
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage();
@@ -1016,6 +1018,7 @@ int main(int argc, char *argv[])
   Vec<long> powToCompressedIndexMap;
   computePowToCompressedIndexMap(powToCompressedIndexMap, m, powVec, 
                                  compressedIndex, shortSig);
+
 
   eval(cube, multiEvalPoints);
 
