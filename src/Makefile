@@ -14,9 +14,9 @@
 # 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 # 
 CC = g++
-#CFLAGS = -g -Wall -O3 -I/usr/local/include
 #CFLAGS = -g -Wall -I/usr/local/include
 CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+#CFLAGS= -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DUSE_ALT_CRT
 #CFLAGS = -pg -Wall -I/usr/local/include
 LD = g++
 
@@ -35,18 +35,19 @@ SRC = KeySwitching.cpp EncryptedArray.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEConte
 OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o SingleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o replicate.o 
 
 #TESTPROGS = Test_PAlgebra_x Test_DoubleCRT_x Test_CModulus_x Test_FHE_x Test_Arrays_x
-TESTPROGS = Test_General_x Test_Replicate_x Test_LinPoly_x
+TESTPROGS = Test_General_x Test_Replicate_x Test_LinPoly_x Test_matmul_x
 
 
 all: fhe.a
 
 check: Test_General_x
-	Test_General_x R=1 k=10 p=2 r=1 d=1
-	Test_General_x R=1 k=10 p=2 r=2 d=1
-	Test_General_x R=1 k=10 p=2 r=1 d=2
-	Test_General_x R=1 k=10 p=3 r=1 d=1
-	Test_General_x R=1 k=10 p=3 r=2 d=1
-	Test_General_x R=1 k=10 p=3 r=1 d=2
+	./Test_General_x R=1 m=255
+	./Test_General_x R=1 k=10 p=2 r=1 d=1
+	./Test_General_x R=1 k=10 p=2 r=2 d=1
+	./Test_General_x R=1 k=10 p=2 r=1 d=2
+	./Test_General_x R=1 k=10 p=3 r=1 d=1
+	./Test_General_x R=2 k=10 p=3 r=2 d=1 c=3
+	./Test_General_x R=1 k=10 p=3 r=1 d=2 c=3
 
 test: $(TESTPROGS)
 

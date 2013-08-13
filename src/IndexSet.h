@@ -131,6 +131,9 @@ public:
 
   //! @brief Read-only access to an empty set
   static const IndexSet& emptySet();
+
+  //! @brief Is this set a contiguous interval?
+  bool isInterval() const {return (_card==(1+_last-_first));}
 };
 
 // some high-level convenience methods...not very efficient...

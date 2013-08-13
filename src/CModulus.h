@@ -149,6 +149,7 @@ class Cmod {
   { *this = other; }
 
   // Specify m and q, and optionally also the root
+  // if q == 0, then the current context is used
   Cmod(const PAlgebra &zms, const zz &qq, const zz &rt);
 
   // Copy operator
@@ -157,8 +158,8 @@ class Cmod {
   // utility methods
 
   const PAlgebra &getZMStar() const { return *zMStar; }
-  unsigned getM() const    { return zMStar->getM(); }
-  unsigned getPhiM() const { return zMStar->getPhiM(); }
+  unsigned long getM() const    { return zMStar->getM(); }
+  unsigned long getPhiM() const { return zMStar->getPhiM(); }
   const zz& getQ() const          { return q; }
   const zz& getRoot() const       { return root; }
   const zpxModulus& getPhimX() const  { return *phimx; }

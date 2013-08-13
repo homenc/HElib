@@ -102,7 +102,7 @@ public:
   bool operator==(const KeySwitch& other) const;
   bool operator!=(const KeySwitch& other) const {return !(*this==other);}
 
-  unsigned NumCols() const { return b.size(); }
+  unsigned long NumCols() const { return b.size(); }
 
   //! @brief returns a dummy static matrix with toKeyId == -1
   static const KeySwitch& dummy();

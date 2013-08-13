@@ -57,21 +57,24 @@
 NTL_CLIENT
 
 class PAlgebra {
-  unsigned m;        // the integer m defines (Z/mZ)^*, Phi_m(X), etc.
-  unsigned p;        // the prime base of the plaintext space
+  unsigned long m;   // the integer m defines (Z/mZ)^*, Phi_m(X), etc.
+  unsigned long p;   // the prime base of the plaintext space
 
-  unsigned phiM;     // phi(m)
-  unsigned ordP;     // the order of p in (Z/mZ)^*
-  unsigned nSlots;   // phi(m)/ordP = # of plaintext slots
+  unsigned long phiM; // phi(m)
+  unsigned long ordP; // the order of p in (Z/mZ)^*
+  unsigned long nSlots; // phi(m)/ordP = # of plaintext slots
 
-  vector<unsigned> gens; // Our generators for (Z/mZ)^* (other than p)
+  vector<unsigned long> gens; // Our generators for (Z/mZ)^* (other than p)
   vector<long> ords; // ords[i] is the order of gens[i] in quotient group kept
                      // with a negative sign if different than order in (Z/mZ)*
+
+
+  vector<long> prods; // \prods[i] = \prod_{j=i}^{gens.size()-1} |ords[i]|
 
   ZZX PhimX;   // Holds the integer polynomial Phi_m(X)
   double cM;   // the ring constant c_m for Z[X]/Phi_m(X)
 
-  vector<unsigned> T; // The representatives for the quotient group (Z/mZ)^*/(p)
+  vector<unsigned long> T; // The representatives for the quotient group (Z/mZ)^*/(p)
   vector<long> Tidx;  // i=Tidx[t] is the index i s.t. T[i]=t. 
                       // Tidx[t]==-1 if t notin T
 
@@ -88,7 +91,7 @@ class PAlgebra {
 
  public:
 
-  PAlgebra(unsigned mm, unsigned pp = 2);  // constructor
+  PAlgebra(unsigned long mm, unsigned long pp = 2);  // constructor
 
   bool operator==(const PAlgebra& other) const;
   bool operator!=(const PAlgebra& other) const {return !(*this==other);}
@@ -102,72 +105,75 @@ class PAlgebra {
   /* Access methods */
 
   //! Returns m
-  unsigned getM() const { return m; }
+  unsigned long getM() const { return m; }
 
   //! Returns p
-  unsigned getP() const { return p; }
+  unsigned long getP() const { return p; }
 
   //! Returns phi(m)
-  unsigned getPhiM() const { return phiM; }
+  unsigned long getPhiM() const { return phiM; }
 
   //! The order of p in (Z/mZ)^*
-  unsigned getOrdP() const { return ordP; }
+  unsigned long getOrdP() const { return ordP; }
 
   //! The number of plaintext slots = phi(m) = ord(p)
-  unsigned getNSlots() const { return nSlots; }
+  unsigned long getNSlots() const { return nSlots; }
 
   //! The cyclotomix polynomial Phi_m(X)
   const ZZX& getPhimX() const { return PhimX; }
 
   //! The number of generators in (Z/mZ)^* /(p)
-  unsigned numOfGens() const { return gens.size(); }
+  unsigned long numOfGens() const { return gens.size(); }
 
   //! the i'th generator in (Z/mZ)^* /(p) (if any)
-  unsigned ZmStarGen(unsigned i) const
+  unsigned long ZmStarGen(unsigned long i) const
   {  return (i<gens.size())? gens[i] : 0; }
 
   //! The order of i'th generator (if any)
-  unsigned OrderOf(unsigned i) const
+  unsigned long OrderOf(unsigned long i) const
   {  return (i<ords.size())? abs(ords[i]) : 0; }
 
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
-  bool SameOrd(unsigned i) const
+  bool SameOrd(unsigned long i) const
   {  return (i<ords.size())? (ords[i]>0) : false; }
 
   //! @name Translation between index, represnetatives, and exponents
 
   //! Returns the i'th element in T
-  unsigned ith_rep(unsigned i) const
+  unsigned long ith_rep(unsigned long i) const
   {  return (i<nSlots)? T[i]: 0; }
 
   //! Returns the index of t in T
-  int indexOfRep(unsigned t) const
+  long indexOfRep(unsigned long t) const
   {  return (t>0 && t<m)? Tidx[t]: -1; }
 
   //! Is t in T?
-  bool isRep(unsigned t) const
+  bool isRep(unsigned long t) const
   {  return (t>0 && t<m && Tidx[t]>-1); }
 
   //! Returns the index of t in (Z/mZ)*
-  int indexInZmstar(unsigned t) const
+  long indexInZmstar(unsigned long t) const
   {  return (t>0 && t<m)? zmsIdx[t]: -1; }
 
   //! Is t in [0,m-1] with (t,m)=1?
-  bool inZmStar(unsigned t) const
+  bool inZmStar(unsigned long t) const
   {  return (t>0 && t<m && zmsIdx[t]>-1); }
 
   //! @brief Returns ith coordinate of index k along the i'th dimension.
   //! See Section 2.4 in the design document.
   long coordinate(long i, long k) const;
+ 
+  //! @brief adds offset to index k in the i'th dimension
+  long addCoord(long i, long k, long offset) const;
 
   //! @brief Returns prod_i gi^{exps[i]} mod m. If onlySameOrd=true,
   //! use only generators that have the same order as in (Z/mZ)^*.
-  unsigned exponentiate(const vector<unsigned>& exps, 
+  unsigned long exponentiate(const vector<unsigned long>& exps, 
 			      bool onlySameOrd=false) const;
 
   //! Inverse of exponentiate
-  const int* dLog(unsigned t) const {
-    int i = indexOfRep(t);
+  const int* dLog(unsigned long t) const {
+    long i = indexOfRep(t);
     if (i<0) return NULL;
     return &(dLogT[i*gens.size()]); // bug: this should be an iterator
   }
@@ -176,10 +182,10 @@ class PAlgebra {
 
   //! The order of the quoteint group (Z/mZ)^* /(p) (if flag=false), or the
   //! subgroup of elements with the same order as in (Z/mZ)^* (if flag=true)
-  unsigned qGrpOrd(bool onlySameOrd=false) const { 
+  unsigned long qGrpOrd(bool onlySameOrd=false) const { 
     if (gens.size()<=0) return 1;
-    unsigned ord = 1;
-    for (unsigned i=0; i<ords.size(); i++)
+    unsigned long ord = 1;
+    for (unsigned long i=0; i<ords.size(); i++)
       if (!onlySameOrd || SameOrd(i)) ord *= abs(ords[i]);
     return ord;
   }
@@ -187,7 +193,7 @@ class PAlgebra {
   //! exps is an array of exponents (the dLog of some t in T), this function
   //! incerement exps lexicographic order, reutrn false if it cannot be
   //! incremented (because it is at its maximum value)
-  bool nextExpVector(vector<unsigned>& exps) const;
+  bool nextExpVector(vector<unsigned long>& exps) const;
 };
 
 
@@ -549,7 +555,7 @@ private:
 
   //! Same as above, but embeds relative to Ft rather than F1. The
   //! optional rF1 contains the output of mapToF1, to speed this operation.
-  void mapToFt(RX& w, const RX& G, unsigned t, const RX* rF1=NULL) const;
+  void mapToFt(RX& w, const RX& G, unsigned long t, const RX* rF1=NULL) const;
 };
 
 //! Builds a table, of type PA_GF2 if p == 2 and r == 1, and PA_zz_p otherwise

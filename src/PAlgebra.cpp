@@ -100,9 +100,9 @@ bool operator<(const zz_pEX& a, const zz_pEX& b) { return poly_comp(a, b); }
 // the smallest element in that class. 
 
 static 
-void conjClasses(vector<unsigned>& classes, unsigned g, unsigned m)
+void conjClasses(vector<unsigned long>& classes, unsigned long g, unsigned long m)
 {
-  for (unsigned i=0; i<m; i++) {
+  for (unsigned long i=0; i<m; i++) {
     if (classes[i]==0) continue; // i \notin (Z/mZ)^*
 
     if (classes[i]<i) { // i is not a pivot, updated its pivot
@@ -111,9 +111,9 @@ void conjClasses(vector<unsigned>& classes, unsigned g, unsigned m)
     }
 
     // If i is a pivot, update other pivots to point to it
-    unsigned ii = i;
-    unsigned gg = g;
-    unsigned jj = MulMod(ii, gg, m);
+    unsigned long ii = i;
+    unsigned long gg = g;
+    unsigned long jj = MulMod(ii, gg, m);
     while (classes[jj] != i) {
       classes[classes[jj]]= i; // Merge the equivalence classes of j and i
 
@@ -132,12 +132,12 @@ void conjClasses(vector<unsigned>& classes, unsigned g, unsigned m)
 // with negative sign if not.
 
 static 
-void compOrder(vector<long>& orders, vector<unsigned>& classes, bool flag, 
-               unsigned m)
+void compOrder(vector<long>& orders, vector<unsigned long>& classes, bool flag, 
+               unsigned long m)
 {
   orders[0] = -INT_MAX;
   orders[1] = 0;
-  for (unsigned i=2; i<m; i++) {
+  for (unsigned long i=2; i<m; i++) {
     if (classes[i] <= 1) { // ignore i not in Z_m^* and order-0 elements
       orders[i] = (classes[i]==1)? 0 : -INT_MAX;
       continue;
@@ -151,8 +151,8 @@ void compOrder(vector<long>& orders, vector<unsigned>& classes, bool flag,
     }
 
     // For an element i>1, the order is at least 2
-    unsigned ii = i;
-    unsigned jj = MulMod(ii, ii, m);
+    unsigned long ii = i;
+    unsigned long jj = MulMod(ii, ii, m);
     long ord = 2;
     while (classes[jj] != 1) {
       jj = MulMod(jj, ii, m); // next element in <i>
@@ -176,15 +176,15 @@ bool PAlgebra::operator==(const PAlgebra& other) const
   return true;
 }
 
-bool PAlgebra::nextExpVector(vector<unsigned>& buffer) const
+bool PAlgebra::nextExpVector(vector<unsigned long>& buffer) const
 {
   // increment the vector in lexicographic order
-  for (int i=gens.size()-1; i>=0; i--) {
-    if (i>=(int)buffer.size()) continue; // sanity check
+  for (long i=gens.size()-1; i>=0; i--) {
+    if (i>=(long)buffer.size()) continue; // sanity check
     // increment current index, set all the ones after it to zero
     if (buffer[i] < OrderOf(i)-1) { 
       buffer[i]++;
-      for (unsigned j=i+1; j<buffer.size(); j++) buffer[j] = 0;
+      for (unsigned long j=i+1; j<buffer.size(); j++) buffer[j] = 0;
       return true;  // succeeded in incrementing the vector
     }
     // if buffer[i] >= OrderOf(i)-1, mover to previous index i
@@ -201,14 +201,31 @@ long PAlgebra::coordinate(long i, long k) const
   return dLog(t)[i];
 }
 
-unsigned PAlgebra::exponentiate(const vector<unsigned>& exps,
+long PAlgebra::addCoord(long i, long k, long offset) const
+{
+  assert(k >= 0 && k < (long) nSlots);
+  assert(i >= 0 && i < (long) gens.size());
+  
+  offset = offset % ((long) OrderOf(i));
+  if (offset < 0) offset += OrderOf(i);
+  
+  long k_i = coordinate(i, k);
+  long k_i1 = (k_i + offset) % OrderOf(i);
+  
+  long k1 = k + (k_i1 - k_i) * prods[i+1];
+  
+  return k1;
+  
+}
+
+unsigned long PAlgebra::exponentiate(const vector<unsigned long>& exps,
 				bool onlySameOrd) const
 {
-  unsigned t = 1;
-  unsigned n = min(exps.size(),gens.size());
-  for (unsigned i=0; i<n; i++) {
+  unsigned long t = 1;
+  unsigned long n = min(exps.size(),gens.size());
+  for (unsigned long i=0; i<n; i++) {
     if (onlySameOrd && !SameOrd(i)) continue;
-    unsigned g = PowerMod(gens[i] ,exps[i], m); 
+    unsigned long g = PowerMod(gens[i] ,exps[i], m); 
     t = MulMod(t, g, m);
   }
   return t;
@@ -216,7 +233,7 @@ unsigned PAlgebra::exponentiate(const vector<unsigned>& exps,
 
 void PAlgebra::printout() const
 {
-  unsigned i;
+  unsigned long i;
   cout << "m = " << m << ", p = " << p << ", phi(m) = " << phiM << endl;
   cout << "  ord(p)=" << ordP << endl;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
@@ -233,7 +250,7 @@ void PAlgebra::printout() const
 
 // Generate the representation of Z_m^* for a given odd integer m
 // and plaintext base p
-PAlgebra::PAlgebra(unsigned mm, unsigned pp)
+PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
 {
   m = mm;
   p = pp;
@@ -244,10 +261,10 @@ PAlgebra::PAlgebra(unsigned mm, unsigned pp)
   assert( m < NTL_SP_BOUND );
 
   // Compute the generators for (Z/mZ)^*
-  vector<unsigned> classes(m);
+  vector<unsigned long> classes(m);
   vector<long> orders(m);
 
-  unsigned i;
+  unsigned long i;
   for (i=0; i<m; i++) { // initially each element in its own class
     if (GCD(i,m)!=1) 
       classes[i] = 0; // i is not in (Z/mZ)^*
@@ -259,7 +276,7 @@ PAlgebra::PAlgebra(unsigned mm, unsigned pp)
   conjClasses(classes,p,m);  // merge classes that have a factor of 2
 
   // The order of p is the size of the equivalence class of 1
-  ordP = (unsigned) count (classes.begin(), classes.end(), 1);
+  ordP = (unsigned long) count (classes.begin(), classes.end(), 1);
 
   // Compute orders in (Z/mZ)^*/<p> while comparing to (Z/mZ)^*
   long idx, largest;
@@ -306,11 +323,11 @@ PAlgebra::PAlgebra(unsigned mm, unsigned pp)
   // in lexicographic order.
 
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
-  vector<unsigned> buffer(gens.size()); // temporaty holds exponents
+  vector<unsigned long> buffer(gens.size()); // temporaty holds exponents
   i = idx = 0;
   do {
-    unsigned t = exponentiate(buffer);
-    for (unsigned j=0; j<buffer.size(); j++) dLogT[idx++] = buffer[j];
+    unsigned long t = exponentiate(buffer);
+    for (unsigned long j=0; j<buffer.size(); j++) dLogT[idx++] = buffer[j];
     T[i] = t;       // The i'th element in T it t
     Tidx[t] = i++;  // the index of t in T is i
 
@@ -318,6 +335,14 @@ PAlgebra::PAlgebra(unsigned mm, unsigned pp)
   } while (nextExpVector(buffer)); // until we cover all the group
 
   PhimX = Cyclotomic(m); // compute and store Phi_m(X)
+
+  // initialize prods array
+  long ndims = gens.size();
+  prods.resize(ndims+1);
+  prods[ndims] = 1;
+  for (long j = ndims-1; j >= 0; j--) {
+    prods[j] = OrderOf(j) * prods[j+1];
+  } 
 }
 
 /***********************************************************************
@@ -328,7 +353,7 @@ PAlgebra::PAlgebra(unsigned mm, unsigned pp)
 
 PAlgebraModBase *buildPAlgebraMod(const PAlgebra& zMStar, long r)
 {
-  unsigned p = zMStar.getP();
+  unsigned long p = zMStar.getP();
   assert(r > 0);
 
   if (p == 2 && r == 1) 
@@ -393,14 +418,14 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
   RXModulus F1(localFactors[0]); 
   for (long i=1; i<nSlots; i++) {
-    unsigned t =zMStar.ith_rep(i); // Ft is minimal polynomial of x^{1/t} mod F1
-    unsigned tInv = InvMod(t, m);  // tInv = t^{-1} mod m
+    unsigned long t =zMStar.ith_rep(i); // Ft is minimal polynomial of x^{1/t} mod F1
+    unsigned long tInv = InvMod(t, m);  // tInv = t^{-1} mod m
     RX X2tInv = PowerXMod(tInv,F1);     // X2tInv = X^{1/t} mod F1
     IrredPolyMod(localFactors[i], X2tInv, F1);
   }
   /* Debugging sanity-check #1: we should have Ft= GCD(F1(X^t),Phi_m(X))
   for (i=1; i<nSlots; i++) {
-    unsigned t = T[i];
+    unsigned long t = T[i];
     RX X2t = PowerXMod(t,phimxmod);  // X2t = X^t mod Phi_m(X)
     RX Ft = GCD(CompMod(F1,X2t,phimxmod),phimxmod);
     if (Ft != localFactors[i]) {
@@ -532,10 +557,10 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
 template<class type> 
 void PAlgebraModDerived<type>::CRT_decompose(vector<RX>& crt, const RX& H) const
 {
-  unsigned nSlots = zMStar.getNSlots();
+  unsigned long nSlots = zMStar.getNSlots();
 
   crt.resize(nSlots);
-  for (unsigned i=0; i<nSlots; i++)
+  for (unsigned long i=0; i<nSlots; i++)
     rem(crt[i], H, factors[i]); // crt[i] = H % factors[i]
 }
 
@@ -617,7 +642,7 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
 
 template<class type>
 void PAlgebraModDerived<type>::mapToFt(RX& w,
-			     const RX& G,unsigned t,const RX* rF1) const
+			     const RX& G,unsigned long t,const RX* rF1) const
 {
   long i = zMStar.indexOfRep(t);
   if (i < 0) { clear(w); return; }

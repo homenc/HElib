@@ -66,9 +66,11 @@ public:
    *
    * The public encryption key and "fresh" ciphertexts are encrypted relative
    * to only a subset of the primes, to allow for mod-UP during key-switching.
-   * See section 3.1.6 in the design document (key-switching).
+   * See section 3.1.6 in the design document (key-switching). 
    * In ctxtPrimes we keep the indexes of this subset. Namely, for a ciphertext
    * part p in a fresh ciphertext we have p.getMap().getIndexSet()==ctxtPrimes.
+   * It is assumed that all the "ciphertext primes" are roughly the same size,
+   * except perhaps the first one (with index 0), which could be smaller.
    **/
   IndexSet ctxtPrimes;
 
@@ -99,32 +101,32 @@ public:
   // Constructors must ensure that alMod points to zMStar
 
   // constructor
-  FHEcontext(unsigned m, unsigned p, unsigned r): zMStar(m, p), alMod(zMStar, r)
+  FHEcontext(unsigned long m, unsigned long p, unsigned long r): zMStar(m, p), alMod(zMStar, r)
   { stdev=3.2; }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }
 
   //! @brief The ith small prime in the modulus chain
-  long ithPrime(unsigned i) const 
+  long ithPrime(unsigned long i) const 
   { return (i<moduli.size())? moduli[i].getQ() :0; }
 
   //! @brief Cmodulus object corresponding to ith small prime in the chain
-  const Cmodulus& ithModulus(unsigned i) const { return moduli[i]; }
+  const Cmodulus& ithModulus(unsigned long i) const { return moduli[i]; }
 
   //! @brief Total number of small prime in the chain
   long numPrimes() const { return moduli.size(); }
 
   //! @brief Is num divisible by any of the primes in the chain?
   bool isZeroDivisor(const ZZ& num) const {
-    for (unsigned i=0; i<moduli.size(); i++) 
+    for (unsigned long i=0; i<moduli.size(); i++) 
       if (divide(num,moduli[i].getQ())) return true;
     return false;
   }
 
   //! @brief Is p already in the chain?
   bool inChain(long p) const {
-    for (unsigned i=0; i<moduli.size(); i++) 
+    for (unsigned long i=0; i<moduli.size(); i++) 
       if (p==moduli[i].getQ()) return true;
     return false;
   }
@@ -141,7 +143,7 @@ public:
 
   // FIXME: run-time error when ithPrime(i) returns 0
   //! @brief Returns the natural logarithm of the ith prime
-  double logOfPrime(unsigned i) const { return log(ithPrime(i)); }
+  double logOfPrime(unsigned long i) const { return log(ithPrime(i)); }
 
   //! @brief Returns the natural logarithm of productOfPrimes(s)
   double logOfProduct(const IndexSet& s) const {
@@ -154,10 +156,23 @@ public:
     return ans;
   }
 
-  //! @brief Add p to the chain, if it's not already there
-  void AddPrime(long p, bool special); 
+  //! @brief Find the next prime and add it to the chain
+  long AddPrime(long startFrom, long delta, bool special=false);
 
+  //! @brief Add an FFT prime to the chain, if it's not already there
+  //! returns the value of the prime
+  long AddFFTPrime(bool special); 
 
+  //! @brief Test if the chain contains a "half-size" ciphertext prime
+  // If it exists, the half-size prime must be the first cipehrtext prime.
+  // All other primes are assumed to have roughly the same size.
+  bool containsSmallPrime() const {
+    if (card(ctxtPrimes)<2) return false;
+    long fst = ctxtPrimes.first();
+    long scnd= ctxtPrimes.next(fst);
+    return (logOfPrime(fst) < (0.75 * logOfPrime(scnd)));
+  }
+  
   ///@{
   /**
      @name I/O routines
@@ -179,7 +194,7 @@ public:
   To read in all the data associated with a context, do the following:
 
   \code
-    unsigned m, p, r;
+    unsigned long m, p, r;
     readContextBase(str, m, p, r);
 
     FHEcontext context(m, p, r);
@@ -199,7 +214,7 @@ public:
   friend ostream& operator<< (ostream &str, const FHEcontext& context);
 
   //! @brief read [m p r] data, needed to construct context
-  friend void readContextBase(istream& str, unsigned& m, unsigned& p, unsigned& r);
+  friend void readContextBase(istream& str, unsigned long& m, unsigned long& p, unsigned long& r);
 
   //! @brief read all other data associated with context
   friend istream& operator>> (istream &str, FHEcontext& context);
@@ -209,26 +224,38 @@ public:
 //! @brief write [m p r] data
 void writeContextBase(ostream& s, const FHEcontext& context);
 //! @brief read [m p r] data, needed to construct context
-void readContextBase(istream& s, unsigned& m, unsigned& p, unsigned& r);
+void readContextBase(istream& s, unsigned long& m, unsigned long& p, unsigned long& r);
 
 // VJS: compiler seems to need these declarations out here...wtf...
 
 //@{
 //! @name Convenience routines for generating the modulus chain
 
+//! @brief Adds several primes to the chain. If byNumber=true then totalSize
+//! specifies the number of primes to add. If byNumber=false then totalSize
+//! specifies the target naturals log all the added primes.
+//! Returns natural log of the product of all added primes.
+double AddManyPrimes(FHEcontext& context, double totalSize, 
+		     bool byNumber, bool special=false);
+
 //! @brief Adds to the chain primes whose product is at least e^totalSize, 
-//! returns natural log of the product of all added primes
-double AddPrimesBySize(FHEcontext& context, double totalSize,
-		       bool special=false);
+//! Returns natural log of the product of all added primes.
+inline double AddPrimesBySize(FHEcontext& context, double totalSize,
+			      bool special=false)
+{
+  return AddManyPrimes(context, totalSize, false, special);
+}
 
 //! @brief Adds n primes to the chain
-//! returns natural log of the product of all added primes
-double AddPrimesByNumber(FHEcontext& context, long nPrimes, 
-			 long startAt=1,
-			 bool special=false);
+//! Returns natural log of the product of all added primes.
+inline double AddPrimesByNumber(FHEcontext& context, long nPrimes, 
+				bool special=false) 
+{
+  return AddManyPrimes(context, (double)nPrimes, true, special);
+}
 
 //! @brief Build modulus chain for nLvls levels, using c digits in key-switching
 void buildModChain(FHEcontext &context, long nLvls, long c=3);
 ///@}
-extern FHEcontext* activeContext; // Points to the "current" context
+extern FHEcontext* activeContext; // Should point to the "current" context
 #endif // ifndef _FHEcontext_H_

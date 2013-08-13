@@ -23,7 +23,33 @@ NTL_CLIENT
 #include "timing.h"
 
 
+// Sanity-check: Check that prime-set is "valid":
+//  i. The set contains either all the special primes or none of them;
+// ii. The regular primes in this set consists of a contiguous nonempty
+//    interval, starting at either 0 or 1.
+bool Ctxt::verifyPrimeSet() const
+{
+  IndexSet s = primeSet & context.specialPrimes; // special primes in primeSet
+  if (!empty(s) && s!=context.specialPrimes) return false;
 
+  s = primeSet / s;                              // ctxt primes in primeSet
+  return (s.isInterval() && s.first()<=1 && !empty(s));
+}
+
+
+//! @brief How many levels in the "base-set" for that ciphertext
+long Ctxt::findBaseLevel() const 
+{
+  IndexSet s;
+  findBaseSet(s);
+  if (context.containsSmallPrime()) {
+    if (s.contains(context.ctxtPrimes.first()))
+      return 2*card(s) -1; // 1st prime is half size
+    else
+      return 2*card(s);
+  }
+  else return card(s);     // one prime per level
+}
 
 bool CtxtPart::operator==(const CtxtPart& other) const
 {
@@ -32,7 +58,8 @@ bool CtxtPart::operator==(const CtxtPart& other) const
   return (skHandle==other.skHandle);
 }
 
-
+// Checking equality between ciphertexts. This routine performs a
+// "shallow" check, comparing only pointers to ciphertext parts.
 bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
 {
   if (&context != &other.context) return false;
@@ -78,9 +105,6 @@ Ctxt& Ctxt::operator=(const Ctxt& other)
 void Ctxt::modUpToSet(const IndexSet &s)
 {
   FHE_TIMER_START;
-  IndexSet intersection = context.specialPrimes & s; // set intersection
-  assert(empty(intersection) || intersection==context.specialPrimes);
-
   IndexSet setDiff = s/primeSet; // set minus (primes in s but not in primeSet)
   if (empty(setDiff)) return;    // nothing to do, no primes are added
 
@@ -96,6 +120,7 @@ void Ctxt::modUpToSet(const IndexSet &s)
   noiseVar *= xexp(2*f);
 
   primeSet.insert(setDiff); // add setDiff to primeSet
+  assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
   FHE_TIMER_STOP;
 }
 
@@ -104,10 +129,8 @@ void Ctxt::modUpToSet(const IndexSet &s)
 void Ctxt::modDownToSet(const IndexSet &s)
 {
   FHE_TIMER_START;
-  IndexSet intersection = context.specialPrimes & s; // set intersection
-  assert(empty(intersection) || intersection==context.specialPrimes);
 
-  intersection = primeSet & s;
+  IndexSet intersection = primeSet & s;
   assert(!empty(intersection));       // some primes must be left
   if (intersection==primeSet) return; // nothing to do, removing no primes
   IndexSet setDiff = primeSet / intersection; // set-minus
@@ -122,8 +145,7 @@ void Ctxt::modDownToSet(const IndexSet &s)
   // Get an estimate for the added noise term for modulus switching
   xdouble addedNoiseVar = modSwitchAddedNoiseVar();
   if (noiseVar*ptxtSpace*ptxtSpace < addedNoiseVar) {     // just "drop down"
-    long prodInv 
-      = InvMod(rem(context.productOfPrimes(setDiff),ptxtSpace), ptxtSpace);
+    long prodInv = InvMod(rem(context.productOfPrimes(setDiff),ptxtSpace), ptxtSpace);
     for (size_t i=0; i<parts.size(); i++) {
       parts[i].removePrimes(setDiff);         // remove the primes not in s
       parts[i] *= prodInv;
@@ -142,7 +164,46 @@ void Ctxt::modDownToSet(const IndexSet &s)
     noiseVar += addedNoiseVar;
   }
   primeSet.remove(setDiff); // remove the primes not in s
+  assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
   FHE_TIMER_STOP;
+}
+
+
+// Modulus-switching down
+void Ctxt::modDownToLevel(long lvl)
+
+{
+  long currentLvl;
+  IndexSet targetSet;
+  IndexSet currentSet = primeSet & context.ctxtPrimes;
+  if (context.containsSmallPrime()) {
+    currentLvl = 2*card(currentSet);
+    if (currentSet.contains(0))
+      currentLvl--;  // first prime is half the size
+
+    if (lvl & 1) {   // odd level, includes the half-size prime
+      targetSet = IndexSet(0,(lvl-1)/2);
+    } else {
+      targetSet = IndexSet(1,lvl/2);
+    }
+  }
+  else {
+    currentLvl = card(currentSet);
+
+    targetSet = IndexSet(0,lvl-1);    // one prime per level
+  }
+
+  // If target is not below the current level, nothing to do
+  if (lvl >= currentLvl) return;
+
+  // sanity-check: interval does not contain special primes
+  assert(targetSet.disjointFrom(context.specialPrimes));
+
+  // may need to mod-UP to include the smallest prime
+  if (targetSet.contains(0) && !currentSet.contains(0))
+    modUpToSet(targetSet); // adds the primes in targetSet / primeSet
+
+  modDownToSet(targetSet); // removes the primes in primeSet / targetSet
 }
 
 // key-switch to (1,s_i), s_i is the base key with index keyID. If
@@ -251,25 +312,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // during homormophic evaluation, so it should be thoroughly optimized.
 
   vector<DoubleCRT> polyDigits;
-#if 1
   p.breakIntoDigits(polyDigits, nDigits);
-#else
-  // Currently we use a very naive implementation, significant optimizations
-  // should be possible here.
-
-  IndexSet s = p.getIndexSet();    // a scrach copy
-  s.insert(context.specialPrimes); // add the special primes
-  ZZX poly, polyMod;
-  p.toPoly(poly);
-  polyDigits.resize(nDigits, DoubleCRT(context,s));
-  for (long i=0; i<nDigits; i++) {
-    ZZ pi = context.productOfPrimes(context.digits[i]);
-    PolyRed(polyMod, poly, pi); // low digit: poly % pi
-    polyDigits[i] = polyMod;    // convert to DoubleCRT representation
-    poly -= polyMod;
-    poly /= pi;      // poly = (poly - (poly % pi))/pi
-  }
-#endif
 
   // Finally we multiply the vector of digits by the key-switching matrix
 
@@ -287,7 +330,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // Add the columns in, one by one
   DoubleCRT tmp(context, IndexSet::emptySet());
   
-  for (unsigned i=0; i<polyDigits.size(); i++) {
+  for (unsigned long i=0; i<polyDigits.size(); i++) {
     ai.randomize();
     tmp = polyDigits[i];
   
@@ -305,28 +348,51 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   FHE_TIMER_STOP;
 } // restore random state upon destruction of the RandomState, see NumbTh.h
 
-
 // Find the IndexSet such that modDown to that set of primes makes the
 // additive term due to rounding into the dominant noise term 
 void Ctxt::findBaseSet(IndexSet& s) const
 {
+  assert(verifyPrimeSet());
+  bool halfSize = context.containsSmallPrime();
   double addedNoise = log(modSwitchAddedNoiseVar())/2;
   double curNoise = log(getNoiseVar())/2;
+  double firstNoise = context.logOfPrime(0);
 
   // remove special primes, if they are included in this->primeSet
-  s = getPrimeSet() & context.specialPrimes; // set intersection
-  if (!empty(s)) { 
-    curNoise -= context.logOfProduct(s); // scaled down noise
-    s = getPrimeSet() / s; // set minus
+  s = getPrimeSet();
+  if (!s.disjointFrom(context.specialPrimes)) { 
+    // scale down noise
+    curNoise -= context.logOfProduct(context.specialPrimes);
+    s.remove(context.specialPrimes);
   }
-  else s = getPrimeSet();
-  assert (!empty(s));
+
+  if (curNoise<=addedNoise) return; // no need to mod down
+
+  // if the first prime in half size, begin by removing it
+  if (halfSize && s.contains(0)) {
+    curNoise -= firstNoise;
+    s.remove(0);
+  }
 
   // while noise is larger than added term, scale down by the next prime
   while (curNoise>addedNoise && card(s)>1) {
     curNoise -= context.logOfPrime(s.last());
     s.remove(s.last());
   }
+
+  if (halfSize) {
+    // If noise is still too big, drop last big prime and insert half-size prime
+    if (curNoise>addedNoise) {
+      curNoise = firstNoise;
+      s = IndexSet(0);
+    } 
+    // Otherwise check if you can add back the half-size prime
+    else if (curNoise+firstNoise <= addedNoise) {
+      curNoise += firstNoise;
+      s.insert(0);
+    }
+  }
+
   if (curNoise>addedNoise)
     cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
 }
@@ -398,7 +464,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   }
   else addPart(dcrt, SKHandle(0,1,0));
 
-  noiseVar += size*f*f;
+  noiseVar += (size*f)*f;
   FHE_TIMER_STOP;
 }
 
@@ -509,7 +575,7 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   noiseVar = c1.noiseVar * c2.noiseVar * factor;
   if (f!=1) {
     // WARNING: the following line is written just so to prevent overflow
-    noiseVar = noiseVar*f*f; // because every product was scaled by f
+    noiseVar = (noiseVar*f)*f; // because every product was scaled by f
   }
 }
 
@@ -531,23 +597,23 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
     assert (g>1);
     this->ptxtSpace = g;
 
-    // Match the prime-sets, mod-DOWN the arguments if needed
-    IndexSet intersection = primeSet & other.primeSet; // set-intersection
-    assert(!empty(intersection)); // nowhere to mod-switch to
+    // Match the levels, mod-DOWN the arguments if needed
+    long lvl = findBaseLevel();
+    long otherLvl = other.findBaseLevel();
+    if (lvl > otherLvl) lvl = otherLvl; // the smallest of the two
 
-    // mod-DOWN *this, if needed
-    if (intersection!=this->primeSet) modDownToSet(intersection);
+    // mod-DOWN *this, if needed (also removes special primes, if any)
+    modDownToLevel(lvl);
 
     // mod-DOWN other, if needed
-    if (intersection!=other.primeSet){ // use temporary copy to mod-DOWN other
+    if (primeSet!=other.primeSet){ // use temporary copy to mod-DOWN other
       Ctxt tmpCtxt1 = other;
-      tmpCtxt1.modDownToSet(intersection);
+      tmpCtxt1.modDownToLevel(lvl);
       tmpCtxt.tensorProduct(*this,tmpCtxt1); // compute the actual product
     }
     else 
       tmpCtxt.tensorProduct(*this, other);   // compute the actual product
   }
-
   *this = tmpCtxt; // copy the result into *this
 
   FHE_TIMER_STOP;
@@ -559,61 +625,32 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
 
 void Ctxt::multiplyBy(const Ctxt& other)
 {
-  FHE_TIMER_START;
-  // The level where we do this multiplication is the lower between
-  // the "base sets" of the two arguments
-
-  IndexSet s, s1;
-  this->findBaseSet(s);
-  other.findBaseSet(s1);
-
-  modDownToSet(s&s1); // mod-down to the intersection
   *this *= other;  // perform the multiplication
   reLinearize();   // re-linearize
-  FHE_TIMER_STOP;
 }
 
 void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 {
-  FHE_TIMER_START;
-  // The level where we do this multiplication is the lower between
-  // the "base sets" of the three arguments
+  long lvl = findBaseLevel();
+  long lvl1 = other1.findBaseLevel();
+  long lvl2 = other2.findBaseLevel();
 
-  IndexSet s, s1, s2;
-  this->findBaseSet(s);
-  other1.findBaseSet(s1);
-  other2.findBaseSet(s2);
+  if (lvl<lvl1 && lvl<lvl2){ // if both others at higher levels than this,
+    Ctxt tmp = other1;       // multiply others by each other, then by this
+    if (&other1 == &other2) tmp *= tmp; // squaring rather than multiplication
+    else                    tmp *= other2;
 
-  if (s<s1 && s<s2) { // special case: both others at higher levels than this
-    Ctxt tmp = other1;// multiply the two others by each other, then by this
-    s1.retain(s2);        // set intersection
-    tmp.modDownToSet(s1); // mod-Down to the intersection of s1,s2
-    tmp *= other2;
-
-    this->modDownToSet(s); // mod-Down to s (we know that s < s1&s2)
-    tmp.modDownToSet(s);
     *this *= tmp;
   }
-  else if (s<s2) { // s1<=s<s2, multiply first by other2, then by other1
-    this->modDownToSet(s); // mod-Down to s < s2
+  else if (lvl<lvl2) { // lvl1<=lvl<lvl2, multiply by other2, then by other1
     *this *= other2;
-
-    s.retain(s1);  // set intersection
-    this->modDownToSet(s); // mod-Down to the intersection of s,s1
     *this *= other1;    
   }
   else { // multiply first by other1, then by other2
-    s.retain(s1);  // set intersection
-    this->modDownToSet(s); // mod-Down to the intersection of s,s1
     *this *= other1;
-
-    s.retain(s2);  // set intersection
-    this->modDownToSet(s); // mod-Down to the intersection of s,s1,s2
     *this *= other2;
   }
-
   reLinearize(); // re-linearize after all the multiplications
-  FHE_TIMER_STOP;
 }
 
 // Multiply-by-constant
@@ -623,7 +660,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
   if (size <= 0.0) {
     // WARNING: the following line is written just so to prevent overflow
-    size = ((double) context.zMStar.getPhiM()) * ptxtSpace * ptxtSpace /4.0;
+    size = ((double) context.zMStar.getPhiM()) * ptxtSpace * (ptxtSpace /4.0);
   }
 
   // multiply all the parts by this constant
@@ -719,8 +756,8 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
     }
   }
   // WARNING: the following line is written just so to prevent overflow
-  addedNoise = addedNoise * context.zMStar.getPhiM() 
-                          * ptxtSpace * ptxtSpace/ 12.0;
+  addedNoise = (addedNoise * context.zMStar.getPhiM()) 
+               * ptxtSpace * (ptxtSpace/ 12.0);
 
   return addedNoise;
 }
@@ -783,6 +820,6 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  cerr << "  "<<label << ", level=" << c.getLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
+  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
 }
 

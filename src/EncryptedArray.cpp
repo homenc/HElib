@@ -225,8 +225,8 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     tmp.multByConstant(m1); // only the slots in which mask=1
     ctxt -= tmp;            // only the slots in which mask=0
 
-    rotate1D(tmp, 0, v); 
-    rotate1D(ctxt, 0, v+1);
+    rotate1D(tmp, i, v); 
+    rotate1D(ctxt, i, v+1);
     ctxt += tmp;
     if (i>0) {
       mask = ((mask * (maskTable[i][v] - maskTable[i][v+1])) % PhimXmod)
@@ -301,6 +301,79 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   }
   FHE_TIMER_STOP;
 }
+
+
+
+template<class type>
+void EncryptedArrayDerived<type>::
+  rec_mul(long dim, 
+          Ctxt& res, 
+          const Ctxt& pdata, const vector<long>& idx,
+          const PlaintextMatrixInterface<type>& mat) const
+{
+  long ndims = dimension();
+  long nslots = size();
+
+  if (dim >= ndims) {
+    vector<RX> pmat;
+    pmat.resize(nslots);
+    for (long j = 0; j < nslots; j++) {
+      long i = idx[j];
+      RX val;
+      mat.get(val, i, j);
+      pmat[j] = val;
+    }
+
+    ZZX epmat;
+    encode(epmat, pmat);
+
+    Ctxt tmp = pdata;
+    tmp.multByConstant(epmat);
+    res += tmp;
+  }
+  else {
+    long sdim = sizeOfDimension(dim);
+
+    for (long offset = 0; offset < sdim; offset++) {
+      Ctxt pdata1 = pdata;
+      vector<long> idx1;
+      rotate1D(pdata1, dim, offset);
+      this->EncryptedArrayBase::rotate1D(idx1, idx, dim, offset);
+      rec_mul(dim+1, res, pdata1, idx1, mat);
+    }
+  }
+}
+
+
+
+
+template<class type>
+void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const
+{
+  assert(this == &mat.getEA().getDerived(type()));
+  assert(&context == &ctxt.getContext());
+
+  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
+  RBak bak; bak.save(); tab.restoreContext();
+
+  const PlaintextMatrixInterface<type>& mat1 = 
+    dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
+  // a new ciphertext, encrypting zero
+
+  vector<long> idx;
+  idx.resize(size());
+  for (long i = 0; i < size(); i++)
+     idx[i] = i;
+
+  rec_mul(0, res, ctxt, idx, mat1);
+
+  ctxt = res;
+}
+
+
+
 
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
