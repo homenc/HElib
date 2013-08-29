@@ -98,11 +98,13 @@ public:
   **/
   vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
 
+  long fftPrimeCount;
+
   // Constructors must ensure that alMod points to zMStar
 
   // constructor
   FHEcontext(unsigned long m, unsigned long p, unsigned long r): zMStar(m, p), alMod(zMStar, r)
-  { stdev=3.2; }
+  { stdev=3.2; fftPrimeCount = 0; }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }

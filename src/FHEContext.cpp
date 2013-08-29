@@ -157,12 +157,11 @@ long FHEcontext::AddPrime(long initialP, long delta, bool special)
 
 long FHEcontext::AddFFTPrime(bool special)
 {
-  static long count = 0;
   zz_pBak bak; bak.save(); // Backup the NTL context
 
   do {
-    zz_p::FFTInit(count);
-    count++;
+    zz_p::FFTInit(fftPrimeCount);
+    fftPrimeCount++;
   } while (inChain(zz_p::modulus()));
 
   long i = moduli.size(); // The index of the new prime in the list
