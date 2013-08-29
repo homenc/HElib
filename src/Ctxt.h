@@ -298,7 +298,7 @@ class Ctxt {
   bool verifyPrimeSet() const;
 
 public:
-  Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace=2); // constructor
+  Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace=0); // constructor
   Ctxt& operator=(const Ctxt& other);  // assignment
 
   bool operator==(const Ctxt& other) const { return equalsTo(other); }

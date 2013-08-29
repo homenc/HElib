@@ -1,4 +1,8 @@
 
+#include "FHE.h"
+#include "EncryptedArray.h"
+#include <NTL/lzz_pXFactoring.h>
+
 #include <cstdlib>
 #include <cassert>
 #include <NTL/vector.h>
@@ -322,6 +326,8 @@ bool testNetwork(const BenesNetwork& net, const Vec<long>& perm)
 
 }
 
+#if 0
+
 int main(int argc, char *argv[])
 {
    argmap_t argmap;
@@ -363,3 +369,261 @@ int main(int argc, char *argv[])
    cout << "\n";
 
 }
+
+#endif
+
+ZZX makeIrredPoly(long p, long d)
+{
+  assert(d >= 1);
+  assert(ProbPrime(p));
+
+  if (d == 1) return ZZX(1, 1); // the monomial X
+
+  zz_pBak bak; bak.save();
+  zz_p::init(p);
+  return to_ZZX(BuildIrred_zz_pX(d));
+}
+
+void usage(char *prog) 
+{
+  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
+  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
+  cerr << "  R is log_2 of the logical arrat size [default=1]\n";
+  cerr << "  p is the plaintext base [default=2]" << endl;
+  cerr << "  r is the lifting [default=1]" << endl;
+  cerr << "  d is the degree of the field extension [default==1]\n";
+  cerr << "    (d == 0 => factors[0] defined the extension)\n";
+  cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
+  cerr << "  k is the security parameter [default=80]\n";
+  cerr << "  L is the # of primes in the modulus chai [default=10]\n";
+  cerr << "  s is the minimum number of slots [default=4]\n";
+  cerr << "  m is a specific modulus\n";
+  exit(0);
+}
+
+void randomPerm(Vec<long>& perm, long n)
+{
+  perm.SetLength(n);
+  for (long j = 0; j < n; j++)
+     perm[j] = j;
+   
+  // random shuffle
+  for (long m = n; m > 0; m--) {
+     long p = RandomBnd(m);
+     // swap positions p and m-1 of perm
+     long tmp = perm[p];
+     perm[p] = perm[m-1];
+     perm[m-1] = tmp;
+  }
+}
+
+
+// returns ceiling(a / b); assumes a >=0, b > 0, a + b <= MAX_LONG
+inline long divc(long a, long b)
+{
+  return (a + b - 1)/b;
+}
+
+
+
+
+// Some useful template stuff
+
+template<class T>
+void reverse(Vec<T>& v, long lo, long hi)
+{
+  long n = v.length();
+  assert(lo >= 0 && lo <= hi && hi < n);
+
+  if (lo >= hi) return;
+
+  for (long i = lo, j = hi; i < j; i++, j--) swap(v[i], v[j]); 
+}
+
+// Example: rotate by 1 means [0 1 2 3] -> [3 0 1 2]
+// rotate by -1 means [0 1 2 3] -> [1 2 3 0]
+// Implemented using an "in place" algorithm and swaps
+template<class T>
+void rotate(Vec<T>& v, long k)
+{
+  long n = v.length();
+  if (n <= 1) return;
+
+  k %= n;
+  if (k < 0) k += n;
+
+  if (k == 0) return;
+
+  reverse(v, 0, n-1);
+  reverse(v, 0, k-1);
+  reverse(v, k, n-1);
+}
+
+
+
+void rotateSlots(const EncryptedArray& ea, Vec< copied_ptr<Ctxt> >& v, long amt)
+{
+  long nblocks = v.length();
+  long nslots = ea.size();
+  long N = nblocks * nslots;
+
+  if (N == 0) return;
+
+  amt %= N;
+  if (amt < 0) amt += N;
+
+  if (amt == 0) return;
+
+  long q = amt / nslots;
+  long r = amt % nslots;
+
+ 
+  rotate(v, q);
+
+  if (r != 0) {
+    // construct appropriate mask: first r slots 0,
+    // remaining slots are 1
+
+    vector<long> mask;
+    mask.resize(nslots);
+    for (long j = 0; j < r; j++) mask[j] = 0;
+    for (long j = r; j < nslots; j++) mask[j] = 1;
+
+    ZZX pmask;
+    ea.encode(pmask, mask); 
+
+    const FHEPubKey& publicKey = v[0]->getPubKey();
+    Ctxt c0(publicKey), c1(publicKey), carry(publicKey);
+
+    for (long i = 0; i < nblocks; i++) {
+      c0 = *v[i];
+      ea.rotate(c0, r);
+      c1 = c0;
+      c1.multByConstant(pmask);
+      c0 -= c1;
+   
+      c1 += carry;
+
+      *v[i] = c1;
+      carry = c0;
+
+    }
+    *v[0] += carry;
+  }
+}
+
+
+int main(int argc, char *argv[])
+{
+  argmap_t argmap;
+  argmap["R"] = "1";
+  argmap["p"] = "2";
+  argmap["r"] = "1";
+  argmap["d"] = "1";
+  argmap["c"] = "2";
+  argmap["k"] = "80";
+  argmap["L"] = "10";
+  argmap["s"] = "0";
+  argmap["m"] = "0";
+
+  // get parameters from the command line
+  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
+
+  long R = atoi(argmap["R"]);
+  long p = atoi(argmap["p"]);
+  long r = atoi(argmap["r"]);
+  long d = atoi(argmap["d"]);
+  long c = atoi(argmap["c"]);
+  long k = atoi(argmap["k"]);
+  long s = atoi(argmap["s"]);
+  long L = atoi(argmap["L"]);
+  long chosen_m = atoi(argmap["m"]);
+
+  long w = 64; // Hamming weight of secret key
+
+  long m = FindM(k, L, c, p, d, s, chosen_m, true);
+
+  long N = 1L << R;
+
+
+
+  FHEcontext context(m, p, r);
+  buildModChain(context, L, c);
+
+  context.zMStar.printout();
+
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+
+
+  ZZX G;
+
+  if (d == 0)
+    G = context.alMod.getFactorsOverZZ()[0];
+  else
+    G = makeIrredPoly(p, d); 
+
+  cerr << "G = " << G << "\n";
+  cerr << "generating key-switching matrices... ";
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  cerr << "done\n";
+
+
+  cerr << "computing masks and tables for rotation...";
+  EncryptedArray ea(context, G);
+  cerr << "done\n";
+
+
+  long nslots = ea.size();
+  long nblocks = divc(N, nslots);
+  long remslots = nslots*nblocks - N; // # of leftover slots
+
+  vector<long> mask;
+  mask.resize(nslots);
+  for (long j = 0; j < nslots-remslots; j++) mask[j] = 1;
+  for (long j = nslots-remslots; j < nslots; j++) mask[j] = 0;
+  PlaintextArray pmask(ea);
+  pmask.encode(mask);
+
+  Vec< copied_ptr<Ctxt> > cvec;
+  cvec.SetLength(nblocks);
+  for (long i = 0; i < nblocks; i++) cvec[i].set_ptr(new Ctxt(publicKey));
+
+  Vec< copied_ptr<PlaintextArray> > pvec;
+  pvec.SetLength(nblocks);
+  for (long i = 0; i < nblocks; i++) pvec[i].set_ptr(new PlaintextArray(ea));
+
+  for (long i = 0; i < nblocks; i++)
+    pvec[i]->random();
+
+  // pvec[nblocks-1]->mul(pmask); // zero out leftover slots
+
+  for (long i = 0; i < nblocks; i++) {
+    pvec[i]->print(cout);
+    cout << "\n";
+  }
+  cout << "\n";
+
+
+  for (long i = 0; i < nblocks; i++)
+    ea.encrypt(*cvec[i], publicKey, *pvec[i]);
+
+  // rotate(cvec, 1);
+  rotateSlots(ea, cvec, -1);
+
+  for (long i = 0; i < nblocks; i++)
+    ea.decrypt(*cvec[i], secretKey, *pvec[i]);
+
+  for (long i = 0; i < nblocks; i++) {
+    pvec[i]->print(cout);
+    cout << "\n";
+  }
+  cout << "\n";
+}
+
+
+// benes_x R=4 k=0 p=7 r=2
+
+

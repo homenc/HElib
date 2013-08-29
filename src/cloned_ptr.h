@@ -142,11 +142,17 @@ public: \
     const X* get_ptr() const { return ptr; } \
     X* get_ptr() { return ptr; } \
  \
+    void swap(CLONED_PTR_TYPE& r) \
+    { \
+      X *tmp; tmp = r.ptr; r.ptr = ptr; ptr = tmp;  \
+    } \
 private: \
     X* ptr; \
  \
     void copy(X* p)  {ptr = (p ? Cloner::apply(p) : 0);} \
 }; \
+ \
+
 
 
 // declare the template class cloned_ptr<X>
@@ -156,6 +162,12 @@ CLONED_PTR_DECLARE(cloned_ptr, deep_clone)
 CLONED_PTR_DECLARE(copied_ptr, shallow_clone)
 
 // template <class X> using copied_ptr = cloned_ptr<X, noclone<X> >;
+
+template<class X, class Cloner> 
+void swap(cloned_ptr<X,Cloner>& x, cloned_ptr<X,Cloner>& y) { x.swap(y); }
+
+template<class X, class Cloner> 
+void swap(copied_ptr<X,Cloner>& x, copied_ptr<X,Cloner>& y) { x.swap(y); }
 
 
 

@@ -157,8 +157,12 @@ public:
 
   // Access methods
   const FHEcontext& getContext() const {return context;}
+  long getPtxtSpace() const { return pubEncrKey.ptxtSpace; }
+
+
   //! @brief The Hamming weight of the secret key
   long getSKeyWeight(long keyID=0) const {return skHwts[keyID];}
+
 
   ///@{
   //! @name Find key-switching matrices
