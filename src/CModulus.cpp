@@ -196,10 +196,10 @@ void Cmod<type>::iFFT(zpx &x, const zzv& y)const
   long m = getM();
 
   // convert input to zpx format, initializing only the coeffs i s.t. (i,m)=1
-  x.SetMaxLength(m);
+  x.rep.SetLength(m);
   long i,j;
   for (i=j=0; i<m; i++)
-    if (zMStar->inZmStar(i)) SetCoeff(x, i, y[j++]);
+    if (zMStar->inZmStar(i)) conv(x.rep[i], y[j++]);
   x.normalize();
   conv(rt, rInv);  // convert rInv to zp format
 

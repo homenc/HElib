@@ -157,10 +157,15 @@ long FHEcontext::AddPrime(long initialP, long delta, bool special)
 
 long FHEcontext::AddFFTPrime(bool special)
 {
+  static long count = 0;
   zz_pBak bak; bak.save(); // Backup the NTL context
 
+  do {
+    zz_p::FFTInit(count);
+    count++;
+  } while (inChain(zz_p::modulus()));
+
   long i = moduli.size(); // The index of the new prime in the list
-  zz_p::FFTInit(i);
   long p = zz_p::modulus();
 
   moduli.push_back( Cmodulus(zMStar, 0, 1) ); // a dummy Cmodulus object

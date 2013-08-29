@@ -82,7 +82,13 @@ bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
 Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   context(newPubKey.getContext()), pubKey(newPubKey), ptxtSpace(newPtxtSpace),
   noiseVar(to_xdouble(0.0))
-{}
+{
+  if (ptxtSpace != pubKey.getPtxtSpace()) { // plaintext-space mistamtch
+    ptxtSpace = GCD(ptxtSpace, pubKey.getPtxtSpace());
+    if (ptxtSpace <= 1) Error("Plaintext-space mismatch Ctxt constructor");
+  }
+
+}
 
 // Assignment
 Ctxt& Ctxt::operator=(const Ctxt& other)

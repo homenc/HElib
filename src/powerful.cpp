@@ -3,6 +3,8 @@
  */
 
 #include "NumbTh.h"
+#include "bluestein.h"
+#include "cloned_ptr.h"
 
 
 #include <NTL/lzz_pX.h>
@@ -188,7 +190,7 @@ private:
 public:
    // initialzie a HyperCube with a CubeSignature
    HyperCube(const CubeSignature& _sig) : sig(_sig) {
-      data.SetLength(sig.getSize());
+      data.FixLength(sig.getSize());
    }
 
    // use default copy constructor 
@@ -198,11 +200,30 @@ public:
    {
       assert(&this->sig == &other.sig);
       data = other.data;
+      return *this;
+   }
+
+
+   // equality testing: signaturees must be the same
+   bool operator==(const HyperCube<T>& other) const
+   {
+      assert(&this->sig == &other.sig);
+      return data == other.data;
+   }
+
+   bool operator!=(const HyperCube<T>& other) const
+   {
+      return !(*this == other);
    }
 
 
    // const ref to signature
    const CubeSignature& getSig() const { return sig; }
+
+   // read/write ref to the data vector.
+   // Note that the length of data is fixed upon construction,
+   // so it cannot be changed through this ref.
+   Vec<T>& getData() { return data; }
 
    // total size of cube
    long getSize() const { return sig.getSize(); }
@@ -233,6 +254,51 @@ public:
 
    // read-only reference to element at position i, without bounds check 
    const T& operator[](long i) const { return data[i]; }
+
+
+
+
+};
+
+
+
+// The class FFTHelper is used to help perform FFT' over zz_p.
+// The constructor supplies an element x in zz_p and an integer m,
+// where x has order m and x has a square root in zz-p.
+// Auxilliary data structures are constricted to support
+// evaluation and interpolation at the points x^i for i in Z_m^*
+
+// It is assumed that the zz_p-context is set prior to all
+// constructor and method invocations.
+
+
+class FFTHelper {
+
+private:
+  long m;
+  zz_p m_inv;
+  zz_p root, iroot;
+  zz_pXModulus phimx;
+  Vec<bool> coprime;
+  long phim;
+
+  mutable zz_pX powers, ipowers;
+  mutable Vec<mulmod_precon_t> powers_aux, ipowers_aux;
+  mutable fftRep Rb, iRb;
+  mutable fftrep_aux Rb_aux, iRb_aux;
+  mutable fftRep Ra; 
+  mutable zz_pX tmp;
+
+public:
+  FFTHelper(long _m, zz_p x);
+
+  void FFT(const zz_pX& f, Vec<zz_p>& v) const;
+    // compute v = { f(x^i) }_{i in Z_m^*}
+  void iFFT(zz_pX& f, const Vec<zz_p>& v, bool normalize = true) const;
+    // computes inverse transform. If !normalize, result is scaled by m
+
+  const zz_p& get_m_inv() const { return m_inv; }
+  // useful for aggregate normalization
 
 };
 
@@ -372,8 +438,11 @@ void getHyperColumn(Vec<T>& v, const ConstCubeSlice<T>& s, long pos)
    assert(pos >= 0 && pos < m);
    v.SetLength(n);
 
+   T* vp = &v[0];
+   const T* sp = &s[0];
+
    for (long i = 0; i < n; i++)
-      v[i] = s[pos + i*m];
+      vp[i] = sp[pos + i*m];
 }
 
 // setHyperColumn does the reverse of getHyperColumn, setting the column
@@ -388,8 +457,35 @@ void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos)
    assert(pos >= 0 && pos < m);
    if (v.length() < n) n = v.length();
 
+   const T* vp = &v[0];
+   T* sp = &s[0];
+
    for (long i = 0; i < n; i++)
-      s[pos + i*m] = v[i];
+      sp[pos + i*m] = vp[i];
+}
+
+
+// this version of setHyperColumn implicitly pads v with a default value,
+// if v is too short
+
+template<class T>
+void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos, const T& val)
+{
+   long m = s.getProd(1);
+   long n = s.getDim(0);
+   long n1 = n;
+
+   assert(pos >= 0 && pos < m);
+   if (v.length() < n) n1 = v.length();
+
+   const T* vp = &v[0];
+   T* sp = &s[0];
+
+   for (long i = 0; i < n1; i++)
+      sp[pos + i*m] = vp[i];
+
+   for (long i = n1; i < n; i++)
+      sp[pos + i*m] = val;
 }
 
 
@@ -417,6 +513,54 @@ void print3D(const HyperCube<T>& c)
    }
 }
 
+
+// Implementation of FFTHelper
+
+
+FFTHelper::FFTHelper(long _m, zz_p x)
+{
+  m = _m;
+  m_inv = 1/conv<zz_p>(m);
+  root = conv<zz_p>( SqrRootMod( conv<ZZ>(x), conv<ZZ>(zz_p::modulus())) );
+    // NOTE: the previous line is a pain because NTL does not have
+    // a single-precision variant of SqrRootMod...
+  iroot = 1/root;
+
+  phim = 0;
+  coprime.SetLength(m);
+  for (long i = 0; i < m; i++) {
+    coprime[i] = (GCD(i, m) == 1); 
+    if (coprime[i]) phim++;
+  }
+
+  build(phimx, conv<zz_pX>( Cyclotomic(m) ));
+}
+
+
+void FFTHelper::FFT(const zz_pX& f, Vec<zz_p>& v) const
+{
+  tmp = f;
+  BluesteinFFT(tmp, m, root, powers, powers_aux, Rb, Rb_aux, Ra);
+  v.SetLength(phim);
+
+  for (long i = 0, j = 0; i < m; i++)
+    if (coprime[i]) v[j++] = coeff(tmp, i);
+}
+
+void FFTHelper::iFFT(zz_pX& f, const Vec<zz_p>& v, bool normalize) const
+{
+  tmp.rep.SetLength(m);
+  for (long i = 0, j = 0; i < m; i++) {
+    if (coprime[i]) tmp.rep[i] = v[j++];
+  }
+  tmp.normalize();
+  
+  BluesteinFFT(tmp, m, iroot, ipowers, ipowers_aux, iRb, iRb_aux, Ra);
+
+  rem(f, tmp, phimx);
+
+  if (normalize) f *= m_inv;
+}
 
 // x = p^e
 // returns phi(p^e) = (p-1) p^{e-1}
@@ -743,17 +887,36 @@ void computeMultiEvalPoints(Vec< Vec<zz_p> >& multiEvalPoints,
    }
 }
 
+// powVec[d] = m_d = p_d^{e_d}
+// computes multiEvalPoints[d] as an FFTHelper for base^{m/m_d}
+void computeMultiEvalPoints(Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+                            const zz_p& base,
+                            long m,
+                            const Vec<long>& powVec,
+                            const Vec<long>& phiVec)
+{
+   long k = powVec.length();
 
-// computes linearEvalPoints[i] = base^i, i = 0..m-1
+   multiEvalPoints.SetLength(k);
+
+   for (long d = 0; d < k; d++) {
+      long m_d = powVec[d];
+      multiEvalPoints[d].set_ptr(new FFTHelper(m_d, power(base, m/m_d))); 
+   }
+   
+}
+
+
+// computes linearEvalPoints[i] = base^i, i in Z_m^*
 void computeLinearEvalPoints(Vec<zz_p>& linearEvalPoints,
                              const zz_p& base,
-                             long m)
+                             long m, long phim)
 {
-   linearEvalPoints.SetLength(m);
+   linearEvalPoints.SetLength(phim);
    zz_p pow = conv<zz_p>(1);
 
-   for (long i = 0; i < m; i++) {
-      linearEvalPoints[i] = pow;
+   for (long i = 0, j = 0; i < m; i++) {
+      if (GCD(i, m) == 1) linearEvalPoints[j++] = pow;
       pow = pow * base;
    }
 }
@@ -855,6 +1018,87 @@ void eval(HyperCube<zz_p>& cube,
 } 
 
 
+void recursiveEval(const CubeSlice<zz_p>& s,
+                   const Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+                   long d,
+                   zz_pX& tmp1,
+                   Vec<zz_p>& tmp2)
+{
+   long numDims = s.getNumDims();
+   assert(numDims > 0);
+
+   if (numDims > 1) {
+      long dim0 = s.getDim(0);
+      for (long i = 0; i < dim0; i++)
+         recursiveEval(CubeSlice<zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
+   }
+
+   long posBnd = s.getProd(1);
+   for (long pos = 0; pos < posBnd; pos++) {
+      getHyperColumn(tmp1.rep, s, pos);
+      tmp1.normalize();
+      multiEvalPoints[d]->FFT(tmp1, tmp2);
+      setHyperColumn(tmp2, s, pos);
+   }
+
+}
+
+
+void eval(HyperCube<zz_p>& cube,
+          const Vec< copied_ptr<FFTHelper> >& multiEvalPoints)
+{
+   zz_pX tmp1;
+   Vec<zz_p> tmp2;
+
+   recursiveEval(CubeSlice<zz_p>(cube), multiEvalPoints, 0, tmp1, tmp2);
+} 
+
+
+
+void recursiveInterp(const CubeSlice<zz_p>& s,
+                     const Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+                     long d,
+                     zz_pX& tmp1,
+                     Vec<zz_p>& tmp2)
+{
+   long numDims = s.getNumDims();
+   assert(numDims > 0);
+
+   long posBnd = s.getProd(1);
+   for (long pos = 0; pos < posBnd; pos++) {
+      getHyperColumn(tmp2, s, pos);
+      multiEvalPoints[d]->iFFT(tmp1, tmp2, false); // do not normalize
+      setHyperColumn(tmp1.rep, s, pos, zz_p::zero());
+   }
+
+   if (numDims > 1) {
+      long dim0 = s.getDim(0);
+      for (long i = 0; i < dim0; i++)
+         recursiveInterp(CubeSlice<zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
+   }
+
+}
+
+
+void interp(HyperCube<zz_p>& cube,
+          const Vec< copied_ptr<FFTHelper> >& multiEvalPoints)
+{
+   zz_pX tmp1;
+   Vec<zz_p> tmp2;
+
+   recursiveInterp(CubeSlice<zz_p>(cube), multiEvalPoints, 0, tmp1, tmp2);
+
+   // result is not normalized, so we fix that now...
+
+   long k = multiEvalPoints.length();
+
+   zz_p m_inv = conv<zz_p>(1);
+   for (long d = 0; d < k; d++) m_inv *= multiEvalPoints[d]->get_m_inv();
+
+   cube.getData() *= m_inv;
+
+} 
+
 
 // -------------------------------------
 
@@ -908,17 +1152,22 @@ int main(int argc, char *argv[])
 
   argmap_t argmap;
 
-  argmap["q"] = "1801"; // 1801 = 225*8+1
   argmap["m"] = "225"; // 225 = 5^2*3^2
+  argmap["iter"] = "10";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage();
 
-  long q = atoi(argmap["q"]);
   long m = atoi(argmap["m"]);
+  long iter = atoi(argmap["iter"]);
 
-  cout << "q=" << q << "\n";
   cout << "m=" << m << "\n";
+
+  long q; // find least prime q s/t q = 2*k*m + 1 for some k
+
+  for (long k = 1; q = 2*k*m + 1, !ProbPrime(q, 20); k++);
+  cout << "q=" << q << "\n";
+  
 
   Vec< Pair<long, long> > factors;
 
@@ -939,11 +1188,9 @@ int main(int argc, char *argv[])
 
   Vec<long> divVec;
   computeDivVec(divVec, m, powVec);
-  cout << divVec << "\n";
 
   Vec<long> invVec;
   computeInvVec(invVec, divVec, powVec);
-  cout << invVec << "\n";
 
 
   CubeSignature shortSig(phiVec);
@@ -952,29 +1199,23 @@ int main(int argc, char *argv[])
   Vec<long> polyToCubeMap;
   Vec<long> cubeToPolyMap;
   computePowerToCubeMap(polyToCubeMap, cubeToPolyMap, m, powVec, invVec, longSig);
-  cout << polyToCubeMap << "\n";
-  cout << cubeToPolyMap << "\n";
 
   Vec<long> shortToLongMap;
   computeShortToLongMap(shortToLongMap, shortSig, longSig);
-  cout << shortToLongMap << "\n";
 
   Vec<long> longToShortMap;
   computeLongToShortMap(longToShortMap, m, shortToLongMap);
-  cout << longToShortMap << "\n";
   
 
   zz_p::init(q);
 
   Vec<zz_pX> cycVec;
   computeCycVec(cycVec, powVec);
-  cout << cycVec << "\n";
 
 
   ZZX PhimX = Cyclotomic(m);
   zz_pX phimX = conv<zz_pX>(PhimX);
 
-  cout << phimX << "\n";
 
   zz_pX poly;
   random(poly, phim);
@@ -1006,11 +1247,13 @@ int main(int argc, char *argv[])
 
   zz_p base = conv<zz_p>(lbase);
 
-  Vec< Vec<zz_p> > multiEvalPoints;
+  // Vec< Vec<zz_p> > multiEvalPoints;
+  Vec< copied_ptr<FFTHelper> > multiEvalPoints;
+
   computeMultiEvalPoints(multiEvalPoints, base, m, powVec, phiVec);
 
   Vec<zz_p> linearEvalPoints;
-  computeLinearEvalPoints(linearEvalPoints, base, m);
+  computeLinearEvalPoints(linearEvalPoints, base, m, phim);
 
   Vec< Vec<long> > compressedIndex;
   computeCompressedIndex(compressedIndex, powVec);
@@ -1020,17 +1263,19 @@ int main(int argc, char *argv[])
                                  compressedIndex, shortSig);
 
 
-  eval(cube, multiEvalPoints);
+  
+  HyperCube<zz_p> cube1 = cube;
+
+  eval(cube1, multiEvalPoints);
 
   Vec<zz_p> res;
   eval(res, poly, linearEvalPoints);
 
   bool eval_ok = true;
 
-  for (long i = 0; i < m; i++) {
+  for (long i = 0, j = 0; i < m; i++) {
     if (GCD(i, m) == 1) {
-      long j = powToCompressedIndexMap[i];
-      if (cube[j] != res[i]) eval_ok = false;
+      if (cube1[powToCompressedIndexMap[i]] != res[j++]) eval_ok = false;
     }
   } 
 
@@ -1040,5 +1285,63 @@ int main(int argc, char *argv[])
   else
     cout << "eval not ok\n";
 
+
+  interp(cube1, multiEvalPoints);
+
+  if (cube1 == cube)
+    cout << "interp OK\n";
+  else
+    cout << "interp NOT OK\n";
+  
+
+  FFTHelper fftHelper(m, base);
+ 
+  Vec<zz_p> res1;
+
+  fftHelper.FFT(poly, res1);
+
+  if (res1 == res) 
+    cout << "fast eval OK\n";
+  else
+    cout << "fast eval NOT OK\n";
+
+  zz_pX poly2;
+
+  fftHelper.iFFT(poly2, res);
+
+  if (poly2 == poly)
+    cout << "fast interp OK\n";
+  else
+    cout << "fast interp NOT OK\n";
+
+
+
+  double t;
+
+  cout << "time for cube eval...";
+
+  t = GetTime();
+
+  HyperCube<zz_p> cube2(shortSig);
+
+  eval(cube1, multiEvalPoints);
+  t = GetTime();
+  for (long i = 0; i < iter; i++) {
+    cube2 = cube;
+    eval(cube2, multiEvalPoints);
+  }
+  t = GetTime()-t;
+  cout << t << "\n";
+
+
+  cout << "time for linear eval...";
+  
+  t = GetTime();
+  for (long i = 0; i < iter; i++) {
+    fftHelper.FFT(poly, res1);
+  }
+  t = GetTime()-t;
+  cout << t << "\n";
+  
 }
 
