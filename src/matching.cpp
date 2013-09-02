@@ -7,7 +7,7 @@ static long augmenting_path(vector<long>& p, FlowGraph& g, long src, long sink);
 void printFlow(FlowGraph& fg)
 {
   cout << "Flow graph in format from->to: flow(capacity):\n";
-  for (long i=0; i<fg.size(); i++)
+  for (long i=0; i<(long)fg.size(); i++)
     for (FNeighborList::iterator it=fg[i].begin(); it!=fg[i].end(); ++it) {
       long j = it->first; // found an edge i->j
       if (it->second.capacity <= 0) continue; // ignore dummy edges
@@ -20,7 +20,7 @@ void printFlow(FlowGraph& fg)
 void BipartitleGraph::printout()
 {
   cout << "Bipartite graph in format left->right: label, color\n";
-  for (long i=0; i<left.size(); i++) {
+  for (long i=0; i<(long)left.size(); i++) {
     for (LNeighborList::iterator it=left[i].neighbors.begin(); 
 	 it!=left[i].neighbors.end(); ++it) {
       cout <<"  "<< i+1 <<"->"<< it->first+1 <<": "
@@ -35,10 +35,11 @@ void BipartitleGraph::printout()
 void BipartitleGraph::partitionToMatchings()
 {
   // Make sure that all the edges are colored 0
-  for (long i=0; i<(long)left.size(); i++)
+  for (long i=0; i<(long)left.size(); i++) {
     for (LNeighborList::iterator it=left[i].neighbors.begin(); 
 	 it!=left[i].neighbors.end(); ++it)
       it->second.color = 0;
+  }
 
   // Build the flow graph for this bipartite graph
   FlowGraph fg;
@@ -86,11 +87,11 @@ void BipartitleGraph::partitionToMatchings()
 	assert (flow==0); // sanity check, we must have enough edges to color
       }
       // Remove flow edges that are marked for removal
-      for (long i=0; i<(long)edges2remove.size(); i++) {
-	long j = edges2remove[i]; // neighbor index in the flow graph
+      for (long ii=0; ii<(long)edges2remove.size(); ii++) {
+	long j = edges2remove[ii]; // neighbor index in the flow graph
 	v.erase(j);
 	// also erase the reverse direction of this edge from the flow graph
-	fg[j].erase(i+1);
+	fg[j].erase(ii+1);
       }
     }
     // Remove the flow from the source and sink edges
@@ -290,6 +291,7 @@ static long augmenting_path(vector<long>& path, FlowGraph& fg,
   return flowVal;
  }
 
+#if 0
 /*********** Simple networks to test the code from above ***********/
 /******* a directed flow graph *******
          /-------3-\   /-------3-\
@@ -297,7 +299,7 @@ static long augmenting_path(vector<long>& path, FlowGraph& fg,
 A -3-> B -2-> C -3-> D -4-> E -3-> F
  \           / \           /
   \-------3-/   \-------2-/
-**************************************
+**************************************/
 int main()
 {
   // initializing in C++ is such a pain
@@ -339,7 +341,7 @@ int main()
 /*********** an undirected bipartite graph ***********
  0 -> 1,3,4    2 -> 0,2,3    4 -> 1,3,4
  1 -> 0,1,4    3 -> 0,2,2
- *****************************************************
+*****************************************************/
   BipartitleGraph bg;
   bg.addEdge(0,1,1);  bg.addEdge(0,3,2);  bg.addEdge(0,4,3);
   bg.addEdge(1,0,4);  bg.addEdge(1,1,5);  bg.addEdge(1,4,6);
@@ -350,3 +352,4 @@ int main()
   bg.printout();
 }
 /*********************************************************************/
+#endif

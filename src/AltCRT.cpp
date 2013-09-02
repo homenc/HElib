@@ -617,6 +617,7 @@ void AltCRT::randomize(const ZZ* seed)
 AltCRT& AltCRT::operator=(const SingleCRT& scrt)
 {
    assert(0); // not implemented
+   return *this;
 }
 
 
@@ -701,11 +702,13 @@ void AltCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 ostream& operator<< (ostream &str, const AltCRT &d)
 {
   assert(0); // not implemented
+  return str;
 }
 
 istream& operator>> (istream &str, AltCRT &d)
 {
   assert(0); // not implemented
+  return str;
 }
 
 

@@ -15,7 +15,7 @@
  */
 /**
  * @file DoubleCRT.h
- * @brief Implementatigs polynomials (elements in the ring R_Q) in double-CRT form
+ * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
  **/
 
 // change to #if 1 to get an alternative implementation
