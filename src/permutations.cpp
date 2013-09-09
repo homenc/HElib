@@ -48,7 +48,7 @@ SlicePerm& SlicePerm::operator=(const ColPerm &other)
 {
   assert(&getSig()==&other.getSig());// Ensure the same cube dimensions
   assert(other.dim==getNumDims()-1); //   and dim = the last dimension,
-  getData() = ((HyperCube&) other).getData(); // then copy the raw data.
+  getData() = ((HyperCube<long>&) other).getData(); // then copy the raw data.
   dim = other.dim;
   return *this;
 }
@@ -97,7 +97,7 @@ ColPerm& ColPerm::operator=(const SlicePerm &other)
 {
   assert(&getSig()==&other.getSig());// Ensure the same cube dimensions
   assert(other.dim==getNumDims()-1); //   and dim = the last dimension,
-  getData() = ((HyperCube&) other).getData(); // then copy the raw data.
+  getData() = ((HyperCube<long>&) other).getData(); // then copy the raw data.
   dim = other.dim;
   return *this;
 }
