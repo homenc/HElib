@@ -514,6 +514,67 @@ void rotateSlots(const EncryptedArray& ea, Vec< copied_ptr<Ctxt> >& v, long amt)
 }
 
 
+void applyNetwork(const BenesNetwork& net, 
+                  const EncryptedArray& ea, 
+                  Vec< copied_ptr<Ctxt> >& v)
+{
+  long sz = net.getSize();
+  long nlev = net.getNumLevels();
+
+  long nblocks = v.length();
+  long nslots = ea.size();
+  long N = nblocks * nslots;
+
+  assert(sz <= N);
+  assert(sz > N - nslots);
+
+  for (long i = 0; i < nlev; i++) {
+    const Vec<short>& lev = net.getLevel(i);
+    long p = net.bitPos(i);
+    long shamt1 = -(1L << p);
+    long shamt2 = +(1L << p);
+
+    Vec< copied_ptr<Ctxt> > v1, v2;
+    v1 = v; 
+    v2 = v;
+
+    for (long b = 0; b < nblocks; b++) {
+      vector<long> mask1, mask2;
+      mask1.resize(nslots);
+      mask2.resize(nslots);
+
+      for (long s = 0; s < nslots; s++) {
+        long j = b*nslots + s;
+        mask1[s] = mask2[s] = 0;
+        if (j < sz && lev[j] != 0) {
+          if (j & (1L << p)) 
+            mask1[s] = 1;
+          else
+            mask2[s] = 1;
+        }
+      }
+
+      ZZX pmask1, pmask2;
+      ea.encode(pmask1, mask1);
+      ea.encode(pmask2, mask2);
+
+      v1[b]->multByConstant(pmask1);
+      v2[b]->multByConstant(pmask2);
+      *v[b] -= *v1[b];
+      *v[b] -= *v2[b];
+    }
+
+    rotateSlots(ea, v1, shamt1);
+    rotateSlots(ea, v2, shamt2);
+
+    for (long b = 0; b < nblocks; b++) {
+      *v[b] += *v1[b];
+      *v[b] += *v2[b];
+    }
+  }
+}
+
+
 int main(int argc, char *argv[])
 {
   argmap_t argmap;
@@ -544,7 +605,7 @@ int main(int argc, char *argv[])
 
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
-  long N = 1L << R;
+  long sz = 1L << R;
 
 
 
@@ -577,8 +638,8 @@ int main(int argc, char *argv[])
 
 
   long nslots = ea.size();
-  long nblocks = divc(N, nslots);
-  long remslots = nslots*nblocks - N; // # of leftover slots
+  long nblocks = divc(sz, nslots);
+  long remslots = nslots*nblocks - sz; // # of leftover slots
 
   vector<long> mask;
   mask.resize(nslots);
@@ -598,7 +659,7 @@ int main(int argc, char *argv[])
   for (long i = 0; i < nblocks; i++)
     pvec[i]->random();
 
-  // pvec[nblocks-1]->mul(pmask); // zero out leftover slots
+  pvec[nblocks-1]->mul(pmask); // zero out leftover slots
 
   for (long i = 0; i < nblocks; i++) {
     pvec[i]->print(cout);
@@ -610,8 +671,14 @@ int main(int argc, char *argv[])
   for (long i = 0; i < nblocks; i++)
     ea.encrypt(*cvec[i], publicKey, *pvec[i]);
 
-  // rotate(cvec, 1);
-  rotateSlots(ea, cvec, -1);
+  Vec<long> perm;
+  randomPerm(perm, sz);
+
+  cout << "perm = " << perm << "\n";
+
+  BenesNetwork net(R, perm);
+
+  applyNetwork(net, ea, cvec);
 
   for (long i = 0; i < nblocks; i++)
     ea.decrypt(*cvec[i], secretKey, *pvec[i]);
