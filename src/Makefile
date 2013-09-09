@@ -20,6 +20,7 @@ CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include
 #CFLAGS = -pg -Wall -I/usr/local/include
 LD = g++
 
+
 AR = ar
 ARFLAGS=ruv
 
