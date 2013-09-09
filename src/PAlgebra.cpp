@@ -273,7 +273,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
   }
 
   // Start building a representation of (Z/mZ)^*, first use the generator p
-  conjClasses(classes,p,m);  // merge classes that have a factor of 2
+  conjClasses(classes,p,m);  // merge classes that have a factor of p
 
   // The order of p is the size of the equivalence class of 1
   ordP = (unsigned long) count (classes.begin(), classes.end(), 1);
