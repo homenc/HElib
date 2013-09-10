@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 
   string s2 = s1.str();
 
-  cout << s2;
+  cout << s2 << endl;
 
   stringstream s3(s2);
 

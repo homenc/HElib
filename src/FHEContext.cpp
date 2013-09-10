@@ -415,7 +415,11 @@ istream& operator>> (istream &str, FHEcontext& context)
   for (long i=0; i<nPrimes; i++) {
     long p;
     str >> p; 
-    context.moduli.push_back(Cmodulus(context.zMStar, p, 0));
+#ifdef USE_ALT_CRT
+    context.moduli.push_back(Cmodulus(context.zMStar,p,1)); // a dummy object
+#else
+    context.moduli.push_back(Cmodulus(context.zMStar,p,0)); // a real object
+#endif
     if (s.contains(i))
       context.specialPrimes.insert(i); // special prime
     else

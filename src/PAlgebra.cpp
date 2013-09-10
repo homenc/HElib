@@ -255,9 +255,10 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
   m = mm;
   p = pp;
 
-  assert( (m&1) == 1 );
+  //  assert( (m&1) == 1 );
   assert( ProbPrime(p) );
-  assert( m > p && (m % p) != 0 );
+  //  assert( m > p && (m % p) != 0 );
+  assert( (m % p) != 0 );
   assert( m < NTL_SP_BOUND );
 
   // Compute the generators for (Z/mZ)^*
