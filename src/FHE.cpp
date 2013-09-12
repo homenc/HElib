@@ -654,6 +654,7 @@ long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
     ptxtSpace =  context.alMod.getPPowR();  // default plaintext space is p^r
 
   const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
+  ctxt.primeSet = context.ctxtPrimes;        // initialize the primeSet
   ctxt.parts.assign(2,CtxtPart(context, context.ctxtPrimes));// allocate space
   RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);  // a new RLWE instance
 
