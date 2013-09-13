@@ -13,6 +13,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+#include <NTL/ZZ.h>
 #include "permutations.h"
 
 // Write a slice (row) permutation explicitly
@@ -230,6 +231,22 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
   }
   rho1.dim = rho3.dim = dim;
   rho2.dim = dim+1;
+}
+
+void randomPerm(Permut& perm, long n)
+{
+  perm.SetLength(n);
+  for (long j = 0; j < n; j++)
+     perm[j] = j;
+   
+  // random shuffle
+  for (long m = n; m > 0; m--) {
+     long p = RandomBnd(m);
+     // swap positions p and m-1 of perm
+     long tmp = perm[p];
+     perm[p] = perm[m-1];
+     perm[m-1] = tmp;
+  }
 }
 
 #if 0

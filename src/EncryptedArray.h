@@ -863,9 +863,11 @@ public:
     if (n == 0) 
       s << "[]";
     else {
-      s << "[" << data[0];
+      if (IsZero(data[0])) s << "[[0]";
+      else                 s << "[" << data[0];
       for (long i = 1; i < lsize(data); i++)
-        s << " " << data[i];
+        if (IsZero(data[i])) s << " [0]";
+	else                 s << " " << data[i];
       s << "]";
     }
   }

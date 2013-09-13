@@ -21,6 +21,7 @@
  **/
 #include <vector>
 #include <cmath>
+#include <cassert>
 #include <istream>
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_p.h>
@@ -310,6 +311,34 @@ private:
 //! @brief Advance the input stream beyond white spaces and a single instance of the char cc
 void seekPastChar(istream& str, int cc);
 
+//! @brief Reverse a vector in place
+template<class T> void reverse(Vec<T>& v, long lo, long hi)
+{
+  long n = v.length();
+  assert(lo >= 0 && lo <= hi && hi < n);
+
+  if (lo >= hi) return;
+
+  for (long i = lo, j = hi; i < j; i++, j--) swap(v[i], v[j]); 
+}
+
+//! @brief Rotate a vector in place using swaps
+// Example: rotate by 1 means [0 1 2 3] -> [3 0 1 2]
+//          rotate by -1 means [0 1 2 3] -> [1 2 3 0]
+template<class T> void rotate(Vec<T>& v, long k)
+{
+  long n = v.length();
+  if (n <= 1) return;
+
+  k %= n;
+  if (k < 0) k += n;
+
+  if (k == 0) return;
+
+  reverse(v, 0, n-1);
+  reverse(v, 0, k-1);
+  reverse(v, k, n-1);
+}
 
 // An experimental facility...it is annoying that vector::size() is an
 // unsigned quantity...this leads to all kinds of annoying warning messages...
@@ -328,6 +357,12 @@ bool sameObject(const T1* p1, const T2* p2) {
 
 //! @brief Modular composition of polynomials: res = g(h) mod f
 void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f);
+
+//! @brief returns ceiling(a/b); assumes a >=0, b>0, a+b <= MAX_LONG
+inline long divc(long a, long b)
+{
+  return (a + b - 1)/b;
+}
 
 ///@{
 //! @name The size of the coefficient vector of a polynomial.
