@@ -28,6 +28,10 @@ void AltCRT::verify()
   assert(map.getIndexSet() <= (context.specialPrimes | context.ctxtPrimes));
 }
 
+
+
+
+
 // Arithmetic operations. Only the "destructive" versions are used,
 // i.e., a += b is implemented but not a + b.
 
@@ -79,6 +83,10 @@ template
 AltCRT& AltCRT::Op<AltCRT::SubFun>(const AltCRT &other, SubFun fun,
 			 bool matchIndexSets);
 
+
+
+
+
 template<class Fun>
 AltCRT& AltCRT::Op(const ZZ &num, Fun fun)
 {
@@ -107,6 +115,8 @@ AltCRT& AltCRT::Op<AltCRT::AddFun>(const ZZ &num, AddFun fun);
 template
 AltCRT& AltCRT::Op<AltCRT::SubFun>(const ZZ &num, SubFun fun);
 
+
+
 AltCRT& AltCRT::Negate(const AltCRT& other)
 {
   if (dryRun) return *this;
@@ -129,6 +139,8 @@ AltCRT& AltCRT::Negate(const AltCRT& other)
   return *this;
 }
 
+
+
 // The following is identical to definition in DoubleCRT
 
 template<class Fun>
@@ -142,6 +154,7 @@ AltCRT& AltCRT::Op(const ZZX &poly, Fun fun)
   return Op(other, fun);
 }
 
+
 template
 AltCRT& AltCRT::Op<AltCRT::MulFun>(const ZZX &poly, MulFun fun);
 
@@ -150,6 +163,9 @@ AltCRT& AltCRT::Op<AltCRT::AddFun>(const ZZX &poly, AddFun fun);
 
 template
 AltCRT& AltCRT::Op<AltCRT::SubFun>(const ZZX &poly, SubFun fun);
+
+
+
 
 // The following is identical to definition in DoubleCRT
 
@@ -201,6 +217,9 @@ void AltCRT::breakIntoDigits(vector<AltCRT>& digits, long n) const
   FHE_TIMER_STOP;
 }
 
+
+
+
 // expand index set by s1.
 // it is assumed that s1 is disjoint from the current index set.
 void AltCRT::addPrimes(const IndexSet& s1)
@@ -214,6 +233,7 @@ void AltCRT::addPrimes(const IndexSet& s1)
   map.insert(s1);  // add new rows to the map
   if (dryRun) return;
 
+
   zz_pBak bak; bak.save();
 
   // fill in new rows
@@ -222,6 +242,11 @@ void AltCRT::addPrimes(const IndexSet& s1)
     conv(map[i], poly);
   }
 }
+
+
+
+
+
 
 // Expand index set by s1, and multiply by \prod{q \in s1}. s1 is assumed to
 // be disjoint from the current index set. Returns the logarithm of product.
@@ -238,6 +263,7 @@ double AltCRT::addPrimesAndScale(const IndexSet& s1)
     factor *= qi;
     logFactor += log((double)qi);
   }
+
 
   zz_pBak bak; bak.save();
 
@@ -260,6 +286,10 @@ double AltCRT::addPrimesAndScale(const IndexSet& s1)
   return logFactor;
 }
 
+
+
+
+
 AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new AltCRTHelper(_context))
 {
@@ -276,6 +306,10 @@ AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
   }
 }
 
+
+
+
+
 AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context)
 : context(_context), map(new AltCRTHelper(_context))
 {
@@ -284,6 +318,7 @@ AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context)
   map.insert(s);
   if (dryRun) return;
 
+
   zz_pBak bak; bak.save();
 
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
@@ -291,6 +326,10 @@ AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context)
     conv(map[i], poly);
   }
 }
+
+
+
+
 
 AltCRT::AltCRT(const ZZX& poly)
 : context(*activeContext), map(new AltCRTHelper(*activeContext))
@@ -308,6 +347,10 @@ AltCRT::AltCRT(const ZZX& poly)
   }
 }
 
+
+
+
+
 AltCRT::AltCRT(const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new AltCRTHelper(_context))
 {
@@ -324,6 +367,10 @@ AltCRT::AltCRT(const FHEcontext &_context, const IndexSet& s)
   }
 }
 
+
+
+
+
 AltCRT::AltCRT(const FHEcontext &_context)
 : context(_context), map(new AltCRTHelper(_context))
 {
@@ -339,6 +386,9 @@ AltCRT::AltCRT(const FHEcontext &_context)
     clear(map[i]);
   }
 }
+
+
+
 
 AltCRT& AltCRT::operator=(const AltCRT& other)
 // optimized for the case of matching index sets
@@ -363,6 +413,9 @@ AltCRT& AltCRT::operator=(const AltCRT& other)
    return *this;
 }
 
+
+
+
 AltCRT& AltCRT::operator=(const ZZX&poly)
 {
   if (dryRun) return *this;
@@ -378,6 +431,10 @@ AltCRT& AltCRT::operator=(const ZZX&poly)
   return *this;
 }
 
+
+
+
+
 AltCRT& AltCRT::operator=(const ZZ& num)
 {
   if (dryRun) return *this;
@@ -392,6 +449,7 @@ AltCRT& AltCRT::operator=(const ZZ& num)
 
   return *this;
 }
+
 
 
 // DIRT: I am not sure if this function behaves the same
@@ -416,6 +474,7 @@ void AltCRT::toPoly(ZZX& poly, const IndexSet& s,
   ZZ prod;
   prod = 1;
 
+
   zz_pBak bak; bak.save();
 
   for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
@@ -433,12 +492,20 @@ void AltCRT::toPoly(ZZX& poly, const IndexSet& s,
   }
 }
 
+
+
+
+
 // The following is identical to definition in DoubleCRT
+
 void AltCRT::toPoly(ZZX& p, bool positive) const
 {
   const IndexSet& s = map.getIndexSet();
   toPoly(p, s, positive);
 }
+
+
+
 
 // Division by constant
 AltCRT& AltCRT::operator/=(const ZZ &num)
@@ -457,6 +524,9 @@ AltCRT& AltCRT::operator/=(const ZZ &num)
   return *this;
 }
 
+
+
+
 // Small-exponent polynomial exponentiation
 void AltCRT::Exp(long e)
 {
@@ -471,6 +541,9 @@ void AltCRT::Exp(long e)
     PowerMod(map[i], map[i], e, phimx);
   }
 }
+
+
+
 
 // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
 void AltCRT::automorph(long k)
@@ -507,6 +580,13 @@ void AltCRT::automorph(long k)
   }
 }
 
+
+
+
+
+
+
+
 // FIXME: there is a potential incompatibilty here
 // with DoubleCRT -- starting from the same seed,
 // we will get different polynomials.  This may lead
@@ -531,24 +611,37 @@ void AltCRT::randomize(const ZZ* seed)
   }
 }
 
+
+
+
 AltCRT& AltCRT::operator=(const SingleCRT& scrt)
 {
    assert(0); // not implemented
+   return *this;
 }
+
 
 void AltCRT::toSingleCRT(SingleCRT& scrt, const IndexSet& s) const 
 {
    assert(0); // not implemented
 }
 
+
+
 // The following is identical to definition in DoubleCRT
+
 void AltCRT::toSingleCRT(SingleCRT& scrt) const 
 {
   const IndexSet& s = map.getIndexSet();
   toSingleCRT(scrt, s);
 }
 
+
+
+
 // The following is identical to definition in DoubleCRT
+
+
 void AltCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 {
   assert(ptxtSpace >= 2);
@@ -599,13 +692,51 @@ void AltCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   *this /= diffProd; // *this is divisible by diffProd, so this operation actually scales it down
 }
 
+
+
+
+
+
+
+
 ostream& operator<< (ostream &str, const AltCRT &d)
 {
-  assert(0); // not implemented
+  // output the set of "active" primes
+  const IndexSet& set = d.map.getIndexSet();
+  str << "[" << set << endl;
+
+  // For each "active" prime, output the zz_pX object
+  zz_pBak bak; bak.save();
+  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+    d.context.ithModulus(i).restoreModulus();
+    str << " " << d.map[i] << "\n";
+  }
+  str << "]";
+  return str;
 }
 
 istream& operator>> (istream &str, AltCRT &d)
 {
-  assert(0); // not implemented
+  // Advance str beyond first '[' 
+  seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
+
+  IndexSet set;
+  const FHEcontext& context = d.context;
+
+  str >> set; // read in the indexSet, describing the "active" primes
+  assert(set <= (context.specialPrimes | context.ctxtPrimes));
+  d.map.clear();
+  d.map.insert(set); // fix the index set for the data
+
+  zz_pBak bak; bak.save();
+  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+    d.context.ithModulus(i).restoreModulus();
+    str >> d.map[i]; // read the actual data
+  }
+  // Advance str beyond closing ']'
+  seekPastChar(str, ']');
+  return str;
 }
+
+
 

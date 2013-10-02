@@ -392,25 +392,13 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
   return true;
 }
 
-// FIXME: implement these.
 ostream& operator<<(ostream& str, const FHEPubKey& pk)
 {
-   assert(false);
-   return str;
-}
+  str << "[";
+  writeContextBase(str, pk.getContext());
 
-istream& operator>>(istream& str, FHEPubKey& pk)
-{
-   assert(false);
-   return str;
-}
-
-#if 0
-ostream& operator<<(ostream& str, const FHEPubKey& pk)
-{
-  str << "[" << pk.getContext().zMstar.M()
-      << " " << pk.getContext().mod2r.getR() << endl
-      << pk.pubEncrKey << endl;
+  // output the public encryption key itself
+  str << pk.pubEncrKey << endl;
 
   // output skHwts in the same format as vec_long
   str << "[";
@@ -418,6 +406,7 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
     str << pk.skHwts[i]<<" ";
   str << "]\n";
 
+  // output the key-switching matrices
   str << pk.keySwitching.size() << endl;
   for (long i=0; i<(long)pk.keySwitching.size(); i++)
     str << pk.keySwitching[i] << endl;
@@ -430,7 +419,7 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
       str << pk.keySwitchMap[i][j] << " ";
     str << "]\n ";
   }
-  return str << "]]";
+  return str << "]\n]";
 }
 
 istream& operator>>(istream& str, FHEPubKey& pk)
@@ -438,24 +427,31 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   pk.clear();
   //  cerr << "FHEPubKey[";
   seekPastChar(str, '['); // defined in NumbTh.cpp
-  long m, r;
-  str >> m >> r;
-  assert( m == (long)pk.getContext().zMstar.M() &&
-	  r == (long)pk.getContext().mod2r.getR() );
 
+  // sanity check, verify that basic ocntext parameters are correct
+  unsigned long m, p, r;
+  readContextBase(str, m, p, r);
+  assert( m == pk.getContext().zMStar.getM() );
+  assert( p == pk.getContext().zMStar.getP() );
+  assert( r == (unsigned long)pk.getContext().alMod.getR() );
+
+  // Get the public encryption key itself
   str >> pk.pubEncrKey;
 
+  // Get the vector of secret-key Hamming-weights
   vec_long vl;
   str >> vl;
   pk.skHwts.resize(vl.length());
   for (long i=0; i<(long)pk.skHwts.size(); i++) pk.skHwts[i] = vl[i];
 
+  // Get the key-switching matrices
   long nMatrices;
   str >> nMatrices;
   pk.keySwitching.resize(nMatrices);
   for (long i=0; i<nMatrices; i++)  // read the matrix from input str
     pk.keySwitching[i].readMatrix(str, pk.getContext());
 
+  // Get the key-switching map
   vec_vec_long vvl;
   str >> vvl;
   pk.keySwitchMap.resize(vvl.length());
@@ -464,6 +460,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
     for (long j=0; j<(long)pk.keySwitchMap[i].size(); j++)
       pk.keySwitchMap[i][j] = vvl[i][j];
   }
+
   seekPastChar(str, ']');
   //  cerr << "]";
   // build the key-switching map for all keys
@@ -471,7 +468,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
     pk.setKeySwitchMap(i);
   return str;
 }
-#endif
+
 
 /******************** FHESecKey implementation **********************/
 /********************************************************************/

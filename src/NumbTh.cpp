@@ -524,7 +524,11 @@ void seekPastChar(istream& str, int cc)
 {
    int c = str.get();
    while (isspace(c)) c = str.get();
-   assert (c == cc);
+   if (c != cc) {
+     std::cerr << "Searching for cc='"<<(char)cc<<"' (ascii "<<cc<<")"
+	       << ", found c='"<<(char)c<<"' (ascii "<<c<<")\n";
+     exit(1);
+   }
 }
 
 // stuff added relating to linearized polynomials and support routines
