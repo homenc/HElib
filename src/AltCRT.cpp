@@ -701,13 +701,40 @@ void AltCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 
 ostream& operator<< (ostream &str, const AltCRT &d)
 {
-  assert(0); // not implemented
+  // output the set of "active" primes
+  const IndexSet& set = d.map.getIndexSet();
+  str << "[" << set << endl;
+
+  // For each "active" prime, output the zz_pX object
+  zz_pBak bak; bak.save();
+  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+    d.context.ithModulus(i).restoreModulus();
+    str << " " << d.map[i] << "\n";
+  }
+  str << "]";
   return str;
 }
 
 istream& operator>> (istream &str, AltCRT &d)
 {
-  assert(0); // not implemented
+  // Advance str beyond first '[' 
+  seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
+
+  IndexSet set;
+  const FHEcontext& context = d.context;
+
+  str >> set; // read in the indexSet, describing the "active" primes
+  assert(set <= (context.specialPrimes | context.ctxtPrimes));
+  d.map.clear();
+  d.map.insert(set); // fix the index set for the data
+
+  zz_pBak bak; bak.save();
+  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+    d.context.ithModulus(i).restoreModulus();
+    str >> d.map[i]; // read the actual data
+  }
+  // Advance str beyond closing ']'
+  seekPastChar(str, ']');
   return str;
 }
 
