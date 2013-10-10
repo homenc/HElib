@@ -39,6 +39,30 @@ bool parseArgs(int argc,  char *argv[], argmap_t& argmap)
   return true;
 }
 
+// Mathematically correct mod and div, avoids overflow
+long mcMod(long a, long b) 
+{
+   long r = a % b;
+
+   if (r != 0 && (b < 0) != (r < 0))
+      return r + b;
+   else
+      return r;
+
+}
+
+long mcDiv(long a, long b) {
+
+   long r = a % b;
+   long q = a / b;
+
+   if (r != 0 && (b < 0) != (r < 0))
+      return q + 1;
+   else
+      return q;
+}
+
+
 // return multiplicative order of p modulo m, or 0 if GCD(p, m) != 1
 long multOrd(long p, long m)
 {

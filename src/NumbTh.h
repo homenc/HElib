@@ -49,6 +49,15 @@ typedef tr1::unordered_map<string, const char *> argmap_t;
  **/
 bool parseArgs(int argc,  char *argv[], argmap_t& argmap);
 
+
+//! @brief Routines for computing mathematically correct mod and div.
+//! 
+//! mcDiv(a, b) = floor(a / b), mcMod(a, b) = a - b*mcDiv(a, b);
+//! in particular, mcMod(a, b) is 0 or has the same sign as b
+
+long mcMod(long a, long b);
+long mcDiv(long a, long b);
+
 //! Return multiplicative order of p modulo m, or 0 if GCD(p, m) != 1
 long multOrd(long p, long m);
 

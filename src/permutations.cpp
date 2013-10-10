@@ -535,6 +535,7 @@ void GeneratorTree::CubeMapping(Permut& map2cube, Permut& mapBack) const
 }
 
 
+#if 0
 int main()
 {
   // Build a "good" 2x3 tree for the order-6 generator g=5 in Z_31^*/(2)
@@ -598,3 +599,4 @@ int main()
   }
 #endif
 }
+#endif
