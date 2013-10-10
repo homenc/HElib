@@ -21,9 +21,15 @@
 
 #include <cstdlib>
 #include <cassert>
+#include <list>
+#include <tr1/memory>
+#include <sstream>
+
+
 #include <NTL/vector.h>
 #include "NumbTh.h"
 #include "permutations.h"
+
 
 /**
  * @class BenesNetwork
@@ -46,7 +52,7 @@ private:
 
 public:
 
-  long getK() const { return k; }
+  long getDepth() const { return k; }
   long getSize() const { return 1L << k; }
   long getNumLevels() const { return 2*k-1; }
 
@@ -327,8 +333,19 @@ bool BenesNetwork::testNetwork(const Permut& perm) const
 
 // aux routines for GeneralBenesNetwork
 
+static 
+long GB_depth(long n)
+// computes recursion depth k for generalized Benes network of size n.
+// the actual number of levels in the network is 2*k-1
+{
+  long k = 1;
+  while ((1L << k) < n) k++;
+  return k;
+}
+
+
 static inline
-long levelToDepthMap(long n, long k, long i) 
+long GB_levelToDepthMap(long n, long k, long i) 
 // maps a level number i = 0..2*k-2 to a recursion depth d = 0..k-1
 // using the formula d = (k-1)-|(k-1)-i|
 {
@@ -338,12 +355,12 @@ long levelToDepthMap(long n, long k, long i)
 
 
 static inline
-long shamt(long n, long k, long i) 
-// shift amount for level number i=0..2*k-1
+long GB_shamt(long n, long k, long i) 
+// shift amount for level number i=0..2*k-2
 // using the formula ceil( floor(n/2^d) / 2), 
 //   where d = levelToDepthMap(i)
 {
-  long d = levelToDepthMap(n, k, i);
+  long d = GB_levelToDepthMap(n, k, i);
   return ((n >> d) + 1) >> 1;
 }
 
@@ -364,7 +381,7 @@ private:
 
 public:
 
-  long getK() const { return k; }
+  long getDepth() const { return k; }
   long getSize() const { return n; }
   long getNumLevels() const { return 2*k-1; }
 
@@ -374,9 +391,9 @@ public:
     return level[i];
   }
 
-  long levelToDepthMap(long i) const { return ::levelToDepthMap(n, k, i); }
+  long levelToDepthMap(long i) const { return GB_levelToDepthMap(n, k, i); }
 
-  long shamt(long i) const { return ::shamt(n, k, i); }
+  long shamt(long i) const { return GB_shamt(n, k, i); }
    
   // constructor
   GeneralBenesNetwork(const Permut& perm);
@@ -428,7 +445,7 @@ recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
 
   long nlev = 2*k-1;
 
-  long sz0 = shamt(n, k, d); // size of upper internal network
+  long sz0 = GB_shamt(n, k, d); // size of upper internal network
   long sz1 = sz - sz0;
 
 #if 0
@@ -627,8 +644,7 @@ GeneralBenesNetwork::GeneralBenesNetwork(const Permut& perm)
   assert(n > 1);
 
   // compute recursion depth k = least integer k s/t 2^k >= n
-  k = 1;
-  while ((1L << k) < n) k++;
+  k = GB_depth(n);
 
   // construct the inverse perm, which is convenient in the recursive function.
   // As a byproduct, verify that perm is indeed a permutation on {0,...,n-1}.
@@ -689,13 +705,263 @@ bool GeneralBenesNetwork::testNetwork(const Permut& perm) const
 
 
 
+// routines for finding optimal level collapsing strategies
+
+void removeDups(list<long>& x, bool *aux)
+// removes duplicates from list x
+// uses vector aux as scratch space
+//   invariants: 
+//     * all elements in x lie in a range a..b
+//     * aux[a..b] is false before and after removeDups is called
+{
+  for (list<long>::iterator i = x.begin(); i != x.end(); ) { 
+    if (aux[*i])
+      i = x.erase(i);
+    else {
+      aux[*i] = true;
+      i++;
+    }
+  }
+
+  for (list<long>::iterator i = x.begin(); i != x.end(); i++)
+    aux[*i] = false;
+}
+
+void addOffset(list<long>& x, long offset, long n, bool *aux)
+// creates a new list with all the old values, plus
+//   all the old values with +/- offset added.
+// results outside the range -n+1 .. n-1 are discarded
+//   and all resulting duplicates are removed
+{
+  for (list<long>::iterator i = x.begin(); i != x.end(); i++) {
+    long val = *i;
+    long val1 = val + offset;
+    long val2 = val - offset;
+    if (val1 > -n && val1 < n) x.push_front(val1);
+    if (val2 > -n && val2 < n) x.push_front(val2);
+  }
+
+  removeDups(x, aux);
+}
+
+long reducedCount(const list<long>& x, long n, bool *aux)
+// counts the number of unique elements mod n in x 
+{
+  long res = 0;
+
+  for (list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
+    long val = *i;
+    if (val < 0) val += n;
+
+    if (!aux[val]) {
+      res++;
+      aux[val] = true;
+    }
+  }
+
+  for (list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
+    long val = *i;
+    if (val < 0) val += n;
+    aux[val] = false;
+  }
+
+  return res;
+}
+
+
+void buildCollapseCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
+{
+  long nlev = 2*k-1;
+  tab.SetLength(nlev);
+  for (long i = 0; i < nlev; i++) tab[i].SetLength(nlev-i);
+
+  // for j in [0..nlev-i) tab[i][j] is the cost of collapsing 
+  // levels i..i+j
+
+
+  Vec<bool> aux_vec;
+  aux_vec.SetLength(2*n-1);
+  bool *aux = &aux_vec[n-1];
+  for (long i = 0; i < 2*n-1; i++) aux_vec[i] = false;
+
+  for (long i = 0; i < nlev; i++) {
+    list<long> x;
+
+    x.push_front(0L);
+    for (long j = 0; j < nlev-i; j++) {
+      long shamt = GB_shamt(n, k, i+j);
+      addOffset(x, shamt, n, aux);
+      if (good)
+        tab[i][j] = reducedCount(x, n, aux) - 1;
+      else
+        tab[i][j] = x.size() - 1;
+    }
+  }
+
+}
+
+
+
+class CollapseNode;
+typedef tr1::shared_ptr<CollapseNode> CollapseNodePtr;
+
+
+class CollapseNode {
+public:
+  long count;           // number of levels collapsed
+  CollapseNodePtr next; // next node in the list
+
+  CollapseNode(long _count, CollapseNodePtr _next) {
+    count = _count; next = _next;
+  }
+};
+
+
+
+class CollapseTableKey {
+public:
+  long i;
+  long budget;
+
+  CollapseTableKey(long _i, long _budget) {
+    i = _i; budget = _budget;
+  }
+
+  size_t hash() const {
+    stringstream s;
+    s << i << " " << budget;
+    return tr1::hash<string>()(s.str());
+  }
+
+  bool operator==(const CollapseTableKey& other) const {
+    return i == other.i && budget == other.budget;
+  }
+};
+
+class CollapseTableEntry {
+public:
+  long cost;
+  CollapseNodePtr solution;
+
+  CollapseTableEntry(long _cost, CollapseNodePtr _solution) {
+    cost = _cost; solution = _solution;
+  }
+
+  CollapseTableEntry() { }
+};
+
+
+template<class T> 
+class ClassHash {
+public:
+  size_t operator()(const T& t) const { return t.hash(); }
+};
+
+typedef tr1::unordered_map< CollapseTableKey, CollapseTableEntry, 
+                            ClassHash<CollapseTableKey> > CollapseMemoTable;
+
+void recursiveCollapse(long i, long budget, long nlev, 
+                       const Vec< Vec<long> >& costTab, 
+                       CollapseMemoTable& memoTab,
+                       CollapseTableEntry& result)
+{
+  assert(i >= 0 && i <= nlev);
+  assert(budget > 0);
+
+  cout << "*** " << i << " " << budget << "\n";
+
+  if (memoTab.find(CollapseTableKey(i, budget)) != memoTab.end())
+    return;
+
+  // a new subproblem to process...
+
+  long cost;
+  CollapseNodePtr solution;
+
+  if (i == nlev) {
+    // nothing to collapse, trivial solition
+
+    cost = 0;
+    solution = CollapseNodePtr();
+    
+  }
+  else if (budget == 1) {
+    // only one possible solution, which is to collapse
+    // all remaining levels into a single level
+
+    cost = costTab[i][nlev-i-1];
+    solution = CollapseNodePtr(new CollapseNode(nlev-i, CollapseNodePtr()));
+  }
+  else {
+    // budget > 1, so we consider collapsing levels i..i+j, for j in [0..nlev-i)
+
+    long bestCost = NTL_MAX_LONG;
+    long bestJ = 0;
+    CollapseTableEntry bestT;
+    for (long j = 0; j < nlev-i; j++) {
+      CollapseTableEntry t;
+      recursiveCollapse(i+j, budget-1, nlev, costTab, memoTab, t);
+      if (t.cost + costTab[i][j] < bestCost) {
+        bestCost = t.cost + costTab[i][j];
+        bestJ = j;
+        bestT = t;
+      }
+    }
+
+    cost = bestCost;
+    solution = CollapseNodePtr(new CollapseNode(bestJ+1, bestT.solution));
+  }
+
+  result.cost = cost;
+  result.solution = solution;
+
+  memoTab[CollapseTableKey(i, budget)] = result;
+}
+
+void optimalCollapse(long n, long budget, bool good, 
+                     long& cost, Vec<long>& solution)
+{
+  long k = GB_depth(n);
+  long nlev = 2*k - 1;
+
+  Vec< Vec<long> > costTab;
+
+  buildCollapseCostTable(n, k, good, costTab);
+
+  CollapseMemoTable memoTab;
+
+  CollapseTableEntry t;
+  recursiveCollapse(0, budget, nlev, costTab, memoTab, t);
+
+  cost = t.cost;
+
+  // reconstruct solution as a vector, rather than a linked list
+
+  long len = 0;
+  for (CollapseNodePtr p = t.solution; p != NULL; p = p->next) len++;
+
+  solution.SetLength(len);
+  long i = 0;
+  for (CollapseNodePtr p = t.solution; p != NULL; p = p->next) {
+    solution[i] = p->count; 
+    i++;
+  }
+  
+}
+
+
+
+
+
+
+
 
 
 
 
 static ZZX makeIrredPoly(long p, long d)
 {
-  assert(d >= 1);
+	assert(d >= 1);
   assert(ProbPrime(p));
 
   if (d == 1) return ZZX(1, 1); // the monomial X
@@ -839,6 +1105,9 @@ void applyNetwork(const BenesNetwork& net,
 }
 
 
+
+
+
 int main(int argc, char *argv[])
 {
 
@@ -860,6 +1129,16 @@ int main(int argc, char *argv[])
     else                        cout << "X";
   }
   cout << "\n";
+
+  long cost;
+  Vec<long> solution;
+
+  optimalCollapse(n, 100, true, cost, solution);
+
+  cout << cost << "\n";
+  cout << solution << "\n";
+
+  
 #endif
 
 #if 0
