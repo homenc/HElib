@@ -1109,9 +1109,10 @@ index set.
 This is a modulus-switching operation. Let $\Delta$ be the set of
 primes that are removed, $\Delta=\mathtt{getIndexSet()\setminus s}$,
 and  $q_{\mathrm{diff}}=\prod_{i \in \Delta}p_i$. This operation
-removes the primes $p_i, i\in\Delta$, scales down the polynomial by
-a factor of $q_{\mathrm{diff}}$, and rounds so as to keep $a \bmod
-\mathtt{ptxtSpace}$ unchanged.
+removes the primes $p_i, i\in\Delta$, scales down the polynomial by a
+factor of $q_{\mathrm{diff}}$ (hence getting a fractional polynomial),
+and rounds to an integer so as to keep $a \bmod\mathtt{ptxtSpace}$
+unchanged.
 \end{description}
 
 We provide some conversion routines to convert polynomials from
@@ -2147,7 +2148,7 @@ from a discrete Gaussian over the integers with variance $\sigma^2$
 and return the canonical ciphertext
 \[
 \vc = (\ct_0,\ct_1) ~:=~ \rr \cdot(\ct_0^*,\ct_1^*) + p\cdot(\ee_0,\ee_1)
-+ \mathtt{plaintxt}.
++ (\mathtt{plaintxt},0).
 \]
 Note that since the public encryption key satisfies $[\ct_0^*+\sk\cdot
 \ct_1^*]_{\Qct}=p\cdot\ee^*$ for some low-norm polynomial~$\ee^*$,
@@ -2164,7 +2165,7 @@ $\rr$, and add another term for the expression $\mfa=p\cdot(\ee_0+
 \sk\cdot\ee_1)+\mathtt{plaintxt}$. Specifically, the noise estimate
 in the public encryption key is $\mathtt{pubEncrKey.noiseVar}=\phi(m)
 \sigma^2 p^2$, the second moment of $\rr(\tau_m)$ is $\phi(m)/2$, and
-the second moment of $a(\tau_m)$ is no more than $p^2(1+\sigma2^\phi(m)
+the second moment of $a(\tau_m)$ is no more than $p^2(1+\sigma^2{\phi(m)}
 (H+1))$ with $H$ the Hamming weight of the secret key~$\sk$. Hence the
 noise estimate in a freshly encrypted ciphertext is
 \[

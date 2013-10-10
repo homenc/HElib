@@ -30,11 +30,10 @@ class EncryptedArray; // forward reference
 
 //! @class PlaintextMatrixBaseInterface
 //! @brief An abstract interface for plaintext arrays.
-//! Any class implementing this interface should
-//! be linked to a specific EncryptedArray object,
-//! a reference to which is returned by the getEA()
-//! method -- this method will generally be invoked
-//! by an EncryptedArray object to verify consistent use.
+//! Any class implementing this interface should be linked to a specific
+//! EncryptedArray object, a reference to which is returned by the getEA()
+//! method -- this method will generally be invoked by an EncryptedArray
+//! object to verify consistent use.
 
 class PlaintextMatrixBaseInterface {
 public:
@@ -46,12 +45,10 @@ public:
 
 
 //! @class PlaintextMatrixInterface<type>
-//! @brief A somewhat less abstract interface for plaintext
-//! arrays. The method get(out, i, j) copies the element
-//! at row i column j of a matrix into the variable out.
-//! The type of out is RX, which is GF2X if type is PA_GF2,
-//! and zz_pX if type is PA_zz_p.
-
+//! @brief A somewhat less abstract interface for plaintext arrays.
+//! The method get(out, i, j) copies the element at row i column j of a
+//! matrix into the variable out. The type of out is RX, which is GF2X
+//! if type is PA_GF2, and zz_pX if type is PA_zz_p.
 template<class type> 
 class  PlaintextMatrixInterface : public PlaintextMatrixBaseInterface {
 public:
@@ -59,15 +56,6 @@ public:
 
   virtual void get(RX& out, long i, long j) const = 0;
 };
-
-  
-
-  
-
-  
-
-
-
 
 
 /**
@@ -86,7 +74,7 @@ public:
  *
  * either r == 1 or deg(G) == 1 or G == factors[0].
  * 
- * ea stores objects in the polynomial the polynomial ring Z/(p^r)[X].
+ * ea stores objects in the polynomial ring Z/(p^r)[X].
  * 
  * Just as for the class PAlegebraMod, if p == 2 and r == 1, then these
  * polynomials are represented as GF2X's, and otherwise as zz_pX's.
