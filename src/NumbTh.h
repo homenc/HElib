@@ -195,6 +195,15 @@ void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b);
 //! Returns -1 it not and the location if true
 long is_in(long x,int* X,long sz);
 
+//! @brief Returns a CRT coefficient: x = (0 mod p, 1 mod q).
+//! If symmetric is set then x \in [-pq/2, pq/2), else x \in [0,pq)
+inline long CRTcoeff(long p, long q, bool symmetric=false)
+{
+  long pInv = InvMod(p,q); // p^-1 mod q \in [0,q)
+  if (symmetric && 2*pInv >= q) return p*(pInv-q);
+  else                          return p*pInv;
+}
+
 /**
  * @brief Incremental integer CRT for vectors.
  * 
