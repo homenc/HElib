@@ -20,15 +20,23 @@
 #ifndef _PERMUTATIONS_H_
 #define _PERMUTATIONS_H_
 
+#include <iostream>
 #include "matching.h"
 #include "hypercube.h"
-#include <iostream>
+#include "PAlgebra.h"
 
 using namespace std;
 using namespace NTL;
 
 //! A simple permutation is just a vector with p[i]=\pi_i
 typedef Vec<long> Permut;
+
+//! Apply a permutation to a function, out[i]=in[p1[i]]
+void ApplyPermutation(Vec<long>& out, const Vec<long>& in, const Permut& p1);
+
+//! Apply two permutations to a function out[i]=in[p2[p1[i]]]
+void ApplyPermutations(Vec<long>& out, const Vec<long>& in,
+		       const Permut& p2, const Permut& p1);
 
 //! @brief A random size-n permutation
 void randomPerm(Permut& perm, long n);
@@ -115,10 +123,21 @@ public:
  * along the last dimension is the same as SlicePerm for that dimension.
  * 
  * For example, permuting a 2x3x2 cube along dim=1 (the 2nd dimention), we
- * could have the data vector as [ 1  1  0  2  2  0  2  0  1  1  0  2 ]. (In
+ * could have the data vector as  [ 1  1  0  2  2  0  2  0  1  1  0  2 ]. (In
  * this example we have n=4 and step=2.) This means the four subcubes are
- * permuted using the permutation [1 0 2],[1 2 0],[2 1 0],[0 1 2]. Written
- * explicitly, this permutation would be [2 3 0 5 4 1 10 7 8 9 11].
+ * permuted by the permutations     [ 1     0     2                      ]
+ *                                  [    1     2     0                   ]
+ *                                  [                   2     1     0    ]
+ *                                  [                      0     1     2 ].
+ * Written explicitly, we get:      [ 2  3  0  5  4  1 10  7  8  9  6 11 ].
+ * 
+ * Another representation that we provide is by "shift amount": how many
+ * slots each element needs to move inside its small permutation. For the
+ * example above, this will be:     [ 1     -1    0                      ]
+ *                                  [    1     1    -2                   ]
+ *                                  [                   2     0    -2    ]
+ *                                  [                      0     0     0 ]
+ * so we write the permutatation as [ 1  1 -1  1  0 -2  2  0  0  0 -2  0 ].
  **/
 class ColPerm : public HyperCube<long> {
 private:
@@ -133,8 +152,13 @@ public:
 
   long getPermDim() const {return dim;}
 
-  void makeExplicit(Permut& out) const;      // Write the permutation explicitly
+  void makeExplicit(Permut& out) const;    // Write the permutation explicitly
   void extractSlice(Permut& out, long i) const; // The perm over the ith subcube
+
+  //! For each position in the data vector, compute how many slots it should be
+  //! shifted inside its small permutation. Returns zero if all the shift amount
+  //! are zero, nonzero values otherwise.
+  long getShiftAmounts(Permut& out) const;
 
   //! When dim=m (the last dimension), ColPerm and SlicePerm are equivalent
   ColPerm& operator=(const SlicePerm &other);
@@ -155,5 +179,219 @@ public:
  **/
 void breakPermByDim(vector<ColPerm>& out, 
 		    const Permut &pi, const CubeSignature& sig);
+
+/****
+ * A simple implementation of full binary trees (each non-leaf has 2 children)
+ ****/
+template<class T> class FullBinaryTree;
+
+// A node in a tree, these nodes will be kept in a vector, so we use
+// indexes rather than pointers
+template<class T> class TreeNode {
+  T data;
+  long parent;
+  long leftChild, rightChild;
+  long prev, next; // useful, e.g., to connect all leaves in a list
+
+  void makeNullIndexes() {parent = leftChild = rightChild = prev = next = -1;}
+
+public:
+  TreeNode() { makeNullIndexes(); }
+  explicit TreeNode(const T& d): data(d) { makeNullIndexes(); }
+
+  T& getData() { return data; }
+  const T& getData() const { return data; }
+
+  long getParent() const { return parent; }
+  long getLeftChild() const { return leftChild; }
+  long getRightChild() const { return rightChild; }
+  long getPrev() const { return prev; }
+  long getNext() const { return next; }
+
+  friend class FullBinaryTree<T>;
+};
+
+// A binary tree, the root is always the node at index 0
+template<class T> class FullBinaryTree {
+  vector< TreeNode<T> > nodes;
+  long nLeaves;             // how many leaves in this tree
+  long firstLeaf, lastLeaf; // index of the first/last leaves
+
+public:
+  FullBinaryTree() { nLeaves=0; firstLeaf = lastLeaf = -1; } // empty tree
+
+  explicit FullBinaryTree(const T& d)  // tree with only a root
+  {
+    nLeaves = 1;
+    TreeNode<T> n(d);
+    nodes.push_back(n);
+    firstLeaf = lastLeaf = 0;
+  }
+
+  void PutDataInRoot(const T& d)
+  {
+    if (nodes.size()==0) { // make new root
+      TreeNode<T> n(d);
+      nodes.push_back(n);
+      firstLeaf = lastLeaf = 0;
+      nLeaves = 1;
+    }
+    else nodes[0].data = d; // Root exists, just update data
+  }
+
+  // Provide some of the interfaces of the underlying vector
+  long size() { return (long) nodes.size(); }
+  void resize(long sz) { nodes.resize(sz); }
+  void resize(long sz, const TreeNode<T>& n) { nodes.resize(sz,n); }
+
+  TreeNode<T>& operator[](long i) { return nodes[i]; }
+  const TreeNode<T>& operator[](long i) const { return nodes[i]; }
+
+  TreeNode<T>& at(long i) { return nodes.at(i); }
+  const TreeNode<T>& at(long i) const { return nodes.at(i); }
+
+  T& DataOfNode(long i) const { return nodes.at(i).data; }
+
+  long getNleaves() const { return nLeaves; }
+  long FirstLeaf() const { return firstLeaf; }
+  long NextLeaf(long i) const { return nodes.at(i).next; }
+  long PrevLeaf(long i) const { return nodes.at(i).prev; }
+  long LastLeaf() const { return lastLeaf; }
+
+  long RootIdx() const { return 0; }
+  long ParentIdx(long i) const { return nodes.at(i).parent; }
+  long LeftChildIdx(long i) const { return nodes.at(i).leftChild; }
+  long RightChildIdx(long i) const { return nodes.at(i).rightChild; }
+
+  void AddChildren(long parentIdx, const T& leftData, const T& rightData)
+  {
+    assert (parentIdx >= 0 && parentIdx < (long)(nodes.size()));
+
+    if (nodes[parentIdx].leftChild==-1 && nodes[parentIdx].rightChild==-1) {
+      // parent is a leaf
+      long childIdx = nodes.size();
+      TreeNode<T> n1(leftData);
+      nodes.push_back(n1); // add left child to vector
+      TreeNode<T> n2(rightData);
+      nodes.push_back(n2);// add right child to vector
+
+      TreeNode<T>& parent = nodes[parentIdx];
+      TreeNode<T>& left = nodes[childIdx];
+      TreeNode<T>& right = nodes[childIdx+1];
+
+      parent.leftChild = childIdx;            // point to children from parent
+      parent.rightChild= childIdx+1;
+      left.parent = right.parent = parentIdx; // point to parent from children
+
+      // remove parent and insert children to the linked list of leaves
+      left.prev = parent.prev;
+      left.next = childIdx+1;
+      right.prev = childIdx;
+      right.next = parent.next;
+      if (parent.prev>=0) { // parent was not the 1st leaf
+	nodes[parent.prev].next = childIdx;
+	parent.prev = -1;
+      }
+      else // parent was the first leaf, now its left child is 1st
+	firstLeaf = childIdx;
+
+      if (parent.next>=0) { // parent was not the last leaf
+	nodes[parent.next].prev = childIdx+1;
+	parent.next = -1;
+      }
+      else // parent was the last leaf, now its left child is last
+	lastLeaf = childIdx+1;
+
+      nLeaves++; // we replaced a leaf by a parent w/ two leaves
+    }
+    else { // parent is not a leaf, update the two children
+      TreeNode<T>& parent = nodes[parentIdx];
+      assert(parent.leftChild>=0 && parent.rightChild>=0);
+
+      TreeNode<T>& left = nodes[parent.leftChild];
+      TreeNode<T>& right = nodes[parent.rightChild];
+      left.data = leftData;
+      right.data = rightData;
+    }
+  }
+};
+
+
+class BenesData; // information on a generalized Benes network
+
+// A node in a tree relative to some generator
+class SubDimension {
+ public:
+  long genIdx; // sub-dimension of what generator
+  long size;   // Size of cube slice
+  long e;      // shift-by-1 in this sub-dim is done via X -> X^{g^e}
+  bool good;   // good or bad
+
+  // If this is a Benes leaf, a description of its network (else NULL)
+  BenesData* benes;
+
+  explicit SubDimension(long idx=0, long sz=0, 
+			long ee=0, bool gd=false, BenesData* bns=NULL)
+  { genIdx=idx; size=sz; e=ee; good=gd; benes=bns; }
+
+  SubDimension& operator=(const SubDimension& other)
+    { genIdx=other.genIdx; size=other.size; 
+      e=other.e; good=other.good; benes=other.benes;
+      return *this;
+    }
+};
+
+// a tree for one generator
+class GeneratorTree: public FullBinaryTree<SubDimension> {
+ public:
+  // Call the base class constructor with or without parameter
+  GeneratorTree(): FullBinaryTree<SubDimension>() {}
+  explicit GeneratorTree(SubDimension& s): FullBinaryTree<SubDimension>(s) {}
+
+  //! @brief returns coordinates of i relative to leaves of the tree
+  void GetCoordinates(Vec<long>&, long i) const;
+
+  //! Get the cube dimensions corresponding to a vector of trees,
+  //! the ordered vector with one dimension per leaf in any of the trees.
+  static void GetCubeDims(Vec<long>& dims, const vector<GeneratorTree>& trees);
+
+  /**
+   * @brief Computes permutations mapping between linear array and the cube.
+   *
+   * If the cube dimensions (i.e., leaves of tree) are n1,n2,...,nt and
+   * N=\prod_j n_j is the size of the cube, then an integer i can be
+   * represented in either the mixed base of the n_j's or in "CRT basis"
+   * relative to the leaves: Namely either
+   *                            i = \sum_{j<=t}  i_j  * \prod_{k>j} n_k,
+   *                         or i = \sum_leaf i'_leaf * leaf.e mod N.
+   *
+   * The breakPermByDim procedure expects its input in the mixed-base
+   * representation, and the maps are used to convert back and forth.
+   * Specifically, let (i'_1,...,i'_t) be the CRT representation of i in
+   * this cube, and j = \sum_{j=1}^t i'_j * \prod_{k>j} n_k, then we have
+   * map2cube[i]=j and mapBack[j]=i.
+   **/
+  void CubeMapping(Permut& map2cube, Permut& mapBack) const;
+};
+
+// The information needed to apply one layer of a permutation network
+class PermNetLayer {
+ public:
+  long genIdx; // shift-by-1 in this layer is done via X -> X^{g^e}
+  long e;
+  Vec<long> shifts; // shifts[i] is how much to shift slot i
+  bool isID; // a silly optimization, does this layer copmute the identity?
+};
+
+class Ctxt; // The Apply method below takes a cipehrtext as a parameter
+class PermNetwork : public Vec<PermNetLayer> {
+ public:
+  // Take as input a permutation pi and the trees of all the generators,
+  // and prepares the permutation network for this pi
+  void BuildNetwork(const Permut& pi, const vector<GeneratorTree>& trees,
+		    const PAlgebra& ZmStar);
+
+  void ApplyToCtxt(Ctxt& c); // Apply network to permute a ciphertext
+};
 
 #endif /* ifndef _PERMUTATIONS_H_ */
