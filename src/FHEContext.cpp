@@ -119,13 +119,24 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
     }
   }
 
-  // If m is not set yet, just set it close to N. Note that this is typically
-  // a pretty lousy choice of m for this p, since you will get a small number
-  // of slots.
+  // If m is not set yet, just set it close to N. This may be a lousy
+  // choice of m for this p, since you will get a small number of slots.
 
   if (m==0) {
-    m = NextPrime(N);
-    if (m==p) m = NextPrime(p+1); // unlikely, but who knows..
+    // search only for odd values of m, to make phi(m) a little closer to m
+    for (long candidate=N|1; candidate<10*N; candidate+=2) {
+      if (GCD(p,candidate)!=1) continue;
+
+      long ordP = multOrd(p,candidate); // the multiplicative order of p mod m
+      if (d>1 && ordP%d!=0 ) continue;
+      if (ordP > 100) continue;  // order too big, we will get very few slots
+
+      long n = phi_N(candidate); // compute phi(m)
+      if (n < N) continue;       // phi(m) too small
+
+      m = candidate;  // all tests passed, return this value of m
+      break;
+    }
   }
 
   if (verbose) {
