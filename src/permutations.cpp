@@ -488,9 +488,8 @@ void GeneratorTrees::ComputeCubeMapping()
     }
     CubeSignature sig(dims);
 
-    // Allocate space for the mappings
+    // Allocate space for the mapping
     map2cube.SetLength(sig.getSize());
-    map2array.SetLength(sig.getSize());
 
     // Combine the generator perms to a single permutation over the cube
     for (long i=0; i<map2array.length(); i++) {
@@ -506,5 +505,6 @@ void GeneratorTrees::ComputeCubeMapping()
   }
 
   // Compute the inverse permutation
+  map2array.SetLength(map2cube.length());
   for (long i=0; i<map2cube.length(); i++) map2array[ map2cube[i] ] = i;
 }

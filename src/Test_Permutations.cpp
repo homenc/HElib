@@ -22,18 +22,21 @@ void BuildTree(OneGeneratorTree& T, long type)
   T.CollapseToRoot(); // ensure the tree has nothing except perhaps the root
 
   long nodeIdx = 0;
+  long size = 6;
   SubDimension n6(/*genIdx=*/0, /*size=*/6, /*e=*/1, /*good=*/true);
-  SubDimension n3(/*genIdx=*/0, /*size=*/3, /*e=*/4, /*good=*/true);
-  SubDimension n2g(/*genIdx=*/0, /*size=*/2, /*e=*/3, /*good=*/true);
+  SubDimension n3(/*genIdx=*/0, /*size=*/3, /*e=*/0, /*good=*/true);
+  SubDimension n2g(/*genIdx=*/0, /*size=*/2, /*e=*/0, /*good=*/true);
   if (type == 2) {
-    SubDimension n12(/*genIdx=*/0, /*size=*/2, /*e=*/3, /*good=*/true);
-    SubDimension n2b(/*genIdx=*/0, /*size=*/2, /*e=*/3, /*good=*/false);
+    size = 12;
+    SubDimension n12(/*genIdx=*/0, /*size=*/2, /*e=*/1, /*good=*/true);
+    SubDimension n2b(/*genIdx=*/0, /*size=*/2, /*e=*/0, /*good=*/false);
     T.PutDataInRoot(n12);
     nodeIdx = T.AddChildren(0, n6, n2b);
   } else
     T.PutDataInRoot(n6);
 
   T.AddChildren(nodeIdx, n2g, n3);
+  computeEvalues(T, 0, size);
 }
 
 void TestIt(Vec<OneGeneratorTree>& ts)
