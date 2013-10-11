@@ -802,28 +802,59 @@ void buildCollapseCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
 
 
 
-class CollapseNode;
-typedef tr1::shared_ptr<CollapseNode> CollapseNodePtr;
+class LongNode;
+typedef tr1::shared_ptr<LongNode> LongNodePtr;
 
 
-class CollapseNode {
+class LongNode {
 public:
   long count;           // number of levels collapsed
-  CollapseNodePtr next; // next node in the list
+  LongNodePtr next; // next node in the list
 
-  CollapseNode(long _count, CollapseNodePtr _next) {
+  LongNode(long _count, LongNodePtr _next) {
     count = _count; next = _next;
   }
 };
 
 
+void listToVec(LongNodePtr ptr, Vec<long>& vec)
+{
+  long len = 0;
+  for (LongNodePtr p = ptr; p != NULL; p = p->next) len++;
 
-class CollapseTableKey {
+  vec.SetLength(len);
+  long i = 0;
+  for (LongNodePtr p = ptr; p != NULL; p = p->next) {
+    vec[i] = p->count; 
+    i++;
+  }
+}
+
+
+void print(ostream& s, LongNodePtr p)
+{
+  if (p == NULL) {
+    s << "()";
+    return;
+  }
+
+  s << "(" << p->count;
+  p = p->next;
+  while (p != NULL) {
+    s << "," << p->count;
+    p = p->next;
+  }
+  cout << ")";
+}
+
+
+
+class CollapseMemoKey {
 public:
   long i;
   long budget;
 
-  CollapseTableKey(long _i, long _budget) {
+  CollapseMemoKey(long _i, long _budget) {
     i = _i; budget = _budget;
   }
 
@@ -833,21 +864,21 @@ public:
     return tr1::hash<string>()(s.str());
   }
 
-  bool operator==(const CollapseTableKey& other) const {
+  bool operator==(const CollapseMemoKey& other) const {
     return i == other.i && budget == other.budget;
   }
 };
 
-class CollapseTableEntry {
+class CollapseMemoEntry {
 public:
   long cost;
-  CollapseNodePtr solution;
+  LongNodePtr solution;
 
-  CollapseTableEntry(long _cost, CollapseNodePtr _solution) {
+  CollapseMemoEntry(long _cost, LongNodePtr _solution) {
     cost = _cost; solution = _solution;
   }
 
-  CollapseTableEntry() { }
+  CollapseMemoEntry() { }
 };
 
 
@@ -857,32 +888,39 @@ public:
   size_t operator()(const T& t) const { return t.hash(); }
 };
 
-typedef tr1::unordered_map< CollapseTableKey, CollapseTableEntry, 
-                            ClassHash<CollapseTableKey> > CollapseMemoTable;
+typedef tr1::unordered_map< CollapseMemoKey, CollapseMemoEntry, 
+                            ClassHash<CollapseMemoKey> > CollapseMemoTable;
 
-void recursiveCollapse(long i, long budget, long nlev, 
-                       const Vec< Vec<long> >& costTab, 
-                       CollapseMemoTable& memoTab,
-                       CollapseTableEntry& result)
+CollapseMemoEntry recursiveCollapse(long i, long budget, long nlev, 
+                                     const Vec< Vec<long> >& costTab, 
+                                     CollapseMemoTable& memoTab)
 {
   assert(i >= 0 && i <= nlev);
   assert(budget > 0);
 
-  cout << "*** " << i << " " << budget << "\n";
+#if 0
+  cout << "enter(" << i << "," << budget << ")\n";
+#endif
 
-  if (memoTab.find(CollapseTableKey(i, budget)) != memoTab.end())
-    return;
+  CollapseMemoTable::iterator find = memoTab.find(CollapseMemoKey(i, budget));
+
+  if (find != memoTab.end()) {
+#if 0
+    cout << "found(" << i << "," << budget << ")\n";
+#endif
+    return find->second;
+  }
 
   // a new subproblem to process...
 
   long cost;
-  CollapseNodePtr solution;
+  LongNodePtr solution;
 
   if (i == nlev) {
-    // nothing to collapse, trivial solition
+    // nothing to collapse, trivial solution
 
     cost = 0;
-    solution = CollapseNodePtr();
+    solution = LongNodePtr();
     
   }
   else if (budget == 1) {
@@ -890,17 +928,16 @@ void recursiveCollapse(long i, long budget, long nlev,
     // all remaining levels into a single level
 
     cost = costTab[i][nlev-i-1];
-    solution = CollapseNodePtr(new CollapseNode(nlev-i, CollapseNodePtr()));
+    solution = LongNodePtr(new LongNode(nlev-i, LongNodePtr()));
   }
   else {
     // budget > 1, so we consider collapsing levels i..i+j, for j in [0..nlev-i)
 
     long bestCost = NTL_MAX_LONG;
     long bestJ = 0;
-    CollapseTableEntry bestT;
+    CollapseMemoEntry bestT;
     for (long j = 0; j < nlev-i; j++) {
-      CollapseTableEntry t;
-      recursiveCollapse(i+j, budget-1, nlev, costTab, memoTab, t);
+      CollapseMemoEntry t = recursiveCollapse(i+j+1, budget-1, nlev, costTab, memoTab);
       if (t.cost + costTab[i][j] < bestCost) {
         bestCost = t.cost + costTab[i][j];
         bestJ = j;
@@ -909,17 +946,28 @@ void recursiveCollapse(long i, long budget, long nlev,
     }
 
     cost = bestCost;
-    solution = CollapseNodePtr(new CollapseNode(bestJ+1, bestT.solution));
+    solution = LongNodePtr(new LongNode(bestJ+1, bestT.solution));
   }
 
-  result.cost = cost;
-  result.solution = solution;
-
-  memoTab[CollapseTableKey(i, budget)] = result;
+#if 0
+  cout << "computed(" << i << "," << budget << ") = (" << cost << ",";
+  print(cout, solution);
+  cout << ")\n";
+#endif
+  return memoTab[CollapseMemoKey(i, budget)] = CollapseMemoEntry(cost, solution);
 }
 
 void optimalCollapse(long n, long budget, bool good, 
                      long& cost, Vec<long>& solution)
+// computes an optimal level-collapsing strategy for a Benes network
+//   n = the size of the network
+//   budget = an upper bound on the number of levels in the collapsed network
+//   good = flag indicating whether this is with respect to a "good" generator,
+//     for which shifts by i and i-n correspond to the same rotation
+//   cost = total number of shifts needed by the collapsed network
+//   solution = vector indicating how levels in a standard benes network
+//      are collapsed: if solution = [s_1 s_2 ... s_k], then k <= budget,
+//      and the first s_1 levels are collapsed, the next s_2 levels are collapsed, etc.
 {
   long k = GB_depth(n);
   long nlev = 2*k - 1;
@@ -928,24 +976,16 @@ void optimalCollapse(long n, long budget, bool good,
 
   buildCollapseCostTable(n, k, good, costTab);
 
+  // cout << good << "\n";
+  // cout << costTab << "\n";
+
   CollapseMemoTable memoTab;
 
-  CollapseTableEntry t;
-  recursiveCollapse(0, budget, nlev, costTab, memoTab, t);
+  CollapseMemoEntry t = recursiveCollapse(0, budget, nlev, costTab, memoTab);
 
   cost = t.cost;
+  listToVec(t.solution, solution);
 
-  // reconstruct solution as a vector, rather than a linked list
-
-  long len = 0;
-  for (CollapseNodePtr p = t.solution; p != NULL; p = p->next) len++;
-
-  solution.SetLength(len);
-  long i = 0;
-  for (CollapseNodePtr p = t.solution; p != NULL; p = p->next) {
-    solution[i] = p->count; 
-    i++;
-  }
   
 }
 
@@ -1114,11 +1154,15 @@ int main(int argc, char *argv[])
 #if 1
   argmap_t argmap;
   argmap["n"] = "2";
+  argmap["L"] = "10";
+  argmap["good"] = "0";
   if (!parseArgs(argc, argv, argmap)) {
     cerr << "bad args\n";
     exit(0);
   }
   long n = atoi(argmap["n"]);
+  long L = atoi(argmap["L"]);
+  bool good = !!atoi(argmap["good"]);
 
   for (long iter=0; iter < 20; iter++) {
     Permut perm;
@@ -1133,7 +1177,7 @@ int main(int argc, char *argv[])
   long cost;
   Vec<long> solution;
 
-  optimalCollapse(n, 100, true, cost, solution);
+  optimalCollapse(n, L, good, cost, solution);
 
   cout << cost << "\n";
   cout << solution << "\n";
