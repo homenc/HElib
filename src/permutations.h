@@ -31,16 +31,15 @@ using namespace NTL;
 //! A simple permutation is just a vector with p[i]=\pi_i
 typedef Vec<long> Permut;
 
-//! Apply a permutation to a function, out[i]=in[p1[i]]
-void ApplyPermutation(Vec<long>& out, const Vec<long>& in, const Permut& p1);
+//! Apply a permutation to a function, out[i]=in[p1[i]] (NOT in-place)
+void ApplyPermToFunc(Vec<long>& out, const Vec<long>& in, const Permut& p1);
 
-//! Apply two permutations to a function out[i]=in[p2[p1[i]]]
-void ApplyPermutations(Vec<long>& out, const Vec<long>& in,
-		       const Permut& p2, const Permut& p1);
+//! Apply two permutations to a function out[i]=in[p2[p1[i]]] (NOT in-place)
+void ApplyPermsToFunc(Vec<long>& out, const Vec<long>& in,
+		      const Permut& p2, const Permut& p1);
 
 //! @brief A random size-n permutation
-void randomPerm(Permut& perm, long n);
-
+void RandomPerm(Permut& perm, long n);
 
 class SlicePerm; // a "row permutation"
 class ColPerm;   // a "column permutation"
@@ -211,6 +210,7 @@ public:
   friend class FullBinaryTree<T>;
 };
 
+
 // A binary tree, the root is always the node at index 0
 template<class T> class FullBinaryTree {
   vector< TreeNode<T> > nodes;
@@ -241,8 +241,6 @@ public:
 
   // Provide some of the interfaces of the underlying vector
   long size() { return (long) nodes.size(); }
-  void resize(long sz) { nodes.resize(sz); }
-  void resize(long sz, const TreeNode<T>& n) { nodes.resize(sz,n); }
 
   TreeNode<T>& operator[](long i) { return nodes[i]; }
   const TreeNode<T>& operator[](long i) const { return nodes[i]; }
@@ -263,58 +261,76 @@ public:
   long LeftChildIdx(long i) const { return nodes.at(i).leftChild; }
   long RightChildIdx(long i) const { return nodes.at(i).rightChild; }
 
-  void AddChildren(long parentIdx, const T& leftData, const T& rightData)
+  //! If the parent is a leaf, add to it tho children with the given data,
+  //! else just update the data of the two children of this parent.
+  //! Returns the index of the left child, the right-child index is one
+  //! more than the left-child index.
+  long AddChildren(long parentIdx, const T& leftData, const T& rightData);
+
+  //! Remove all nodes in the tree except for the root
+  void CollapseToRoot()
   {
-    assert (parentIdx >= 0 && parentIdx < (long)(nodes.size()));
-
-    if (nodes[parentIdx].leftChild==-1 && nodes[parentIdx].rightChild==-1) {
-      // parent is a leaf
-      long childIdx = nodes.size();
-      TreeNode<T> n1(leftData);
-      nodes.push_back(n1); // add left child to vector
-      TreeNode<T> n2(rightData);
-      nodes.push_back(n2);// add right child to vector
-
-      TreeNode<T>& parent = nodes[parentIdx];
-      TreeNode<T>& left = nodes[childIdx];
-      TreeNode<T>& right = nodes[childIdx+1];
-
-      parent.leftChild = childIdx;            // point to children from parent
-      parent.rightChild= childIdx+1;
-      left.parent = right.parent = parentIdx; // point to parent from children
-
-      // remove parent and insert children to the linked list of leaves
-      left.prev = parent.prev;
-      left.next = childIdx+1;
-      right.prev = childIdx;
-      right.next = parent.next;
-      if (parent.prev>=0) { // parent was not the 1st leaf
-	nodes[parent.prev].next = childIdx;
-	parent.prev = -1;
-      }
-      else // parent was the first leaf, now its left child is 1st
-	firstLeaf = childIdx;
-
-      if (parent.next>=0) { // parent was not the last leaf
-	nodes[parent.next].prev = childIdx+1;
-	parent.next = -1;
-      }
-      else // parent was the last leaf, now its left child is last
-	lastLeaf = childIdx+1;
-
-      nLeaves++; // we replaced a leaf by a parent w/ two leaves
-    }
-    else { // parent is not a leaf, update the two children
-      TreeNode<T>& parent = nodes[parentIdx];
-      assert(parent.leftChild>=0 && parent.rightChild>=0);
-
-      TreeNode<T>& left = nodes[parent.leftChild];
-      TreeNode<T>& right = nodes[parent.rightChild];
-      left.data = leftData;
-      right.data = rightData;
+    if (nodes.size() > 1) {
+      nodes.resize(1);
+      firstLeaf = lastLeaf = 0;
+      nLeaves = 1;
     }
   }
 };
+template <class T>
+long FullBinaryTree<T>::AddChildren(long parentIdx, 
+				    const T& leftData, const T& rightData)
+{
+  assert (parentIdx >= 0 && parentIdx < (long)(nodes.size()));
+
+  // If parent is a leaf, add to it two children
+  if (nodes[parentIdx].leftChild==-1 && nodes[parentIdx].rightChild==-1) {
+    long childIdx = nodes.size();
+    TreeNode<T> n1(leftData);
+    nodes.push_back(n1); // add left child to vector
+    TreeNode<T> n2(rightData);
+    nodes.push_back(n2);// add right child to vector
+
+    TreeNode<T>& parent = nodes[parentIdx];
+    TreeNode<T>& left = nodes[childIdx];
+    TreeNode<T>& right = nodes[childIdx+1];
+
+    parent.leftChild = childIdx;            // point to children from parent
+    parent.rightChild= childIdx+1;
+    left.parent = right.parent = parentIdx; // point to parent from children
+
+    // remove parent and insert children to the linked list of leaves
+    left.prev = parent.prev;
+    left.next = childIdx+1;
+    right.prev = childIdx;
+    right.next = parent.next;
+    if (parent.prev>=0) { // parent was not the 1st leaf
+      nodes[parent.prev].next = childIdx;
+      parent.prev = -1;
+    }
+    else // parent was the first leaf, now its left child is 1st
+      firstLeaf = childIdx;
+
+    if (parent.next>=0) { // parent was not the last leaf
+      nodes[parent.next].prev = childIdx+1;
+      parent.next = -1;
+    }
+    else // parent was the last leaf, now its left child is last
+      lastLeaf = childIdx+1;
+
+    nLeaves++; // we replaced a leaf by a parent w/ two leaves
+  }
+  else { // parent is not a leaf, update the two children
+    TreeNode<T>& parent = nodes[parentIdx];
+    assert(parent.leftChild>=0 && parent.rightChild>=0);
+
+    TreeNode<T>& left = nodes[parent.leftChild];
+    TreeNode<T>& right = nodes[parent.rightChild];
+    left.data = leftData;
+    right.data = rightData;
+  }
+  return nodes[parentIdx].leftChild;
+}
 
 
 class BenesData; // information on a generalized Benes network
@@ -334,26 +350,60 @@ class SubDimension {
 			long ee=0, bool gd=false, BenesData* bns=NULL)
   { genIdx=idx; size=sz; e=ee; good=gd; benes=bns; }
 
-  SubDimension& operator=(const SubDimension& other)
+  /*  SubDimension& operator=(const SubDimension& other)
     { genIdx=other.genIdx; size=other.size; 
       e=other.e; good=other.good; benes=other.benes;
       return *this;
-    }
+      } 
+  */
 };
+typedef FullBinaryTree<SubDimension> OneGeneratorTree;// tree for one generator
 
-// a tree for one generator
-class GeneratorTree: public FullBinaryTree<SubDimension> {
+//! A recursive procedure for computing the e exponent values
+void computeEvalues(const OneGeneratorTree &T, long idx, long genOrd);
+
+//! A vector of generator trees, one per generator in Zm*/(p)
+class GeneratorTrees  {
+  Vec<OneGeneratorTree> trees;
+  Permut map2cube, map2array;
+
  public:
-  // Call the base class constructor with or without parameter
-  GeneratorTree(): FullBinaryTree<SubDimension>() {}
-  explicit GeneratorTree(SubDimension& s): FullBinaryTree<SubDimension>(s) {}
+  GeneratorTrees() {} // default constructor
 
-  //! @brief returns coordinates of i relative to leaves of the tree
-  void GetCoordinates(Vec<long>&, long i) const;
+  GeneratorTrees(const Vec<OneGeneratorTree>& _trees): trees(_trees) {}
 
-  //! Get the cube dimensions corresponding to a vector of trees,
-  //! the ordered vector with one dimension per leaf in any of the trees.
-  static void GetCubeDims(Vec<long>& dims, const vector<GeneratorTree>& trees);
+  // Initialze trees with only the roots.
+  GeneratorTrees(const Vec<SubDimension>& dims);
+
+  long length() const { return trees.length(); }
+  OneGeneratorTree& operator[](long i) { return trees[i]; }
+  const OneGeneratorTree& operator[](long i) const { return trees[i]; }
+
+  OneGeneratorTree& at(long i) { return trees.at(i); }
+  const OneGeneratorTree& at(long i) const { return trees.at(i); }
+
+  long getSize() const { return map2cube.length(); }
+  OneGeneratorTree& getGenTree(long i) { return trees.at(i); }
+  const OneGeneratorTree& getGenTree(long i) const { return trees.at(i); }
+
+  const Vec<long>& Map2Cube() const { return map2cube; }
+  const Vec<long>& Map2Array() const { return map2array; }
+  Vec<long>& Map2Cube() { return map2cube; }
+  Vec<long>& Map2Array() { return map2array; }
+
+  long Map2Cube(long i) const { return map2cube[i]; }
+  long Map2Array(long i) const { return map2array[i]; }
+
+  //! Get the cube dimensions corresponding to the vector of trees,
+  //! the ordered vector with one dimension per leaf in all the trees.
+  void getCubeDims(Vec<long>& dims) const;
+
+  // Returns coordinates of i relative to leaves of the tree
+  //  void getCoordinates(Vec<long>&, long i) const;
+
+  //! Compute the trees corresponding to the "optimal" way of breaking
+  //! a permutation into dimensions, subject to some constraints
+  void BuildOptimalTrees(long widthBound);
 
   /**
    * @brief Computes permutations mapping between linear array and the cube.
@@ -369,29 +419,50 @@ class GeneratorTree: public FullBinaryTree<SubDimension> {
    * representation, and the maps are used to convert back and forth.
    * Specifically, let (i'_1,...,i'_t) be the CRT representation of i in
    * this cube, and j = \sum_{j=1}^t i'_j * \prod_{k>j} n_k, then we have
-   * map2cube[i]=j and mapBack[j]=i.
+   * map2cube[i]=j and map2array[j]=i.
    **/
-  void CubeMapping(Permut& map2cube, Permut& mapBack) const;
+  void ComputeCubeMapping();
 };
+
+
+// Permutation networks
+
+class Ctxt;
+class EncryptedArray;
+class PermNetwork;
 
 // The information needed to apply one layer of a permutation network
 class PermNetLayer {
- public:
   long genIdx; // shift-by-1 in this layer is done via X -> X^{g^e}
   long e;
   Vec<long> shifts; // shifts[i] is how much to shift slot i
   bool isID; // a silly optimization, does this layer copmute the identity?
+
+  friend class PermNetwork;
 };
 
-class Ctxt; // The Apply method below takes a cipehrtext as a parameter
-class PermNetwork : public Vec<PermNetLayer> {
- public:
+class PermNetwork {
+  Vec<PermNetLayer> layers;
+
+public:
+  PermNetwork() {}; // empty network
+  PermNetwork(const Permut& pi,const GeneratorTrees& trees)
+    { BuildNetwork(pi, trees); }
+
+  long Width() const { return layers.length(); }
+
   // Take as input a permutation pi and the trees of all the generators,
   // and prepares the permutation network for this pi
-  void BuildNetwork(const Permut& pi, const vector<GeneratorTree>& trees,
-		    const PAlgebra& ZmStar);
+  void BuildNetwork(const Permut& pi, const GeneratorTrees& trees);
 
-  void ApplyToCtxt(Ctxt& c); // Apply network to permute a ciphertext
+  //! Apply network to permute a ciphertext
+  void ApplyToCtxt(Ctxt& c);
+
+  //! Apply network to array, used mostly for debugging
+  void ApplyToArray(HyperCube<long>& v);
+
+  //! Apply network to plaintext polynomial, used mostly for debugging
+  void ApplyToPtxt(ZZX& p, const EncryptedArray& ea);
 };
 
 #endif /* ifndef _PERMUTATIONS_H_ */

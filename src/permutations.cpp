@@ -17,8 +17,10 @@
 #include "NumbTh.h"
 #include "permutations.h"
 
+//template class FullBinaryTree<SubDimension>;// instantiate the template class
+
 // Apply a permutation to a function, out[i]=in[p1[i]]
-void ApplyPermutation(Vec<long>& out, const Vec<long>& in, const Permut& p1)
+void ApplyPermToFunc(Vec<long>& out, const Vec<long>& in, const Permut& p1)
 {
   assert(&out != &in); // NOT an in-place procedure
   out.SetLength(p1.length());
@@ -27,8 +29,8 @@ void ApplyPermutation(Vec<long>& out, const Vec<long>& in, const Permut& p1)
 }
 
 // Apply two permutations to a function out[i]=in[p2[p1[i]]]
-void ApplyPermutations(Vec<long>& out, const Vec<long>& in,
-		       const Permut& p2, const Permut& p1)
+void ApplyPermsToFunc(Vec<long>& out, const Vec<long>& in,
+		      const Permut& p2, const Permut& p1)
 {
   assert(&out != &in); // NOT an in-place procedure
   assert(p1.length() == p2.length());
@@ -37,6 +39,21 @@ void ApplyPermutations(Vec<long>& out, const Vec<long>& in,
     out[i] = in.at(p2.at(p1[i]));
 }
 
+void RandomPerm(Permut& perm, long n)
+{
+  perm.SetLength(n);
+  for (long j = 0; j < n; j++)
+     perm[j] = j;
+   
+  // random shuffle
+  for (long m = n; m > 0; m--) {
+     long p = RandomBnd(m);
+     // swap positions p and m-1 of perm
+     long tmp = perm[p];
+     perm[p] = perm[m-1];
+     perm[m-1] = tmp;
+  }
+}
 
 // Write a slice (row) permutation explicitly
 void SlicePerm::makeExplicit(Permut& out) const
@@ -310,25 +327,13 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
   rho2.dim = dim+1;
 }
 
-void randomPerm(Permut& perm, long n)
-{
-  perm.SetLength(n);
-  for (long j = 0; j < n; j++)
-     perm[j] = j;
-   
-  // random shuffle
-  for (long m = n; m > 0; m--) {
-     long p = RandomBnd(m);
-     // swap positions p and m-1 of perm
-     long tmp = perm[p];
-     perm[p] = perm[m-1];
-     perm[m-1] = tmp;
-  }
-}
+/********************************************************************/
+/********************************************************************/
+/********************************************************************/
 
 // A recursive procedure for computing the e exponent values
 // FIXME: This code should be part of the logic that builds the tree
-void computeEvalues(const GeneratorTree &T, long idx, long genOrd)
+void computeEvalues(const OneGeneratorTree &T, long idx, long genOrd)
 {
   // if either child is missing then we are at a leaf (this is a full tree)
   long left = T[idx].getLeftChild();
@@ -365,129 +370,60 @@ void computeEvalues(const GeneratorTree &T, long idx, long genOrd)
   computeEvalues(T, right, genOrd);
 }
 
+GeneratorTrees::GeneratorTrees(const Vec<SubDimension>& dims)
+{
+  if (dims.length()<=0) return;
+  trees.FixLength(dims.length());
+  for (long i=0; i<trees.length(); i++) {
+    trees[i].PutDataInRoot(dims[i]);
+    trees[i][0].getData().e = 1; // make sure that e is set correctly
+  }
+}
+
 // Get the cube dimensions corresponding to a vector of trees,
 // the ordered vector with one dimension per leaf in any of the trees.
-void GeneratorTree::GetCubeDims(Vec<long>& dims,
-				const vector<GeneratorTree>& trees)
+void GeneratorTrees::getCubeDims(Vec<long>& dims) const
 {
   // how many dimensions do we need
   long nDims = 0;
-  for (long i=0; i<(long)trees.size(); i++)
+  for (long i=0; i<trees.length(); i++)
     nDims += trees[i].getNleaves();
   dims.SetLength(nDims); // set the size
 
   // copy dims from the leaves in all the trees
   long idx = 0;
-  for (long i=0; i<(long)trees.size(); i++) {
-    const GeneratorTree& T = trees[i];
+  for (long i=0; i<trees.length(); i++) {
+    const OneGeneratorTree& T = trees[i];
     for (long leaf=T.FirstLeaf(); leaf>=0; leaf=T.NextLeaf(leaf))
       dims[idx++] = T[leaf].getData().size;
   }
 }
 
-void PermNetwork::BuildNetwork(const Permut& pi, 
-			       const vector<GeneratorTree>& trees,
-			       const PAlgebra& zmStar)
+// Compute the trees corresponding to the "optimal" way of breaking
+// a permutation into dimensions, subject to some constraints
+void GeneratorTrees::BuildOptimalTrees(long widthBound)
 {
-  // FIXME: For now we only implement the single-generator case
-  assert(trees.size()==1);
+  assert(trees.length() >= 1);
 
-  Vec<long> dims;
-  GeneratorTree::GetCubeDims(dims, trees);
-  CubeSignature sig(dims); // make a cube-signature object
-  std::cerr << "\ndims="<<dims<<endl;
-
-  const GeneratorTree &T = trees[0];
-  long genIdx = T[0].getData().genIdx;
-  long genOrd = zmStar.OrderOf(genIdx);
-
-  // Traverse the tree and compute the e exponent in each node
-  // FIXME: This should be part of the logic that builds the tree
-  ((TreeNode<SubDimension>&)T[0]).getData().e = 1; // The root e value is 1
-  computeEvalues(T,0,genOrd); // compute the exponents in the rest of the tree
-
-  // Compute the total number of levels in the target permutation network
-  long nLvls=0;
-  for (long i=0, leaf=T.FirstLeaf(); leaf>=0; i++, leaf=T.NextLeaf(leaf)) {
-    long lvls=1; // how many levels to add for this leaf
-
-    const SubDimension& leafData = T[leaf].getData();
-    if (leafData.benes != NULL) // a benes leaf
-      lvls = 3; /* FIXME: leafData.benes->getNLvls(); */
-
-    if (T.NextLeaf(leaf)>=0) lvls *= 2; // not last leaf, so not middle level
-    nLvls += lvls;
+  // reset the trees, starting from only the roots
+  for (long i=0; i<trees.length(); i++) {
+    assert(trees[i].getNleaves()>0); // tree is not empty
+    trees[i].CollapseToRoot();
   }
 
-  // Compute the mapping from linear array to cube and back
-  Permut map2cube, map2array;
-  T.CubeMapping(map2cube, map2array);
+  // Now do the dynamic programming magic to get the optimal trees
+  // FIXME: implement this
 
-  std::cerr << "pi =      "<<pi<<endl;
-  std::cerr << "map2cube ="<<map2cube<<endl;
-  std::cerr << "map2array="<<map2array<<endl;
-
-  // Compute the permutation on the cube, rho = map2cube o pi o map2array
-  Permut rho;
-  ApplyPermutations(rho, map2cube, pi, map2array);
-  std::cerr << "rho =     "<<rho<<endl;
-
-  // Break rho along the different dimensions
-  vector<ColPerm> perms;
-  breakPermByDim(perms, rho, sig);
-
-  for (long i=0; i<(long)perms.size(); i++) {
-    Permut tmp;
-    perms[i].makeExplicit(tmp);
-    std::cerr << " prems["<<i<<"]="<<tmp<<endl;
+  // Now that we have the trees, copmute the e values for the nodes in them
+  for (long i=0; i<trees.length(); i++) {
+    trees[i][0].getData().e = 1;
+    computeEvalues(trees[i], 0, trees[i][0].getData().size);
   }
 
-  // Go over the different permutations and build the corresponding levels
-  this->SetLength(nLvls); // allocate space
-  Vec<long> shifts;
-  for (long i=0,j=0,leaf=T.FirstLeaf(); leaf>=0; leaf=T.NextLeaf(leaf),i++) {
-    const SubDimension& leafData = T[leaf].getData();
-    const ColPerm& p1 = perms[i]; // leaf corresponding to permutations i,n-i
-    const ColPerm& p2 = perms[perms.size()-i-1];
-
-    if (leafData.benes != NULL) { // A Benes leaf
-      // FIXME: do something here..
-      j += 3; /* FIXME: leafData.benes->getNLvls(); */
-      continue;
-    }
-
-    // A naive permutation leaf, corresponding to 1 or 2 levels
-    PermNetLayer& l1 = (*this)[j];
-    l1.isID = !p1.getShiftAmounts(shifts);
-    if (!l1.isID) {
-      std::cerr << "layer "<<i<<": "<<shifts<<endl;
-      if (leafData.good) // For good leaves, shift by -x is the same as size-x
-	for (long k=0; k<shifts.length(); k++)
-	  if (shifts[k]<0) shifts[k] += leafData.size;
-      // li.shifts[i] := shifts[map2cube[i]]
-      ApplyPermutation(l1.shifts, shifts, map2cube);
-      std::cerr << "       : "<<l1.shifts<<endl;
-    }
-    else std::cerr << "layer "<<i<<"= identity\n";
-
-    if (j == this->length()-j-1) break; // the middle layer (last leaf)
-
-    PermNetLayer& l2 = (*this)[this->length()-j-1];
-    l2.isID = !p2.getShiftAmounts(shifts);
-    if (!l2.isID) {
-      std::cerr << "layer "<<(perms.size()-i-1)<<": "<<shifts<<endl;
-      if (leafData.good) // For good leaves, shift by -x is the same as size-x
-	for (long k=0; k<shifts.length(); k++)
-	  if (shifts[k]<0) shifts[k] += leafData.size;
-      // li.shifts[i] := shifts[map2cube[i]]
-      ApplyPermutation(l2.shifts, shifts, map2cube);
-      std::cerr << "       : "<<l2.shifts<<endl;
-    }
-    else std::cerr << "layer "<<(perms.size()-i-1)<<"= identity\n";
-
-    j++;
-  }
+  // Compute the mapping from array to cube and back
+  ComputeCubeMapping();
 }
+
 
 // Adds one to the little-endian representation of an integer in base digits,
 // returns true if there was an overflow
@@ -503,100 +439,72 @@ static bool addOne(Vec<long>& rep, const Vec<long> digits)
   return true;
 }
 
-void GeneratorTree::CubeMapping(Permut& map2cube, Permut& mapBack) const
+void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
 {
-  Vec<long> dims(INIT_SIZE, getNleaves());
-  Vec<long> coefs(INIT_SIZE,getNleaves());
-  for (long i=getNleaves()-1, leaf=LastLeaf(); i>=0; i--,leaf=PrevLeaf(leaf)) {
-    dims[i] = (*this)[leaf].getData().size;
-    coefs[i] = (*this)[leaf].getData().e;
+  Vec<long> dims(INIT_SIZE, T.getNleaves());
+  Vec<long> coefs(INIT_SIZE,T.getNleaves());
+  for (long i=T.getNleaves()-1, leaf=T.LastLeaf(); i>=0;
+                                i--, leaf=T.PrevLeaf(leaf)) {
+    dims[i] = T[leaf].getData().size;
+    coefs[i] = T[leaf].getData().e;
   }
   std::cerr << "coefs="<<coefs<<endl;
 
   // A representation of an integer with digits from dims
-  Vec<long> rep(INIT_SIZE, getNleaves());
+  Vec<long> rep(INIT_SIZE, T.getNleaves());
   for (long i=0; i<rep.length(); i++) rep[i]=0; // initialize to zero
 
   // initialize to all zero
-  long sz = (*this)[0].getData().size;
-  map2cube.SetLength(sz);
-  mapBack.SetLength(sz);
-  for (long i=0; i<map2cube.length(); i++) map2cube[i]=mapBack[i]=0;
+  long sz = T[0].getData().size;
+  genMap.SetLength(sz);
+  for (long i=0; i<sz; i++) genMap[i]=0;
 
-  // compute the permutations
+  // compute the permutation
   for (long i=1; i<sz; i++) {
     addOne(rep, dims); // representation of i in base dims
     for (long j=0; j<coefs.length(); j++) {
       long tmp = MulMod(rep[j], coefs[j], sz);
-      map2cube[i] = AddMod(map2cube[i], tmp, sz);
+      genMap[i] = AddMod(genMap[i], tmp, sz);
     }
-    mapBack[map2cube[i]] = i;
   }
 }
 
-
-#if 0
-int main()
+void GeneratorTrees::ComputeCubeMapping()
 {
-  // Build a "good" 2x3 tree for the order-6 generator g=5 in Z_31^*/(2)
-  PAlgebra al(/*m=*/31, /*p=*/2);
+  assert(trees.length()>=1);
 
-  // Build a 2x3x3 tree for the order-18 generator g=24 in Z_127^*/(2)
-  //PAlgebra al(/*m=*/127, /*p=*/2);
-  //SubDimension rtDim(/*genIdx=*/0, /*size=*/18, /*e=*/1, /*good=*/true);
+  // An optimization for the case of a single tree
+  if (trees.length()==1)
+    ComputeOneGenMapping(map2cube, trees[0]);
 
-  for (long iii=0; iii<3; iii++) {
-  // Initialize the tree with just the size-6 root
-  SubDimension rtDim(/*genIdx=*/0, /*size=*/6, /*e=*/1, /*good=*/true);
-  GeneratorTree T(rtDim);
-
-  // A random size-6 permutation
-  Permut p;
-  randomPerm(p, T[0].getData().size);
-
-  // Add the size-2 and size-3 children
-  SubDimension lftDim(/*genIdx=*/0, /*size=*/2, /*e=*/3, /*good=*/false);
-  SubDimension rgtDim(/*genIdx=*/0, /*size=*/3, /*e=*/4, /*good=*/true);
-  T.AddChildren(0, rgtDim, lftDim);
-
-  // A vector of trees, with only this one tree in it
-  vector<GeneratorTree> trees;
-  trees.push_back(T);
-
-  PermNetwork ntwrk;
-  ntwrk.BuildNetwork(p, trees, al);
-  }
-#if 0
-  Vec<long> dims(INIT_SIZE,3);
-  {
-    long dd[3] = {2,3,2};
-    for (long i=0; i<3; i++) dims[i] = dd[i];
-  }
-  CubeSignature cs(dims);
-
-#define psize 12
-  Permut p(INIT_SIZE, psize);
-  { long pp[psize] = { 0, 3, 9, 4, 2, 7, 8, 11, 1, 6, 5, 10 };
-    for (long i=0; i<psize; i++) p[i] = pp[i];
-  }
-  std::cout << "input="<<p<<endl<<endl;
-
-  // break it into three permutations over the colums and rows
-  vector<ColPerm> out;
-  breakPermByDim(out,p,cs);
-
-  for (long i=0; i<(long)out.size(); i++) {
-    out[i].printout(std::cout);
-    long nPerms = out[i].getSize()/dims[out[i].getPermDim()];
-    for (long j=0; j<nPerms; j++) {
-      out[i].extractSlice(p,j);
-      std::cout <<"  "<<j<<": "<<p<<endl;
+  else { // more than one generator
+    // Compute the sub-mapping for every generator. Also prepare
+    // a hypercube-signature object for the index calculations
+    Vec<long> dims(INIT_SIZE, trees.length());
+    Vec<Permut> genMappings(INIT_SIZE, trees.length());
+    for (long i=0; i<trees.length(); i++) {
+      dims[i] = trees[i][0].getData().size;
+      ComputeOneGenMapping(genMappings[i], trees[i]);
     }
-    out[i].makeExplicit(p);
-    std::cout << " expl: " << p << endl;
-    out[i].getShiftAmounts(p);
-    std::cout << " shft: " << p << endl << endl;
+    CubeSignature sig(dims);
+
+    // Allocate space for the mappings
+    map2cube.SetLength(sig.getSize());
+    map2array.SetLength(sig.getSize());
+
+    // Combine the generator perms to a single permutation over the cube
+    for (long i=0; i<map2array.length(); i++) {
+      long t=0;
+      for (long j=0; j<sig.getNumDims(); j++) {
+	const Permut& pi = genMappings[j];
+	long digit = sig.getCoord(i, j); // the j'th digit of i in base dims
+	digit = pi[digit];               // apply the j'th permutation to it
+	t += digit * sig.getProd(j+1);   // adds the permuted digit
+      }
+      map2cube[i] = t;
+    }
   }
-#endif
+
+  // Compute the inverse permutation
+  for (long i=0; i<map2cube.length(); i++) map2array[ map2cube[i] ] = i;
 }
-#endif
