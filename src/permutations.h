@@ -338,17 +338,15 @@ class BenesData; // information on a generalized Benes network
 // A node in a tree relative to some generator
 class SubDimension {
  public:
-  long genIdx; // sub-dimension of what generator
-  long size;   // Size of cube slice
-  long e;      // shift-by-1 in this sub-dim is done via X -> X^{g^e}
+  long size;   // size of cube slice
   bool good;   // good or bad
+  long e;      // shift-by-1 in this sub-dim is done via X -> X^{g^e}
 
   // If this is a Benes leaf, a description of its network (else NULL)
   BenesData* benes;
 
-  explicit SubDimension(long idx=0, long sz=0, 
-			long ee=0, bool gd=false, BenesData* bns=NULL)
-  { genIdx=idx; size=sz; e=ee; good=gd; benes=bns; }
+  explicit SubDimension(long sz=0,bool gd=false,long ee=0,BenesData* bns=NULL)
+  { size=sz; good=gd; e=ee; benes=bns; }
 
   /*  SubDimension& operator=(const SubDimension& other)
     { genIdx=other.genIdx; size=other.size; 

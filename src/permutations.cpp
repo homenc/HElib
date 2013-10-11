@@ -448,6 +448,7 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
     dims[i] = T[leaf].getData().size;
     coefs[i] = T[leaf].getData().e;
   }
+  std::cerr << "\ndims ="<<dims<<endl;
   std::cerr << "coefs="<<coefs<<endl;
 
   // A representation of an integer with digits from dims
@@ -492,7 +493,7 @@ void GeneratorTrees::ComputeCubeMapping()
     map2cube.SetLength(sig.getSize());
 
     // Combine the generator perms to a single permutation over the cube
-    for (long i=0; i<map2array.length(); i++) {
+    for (long i=0; i<map2cube.length(); i++) {
       long t=0;
       for (long j=0; j<sig.getNumDims(); j++) {
 	const Permut& pi = genMappings[j];

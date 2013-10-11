@@ -23,7 +23,6 @@ void PermNetwork::BuildNetwork(const Permut& pi, const GeneratorTrees& trees)
   Vec<long> dims;
   trees.getCubeDims(dims);
 
-  std::cerr << "\ndims="<<dims<<endl;
   std::cerr << "pi =      "<<pi<<endl;
   std::cerr << "map2cube ="<<trees.Map2Cube()<<endl;
   std::cerr << "map2array="<<trees.Map2Array()<<endl;
@@ -65,14 +64,11 @@ void PermNetwork::BuildNetwork(const Permut& pi, const GeneratorTrees& trees)
   // Go over the different permutations and build the corresponding levels
   Vec<long> shifts;
   long dimIdx=0, lyrIdx=0;
-  for (long g=0; g<trees.length(); g++) {
+  for (long g=0; g<trees.length(); g++) { // go over all the generators/trees
     const OneGeneratorTree &T = trees[g];
+    // In each tree, go over all the leaves
     for (long leaf=T.FirstLeaf(); leaf>=0; leaf=T.NextLeaf(leaf)) {
       const SubDimension& leafData = T[leaf].getData();
-
-      // This leaf corresponds to permutations idx, n-idx
-      const ColPerm& p1 = perms[dimIdx];
-      const ColPerm& p2 = perms[perms.size()-dimIdx-1];
 
       if (leafData.benes != NULL) { // A Benes leaf
 	// FIXME: do something here..
@@ -80,8 +76,13 @@ void PermNetwork::BuildNetwork(const Permut& pi, const GeneratorTrees& trees)
 	continue;
       }
 
+      // This leaf corresponds to <= permutations idx, n-idx
+      const ColPerm& p1 = perms[dimIdx];
+      const ColPerm& p2 = perms[perms.size()-dimIdx-1];
+
       // A naive permutation leaf, corresponding to 1 or 2 levels
       PermNetLayer& l1 = layers[lyrIdx];
+      l1.genIdx = g;
       l1.isID = !p1.getShiftAmounts(shifts);
       if (!l1.isID) {
 	std::cerr << "layer "<<lyrIdx<<": "<<shifts<<endl;
@@ -98,6 +99,7 @@ void PermNetwork::BuildNetwork(const Permut& pi, const GeneratorTrees& trees)
       lyrIdx = layers.length()-lyrIdx-1; // the other layers for this leaf
 
       PermNetLayer& l2 = layers[lyrIdx];
+      l2.genIdx = g;
       l2.isID = !p2.getShiftAmounts(shifts);
       if (!l2.isID) {
 	std::cerr << "layer "<<lyrIdx<<": "<<shifts<<endl;
@@ -123,37 +125,70 @@ void PermNetwork::ApplyToPtxt(ZZX& p, const EncryptedArray& ea)
 {
 }
 
+// Upon return, mask[i]=1 if haystack[i]=needle, 0 otherwise. Also set to 0
+// all the entries in haystack where mask[i]=1. Return the index of the first
+// nonzero entry in haystack at the end of the pass (-1 if they are all zero).
+// Also return a flag saying if any entries of the mask are nonzero.
+static pair<long,bool>
+makeMask(vector<long>& mask, Vec<long>& haystack, long needle)
+{
+  long found = false;
+  long fstNZidx = -1;
+  for (long i=0; i<(long)mask.size(); i++) {
+    if (haystack[i] == needle) {
+      mask[i]=1;
+      haystack[i]=0;
+      found = true;
+    } 
+    else {
+      mask[i]=0;
+      if (haystack[i]!=0 && fstNZidx<0)
+	fstNZidx = i;
+    }
+  }
+  return std::make_pair(fstNZidx,found);
+}
 
 void PermNetwork::ApplyToCtxt(Ctxt& c)
 {
-#if 0
   const PAlgebra& al = c.getContext().zMStar;
-  EncryptedArray ea(c.getContext()); // use G(X)=X for this ez object
+  EncryptedArray ea(c.getContext()); // use G(X)=X for this ea object
 
   // Apply the layers, one at a time
-  for (long i=0; i<this->length(); i++) {
-    PermNetLayer& lyr = layers[i];
-    long g = PowerMod(al.ZmStarGen(lyr.genIdx), lyr.e, al.getM());
+  for (long i=0; i<layers.length(); i++) {
+    const PermNetLayer& lyr = layers[i];
+    if (lyr.isID) continue; // this layer is the identity permutation
 
+    // This layer is shifted via powers of g^e mod m
+    long g2e = PowerMod(al.ZmStarGen(lyr.genIdx), lyr.e, al.getM());
+
+    Vec<long> unused = lyr.shifts;
+    vector<long> mask(lyr.shifts.length());  // buffer to hold masks
     Ctxt sum(c.getPubKey(), c.getPtxtSpace()); // an empty ciphertext
-    for (long j=0; j<(long)lyr.shiftAmountUsed.size(); j++) {
-      long shft = lyr.shiftAmountUsed[j];
 
-      // Prepare the mask for this shift amount
-      vector<long> mask = lyr.shifts;
-      ZZX maskPoly;
-      for (long k=0; k<(long) mask.size(); k++)
-	mask[k] = (mask[k]==shft)? 1 : 0;
-      ea.encode(maskPoly, mask);
+    long shamt = 0;
+    bool frst = true;
+    while (true) {
+      pair<long,bool> ret=makeMask(mask, unused, shamt); // compute mask
+      if (ret.second) { // non-empty mask
+	Ctxt tmp = c;
+	ZZX maskPoly;
+	ea.encode(maskPoly, mask);    // encode mask as polynomial
+	tmp.multByConstant(maskPoly); // multiply by mask
+	if (shamt!=0) // rotate if the shift amount is nonzero
+	  tmp.smartAutomorph(PowerMod(g2e, shamt, al.getM()));
+	if (frst) {
+	  sum = tmp;
+	  frst = false;
+	}
+	else
+	  sum += tmp;
+      }
+      if (ret.first >= 0)
+	shamt = unused[ret.first]; // next shift amount to use
 
-      // Then mask and rotate
-      Ctxt tmp = c;
-      tmp.multByConstant(maskPoly);
-      if (shft!=0) tmp.smartAutomorph(PowerMod(g, shft, al.getM()));
-      if (j==0) sum = tmp;
-      else sum += tmp;
+      else break; // unused is all-zero, done with this layer
     }
-    c = sum; // Done with this layer, update the cipehrtext c
+    c = sum; // update the cipehrtext c before the next layer
   }
-#endif
 }

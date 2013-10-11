@@ -23,16 +23,17 @@ void BuildTree(OneGeneratorTree& T, long type)
 
   long nodeIdx = 0;
   long size = 6;
-  SubDimension n6(/*genIdx=*/0, /*size=*/6, /*e=*/1, /*good=*/true);
-  SubDimension n3(/*genIdx=*/0, /*size=*/3, /*e=*/0, /*good=*/true);
-  SubDimension n2g(/*genIdx=*/0, /*size=*/2, /*e=*/0, /*good=*/true);
+  SubDimension n6(/*size=*/6,  /*good=*/true, /*e=*/1);
+  SubDimension n3(/*size=*/3,  /*good=*/true);
+  SubDimension n2g(/*size=*/2, /*good=*/true);
   if (type == 2) {
     size = 12;
-    SubDimension n12(/*genIdx=*/0, /*size=*/2, /*e=*/1, /*good=*/true);
-    SubDimension n2b(/*genIdx=*/0, /*size=*/2, /*e=*/0, /*good=*/false);
+    SubDimension n12(/*size=*/12, /*good=*/true, /*e=*/1);
+    SubDimension n2b(/*size=*/ 2, /*good=*/false);
     T.PutDataInRoot(n12);
     nodeIdx = T.AddChildren(0, n6, n2b);
-  } else
+  } 
+  else
     T.PutDataInRoot(n6);
 
   T.AddChildren(nodeIdx, n2g, n3);
