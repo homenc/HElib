@@ -703,7 +703,15 @@ bool GeneralBenesNetwork::testNetwork(const Permut& perm) const
   return true;
 }
 
+// ******* optimization code **********
 
+// helper class to make defining hash functions easier
+
+template<class T> 
+class ClassHash {
+public:
+  size_t operator()(const T& t) const { return t.hash(); }
+};
 
 // routines for finding optimal level collapsing strategies
 
@@ -769,7 +777,7 @@ long reducedCount(const list<long>& x, long n, bool *aux)
 }
 
 
-void buildCollapseCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
+void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
 {
   long nlev = 2*k-1;
   tab.SetLength(nlev);
@@ -816,11 +824,17 @@ public:
   }
 };
 
+long length(LongNodePtr ptr)
+{
+  long res = 0;
+  for (LongNodePtr p = ptr; p != NULL; p = p->next) res++;
+  return res;
+}
+
 
 void listToVec(LongNodePtr ptr, Vec<long>& vec)
 {
-  long len = 0;
-  for (LongNodePtr p = ptr; p != NULL; p = p->next) len++;
+  long len = length(ptr);
 
   vec.SetLength(len);
   long i = 0;
@@ -831,30 +845,32 @@ void listToVec(LongNodePtr ptr, Vec<long>& vec)
 }
 
 
-void print(ostream& s, LongNodePtr p)
+ostream& operator<<(ostream& s, LongNodePtr p)
 {
   if (p == NULL) {
-    s << "()";
-    return;
+    s << "[]";
+    return s;
   }
 
-  s << "(" << p->count;
+  s << "[" << p->count;
   p = p->next;
   while (p != NULL) {
-    s << "," << p->count;
+    s << " " << p->count;
     p = p->next;
   }
-  cout << ")";
+  cout << "]";
+
+  return s;
 }
 
 
 
-class CollapseMemoKey {
+class BenesMemoKey {
 public:
   long i;
   long budget;
 
-  CollapseMemoKey(long _i, long _budget) {
+  BenesMemoKey(long _i, long _budget) {
     i = _i; budget = _budget;
   }
 
@@ -864,36 +880,31 @@ public:
     return tr1::hash<string>()(s.str());
   }
 
-  bool operator==(const CollapseMemoKey& other) const {
+  bool operator==(const BenesMemoKey& other) const {
     return i == other.i && budget == other.budget;
   }
 };
 
-class CollapseMemoEntry {
+class BenesMemoEntry {
 public:
   long cost;
   LongNodePtr solution;
 
-  CollapseMemoEntry(long _cost, LongNodePtr _solution) {
+  BenesMemoEntry(long _cost, LongNodePtr _solution) {
     cost = _cost; solution = _solution;
   }
 
-  CollapseMemoEntry() { }
+  BenesMemoEntry() { }
 };
 
 
-template<class T> 
-class ClassHash {
-public:
-  size_t operator()(const T& t) const { return t.hash(); }
-};
 
-typedef tr1::unordered_map< CollapseMemoKey, CollapseMemoEntry, 
-                            ClassHash<CollapseMemoKey> > CollapseMemoTable;
+typedef tr1::unordered_map< BenesMemoKey, BenesMemoEntry, 
+                            ClassHash<BenesMemoKey> > BenesMemoTable;
 
-CollapseMemoEntry recursiveCollapse(long i, long budget, long nlev, 
+BenesMemoEntry optimalBenesAux(long i, long budget, long nlev, 
                                      const Vec< Vec<long> >& costTab, 
-                                     CollapseMemoTable& memoTab)
+                                     BenesMemoTable& memoTab)
 {
   assert(i >= 0 && i <= nlev);
   assert(budget > 0);
@@ -902,7 +913,7 @@ CollapseMemoEntry recursiveCollapse(long i, long budget, long nlev,
   cout << "enter(" << i << "," << budget << ")\n";
 #endif
 
-  CollapseMemoTable::iterator find = memoTab.find(CollapseMemoKey(i, budget));
+  BenesMemoTable::iterator find = memoTab.find(BenesMemoKey(i, budget));
 
   if (find != memoTab.end()) {
 #if 0
@@ -935,9 +946,9 @@ CollapseMemoEntry recursiveCollapse(long i, long budget, long nlev,
 
     long bestCost = NTL_MAX_LONG;
     long bestJ = 0;
-    CollapseMemoEntry bestT;
+    BenesMemoEntry bestT;
     for (long j = 0; j < nlev-i; j++) {
-      CollapseMemoEntry t = recursiveCollapse(i+j+1, budget-1, nlev, costTab, memoTab);
+      BenesMemoEntry t = optimalBenesAux(i+j+1, budget-1, nlev, costTab, memoTab);
       if (t.cost + costTab[i][j] < bestCost) {
         bestCost = t.cost + costTab[i][j];
         bestJ = j;
@@ -954,18 +965,18 @@ CollapseMemoEntry recursiveCollapse(long i, long budget, long nlev,
   print(cout, solution);
   cout << ")\n";
 #endif
-  return memoTab[CollapseMemoKey(i, budget)] = CollapseMemoEntry(cost, solution);
+  return memoTab[BenesMemoKey(i, budget)] = BenesMemoEntry(cost, solution);
 }
 
-void optimalCollapse(long n, long budget, bool good, 
-                     long& cost, Vec<long>& solution)
+void optimalBenes(long n, long budget, bool good, 
+                     long& cost, LongNodePtr& solution)
 // computes an optimal level-collapsing strategy for a Benes network
 //   n = the size of the network
 //   budget = an upper bound on the number of levels in the collapsed network
 //   good = flag indicating whether this is with respect to a "good" generator,
 //     for which shifts by i and i-n correspond to the same rotation
 //   cost = total number of shifts needed by the collapsed network
-//   solution = vector indicating how levels in a standard benes network
+//   solution = list indicating how levels in a standard benes network
 //      are collapsed: if solution = [s_1 s_2 ... s_k], then k <= budget,
 //      and the first s_1 levels are collapsed, the next s_2 levels are collapsed, etc.
 {
@@ -974,27 +985,434 @@ void optimalCollapse(long n, long budget, bool good,
 
   Vec< Vec<long> > costTab;
 
-  buildCollapseCostTable(n, k, good, costTab);
+  buildBenesCostTable(n, k, good, costTab);
 
   // cout << good << "\n";
   // cout << costTab << "\n";
 
-  CollapseMemoTable memoTab;
+  BenesMemoTable memoTab;
 
-  CollapseMemoEntry t = recursiveCollapse(0, budget, nlev, costTab, memoTab);
+  BenesMemoEntry t = optimalBenesAux(0, budget, nlev, costTab, memoTab);
 
   cost = t.cost;
-  listToVec(t.solution, solution);
-
+  solution = t.solution;
   
 }
 
 
+// routines for finding the optimal splits among generators
+
+// binary tree data structure for spliting generators
+
+class SplitNode;
+typedef tr1::shared_ptr<SplitNode> SplitNodePtr;
+
+
+class SplitNode {
+public:
+  long order; // order associated with this node
+  long mid;   // the "middle" token, 0 or 1
+  LongNodePtr solution1, solution2; 
+    // the benes solution(s)...for non-middle nodes,
+    // there may be two different solutions, depending
+    // on how the budget is split
+  SplitNodePtr left, right;  // the children (for internal nodes)
+  
+  SplitNode(long _order, long _mid, LongNodePtr _solution1, LongNodePtr _solution2) {
+  // constructor for leaves
+    order = _order; mid = _mid; solution1 = _solution1; solution2 = _solution2;
+    left = right = SplitNodePtr();
+  }
+
+  SplitNode(long _order, long _mid, SplitNodePtr _left, SplitNodePtr _right) {
+  // constructor for internal nodes
+    order = _order; mid = _mid; solution1 = solution2 = LongNodePtr();
+    left = _left; right = _right;
+  }
+
+  bool isLeaf() const { return left == NULL && right == NULL; }
+    
+};
+
+void print(ostream& s, SplitNodePtr p, bool first)
+{
+  if (p->isLeaf()) {
+    if (!first) s << " ";
+    s << "[";
+    if (p->mid == 1) s << "* ";
+    s << p->order << " " << p->solution1 << " " << p->solution2 << "]";
+  }
+  else {
+    print(s, p->left, first);
+    print(s, p->right, false);
+  }
+}
+
+
+ostream& operator<<(ostream& s, SplitNodePtr p)
+{
+  s << "[";
+  print(s, p, true);
+  s << "]";
+  return s;
+}
+
+
+// lower level memo table
+
+
+class LowerMemoKey {
+public:
+  long order;
+  bool good;
+  long budget;
+  long mid;
+
+  LowerMemoKey(long _order, bool _good, long _budget, long _mid) {
+    order = _order; good = _good; budget = _budget; mid = _mid;
+  }
+
+  size_t hash() const {
+    stringstream s;
+    s << order << " " << good << " " << budget << " " << mid;
+    return tr1::hash<string>()(s.str());
+  }
+
+  bool operator==(const LowerMemoKey& other) const {
+    return order == other.order && good == other.good &&
+           budget == other.budget && mid == other.mid;
+  }
+};
+
+class LowerMemoEntry {
+public:
+  long cost;
+  SplitNodePtr solution;
+
+  LowerMemoEntry(long _cost, SplitNodePtr _solution) {
+    cost = _cost; solution = _solution;
+  }
+
+  LowerMemoEntry() { }
+};
 
 
 
+typedef tr1::unordered_map< LowerMemoKey, LowerMemoEntry, 
+                            ClassHash<LowerMemoKey> > LowerMemoTable;
 
 
+// list structure for managing generators
+
+class GenNode;
+typedef tr1::shared_ptr<GenNode> GenNodePtr;
+
+
+class GenNode {
+public:
+  SplitNodePtr solution;  // the solution tree for this generator
+  GenNodePtr next; // next node in the list
+
+  GenNode(SplitNodePtr _solution, GenNodePtr _next) {
+    solution = _solution; next = _next;
+  }
+};
+
+long length(GenNodePtr ptr)
+{
+  long res = 0;
+  for (GenNodePtr p = ptr; p != NULL; p = p->next) res++;
+  return res;
+}
+
+
+ostream& operator<<(ostream& s, GenNodePtr p)
+{
+  if (p == NULL) {
+    s << "[]";
+    return s;
+  }
+
+  s << "[" << p->solution;
+  p = p->next;
+  while (p != NULL) {
+    s << " " << p->solution;
+    p = p->next;
+  }
+  cout << "]";
+
+  return s;
+}
+
+
+// upper level memo table
+
+class UpperMemoKey {
+public:
+  long i;
+  long budget;
+  long mid;
+
+  UpperMemoKey(long _i, long _budget, long _mid) {
+    i = _i; budget = _budget; mid = _mid;
+  }
+
+  size_t hash() const {
+    stringstream s;
+    s << i << " " << budget << " " << mid;
+    return tr1::hash<string>()(s.str());
+  }
+
+  bool operator==(const UpperMemoKey& other) const {
+    return i == other.i && budget == other.budget && mid == other.mid;
+  }
+};
+
+class UpperMemoEntry {
+public:
+  long cost;
+  GenNodePtr solution;
+
+  UpperMemoEntry(long _cost, GenNodePtr _solution) {
+    cost = _cost; solution = _solution;
+  }
+
+  UpperMemoEntry() { }
+};
+
+
+
+typedef tr1::unordered_map< UpperMemoKey, UpperMemoEntry, 
+                            ClassHash<UpperMemoKey> > UpperMemoTable;
+
+
+class GenDescriptor {
+public:
+  long order;
+  bool good;
+
+  GenDescriptor(long _order, bool _good) {
+    order = _order; good = _good;
+  }
+
+  GenDescriptor() { }
+};
+
+LowerMemoEntry optimalLower(long order, bool good, long budget, long mid, 
+                            LowerMemoTable& lowerMemoTable)
+{
+  assert(order > 1);
+  assert(mid == 0 || mid == 1);
+  assert(budget > 0);
+
+  LowerMemoTable::iterator find = 
+    lowerMemoTable.find(LowerMemoKey(order, good, budget, mid));
+
+  if (find != lowerMemoTable.end()) {
+    return find->second;
+  }
+
+  long cost;
+  SplitNodePtr solution;
+
+  if (mid == 0 && budget == 1) {
+    // no solution possible
+
+    cost = NTL_MAX_LONG;
+    solution = SplitNodePtr();
+  }
+  else {
+    // we first calculate a solution without splitting
+
+    LongNodePtr benesSolution1, benesSolution2;
+
+    if (mid == 1) { 
+      // this is the middle node, so just one Benes network
+
+      optimalBenes(order, budget, good, cost, benesSolution1);
+      benesSolution2 = LongNodePtr();
+    }
+    else {
+      // not the middle node, so we need two Benes networks.
+      // if budget is odd, we split it unevenly
+
+      long cost1, cost2;
+      optimalBenes(order, budget/2, good, cost1, benesSolution1);
+      if (budget % 2 == 0) {
+        cost2 = cost1;
+        benesSolution2 = benesSolution1;
+      }
+      else {
+        optimalBenes(order, budget - budget/2, good, cost2, benesSolution2);
+      }
+
+      cost = cost1 + cost2;
+    }
+
+    solution = SplitNodePtr(new SplitNode(order, mid, 
+                                              benesSolution1, benesSolution2));
+
+
+    // now that we have a candidate solution that has no splits,
+    // we recursively try splitting the order
+
+    for (long order1 = 2; order1 < order; order1++) {
+      if (order % order1 != 0) continue;
+
+      bool good1 = good;
+      bool good2 = good;
+
+      if (good && GCD(order1, order/order1) != 1)
+        good2 = false;
+
+      // The logic is that if the problem is "good"
+      // but the split is not relatively prime,
+      // then only one of the subproblems is good.
+      // since order1 ranges over all factors of order,
+      // it suffices to choose the left subproblem to be
+      // the good one.
+
+      for (long budget1 = 1; budget1 < budget; budget1++) {
+        for (long mid1 = 0; mid1 <= mid; mid1++) {
+          LowerMemoEntry s1 = optimalLower(order1, good1, budget1, mid1, 
+                                           lowerMemoTable);
+          LowerMemoEntry s2 = optimalLower(order/order1, good2, budget-budget1, 
+                                           mid-mid1, lowerMemoTable);
+          if (s1.cost != NTL_MAX_LONG && s2.cost != NTL_MAX_LONG &&
+              s1.cost + s2.cost < cost) {
+            cost = s1.cost + s2.cost;
+            solution = SplitNodePtr(new SplitNode(order, mid, s1.solution,
+                                                      s2.solution));
+          }
+        }
+      }
+    }
+  }
+
+  return lowerMemoTable[LowerMemoKey(order, good, budget, mid)] =
+           LowerMemoEntry(cost, solution);
+
+  
+}
+
+UpperMemoEntry optimalUpperAux(const Vec<GenDescriptor>& vec, long i, long budget,
+                               long mid, UpperMemoTable& upperMemoTable,
+                               LowerMemoTable& lowerMemoTable) 
+{
+  assert(i >= 0 && i <= vec.length());
+  assert(budget >= 0);
+  assert(mid == 0 || mid == 1);
+
+  UpperMemoTable::iterator find = upperMemoTable.find(UpperMemoKey(i, budget, mid));
+  if (find != upperMemoTable.end()) {
+    return find->second;
+  }
+
+  long cost;
+  GenNodePtr solution;
+
+  if (i == vec.length()) {
+    // recursion stops here with trivial solution
+
+    cost = 0;
+    solution = GenNodePtr();
+  }
+  else if (budget == 0) {
+    // recursion stops here with no solution
+
+    cost = NTL_MAX_LONG;
+    solution = GenNodePtr();
+  }
+  else {
+    // allocate resources (budget, mid) between generator i and the rest
+
+    long bestCost = NTL_MAX_LONG;
+    LowerMemoEntry bestS;
+    UpperMemoEntry bestT;
+
+    for (long budget1 = 1; budget1 <= budget; budget1++) {
+      for (long mid1 = 0; mid1 <= mid; mid1++) {
+        LowerMemoEntry s = optimalLower(vec[i].order, vec[i].good, budget1, mid1,
+                                        lowerMemoTable);
+        UpperMemoEntry t = optimalUpperAux(vec, i+1, budget-budget1, mid-mid1,
+                                           upperMemoTable, lowerMemoTable);
+        if (s.cost != NTL_MAX_LONG && t.cost != NTL_MAX_LONG &&
+            s.cost + t.cost < bestCost) {
+          bestCost = s.cost + t.cost;
+          bestS = s;
+          bestT = t;
+        }
+      }
+    }
+
+    cost = bestCost;
+    if (cost == NTL_MAX_LONG) 
+      solution = GenNodePtr();
+    else 
+      solution = GenNodePtr(new GenNode(bestS.solution, bestT.solution));
+  }
+
+  return upperMemoTable[UpperMemoKey(i, budget, mid)] 
+           = UpperMemoEntry(cost, solution);
+}
+                     
+
+// optimalUpper is the high-level routine used to find
+// an optimal strategy for evaluating a permutation
+// The inputs are:
+//   * vec: a vector describing the generators, each entry
+//       consist of a long/bool pair (order, good)
+//   * budget: the total budget for levels in the network,
+//       which corresponds to the (multiplicative) circuit depth
+// The outputs are:
+//   * cost: the number of rotations needed (a specific
+//       permutation could use fewer)
+//   * solution: the optimal strategy, described below
+//
+// The solution is a linked list of length equal to the length of vec.
+// The ith entry of the list corresponds to the ith entry in vec.
+// Each entry in the list is a binary tree (SplitNodePtr).
+// Every node in such a tree is either a leaf or an internal node
+//   with two children.
+// Every node contains the order associated with that node, along with
+//   a "mid" flag: 1 means this is a "middle" node, 0 means not. 
+// In the top-level list of trees, only one tree root will be a middle node,
+//   and for every internal middle node in any tree, only one child
+//   will be a middle node.
+// A leaf node in a tree will contain two "benes network collapsing solutions",
+//   solution1 and solution2.
+//   If this leaf node is a middle node, solution2 is empty.
+//   Otherwise, there are actually two solutions: this is because
+//   the benes network corresponding to this leaf will appear twice
+//   in the overall network, and if the budget allocated to this leaf
+//   is *odd*, we may want to split the budget unevenly between the two
+//   networks (floor(budget/2) and floor(budget/2)+1.
+//   NOTE: one could consider more general splits of the budget
+//   between these two occurrences of the network, but it seems doubtful
+//   to be of benefit.
+// A "benes network collapsing solution" is a list of longs (longNodePtr).
+//   If the list is [n_1 n_2 ... n_k], this means we are to collapse
+//   the first n_1 levels of the Benes network, then the next n_2 levels,
+//   and so on.  The resulting "collapsed" Benes network will have k
+//   levels.
+
+
+  
+
+void optimalUpper(const Vec<GenDescriptor>& vec, long budget,
+                  long& cost, GenNodePtr& solution)
+{
+  assert(budget > 0);
+
+  UpperMemoTable upperMemoTable;
+  LowerMemoTable lowerMemoTable;
+
+  UpperMemoEntry t = 
+    optimalUpperAux(vec, 0, budget, 1, upperMemoTable, lowerMemoTable);
+
+  cost = t.cost;
+  solution = t.solution;
+}
 
 
 
@@ -1166,7 +1584,7 @@ int main(int argc, char *argv[])
 
   for (long iter=0; iter < 20; iter++) {
     Permut perm;
-    randomPerm(perm,n);      
+    RandomPerm(perm,n);      
     // cout << perm << "\n";
     GeneralBenesNetwork net(perm);   
     if (net.testNetwork(perm))  cout << ".";
@@ -1175,12 +1593,30 @@ int main(int argc, char *argv[])
   cout << "\n";
 
   long cost;
-  Vec<long> solution;
+  LongNodePtr solution;
 
-  optimalCollapse(n, L, good, cost, solution);
+  optimalBenes(n, L, good, cost, solution);
 
   cout << cost << "\n";
   cout << solution << "\n";
+  cout << length(solution) << "\n";
+
+  cout << "*************\n";
+
+  long cost1;
+  GenNodePtr solution1;
+
+  Vec<GenDescriptor> vec;
+
+  vec.SetLength(2);
+  vec[0] = GenDescriptor(n, good);
+  vec[1] = GenDescriptor(101, good);
+  optimalUpper(vec, L, cost1, solution1);
+
+  cout << cost1 << "\n";
+  cout << solution1 << "\n";
+  
+  
 
   
 #endif
@@ -1282,7 +1718,7 @@ int main(int argc, char *argv[])
 
   // Choose a random permutation of size sz
   Permut perm;
-  randomPerm(perm, sz);
+  RandomPerm(perm, sz);
   cout << "perm = " << perm << "\n";
 
   // Setup a Benes network for this permutation
