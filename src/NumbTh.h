@@ -129,6 +129,9 @@ long mobius(long n);
 //! Compute cyclotomic polynomial.
 ZZX Cyclotomic(long N);
 
+//! Return a degree-d irreducible polynomial mod p
+ZZX makeIrredPoly(long p, long d);
+
 //! Find a primitive root modulo N.
 long primroot(long N,long phiN);
 

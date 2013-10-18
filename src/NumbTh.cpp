@@ -79,6 +79,18 @@ long multOrd(long p, long m)
 }
 
 
+// return a degree-d irreducible polynomial mod p
+ZZX makeIrredPoly(long p, long d)
+{
+	assert(d >= 1);
+  assert(ProbPrime(p));
+
+  if (d == 1) return ZZX(1, 1); // the monomial X
+
+  zz_pBak bak; bak.save();
+  zz_p::init(p);
+  return to_ZZX(BuildIrred_zz_pX(d));
+}
 
 
 // Factoring by trial division, only works for N<2^{60}.
