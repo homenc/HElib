@@ -33,81 +33,6 @@
 
 // aux routines for GeneralBenesNetwork
 
-static 
-long GB_depth(long n)
-// computes recursion depth k for generalized Benes network of size n.
-// the actual number of levels in the network is 2*k-1
-{
-  long k = 1;
-  while ((1L << k) < n) k++;
-  return k;
-}
-
-
-static inline
-long GB_levelToDepthMap(long n, long k, long i) 
-// maps a level number i = 0..2*k-2 to a recursion depth d = 0..k-1
-// using the formula d = (k-1)-|(k-1)-i|
-{
-  assert(i >= 0 && i < 2*k-1);
-  return (k-1) - labs((k-1)-i);
-}
-
-
-static inline
-long GB_shamt(long n, long k, long i) 
-// shift amount for level number i=0..2*k-2
-// using the formula ceil( floor(n/2^d) / 2), 
-//   where d = levelToDepthMap(i)
-{
-  long d = GB_levelToDepthMap(n, k, i);
-  return ((n >> d) + 1) >> 1;
-}
-
-/**
- * @class GeneralBenesNetwork
- * @brief Implementation of generalized Benes Permutation Network
- **/
-class GeneralBenesNetwork {
-private:
-
-  long n; // size of perm, n > 1, not necessarily power of 2
-  long k; // recursion depth, k = least integer k s/t 2^k >= n
-
-  Vec< Vec<short> > level;
-    // there are 2*k - 1 levels, each wity n nodes.
-    // level[i][j] is 0, 1, or -1, 
-    //   which designates an edge from node j at level i 
-    //   to node j + level[i][j]*shamt(i) at level i+1
-
-  GeneralBenesNetwork(); // default constructor disabled
-
-public:
-
-  long getDepth() const { return k; }
-  long getSize() const { return n; }
-  long getNumLevels() const { return 2*k-1; }
-
-  const Vec<short>& getLevel(long i) const 
-  { 
-    assert(i >= 0 && i < 2*k-1);
-    return level[i];
-  }
-
-  long levelToDepthMap(long i) const { return GB_levelToDepthMap(n, k, i); }
-
-  long shamt(long i) const { return GB_shamt(n, k, i); }
-   
-  // constructor
-  GeneralBenesNetwork(const Permut& perm);
-
-  // test correctness
-
-  bool testNetwork(const Permut& perm) const;
-
-};
-
-
 static void 
 recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
                           const Permut& perm, const Permut& iperm,
@@ -148,7 +73,7 @@ recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
 
   long nlev = 2*k-1;
 
-  long sz0 = GB_shamt(n, k, d); // size of upper internal network
+  long sz0 = GeneralBenesNetwork::shamt(n, k, d); // size of upper internal network
   long sz1 = sz - sz0;
 
 #if 0
@@ -347,7 +272,7 @@ GeneralBenesNetwork::GeneralBenesNetwork(const Permut& perm)
   assert(n > 1);
 
   // compute recursion depth k = least integer k s/t 2^k >= n
-  k = GB_depth(n);
+  k = GeneralBenesNetwork::depth(n);
 
   // construct the inverse perm, which is convenient in the recursive function.
   // As a byproduct, verify that perm is indeed a permutation on {0,...,n-1}.
@@ -515,7 +440,7 @@ void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
 
     x.push_front(0L);
     for (long j = 0; j < nlev-i; j++) {
-      long shamt = GB_shamt(n, k, i+j); // The shift amount for this level
+      long shamt = GeneralBenesNetwork::shamt(n, k, i+j); // The shift amount for this level
       addOffset(x, shamt, n, aux);
       if (good)
         tab[i][j] = reducedCount(x, n, aux) - 1;
@@ -723,7 +648,7 @@ void optimalBenes(long n, long budget, bool good,
 //      are collapsed: if solution = [s_1 s_2 ... s_k], then k <= budget,
 //      and the first s_1 levels are collapsed, the next s_2 levels are collapsed, etc.
 {
-  long k = GB_depth(n); // k = ceil(log n)
+  long k = GeneralBenesNetwork::depth(n); // k = ceil(log n)
   long nlev = 2*k - 1;  // before collapsing, we have 2k-1 levels
 
   Vec< Vec<long> > costTab;
@@ -941,18 +866,6 @@ public:
 typedef tr1::unordered_map< UpperMemoKey, UpperMemoEntry, 
                             ClassHash<UpperMemoKey> > UpperMemoTable;
 
-
-class GenDescriptor {
-public:
-  long order;
-  bool good;
-
-  GenDescriptor(long _order, bool _good) {
-    order = _order; good = _good;
-  }
-
-  GenDescriptor() { }
-};
 
 // Optimize a single tree: try all possible ways of splitting the order into
 // order1*order2 (and also the solution of not splitting at all). For every
