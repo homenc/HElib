@@ -18,18 +18,41 @@
 #include "permutations.h"
 #include "EncryptedArray.h"
 
-void PermNetwork::BuildNetwork(const Permut& pi, const GeneratorTrees& trees)
+/*
+// Copmute one or more layers corresponding to one network of a leaf
+void PermNetwork::setLayers4Leaf(long lyrIdx, long gIdx, bool good,
+				 const Vec<long>& benesLvls, const ColPerm& p)
+{
+  if (benesLvls.length()==1) { // A "trivial" network
+    PermNetLayer& l1 = layers[lyrIdx];
+    l1.genIdx = gIdx;
+    l1.isID = !p.getShiftAmounts(shifts);
+    if (!l1.isID) {
+      std::cerr << "layer "<<frntLyr<<": "<<shifts<<endl;
+      if (good) // For good leaves, shift by -x is the same as size-x
+	for (long k=0; k<shifts.length(); k++)
+	  if (shifts[k]<0) shifts[k] += leafData.size;
+      // li.shifts[i] := shifts[map2cube[i]]
+      ApplyPermToFunc(l1.shifts, shifts, trees.mapToCube());
+      std::cerr << "       : "<<l1.shifts<<endl;
+    }
+    else std::cerr << "layer "<<frntLyr<<"= identity\n";
+  }
+}
+*/
+
+void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
 {
   Vec<long> dims;
   trees.getCubeDims(dims);
 
   std::cerr << "pi =      "<<pi<<endl;
-  std::cerr << "map2cube ="<<trees.Map2Cube()<<endl;
-  std::cerr << "map2array="<<trees.Map2Array()<<endl;
+  std::cerr << "map2cube ="<<trees.mapToCube()<<endl;
+  std::cerr << "map2array="<<trees.mapToArray()<<endl;
 
   // Compute the permutation on the cube, rho = map2cube o pi o map2array
   Permut rho;
-  ApplyPermsToFunc(rho, trees.Map2Cube(), pi, trees.Map2Array());
+  ApplyPermsToFunc(rho, trees.mapToCube(), pi, trees.mapToArray());
   std::cerr << "rho =     "<<rho<<endl;
 
   // Break rho along the different dimensions
@@ -43,85 +66,39 @@ void PermNetwork::BuildNetwork(const Permut& pi, const GeneratorTrees& trees)
     std::cerr << " prems["<<i<<"]="<<tmp<<endl;
   }
 
-  // Compute the total number of levels in the target permutation network
-  long nLvls=0;
-  for (long g=0; g<trees.length(); g++) {
-    const OneGeneratorTree &T = trees[g];
-    for (long i=0, leaf=T.FirstLeaf(); leaf>=0; i++, leaf=T.NextLeaf(leaf)) {
-      long lvls=1; // how many levels to add for this leaf
-
-      const SubDimension& leafData = T[leaf].getData();
-      if (leafData.benes != NULL) // a benes leaf
-	lvls = 3; /* FIXME: leafData.benes->getNLvls(); */
-
-      if (g<trees.length()-1 || T.NextLeaf(leaf)>=0) 
-	lvls *= 2; // not last leaf in last tree, so not middle level
-      nLvls += lvls;
-    }
-  }
-  layers.SetLength(nLvls); // allocate space
+  layers.SetLength(trees.numLayers()); // allocate space
 
   // Go over the different permutations and build the corresponding levels
-  Vec<long> shifts;
-  long dimIdx=0, lyrIdx=0;
-  for (long g=0; g<trees.length(); g++) { // go over all the generators/trees
+  long dimIdx =0;
+  long frntLyr=0, backLyr=layers.length();
+  for (long g=0; g<trees.numTrees(); g++) { // go over all the generators/trees
     const OneGeneratorTree &T = trees[g];
     // In each tree, go over all the leaves
-    for (long leaf=T.FirstLeaf(); leaf>=0; leaf=T.NextLeaf(leaf)) {
+    for (long leaf=T.firstLeaf(); leaf>=0; leaf=T.nextLeaf(leaf)) {
       const SubDimension& leafData = T[leaf].getData();
 
-      if (leafData.benes != NULL) { // A Benes leaf
-	// FIXME: do something here..
-	lyrIdx += 3; /* FIXME: leafData.benes->getNLvls(); */
-	continue;
+      // This leaf determines layers frntLyer...frntLey+frst.length()-1, and
+      // if it isn't the middle then also backLyr-scnd.length()...backLyr-1
+
+      // handle the first Benes network
+      //   setLayers4Leaf(layers, frntLyr, leafData.frstBenes, perms[dimIdx]);
+      frntLyr += leafData.frstBenes.length(); // how many layers were used
+      dimIdx++;
+
+      if (leafData.scndBenes.length()>0) {
+	long dimIdx2 = perms.size() -dimIdx;
+	backLyr -= leafData.scndBenes.length();
+	// setLayers4Leaf(layers, backLyr, leafData.scndBenes, perms[dimIdx2]);
       }
-
-      // This leaf corresponds to <= permutations idx, n-idx
-      const ColPerm& p1 = perms[dimIdx];
-      const ColPerm& p2 = perms[perms.size()-dimIdx-1];
-
-      // A naive permutation leaf, corresponding to 1 or 2 levels
-      PermNetLayer& l1 = layers[lyrIdx];
-      l1.genIdx = g;
-      l1.isID = !p1.getShiftAmounts(shifts);
-      if (!l1.isID) {
-	std::cerr << "layer "<<lyrIdx<<": "<<shifts<<endl;
-	if (leafData.good) // For good leaves, shift by -x is the same as size-x
-	  for (long k=0; k<shifts.length(); k++)
-	    if (shifts[k]<0) shifts[k] += leafData.size;
-	// li.shifts[i] := shifts[map2cube[i]]
-	ApplyPermToFunc(l1.shifts, shifts, trees.Map2Cube());
-	std::cerr << "       : "<<l1.shifts<<endl;
-      }
-      else std::cerr << "layer "<<lyrIdx<<"= identity\n";
-
-      if (lyrIdx == layers.length()-lyrIdx-1) break;// middle layer (last leaf)
-      lyrIdx = layers.length()-lyrIdx-1; // the other layers for this leaf
-
-      PermNetLayer& l2 = layers[lyrIdx];
-      l2.genIdx = g;
-      l2.isID = !p2.getShiftAmounts(shifts);
-      if (!l2.isID) {
-	std::cerr << "layer "<<lyrIdx<<": "<<shifts<<endl;
-	if (leafData.good) // For good leaves, shift by -x is the same as size-x
-	  for (long k=0; k<shifts.length(); k++)
-	    if (shifts[k]<0) shifts[k] += leafData.size;
-	// li.shifts[i] := shifts[map2cube[i]]
-	ApplyPermToFunc(l2.shifts, shifts, trees.Map2Cube());
-	std::cerr << "       : "<<l2.shifts<<endl;
-      }
-      else std::cerr << "layer "<<lyrIdx<<"= identity\n";
-
-      lyrIdx = layers.length()-lyrIdx;
     }
   }
 }
 
-void PermNetwork::ApplyToArray(HyperCube<long>& v)
+void PermNetwork::applyToArray(HyperCube<long>& v)
 {
 }
 
-void PermNetwork::ApplyToPtxt(ZZX& p, const EncryptedArray& ea)
+void PermNetwork::applyToPtxt(ZZX& p, const EncryptedArray& ea)
 {
 }
 
@@ -149,7 +126,7 @@ makeMask(vector<long>& mask, Vec<long>& haystack, long needle)
   return std::make_pair(fstNZidx,found);
 }
 
-void PermNetwork::ApplyToCtxt(Ctxt& c)
+void PermNetwork::applyToCtxt(Ctxt& c)
 {
   const PAlgebra& al = c.getContext().zMStar;
   EncryptedArray ea(c.getContext()); // use G(X)=X for this ea object

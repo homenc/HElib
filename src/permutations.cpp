@@ -17,6 +17,8 @@
 #include "NumbTh.h"
 #include "permutations.h"
 
+const Vec<long> SubDimension::dummyBenes;
+
 //template class FullBinaryTree<SubDimension>;// instantiate the template class
 
 // Apply a permutation to a function, out[i]=in[p1[i]]
@@ -370,15 +372,16 @@ void computeEvalues(const OneGeneratorTree &T, long idx, long genOrd)
   computeEvalues(T, right, genOrd);
 }
 
+/*
 GeneratorTrees::GeneratorTrees(const Vec<SubDimension>& dims)
 {
   if (dims.length()<=0) return;
-  trees.FixLength(dims.length());
+  trees.SetLength(dims.length());
   for (long i=0; i<trees.length(); i++) {
-    trees[i].PutDataInRoot(dims[i]);
+    trees[i].putDataInRoot(dims[i]);
     trees[i][0].getData().e = 1; // make sure that e is set correctly
   }
-}
+  }*/
 
 // Get the cube dimensions corresponding to a vector of trees,
 // the ordered vector with one dimension per leaf in any of the trees.
@@ -394,36 +397,10 @@ void GeneratorTrees::getCubeDims(Vec<long>& dims) const
   long idx = 0;
   for (long i=0; i<trees.length(); i++) {
     const OneGeneratorTree& T = trees[i];
-    for (long leaf=T.FirstLeaf(); leaf>=0; leaf=T.NextLeaf(leaf))
+    for (long leaf=T.firstLeaf(); leaf>=0; leaf=T.nextLeaf(leaf))
       dims[idx++] = T[leaf].getData().size;
   }
 }
-
-// Compute the trees corresponding to the "optimal" way of breaking
-// a permutation into dimensions, subject to some constraints
-void GeneratorTrees::BuildOptimalTrees(long widthBound)
-{
-  assert(trees.length() >= 1);
-
-  // reset the trees, starting from only the roots
-  for (long i=0; i<trees.length(); i++) {
-    assert(trees[i].getNleaves()>0); // tree is not empty
-    trees[i].CollapseToRoot();
-  }
-
-  // Now do the dynamic programming magic to get the optimal trees
-  // FIXME: implement this
-
-  // Now that we have the trees, copmute the e values for the nodes in them
-  for (long i=0; i<trees.length(); i++) {
-    trees[i][0].getData().e = 1;
-    computeEvalues(trees[i], 0, trees[i][0].getData().size);
-  }
-
-  // Compute the mapping from array to cube and back
-  ComputeCubeMapping();
-}
-
 
 // Adds one to the little-endian representation of an integer in base digits,
 // returns true if there was an overflow
@@ -443,13 +420,13 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
 {
   Vec<long> dims(INIT_SIZE, T.getNleaves());
   Vec<long> coefs(INIT_SIZE,T.getNleaves());
-  for (long i=T.getNleaves()-1, leaf=T.LastLeaf(); i>=0;
-                                i--, leaf=T.PrevLeaf(leaf)) {
+  for (long i=T.getNleaves()-1, leaf=T.lastLeaf(); i>=0;
+                                i--, leaf=T.prevLeaf(leaf)) {
     dims[i] = T[leaf].getData().size;
     coefs[i] = T[leaf].getData().e;
   }
-  std::cerr << "\ndims ="<<dims<<endl;
-  std::cerr << "coefs="<<coefs<<endl;
+  //  std::cerr << "\ndims ="<<dims<<endl;
+  //  std::cerr << "coefs="<<coefs<<endl;
 
   // A representation of an integer with digits from dims
   Vec<long> rep(INIT_SIZE, T.getNleaves());
@@ -508,4 +485,22 @@ void GeneratorTrees::ComputeCubeMapping()
   // Compute the inverse permutation
   map2array.SetLength(map2cube.length());
   for (long i=0; i<map2cube.length(); i++) map2array[ map2cube[i] ] = i;
+}
+
+ostream& operator<< (ostream &s, const SubDimension& sd)
+{
+  s << (sd.good? "(g ": "(b ") << sd.size << " " << sd.e << ")";
+  if (sd.frstBenes.length()>0 || sd.scndBenes.length()>0)
+    s  << sd.frstBenes << sd.scndBenes;
+  return s;
+}
+
+ostream& operator<< (ostream &s, const GeneratorTrees &trees)
+{
+  s << "[" << trees.depth << "\n";
+  for (long g=0; g<trees.numTrees(); g++) {
+    const OneGeneratorTree &T = trees[g];
+    s << " ["; T.printout(s); s<<"]\n";
+  }
+  return s << "]\n";
 }

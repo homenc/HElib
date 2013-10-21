@@ -756,21 +756,25 @@ class SplitNode {
 public:
   long order; // order associated with this node
   long mid;   // the "middle" token, 0 or 1
+  bool good;  // the "good" flag
   LongNodePtr solution1, solution2; 
     // The benes solution(s).
     // For non-middle nodes there may be two different solutions,
     // depending on how the budget is split
   SplitNodePtr left, right;  // the children (for internal nodes)
 
-  SplitNode(long _order, long _mid, LongNodePtr _solution1, LongNodePtr _solution2) {
+  SplitNode(long _order, long _mid, bool _good, 
+	    LongNodePtr _solution1, LongNodePtr _solution2) {
   // constructor for leaves
-    order = _order; mid = _mid; solution1 = _solution1; solution2 = _solution2;
+    order = _order; mid = _mid; good = _good;
+    solution1 = _solution1; solution2 = _solution2;
     left = right = SplitNodePtr();
   }
 
-  SplitNode(long _order, long _mid, SplitNodePtr _left, SplitNodePtr _right) {
+  SplitNode(long _order, long _mid, bool _good, SplitNodePtr _left, SplitNodePtr _right) {
   // constructor for internal nodes
-    order = _order; mid = _mid; solution1 = solution2 = LongNodePtr();
+    order = _order; mid = _mid; good = _good;
+    solution1 = solution2 = LongNodePtr();
     left = _left; right = _right;
   }
 
@@ -784,7 +788,9 @@ void print(ostream& s, SplitNodePtr p, bool first)
   if (p->isLeaf()) {
     if (!first) s << " ";
     s << "[";
-    if (p->mid == 1) s << "* ";
+    if (p->mid == 1) s << "*";
+    if (p->good) s << "g ";
+    else         s << "b ";
     s << p->order << " " << p->solution1 << " " << p->solution2 << "]";
   }
   else {
@@ -1003,7 +1009,7 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
     }
 
     // The initial solution coresponds to this being a leaf node
-    solution = SplitNodePtr(new SplitNode(order, mid, 
+    solution = SplitNodePtr(new SplitNode(order, mid, good,
                                               benesSolution1, benesSolution2));
 
 
@@ -1042,8 +1048,8 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
               s1.cost + s2.cost < cost) {
             cost = s1.cost + s2.cost;
 	    // Record the new best solution
-            solution = SplitNodePtr(new SplitNode(order, mid, s1.solution,
-                                                      s2.solution));
+            solution = SplitNodePtr(new SplitNode(order, mid, good,
+						  s1.solution, s2.solution));
           }
         }
       }
@@ -1258,7 +1264,7 @@ int main(int argc, char *argv[])
 #if 1
   argmap_t argmap;
   argmap["n"] = "108";
-  argmap["L"] = "7";
+  argmap["L"] = "5";
   argmap["good"] = "0";
   if (!parseArgs(argc, argv, argmap)) {
     cerr << "bad args\n";
@@ -1294,9 +1300,9 @@ int main(int argc, char *argv[])
 
   Vec<GenDescriptor> vec;
 
-  vec.SetLength(2);
+  vec.SetLength(1);
   vec[0] = GenDescriptor(n, good);
-  vec[1] = GenDescriptor(2, !good);
+  //  vec[1] = GenDescriptor(2, !good);
   optimalUpper(vec, L, cost1, solution1);
 
   cout << cost1 << "\n";
