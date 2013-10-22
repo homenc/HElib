@@ -21,8 +21,8 @@ const Vec<long> SubDimension::dummyBenes;
 
 //template class FullBinaryTree<SubDimension>;// instantiate the template class
 
-// Apply a permutation to a function, out[i]=in[p1[i]]
-void ApplyPermToFunc(Vec<long>& out, const Vec<long>& in, const Permut& p1)
+// Apply a permutation to a vector, out[i]=in[p1[i]]
+void applyPermToVec(Vec<long>& out, const Vec<long>& in, const Permut& p1)
 {
   assert(&out != &in); // NOT an in-place procedure
   out.SetLength(p1.length());
@@ -30,8 +30,8 @@ void ApplyPermToFunc(Vec<long>& out, const Vec<long>& in, const Permut& p1)
     out[i] = in.at(p1[i]);
 }
 
-// Apply two permutations to a function out[i]=in[p2[p1[i]]]
-void ApplyPermsToFunc(Vec<long>& out, const Vec<long>& in,
+// Apply two permutations to a vector out[i]=in[p2[p1[i]]]
+void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
 		      const Permut& p2, const Permut& p1)
 {
   assert(&out != &in); // NOT an in-place procedure
@@ -41,7 +41,7 @@ void ApplyPermsToFunc(Vec<long>& out, const Vec<long>& in,
     out[i] = in.at(p2.at(p1[i]));
 }
 
-void RandomPerm(Permut& perm, long n)
+void randomPerm(Permut& perm, long n)
 {
   perm.SetLength(n);
   for (long j = 0; j < n; j++)
@@ -168,8 +168,92 @@ long ColPerm::getShiftAmounts(Vec<long>& out) const
   return nonZero;
 }
 
+// Compute the shift amounts corresponding to collapsing 'numLvls' levels
+// of the Benes network in 'net' starting from 'startLvl'. Resulting shift
+// amounts are returned in 'out', and the return value indicates if the
+// resulting permutation from collapsing these levels is the identity.
+static bool
+collapseBenesLevels(Permut& out, const GeneralBenesNetwork &net,
+		    long startLvl, long numLvls)
+{
+  bool noChange = true;
+  // Compute partial permutation computed by the next few Benes levels
+  for (long i=0; i<net.getSize(); i++) { // go over all slots
+    long i2 = i;
+    // compute where this slot is mapped to
+    for (long l=startLvl; l<startLvl+numLvls; l++) {
+      // how much to shift slot i2 between this level and next
+      i2 +=  net.shamt(l) * net.getLevel(l)[i2];
+    }
+    out[i] = i2 - i; // shift amount for all levels together
+    noChange = noChange && (i == i2);
+  }
+  return noChange;
+}
+
+// Get multiple layers of a Benes permutation network. Returns in out[i][j]
+// the shift amount to move item j in the i'th layer. Also isID[i]=true if
+// the i'th layer is the identity (i.e., contains only 0 shift amounts).
+void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
+				   const Vec<long>& benesLvls) const
+{
+  // Go over the columns one by one. For each column extract the columns
+  // permutation, prepare a Benes network for it, and then for every layer
+  // copmute the shift amounts for this columns.
+
+  long n = getDim(dim);     // the permutations are over [0,n-1]
+  long s = getProd(dim+1);  // step between elements of a permutation
+  long m = getSize()/(n*s); // how many chunks of interleaved permutations
+
+  // Allocate space
+  out.SetLength(benesLvls.length());
+  isID.SetLength(benesLvls.length());
+  for (long k=0; k<benesLvls.length(); k++) {
+    out[k].SetLength(getSize());
+    isID[k] = true;
+  }
+
+  long offset = 0;
+  Permut col(INIT_SIZE, n); // scratch working space
+  while (m--) { // go over the chunks one at a time
+    for (long j=0; j<s; j++) { // go over the columns one at a time
+
+      for (long i=0; i<n; i++) // extract column
+	col[i]=(*this)[i*s+j+offset];
+      // FIXME: The above is the same as extractColumn(col,j+(initial_m-m)*s);
+
+      GeneralBenesNetwork net(col); // build a Benes network for this column
+
+      // Sanity checks: width of network == n,
+      //                and sum of benesLvls entries == # of levels
+      assert(net.getSize()==n);
+      {long sum=0;
+       for (long k=0; k<benesLvls.length(); k++) sum+=benesLvls[k];
+       assert(net.getNumLevels()==sum);
+      }
+
+      // Compute the layers of the collapased network for this column
+      for (long lvl=0,k=0; k<benesLvls.length(); k++) {
+
+	// Returns in col the shift amounts for this layer in the network,
+	// restricted to this column. Also returns true if the returned
+	// permutation is the idendity, false otherwise.
+	bool id = collapseBenesLevels(col, net, lvl, benesLvls[k]);
+	isID[k] = isID[k] && id;
+
+	// Store shift amounts for this column in the current layer
+	for (long i=0; i<n; i++)
+	  out[k][i*s+j+offset]=col[i];
+
+	lvl += benesLvls[k]; // next set of collapsed levels
+      }  // next collapsed layer
+    }  // next column
+    offset += n*s; // offset of next chunk
+  } // next chunk
+}
+
 // Extrtact the permutation over the i'th column
-void ColPerm::extractSlice(Permut& out, long i) const
+void ColPerm::extractColumn(Permut& out, long i) const
 {
   long n = getDim(dim);    // the permutations are over [0,n-1]
   assert (i>=0 && i*n<getSize());
@@ -184,6 +268,25 @@ void ColPerm::extractSlice(Permut& out, long i) const
   for (long j=0; j<n; j++)
     out[j] = (*this)[offset + j*s];
 }
+
+/*
+// Update the permutation over the i'th column from the given input
+void ColPerm::upateColumn(const Permut& in, long i)
+{
+  long n = getDim(dim);    // the permutations are over [0,n-1]
+  assert(in.length() == n);
+  assert (i>=0 && i*n<getSize());
+
+  long s = getProd(dim+1); // step between elements of a permutation
+
+  // every chunk consists of s permutations, which chunk contains the i'th
+  long chunk = i / s;
+  long offset = (i % s) + (chunk*n*s); // offset from beginning of pi
+
+  for (long j=0; j<n; j++)
+    (*this)[offset + j*s] = in[j];
+}
+*/
 
 // When dim=m (the last dimension), ColPerm and SlicePerm are equivalent
 ColPerm& ColPerm::operator=(const SlicePerm &other)
@@ -330,58 +433,8 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
 }
 
 /********************************************************************/
+/**********     MAPPING BETWEEN CUBE AND LINEAR ARRAY      **********/
 /********************************************************************/
-/********************************************************************/
-
-// A recursive procedure for computing the e exponent values
-// FIXME: This code should be part of the logic that builds the tree
-void computeEvalues(const OneGeneratorTree &T, long idx, long genOrd)
-{
-  // if either child is missing then we are at a leaf (this is a full tree)
-  long left = T[idx].getLeftChild();
-  long right = T[idx].getRightChild();
-  if (left < 0 || right < 0) return;
-
-  SubDimension& lData = (SubDimension&) T[left].getData();
-  SubDimension& rData = (SubDimension&) T[right].getData();
-
-  // The entire tree size is sz1 * sz2;
-  long sz1 = lData.size;  // size of left subtree
-  long sz2 = rData.size; // size of right subtree
-
-  long ee = T[idx].getData().e;
-  // If right tree is bad, copy e from parent to right and scale left
-  if (!rData.good) {
-    rData.e = ee;
-    lData.e = ee * sz2;
-  }
-  // If right tree is good and left is bad, copy parent to left and scale right
-  else if (!lData.good) {
-    lData.e = ee;
-    rData.e = ee * sz1;
-  }
-  // If both are good, scale both using CRT coefficients (assuming GCD==1)
-  else {
-    long f1 = CRTcoeff(sz1, sz2); // f1 = 0 mod sz1, 1 mod sz2
-    long f2 = sz1*sz2 +1 - f1;    // f2 = 1 mod sz1, 0 mod sz2
-    lData.e = MulMod(ee, f2, genOrd);
-    rData.e = MulMod(ee, f1, genOrd);
-  }
-  // Recurse on the two subtrees
-  computeEvalues(T, left, genOrd);
-  computeEvalues(T, right, genOrd);
-}
-
-/*
-GeneratorTrees::GeneratorTrees(const Vec<SubDimension>& dims)
-{
-  if (dims.length()<=0) return;
-  trees.SetLength(dims.length());
-  for (long i=0; i<trees.length(); i++) {
-    trees[i].putDataInRoot(dims[i]);
-    trees[i][0].getData().e = 1; // make sure that e is set correctly
-  }
-  }*/
 
 // Get the cube dimensions corresponding to a vector of trees,
 // the ordered vector with one dimension per leaf in any of the trees.

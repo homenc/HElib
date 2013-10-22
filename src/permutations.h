@@ -31,15 +31,15 @@ using namespace NTL;
 //! A simple permutation is just a vector with p[i]=\pi_i
 typedef Vec<long> Permut;
 
-//! Apply a permutation to a function, out[i]=in[p1[i]] (NOT in-place)
-void ApplyPermToFunc(Vec<long>& out, const Vec<long>& in, const Permut& p1);
+//! Apply a permutation to a vector, out[i]=in[p1[i]] (NOT in-place)
+void applyPermToVec(Vec<long>& out, const Vec<long>& in, const Permut& p1);
 
-//! Apply two permutations to a function out[i]=in[p2[p1[i]]] (NOT in-place)
-void ApplyPermsToFunc(Vec<long>& out, const Vec<long>& in,
+//! Apply two permutations to a vector out[i]=in[p2[p1[i]]] (NOT in-place)
+void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
 		      const Permut& p2, const Permut& p1);
 
 //! @brief A random size-n permutation
-void RandomPerm(Permut& perm, long n);
+void randomPerm(Permut& perm, long n);
 
 class SlicePerm; // a "row permutation"
 class ColPerm;   // a "column permutation"
@@ -152,12 +152,18 @@ public:
   long getPermDim() const {return dim;}
 
   void makeExplicit(Permut& out) const;    // Write the permutation explicitly
-  void extractSlice(Permut& out, long i) const; // The perm over the ith subcube
+  void extractColumn(Permut& out, long i) const;// Get perm over the ith column
+  void updateColumn(const Permut& out, long i); // Update perm over ith column
 
   //! For each position in the data vector, compute how many slots it should be
   //! shifted inside its small permutation. Returns zero if all the shift amount
   //! are zero, nonzero values otherwise.
   long getShiftAmounts(Permut& out) const;
+
+  //! Get multiple layers of a Benes permutation network. Returns in out[i][j]
+  //! the shift amount to move item j in the i'th layer. Also isID[i]=true if
+  //! the i'th layer is the identity (i.e., contains only 0 shift amounts).
+  void getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& idID, const Vec<long>& benesLvls) const;
 
   //! When dim=m (the last dimension), ColPerm and SlicePerm are equivalent
   ColPerm& operator=(const SlicePerm &other);
@@ -178,6 +184,68 @@ public:
  **/
 void breakPermByDim(vector<ColPerm>& out, 
 		    const Permut &pi, const CubeSignature& sig);
+
+/**
+ * @class GeneralBenesNetwork
+ * @brief Implementation of generalized Benes Permutation Network
+ **/
+class GeneralBenesNetwork {
+private:
+  long n; // size of perm, n > 1, not necessarily power of 2
+  long k; // recursion depth, k = least integer k s/t 2^k >= n
+
+  Vec< Vec<short> > level;
+    // there are 2*k - 1 levels, each wity n nodes.
+    // level[i][j] is 0, 1, or -1, 
+    //   which designates an edge from node j at level i 
+    //   to node j + level[i][j]*shamt(i) at level i+1
+
+  GeneralBenesNetwork(); // default constructor disabled
+
+public:
+  //! computes recursion depth k for generalized Benes network of size n.
+  //! the actual number of levels in the network is 2*k-1
+  static long depth(long n) {
+    long k = 1;
+    while ((1L << k) < n) k++;
+    return k;
+  }
+
+  //! maps a level number i = 0..2*k-2 to a recursion depth d = 0..k-1
+  //! using the formula d = (k-1)-|(k-1)-i|
+  static long levelToDepthMap(long n, long k, long i) {
+    assert(i >= 0 && i < 2*k-1);
+    return (k-1) - labs((k-1)-i);
+  }
+
+  //! shift amount for level number i=0..2*k-2 using the formula
+  //! ceil( floor(n/2^d) / 2), where d = levelToDepthMap(i)
+  static long shamt(long n, long k, long i) {
+    long d = levelToDepthMap(n, k, i);
+    return ((n >> d) + 1) >> 1;
+  }
+
+  long getDepth() const { return k; }
+  long getSize() const { return n; }
+  long getNumLevels() const { return 2*k-1; }
+
+  const Vec<short>& getLevel(long i) const 
+  { 
+    assert(i >= 0 && i < 2*k-1);
+    return level[i];
+  }
+
+  long levelToDepthMap(long i) const { return levelToDepthMap(n, k, i); }
+  long shamt(long i) const { return shamt(n, k, i); }
+
+  // constructor
+  GeneralBenesNetwork(const Permut& perm);
+
+  // test correctness
+
+  bool testNetwork(const Permut& perm) const;
+};
+
 
 /****
  * A simple implementation of full binary trees (each non-leaf has 2 children)
@@ -251,7 +319,8 @@ public:
   TreeNode<T>& at(long i) { return nodes.at(i); }
   const TreeNode<T>& at(long i) const { return nodes.at(i); }
 
-  T& DataOfNode(long i) const { return nodes.at(i).data; }
+  T& DataOfNode(long i) { return nodes.at(i).data; }
+  const T& DataOfNode(long i) const { return nodes.at(i).data; }
 
   long getAuxKey() const { return aux; }
   void setAuxKey(long _aux) { aux=_aux; }
@@ -394,10 +463,6 @@ class SubDimension {
 typedef FullBinaryTree<SubDimension> OneGeneratorTree;// tree for one generator
 
 
-
-//! A recursive procedure for computing the e exponent values
-void computeEvalues(const OneGeneratorTree &T, long idx, long genOrd);
-
 //! A vector of generator trees, one per generator in Zm*/(p)
 class GeneratorTrees  {
   long depth; // How many layers in this permutation network
@@ -425,10 +490,10 @@ class GeneratorTrees  {
   OneGeneratorTree& getGenTree(long i) { return trees.at(i); }
   const OneGeneratorTree& getGenTree(long i) const { return trees.at(i); }
 
-  const Vec<long>& mapToCube() const { return map2cube; }
-  const Vec<long>& mapToArray() const { return map2array; }
-  Vec<long>& mapToCube() { return map2cube; }
-  Vec<long>& mapToArray() { return map2array; }
+  const Permut& mapToCube() const { return map2cube; }
+  const Permut& mapToArray() const { return map2array; }
+  Permut& mapToCube() { return map2cube; }
+  Permut& mapToArray() { return map2array; }
 
   long mapToCube(long i) const { return map2cube[i]; }
   long mapToArray(long i) const { return map2array[i]; }
@@ -484,6 +549,10 @@ class PermNetLayer {
 
 class PermNetwork {
   Vec<PermNetLayer> layers;
+
+  //! Copmute one or more layers corresponding to one network of a leaf
+  void setLayers4Leaf(long lyrIdx, const ColPerm& p, const Vec<long>& benesLvls,
+		      long gIdx, bool good, long ord, const Permut& map2cube);
 
 public:
   PermNetwork() {}; // empty network

@@ -331,7 +331,10 @@ bool GeneralBenesNetwork::testNetwork(const Permut& perm) const
   return true;
 }
 
-// ******* optimization code **********
+#if 0
+/********************************************************************
+ ******************       OPTIMIZATION CODE       *******************
+ ********************************************************************/
 
 // helper class to make defining hash functions easier
 
@@ -1101,13 +1104,65 @@ void optimalUpper(const Vec<GenDescriptor>& vec, long budget,
   cost = t.cost;
   solution = t.solution;
 }
+#endif
 
 /********************************************************************
  ******************        TESTING PROGRAM        *******************
  ********************************************************************/
+#if 0
+int main(int argc, char *argv[])
+{
+  argmap_t argmap;
+  argmap["n"] = "108";
+  argmap["L"] = "5";
+  argmap["good"] = "0";
+  if (!parseArgs(argc, argv, argmap)) {
+    cerr << "bad args\n";
+    exit(0);
+  }
+  long n = atoi(argmap["n"]);
+  long L = atoi(argmap["L"]);
+  bool good = !!atoi(argmap["good"]);
 
-// divc(), rotate() defined in NumbTh.h
+  for (long iter=0; iter < 20; iter++) {
+    Permut perm;
+    RandomPerm(perm,n);      
+    // cout << perm << "\n";
+    GeneralBenesNetwork net(perm);   
+    if (net.testNetwork(perm))  cout << ".";
+    else                        cout << "X";
+  }
+  cout << "\n";
 
+  long cost;
+  LongNodePtr solution;
+
+  optimalBenes(n, L, good, cost, solution);
+
+  cout << cost << "\n";
+  cout << solution << "\n";
+  cout << length(solution) << "\n";
+
+  cout << "*************\n";
+
+  long cost1;
+  GenNodePtr solution1;
+
+  Vec<GenDescriptor> vec;
+
+  vec.SetLength(1);
+  vec[0] = GenDescriptor(n, good);
+  //  vec[1] = GenDescriptor(2, !good);
+  optimalUpper(vec, L, cost1, solution1);
+
+  cout << cost1 << "\n";
+  cout << solution1 << "\n";
+}
+#endif
+#if 0
+/********************************************************************
+ ******************        OLD UNUSED CODE        *******************
+ ********************************************************************/
 void rotateSlots(const EncryptedArray& ea, Vec< copied_ptr<Ctxt> >& v, long amt)
 // copied_ptr is "smart pointer" with shallow-copy semantics, see cloned_ptr.h
 {
@@ -1160,198 +1215,6 @@ void rotateSlots(const EncryptedArray& ea, Vec< copied_ptr<Ctxt> >& v, long amt)
   }
 }
 
-void usage(char *prog) 
-{
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'n=2 L=10 good=0\n\n";
-  cerr << "  n is [default=108]\n";
-  cerr << "  L is [default=7]\n";
-  cerr << "  good is the flag sayign if this is good [default=0]\n";
-  exit(0);
-}
-
-int main(int argc, char *argv[])
-{
-
-#if 1
-  argmap_t argmap;
-  argmap["n"] = "108";
-  argmap["L"] = "5";
-  argmap["good"] = "0";
-  if (!parseArgs(argc, argv, argmap)) {
-    cerr << "bad args\n";
-    exit(0);
-  }
-  long n = atoi(argmap["n"]);
-  long L = atoi(argmap["L"]);
-  bool good = !!atoi(argmap["good"]);
-
-  for (long iter=0; iter < 20; iter++) {
-    Permut perm;
-    RandomPerm(perm,n);      
-    // cout << perm << "\n";
-    GeneralBenesNetwork net(perm);   
-    if (net.testNetwork(perm))  cout << ".";
-    else                        cout << "X";
-  }
-  cout << "\n";
-
-  long cost;
-  LongNodePtr solution;
-
-  optimalBenes(n, L, good, cost, solution);
-
-  cout << cost << "\n";
-  cout << solution << "\n";
-  cout << length(solution) << "\n";
-
-  cout << "*************\n";
-
-  long cost1;
-  GenNodePtr solution1;
-
-  Vec<GenDescriptor> vec;
-
-  vec.SetLength(1);
-  vec[0] = GenDescriptor(n, good);
-  //  vec[1] = GenDescriptor(2, !good);
-  optimalUpper(vec, L, cost1, solution1);
-
-  cout << cost1 << "\n";
-  cout << solution1 << "\n";
-  
-  
-
-  
-#endif
-
-#if 0
-  argmap_t argmap;
-  argmap["R"] = "1";
-
-  argmap["p"] = "2";  // plaintext space characteristic
-  argmap["r"] = "1";  // if r>1 plaintext space is Z_{p^r}
-  argmap["d"] = "1";  // if d>1 plaintext space is GF(p^d)
-  argmap["c"] = "2";  // number of columns in key-switching matrices
-  argmap["k"] = "80"; // security parameter
-  argmap["L"] = "10"; // number of primes in modulus-chain
-  argmap["s"] = "0";  // if s>0, need to have at least s slots
-  argmap["m"] = "0";  // if m>0, use m'th cyclotomic polynomial
-
-  // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
-
-  long R = atoi(argmap["R"]);
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long d = atoi(argmap["d"]);
-  long c = atoi(argmap["c"]);
-  long k = atoi(argmap["k"]);
-  long s = atoi(argmap["s"]);
-  long L = atoi(argmap["L"]);
-  long chosen_m = atoi(argmap["m"]);
-
-  long w = 64; // Hamming weight of secret key
-
-  long m = FindM(k, L, c, p, d, s, chosen_m, true);
-
-  long sz = 1L << R; // size of the permutation
-
-  // Build the FHEContext for this instance of the cryptosystem
-  FHEcontext context(m, p, r);
-  buildModChain(context, L, c);
-  context.zMStar.printout();
-
-  // Generate a key-pair
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-
-  // Compute tables for the plaintext space
-  ZZX G;
-  if (d == 0)
-    G = context.alMod.getFactorsOverZZ()[0];
-  else
-    G = makeIrredPoly(p, d); 
-
-  cerr << "G = " << G << "\n";
-  cerr << "generating key-switching matrices... ";
-  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-  cerr << "done\n";
-
-  cerr << "computing masks and tables for rotation...";
-  EncryptedArray ea(context, G);
-  cerr << "done\n";
-
-  long nslots = ea.size(); // how many plaintext slots in each ciphertext
-  long nblocks = divc(sz, nslots); // nblocks = ceiling(sz/nslots)
-    // nblocks is # of ciphertexts needed to hold a permutation of zise sz
-  long remslots = nslots*nblocks - sz; // # of leftover slots
-
-  vector<long> mask; // a mask to zero-out the extra slots in the last ctxt
-  mask.resize(nslots);
-  for (long j = 0; j < nslots-remslots; j++) mask[j] = 1;
-  for (long j = nslots-remslots; j < nslots; j++) mask[j] = 0;
-  PlaintextArray pmask(ea);
-  pmask.encode(mask); // encode the mask as a plaintext polynomial
-
-  Vec< copied_ptr<Ctxt> > cvec; // a vector of pointers to ciphertexts
-  cvec.SetLength(nblocks);      // allocate space and initialize to empty
-  for (long i = 0; i < nblocks; i++) cvec[i].set_ptr(new Ctxt(publicKey));
-
-  Vec< copied_ptr<PlaintextArray> > pvec; // vector of pointers to ptxt arrays
-  pvec.SetLength(nblocks);
-  for (long i = 0; i < nblocks; i++) pvec[i].set_ptr(new PlaintextArray(ea));
-
-  for (long i = 0; i < nblocks; i++)
-    pvec[i]->random();
-
-  pvec[nblocks-1]->mul(pmask); // zero out leftover slots in last ptxt array
-  // Shai: why do we care about these slots?
-
-  // Print the plaintext before the permutation
-  for (long i = 0; i < nblocks; i++) {
-    pvec[i]->print(cout);
-    cout << "\n";
-  }
-  cout << "\n";
-
-  // Encrypt the plaintext arrays, then permute them
-  for (long i = 0; i < nblocks; i++)
-    ea.encrypt(*cvec[i], publicKey, *pvec[i]); // encrypt all the blocks
-
-  // Choose a random permutation of size sz
-  Permut perm;
-  RandomPerm(perm, sz);
-  cout << "perm = " << perm << "\n";
-
-  // Setup a Benes network for this permutation
-  BenesNetwork net(R, perm);
-
-  // Apply the Benes network to the encrypted arrays
-  applyNetwork(net, ea, cvec);
-
-  // Decrypt the permuted arrays
-  for (long i = 0; i < nblocks; i++)
-    ea.decrypt(*cvec[i], secretKey, *pvec[i]);
-
-  // Print the permuted plaintext
-  for (long i = 0; i < nblocks; i++) {
-    pvec[i]->print(cout);
-    cout << "\n";
-  }
-  cout << "\n";
-
-#endif
-}
-
-// benes_x R=4 p=47 m=46
-
-#if 0
-/********************************************************************
- ******************        OLD UNUSED CODE        *******************
- ********************************************************************/
 /**
  * @class BenesNetwork
  * @brief Implementation of Benes Permutation Network

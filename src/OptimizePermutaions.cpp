@@ -26,38 +26,6 @@
 #include "EncryptedArray.h"
 #include "permutations.h"
 
-
-// aux routines for GeneralBenesNetwork
-
-static 
-long GB_depth(long n)
-// computes recursion depth k for generalized Benes network of size n.
-// the actual number of levels in the network is 2*k-1
-{
-  long k = 1;
-  while ((1L << k) < n) k++;
-  return k;
-}
-
-static inline
-long GB_levelToDepthMap(long n, long k, long i) 
-// maps a level number i = 0..2*k-2 to a recursion depth d = 0..k-1
-// using the formula d = (k-1)-|(k-1)-i|
-{
-  assert(i >= 0 && i < 2*k-1);
-  return (k-1) - labs((k-1)-i);
-  }
-
-static inline
-long GB_shamt(long n, long k, long i) 
-// shift amount for level number i=0..2*k-2
-// using the formula ceil( floor(n/2^d) / 2), 
-//   where d = levelToDepthMap(i)
-{
-  long d = GB_levelToDepthMap(n, k, i);
-  return ((n >> d) + 1) >> 1;
-}
-
 template<class T> 
 class ClassHash { // helper class to make defining hash functions easier
 public:
@@ -163,7 +131,9 @@ void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
 
     x.push_front(0L);
     for (long j = 0; j < nlev-i; j++) {
-      long shamt = GB_shamt(n, k, i+j); // The shift amount for this level
+      long shamt = GeneralBenesNetwork::shamt(n, k, i+j);
+           // The shift amount for this level
+
       addOffset(x, shamt, n, aux);
       if (good)
         tab[i][j] = reducedCount(x, n, aux) - 1;
@@ -361,7 +331,7 @@ void optimalBenes(long n, long budget, bool good,
 //      are collapsed: if solution = [s_1 s_2 ... s_k], then k <= budget,
 //      and the first s_1 levels are collapsed, the next s_2 levels are collapsed, etc.
 {
-  long k = GB_depth(n); // k = ceil(log n)
+  long k = GeneralBenesNetwork::depth(n); // k = ceil(log n)
   long nlev = 2*k - 1;  // before collapsing, we have 2k-1 levels
 
   Vec< Vec<long> > costTab;
@@ -384,7 +354,7 @@ void optimalBenes(long n, long budget, bool good,
 
 /********************************************************************/
 /***** Routines for finding the optimal splits among generators *****/
-
+/********************************************************************/
 
 // A binary tree data structure for spliting generators
 class SplitNode;
@@ -798,7 +768,7 @@ optimalUpperAux(const Vec<GenDescriptor>& vec, long i, long budget, long mid,
  *   and so on.  The resulting "collapsed" Benes network will have k
  *   levels.
 *********************************************************************/
-
+// FIXME: this function is obsoleted by GeneratorTrees::buildOptimalTrees
 void optimalUpper(const Vec<GenDescriptor>& vec, long budget,
                   long& cost, GenNodePtr& solution)
 {
@@ -841,6 +811,45 @@ static long recursiveCopy2Tree(OneGeneratorTree& gTree, long nodeIdx,
     + recursiveCopy2Tree(gTree, gTree.rightChildIdx(nodeIdx), rightChld);
 }
 
+// A recursive procedure for computing the e exponent values
+static void computeEvalues(const OneGeneratorTree &T, long idx, long genOrd)
+{
+  // if either child is missing then we are at a leaf (this is a full tree)
+  long left = T[idx].getLeftChild();
+  long right = T[idx].getRightChild();
+  if (left < 0 || right < 0) return;
+
+  SubDimension& lData = (SubDimension&) T[left].getData();
+  SubDimension& rData = (SubDimension&) T[right].getData();
+
+  // The entire tree size is sz1 * sz2;
+  long sz1 = lData.size;  // size of left subtree
+  long sz2 = rData.size; // size of right subtree
+
+  long ee = T[idx].getData().e;
+  // If right tree is bad, copy e from parent to right and scale left
+  if (!rData.good) {
+    rData.e = ee;
+    lData.e = ee * sz2;
+  }
+  // If right tree is good and left is bad, copy parent to left and scale right
+  else if (!lData.good) {
+    lData.e = ee;
+    rData.e = ee * sz1;
+  }
+  // If both are good, scale both using CRT coefficients (assuming GCD==1)
+  else {
+    long f1 = CRTcoeff(sz1, sz2); // f1 = 0 mod sz1, 1 mod sz2
+    long f2 = sz1*sz2 +1 - f1;    // f2 = 1 mod sz1, 0 mod sz2
+    lData.e = MulMod(ee, f2, genOrd);
+    rData.e = MulMod(ee, f1, genOrd);
+  }
+  // Recurse on the two subtrees
+  computeEvalues(T, left, genOrd);
+  computeEvalues(T, right, genOrd);
+}
+
+// Copy data from a SplitNode tree to a OneGeneratorTree
 static long copyToGenTree(OneGeneratorTree& gTree, SplitNodePtr& solution)
 {
   SubDimension rootData(solution->order, solution->good, /*e=*/1);
@@ -874,22 +883,22 @@ void GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
 
   // Copy the solution into the trees
   GenNodePtr midPtr;
-  long genIdx=0, treeIdx=0, midIdx=0;
+  long i=0, treeIdx=0, midIdx=0;
   depth = 0; // Also compute the depth of the permutation network
   for (GenNodePtr genPtr = t.solution;
-       genPtr!=NULL; genPtr = genPtr->next, genIdx++) {
+       genPtr!=NULL; genPtr = genPtr->next, i++) {
     if (genPtr->solution->mid) { // Keep the "middle tree" for last
       midPtr = genPtr;
-      midIdx = genIdx;
+      midIdx = i;
       continue;
     }
     depth += copyToGenTree(trees[treeIdx], genPtr->solution);
-    trees[treeIdx].setAuxKey(genIdx);
+    trees[treeIdx].setAuxKey(gens[i].genIdx);
     treeIdx++;
   }
   assert(midPtr != NULL);
   depth += copyToGenTree(trees[treeIdx], midPtr->solution);
-  trees[treeIdx].setAuxKey(midIdx);
+  trees[treeIdx].setAuxKey(gens[midIdx].genIdx);
 
   // Compute the mapping from array to cube and back
   ComputeCubeMapping();
@@ -908,7 +917,7 @@ void usage(char *prog)
   cerr << "  e.g, 'n=2 L=10 good=0\n\n";
   cerr << "  n is [default=108]\n";
   cerr << "  L is [default=7]\n";
-  cerr << "  good is the flag sayign if this is good [default=0]\n";
+  cerr << "  good is the good-generator flag [default=0]\n";
   exit(0);
 }
 
