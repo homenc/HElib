@@ -13,102 +13,103 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
+#include "NumbTh.h"
 #include "PAlgebra.h"
 #include "permutations.h"
 
-// Type-1 is a 2x3 good tree, type-2 is a 2(good)x3(good)x2(bad)
-void BuildTree(OneGeneratorTree& T, long type)
+void usage(char *prog) 
 {
-  T.CollapseToRoot(); // ensure the tree has nothing except perhaps the root
-
-  long nodeIdx = 0;
-  long size = 6;
-  SubDimension n6(/*size=*/6,  /*good=*/true, /*e=*/1);
-  SubDimension n3(/*size=*/3,  /*good=*/true);
-  SubDimension n2g(/*size=*/2, /*good=*/true);
-  if (type == 2) {
-    size = 12;
-    SubDimension n12(/*size=*/12, /*good=*/true, /*e=*/1);
-    SubDimension n2b(/*size=*/ 2, /*good=*/false);
-    T.PutDataInRoot(n12);
-    nodeIdx = T.AddChildren(0, n6, n2b);
-  } 
-  else
-    T.PutDataInRoot(n6);
-
-  T.AddChildren(nodeIdx, n2g, n3);
-  computeEvalues(T, 0, size);
+  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
+  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cerr << "  e.g, 'n1= L1=10 good1=0\n\n";
+  cerr << "  n is [default=108]\n";
+  cerr << "  L is [default=7]\n";
+  cerr << "  good is the good-generator flag [default=0]\n";
+  exit(0);
 }
 
-void TestIt(Vec<OneGeneratorTree>& ts)
-{
-  GeneratorTrees trees(ts);
-  trees.ComputeCubeMapping();
+/* m = 31, p = 2, phi(m) = 30
+  ord(p)=5
+  generator 6 has order (== Z_m^*) of 6
+  T = [1 6 5 30 25 26 ]
 
-  Permut p;
-  RandomPerm(p, trees.getSize());
-  PermNetwork ntwrk;
-  ntwrk.BuildNetwork(p, trees);
+  m = 61, p = 3, phi(m) = 60
+  ord(p)=10
+  generator 13 has order (== Z_m^*) of 3
+  generator 2 has order (!= Z_m^*) of 2
+  T = [1 2 13 26 47 33 ]
+
+  m = 683, p = 2, phi(m) = 682
+  ord(p)=22
+  generator 3 has order (== Z_m^*) of 31
+
+  m = 47127, p = 2, phi(m) = 30008
+  ord(p)=22
+  generator 5 has order (== Z_m^*) of 682
+  generator 13661 has order (== Z_m^*) of 2
+*/
+
+void testIt(const Vec<GenDescriptor>& vec, long width);
+
+void test1()
+{
+  Vec<GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = GenDescriptor(/*order=*/6, /*good=*/true, /*genIdx=*/0);
+  cout << "**Testing (6,good), width=3\n";
+  testIt(vec, /*width=*/3);
 }
 
-int main()
+void test2()
 {
-  // Build a "good" 2x3 tree for the order-6 generator g=5 in Z_31^*/(2)
-  // PAlgebra al(/*m=*/31, /*p=*/2);
-  // Build a 2x3x3 tree for the order-18 generator g=24 in Z_127^*/(2)
-  // PAlgebra al(/*m=*/127, /*p=*/2);
-  // SubDimension rtDim(/*genIdx=*/0, /*size=*/18, /*e=*/1, /*good=*/true);
+  Vec<GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
+  vec[1] = GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/1);
+  cout << "**Testing [(3,good),(2,bad)], width=3\n";
+  testIt(vec, /*width=*/3);
+}
 
-  // Test #1: a single 2x3 tree
-  {
-  Vec<OneGeneratorTree> trees(INIT_SIZE, 1);
-  BuildTree(trees[0], 1);
-  TestIt(trees);
-  }
-  // Test #2: a single 2x3x2 tree
-  {
-  Vec<OneGeneratorTree> trees(INIT_SIZE, 1);
-  BuildTree(trees[0], 2);
-  TestIt(trees);
-  }
-  // Test #3: both trees
-  {
-  Vec<OneGeneratorTree> trees(INIT_SIZE, 2);
-  BuildTree(trees[0], 2);
-  BuildTree(trees[1], 1);
-  TestIt(trees);
-  }
+void test3()
+{
+  Vec<GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = GenDescriptor(/*order=*/31, /*good=*/true, /*genIdx=*/0);
+  cout << "**Testing (31,good), width=5\n";
+  testIt(vec, /*width=*/5);
+}
 
-#if 0
-  Vec<long> dims(INIT_SIZE,3);
-  {
-    long dd[3] = {2,3,2};
-    for (long i=0; i<3; i++) dims[i] = dd[i];
-  }
-  CubeSignature cs(dims);
+void test4()
+{
+  Vec<GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = GenDescriptor(/*order=*/682,/*good=*/true, /*genIdx=*/0);
+  vec[1] = GenDescriptor(/*order=*/ 2, /*good=*/false,/*genIdx=*/1);
+  cout << "**Testing [(682,good),(2,bad)], width=11\n";
+  testIt(vec, /*width=*/11);
+}
 
-#define psize 12
-  Permut p(INIT_SIZE, psize);
-  { long pp[psize] = { 0, 3, 9, 4, 2, 7, 8, 11, 1, 6, 5, 10 };
-    for (long i=0; i<psize; i++) p[i] = pp[i];
-  }
-  std::cout << "input="<<p<<endl<<endl;
+void testIt(const Vec<GenDescriptor>& vec, long width)
+{
+  GeneratorTrees trees;
+  trees.buildOptimalTrees(vec,width);
+  cout << trees << endl;
+}
 
-  // break it into three permutations over the colums and rows
-  vector<ColPerm> out;
-  breakPermByDim(out,p,cs);
-
-  for (long i=0; i<(long)out.size(); i++) {
-    out[i].printout(std::cout);
-    long nPerms = out[i].getSize()/dims[out[i].getPermDim()];
-    for (long j=0; j<nPerms; j++) {
-      out[i].extractSlice(p,j);
-      std::cout <<"  "<<j<<": "<<p<<endl;
-    }
-    out[i].makeExplicit(p);
-    std::cout << " expl: " << p << endl;
-    out[i].getShiftAmounts(p);
-    std::cout << " shft: " << p << endl << endl;
+int main(int argc, char *argv[])
+{
+  /*  argmap_t argmap;
+  argmap["n"] = "108";
+  argmap["L"] = "5";
+  argmap["good"] = "0";
+  if (!parseArgs(argc, argv, argmap)) {
+    cerr << "bad args\n";
+    exit(0);
   }
-#endif
+  long n = atoi(argmap["n"]);
+  long L = atoi(argmap["L"]);
+  bool good = !!atoi(argmap["good"]);
+  */
+
+  test1();
+  test2();
+  test3();
+  test4();
 }

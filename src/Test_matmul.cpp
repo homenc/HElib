@@ -22,19 +22,6 @@
 #include <cassert>
 
 
-ZZX makeIrredPoly(long p, long d)
-{
-  assert(d >= 1);
-  assert(ProbPrime(p));
-
-  if (d == 1) return ZZX(1, 1); // the monomial X
-
-  zz_pBak bak; bak.save();
-  zz_p::init(p);
-  return to_ZZX(BuildIrred_zz_pX(d));
-}
-
-
 template<class type> 
 class RunningSumMatrix : public  PlaintextMatrixInterface<type> {
 public:

@@ -33,20 +33,6 @@ NTL_CLIENT
 // Test_General_x p=2 r=4 k=10 z=10 m=3133 ## 60 x !2
 
 
-
-
-ZZX makeIrredPoly(long p, long d)
-{
-  assert(d >= 1);
-  assert(ProbPrime(p));
-
-  if (d == 1) return ZZX(1, 1); // the monomial X
-
-  zz_pBak bak; bak.save();
-  zz_p::init(p);
-  return to_ZZX(BuildIrred_zz_pX(d));
-}
-
 class StopReplicate { };
 
 class ReplicateTester : public ReplicateHandler {
