@@ -19,20 +19,88 @@
  **/
 #include "hypercube.h"
 
+
+// Rotate k positions along the d'th dimension: The content of slot j that has
+// coordinate j_d in the d'th dimension is moved to j' that has coordinates the
+// same as j in all the dimensions except d, and has coordinate at dimension d
+// j'_d = j_d +k mod sz (where sz is the size of the d'th dimension).
+template<class T>
+void HyperCube<T>::rotate1D(long d, long k)
+{
+  assert(d >=0 && d < getNumDims());
+
+  // Make sure rotation amount is in the range [1,dimSize-1]
+  k %= getDim(d);
+  if (k == 0) return;
+  if (k < 0) k += getDim(d);
+
+  // A simple implementation with a temporary vector
+  Vec<T> tmp(INIT_SIZE, getSize());
+  for (long i=0; i<getSize(); i++) 
+    tmp[addCoord(i, d, k)] = data[i];
+  for (long i=0; i<getSize(); i++)
+    data[i] = tmp[i];
+}
+
+// Shift k positions along the d'th dimension with zero fill
+template<class T>
+void HyperCube<T>::shift1D(long d, long k)
+{
+  assert(d >=0 && d < getNumDims());
+
+  // Make sure rotation amount is in the range [1,dimSize-1]
+  bool negative = (k<0);
+  k %= getDim(d);
+  if (k == 0) return;
+  if (k < 0) k += getDim(d);
+
+  if (negative) { // left shift, zeros at the end
+    for (long i=getSize()-1; i>=0; i--) {
+      long iPrime = addCoord(i, d, k);
+      if (iPrime < i) data[iPrime] = data[i];
+      else            data[iPrime] = T(); // empty
+    }
+  } else {        // right shift, zeros at the beginning
+    for (long i=0; i<getSize(); i++) {
+      long iPrime = addCoord(i, d, k);
+      if (iPrime > i) data[iPrime] = data[i];
+      else            data[iPrime] = T(); // empty
+    }
+  }
+}
+
 // initialize the slice to point to the i-th subcube
 // of the cube pointed to by bigger
 template<class T>
-ConstCubeSlice<T>::ConstCubeSlice(const ConstCubeSlice<T>& bigger, long i) 
+ConstCubeSlice<T>::ConstCubeSlice(const ConstCubeSlice<T>& bigger, long i,
+				  long dOffset)
 {
+   if (dOffset<1) dOffset=1;
    cube = bigger.cube;
-   dimOffset = bigger.dimOffset + 1;
+   dimOffset = bigger.dimOffset + dOffset;
 
    assert(dimOffset <= cube->getNumDims());
    // allow zero-dimensional slice
 
-   assert(i >= 0 && i < cube->getDim(bigger.dimOffset));
+   assert(i >= 0 && i < cube->getProd(bigger.dimOffset,dimOffset));
 
    sizeOffset = bigger.sizeOffset + i*cube->getProd(dimOffset);
+}
+
+template<class T>
+ConstCubeSlice<T>::ConstCubeSlice(const HyperCube<T>& _cube, long i,
+				  long dOffset)
+{
+   cube = &_cube;
+   if (dOffset<1) dOffset=1;
+   dimOffset = dOffset;
+
+   assert(dimOffset <= cube->getNumDims());
+   // allow zero-dimensional slice
+
+   assert(i >= 0 && i < cube->getProd(0,dimOffset));
+
+   sizeOffset = i*cube->getProd(dimOffset);
 }
 
 // deep copy of a slice: copies other into this 

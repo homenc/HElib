@@ -85,6 +85,10 @@ public:
    // product of sizes of dimensions d, d+1, ...
    long getProd(long d) const { return prods.at(d);}
 
+   // product of sizes of dimensions from, from+1, ..., to-1
+   long getProd(long from, long to) const 
+   { return prods.at(from)/prods.at(to); }
+
    // get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
       assert(i >= 0 && i < size);
@@ -106,6 +110,7 @@ public:
 
       return i1;
    }
+
    friend ostream& operator<<(ostream &s, const CubeSignature& sig);
 };
 
@@ -175,6 +180,9 @@ public:
    // product of sizes of dimensions d, d+1, ...
    long getProd(long d) const { return sig.getProd(d);}
 
+   // product of sizes of dimensions from, from+1, ..., to-1
+   long getProd(long from, long to) const { return sig.getProd(from,to);} 
+
    // get coordinate in dimension d of index i
    long getCoord(long i, long d) const { return sig.getCoord(i, d); }
 
@@ -192,6 +200,12 @@ public:
 
    // read-only reference to element at position i, without bounds check 
    const T& operator[](long i) const { return data[i]; }
+
+  //! @brief rotate k positions along the i'th dimension
+   void rotate1D(long i, long k);
+
+  //! @brief Shift k positions along the i'th dimension with zero fill
+   void shift1D(long i, long k);
 };
 
 // A ConstCubeSlice acts like a pointer to a lower dimensional constant subcube
@@ -204,8 +218,8 @@ template<class T>
 class ConstCubeSlice {
 private:
    const HyperCube<T>* cube;
-   long dimOffset;
-   long sizeOffset;
+   long dimOffset; // # of "missing dimensions" is this slice vs. the full cube
+   long sizeOffset; // index in the cube of the first element in this slice
 
    ConstCubeSlice(); // disabled
 
@@ -215,9 +229,10 @@ public:
    explicit ConstCubeSlice(const HyperCube<T>& _cube)
    { cube = &_cube; dimOffset = 0; sizeOffset = 0; }
 
-   // initialize the slice to point to the i-th subcube
-   // of the cube pointed to by bigger
-   ConstCubeSlice(const ConstCubeSlice& bigger, long i);
+   // initialize the slice to point to the i-th subcube (with some
+   // given dimension offset) of the cube pointed to by _cube or bigger.
+   ConstCubeSlice(const ConstCubeSlice& bigger, long i, long _dimOffset=1);
+   ConstCubeSlice(const HyperCube<T>& _cube, long i, long _dimOffset=1);
 
    // use default copy constructor and assignment operators,
    // which means shallow copy
@@ -270,8 +285,11 @@ public:
 
    // initialize the slice to point to the i-th subcube
    // of the cube pointed to by bigger
-   CubeSlice(const CubeSlice<T>& bigger, long i) :
-     ConstCubeSlice<T>(bigger, i) {}
+   CubeSlice(const CubeSlice<T>& bigger, long i, long _dimOffset=1) :
+   ConstCubeSlice<T>(bigger, i, _dimOffset) {}
+
+   CubeSlice(HyperCube<T>& _cube, long i, long _dimOffset=1) :
+   ConstCubeSlice<T>(_cube, i, _dimOffset) {}
 
    // deep copy of a slice: copies other into this 
    void copy(const ConstCubeSlice<T>& other) const;
