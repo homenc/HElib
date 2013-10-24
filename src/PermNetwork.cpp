@@ -22,7 +22,8 @@
 // Compute one or more layers corresponding to one network of one leaf
 void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
 				 const Vec<long>& benesLvls, long gIdx,
-				 bool good, long ord, const Permut& map2cube)
+				 const SubDimension& leafData, 
+				 const Permut& map2cube)
 {
   // Compute the shift amounts for all the layers in this network
   Vec<bool> isID;
@@ -41,11 +42,12 @@ void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
     PermNetLayer& lyr = layers[lyrIdx+i];
     lyr.genIdx = gIdx;
     lyr.isID = isID[i];
+    lyr.e = leafData.e;
     if (!lyr.isID) {
       //      std::cerr << "layer "<<lyrIdx+i<<": "<<shifts[i]<<endl;
-      if (good) // For good leaves, shift by -x is the same as size-x
+      if (leafData.good) // For good leaves, shift by -x is the same as size-x
 	for (long k=0; k<shifts[i].length(); k++)
-	  if (shifts[i][k]<0) shifts[i][k] += ord;
+	  if (shifts[i][k]<0) shifts[i][k] += leafData.size;
       applyPermToVec(lyr.shifts, shifts[i], map2cube); // do the renaming
       //      std::cerr << "       : "<<lyr.shifts<<endl;
     }
@@ -57,7 +59,7 @@ void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
 void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
 {
   Vec<long> dims;
-  trees.getCubeDims(dims);
+  trees.getCubeSubDims(dims);
 
   //  std::cerr << "pi =      "<<pi<<endl;
   //  std::cerr << "map2cube ="<<trees.mapToCube()<<endl;
@@ -95,12 +97,11 @@ void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
       // if it isn't the middle then also backLyr-scnd.length()...backLyr-1
 
       // handle the first Benes network
-      setLayers4Leaf(/*layer-index    =*/frntLyr, 
+      setLayers4Leaf(/*1st-layer-index=*/frntLyr, 
 		     /*permutation    =*/perms[dimIdx],
 		     /*Benes levels   =*/leafData.frstBenes,
 		     /*generator index=*/T.getAuxKey(),
-		     /*good flag      =*/leafData.good,
-		     /*order          =*/leafData.size,
+		     /*(size,good,e)  =*/leafData,
 		     /*hypercube renaming permutation=*/trees.mapToCube());
       frntLyr += leafData.frstBenes.length(); // how many layers were used
       dimIdx++;
@@ -108,20 +109,45 @@ void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
       if (leafData.scndBenes.length()>0) { // Also a second Benes network
 	long dimIdx2 = perms.size() -dimIdx; // dimIdx was incremented above
 	backLyr -= leafData.scndBenes.length();
-	setLayers4Leaf(/*layer-index    =*/backLyr, 
+	setLayers4Leaf(/*1st-layer-index=*/backLyr, 
 		       /*permutation    =*/perms[dimIdx2],
 		       /*Benes levels   =*/leafData.scndBenes,
 		       /*generator index=*/T.getAuxKey(),
-		       /*good flag      =*/leafData.good,
-		       /*order          =*/leafData.size,
+		       /*(size,good,e)  =*/leafData,
 		       /*hypercube renaming permutation=*/trees.mapToCube());
       }
     }
   }
 }
 
-void PermNetwork::applyToArray(HyperCube<long>& v)
+// Apply a permutation network to a hypercube, used mostly for debugging
+void PermNetwork::applyToCube(HyperCube<long>& cube)
 {
+  if (layers.length()==0) return;
+  long n = cube.getSize();
+  Vec<long> tmp(INIT_SIZE, n); // temporary vector
+
+  // Apply the layers, one at a time
+  for (long i=0; i<layers.length(); i++) {
+    const PermNetLayer& lyr = layers[i];
+    if (lyr.isID) continue; // this layer is the identity permutation
+
+    assert(lyr.shifts.length()==n);
+
+    // This layer shift elements along the dimension lyr.genIdx
+    long dim = lyr.genIdx;
+
+    // Move elements as dictated by this layer
+    for (long j=0; j<n; j++) {
+      long shamt = lyr.e * lyr.shifts[j]; // how much to shift this slot
+      if (shamt<0) shamt += cube.getDim(dim); // addCoord expects shamt>=0
+      long j2 = cube.addCoord(j, dim, shamt); // new index for this slot
+      tmp[j2] = cube[j];
+    }
+    // Copy back to cube
+    for (long j=0; j<n; j++)
+      cube[i] = tmp[i];
+  }
 }
 
 void PermNetwork::applyToPtxt(ZZX& p, const EncryptedArray& ea)

@@ -498,9 +498,13 @@ class GeneratorTrees  {
   long mapToCube(long i) const { return map2cube[i]; }
   long mapToArray(long i) const { return map2array[i]; }
 
-  //! Get the cube dimensions corresponding to the vector of trees,
-  //! the ordered vector with one dimension per leaf in all the trees.
+  //! Get the "crude" cube dimensions corresponding to the vector of trees,
+  //! the ordered vector with one dimension per tree
   void getCubeDims(Vec<long>& dims) const;
+
+  //! Get the "fine" cube dimensions corresponding to the vector of trees,
+  //! the ordered vector with one dimension per leaf in all the trees.
+  void getCubeSubDims(Vec<long>& dims) const;
 
   // Returns coordinates of i relative to leaves of the tree
   //  void getCoordinates(Vec<long>&, long i) const;
@@ -552,7 +556,8 @@ class PermNetwork {
 
   //! Copmute one or more layers corresponding to one network of a leaf
   void setLayers4Leaf(long lyrIdx, const ColPerm& p, const Vec<long>& benesLvls,
-		      long gIdx, bool good, long ord, const Permut& map2cube);
+		      long gIdx, const SubDimension& leafData,
+		      const Permut& map2cube);
 
 public:
   PermNetwork() {}; // empty network
@@ -569,7 +574,7 @@ public:
   void applyToCtxt(Ctxt& c);
 
   //! Apply network to array, used mostly for debugging
-  void applyToArray(HyperCube<long>& v);
+  void applyToCube(HyperCube<long>& v);
 
   //! Apply network to plaintext polynomial, used mostly for debugging
   void applyToPtxt(ZZX& p, const EncryptedArray& ea);

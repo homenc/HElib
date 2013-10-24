@@ -902,4 +902,16 @@ void GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
 
   // Compute the mapping from array to cube and back
   ComputeCubeMapping();
+
+#ifdef DEBUG_PRINTOUT // debugging printouts
+  Vec<long> dims;  // The "crude" cube dimensions, one dimension per tree
+  getCubeDims(dims);
+  std::cerr << " dims="<<dims<<endl;
+  std::cerr << " trees=" << *this << endl;
+  if (map2cube.length()<100) {
+    std::cerr << " map2cube="<<map2cube<<endl;
+    std::cerr << " map2array="<<map2array<<endl;
+  }
+  std::cerr << endl;
+#endif  
 }
