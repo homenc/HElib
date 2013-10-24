@@ -22,6 +22,7 @@
 
 #include <NTL/vector.h>
 // We only need NTL for the Vec templates, why not just use STL vectors instead?
+// because NTL vectors don't force us to use those ugly unsigned types...
 
 #include <cassert>
 #include <iomanip>
