@@ -643,7 +643,7 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
       // Try all possible ways of splitting the budget between the two nodes
       for (long budget1 = 1; budget1 < budget; budget1++) {
 
-	// A slick way of given the middle token to one of the
+	// A slick way of giving the middle token to one of the
 	// nodes if we have it, and to none of the nodes if we don't
         for (long mid1 = 0; mid1 <= mid; mid1++) {
           LowerMemoEntry s1 = optimalLower(order1, good1, budget1, mid1, 
