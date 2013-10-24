@@ -66,7 +66,8 @@ void addOffset(list<long>& x, long offset, long n, bool *aux, bool good=false)
     long val2 = val - offset;
     if (val1 > -n && val1 < n) x.push_front(val1);
     if (val2 > -n && val2 < n) x.push_front(val2);
-    /* FIXME: Replace the above two lines by 
+    /* FIXME: Alternative Impl:
+     *        Replace the above two lines by 
      *        if (good) {
      *           if (val1 < 0 && val1 > -n) val1 += n;
      *           if (val2 < 0 && val2 > -n) val2 += n;
@@ -139,10 +140,11 @@ void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
         tab[i][j] = reducedCount(x, n, aux) - 1;
       else
         tab[i][j] = x.size() - 1;
-      // FIXME: Replace the 5 lines above by
+      // FIXME: Alternative Impl:
+      //        Replace the 5 lines above by
       //        addOffset(x, shamt, n, aux, good);
       //        tab[i][j] = x.size() - 1;
-      // Also initialize aux to false in every iteration
+      //        Also initialize aux to false in every iteration
     }
   }
 }
@@ -150,6 +152,7 @@ void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
 
 class LongNode;
 typedef tr1::shared_ptr<LongNode> LongNodePtr;
+// A "shared_ptr" is a pointer with (some) garbage collection
 
 // A LongNode is an implementation of list<long>, i.e. a linked list of
 // counters, representing a particular way of "collapsing levels" in a Benes
@@ -198,11 +201,12 @@ ostream& operator<<(ostream& s, LongNodePtr p)
 }
 
 
-// Data structures to hold the memory table for the computation of the level
-// collapsing in a Benes network. An entry in the table is specified by the
-// first-level index i and the alotted budget (=depth). Once the computation
+// Data structures to hold the memoization table for the computation of the 
+// level collapsing in a Benes network. An entry in the table is specified by 
+// the first-level index i and the alotted budget (depth). Once the computation
 // is over, this entry will contain the optimal way of breaking this network
 // (encoded as a LongNode list) and the cost of this network.
+
 class BenesMemoKey {
 public:
   long i;      // Index of 1st level to consider
@@ -240,7 +244,7 @@ public:
 typedef tr1::unordered_map< BenesMemoKey, BenesMemoEntry, 
                             ClassHash<BenesMemoKey> > BenesMemoTable;
 
-// A dynamic program (implemented as a recursive routine with memory) for
+// A dynamic program (implemented as a recursive routine with memoization) for
 // computing the optimal collapsing of layers in a generalized Benes network.
 //
 // The parameter i indicates the sub-problem at hand, namely we are trying
@@ -250,9 +254,10 @@ typedef tr1::unordered_map< BenesMemoKey, BenesMemoEntry,
 // The budget is the largest number of levels that we can afford after
 // collapsing. (For example, if budget >= nlev-i, then there is no need to
 // collapse anything.)
+
 BenesMemoEntry optimalBenesAux(long i, long budget, long nlev, 
-                                     const Vec< Vec<long> >& costTab, 
-                                     BenesMemoTable& memoTab)
+                               const Vec< Vec<long> >& costTab, 
+                               BenesMemoTable& memoTab)
 {
   assert(i >= 0 && i <= nlev);
   assert(budget > 0);
@@ -318,7 +323,6 @@ BenesMemoEntry optimalBenesAux(long i, long budget, long nlev,
 }
 
 
-// FIXME: Shouldn't this be a method of the BenesMemoEntry class?
 void optimalBenes(long n, long budget, bool good, 
                      long& cost, LongNodePtr& solution)
 // computes an optimal level-collapsing strategy for a Benes network
@@ -329,9 +333,10 @@ void optimalBenes(long n, long budget, bool good,
 //   cost = total number of shifts needed by the collapsed network
 //   solution = list indicating how levels in a standard benes network
 //      are collapsed: if solution = [s_1 s_2 ... s_k], then k <= budget,
-//      and the first s_1 levels are collapsed, the next s_2 levels are collapsed, etc.
+//      and the first s_1 levels are collapsed, the next s_2 levels 
+//      are collapsed, etc.
 {
-  long k = GeneralBenesNetwork::depth(n); // k = ceil(log n)
+  long k = GeneralBenesNetwork::depth(n); // k = ceiling(log_2 n)
   long nlev = 2*k - 1;  // before collapsing, we have 2k-1 levels
 
   Vec< Vec<long> > costTab;
@@ -359,6 +364,7 @@ void optimalBenes(long n, long budget, bool good,
 // A binary tree data structure for spliting generators
 class SplitNode;
 typedef tr1::shared_ptr<SplitNode> SplitNodePtr;
+// A "shared_ptr" is a pointer with (some) garbage collection
 
 class SplitNode {
 public:
@@ -379,7 +385,8 @@ public:
     left = right = SplitNodePtr();
   }
 
-  SplitNode(long _order, long _mid, bool _good, SplitNodePtr _left, SplitNodePtr _right) {
+  SplitNode(long _order, long _mid, bool _good, SplitNodePtr _left, 
+            SplitNodePtr _right) {
   // constructor for internal nodes
     order = _order; mid = _mid; good = _good;
     solution1 = solution2 = LongNodePtr();
@@ -425,7 +432,7 @@ public:
   long order;  // size of hypercube corresponding to this sub-tree
   bool good;   // is this a good subtree
   long budget; // max-depth of network(s) associated to this node
-  long mid;    // whether or not this is the moddle layer of the network
+  long mid;    // whether or not this is the middle layer of the network
 
   LowerMemoKey(long _order, bool _good, long _budget, long _mid) {
     order = _order; good = _good; budget = _budget; mid = _mid;
@@ -511,6 +518,7 @@ ostream& operator<<(ostream& s, GenNodePtr p)
 // of a generaor, the budget allocated to this tree, and the middle flag.
 // When the copmutation is over, this entry will contain the optimal list
 // of trees (encoded as a GenNode list) and the cost of this solution.
+
 class UpperMemoKey {
 public:
   long i;
@@ -605,13 +613,18 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
 
     // The initial solution coresponds to this being a leaf node
     solution = SplitNodePtr(new SplitNode(order, mid, good,
-                                              benesSolution1, benesSolution2));
+                                          benesSolution1, benesSolution2));
 
 
     // Recursively try all the ways of splitting order = order1 * order2
 
     for (long order1 = 2; order1 < order; order1++) {
-      // FIXME: Do we need to try only upto sqrt(order)?
+      // try all factors of order
+      // there is some redundancy here, since we consider 
+      // both the splits (d, n/d) and (n/d, d); however,
+      // we ustilize this redundancy (see below) to streamline
+      // allocation of the "good" token (if we have it)
+
       if (order % order1 != 0) continue;
 
       bool good1 = good;
@@ -630,7 +643,7 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
       // Try all possible ways of splitting the budget between the two nodes
       for (long budget1 = 1; budget1 < budget; budget1++) {
 
-	// A ridiculus way of given the middle token to one of the
+	// A slick way of giving the middle token to one of the
 	// nodes if we have it, and to none of the nodes if we don't
         for (long mid1 = 0; mid1 <= mid; mid1++) {
           LowerMemoEntry s1 = optimalLower(order1, good1, budget1, mid1, 
@@ -915,3 +928,78 @@ void GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
   std::cerr << endl;
 #endif  
 }
+
+
+
+
+#if 0
+/********************************************************************
+ ******************        TESTING PROGRAM        *******************
+ ********************************************************************/
+
+
+void usage(char *prog) 
+{
+  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
+  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cerr << "  e.g, 'n=2 L=10 good=0\n\n";
+  cerr << "  n is [default=108]\n";
+  cerr << "  L is [default=7]\n";
+  cerr << "  good is the good-generator flag [default=0]\n";
+  exit(0);
+}
+
+int main(int argc, char *argv[])
+{
+  argmap_t argmap;
+  argmap["n"] = "108";
+  argmap["L"] = "5";
+  argmap["good"] = "0";
+  if (!parseArgs(argc, argv, argmap)) {
+    cerr << "bad args\n";
+    exit(0);
+  }
+  long n = atoi(argmap["n"]);
+  long L = atoi(argmap["L"]);
+  bool good = !!atoi(argmap["good"]);
+
+  /*  for (long iter=0; iter < 20; iter++) {
+    Permut perm;
+    RandomPerm(perm,n);      
+    // cout << perm << "\n";
+    GeneralBenesNetwork net(perm);   
+    if (net.testNetwork(perm))  cout << ".";
+    else                        cout << "X";
+  }
+  cout << "\n";*/
+
+  long cost;
+  LongNodePtr solution;
+
+  optimalBenes(n, L, good, cost, solution);
+
+  cout << cost << "\n";
+  cout << solution << "\n";
+  cout << length(solution) << "\n";
+
+  cout << "*************\n";
+
+  long cost1;
+  GenNodePtr solution1;
+
+  Vec<GenDescriptor> vec;
+
+  vec.SetLength(2);
+  vec[0] = GenDescriptor(n, good, 0);
+  vec[1] = GenDescriptor(2, !good, 1);
+  optimalUpper(vec, L, cost1, solution1);
+
+  cout << cost1 << "\n";
+  cout << solution1 << "\n";
+
+  GeneratorTrees trees;
+  trees.buildOptimalTrees(vec,L);
+  cout << trees;
+}
+
+#endif
