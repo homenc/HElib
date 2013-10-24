@@ -127,6 +127,8 @@ void ColPerm::makeExplicit(Permut& out) const
   }
 }
 
+
+
 // For each position in the data vector, compute how many slots it should be
 // shifted inside its small permutation. Returns zero if all the shift amount
 // are zero, nonzero otherwise.
@@ -144,8 +146,8 @@ long ColPerm::getShiftAmounts(Vec<long>& out) const
    *                                     [   1     2     0                  ]
    *                                     [                  2     1     0   ]
    *                                     [                     0     1     2]
-   * Hence the shift amount are:         [1     -1    0                     ]
-   *                                     [   1     1    -2                  ]
+   * Hence the shift amount are:         [1    -1     0                     ]
+   *                                     [   2    -1    -1                  ]
    *                                     [                  2     0    -2   ]
    *                                     [                     0     0     0]
    * so the output vector is [1  1 -1  1  0 -2  2  0  0  0 -2  0].
@@ -160,8 +162,10 @@ long ColPerm::getShiftAmounts(Vec<long>& out) const
   while (m--) { // go over the chunks one at a time
     for (long i=0; i<n; i++) for (long j=0; j<s; j++) {
 	long ind = i*s +j +offset;
-	out[ind] = (*this)[ind] -i;
-	nonZero |= out[ind];
+	long i2 = (*this)[ind];      // we have pi[i]=i2
+	long ind2 = i2*s +j +offset;
+	out[ind2] = i - i2;          // so shamt[i2]=i-i2
+	nonZero |= out[ind2];
       }
     offset += n*s;
   }
@@ -551,6 +555,13 @@ void GeneratorTrees::ComputeCubeMapping()
   // Compute the inverse permutation
   map2array.SetLength(map2cube.length());
   for (long i=0; i<map2cube.length(); i++) map2array[ map2cube[i] ] = i;
+}
+
+ostream& operator<< (ostream &s, const ColPerm& p)
+{
+  Permut pp;
+  p.makeExplicit(pp);
+  return s << pp;
 }
 
 ostream& operator<< (ostream &s, const SubDimension& sd)

@@ -18,6 +18,16 @@
 #include "permutations.h"
 #include "EncryptedArray.h"
 
+ostream& operator<< (ostream &s, const PermNetwork &net)
+{
+  s << "[";
+  for (long i=0; i< net.layers.length(); i++) {
+    const PermNetLayer& lyr = net.layers[i];
+    s << "[" << lyr.genIdx << " " << lyr.e << " " << lyr.isID << " "
+      << lyr.shifts << "]\n";
+  }
+  return s << "]";
+}
 
 // Compute one or more layers corresponding to one network of one leaf
 void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
@@ -25,6 +35,9 @@ void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
 				 const SubDimension& leafData, 
 				 const Permut& map2cube)
 {
+#ifdef DEBUG_PRINTOUT
+  std::cerr << "column-permutation="<< p << endl;
+#endif
   // Compute the shift amounts for all the layers in this network
   Vec<bool> isID;
   Vec<Permut> shifts;
@@ -146,7 +159,7 @@ void PermNetwork::applyToCube(HyperCube<long>& cube)
     }
     // Copy back to cube
     for (long j=0; j<n; j++)
-      cube[i] = tmp[i];
+      cube[j] = tmp[j];
   }
 }
 

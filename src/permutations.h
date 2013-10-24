@@ -132,8 +132,8 @@ public:
  * 
  * Another representation that we provide is by "shift amount": how many
  * slots each element needs to move inside its small permutation. For the
- * example above, this will be:     [ 1     -1    0                      ]
- *                                  [    1     1    -2                   ]
+ * example above, this will be:     [ 1    -1     0                      ]
+ *                                  [    2    -1    -1                   ]
  *                                  [                   2     0    -2    ]
  *                                  [                      0     0     0 ]
  * so we write the permutatation as [ 1  1 -1  1  0 -2  2  0  0  0 -2  0 ].
@@ -175,6 +175,7 @@ public:
     s << "  data="<<getData()<<endl;
   }
 };
+ostream& operator<< (ostream &s, const ColPerm& p);
 
 /**
  * @brief Takes a permutation pi over m-dimensional cube C=Z_{n1} x...x Z_{nm}
@@ -549,6 +550,7 @@ class PermNetLayer {
   bool isID; // a silly optimization, does this layer copmute the identity?
 
   friend class PermNetwork;
+  friend ostream& operator<< (ostream &s, const PermNetwork &net);
 };
 
 class PermNetwork {
@@ -578,6 +580,8 @@ public:
 
   //! Apply network to plaintext polynomial, used mostly for debugging
   void applyToPtxt(ZZX& p, const EncryptedArray& ea);
+
+  friend ostream& operator<< (ostream &s, const PermNetwork &net);
 };
 
 #endif /* ifndef _PERMUTATIONS_H_ */

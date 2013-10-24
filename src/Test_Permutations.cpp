@@ -54,6 +54,34 @@ void testIt(Vec<GenDescriptor>& vec, long widthBound)
 {
   GeneratorTrees trees;
   trees.buildOptimalTrees(vec, widthBound);
+  Vec<long> dims;
+  trees.getCubeDims(dims);
+  CubeSignature sig(dims);
+
+  for (long cnt=0; cnt<3; cnt++) {
+    Permut pi;
+    randomPerm(pi, trees.getSize());
+    if (pi.length()<100)  cout << "pi="<<pi<<endl;
+
+    PermNetwork net;
+    net.buildNetwork(pi, trees);
+    if (pi.length()<100) {
+      cout << "permutations network {[gIdx,e,isID,shifts]} = " << endl;
+      cout << net << endl;
+    }
+
+    HyperCube<long> cube1(sig), cube2(sig);
+    for (long i=0; i<cube1.getSize(); i++) cube1[i] = i+1;
+    HyperCube<long> cube3 = cube1;
+    applyPermToVec(cube2.getData(), cube1.getData(), pi); // direct application
+    net.applyToCube(cube3); // applying permutation netwrok
+    if (cube2==cube3) cout << "yay\n\n";
+    else {
+      cout << "blech\n";
+      cout << "in="<<cube1.getData() << endl;
+      cout << "out1="<<cube2.getData()<<", out2="<<cube3.getData()<<endl<<endl;
+    }
+  }
 }
 
 int main(int argc, char *argv[])
@@ -71,37 +99,40 @@ int main(int argc, char *argv[])
   bool good = !!atoi(argmap["good"]);
   */
 
+#if 0
   // Test 1: a single good small prime-order generator (3)
   {
   Vec<GenDescriptor> vec(INIT_SIZE, 1);
   vec[0] = GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
-  cout << "**Testing (3,good), width=1\n";
+  cout << "***Testing (3,good), width=1\n";
   testIt(vec, /*width=*/1);
   }
 
-  // Test 2: a single good larger prime-order generator (31)
+  // Test 2: a single bad larger prime-order generator (31)
   {
   Vec<GenDescriptor> vec(INIT_SIZE, 1);
-  vec[0] = GenDescriptor(/*order=*/31, /*good=*/true, /*genIdx=*/0);
-  cout << "**Testing (31,good), width=5\n";
+  vec[0] = GenDescriptor(/*order=*/31, /*good=*/false, /*genIdx=*/0);
+  cout << "\n***Testing (31,bad), width=5\n";
   testIt(vec, /*width=*/5);
   }
+#endif
 
   // Test 3: two generators with small prime orders (2,3), both bad
   {
   Vec<GenDescriptor> vec(INIT_SIZE, 2);
   vec[0] = GenDescriptor(/*order=*/3, /*good=*/false, /*genIdx=*/0);
   vec[1] = GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/1);
-  cout << "**Testing [(3,bad),(2,bad)], width=3\n";
+  cout << "\n***Testing [(3,bad),(2,bad)], width=3\n";
   testIt(vec, /*width=*/3);
   }
 
+#if 0
   // Test 4: two generators with small prime orders (2,3), one good
   {
   Vec<GenDescriptor> vec(INIT_SIZE, 2);
   vec[0] = GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
   vec[1] = GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/1);
-  cout << "**Testing [(3,good),(2,bad)], width=3\n";
+  cout << "\n***Testing [(3,good),(2,bad)], width=3\n";
   testIt(vec, /*width=*/3);
   }
 
@@ -109,7 +140,7 @@ int main(int argc, char *argv[])
   {
   Vec<GenDescriptor> vec(INIT_SIZE, 1);
   vec[0] = GenDescriptor(/*order=*/6, /*good=*/false, /*genIdx=*/0);
-  cout << "**Testing (6,bad), width=3\n";
+  cout << "\n***Testing (6,bad), width=3\n";
   testIt(vec, /*width=*/3);
   }
 
@@ -117,7 +148,7 @@ int main(int argc, char *argv[])
   {
   Vec<GenDescriptor> vec(INIT_SIZE, 1);
   vec[0] = GenDescriptor(/*order=*/6, /*good=*/true, /*genIdx=*/0);
-  cout << "**Testing (6,good), width=3\n";
+  cout << "\n***Testing (6,good), width=3\n";
   testIt(vec, /*width=*/3);
   }
 
@@ -129,4 +160,5 @@ int main(int argc, char *argv[])
   cout << "**Testing [(682,good),(2,bad)], width=11\n";
   testIt(vec, /*width=*/11);
   }
+#endif
 }
