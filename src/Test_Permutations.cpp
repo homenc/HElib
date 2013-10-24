@@ -50,47 +50,10 @@ void usage(char *prog)
   generator 13661 has order (== Z_m^*) of 2
 */
 
-void testIt(const Vec<GenDescriptor>& vec, long width);
-
-void test1()
-{
-  Vec<GenDescriptor> vec(INIT_SIZE, 1);
-  vec[0] = GenDescriptor(/*order=*/6, /*good=*/true, /*genIdx=*/0);
-  cout << "**Testing (6,good), width=3\n";
-  testIt(vec, /*width=*/3);
-}
-
-void test2()
-{
-  Vec<GenDescriptor> vec(INIT_SIZE, 2);
-  vec[0] = GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
-  vec[1] = GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/1);
-  cout << "**Testing [(3,good),(2,bad)], width=3\n";
-  testIt(vec, /*width=*/3);
-}
-
-void test3()
-{
-  Vec<GenDescriptor> vec(INIT_SIZE, 1);
-  vec[0] = GenDescriptor(/*order=*/31, /*good=*/true, /*genIdx=*/0);
-  cout << "**Testing (31,good), width=5\n";
-  testIt(vec, /*width=*/5);
-}
-
-void test4()
-{
-  Vec<GenDescriptor> vec(INIT_SIZE, 2);
-  vec[0] = GenDescriptor(/*order=*/682,/*good=*/true, /*genIdx=*/0);
-  vec[1] = GenDescriptor(/*order=*/ 2, /*good=*/false,/*genIdx=*/1);
-  cout << "**Testing [(682,good),(2,bad)], width=11\n";
-  testIt(vec, /*width=*/11);
-}
-
-void testIt(const Vec<GenDescriptor>& vec, long width)
+void testIt(Vec<GenDescriptor>& vec, long widthBound)
 {
   GeneratorTrees trees;
-  trees.buildOptimalTrees(vec,width);
-  cout << trees << endl;
+  trees.buildOptimalTrees(vec, widthBound);
 }
 
 int main(int argc, char *argv[])
@@ -108,8 +71,62 @@ int main(int argc, char *argv[])
   bool good = !!atoi(argmap["good"]);
   */
 
-  test1();
-  test2();
-  test3();
-  test4();
+  // Test 1: a single good small prime-order generator (3)
+  {
+  Vec<GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
+  cout << "**Testing (3,good), width=1\n";
+  testIt(vec, /*width=*/1);
+  }
+
+  // Test 2: a single good larger prime-order generator (31)
+  {
+  Vec<GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = GenDescriptor(/*order=*/31, /*good=*/true, /*genIdx=*/0);
+  cout << "**Testing (31,good), width=5\n";
+  testIt(vec, /*width=*/5);
+  }
+
+  // Test 3: two generators with small prime orders (2,3), both bad
+  {
+  Vec<GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = GenDescriptor(/*order=*/3, /*good=*/false, /*genIdx=*/0);
+  vec[1] = GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/1);
+  cout << "**Testing [(3,bad),(2,bad)], width=3\n";
+  testIt(vec, /*width=*/3);
+  }
+
+  // Test 4: two generators with small prime orders (2,3), one good
+  {
+  Vec<GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
+  vec[1] = GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/1);
+  cout << "**Testing [(3,good),(2,bad)], width=3\n";
+  testIt(vec, /*width=*/3);
+  }
+
+  // Test 5: a single bad composite-order generator (6)
+  {
+  Vec<GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = GenDescriptor(/*order=*/6, /*good=*/false, /*genIdx=*/0);
+  cout << "**Testing (6,bad), width=3\n";
+  testIt(vec, /*width=*/3);
+  }
+
+  // Test 6: a single good composite-order generator (6)
+  {
+  Vec<GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = GenDescriptor(/*order=*/6, /*good=*/true, /*genIdx=*/0);
+  cout << "**Testing (6,good), width=3\n";
+  testIt(vec, /*width=*/3);
+  }
+
+  // Test 7: the "general case", (682,good),(2,bad)
+  {
+  Vec<GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = GenDescriptor(/*order=*/682,/*good=*/true, /*genIdx=*/0);
+  vec[1] = GenDescriptor(/*order=*/ 2, /*good=*/false,/*genIdx=*/1);
+  cout << "**Testing [(682,good),(2,bad)], width=11\n";
+  testIt(vec, /*width=*/11);
+  }
 }

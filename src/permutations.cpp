@@ -436,9 +436,22 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
 /**********     MAPPING BETWEEN CUBE AND LINEAR ARRAY      **********/
 /********************************************************************/
 
-// Get the cube dimensions corresponding to a vector of trees,
-// the ordered vector with one dimension per leaf in any of the trees.
+// Get the "crude" cube dimensions corresponding to a vector of trees,
+// the ordered vector with one dimension per tree
 void GeneratorTrees::getCubeDims(Vec<long>& dims) const
+{
+  dims.SetLength(trees.length());
+
+  // copy dims from the trees
+  for (long i=0; i<trees.length(); i++) {
+    const OneGeneratorTree& T = trees[i];
+    dims[T.getAuxKey()] = T.DataOfNode(T.rootIdx()).size;
+  }
+}
+
+// Get the "fine" cube dimensions corresponding to a vector of trees,
+// the ordered vector with one dimension per leaf in any of the trees.
+void GeneratorTrees::getCubeSubDims(Vec<long>& dims) const
 {
   // how many dimensions do we need
   long nDims = 0;
@@ -555,5 +568,5 @@ ostream& operator<< (ostream &s, const GeneratorTrees &trees)
     const OneGeneratorTree &T = trees[g];
     s << " ["; T.printout(s); s<<"]\n";
   }
-  return s << "]\n";
+  return s << "]";
 }
