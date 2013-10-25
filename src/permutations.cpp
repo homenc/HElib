@@ -375,13 +375,13 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
       long j = (*this)[offset+i]; // the image of i under the permutation
       // when i = (i1,i2) and j=(j1,j2), add an edge from i2 to j2 labeled i
       bg.addEdge(rep[i].second, rep[j].second, i);
-      // cerr <<"  "<<rep[i].second<<"->"<<rep[j].second<<" label "<<i<<endl;
     }
-    //  cerr << endl;
-
     // The bipartite graph is n1-regular, so we can break its edges into
     // n1 perfect matchings, which are numbered 1,2,...,n1.
     bg.partitionToMatchings();
+#ifdef DEBUG_PRINTOUT
+    //    bg.printout();
+#endif
 
     // The output permutations are defined by the representation i<->(i1,i2),
     // the target permutation pi, and the coloring of the bipartite graph.
@@ -422,13 +422,13 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
 	long j2 = e.to;   // = it->first = rep[j].second;
 
 	long tmp1 = c*n2 + i2;  // the image of i under rho1 = (c,i2)
-	rho1[offset+i] = c;
+	rho3[offset+i] = c;
 	long tmp2 = c*n2 + j2;  // the image of tmp1 under rho2 =(c,j2)
 	rho2[offset+tmp1] = j2;
-	rho3[offset+tmp2] = j1; // image of tmp2 under rho3 =(j1,j2)=pi(i)
-	// cerr <<"  "<< i <<" -> "<< tmp1 <<" -> "<< tmp2 <<" ->  "
-	//	<< (*this)[offset+i] << endl;
+	rho1[offset+tmp2] = j1; // image of tmp2 under rho3 =(j1,j2)=pi(i)
       }
+    // FIXME: The comments above do not match the code, the roles
+    //        of rho1,rho3 are switched. Why is this code working??
     --nPerms;
     offset += n;
   }
