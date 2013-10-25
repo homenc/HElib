@@ -36,7 +36,7 @@ void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
 				 const Permut& map2cube)
 {
 #ifdef DEBUG_PRINTOUT
-  std::cerr << "column-permutation="<< p << endl;
+  std::cerr << "Layer "<<lyrIdx<<", column-permutation="<< p << endl;
 #endif
   // Compute the shift amounts for all the layers in this network
   Vec<bool> isID;
@@ -160,6 +160,9 @@ void PermNetwork::applyToCube(HyperCube<long>& cube)
     // Copy back to cube
     for (long j=0; j<n; j++)
       cube[j] = tmp[j];
+#ifdef DEBUG_PRINTOUT
+    std::cerr << " after layer "<< i << ", cube=" << cube.getData()<<endl;
+#endif
   }
 }
 

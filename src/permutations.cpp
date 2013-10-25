@@ -521,34 +521,38 @@ void GeneratorTrees::ComputeCubeMapping()
 {
   assert(trees.length()>=1);
 
-  // An optimization for the case of a single tree
-  if (trees.length()==1)
+  if (trees.length()==1)  // A single tree
     ComputeOneGenMapping(map2cube, trees[0]);
 
   else { // more than one generator
-    // Compute the sub-mapping for every generator. Also prepare
-    // a hypercube-signature object for the index calculations
-    Vec<long> dims(INIT_SIZE, trees.length());
+    // Compute the sub-mapping for every generator. Also prepare two hypercube
+    // signature objects for the index calculations, with the two ordering of
+    // the generators: one for the generators ordered by their index 0,1,2...
+    // and the other odred the generators by the order of their trees
+
+    Vec<long> dims1(INIT_SIZE,trees.length()), dims2(INIT_SIZE,trees.length());
     Vec<Permut> genMappings(INIT_SIZE, trees.length());
     for (long i=0; i<trees.length(); i++) {
-      dims[i] = trees[i][0].getData().size;
+      dims1[i] = trees[i][0].getData().size;
       ComputeOneGenMapping(genMappings[i], trees[i]);
     }
-    CubeSignature sig(dims);
+    getCubeDims(dims2);
+    CubeSignature sig1(dims1), sig2(dims2);
 
     // Allocate space for the mapping
-    map2cube.SetLength(sig.getSize());
+    map2cube.SetLength(sig1.getSize());
 
     // Combine the generator perms to a single permutation over the cube
     for (long i=0; i<map2cube.length(); i++) {
       long t=0;
-      for (long j=0; j<sig.getNumDims(); j++) {
-	const Permut& pi = genMappings[j];
-	long digit = sig.getCoord(i, j); // the j'th digit of i in base dims
-	digit = pi[digit];               // apply the j'th permutation to it
-	t += digit * sig.getProd(j+1);   // adds the permuted digit
+      for (long j2=0; j2<trees.length(); j2++) {
+	long j1 = trees[j2].getAuxKey();
+	long digit = sig1.getCoord(i,j1); // the j1 digit of i in base dims
+
+	digit = genMappings[j1][digit];   // apply the j1 permutation to it
+	t += digit * sig2.getProd(j2+1);  // adds the permuted digit
       }
-      map2cube[i] = t;
+      map2cube[t] = i;
     }
   }
 
