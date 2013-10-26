@@ -33,9 +33,12 @@ typedef Vec<long> Permut;
 
 //! Apply a permutation to a vector, out[i]=in[p1[i]] (NOT in-place)
 void applyPermToVec(Vec<long>& out, const Vec<long>& in, const Permut& p1);
+void applyPermToVec(vector<long>& out, const vector<long>& in, const Permut& p1);
 
 //! Apply two permutations to a vector out[i]=in[p2[p1[i]]] (NOT in-place)
 void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
+		      const Permut& p2, const Permut& p1);
+void applyPermsToVec(vector<long>& out, const vector<long>& in,
 		      const Permut& p2, const Permut& p1);
 
 //! @brief A random size-n permutation
@@ -511,8 +514,9 @@ class GeneratorTrees  {
   //  void getCoordinates(Vec<long>&, long i) const;
 
   //! Compute the trees corresponding to the "optimal" way of breaking
-  //! a permutation into dimensions, subject to some constraints
-  void buildOptimalTrees(const Vec<GenDescriptor>& vec, long depthBound);
+  //! a permutation into dimensions, subject to some constraints. Returns
+  //! the cost (# of 1D shifts) of this colution.
+  long buildOptimalTrees(const Vec<GenDescriptor>& vec, long depthBound);
 
   /**
    * @brief Computes permutations mapping between linear array and the cube.
@@ -551,6 +555,11 @@ class PermNetLayer {
 
   friend class PermNetwork;
   friend ostream& operator<< (ostream &s, const PermNetwork &net);
+ public:
+  long getGenIdx() const { return genIdx; }
+  long getE() const { return e; }
+  const Vec<long>& getShifts() const { return shifts; }
+  bool isIdentity() const { return isID; }
 };
 
 class PermNetwork {
@@ -580,6 +589,8 @@ public:
 
   //! Apply network to plaintext polynomial, used mostly for debugging
   void applyToPtxt(ZZX& p, const EncryptedArray& ea);
+
+  const PermNetLayer& getLayer(long i) const {return layers[i];}
 
   friend ostream& operator<< (ostream &s, const PermNetwork &net);
 };

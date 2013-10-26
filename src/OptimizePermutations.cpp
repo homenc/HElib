@@ -874,7 +874,7 @@ static long copyToGenTree(OneGeneratorTree& gTree, SplitNodePtr& solution)
 
 // Compute the trees corresponding to the "optimal" way of breaking
 // a permutation into dimensions, subject to some constraints
-void GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens, 
+long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens, 
 				       long depthBound)
 {
   assert(gens.length() >= 1);
@@ -917,7 +917,6 @@ void GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
   ComputeCubeMapping();
 
 #ifdef DEBUG_PRINTOUT
-  std::cerr << "Why is DEBUG_PRINTOUT defined?\n";
   Vec<long> dims;  // The "crude" cube dimensions, one dimension per tree
   getCubeDims(dims);
   std::cerr << " dims="<<dims<<endl;
@@ -927,5 +926,7 @@ void GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
     std::cerr << " map2array="<<map2array<<endl;
   }
   std::cerr << endl;
-#endif  
+#endif
+
+  return t.cost;
 }

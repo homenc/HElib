@@ -22,10 +22,17 @@ const Vec<long> SubDimension::dummyBenes;
 //template class FullBinaryTree<SubDimension>;// instantiate the template class
 
 // Apply a permutation to a vector, out[i]=in[p1[i]]
+// Unfortunately we need to implement for both Vec<long> and vector<long>
 void applyPermToVec(Vec<long>& out, const Vec<long>& in, const Permut& p1)
 {
   assert(&out != &in); // NOT an in-place procedure
   out.SetLength(p1.length());
+  for (long i=0; i<p1.length(); i++)
+    out[i] = in.at(p1[i]);
+}
+void applyPermToVec(vector<long>& out, const vector<long>& in, const Permut& p1)
+{
+  out.resize(p1.length());
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p1[i]);
 }
@@ -37,6 +44,14 @@ void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
   assert(&out != &in); // NOT an in-place procedure
   assert(p1.length() == p2.length());
   out.SetLength(p1.length());
+  for (long i=0; i<p1.length(); i++)
+    out[i] = in.at(p2.at(p1[i]));
+}
+void applyPermsToVec(vector<long>& out, const vector<long>& in,
+		      const Permut& p2, const Permut& p1)
+{
+  assert(p1.length() == p2.length());
+  out.resize(p1.length());
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p2.at(p1[i]));
 }

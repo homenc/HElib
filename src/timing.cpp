@@ -117,7 +117,7 @@ void printAllTimers(std::ostream& str)
       ave = t/n;
     }
     else {
-      ave = NAN;
+      continue;
     }
 
     str << "  " << (*it) << ": " << t << " / " << n << " = " << ave << "\n";
