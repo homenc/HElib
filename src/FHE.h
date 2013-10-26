@@ -296,4 +296,7 @@ void addSome1DMatrices(FHESecKey& sKey, long bound=100, long keyID=0);
 //! Generate all Frobenius matrices of the form s(X^{2^i})->s(X)
 void addFrbMatrices(FHESecKey& sKey, long keyID=0);
 
+//! Generate all key-switching matrices for a given permutation network
+class PermNetwork;
+void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID=0);
 #endif // ifndef _FHE_H_

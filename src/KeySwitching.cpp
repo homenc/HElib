@@ -18,6 +18,7 @@
  * Copyright IBM Corporation 2012 All rights reserved.
  */
 #include "FHE.h"
+#include "permutations.h"
 
 // A maximalistic approach: generate matrices s(X^e)->s(X) for all e \in Zm*
 void addAllMatrices(FHESecKey& sKey, long keyID)
@@ -127,8 +128,29 @@ void addFrbMatrices(FHESecKey& sKey, long keyID)
   long m = context.zMStar.getM();
 
   for (long j = 1; j < (long)context.zMStar.getOrdP(); j++) {
-    long val = PowerMod(context.zMStar.getP(), j, m); // val = 2^j mod m
+    long val = PowerMod(context.zMStar.getP(), j, m); // val = p^j mod m
     sKey.GenKeySWmatrix(1, val, keyID, keyID);
+  }
+  sKey.setKeySwitchMap(); // re-compute the key-switching map
+}
+
+// Generate all key-switching matrices for a given permutation network
+void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID)
+{
+  const FHEcontext &context = sKey.getContext();
+  long m = context.zMStar.getM();
+
+  for (long i=0; i<net.depth(); i++) {
+    long e = net.getLayer(i).getE();
+    long gIdx = net.getLayer(i).getGenIdx();
+    long g = context.zMStar.ZmStarGen(gIdx);
+    long g2e = PowerMod(g, e, m); // g^e mod m
+    const Vec<long>&shamts = net.getLayer(i).getShifts();
+    for (long j=0; j<shamts.length(); j++) {
+      if (shamts[j]==0) continue;
+      long val = PowerMod(g2e, shamts[j], m);
+      sKey.GenKeySWmatrix(1, val, keyID, keyID);
+    }
   }
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
