@@ -364,6 +364,11 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
   assert(&rho2.getSig()==&getSig());
   assert(&rho3.getSig()==&getSig());
 
+#ifdef DEBUG_PRINTOUT
+  Permut ppp;
+  makeExplicit(ppp);
+  std::cerr << "**breakPermTo3, input="<<ppp<<endl;
+#endif
   // *this consists of separate permutations over [0,n-1], and each
   // of these is viewed as a permutation over an n1 x n2 cebe
 
@@ -537,7 +542,7 @@ void GeneratorTrees::ComputeCubeMapping()
   assert(trees.length()>=1);
 
   if (trees.length()==1)  // A single tree
-    ComputeOneGenMapping(map2cube, trees[0]);
+    ComputeOneGenMapping(map2array, trees[0]);
 
   else { // more than one generator
     // Compute the sub-mapping for every generator. Also prepare two hypercube
@@ -555,10 +560,10 @@ void GeneratorTrees::ComputeCubeMapping()
     CubeSignature sig1(dims1), sig2(dims2);
 
     // Allocate space for the mapping
-    map2cube.SetLength(sig1.getSize());
+    map2array.SetLength(sig1.getSize());
 
     // Combine the generator perms to a single permutation over the cube
-    for (long i=0; i<map2cube.length(); i++) {
+    for (long i=0; i<map2array.length(); i++) {
       long t=0;
       for (long j2=0; j2<trees.length(); j2++) {
 	long j1 = trees[j2].getAuxKey();
@@ -567,13 +572,13 @@ void GeneratorTrees::ComputeCubeMapping()
 	digit = genMappings[j1][digit];   // apply the j1 permutation to it
 	t += digit * sig2.getProd(j2+1);  // adds the permuted digit
       }
-      map2cube[t] = i;
+      map2array[i] = t;
     }
   }
 
   // Compute the inverse permutation
-  map2array.SetLength(map2cube.length());
-  for (long i=0; i<map2cube.length(); i++) map2array[ map2cube[i] ] = i;
+  map2cube.SetLength(map2array.length());
+  for (long i=0; i<map2array.length(); i++) map2cube[ map2array[i] ] = i;
 }
 
 ostream& operator<< (ostream &s, const ColPerm& p)

@@ -57,12 +57,16 @@ void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
     lyr.isID = isID[i];
     lyr.e = leafData.e;
     if (!lyr.isID) {
-      //      std::cerr << "layer "<<lyrIdx+i<<": "<<shifts[i]<<endl;
+#ifdef DEBUG_PRINTOUT
+      std::cerr << "layer "<<lyrIdx+i<<": "<<shifts[i]<<endl;
+#endif
       if (leafData.good) // For good leaves, shift by -x is the same as size-x
 	for (long k=0; k<shifts[i].length(); k++)
 	  if (shifts[i][k]<0) shifts[i][k] += leafData.size;
       applyPermToVec(lyr.shifts, shifts[i], map2cube); // do the renaming
-      //      std::cerr << "       : "<<lyr.shifts<<endl;
+#ifdef DEBUG_PRINTOUT
+      std::cerr << "       : "<<lyr.shifts<<endl;
+#endif
     }
     //    else std::cerr << "layer "<<lyrIdx+i<<"= identity\n";
   }
