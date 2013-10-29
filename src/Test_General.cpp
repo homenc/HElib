@@ -89,15 +89,12 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   cerr << "done\n";
 
-  //  printAllTimers();
-  resetAllTimers();
 
   cerr << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
   cerr << "done\n";
 
 
-  double t = GetTime();
 
   long nslots = ea.size();
 
@@ -116,6 +113,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   ea.encrypt(c1, publicKey, p1);
   ea.encrypt(c2, publicKey, p2);
   ea.encrypt(c3, publicKey, p3);
+
+
+  double t = GetTime();
+  resetAllTimers();
 
   for (long i = 0; i < R; i++) {
 
@@ -267,3 +268,5 @@ int main(int argc, char *argv[])
 
 }
 
+// call to get our running test case:
+// Test_General_x p=23 m=20485 L=20 R=5

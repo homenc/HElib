@@ -662,8 +662,7 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 // Multiply-by-constant
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
-  FHE_TIMER_START;
-  // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
+   // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
   if (size <= 0.0) {
     // WARNING: the following line is written just so to prevent overflow
     size = ((double) context.zMStar.getPhiM()) * ptxtSpace * (ptxtSpace /4.0);
@@ -674,7 +673,6 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 
   noiseVar *= size;
-  FHE_TIMER_STOP;
 }
 
 void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)

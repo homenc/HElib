@@ -344,7 +344,9 @@ public:
   // phi(m)*ptxtSpace^2 as the default value.
   void multByConstant(const DoubleCRT& dcrt, double size=0.0);
   void multByConstant(const ZZX& poly, double size=0.0)
-  { multByConstant(DoubleCRT(poly,context,primeSet),size); }
+  { 
+    multByConstant(DoubleCRT(poly,context,primeSet),size); 
+  }
 
   // Higher-level multiply routines
   void multiplyBy(const Ctxt& other);
