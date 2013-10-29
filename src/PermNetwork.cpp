@@ -138,7 +138,7 @@ void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
 }
 
 // Apply a permutation network to a hypercube, used mostly for debugging
-void PermNetwork::applyToCube(HyperCube<long>& cube)
+void PermNetwork::applyToCube(HyperCube<long>& cube) const
 {
   if (layers.length()==0) return;
   long n = cube.getSize();
@@ -170,8 +170,9 @@ void PermNetwork::applyToCube(HyperCube<long>& cube)
   }
 }
 
-void PermNetwork::applyToPtxt(ZZX& p, const EncryptedArray& ea)
+void PermNetwork::applyToPtxt(ZZX& p, const EncryptedArray& ea) const
 {
+  NTL::Error("PermNetwork::applyToPtxt is not implemented");
 }
 
 // Upon return, mask[i]=1 if haystack[i]=needle, 0 otherwise.
@@ -200,7 +201,7 @@ makeMask(vector<long>& mask, Vec<long>& haystack, long needle)
 
 // Apply a permutation network to a ciphertext
 // FIXME: Do we need to also give an EncryptedArray object as paramter?
-void PermNetwork::applyToCtxt(Ctxt& c)
+void PermNetwork::applyToCtxt(Ctxt& c) const
 {
   const PAlgebra& al = c.getContext().zMStar;
   EncryptedArray ea(c.getContext());

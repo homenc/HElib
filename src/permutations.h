@@ -582,13 +582,13 @@ public:
   void buildNetwork(const Permut& pi, const GeneratorTrees& trees);
 
   //! Apply network to permute a ciphertext
-  void applyToCtxt(Ctxt& c);
+  void applyToCtxt(Ctxt& c) const;
 
   //! Apply network to array, used mostly for debugging
-  void applyToCube(HyperCube<long>& v);
+  void applyToCube(HyperCube<long>& v) const;
 
   //! Apply network to plaintext polynomial, used mostly for debugging
-  void applyToPtxt(ZZX& p, const EncryptedArray& ea);
+  void applyToPtxt(ZZX& p, const EncryptedArray& ea) const;
 
   const PermNetLayer& getLayer(long i) const {return layers[i];}
 
