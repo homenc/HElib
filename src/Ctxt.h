@@ -360,6 +360,9 @@ public:
   void reLinearize(long keyIdx=0);
           // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
+  //! @brief Add a high-noise encryption of the given constant
+  void blindCtxt(const ZZX& poly);
+
   //! @brief Estimate the added noise variance
   xdouble modSwitchAddedNoiseVar() const;
 

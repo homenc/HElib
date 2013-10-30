@@ -212,6 +212,15 @@ void Ctxt::modDownToLevel(long lvl)
   modDownToSet(targetSet); // removes the primes in primeSet / targetSet
 }
 
+void Ctxt::blindCtxt(const ZZX& poly)
+{
+  Ctxt tmp(pubKey);
+  pubKey.Encrypt(tmp,poly,ptxtSpace,/*highNoise=*/true);
+  *this += tmp;
+  // FIXME: This implementation is not optimized, the levels in the
+  //  modulus chain should be handled much better.
+}
+
 // key-switch to (1,s_i), s_i is the base key with index keyID. If
 // keyID<0 then re-linearize to any key for which a switching matrix exists
 void Ctxt::reLinearize(long keyID)
