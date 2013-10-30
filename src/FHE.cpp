@@ -24,8 +24,7 @@ NTL_CLIENT
 /******** Utility function to generate RLWE instances *********/
 
 // Choose random c0,c1 such that c0+s*c1 = p*e for a short e
-void RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
-	  ZZ* prgSeed=NULL)
+void RLWE(DoubleCRT& c0,DoubleCRT& c1, const DoubleCRT &s, long p, ZZ* prgSeed)
 {
   assert (p>0); // Can be used with p=1, but we always use with p>=2
 
