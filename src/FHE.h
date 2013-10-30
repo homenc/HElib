@@ -201,9 +201,11 @@ public:
   //! See Section 3.2.2 in the design document (KeySwitchMap)
   void setKeySwitchMap(long keyId=0);  // Computes the keySwitchMap pointers
 
-  //! @brief Result returned in the ciphertext argument,
-  //! The resurn value is the plaintext-space for that ciphertext
-  long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0) const;
+  //! @brief Encrypts plaintext, result returned in the ciphertext argument.
+  //! The returned value is the plaintext-space for that ciphertext. When
+  //! called with highNoise=true, returns a ciphertext with noise level~q/8.
+  long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0,
+	       bool highNoise=false) const;
 
   friend class FHESecKey;
   friend ostream& operator << (ostream& str, const FHEPubKey& pk);
@@ -299,4 +301,12 @@ void addFrbMatrices(FHESecKey& sKey, long keyID=0);
 //! Generate all key-switching matrices for a given permutation network
 class PermNetwork;
 void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID=0);
+
+//! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
+void RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
+	  ZZ* prgSeed=NULL);
+
+//! Same as RLWE, but assumes that c1 is already chosen by the caller
+void RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);
+
 #endif // ifndef _FHE_H_
