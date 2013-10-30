@@ -32,13 +32,17 @@ using namespace NTL;
 typedef Vec<long> Permut;
 
 //! Apply a permutation to a vector, out[i]=in[p1[i]] (NOT in-place)
-void applyPermToVec(Vec<long>& out, const Vec<long>& in, const Permut& p1);
-void applyPermToVec(vector<long>& out, const vector<long>& in, const Permut& p1);
+template<class T>
+void applyPermToVec(Vec<T>& out, const Vec<T>& in, const Permut& p1);
+template<class T>
+void applyPermToVec(vector<T>& out, const vector<T>& in, const Permut& p1);
 
 //! Apply two permutations to a vector out[i]=in[p2[p1[i]]] (NOT in-place)
-void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
+template<class T>
+void applyPermsToVec(Vec<T>& out, const Vec<T>& in,
 		      const Permut& p2, const Permut& p1);
-void applyPermsToVec(vector<long>& out, const vector<long>& in,
+template<class T>
+void applyPermsToVec(vector<T>& out, const vector<T>& in,
 		      const Permut& p2, const Permut& p1);
 
 //! @brief A random size-n permutation

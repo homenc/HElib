@@ -23,14 +23,16 @@ const Vec<long> SubDimension::dummyBenes;
 
 // Apply a permutation to a vector, out[i]=in[p1[i]]
 // Unfortunately we need to implement for both Vec<long> and vector<long>
-void applyPermToVec(Vec<long>& out, const Vec<long>& in, const Permut& p1)
+template<class T>
+void applyPermToVec(Vec<T>& out, const Vec<T>& in, const Permut& p1)
 {
   assert(&out != &in); // NOT an in-place procedure
   out.SetLength(p1.length());
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p1[i]);
 }
-void applyPermToVec(vector<long>& out, const vector<long>& in, const Permut& p1)
+template<class T>
+void applyPermToVec(vector<T>& out, const vector<T>& in, const Permut& p1)
 {
   out.resize(p1.length());
   for (long i=0; i<p1.length(); i++)
@@ -38,7 +40,8 @@ void applyPermToVec(vector<long>& out, const vector<long>& in, const Permut& p1)
 }
 
 // Apply two permutations to a vector out[i]=in[p2[p1[i]]]
-void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
+template<class T>
+void applyPermsToVec(Vec<T>& out, const Vec<T>& in,
 		      const Permut& p2, const Permut& p1)
 {
   assert(&out != &in); // NOT an in-place procedure
@@ -47,7 +50,8 @@ void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p2.at(p1[i]));
 }
-void applyPermsToVec(vector<long>& out, const vector<long>& in,
+template<class T>
+void applyPermsToVec(vector<T>& out, const vector<T>& in,
 		      const Permut& p2, const Permut& p1)
 {
   assert(p1.length() == p2.length());
@@ -55,6 +59,19 @@ void applyPermsToVec(vector<long>& out, const vector<long>& in,
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p2.at(p1[i]));
 }
+// explicit instantiations
+template void applyPermToVec(Vec<long>& out, const Vec<long>& in,
+			       const Permut& p1);
+template void applyPermToVec(vector<long>& out, const vector<long>& in,
+			       const Permut& p1);
+template void applyPermToVec(vector<ZZX>& out, const vector<ZZX>& in,
+			       const Permut& p1);
+
+template void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
+				const Permut& p2, const Permut& p1);
+template void applyPermsToVec(vector<long>& out, const vector<long>& in,
+				const Permut& p2, const Permut& p1);
+
 
 void randomPerm(Permut& perm, long n)
 {
