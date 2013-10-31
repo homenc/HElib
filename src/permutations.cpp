@@ -60,16 +60,16 @@ void applyPermsToVec(vector<T>& out, const vector<T>& in,
     out[i] = in.at(p2.at(p1[i]));
 }
 // explicit instantiations
-template void applyPermToVec(Vec<long>& out, const Vec<long>& in,
+template void applyPermToVec<long>(Vec<long>& out, const Vec<long>& in,
 			       const Permut& p1);
-template void applyPermToVec(vector<long>& out, const vector<long>& in,
+template void applyPermToVec<long>(vector<long>& out, const vector<long>& in,
 			       const Permut& p1);
-template void applyPermToVec(vector<ZZX>& out, const vector<ZZX>& in,
+template void applyPermToVec<ZZX>(vector<ZZX>& out, const vector<ZZX>& in,
 			       const Permut& p1);
 
-template void applyPermsToVec(Vec<long>& out, const Vec<long>& in,
+template void applyPermsToVec<long>(Vec<long>& out, const Vec<long>& in,
 				const Permut& p2, const Permut& p1);
-template void applyPermsToVec(vector<long>& out, const vector<long>& in,
+template void applyPermsToVec<long>(vector<long>& out, const vector<long>& in,
 				const Permut& p2, const Permut& p1);
 
 
