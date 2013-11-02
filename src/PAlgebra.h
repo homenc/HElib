@@ -318,10 +318,17 @@ public:
      \verbatim
        maskTable.size() == zMStar.numOfGens()     // # of generators
        for i = 0..maskTable.size()-1:
-         maskTable[i].size() == zMStar.OrderOf(i) // order of generator i
+         maskTable[i].size() == 1 + zMStar.OrderOf(i) // 1 + order of gen i
      \endverbatim
   **/
   virtual void genMaskTable() const = 0;
+
+  /**
+
+    generates CRT table to speed up mask encoding
+
+  **/
+  virtual void genCrtTable() const = 0;
 };
 
 #ifndef DOXYGEN_IGNORE
@@ -384,6 +391,7 @@ private:
   vector<ZZX> factorsOverZZ;
   vec_RX crtCoeffs;
   vector< vector< RX > > maskTable;
+  vector<RX> crtTable;
 
 
 public:
@@ -398,6 +406,7 @@ public:
     PhimXMod = other.PhimXMod;
     factors = other.factors;
     maskTable = other.maskTable;
+    crtTable = other.crtTable;
   }
 
   PAlgebraModDerived& operator=(const PAlgebraModDerived& other) // assignment
@@ -413,6 +422,7 @@ public:
     PhimXMod = other.PhimXMod;
     factors = other.factors;
     maskTable = other.maskTable;
+    crtTable = other.crtTable;
 
     return *this;
   }
@@ -451,10 +461,19 @@ public:
   **/
   virtual void genMaskTable() const; // logically, but not really, const
 
+  /**
+
+    generates CRT table to speed up mask encoding
+
+  **/
+
+  virtual void genCrtTable() const; // logically, but not really, const
+
   /* In all of the following functions, it is expected that the caller 
      has already restored the relevant modulus (p^r), which
      can be done by invoking the method restoreContext()
    */
+
 
   //! Returns reference to an RXModulus representing Phi_m(X) (mod p^r)
   const RXModulus& getPhimXMod() const { return PhimXMod; }
@@ -485,6 +504,19 @@ public:
     if (maskTable.size() == 0) 
       genMaskTable();
     return maskTable;
+  }
+
+  /** 
+
+    returns ref to CRT table
+ 
+  **/
+
+  const vector< RX >& getCrtTable() const // logically, but not really, const
+  {
+    if (crtTable.size() == 0) 
+      genCrtTable();
+    return crtTable;
   }
 
   ///@{
@@ -630,6 +662,14 @@ public:
      \endverbatim
   **/
   void genMaskTable() const { rep->genMaskTable(); }
+
+  /** 
+
+    generates CRT table to speed up mask encoding
+ 
+  **/
+
+  void genCrtTable() const { rep->genCrtTable(); }
 };
 
 #endif // #ifdef _PAlgebra_H_

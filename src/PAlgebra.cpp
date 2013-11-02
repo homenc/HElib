@@ -30,6 +30,7 @@
 
 #include "NumbTh.h"    // defines argmax(...)
 #include "PAlgebra.h"
+#include "timing.h"
 
 
 NTL_CLIENT
@@ -569,6 +570,7 @@ template<class type>
 void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha, 
                                             const MappingData<type>& mappingData) const
 {
+  FHE_TIMER_START;
   long nSlots = zMStar.getNSlots();
 
   vector<RX> crt(nSlots); // alloate space for CRT components
@@ -577,9 +579,9 @@ void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha,
   // where with t=T[i].
 
   
-  if (IsX(mappingData.G)) {
+  if (IsX(mappingData.G) || deg(alpha) <= 0) {
     // special case...no need for CompMod, which is
-    // is not optimized for zero
+    // is not optimized for this case
 
     for (long i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
       crt[i] = ConstTerm(alpha);
@@ -592,12 +594,15 @@ void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha,
   }
 
   CRT_reconstruct(H,crt); // interpolate to get H
+  FHE_TIMER_START;
 }
 
 template<class type>
 void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas, 
                                          const MappingData<type>& mappingData) const
 {
+  FHE_TIMER_START;
+
   long nSlots = zMStar.getNSlots();
   assert(lsize(alphas) == nSlots);
 
@@ -610,35 +615,50 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
 
   if (IsX(mappingData.G)) {
     // special case...no need for CompMod, which is
-    // is not optimized for zero
+    // is not optimized for this case
 
     for (long i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
       crt[i] = ConstTerm(alphas[i]);
   }
   else {
-    // general case...
+    // general case...still try to avoid CompMod when possible,
+    // which is the common case for encoding masks
 
-    for (long i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
-      CompMod(crt[i], alphas[i], mappingData.maps[i], factors[i]);
+    for (long i=0; i<nSlots; i++) {   // crt[i] = alpha(maps[i]) mod Ft
+      if (deg(alphas[i]) <= 0) 
+        crt[i] = alphas[i];
+      else
+        CompMod(crt[i], alphas[i], mappingData.maps[i], factors[i]);
+    }
   }
 
   CRT_reconstruct(H,crt); // interpolate to get p
+
+  FHE_TIMER_STOP;
 }
 
 template<class type>
 void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
 {
+  FHE_TIMER_START;
   long nSlots = zMStar.getNSlots();
 
-  // Recall that we have crtCoeffs[i] = \prod_{j \ne i} Fj^{-1} mod Fi
+  const vector<RX>& ctab = getCrtTable();
+
   clear(H);
+  RX tmp;
   for (long i=0; i<nSlots; i++) {
-    RX allBut_i = PhimXMod / factors[i]; // = \prod_{j \ne i} Fj
-    allBut_i *= crtCoeffs[i];      // =1 mod Fi and =0 mod Fj for j \ne i
-    MulMod(allBut_i, allBut_i, crt[i], PhimXMod);
-                              // =crt[i] mod Fi and =0 mod Fj for j \ne i
-    H += allBut_i;
+    // optimize special cases 0 and 1, which are common
+    if (!IsZero(crt[i])) {
+      if (IsOne(crt[i]))
+        H += ctab[i];
+      else {
+        MulMod(tmp, ctab[i], crt[i], PhimXMod);
+        H += tmp;
+      }
+    }
   }
+  FHE_TIMER_STOP;
 }
 
 template<class type>
@@ -874,7 +894,6 @@ void PAlgebraModDerived<type>::genMaskTable() const
   
   mtab.resize(zMStar.numOfGens());
   for (long i = 0; i < (long)zMStar.numOfGens(); i++) {
-    // if (i==0 && zMStar.SameOrd(i)) continue;//SHAI: need these masks for shift1D
     long ord = zMStar.OrderOf(i);
     mtab[i].resize(ord+1);
     mtab[i][ord] = 0;
@@ -893,6 +912,30 @@ void PAlgebraModDerived<type>::genMaskTable() const
     mtab[i][0] = 1;
   }
 }
+
+// code for generating crt tables
+// the tables are generated "on demand"
+
+template<class type> 
+void PAlgebraModDerived<type>::genCrtTable() const
+{
+  if (crtTable.size() > 0) return;
+
+  RBak bak; bak.save(); restoreContext();
+
+  // strip const
+  vector< RX >& tab = (vector< RX >&) crtTable;
+
+  
+  long nslots = zMStar.getNSlots();
+  tab.resize(nslots);
+  for (long i = 0; i < nslots; i++) {
+    RX allBut_i = PhimXMod / factors[i]; // = \prod_{j \ne i }Fj
+    allBut_i *= crtCoeffs[i]; // = 1 mod Fi and = 0 mod Fj for j \ne i
+    tab[i] = allBut_i;
+  }
+}
+
 
 // Explicit instantiation
 
