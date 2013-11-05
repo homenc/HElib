@@ -340,6 +340,15 @@ public:
   }
 
 
+  // Coefficients are uniform in [-B..B] 
+  void sampleUniform(const ZZ& B) {
+    ZZX poly;
+    ::sampleUniform(poly, B, context.zMStar.getPhiM());
+    *this = poly;
+  }
+
+
+
   // makes a corresponding SingleCRT object, restricted to
   // the given index set, if specified
   void toSingleCRT(SingleCRT& scrt, const IndexSet& s) const;

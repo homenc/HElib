@@ -281,6 +281,10 @@ void sampleSmall(ZZX &poly, long n=0);
 //! Sample polynomials with Gaussian coefficients.
 void sampleGaussian(ZZX &poly, long n=0, double stdev=1.0);
 
+//! Sample polynomials with coefficients sampled uniformy
+//! over [-B..B]
+void sampleUniform(ZZX& poly, const ZZ& B, long n=0);
+
 
 /**
  * @brief Facility for "restoring" the NTL PRG state.

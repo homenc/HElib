@@ -330,21 +330,25 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
   // then set ctxt = r*pubEncrKey + ptstSpace*e + (ptxt,0)
   DoubleCRT e(context, context.ctxtPrimes);
   DoubleCRT r(context, context.ctxtPrimes);
-  double stdev;
-  if (highNoise) {
-    // Select r from a Gaussian with stdev q/something 
-    // FIXME: calculate this something, currently sqrt(q)
-    stdev = exp(context.logOfProduct(ctxt.getPrimeSet())/2);
-    r.sampleGaussian(stdev);
-  } else {
-    stdev = sqrt(0.5); // used for noise-variance estimate below
-    r.sampleSmall();
-  }
+  r.sampleSmall();
 
   for (size_t i=0; i<ctxt.parts.size(); i++) {  // add noise to all the parts
     ctxt.parts[i] *= r;
 
-    e.sampleGaussian();
+    if (highNoise && i == 0) {
+      // we sample e so that coefficients are uniform over 
+      // [-Q/(8*ptxtSpace)..Q/(8*ptxtSpace)]
+
+      ZZ B;
+      B = context.productOfPrimes(context.ctxtPrimes);
+      B /= ptxtSpace;
+      B /= 8;
+      e.sampleUniform(B);
+    }
+    else { 
+      e.sampleGaussian();
+    }
+
     e *= ptxtSpace;
     ctxt.parts[i] += e;
   }
@@ -363,20 +367,28 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
   // fill in the other ciphertext data members
   ctxt.ptxtSpace = ptxtSpace;
 
-  // We have <skey,ctxt>= r*<skey,pkey> +p*(e0+e1*s) +m, where VAR(<skey,pkey>)
-  // is recorded in pubEncrKey.noiseVar, VAR(ei)=sigma^2*phi(m), and VAR(s) is
-  // determined by the secret-key Hamming weight (skHwt). If highNose is set
-  // then VAR(r)=stdev^2*phi(m), and otherwise VAR(r)=phi(m)/2 (and we set
-  // stdev=sqrt(1/2) above). Hence the expected size squared is bounded by:
-  // E(X^2) <= pubEncrKey.noiseVar *phi(m) *stdev^2
-  //                               + p^2*sigma^2 *phi(m) *(skHwt+1) + p^2
+  if (highNoise) {
+    // hack: we set noiseVar to Q^2/8, which is just below threshold 
+    // that will signal an error
 
-  long hwt = skHwts[0];
-  xdouble phim = to_xdouble(context.zMStar.getPhiM());
-  xdouble sigma2 = context.stdev * context.stdev;
-  xdouble p2 = to_xdouble(ptxtSpace) * to_xdouble(ptxtSpace);
-  ctxt.noiseVar = pubEncrKey.noiseVar*phim*stdev*stdev 
-                  + p2*sigma2*phim*(hwt+1) + p2;
+    ctxt.noiseVar = xexp(2*context.logOfProduct(context.ctxtPrimes) - log(8.0));
+
+  }
+  else {
+    // We have <skey,ctxt>= r*<skey,pkey> +p*(e0+e1*s) +m, where VAR(<skey,pkey>)
+    // is recorded in pubEncrKey.noiseVar, VAR(ei)=sigma^2*phi(m), and VAR(s) is
+    // determined by the secret-key Hamming weight (skHwt). 
+    // VAR(r)=phi(m)/2, hence the expected size squared is bounded by:
+    // E(X^2) <= pubEncrKey.noiseVar *phi(m) *stdev^2
+    //                               + p^2*sigma^2 *phi(m) *(skHwt+1) + p^2
+  
+    long hwt = skHwts[0];
+    xdouble phim = to_xdouble(context.zMStar.getPhiM());
+    xdouble sigma2 = context.stdev * context.stdev;
+    xdouble p2 = to_xdouble(ptxtSpace) * to_xdouble(ptxtSpace);
+    ctxt.noiseVar = pubEncrKey.noiseVar*phim*0.5 
+                    + p2*sigma2*phim*(hwt+1) + p2;
+  }
 
   FHE_TIMER_STOP;
   return ptxtSpace;
