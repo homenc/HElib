@@ -513,6 +513,30 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
   poly.normalize(); // need to call this after we work on the coeffs
 }
 
+void sampleUniform(ZZX& poly, const ZZ& B, long n)
+{
+  if (n<=0) n=deg(poly)+1; if (n<=0) return;
+  if (B <= 0) {
+    clear(poly);
+    return;
+  }
+
+  poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
+
+  ZZ UB, tmp;
+
+  UB =  2*B + 1;
+  for (long i = 0; i < n; i++) {
+    RandomBnd(tmp, UB);
+    tmp -= B; 
+    poly.rep[i] = tmp;
+  }
+
+  poly.normalize();
+}
+
+
+
 // ModComp: a pretty lame implementation
 
 void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f)

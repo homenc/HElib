@@ -953,4 +953,24 @@ public:
   void print(ostream& s) const { rep->print(s); }
 };
 
+
+// Following are functions for performing "higher level"
+// operations on "encrypted arrays".  There is really no
+// reason for these to be members of the EncryptedArray class,
+// so they are just declared as separate functions.
+
+//! @brief if ctxt encrypts (x_1, ..., x_n), then it is
+//! replaced by an encryption of (y_1, ..., y_n), where
+//! y_i = sum_{j=1}^i x_j.  The implementation uses 
+//! O(log n) shift operations.
+void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
+
+//! @brief if ctxt encrypts (x_1, ..., x_n), then it is
+//! replaced by an encryption of (y_n, ..., y_n), where
+//! y_n = sum_{j=1}^n x_j
+void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
+
+
+
+
 #endif /* ifdef _EncryptedArray_H_ */

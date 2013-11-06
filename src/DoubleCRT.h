@@ -364,6 +364,13 @@ public:
     *this = poly; // convert to DoubleCRT
   }
 
+  //! @brief Coefficients are uniform in [-B..B]
+  void sampleUniform(const ZZ& B) {
+    ZZX poly;
+    ::sampleUniform(poly, B, context.zMStar.getPhiM());
+    *this = poly;
+  }
+
 
   //! @brief Makes a corresponding SingleCRT object.
   // Restricted to the given index set, if specified
