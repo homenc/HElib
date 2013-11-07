@@ -101,19 +101,21 @@ public:
   virtual const FHEcontext& getContext() const = 0;
   virtual const long getDegree() const = 0;
 
-  //! @brief Rotation/shift as a linear array
+  //! @brief Left rotation as a linear array.
+  //! E.g., rotating ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(2 3 ... n 1)
   virtual void rotate(Ctxt& ctxt, long k) const = 0; 
 
-  //! @brief Non-cyclic shift with zero fill
+  //! @brief Non-cyclic left shift with zero fill
+  //! E.g., shifting ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(2 3 ... n 0)
   virtual void shift(Ctxt& ctxt, long k) const = 0;
 
-  //! @brief rotate k positions along the i'th dimension
+  //! @brief left-rotate k positions along the i'th dimension
   //! @param dc means "don't care", which means that the caller guarantees
   //! that only zero elements rotate off the end -- this allows for some
   //! optimizations that would not otherwise be possible
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const = 0; 
 
-  //! @brief Shift k positions along the i'th dimension with zero fill
+  //! @brief Left shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
 
