@@ -147,6 +147,13 @@ public:
   FHEPubKey(const FHEcontext& _context): 
     context(_context), pubEncrKey(*this) {}
 
+  FHEPubKey(const FHEPubKey& other): // copy constructor
+    context(other.context), pubEncrKey(*this), skHwts(other.skHwts), 
+    keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap) 
+  { // copy the pubEncrKey w/o checking the reference to the public key
+    pubEncrKey.privateAssign(other.pubEncrKey);
+  }
+
   void clear() { // clear all public-key data
     pubEncrKey.clear(); skHwts.clear(); 
     keySwitching.clear(); keySwitchMap.clear();

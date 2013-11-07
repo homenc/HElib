@@ -90,12 +90,12 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
 
 }
 
-// Assignment
-Ctxt& Ctxt::operator=(const Ctxt& other)
+// A private assignment method that does not check equality of context or
+// public key, this needed for example when we copy the pubEncrKey member
+// between different public keys.
+Ctxt& Ctxt::privateAssign(const Ctxt& other)
 {
   if (this == &other) return *this; // both point to the same object
-  assert(&context == &other.context);
-  assert (&pubKey == &other.pubKey);
 
   parts = other.parts;
   primeSet = other.primeSet;

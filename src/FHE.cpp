@@ -618,6 +618,7 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 			ZZX& f) const // plaintext before modular reduction
 {
   FHE_TIMER_START;
+  assert(getContext()==ciphertxt.getContext());
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
   DoubleCRT ptxt(context, ptxtPrimes); // Set to zero
 
