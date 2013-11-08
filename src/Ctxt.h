@@ -297,9 +297,19 @@ class Ctxt {
   //    interval, starting at 0.
   bool verifyPrimeSet() const;
 
+  // A private assignment method that does not check equality of context or
+  // public key, this is needed when we copy the pubEncrKey member between
+  // different public keys.
+  Ctxt& privateAssign(const Ctxt& other);
+ 
 public:
   Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace=0); // constructor
-  Ctxt& operator=(const Ctxt& other);  // assignment
+
+  Ctxt& operator=(const Ctxt& other) {  // public assignment operator
+    assert(&context == &other.context);
+    assert (&pubKey == &other.pubKey);
+    return privateAssign(other);
+  }
 
   bool operator==(const Ctxt& other) const { return equalsTo(other); }
   bool operator!=(const Ctxt& other) const { return !equalsTo(other); }
