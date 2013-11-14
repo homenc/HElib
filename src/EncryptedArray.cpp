@@ -442,7 +442,7 @@ buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
   vector<RX> CC, LL;
   convert(LL, L);
   tab.buildLinPolyCoeffs(CC, LL, mappingData);
-  convert(C, LL);
+  convert(C, CC);
 }
 
 PlaintextArrayBase* buildPlaintextArray(const EncryptedArray& ea)

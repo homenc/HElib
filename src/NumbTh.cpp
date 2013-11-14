@@ -621,7 +621,7 @@ void buildLinPolyMatrix(mat_GF2E& M, long p)
 {
    assert(p == 2);
 
-   long d = zz_pE::degree();
+   long d = GF2E::degree();
 
    M.SetDims(d, d);
 

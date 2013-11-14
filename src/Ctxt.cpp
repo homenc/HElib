@@ -714,6 +714,10 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
 void Ctxt::smartAutomorph(long k) 
 {
   FHE_TIMER_START;
+  long m = context.zMStar.getM();
+
+  k = mcMod(k, m);
+
   // Sanity check: verify that k \in Zm*
   assert (context.zMStar.inZmStar(k));
 
@@ -724,7 +728,6 @@ void Ctxt::smartAutomorph(long k)
   }
   assert (pubKey.isReachable(k,keyID)); // reachable from 1
 
-  long m = context.zMStar.getM();
   while (k != 1) {
     const KeySwitch& matrix = pubKey.getNextKSWmatrix(k,keyID);
     long amt = matrix.fromKey.getPowerOfX();

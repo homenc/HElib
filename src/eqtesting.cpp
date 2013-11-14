@@ -30,19 +30,119 @@ Experimental program for equality testing...
 
 ********/
 
-typdef tr1::shared_ptr<Ctxt> CtxtPtr;
+typedef tr1::shared_ptr<Ctxt> CtxtPtr;
 
-void printVector(const vector<ZZX>& v) 
+void printBits(const vector<ZZX>& v, long n) 
 {
+  long len = v.size();
+  for (long i = 0; i < len; i++) {
+    for (long j = n-1; j >= 0; j--)
+      cout << coeff(v[i], j);
+    cout << " ";
+  }
+  cout << "\n";
 }
 
-void computeIt(vector<CtxtPtr>& res, const Ctxt& ctxt, unsigned long w, long n)
-{
 
+// computes ctxt^{2^d-1} using a method that takes
+// O(log d) automorphisms and multiplications
+void fastPower(Ctxt& ctxt, long d) 
+{
+  if (d == 1) return;
+
+  Ctxt orig = ctxt;
+
+  long k = NumBits(d);
+  long e = 1;
+
+  for (long i = k-2; i >= 0; i--) {
+    Ctxt tmp1 = ctxt;
+    tmp1.smartAutomorph(1L << e);
+    ctxt.multiplyBy(tmp1);
+    e = 2*e;
+
+    if (bit(d, i)) {
+      ctxt.smartAutomorph(2);
+      ctxt.multiplyBy(orig);
+      e += 1;
+    }
+  }
+}
+
+// zeroTest sets each res[i], for i=0..n-1, to
+// a ciphertext in which each slot is 0 or 1 according
+// to whether or not bits 0..i of corresponding slot in ctxt
+// is zero (1 if not zero, 0 if zero).
+// It is assumed that res and each res[i] is already initialized
+// by the caller.
+
+// Complexity: O(d + n log d) smart automorphisms
+//             O(n d) 
+
+void zeroTest(vector<CtxtPtr>& res, const EncryptedArray& ea, 
+              const Ctxt& ctxt, long n)
+{
+  FHE_TIMER_START
+  long nslots = ea.size();
+  long d = ea.getDegree();
+
+  // compute linearized polynomial coefficients
+
+  vector< vector<ZZX> > Coeff;
+  Coeff.resize(n);
+
+  for (long i = 0; i < n; i++) {
+    // coeffients for mask on bits 0..i
+    // L[j] = X^j for j = 0..i, L[j] = 0 for j = i+1..d-1
+
+    vector<ZZX> L;
+    L.resize(d);
+
+    for (long j = 0; j <= i; j++) 
+      SetCoeff(L[j], j);
+
+    vector<ZZX> C;
+
+    ea.buildLinPolyCoeffs(C, L);
+
+    Coeff[i].resize(d);
+    for (long j = 0; j < d; j++) {
+      // Coeff[i][j] = to the encoding that has C[j] in all slots
+      // FIXME: maybe encrtpted array should have this functionality
+      //        built in
+      vector<ZZX> T;
+      T.resize(nslots);
+      for (long s = 0; s < nslots; s++) T[s] = C[j];
+      ea.encode(Coeff[i][j], T);
+    }
+  }
+
+  vector<CtxtPtr> Conj;
+  Conj.resize(d);
+  // initialize *Cong[j] to ctxt^{2^j}
+  for (long j = 0; j < d; j++) {
+    Conj[j] = CtxtPtr(new Ctxt(ctxt));
+    Conj[j]->smartAutomorph(1L << j);
+  }
+
+  for (long i = 0; i < n; i++) {
+    res[i]->clear();
+    for (long j = 0; j < d; j++) {
+      Ctxt tmp = *Conj[j];
+      tmp.multByConstant(Coeff[i][j]);
+      *res[i] += tmp;
+    }
+
+    // *res[i] now has 0..i in each slot
+    // next, we raise to the power 2^d-1
+
+    fastPower(*res[i], d);
+  }
+  FHE_TIMER_STOP
 }
 
 
-void  TestIt(long L, long m, long c)
+void  TestIt(long c, long k, long w, long L, long m, long n)
 {
   FHEcontext context(m, 2, 1); // p = 2, r = 1
   long d = context.zMStar.getOrdP(); 
@@ -62,7 +162,8 @@ void  TestIt(long L, long m, long c)
 
   ZZX G;
 
-  G = makeIrredPoly(p, d); 
+  G = makeIrredPoly(2, d); 
+  // G = context.alMod.getFactorsOverZZ()[0];
 
   cerr << "generating key-switching matrices... ";
   addFrbMatrices(secretKey);
@@ -77,42 +178,40 @@ void  TestIt(long L, long m, long c)
 
   long nslots = ea.size();
 
-  double t = GetTime();
-  resetAllTimers();
+  if (n <= 0 || n > d) n = d;
+  
+
 
   vector<ZZX> v;
   v.resize(nslots);
   for (long i = 0; i < nslots; i++) {
     GF2X f;
-    random(f, d);
+    random(f, n);
     conv(v[i], f);
   }
 
-  printVector(v);
+  printBits(v, n);
 
   Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, v);
   // ctxt encrypts a vector where each slots is a random
-  // polynomial of degree < d
-
-  unsigned long w = RandomBits_ulong(d);
-  // w is a random d-bit number
-
-  long n = d;
+  // polynomial of degree < n
 
 
   vector<CtxtPtr> res;
   res.resize(n);
-  for (long j = 0; j < n; j++) {
+  for (long j = 0; j < n; j++) 
     res[j] = CtxtPtr(new Ctxt(publicKey));
-  }
+  
 
-  computeIt(res, ctxt, w, n);
+  resetAllTimers();
+
+  zeroTest(res, ea, ctxt, n);
 
   for (long j = 0; j < n; j++) {
     vector<ZZX> v1;
     ea.decrypt(*res[j], secretKey, v1); 
-    printVector(v1);
+    printBits(v1, n);
   }
 
 }
@@ -123,16 +222,11 @@ void usage(char *prog)
   cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
   cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
-  cerr << "  R is the number of rounds\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  r is the lifting [default=1]" << endl;
-  cerr << "  d is the degree of the field extension [default==1]\n";
-  cerr << "    (d == 0 => factors[0] defined the extension)\n";
   cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
   cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
-  cerr << "  s is the minimum number of slots [default=4]\n";
+  cerr << "  L is the # of primes in the modulus chai [default=20]\n";
   cerr << "  m is a specific modulus\n";
+  cerr << "  n is the number of masks (defaults to all)\n";
   exit(0);
 }
 
@@ -140,44 +234,28 @@ void usage(char *prog)
 int main(int argc, char *argv[]) 
 {
   argmap_t argmap;
-  argmap["R"] = "1";
-  argmap["p"] = "2";
-  argmap["r"] = "1";
-  argmap["d"] = "1";
   argmap["c"] = "2";
   argmap["k"] = "80";
-  argmap["L"] = "0";
-  argmap["s"] = "0";
+  argmap["L"] = "20";
   argmap["m"] = "0";
+  argmap["n"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
-  long R = atoi(argmap["R"]);
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long d = atoi(argmap["d"]);
   long c = atoi(argmap["c"]);
   long k = atoi(argmap["k"]);
-  //  long z = atoi(argmap["z"]);
   long L = atoi(argmap["L"]);
-  if (L==0) { // determine L based on R,r
-    L = 3*R+3;
-    if (p>2 || r>1) { // add some more primes for each round
-      long addPerRound = 2*ceil(log((double)p)*r*3)/(log(2.0)*NTL_SP_NBITS) +1;
-      L += R * addPerRound;
-    }
-  }
-  long s = atoi(argmap["s"]);
   long chosen_m = atoi(argmap["m"]);
+  long n = atoi(argmap["n"]);
 
   long w = 64; // Hamming weight of secret key
   //  long L = z*R; // number of levels
 
-  long m = FindM(k, L, c, p, d, s, chosen_m, true);
+  long m = FindM(k, L, c, 2, 1, 0, chosen_m, true);
 
   setTimersOn();
-  TestIt(R, p, r, d, c, k, w, L, m);
+  TestIt(c, k, w, L, m, n);
 
   cerr << endl;
   printAllTimers();
@@ -186,4 +264,6 @@ int main(int argc, char *argv[])
 }
 
 // call to get our running test case:
-// Test_General_x p=23 m=20485 L=20 R=5
+// eqtesting_x m=20485 
+// eqtesting_x m=105 for quick testing
+// 
