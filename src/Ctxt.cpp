@@ -600,6 +600,7 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
 
   if (this == &other) { // a squaring operation
+    modDownToLevel(findBaseLevel());      // mod-down if needed
     tmpCtxt.tensorProduct(*this, other);  // compute the actual product
     tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
   }
