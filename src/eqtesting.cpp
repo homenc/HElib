@@ -224,7 +224,7 @@ void usage(char *prog)
   cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
   cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
   cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  L is the # of primes in the modulus chai [default=20]\n";
+  cerr << "  L is the # of primes in the modulus chain [default=20]\n";
   cerr << "  m is a specific modulus\n";
   cerr << "  n is the number of masks (defaults to all)\n";
   exit(0);
