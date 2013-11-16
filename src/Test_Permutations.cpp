@@ -19,13 +19,13 @@
 #include "permutations.h"
 #include "EncryptedArray.h"
 
-void testCtxt(long m, long p, long widthBound=0, long L=0);
+void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 
 void usage(char *prog) 
 {
   cerr << "Usage: "<<prog<<" [test=? [optional parameters...]]\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'test=1 m=108 p=2\n";
+  cerr << "  e.g, 'test=1 m=108 p=2 r=1\n";
   cerr << "  test is either 0 (plaintext) or 1 (ciphertext)[default=1]\n\n";
   cerr << "test=0, permuting plaintext hypercubes (dimension upto 4):\n";
   cerr << "  ord1,ord2,ord3,ord4 size of dimensions 1..4 [default ord1=30, ord2,3,4=0]\n";
@@ -33,7 +33,7 @@ void usage(char *prog)
   cerr << "  depth bounds the depth of permutation network [default=5]\n";
   cerr << "\ntest=1, permuting ciphertext slots:\n";
   cerr << "  m is the cyclotomic field [default=4369]\n";
-  cerr << "  p is the plaintext space [default=2]\n";
+  cerr << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
   cerr << "  depth bounds the depth of permutation network [default=5]\n";
   cerr << "  L is number of primes in chain [default=depth]\n";
   exit(0);
@@ -78,11 +78,11 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
   }
 }
 
-void testCtxt(long m, long p, long widthBound, long L)
+void testCtxt(long m, long p, long widthBound, long L, long r)
 {
-  cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ")";
+  cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ",r="<<r<<")";
 
-  FHEcontext context(m,p,1);
+  FHEcontext context(m,p,r);
   EncryptedArray ea(context); // Use G(X)=X for this ea object
 
   // Some arbitrary initial plaintext array
@@ -189,6 +189,7 @@ int main(int argc, char *argv[])
   argmap["test"] = "1";
   argmap["m"] = "4369";
   argmap["p"] = "2";
+  argmap["r"] = "1";
   argmap["depth"] = "5";
   argmap["L"] = "0";
   argmap["ord1"] = "30";
@@ -206,6 +207,7 @@ int main(int argc, char *argv[])
 
   long test = atoi(argmap["test"]);
   long p = atoi(argmap["p"]);
+  long r = atoi(argmap["r"]);
   long m = atoi(argmap["m"]);
   long depth = atoi(argmap["depth"]);
   long L = atoi(argmap["L"]);
@@ -243,7 +245,7 @@ int main(int argc, char *argv[])
   else {
     setTimersOn();
     cout << "***Testing m="<<m<<", p="<<p<<", depth="<<depth<< endl;
-    testCtxt(m,p,depth,L);
+    testCtxt(m,p,depth,L,r);
   }
 }
 
