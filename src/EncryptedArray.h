@@ -133,6 +133,12 @@ public:
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(PlaintextArray& array, const ZZX& ptxt) const = 0;
 
+  // FIXME: Inefficient implementation, calls usual decode and returns one slot
+  long decode1Slot(const ZZX& ptxt, long i) const
+  { vector< long > v; decode(v, ptxt); return v.at(i); }
+  void decode1Slot(ZZX& slot, const ZZX& ptxt, long i) const
+  { vector< ZZX > v; decode(v, ptxt); slot=v.at(i); }
+
   //! @brief Encodes a vector with 1 at position i and 0 everywhere else
   virtual void encodeUnitSelector(ZZX& ptxt, long i) const = 0;
   ///@}
@@ -145,6 +151,12 @@ public:
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const = 0;
+
+  // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
+  long decrypt1Slot(const Ctxt& ctxt, const FHESecKey& sKey, long i) const
+  { vector< long > v; decrypt(ctxt, sKey, v); return v.at(i); }
+  void decrypt1Slot(ZZX& slot, const Ctxt& ctxt, const FHESecKey& sKey, long i) const
+  { vector< ZZX > v; decrypt(ctxt, sKey, v); slot = v.at(i); }
   ///@}
 
   //@{
