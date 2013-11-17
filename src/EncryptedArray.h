@@ -133,6 +133,9 @@ public:
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(PlaintextArray& array, const ZZX& ptxt) const = 0;
 
+  virtual void random(vector< long >& array) const = 0;
+  virtual void random(vector< ZZX >& array) const = 0;
+
   // FIXME: Inefficient implementation, calls usual decode and returns one slot
   long decode1Slot(const ZZX& ptxt, long i) const
   { vector< long > v; decode(v, ptxt); return v.at(i); }
@@ -292,6 +295,12 @@ public:
 
   virtual void decode(PlaintextArray& array, const ZZX& ptxt) const;
 
+  virtual void random(vector< long  >& array) const
+    { genericRandom(array); } // choose at random and convert to vector<long>
+
+  virtual void random(vector< ZZX  >& array) const
+    { genericRandom(array); } // choose at random and convert to vector<ZZX>
+
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const
     { genericEncrypt(ctxt, pKey, ptxt); }
 
@@ -326,6 +335,13 @@ public:
   void encode(ZZX& ptxt, const vector< RX >& array) const;
   void decode(vector< RX  >& array, const ZZX& ptxt) const;
 
+  // Choose random polynomial of the right degree, coeffs in GF2 or zz_p
+  void random(vector< RX  >& array) const
+  { 
+    array.resize(size()); 
+    for (long i=0; i<size(); i++) NTL::random(array[i], getDegree());
+  }
+
   void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< RX >& ptxt) const
     { genericEncrypt(ctxt, pKey, ptxt); }
 
@@ -357,6 +373,16 @@ private:
     vector< RX > array1;
     decode(array1, ptxt);
     convert(array, array1);
+  }
+
+  template<class T>
+  void genericRandom(T& array) const // T is vector<long> or vector<ZZX>
+  {
+    RBak bak; bak.save(); context.alMod.restoreContext(); // backup NTL modulus
+
+    vector< RX > array1;    // RX is GF2X or zz_pX
+    random(array1);         // choose random coefficients from GF2/zz_p
+    convert(array, array1); // convert to type T (see NumbTh.h)
   }
 
   template<class T>
@@ -457,6 +483,11 @@ public:
     { rep->decode(array, ptxt); }
   void decode(PlaintextArray& array, const ZZX& ptxt) const 
     { rep->decode(array, ptxt); }
+
+  void random(vector< long  >& array) const
+    { rep->random(array); }
+  void random(vector< ZZX  >& array) const
+    { rep->random(array); }
 
   void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const 
     { rep->encrypt(ctxt, pKey, ptxt); }
