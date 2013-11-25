@@ -144,9 +144,9 @@ public:
 
   // copy constructor: default
 
-  //! @brief Initializing AltCRT from a ZZX polynomial
+  //! @brief Initializing DoubleCRT from a ZZX polynomial
   //! @param poly The ring element itself, zero if not specified
-  //! @param _context The context for this AltCRT object, use "current active context" if not specified
+  //! @param _context The context for this DoubleCRT object, use "current active context" if not specified
   //! @param indexSet Which primes to use for this object, if not specified then use all of them
   DoubleCRT(const ZZX&poly, const FHEcontext& _context, const IndexSet& indexSet);
   DoubleCRT(const ZZX&poly, const FHEcontext& _context);
