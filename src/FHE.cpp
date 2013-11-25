@@ -617,6 +617,11 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt) const
 void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 			ZZX& f) const // plaintext before modular reduction
 {
+#ifdef DEBUG_PRINTOUT
+  // The call to findBaseSet is only for the purpose of printing a
+  // warning if the noise is large enough so as to risk decryption error
+  IndexSet s; ciphertxt.findBaseSet(s);
+#endif
   FHE_TIMER_START;
   assert(getContext()==ciphertxt.getContext());
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
