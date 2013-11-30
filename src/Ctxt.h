@@ -358,6 +358,20 @@ public:
     multByConstant(DoubleCRT(poly,context,primeSet),size); 
   }
 
+  //! Divide a cipehrtext by 2. It is assumed that the ciphertext
+  //! encrypts an even polynomial and has plaintext space 2^r for r>1.
+  //! As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
+  //! If these assumptions are not met then the result will not be a
+  //! valid ciphertext anymore.
+  void divideBy2();
+
+  //! This function assumes that the slots of c contains integers mod 2^r
+  //! (i.e., that only the free terms are nonzero). It returns in the slots of
+  //! bits[i] the i'th-lowest bits from the integers in the slots of the input
+  //! If these assumptions are not met then the result will not be a
+  //! valid ciphertext anymore.
+  void extractBits(vector<Ctxt>& bits, long nBits2extract=0);
+
   // Higher-level multiply routines
   void multiplyBy(const Ctxt& other);
   void multiplyBy2(const Ctxt& other1, const Ctxt& other2);

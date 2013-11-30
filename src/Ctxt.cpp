@@ -597,6 +597,11 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 Ctxt& Ctxt::operator*=(const Ctxt& other)
 {
   FHE_TIMER_START;
+
+  // Sanity check: plaintext spaces are compatible
+  long g = GCD(ptxtSpace, other.ptxtSpace);
+  assert (g>1);
+  this->ptxtSpace = g;
   Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
 
   if (this == &other) { // a squaring operation
@@ -607,11 +612,6 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   else {                // standard multiplication between two ciphertexts
     // Sanity check: same context and public key
     assert (&context==&other.context && &pubKey==&other.pubKey);
-
-    // Sanity check: plaintext spaces are compatible
-    long g = GCD(ptxtSpace, other.ptxtSpace);
-    assert (g>1);
-    this->ptxtSpace = g;
 
     // Match the levels, mod-DOWN the arguments if needed
     long lvl = findBaseLevel();
@@ -687,6 +687,53 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   noiseVar *= size;
 
   FHE_TIMER_STOP;
+}
+
+// Divide a cipehrtext by 2. It is assumed that the ciphertext
+// encrypts an even polynomial and has plaintext space 2^r for r>1.
+// As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
+// If these assumptions are not met then the result will not be a
+// valid ciphertext anymore.
+void Ctxt::divideBy2()
+{
+  assert (ptxtSpace % 2 == 0 && ptxtSpace>2);
+
+  // multiply all the parts by (productOfPrimes+1)/2
+  ZZ twoInverse; // set to (Q+1)/2
+  getContext().productOfPrimes(twoInverse, getPrimeSet());
+  twoInverse += 1;
+  twoInverse /= 2;
+  for (size_t i=0; i<parts.size(); i++)
+    parts[i] *= twoInverse;
+
+  noiseVar /= 4;  // noise is halved by this operation
+  ptxtSpace /= 2; // and so is the plaintext space
+}
+
+// This function assumes that the slots of c contains integers mod 2^r
+// (i.e., that only the free terms are nonzero). It computes for each slot
+// the AND (product) of all the bits in the inetegr in that slot. That is,
+// the end result has 1 in some slot iff the content of that slot was 2^r-1.
+void Ctxt::extractBits(vector<Ctxt>& bits, long r)
+{
+  assert (getContext().zMStar.getP()==2);
+  if (r<=0 || r>getContext().alMod.getR()) // how many bits to extract
+    r = getContext().alMod.getR();
+
+  Ctxt tmp(getPubKey(), getPtxtSpace());
+  bits.resize(r, tmp);      // allocate space
+  vector<Ctxt> w(r-1, tmp);
+  w[0] = *this;
+  for (long i=1; i<r; i++) {
+    tmp = *this;
+    for (long j=0; j<i; j++) {
+      w[j].square();
+      tmp -= w[j];
+      tmp.divideBy2();
+    }
+    bits[i] = tmp; // bits[i]=i'th lowest bit in the slots of c mod 2^{r-i}
+    if (i<r-1) w[i] = tmp; // needed in the next round
+  }
 }
 
 void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
