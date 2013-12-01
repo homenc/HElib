@@ -222,7 +222,7 @@ void Ctxt::blindCtxt(const ZZX& poly)
 }
 
 // Reduce plaintext space to a divisor of the original plaintext space
-void reducePtxtSpace(long newPtxtSpace)
+void Ctxt::reducePtxtSpace(long newPtxtSpace)
 {
   long g = GCD(ptxtSpace, newPtxtSpace);
   assert (g>1);
