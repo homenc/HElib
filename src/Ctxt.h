@@ -381,6 +381,9 @@ public:
 
   //! @name Ciphertext maintenance
   ///@{
+  //! Reduce plaintext space to a divisor of the original plaintext space
+  void reducePtxtSpace(long newPtxtSpace);
+
   void reLinearize(long keyIdx=0);
           // key-switch to (1,s_i), s_i is the base key with index keyIdx
 

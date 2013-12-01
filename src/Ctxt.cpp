@@ -221,6 +221,15 @@ void Ctxt::blindCtxt(const ZZX& poly)
   //  modulus chain should be handled much better.
 }
 
+// Reduce plaintext space to a divisor of the original plaintext space
+void reducePtxtSpace(long newPtxtSpace)
+{
+  long g = GCD(ptxtSpace, newPtxtSpace);
+  assert (g>1);
+  ptxtSpace = g;
+}
+
+
 // key-switch to (1,s_i), s_i is the base key with index keyID. If
 // keyID<0 then re-linearize to any key for which a switching matrix exists
 void Ctxt::reLinearize(long keyID)
