@@ -13,7 +13,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "NTL/zz_pX.h"
+#include <NTL/ZZX.h>
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 
   // open file for read
   {fstream keyFile("iotest.txt", fstream::in);
-  for (long i=0; i<(long)(sizeof(ms)/sizeof(int[4])); i++) {
+  for (long i=0; i<N_TESTS; i++) {
 
     // Read context from file
     unsigned long m1, p1, r1;
