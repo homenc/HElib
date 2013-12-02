@@ -79,7 +79,10 @@ int main(int argc, char *argv[])
     keyFile << *sKeys[i] << endl;;
 
     vector<ZZX> b;
-    eas[i]->random(ptxts[i]);
+    long p2r = eas[i]->getContext().alMod.getPPowR();
+    ZZX poly = RandPoly(0,to_ZZ(p2r)); // choose a random constant polynomial
+    eas[i]->decode(ptxts[i], poly);
+
     ctxts[i] = new Ctxt(publicKey);
     eas[i]->encrypt(*ctxts[i], publicKey, ptxts[i]);
     eas[i]->decrypt(*ctxts[i], *sKeys[i], b);
@@ -91,7 +94,6 @@ int main(int argc, char *argv[])
     for (long j = 0; j < nslots; j++) keyFile << ptxts[i][j] << " ";
     keyFile << "]\n";
 
-    ZZX poly;
     eas[i]->encode(poly,ptxts[i]);
     keyFile << poly << endl;
 
