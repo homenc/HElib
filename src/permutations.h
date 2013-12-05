@@ -82,7 +82,7 @@ public:
   explicit SlicePerm(const CubeSignature& _sig): HyperCube<long>(_sig)
   { dim = -1; }
   SlicePerm(const CubeSignature& _sig, const Permut& p): HyperCube<long>(_sig)
-  { *this = p; } // use assignment operator to copy data
+  { dim=0; *this = p; } // use assignment operator to copy data
 
   long getPermDim() const {return dim;}
 

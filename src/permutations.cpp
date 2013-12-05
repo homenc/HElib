@@ -394,7 +394,7 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
   long n = getProd(dim); // = n1*n2;
 
   // representing I_n as I_n1 x I_n2: i == n2*rep[i].first + rep[i].second
-  pair<long,long> rep[n];
+  vector< pair<long,long> > rep(n);
   for (long ind=0,i=0; i<n1; i++) for (long j=0; j<n2; j++,ind++) {
       rep[ind].first = i;
       rep[ind].second = j;
@@ -411,7 +411,7 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
     for (long i=0; i<n; i++) {
       long j = (*this)[offset+i]; // the image of i under the permutation
       // when i = (i1,i2) and j=(j1,j2), add an edge from i2 to j2 labeled i
-      bg.addEdge(rep[i].second, rep[j].second, i);
+      bg.addEdge(rep.at(i).second, rep.at(j).second, i);
     }
     // The bipartite graph is n1-regular, so we can break its edges into
     // n1 perfect matchings, which are numbered 1,2,...,n1.
@@ -552,15 +552,16 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
       genMap[i] = AddMod(genMap[i], tmp, sz);
     }
   }
+
 }
 
 void GeneratorTrees::ComputeCubeMapping()
 {
   assert(trees.length()>=1);
 
-  if (trees.length()==1)  // A single tree
+  if (trees.length()==1) {  // A single tree
     ComputeOneGenMapping(map2array, trees[0]);
-
+  }
   else { // more than one generator
     // Compute the sub-mapping for every generator. Also prepare two hypercube
     // signature objects for the index calculations, with the two ordering of
@@ -576,22 +577,24 @@ void GeneratorTrees::ComputeCubeMapping()
     getCubeDims(dims2);
     CubeSignature sig1(dims1), sig2(dims2);
 
+
     // Allocate space for the mapping
     map2array.SetLength(sig1.getSize());
 
     // Combine the generator perms to a single permutation over the cube
     for (long i=0; i<map2array.length(); i++) {
       long t=0;
-      for (long j2=0; j2<trees.length(); j2++) {
-	long j1 = trees[j2].getAuxKey();
+      for (long j1=0; j1<trees.length(); j1++) {
+	long j2 = trees[j1].getAuxKey();
 	long digit = sig1.getCoord(i,j1); // the j1 digit of i in base dims
-
 	digit = genMappings[j1][digit];   // apply the j1 permutation to it
 	t += digit * sig2.getProd(j2+1);  // adds the permuted digit
+
       }
       map2array[i] = t;
     }
   }
+
 
   // Compute the inverse permutation
   map2cube.SetLength(map2array.length());

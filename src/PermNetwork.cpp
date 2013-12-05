@@ -83,9 +83,11 @@ void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
   //  std::cerr << "map2array="<<trees.mapToArray()<<endl;
 
   // Compute the permutation on the cube, rho = map2cube o pi o map2array
+
   Permut rho;
   applyPermsToVec(rho, trees.mapToCube(), pi, trees.mapToArray());
   //  std::cerr << "rho =     "<<rho<<endl;
+
 
   // Break rho along the different dimensions
   CubeSignature sig(dims); // make a cube-signature object
