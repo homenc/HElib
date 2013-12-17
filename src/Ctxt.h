@@ -450,6 +450,9 @@ inline IndexSet baseSetOf(const Ctxt& c) {
   IndexSet s; c.findBaseSet(s); return s; 
 }
 
+//! For i=n-1...0, set v[i]=prod_{j<=i} v[j]
+//! This implementation uses depth log n and (nlog n)/2 products
+void incrementalProduct(vector<Ctxt>& v);
 
 // print to cerr some info about ciphertext
 void CheckCtxt(const Ctxt& c, const char* label);

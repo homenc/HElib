@@ -900,3 +900,30 @@ void CheckCtxt(const Ctxt& c, const char* label)
   cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
 }
 
+// The recursive incremental-product function that does the actual work,
+// see 
+static void recursiveIncrementalProduct(Ctxt array[], long n)
+{
+  if (n <= 1) return; // nothing to do
+
+  // split the array in two, first part is the highest power of two smaller
+  // than n and second part is the rest
+
+  long ell = NTL::NumBits(n-1); // 2^{l-1} <= n-1
+  long n1 = 1UL << (ell-1);     // n/2 <= n1 = 2^l < n
+
+  // Call the recursive procedure separately on the first and second parts
+  recursiveIncrementalProduct(array, n1);
+  recursiveIncrementalProduct(&array[n1], n-n1);
+
+  // Multiply the last product in the 1st part into every product in the 2nd
+  for (long i=n1; i<n; i++) array[i].multiplyBy(array[n1-1]);
+}
+
+// For i=n-1...0, set v[i]=prod_{j<=i} v[j]
+// This implementation uses depth log n and (nlog n)/2 products
+void incrementalProduct(vector<Ctxt>& v)
+{
+  long n = v.size();  // how many ciphertexts do we have
+  if (n > 0) recursiveIncrementalProduct(&v[0], n); // do the actual work
+}
