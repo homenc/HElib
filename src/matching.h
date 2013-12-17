@@ -63,7 +63,7 @@ public:
   void addEdge(long from, long to, long label, long color=0) {
     for (long sz = left.size(); sz <= from; sz++) // insert nodes if needed
       left.push_back(LabeledVertex(sz));
-    left[from].addEdge(to, label, color); // insert the edge itself
+    left.at(from).addEdge(to, label, color); // insert the edge itself
   }
 
   // Partition the graph into maximum matchings, color by i=1,2,3,...

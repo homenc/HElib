@@ -155,9 +155,9 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
 
     if (out1==out2) cout << "yay\n";
     else {
-      cout << "blech\n";
+      cout << "************ blech\n";
     }
-    printAllTimers();
+    // printAllTimers();
   }
 }
 
