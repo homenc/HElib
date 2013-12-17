@@ -1017,5 +1017,14 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 
 
+//! @brief incrementalZeroTest sets each res[i], for i=0..n-1, to a ciphertext
+//! in which each slot is 0 or 1 according to whether or not bits 0..i of
+//! corresponding slot in ctxt is zero (1 if not zero, 0 if zero). It is
+//! assumed that res and each res[i] is already initialized by the caller.
+void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
+			 const Ctxt& ctxt, long n);
+// Complexity: O(d + n log d) smart automorphisms
+//             O(n d) 
+
 
 #endif /* ifdef _EncryptedArray_H_ */

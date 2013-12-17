@@ -21,28 +21,11 @@
 #include <cassert>
 #include <cstdio>
 
-#include <tr1/memory> 
-// for tr1::shared_ptr<T>
-
 /********
 
 Experimental program for equality testing...
 
 ********/
-
-typedef tr1::shared_ptr<Ctxt> CtxtPtr;
-
-void printBits(const vector<ZZX>& v, long n) 
-{
-  long len = v.size();
-  for (long i = 0; i < len; i++) {
-    for (long j = n-1; j >= 0; j--)
-      cout << coeff(v[i], j);
-    cout << " ";
-  }
-  cout << "\n";
-}
-
 
 // computes ctxt^{2^d-1} using a method that takes
 // O(log d) automorphisms and multiplications
@@ -69,18 +52,16 @@ void fastPower(Ctxt& ctxt, long d)
   }
 }
 
-// zeroTest sets each res[i], for i=0..n-1, to
+// incrementalZeroTest sets each res[i], for i=0..n-1, to
 // a ciphertext in which each slot is 0 or 1 according
 // to whether or not bits 0..i of corresponding slot in ctxt
 // is zero (1 if not zero, 0 if zero).
 // It is assumed that res and each res[i] is already initialized
 // by the caller.
-
 // Complexity: O(d + n log d) smart automorphisms
 //             O(n d) 
-
-void zeroTest(vector<CtxtPtr>& res, const EncryptedArray& ea, 
-              const Ctxt& ctxt, long n)
+void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
+			 const Ctxt& ctxt, long n)
 {
   FHE_TIMER_START
   long nslots = ea.size();
@@ -117,18 +98,16 @@ void zeroTest(vector<CtxtPtr>& res, const EncryptedArray& ea,
     }
   }
 
-  vector<CtxtPtr> Conj;
-  Conj.resize(d);
-  // initialize *Cong[j] to ctxt^{2^j}
+  vector<Ctxt> Conj(d, ctxt);
+  // initialize Cong[j] to ctxt^{2^j}
   for (long j = 0; j < d; j++) {
-    Conj[j] = CtxtPtr(new Ctxt(ctxt));
-    Conj[j]->smartAutomorph(1L << j);
+    Conj[j].smartAutomorph(1L << j);
   }
 
   for (long i = 0; i < n; i++) {
     res[i]->clear();
     for (long j = 0; j < d; j++) {
-      Ctxt tmp = *Conj[j];
+      Ctxt tmp = Conj[j];
       tmp.multByConstant(Coeff[i][j]);
       *res[i] += tmp;
     }
@@ -139,6 +118,19 @@ void zeroTest(vector<CtxtPtr>& res, const EncryptedArray& ea,
     fastPower(*res[i], d);
   }
   FHE_TIMER_STOP
+}
+
+#ifdef DEBUG_TEST
+void printBits(const vector<ZZX>& v, long n) 
+{
+  long len = v.size();
+  if (n>50 || len>32) return;
+  for (long i = 0; i < len; i++) {
+    for (long j = n-1; j >= 0; j--)
+      cout << coeff(v[i], j);
+    cout << " ";
+  }
+  cout << "\n";
 }
 
 
@@ -167,6 +159,7 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
 
   cerr << "generating key-switching matrices... ";
   addFrbMatrices(secretKey);
+  addSome1DMatrices(secretKey);
   cerr << "done\n";
 
 
@@ -198,15 +191,12 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
   // polynomial of degree < n
 
 
-  vector<CtxtPtr> res;
-  res.resize(n);
-  for (long j = 0; j < n; j++) 
-    res[j] = CtxtPtr(new Ctxt(publicKey));
-  
+  Ctxt* res[n];
+  for (long j = 0; j < n; j++) res[j] = new Ctxt(publicKey); // allocate
 
   resetAllTimers();
 
-  zeroTest(res, ea, ctxt, n);
+  incrementalZeroTest(res, ea, ctxt, n);
 
   for (long j = 0; j < n; j++) {
     vector<ZZX> v1;
@@ -214,6 +204,7 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
     printBits(v1, n);
   }
 
+  for (long j = 0; j < n; j++) delete res[j]; // cleanup
 }
 
 
@@ -266,4 +257,5 @@ int main(int argc, char *argv[])
 // call to get our running test case:
 // eqtesting_x m=20485 
 // eqtesting_x m=105 for quick testing
-// 
+
+#endif
