@@ -89,43 +89,6 @@ void randomPerm(Permut& perm, long n)
   }
 }
 
-// Write a slice (row) permutation explicitly
-void SlicePerm::makeExplicit(Permut& out) const
-{
-  // pi consists of separate contiguous permutations, each over [0,n-1]
-  long n = getProd(dim);
-  long nPerms = getSize()/n; // how many separate permutations
-
-  out.SetLength(getSize());  // allocate space and initialize
-  long offset = 0;
-  while (nPerms--) {
-    for (long i=0; i<n; i++)
-      out[offset+i] = (*this)[offset+i] + offset;
-    offset += n;
-  }
-}
-
-// Extrtact the permutation over the i'th slice
-void SlicePerm::extractSlice(Permut& out, long i) const
-{
-  // *this consists of separate contiguous permutations, each over [0,n-1]
-  long n = getProd(dim);
-  long offset = i*n; // The beginning of the i'th slice
-  assert (i>=0 && offset < getSize());
-
-  out.SetLength(n); // allocate space and initialize
-  for (long j=0; j<n; j++) out[j] = (*this)[offset+j];
-}
-
-// When dim=m (the last dimension), ColPerm and SlicePerm are equivalent
-SlicePerm& SlicePerm::operator=(const ColPerm &other)
-{
-  assert(&getSig()==&other.getSig());// Ensure the same cube dimensions
-  assert(other.dim==getNumDims()-1); //   and dim = the last dimension,
-  getData() = ((HyperCube<long>&) other).getData(); // then copy the raw data.
-  dim = other.dim;
-  return *this;
-}
 
 // Write a column permutation explicitly
 void ColPerm::makeExplicit(Permut& out) const
@@ -324,74 +287,25 @@ void ColPerm::upateColumn(const Permut& in, long i)
 }
 */
 
-// When dim=m (the last dimension), ColPerm and SlicePerm are equivalent
-ColPerm& ColPerm::operator=(const SlicePerm &other)
-{
-  assert(&getSig()==&other.getSig());// Ensure the same cube dimensions
-  assert(other.dim==getNumDims()-1); //   and dim = the last dimension,
-  getData() = ((HyperCube<long>&) other).getData(); // then copy the raw data.
-  dim = other.dim;
-  return *this;
-}
-
-
-/* Takes a permutation pi over an m-dimensional cube C=Z_{n1} x ... x Z_{nm}
- * and expresses pi as a product pi = rho_{2m-1} o ... o rho_2 o rho_1 where
- * each rho_i is a column permutation along one dimension. Specifically for
- * i<m, the permutations rho_i and rho_{2(m-1)-i} permute the i'th dimension
- ************************************************************************/
-void breakPermByDim(vector<ColPerm>& out, 
-		    const Permut &pi, const CubeSignature& sig)
-{
-  assert(sig.getSize()==pi.length());
-
-  // Allocate two temporary SlicePerm's 
-  SlicePerm tmp1(sig,pi); // initialize to pi
-  SlicePerm tmp2(sig);    // empty permutation
-  SlicePerm* tp1 = &tmp1;
-  SlicePerm* tp2 = &tmp2;
-
-  // Allocate the output permutations
-  long m = sig.getNumDims();
-  ColPerm dummy(sig);
-  out.assign(2*m -1, dummy); // allocate space and initialize
-  if (m == 1) { // special case, no need to break
-    out[0] = tmp1;
-    return;
-  }
-
-  for (long i=0; i<m-2; i++) {
-    tp1->breakPermTo3(out[i], *tp2, out[2*m-i-2]);
-    std::swap(tp1,tp2);
-  }
-  // use pointer hack to cast between SlicePerm and ColPerm
-  tp2 = (SlicePerm*) &out[m-1];
-  tp1->breakPermTo3(out[m-2], *tp2, out[m]);
-}
 
 // Break a permutation into column-row-column format. The input pi permutes
 // each dimension-i subcube, and in the output rho1,rho3 permute only along
 // the i'th dimension and rho2 permutes each dimension-i+1 subcube.
 // This routine cannot permute in-place, it is assumed that pi and rho2 point
 // to disjoint vectors.
-void SlicePerm::breakPermTo3(ColPerm& rho1, 
-			     SlicePerm& rho2, ColPerm& rho3) const
+void breakPermTo3(const HyperCube<long>& pi, long dim, 
+                  ColPerm& rho1, HyperCube<long>& rho2, ColPerm& rho3)
 {
-  assert(&rho1.getSig()==&getSig());
-  assert(&rho2.getSig()==&getSig());
-  assert(&rho3.getSig()==&getSig());
+  assert(&rho1.getSig()==&pi.getSig());
+  assert(&rho2.getSig()==&pi.getSig());
+  assert(&rho3.getSig()==&pi.getSig());
 
-#ifdef DEBUG_PRINTOUT
-  Permut ppp;
-  makeExplicit(ppp);
-  std::cerr << "**breakPermTo3, input="<<ppp<<endl;
-#endif
-  // *this consists of separate permutations over [0,n-1], and each
-  // of these is viewed as a permutation over an n1 x n2 cebe
+  // pi consists of separate permutations over [0,n-1], and each
+  // of these is viewed as a permutation over an n1 x n2 cube
 
-  long n1 = getDim(dim); // Size of this dimension, inherited from HyperCube
-  long n2 = getProd(dim+1); 
-  long n = getProd(dim); // = n1*n2;
+  long n1 = pi.getDim(dim); // Size of this dimension
+  long n2 = pi.getProd(dim+1); 
+  long n = pi.getProd(dim); // = n1*n2;
 
   // representing I_n as I_n1 x I_n2: i == n2*rep[i].first + rep[i].second
   vector< pair<long,long> > rep(n);
@@ -401,7 +315,7 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
     }
 
   long offset = 0;
-  long nPerms = getSize()/n;  // how many separate permutations
+  long nPerms = pi.getSize()/n;  // how many separate permutations
   while (nPerms > 0) { // break the permutations one at a time
 
     // Construct a bipartite n2-by-n2 graph for pi (cf. Lemma 1 in [GHS12a]).
@@ -409,16 +323,13 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
     // in the bipartite graph an edge i2->j2 and label it by i.
     BipartitleGraph bg;
     for (long i=0; i<n; i++) {
-      long j = (*this)[offset+i]; // the image of i under the permutation
+      long j = pi[offset+i]; // the image of i under the permutation
       // when i = (i1,i2) and j=(j1,j2), add an edge from i2 to j2 labeled i
       bg.addEdge(rep.at(i).second, rep.at(j).second, i);
     }
     // The bipartite graph is n1-regular, so we can break its edges into
     // n1 perfect matchings, which are numbered 1,2,...,n1.
     bg.partitionToMatchings();
-#ifdef DEBUG_PRINTOUT
-    //    bg.printout();
-#endif
 
     // The output permutations are defined by the representation i<->(i1,i2),
     // the target permutation pi, and the coloring of the bipartite graph.
@@ -454,7 +365,7 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
 	long i = e.label; // labeled by i
 	long c = e.color -1; // colored by c (after the -1 adjustment)
 	// i2 = e.from = rep[i].second;
-	long j = (*this)[offset+i];
+	long j = pi[offset+i];
 	long j1 = rep[j].first;
 	long j2 = e.to;   // = it->first = rep[j].second;
 
@@ -469,9 +380,50 @@ void SlicePerm::breakPermTo3(ColPerm& rho1,
     --nPerms;
     offset += n;
   }
-  rho1.dim = rho3.dim = dim;
-  rho2.dim = dim+1;
+  rho1.setPermDim(dim);
+  rho3.setPermDim(dim);
 }
+
+
+
+/* Takes a permutation pi over an m-dimensional cube C=Z_{n1} x ... x Z_{nm}
+ * and expresses pi as a product pi = rho_{2m-1} o ... o rho_2 o rho_1 where
+ * each rho_i is a column permutation along one dimension. Specifically for
+ * i<m, the permutations rho_i and rho_{2(m-1)-i} permute the i'th dimension
+ ************************************************************************/
+void breakPermByDim(vector<ColPerm>& out, 
+		    const Permut &pi, const CubeSignature& sig)
+{
+  assert(sig.getSize()==pi.length());
+
+  HyperCube<long> tmp1(sig);  
+  tmp1.getData() = pi;
+
+  HyperCube<long> tmp2(sig);  
+
+  HyperCube<long>* tp1 = &tmp1;
+  HyperCube<long>* tp2 = &tmp2;
+
+  // Allocate the output permutations
+  long m = sig.getNumDims();
+  ColPerm dummy(sig);
+  out.assign(2*m-1, dummy); // allocate space and initialize
+
+  if (m == 1) { // special case, no need to break
+    HyperCube<long>& out0 = out[0];
+    out0 = tmp1;
+    return;
+  }
+
+  for (long i=0; i<m-2; i++) {
+    breakPermTo3(*tp1, i, out[i], *tp2, out[2*m-i-2]);
+    std::swap(tp1,tp2);
+  }
+
+  breakPermTo3(*tp1, m-2, out[m-2], out[m-1], out[m]);
+  out[m-1].setPermDim(m-1);
+}
+
 
 /********************************************************************/
 /**********     MAPPING BETWEEN CUBE AND LINEAR ARRAY      **********/

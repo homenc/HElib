@@ -253,6 +253,10 @@ public:
    // product of sizes of dimensions d, d+1, ...
    long getProd(long d) const { return cube->getProd(d + dimOffset); }
 
+   // product of sizes of dimensions from, from+1, ..., to-1
+   long getProd(long from, long to) const 
+   { return cube->getProd(from + dimOffset, to + dimOffset); } 
+
    // get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
      assert(i >= 0 && i < getSize());
