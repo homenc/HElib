@@ -93,34 +93,16 @@ void randomPerm(Permut& perm, long n)
 // Write a column permutation explicitly
 void ColPerm::makeExplicit(Permut& out) const
 {
-  /* the data vector consists of interleaved permutations over [0,n-1],
-   * n=getDim(dim), and the "step" between elements of any single permutation
-   * is s=getProd(dim+1). Hence we have m=getSize()/(n*s) "chunks" of
-   * interleaved permutations. 
-   *
-   * For example, with a 2x3x2 cube and dim=1, we have size=12, n=4 and s=2,
-   * and hence two "chunks". Data vector [1  1  0  2  2  0  2  0  1  1  0  2]
-   * in this example is interpreted as four permutations:
-   *                                     [1     0     2                     ] 
-   *                                     [   1     2     0                  ] 
-   *                                     [                  2     1     0   ] 
-   *                                     [                     0     1     2] 
-   * Written explicitly, we then get:    [2  3  0  5  4  1 10  7  8  9  6 11].
-   */
-  long n = getDim(dim);     // the permutations are over [0,n-1]
-  long s = getProd(dim+1);  // step between elements of a permutation
-  long m = getSize()/(n*s); // how many chunks of interleaved permutations
+  long sz = getSize();
+  out.SetLength(sz);
 
-  out.SetLength(getSize()); // allocate space and initialize
-  long offset = 0;
-  while (m--) { // go over the chunks one at a time
-    for (long i=0; i<n; i++) for (long j=0; j<s; j++) {
-	long ind = i*s +j;
-	out[ind+offset] = (*this)[ind+offset]*s +j +offset;
-      }
-    offset += n*s;
+  for (long k = 0; k < sz; k++) {
+    long i = getCoord(k, dim);
+    long pi_i = at(k);
+    out.at(k) = addCoord(k, dim, pi_i-i);
   }
 }
+
 
 
 
@@ -129,42 +111,19 @@ void ColPerm::makeExplicit(Permut& out) const
 // are zero, nonzero otherwise.
 long ColPerm::getShiftAmounts(Vec<long>& out) const
 {
-  /* the data vector consists of interleaved permutations over [0,n-1],
-   * n=getDim(dim), and the "step" between elements of any single permutation
-   * is s=getProd(dim+1). Hence we have m=getSize()/(n*s) "chunks" of
-   * interleaved permutations. 
-   *
-   * For example, with a 2x3x2 cube and dim=1, we have size=12, n=4 and s=2,
-   * and hence two "chunks". Data vector [1  1  0  2  2  0  2  0  1  1  0  2]
-   * in this example is interpreted as four permutations:
-   *                                     [1     0     2                     ]
-   *                                     [   1     2     0                  ]
-   *                                     [                  2     1     0   ]
-   *                                     [                     0     1     2]
-   * Hence the shift amount are:         [1    -1     0                     ]
-   *                                     [   2    -1    -1                  ]
-   *                                     [                  2     0    -2   ]
-   *                                     [                     0     0     0]
-   * so the output vector is [1  1 -1  1  0 -2  2  0  0  0 -2  0].
-   */
-  long n = getDim(dim);     // the permutations are over [0,n-1]
-  long s = getProd(dim+1);  // step between elements of a permutation
-  long m = getSize()/(n*s); // how many chunks of interleaved permutations
+  long sz = getSize();
+  out.SetLength(sz);
   long nonZero = 0;
 
-  out.SetLength(getSize()); // allocate space and initialize
-  long offset = 0;
-  while (m--) { // go over the chunks one at a time
-    for (long i=0; i<n; i++) for (long j=0; j<s; j++) {
-	long ind = i*s +j +offset;
-	long i2 = (*this)[ind];      // we have pi[i]=i2
-	long ind2 = i2*s +j +offset;
-	out[ind2] = i - i2;          // so shamt[i2]=i-i2
-	nonZero |= out[ind2];
-      }
-    offset += n*s;
+  for (long k = 0; k < sz; k++) {
+    long i = getCoord(k, dim);
+    long pi_i = at(k);
+    if (i != pi_i) nonZero = 1;
+    out.at(addCoord(k, dim, pi_i-i)) = i - pi_i;
   }
+
   return nonZero;
+ 
 }
 
 // Compute the shift amounts corresponding to collapsing 'numLvls' levels
@@ -200,9 +159,10 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
   // permutation, prepare a Benes network for it, and then for every layer
   // copmute the shift amounts for this columns.
 
+   // cout << "\n++++++ HERE ++++++ " << dim << " " << getDim(dim) 
+   //     << " " << getNumDims() << "\n";;
+
   long n = getDim(dim);     // the permutations are over [0,n-1]
-  long s = getProd(dim+1);  // step between elements of a permutation
-  long m = getSize()/(n*s); // how many chunks of interleaved permutations
 
   // Allocate space
   out.SetLength(benesLvls.length());
@@ -212,14 +172,13 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
     isID[k] = true;
   }
 
-  long offset = 0;
-  Permut col(INIT_SIZE, n); // scratch working space
-  while (m--) { // go over the chunks one at a time
-    for (long j=0; j<s; j++) { // go over the columns one at a time
+  Vec<long> col;
+  col.SetLength(n);
 
-      for (long i=0; i<n; i++) // extract column
-	col[i]=(*this)[i*s+j+offset];
-      // FIXME: The above is the same as extractColumn(col,j+(initial_m-m)*s);
+  for (long slice_index = 0; slice_index < getProd(0, dim); slice_index++) {
+    ConstCubeSlice<long> slice(*this, slice_index, dim);
+    for (long col_index = 0; col_index < getProd(dim+1); col_index++) {
+      getHyperColumn(col, slice, col_index);
 
       GeneralBenesNetwork net(col); // build a Benes network for this column
 
@@ -232,7 +191,7 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
       }
 
       // Compute the layers of the collapased network for this column
-      for (long lvl=0,k=0; k<benesLvls.length(); k++) {
+      for (long lvl=0,k=0; k<benesLvls.length(); lvl += benesLvls[k], k++) {
 
 	// Returns in col the shift amounts for this layer in the network,
 	// restricted to this column. Also returns true if the returned
@@ -240,52 +199,13 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
 	bool id = collapseBenesLevels(col, net, lvl, benesLvls[k]);
 	isID[k] = isID[k] && id;
 
-	// Store shift amounts for this column in the current layer
-	for (long i=0; i<n; i++)
-	  out[k][i*s+j+offset]=col[i];
-
-	lvl += benesLvls[k]; // next set of collapsed levels
+        CubeSlice<long> oslice(out[k], getSig());
+        CubeSlice<long> osubslice(oslice, slice_index, dim);
+        setHyperColumn(col, osubslice, col_index);
       }  // next collapsed layer
     }  // next column
-    offset += n*s; // offset of next chunk
-  } // next chunk
+  } // next slice
 }
-
-// Extrtact the permutation over the i'th column
-void ColPerm::extractColumn(Permut& out, long i) const
-{
-  long n = getDim(dim);    // the permutations are over [0,n-1]
-  assert (i>=0 && i*n<getSize());
-
-  long s = getProd(dim+1); // step between elements of a permutation
-
-  // every chunk consists of s permutations, which chunk contains the i'th
-  long chunk = i / s;
-  long offset = (i % s) + (chunk*n*s); // offset from beginning of pi
-
-  out.SetLength(n); // allocate space and initialize
-  for (long j=0; j<n; j++)
-    out[j] = (*this)[offset + j*s];
-}
-
-/*
-// Update the permutation over the i'th column from the given input
-void ColPerm::upateColumn(const Permut& in, long i)
-{
-  long n = getDim(dim);    // the permutations are over [0,n-1]
-  assert(in.length() == n);
-  assert (i>=0 && i*n<getSize());
-
-  long s = getProd(dim+1); // step between elements of a permutation
-
-  // every chunk consists of s permutations, which chunk contains the i'th
-  long chunk = i / s;
-  long offset = (i % s) + (chunk*n*s); // offset from beginning of pi
-
-  for (long j=0; j<n; j++)
-    (*this)[offset + j*s] = in[j];
-}
-*/
 
 
 // Break a permutation into column-row-column format. The input pi permutes

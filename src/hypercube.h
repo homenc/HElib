@@ -169,6 +169,9 @@ public:
    // so it cannot be changed through this ref.
    Vec<T>& getData() { return data; }
 
+   // read-only ref to data vector
+   const Vec<T>& getData() const { return data; } 
+
    // total size of cube
    long getSize() const { return sig.getSize(); }
 
@@ -214,11 +217,15 @@ public:
 // must remain alive during the lifetime of the slice, to prevent dangling
 // pointers.
 // The subclass CubeSlice works also with non-constant cubes and subcubes.
+// 
+// In addition, for greater flexibility, a "slice" may be initialized
+// with a vector and a signature, rather than a cube
 
 template<class T>
 class ConstCubeSlice {
 private:
-   const HyperCube<T>* cube;
+   const Vec<T>* data;
+   const CubeSignature* sig;
    long dimOffset; // # of "missing dimensions" is this slice vs. the full cube
    long sizeOffset; // index in the cube of the first element in this slice
 
@@ -227,8 +234,20 @@ private:
 public:
 
    // initialize the slice to the full cube
-   explicit ConstCubeSlice(const HyperCube<T>& _cube)
-   { cube = &_cube; dimOffset = 0; sizeOffset = 0; }
+   explicit ConstCubeSlice(const HyperCube<T>& _cube) {
+     data = &_cube.getData(); 
+     sig = &_cube.getSig(); 
+     dimOffset = 0; 
+     sizeOffset = 0; 
+   }
+
+   ConstCubeSlice(const Vec<T>& _data, const CubeSignature& _sig) { 
+     assert(_data.length() == _sig.getSize());
+     data = &_data;
+     sig = &_sig;
+     dimOffset = 0; 
+     sizeOffset = 0; 
+   }
 
    // initialize the slice to point to the i-th subcube (with some
    // given dimension offset) of the cube pointed to by _cube or bigger.
@@ -241,42 +260,45 @@ public:
    // the following mimic the corresponding methods
    // in the HyperCube class, restricted to the slice
 
+   // const ref to signature
+    const CubeSignature& getSig() const { return *sig; }
+
    // total size 
-   long getSize() const { return cube->getProd(dimOffset); }
+   long getSize() const { return sig->getProd(dimOffset); }
 
    // number of dimensions 
-   long getNumDims() const { return cube->getNumDims() - dimOffset; }
+   long getNumDims() const { return sig->getNumDims() - dimOffset; }
 
    // size of dimension d
-   long getDim(long d) const { return cube->getDim(d + dimOffset); }
+   long getDim(long d) const { return sig->getDim(d + dimOffset); }
 
    // product of sizes of dimensions d, d+1, ...
-   long getProd(long d) const { return cube->getProd(d + dimOffset); }
+   long getProd(long d) const { return sig->getProd(d + dimOffset); }
 
    // product of sizes of dimensions from, from+1, ..., to-1
    long getProd(long from, long to) const 
-   { return cube->getProd(from + dimOffset, to + dimOffset); } 
+   { return sig->getProd(from + dimOffset, to + dimOffset); } 
 
    // get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
      assert(i >= 0 && i < getSize());
-     return cube->getCoord(i + sizeOffset, d + dimOffset);
+     return sig->getCoord(i + sizeOffset, d + dimOffset);
    }
 
    // add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
      assert(i >= 0 && i < getSize());
-     return cube->addCoord(i + sizeOffset, d + dimOffset, offset);
+     return sig->addCoord(i + sizeOffset, d + dimOffset, offset);
    }
 
    // read-only reference to element at position i, with bounds check 
    const T& at(long i) const {
      assert(i >= 0 && i < getSize());
-     return (*cube)[i + sizeOffset];
+     return (*data)[i + sizeOffset];
    }
 
    // read-only reference to element at position i, without bounds check 
-   const T& operator[](long i) const { return (*cube)[i + sizeOffset]; }
+   const T& operator[](long i) const { return (*data)[i + sizeOffset]; }
 };
 
 template<class T>
@@ -287,6 +309,8 @@ public:
 
    // initialize the slice to the full cube
    explicit CubeSlice(HyperCube<T>& _cube) : ConstCubeSlice<T>(_cube) {}
+
+   CubeSlice(Vec<T>& _data, const CubeSignature& _sig) : ConstCubeSlice<T>(_data, _sig) {}
 
    // initialize the slice to point to the i-th subcube
    // of the cube pointed to by bigger

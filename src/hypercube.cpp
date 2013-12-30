@@ -75,32 +75,28 @@ template<class T>
 ConstCubeSlice<T>::ConstCubeSlice(const ConstCubeSlice<T>& bigger, long i,
 				  long dOffset)
 {
-   if (dOffset<1) dOffset=1;
-   cube = bigger.cube;
-   dimOffset = bigger.dimOffset + dOffset;
-
-   assert(dimOffset <= cube->getNumDims());
+   assert(dOffset >= 0 && dOffset <= bigger.getNumDims()); 
    // allow zero-dimensional slice
 
-   assert(i >= 0 && i < cube->getProd(bigger.dimOffset,dimOffset));
+   assert(i >= 0 && i < bigger.getProd(0, dOffset));
 
-   sizeOffset = bigger.sizeOffset + i*cube->getProd(dimOffset);
+   data = bigger.data;
+   sig = bigger.sig;
+   dimOffset = dOffset + bigger.dimOffset;
+   sizeOffset = bigger.sizeOffset + i*bigger.getProd(dOffset);
 }
 
 template<class T>
 ConstCubeSlice<T>::ConstCubeSlice(const HyperCube<T>& _cube, long i,
 				  long dOffset)
 {
-   cube = &_cube;
-   if (dOffset<1) dOffset=1;
+   assert(dOffset >= 0 && dOffset <= _cube.getNumDims()); // allow zero-dimensional slice
+   assert(i >= 0 && i < _cube.getProd(0,dOffset));
+
+   data = &_cube.getData();
+   sig = &_cube.getSig();
    dimOffset = dOffset;
-
-   assert(dimOffset <= cube->getNumDims());
-   // allow zero-dimensional slice
-
-   assert(i >= 0 && i < cube->getProd(0,dimOffset));
-
-   sizeOffset = i*cube->getProd(dimOffset);
+   sizeOffset = i*_cube.getProd(dimOffset);
 }
 
 // deep copy of a slice: copies other into this 
@@ -212,6 +208,7 @@ void print3D(const HyperCube<T>& c)
 
 // Explicit instantiations for long and for zz_p
 template class HyperCube<long>;
+template class ConstCubeSlice<long>;
 template class CubeSlice<long>;
 template void getHyperColumn(Vec<long>& v, const ConstCubeSlice<long>& s, long pos);
 template void setHyperColumn(const Vec<long>& v, const CubeSlice<long>& s, long pos);
@@ -222,6 +219,7 @@ template void print3D(const HyperCube<long>& c);
 #include <NTL/lzz_p.h>
 
 template class HyperCube<NTL::zz_p>;
+template class ConstCubeSlice<NTL::zz_p>;
 template class CubeSlice<NTL::zz_p>;
 template void getHyperColumn(Vec<NTL::zz_p>& v, const ConstCubeSlice<NTL::zz_p>& s, long pos);
 template void setHyperColumn(const Vec<NTL::zz_p>& v, const CubeSlice<NTL::zz_p>& s, long pos);

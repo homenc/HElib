@@ -57,14 +57,22 @@ void randomPerm(Permut& perm, long n);
  * to store the actual permutation data. The interpretation of this data,
  * however, depends on the data member dim.
  * 
- * The cube is partitioned into n=getSize()/getDim(dim) subcubes, and each of
- * them is permuted separatly. Hence pi consists of n interleaved permutations,
- * each over the domain [0,getDim(dim)-1], and the "step" between elements of
- * any single permutation inside the data vector is getProd(dim+1). 
+ * The cube is partitioned into columns of size n = getDim(dim):
+ * a single column consists of the n entries whose indices i have the
+ * same coordinates in all dimensions other than dim.  The entries
+ * in any such column foem a permutation on [0..n).
+ *
+ * For a given ColPerm perm, one way to access each column is as follows:
+ *   for slice_index = [0..perm.getProd(0, dim))
+ *     CubeSlice slice(perm, slice_index, dim)
+ *     for col_index = [0..perm.getProd(dim+1))
+ *        getHyperColumn(column, slice, col_index) 
+ *
+ * Another way is to use the getCoord and addCoord methods.
  * 
  * For example, permuting a 2x3x2 cube along dim=1 (the 2nd dimention), we
- * could have the data vector as  [ 1  1  0  2  2  0  2  0  1  1  0  2 ]. (In
- * this example we have n=4 and step=2.) This means the four subcubes are
+ * could have the data vector as  [ 1  1  0  2  2  0  2  0  1  1  0  2 ]. 
+ * This means the four columns are
  * permuted by the permutations     [ 1     0     2                      ]
  *                                  [    1     2     0                   ]
  *                                  [                   2     1     0    ]
@@ -96,8 +104,6 @@ public:
   }
 
   void makeExplicit(Permut& out) const;    // Write the permutation explicitly
-  void extractColumn(Permut& out, long i) const;// Get perm over the ith column
-  void updateColumn(const Permut& out, long i); // Update perm over ith column
 
   //! For each position in the data vector, compute how many slots it should be
   //! shifted inside its small permutation. Returns zero if all the shift amount
