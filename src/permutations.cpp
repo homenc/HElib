@@ -159,8 +159,7 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
   // permutation, prepare a Benes network for it, and then for every layer
   // copmute the shift amounts for this columns.
 
-   // cout << "\n++++++ HERE ++++++ " << dim << " " << getDim(dim) 
-   //     << " " << getNumDims() << "\n";;
+  // cout << "\n++++++ HERE ++++++ " << dim << " " << getNumDims() << "\n";
 
   long n = getDim(dim);     // the permutations are over [0,n-1]
 
@@ -175,9 +174,9 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
   Vec<long> col;
   col.SetLength(n);
 
-  for (long slice_index = 0; slice_index < getProd(0, dim); slice_index++) {
+  for (long slice_index = 0; slice_index < numSlices(dim); slice_index++) {
     ConstCubeSlice<long> slice(*this, slice_index, dim);
-    for (long col_index = 0; col_index < getProd(dim+1); col_index++) {
+    for (long col_index = 0; col_index < slice.numCols(); col_index++) {
       getHyperColumn(col, slice, col_index);
 
       GeneralBenesNetwork net(col); // build a Benes network for this column
@@ -234,16 +233,18 @@ void breakPermTo3(const HyperCube<long>& pi, long dim,
       rep[ind].second = j;
     }
 
-  long offset = 0;
-  long nPerms = pi.getSize()/n;  // how many separate permutations
-  while (nPerms > 0) { // break the permutations one at a time
+  for (long slice_index = 0; slice_index < pi.numSlices(dim); slice_index++) {
+    ConstCubeSlice<long> pi_slice(pi, slice_index, dim);
+    CubeSlice<long> rho1_slice(rho1, slice_index, dim);
+    CubeSlice<long> rho2_slice(rho2, slice_index, dim);
+    CubeSlice<long> rho3_slice(rho3, slice_index, dim);
 
     // Construct a bipartite n2-by-n2 graph for pi (cf. Lemma 1 in [GHS12a]).
     // For each j=pi(i) with representations i=(i1,i2) and j=(j1,j2), we put
     // in the bipartite graph an edge i2->j2 and label it by i.
     BipartitleGraph bg;
     for (long i=0; i<n; i++) {
-      long j = pi[offset+i]; // the image of i under the permutation
+      long j = pi_slice[i]; // the image of i under the permutation
       // when i = (i1,i2) and j=(j1,j2), add an edge from i2 to j2 labeled i
       bg.addEdge(rep.at(i).second, rep.at(j).second, i);
     }
@@ -285,20 +286,18 @@ void breakPermTo3(const HyperCube<long>& pi, long dim,
 	long i = e.label; // labeled by i
 	long c = e.color -1; // colored by c (after the -1 adjustment)
 	// i2 = e.from = rep[i].second;
-	long j = pi[offset+i];
+	long j = pi_slice[i];
 	long j1 = rep[j].first;
 	long j2 = e.to;   // = it->first = rep[j].second;
 
 	long tmp1 = c*n2 + i2;  // the image of i under rho1 = (c,i2)
-	rho3[offset+i] = c;
+	rho3_slice[i] = c;
 	long tmp2 = c*n2 + j2;  // the image of tmp1 under rho2 =(c,j2)
-	rho2[offset+tmp1] = j2;
-	rho1[offset+tmp2] = j1; // image of tmp2 under rho3 =(j1,j2)=pi(i)
+	rho2_slice[tmp1] = j2;
+	rho1_slice[tmp2] = j1; // image of tmp2 under rho3 =(j1,j2)=pi(i)
       }
     // FIXME: The comments above do not match the code, the roles
     //        of rho1,rho3 are switched. Why is this code working??
-    --nPerms;
-    offset += n;
   }
   rho1.setPermDim(dim);
   rho3.setPermDim(dim);
@@ -332,6 +331,7 @@ void breakPermByDim(vector<ColPerm>& out,
   if (m == 1) { // special case, no need to break
     HyperCube<long>& out0 = out[0];
     out0 = tmp1;
+    out[0].setPermDim(0);
     return;
   }
 

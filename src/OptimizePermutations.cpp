@@ -625,6 +625,7 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
       // we ustilize this redundancy (see below) to streamline
       // allocation of the "good" token (if we have it)
 
+      // continue;  // temporary hack to force benes for testing
       if (order % order1 != 0) continue;
 
       bool good1 = good;

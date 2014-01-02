@@ -112,6 +112,15 @@ public:
       return i1;
    }
 
+   // number of slices
+   long numSlices(long d=1) const { return getProd(0, d); }
+
+   // size of one slice
+   long sliceSize(long d=1) const { return getProd(d); }
+
+   // number of columns
+   long numCols() const { return getProd(1); }
+
    friend ostream& operator<<(ostream &s, const CubeSignature& sig);
 };
 
@@ -192,6 +201,16 @@ public:
 
    // add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const { return sig.addCoord(i, d, offset); }
+
+
+   // number of slices
+   long numSlices(long d=1) const { return getProd(0, d); }
+
+   // size of one slice
+   long sliceSize(long d=1) const { return getProd(d); }
+
+   // number of columns
+   long numCols() const { return getProd(1); }
 
    // reference to element at position i, with bounds check 
    T& at(long i) { return data.at(i); }
@@ -290,6 +309,16 @@ public:
      assert(i >= 0 && i < getSize());
      return sig->addCoord(i + sizeOffset, d + dimOffset, offset);
    }
+
+
+   // number of slices
+   long numSlices(long d=1) const { return getProd(0, d); }
+
+   // size of one slice
+   long sliceSize(long d=1) const { return getProd(d); }
+
+   // number of columns
+   long numCols() const { return getProd(1); }
 
    // read-only reference to element at position i, with bounds check 
    const T& at(long i) const {
