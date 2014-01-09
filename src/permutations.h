@@ -196,13 +196,16 @@ public:
 };
 
 
-/****
- * A simple implementation of full binary trees (each non-leaf has 2 children)
- ****/
+/**
+ * @class FullBinaryTree
+ * @brief A simple implementation of full binary trees (each non-leaf has 2 children)
+ */
 template<class T> class FullBinaryTree;
 
-// A node in a tree, these nodes will be kept in a vector, so we use
-// indexes rather than pointers
+//! @class TreeNode
+//! @brief A node in a full binary tree.
+//!
+//! These nodes are in a vector, so we use indexes rather than pointers
 template<class T> class TreeNode {
   T data;
   long parent;
@@ -379,7 +382,7 @@ public:
   GenDescriptor() { }
 };
 
-// A node in a tree relative to some generator
+//! A node in a tree relative to some generator
 class SubDimension {
   static const Vec<long> dummyBenes; // Useful for initialization
  public:
@@ -491,7 +494,8 @@ class Ctxt;
 class EncryptedArray;
 class PermNetwork;
 
-// The information needed to apply one layer of a permutation network
+//! @class PermNetLayer
+//! @brief The information needed to apply one layer of a permutation network
 class PermNetLayer {
   long genIdx; // shift-by-1 in this layer is done via X -> X^{g^e}
   long e;
@@ -507,6 +511,7 @@ class PermNetLayer {
   bool isIdentity() const { return isID; }
 };
 
+//! A full permutation network
 class PermNetwork {
   Vec<PermNetLayer> layers;
 
@@ -522,8 +527,8 @@ public:
 
   long depth() const { return layers.length(); }
 
-  // Take as input a permutation pi and the trees of all the generators,
-  // and prepares the permutation network for this pi
+  //! Take as input a permutation pi and the trees of all the generators,
+  //! and prepares the permutation network for this pi
   void buildNetwork(const Permut& pi, const GeneratorTrees& trees);
 
   //! Apply network to permute a ciphertext

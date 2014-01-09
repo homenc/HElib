@@ -15,6 +15,10 @@
  */
 #ifndef _AltCRT_H_
 #define _AltCRT_H_
+/**
+ * @file AltCRT.h
+ * @brief Alternative implementation of integer polynomials
+ **/
 
 
 #include <vector>
@@ -30,6 +34,12 @@ NTL_CLIENT
 
 class SingleCRT;
 
+/**
+* @class AltCRTHelper
+* @brief A helper class to enforce consistency within an AltCRTHelper object
+*
+* See Section 2.6.2 of the design document (IndexMap)
+*/
 class AltCRTHelper : public IndexMapInit<zz_pX> {
 private: 
   long val;
@@ -55,7 +65,8 @@ private:
 
 
 
-
+/! @class AltCRT
+/! @brief Alternative implementation of integer polynomials
 class AltCRT {
   const FHEcontext& context; // the context
   IndexMap<zz_pX> map; // the data itself: if the i'th prime is in use then

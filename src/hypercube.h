@@ -31,9 +31,8 @@ using namespace std;
 using namespace NTL;
 
 
-// class CubSignature: such an object is initialized with a vector of
-// dimensions for a hypercube, and some auxilliary data is computed
-
+//! @class CubeSignature
+//! @brief Holds a vector of dimensions for a hypercube and some additional data
 class CubeSignature {
 private:
    Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
@@ -74,30 +73,30 @@ public:
    }
    **********************************************************/
 
-   // total size of cube
+   //! total size of cube
    long getSize() const { return size; }
 
-   // number of dimensions
+   //! number of dimensions
    long getNumDims() const { return ndims; }
 
-   // size of dimension d
+   //! size of dimension d
    long getDim(long d) const { return dims.at(d); }
 
-   // product of sizes of dimensions d, d+1, ...
+   //! product of sizes of dimensions d, d+1, ...
    long getProd(long d) const { return prods.at(d);}
 
-   // product of sizes of dimensions from, from+1, ..., to-1
+   //! product of sizes of dimensions from, from+1, ..., to-1
    long getProd(long from, long to) const 
    { return prods.at(from)/prods.at(to); }
 
-   // get coordinate in dimension d of index i
+   //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
       assert(i >= 0 && i < size);
    
       return (i % prods.at(d)) / prods.at(d+1); 
    }
 
-   // add offset to coordinate in dimension d of index i
+   //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
       assert(i >= 0 && i < size);
       
@@ -112,13 +111,13 @@ public:
       return i1;
    }
 
-   // number of slices
+   //! number of slices
    long numSlices(long d=1) const { return getProd(0, d); }
 
-   // size of one slice
+   //! size of one slice
    long sliceSize(long d=1) const { return getProd(d); }
 
-   // number of columns
+   //! number of columns
    long numCols() const { return getProd(1); }
 
    friend ostream& operator<<(ostream &s, const CubeSignature& sig);
@@ -127,11 +126,13 @@ public:
 inline ostream& operator<<(ostream &s, const CubeSignature& sig)
 { return s << sig.dims; }
 
-// The class HyperCube<T> represents a multi-dimensional cube.
-// Such an object is initialzied with a CubeSignature: a reference to the
-// signature is stored with the cube, and so the signature must remain alive
-// during the lifetime of the cube, to prevent dangling pointers.
 
+//! @class HyperCube
+//! @brief A multi-dimensional cube.
+//!
+//! Such an object is initialzied with a CubeSignature: a reference to the
+//! signature is stored with the cube, and so the signature must remain alive
+//! during the lifetime of the cube, to prevent dangling pointers.
 template<class T>
 class HyperCube {
 private:
@@ -141,14 +142,14 @@ private:
    HyperCube(); // disable default constructor
 
 public:
-   // initialzie a HyperCube with a CubeSignature
+   //! initialzie a HyperCube with a CubeSignature
    HyperCube(const CubeSignature& _sig) : sig(_sig) {
       data.FixLength(sig.getSize());
    }
 
    // use default copy constructor 
 
-   // assignment: signatures must be the same
+   //! assignment: signatures must be the same
    HyperCube& operator=(const HyperCube<T>& other)
    {
       assert(&this->sig == &other.sig);
@@ -157,7 +158,7 @@ public:
    }
 
 
-   // equality testing: signaturees must be the same
+   //! equality testing: signaturees must be the same
    bool operator==(const HyperCube<T>& other) const
    {
       assert(&this->sig == &other.sig);
@@ -170,58 +171,57 @@ public:
    }
 
 
-   // const ref to signature
+   //! const ref to signature
    const CubeSignature& getSig() const { return sig; }
 
-   // read/write ref to the data vector.
-   // Note that the length of data is fixed upon construction,
-   // so it cannot be changed through this ref.
+   //! read/write ref to the data vector.
+   //! Note that the length of data is fixed upon construction,
+   //! so it cannot be changed through this ref.
    Vec<T>& getData() { return data; }
 
-   // read-only ref to data vector
+   //! read-only ref to data vector
    const Vec<T>& getData() const { return data; } 
 
-   // total size of cube
+   //! total size of cube
    long getSize() const { return sig.getSize(); }
 
-   // number of dimensions
+   //! number of dimensions
    long getNumDims() const { return sig.getNumDims(); }
 
-   // size of dimension d
+   //! size of dimension d
    long getDim(long d) const { return sig.getDim(d); }
 
-   // product of sizes of dimensions d, d+1, ...
+   //! product of sizes of dimensions d, d+1, ...
    long getProd(long d) const { return sig.getProd(d);}
 
-   // product of sizes of dimensions from, from+1, ..., to-1
+   //! product of sizes of dimensions from, from+1, ..., to-1
    long getProd(long from, long to) const { return sig.getProd(from,to);} 
 
-   // get coordinate in dimension d of index i
+   //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const { return sig.getCoord(i, d); }
 
-   // add offset to coordinate in dimension d of index i
+   //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const { return sig.addCoord(i, d, offset); }
 
-
-   // number of slices
+   //! number of slices
    long numSlices(long d=1) const { return getProd(0, d); }
 
-   // size of one slice
+   //! size of one slice
    long sliceSize(long d=1) const { return getProd(d); }
 
-   // number of columns
+   //! number of columns
    long numCols() const { return getProd(1); }
 
-   // reference to element at position i, with bounds check 
+   //! reference to element at position i, with bounds check 
    T& at(long i) { return data.at(i); }
 
-   // reference to element at position i, without bounds check 
+   //! reference to element at position i, without bounds check 
    T& operator[](long i) { return data[i]; }
 
-   // read-only reference to element at position i, with bounds check 
+   //! read-only reference to element at position i, with bounds check 
    const T& at(long i) const { return data.at(i); }
 
-   // read-only reference to element at position i, without bounds check 
+   //! read-only reference to element at position i, without bounds check 
    const T& operator[](long i) const { return data[i]; }
 
   //! @brief rotate k positions along the i'th dimension
@@ -231,14 +231,17 @@ public:
    void shift1D(long i, long k);
 };
 
-// A ConstCubeSlice acts like a pointer to a lower dimensional constant subcube
-// of a hypercube. It is initialized using a reference to a hypercube, which
-// must remain alive during the lifetime of the slice, to prevent dangling
-// pointers.
-// The subclass CubeSlice works also with non-constant cubes and subcubes.
-// 
-// In addition, for greater flexibility, a "slice" may be initialized
-// with a vector and a signature, rather than a cube
+//! @class ConstCubeSlice
+//! @brief A constant lower-dimension slice of a hypercube
+//!
+//! A ConstCubeSlice acts like a pointer to a lower dimensional constant
+//! subcube of a hypercube. It is initialized using a reference to a hypercube,
+//! which must remain alive during the lifetime of the slice, to prevent
+//! dangling pointers.
+//! The subclass CubeSlice works also with non-constant cubes and subcubes.
+//! 
+//! In addition, for greater flexibility, a "slice" may be initialized
+//! with a vector and a signature, rather than a cube
 
 template<class T>
 class ConstCubeSlice {
@@ -252,7 +255,7 @@ private:
 
 public:
 
-   // initialize the slice to the full cube
+   //! initialize the slice to the full cube
    explicit ConstCubeSlice(const HyperCube<T>& _cube) {
      data = &_cube.getData(); 
      sig = &_cube.getSig(); 
@@ -268,8 +271,8 @@ public:
      sizeOffset = 0; 
    }
 
-   // initialize the slice to point to the i-th subcube (with some
-   // given dimension offset) of the cube pointed to by _cube or bigger.
+   //! initialize the slice to point to the i-th subcube (with some
+   //! given dimension offset) of the cube pointed to by _cube or bigger.
    ConstCubeSlice(const ConstCubeSlice& bigger, long i, long _dimOffset=1);
    ConstCubeSlice(const HyperCube<T>& _cube, long i, long _dimOffset=1);
 
@@ -279,57 +282,59 @@ public:
    // the following mimic the corresponding methods
    // in the HyperCube class, restricted to the slice
 
-   // const ref to signature
+   //! const ref to signature
     const CubeSignature& getSig() const { return *sig; }
 
-   // total size 
+   //! total size 
    long getSize() const { return sig->getProd(dimOffset); }
 
-   // number of dimensions 
+   //! number of dimensions 
    long getNumDims() const { return sig->getNumDims() - dimOffset; }
 
-   // size of dimension d
+   //! size of dimension d
    long getDim(long d) const { return sig->getDim(d + dimOffset); }
 
-   // product of sizes of dimensions d, d+1, ...
+   //! product of sizes of dimensions d, d+1, ...
    long getProd(long d) const { return sig->getProd(d + dimOffset); }
 
-   // product of sizes of dimensions from, from+1, ..., to-1
+   //! product of sizes of dimensions from, from+1, ..., to-1
    long getProd(long from, long to) const 
    { return sig->getProd(from + dimOffset, to + dimOffset); } 
 
-   // get coordinate in dimension d of index i
+   //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
      assert(i >= 0 && i < getSize());
      return sig->getCoord(i + sizeOffset, d + dimOffset);
    }
 
-   // add offset to coordinate in dimension d of index i
+   //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
      assert(i >= 0 && i < getSize());
      return sig->addCoord(i + sizeOffset, d + dimOffset, offset);
    }
 
-
-   // number of slices
+   //! number of slices
    long numSlices(long d=1) const { return getProd(0, d); }
 
-   // size of one slice
+   //! size of one slice
    long sliceSize(long d=1) const { return getProd(d); }
 
-   // number of columns
+   //! number of columns
    long numCols() const { return getProd(1); }
 
-   // read-only reference to element at position i, with bounds check 
+   //! read-only reference to element at position i, with bounds check 
    const T& at(long i) const {
      assert(i >= 0 && i < getSize());
      return (*data)[i + sizeOffset];
    }
 
-   // read-only reference to element at position i, without bounds check 
+   //! read-only reference to element at position i, without bounds check 
    const T& operator[](long i) const { return (*data)[i + sizeOffset]; }
 };
 
+
+//! @class CubeSlice
+//! @brief A lower-dimension slice of a hypercube
 template<class T>
 class CubeSlice : public ConstCubeSlice<T> {
 private:
@@ -363,23 +368,22 @@ public:
    }
 };
 
-// getHyperColumn reads out a (multi-dimensional) column from a slice. The
-// parameter pos specifies the position of the column, which must be in the
-// range 0 <= pos < s.getProd(1). The vector v is filled with values whose
-// coordinate in the lower dimensional subcube is equal to pos. The length
-// of v will be set to s.getDim(0).
+
+//! getHyperColumn reads out a (multi-dimensional) column from a slice. The
+//! parameter pos specifies the position of the column, which must be in the
+//! range 0 <= pos < s.getProd(1). The vector v is filled with values whose
+//! coordinate in the lower dimensional subcube is equal to pos. The length
+//! of v will be set to s.getDim(0).
 template<class T>
 void getHyperColumn(Vec<T>& v, const ConstCubeSlice<T>& s, long pos);
 
-// setHyperColumn does the reverse of getHyperColumn, setting the column
-// to the given vector
-
+//! setHyperColumn does the reverse of getHyperColumn, setting the column
+//! to the given vector
 template<class T>
 void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos);
 
-// this version of setHyperColumn implicitly pads v with a default value,
-// if v is too short
-
+//! this version of setHyperColumn implicitly pads v with a default value,
+//! if v is too short
 template<class T>
 void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos, const T& val);
 

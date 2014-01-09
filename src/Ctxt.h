@@ -454,7 +454,7 @@ inline IndexSet baseSetOf(const Ctxt& c) {
 //! This implementation uses depth log n and (nlog n)/2 products
 void incrementalProduct(vector<Ctxt>& v);
 
-// print to cerr some info about ciphertext
+//! print to cerr some info about ciphertext
 void CheckCtxt(const Ctxt& c, const char* label);
 
 #endif // ifndef _Ctxt_H_

@@ -1,3 +1,22 @@
+/* Copyright (C) 2012,2013 IBM Corp.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+/**
+ * @file matching.h
+ * @brief Classes and functions for max-flow in a generic graph
+ **/
 #ifndef _MATCHING_H_
 #define _MATCHING_H_
 
@@ -9,8 +28,7 @@
 
 using namespace std;
 
-// Classes and functions for max-flow in a generic graph
-
+//! An edge in a flow graph
 class FlowEdge {
 public:
   long capacity, flow;
@@ -26,8 +44,9 @@ typedef vector<FNeighborList> FlowGraph;
 long maximum_flow(FlowGraph& fg, long src, long sink);
      // Use the Edmonds-Karp max-flow algorithm
 
-// Classes and fucntions for maximum-matching in bipartite graphs
-class LabeledEdge { // a generic directed edge in a graph with some labels
+//! @class LabeledEdge
+//! @brief A generic directed edge in a graph with some labels
+class LabeledEdge {
 public:
   long from, to;
   long label;
@@ -37,6 +56,9 @@ public:
 };
 
 typedef tr1::unordered_multimap<long,LabeledEdge> LNeighborList;
+
+//! @class LabeledVertex
+//! @brief A generic node in a graph with some labels
 class LabeledVertex {
 public:
   long name;
@@ -53,6 +75,7 @@ public:
   }
 };
 
+//! A bipartite flow graph
 class BipartitleGraph {
   // Construct a flow graph corresponding to this bipartite graph
   void buildFlowGraph(FlowGraph& fg);

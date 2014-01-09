@@ -13,8 +13,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/* benes.cpp - Implementation of generalized Benes permutation networks
+/* @file OptimizePermutations.cpp
+ * @brief Implementation of optimized permutation networks
  */
+
 #include <cstdlib>
 #include <cassert>
 #include <list>
@@ -26,20 +28,22 @@
 #include "EncryptedArray.h"
 #include "permutations.h"
 
+
+//! \cond FALSE (make doxygen ignore these classes)
 template<class T> 
 class ClassHash { // helper class to make defining hash functions easier
 public:
   size_t operator()(const T& t) const { return t.hash(); }
 };
+//! encond
 
-// routines for finding optimal level collapsing strategies
+// routines for finding optimal level-collapsing strategies for Benes networks
 
-void removeDups(list<long>& x, bool *aux)
-// removes duplicates from list x
-// uses vector aux as scratch space
+// Removes duplicates from list x. Uses vector aux as scratch space
 //   invariants: 
 //     * all elements in x lie in a range a..b
 //     * aux[a..b] is false before and after removeDups is called
+void removeDups(list<long>& x, bool *aux)
 {
   for (list<long>::iterator i = x.begin(); i != x.end(); ) { 
     if (aux[*i])
@@ -54,11 +58,10 @@ void removeDups(list<long>& x, bool *aux)
     aux[*i] = false;
 }
 
-void addOffset(list<long>& x, long offset, long n, bool *aux, bool good=false)
-// creates a new list with all the old values, plus
-//   all the old values with +/- offset added.
+// Creates a new list with the old values and old values +/- offset.
 // results outside the range -n+1 .. n-1 are discarded
 //   and all resulting duplicates are removed
+void addOffset(list<long>& x, long offset, long n, bool *aux, bool good=false)
 {
   for (list<long>::iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;
@@ -87,8 +90,8 @@ void addOffset(list<long>& x, long offset, long n, bool *aux, bool good=false)
   removeDups(x, aux);
 }
 
+// Counts the number of unique elements mod n in x 
 long reducedCount(const list<long>& x, long n, bool *aux)
-// counts the number of unique elements mod n in x 
 {
   long res = 0;
 
@@ -150,9 +153,11 @@ void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
 }
 
 
+//! \cond FALSE (make doxygen ignore these classes)
 class LongNode;
 typedef tr1::shared_ptr<LongNode> LongNodePtr;
 // A "shared_ptr" is a pointer with (some) garbage collection
+
 
 // A LongNode is an implementation of list<long>, i.e. a linked list of
 // counters, representing a particular way of "collapsing levels" in a Benes
@@ -167,6 +172,7 @@ public:
     count = _count; next = _next;
   }
 };
+//! \endcond
 
 // Returns the length of the linked list, starting with this pointer
 static long length(LongNodePtr ptr)
@@ -176,7 +182,7 @@ static long length(LongNodePtr ptr)
   return res;
 }
 
-// Convert list<long> to Vec<long>
+// Converts list<long> to Vec<long>
 static long listToVec(Vec<long>& vec, LongNodePtr ptr)
 {
   long len = length(ptr);
@@ -190,6 +196,7 @@ static long listToVec(Vec<long>& vec, LongNodePtr ptr)
   return len;
 }
 
+// Prints out a list of integers
 ostream& operator<<(ostream& s, LongNodePtr p)
 {
   if (p == NULL) return s << "[]";
@@ -201,12 +208,13 @@ ostream& operator<<(ostream& s, LongNodePtr p)
 }
 
 
-// Data structures to hold the memoization table for the computation of the 
-// level collapsing in a Benes network. An entry in the table is specified by 
-// the first-level index i and the alotted budget (depth). Once the computation
-// is over, this entry will contain the optimal way of breaking this network
-// (encoded as a LongNode list) and the cost of this network.
-
+// Data structures to hold the memoization table for the dynamic-programming
+// computation of the level collapsing in a Benes network. An entry in the
+// table is specified by the first-level index i and the alotted budget (depth).
+// Once the computation is over, this entry will contain the optimal way of
+// breaking this network (encoded as a LongNode list) and the cost of this
+// network.
+//! \cond FALSE (make doxygen ignore these classes)
 class BenesMemoKey {
 public:
   long i;      // Index of 1st level to consider
@@ -239,10 +247,9 @@ public:
   BenesMemoEntry() { }
 };
 
-
-
 typedef tr1::unordered_map< BenesMemoKey, BenesMemoEntry, 
                             ClassHash<BenesMemoKey> > BenesMemoTable;
+//! \endcond
 
 // A dynamic program (implemented as a recursive routine with memoization) for
 // computing the optimal collapsing of layers in a generalized Benes network.
@@ -262,14 +269,9 @@ BenesMemoEntry optimalBenesAux(long i, long budget, long nlev,
   assert(i >= 0 && i <= nlev);
   assert(budget > 0);
 
-#if 0
-  cout << "enter(" << i << "," << budget << ")\n";
-#endif
-
   // Did we already solve this problem? If so just return the solution.
   BenesMemoTable::iterator find = memoTab.find(BenesMemoKey(i, budget));
   if (find != memoTab.end()) {
-    //    cout << "found(" << i << "," << budget << ")\n";
     return find->second;
   }
 
@@ -314,18 +316,11 @@ BenesMemoEntry optimalBenesAux(long i, long budget, long nlev,
     solution = LongNodePtr(new LongNode(bestJ+1, bestT.solution));
   }
 
-#if 0
-  cout << "computed(" << i << "," << budget << ") = (" << cost << ",";
-  print(cout, solution);
-  cout << ")\n";
-#endif
   return memoTab[BenesMemoKey(i, budget)] = BenesMemoEntry(cost, solution);
 }
 
 
-void optimalBenes(long n, long budget, bool good, 
-                     long& cost, LongNodePtr& solution)
-// computes an optimal level-collapsing strategy for a Benes network
+// Computes an optimal level-collapsing strategy for a Benes network
 //   n = the size of the network
 //   budget = an upper bound on the number of levels in the collapsed network
 //   good = flag indicating whether this is with respect to a "good" generator,
@@ -335,6 +330,8 @@ void optimalBenes(long n, long budget, bool good,
 //      are collapsed: if solution = [s_1 s_2 ... s_k], then k <= budget,
 //      and the first s_1 levels are collapsed, the next s_2 levels 
 //      are collapsed, etc.
+void optimalBenes(long n, long budget, bool good, 
+                     long& cost, LongNodePtr& solution)
 {
   long k = GeneralBenesNetwork::depth(n); // k = ceiling(log_2 n)
   long nlev = 2*k - 1;  // before collapsing, we have 2k-1 levels
@@ -344,9 +341,6 @@ void optimalBenes(long n, long budget, bool good,
 
   buildBenesCostTable(n, k, good, costTab);
   // Compute the cost for all (n choose 2) possible ways to collapse levels.
-
-  // cout << good << "\n";
-  // cout << costTab << "\n";
 
   BenesMemoTable memoTab;
   BenesMemoEntry t = optimalBenesAux(0, budget, nlev, costTab, memoTab);
@@ -360,6 +354,8 @@ void optimalBenes(long n, long budget, bool good,
 /********************************************************************/
 /***** Routines for finding the optimal splits among generators *****/
 /********************************************************************/
+
+//! \cond FALSE (make doxygen ignore these classes)
 
 // A binary tree data structure for spliting generators
 class SplitNode;
@@ -393,9 +389,9 @@ public:
     left = _left; right = _right;
   }
 
-  bool isLeaf() const { return left == NULL && right == NULL; }
-    
+  bool isLeaf() const { return left == NULL && right == NULL; }    
 };
+//! \endcond
 
 // Routines for printing the leaves of a generator-tree
 void print(ostream& s, SplitNodePtr p, bool first)
@@ -422,11 +418,12 @@ ostream& operator<<(ostream& s, SplitNodePtr p)
 }
 
 
-// Data structures to hold the memory table for optimizing a generator tree.
-// An entry in the table is specified by (order,good-flag,budget,middle-flag).
-// When the copmutation is over, this entry will contain the optimal tree for
-// a single generator (encoded as a SplitNode tree) and the cost of this
-// solution.
+// Data structures to hold the memory table for the dynamic-programming
+// computation optimizing a generator tree. An entry in the table is specified
+// by (order,good-flag,budget,middle-flag). When the copmutation is over, this
+// entry will contain the optimal tree for a single generator (encoded as a
+// SplitNode tree) and the cost of this solution.
+//! \cond FALSE (make doxygen ignore these classes)
 class LowerMemoKey {
 public:
   long order;  // size of hypercube corresponding to this sub-tree
@@ -462,8 +459,6 @@ public:
   LowerMemoEntry() { }
 };
 
-
-
 typedef tr1::unordered_map< LowerMemoKey, LowerMemoEntry, 
                             ClassHash<LowerMemoKey> > LowerMemoTable;
 
@@ -483,7 +478,9 @@ public:
     solution = _solution; next = _next;
   }
 };
+//! \endcond
 
+// Compute the length of a list
 long length(GenNodePtr ptr)
 {
   long res = 0;
@@ -518,7 +515,7 @@ ostream& operator<<(ostream& s, GenNodePtr p)
 // of a generaor, the budget allocated to this tree, and the middle flag.
 // When the copmutation is over, this entry will contain the optimal list
 // of trees (encoded as a GenNode list) and the cost of this solution.
-
+//! \cond FALSE (make doxygen ignore these classes)
 class UpperMemoKey {
 public:
   long i;
@@ -552,10 +549,9 @@ public:
   UpperMemoEntry() { }
 };
 
-
-
 typedef tr1::unordered_map< UpperMemoKey, UpperMemoEntry, 
                             ClassHash<UpperMemoKey> > UpperMemoTable;
+//! \endcond
 
 // Optimize a single tree: try all possible ways of splitting the order into
 // order1*order2 (and also the solution of not splitting at all). For every
@@ -782,21 +778,6 @@ optimalUpperAux(const Vec<GenDescriptor>& vec, long i, long budget, long mid,
  *   and so on.  The resulting "collapsed" Benes network will have k
  *   levels.
 *********************************************************************/
-// FIXME: this function is obsoleted by GeneratorTrees::buildOptimalTrees
-void optimalUpper(const Vec<GenDescriptor>& vec, long budget,
-                  long& cost, GenNodePtr& solution)
-{
-  assert(budget > 0);
-
-  UpperMemoTable upperMemoTable;
-  LowerMemoTable lowerMemoTable;
-
-  UpperMemoEntry t = 
-    optimalUpperAux(vec, 0, budget, 1, upperMemoTable, lowerMemoTable);
-
-  cost = t.cost;
-  solution = t.solution;
-}
 
 // Returns the total number of layers in the corresponding (sub)network
 static long recursiveCopy2Tree(OneGeneratorTree& gTree, long nodeIdx, 

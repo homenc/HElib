@@ -17,9 +17,7 @@
 #include "NumbTh.h"
 #include "permutations.h"
 
-const Vec<long> SubDimension::dummyBenes;
-
-//template class FullBinaryTree<SubDimension>;// instantiate the template class
+const Vec<long> SubDimension::dummyBenes; // global variable
 
 // Apply a permutation to a vector, out[i]=in[p1[i]]
 // Unfortunately we need to implement for both Vec<long> and vector<long>
@@ -73,6 +71,7 @@ template void applyPermsToVec<long>(vector<long>& out, const vector<long>& in,
 				const Permut& p2, const Permut& p1);
 
 
+// Generate a random permutation on [0..n-1]
 void randomPerm(Permut& perm, long n)
 {
   perm.SetLength(n);
@@ -107,8 +106,8 @@ void ColPerm::makeExplicit(Permut& out) const
 
 
 // For each position in the data vector, compute how many slots it should be
-// shifted inside its small permutation. Returns zero if all the shift amount
-// are zero, nonzero otherwise.
+// shifted inside its small permutation.
+// Return value is zero if all the shift amounts are zero, nonzero otherwise.
 long ColPerm::getShiftAmounts(Vec<long>& out) const
 {
   long sz = getSize();
@@ -157,9 +156,7 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
 {
   // Go over the columns one by one. For each column extract the columns
   // permutation, prepare a Benes network for it, and then for every layer
-  // copmute the shift amounts for this columns.
-
-  // cout << "\n++++++ HERE ++++++ " << dim << " " << getNumDims() << "\n";
+  // compute the shift amounts for this columns.
 
   long n = getDim(dim);     // the permutations are over [0,n-1]
 
@@ -244,7 +241,7 @@ void breakPermTo3(const HyperCube<long>& pi, long dim,
     // in the bipartite graph an edge i2->j2 and label it by i.
     BipartitleGraph bg;
     for (long i=0; i<n; i++) {
-      long j = pi_slice[i]; // the image of i under the permutation
+      long j = pi_slice[i];  // the image of i under the permutation
       // when i = (i1,i2) and j=(j1,j2), add an edge from i2 to j2 labeled i
       bg.addEdge(rep.at(i).second, rep.at(j).second, i);
     }
@@ -266,14 +263,14 @@ void breakPermTo3(const HyperCube<long>& pi, long dim,
     // a left node in the graph), all the edges leaving that node have different
     // colors.
     //
-    // rho_2 is a permutation since the edges of each color form a perfect,
-    // so for every left-node j2 and color c there is a single c-colored edge
-    // going into j2. The label of that edge determines a unique origin index
-    // i=(i1,i2), and therefore also the pre-image of (c,j2) under rho_2, which
-    // is (sigma(i),i2)=(c,i2).
+    // rho_2 is a permutation since the edges of each color form a perfect
+    // matching, so for every left-node j2 and color c there is a single
+    // c-colored edge going into j2. The label of that edge determines a unique
+    // origin index i=(i1,i2), and therefore also the pre-image of (c,j2) under
+    // rho_2, which is (sigma(i),i2)=(c,i2).
     //
     // rho_3 is a permutation because rho_1,rho_2,pi are permutations, and
-    // pi = rho_3 o rho_2 o rho_1.
+    // so is pi = rho_3 o rho_2 o rho_1.
     //
     // Note that the edges are colored 1..n2 while our represenation above
     // has the second digits in the range 0..n2-1, so below we use sigma(i)-1
@@ -359,6 +356,7 @@ void GeneratorTrees::getCubeDims(Vec<long>& dims) const
   for (long i=0; i<trees.length(); i++) {
     const OneGeneratorTree& T = trees[i];
     dims[T.getAuxKey()] = T.DataOfNode(T.rootIdx()).size;
+    // getAuxKey() returns the generator number associated with this tree
   }
 }
 
@@ -395,6 +393,8 @@ static bool addOne(Vec<long>& rep, const Vec<long> digits)
   return true;
 }
 
+// Compute the mapping between linear array and a hypercube corresponding
+/// to a single generator tree
 void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
 {
   Vec<long> dims(INIT_SIZE, T.getNleaves());
@@ -404,8 +404,6 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
     dims[i] = T[leaf].getData().size;
     coefs[i] = T[leaf].getData().e;
   }
-  //  std::cerr << "\ndims ="<<dims<<endl;
-  //  std::cerr << "coefs="<<coefs<<endl;
 
   // A representation of an integer with digits from dims
   Vec<long> rep(INIT_SIZE, T.getNleaves());
@@ -424,9 +422,10 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
       genMap[i] = AddMod(genMap[i], tmp, sz);
     }
   }
-
 }
 
+// Compute the mapping between linear array and the hypercube
+// corresponding to all the trees.
 void GeneratorTrees::ComputeCubeMapping()
 {
   assert(trees.length()>=1);
@@ -467,12 +466,12 @@ void GeneratorTrees::ComputeCubeMapping()
     }
   }
 
-
   // Compute the inverse permutation
   map2cube.SetLength(map2array.length());
   for (long i=0; i<map2array.length(); i++) map2cube[ map2array[i] ] = i;
 }
 
+// Prints out a column permutation
 ostream& operator<< (ostream &s, const ColPerm& p)
 {
   Permut pp;
@@ -480,6 +479,7 @@ ostream& operator<< (ostream &s, const ColPerm& p)
   return s << pp;
 }
 
+// Prints out a sub-dimension
 ostream& operator<< (ostream &s, const SubDimension& sd)
 {
   s << (sd.good? "(g ": "(b ") << sd.size << " " << sd.e << ")";
@@ -488,6 +488,7 @@ ostream& operator<< (ostream &s, const SubDimension& sd)
   return s;
 }
 
+// Prints out the vector of trees
 ostream& operator<< (ostream &s, const GeneratorTrees &trees)
 {
   s << "[" << trees.depth << "\n";

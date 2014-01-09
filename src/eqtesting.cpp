@@ -13,6 +13,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+/*
+ * @file eqtesting.cpp
+ * @brief Experimental program for equality testing...
+ */
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
@@ -21,11 +25,6 @@
 #include <cassert>
 #include <cstdio>
 
-/********
-
-Experimental program for equality testing...
-
-********/
 
 // computes ctxt^{2^d-1} using a method that takes
 // O(log d) automorphisms and multiplications

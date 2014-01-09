@@ -30,6 +30,7 @@ class EncryptedArray; // forward reference
 
 //! @class PlaintextMatrixBaseInterface
 //! @brief An abstract interface for plaintext arrays.
+//!
 //! Any class implementing this interface should be linked to a specific
 //! EncryptedArray object, a reference to which is returned by the getEA()
 //! method -- this method will generally be invoked by an EncryptedArray
@@ -44,8 +45,9 @@ public:
 };
 
 
-//! @class PlaintextMatrixInterface<type>
+//! @class PlaintextMatrixInterface
 //! @brief A somewhat less abstract interface for plaintext arrays.
+//! 
 //! The method get(out, i, j) copies the element at row i column j of a
 //! matrix into the variable out. The type of out is RX, which is GF2X
 //! if type is PA_GF2, and zz_pX if type is PA_zz_p.
