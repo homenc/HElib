@@ -65,8 +65,8 @@ private:
 
 
 
-/! @class AltCRT
-/! @brief Alternative implementation of integer polynomials
+//! @class AltCRT
+//! @brief Alternative implementation of integer polynomials
 class AltCRT {
   const FHEcontext& context; // the context
   IndexMap<zz_pX> map; // the data itself: if the i'th prime is in use then
