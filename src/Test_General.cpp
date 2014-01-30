@@ -197,6 +197,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   t = GetTime() - t;
 
+#if 0
+
   vector<Ctxt> vc(L,c0);            // A vector of L ciphertexts
   vector<PlaintextArray> vp(L, p0); // A vector of L plaintexts
   for (long i=0; i<L; i++) {
@@ -216,6 +218,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     }
   }
   if (!fail) cerr << "incrementalProduct works\n";
+#endif
 
   cerr << "\ntime for circuit: " << t << "\n";
 }
