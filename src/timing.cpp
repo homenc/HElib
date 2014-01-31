@@ -16,7 +16,7 @@
 #include <ctime>
 #include <iostream>
 #include "timing.h"
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <vector>
 #include <algorithm>
 #include <utility>
@@ -43,7 +43,7 @@ bool string_compare(const char *a, const char *b)
 
 bool FHEtimersOn=false;
 
-typedef tr1::unordered_map<const char*,FHEtimer>timerMap;
+typedef std::unordered_map<const char*,FHEtimer>timerMap;
 static timerMap timers;
 
 // Reset a timer for some label to zero
