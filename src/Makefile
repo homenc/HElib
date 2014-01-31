@@ -14,7 +14,7 @@
 # 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 # 
 CC = g++
-CFLAGS = -g -Wall -I/usr/local/include
+CFLAGS = -g -Wall -I/usr/local/include -std=c++11
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
 #CFLAGS = -g -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
 #CFLAGS= -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DUSE_ALT_CRT
