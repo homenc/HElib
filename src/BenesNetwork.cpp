@@ -75,6 +75,8 @@ recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
   long sz0 = GeneralBenesNetwork::shamt(n, k, d); // size of upper internal network
   long sz1 = sz - sz0;
 
+  assert(labs(sz0-sz1) <= 1);
+
   // id_perm: the identity permutation on {0,...,sz-1}
   Permut id_perm;
   id_perm.SetLength(sz);
