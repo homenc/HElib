@@ -21,7 +21,7 @@
  **/
 
 #include "IndexSet.h"
-#include <tr1/unordered_map>
+#include <unordered_map>
 #include <iostream>
 #include <cassert>
 #include "cloned_ptr.h"
@@ -46,7 +46,7 @@ public:
 //! flexible manner.
 template < class T > class IndexMap {
 
-  tr1::unordered_map<long, T> map;
+  std::unordered_map<long, T> map;
   IndexSet indexSet;
   cloned_ptr< IndexMapInit<T> > init;
 
@@ -78,8 +78,8 @@ public:
     assert(indexSet.contains(j)); 
     // unordered_map does not support a const [] operator,
     // so we have to artificially strip away the const-ness here
-    tr1::unordered_map<long, T> & map1 = 
-      const_cast< tr1::unordered_map<long, T> & > (map);
+    std::unordered_map<long, T> & map1 = 
+      const_cast< std::unordered_map<long, T> & > (map);
     return map1[j];
   }
 

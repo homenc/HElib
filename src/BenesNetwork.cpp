@@ -24,7 +24,7 @@
 #include <cstdlib>
 #include <cassert>
 #include <list>
-#include <tr1/memory>
+#include <memory>
 #include <sstream>
 
 
