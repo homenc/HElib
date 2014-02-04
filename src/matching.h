@@ -25,9 +25,9 @@
 #include <queue>
 #include <cassert>
 
+using namespace std;
 #if (__cplusplus>199711L)
 #include <unordered_map>
-using namespace std;
 #else
 #include <tr1/unordered_map>
 using namespace tr1;

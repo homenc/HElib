@@ -35,6 +35,8 @@
 #include <NTL/GF2XFactoring.h>
 #include <string>
 
+NTL_CLIENT
+
 #if (__cplusplus>199711L)
 #include <unordered_map>
 //! @typedef
@@ -44,7 +46,6 @@ typedef std::unordered_map<string, const char *> argmap_t;
 typedef tr1::unordered_map<string, const char *> argmap_t;
 #endif
 
-NTL_CLIENT
 
 //! @brief Code for parsing command line arguments.
 /**

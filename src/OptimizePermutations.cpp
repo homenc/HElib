@@ -22,9 +22,9 @@
 #include <list>
 #include <sstream>
 
+using namespace std;
 #if (__cplusplus>199711L)
 #include <memory>
-using namespace std;
 #else
 #include <tr1/memory>
 using namespace tr1;
