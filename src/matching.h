@@ -23,10 +23,15 @@
 #include <climits>
 #include <vector>
 #include <queue>
-#include <unordered_map>
 #include <cassert>
 
+#if (__cplusplus>199711L)
+#include <unordered_map>
 using namespace std;
+#else
+#include <tr1/unordered_map>
+using namespace tr1;
+#endif
 
 //! An edge in a flow graph
 class FlowEdge {
@@ -35,7 +40,7 @@ public:
   explicit FlowEdge(long c=0, long f=0){capacity=c; flow=f;}
 };
 
-typedef std::unordered_map<long,FlowEdge> FNeighborList;
+typedef unordered_map<long,FlowEdge> FNeighborList;
      // FNeighborList[i]=edge-to-node-i
 
 typedef vector<FNeighborList> FlowGraph;
@@ -55,7 +60,7 @@ public:
   {from=f; to=t; label=l; color=c;}
 };
 
-typedef std::unordered_multimap<long,LabeledEdge> LNeighborList;
+typedef unordered_multimap<long,LabeledEdge> LNeighborList;
 
 //! @class LabeledVertex
 //! @brief A generic node in a graph with some labels

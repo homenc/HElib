@@ -33,14 +33,18 @@
 #include <NTL/mat_GF2E.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <NTL/GF2XFactoring.h>
-#include <unordered_map>
 #include <string>
-NTL_CLIENT
 
-
+#if (__cplusplus>199711L)
+#include <unordered_map>
 //! @typedef
 typedef std::unordered_map<string, const char *> argmap_t;
+#else
+#include <tr1/unordered_map>
+typedef tr1::unordered_map<string, const char *> argmap_t;
+#endif
 
+NTL_CLIENT
 
 //! @brief Code for parsing command line arguments.
 /**

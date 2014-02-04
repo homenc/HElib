@@ -20,8 +20,15 @@
 #include <cstdlib>
 #include <cassert>
 #include <list>
-#include <memory>
 #include <sstream>
+
+#if (__cplusplus>199711L)
+#include <memory>
+using namespace std;
+#else
+#include <tr1/memory>
+using namespace tr1;
+#endif
 
 #include <NTL/vector.h>
 #include "NumbTh.h"
@@ -155,7 +162,7 @@ void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
 
 //! \cond FALSE (make doxygen ignore these classes)
 class LongNode;
-typedef std::shared_ptr<LongNode> LongNodePtr;
+typedef shared_ptr<LongNode> LongNodePtr;
 // A "shared_ptr" is a pointer with (some) garbage collection
 
 
@@ -227,7 +234,11 @@ public:
   size_t hash() const {
     stringstream s;
     s << i << " " << budget;
-    return std::hash<string>()(s.str());
+#if (__cplusplus>199711L)
+    return std::hash< string >()(s.str());
+#else
+    return tr1::hash< string >()(s.str());
+#endif
   }
 
   bool operator==(const BenesMemoKey& other) const {
@@ -247,7 +258,7 @@ public:
   BenesMemoEntry() { }
 };
 
-typedef std::unordered_map< BenesMemoKey, BenesMemoEntry, 
+typedef unordered_map< BenesMemoKey, BenesMemoEntry, 
                             ClassHash<BenesMemoKey> > BenesMemoTable;
 //! \endcond
 
@@ -359,7 +370,7 @@ void optimalBenes(long n, long budget, bool good,
 
 // A binary tree data structure for spliting generators
 class SplitNode;
-typedef std::shared_ptr<SplitNode> SplitNodePtr;
+typedef shared_ptr<SplitNode> SplitNodePtr;
 // A "shared_ptr" is a pointer with (some) garbage collection
 
 class SplitNode {
@@ -438,7 +449,11 @@ public:
   size_t hash() const {
     stringstream s;
     s << order << " " << good << " " << budget << " " << mid;
-    return std::hash<string>()(s.str());
+#if (__cplusplus>199711L)
+    return std::hash< string >()(s.str());
+#else
+    return tr1::hash< string >()(s.str());
+#endif
   }
 
   bool operator==(const LowerMemoKey& other) const {
@@ -459,14 +474,14 @@ public:
   LowerMemoEntry() { }
 };
 
-typedef std::unordered_map< LowerMemoKey, LowerMemoEntry, 
+typedef unordered_map< LowerMemoKey, LowerMemoEntry, 
                             ClassHash<LowerMemoKey> > LowerMemoTable;
 
 
 // list structure for managing generators
 
 class GenNode;
-typedef std::shared_ptr<GenNode> GenNodePtr;
+typedef shared_ptr<GenNode> GenNodePtr;
 // A "shared_ptr" is a pointer with (some) garbage collection
 
 class GenNode {
@@ -529,7 +544,11 @@ public:
   size_t hash() const {
     stringstream s;
     s << i << " " << budget << " " << mid;
-    return std::hash<string>()(s.str());
+#if (__cplusplus>199711L)
+    return std::hash< string >()(s.str());
+#else
+    return tr1::hash< string >()(s.str());
+#endif
   }
 
   bool operator==(const UpperMemoKey& other) const {
@@ -549,7 +568,7 @@ public:
   UpperMemoEntry() { }
 };
 
-typedef std::unordered_map< UpperMemoKey, UpperMemoEntry, 
+typedef unordered_map< UpperMemoKey, UpperMemoEntry, 
                             ClassHash<UpperMemoKey> > UpperMemoTable;
 //! \endcond
 

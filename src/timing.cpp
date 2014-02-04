@@ -15,8 +15,6 @@
  */
 #include <ctime>
 #include <iostream>
-#include "timing.h"
-#include <unordered_map>
 #include <vector>
 #include <algorithm>
 #include <utility>
@@ -24,6 +22,14 @@
 #include <cstring>
 
 using namespace std;
+#if (__cplusplus>199711L)
+#include <unordered_map>
+#else
+#include <tr1/unordered_map>
+using namespace tr1;
+#endif
+
+#include "timing.h"
 
 //! A simple class to toggle timing information on and off
 class FHEtimer {
@@ -43,7 +49,7 @@ bool string_compare(const char *a, const char *b)
 
 bool FHEtimersOn=false;
 
-typedef std::unordered_map<const char*,FHEtimer>timerMap;
+typedef unordered_map<const char*,FHEtimer>timerMap;
 static timerMap timers;
 
 // Reset a timer for some label to zero
@@ -100,7 +106,7 @@ void resetAllTimers()
 }
 
 // Print the value of all timers to stream
-void printAllTimers(std::ostream& str)
+void printAllTimers(ostream& str)
 {
   vector<const char *> vec;
   for (timerMap::iterator it = timers.begin(); it != timers.end(); ++it) {

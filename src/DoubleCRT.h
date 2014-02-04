@@ -19,7 +19,7 @@
  **/
 
 // change to #if 1 to get an alternative implementation
-#if 1
+#if 0
 #define USE_ALT_CRT
 #endif
 

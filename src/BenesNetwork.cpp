@@ -24,9 +24,13 @@
 #include <cstdlib>
 #include <cassert>
 #include <list>
-#include <memory>
 #include <sstream>
 
+#if (__cplusplus>199711L)
+#include <memory>
+#else
+#include <tr1/memory>
+#endif
 
 #include <NTL/vector.h>
 #include "NumbTh.h"

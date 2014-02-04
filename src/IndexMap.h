@@ -20,11 +20,17 @@
  * @brief Implementation of a map indexed by a dynamic set of integers.
  **/
 
-#include "IndexSet.h"
-#include <unordered_map>
 #include <iostream>
 #include <cassert>
+
+#if (__cplusplus>199711L)
+#include <unordered_map>
+#else
+#include <tr1/unordered_map>
+#endif
+
 #include "cloned_ptr.h"
+#include "IndexSet.h"
 
 using namespace std;
 
@@ -46,7 +52,12 @@ public:
 //! flexible manner.
 template < class T > class IndexMap {
 
+#if (__cplusplus>199711L)
   std::unordered_map<long, T> map;
+#else
+  tr1::unordered_map<long, T> map;
+#endif
+
   IndexSet indexSet;
   cloned_ptr< IndexMapInit<T> > init;
 
@@ -78,8 +89,13 @@ public:
     assert(indexSet.contains(j)); 
     // unordered_map does not support a const [] operator,
     // so we have to artificially strip away the const-ness here
+#if (__cplusplus>199711L)
     std::unordered_map<long, T> & map1 = 
       const_cast< std::unordered_map<long, T> & > (map);
+#else
+    tr1::unordered_map<long, T> & map1 = 
+      const_cast< tr1::unordered_map<long, T> & > (map);
+#endif
     return map1[j];
   }
 
