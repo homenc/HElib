@@ -15,8 +15,9 @@
 # 
 CC = g++
 #CFLAGS = -g -Wall -I/usr/local/include -std=c++11 -lstdc++
-CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++
-#CFLAGS = -g -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+#CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++0x 
+#CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++
+CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
 #CFLAGS= -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DUSE_ALT_CRT
 #CFLAGS = -pg -Wall -I/usr/local/include
 LD = g++
