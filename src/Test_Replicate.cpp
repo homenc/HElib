@@ -23,6 +23,7 @@
 
 NTL_CLIENT
 
+static bool decryptAndTest=true;
 
 // k=10 p=5 r=2 -- 3 dimensions: 12, 3, !2
 // p=11 -- 2 dimensions: 16, !4
@@ -56,34 +57,34 @@ public:
 
   virtual void handle(const Ctxt& ctxt) {
 
-    double t_new = GetTime();
-    double t_elapsed = t_new - t_last;
+    if (decryptAndTest) {
+      double t_new = GetTime();
+      double t_elapsed = t_new - t_last;
 
-    t_total += t_elapsed;
+      t_total += t_elapsed;
 
-    cerr << "*** " << pos << " t=" << t_elapsed 
-         << ", t_total=" << t_total 
-         << ", level=" << ctxt.findBaseLevel() 
-         << ", log(noise/modulus)~" << ctxt.log_of_ratio() 
-         << "\n";
+      // cerr << "*** " << pos << " t=" << t_elapsed 
+      // 	   << ", t_total=" << t_total 
+      // 	   << ", level=" << ctxt.findBaseLevel() 
+      // 	   << ", log(noise/modulus)~" << ctxt.log_of_ratio() 
+      // 	   << "\n";
     
+      PlaintextArray pa1 = pa;
+      pa1.replicate(pos);
+      PlaintextArray pa2(ea);
 
-    PlaintextArray pa1 = pa;
-    pa1.replicate(pos);
-    PlaintextArray pa2(ea);
+      ea.decrypt(ctxt, sKey, pa2);
+      if (!pa1.equals(pa2)) {
+	cerr << "error:\n";
+	pa2.print(cerr); cerr << "\n";
+      }
 
-    ea.decrypt(ctxt, sKey, pa2);
-    if (!pa1.equals(pa2)) {
-      cerr << "error:\n";
-      pa2.print(cerr); cerr << "\n";
+      t_last = GetTime();
     }
-
-    t_last = GetTime();
     pos++;
 
     if (M > 0 && pos >= M) throw StopReplicate();
   }
-
 };
 
 
@@ -103,6 +104,7 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
        << ", bnd=" << bnd
        << ", M=" << bnd
        << ", v=" << v
+       << ", t=" << decryptAndTest
        << endl;
 
   FHEcontext context(m, p, r);
@@ -152,8 +154,8 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
   ZZX poly_xp1;
   ea.encode(poly_xp1, xp1);
 
+#if 0
   double t;
-
   cerr << "multiplication test:\n";
   t = GetTime();
   for (long i = 0; i < ea.size(); i++) {
@@ -162,27 +164,32 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
   }
   t = GetTime()-t;
   cerr << "time = " << t << "\n";
-  
+#endif  
 
+  cerr << "** Testing replicate():\n";
   Ctxt xc1 = xc0;
-
   CheckCtxt(xc1, "before replicate");
-  t = GetTime();
   replicate(ea, xc1, ea.size()/2);
-  t = GetTime()-t;
   CheckCtxt(xc1, "after replicate");
-  cerr << "time: " << t << "\n";
 
+  // Get some timing results
+  for (long i=0; i<20 && i<ea.size(); i++) {
+    xc1 = xc0;
+    startFHEtimer("replicate");
+    replicate(ea, xc1, i);
+    stopFHEtimer("replicate");    
+  }
+
+  cerr << "** Testing replicateAll():\n";
   replicateVerboseFlag = v;
-  
-
   ReplicateHandler *handler = new ReplicateTester(secretKey, ea, xp0, M);
-
   try {
+    startFHEtimer("replicateAll");
     replicateAll(ea, xc0, handler, bnd);
   }
   catch (StopReplicate) {
   }
+  stopFHEtimer("replicateAll");
 
   delete handler;
 
@@ -204,6 +211,7 @@ void usage(char *prog)
   cerr << "  bnd is a recursion bound for replication\n";
   cerr << "  M is a bound for # of replications [default=0 => all]\n";
   cerr << "  v for verbose [default=0]\n";
+  cerr << "  t for decrypt-and-compare [default=1], otherwise just timing\n";
   exit(0);
 }
 
@@ -222,6 +230,7 @@ int main(int argc, char *argv[])
   argmap["bnd"] = "64";
   argmap["M"] = "0";
   argmap["v"] = "0";
+  argmap["t"] = "1";
 
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
@@ -239,10 +248,11 @@ int main(int argc, char *argv[])
 
   long w = 64; // Hamming weight of secret key
   long L = z; // number of levels
-
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
-  setTimersOn();
+  decryptAndTest = atoi(argmap["t"]);
+
+  //  setTimersOn();
 
   TestIt(p, r, d, c, k, w, L, m, bnd, M, v);
 

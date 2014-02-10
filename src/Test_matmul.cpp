@@ -211,7 +211,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   cerr << "done\n";
 
   // choose a random plaintext square matrix
-  PlaintextMatrixBaseInterface *ptr = buildTotalSumMatrix(ea);
+  //  PlaintextMatrixBaseInterface *ptr = buildTotalSumMatrix(ea);
+  PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
 
   // choose a random plaintext vector
   PlaintextArray v(ea);
@@ -225,15 +226,21 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   // encrypt the random vector
   Ctxt ctxt(publicKey);
+  startFHEtimer("ea.encrypt");
   ea.encrypt(ctxt, publicKey, v);
+  stopFHEtimer("ea.encrypt");
 
   v.mat_mul(*ptr);         // multiply the plaintext vector
-  // ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
-  totalSums(ea, ctxt);  // multiply the ciphertext vector
+  startFHEtimer("ea.mat_mul");
+  ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
+  stopFHEtimer("ea.mat_mul");
+  //  totalSums(ea, ctxt);  // multiply the ciphertext vector
 
   PlaintextArray v1(ea);
   //  v1 = v;
+  startFHEtimer("ea.decrypt");
   ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
+  stopFHEtimer("ea.decrypt");
 
   if (v.equals(v1))        // check that we've got the right answer
     cout << "Nice!!\n";
@@ -302,7 +309,7 @@ int main(int argc, char *argv[])
 
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
-  setTimersOn();
+  //  setTimersOn();
   TestIt(R, p, r, d, c, k, w, L, m);
 
   cerr << endl;
