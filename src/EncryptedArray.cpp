@@ -401,11 +401,13 @@ void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) c
 template<class type>
 void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) const
 {
+  FHE_TIMER_START;
   const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
 
   RX pp;
   conv(pp, ptxt);
   tab.decodePlaintext(array, pp, mappingData); 
+  FHE_TIMER_STOP;
 }
 
 template<class type>

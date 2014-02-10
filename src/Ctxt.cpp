@@ -236,8 +236,10 @@ void Ctxt::reLinearize(long keyID)
 {
   FHE_TIMER_START;
   // To relinearize, the primeSet must be disjoint from the special primes
-  if (!primeSet.disjointFrom(context.specialPrimes))
+  if (!primeSet.disjointFrom(context.specialPrimes)) {
     modDownToSet(primeSet / context.specialPrimes);
+    // cout << "<<< special primes\n";
+  }
 
   long g = ptxtSpace;
   Ctxt tmp(pubKey, ptxtSpace); // an empty ciphertext, same plaintext space
@@ -268,6 +270,17 @@ void Ctxt::reLinearize(long keyID)
     tmp.keySwitchPart(part, W); // switch this part & update noiseVar
   }
   *this = tmp;
+
+#if 0
+  // alternative strategy: get rid of special primes
+  // after each reLin...
+  if (!primeSet.disjointFrom(context.specialPrimes)) {
+    modDownToSet(primeSet / context.specialPrimes);
+    // cout << ">>> special primes\n";
+  }
+#endif
+
+
   FHE_TIMER_STOP;
 }
 
