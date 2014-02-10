@@ -52,7 +52,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
                long L, long m)
 {
   char buffer[32];
-  cerr << "*** TestIt: R=" << R 
+  cerr << "\n\n******** TestIt: R=" << R 
        << ", p=" << p
        << ", r=" << r
        << ", d=" << d
@@ -115,8 +115,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   ea.encrypt(c3, publicKey, p3);
 
 
-  double t = GetTime();
+
   resetAllTimers();
+
+  FHE_NTIMER_START("*** circuit");
 
   for (long i = 0; i < R; i++) {
 
@@ -177,25 +179,38 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      c0 -= c3;                       CheckCtxt(c0, "c0=-c3");
      debugCompare(ea,secretKey,p0,c0);
 
-     PlaintextArray pp0(ea);
-     PlaintextArray pp1(ea);
-     PlaintextArray pp2(ea);
-     PlaintextArray pp3(ea);
-
-     ea.decrypt(c0, secretKey, pp0);
-     ea.decrypt(c1, secretKey, pp1);
-     ea.decrypt(c2, secretKey, pp2);
-     ea.decrypt(c3, secretKey, pp3);
-
-     cerr << "\n";
-
-     if (!pp0.equals(p0)) cerr << "oops 0\n";
-     if (!pp1.equals(p1)) cerr << "oops 1\n";
-     if (!pp2.equals(p2)) cerr << "oops 2\n";
-     if (!pp3.equals(p3)) cerr << "oops 3\n";
   }
 
-  t = GetTime() - t;
+  FHE_NTIMER_STOP("*** circuit");
+   
+  cerr << endl;
+  printAllTimers();
+  cerr << endl;
+   
+  resetAllTimers();
+  FHE_NTIMER_START("*** check");
+   
+  PlaintextArray pp0(ea);
+  PlaintextArray pp1(ea);
+  PlaintextArray pp2(ea);
+  PlaintextArray pp3(ea);
+   
+  ea.decrypt(c0, secretKey, pp0);
+  ea.decrypt(c1, secretKey, pp1);
+  ea.decrypt(c2, secretKey, pp2);
+  ea.decrypt(c3, secretKey, pp3);
+   
+  if (!pp0.equals(p0)) cerr << "oops 0\n";
+  if (!pp1.equals(p1)) cerr << "oops 1\n";
+  if (!pp2.equals(p2)) cerr << "oops 2\n";
+  if (!pp3.equals(p3)) cerr << "oops 3\n";
+   
+  FHE_NTIMER_STOP("*** check");
+   
+  cerr << endl;
+  printAllTimers();
+  cerr << endl;
+   
 
 #if 0
 
@@ -220,7 +235,6 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   if (!fail) cerr << "incrementalProduct works\n";
 #endif
 
-  cerr << "\ntime for circuit: " << t << "\n";
 }
 
 
@@ -239,6 +253,7 @@ void usage(char *prog)
   cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
   cerr << "  s is the minimum number of slots [default=4]\n";
   cerr << "  m is a specific modulus\n";
+  cerr << "  repeat is the number of times to repeat the test\n";
   exit(0);
 }
 
@@ -255,6 +270,7 @@ int main(int argc, char *argv[])
   argmap["L"] = "0";
   argmap["s"] = "0";
   argmap["m"] = "0";
+  argmap["repeat"] = "1";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -277,17 +293,17 @@ int main(int argc, char *argv[])
   long s = atoi(argmap["s"]);
   long chosen_m = atoi(argmap["m"]);
 
+  long repeat = atoi(argmap["repeat"]);
+
   long w = 64; // Hamming weight of secret key
   //  long L = z*R; // number of levels
 
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
   setTimersOn();
-  TestIt(R, p, r, d, c, k, w, L, m);
-
-  cerr << endl;
-  printAllTimers();
-  cerr << endl;
+  for (long repeat_cnt = 0; repeat_cnt < repeat; repeat_cnt++) {
+    TestIt(R, p, r, d, c, k, w, L, m);
+  }
 
 }
 
