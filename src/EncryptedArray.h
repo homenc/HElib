@@ -274,8 +274,10 @@ public:
   // helper routine for mat_mul
   void rec_mul(long dim, 
                Ctxt& res, 
-               const Ctxt& pdata, const vector<long>& idx,
-               const PlaintextMatrixInterface<type>& mat) const;
+               const Ctxt& pdata, 
+               const vector<long>& idx,
+               const PlaintextMatrixInterface<type>& mat,
+               const vector<long>& dimx) const;
 
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
 

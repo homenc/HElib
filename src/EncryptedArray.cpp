@@ -309,8 +309,10 @@ template<class type>
 void EncryptedArrayDerived<type>::
   rec_mul(long dim, 
           Ctxt& res, 
-          const Ctxt& pdata, const vector<long>& idx,
-          const PlaintextMatrixInterface<type>& mat) const
+          const Ctxt& pdata, 
+          const vector<long>& idx,
+          const PlaintextMatrixInterface<type>& mat,
+          const vector<long>& dimx) const
 {
   long ndims = dimension();
   long nslots = size();
@@ -333,19 +335,38 @@ void EncryptedArrayDerived<type>::
     res += tmp;
   }
   else {
-    long sdim = sizeOfDimension(dim);
+    long sdim = sizeOfDimension(dimx[dim]);
 
     for (long offset = 0; offset < sdim; offset++) {
       Ctxt pdata1 = pdata;
       vector<long> idx1;
-      rotate1D(pdata1, dim, offset);
-      this->EncryptedArrayBase::rotate1D(idx1, idx, dim, offset);
-      rec_mul(dim+1, res, pdata1, idx1, mat);
+      rotate1D(pdata1, dimx[dim], offset);
+      this->EncryptedArrayBase::rotate1D(idx1, idx, dimx[dim], offset);
+      rec_mul(dim+1, res, pdata1, idx1, mat, dimx);
     }
   }
 }
 
 
+// helper class to sort dimensions, so that
+//    - bad dimensions come before good dimensions (primary sort key)
+//    - small dimensions come before large dimesnions (secondary sort key)
+// this is a good order to process the dimensions in the recursive mat_mul
+// routine: it ensures that the work done at the work done at the
+// leaves of the recursion is minimized, and that the work done
+// at the non-leaves is dominated by the work done at the leaves.
+
+template<class type>
+struct MatMulDimComp {
+  const EncryptedArrayDerived<type> *ea;
+  MatMulDimComp(const EncryptedArrayDerived<type> *_ea) : ea(_ea) {}
+
+  bool operator()(long i, long j) { 
+    return (!ea->nativeDimension(i) && ea->nativeDimension(j)) ||
+           (  (ea->nativeDimension(i) == ea->nativeDimension(j)) &&
+              (ea->sizeOfDimension(i) < ea->sizeOfDimension(j))  );
+  }
+};
 
 
 template<class type>
@@ -368,7 +389,16 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
   for (long i = 0; i < size(); i++)
      idx[i] = i;
 
-  rec_mul(0, res, ctxt, idx, mat1);
+  vector<long> dimx;
+  dimx.resize(dimension());
+  for (long i = 0; i < dimension(); i++)
+    dimx[i] = i;
+
+  sort(dimx.begin(), dimx.end(), MatMulDimComp<type>(this));
+  // sort the dimenesions so that bad ones come before good,
+  // and then small ones come before large
+
+  rec_mul(0, res, ctxt, idx, mat1, dimx);
 
   ctxt = res;
 }
