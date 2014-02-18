@@ -430,7 +430,7 @@ void Ctxt::findBaseSet(IndexSet& s) const
     }
   }
 
-  if (curNoise>addedNoise)
+  if (curNoise>addedNoise && log_of_ratio()>-0.5)
     cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
 }
 
