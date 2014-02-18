@@ -169,30 +169,30 @@ void  TimeIt(long m, long p, long r, bool d_eq_1)
   stopFHEtimer("encode");
   startFHEtimer("SK-encrypt");
   secretKey.Encrypt(c0, pp);
-  startFHEtimer("SK-encrypt");
+  stopFHEtimer("SK-encrypt");
   startFHEtimer("PK-encrypt");
   publicKey.Encrypt(c0, pp);
-  startFHEtimer("PK-encrypt");
+  stopFHEtimer("PK-encrypt");
 
   startFHEtimer("encode");
   ea.encode(pp, p1);
   stopFHEtimer("encode");
   startFHEtimer("SK-encrypt");
   secretKey.Encrypt(c1, pp);
-  startFHEtimer("SK-encrypt");
+  stopFHEtimer("SK-encrypt");
   startFHEtimer("PK-encrypt");
   publicKey.Encrypt(c1, pp);
-  startFHEtimer("PK-encrypt");
+  stopFHEtimer("PK-encrypt");
 
   startFHEtimer("encode");
   ea.encode(pp, p2);
   stopFHEtimer("encode");
   startFHEtimer("SK-encrypt");
   secretKey.Encrypt(c2, pp);
-  startFHEtimer("SK-encrypt");
+  stopFHEtimer("SK-encrypt");
   startFHEtimer("PK-encrypt");
   publicKey.Encrypt(c2, pp);
-  startFHEtimer("PK-encrypt");
+  stopFHEtimer("PK-encrypt");
 
   cerr << "Initialization time:\n";
   printAllTimers();
@@ -236,21 +236,21 @@ void  TimeIt(long m, long p, long r, bool d_eq_1)
 
   startFHEtimer("decrypt");
   secretKey.Decrypt(pp, c0);
-  startFHEtimer("decrypt");
+  stopFHEtimer("decrypt");
   startFHEtimer("decode");
   ea.decode(p0, pp);
   stopFHEtimer("decode");
 
   startFHEtimer("decrypt");
   secretKey.Decrypt(pp, c1);
-  startFHEtimer("decrypt");
+  stopFHEtimer("decrypt");
   startFHEtimer("decode");
   ea.decode(p1, pp);
   stopFHEtimer("decode");
 
   startFHEtimer("decrypt");
   secretKey.Decrypt(pp, c2);
-  startFHEtimer("decrypt");
+  stopFHEtimer("decrypt");
   startFHEtimer("decode");
   ea.decode(p2, pp);
   stopFHEtimer("decode");
