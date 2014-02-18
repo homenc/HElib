@@ -19,6 +19,8 @@
 #include "timing.h"
 #include "cloned_ptr.h"
 
+#include <algorithm>
+
 
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G)
 {
