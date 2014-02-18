@@ -14,21 +14,19 @@
 # 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 # 
 CC = g++
-#CFLAGS = -g -Wall -I/usr/local/include -std=c++11 -lstdc++
+#
+CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include
+
+#  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++
-CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
-#CFLAGS = -g -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
-#CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++0x 
-#CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++
-#CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+#CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++0x
+
+#  To get the alternative DoubleCRT implementation, add USE_ALT_CRT
 #CFLAGS= -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DUSE_ALT_CRT
-#CFLAGS = -pg -Wall -I/usr/local/include
+
 LD = g++
-
-
 AR = ar
 ARFLAGS=ruv
-
 GMP=-lgmp 
 LDLIBS = -L/usr/local/lib -lntl $(GMP) -lm
 
@@ -41,7 +39,7 @@ SRC = KeySwitching.cpp EncryptedArray.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEConte
 OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o SingleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o
 
 #TESTPROGS = Test_PAlgebra_x Test_DoubleCRT_x Test_CModulus_x Test_FHE_x Test_Arrays_x
-TESTPROGS = Test_General_x Test_Replicate_x Test_LinPoly_x Test_matmul_x Test_Powerful_x Test_Permutations_x
+TESTPROGS = Test_General_x Test_Replicate_x Test_LinPoly_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x
 
 
 all: fhe.a
@@ -62,7 +60,7 @@ obj: $(OBJ)
 %.o: %.cpp $(HEADER)
 	$(CC) $(CFLAGS) -c $<
 
-fhe.a: $(OBJ)
+fhe.a: info $(OBJ)
 	$(AR) $(ARFLAGS) fhe.a $(OBJ)
 
 ./%_x: %.cpp fhe.a
@@ -71,3 +69,8 @@ fhe.a: $(OBJ)
 clean:
 	rm -f *.o *_x *_x.exe *.a core.*
 	rm -rf *.dSYM
+
+info:
+	: HElib compilation flags are 'CFLAGS=$(CFLAGS)'
+	: If erros occur, try adding/removing '-std=c++11' in Makefile
+	:
