@@ -543,6 +543,7 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt, long ptxtSpace)
   long keyID = sKeys.size()-1; // not thread-safe?
 
   GenKeySWmatrix(2,1,keyID,keyID); // At least we need the s^2 -> s matrix
+  GenKeySWmatrix(3,1,keyID,keyID); //             and also s^3 -> s
 
   return keyID; // return the index where this key is stored
 }
