@@ -63,7 +63,10 @@ private:
 };
 
 
-
+// helper routine: computes (a*b mod X^m-1) ...experimental "lazy"
+// version.... f unused
+void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus& f,
+             long m);
 
 //! @class AltCRT
 //! @brief Alternative implementation of integer polynomials
@@ -85,7 +88,7 @@ class AltCRT {
 
   class AddFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f) 
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m) 
     { return add(a, a, b); }
 
     void apply(zz_pX& a, zz_p b)
@@ -94,7 +97,7 @@ class AltCRT {
 
   class SubFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f) 
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m) 
     { return sub(a, a, b); }
 
     void apply(zz_pX& a, zz_p b)
@@ -103,8 +106,8 @@ class AltCRT {
 
   class MulFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f) 
-    { return MulMod(a, a, b, f); }
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m) 
+    { return MulMod1(a, a, b, f, m); }
 
     void apply(zz_pX& a, zz_p b)
     { return mul(a, a, b); }
@@ -122,6 +125,8 @@ class AltCRT {
   AltCRT& Op(const ZZX &poly, Fun fun);
 
   static bool dryRun; // do not actually perform any of the operations
+
+  void reduce() const; // reduce rows mod phimx...remove laziness
 
 public:
 

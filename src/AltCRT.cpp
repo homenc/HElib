@@ -29,6 +29,29 @@ void AltCRT::verify()
 }
 
 
+void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus& f,
+             long m)
+{
+  zz_pX t;
+  mul(t, a, b);
+
+  // reduce mod X^m-1
+  long d = deg(t);
+  if (d >= m) {
+    long j = 0;
+    for (long i = m; i <= d; i++) {
+      t[j] += t[i];
+      j++;
+      if (j >= m) j = 0;
+    }
+
+    t.SetLength(m);
+    t.normalize();
+  }
+
+  x = t;
+}
+
 
 
 
@@ -61,11 +84,13 @@ AltCRT& AltCRT::Op(const AltCRT &other, Fun fun,
 
   zz_pBak bak; bak.save();
 
+  long m = context.zMStar.getM();
+
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
     const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
-    fun.apply(map[i], (*other_map)[i], phimx);
+    fun.apply(map[i], (*other_map)[i], phimx, m);
   }
 
   return *this;
@@ -165,9 +190,44 @@ template
 AltCRT& AltCRT::Op<AltCRT::SubFun>(const ZZX &poly, SubFun fun);
 
 
+// experimental remainder routine, when deg(a) is not
+// much bigger than deg(f)
+void alt_rem(zz_pX& x, const zz_pX& a, const zz_pXModulus& f)
+{
+  if (deg(a) < deg(f)) {
+    x = a;
+  }
+  else if (10*deg(a) < 11*deg(f)) {
+    // heuristic: deg(a) < 1.1 deg(f)
+    const zz_pX& ff = f;
+    rem(x, a, ff); // just call NTL's unconditioned rem routine
+                   // this may be faster in this case...
+  }
+  else {
+    // default
+    rem(x, a, f);
+  }
+}
+
+
+void AltCRT::reduce() const
+// logically but not really const
+{
+  const IndexSet& s = map.getIndexSet();
+
+  zz_pBak bak; bak.save();
+
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
+    alt_rem(const_cast<zz_pX&>(map[i]), map[i], phimx);
+  }
+}
+
 
 
 // The following is identical to definition in DoubleCRT
+// ...not quite...we first reduce *this
 
 // break *this into n digits,according to the primeSets in context.digits
 void AltCRT::breakIntoDigits(vector<AltCRT>& digits, long n) const
@@ -179,8 +239,10 @@ void AltCRT::breakIntoDigits(vector<AltCRT>& digits, long n) const
   digits.resize(n, AltCRT(context, IndexSet::emptySet()));
   if (dryRun) return;
 
+  this->reduce();
+
   for (long i=0; i<(long)digits.size(); i++) {
-    digits[i]=*this;
+    digits[i]=*this;;
     IndexSet notInDigit = digits[i].getIndexSet()/context.digits[i];
     digits[i].removePrimes(notInDigit); // reduce modulo the digit primes
   }
@@ -479,6 +541,11 @@ void AltCRT::toPoly(ZZX& poly, const IndexSet& s,
 
   for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
     context.ithModulus(i).restoreModulus();
+
+    // LAZY: first reduce map[i] mod phimx
+    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
+    alt_rem(const_cast<zz_pX&>(map[i]), map[i], phimx);
+    
     CRT(poly, prod, map[i]);  // NTL :-)
   }
 
@@ -538,6 +605,10 @@ void AltCRT::Exp(long e)
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
     const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
+
+    // LAZY: first reduce map[i] mod phimx
+    alt_rem(map[i], map[i], phimx);
+
     PowerMod(map[i], map[i], e, phimx);
   }
 }
@@ -576,7 +647,8 @@ void AltCRT::automorph(long k)
 
     tmp.normalize();
 
-    rem(row, tmp, phimx);
+    // LAZY: don't reduce
+    row = tmp;
   }
 }
 
@@ -709,6 +781,11 @@ ostream& operator<< (ostream &str, const AltCRT &d)
   zz_pBak bak; bak.save();
   for (long i = set.first(); i <= set.last(); i = set.next(i)) {
     d.context.ithModulus(i).restoreModulus();
+
+    // LAZY: first reduce d.map[i] mod phimx
+    const zz_pXModulus& phimx = d.context.ithModulus(i).getPhimX();
+    alt_rem(const_cast<zz_pX&>(d.map[i]), d.map[i], phimx);
+
     str << " " << d.map[i] << "\n";
   }
   str << "]";
