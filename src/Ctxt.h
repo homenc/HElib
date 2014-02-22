@@ -454,6 +454,28 @@ inline IndexSet baseSetOf(const Ctxt& c) {
 //! This implementation uses depth log n and (nlog n)/2 products
 void incrementalProduct(vector<Ctxt>& v);
 
+//! Compute the inner product of two vectors of ciphertexts
+void innerProduct(Ctxt& result, const vector<Ctxt>& v1, const vector<Ctxt>& v2);
+inline Ctxt innerProduct(const vector<Ctxt>& v1, const vector<Ctxt>& v2)
+{ Ctxt ret(v1[0].getPubKey());
+  innerProduct(ret, v1, v2); return ret; 
+}
+
+//! Compute the inner product of a vectors of ciphertexts and a constant vector
+void innerProduct(Ctxt& result,
+		  const vector<Ctxt>& v1, const vector<DoubleCRT>& v2);
+inline Ctxt innerProduct(const vector<Ctxt>& v1, const vector<DoubleCRT>& v2)
+{ Ctxt ret(v1[0].getPubKey());
+  innerProduct(ret, v1, v2); return ret; 
+}
+
+void innerProduct(Ctxt& result,
+		  const vector<Ctxt>& v1, const vector<ZZX>& v2);
+inline Ctxt innerProduct(const vector<Ctxt>& v1, const vector<ZZX>& v2)
+{ Ctxt ret(v1[0].getPubKey());
+  innerProduct(ret, v1, v2); return ret; 
+}
+
 //! print to cerr some info about ciphertext
 void CheckCtxt(const Ctxt& c, const char* label);
 

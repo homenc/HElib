@@ -940,3 +940,56 @@ void incrementalProduct(vector<Ctxt>& v)
   long n = v.size();  // how many ciphertexts do we have
   if (n > 0) recursiveIncrementalProduct(&v[0], n); // do the actual work
 }
+
+// Compute the inner product of two vectors of ciphertexts, this routine uses
+// the lower-level *= operator and does only one re-linearization at the end.
+void innerProduct(Ctxt& result, const vector<Ctxt>& v1, const vector<Ctxt>& v2)
+{
+  long n = min(v1.size(), v2.size());
+  if (n<=0) {
+    result.clear();
+    return;
+  }
+  result = v1[0]; result *= v2[0];
+  for (long i=1; i<n; i++) {
+    Ctxt tmp = v1[i];
+    tmp *= v2[i];
+    result += tmp;
+  }
+  result.reLinearize();
+}
+
+// Compute the inner product of a ciphertext vector and a constant vector
+void innerProduct(Ctxt& result,
+		  const vector<Ctxt>& v1, const vector<DoubleCRT>& v2)
+{
+  long n = min(v1.size(), v2.size());
+  if (n<=0) {
+    result.clear();
+    return;
+  }
+  result = v1[0]; result.multByConstant(v2[0]);
+  for (long i=1; i<n; i++) {
+    Ctxt tmp = v1[i];
+    tmp.multByConstant(v2[i]);
+    result += tmp;
+  }
+}
+
+void innerProduct(Ctxt& result,
+		  const vector<Ctxt>& v1, const vector<ZZX>& v2)
+{
+  long n = min(v1.size(), v2.size());
+  if (n<=0) {
+    result.clear();
+    return;
+  }
+  result = v1[0]; result.multByConstant(v2[0]);
+  for (long i=1; i<n; i++) {
+    Ctxt tmp = v1[i];
+    tmp.multByConstant(v2[i]);
+    result += tmp;
+  }
+}
+
+
