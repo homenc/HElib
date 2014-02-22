@@ -55,11 +55,13 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     nPrimes = cc[0].findBaseLevel();
 
   // inner-product of size-5 vectors
-  cerr << "." << std::flush;
-  startFHEtimer("dimension-5-innerProduct");
-  innerProduct(ret,cc,cc);
-  ret.modDownToLevel(ret.findBaseLevel());      // mod-down if needed
-  stopFHEtimer("dimension-5-innerProduct");
+  if (nPrimes > 2) {
+    cerr << "." << std::flush;
+    startFHEtimer("dimension-5-innerProduct");
+    innerProduct(ret,cc,cc);
+    ret.modDownToLevel(ret.findBaseLevel());
+    stopFHEtimer("dimension-5-innerProduct");
+  }
 
   // Multiplication with 2,3 arguments
   cerr << "." << std::flush;
