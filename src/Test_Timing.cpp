@@ -74,14 +74,16 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     ret += c0; // Just so the compiler doesn't optimize it away
   }
 
-  cerr << "." << std::flush;
-  for (long i=0; i<nTests; i++) {
-    Ctxt c0 = cc[0];
-    startFHEtimer("multiplyBy2");
-    c0.multiplyBy2(cc[1],cc[2]);
-    if (nPrimes > 2) c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
-    stopFHEtimer("multiplyBy2");
-    ret += c0; // Just so the compiler doesn't optimize it away
+  if (nPrimes > 2) {
+    cerr << "." << std::flush;
+    for (long i=0; i<nTests; i++) {
+      Ctxt c0 = cc[0];
+      startFHEtimer("multiplyBy2");
+      c0.multiplyBy2(cc[1],cc[2]);
+      c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
+      stopFHEtimer("multiplyBy2");
+      ret += c0; // Just so the compiler doesn't optimize it away
+    }
   }
 
   // Multiply by constant
