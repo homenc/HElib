@@ -54,14 +54,14 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   else 
     nPrimes = cc[0].findBaseLevel();
 
+  if (nPrimes <= 2)
+    cerr << "(no mod-Down)";
   // inner-product of size-5 vectors
-  if (nPrimes > 2) {
-    cerr << "." << std::flush;
-    startFHEtimer("dimension-5-innerProduct");
-    innerProduct(ret,cc,cc);
-    ret.modDownToLevel(ret.findBaseLevel());
-    stopFHEtimer("dimension-5-innerProduct");
-  }
+  cerr << "." << std::flush;
+  startFHEtimer("dimension-5-innerProduct");
+  innerProduct(ret,cc,cc);
+  if (nPrimes > 2) ret.modDownToLevel(ret.findBaseLevel());
+  stopFHEtimer("dimension-5-innerProduct");
 
   // Multiplication with 2,3 arguments
   cerr << "." << std::flush;
@@ -69,21 +69,19 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     Ctxt c0 = cc[0];
     startFHEtimer("multiplyBy");
     c0.multiplyBy(cc[1]);
-    c0.modDownToLevel(c0.findBaseLevel());      // mod-down if needed
+    if (nPrimes > 2) c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
     stopFHEtimer("multiplyBy");
     ret += c0; // Just so the compiler doesn't optimize it away
   }
 
-  if (nPrimes > 2) {
-    cerr << "." << std::flush;
-    for (long i=0; i<nTests; i++) {
-      Ctxt c0 = cc[0];
-      startFHEtimer("multiplyBy2");
-      c0.multiplyBy2(cc[1],cc[2]);
-      c0.modDownToLevel(c0.findBaseLevel());      // mod-down if needed
-      stopFHEtimer("multiplyBy2");
-      ret += c0; // Just so the compiler doesn't optimize it away
-    }
+  cerr << "." << std::flush;
+  for (long i=0; i<nTests; i++) {
+    Ctxt c0 = cc[0];
+    startFHEtimer("multiplyBy2");
+    c0.multiplyBy2(cc[1],cc[2]);
+    if (nPrimes > 2) c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
+    stopFHEtimer("multiplyBy2");
+    ret += c0; // Just so the compiler doesn't optimize it away
   }
 
   // Multiply by constant
@@ -113,7 +111,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/true);
     startFHEtimer("automorph-with-matrix");
     c0.smartAutomorph(k);
-    c0.modDownToLevel(c0.findBaseLevel());      // mod-down if needed
+    if (nPrimes > 2) c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
     stopFHEtimer("automorph-with-matrix");    
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -124,7 +122,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/false);
     startFHEtimer("automorph");
     c0.smartAutomorph(k);
-    c0.modDownToLevel(c0.findBaseLevel());      // mod-down if needed
+    if (nPrimes > 2) c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
     stopFHEtimer("automorph");
     ret += c0; // Just so the compiler doesn't optimize it away
   }
