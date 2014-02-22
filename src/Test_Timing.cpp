@@ -24,9 +24,8 @@
 
 long rotationAmount(const EncryptedArray& ea, const FHEPubKey& publicKey,
 	       bool withMatrix=false);
-void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey,
-	     Ctxt& c0, Ctxt& c1, Ctxt& c2, Ctxt& c3, ZZX& p, long nTests,
-	     long nPrimes=0);
+void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
+	     const vector<Ctxt>& c, ZZX& p, long nTests, long nPrimes=0);
 
 // Returns either a random automorphism amount or an amount
 // for which we have a key-switching matrix s^k -> s.
@@ -44,74 +43,88 @@ long rotationAmount(const EncryptedArray& ea, const FHEPubKey& publicKey,
   return k;
 }
 
-void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, 
-	     Ctxt& c0, Ctxt& c1, Ctxt& c2, Ctxt& c3, ZZX& p, long nTests,
-	     long nPrimes)
+void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
+	     const vector<Ctxt>& c, ZZX& p, long nTests, long nPrimes)
 {
-  if (nPrimes>0) {  // perform operations at a lower level
-    c0.modDownToLevel(nPrimes);
-    c1.modDownToLevel(nPrimes);
-    c2.modDownToLevel(nPrimes);
-  }
+  assert(c.size()>=3);
+  vector<Ctxt> cc = c;
+  // perform operations at a lower level
+  if (nPrimes>0) for (long i=0; i<(long)cc.size(); i++)
+    cc[i].modDownToLevel(nPrimes);
+  else 
+    nPrimes = cc[0].findBaseLevel();
+
+  // inner-product of size-5 vectors
+  cerr << "." << std::flush;
+  startFHEtimer("dimension-5-innerProduct");
+  innerProduct(ret,cc,cc);
+  ret.modDownToLevel(ret.findBaseLevel());      // mod-down if needed
+  stopFHEtimer("dimension-5-innerProduct");
 
   // Multiplication with 2,3 arguments
   cerr << "." << std::flush;
   for (long i=0; i<nTests; i++) {
-    Ctxt cc1 = c1;
+    Ctxt c0 = cc[0];
     startFHEtimer("multiplyBy");
-    cc1.multiplyBy(c0);
+    c0.multiplyBy(cc[1]);
+    c0.modDownToLevel(c0.findBaseLevel());      // mod-down if needed
     stopFHEtimer("multiplyBy");
-    c3 += cc1; // Just so the compiler doesn't optimize it away
+    ret += c0; // Just so the compiler doesn't optimize it away
   }
 
-  cerr << "." << std::flush;
-  for (long i=0; i<nTests; i++) {
-    Ctxt cc2 = c2;
-    startFHEtimer("multiplyBy2");
-    cc2.multiplyBy2(c0,c1);
-    stopFHEtimer("multiplyBy2");
-    c3 += cc2; // Just so the compiler doesn't optimize it away
+  if (nPrimes > 2) {
+    cerr << "." << std::flush;
+    for (long i=0; i<nTests; i++) {
+      Ctxt c0 = cc[0];
+      startFHEtimer("multiplyBy2");
+      c0.multiplyBy2(cc[1],cc[2]);
+      c0.modDownToLevel(c0.findBaseLevel());      // mod-down if needed
+      stopFHEtimer("multiplyBy2");
+      ret += c0; // Just so the compiler doesn't optimize it away
+    }
   }
 
   // Multiply by constant
   cerr << "." << std::flush;
   for (long i=0; i<3*nTests; i++) {
-    Ctxt cc0 = c0;
+    Ctxt c0 = cc[0];
     startFHEtimer("multByConstant");
-    cc0.multByConstant(p);
+    c0.multByConstant(p);
     stopFHEtimer("multByConstant");
-    c3 -= cc0; // Just so the compiler doesn't optimize it away
+    ret -= c0; // Just so the compiler doesn't optimize it away
   }
 
   // Add constant
   cerr << "." << std::flush;
   for (long i=0; i<10*nTests; i++) {
-    Ctxt cc0 = c0;
+    Ctxt c0 = cc[0];
     startFHEtimer("addConstant");
-    cc0.addConstant(p);
+    c0.addConstant(p);
     stopFHEtimer("addConstant");
-    c3 += cc0; // Just so the compiler doesn't optimize it away
+    ret += c0; // Just so the compiler doesn't optimize it away
   }
 
   // Rotation by an amount k for which we have a key-switching matrix
   cerr << "." << std::flush;
   for (long i=0; i<nTests; i++) {
-    Ctxt cc0 = c0;
+    Ctxt c0 = cc[0];
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/true);
     startFHEtimer("automorph-with-matrix");
-    cc0.smartAutomorph(k);
+    c0.smartAutomorph(k);
+    c0.modDownToLevel(c0.findBaseLevel());      // mod-down if needed
     stopFHEtimer("automorph-with-matrix");    
-    c3 += cc0; // Just so the compiler doesn't optimize it away
+    ret += c0; // Just so the compiler doesn't optimize it away
   }
   // Rotation by a random amount k
   cerr << "." << std::flush;
   for (long i=0; i<nTests; i++) {
-    Ctxt cc0 = c0;
+    Ctxt c0 = cc[0];
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/false);
     startFHEtimer("automorph");
-    cc0.smartAutomorph(k);
+    c0.smartAutomorph(k);
+    c0.modDownToLevel(c0.findBaseLevel());      // mod-down if needed
     stopFHEtimer("automorph");
-    c3 += cc0; // Just so the compiler doesn't optimize it away
+    ret += c0; // Just so the compiler doesn't optimize it away
   }
 }
 
@@ -154,106 +167,57 @@ void  TimeIt(long m, long p, long r, bool d_eq_1)
   EncryptedArray ea(context, G);
   stopFHEtimer("Initialize EncryptedArray");
   
-  PlaintextArray p0(ea);
-  PlaintextArray p1(ea);
-  PlaintextArray p2(ea);
-  Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
+  ZZX poly;
+  PlaintextArray pp(ea);
+  vector<PlaintextArray> vp(5,pp);
+  for (long i=0; i<(long)vp.size(); i++)
+    vp[i].random();
 
-  p0.random();
-  p1.random();
-  p2.random();
+  Ctxt cc(publicKey);
+  vector<Ctxt> vc(5,cc);
 
-  ZZX pp;
-  startFHEtimer("encode");
-  ea.encode(pp, p0);
-  stopFHEtimer("encode");
-  startFHEtimer("SK-encrypt");
-  secretKey.Encrypt(c0, pp);
-  stopFHEtimer("SK-encrypt");
-  startFHEtimer("PK-encrypt");
-  publicKey.Encrypt(c0, pp);
-  stopFHEtimer("PK-encrypt");
-
-  startFHEtimer("encode");
-  ea.encode(pp, p1);
-  stopFHEtimer("encode");
-  startFHEtimer("SK-encrypt");
-  secretKey.Encrypt(c1, pp);
-  stopFHEtimer("SK-encrypt");
-  startFHEtimer("PK-encrypt");
-  publicKey.Encrypt(c1, pp);
-  stopFHEtimer("PK-encrypt");
-
-  startFHEtimer("encode");
-  ea.encode(pp, p2);
-  stopFHEtimer("encode");
-  startFHEtimer("SK-encrypt");
-  secretKey.Encrypt(c2, pp);
-  stopFHEtimer("SK-encrypt");
-  startFHEtimer("PK-encrypt");
-  publicKey.Encrypt(c2, pp);
-  stopFHEtimer("PK-encrypt");
+  for (long i=0; i<(long)vc.size(); i++) {
+    startFHEtimer("encode");
+    ea.encode(poly, vp[i]);
+    stopFHEtimer("encode");
+    startFHEtimer("SK-encrypt");
+    secretKey.Encrypt(vc[i], poly);
+    stopFHEtimer("SK-encrypt");
+    startFHEtimer("PK-encrypt");
+    publicKey.Encrypt(vc[i], poly);
+    stopFHEtimer("PK-encrypt");
+  }
 
   cerr << "Initialization time:\n";
   printAllTimers();
+  resetAllTimers();
   cerr << endl;
 
-  long nTests = 3*(53261/m); // more tests for smaller values of m
-  resetAllTimers();
+  long nTests = 5;
+
+  for (long i=2; i<L; i*=2) {
+    cerr << "Operations with "<<i<<" primes in the chain: ";
+    timeOps(ea, publicKey, cc,vc, poly, nTests, i);
+    cerr << endl;
+    printAllTimers();
+    resetAllTimers();
+    cerr << endl;
+  }
   cerr << "Operations with "<<L<<" primes in the chain: ";
-  timeOps(ea, publicKey, c0,c1,c2,c3, pp, nTests);// timing with all primes in the chain
+  timeOps(ea, publicKey, cc,vc, poly, nTests);
   cerr << endl;
   printAllTimers();
+  resetAllTimers();
   cerr << endl;
 
-  if (L >= 14) {
-    L -= (L-2)/3;
-    resetAllTimers();
-    cerr << "Operations with "<<L<<" primes in the chain: ";
-    timeOps(ea, publicKey, c0,c1,c2,c3, pp, nTests, L); // timing with 2/3 of the primes
-    cerr << endl;
-    printAllTimers();
-    cerr << endl;
+  for (long i=0; i<(long)vc.size(); i++) {
+    startFHEtimer("decrypt");
+    secretKey.Decrypt(poly, vc[i]);
+    stopFHEtimer("decrypt");
+    startFHEtimer("decode");
+    ea.decode(vp[i], poly);
+    stopFHEtimer("decode");
   }
-  if (L >= 8) {
-    L -= (L-2)/2;
-    resetAllTimers();
-    cerr << "Operations with "<<L<<" primes in the chain: ";
-    timeOps(ea, publicKey, c0,c1,c2,c3, pp, nTests, L); // timing with 1/3 of the primes
-    cerr << endl;
-    printAllTimers();
-    cerr << endl;
-  }
-  if (L >= 4) {
-    resetAllTimers();
-    cerr << "Operations with 2 primes in the chain: ";
-    timeOps(ea, publicKey, c0,c1,c2,c3, pp, nTests, 2); // timing with only two primes
-    cerr << endl;
-    printAllTimers();
-    cerr << endl;
-  }
-  resetAllTimers();
-
-  startFHEtimer("decrypt");
-  secretKey.Decrypt(pp, c0);
-  stopFHEtimer("decrypt");
-  startFHEtimer("decode");
-  ea.decode(p0, pp);
-  stopFHEtimer("decode");
-
-  startFHEtimer("decrypt");
-  secretKey.Decrypt(pp, c1);
-  stopFHEtimer("decrypt");
-  startFHEtimer("decode");
-  ea.decode(p1, pp);
-  stopFHEtimer("decode");
-
-  startFHEtimer("decrypt");
-  secretKey.Decrypt(pp, c2);
-  stopFHEtimer("decrypt");
-  startFHEtimer("decode");
-  ea.decode(p2, pp);
-  stopFHEtimer("decode");
 
   cerr << "Decoding/decryption time:\n";
   printAllTimers();
