@@ -261,6 +261,9 @@ int main(int argc, char *argv[])
 		 18631,20485,21845, 49981,53261};
   if (m>0)
     TimeIt(m, p, r, (d==1));
-  else for (long i=0; i<11; i++)
-      TimeIt(ms[i], p, r, (d==1));
+  else for (long i=0; i<11; i++) {
+      TimeIt(ms[i], p, /*r=*/1, /*deq1=*/true);
+      TimeIt(ms[i], p, /*r=*/1, /*deq1=*/false);
+      if (p==2) TimeIt(ms[i], p, /*r=*/2, /*deq1=*/true);
+    }
 }
