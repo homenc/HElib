@@ -72,5 +72,5 @@ clean:
 
 info:
 	: HElib compilation flags are 'CFLAGS=$(CFLAGS)'
-	: If erros occur, try adding/removing '-std=c++11' in Makefile
+	: If errors occur, try adding/removing '-std=c++11' in Makefile
 	:
