@@ -403,7 +403,7 @@ void Ctxt::findBaseSet(IndexSet& s) const
     s.remove(context.specialPrimes);
   }
 
-  if (curNoise<=addedNoise) return; // no need to mod down
+  if (curNoise<=2*addedNoise) return; // no need to mod down
 
   // if the first prime in half size, begin by removing it
   if (halfSize && s.contains(0)) {
