@@ -45,38 +45,27 @@ static void reduce1(zz_pX& x, long m)
   }
 }
 
-static void reduce2(zz_pX& x, const zz_pXModulus& f)
+// reduce x mod f, assuming already reduced mod X^m-1
+static void reduce2(zz_pX& x, const zz_pXModulus1& f)
 {
-  if (deg(x) < deg(f)) {
-    // do nothing
-  }
-  else if (10*deg(x) < 11*deg(f)) {
-    // heuristic: deg(x) < 1.1 deg(f)
-    const zz_pX& ff = f;
-    rem(x, x, ff); // just call NTL's unconditioned rem routine
-                   // this may be faster in this case...
-  }
-  else {
-    // default
-    rem(x, x, f);
-  }
+   rem(x, x, f);
 }
 
-static void reduce12(zz_pX& x, long m, const zz_pXModulus& f)
+static void reduce12(zz_pX& x, const zz_pXModulus1& f)
 {
-  reduce1(x, m);
+  reduce1(x, f.m);
   reduce2(x, f);
 }
 
 
 
-void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus& f,
-             long m, bool lazy)
+void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus1& f,
+             bool lazy)
 {
   zz_pX t;
   mul(t, a, b);
 
-  reduce1(t, m);
+  reduce1(t, f.m);
   if(!lazy) reduce2(t, f);
 
   x = t;
@@ -114,14 +103,13 @@ AltCRT& AltCRT::Op(const AltCRT &other, Fun fun,
 
   zz_pBak bak; bak.save();
 
-  long m = context.zMStar.getM();
   bool lazy = context.lazy;
 
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
-    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
-    fun.apply(map[i], (*other_map)[i], phimx, m, lazy);
+    const zz_pXModulus1& phimx = context.ithModulus(i).getPhimX();
+    fun.apply(map[i], (*other_map)[i], phimx, lazy);
   }
 
   return *this;
@@ -229,12 +217,10 @@ void AltCRT::reduce() const
 
   zz_pBak bak; bak.save();
 
-  long m = context.zMStar.getM();
-
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
-    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
-    reduce12(const_cast<zz_pX&>(map[i]), m, phimx);
+    const zz_pXModulus1& phimx = context.ithModulus(i).getPhimX();
+    reduce12(const_cast<zz_pX&>(map[i]), phimx);
   }
 }
 
@@ -550,16 +536,14 @@ void AltCRT::toPoly(ZZX& poly, const IndexSet& s,
   ZZ prod;
   prod = 1;
 
-  long m = context.zMStar.getM();
-
   zz_pBak bak; bak.save();
 
   for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
     context.ithModulus(i).restoreModulus();
 
     // LAZY: first reduce map[i] mod phimx
-    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
-    reduce12(const_cast<zz_pX&>(map[i]), m, phimx);
+    const zz_pXModulus1& phimx = context.ithModulus(i).getPhimX();
+    reduce12(const_cast<zz_pX&>(map[i]), phimx);
     
     CRT(poly, prod, map[i]);  // NTL :-)
   }
@@ -617,16 +601,14 @@ void AltCRT::Exp(long e)
   const IndexSet& s = map.getIndexSet();
   zz_pBak bak; bak.save();
 
-  long m = context.zMStar.getM();
-
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
-    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
+    const zz_pXModulus1& phimx = context.ithModulus(i).getPhimX();
 
     // LAZY: first reduce map[i] mod phimx
-    reduce12(map[i], m, phimx);
+    reduce12(map[i], phimx);
 
-    PowerMod(map[i], map[i], e, phimx);
+    PowerMod(map[i], map[i], e, phimx.upcast());
   }
 }
 
@@ -651,7 +633,7 @@ void AltCRT::automorph(long k)
 
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
-    const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
+    const zz_pXModulus1& phimx = context.ithModulus(i).getPhimX();
     zz_pX& tmp = context.ithModulus(i).getScratch();
     zz_pX& row = map[i];
     long d = deg(row);
@@ -795,16 +777,14 @@ ostream& operator<< (ostream &str, const AltCRT &d)
   const IndexSet& set = d.map.getIndexSet();
   str << "[" << set << endl;
 
-  long m = d.context.zMStar.getM();
-
   // For each "active" prime, output the zz_pX object
   zz_pBak bak; bak.save();
   for (long i = set.first(); i <= set.last(); i = set.next(i)) {
     d.context.ithModulus(i).restoreModulus();
 
     // LAZY: first reduce d.map[i] mod phimx
-    const zz_pXModulus& phimx = d.context.ithModulus(i).getPhimX();
-    reduce12(const_cast<zz_pX&>(d.map[i]), m, phimx);
+    const zz_pXModulus1& phimx = d.context.ithModulus(i).getPhimX();
+    reduce12(const_cast<zz_pX&>(d.map[i]), phimx);
 
     str << " " << d.map[i] << "\n";
   }

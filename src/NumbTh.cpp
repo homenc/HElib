@@ -886,3 +886,127 @@ void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p)
    beta = res;
 }
 
+// Auxilliary classes to facillitiate faster reduction mod Phi_m(X)
+// when the input has degree less than m
+
+
+static
+void LocalCopyReverse(zz_pX& x, const zz_pX& a, long lo, long hi)
+
+   // x[0..hi-lo] = reverse(a[lo..hi]), with zero fill
+   // input may not alias output
+
+{
+   long i, j, n, m;
+
+   n = hi-lo+1;
+   m = a.rep.length();
+
+   x.rep.SetLength(n);
+
+   const zz_p* ap = a.rep.elts();
+   zz_p* xp = x.rep.elts();
+
+   for (i = 0; i < n; i++) {
+      j = hi-i;
+      if (j < 0 || j >= m)
+         clear(xp[i]);
+      else
+         xp[i] = ap[j];
+   }
+
+   x.normalize();
+} 
+
+static
+void LocalCyclicReduce(zz_pX& x, const zz_pX& a, long m)
+
+// computes x = a mod X^m-1
+
+{
+   long n = deg(a);
+   long i, j;
+   zz_p accum;
+
+   if (n < m) {
+      x = a;
+      return;
+   }
+
+   if (&x != &a)
+      x.rep.SetLength(m);
+
+   for (i = 0; i < m; i++) {
+      accum = a.rep[i];
+      for (j = i + m; j <= n; j += m)
+         add(accum, accum, a.rep[j]);
+      x.rep[i] = accum;
+   }
+
+   if (&x == &a)
+      x.rep.SetLength(m);
+
+   x.normalize();
+}
+
+zz_pXModulus1::zz_pXModulus1(long _m, const zz_pX& _f) 
+: m(_m), f(_f), n(deg(f))
+{
+   specialLogic = (m - n > 10 && m < 2*n);
+   build(fm, f);
+   
+   if (specialLogic) {
+      zz_pX P1, P2, P3;
+
+      LocalCopyReverse(P3, f, 0, n);
+      InvTrunc(P2, P3, m-n);
+      LocalCopyReverse(P1, P2, 0, m-n-1);
+
+      k = NextPowerOfTwo(2*(m-1-n)+1);
+      k1 = NextPowerOfTwo(n);
+
+      TofftRep(R0, P1, k); 
+      TofftRep(R1, f, k1);
+   }
+}
+
+
+void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
+{
+   if (!ff.specialLogic) {
+      rem(r, a, ff.fm);
+      return;
+   }
+
+   long m = ff.m;
+   long n = ff.n;
+   long k = ff.k;
+   long k1 = ff.k1;
+   const fftRep& R0 = ff.R0;
+   const fftRep& R1 = ff.R1;
+
+   if (deg(a) < n) {
+      r = a;
+      return;
+   }
+
+   zz_pX P2, P3;
+
+   fftRep R2, R3;
+
+   TofftRep(R2, a, k, n, m-1);
+   mul(R2, R2, R0);
+   FromfftRep(P3, R2, m-1-n, 2*(m-1-n));
+   
+   long l = 1L << k1;
+
+   TofftRep(R3, P3, k1);
+   mul(R3, R3, R1);
+   FromfftRep(P3, R3, 0, n-1);
+   LocalCyclicReduce(P2, a, l);
+   trunc(r, P2, n);
+   sub(r, r, P3);
+}
+
+
+

@@ -24,6 +24,7 @@
  * CModulus for a large ones (ZZ). These classes are otherwise identical
  * hence they are implemented using a class template.
  **/
+#include "NumbTh.h"
 #include "PAlgebra.h"
 #include "bluestein.h"
 #include "cloned_ptr.h"
@@ -43,6 +44,7 @@ public:
   typedef zz_pContext zpContext;
   typedef zz_pBak zpBak;
   typedef zz_pXModulus zpxModulus;
+  typedef zz_pXModulus1 zpxModulus1;
 
 };
 
@@ -60,6 +62,7 @@ public:
   typedef ZZ_pContext zpContext ;
   typedef ZZ_pBak zpBak;
   typedef ZZ_pXModulus zpxModulus;
+  typedef ZZ_pXModulus1 zpxModulus1;
 };
 
 #define INJECT_TYPE(type,subtype) typedef typename type::subtype subtype
@@ -95,6 +98,7 @@ class Cmod {
   INJECT_TYPE(type,zpContext);
   INJECT_TYPE(type,zpBak);
   INJECT_TYPE(type,zpxModulus);
+  INJECT_TYPE(type,zpxModulus1);
 
   zz          q;       // the modulus
   zpContext   context; // NTL's tables for this modulus
@@ -117,7 +121,7 @@ class Cmod {
   fftrep*     iRb;
   mutable fftrep_aux iRb_aux;
 
-  zpxModulus* phimx; // PhimX modulo q, for faster division w/ remainder
+  zpxModulus1* phimx; // PhimX modulo q, for faster division w/ remainder
   zpx*        scratch; // temporary space, to satisfy NTL's rules
 
   // Allocate memory and compute roots
@@ -162,7 +166,7 @@ class Cmod {
   unsigned long getPhiM() const { return zMStar->getPhiM(); }
   const zz& getQ() const          { return q; }
   const zz& getRoot() const       { return root; }
-  const zpxModulus& getPhimX() const  { return *phimx; }
+  const zpxModulus1& getPhimX() const  { return *phimx; }
   zpx& getScratch() const { return *scratch; }
 
   //! @brief Restore NTL's current modulus
