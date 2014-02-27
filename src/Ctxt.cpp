@@ -200,7 +200,7 @@ void Ctxt::modDownToLevel(long lvl)
   }
 
   // If target is not below the current level, nothing to do
-  if (lvl >= currentLvl) return;
+  if (lvl >= currentLvl && currentSet==primeSet) return;
 
   // sanity-check: interval does not contain special primes
   assert(targetSet.disjointFrom(context.specialPrimes));
