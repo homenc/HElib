@@ -278,8 +278,8 @@ inline double AddPrimesByNumber(FHEcontext& context, long nPrimes,
   return AddManyPrimes(context, (double)nPrimes, true, special);
 }
 
-//! @brief Build modulus chain for nLvls levels, using c digits in key-switching
-void buildModChain(FHEcontext &context, long nLvls, long c=3);
+//! @brief Build modulus chain with nPrimes primes, using c digits in key-switching
+void buildModChain(FHEcontext &context, long nPrimes, long c=3);
 ///@}
 extern FHEcontext* activeContext; // Should point to the "current" context
 #endif // ifndef _FHEcontext_H_
