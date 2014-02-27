@@ -28,26 +28,56 @@ void AltCRT::verify()
   assert(map.getIndexSet() <= (context.specialPrimes | context.ctxtPrimes));
 }
 
-
-void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus& f,
-             long m)
+// reduce x mod X^m-1
+static void reduce1(zz_pX& x, long m) 
 {
-  zz_pX t;
-  mul(t, a, b);
-
-  // reduce mod X^m-1
-  long d = deg(t);
+  long d = deg(x);
   if (d >= m) {
     long j = 0;
     for (long i = m; i <= d; i++) {
-      t[j] += t[i];
+      x[j] += x[i];
       j++;
       if (j >= m) j = 0;
     }
 
-    t.SetLength(m);
-    t.normalize();
+    x.SetLength(m);
+    x.normalize();
   }
+}
+
+static void reduce2(zz_pX& x, const zz_pXModulus& f)
+{
+  if (deg(x) < deg(f)) {
+    // do nothing
+  }
+  else if (10*deg(x) < 11*deg(f)) {
+    // heuristic: deg(x) < 1.1 deg(f)
+    const zz_pX& ff = f;
+    rem(x, x, ff); // just call NTL's unconditioned rem routine
+                   // this may be faster in this case...
+  }
+  else {
+    // default
+    rem(x, x, f);
+  }
+}
+
+static void reduce12(zz_pX& x, long m, const zz_pXModulus& f)
+{
+  reduce1(x, m);
+  reduce2(x, f);
+}
+
+
+
+void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus& f,
+             long m, bool lazy)
+{
+  zz_pX t;
+  mul(t, a, b);
+
+  reduce1(t, m);
+  if(!lazy) reduce2(t, f);
 
   x = t;
 }
@@ -85,12 +115,13 @@ AltCRT& AltCRT::Op(const AltCRT &other, Fun fun,
   zz_pBak bak; bak.save();
 
   long m = context.zMStar.getM();
+  bool lazy = context.lazy;
 
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
     const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
-    fun.apply(map[i], (*other_map)[i], phimx, m);
+    fun.apply(map[i], (*other_map)[i], phimx, m, lazy);
   }
 
   return *this;
@@ -190,25 +221,6 @@ template
 AltCRT& AltCRT::Op<AltCRT::SubFun>(const ZZX &poly, SubFun fun);
 
 
-// experimental remainder routine, when deg(a) is not
-// much bigger than deg(f)
-void alt_rem(zz_pX& x, const zz_pX& a, const zz_pXModulus& f)
-{
-  if (deg(a) < deg(f)) {
-    x = a;
-  }
-  else if (10*deg(a) < 11*deg(f)) {
-    // heuristic: deg(a) < 1.1 deg(f)
-    const zz_pX& ff = f;
-    rem(x, a, ff); // just call NTL's unconditioned rem routine
-                   // this may be faster in this case...
-  }
-  else {
-    // default
-    rem(x, a, f);
-  }
-}
-
 
 void AltCRT::reduce() const
 // logically but not really const
@@ -217,10 +229,12 @@ void AltCRT::reduce() const
 
   zz_pBak bak; bak.save();
 
+  long m = context.zMStar.getM();
+
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
     const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
-    alt_rem(const_cast<zz_pX&>(map[i]), map[i], phimx);
+    reduce12(const_cast<zz_pX&>(map[i]), m, phimx);
   }
 }
 
@@ -536,6 +550,7 @@ void AltCRT::toPoly(ZZX& poly, const IndexSet& s,
   ZZ prod;
   prod = 1;
 
+  long m = context.zMStar.getM();
 
   zz_pBak bak; bak.save();
 
@@ -544,7 +559,7 @@ void AltCRT::toPoly(ZZX& poly, const IndexSet& s,
 
     // LAZY: first reduce map[i] mod phimx
     const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
-    alt_rem(const_cast<zz_pX&>(map[i]), map[i], phimx);
+    reduce12(const_cast<zz_pX&>(map[i]), m, phimx);
     
     CRT(poly, prod, map[i]);  // NTL :-)
   }
@@ -602,12 +617,14 @@ void AltCRT::Exp(long e)
   const IndexSet& s = map.getIndexSet();
   zz_pBak bak; bak.save();
 
+  long m = context.zMStar.getM();
+
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
     const zz_pXModulus& phimx = context.ithModulus(i).getPhimX();
 
     // LAZY: first reduce map[i] mod phimx
-    alt_rem(map[i], map[i], phimx);
+    reduce12(map[i], m, phimx);
 
     PowerMod(map[i], map[i], e, phimx);
   }
@@ -647,7 +664,8 @@ void AltCRT::automorph(long k)
 
     tmp.normalize();
 
-    // LAZY: don't reduce
+    // LAZY ...reduce mod phimx if not lazy
+    if (!context.lazy) reduce2(tmp, phimx);
     row = tmp;
   }
 }
@@ -777,6 +795,8 @@ ostream& operator<< (ostream &str, const AltCRT &d)
   const IndexSet& set = d.map.getIndexSet();
   str << "[" << set << endl;
 
+  long m = d.context.zMStar.getM();
+
   // For each "active" prime, output the zz_pX object
   zz_pBak bak; bak.save();
   for (long i = set.first(); i <= set.last(); i = set.next(i)) {
@@ -784,7 +804,7 @@ ostream& operator<< (ostream &str, const AltCRT &d)
 
     // LAZY: first reduce d.map[i] mod phimx
     const zz_pXModulus& phimx = d.context.ithModulus(i).getPhimX();
-    alt_rem(const_cast<zz_pX&>(d.map[i]), d.map[i], phimx);
+    reduce12(const_cast<zz_pX&>(d.map[i]), m, phimx);
 
     str << " " << d.map[i] << "\n";
   }

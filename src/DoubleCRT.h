@@ -18,12 +18,9 @@
  * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
  **/
 
-// change to #if 1 to get an alternative implementation
-#if 0
-#define USE_ALT_CRT
-#endif
+#include "FHEContext.h"
 
-#ifdef USE_ALT_CRT
+#if (ALT_CRT)
 #define DoubleCRT AltCRT
 #include "AltCRT.h"
 
@@ -36,7 +33,6 @@
 #include <NTL/vec_vec_long.h>
 #include "NumbTh.h"
 #include "IndexMap.h"
-#include "FHEContext.h"
 NTL_CLIENT
 
 class SingleCRT;
@@ -379,6 +375,9 @@ public:
 
   // used to implement modulus switching
   void scaleDownToSet(const IndexSet& s, long ptxtSpace);
+
+  void reduce() const {} // place-holder for consistenct with AltCRT
+
 
   // I/O: ONLY the matrix is outputted/recovered, not the moduli chain!! An
   // error is raised on input if this is not consistent with the current chain

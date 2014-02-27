@@ -66,6 +66,13 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   FHEcontext context(m, p, r);
   buildModChain(context, L, c);
 
+  // context.lazy = false;
+
+  if (context.lazy)
+    cerr << "LAZY REDUCTIONS\n";
+  else
+    cerr << "NON-LAZY REDUCTIONS\n";
+
   context.zMStar.printout();
   cerr << endl;
 #ifdef DEBUG

@@ -25,7 +25,7 @@
 
 #include "DoubleCRT.h"
 
-#ifdef USE_ALT_CRT
+#if (ALT_CRT)
 
 #warning "using AltCRT..."
 

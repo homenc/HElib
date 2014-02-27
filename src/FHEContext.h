@@ -39,6 +39,12 @@
  **/
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose=false);
 
+#ifdef USE_ALT_CRT
+#define ALT_CRT (1)
+#else
+#define ALT_CRT (0)
+#endif
+
 /**
  * @class FHEcontext
  * @brief Maintaining the parameters
@@ -98,13 +104,29 @@ public:
   **/
   vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
 
+  //! @brief Flag to allow lazy reductions. Only has an effect 
+  //! when the flag ALT_CRT is set.
+  mutable bool lazy;
+
   long fftPrimeCount;
 
   // Constructors must ensure that alMod points to zMStar
 
   // constructor
-  FHEcontext(unsigned long m, unsigned long p, unsigned long r): zMStar(m, p), alMod(zMStar, r)
-  { stdev=3.2; fftPrimeCount = 0; }
+  FHEcontext(unsigned long m, unsigned long p, unsigned long r): 
+  zMStar(m, p), alMod(zMStar, r) 
+  {
+    stdev=3.2;  
+    fftPrimeCount = 0; 
+
+    lazy = ALT_CRT && 
+           NextPowerOfTwo(zMStar.getM()) == NextPowerOfTwo(zMStar.getPhiM());
+    // we only set the lazy flag if we are using ALT_CRT and 
+    // if the size of NTL's FFTs for m and phi(m) are the same.
+    // If NTL didn't have these power-of-two jumps, we would possibly
+    // want to change this.
+
+  }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }

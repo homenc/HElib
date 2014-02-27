@@ -17,8 +17,6 @@
 #include "NumbTh.h"
 #include "FHEContext.h"
 
-#include "DoubleCRT.h" // include this to pick up USE_ALT_CRT macro
-
 #define pSize (NTL_SP_NBITS/2) /* The size of levels in the chain */
 
 NTL_CLIENT
@@ -221,32 +219,33 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   if (!context.zMStar.getM() || context.zMStar.getM()>(1<<20))// sanity checks
     Error("AddManyPrimes: m undefined or larger than 2^20");
 
-#ifdef USE_ALT_CRT
-  while (sizeSoFar < totalSize) {
-    long p = context.AddFFTPrime(special);
-    nBits += log((double)p);
-    sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
-  }
-#else
-  // make p-1 divisible by m*2^k for as large k as possible
-  long twoM = 2 * context.zMStar.getM();
-  while (twoM < NTL_SP_BOUND/(NTL_SP_NBITS*2)) twoM *= 2;
-
-  long bigP = NTL_SP_BOUND - (NTL_SP_BOUND%twoM) +1; // 1 mod 2m
-  long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
-
-  while (sizeSoFar < totalSize) {
-    if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
+  if (ALT_CRT) {
+    while (sizeSoFar < totalSize) {
+      long p = context.AddFFTPrime(special);
       nBits += log((double)p);
       sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
     }
-    else { // we ran out of primes, try a lower power of two
-      twoM /= 2;
-      assert(twoM > (long)context.zMStar.getM()); // can we go lower?
-      p = bigP;
+  }
+  else {
+    // make p-1 divisible by m*2^k for as large k as possible
+    long twoM = 2 * context.zMStar.getM();
+    while (twoM < NTL_SP_BOUND/(NTL_SP_NBITS*2)) twoM *= 2;
+
+    long bigP = NTL_SP_BOUND - (NTL_SP_BOUND%twoM) +1; // 1 mod 2m
+    long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
+
+    while (sizeSoFar < totalSize) {
+      if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
+        nBits += log((double)p);
+        sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
+      }
+      else { // we ran out of primes, try a lower power of two
+        twoM /= 2;
+        assert(twoM > (long)context.zMStar.getM()); // can we go lower?
+        p = bigP;
+      }
     }
   }
-#endif
   return nBits;
 }
 
@@ -447,11 +446,12 @@ istream& operator>> (istream &str, FHEcontext& context)
   for (long i=0; i<nPrimes; i++) {
     long p;
     str >> p; 
-#ifdef USE_ALT_CRT
-    context.moduli.push_back(Cmodulus(context.zMStar,p,1)); // a dummy object
-#else
-    context.moduli.push_back(Cmodulus(context.zMStar,p,0)); // a real object
-#endif
+
+    if (ALT_CRT) 
+      context.moduli.push_back(Cmodulus(context.zMStar,p,1)); // a dummy object
+    else
+      context.moduli.push_back(Cmodulus(context.zMStar,p,0)); // a real object
+
     if (s.contains(i))
       context.specialPrimes.insert(i); // special prime
     else

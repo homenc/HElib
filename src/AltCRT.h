@@ -64,9 +64,9 @@ private:
 
 
 // helper routine: computes (a*b mod X^m-1) ...experimental "lazy"
-// version.... f unused
+// version.... 
 void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus& f,
-             long m);
+             long m, bool lazy);
 
 //! @class AltCRT
 //! @brief Alternative implementation of integer polynomials
@@ -88,7 +88,7 @@ class AltCRT {
 
   class AddFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m) 
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m, bool lazy) 
     { return add(a, a, b); }
 
     void apply(zz_pX& a, zz_p b)
@@ -97,7 +97,7 @@ class AltCRT {
 
   class SubFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m) 
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m, bool lazy) 
     { return sub(a, a, b); }
 
     void apply(zz_pX& a, zz_p b)
@@ -106,8 +106,8 @@ class AltCRT {
 
   class MulFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m) 
-    { return MulMod1(a, a, b, f, m); }
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus& f, long m, bool lazy) 
+    { return MulMod1(a, a, b, f, m, lazy); }
 
     void apply(zz_pX& a, zz_p b)
     { return mul(a, a, b); }
@@ -126,7 +126,6 @@ class AltCRT {
 
   static bool dryRun; // do not actually perform any of the operations
 
-  void reduce() const; // reduce rows mod phimx...remove laziness
 
 public:
 
@@ -372,6 +371,8 @@ public:
 
   // used to implement modulus switching
   void scaleDownToSet(const IndexSet& s, long ptxtSpace);
+
+  void reduce() const; // reduce rows mod phimx...remove laziness
 
   // I/O: ONLY the matrix is outputted/recovered, not the moduli chain!! An
   // error is raised on input if this is not consistent with the current chain
