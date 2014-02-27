@@ -249,13 +249,9 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   return nBits;
 }
 
-void buildModChain(FHEcontext &context, long nLvls, long nDgts)
+void buildModChain(FHEcontext &context, long nPrimes, long nDgts)
 {
-  long morePrimes = nLvls/2;    // how many more primes to choose
-
-#ifdef NO_HALF_SIZE_PRIME
-  morePrimes = nLvls+1;
-#else
+#ifndef NO_HALF_SIZE_PRIME
   // The first prime should be of half the size. The code below tries to find
   // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
   // Then if the plaintext space is a power of two it tries to choose the
@@ -269,46 +265,11 @@ void buildModChain(FHEcontext &context, long nLvls, long nDgts)
   bound = bound - (bound % twoM) +1; // = 1 mod 2m
   long q0 = context.AddPrime(bound, twoM); // add next prime to chain
   assert(q0 != 0);
-
-
-#if 0
-  // The choice of the 2nd prime is an optimization for the case of
-  // plaintext space mod 2^r for moderate r's (e.g., 2^32).
-  if (context.zMStar.getP() == 2 && context.alMod.getR()>1) {
-    long qmodp = q0 % context.alMod.getPPowR();
-    long nBits = NTL::NumBits(context.zMStar.getM()) + context.alMod.getR();
-
-    // If q0 != 1 mod p^r, try to choose 2nd prime q1 s.t. q0*q1 = 1 mod p^r.
-    // Since q1 should be 1 mod m and q0^{-1} mod p^r, and it needs to be a
-    // prime smaller than NTL_SP_BOUND, then we only attempt it if p^r*m is no
-    // more than NTL_SP_BOUND/128. (The nubmer 128 is chosen since NTL_SP_BOUND
-    // is either 2^30 or 2^50, for 32- or 64-bit machines, respectively.)
-    if (qmodp != 1 && nBits <= NTL_SP_NBITS-7) {
-      // (p^r){-1} mod m
-      long prInv = InvMod(context.alMod.getPPowR(), context.zMStar.getM());
-
-      // (q0*m)^{-1} mod p^r
-      qmodp *= context.zMStar.getM();
-      qmodp %= context.alMod.getPPowR();
-      long qmInv = InvMod(qmodp, context.alMod.getPPowR());
-      // q1 = m*((q0*m)^{-1} mod p^r) + p^r*((p^r)^{-1} mod m)
-      //    = 1 mod m, and also = q0^{-1} mod p^r
-      long q1 = context.zMStar.getM()*qmInv + context.alMod.getPPowR()*prInv;
-      long delta = context.zMStar.getM() * context.alMod.getPPowR();
-
-      bound = NTL_SP_BOUND -(NTL_SP_BOUND%delta) +q1; // = q1 mod  m * p^r
-      while (bound-delta>=NTL_SP_BOUND) 
-	bound -= delta;// ensure that bound-delta < NTL_SP_BOUND
-
-      q1=context.AddPrime(bound,-delta);// add next prime to the chain
-      if (q1) morePrimes--;             // a prime was found
-    }
-  }
-#endif
+  nPrimes--;
 #endif
 
   // Choose the next primes as large as possible
-  if (morePrimes>0) AddPrimesByNumber(context, morePrimes);
+  if (nPrimes>0) AddPrimesByNumber(context, nPrimes);
 
   // calculate the size of the digits
 
