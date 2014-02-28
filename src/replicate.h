@@ -24,8 +24,8 @@
  * generate the n encrypted vectors (x_1, ..., x_1), ..., (x_n, ..., x_n),
  * in that order.
  *
- * To process the output vectors, a "call back" mechanism is used (so that
- * we do'ne need to generate them all, and instead can return them one by one).
+ * To process the output vectors, a "call back" mechanism is used (so that we
+ * do not need to generate them all, and instead can return them one by one).
  * For this purpose, the caller should pass a pointer to a class derived from
  * the purely abstract class ReplicateHandler.
  *
