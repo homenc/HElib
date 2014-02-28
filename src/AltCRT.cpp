@@ -48,6 +48,8 @@ static void reduce1(zz_pX& x, long m)
 // reduce x mod f, assuming already reduced mod X^m-1
 static void reduce2(zz_pX& x, const zz_pXModulus1& f)
 {
+   assert(deg(x) < f.m);
+   if (deg(x) < f.n) return;
    rem(x, x, f);
 }
 
@@ -62,6 +64,8 @@ static void reduce12(zz_pX& x, const zz_pXModulus1& f)
 void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus1& f,
              bool lazy)
 {
+  assert(deg(a) < f.m && deg(b) < f.m);
+
   zz_pX t;
   mul(t, a, b);
 

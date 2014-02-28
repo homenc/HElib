@@ -952,6 +952,8 @@ void LocalCyclicReduce(zz_pX& x, const zz_pX& a, long m)
 zz_pXModulus1::zz_pXModulus1(long _m, const zz_pX& _f) 
 : m(_m), f(_f), n(deg(f))
 {
+   assert(m > n);
+
    specialLogic = (m - n > 10 && m < 2*n);
    build(fm, f);
    
@@ -1004,8 +1006,9 @@ void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
    mul(R3, R3, R1);
    FromfftRep(P3, R3, 0, n-1);
    LocalCyclicReduce(P2, a, l);
-   trunc(r, P2, n);
-   sub(r, r, P3);
+   trunc(P2, P2, n);
+   sub(P2, P2, P3);
+   r = P2;
 }
 
 
