@@ -400,4 +400,43 @@ ZZ sumOfCoeffs(const ZZX& f);  // = f(1)
 ZZ largestCoeff(const ZZX& f); // l_infty norm
 xdouble coeffsL2Norm(const ZZX& f); // l_2 norm
 ///@}
+
+
+
+// Auxilliary classes to facillitiate faster reduction mod Phi_m(X)
+// when the input has degree less than m
+
+
+
+class zz_pXModulus1 {
+public:
+   long m;
+   zz_pX f;
+   long n;
+
+   bool specialLogic;
+
+   long k, k1;
+   fftRep R0, R1;
+
+   zz_pXModulus fm; // just in case...
+
+   zz_pXModulus1(long _m, const zz_pX& _f);
+
+   const zz_pXModulus& upcast() const { return fm; } 
+};
+
+
+void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff);
+
+// placeholder for ZZ_pX's ...no optimizations
+
+class ZZ_pXModulus1 : public ZZ_pXModulus {
+public:
+   ZZ_pXModulus1(long _m, const ZZ_pX& _f) : ZZ_pXModulus(_f) { }
+   const ZZ_pXModulus& upcast() const { return *this; }
+};
+
+
+
 #endif

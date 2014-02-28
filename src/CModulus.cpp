@@ -122,7 +122,7 @@ Cmod(const PAlgebra &zms, const zz &qq, const zz &rt)
   Ra      = new fftrep();
   ipowers = new zpx();
   iRb     = new fftrep();
-  phimx   = new zpxModulus(phimx_poly);
+  phimx   = new zpxModulus1(zms.getM(), phimx_poly);
   scratch = new zpx();
 }
 
@@ -154,7 +154,7 @@ Cmod<type>& Cmod<type>::operator=(const Cmod &other)
   if (other.Ra)      Ra      = new fftrep(*(other.Ra));
   if (other.ipowers) ipowers = new zpx(*(other.ipowers));
   if (other.iRb)     iRb     = new fftrep(*(other.iRb));
-  if (other.phimx)   phimx   = new zpxModulus(*(other.phimx));
+  if (other.phimx)   phimx   = new zpxModulus1(*(other.phimx));
   if (other.scratch) scratch   = new zpx(*(other.scratch));
 
   return *this;
