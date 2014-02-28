@@ -19,13 +19,74 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include "replicate.h"
+#include "permutations.h"
 
 #define pSize (NTL_SP_NBITS/2) /* The size of levels in the chain */
 
+PlaintextMatrixBaseInterface *buildRandomMatrix(const EncryptedArray& ea);
 long rotationAmount(const EncryptedArray& ea, const FHEPubKey& publicKey,
 	       bool withMatrix=false);
 void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
 	     const vector<Ctxt>& c, ZZX& p, long nTests, long nPrimes=0);
+
+void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
+		 Ctxt& ret, const vector<Ctxt>& c, GeneratorTrees& trees,
+		 long nTests);
+
+
+template<class type> 
+class RandomMatrix : public  PlaintextMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+  vector< vector< RX > > data;
+
+public:
+  //  ~RandomMatrix() { cerr << "destructor: random matrix\n"; }
+
+  RandomMatrix(const EncryptedArray& _ea) : ea(_ea) { 
+    long n = ea.size();
+    long d = ea.getDegree();
+
+    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+
+    data.resize(n);
+    for (long i = 0; i < n; i++) {
+      data[i].resize(n);
+      for (long j = 0; j < n; j++)
+        random(data[i][j], d);
+    }
+  }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual void get(RX& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    out = data[i][j];
+  }
+};
+
+PlaintextMatrixBaseInterface *buildRandomMatrix(const EncryptedArray& ea)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMatrix<PA_GF2>(ea);
+    }
+
+    case PA_zz_p_tag: {
+      return new RandomMatrix<PA_zz_p>(ea);
+    }
+
+    default: return 0;
+  }
+}
 
 // Returns either a random automorphism amount or an amount
 // for which we have a key-switching matrix s^k -> s.
@@ -130,7 +191,67 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   }
 }
 
-void  TimeIt(long m, long p, long r, bool d_eq_1)
+
+class ReplicateDummy : public ReplicateHandler {
+public:
+  ReplicateDummy() {}
+  virtual void handle(const Ctxt& ctxt) {}
+};
+
+void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
+		 Ctxt& ret, const vector<Ctxt>& c, GeneratorTrees& trees,
+		 long nTests)
+{
+  PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
+  Ctxt tmp = c[0];
+  tmp.modDownToLevel(9);
+  cerr << "." << std::flush;
+  startFHEtimer("Matrix Multiply");
+  ea.mat_mul(tmp, *ptr);      // multiply the ciphertext vector
+  stopFHEtimer("Matrix Multiply");
+  ret = tmp;
+  delete ptr;
+
+  // Get some timing results
+  cerr << "." << std::flush;
+  for (long i=0; i<nTests && i<ea.size(); i++) {
+    tmp = c[i % c.size()];
+    tmp.modDownToLevel(9);
+    startFHEtimer("replicate");
+    replicate(ea, tmp, i);
+    stopFHEtimer("replicate");    
+    ret += tmp; // just so the compiler will not optimize it out
+  }
+
+  cerr << "." << std::flush;
+  ReplicateDummy handler;
+  tmp = c[1];
+  tmp.modDownToLevel(9);
+  startFHEtimer("replicateAll");
+  replicateAll(ea, tmp, &handler);
+  stopFHEtimer("replicateAll");
+  ret += tmp;
+
+  cerr << "." << std::flush;
+  Permut pi;
+  randomPerm(pi, trees.getSize());
+
+  // Build a permutation network for pi
+  PermNetwork net;
+  startFHEtimer("Build Permutation Network");
+  net.buildNetwork(pi, trees);
+  stopFHEtimer("Build Permutation Network");
+
+  tmp = c[2];
+  tmp.modDownToLevel(9);
+  startFHEtimer("Apply Permutation");
+  net.applyToCtxt(tmp); // applying permutation netwrok
+  stopFHEtimer("Apply Permutation");
+  ret +=tmp;
+}
+
+
+void  TimeIt(long m, long p, long r, bool d_eq_1, bool high)
 {
   cerr << "\n\n******** TimeIt: m=" << m
        << ", p=" << p
@@ -198,19 +319,54 @@ void  TimeIt(long m, long p, long r, bool d_eq_1)
   long nTests = 5;
 
   for (long i=2; i<L; i*=2) {
-    cerr << "Operations with "<<i<<" primes in the chain: ";
+    cerr << "Operations at level "<<i<<": ";
     timeOps(ea, publicKey, cc,vc, poly, nTests, i);
     cerr << endl;
     printAllTimers();
     resetAllTimers();
     cerr << endl;
   }
-  cerr << "Operations with "<<L<<" primes in the chain: ";
+  cerr << "Operations at level "<<L<<": ";
   timeOps(ea, publicKey, cc,vc, poly, nTests);
   cerr << endl;
   printAllTimers();
   resetAllTimers();
   cerr << endl;
+
+  if (high) {
+    startFHEtimer("Compute Permutation Params");
+    // Setup generator-descriptors for the PAlgebra generators
+    Vec<GenDescriptor> vec(INIT_SIZE, ea.dimension());
+    for (long i=0; i<ea.dimension(); i++)
+      vec[i] = GenDescriptor(/*order=*/ea.sizeOfDimension(i),
+			     /*good=*/ ea.nativeDimension(i), /*genIdx=*/i);
+
+    // Some default for the width-bound, if not provided
+    //  long widthBound = log2((double)ea.size()) -1;
+
+    // Get the generator-tree structures and the corresponding hypercube
+    GeneratorTrees trees;
+    trees.buildOptimalTrees(vec, /*widthBound=*/7);
+    //  cout << " cost =" << cost << endl;
+    stopFHEtimer("Compute Permutation Params");
+
+    Permut pi;
+    randomPerm(pi, trees.getSize());
+
+    // Build a permutation network for pi
+    PermNetwork net;
+    net.buildNetwork(pi, trees);
+
+    // make sure we have the key-switching matrices needed for this network
+    addMatrices4Network(secretKey, net);
+
+    cerr << "High-level operations at level "<<min(L,9)<<": ";
+    timeHighLvl(ea, publicKey, cc, vc, trees, nTests);
+    cerr << endl;
+    printAllTimers();
+    resetAllTimers();
+    cerr << endl;
+  }
 
   for (long i=0; i<(long)vc.size(); i++) {
     startFHEtimer("decrypt");
@@ -238,6 +394,7 @@ void usage(char *prog)
   cerr << "  r is the lifting [default=1]" << endl;
   cerr << "  d is the degree of the field extension [default==1]\n";
   cerr << "    (d == 0 => factors[0] defined the extension)\n";
+  cerr << "  high=1 will time also high-level procedures [default==0]\n";
   exit(0);
 }
 
@@ -248,6 +405,7 @@ int main(int argc, char *argv[])
   argmap["r"] = "1";
   argmap["m"] = "0";
   argmap["d"] = "1";
+  argmap["high"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -256,14 +414,16 @@ int main(int argc, char *argv[])
   long r = atoi(argmap["r"]);
   long m = atoi(argmap["m"]);
   long d = atoi(argmap["d"]);
+  long high = atoi(argmap["high"]);
 
   long ms[11] = { 4051, 4369, 4859, 10261,11023,11441,
 		 18631,20485,21845, 49981,53261};
   if (m>0)
-    TimeIt(m, p, r, (d==1));
+    TimeIt(m, p, r, (d==1), high);
   else for (long i=0; i<11; i++) {
-      TimeIt(ms[i], p, /*r=*/1, /*deq1=*/true);
-      TimeIt(ms[i], p, /*r=*/1, /*deq1=*/false);
-      if (p==2) TimeIt(ms[i], p, /*r=*/2, /*deq1=*/true);
+      TimeIt(ms[i], p, /*r=*/1, /*deq1=*/true, /*timeHighLvl=*/high);
+      TimeIt(ms[i], p, /*r=*/1, /*deq1=*/false,/*timeHighLvl=*/high);
+      if (p==2)
+	TimeIt(ms[i], p,/*r=*/2,/*deq1=*/true, /*timeHighLvl=*/high);
     }
 }
