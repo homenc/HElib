@@ -39,7 +39,7 @@
  **/
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose=false);
 
-#ifdef USE_ALT_CRT
+#ifndef NO_ALT_CRT
 #define ALT_CRT (1)
 #else
 #define ALT_CRT (0)

@@ -22,17 +22,13 @@
  * in use. The list of primes is defined by the data member modChain, which is
  * a vector of Cmodulus objects. 
  */
-
 #include "DoubleCRT.h"
 
 #if (ALT_CRT)
-
-#warning "using AltCRT..."
-
+#warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
 #include "AltCRT.cpp"
-
 #else
-
+#warning "Old Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
 #include <NTL/ZZX.h>
 #include "NumbTh.h"

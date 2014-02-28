@@ -21,8 +21,10 @@ CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++0x
 
-#  To get the alternative DoubleCRT implementation, add USE_ALT_CRT
-#CFLAGS= -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DUSE_ALT_CRT
+#  To get the old DoubleCRT implementation, add NO_ALT_CRT flag
+#CFLAGS= -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DNO_ALT_CRT
+
+$(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
 
 LD = g++
 AR = ar
@@ -60,7 +62,7 @@ obj: $(OBJ)
 %.o: %.cpp $(HEADER)
 	$(CC) $(CFLAGS) -c $<
 
-fhe.a: info $(OBJ)
+fhe.a: $(OBJ)
 	$(AR) $(ARFLAGS) fhe.a $(OBJ)
 
 ./%_x: %.cpp fhe.a
@@ -69,8 +71,3 @@ fhe.a: info $(OBJ)
 clean:
 	rm -f *.o *_x *_x.exe *.a core.*
 	rm -rf *.dSYM
-
-info:
-	: HElib compilation flags are 'CFLAGS=$(CFLAGS)'
-	: If errors occur, try adding/removing '-std=c++11' in Makefile
-	:
