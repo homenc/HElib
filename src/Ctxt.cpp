@@ -177,7 +177,6 @@ void Ctxt::modDownToSet(const IndexSet &s)
 
 // Modulus-switching down
 void Ctxt::modDownToLevel(long lvl)
-
 {
   long currentLvl;
   IndexSet targetSet;
@@ -195,12 +194,15 @@ void Ctxt::modDownToLevel(long lvl)
   }
   else {
     currentLvl = card(currentSet);
-
     targetSet = IndexSet(0,lvl-1);    // one prime per level
   }
 
   // If target is not below the current level, nothing to do
   if (lvl >= currentLvl && currentSet==primeSet) return;
+
+  if (lvl >= currentLvl) { // just remove the special primes
+    targetSet = currentSet;
+  }
 
   // sanity-check: interval does not contain special primes
   assert(targetSet.disjointFrom(context.specialPrimes));
