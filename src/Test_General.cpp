@@ -315,8 +315,8 @@ int main(int argc, char *argv[])
 }
 
 // call to get our running test case:
-// Test_General_x p=23 m=20485 L=20 R=5
+// Test_General_x p=23 m=20485 L=10 R=5
 //
 // another call to get an example where phi(m) is very
 // close to m:
-// Test_General_x m=18631 L=20 R=5
+// Test_General_x m=18631 L=10 R=5

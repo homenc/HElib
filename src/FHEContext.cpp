@@ -163,10 +163,12 @@ void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
 }
 
 // Find the next prime and add it to the chain
-long FHEcontext::AddPrime(long initialP, long delta, bool special)
+long FHEcontext::AddPrime(long initialP, long delta, bool special, 
+                          bool findRoot)
 {
-  long twoM = 2 * zMStar.getM();
-  assert((initialP % twoM == 1) && (delta % twoM == 0));
+  // long twoM = 2 * zMStar.getM();
+  // assert((initialP % twoM == 1) && (delta % twoM == 0));
+  // NOTE: this assertion will fail for the half-prime in ALT_CRT
 
   long p = initialP;
   do { p += delta; } // delta could be positive or negative
@@ -175,7 +177,7 @@ long FHEcontext::AddPrime(long initialP, long delta, bool special)
   if (p<=initialP/16 || p>=NTL_SP_BOUND) return 0; // no prime found
 
   long i = moduli.size(); // The index of the new prime in the list
-  moduli.push_back( Cmodulus(zMStar, p, 0) );
+  moduli.push_back( Cmodulus(zMStar, p, findRoot ? 0 : 1) );
 
   if (special)
     specialPrimes.insert(i);
@@ -257,13 +259,20 @@ void buildModChain(FHEcontext &context, long nPrimes, long nDgts)
   // Then if the plaintext space is a power of two it tries to choose the
   // second prime q1 so that q0*q1 = 1 mod ptxtSpace. All the other primes are
   // chosen so that qi-1 is divisible by 2^k * m for as large k as possible.
-  long twoM = 2 * context.zMStar.getM();
+  long twoM;
+  if (ALT_CRT) 
+    twoM = 2;
+  else
+    twoM = 2 * context.zMStar.getM();
+
   long bound = (1 << (pSize-1));
   while (twoM < bound/(2*pSize))
     twoM *= 2; // divisible by 2^k * m  for a larger k
 
   bound = bound - (bound % twoM) +1; // = 1 mod 2m
-  long q0 = context.AddPrime(bound, twoM); // add next prime to chain
+  long q0 = context.AddPrime(bound, twoM, false, !ALT_CRT); 
+  // add next prime to chain
+  
   assert(q0 != 0);
   nPrimes--;
 #endif

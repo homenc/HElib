@@ -181,7 +181,7 @@ public:
   }
 
   //! @brief Find the next prime and add it to the chain
-  long AddPrime(long startFrom, long delta, bool special=false);
+  long AddPrime(long startFrom, long delta, bool special, bool findRoot=true);
 
   //! @brief Add an FFT prime to the chain, if it's not already there
   //! returns the value of the prime

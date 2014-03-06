@@ -149,6 +149,7 @@ void tBluesteinFFT(zz_pX& x, long n, const zz_p& root,
     // We are experimentally using some undocumented 
     // features of NTL.
 
+#if 0
     Rb_aux.SetLength(Rb.NumPrimes);
     for (long i = 0; i < Rb.NumPrimes; i++) {
       long q = FFTPrime[i];
@@ -158,13 +159,13 @@ void tBluesteinFFT(zz_pX& x, long n, const zz_p& root,
       for (long j = 0; j < len; j++)
         Rb_aux[i][j] = PrepMulModPrecon(Rb.tbl[i][j], q, qinv);
     }
+#endif
     
-
   } // if Rb.k==k, assume that Rb already contains a transform of b
 
-  // mul(Ra,Ra,Rb);           // multiply in FFT representation
+  mul(Ra,Ra,Rb);           // multiply in FFT representation
 
-#if 1
+#if 0
   for (long i = 0; i < Ra.NumPrimes; i++) {
     long len = 1L << Ra.k;
     long q = FFTPrime[i];

@@ -65,8 +65,12 @@ inline void SetCoeff(NTL::ZZ_pX& poly, long idx, const NTL::ZZ& val)
 ZZ_pContext BuildContext(const ZZ& p, long maxroot)
   { return ZZ_pContext(p); }
 
-zz_pContext BuildContext(long p, long maxroot)
-  { return zz_pContext(p, maxroot); }
+zz_pContext BuildContext(long p, long maxroot) {
+   if (maxroot <= CalcMaxRoot(p))
+      return zz_pContext(INIT_USER_FFT, p);
+   else
+      return zz_pContext(p, maxroot);
+}
 
 
 // Constructor: it is assumed that zms is already set with m>1
