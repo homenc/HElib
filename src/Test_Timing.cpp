@@ -266,8 +266,8 @@ void  TimeIt(long m, long p, long r, bool d_eq_1, bool high)
   stopFHEtimer("Initialize context");
 
   long phim = context.zMStar.getPhiM();
-  long L = floor((7.2*phim)/(pSize* /*cc*/1.33* (110+/*k*/80))) -1;
-  assert(L>1); // Make sure we have at least a few primes
+  long L = (floor((7.2*phim)/(pSize* /*cc*/1.33* (110+/*k*/80))) -1)/2;
+  if (L<2) L=2; // Make sure we have at least a few primes
 
   startFHEtimer("buildModChain");
   buildModChain(context, L, /*c=*/3);
@@ -318,7 +318,7 @@ void  TimeIt(long m, long p, long r, bool d_eq_1, bool high)
 
   long nTests = 5;
 
-  for (long i=2; i<L; i*=2) {
+  for (long i=2; i<2*L-1; i*=2) {
     cerr << "Operations at level "<<i<<": ";
     timeOps(ea, publicKey, cc,vc, poly, nTests, i);
     cerr << endl;
@@ -326,8 +326,8 @@ void  TimeIt(long m, long p, long r, bool d_eq_1, bool high)
     resetAllTimers();
     cerr << endl;
   }
-  cerr << "Operations at level "<<L<<": ";
-  timeOps(ea, publicKey, cc,vc, poly, nTests);
+  cerr << "Operations at level "<<2*L -1<<": ";
+  timeOps(ea, publicKey, cc,vc, poly, nTests, 2*L -1);
   cerr << endl;
   printAllTimers();
   resetAllTimers();
