@@ -27,7 +27,7 @@
 // We measure low-level timing at all levels
 class LowLvlTimingData {
 public:
-  long lvl = -1;
+  long lvl;
   double addConst;
   double add;
   double multConst;
@@ -36,18 +36,22 @@ public:
   double autoNative;
   double autoTypical;
   double innerProd;
+
+  explicit LowLvlTimingData(long _lvl=-1) {lvl=_lvl;}
 };
 
 // We only measure high-level timing at one level (lvl=8 or lower)
 class HighLvlTimingData {
 public:
-  long lvl = -1;
+  long lvl;
   double rotate;
   double shift;
   double permute;
   double matmul;
   double replicate;
   double replAll;
+
+  explicit HighLvlTimingData(long _lvl=-1) {lvl=_lvl;}
 };
 
 class OtherTimingData {
@@ -65,15 +69,17 @@ public:
   double decrypt;
 };
 
-class timingData {
+class TimingData {
 public:
-  long m = -1;
+  long m;
   long phim;
   long nSlots;
   long p;
   vector<LowLvlTimingData> lowLvl;
   HighLvlTimingData highLvl;
   OtherTimingData other;
+
+  explicit TimingData(long _m=-1) {m=_m;}
 };
 
 
@@ -390,7 +396,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
 }
 
 
-void  TimeIt(long m, long p, timingData& data, bool high=false)
+void  TimeIt(long m, long p, TimingData& data, bool high=false)
 {
   resetAllTimers();
   long nTests = 10;
@@ -492,7 +498,7 @@ void  TimeIt(long m, long p, timingData& data, bool high=false)
   }
 }
 
-void printTimeData(timingData& td)
+void printTimeData(TimingData& td)
 {
   if (td.m <=0) return;
 
@@ -555,7 +561,7 @@ int main(int argc, char *argv[])
   if (high) cout << ",rotate,shift,permute,matmul,replicate,replAll\n";
   else cout << endl;
 
-  timingData td;
+  TimingData td;
   if (m>0) {
     TimeIt(m, p, td, high);
     printTimeData(td);
