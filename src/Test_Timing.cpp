@@ -496,6 +496,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
     data.highLvl.lvl = 8;
     timeHighLvl(ea, publicKey, cc, vc, trees, nTests, data.highLvl);
   }
+  cerr << "!" << std::flush;
 }
 
 void printTimeData(TimingData& td)
@@ -527,8 +528,9 @@ void printTimeData(TimingData& td)
 
 void usage(char *prog) 
 {
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  result printed to cout in comma-separated-value format\n";
+  cerr << "Usage: "<<prog<<" [ optional parameters ]... 2> logfile > results-file\n";
+  cerr << "results on stdout in comma-separated-value format, ";
+  cerr << "progress printed on stderr\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
   cerr << "  e.g, 'm=11441 p=2 high=1'\n\n";
   cerr << "  m determines the cyclotomic ring, defaults to all the set\n";
@@ -563,10 +565,14 @@ int main(int argc, char *argv[])
 
   TimingData td;
   if (m>0) {
+    cerr << "\nTesting m="<<m; 
+    if (high) cout << " (including high-level)";
     TimeIt(m, p, td, high);
     printTimeData(td);
   }
   else for (long i=0; i<numTests; i++) {
+      cerr << "\nTesting m="<<ms[i];
+      if (high) cout << " (including high-level)";
       TimeIt(ms[i], p, td, /*timeHighLvl=*/high);
       printTimeData(td);
     }
