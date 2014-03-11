@@ -231,7 +231,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/true);
     startFHEtimer("nativeAutomorph");
     c0.smartAutomorph(k);
-    if (level > 2) c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
+    c0.modDownToLevel(c0.findBaseLevel());
     stopFHEtimer("nativeAutomorph");    
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -242,7 +242,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/false);
     startFHEtimer("automorph");
     c0.smartAutomorph(k);
-    if (level > 2) c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
+    c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
     stopFHEtimer("automorph");
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -399,7 +399,6 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
 void  TimeIt(long m, long p, TimingData& data, bool high=false)
 {
   resetAllTimers();
-  long nTests = 10;
   long phim = phi_N(m);
   long L = (floor((7.2*phim)/(pSize* /*cc*/1.33* (110+/*k*/80))) -1)/2;
   if (L<2) L=2; // Make sure we have at least a few primes
@@ -453,6 +452,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   ea.encode(poly, pp);
 
   Ctxt cc(publicKey);
+  long nTests = 10;
   vector<Ctxt> vc(nTests,cc);
   for (long i=0; i<nTests; i++) {
     pp.random();
@@ -460,6 +460,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   }
 
   LowLvlTimingData td;
+  data.lowLvl.clear();
   for (long i=2; i<2*L-1; i*=2) {
     td.lvl=i;
     timeOps(ea, publicKey, cc,vc, poly, nTests, td);
