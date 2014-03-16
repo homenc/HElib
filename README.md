@@ -7,7 +7,7 @@ At its present state, this library is mostly meant for researchers working on HE
 
 We still do not have an implementation of bootstrapping, hence so far we can only support "leveled" HE, where the parameters must be set large enough to evaluate the desired functionality.
 
-This library is written in C++ and uses the [NTL mathematical library] [4]. It is distributed under the terms of the [GNU General Public License] [5] (GPL).
+This library is written in C++ and uses the [NTL mathematical library] [4] (version 6.1.0 or higher). It is distributed under the terms of the [GNU General Public License] [5] (GPL).
 
   [1]: http://eprint.iacr.org/2011/277       "BGV12"
   [2]: http://eprint.iacr.org/2011/133       "SV11"
