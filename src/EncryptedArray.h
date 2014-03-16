@@ -175,10 +175,17 @@ public:
   //! L describes a linear map M by describing its action on the standard
   //! power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.  
   //! The result is a coefficient vector C for the linearized polynomial
-  //! representing M:  for h in Z/(p^r)[X] of degree < d,
-  //!
-  //!   M(h(X) mod G) = sum_{i=0}^{d-1} (C[j] mod G) * (h(X^{p^j}) mod G).
+  //! representing M: a polynoamial h in Z/(p^r)[X] of degree < d is sent to
+  //! \f[
+  //! M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
+  //! \f]
   virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const=0;
+
+  // Apply the corresponding transformation to a plaintext polynomial
+  virtual void applyLinPoly(ZZX& poly, const vector<ZZX>& C) const=0;
+
+  // Apply the corresponding transformation to a ciphertext
+  virtual void applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const=0;
 
   /* some non-virtual convenience functions */
 
@@ -233,7 +240,7 @@ public:
 
 private:
   const FHEcontext& context;
-  MappingData<type> mappingData;
+  MappingData<type> mappingData; // MappingData is defined in PAlgebra.h
 
 public:
   explicit
@@ -354,6 +361,11 @@ public:
 
   void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const;
 
+  // Apply the corresponding transformation to a plaintext polynomial
+  void applyLinPoly(ZZX& poly, const vector<ZZX>& C) const;
+
+  // Apply the corresponding transformation to a ciphertext
+  void applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const;
 
 private:
 
@@ -518,6 +530,14 @@ public:
 
   void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
     { rep->buildLinPolyCoeffs(C, L); }
+
+  // Apply the corresponding transformation to a plaintext polynomial
+  void applyLinPoly(ZZX& poly, const vector<ZZX>& C) const
+    { rep->applyLinPoly(poly, C); }
+
+  // Apply the corresponding transformation to a ciphertext
+  void applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const
+    { rep->applyLinPoly(ctxt, C); }
 
   long size() const { return rep->size(); } 
   long dimension() const { return rep->dimension(); }

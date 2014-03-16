@@ -479,6 +479,21 @@ buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
   convert(C, CC);
 }
 
+template<class type>
+void EncryptedArrayDerived<type>::
+applyLinPoly(ZZX& poly, const vector<ZZX>& C) const
+{
+  NTL::Error("EncryptedArray::applyLinPoly(poly,...) not implemented yet");
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::
+applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const
+{
+  NTL::Error("EncryptedArray::applyLinPoly(ctxt,...) not implemented yet");
+}
+
+
 PlaintextArrayBase* buildPlaintextArray(const EncryptedArray& ea)
 {
   switch (ea.getContext().alMod.getTag()) {
