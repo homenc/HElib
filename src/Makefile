@@ -24,7 +24,9 @@ CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include
 #  To get the old DoubleCRT implementation, add NO_ALT_CRT flag
 #CFLAGS= -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DNO_ALT_CRT
 
+$(info HElib requires NTL version 6.1.0 or higher, see http://shoup.net/ntl)
 $(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
+$(info )
 
 LD = g++
 AR = ar
@@ -71,3 +73,9 @@ fhe.a: $(OBJ)
 clean:
 	rm -f *.o *_x *_x.exe *.a core.*
 	rm -rf *.dSYM
+
+info:
+	: HElib require NTL version 6.1.0 or higher
+	: Compilation flags are 'CFLAGS=$(CFLAGS)'
+	: If errors occur, try adding/removing '-std=c++11' in Makefile
+	:
