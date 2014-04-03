@@ -1036,7 +1036,7 @@ void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 //! @brief if ctxt encrypts (x_1, ..., x_n), then it is
 //! replaced by an encryption of (y_n, ..., y_n), where
-//! y_n = sum_{j=1}^n x_j
+
 void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 
@@ -1050,5 +1050,41 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 // Complexity: O(d + n log d) smart automorphisms
 //             O(n d) 
 
+
+
+//! @brief apply the linearized polynomial to a ciphertext
+
+void applyLinPolyLL(const EncryptedArray& ea, 
+                    Ctxt& ctxt, const vector<ZZX>& encodedC);
+// low-level variant: encodedCoeffs has all the linPoly coeffs
+// encoded in slots; different transformations can be encoded
+// in different slots
+
+void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C);
+// C is the output of ea.buildLinPolyCoeffs;
+// same linear transformation applied to each slot
+
+void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
+                      const vector< vector<ZZX> >& Cvec);
+// Cvec is a vector of length ea.size(), each entry of which
+// is the output of ea.buildLinPolyCoeffs; 
+// different transformations can be encoded in different slots
+
+
+/*********************
+ *
+ * Example usage: The map L selects just the even coefficients
+ *
+ *   long d = ea.getDegree();
+ *   vector<ZZX> L(d);
+ *   for (long j = 0; j < d; j++)
+ *     if (j % 2 == 0) L[j] = ZZX(j, 1);
+ *
+ *   vector<ZZX> C;
+ *   ea.buildLinPolyCoeffs(C, L); 
+ *
+ *   applyLinPoly1(ea, ctxt, C);
+ *
+ *********************/
 
 #endif /* ifdef _EncryptedArray_H_ */

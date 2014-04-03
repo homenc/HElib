@@ -812,6 +812,20 @@ void Ctxt::smartAutomorph(long k)
 }
 
 
+
+// applies the Frobenius automorphism p^j
+void Ctxt::frobeniusAutomorph(long j) 
+{
+  long m = context.zMStar.getM();
+  long p = context.zMStar.getP();
+  long d = context.zMStar.getOrdP();
+
+  j = mcMod(j, d);
+  long val = PowerMod(p, j, m);
+  smartAutomorph(val);
+}
+
+
 /********************************************************************/
 // Utility methods
 
