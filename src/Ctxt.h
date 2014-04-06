@@ -344,6 +344,10 @@ public:
   // possibly evaluated via a sequence of steps, to ensure that we can
   // re-linearize the result of every step.
 
+
+  //! @brief applies the automorphsim p^j using smartAutomorphism
+  void frobeniusAutomorph(long j);
+
   // Add a constant polynomial. If the size is not given, we use
   // phi(m)*ptxtSpace^2 as the default value.
   void addConstant(const DoubleCRT& dcrt, double size=0.0);

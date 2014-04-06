@@ -565,4 +565,62 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 }
 
 
+void applyLinPolyLL(const EncryptedArray& ea, 
+                    Ctxt& ctxt, const vector<ZZX>& encodedC)
+{
+  long d = ea.getDegree();
+  assert(d == lsize(encodedC));
+
+  ctxt.reLinearize();  // not sure, but this may be a good idea
+
+  Ctxt tmp(ctxt);
+
+  ctxt.multByConstant(encodedC[0]);
+  for (long j = 1; j < d; j++) {
+    Ctxt tmp1(tmp);
+    tmp1.frobeniusAutomorph(j);
+    tmp1.multByConstant(encodedC[j]);
+    ctxt += tmp1;
+  }
+}
+
+void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
+{
+  assert(&ea.getContext() == &ctxt.getContext());
+  long d = ea.getDegree();
+  assert(d == lsize(C));
+
+  long nslots = ea.size();
+
+  vector<ZZX> encodedC(d);
+  for (long j = 0; j < d; j++) {
+    vector<ZZX> v(nslots);
+    for (long i = 0; i < nslots; i++) v[i] = C[j];
+    ea.encode(encodedC[j], v);
+  }
+
+  applyLinPolyLL(ea, ctxt, encodedC);
+}
+
+
+void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
+                      const vector< vector<ZZX> >& Cvec)
+{
+  assert(&ea.getContext() == &ctxt.getContext());
+  long d = ea.getDegree();
+  long nslots = ea.size();
+
+  assert(nslots == lsize(Cvec));
+  for (long i = 0; i < nslots; i++)
+    assert(d == lsize(Cvec[i]));
+
+  vector<ZZX> encodedC(d);
+  for (long j = 0; j < d; j++) {
+    vector<ZZX> v(nslots);
+    for (long i = 0; i < nslots; i++) v[i] = Cvec[i][j];
+    ea.encode(encodedC[j], v);
+  }
+
+  applyLinPolyLL(ea, ctxt, encodedC);
+}
 
