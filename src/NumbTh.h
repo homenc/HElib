@@ -388,6 +388,14 @@ bool sameObject(const T1* p1, const T2* p2) {
 //! @brief Modular composition of polynomials: res = g(h) mod f
 void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f);
 
+//! @brief Evaluates a modular integer polynomial, returns poly(x) mod p
+long polyEvalMod(const ZZX& poly, long x, long p);
+
+//! @brief Interpolate polynomial such that poly(x[i] mod p)=y[i] (mod p^e)
+//! It is assumed that the points x[i] are all distinct modulo p
+void interpolateMod(ZZX& poly, const vec_long& x, const vec_long& y,
+		    long p, long e=1);
+
 //! @brief returns ceiling(a/b); assumes a >=0, b>0, a+b <= MAX_LONG
 inline long divc(long a, long b)
 {

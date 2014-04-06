@@ -552,6 +552,61 @@ void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f)
   res = r;
 }
 
+long polyEvalMod(const ZZX& poly, long x, long p)
+{
+  long ret = 0;
+  for (long i=deg(poly); i>=0; i--) {
+    ret = AddMod(ret, to_long(poly[i]), p); // Add the coefficient of x^i
+    if (i>0) ret = MulMod(ret, x, p);       // then mult by x
+  }
+  return ret;
+}
+
+// Interpolate the integer polynomial such that poly(x[i] mod p)=y[i] (mod p^e)
+// It is assumed that the points x[i] are all distinct modulo p
+void interpolateMod(ZZX& poly, const vec_long& x, const vec_long& y,
+		    long p, long e)
+{
+  poly = ZZX::zero();       // initialize to zero
+  long p2e = power_long(p,e); // p^e
+
+  vec_long ytmp(INIT_SIZE, y.length()); // A temporary writable copy
+  for (long j=0; j<y.length(); j++) ytmp[j] = y[j];
+
+  zz_pBak bak; bak.save();    // Set the current modulus to p
+  zz_p::init(p);
+
+  vec_zz_p xmod(INIT_SIZE, x.length()); // convert to zz_p
+  for (long j=0; j<x.length(); j++) xmod[j] = to_zz_p(x[j] % p);
+
+  long p2i = 1; // p^i
+  for (long i=0; i<e; i++, p2i*=p) {// gradually lift the result to mod p^i
+    vec_zz_p ymod(INIT_SIZE, y.length());
+
+    // convert to zz_p
+    for (long j=0; j<y.length(); j++) ymod[j] = to_zz_p(ytmp[j] % p);
+
+    // a polynomial p_i s.t. p_i(x[j]) = i'th p-base digit of poly(x[j])
+    zz_pX polyMod;
+    interpolate(polyMod, xmod, ymod);    // interpolation modulo p
+
+    // cerr <<"digit "<<i<<"="<<ymod<<", poly="<<polyMod <<endl<<std::flush;
+
+    ZZX polyTmp; conv(polyTmp, polyMod); // convert to ZZX
+
+    // update ytmp by subtracting the new digit, then dividing by p
+    for (long j=0; j<y.length(); j++) {
+      ytmp[j] -= polyEvalMod(polyTmp,rep(xmod[j]),p2e/p2i); // mod p^{e-i}
+      if (ytmp[j]<0) ytmp[j] += p2e/p2i;
+      ytmp[j] /= p;
+    } // maybe it's worth optimizing above by using multi-point evaluation
+
+    // add the new digit to the result
+    polyTmp *= p2i;
+    poly += polyTmp;
+  }
+}
+
 ZZ largestCoeff(const ZZX& f)
 {
   ZZ mx = ZZ::zero();
