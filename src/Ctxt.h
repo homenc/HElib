@@ -291,10 +291,8 @@ class Ctxt {
     return -1;
   }
 
-  // Sanity-check: Check that prime-set is "valid":
-  //  i. The set contains either all the special primes or none of them;
-  // ii. The regular primes in this set consists of a contiguous nonempty
-  //    interval, starting at 0.
+  // Sanity-check: Check that prime-set is "valid", i.e. that it 
+  // contains either all the special primes or none of them
   bool verifyPrimeSet() const;
 
   // A private assignment method that does not check equality of context or
@@ -316,12 +314,6 @@ public:
 
   // a procedural variant with an additional parameter
   bool equalsTo(const Ctxt& other, bool comparePkeys=true) const;
-
-  void clear() { // set as an empty ciphertext
-    primeSet.clear();
-    parts.clear();
-    noiseVar = to_xdouble(0.0);
-  }
 
   // Encryption and decryption are done by the friends FHE[Pub|Sec]Key
 
@@ -350,17 +342,17 @@ public:
 
   // Add a constant polynomial. If the size is not given, we use
   // phi(m)*ptxtSpace^2 as the default value.
-  void addConstant(const DoubleCRT& dcrt, double size=0.0);
-  void addConstant(const ZZX& poly, double size=0.0)
+  void addConstant(const DoubleCRT& dcrt, double size=-1.0);
+  void addConstant(const ZZX& poly, double size=-1.0)
   { addConstant(DoubleCRT(poly,context,primeSet),size); }
+  void addConstant(const ZZ& c);
 
   // Multiply-by-constant. If the size is not given, we use
   // phi(m)*ptxtSpace^2 as the default value.
-  void multByConstant(const DoubleCRT& dcrt, double size=0.0);
-  void multByConstant(const ZZX& poly, double size=0.0)
-  { 
-    multByConstant(DoubleCRT(poly,context,primeSet),size); 
-  }
+  void multByConstant(const DoubleCRT& dcrt, double size=-1.0);
+  void multByConstant(const ZZX& poly, double size=-1.0)
+  { multByConstant(DoubleCRT(poly,context,primeSet),size); }
+  void multByConstant(const ZZ& c);
 
   //! Divide a cipehrtext by 2. It is assumed that the ciphertext
   //! encrypts an even polynomial and has plaintext space 2^r for r>1.
@@ -419,10 +411,25 @@ public:
   //! Find the highest IndexSet so that mod-switching down to that set results
   //! in the dominant noise term being the additive term due to rounding
   void findBaseSet(IndexSet& s) const;
+
+  //! @brief compute the power X,X^2,...,X^n
+  //  void computePowers(vector<Ctxt>& v, long nPowers) const;
+
+  //! @brief Evaluate the cleartext poly on the encrypted ciphertext
+  void evalPoly(const ZZX& poly);
   ///@}
 
   //! @name Utility methods
   ///@{
+
+  void clear() { // set as an empty ciphertext
+    primeSet=context.ctxtPrimes;
+    parts.clear();
+    noiseVar = to_xdouble(0.0);
+  }
+
+  //! @brief Is this an empty cipehrtext without any parts
+  bool isEmpty() const { return (parts.size()==0); }
 
   //! @brief A canonical ciphertext has handles pointing to (1,s)
   bool inCanonicalForm(long keyID=0) const {
@@ -435,6 +442,7 @@ public:
     ZZ q = context.productOfPrimes(primeSet);
     return (to_xdouble(q) > sqrt(noiseVar)*2);
   }
+
   const FHEcontext& getContext() const { return context; }
   const FHEPubKey& getPubKey() const   { return pubKey; }
   const IndexSet& getPrimeSet() const  { return primeSet; }

@@ -23,10 +23,8 @@ NTL_CLIENT
 #include "timing.h"
 
 
-// Sanity-check: Check that prime-set is "valid":
-//  i. The set contains either all the special primes or none of them;
-// ii. The regular primes in this set consists of a contiguous nonempty
-//    interval, starting at either 0 or 1.
+// Sanity-check: Check that prime-set is "valid", i.e. that it 
+// contains either all the special primes or none of them
 bool Ctxt::verifyPrimeSet() const
 {
   IndexSet s = primeSet & context.specialPrimes; // special primes in primeSet
@@ -87,7 +85,7 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
     ptxtSpace = GCD(ptxtSpace, pubKey.getPtxtSpace());
     if (ptxtSpace <= 1) Error("Plaintext-space mismatch Ctxt constructor");
   }
-
+  primeSet=context.ctxtPrimes;
 }
 
 // A private assignment method that does not check equality of context or
@@ -237,6 +235,9 @@ void Ctxt::reducePtxtSpace(long newPtxtSpace)
 void Ctxt::reLinearize(long keyID)
 {
   FHE_TIMER_START;
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
   // To relinearize, the primeSet must be disjoint from the special primes
   if (!primeSet.disjointFrom(context.specialPrimes)) {
     modDownToSet(primeSet / context.specialPrimes);
@@ -391,6 +392,11 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 // additive term due to rounding into the dominant noise term 
 void Ctxt::findBaseSet(IndexSet& s) const
 {
+  if (getNoiseVar()<=0.0) { // an empty ciphertext
+    s = context.ctxtPrimes;
+    return;
+  }
+
   assert(verifyPrimeSet());
   bool halfSize = context.containsSmallPrime();
   double addedNoise = log(modSwitchAddedNoiseVar())/2;
@@ -489,7 +495,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 {
   FHE_TIMER_START;
   // If the size is not given, we use the default value phi(m)*(ptxtSpace/2)^2
-  if (size <= 0.0) {
+  if (size < 0.0) {
     // WARNING: the following line is written just so to prevent overflow
     size = ((double) context.zMStar.getPhiM()) * ptxtSpace*ptxtSpace /4.0;
   }
@@ -507,6 +513,19 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   FHE_TIMER_STOP;
 }
 
+// Add a constant polynomial
+void Ctxt::addConstant(const ZZ& c)
+{
+  DoubleCRT dcrt(getContext(), getPrimeSet());
+  long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
+  dcrt = cc;
+
+  if (cc > ptxtSpace/2) cc -= ptxtSpace;
+  double size = to_double(cc);
+
+  addConstant(dcrt, size*size);
+}
+
 void Ctxt::negate()
 {
   FHE_TIMER_START;
@@ -520,6 +539,13 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   FHE_TIMER_START;
   // Sanity check: same context and public key
   assert (&context==&other.context && &pubKey==&other.pubKey);
+
+  // Special case: if *this is empty then just copy other
+  if (this->isEmpty()) {
+    *this = other;
+    if (negative) negate();
+    return;
+  }
 
   // Sanity check: verify that the plaintext spaces are compatible
   long g = GCD(this->ptxtSpace, other.ptxtSpace);
@@ -621,6 +647,8 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 Ctxt& Ctxt::operator*=(const Ctxt& other)
 {
   FHE_TIMER_START;
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return  *this;
 
   // Sanity check: plaintext spaces are compatible
   long g = GCD(ptxtSpace, other.ptxtSpace);
@@ -665,12 +693,18 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
 
 void Ctxt::multiplyBy(const Ctxt& other)
 {
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
   *this *= other;  // perform the multiplication
   reLinearize();   // re-linearize
 }
 
 void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 {
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
   long lvl = findBaseLevel();
   long lvl1 = other1.findBaseLevel();
   long lvl2 = other2.findBaseLevel();
@@ -694,12 +728,31 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 }
 
 // Multiply-by-constant
+void Ctxt::multByConstant(const ZZ& c)
+{
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
+  long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
+  ZZ tmp = to_ZZ(cc);
+
+  // multiply all the parts by this constant
+  for (size_t i=0; i<parts.size(); i++) parts[i] *= tmp;
+
+  if (cc > ptxtSpace/2) cc -= ptxtSpace;
+  double size = to_double(cc);
+  noiseVar *= size*size;
+}
+
+// Multiply-by-constant
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
   FHE_TIMER_START;
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
 
    // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
-  if (size <= 0.0) {
+  if (size < 0.0) {
     // WARNING: the following line is written just so to prevent overflow
     size = ((double) context.zMStar.getPhiM()) * ptxtSpace * (ptxtSpace /4.0);
   }
@@ -720,6 +773,8 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 // valid ciphertext anymore.
 void Ctxt::divideBy2()
 {
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
   assert (ptxtSpace % 2 == 0 && ptxtSpace>2);
 
   // multiply all the parts by (productOfPrimes+1)/2
@@ -763,6 +818,9 @@ void Ctxt::extractBits(vector<Ctxt>& bits, long r)
 void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
 {
   FHE_TIMER_START;
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
   // Sanity check: verify that k \in Zm*
   assert (context.zMStar.inZmStar(k));
   long m = context.zMStar.getM();
@@ -785,6 +843,9 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
 void Ctxt::smartAutomorph(long k) 
 {
   FHE_TIMER_START;
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
   long m = context.zMStar.getM();
 
   k = mcMod(k, m);
@@ -816,6 +877,9 @@ void Ctxt::smartAutomorph(long k)
 // applies the Frobenius automorphism p^j
 void Ctxt::frobeniusAutomorph(long j) 
 {
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
   long m = context.zMStar.getM();
   long p = context.zMStar.getP();
   long d = context.zMStar.getOrdP();
@@ -929,8 +993,7 @@ void CheckCtxt(const Ctxt& c, const char* label)
   cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
 }
 
-// The recursive incremental-product function that does the actual work,
-// see 
+// The recursive incremental-product function that does the actual work
 static void recursiveIncrementalProduct(Ctxt array[], long n)
 {
   if (n <= 1) return; // nothing to do
