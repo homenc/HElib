@@ -556,8 +556,9 @@ long polyEvalMod(const ZZX& poly, long x, long p)
 {
   long ret = 0;
   for (long i=deg(poly); i>=0; i--) {
-    ret = AddMod(ret, to_long(poly[i]), p); // Add the coefficient of x^i
-    if (i>0) ret = MulMod(ret, x, p);       // then mult by x
+    long coeff = rem(poly[i], p);
+    ret = AddMod(ret, coeff, p);      // Add the coefficient of x^i
+    if (i>0) ret = MulMod(ret, x, p); // then mult by x
   }
   return ret;
 }
