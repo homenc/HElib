@@ -47,7 +47,7 @@ void testIt(long d, long k, long p, long r, long m, long L,
 
   ZZX poly;
   for (long i=d; i>=0; i--)
-    SetCoeff(poly, i, RandomBnd(p)); // coefficients are random
+    SetCoeff(poly, i, RandomBnd(p2r)); // coefficients are random
   if (isMonic) SetCoeff(poly, d);    // set top coefficient to 1
 
   // Evaluate poly on the ciphertext
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
   long k = atoi(argmap["k"]);
 
   long max_d = (d<=0)? 35 : d;
-  long L = 1+NextPowerOfTwo(max_d);
+  long L = 4+NextPowerOfTwo(max_d);
   if (m<2)
     m = FindM(/*secprm=*/80, L, /*c=*/3, p, 1, 0, m, true);
 
