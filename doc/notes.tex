@@ -1,0 +1,146 @@
+
+\documentclass[11pt]{article}
+
+\newcommand{\FF}{\mathbf{F}}
+\newcommand{\ZZ}{\mathbf{Z}}
+\newcommand{\deq}{\mathrel{\mathop:}=}
+
+\begin{document}
+\sloppy
+
+Assume $\gcd(m_1, m_2) = 1$, $p$ has order $d$ mod $m_1$,
+and that $p^d \equiv 1 \pmod{m_2}$, so that $p$ also 
+has order $d$ mod $m \deq m_1 m_2$.
+
+Let $U$ be a set of integers whose images in $\ZZ/m_1\ZZ$
+form a complete set of representatives for $(\ZZ/m_1\ZZ)^*/\langle p \rangle$.
+Let $V$ be a set of integers whose images in $\ZZ/m_2\ZZ$
+form a complete set of representatives for $(\ZZ/m_2\ZZ)^*$.
+
+For each $i \in U$ and $j \in V$, there exists an integer $k$,
+uniquely determined modulo $m$, such that 
+\begin{equation}
+\label{eq1}
+\begin{array}{rcl}
+m_2 k & \equiv & m_2 i \pmod{m} \\
+m_1 k & \equiv & m_1 j \pmod{m} . \\
+\end{array}
+\end{equation}
+Indeed, these two congrences are equivalent to
+\begin{eqnarray*}
+k & \equiv & i \pmod{m_1} \\
+k & \equiv & j \pmod{m_2},
+\end{eqnarray*}
+and the claim follows from CRT.
+Let $W$ be the set of integers $k$ that arise in this way.
+The claim (verify) is that the image of $W$ in $(\ZZ/m\ZZ)^*$
+forms a complete set of representatives fpr $(\ZZ/m\ZZ)^*/\langle p \rangle$.
+
+
+
+Now consider the tower of rings $R = \FF_p[x_1]/(\Phi_{m_1}(x_1))$
+and $S = R[x_2]/(\Phi_{m_2}(x_2))$.
+We also have the ring $T = \FF_p[x]/(\Phi_m(x))$ and the $\FF_p$-algebra
+isomorphism $\theta : S \rightarrow T$ that maps $x_1$ to $x^{m_2}$ and
+$x_2$ to $x^{m_1}$.
+
+Now we consider various evaluation maps.
+Let $\xi$ be an element of order $m$ in $\FF_{p^d}$. 
+The field elements $\xi^{m_2 i}$, for $i \in U$, each have order $m_1$,
+and lie in distinct conjugacy classes relative to the Frobenius map
+for $\FF_{p^d}/\FF_p$.
+Therefore, as $i$ runs over $U$, the minimal polynomial of 
+$\xi^{m_2 i}$ runs over the set of distinct irreducible factors
+of $\Phi_{m_1}$.
+The field elements $\xi^{m_1 j}$, for $j \in V$,
+each have order $m_2$.
+The field elements $\xi^k$, as $k$ runs over $W$,
+each have order $m$, and lie in distinct conjugacy classes
+relative to the Frobenius map for  $\FF_{p^d}/\FF_p$.
+Therefore, as $k$ runs over $W$, the minimal polynomial of
+$\xi^k$ runs over the set of distinct irreducible factors
+of $\Phi_m$.
+
+The evaluation map $\sigma_{i j} : S \rightarrow \FF_{p^d}$,
+for $i \in U$ and $j \in V$, is defined so that
+it sends $x_1 \mapsto \xi^{m_2 i}$ and $x_2 \mapsto \xi^{m_1 j}$.
+The evaluation map $\tau_k : T \rightarrow \FF_{p^d}$,
+for $k \in W$, sends $x \mapsto x^k$.
+The claim (verify) is that for each $i \in U$ and $j \in V$,
+if $k$ is the integer corresponding to $(i, j)$ as in (\ref{eq1}),
+then
+$\sigma_{i j} = \tau_k \circ \theta$;
+that is, the evaluation map $\sigma_{i j}$ has the same effect as
+mapping from $S$ to $T$ via the isomorphism $\theta$,
+and then applying the evaluation map $\tau_k$.
+
+\subsection*{Computation}
+
+Now we want to consider the $\FF_p$-linear transformation 
+that takes an element in $\alpha \in S$,
+written on the natural $\FF_p$-basis for $S$,
+and maps it to $\{\sigma_k(\theta(\alpha))\}_{k\in W}$.
+In FHE-speak, this corresponds to the map that sends an object 
+with its powerful-basis coordinates packed into slots to our
+normal computational representation.
+
+So let $\alpha = \sum_v x_2^v \sum_u a_{u v} x_1^u$,
+where $u$ ranges over $0, \ldots, \phi(m_1)-1$,
+and $v$ ranges over $0, \ldots, \phi(m_2)-1$. 
+For each $v$, let $f_v(x_1) \deq \sum_u a_{u v} x_1^u$.
+The first step is to compute 
+$f_v(\xi^{m_2 i})$ for each $i \in U$  and $v = 0, \ldots, \phi(m_2)-1$.
+So we are repeating the same multi-point evaluation map ``in parallel'',
+and assuming slots are fully packed to begin with, we should be
+able to do this 
+with $\phi(m_1)/d$ inter-slot rotations and $d$ intra-slot (i.e., Frobenius)
+rotations.
+
+In more detail.
+Assume we pack the coefficients of each $f_v$
+into $\phi(m_1)/d$ slots.
+To each such collection of $\phi(m_1)/d$ slots, 
+we apply the same $\phi(m_1)/d \times \phi(m_1)/d$
+block matrix, where each block is itself a $d \times d$ matrix.
+Using generic SIMD linear-algebra techniques,
+we should be able to do this in the stated complexity. 
+
+Once we complete this first step, the second step is
+to compute, in parallel, the multi-point evaluation maps that send
+$x_2$ to to $\xi^{m_1 j}$ for $j \in V$.
+These evaluation maps are $\FF_{p^d}$-linear maps,
+and using generic SIMD linear-algebra techniques,
+we should be able to do this using $\phi(m_2)$ inter-slot rotations.
+
+\subsection*{Remarks}
+
+The above assumes that we can efficiently implement the
+required inter-slot rotations.
+I'm fairly optimistic, but not entirely sure.
+I would hope that in the worst case, we just need to do
+a mask and two native rotations (well, this asumes we have
+all the necessary key-switching matrices; if not they will cost more).
+
+The above should trivially generalize to the base where
+we have several moduli $m_1, \ldots, m_r$, where
+$p$ has order $d$ mod $m_1$ and mod $m \deq m_1 \cdots m_r$.
+For $p = 2$, it seems that one can get a pretty good variety of
+$m$'s in this way, although it may not be enough for general
+computations.
+
+If our plaintext space is a power of $p$, I'm not sure what happens
+to all of this theory. 
+It might actually work with only small changes.
+I know I've verified some of the linearized polynomial stuff
+still works in this setting, although here, one cannot work
+with an arbitrary field $\FF_{p^d}$,
+but rather one must work explicitly with the ring of polynomials
+modulo one of the irreducible factors of $\Phi_m$, or so it seems
+to me.
+
+
+
+
+
+
+\end{document}
