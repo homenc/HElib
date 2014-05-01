@@ -407,6 +407,94 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
 
 
 
+template<class type>
+void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const
+{
+  assert(this == &mat.getEA().getDerived(type()));
+  assert(&context == &ctxt.getContext());
+
+  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
+  RBak bak; bak.save(); tab.restoreContext();
+
+  const PlaintextBlockMatrixInterface<type>& mat1 = 
+    dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
+
+  ctxt.reLinearize(); // not sure, but this may be a good idea
+
+  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
+  // a new ciphertext, encrypting zero
+  
+
+  long nslots = size();
+  long d = getDegree();
+
+  for (long i = 0; i < nslots; i++) {
+    // process diagonal i
+
+    mat_R entry;
+    vector<RX> entry1;
+    
+    vector< vector<RX> > diag;
+    diag.resize(nslots);
+
+    bool zeroDiag = true;
+
+    for (long j = 0; j < nslots; j++) {
+      mat1.get(entry, mcMod(j-i, nslots), j);
+      assert(entry.NumRows() == d && entry.NumCols() == d);
+
+      if (IsZero(entry)) {
+        for (long k = 0; k < d; k++)
+          clear(diag[j][k]);
+      }
+      else {
+
+        zeroDiag = false;
+
+        // recode entry as a vector of polynomials
+        entry1.resize(d);
+        for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
+
+        // compute the lin poly coeffs
+        tab.buildLinPolyCoeffs(diag[j], entry1, mappingData);
+
+      }
+    }
+
+    // now diag[j] contains the lin poly coeffs
+    
+    if (zeroDiag) continue;
+    
+    Ctxt shCtxt = ctxt;
+    rotate(shCtxt, i); 
+
+    for (long k = 0; k < d; k++) {
+
+      // compute the constant
+      bool zeroConst = true;
+      vector<RX> cvec;
+      cvec.resize(nslots);
+      for (long j = 0; j < nslots; j++) {
+        cvec[j] = diag[j][k];
+        if (!IsZero(cvec[j])) zeroConst = false;
+      }
+
+      if (zeroConst) continue;
+
+      ZZX cpoly;
+      encode(cpoly, cvec);
+
+      Ctxt shCtxt1 = shCtxt;
+      shCtxt1.frobeniusAutomorph(k);
+      shCtxt1.multByConstant(cpoly);
+      res += shCtxt1;
+    }
+  }
+
+  ctxt = res;
+}
+
+
 
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const

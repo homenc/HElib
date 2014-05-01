@@ -164,7 +164,150 @@ buildRandomMatrix(const EncryptedArray& ea)
   }
 }
 
+static void matrixOfPoly(mat_GF2& m, const GF2X& a, const GF2X& f)
+{
+  long d = deg(f);
+  m.SetDims(d, d);
+  GF2X b = a;
 
+  for (long i = 0; i < d; i++) {
+    VectorCopy(m[i], b, d);
+    MulByXMod(b, b, f);
+  }
+}
+
+static void matrixOfPoly(mat_zz_p& m, const zz_pX& a, const zz_pX& f)
+{
+  long d = deg(f);
+  m.SetDims(d, d);
+  zz_pX b = a;
+
+  for (long i = 0; i < d; i++) {
+    VectorCopy(m[i], b, d);
+    MulByXMod(b, b, f);
+  }
+}
+
+template<class type> 
+class PolyBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+  vector< vector< mat_R > > data;
+
+public:
+
+  PolyBlockMatrix(const PlaintextMatrixBaseInterface& MM) : ea(MM.getEA()) { 
+    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+
+    const PlaintextMatrixInterface<type>& M =
+      dynamic_cast< const PlaintextMatrixInterface<type>& >(MM);
+
+    long n = ea.size();
+    const RX& G = ea.getDerived(type()).getG();
+
+    data.resize(n);
+    for (long i = 0; i < n; i++) {
+      data[i].resize(n);
+      for (long j = 0; j < n; j++) {
+        RX tmp;
+        M.get(tmp, i, j);
+        matrixOfPoly(data[i][j], tmp, G);
+      }
+    }
+  }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual void get(mat_R& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    out = data[i][j];
+  }
+};
+
+
+PlaintextBlockMatrixBaseInterface *
+buildPolyBlockMatrix(const PlaintextMatrixBaseInterface& M)
+{
+  switch (M.getEA().getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new PolyBlockMatrix<PA_GF2>(M);
+    }
+
+    case PA_zz_p_tag: {
+      return new PolyBlockMatrix<PA_zz_p>(M);
+    }
+
+    default: return 0;
+  }
+}
+
+
+
+template<class type> 
+class RandomBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+  vector< vector< mat_R > > data;
+
+public:
+
+  RandomBlockMatrix(const EncryptedArray& _ea) : ea(_ea) { 
+    long n = ea.size();
+    long d = ea.getDegree();
+
+    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+
+    data.resize(n);
+    for (long i = 0; i < n; i++) {
+      data[i].resize(n);
+      for (long j = 0; j < n; j++) {
+        data[i][j].SetDims(d, d);
+
+        for (long u = 0; u < d; u++)
+          for (long v = 0; v < d; v++)
+            random(data[i][j][u][v]);
+      }
+    }
+  }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual void get(mat_R& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    out = data[i][j];
+  }
+};
+
+
+PlaintextBlockMatrixBaseInterface *
+buildRandomBlockMatrix(const EncryptedArray& ea)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomBlockMatrix<PA_GF2>(ea);
+    }
+
+    case PA_zz_p_tag: {
+      return new RandomBlockMatrix<PA_zz_p>(ea);
+    }
+
+    default: return 0;
+  }
+}
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
                long L, long m)
@@ -201,6 +344,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   cerr << "G = " << G << "\n";
   cerr << "generating key-switching matrices... ";
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  addFrbMatrices(secretKey); // compute key-switching matrices that we need
   cerr << "done\n";
 
   printAllTimers();
@@ -210,45 +354,66 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   EncryptedArray ea(context, G);
   cerr << "done\n";
 
-  // choose a random plaintext square matrix
-  //  PlaintextMatrixBaseInterface *ptr = buildTotalSumMatrix(ea);
-  PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
+  {
+    // choose a random plaintext square matrix
+    PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
 
-  // choose a random plaintext vector
-  PlaintextArray v(ea);
+    // choose a random plaintext vector
+    PlaintextArray v(ea);
+    v.random();
 
-/* v.encode(1);  
-   v.print(cout); cout << "\n";
-   v.alt_mul(*ptr);
-*/
-  v.random();
-  // v.print(cout); cout << "\n";
+    // encrypt the random vector
+    Ctxt ctxt(publicKey);
+    startFHEtimer("ea.encrypt");
+    ea.encrypt(ctxt, publicKey, v);
+    stopFHEtimer("ea.encrypt");
 
-  // encrypt the random vector
-  Ctxt ctxt(publicKey);
-  startFHEtimer("ea.encrypt");
-  ea.encrypt(ctxt, publicKey, v);
-  stopFHEtimer("ea.encrypt");
+    v.mat_mul(*ptr);         // multiply the plaintext vector
+    startFHEtimer("ea.mat_mul");
+    ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
+    stopFHEtimer("ea.mat_mul");
 
-  v.mat_mul(*ptr);         // multiply the plaintext vector
-  startFHEtimer("ea.mat_mul");
-  ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
-  stopFHEtimer("ea.mat_mul");
-  //  totalSums(ea, ctxt);  // multiply the ciphertext vector
+    PlaintextArray v1(ea);
+    startFHEtimer("ea.decrypt");
+    ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
+    stopFHEtimer("ea.decrypt");
 
-  PlaintextArray v1(ea);
-  //  v1 = v;
-  startFHEtimer("ea.decrypt");
-  ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
-  stopFHEtimer("ea.decrypt");
+    if (v.equals(v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr...\n";
+  }
 
-  if (v.equals(v1))        // check that we've got the right answer
-    cout << "Nice!!\n";
-  else
-    cout << "Grrr...\n";
+  {
+    // choose a random plaintext square matrix
+    PlaintextBlockMatrixBaseInterface *ptr = buildRandomBlockMatrix(ea);
 
-  // v.print(cout); cout << "\n";
-  // v1.print(cout); cout << "\n";
+    // choose a random plaintext vector
+    PlaintextArray v(ea);
+    v.random();
+
+    // encrypt the random vector
+    Ctxt ctxt(publicKey);
+    startFHEtimer("ea.encrypt1");
+    ea.encrypt(ctxt, publicKey, v);
+    stopFHEtimer("ea.encrypt1");
+
+    v.mat_mul(*ptr);         // multiply the plaintext vector
+    startFHEtimer("ea.mat_mul1");
+    ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
+    stopFHEtimer("ea.mat_mul1");
+
+    PlaintextArray v1(ea);
+    startFHEtimer("ea.decrypt1");
+    ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
+    stopFHEtimer("ea.decrypt1");
+
+    if (v.equals(v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr...\n";
+  }
+
 }
 
 

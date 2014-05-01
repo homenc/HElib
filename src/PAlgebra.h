@@ -48,12 +48,17 @@
  */
 
 #include <vector>
+
 #include <NTL/ZZX.h>
 #include <NTL/GF2X.h>
 #include <NTL/vec_GF2.h>
 #include <NTL/GF2EX.h>
 #include <NTL/lzz_pEX.h>
+#include <NTL/mat_GF2.h>
+#include <NTL/mat_lzz_p.h>
+
 #include "cloned_ptr.h"
+
 NTL_CLIENT
 
 class PAlgebra {
@@ -261,6 +266,8 @@ public:
   typedef GF2EBak REBak;
   typedef vec_GF2EX vec_REX;
   typedef GF2EContext REContext;
+  typedef mat_GF2 mat_R;
+  typedef vec_GF2 vec_R;
 };
 
 
@@ -280,6 +287,8 @@ public:
   typedef zz_pEBak REBak;
   typedef vec_zz_pEX vec_REX;
   typedef zz_pEContext REContext;
+  typedef mat_zz_p mat_R;
+  typedef vec_zz_p vec_R;
 };
 //! \endcond
 
@@ -345,6 +354,8 @@ public:
   typedef typename typ::REBak REBak;  \
   typedef typename typ::vec_REX vec_REX;  \
   typedef typename typ::REContext REContext;  \
+  typedef typename typ::mat_R mat_R;  \
+  typedef typename typ::vec_R vec_R;  \
 
 #endif
 

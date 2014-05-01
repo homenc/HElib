@@ -60,6 +60,42 @@ public:
 };
 
 
+
+
+//! @class PlaintextBlockMatrixBaseInterface
+//! @brief An abstract interface for block plaintext arrays.
+//!
+//! Any class implementing this interface should be linked to a specific
+//! EncryptedArray object, a reference to which is returned by the getEA()
+//! method -- this method will generally be invoked by an EncryptedArray
+//! object to verify consistent use.
+
+class PlaintextBlockMatrixBaseInterface {
+public:
+  virtual const EncryptedArray& getEA() const = 0;
+
+  virtual ~PlaintextBlockMatrixBaseInterface() {}
+
+};
+
+
+//! @class PlaintextBlockMatrixInterface
+//! @brief A somewhat less abstract interface for plaintext arrays.
+//! 
+//! The method get(out, i, j) copies the element at row i column j of a
+//! matrix into the variable out. The type of out is mat_R (so either
+//! mar_GF2 or mat_zz_p.
+
+template<class type> 
+class  PlaintextBlockMatrixInterface : public PlaintextBlockMatrixBaseInterface {
+public:
+  PA_INJECT(type)
+
+  virtual void get(mat_R& out, long i, long j) const = 0;
+};
+
+
+
 /**
  * @class EncryptedArrayBase
  * @brief virtual class for data-movement operations on arrays of slots
@@ -103,27 +139,31 @@ public:
   virtual const FHEcontext& getContext() const = 0;
   virtual const long getDegree() const = 0;
 
-  //! @brief Left rotation as a linear array.
-  //! E.g., rotating ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(2 3 ... n 1)
+  //! @brief Right rotation as a linear array.
+  //! E.g., rotating ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(n 1 2 ... n-1)
   virtual void rotate(Ctxt& ctxt, long k) const = 0; 
 
-  //! @brief Non-cyclic left shift with zero fill
-  //! E.g., shifting ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(2 3 ... n 0)
+  //! @brief Non-cyclic right shift with zero fill
+  //! E.g., shifting ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(0 1  2... n-1)
   virtual void shift(Ctxt& ctxt, long k) const = 0;
 
-  //! @brief left-rotate k positions along the i'th dimension
+  //! @brief right-rotate k positions along the i'th dimension
   //! @param dc means "don't care", which means that the caller guarantees
   //! that only zero elements rotate off the end -- this allows for some
   //! optimizations that would not otherwise be possible
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const = 0; 
 
-  //! @brief Left shift k positions along the i'th dimension with zero fill
+  //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
 
   //! @multiply ctx by plaintext matrix: Ctxt is treated as
   //! a row matrix v, and replaced by en encryption of v * mat
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
+
+  //! @multiply ctx by plaintext block matrix: Ctxt is treated as
+  //! a row matrix v, and replaced by en encryption of v * mat
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const = 0;
 
   ///@{
   //! @name Encoding/decoding methods
@@ -287,6 +327,7 @@ public:
                const vector<long>& dimx) const;
 
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array); }
@@ -483,6 +524,9 @@ public:
   void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const 
   { rep->mat_mul(ctxt, mat); }
 
+  void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const 
+  { rep->mat_mul(ctxt, mat); }
+
   void encode(ZZX& ptxt, const vector< long >& array) const 
     { rep->encode(ptxt, array); }
   void encode(ZZX& ptxt, const vector< ZZX >& array) const 
@@ -623,6 +667,8 @@ public:
   // linear algebra
   virtual void mat_mul(const PlaintextMatrixBaseInterface& mat) = 0;
   virtual void alt_mul(const PlaintextMatrixBaseInterface& mat) = 0;
+
+  virtual void mat_mul(const PlaintextBlockMatrixBaseInterface& mat) = 0;
 
   //! Replicate coordinate i at all coordinates
   virtual void replicate(long i) = 0;
@@ -905,6 +951,33 @@ public:
        data[i] = res[i] % G;
   }
 
+  virtual void mat_mul(const PlaintextBlockMatrixBaseInterface& mat) 
+  {
+    assert(&ea == &mat.getEA());
+
+    RBak bak; bak.save(); tab.restoreContext();
+    const PlaintextBlockMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
+
+    vector<RX> res;
+    res.resize(n);
+    for (long j = 0; j < n; j++) {
+      vec_R acc, tmp, tmp1;
+      mat_R val;
+
+      acc.SetLength(degG);
+      for (long i = 0; i < n; i++) {
+         mat1.get(val, i, j);
+         VectorCopy(tmp1, data[i], degG);
+         NTL::mul(tmp, tmp1, val);
+         NTL::add(acc, acc, tmp);
+      }
+      conv(res[j], acc);
+    }
+
+    data = res;
+  }
+
   virtual void replicate(long i)
   {
     RBak bak; bak.save(); tab.restoreContext();
@@ -1015,6 +1088,8 @@ public:
 
   void mat_mul(const PlaintextMatrixBaseInterface& mat) { rep->mat_mul(mat); }
   void alt_mul(const PlaintextMatrixBaseInterface& mat) { rep->alt_mul(mat); }
+
+  void mat_mul(const PlaintextBlockMatrixBaseInterface& mat) { rep->mat_mul(mat); }
 
   //! Replicate coordinate i at all coordinates
   void replicate(long i) { rep->replicate(i); }
