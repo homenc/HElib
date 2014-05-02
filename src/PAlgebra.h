@@ -69,7 +69,7 @@ class PAlgebra {
   unsigned long ordP; // the order of p in (Z/mZ)^*
   unsigned long nSlots; // phi(m)/ordP = # of plaintext slots
 
-  vector<unsigned long> gens; // Our generators for (Z/mZ)^* (other than p)
+  vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
   vector<long> ords; // ords[i] is the order of gens[i] in quotient group kept
                      // with a negative sign if different than order in (Z/mZ)*
 

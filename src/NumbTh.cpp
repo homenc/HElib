@@ -122,6 +122,8 @@ template<class zz> static void factorT(vector<zz> &factors, const zz &N)
 void factorize(vector<long> &factors, long N) { factorT<long>(factors, N);}
 void factorize(vector<ZZ> &factors, const ZZ& N) {factorT<ZZ>(factors, N);}
 
+// Returns a list of prime factors and their multiplicity, 
+// N = \prod_i factors[i].first^{factors[i].second}
 void factorize(Vec< Pair<long, long> > &factors, long N)
 {
   factors.SetLength(0);
@@ -131,23 +133,34 @@ void factorize(Vec< Pair<long, long> > &factors, long N)
   PrimeSeq s;
   long n = N;
   while (n > 1) {
-    if (ProbPrime(n)) {
+    if (ProbPrime(n)) { // n itself is a prime, add (n,1) to the list
       append(factors, cons(n, 1L));
       return;
     }
 
     long p = s.next();
-    if ((n % p) == 0) {
+    if ((n % p) == 0) { // p divides n, find its multiplicity
       long e = 1;
       n = n/p;
       while ((n % p) == 0) {
         n = n/p;
         e++;
       }
-      append(factors, cons(p, e));
+      append(factors, cons(p, e)); // add (p,e) to the list
     }
   }
 }
+
+// Prime-power factorization
+void pp_factorize(vector<long>& factors, long N)
+{
+  Vec< Pair<long, long> > pf;
+  factorize(pf,N); // prime factors, N = \prod_i pf[i].first^{pf[i].second}
+  factors.resize(pf.length());
+  for (long i=0; i<pf.length(); i++)
+    factors[i] = power_long(pf[i].a, pf[i].b); // p_i^e_i
+}
+
 
 template<class zz> static void phiNT(zz &phin, vector<zz> &facts, const zz &N)
 {

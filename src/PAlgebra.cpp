@@ -73,6 +73,12 @@ bool operator<(const zz_pEX& a, const zz_pEX& b) { return poly_comp(a, b); }
 }
 
 
+// Compare numbers based on their absolute value
+
+static bool GTAbsVal(long a, long b)
+{
+  return (abs(a)>abs(b) || (abs(a)==abs(b) && a>b));
+}
 
 
 /* While generating the representation of (Z/mZ)^*, we keep the elements in
@@ -136,11 +142,11 @@ static
 void compOrder(vector<long>& orders, vector<unsigned long>& classes, bool flag, 
                unsigned long m)
 {
-  orders[0] = -INT_MAX;
-  orders[1] = 0;
+  orders[0] = 0;
+  orders[1] = 1;
   for (unsigned long i=2; i<m; i++) {
     if (classes[i] <= 1) { // ignore i not in Z_m^* and order-0 elements
-      orders[i] = (classes[i]==1)? 0 : -INT_MAX;
+      orders[i] = (classes[i]==1)? 1 : 0;
       continue;
     }
 
@@ -284,30 +290,16 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
   long idx, largest;
   while (true) {
     compOrder(orders,classes,true,m);
-    idx = argmax(orders);      // find the element with largest order
+    idx = argmax(orders, &GTAbsVal); // find the element with largest order
     largest = orders[idx];
 
-    if (largest <= 0) break;   // stop comparing to order in (Z/mZ)^*
+    if (abs(largest) == 1) break;   // stop comparing to order in (Z/mZ)^*
 
     // store generator with same order as in (Z/mZ)^*
     gens.push_back(idx);
     ords.push_back(largest);
     conjClasses(classes,idx,m); // merge classes that have a factor of idx
   }
-  // Compute orders in (Z/mZ)^*/<p> without comparing to (Z/mZ)^*
-  while (true) {
-    compOrder(orders,classes,false,m);
-    idx = argmax(orders);      // find the element with largest order
-    largest = orders[idx];
-
-    if (largest <= 0) break;   // we have the trivial group, we are done
-
-    // store generator with different order than (Z/mZ)^*
-    gens.push_back(idx);
-    ords.push_back(-largest);  // store with negative sign
-    conjClasses(classes,idx,m);  // merge classes that have a factor of idx
-  }
-
   nSlots = qGrpOrd();
   phiM = ordP * nSlots;
 

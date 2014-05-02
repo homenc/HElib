@@ -117,6 +117,9 @@ void factorize(vector<ZZ> &factors, const ZZ& N);
 //! primes and multiplicities are recorded
 void factorize(Vec< Pair<long, long> > &factors, long N);
 
+//! @brief Prime-power factorization
+void pp_factorize(vector<long>& factors, long N);
+
 //! Compute Phi(N) and also factorize N.
 void phiN(long &phiN, vector<long> &facts, long N);
 void phiN(ZZ &phiN, vector<ZZ> &facts, const ZZ &N);
@@ -266,6 +269,17 @@ template <class T> long argmax(vector<T>& v)
 template <class T> long argmin(vector<T>& v)
 {  return argminmax<T,false>(v); }
 
+//! @brief A variant with a specialized comparison function
+//! (*moreThan)(a,b) returns the comparison a>b
+inline long argmax(vector<long>& v, bool (*moreThan)(long, long))
+{
+  if (v.size()<1) return -INT_MAX; // error: this is an empty array
+  unsigned long idx = 0;
+  long target = v[0];
+  for (unsigned long i=1; i<v.size(); i++)
+    if ((*moreThan)(v[i],target)) { target = v[i]; idx = i; }
+  return (long) idx;
+}
 
 // Sample polynomials with entries {-1,0,1}. These functions are similar to
 // the SampleSmall class from v1, but without a class around it.
