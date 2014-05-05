@@ -24,9 +24,9 @@
 
 #include <climits>     // defines INT_MAX
 #include <cstring>
-#include <algorithm>   // defines count(...), min(...)
 #include <iostream>
 #include <cassert>
+#include <algorithm>   // defines count(...), min(...)
 
 #include "NumbTh.h"    // defines argmax(...)
 #include "PAlgebra.h"
@@ -72,108 +72,6 @@ bool operator<(const zz_pEX& a, const zz_pEX& b) { return poly_comp(a, b); }
 
 }
 
-
-// Compare numbers based on their absolute value
-
-static bool GTAbsVal(long a, long b)
-{
-  return (abs(a)>abs(b) || (abs(a)==abs(b) && a>b));
-}
-
-
-/* While generating the representation of (Z/mZ)^*, we keep the elements in
- * equivalence classes, and each class has a representative element (called
- * a pivot), which is the smallest element in the class. Initialy each element
- * is in its own class. When we add a new generator g we unify classes if
- * their members are a factor of g from each other, repeating this process
- * until no further unification is possible.
- *
- * We begin by adding p as a generator, thus computing the equivalence
- * classes of (Z/mZ)^* /<p>. Then we repeatedly compute the orders of
- * all elements in the current quotient group, choose the highest-order
- * element and add it as a generator, then recompute the new quotient
- * group and so on, until the remaining quotient group is the trivial
- * one, containing just a a single element.
- *
- * A twist is that initially we only add an element as a new generator if its
- * order in the current quotient group is the same as in the original group
- * (Z/mZ)^* (these are the gi's). Only after no such elements are available
- * we begin to use generators that do not have the same order as in Z_m^*.
- **/
-
-
-// The function conjClasses(classes,g,m) unifies equivalence classes that have
-// elements which are a factor of g apart, the pivot of the unified class is
-// the smallest element in that class. 
-
-static 
-void conjClasses(vector<unsigned long>& classes, unsigned long g, unsigned long m)
-{
-  for (unsigned long i=0; i<m; i++) {
-    if (classes[i]==0) continue; // i \notin (Z/mZ)^*
-
-    if (classes[i]<i) { // i is not a pivot, updated its pivot
-      classes[i] = classes[classes[i]];
-      continue;
-    }
-
-    // If i is a pivot, update other pivots to point to it
-    unsigned long ii = i;
-    unsigned long gg = g;
-    unsigned long jj = MulMod(ii, gg, m);
-    while (classes[jj] != i) {
-      classes[classes[jj]]= i; // Merge the equivalence classes of j and i
-
-      // Note: if classes[j]!=j then classes[j] will be updated later,
-      //       when we get to i=j and use the code for "i not pivot".
-
-      jj = MulMod(jj, g, m);
-    }
-  }
-}
-
-
-// The function compOrder(orders, classes,flag,m) computes the order of elements
-// of the quotient group, relative to current equivalent classes. If flag==1
-// then also check if the order is the same as in (Z/mZ)^* and store the order
-// with negative sign if not.
-
-static 
-void compOrder(vector<long>& orders, vector<unsigned long>& classes, bool flag, 
-               unsigned long m)
-{
-  orders[0] = 0;
-  orders[1] = 1;
-  for (unsigned long i=2; i<m; i++) {
-    if (classes[i] <= 1) { // ignore i not in Z_m^* and order-0 elements
-      orders[i] = (classes[i]==1)? 1 : 0;
-      continue;
-    }
-
-    // If not comparing order with (Z/mZ)^*, only compute the order of pivots
-
-    if (!flag && classes[i]<i){          // not a pivot
-      orders[i] = orders[classes[i]];
-      continue;
-    }
-
-    // For an element i>1, the order is at least 2
-    unsigned long ii = i;
-    unsigned long jj = MulMod(ii, ii, m);
-    long ord = 2;
-    while (classes[jj] != 1) {
-      jj = MulMod(jj, ii, m); // next element in <i>
-      ord++;    // count how many steps until we reach 1
-    }
-
-    // When we get here we have classes[j]==1, so if j!=1 it means that the
-    // order of i in the quotient group is smaller than its order in the
-    // entire group Z_m^*. If the flag is set then we store orders[i] = -ord.
-    
-    if (flag && jj != 1) ord = -ord; // order in Z_m^* is larger than ord
-    orders[i] = ord;
-  }
-}
 
 bool PAlgebra::operator==(const PAlgebra& other) const
 {
@@ -262,44 +160,12 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
   m = mm;
   p = pp;
 
-  //  assert( (m&1) == 1 );
   assert( ProbPrime(p) );
-  //  assert( m > p && (m % p) != 0 );
   assert( (m % p) != 0 );
   assert( m < NTL_SP_BOUND );
 
-  // Compute the generators for (Z/mZ)^*
-  vector<unsigned long> classes(m);
-  vector<long> orders(m);
-
-  unsigned long i;
-  for (i=0; i<m; i++) { // initially each element in its own class
-    if (GCD(i,m)!=1) 
-      classes[i] = 0; // i is not in (Z/mZ)^*
-    else 
-      classes[i] = i;
-  }
-
-  // Start building a representation of (Z/mZ)^*, first use the generator p
-  conjClasses(classes,p,m);  // merge classes that have a factor of p
-
-  // The order of p is the size of the equivalence class of 1
-  ordP = (unsigned long) count (classes.begin(), classes.end(), 1);
-
-  // Compute orders in (Z/mZ)^*/<p> while comparing to (Z/mZ)^*
-  long idx, largest;
-  while (true) {
-    compOrder(orders,classes,true,m);
-    idx = argmax(orders, &GTAbsVal); // find the element with largest order
-    largest = orders[idx];
-
-    if (abs(largest) == 1) break;   // stop comparing to order in (Z/mZ)^*
-
-    // store generator with same order as in (Z/mZ)^*
-    gens.push_back(idx);
-    ords.push_back(largest);
-    conjClasses(classes,idx,m); // merge classes that have a factor of idx
-  }
+  // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
+  ordP = findGenerators(this->gens, this->ords, m, p);
   nSlots = qGrpOrd();
   phiM = ordP * nSlots;
 
@@ -308,7 +174,8 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
   dLogT.resize(nSlots*gens.size());
   Tidx.assign(m,-1);    // allocate m slots, initialize them to -1
   zmsIdx.assign(m,-1);  // allocate m slots, initialize them to -1
-  for (i=idx=0; i<m; i++) if (GCD(i,m)==1) zmsIdx[i] = idx++;
+  long i, idx;
+  for (i=idx=0; i<(long)m; i++) if (GCD(i,m)==1) zmsIdx[i] = idx++;
 
   // Now fill the Tidx and dLogT translation tables. We identify an element
   // t\in T with its representation t = \prod_{i=0}^n gi^{ei} mod m (where

@@ -18,6 +18,7 @@
 #include <fstream>
 #include <cassert>
 #include <cctype>
+#include <algorithm>   // defines count(...), min(...)
 
 using namespace std;
 
@@ -191,6 +192,134 @@ long phi_N(long N)
         { phiN=phiN*(p-1)*power_long(p,e-1); }
     }
   return phiN;
+}
+
+/* While generating the representation of (Z/mZ)^*, we keep the elements in
+ * equivalence classes, and each class has a representative element (called
+ * a pivot), which is the smallest element in the class. Initialy each element
+ * is in its own class. When we add a new generator g we unify classes if
+ * their members are a factor of g from each other, repeating this process
+ * until no further unification is possible.
+ *
+ * We begin by adding p as a generator, thus computing the equivalence
+ * classes of (Z/mZ)^* /<p>. Then we repeatedly compute the orders of
+ * all elements in the current quotient group, choose the highest-order
+ * element and add it as a generator, then recompute the new quotient
+ * group and so on, until the remaining quotient group is the trivial
+ * one, containing just a a single element. A twist is that when choosing
+ * the highest-order generator, we try to find one whose order in the
+ * current quotient group is the same as in the original group (Z/mZ)^*.
+ **/
+
+// The function conjClasses(classes,g,m) unifies equivalence classes that
+// have elements which are a factor of g apart, the pivot of the unified
+// class is the smallest element in that class. 
+static void conjClasses(vector<long>& classes, long g, long m)
+{
+  for (long i=0; i<m; i++) {
+    if (classes[i]==0) continue; // i \notin (Z/mZ)^*
+
+    if (classes[i]<i) { // i is not a pivot, updated its pivot
+      classes[i] = classes[classes[i]];
+      continue;
+    }
+
+    // If i is a pivot, update other pivots to point to it
+    unsigned long j = MulMod(i, g, m);
+    while (classes[j] != i) {
+      classes[classes[j]]= i; // Merge the equivalence classes of j and i
+
+      // Note: if classes[j]!=j then classes[j] will be updated later,
+      //       when we get to i=j and use the code for "i not pivot".
+
+      j = MulMod(j, g, m);
+    }
+  }
+}
+
+
+// The function compOrder(orders, classes,flag,m) computes the order of elements
+// of the quotient group, relative to current equivalent classes. If flag==1
+// then also check if the order is the same as in (Z/mZ)^* and store the order
+// with negative sign if not.
+static void 
+compOrder(vector<long>& orders, vector<long>& classes, bool flag, long m)
+{
+  orders[0] = 0;
+  orders[1] = 1;
+  for (long i=2; i<m; i++) {
+    if (classes[i] <= 1) { // ignore i not in Z_m^* and order-0 elements
+      orders[i] = (classes[i]==1)? 1 : 0;
+      continue;
+    }
+
+    // If not comparing order with (Z/mZ)^*, only compute the order of pivots
+
+    if (!flag && classes[i]<i){          // not a pivot
+      orders[i] = orders[classes[i]];
+      continue;
+    }
+
+    // For an element i>1, the order is at least 2
+    long j = MulMod(i, i, m);
+    long ord = 2;
+    while (classes[j] != 1) {
+      j = MulMod(j, i, m); // next element in <i>
+      ord++;    // count how many steps until we reach 1
+    }
+
+    // When we get here we have classes[j]==1, so if j!=1 it means that the
+    // order of i in the quotient group is smaller than its order in the
+    // entire group Z_m^*. If the flag is set then we store orders[i] = -ord.
+    
+    if (flag && j != 1) ord = -ord; // order in Z_m^* is larger than ord
+    orders[i] = ord;
+  }
+}
+
+// Compare numbers based on their absolute value
+static bool gtAbsVal(long a, long b)
+{
+  return (abs(a)>abs(b) || (abs(a)==abs(b) && a>b));
+}
+
+// Returns in gens a generating set for Zm* /<p>, and in ords the
+// order of these generators. Return value is the order of p in Zm*.
+long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p)
+{
+  // Compute the generators for (Z/mZ)^*
+  vector<long> classes(m);
+  vector<long> orders(m);
+
+  for (long i=0; i<m; i++) { // initially each element in its own class
+    if (GCD(i,m)!=1) classes[i] = 0; // i is not in (Z/mZ)^*
+    else             classes[i] = i;
+  }
+
+  // Start building a representation of (Z/mZ)^*, first use the generator p
+  conjClasses(classes,p,m);  // merge classes that have a factor of p
+
+  // The order of p is the size of the equivalence class of 1
+  long ordP = std::count(classes.begin(), classes.end(), 1);
+       // count(from,to,val) returns # of elements in (from,to) with value=val
+
+  // Compute orders in (Z/mZ)^*/<p> while comparing to (Z/mZ)^*
+  while (true) {
+    compOrder(orders,classes,true,m);
+    // if the orders of i in Zm* /<p> and Zm* are not the same, then
+    // order[i] contains the order in Zm* /<p> with negative sign
+
+    long idx = argmax(orders, &gtAbsVal); // find the element with largest order
+    long largest = orders[idx];
+
+    if (abs(largest) == 1) break;   // Trivial group, we are done
+
+    // store generator with same order as in (Z/mZ)^*
+    gens.push_back(idx);
+    ords.push_back(largest);
+    conjClasses(classes,idx,m); // merge classes that have a factor of idx
+  }
+  return ordP;
 }
 
 // finding e-th root of unity modulo the current modulus
