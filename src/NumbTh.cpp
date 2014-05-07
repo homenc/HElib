@@ -287,6 +287,8 @@ static bool gtAbsVal(long a, long b)
 // order of these generators. Return value is the order of p in Zm*.
 long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p)
 {
+  gens.clear();
+  ords.clear();
   // Compute the generators for (Z/mZ)^*
   vector<long> classes(m);
   vector<long> orders(m);

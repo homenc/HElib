@@ -463,6 +463,15 @@ public:
    const ZZ_pXModulus& upcast() const { return *this; }
 };
 
+inline ostream& operator<<(ostream& s, vector<long> v)
+{
+  if (v.size()==0) return (s << "[]");
+
+  s << '[';
+  for (long i=0; i<(long) v.size()-1; i++)
+    s << v[i] << ' ';
+  return (s << v[v.size()-1] << ']');
+}
 
 
 #endif
