@@ -82,6 +82,11 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
 void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
              long p, long r);
 
+//! @brief Compute the inverse mod p^r of an n x n matrix.
+//! NTL's current smallint modulus zz_p::modulus() is assumed to be p^r for
+//! p prime, r >= 1 integer. An error is raised if A is not inverible mod p.
+void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r);
+
 //! @brief Combination of buildLinPolyMatrix and ppsolve.
 //!
 //! Obtain the linearized polynomial coefficients from a vector L representing 

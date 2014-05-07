@@ -1028,6 +1028,65 @@ void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
    if (det == 0) Error("ppsolve: matrix not invertible");
 }
 
+
+// prime power solver
+// zz_p::modulus() is assumed to be p^r, for p prime, r >= 1.
+// A is an n x n matrix, we compute its inverse mod p^r.
+// An error is raised if A is not inverible mod p.
+void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
+{
+  if (r == 1) { // use native inversion from NTL
+    inv(X, A);    // X = A^{-1}
+    return;
+  }
+
+  // begin by inverting A modulo p
+
+  // convert to ZZX for a safe transaltion to mod-p objects
+  vector< vector<ZZX> > tmp;
+  convert(tmp, A);
+  { // open a new block for mod-p computation
+  ZZX G;
+  convert(G, zz_pE::modulus());
+  zz_pBak bak_pr; bak_pr.save(); // backup the mod-p^r moduli
+  zz_pEBak bak_prE; bak_prE.save();
+  zz_p::init(p);   // Set the mod-p moduli
+  zz_pE::init(conv<zz_pX>(G));
+
+  mat_zz_pE A1, Inv1;
+  convert(A1, tmp);   // Recover A as a mat_zz_pE object modulo p
+  inv(Inv1, A1);      // Inv1 = A^{-1} (mod p)
+  convert(tmp, Inv1); // convert to ZZX for transaltion to a mod-p^r object
+  } // mod-p^r moduli restored on desctuction of bak_pr and bak_prE
+  convert(X, tmp); // X = A^{-1} (mod p)
+
+  // Now lift the solution modulo p^r
+
+  // Compute the "correction factor" Z, s.t. X*A = I - p*Z (mod p^r)
+  long n = A.NumRows();
+  const mat_zz_pE I = ident_mat_zz_pE(n); // identity matrix
+  mat_zz_pE Z = I - X*A;
+
+  convert(tmp, Z);  // Conver to ZZX to divide by p
+  for (long i=0; i<n; i++) for (long j=0; j<n; j++) tmp[i][j] /= p;
+  convert(Z, tmp);  // convert back to a mod-p^r object
+
+  // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*X (mod p^r). We use
+  // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* X
+
+  long e = NextPowerOfTwo(r); // 2^e is smallest power of two >= r
+
+  Z *= p;                 // = pZ
+  mat_zz_pE prod = I + Z; // = I + pZ
+  for (long i=1; i<e; i++) {
+    sqr(Z, Z);     // = (pZ)^{2^i}
+    prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
+  }
+  mul(X, prod, X); // X = A^{-1} mod p^r
+  assert(X*A == I);
+}
+
+
 void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
 {
    mat_zz_pE M;
