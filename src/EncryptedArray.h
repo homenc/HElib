@@ -217,7 +217,7 @@ public:
   //! The result is a coefficient vector C for the linearized polynomial
   //! representing M: a polynoamial h in Z/(p^r)[X] of degree < d is sent to
   //! \f[
-  //! M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
+  //!  M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
   //! \f]
   virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const=0;
 
@@ -1103,17 +1103,14 @@ public:
 // reason for these to be members of the EncryptedArray class,
 // so they are just declared as separate functions.
 
-//! @brief if ctxt encrypts (x_1, ..., x_n), then it is
-//! replaced by an encryption of (y_1, ..., y_n), where
-//! y_i = sum_{j=1}^i x_j.  The implementation uses 
-//! O(log n) shift operations.
+//! @brief A ctxt that encrypts \f$(x_1, ..., x_n)\f$ is replaced by an
+//! encryption of \f$(y_1, ..., y_n)\$, where \f$y_i = sum_{j\le i} x_j.\f$
+// The implementation uses O(log n) shift operations.
 void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 
-//! @brief if ctxt encrypts (x_1, ..., x_n), then it is
-//! replaced by an encryption of (y_n, ..., y_n), where
-
+//! @brief A ctxt that encrypts \f$(x_1, ..., x_n)\f$ is replaced by an
+//! encryption of \f$(y, ..., y)\$, where \f$y = sum_{j=1}^n x_j.\f$
 void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
-
 
 
 //! @brief incrementalZeroTest sets each res[i], for i=0..n-1, to a ciphertext
@@ -1126,40 +1123,38 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 //             O(n d) 
 
 
-
-//! @brief apply the linearized polynomial to a ciphertext
-
-void applyLinPolyLL(const EncryptedArray& ea, 
-                    Ctxt& ctxt, const vector<ZZX>& encodedC);
-// low-level variant: encodedCoeffs has all the linPoly coeffs
-// encoded in slots; different transformations can be encoded
-// in different slots
-
-void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C);
-// C is the output of ea.buildLinPolyCoeffs;
-// same linear transformation applied to each slot
-
-void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
-                      const vector< vector<ZZX> >& Cvec);
-// Cvec is a vector of length ea.size(), each entry of which
-// is the output of ea.buildLinPolyCoeffs; 
-// different transformations can be encoded in different slots
-
-
-/*********************
+///@{
+/**
+ * @name Apply linearized polynomials to a ciphertext.
  *
  * Example usage: The map L selects just the even coefficients
+ * \code
+ *     long d = ea.getDegree();
+ *     vector<ZZX> L(d);
+ *     for (long j = 0; j < d; j++)
+ *       if (j % 2 == 0) L[j] = ZZX(j, 1);
  *
- *   long d = ea.getDegree();
- *   vector<ZZX> L(d);
- *   for (long j = 0; j < d; j++)
- *     if (j % 2 == 0) L[j] = ZZX(j, 1);
- *
- *   vector<ZZX> C;
- *   ea.buildLinPolyCoeffs(C, L); 
- *
- *   applyLinPoly1(ea, ctxt, C);
- *
- *********************/
+ *     vector<ZZX> C;
+ *     ea.buildLinPolyCoeffs(C, L); 
+ *     applyLinPoly1(ea, ctxt, C);
+ * \endcode
+ */
+
+//! @brief Apply the same linear transformation to all the slots
+//! @param C is the output of ea.buildLinPolyCoeffs;
+void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C);
+
+//! @brief Apply different transformations to different slots
+//! @param Cvec is a vector of length ea.size(), each entry of which
+//!        is the output of ea.buildLinPolyCoeffs; 
+void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
+                      const vector< vector<ZZX> >& Cvec);
+
+//! @brief a low-level variant:
+//! @param encodedCoeffs has all the linPoly coeffs encoded  in slots;
+//!        different transformations can be encoded in different slots
+void applyLinPolyLL(const EncryptedArray& ea, 
+                    Ctxt& ctxt, const vector<ZZX>& encodedC);
+///@}
 
 #endif /* ifdef _EncryptedArray_H_ */

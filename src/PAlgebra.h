@@ -121,7 +121,7 @@ class PAlgebra {
   //! The order of p in (Z/mZ)^*
   unsigned long getOrdP() const { return ordP; }
 
-  //! The number of plaintext slots = phi(m) = ord(p)
+  //! The number of plaintext slots = phi(m)/ord(p)
   unsigned long getNSlots() const { return nSlots; }
 
   //! The cyclotomix polynomial Phi_m(X)

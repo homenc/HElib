@@ -554,9 +554,16 @@ void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt)
   arr.setData(array1);
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::
-buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
+// Linearized polynomials.
+// L describes a linear map M by describing its action on the standard
+// power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.  
+// The result is a coefficient vector C for the linearized polynomial
+// representing M: a polynoamial h in Z/(p^r)[X] of degree < d is sent to
+//
+//    M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
+template<class type> void
+EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<ZZX>& C, 
+						const vector<ZZX>& L) const
 {
   RBak bak; bak.save(); context.alMod.restoreContext();
   const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
@@ -653,25 +660,8 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 }
 
 
-void applyLinPolyLL(const EncryptedArray& ea, 
-                    Ctxt& ctxt, const vector<ZZX>& encodedC)
-{
-  long d = ea.getDegree();
-  assert(d == lsize(encodedC));
-
-  ctxt.reLinearize();  // not sure, but this may be a good idea
-
-  Ctxt tmp(ctxt);
-
-  ctxt.multByConstant(encodedC[0]);
-  for (long j = 1; j < d; j++) {
-    Ctxt tmp1(tmp);
-    tmp1.frobeniusAutomorph(j);
-    tmp1.multByConstant(encodedC[j]);
-    ctxt += tmp1;
-  }
-}
-
+// Apply the same linear transformation to all the slots.
+// C is the output of ea.buildLinPolyCoeffs
 void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 {
   assert(&ea.getContext() == &ctxt.getContext());
@@ -691,6 +681,8 @@ void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 }
 
 
+// Apply different transformations to different slots. Cvec is a vector of
+// length ea.size(), with each entry the output of ea.buildLinPolyCoeffs
 void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
                       const vector< vector<ZZX> >& Cvec)
 {
@@ -712,3 +704,23 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
   applyLinPolyLL(ea, ctxt, encodedC);
 }
 
+// A low-level variant: encodedCoeffs has all the linPoly coeffs encoded
+// in slots; different transformations can be encoded in different slots
+void applyLinPolyLL(const EncryptedArray& ea, 
+                    Ctxt& ctxt, const vector<ZZX>& encodedC)
+{
+  long d = ea.getDegree();
+  assert(d == lsize(encodedC));
+
+  ctxt.reLinearize();  // not sure, but this may be a good idea
+
+  Ctxt tmp(ctxt);
+
+  ctxt.multByConstant(encodedC[0]);
+  for (long j = 1; j < d; j++) {
+    Ctxt tmp1(tmp);
+    tmp1.frobeniusAutomorph(j);
+    tmp1.multByConstant(encodedC[j]);
+    ctxt += tmp1;
+  }
+}
