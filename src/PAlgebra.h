@@ -55,7 +55,9 @@
 #include <NTL/GF2EX.h>
 #include <NTL/lzz_pEX.h>
 #include <NTL/mat_GF2.h>
+#include <NTL/mat_GF2E.h>
 #include <NTL/mat_lzz_p.h>
+#include <NTL/mat_lzz_pE.h>
 
 #include "cloned_ptr.h"
 
@@ -262,6 +264,7 @@ public:
   typedef DummyContext RContext;
   typedef GF2E RE;
   typedef vec_GF2E vec_RE;
+  typedef mat_GF2E mat_RE;
   typedef GF2EX REX;
   typedef GF2EBak REBak;
   typedef vec_GF2EX vec_REX;
@@ -283,6 +286,7 @@ public:
   typedef zz_pContext RContext;
   typedef zz_pE RE;
   typedef vec_zz_pE vec_RE;
+  typedef mat_zz_pE mat_RE;
   typedef zz_pEX REX;
   typedef zz_pEBak REBak;
   typedef vec_zz_pEX vec_REX;
@@ -350,6 +354,7 @@ public:
   typedef typename typ::RContext RContext;  \
   typedef typename typ::RE RE;  \
   typedef typename typ::vec_RE vec_RE;  \
+  typedef typename typ::mat_RE mat_RE;  \
   typedef typename typ::REX REX;  \
   typedef typename typ::REBak REBak;  \
   typedef typename typ::vec_REX vec_REX;  \

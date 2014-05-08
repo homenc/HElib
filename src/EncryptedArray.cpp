@@ -525,12 +525,13 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
     for (long j = 0; j < nslots; j++) {
       bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j);
       assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+        // get(...) returns true if the entry is empty, false otherwise
 
-      if (!zEntry && IsZero(entry)) zEntry = true;
+      if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
 
-      if (!zEntry) {
+      if (!zEntry) {    // non-empty entry
 
-        zDiag = false;
+        zDiag = false;  // mark diagonal as non-empty
 
         // clear entries between last nonzero entry and this one
 
@@ -549,21 +550,20 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
       }
     }
 
-    
     if (zDiag) continue; // zero diagonal, continue
 
-    // clear trailing zero entries
-    
+    // clear trailing zero entries    
     for (long jj = nzLast+1; jj < nslots; jj++) {
       for (long k = 0; k < d; k++)
         clear(diag[jj][k]);
     }
-    
+
     // now diag[j] contains the lin poly coeffs
-    
+
     Ctxt shCtxt = ctxt;
     rotate(shCtxt, i); 
 
+    // apply the linearlized polynomial
     for (long k = 0; k < d; k++) {
 
       // compute the constant
@@ -579,6 +579,7 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
 
       ZZX cpoly;
       encode(cpoly, cvec);
+      // FIXME: record the encoded polynomial for future use
 
       Ctxt shCtxt1 = shCtxt;
       shCtxt1.frobeniusAutomorph(k);
@@ -586,7 +587,6 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
       res += shCtxt1;
     }
   }
-
   ctxt = res;
 }
 

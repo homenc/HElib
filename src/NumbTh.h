@@ -23,19 +23,24 @@
 #include <cmath>
 #include <cassert>
 #include <istream>
+#include <string>
 #include <climits>
 
 #include <NTL/ZZ.h>
-#include <NTL/ZZ_p.h>
 #include <NTL/ZZX.h>
-#include <NTL/GF2X.h>
 #include <NTL/vec_ZZ.h>
+#include <NTL/ZZ_p.h>
 #include <NTL/xdouble.h>
-#include <NTL/mat_lzz_pE.h>
+
+//#include <NTL/GF2X.h>
+#include <NTL/mat_GF2.h>
 #include <NTL/mat_GF2E.h>
-#include <NTL/lzz_pXFactoring.h>
 #include <NTL/GF2XFactoring.h>
-#include <string>
+
+#include <NTL/mat_lzz_p.h>
+#include <NTL/mat_lzz_pE.h>
+#include <NTL/lzz_pXFactoring.h>
+
 
 NTL_CLIENT
 
@@ -85,8 +90,11 @@ void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
              long p, long r);
 
 //! @brief Compute the inverse mod p^r of an n x n matrix.
+//! 
 //! NTL's current smallint modulus zz_p::modulus() is assumed to be p^r for
-//! p prime, r >= 1 integer. An error is raised if A is not inverible mod p.
+//! p prime, r >= 1 integer. For the zz_pE variant also zz_pE::modulus()
+//! must be initialized. An error is raised if A is not inverible mod p.
+void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r);
 void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r);
 
 //! @brief Combination of buildLinPolyMatrix and ppsolve.
