@@ -23,6 +23,8 @@
 #include <cmath>
 #include <cassert>
 #include <istream>
+#include <climits>
+
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_p.h>
 #include <NTL/ZZX.h>
