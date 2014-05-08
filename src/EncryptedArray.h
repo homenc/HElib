@@ -50,13 +50,15 @@ public:
 //! 
 //! The method get(out, i, j) copies the element at row i column j of a
 //! matrix into the variable out. The type of out is RX, which is GF2X
-//! if type is PA_GF2, and zz_pX if type is PA_zz_p.
+//! if type is PA_GF2, and zz_pX if type is PA_zz_p. A return value of 
+//! true means that the entry is zero, and out is not touched.
+
 template<class type> 
 class  PlaintextMatrixInterface : public PlaintextMatrixBaseInterface {
 public:
   PA_INJECT(type)
 
-  virtual void get(RX& out, long i, long j) const = 0;
+  virtual bool get(RX& out, long i, long j) const = 0;
 };
 
 
@@ -157,13 +159,20 @@ public:
   //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
+  //! @multiply ctx by plaintext matrix: Ctxt is treated as
+  //! a row matrix v, and replaced by en encryption of v * mat
+  //! Optimized for sparse diagonals
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
 
   //! @multiply ctx by plaintext matrix: Ctxt is treated as
   //! a row matrix v, and replaced by en encryption of v * mat
-  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
+  //! Optimized for dense matrices
+  virtual void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
+
 
   //! @multiply ctx by plaintext block matrix: Ctxt is treated as
   //! a row matrix v, and replaced by en encryption of v * mat
+  //! Optimized for sparse diagonals
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const = 0;
 
   ///@{
@@ -319,7 +328,7 @@ public:
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
 
 
-  // helper routine for mat_mul
+  // helper routine for mat_mul_dense
   void rec_mul(long dim, 
                Ctxt& res, 
                const Ctxt& pdata, 
@@ -327,6 +336,7 @@ public:
                const PlaintextMatrixInterface<type>& mat,
                const vector<long>& dimx) const;
 
+  virtual void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const;
 
@@ -521,6 +531,9 @@ public:
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
+
+  void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const 
+  { rep->mat_mul_dense(ctxt, mat); }
 
   void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const 
   { rep->mat_mul(ctxt, mat); }
@@ -890,9 +903,10 @@ public:
       RX acc, val, tmp; 
       acc = 0;
       for (long i = 0; i < n; i++) {
-         mat1.get(val, i, j);
-         NTL::mul(tmp, data[i], val);
-         NTL::add(acc, acc, tmp);
+        if (!mat1.get(val, i, j)) {
+          NTL::mul(tmp, data[i], val);
+          NTL::add(acc, acc, tmp);
+        }
       }
       rem(acc, acc, G);
       res[j] = acc;
@@ -913,8 +927,7 @@ public:
       for (long j = 0; j < ea.size(); j++) {
         long i = idx[j];
         RX val;
-        mat.get(val, i, j);
-        res[j] += pdata[j] * val;
+        if (!mat.get(val, i, j)) res[j] += pdata[j] * val;
       }
     }
     else {

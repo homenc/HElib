@@ -325,8 +325,10 @@ void EncryptedArrayDerived<type>::
     for (long j = 0; j < nslots; j++) {
       long i = idx[j];
       RX val;
-      mat.get(val, i, j);
-      pmat[j] = val;
+      if (!mat.get(val, i, j))
+        pmat[j] = val;
+      else
+        clear(pmat[j]);
     }
 
     ZZX epmat;
@@ -353,7 +355,7 @@ void EncryptedArrayDerived<type>::
 // helper class to sort dimensions, so that
 //    - bad dimensions come before good dimensions (primary sort key)
 //    - small dimensions come before large dimesnions (secondary sort key)
-// this is a good order to process the dimensions in the recursive mat_mul
+// this is a good order to process the dimensions in the recursive mat_mul_dense
 // routine: it ensures that the work done at the work done at the
 // leaves of the recursion is minimized, and that the work done
 // at the non-leaves is dominated by the work done at the leaves.
@@ -372,7 +374,7 @@ struct MatMulDimComp {
 
 
 template<class type>
-void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const
+void EncryptedArrayDerived<type>::mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const
 {
   assert(this == &mat.getEA().getDerived(type()));
   assert(&context == &ctxt.getContext());
@@ -382,6 +384,8 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
 
   const PlaintextMatrixInterface<type>& mat1 = 
     dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+  ctxt.reLinearize(); // not sure, but this may be a good idea
 
   Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
   // a new ciphertext, encrypting zero
@@ -401,6 +405,79 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
   // and then small ones come before large
 
   rec_mul(0, res, ctxt, idx, mat1, dimx);
+
+  ctxt = res;
+}
+
+
+// this mat_mul is optimized for diagonally sparse matrices
+
+template<class type>
+void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const
+{
+  assert(this == &mat.getEA().getDerived(type()));
+  assert(&context == &ctxt.getContext());
+
+  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
+  RBak bak; bak.save(); tab.restoreContext();
+
+  const PlaintextMatrixInterface<type>& mat1 = 
+    dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+  ctxt.reLinearize(); // not sure, but this may be a good idea
+
+  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
+  // a new ciphertext, encrypting zero
+  
+
+  long nslots = size();
+  long d = getDegree();
+
+  RX entry;
+  vector<RX> diag;
+  diag.resize(nslots);
+
+  for (long i = 0; i < nslots; i++) {
+    // process diagonal i
+
+
+    bool zDiag = true;
+    long nzLast = -1;
+
+    for (long j = 0; j < nslots; j++) {
+      bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j);
+      assert(zEntry || deg(entry) < d);
+
+      if (!zEntry && IsZero(entry)) zEntry = true;
+
+      if (!zEntry) {
+
+        zDiag = false;
+
+        // clear entries between last nonzero entry and this one
+
+        for (long jj = nzLast+1; jj < j; jj++) clear(diag[jj]);
+        nzLast = j;
+
+        diag[j] = entry;
+      }
+    }
+
+    
+    if (zDiag) continue; // zero diagonal, continue
+
+    // clear trailing zero entries
+    for (long jj = nzLast+1; jj < nslots; jj++) clear(diag[jj]);
+    
+    Ctxt shCtxt = ctxt;
+    rotate(shCtxt, i); 
+
+    ZZX cpoly;
+    encode(cpoly, diag);
+
+    shCtxt.multByConstant(cpoly);
+    res += shCtxt;
+  }
 
   ctxt = res;
 }

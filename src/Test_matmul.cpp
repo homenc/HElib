@@ -39,13 +39,14 @@ public:
     return ea;
   }
 
-  virtual void get(RX& out, long i, long j) const {
+  virtual bool get(RX& out, long i, long j) const {
     assert(i >= 0 && i < ea.size());
     assert(j >= 0 && j < ea.size());
     if (j >= i)
       out = 1;
     else
       out = 0;
+    return false;
   }
 };
 
@@ -84,10 +85,11 @@ public:
     return ea;
   }
 
-  virtual void get(RX& out, long i, long j) const {
+  virtual bool get(RX& out, long i, long j) const {
     assert(i >= 0 && i < ea.size());
     assert(j >= 0 && j < ea.size());
     out = 1;
+    return false;
   }
 };
 
@@ -126,13 +128,21 @@ public:
     long n = ea.size();
     long d = ea.getDegree();
 
+    long bnd = 2*n; // non-zero with probability 1/bnd
+
     RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
 
     data.resize(n);
     for (long i = 0; i < n; i++) {
       data[i].resize(n);
-      for (long j = 0; j < n; j++)
-        random(data[i][j], d);
+      for (long j = 0; j < n; j++) {
+        bool zEntry = (RandomBnd(bnd) > 0);
+
+        if (zEntry)
+          clear(data[i][j]);
+        else
+          random(data[i][j], d);
+      }
     }
   }
 
@@ -140,10 +150,12 @@ public:
     return ea;
   }
 
-  virtual void get(RX& out, long i, long j) const {
+  virtual bool get(RX& out, long i, long j) const {
     assert(i >= 0 && i < ea.size());
     assert(j >= 0 && j < ea.size());
+    if (IsZero(data[i][j])) return true;
     out = data[i][j];
+    return false;
   }
 };
 
@@ -214,7 +226,7 @@ public:
       data[i].resize(n);
       for (long j = 0; j < n; j++) {
         RX tmp;
-        M.get(tmp, i, j);
+        if (M.get(tmp, i, j)) clear(tmp);
         matrixOfPoly(data[i][j], tmp, G);
       }
     }
@@ -267,6 +279,8 @@ public:
     long n = ea.size();
     long d = ea.getDegree();
 
+    long bnd = 2*n; // non-zero with probability 1/bnd
+
     RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
 
     data.resize(n);
@@ -275,9 +289,14 @@ public:
       for (long j = 0; j < n; j++) {
         data[i][j].SetDims(d, d);
 
+        bool zEntry = (RandomBnd(bnd) > 0);
+
         for (long u = 0; u < d; u++)
-          for (long v = 0; v < d; v++)
-            random(data[i][j][u][v]);
+          for (long v = 0; v < d; v++) 
+            if (zEntry) 
+              clear(data[i][j][u][v]);
+            else
+              random(data[i][j][u][v]);
       }
     }
   }
@@ -289,6 +308,7 @@ public:
   virtual bool get(mat_R& out, long i, long j) const {
     assert(i >= 0 && i < ea.size());
     assert(j >= 0 && j < ea.size());
+    if (IsZero(data[i][j])) return true;
     out = data[i][j];
     return false;
   }
