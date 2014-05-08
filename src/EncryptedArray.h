@@ -84,14 +84,15 @@ public:
 //! 
 //! The method get(out, i, j) copies the element at row i column j of a
 //! matrix into the variable out. The type of out is mat_R (so either
-//! mar_GF2 or mat_zz_p.
+//! mar_GF2 or mat_zz_p.  A return value of true means that the
+//! entry is zero, and out is not touched.
 
 template<class type> 
 class  PlaintextBlockMatrixInterface : public PlaintextBlockMatrixBaseInterface {
 public:
   PA_INJECT(type)
 
-  virtual void get(mat_R& out, long i, long j) const = 0;
+  virtual bool get(mat_R& out, long i, long j) const = 0;
 };
 
 
@@ -967,10 +968,11 @@ public:
 
       acc.SetLength(degG);
       for (long i = 0; i < n; i++) {
-         mat1.get(val, i, j);
-         VectorCopy(tmp1, data[i], degG);
-         NTL::mul(tmp, tmp1, val);
-         NTL::add(acc, acc, tmp);
+         if (!mat1.get(val, i, j)) {
+            VectorCopy(tmp1, data[i], degG);
+            NTL::mul(tmp, tmp1, val);
+            NTL::add(acc, acc, tmp);
+         }
       }
       conv(res[j], acc);
     }

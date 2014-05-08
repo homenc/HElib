@@ -224,10 +224,11 @@ public:
     return ea;
   }
 
-  virtual void get(mat_R& out, long i, long j) const {
+  virtual bool get(mat_R& out, long i, long j) const {
     assert(i >= 0 && i < ea.size());
     assert(j >= 0 && j < ea.size());
     out = data[i][j];
+    return false;
   }
 };
 
@@ -285,10 +286,11 @@ public:
     return ea;
   }
 
-  virtual void get(mat_R& out, long i, long j) const {
+  virtual bool get(mat_R& out, long i, long j) const {
     assert(i >= 0 && i < ea.size());
     assert(j >= 0 && j < ea.size());
     out = data[i][j];
+    return false;
   }
 };
 

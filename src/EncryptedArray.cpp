@@ -428,42 +428,61 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
   long nslots = size();
   long d = getDegree();
 
+  mat_R entry;
+  entry.SetDims(d, d);
+
+  vector<RX> entry1;
+  entry1.resize(d);
+  
+  vector< vector<RX> > diag;
+  diag.resize(nslots);
+  for (long j = 0; j < nslots; j++) diag[j].resize(d);
+
   for (long i = 0; i < nslots; i++) {
     // process diagonal i
 
-    mat_R entry;
-    vector<RX> entry1;
-    
-    vector< vector<RX> > diag;
-    diag.resize(nslots);
 
-    bool zeroDiag = true;
+    bool zDiag = true;
+    long nzLast = -1;
 
     for (long j = 0; j < nslots; j++) {
-      mat1.get(entry, mcMod(j-i, nslots), j);
-      assert(entry.NumRows() == d && entry.NumCols() == d);
+      bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j);
+      assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
 
-      if (IsZero(entry)) {
-        for (long k = 0; k < d; k++)
-          clear(diag[j][k]);
-      }
-      else {
+      if (!zEntry && IsZero(entry)) zEntry = true;
 
-        zeroDiag = false;
+      if (!zEntry) {
+
+        zDiag = false;
+
+        // clear entries between last nonzero entry and this one
+
+        for (long jj = nzLast+1; jj < j; jj++) {
+          for (long k = 0; k < d; k++)
+            clear(diag[jj][k]);
+        }
+
+        nzLast = j;
 
         // recode entry as a vector of polynomials
-        entry1.resize(d);
         for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
 
         // compute the lin poly coeffs
         tab.buildLinPolyCoeffs(diag[j], entry1, mappingData);
-
       }
     }
 
-    // now diag[j] contains the lin poly coeffs
     
-    if (zeroDiag) continue;
+    if (zDiag) continue; // zero diagonal, continue
+
+    // clear trailing zero entries
+    
+    for (long jj = nzLast+1; jj < nslots; jj++) {
+      for (long k = 0; k < d; k++)
+        clear(diag[jj][k]);
+    }
+    
+    // now diag[j] contains the lin poly coeffs
     
     Ctxt shCtxt = ctxt;
     rotate(shCtxt, i); 
@@ -471,15 +490,15 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
     for (long k = 0; k < d; k++) {
 
       // compute the constant
-      bool zeroConst = true;
+      bool zConst = true;
       vector<RX> cvec;
       cvec.resize(nslots);
       for (long j = 0; j < nslots; j++) {
         cvec[j] = diag[j][k];
-        if (!IsZero(cvec[j])) zeroConst = false;
+        if (!IsZero(cvec[j])) zConst = false;
       }
 
-      if (zeroConst) continue;
+      if (zConst) continue;
 
       ZZX cpoly;
       encode(cpoly, cvec);

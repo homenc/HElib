@@ -598,11 +598,12 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   for (long i=1; i<nSlots; i++)
     mapToFt(mappingData.maps[i], G, zMStar.ith_rep(i), &(mappingData.maps[0])); 
 
-  if (deg(G)==1) return;
 
   REBak bak; bak.save(); 
   RE::init(G);
   mappingData.contextForG.save();
+
+  if (deg(G)==1) return;
 
   mappingData.rmaps.resize(nSlots);
 
