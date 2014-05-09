@@ -1058,21 +1058,22 @@ void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
   inv(Inv1, A1);      // Inv1 = A^{-1} (mod p)
   convert(tmp, Inv1); // convert to ZZX for transaltion to a mod-p^r object
   } // mod-p^r moduli restored on desctuction of bak_pr and bak_prE
-  convert(X, tmp); // X = A^{-1} (mod p)
+  mat_zz_pE XX;
+  convert(XX, tmp); // XX = A^{-1} (mod p)
 
   // Now lift the solution modulo p^r
 
-  // Compute the "correction factor" Z, s.t. X*A = I - p*Z (mod p^r)
+  // Compute the "correction factor" Z, s.t. XX*A = I - p*Z (mod p^r)
   long n = A.NumRows();
   const mat_zz_pE I = ident_mat_zz_pE(n); // identity matrix
-  mat_zz_pE Z = I - X*A;
+  mat_zz_pE Z = I - XX*A;
 
   convert(tmp, Z);  // Conver to ZZX to divide by p
   for (long i=0; i<n; i++) for (long j=0; j<n; j++) tmp[i][j] /= p;
   convert(Z, tmp);  // convert back to a mod-p^r object
 
-  // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*X (mod p^r). We use
-  // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* X
+  // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*XX (mod p^r). We use
+  // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* XX
 
   long e = NextPowerOfTwo(r); // 2^e is smallest power of two >= r
 
@@ -1082,7 +1083,7 @@ void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
     sqr(Z, Z);     // = (pZ)^{2^i}
     prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
   }
-  mul(X, prod, X); // X = A^{-1} mod p^r
+  mul(X, prod, XX); // X = A^{-1} mod p^r
   assert(X*A == I);
 }
 
@@ -1100,7 +1101,7 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
 
   // begin by inverting A modulo p
 
-  // convert to ZZX for a safe transaltion to mod-p objects
+  // convert to long for a safe transaltion to mod-p objects
   Mat<long> tmp;
   conv(tmp, A);
   { // open a new block for mod-p computation
@@ -1110,23 +1111,24 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
   mat_zz_p A1, Inv1;
   conv(A1, tmp);   // Recover A as a mat_zz_pE object modulo p
   inv(Inv1, A1);      // Inv1 = A^{-1} (mod p)
-  conv(tmp, Inv1); // convert to ZZX for transaltion to a mod-p^r object
+  conv(tmp, Inv1); // convert to long for transaltion to a mod-p^r object
   } // mod-p^r moduli restored on desctuction of bak_pr and bak_prE
-  conv(X, tmp); // X = A^{-1} (mod p)
+  mat_zz_p XX;
+  conv(XX, tmp); // XX = A^{-1} (mod p)
 
   // Now lift the solution modulo p^r
 
-  // Compute the "correction factor" Z, s.t. X*A = I - p*Z (mod p^r)
+  // Compute the "correction factor" Z, s.t. XX*A = I - p*Z (mod p^r)
   long n = A.NumRows();
   const mat_zz_p I = ident_mat_zz_p(n); // identity matrix
-  mat_zz_p Z = I - X*A;
+  mat_zz_p Z = I - XX*A;
 
-  conv(tmp, Z);  // Conver to ZZX to divide by p
+  conv(tmp, Z);  // Conver to long to divide by p
   for (long i=0; i<n; i++) for (long j=0; j<n; j++) tmp[i][j] /= p;
   conv(Z, tmp);  // convert back to a mod-p^r object
 
-  // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*X (mod p^r). We use
-  // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* X
+  // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*XX (mod p^r). We use
+  // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* XX
 
   long e = NextPowerOfTwo(r); // 2^e is smallest power of two >= r
 
@@ -1136,10 +1138,9 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
     sqr(Z, Z);     // = (pZ)^{2^i}
     prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
   }
-  mul(X, prod, X); // X = A^{-1} mod p^r
+  mul(X, prod, XX); // X = A^{-1} mod p^r
   assert(X*A == I);
 }
-
 
 void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
 {

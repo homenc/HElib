@@ -92,10 +92,16 @@ void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
 //! @brief Compute the inverse mod p^r of an n x n matrix.
 //! 
 //! NTL's current smallint modulus zz_p::modulus() is assumed to be p^r for
-//! p prime, r >= 1 integer. For the zz_pE variant also zz_pE::modulus()
-//! must be initialized. An error is raised if A is not inverible mod p.
+//! p prime, r >= 1 integer. For the zz_pE variant also zz_pE::modulus() must
+//! be initialized. An error is raised if A is not inverible mod p.
 void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r);
 void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r);
+
+// variants for GF2/GF2E to help with template code
+inline void ppInvert(mat_GF2& X, const mat_GF2& A, long p, long r)
+{ NTL::inv(X, A); }
+inline void ppInvert(mat_GF2E& X, const mat_GF2E& A, long p, long r)
+{ NTL::inv(X, A); }
 
 //! @brief Combination of buildLinPolyMatrix and ppsolve.
 //!
