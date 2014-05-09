@@ -343,7 +343,7 @@ Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea, long m1, long m2)
   A.SetDims(ord2, ord2);
   for (long i=0; i<ord2; i++) for (long j=0; j<ord2; j++) {
       long exp = MulMod(i, T[j], m2);
-      convert(A[i][j], T[exp]); // convert ZZX to zz_pE
+      convert(A[i][j], eta2Powers[exp]);
     }
 }
 
