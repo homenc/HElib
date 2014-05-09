@@ -159,6 +159,9 @@ Step1Matrix<type>::Step1Matrix(const EncryptedArray& _ea, long m1, long m2)
   PolyPowers<type>::computePolyPowers(eta1Powers,       // powers of eta1
 				      ea.getDerived(type()),m2,m1);
 
+  const PAlgebraModDerived<type>& tab=ea.getContext().alMod.getDerived(type());
+  RBak bak; bak.save();
+  tab.restoreContext();
   A.resize(ord1);
   for (long i=0; i<ord1; i++) { // Go over the rows A_i
     A[i].resize(ord1);
@@ -332,6 +335,11 @@ Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea, long m1, long m2)
   PolyPowers<type>::computePolyPowers(eta2Powers,
 				      ea.getDerived(type()), m1, m2);
 
+  const PAlgebraModDerived<type>& tab=ea.getContext().alMod.getDerived(type());
+  RBak bak; bak.save();
+  REBak bakE; bakE.save();
+  tab.restoreContext();
+  RE::init(ea.getDerived(type()).getG());
   A.SetDims(ord2, ord2);
   for (long i=0; i<ord2; i++) for (long j=0; j<ord2; j++) {
       long exp = MulMod(i, T[j], m2);
@@ -361,6 +369,7 @@ void testIt(long m1, long m2, long p, long r)
   FHEcontext context(m, p, r);
   EncryptedArray ea(context, context.alMod.getFactorsOverZZ()[0]);
 
+#if 0
   if (r>1) {
     const PAlgebraModDerived<PA_zz_p>& tab = context.alMod.getDerived(PA_zz_p());
     zz_pBak bak; bak.save(); tab.restoreContext();
@@ -376,20 +385,25 @@ void testIt(long m1, long m2, long p, long r)
     cout << "okay\n";
     exit(0);
   }
+#endif
 
   // Compute the matrix for step 1 and its inverse
+  cerr << " + Computing step-1 matrix..." << std::flush;
   PlaintextBlockMatrixBaseInterface* step1Matrix_pt
     = buildStep1Matrix(ea, m1, m2);
+  cerr << "done\n + Inverting step-1 matrix..." << std::flush;
   PlaintextBlockMatrixBaseInterface* step1Inverse_pt
     = buildStep1Inverse(step1Matrix_pt);
 
   // Compute the matrix for step 2
+  cerr << "done\n + Computing step-2 matrix..." << std::flush;
   PlaintextMatrixBaseInterface* step2Matrix_pt
     = buildStep2Matrix(ea, m1, m2);
+  cerr << "done\n + Inverting step-2 matrix..." << std::flush;
   PlaintextMatrixBaseInterface* step2Inverse_pt
     = buildStep2Inverse(step2Matrix_pt);
 
-  cout << "okay";
+  cerr << "done";
 }
 
 void usage(char *prog) 
