@@ -789,30 +789,27 @@ void Ctxt::divideBy2()
   ptxtSpace /= 2; // and so is the plaintext space
 }
 
-// This function assumes that the slots of c contains integers mod 2^r
-// (i.e., that only the free terms are nonzero). It computes for each slot
-// the AND (product) of all the bits in the inetegr in that slot. That is,
-// the end result has 1 in some slot iff the content of that slot was 2^r-1.
-void Ctxt::extractBits(vector<Ctxt>& bits, long r)
+// Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
+// that the ciphertext encrypts a polynomial which is zero mod p. If this
+// is not the case then the result will not be a valid ciphertext anymore.
+// As a side-effect, the plaintext space is reduced from p^r to p^{r-1}.
+void Ctxt::divideByP()
 {
-  assert (getContext().zMStar.getP()==2);
-  if (r<=0 || r>getContext().alMod.getR()) // how many bits to extract
-    r = getContext().alMod.getR();
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
 
-  Ctxt tmp(getPubKey(), getPtxtSpace());
-  bits.resize(r, tmp);      // allocate space
-  vector<Ctxt> w(r-1, tmp);
-  w[0] = *this;
-  for (long i=1; i<r; i++) {
-    tmp = *this;
-    for (long j=0; j<i; j++) {
-      w[j].square();
-      tmp -= w[j];
-      tmp.divideBy2();
-    }
-    bits[i] = tmp; // bits[i]=i'th lowest bit in the slots of c mod 2^{r-i}
-    if (i<r-1) w[i] = tmp; // needed in the next round
-  }
+  long p = getContext().zMStar.getP();
+  assert (ptxtSpace>p);
+
+  // multiply all the parts by p^{-1} mod Q (Q=productOfPrimes)
+  ZZ pInverse, Q;
+  getContext().productOfPrimes(Q, getPrimeSet());
+  InvMod(pInverse, conv<ZZ>(p), Q);
+  for (size_t i=0; i<parts.size(); i++)
+    parts[i] *= pInverse;
+
+  noiseVar /= (p * (double)p);  // noise is reduced by a p factor
+  ptxtSpace /= p;               // and so is the plaintext space
 }
 
 void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)

@@ -354,18 +354,14 @@ public:
   { multByConstant(DoubleCRT(poly,context,primeSet),size); }
   void multByConstant(const ZZ& c);
 
-  //! Divide a cipehrtext by 2. It is assumed that the ciphertext
-  //! encrypts an even polynomial and has plaintext space 2^r for r>1.
-  //! As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
-  //! If these assumptions are not met then the result will not be a
-  //! valid ciphertext anymore.
+  //! Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
+  //! that the ciphertext encrypts a polynomial which is zero mod p. If this
+  //! is not the case then the result will not be a valid ciphertext anymore.
+  //! As a side-effect, the plaintext space is reduced from p^r to p^{r-1}.
+  void divideByP();
   void divideBy2();
 
-  //! This function assumes that the slots of c contains integers mod 2^r
-  //! (i.e., that only the free terms are nonzero). It returns in the slots of
-  //! bits[i] the i'th-lowest bits from the integers in the slots of the input
-  //! If these assumptions are not met then the result will not be a
-  //! valid ciphertext anymore.
+  // For backward compatibility
   void extractBits(vector<Ctxt>& bits, long nBits2extract=0);
 
   // Higher-level multiply routines
@@ -490,5 +486,30 @@ inline Ctxt innerProduct(const vector<Ctxt>& v1, const vector<ZZX>& v2)
 
 //! print to cerr some info about ciphertext
 void CheckCtxt(const Ctxt& c, const char* label);
+
+/**
+ * @brief Extract the mod-p digits of a mod-p^r ciphertext.
+ * 
+ * extractDigits returns in the slots of digits[j] the j'th-lowest digits
+ * from the integers in the slots of the input. Namely, the i'th slot of
+ * digits[j] contains the j'th digit in the p-base expansion of the integer
+ * in the i'th slot of the *this.
+ * 
+ * If r==0 then it is set to context.alMod.getR(). It is assumed that the
+ * slots of *this contains integers mod p^r, i.e., that only the free terms
+ * are nonzero. If that assumptions does not hold then the result will not
+ * be a valid ciphertext anymore.
+ *
+ * If the shortCut flag is set then digits[j] contains the j'th digits
+ * wrt mod-p plaintext space and the highest possible level (for all j).
+ * Otherwise digits[j] still contains the j'th digit in the base-p expansion,
+ * but wrt mod-p^{r-j} plaintext space, and all the ciphertexts are at the
+ * same level.
+ **/
+void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r=0, bool shortCut=false);
+  // implemented in extractDigits.cpp
+
+inline void Ctxt::extractBits(vector<Ctxt>& bits, long nBits2extract)
+{ extractDigits(bits, *this, nBits2extract, true); }
 
 #endif // ifndef _Ctxt_H_

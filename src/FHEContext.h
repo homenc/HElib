@@ -110,11 +110,17 @@ public:
 
   long fftPrimeCount;
 
+  //! A degree-p polynomial Q(X) s.t. for any t<r and integr z of the
+  //! form z = z0 + p^t*z1 (with 0<=z0<p), we have Q(z) = z0 (mod p^{t+1}).
+  ZZX modP_digPoly;
+    // Initialized at 1st call to Ctxt::extractDigits(...)
+
+
   // Constructors must ensure that alMod points to zMStar
 
   // constructor
   FHEcontext(unsigned long m, unsigned long p, unsigned long r): 
-  zMStar(m, p), alMod(zMStar, r) 
+  zMStar(m, p), alMod(zMStar, r), modP_digPoly(ZZX::zero())
   {
     stdev=3.2;  
     fftPrimeCount = 0; 
@@ -125,7 +131,6 @@ public:
     // if the size of NTL's FFTs for m and phi(m) are the same.
     // If NTL didn't have these power-of-two jumps, we would possibly
     // want to change this.
-
   }
 
   bool operator==(const FHEcontext& other) const;
