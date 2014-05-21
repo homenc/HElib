@@ -161,6 +161,15 @@ void convertToPowerful(Vec<zz_p>& v, const zz_pX& F,
   for (long i = 0; i < phim; i++) v[i] = cube[i];
 }
 
+// returns g(h) mod f
+zz_pX EvalMod(const Vec<zz_pX>& g, const zz_pX& h, const zz_pX& f) 
+{
+  zz_pX acc;
+  for (long i = g.length()-1; i >= 0; i--)
+    acc = ((acc*h) % f) + g[i];
+  return acc;
+}
+
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
                long L, long m1, long m2)
@@ -272,33 +281,44 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   for (long i = 0; i < nslots; i++)
     eval_values[i] = CompMod(F, eval_points[i], G);
 
-
-
-
   // evaluate F via the cube structure
+
+
+  Vec<zz_pX> points1;
+  points1.SetLength(phim1/d);
+  for (long i = 0; i < phim1/d; i++)
+    points1[i] = zz_pX(m2 * rep1[i], 1) % G;
+
+  Vec<zz_pX> points2;
+  points2.SetLength(phim2);
+  for (long j = 0; j < phim2; j++)
+    points2[j] = zz_pX(m1 * rep2[j], 1) % G;
 
   Vec<zz_p> cube;
   convertToPowerful(cube, F, m1, m2, phim1, phim2);
   
   Vec<zz_pX> alt_values;
-  
-  for (long i = 0; i < rep1.length(); i++) {
-    for (long j = 0; j < rep2.length(); j++) {
-      cerr << ".";
-      long x1 = rep1[i];
-      long x2 = rep2[j];
+  alt_values.SetLength(nslots);
 
-      zz_pX res;
-      for (long l = 0; l < phim; l++) {
-        long s1 = l / phim2;
-        long s2 = l % phim2;
-        long s = mcMod(m2*s1*x1 + m1*s2*x2, m);
+  for (long j = 0; j < phim2; j++) {
+    zz_pX tpoly;
+    tpoly.SetLength(phim1);
+    for (long i = 0; i < phim1; i++)
+      tpoly[i] = cube[i*phim2 + j];
+    tpoly.normalize();
 
-        res += zz_pX(s, cube[l]) % G; 
-      }
+    for (long i = 0; i < phim1/d; i++)
+      alt_values[i*phim2 + j] = CompMod(tpoly, points1[i], G);
+  }
 
-      append(alt_values, res);
-    }
+  for (long i = 0; i < phim1/d; i++) {
+    Vec<zz_pX> tpoly;
+    tpoly.SetLength(phim2);
+    for (long j = 0; j < phim2; j++)
+      tpoly[j] = alt_values[i*phim2 + j];
+
+    for (long j = 0; j < phim2; j++)
+      alt_values[i*phim2 + j ] = EvalMod(tpoly, points2[j], G);
   }
 
   if (eval_values == alt_values) 
