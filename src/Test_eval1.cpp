@@ -185,7 +185,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   cout << slot_index << "\n";
   cout << slot_rotate << "\n";
 
-  zz_p::init(p);
+  zz_p::init(context.alMod.getPPowR());
 
   zz_pX G = conv<zz_pX>(GG);
 
@@ -418,3 +418,4 @@ int main(int argc, char *argv[])
 }
 
 // working test case: m1=89 m2=23
+// smaller case: m1=17 m2=5
