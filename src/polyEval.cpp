@@ -19,44 +19,7 @@
  */
 #include "polyEval.h"
 
-#ifdef DEBUG_PRINTOUT
-static FHESecKey* sk_pt = NULL;      // global pointers for debugging purposes
-static EncryptedArray* ea_pt = NULL;
-
-static void checkPolyEval(const Ctxt& out, const Ctxt& in, const ZZX& poly)
-{
-  long p = in.getPtxtSpace();
-
-  // decrypt input and output
-  vector< long > in_v;
-  vector< long > out_v;
-  ea_pt->decrypt(in, *sk_pt, in_v);
-  ea_pt->decrypt(out, *sk_pt, out_v);
-  for (long i=0; i<ea_pt->size(); i++)
-    if (out_v[i] != polyEvalMod(poly, in_v[i], p)) {
-	cerr << "Error: poly="<< poly 
-	     << ", p="  << p
-	     << ", in=" << in_v[i]
-	     << ", out="<< out_v[i] <<endl;
-	exit(0);
-      }
-
-  cerr << "Eval("<<poly<<") succeeded, out[0]="<<out_v[0]<<endl;
-}
-
-static void printSlots(const Ctxt& c)
-{
-  // decrypt input and output
-  vector< long > v;
-  ea_pt->decrypt(c, *sk_pt, v);
-  cerr << "[";
-  for (long i=0; i<ea_pt->size(); i++)
-    cerr << v[i]<<" ";
-  cerr << "]";
-}
-#endif // DEBUG_PRINTOUT
-
-// Returns the e'th power, computing it as needed
+// Returns the e'th power of X, computing it as needed
 Ctxt& DynamicCtxtPowers::getPower(long e)
 {
   if (v.at(e-1).isEmpty()) { // Not computed yet, compute it now
@@ -99,15 +62,14 @@ simplePolyEval(Ctxt& ret, const ZZX& poly, DynamicCtxtPowers& babyStep)
 }
 
 
-// The recursive procedure in the Paterson-Stockmeyer polynomial-evaluation
-// algorithm from SIAM J. on Computing, 1973.
+// The recursive procedure in the Paterson-Stockmeyer
+// polynomial-evaluation algorithm from SIAM J. on Computing, 1973.
 // This procedure assumes that poly is monic, deg(poly)=k*(2t-1)+delta
-// with t=2^e, and that babyStep contains k+delta powers
+// with t=2^e, and that babyStep contains >= k+delta powers
 static void
 PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long delta,
 		   DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep)
 {
-  //  if (verbose) cerr << "PatersonStockmeyer("<<poly<<"), t="<<t<<endl;
   if (deg(poly)<=babyStep.size()) { // Edge condition, use simple eval
     simplePolyEval(ret, poly, babyStep);
     return;
@@ -127,7 +89,7 @@ PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long delta,
   assert(IsZero(c) || deg(c)<k-delta);
   SetCoeff(s,deg(q)); // s' = s + X^{deg(q)}, deg(s)==deg(q)
 
-  // reduce the coefficients modulo mod
+  // reduce the coefficients modulo p
   for (long i=0; i<=deg(c); i++) rem(c[i],c[i], p);
   c.normalize();
   for (long i=0; i<=deg(s); i++) rem(s[i],s[i], p);
@@ -143,11 +105,10 @@ PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long delta,
 
   PatersonStockmeyer(tmp, s, k, t/2, delta, babyStep, giantStep);
   ret += tmp;
-  //  if (verbose) checkPolyEval(ret, babyStep[0], poly);
 }
 
 // This procedure assumes that k*(2^e +1) > deg(poly) > k*(2^e -1),
-// and that babyStep contains k+ (deg(poly) mod k) powers
+// and that babyStep contains >= k + (deg(poly) mod k) powers
 static void
 degPowerOfTwo(Ctxt& ret, const ZZX& poly, long k,
 	      DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep)
@@ -173,14 +134,12 @@ degPowerOfTwo(Ctxt& ret, const ZZX& poly, long k,
     tmp.multiplyBy(giantStep.getPower(i));
   }
   ret += tmp;
-  //  if (verbose) checkPolyEval(ret, babyStep[0], poly);
 }
 
 static void 
 recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
 		  DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep)
 {
-  //  if (verbose) cerr << "recursivePolyEval("<<poly<<")"<<endl;
   if (deg(poly)<=babyStep.size()) { // Edge condition, use simple eval
     simplePolyEval(ret, poly, babyStep);
     return;
@@ -224,7 +183,6 @@ recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
 
   recursivePolyEval(tmp, r, k, babyStep, giantStep);
   ret += tmp;
-  //  if (verbose) checkPolyEval(ret, babyStep[0], poly);
 }
 
 
@@ -232,12 +190,11 @@ recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
 void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
      // Note: poly is passed by value, so caller keeps the original
 {
-  //  if (verbose) cerr << "polyEval("<<poly<<")"<<endl;
-  if (deg(poly)<=2) { // nothing to optimize here
-    if (deg(poly)<1) {
+  if (deg(poly)<=2) {  // nothing to optimize here
+    if (deg(poly)<1) { // A constant
       ret.clear();
       ret.addConstant(coeff(poly, 0));
-    } else {
+    } else {           // A linear or quadratic polynomial
       DynamicCtxtPowers babyStep(x, deg(poly));
       simplePolyEval(ret, poly, babyStep);
     }
@@ -260,11 +217,11 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
     if ((k==16 && deg(poly)>167) || (k>16 && k>(1.44*kk)))
       k /= 2;
   }
+#ifdef DEBUG_PRINTOUT
   cerr << "  k="<<k;
+#endif
 
   long n = divc(deg(poly),k);          // deg(p) = k*n +delta
-  //  if (verbose) cerr << ", n="<<n<<endl;
-
   DynamicCtxtPowers babyStep(x, k);
   const Ctxt& x2k = babyStep.getPower(k);
 
@@ -304,7 +261,6 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
   DynamicCtxtPowers giantStep(x2k, t);
 
   if (!IsOne(top)) {
-    // if (verbose) cerr << "multiplying polynomial by "<<topInv<<endl;
     poly *= topInv; // Multiply by topInv to make into a monic polynomial
     for (long i=0; i<=n*k; i++) rem(poly[i], poly[i], p);
     poly.normalize();
@@ -312,7 +268,6 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
   recursivePolyEval(ret, poly, k, babyStep, giantStep);
 
   if (!IsOne(top)) {
-    // if (verbose) cerr << "multiplying result by "<<top<<endl;
     ret.multByConstant(top);
   }
 
@@ -326,10 +281,44 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
 
 
 
+// Some debugging code
 
+#ifdef DEBUG_PRINTOUT
+static FHESecKey* sk_pt = NULL;      // global pointers for debugging purposes
+static EncryptedArray* ea_pt = NULL;
 
+static void checkPolyEval(const Ctxt& out, const Ctxt& in, const ZZX& poly)
+{
+  long p = in.getPtxtSpace();
 
+  // decrypt input and output
+  vector< long > in_v;
+  vector< long > out_v;
+  ea_pt->decrypt(in, *sk_pt, in_v);
+  ea_pt->decrypt(out, *sk_pt, out_v);
+  for (long i=0; i<ea_pt->size(); i++)
+    if (out_v[i] != polyEvalMod(poly, in_v[i], p)) {
+	cerr << "Error: poly="<< poly 
+	     << ", p="  << p
+	     << ", in=" << in_v[i]
+	     << ", out="<< out_v[i] <<endl;
+	exit(0);
+      }
 
+  cerr << "Eval("<<poly<<") succeeded, out[0]="<<out_v[0]<<endl;
+}
+
+static void printSlots(const Ctxt& c)
+{
+  // decrypt input and output
+  vector< long > v;
+  ea_pt->decrypt(c, *sk_pt, v);
+  cerr << "[";
+  for (long i=0; i<ea_pt->size(); i++)
+    cerr << v[i]<<" ";
+  cerr << "]";
+}
+#endif // DEBUG_PRINTOUT
 
 
 

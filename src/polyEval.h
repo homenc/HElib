@@ -19,6 +19,16 @@
  */
 #include "Ctxt.h"
 
+//! @brief Evaluate a cleartext polynomial on an encrypted input
+//! @param[out] res  to hold the return value
+//! @param[in]  poly the degree-d polynomial to evaluate
+//! @param[in]  x    the point on which to evaluate
+//! @param[in]  k    optional optimization parameter, defaults to sqrt(d/2) rounded up or down to a power of two
+void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k=0);
+     // Note: poly is passed by value, so caller keeps the original
+
+// A useful helper class
+
 //! @brief Store powers of X, compute them synamically as needed.
 // This implementation assumes that the size (# of powers) is determine
 // at initialization time, it is not hard to grow the vector as needed,
@@ -63,7 +73,3 @@ public:
 void checkPolyEval(const Ctxt& out, const Ctxt& in, const ZZX& poly);
 void printSlots(const Ctxt& c);
 #endif
-
-//! @brief Evaluate a cleartext polynomial on an encrypted input
-void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k=0);
-     // Note: poly is passed by value, so caller keeps the original
