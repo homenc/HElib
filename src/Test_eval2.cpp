@@ -378,8 +378,11 @@ void Step1Matrix<type>::invert(vector< vector< mat_R > >& Ainv) const
   for (long i=0; i<dim; i++) for (long j=0; j<dim; j++)
       bigA[i][j] = A[i/d][j/d][i%d][j%d];
 
-  // invert the big matrix
-  ppInvert(bigA, bigA, tab.getZMStar().getP(), tab.getR());
+  mat_R bigAinv;
+
+  // invert the big matrix...careful, ppInvert does not work
+  // if first two arguments are aliases
+  ppInvert(bigAinv, bigA, tab.getZMStar().getP(), tab.getR());
 
   // Copy the inverted matrix back into the small matrices in Ainv
 
@@ -392,7 +395,7 @@ void Step1Matrix<type>::invert(vector< vector< mat_R > >& Ainv) const
   }
   // Then copy the data
   for (long i=0; i<dim; i++) for (long j=0; j<dim; j++)
-      Ainv[i/d][j/d][i%d][j%d] = bigA[i][j];
+      Ainv[i/d][j/d][i%d][j%d] = bigAinv[i][j];
 }
 
 
@@ -800,6 +803,9 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   PlaintextArray pa_orig = pa;
 
   pa.mat_mul(*step1);
+
+  PlaintextArray pa_int = pa;
+
   pa.mat_mul(*step2);
 
   vector<ZZX> AV3;
@@ -815,13 +821,19 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   
 
-  PlaintextBlockMatrixBaseInterface *step1inv =
+  PlaintextBlockMatrixBaseInterface *step1inv = 
     buildStep1Inverse(step1);
 
   PlaintextMatrixBaseInterface *step2inv =
     buildStep2Inverse(step2);
 
   pa.mat_mul(*step2inv);
+
+  if (pa.equals(pa_int)) 
+    cout << "step2 inverse OK\n";
+  else
+    cout << "step2 inverse NOT OK\n";
+
   pa.mat_mul(*step1inv);
 
   if (pa.equals(pa_orig)) 
