@@ -220,12 +220,30 @@ void convert(T1& x1, const T2& x2)
    conv(x1, x2);
 }
 
-//! A generic vector conversion routine
+//! generic vector conversion routines
 template<class T1, class T2> 
 void convert(vector<T1>& v1, const vector<T2>& v2)
 {
    long n = v2.size();
    v1.resize(n);
+   for (long i = 0; i < n; i++)
+      convert(v1[i], v2[i]);
+}
+
+template<class T1, class T2> 
+void convert(vector<T1>& v1, const Vec<T2>& v2)
+{
+   long n = v2.length();
+   v1.resize(n);
+   for (long i = 0; i < n; i++)
+      convert(v1[i], v2[i]);
+}
+
+template<class T1, class T2> 
+void convert(Vec<T1>& v1, const vector<T2>& v2)
+{
+   long n = v2.size();
+   v1.SetLength(n);
    for (long i = 0; i < n; i++)
       convert(v1[i], v2[i]);
 }
@@ -484,7 +502,8 @@ public:
    const ZZ_pXModulus& upcast() const { return *this; }
 };
 
-inline ostream& operator<<(ostream& s, vector<long> v)
+template<class T>
+ostream& operator<<(ostream& s, vector<T> v)
 {
   if (v.size()==0) return (s << "[]");
 
