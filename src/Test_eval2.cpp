@@ -795,7 +795,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   convert(AV2, av2);
 
   PlaintextArray pa(ea);
+
   pa.encode(AV2);
+  PlaintextArray pa_orig = pa;
+
   pa.mat_mul(*step1);
   pa.mat_mul(*step2);
 
@@ -809,6 +812,24 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     cout << "too cool!!\n";
   else
     cout << "nooooo!!!\n";
+
+  
+
+  PlaintextBlockMatrixBaseInterface *step1inv =
+    buildStep1Inverse(step1);
+
+  PlaintextMatrixBaseInterface *step2inv =
+    buildStep2Inverse(step2);
+
+  pa.mat_mul(*step2inv);
+  pa.mat_mul(*step1inv);
+
+  if (pa.equals(pa_orig)) 
+    cout << "inverse OK\n";
+  else
+    cout << "inverse NOT OK\n";
+
+
 #endif
 
 
