@@ -14,6 +14,9 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+// turn on range checking
+#define NTL_RANGE_CHECK
+
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
@@ -22,556 +25,104 @@
 
 #include <cassert>
 
-void init_representatives(Vec<long>& representatives, long m, long p)
+void buildLinPolyMatrix(mat_zz_pE& M, long p, long d1)
 {
-  Vec<bool> available;
-  available.SetLength(m);
+   long d = zz_pE::degree();
+   assert(d % d1 == 0);
+   long d2 = d/d1;
+   long q = power_long(p, d1);
 
-  long num_available = 0;
+   M.SetDims(d2, d2);
 
-  for (long i = 0; i < m; i++) {
-    if (GCD(i, m) == 1) {
-      available[i] = true;
-      num_available++;
-    }
-    else
-      available[i] = false;
-  }
+   for (long j = 0; j < d2; j++) 
+      conv(M[0][j], zz_pX(j, 1));
 
-  representatives.SetLength(0);
-
-  while (num_available > 0) {
-
-    // choose next available at random
-    long i;
-    do {
-      i = RandomBnd(m);
-    } while (!available[i]);
-
-    append(representatives, i);
-
-    // mark all conjugates as unavailable
-    long j = i;
-    do {
-      available[j] = false;
-      num_available--;
-      j = MulMod(j, p, m);
-    } while (j != i);
-  }
+   for (long i = 1; i < d2; i++)
+      for (long j = 0; j < d2; j++)
+         M[i][j] = power(M[i-1][j], q);
 }
 
 
-void alt_init_representatives(Vec<long>& rep, long m, long gen, long phim)
+
+void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r, long d1)
 {
-  rep.SetLength(phim);
-  rep[0] = 1;
-  for (long i = 1; i < phim; i++)
-    rep[i] = MulMod(rep[i-1], gen, m);
+   mat_zz_pE M;
+   buildLinPolyMatrix(M, p, d1);
+
+   vec_zz_pE C;
+   ppsolve(C, M, L, p, r);
+
+   C_out = C;
 }
 
-
-void init_slot_mappings(Vec<long>& slot_index, 
-                        Vec<long>& slot_rotate, 
-                        const Vec<long>& representatives, 
-                        long m,
-                        long p,
-                        const FHEcontext& context)
+void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p, long d1)
 {
-   long nslots = representatives.length();
+   long d = zz_pE::degree();
+   assert(d % d1 == 0);
+   long d2 = d/d1;
+   assert(d2 == C.length());
+   long q = power_long(p, d1);
 
-   assert(nslots == long(context.zMStar.getNSlots()));
+   zz_pE gamma, res;
 
-   slot_index.SetLength(nslots);
-   slot_rotate.SetLength(nslots);
-
-   Vec<bool> used; // for debugging
-   used.SetLength(nslots);
-   for (long i = 0; i < nslots; i++) used[i] = false;
-   
-   for (long i = 0; i < nslots; i++) {
-     long t = representatives[i];
-     long h = 0;
-     long idx;
-     while ((idx = context.zMStar.indexOfRep(InvMod(t, m))) == -1) {
-       t = MulMod(t, p, m);
-       h++;
-     }
-
-     assert(!used[idx]);
-     used[idx] = true;
-     slot_index[i] = idx;
-     slot_rotate[i] = h;
+   gamma = to_zz_pE(zz_pX(1, 1));
+   res = C[0]*alpha;
+   for (long i = 1; i < d2; i++) {
+      gamma = power(gamma, q);
+      res += C[i]*to_zz_pE(CompMod(rep(alpha), rep(gamma), zz_pE::modulus()));
    }
+
+   beta = res;
 }
 
-void convertToPowerful(Vec<zz_p>& v, const zz_pX& F, 
-                       long m1, long m2, long phim1, long phim2)
-{ 
-  // Crazy code from powerful module
-
-  long m = m1*m2;
-  long phim = phim1*phim2;
-
-  Vec<long> phiVec;
-  phiVec.SetLength(2);
-  phiVec[0] = phim1;
-  phiVec[1] = phim2;
-
-  Vec<long> powVec;
-  powVec.SetLength(2);
-  powVec[0] = m1;
-  powVec[1] = m2;
-
-  Vec<long> divVec;
-  computeDivVec(divVec, m, powVec);
-
-  Vec<long> invVec;
-  computeInvVec(invVec, divVec, powVec);
-
-  CubeSignature shortSig(phiVec);
-  CubeSignature longSig(powVec);
-
-  Vec<long> polyToCubeMap;
-  Vec<long> cubeToPolyMap;
-  computePowerToCubeMap(polyToCubeMap, cubeToPolyMap, m, powVec, invVec, longSig);
-
-  Vec<long> shortToLongMap;
-  computeShortToLongMap(shortToLongMap, shortSig, longSig);
-
-  Vec<long> longToShortMap;
-  computeLongToShortMap(longToShortMap, m, shortToLongMap);
-  
-
-  Vec<zz_pX> cycVec;
-  computeCycVec(cycVec, powVec);
-
-
-  ZZX PhimX = Cyclotomic(m);
-  zz_pX phimX = conv<zz_pX>(PhimX);
-
-  HyperCube<zz_p> cube(shortSig);
-  HyperCube<zz_p> tmpCube(longSig);
-
-  convertPolyToPowerful(cube, tmpCube, F, cycVec, 
-                        polyToCubeMap, shortToLongMap);
-
-  zz_pX poly1;
-
-  convertPowerfulToPoly(poly1, cube, m, shortToLongMap, cubeToPolyMap, phimX);
-
-  if (F == poly1)
-    cout << "*********** :-)\n";
-  else {
-    cout << "*********** :-(\n";
-    cout << F << "\n";
-    cout << poly1 << "\n";
-  }
-
-  v.SetLength(phim);
-  for (long i = 0; i < phim; i++) v[i] = cube[i];
-}
-
-// returns g(h) mod f
-zz_pX EvalMod(const Vec<zz_pX>& g, const zz_pX& h, const zz_pX& f) 
+zz_pE convert2to1(const Mat<zz_p>& M2, const Mat<zz_p>& M2i, long d1,
+                  const Vec<zz_pX>& v)
 {
-  zz_pX acc;
-  for (long i = g.length()-1; i >= 0; i--)
-    acc = ((acc*h) % f) + g[i];
-  return acc;
+  long d = M2.NumRows();
+  assert(d % d1 == 0);
+  long d2 = d/d1;
+
+  assert(d == zz_pE::degree());
+  assert(v.length() <= d2);
+
+  Vec<zz_p> w;
+  w.SetLength(d);
+
+  for (long i = 0; i < v.length(); i++) {
+    assert(deg(v[i]) < d1);
+    for (long j = 0; j <= deg(v[i]); j++) 
+      w[i*d1 + j] = v[i][j];
+  }
+
+  Vec<zz_p> z = w*M2;
+  return conv<zz_pE>( conv<zz_pX>( z ) );
 }
 
-
-/***************************************************************/
-/*   Computing an array containing the powers X^{e*i} mod G    */
-/***************************************************************/
-template<class type> class PolyPowers {
-public:
-  PA_INJECT(type)
-
-  static long computePolyPowers(vector<RX>& v,
-				const EncryptedArrayDerived<type>& ea,
-				long e, long size)
-  {
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
-    RXModulus G = ea.getG();
-    RX alpha; SetX(alpha); PowerMod(alpha,alpha,e,G); // alpha = X^e mod G
-    v.resize(size);
-    conv(v[0], 1);
-    v[1] = alpha;
-    for (long i=2; i<size; i++) {
-      MulMod(v[i], v[i-1], alpha, G); // v[i] = alpha^i mod G
-    }
-    return 0;
-  }
-};
-
-
-/*************************************************************/
-/****      Building the "Step-1 matrix" over Z_{p^r}      ****/
-/*************************************************************/
-
-
-class Step1MatrixSuper { 
-  // shared components of Step1Matrix
-  // we could move other components here, as convenient
-
-protected:
-long gen; // generator for the group Z_m1* / <p>
-
-public:
-long getGen() const { return gen; }
-
-};
-
-
-
-template<class type> 
-class Step1Matrix : public Step1MatrixSuper, 
-                    public PlaintextBlockMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-  // long ord1; // order of quotient group Z_m1* / <p>    = phi(m1)/d
-  long ord2; // order of quotient group Z_m2* / <p^d> [[ = phi(m2) for now ]]
-
-  vector< vector< mat_R > > A; // basic ord1 x ord1 block of this matrix
-
-  // return the inverse of the matrix encoded in the A data member
-  void invert(vector< vector< mat_R > >& Ainv) const;
-
-public:
-  Step1Matrix(const EncryptedArray& ea, long m1, long m2); // constructor
-
-  // copy/inverse constructor
-  Step1Matrix(const Step1Matrix& other, bool invFlag=false) : ea(other.ea) {
-    ord2 = other.ord2;
-    if (invFlag) other.invert(A); // Invert the matrix of other
-    else         A = other.A;     // Copy the matrix of other
-  }
-
-  virtual const EncryptedArray& getEA() const { return ea; }
-
-  // The matrix represented by this object has dimension nSlots x nSlots,
-  // and it consists of ord1^2 submatrices B_{i,j} of dimension ord2 x ord2,
-  // where each B_{i,j} is fixed along the main diagonal and zero elsewhere
-  // (so we have total ord1 nonzero diagonals).
-  // The main diagonal of each B_{i,j} consists of ord2 repetitions of the
-  // same A_{i,j}. For example with ord1=2 and ord2=3 we have the 6x6 matrix
-  //
-  //   ( A_{0,0}              A_{0,1}               )
-  //   (        A_{0,0}              A_{0,1}        )
-  //   (               A_{0,0}              A_{0,1} )
-  //   ( A_{1,0}              A_{1,1}               )
-  //   (        A_{1,0}              A_{1,1}        )
-  //   (               A_{1,0}              A_{1,1} )
-  //
-  // Each A_{i,j} is itself a d-by-d block over Z_{p^r}
-
-  virtual bool get(mat_R& out, long i, long j) const { // callback function
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    if ((i % ord2)!=(j % ord2)) // Not on the diagonal of the B_{i,j}'s
-      return true;              // return true for an empty entry
-
-    out = A[i/ord2][j/ord2]; // The block indexes are i,j div ord2
-    return false;
-  }
-};
-PlaintextBlockMatrixBaseInterface *
-buildStep1Matrix(const EncryptedArray& ea, long m1, long m2)
+Vec<zz_pX> convert1to2(const Mat<zz_p>& M2, const Mat<zz_p>& M2i, long d1,
+                       const zz_pE& beta)
 {
-  switch (ea.getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new Step1Matrix<PA_GF2>(ea, m1, m2);
-    }
-    case PA_zz_p_tag: {
-      return new Step1Matrix<PA_zz_p>(ea, m1, m2);
-    }
-    default: return 0;
+  long d = M2.NumRows();
+  assert(d % d1 == 0);
+  long d2 = d/d1;
+  assert(d == zz_pE::degree());
+
+  Vec<zz_p> z = VectorCopy(rep(beta), d);
+  Vec<zz_p> w = z*M2i;
+
+  Vec<zz_pX> res;
+  res.SetLength(d2);
+
+  for (long i = 0; i < d2; i++) {
+    Vec<zz_p> tmp;
+    tmp.SetLength(d1);
+    for (long j = 0; j < d1; j++)
+      tmp[j] = w[i*d1+j];
+
+    res[i] = conv<zz_pX>(tmp);
   }
+
+  return res;
 }
-PlaintextBlockMatrixBaseInterface *
-buildStep1Inverse(const PlaintextBlockMatrixBaseInterface* other)
-{
-  switch (other->getEA().getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      const Step1Matrix<PA_GF2>* ptr 
-	= dynamic_cast< const Step1Matrix<PA_GF2>* >(other);
-      return new Step1Matrix<PA_GF2>(*ptr, /*invert=*/true);
-    }
-    case PA_zz_p_tag: {
-      const Step1Matrix<PA_zz_p>* ptr
-	= dynamic_cast< const Step1Matrix<PA_zz_p>* >(other);
-      return new Step1Matrix<PA_zz_p>(*ptr, /*invert=*/true);
-    }
-    default: return 0;
-  }
-}
-
-template<class type>
-Step1Matrix<type>::Step1Matrix(const EncryptedArray& _ea, long m1, long m2)
-  : ea(_ea)
-{
-  // Find generator sets for Zm1* /<p>
-  vector<long> gens, ords;
-  long p = ea.getContext().zMStar.getP();
-  long d = findGenerators(gens, ords, m1, p);
-  if (ea.getDegree() != d) { // verify that p has the same order mod m,m1
-     cerr << "  Cannod handle the case where d="<<ea.getDegree()
-	  << "!=d1="<<d<<endl;
-     exit(0);
-  }
-  assert(gens.size()==1); // Zm1* /<p> is cyclic
-  gen = gens[0];
-
-  long nSlots = ea.size();
-  long ord1 = abs(ords[0]); // the order of Zm1* /<p>
-  ord2 = nSlots / ord1; // the order of Zm2* /<p^d> [[ = phi(m2) for now ]]
-
-  vector<long> T(ord1); // representative set for Zm1* /<p>
-  T[0] = 1;
-  T[1] = gen;
-  for (long i=2; i<ord1; i++) 
-    T[i] = MulMod(T[i-1], gen, m1); // T[i] = g^i mod m1
-
-  // prepare a table of eta1^i for i=0,1,...,m2-1
-  vector< RX > eta1Powers; // eta1 = X^m2 mod G is an m1'th root of unity
-  PolyPowers<type>::computePolyPowers(eta1Powers,       // powers of eta1
-				      ea.getDerived(type()),m2,m1);
-
-  const PAlgebraModDerived<type>& tab=ea.getContext().alMod.getDerived(type());
-  RBak bak; bak.save();
-  tab.restoreContext();
-  A.resize(ord1);
-  for (long i=0; i<ord1; i++) { // Go over the rows A_i
-    A[i].resize(ord1);
-    long di= MulMod(d,i,m1);    // d*i mod m1
-
-    for (long j=0; j<ord1; j++) { // Go over columns and build A_{i,j}
-      A[i][j].SetDims(d,d);
-      long tj = T[j];
-
-      for (long k=0; k<d; k++) { // Go over the d rows of A_{i,j}
-	// set the k'th row to eta1^{tj*(di+k)}
-	long idx = MulMod(tj, AddMod(di, k, m1), m1);  // tj*(di+k)
-	VectorCopy(A[i][j][k], eta1Powers[idx], d); // eta1^{tj*(di+k)}
-      }
-    }
-  }
-};
-
-// returns the inverse of the matrix encoded in the A data member
-template <class type>
-void Step1Matrix<type>::invert(vector< vector< mat_R > >& Ainv) const
-{
-  const PAlgebraModDerived<type>& tab=ea.getContext().alMod.getDerived(type());
-  zz_pBak bak; bak.save(); tab.restoreContext();
-
-  // Prepare a single matrix with all the A_{i,j}'s
-  long d = A[0][0].NumRows(); // dimension of small A_{i,j}'s
-  long dim = A.size() * d;    // dimension of big matrix
-  mat_R bigA(INIT_SIZE, dim, dim);
-
-  // tile bigA with all the A_{i,j}'s
-  for (long i=0; i<dim; i++) for (long j=0; j<dim; j++)
-      bigA[i][j] = A[i/d][j/d][i%d][j%d];
-
-  mat_R bigAinv;
-
-  // invert the big matrix...careful, ppInvert does not work
-  // if first two arguments are aliases
-  ppInvert(bigAinv, bigA, tab.getZMStar().getP(), tab.getR());
-
-  // Copy the inverted matrix back into the small matrices in Ainv
-
-  // begin by allocating space
-  Ainv.resize(A.size());
-  for (long i=0; i<(long)A.size(); i++) {
-    Ainv[i].resize(A.size());
-    for (long j=0; j<(long)A.size(); j++)
-      Ainv[i][j].SetDims(d,d);
-  }
-  // Then copy the data
-  for (long i=0; i<dim; i++) for (long j=0; j<dim; j++)
-      Ainv[i/d][j/d][i%d][j%d] = bigAinv[i][j];
-}
-
-
-
-
-/*******************************************************************/
-/** Building the "Step-2 matrix" over GF(p^d) (lifted to mod p^r) **/
-/*******************************************************************/
-
-class Step2MatrixSuper { 
-  // shared components of Step2Matrix
-  // we could move other components here, as convenient
-
-protected:
-long gen; // generator for the group Z_m2* / <p^d>
-
-public:
-long getGen() const { return gen; }
-
-virtual void printA(ostream& s) const = 0;
-
-};
-
-template<class type> 
-class Step2Matrix : public Step2MatrixSuper, 
-                    public PlaintextMatrixInterface<type>  {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-  long ord1; // order of quotient group Z_m1* / <p>    = phi(m1)/d
-  long ord2; // order of quotient group Z_m2* / <p^d> [[=phi(m2) for now ]]
-
-  mat_RE A;
-
-
-  // return the inverse of the matrix [get(i,j)]_{i,j}
-  void invert(mat_RE& Minv) const;
-
-public:
-  Step2Matrix(const EncryptedArray& _ea, long m1, long m2); // constructor
-
-  // copy/inverse constructor
-  Step2Matrix(const Step2Matrix& other, bool invFlag=false) : ea(other.ea) {
-    ord1 = other.ord1;
-    ord2 = other.ord2;
-    if (invFlag) other.invert(A); // Invert the matrix of other
-    else         A = other.A;     // Copy the matrix of other
-  }
-
-  virtual void printA(ostream& s) const { s << A; }
-
-  virtual const EncryptedArray& getEA() const { return ea; }
-
-  // The matrix represented by this object has dimension nSlots x nSlots over
-  // GF(p^d), which is a block matrix with ord1 x ord1 blocks on the main
-  // diagonal and zero elsewhere. Each block is a Vandermonde matrix with
-  // all the powers 0,1,...ord2 of eta2^i for all i \in Zm2*. For example
-  // for m2=5 we have ord2=phi(m2)=4 and eta2 of order 5. Id we have nSlots=8
-  // then we get the followin g8x8 matrix:
-  //
-  //   ( 1 eta2   eta2^2 eta2^3                        )
-  //   ( 1 eta2^2 eta2^4 eta2^3                        )
-  //   ( 1 eta2^4 eta2^3 eta2^2                        )
-  //   ( 1 eta2^3 eta2   eta2^4                        )
-  //   (                        1 eta2   eta2^2 eta2^3 )
-  //   (                        1 eta2^2 eta2^4 eta2^3 )
-  //   (                        1 eta2^4 eta2^3 eta2^2 )
-  //   (                        1 eta2^3 eta2   eta2^4)
-  //
-  // where each block is V(eta, eta^2, eta^4, eta^3). Note that the order
-  // or the rows in the block is determined by the ordering of Zm2* which
-  // is determined by some generator. 
-  //
-  // In the example above the generator was 2 so we get th eorder 1,2,4,3.
-
-  virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    if ((i/ord2) != (j/ord2)) // zero outside the main blocks
-      return true; // return true for an empty entry
-
-    // Return the position of (i,j) inside their block
-    conv(out, A[i % ord2][j % ord2]);
-    return false; // false for a non-empty entry
-  }
-};
-
-
-PlaintextMatrixBaseInterface*
-buildStep2Matrix(const EncryptedArray& ea, long m1, long m2)
-{
-  switch (ea.getContext().alMod.getTag()) {
-  case PA_GF2_tag: 
-    return new Step2Matrix<PA_GF2>(ea, m1, m2);
-
-  case PA_zz_p_tag: 
-    return new Step2Matrix<PA_zz_p>(ea, m1, m2);
-
-  default: return 0;
-  }
-}
-
-
-PlaintextMatrixBaseInterface *
-buildStep2Inverse(const PlaintextMatrixBaseInterface* other)
-{
-  switch (other->getEA().getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      const Step2Matrix<PA_GF2>* ptr 
-	= dynamic_cast< const Step2Matrix<PA_GF2>* >(other);
-      return new Step2Matrix<PA_GF2>(*ptr, /*invert=*/true);
-    }
-    case PA_zz_p_tag: {
-      const Step2Matrix<PA_zz_p>* ptr 
-	= dynamic_cast< const Step2Matrix<PA_zz_p>* >(other);
-      return new Step2Matrix<PA_zz_p>(*ptr, /*invert=*/true);
-    }
-    default: return 0;
-  }
-}
-
-template<class type>
-Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea, long m1, long m2)
-  : ea(_ea)
-{ 
-  // Find generator sets for Zm2* /<p^d>
-  long d = ea.getDegree();
-  long p = ea.getContext().zMStar.getP();
-  long p2d = PowerMod(p % m2, d, m2);
-  vector<long> gens, ords;     // Find generator sets for Zm2* /<p^d>
-  assert(findGenerators(gens, ords, m2, p2d) == 1); // p^d==1 mod m2
-  assert(gens.size()==1);      // Zm2* = Zm2* /<p^d> is cyclic
-  gen = gens[0];
-
-  long nSlots = ea.size();
-  ord2 = abs(ords[0]); // the order of Zm2* /<p^d> = Zm2*
-  ord1 = nSlots / ord2;     // the order of Zm1* /<p>
-
-  vector<long> T(ord2);     // representative set for Zm2*/ <p^d>
-  T[0] = 1;
-  T[1] = gen;
-  for (long i=2; i<ord2; i++)
-    T[i] = MulMod(T[i-1], gen, m2);
-
-  // prepare a table of eta2^i for i=0,1,...,m2-1
-  vector<RX> eta2Powers; // powers of eta2 = X^m1 mod G
-  PolyPowers<type>::computePolyPowers(eta2Powers,
-				      ea.getDerived(type()), m1, m2);
-
-  const PAlgebraModDerived<type>& tab=ea.getContext().alMod.getDerived(type());
-  RBak bak; bak.save();
-  REBak bakE; bakE.save();
-  tab.restoreContext();
-  RE::init(ea.getDerived(type()).getG());
-  A.SetDims(ord2, ord2);
-  for (long i=0; i<ord2; i++) for (long j=0; j<ord2; j++) {
-      long exp = MulMod(i, T[j], m2);
-      convert(A[i][j], eta2Powers[exp]);
-    }
-}
-
-// returns the inverse of the matrix encoded in the A data member
-template<class type> void Step2Matrix<type>::invert(mat_RE& Ainv) const
-{
-  const PAlgebraModDerived<type>& tab=ea.getContext().alMod.getDerived(type());
-  RBak bak; bak.save();
-  REBak bakE; bakE.save();
-  tab.restoreContext();
-  RE::init(ea.getDerived(type()).getG());
-
-  ppInvert(Ainv, A, tab.getZMStar().getP(), tab.getR()); // invert mod p^r
-}
-
-
 
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
@@ -630,20 +181,20 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   zz_p::init(power_long(p, r));
   zz_pX G = conv<zz_pX>(GG);
 
-  zz_pX alpha1 = zz_pX(m2, 1) % G; // X^m2 has order m1, and should
+  zz_pX alpha = zz_pX(m2, 1) % G; // X^m2 has order m1, and should
                                    // have min poly of degree d1
 
-  // compute min poly of alpha1 by linear algebra 
+  // compute min poly of alpha by linear algebra 
 
   Mat<zz_p> M1;
   M1.SetDims(d1, d);
 
   for (long i = 0; i < d1; i++) {
-    VectorCopy(M1[i], PowerMod(alpha1, i, G), d);
+    VectorCopy(M1[i], PowerMod(alpha, i, G), d);
   }
 
   Vec<zz_p> V1;
-  VectorCopy(V1, PowerMod(alpha1, d1, G), d);
+  VectorCopy(V1, PowerMod(alpha, d1, G), d);
 
   Mat<zz_p> M1sq;
 
@@ -679,6 +230,72 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   Vec<zz_p> W1 = V1sq * M1sqi;
 
   assert(W1*M1 == V1);
+
+
+  // now construct the min poly of X over ZZ_{p^r}[alpha]
+
+  Mat<zz_p> M2;
+  M2.SetDims(d, d);
+
+  for (long i = 0; i < d2; i++) {
+    // construct rows [i..i+d1)
+    for (long j = 0; j < d1; j++) {
+       VectorCopy(M2[i*d1+j], (PowerMod(alpha, j, G) << i) % G, d);
+    }
+  }
+
+  Mat<zz_p> M2i;
+  ppInvert(M2i, M2, p, r);
+
+  // M2 is the matrix that takes us from the two-step tower
+  // to the one-step tower, and M2i is its inverse.
+
+  Vec<zz_p> V2, W2;
+  VectorCopy(V2, zz_pX(d, 1) % G, d);
+
+  W2 = V2 * M2i;
+
+  assert(W2 * M2 == V2);
+
+
+  zz_pX H = conv<zz_pX>(W1) + zz_pX(d1, 1);
+  // H is the min poly of alpha
+
+  zz_pE::init(G);
+
+  Vec<zz_pE> C_out, map1;
+
+  Vec< Vec<zz_pX> > map2;
+  map2.SetLength(d2);
+  long idx_in = 1;
+  long idx_out = d2-1;
+  map2[idx_in].SetLength(idx_out+1);
+  map2[idx_in][idx_out] = 1;
+  // so map2 projects idx_in onto idx_out
+
+  map1.SetLength(d2);
+  for (long i = 0; i < d2; i++) 
+    map1[i] = convert2to1(M2, M2i, d1, map2[i]); 
+
+  buildLinPolyCoeffs(C_out, map1, p, r, d1);
+
+  zz_pE testval1;
+  random(testval1);
+
+  Vec<zz_pX> testval2 = convert1to2(M2, M2i, d1, testval1);
+  zz_pE testval1a = convert2to1(M2, M2i, d1, testval2);
+
+  cout << testval1 << "\n";
+  cout << testval1a << "\n";
+
+  cout << testval2 << "\n";
+
+  zz_pE resval1;
+  applyLinPoly(resval1, C_out, testval1, p, d1);
+  Vec<zz_pX> resval2 = convert1to2(M2, M2i, d1, resval1);
+
+  cout << resval2;
+
 }
 
 
