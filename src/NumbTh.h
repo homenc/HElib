@@ -41,9 +41,6 @@
 #include <NTL/mat_lzz_pE.h>
 #include <NTL/lzz_pXFactoring.h>
 
-
-NTL_CLIENT
-
 #if (__cplusplus>199711L)
 #include <unordered_map>
 //! @typedef

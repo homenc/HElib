@@ -13,14 +13,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+#include <cassert>
 #include <NTL/mat_lzz_pE.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <NTL/ZZXFactoring.h>
-#include "NumbTh.h"
-#include <cassert>
-
 NTL_CLIENT
 
+#include "NumbTh.h"
 
 void usage(char *prog)
 {

@@ -17,6 +17,8 @@
  * @file polyEval.cpp
  * @brief Homomorphic Polynomial Evaluation
  */
+#include <NTL/ZZ.h>
+NTL_CLIENT
 #include "polyEval.h"
 
 // Returns the e'th power of X, computing it as needed

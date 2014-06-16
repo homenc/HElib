@@ -14,6 +14,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 #include <NTL/ZZ.h>
+NTL_CLIENT
 #include "NumbTh.h"
 #include "permutations.h"
 

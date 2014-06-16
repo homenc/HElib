@@ -21,7 +21,6 @@
 #include <cassert>
 #include <list>
 #include <sstream>
-
 using namespace std;
 #if (__cplusplus>199711L)
 #include <memory>
@@ -32,6 +31,7 @@ using namespace tr1;
 #endif
 
 #include <NTL/vector.h>
+NTL_CLIENT
 #include "NumbTh.h"
 #include "EncryptedArray.h"
 #include "permutations.h"

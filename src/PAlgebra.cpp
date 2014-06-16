@@ -20,7 +20,7 @@
 #include <NTL/ZZXFactoring.h>
 #include <NTL/GF2EXFactoring.h>
 #include <NTL/lzz_pEXFactoring.h>
-
+NTL_CLIENT
 
 #include <climits>     // defines INT_MAX
 #include <cstring>
@@ -31,9 +31,6 @@
 #include "NumbTh.h"    // defines argmax(...)
 #include "PAlgebra.h"
 #include "timing.h"
-
-
-NTL_CLIENT
 
 
 // polynomials are sorted lexicographically, with the

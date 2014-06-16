@@ -17,6 +17,8 @@
  * @file Test_PolyEval.cpp
  * @brief Homomorphic Polynomial Evaluation
  */
+#include <NTL/ZZ.h>
+NTL_CLIENT
 #include "polyEval.h"
 #include "EncryptedArray.h"
 

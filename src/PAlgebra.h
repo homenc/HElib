@@ -61,7 +61,7 @@
 
 #include "cloned_ptr.h"
 
-NTL_CLIENT
+//NTL_CLIENT
 
 class PAlgebra {
   unsigned long m;   // the integer m defines (Z/mZ)^*, Phi_m(X), etc.

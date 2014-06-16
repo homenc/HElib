@@ -28,7 +28,6 @@
 #include "PAlgebra.h"
 #include "bluestein.h"
 #include "cloned_ptr.h"
-//NTL_CLIENT
 
 /**
  * @class CMOD_zz_p

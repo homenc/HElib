@@ -14,14 +14,11 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 #include <NTL/vec_long.h>
+NTL_CLIENT
 #include "NumbTh.h"
 #include "FHEContext.h"
 
 #define pSize (NTL_SP_NBITS/2) /* The size of levels in the chain */
-
-NTL_CLIENT
-
-
 
 
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)

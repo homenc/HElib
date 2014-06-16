@@ -13,13 +13,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include <queue> // used in the breadth-first search in setKeySwitchMap
 #include "NTL/vec_vec_long.h"
+NTL_CLIENT
+#include <queue> // used in the breadth-first search in setKeySwitchMap
 #include "DoubleCRT.h"
 #include "FHE.h"
 #include "timing.h"
-
-NTL_CLIENT
 
 /******** Utility function to generate RLWE instances *********/
 

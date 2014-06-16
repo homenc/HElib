@@ -29,9 +29,6 @@
 #include "FHEContext.h"
 
 
-NTL_CLIENT
-
-
 class SingleCRT;
 
 /**

@@ -15,6 +15,8 @@
  */
 #include <cassert>
 #include <cstdio>
+#include <NTL/ZZ.h>
+NTL_CLIENT
 
 #include "FHE.h"
 #include "timing.h"
@@ -293,10 +295,11 @@ public:
     return ea;
   }
 
-  virtual void get(RX& out, long i, long j) const {
+  virtual bool get(RX& out, long i, long j) const {
     assert(i >= 0 && i < ea.size());
     assert(j >= 0 && j < ea.size());
     out = data[i][j];
+    return false;
   }
 };
 

@@ -17,9 +17,10 @@
  * @file BenesNetwork.cpp
  * @brief Auxiliary routines for GeneralBenesNetwork
  */
+#include <NTL/lzz_pXFactoring.h>
+NTL_CLIENT
 #include "FHE.h"
 #include "EncryptedArray.h"
-#include <NTL/lzz_pXFactoring.h>
 
 #include <cstdlib>
 #include <cassert>

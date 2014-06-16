@@ -58,9 +58,6 @@
 #include <NTL/ZZ_pX.h>
 #include <NTL/lzz_pX.h>
 
-NTL_CLIENT
-
-
 typedef Vec< Vec<mulmod_precon_t> > fftrep_aux;
 
 //! @brief bigint implementation

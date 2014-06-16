@@ -15,6 +15,8 @@
  */
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
+#include "NTL/ZZ.h"
+NTL_CLIENT
 #include "EncryptedArray.h"
 #include "timing.h"
 #include "cloned_ptr.h"

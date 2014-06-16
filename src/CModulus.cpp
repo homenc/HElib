@@ -32,6 +32,8 @@
  * roots of unity.
  */
 #include <cassert>
+#include <NTL/ZZ.h>
+NTL_CLIENT
 
 #include "NumbTh.h"
 #include "CModulus.h"

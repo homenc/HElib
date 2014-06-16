@@ -1,6 +1,8 @@
 /* a prelimary test program for playing around with Peikert's "powerful" basis.
  * EXPERIMENTAL CODE, not usable yet
  */
+#include <NTL/ZZ.h>
+NTL_CLIENT
 #include "NumbTh.h"
 #include "bluestein.h"
 #include "cloned_ptr.h"

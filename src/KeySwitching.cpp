@@ -17,6 +17,8 @@
  *
  * Copyright IBM Corporation 2012 All rights reserved.
  */
+#include "NTL/ZZ.h"
+NTL_CLIENT
 #include "FHE.h"
 #include "permutations.h"
 

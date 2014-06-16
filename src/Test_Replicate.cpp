@@ -13,16 +13,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+#include <cassert>
+#include <NTL/lzz_pXFactoring.h>
+NTL_CLIENT
 
 #include "FHE.h"
 #include "replicate.h"
 #include "timing.h"
-
-#include <NTL/lzz_pXFactoring.h>
-
-#include <cassert>
-
-NTL_CLIENT
 
 static bool decryptAndTest=true;
 

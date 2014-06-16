@@ -33,7 +33,6 @@
 #include <NTL/vec_vec_long.h>
 #include "NumbTh.h"
 #include "IndexMap.h"
-NTL_CLIENT
 
 class SingleCRT;
 
