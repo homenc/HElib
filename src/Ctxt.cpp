@@ -156,7 +156,7 @@ void Ctxt::modDownToSet(const IndexSet &s)
       // WARNING: the following line is written just so to prevent overflow
       noiseVar = noiseVar*prodInv*prodInv;
     }
-    cerr << "DEGENERATE DROP\n";
+    //    cerr << "DEGENERATE DROP\n";
   } 
   else {                                      // do real mod switching
     for (size_t i=0; i<parts.size(); i++) 
