@@ -24,6 +24,15 @@ NTL_CLIENT
 
 #include <cassert>
 
+#if (__cplusplus>199711L)
+#include <memory>
+#else
+#include <tr1/memory>
+using namespace tr1;
+#warning "using TR1"
+#endif
+
+
 void init_representatives(Vec<long>& representatives, long m, long p)
 {
   Vec<bool> available;
@@ -567,14 +576,14 @@ template<class type> void Step2Matrix<type>::invert(mat_RE& Ainv) const
 
 
 
-void  TestIt(long R, long p, long r, long c, long k, long w, 
+void  TestIt(long R, long p, long r, long c, long _k, long w, 
                long L, const Vec<long>& mvec)
 {
   cerr << "*** TestIt: R=" << R 
        << ", p=" << p
        << ", r=" << r
        << ", c=" << c
-       << ", k=" << k
+       << ", k=" << _k
        << ", w=" << w
        << ", L=" << L
        << ", mvec=" << mvec
@@ -604,13 +613,14 @@ void  TestIt(long R, long p, long r, long c, long k, long w,
   for (long i = 0; i < nfactors; i++)
     dvec[i] = dprodvec[i] / dprodvec[i+1];
 
+  cout << "dvec=" << dvec << "\n";
+
   long d = dprodvec[0];
+  long nslots = phim/d;
 
-  cout << dvec << "\n";
-
-  Vec< Vec<long> > repvec(INIT_SIZE, nfactors);
+  Vec< Vec<long> > local_reps(INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
-    init_representatives(repvec[i], mvec[i], 
+    init_representatives(local_reps[i], mvec[i], 
                          PowerMod(p % mvec[i], dprodvec[i+1], mvec[i]));
 
   Vec<long> crtvec(INIT_SIZE, nfactors);
@@ -623,12 +633,12 @@ void  TestIt(long R, long p, long r, long c, long k, long w,
 
   CubeSignature redphisig(redphivec);
 
-  Vec<long> globalreps(INIT_SIZE, phim/d);
+  Vec<long> global_reps(INIT_SIZE, phim/d);
   for (long i = 0; i < phim/d; i++) {
-    globalreps[i] = 0;
+    global_reps[i] = 0;
     for (long j = 0; j < nfactors; j++) {
       long i1 = redphisig.getCoord(i, j);
-      globalreps[i] = (globalreps[i] + crtvec[j]*repvec[j][i1]) % m;
+      global_reps[i] = (global_reps[i] + crtvec[j]*local_reps[j][i1]) % m;
     }
   }
 
@@ -644,39 +654,126 @@ void  TestIt(long R, long p, long r, long c, long k, long w,
   zz_pX G = conv<zz_pX>(GG);
   zz_pE::init(G);
 
-  Vec<zz_pE> globalpoints(INIT_SIZE, phim/d);
+  Vec<zz_pE> global_points(INIT_SIZE, phim/d);
   for (long i = 0; i < phim/d; i++) 
-    globalpoints[i] = conv<zz_pE>(zz_pX(globalreps[i], 1)); 
+    global_points[i] = conv<zz_pE>(zz_pX(global_reps[i], 1)); 
 
 
   zz_pX F;
   random(F, phim);
 
-  Vec<zz_pE> globalvalues(INIT_SIZE, phim/d);
+  Vec<zz_pE> global_values(INIT_SIZE, phim/d);
   for (long i = 0; i < phim/d; i++)
-    globalvalues[i] = eval(F, globalpoints[i]);
+    global_values[i] = eval(F, global_points[i]);
 
   Vec<zz_p> cube;
   convertToPowerful(cube, F, mvec);
 
-  Vec< Vec<zz_pE> > localpoints(INIT_SIZE, nfactors);
+  Vec< Vec<zz_pE> > local_points(INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++) {
-    localpoints[i].SetLength(phivec[i]/dvec[i]);
+    local_points[i].SetLength(phivec[i]/dvec[i]);
     for (long j = 0; j < phivec[i]/dvec[i]; j++)
-      localpoints[i][j] = conv<zz_pE>(zz_pX(repvec[i][j]*(m/mvec[i]), 1));
+      local_points[i][j] = conv<zz_pE>(zz_pX(local_reps[i][j]*(m/mvec[i]), 1));
   }
 
 
-  Vec< Vec<zz_pE> > evalsequence;
-  evalsequence.SetLength(nfactors+1);
-  conv(evalsequence[nfactors], cube);
+  Vec< Vec<zz_pE> > eval_sequence;
+  eval_sequence.SetLength(nfactors+1);
+  conv(eval_sequence[nfactors], cube);
 
-  for (long i = nfactors-1; i >= 0; i--) {
+  Vec< shared_ptr<CubeSignature> > sig_sequence;
+  sig_sequence.SetLength(nfactors+1);
+  sig_sequence[nfactors] = shared_ptr<CubeSignature>(new CubeSignature(phivec));
+
+  Vec<long> reduced_phivec = phivec;
+
+  for (long dim = nfactors-1; dim >= 0; dim--) {
+    reduced_phivec[dim] /= dvec[dim];
+    sig_sequence[dim] = 
+      shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
+
+    shared_ptr<CubeSignature> old_sig = sig_sequence[dim+1];
+    shared_ptr<CubeSignature> new_sig = sig_sequence[dim];
+
+    
+
+    long nslices = old_sig->getProd(0, dim); // same for both old and new
+    long ncols = old_sig->getProd(dim+1);  // same for both old and new
+    long old_colsz  = old_sig->getDim(dim);
+    long new_colsz  = new_sig->getDim(dim);
+
+    Vec<zz_pE> old_col(INIT_SIZE, old_colsz);
+    zz_pEX old_col_as_poly;
+    Vec<zz_pE> new_col(INIT_SIZE, new_colsz);
+
+    eval_sequence[dim].SetLength(new_sig->getSize());
+
+    for (long i = 0; i < nslices; i++) {
+      for (long j = 0; j < ncols; j++) {
+        // extract old column
+        for (long k = 0; k < old_colsz; k++) 
+          old_col[k] = eval_sequence[dim+1][i*old_colsz*ncols + j + k*ncols];
+
+        // convert old column to a polynomial
+        conv(old_col_as_poly, old_col);
+
+        // compute new column
+        for (long k = 0; k < new_colsz; k++)
+          new_col[k] = eval(old_col_as_poly, local_points[dim][k]);
+
+        // insert new column
+        for (long k = 0; k < new_colsz; k++)
+          eval_sequence[dim][i*new_colsz*ncols + j + k*ncols] = new_col[k];
+      }
+    }
   }
+
+  if (global_values == eval_sequence[0]) 
+    cout << "I win!!\n";
+  else {
+    cout << "I lose\n";
+    cout << global_values << "\n";
+    cout << eval_sequence[0] << "\n";
+  }
+
+  Vec<long> slot_index, slot_rotate;
+  init_slot_mappings(slot_index, slot_rotate, global_reps, m, p, context);
+
+  zz_pE H = conv<zz_pE>(zz_pX(p, 1));
+
+  vector<ZZX> adjusted_values;
+  adjusted_values.resize(nslots);
+
+  for (long i = 0; i < nslots; i++) {
+    zz_pE V = global_values[i];
+    long h = slot_rotate[i];
+    for (long j = 0; j < h; j++) 
+      V = conv<zz_pE>(CompMod(rep(V), rep(H), G));
+    
+    adjusted_values[ slot_index[i] ] = conv<ZZX>(rep(V));
+  }
+
+  EncryptedArray ea(context, GG);
+
+  ZZX FF1;
+  ea.encode(FF1, adjusted_values);
+  
+  zz_pX F1 = conv<zz_pX>(FF1);
+
+  if (F1 == F) 
+    cout << "yes!!\n";
+  else 
+    cout << "NO!!!\n";
 
   exit(0);
 
-
+/*
+for i in [0..sig.getProd(0, dim))  // iterate over all dimension dim subcubes
+   offset = i*sig.getProd(dim)
+   for j in [0..sig.getProd(dim+1))  // iterate over all columns in the subcube
+      for k = 0..sig.getDim(dim)   // iterate over the column elements
+         index = offset + j + k*sig.getProd(dim+1)
+*/
 
 
 #if 0
@@ -1014,3 +1111,4 @@ int main(int argc, char *argv[])
 
 }
 
+// a nice test case: Test_eval3_x p=2 m1=3 m2=5 m3=7 m4=17
