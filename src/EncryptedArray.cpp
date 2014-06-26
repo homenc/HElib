@@ -15,44 +15,40 @@
  */
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
-#include "NTL/ZZ.h"
+#include <algorithm>
+#include <NTL/ZZ.h>
 NTL_CLIENT
 #include "EncryptedArray.h"
 #include "timing.h"
 #include "cloned_ptr.h"
 
-#include <algorithm>
 
-
-EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G)
+EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
+					const PAlgebraMod& alMod)
 {
-  switch (context.alMod.getTag()) {
+  switch (alMod.getTag()) {
     case PA_GF2_tag: {
-      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(G));
+      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(G), alMod);
     }
 
     case PA_zz_p_tag: {
-      zz_pBak bak; bak.save(); context.alMod.restoreContext();
-      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(G));
+      zz_pBak bak; bak.save(); alMod.restoreContext();
+      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(G), alMod);
     }
 
-    default: return 0;
+    default: return NULL;
   }
 }
 
 
 template<class type>
-EncryptedArrayDerived<type>::EncryptedArrayDerived(const FHEcontext& _context, 
-                                           const RX& _G)
-: context(_context)
-
+EncryptedArrayDerived<type>::EncryptedArrayDerived(
+   const FHEcontext& _context, const RX& _G, const PAlgebraMod& alMod)
+  : context(_context), tab(alMod.getDerived(type()))
 {
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
   tab.genMaskTable();
   tab.mapToSlots(mappingData, _G); // Compute the base-G representation maps
 }
-
-
 
 // rotate ciphertext in dimension i by amt
 template<class type>
@@ -60,8 +56,6 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
 {
   FHE_TIMER_START;
   const PAlgebra& al = context.zMStar;
-
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
 
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
 
@@ -118,8 +112,6 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   FHE_TIMER_START;
   const PAlgebra& al = context.zMStar;
 
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
-
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
 
   RBak bak; bak.save(); tab.restoreContext();
@@ -160,8 +152,6 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   FHE_TIMER_START;
 
   const PAlgebra& al = context.zMStar;
-
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
 
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
 
@@ -247,7 +237,6 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
 
   const PAlgebra& al = context.zMStar;
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
 
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
 
@@ -381,7 +370,6 @@ void EncryptedArrayDerived<type>::mat_mul_dense(Ctxt& ctxt, const PlaintextMatri
   assert(this == &mat.getEA().getDerived(type()));
   assert(&context == &ctxt.getContext());
 
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
   RBak bak; bak.save(); tab.restoreContext();
 
   const PlaintextMatrixInterface<type>& mat1 = 
@@ -420,7 +408,6 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
   assert(this == &mat.getEA().getDerived(type()));
   assert(&context == &ctxt.getContext());
 
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
   RBak bak; bak.save(); tab.restoreContext();
 
   const PlaintextMatrixInterface<type>& mat1 = 
@@ -492,7 +479,6 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
   assert(this == &mat.getEA().getDerived(type()));
   assert(&context == &ctxt.getContext());
 
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
   RBak bak; bak.save(); tab.restoreContext();
 
   const PlaintextBlockMatrixInterface<type>& mat1 = 
@@ -598,7 +584,6 @@ template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
 {
   assert(i >= 0 && i < (long)context.zMStar.getNSlots());
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
   RBak bak; bak.save(); tab.restoreContext();
   RX res;
   div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
@@ -609,8 +594,6 @@ void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
 template<class type>
 void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) const
 {
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
-
   RX pp;
   tab.embedInSlots(pp, array, mappingData); 
   ptxt = conv<ZZX>(pp); 
@@ -620,8 +603,6 @@ template<class type>
 void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) const
 {
   FHE_TIMER_START;
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
-
   RX pp;
   conv(pp, ptxt);
   tab.decodePlaintext(array, pp, mappingData); 
@@ -635,7 +616,7 @@ void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const PlaintextArray& array)
 
   const PlaintextArrayDerived<type>& arr = array.getDerived(type());
 
-  RBak bak; bak.save(); context.alMod.restoreContext();
+  RBak bak; bak.save(); tab.restoreContext();
   encode(ptxt, arr.getData());
 }
 
@@ -646,7 +627,7 @@ void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt)
 
   PlaintextArrayDerived<type>& arr = array.getDerived(type());
 
-  RBak bak; bak.save(); context.alMod.restoreContext();
+  RBak bak; bak.save(); tab.restoreContext();
   vector< RX > array1;
   decode(array1, ptxt);
   arr.setData(array1);
@@ -663,9 +644,7 @@ template<class type> void
 EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<ZZX>& C, 
 						const vector<ZZX>& L) const
 {
-  RBak bak; bak.save(); context.alMod.restoreContext();
-  const PAlgebraModDerived<type>& tab = context.alMod.getDerived(type());
-
+  RBak bak; bak.save(); tab.restoreContext();
   vector<RX> CC, LL;
   convert(LL, L);
   tab.buildLinPolyCoeffs(CC, LL, mappingData);
@@ -689,7 +668,7 @@ applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const
 
 PlaintextArrayBase* buildPlaintextArray(const EncryptedArray& ea)
 {
-  switch (ea.getContext().alMod.getTag()) {
+  switch (ea.getAlMod().getTag()) {
     case PA_GF2_tag: 
       return new PlaintextArrayDerived<PA_GF2>(ea);
 

@@ -45,6 +45,8 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
 #define ALT_CRT (0)
 #endif
 
+class EncryptedArray;
+
 /**
  * @class FHEcontext
  * @brief Maintaining the parameters
@@ -63,6 +65,11 @@ public:
 
   //! @brief The structure of Z[X]/(Phi_m(X),p^r)
   PAlgebraMod alMod;
+
+  //! PAlgebraMod, EncryptedArray objects to handle bootstrapping, they refer
+  //! to plaintext space p^{r'} gratet than the p^r plantext space of alMod
+  PAlgebraMod* bootstrapPAM;
+  EncryptedArray* bootstrapEA;
 
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   xdouble stdev;
@@ -115,21 +122,9 @@ public:
   ZZX modP_digPoly;     // Initialized during call to Ctxt::extractDigits(...)
   long modP_digPoly_r;  // relative to which p^r was this computed
 
-  // Constructors must ensure that alMod points to zMStar
-
-  // constructor
-  FHEcontext(unsigned long m, unsigned long p, unsigned long r): 
-  zMStar(m, p), alMod(zMStar, r), modP_digPoly(ZZX::zero())
-  {
-    stdev=3.2;  
-    fftPrimeCount = 0; 
-
-    lazy = ALT_CRT && 
-           NextPowerOfTwo(zMStar.getM()) == NextPowerOfTwo(zMStar.getPhiM());
-    // we only set the lazy flag if we are using ALT_CRT and if the size of
-    // NTL's FFTs for m and phi(m) are the same. If NTL didn't have these
-    // power-of-two jumps, we would possibly want to change this.
-  }
+  ~FHEcontext(); // destructor
+  FHEcontext(unsigned long m, unsigned long p, unsigned long r, // constructor
+	     bool bootstrappable=false);
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }

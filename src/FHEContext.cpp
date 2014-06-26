@@ -436,3 +436,41 @@ istream& operator>> (istream &str, FHEcontext& context)
   return str;
 }
 
+// what p^r needs to be for bootstrapping
+static long bootstrapR(long m, long p, long r)
+{
+  return r + 7;
+} // FIXME: Implement this function
+
+
+#include "EncryptedArray.h"
+FHEcontext::~FHEcontext()
+{
+  if (bootstrapEA!=NULL) delete bootstrapEA;
+  if (bootstrapPAM!=NULL) delete bootstrapPAM;
+}
+
+// Constructors must ensure that alMod points to zMStar, and
+// bootstrapEA (if set) points to bootstrapPAM which points to zMStar
+FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
+		       bool bootstrappable):
+  zMStar(m, p), alMod(zMStar, r), modP_digPoly(ZZX::zero()), modP_digPoly_r(0)
+{
+  stdev=3.2;  
+  fftPrimeCount = 0; 
+
+  lazy = ALT_CRT && 
+    NextPowerOfTwo(zMStar.getM()) == NextPowerOfTwo(zMStar.getPhiM());
+  // we only set the lazy flag if we are using ALT_CRT and if the size of
+  // NTL's FFTs for m and phi(m) are the same. If NTL didn't have these
+  // power-of-two jumps, we would possibly want to change this.
+
+  if (bootstrappable) {
+    bootstrapPAM = new PAlgebraMod(zMStar, bootstrapR(m,p,r));
+    bootstrapEA = new EncryptedArray(*this, *bootstrapPAM);
+  }
+  else {
+    bootstrapPAM = NULL;
+    bootstrapEA = NULL;
+  }
+}

@@ -290,16 +290,18 @@ public:
 
 private:
   const FHEcontext& context;
+  const PAlgebraModDerived<type>& tab;
   MappingData<type> mappingData; // MappingData is defined in PAlgebra.h
 
 public:
   explicit
-  EncryptedArrayDerived(const FHEcontext& _context, const RX& _G = RX(1, 1));
+  EncryptedArrayDerived(const FHEcontext& _context, const RX& _G,
+			const PAlgebraMod& _tab);
 
   EncryptedArrayDerived(const EncryptedArrayDerived& other) // copy constructor
-  : context(other.context)
+    : context(other.context), tab(other.tab)
   {
-    RBak bak; bak.save(); context.alMod.restoreContext();
+    RBak bak; bak.save(); tab.restoreContext();
     mappingData = other.mappingData;
   }
 
@@ -307,8 +309,9 @@ public:
   {
     if (this == &other) return *this;
     assert(&context == &other.context);
+    assert(&tab == &other.tab);
 
-    RBak bak; bak.save(); context.alMod.restoreContext();
+    RBak bak; bak.save(); tab.restoreContext();
     mappingData = other.mappingData;
     return *this;
   }
@@ -426,7 +429,7 @@ private:
   template<class T> 
   void genericEncode(ZZX& ptxt, const T& array) const
   {
-    RBak bak; bak.save(); context.alMod.restoreContext();
+    RBak bak; bak.save(); tab.restoreContext();
 
     vector< RX > array1;
     convert(array1, array);
@@ -436,7 +439,7 @@ private:
   template<class T>
   void genericDecode(T& array, const ZZX& ptxt) const
   {
-    RBak bak; bak.save(); context.alMod.restoreContext();
+    RBak bak; bak.save(); tab.restoreContext();
 
     vector< RX > array1;
     decode(array1, ptxt);
@@ -446,7 +449,7 @@ private:
   template<class T>
   void genericRandom(T& array) const // T is vector<long> or vector<ZZX>
   {
-    RBak bak; bak.save(); context.alMod.restoreContext(); // backup NTL modulus
+    RBak bak; bak.save(); tab.restoreContext(); // backup NTL modulus
 
     vector< RX > array1;    // RX is GF2X or zz_pX
     random(array1);         // choose random coefficients from GF2/zz_p
@@ -494,22 +497,29 @@ private:
 };
 
 //! @brief A "factory" for building EncryptedArrays
-EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G);
+EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
+					const ZZX& G, const PAlgebraMod& alMod);
 
 
 
 //! @class EncryptedArray
 //! @brief A simple wrapper for a smart pointer to an EncryptedArrayBase.
 //! This is the interface that higher-level code should use
-class EncryptedArray {  
+class EncryptedArray {
 private:
+  const PAlgebraMod& alMod;
   cloned_ptr<EncryptedArrayBase> rep;
 
 public:
 
-  //! constructor: G defaults to the monomial X
+  //! constructor: G defaults to the monomial X, PAlgebraMod from context
   EncryptedArray(const FHEcontext& context, const ZZX& G = ZZX(1, 1))
-  : rep(buildEncryptedArray(context, G))
+    : alMod(context.alMod), rep(buildEncryptedArray(context,G,context.alMod))
+  { }
+  //! constructor: G defaults to F0, PAlgebraMod explicitly given
+  EncryptedArray(const FHEcontext& context, const PAlgebraMod& _alMod)
+    : alMod(_alMod), 
+      rep(buildEncryptedArray(context, _alMod.getFactorsOverZZ()[0], _alMod))
   { }
 
   // copy constructor: default
@@ -526,6 +536,7 @@ public:
   //! @name Direct access to EncryptedArrayBase methods
 
   const FHEcontext& getContext() const { return rep->getContext(); }
+  const PAlgebraMod& getAlMod() const { return alMod; }
   const long getDegree() const { return rep->getDegree(); }
   void rotate(Ctxt& ctxt, long k) const { rep->rotate(ctxt, k); }
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
@@ -717,7 +728,7 @@ public:
 
   PlaintextArrayDerived(const EncryptedArray& _ea) : 
     ea(_ea),
-    tab( ea.getContext().alMod.getDerived(type()) ),
+    tab( ea.getAlMod().getDerived(type()) ),
     G( ea.getDerived(type()).getG() )
   {
     RBak bak; bak.save(); tab.restoreContext();
