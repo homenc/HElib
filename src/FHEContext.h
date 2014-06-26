@@ -61,7 +61,7 @@ public:
   //! @brief The structure of Zm*
   PAlgebra zMStar;
 
-  //! @brief The structure of Z[X]/(Phi_m(X),2)
+  //! @brief The structure of Z[X]/(Phi_m(X),p^r)
   PAlgebraMod alMod;
 
   //! @brief sqrt(variance) of the LWE error (default=3.2)
@@ -112,9 +112,8 @@ public:
 
   //! A degree-p polynomial Q(X) s.t. for any t<r and integr z of the
   //! form z = z0 + p^t*z1 (with 0<=z0<p), we have Q(z) = z0 (mod p^{t+1}).
-  ZZX modP_digPoly;
-    // Initialized at 1st call to Ctxt::extractDigits(...)
-
+  ZZX modP_digPoly;     // Initialized during call to Ctxt::extractDigits(...)
+  long modP_digPoly_r;  // relative to which p^r was this computed
 
   // Constructors must ensure that alMod points to zMStar
 
@@ -127,10 +126,9 @@ public:
 
     lazy = ALT_CRT && 
            NextPowerOfTwo(zMStar.getM()) == NextPowerOfTwo(zMStar.getPhiM());
-    // we only set the lazy flag if we are using ALT_CRT and 
-    // if the size of NTL's FFTs for m and phi(m) are the same.
-    // If NTL didn't have these power-of-two jumps, we would possibly
-    // want to change this.
+    // we only set the lazy flag if we are using ALT_CRT and if the size of
+    // NTL's FFTs for m and phi(m) are the same. If NTL didn't have these
+    // power-of-two jumps, we would possibly want to change this.
   }
 
   bool operator==(const FHEcontext& other) const;

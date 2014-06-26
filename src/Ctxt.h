@@ -446,6 +446,17 @@ public:
   const long getPtxtSpace() const      { return ptxtSpace;}
   const long getKeyID() const;
 
+  // Return r such that p^r = ptxtSpace
+  const long effectiveR() const {
+    long p = context.zMStar.getP();
+    for (long r=1, p2r=p; r<NTL_SP_NBITS; r++, p2r *= p) {
+      if (p2r == ptxtSpace) return r;
+      if (p2r > ptxtSpace) NTL::Error("ctxt.ptxtSpace is not of the form p^r");
+    }
+    NTL::Error("ctxt.ptxtSpace is not of the form p^r");
+    return 0; // just to keep the compiler happy
+  }
+
   //! @brief Returns log(noise-variance)/2 - log(q)
   double log_of_ratio() const
   {return (log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet()));}
@@ -495,10 +506,10 @@ void CheckCtxt(const Ctxt& c, const char* label);
  * digits[j] contains the j'th digit in the p-base expansion of the integer
  * in the i'th slot of the *this.
  * 
- * If r==0 then it is set to context.alMod.getR(). It is assumed that the
- * slots of *this contains integers mod p^r, i.e., that only the free terms
- * are nonzero. If that assumptions does not hold then the result will not
- * be a valid ciphertext anymore.
+ * If r==0 then it is set to c.effectiveR(). It is assumed that the slots
+ * of *this contains integers mod p^r, i.e., that only the free terms are
+ * nonzero. If that assumptions does not hold then the result will not be
+ * a valid ciphertext anymore.
  *
  * If the shortCut flag is set then digits[j] contains the j'th digits
  * wrt mod-p plaintext space and the highest possible level (for all j).

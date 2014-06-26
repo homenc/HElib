@@ -38,14 +38,17 @@ static void buildDigitPolynomial(ZZX& result, long p, long e);
 // mod-p^{r-j} plaintext space, and all the ciphertexts are at the same level.
 void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
 {
-  if (r<=0 || r>c.getContext().alMod.getR()) // how many digits to extract
-    r = c.getContext().alMod.getR();
+  FHEcontext& context = (FHEcontext&) c.getContext();
+  long rr = c.effectiveR();
+  if (r<=0 || r>rr) r = rr; // how many digits to extract
 
   // If the digitPoly in the context is not yet initialized, then compute it
-  long p = c.getContext().zMStar.getP();
-  ZZX& x2p = (ZZX&) c.getContext().modP_digPoly;
-  if (IsZero(x2p) && p!=2)
-    buildDigitPolynomial(x2p, p, c.getContext().alMod.getR());
+  long p = context.zMStar.getP();
+  ZZX& x2p = context.modP_digPoly;
+  if (r>context.modP_digPoly_r && p!=2) { // not thread safe...
+    buildDigitPolynomial(x2p, p, r);
+    context.modP_digPoly_r = r;
+  }
 
   Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
   digits.resize(r, tmp);      // allocate space

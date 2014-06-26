@@ -459,7 +459,6 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   readContextBase(str, m, p, r);
   assert( m == pk.getContext().zMStar.getM() );
   assert( p == pk.getContext().zMStar.getP() );
-  assert( r == (unsigned long)pk.getContext().alMod.getR() );
 
   // Get the public encryption key itself
   str >> pk.pubEncrKey;
@@ -518,10 +517,10 @@ bool FHESecKey::operator==(const FHESecKey& other) const
 // It is assumed that the context already contains all parameters.
 long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt, long ptxtSpace)
 {
-  if (ptxtSpace<2)
-    ptxtSpace = context.alMod.getPPowR(); // default plaintext space is p^r
+  if (sKeys.empty()) { // 1st secret-key, generate corresponding public key
+    if (ptxtSpace<2)
+      ptxtSpace = context.alMod.getPPowR(); // default plaintext space is p^r
 
-  if (sKeys.empty()) {   // generate the public key
     pubEncrKey.parts.assign(2,CtxtPart(context,context.ctxtPrimes));// allocate space
     RLWE(pubEncrKey.parts[0], pubEncrKey.parts[1], sKey, ptxtSpace); // a new RLWE instance
 
@@ -588,7 +587,8 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   } // restore state upon destruction of state
 
   // Record the plaintext space for this key-switching matrix
-  if (p<2) p = context.alMod.getPPowR();  // default plaintext space is p^r
+  if (p<2) p = pubEncrKey.ptxtSpace; // default plaintext space is p^r
+  assert(p>=2);
   ksMatrix.ptxtSpace = p;
 
   // generate the RLWE instances with pseudorandom ai's
@@ -604,7 +604,7 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   }
 
   // Push the new matrix onto our list
-  keySwitching.push_back(ksMatrix);
+  keySwitching.push_back(ksMatrix); // FIXME: put bootstrap matrices elsewhere
   FHE_TIMER_STOP;
 }
 
@@ -681,7 +681,8 @@ long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
   assert(((FHEPubKey*)this) == &ctxt.pubKey);
 
   if (ptxtSpace<2) 
-    ptxtSpace =  context.alMod.getPPowR();  // default plaintext space is p^r
+    ptxtSpace = pubEncrKey.ptxtSpace; // default plaintext space is p^r
+  assert(ptxtSpace >= 2);
 
   const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
   ctxt.primeSet = context.ctxtPrimes;        // initialize the primeSet
