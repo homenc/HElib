@@ -13,12 +13,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "PAlgebra.h"
-#include "NumbTh.h"
-#include "FHEContext.h"
 #include <cassert>
 #include <string>
 #include <sstream>
+#include <NTL/ZZ.h>
+NTL_CLIENT
+#include "NumbTh.h"
+#include "FHEContext.h"
 
 void usage() 
 {
