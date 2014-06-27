@@ -135,7 +135,11 @@ void Ctxt::modDownToSet(const IndexSet &s)
   FHE_TIMER_START;
 
   IndexSet intersection = primeSet & s;
-  assert(!empty(intersection));       // some primes must be left
+  //  assert(!empty(intersection));       // some primes must be left
+  if (empty(intersection)) {
+    cerr << "modDownToSet called from "<<primeSet<<" to "<<s<<endl;
+    exit(1);
+  }
   if (intersection==primeSet) return; // nothing to do, removing no primes
   IndexSet setDiff = primeSet / intersection; // set-minus
 
@@ -420,22 +424,15 @@ void Ctxt::findBaseSet(IndexSet& s) const
   }
 
   // while noise is larger than added term, scale down by the next prime
-  while (curNoise>addedNoise && card(s)>1) {
+  while (curNoise>addedNoise && !empty(s)) {
     curNoise -= context.logOfPrime(s.last());
     s.remove(s.last());
   }
 
-  if (halfSize) {
-    // If noise is still too big, drop last big prime and insert half-size prime
-    if (curNoise>addedNoise) {
-      curNoise = firstNoise;
-      s = IndexSet(0);
-    } 
-    // Otherwise check if you can add back the half-size prime
-    else if (curNoise+firstNoise <= addedNoise) {
-      curNoise += firstNoise;
-      s.insert(0);
-    }
+  // Add 1st prime if s is empty or if this does not increase noise too much
+  if (empty(s) || (!s.contains(0) && curNoise+firstNoise<=addedNoise)) {
+    s.insert(0);
+    curNoise += firstNoise;
   }
 
   if (curNoise>addedNoise && log_of_ratio()>-0.5)
