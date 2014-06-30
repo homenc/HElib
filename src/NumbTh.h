@@ -245,6 +245,16 @@ void convert(Vec<T1>& v1, const vector<T2>& v2)
       convert(v1[i], v2[i]);
 }
 
+template<class T1, class T2>
+T1 convert(const T2& v2)
+{  
+   T1 v1;
+   convert(v1, v2);
+   return v1;
+}
+
+
+
 // some useful operations
 void mul(vector<ZZX>& x, const vector<ZZX>& a, long b);
 void div(vector<ZZX>& x, const vector<ZZX>& a, long b);

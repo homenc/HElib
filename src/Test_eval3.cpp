@@ -46,14 +46,32 @@ private:
 
   Mat<RX> A;
 
+public:
   // constructor
   Step2Matrix(const EncryptedArray& _ea, 
               const Vec<long>& dimvec,
               const Vec<long>& reps,
               long _dim,
               long cofactor);
+
+  virtual const EncryptedArray& getEA() const { return ea; }
+
+  virtual bool get(RX& out, long i, long j) const;
               
 };
+
+template<class type>
+bool Step2Matrix<type>::get(RX& out, long i, long j) const
+{
+  long i1 = sig.getCoord(i, dim);
+  long j1 = sig.getCoord(j, dim);
+
+  if (sig.addCoord(i, dim, -i1) != sig.addCoord(j, dim, -j1)) 
+    return true;
+
+  out = A[i1][j1];
+  return false;
+}
 
 template<class type>
 Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea, 
@@ -63,7 +81,7 @@ Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea,
                                long cofactor)
 : ea(_ea), sig(dimvec), dim(_dim)
 {
-   RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+   RBak bak; bak.save(); ea.getAlMod().restoreContext();
    const RX& G = ea.getDerived(type()).getG();
 
    long sz = dimvec[dim];
@@ -73,7 +91,7 @@ Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea,
    Vec<RX> points;
    points.SetLength(sz);
    for (long j = 0; j < sz; j++) 
-      points[j] = zz_pX(reps[j]*cofactor, 1) % G;
+      points[j] = RX(reps[j]*cofactor, 1) % G;
 
    A.SetDims(sz, sz);
    for (long j = 0; j < sz; j++)
@@ -82,6 +100,25 @@ Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea,
    for (long i = 1; i < sz; i++)
       for (long j = 0; j < sz; j++)
          A[i][j] = (A[i-1][j] * points[j]) % G;
+}
+
+
+PlaintextMatrixBaseInterface*
+buildStep2Matrix(const EncryptedArray& ea, 
+                 const Vec<long>& dimvec,
+                 const Vec<long>& reps,
+                 long dim,
+                 long cofactor)
+{
+  switch (ea.getAlMod().getTag()) {
+  case PA_GF2_tag: 
+    return new Step2Matrix<PA_GF2>(ea, dimvec, reps, dim, cofactor);
+
+  case PA_zz_p_tag: 
+    return new Step2Matrix<PA_zz_p>(ea, dimvec, reps, dim, cofactor);
+
+  default: return 0;
+  }
 }
 
 
@@ -270,6 +307,13 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   long d = dprodvec[0];
   long nslots = phim/d;
 
+  long inertPrefix = 0;
+  for (long i = 0; i < nfactors && dvec[i] == 1; i++) {
+    inertPrefix++;
+  }
+
+  cout << "inertPrefix=" << inertPrefix << "\n";
+
   Vec< Vec<long> > local_reps(INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
     init_representatives(local_reps[i], mvec[i], 
@@ -417,16 +461,39 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   else 
     cout << "NO!!!\n";
 
+
+
+  for (long dim = 0; dim < inertPrefix; dim++) {
+    PlaintextMatrixBaseInterface *mat = 
+      buildStep2Matrix(ea, reduced_phivec, local_reps[dim], dim, m/mvec[dim]);
+
+    
+    vector<ZZX> val1;
+    val1.resize(nslots);
+    for (long i = 0; i < nslots; i++) 
+      val1[i] = conv<ZZX>(rep(eval_sequence[dim+1][i]));
+
+    PlaintextArray pa1(ea);
+    pa1.encode(val1);
+
+    pa1.mat_mul(*mat);
+
+    vector<ZZX> val2;
+    val2.resize(nslots);
+    for (long i = 0; i < nslots; i++) 
+      val2[i] = conv<ZZX>(rep(eval_sequence[dim][i]));
+
+    PlaintextArray pa2(ea);
+    pa2.encode(val2);
+
+    if (pa1.equals(pa2))
+      cout << "dim=" << dim << " GOOD\n";
+    else
+      cout << "dim=" << dim << " BAD\n";
+  }
+
+
   exit(0);
-
-/*
-for i in [0..sig.getProd(0, dim))  // iterate over all dimension dim subcubes
-   offset = i*sig.getProd(dim)
-   for j in [0..sig.getProd(dim+1))  // iterate over all columns in the subcube
-      for k = 0..sig.getDim(dim)   // iterate over the column elements
-         index = offset + j + k*sig.getProd(dim+1)
-*/
-
 
 #if 0
     

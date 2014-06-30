@@ -388,6 +388,7 @@ private:
 public:
   const RX& getG() const { return G; }
   long getDegG() const { return degG; } 
+  void restoreContextForG() const { contextForG.restore(); }
 };
 
 //! A concrete instantiation of the virtual class

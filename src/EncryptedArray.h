@@ -302,6 +302,7 @@ public:
     : context(other.context), tab(other.tab)
   {
     RBak bak; bak.save(); tab.restoreContext();
+    REBak ebak; ebak.save(); other.mappingData.restoreContextForG();
     mappingData = other.mappingData;
   }
 
@@ -319,6 +320,8 @@ public:
   virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
 
   const RX& getG() const { return mappingData.getG(); }
+  void restoreContextForG() const { mappingData.restoreContextForG(); }
+
 
   virtual const FHEcontext& getContext() const { return context; }
   virtual const long getDegree() const { return mappingData.getDegG(); }
@@ -523,7 +526,13 @@ public:
   { }
 
   // copy constructor: default
-  // assignment: default
+
+  EncryptedArray& operator=(const EncryptedArray& other) {
+    if (this == &other) return *this;
+    assert(&alMod== &other.alMod);
+    rep = other.rep;
+    return *this;
+  }
 
   //! @brief downcast operator
   //! example: const EncryptedArrayDerived<PA_GF2>& rep = ea.getDerived(PA_GF2());
