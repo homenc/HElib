@@ -52,7 +52,8 @@ public:
               const Vec<long>& dimvec,
               const Vec<long>& reps,
               long _dim,
-              long cofactor);
+              long cofactor,
+              bool invert = false);
 
   virtual const EncryptedArray& getEA() const { return ea; }
 
@@ -78,7 +79,8 @@ Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea,
                                const Vec<long>& dimvec,
                                const Vec<long>& reps,
                                long _dim,
-                               long cofactor)
+                               long cofactor,
+                               bool invert)
 : ea(_ea), sig(dimvec), dim(_dim)
 {
    RBak bak; bak.save(); ea.getAlMod().restoreContext();
@@ -100,6 +102,19 @@ Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea,
    for (long i = 1; i < sz; i++)
       for (long j = 0; j < sz; j++)
          A[i][j] = (A[i-1][j] * points[j]) % G;
+
+   if (invert) {
+      REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+
+      mat_RE A1, A2;
+      conv(A1, A);
+
+      long p = ea.getAlMod().getZMStar().getP();
+      long r = ea.getAlMod().getR();
+
+      ppInvert(A2, A1, p, r);
+      conv(A, A2);
+   }
 }
 
 
@@ -108,14 +123,15 @@ buildStep2Matrix(const EncryptedArray& ea,
                  const Vec<long>& dimvec,
                  const Vec<long>& reps,
                  long dim,
-                 long cofactor)
+                 long cofactor,
+                 bool invert = false)
 {
   switch (ea.getAlMod().getTag()) {
   case PA_GF2_tag: 
-    return new Step2Matrix<PA_GF2>(ea, dimvec, reps, dim, cofactor);
+    return new Step2Matrix<PA_GF2>(ea, dimvec, reps, dim, cofactor, invert);
 
   case PA_zz_p_tag: 
-    return new Step2Matrix<PA_zz_p>(ea, dimvec, reps, dim, cofactor);
+    return new Step2Matrix<PA_zz_p>(ea, dimvec, reps, dim, cofactor, invert);
 
   default: return 0;
   }
@@ -467,6 +483,9 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     PlaintextMatrixBaseInterface *mat = 
       buildStep2Matrix(ea, reduced_phivec, local_reps[dim], dim, m/mvec[dim]);
 
+    PlaintextMatrixBaseInterface *imat = 
+      buildStep2Matrix(ea, reduced_phivec, local_reps[dim], dim, m/mvec[dim], true);
+
     
     vector<ZZX> val1;
     val1.resize(nslots);
@@ -475,6 +494,8 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
     PlaintextArray pa1(ea);
     pa1.encode(val1);
+
+    PlaintextArray pa1_orig(pa1);
 
     pa1.mat_mul(*mat);
 
@@ -490,6 +511,13 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
       cout << "dim=" << dim << " GOOD\n";
     else
       cout << "dim=" << dim << " BAD\n";
+
+    pa1.mat_mul(*imat);
+    if (pa1.equals(pa1_orig))
+      cout << "dim=" << dim << " INV GOOD\n";
+    else
+      cout << "dim=" << dim << " INV BAD\n";
+
   }
 
 
