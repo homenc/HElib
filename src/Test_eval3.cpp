@@ -14,8 +14,11 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include <NTL/lzz_pXFactoring.h>
-NTL_CLIENT
+
+
+namespace std {} using namespace std;
+namespace NTL {} using namespace NTL;
+
 
 #include "FHE.h"
 #include "timing.h"
@@ -270,6 +273,195 @@ buildStep2Matrix(const EncryptedArray& ea,
   default: return 0;
   }
 }
+
+
+
+// two-step tower stuff...
+
+template<class type>
+class Tower {
+public:
+  PA_INJECT(type)
+
+  long m1, m2, d1, d2, p, r;
+
+  long d;
+  RE zeta; // = [X^m2 mod G]
+
+  RX H;  // = the min poly of zeta over R
+
+  Mat<R> M2, M2i;
+  // M2 is the matrix that takes us from the two-step tower
+  // to the one-step tower, and M2i is its inverse.
+
+
+  Tower(long _m1, long _m2, long _d1, long _d2, long _p, long _r)
+    : m1(_m1), m2(_m2), d1(_d1), d2(_d2), p(_p), r(_r)
+  {
+    d = RE::degree();
+    assert(d == d1*d2);
+
+    const RXModulus& G = RE::modulus();
+
+    zeta = conv<RE>(RX(m2, 1));  // zeta = [X^m2 mod G]
+
+    // compute H = min poly of zeta over R
+
+    Mat<R> M1;
+    M1.SetDims(d1, d);
+
+    for (long i = 0; i < d1; i++) {
+      VectorCopy(M1[i], rep(power(zeta, i)), d);
+    }
+
+    Vec<R> V1;
+    VectorCopy(V1, rep(power(zeta, d1)), d);
+
+    Mat<R> M1sq;
+
+    Mat<R> R1;
+    R1.SetDims(d, d1);
+
+    for (;;) {
+      for (long i = 0; i < d; i++)
+        for (long j = 0; j < d1; j++)
+          random(R1[i][j]);
+
+      M1sq = M1*R1;
+    
+      Mat<long> M1sqInt = conv< Mat<long> >(M1sq);
+      {
+         RBak bak; bak.save();
+         GenericModulus<R>::init(p);
+         Mat<R> M1sq_modp = conv< Mat<R> >(M1sqInt);
+         if (determinant(M1sq_modp) != 0) break;
+      }
+   
+    }
+
+    Vec<R> V1sq = V1*R1;
+
+    Mat<R> M1sqi;
+    ppInvert(M1sqi, M1sq, p, r);
+
+    Vec<R> W1 = V1sq * M1sqi;
+
+    assert(W1*M1 == V1);
+
+    H = RX(d1, 1) - conv<RX>(W1);
+    // H is the min poly of zeta
+
+    assert(eval(H, zeta) == 0);
+
+    // compute matrices M2 and M2i
+
+    M2.SetDims(d, d);
+
+    for (long i = 0; i < d2; i++) {
+      // construct rows [i..i+d1)
+      for (long j = 0; j < d1; j++) {
+         VectorCopy(M2[i*d1+j], (rep(power(zeta, j)) << i) % G, d);
+      }
+    }
+
+    ppInvert(M2i, M2, p, r);
+  }
+
+
+  // converts an object represented in the two-step
+  // tower representation to the one-step representation
+
+  RE convert2to1(const Vec<RX>& v)
+  {
+    assert(v.length() <= d2);
+
+    Vec<R> w;
+    w.SetLength(d);
+
+    for (long i = 0; i < v.length(); i++) {
+      assert(deg(v[i]) < d1);
+      for (long j = 0; j <= deg(v[i]); j++) 
+        w[i*d1 + j] = v[i][j];
+    }
+
+    Vec<R> z = w*M2;
+    return conv<RE>( conv<RX>( z ) );
+  }
+
+  // performs the reverse conversion
+
+  Vec<RX> convert1to2(const RE& beta)
+  {
+    Vec<R> z = VectorCopy(rep(beta), d);
+    Vec<R> w = z*M2i;
+
+    Vec<RX> res;
+    res.SetLength(d2);
+
+    for (long i = 0; i < d2; i++) {
+      Vec<R> tmp;
+      tmp.SetLength(d1);
+      for (long j = 0; j < d1; j++)
+        tmp[j] = w[i*d1+j];
+
+      res[i] = conv<RX>(tmp);
+    }
+
+    return res;
+  }
+
+  void buildLinPolyMatrix(Mat<RE>& M)
+  {
+     long q = power_long(p, d1);
+
+     M.SetDims(d2, d2);
+
+     for (long j = 0; j < d2; j++) 
+        conv(M[0][j], RX(j, 1));
+
+     for (long i = 1; i < d2; i++)
+        for (long j = 0; j < d2; j++)
+           M[i][j] = power(M[i-1][j], q);
+  }
+
+
+
+  void buildLinPolyCoeffs(Vec<RE>& C_out, const Vec<RE>& L)
+  {
+     Mat<RE> M;
+     buildLinPolyMatrix(M);
+
+     Vec<RE> C;
+     ppsolve(C, M, L, p, r);
+
+     C_out = C;
+  }
+
+  void applyLinPoly(RE& beta, const Vec<RE>& C, const RE& alpha)
+  {
+     assert(d2 == C.length());
+     long q = power_long(p, d1);
+
+     RE gamma, res;
+
+     gamma = conv<RE>(RX(1, 1));
+     res = C[0]*alpha;
+     for (long i = 1; i < d2; i++) {
+        gamma = power(gamma, q);
+        res += C[i]*conv<RE>(CompMod(rep(alpha), rep(gamma), RE::modulus()));
+     }
+
+     beta = res;
+  }
+
+
+
+
+
+};
+
+template class Tower<PA_GF2>;
+template class Tower<PA_zz_p>;
 
 
 
@@ -654,7 +846,7 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   }
 
   if (inertPrefix == nfactors-1) {
-    cout << "special case\n";
+    cout << "easy case\n";
 
     long dim = nfactors-1;
     PlaintextBlockMatrixBaseInterface *mat = 
@@ -694,6 +886,29 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
       cout << "dim=" << dim << " INV GOOD\n";
     else
       cout << "dim=" << dim << " INV BAD\n";
+
+  }
+  else if (inertPrefix == nfactors-2) {
+    cout << "harder case\n";
+
+    long m1 = mvec[nfactors-1];
+    long m2 = m/m1;
+
+    long d1 = dvec[nfactors-1];
+    long d2 = d/d1;
+
+    Tower<PA_zz_p> tower(m1, m2, d1, d2, p, r);
+
+    zz_pX g;
+    random(g, d1);
+    zz_pE beta = eval(g, tower.zeta) * conv<zz_pE>(zz_pX(1, 1));
+
+    cout << g << "\n";
+    cout << tower.convert1to2(beta) << "\n";
+
+  }
+  else {
+    cout << "case not handled\n";
 
   }
    

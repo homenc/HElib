@@ -48,6 +48,7 @@
  */
 
 #include <vector>
+#include <cassert>
 
 #include <NTL/ZZX.h>
 #include <NTL/GF2X.h>
@@ -252,11 +253,27 @@ public:
   DummyContext(long) {}
 };
 
+
+// some stuff to help with template code
+template<class R> 
+struct GenericModulus { };
+
+template<> 
+struct GenericModulus<zz_p> {
+  static void init(long p) { zz_p::init(p); }
+};
+
+template<> 
+struct GenericModulus<GF2> {
+  static void init(long p) { assert(p == 2); }
+};
+
 class PA_GF2 {
 // typedefs for algebraic structires built up from GF2
 
 public:
   static const PA_tag tag = PA_GF2_tag;
+  typedef GF2 R;
   typedef GF2X RX;
   typedef vec_GF2X vec_RX;
   typedef GF2XModulus RXModulus;
@@ -279,6 +296,7 @@ class PA_zz_p {
 
 public:
   static const PA_tag tag = PA_zz_p_tag;
+  typedef zz_p R;
   typedef zz_pX RX;
   typedef vec_zz_pX vec_RX;
   typedef zz_pXModulus RXModulus;
@@ -347,6 +365,7 @@ public:
 #ifndef DOXYGEN_IGNORE
 #define PA_INJECT(typ)\
   static const PA_tag tag = typ::tag;  \
+  typedef typename typ::R R;  \
   typedef typename typ::RX RX;  \
   typedef typename typ::vec_RX vec_RX;  \
   typedef typename typ::RXModulus RXModulus;  \

@@ -14,8 +14,8 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-// turn on range checking
-#define NTL_RANGE_CHECK
+namespace std {} using namespace std;
+namespace NTL {} using namespace NTL;
 
 #include "FHE.h"
 #include "timing.h"
@@ -24,6 +24,7 @@
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cassert>
+
 
 void buildLinPolyMatrix(mat_zz_pE& M, long p, long d1)
 {
@@ -231,6 +232,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   assert(W1*M1 == V1);
 
+  zz_pX H = zz_pX(d1, 1) - conv<zz_pX>(W1);
+  // H is the min poly of alpha
+
+  assert(CompMod(H, alpha, G) == 0);
 
   // now construct the min poly of X over ZZ_{p^r}[alpha]
 
@@ -258,8 +263,6 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   assert(W2 * M2 == V2);
 
 
-  zz_pX H = conv<zz_pX>(W1) + zz_pX(d1, 1);
-  // H is the min poly of alpha
 
   zz_pE::init(G);
 
