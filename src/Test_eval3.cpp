@@ -33,6 +33,140 @@ using namespace tr1;
 #endif
 
 
+
+template<class type>
+class Step1Matrix : public PlaintextBlockMatrixInterface<type> 
+{
+public:
+  PA_INJECT(type)
+
+private:
+  const EncryptedArray& ea;
+  const CubeSignature& sig;
+  long dim;
+
+  Mat< mat_R > A;
+
+public:
+  // constructor
+  Step1Matrix(const EncryptedArray& _ea, 
+              const CubeSignature& _sig,
+              const Vec<long>& reps,
+              long _dim,
+              long cofactor,
+              bool invert = false);
+
+  virtual const EncryptedArray& getEA() const { return ea; }
+
+  virtual bool get(mat_R& out, long i, long j) const;
+              
+};
+
+template<class type>
+bool Step1Matrix<type>::get(mat_R& out, long i, long j) const
+{
+  long i1 = sig.getCoord(i, dim);
+  long j1 = sig.getCoord(j, dim);
+
+  if (sig.addCoord(i, dim, -i1) != sig.addCoord(j, dim, -j1)) 
+    return true;
+
+  out = A[i1][j1];
+  return false;
+}
+
+template<class type>
+Step1Matrix<type>::Step1Matrix(const EncryptedArray& _ea, 
+                               const CubeSignature& _sig,
+                               const Vec<long>& reps,
+                               long _dim,
+                               long cofactor,
+                               bool invert)
+: ea(_ea), sig(_sig), dim(_dim)
+{
+  RBak bak; bak.save(); ea.getAlMod().restoreContext();
+  const RX& G = ea.getDerived(type()).getG();
+
+  assert(dim == sig.getNumDims() - 1);
+  assert(sig.getSize() == ea.size());
+
+  long sz = sig.getDim(dim);
+  assert(sz == reps.length());
+
+  long d = deg(G);
+
+  // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
+
+  Vec<RX> points;
+  points.SetLength(sz);
+  for (long j = 0; j < sz; j++) 
+    points[j] = RX(reps[j]*cofactor, 1) % G;
+
+  Mat<RX> AA;
+
+  AA.SetDims(sz*d, sz);
+  for (long j = 0; j < sz; j++)
+    AA[0][j] = 1;
+
+  for (long i = 1; i < sz*d; i++)
+    for (long j = 0; j < sz; j++)
+      AA[i][j] = (AA[i-1][j] * points[j]) % G;
+
+  A.SetDims(sz, sz);
+  for (long i = 0; i < sz; i++)
+    for (long j = 0; j < sz; j++) {
+      A[i][j].SetDims(d, d);
+      for (long k = 0; k < d; k++)
+        VectorCopy(A[i][j][k], AA[i*d + k][j], d);
+    }
+
+
+  if (invert) {
+    REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+
+    mat_R A1, A2;
+
+    A1.SetDims(sz*d, sz*d);
+    for (long i = 0; i < sz*d; i++)
+      for (long j = 0; j < sz*d; j++)
+        A1[i][j] = A[i/d][j/d][i%d][j%d];
+
+
+    long p = ea.getAlMod().getZMStar().getP();
+    long r = ea.getAlMod().getR();
+
+    ppInvert(A2, A1, p, r);
+
+    for (long i = 0; i < sz*d; i++)
+      for (long j = 0; j < sz*d; j++)
+        A[i/d][j/d][i%d][j%d] = A2[i][j];
+ }
+}
+
+
+PlaintextBlockMatrixBaseInterface*
+buildStep1Matrix(const EncryptedArray& ea, 
+                 const CubeSignature& sig,
+                 const Vec<long>& reps,
+                 long dim,
+                 long cofactor,
+                 bool invert = false)
+{
+  switch (ea.getAlMod().getTag()) {
+  case PA_GF2_tag: 
+    return new Step1Matrix<PA_GF2>(ea, sig, reps, dim, cofactor, invert);
+
+  case PA_zz_p_tag: 
+    return new Step1Matrix<PA_zz_p>(ea, sig, reps, dim, cofactor, invert);
+
+  default: return 0;
+  }
+}
+
+/***** END Step1 stuff *****/
+
+
+
 template<class type>
 class Step2Matrix : public PlaintextMatrixInterface<type> 
 {
@@ -41,7 +175,7 @@ public:
 
 private:
   const EncryptedArray& ea;
-  CubeSignature sig;
+  const CubeSignature& sig;
   long dim;
 
   Mat<RX> A;
@@ -49,7 +183,7 @@ private:
 public:
   // constructor
   Step2Matrix(const EncryptedArray& _ea, 
-              const Vec<long>& dimvec,
+              const CubeSignature& _sig,
               const Vec<long>& reps,
               long _dim,
               long cofactor,
@@ -76,51 +210,51 @@ bool Step2Matrix<type>::get(RX& out, long i, long j) const
 
 template<class type>
 Step2Matrix<type>::Step2Matrix(const EncryptedArray& _ea, 
-                               const Vec<long>& dimvec,
+                               const CubeSignature& _sig,
                                const Vec<long>& reps,
                                long _dim,
                                long cofactor,
                                bool invert)
-: ea(_ea), sig(dimvec), dim(_dim)
+: ea(_ea), sig(_sig), dim(_dim)
 {
-   RBak bak; bak.save(); ea.getAlMod().restoreContext();
-   const RX& G = ea.getDerived(type()).getG();
+  RBak bak; bak.save(); ea.getAlMod().restoreContext();
+  const RX& G = ea.getDerived(type()).getG();
 
-   long sz = dimvec[dim];
-   assert(sz == reps.length());
+  long sz = sig.getDim(dim);
+  assert(sz == reps.length());
 
 
-   Vec<RX> points;
-   points.SetLength(sz);
-   for (long j = 0; j < sz; j++) 
-      points[j] = RX(reps[j]*cofactor, 1) % G;
+  Vec<RX> points;
+  points.SetLength(sz);
+  for (long j = 0; j < sz; j++) 
+    points[j] = RX(reps[j]*cofactor, 1) % G;
 
-   A.SetDims(sz, sz);
-   for (long j = 0; j < sz; j++)
-      A[0][j] = 1;
+  A.SetDims(sz, sz);
+  for (long j = 0; j < sz; j++)
+    A[0][j] = 1;
 
-   for (long i = 1; i < sz; i++)
-      for (long j = 0; j < sz; j++)
-         A[i][j] = (A[i-1][j] * points[j]) % G;
+  for (long i = 1; i < sz; i++)
+    for (long j = 0; j < sz; j++)
+      A[i][j] = (A[i-1][j] * points[j]) % G;
 
-   if (invert) {
-      REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+  if (invert) {
+    REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
 
-      mat_RE A1, A2;
-      conv(A1, A);
+    mat_RE A1, A2;
+    conv(A1, A);
 
-      long p = ea.getAlMod().getZMStar().getP();
-      long r = ea.getAlMod().getR();
+    long p = ea.getAlMod().getZMStar().getP();
+    long r = ea.getAlMod().getR();
 
-      ppInvert(A2, A1, p, r);
-      conv(A, A2);
-   }
+    ppInvert(A2, A1, p, r);
+    conv(A, A2);
+ }
 }
 
 
 PlaintextMatrixBaseInterface*
 buildStep2Matrix(const EncryptedArray& ea, 
-                 const Vec<long>& dimvec,
+                 const CubeSignature& sig,
                  const Vec<long>& reps,
                  long dim,
                  long cofactor,
@@ -128,10 +262,10 @@ buildStep2Matrix(const EncryptedArray& ea,
 {
   switch (ea.getAlMod().getTag()) {
   case PA_GF2_tag: 
-    return new Step2Matrix<PA_GF2>(ea, dimvec, reps, dim, cofactor, invert);
+    return new Step2Matrix<PA_GF2>(ea, sig, reps, dim, cofactor, invert);
 
   case PA_zz_p_tag: 
-    return new Step2Matrix<PA_zz_p>(ea, dimvec, reps, dim, cofactor, invert);
+    return new Step2Matrix<PA_zz_p>(ea, sig, reps, dim, cofactor, invert);
 
   default: return 0;
   }
@@ -481,10 +615,10 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
   for (long dim = 0; dim < inertPrefix; dim++) {
     PlaintextMatrixBaseInterface *mat = 
-      buildStep2Matrix(ea, reduced_phivec, local_reps[dim], dim, m/mvec[dim]);
+      buildStep2Matrix(ea, *sig_sequence[dim], local_reps[dim], dim, m/mvec[dim]);
 
     PlaintextMatrixBaseInterface *imat = 
-      buildStep2Matrix(ea, reduced_phivec, local_reps[dim], dim, m/mvec[dim], true);
+      buildStep2Matrix(ea, *sig_sequence[dim], local_reps[dim], dim, m/mvec[dim], true);
 
     
     vector<ZZX> val1;
@@ -494,7 +628,6 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
     PlaintextArray pa1(ea);
     pa1.encode(val1);
-
     PlaintextArray pa1_orig(pa1);
 
     pa1.mat_mul(*mat);
@@ -520,260 +653,50 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
   }
 
+  if (inertPrefix == nfactors-1) {
+    cout << "special case\n";
 
-  exit(0);
+    long dim = nfactors-1;
+    PlaintextBlockMatrixBaseInterface *mat = 
+      buildStep1Matrix(ea, *sig_sequence[dim], local_reps[dim], dim, m/mvec[dim]);
 
-#if 0
-    
-  
-
-  long nslots = context.zMStar.getNSlots();
-
-
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-
-  assert(d == 0); // that's the assumption here
+    PlaintextBlockMatrixBaseInterface *imat = 
+      buildStep1Matrix(ea, *sig_sequence[dim], local_reps[dim], dim, m/mvec[dim], true);
 
 
-  if (d == 0)
-  else
-    GG = makeIrredPoly(p, d); 
-
-  d = deg(GG);
-
-  cerr << "GG = " << GG << "\n";
-  cerr << "generating key-switching matrices... ";
-  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-  addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cerr << "done\n";
-
-  printAllTimers();
-  resetAllTimers();
-
-
-
-  cerr << "computing masks and tables for rotation...";
-  EncryptedArray ea(context, GG);
-  cerr << "done\n";
-
-
-  // build a Step1 matrix
-
-  PlaintextBlockMatrixBaseInterface *step1 =
-    buildStep1Matrix(ea, m1, m2);
-
-  long gen1 = dynamic_cast<Step1MatrixSuper*>(step1)->getGen();
-
-  Vec<long> rep1;
-  alt_init_representatives(rep1, m1, gen1, phim1/d);
-
-  // build a Step2 matrix
-
-  PlaintextMatrixBaseInterface *step2 =
-    buildStep2Matrix(ea, m1, m2);
-
-  long gen2 = dynamic_cast<Step2MatrixSuper*>(step2)->getGen();
-
-  Vec<long> rep2;
-  alt_init_representatives(rep2, m2, gen2, phim2);
-
-
-  Vec<long> representatives;
-  for (long i = 0; i < rep1.length(); i++)
-    for (long j = 0; j < rep2.length(); j++) {
-      // chinese remaindering
-      long x1 = rep1[i];
-      long x2 = rep2[j];
-
-      long x = mcMod(x1*m2*InvMod(m2, m1) + x2*m1*InvMod(m1, m2), m);
-
-      append(representatives, x);
+    vector<ZZX> val1;
+    val1.resize(nslots);
+    for (long i = 0; i < phim; i++) {
+      val1[i/d] += conv<ZZX>(rep(eval_sequence[dim+1][i])) << (i % d);
     }
+    PlaintextArray pa1(ea);
+    pa1.encode(val1);
+    PlaintextArray pa1_orig(pa1);
+
+    pa1.mat_mul(*mat);
+
+    vector<ZZX> val2;
+    val2.resize(nslots);
+    for (long i = 0; i < nslots; i++) 
+      val2[i] = conv<ZZX>(rep(eval_sequence[dim][i]));
+
+    PlaintextArray pa2(ea);
+    pa2.encode(val2);
+
+    if (pa1.equals(pa2))
+      cout << "dim=" << dim << " GOOD\n";
+    else
+      cout << "dim=" << dim << " BAD\n";
 
 
-  cout << representatives << "\n";
+    pa1.mat_mul(*imat);
+    if (pa1.equals(pa1_orig))
+      cout << "dim=" << dim << " INV GOOD\n";
+    else
+      cout << "dim=" << dim << " INV BAD\n";
 
-  Vec<long> slot_index, slot_rotate;
-
-  init_slot_mappings(slot_index, slot_rotate, representatives, m, p, context);
-
-  cout << slot_index << "\n";
-  cout << slot_rotate << "\n";
-
-
-  // evaluate F via the cube structure
-
-  Vec<zz_pX> points1;
-  points1.SetLength(phim1/d);
-  for (long i = 0; i < phim1/d; i++)
-    points1[i] = zz_pX(m2 * rep1[i], 1) % G;
-
-  Vec<zz_pX> points2;
-  points2.SetLength(phim2);
-  for (long j = 0; j < phim2; j++)
-    points2[j] = zz_pX(m1 * rep2[j], 1) % G;
-
-
-  // cube represents an array with phim1 rows and phim2 colums,
-  //   stored in row-major order.
-  //   So, the first phim2 elements elements represent row 0,
-  //   the next phim2 elements represent row 1, etc.
-  //   Column i represents the polynomial f_i in the powerful 
-  //   basis represenation: sum_i f_i(X_1) X_2^i, where i = 0..phim2-1
-  
-  Vec<zz_pX> alt_values1;
-  alt_values1.SetLength(nslots);
-
-  for (long j = 0; j < phim2; j++) {
-    zz_pX tpoly;
-    tpoly.SetLength(phim1);
-    for (long i = 0; i < phim1; i++)
-      tpoly[i] = cube[i*phim2 + j];
-    tpoly.normalize();
-
-    for (long i = 0; i < phim1/d; i++)
-      alt_values1[i*phim2 + j] = CompMod(tpoly, points1[i], G);
   }
-
-  Vec<zz_pX> alt_values2;
-  alt_values2.SetLength(nslots);
-
-  for (long i = 0; i < phim1/d; i++) {
-    Vec<zz_pX> tpoly;
-    tpoly.SetLength(phim2);
-    for (long j = 0; j < phim2; j++)
-      tpoly[j] = alt_values1[i*phim2 + j];
-
-    for (long j = 0; j < phim2; j++)
-      alt_values2[i*phim2 + j ] = EvalMod(tpoly, points2[j], G);
-  }
-
-  if (eval_values == alt_values2) 
-    cout << "right on!!\n";
-  else
-    cout << "no way!!!\n";
-
-  // evaluate using matrices
-
-#if 0
-
-  PlaintextArray pa(ea);
-  vector<ZZX> Alt_values1;
-  convert(Alt_values1, alt_values1);
-
-  pa.encode(Alt_values1);
-  pa.mat_mul(*step2);
-
-  vector<ZZX> AV3;
-  pa.decode(AV3);
-
-  Vec<zz_pX> av3;
-  convert(av3, AV3);
-
-  if (eval_values == av3) 
-    cout << "too cool!!\n";
-  else
-    cout << "nooooo!!!\n";
-#endif
-
-
-#if 1
-  Vec<zz_pX> av2;
-  av2.SetLength(nslots);
-
-  for (long i = 0; i < nslots; i++) {
-    long u = i / phim2;
-    long v = i % phim2;
-
-    // pack coeffs [ud..ud+d) of f_v into slot i
-    av2[i] = 0;
-    for (long j = u*d; j < u*d+d; j++) {
-      av2[i] += zz_pX(j - u*d, cube[j*phim2 + v]);
-    }
-  }
-
-
-  vector<ZZX> AV2;
-  convert(AV2, av2);
-
-  PlaintextArray pa(ea);
-
-  pa.encode(AV2);
-  PlaintextArray pa_orig = pa;
-
-  pa.mat_mul(*step1);
-
-  PlaintextArray pa_int = pa;
-
-  pa.mat_mul(*step2);
-
-  vector<ZZX> AV3;
-  pa.decode(AV3);
-
-  Vec<zz_pX> av3;
-  convert(av3, AV3);
-
-  if (eval_values == av3) 
-    cout << "too cool!!\n";
-  else
-    cout << "nooooo!!!\n";
-
-  
-
-  PlaintextBlockMatrixBaseInterface *step1inv = 
-    buildStep1Inverse(step1);
-
-  PlaintextMatrixBaseInterface *step2inv =
-    buildStep2Inverse(step2);
-
-  pa.mat_mul(*step2inv);
-
-  if (pa.equals(pa_int)) 
-    cout << "step2 inverse OK\n";
-  else
-    cout << "step2 inverse NOT OK\n";
-
-  pa.mat_mul(*step1inv);
-
-  if (pa.equals(pa_orig)) 
-    cout << "inverse OK\n";
-  else
-    cout << "inverse NOT OK\n";
-
-
-#endif
-
-
-  // now verify adjustments
-
-  zz_pX H = zz_pX(p, 1) % G;
-
-  vector<ZZX> adjusted_values;
-  adjusted_values.resize(nslots);
-
-  for (long i = 0; i < nslots; i++) {
-    zz_pX V = eval_values[i];
-    long h = slot_rotate[i];
-    for (long j = 0; j < h; j++) 
-      V = CompMod(V, H, G);
-    
-    adjusted_values[ slot_index[i] ] = conv<ZZX>(V);
-  }
-
-  ZZX FF1;
-  ea.encode(FF1, adjusted_values);
-  
-  zz_pX F1 = conv<zz_pX>(FF1);
-
-  if (F1 == F) 
-    cout << "yes!!\n";
-  else 
-    cout << "NO!!!\n";
-
-#endif
-
+   
 
 }
 
@@ -858,4 +781,7 @@ int main(int argc, char *argv[])
 
 }
 
-// a nice test case: Test_eval3_x p=2 m1=3 m2=5 m3=7 m4=17
+//   [1 1 3 8] Test_eval3_x p=2 m1=3 m2=5 m3=7 m4=17
+//   [1 1 20]  Test_eval3_x p=2 m1=3 m2=11 m3=25
+//   [1 1 20]  Test_eval3_x p=2 m1=3 m2=11 m3=41
+
