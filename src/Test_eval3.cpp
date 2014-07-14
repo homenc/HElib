@@ -1168,6 +1168,7 @@ int main(int argc, char *argv[])
 }
 
 //   [1 1 3 8] Test_eval3_x p=2 m1=3 m2=5 m3=7 m4=17
+//   Test_eval3_x p=2 m1=11 m2=41 m3=31
 //   [1 1 20]  Test_eval3_x p=2 m1=3 m2=11 m3=25
 //   [1 1 20]  Test_eval3_x p=2 m1=3 m2=11 m3=41
 
