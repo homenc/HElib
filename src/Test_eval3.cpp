@@ -296,7 +296,7 @@ public:
 
 
   Tower(long _m1, long _m2, long _d1, long _d2, long _p, long _r)
-    : m1(_m1), m2(_m2), d1(_d1), d2(_d2), p(_p), r(_r)
+    : m1(_m1), m2(_m2), d1(_d1), d2(_d2), p(_p), r(_r) 
   {
     d = RE::degree();
     assert(d == d1*d2);
@@ -462,6 +462,138 @@ public:
 
 template class Tower<PA_GF2>;
 template class Tower<PA_zz_p>;
+
+
+template<class type>
+class Step1aMatrix : public PlaintextBlockMatrixInterface<type> 
+{
+public:
+  PA_INJECT(type)
+
+private:
+  const EncryptedArray& ea;
+  long m1, m2, d1, d2, phim1;
+
+
+  copied_ptr< Tower<type> > tower;
+
+  Mat< mat_R > A;
+
+public:
+  // constructor
+  Step1aMatrix(const EncryptedArray& _ea, 
+              const Vec<long>& reps,
+              long _m1, long _m2, long _d1, long _d2, long _phim1,
+              bool invert = false);
+
+  virtual const EncryptedArray& getEA() const { return ea; }
+
+  virtual bool get(mat_R& out, long i, long j) const;
+              
+};
+
+template<class type>
+bool Step1aMatrix<type>::get(mat_R& out, long i, long j) const
+{
+  long sz = phim1/d1;
+
+  long i_lo = i*d2;
+  long i_hi = i_lo + d2 - 1;
+  long j_lo = j*d2;
+  long j_hi = j_lo + d2 - 1;
+
+  if (i_hi/sz < j_lo/sz || j_hi/sz < i_lo/sz) return true;
+
+  long d = d1*d2;
+
+  Mat<R> tmp;
+
+  tmp.SetDims(d, d);
+  clear(tmp);
+
+  for (long i1 = i_lo; i1 <= i_hi; i1++)
+    for (long j1 = j_lo; j1 <= j_hi; j1++) 
+      if (i1/sz == j1/sz) {
+        long i2 = i1 % sz;
+        long j2 = j1 % sz;
+        for (long i3 = 0; i3 < d1; i3++)
+          for (long j3 = 0; j3 < d1; j3++)
+            tmp[(i1-i_lo)*d1 + i3][(j1-j_lo)*d1 + j3] = A[i2][j2][i3][j3];
+      }
+
+  mul(out, tmp, tower->M2);
+  return false;
+}
+
+template<class type>
+Step1aMatrix<type>::Step1aMatrix(const EncryptedArray& _ea, 
+                               const Vec<long>& reps,
+                               long _m1, long _m2, long _d1, long _d2, long _phim1,
+                               bool invert)
+: ea(_ea), m1(_m1), m2(_m2), d1(_d1), d2(_d2), phim1(_phim1)
+{
+  RBak bak; bak.save(); ea.getAlMod().restoreContext();
+  REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+  const RXModulus& G = RE::modulus();
+
+  long p = ea.getAlMod().getZMStar().getP();
+  long r = ea.getAlMod().getR();
+
+  tower.set_ptr(new Tower<type>(m1, m2, d1, d2, p, r));
+
+  const RX& H = tower->H;
+
+  assert(phim1 % d1 == 0);
+
+  long sz = phim1/d1;
+
+  Vec<RX> points;
+  points.SetLength(sz);
+  for (long j = 0; j < sz; j++)
+    points[j] = RX(reps[j], 1) % H;
+
+  Mat<RX> AA;
+  AA.SetDims(sz*d1, sz);
+  for (long j = 0; j < sz; j++)
+    AA[0][j] = 1;
+
+  for (long i = 1; i < sz*d1; i++)
+    for (long j = 0; j < sz; j++)
+      AA[i][j] = (AA[i-1][j] * points[j]) % H;
+
+  A.SetDims(sz, sz);
+  for (long i = 0; i < sz; i++)
+    for (long j = 0; j < sz; j++) {
+      A[i][j].SetDims(d1, d1);
+      for (long k = 0; k < d1; k++)
+        VectorCopy(A[i][j][k], AA[i*d1 + k][j], d1);
+    }
+
+  if (invert) {
+    Error("not implemented");
+  }
+}
+
+
+PlaintextBlockMatrixBaseInterface*
+buildStep1aMatrix(const EncryptedArray& ea, 
+                 const Vec<long>& reps,
+                 long m1, long m2, long d1, long d2, long phim1,
+                 bool invert = false)
+{
+  switch (ea.getAlMod().getTag()) {
+  case PA_GF2_tag: 
+    return new Step1aMatrix<PA_GF2>(ea, reps, m1, m2, d1, d2, phim1, invert);
+
+  case PA_zz_p_tag: 
+    return new Step1aMatrix<PA_zz_p>(ea, reps, m1, m2, d1, d2, phim1, invert);
+
+  default: return 0;
+  }
+}
+
+/***** END Step1a stuff *****/
+
 
 
 
@@ -906,6 +1038,45 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     cout << g << "\n";
     cout << tower.convert1to2(beta) << "\n";
 
+    long dim = nfactors-1;
+
+
+    PlaintextBlockMatrixBaseInterface *mat =
+      buildStep1aMatrix(ea, local_reps[dim], m1, m2, d1, d2, phivec[dim]);
+
+    vector<ZZX> val1;
+    val1.resize(nslots);
+    for (long i = 0; i < phim; i++) {
+      val1[i/d] += conv<ZZX>(rep(eval_sequence[dim+1][i])) << (i % d);
+    }
+    PlaintextArray pa1(ea);
+    pa1.encode(val1);
+    PlaintextArray pa1_orig(pa1);
+
+    pa1.mat_mul(*mat);
+
+    assert(eval_sequence[dim].length() == nslots*d2);
+
+    vector<ZZX> val2;
+    val2.resize(nslots);
+    for (long i = 0; i < nslots; i++) {
+      Vec<zz_pX> one_slot;
+      one_slot.SetLength(d2);
+      for (long j = 0; j < d2; j++) {
+        Vec<zz_pX> v = tower.convert1to2(eval_sequence[dim][i*d2 + j]);
+        for (long k = 1; k < d2; k++) assert(v[k] == 0);
+        one_slot[j] = v[0];
+      }
+      val2[i] = conv<ZZX>(rep(tower.convert2to1(one_slot)));
+    }
+
+    PlaintextArray pa2(ea);
+    pa2.encode(val2);
+
+    if (pa1.equals(pa2))
+      cout << "dim=" << dim << " GOOD\n";
+    else
+      cout << "dim=" << dim << " BAD\n";
   }
   else {
     cout << "case not handled\n";
