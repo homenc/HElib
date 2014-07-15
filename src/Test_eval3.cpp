@@ -283,10 +283,10 @@ class Tower {
 public:
   PA_INJECT(type)
 
-  long m1, m2, d1, d2, p, r;
+  long cofactor, d1, d2, p, r;
 
   long d;
-  RE zeta; // = [X^m2 mod G]
+  RE zeta; // = [X^cofactor mod G]
 
   RX H;  // = the min poly of zeta over R
 
@@ -295,15 +295,15 @@ public:
   // to the one-step tower, and M2i is its inverse.
 
 
-  Tower(long _m1, long _m2, long _d1, long _d2, long _p, long _r)
-    : m1(_m1), m2(_m2), d1(_d1), d2(_d2), p(_p), r(_r) 
+  Tower(long long _cofactor, long _d1, long _d2, long _p, long _r)
+    : cofactor(_cofactor), d1(_d1), d2(_d2), p(_p), r(_r) 
   {
     d = RE::degree();
     assert(d == d1*d2);
 
     const RXModulus& G = RE::modulus();
 
-    zeta = conv<RE>(RX(m2, 1));  // zeta = [X^m2 mod G]
+    zeta = conv<RE>(RX(cofactor, 1));  // zeta = [X^cofactor mod G]
 
     // compute H = min poly of zeta over R
 
@@ -472,7 +472,8 @@ public:
 
 private:
   const EncryptedArray& ea;
-  long m1, m2, d1, d2, phim1;
+  long cofactor, d1, d2, phim1;
+  bool invert;
 
 
   copied_ptr< Tower<type> > tower;
@@ -483,8 +484,8 @@ public:
   // constructor
   Step1aMatrix(const EncryptedArray& _ea, 
               const Vec<long>& reps,
-              long _m1, long _m2, long _d1, long _d2, long _phim1,
-              bool invert = false);
+              long _cofactor, long _d1, long _d2, long _phim1,
+              bool _invert = false);
 
   virtual const EncryptedArray& getEA() const { return ea; }
 
@@ -521,25 +522,28 @@ bool Step1aMatrix<type>::get(mat_R& out, long i, long j) const
             tmp[(i1-i_lo)*d1 + i3][(j1-j_lo)*d1 + j3] = A[i2][j2][i3][j3];
       }
 
-  mul(out, tmp, tower->M2);
+  if (invert)
+    mul(out, tower->M2i, tmp);
+  else
+    mul(out, tmp, tower->M2);
+
   return false;
 }
 
 template<class type>
 Step1aMatrix<type>::Step1aMatrix(const EncryptedArray& _ea, 
                                const Vec<long>& reps,
-                               long _m1, long _m2, long _d1, long _d2, long _phim1,
-                               bool invert)
-: ea(_ea), m1(_m1), m2(_m2), d1(_d1), d2(_d2), phim1(_phim1)
+                               long _cofactor, long _d1, long _d2, long _phim1,
+                               bool _invert)
+: ea(_ea), cofactor(_cofactor), d1(_d1), d2(_d2), phim1(_phim1), invert(_invert)
 {
   RBak bak; bak.save(); ea.getAlMod().restoreContext();
   REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
-  const RXModulus& G = RE::modulus();
 
   long p = ea.getAlMod().getZMStar().getP();
   long r = ea.getAlMod().getR();
 
-  tower.set_ptr(new Tower<type>(m1, m2, d1, d2, p, r));
+  tower.set_ptr(new Tower<type>(cofactor, d1, d2, p, r));
 
   const RX& H = tower->H;
 
@@ -570,7 +574,18 @@ Step1aMatrix<type>::Step1aMatrix(const EncryptedArray& _ea,
     }
 
   if (invert) {
-    Error("not implemented");
+    Mat<R> A1, A2;
+    A1.SetDims(sz*d1, sz*d1);
+    for (long i = 0; i < sz*d1; i++)
+      for (long j = 0; j < sz*d1; j++)
+        A1[i][j] = A[i/d1][j/d1][i%d1][j%d1];
+
+
+    ppInvert(A2, A1, p, r);
+
+    for (long i = 0; i < sz*d1; i++)
+      for (long j = 0; j < sz*d1; j++)
+        A[i/d1][j/d1][i%d1][j%d1] = A2[i][j];
   }
 }
 
@@ -578,21 +593,140 @@ Step1aMatrix<type>::Step1aMatrix(const EncryptedArray& _ea,
 PlaintextBlockMatrixBaseInterface*
 buildStep1aMatrix(const EncryptedArray& ea, 
                  const Vec<long>& reps,
-                 long m1, long m2, long d1, long d2, long phim1,
+                 long cofactor, long d1, long d2, long phim1,
                  bool invert = false)
 {
   switch (ea.getAlMod().getTag()) {
   case PA_GF2_tag: 
-    return new Step1aMatrix<PA_GF2>(ea, reps, m1, m2, d1, d2, phim1, invert);
+    return new Step1aMatrix<PA_GF2>(ea, reps, cofactor, d1, d2, phim1, invert);
 
   case PA_zz_p_tag: 
-    return new Step1aMatrix<PA_zz_p>(ea, reps, m1, m2, d1, d2, phim1, invert);
+    return new Step1aMatrix<PA_zz_p>(ea, reps, cofactor, d1, d2, phim1, invert);
 
   default: return 0;
   }
 }
 
 /***** END Step1a stuff *****/
+
+
+template<class type>
+class Step2aMatrix 
+{
+public:
+  PA_INJECT(type)
+
+private:
+  const EncryptedArray& ea;
+  const CubeSignature& sig;
+  long dim;
+  long d2;
+
+  copied_ptr< Tower<type> > tower;
+
+public:
+  // constructor
+  Step2aMatrix(const EncryptedArray& _ea, 
+              const CubeSignature& _sig,
+              const Vec<long>& reps,
+              long _dim,
+              long cofactor,
+              long _d2,
+              bool invert = false);
+
+  virtual const EncryptedArray& getEA() const { return ea; }
+
+              
+};
+
+
+template<class type>
+Step2aMatrix<type>::Step2aMatrix(const EncryptedArray& _ea, 
+                               const CubeSignature& _sig,
+                               const Vec<long>& reps,
+                               long _dim,
+                               long cofactor,
+                               long _d2,
+                               bool invert)
+: ea(_ea), sig(_sig), dim(_dim), d2(_d2)
+{
+  RBak bak; bak.save(); ea.getAlMod().restoreContext();
+  REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+
+  long p = ea.getAlMod().getZMStar().getP();
+  long r = ea.getAlMod().getR();
+
+  long phim1 = sig.getDim(dim+1); // actually, phim1/d1
+  long phim2 = sig.getDim(dim) * d2;
+
+  if (GCD(d2, phim1) != 1) {
+    Error("not yet implemented");
+  }
+
+  Vec<long> shamt;
+  shamt.SetLength(d2);
+
+  Mat< Pair<long, long> > mapping;
+  mapping.SetDims(phim1*phim2/d2, d2);
+
+  for (long i = 0; i < phim1*phim2; i++)
+    mapping[i/d2][i%d2] = Pair<long,long>(i%phim1, i/phim1);
+
+  cout << mapping << "\n";
+
+  for (long j = 0; j < d2; j++)
+    shamt[j] = mapping[0][j].a;
+
+  cout << shamt << "\n";
+
+  Vec<long> new_order;
+  new_order.SetLength(phim1);
+  for (long i = 0; i < phim1; i++)
+    new_order[i] = mapping[i][0].b;
+
+  cout << new_order << "\n";
+
+  for (long j = 0; j < d2; j++) {
+    long amt = shamt[j];
+    // rotate column j of mapping mapping by amt
+
+    long nrows = phim1*phim2/d2;
+
+    Vec< Pair<long, long> > tmp1, tmp2;
+    tmp1.SetLength(nrows);
+    tmp2.SetLength(nrows);
+
+    for (long i = 0; i < nrows; i++) tmp1[i] = mapping[i][j];
+    for (long i = 0; i < nrows; i++) tmp2[(i+amt)%nrows] = tmp1[i];
+    for (long i = 0; i < nrows; i++) mapping[i][j] = tmp2[i];
+  }
+
+  cout << mapping << "\n";
+}
+
+
+void*
+buildStep2aMatrix(const EncryptedArray& ea, 
+                 const CubeSignature& sig,
+                 const Vec<long>& reps,
+                 long dim,
+                 long cofactor,
+                 long d2,
+                 bool invert = false)
+{
+  switch (ea.getAlMod().getTag()) {
+  case PA_GF2_tag: 
+    return new Step2aMatrix<PA_GF2>(ea, sig, reps, dim, cofactor, d2, invert);
+
+  case PA_zz_p_tag: 
+    return new Step2aMatrix<PA_zz_p>(ea, sig, reps, dim, cofactor, d2, invert);
+
+  default: return 0;
+  }
+}
+
+/***** END Step2a stuff *****/
+
 
 
 
@@ -846,6 +980,7 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
       local_points[i][j] = conv<zz_pE>(zz_pX(local_reps[i][j]*(m/mvec[i]), 1));
   }
 
+  // cout << "*** " << cube << "\n";
 
   Vec< Vec<zz_pE> > eval_sequence;
   eval_sequence.SetLength(nfactors+1);
@@ -1024,12 +1159,12 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     cout << "harder case\n";
 
     long m1 = mvec[nfactors-1];
-    long m2 = m/m1;
+    long cofactor = m/m1;
 
     long d1 = dvec[nfactors-1];
     long d2 = d/d1;
 
-    Tower<PA_zz_p> tower(m1, m2, d1, d2, p, r);
+    Tower<PA_zz_p> tower(cofactor, d1, d2, p, r);
 
     zz_pX g;
     random(g, d1);
@@ -1042,7 +1177,12 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
 
     PlaintextBlockMatrixBaseInterface *mat =
-      buildStep1aMatrix(ea, local_reps[dim], m1, m2, d1, d2, phivec[dim]);
+      buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim]);
+
+    PlaintextBlockMatrixBaseInterface *imat =
+      buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], true);
+
+
 
     vector<ZZX> val1;
     val1.resize(nslots);
@@ -1077,6 +1217,17 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
       cout << "dim=" << dim << " GOOD\n";
     else
       cout << "dim=" << dim << " BAD\n";
+
+    pa1.mat_mul(*imat);
+    if (pa1.equals(pa1_orig))
+      cout << "dim=" << dim << " INV GOOD\n";
+    else
+      cout << "dim=" << dim << " INV BAD\n";
+
+    void *junk = 
+      buildStep2aMatrix(ea, *sig_sequence[dim-1], local_reps[dim-1], dim-1, m/mvec[dim-1],
+                        d2);
+
   }
   else {
     cout << "case not handled\n";
