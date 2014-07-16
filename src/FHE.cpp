@@ -674,7 +674,7 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 
 // Encryption using the secret key, this is useful, e.g., to put an
 // encryption of the secret key into the public key.
-long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
+long FHESecKey::Encrypt(Ctxt &ctxt, const DoubleCRT& ptxt,
 			long ptxtSpace, long skIdx) const
 {
   FHE_TIMER_START;
@@ -694,8 +694,10 @@ long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   else { // The general case of ptxtSpace>2: for a ciphertext
          // relative to modulus Q, we add ptxt * Q mod ptxtSpace.
-    long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
-    ctxt.parts[0] += MulMod(ptxt,QmodP,ptxtSpace); // MulMod from module NumbTh
+    DoubleCRT pp = ptxt;
+    pp *= (long) rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
+    ctxt.parts[0] += pp;
+    // ctxt.parts[0] += MulMod(ptxt,QmodP,ptxtSpace); // MulMod from NumbTh
   }
 
   // make parts[0],parts[1] point to (1,s)
@@ -710,6 +712,15 @@ long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   FHE_TIMER_STOP;
   return ptxtSpace;
+}
+
+
+// Encrypting the secret key under itself
+long FHESecKey::circularEncrypt(Ctxt &ctxt) const
+{
+  // Make sure that the context has the bootstrapping EA and PAlgMod
+  assert(context.bootstrapPAM != NULL && context.bootstrapEA != NULL);
+  return Encrypt(ctxt, sKeys.at(0), context.bootstrapPAM->getPPowR());
 }
 
 
