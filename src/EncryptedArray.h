@@ -207,6 +207,11 @@ public:
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const = 0;
 
+  // Also secret-key encryption, for convenience
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const = 0;
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const = 0;
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const = 0;
+
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const FHESecKey& sKey, long i) const
   { vector< long > v; decrypt(ctxt, sKey, v); return v.at(i); }
@@ -388,6 +393,17 @@ public:
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt); }
 
+
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const
+    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
+
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const
+    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
+
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const
+    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
+
+
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const
     { genericSelect(ctxt1, ctxt2, selector); }
 
@@ -416,6 +432,9 @@ public:
 
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< RX >& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt); }
+
+  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< RX >& ptxt, long skIdx=0) const
+    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
   void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const;
 
@@ -466,7 +485,7 @@ private:
     assert(&context == &ctxt.getContext());
     ZZX pp;
     encode(pp, array); // Convert the array of slots into a plaintext polynomial
-    pKey.Encrypt(ctxt, pp); // encrypt the plaintext polynomial
+    pKey.Encrypt(ctxt, pp, tab.getPPowR()); // encrypt the plaintext polynomial
   }
 
   template<class T>
@@ -478,6 +497,17 @@ private:
     sKey.Decrypt(pp, ctxt);
     decode(array, pp);
   }
+
+  template<class T>
+  void genericSkEncrypt(Ctxt& ctxt, const FHESecKey& sKey, 
+                      const T& array, long skIdx=0) const
+  {
+    assert(&context == &ctxt.getContext());
+    ZZX pp;
+    encode(pp, array); // Convert the array of slots into a plaintext polynomial
+    sKey.Encrypt(ctxt, pp, tab.getPPowR(), skIdx); // encrypt the plaintext polynomial
+  }
+
 
   template<class T>
   void genericSelect(Ctxt& ctxt1, const Ctxt& ctxt2,
@@ -597,6 +627,14 @@ public:
     { rep->decrypt(ctxt, sKey, ptxt); }
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
     { rep->decrypt(ctxt, sKey, ptxt); }
+
+
+  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const 
+    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
+  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const 
+    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
+  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const 
+    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
 
 
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const 

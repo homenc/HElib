@@ -568,7 +568,7 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   if (fromSPower>1) fromKey.Exp(fromSPower);       // compute s^r(X^t)
   // SHAI: The above lines compute the automorphism and exponentiation mod q,
   //   turns out this is really what we want (even through usually we think
-  //   of the secret key as being mod 2 or mod 2^r)
+  //   of the secret key as being mod p or mod p^r)
 
   KeySwitch ksMatrix(fromSPower,fromXPower,fromIdx,toIdx);
   RandomBits(ksMatrix.prgSeed, 256); // a random 256-bit seed
