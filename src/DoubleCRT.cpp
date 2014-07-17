@@ -691,10 +691,10 @@ void DoubleCRT::toSingleCRT(SingleCRT& scrt) const
 void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 {
   assert(ptxtSpace >= 2);
-  assert(!(getIndexSet()<=s)); // cannot mod-down to the empty set
 
   IndexSet diff = getIndexSet() / s;
-  if (empty(diff)) return;     // nothing to do
+  assert(diff!=s);          // cannot mod-down to the empty set
+  if (empty(diff)) return;  // nothing to do
 
   if (dryRun) {
     removePrimes(diff);// remove the primes from consideration
