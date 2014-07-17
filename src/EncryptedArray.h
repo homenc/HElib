@@ -242,6 +242,10 @@ public:
   // Apply the corresponding transformation to a ciphertext
   virtual void applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const=0;
 
+  // restore contexts mod p and mod G
+  virtual void restoreContext() const = 0;
+  virtual void restoreContextForG() const = 0;
+
   /* some non-virtual convenience functions */
 
   //! @brief Total size (# of slots) of hypercube
@@ -325,7 +329,9 @@ public:
   virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
 
   const RX& getG() const { return mappingData.getG(); }
-  void restoreContextForG() const { mappingData.restoreContextForG(); }
+
+  virtual void restoreContext() const { tab.restoreContext(); }
+  virtual void restoreContextForG() const { mappingData.restoreContextForG(); }
 
 
   virtual const FHEcontext& getContext() const { return context; }
@@ -655,6 +661,9 @@ public:
   void applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const
     { rep->applyLinPoly(ctxt, C); }
 
+  void restoreContext() const { rep->restoreContext(); }
+  void restoreContextForG() const { rep->restoreContextForG(); }
+
   long size() const { return rep->size(); } 
   long dimension() const { return rep->dimension(); }
   long sizeOfDimension(long i) const { return rep->sizeOfDimension(i); }
@@ -744,6 +753,9 @@ public:
 
   //! Replicate coordinate i at all coordinates
   virtual void replicate(long i) = 0;
+
+  //! apply x -> x^{p^j} at all coordinates
+  virtual void frobeniusAutomorph(long j) = 0;
 
   // output
   virtual void print(ostream& s) const = 0;
@@ -1061,6 +1073,19 @@ public:
     }
   }
 
+  virtual void frobeniusAutomorph(long j)
+  {
+    RBak bak; bak.save(); tab.restoreContext();
+    long d = degG;
+    long p = ea.getAlMod().getZMStar().getP();
+
+    j = mcMod(j, d);
+    RX H = PowerMod(RX(1, 1), power_ZZ(p, j), G);
+
+    for (long i = 0; i < n; i++)
+      data[i] = CompMod(data[i], H, G);
+  }
+
   virtual void print(ostream& s) const 
   {
     if (n == 0) 
@@ -1139,8 +1164,8 @@ public:
   //! Encode/decode arrays into plaintext polynomials
   void encode(const vector< long >& array) { rep->encode(array); }
   void encode(const vector< ZZX >& array) { rep->encode(array); }
-  void decode(vector< long  >& array) { rep->decode(array); }
-  void decode(vector< ZZX  >& array) { rep->decode(array); }
+  void decode(vector< long  >& array) const { rep->decode(array); }
+  void decode(vector< ZZX  >& array) const { rep->decode(array); }
 
   //! Encode with the same value replicated in each slot
   void encode(long val) { rep->encode(val); }
@@ -1166,6 +1191,8 @@ public:
 
   //! Replicate coordinate i at all coordinates
   void replicate(long i) { rep->replicate(i); }
+
+  void frobeniusAutomorph(long j) { rep->frobeniusAutomorph(j); }
 
   void print(ostream& s) const { rep->print(s); }
 };

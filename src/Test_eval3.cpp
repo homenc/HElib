@@ -278,8 +278,13 @@ buildStep2Matrix(const EncryptedArray& ea,
 
 // two-step tower stuff...
 
+class TowerBase { 
+public:
+  virtual ~TowerBase() { }
+};
+
 template<class type>
-class Tower {
+class Tower : public TowerBase {
 public:
   PA_INJECT(type)
 
@@ -295,7 +300,7 @@ public:
   // to the one-step tower, and M2i is its inverse.
 
 
-  Tower(long long _cofactor, long _d1, long _d2, long _p, long _r)
+  Tower(long _cofactor, long _d1, long _d2, long _p, long _r)
     : cofactor(_cofactor), d1(_d1), d2(_d2), p(_p), r(_r) 
   {
     d = RE::degree();
@@ -371,7 +376,7 @@ public:
   // converts an object represented in the two-step
   // tower representation to the one-step representation
 
-  RE convert2to1(const Vec<RX>& v)
+  RE convert2to1(const Vec<RX>& v) const
   {
     assert(v.length() <= d2);
 
@@ -390,7 +395,7 @@ public:
 
   // performs the reverse conversion
 
-  Vec<RX> convert1to2(const RE& beta)
+  Vec<RX> convert1to2(const RE& beta) const
   {
     Vec<R> z = VectorCopy(rep(beta), d);
     Vec<R> w = z*M2i;
@@ -410,9 +415,9 @@ public:
     return res;
   }
 
-  void buildLinPolyMatrix(Mat<RE>& M)
+  void buildLinPolyMatrix(Mat<RE>& M) const
   {
-     long q = power_long(p, d1);
+     ZZ q = power_ZZ(p, d1);
 
      M.SetDims(d2, d2);
 
@@ -426,7 +431,7 @@ public:
 
 
 
-  void buildLinPolyCoeffs(Vec<RE>& C_out, const Vec<RE>& L)
+  void buildLinPolyCoeffs(Vec<RE>& C_out, const Vec<RE>& L) const
   {
      Mat<RE> M;
      buildLinPolyMatrix(M);
@@ -437,10 +442,10 @@ public:
      C_out = C;
   }
 
-  void applyLinPoly(RE& beta, const Vec<RE>& C, const RE& alpha)
+  void applyLinPoly(RE& beta, const Vec<RE>& C, const RE& alpha) const
   {
      assert(d2 == C.length());
-     long q = power_long(p, d1);
+     ZZ q = power_ZZ(p, d1);
 
      RE gamma, res;
 
@@ -455,13 +460,41 @@ public:
   }
 
 
-
-
+  void print(ostream& s, const PlaintextArray& v, long nrows) const
+  {
+    vector<ZZX> v1;
+    v.decode(v1); 
+    Vec<RX> v2;
+    convert(v2, v1);
+    for (long i = 0; i < v2.length(); i++) {
+      if (i % nrows == 0) s << "\n";
+      s << convert1to2(conv<RE>(v2[i])) << "\n";
+    }
+  }
 
 };
 
 template class Tower<PA_GF2>;
 template class Tower<PA_zz_p>;
+
+TowerBase* buildTowerBase(const EncryptedArray& ea, 
+                      long cofactor, long d1, long d2)
+{
+  long p = ea.getAlMod().getZMStar().getP();
+  long r = ea.getAlMod().getR();
+
+  switch (ea.getAlMod().getTag()) {
+    case PA_GF2_tag: {
+      GF2EBak ebak; ebak.save();
+      return new Tower<PA_GF2>(cofactor, d1, d2, p, r);
+    }
+    case PA_zz_p_tag: {
+      zz_pBak bak; bak.save(); zz_pEBak ebak; ebak.save();
+      return new Tower<PA_zz_p>(cofactor, d1, d2, p, r);
+    }
+    default: return 0;
+  }
+}
 
 
 template<class type>
@@ -473,10 +506,10 @@ public:
 private:
   const EncryptedArray& ea;
   long cofactor, d1, d2, phim1;
+  shared_ptr<TowerBase> towerBase;
   bool invert;
 
 
-  copied_ptr< Tower<type> > tower;
 
   Mat< mat_R > A;
 
@@ -485,6 +518,7 @@ public:
   Step1aMatrix(const EncryptedArray& _ea, 
               const Vec<long>& reps,
               long _cofactor, long _d1, long _d2, long _phim1,
+              shared_ptr<TowerBase> _towerBase,
               bool _invert = false);
 
   virtual const EncryptedArray& getEA() const { return ea; }
@@ -522,6 +556,8 @@ bool Step1aMatrix<type>::get(mat_R& out, long i, long j) const
             tmp[(i1-i_lo)*d1 + i3][(j1-j_lo)*d1 + j3] = A[i2][j2][i3][j3];
       }
 
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
+
   if (invert)
     mul(out, tower->M2i, tmp);
   else
@@ -534,8 +570,10 @@ template<class type>
 Step1aMatrix<type>::Step1aMatrix(const EncryptedArray& _ea, 
                                const Vec<long>& reps,
                                long _cofactor, long _d1, long _d2, long _phim1,
+                               shared_ptr<TowerBase> _towerBase,
                                bool _invert)
-: ea(_ea), cofactor(_cofactor), d1(_d1), d2(_d2), phim1(_phim1), invert(_invert)
+: ea(_ea), cofactor(_cofactor), d1(_d1), d2(_d2), phim1(_phim1), 
+  towerBase(_towerBase), invert(_invert)
 {
   RBak bak; bak.save(); ea.getAlMod().restoreContext();
   REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
@@ -543,7 +581,7 @@ Step1aMatrix<type>::Step1aMatrix(const EncryptedArray& _ea,
   long p = ea.getAlMod().getZMStar().getP();
   long r = ea.getAlMod().getR();
 
-  tower.set_ptr(new Tower<type>(cofactor, d1, d2, p, r));
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
 
   const RX& H = tower->H;
 
@@ -594,14 +632,15 @@ PlaintextBlockMatrixBaseInterface*
 buildStep1aMatrix(const EncryptedArray& ea, 
                  const Vec<long>& reps,
                  long cofactor, long d1, long d2, long phim1,
+                 shared_ptr<TowerBase> towerBase,
                  bool invert = false)
 {
   switch (ea.getAlMod().getTag()) {
   case PA_GF2_tag: 
-    return new Step1aMatrix<PA_GF2>(ea, reps, cofactor, d1, d2, phim1, invert);
+    return new Step1aMatrix<PA_GF2>(ea, reps, cofactor, d1, d2, phim1, towerBase, invert);
 
   case PA_zz_p_tag: 
-    return new Step1aMatrix<PA_zz_p>(ea, reps, cofactor, d1, d2, phim1, invert);
+    return new Step1aMatrix<PA_zz_p>(ea, reps, cofactor, d1, d2, phim1, towerBase, invert);
 
   default: return 0;
   }
@@ -610,64 +649,85 @@ buildStep1aMatrix(const EncryptedArray& ea,
 /***** END Step1a stuff *****/
 
 
+class Step2aShuffleBase {
+public:
+
+virtual void apply(PlaintextArray& v) const = 0;
+
+};
+
 template<class type>
-class Step2aMatrix 
+class Step2aShuffle : public Step2aShuffleBase
 {
 public:
   PA_INJECT(type)
+
+  virtual void apply(PlaintextArray& v) const;
 
 private:
   const EncryptedArray& ea;
   const CubeSignature& sig;
   long dim;
-  long d2;
+  long cofactor;
+  shared_ptr<TowerBase> towerBase;
+  bool invert;
+  
 
-  copied_ptr< Tower<type> > tower;
+  long p, r, d, d1, d2, phim1, phim2;
+
+  Vec<long> shamt;
+  Vec< Vec <ZZX> > C;
+
 
 public:
   // constructor
-  Step2aMatrix(const EncryptedArray& _ea, 
+  Step2aShuffle(const EncryptedArray& _ea, 
               const CubeSignature& _sig,
-              const Vec<long>& reps,
+              const Vec<long>& _reps,
               long _dim,
-              long cofactor,
-              long _d2,
-              bool invert = false);
+              long _cofactor,
+              shared_ptr<TowerBase> _towerBase,
+              bool _invert = false);
 
-  virtual const EncryptedArray& getEA() const { return ea; }
-
-              
 };
 
 
 template<class type>
-Step2aMatrix<type>::Step2aMatrix(const EncryptedArray& _ea, 
-                               const CubeSignature& _sig,
-                               const Vec<long>& reps,
-                               long _dim,
-                               long cofactor,
-                               long _d2,
-                               bool invert)
-: ea(_ea), sig(_sig), dim(_dim), d2(_d2)
+Step2aShuffle<type>::Step2aShuffle(const EncryptedArray& _ea, 
+                                   const CubeSignature& _sig,
+                                   const Vec<long>& _reps,
+                                   long _dim,
+                                   long _cofactor,
+                                   shared_ptr<TowerBase> _towerBase,
+                                   bool _invert)
+
+: ea(_ea), sig(_sig), dim(_dim), cofactor(_cofactor),
+  towerBase(_towerBase), invert(_invert)
 {
   RBak bak; bak.save(); ea.getAlMod().restoreContext();
   REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
 
-  long p = ea.getAlMod().getZMStar().getP();
-  long r = ea.getAlMod().getR();
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
 
-  long phim1 = sig.getDim(dim+1); // actually, phim1/d1
-  long phim2 = sig.getDim(dim) * d2;
+  p = tower->p;
+  r = tower->r;
+  d = tower->d;
+  d1 = tower->d1;
+  d2 = tower->d2;
+
+  phim1 = sig.getDim(dim+1); // actually, phim1/d1
+  phim2 = sig.getDim(dim) * d2;
+
+  long nrows = phim1*phim2/d2;
 
   if (GCD(d2, phim1) != 1) {
     Error("not yet implemented");
   }
 
-  Vec<long> shamt;
   shamt.SetLength(d2);
 
   Mat< Pair<long, long> > mapping;
-  mapping.SetDims(phim1*phim2/d2, d2);
+  mapping.SetDims(nrows, d2);
 
   for (long i = 0; i < phim1*phim2; i++)
     mapping[i/d2][i%d2] = Pair<long,long>(i%phim1, i/phim1);
@@ -690,8 +750,6 @@ Step2aMatrix<type>::Step2aMatrix(const EncryptedArray& _ea,
     long amt = shamt[j];
     // rotate column j of mapping mapping by amt
 
-    long nrows = phim1*phim2/d2;
-
     Vec< Pair<long, long> > tmp1, tmp2;
     tmp1.SetLength(nrows);
     tmp2.SetLength(nrows);
@@ -702,24 +760,91 @@ Step2aMatrix<type>::Step2aMatrix(const EncryptedArray& _ea,
   }
 
   cout << mapping << "\n";
+
+  // build linPolyCoeffs
+
+  C.SetLength(d2);
+  for (long i = 0; i < d2; i++) {
+    Vec<RX> L1;
+    L1.SetLength(i+1);
+    L1[i] = 1;
+
+    Vec<RE> L2;
+    L2.SetLength(d2);
+    L2[i] = tower->convert2to1(L1);
+
+    Vec<RE> C1;
+    tower->buildLinPolyCoeffs(C1, L2);
+
+    C[i].SetLength(d2);
+    for (long j = 0; j < d2; j++) 
+      conv(C[i][j], rep(C1[j])); 
+  }
 }
 
 
-void*
-buildStep2aMatrix(const EncryptedArray& ea, 
+template<class type>
+void Step2aShuffle<type>::apply(PlaintextArray& v) const
+{
+  RBak bak; bak.save(); ea.getAlMod().restoreContext();
+  REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
+  long nrows = phim1*phim2/d2;
+
+  cout << "starting shuffle...\n";
+
+  tower->print(cout, v, nrows);
+
+  // mask each sub-slot
+
+  Vec< shared_ptr<PlaintextArray> > frobv; 
+  frobv.SetLength(d2);
+  for (long j = 0; j < d2; j++) {
+    shared_ptr<PlaintextArray> ptr(new PlaintextArray(v));
+    ptr->frobeniusAutomorph(j*d1);
+    frobv[j] = ptr;
+  }
+
+  Vec< shared_ptr<PlaintextArray> > colv;
+  colv.SetLength(d2);
+  for (long i = 0; i < d2; i++) {
+    shared_ptr<PlaintextArray> acc(new PlaintextArray(ea));
+
+    for (long j = 0; j < d2; j++) {
+      PlaintextArray t1(ea);
+      t1.encode(vector_replicate(C[i][j], ea.size()));
+
+      t1.mul(*frobv[j]);
+      acc->add(t1);
+    }
+
+    colv[i] = acc;
+  }
+
+  for (long i = 0; i < d2; i++) {
+    cout << "column " << i << "\n";
+    tower->print(cout, *colv[i], nrows);
+  }
+
+}
+
+
+Step2aShuffleBase*
+buildStep2aShuffle(const EncryptedArray& ea, 
                  const CubeSignature& sig,
                  const Vec<long>& reps,
                  long dim,
                  long cofactor,
-                 long d2,
+                 shared_ptr<TowerBase> towerBase,
                  bool invert = false)
 {
   switch (ea.getAlMod().getTag()) {
   case PA_GF2_tag: 
-    return new Step2aMatrix<PA_GF2>(ea, sig, reps, dim, cofactor, d2, invert);
+    return new Step2aShuffle<PA_GF2>(ea, sig, reps, dim, cofactor, towerBase, invert);
 
   case PA_zz_p_tag: 
-    return new Step2aMatrix<PA_zz_p>(ea, sig, reps, dim, cofactor, d2, invert);
+    return new Step2aShuffle<PA_zz_p>(ea, sig, reps, dim, cofactor, towerBase, invert);
 
   default: return 0;
   }
@@ -1175,12 +1300,14 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
     long dim = nfactors-1;
 
+    shared_ptr<TowerBase>  towerBase(buildTowerBase(ea, cofactor, d1, d2));
+
 
     PlaintextBlockMatrixBaseInterface *mat =
-      buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim]);
+      buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], towerBase);
 
     PlaintextBlockMatrixBaseInterface *imat =
-      buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], true);
+      buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], towerBase, true);
 
 
 
@@ -1224,9 +1351,11 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     else
       cout << "dim=" << dim << " INV BAD\n";
 
-    void *junk = 
-      buildStep2aMatrix(ea, *sig_sequence[dim-1], local_reps[dim-1], dim-1, m/mvec[dim-1],
-                        d2);
+    Step2aShuffleBase *shuffle = 
+      buildStep2aShuffle(ea, *sig_sequence[dim-1], local_reps[dim-1], dim-1, m/mvec[dim-1],
+                        towerBase);
+
+    shuffle->apply(pa1);
 
   }
   else {
