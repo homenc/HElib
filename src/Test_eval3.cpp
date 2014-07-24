@@ -15,7 +15,6 @@
  */
 
 
-
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
 
@@ -655,6 +654,8 @@ buildStep1aMatrix(const EncryptedArray& ea,
 class Step2aShuffleBase {
 public:
 
+Vec<long> new_order;
+
 virtual void apply(PlaintextArray& v) const = 0;
 
 };
@@ -667,9 +668,11 @@ public:
 
   virtual void apply(PlaintextArray& v) const;
 
+
 private:
   const EncryptedArray& ea;
   shared_ptr<CubeSignature> sig;
+  Vec<long> reps;
   long dim;
   long cofactor;
   shared_ptr<TowerBase> towerBase;
@@ -680,7 +683,17 @@ private:
 
   Vec<long> shamt;
 
+
   Mat<long> intraSlotPerm;
+
+  Mat<long> eval_reordering;
+
+  Mat<RE> eval_mat;
+
+
+  bool get(Vec<RE>& entry, long i, long j) const;
+
+  void mat_mul(PlaintextArray& ctxt) const;
 
 
 public:
@@ -705,7 +718,7 @@ Step2aShuffle<type>::Step2aShuffle(const EncryptedArray& _ea,
                                    shared_ptr<TowerBase> _towerBase,
                                    bool _invert)
 
-: ea(_ea), sig(_sig), dim(_dim), cofactor(_cofactor),
+: ea(_ea), sig(_sig), reps(_reps), dim(_dim), cofactor(_cofactor),
   towerBase(_towerBase), invert(_invert)
 {
   RBak bak; bak.save(); ea.getAlMod().restoreContext();
@@ -721,6 +734,8 @@ Step2aShuffle<type>::Step2aShuffle(const EncryptedArray& _ea,
 
   phim1 = sig->getDim(dim+1); // actually, phim1/d1
   phim2 = sig->getDim(dim) * d2;
+
+  cout << "phim1=" << phim1 << ", phim2=" << phim2 << ", d2=" << d2 << "\n";
 
   nrows = phim1*phim2/d2;
 
@@ -738,32 +753,34 @@ Step2aShuffle<type>::Step2aShuffle(const EncryptedArray& _ea,
 
   cout << mapping << "\n";
 
-  for (long j = 0; j < d2; j++)
-    shamt[j] = mapping[0][j].a;
-
-  cout << "shamt: " << shamt << "\n";
-
-  Vec<long> new_order;
-  new_order.SetLength(phim1);
-  for (long i = 0; i < phim1; i++)
-    new_order[i] = mapping[i][0].b;
-
-  cout << new_order << "\n";
 
   for (long j = 0; j < d2; j++) {
-    long amt = shamt[j];
-    // rotate column j of mapping mapping by amt
+    long amt = 0;
 
-    Vec< Pair<long, long> > tmp1, tmp2;
-    tmp1.SetLength(nrows);
-    tmp2.SetLength(nrows);
+    while (mapping[0][j].a != 0) {
+      amt++;
 
-    for (long i = 0; i < nrows; i++) tmp1[i] = mapping[i][j];
-    for (long i = 0; i < nrows; i++) tmp2[(i+amt)%nrows] = tmp1[i];
-    for (long i = 0; i < nrows; i++) mapping[i][j] = tmp2[i];
+      // rotate column j of mapping mapping by 1
+      Vec< Pair<long, long> > tmp1, tmp2;
+      tmp1.SetLength(nrows);
+      tmp2.SetLength(nrows);
+
+      for (long i = 0; i < nrows; i++) tmp1[i] = mapping[i][j];
+      for (long i = 0; i < nrows; i++) tmp2[(i+1)%nrows] = tmp1[i];
+      for (long i = 0; i < nrows; i++) mapping[i][j] = tmp2[i];
+    } 
+
+    shamt[j] = amt;
   }
 
   cout << mapping << "\n";
+
+  new_order.SetLength(phim1);
+  for (long i = 0; i < phim1; i++)
+    new_order[i] = mapping[i][0].a;
+
+  cout << new_order << "\n";
+
 
   intraSlotPerm.SetDims(nrows, d2);
 
@@ -771,7 +788,142 @@ Step2aShuffle<type>::Step2aShuffle(const EncryptedArray& _ea,
     for (long j = 0; j < d2; j++)
       intraSlotPerm[i][j] = j;
 
+  eval_reordering.SetDims(phim1, phim2);
+
+  for (long i = 0; i < nrows; i++)
+    for (long j = 0; j < d2; j++) {
+      eval_reordering[i % phim1][(i / phim1)*d2 + j] = mapping[i][j].b;
+      assert(mapping[i][j].a == new_order[i % phim1]);
+    }
+
+  cout << "eval_reordering: \n";
+  cout << eval_reordering << "\n";
+
+  eval_mat.SetDims(phim2, phim2/d2);
+
+  Vec<RE> points;
+  points.SetLength(phim2/d2);
+  for (long j = 0; j < phim2/d2; j++)
+    points[j] = conv<RE>(RX(reps[j]*cofactor, 1));
+
+  for (long j = 0; j < phim2/d2; j++)
+    eval_mat[0][j] = 1;
+
+  for (long i = 1; i < phim2; i++)
+    for (long j = 0; j < phim2/d2; j++)
+      eval_mat[i][j] = eval_mat[i-1][j] * points[j];
+
 }
+
+template<class type>
+bool Step2aShuffle<type>::get(Vec<RE>& entry, long i, long j) const 
+{
+  long i1 = sig->getCoord(i, dim);
+  long j1 = sig->getCoord(j, dim);
+
+  if (sig->addCoord(i, dim, -i1) != sig->addCoord(j, dim, -j1)) 
+    return true;
+
+  long i2 = sig->getCoord(i, dim+1);
+
+  for (long i3 = 0; i3 < d2; i3++) {
+    entry[i3] = eval_mat[eval_reordering[i2][i1*d2+i3]][j1];
+  }
+
+  return false;
+}
+
+template<class type>
+void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt) const
+{
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
+  long nslots = ea.size();
+
+  // ctxt.reLinearize(); 
+
+  PlaintextArray res(ea);
+
+  Vec<RE> entry;
+  entry.SetLength(d2);
+
+  Vec<RE> C;
+  C.SetLength(d2);
+
+  
+  Vec< Vec<RX> > diag;
+  diag.SetLength(nslots);
+  for (long j = 0; j < nslots; j++) diag[j].SetLength(d2);
+
+  for (long i = 0; i < nslots; i++) {
+    // process diagonal i
+
+
+    bool zDiag = true;
+    long nzLast = -1;
+
+    for (long j = 0; j < nslots; j++) {
+      bool zEntry = get(entry, mcMod(j-i, nslots), j);
+
+      if (!zEntry) {    // non-empty entry
+
+        zDiag = false;  // mark diagonal as non-empty
+
+        // clear entries between last nonzero entry and this one
+
+        for (long jj = nzLast+1; jj < j; jj++) {
+          for (long k = 0; k < d2; k++)
+            clear(diag[jj][k]);
+        }
+
+        nzLast = j;
+
+        // compute the lin poly coeffs
+        tower->buildLinPolyCoeffs(C, entry);
+        conv(diag[j], C);
+      }
+    }
+
+    if (zDiag) continue; // zero diagonal, continue
+
+    // clear trailing zero entries    
+    for (long jj = nzLast+1; jj < nslots; jj++) {
+      for (long k = 0; k < d2; k++)
+        clear(diag[jj][k]);
+    }
+
+    // now diag[j] contains the lin poly coeffs
+
+    PlaintextArray shCtxt = ctxt;
+    shCtxt.rotate(i); 
+
+    // apply the linearlized polynomial
+    for (long k = 0; k < d2; k++) {
+
+      // compute the constant
+      bool zConst = true;
+      vector<ZZX> cvec;
+      cvec.resize(nslots);
+      for (long j = 0; j < nslots; j++) {
+        convert(cvec[j], diag[j][k]);
+        if (!IsZero(cvec[j])) zConst = false;
+      }
+
+      if (zConst) continue;
+
+      PlaintextArray cpoly(ea);
+      cpoly.encode(cvec);
+      // FIXME: record the encoded polynomial for future use
+
+      PlaintextArray shCtxt1 = shCtxt;
+      shCtxt1.frobeniusAutomorph(k*d1);
+      shCtxt1.mul(cpoly);
+      res.add(shCtxt1);
+    }
+  }
+  ctxt = res;
+}
+
+
 
 
 template<class type>
@@ -903,7 +1055,18 @@ void Step2aShuffle<type>::apply(PlaintextArray& v) const
     tower->print(cout, *colvec[i], nrows);
   }
 
+  // conbine columns
 
+  PlaintextArray v1(ea);
+  for (long i = 0; i < d2; i++) 
+    v1.add(*colvec[i]);
+
+
+  // apply the matrix
+
+  mat_mul(v1);
+
+  v = v1;
 }
 
 
@@ -1422,17 +1585,44 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     else
       cout << "dim=" << dim << " BAD\n";
 
-    pa1.mat_mul(*imat);
-    if (pa1.equals(pa1_orig))
+    PlaintextArray pa1a = pa1;
+    pa1a.mat_mul(*imat);
+    if (pa1a.equals(pa1_orig))
       cout << "dim=" << dim << " INV GOOD\n";
     else
       cout << "dim=" << dim << " INV BAD\n";
 
+
+    dim--;
+
     Step2aShuffleBase *shuffle = 
-      buildStep2aShuffle(ea, sig_sequence[dim-1], local_reps[dim-1], dim-1, m/mvec[dim-1],
+      buildStep2aShuffle(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim],
                         towerBase);
 
     shuffle->apply(pa1);
+
+
+    vector<ZZX> val3;
+    val3.resize(nslots);
+    for (long i = 0; i < nslots; i++) 
+      val3[i] = conv<ZZX>(rep(eval_sequence[dim][i]));
+
+    vector<ZZX> val3a;
+    val3a.resize(nslots);
+
+    long phim1 = shuffle->new_order.length();
+    for (long i = 0; i < nslots/phim1; i++)
+      for (long j = 0; j < phim1; j++)
+        val3a[i*phim1 + j] = val3[i*phim1 + shuffle->new_order[j]];
+
+    PlaintextArray pa3(ea);
+    pa3.encode(val3a);
+
+    if (pa1.equals(pa3))
+      cout << "dim=" << dim << " GOOD\n";
+    else
+      cout << "dim=" << dim << " BAD\n";
+    
 
   }
   else {
@@ -1528,4 +1718,6 @@ int main(int argc, char *argv[])
 //   Test_eval3_x p=2 m1=11 m2=41 m3=31
 //   [1 1 20]  Test_eval3_x p=2 m1=3 m2=11 m3=25
 //   [1 1 20]  Test_eval3_x p=2 m1=3 m2=11 m3=41
+//   Test_eval3_x p=2 m1=3 m2=11 m3=17
+//   Test_eval3_x p=2 m1=3 m2=5 m3=43 (phim1 == 3)
 
