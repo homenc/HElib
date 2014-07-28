@@ -236,12 +236,6 @@ public:
   //! \f]
   virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const=0;
 
-  // Apply the corresponding transformation to a plaintext polynomial
-  virtual void applyLinPoly(ZZX& poly, const vector<ZZX>& C) const=0;
-
-  // Apply the corresponding transformation to a ciphertext
-  virtual void applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const=0;
-
   // restore contexts mod p and mod G
   virtual void restoreContext() const = 0;
   virtual void restoreContextForG() const = 0;
@@ -443,12 +437,6 @@ public:
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
   void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const;
-
-  // Apply the corresponding transformation to a plaintext polynomial
-  void applyLinPoly(ZZX& poly, const vector<ZZX>& C) const;
-
-  // Apply the corresponding transformation to a ciphertext
-  void applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const;
 
 private:
 
@@ -652,14 +640,6 @@ public:
 
   void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
     { rep->buildLinPolyCoeffs(C, L); }
-
-  // Apply the corresponding transformation to a plaintext polynomial
-  void applyLinPoly(ZZX& poly, const vector<ZZX>& C) const
-    { rep->applyLinPoly(poly, C); }
-
-  // Apply the corresponding transformation to a ciphertext
-  void applyLinPoly(Ctxt& ctxt, const vector<ZZX>& C) const
-    { rep->applyLinPoly(ctxt, C); }
 
   void restoreContext() const { rep->restoreContext(); }
   void restoreContextForG() const { rep->restoreContextForG(); }
