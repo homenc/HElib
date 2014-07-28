@@ -319,8 +319,11 @@ void buildModChain(FHEcontext &context, long nPrimes, long nDgts)
   }
 
   // Add primes to the chain for the P factor of key-switching
+  long p2r = (context.bootstrapPAM)? context.bootstrapPAM->getPPowR()
+                                   : context.alMod.getPPowR();
   double sizeOfSpecialPrimes 
-    = maxDigitSize + log(nDgts/32.0)/2 + log(context.stdev *2);
+    = maxDigitSize + log(nDgts/32.0)/2 + log(context.stdev *2)
+      + log((double)p2r);
 
   AddPrimesBySize(context, sizeOfSpecialPrimes, true);
 }
@@ -465,9 +468,22 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   // NTL's FFTs for m and phi(m) are the same. If NTL didn't have these
   // power-of-two jumps, we would possibly want to change this.
 
+  allOnes = ZZX::zero();
   if (bootstrappable) {
     bootstrapPAM = new PAlgebraMod(zMStar, bootstrapR(m,p,r));
     bootstrapEA = new EncryptedArray(*this, *bootstrapPAM);
+                  // Polynomial defaults to F0, PAlgebraMod explicitly given
+
+    // If p=2 and m1 ... mk is the prime-power factorization of m, then
+    // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
+    if (p==2) {
+      for (long i=0; i<(long) zMStar.getMfactors().size(); i++) {
+	long phi_mi = phi_N(zMStar.getMfactors()[i]);
+	long exp_i = m/(zMStar.getMfactors()[i]);
+	for (long j=phi_mi-1; j>=0; --j) SetCoeff(allOnes, j*exp_i);
+      }
+      allOnes %= zMStar.getPhimX();
+    }
   }
   else {
     bootstrapPAM = NULL;

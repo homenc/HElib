@@ -122,6 +122,11 @@ public:
   ZZX modP_digPoly;     // Initialized during call to Ctxt::extractDigits(...)
   long modP_digPoly_r;  // relative to which p^r was this computed
 
+  ZZX allOnes;
+  // If p=2 and m1 ... mk is the prime-power factorization of m, then
+  // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
+
+  /******************************************************************/
   ~FHEcontext(); // destructor
   FHEcontext(unsigned long m, unsigned long p, unsigned long r, // constructor
 	     bool bootstrappable=false);
