@@ -81,10 +81,8 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   context(newPubKey.getContext()), pubKey(newPubKey), ptxtSpace(newPtxtSpace),
   noiseVar(to_xdouble(0.0))
 {
-  if (ptxtSpace != pubKey.getPtxtSpace()) { // plaintext-space mistamtch
-    ptxtSpace = GCD(ptxtSpace, pubKey.getPtxtSpace());
-    if (ptxtSpace <= 1) Error("Plaintext-space mismatch Ctxt constructor");
-  }
+  if (ptxtSpace<=0) ptxtSpace = pubKey.getPtxtSpace();
+  else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
 }
 
@@ -176,6 +174,71 @@ void Ctxt::modDownToSet(const IndexSet &s)
   FHE_TIMER_STOP;
 }
 
+// Special-purpose modulus-switching for bootstrapping.
+// Mod-switch to an externally-supplied modulus. The modulus need not be in
+// the moduli-chain in the context, and does not even need to be a prime.
+// The ciphertext *this is not affected, instead the result is returned in
+// the zzParts vector, as a vector of ZZX'es. Returns an extimate for the
+// noise variance after mod-switching.
+double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
+{
+  // Ensure that new modulus is co-prime with plaintetx space
+  assert(toModulus>1 && GCD(toModulus, getPtxtSpace())==1);
+  const long p2r = getPtxtSpace();
+
+  // Compute the ratio between the current modulus and the new one.
+  // NOTE: toModulus is a long int, so a double for the logarithms and
+  //       xdouble for the ratio itself is sufficient
+  xdouble ratio = xexp(log((double)toModulus)
+		       - context.logOfProduct(getPrimeSet()));
+
+  // Compute also the ratio modulo ptxtSpace
+  const ZZ fromModulus = context.productOfPrimes(getPrimeSet());
+  long ratioModP = MulMod(toModulus % p2r, 
+			  InvMod(rem(fromModulus,p2r),p2r), p2r);
+
+  mulmod_precon_t precon = PrepMulModPrecon(ratioModP, p2r, 1/(double)p2r);
+
+  // Convert all parts to ZZX format
+  zzParts.resize(parts.size());
+  for (size_t i=0; i<parts.size(); i++) parts[i].toPoly(zzParts[i]);
+
+  // cerr << "## converting from mod-"<<context.productOfPrimes(getPrimeSet())
+  //      << " to mod-"<<toModulus<<" (ratio="<<ratio
+  //      << "), ptxtSpace="<<p2r<<endl;
+
+  // Scale and round all the integers in all the parts
+  for (size_t i=0; i<zzParts.size(); i++) {
+    // if (deg(zzParts[i])<20) {
+    //   cerr << " original poly="<<zzParts[i]<<endl;
+    //   cerr << "    poly mod p=[";
+    // }
+    for (long j=0; j<=deg(zzParts[i]); j++) {
+      const ZZ& coef = coeff(zzParts[i],j);
+      long c_mod_p = MulModPrecon(rem(coef,p2r), ratioModP, p2r, precon);
+      // c_mod_p in [0,p-1]
+      //      if (deg(zzParts[i])<20) cerr << c_mod_p << " ";
+      xdouble xcoef = ratio*conv<xdouble>(coef); // the scaled coefficient
+
+      // round xcoef to an integer which is equal to c_mod_p modulo ptxtSpace
+      long rounded = conv<long>(floor(xcoef));
+      long r_mod_p = rounded % p2r;
+      if (r_mod_p < 0) r_mod_p += p2r; // r_mod_p in [0,p-1]
+
+      if (r_mod_p != c_mod_p) {
+        long delta = SubMod(c_mod_p, r_mod_p, p2r);
+	// either add delta or subtract toModulus-delta
+	rounded += delta;
+	if (delta > toModulus-delta) rounded -= p2r;
+      }
+      SetCoeff(zzParts[i],j,rounded);
+    }
+    //  if (deg(zzParts[i])<20) cerr << "]\n   scaled poly="<<zzParts[i]<<endl;
+  }
+
+  // Return an estimate for the noise
+  return conv<double>(noiseVar*ratio*ratio + modSwitchAddedNoiseVar());
+}
 
 // Modulus-switching down
 void Ctxt::modDownToLevel(long lvl)

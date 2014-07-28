@@ -403,6 +403,15 @@ public:
   //! @brief Modulus-switching down.
   void modDownToLevel(long lvl);
 
+  //! @brief Special-purpose modulus-switching for bootstrapping.
+  //!
+  //! Mod-switch to an externally-supplied modulus. The modulus need not be in
+  //! the moduli-chain in the context, and does not even need to be a prime.
+  //! The ciphertext *this is not affected, instead the result is returned in
+  //! the zzParts vector, as a vector of ZZX'es.
+  //! Returns an extimate for the noise variance after mod-switching.
+  double rawModSwitch(vector<ZZX>& zzParts, long toModulus) const;
+
   //! @brief Find the "natural prime-set" of a cipehrtext.
   //! Find the highest IndexSet so that mod-switching down to that set results
   //! in the dominant noise term being the additive term due to rounding
