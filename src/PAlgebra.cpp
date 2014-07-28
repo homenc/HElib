@@ -200,7 +200,9 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
   prods[ndims] = 1;
   for (long j = ndims-1; j >= 0; j--) {
     prods[j] = OrderOf(j) * prods[j+1];
-  } 
+  }
+
+  pp_factorize(mFactors, m); // prime-power factorization from NumbTh.cpp
 }
 
 /***********************************************************************

@@ -89,13 +89,15 @@ class PAlgebra {
   vector<long> zmsIdx; // if t is the i'th element in (Z/mZ)* then zmsIdx[t]=i
                        // zmsIdx[t]==-1 if t notin (Z/mZ)*
 
-  vector<int> dLogT; 
+  vector<long> dLogT; 
   // holds the discrete-logarithms for elements in T: If (z/mZ)^*/(p)
   // has n generators then dLogT is an array of n*nSlots interest, where
   // the entries [in, in+1,...,(i+1)n-1] hold the discrete-logarithms for
   // the i'th element of (z/mZ)^*/(p). 
   // Namely, for i<nSlots we have dLogT[in,...,(i+1)n-1] = [e1,...,en]
   // s.t. T[i] = prod_{i=1}^n gi^{ei} mod m (with n=gens.size())
+
+  vector<long> mFactors; // The prime-power factorization of m
 
  public:
 
@@ -129,6 +131,9 @@ class PAlgebra {
 
   //! The cyclotomix polynomial Phi_m(X)
   const ZZX& getPhimX() const { return PhimX; }
+
+  //! The prime-power factorization of m
+  const vector<long> getMfactors() const { return mFactors; }
 
   //! The number of generators in (Z/mZ)^* /(p)
   unsigned long numOfGens() const { return gens.size(); }
@@ -180,7 +185,7 @@ class PAlgebra {
 			      bool onlySameOrd=false) const;
 
   //! Inverse of exponentiate
-  const int* dLog(unsigned long t) const {
+  const long* dLog(unsigned long t) const {
     long i = indexOfRep(t);
     if (i<0) return NULL;
     return &(dLogT[i*gens.size()]); // bug: this should be an iterator
