@@ -121,6 +121,7 @@ void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p);
 //! @brief A version for GF2: must be called with p == 2 and r == 1
 void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p);
 
+
 //! Base-2 logarithm
 inline double log2(const xdouble& x){ return log(x) * 1.442695040889; }
 inline double log2(const double x){ return log(x) * 1.442695040889; }
@@ -254,11 +255,32 @@ T1 convert(const T2& v2)
 }
 
 
+template<class T>
+vector<T> vector_replicate(const T& a, long n)
+{
+   vector<T> res;
+   res.resize(n);
+   for (long i = 0; i < n; i++) res[i] = a;
+   return res;
+}
+
+template<class T>
+vector<T> Vec_replicate(const T& a, long n)
+{
+   Vec<T> res;
+   res.SetLength(n);
+   for (long i = 0; i < n; i++) res[i] = a;
+   return res;
+}
+
+
 
 // some useful operations
 void mul(vector<ZZX>& x, const vector<ZZX>& a, long b);
 void div(vector<ZZX>& x, const vector<ZZX>& a, long b);
 void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b);
+
+
 
 
 //! @brief Finds whether x is an element of the set X of size sz,

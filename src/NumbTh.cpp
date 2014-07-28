@@ -835,6 +835,10 @@ void buildLinPolyMatrix(mat_GF2E& M, long p)
          M[i][j] = power(M[i-1][j], p);
 }
 
+
+
+
+
 // some auxilliary conversion routines
 
 void convert(vec_zz_pE& X, const vector<ZZX>& A)
