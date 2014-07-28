@@ -415,6 +415,12 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
     for (size_t j=0; j<keySwitchMap[i].size(); j++)
       if (keySwitchMap[i][j] != other.keySwitchMap[i][j]) return false;
   }
+
+  if (bootstrapKeyID!=other.bootstrapKeyID) return false;
+  if (bootstrapKeyID>=0 && 
+      !bootstrapEkey.equalsTo(other.bootstrapEkey, /*comparePkeys=*/false))
+    return false;
+
   return true;
 }
 
@@ -445,7 +451,12 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
       str << pk.keySwitchMap[i][j] << " ";
     str << "]\n ";
   }
-  return str << "]\n]";
+  str << "]\n";
+
+  // output the bootstrapping key, if any
+  str << pk.bootstrapKeyID << " ";
+  if (pk.bootstrapKeyID>=0) str << pk.bootstrapEkey << endl;
+  return str << "]";
 }
 
 istream& operator>>(istream& str, FHEPubKey& pk)
@@ -486,11 +497,15 @@ istream& operator>>(istream& str, FHEPubKey& pk)
       pk.keySwitchMap[i][j] = vvl[i][j];
   }
 
-  seekPastChar(str, ']');
-  //  cerr << "]";
   // build the key-switching map for all keys
   for (long i=pk.skHwts.size()-1; i>=0; i--)
     pk.setKeySwitchMap(i);
+
+  // Get the bootstrapping key, if any
+  str >> pk.bootstrapKeyID;
+  if (pk.bootstrapKeyID>=0) str >> pk.bootstrapEkey;
+
+  seekPastChar(str, ']');
   return str;
 }
 
@@ -515,7 +530,8 @@ bool FHESecKey::operator==(const FHESecKey& other) const
 // FHESecKey object, then the procedure below generates a corresponding public
 // encryption key.
 // It is assumed that the context already contains all parameters.
-long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt, long ptxtSpace)
+long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
+			     long ptxtSpace, bool onlyLinear)
 {
   if (sKeys.empty()) { // 1st secret-key, generate corresponding public key
     if (ptxtSpace<2)
@@ -540,9 +556,10 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt, long ptxtSpace)
   sKeys.push_back(sKey); // add to the list of secret keys
   long keyID = sKeys.size()-1; // not thread-safe?
 
-  GenKeySWmatrix(2,1,keyID,keyID); // At least we need the s^2 -> s matrix
-  GenKeySWmatrix(3,1,keyID,keyID); //             and also s^3 -> s
-
+  if (!onlyLinear) {
+    GenKeySWmatrix(2,1,keyID,keyID); // At least we need the s^2 -> s matrix
+    GenKeySWmatrix(3,1,keyID,keyID); //             and also s^3 -> s
+  }
   return keyID; // return the index where this key is stored
 }
 
@@ -568,7 +585,7 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   if (fromSPower>1) fromKey.Exp(fromSPower);       // compute s^r(X^t)
   // SHAI: The above lines compute the automorphism and exponentiation mod q,
   //   turns out this is really what we want (even through usually we think
-  //   of the secret key as being mod p or mod p^r)
+  //   of the secret key as being mod p^r)
 
   KeySwitch ksMatrix(fromSPower,fromXPower,fromIdx,toIdx);
   RandomBits(ksMatrix.prgSeed, 256); // a random 256-bit seed
@@ -587,7 +604,11 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   } // restore state upon destruction of state
 
   // Record the plaintext space for this key-switching matrix
-  if (p<2) p = pubEncrKey.ptxtSpace; // default plaintext space is p^r
+  if (p<2) {
+    if (isBootstrappable())   // use the larger bootstrapping plaintext space
+         p = context.bootstrapPAM->getPPowR();
+    else p = pubEncrKey.ptxtSpace; // default plaintext space from public key
+  }
   assert(p>=2);
   ksMatrix.ptxtSpace = p;
 
@@ -604,7 +625,7 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   }
 
   // Push the new matrix onto our list
-  keySwitching.push_back(ksMatrix); // FIXME: put bootstrap matrices elsewhere
+  keySwitching.push_back(ksMatrix);
   FHE_TIMER_STOP;
 }
 
@@ -715,12 +736,25 @@ long FHESecKey::Encrypt(Ctxt &ctxt, const DoubleCRT& ptxt,
 }
 
 
-// Encrypting the secret key under itself
-long FHESecKey::circularEncrypt(Ctxt &ctxt) const
+// Generate bootstrapping data if needed, returns index of key
+long FHESecKey::genBootstrapData(long hwt)
 {
+  if (bootstrapKeyID>=0) return bootstrapKeyID;
+
   // Make sure that the context has the bootstrapping EA and PAlgMod
   assert(context.bootstrapPAM != NULL && context.bootstrapEA != NULL);
-  return Encrypt(ctxt, sKeys.at(0), context.bootstrapPAM->getPPowR());
+  long p2r = context.bootstrapPAM->getPPowR();
+
+  // Generate a new bootstrapping key
+  long keyID = GenSecKey(hwt, p2r, /*onlyLinear=*/true);
+
+  // Generate a key-switching matrix from key 0 to this key
+  GenKeySWmatrix(/*fromSPower=*/1,/*fromXPower=*/1,/*fromIdx=*/0,
+		 /*toId=*/keyID,  /*ptxtSpace=*/p2r);
+
+  Encrypt(bootstrapEkey, sKeys.at(keyID), p2r); // Encrypt new key under key #0
+
+  return (bootstrapKeyID=keyID); // return the new key-ID
 }
 
 

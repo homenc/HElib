@@ -139,24 +139,35 @@ class FHEPubKey { // The public key
   // use when re-linearizing s_i(X^n). 
   vector< vector<long> > keySwitchMap;
 
+  // bootstrapping data
+
+  long bootstrapKeyID; // index of the bootstrapping key
+  Ctxt bootstrapEkey;  // the key itself, encrypted under key #0
+  vector< vector<ZZX> > unpackSlotEncoding;// linPolys for uppacking the slots
+
 public:
   FHEPubKey(): // this constructor thorws run-time error if activeContext=NULL
-    context(*activeContext), pubEncrKey(*this) {}
+    context(*activeContext), pubEncrKey(*this), bootstrapEkey(*this)
+      { bootstrapKeyID=-1; }
 
   explicit
   FHEPubKey(const FHEcontext& _context): 
-    context(_context), pubEncrKey(*this) {}
+    context(_context), pubEncrKey(*this), bootstrapEkey(*this)
+      { bootstrapKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
-    context(other.context), pubEncrKey(*this), skHwts(other.skHwts), 
-    keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap) 
-  { // copy the pubEncrKey w/o checking the reference to the public key
+    context(other.context), pubEncrKey(*this), skHwts(other.skHwts),
+    keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
+    bootstrapKeyID(other.bootstrapKeyID), bootstrapEkey(*this)
+  { // copy pubEncrKey,bootstrapEkey w/o checking the ref to the public key
     pubEncrKey.privateAssign(other.pubEncrKey);
+    bootstrapEkey.privateAssign(other.bootstrapEkey);
   }
 
   void clear() { // clear all public-key data
     pubEncrKey.clear(); skHwts.clear(); 
     keySwitching.clear(); keySwitchMap.clear();
+    bootstrapKeyID=-1; bootstrapEkey.clear();
   }
 
   bool operator==(const FHEPubKey& other) const;
@@ -165,18 +176,17 @@ public:
   // Access methods
   const FHEcontext& getContext() const {return context;}
   long getPtxtSpace() const { return pubEncrKey.ptxtSpace; }
-
+  bool keyExists(long keyID) { return (keyID<(long)skHwts.size()); }
 
   //! @brief The Hamming weight of the secret key
-  long getSKeyWeight(long keyID=0) const {return skHwts[keyID];}
-
+  long getSKeyWeight(long keyID=0) const {return skHwts.at(keyID);}
 
   ///@{
   //! @name Find key-switching matrices
 
   //! @brief Find a key-switching matrix by its indexes. 
   //! If no such matrix exists it returns a dummy matrix with toKeyID==-1.
-   const KeySwitch& getKeySWmatrix(const SKHandle& from, long toID=0) const;
+  const KeySwitch& getKeySWmatrix(const SKHandle& from, long toID=0) const;
   const KeySwitch& getKeySWmatrix(long fromSPower, long fromXPower, long fromID=0, long toID=0) const
   { return getKeySWmatrix(SKHandle(fromSPower,fromXPower,fromID), toID); }
 
@@ -214,6 +224,9 @@ public:
   long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0,
 	       bool highNoise=false) const;
 
+  void isBootstrappable() { return (context.bootstrapPAM != NULL); }
+  void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
+
   friend class FHESecKey;
   friend ostream& operator << (ostream& str, const FHEPubKey& pk);
   friend istream& operator >> (istream& str, FHEPubKey& pk);
@@ -227,11 +240,11 @@ class FHESecKey: public FHEPubKey { // The secret key
 public:
   vector<DoubleCRT> sKeys; // The secret key(s) themselves
 
+  FHESecKey(){} // disable default constructor
+
 public:
 
   // Constructors just call the ones for the base class
-  FHESecKey(){}
-
   explicit
   FHESecKey(const FHEcontext& _context): FHEPubKey(_context) {}
 
@@ -244,17 +257,18 @@ public:
   //! We allow the calling application to choose a secret-key polynomial by
   //! itself, then insert it into the FHESecKey object, getting the index of
   //! that secret key in the sKeys list. If this is the first secret-key for
-  //! this object then the procedure below also generate a corresponding public
-  //! encryption key.
+  //! this object then the procedure below also generates a corresponding
+  //! public encryption key.
   //! It is assumed that the context already contains all parameters.
-  long ImportSecKey(const DoubleCRT& sKey, long hwt, long ptxtSpace=0);
+  long ImportSecKey(const DoubleCRT& sKey, long hwt,
+		    long ptxtSpace=0, bool onlyLinear=false);
 
-  //! Key generation: This procedure generates a single secret key, pushes it
-  //! onto the sKeys list using ImportSecKey from above.
-  long GenSecKey(long hwt, long ptxtSpace=0)
+  //! Key generation: This procedure generates a single secret key,
+  //! pushes it onto the sKeys list using ImportSecKey from above.
+  long GenSecKey(long hwt, long ptxtSpace=0, bool onlyLinear=false)
   { DoubleCRT newSk(context); // defined relative to all primes, special or not
     newSk.sampleHWt(hwt);     // samle a Hamming-weight-hwt polynomial
-    return ImportSecKey(newSk, hwt, ptxtSpace);
+    return ImportSecKey(newSk, hwt, ptxtSpace, onlyLinear);
   }
 
   //! Generate a key-switching matrix and store it in the public key. The i'th
@@ -283,8 +297,8 @@ public:
     return Encrypt(ctxt, dcrt, ptxtSpace, skIdx);      // then encrypt
   }
 
-  //! @brief Encrypting the secret key under itself
-  long circularEncrypt(Ctxt &ctxt) const;
+  //! @brief Generate bootstrapping data if needed, returns index of key
+  long genBootstrapData(long hwt);
 
   friend ostream& operator << (ostream& str, const FHESecKey& sk);
   friend istream& operator >> (istream& str, FHESecKey& sk);
