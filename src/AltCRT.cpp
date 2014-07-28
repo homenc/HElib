@@ -645,8 +645,9 @@ void AltCRT::automorph(long k)
     tmp.rep.SetLength(m);
     for (long j = 0; j < m; j++) tmp.rep[j] = 0;
 
+    mulmod_precon_t precon = PrepMulModPrecon(k, m, 1/(double)m);
     for (long j = 0; j <= d; j++) 
-      tmp.rep[MulMod(j, k, m)] = row.rep[j];
+      tmp.rep[MulModPrecon(j, k, m, precon)] = row.rep[j];
 
     tmp.normalize();
 
@@ -752,10 +753,12 @@ void AltCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   else {
     long p_over_2 = ptxtSpace/2;
     long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
+    mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace,// optimization
+					      1/(double)ptxtSpace);
     for (long i = 0; i < delta_len; i++) {
       long delta_i_modP = rem(delta.rep[i],ptxtSpace);
       if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
-	delta_i_modP = MulMod(delta_i_modP, prodInv, ptxtSpace);
+	delta_i_modP = MulModPrecon(delta_i_modP, prodInv, ptxtSpace, precon);
 	if (delta_i_modP > p_over_2) delta_i_modP -= ptxtSpace;
 	delta.rep[i] -= diffProd * delta_i_modP;
       }
