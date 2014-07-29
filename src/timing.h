@@ -63,4 +63,13 @@ void printAllTimers(std::ostream& str=std::cerr);
 #define FHE_NTIMER_START(n) {if (areTimersOn()) startFHEtimer(n);}
 #define FHE_NTIMER_STOP(n)  {if (areTimersOn()) stopFHEtimer(n);}
 
+class auto_timer {
+public:
+  const char *name;
+  auto_timer(const char *_name) : name(_name) { FHE_NTIMER_START(name); }
+  ~auto_timer() { FHE_NTIMER_STOP(name); }
+};
+
+#define FHE_AUTO_TIMER auto_timer _local_auto_timer_(__func__)
+
 #endif // _TIMING_H_

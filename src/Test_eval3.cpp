@@ -433,6 +433,7 @@ public:
 
   void buildLinPolyCoeffs(Vec<RE>& C_out, const Vec<RE>& L) const
   {
+     FHE_NTIMER_START("tower-buildLinPoly");
      Mat<RE> M;
      buildLinPolyMatrix(M);
 
@@ -440,6 +441,7 @@ public:
      ppsolve(C, M, L, p, r);
 
      C_out = C;
+     FHE_NTIMER_STOP("tower-buildLinPoly");
   }
 
   void applyLinPoly(RE& beta, const Vec<RE>& C, const RE& alpha) const
@@ -657,6 +659,7 @@ public:
 Vec<long> new_order;
 
 virtual void apply(PlaintextArray& v) const = 0;
+virtual void apply(Ctxt& v) const = 0;
 
 };
 
@@ -667,6 +670,7 @@ public:
   PA_INJECT(type)
 
   virtual void apply(PlaintextArray& v) const;
+  virtual void apply(Ctxt& v) const;
 
 
 private:
@@ -689,6 +693,7 @@ private:
   bool get(Vec<RE>& entry, long i, long j) const;
 
   void mat_mul(PlaintextArray& ctxt) const;
+  void mat_mul(Ctxt& ctxt) const;
 
 public:
   // constructor
@@ -956,6 +961,98 @@ void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt) const
   ctxt = res;
 }
 
+template<class type>
+void Step2aShuffle<type>::mat_mul(Ctxt& ctxt) const
+{
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
+  long nslots = ea.size();
+
+  ctxt.reLinearize(); 
+
+  Ctxt res(ZeroCtxtLike, ctxt);
+
+  Vec<RE> entry;
+  entry.SetLength(d2);
+
+  Vec<RE> C;
+  C.SetLength(d2);
+
+  
+  Vec< Vec<RX> > diag;
+  diag.SetLength(nslots);
+  for (long j = 0; j < nslots; j++) diag[j].SetLength(d2);
+
+  for (long i = 0; i < nslots; i++) {
+    // process diagonal i
+
+
+    bool zDiag = true;
+    long nzLast = -1;
+
+    for (long j = 0; j < nslots; j++) {
+      bool zEntry = get(entry, mcMod(j-i, nslots), j);
+
+      if (!zEntry) {    // non-empty entry
+
+        zDiag = false;  // mark diagonal as non-empty
+
+        // clear entries between last nonzero entry and this one
+
+        for (long jj = nzLast+1; jj < j; jj++) {
+          for (long k = 0; k < d2; k++)
+            clear(diag[jj][k]);
+        }
+
+        nzLast = j;
+
+        // compute the lin poly coeffs
+        tower->buildLinPolyCoeffs(C, entry);
+        conv(diag[j], C);
+      }
+    }
+
+    if (zDiag) continue; // zero diagonal, continue
+
+    // clear trailing zero entries    
+    for (long jj = nzLast+1; jj < nslots; jj++) {
+      for (long k = 0; k < d2; k++)
+        clear(diag[jj][k]);
+    }
+
+    // now diag[j] contains the lin poly coeffs
+
+    Ctxt shCtxt = ctxt;
+    ea.rotate(shCtxt, i); 
+
+    // apply the linearlized polynomial
+    for (long k = 0; k < d2; k++) {
+
+      // compute the constant
+      bool zConst = true;
+      vector<ZZX> cvec;
+      cvec.resize(nslots);
+      for (long j = 0; j < nslots; j++) {
+        convert(cvec[j], diag[j][k]);
+        if (!IsZero(cvec[j])) zConst = false;
+      }
+
+      if (zConst) continue;
+
+      ZZX cpoly;
+      ea.encode(cpoly, cvec);
+      // FIXME: record the encoded polynomial for future use
+
+      Ctxt shCtxt1 = shCtxt;
+      shCtxt1.frobeniusAutomorph(k*d1);
+      shCtxt1.multByConstant(cpoly);
+      res += shCtxt1;
+    }
+  }
+  ctxt = res;
+}
+
+
+
 
 
 
@@ -1101,6 +1198,155 @@ void Step2aShuffle<type>::apply(PlaintextArray& v) const
 
   v = v1;
 }
+
+
+
+template<class type>
+void Step2aShuffle<type>::apply(Ctxt& v) const
+{
+  RBak bak; bak.save(); ea.getAlMod().restoreContext();
+  REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
+  long nslots = ea.size();
+
+  // cout << "starting shuffle...\n";
+
+  // tower->print(cout, v, nrows);
+
+  // build linPolyCoeffs
+
+  v.reLinearize();
+
+  Mat< Vec<ZZX> > C;
+
+  C.SetDims(d2, d2);
+  for (long i = 0; i < d2; i++)
+    for (long j = 0; j < d2; j++)
+      C[i][j].SetLength(nrows);
+
+  // C[i][j][k] is the j-th lin-poly coefficient
+  // of the map that projects subslot intraSlotPerm[k][i]
+  // onto subslot i
+
+  for (long k = 0; k < nrows; k++) {
+    for (long i = 0; i < d2; i++) {
+      long idx_in = intraSlotPerm[k][i];
+      long idx_out = i;
+
+      Vec< Vec<RX> > map2;
+      map2.SetLength(d2);
+      map2[idx_in].SetLength(idx_out+1);
+      map2[idx_in][idx_out] = 1;
+      // map2 projects idx_in ontot idx_out
+
+      Vec<RE> map1;
+      map1.SetLength(d2);
+      for (long j = 0; j < d2; j++)
+        map1[j] = tower->convert2to1(map2[j]);
+
+      Vec<RE> C1;
+      tower->buildLinPolyCoeffs(C1, map1);
+
+      for (long j = 0; j < d2; j++)
+        C[i][j][k] = conv<ZZX>(rep(C1[j]));
+    }
+  }
+
+  // mask each sub-slot
+
+  Vec< shared_ptr<Ctxt> > frobvec; 
+  frobvec.SetLength(d2);
+  for (long j = 0; j < d2; j++) {
+    shared_ptr<Ctxt> ptr(new Ctxt(v));
+    ptr->frobeniusAutomorph(j*d1);
+    frobvec[j] = ptr;
+  }
+
+  Vec< shared_ptr<Ctxt> > colvec;
+  colvec.SetLength(d2);
+  for (long i = 0; i < d2; i++) {
+    shared_ptr<Ctxt> acc(new Ctxt(ZeroCtxtLike, v));
+
+    for (long j = 0; j < d2; j++) {
+      ZZX const1;
+
+      vector<ZZX> vec1;
+      vec1.resize(nslots);
+      for (long k = 0; k < nslots; k++)
+        vec1[k] = C[i][j][k % nrows];
+      ea.encode(const1, vec1);
+
+      Ctxt ctxt1(*frobvec[j]);
+
+      ctxt1.multByConstant(const1);
+      (*acc) += ctxt1;
+    }
+
+    colvec[i] = acc;
+  }
+
+  // for (long i = 0; i < d2; i++) {
+    // cout << "column " << i << "\n";
+    // tower->print(cout, *colvec[i], nrows);
+  // }
+
+  // rotate each subslot 
+
+  for (long i = 0; i < d2; i++) {
+    if (cshift[i] == 0) continue;
+
+    if (nrows == nslots) {
+      // simple rotation
+
+      ea.rotate(*colvec[i], cshift[i]);
+
+    }
+    else {
+      // synthetic rotation 
+
+      vector<long> mask;
+      mask.resize(nslots);
+
+      for (long j = 0; j < nslots; j++) 
+        mask[j] = ((j % nrows) < (nrows - cshift[i]));
+
+      ZZX emask;
+      ea.encode(emask, mask);
+
+      Ctxt tmp1(*colvec[i]), tmp2(*colvec[i]);
+
+      tmp1.multByConstant(emask);
+      tmp2 -= tmp1;
+
+      ea.rotate(tmp1, cshift[i]);
+      ea.rotate(tmp2, -(nrows-cshift[i]));
+      
+      tmp1 += tmp2;
+      *colvec[i] = tmp1;
+    }
+  }
+
+  // for (long i = 0; i < d2; i++) {
+    // cout << "column " << i << "\n";
+    // tower->print(cout, *colvec[i], nrows);
+  // }
+
+  // conbine columns
+
+  Ctxt v1(ZeroCtxtLike, v);
+  for (long i = 0; i < d2; i++) 
+    v1 += *colvec[i];
+
+
+  // apply the matrix
+
+  mat_mul(v1);
+
+  v = v1;
+}
+
+
 
 
 Step2aShuffleBase*
@@ -1284,6 +1530,8 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
        << ", mvec=" << mvec
        << endl;
 
+  setTimersOn();
+
   long nfactors = mvec.length();
   for (long i = 0; i < nfactors; i++)
     for (long j = i+1; j < nfactors; j++)
@@ -1350,11 +1598,26 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   context.zMStar.printout();
   cerr << endl;
 
+
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+
+  cerr << "generating key-switching matrices... ";
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  addFrbMatrices(secretKey); // compute key-switching matrices that we need
+  cerr << "done\n";
+
+
+
   ZZX GG;
   GG = context.alMod.getFactorsOverZZ()[0];
+  EncryptedArray ea(context, GG);
+
   zz_p::init(context.alMod.getPPowR());
   zz_pX G = conv<zz_pX>(GG);
   zz_pE::init(G);
+
 
   Vec<zz_pE> global_points(INIT_SIZE, phim/d);
   for (long i = 0; i < phim/d; i++) 
@@ -1456,7 +1719,6 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     adjusted_values[i] = conv<ZZX>(rep(V));
   }
 
-  EncryptedArray ea(context, GG);
 
   ZZX FF1;
   ea.encode(FF1, adjusted_values);
@@ -1554,6 +1816,8 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
   }
   else if (inertPrefix == nfactors-2) {
+
+#if 0
     cout << "harder case\n";
 
     long m1 = mvec[nfactors-1];
@@ -1583,10 +1847,18 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     PlaintextArray pa1(ea);
     pa1.encode(val1);
 
+    PlaintextArray check_val(ea);
+    Ctxt ctxt(publicKey);
+    ea.encrypt(ctxt, publicKey, pa1);
+
     PlaintextBlockMatrixBaseInterface *mat =
       buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], towerBase);
 
     pa1.mat_mul(*mat);
+
+    ea.mat_mul(ctxt, *mat);
+    ea.decrypt(ctxt, secretKey, check_val);
+    assert(pa1.equals(check_val));
 
     vector<ZZX> val2;
     val2.resize(nslots);
@@ -1616,6 +1888,11 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
                         towerBase);
 
     shuffle->apply(pa1);
+
+    shuffle->apply(ctxt);
+    ea.decrypt(ctxt, secretKey, check_val);
+    assert(pa1.equals(check_val));
+
 
     long phim1 = shuffle->new_order.length();
 
@@ -1710,6 +1987,70 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
 
     }
+
+#else
+
+    cout << "harder case\n"; 
+    cout.flush();
+
+    resetAllTimers();
+
+
+    long m1 = mvec[nfactors-1];
+    long cofactor = m/m1;
+
+    long d1 = dvec[nfactors-1];
+    long d2 = d/d1;
+
+    long dim = nfactors-1;
+
+    shared_ptr<TowerBase>  towerBase(buildTowerBase(ea, cofactor, d1, d2));
+
+    vector<ZZX> val1;
+    val1.resize(nslots);
+    for (long i = 0; i < phim; i++) {
+      val1[i/d] += conv<ZZX>(rep(eval_sequence[dim+1][i])) << (i % d);
+    }
+    PlaintextArray pa1(ea);
+    pa1.encode(val1);
+
+    PlaintextArray check_val(ea);
+    Ctxt ctxt(publicKey);
+    ea.encrypt(ctxt, publicKey, pa1);
+
+    PlaintextBlockMatrixBaseInterface *mat =
+      buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], towerBase);
+
+    cout << "first mul\n";
+    cout.flush();
+    ea.mat_mul(ctxt, *mat);
+
+    dim--;
+
+    Step2aShuffleBase *shuffle = 
+      buildStep2aShuffle(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim],
+                        towerBase);
+
+
+    cout << "shuffle\n";
+    cout.flush();
+    shuffle->apply(ctxt);
+
+
+    while (dim > 0) {
+      dim--;
+
+      PlaintextMatrixBaseInterface *mat2 = 
+        buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim]);
+
+      cout << "mul\n";
+      cout.flush();
+      ea.mat_mul(ctxt, *mat2);
+
+    }
+
+
+#endif
     
 
   }
@@ -1717,6 +2058,12 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     cout << "case not handled\n";
 
   }
+
+
+  cerr << "*********\n";
+  printAllTimers();
+  cerr << endl;
+
    
 
 }
@@ -1796,9 +2143,6 @@ int main(int argc, char *argv[])
 
   TestIt(R, p, r, c, k, w, L, mvec);
 
-  cerr << endl;
-  printAllTimers();
-  cerr << endl;
 
 }
 

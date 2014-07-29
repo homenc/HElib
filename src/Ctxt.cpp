@@ -86,6 +86,19 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   primeSet=context.ctxtPrimes;
 }
 
+// Constructor
+Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
+  context(ctxt.getPubKey().getContext()), pubKey(ctxt.getPubKey()), 
+  ptxtSpace(ctxt.getPtxtSpace()),
+  noiseVar(to_xdouble(0.0))
+{
+  // same body as previous constructor
+  if (ptxtSpace<=0) ptxtSpace = pubKey.getPtxtSpace();
+  else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+  primeSet=context.ctxtPrimes;
+}
+
+
 // A private assignment method that does not check equality of context or
 // public key, this needed for example when we copy the pubEncrKey member
 // between different public keys.
@@ -934,6 +947,7 @@ void Ctxt::smartAutomorph(long k)
 // applies the Frobenius automorphism p^j
 void Ctxt::frobeniusAutomorph(long j) 
 {
+  FHE_AUTO_TIMER;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 

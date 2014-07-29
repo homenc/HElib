@@ -149,7 +149,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 template<class type>
 void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 {
-  FHE_TIMER_START;
+  FHE_NTIMER_START("rotate-ctxt");
 
   const PAlgebra& al = context.zMStar;
 
@@ -162,12 +162,13 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   // Simple case: just one generator
   if (al.numOfGens()==1) { // VJS: bug fix: <= must be ==
     rotate1D(ctxt, 0, amt);
+    FHE_NTIMER_STOP("rotate-ctxt");
     return;
   }
 
   // Make sure that amt is in [1,nslots-1]
   amt %= (long) al.getNSlots();
-  if (amt == 0) return;
+  if (amt == 0) { FHE_NTIMER_STOP("rotate-ctxt"); return; }
   if (amt < 0) amt += al.getNSlots();
 
   // rotate the ciphertext, one dimension at a time
@@ -204,7 +205,7 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     rotate1D(tmp, i, v+1);
     ctxt += tmp;         // combine the two parts
 
-    if (i <= 0) return;  // no more generators
+    if (i <= 0) { FHE_NTIMER_STOP("rotate-ctxt"); return; }  // no more generators
 
     mask = ((mask * (maskTable[i][v] - maskTable[i][v+1])) % PhimXmod)
              + maskTable[i][v+1];  // update the mask for next iteration
@@ -227,7 +228,7 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
              + maskTable[i][v+1];  // update the mask for next iteration
     }
   }
-  FHE_TIMER_STOP;
+  FHE_NTIMER_STOP("rotate-ctxt");
 }
 
 template<class type>

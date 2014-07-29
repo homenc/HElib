@@ -16,6 +16,7 @@
 #include <NTL/ZZ.h>
 NTL_CLIENT
 #include "NumbTh.h"
+#include "timing.h"
 
 #include <fstream>
 #include <cassert>
@@ -1205,6 +1206,7 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
 
 void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
 {
+   FHE_TIMER_START;
    mat_zz_pE M;
    buildLinPolyMatrix(M, p);
 
@@ -1212,10 +1214,12 @@ void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
    ppsolve(C, M, L, p, r);
 
    C_out = C;
+   FHE_TIMER_STOP;
 }
 
 void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
 {
+   FHE_TIMER_START;
    assert(p == 2 && r == 1);
 
    mat_GF2E M;
@@ -1225,6 +1229,7 @@ void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
    ppsolve(C, M, L, p, r);
 
    C_out = C;
+   FHE_TIMER_STOP;
 }
 
 void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p)

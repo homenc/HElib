@@ -20,6 +20,7 @@
  * @brief Data-movement operations on encrypted arrays of slots
  */
 #include "FHE.h"
+#include "timing.h"
 #include <NTL/ZZ_pX.h>
 #include <NTL/GF2X.h>
 #include <NTL/ZZX.h>
@@ -352,10 +353,10 @@ public:
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
-    { genericEncode(ptxt, array); }
+    { FHE_TIMER_START; genericEncode(ptxt, array); FHE_TIMER_STOP;  }
 
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const
-    { genericEncode(ptxt, array); }
+    { FHE_TIMER_START; genericEncode(ptxt, array); FHE_TIMER_STOP; }
 
   virtual void encode(ZZX& ptxt, const PlaintextArray& array) const;
 

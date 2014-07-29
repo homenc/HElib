@@ -220,6 +220,9 @@ public:
 istream& operator>>(istream& s, CtxtPart& p);
 ostream& operator<<(ostream& s, const CtxtPart& p);
 
+struct ZeroCtxtLike_type {}; // used to select a constructor
+const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
+
 /**
  * @class Ctxt
  * @brief A Ctxt object holds a single cipehrtext
@@ -302,6 +305,11 @@ class Ctxt {
  
 public:
   Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace=0); // constructor
+
+  Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt); 
+    // constructs a zero ciphertext with same public key and 
+    // plaintext space as ctxt
+
 
   Ctxt& operator=(const Ctxt& other) {  // public assignment operator
     assert(&context == &other.context);
