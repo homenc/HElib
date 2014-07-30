@@ -237,10 +237,9 @@ public:
  * @brief The secret key
 ******************************************************************/
 class FHESecKey: public FHEPubKey { // The secret key
+  FHESecKey(){} // disable default constructor
 public:
   vector<DoubleCRT> sKeys; // The secret key(s) themselves
-
-  FHESecKey(){} // disable default constructor
 
 public:
 
@@ -288,14 +287,8 @@ public:
   void Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt, ZZX& f) const;
 
   //! @brief Symmetric encryption using the secret key.
-  long Encrypt(Ctxt &ctxt, const DoubleCRT& ptxt,
-	       long ptxtSpace=0, long skIdx=0) const;
-
   long Encrypt(Ctxt &ctxt, const ZZX& ptxt,
-	       long ptxtSpace=0, long skIdx=0) const
-  { DoubleCRT dcrt(ptxt, context, context.ctxtPrimes); // convert to DoubleCRT
-    return Encrypt(ctxt, dcrt, ptxtSpace, skIdx);      // then encrypt
-  }
+	       long ptxtSpace=0, long skIdx=0) const;
 
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genBootstrapData(long hwt);

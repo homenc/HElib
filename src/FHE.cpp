@@ -314,7 +314,7 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
 long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 			bool highNoise) const
 {
-  FHE_TIMER_START;
+  FHE_AUTO_TIMER;
   assert(this == &ctxt.pubKey);
 
   if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mistamtch
@@ -388,8 +388,6 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     ctxt.noiseVar = pubEncrKey.noiseVar*phim*0.5 
                     + p2*sigma2*phim*(hwt+1) + p2;
   }
-
-  FHE_TIMER_STOP;
   return ptxtSpace;
 }
 
@@ -568,7 +566,7 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
 void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
 			       long fromIdx, long toIdx, long p)
 {
-  FHE_TIMER_START;
+  FHE_AUTO_TIMER;
 
   // sanity checks
   if (fromSPower<=0 || fromXPower<=0) return;  
@@ -626,7 +624,6 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
 
   // Push the new matrix onto our list
   keySwitching.push_back(ksMatrix);
-  FHE_TIMER_STOP;
 }
 
 // Decryption
@@ -643,7 +640,7 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
   // warning if the noise is large enough so as to risk decryption error
   IndexSet s; ciphertxt.findBaseSet(s);
 #endif
-  FHE_TIMER_START;
+  FHE_AUTO_TIMER;
   assert(getContext()==ciphertxt.getContext());
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
   DoubleCRT ptxt(context, ptxtPrimes); // Set to zero
@@ -690,48 +687,38 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
     }
   }
   PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
-  FHE_TIMER_STOP;
 }
 
 // Encryption using the secret key, this is useful, e.g., to put an
 // encryption of the secret key into the public key.
-long FHESecKey::Encrypt(Ctxt &ctxt, const DoubleCRT& ptxt,
+long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
 			long ptxtSpace, long skIdx) const
 {
-  FHE_TIMER_START;
+  FHE_AUTO_TIMER;
   assert(((FHEPubKey*)this) == &ctxt.pubKey);
 
   if (ptxtSpace<2) 
     ptxtSpace = pubEncrKey.ptxtSpace; // default plaintext space is p^r
   assert(ptxtSpace >= 2);
 
-  const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
-  ctxt.primeSet = context.ctxtPrimes;        // initialize the primeSet
-  ctxt.parts.assign(2,CtxtPart(context, context.ctxtPrimes));// allocate space
-  RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);  // a new RLWE instance
+  ctxt.primeSet = context.ctxtPrimes; // initialize the primeSet
+  {CtxtPart tmpPart(context, context.ctxtPrimes);
+  ctxt.parts.assign(2,tmpPart);}      // allocate space
 
-  // add in the plaintext
-  if (ptxtSpace==2) ctxt.parts[0] += ptxt;
-
-  else { // The general case of ptxtSpace>2: for a ciphertext
-         // relative to modulus Q, we add ptxt * Q mod ptxtSpace.
-    DoubleCRT pp = ptxt;
-    pp *= (long) rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
-    ctxt.parts[0] += pp;
-    // ctxt.parts[0] += MulMod(ptxt,QmodP,ptxtSpace); // MulMod from NumbTh
-  }
+  // Set Ctxt bookeeping parameters
+  ctxt.ptxtSpace = ptxtSpace;
+  xdouble phim = to_xdouble(context.zMStar.getPhiM());
+  ctxt.noiseVar = context.stdev*context.stdev * phim * ptxtSpace*ptxtSpace;
 
   // make parts[0],parts[1] point to (1,s)
   ctxt.parts[0].skHandle.setOne();
   ctxt.parts[1].skHandle.setBase(skIdx);
 
-  // Set the other Ctxt bookeeping parameters in pubEncrKey
-  ctxt.primeSet = context.ctxtPrimes;
-  ctxt.ptxtSpace = ptxtSpace;
-  xdouble phim = to_xdouble(context.zMStar.getPhiM());
-  ctxt.noiseVar = context.stdev*context.stdev * phim * ptxtSpace*ptxtSpace;
+  const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
+  RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace); // a new RLWE instance
 
-  FHE_TIMER_STOP;
+  // add in the plaintext
+  ctxt.addConstant(ptxt);
   return ptxtSpace;
 }
 
@@ -746,13 +733,16 @@ long FHESecKey::genBootstrapData(long hwt)
   long p2r = context.bootstrapPAM->getPPowR();
 
   // Generate a new bootstrapping key
-  long keyID = GenSecKey(hwt, p2r, /*onlyLinear=*/true);
+  ZZX keyPoly;
+  sampleHWt(keyPoly, hwt, context.zMStar.getPhiM());
+  DoubleCRT newSk(keyPoly, context); // defined relative to all primes
+  long keyID = ImportSecKey(newSk, hwt, p2r, /*onlyLinear=*/true);
 
   // Generate a key-switching matrix from key 0 to this key
-  GenKeySWmatrix(/*fromSPower=*/1,/*fromXPower=*/1,/*fromIdx=*/0,
-		 /*toId=*/keyID,  /*ptxtSpace=*/p2r);
+  GenKeySWmatrix(    1,          1,          0,   keyID,    p2r  );
+              // fromSPower, fromXPower, fromIdx, toIdx, ptxtSpace
 
-  Encrypt(bootstrapEkey, sKeys.at(keyID), p2r); // Encrypt new key under key #0
+  Encrypt(bootstrapEkey, keyPoly, p2r); // Encrypt new key under key #0
 
   return (bootstrapKeyID=keyID); // return the new key-ID
 }
