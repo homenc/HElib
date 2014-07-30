@@ -353,10 +353,10 @@ public:
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
-    { FHE_TIMER_START; genericEncode(ptxt, array); FHE_TIMER_STOP;  }
+    { genericEncode(ptxt, array);  }
 
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const
-    { FHE_TIMER_START; genericEncode(ptxt, array); FHE_TIMER_STOP; }
+    {  genericEncode(ptxt, array); }
 
   virtual void encode(ZZX& ptxt, const PlaintextArray& array) const;
 
