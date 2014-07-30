@@ -1817,7 +1817,7 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   }
   else if (inertPrefix == nfactors-2) {
 
-#if 0
+#if 1
     cout << "harder case\n";
 
     long m1 = mvec[nfactors-1];
