@@ -57,19 +57,25 @@ void resetAllTimers();
 //! Print the value of all timers to stream
 void printAllTimers(std::ostream& str=std::cerr);
 
-#define FHE_TIMER_START {if (areTimersOn()) startFHEtimer(__func__);}
-#define FHE_TIMER_STOP  {if (areTimersOn()) stopFHEtimer(__func__);}
 
-#define FHE_NTIMER_START(n) {if (areTimersOn()) startFHEtimer(n);}
-#define FHE_NTIMER_STOP(n)  {if (areTimersOn()) stopFHEtimer(n);}
+#define FHE_BASIC_NTIMER_START(n) {if (areTimersOn()) startFHEtimer(n);}
+#define FHE_BASIC_NTIMER_STOP(n)  {if (areTimersOn()) stopFHEtimer(n);}
 
 class auto_timer {
 public:
   const char *name;
-  auto_timer(const char *_name) : name(_name) { FHE_NTIMER_START(name); }
-  ~auto_timer() { FHE_NTIMER_STOP(name); }
+  auto_timer(const char *_name) : name(_name) { FHE_BASIC_NTIMER_START(name); }
+  ~auto_timer() { FHE_BASIC_NTIMER_STOP(name); }
 };
 
-#define FHE_AUTO_TIMER auto_timer _local_auto_timer_(__func__)
+
+// NOTE: the STOP functions below are not really needed,
+// but are provided for backward compatibility
+
+#define FHE_TIMER_START auto_timer _local_auto_timer_(__func__)
+#define FHE_TIMER_STOP FHE_BASIC_NTIMER_STOP(__func__)
+
+#define FHE_NTIMER_START(n) auto_timer _named_auto_timer_ ## n (#n)
+#define FHE_NTIMER_STOP(n) FHE_BASIC_NTIMER_STOP(#n)
 
 #endif // _TIMING_H_

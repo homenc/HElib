@@ -298,9 +298,9 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
 		  zz_pX& powers, Vec<mulmod_precon_t>& powers_aux, 
                   fftRep& Rb, fftrep_aux& Rb_aux, fftRep& Ra)
 {  
-FHE_TIMER_START
+FHE_TIMER_START;
    tBluesteinFFT(x,n,root,powers,powers_aux,Rb,Rb_aux,Ra); 
-FHE_TIMER_STOP
+FHE_TIMER_STOP;
 }
 
 void DFT(ZZ_pX& x, const ZZ_pX& a, long n, const ZZ_p& root)

@@ -212,9 +212,9 @@ void Cmod<type>::iFFT(zpx &x, const zzv& y)const
   BluesteinFFT(x, m, rt, *ipowers, ipowers_aux, *iRb, iRb_aux, *Ra); // call the FFT routine
 
   // reduce the result mod (Phi_m(X),q) and copy to the output polynomial x
-FHE_NTIMER_START("iFFT:division")
+FHE_NTIMER_START(__iFFT_division);
   rem(x, x, *phimx); // out %= (Phi_m(X),q)
-FHE_NTIMER_STOP("iFFT:division")
+FHE_NTIMER_STOP(__iFFT_division);
 
   // normalize
   zp mm_inv;

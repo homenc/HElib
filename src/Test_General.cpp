@@ -127,7 +127,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   resetAllTimers();
 
-  FHE_NTIMER_START("*** circuit");
+  FHE_NTIMER_START(__circuit);
 
   for (long i = 0; i < R; i++) {
 
@@ -190,14 +190,14 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   }
 
-  FHE_NTIMER_STOP("*** circuit");
+  FHE_NTIMER_STOP(__circuit);
    
   cerr << endl;
   printAllTimers();
   cerr << endl;
    
   resetAllTimers();
-  FHE_NTIMER_START("*** check");
+  FHE_NTIMER_START(__check);
    
   PlaintextArray pp0(ea);
   PlaintextArray pp1(ea);
@@ -214,7 +214,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   if (!pp2.equals(p2)) cerr << "oops 2\n";
   if (!pp3.equals(p3)) cerr << "oops 3\n";
    
-  FHE_NTIMER_STOP("*** check");
+  FHE_NTIMER_STOP(__check);
    
   cerr << endl;
   printAllTimers();

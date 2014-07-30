@@ -452,7 +452,7 @@ void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha,
   }
 
   CRT_reconstruct(H,crt); // interpolate to get H
-  FHE_TIMER_START;
+  FHE_TIMER_STOP;
 }
 
 template<class type>

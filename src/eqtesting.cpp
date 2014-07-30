@@ -63,7 +63,7 @@ void fastPower(Ctxt& ctxt, long d)
 void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 			 const Ctxt& ctxt, long n)
 {
-  FHE_TIMER_START
+  FHE_TIMER_START;
   long nslots = ea.size();
   long d = ea.getDegree();
 
@@ -117,7 +117,7 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 
     fastPower(*res[i], d);
   }
-  FHE_TIMER_STOP
+  FHE_TIMER_STOP;
 }
 
 #ifdef DEBUG_TEST

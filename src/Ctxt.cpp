@@ -947,7 +947,7 @@ void Ctxt::smartAutomorph(long k)
 // applies the Frobenius automorphism p^j
 void Ctxt::frobeniusAutomorph(long j) 
 {
-  FHE_AUTO_TIMER;
+  FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 

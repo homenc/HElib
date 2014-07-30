@@ -433,7 +433,7 @@ public:
 
   void buildLinPolyCoeffs(Vec<RE>& C_out, const Vec<RE>& L) const
   {
-     FHE_NTIMER_START("tower-buildLinPoly");
+     FHE_NTIMER_START(__tower_buildLinPoly);
      Mat<RE> M;
      buildLinPolyMatrix(M);
 
@@ -441,7 +441,7 @@ public:
      ppsolve(C, M, L, p, r);
 
      C_out = C;
-     FHE_NTIMER_STOP("tower-buildLinPoly");
+     FHE_NTIMER_STOP(__tower_buildLinPoly);
   }
 
   void applyLinPoly(RE& beta, const Vec<RE>& C, const RE& alpha) const
