@@ -127,7 +127,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   resetAllTimers();
 
-  FHE_NTIMER_START(__circuit);
+  FHE_NTIMER_START(Circuit);
 
   for (long i = 0; i < R; i++) {
 
@@ -190,14 +190,14 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   }
 
-  FHE_NTIMER_STOP(__circuit);
+  FHE_NTIMER_STOP(Circuit);
    
   cerr << endl;
   printAllTimers();
   cerr << endl;
    
   resetAllTimers();
-  FHE_NTIMER_START(__check);
+  FHE_NTIMER_START(Check);
    
   PlaintextArray pp0(ea);
   PlaintextArray pp1(ea);
@@ -214,7 +214,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   if (!pp2.equals(p2)) cerr << "oops 2\n";
   if (!pp3.equals(p3)) cerr << "oops 3\n";
    
-  FHE_NTIMER_STOP(__check);
+  FHE_NTIMER_STOP(Check);
    
   cerr << endl;
   printAllTimers();
@@ -269,6 +269,8 @@ void usage(char *prog)
 
 int main(int argc, char *argv[]) 
 {
+  setTimersOn();
+
   argmap_t argmap;
   argmap["R"] = "1";
   argmap["p"] = "2";
@@ -309,7 +311,6 @@ int main(int argc, char *argv[])
 
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
-  setTimersOn();
   for (long repeat_cnt = 0; repeat_cnt < repeat; repeat_cnt++) {
     TestIt(R, p, r, d, c, k, w, L, m);
   }

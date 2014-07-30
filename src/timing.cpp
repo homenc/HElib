@@ -22,6 +22,7 @@
 #include <cstring>
 
 using namespace std;
+
 #if (__cplusplus>199711L)
 #include <unordered_map>
 #else
@@ -31,93 +32,80 @@ using namespace tr1;
 
 #include "timing.h"
 
-//! A simple class to toggle timing information on and off
-class FHEtimer {
-public:
-  bool isOn;  // a broken semaphore
-  clock_t counter;
-
-  long numCalls;
-
-  FHEtimer() { isOn=false; counter=0; numCalls=0; }
-};
-
-bool string_compare(const char *a, const char *b)
-{
-  return strcmp(a, b) < 0;
-}
-
 bool FHEtimersOn=false;
 
-typedef unordered_map<const char*,FHEtimer>timerMap;
-static timerMap timers;
+bool timer_compare(const FHEtimer *a, const FHEtimer *b)
+{
+  return strcmp(a->name, b->name) < 0;
+}
+
+
+
+static vector<FHEtimer *> timerMap;
+
+void registerTimer(FHEtimer *timer)
+{
+  timerMap.push_back(timer);
+}
 
 // Reset a timer for some label to zero
-void resetFHEtimer(const char *fncName)
+void FHEtimer::reset()
 {
-  FHEtimer& t = timers[fncName];   // insert to map if not already there
-  t.numCalls = 0;
-  t.counter = 0;
-  if (t.isOn) t.counter -= std::clock();
+  numCalls = 0;
+  counter = 0;
+  if (isOn) counter -= std::clock();
 }
 
 // Start a timer
-void startFHEtimer(const char *fncName)
+void FHEtimer::start()
 {
-  FHEtimer& t = timers[fncName];   // insert to map if not already there
-  if (!t.isOn) {
-    t.isOn = true;
-    t.numCalls++;
-    t.counter -= std::clock();
+  if (!isOn) {
+    isOn = true;
+    numCalls++;
+    counter -= std::clock();
   }
 }
 
 // Stop a timer
-void stopFHEtimer(const char *fncName)
+void FHEtimer::stop()
 {
-  FHEtimer& t = timers[fncName];   // insert to map if not already there
-  if (t.isOn) {
-    t.isOn = false;
-    t.counter += std::clock();
+  if (isOn) {
+    isOn = false;
+    counter += std::clock();
   }
 }
 
 // Read the value of a timer (in seconds)
-double getTime4func(const char *fncName) // returns time in seconds
+double FHEtimer::getTime() const // returns time in seconds
 {
-  FHEtimer& t = timers[fncName];   // insert to map if not already there
-
   // If the counter is currently counting, add the clock() value
-  clock_t c = t.isOn? (t.counter + std::clock()) : t.counter;
+  clock_t c = isOn? (counter + std::clock()) : counter;
   return ((double)c)/CLOCKS_PER_SEC;
 }
 
 // Returns number of calls for that timer
-long getNumCalls4func(const char *fncName) 
+long FHEtimer::getNumCalls() const
 {
-    FHEtimer& t = timers[fncName];   // insert to map if not already there
-    return t.numCalls;
+    return numCalls;
 }
 
 void resetAllTimers()
 {
-  for (timerMap::iterator it = timers.begin(); it != timers.end(); ++it)
-    resetFHEtimer(it->first);
+  for (long i = 0; i < long(timerMap.size()); i++) 
+    timerMap[i]->reset();
 }
 
 // Print the value of all timers to stream
 void printAllTimers(ostream& str)
 {
-  vector<const char *> vec;
-  for (timerMap::iterator it = timers.begin(); it != timers.end(); ++it) {
-    vec.push_back(it->first);
-  }
 
-  sort(vec.begin(), vec.end(), string_compare);
+  sort(timerMap.begin(), timerMap.end(), timer_compare);
 
-  for (vector<const char *>::iterator it = vec.begin(); it != vec.end(); ++it) {
-    double t =  getTime4func(*it);
-    long n = getNumCalls4func(*it);
+  for (long i = 0; i < long(timerMap.size()); i++) {
+    const char *name = timerMap[i]->name;
+    const char *loc = timerMap[i]->loc;
+    double t =  timerMap[i]->getTime();
+    long n = timerMap[i]->getNumCalls();
     double ave;
     if (n > 0) { 
       ave = t/n;
@@ -126,6 +114,6 @@ void printAllTimers(ostream& str)
       continue;
     }
 
-    str << "  " << (*it) << ": " << t << " / " << n << " = " << ave << "\n";
+    str << "  " << name << ": " << t << " / " << n << " = " << ave << "   [" << loc << "]\n";
   }
 }

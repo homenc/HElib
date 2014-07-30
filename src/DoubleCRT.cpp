@@ -307,7 +307,7 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
-  FHE_NTIMER_START(__poly_DoubleCRT);
+  FHE_TIMER_START;
   assert(s.last() < context.numPrimes());
 
   map.insert(s);
@@ -318,13 +318,13 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet
     const Cmodulus &pi = context.ithModulus(i);
     pi.FFT(map[i], poly); // reduce mod pi and store FFT image
   }
-  FHE_NTIMER_STOP(__poly_DoubleCRT);
+  FHE_TIMER_STOP;
 }
 
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
-  FHE_NTIMER_START(__poly_DoubleCRT);
+  FHE_TIMER_START;
   IndexSet s = IndexSet(0, context.numPrimes()-1);
   // FIXME: maybe the default index set should be determined by context?
 
@@ -336,13 +336,13 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
     const Cmodulus &pi = context.ithModulus(i);
     pi.FFT(map[i], poly); // reduce mod pi and store FFT image
   }
-  FHE_NTIMER_STOP(__poly_DoubleCRT);
+  FHE_TIMER_STOP;
 }
 
 DoubleCRT::DoubleCRT(const ZZX& poly)
 : context(*activeContext), map(new DoubleCRTHelper(*activeContext))
 {
-  FHE_NTIMER_START(__poly_DoubleCRT);
+  FHE_TIMER_START;
   IndexSet s = IndexSet(0, context.numPrimes()-1);
   // FIXME: maybe the default index set should be determined by context?
 
@@ -354,7 +354,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly)
     const Cmodulus &pi = context.ithModulus(i);
     pi.FFT(map[i], poly); // reduce mod pi and store FFT image
   }
-  FHE_NTIMER_STOP(__poly_DoubleCRT);
+  FHE_TIMER_STOP;
 }
 
 DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)

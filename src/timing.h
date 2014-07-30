@@ -34,48 +34,87 @@
  **/
 #ifndef _TIMING_H_
 #define _TIMING_H_
-#include <iostream>
+#include <ctime>
+
+
+//! A simple class to toggle timing information on and off
+class FHEtimer {
+public:
+  const char *name;
+  const char *loc;
+  bool isOn;  // a broken semaphore
+  std::clock_t counter;
+  long numCalls;
+
+  FHEtimer(const char *_name, const char *_loc) :
+    name(_name), loc(_loc), isOn(false), counter(0), numCalls(0) 
+  { }
+
+  void reset();
+  void start();
+  void stop();
+  double getTime() const;
+  long getNumCalls() const;
+};
+
 
 // Activate/deactivate/check-status of timing
 extern bool FHEtimersOn;
+
 inline void setTimersOn()  { FHEtimersOn=true; }
 inline void setTimersOff() { FHEtimersOn=false; }
 inline bool areTimersOn()  { return FHEtimersOn; }
 
-//! Start a timer
-void startFHEtimer(const char *fncName); // start counting
-//! Stop a timer
-void stopFHEtimer(const char *fncName);  // pause counting
-//! Reset a timer for some label to zero
-void resetFHEtimer(const char *fncName); // reset value to zero
-//! Read the value of a timer (in seconds)
-double getTime4func(const char *fncName); // returns time in seconds
-//! Returns number of calls for that timer
-long getNumCalls4func(const char *fncName); // returns # of calls
+void registerTimer(FHEtimer *timer);
+
+inline void buildTimer(FHEtimer*& timer, const char *name, const char *loc)
+{
+  if (areTimersOn() && !timer) {
+    FHEtimer *tmp = new FHEtimer(name, loc);
+    registerTimer(tmp);
+    timer = tmp;
+  }
+}
+
+
 
 void resetAllTimers();
 //! Print the value of all timers to stream
 void printAllTimers(std::ostream& str=std::cerr);
 
 
-#define FHE_BASIC_NTIMER_START(n) {if (areTimersOn()) startFHEtimer(n);}
-#define FHE_BASIC_NTIMER_STOP(n)  {if (areTimersOn()) stopFHEtimer(n);}
-
 class auto_timer {
 public:
-  const char *name;
-  auto_timer(const char *_name) : name(_name) { FHE_BASIC_NTIMER_START(name); }
-  ~auto_timer() { FHE_BASIC_NTIMER_STOP(name); }
+  FHEtimer *timer;
+  auto_timer(FHEtimer *_timer) : timer(_timer) { if (timer && areTimersOn()) timer->start(); }
+  void stop() { if (timer && areTimersOn()) timer->stop(); }
+  ~auto_timer() { stop(); }
 };
 
 
 // NOTE: the STOP functions below are not really needed,
 // but are provided for backward compatibility
 
-#define FHE_TIMER_START auto_timer _local_auto_timer_(__func__)
-#define FHE_TIMER_STOP FHE_BASIC_NTIMER_STOP(__func__)
+#define FHE_STRINGIFY(x) #x
+#define FHE_TOSTRING(x) FHE_STRINGIFY(x)
+#define FHE_AT __FILE__ "/" FHE_TOSTRING(__LINE__)
 
-#define FHE_NTIMER_START(n) auto_timer _named_auto_timer_ ## n (#n)
-#define FHE_NTIMER_STOP(n) FHE_BASIC_NTIMER_STOP(#n)
+#define FHE_stringify_aux(s) #s
+#define FHE_stringify(s) FHE_stringify_aux(s)
+
+#define FHE_TIMER_START \
+  static FHEtimer *_local_timer = 0; \
+  buildTimer(_local_timer, __func__, FHE_AT ); \
+  auto_timer _local_auto_timer(_local_timer)
+  
+#define FHE_TIMER_STOP  _local_auto_timer.stop()
+
+
+#define FHE_NTIMER_START(n) \
+  static FHEtimer *_named_local_timer ## n = 0; \
+  buildTimer(_named_local_timer ## n, # n, FHE_AT ); \
+  auto_timer _named_local_auto_timer ## n(_named_local_timer ## n)
+
+#define FHE_NTIMER_STOP(n)    _named_local_auto_timer ## n.stop();
 
 #endif // _TIMING_H_
