@@ -367,9 +367,18 @@ public:
   //! is not the case then the result will not be a valid ciphertext anymore.
   //! As a side-effect, the plaintext space is reduced from p^r to p^{r-1}.
   void divideByP();
-  void divideBy2();
+
+  //! Mulitply ciphretext by p^e, for plaintext space p^r. This also has
+  //! the side-effect of increasing the plaintext space to p^{r+e}.
+  void multByP(long e=1)
+  {
+    long p2e = power_long(context.zMStar.getP(), e);
+    multByConstant(to_ZZ(p2e));
+    ptxtSpace *= p2e;
+  }
 
   // For backward compatibility
+  void divideBy2();
   void extractBits(vector<Ctxt>& bits, long nBits2extract=0);
 
   // Higher-level multiply routines
