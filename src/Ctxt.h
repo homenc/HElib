@@ -373,8 +373,8 @@ public:
   void multByP(long e=1)
   {
     long p2e = power_long(context.zMStar.getP(), e);
-    multByConstant(to_ZZ(p2e));
     ptxtSpace *= p2e;
+    multByConstant(to_ZZ(p2e));
   }
 
   // For backward compatibility
