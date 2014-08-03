@@ -538,61 +538,6 @@ long is_in(long x,int* X,long sz)
   return -1;
 }
 
-// Make every entry of vec divisible by p^e by adding/subtracting multiples
-// of p^r and q, while keeping the added multiples small. Specifically, for
-// e>=2, an integer z can be made divisible by p^e via
-//   z' = z + u * p^r + v*p^r * q,
-// with
-//   |u|<=ceil(alpha p^{r(e-1)}/2) and |v|<=0.5+floor(beta p^{r(e-1)}/2),
-// for any alpha+beta=1. We assume that r<e and that q-1 is divisible by p^e.
-// Returns the largest absolute values of the u's and the new entries.
-template<class VecInt> pair<long,long> 
-makeDivisible(VecInt& vec, long p, long e, long p2r, long q, double alpha)
-{
-  if (alpha<=0.0 || alpha>=1) alpha = 0.33;
-  const double beta = 1-alpha;
-
-  long p2e = power_long(p,e); // p^e
-  assert((p2r<p2e)&&(p2e % p2r == 0)&&(q % p2e == 1));
-
-  long maxU =0, maxZ =0;
-  for (long i=0; i<vec.length(); i++) {
-    long z = conv<long>(vec[i]); // convert from native format to long int
-    long zMod = z % p2r;
-    if      (zMod <-p2r/2) zMod += p2r; // map to the symmetric interval
-    else if (zMod > p2r/2) zMod -= p2r;
-
-    long z2= z-(zMod * q); // make z divisible by p^r by adding a multiple of q
-
-    zMod = z2 % p2e; // z mod p^e, still divisible by p^r
-    if      (zMod <-p2e/2) zMod += p2e; // map to the symmetric interval
-    else if (zMod > p2e/2) zMod -= p2e;
-    zMod /= -p2r;    // now z+ p^r*zMod = 0 (mod p^e) and |zMod|<=p^{r(e-1)}/2
-
-    long u = ceil(alpha * zMod);
-    long v = floor(beta * zMod);
-    z = z2 + u*p2r + v*p2r*q;
-
-    if (abs(u) > maxU) maxU = abs(u);
-    if (abs(z) > maxZ) maxZ = abs(z);
-
-    if (z % p2e != 0) { // sanity check
-      cerr << "**error: original z="<<vec[i]
-	   << ", z'="<<z2<<", delta="<<zMod<< ", (u,v)=("<<u<<","<<v
-	   << "), z''="<<z<<endl;
-      exit(1);
-    }
-    conv(vec[i], z); // convert back to native format
-  }
-  return make_pair(maxU, maxZ);
-}
-// explicit instantiation for vec_ZZ and vec_long
-template pair<long,long> makeDivisible<vec_ZZ>(vec_ZZ& v, long p, long e,
-					       long p2r, long q, double alpha);
-template pair<long,long> makeDivisible<vec_long>(vec_long& v, long p, long e,
-					       long p2r, long q, double alpha);
-
-
 /* Incremental integer CRT for vectors. Expects co-primes p>0,q>0 with q odd,
  * and such that all the entries in vp are in [-p/2,p/2) and all entries in
  * vq are in [0,q-1). Returns in vp the CRT of vp mod p and vq mod q, as

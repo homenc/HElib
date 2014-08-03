@@ -296,19 +296,6 @@ inline long CRTcoeff(long p, long q, bool symmetric=false)
   else                          return p*pInv;
 }
 
-//! @brief Make every entry of vec divisible by p^e by adding/subtracting
-//! multiples of p^r and q, while keeping the added multiples small.
-//!
-//! Specifically, for e>=2, an integer z can be made divisible by p^e via
-//! \[ z' = z + u * p^r + v*p^r * q, \]
-//! with
-//! \[ |u|<=ceil(alpha p^{r(e-1)}/2) and |v|<=0.5+floor(beta p^{r(e-1)}/2),\]
-//! for any alpha+beta=1. We assume that r<e and that q-1 is divisible by p^e.
-//! The procedure returns the largest absolute value of the u's and v's.
-template<class VecInt> pair<long,long> 
-makeDivisible(VecInt& vec, long p, long e, long p2r, long q, double alpha=0.33);
-// VecInt is an NTL integer vector such as vec_ZZ or Vec<long>
-
 /**
  * @brief Incremental integer CRT for vectors.
  * 
