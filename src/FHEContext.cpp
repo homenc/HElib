@@ -442,8 +442,11 @@ istream& operator>> (istream &str, FHEcontext& context)
 // what p^r needs to be for bootstrapping
 static long bootstrapR(long m, long p, long r)
 {
-  return r + 7;
-} // FIXME: Implement this function
+  return 2*r - 1 // + ceil( log_p((t+1)/2) ), t is HWT of bootstrapping key
+    + ceil( log((FHEcontext::bootstrapHwt+1.0)/2.0) / log((double)p) );
+
+  // FIXME: Check that we can bootstrap the plaintext space p^r
+}
 
 
 #include "EncryptedArray.h"
@@ -477,12 +480,17 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
     // If p=2 and m1 ... mk is the prime-power factorization of m, then
     // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
     if (p==2) {
+#if 0 // This is the all-1 in powerful representation
       for (long i=0; i<(long) zMStar.getMfactors().size(); i++) {
 	long phi_mi = phi_N(zMStar.getMfactors()[i]);
 	long exp_i = m/(zMStar.getMfactors()[i]);
 	for (long j=phi_mi-1; j>=0; --j) SetCoeff(allOnes, j*exp_i);
       }
       allOnes %= zMStar.getPhimX();
+#else // This is the all-1 in standard coefficient representation
+      for (long i=0; i<(long)zMStar.getPhiM(); i++)
+	SetCoeff(allOnes, i);
+#endif
     }
   }
   else {

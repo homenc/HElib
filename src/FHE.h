@@ -230,6 +230,10 @@ public:
   friend class FHESecKey;
   friend ostream& operator << (ostream& str, const FHEPubKey& pk);
   friend istream& operator >> (istream& str, FHEPubKey& pk);
+
+  // defines plaintext space for the bootstrapping encrypted secret key
+  static long ePlusR(long p)
+  { return floor( log((double)NTL_SP_BOUND)/log(p) ); }
 };
 
 /**
@@ -291,7 +295,7 @@ public:
 	       long ptxtSpace=0, long skIdx=0) const;
 
   //! @brief Generate bootstrapping data if needed, returns index of key
-  long genBootstrapData(long hwt);
+  long genBootstrapData();
 
   friend ostream& operator << (ostream& str, const FHESecKey& sk);
   friend istream& operator >> (istream& str, FHESecKey& sk);
