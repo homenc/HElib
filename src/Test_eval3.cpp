@@ -697,8 +697,10 @@ private:
   Mat<long> intraSlotPerm;
   Mat<long> eval_reordering;
   Mat<RE> eval_mat;
+  Mat<RX> inv_mat;
 
   bool get(Vec<RE>& entry, long i, long j) const;
+  bool iget(Vec<RE>& entry, long i, long j) const;
 
   typedef bool (Step2aShuffle<type>::*get_type)(Vec<RE>&, long, long) const; 
 
@@ -864,6 +866,29 @@ Step2aShuffle<type>::Step2aShuffle(const EncryptedArray& _ea,
     for (long j = 0; j < phim2/d2; j++)
       eval_mat[i][j] = eval_mat[i-1][j] * points[j];
 
+  if (invert) {
+    Mat<RX> inv_mat1;
+    inv_mat1.SetDims(phim2, phim2);
+    for (long i = 0; i < phim2; i++) {
+      for (long j = 0; j < phim2/d2; j++) {
+        Vec<RX> tmp1 = tower->convert1to2(eval_mat[i][j]);
+        for (long k = 0; k < d2; k++)
+          inv_mat1[i][j*d2+k] = tmp1[k];
+      }
+    }
+
+    eval_mat.kill(); // we no longer need it
+
+    { // temporarily switch RE::modulus to the minpoly of the subring
+      REBak ebak1; ebak1.save();
+      RE::init(tower->H);
+      Mat<RE> inv_mat2, inv_mat3;
+      conv(inv_mat2, inv_mat1);
+      ppInvert(inv_mat3, inv_mat2, p, r);
+      conv(inv_mat, inv_mat3);
+    }
+  }
+
 }
 
 template<class type>
@@ -883,6 +908,45 @@ bool Step2aShuffle<type>::get(Vec<RE>& entry, long i, long j) const
 
   return false;
 }
+
+
+template<class type>
+bool Step2aShuffle<type>::iget(Vec<RE>& entry, long i, long j) const 
+{
+  long i1 = sig->getCoord(i, dim);
+  long j1 = sig->getCoord(j, dim);
+
+  if (sig->addCoord(i, dim, -i1) != sig->addCoord(j, dim, -j1)) 
+    return true;
+
+  long j2 = sig->getCoord(j, dim+1);
+
+#if 0
+  // inverse permutation?
+  Mat<long> iperm;
+  {
+    iperm.SetDims(eval_reordering.NumRows(), eval_reordering.NumCols());
+    for (long i = 0; i < iperm.NumRows(); i++)
+      for (long j = 0; j < iperm.NumCols(); j++)
+        iperm[i][ eval_reordering[i][j] ] = j;
+  }
+#endif
+
+  Mat<RX> tmp;
+  tmp.SetDims(d2, d2);
+  for (long i3 = 0; i3 < d2; i3++)
+    for (long j3 = 0; j3 < d2; j3++)
+      tmp[i3][j3] = inv_mat[i1*d2+i3][eval_reordering[j2][j1*d2+j3]];
+
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
+
+  for (long i3 = 0; i3 < d2; i3++) {
+    entry[i3] = tower->convert2to1(tmp[i3]);
+  }
+
+  return false;
+}
+
 
 template<class type>
 void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt, get_type get_fn) const
@@ -1207,7 +1271,7 @@ void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
 
   // apply the matrix
 
-  // mat_mul(v1, &Step2aShuffle<type>::get);
+  mat_mul(v1, &Step2aShuffle<type>::get);
 
   v = v1;
 }
@@ -1222,6 +1286,9 @@ void Step2aShuffle<type>::applyBack(PlaintextArray& v) const
 
   Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
   long nslots = ea.size();
+
+
+  mat_mul(v, &Step2aShuffle<type>::iget);
 
   Mat< Vec<ZZX> > C;
 
