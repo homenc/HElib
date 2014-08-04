@@ -21,6 +21,7 @@ NTL_CLIENT
 #include "EncryptedArray.h"
 #include "timing.h"
 #include "cloned_ptr.h"
+#include "NumbTh.h"
 
 
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
@@ -534,7 +535,7 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
         for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
 
         // compute the lin poly coeffs
-        tab.buildLinPolyCoeffs(diag[j], entry1, mappingData);
+        buildLinPolyCoeffs(diag[j], entry1);
       }
     }
 
@@ -644,12 +645,42 @@ template<class type> void
 EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<ZZX>& C, 
 						const vector<ZZX>& L) const
 {
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak; bak.save(); restoreContext();
   vector<RX> CC, LL;
   convert(LL, L);
-  tab.buildLinPolyCoeffs(CC, LL, mappingData);
+  buildLinPolyCoeffs(CC, LL);
   convert(C, CC);
 }
+
+template<class type> void
+EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C, 
+						const vector<RX>& L) const
+{
+  FHE_TIMER_START;
+
+  RBak bak; bak.save(); restoreContext();
+  REBak ebak; ebak.save(); restoreContextForG();
+
+  if (!linPolyMatrix) {
+    FHE_NTIMER_START(buildLinPolyCoeffs_buildMatrix);
+
+    long p = tab.getZMStar().getP();
+    long r = tab.getR();
+
+    Mat<RE> M1;
+    buildLinPolyMatrix(M1, p);
+    Mat<RE> M2;
+    ppInvert(M2, M1, p, r);
+
+    linPolyMatrix = shared_ptr< Mat<RE> >(new Mat<RE>(M2) );
+  }
+
+  Vec<RE> CC, LL;
+  convert(LL, L);
+  mul(CC, LL, *linPolyMatrix);
+  convert(C, CC);
+}
+
 
 PlaintextArrayBase* buildPlaintextArray(const EncryptedArray& ea)
 {

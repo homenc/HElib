@@ -26,14 +26,6 @@ namespace NTL {} using namespace NTL;
 
 #include <cassert>
 
-#if (__cplusplus>199711L)
-#include <memory>
-#else
-#include <tr1/memory>
-using namespace tr1;
-#warning "using TR1"
-#endif
-
 
 
 template<class type>
@@ -299,6 +291,8 @@ public:
   // M2 is the matrix that takes us from the two-step tower
   // to the one-step tower, and M2i is its inverse.
 
+  mutable shared_ptr< Mat<RE> > linPolyMatrix;
+
 
   Tower(long _cofactor, long _d1, long _d2, long _p, long _r)
     : cofactor(_cofactor), d1(_d1), d2(_d2), p(_p), r(_r) 
@@ -434,14 +428,21 @@ public:
   void buildLinPolyCoeffs(Vec<RE>& C_out, const Vec<RE>& L) const
   {
      FHE_TIMER_START;
-     Mat<RE> M;
-     buildLinPolyMatrix(M);
+
+     if (!linPolyMatrix) {
+       FHE_NTIMER_START(buildLinPolyCoeffs_buildMatrix);
+
+       Mat<RE> M;
+       buildLinPolyMatrix(M);
+       Mat<RE> Minv;
+       ppInvert(Minv, M, p, r);
+       linPolyMatrix = shared_ptr< Mat<RE> >(new Mat<RE>(Minv) );
+     }
 
      Vec<RE> C;
-     ppsolve(C, M, L, p, r);
+     mul(C, L, *linPolyMatrix);
 
      C_out = C;
-     FHE_TIMER_STOP;
   }
 
   void applyLinPoly(RE& beta, const Vec<RE>& C, const RE& alpha) const

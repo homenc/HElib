@@ -19,11 +19,23 @@
  * @file EncryptedArray.h
  * @brief Data-movement operations on encrypted arrays of slots
  */
+
+#if (__cplusplus>199711L)
+#include <memory>
+#else
+#include <tr1/memory>
+using namespace tr1;
+#warning "using TR1"
+#endif
+
 #include "FHE.h"
 #include "timing.h"
 #include <NTL/ZZ_pX.h>
 #include <NTL/GF2X.h>
 #include <NTL/ZZX.h>
+
+
+
 
 class PlaintextArray; // forward reference
 
@@ -297,6 +309,8 @@ private:
   const PAlgebraModDerived<type>& tab;
   MappingData<type> mappingData; // MappingData is defined in PAlgebra.h
 
+  mutable shared_ptr< Mat<RE> > linPolyMatrix; // computed once and for all
+
 public:
   explicit
   EncryptedArrayDerived(const FHEcontext& _context, const RX& _G,
@@ -308,6 +322,7 @@ public:
     RBak bak; bak.save(); tab.restoreContext();
     REBak ebak; ebak.save(); other.mappingData.restoreContextForG();
     mappingData = other.mappingData;
+    linPolyMatrix = other.linPolyMatrix;
   }
 
   EncryptedArrayDerived& operator=(const EncryptedArrayDerived& other) // assignment
@@ -414,6 +429,8 @@ public:
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const PlaintextArray& selector) const
     { genericSelect(ctxt1, ctxt2, selector); }
 
+  virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const;
+
   /* the following are specialized methods, used to work over extension fields...they assume 
      the modulus context is already set
    */
@@ -437,7 +454,8 @@ public:
   void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< RX >& ptxt, long skIdx=0) const
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
-  void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const;
+  virtual void buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L) const;
+
 
 private:
 

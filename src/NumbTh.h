@@ -100,6 +100,9 @@ inline void ppInvert(mat_GF2& X, const mat_GF2& A, long p, long r)
 inline void ppInvert(mat_GF2E& X, const mat_GF2E& A, long p, long r)
 { NTL::inv(X, A); }
 
+void buildLinPolyMatrix(mat_zz_pE& M, long p);
+void buildLinPolyMatrix(mat_GF2E& M, long p);
+
 //! @brief Combination of buildLinPolyMatrix and ppsolve.
 //!
 //! Obtain the linearized polynomial coefficients from a vector L representing 
