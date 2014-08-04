@@ -2231,6 +2231,10 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     Ctxt ctxt(publicKey);
     ea.encrypt(ctxt, publicKey, pa1);
 
+    resetAllTimers();
+
+    FHE_NTIMER_START(ALL);
+
     PlaintextBlockMatrixBaseInterface *mat =
       buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], towerBase);
 
@@ -2290,6 +2294,10 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     ishuffle->apply(ctxt);
     ea.decrypt(ctxt, secretKey, check_val);
     assert(pa1.equals(check_val));
+
+    
+    FHE_NTIMER_STOP(ALL);
+    printAllTimers();
 
     exit(0);
 
