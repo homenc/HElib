@@ -677,7 +677,14 @@ public:
       applyFwd(v);
   }
 
-  virtual void apply(Ctxt& v) const;
+  virtual void apply(Ctxt& v) const
+  {
+    if (invert) 
+      applyBack(v);
+    else
+      applyFwd(v);
+  }
+
 
 
 private:
@@ -708,7 +715,10 @@ private:
   void mat_mul(Ctxt& ctxt, get_type) const;
 
   void applyBack(PlaintextArray& v) const;
+  void applyBack(Ctxt& v) const;
+
   void applyFwd(PlaintextArray& v) const;
+  void applyFwd(Ctxt& v) const;
 
 public:
   // constructor
@@ -921,17 +931,6 @@ bool Step2aShuffle<type>::iget(Vec<RE>& entry, long i, long j) const
 
   long j2 = sig->getCoord(j, dim+1);
 
-#if 0
-  // inverse permutation?
-  Mat<long> iperm;
-  {
-    iperm.SetDims(eval_reordering.NumRows(), eval_reordering.NumCols());
-    for (long i = 0; i < iperm.NumRows(); i++)
-      for (long j = 0; j < iperm.NumCols(); j++)
-        iperm[i][ eval_reordering[i][j] ] = j;
-  }
-#endif
-
   Mat<RX> tmp;
   tmp.SetDims(d2, d2);
   for (long i3 = 0; i3 < d2; i3++)
@@ -1061,7 +1060,6 @@ void Step2aShuffle<type>::mat_mul(Ctxt& ctxt, get_type get_fn) const
 
   for (long i = 0; i < nslots; i++) {
     // process diagonal i
-
 
     bool zDiag = true;
     long nzLast = -1;
@@ -1277,7 +1275,6 @@ void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
 }
 
 
-
 template<class type>
 void Step2aShuffle<type>::applyBack(PlaintextArray& v) const
 {
@@ -1432,7 +1429,160 @@ void Step2aShuffle<type>::applyBack(PlaintextArray& v) const
 
 
 template<class type>
-void Step2aShuffle<type>::apply(Ctxt& v) const
+void Step2aShuffle<type>::applyBack(Ctxt& v) const
+{
+  RBak bak; bak.save(); ea.getAlMod().restoreContext();
+  REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+
+  Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
+  long nslots = ea.size();
+
+
+  mat_mul(v, &Step2aShuffle<type>::iget);
+  v.reLinearize();
+
+  Mat< Vec<ZZX> > C;
+
+  C.SetDims(d2, d2);
+  for (long i = 0; i < d2; i++)
+    for (long j = 0; j < d2; j++)
+      C[i][j].SetLength(nrows);
+
+  // C[i][j][k] is the j-th lin-poly coefficient
+  // of the map that projects subslot i
+  // onto subslot i if hfactor == 1, or
+  // onto subslot 0 if hfactor != 1
+
+  for (long k = 0; k < nrows; k++) {
+    for (long i = 0; i < d2; i++) {
+      long idx_in = i;
+      long idx_out = (hfactor == 1) ? i : 0;
+
+      Vec< Vec<RX> > map2;
+      map2.SetLength(d2);
+      map2[idx_in].SetLength(idx_out+1);
+      map2[idx_in][idx_out] = 1;
+      // map2 projects idx_in ontot idx_out
+
+      Vec<RE> map1;
+      map1.SetLength(d2);
+      for (long j = 0; j < d2; j++)
+        map1[j] = tower->convert2to1(map2[j]);
+
+      Vec<RE> C1;
+      tower->buildLinPolyCoeffs(C1, map1);
+
+      for (long j = 0; j < d2; j++)
+        C[i][j][k] = conv<ZZX>(rep(C1[j]));
+    }
+  }
+
+  // mask each sub-slot
+
+  Vec< shared_ptr<Ctxt> > frobvec; 
+  frobvec.SetLength(d2);
+  for (long j = 0; j < d2; j++) {
+    shared_ptr<Ctxt> ptr(new Ctxt(v));
+    ptr->frobeniusAutomorph(j*d1);
+    frobvec[j] = ptr;
+  }
+
+  Vec< shared_ptr<Ctxt> > colvec;
+  colvec.SetLength(d2);
+  for (long i = 0; i < d2; i++) {
+    shared_ptr<Ctxt> acc(new Ctxt(ZeroCtxtLike, v));
+
+    for (long j = 0; j < d2; j++) {
+      ZZX const1;
+
+      vector<ZZX> vec1;
+      vec1.resize(nslots);
+      for (long k = 0; k < nslots; k++)
+        vec1[k] = C[i][j][k % nrows];
+      ea.encode(const1, vec1);
+
+      Ctxt ctxt1(*frobvec[j]);
+
+      ctxt1.multByConstant(const1);
+      (*acc) += ctxt1;
+    }
+
+    colvec[i] = acc;
+  }
+  
+
+  // rotate each subslot 
+
+  for (long i = 0; i < d2; i++) {
+    long shamt = mcMod(-cshift[i], nrows);
+
+    if (shamt == 0) continue;
+
+    if (nrows == nslots) {
+      // simple rotation
+
+      ea.rotate(*colvec[i], shamt);
+    }
+    else {
+      // synthetic rotation 
+
+      vector<long> mask;
+      mask.resize(nslots);
+
+      for (long j = 0; j < nslots; j++) 
+        mask[j] = ((j % nrows) < (nrows - shamt));
+
+      ZZX emask;
+      ea.encode(emask, mask);
+
+      Ctxt tmp1(*colvec[i]), tmp2(*colvec[i]);
+
+      tmp1.multByConstant(emask);
+      tmp2 -= tmp1;
+
+      ea.rotate(tmp1, shamt);
+      ea.rotate(tmp2, -(nrows-shamt));
+      
+      tmp1 += tmp2;
+      *colvec[i] = tmp1;
+    }
+  }
+
+  // combine columns...
+  // optimized to avoid unnecessary constant muls
+  // when hfactor == 1
+
+  Ctxt v1(ZeroCtxtLike, v);
+
+  if (hfactor == 1) {
+    for (long i = 0; i < d2; i++) { 
+      v1 += *colvec[i];
+    }
+  }
+  else {
+    for (long i = 0; i < d2; i++) { 
+      ZZX const1;
+      vector<ZZX> vec1;
+      vec1.resize(nslots);
+      for (long k = 0; k < nslots; k++)
+        vec1[k] = conv<ZZX>(RX(intraSlotPerm[k%nrows][i], 1) % RE::modulus());
+      ea.encode(const1, vec1);
+
+      Ctxt ctxt1(*colvec[i]);
+      ctxt1.multByConstant(const1);
+      
+      v1 += ctxt1;
+    }
+  }
+
+  v = v1;
+}
+
+
+
+
+template<class type>
+void Step2aShuffle<type>::applyFwd(Ctxt& v) const
 {
   RBak bak; bak.save(); ea.getAlMod().restoreContext();
   REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
@@ -1834,8 +1984,8 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   secretKey.GenSecKey(w); // A Hamming-weight-w secret key
 
   cerr << "generating key-switching matrices... ";
-  // addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-  // addFrbMatrices(secretKey); // compute key-switching matrices that we need
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  addFrbMatrices(secretKey); // compute key-switching matrices that we need
   cerr << "done\n";
 
 
@@ -2086,9 +2236,9 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
     pa1.mat_mul(*mat);
 
-    // ea.mat_mul(ctxt, *mat);
-    // ea.decrypt(ctxt, secretKey, check_val);
-    // assert(pa1.equals(check_val));
+    ea.mat_mul(ctxt, *mat);
+    ea.decrypt(ctxt, secretKey, check_val);
+    assert(pa1.equals(check_val));
 
     vector<ZZX> val2;
     val2.resize(nslots);
@@ -2123,7 +2273,13 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
 
     PlaintextArray pa_tmp(pa1);
+
     shuffle->apply(pa1);
+
+    shuffle->apply(ctxt);
+    ea.decrypt(ctxt, secretKey, check_val);
+    assert(pa1.equals(check_val));
+
     ishuffle->apply(pa1);
 
     if (pa1.equals(pa_tmp)) 
@@ -2131,11 +2287,11 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     else
       cout << "ishuffle NO\n";
 
-    exit(0);
+    ishuffle->apply(ctxt);
+    ea.decrypt(ctxt, secretKey, check_val);
+    assert(pa1.equals(check_val));
 
-    // shuffle->apply(ctxt);
-    // ea.decrypt(ctxt, secretKey, check_val);
-    // assert(pa1.equals(check_val));
+    exit(0);
 
 
     long phim1 = shuffle->new_order.length();

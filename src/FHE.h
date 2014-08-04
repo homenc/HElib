@@ -212,7 +212,7 @@ public:
   //! @brief Is it possible to re-linearize the automorphism X -> X^k
   //! See Section 3.2.2 in the design document (KeySwitchMap)
   bool isReachable(long k, long keyID=0) const
-  { return keySwitchMap.at(keyID).at(k)>=0; }
+  { return keyID < long(keySwitchMap.size()) && keySwitchMap.at(keyID).at(k)>=0; }
 
   //! @brief Compute the reachability graph of key-switching matrices
   //! See Section 3.2.2 in the design document (KeySwitchMap)
