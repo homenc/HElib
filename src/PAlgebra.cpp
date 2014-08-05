@@ -499,22 +499,34 @@ template<class type>
 void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
 {
   FHE_TIMER_START;
-  long nSlots = zMStar.getNSlots();
+  long nslots = zMStar.getNSlots();
 
-  const vector<RX>& ctab = getCrtTable();
+  genCrtTable();
+
+  const vector<RX>& ctab = crtTable;
 
   clear(H);
-  RX tmp;
-  for (long i=0; i<nSlots; i++) {
-    // optimize special cases 0 and 1, which are common
-    if (!IsZero(crt[i])) {
-      if (IsOne(crt[i]))
-        H += ctab[i];
-      else {
-        MulMod(tmp, ctab[i], crt[i], PhimXMod);
-        H += tmp;
-      }
+  RX tmp1, tmp2;
+
+  bool easy = true;
+  for (long i = 0; i < nslots; i++) 
+    if (!IsZero(crt[i]) && !IsOne(crt[i])) {
+      easy = false;
+      break;
     }
+    
+  if (easy) {
+    for (long i=0; i<nslots; i++) 
+      if (!IsZero(crt[i])) 
+        H += ctab[i];
+  }
+  else {
+    vector<RX> crt1;
+    crt1.resize(nslots);
+    for (long i = 0; i < nslots; i++)
+       MulMod(crt1[i], crt[i], crtCoeffs[i], factors[i]);
+
+    evalTree(H, crtTree, crt1, 0, nslots);
   }
   FHE_TIMER_STOP;
 }
@@ -784,7 +796,7 @@ void PAlgebraModDerived<type>::genCrtTable() const
 
   // strip const
   vector< RX >& tab = (vector< RX >&) crtTable;
-
+  shared_ptr< TNode<RX> >& tree = (shared_ptr< TNode<RX> >&) crtTree;
   
   long nslots = zMStar.getNSlots();
   tab.resize(nslots);
@@ -793,7 +805,48 @@ void PAlgebraModDerived<type>::genCrtTable() const
     allBut_i *= crtCoeffs[i]; // = 1 mod Fi and = 0 mod Fj for j \ne i
     tab[i] = allBut_i;
   }
+
+  buildTree(tree, 0, nslots);
 }
+
+template<class type> 
+void PAlgebraModDerived<type>::
+  buildTree(shared_ptr< TNode<RX> >& res, long offset, long extent) const
+{
+  if (extent == 1)
+    res = buildTNode<RX>(nullTNode<RX>(), nullTNode<RX>(), 
+                            factors[offset]);
+  else {
+    long half = extent/2;
+    shared_ptr< TNode<RX> > left, right;
+    buildTree(left, offset, half);
+    buildTree(right, offset+half, extent-half);
+    RX data = left->data * right->data;
+    res = buildTNode<RX>(left, right, data);
+  }
+}
+
+template<class type> 
+void PAlgebraModDerived<type>::evalTree(RX& res,
+              shared_ptr< TNode<RX> > tree,
+              const vector<RX>& crt1,
+              long offset, long extent) const
+{
+  if (extent == 1) 
+    res = crt1[offset];
+  else {
+    long half = extent/2;
+    RX lres, rres;
+    evalTree(lres, tree->left, crt1, offset, half);
+    evalTree(rres, tree->right, crt1, offset+half, extent-half);
+    RX tmp1, tmp2;
+    mul(tmp1, lres, tree->right->data);
+    mul(tmp2, rres, tree->left->data);
+    add(tmp1, tmp1, tmp2);
+    res = tmp1;
+  }
+}
+
 
 
 // Explicit instantiation

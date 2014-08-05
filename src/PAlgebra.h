@@ -50,6 +50,14 @@
 #include <vector>
 #include <cassert>
 
+#if (__cplusplus>199711L)
+#include <memory>
+#else
+#include <tr1/memory>
+using namespace tr1;
+#endif
+
+
 #include <NTL/ZZX.h>
 #include <NTL/GF2X.h>
 #include <NTL/vec_GF2.h>
@@ -415,6 +423,31 @@ public:
   void restoreContextForG() const { contextForG.restore(); }
 };
 
+template<class T> 
+class TNode {
+public:
+  shared_ptr< TNode<T> > left, right;
+  T data;
+
+  TNode(shared_ptr< TNode<T> > _left, shared_ptr< TNode<T> > _right,
+           const T& _data) : left(_left), right(_right), data(_data) { }
+};
+
+template<class T>
+shared_ptr< TNode<T> > 
+  buildTNode(shared_ptr< TNode<T> > left, 
+                shared_ptr< TNode<T> > right,
+                const T& data)
+{
+  return shared_ptr< TNode<T> >(new TNode<T>(left, right, data));
+}
+
+template<class T> shared_ptr< TNode<T> > nullTNode()
+{
+  return shared_ptr< TNode<T> >();
+}
+  
+
 //! A concrete instantiation of the virtual class
 template<class type> class PAlgebraModDerived : public PAlgebraModBase {
 public:
@@ -433,6 +466,7 @@ private:
   vec_RX crtCoeffs;
   vector< vector< RX > > maskTable;
   vector<RX> crtTable;
+  shared_ptr< TNode<RX> > crtTree;
 
 
 public:
@@ -448,6 +482,7 @@ public:
     factors = other.factors;
     maskTable = other.maskTable;
     crtTable = other.crtTable;
+    crtTree = other.crtTree;
   }
 
   PAlgebraModDerived& operator=(const PAlgebraModDerived& other) // assignment
@@ -464,6 +499,7 @@ public:
     factors = other.factors;
     maskTable = other.maskTable;
     crtTable = other.crtTable;
+    crtTree = other.crtTree;
 
     return *this;
   }
@@ -547,18 +583,6 @@ public:
     return maskTable;
   }
 
-  /** 
-
-    returns ref to CRT table
- 
-  **/
-
-  const vector< RX >& getCrtTable() const // logically, but not really, const
-  {
-    if (crtTable.size() == 0) 
-      genCrtTable();
-    return crtTable;
-  }
 
   ///@{
   //! @name Embedding in the plaintext slots and decoding back
@@ -629,7 +653,16 @@ private:
   //! Same as above, but embeds relative to Ft rather than F1. The
   //! optional rF1 contains the output of mapToF1, to speed this operation.
   void mapToFt(RX& w, const RX& G, unsigned long t, const RX* rF1=NULL) const;
+
+  void buildTree(shared_ptr< TNode<RX> >& res, long offset, long extent) const;
+
+  void evalTree(RX& res, 
+              shared_ptr< TNode<RX> > tree,
+              const vector<RX>& crt1,
+              long offset, long extent) const;
 };
+
+
 
 //! Builds a table, of type PA_GF2 if p == 2 and r == 1, and PA_zz_p otherwise
 PAlgebraModBase *buildPAlgebraMod(const PAlgebra& zMStar, long r);

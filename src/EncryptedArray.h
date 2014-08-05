@@ -25,7 +25,6 @@
 #else
 #include <tr1/memory>
 using namespace tr1;
-#warning "using TR1"
 #endif
 
 #include "FHE.h"
