@@ -911,7 +911,17 @@ long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
     trees[treeIdx].setAuxKey(gens[i].genIdx);
     treeIdx++;
   }
-  assert(midPtr != NULL);
+  if (!midPtr) {
+    // no solution, undo initialization and return
+    // NTL_MAX_LONG
+
+    depth = 0;
+    trees.kill();
+    map2cube.kill();
+    map2array.kill();
+    return NTL_MAX_LONG;
+  }
+
   depth += copyToGenTree(trees[treeIdx], midPtr->solution);
   trees[treeIdx].setAuxKey(gens[midIdx].genIdx);
 

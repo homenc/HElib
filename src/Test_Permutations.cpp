@@ -115,6 +115,8 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   buildModChain(context, /*nPrimes=*/L, /*nDigits=*/3);
   cerr << "**Using "<<L<<" primes\n";
 
+  cerr << context.ctxtPrimes.card() << "\n";
+
   // Generate a sk/pk pair
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
@@ -150,7 +152,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
     ea.encrypt(ctxt, publicKey, in);
     cout << "  ** applying permutation network to ciphertext... " << flush;
     double t = GetTime();
-    net.applyToCtxt(ctxt); // applying permutation netwrok
+    net.applyToCtxt(ctxt, ea); // applying permutation netwrok
     t = GetTime() -t;
     cout << "done in " << t << " seconds" << endl;
     ea.decrypt(ctxt, secretKey, out2);

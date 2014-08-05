@@ -384,7 +384,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   PermNetwork net;
   startFHEtimer("permutation");
   net.buildNetwork(pi, trees);  // Build a permutation network for pi
-  net.applyToCtxt(tmp);         // Apply permutation netwrok
+  net.applyToCtxt(tmp, ea);         // Apply permutation netwrok
   stopFHEtimer("permutation");
   ret +=tmp; // just so the compiler will not optimize it out
 

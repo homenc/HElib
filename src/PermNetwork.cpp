@@ -203,12 +203,9 @@ makeMask(vector<long>& mask, Vec<long>& haystack, long needle)
 }
 
 // Apply a permutation network to a ciphertext
-// FIXME: Do we need to also give an EncryptedArray object as paramter?
-void PermNetwork::applyToCtxt(Ctxt& c) const
+void PermNetwork::applyToCtxt(Ctxt& c, const EncryptedArray& ea) const
 {
   const PAlgebra& al = c.getContext().zMStar;
-  EncryptedArray ea(c.getContext());
-  // Use G(X)=X for this ea object, this works since we only have 0/1 entries
 
   // Apply the layers, one at a time
   for (long i=0; i<layers.length(); i++) {

@@ -411,16 +411,19 @@ private:
   RX G; // the polynomial defining the field extension
   long degG; // the degree of the polynomial
 
+  REContext contextForG;
+
   /* the remaining fields are visible only to PAlgebraModDerived */
 
   vector<RX> maps;
-  REContext contextForG;
   vector<REX> rmaps;
 
 public:
   const RX& getG() const { return G; }
   long getDegG() const { return degG; } 
   void restoreContextForG() const { contextForG.restore(); }
+
+  // copy and assignment 
 };
 
 template<class T> 

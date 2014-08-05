@@ -567,7 +567,7 @@ public:
       rep(buildEncryptedArray(context, _alMod.getFactorsOverZZ()[0], _alMod))
   { }
 
-  // copy constructor: default
+  // copy constructor: 
 
   EncryptedArray& operator=(const EncryptedArray& other) {
     if (this == &other) return *this;
@@ -754,6 +754,13 @@ public:
 
   //! apply x -> x^{p^j} at all coordinates
   virtual void frobeniusAutomorph(long j) = 0;
+
+  //! apply x-> x^{p^{vec[i]}} to slot i
+  virtual void frobeniusAutomorph(const Vec<long>& vec) = 0;
+  
+
+  //! apply a permutation: new[i] = old[pi[i]]
+  virtual void applyPerm(const Vec<long>& pi) = 0;
 
   // output
   virtual void print(ostream& s) const = 0;
@@ -1084,6 +1091,35 @@ public:
       data[i] = CompMod(data[i], H, G);
   }
 
+  virtual void frobeniusAutomorph(const Vec<long>& vec)
+  {
+    RBak bak; bak.save(); tab.restoreContext();
+    long d = degG;
+    long p = ea.getAlMod().getZMStar().getP();
+
+    assert(vec.length() == n);
+
+    for (long i = 0; i < n; i++) {
+      long j = mcMod(vec[i], d);
+      RX H = PowerMod(RX(1, 1), power_ZZ(p, j), G);
+      data[i] = CompMod(data[i], H, G);
+    }
+  }
+
+  virtual void applyPerm(const Vec<long>& pi) 
+  {
+    RBak bak; bak.save(); tab.restoreContext();
+
+    assert(pi.length() == n);
+
+    vector<RX> tmp;
+    tmp.resize(n);
+    for (long i = 0; i < n; i++)
+      tmp[i] = data[pi[i]];
+
+    data = tmp;
+  }
+
   virtual void print(ostream& s) const 
   {
     if (n == 0) 
@@ -1191,6 +1227,10 @@ public:
   void replicate(long i) { rep->replicate(i); }
 
   void frobeniusAutomorph(long j) { rep->frobeniusAutomorph(j); }
+
+  void frobeniusAutomorph(const Vec<long>& vec) { rep->frobeniusAutomorph(vec); }
+
+  virtual void applyPerm(const Vec<long>& pi) { rep->applyPerm(pi); }
 
   void print(ostream& s) const { rep->print(s); }
 };

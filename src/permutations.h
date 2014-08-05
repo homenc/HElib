@@ -464,6 +464,7 @@ class GeneratorTrees  {
   //! Compute the trees corresponding to the "optimal" way of breaking
   //! a permutation into dimensions, subject to some constraints. Returns
   //! the cost (# of 1D shifts) of this colution.
+  //! Returns NTL_MAX_LONG if no solution
   long buildOptimalTrees(const Vec<GenDescriptor>& vec, long depthBound);
 
   /**
@@ -532,7 +533,7 @@ public:
   void buildNetwork(const Permut& pi, const GeneratorTrees& trees);
 
   //! Apply network to permute a ciphertext
-  void applyToCtxt(Ctxt& c) const;
+  void applyToCtxt(Ctxt& c, const EncryptedArray& ea) const;
 
   //! Apply network to array, used mostly for debugging
   void applyToCube(HyperCube<long>& v) const;

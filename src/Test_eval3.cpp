@@ -23,6 +23,7 @@ namespace NTL {} using namespace NTL;
 #include "timing.h"
 #include "EncryptedArray.h"
 #include "powerful.h"
+#include "permutations.h"
 
 #include <cassert>
 
@@ -1896,6 +1897,41 @@ void convertToPowerful(Vec<zz_p>& v, const zz_pX& F, const Vec<long>& mvec)
   for (long i = 0; i < phim; i++) v[i] = cube[i];
 }
 
+// apply p^{vec[i]} to slot i
+void frobeniusAutomorph(Ctxt& ctxt, const EncryptedArray& ea, const Vec<long>& vec)
+{
+  long d = ea.getDegree();
+  long nslots = ea.size();
+
+  // construct masks
+  Vec<ZZX> masks;
+  masks.SetLength(d);
+
+  for (long i = 0; i < d; i++) {
+    vector<long> mask1_vec;
+    mask1_vec.resize(nslots);
+    for (long j = 0; j < nslots; j++) 
+      mask1_vec[j] = (mcMod(vec[j], d) == i);
+
+    ZZX mask1_poly;
+    ea.encode(mask1_poly, mask1_vec);
+    masks[i] = mask1_poly;
+  }
+
+  ctxt.reLinearize();
+  Ctxt acc(ZeroCtxtLike, ctxt);
+  for (long i = 0; i < d; i++) {
+    if (masks[i] != 0) {
+      Ctxt tmp = ctxt;
+      tmp.frobeniusAutomorph(i);
+      tmp.multByConstant(masks[i]);
+      acc += tmp;
+    }
+  }
+
+  ctxt = acc;
+}
+
 
 
 void  TestIt(long R, long p, long r, long c, long _k, long w, 
@@ -2232,6 +2268,10 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     Ctxt ctxt(publicKey);
     ea.encrypt(ctxt, publicKey, pa1);
 
+    CheckCtxt(ctxt, "init");
+
+    cout << "starting computation\n";
+
     resetAllTimers();
 
     FHE_NTIMER_START(ALL);
@@ -2240,8 +2280,8 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
       buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], towerBase);
 
     pa1.mat_mul(*mat);
-
     ea.mat_mul(ctxt, *mat);
+    CheckCtxt(ctxt, "Step1a");
     ea.decrypt(ctxt, secretKey, check_val);
     assert(pa1.equals(check_val));
 
@@ -2272,9 +2312,11 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
       buildStep2aShuffle(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim],
                         towerBase);
 
+#if 0
     Step2aShuffleBase *ishuffle = 
       buildStep2aShuffle(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim],
                         towerBase, true);
+#endif
 
 
     PlaintextArray pa_tmp(pa1);
@@ -2282,9 +2324,11 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     shuffle->apply(pa1);
 
     shuffle->apply(ctxt);
+    CheckCtxt(ctxt, "Step2a");
     ea.decrypt(ctxt, secretKey, check_val);
     assert(pa1.equals(check_val));
 
+#if 0
     ishuffle->apply(pa1);
 
     if (pa1.equals(pa_tmp)) 
@@ -2295,14 +2339,9 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     ishuffle->apply(ctxt);
     ea.decrypt(ctxt, secretKey, check_val);
     assert(pa1.equals(check_val));
+#endif
 
     
-    FHE_NTIMER_STOP(ALL);
-    printAllTimers();
-
-    exit(0);
-
-
     long phim1 = shuffle->new_order.length();
 
     Vec<long> no_i; // inverse function
@@ -2341,6 +2380,11 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
         buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim]);
 
       pa1.mat_mul(*mat2);
+
+      ea.mat_mul(ctxt, *mat2);
+      CheckCtxt(ctxt, "Step2");
+      ea.decrypt(ctxt, secretKey, check_val);
+      assert(pa1.equals(check_val));
 
       vector<ZZX> val3;
       val3.resize(nslots);
@@ -2391,8 +2435,61 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
       else 
         cout << "NO!!!\n";
 
+      { // apply final permutation to ctxt
 
+        // estimate cost of other computations
+        long est_cost = 0;
+        for (long i = 0; i < nfactors; i++)
+          est_cost += phivec[i];
 
+        // Setup generator-descriptors for the PAlgebra generators
+        Vec<GenDescriptor> vec(INIT_SIZE, ea.dimension());
+        for (long i=0; i<ea.dimension(); i++)
+          vec[i] = GenDescriptor(/*order=*/ea.sizeOfDimension(i),
+                                 /*good=*/ ea.nativeDimension(i), /*genIdx=*/i); 
+
+        long widthBound = 0;
+        long cost = NTL_MAX_LONG;
+        shared_ptr<GeneratorTrees> trees;
+   
+        const long MAX_WIDTH = 5;
+
+        // Get the generator-tree structures and the corresponding hypercube
+        while (cost > est_cost && (cost == NTL_MAX_LONG || widthBound <= MAX_WIDTH) ) {
+          widthBound++;
+          trees = shared_ptr<GeneratorTrees>(new GeneratorTrees());
+          cost = trees->buildOptimalTrees(vec, widthBound);
+          cout << "trees=" << *trees << endl;
+          cout << "cost =" << cost << endl;
+        }
+
+        // Build a permutation network for slot_index1
+        PermNetwork net;
+        net.buildNetwork(slot_index1, *trees);
+
+        net.applyToCtxt(ctxt, ea);
+        CheckCtxt(ctxt, "perm");
+
+        pa1.applyPerm(slot_index1);
+
+        ea.decrypt(ctxt, secretKey, check_val);
+        assert(pa1.equals(check_val));
+
+        frobeniusAutomorph(ctxt, ea, slot_rotate);
+        CheckCtxt(ctxt, "frob");
+        pa1.frobeniusAutomorph(slot_rotate);
+
+        ea.decrypt(ctxt, secretKey, check_val);
+        assert(pa1.equals(check_val));
+
+        {
+          ZZX FF1;
+          secretKey.Decrypt(FF1, ctxt);
+          zz_pX F1 = conv<zz_pX>(FF1);
+
+          assert(F1 == F);
+        }
+      }
     }
 
 #else
