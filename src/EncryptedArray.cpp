@@ -147,6 +147,11 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   FHE_TIMER_STOP;
 }
 
+
+// NOTE: masking depth: if there are N dimensions, and if for i = 1..N
+// we define c_i = 1 if dimension i is bad and 0 o/w, then the masking
+// depth is N - 1 + \sum_{i=1} c_i.  
+
 template<class type>
 void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 {

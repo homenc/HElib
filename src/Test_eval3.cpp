@@ -1635,6 +1635,14 @@ void Step2aShuffle<type>::applyFwd(Ctxt& v) const
     }
   }
 
+  // FIXME: in the case where nrows != nslots, which
+  // is the same as saying we are at dimension 0, we can
+  // avoid the extra masking depth incurred for the 
+  // synthetic rotations, by folding them into 
+  // the masking/frobenius step. A similar optimization
+  // applies to the applyBack routine.
+
+
   // mask each sub-slot
 
   Vec< shared_ptr<Ctxt> > frobvec; 
@@ -1931,6 +1939,254 @@ void frobeniusAutomorph(Ctxt& ctxt, const EncryptedArray& ea, const Vec<long>& v
 
   ctxt = acc;
 }
+
+
+class EvalMap {
+private:
+  const EncryptedArray& ea;
+  bool invert; 
+
+  bool easy;  // easy => d1 == d, 
+              // !ease => d1 != d (but we d1 * d2 == d)
+
+  long nfactors;
+
+  shared_ptr<PlaintextBlockMatrixBaseInterface> mat1;
+    // use for both easy and !easy
+
+  shared_ptr<Step2aShuffleBase> shuffle;
+  shared_ptr<TowerBase> tower;
+    // use only in the !easy case
+
+  Vec< shared_ptr<PlaintextMatrixBaseInterface> > matvec;
+
+  shared_ptr<PermNetwork> net;
+  Vec<long> slot_rotate;
+    // used for the initial/final inter- and intra-slot rotations
+
+  
+  EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, long width, 
+          bool _invert);
+
+  void apply(Ctxt& ctxt) const;
+};
+
+
+EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, 
+                 long width, bool _invert)
+  : ea(_ea), invert(_invert)
+{
+  const FHEcontext& context = ea.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  
+  long p = zMStar.getP();
+  long d = zMStar.getOrdP();
+
+  // FIXME: we should check that ea was initilized with 
+  // G == factors[0], but this is a slight pain to check
+  // currently
+
+  nfactors = mvec.length();
+
+  assert(nfactors > 0);
+
+  for (long i = 0; i < nfactors; i++)
+    for (long j = i+1; j < nfactors; j++)
+      assert(GCD(mvec[i], mvec[j]) == 1);
+
+  long m = computeProd(mvec);
+  assert(m == zMStar.getM());
+
+  Vec<long> phivec(INIT_SIZE, nfactors);
+  for (long i = 0; i < nfactors; i++)  phivec[i] = phi_N(mvec[i]);
+  long phim = computeProd(phivec);
+
+  Vec<long> dprodvec(INIT_SIZE, nfactors+1);
+  dprodvec[nfactors] = 1;
+  
+  for (long i = nfactors-1; i >= 0; i--)
+    dprodvec[i] = dprodvec[i+1] *
+      multOrd(PowerMod(p % mvec[i], dprodvec[i+1], mvec[i]), mvec[i]);
+
+  Vec<long> dvec(INIT_SIZE, nfactors);
+  for (long i = 0; i < nfactors; i++)
+    dvec[i] = dprodvec[i] / dprodvec[i+1];
+
+  long nslots = phim/d;
+  assert(d == dprodvec[0]);
+  assert(nslots == zMStar.getNSlots());
+
+  long inertPrefix = 0;
+  for (long i = 0; i < nfactors && dvec[i] == 1; i++) {
+    inertPrefix++;
+  }
+
+  if (inertPrefix == nfactors-1)
+    easy = true;
+  else if (inertPrefix == nfactors-2)
+    easy = false;
+  else
+    Error("EvalMap: case not handled: bad inertPrefix");
+
+  Vec< Vec<long> > local_reps(INIT_SIZE, nfactors);
+  for (long i = 0; i < nfactors; i++)
+    init_representatives(local_reps[i], mvec[i], 
+                         PowerMod(p % mvec[i], dprodvec[i+1], mvec[i]));
+
+
+
+
+  Vec<long> crtvec(INIT_SIZE, nfactors);
+  for (long i = 0; i < nfactors; i++) 
+    crtvec[i] = (m/mvec[i]) * InvMod((m/mvec[i]) % mvec[i], mvec[i]);
+
+  Vec<long> redphivec(INIT_SIZE, nfactors);
+  for (long i = 0; i < nfactors; i++)
+    redphivec[i] = phivec[i]/dvec[i];
+
+  CubeSignature redphisig(redphivec);
+
+
+  Vec<long> global_reps(INIT_SIZE, phim/d);
+  for (long i = 0; i < phim/d; i++) {
+    global_reps[i] = 0;
+    for (long j = 0; j < nfactors; j++) {
+      long i1 = redphisig.getCoord(i, j);
+      global_reps[i] = (global_reps[i] + crtvec[j]*local_reps[j][i1]) % m;
+    }
+  }
+
+  Vec<long> slot_index;
+  init_slot_mappings(slot_index, slot_rotate, global_reps, m, p, context);
+
+  Vec< shared_ptr<CubeSignature> > sig_sequence;
+  sig_sequence.SetLength(nfactors+1);
+  sig_sequence[nfactors] = shared_ptr<CubeSignature>(new CubeSignature(phivec));
+
+  Vec<long> reduced_phivec = phivec;
+
+  for (long dim = nfactors-1; dim >= 0; dim--) {
+    reduced_phivec[dim] /= dvec[dim];
+    sig_sequence[dim] = 
+      shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
+  }
+
+  if (easy) {
+    long dim = nfactors - 1;
+
+    mat1 = shared_ptr<PlaintextBlockMatrixBaseInterface>(
+      buildStep1Matrix(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim], invert));
+
+    matvec.SetLength(nfactors-1);
+
+    while (dim > 0) {
+      dim--;
+      matvec[dim] = shared_ptr<PlaintextMatrixBaseInterface>(
+        buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim], invert));
+    }
+  }
+  else {
+    long m1 = mvec[nfactors-1];
+    long cofactor = m/m1;
+
+    long d1 = dvec[nfactors-1];
+    long d2 = d/d1;
+
+    tower = shared_ptr<TowerBase>(buildTowerBase(ea, cofactor, d1, d2));
+    long dim = nfactors-1;
+
+    mat1 = shared_ptr<PlaintextBlockMatrixBaseInterface>(
+      buildStep1aMatrix(ea, local_reps[dim], cofactor, d1, d2, phivec[dim], tower, invert));
+
+
+    dim--;
+    shuffle = shared_ptr<Step2aShuffleBase>(
+      buildStep2aShuffle(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim], tower, invert));
+
+    
+    long phim1 = shuffle->new_order.length();
+
+    Vec<long> no_i; // inverse function
+    no_i.SetLength(phim1);
+    for (long i = 0; i < phim1; i++) 
+      no_i[shuffle->new_order[i]] = i;
+
+    Vec<long> slot_index1;
+    slot_index1.SetLength(nslots);
+    for (long i = 0; i < nslots; i++) 
+      slot_index1[i] = (slot_index[i]/phim1)*phim1 + no_i[slot_index[i] % phim1];
+
+    slot_index = slot_index1;
+
+    matvec.SetLength(nfactors-2);
+
+    while (dim > 0) {
+      dim--;
+      matvec[dim] = shared_ptr<PlaintextMatrixBaseInterface>(
+        buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim], invert));
+    }
+  }
+
+  if (invert) {
+    Vec<long> slot_index_i; // inverse function
+    slot_index.SetLength(nslots);
+    for (long i = 0; i < nslots; i++) 
+      slot_index_i[slot_index[i]] = i;
+
+    slot_index = slot_index_i; 
+
+    for (long i = 0; i < nslots; i++)
+      slot_rotate[i] = mcMod(-slot_rotate[i], d);
+  }
+
+  Vec<GenDescriptor> gvec(INIT_SIZE, ea.dimension());
+  for (long i=0; i<ea.dimension(); i++)
+    gvec[i] = GenDescriptor(/*order=*/ea.sizeOfDimension(i),
+                            /*good=*/ ea.nativeDimension(i), /*genIdx=*/i); 
+
+  GeneratorTrees trees;
+  long cost = trees.buildOptimalTrees(gvec, width);
+
+  if (cost == NTL_MAX_LONG)
+    Error("EvalMap: can't build network for given width");
+
+  net = shared_ptr<PermNetwork>(new PermNetwork(slot_index, trees));
+}
+
+void EvalMap::apply(Ctxt& ctxt) const
+{
+  if (!invert) {
+    // forward direction
+
+    ea.mat_mul(ctxt, *mat1);
+    if (!easy) shuffle->apply(ctxt);
+
+    for (long i = matvec.length()-1; i >= 0; i--) 
+      ea.mat_mul(ctxt, *matvec[i]);
+
+    net->applyToCtxt(ctxt, ea);
+    frobeniusAutomorph(ctxt, ea, slot_rotate);
+
+  }
+  else {
+    frobeniusAutomorph(ctxt, ea, slot_rotate);
+    net->applyToCtxt(ctxt, ea);
+
+    for (long i = 0; i < matvec.length(); i++)
+      ea.mat_mul(ctxt, *matvec[i]);
+
+    if (!easy) shuffle->apply(ctxt);
+    ea.mat_mul(ctxt, *mat1);
+  }
+}
+
+
+
+
+
+
+
+
 
 
 
