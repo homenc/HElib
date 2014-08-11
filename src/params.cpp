@@ -16,6 +16,7 @@ int main()
    long total = 0;
    long ord_skip = 0;
    long gen_skip = 0;
+   long fac_skip = 0;
    long good_m = 0;
 
    
@@ -40,10 +41,21 @@ int main()
          continue;
       }
 
-      good_m++;
+      if (long(pal.numOfGens()) > 1 && !pal.SameOrd(0)) {
+         gen_skip++;
+         continue;
+      }
+
 
       Vec< Pair<long, long> > fac;
       factorize(fac, m);
+
+      if (fac[fac.length()-1].a > 5*sqrt(m)) {
+        fac_skip++;
+        continue;
+      }
+
+      good_m++;
 
       cout << "m=" << m << "=";
       for (long i = 0; i < fac.length(); i++) {
@@ -70,6 +82,7 @@ int main()
    cout << "total=" << total << " "
         << "ord_skip=" << ord_skip << " "
         << "gen_skip=" << gen_skip << " "
+        << "fac_skip=" << fac_skip << " "
         << "good_m=" << good_m << " ";
 
    cout << "\n";
