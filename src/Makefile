@@ -58,6 +58,9 @@ test: $(TESTPROGS)
 
 obj: $(OBJ)
 
+DoubleCRT.o: DoubleCRT.cpp AltCRT.cpp $(HEADER)
+	$(CC) $(CFLAGS) -c DoubleCRT.cpp
+
 %.o: %.cpp $(HEADER)
 	$(CC) $(CFLAGS) -c $<
 

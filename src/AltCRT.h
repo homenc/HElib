@@ -62,8 +62,7 @@ private:
 
 // helper routine: computes (a*b mod X^m-1) ...experimental "lazy"
 // version.... 
-void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus1& f,
-             bool lazy);
+void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus1& f);
 
 //! @class AltCRT
 //! @brief Alternative implementation of integer polynomials
@@ -85,29 +84,35 @@ class AltCRT {
 
   class AddFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus1& f, bool lazy) 
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus1& f) 
     { return add(a, a, b); }
 
     void apply(zz_pX& a, zz_p b)
     { return add(a, a, b); }
+
+    bool reduce() { return false; }
   };
 
   class SubFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus1& f, bool lazy) 
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus1& f) 
     { return sub(a, a, b); }
 
     void apply(zz_pX& a, zz_p b)
     { return sub(a, a, b); }
+
+    bool reduce() { return false; }
   };
 
   class MulFun {
   public:
-    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus1& f, bool lazy) 
-    { return MulMod1(a, a, b, f, lazy); }
+    void apply(zz_pX& a, const zz_pX& b, const zz_pXModulus1& f) 
+    { return MulMod1(a, a, b, f); }
 
     void apply(zz_pX& a, zz_p b)
     { return mul(a, a, b); }
+
+    bool reduce() { return true; }
   };
 
 
@@ -133,7 +138,9 @@ public:
   // the context. If the coefficients of poly are larger than the product of
   // the used primes, they are effectively reduced modulo that product
 
-  // copy constructor: default
+  // copy constructor: default but with reduction
+
+  AltCRT(const AltCRT& other);
 
   AltCRT(const ZZX&poly, const FHEcontext& _context, const IndexSet& indexSet);
   AltCRT(const ZZX&poly, const FHEcontext& _context);

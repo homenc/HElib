@@ -318,6 +318,8 @@ void Ctxt::reLinearize(long keyID)
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
+  this->reduce();
+
   // To relinearize, the primeSet must be disjoint from the special primes
   if (!primeSet.disjointFrom(context.specialPrimes)) {
     modDownToSet(primeSet / context.specialPrimes);
@@ -353,6 +355,8 @@ void Ctxt::reLinearize(long keyID)
     tmp.keySwitchPart(part, W); // switch this part & update noiseVar
   }
   *this = tmp;
+
+  this->reduce();
 
 #if 0
   // alternative strategy: get rid of special primes
@@ -1003,6 +1007,13 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
   return addedNoise;
 }
 
+
+void Ctxt::reduce() const
+{
+  long n = parts.size();
+  for (long i = 0; i < n; i++) parts[i].reduce();
+}
+
 istream& operator>>(istream& str, SKHandle& handle)
 {
   //  cerr << "SKHandle[";
@@ -1141,5 +1152,6 @@ void innerProduct(Ctxt& result,
     result += tmp;
   }
 }
+
 
 

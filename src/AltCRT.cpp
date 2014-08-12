@@ -20,6 +20,22 @@
 
 NTL_CLIENT
 
+/*
+ * Current incarnation of lazy strategy: 
+ *  - results are generally left reduced mod X^m-1
+ *  - right before two AltCRT objects are multiplied,
+ *    they are reduced mod Phi_m(X), unless the "lazy"
+ *    flag in the context is set, in which case, we are
+ *    *really* lazy, and don't reduce the inputs to
+ *    multiplication
+ *  - objects are also reduced in toPoly
+ *  - the reduce() method can be explicitly called
+ *    to force a reduction mod Phi_m(X), and the reduce()
+ *    method in Ctxt calls this method.
+ *    Right now, this is invoked both before and after 
+ *    we relinearize a ciphertext
+ */
+
 
 bool AltCRT::dryRun = false;
 
@@ -61,8 +77,7 @@ static void reduce12(zz_pX& x, const zz_pXModulus1& f)
 
 
 
-void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus1& f,
-             bool lazy)
+void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus1& f)
 {
   assert(deg(a) < f.m && deg(b) < f.m);
 
@@ -70,7 +85,6 @@ void MulMod1(zz_pX& x, const zz_pX& a, const zz_pX& b, const zz_pXModulus1& f,
   mul(t, a, b);
 
   reduce1(t, f.m);
-  if(!lazy) reduce2(t, f);
 
   x = t;
 }
@@ -90,6 +104,12 @@ AltCRT& AltCRT::Op(const AltCRT &other, Fun fun,
   if (&context != &other.context)
     Error("AltCRT::Op: incompatible objects");
 
+  if (fun.reduce()) {
+    this->reduce();
+    other.reduce();
+  }
+
+
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet()))
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
@@ -107,13 +127,12 @@ AltCRT& AltCRT::Op(const AltCRT &other, Fun fun,
 
   zz_pBak bak; bak.save();
 
-  bool lazy = context.lazy;
 
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
     const zz_pXModulus1& phimx = context.ithModulus(i).getPhimX();
-    fun.apply(map[i], (*other_map)[i], phimx, lazy);
+    fun.apply(map[i], (*other_map)[i], phimx);
   }
 
   return *this;
@@ -173,7 +192,7 @@ AltCRT& AltCRT::Negate(const AltCRT& other)
     Error("AltCRT Negate: incompatible contexts");
 
   if (map.getIndexSet() != other.map.getIndexSet()) {
-    map = other.map; // copy the data
+    map = other.map; // DIRT: copies zz_p objects out of context
   }
   const IndexSet& s = map.getIndexSet();
 
@@ -217,6 +236,10 @@ AltCRT& AltCRT::Op<AltCRT::SubFun>(const ZZX &poly, SubFun fun);
 void AltCRT::reduce() const
 // logically but not really const
 {
+  FHE_TIMER_START;
+
+  if (context.lazy) return;
+
   const IndexSet& s = map.getIndexSet();
 
   zz_pBak bak; bak.save();
@@ -242,8 +265,6 @@ void AltCRT::breakIntoDigits(vector<AltCRT>& digits, long n) const
 
   digits.resize(n, AltCRT(context, IndexSet::emptySet()));
   if (dryRun) return;
-
-  this->reduce();
 
   for (long i=0; i<(long)digits.size(); i++) {
     digits[i]=*this;;
@@ -454,6 +475,12 @@ AltCRT::AltCRT(const FHEcontext &_context)
 }
 
 
+AltCRT::AltCRT(const AltCRT& other) 
+: context(other.context), map(new AltCRTHelper(other.context))
+
+{
+   map = other.map;  // DIRT: copies zz_p objects out of context
+}
 
 
 AltCRT& AltCRT::operator=(const AltCRT& other)
@@ -464,8 +491,9 @@ AltCRT& AltCRT::operator=(const AltCRT& other)
    if (&context != &other.context) 
       Error("AltCRT assignment: incompatible contexts");
 
+
    if (map.getIndexSet() != other.map.getIndexSet()) {
-      map = other.map; // copy the data
+      map = other.map; // DIRT: copies zz_p objects out of context
    }
    else {
       const IndexSet& s = map.getIndexSet();
@@ -637,7 +665,6 @@ void AltCRT::automorph(long k)
 
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
-    const zz_pXModulus1& phimx = context.ithModulus(i).getPhimX();
     zz_pX& tmp = context.ithModulus(i).getScratch();
     zz_pX& row = map[i];
     long d = deg(row);
@@ -651,8 +678,6 @@ void AltCRT::automorph(long k)
 
     tmp.normalize();
 
-    // LAZY ...reduce mod phimx if not lazy
-    if (!context.lazy) reduce2(tmp, phimx);
     row = tmp;
   }
 }

@@ -396,6 +396,8 @@ public:
   void reLinearize(long keyIdx=0);
           // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
+  void reduce() const;
+
   //! @brief Add a high-noise encryption of the given constant
   void blindCtxt(const ZZX& poly);
 

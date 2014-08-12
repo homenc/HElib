@@ -93,7 +93,8 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
 
 
-  FHEcontext context(m, p, r);
+  FHEcontext context(m, p, r); 
+
   buildModChain(context, L, c);
   context.zMStar.printout();
   cerr << endl;
