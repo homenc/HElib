@@ -105,7 +105,7 @@ class PAlgebra {
   // Namely, for i<nSlots we have dLogT[in,...,(i+1)n-1] = [e1,...,en]
   // s.t. T[i] = prod_{i=1}^n gi^{ei} mod m (with n=gens.size())
 
-  vector<long> mFactors; // The prime-power factorization of m
+  //  vector<long> mFactors; // The prime-power factorization of m
 
  public:
 
@@ -141,7 +141,7 @@ class PAlgebra {
   const ZZX& getPhimX() const { return PhimX; }
 
   //! The prime-power factorization of m
-  const vector<long> getMfactors() const { return mFactors; }
+  //  const vector<long> getMfactors() const { return mFactors; }
 
   //! The number of generators in (Z/mZ)^* /(p)
   unsigned long numOfGens() const { return gens.size(); }
