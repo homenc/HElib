@@ -422,6 +422,13 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
   return true;
 }
 
+
+long FHEPubKey::ePlusR(long p)
+{
+  return floor( log((double)NTL_SP_BOUND)/log(p) );
+}
+
+
 ostream& operator<<(ostream& str, const FHEPubKey& pk)
 {
   str << "[";

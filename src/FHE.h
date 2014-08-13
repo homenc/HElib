@@ -232,8 +232,7 @@ public:
   friend istream& operator >> (istream& str, FHEPubKey& pk);
 
   // defines plaintext space for the bootstrapping encrypted secret key
-  static long ePlusR(long p)
-  { return floor( log((double)NTL_SP_BOUND)/log(p) ); }
+  static long ePlusR(long p);
 };
 
 /**
