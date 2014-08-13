@@ -381,7 +381,7 @@ void EncryptedArrayDerived<type>::mat_mul_dense(Ctxt& ctxt, const PlaintextMatri
   const PlaintextMatrixInterface<type>& mat1 = 
     dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
 
-  ctxt.reLinearize(); // not sure, but this may be a good idea
+  ctxt.cleanUp(); // not sure, but this may be a good idea
 
   Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
   // a new ciphertext, encrypting zero
@@ -419,7 +419,7 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
   const PlaintextMatrixInterface<type>& mat1 = 
     dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
 
-  ctxt.reLinearize(); // not sure, but this may be a good idea
+  ctxt.cleanUp(); // not sure, but this may be a good idea
 
   Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
   // a new ciphertext, encrypting zero
@@ -490,7 +490,7 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
   const PlaintextBlockMatrixInterface<type>& mat1 = 
     dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
 
-  ctxt.reLinearize(); // not sure, but this may be a good idea
+  ctxt.cleanUp(); // not sure, but this may be a good idea
 
   Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
   // a new ciphertext, encrypting zero
@@ -810,7 +810,7 @@ void applyLinPolyLL(const EncryptedArray& ea,
   long d = ea.getDegree();
   assert(d == lsize(encodedC));
 
-  ctxt.reLinearize();  // not sure, but this may be a good idea
+  ctxt.cleanUp();  // not sure, but this may be a good idea
 
   Ctxt tmp(ctxt);
 
