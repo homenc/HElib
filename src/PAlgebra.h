@@ -109,7 +109,10 @@ class PAlgebra {
 
  public:
 
-  PAlgebra(unsigned long mm, unsigned long pp = 2);  // constructor
+  PAlgebra(unsigned long mm, unsigned long pp = 2,
+           const vector<long>& _gens = vector<long>(), 
+           const vector<long>& _ords = vector<long>() );  // constructor
+
 
   bool operator==(const PAlgebra& other) const;
   bool operator!=(const PAlgebra& other) const {return !(*this==other);}

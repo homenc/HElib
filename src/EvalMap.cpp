@@ -932,7 +932,7 @@ void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt, get_type get_fn) const
   Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
   long nslots = ea.size();
 
-  // ctxt.reLinearize(); 
+  // ctxt.cleanUp(); 
 
   PlaintextArray res(ea);
 
@@ -1022,7 +1022,7 @@ void Step2aShuffle<type>::mat_mul(Ctxt& ctxt, get_type get_fn) const
   Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
   long nslots = ea.size();
 
-  ctxt.reLinearize(); 
+  ctxt.cleanUp(); 
 
   Ctxt res(ZeroCtxtLike, ctxt);
 
@@ -1418,7 +1418,7 @@ void Step2aShuffle<type>::applyBack(Ctxt& v) const
 
 
   mat_mul(v, &Step2aShuffle<type>::iget);
-  v.reLinearize();
+  v.cleanUp();
 
   Mat< Vec<ZZX> > C;
 
@@ -1575,7 +1575,7 @@ void Step2aShuffle<type>::applyFwd(Ctxt& v) const
 
   // build linPolyCoeffs
 
-  v.reLinearize();
+  v.cleanUp();
 
   Mat< Vec<ZZX> > C;
 
@@ -1836,7 +1836,7 @@ void frobeniusAutomorph(Ctxt& ctxt, const EncryptedArray& ea, const Vec<long>& v
     masks[i] = mask1_poly;
   }
 
-  ctxt.reLinearize();
+  ctxt.cleanUp();
   Ctxt acc(ZeroCtxtLike, ctxt);
   for (long i = 0; i < d; i++) {
     if (masks[i] != 0) {

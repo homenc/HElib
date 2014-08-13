@@ -356,8 +356,6 @@ void Ctxt::reLinearize(long keyID)
   }
   *this = tmp;
 
-  this->reduce();
-
 #if 0
   // alternative strategy: get rid of special primes
   // after each reLin...
@@ -369,6 +367,15 @@ void Ctxt::reLinearize(long keyID)
 
 
   FHE_TIMER_STOP;
+}
+
+void Ctxt::cleanUp()
+{
+  reLinearize();
+  reduce();
+  if (!primeSet.disjointFrom(context.specialPrimes)) {
+    modDownToSet(primeSet / context.specialPrimes);
+  }
 }
 
 // Takes as arguments a ciphertext-part p relative to s' and a key-switching

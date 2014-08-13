@@ -151,8 +151,11 @@ void PAlgebra::printout() const
 }
 
 // Generate the representation of Z_m^* for a given odd integer m
-// and plaintext base p
-PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
+// and plaintext base p.  If you know what you are doing, you can 
+// supply your own gens and ords.
+
+PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,  
+                   const vector<long>& _gens, const vector<long>& _ords )
 {
   m = mm;
   p = pp;
@@ -162,7 +165,16 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
   assert( m < NTL_SP_BOUND );
 
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
-  ordP = findGenerators(this->gens, this->ords, m, p);
+
+  if (_gens.size() == 0) 
+    ordP = findGenerators(this->gens, this->ords, m, p);
+  else {
+    assert(_gens.size() == _ords.size());
+    gens = _gens;
+    ords = _ords;
+    ordP = multOrd(p, m);
+  }
+
   nSlots = qGrpOrd();
   phiM = ordP * nSlots;
 
@@ -183,14 +195,22 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp)
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
   vector<unsigned long> buffer(gens.size()); // temporaty holds exponents
   i = idx = 0;
+  long ctr = 0;
   do {
+    ctr++;
     unsigned long t = exponentiate(buffer);
     for (unsigned long j=0; j<buffer.size(); j++) dLogT[idx++] = buffer[j];
+
+    assert(GCD(t, m) == 1); // sanity check for user-supplied gens
+    assert(Tidx[t] == -1);
+
     T[i] = t;       // The i'th element in T it t
     Tidx[t] = i++;  // the index of t in T is i
 
     // increment buffer by one (in lexigoraphic order)
   } while (nextExpVector(buffer)); // until we cover all the group
+
+  assert(ctr == long(phiM)); // sanity check for user-supplied gens
 
   PhimX = Cyclotomic(m); // compute and store Phi_m(X)
 
