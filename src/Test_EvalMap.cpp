@@ -1,5 +1,3 @@
-
-
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
 
@@ -8,30 +6,39 @@ namespace NTL {} using namespace NTL;
 #include "powerful.h"
 
 void convertToPowerful(Vec<zz_p>& v, const zz_pX& F, const Vec<long>& mvec)
-{ 
-  long nfactors = mvec.length();
+{
+  // mvec contains the prime-power factorization of m = \prod_{i=1}^k mi
+  long nfactors = mvec.length(); // = k
+  long m = computeProd(mvec);    // compute m itself
 
-  long m = computeProd(mvec);
-  
-  Vec<long> phivec;
+  Vec<long> phivec; // phivec holds phi(mi) for all factors mi
   phivec.SetLength(nfactors);
   for (long i = 0; i < nfactors; i++) phivec[i] = phi_N(mvec[i]);
 
-  long phim = computeProd(phivec);
+  long phim = computeProd(phivec); // phi(m) = prod_i phi(mi)
 
-  Vec<long> divvec;
+  Vec<long> divvec; // divvec[i] = m/mi
   computeDivVec(divvec, m, mvec);
 
-  Vec<long> invvec;
+  Vec<long> invvec; // invvec[i] = (m/mi)^{-1} mod mi
   computeInvVec(invvec, divvec, mvec);
 
   CubeSignature shortsig(phivec);
   CubeSignature longsig(mvec);
 
+  // Let (i_1,...,i_k) be the representation of i in base
+  // (m/m1,...,m/mk), namely i = i_1 (m/m_1)+...+i_k (m/m_k) mod m.
+  // Then polyToCubeMap[i] is the lexicographic index of the tuple
+  // (i_1,...,i_k) in the cube with dimensions (m_1, ..., m_k).
+  // cubeToPolyMap is the inverse map, polyToCubeMap[cubeToPolyMap[j]]=j.
   Vec<long> polyToCubeMap;
   Vec<long> cubeToPolyMap;
   computePowerToCubeMap(polyToCubeMap, cubeToPolyMap, m, mvec, invvec, longsig);
 
+  // shortSig is a CubeSignature for (phi(m_1),..., phi(m_k)), and longSig
+  // is a CubeSignature for (m_1, ..., m_k). shortToLongMap[i] maps an
+  // index i wrt shortSig to an index i' wrt longSig so that both indexes
+  // correspond to the same tuple (i_1,...,i_k).
   Vec<long> shortToLongMap;
   computeShortToLongMap(shortToLongMap, shortsig, longsig);
 
@@ -46,7 +53,7 @@ void convertToPowerful(Vec<zz_p>& v, const zz_pX& F, const Vec<long>& mvec)
   HyperCube<zz_p> cube(shortsig);
   HyperCube<zz_p> tmpCube(longsig);
 
-  convertPolyToPowerful(cube, tmpCube, F, cycvec, 
+  convertPolyToPowerful(cube, tmpCube, F, cycvec,
                         polyToCubeMap, shortToLongMap);
 
   zz_pX poly1;
@@ -66,10 +73,10 @@ void convertToPowerful(Vec<zz_p>& v, const zz_pX& F, const Vec<long>& mvec)
 }
 
 
-void  TestIt(long R, long p, long r, long c, long _k, long w, 
+void  TestIt(long R, long p, long r, long c, long _k, long w,
                long L, const Vec<long>& mvec, long width)
 {
-  cerr << "*** TestIt: R=" << R 
+  cerr << "*** TestIt: R=" << R
        << ", p=" << p
        << ", r=" << r
        << ", c=" << c
@@ -77,24 +84,22 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
        << ", w=" << w
        << ", L=" << L
        << ", mvec=" << mvec
-       << ", width=" << width 
+       << ", width=" << width
        << endl;
 
   setTimersOn();
 
+  // mvec is supposed to include the prime-power factorization of m
   long nfactors = mvec.length();
   for (long i = 0; i < nfactors; i++)
     for (long j = i+1; j < nfactors; j++)
       assert(GCD(mvec[i], mvec[j]) == 1);
 
-
+  // multiply all the prime powers to get m itself
   long m = computeProd(mvec);
-  assert(GCD(p, m) == 1); 
+  assert(GCD(p, m) == 1);
 
-
-
-  FHEcontext context(m, p, r); 
-
+  FHEcontext context(m, p, r);
   buildModChain(context, L, c);
   context.zMStar.printout();
   cerr << endl;
@@ -114,20 +119,41 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   cerr << "done\n";
 
 
+  // GG defines the plaintext space Z_p[X]/GG(X)
   ZZX GG;
   GG = context.alMod.getFactorsOverZZ()[0];
 
   EncryptedArray ea(context, GG);
 
   zz_p::init(context.alMod.getPPowR());
-
-
   zz_pX F;
-  random(F, phim);
+  random(F, phim); // a random polynomial of degree phi(m)-1 modulo p
 
+  // convert F to powerful representation: cube represents a multi-variate
+  // polynomial with as many variables Xi as factors mi in mvec. cube has
+  // degree phi(mi) in the variable Xi, and the coefficients are given
+  // in lexicographic order.
+  //
+  // Let ni=phi(mi), lexicographic ordering induces a correspondence
+  //       (i_1,...,i_k) <-> i=\sum_j i_j * \prod_{t>j} n_t.
+  // We denote lex(i_1,...,i_k)=i and lex^{-1}(i)=(i_1,...,i_k).
+  // To convert cube to a ZZX polynomial, we need to compute for all i:
+  //   - (i1,...,ik) = lex^{-1}(i)    // coefficient of term \prod_t Xt^{it}
+  //   - e = \sum_{t=1}^k  it * m/mt  // The corresponding ZZX exponent
+  //   - SetCoeff(poly, e, cube[i])   // poly_e = cube[i]
+  //
+  // The computeation of e from i is stored in cubeToPolyMap, so we can do
+  // Vec<long> polyToCubeMap;
+  // Vec<long> cubeToPolyMap;
+  // computePowerToCubeMap(polyToCubeMap,cubeToPolyMap,m,mvec,invvec,longsig);
+  // for (long i=0; i<cube.length(); i++)
+  //    SetCoeff(poly, cubeToPolyMap[i], cube[i]);
 
   Vec<zz_p> cube;
   convertToPowerful(cube, F, mvec);
+
+  // pack the coefficients from cube in the plaintext slots: the j'th
+  // slot contains the polynomial pj(X) = \sum_{t=0}^{d-1} cube[jd+t] X^t
   vector<ZZX> val1;
   val1.resize(nslots);
   for (long i = 0; i < phim; i++) {
@@ -144,13 +170,16 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
   FHE_NTIMER_START(ALL);
 
+  // Compute homomorphically the transformation that takes the
+  // coefficients packed in the slots and produces the polynomial
+  // corresponding to cube
 
   CheckCtxt(ctxt, "init");
 
   cout << "build EvalMap\n";
-  EvalMap map(ea, mvec, width, false);
+  EvalMap map(ea, mvec, width, false); // compute the transformation to apply
   cout << "apply EvalMap\n";
-  map.apply(ctxt);
+  map.apply(ctxt);                     // apply the transformation to ctxt
   CheckCtxt(ctxt, "EvalMap");
   cout << "check results\n";
 
@@ -158,7 +187,7 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   secretKey.Decrypt(FF1, ctxt);
   zz_pX F1 = conv<zz_pX>(FF1);
 
-  if (F1 == F) 
+  if (F1 == F)
     cout << "EvalMap: good\n";
   else
     cout << "EvalMap: bad\n";
@@ -166,10 +195,14 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   publicKey.Encrypt(ctxt, FF1);
   CheckCtxt(ctxt, "init");
 
+  // Compute homomorphically the inverse transformation that takes the
+  // polynomial corresponding to cube and produces the coefficients
+  // packed in the slots
+
   cout << "build EvalMap\n";
-  EvalMap imap(ea, mvec, width, true);
+  EvalMap imap(ea, mvec, width, true); // compute the transformation to apply
   cout << "apply EvalMap\n";
-  imap.apply(ctxt);
+  imap.apply(ctxt);                    // apply the transformation to ctxt
   CheckCtxt(ctxt, "EvalMap");
   cout << "check results\n";
 
@@ -189,7 +222,7 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 }
 
 
-void usage(char *prog) 
+void usage(char *prog)
 {
   cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
@@ -209,7 +242,7 @@ void usage(char *prog)
 }
 
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   argmap_t argmap;
   argmap["R"] = "1";
@@ -219,8 +252,8 @@ int main(int argc, char *argv[])
   argmap["k"] = "80";
   argmap["L"] = "0";
   argmap["s"] = "0";
-  argmap["m1"] = "0";
-  argmap["m2"] = "0";
+  argmap["m1"] = "5";
+  argmap["m2"] = "7";
   argmap["m3"] = "0";
   argmap["m4"] = "0";
   argmap["width"] = "5";
@@ -240,7 +273,7 @@ int main(int argc, char *argv[])
     if (r==1) L = 2*R+2;
     else      L = 4*R;
   }
-  long s = atoi(argmap["s"]);
+  //  long s = atoi(argmap["s"]);
 
   long m1 = atoi(argmap["m1"]);
   long m2 = atoi(argmap["m2"]);
@@ -257,13 +290,10 @@ int main(int argc, char *argv[])
   if (m2 != 0) append(mvec, m2);
   if (m3 != 0) append(mvec, m3);
   if (m4 != 0) append(mvec, m4);
-  
 
   if (seed) SetSeed(conv<ZZ>(seed));
 
   TestIt(R, p, r, c, k, w, L, mvec, width);
-
-
 }
 
 //   [1 1 3 8] Test_EvalMap_x p=2 m1=3 m2=5 m3=7 m4=17
@@ -274,10 +304,3 @@ int main(int argc, char *argv[])
 //   Test_EvalMap_x p=2 m1=3 m2=5 m3=43 (phim1 == 3)
 //   Test_EvalMap_x p=2 m1=7 m2=13 m3=73 (phim1=8, phim2=12, d2=4)
 //   Test_EvalMap_x p=2 m1=7 m2=33 m3=73 (phim1=8, phim2=20, d2=10)
-
-
-    
-
-
-
-
