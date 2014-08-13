@@ -210,7 +210,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
     // increment buffer by one (in lexigoraphic order)
   } while (nextExpVector(buffer)); // until we cover all the group
 
-  assert(ctr == long(phiM)); // sanity check for user-supplied gens
+  assert(ctr == long(nSlots)); // sanity check for user-supplied gens
 
   PhimX = Cyclotomic(m); // compute and store Phi_m(X)
 
