@@ -17,6 +17,8 @@
 NTL_CLIENT
 #include "NumbTh.h"
 #include "FHEContext.h"
+#include "EvalMap.h"
+#include "powerful.h"
 
 #define pSize (NTL_SP_NBITS/2) /* The size of levels in the chain */
 
@@ -454,12 +456,14 @@ FHEcontext::~FHEcontext()
 {
   if (bootstrapEA!=NULL) delete bootstrapEA;
   if (bootstrapPAM!=NULL) delete bootstrapPAM;
+  if (secondEA!=NULL) delete secondEA;
+  if (firstMap!=NULL) delete firstMap;
+  if (secondMap!=NULL) delete secondMap;
 }
 
 // Constructors must ensure that alMod points to zMStar, and
 // bootstrapEA (if set) points to bootstrapPAM which points to zMStar
-FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
-		       bool bootstrappable):
+FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r):
   zMStar(m, p), alMod(zMStar, r), modP_digPoly(ZZX::zero()), modP_digPoly_r(0)
 {
   stdev=3.2;  
@@ -472,18 +476,46 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   // power-of-two jumps, we would possibly want to change this.
 
   allOnes = ZZX::zero();
-  if (bootstrappable) {
-    bootstrapPAM = new PAlgebraMod(zMStar, bootstrapR(m,p,r));
-    bootstrapEA = new EncryptedArray(*this, *bootstrapPAM);
+  bootstrapPAM = NULL;
+  bootstrapEA = NULL;
+  secondEA = NULL;
+  firstMap = NULL;
+  secondMap = NULL;
+}
+
+
+void FHEcontext::makeBootstrappable(const Vec<long>& mvec, long width)
+{
+  if (bootstrapPAM != NULL) { // were we called for a second time?
+    cerr << "@Warning: multiple calls to FHEcontext::makeBootstrappable\n";
+    return;
+  }
+  long m = computeProd(mvec);    // compute m itself
+  assert(m == (long)zMStar.getM());    // sanity check
+
+  // Some default for the permtation-width parameter
+  if (width==0) width = 2*zMStar.numOfGens()-1;
+
+  // First part of Bootstrapping works wrt plaintext space p^{r'}
+  long p = zMStar.getP();
+  long rPrime = bootstrapR(m, p, alMod.getR());
+  bootstrapPAM = new PAlgebraMod(zMStar, rPrime);
+  bootstrapEA = new EncryptedArray(*this, *bootstrapPAM);
                   // Polynomial defaults to F0, PAlgebraMod explicitly given
 
-    // If p=2 and m1 ... mk is the prime-power factorization of m, then
+  secondEA = new EncryptedArray(*this, alMod);
+                  // Polynomial defaults to F0, relative to "standard" alMod
+
+  firstMap  = new EvalMap(*bootstrapEA, mvec, width, true);
+  secondMap = new EvalMap(*secondEA, mvec, width, false);
+
+    // If p=2 and m1 ... mk is the given factorization of m, then
     // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
     if (p==2) {
-#if 0 // This is the all-1 in powerful representation
-      for (long i=0; i<(long) zMStar.getMfactors().size(); i++) {
-	long phi_mi = phi_N(zMStar.getMfactors()[i]);
-	long exp_i = m/(zMStar.getMfactors()[i]);
+#if 1 // This is the all-1 in powerful representation
+      for (long i=0; i<mvec.length(); i++) {
+	long phi_mi = phi_N(mvec[i]);
+	long exp_i = m/mvec[i];
 	for (long j=phi_mi-1; j>=0; --j) SetCoeff(allOnes, j*exp_i);
       }
       allOnes %= zMStar.getPhimX();
@@ -492,9 +524,4 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
 	SetCoeff(allOnes, i);
 #endif
     }
-  }
-  else {
-    bootstrapPAM = NULL;
-    bootstrapEA = NULL;
-  }
 }
