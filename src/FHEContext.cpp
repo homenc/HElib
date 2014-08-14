@@ -513,12 +513,16 @@ void FHEcontext::makeBootstrappable(const Vec<long>& mvec, long width)
     // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
     if (p==2) {
 #if 1 // This is the all-1 in powerful representation
+      conv(allOnes, 1L); // initialize allOnes = 1
       for (long i=0; i<mvec.length(); i++) {
 	long phi_mi = phi_N(mvec[i]);
 	long exp_i = m/mvec[i];
-	for (long j=phi_mi-1; j>=0; --j) SetCoeff(allOnes, j*exp_i);
+	ZZX tmp; // holds \sum_{j=0}^{phi(mi)-1} Xi^j
+	for (long j=phi_mi-1; j>=0; --j) SetCoeff(tmp, j*exp_i);
+	allOnes *= tmp;
       }
       allOnes %= zMStar.getPhimX();
+      PolyRed(allOnes, power_long(p,rPrime));
 #else // This is the all-1 in standard coefficient representation
       for (long i=0; i<(long)zMStar.getPhiM(); i++)
 	SetCoeff(allOnes, i);

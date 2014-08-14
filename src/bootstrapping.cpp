@@ -16,7 +16,8 @@
 #include <NTL/ZZ.h>
 NTL_CLIENT
 #include "EncryptedArray.h"
-
+#include "EvalMap.h"
+#include "powerful.h"
 
 /*********** Debugging utilities **************/
 FHESecKey* dbgKey=NULL;
@@ -215,8 +216,11 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 // Move the powerful-basis coefficients to the plaintext slots
 void movePwrflCoefs2Slots(Ctxt& ctxt)
 {
-  // For testing purposes.
-  // Decrypt a polynomial, put the coefficients in slots, then re-encryp
+  const FHEcontext& context = ctxt.getContext();
+  context.firstMap->apply(ctxt);
+  return;
+
+  // For testing purposes: Decrypt, put coefficients in slots, then re-encryp
   if (dbgKey && dbgEa) {
     ZZX ptxt;
     dbgKey->Decrypt(ptxt, ctxt);
@@ -236,8 +240,11 @@ void movePwrflCoefs2Slots(Ctxt& ctxt)
 // Move the slots back to powerful-basis coefficients
 void moveSlots2PwrflCoefs(Ctxt& ctxt)
 {
-  // For testing purposes.
-  // Decrypt a polynomial, put the coefficients in slots, then re-encryp
+  const FHEcontext& context = ctxt.getContext();
+  context.secondMap->apply(ctxt);
+  return;
+
+  // For testing purposes: Decrypt, move slots to coefficients, then re-encryp
   if (dbgKey && dbgEa) {
     vector<ZZX> v;
     dbgEa->decrypt(ctxt, *dbgKey, v);
@@ -279,6 +286,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // can only bootstrap ciphertext with plaintext-space dividing p^r
   long ptxtSpace = ctxt.getPtxtSpace();
   assert(p2r % ptxtSpace == 0);
+
+  FHE_NTIMER_START(preProcess);
 
   // Make sure that this ciphertxt is in canonical form
   if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
@@ -366,6 +375,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   e -= ePrime;
   p2e /= p2ePrime; // reduce the plaintext space by p^{e'} factor
   ctxt.reducePtxtSpace(p2e*p2r);
+  FHE_NTIMER_STOP(preProcess);
 
   // if (dbgKey) {
   //   tmp1 /= p2ePrime;
@@ -392,7 +402,9 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // }
 
   // Move the powerful-basis coefficients to the plaintext slots
+  FHE_NTIMER_START(LinearTransform1);
   movePwrflCoefs2Slots(ctxt);
+  FHE_NTIMER_STOP(LinearTransform1);
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
 
@@ -400,13 +412,17 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   if (unpackSlotEncoding.size()==0)
     initUnpackEncoding(unpackSlotEncoding, *context.bootstrapEA);
 
+  FHE_NTIMER_START(DigitExtraction);
   extractDigitsPacked(ctxt, e, r, ePrime, unpackSlotEncoding);
+  FHE_NTIMER_STOP(DigitExtraction);
   // return in ctxt an encryption of the r-digit integer
   // <z_topLow,...,z_{topLow-r+1}> - <z_{botHigh+r-1},...,z_{botHigh}>
   // (modulo p^r), where digits with negative index are zero
 
   // Move the slots back to powerful-basis coefficients
+  FHE_NTIMER_START(LinearTransform2);
   moveSlots2PwrflCoefs(ctxt);
+  FHE_NTIMER_STOP(LinearTransform2);
 }
 
 
@@ -426,29 +442,64 @@ void usage(char *prog)
 int main(int argc, char *argv[]) 
 {
   argmap_t argmap;
-  argmap["L"] = "7";
+  argmap["L"] = "15";
   argmap["p"] = "2";
-  argmap["m"] = "17";
+  argmap["m1"] = "5";
+  argmap["m2"] = "7";
+  argmap["m3"] = "0";
   argmap["r"] = "1";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
   long p = atoi(argmap["p"]);
-  long m = atoi(argmap["m"]);
+  long m1 = atoi(argmap["m1"]);
+  long m2 = atoi(argmap["m2"]);
+  long m3 = atoi(argmap["m3"]);
   long r = atoi(argmap["r"]);
   long L =  atoi(argmap["L"]);
 
-  FHEcontext context(m,p,r,/*botstrappable=*/true);
-  long p2r = context.alMod.getPPowR();
-  buildModChain(context, L, /*c=*/3);
+  if (m1 <= 1) {
+    cerr << "m needs at least one factor\n";
+    exit(0);
+  }
+  Vec<long> mvec(INIT_SIZE, 1);
+  long m = mvec[0] = m1;
+  if (m2 > 1) {
+    m *= m2;
+    append(mvec, m2);
+  }
+  if (m3 > 1) {
+    m *= m3;
+    append(mvec, m3);
+  }
 
+  cerr << "*** TestIt: p=" << p
+       << ", r=" << r
+       << ", L=" << L
+       << ", m=" << m
+       << " (=" << mvec << ")"
+       << endl;
+
+  setTimersOn();
+  FHE_NTIMER_START(initialize);
+
+  cerr << "Initializing context..." << std::flush;
+  FHEcontext context(m,p,r);
+  buildModChain(context, L, /*c=*/3);
+  cerr << " done. Computing bootstrapping information..." << std::flush;
+  context.makeBootstrappable(mvec);
+  cerr << " done\n";
+  long p2r = context.alMod.getPPowR();
+
+  cerr << "Generating keys..." << std::flush;
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
   secretKey.genBootstrapData();
+  cerr << " done\n";
 
   // the bootstrapping key is encrypted relative to plaintext space p^{e+r}.
   //  long ePr = FHEPubKey::ePlusR(p);
@@ -456,6 +507,11 @@ int main(int argc, char *argv[])
   //  PAlgebraMod almod2(context.zMStar, context.bootstrapPAM->getR());
   //  EncryptedArray ea2(context, almod2);
   //  EncryptedArray ea1(context, context.alMod);
+
+  FHE_NTIMER_STOP(initialize);
+  cerr << "****Initialization time:\n";
+  printAllTimers();
+  resetAllTimers();
 
   dbgKey = &secretKey; // debugging key and ea
 
@@ -470,13 +526,18 @@ int main(int argc, char *argv[])
   printZZX(cerr, poly)<<endl;
 
   secretKey.Encrypt(c1,poly,p2r);
+  FHE_NTIMER_START(reCrypt);
   publicKey.reCrypt(c1);
+  FHE_NTIMER_STOP(reCrypt);
   secretKey.Decrypt(poly2,c1);
   if (poly != poly2) {
     cerr << "\ndecryption error, result is ";
     printZZX(cerr, poly2)<<endl;
   }
   else cerr << "  decryption succeeds!!\n";
+
+  cerr << "\n****Bootstrapping time:\n";
+  printAllTimers();
   return 0;
 }
 
