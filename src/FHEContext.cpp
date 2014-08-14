@@ -463,8 +463,9 @@ FHEcontext::~FHEcontext()
 
 // Constructors must ensure that alMod points to zMStar, and
 // bootstrapEA (if set) points to bootstrapPAM which points to zMStar
-FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r):
-  zMStar(m, p), alMod(zMStar, r), modP_digPoly(ZZX::zero()), modP_digPoly_r(0)
+FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
+   const vector<long>& gens, const vector<long>& ords):
+  zMStar(m, p, gens, ords), alMod(zMStar, r), modP_digPoly(ZZX::zero()), modP_digPoly_r(0)
 {
   stdev=3.2;  
   fftPrimeCount = 0; 

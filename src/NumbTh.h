@@ -24,6 +24,7 @@
 #include <cassert>
 #include <istream>
 #include <string>
+#include <sstream>
 #include <climits>
 
 #include <NTL/ZZ.h>
@@ -544,6 +545,27 @@ ostream& operator<<(ostream& s, vector<T> v)
     s << v[i] << ' ';
   return (s << v[v.size()-1] << ']');
 }
+
+
+template<class T>
+Vec<T> atoVec(const char *a) 
+{
+  Vec<T> v;
+  string s(a);
+  stringstream ss(s);
+  ss >> v;
+  return v;
+}
+
+template<class T>
+vector<T> atovector(const char *a)
+{
+  Vec<T> v1 = atoVec<T>(a);
+  vector<T> v2;
+  convert(v2, v1);
+  return v2;
+}
+
 
 
 #endif

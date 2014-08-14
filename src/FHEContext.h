@@ -140,7 +140,9 @@ public:
 
   /******************************************************************/
   ~FHEcontext(); // destructor
-  FHEcontext(unsigned long m, unsigned long p, unsigned long r); // constructor
+  FHEcontext(unsigned long m, unsigned long p, unsigned long r,
+             const vector<long>& gens = vector<long>(), 
+             const vector<long>& ords = vector<long>() );  // constructor
 
   void makeBootstrappable(const Vec<long>& mvec, long width=0);
 
