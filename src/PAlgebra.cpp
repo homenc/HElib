@@ -192,6 +192,10 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   // exponents *in reverse order* (en,...,e1,e0), and order these vectors
   // in lexicographic order.
 
+  // FIXME: is the comment above about reverse order true? It doesn't 
+  // seem like it to me.  VJS.
+
+
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
   vector<unsigned long> buffer(gens.size()); // temporaty holds exponents
   i = idx = 0;

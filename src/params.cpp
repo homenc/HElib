@@ -10,6 +10,23 @@ using namespace NTL;
 #include <iomanip>
 #include <algorithm>
 
+Vec<long> rev(const Vec<long>& v) 
+{
+   long n = v.length();
+   Vec<long> w;
+   w.SetLength(n);
+   for (long i = 0; i < n; i++) w[i] = v[n-1-i];
+   return w;
+}
+
+Vec<long> trunc(const Vec<long>& v)
+{
+   long n = v.length();
+   Vec<long> w = v;
+   if (n > 0 && w[n-1] == 1) w.SetLength(n-1);
+   return w;
+}
+
 const long MaxOrd = 100;
 
 long computePhi(const Pair<long,long>& x)
@@ -23,8 +40,15 @@ bool comparePhi(const Pair<long,long>& x, const Pair<long,long>& y)
 } 
 
 
-int main()
+int main(int argc, char *argv[])
 {
+   argmap_t argmap;
+   argmap["gens"] = "0";
+   if (!parseArgs(argc, argv, argmap)) Error("bad args");
+
+   long gens_flag = atoi(argmap["gens"]);
+
+
    for (long m = 1001; m <= 100000; m += 2) {
 
       long d = multOrd(2, m);
@@ -65,6 +89,8 @@ int main()
          if (multOrd(2, m1) != d) continue;
 
          PAlgebra pal1(m1);
+         if (pal1.numOfGens() > 1) continue;
+
          bool good = (pal1.numOfGens() == 0 || 
                       (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
 
@@ -77,27 +103,32 @@ int main()
          if (gen_index != -1 && good_gen) break;
       }
 
-      bool cofactor = false;
+      long gen_index2 = -1;
 
-      if (gen_index == -1 || !good_gen) {
+      if (k > 2 && (gen_index == -1 || !good_gen)) {
+         // search for two-generator solution
 
          for (long i = 0; i < k; i++) {
-            long m1 = m/fac1[i];
-            long phim1 = phim/phivec[i];
-            if (phim1 > 5*sqrt(phim) || multOrd(2, m1) != d) continue;
+            for (long j = i+1; j < k; j++) {
+               long m1 = fac1[i]*fac1[j];
+               long phim1 = phivec[i]*phivec[j];
+               if (phim1 > 5*sqrt(phim) || multOrd(2, m1) != d) continue;
 
-            PAlgebra pal1(m1);
-            bool good = (pal1.numOfGens() == 0 || 
-                         (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
+               PAlgebra pal1(m1);
+               if (pal1.numOfGens() > 1) continue;
 
-            if (gen_index == -1 || good) {
-               gen_index = i;
-               good_gen = good;
-               first_gen = pal1.ZmStarGen(0);
-               cofactor = true;
+               bool good = (pal1.numOfGens() == 0 || 
+                            (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
+
+               if (gen_index == -1 || good) {
+                  gen_index = i;
+                  gen_index2 = j;
+                  good_gen = good;
+                  first_gen = pal1.ZmStarGen(0);
+               }
+
+               if (gen_index != -1 && good_gen) break;
             }
-
-            if (gen_index != -1 && good_gen) break;
          }
       }
 
@@ -107,17 +138,17 @@ int main()
 
       Vec<long> fac2;
 
-      if (cofactor) {
-         fac2.SetLength(2);
-         fac2[0] = m/fac1[gen_index];
-         fac2[1] = fac1[gen_index];
-      }
-      else {
-         fac2.SetLength(k);
-         fac2 = fac1;
+      fac2.SetLength(k);
+      fac2 = fac1;
 
-         for (long i = gen_index-1; i >= 0; i--)
-           swap(fac2[i], fac2[i+1]);
+      for (long i = gen_index-1; i >= 0; i--)
+        swap(fac2[i], fac2[i+1]);
+
+      if (gen_index2 != -1) {
+         for (long i = gen_index2; i < k-1; i++)
+            swap(fac2[i], fac2[i+1]);
+         fac2[0] *= fac2[k-1];
+         fac2.SetLength(k-1);
       }
 
       long k2 = fac2.length();
@@ -156,6 +187,8 @@ int main()
          global_gen[i] = (all_1 - crtvec[i] + crtvec[i]*genvec[i]) % m;
       }
 
+
+
       cout << setw(6) << phim << "  ";
       cout << setw(4) << d << "  ";
       cout << setw(6) << m << "  ";
@@ -165,23 +198,44 @@ int main()
       cout << "m=";
       for (long i = 0; i < k; i++) {
         if (i > 0) cout << "*";
-        if (i == gen_index) { cout << (cofactor ? "[" : "("); }
+        if (i == gen_index) cout << "(";
+        if (i == gen_index2) cout << "{";
         cout << fac[i].a;
         if (fac[i].b > 1) cout << "^" << fac[i].b;
-        if (i == gen_index) { cout << (cofactor ? "]" : ")"); }
-        if (i == gen_index && !good_gen) cout << "!";
+        if (i == gen_index) cout << ")";
+        if (i == gen_index2) cout << "}";
       }
       cout << " ";
 
+      long phim0 = phi_N(fac2[0]);
+
+      if (!good_gen) 
+         cout << ":-( ";
+
+      if (phim0 == d)
+         cout << ":-) ";
 
       cout << "m/phim(m)=" 
            << double(long(100*double(m)/double(phim)))/100.0 << " ";
 
+      long cost = 0;
 
+      
+      if (phim0 != d) {
+         cost += phim0;
+      }
 
-      cout << "fac=" << fac2 << " ";
-      cout << "gen=" << global_gen << " "; 
-      cout << "ord=" << ordvec << " "; 
+      for (long i = 1; i < k2; i++) {
+         cost += phi_N(fac2[i]);
+      }
+
+      cout << "cost=" << cost << " ";
+
+      if (gens_flag) {
+         cout << "facs=" << "\"" << rev(fac2) << "\"" << " ";
+         cout << "gens=" << "\"" << trunc(rev(global_gen)) << "\"" << " "; 
+         cout << "ords=" << "\"" << trunc(rev(ordvec)) << "\"" << " "; 
+      }
 
 
       cout << "\n";

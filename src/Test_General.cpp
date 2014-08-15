@@ -34,6 +34,8 @@ NTL_CLIENT
 #endif
 
 
+
+
 /**************
 
 1. c1.multiplyBy(c0)
@@ -51,7 +53,7 @@ NTL_CLIENT
 
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
-               long L, long m)
+               long L, long m, const Vec<long>& gens, const Vec<long>& ords)
 {
   char buffer[32];
   cerr << "\n\n******** TestIt: R=" << R 
@@ -63,9 +65,15 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
        << ", w=" << w
        << ", L=" << L
        << ", m=" << m
+       << ", gens=" << gens
+       << ", ords=" << ords
        << endl;
 
-  FHEcontext context(m, p, r);
+  vector<long> gens1, ords1;
+  convert(gens1, gens);
+  convert(ords1, ords);
+
+  FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
   // context.lazy = false;
@@ -282,6 +290,9 @@ int main(int argc, char *argv[])
   argmap["s"] = "0";
   argmap["m"] = "0";
   argmap["repeat"] = "1";
+  argmap["gens"] = "[]";
+  argmap["ords"] = "[]";
+
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -305,6 +316,9 @@ int main(int argc, char *argv[])
   long chosen_m = atoi(argmap["m"]);
 
   long repeat = atoi(argmap["repeat"]);
+  Vec<long> gens = atoVec<long>(argmap["gens"]);
+  Vec<long> ords = atoVec<long>(argmap["ords"]);
+
 
   long w = 64; // Hamming weight of secret key
   //  long L = z*R; // number of levels
@@ -312,7 +326,7 @@ int main(int argc, char *argv[])
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
   for (long repeat_cnt = 0; repeat_cnt < repeat; repeat_cnt++) {
-    TestIt(R, p, r, d, c, k, w, L, m);
+    TestIt(R, p, r, d, c, k, w, L, m, gens, ords);
   }
 
 }
