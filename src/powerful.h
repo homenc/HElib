@@ -23,47 +23,99 @@
 #include "hypercube.h"
 #include <NTL/lzz_pX.h>
 
-//! @class FFTHelper
-//! @brief Helper class for FFT over NTL::zz_p
-//!
-//! The class FFTHelper is used to help perform FFT over zz_p.
-//! The constructor supplies an element x in zz_p and an integer m,
-//! where x has order m and x has a square root in zz-p.
-//! Auxilliary data structures are constricted to support
-//! evaluation and interpolation at the points x^i for i in Z_m^*
-//!
-//! It is assumed that the zz_p-context is set prior to all
-//! constructor and method invocations.
-class FFTHelper {
 
-private:
-  long m;
-  zz_p m_inv;
-  zz_p root, iroot;
-  zz_pXModulus phimx;
-  Vec<bool> coprime;
-  long phim;
+//! @class PowerfulTranslationIndexes
+//! @brief Holds index tables for translation between powerful and zz_pX
+class PowerfulTranslationIndexes {
+ public:
+  long m;     // product of mi's
+  long phim;  // phi(m) = product of phi(mi)'s
+  Vec<long> mvec;   // mvec[i] = mi
+  Vec<long> phivec; // phivec[i] = phi(mi)
+  Vec<long> divvec; // divvec[i] = m/mi
+  Vec<long> invvec; // invvec[i] = (m/mi)^{-1} mod mi
 
-  mutable zz_pX powers, ipowers;
-  mutable Vec<mulmod_precon_t> powers_aux, ipowers_aux;
-  mutable fftRep Rb, iRb;
-  mutable fftrep_aux Rb_aux, iRb_aux;
-  mutable fftRep Ra; 
-  mutable zz_pX tmp;
+  CubeSignature longSig;  // hypercube of dimensions mi
+  CubeSignature shortSig; // hypercube of dimensions phi(mi)
 
-public:
-  FFTHelper(long _m, zz_p x);
+  Vec<long> polyToCubeMap; // index translation tables
+  Vec<long> cubeToPolyMap;
+  Vec<long> shortToLongMap;
 
-  void FFT(const zz_pX& f, Vec<zz_p>& v) const;
-    // compute v = { f(x^i) }_{i in Z_m^*}
-  void iFFT(zz_pX& f, const Vec<zz_p>& v, bool normalize = true) const;
-    // computes inverse transform. If !normalize, result is scaled by m
+  Vec<ZZX> cycVec; // cycvec[i] = Phi_mi(X)
+  ZZX phimX;
 
-  const zz_p& get_m_inv() const { return m_inv; }
-  // useful for aggregate normalization
-
+  PowerfulTranslationIndexes(const Vec<long>& mv);
 };
 
+/**
+ * @class PowerfulConversion
+ * @brief Conversion between powerful representation in R_m/(q) and zz_pX
+ *
+ * Usage pattern is as follows:
+ *
+ *    // compute tables for index translation
+ *    PowerfulTranslationIndexes ind(mvec); // mvec is some factorization of m
+ *
+ *    // ... set the current zz_p::modulus to something before initializing
+ *    PowerfulConversion pConv(ind);
+ *
+ *    // A powerful basis is defined wrt same modulus and cube signature
+ *    HyperCube<zz_p> powerful(pConv.getShortSig());
+ *
+ *    // ... some code here to initialize powerful
+ *    // code can also do other stuff, perhaps changing zz_p::modulus
+ *
+ *    pConv.restoreModulus(); // restore  zz_p::modulus
+ *    zz_pX poly;             // defined relative to the same modulus
+ *    pConv.powerfulToPoly(poly, powerful);
+ *
+ *    // ... some more code here, perhaps changing zz_p::modulus again
+ *
+ *    pConv.restoreModulus(); // restore  zz_p::modulus
+ *    pConv.polyToPowerful(powerful, poly);
+ **/
+class PowerfulConversion {
+  const PowerfulTranslationIndexes& indexes;
+  zz_pContext zzpContext;
+  Vec<zz_pXModulus> cycVec_p; // cycvec[i] = Phi_mi(X)
+  zz_pXModulus phimX_p;
+
+public:
+  explicit PowerfulConversion(const PowerfulTranslationIndexes& ind):
+  indexes(ind), cycVec_p(INIT_SIZE, ind.cycVec.length())
+  {
+    zzpContext.save(); // store the current modulus
+    for (long i=0; i<ind.cycVec.length(); i++) {
+      zz_pX phi_miX_p = conv<zz_pX>(ind.cycVec[i]); // convert to zz_pX 
+      cycVec_p[i] = phi_miX_p;           // then conver to zz_pXModulus
+    }
+    zz_pX tmp = conv<zz_pX>(ind.phimX); // convert to zz_pX 
+    phimX_p = tmp;          // then convert to zz_pXModulus
+  }
+
+  void restoreModulus() const { zzpContext.restore(); }
+  const CubeSignature& getLongSig() const { return indexes.longSig; }
+  const CubeSignature& getShortSig() const { return indexes.shortSig; }
+
+  //! The conversion routines return the value of the modulus q.
+  //! It is assumed that the modulus is already set before calling them
+  long powerfulToPoly(zz_pX& poly, const HyperCube<zz_p>& powerful) const;
+  long polyToPowerful(HyperCube<zz_p>& powerful, const zz_pX& poly) const;
+};
+
+//FIXME: Utility function computeProd should be moved to NumbTh
+
+//! returns \prod_d vec[d]
+long computeProd(const Vec<long>& vec);
+
+/********************************************************************/
+/****************    UNUSED CODE - COMMENTED OUT   ******************/
+/********************************************************************/
+
+#if 0
+//! For vec[d] = (a_d , b_d), returns \prod_d a_d^{b_d}
+long computeProd(const Vec< Pair<long, long> >& vec);
 
 //! For x=p^e, returns phi(p^e) = (p-1) p^{e-1}
 inline long computePhi(const Pair<long, long>& x)
@@ -73,28 +125,9 @@ inline long computePhi(const Pair<long, long>& x)
   return power_long(p, e - 1) * (p-1);
 }
 
-//! For x = (p,e), returns p^e
-inline long computePow(const Pair<long, long>& x)
-{
-  long p = x.a;
-  long e = x.b;
-  return power_long(p, e);
-}
-
-
-//! returns \prod_d vec[d]
-long computeProd(const Vec<long>& vec);
-
-//! For vec[d] = (a_d , b_d), returns \prod_d a_d^{b_d}
-long computeProd(const Vec< Pair<long, long> >& vec);
-
 //! For factors[d] = (p_d, e_d), computes
 //! phiVec[d] = phi(p_d^{e_d}) = (p_d-1) p_i{e_d-1}
 void computePhiVec(Vec<long>& phiVec,
-                   const Vec< Pair<long, long> >& factors);
-
-//! For factors[d] = (p_d, e_d), computes powVec[d] = p_d^{e_d}
-void computePowVec(Vec<long>& powVec, 
                    const Vec< Pair<long, long> >& factors);
 
 //! For powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}, computes
@@ -107,25 +140,6 @@ void computeDivVec(Vec<long>& divVec, long m,
 void computeInvVec(Vec<long>& invVec,
                    const Vec<long>& divVec, const Vec<long>& powVec);
 
-//! For powVec[d] = p_d^{e_d}, cycVec[d] = Phi_{p_d^{e_d}}(X) mod p
-void computeCycVec(Vec<zz_pX>& cycVec, const Vec<long>& powVec);
-
-//! m = m_1 ... m_k, m_d = p_d^{e_d} 
-//! powVec[d] = m_d
-//! invVec[d] = (m/m_d)^{-1} mod m_d
-//! computes polyToCubeMap[i] and cubeToPolyMap[i] 
-//!   where polyToCubeMap[i] is the index of (i_1, ..., i_k)
-//!   in the cube with CubeSignature longSig = (m_1, ..., m_k),
-//!   and (i_1, ..., i_k) is the unique tuple satistifying
-//!   i = i_1 (m/m_1) + ... + i_k (m/m_k) mod m
-//! and
-//!   cubeToPolyMap is the inverse map.
-void computePowerToCubeMap(Vec<long>& polyToCubeMap,
-                           Vec<long>& cubeToPolyMap,
-                           long m,
-                           const Vec<long>& powVec,
-                           const Vec<long>& invVec,
-                           const CubeSignature& longSig);
 
 //! shortSig is a CubeSignature for (phi(m_1), .., phi(m_k)),
 //! longSig is a CubeSignature for (m_1, ..., m_k).
@@ -150,7 +164,7 @@ void computeLongToShortMap(Vec<long>& longToShortMap,
 //! F_p[X_1,...,X_k]/(Phi_{m_1}(X_1), ..., Phi_{m_k}(X_k)),
 //! the cube remains unchanged.
 void recursiveReduce(const CubeSlice<zz_p>& s, 
-                     const Vec<zz_pX>& cycVec, 
+                     const Vec<zz_pXModulus>& cycVec, 
                      long d,
                      zz_pX& tmp1,
                      zz_pX& tmp2);
@@ -164,7 +178,7 @@ void recursiveReduce(const CubeSlice<zz_p>& s,
 void convertPolyToPowerful(HyperCube<zz_p>& cube, 
                            HyperCube<zz_p>& tmpCube, 
                            const zz_pX& poly,
-                           const Vec<zz_pX>& cycVec,
+                           const Vec<zz_pXModulus>& cycVec,
                            const Vec<long>& polyToCubeMap,
                            const Vec<long>& shortToLongMap);
 
@@ -174,20 +188,50 @@ void convertPowerfulToPoly(zz_pX& poly,
                            long m,
                            const Vec<long>& shortToLongMap,
                            const Vec<long>& cubeToPolyMap,
-                           const zz_pX& phimX);
+                           const zz_pXModulus& phimX);
+#endif
+/********************************************************************/
+#if 0
+//! For x = (p,e), returns p^e
+inline long computePow(const Pair<long, long>& x)
+{
+  long p = x.a;
+  long e = x.b;
+  return power_long(p, e);
+}
+
+//! For factors[d] = (p_d, e_d), computes powVec[d] = p_d^{e_d}
+void computePowVec(Vec<long>& powVec, 
+                   const Vec< Pair<long, long> >& factors);
+
+//! this maps an index j in [phi(m)] to a vector
+//! representing the powerful basis coordinates
+void mapIndexToPowerful(Vec<long>& pow, long j, const Vec<long>& phiVec);
+
+//! @deprecated For powVec[d]=p_d^{e_d}, cycVec[d] = Phi_{p_d^{e_d}}(X) mod p
+void computeCycVec(Vec<zz_pXModulus>& cycVec, const Vec<long>& powVec);
+
+//! m = m_1 ... m_k, m_d = p_d^{e_d} 
+//! powVec[d] = m_d
+//! invVec[d] = (m/m_d)^{-1} mod m_d
+//! computes polyToCubeMap[i] and cubeToPolyMap[i] 
+//!   where polyToCubeMap[i] is the index of (i_1, ..., i_k)
+//!   in the cube with CubeSignature longSig = (m_1, ..., m_k),
+//!   and (i_1, ..., i_k) is the unique tuple satistifying
+//!   i = i_1 (m/m_1) + ... + i_k (m/m_k) mod m
+//! and
+//!   cubeToPolyMap is the inverse map.
+void computePowerToCubeMap(Vec<long>& polyToCubeMap,
+                           Vec<long>& cubeToPolyMap,
+                           long m,
+                           const Vec<long>& powVec,
+                           const Vec<long>& invVec,
+                           const CubeSignature& longSig);
 
 //! powVec[d] = m_d = p_d^{e_d}
 //! computes multiEvalPoints[d] as a vector of length phi(m_d)
 //!   containing base^{(m/m_d) j} for j in Z_{m_d}^*
 void computeMultiEvalPoints(Vec< Vec<zz_p> >& multiEvalPoints,
-                            const zz_p& base,
-                            long m,
-                            const Vec<long>& powVec,
-                            const Vec<long>& phiVec);
-
-//! powVec[d] = m_d = p_d^{e_d}
-//! computes multiEvalPoints[d] as an FFTHelper for base^{m/m_d}
-void computeMultiEvalPoints(Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
                             const zz_p& base,
                             long m,
                             const Vec<long>& powVec,
@@ -231,6 +275,64 @@ inline void eval(HyperCube<zz_p>& cube,
    recursiveEval(CubeSlice<zz_p>(cube), multiEvalPoints, 0, tmp1, tmp2);
 } 
 
+void mapPowerfulToPoly(ZZX& poly, 
+                       const Vec<long>& pow, 
+                       const Vec<long>& divVec,
+                       long m,
+                       const ZZX& phimX);
+#endif
+/********************************************************************/
+#if 0
+//! @class FFTHelper
+//! @brief Helper class for FFT over NTL::zz_p
+//!
+//! The class FFTHelper is used to help perform FFT over zz_p.
+//! The constructor supplies an element x in zz_p and an integer m,
+//! where x has order m and x has a square root in zz-p.
+//! Auxilliary data structures are constricted to support
+//! evaluation and interpolation at the points x^i for i in Z_m^*
+//!
+//! It is assumed that the zz_p-context is set prior to all
+//! constructor and method invocations.
+class FFTHelper {
+
+private:
+  long m;
+  zz_p m_inv;
+  zz_p root, iroot;
+  zz_pXModulus phimx;
+  Vec<bool> coprime;
+  long phim;
+
+  mutable zz_pX powers, ipowers;
+  mutable Vec<mulmod_precon_t> powers_aux, ipowers_aux;
+  mutable fftRep Rb, iRb;
+  mutable fftrep_aux Rb_aux, iRb_aux;
+  mutable fftRep Ra; 
+  mutable zz_pX tmp;
+
+public:
+  FFTHelper(long _m, zz_p x);
+
+  void FFT(const zz_pX& f, Vec<zz_p>& v) const;
+    // compute v = { f(x^i) }_{i in Z_m^*}
+  void iFFT(zz_pX& f, const Vec<zz_p>& v, bool normalize = true) const;
+    // computes inverse transform. If !normalize, result is scaled by m
+
+  const zz_p& get_m_inv() const { return m_inv; }
+  // useful for aggregate normalization
+
+};
+
+
+//! powVec[d] = m_d = p_d^{e_d}
+//! computes multiEvalPoints[d] as an FFTHelper for base^{m/m_d}
+void computeMultiEvalPoints(Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+                            const zz_p& base,
+                            long m,
+                            const Vec<long>& powVec,
+                            const Vec<long>& phiVec);
+
 void recursiveEval(const CubeSlice<zz_p>& s,
                    const Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
                    long d,
@@ -254,13 +356,4 @@ void recursiveInterp(const CubeSlice<zz_p>& s,
 
 void interp(HyperCube<zz_p>& cube,
 	    const Vec< copied_ptr<FFTHelper> >& multiEvalPoints);
-
-//! this maps an index j in [phi(m)] to a vector
-//! representing the powerful basis coordinates
-void mapIndexToPowerful(Vec<long>& pow, long j, const Vec<long>& phiVec);
-
-void mapPowerfulToPoly(ZZX& poly, 
-                       const Vec<long>& pow, 
-                       const Vec<long>& divVec,
-                       long m,
-                       const ZZX& phimX);
+#endif

@@ -5,74 +5,6 @@ namespace NTL {} using namespace NTL;
 #include "hypercube.h"
 #include "powerful.h"
 
-void convertToPowerful(Vec<zz_p>& v, const zz_pX& F, const Vec<long>& mvec)
-{
-  // mvec contains the prime-power factorization of m = \prod_{i=1}^k mi
-  long nfactors = mvec.length(); // = k
-  long m = computeProd(mvec);    // compute m itself
-
-  Vec<long> phivec; // phivec holds phi(mi) for all factors mi
-  phivec.SetLength(nfactors);
-  for (long i = 0; i < nfactors; i++) phivec[i] = phi_N(mvec[i]);
-
-  long phim = computeProd(phivec); // phi(m) = prod_i phi(mi)
-
-  Vec<long> divvec; // divvec[i] = m/mi
-  computeDivVec(divvec, m, mvec);
-
-  Vec<long> invvec; // invvec[i] = (m/mi)^{-1} mod mi
-  computeInvVec(invvec, divvec, mvec);
-
-  CubeSignature shortsig(phivec);
-  CubeSignature longsig(mvec);
-
-  // Let (i_1,...,i_k) be the representation of i in base
-  // (m/m1,...,m/mk), namely i = i_1 (m/m_1)+...+i_k (m/m_k) mod m.
-  // Then polyToCubeMap[i] is the lexicographic index of the tuple
-  // (i_1,...,i_k) in the cube with dimensions (m_1, ..., m_k).
-  // cubeToPolyMap is the inverse map, polyToCubeMap[cubeToPolyMap[j]]=j.
-  Vec<long> polyToCubeMap;
-  Vec<long> cubeToPolyMap;
-  computePowerToCubeMap(polyToCubeMap, cubeToPolyMap, m, mvec, invvec, longsig);
-
-  // shortSig is a CubeSignature for (phi(m_1),..., phi(m_k)), and longSig
-  // is a CubeSignature for (m_1, ..., m_k). shortToLongMap[i] maps an
-  // index i wrt shortSig to an index i' wrt longSig so that both indexes
-  // correspond to the same tuple (i_1,...,i_k).
-  Vec<long> shortToLongMap;
-  computeShortToLongMap(shortToLongMap, shortsig, longsig);
-
-
-  Vec<zz_pX> cycvec;
-  computeCycVec(cycvec, mvec);
-
-
-  ZZX PhimX = Cyclotomic(m);
-  zz_pX phimX = conv<zz_pX>(PhimX);
-
-  HyperCube<zz_p> cube(shortsig);
-  HyperCube<zz_p> tmpCube(longsig);
-
-  convertPolyToPowerful(cube, tmpCube, F, cycvec,
-                        polyToCubeMap, shortToLongMap);
-
-  zz_pX poly1;
-
-  convertPowerfulToPoly(poly1, cube, m, shortToLongMap, cubeToPolyMap, phimX);
-
-  if (F == poly1)
-    cout << "*********** :-)\n";
-  else {
-    cout << "*********** :-(\n";
-    cout << F << "\n";
-    cout << poly1 << "\n";
-  }
-
-  v.SetLength(phim);
-  for (long i = 0; i < phim; i++) v[i] = cube[i];
-}
-
-
 void  TestIt(long R, long p, long r, long c, long _k, long w,
                long L, const Vec<long>& mvec, long width)
 {
@@ -133,24 +65,18 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   // polynomial with as many variables Xi as factors mi in mvec. cube has
   // degree phi(mi) in the variable Xi, and the coefficients are given
   // in lexicographic order.
-  //
-  // Let ni=phi(mi), lexicographic ordering induces a correspondence
-  //       (i_1,...,i_k) <-> i=\sum_j i_j * \prod_{t>j} n_t.
-  // We denote lex(i_1,...,i_k)=i and lex^{-1}(i)=(i_1,...,i_k).
-  // To convert cube to a ZZX polynomial, we need to compute for all i:
-  //   - (i1,...,ik) = lex^{-1}(i)    // coefficient of term \prod_t Xt^{it}
-  //   - e = \sum_{t=1}^k  it * m/mt  // The corresponding ZZX exponent
-  //   - SetCoeff(poly, e, cube[i])   // poly_e = cube[i]
-  //
-  // The computeation of e from i is stored in cubeToPolyMap, so we can do
-  // Vec<long> polyToCubeMap;
-  // Vec<long> cubeToPolyMap;
-  // computePowerToCubeMap(polyToCubeMap,cubeToPolyMap,m,mvec,invvec,longsig);
-  // for (long i=0; i<cube.length(); i++)
-  //    SetCoeff(poly, cubeToPolyMap[i], cube[i]);
 
-  Vec<zz_p> cube;
-  convertToPowerful(cube, F, mvec);
+  // compute tables for converting between powerful and zz_pX
+  PowerfulTranslationIndexes ind(mvec); // indpendent of p
+  PowerfulConversion pConv(ind);        // depends on p
+
+  HyperCube<zz_p> cube(pConv.getShortSig());
+  pConv.polyToPowerful(cube, F);
+
+  // Sanity check: convert back and compare
+  zz_pX F2;
+  pConv.powerfulToPoly(F2, cube);
+  if (F != F2) cerr << " @@@ conversion error ):\n";
 
   // pack the coefficients from cube in the plaintext slots: the j'th
   // slot contains the polynomial pj(X) = \sum_{t=0}^{d-1} cube[jd+t] X^t
