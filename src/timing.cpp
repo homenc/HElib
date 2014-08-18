@@ -117,3 +117,31 @@ void printAllTimers(ostream& str)
     str << "  " << name << ": " << t << " / " << n << " = " << ave << "   [" << loc << "]\n";
   }
 }
+
+bool getTimerByName(FHEtimer& timer, const char* name)
+{
+  for (long i = 0; i < long(timerMap.size()); i++) {
+    if (strcmp(name, timerMap[i]->name) == 0) {
+      timer = *timerMap[i];
+      return true;
+    }
+  }
+  timer.numCalls = timer.counter = 0;
+  return false;
+}
+
+bool printNamedTimer(ostream& str, const char* name)
+{
+  FHEtimer timer(NULL,NULL);
+  getTimerByName(timer, name);
+  long n = timer.getNumCalls();
+  if (n>0) {
+    double t = timer.getTime();
+    double ave = t/n;
+
+    str << "  " << name << ": " << t << " / " << n << " = " 
+	<< ave << "   [" << timer.loc << "]\n";
+    return true;
+  }
+  return false;
+}

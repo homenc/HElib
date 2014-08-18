@@ -82,6 +82,10 @@ void resetAllTimers();
 //! Print the value of all timers to stream
 void printAllTimers(std::ostream& str=std::cerr);
 
+// return true if timer was found, false otherwise
+bool getTimerByName(FHEtimer& timer, const char* name);
+bool printNamedTimer(ostream& str, const char* name);
+
 
 class auto_timer {
 public:

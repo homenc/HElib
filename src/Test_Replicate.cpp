@@ -173,21 +173,20 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
   // Get some timing results
   for (long i=0; i<20 && i<ea.size(); i++) {
     xc1 = xc0;
-    startFHEtimer("replicate");
+    FHE_NTIMER_START(replicate);
     replicate(ea, xc1, i);
-    stopFHEtimer("replicate");    
+    FHE_NTIMER_STOP(replicate);
   }
 
   cerr << "** Testing replicateAll():\n";
   replicateVerboseFlag = v;
   ReplicateHandler *handler = new ReplicateTester(secretKey, ea, xp0, M);
   try {
-    startFHEtimer("replicateAll");
+    FHE_NTIMER_START(replicateAll);
     replicateAll(ea, xc0, handler, bnd);
   }
   catch (StopReplicate) {
   }
-  stopFHEtimer("replicateAll");
 
   delete handler;
 

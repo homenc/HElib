@@ -385,19 +385,19 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
     // encrypt the random vector
     Ctxt ctxt(publicKey);
-    startFHEtimer("ea.encrypt");
+    FHE_NTIMER_START(ea_encrypt);
     ea.encrypt(ctxt, publicKey, v);
-    stopFHEtimer("ea.encrypt");
+    FHE_NTIMER_STOP(ea_encrypt);
 
     v.mat_mul(*ptr);         // multiply the plaintext vector
-    startFHEtimer("ea.mat_mul");
+    FHE_NTIMER_START(ea_mat_mul);
     ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
-    stopFHEtimer("ea.mat_mul");
+    FHE_NTIMER_STOP(ea_mat_mul);
 
     PlaintextArray v1(ea);
-    startFHEtimer("ea.decrypt");
+    FHE_NTIMER_START(ea_decrypt);
     ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
-    stopFHEtimer("ea.decrypt");
+    FHE_NTIMER_STOP(ea_decrypt);
 
     if (v.equals(v1))        // check that we've got the right answer
       cout << "Nice!!\n";
@@ -415,19 +415,19 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
     // encrypt the random vector
     Ctxt ctxt(publicKey);
-    startFHEtimer("ea.encrypt1");
+    FHE_NTIMER_START(ea_encrypt1);
     ea.encrypt(ctxt, publicKey, v);
-    stopFHEtimer("ea.encrypt1");
+    FHE_NTIMER_STOP(ea_encrypt1);
 
     v.mat_mul(*ptr);         // multiply the plaintext vector
-    startFHEtimer("ea.mat_mul1");
+    FHE_NTIMER_START(ea_mat_mul1);
     ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
-    stopFHEtimer("ea.mat_mul1");
+    FHE_NTIMER_STOP(ea_mat_mul1);
 
     PlaintextArray v1(ea);
-    startFHEtimer("ea.decrypt1");
+    FHE_NTIMER_START(ea_decrypt1);
     ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
-    stopFHEtimer("ea.decrypt1");
+    FHE_NTIMER_STOP(ea_decrypt1);
 
     if (v.equals(v1))        // check that we've got the right answer
       cout << "Nice!!\n";
