@@ -544,6 +544,51 @@ AltCRT& AltCRT::operator=(const ZZ& num)
   return *this;
 }
 
+// DIRT: this method affect the NTL zz_p::modulus
+long AltCRT::getOneRow(zz_pX& row, long idx) const
+{
+  if (!map.getIndexSet().contains(idx)) // idx not in the primeset
+    return 0;
+
+  context.ithModulus(idx).restoreModulus(); // recover NTL modulus for prime
+  long q = context.ithPrime(idx);
+
+  // LAZY: first reduce map[idx] mod phimx
+  const zz_pXModulus1& phimx = context.ithModulus(idx).getPhimX();
+  reduce12(const_cast<zz_pX&>(map[idx]), phimx);
+  row = map[idx];
+
+  return q;
+}
+
+// Get the row corresponding to the i'th moduli, in Vec<long> format.
+// For conveience, returns the modulus that was used for this row.
+// If idx is not in the current primesSet then do nothing and return 0;
+long AltCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
+{
+  if (!map.getIndexSet().contains(idx)) // idx not in the primeset
+    return 0;
+
+  zz_pBak bak; bak.save();  // backup NTL's current modulus
+  context.ithModulus(idx).restoreModulus(); // recover NTL modulus for prime
+  long q = context.ithPrime(idx);
+
+  // LAZY: first reduce map[idx] mod phimx
+  const zz_pXModulus1& phimx = context.ithModulus(idx).getPhimX();
+  reduce12(const_cast<zz_pX&>(map[idx]), phimx);
+
+  // copy the row to Vec<long> format
+  conv(row, map[idx].rep); // does this work??
+
+  // By default, integers are in [0,q).
+  // If we need the symmetric interval then make it so.
+  if (positive) {
+    long phim = context.zMStar.getPhiM();
+    for (long j = 0; j < phim; j++) if (row[j] > q/2) row[j] -= q;
+  }
+  return q;
+} // NTL's current modulus restored upon exit
+
 
 
 // DIRT: I am not sure if this function behaves the same

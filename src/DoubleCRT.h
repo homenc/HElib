@@ -173,6 +173,10 @@ public:
   DoubleCRT& operator=(const ZZ& num);
   DoubleCRT& operator=(const long num) { *this = to_ZZ(num); return *this; }
 
+  //! Get one row of a polynomial
+  long getOneRow(Vec<long>& row, long idx, bool positive=false) const;
+  long getOneRow(zz_pX& row, long idx) const; // This affects NTL's modulus
+
   //! @brief Recovering the polynomial in coefficient representation.
   //! This yields an integer polynomial with coefficients in [-P/2,P/2],
   //! unless the positive flag is set to true, in which case we get

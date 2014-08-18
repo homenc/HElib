@@ -467,6 +467,40 @@ DoubleCRT& DoubleCRT::operator=(const ZZ& num)
   return *this;
 }
 
+// DIRT: this method affect the NTL zz_p::modulus
+long DoubleCRT::getOneRow(zz_pX& row, long idx) const
+{
+  if (!map.getIndexSet().contains(idx)) // idx not in the primeset
+    return 0;
+
+  // convert from evaluation to standard coefficient representation
+  context.ithModulus(idx).restoreModulus(); // recover NTL modulus for prime
+  context.ithModulus(idx).iFFT(row, map[idx]);
+  return context.ithPrime(idx);
+}
+
+// Get the row corresponding to the i'th moduli, in Vec<long> format.
+// For conveience, returns the modulus that was used for this row.
+// If idx is not in the current primesSet then do nothing and return 0;
+long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
+{
+  zz_pBak bak; bak.save();   // backup NTL's current modulus
+
+  zz_pX& tmp = context.ithModulus(idx).getScratch();
+  long q = getOneRow(tmp,idx);
+  if (q==0) return 0;        // no such index
+
+  conv(row, tmp.rep);        // copy the row to Vec<long> format
+
+  // By default, integers are in [0,q).
+  // If we need the symmetric interval then make it so.
+  if (!positive) {
+    long phim = context.zMStar.getPhiM();
+    for (long j = 0; j < phim; j++) if (row[j] > q/2) row[j] -= q;
+  }
+  return q;
+}
+
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
