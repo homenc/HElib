@@ -1,9 +1,69 @@
 #include "hypercube.h"
 #include "powerful.h"
+#include "FHEContext.h"
 
-void usage()
+void testSimpleConversion(const Vec<long>& mvec)
 {
-  cerr << "bad args\n";
+  PowerfulTranslationIndexes ind(mvec);
+  PowerfulConversion pConv;
+  long q = NextPrime(ind.m);
+  zz_p::init(q);
+  pConv.initPConv(ind); // uses ind and also the current modulus q
+  zz_pX poly, poly2;
+  random(poly,ind.phim);
+
+  HyperCube<zz_p> cube(pConv.getShortSig());
+  pConv.polyToPowerful(cube, poly);
+  pConv.powerfulToPoly(poly2, cube);
+  if (poly == poly2) cerr << " simple conversion succeeds\n";
+  else               cerr << " simple conversion failed\n";
+}
+
+void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
+{
+  PowerfulDCRT p2d(context, mvec);
+  DoubleCRT dcrt(context);
+  ZZX poly1, poly2;
+  Vec<ZZ> pwrfl1, pwrfl2;
+  IndexSet set = dcrt.getIndexSet();
+
+  dcrt.randomize(); // a random polynomial
+  dcrt.toPoly(poly1); //, /*positive=*/true);
+
+  p2d.dcrtToPowerful(pwrfl1, dcrt);
+  p2d.ZZXtoPowerful(pwrfl2, poly1, set);
+  if (pwrfl2 != pwrfl1) cerr << " dcrt->powerful != dcrt->poly->powerful :(\n";
+  else                  cerr << " dcrt->powerful == dcrt->poly->powerful :)\n";
+
+  p2d.powerfulToZZX(poly2,pwrfl2, set);
+  if (poly1!=poly2) {
+    cerr << " poly->powerful->poly failed :(\n";
+    long idx;
+    for (idx=0; idx <= deg(poly1); idx++) if (poly1[idx]!=poly2[idx]) break;
+
+    cerr << "poly1["<<idx<<"]="<<poly1[idx]<< ",poly2[*]="<<poly2[idx]<<endl;
+    for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+      cerr << "mod " << context.ithPrime(i) << ": poly1[*]="
+	   << rem(poly1[idx], context.ithPrime(i))<< ", poly2[*]="
+	   << rem(poly2[idx], context.ithPrime(i))<< endl;
+    }
+    poly1 -= poly2;
+    PolyRed(poly1, context.productOfPrimes(set));
+    if (!IsZero(poly1)) 
+      cerr << "(poly1-poly2)%product=" << poly1<<endl;
+    else cerr << "poly1=poly2 (mod product)\n";
+  }
+  else cerr << " poly->powerful->poly succeeded :)\n";
+}
+
+void usage(char *prog) 
+{
+  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
+  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cerr << "  e.g, 'm1=3 m2=5 m3=7 p=2 r=1'\n\n";
+  cerr << "  m1,m2,m3 are the factors of m=m1*m2*m3 [default: m1=7,m2=13, m3=17]\n";
+  cerr << "  p is the plaintext base [default=2]" << endl;
+  cerr << "  r is the lifting [default=1]" << endl;
   exit(0);
 }
 
@@ -12,17 +72,43 @@ int main(int argc, char *argv[])
 
   argmap_t argmap;
 
-  argmap["m"] = "225"; // 225 = 5^2*3^2
-  argmap["iter"] = "10";
+  argmap["m1"] = "7";
+  argmap["m2"] = "13";
+  argmap["m3"] = "17";
+  argmap["p"] = "2";
+  argmap["r"] = "1";
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage();
+  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
-  long m = atoi(argmap["m"]);
-  long iter = atoi(argmap["iter"]);
+  long m1 = atoi(argmap["m1"]);
+  long m2 = atoi(argmap["m2"]);
+  long m3 = atoi(argmap["m3"]);
+  long p = atoi(argmap["p"]);
+  long r = atoi(argmap["r"]);
 
-  cout << "m=" << m << "\n";
+  if (m1<2 || m2<2) {
+    cerr << "m1,m2 are mandatory\n";
+    exit(0);
+  }
+  Vec<long> mvec(INIT_SIZE,2);
+  mvec[0] = m1;
+  mvec[1] = m2;
+  if (m3>1) append(mvec,m3);
+  long m = computeProd(mvec);
 
+  cout << "m="<<m<<" "<<mvec<<", p="<<p<<", r="<<r<<endl;
+
+  // Test conversion between zz_pX abd HyperCube<zz_p>
+  testSimpleConversion(mvec);
+
+  FHEcontext context(m,p,r);
+  buildModChain(context, /*L=*/5, /*c=*/3);
+
+  testHighLvlConversion(context, mvec);
+  return 0;
+  /****************** UNUSED OLD CODE, COMMENTED OUT *****************/
+#if 0
   long q; // find least prime q s/t q = 2*k*m + 1 for some k
 
   for (long k = 1; q = 2*k*m + 1, !ProbPrime(q, 20); k++);
@@ -202,5 +288,5 @@ int main(int argc, char *argv[])
   }
   t = GetTime()-t;
   cout << t << "\n";
-  
+#endif  
 }
