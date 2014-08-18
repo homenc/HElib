@@ -47,7 +47,7 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
 
 class EncryptedArray;
 class EvalMap;
-
+class PowerfulDCRT;
 /**
  * @class FHEcontext
  * @brief Maintaining the parameters
@@ -66,22 +66,6 @@ public:
 
   //! @brief The structure of Z[X]/(Phi_m(X),p^r)
   PAlgebraMod alMod;
-
-  //! @name Bootstrapping-related data in the context
-  ///@{
-  //! PAlgebraMod, EncryptedArray objects to handle bootstrapping, they refer
-  //! to plaintext space p^{r'} gratet than the p^r plantext space of alMod
-  static const long  bootstrapHwt = 60; // Hamming weight of bootstrapping key
-  PAlgebraMod* bootstrapPAM;
-  EncryptedArray* bootstrapEA;
-
-  //! We also need an EncryptedArray relative to plaintext space p^r
-  EncryptedArray* secondEA;
-
-  //! Tables for computing the linear maps during bootstrapping
-  EvalMap* firstMap;
-  EvalMap* secondMap;
-  ///@}
 
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   xdouble stdev;
@@ -134,9 +118,28 @@ public:
   ZZX modP_digPoly;     // Initialized during call to Ctxt::extractDigits(...)
   long modP_digPoly_r;  // relative to which p^r was this computed
 
+  //! @name Bootstrapping-related data in the context
+  ///@{
+  //! PAlgebraMod, EncryptedArray objects to handle bootstrapping, they refer
+  //! to plaintext space p^{r'} gratet than the p^r plantext space of alMod
+  static const long  bootstrapHwt = 60; // Hamming weight of bootstrapping key
+  PAlgebraMod* bootstrapPAM;
+  EncryptedArray* bootstrapEA;
+
+  //! We also need an EncryptedArray relative to plaintext space p^r
+  EncryptedArray* secondEA;
+
+  //! Tables for computing the linear maps during bootstrapping
+  EvalMap* firstMap;
+  EvalMap* secondMap;
+
+  //! Tables to ocnvert between ZZX and powerful representation
+  PowerfulDCRT* p2dConversion;
+
   ZZX allOnes;  // all-ones in powerful representation
   // If p=2 and m1 ... mk is the given factorization of m, then
   // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
+  ///@}
 
   /******************************************************************/
   ~FHEcontext(); // destructor

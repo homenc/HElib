@@ -444,7 +444,7 @@ istream& operator>> (istream &str, FHEcontext& context)
 // what p^r needs to be for bootstrapping
 static long bootstrapR(long m, long p, long r)
 {
-  return 2*r - 1 // + ceil( log_p((t+1)/2) ), t is HWT of bootstrapping key
+  return 2*r // + ceil( log_p((t+1)/2) ), t is HWT of bootstrapping key
     + ceil( log((FHEcontext::bootstrapHwt+1.0)/2.0) / log((double)p) );
 
   // FIXME: Check that we can bootstrap the plaintext space p^r
@@ -459,6 +459,7 @@ FHEcontext::~FHEcontext()
   if (secondEA!=NULL) delete secondEA;
   if (firstMap!=NULL) delete firstMap;
   if (secondMap!=NULL) delete secondMap;
+  if (p2dConversion!=NULL) delete p2dConversion;
 }
 
 // Constructors must ensure that alMod points to zMStar, and
@@ -482,6 +483,7 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   secondEA = NULL;
   firstMap = NULL;
   secondMap = NULL;
+  p2dConversion = NULL;
 }
 
 
@@ -509,6 +511,8 @@ void FHEcontext::makeBootstrappable(const Vec<long>& mvec, long width)
 
   firstMap  = new EvalMap(*bootstrapEA, mvec, width, true);
   secondMap = new EvalMap(*secondEA, mvec, width, false);
+
+  p2dConversion = new PowerfulDCRT(*this, mvec);
 
     // If p=2 and m1 ... mk is the given factorization of m, then
     // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
