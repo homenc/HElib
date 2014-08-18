@@ -17,12 +17,18 @@
  * @file powerful.h
  * @brief The "powerful basis" of a cyclotomic ring
  **/
+#include <NTL/lzz_pX.h>
 #include "NumbTh.h"
 #include "bluestein.h"
 #include "cloned_ptr.h"
 #include "hypercube.h"
-#include <NTL/lzz_pX.h>
+#include "DoubleCRT.h"
+#include "FHEContext.h"
 
+//FIXME: Utility function computeProd should be moved to NumbTh
+
+//! returns \prod_d vec[d]
+long computeProd(const Vec<long>& vec);
 
 //! @class PowerfulTranslationIndexes
 //! @brief Holds index tables for translation between powerful and zz_pX
@@ -60,6 +66,10 @@ class PowerfulTranslationIndexes {
  *    // ... set the current zz_p::modulus to something before initializing
  *    PowerfulConversion pConv(ind);
  *
+ *    // Alternatively use
+ *    //   PowerfulConversion pConv(); pConv.initPConv(ind);
+ *    // Only the latter call needs zz_p::modulus to be defined
+ *
  *    // A powerful basis is defined wrt same modulus and cube signature
  *    HyperCube<zz_p> powerful(pConv.getShortSig());
  *
@@ -76,27 +86,34 @@ class PowerfulTranslationIndexes {
  *    pConv.polyToPowerful(powerful, poly);
  **/
 class PowerfulConversion {
-  const PowerfulTranslationIndexes& indexes;
+  const PowerfulTranslationIndexes* indexes;
   zz_pContext zzpContext;
   Vec<zz_pXModulus> cycVec_p; // cycvec[i] = Phi_mi(X)
   zz_pXModulus phimX_p;
 
 public:
+
+  PowerfulConversion(): indexes(NULL) {}
+
   explicit PowerfulConversion(const PowerfulTranslationIndexes& ind):
-  indexes(ind), cycVec_p(INIT_SIZE, ind.cycVec.length())
+  indexes(NULL) { initPConv(ind); }
+
+  void initPConv(const PowerfulTranslationIndexes& ind)
   {
+    if (indexes!=NULL) return; // cannot re-initialize a non-NULL object
+    indexes = &ind;
+
+    cycVec_p.SetLength(ind.cycVec.length());
     zzpContext.save(); // store the current modulus
     for (long i=0; i<ind.cycVec.length(); i++) {
-      zz_pX phi_miX_p = conv<zz_pX>(ind.cycVec[i]); // convert to zz_pX 
-      cycVec_p[i] = phi_miX_p;           // then conver to zz_pXModulus
+      cycVec_p[i] = conv<zz_pX>(ind.cycVec[i]); // convert to zz_pXModulus
     }
-    zz_pX tmp = conv<zz_pX>(ind.phimX); // convert to zz_pX 
-    phimX_p = tmp;          // then convert to zz_pXModulus
+    phimX_p = conv<zz_pX>(ind.phimX); // convert to zz_pXModulus
   }
 
   void restoreModulus() const { zzpContext.restore(); }
-  const CubeSignature& getLongSig() const { return indexes.longSig; }
-  const CubeSignature& getShortSig() const { return indexes.shortSig; }
+  const CubeSignature& getLongSig() const { return indexes->longSig; }
+  const CubeSignature& getShortSig() const { return indexes->shortSig; }
 
   //! The conversion routines return the value of the modulus q.
   //! It is assumed that the modulus is already set before calling them
@@ -104,10 +121,42 @@ public:
   long polyToPowerful(HyperCube<zz_p>& powerful, const zz_pX& poly) const;
 };
 
-//FIXME: Utility function computeProd should be moved to NumbTh
+/**
+ * @class PowerfulDCRT
+ * @brief Conversion between powerful representation, DoubleCRT, and ZZX
+ **/
+class PowerfulDCRT {
+  const FHEcontext& context; // points to the context for the DoubleCRT's
 
-//! returns \prod_d vec[d]
-long computeProd(const Vec<long>& vec);
+  PowerfulTranslationIndexes indexes; // modulus-independent tables
+
+  // a vector of PowerfulConversion tables, one for each modulus in the chain
+  Vec<PowerfulConversion> pConvVec;
+
+public:
+  PowerfulDCRT(const FHEcontext& _context, const Vec<long>& mvec);
+
+  const PowerfulTranslationIndexes& getIndexTranslation() const
+  { return indexes; }
+  const PowerfulConversion& getPConv(long i) const
+  { return pConvVec.at(i); }
+
+  // The Powerful<->DCRT conversion goes through SingleCRT
+  void dcrtToPowerful(Vec<ZZ>& powerful, const DoubleCRT& dcrt) const;
+  void powerfulToDCRT(DoubleCRT& dcrt, const Vec<ZZ>& powerful) const;
+
+  // If the IndexSet is omitted, default to all the primes in the chain
+  void ZZXtoPowerful(Vec<ZZ>& powerful, const ZZX& poly,
+		     IndexSet s=IndexSet::emptySet()    ) const;
+  void powerfulToZZX(ZZX& poly, const Vec<ZZ>& powerful,
+		     IndexSet s=IndexSet::emptySet()    ) const;
+};
+
+
+
+
+
+
 
 /********************************************************************/
 /****************    UNUSED CODE - COMMENTED OUT   ******************/

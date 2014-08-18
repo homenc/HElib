@@ -19,7 +19,6 @@ long computeProd(const Vec<long>& vec)
   return prod;
 }
 
-
 // powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}
 // computes divVec[d] = m/p_d^{e_d}
 inline void computeDivVec(Vec<long>& divVec, long m,
@@ -204,19 +203,19 @@ long PowerfulConversion::polyToPowerful(HyperCube<zz_p>& powerful,
   HyperCube<zz_p> tmpCube(getLongSig());
 
   long n = deg(poly);
-  assert(n < indexes.m);
+  assert(n < indexes->m);
 
   for (long i = 0; i <= n; i++)
-    tmpCube[indexes.polyToCubeMap[i]] = poly[i];
+    tmpCube[indexes->polyToCubeMap[i]] = poly[i];
 
-  for (long i = n+1; i < indexes.m; i++)
-    tmpCube[indexes.polyToCubeMap[i]] = 0;
+  for (long i = n+1; i < indexes->m; i++)
+    tmpCube[indexes->polyToCubeMap[i]] = 0;
 
   zz_pX tmp1, tmp2;
   recursiveReduce(CubeSlice<zz_p>(tmpCube), cycVec_p, 0, tmp1, tmp2);
 
-  for (long i = 0; i < indexes.phim; i++)
-    powerful[i] = tmpCube[indexes.shortToLongMap[i]];
+  for (long i = 0; i < indexes->phim; i++)
+    powerful[i] = tmpCube[indexes->shortToLongMap[i]];
 
   return zz_p::modulus();
 }
@@ -224,22 +223,120 @@ long PowerfulConversion::polyToPowerful(HyperCube<zz_p>& powerful,
 long PowerfulConversion::powerfulToPoly(zz_pX& poly,
 					const HyperCube<zz_p>& powerful) const
 {
-  //  convertPowerfulToPoly(poly, powerful, indexes.m, indexes.shortToLongMap,
-  //			indexes.cubeToPolyMap, phimX_p);
+  //  convertPowerfulToPoly(poly, powerful, indexes->m, indexes.shortToLongMap,
+  //			indexes->cubeToPolyMap, phimX_p);
   zz_pX tmp; // a temporary degree-(m-1) polynomial, initialized to all-zero
-  tmp.SetLength(indexes.m);
-  for (long i = 0; i < indexes.m; i++)
+  tmp.SetLength(indexes->m);
+  for (long i = 0; i < indexes->m; i++)
     tmp[i] = 0;
 
   // copy the coefficienct from hypercube in the right order
-  for (long i = 0; i < indexes.phim; i++)
-    tmp[indexes.cubeToPolyMap[indexes.shortToLongMap[i]]] = powerful[i];
+  for (long i = 0; i < indexes->phim; i++)
+    tmp[indexes->cubeToPolyMap[indexes->shortToLongMap[i]]] = powerful[i];
       // FIXME: these two maps could be composed into a single map
 
   tmp.normalize();
   rem(poly, tmp, phimX_p); // reduce modulo Phi_m(X)
 
   return zz_p::modulus();
+}
+
+PowerfulDCRT::PowerfulDCRT(const FHEcontext& _context, const Vec<long>& mvec):
+  context(_context), indexes(mvec)
+{
+  zz_pBak bak; bak.save(); // backup NTL's current modulus
+
+  // initialize the modulus-dependent tables for all the moduli in the chain
+  long n = context.numPrimes();
+  pConvVec.SetLength(n);     // allocate space
+  for (long i=0; i<n; i++) { // initialize
+    context.ithModulus(i).restoreModulus(); // set current mod to i'th prime
+    pConvVec[i].initPConv(indexes);         // initialize tables
+  }
+} // NTL's modulus restored upon exit
+
+
+// The Powerful<->DCRT conversion goes through SingleCRT
+void PowerfulDCRT::dcrtToPowerful(Vec<ZZ>& out, const DoubleCRT& dcrt) const
+{
+  const IndexSet& set = dcrt.getIndexSet();
+  if (empty(set)) { // sanity check
+    clear(out);
+    return;
+  }
+  zz_pBak bak; bak.save(); // backup NTL's current modulus
+
+  ZZ product = conv<ZZ>(1L);
+  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+    pConvVec[i].restoreModulus();
+    zz_pX oneRowPoly;
+    long newPrime = dcrt.getOneRow(oneRowPoly,i);
+
+    HyperCube<zz_p> oneRowPwrfl(indexes.shortSig);
+    pConvVec[i].polyToPowerful(oneRowPwrfl, oneRowPoly);
+    if (i == set.first()) // just copy
+      conv(out, oneRowPwrfl.getData());
+    else                  // CRT
+      intVecCRT(out, product, oneRowPwrfl.getData(), newPrime); // in NumbTh
+    product *= newPrime;
+  }
+}
+
+void PowerfulDCRT::powerfulToDCRT(DoubleCRT& dcrt, const Vec<ZZ>& in) const
+{
+  NTL::Error("powerfulToDCRT not implemented yet");
+}
+
+// If the IndexSet is omitted, default to all the primes in the chain
+void PowerfulDCRT::ZZXtoPowerful(Vec<ZZ>& out, const ZZX& poly,
+				 IndexSet set) const
+{
+  if (empty(set))
+    set = IndexSet(0, pConvVec.length()-1);
+
+  zz_pBak bak; bak.save(); // backup NTL's current modulus
+
+  ZZ product = conv<ZZ>(1L);
+  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+    pConvVec[i].restoreModulus();
+    long newPrime = zz_p::modulus();
+    zz_pX oneRowPoly;
+    conv(oneRowPoly, poly);  // reduce mod p and convert to zz_pX
+
+    HyperCube<zz_p> oneRowPwrfl(indexes.shortSig);
+    pConvVec[i].polyToPowerful(oneRowPwrfl, oneRowPoly);
+    if (i == set.first()) // just copy
+      conv(out, oneRowPwrfl.getData());
+    else                  // CRT
+      intVecCRT(out, product, oneRowPwrfl.getData(), newPrime); // in NumbTh
+    product *= newPrime;
+  }
+}
+
+//FIXME: both the reduction from powerful to the individual primes and
+//  the CRT back to poly can be made more efficient
+void PowerfulDCRT::powerfulToZZX(ZZX& poly, const Vec<ZZ>& powerful,
+				 IndexSet set) const
+{
+  zz_pBak bak; bak.save(); // backup NTL's current modulus
+
+  if (empty(set)) set = IndexSet(0, pConvVec.length()-1);
+
+  clear(poly);
+  //  poly.SetLength(powerful.length());
+  ZZ product = conv<ZZ>(1L);
+  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+    pConvVec[i].restoreModulus();
+    long newPrime = zz_p::modulus();
+
+    HyperCube<zz_p> oneRowPwrfl(indexes.shortSig);
+    conv(oneRowPwrfl.getData(), powerful); // reduce and convert to Vec<zz_p>
+
+    zz_pX oneRowPoly;
+    pConvVec[i].powerfulToPoly(oneRowPoly, oneRowPwrfl);
+    CRT(poly, product, oneRowPoly);                   // NTL :-)
+  }
+  poly.normalize();
 }
 
 /********************************************************************/
