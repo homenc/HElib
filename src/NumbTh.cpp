@@ -522,9 +522,10 @@ void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs/*default=true*/)
   out.SetMaxLength(deg(f)+1);               // allocate space if needed
   if (deg(out)>deg(f)) trunc(out,out,deg(f)+1); // remove high degrees
 
+  mulmod_precon_t aqinv = PrepMulModPrecon(a, q, 1/((double)q));
   for (long i=0; i<=deg(f); i++) { 
     long c = rem(coeff(f,i), q);
-    c = MulMod(c, a, q); // returns c \in [0,q-1]
+    c = MulModPrecon(c, a, q, aqinv); // returns c \in [0,q-1]
     if (!abs && c >= q/2)
       c -= q;
     SetCoeff(out,i,c);
@@ -560,11 +561,12 @@ bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q)
   long q_over_2 = q/2;
   ZZ tmp;
   long vqi;
+  mulmod_precon_t pqInv = PrepMulModPrecon(pInv, q, 1/((double)q));
   for (long i=0; i<n; i++) {
     conv(vqi, vq[i]); // convert to single precision
     long vq_minus_vp_mod_q = SubMod(vqi, rem(vp[i],q), q);
 
-    long delta_times_pInv = MulMod(vq_minus_vp_mod_q, pInv, q);
+    long delta_times_pInv = MulModPrecon(vq_minus_vp_mod_q, pInv, q, pqInv);
     if (delta_times_pInv > q_over_2) delta_times_pInv -= q;
 
     mul(tmp, delta_times_pInv, p); // tmp = [(vq_i-vp_i)*p^{-1}]_q * p
@@ -574,7 +576,7 @@ bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q)
   for (long i=vq.length(); i<vp.length(); i++) {
     long minus_vp_mod_q = NegateMod(rem(vp[i],q), q);
 
-    long delta_times_pInv = MulMod(minus_vp_mod_q, pInv, q);
+    long delta_times_pInv = MulModPrecon(minus_vp_mod_q, pInv, q, pqInv);
     if (delta_times_pInv > q_over_2) delta_times_pInv -= q;
 
     mul(tmp, delta_times_pInv, p); // tmp = [(vq_i-vp_i)*p^{-1}]_q * p
@@ -582,9 +584,10 @@ bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q)
   }
   return (vp.length()==vq.length());
 }
-// specific instantiations: vq can be vec_long or vec_ZZ
+// specific instantiations: vq can be vec_long, vec_ZZ, or Vec<zz_p>
 template bool intVecCRT(vec_ZZ&, const ZZ&, const vec_ZZ&, long);
 template bool intVecCRT(vec_ZZ&, const ZZ&, const vec_long&, long);
+template bool intVecCRT(vec_ZZ&, const ZZ&, const Vec<zz_p>&, long);
 
 // MinGW hack
 #ifndef lrand48
@@ -702,10 +705,11 @@ void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f)
 long polyEvalMod(const ZZX& poly, long x, long p)
 {
   long ret = 0;
+  mulmod_precon_t xpinv = PrepMulModPrecon(x, p, 1/((double)p));
   for (long i=deg(poly); i>=0; i--) {
     long coeff = rem(poly[i], p);
     ret = AddMod(ret, coeff, p);      // Add the coefficient of x^i
-    if (i>0) ret = MulMod(ret, x, p); // then mult by x
+    if (i>0) ret = MulModPrecon(ret, x, p, xpinv); // then mult by x
   }
   return ret;
 }

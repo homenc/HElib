@@ -306,7 +306,7 @@ inline long CRTcoeff(long p, long q, bool symmetric=false)
  * Expects co-primes p,q with q odd, and such that all the entries in v1 are
  * in [-p/2,p/2). Returns in v1 the CRT of vp mod p and vq mod q, as integers
  * in [-pq/2, pq/2). Uses the formula:
- * \f[                  CRT(vp,p,vq,q) = vp + [(vq-vp) * p^{-1}]_q * p, \f]
+ * \f[               CRT(vp,p,vq,q) = vp + [(vq-vp) * p^{-1}]_q * p, \f]
  * where [...]_q means reduction to the interval [-q/2,q/2). Notice that if
  * q is odd then this is the same as reducing to [-(q-1)/2,(q-1)/2], which
  * means that [...]_q * p is in [-p(q-1)/2, p(q-1)/2], and since vp is in
@@ -314,7 +314,7 @@ inline long CRTcoeff(long p, long q, bool symmetric=false)
  *
  * Return true is both vectors are of the same length, false otherwise
  */
-template <class zzvec>        // zzvec can be vec_ZZ or vec_long
+template <class zzvec>     // zzvec can be vec_ZZ, vec_long, or Vec<zz_p>
 bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q);
 
 /**
