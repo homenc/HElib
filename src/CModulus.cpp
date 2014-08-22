@@ -41,18 +41,7 @@ NTL_CLIENT
 
 // Some simple functions that should have been provided by NTL but are not
 inline bool IsZero(long i) { return (i==0); }
-inline void conv(NTL::vec_zz_p& to, NTL::vec_long& from)
-{
-  to.SetLength(from.length());
-  for (long i=0; i<from.length(); i++) conv(to[i], from[i]);
-  // It is assumed that the NTL modulus is already set
-}
-inline void conv(NTL::vec_long& to, NTL::vec_zz_p& from)
-{
-  to.SetLength(from.length());
-  for (long i=0; i<from.length(); i++) to[i]=rep(from[i]);
-  // It is assumed that the NTL modulus is already set
-}
+
 
 inline void SetCoeff(NTL::ZZ_pX& poly, long idx, const NTL::ZZ& val)
 { SetCoeff(poly, idx, to_ZZ_p(val)); }
@@ -205,7 +194,7 @@ void Cmod<type>::iFFT(zpx &x, const zzv& y)const
   x.rep.SetLength(m);
   long i,j;
   for (i=j=0; i<m; i++)
-    if (zMStar->inZmStar(i)) conv(x.rep[i], y[j++]);
+    if (zMStar->inZmStar(i)) x.rep[i].LoopHole() = y[j++]; // DIRT: y[j] already reduced
   x.normalize();
   conv(rt, rInv);  // convert rInv to zp format
 
