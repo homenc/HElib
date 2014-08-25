@@ -24,6 +24,32 @@ NTL_CLIENT
 #include "NumbTh.h"
 
 
+// plaintextAutomorph: an auxilliary routine...maybe palce in NumbTh?
+// result is calclated in the output x "in place", so a should
+// not alias x
+
+template <class RX, class RXModulus>
+void plaintextAutomorph(RX& x, const RX& a, long k, const PAlgebra& zMStar, 
+                       const RXModulus& F)
+{
+  long m  = zMStar.getM();
+
+  assert(zMStar.inZmStar(k));
+
+  x.SetLength(m);
+  for (long j = 0; j < m; j++) x[j] = 0;
+
+  long d = deg(a);
+  
+  mulmod_precon_t precon = PrepMulModPrecon(k, m, 1/(double)m);
+  for (long j = 0; j <= d; j++) 
+    x[MulModPrecon(j, k, m, precon)] = a[j];
+
+  x.normalize();
+
+  rem(x, x, F);
+}
+
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
 					const PAlgebraMod& alMod)
 {
@@ -479,6 +505,10 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
 
 
 
+#if 0
+
+// old mat_mul 
+
 template<class type>
 void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const
 {
@@ -583,6 +613,139 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
   }
   ctxt = res;
 }
+#else
+
+
+// new mat_mul
+
+// This one has a complexity of N+d, instead of N*d, where N is
+// the number of nonzero diagonal blocks. However, it requires
+// space for d extra ciphertexts
+
+template<class type>
+void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const
+{
+  assert(this == &mat.getEA().getDerived(type()));
+  assert(&context == &ctxt.getContext());
+
+  const PAlgebra& zMStar = context.zMStar;
+  long p = zMStar.getP(); 
+  long m = zMStar.getM();
+  const RXModulus& F = tab.getPhimXMod();
+
+  RBak bak; bak.save(); tab.restoreContext();
+
+  const PlaintextBlockMatrixInterface<type>& mat1 = 
+    dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
+
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+
+  long nslots = size();
+  long d = getDegree();
+
+  Vec< shared_ptr<Ctxt> > acc;
+  acc.SetLength(d);
+  for (long k = 0; k < d; k++)
+    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  mat_R entry;
+  entry.SetDims(d, d);
+
+  vector<RX> entry1;
+  entry1.resize(d);
+  
+  vector< vector<RX> > diag;
+  diag.resize(nslots);
+  for (long j = 0; j < nslots; j++) diag[j].resize(d);
+
+  for (long i = 0; i < nslots; i++) {
+    // process diagonal i
+
+
+    bool zDiag = true;
+    long nzLast = -1;
+
+    for (long j = 0; j < nslots; j++) {
+      bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j);
+      assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+        // get(...) returns true if the entry is empty, false otherwise
+
+      if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
+
+      if (!zEntry) {    // non-empty entry
+
+        zDiag = false;  // mark diagonal as non-empty
+
+        // clear entries between last nonzero entry and this one
+
+        for (long jj = nzLast+1; jj < j; jj++) {
+          for (long k = 0; k < d; k++)
+            clear(diag[jj][k]);
+        }
+
+        nzLast = j;
+
+        // recode entry as a vector of polynomials
+        for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
+
+        // compute the lin poly coeffs
+        buildLinPolyCoeffs(diag[j], entry1);
+      }
+    }
+
+    if (zDiag) continue; // zero diagonal, continue
+
+    // clear trailing zero entries    
+    for (long jj = nzLast+1; jj < nslots; jj++) {
+      for (long k = 0; k < d; k++)
+        clear(diag[jj][k]);
+    }
+
+    // now diag[j] contains the lin poly coeffs
+
+    Ctxt shCtxt = ctxt;
+    rotate(shCtxt, i); 
+    shCtxt.cleanUp();
+
+    RX cpoly1, cpoly2;
+    ZZX cpoly;
+
+    // apply the linearlized polynomial
+    for (long k = 0; k < d; k++) {
+
+      // compute the constant
+      bool zConst = true;
+      vector<RX> cvec;
+      cvec.resize(nslots);
+      for (long j = 0; j < nslots; j++) {
+        cvec[j] = diag[j][k];
+        if (!IsZero(cvec[j])) zConst = false;
+      }
+
+      if (zConst) continue;
+
+      encode(cpoly, cvec);
+      conv(cpoly1, cpoly);
+
+      // apply inverse automorphism to constant
+      plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar, F);
+      conv(cpoly, cpoly2);
+      Ctxt shCtxt1 = shCtxt;
+      shCtxt1.multByConstant(cpoly);
+      *acc[k] += shCtxt1;
+    }
+  }
+
+  Ctxt res(ZeroCtxtLike, ctxt);
+
+  for (long k = 0; k < d; k++) {
+    acc[k]->frobeniusAutomorph(k);
+    res += *acc[k];
+  }
+
+  ctxt = res;
+}
+#endif
 
 
 

@@ -8,7 +8,6 @@ using namespace NTL;
 #include "NumbTh.h"
 #include "PAlgebra.h"
 #include <iomanip>
-#include <algorithm>
 
 Vec<long> rev(const Vec<long>& v) 
 {
@@ -64,8 +63,6 @@ int main(int argc, char *argv[])
 
       if (k == 1) continue;
 
-      sort(fac.begin(), fac.end(), comparePhi);
-
       Vec<long> fac1;
       fac1.SetLength(k);
 
@@ -77,15 +74,21 @@ int main(int argc, char *argv[])
       for (long i = 0; i < k; i++)
          phivec[i] = computePhi(fac[i]);
 
-      if (phivec[k-1] >= 5*sqrt(phim)) continue;
+      long phisum = 0;
+      for (long i = 0; i < k; i++)
+         phisum += phivec[i];
 
       long gen_index = -1;
       bool good_gen = false;
       long first_gen = 0;
 
+      long best_weighted_cost = NTL_MAX_LONG;
+      long best_cost = NTL_MAX_LONG;
+      long best_depth = NTL_MAX_LONG;
 
       for (long i = 0; i < k; i++) {
          long m1 = fac1[i];
+         long phim1 = phivec[i];
          if (multOrd(2, m1) != d) continue;
 
          PAlgebra pal1(m1);
@@ -94,40 +97,53 @@ int main(int argc, char *argv[])
          bool good = (pal1.numOfGens() == 0 || 
                       (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
 
-         if (gen_index == -1 || good) {
+         long cost = phisum - phivec[i] + d;
+         long depth = k-1;
+         if (d != phim1) {
+            cost += (2-long(good))*(phim1/d);
+            depth += (2-long(good));
+         }
+
+         if (cost*depth < best_weighted_cost) {
             gen_index = i;
             good_gen = good;
             first_gen = pal1.ZmStarGen(0);
+            best_weighted_cost = cost*depth;
+            best_cost = cost;
+            best_depth = depth;
          }
-
-         if (gen_index != -1 && good_gen) break;
       }
 
       long gen_index2 = -1;
 
-      if (k > 2 && (gen_index == -1 || !good_gen)) {
-         // search for two-generator solution
+      // search for two-generator solution
 
-         for (long i = 0; i < k; i++) {
-            for (long j = i+1; j < k; j++) {
-               long m1 = fac1[i]*fac1[j];
-               long phim1 = phivec[i]*phivec[j];
-               if (phim1 > 5*sqrt(phim) || multOrd(2, m1) != d) continue;
+      for (long i = 0; i < k; i++) {
+         for (long j = i+1; j < k; j++) {
+            long m1 = fac1[i]*fac1[j];
+            long phim1 = phivec[i]*phivec[j];
 
-               PAlgebra pal1(m1);
-               if (pal1.numOfGens() > 1) continue;
+            PAlgebra pal1(m1);
+            if (pal1.numOfGens() > 1) continue;
 
-               bool good = (pal1.numOfGens() == 0 || 
-                            (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
+            bool good = (pal1.numOfGens() == 0 || 
+                         (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
 
-               if (gen_index == -1 || good) {
-                  gen_index = i;
-                  gen_index2 = j;
-                  good_gen = good;
-                  first_gen = pal1.ZmStarGen(0);
-               }
+            long cost = phisum - (phivec[i] + phivec[j]) + d;
+            long depth = k-2;
+            if (d != phim1) {
+               cost += (2-long(good))*(phim1/d);
+               depth += (2-long(good));
+            }
 
-               if (gen_index != -1 && good_gen) break;
+            if (cost*depth < best_weighted_cost) {
+               gen_index = i;
+               gen_index2 = j;
+               good_gen = good;
+               first_gen = pal1.ZmStarGen(0);
+               best_weighted_cost = cost*depth;
+               best_cost = cost;
+               best_depth = depth;
             }
          }
       }
@@ -135,10 +151,11 @@ int main(int argc, char *argv[])
 
       if (gen_index == -1) continue;
 
+      if (best_cost > sqrt(phim)) continue;
+
 
       Vec<long> fac2;
 
-      fac2.SetLength(k);
       fac2 = fac1;
 
       for (long i = gen_index-1; i >= 0; i--)
@@ -193,7 +210,6 @@ int main(int argc, char *argv[])
       cout << setw(4) << d << "  ";
       cout << setw(6) << m << "  ";
 
-      cout << "(" << NumTwos(conv<ZZ>(d)) << ") ";
 
       cout << "m=";
       for (long i = 0; i < k; i++) {
@@ -207,29 +223,15 @@ int main(int argc, char *argv[])
       }
       cout << " ";
 
-      long phim0 = phi_N(fac2[0]);
-
       if (!good_gen) 
          cout << ":-( ";
-
-      if (phim0 == d)
-         cout << ":-) ";
 
       cout << "m/phim(m)=" 
            << double(long(100*double(m)/double(phim)))/100.0 << " ";
 
-      long cost = 0;
-
-      
-      if (phim0 != d) {
-         cost += phim0;
-      }
-
-      for (long i = 1; i < k2; i++) {
-         cost += phi_N(fac2[i]);
-      }
-
-      cout << "cost=" << cost << " ";
+      cout << "C=" << best_cost << " ";
+      cout << "D=" << best_depth << " ";
+      cout << "E=" << NumTwos(conv<ZZ>(d)) << " ";
 
       if (gens_flag) {
          cout << "facs=" << "\"" << rev(fac2) << "\"" << " ";
