@@ -6,7 +6,8 @@ namespace NTL {} using namespace NTL;
 #include "powerful.h"
 
 void  TestIt(long R, long p, long r, long c, long _k, long w,
-               long L, const Vec<long>& mvec, long width)
+             long L, const Vec<long>& mvec, long width,
+             const Vec<long>& gens, const Vec<long>& ords )
 {
   cerr << "*** TestIt: R=" << R
        << ", p=" << p
@@ -31,7 +32,12 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   long m = computeProd(mvec);
   assert(GCD(p, m) == 1);
 
-  FHEcontext context(m, p, r);
+  vector<long> gens1, ords1;
+  convert(gens1, gens);
+  convert(ords1, ords);
+
+
+  FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
   context.zMStar.printout();
   cerr << endl;
@@ -184,6 +190,9 @@ int main(int argc, char *argv[])
   argmap["m4"] = "0";
   argmap["width"] = "5";
   argmap["seed"] = "0";
+  argmap["gens"] = "[]";
+  argmap["ords"] = "[]";
+
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -208,6 +217,10 @@ int main(int argc, char *argv[])
   long width = atoi(argmap["width"]);
   long seed = atoi(argmap["seed"]);
 
+  Vec<long> gens = atoVec<long>(argmap["gens"]);
+  Vec<long> ords = atoVec<long>(argmap["ords"]);
+
+
   long w = 64; // Hamming weight of secret key
   //  long L = z*R; // number of levels
 
@@ -219,7 +232,7 @@ int main(int argc, char *argv[])
 
   if (seed) SetSeed(conv<ZZ>(seed));
 
-  TestIt(R, p, r, c, k, w, L, mvec, width);
+  TestIt(R, p, r, c, k, w, L, mvec, width, gens, ords);
 }
 
 //   [1 1 3 8] Test_EvalMap_x p=2 m1=3 m2=5 m3=7 m4=17
