@@ -189,6 +189,7 @@ void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs=false);
 inline void PolyRed(ZZX& F, long q, bool abs=false) { PolyRed(F,F,q,abs); }
 inline void PolyRed(ZZX& F, const ZZ& q, bool abs=false)
 { PolyRed(F,F,q,abs); }
+void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, long q, bool abs);
 ///@}
 
 //! Multiply the polynomial f by the integer a modulo q
