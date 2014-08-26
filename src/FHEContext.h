@@ -135,10 +135,6 @@ public:
 
   //! Tables to ocnvert between ZZX and powerful representation
   PowerfulDCRT* p2dConversion;
-
-  ZZX allOnes;  // all-ones in powerful representation
-  // If p=2 and m1 ... mk is the given factorization of m, then
-  // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
   ///@}
 
   /******************************************************************/

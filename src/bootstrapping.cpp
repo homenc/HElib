@@ -19,14 +19,19 @@ NTL_CLIENT
 #include "EvalMap.h"
 #include "powerful.h"
 
+#define DEBUGGING
+
 /*********** Debugging utilities **************/
 FHESecKey* dbgKey=NULL;
 EncryptedArray* dbgEa=NULL;
+ZZX dbg_ptxt;
+Vec<ZZ> ptxt_pwr;
 
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
 
+template<class T> ostream& printVec(ostream& s, const Vec<T>& v, long nCoeffs=40);
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 void decryptAndPrint(const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags=0);
@@ -177,8 +182,11 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
       unpacked[i].multByP();
       unpacked[i] += scratch[j];
     }
+    if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
+      unpacked[i] += scratch[botHigh-1];
     unpacked[i].negate();
-    if (r>ePrime) { // Add in digits from the bottom part, if any
+
+    if (r>ePrime) {          // Add in digits from the bottom part, if any
       long topLow = r-1 - ePrime;
       Ctxt tmp = scratch[topLow];
       for (long j=topLow-1; j>=0; --j) {
@@ -216,24 +224,39 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 // Move the powerful-basis coefficients to the plaintext slots
 void movePwrflCoefs2Slots(Ctxt& ctxt)
 {
+  ZZX ptxt1; // for debugging
+  long p = ctxt.getPtxtSpace();
+  if (dbgKey && dbgEa) dbgKey->Decrypt(ptxt1, ctxt);
+
   const FHEcontext& context = ctxt.getContext();
   context.firstMap->apply(ctxt);
-  return;
 
-  // For testing purposes: Decrypt, put coefficients in slots, then re-encryp
+  // For debugging: Check that we have powerful representation in the slots
   if (dbgKey && dbgEa) {
-    ZZX ptxt;
-    dbgKey->Decrypt(ptxt, ctxt);
+    zz_pBak bak; bak.save(); // backup NTL's current modulus
+    zz_p::init(p);
+    PowerfulConversion pConv(context.p2dConversion->getIndexTranslation());
+    HyperCube<zz_p> powerful(pConv.getShortSig());
+    zz_pX poly = conv<zz_pX>(ptxt1);
+    pConv.polyToPowerful(powerful, poly);
 
     long nSlots = dbgEa->size();
     long d =  dbgEa->getDegree();
     vector<ZZX> v(nSlots);
-    // copy the coefficients from ptxt to the slots
-    for (long i=nSlots-1; i>=0; --i) for (long j=d-1; j>=0; --j) {
-	const ZZ& coef = coeff(ptxt, i*d + j);
-	SetCoeff(v[i], j, coef);
+    dbgEa->decrypt(ctxt,*dbgKey,v);
+
+    long idx = 0;
+    for (long i=0; i<nSlots; i++) for (long j=0; j<d; j++) {
+	long coef1 = conv<long>(v[i][j]);
+	long coef2 = conv<long>(powerful[idx++]);
+	if (coef1 != coef2) {
+	  cerr << " @ error: powerful coefficient is "<<coef2
+	       << " but slot contains "<<coef1<<endl;
+	  return;
+	}
       }
-    dbgEa->skEncrypt(ctxt, *dbgKey, v);
+    cerr << "LinTrans1 successful. ";
+    decryptAndPrint(ctxt, *dbgKey, *dbgEa, 0);
   }
 }
 
@@ -263,8 +286,6 @@ void moveSlots2PwrflCoefs(Ctxt& ctxt)
 // bootstrap a ciphertext to reduce noise
 void FHEPubKey::reCrypt(Ctxt &ctxt)
 {
-  ZZX dbgPoly, skPoly, tmp1, tmp2;
-
   assert(bootstrapKeyID>=0); // check that we have bootstrapping data
 
   long p = getContext().zMStar.getP();
@@ -304,13 +325,35 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // key-switch to the bootstrapping key
   ctxt.reLinearize(bootstrapKeyID);
 
+#ifdef DEBUGGING
+  if (dbgKey && dbgEa) {
+    ZZX poly;
+    dbgKey->Decrypt(poly,ctxt);
+    if (poly!=dbg_ptxt)
+      cerr << " Decryption error after key-switching to bootsrapping key\n";
+    else {
+      cerr << " After key-switching to bootsrapping key: ";
+      decryptAndPrint(ctxt, *dbgKey, *dbgEa, 0);
+    }
+  }
+#endif
+
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
   double noise = ctxt.rawModSwitch(zzParts, q);
   noise = sqrt(noise);
 
-  // if (noise>q/64.0)
-  //   cerr << "  @ initial noise exceeds q/64, decryption error likely\n";
+#ifdef DEBUGGING
+  ZZX dbgPoly, skPoly, tmp1, tmp2;
+  if (dbgKey && dbgEa) { // apply the decryption procedure to the zzParts
+    dbgKey->sKeys[bootstrapKeyID].toPoly(skPoly);
+    MulMod(dbgPoly, skPoly, zzParts[1], context.zMStar.getPhimX());
+    dbgPoly += zzParts[0];
+
+    Vec<ZZ> powerful;
+    context.p2dConversion->ZZXtoPowerful(powerful,dbgPoly);
+  }
+#endif
 
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   long maxU=0;
@@ -326,43 +369,18 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
     cerr << " * noise/q after makeDisivible = "
 	 << ((noise + maxU*p2r*(skHwts[bootstrapKeyID]+1))/q) << endl;
 
-  // if (dbgKey) {
-  //   MulMod(dbgPoly, skPoly, zzParts[1], context.zMStar.getPhimX());
-  //   dbgPoly += zzParts[0];
-  //   tmp1 = tmp2 = dbgPoly;
-  //   if (p==2) tmp1 += ((p2e/p) * context.allOnes);
-  //   PolyRed(dbgPoly, conv<ZZ>(q));
-  //   PolyRed(dbgPoly, conv<ZZ>(p2r), true);
-  //   ZZ maxCoef = ZZ::zero();
-  //   ZZ maxNoise = ZZ::zero();
-  //   for (long i=0; i<=deg(tmp2); i++) {
-  //     ZZ coef2 = coeff(tmp2,i);
-  //     ZZ coef1 = coeff(tmp1,i);
-  //     ZZ cDiv2 = coef2 / p2e;
-  //     ZZ cDiv1 = coef1 / p2e;
-  //     ZZ cModQ2; rem(cModQ2,coef2,to_ZZ(q));
-  //     if (cModQ2 > q/2) cModQ2 -= q;
-  //     if (abs(coef2)>maxCoef)   maxCoef = abs(coef2);
-  //     if (abs(cModQ2)>maxNoise) maxNoise = abs(cModQ2);
-  //     if ((coef1 - cDiv1 - dbgPoly[i])% p2r != 0) {
-  // 	cerr << "simple decryption formula failed\n";
-  // 	cerr << " * original coef_"<<i<<"="<< coef2
-  // 	     << "(~q^2*"<<(to_double(coef2)/(q*(double)q))<<")"
-  // 	     << ", [orig-coef]_q="<<cModQ2
-  // 	     << "(~q*"<<(to_double(cModQ2)/(double)q)<<")"
-  // 	     << ", orig-coef/p^e="<<cDiv2<<endl;
-  // 	cerr << " * coef="<< coef1
-  // 	     << ", coef/p^e="<<cDiv1
-  // 	     << " but [[orig-coef]_q]_"<<p2r<<"="<< coeff(dbgPoly,i)<<endl;
-  // 	exit(0);
-  //     }
-  //     if (coef1 % p2r != 0)
-  // 	cerr << "coef_"<<i<<"="<<coef1<<"!=0 (mod "<<p2r<<endl;
-  //   } // end-for
-  // }
+#ifdef DEBUGGING
+  if (dbgKey && dbgEa) { // apply the decryption procedure to the new zzParts
+    MulMod(dbgPoly, skPoly, zzParts[1], context.zMStar.getPhimX());
+    dbgPoly += zzParts[0];
 
-  if (p==2) // add the constant 2^{e-1} * allOnes to the ciphertext
-    zzParts[0] += (p2e/p) * context.allOnes;
+    Vec<ZZ> powerful;
+    context.p2dConversion->ZZXtoPowerful(powerful,dbgPoly);
+  }
+#endif
+
+  //  if (p==2) // add the constant 2^{e-1} * allOnes to the ciphertext
+  //    zzParts[0] += (p2e/p) * context.allOnes;
 
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
@@ -376,30 +394,6 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   p2e /= p2ePrime; // reduce the plaintext space by p^{e'} factor
   ctxt.reducePtxtSpace(p2e*p2r);
   FHE_NTIMER_STOP(preProcess);
-
-  // if (dbgKey) {
-  //   tmp1 /= p2ePrime;
-  //   PolyRed(tmp1, conv<ZZ>(ctxt.getPtxtSpace()), true);
-  //   dbgKey->Decrypt(tmp2, ctxt);
-  //   if (tmp2 != tmp1) {
-  //     cerr << "  @ decryption error afer mult-by-c, ciphretext ";
-  //     decryptAndPrint(ctxt, *dbgKey, *dbgEa, FLAG_PRINT_POLY);
-  //     cerr << "  but plaintext poly = ";
-  //     printZZX(cerr, tmp1) << endl;
-  //   }
-  //   for (long i=0; i<=deg(tmp2); i++) {
-  //     tmp2[i] /= p2e;
-  //     tmp2[i] = -tmp2[i];
-  //   }
-  //   tmp2.normalize();
-  //   if (ePrime<r)
-  //     tmp2 += tmp1;
-  //   PolyRed(tmp2, conv<ZZ>(p2r), true);
-  //   if (dbgPoly != tmp2) {
-  //     cerr << "  @ after division by p^{e'}, simple decryption fails:\n";
-  //     cerr << "    "<<dbgPoly<<"!="<<tmp2<<endl;
-  //   }
-  // }
 
   // Move the powerful-basis coefficients to the plaintext slots
   FHE_NTIMER_START(LinearTransform1);
@@ -415,9 +409,6 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   FHE_NTIMER_START(DigitExtraction);
   extractDigitsPacked(ctxt, e, r, ePrime, unpackSlotEncoding);
   FHE_NTIMER_STOP(DigitExtraction);
-  // return in ctxt an encryption of the r-digit integer
-  // <z_topLow,...,z_{topLow-r+1}> - <z_{botHigh+r-1},...,z_{botHigh}>
-  // (modulo p^r), where digits with negative index are zero
 
   // Move the slots back to powerful-basis coefficients
   FHE_NTIMER_START(LinearTransform2);
@@ -442,7 +433,7 @@ void usage(char *prog)
 int main(int argc, char *argv[]) 
 {
   argmap_t argmap;
-  argmap["L"] = "15";
+  argmap["L"] = "20";
   argmap["p"] = "2";
   argmap["m1"] = "5";
   argmap["m2"] = "7";
@@ -509,8 +500,8 @@ int main(int argc, char *argv[])
   //  EncryptedArray ea1(context, context.alMod);
 
   FHE_NTIMER_STOP(initialize);
-  cerr << "****Initialization time:\n";
-  printAllTimers();
+  //  cerr << "****Initialization time:\n";
+  //  printAllTimers();
   resetAllTimers();
 
   dbgKey = &secretKey; // debugging key and ea
@@ -518,26 +509,49 @@ int main(int argc, char *argv[])
   // The bootstrapping data in the context is for plaintext space p^{e+r-e'}
   dbgEa = context.bootstrapEA;
 
-  ZZX poly = RandPoly(context.zMStar.getPhiM(), to_ZZ(p2r));
-  PolyRed(poly, p2r, true);
+  zz_p::init(p2r);
+  zz_pX poly_p = random_zz_pX(context.zMStar.getPhiM());
+  PowerfulConversion pConv(context.p2dConversion->getIndexTranslation());
+  HyperCube<zz_p> powerful(pConv.getShortSig());
+  pConv.polyToPowerful(powerful, poly_p);
+  
+  conv(dbg_ptxt, poly_p);
+  PolyRed(dbg_ptxt, p2r, true);
+  context.p2dConversion->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
+
   ZZX poly2;
   Ctxt c1(publicKey);
-  cerr << "encrypting ";
-  printZZX(cerr, poly)<<endl;
+  cerr << "encrypting (in powerful rep) "; // <<dbg_ptxt<<endl;
+  printVec(cerr, powerful.getData())<<endl;
 
-  secretKey.Encrypt(c1,poly,p2r);
+  secretKey.Encrypt(c1,dbg_ptxt,p2r);
   FHE_NTIMER_START(reCrypt);
   publicKey.reCrypt(c1);
   FHE_NTIMER_STOP(reCrypt);
   secretKey.Decrypt(poly2,c1);
-  if (poly != poly2) {
-    cerr << "\ndecryption error, result is ";
-    printZZX(cerr, poly2)<<endl;
+  decryptAndPrint(c1, secretKey, *dbgEa, 0);
+
+  if (dbg_ptxt != poly2) {
+    conv(poly_p,poly2);
+    HyperCube<zz_p> powerful2(pConv.getShortSig());
+    cerr << "\ndecryption error, result is "; //<<poly2<<endl;
+    pConv.polyToPowerful(powerful2, poly_p);
+    printVec(cerr, powerful2.getData())<<endl;
+    long numDiff = 0;
+    for (long i=0; i<powerful.getSize(); i++) 
+      if (powerful[i] != powerful2[i]) {
+        numDiff++;
+	cerr << i << ": " << powerful[i] << " != " << powerful2[i]<<", ";
+	if (numDiff >5) {
+	  cerr << endl;
+	  break;
+	}
+      }
   }
   else cerr << "  decryption succeeds!!\n";
 
-  cerr << "\n****Bootstrapping time:\n";
-  printAllTimers();
+  //  cerr << "\n****Bootstrapping time:\n";
+  //  printAllTimers();
   return 0;
 }
 
@@ -548,16 +562,29 @@ int main(int argc, char *argv[])
 /*********** Debugging utilities **************/
 /**********************************************/
 
+template<class T> ostream& printVec(ostream& s, const Vec<T>& v, long nCoeffs)
+{
+  long d = v.length();
+  if (d<nCoeffs) return s << v; // just print the whole thing
+
+  // otherwise print only 1st nCoeffs coefficiants
+  s << '[';
+  for (long i=0; i<nCoeffs-2; i++) s << v[i] << ' ';
+  s << "... " << v[d-2] << ' ' << v[d-1] << ']';
+  return s;
+}
+
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs)
 {
-  long d = deg(poly);
+  return printVec(s, poly.rep, nCoeffs);
+  /*  long d = deg(poly);
   if (d<nCoeffs) return s << poly; // just print the whole thing
 
   // otherwise print only 1st nCoeffs coefficiants
   s << '[';
   for (long i=0; i<nCoeffs-2; i++) s << poly[i] << ' ';
   s << "... " << poly[d-1] << ' ' << poly[d] << ']';
-  return s;
+  return s; */
 }
 
 void decryptAndPrint(const Ctxt& ctxt, const FHESecKey& sk,
@@ -603,4 +630,3 @@ void decryptAndPrint(const Ctxt& ctxt, const FHESecKey& sk,
     }
   }
 }
-

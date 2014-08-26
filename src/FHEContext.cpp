@@ -477,7 +477,6 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   // NTL's FFTs for m and phi(m) are the same. If NTL didn't have these
   // power-of-two jumps, we would possibly want to change this.
 
-  allOnes = ZZX::zero();
   bootstrapPAM = NULL;
   bootstrapEA = NULL;
   secondEA = NULL;
@@ -513,24 +512,4 @@ void FHEcontext::makeBootstrappable(const Vec<long>& mvec, long width)
   secondMap = new EvalMap(*secondEA, mvec, width, false);
 
   p2dConversion = new PowerfulDCRT(*this, mvec);
-
-    // If p=2 and m1 ... mk is the given factorization of m, then
-    // allOnes = \sum_{i=1}^k \sum_{j=0}^{phi(m_i)-1} X^{(m/m_i)*j} mod Phi_m(X)
-    if (p==2) {
-#if 1 // This is the all-1 in powerful representation
-      conv(allOnes, 1L); // initialize allOnes = 1
-      for (long i=0; i<mvec.length(); i++) {
-	long phi_mi = phi_N(mvec[i]);
-	long exp_i = m/mvec[i];
-	ZZX tmp; // holds \sum_{j=0}^{phi(mi)-1} Xi^j
-	for (long j=phi_mi-1; j>=0; --j) SetCoeff(tmp, j*exp_i);
-	allOnes *= tmp;
-      }
-      allOnes %= zMStar.getPhimX();
-      PolyRed(allOnes, power_long(p,rPrime));
-#else // This is the all-1 in standard coefficient representation
-      for (long i=0; i<(long)zMStar.getPhiM(); i++)
-	SetCoeff(allOnes, i);
-#endif
-    }
 }
