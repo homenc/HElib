@@ -327,7 +327,7 @@ void PowerfulDCRT::powerfulToZZX(ZZX& poly, const Vec<ZZ>& powerful,
   ZZ product = conv<ZZ>(1L);
   for (long i = set.first(); i <= set.last(); i = set.next(i)) {
     pConvVec[i].restoreModulus();
-    long newPrime = zz_p::modulus();
+    //    long newPrime = zz_p::modulus();
 
     HyperCube<zz_p> oneRowPwrfl(indexes.shortSig);
     conv(oneRowPwrfl.getData(), powerful); // reduce and convert to Vec<zz_p>
