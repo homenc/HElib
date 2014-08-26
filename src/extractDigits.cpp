@@ -45,7 +45,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
   // If the digitPoly in the context is not yet initialized, then compute it
   long p = context.zMStar.getP();
   ZZX& x2p = context.modP_digPoly;
-  if (r>context.modP_digPoly_r && p!=2) { // not thread safe...
+  if (r>context.modP_digPoly_r && p!=2) { // FIXME: not thread safe...
     buildDigitPolynomial(x2p, p, r);
     context.modP_digPoly_r = r;
   }
@@ -84,10 +84,13 @@ static void buildDigitPolynomial(ZZX& result, long p, long e)
   // Compute x - x^p (mod p^e), for x=0,1,...,p-1
   vec_long x(INIT_SIZE, p);
   vec_long y(INIT_SIZE, p);
+  long bottom = -(p/2);
   for (long j=0; j<p; j++) {
-    x[j] = j;
-    y[j] = j-PowerMod(j,p,p2e);  // x - x^p (mod p^e)
-    if (y[j]<0) y[j] += p2e;
+    long z = bottom+j;
+    x[j] = z;
+    y[j] = z-PowerMod(z,p,p2e);  // x - x^p (mod p^e)
+    if (y[j] > p2e/2)         y[j] -= p2e;
+    else if (y[j] < -(p2e/2)) y[j] += p2e;
   }
   interpolateMod(result, x, y, p, e);
   assert(deg(result)<p); // interpolating p points, should get deg<=p-1
