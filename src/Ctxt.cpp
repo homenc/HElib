@@ -734,14 +734,31 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
     else                    tmp *= other2;
 
     *this *= tmp;
+    reLinearize(); // re-linearize after all the multiplications
+    return;
   }
-  else if (lvl<lvl2) { // lvl1<=lvl<lvl2, multiply by other2, then by other1
-    *this *= other2;
-    *this *= other1;    
+
+  const Ctxt *first, *second;
+  if (lvl<lvl2) { // lvl1<=lvl<lvl2, multiply by other2, then by other1
+    first = &other2;
+    second = &other1;
   }
   else { // multiply first by other1, then by other2
-    *this *= other1;
-    *this *= other2;
+    first = &other1;
+    second = &other2;
+  }
+
+  if (this == second) { // handle pointer collision
+    Ctxt tmp = *second;
+    *this *= *first;
+    *this *= tmp;
+    if (this == first) // cubing operation
+      noiseVar *= 3;   // a correction factor due to dependency
+    else
+      noiseVar *= 2;   // a correction factor due to dependency
+  } else {
+    *this *= *first;
+    *this *= *second;
   }
   reLinearize(); // re-linearize after all the multiplications
 }
