@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
    long gens_flag = atoi(argmap["gens"]);
 
 
-   for (long m = 1001; m <= 100000; m += 2) {
+   for (long m = 1001; m <= 30000; m += 2) {
 
       long d = multOrd(2, m);
 
@@ -97,12 +97,10 @@ int main(int argc, char *argv[])
          bool good = (pal1.numOfGens() == 0 || 
                       (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
 
-         long cost = phisum - phivec[i] + d;
+         long cost = phisum - phivec[i] + d-1;
          long depth = k-1;
-         if (d != phim1) {
-            cost += (2-long(good))*(phim1/d);
-            depth += (2-long(good));
-         }
+         cost += (2-long(good))*(phim1/d-1);
+         depth += (2-long(good));
 
          if (cost*depth < best_weighted_cost) {
             gen_index = i;
@@ -122,6 +120,7 @@ int main(int argc, char *argv[])
          for (long j = i+1; j < k; j++) {
             long m1 = fac1[i]*fac1[j];
             long phim1 = phivec[i]*phivec[j];
+            if (multOrd(2, m1) != d) continue;
 
             PAlgebra pal1(m1);
             if (pal1.numOfGens() > 1) continue;
@@ -129,12 +128,10 @@ int main(int argc, char *argv[])
             bool good = (pal1.numOfGens() == 0 || 
                          (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
 
-            long cost = phisum - (phivec[i] + phivec[j]) + d;
+            long cost = phisum - (phivec[i] + phivec[j]) + d-1;
             long depth = k-2;
-            if (d != phim1) {
-               cost += (2-long(good))*(phim1/d);
-               depth += (2-long(good));
-            }
+            cost += (2-long(good))*(phim1/d-1);
+            depth += (2-long(good));
 
             if (cost*depth < best_weighted_cost) {
                gen_index = i;
@@ -234,7 +231,7 @@ int main(int argc, char *argv[])
       cout << "E=" << NumTwos(conv<ZZ>(d)) << " ";
 
       if (gens_flag) {
-         cout << "facs=" << "\"" << rev(fac2) << "\"" << " ";
+         cout << "mvec=" << "\"" << rev(fac2) << "\"" << " ";
          cout << "gens=" << "\"" << trunc(rev(global_gen)) << "\"" << " "; 
          cout << "ords=" << "\"" << trunc(rev(ordvec)) << "\"" << " "; 
       }

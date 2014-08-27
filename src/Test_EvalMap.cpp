@@ -184,14 +184,11 @@ int main(int argc, char *argv[])
   argmap["k"] = "80";
   argmap["L"] = "0";
   argmap["s"] = "0";
-  argmap["m1"] = "5";
-  argmap["m2"] = "7";
-  argmap["m3"] = "0";
-  argmap["m4"] = "0";
   argmap["width"] = "5";
   argmap["seed"] = "0";
   argmap["gens"] = "[]";
   argmap["ords"] = "[]";
+  argmap["mvec"] = "[]";
 
 
   // get parameters from the command line
@@ -210,25 +207,16 @@ int main(int argc, char *argv[])
   }
   //  long s = atoi(argmap["s"]);
 
-  long m1 = atoi(argmap["m1"]);
-  long m2 = atoi(argmap["m2"]);
-  long m3 = atoi(argmap["m3"]);
-  long m4 = atoi(argmap["m4"]);
   long width = atoi(argmap["width"]);
   long seed = atoi(argmap["seed"]);
 
   Vec<long> gens = atoVec<long>(argmap["gens"]);
   Vec<long> ords = atoVec<long>(argmap["ords"]);
+  Vec<long> mvec = atoVec<long>(argmap["mvec"]);
 
 
   long w = 64; // Hamming weight of secret key
   //  long L = z*R; // number of levels
-
-  Vec<long> mvec;
-  if (m1 != 0) append(mvec, m1);
-  if (m2 != 0) append(mvec, m2);
-  if (m3 != 0) append(mvec, m3);
-  if (m4 != 0) append(mvec, m4);
 
   if (seed) SetSeed(conv<ZZ>(seed));
 

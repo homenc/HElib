@@ -177,6 +177,17 @@ public:
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
 
   //! @multiply ctx by plaintext matrix: Ctxt is treated as
+  //! a row matrix v, and replaced by en encryption of v * mat'
+  //! where mat' is the block-diagonal matrix defined by mat
+  //! in dimension dim.  Here, mat should represent a D x D matrix,
+  //! where D is the order of generator dim.
+  //! Also, we allow dim to be one greater than the number of generators in zMStar,
+  //! as if there were an implicit generator of order 1.
+  //! This is convenient in some applications.
+  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
+  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
+
+  //! @multiply ctx by plaintext matrix: Ctxt is treated as
   //! a row matrix v, and replaced by en encryption of v * mat
   //! Optimized for dense matrices
   virtual void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
@@ -186,6 +197,7 @@ public:
   //! a row matrix v, and replaced by en encryption of v * mat
   //! Optimized for sparse diagonals
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const = 0;
+
 
   ///@{
   //! @name Encoding/decoding methods
@@ -364,6 +376,8 @@ public:
 
   virtual void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
+  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const;
+  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
@@ -599,6 +613,12 @@ public:
 
   void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const 
   { rep->mat_mul(ctxt, mat); }
+
+  void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const 
+  { rep->mat_mul1D(ctxt, mat, dim); }
+
+  void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const 
+  { rep->mat_mul1D(ctxt, mat, dim); }
 
   void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const 
   { rep->mat_mul(ctxt, mat); }

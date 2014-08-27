@@ -51,6 +51,8 @@ typedef std::unordered_map<string, const char *> argmap_t;
 typedef tr1::unordered_map<string, const char *> argmap_t;
 #endif
 
+typedef long LONG; // using this to identify casts that we should really get rid of
+                   // at some point in the future
 
 //! @brief Code for parsing command line arguments.
 /**

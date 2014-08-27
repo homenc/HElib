@@ -503,6 +503,86 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
   ctxt = res;
 }
 
+template<class type> void EncryptedArrayDerived<type>::
+mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const
+{
+  FHE_TIMER_START;
+
+  assert(this == &mat.getEA().getDerived(type()));
+  assert(&context == &ctxt.getContext());
+  
+  const PAlgebra& zMStar = context.zMStar;
+
+  assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
+
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim);
+
+  RBak bak; bak.save(); tab.restoreContext();
+
+  const PlaintextMatrixInterface<type>& mat1 = 
+    dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+
+  Ctxt res(ZeroCtxtLike, ctxt);
+
+  long nslots = size();
+  long d = getDegree();
+
+  RX entry;
+  vector<RX> diag, diag1;
+  diag.resize(D);
+  diag1.resize(nslots);
+  ZZX cpoly;
+  
+
+  for (long i = 0; i < D; i++) {
+    // process diagonal i
+
+    bool zDiag = true;
+    long nzLast = -1;
+
+    for (long j = 0; j < D; j++) {
+      bool zEntry = mat1.get(entry, mcMod(j-i, D), j);
+      assert(zEntry || deg(entry) < d);
+
+      if (!zEntry && IsZero(entry)) zEntry = true;
+
+      if (!zEntry) {
+
+        zDiag = false;
+
+        // clear entries between last nonzero entry and this one
+
+        for (long jj = nzLast+1; jj < j; jj++) clear(diag[jj]);
+        nzLast = j;
+
+        diag[j] = entry;
+      }
+    }
+
+    
+    if (zDiag) continue; // zero diagonal, continue
+
+    // clear trailing zero entries
+    for (long jj = nzLast+1; jj < D; jj++) clear(diag[jj]);
+    
+    Ctxt shCtxt = ctxt;
+    if (i != 0) rotate1D(shCtxt, dim, i); 
+
+    
+    for (long j = 0; j < nslots; j++)
+      diag1[j] = diag[ special ? 0 : zMStar.coordinate(dim, j) ];
+
+    encode(cpoly, diag1);
+
+    shCtxt.multByConstant(cpoly);
+    res += shCtxt;
+  }
+
+  ctxt = res;
+}
 
 
 #if 0
@@ -746,6 +826,140 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
   ctxt = res;
 }
 #endif
+
+
+
+template<class type> void EncryptedArrayDerived<type>::
+mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
+{
+  FHE_TIMER_START;
+
+  assert(this == &mat.getEA().getDerived(type()));
+  assert(&context == &ctxt.getContext());
+
+  const PAlgebra& zMStar = context.zMStar;
+  long p = zMStar.getP(); 
+  long m = zMStar.getM();
+  const RXModulus& F = tab.getPhimXMod();
+
+  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
+
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim);
+
+  RBak bak; bak.save(); tab.restoreContext();
+
+  const PlaintextBlockMatrixInterface<type>& mat1 = 
+    dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
+
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+
+  long nslots = size();
+  long d = getDegree();
+
+  Vec< shared_ptr<Ctxt> > acc;
+  acc.SetLength(d);
+  for (long k = 0; k < d; k++)
+    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  mat_R entry;
+  entry.SetDims(d, d);
+
+  vector<RX> entry1;
+  entry1.resize(d);
+  
+  vector< vector<RX> > diag;
+  diag.resize(D);
+  for (long j = 0; j < D; j++) diag[j].resize(d);
+
+  for (long i = 0; i < D; i++) {
+    // process diagonal i
+
+
+    bool zDiag = true;
+    long nzLast = -1;
+
+    for (long j = 0; j < D; j++) {
+      bool zEntry = mat1.get(entry, mcMod(j-i, D), j);
+      assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+        // get(...) returns true if the entry is empty, false otherwise
+
+      if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
+
+      if (!zEntry) {    // non-empty entry
+
+        zDiag = false;  // mark diagonal as non-empty
+
+        // clear entries between last nonzero entry and this one
+
+        for (long jj = nzLast+1; jj < j; jj++) {
+          for (long k = 0; k < d; k++)
+            clear(diag[jj][k]);
+        }
+
+        nzLast = j;
+
+        // recode entry as a vector of polynomials
+        for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
+
+        // compute the lin poly coeffs
+        buildLinPolyCoeffs(diag[j], entry1);
+      }
+    }
+
+    if (zDiag) continue; // zero diagonal, continue
+
+    // clear trailing zero entries    
+    for (long jj = nzLast+1; jj < D; jj++) {
+      for (long k = 0; k < d; k++)
+        clear(diag[jj][k]);
+    }
+
+    // now diag[j] contains the lin poly coeffs
+
+    Ctxt shCtxt = ctxt;
+    if (i != 0) rotate1D(shCtxt, dim, i); 
+    shCtxt.cleanUp();
+
+    RX cpoly1, cpoly2;
+    ZZX cpoly;
+
+    // apply the linearlized polynomial
+    for (long k = 0; k < d; k++) {
+
+      // compute the constant
+      bool zConst = true;
+      vector<RX> cvec;
+      cvec.resize(nslots);
+      for (long j = 0; j < nslots; j++) {
+        cvec[j] = diag[ special ? 0 : zMStar.coordinate(dim, j) ][k];
+        if (!IsZero(cvec[j])) zConst = false;
+      }
+
+      if (zConst) continue;
+
+      encode(cpoly, cvec);
+      conv(cpoly1, cpoly);
+
+      // apply inverse automorphism to constant
+      plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar, F);
+      conv(cpoly, cpoly2);
+      Ctxt shCtxt1 = shCtxt;
+      shCtxt1.multByConstant(cpoly);
+      *acc[k] += shCtxt1;
+    }
+  }
+
+  Ctxt res(ZeroCtxtLike, ctxt);
+
+  for (long k = 0; k < d; k++) {
+    acc[k]->frobeniusAutomorph(k);
+    res += *acc[k];
+  }
+
+  ctxt = res;
+}
+
 
 
 
