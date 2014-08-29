@@ -1016,6 +1016,8 @@ void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt, get_type get_fn) const
   ctxt = res;
 }
 
+// FIXME: this mat_mul can probably be replaced by one that 
+// is more like the mat_mul1D routine in EncryptedArray
 template<class type>
 void Step2aShuffle<type>::mat_mul(Ctxt& ctxt, get_type get_fn) const
 {

@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
    long gens_flag = atoi(argmap["gens"]);
 
 
-   for (long m = 1001; m <= 30000; m += 2) {
+   for (long m = 1001; m <= 80000; m += 2) {
 
       long d = multOrd(2, m);
 
@@ -115,6 +115,7 @@ int main(int argc, char *argv[])
       long gen_index2 = -1;
 
       // search for two-generator solution
+
 
       for (long i = 0; i < k; i++) {
          for (long j = i+1; j < k; j++) {
