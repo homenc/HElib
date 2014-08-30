@@ -9,6 +9,11 @@ using namespace NTL;
 #include "PAlgebra.h"
 #include <iomanip>
 
+long weighted_cost(long cost, long depth)
+{
+   return depth*(1L << 16) + cost;
+}
+
 Vec<long> rev(const Vec<long>& v) 
 {
    long n = v.length();
@@ -43,14 +48,18 @@ int main(int argc, char *argv[])
 {
    argmap_t argmap;
    argmap["gens"] = "0";
+   argmap["p"] = "2";
    if (!parseArgs(argc, argv, argmap)) Error("bad args");
 
    long gens_flag = atoi(argmap["gens"]);
+   long p = atoi(argmap["p"]);
 
 
    for (long m = 1001; m <= 80000; m += 2) {
 
-      long d = multOrd(2, m);
+      if (GCD(p, m) != 1) continue;
+
+      long d = multOrd(p, m);
 
       if (d > MaxOrd) continue;
 
@@ -89,9 +98,9 @@ int main(int argc, char *argv[])
       for (long i = 0; i < k; i++) {
          long m1 = fac1[i];
          long phim1 = phivec[i];
-         if (multOrd(2, m1) != d) continue;
+         if (multOrd(p, m1) != d) continue;
 
-         PAlgebra pal1(m1);
+         PAlgebra pal1(m1, p);
          if (pal1.numOfGens() > 1) continue;
 
          bool good = (pal1.numOfGens() == 0 || 
@@ -102,11 +111,11 @@ int main(int argc, char *argv[])
          cost += (2-long(good))*(phim1/d-1);
          depth += (2-long(good));
 
-         if (cost*depth < best_weighted_cost) {
+         if (weighted_cost(cost, depth) < best_weighted_cost) {
             gen_index = i;
             good_gen = good;
             first_gen = pal1.ZmStarGen(0);
-            best_weighted_cost = cost*depth;
+            best_weighted_cost = weighted_cost(cost, depth);
             best_cost = cost;
             best_depth = depth;
          }
@@ -121,9 +130,9 @@ int main(int argc, char *argv[])
          for (long j = i+1; j < k; j++) {
             long m1 = fac1[i]*fac1[j];
             long phim1 = phivec[i]*phivec[j];
-            if (multOrd(2, m1) != d) continue;
+            if (multOrd(p, m1) != d) continue;
 
-            PAlgebra pal1(m1);
+            PAlgebra pal1(m1, p);
             if (pal1.numOfGens() > 1) continue;
 
             bool good = (pal1.numOfGens() == 0 || 
@@ -134,12 +143,12 @@ int main(int argc, char *argv[])
             cost += (2-long(good))*(phim1/d-1);
             depth += (2-long(good));
 
-            if (cost*depth < best_weighted_cost) {
+            if (weighted_cost(cost, depth) < best_weighted_cost) {
                gen_index = i;
                gen_index2 = j;
                good_gen = good;
                first_gen = pal1.ZmStarGen(0);
-               best_weighted_cost = cost*depth;
+               best_weighted_cost = weighted_cost(cost, depth);
                best_cost = cost;
                best_depth = depth;
             }
@@ -181,8 +190,10 @@ int main(int argc, char *argv[])
       for (long i = 1; i < k2; i++) {
          vector<long> gens, ords;
          findGenerators(gens, ords, fac2[i], 1);
-         assert(gens.size() == 1 && ords.size() == 1 &&
-                ords[0] > 0);
+         
+         assert(gens.size() == 1);
+         assert(ords.size() == 1);
+         assert(ords[0] > 0);
          genvec[i] = gens[0];
          ordvec[i] = ords[0];
       }
