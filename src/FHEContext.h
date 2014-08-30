@@ -46,7 +46,7 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
 #endif
 
 class EncryptedArray;
-class EvalMap;
+class AltEvalMap;
 class PowerfulDCRT;
 /**
  * @class FHEcontext
@@ -130,8 +130,8 @@ public:
   EncryptedArray* secondEA;
 
   //! Tables for computing the linear maps during bootstrapping
-  EvalMap* firstMap;
-  EvalMap* secondMap;
+  AltEvalMap* firstMap;
+  AltEvalMap* secondMap;
 
   //! Tables to ocnvert between ZZX and powerful representation
   PowerfulDCRT* p2dConversion;
@@ -143,7 +143,7 @@ public:
              const vector<long>& gens = vector<long>(), 
              const vector<long>& ords = vector<long>() );  // constructor
 
-  void makeBootstrappable(const Vec<long>& mvec, long width=0);
+  void makeBootstrappable(const Vec<long>& mvec);
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }

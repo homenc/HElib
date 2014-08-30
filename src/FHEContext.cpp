@@ -17,7 +17,7 @@
 NTL_CLIENT
 #include "NumbTh.h"
 #include "FHEContext.h"
-#include "EvalMap.h"
+#include "AltEvalMap.h"
 #include "powerful.h"
 
 #define pSize (NTL_SP_NBITS/2) /* The size of levels in the chain */
@@ -486,7 +486,7 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
 }
 
 
-void FHEcontext::makeBootstrappable(const Vec<long>& mvec, long width)
+void FHEcontext::makeBootstrappable(const Vec<long>& mvec)
 {
   if (bootstrapPAM != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to FHEcontext::makeBootstrappable\n";
@@ -494,9 +494,6 @@ void FHEcontext::makeBootstrappable(const Vec<long>& mvec, long width)
   }
   long m = computeProd(mvec);    // compute m itself
   assert(m == (long)zMStar.getM());    // sanity check
-
-  // Some default for the permtation-width parameter
-  if (width==0) width = 2*zMStar.numOfGens()-1;
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
   long p = zMStar.getP();
@@ -508,8 +505,8 @@ void FHEcontext::makeBootstrappable(const Vec<long>& mvec, long width)
   secondEA = new EncryptedArray(*this, alMod);
                   // Polynomial defaults to F0, relative to "standard" alMod
 
-  firstMap  = new EvalMap(*bootstrapEA, mvec, width, true);
-  secondMap = new EvalMap(*secondEA, mvec, width, false);
+  firstMap  = new AltEvalMap(*bootstrapEA, mvec, true);
+  secondMap = new AltEvalMap(*secondEA, mvec, false);
 
   p2dConversion = new PowerfulDCRT(*this, mvec);
 }

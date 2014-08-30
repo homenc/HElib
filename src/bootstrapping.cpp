@@ -16,10 +16,35 @@
 #include <NTL/ZZ.h>
 NTL_CLIENT
 #include "EncryptedArray.h"
-#include "EvalMap.h"
+//#include "EvalMap.h"
+#include "AltEvalMap.h"
 #include "powerful.h"
 
 #define DEBUGGING
+
+#define num_mValues 18
+static long mValues[num_mValues][12] = { 
+ // {phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3}
+  {  600,  1023, 10, 11,  93,  0,   838,   584,    0, 10,  6,   0}, // m=(3)*11*{31} m/phim(m)=1.7 C=24 D=2 E=1
+  {12800, 17425, 40, 41, 425,  0,  5951,  8078,    0, 40, -8,   0}, // m=(5^2)*{17}*41 :-( m/phim(m)=1.36 C=93 D=3 E=3
+  {15004, 15709, 22, 23, 683,  0,  4099, 13663,    0, 22, 31,   0}, // m=23*(683) m/phim(m)=1.04        C=73  D=2 E=1
+  {18000, 18631, 25, 31, 601,  0, 15627,  1334,    0, 30, 24,   0}, // m=31*(601) m/phim(m)=1.03        C=77  D=2 E=0
+  {18000, 20801, 60, 31, 671,  0, 18789, 19500,    0, 30, 10,   0}, // m=(11)*31*{61} m/phim(m)=1.15    C=98  D=2 E=2
+  {18816, 24295, 28, 43, 565,  0, 16386, 16427,    0, 42, 16,   0}, // m=(5)*43*{113} m/phim(m)=1.29    C=84  D=2 E=2
+  {21168, 27305, 28, 43, 635,  0, 10796, 26059,    0, 42, 18,   0}, // m=(5)*43*{127} m/phim(m)=1.28    C=86  D=2 E=2
+  {23040, 28679, 24, 17,  7, 241, 15184,  4098,28204, 16,  6, -10}, // m=7*17*(241) :-( m/phim(m)=1.24  C=63  D=4 E=3
+  {24000, 31775, 20, 41, 775,  0,  6976, 24806,    0, 40, 30,   0}, // m=(5^2)*{31}*41 m/phim(m)=1.32   C=88  D=2 E=2
+  {26400, 27311, 55, 31, 881,  0, 21145,  1830,    0, 30, 16,   0}, // m=31*(881) m/phim(m)=1.03        C=99  D=2 E=0
+  {31104, 35113, 36, 37, 949,  0, 16134,  8548,    0, 36, 24,   0}, // m=(13)*37*{73} m/phim(m)=1.12    C=94  D=2 E=2
+  {34848, 45655, 44, 23, 1985, 0, 33746, 27831,    0, 22, 36,   0}, // m=(5)*23*{397} m/phim(m)=1.31    C=100 D=2 E=2
+  {42336, 42799, 21, 127, 337, 0, 25276, 40133,    0,126, 16,   0}, // m=127*(337) m/phim(m)=1.01       C=161 D=2 E=0
+  {45360, 46063, 45, 73, 631,  0, 35337, 20222,    0, 72, 14,   0}, // m=73*(631) m/phim(m)=1.01        C=129 D=2 E=0
+  {46080, 53261, 24, 17, 13, 241, 43863, 28680,15913, 16, 12, -10}, // m=13*17*(241) :-( m/phim(m)=1.15 C=69  D=4 E=3
+  {49500, 49981, 30, 151, 331, 0,  6952, 28540,    0,150, 11,   0}, // m=151*(331) m/phim(m)=1          C=189 D=2 E=1
+  {54000, 55831, 25, 31, 1801, 0, 19812, 50593,    0, 30, 72,   0}, // m=31*(1801) m/phim(m)=1.03       C=125 D=2 E=0
+  {60016, 60787, 22, 89, 683,  0,  2050, 58741,    0, 88, 31,   0}  //  m=89*(683) m/phim(m)=1.01       C=139 D=2 E=1
+};
+
 
 /*********** Debugging utilities **************/
 FHESecKey* dbgKey=NULL;
@@ -31,6 +56,7 @@ Vec<ZZ> ptxt_pwr;
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
 
+void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
 template<class T> ostream& printVec(ostream& s, const Vec<T>& v, long nCoeffs=40);
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 void decryptAndPrint(const Ctxt& ctxt, const FHESecKey& sk,
@@ -139,6 +165,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   CheckCtxt(ctxt, "Before unpacking");
 
   // Step 1: unpack the slots of ctxt
+  double tm = -GetTime();
 
   // Apply the d automorphisms and store them in scratch area
   vector<Ctxt> scratch(d, ctxt);
@@ -154,22 +181,56 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
       unpacked[i] += tmp;
     }
   }
+  tm += GetTime();
+  cerr << "  Unpacking in "<<tm<<" seconds.";
   CheckCtxt(unpacked[0], "After unpacking");
 
   // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]
-
+  tm = -GetTime();
   long p = ctxt.getContext().zMStar.getP();
   long p2r = power_long(p,r);
   long topHigh = botHigh + r-1;
   if (p==2 && r>2)
     topHigh--; // For p==2 we sometime get a bit for free
 
-  cerr << "extracting "<<(topHigh+1)<<" digits\n";
+  cerr << "  extracting "<<(topHigh+1)<<" digits:\n";
+  bool foundError = false;
   for (long i=0; i<(long)unpacked.size(); i++) {
-    if (topHigh>0) // extract digits topHigh...0, store them in scratch
+    if (topHigh>0) { // extract digits topHigh...0, store them in scratch
       extractDigits(scratch, unpacked[i], topHigh+1);
-    else
+#ifdef DEBUGGING // check digit-extraction
+      long nDigits = scratch.size();
+      if (dbgKey && dbgEa && !foundError) {
+	vector<ZZX> slots;
+	dbgEa->decrypt(unpacked[i], *dbgKey, slots);
+
+	vector< vector<long> > digits(nDigits);
+	for (long j=0; j<nDigits; j++)
+	  dbgEa->decrypt(scratch[j], *dbgKey, digits[j]);
+
+	Vec<long> expansion;
+	for (long k=0; k<(long)slots.size() && !foundError; k++) {
+	  baseRep(expansion, nDigits, coeff(slots[k],0), p);
+	  long p2j = 1;
+	  for (long j=nDigits-1; j>=0; j--) {
+	    p2j *= p;
+	    if ( ((digits[j][k]-expansion[j]) % p2j) != 0) {
+	      cerr << " @ Digit extraction error (p="<<p<<"):\n";
+	      cerr << "   slots["<<k<<"]="<<slots[k]<<", rep="<<expansion<<endl;
+	      cerr << "   but extract returns [";
+	      for (long t=0; t<nDigits-1; t++) cerr << digits[t][k]<< " ";
+	      cerr << digits[nDigits-1][k]<< "]\n";
+	      cerr << "   "<<j<<"'th digits mismatch\n";
+	      foundError = true;
+	      break;
+	    }
+	  }
+	}
+      }
+#endif
+    } else {
       scratch.assign(1,unpacked[i]); // extracting LSB = no-op
+    }
 
     // set upacked[i] = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
     if (topHigh >= (long)scratch.size()) {
@@ -201,9 +262,12 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     // Our plaintext space is now mod p^r
     unpacked[i].reducePtxtSpace(p2r);
   }
+  tm += GetTime();
+  cerr << "  Extracting in "<<tm<<" seconds.";
   CheckCtxt(unpacked[0], "After extraction");
 
   // Step 3: re-pack the slots
+  tm = -GetTime();
   EncryptedArray ea2(ctxt.getContext(), ctxt.getContext().alMod);
   long nSlots = ea2.size();
   vector<ZZX> xVec(nSlots, ZZX(1,1)); // X in all the slots
@@ -218,6 +282,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     PolyRed(x2iInSlots, conv<ZZ>(p2r));
     ctxt += unpacked[i];
   }
+  tm += GetTime();
+  cerr << "  Repacking in "<<tm<<" seconds.";
   CheckCtxt(ctxt, "After re-packing");
 }
  
@@ -247,15 +313,15 @@ void movePwrflCoefs2Slots(Ctxt& ctxt)
 
     long idx = 0;
     for (long i=0; i<nSlots; i++) for (long j=0; j<d; j++) {
-	long coef1 = conv<long>(v[i][j]);
+	long coef1 = conv<long>(coeff(v[i],j));
 	long coef2 = conv<long>(powerful[idx++]);
 	if (coef1 != coef2) {
-	  cerr << " @ error: powerful coefficient is "<<coef2
+	  cerr << " @ error: powerful coefficient "<<i<<" is "<<coef2
 	       << " but slot contains "<<coef1<<endl;
 	  return;
 	}
       }
-    cerr << "LinTrans1 successful. ";
+    cerr << "  LinTrans1 successful. ";
     decryptAndPrint(ctxt, *dbgKey, *dbgEa, 0);
   }
 }
@@ -263,23 +329,40 @@ void movePwrflCoefs2Slots(Ctxt& ctxt)
 // Move the slots back to powerful-basis coefficients
 void moveSlots2PwrflCoefs(Ctxt& ctxt)
 {
+  vector<ZZX> v; // for debugging
+  if (dbgKey && dbgEa) dbgEa->decrypt(ctxt,*dbgKey,v);
+
   const FHEcontext& context = ctxt.getContext();
   context.secondMap->apply(ctxt);
-  return;
 
-  // For testing purposes: Decrypt, move slots to coefficients, then re-encryp
+  // For debugging: Check that we have powerful representation in the slots
   if (dbgKey && dbgEa) {
-    vector<ZZX> v;
-    dbgEa->decrypt(ctxt, *dbgKey, v);
+    ZZX ptxt1;
+    dbgKey->Decrypt(ptxt1, ctxt);
 
-    ZZX ptxt; 
+    zz_pBak bak; bak.save(); // backup NTL's current modulus
+    long p = ctxt.getPtxtSpace();
+    zz_p::init(p);
+    PowerfulConversion pConv(context.p2dConversion->getIndexTranslation());
+    HyperCube<zz_p> powerful(pConv.getShortSig());
+  
+    zz_pX poly = conv<zz_pX>(ptxt1);
+    pConv.polyToPowerful(powerful, poly);
+
+    long idx = 0;
+    long nSlots = dbgEa->size();
     long d =  dbgEa->getDegree();
-    // copy the coefficients from ptxt to the slots
-    for (long i=v.size()-1; i>=0; --i) for (long j=d-1; j>=0; --j) {
-	const ZZ& coef = coeff(v[i], j);
-	SetCoeff(ptxt, i*d + j, coef);
+    for (long i=0; i<nSlots; i++) for (long j=0; j<d; j++) {
+	long coef1 = conv<long>(coeff(v[i],j) % p);
+	long coef2 = conv<long>(powerful[idx++]);
+	if (coef1 != coef2) {
+	  cerr << " @ error: powerful coefficient "<<i<<" is "<<coef2
+	       << " but slot contains "<<coef1<<endl;
+	  return;
+	}
       }
-    dbgKey->Encrypt(ctxt, ptxt, ctxt.getContext().alMod.getPPowR());
+    cerr << "  LinTrans2 successful. ";
+    decryptAndPrint(ctxt, *dbgKey, *dbgEa, 0);
   }
 }
 
@@ -330,9 +413,9 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
     ZZX poly;
     dbgKey->Decrypt(poly,ctxt);
     if (poly!=dbg_ptxt)
-      cerr << " Decryption error after key-switching to bootsrapping key\n";
+      cerr << "  Decryption error after key-switching to bootsrapping key\n";
     else {
-      cerr << " After key-switching to bootsrapping key: ";
+      cerr << "  After key-switching to bootsrapping key: ";
       decryptAndPrint(ctxt, *dbgKey, *dbgEa, 0);
     }
   }
@@ -352,6 +435,24 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
     Vec<ZZ> powerful;
     context.p2dConversion->ZZXtoPowerful(powerful,dbgPoly);
+
+    Vec<long> expansion(INIT_SIZE, e+r); // base-p expansion of coefs
+    for (long i=0; i<powerful.length(); i++) {
+      long c_lo=0, c_hi=0;
+      baseRep(expansion, e+r, powerful[i], p);
+      for (long j=0; j<r; j++) {
+	c_lo = (c_lo*p) + expansion[j];
+	c_hi = (c_hi*p) + expansion[e+j];
+      }
+      if (p==2) c_hi += expansion[e-1];
+      long delta = (c_lo - c_hi - ptxt_pwr[i]) % p2r;
+      if (delta != 0) {
+	cerr << " @error in pwrful(c1*s+c0)["<<i<<"]: "
+	     << powerful[i] << "="<<expansion<<" (hi: "<<c_hi<<", lo: "<<c_lo
+	     << ") does not yeild "<< ptxt_pwr[i]<<endl;
+	break;
+      }
+    }
   }
 #endif
 
@@ -376,11 +477,25 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
     Vec<ZZ> powerful;
     context.p2dConversion->ZZXtoPowerful(powerful,dbgPoly);
+    Vec<long> expansion(INIT_SIZE, e+r); // base-p expansion of coefs
+    for (long i=0; i<powerful.length(); i++) {
+      long c_lo=0, c_hi=0;
+      baseRep(expansion, e+r, powerful[i], p);
+      for (long j=0; j<r; j++) {
+	c_lo = (c_lo*p) + expansion[j];
+	c_hi = (c_hi*p) + expansion[e+j];
+      }
+      if (p==2) c_hi += expansion[e-1];
+      long delta = (c_lo - c_hi - ptxt_pwr[i]) % p2r;
+      if (delta != 0) {
+	cerr << " @error in makeDivisible(pwrful(c1*s+c0))["<<i<<"]: "
+	     << powerful[i] << "="<<expansion<<" (hi: "<<c_hi<<", lo: "<<c_lo
+	     << ") does not yeild "<< ptxt_pwr[i]<<endl;
+	break;
+      }
+    }
   }
 #endif
-
-  //  if (p==2) // add the constant 2^{e-1} * allOnes to the ciphertext
-  //    zzParts[0] += (p2e/p) * context.allOnes;
 
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
@@ -389,11 +504,40 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   ctxt = bootstrapEkey;
   ctxt.multByConstant(zzParts[1]);
   ctxt.addConstant(zzParts[0]);
+  CheckCtxt(ctxt, "After pre-processing");
 
   e -= ePrime;
-  p2e /= p2ePrime; // reduce the plaintext space by p^{e'} factor
-  ctxt.reducePtxtSpace(p2e*p2r);
+  p2e /= p2ePrime;     // reduce the plaintext space by p^{e'} factor
+  ctxt.reducePtxtSpace(/*newPtxtSpace=*/p2e*p2r);
   FHE_NTIMER_STOP(preProcess);
+
+#ifdef DEBUGGING
+  if (dbgKey && dbgEa) { // apply the decryption procedure to the new zzParts
+    MulMod(dbgPoly, skPoly, zzParts[1], context.zMStar.getPhimX());
+    dbgPoly += zzParts[0];
+
+    Vec<ZZ> powerful;
+    context.p2dConversion->ZZXtoPowerful(powerful,dbgPoly);
+
+    Vec<long> expansion(INIT_SIZE, e+r); // base-p expansion of coefs
+    for (long i=0; i<powerful.length(); i++) {
+      long c_lo=0, c_hi=0;
+      baseRep(expansion, e+r, powerful[i], p);
+      for (long j=0; j<r; j++) {
+	if (j>=ePrime) c_lo = (c_lo*p) + expansion[j-ePrime];
+	c_hi = (c_hi*p) + expansion[e+j];
+      }
+      if (p==2) c_hi += expansion[e-1];
+      long delta = (c_lo - c_hi - ptxt_pwr[i]) % p2r;
+      if (delta != 0) {
+	cerr << " @error pwrfl["<<i<<"]="
+	     << powerful[i] << "="<<expansion<<" (hi: "<<c_hi<<", lo: "<<c_lo
+	     << ") does not yeild "<< ptxt_pwr[i]<<endl;
+	break;
+      }
+    }
+  }
+#endif
 
   // Move the powerful-basis coefficients to the plaintext slots
   FHE_NTIMER_START(LinearTransform1);
@@ -423,91 +567,74 @@ void usage(char *prog)
 {
   cerr << "Usage: "<<prog<<" [ optional parameters ]\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'p=2 e=4 q=257'\n\n";
-  cerr << "  p is the plaintext base [default=2]\n";
-  cerr << "  e is the exponent [default=4]\n";
-  cerr << "  q is the modulus [default=p^e+1]\n";
+  /*  cerr << "  e.g, 'p=2 e=4 q=257'\n\n";
+      cerr << "  p is the plaintext base [default=2]\n";
+      cerr << "  e is the exponent [default=4]\n";
+  */
+  cerr << "  r determines plaintext space mod 2^r [default=1]\n";
+  cerr << "  L is # of primes in the chain [default=20]\n";
+  cerr << "  N is a lower bound on phi(m) [default=0]\n";
   exit(0);
 }
 
-int main(int argc, char *argv[]) 
+void TestIt(long idx, long p, long r, long L)
 {
-  argmap_t argmap;
-  argmap["L"] = "20";
-  argmap["p"] = "2";
-  argmap["m1"] = "5";
-  argmap["m2"] = "7";
-  argmap["m3"] = "0";
-  argmap["r"] = "1";
+  Vec<long> mvec;
+  vector<long> gens;
+  vector<long> ords;
 
-  // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
+  long m = mValues[idx][1];
+  assert(GCD(p, m) == 1);
 
-  long p = atoi(argmap["p"]);
-  long m1 = atoi(argmap["m1"]);
-  long m2 = atoi(argmap["m2"]);
-  long m3 = atoi(argmap["m3"]);
-  long r = atoi(argmap["r"]);
-  long L =  atoi(argmap["L"]);
-
-  if (m1 <= 1) {
-    cerr << "m needs at least one factor\n";
-    exit(0);
-  }
-  Vec<long> mvec(INIT_SIZE, 1);
-  long m = mvec[0] = m1;
-  if (m2 > 1) {
-    m *= m2;
-    append(mvec, m2);
-  }
-  if (m3 > 1) {
-    m *= m3;
-    append(mvec, m3);
-  }
+  append(mvec, mValues[idx][3]);
+  append(mvec, mValues[idx][4]);
+  if (mValues[idx][5]>1) append(mvec, mValues[idx][5]);
+  gens.push_back(mValues[idx][6]);
+  gens.push_back(mValues[idx][7]);
+  if (mValues[idx][8]>1) gens.push_back(mValues[idx][8]);
+  ords.push_back(mValues[idx][9]);
+  ords.push_back(mValues[idx][10]);
+  if (mValues[idx][11]>1) ords.push_back(mValues[idx][11]);
 
   cerr << "*** TestIt: p=" << p
        << ", r=" << r
        << ", L=" << L
        << ", m=" << m
-       << " (=" << mvec << ")"
+       << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
        << endl;
 
   setTimersOn();
   FHE_NTIMER_START(initialize);
-
-  cerr << "Initializing context..." << std::flush;
-  FHEcontext context(m,p,r);
+  FHEcontext context(m, p, r, gens, ords);
   buildModChain(context, L, /*c=*/3);
-  cerr << " done. Computing bootstrapping information..." << std::flush;
+  context.zMStar.printout();
+  double t = -GetTime();
+  cerr << "Computing key-independent bootstrapping tables..." << std::flush;
   context.makeBootstrappable(mvec);
-  cerr << " done\n";
+  t += GetTime();
+  cerr << " done in "<<t<<" seconds\n";
   long p2r = context.alMod.getPPowR();
 
-  cerr << "Generating keys..." << std::flush;
+  cerr << "Generating keys\n" << std::flush;
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
+  cerr << "Computing key-dependent bootstrapping tables..." << std::flush;
+  t = -GetTime();
   secretKey.genBootstrapData();
-  cerr << " done\n";
-
-  // the bootstrapping key is encrypted relative to plaintext space p^{e+r}.
-  //  long ePr = FHEPubKey::ePlusR(p);
-
-  //  PAlgebraMod almod2(context.zMStar, context.bootstrapPAM->getR());
-  //  EncryptedArray ea2(context, almod2);
-  //  EncryptedArray ea1(context, context.alMod);
+  t += GetTime();
+  cerr << " done in "<<t<<" seconds\n";
 
   FHE_NTIMER_STOP(initialize);
   //  cerr << "****Initialization time:\n";
   //  printAllTimers();
+  //  cerr << endl;
   resetAllTimers();
 
   dbgKey = &secretKey; // debugging key and ea
-
-  // The bootstrapping data in the context is for plaintext space p^{e+r-e'}
-  dbgEa = context.bootstrapEA;
+  dbgEa = context.bootstrapEA; // EA for plaintext space p^{e+r-e'}
 
   zz_p::init(p2r);
   zz_pX poly_p = random_zz_pX(context.zMStar.getPhiM());
@@ -518,6 +645,7 @@ int main(int argc, char *argv[])
   conv(dbg_ptxt, poly_p);
   PolyRed(dbg_ptxt, p2r, true);
   context.p2dConversion->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
+  vecRed(ptxt_pwr, ptxt_pwr, p2r, true);
 
   ZZX poly2;
   Ctxt c1(publicKey);
@@ -529,7 +657,7 @@ int main(int argc, char *argv[])
   publicKey.reCrypt(c1);
   FHE_NTIMER_STOP(reCrypt);
   secretKey.Decrypt(poly2,c1);
-  decryptAndPrint(c1, secretKey, *dbgEa, 0);
+  //  decryptAndPrint(c1, secretKey, *dbgEa, 0);
 
   if (dbg_ptxt != poly2) {
     conv(poly_p,poly2);
@@ -542,16 +670,38 @@ int main(int argc, char *argv[])
       if (powerful[i] != powerful2[i]) {
         numDiff++;
 	cerr << i << ": " << powerful[i] << " != " << powerful2[i]<<", ";
-	if (numDiff >5) {
-	  cerr << endl;
-	  break;
-	}
+	if (numDiff >5) break;
       }
+    cerr << endl<< endl;
   }
-  else cerr << "  decryption succeeds!!\n";
+  else cerr << "  decryption succeeds!!\n\n";
 
-  //  cerr << "\n****Bootstrapping time:\n";
-  //  printAllTimers();
+  cerr << "****Bootstrapping time:\n";
+  printAllTimers();
+  cerr << endl<< endl;
+}
+
+int main(int argc, char *argv[]) 
+{
+  argmap_t argmap;
+  //  argmap["p"] = "2";
+  argmap["r"] = "1";
+  argmap["L"] = "20";
+  argmap["N"] = "0";
+
+  // get parameters from the command line
+  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
+
+  //  long p = atoi(argmap["p"]);
+  long p=2;
+  long r = atoi(argmap["r"]);
+  long L =  atoi(argmap["L"]);
+  long N =  atoi(argmap["N"]);
+
+  for (long i=0; i<num_mValues; i++) if (mValues[i][0]>=N) {
+      TestIt(i,p,r,L);
+      break;
+    }
   return 0;
 }
 
@@ -585,6 +735,17 @@ ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs)
   for (long i=0; i<nCoeffs-2; i++) s << poly[i] << ' ';
   s << "... " << poly[d-1] << ' ' << poly[d] << ']';
   return s; */
+}
+
+void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base)
+{
+  rep.SetLength(nDigits);
+  for (long j=0; j<nDigits; j++) {
+    rep[j] = rem(num, base);
+    if (rep[j] > base/2)         rep[j] -= base;
+    else if (rep[j] < -(base/2)) rep[j] += base;
+    num = (num - rep[j]) / base;
+  }
 }
 
 void decryptAndPrint(const Ctxt& ctxt, const FHESecKey& sk,
