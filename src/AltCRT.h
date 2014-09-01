@@ -126,10 +126,8 @@ class AltCRT {
   template<class Fun>
   AltCRT& Op(const ZZX &poly, Fun fun);
 
-  static bool dryRun; // do not actually perform any of the operations
-
-
 public:
+  static bool dryRun; // do not actually perform any of the operations
 
   // Constructors and assignment operators
 
