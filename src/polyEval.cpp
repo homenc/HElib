@@ -30,9 +30,7 @@ Ctxt& DynamicCtxtPowers::getPower(long e)
     v[e-1] = getPower(e-k);             // compute X^e = X^{e-k} * X^k
     v[e-1].multiplyBy(getPower(k));
 
-    IndexSet s;                         // mod-switch down to base set
-    v[e-1].findBaseSet(s);
-    v[e-1].modDownToSet(s);
+    v[e-1].modDownToLevel(v[e-1].findBaseLevel()); // mod-switch down to base level
   }
   return v[e-1];
 }
