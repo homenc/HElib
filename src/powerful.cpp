@@ -7,18 +7,6 @@ NTL_CLIENT
 #include "powerful.h"
 #include "hypercube.h"
 
-//FIXME: The utility function computeProd should be moved to NumbTh
-
-// returns \prod_d vec[d]
-long computeProd(const Vec<long>& vec)
-{
-  long prod = 1;
-  long k = vec.length();
-  for (long d = 0; d < k; d++)
-    prod = prod * vec[d];
-  return prod;
-}
-
 // powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}
 // computes divVec[d] = m/p_d^{e_d}
 inline void computeDivVec(Vec<long>& divVec, long m,
