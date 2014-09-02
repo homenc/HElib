@@ -280,7 +280,9 @@ vector<T> Vec_replicate(const T& a, long n)
    return res;
 }
 
-
+//! returns \prod_d vec[d]
+long computeProd(const Vec<long>& vec);
+long computeProd(const vector<long>& vec);
 
 // some useful operations
 void mul(vector<ZZX>& x, const vector<ZZX>& a, long b);
@@ -547,6 +549,15 @@ ostream& operator<<(ostream& s, vector<T> v)
   for (long i=0; i<(long) v.size()-1; i++)
     s << v[i] << ' ';
   return (s << v[v.size()-1] << ']');
+}
+
+template<class T>
+istream& operator>>(istream& s, vector<T> v)
+{
+  Vec<T> vv; // read into an NTL vector, then convert
+  s >> vv;
+  convert(v, vv);
+  return s;
 }
 
 
