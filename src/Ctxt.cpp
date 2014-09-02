@@ -119,7 +119,7 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
 // have s<=primeSet. s must contain either all special primes or none of them.
 void Ctxt::modUpToSet(const IndexSet &s)
 {
-  FHE_TIMER_START;
+  //  FHE_TIMER_START;
   IndexSet setDiff = s/primeSet; // set minus (primes in s but not in primeSet)
   if (empty(setDiff)) return;    // nothing to do, no primes are added
 
@@ -136,15 +136,13 @@ void Ctxt::modUpToSet(const IndexSet &s)
 
   primeSet.insert(setDiff); // add setDiff to primeSet
   assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
-  FHE_TIMER_STOP;
+  //  FHE_TIMER_STOP;
 }
 
 // mod-switch down to primeSet \intersect s, after this call we have
 // primeSet<=s. s must contain either all special primes or none of them.
 void Ctxt::modDownToSet(const IndexSet &s)
 {
-  FHE_TIMER_START;
-
   IndexSet intersection = primeSet & s;
   //  assert(!empty(intersection));       // some primes must be left
   if (empty(intersection)) {
@@ -152,6 +150,8 @@ void Ctxt::modDownToSet(const IndexSet &s)
     exit(1);
   }
   if (intersection==primeSet) return; // nothing to do, removing no primes
+  FHE_TIMER_START;
+
   IndexSet setDiff = primeSet / intersection; // set-minus
 
   // Scale down all the parts: use either a simple "drop down" (just removing
@@ -249,10 +249,10 @@ void Ctxt::reducePtxtSpace(long newPtxtSpace)
 // keyID<0 then re-linearize to any key for which a switching matrix exists
 void Ctxt::reLinearize(long keyID)
 {
-  FHE_TIMER_START;
-  // Special case: if *this is empty then do nothing
-  if (this->isEmpty()) return;
+  // Special case: if *this is empty or already re-linearized then do nothing
+  if (this->isEmpty() || this->inCanonicalForm(keyID)) return;
 
+  FHE_TIMER_START;
   this->reduce();
 
   // To relinearize, the primeSet must be disjoint from the special primes
@@ -300,7 +300,6 @@ void Ctxt::reLinearize(long keyID)
   }
 #endif
 
-
   FHE_TIMER_STOP;
 }
 
@@ -321,8 +320,6 @@ void Ctxt::cleanUp()
 // p.getIndexSet() \union context.specialPrimes
 void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 {
-  FHE_TIMER_START;
-
   // no special primes in the input part
   assert(context.specialPrimes.disjointFrom(p.getIndexSet()));
 
@@ -331,7 +328,6 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
     CtxtPart pp = p;
     pp.addPrimesAndScale(context.specialPrimes);
     addPart(pp, /*matchPrimeSet=*/true);
-    FHE_TIMER_STOP;
     return; 
   }
 
@@ -411,7 +407,6 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
     addPart(polyDigits[i], SKHandle(), /*matchPrimeSet=*/true);
   }
   noiseVar += addedNoise;
-  FHE_TIMER_STOP;
 } // restore random state upon destruction of the RandomState, see NumbTh.h
 
 // Find the IndexSet such that modDown to that set of primes makes the
@@ -470,7 +465,6 @@ void Ctxt::findBaseSet(IndexSet& s) const
 void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle, 
 		   bool matchPrimeSet, bool negative)
 {
-  FHE_TIMER_START;
   assert (&part.getContext() == &context);
 
   // add to the the prime-set of *this, if needed (this is expensive)
@@ -506,13 +500,11 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
       if (negative) parts.back().Negate(); // not thread-safe??
     }
   }
-  FHE_TIMER_STOP;
 }
 
 // Add a constant polynomial
 void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 {
-  FHE_TIMER_START;
   // If the size is not given, we use the default value phi(m)*(ptxtSpace/2)^2
   if (size < 0.0) {
     // WARNING: the following line is written just so to prevent overflow
@@ -529,7 +521,6 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   else addPart(dcrt, SKHandle(0,1,0));
 
   noiseVar += (size*f)*f;
-  FHE_TIMER_STOP;
 }
 
 // Add a constant polynomial
@@ -547,15 +538,12 @@ void Ctxt::addConstant(const ZZ& c)
 
 void Ctxt::negate()
 {
-  FHE_TIMER_START;
   for (size_t i=0; i<parts.size(); i++) parts[i].Negate();
-  FHE_TIMER_STOP;
 }
 
 // Add/subtract another ciphertxt (depending on the negative flag)
 void Ctxt::addCtxt(const Ctxt& other, bool negative)
 {
-  FHE_TIMER_START;
   // Sanity check: same context and public key
   assert (&context==&other.context && &pubKey==&other.pubKey);
 
@@ -599,7 +587,6 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     }
   }
   noiseVar += other_pt->noiseVar;
-  FHE_TIMER_STOP;
 }
 
 // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
@@ -783,7 +770,6 @@ void Ctxt::multByConstant(const ZZ& c)
 // Multiply-by-constant
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
-  FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
@@ -798,8 +784,6 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 
   noiseVar *= size;
-
-  FHE_TIMER_STOP;
 }
 
 // Divide a cipehrtext by 2. It is assumed that the ciphertext
@@ -921,6 +905,7 @@ void Ctxt::frobeniusAutomorph(long j)
   j = mcMod(j, d);
   long val = PowerMod(p, j, m);
   smartAutomorph(val);
+  FHE_TIMER_STOP;
 }
 
 
