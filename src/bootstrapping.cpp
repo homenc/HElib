@@ -25,6 +25,7 @@ NTL_CLIENT
 static long mValues[][13] = { 
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3}
   {  2,   600,  1023, 10, 11,  93,  0,   838,   584,    0, 10,  6,   0}, // m=(3)*11*{31} m/phim(m)=1.7    C=24  D=2 E=1
+  {  2,  1200,  1705, 20, 11, 155,  0,   156,   936,    0, 10,  6,   0}, // m=(5)*11*{31} m/phim(m)=1.42   C=34  D=2 E=2
   {  2, 12800, 17425, 40, 41, 425,  0,  5951,  8078,    0, 40, -8,   0}, // m=(5^2)*{17}*41 m/phim(m)=1.36 C=93  D=3 E=3
   {  2, 15004, 15709, 22, 23, 683,  0,  4099, 13663,    0, 22, 31,   0}, // m=23*(683) m/phim(m)=1.04      C=73  D=2 E=1
   {  2, 18000, 18631, 25, 31, 601,  0, 15627,  1334,    0, 30, 24,   0}, // m=31*(601) m/phim(m)=1.03      C=77  D=2 E=0
@@ -304,10 +305,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   ctxt = unpacked[0];
   for (long i=1; i<d; i++) {
     unpacked[i].multByConstant(x2iInSlots);
-    FHE_NTIMER_START(repackOverhead);
+    FHE_NTIMER_START(repackOverhead2);
     MulMod(x2iInSlots, x2iInSlots,xInSlots,ctxt.getContext().zMStar.getPhimX());
     PolyRed(x2iInSlots, conv<ZZ>(p2r));
-    FHE_NTIMER_STOP(repackOverhead);
+    FHE_NTIMER_STOP(repackOverhead2);
     ctxt += unpacked[i];
   }
   tm += GetTime();
@@ -733,7 +734,7 @@ int main(int argc, char *argv[])
   long L =  atoi(argmap["L"]);
   long N =  atoi(argmap["N"]);
 
-  for (long i=0; i<num_mValues; i++) if (mValues[i][0]>=N) {
+  for (long i=0; i<(long)num_mValues; i++) if (mValues[i][0]>=N) {
       TestIt(i,p,r,L);
       break;
     }
