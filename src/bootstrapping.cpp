@@ -20,7 +20,7 @@ NTL_CLIENT
 #include "AltEvalMap.h"
 #include "powerful.h"
 
-#define DEBUGGING
+//#define DEBUGGING
 
 #define num_mValues 18
 static long mValues[num_mValues][12] = { 
@@ -194,10 +194,13 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     topHigh--; // For p==2 we sometime get a bit for free
 
   cerr << "  extracting "<<(topHigh+1)<<" digits:\n";
+#ifdef DEBUGGING // check digit-extraction
   bool foundError = false;
+#endif
   for (long i=0; i<(long)unpacked.size(); i++) {
     if (topHigh>0) { // extract digits topHigh...0, store them in scratch
       extractDigits(scratch, unpacked[i], topHigh+1);
+
 #ifdef DEBUGGING // check digit-extraction
       long nDigits = scratch.size();
       if (dbgKey && dbgEa && !foundError) {
@@ -290,13 +293,15 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 // Move the powerful-basis coefficients to the plaintext slots
 void movePwrflCoefs2Slots(Ctxt& ctxt)
 {
+#ifdef DEBUGGING
   ZZX ptxt1; // for debugging
   long p = ctxt.getPtxtSpace();
   if (dbgKey && dbgEa) dbgKey->Decrypt(ptxt1, ctxt);
-
+#endif
   const FHEcontext& context = ctxt.getContext();
   context.firstMap->apply(ctxt);
 
+#ifdef DEBUGGING
   // For debugging: Check that we have powerful representation in the slots
   if (dbgKey && dbgEa) {
     zz_pBak bak; bak.save(); // backup NTL's current modulus
@@ -324,18 +329,22 @@ void movePwrflCoefs2Slots(Ctxt& ctxt)
     cerr << "  LinTrans1 successful. ";
     decryptAndPrint(ctxt, *dbgKey, *dbgEa, 0);
   }
+#endif
 }
 
 // Move the slots back to powerful-basis coefficients
 void moveSlots2PwrflCoefs(Ctxt& ctxt)
 {
+#ifdef DEBUGGING
   vector<ZZX> v; // for debugging
   if (dbgKey && dbgEa) dbgEa->decrypt(ctxt,*dbgKey,v);
+#endif
 
   const FHEcontext& context = ctxt.getContext();
   context.secondMap->apply(ctxt);
 
   // For debugging: Check that we have powerful representation in the slots
+#ifdef DEBUGGING
   if (dbgKey && dbgEa) {
     ZZX ptxt1;
     dbgKey->Decrypt(ptxt1, ctxt);
@@ -364,6 +373,7 @@ void moveSlots2PwrflCoefs(Ctxt& ctxt)
     cerr << "  LinTrans2 successful. ";
     decryptAndPrint(ctxt, *dbgKey, *dbgEa, 0);
   }
+#endif
 }
 
 // bootstrap a ciphertext to reduce noise
