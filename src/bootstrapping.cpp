@@ -101,7 +101,7 @@ void initUnpackEncoding(vector< vector<ZZX> >& unpackSlotEncoding,
 // This code is more general than we need, for bootstrapping we will always
 // have e>r/
 template<class VecInt>
-long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha=0.4)
+long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha=0.42)
 {
   assert(((p2e % p2r == 0) && (q % p2e == 1)) ||
 	 ((p2r % p2e == 0) && (q % p2r == 1)));
@@ -594,7 +594,7 @@ void TestIt(long idx, long p, long r, long L)
   if (mValues[idx][8]>1) gens.push_back(mValues[idx][8]);
   ords.push_back(mValues[idx][9]);
   ords.push_back(mValues[idx][10]);
-  if (mValues[idx][11]>1) ords.push_back(mValues[idx][11]);
+  if (abs(mValues[idx][11])>1) ords.push_back(mValues[idx][11]);
 
   cerr << "*** TestIt: p=" << p
        << ", r=" << r
@@ -628,9 +628,9 @@ void TestIt(long idx, long p, long r, long L)
   cerr << " done in "<<t<<" seconds\n";
 
   FHE_NTIMER_STOP(initialize);
-  //  cerr << "****Initialization time:\n";
-  //  printAllTimers();
-  //  cerr << endl;
+  cerr << "****Initialization time:\n";
+  printAllTimers();
+  cerr << endl;
   resetAllTimers();
 
   dbgKey = &secretKey; // debugging key and ea
