@@ -619,18 +619,18 @@ void TestIt(long idx, long p, long r, long L)
   vector<long> gens;
   vector<long> ords;
 
-  long m = mValues[idx][1];
+  long m = mValues[idx][2];
   assert(GCD(p, m) == 1);
 
-  append(mvec, mValues[idx][3]);
   append(mvec, mValues[idx][4]);
-  if (mValues[idx][5]>1) append(mvec, mValues[idx][5]);
-  gens.push_back(mValues[idx][6]);
+  append(mvec, mValues[idx][5]);
+  if (mValues[idx][6]>1) append(mvec, mValues[idx][6]);
   gens.push_back(mValues[idx][7]);
-  if (mValues[idx][8]>1) gens.push_back(mValues[idx][8]);
-  ords.push_back(mValues[idx][9]);
+  gens.push_back(mValues[idx][8]);
+  if (mValues[idx][9]>1) gens.push_back(mValues[idx][9]);
   ords.push_back(mValues[idx][10]);
-  if (abs(mValues[idx][11])>1) ords.push_back(mValues[idx][11]);
+  ords.push_back(mValues[idx][11]);
+  if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
   cerr << "*** TestIt: p=" << p
        << ", r=" << r
@@ -720,7 +720,7 @@ void TestIt(long idx, long p, long r, long L)
 int main(int argc, char *argv[]) 
 {
   argmap_t argmap;
-  //  argmap["p"] = "2";
+  argmap["p"] = "2";
   argmap["r"] = "1";
   argmap["L"] = "20";
   argmap["N"] = "0";
@@ -728,13 +728,13 @@ int main(int argc, char *argv[])
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
-  //  long p = atoi(argmap["p"]);
-  long p=2;
+  long p = atoi(argmap["p"]);
   long r = atoi(argmap["r"]);
   long L =  atoi(argmap["L"]);
   long N =  atoi(argmap["N"]);
 
-  for (long i=0; i<(long)num_mValues; i++) if (mValues[i][0]>=N) {
+  for (long i=0; i<(long)num_mValues; i++)
+    if (mValues[i][0]==p && mValues[i][1]>=N) {
       TestIt(i,p,r,L);
       break;
     }
