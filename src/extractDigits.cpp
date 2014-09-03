@@ -56,9 +56,11 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
   for (long i=0; i<r; i++) {
     tmp = c;
     for (long j=0; j<i; j++) {
+      FHE_NTIMER_START(square);
       if (p==2) w[j].square();
       else if (p==3) w[j].cube();
       else polyEval(w[j], x2p, w[j]); // "in spirit" w[j] = w[j]^p
+      FHE_NTIMER_STOP(square);
       tmp -= w[j];
       tmp.divideByP();
     }
@@ -80,6 +82,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
 static void buildDigitPolynomial(ZZX& result, long p, long e)
 {
   if (p<2 || e<=1) return; // nothing to do
+  FHE_TIMER_START;
   long p2e = power_long(p,e); // the integer p^e
 
   // Compute x - x^p (mod p^e), for x=0,1,...,p-1
@@ -96,5 +99,6 @@ static void buildDigitPolynomial(ZZX& result, long p, long e)
   interpolateMod(result, x, y, p, e);
   assert(deg(result)<p); // interpolating p points, should get deg<=p-1
   SetCoeff(result, p);   // return result = x^p + poly'(x)
-  cerr << "# digitExt mod "<<p<<"^"<<e<<"="<<result<<endl;
+  //  cerr << "# digitExt mod "<<p<<"^"<<e<<"="<<result<<endl;
+  FHE_TIMER_STOP;
 }
