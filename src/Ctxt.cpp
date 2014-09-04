@@ -755,6 +755,7 @@ void Ctxt::multByConstant(const ZZ& c)
 {
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
+  FHE_TIMER_START;
 
   long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
   ZZ tmp = to_ZZ(cc);
@@ -772,6 +773,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
+  FHE_TIMER_START;
 
    // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
   if (size < 0.0) {
@@ -784,6 +786,14 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 
   noiseVar *= size;
+}
+
+void Ctxt::multByConstant(const ZZX& poly, double size)
+{
+  if (this->isEmpty()) return;
+  FHE_TIMER_START;
+  DoubleCRT dcrt(poly,context,primeSet);
+  multByConstant(dcrt,size);
 }
 
 // Divide a cipehrtext by 2. It is assumed that the ciphertext
@@ -1133,21 +1143,13 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
   zzParts.resize(parts.size());
   const PowerfulDCRT& p2d_conv = *context.p2dConversion;
   for (size_t i=0; i<parts.size(); i++) {
-    // parts[i].toPoly(zzParts[i]);  // Convert to ZZX format
-    // if (deg(zzParts[i])<20) {
-    //   cerr << " original poly="<<zzParts[i]<<endl;
-    //   cerr << "    poly mod p=[";
-    // }
 
     Vec<ZZ> powerful;
     p2d_conv.dcrtToPowerful(powerful, parts[i]); // conver to powerful rep
-    // for (long j=0; j<=deg(zzParts[i]); j++) {
-    //   const ZZ& coef = coeff(zzParts[i],j);
+
     for (long j=0; j<powerful.length(); j++) {
       const ZZ& coef = powerful[j];
       long c_mod_p = MulModPrecon(rem(coef,p2r), ratioModP, p2r, precon);
-      // c_mod_p in [0,p-1]
-      //      if (j<20) cerr << c_mod_p << " ";
       xdouble xcoef = ratio*conv<xdouble>(coef); // the scaled coefficient
 
       // round xcoef to an integer which is equal to c_mod_p modulo ptxtSpace
