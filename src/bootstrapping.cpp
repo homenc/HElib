@@ -263,6 +263,55 @@ static void x2iInSlots(ZZX& poly, long i,
 }
 
 // Initialized linearized polynomials for unpacking the slots
+#ifdef NEWCODE
+// we should just use a 1-D array, but for now I'll use
+// a 2-D array so as to not break the interfaces
+//
+
+// The following is a HACK for now
+
+extern void *normal_basis_hack;
+
+static void initUnpackEncoding(vector< vector<ZZX> >& unpackSlotEncoding,
+			       const EncryptedArray& ea)
+{
+  FHE_TIMER_START;
+
+  zz_pBak bak; bak.save(); ea.getAlMod().restoreContext();
+  zz_pEBak ebak; ebak.save(); ea.getDerived(PA_zz_p()).restoreContextForG();
+  // NOTE: at this point in the bootstrapping, we should be working
+  // with zz_p's and not GF2's
+
+  long nslots = ea.size();
+  long d = ea.getDegree();
+  long p = ea.getAlMod().getZMStar().getP();
+  long r = ea.getAlMod().getR();
+
+  Mat<zz_p> &CB = * (Mat<zz_p> *)(normal_basis_hack);
+  Mat<zz_p> CBi;
+  ppInvert(CBi, CB, p, r);
+
+  vector<ZZX> LM;
+  LM.resize(d);
+  for (long i = 0; i < d; i++)
+    LM[i] = rep(CBi[i][0]);
+
+  vector<ZZX> C; 
+  ea.buildLinPolyCoeffs(C, LM);
+  
+
+  unpackSlotEncoding.resize(1);
+  unpackSlotEncoding[0].resize(d);
+
+  for (long j = 0; j < d; j++) {
+    vector<ZZX> v(nslots);
+    for (long k = 0; k < nslots; k++) v[k] = C[j];
+    ea.encode(unpackSlotEncoding[0][j], v);
+  }
+}
+  
+#else
+
 static void initUnpackEncoding(vector< vector<ZZX> >& unpackSlotEncoding,
 			       const EncryptedArray& ea)
 {
@@ -287,6 +336,7 @@ static void initUnpackEncoding(vector< vector<ZZX> >& unpackSlotEncoding,
     }
   }
 }
+#endif
 
 
 // Make every entry of vec divisible by p^e by adding/subtracting multiples
@@ -366,7 +416,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   FHE_NTIMER_START(unpack);
 
   // Apply the d automorphisms and store them in scratch area
-  long d = unpackSlotEncoding.size();
+  long d = ctxt.getContext().zMStar.getOrdP();
+
   vector<Ctxt> scratch(d, ctxt);
   for (long i=1; i<d; i++) scratch[i].frobeniusAutomorph(i);
 
@@ -375,6 +426,17 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
   // Now apply the d linear transformations to get the coefficients
   vector<Ctxt> unpacked(d, scratch[0]);
+
+#ifdef NEWCODE
+  for (long i=0; i<d; i++) { // compute the i'th linear transformation
+    unpacked[i].multByConstant(unpackSlotEncoding[0][mcMod(i, d)]);
+    for (long j = 1; j < d; j++) {
+      Ctxt tmp(scratch[j]);
+      tmp.multByConstant(unpackSlotEncoding[0][mcMod(i+j, d)]);
+      unpacked[i] += tmp;
+    }
+  }
+#else
   for (long i=0; i<d; i++) { // compute the i'th linear transformation
     unpacked[i].multByConstant(unpackSlotEncoding[i][0]);
     for (long j = 1; j < d; j++) {
@@ -383,6 +445,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
       unpacked[i] += tmp;
     }
   }
+#endif
   FHE_NTIMER_STOP(unpack);
 
   // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]

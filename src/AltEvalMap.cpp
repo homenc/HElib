@@ -155,6 +155,14 @@ bool AltStep1Matrix<type>::get(mat_R& out, long i, long j) const
   return false;
 }
 
+#ifdef NEWCODE
+
+// This is a HACK for now...
+
+void *normal_basis_hack = 0; 
+
+#endif
+
 template<class type>
 AltStep1Matrix<type>::AltStep1Matrix(const EncryptedArray& _ea, 
                                shared_ptr<CubeSignature> _sig,
@@ -202,7 +210,6 @@ AltStep1Matrix<type>::AltStep1Matrix(const EncryptedArray& _ea,
 
 
   if (invert) {
-    REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
 
     mat_R A1, A2;
 
@@ -220,6 +227,79 @@ AltStep1Matrix<type>::AltStep1Matrix(const EncryptedArray& _ea,
     for (long i = 0; i < sz*d; i++)
       for (long j = 0; j < sz*d; j++)
         A[i/d][j/d][i%d][j%d] = A2[i][j];
+    
+    
+#ifdef NEWCODE
+    REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
+
+    // compute change of basis matrix CB
+    mat_R CB;
+    CB.SetDims(d, d);
+    RE normal_element;
+    RE H;
+    bool got_it = false;
+
+    H = power(conv<RE>(RX(1, 1)), p);
+    
+
+    do {
+      random(normal_element);
+   
+      RE pow;
+      pow = normal_element; 
+      VectorCopy(CB[0], rep(pow), d);
+      for (long i = 1; i < d; i++) {
+        pow = eval(rep(pow), H);
+        VectorCopy(CB[i], rep(pow), d);
+      }
+
+      Mat<ZZ> CB1;
+      conv(CB1, CB);
+
+      {
+         zz_pBak bak1; bak1.save(); zz_p::init(p);
+         Mat<zz_p> CB2;
+         conv(CB2, CB1);
+         got_it = determinant(CB2) != 0;
+      }
+    } while (!got_it);
+
+    // multiply each entry of A on the right by CB
+    for (long i = 0; i < sz; i++)
+      for (long j = 0; j < sz; j++)
+        A[i][j] =  A[i][j] * CB;
+
+    // save CB for future use
+
+    normal_basis_hack = new mat_R(CB);
+
+    // test theory
+
+    Mat<R> CBi;
+    ppInvert(CBi, CB, p, r);
+
+    RE tt1;
+    random(tt1);
+
+    cerr << "\n\n***\n\n";
+    cerr << tt1 << "\n";
+    Vec<R> tt1_vec;
+    VectorCopy(tt1_vec, rep(tt1), d);
+
+    RE tt2;
+    tt2 = conv<RE>(conv<RX>(tt1_vec * CB));
+
+    for (long i = 0; i < d; i++)  {
+      Vec<R> tt2_vec, tt3_vec;
+      VectorCopy(tt2_vec, rep(tt2), d);
+      tt3_vec = tt2_vec * CBi;
+      cerr << tt3_vec[0] << "\n";
+
+      tt2 = eval(rep(tt2), H);
+    } 
+
+
+#endif
  }
 }
 

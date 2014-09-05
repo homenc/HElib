@@ -180,7 +180,7 @@ void TestIt(long idx, long p, long r, long L)
 	if (powerful[i] != powerful2[i]) {
           numDiff++;
 	  cout << i << ": " << powerful[i] << " != " << powerful2[i]<<", ";
-	  if (numDiff >5) break;
+	  // if (numDiff >5) break;
         }
       cout << endl<< endl;
       printAllTimers();
