@@ -25,11 +25,6 @@
 #include "DoubleCRT.h"
 #include "FHEContext.h"
 
-//FIXME: Utility function computeProd should be moved to NumbTh
-
-//! returns \prod_d vec[d]
-long computeProd(const Vec<long>& vec);
-
 //! @class PowerfulTranslationIndexes
 //! @brief Holds index tables for translation between powerful and zz_pX
 class PowerfulTranslationIndexes {

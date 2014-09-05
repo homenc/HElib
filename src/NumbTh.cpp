@@ -83,6 +83,18 @@ long multOrd(long p, long m)
 }
 
 
+// returns \prod_d vec[d]
+template<class T> static inline long computeProd(const T& vec, long k)
+{
+  long prod = 1;
+  for (long d = 0; d < k; d++)
+    prod = prod * vec[d];
+  return prod;
+}
+long computeProd(const Vec<long>& vec) { return computeProd(vec, vec.length());}
+long computeProd(const vector<long>& vec) {return computeProd(vec, vec.size());}
+
+
 // return a degree-d irreducible polynomial mod p
 ZZX makeIrredPoly(long p, long d)
 {

@@ -122,7 +122,7 @@ public:
   ///@{
   //! PAlgebraMod, EncryptedArray objects to handle bootstrapping, they refer
   //! to plaintext space p^{r'} gratet than the p^r plantext space of alMod
-  static const long  bootstrapHwt = 60; // Hamming weight of bootstrapping key
+  static const long  bootstrapHwt = 48; // Hamming weight of bootstrapping key
   PAlgebraMod* bootstrapPAM;
   EncryptedArray* bootstrapEA;
 

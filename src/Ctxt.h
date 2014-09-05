@@ -358,8 +358,7 @@ public:
   // Multiply-by-constant. If the size is not given, we use
   // phi(m)*ptxtSpace^2 as the default value.
   void multByConstant(const DoubleCRT& dcrt, double size=-1.0);
-  void multByConstant(const ZZX& poly, double size=-1.0)
-  { multByConstant(DoubleCRT(poly,context,primeSet),size); }
+  void multByConstant(const ZZX& poly, double size=-1.0);
   void multByConstant(const ZZ& c);
 
   //! Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
