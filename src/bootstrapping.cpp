@@ -594,7 +594,7 @@ void TestIt(long idx, long p, long r, long L)
   if (mValues[idx][8]>1) gens.push_back(mValues[idx][8]);
   ords.push_back(mValues[idx][9]);
   ords.push_back(mValues[idx][10]);
-  if (mValues[idx][11]>1) ords.push_back(mValues[idx][11]);
+  if (labs(mValues[idx][11])>1) ords.push_back(mValues[idx][11]);
 
   cerr << "*** TestIt: p=" << p
        << ", r=" << r
