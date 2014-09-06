@@ -50,12 +50,6 @@
 #include <vector>
 #include <cassert>
 
-#if (__cplusplus>199711L)
-#include <memory>
-#else
-#include <tr1/memory>
-using namespace tr1;
-#endif
 
 
 #include <NTL/ZZX.h>
@@ -69,6 +63,7 @@ using namespace tr1;
 #include <NTL/mat_lzz_pE.h>
 
 #include "cloned_ptr.h"
+#include "NumbTh.h"
 
 //NTL_CLIENT
 

@@ -405,7 +405,7 @@ inline ZZX to_ZZX(const AltCRT &d)  { ZZX p; d.toPoly(p); return p; }
 inline void conv(AltCRT& d, const SingleCRT& s) { d=s; }
 
 
-typedef std::shared_ptr<AltCRT> DCRTptr;
-typedef std::shared_ptr<ZZX> ZZXptr;
+typedef shared_ptr<AltCRT> DCRTptr;
+typedef shared_ptr<ZZX> ZZXptr;
 
 #endif

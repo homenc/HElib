@@ -43,6 +43,14 @@
 #include <NTL/lzz_pXFactoring.h>
 
 #if (__cplusplus>199711L)
+#include <memory>
+#else
+#include <tr1/memory>
+using namespace tr1;
+#endif
+
+
+#if (__cplusplus>199711L)
 #include <unordered_map>
 //! @typedef
 typedef std::unordered_map<string, const char *> argmap_t;

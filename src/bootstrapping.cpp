@@ -377,9 +377,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   // Step 1: unpack the slots of ctxt
   FHE_NTIMER_START(unpack);
 
-  cout << "*** " << ctxt.getPrimeSet() << "\n";
   ctxt.cleanUp();
-  cout << "*** " << ctxt.getPrimeSet() << "\n";
 
   // Apply the d automorphisms and store them in scratch area
   long d = ctxt.getContext().zMStar.getOrdP();
