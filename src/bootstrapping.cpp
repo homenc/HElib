@@ -373,8 +373,13 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   double tm = -GetTime();
 #endif
 
+
   // Step 1: unpack the slots of ctxt
   FHE_NTIMER_START(unpack);
+
+  cout << "*** " << ctxt.getPrimeSet() << "\n";
+  ctxt.cleanUp();
+  cout << "*** " << ctxt.getPrimeSet() << "\n";
 
   // Apply the d automorphisms and store them in scratch area
   long d = ctxt.getContext().zMStar.getOrdP();
@@ -387,7 +392,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     // explicit scope to force all temporaries
     // to be released
 
-    FHE_NTIMER_START(ConvertConstants);
+    FHE_NTIMER_START(UnpackConvertConstants);
 
     vector< shared_ptr<DoubleCRT> > coeff_vector;
     coeff_vector.resize(d);
@@ -395,15 +400,17 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
       coeff_vector[i] = shared_ptr<DoubleCRT>(new 
         DoubleCRT(unpackSlotEncoding[0][i], ctxt.getContext(), ctxt.getPrimeSet()) );
 
-    FHE_NTIMER_STOP(ConvertConstants);
+    FHE_NTIMER_STOP(UnpackConvertConstants);
 
 
+    FHE_NTIMER_START(UnpackMain);
     Ctxt tmp1(ZeroCtxtLike, ctxt);
     Ctxt tmp2(ZeroCtxtLike, ctxt);
 
     for (long j = 0; j < d; j++) { // process jth Frobenius 
       tmp1 = ctxt;
       tmp1.frobeniusAutomorph(j);
+      tmp1.cleanUp();
 
       for (long i = 0; i < d; i++) {
         tmp2 = tmp1;
@@ -411,6 +418,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
         unpacked[i] += tmp2;
       }
     }
+
+    FHE_NTIMER_STOP(UnpackMain);
   }
 
 
