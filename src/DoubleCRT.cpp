@@ -250,6 +250,8 @@ void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
 // it is assumed that s1 is disjoint from the current index set.
 void DoubleCRT::addPrimes(const IndexSet& s1)
 {
+  FHE_TIMER_START;
+
   if (empty(s1)) return; // nothing to do
   assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
 
