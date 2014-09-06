@@ -472,75 +472,82 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 
 // stuff from matmul.cpp follows:
 
-
 // plaintextAutomorph: an auxilliary routine...maybe palce in NumbTh?
-// result is calclated in the output x "in place", so a should
-// not alias x
+// Compute b(X) = a(X^k) mod Phi_m(X). Result is calclated in the output b
+// "in place", so a should not alias b.
 
 template <class RX, class RXModulus>
-void plaintextAutomorph(RX& x, const RX& a, long k, const PAlgebra& zMStar, 
-                       const RXModulus& F)
+void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar, 
+                       const RXModulus& PhimX)
 {
   long m  = zMStar.getM();
 
   assert(zMStar.inZmStar(k));
 
-  x.SetLength(m);
-  for (long j = 0; j < m; j++) x[j] = 0;
+  b.SetLength(m);
+  for (long j = 0; j < m; j++) b[j] = 0;
 
   long d = deg(a);
-  
+
+  // compute b(X) = a(X^k) mod (X^m-1)
   mulmod_precon_t precon = PrepMulModPrecon(k, m, 1/(double)m);
   for (long j = 0; j <= d; j++) 
-    x[MulModPrecon(j, k, m, precon)] = a[j];
+    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
+  b.normalize();
 
-  x.normalize();
-
-  rem(x, x, F);
+  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
 }
 
-// A recursive matrix-by-vector multiply routine, used by the dense matrix
-// code. This routine is optimized to use only the rotate1D routine rather
+// A recursive matrix-by-vector multiply, used by the dense matrix code.
+// This routine is optimized to use only the rotate1D routine rather
 // than the more expensive linear-array rotations.
 template<class type>
-void EncryptedArrayDerived<type>::
-  rec_mul(long dim, 
-          Ctxt& res, 
-          const Ctxt& pdata, 
-          const vector<long>& idx,
+void EncryptedArrayDerived<type>::rec_mul(long dim, 
+          Ctxt& res, const Ctxt& pdata, const vector<long>& idx,
           const PlaintextMatrixInterface<type>& mat,
           const vector<long>& dimx) const
 {
   long ndims = dimension();
   long nslots = size();
 
-  if (dim >= ndims) {
-    vector<RX> pmat;
+  if (dim >= ndims) { // Last dimension (recursion edge condition)
+    vector<RX> pmat;  // the plaintext diagonal
     pmat.resize(nslots);
+    bool zDiag = true; // is this a zero diagonal
     for (long j = 0; j < nslots; j++) {
       long i = idx[j];
       RX val;
-      if (!mat.get(val, i, j))
-        pmat[j] = val;
-      else
+      if (mat.get(val, i, j)) // returns true if the entry is zero
         clear(pmat[j]);
+      else {           // not a zero entry
+        pmat[j] = val;
+	zDiag = false; // not a zero diagonal
+      }
     }
+    if (zDiag) return; // zero diagonal, nothing to do
 
+    // Now we have the constants for all the diagonal entries, encode the
+    // diagonal as a single polynomial with these constants in the slots
     ZZX epmat;
     encode(epmat, pmat);
 
+    // multiply by the polynomial, then add to the result
     Ctxt tmp = pdata;
     tmp.multByConstant(epmat);
     res += tmp;
   }
-  else {
+  else { // not the last dimension, make a recursive call
     long sdim = sizeOfDimension(dimx[dim]);
 
+    // compute "in spirit" sum_i (pdata >> i) * i'th-diagonal, but
+    // adjust the indexes so that we only need to rotate the cipehrtext
+    // along the different dimensions separately
     for (long offset = 0; offset < sdim; offset++) {
       Ctxt pdata1 = pdata;
       vector<long> idx1;
       rotate1D(pdata1, dimx[dim], offset);
       this->EncryptedArrayBase::rotate1D(idx1, idx, dimx[dim], offset);
+      // indexes adjusted, make the recursive call
       rec_mul(dim+1, res, pdata1, idx1, mat, dimx);
     }
   }
@@ -551,9 +558,9 @@ void EncryptedArrayDerived<type>::
 //    - bad dimensions come before good dimensions (primary sort key)
 //    - small dimensions come before large dimesnions (secondary sort key)
 // this is a good order to process the dimensions in the recursive mat_mul_dense
-// routine: it ensures that the work done at the work done at the
-// leaves of the recursion is minimized, and that the work done
-// at the non-leaves is dominated by the work done at the leaves.
+// routine: it ensures that the work done at the leaves of the recursion is
+// minimized, and that the work done at the non-leaves is dominated by the
+// work done at the leaves.
 
 template<class type>
 struct MatMulDimComp {
@@ -567,7 +574,7 @@ struct MatMulDimComp {
   }
 };
 
-
+// Multiply a ciphertext vector by a plaintext dense matrix
 template<class type>
 void EncryptedArrayDerived<type>::mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const
 {
@@ -576,6 +583,7 @@ void EncryptedArrayDerived<type>::mat_mul_dense(Ctxt& ctxt, const PlaintextMatri
 
   RBak bak; bak.save(); tab.restoreContext();
 
+  // Get the derived type
   const PlaintextMatrixInterface<type>& mat1 = 
     dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
 
@@ -596,9 +604,10 @@ void EncryptedArrayDerived<type>::mat_mul_dense(Ctxt& ctxt, const PlaintextMatri
   // sort the dimenesions so that bad ones come before good,
   // and then small ones come before large
 
+  // call the recursive procedure to do the actual work
   rec_mul(0, res, ctxt, idx, mat1, dimx);
 
-  ctxt = res;
+  ctxt = res; // copy the result back to ctxt
 }
 
 
@@ -612,14 +621,13 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
 
   RBak bak; bak.save(); tab.restoreContext();
 
+  // Get the derived type
   const PlaintextMatrixInterface<type>& mat1 = 
     dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
 
   ctxt.cleanUp(); // not sure, but this may be a good idea
 
-  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
-  // a new ciphertext, encrypting zero
-  
+  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace()); // fresh encryption of zero
 
   long nslots = size();
   long d = getDegree();
@@ -628,44 +636,139 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
   vector<RX> diag;
   diag.resize(nslots);
 
-  for (long i = 0; i < nslots; i++) {
-    // process diagonal i
+  // Process the diagonals one at a time
+  for (long i = 0; i < nslots; i++) {  // process diagonal i
+    bool zDiag = true; // is this a zero diagonal?
+    long nzLast = -1;  // index of last non-zero entry on this diagonal
 
-
-    bool zDiag = true;
-    long nzLast = -1;
-
-    for (long j = 0; j < nslots; j++) {
-      bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j);
+    // Compute constants for each entry on this diagonal
+    for (long j = 0; j < nslots; j++) { // process entry j
+      bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j); // callback
       assert(zEntry || deg(entry) < d);
 
-      if (!zEntry && IsZero(entry)) zEntry = true;
+      if (!zEntry && IsZero(entry)) zEntry = true; // check for zero
 
-      if (!zEntry) {
+      if (!zEntry) { // non-zero diagonal entry
 
-        zDiag = false;
+        zDiag = false; // diagonal is non-zero
 
         // clear entries between last nonzero entry and this one
-
         for (long jj = nzLast+1; jj < j; jj++) clear(diag[jj]);
         nzLast = j;
 
         diag[j] = entry;
       }
     }
-
     
     if (zDiag) continue; // zero diagonal, continue
 
     // clear trailing zero entries
     for (long jj = nzLast+1; jj < nslots; jj++) clear(diag[jj]);
-    
-    Ctxt shCtxt = ctxt;
-    rotate(shCtxt, i); 
 
+    // Now we have the constants for all the diagonal entries, encode the
+    // diagonal as a single polynomial with these constants in the slots
     ZZX cpoly;
     encode(cpoly, diag);
 
+    // rotate by i, multiply by the polynomial, then add to the result
+    Ctxt shCtxt = ctxt;
+    rotate(shCtxt, i); // rotate by i
+    shCtxt.multByConstant(cpoly);
+    res += shCtxt;
+  }
+  ctxt = res;
+}
+
+template<class type, class RX> static
+bool processDiagonal(vector<RX>& diag, long dim, long i, vector<RX>& tmpDiag,
+		     const PlaintextMatrixInterface<type>& mat,
+		     const PAlgebra& zMStar, long d, bool special)
+{
+  long D = tmpDiag.size();
+  long nslots = diag.size();
+  bool zDiag = true; // is this a zero diagonal?
+  long nzLast = -1;  // index of last non-zero entry
+  RX entry;
+
+  // Process the entries in this diagonal one at a time
+  for (long j = 0; j < D; j++) { // process entry j
+    bool zEntry = mat.get(entry, mcMod(j-i, D), j); // entry [i,j-i mod D]
+    assert(zEntry || deg(entry) < d);
+    // get(...) returns true if the entry is empty, false otherwise
+
+    if (!zEntry && IsZero(entry)) zEntry = true; // zero is an empty entry too
+
+    if (!zEntry) {   // not a zero entry
+      zDiag = false; // mark diagonal as non-empty
+
+      // clear entries between last nonzero entry and this one
+      for (long jj = nzLast+1; jj < j; jj++) clear(tmpDiag[jj]);
+      nzLast = j;
+
+      tmpDiag[j] = entry;
+    }
+  }    
+  if (zDiag) return true; // zero diagonal, nothing to do
+
+  // clear trailing zero entries
+  for (long jj = nzLast+1; jj < D; jj++) clear(tmpDiag[jj]);
+
+  if (special) diag.assign(nslots, tmpDiag[0]); // order-1 dimension
+  else for (long j = 0; j < nslots; j++)
+    diag[j] = tmpDiag[ zMStar.coordinate(dim,j) ];
+    // rearrange the indexes based on the current dimension
+
+  return false; // a nonzero diagonal
+}
+
+
+// Multiply ctx by plaintext matrix over the extension field/ring.
+// Ctxt is treated as a row matrix v, and replaced by en encryption of
+// v * mat' where mat' is the block-diagonal matrix defined by mat in
+// dimension dim. Here, mat should represent a D x D matrix, where D is
+// the order of generator dim.
+// We also allow dim to be one greater than the number of generators in
+// zMStar, as if there were an implicit generator of order 1, this is
+// convenient in some applications.
+template<class type> void EncryptedArrayDerived<type>::
+mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const
+{
+  FHE_TIMER_START;
+  const PAlgebra& zMStar = context.zMStar;
+
+  assert(this == &mat.getEA().getDerived(type()));
+  assert(&context == &ctxt.getContext());
+  assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+
+  RBak bak; bak.save(); tab.restoreContext(); // backup the NTL modulus
+
+  // Get the derived type
+  const PlaintextMatrixInterface<type>& mat1 = 
+    dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+  ctxt.cleanUp();  // not sure, but this may be a good idea
+  Ctxt res(ZeroCtxtLike, ctxt); // fresh encryption of zero
+
+  long nslots = size();
+  long d = getDegree();
+  vector<RX> diag, diag1;
+  diag.resize(D);
+  diag1.resize(nslots);
+  ZZX cpoly;
+
+  // Process the diagonals one at a time
+  for (long i = 0; i < D; i++) { // process diagonal i
+    if (processDiagonal(diag1, dim, i, diag, mat1, zMStar, d, special))
+      continue; // zero diagonal
+
+    // encode as a polynomial, then multiply and add
+    encode(cpoly, diag1);
+    Ctxt shCtxt = ctxt;
+    if (i != 0) rotate1D(shCtxt, dim, i);   
     shCtxt.multByConstant(cpoly);
     res += shCtxt;
   }
@@ -674,86 +777,72 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseI
 }
 
 template<class type> void EncryptedArrayDerived<type>::
-mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const
+compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const
 {
   FHE_TIMER_START;
-
-  assert(this == &mat.getEA().getDerived(type()));
-  assert(&context == &ctxt.getContext());
-  
   const PAlgebra& zMStar = context.zMStar;
 
+  assert(this == &mat.getEA().getDerived(type()));
   assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
 
+  // special case fo the extra dimension
   bool special = (dim == LONG(zMStar.numOfGens()));
-  long D = special ? 1 : zMStar.OrderOf(dim);
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
 
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak; bak.save(); tab.restoreContext(); // backup the NTL modulus
 
+  // Get the derived type
   const PlaintextMatrixInterface<type>& mat1 = 
     dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
 
-  ctxt.cleanUp(); // not sure, but this may be a good idea
-
-  Ctxt res(ZeroCtxtLike, ctxt);
-
   long nslots = size();
   long d = getDegree();
-
-  RX entry;
   vector<RX> diag, diag1;
   diag.resize(D);
   diag1.resize(nslots);
+  cmat.SetLength(D);
   ZZX cpoly;
-  
 
-  for (long i = 0; i < D; i++) {
-    // process diagonal i
+  // Process the diagonals one at a time
+  for (long i = 0; i < D; i++) { // process diagonal i
+    if (processDiagonal(diag1, dim, i, diag, mat1, zMStar, d, special))
+      continue; // zero diagonal
 
-    bool zDiag = true;
-    long nzLast = -1;
-
-    for (long j = 0; j < D; j++) {
-      bool zEntry = mat1.get(entry, mcMod(j-i, D), j);
-      assert(zEntry || deg(entry) < d);
-
-      if (!zEntry && IsZero(entry)) zEntry = true;
-
-      if (!zEntry) {
-
-        zDiag = false;
-
-        // clear entries between last nonzero entry and this one
-
-        for (long jj = nzLast+1; jj < j; jj++) clear(diag[jj]);
-        nzLast = j;
-
-        diag[j] = entry;
-      }
-    }
-
-    
-    if (zDiag) continue; // zero diagonal, continue
-
-    // clear trailing zero entries
-    for (long jj = nzLast+1; jj < D; jj++) clear(diag[jj]);
-    
-    Ctxt shCtxt = ctxt;
-    if (i != 0) rotate1D(shCtxt, dim, i); 
-
-    
-    for (long j = 0; j < nslots; j++)
-      diag1[j] = diag[ special ? 0 : zMStar.coordinate(dim, j) ];
-
+    // encode as a polynomial, then multiply and add
     encode(cpoly, diag1);
-
-    shCtxt.multByConstant(cpoly);
-    res += shCtxt;
+    cmat[i] = ZZXptr(new ZZX(cpoly));
   }
-
-  ctxt = res;
 }
 
+template<class type> void EncryptedArrayDerived<type>::
+compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
+{
+}
+
+template<class type> void EncryptedArrayDerived<type>::
+compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const
+{
+  FHE_TIMER_START;
+  CachedPtxtMatrix zzxMat;
+  compMat1D(zzxMat, mat, dim);
+  long n = zzxMat.length();
+  cmat.SetLength(n);
+  for (long i=0; i<n; i++)
+    cmat[i] = DCRTptr(new DoubleCRT(*zzxMat[i], context, context.ctxtPrimes));
+}
+
+template<class type> void EncryptedArrayDerived<type>::
+compMat1D(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
+{
+  FHE_TIMER_START;
+  CachedPtxtBlockMatrix zzxMat;
+  compMat1D(zzxMat, mat, dim);
+  long m = zzxMat.NumRows();
+  long n = zzxMat.NumCols();
+  cmat.SetDims(m,n);
+  for (long i=0; i<m; i++) for (long j=0; j<n; j++)
+    cmat[i][j] = DCRTptr(new DoubleCRT(*zzxMat[i][j], context, context.ctxtPrimes));
+}
 
 // This code has a complexity of N+d (instead of N*d) where N is the number of
 // nonzero diagonal blocks. However, it requires space for d extra ciphertexts
@@ -882,26 +971,35 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
 }
 
 
+// Multiply ctx by plaintext matrix over the base field/ring.
+// Ctxt is treated as a row matrix v, and replaced by en encryption of
+// v * mat' where mat' is the block-diagonal matrix defined by mat in
+// dimension dim. Here, mat should represent a D x D matrix, where D is
+// the order of generator dim.
+// We also allow dim to be one greater than the number of generators in
+// zMStar, as if there were an implicit generator of order 1, this is
+// convenient in some applications.
 template<class type> void EncryptedArrayDerived<type>::
 mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
 {
   FHE_TIMER_START;
+  const PAlgebra& zMStar = context.zMStar;
 
   assert(this == &mat.getEA().getDerived(type()));
   assert(&context == &ctxt.getContext());
+  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
 
-  const PAlgebra& zMStar = context.zMStar;
   long p = zMStar.getP(); 
   long m = zMStar.getM();
   const RXModulus& F = tab.getPhimXMod();
 
-  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
-
+  // special case fo the extra dimension
   bool special = (dim == LONG(zMStar.numOfGens()));
-  long D = special ? 1 : zMStar.OrderOf(dim);
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
 
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak; bak.save(); tab.restoreContext(); // backup the NTL modulus
 
+  // Get the derived type
   const PlaintextBlockMatrixInterface<type>& mat1 = 
     dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
 
@@ -925,31 +1023,27 @@ mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) co
   diag.resize(D);
   for (long j = 0; j < D; j++) diag[j].resize(d);
 
-  for (long i = 0; i < D; i++) {
-    // process diagonal i
+  // Process the diagonals one at a time
+  for (long i = 0; i < D; i++) { // process diagonal i
+    bool zDiag = true; // is this a zero diagonal?
+    long nzLast = -1;  // index of last non-zero entry
 
-
-    bool zDiag = true;
-    long nzLast = -1;
-
-    for (long j = 0; j < D; j++) {
-      bool zEntry = mat1.get(entry, mcMod(j-i, D), j);
+    // Process the entries in this diagonal one at a time
+    for (long j = 0; j < D; j++) { // process entry j
+      bool zEntry = mat1.get(entry, mcMod(j-i, D), j); // entry [i,j-i mod D]
       assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
         // get(...) returns true if the entry is empty, false otherwise
 
       if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
 
       if (!zEntry) {    // non-empty entry
-
         zDiag = false;  // mark diagonal as non-empty
 
         // clear entries between last nonzero entry and this one
-
         for (long jj = nzLast+1; jj < j; jj++) {
           for (long k = 0; k < d; k++)
             clear(diag[jj][k]);
         }
-
         nzLast = j;
 
         // recode entry as a vector of polynomials
@@ -959,7 +1053,6 @@ mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) co
         buildLinPolyCoeffs(diag[j], entry1);
       }
     }
-
     if (zDiag) continue; // zero diagonal, continue
 
     // clear trailing zero entries    
@@ -995,7 +1088,7 @@ mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) co
       conv(cpoly1, cpoly);
 
       // apply inverse automorphism to constant
-      plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar, F);
+      plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar, F);
       conv(cpoly, cpoly2);
       Ctxt shCtxt1 = shCtxt;
       shCtxt1.multByConstant(cpoly);
@@ -1234,10 +1327,6 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
   ctxt = res;
 }
 #endif
-
-
-
-
 
 
 
