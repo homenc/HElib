@@ -321,6 +321,8 @@ private:
   MappingData<type> mappingData; // MappingData is defined in PAlgebra.h
 
   mutable shared_ptr< Mat<RE> > linPolyMatrix; // computed once and for all
+  mutable shared_ptr< Mat<R> > normalBasisMatrix; 
+  mutable shared_ptr< Mat<R> > normalBasisMatrixInverse; 
 
 public:
   explicit
@@ -334,6 +336,8 @@ public:
     REBak ebak; ebak.save(); other.mappingData.restoreContextForG();
     mappingData = other.mappingData;
     linPolyMatrix = other.linPolyMatrix;
+    normalBasisMatrix = other.normalBasisMatrix;
+    normalBasisMatrixInverse = other.normalBasisMatrixInverse;
   }
 
   EncryptedArrayDerived& operator=(const EncryptedArrayDerived& other) // assignment
@@ -344,12 +348,27 @@ public:
 
     RBak bak; bak.save(); tab.restoreContext();
     mappingData = other.mappingData;
+    linPolyMatrix = other.linPolyMatrix;
+    normalBasisMatrix = other.normalBasisMatrix;
+    normalBasisMatrixInverse = other.normalBasisMatrixInverse;
     return *this;
   }
 
   virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
 
   const RX& getG() const { return mappingData.getG(); }
+
+  const Mat<R>& getNormalBasisMatrix() const {
+    if (!normalBasisMatrix) initNormalBasisMatrix(); 
+    return *normalBasisMatrix;
+  }
+
+  const Mat<R>& getNormalBasisMatrixInverse() const {
+    if (!normalBasisMatrixInverse) initNormalBasisMatrix(); 
+    return *normalBasisMatrixInverse;
+  }
+
+  void initNormalBasisMatrix() const;
 
   virtual void restoreContext() const { tab.restoreContext(); }
   virtual void restoreContextForG() const { mappingData.restoreContextForG(); }
