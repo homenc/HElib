@@ -33,38 +33,39 @@ using namespace tr1;
 #include <NTL/GF2X.h>
 #include <NTL/ZZX.h>
 
-
-
-
 class PlaintextArray; // forward reference
-
 class EncryptedArray; // forward reference
 
+/********************************************************************/
+/****************** Linear transformation classes *******************/
+
 //! @class PlaintextMatrixBaseInterface
-//! @brief An abstract interface for plaintext arrays.
+//! @brief An abstract interface for linear transformations.
 //!
-//! Any class implementing this interface should be linked to a specific
-//! EncryptedArray object, a reference to which is returned by the getEA()
-//! method -- this method will generally be invoked by an EncryptedArray
-//! object to verify consistent use.
+//! A matrix implements linear transformation over an extension field/ring
+//! (e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G). Any class
+//! implementing this interface should be linked to a specific EncryptedArray
+//! object, a reference to which is returned by the getEA() method -- this
+//! method will generally be invoked by an EncryptedArray object to verify
+//! consistent use.
 
 class PlaintextMatrixBaseInterface {
 public:
   virtual const EncryptedArray& getEA() const = 0;
 
   virtual ~PlaintextMatrixBaseInterface() {}
-
 };
 
 
 //! @class PlaintextMatrixInterface
-//! @brief A somewhat less abstract interface for plaintext arrays.
+//! @brief A somewhat less abstract interface for linear transformations.
 //! 
-//! The method get(out, i, j) copies the element at row i column j of a
-//! matrix into the variable out. The type of out is RX, which is GF2X
-//! if type is PA_GF2, and zz_pX if type is PA_zz_p. A return value of 
-//! true means that the entry is zero, and out is not touched.
-
+//! A matrix implements linear transformation over an extension field/ring
+//! (e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G). The method
+//! get(out, i, j) copies the element at row i column j of a matrix into
+//! the variable out. The type of out is RX, which is GF2X if type is PA_GF2,
+//! and zz_pX if type is PA_zz_p. A return value of true means that the
+//! entry is zero, and out is not touched.
 template<class type> 
 class  PlaintextMatrixInterface : public PlaintextMatrixBaseInterface {
 public:
@@ -75,31 +76,31 @@ public:
 
 
 
-
 //! @class PlaintextBlockMatrixBaseInterface
-//! @brief An abstract interface for block plaintext arrays.
+//! @brief An abstract interface for linear transformations.
 //!
-//! Any class implementing this interface should be linked to a specific
-//! EncryptedArray object, a reference to which is returned by the getEA()
-//! method -- this method will generally be invoked by an EncryptedArray
-//! object to verify consistent use.
+//! A block matrix implements linear transformation over the base field/ring
+//! (e.g., Z_2, Z_3, Z_{2^8}, etc.) Any class implementing this interface
+//! should be linked to a specific EncryptedArray object, a reference to which
+//! is returned by the getEA() method -- this method will generally be invoked
+//! by an EncryptedArray object to verify consistent use.
 
 class PlaintextBlockMatrixBaseInterface {
 public:
   virtual const EncryptedArray& getEA() const = 0;
 
   virtual ~PlaintextBlockMatrixBaseInterface() {}
-
 };
 
 
 //! @class PlaintextBlockMatrixInterface
-//! @brief A somewhat less abstract interface for plaintext arrays.
+//! @brief A somewhat less abstract interface for linear transformations.
 //! 
-//! The method get(out, i, j) copies the element at row i column j of a
-//! matrix into the variable out. The type of out is mat_R (so either
-//! mar_GF2 or mat_zz_p.  A return value of true means that the
-//! entry is zero, and out is not touched.
+//! A block matrix implements linear transformation over the base field/ring
+//! (e.g., Z_2, Z_3, Z_{2^8}, etc.) The method get(out, i, j) copies the
+//! element at row i column j of a matrix into the variable out. The type
+//! of out is mat_R (so either mar_GF2 or mat_zz_p.  A return value of true
+//! means that the entry is zero, and out is not touched.
 
 template<class type> 
 class  PlaintextBlockMatrixInterface : public PlaintextBlockMatrixBaseInterface {
@@ -109,6 +110,13 @@ public:
   virtual bool get(mat_R& out, long i, long j) const = 0;
 };
 
+typedef Vec<ZZXptr> CachedPtxtMatrix;
+typedef Mat<ZZXptr> CachedPtxtBlockMatrix;
+typedef Vec<DCRTptr> CachedDCRTPtxtMatrix;
+typedef Mat<DCRTptr> CachedDCRTPtxtBlockMatrix;
+
+/**************** End linear transformation classes *****************/
+/********************************************************************/
 
 
 /**
@@ -171,33 +179,40 @@ public:
   //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
-  //! @multiply ctx by plaintext matrix: Ctxt is treated as
-  //! a row matrix v, and replaced by en encryption of v * mat
-  //! Optimized for sparse diagonals
-  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
+  ///@{
+  //! @name Matrix multiplication routines
 
-  //! @multiply ctx by plaintext matrix: Ctxt is treated as
-  //! a row matrix v, and replaced by en encryption of v * mat'
-  //! where mat' is the block-diagonal matrix defined by mat
-  //! in dimension dim.  Here, mat should represent a D x D matrix,
-  //! where D is the order of generator dim.
-  //! Also, we allow dim to be one greater than the number of generators in zMStar,
-  //! as if there were an implicit generator of order 1.
-  //! This is convenient in some applications.
-  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
-  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
-
-  //! @multiply ctx by plaintext matrix: Ctxt is treated as
-  //! a row matrix v, and replaced by en encryption of v * mat
+  //! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
+  //! a row matrix v, and replaced by an encryption of v * mat.
   //! Optimized for dense matrices
   virtual void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
 
+  //! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
+  //! a row matrix v, and replaced by an encryption of v * mat.
+  //! Optimized for sparse diagonals
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0;
 
-  //! @multiply ctx by plaintext block matrix: Ctxt is treated as
-  //! a row matrix v, and replaced by en encryption of v * mat
+  //! @brief Multiply ctx by plaintext block matrix (over the base field/ring).
+  //! Ctxt is treated as a row matrix v, and replaced by an encryption of v*mat.
   //! Optimized for sparse diagonals
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const = 0;
 
+  //! @brief Multiply ctx by plaintext matrix.
+  //! Ctxt is treated as a row matrix v, and replaced by en encryption of
+  //! v * mat' where mat' is the block-diagonal matrix defined by mat in
+  //! dimension dim. Here, mat should represent a D x D matrix, where D is
+  //! the order of generator dim.
+  //! We also allow dim to be one greater than the number of generators in
+  //! zMStar, as if there were an implicit generator of order 1, this is
+  //! convenient in some applications.
+  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
+  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
+
+  virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
+  virtual void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
+  virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
+  virtual void compMat1D(CachedDCRTPtxtBlockMatrix& smat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
+  ///@}
 
   ///@{
   //! @name Encoding/decoding methods
@@ -395,9 +410,15 @@ public:
 
   virtual void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const;
+  virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const;
+
   virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const;
   virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
-  virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const;
+
+  virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const;
+  virtual void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
+  virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const;
+  virtual void compMat1D(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array);  }
@@ -641,6 +662,18 @@ public:
 
   void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const 
   { rep->mat_mul(ctxt, mat); }
+
+  void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const
+  { rep->compMat1D(cmat, mat, dim); }
+
+  void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
+  { rep->compMat1D(cmat, mat, dim); }
+
+  void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const
+  { rep->compMat1D(cmat, mat, dim); }
+
+  void compMat1D(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
+  { rep->compMat1D(cmat, mat, dim); }
 
   void encode(ZZX& ptxt, const vector< long >& array) const 
     { rep->encode(ptxt, array); }

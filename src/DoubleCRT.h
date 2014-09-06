@@ -410,6 +410,8 @@ inline ZZX to_ZZX(const DoubleCRT &d)  { ZZX p; d.toPoly(p); return p; }
 
 inline void conv(DoubleCRT& d, const SingleCRT& s) { d=s; }
 
+typedef std::shared_ptr<DoubleCRT> DCRTptr;
+typedef std::shared_ptr<ZZX> ZZXptr;
 
 #endif // #ifndef _DoubleCRT_H_
 
