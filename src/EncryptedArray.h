@@ -701,16 +701,16 @@ public:
   void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const 
   { rep->mat_mul(ctxt, mat); }
 
-  virtual void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const
+  void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const
   { rep->compMat(cmat, mat); }
 
-  virtual void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const
+  void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const
   { rep->compMat(cmat, mat); }
 
-  virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const
+  void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const
   { rep->compMat(cmat, mat); }
 
-  virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const
+  void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const
   { rep->compMat(cmat, mat); }
 
   void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const
