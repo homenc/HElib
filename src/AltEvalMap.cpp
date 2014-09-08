@@ -354,19 +354,28 @@ AltEvalMap::AltEvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _i
       shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
   }
 
-  {
-    long dim = nfactors - 1;
-
-    mat1 = shared_ptr<PlaintextBlockMatrixBaseInterface>(
-      buildAltStep1Matrix(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim], invert));
-
-    matvec.SetLength(nfactors-1);
-
-    while (dim > 0) {
-      dim--;
-      matvec[dim] = shared_ptr<PlaintextMatrixBaseInterface>(
-        buildAltStep2Matrix(ea, sig_sequence[dim], local_reps[dim], dim, m/mvec[dim], invert));
-    }
+  {long dim = nfactors - 1;
+  shared_ptr<PlaintextBlockMatrixBaseInterface> blockMat(
+        buildAltStep1Matrix(ea, sig_sequence[dim],
+			    local_reps[dim], dim, m/mvec[dim], invert));
+#ifdef ALTEVAL_CACHED // cache the matrix of constants
+  cerr << "cached AltEval, caching-level="<<ALTEVAL_CACHED<<endl;
+  ea.compMat1D(mat1, *blockMat, dim);
+#else
+  cerr << "non-cached AltEval\n";
+  mat1 = blockMat;
+#endif
+  }
+  matvec.SetLength(nfactors-1);
+  for (long dim=nfactors-2; dim>=0; --dim) {
+    shared_ptr<PlaintextMatrixBaseInterface> mat_dim(
+          buildAltStep2Matrix(ea, sig_sequence[dim],
+                              local_reps[dim], dim, m/mvec[dim], invert));
+#ifdef ALTEVAL_CACHED // cache the matrix of constants
+    ea.compMat1D(matvec[dim], *mat_dim, dim);
+#else
+    matvec[dim] = mat_dim;
+#endif
   }
 }
 
@@ -375,21 +384,33 @@ void AltEvalMap::apply(Ctxt& ctxt) const
   if (!invert) {
     // forward direction
 
+#ifdef ALTEVAL_CACHED // cached matrix of constants
+    mat_mul1D(ctxt, mat1, nfactors-1, ea);
+#else
     ea.mat_mul1D(ctxt, *mat1, nfactors-1);
+#endif
 
-    for (long i = matvec.length()-1; i >= 0; i--) 
+    for (long i = matvec.length()-1; i >= 0; i--) {
+#ifdef ALTEVAL_CACHED // cached matrix of constants
+      mat_mul1D(ctxt, matvec[i], i, ea);
+#else
       ea.mat_mul1D(ctxt, *matvec[i], i);
-
+#endif
+    }
   }
   else {
-
-    for (long i = 0; i < matvec.length(); i++)
+    for (long i = 0; i < matvec.length(); i++) {
+#ifdef ALTEVAL_CACHED // cached matrix of constants
+      mat_mul1D(ctxt, matvec[i], i, ea);
+#else
       ea.mat_mul1D(ctxt, *matvec[i], i);
+#endif
+    }
 
+#ifdef ALTEVAL_CACHED // cached matrix of constants
+    mat_mul1D(ctxt, mat1, nfactors-1, ea);
+#else
     ea.mat_mul1D(ctxt, *mat1, nfactors-1);
+#endif
   }
 }
-
-
-
-

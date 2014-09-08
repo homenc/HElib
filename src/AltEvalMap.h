@@ -17,23 +17,29 @@
  */
 /* AltEvalMap.h - Implementing the reCrypt linear transformations
  */
-#include "FHE.h"
-#include "Ctxt.h"
+//#include "FHE.h"
+//#include "Ctxt.h"
 #include "EncryptedArray.h"
-#include "permutations.h"
+//#include "permutations.h"
 
 class AltEvalMap {
 private:
   const EncryptedArray& ea;
-  bool invert; 
+  bool invert;   // apply transformation in inverser order?
+  long nfactors; // how many factors of m
 
-  long nfactors;
-
-  shared_ptr<PlaintextBlockMatrixBaseInterface> mat1;
-
-  Vec< shared_ptr<PlaintextMatrixBaseInterface> > matvec;
-
-  
+#ifndef ALTEVAL_CACHED    // no caching
+  shared_ptr<PlaintextBlockMatrixBaseInterface>   mat1;   // one block matrix
+  Vec< shared_ptr<PlaintextMatrixBaseInterface> > matvec; // regular matrices
+#else
+#if (ALTEVAL_CACHED==0) // ZZX caching
+  CachedPtxtBlockMatrix mat1;
+  Vec<CachedPtxtMatrix> matvec;
+#else               // DoubleCRT cashing
+  CachedDCRTPtxtBlockMatrix mat1;
+  Vec<CachedDCRTPtxtMatrix> matvec;
+#endif
+#endif
 public:
 
   AltEvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert);
