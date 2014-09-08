@@ -385,24 +385,42 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
     // encrypt the random vector
     Ctxt ctxt(publicKey);
-    FHE_NTIMER_START(ea_encrypt);
     ea.encrypt(ctxt, publicKey, v);
-    FHE_NTIMER_STOP(ea_encrypt);
+    Ctxt ctxt2 = ctxt;
 
+    cerr << " Multiplying with PlaintextMatrixBaseInterface... " << std::flush;
     v.mat_mul(*ptr);         // multiply the plaintext vector
-    FHE_NTIMER_START(ea_mat_mul);
-    ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
-    FHE_NTIMER_STOP(ea_mat_mul);
+    ea.mat_mul(ctxt2, *ptr);  // multiply the ciphertext vector
 
     PlaintextArray v1(ea);
-    FHE_NTIMER_START(ea_decrypt);
-    ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
-    FHE_NTIMER_STOP(ea_decrypt);
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
     if (v.equals(v1))        // check that we've got the right answer
       cout << "Nice!!\n";
     else
-      cout << "Grrr...\n";
+      cout << "Grrr@*\n";
+
+    {CachedPtxtMatrix zzxMat;
+    ea.compMat(zzxMat, *ptr);
+    ctxt2 = ctxt;
+    cerr << " Multiplying with CachedPtxtMatrix... " << std::flush;
+    mat_mul(ctxt2, zzxMat, ea);
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+    if (v.equals(v1))        // check that we've got the right answer
+      cout << "Nice!!\n" << std::flush;
+    else
+      cout << "Grrr@*\n" << std::flush;}
+
+    {CachedDCRTPtxtMatrix dcrtMat;
+    ea.compMat(dcrtMat, *ptr);
+    ctxt2 = ctxt;
+    cerr << " Multiplying with CachedDCRTPtxtMatrix... " << std::flush;
+    mat_mul(ctxt2, dcrtMat, ea);
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+    if (v.equals(v1))        // check that we've got the right answer
+      cout << "Nice!!\n\n";
+    else
+      cout << "Grrr@*\n\n";}
   }
 
   {
@@ -415,26 +433,44 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
     // encrypt the random vector
     Ctxt ctxt(publicKey);
-    FHE_NTIMER_START(ea_encrypt1);
     ea.encrypt(ctxt, publicKey, v);
-    FHE_NTIMER_STOP(ea_encrypt1);
+    Ctxt ctxt2 = ctxt;
 
     v.mat_mul(*ptr);         // multiply the plaintext vector
-    FHE_NTIMER_START(ea_mat_mul1);
-    ea.mat_mul(ctxt, *ptr);  // multiply the ciphertext vector
-    FHE_NTIMER_STOP(ea_mat_mul1);
+    cerr << " Multiplying with PlaintextBlockMatrixBaseInterface... " 
+	 << std::flush;
+    ea.mat_mul(ctxt2, *ptr);  // multiply the ciphertext vector
 
     PlaintextArray v1(ea);
-    FHE_NTIMER_START(ea_decrypt1);
-    ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
-    FHE_NTIMER_STOP(ea_decrypt1);
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
     if (v.equals(v1))        // check that we've got the right answer
       cout << "Nice!!\n";
     else
       cout << "Grrr...\n";
-  }
 
+    {CachedPtxtBlockMatrix zzxMat;
+    ea.compMat(zzxMat, *ptr);
+    ctxt2 = ctxt;
+    cerr << " Multiplying with CachedPtxtBlockMatrix... " << std::flush;
+    mat_mul(ctxt2, zzxMat, ea);
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+    if (v.equals(v1))        // check that we've got the right answer
+      cout << "Nice!!\n" << std::flush;
+    else
+      cout << "Grrr@*\n" << std::flush;}
+
+    {CachedDCRTPtxtBlockMatrix dcrtMat;
+    ea.compMat(dcrtMat, *ptr);
+    ctxt2 = ctxt;
+    cerr << " Multiplying with CachedDCRTPtxtBlockMatrix... " << std::flush;
+    mat_mul(ctxt2, dcrtMat, ea);
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+    if (v.equals(v1))        // check that we've got the right answer
+      cout << "Nice!!\n\n";
+    else
+      cout << "Grrr@*\n\n";}
+  }
 }
 
 
