@@ -579,6 +579,7 @@ struct MatMulDimComp {
 template<class type>
 void EncryptedArrayDerived<type>::mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const
 {
+  FHE_TIMER_START;
   assert(this == &mat.getEA().getDerived(type()));
   assert(&context == &ctxt.getContext());
 
@@ -615,6 +616,7 @@ template<class type>
 void EncryptedArrayDerived<type>::compMat_dense(CachedPtxtMatrix& cmat,
                                const PlaintextMatrixBaseInterface& mat) const
 {
+  FHE_TIMER_START;
   NTL::Error("cached compMat_dense not implemented yet");
 }
 
@@ -622,6 +624,7 @@ template<class type>
 void EncryptedArrayDerived<type>::compMat_dense(CachedDCRTPtxtMatrix& cmat,
                                 const PlaintextMatrixBaseInterface& mat) const
 {
+  FHE_TIMER_START;
   CachedPtxtMatrix zzxMat;
   compMat_dense(zzxMat, mat);
   long n = zzxMat.length();
@@ -635,6 +638,7 @@ template<class CachedMatrix>
 static void mat_mul_dense_tmpl(Ctxt& ctxt, const CachedMatrix& cmat,
 			       const EncryptedArray& ea)
 {
+  FHE_TIMER_START;
   NTL::Error("cached mat_mul_dense not implemented yet");
 }
 void mat_mul_dense(Ctxt& ctxt, const CachedPtxtMatrix& cmat,
@@ -654,6 +658,7 @@ void mat_mul_dense(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat,
 template<class type>
 void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const
 {
+  FHE_TIMER_START;
   assert(this == &mat.getEA().getDerived(type()));
   assert(&context == &ctxt.getContext());
 
@@ -792,6 +797,7 @@ template<class CachedMatrix>
 void mat_mul_tmpl(Ctxt& ctxt, const CachedMatrix& cmat,
 		  const EncryptedArray& ea)
 {
+  FHE_TIMER_START;
   ctxt.cleanUp(); // not sure, but this may be a good idea
   Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace()); // fresh encryption of zero
 
@@ -1710,6 +1716,7 @@ void applyLinPolyLL(const EncryptedArray& ea,
 template<class type>
 void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const
 {
+  FHE_TIMER_START;
   assert(this == &mat.getEA().getDerived(type()));
   assert(&context == &ctxt.getContext());
 
