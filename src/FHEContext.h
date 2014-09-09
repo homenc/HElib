@@ -45,6 +45,15 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
 #define ALT_CRT (0)
 #endif
 
+// FIXME: The size of primes in the chain should be computed at run-time
+#if (NTL_SP_NBITS<44)  //#if (ALT_CRT || NTL_SP_NBITS<44)
+#define FHE_p2Size NTL_SP_NBITS
+#else
+#define FHE_p2Size 44
+#endif
+#define FHE_p2Bound (1L<<FHE_p2Size)
+#define FHE_pSize (FHE_p2Size/2) /* The size of levels in the chain */
+
 class EncryptedArray;
 class AltEvalMap;
 class PowerfulDCRT;

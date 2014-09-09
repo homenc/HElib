@@ -20,15 +20,13 @@ NTL_CLIENT
 #include "AltEvalMap.h"
 #include "powerful.h"
 
-#define pSize (NTL_SP_NBITS/2) /* The size of levels in the chain */
-
 
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
   // get a lower-bound on the parameter N=phi(m):
-  // 1. Each level in the modulus chain corresponds to pSize=NTL_SP_NBITS/2
+  // 1. Each level in the modulus chain corresponds to pSize=p2Size/2
   //    bits (where we have one prime of this size, and all the others are of
-  //    size NTL_SP_NBITS).
+  //    size p2Size).
   //    When using DoubleCRT, we need 2m to divide q-1 for every prime q.
   // 2. With L levels, the largest modulus for "fresh ciphertexts" has size
   //          Q0 ~ p^{L+1} ~ 2^{(L+1)*pSize}
@@ -47,7 +45,7 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
 
   // Compute a bound on m, and make sure that it is not too large
   double cc = 1.0+(1.0/(double)c);
-  double dN = ceil((L+1)*pSize*cc*(k+110)/7.2);
+  double dN = ceil((L+1)*FHE_pSize*cc*(k+110)/7.2);
   long N = NTL_SP_BOUND;
   if (N > dN) N = dN;
   else {
@@ -171,9 +169,9 @@ long FHEcontext::AddPrime(long initialP, long delta, bool special,
 
   long p = initialP;
   do { p += delta; } // delta could be positive or negative
-  while (p>initialP/16 && p<NTL_SP_BOUND && !(ProbPrime(p) && !inChain(p)));
+  while (p>initialP/16 && p<FHE_p2Bound && !(ProbPrime(p) && !inChain(p)));
 
-  if (p<=initialP/16 || p>=NTL_SP_BOUND) return 0; // no prime found
+  if (p<=initialP/16 || p>=FHE_p2Bound) return 0; // no prime found
 
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back( Cmodulus(zMStar, p, findRoot ? 0 : 1) );
@@ -230,9 +228,9 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   else {
     // make p-1 divisible by m*2^k for as large k as possible
     long twoM = 2 * context.zMStar.getM();
-    while (twoM < NTL_SP_BOUND/(NTL_SP_NBITS*2)) twoM *= 2;
+    while (twoM < FHE_p2Bound/(FHE_p2Size*2)) twoM *= 2;
 
-    long bigP = NTL_SP_BOUND - (NTL_SP_BOUND%twoM) +1; // 1 mod 2m
+    long bigP = FHE_p2Bound - (FHE_p2Bound%twoM) +1; // 1 mod 2m
     long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
 
     while (sizeSoFar < totalSize) {
@@ -264,8 +262,8 @@ void buildModChain(FHEcontext &context, long nPrimes, long nDgts)
   else
     twoM = 2 * context.zMStar.getM();
 
-  long bound = (1 << (pSize-1));
-  while (twoM < bound/(2*pSize))
+  long bound = (1 << (FHE_pSize-1));
+  while (twoM < bound/(2*FHE_pSize))
     twoM *= 2; // divisible by 2^k * m  for a larger k
 
   bound = bound - (bound % twoM) +1; // = 1 mod 2m
@@ -288,7 +286,7 @@ void buildModChain(FHEcontext &context, long nPrimes, long nDgts)
   double maxDigitSize = 0.0;
   if (nDgts>1) { // we break ciphetext into a few digits when key-switching
     double dsize = context.logOfProduct(context.ctxtPrimes)/nDgts; // estimate
-    double target = dsize-(pSize/3.0);
+    double target = dsize-(FHE_pSize/3.0);
     long idx = context.ctxtPrimes.first();
     for (long i=0; i<nDgts-1; i++) { // compute next digit
       IndexSet s;

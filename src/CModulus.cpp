@@ -57,10 +57,13 @@ ZZ_pContext BuildContext(const ZZ& p, long maxroot)
   { return ZZ_pContext(p); }
 
 zz_pContext BuildContext(long p, long maxroot) {
-   if (maxroot <= CalcMaxRoot(p))
-      return zz_pContext(INIT_USER_FFT, p);
-   else
-      return zz_pContext(p, maxroot);
+  if (maxroot <= CalcMaxRoot(p)) {
+    cerr << " # FFT-prime:"<<p<<endl; 
+    return zz_pContext(INIT_USER_FFT, p);
+  } else {
+    cerr << " # non-FFT-prime:"<<p<<endl; 
+    return zz_pContext(p, maxroot);
+  }
 }
 
 

@@ -25,7 +25,7 @@ void usage(char *prog)
   cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
   cerr << "  p is the plaintext base [default=3]" << endl;
-  cerr << "  r is the lifting [default=floor(log_p(NTL_SP_BOUND))]" << endl;
+  cerr << "  r is the lifting [default=floor(log_p(FHE_p2Size))]" << endl;
   cerr << "  m is the cyclotomic ring [default determined by p,r]\n";
   exit(0);
 }
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
   long r = atoi(argmap["r"]);
   long m = atoi(argmap["m"]);
   if (p<2) exit(0);
-  long bound = floor(log((double)NTL_SP_BOUND)/log((double)p));
+  long bound = floor(log((double)FHE_p2Size)/log((double)p));
   if (r<2 || r>bound) r = bound;
   long p2r = power_long(p,r); // p^r
 

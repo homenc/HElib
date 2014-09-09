@@ -308,7 +308,7 @@ int main(int argc, char *argv[])
   if (L==0) { // determine L based on R,r
     L = 3*R+3;
     if (p>2 || r>1) { // add some more primes for each round
-      long addPerRound = 2*ceil(log((double)p)*r*3)/(log(2.0)*NTL_SP_NBITS) +1;
+      long addPerRound = 2*ceil(log((double)p)*r*3)/(log(2.0)*FHE_p2Size) +1;
       L += R * addPerRound;
     }
   }

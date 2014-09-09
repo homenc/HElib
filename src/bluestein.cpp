@@ -114,7 +114,7 @@ void tBluesteinFFT(zz_pX& x, long n, const zz_p& root,
     for (long i = 0; i < n; i++)
       powers_aux[i] = PrepMulModPrecon(rep(powers[i]), p, 1/((double) p));
 
-  } // if deg(powers)==n, assume that it already includes powers of root
+  } // if deg(powers)==n-1, assume that it already includes powers of root
 
   long dx = deg(x);
   for (long i=0; i<=dx; i++) {
@@ -218,7 +218,7 @@ void tBluesteinFFT(ZZ_pX& x, long n, const ZZ_p& root,
       long iSqr = MulMod(i, i, 2*n); // i^2 mod 2n
       SetCoeff(powers,i, power(root,iSqr)); // powers[i] = root^{i^2}
     }
-  } // if deg(powers)==n, assume that it already includes powers of root
+  } // if deg(powers)==n-1, assume that it already includes powers of root
 
   long dx = deg(x);
   for (long i=0; i<=dx; i++) {
