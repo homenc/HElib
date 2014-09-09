@@ -80,12 +80,13 @@ static long mValues[][13] = {
 #define num_mValues (sizeof(mValues)/(13*sizeof(long)))
 
 
-void TestIt(long idx, long p, long r, long L)
+void TestIt(long idx, long p, long r, long L, long c)
 {
   Vec<long> mvec;
   vector<long> gens;
   vector<long> ords;
 
+  long phim = mValues[idx][1];
   long m = mValues[idx][2];
   assert(GCD(p, m) == 1);
 
@@ -109,12 +110,14 @@ void TestIt(long idx, long p, long r, long L)
   setTimersOn();
   FHE_NTIMER_START(initialize);
   FHEcontext context(m, p, r, gens, ords);
-  buildModChain(context, L, /*c=*/3);
+  buildModChain(context, L, c);
   context.zMStar.printout();
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
+  double bitsize = context.logOfProduct(allPrimes)/log(2.0);
   cout << "  "<<nPrimes<<" primes in chain, total bitsize="
-       << ceil(context.logOfProduct(allPrimes)/log(2.0)) << endl;
+       << ceil(bitsize) << ", secparam="
+       << (7.2*phim/bitsize -110) << endl;
   double t = -GetTime();
   cout << "Computing key-independent bootstrapping tables..." << std::flush;
   context.makeBootstrappable(mvec);
@@ -212,7 +215,8 @@ int main(int argc, char *argv[])
   argmap_t argmap;
   argmap["p"] = "2";
   argmap["r"] = "1";
-  argmap["L"] = "20";
+  argmap["c"] = "3";
+  argmap["L"] = "15";
   argmap["N"] = "0";
 
   // get parameters from the command line
@@ -220,12 +224,13 @@ int main(int argc, char *argv[])
 
   long p = atoi(argmap["p"]);
   long r = atoi(argmap["r"]);
+  long c = atoi(argmap["c"]);
   long L =  atoi(argmap["L"]);
   long N =  atoi(argmap["N"]);
 
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
-      TestIt(i,p,r,L);
+      TestIt(i,p,r,L,c);
       break;
     }
   return 0;
