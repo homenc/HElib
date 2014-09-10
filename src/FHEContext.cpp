@@ -169,9 +169,9 @@ long FHEcontext::AddPrime(long initialP, long delta, bool special,
 
   long p = initialP;
   do { p += delta; } // delta could be positive or negative
-  while (p>initialP/16 && p<FHE_p2Bound && !(ProbPrime(p) && !inChain(p)));
+  while (p>initialP/16 && p<NTL_SP_BOUND && !(ProbPrime(p) && !inChain(p)));
 
-  if (p<=initialP/16 || p>=FHE_p2Bound) return 0; // no prime found
+  if (p<=initialP/16 || p>=NTL_SP_BOUND) return 0; // no prime found
 
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back( Cmodulus(zMStar, p, findRoot ? 0 : 1) );
@@ -226,13 +226,18 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
     }
   }
   else {
+    long sizeBits = 2*context.bitsPerLevel;
+    if (special || sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
+    long sizeBound = 1L << sizeBits;
+
     // make p-1 divisible by m*2^k for as large k as possible
     long twoM = 2 * context.zMStar.getM();
-    while (twoM < FHE_p2Bound/(FHE_p2Size*2)) twoM *= 2;
+    while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
 
-    long bigP = FHE_p2Bound - (FHE_p2Bound%twoM) +1; // 1 mod 2m
+    long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
     long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
 
+    // FIXME: The last prime could be smaller
     while (sizeSoFar < totalSize) {
       if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
         nBits += log((double)p);
@@ -262,8 +267,8 @@ void buildModChain(FHEcontext &context, long nPrimes, long nDgts)
   else
     twoM = 2 * context.zMStar.getM();
 
-  long bound = (1 << (FHE_pSize-1));
-  while (twoM < bound/(2*FHE_pSize))
+  long bound = (1L << (context.bitsPerLevel-1));
+  while (twoM < bound/(2*context.bitsPerLevel))
     twoM *= 2; // divisible by 2^k * m  for a larger k
 
   bound = bound - (bound % twoM) +1; // = 1 mod 2m
@@ -286,7 +291,7 @@ void buildModChain(FHEcontext &context, long nPrimes, long nDgts)
   double maxDigitSize = 0.0;
   if (nDgts>1) { // we break ciphetext into a few digits when key-switching
     double dsize = context.logOfProduct(context.ctxtPrimes)/nDgts; // estimate
-    double target = dsize-(FHE_pSize/3.0);
+    double target = dsize-(context.bitsPerLevel/3.0);
     long idx = context.ctxtPrimes.first();
     for (long i=0; i<nDgts-1; i++) { // compute next digit
       IndexSet s;
@@ -467,6 +472,7 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   zMStar(m, p, gens, ords), alMod(zMStar, r), modP_digPoly(ZZX::zero()), modP_digPoly_r(0)
 {
   stdev=3.2;  
+  bitsPerLevel = FHE_pSize;
   fftPrimeCount = 0; 
 
   lazy = ALT_CRT && 

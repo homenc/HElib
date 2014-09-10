@@ -79,6 +79,8 @@ public:
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   xdouble stdev;
 
+  //! @brief number of bits per level
+  long bitsPerLevel;
   /**
    * @brief The "ciphertext primes", used for fresh ciphertexts.
    *
