@@ -13,6 +13,11 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+#if defined(__unix__) || defined(__unix) || defined(unix)
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 #include <NTL/ZZ.h>
 NTL_CLIENT
 #include "EncryptedArray.h"
@@ -80,7 +85,7 @@ static long mValues[][13] = {
 #define num_mValues (sizeof(mValues)/(13*sizeof(long)))
 
 
-void TestIt(long idx, long p, long r, long L, long c)
+void TestIt(long idx, long p, long r, long L, long c, long B)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -100,9 +105,13 @@ void TestIt(long idx, long p, long r, long L, long c)
   ords.push_back(mValues[idx][11]);
   if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
-  cout << "*** TestIt: p=" << p
+  cout << "*** TestIt";
+  if (DoubleCRT::dryRun) cout << " (dry run)";
+  cout << ": p=" << p
        << ", r=" << r
        << ", L=" << L
+       << ", B=" << B
+       << ", c=" << c
        << ", m=" << m
        << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
        << endl;
@@ -110,6 +119,7 @@ void TestIt(long idx, long p, long r, long L, long c)
   setTimersOn();
   FHE_NTIMER_START(initialize);
   FHEcontext context(m, p, r, gens, ords);
+  context.bitsPerLevel = B;
   buildModChain(context, L, c);
   context.zMStar.printout();
   long nPrimes = context.numPrimes();
@@ -169,7 +179,7 @@ void TestIt(long idx, long p, long r, long L, long c)
     secretKey.Decrypt(poly2,c1);
 
     if (ptxt_poly == poly2) cout << "  *** reCryption succeeds!!\n\n";
-    else { // bootsrtapping error
+    else if (!DoubleCRT::dryRun) { // bootsrtapping error
       conv(poly_p,poly2);
       HyperCube<zz_p> powerful2(pConv.getShortSig());
       cout << "\ndecryption error, encrypted ";
@@ -194,7 +204,12 @@ void TestIt(long idx, long p, long r, long L, long c)
     cout << "****Bootstrapping time (#"<<(num+1)<<"):\n";
     printAllTimers();
     resetAllTimers();
-    cout << endl<< endl;
+#if (defined(__unix__) || defined(__unix) || defined(unix))
+    struct rusage rusage;
+    getrusage( RUSAGE_SELF, &rusage );
+    cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+#endif
+    cout << endl;
   }
 }
 
@@ -204,9 +219,13 @@ void usage(char *prog)
 {
   cerr << "Usage: "<<prog<<" [ optional parameters ]\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  r determines plaintext space mod 2^r [default=1]\n";
+  cerr << "  p,r determines plaintext space mod p^r [default=2^1]\n";
+  cerr << "  B is the number of bit per level [default="
+       << FHE_pSize << "]\n";
   cerr << "  L is # of primes in the chain [default=20]\n";
+  cerr << "  c is the number of digits for key-switching [default=3]\n";
   cerr << "  N is a lower bound on phi(m) [default=0]\n";
+  cerr << "  dry=1 for a dry run [default=0]\n";
   exit(0);
 }
 
@@ -216,8 +235,10 @@ int main(int argc, char *argv[])
   argmap["p"] = "2";
   argmap["r"] = "1";
   argmap["c"] = "3";
+  argmap["B"] = "0";
   argmap["L"] = "15";
   argmap["N"] = "0";
+  argmap["dry"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -227,10 +248,14 @@ int main(int argc, char *argv[])
   long c = atoi(argmap["c"]);
   long L =  atoi(argmap["L"]);
   long N =  atoi(argmap["N"]);
+  long B =  atoi(argmap["B"]);
+  if (B<=0) B=FHE_pSize;
+  if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
 
+  DoubleCRT::dryRun = (atoi(argmap["dry"]) != 0);
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
-      TestIt(i,p,r,L,c);
+      TestIt(i,p,r,L,c,B);
       break;
     }
   return 0;
