@@ -227,7 +227,11 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   }
   else {
     long sizeBits = 2*context.bitsPerLevel;
-    if (special || sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
+    if (special) {
+      long numPrimes = ceil(totalSize/NTL_SP_NBITS);// how many special primes
+      sizeBits = ceil(totalSize/numPrimes);         // what's the size of each
+    }
+    if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
     long sizeBound = 1L << sizeBits;
 
     // make p-1 divisible by m*2^k for as large k as possible
