@@ -49,13 +49,23 @@ int main(int argc, char *argv[])
    argmap_t argmap;
    argmap["gens"] = "0";
    argmap["p"] = "2";
+   argmap["lo"] = "1001";
+   argmap["hi"] = "80000";
+   argmap["m"] = "0";
    if (!parseArgs(argc, argv, argmap)) Error("bad args");
 
    long gens_flag = atoi(argmap["gens"]);
    long p = atoi(argmap["p"]);
+   long lo = atoi(argmap["lo"]);
+   long hi = atoi(argmap["hi"]);
+   long m_arg = atoi(argmap["m"]);
+
+   if (lo % 2 == 0) lo++;
+
+   if (m_arg) lo = hi = m_arg;
 
 
-   for (long m = 1001; m <= 80000; m += 2) {
+   for (long m = lo; m <= hi; m += 2) {
 
       if (GCD(p, m) != 1) continue;
 
