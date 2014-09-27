@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 
       if (gen_index == -1) continue;
 
-      if (best_cost > sqrt(phim)) continue;
+      // if (best_cost > sqrt(phim)) continue;
 
 
       Vec<long> fac2;
