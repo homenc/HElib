@@ -58,18 +58,4 @@ public:
   long size() const { return v.size(); }
   bool isPowerComputed(long i)
   { return (i>0 && i<=(long)v.size() && !v[i-1].isEmpty()); }
-
-#ifdef DEBUG_PRINTOUT
-  void printLevels(ostream& s) const
-  {
-    s << "[";
-    for (long i=0; i<size(); i++) s << v[i].findBaseLevel() << " ";
-    s << "]";
-  }
-#endif
 };
-
-#ifdef DEBUG_PRINTOUT
-void checkPolyEval(const Ctxt& out, const Ctxt& in, const ZZX& poly);
-void printSlots(const Ctxt& c);
-#endif

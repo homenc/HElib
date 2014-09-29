@@ -35,6 +35,106 @@ Ctxt& DynamicCtxtPowers::getPower(long e)
   return v[e-1];
 }
 
+// Local functions for polynomial evaluation in some special cases
+static void simplePolyEval(Ctxt& ret, const ZZX& poly, DynamicCtxtPowers& babyStep);
+static void PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long delta, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
+static void degPowerOfTwo(Ctxt& ret, const ZZX& poly, long k, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
+static void recursivePolyEval(Ctxt& ret, const ZZX& poly, long k, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
+
+
+// Main entry point: Evaluate a cleartext polynomial on an encrypted input
+void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
+     // Note: poly is passed by value, so caller keeps the original
+{
+  if (deg(poly)<=2) {  // nothing to optimize here
+    if (deg(poly)<1) { // A constant
+      ret.clear();
+      ret.addConstant(coeff(poly, 0));
+    } else {           // A linear or quadratic polynomial
+      DynamicCtxtPowers babyStep(x, deg(poly));
+      simplePolyEval(ret, poly, babyStep);
+    }
+    return;
+  }
+
+  // How many baby steps: set k~sqrt(n/2), rounded up/down to a power of two
+
+  // FIXME: There may be some room for optimization here: it may be possible
+  // to choose k as something other than a power of two and still maintain
+  // optimal depth, in principle we can try all possible values of k between
+  // two consecutive powers of two and choose the one that gives the least
+  // number of multiplies, conditioned on minimum depth.
+
+  if (k<=0) {
+    long kk = (long) sqrt(deg(poly)/2.0);
+    k = 1L << NextPowerOfTwo(kk);
+
+    // heuristic: if k>>kk then use a smaler power of two
+    if ((k==16 && deg(poly)>167) || (k>16 && k>(1.44*kk)))
+      k /= 2;
+  }
+#ifdef DEBUG_PRINTOUT
+  cerr << "  k="<<k;
+#endif
+
+  long n = divc(deg(poly),k);      // n = ceil(deg(p)/k), deg(p) >= k*n
+  DynamicCtxtPowers babyStep(x, k);
+  const Ctxt& x2k = babyStep.getPower(k);
+
+  // Special case when deg(p)>k*(2^e -1)
+  if (n==(1L << NextPowerOfTwo(n))) { // n is a power of two
+    DynamicCtxtPowers giantStep(x2k, n/2);
+    degPowerOfTwo(ret, poly, k, babyStep, giantStep);
+    return;
+  }
+
+  // If n is not a power of two, ensure that poly is monic and that
+  // its degree is divisible by k, then call the recursive procedure
+
+  const ZZ p = to_ZZ(x.getPtxtSpace());
+  ZZ top = LeadCoeff(poly);
+  ZZ topInv; // the inverse mod p of the top coefficient of poly (if any)
+  bool divisible = (n*k == deg(poly)); // is the degree divisible by k?
+  long nonInvertibe = InvModStatus(topInv, top, p);
+       // 0 if invertible, 1 if not
+
+  // FIXME: There may be some room for optimization below: instead of
+  // adding a term X^{n*k} we can add X^{n'*k} for some n'>n, so long
+  // as n' is smaller than the next power of two. We could save a few
+  // multiplications since giantStep[n'] may be easier to compute than
+  // giantStep[n] when n' has fewer 1's than n in its binary expansion.
+
+  ZZ extra = ZZ::zero();    // extra!=0 denotes an added term extra*X^{n*k}
+  if (!divisible || nonInvertibe) {  // need to add a term
+    top = to_ZZ(1);  // new top coefficient is one
+    topInv = top;    // also the new inverse is one
+    // set extra = 1 - current-coeff-of-X^{n*k}
+    extra = SubMod(top, coeff(poly,n*k), p);
+    SetCoeff(poly, n*k); // set the top coefficient of X^{n*k} to one
+  }
+
+  long t = IsZero(extra)? divc(n,2) : n;
+  DynamicCtxtPowers giantStep(x2k, t);
+
+  if (!IsOne(top)) {
+    poly *= topInv; // Multiply by topInv to make into a monic polynomial
+    for (long i=0; i<=n*k; i++) rem(poly[i], poly[i], p);
+    poly.normalize();
+  }
+  recursivePolyEval(ret, poly, k, babyStep, giantStep);
+
+  if (!IsOne(top)) {
+    ret.multByConstant(top);
+  }
+
+  if (!IsZero(extra)) { // if we added a term, now is the time to subtract back
+    Ctxt topTerm = giantStep.getPower(n);
+    topTerm.multByConstant(extra);
+    ret -= topTerm;
+  }
+}
+
+
 // Simple evaluation sum f_i * X^i, assuming that babyStep has enough powers
 static void 
 simplePolyEval(Ctxt& ret, const ZZX& poly, DynamicCtxtPowers& babyStep)
@@ -184,142 +284,6 @@ recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
   recursivePolyEval(tmp, r, k, babyStep, giantStep);
   ret += tmp;
 }
-
-
-//! @brief Evaluate a cleartext polynomial on an encrypted input
-void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
-     // Note: poly is passed by value, so caller keeps the original
-{
-  if (deg(poly)<=2) {  // nothing to optimize here
-    if (deg(poly)<1) { // A constant
-      ret.clear();
-      ret.addConstant(coeff(poly, 0));
-    } else {           // A linear or quadratic polynomial
-      DynamicCtxtPowers babyStep(x, deg(poly));
-      simplePolyEval(ret, poly, babyStep);
-    }
-    return;
-  }
-
-  // How many baby steps: set k~sqrt(n/2), rounded up/down to a power of two
-
-  // FIXME: There may be some room for optimization here: it may be possible
-  // to choose k as something other than a power of two and still maintain
-  // optimal depth, in principle we can try all possible values of k between
-  // the two powers of two and choose the one that goves the least number
-  // of multiplies, conditioned on minimum depth.
-
-  if (k<=0) {
-    long kk = (long) sqrt(deg(poly)/2.0);
-    k = 1L << NextPowerOfTwo(kk);
-
-    // heuristic: if k>>kk then use a smaler power of two
-    if ((k==16 && deg(poly)>167) || (k>16 && k>(1.44*kk)))
-      k /= 2;
-  }
-#ifdef DEBUG_PRINTOUT
-  cerr << "  k="<<k;
-#endif
-
-  long n = divc(deg(poly),k);          // deg(p) = k*n +delta
-  DynamicCtxtPowers babyStep(x, k);
-  const Ctxt& x2k = babyStep.getPower(k);
-
-  // Special case when deg(p)>k*(2^e -1)
-  if (n==(1L << NextPowerOfTwo(n))) { // n is a power of two
-    DynamicCtxtPowers giantStep(x2k, n/2);
-    degPowerOfTwo(ret, poly, k, babyStep, giantStep);
-    return;
-  }
-
-  // If n is not a power of two, ensure that poly is monic and that
-  // its degree is divisible by k, then call the recursive procedure
-
-  const ZZ p = to_ZZ(x.getPtxtSpace());
-  ZZ top = LeadCoeff(poly);
-  ZZ topInv; // the inverse mod p of the top coefficient of poly (if any)
-  bool divisible = (n*k == deg(poly)); // is the degree divisible by k?
-  long nonInvertibe = InvModStatus(topInv, top, p);
-       // 0 if invertible, 1 if not
-
-  // FIXME: There may be some room for optimization below: instead of
-  // adding a term X^{n*k} we can add X^{n'*k} for some n'>n, so long
-  // as n' is smaller than the next power of two. We could save a few
-  // multiplications since giantStep[n'] may be easier to compute than
-  // giantStep[n] when n' has fewer 1's than n in its binary expansion.
-
-  ZZ extra = ZZ::zero();    // extra!=0 denotes an added term extra*X^{n*k}
-  if (!divisible || nonInvertibe) {  // need to add a term
-    top = to_ZZ(1);  // new top coefficient is one
-    topInv = top;    // also the new inverse is one
-    // set extra = 1 - current-coeff-of-X^{n*k}
-    extra = SubMod(top, coeff(poly,n*k), p);
-    SetCoeff(poly, n*k); // set the top coefficient of X^{n*k} to one
-  }
-
-  long t = IsZero(extra)? divc(n,2) : n;
-  DynamicCtxtPowers giantStep(x2k, t);
-
-  if (!IsOne(top)) {
-    poly *= topInv; // Multiply by topInv to make into a monic polynomial
-    for (long i=0; i<=n*k; i++) rem(poly[i], poly[i], p);
-    poly.normalize();
-  }
-  recursivePolyEval(ret, poly, k, babyStep, giantStep);
-
-  if (!IsOne(top)) {
-    ret.multByConstant(top);
-  }
-
-  if (!IsZero(extra)) { // if we added a term, now is the time to subtract back
-    Ctxt topTerm = giantStep.getPower(n);
-    topTerm.multByConstant(extra);
-    ret -= topTerm;
-  }
-}
-
-
-
-
-// Some debugging code
-
-#ifdef DEBUG_PRINTOUT
-static FHESecKey* sk_pt = NULL;      // global pointers for debugging purposes
-static EncryptedArray* ea_pt = NULL;
-
-static void checkPolyEval(const Ctxt& out, const Ctxt& in, const ZZX& poly)
-{
-  long p = in.getPtxtSpace();
-
-  // decrypt input and output
-  vector< long > in_v;
-  vector< long > out_v;
-  ea_pt->decrypt(in, *sk_pt, in_v);
-  ea_pt->decrypt(out, *sk_pt, out_v);
-  for (long i=0; i<ea_pt->size(); i++)
-    if (out_v[i] != polyEvalMod(poly, in_v[i], p)) {
-	cerr << "Error: poly="<< poly 
-	     << ", p="  << p
-	     << ", in=" << in_v[i]
-	     << ", out="<< out_v[i] <<endl;
-	exit(0);
-      }
-
-  cerr << "Eval("<<poly<<") succeeded, out[0]="<<out_v[0]<<endl;
-}
-
-static void printSlots(const Ctxt& c)
-{
-  // decrypt input and output
-  vector< long > v;
-  ea_pt->decrypt(c, *sk_pt, v);
-  cerr << "[";
-  for (long i=0; i<ea_pt->size(); i++)
-    cerr << v[i]<<" ";
-  cerr << "]";
-}
-#endif // DEBUG_PRINTOUT
-
 
 
 #if 0
