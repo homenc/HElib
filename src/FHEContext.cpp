@@ -451,8 +451,8 @@ istream& operator>> (istream &str, FHEcontext& context)
 // what p^r needs to be for bootstrapping
 static long bootstrapR(long m, long p, long r)
 {
-  return 2*r // + ceil( log_p((t+1)/2) ), t is HWT of bootstrapping key
-    + ceil( log((FHEcontext::bootstrapHwt+1.0)/2.0) / log((double)p) );
+  return 2*r -1// + ceil( log_p((t+1)/2) ), t is HWT of bootstrapping key
+    + ceil( log(FHEcontext::bootstrapHwt+2.0) / log((double)p) );
 
   // FIXME: Check that we can bootstrap the plaintext space p^r
 }
