@@ -420,9 +420,12 @@ void Ctxt::findBaseSet(IndexSet& s) const
 
   assert(verifyPrimeSet());
   bool halfSize = context.containsSmallPrime();
-  double addedNoise = log(modSwitchAddedNoiseVar())/2;
   double curNoise = log(getNoiseVar())/2;
   double firstNoise = context.logOfPrime(0);
+  double noiseThreshold = log(modSwitchAddedNoiseVar())*0.55;
+  // FIXME: The above should have been 0.5. Making it a bit more means
+  // that we will mod-switch a little less frequently, whether this is
+  // a good thing needs to be tested.
 
   // remove special primes, if they are included in this->primeSet
   s = getPrimeSet();
@@ -432,7 +435,17 @@ void Ctxt::findBaseSet(IndexSet& s) const
     s.remove(context.specialPrimes);
   }
 
-  if (curNoise<=2*addedNoise) return; // no need to mod down
+  /* We compare below to noiseThreshold+1 rather than to noiseThreshold
+   * to make sure that if you mod-switch down to c.findBaseSet() and
+   * then immediately call c.findBaseSet() again, it will not tell you
+   * to mod-switch further down. Note that mod-switching adds close to
+   * noiseThreshold to the scaled noise, so if the scaled noise was
+   * equal to noiseThreshold then after mod-switchign you would have
+   * roughly twice as much noise. Since we're mesuring the log, it means
+   * that you may have as much as noiseThreshold+log(2), which we round
+   * up to noiseThreshold+1 in the test below.
+   */
+  if (curNoise<=noiseThreshold+1) return; // no need to mod down
 
   // if the first prime in half size, begin by removing it
   if (halfSize && s.contains(0)) {
@@ -440,19 +453,19 @@ void Ctxt::findBaseSet(IndexSet& s) const
     s.remove(0);
   }
 
-  // while noise is larger than added term, scale down by the next prime
-  while (curNoise>addedNoise && !empty(s)) {
+  // while noise is larger than threshold, scale down by the next prime
+  while (curNoise>noiseThreshold && !empty(s)) {
     curNoise -= context.logOfPrime(s.last());
     s.remove(s.last());
   }
 
   // Add 1st prime if s is empty or if this does not increase noise too much
-  if (empty(s) || (!s.contains(0) && curNoise+firstNoise<=addedNoise)) {
+  if (empty(s) || (!s.contains(0) && curNoise+firstNoise<=noiseThreshold)) {
     s.insert(0);
     curNoise += firstNoise;
   }
 
-  if (curNoise>addedNoise && log_of_ratio()>-0.5)
+  if (curNoise>noiseThreshold && log_of_ratio()>-0.5)
     cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
 }
 
