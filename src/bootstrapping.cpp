@@ -198,10 +198,13 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   p2e /= p2ePrime;     // reduce the plaintext space by p^{e'} factor
   ctxt.reducePtxtSpace(/*newPtxtSpace=*/p2e*p2r);
 
+  cerr << "+ before recryption, level=" << ctxt.findBaseLevel()<<endl;
+  cerr << "  constant size = " << p0size <<", "<<p1size << endl;
   ctxt.multByConstant(zzParts[1], p1size*p1size);
   ctxt.addConstant(zzParts[0], p0size*p0size);
 
   FHE_NTIMER_STOP(preProcess);
+  cerr << "+ before linearTrans1, level=" << ctxt.findBaseLevel()<<endl;
 
 #ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "After pre-processing");
@@ -236,6 +239,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   FHE_NTIMER_START(LinearTransform1);
   ctxt.getContext().firstMap->apply(ctxt);
   FHE_NTIMER_STOP(LinearTransform1);
+  cerr << "+ after linearTrans1, level=" << ctxt.findBaseLevel()<<endl;
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
 
@@ -248,6 +252,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   FHE_NTIMER_STOP(DigitExtraction);
 
   // Move the slots back to powerful-basis coefficients
+  cerr << "+ before linearTrans2, level=" << ctxt.findBaseLevel()<<endl;
   FHE_NTIMER_START(LinearTransform2);
   ctxt.getContext().secondMap->apply(ctxt);
   FHE_NTIMER_STOP(LinearTransform2);
@@ -426,9 +431,9 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 
   FHE_NTIMER_STOP(unpack);
+  cerr << "+ after unpacking, level=" << unpacked[0].findBaseLevel()<<endl;
 
   // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]
-  FHE_NTIMER_START(extractDigits);
 
   long p = ctxt.getContext().zMStar.getP();
   long p2r = power_long(p,r);
@@ -446,6 +451,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 #endif
 
   for (long i=0; i<(long)unpacked.size(); i++) {
+    FHE_NTIMER_START(extractDigits);
     if (topHigh<=0) { // extracting LSB = no-op
       scratch.assign(1,unpacked[i]);
     } else {          // extract digits topHigh...0, store them in scratch
@@ -522,6 +528,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   CheckCtxt(unpacked[0], "After extraction");
   tm = -GetTime();
 #endif
+  cerr << "+ before repacking, level=" << unpacked[0].findBaseLevel()<<endl;
 
   // Step 3: re-pack the slots
   FHE_NTIMER_START(repack);
