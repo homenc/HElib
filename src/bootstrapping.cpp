@@ -189,14 +189,18 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
+  double p0size = to_double(coeffsL2Norm(zzParts[0]));
+  double p1size = to_double(coeffsL2Norm(zzParts[1]));
+
   // Multiply the post-processed cipehrtext by the encrypted sKey
   ctxt = bootstrapEkey;
-  ctxt.multByConstant(zzParts[1]);
-  ctxt.addConstant(zzParts[0]);
-
   e -= ePrime;
   p2e /= p2ePrime;     // reduce the plaintext space by p^{e'} factor
   ctxt.reducePtxtSpace(/*newPtxtSpace=*/p2e*p2r);
+
+  ctxt.multByConstant(zzParts[1], p1size*p1size);
+  ctxt.addConstant(zzParts[0], p0size*p0size);
+
   FHE_NTIMER_STOP(preProcess);
 
 #ifdef DEBUG_PRINTOUT
