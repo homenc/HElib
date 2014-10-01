@@ -123,6 +123,10 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   else
     cout << "AltEvalMap: bad\n";
 
+#if 0
+  // This test no longer works, because the inverse map 
+  // now applies the normal basis transformation
+
   publicKey.Encrypt(ctxt, FF1);
   CheckCtxt(ctxt, "init");
 
@@ -144,6 +148,7 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
     cout << "AltEvalMap: good\n";
   else
     cout << "AltEvalMap: bad\n";
+#endif
 
   FHE_NTIMER_STOP(ALL);
 

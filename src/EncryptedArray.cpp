@@ -1317,6 +1317,7 @@ template<class type> void EncryptedArrayDerived<type>::mat_mul1D(Ctxt& ctxt,
   // special case fo the extra dimension
   bool special = (dim == LONG(zMStar.numOfGens()));
   long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+  bool bad = !special && !zMStar.SameOrd(dim);
 
   RBak bak; bak.save(); tab.restoreContext(); // backup the NTL modulus
 
@@ -1384,11 +1385,42 @@ template<class type> void EncryptedArrayDerived<type>::mat_mul1D(Ctxt& ctxt,
 
     // now diag[j] contains the lin poly coeffs
 
-    Ctxt shCtxt = ctxt;
-    if (i != 0) rotate1D(shCtxt, dim, i); 
-    shCtxt.cleanUp();
+    
+    vector<Ctxt> shCtxt;
+    vector<RX> shMask;
+    if (i == 0) {
+      shCtxt.resize(1, ctxt);
+      shMask.resize(1, conv<RX>(1));
+    }
+    else if (!bad) {
+      shCtxt.resize(1, ctxt);
+      shMask.resize(1, conv<RX>(1));
+      rotate1D(shCtxt[0], dim, i);
+      shCtxt[0].cleanUp();
+    }
+    else {
+      // we fold the masking constants into the linearized polynomial
+      // constants to save a level. We lift some code out of rotate1D
+      // to do this.
 
-    RX cpoly1, cpoly2;
+      shCtxt.resize(2, ctxt);
+      shMask.resize(2);
+
+      long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+      long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+      const RX& mask = tab.getMaskTable()[dim][D-i];
+
+      shCtxt[0].smartAutomorph(val); 
+      shCtxt[0].cleanUp();
+
+      shCtxt[1].smartAutomorph(ival); 
+      shCtxt[1].cleanUp();
+
+      plaintextAutomorph(shMask[0], 1 - mask, val, zMStar, F);
+      plaintextAutomorph(shMask[1], mask, ival, zMStar, F);
+    }
+    
+    RX cpoly1, cpoly2, cpoly3;
     ZZX cpoly;
 
     // apply the linearlized polynomial
@@ -1410,10 +1442,14 @@ template<class type> void EncryptedArrayDerived<type>::mat_mul1D(Ctxt& ctxt,
 
       // apply inverse automorphism to constant
       plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar, F);
-      conv(cpoly, cpoly2);
-      Ctxt shCtxt1 = shCtxt;
-      shCtxt1.multByConstant(cpoly);
-      *acc[k] += shCtxt1;
+
+      for (long j = 0; j < LONG(shCtxt.size()); j++) {
+        MulMod(cpoly3, cpoly2, shMask[j], F);
+        conv(cpoly, cpoly3);
+        Ctxt shCtxt1 = shCtxt[j];;
+        shCtxt1.multByConstant(cpoly);
+        *acc[k] += shCtxt1;
+      }
     }
   }
 
