@@ -37,7 +37,7 @@ void usage(char *prog)
   cerr << "  m is the cyclotomic field [default=4369]\n";
   cerr << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
   cerr << "  depth bounds the depth of permutation network [default=5]\n";
-  cerr << "  L is number of primes in chain [default=depth]\n";
+  cerr << "  L is number of levels in chain [default=depth]\n";
   exit(0);
 }
 
@@ -111,8 +111,8 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   //  CubeSignature sig(dims);
 
   // 1/2 prime per level should be more or less enough, here we use 1 per layer
-  if (L<=0) L = 2*trees.numLayers();
-  buildModChain(context, /*nPrimes=*/L, /*nDigits=*/3);
+  if (L<=0) L = 1+trees.numLayers();
+  buildModChain(context, /*nLevels=*/L, /*nDigits=*/3);
   cerr << "**Using "<<L<<" primes\n";
 
   cerr << context.ctxtPrimes.card() << "\n";

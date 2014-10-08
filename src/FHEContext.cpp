@@ -231,11 +231,16 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
       long numPrimes = ceil(totalSize/NTL_SP_NBITS);// how many special primes
       sizeBits = ceil(totalSize/numPrimes);         // what's the size of each
     }
+    long twoM = 2 * context.zMStar.getM();
+
     if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
     long sizeBound = 1L << sizeBits;
+    if (sizeBound < twoM*log2(twoM)*8) {
+      sizeBits = ceil(log2(twoM*log2(twoM)))+3;
+      sizeBound = 1L << sizeBits;
+    }
 
     // make p-1 divisible by m*2^k for as large k as possible
-    long twoM = 2 * context.zMStar.getM();
     while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
 
     long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
@@ -257,9 +262,12 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   return nBits;
 }
 
-void buildModChain(FHEcontext &context, long nPrimes, long nDgts)
+void buildModChain(FHEcontext &context, long nLevels, long nDgts)
 {
-#ifndef NO_HALF_SIZE_PRIME
+#ifdef NO_HALF_SIZE_PRIME
+  long nPrimes = nLevels;
+#else
+  long nPrimes = (nLevels+1)/2;
   // The first prime should be of half the size. The code below tries to find
   // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
   // Then if the plaintext space is a power of two it tries to choose the
