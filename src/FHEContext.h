@@ -140,8 +140,9 @@ public:
              const vector<long>& gens = vector<long>(), 
              const vector<long>& ords = vector<long>() );  // constructor
 
-  void makeBootstrappable(const Vec<long>& mvec, long skWht=0)
-  { rcData.init(*this, mvec, skWht); }
+  void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
+			  bool conservative=false)
+  { rcData.init(*this, mvec, skWht, conservative); }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }

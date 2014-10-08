@@ -90,7 +90,8 @@ static void setAlphaE(double& alpha, long& e, double rho, double gamma,
 }
 
 // The main method
-void RecryptData::init(const FHEcontext& context,const Vec<long>& mvec,long t)
+void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec,
+		       long t, bool conservative)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to RecryptData::init\n";
@@ -111,23 +112,25 @@ void RecryptData::init(const FHEcontext& context,const Vec<long>& mvec,long t)
   long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
   double rho = (t+1)/pow(p,logT);
 
-  // try alpha, e with this setting
-  setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
-  ePrime = e -r +1 -logT;
+  if (!conservative) {   // try alpha, e with this "aggresive" setting
+    setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
+    ePrime = e -r +1 -logT;
 
-  // If e is too large, try again with rho/p instead of rho
-  
-  // FIXME: compare to a rather arbitrary bound of 10000*p^{r+2}
-  long bound = power_long(p,r+2)*10000;
-  if (bound > (1L<<context.bitsPerLevel)) bound = (1L<<context.bitsPerLevel);
-  if (pow(p,e) > bound) {
-    cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
+    // If e is too large, try again with rho/p instead of rho
+    long bound = (1L << (context.bitsPerLevel-1)); // halfSizePrime/2
+    if (pow(p,e) > bound) { // try the conservative setting instead
+      cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
+      conservative = true;
+    }
+  }
+  if (conservative) { // set alpha, e with a "conservative" rho/p
     setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
     ePrime = e -r -logT;
   }
+
   // Compute highest key-Hamming-weight that still works (not more than 256)
   double qOver4 = (pow(p,e)+1)/4;
-  for (t-=2; qOver4>=lowerBound2(p,r,ePrime,t,alpha)
+  for (t-=10; qOver4>=lowerBound2(p,r,ePrime,t,alpha)
 	 &&  qOver4>=lowerBound1(p,r,ePrime,t,alpha,noise) && t<257; t++);
   skHwt = t-1;
 

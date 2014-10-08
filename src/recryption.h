@@ -40,8 +40,8 @@ public:
 
   RecryptData() { alMod=NULL; ea=NULL; firstMap=secondMap=NULL;p2dConv=NULL; }
   ~RecryptData();
-  void init(const FHEcontext& context, 
-	    const Vec<long>& mvec, long t=0/*min Hwt for sk*/);
+  void init(const FHEcontext& context, const Vec<long>& mvec,
+	    long t=0/*min Hwt for sk*/, bool conservative=false);
 };
 
 #endif /* _RECRYPTION_H_ */

@@ -86,7 +86,7 @@ static long mValues[][13] = {
 #define num_mValues (sizeof(mValues)/(13*sizeof(long)))
 
 
-void TestIt(long idx, long p, long r, long L, long c, long B)
+void TestIt(long idx, long p, long r, long L, long c, long B, bool cons=false)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -123,7 +123,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B)
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
   buildModChain(context, L, c);
-  context.makeBootstrappable(mvec);
+  context.makeBootstrappable(mvec, /*t=*/0, cons);
   t += GetTime();
   cout << " done in "<<t<<" seconds\n";
   cout << "  e="    << context.rcData.e
@@ -227,6 +227,7 @@ void usage(char *prog)
   cerr << "  c is the number of digits for key-switching [default=3]\n";
   cerr << "  N is a lower bound on phi(m) [default=0]\n";
   cerr << "  dry=1 for a dry run [default=0]\n";
+  cerr << "  cons=1 for a conservative setting (circuit deeper by 1) [default=0]\n";
   exit(0);
 }
 
@@ -240,6 +241,7 @@ int main(int argc, char *argv[])
   argmap["L"] = "15";
   argmap["N"] = "0";
   argmap["dry"] = "0";
+  argmap["cons"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -250,13 +252,14 @@ int main(int argc, char *argv[])
   long L =  atoi(argmap["L"]);
   long N =  atoi(argmap["N"]);
   long B =  atoi(argmap["B"]);
+  bool cons = atoi(argmap["cons"]);
   if (B<=0) B=FHE_pSize;
   if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
 
   DoubleCRT::dryRun = (atoi(argmap["dry"]) != 0);
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
-      TestIt(i,p,r,L,c,B);
+      TestIt(i,p,r,L,c,B,cons);
       break;
     }
   return 0;
