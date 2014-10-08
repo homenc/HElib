@@ -70,6 +70,114 @@ typedef long LONG; // using this to identify casts that we should really get rid
 bool parseArgs(int argc,  char *argv[], argmap_t& argmap);
 
 
+//! @brief Easier arg parsing
+/**
+ * Example use:
+ *   ArgMapping amap;
+ *
+ *   long p = 2;
+ *   amap.arg("p", p, "doc for p");
+ *   long m = 1;
+ *   amap.arg("m", m, "doc for m");
+ *
+ *   amap.parse(argc, argv); // parses and overrides initail values
+ *                           // of p and p, returns false on error
+ *
+ *   amap.documentation(); // returns string with documentation
+ *                         // for each parameter, one per line,
+ *
+ **/
+
+/* doArgProcessing: converts c-string s to value T,
+ * returns upon success.  By default, we parse using
+ * the istream input operator, except when T = string
+ * and just convert without any parsing.
+ */
+
+template<class T>
+bool doArgProcessing(T *value, const char *s)
+{
+  string ss(s);
+  stringstream sss(ss);
+  return sss >> *value;
+}
+
+bool doArgProcessing(string *value, const char *s)
+{
+  *value = string(s);
+  return true;
+}
+
+/* ArgProcessor: virtual base class */
+
+class ArgProcessor {
+public:
+virtual bool process(const char *s) = 0;
+};
+
+/* ArgProcessorDerived: templated subclasses */
+
+template<class T>
+class ArgProcessorDerived : public ArgProcessor   {
+public:
+  T *value;
+
+  virtual bool process(const char *s)
+  {
+    return doArgProcessing(value, s);
+  }
+
+  ArgProcessorDerived(T* _value) : value(_value) {}
+};
+
+class ArgMapping {
+public:
+  unordered_map< string, shared_ptr<ArgProcessor> > map;
+  stringstream doc;
+
+  template<class T>
+  void arg(const char *name, T& value) 
+  { 
+    shared_ptr<ArgProcessor> ap = 
+      shared_ptr<ArgProcessor>(new ArgProcessorDerived<T>(&value));
+
+    map[name] = ap;
+  }
+
+  template<class T>
+  void arg(const char *name, T& value, const char *doc1) 
+  {
+    arg(name, value);
+    doc << "\t" << name << " \t" << doc1 << " \t[" << value << "]" << "\n";
+  }
+
+
+  bool parse(int argc, const char *argv[])
+  {
+    for (long i = 1; i < argc; i++) {
+      const char *x = argv[i];
+      long j = 0;
+      while (x[j] != '=' && x[j] != '\0') j++; 
+      if (x[j] == '\0') return false;
+      string name(x, j);
+      const char *s = x+j+1;
+
+      shared_ptr<ArgProcessor> ap = map[name];
+      if (!ap) return false;
+      if (!ap->process(s)) return false;
+    }
+
+    return true;
+  }
+
+  string documentation() 
+  {
+    return doc.str();
+  }
+};
+
+
+
 //! @brief Routines for computing mathematically correct mod and div.
 //! 
 //! mcDiv(a, b) = floor(a / b), mcMod(a, b) = a - b*mcDiv(a, b);
