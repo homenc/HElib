@@ -1385,7 +1385,6 @@ template<class type> void EncryptedArrayDerived<type>::mat_mul1D(Ctxt& ctxt,
 
     // now diag[j] contains the lin poly coeffs
 
-    
     vector<Ctxt> shCtxt;
     vector<RX> shMask;
     if (i == 0) {
@@ -1481,6 +1480,8 @@ void EncryptedArrayDerived<type>::compMat1D(CachedPtxtBlockMatrix& cmat,
   // special case fo the extra dimension
   bool special = (dim == LONG(zMStar.numOfGens()));
   long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+  bool bad = !special && !zMStar.SameOrd(dim);
+
   long nslots = size();
   long d = getDegree();
 
@@ -1496,7 +1497,11 @@ void EncryptedArrayDerived<type>::compMat1D(CachedPtxtBlockMatrix& cmat,
   vector<RX> entry1;
   entry1.resize(d);
   
-  cmat.SetDims(D, d);
+  if (bad)
+    cmat.SetDims(D, 2*d);
+  else
+    cmat.SetDims(D, d);
+
   vector< vector<RX> > diag;
   diag.resize(D);
   for (long j = 0; j < D; j++) diag[j].resize(d);
@@ -1540,7 +1545,30 @@ void EncryptedArrayDerived<type>::compMat1D(CachedPtxtBlockMatrix& cmat,
     }
 
     // now diag[j] contains the lin poly coeffs
-    RX cpoly1, cpoly2;
+
+    vector<RX> shMask;
+    if (i == 0) {
+      shMask.resize(1, conv<RX>(1));
+    }
+    else if (!bad) {
+      shMask.resize(1, conv<RX>(1));
+    }
+    else {
+      // we fold the masking constants into the linearized polynomial
+      // constants to save a level. We lift some code out of rotate1D
+      // to do this.
+
+      shMask.resize(2);
+
+      long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+      long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+      const RX& mask = tab.getMaskTable()[dim][D-i];
+
+      plaintextAutomorph(shMask[0], 1 - mask, val, zMStar, F);
+      plaintextAutomorph(shMask[1], mask, ival, zMStar, F);
+    }
+    
+    RX cpoly1, cpoly2, cpoly3;
     ZZX cpoly;
 
     // apply the linearlized polynomial
@@ -1554,6 +1582,7 @@ void EncryptedArrayDerived<type>::compMat1D(CachedPtxtBlockMatrix& cmat,
         cvec[j] = diag[ special ? 0 : zMStar.coordinate(dim, j) ][k];
         if (!IsZero(cvec[j])) zConst = false;
       }
+
       if (zConst) continue;
 
       encode(cpoly, cvec);
@@ -1561,8 +1590,12 @@ void EncryptedArrayDerived<type>::compMat1D(CachedPtxtBlockMatrix& cmat,
 
       // apply inverse automorphism to constant
       plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar, F);
-      conv(cpoly, cpoly2);
-      cmat[i][k] = ZZXptr(new ZZX(cpoly));
+
+      for (long j = 0; j < LONG(shMask.size()); j++) {
+        MulMod(cpoly3, cpoly2, shMask[j], F);
+        conv(cpoly, cpoly3);
+        cmat[i][k + d*j] = ZZXptr(new ZZX(cpoly));
+      }
     }
   }
 }
@@ -1591,9 +1624,12 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
   const PAlgebra& zMStar = context.zMStar;
   assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
 
+  long m = zMStar.getM();
+
   // special case fo the extra dimension
   bool special = (dim == LONG(zMStar.numOfGens()));
   long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+  bool bad = !special && !zMStar.SameOrd(dim);
   long d = ea.getDegree();
 
   Vec< shared_ptr<Ctxt> > acc;
@@ -1604,17 +1640,41 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
 
   // Process the diagonals one at a time
   for (long i = 0; i < D; i++) { // process diagonal i
-    Ctxt shCtxt = ctxt;
-    if (i != 0) ea.rotate1D(shCtxt, dim, i); 
-    shCtxt.cleanUp();
+    vector<Ctxt> shCtxt;
+    if (i == 0) {
+      shCtxt.resize(1, ctxt);
+    }
+    else if (!bad) {
+      shCtxt.resize(1, ctxt);
+      ea.rotate1D(shCtxt[0], dim, i);
+      shCtxt[0].cleanUp();
+    }
+    else {
+      // we fold the masking constants into the linearized polynomial
+      // constants to save a level. We lift some code out of rotate1D
+      // to do this.
+
+      shCtxt.resize(2, ctxt);
+
+      long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+      long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+
+      shCtxt[0].smartAutomorph(val); 
+      shCtxt[0].cleanUp();
+
+      shCtxt[1].smartAutomorph(ival); 
+      shCtxt[1].cleanUp();
+    }
 
     // apply the linearlized polynomial
     for (long k = 0; k < d; k++) {
-      if (!cmat[i][k]) continue; // zero constant
+      for (long j = 0; j < LONG(shCtxt.size()); j++) {
+        if (!cmat[i][k + d*j]) continue; // zero constant
 
-      Ctxt shCtxt1 = shCtxt;
-      shCtxt1.multByConstant(*cmat[i][k]);
-      *acc[k] += shCtxt1;
+        Ctxt shCtxt1 = shCtxt[j];
+        shCtxt1.multByConstant(*cmat[i][k + d*j]);
+        *acc[k] += shCtxt1;
+      }
     }
   }
 

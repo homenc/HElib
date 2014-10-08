@@ -101,7 +101,7 @@ public:
 
 #define FHE_STRINGIFY(x) #x
 #define FHE_TOSTRING(x) FHE_STRINGIFY(x)
-#define FHE_AT __FILE__ "/" FHE_TOSTRING(__LINE__)
+#define FHE_AT __FILE__ ":" FHE_TOSTRING(__LINE__)
 
 #define FHE_stringify_aux(s) #s
 #define FHE_stringify(s) FHE_stringify_aux(s)
