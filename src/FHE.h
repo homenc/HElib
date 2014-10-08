@@ -141,33 +141,32 @@ class FHEPubKey { // The public key
 
   // bootstrapping data
 
-  long bootstrapKeyID; // index of the bootstrapping key
-  Ctxt bootstrapEkey;  // the key itself, encrypted under key #0
-  vector< vector<ZZX> > unpackSlotEncoding;// linPolys for uppacking the slots
+  long recryptKeyID; // index of the bootstrapping key
+  Ctxt recryptEkey;  // the key itself, encrypted under key #0
 
 public:
   FHEPubKey(): // this constructor thorws run-time error if activeContext=NULL
-    context(*activeContext), pubEncrKey(*this), bootstrapEkey(*this)
-      { bootstrapKeyID=-1; }
+    context(*activeContext), pubEncrKey(*this), recryptEkey(*this)
+      { recryptKeyID=-1; }
 
   explicit
   FHEPubKey(const FHEcontext& _context): 
-    context(_context), pubEncrKey(*this), bootstrapEkey(*this)
-      { bootstrapKeyID=-1; }
+    context(_context), pubEncrKey(*this), recryptEkey(*this)
+      { recryptKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
     context(other.context), pubEncrKey(*this), skHwts(other.skHwts),
     keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
-    bootstrapKeyID(other.bootstrapKeyID), bootstrapEkey(*this)
-  { // copy pubEncrKey,bootstrapEkey w/o checking the ref to the public key
+    recryptKeyID(other.recryptKeyID), recryptEkey(*this)
+  { // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
     pubEncrKey.privateAssign(other.pubEncrKey);
-    bootstrapEkey.privateAssign(other.bootstrapEkey);
+    recryptEkey.privateAssign(other.recryptEkey);
   }
 
   void clear() { // clear all public-key data
     pubEncrKey.clear(); skHwts.clear(); 
     keySwitching.clear(); keySwitchMap.clear();
-    bootstrapKeyID=-1; bootstrapEkey.clear();
+    recryptKeyID=-1; recryptEkey.clear();
   }
 
   bool operator==(const FHEPubKey& other) const;
@@ -224,7 +223,7 @@ public:
   long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0,
 	       bool highNoise=false) const;
 
-  bool isBootstrappable() { return (context.bootstrapPAM != NULL); }
+  bool isBootstrappable() { return (context.rcData.alMod != NULL); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
 
   friend class FHESecKey;
@@ -294,7 +293,7 @@ public:
 	       long ptxtSpace=0, long skIdx=0) const;
 
   //! @brief Generate bootstrapping data if needed, returns index of key
-  long genBootstrapData();
+  long genRecryptData();
 
   friend ostream& operator << (ostream& str, const FHESecKey& sk);
   friend istream& operator >> (istream& str, FHESecKey& sk);

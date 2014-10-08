@@ -414,18 +414,12 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
       if (keySwitchMap[i][j] != other.keySwitchMap[i][j]) return false;
   }
 
-  if (bootstrapKeyID!=other.bootstrapKeyID) return false;
-  if (bootstrapKeyID>=0 && 
-      !bootstrapEkey.equalsTo(other.bootstrapEkey, /*comparePkeys=*/false))
+  if (recryptKeyID!=other.recryptKeyID) return false;
+  if (recryptKeyID>=0 && 
+      !recryptEkey.equalsTo(other.recryptEkey, /*comparePkeys=*/false))
     return false;
 
   return true;
-}
-
-
-long FHEPubKey::ePlusR(long p)
-{
-  return floor( log((double)NTL_SP_BOUND)/log(p) );
 }
 
 
@@ -459,8 +453,8 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
   str << "]\n";
 
   // output the bootstrapping key, if any
-  str << pk.bootstrapKeyID << " ";
-  if (pk.bootstrapKeyID>=0) str << pk.bootstrapEkey << endl;
+  str << pk.recryptKeyID << " ";
+  if (pk.recryptKeyID>=0) str << pk.recryptEkey << endl;
   return str << "]";
 }
 
@@ -507,8 +501,8 @@ istream& operator>>(istream& str, FHEPubKey& pk)
     pk.setKeySwitchMap(i);
 
   // Get the bootstrapping key, if any
-  str >> pk.bootstrapKeyID;
-  if (pk.bootstrapKeyID>=0) str >> pk.bootstrapEkey;
+  str >> pk.recryptKeyID;
+  if (pk.recryptKeyID>=0) str >> pk.recryptEkey;
 
   seekPastChar(str, ']');
   return str;
@@ -611,7 +605,7 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   // Record the plaintext space for this key-switching matrix
   if (p<2) {
     if (isBootstrappable())   // use the larger bootstrapping plaintext space
-         p = context.bootstrapPAM->getPPowR();
+         p = context.rcData.alMod->getPPowR();
     else p = pubEncrKey.ptxtSpace; // default plaintext space from public key
   }
   assert(p>=2);
@@ -731,35 +725,31 @@ long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
 
 
 // Generate bootstrapping data if needed, returns index of key
-long FHESecKey::genBootstrapData()
+long FHESecKey::genRecryptData()
 {
-  if (bootstrapKeyID>=0) return bootstrapKeyID;
+  if (recryptKeyID>=0) return recryptKeyID;
 
   // Make sure that the context has the bootstrapping EA and PAlgMod
-  assert(context.bootstrapPAM != NULL && context.bootstrapEA != NULL);
+  assert(isBootstrappable());
 
-  // Plaintext space p^{r+1} sets as large as can fit in a single precision int
-  double p = context.zMStar.getP();
-  long ePr = FHEPubKey::ePlusR(p);
-  //  long ePr = 14;  // a smaller value for debugging
-  long p2ePr = power_long(p,ePr);      // p^{e+r}
+  long p2ePr = context.rcData.alMod->getPPowR();// p^{e-e'+r}
   long p2r = context.alMod.getPPowR(); // p^r
 
   // Generate a new bootstrapping key
   ZZX keyPoly;
-  const long hwt = FHEcontext::bootstrapHwt;
+  const long hwt = context.rcData.skHwt;
   sampleHWt(keyPoly, hwt, context.zMStar.getPhiM());
   DoubleCRT newSk(keyPoly, context); // defined relative to all primes
   long keyID = ImportSecKey(newSk, hwt, p2r, /*onlyLinear=*/true);
 
   // Generate a key-switching matrix from key 0 to this key
-  GenKeySWmatrix(    1,          1,          0,   keyID,    p2r  );
-              // fromSPower, fromXPower, fromIdx, toIdx, ptxtSpace
+  GenKeySWmatrix(/*fromSPower=*/1,/*fromXPower=*/1,
+		 /*fromIdx=*/0,   /*toIdx=*/keyID, /*ptxtSpace=*/p2r);
 
   // Encrypt new key under key #0 and plaintext space p^{e+r}
-  Encrypt(bootstrapEkey, keyPoly, p2ePr);
+  Encrypt(recryptEkey, keyPoly, p2ePr);
 
-  return (bootstrapKeyID=keyID); // return the new key-ID
+  return (recryptKeyID=keyID); // return the new key-ID
 }
 
 

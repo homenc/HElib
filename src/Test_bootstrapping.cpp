@@ -118,10 +118,14 @@ void TestIt(long idx, long p, long r, long L, long c, long B)
        << endl;
 
   setTimersOn();
-  FHE_NTIMER_START(initialize);
+  cout << "Computing key-independent tables..." << std::flush;
+  double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
   buildModChain(context, L, c);
+  context.makeBootstrappable(mvec);
+  t += GetTime();
+  cout << " done in "<<t<<" seconds\n";
   context.zMStar.printout();
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
@@ -129,34 +133,26 @@ void TestIt(long idx, long p, long r, long L, long c, long B)
   cout << "  "<<nPrimes<<" primes in chain, total bitsize="
        << ceil(bitsize) << ", secparam="
        << (7.2*phim/bitsize -110) << endl;
-  double t = -GetTime();
-  cout << "Computing key-independent bootstrapping tables..." << std::flush;
-  context.makeBootstrappable(mvec);
-  t += GetTime();
-  cout << " done in "<<t<<" seconds\n";
+
   long p2r = context.alMod.getPPowR();
 
-  cout << "Generating keys\n" << std::flush;
+  for (long numkey=0; numkey<3; numkey++) { // test with 3 keys
+
+  t = -GetTime();
+  cout << "Generating keys, " << std::flush;
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
-  cout << "Computing key-dependent bootstrapping tables..." << std::flush;
-  t = -GetTime();
-  secretKey.genBootstrapData();
+  cout << "computing key-dependent tables..." << std::flush;
+  secretKey.genRecryptData();
   t += GetTime();
   cout << " done in "<<t<<" seconds\n";
 
-  FHE_NTIMER_STOP(initialize);
-  cout << "****Initialization time:\n";
-  printAllTimers();
-  cout << endl;
-  resetAllTimers();
-
   zz_p::init(p2r);
   zz_pX poly_p = random_zz_pX(context.zMStar.getPhiM());
-  PowerfulConversion pConv(context.p2dConversion->getIndexTranslation());
+  PowerfulConversion pConv(context.rcData.p2dConv->getIndexTranslation());
   HyperCube<zz_p> powerful(pConv.getShortSig());
   pConv.polyToPowerful(powerful, poly_p);
   ZZX ptxt_poly = conv<ZZX>(poly_p);
@@ -164,9 +160,9 @@ void TestIt(long idx, long p, long r, long L, long c, long B)
 
 #ifdef DEBUG_PRINTOUT
   dbgKey = &secretKey; // debugging key and ea
-  dbgEa = context.bootstrapEA; // EA for plaintext space p^{e+r-e'}
+  dbgEa = context.rcData.ea; // EA for plaintext space p^{e+r-e'}
   dbg_ptxt = ptxt_poly;
-  context.p2dConversion->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
+  context.rcData.p2dConv->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
   vecRed(ptxt_pwr, ptxt_pwr, p2r, true);
 #endif
 
@@ -175,11 +171,10 @@ void TestIt(long idx, long p, long r, long L, long c, long B)
 
   secretKey.Encrypt(c1,ptxt_poly,p2r);
   for (long num=0; num<2; num++) { // recrypt twice, each time test the result
-    cout << "  reCryption number "<<(num+1)<<endl;
     publicKey.reCrypt(c1);
     secretKey.Decrypt(poly2,c1);
 
-    if (ptxt_poly == poly2) cout << "  *** reCryption succeeds!!\n\n";
+    if (ptxt_poly == poly2) cout << "  *** reCryption succeeds!!\n";
     else if (!DoubleCRT::dryRun) { // bootsrtapping error
       conv(poly_p,poly2);
       HyperCube<zz_p> powerful2(pConv.getShortSig());
@@ -194,24 +189,24 @@ void TestIt(long idx, long p, long r, long L, long c, long B)
 	if (powerful[i] != powerful2[i]) {
           numDiff++;
 	  cout << i << ": " << powerful[i] << " != " << powerful2[i]<<", ";
-	  // if (numDiff >5) break;
+	  if (numDiff >5) break;
         }
       cout << endl<< endl;
       printAllTimers();
       exit(0);
     }
 
-    decryptAndPrint(cout, c1, secretKey, *context.secondEA);
-    cout << "****Bootstrapping time (#"<<(num+1)<<"):\n";
-    printAllTimers();
-    resetAllTimers();
+    decryptAndPrint(cout, c1, secretKey, *context.ea);
+    cout << endl;
+  }
+  }
+  printAllTimers();
+  resetAllTimers();
 #if (defined(__unix__) || defined(__unix) || defined(unix))
     struct rusage rusage;
     getrusage( RUSAGE_SELF, &rusage );
     cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
 #endif
-    cout << endl;
-  }
 }
 
 /********************************************************************

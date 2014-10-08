@@ -24,6 +24,7 @@
 #include "PAlgebra.h"
 #include "CModulus.h"
 #include "IndexSet.h"
+#include "recryption.h"
 
 /**
  * @brief Returns smallest parameter m satisfying various constraints:
@@ -55,8 +56,6 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
 #define FHE_pSize (FHE_p2Size/2) /* The size of levels in the chain */
 
 class EncryptedArray;
-class AltEvalMap;
-class PowerfulDCRT;
 /**
  * @class FHEcontext
  * @brief Maintaining the parameters
@@ -75,6 +74,9 @@ public:
 
   //! @brief The structure of Z[X]/(Phi_m(X),p^r)
   PAlgebraMod alMod;
+
+  //! @breif A default EncryptedArray
+  const EncryptedArray* ea;
 
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   xdouble stdev;
@@ -124,29 +126,13 @@ public:
 
   long fftPrimeCount;
 
-  //! A degree-p polynomial Q(X) s.t. for any t<r and integr z of the
+  //! A degree-p polynomial Q(X) s.t. for any t<r and integer z of the
   //! form z = z0 + p^t*z1 (with 0<=z0<p), we have Q(z) = z0 (mod p^{t+1}).
-  ZZX modP_digPoly;     // Initialized during call to Ctxt::extractDigits(...)
-  long modP_digPoly_r;  // relative to which p^r was this computed
+  ZZX modP_digPoly;    // Initialized during call to Ctxt::extractDigits(...)
+  long modP_digPoly_r; // relative to which p^r was this computed
 
-  //! @name Bootstrapping-related data in the context
-  ///@{
-  //! PAlgebraMod, EncryptedArray objects to handle bootstrapping, they refer
-  //! to plaintext space p^{r'} gratet than the p^r plantext space of alMod
-  static const long  bootstrapHwt = 48; // Hamming weight of bootstrapping key
-  PAlgebraMod* bootstrapPAM;
-  EncryptedArray* bootstrapEA;
-
-  //! We also need an EncryptedArray relative to plaintext space p^r
-  EncryptedArray* secondEA;
-
-  //! Tables for computing the linear maps during bootstrapping
-  AltEvalMap* firstMap;
-  AltEvalMap* secondMap;
-
-  //! Tables to ocnvert between ZZX and powerful representation
-  PowerfulDCRT* p2dConversion;
-  ///@}
+  //! Bootstrapping-related data in the context
+  RecryptData rcData;
 
   /******************************************************************/
   ~FHEcontext(); // destructor
@@ -154,7 +140,8 @@ public:
              const vector<long>& gens = vector<long>(), 
              const vector<long>& ords = vector<long>() );  // constructor
 
-  void makeBootstrappable(const Vec<long>& mvec);
+  void makeBootstrappable(const Vec<long>& mvec, long skWht=0)
+  { rcData.init(*this, mvec, skWht); }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }

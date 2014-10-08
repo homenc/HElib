@@ -1154,7 +1154,7 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 
   // Scale and round all the integers in all the parts
   zzParts.resize(parts.size());
-  const PowerfulDCRT& p2d_conv = *context.p2dConversion;
+  const PowerfulDCRT& p2d_conv = *context.rcData.p2dConv;
   for (size_t i=0; i<parts.size(); i++) {
 
     Vec<ZZ> powerful;

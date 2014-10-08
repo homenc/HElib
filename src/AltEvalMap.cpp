@@ -359,10 +359,8 @@ AltEvalMap::AltEvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _i
         buildAltStep1Matrix(ea, sig_sequence[dim],
 			    local_reps[dim], dim, m/mvec[dim], invert));
 #ifdef ALTEVAL_CACHED // cache the matrix of constants
-  cerr << "cached AltEval, caching-level="<<ALTEVAL_CACHED<<endl;
   ea.compMat1D(mat1, *blockMat, dim);
 #else
-  cerr << "non-cached AltEval\n";
   mat1 = blockMat;
 #endif
   }
