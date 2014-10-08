@@ -1,0 +1,447 @@
+/* Copyright (C) 2012,2013 IBM Corp.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+#include <cmath>
+#include <NTL/ZZ.h>
+NTL_CLIENT
+#include "NumbTh.h"
+#include "FHEContext.h"
+#include "EncryptedArray.h"
+#include "powerful.h"
+#include "recryption.h"
+#include "AltEvalMap.h"
+
+/************* Some local functions *************/
+static void x2iInSlots(ZZX& poly, long i,
+		       vector<ZZX>& xVec, const EncryptedArray& ea);
+
+// Make every entry of vec divisible by p^e by adding/subtracting multiples
+// of p^r and q, while keeping the added multiples small. 
+template<class VecInt>
+long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha);
+
+
+RecryptData::~RecryptData()
+{
+  if (alMod!=NULL)     delete alMod;
+  if (ea!=NULL)        delete ea;
+  if (firstMap!=NULL)  delete firstMap;
+  if (secondMap!=NULL) delete secondMap;
+  if (p2dConv!=NULL)   delete p2dConv;
+}
+
+/** Computing the recryption parameters
+ *
+ * To get the smallest possible value of e-e', the params need to satisfy:
+ *  (p^e +1)/4 =>
+ *       max { (t+1)( 1+ (alpha/2)*(p^e/p^{ceil(log_p(t+2))}) ) + 2*Delta    }
+ *           { (t+1)( 1+ ((1-alpha)/2)*(p^e/p^{ceil(log_p(t+2))}) +p^r/2) +1 },
+ *
+ * where Delta is the mod-switching additive term, which is set as
+ * Delta = p^r *sqrt((t+1)*phi(m)/12). Denoting rho=(t+1)/p^{ceil(log_p(t+2))}
+ * (and ignoring fome +1 terms), this is equivalent to:
+ *
+ *   p^e > max { (4t+8Delta)/(1-2*alpha*rho), 2(t+1)p^r/(1-2(1-alpha)rho) }.
+ *
+ * We first compute the optimal value for alpha (which must be in [0,1]),
+ * that makes the two terms in the max{...} as close as possible, and
+ * then compute the smallest value of e satisfying this constraint.
+ *
+ * If this value is too big then we try again with e-e' one larger,
+ * which means that rho is a factor of p smaller.
+ */
+
+// A convenience function
+static void setAlphaE(double& alpha, long& e, double rho, double gamma,
+		      double Delta, double logp, long p2r, long t)
+{
+  alpha = (1 +gamma*(2*rho-1))/(2*rho*(1+gamma));
+  if (alpha<0) alpha=0;
+  else if (alpha>1) alpha=1;
+
+  if (alpha<1) {
+    double ratio = (4*t+8*Delta)/(1-2*alpha*rho);
+    e = floor(1+ log(ratio)/logp);
+  }
+  else
+    e = floor(1+ log(2*(t+1)*p2r)/logp);
+}
+
+// The main method
+void RecryptData::init(const FHEcontext& context,const Vec<long>& mvec,long t)
+{
+  if (alMod != NULL) { // were we called for a second time?
+    cerr << "@Warning: multiple calls to RecryptData::init\n";
+    return;
+  }
+  assert(computeProd(mvec) == (long)context.zMStar.getM()); // sanity check
+
+  if (t <= 0) t = defSkHwt; // recryption key Hwt
+  long p = context.zMStar.getP();
+  long phim = context.zMStar.getPhiM();
+  long r = context.alMod.getR();
+  long p2r = context.alMod.getPPowR();
+  double logp = log((double)p);
+
+  double Delta = p2r * sqrt((t+1)*phim/12.0);
+  double gamma = (2*t +4*Delta)/((t+1)*p2r); // ratio between numerators
+
+  long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
+  double rho = (t+1)/pow(p,logT);
+
+  // try alpha, e with this setting
+  setAlphaE(alpha, e, rho, gamma, Delta, logp, p2r, t);
+  ePrime = e -r +1 -logT;
+
+  // If e is too large, try again with rho/p instead of rho
+  
+  // FIXME: compare to a rather arbitrary bound of 10000*p^{r+2}
+  long bound = power_long(p,r+2)*10000;
+  if (bound > (1L<<context.bitsPerLevel)) bound = (1L<<context.bitsPerLevel);
+  if (pow(p,e) > bound) {
+    cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
+    setAlphaE(alpha, e, rho/p, gamma, Delta, logp, p2r, t);
+    ePrime = e -r -logT;
+  }
+  skHwt = t; // FIXME: Compute highest weight that still works
+
+  // First part of Bootstrapping works wrt plaintext space p^{r'}
+  alMod = new PAlgebraMod(context.zMStar, e-ePrime+r);
+  ea = new EncryptedArray(context, *alMod);
+         // Polynomial defaults to F0, PAlgebraMod explicitly given
+
+  firstMap  = new AltEvalMap(*ea, mvec, true);
+  secondMap = new AltEvalMap(*context.ea, mvec, false);
+
+  p2dConv = new PowerfulDCRT(context, mvec);
+
+  // Initialize the linear polynomial for unpacking the slots
+  zz_pBak bak; bak.save(); ea->getAlMod().restoreContext();
+  long nslots = ea->size();
+  long d = ea->getDegree();
+
+  const Mat<zz_p>& CBi=ea->getDerived(PA_zz_p()).getNormalBasisMatrixInverse();
+
+  vector<ZZX> LM;
+  LM.resize(d);
+  for (long i = 0; i < d; i++) // prepare the linear polynomial
+    LM[i] = rep(CBi[i][0]);
+
+  vector<ZZX> C; 
+  ea->buildLinPolyCoeffs(C, LM); // "build" the linear polynomial
+
+  unpackSlotEncoding.resize(d);  // encode the coefficients
+
+  for (long j = 0; j < d; j++) {
+    vector<ZZX> v(nslots);
+    for (long k = 0; k < nslots; k++) v[k] = C[j];
+    ea->encode(unpackSlotEncoding[j], v);
+  }
+}
+
+// Extract digits from fully packed slots
+void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
+			 const vector<ZZX>& unpackSlotEncoding);
+ 
+// bootstrap a ciphertext to reduce noise
+void FHEPubKey::reCrypt(Ctxt &ctxt)
+{
+  FHE_TIMER_START;
+  assert(recryptKeyID>=0); // check that we have bootstrapping data
+
+  long p = getContext().zMStar.getP();
+  long r = getContext().alMod.getR();
+  long p2r = getContext().alMod.getPPowR();
+
+  // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
+  long e = getContext().rcData.e;
+  long ePrime = getContext().rcData.ePrime;
+  long p2ePrime = power_long(p,ePrime);
+  long q = power_long(p,e)+1;
+  assert(e>=r);
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "reCrypt: p="<<p<<", r="<<r<<", e="<<e<<" ePrime="<<ePrime
+       << ", q="<<q<<endl;
+#endif
+
+  // can only bootstrap ciphertext with plaintext-space dividing p^r
+  long ptxtSpace = ctxt.getPtxtSpace();
+  assert(p2r % ptxtSpace == 0);
+
+  FHE_NTIMER_START(preProcess);
+
+  // Make sure that this ciphertxt is in canonical form
+  if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
+
+  // Mod-switch down if needed
+  const IndexSet& curPS = ctxt.getPrimeSet();
+  if (curPS.card()>2) { // leave only bottom two primes
+    long frst = curPS.first();
+    long scnd = curPS.next(frst);
+    IndexSet s(frst,scnd);
+    ctxt.modDownToSet(s);
+  }
+
+  // key-switch to the bootstrapping key
+  ctxt.reLinearize(recryptKeyID);
+
+  // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
+  vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
+  double noise = ctxt.rawModSwitch(zzParts, q);
+  noise = sqrt(noise);
+
+  // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
+  long maxU=0;
+  for (long i=0; i<(long)zzParts.size(); i++) {
+    // make divisible by p^{e'}
+    long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
+				getContext().rcData.alpha);
+    zzParts[i].normalize();   // normalize after working directly on the rep
+    if (maxU < newMax)  maxU = newMax;
+  }
+
+  // Check that the estimated noise is still low
+  if (noise + maxU*p2r*(skHwts[recryptKeyID]+1) > q/2) 
+    cerr << " * noise/q after makeDisivible = "
+	 << ((noise + maxU*p2r*(skHwts[recryptKeyID]+1))/q) << endl;
+
+  for (long i=0; i<(long)zzParts.size(); i++)
+    zzParts[i] /= p2ePrime;   // divide by p^{e'}
+
+  // Multiply the post-processed cipehrtext by the encrypted sKey
+#ifdef DEBUG_PRINTOUT
+  CheckCtxt(recryptEkey, "+ Before recryption");
+#endif
+
+  double p0size = to_double(coeffsL2Norm(zzParts[0]));
+  double p1size = to_double(coeffsL2Norm(zzParts[1]));
+  ctxt = recryptEkey;
+  ctxt.multByConstant(zzParts[1], p1size*p1size);
+  ctxt.addConstant(zzParts[0], p0size*p0size);
+
+#ifdef DEBUG_PRINTOUT
+  CheckCtxt(ctxt, "+ Before linearTrans1");
+#endif
+  FHE_NTIMER_STOP(preProcess);
+
+  // Move the powerful-basis coefficients to the plaintext slots
+  FHE_NTIMER_START(LinearTransform1);
+  ctxt.getContext().rcData.firstMap->apply(ctxt);
+  FHE_NTIMER_STOP(LinearTransform1);
+
+#ifdef DEBUG_PRINTOUT
+  CheckCtxt(ctxt, "+ After linearTrans1");
+#endif
+
+  // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
+  extractDigitsPacked(ctxt, e-ePrime, r, ePrime,
+		      context.rcData.unpackSlotEncoding);
+
+#ifdef DEBUG_PRINTOUT
+  CheckCtxt(ctxt, "+ Before linearTrans2");
+#endif
+
+  // Move the slots back to powerful-basis coefficients
+  FHE_NTIMER_START(LinearTransform2);
+  ctxt.getContext().rcData.secondMap->apply(ctxt);
+  FHE_NTIMER_STOP(LinearTransform2);
+}
+
+/*********************************************************************/
+/*********************************************************************/
+
+// Return in poly a polynomial with X^i encoded in all the slots
+static void x2iInSlots(ZZX& poly, long i,
+		       vector<ZZX>& xVec, const EncryptedArray& ea)
+{
+  xVec.resize(ea.size());
+  ZZX x2i = ZZX(i,1);
+  for (long j=0; j<(long)xVec.size(); j++) xVec[j] = x2i;
+  ea.encode(poly, xVec);
+}
+
+// Make every entry of vec divisible by p^e by adding/subtracting multiples
+// of p^r and q, while keeping the added multiples small. Specifically, for
+// e>=2, an integer z can be made divisible by p^e via
+//   z' = z + u * p^r + v*p^r * q,
+// with
+//   |u|<=ceil(alpha p^{r(e-1)}/2) and |v|<=0.5+floor(beta p^{r(e-1)}/2),
+// for any alpha+beta=1. We assume that r<e and that q-1 is divisible by p^e.
+// Returns the largest absolute values of the u's and the new entries.
+//
+// This code is more general than we need, for bootstrapping we will always
+// have e>r.
+template<class VecInt>
+long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha)
+{
+  assert(((p2e % p2r == 0) && (q % p2e == 1)) ||
+	 ((p2r % p2e == 0) && (q % p2r == 1)));
+
+  long maxU =0;
+  ZZ maxZ;
+  for (long i=0; i<vec.length(); i++) {
+    ZZ z, z2; conv(z, vec[i]);
+    long u=0, v=0;
+
+    long zMod1=0, zMod2=0;
+    if (p2r < p2e && alpha>0) {
+      zMod1 = rem(z,p2r);
+      if (zMod1 > p2r/2) zMod1 -= p2r; // map to the symmetric interval
+
+      // make z divisible by p^r by adding a multiple of q
+      z2 = z - to_ZZ(zMod1)*q;
+      zMod2 = rem(z2,p2e); // z mod p^e, still divisible by p^r
+      if (zMod2 > p2e/2) zMod2 -= p2e; // map to the symmetric interval
+      zMod2 /= -p2r; // now z+ p^r*zMod2=0 (mod p^e) and |zMod2|<=p^{r(e-1)}/2
+
+      u = ceil(alpha * zMod2);
+      v = zMod2 - u; // = floor((1-alpha) * zMod2)
+      z = z2 + u*p2r + to_ZZ(q)*v*p2r;
+    }
+    else { // r >= e or alpha==0, use only mulitples of q
+      zMod1 = rem(z,p2e);
+      if (zMod1 > p2e/2) zMod1 -= p2e; // map to the symmetric interval
+      z -= to_ZZ(zMod1) * q;
+    }
+    if (abs(u) > maxU) maxU = abs(u);
+    if (abs(z) > maxZ) maxZ = abs(z);
+
+    if (rem(z,p2e) != 0) { // sanity check
+      cerr << "**error: original z["<<i<<"]=" << vec[i]
+	   << std::dec << ", p^r="<<p2r << ", p^e="<<p2e << endl;
+      cerr << "z' = z - "<<zMod1<<"*q = "<< z2<<endl;
+      cerr << "z''=z' +" <<u<<"*p^r +"<<v<<"*p^r*q = "<<z<<endl;
+      exit(1);
+    }
+    conv(vec[i], z); // convert back to native format
+  }
+  return maxU;
+}
+// explicit instantiation for vec_ZZ and vec_long
+template long makeDivisible<vec_ZZ>(vec_ZZ& v, long p2e,
+				    long p2r, long q, double alpha);
+// template long makeDivisible<vec_long>(vec_long& v, long p2e,
+// 				      long p2r, long q, double alpha);
+
+
+// Extract digits from fully packed slots
+void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
+			 const vector<ZZX>& unpackSlotEncoding)
+{
+  FHE_TIMER_START;
+
+  // Step 1: unpack the slots of ctxt
+  FHE_NTIMER_START(unpack);
+  ctxt.cleanUp();
+
+  // Apply the d automorphisms and store them in scratch area
+  long d = ctxt.getContext().zMStar.getOrdP();
+
+  vector<Ctxt> scratch; // used below 
+  vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
+  { // explicit scope to force all temporaries to be released
+    vector< shared_ptr<DoubleCRT> > coeff_vector;
+    coeff_vector.resize(d);
+    for (long i = 0; i < d; i++)
+      coeff_vector[i] = shared_ptr<DoubleCRT>(new 
+        DoubleCRT(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet()) );
+    Ctxt tmp1(ZeroCtxtLike, ctxt);
+    Ctxt tmp2(ZeroCtxtLike, ctxt);
+
+    for (long j = 0; j < d; j++) { // process jth Frobenius 
+      tmp1 = ctxt;
+      tmp1.frobeniusAutomorph(j);
+      tmp1.cleanUp();
+
+      for (long i = 0; i < d; i++) {
+        tmp2 = tmp1;
+        tmp2.multByConstant(*coeff_vector[mcMod(i+j, d)]);
+        unpacked[i] += tmp2;
+      }
+    }
+  }
+  FHE_NTIMER_STOP(unpack);
+
+  // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]
+  long p = ctxt.getContext().zMStar.getP();
+  long p2r = power_long(p,r);
+  long topHigh = botHigh + r-1;
+
+#ifdef DEBUG_PRINTOUT
+  CheckCtxt(unpacked[0], "+ After unpack");
+  cerr << "    extracting "<<(topHigh+1)<<" digits\n";
+#endif
+
+  if (p==2 && r>2)
+    topHigh--; // For p==2 we sometime get a bit for free
+
+  for (long i=0; i<(long)unpacked.size(); i++) {
+    FHE_NTIMER_START(extractDigits);
+    if (topHigh<=0) { // extracting LSB = no-op
+      scratch.assign(1,unpacked[i]);
+    } else {          // extract digits topHigh...0, store them in scratch
+      extractDigits(scratch, unpacked[i], topHigh+1);
+    }
+    FHE_NTIMER_STOP(extractDigits);
+
+    // set upacked[i] = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
+    if (topHigh >= (long)scratch.size()) {
+      topHigh = scratch.size() -1;
+      cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
+    }
+
+    FHE_NTIMER_START(combiningDigits);
+    unpacked[i] = scratch[topHigh];
+    for (long j=topHigh-1; j>=botHigh; --j) {
+      unpacked[i].multByP();
+      unpacked[i] += scratch[j];
+    }
+    if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
+      unpacked[i] += scratch[botHigh-1];
+    unpacked[i].negate();
+
+    if (r>ePrime) {          // Add in digits from the bottom part, if any
+      long topLow = r-1 - ePrime;
+      Ctxt tmp = scratch[topLow];
+      for (long j=topLow-1; j>=0; --j) {
+	tmp.multByP();
+	tmp += scratch[j];
+      }
+      if (ePrime>0)
+	tmp.multByP(ePrime); // multiply by p^e'
+      unpacked[i] += tmp;
+    }
+    unpacked[i].reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
+    FHE_NTIMER_STOP(combiningDigits);
+  }
+
+#ifdef DEBUG_PRINTOUT
+  CheckCtxt(unpacked[0], "+ Before repack");
+#endif
+
+  // Step 3: re-pack the slots
+  FHE_NTIMER_START(repack);
+  const EncryptedArray& ea2 = *ctxt.getContext().ea;
+  ZZX xInSlots;
+  vector<ZZX> xVec(ea2.size());
+  ctxt = unpacked[0];
+  for (long i=1; i<d; i++) {
+    x2iInSlots(xInSlots, i, xVec, ea2);
+    unpacked[i].multByConstant(xInSlots);
+    ctxt += unpacked[i];
+  }
+  FHE_NTIMER_STOP(repack);
+}
