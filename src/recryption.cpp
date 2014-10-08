@@ -46,14 +46,14 @@ RecryptData::~RecryptData()
  *
  * To get the smallest possible value of e-e', the params need to satisfy:
  *  (p^e +1)/4 =>
- *       max { (t+1)( 1+ (alpha/2)*(p^e/p^{ceil(log_p(t+2))}) ) + 2*Delta    }
+ *       max { (t+1)( 1+ (alpha/2)*(p^e/p^{ceil(log_p(t+2))}) ) + noise      }
  *           { (t+1)( 1+ ((1-alpha)/2)*(p^e/p^{ceil(log_p(t+2))}) +p^r/2) +1 },
  *
- * where Delta is the mod-switching additive term, which is set as
- * Delta = p^r *sqrt((t+1)*phi(m)/12). Denoting rho=(t+1)/p^{ceil(log_p(t+2))}
+ * where onise is takes to be twice the mod-switching additive term, namely
+ * noise = p^r *sqrt((t+1)*phi(m)/3). Denoting rho=(t+1)/p^{ceil(log_p(t+2))}
  * (and ignoring fome +1 terms), this is equivalent to:
  *
- *   p^e > max { (4t+8Delta)/(1-2*alpha*rho), 2(t+1)p^r/(1-2(1-alpha)rho) }.
+ *   p^e > max { 4(t+noise)/(1-2*alpha*rho), 2(t+1)p^r/(1-2(1-alpha)rho) }.
  *
  * We first compute the optimal value for alpha (which must be in [0,1]),
  * that makes the two terms in the max{...} as close as possible, and
@@ -63,16 +63,26 @@ RecryptData::~RecryptData()
  * which means that rho is a factor of p smaller.
  */
 
-// A convenience function
+// Some convenience functions
+static double lowerBound1(long p, long r, long ePrime, long t,
+			  double alpha, double noise)
+{
+  return (t+1)*(1+ alpha*pow(p,r+ePrime-1)/2)+noise;
+}
+static double lowerBound2(long p, long r, long ePrime, long t, double alpha)
+{
+  return (t+1)*(1+ (1-alpha)*pow(p,r+ePrime-1)/2 + pow(p,r)/2)+1;
+}
+
 static void setAlphaE(double& alpha, long& e, double rho, double gamma,
-		      double Delta, double logp, long p2r, long t)
+		      double noise, double logp, long p2r, long t)
 {
   alpha = (1 +gamma*(2*rho-1))/(2*rho*(1+gamma));
   if (alpha<0) alpha=0;
   else if (alpha>1) alpha=1;
 
   if (alpha<1) {
-    double ratio = (4*t+8*Delta)/(1-2*alpha*rho);
+    double ratio = 4*(t+noise)/(1-2*alpha*rho);
     e = floor(1+ log(ratio)/logp);
   }
   else
@@ -88,21 +98,21 @@ void RecryptData::init(const FHEcontext& context,const Vec<long>& mvec,long t)
   }
   assert(computeProd(mvec) == (long)context.zMStar.getM()); // sanity check
 
-  if (t <= 0) t = defSkHwt; // recryption key Hwt
+  if (t <= 0) t = defSkHwt+1; // recryption key Hwt
   long p = context.zMStar.getP();
   long phim = context.zMStar.getPhiM();
   long r = context.alMod.getR();
   long p2r = context.alMod.getPPowR();
   double logp = log((double)p);
 
-  double Delta = p2r * sqrt((t+1)*phim/12.0);
-  double gamma = (2*t +4*Delta)/((t+1)*p2r); // ratio between numerators
+  double noise = p2r * sqrt((t+1)*phim/3.0);
+  double gamma = 2*(t+noise)/((t+1)*p2r); // ratio between numerators
 
   long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
   double rho = (t+1)/pow(p,logT);
 
   // try alpha, e with this setting
-  setAlphaE(alpha, e, rho, gamma, Delta, logp, p2r, t);
+  setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
   ePrime = e -r +1 -logT;
 
   // If e is too large, try again with rho/p instead of rho
@@ -112,10 +122,14 @@ void RecryptData::init(const FHEcontext& context,const Vec<long>& mvec,long t)
   if (bound > (1L<<context.bitsPerLevel)) bound = (1L<<context.bitsPerLevel);
   if (pow(p,e) > bound) {
     cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
-    setAlphaE(alpha, e, rho/p, gamma, Delta, logp, p2r, t);
+    setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
     ePrime = e -r -logT;
   }
-  skHwt = t; // FIXME: Compute highest weight that still works
+  // Compute highest key-Hamming-weight that still works (not more than 256)
+  double qOver4 = (pow(p,e)+1)/4;
+  for (t-=2; qOver4>=lowerBound2(p,r,ePrime,t,alpha)
+	 &&  qOver4>=lowerBound1(p,r,ePrime,t,alpha,noise) && t<257; t++);
+  skHwt = t-1;
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
   alMod = new PAlgebraMod(context.zMStar, e-ePrime+r);

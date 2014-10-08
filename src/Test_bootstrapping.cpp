@@ -126,6 +126,11 @@ void TestIt(long idx, long p, long r, long L, long c, long B)
   context.makeBootstrappable(mvec);
   t += GetTime();
   cout << " done in "<<t<<" seconds\n";
+  cout << "  e="    << context.rcData.e
+       << ", e'="   << context.rcData.ePrime
+       << ", alpha="<< context.rcData.alpha
+       << ", t="    << context.rcData.skHwt
+       << "\n  ";
   context.zMStar.printout();
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
