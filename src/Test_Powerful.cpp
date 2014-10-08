@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
   testSimpleConversion(mvec);
 
   FHEcontext context(m,p,r);
-  buildModChain(context, /*L=*/5, /*c=*/3);
+  buildModChain(context, /*L=*/9, /*c=*/3);
 
   testHighLvlConversion(context, mvec);
   return 0;

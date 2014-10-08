@@ -223,7 +223,7 @@ void usage(char *prog)
   cerr << "  p,r determines plaintext space mod p^r [default=2^1]\n";
   cerr << "  B is the number of bit per level [default="
        << FHE_pSize << "]\n";
-  cerr << "  L is # of primes in the chain [default=20]\n";
+  cerr << "  L is # of levels in the chain [default=25]\n";
   cerr << "  c is the number of digits for key-switching [default=3]\n";
   cerr << "  N is a lower bound on phi(m) [default=0]\n";
   cerr << "  dry=1 for a dry run [default=0]\n";
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
   argmap["r"] = "1";
   argmap["c"] = "3";
   argmap["B"] = "0";
-  argmap["L"] = "15";
+  argmap["L"] = "25";
   argmap["N"] = "0";
   argmap["dry"] = "0";
   argmap["cons"] = "0";

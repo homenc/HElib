@@ -170,7 +170,7 @@ void usage(char *prog)
   cerr << "    (d == 0 => factors[0] defined the extension)\n";
   cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
   cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
+  cerr << "  L is the # of levels in the modulus chain [default=4*R]\n";
   cerr << "  s is the minimum number of slots [default=4]\n";
   cerr << "  m defined the cyclotomic polynomial Phi_m(X)\n";
   cerr << "  seed is the PRG seed\n";

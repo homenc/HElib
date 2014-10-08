@@ -168,6 +168,24 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec,
   }
 }
 
+/********************************************************************/
+/********************************************************************/
+
+#ifdef DEBUG_PRINTOUT /*********** Debugging utilities **************/
+extern FHESecKey* dbgKey;
+extern EncryptedArray* dbgEa;
+extern ZZX dbg_ptxt;
+ZZX dbgPoly, skPoly;
+extern Vec<ZZ> ptxt_pwr;
+
+#define FLAG_PRINT_ZZX  1
+#define FLAG_PRINT_POLY 2
+#define FLAG_PRINT_VEC  4
+extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
+			    const EncryptedArray& ea, long flags=0);
+extern void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
+#endif                /********* End Debugging utilities **************/
+
 // Extract digits from fully packed slots
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 			 const vector<ZZX>& unpackSlotEncoding);
@@ -240,7 +258,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
   // Multiply the post-processed cipehrtext by the encrypted sKey
 #ifdef DEBUG_PRINTOUT
-  CheckCtxt(recryptEkey, "+ Before recryption");
+  cerr << "+ Before recryption ";
+  decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa);
 #endif
 
   double p0size = to_double(coeffsL2Norm(zzParts[0]));
@@ -250,7 +269,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   ctxt.addConstant(zzParts[0], p0size*p0size);
 
 #ifdef DEBUG_PRINTOUT
-  CheckCtxt(ctxt, "+ Before linearTrans1");
+  cerr << "+ Before linearTrans1 ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
 #endif
   FHE_NTIMER_STOP(preProcess);
 
@@ -260,7 +280,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   FHE_NTIMER_STOP(LinearTransform1);
 
 #ifdef DEBUG_PRINTOUT
-  CheckCtxt(ctxt, "+ After linearTrans1");
+  cerr << "+ After linearTrans1 ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
@@ -268,7 +289,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 		      context.rcData.unpackSlotEncoding);
 
 #ifdef DEBUG_PRINTOUT
-  CheckCtxt(ctxt, "+ Before linearTrans2");
+  cerr << "+ Before linearTrans2 ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
 #endif
 
   // Move the slots back to powerful-basis coefficients
@@ -398,7 +420,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   long topHigh = botHigh + r-1;
 
 #ifdef DEBUG_PRINTOUT
-  CheckCtxt(unpacked[0], "+ After unpack");
+  cerr << "+ After unpack ";
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
   cerr << "    extracting "<<(topHigh+1)<<" digits\n";
 #endif
 
@@ -446,7 +469,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   }
 
 #ifdef DEBUG_PRINTOUT
-  CheckCtxt(unpacked[0], "+ Before repack");
+  cerr << "+ Before repack ";
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
 #endif
 
   // Step 3: re-pack the slots

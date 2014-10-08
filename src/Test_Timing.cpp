@@ -454,7 +454,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   setTimersOn();
   resetAllTimers();
   long phim = phi_N(m);
-  long L = (floor((7.2*phim)/(FHE_pSize* /*cc*/1.33* (110+/*k*/80))) -1)/2;
+  long L = floor((7.2*phim)/(FHE_pSize* /*cc*/1.33* (110+/*k*/80)));
   if (L<2) L=2; // Make sure we have at least a few primes
 
   buildTimer(_init_timer_2, "init2", FHE_AT);
