@@ -32,6 +32,10 @@ static void x2iInSlots(ZZX& poly, long i,
 template<class VecInt>
 long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha);
 
+double pow(long a, long b)
+{
+  return pow(double(a), double(b));
+}
 
 RecryptData::~RecryptData()
 {
