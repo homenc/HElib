@@ -43,6 +43,13 @@ bool parseArgs(int argc,  char *argv[], argmap_t& argmap)
   return true;
 }
 
+bool doArgProcessing(string *value, const char *s)
+{
+  *value = string(s);
+  return true;
+}
+
+
 // Mathematically correct mod and div, avoids overflow
 long mcMod(long a, long b) 
 {

@@ -102,11 +102,7 @@ bool doArgProcessing(T *value, const char *s)
   return sss >> *value;
 }
 
-bool doArgProcessing(string *value, const char *s)
-{
-  *value = string(s);
-  return true;
-}
+bool doArgProcessing(string *value, const char *s);
 
 /* ArgProcessor: virtual base class */
 
