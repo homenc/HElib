@@ -404,10 +404,22 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
       tmp1 = ctxt;
       tmp1.frobeniusAutomorph(j);
       tmp1.cleanUp();
+#ifdef DEBUG_PRINTOUT
+      if (j==1) {
+	cerr << "+ unpack, after frobeniusAutomorph ";
+	decryptAndPrint(cerr, tmp1, *dbgKey, *dbgEa);
+      }
+#endif
 
       for (long i = 0; i < d; i++) {
         tmp2 = tmp1;
         tmp2.multByConstant(*coeff_vector[mcMod(i+j, d)]);
+#ifdef DEBUG_PRINTOUT
+      if (j==1 && i==1) {
+	cerr << "+ after multByConstant ";
+	decryptAndPrint(cerr, tmp2, *dbgKey, *dbgEa);
+      }
+#endif
         unpacked[i] += tmp2;
       }
     }
