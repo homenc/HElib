@@ -226,6 +226,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
     prods[j] = OrderOf(j) * prods[j+1];
   }
   //  pp_factorize(mFactors, m); // prime-power factorization from NumbTh.cpp
+  cM  = 1.0; // default value for the ring constant
 }
 
 /***********************************************************************

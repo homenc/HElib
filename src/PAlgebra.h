@@ -138,6 +138,10 @@ class PAlgebra {
   //! The cyclotomix polynomial Phi_m(X)
   const ZZX& getPhimX() const { return PhimX; }
 
+  //! The ring constant cM
+  void set_cM(double c) { cM=c; }
+  const double get_cM() const { return cM; }
+
   //! The prime-power factorization of m
   //  const vector<long> getMfactors() const { return mFactors; }
 

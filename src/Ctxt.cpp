@@ -656,7 +656,7 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   for (long i=n1+1; i<=n1+n2; i++) factor *= i;
   for (long i=n2  ; i>1     ; i--) factor /= i;
 
-  noiseVar = c1.noiseVar * c2.noiseVar * factor;
+  noiseVar = c1.noiseVar * c2.noiseVar * factor * context.zMStar.get_cM();
   if (f!=1) {
     // WARNING: the following line is written just so to prevent overflow
     noiseVar = (noiseVar*f)*f; // because every product was scaled by f
@@ -778,7 +778,7 @@ void Ctxt::multByConstant(const ZZ& c)
 
   if (cc > ptxtSpace/2) cc -= ptxtSpace;
   double size = to_double(cc);
-  noiseVar *= size*size;
+  noiseVar *= size*size * context.zMStar.get_cM();
 }
 
 // Multiply-by-constant
@@ -798,7 +798,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   for (size_t i=0; i<parts.size(); i++) 
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 
-  noiseVar *= size;
+  noiseVar *= size * context.zMStar.get_cM();
 }
 
 void Ctxt::multByConstant(const ZZX& poly, double size)
