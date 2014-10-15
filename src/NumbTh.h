@@ -22,18 +22,21 @@
 #include <vector>
 #include <cmath>
 #include <cassert>
-#include <istream>
 #include <string>
-#include <sstream>
 #include <climits>
+#include <cmath>
+#include <iostream>
+#include <fstream>
+#include <istream>
+#include <sstream>
+#include <ctime>
 
 #include <NTL/ZZ.h>
 #include <NTL/ZZX.h>
-#include <NTL/vec_ZZ.h>
 #include <NTL/ZZ_p.h>
+#include <NTL/ZZ_pX.h>
 #include <NTL/xdouble.h>
 
-//#include <NTL/GF2X.h>
 #include <NTL/mat_GF2.h>
 #include <NTL/mat_GF2E.h>
 #include <NTL/GF2XFactoring.h>
@@ -42,22 +45,25 @@
 #include <NTL/mat_lzz_pE.h>
 #include <NTL/lzz_pXFactoring.h>
 
+#include <NTL/GF2EX.h>
+#include <NTL/lzz_pEX.h>
+
+using namespace std;
+using namespace NTL;
+
+
 #if (__cplusplus>199711L)
 #include <memory>
+#include <unordered_map>
 #else
 #include <tr1/memory>
+#include <tr1/unordered_map>
 using namespace tr1;
 #endif
 
 
-#if (__cplusplus>199711L)
-#include <unordered_map>
 //! @typedef
-typedef std::unordered_map<string, const char *> argmap_t;
-#else
-#include <tr1/unordered_map>
-typedef tr1::unordered_map<string, const char *> argmap_t;
-#endif
+typedef unordered_map<string, const char *> argmap_t;
 
 typedef long LONG; // using this to identify casts that we should really get rid of
                    // at some point in the future

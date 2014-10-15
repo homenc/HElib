@@ -27,13 +27,8 @@
  * Hence support for interaction between them is limited to explicit
  * conversions.
  */
-#include <NTL/ZZ.h>
 
-NTL_CLIENT
-
-#include "NumbTh.h"
 #include "SingleCRT.h"
-#include "DoubleCRT.h"
 
 // a "sanity check" function, verifies consistency of polys with current
 // moduli chain an error is raised if they are not consistent

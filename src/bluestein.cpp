@@ -26,10 +26,6 @@
  *                     zz_pX& powers, fftRep& Rb);
  *
  */
-#include <NTL/ZZX.h>
-#include <NTL/lzz_pX.h>
-#include <NTL/ZZ_pX.h>
-NTL_CLIENT
 
 #include "bluestein.h"
 #include "timing.h"

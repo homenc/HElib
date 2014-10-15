@@ -22,9 +22,9 @@
  * in use. The list of primes is defined by the data member modChain, which is
  * a vector of Cmodulus objects. 
  */
-#include <NTL/ZZX.h>
-NTL_CLIENT
 #include "DoubleCRT.h"
+#include "timing.h"
+#include "SingleCRT.h"
 
 #if (ALT_CRT)
 #warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
@@ -32,11 +32,6 @@ NTL_CLIENT
 #else
 #warning "Old Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
-#include "NumbTh.h"
-#include "PAlgebra.h"
-#include "CModulus.h"
-#include "SingleCRT.h"
-#include "timing.h"
 
 // NTL implementation of mat_long
 

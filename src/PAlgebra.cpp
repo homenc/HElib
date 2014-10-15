@@ -13,24 +13,16 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include <NTL/ZZ.h>    // defines GCD(...)
-#include <NTL/ZZX.h>
-#include <NTL/GF2XFactoring.h>
-#include <NTL/lzz_pXFactoring.h>
+
+#include "PAlgebra.h"
+#include "timing.h"
+
+#include <algorithm>   // defines count(...), min(...)
+
 #include <NTL/ZZXFactoring.h>
 #include <NTL/GF2EXFactoring.h>
 #include <NTL/lzz_pEXFactoring.h>
-NTL_CLIENT
 
-#include <climits>     // defines INT_MAX
-#include <cstring>
-#include <iostream>
-#include <cassert>
-#include <algorithm>   // defines count(...), min(...)
-
-#include "NumbTh.h"    // defines argmax(...)
-#include "PAlgebra.h"
-#include "timing.h"
 
 
 // polynomials are sorted lexicographically, with the

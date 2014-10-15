@@ -20,11 +20,7 @@
  * @brief A dynamic set of integers
  **/
 
-#include <vector>
-#include <iostream>
-#include <cassert>
-
-using namespace std;
+#include "NumbTh.h"
 
 //! @brief A dynamic set of non-negative integers.
 //!

@@ -58,8 +58,7 @@
  * ciphertext wrt (1,s(X^2)) to another wrt (1,s(X^2),s^2(X^2)), but not
  * to another ciphertext wrt (1,s).
  **/ 
-#include <vector>
-#include <NTL/xdouble.h>
+
 #include "DoubleCRT.h"
 
 class KeySwitch;

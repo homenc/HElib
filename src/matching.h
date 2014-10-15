@@ -20,18 +20,8 @@
 #ifndef _MATCHING_H_
 #define _MATCHING_H_
 
-#include <climits>
-#include <vector>
-#include <queue>
-#include <cassert>
+#include "NumbTh.h"
 
-using namespace std;
-#if (__cplusplus>199711L)
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-using namespace tr1;
-#endif
 
 //! An edge in a flow graph
 class FlowEdge {

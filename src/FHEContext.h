@@ -20,7 +20,7 @@
  * @file FHEcontext.h
  * @brief Keeps the parameters of an instance of the cryptosystem
  **/
-#include <NTL/xdouble.h>
+
 #include "PAlgebra.h"
 #include "CModulus.h"
 #include "IndexSet.h"

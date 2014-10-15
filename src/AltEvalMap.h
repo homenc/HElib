@@ -17,10 +17,8 @@
  */
 /* AltEvalMap.h - Implementing the reCrypt linear transformations
  */
-//#include "FHE.h"
-//#include "Ctxt.h"
+
 #include "EncryptedArray.h"
-//#include "permutations.h"
 
 class AltEvalMap {
 private:

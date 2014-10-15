@@ -47,23 +47,8 @@
  * polynomial of z^{1/t}.
  */
 
-#include <vector>
-#include <cassert>
-
-
-
-#include <NTL/ZZX.h>
-#include <NTL/GF2X.h>
-#include <NTL/vec_GF2.h>
-#include <NTL/GF2EX.h>
-#include <NTL/lzz_pEX.h>
-#include <NTL/mat_GF2.h>
-#include <NTL/mat_GF2E.h>
-#include <NTL/mat_lzz_p.h>
-#include <NTL/mat_lzz_pE.h>
-
-#include "cloned_ptr.h"
 #include "NumbTh.h"
+#include "cloned_ptr.h"
 
 //NTL_CLIENT
 

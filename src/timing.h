@@ -34,7 +34,11 @@
  **/
 #ifndef _TIMING_H_
 #define _TIMING_H_
+
+
+#include "NumbTh.h"
 #include <ctime>
+
 
 
 //! A simple class to toggle timing information on and off

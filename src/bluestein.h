@@ -54,9 +54,9 @@
 * This module builds on Shoup's NTL, and contains both a bigint version
 * with types ZZ_p and ZZ_pX and a smallint version with types zz_p and zz_pX.
 **/
-#include <NTL/ZZX.h>
-#include <NTL/ZZ_pX.h>
-#include <NTL/lzz_pX.h>
+
+
+#include "NumbTh.h"
 
 typedef Vec< Vec<mulmod_precon_t> > fftrep_aux;
 

@@ -18,6 +18,8 @@
  * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
  **/
 
+#include "NumbTh.h"
+#include "IndexMap.h"
 #include "FHEContext.h"
 
 #if (ALT_CRT)
@@ -28,11 +30,6 @@
 #ifndef _DoubleCRT_H_
 #define _DoubleCRT_H_
 
-#include <vector>
-#include <NTL/ZZX.h>
-#include <NTL/vec_vec_long.h>
-#include "NumbTh.h"
-#include "IndexMap.h"
 
 class SingleCRT;
 

@@ -13,24 +13,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include <ctime>
-#include <iostream>
-#include <vector>
+#include "timing.h"
+
 #include <algorithm>
 #include <utility>
-#include <cmath>
 #include <cstring>
 
-using namespace std;
-
-#if (__cplusplus>199711L)
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-using namespace tr1;
-#endif
-
-#include "timing.h"
 
 bool FHEtimersOn=false;
 

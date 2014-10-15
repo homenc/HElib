@@ -13,15 +13,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include <cmath>
-#include <NTL/ZZ.h>
-NTL_CLIENT
-#include "NumbTh.h"
-#include "FHEContext.h"
-#include "EncryptedArray.h"
-#include "powerful.h"
+
 #include "recryption.h"
+#include "EncryptedArray.h"
 #include "AltEvalMap.h"
+#include "powerful.h"
+
+
 
 /************* Some local functions *************/
 static void x2iInSlots(ZZX& poly, long i,

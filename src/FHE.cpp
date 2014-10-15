@@ -13,11 +13,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "NTL/vec_vec_long.h"
-NTL_CLIENT
-#include <queue> // used in the breadth-first search in setKeySwitchMap
-#include "DoubleCRT.h"
+
 #include "FHE.h"
+
+#include <queue> // used in the breadth-first search in setKeySwitchMap
 #include "timing.h"
 
 /******** Utility function to generate RLWE instances *********/
@@ -487,7 +486,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
     pk.keySwitching[i].readMatrix(str, pk.getContext());
 
   // Get the key-switching map
-  vec_vec_long vvl;
+  Vec< Vec<long> > vvl;
   str >> vvl;
   pk.keySwitchMap.resize(vvl.length());
   for (long i=0; i<(long)pk.keySwitchMap.size(); i++) {

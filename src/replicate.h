@@ -34,6 +34,7 @@
  * replicating each entry of the vector as a stand-alone ciphertext, then use
  * the SIMD operations on these ciphertexts.
  **/
+
 #include "FHE.h"
 #include "EncryptedArray.h"
 

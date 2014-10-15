@@ -18,7 +18,6 @@
 #include "DoubleCRT.h"
 #include "timing.h"
 
-NTL_CLIENT
 
 /*
  * Current incarnation of lazy strategy: 

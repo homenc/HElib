@@ -137,7 +137,7 @@ public: \
     const X* operator->() const {return ptr;} \
     X* operator->() {return ptr;} \
  \
-    bool null() const { return ptr == NULL; } \
+    bool null() const { return ptr == 0; } \
  \
     const X* get_ptr() const { return ptr; } \
     X* get_ptr() { return ptr; } \

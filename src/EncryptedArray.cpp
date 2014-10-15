@@ -15,13 +15,12 @@
  */
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
-#include <algorithm>
-#include <NTL/ZZ.h>
-NTL_CLIENT
+
 #include "EncryptedArray.h"
+
+#include <algorithm>
 #include "timing.h"
 #include "cloned_ptr.h"
-#include "NumbTh.h"
 
 
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,

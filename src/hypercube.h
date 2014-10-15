@@ -20,15 +20,8 @@
 #ifndef _HYPERCUBE_H_
 #define _HYPERCUBE_H_
 
-#include <NTL/vector.h>
-// We only need NTL for the Vec templates, why not just use STL vectors instead?
-// because NTL vectors don't force us to use those ugly unsigned types...
+#include "NumbTh.h"
 
-#include <cassert>
-#include <iomanip>
-
-using namespace std;
-using namespace NTL;
 
 
 //! @class CubeSignature

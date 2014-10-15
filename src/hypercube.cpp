@@ -17,7 +17,11 @@
  * @file hypercube.cpp
  * @brief Implementation for hypercubes and their slices.
  **/
+
+
+
 #include "hypercube.h"
+#include <iomanip>
 
 
 // Rotate k positions along the d'th dimension: The content of slot j that has

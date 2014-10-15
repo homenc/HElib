@@ -20,18 +20,8 @@
  * @brief Data-movement operations on encrypted arrays of slots
  */
 
-#if (__cplusplus>199711L)
-#include <memory>
-#else
-#include <tr1/memory>
-using namespace tr1;
-#endif
-
 #include "FHE.h"
 #include "timing.h"
-#include <NTL/ZZ_pX.h>
-#include <NTL/GF2X.h>
-#include <NTL/ZZX.h>
 
 class PlaintextArray; // forward reference
 class EncryptedArray; // forward reference

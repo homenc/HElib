@@ -17,10 +17,10 @@
  * @file powerful.h
  * @brief The "powerful basis" of a cyclotomic ring
  **/
-#include <NTL/lzz_pX.h>
+
 #include "NumbTh.h"
-#include "bluestein.h"
 #include "cloned_ptr.h"
+#include "bluestein.h"
 #include "hypercube.h"
 #include "DoubleCRT.h"
 #include "FHEContext.h"

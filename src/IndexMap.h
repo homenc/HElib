@@ -20,19 +20,9 @@
  * @brief Implementation of a map indexed by a dynamic set of integers.
  **/
 
-#include <iostream>
-#include <cassert>
-
-#if (__cplusplus>199711L)
-#include <unordered_map>
-#else
-#include <tr1/unordered_map>
-#endif
-
-#include "cloned_ptr.h"
 #include "IndexSet.h"
+#include "cloned_ptr.h"
 
-using namespace std;
 
 //! @brief Initializing elements in an IndexMap
 template < class T > class IndexMapInit {

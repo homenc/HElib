@@ -15,8 +15,7 @@
  */
 /* AltEvalMap.cpp - Implementing the reCrypt linear transformations
  */
-namespace std {} using namespace std;
-namespace NTL {} using namespace NTL;
+
 #include "AltEvalMap.h"
 #include "powerful.h"
 

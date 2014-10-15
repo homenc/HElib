@@ -16,11 +16,14 @@
 #ifndef _RECRYPTION_H_
 #define _RECRYPTION_H_
 
-class PAlgebraMod;
-class FHEcontext;
-class EncryptedArray;
-class AltEvalMap;
-class PowerfulDCRT;
+
+#include "NumbTh.h"
+
+class  PAlgebraMod;
+class  EncryptedArray;
+class  AltEvalMap;
+class  PowerfulDCRT;
+class  FHEcontext;
 
 class RecryptData {
 public:

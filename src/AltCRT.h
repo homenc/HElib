@@ -21,9 +21,6 @@
  **/
 
 
-#include <vector>
-#include <NTL/ZZX.h>
-#include <NTL/lzz_pX.h>
 #include "NumbTh.h"
 #include "IndexMap.h"
 #include "FHEContext.h"

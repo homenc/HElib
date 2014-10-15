@@ -1,11 +1,8 @@
 /* a prelimary test program for playing around with Peikert's "powerful" basis.
  * EXPERIMENTAL CODE, not usable yet
  */
-#include <NTL/ZZ.h>
-NTL_CLIENT
-#include "NumbTh.h"
+
 #include "powerful.h"
-#include "hypercube.h"
 
 // powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}
 // computes divVec[d] = m/p_d^{e_d}

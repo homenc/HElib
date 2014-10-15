@@ -34,9 +34,6 @@
  * and forth are expensive since they involve FFT/iFFT. Hence support for
  * interaction between them is limited to explicit conversions.
  */
-#include <vector>
-#include <iostream>
-#include <NTL/ZZX.h>
 
 #include "FHEContext.h"
 #include "IndexMap.h"

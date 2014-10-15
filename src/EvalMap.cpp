@@ -1,8 +1,5 @@
 
 
-namespace std {} using namespace std;
-namespace NTL {} using namespace NTL;
-
 #include "EvalMap.h"
 #include "powerful.h"
 

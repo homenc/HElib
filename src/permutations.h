@@ -20,13 +20,10 @@
 #ifndef _PERMUTATIONS_H_
 #define _PERMUTATIONS_H_
 
-#include <iostream>
+#include "PAlgebra.h"
 #include "matching.h"
 #include "hypercube.h"
-#include "PAlgebra.h"
 
-using namespace std;
-using namespace NTL;
 
 //! A simple permutation is just a vector with p[i]=\pi_i
 typedef Vec<long> Permut;
