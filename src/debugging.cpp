@@ -39,6 +39,7 @@ template<class T> ostream& printVec(ostream& s, const Vec<T>& v, long nCoeffs)
   s << "... " << v[d-2] << ' ' << v[d-1] << ']';
   return s;
 }
+template ostream& printVec(ostream& s, const Vec<zz_p>& v, long nCoeffs);
 
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40)
 {
