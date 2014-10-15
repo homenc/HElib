@@ -352,7 +352,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
   }
 
   // add in the plaintext
-  // FIXME: This relies on the first part to be with respect to 1
+  // FIXME: This relies on the first part, ctxt[0], to have handle to 1
   if (ptxtSpace==2) ctxt.parts[0] += ptxt;
 
   else { // The general case of ptxtSpace>2: for a ciphertext
@@ -360,7 +360,6 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
     ctxt.parts[0] += MulMod(ptxt,QmodP,ptxtSpace); // MulMod from module NumbTh
   }
-  // FIXME: the above relies on the first part, ctxt[0], to have handle to 1
 
   // fill in the other ciphertext data members
   ctxt.ptxtSpace = ptxtSpace;
@@ -385,7 +384,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     xdouble sigma2 = context.stdev * context.stdev;
     xdouble p2 = to_xdouble(ptxtSpace) * to_xdouble(ptxtSpace);
     ctxt.noiseVar = pubEncrKey.noiseVar*phim*0.5 
-                    + p2*sigma2*phim*(hwt+1) + p2;
+                    + p2*sigma2*phim*(hwt+1)*context.zMStar.get_cM() + p2;
   }
   return ptxtSpace;
 }
