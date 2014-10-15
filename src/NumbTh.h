@@ -77,8 +77,10 @@ bool parseArgs(int argc,  char *argv[], argmap_t& argmap);
  *
  *   long p = 2;
  *   amap.arg("p", p, "doc for p");
- *   long m = 1;
- *   amap.arg("m", m, "doc for m");
+ *   long m = 0;
+ *   amap.arg("m", m, "doc for m", "undefined"); // special default info
+ *   long k = 0;
+ *   amap.arg("k", k, "doc for k", NULL); // no default info
  *
  *   amap.parse(argc, argv); // parses and overrides initail values
  *                           // of p and p, returns false on error
@@ -131,39 +133,64 @@ public:
   unordered_map< string, shared_ptr<ArgProcessor> > map;
   stringstream doc;
 
+  // no documentation
   template<class T>
   void arg(const char *name, T& value) 
   { 
     shared_ptr<ArgProcessor> ap = 
       shared_ptr<ArgProcessor>(new ArgProcessorDerived<T>(&value));
 
+    assert(!map[name]);
     map[name] = ap;
   }
 
+  // documentation + standard default info
   template<class T>
   void arg(const char *name, T& value, const char *doc1) 
   {
     arg(name, value);
-    doc << "\t" << name << " \t" << doc1 << " \t[" << value << "]" << "\n";
+    doc << "\t" << name << " \t" << doc1 << "  [ default=" << value << " ]" << "\n";
   }
 
+  // documentation + standard non-standard default info: 
+  // NULL => no default info
+  template<class T>
+  void arg(const char *name, T& value, const char *doc1, const char *info) 
+  {
+    arg(name, value);
+    doc << "\t" << name << " \t" << doc1; 
+    if (info) 
+      doc << "  [ default=" << info << " ]"  << "\n";
+    else
+      doc << "\n";
+  }
 
-  bool parse(int argc, const char *argv[])
+  void note(const char *s)
+  {
+    doc << "\t\t   " << s << "\n";
+  }
+
+  void usage(const char *prog) 
+  {
+    cerr << "Usage: " << prog << " [ name=value ]...\n";
+    cerr << documentation();
+    exit(0);
+  }
+
+  void parse(int argc, char **argv)
   {
     for (long i = 1; i < argc; i++) {
       const char *x = argv[i];
       long j = 0;
       while (x[j] != '=' && x[j] != '\0') j++; 
-      if (x[j] == '\0') return false;
+      if (x[j] == '\0') usage(argv[0]);
       string name(x, j);
       const char *s = x+j+1;
 
       shared_ptr<ArgProcessor> ap = map[name];
-      if (!ap) return false;
-      if (!ap->process(s)) return false;
+      if (!ap) return usage(argv[0]);
+      if (!ap->process(s)) usage(argv[0]);
     }
-
-    return true;
   }
 
   string documentation() 

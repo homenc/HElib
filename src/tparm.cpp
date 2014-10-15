@@ -103,7 +103,7 @@ int main(int argc, const char *argv[])
   amap.arg("p", p, "the number p");
 
   double v = 1.2;
-  amap.arg("v", v, "the vector v");
+  amap.arg("v", v, "the number v", NULL);
 
   if (amap.parse(argc, argv))
     cout << "OK\n";

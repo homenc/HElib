@@ -255,56 +255,59 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 }
 
 
-void usage(char *prog) 
-{
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'R=4 L=9 k=80'\n\n";
-  cerr << "  R is the number of rounds\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  r is the lifting [default=1]" << endl;
-  cerr << "  d is the degree of the field extension [default==1]\n";
-  cerr << "    (d == 0 => factors[0] defined the extension)\n";
-  cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
-  cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  L is the # of levels in the modulus chain [default=4*R]\n";
-  cerr << "  s is the minimum number of slots [default=4]\n";
-  cerr << "  m is a specific modulus\n";
-  cerr << "  repeat is the number of times to repeat the test\n";
-  exit(0);
-}
 
-
-int main(int argc, char *argv[]) 
+int main(int argc, char **argv) 
 {
   setTimersOn();
 
-  argmap_t argmap;
-  argmap["R"] = "1";
-  argmap["p"] = "2";
-  argmap["r"] = "1";
-  argmap["d"] = "1";
-  argmap["c"] = "2";
-  argmap["k"] = "80";
-  argmap["L"] = "0";
-  argmap["s"] = "0";
-  argmap["m"] = "0";
-  argmap["repeat"] = "1";
-  argmap["gens"] = "[]";
-  argmap["ords"] = "[]";
+  ArgMapping amap;
 
 
-  // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
+  long R=1;
+  amap.arg("R", R, "number of rounds");
 
-  long R = atoi(argmap["R"]);
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long d = atoi(argmap["d"]);
-  long c = atoi(argmap["c"]);
-  long k = atoi(argmap["k"]);
-  //  long z = atoi(argmap["z"]);
-  long L = atoi(argmap["L"]);
+  long p=2;
+  amap.arg("p", p, "plaintext base");
+
+
+  long r=1;
+  amap.arg("r", r,  "lifting");
+
+  long d=1;
+  amap.arg("d", d, "degree of the field extension");
+  amap.note("d == 0 => factors[0] defines extension");
+
+  long c=2;
+  amap.arg("c", c, "number of columns in the key-switching matrices");
+
+  
+  long k=80;
+  amap.arg("k", k, "security parameter");
+
+
+  long L=0;
+  amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
+
+  long s=0;
+  amap.arg("s", s, "minimum number of slots");
+
+  long chosen_m=0;
+  amap.arg("m", chosen_m, "use specified value as modulus", NULL);
+
+  long repeat=1;
+  amap.arg("repeat", repeat,  "number of times to repeat the test");
+
+  Vec<long> gens;
+  amap.arg("gens", gens, "use specified vector of generators", NULL);
+  amap.note("e.g., 'gens=[17 63 42]'");
+
+  Vec<long> ords;
+  amap.arg("ords", ords, "use specified vector of order", NULL);
+  amap.note("e.g., 'ords=[100 20 -4]', negative means 'bad'");
+
+
+  amap.parse(argc, argv);
+  
   if (L==0) { // determine L based on R,r
     L = 3*R+3;
     if (p>2 || r>1) { // add some more primes for each round
@@ -312,12 +315,7 @@ int main(int argc, char *argv[])
       L += R * addPerRound;
     }
   }
-  long s = atoi(argmap["s"]);
-  long chosen_m = atoi(argmap["m"]);
 
-  long repeat = atoi(argmap["repeat"]);
-  Vec<long> gens = atoVec<long>(argmap["gens"]);
-  Vec<long> ords = atoVec<long>(argmap["ords"]);
 
 
   long w = 64; // Hamming weight of secret key
