@@ -1,9 +1,6 @@
 
 
-namespace std {} using namespace std;
-namespace NTL {} using namespace NTL;
-
-#include "EvalMap.h"
+#include "OldEvalMap.h"
 #include "powerful.h"
 
 template<class type>
@@ -1016,6 +1013,8 @@ void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt, get_type get_fn) const
   ctxt = res;
 }
 
+// FIXME: this mat_mul can probably be replaced by one that 
+// is more like the mat_mul1D routine in EncryptedArray
 template<class type>
 void Step2aShuffle<type>::mat_mul(Ctxt& ctxt, get_type get_fn) const
 {
@@ -1850,7 +1849,7 @@ void frobeniusAutomorph(Ctxt& ctxt, const EncryptedArray& ea, const Vec<long>& v
   ctxt = acc;
 }
 
-EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, 
+OldEvalMap::OldEvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, 
                  long width, bool _invert)
   : ea(_ea), invert(_invert)
 {
@@ -1904,7 +1903,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec,
   else if (inertPrefix == nfactors-2)
     easy = false;
   else
-    Error("EvalMap: case not handled: bad inertPrefix");
+    Error("OldEvalMap: case not handled: bad inertPrefix");
 
   Vec< Vec<long> > local_reps(INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
@@ -2026,12 +2025,12 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec,
   long cost = trees.buildOptimalTrees(gvec, width);
 
   if (cost == NTL_MAX_LONG)
-    Error("EvalMap: can't build network for given width");
+    Error("OldEvalMap: can't build network for given width");
 
   net = shared_ptr<PermNetwork>(new PermNetwork(slot_index, trees));
 }
 
-void EvalMap::apply(Ctxt& ctxt) const
+void OldEvalMap::apply(Ctxt& ctxt) const
 {
   if (!invert) {
     // forward direction
