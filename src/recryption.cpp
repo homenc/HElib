@@ -51,7 +51,7 @@ RecryptData::~RecryptData()
  *       max { (t+1)( 1+ (alpha/2)*(p^e/p^{ceil(log_p(t+2))}) ) + noise      }
  *           { (t+1)( 1+ ((1-alpha)/2)*(p^e/p^{ceil(log_p(t+2))}) +p^r/2) +1 },
  *
- * where onise is takes to be twice the mod-switching additive term, namely
+ * where noise is taken to be twice the mod-switching additive term, namely
  * noise = p^r *sqrt((t+1)*phi(m)/3). Denoting rho=(t+1)/p^{ceil(log_p(t+2))}
  * (and ignoring fome +1 terms), this is equivalent to:
  *
