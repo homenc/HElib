@@ -5,12 +5,12 @@ namespace NTL {} using namespace NTL;
 #include "hypercube.h"
 #include "powerful.h"
 
-void  TestIt(long R, long p, long r, long c, long _k, long w,
+void  TestIt(long p, long r, long c, long _k, long w,
              long L, const Vec<long>& mvec, 
              const Vec<long>& gens, const Vec<long>& ords )
 {
-  cerr << "*** TestIt: R=" << R
-       << ", p=" << p
+  cerr << "*** TestIt: "
+       << "  p=" << p
        << ", r=" << r
        << ", c=" << c
        << ", k=" << _k
@@ -119,9 +119,9 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   zz_pX F1 = conv<zz_pX>(FF1);
 
   if (F1 == F)
-    cout << "EvalMap: good\n";
+    cout << "EvalMap: GOOD\n";
   else
-    cout << "EvalMap: bad\n";
+    cout << "EvalMap: BAD\n";
 
 #if 1
   // This test no longer works, because the inverse map 
@@ -145,9 +145,9 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   ea.decrypt(ctxt, secretKey, pa2);
 
   if (pa1.equals(pa2))
-    cout << "EvalMap: good\n";
+    cout << "EvalMap: GOOD\n";
   else
-    cout << "EvalMap: bad\n";
+    cout << "EvalMap: BAD\n";
 #endif
 
   FHE_NTIMER_STOP(ALL);
@@ -158,70 +158,48 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 }
 
 
-void usage(char *prog)
-{
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'R=1 p=2 k=80'\n\n";
-  cerr << "  R is the number of rounds\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  r is the lifting [default=1]" << endl;
-  cerr << "  d is the degree of the field extension [default==0]\n";
-  cerr << "    (d == 0 => factors[0] defined the extension)\n";
-  cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
-  cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  L is the # of levels in the modulus chain [default=4*R]\n";
-  cerr << "  s is the minimum number of slots [default=4]\n";
-  cerr << "  m defined the cyclotomic polynomial Phi_m(X)\n";
-  cerr << "  seed is the PRG seed\n";
-  exit(0);
-}
-
-
 int main(int argc, char *argv[])
 {
-  argmap_t argmap;
-  argmap["R"] = "1";
-  argmap["p"] = "2";
-  argmap["r"] = "1";
-  argmap["c"] = "2";
-  argmap["k"] = "80";
-  argmap["L"] = "0";
-  argmap["s"] = "0";
-  argmap["seed"] = "0";
-  argmap["gens"] = "[]";
-  argmap["ords"] = "[]";
-  argmap["mvec"] = "[]";
+  ArgMapping amap;
 
+  long p=2;
+  amap.arg("p", p, "plaintext base");
 
-  // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
+  long r=1;
+  amap.arg("r", r,  "lifting");
 
-  long R = atoi(argmap["R"]);
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long c = atoi(argmap["c"]);
-  long k = atoi(argmap["k"]);
-  //  long z = atoi(argmap["z"]);
-  long L = atoi(argmap["L"]);
-  if (L==0) { // determine L based on R,r
-    if (r==1) L = 2*R+2;
-    else      L = 4*R;
-  }
-  //  long s = atoi(argmap["s"]);
+  long c=2;
+  amap.arg("c", c, "number of columns in the key-switching matrices");
+  
+  long k=80;
+  amap.arg("k", k, "security parameter");
 
-  long seed = atoi(argmap["seed"]);
+  long L=6;
+  amap.arg("L", L, "# of levels in the modulus chain");
 
-  Vec<long> gens = atoVec<long>(argmap["gens"]);
-  Vec<long> ords = atoVec<long>(argmap["ords"]);
-  Vec<long> mvec = atoVec<long>(argmap["mvec"]);
+  long s=0;
+  amap.arg("s", s, "minimum number of slots");
 
+  long seed=0;
+  amap.arg("seed", seed, "PRG seed");
+
+  Vec<long> gens;
+  amap.arg("gens", gens, "use specified vector of generators", NULL);
+  amap.note("e.g., 'gens=[17 63 42]'");
+
+  Vec<long> ords;
+  amap.arg("ords", ords, "use specified vector of orders", NULL);
+  amap.note("e.g., 'ords=[100 20 -4]', negative means 'bad'");
+
+  Vec<long> mvec;
+  amap.arg("mvec", mvec, "use specified factorization of m", NULL);
+
+  amap.parse(argc, argv);
 
   long w = 64; // Hamming weight of secret key
-  //  long L = z*R; // number of levels
 
   if (seed) SetSeed(conv<ZZ>(seed));
 
-  TestIt(R, p, r, c, k, w, L, mvec, gens, ords);
+  TestIt(p, r, c, k, w, L, mvec, gens, ords);
 }
 

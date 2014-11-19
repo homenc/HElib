@@ -38,7 +38,7 @@ HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h Single
 
 SRC = KeySwitching.cpp EncryptedArray.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEContext.cpp PAlgebra.cpp SingleCRT.cpp DoubleCRT.cpp NumbTh.cpp bluestein.cpp IndexSet.cpp timing.cpp replicate.cpp hypercube.cpp matching.cpp powerful.cpp BenesNetwork.cpp permutations.cpp PermNetwork.cpp OptimizePermutations.cpp eqtesting.cpp polyEval.cpp extractDigits.cpp EvalMap.cpp OldEvalMap.cpp recryption.cpp
 
-OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o SingleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o OldEvalMap.o recryption.o
+OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o SingleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o OldEvalMap.o recryption.o debugging.o
 
 
 TESTPROGS = Test_General_x Test_Replicate_x Test_LinPoly_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_OldEvalMap_x Test_bootstrapping_x
@@ -46,7 +46,7 @@ TESTPROGS = Test_General_x Test_Replicate_x Test_LinPoly_x Test_matmul_x Test_Po
 
 all: fhe.a
 
-check: Test_General_x
+check: Test_General_x Test_Permutations_x Test_Replicate_x Test_EvalMap_x Test_bootstrapping_x
 	./Test_General_x R=1 m=255
 	./Test_General_x R=1 k=10 p=2 r=1 d=1
 	./Test_General_x R=1 k=10 p=2 r=2 d=1
@@ -54,6 +54,10 @@ check: Test_General_x
 	./Test_General_x R=1 k=10 p=3 r=1 d=1
 	./Test_General_x R=2 k=10 p=3 r=2 d=1 c=3
 	./Test_General_x R=1 k=10 p=3 r=1 d=2 c=3
+	./Test_Permutations_x
+	./Test_Replicate_x m=1247
+	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]"
+	./Test_bootstrapping_x
 
 test: $(TESTPROGS)
 

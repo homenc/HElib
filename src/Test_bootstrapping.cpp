@@ -24,7 +24,12 @@ NTL_CLIENT
 #include "EvalMap.h"
 #include "powerful.h"
 
-//#define DEBUG_PRINTOUT
+template<class T> ostream& printVec(ostream& s, const Vec<T>& v, long nCoeffs=40);
+extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
+			    const EncryptedArray& ea, long flags=0);
+extern ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
+
+// #define DEBUG_PRINTOUT
 #ifdef DEBUG_PRINTOUT
 extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;
@@ -34,10 +39,6 @@ extern Vec<ZZ> ptxt_pwr;
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
-extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
-			    const EncryptedArray& ea, long flags=0);
-template<class T> ostream& printVec(ostream& s, const Vec<T>& v, long nCoeffs=40);
-extern ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 #endif
 
 //void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
