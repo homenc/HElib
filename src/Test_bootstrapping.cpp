@@ -24,7 +24,7 @@ NTL_CLIENT
 #include "EvalMap.h"
 #include "powerful.h"
 
-//#define DEBUG_PRINTOUT
+// #define DEBUG_PRINTOUT
 #ifdef DEBUG_PRINTOUT
 extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;

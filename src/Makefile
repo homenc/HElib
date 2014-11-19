@@ -45,7 +45,7 @@ TESTPROGS = Test_General_x Test_Replicate_x Test_LinPoly_x Test_matmul_x Test_Po
 
 all: fhe.a
 
-check: Test_General_x
+check: Test_General_x Test_Permutations_x Test_Replicate_x Test_EvalMap_x Test_bootstrapping_x
 	./Test_General_x R=1 m=255
 	./Test_General_x R=1 k=10 p=2 r=1 d=1
 	./Test_General_x R=1 k=10 p=2 r=2 d=1
@@ -53,6 +53,10 @@ check: Test_General_x
 	./Test_General_x R=1 k=10 p=3 r=1 d=1
 	./Test_General_x R=2 k=10 p=3 r=2 d=1 c=3
 	./Test_General_x R=1 k=10 p=3 r=1 d=2 c=3
+	./Test_Permutations_x
+	./Test_Replicate_x m=1247
+	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]"
+	./Test_bootstrapping_x
 
 test: $(TESTPROGS)
 

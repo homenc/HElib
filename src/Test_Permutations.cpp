@@ -68,9 +68,9 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
     HyperCube<long> cube3 = cube1;
     applyPermToVec(cube2.getData(), cube1.getData(), pi); // direct application
     net.applyToCube(cube3); // applying permutation netwrok
-    if (cube2==cube3) cout << "yay\n";
+    if (cube2==cube3) cout << "GOOD\n";
     else {
-      cout << "blech\n";
+      cout << "BAD\n";
       if (cube1.getSize()<100) {
 	cout << "in="<<cube1.getData() << endl;
 	cout << "out1="<<cube2.getData()<<", out2="
@@ -157,9 +157,9 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
     cout << "done in " << t << " seconds" << endl;
     ea.decrypt(ctxt, secretKey, out2);
 
-    if (out1==out2) cout << "yay\n";
+    if (out1==out2) cout << "GOOD\n";
     else {
-      cout << "************ blech\n";
+      cout << "************ BAD\n";
     }
     // printAllTimers();
   }

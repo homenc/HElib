@@ -61,11 +61,11 @@ public:
 
       t_total += t_elapsed;
 
-      // cerr << "*** " << pos << " t=" << t_elapsed 
-      // 	   << ", t_total=" << t_total 
-      // 	   << ", level=" << ctxt.findBaseLevel() 
-      // 	   << ", log(noise/modulus)~" << ctxt.log_of_ratio() 
-      // 	   << "\n";
+      cerr << "*** " << pos << " t=" << t_elapsed 
+      	   << ", t_total=" << t_total 
+      	   << ", level=" << ctxt.findBaseLevel() 
+      	   << ", log(noise/modulus)~" << ctxt.log_of_ratio() 
+      	   << "\n";
     
       PlaintextArray pa1 = pa;
       pa1.replicate(pos);
@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
 
   decryptAndTest = atoi(argmap["t"]);
 
-  //  setTimersOn();
+  setTimersOn();
 
   TestIt(p, r, d, c, k, w, L, m, bnd, M, v);
 

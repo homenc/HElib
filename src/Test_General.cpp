@@ -302,7 +302,7 @@ int main(int argc, char **argv)
   amap.note("e.g., 'gens=[17 63 42]'");
 
   Vec<long> ords;
-  amap.arg("ords", ords, "use specified vector of order", NULL);
+  amap.arg("ords", ords, "use specified vector of orders", NULL);
   amap.note("e.g., 'ords=[100 20 -4]', negative means 'bad'");
 
 
