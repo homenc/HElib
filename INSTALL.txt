@@ -1,0 +1,66 @@
+Installation Notes
+
+You will need GMP and NTL libraries.
+
+Many distributions come with GMP pre-instralled.
+If not, you can install GMP as follows.
+
+1. Download GMP from http://www.gmplib.org
+2. uncompress and cd into the directory gmp-XXX
+3. On the command line:
+      ./configure
+      make
+      sudo make install
+4. This should istall GMP into /usr/local
+
+Once GMP is installed, you can install NTL as follows:
+(NOTE: you will needs v6.1 or NTL of higher)
+
+1. Download NTL from http://www.shoup.net/ntl/download.html
+2. uncompress and cd into the directory ntl-XXX/src
+3. On the command line:
+      ./configure NTL_GMP_LIP=on
+      make
+      sudo make install
+4. This should install NTL into /usr/local
+
+
+Now that you have these libraries in place, you can cd to
+the helib src directory to build helib.
+
+Right now, the "build system" for helib is very rudimentary:
+no configure script and just a Makefile, which does not support
+installation of helib.  So what you can do directly is simply
+build the static library fhe.a in the helib src directory
+and build programs based on fhe.a, also in the helib src
+directory.  Hopefully, this build system will be improved
+in the future.
+
+Before building helib, you may want to look at the Makefile,
+and consider adjusting some of the defaults for CC and CFLAGS.
+The defaults should be OK on most systems, but you can see
+the suggested options, which are documented in the Makefile.
+
+On the command line in the helib src directory:
+
+   make
+
+will compile and build the library fhe.a.
+Once built, run
+
+   make check
+
+which will compile and runs a series of test programs.
+
+If you want to build your own program based on helib, the easiest
+way to do it is to write the program in a file called myprog.cpp
+and then run
+
+   make myprog_x
+
+which will compile myprog.cpp and link in fhe.a and all required
+support libraries, and create the executable myprog_x.
+
+Take a look at Test_General.cpp for an example program using helib.
+
+

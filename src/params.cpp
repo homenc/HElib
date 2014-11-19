@@ -46,19 +46,30 @@ bool comparePhi(const Pair<long,long>& x, const Pair<long,long>& y)
 
 int main(int argc, char *argv[])
 {
-   argmap_t argmap;
-   argmap["gens"] = "0";
-   argmap["p"] = "2";
-   argmap["lo"] = "1001";
-   argmap["hi"] = "80000";
-   argmap["m"] = "0";
-   if (!parseArgs(argc, argv, argmap)) Error("bad args");
+   ArgMapping amap;
 
-   long gens_flag = atoi(argmap["gens"]);
-   long p = atoi(argmap["p"]);
-   long lo = atoi(argmap["lo"]);
-   long hi = atoi(argmap["hi"]);
-   long m_arg = atoi(argmap["m"]);
+   long gens_flag = 0;
+   amap.arg("gens", gens_flag, "flag to output mvec, gens, and ords");
+
+   long info_flag=1;
+   amap.arg("info", info_flag, "flag to output descriptive info about m");
+
+   long p = 2;
+   amap.arg("p", p, "plaintext base");
+
+   long lo = 1001;
+   amap.arg("lo", lo, "low value for m range");
+
+   long hi = 80000;
+   amap.arg("hi", hi, "high value for m range");
+
+   long m_arg = 0;
+   amap.arg("m", m_arg, "use only the specified m value", NULL);
+
+
+   amap.parse(argc, argv);
+
+   if (!info_flag && !gens_flag) return 0;
 
    if (lo % 2 == 0) lo++;
 
@@ -225,32 +236,34 @@ int main(int argc, char *argv[])
 
 
 
-      cout << setw(6) << phim << "  ";
-      cout << setw(4) << d << "  ";
-      cout << setw(6) << m << "  ";
-
-
-      cout << "m=";
-      for (long i = 0; i < k; i++) {
-        if (i > 0) cout << "*";
-        if (i == gen_index) cout << "(";
-        if (i == gen_index2) cout << "{";
-        cout << fac[i].a;
-        if (fac[i].b > 1) cout << "^" << fac[i].b;
-        if (i == gen_index) cout << ")";
-        if (i == gen_index2) cout << "}";
+      if (info_flag) {
+         cout << setw(6) << phim << "  ";
+         cout << setw(4) << d << "  ";
+         cout << setw(6) << m << "  ";
+   
+   
+         cout << "m=";
+         for (long i = 0; i < k; i++) {
+           if (i > 0) cout << "*";
+           if (i == gen_index) cout << "(";
+           if (i == gen_index2) cout << "{";
+           cout << fac[i].a;
+           if (fac[i].b > 1) cout << "^" << fac[i].b;
+           if (i == gen_index) cout << ")";
+           if (i == gen_index2) cout << "}";
+         }
+         cout << " ";
+   
+         if (!good_gen) 
+            cout << ":-( ";
+   
+         cout << "m/phim(m)=" 
+              << double(long(100*double(m)/double(phim)))/100.0 << " ";
+   
+         cout << "C=" << best_cost << " ";
+         cout << "D=" << best_depth << " ";
+         cout << "E=" << NumTwos(conv<ZZ>(d)) << " ";
       }
-      cout << " ";
-
-      if (!good_gen) 
-         cout << ":-( ";
-
-      cout << "m/phim(m)=" 
-           << double(long(100*double(m)/double(phim)))/100.0 << " ";
-
-      cout << "C=" << best_cost << " ";
-      cout << "D=" << best_depth << " ";
-      cout << "E=" << NumTwos(conv<ZZ>(d)) << " ";
 
       if (gens_flag) {
          cout << "mvec=" << "\"" << rev(fac2) << "\"" << " ";

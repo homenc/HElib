@@ -15,7 +15,23 @@
 # 
 CC = g++
 #
-CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -DNO_ALT_CRT
+CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+
+# useful flags:
+#   -std=c++11
+#   -std=c++0x
+#   -DUSE_ALT_CRT  tells helib to use an alterntive to the default DoubleCRT
+#                  representation...experimental...can be faster or slower
+#                  depending on the operation mixture
+#
+#   -DNO_HALF_SIZE_PRIME  tells helib to not use the half size prime
+#                         in the prime chain
+#
+#   -DALT_EVAL_CACHED=0  tells helib to cache certain constants as ZZX's
+#   -DALT_EVAL_CACHED=1  tells helib to cache certain constants as DoubleCRT's
+#                        these flags only affect bootstrapping
+#                        
+#
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++
