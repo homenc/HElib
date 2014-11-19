@@ -1801,10 +1801,10 @@ Thus for every ciphertext part that we need to switch (i.e. that has a
 handle that points to something other than~1 or base), we add a term
 of $\phi(m)\sigma^2\cdot p^2\cdot D_i^2/4$. Therefore, if our noise
 estimate after the scale-up is $\mathtt{noiseVar}'$ and we need to
-switch~$k$ 
+switch~$k$ parts, we get
 \[
 \mathtt{noiseVar}'' = \mathtt{noiseVar}' + k\cdot\phi(m)\sigma^2
-\cdot p^2\cdot \sum_{i=1}^{n'} D_i^2/4
+\cdot p^2\cdot \sum_{i=1}^{n'} D_i^2/4.
 \]
 
 %---------------------------------------------------------------------
