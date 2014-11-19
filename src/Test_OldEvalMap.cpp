@@ -1,12 +1,12 @@
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
 
-#include "AltEvalMap.h"
+#include "OldEvalMap.h"
 #include "hypercube.h"
 #include "powerful.h"
 
 void  TestIt(long R, long p, long r, long c, long _k, long w,
-             long L, const Vec<long>& mvec, 
+             long L, const Vec<long>& mvec, long width,
              const Vec<long>& gens, const Vec<long>& ords )
 {
   cerr << "*** TestIt: R=" << R
@@ -17,6 +17,7 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
        << ", w=" << w
        << ", L=" << L
        << ", mvec=" << mvec
+       << ", width=" << width
        << endl;
 
   setTimersOn();
@@ -107,11 +108,11 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
 
   CheckCtxt(ctxt, "init");
 
-  cout << "build AltEvalMap\n";
-  AltEvalMap map(ea, mvec, false); // compute the transformation to apply
-  cout << "apply AltEvalMap\n";
+  cout << "build OldEvalMap\n";
+  OldEvalMap map(ea, mvec, width, false); // compute the transformation to apply
+  cout << "apply OldEvalMap\n";
   map.apply(ctxt);                     // apply the transformation to ctxt
-  CheckCtxt(ctxt, "AltEvalMap");
+  CheckCtxt(ctxt, "OldEvalMap");
   cout << "check results\n";
 
   ZZX FF1;
@@ -119,13 +120,9 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   zz_pX F1 = conv<zz_pX>(FF1);
 
   if (F1 == F)
-    cout << "AltEvalMap: good\n";
+    cout << "OldEvalMap: good\n";
   else
-    cout << "AltEvalMap: bad\n";
-
-#if 0
-  // This test no longer works, because the inverse map 
-  // now applies the normal basis transformation
+    cout << "OldEvalMap: bad\n";
 
   publicKey.Encrypt(ctxt, FF1);
   CheckCtxt(ctxt, "init");
@@ -134,21 +131,20 @@ void  TestIt(long R, long p, long r, long c, long _k, long w,
   // polynomial corresponding to cube and produces the coefficients
   // packed in the slots
 
-  cout << "build AltEvalMap\n";
-  AltEvalMap imap(ea, mvec, true); // compute the transformation to apply
-  cout << "apply AltEvalMap\n";
+  cout << "build OldEvalMap\n";
+  OldEvalMap imap(ea, mvec, width, true); // compute the transformation to apply
+  cout << "apply OldEvalMap\n";
   imap.apply(ctxt);                    // apply the transformation to ctxt
-  CheckCtxt(ctxt, "AltEvalMap");
+  CheckCtxt(ctxt, "OldEvalMap");
   cout << "check results\n";
 
   PlaintextArray pa2(ea);
   ea.decrypt(ctxt, secretKey, pa2);
 
   if (pa1.equals(pa2))
-    cout << "AltEvalMap: good\n";
+    cout << "OldEvalMap: good\n";
   else
-    cout << "AltEvalMap: bad\n";
-#endif
+    cout << "OldEvalMap: bad\n";
 
   FHE_NTIMER_STOP(ALL);
 
@@ -170,7 +166,7 @@ void usage(char *prog)
   cerr << "    (d == 0 => factors[0] defined the extension)\n";
   cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
   cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  L is the # of levels in the modulus chain [default=4*R]\n";
+  cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
   cerr << "  s is the minimum number of slots [default=4]\n";
   cerr << "  m defined the cyclotomic polynomial Phi_m(X)\n";
   cerr << "  seed is the PRG seed\n";
@@ -188,6 +184,7 @@ int main(int argc, char *argv[])
   argmap["k"] = "80";
   argmap["L"] = "0";
   argmap["s"] = "0";
+  argmap["width"] = "5";
   argmap["seed"] = "0";
   argmap["gens"] = "[]";
   argmap["ords"] = "[]";
@@ -210,6 +207,7 @@ int main(int argc, char *argv[])
   }
   //  long s = atoi(argmap["s"]);
 
+  long width = atoi(argmap["width"]);
   long seed = atoi(argmap["seed"]);
 
   Vec<long> gens = atoVec<long>(argmap["gens"]);
@@ -222,6 +220,14 @@ int main(int argc, char *argv[])
 
   if (seed) SetSeed(conv<ZZ>(seed));
 
-  TestIt(R, p, r, c, k, w, L, mvec, gens, ords);
+  TestIt(R, p, r, c, k, w, L, mvec, width, gens, ords);
 }
 
+//   [1 1 3 8] Test_EvalMap_x p=2 m1=3 m2=5 m3=7 m4=17
+//   Test_EvalMap_x p=2 m1=11 m2=41 m3=31 (phim1=6, phim2=40, d2=4)
+//   [1 1 20]  Test_EvalMap_x p=2 m1=3 m2=11 m3=25
+//   [1 1 20]  Test_EvalMap_x p=2 m1=3 m2=11 m3=41
+//   Test_EvalMap_x p=2 m1=3 m2=11 m3=17
+//   Test_EvalMap_x p=2 m1=3 m2=5 m3=43 (phim1 == 3)
+//   Test_EvalMap_x p=2 m1=7 m2=13 m3=73 (phim1=8, phim2=12, d2=4)
+//   Test_EvalMap_x p=2 m1=7 m2=33 m3=73 (phim1=8, phim2=20, d2=10)

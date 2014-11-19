@@ -105,11 +105,33 @@ typedef Mat<ZZXptr> CachedPtxtBlockMatrix;
 typedef Vec<DCRTptr> CachedDCRTPtxtMatrix;
 typedef Mat<DCRTptr> CachedDCRTPtxtBlockMatrix;
 
+//! @brief Free functions for various flavors of cached matrix multiplication
+//!
+//! To save time, the constants that need to be computed during a matrix-vector
+//! multiply can be precomputed and stored.  One can store these either
+//! as polynomials (ZZX's) using a CachedPtxtMatrix, or as DoubleCRT's
+//! using a CachedDCRTMatrix.  These caches are computed using EncryptedArray
+//! methods.
+
+
+
+
+//! @brief Functions corresponding to EncryptedArray::mat_mul_dense
+//! Caches are computed using EncryptedArray::compMat_dense
+//! These functions are for multiplying dense matrices over
+//! Z_{p^r}[X]/(G).
 void mat_mul_dense(Ctxt& ctxt, const CachedPtxtMatrix& cmat,
        	                       const EncryptedArray& ea);
 void mat_mul_dense(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat,
        	                       const EncryptedArray& ea);
 
+
+//! @brief Functions corresponding to EncryptedArray::mat_mul
+//! Caches are computed using EncryptedArray::compMat
+//! These functions are designed to work with sparse matrices.
+//! The first two work with matrices over Z_{p^r}[X]/(G).
+//! The second two work with "block" matrices whose entries are themselves
+//! matrices over Z_{p^r}
 void mat_mul(Ctxt& ctxt, const CachedPtxtMatrix& cmat,
                          const EncryptedArray& ea);
 void mat_mul(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat,
@@ -120,6 +142,13 @@ void mat_mul(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat,
 void mat_mul(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat,
 			 const EncryptedArray& ea);
 
+//! @brief Functions corresponding to EncryptedArray::mat_mul1D
+//! Caches are computed using EncryptedArray::compMat1D
+//! These functions apply a matrix concurrently to all the hypercolumns
+//! in a single dimension.
+//! The first two work with matrices over Z_{p^r}[X]/(G).
+//! The second two work with "block" matrices whose entries are themselves
+//! matrices over Z_{p^r}
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
        	                   const EncryptedArray& ea);
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
@@ -166,6 +195,7 @@ void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
  * an EncryptedArrayBase object: copying an EncryptedArray object results
  * is a "deep copy" of the underlying object of the derived class.
 ****************************************************************/
+
 class EncryptedArrayBase {  // purely abstract interface 
 public:
   virtual ~EncryptedArrayBase() {}

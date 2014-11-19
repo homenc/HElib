@@ -16,7 +16,7 @@
 
 #include "recryption.h"
 #include "EncryptedArray.h"
-#include "AltEvalMap.h"
+#include "EvalMap.h"
 #include "powerful.h"
 
 
@@ -141,8 +141,8 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec,
   ea = new EncryptedArray(context, *alMod);
          // Polynomial defaults to F0, PAlgebraMod explicitly given
 
-  firstMap  = new AltEvalMap(*ea, mvec, true);
-  secondMap = new AltEvalMap(*context.ea, mvec, false);
+  firstMap  = new EvalMap(*ea, mvec, true);
+  secondMap = new EvalMap(*context.ea, mvec, false);
 
   p2dConv = new PowerfulDCRT(context, mvec);
 

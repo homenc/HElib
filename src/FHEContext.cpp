@@ -15,7 +15,7 @@
  */
 
 #include "FHEContext.h"
-#include "AltEvalMap.h"
+#include "EvalMap.h"
 #include "powerful.h"
 
 

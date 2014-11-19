@@ -21,8 +21,7 @@
 #include <NTL/ZZ.h>
 NTL_CLIENT
 #include "EncryptedArray.h"
-//#include "EvalMap.h"
-#include "AltEvalMap.h"
+#include "EvalMap.h"
 #include "powerful.h"
 
 //#define DEBUG_PRINTOUT

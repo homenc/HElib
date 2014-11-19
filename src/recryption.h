@@ -21,7 +21,7 @@
 
 class  PAlgebraMod;
 class  EncryptedArray;
-class  AltEvalMap;
+class  EvalMap;
 class  PowerfulDCRT;
 class  FHEcontext;
 
@@ -36,7 +36,7 @@ public:
 
   PAlgebraMod *alMod; // for plaintext space p^{e-e'+r}
   EncryptedArray *ea; // for plaintext space p^{e-e'+r}
-  AltEvalMap *firstMap, *secondMap; // linear maps
+  EvalMap *firstMap, *secondMap; // linear maps
   PowerfulDCRT *p2dConv; // conversion between ZZX and Powerful
 
   vector<ZZX> unpackSlotEncoding;// linPolys for uppacking the slots
