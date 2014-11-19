@@ -725,6 +725,9 @@ vector<T> atovector(const char *a)
   return v2;
 }
 
-
+//! Debug printing routines for vectors, ZZX'es, print only a few entries
+template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
+				    long nCoeffs=40);
+ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 
 #endif

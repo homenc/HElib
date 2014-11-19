@@ -28,42 +28,6 @@ EncryptedArray* dbgEa=NULL;
 ZZX dbg_ptxt;
 Vec<ZZ> ptxt_pwr;
 
-template<class T> ostream& printVec(ostream& s, const Vec<T>& v, long nCoeffs)
-{
-  long d = v.length();
-  if (d<nCoeffs) return s << v; // just print the whole thing
-
-  // otherwise print only 1st nCoeffs coefficiants
-  s << '[';
-  for (long i=0; i<nCoeffs-2; i++) s << v[i] << ' ';
-  s << "... " << v[d-2] << ' ' << v[d-1] << ']';
-  return s;
-}
-template ostream& printVec(ostream& s, const Vec<zz_p>& v, long nCoeffs);
-
-ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40)
-{
-  return printVec(s, poly.rep, nCoeffs);
-  /*  long d = deg(poly);
-  if (d<nCoeffs) return s << poly; // just print the whole thing
-
-  // otherwise print only 1st nCoeffs coefficiants
-  s << '[';
-  for (long i=0; i<nCoeffs-2; i++) s << poly[i] << ' ';
-  s << "... " << poly[d-1] << ' ' << poly[d] << ']';
-  return s; */
-}
-
-/*void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base)
-{
-  rep.SetLength(nDigits);
-  for (long j=0; j<nDigits; j++) {
-    rep[j] = rem(num, base);
-    if (rep[j] > base/2)         rep[j] -= base;
-    else if (rep[j] < -(base/2)) rep[j] += base;
-    num = (num - rep[j]) / base;
-  }
-  }*/
 
 void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags)

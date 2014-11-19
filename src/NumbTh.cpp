@@ -1388,5 +1388,23 @@ void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
    r = P2;
 }
 
+// Debug printing routines for vectors, ZZX'es, print only a few entries
 
+template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
+				    long nCoeffs=40)
+{
+  long d = v.length();
+  if (d<nCoeffs) return s << v; // just print the whole thing
 
+  // otherwise print only 1st nCoeffs coefficiants
+  s << '[';
+  for (long i=0; i<nCoeffs-2; i++) s << v[i] << ' ';
+  s << "... " << v[d-2] << ' ' << v[d-1] << ']';
+  return s;
+}
+template ostream& printVec(ostream& s, const Vec<zz_p>& v, long nCoeffs);
+
+ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs)
+{
+  return printVec(s, poly.rep, nCoeffs);
+}

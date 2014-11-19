@@ -36,8 +36,8 @@ void testIt(long d, long k, long p, long r, long m, long L,
   Ctxt inCtxt(publicKey), outCtxt(publicKey);
 
 #ifdef DEBUG_PRINTOUT
-  ea_pt = &ea;        // for debugging purposes
-  sk_pt = &secretKey;
+  dbgEa = &ea;        // for debugging purposes
+  dbgKey = &secretKey;
 #endif
 
   // evaluate at random points (at least one co-prime with p)

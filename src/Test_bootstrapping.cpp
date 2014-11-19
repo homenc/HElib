@@ -36,8 +36,6 @@ extern Vec<ZZ> ptxt_pwr;
 #define FLAG_PRINT_VEC  4
 extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 			    const EncryptedArray& ea, long flags=0);
-template<class T> ostream& printVec(ostream& s, const Vec<T>& v, long nCoeffs=40);
-extern ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 #endif
 
 //void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
@@ -205,9 +203,10 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
       printAllTimers();
       exit(0);
     }
-
+#ifdef DEBUG_PRINTOUT
     decryptAndPrint(cout, c1, secretKey, *context.ea);
     cout << endl;
+#endif
   }
   }
   printAllTimers();
