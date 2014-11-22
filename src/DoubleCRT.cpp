@@ -24,7 +24,6 @@
  */
 #include "DoubleCRT.h"
 #include "timing.h"
-#include "SingleCRT.h"
 
 #if (ALT_CRT)
 #warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
@@ -680,46 +679,6 @@ void DoubleCRT::randomize(const ZZ* seed)
       row[j] = RandomBnd(pi);   // RandomBnd is defined in NTL's module ZZ
   }
 }
-
-DoubleCRT& DoubleCRT::operator=(const SingleCRT& scrt)
-{
-  if (&context != &scrt.getContext())
-    Error("DoubleCRT=SingleCRT -- incompatible contexts");
-
-  map.clear();  // empty the map
-  const IndexSet& s = scrt.getMap().getIndexSet();
-  map.insert(s);
-  
-  if (dryRun) return *this;
-
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) 
-    context.ithModulus(i).FFT(map[i],scrt.getMap()[i]); // compute FFT image
-  return *this;
-}
-
-void DoubleCRT::toSingleCRT(SingleCRT& scrt, const IndexSet& s) const 
-{
-  if (&context != &scrt.getContext())
-    Error("DoubleCRT::toSingleCRT -- incompatible contexts");
-
-  IndexSet s1 = s & map.getIndexSet();
-  scrt.map.clear();
-  scrt.map.insert(s1);
-
-  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
-    context.ithModulus(i).restoreModulus();
-    zz_pX tmp;
-    context.ithModulus(i).iFFT(tmp, map[i]); // inverse FFT
-    conv(scrt.map[i], tmp);
-  }
-}
-
-void DoubleCRT::toSingleCRT(SingleCRT& scrt) const 
-{
-  const IndexSet& s = map.getIndexSet();
-  toSingleCRT(scrt, s);
-}
-
 
 void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 {

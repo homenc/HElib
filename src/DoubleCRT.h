@@ -31,8 +31,6 @@
 #define _DoubleCRT_H_
 
 
-class SingleCRT;
-
 /**
 * @class DoubleCRTHelper
 * @brief A helper class to enforce consistency within an DoubleCRTHelper object
@@ -165,7 +163,6 @@ public:
   // Copy only the primes in s \intersect other.getIndexSet()
   //  void partialCopy(const DoubleCRT& other, const IndexSet& s);
 
-  DoubleCRT& operator=(const SingleCRT& other);
   DoubleCRT& operator=(const ZZX& poly);
   DoubleCRT& operator=(const ZZ& num);
   DoubleCRT& operator=(const long num) { *this = to_ZZ(num); return *this; }
@@ -368,11 +365,6 @@ public:
   }
 
 
-  //! @brief Makes a corresponding SingleCRT object.
-  // Restricted to the given index set, if specified
-  void toSingleCRT(SingleCRT& scrt, const IndexSet& s) const;
-  void toSingleCRT(SingleCRT& scrt) const;
-
   // used to implement modulus switching
   void scaleDownToSet(const IndexSet& s, long ptxtSpace);
 
@@ -404,8 +396,6 @@ inline DoubleCRT to_DoubleCRT(const ZZX& p) {
 inline void conv(ZZX &p, const DoubleCRT &d) { d.toPoly(p); }
 
 inline ZZX to_ZZX(const DoubleCRT &d)  { ZZX p; d.toPoly(p); return p; }
-
-inline void conv(DoubleCRT& d, const SingleCRT& s) { d=s; }
 
 typedef shared_ptr<DoubleCRT> DCRTptr;
 typedef shared_ptr<ZZX> ZZXptr;

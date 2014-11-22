@@ -26,8 +26,6 @@
 #include "FHEContext.h"
 
 
-class SingleCRT;
-
 /**
 * @class AltCRTHelper
 * @brief A helper class to enforce consistency within an AltCRTHelper object
@@ -165,7 +163,6 @@ public:
   // Copy only the primes in s \intersect other.getIndexSet()
   //  void partialCopy(const AltCRT& other, const IndexSet& s);
 
-  AltCRT& operator=(const SingleCRT& other);
   AltCRT& operator=(const ZZX& poly);
   AltCRT& operator=(const ZZ& num);
   AltCRT& operator=(const long num) { *this = to_ZZ(num); return *this; }
@@ -367,11 +364,6 @@ public:
 
 
 
-  // makes a corresponding SingleCRT object, restricted to
-  // the given index set, if specified
-  void toSingleCRT(SingleCRT& scrt, const IndexSet& s) const;
-  void toSingleCRT(SingleCRT& scrt) const;
-
   // used to implement modulus switching
   void scaleDownToSet(const IndexSet& s, long ptxtSpace);
 
@@ -398,9 +390,6 @@ inline AltCRT to_AltCRT(const ZZX& p) {
 inline void conv(ZZX &p, const AltCRT &d) { d.toPoly(p); }
 
 inline ZZX to_ZZX(const AltCRT &d)  { ZZX p; d.toPoly(p); return p; }
-
-inline void conv(AltCRT& d, const SingleCRT& s) { d=s; }
-
 
 typedef shared_ptr<AltCRT> DCRTptr;
 typedef shared_ptr<ZZX> ZZXptr;

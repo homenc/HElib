@@ -758,33 +758,6 @@ void AltCRT::randomize(const ZZ* seed)
 }
 
 
-
-
-AltCRT& AltCRT::operator=(const SingleCRT& scrt)
-{
-   assert(0); // not implemented
-   return *this;
-}
-
-
-void AltCRT::toSingleCRT(SingleCRT& scrt, const IndexSet& s) const 
-{
-   assert(0); // not implemented
-}
-
-
-
-// The following is identical to definition in DoubleCRT
-
-void AltCRT::toSingleCRT(SingleCRT& scrt) const 
-{
-  const IndexSet& s = map.getIndexSet();
-  toSingleCRT(scrt, s);
-}
-
-
-
-
 // The following is identical to definition in DoubleCRT
 
 
