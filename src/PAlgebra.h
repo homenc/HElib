@@ -413,6 +413,7 @@ public:
   // copy and assignment 
 };
 
+//! \cond FALSE (make doxygen ignore these classes)
 template<class T> 
 class TNode {
 public:
@@ -436,6 +437,7 @@ template<class T> shared_ptr< TNode<T> > nullTNode()
 {
   return shared_ptr< TNode<T> >();
 }
+//! \endcond
   
 
 //! A concrete instantiation of the virtual class

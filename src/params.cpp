@@ -1,4 +1,18 @@
-
+/* Copyright (C) 2012,2013 IBM Corp.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
 namespace std {}
 namespace NTL {}
 
@@ -9,11 +23,13 @@ using namespace NTL;
 #include "PAlgebra.h"
 #include <iomanip>
 
+// A heuristic measure for how good a certain (depth,cost) is
 long weighted_cost(long cost, long depth)
 {
    return depth*(1L << 16) + cost;
 }
 
+// Reverse a vector
 Vec<long> rev(const Vec<long>& v) 
 {
    long n = v.length();
@@ -23,6 +39,7 @@ Vec<long> rev(const Vec<long>& v)
    return w;
 }
 
+// Truncate a vector
 Vec<long> trunc(const Vec<long>& v)
 {
    long n = v.length();
@@ -31,8 +48,10 @@ Vec<long> trunc(const Vec<long>& v)
    return w;
 }
 
+// Disregard values of m where the order of p mod m is grater than MaxOrd
 const long MaxOrd = 100;
 
+// Compute phi(p^e)=p^{e-1}*(p-1) (assuming that p is a prime)
 long computePhi(const Pair<long,long>& x)
 {
    return power_long(x.a, x.b-1) * (x.a-1);
@@ -43,7 +62,14 @@ bool comparePhi(const Pair<long,long>& x, const Pair<long,long>& y)
    return computePhi(x) < computePhi(y);
 } 
 
-
+/* Usage: params_x.exe [ name=value ]...
+ *  gens flag to output mvec, gens, and ords  [ default=0 ]
+ *  info flag to output descriptive info about m  [ default=1 ]
+ *  p    plaintext base  [ default=2 ]
+ *  lo   low value for m range  [ default=1001 ]
+ *  hi   high value for m range  [ default=80000 ]
+ *  m    use only the specified m value
+ */
 int main(int argc, char *argv[])
 {
    ArgMapping amap;
@@ -266,7 +292,7 @@ int main(int argc, char *argv[])
       }
 
       if (gens_flag) {
-         cout << "mvec=" << "\"" << rev(fac2) << "\"" << " ";
+         cout << " mvec=" << "\"" << rev(fac2) << "\"" << " ";
          cout << "gens=" << "\"" << trunc(rev(global_gen)) << "\"" << " "; 
          cout << "ords=" << "\"" << trunc(rev(ordvec)) << "\"" << " "; 
       }

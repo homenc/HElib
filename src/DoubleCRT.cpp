@@ -30,7 +30,7 @@
 #warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
 #include "AltCRT.cpp"
 #else
-#warning "Old Polynomial Arithmetic Implementation in DoubleCRT.cpp"
+#warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
 
 // NTL implementation of mat_long

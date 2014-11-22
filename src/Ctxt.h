@@ -219,8 +219,10 @@ public:
 istream& operator>>(istream& s, CtxtPart& p);
 ostream& operator<<(ostream& s, const CtxtPart& p);
 
+//! \cond FALSE (make doxygen ignore this code)
 struct ZeroCtxtLike_type {}; // used to select a constructor
 const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
+//! \endcond
 
 /**
  * @class Ctxt

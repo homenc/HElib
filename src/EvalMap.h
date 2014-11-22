@@ -15,7 +15,8 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/* EvalMap.h - Implementing the reCrypt linear transformations
+/** @file EvalMap.h
+ *  @brief Implementing the recryption linear transformations
  */
 
 #include "EncryptedArray.h"
@@ -57,11 +58,11 @@ private:
   bool invert;   // apply transformation in inverser order?
   long nfactors; // how many factors of m
 
-#ifndef ALTEVAL_CACHED    // no caching
+#ifndef EVALMAP_CACHED    // no caching
   shared_ptr<PlaintextBlockMatrixBaseInterface>   mat1;   // one block matrix
   Vec< shared_ptr<PlaintextMatrixBaseInterface> > matvec; // regular matrices
 #else
-#if (ALTEVAL_CACHED==0) // ZZX caching
+#if (EVALMAP_CACHED==0) // ZZX caching
   CachedPtxtBlockMatrix mat1;
   Vec<CachedPtxtMatrix> matvec;
 #else               // DoubleCRT cashing

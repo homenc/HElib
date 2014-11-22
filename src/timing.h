@@ -91,6 +91,7 @@ bool getTimerByName(FHEtimer& timer, const char* name);
 bool printNamedTimer(ostream& str, const char* name);
 
 
+//! \cond FALSE (make doxygen ignore these classes)
 class auto_timer {
 public:
   FHEtimer *timer;
@@ -98,6 +99,7 @@ public:
   void stop() { if (timer && areTimersOn()) timer->stop(); }
   ~auto_timer() { stop(); }
 };
+//! \endcond
 
 
 // NOTE: the STOP functions below are not really needed,

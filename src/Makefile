@@ -27,11 +27,9 @@ CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include
 #   -DNO_HALF_SIZE_PRIME  tells helib to not use the half size prime
 #                         in the prime chain
 #
-#   -DALT_EVAL_CACHED=0  tells helib to cache certain constants as ZZX's
-#   -DALT_EVAL_CACHED=1  tells helib to cache certain constants as DoubleCRT's
-#                        these flags only affect bootstrapping
-#                        
-#
+#   -DEVALMAP_CACHED=0  tells helib to cache certain constants as ZZX's
+#   -DEVALMAP_CACHED=1  tells helib to cache certain constants as DoubleCRT's
+#                       these flags only affect bootstrapping
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++

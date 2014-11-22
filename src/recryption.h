@@ -15,7 +15,9 @@
  */
 #ifndef _RECRYPTION_H_
 #define _RECRYPTION_H_
-
+/** @file recryption.h
+ *  @brief Define some data structures to hold recryption data
+ */
 
 #include "NumbTh.h"
 
@@ -25,24 +27,41 @@ class  EvalMap;
 class  PowerfulDCRT;
 class  FHEcontext;
 
+//! @class RecryptData
+//! @brief A structure to hold recryption-related data inside the FHEcontext
 class RecryptData {
 public:
-  //! Default Hamming weight of recryption key
+  //! default Hamming weight of recryption key
   static const long defSkHwt=56;
 
-  long e, ePrime; // skey encrypted wrt space p^{e-e'+r}
-  long skHwt;     // Hamming weight of recryption secret key
-  double alpha;   // an optimization parameter
+  //! skey encrypted wrt space p^{e-e'+r}
+  long e, ePrime;
 
-  PAlgebraMod *alMod; // for plaintext space p^{e-e'+r}
-  EncryptedArray *ea; // for plaintext space p^{e-e'+r}
-  EvalMap *firstMap, *secondMap; // linear maps
-  PowerfulDCRT *p2dConv; // conversion between ZZX and Powerful
+  //! Hamming weight of recryption secret key
+  long skHwt;
 
-  vector<ZZX> unpackSlotEncoding;// linPolys for uppacking the slots
+  //! an optimization parameter
+  double alpha;
+
+  //! for plaintext space p^{e-e'+r}
+  PAlgebraMod *alMod;
+
+  //! for plaintext space p^{e-e'+r}
+  EncryptedArray *ea;
+
+  //! linear maps
+  EvalMap *firstMap, *secondMap;
+
+  //! conversion between ZZX and Powerful
+  PowerfulDCRT *p2dConv;
+
+  //! linPolys for uppacking the slots
+  vector<ZZX> unpackSlotEncoding;
 
   RecryptData() { alMod=NULL; ea=NULL; firstMap=secondMap=NULL;p2dConv=NULL; }
   ~RecryptData();
+
+  //! Initialize the recryption data in the context
   void init(const FHEcontext& context, const Vec<long>& mvec,
 	    long t=0/*min Hwt for sk*/, bool conservative=false);
 };

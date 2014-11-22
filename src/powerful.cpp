@@ -241,7 +241,6 @@ PowerfulDCRT::PowerfulDCRT(const FHEcontext& _context, const Vec<long>& mvec):
 } // NTL's modulus restored upon exit
 
 
-// The Powerful<->DCRT conversion goes through SingleCRT
 void PowerfulDCRT::dcrtToPowerful(Vec<ZZ>& out, const DoubleCRT& dcrt) const
 {
   const IndexSet& set = dcrt.getIndexSet();

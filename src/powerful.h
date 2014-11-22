@@ -136,7 +136,6 @@ public:
   const PowerfulConversion& getPConv(long i) const
   { return pConvVec.at(i); }
 
-  // The Powerful<->DCRT conversion goes through SingleCRT
   void dcrtToPowerful(Vec<ZZ>& powerful, const DoubleCRT& dcrt) const;
   void powerfulToDCRT(DoubleCRT& dcrt, const Vec<ZZ>& powerful) const;
 

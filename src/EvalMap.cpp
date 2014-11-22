@@ -13,13 +13,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/* EvalMap.cpp - Implementing the reCrypt linear transformations
- */
-
 #include "EvalMap.h"
 #include "powerful.h"
 
 // The callback interface for the matrix-multiplication routines.
+
+//! \cond FALSE (make doxygen ignore these classes)
 template<class type>
 class AltStep2Matrix : public PlaintextMatrixInterface<type> 
 {
@@ -253,7 +252,7 @@ buildAltStep1Matrix(const EncryptedArray& ea,
   default: return 0;
   }
 }
-
+//! \endcond
 
 
 void init_representatives(Vec<long>& representatives, long dim, 
@@ -364,7 +363,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
   shared_ptr<PlaintextBlockMatrixBaseInterface> blockMat(
         buildAltStep1Matrix(ea, sig_sequence[dim],
 			    local_reps[dim], dim, m/mvec[dim], invert, normal_basis));
-#ifdef ALTEVAL_CACHED // cache the matrix of constants
+#ifdef EVALMAP_CACHED // cache the matrix of constants
   ea.compMat1D(mat1, *blockMat, dim);
 #else
   mat1 = blockMat;
@@ -375,7 +374,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
     shared_ptr<PlaintextMatrixBaseInterface> mat_dim(
           buildAltStep2Matrix(ea, sig_sequence[dim],
                               local_reps[dim], dim, m/mvec[dim], invert));
-#ifdef ALTEVAL_CACHED // cache the matrix of constants
+#ifdef EVALMAP_CACHED // cache the matrix of constants
     ea.compMat1D(matvec[dim], *mat_dim, dim);
 #else
     matvec[dim] = mat_dim;
@@ -388,14 +387,14 @@ void EvalMap::apply(Ctxt& ctxt) const
   if (!invert) {
     // forward direction
 
-#ifdef ALTEVAL_CACHED // cached matrix of constants
+#ifdef EVALMAP_CACHED // cached matrix of constants
     mat_mul1D(ctxt, mat1, nfactors-1, ea);
 #else
     ea.mat_mul1D(ctxt, *mat1, nfactors-1);
 #endif
 
     for (long i = matvec.length()-1; i >= 0; i--) {
-#ifdef ALTEVAL_CACHED // cached matrix of constants
+#ifdef EVALMAP_CACHED // cached matrix of constants
       mat_mul1D(ctxt, matvec[i], i, ea);
 #else
       ea.mat_mul1D(ctxt, *matvec[i], i);
@@ -404,14 +403,14 @@ void EvalMap::apply(Ctxt& ctxt) const
   }
   else {
     for (long i = 0; i < matvec.length(); i++) {
-#ifdef ALTEVAL_CACHED // cached matrix of constants
+#ifdef EVALMAP_CACHED // cached matrix of constants
       mat_mul1D(ctxt, matvec[i], i, ea);
 #else
       ea.mat_mul1D(ctxt, *matvec[i], i);
 #endif
     }
 
-#ifdef ALTEVAL_CACHED // cached matrix of constants
+#ifdef EVALMAP_CACHED // cached matrix of constants
     mat_mul1D(ctxt, mat1, nfactors-1, ea);
 #else
     ea.mat_mul1D(ctxt, *mat1, nfactors-1);

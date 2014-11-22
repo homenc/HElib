@@ -254,7 +254,25 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 }
 
 
-
+/* Usage: Test_General_x [ name=value ]...
+ *   R       number of rounds  [ default=1 ]
+ *   p       plaintext base  [ default=2 ]
+ *   r       lifting  [ default=1 ]
+ *   d       degree of the field extension  [ default=1 ]
+ *              d == 0 => factors[0] defines extension
+ *   c       number of columns in the key-switching matrices  [ default=2 ]
+ *   k       security parameter  [ default=80 ]
+ *   L       # of levels in the modulus chain  [ default=heuristic ]
+ *   s       minimum number of slots  [ default=0 ]
+ *   repeat  number of times to repeat the test  [ default=1 ]
+ *   m       use specified value as modulus
+ *   mvec    use product of the integers as  modulus
+ *              e.g., 'mvec=[5 3 187]' (this overwrite the m argument)
+ *   gens    use specified vector of generators
+ *              e.g., 'gens=[562 1871 751]'
+ *   ords    use specified vector of orders
+ *              e.g., 'ords=[4 2 -4]', negative means 'bad'
+ */
 int main(int argc, char **argv) 
 {
   setTimersOn();
@@ -267,7 +285,6 @@ int main(int argc, char **argv)
 
   long p=2;
   amap.arg("p", p, "plaintext base");
-
 
   long r=1;
   amap.arg("r", r,  "lifting");
@@ -283,27 +300,29 @@ int main(int argc, char **argv)
   long k=80;
   amap.arg("k", k, "security parameter");
 
-
   long L=0;
   amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
 
   long s=0;
   amap.arg("s", s, "minimum number of slots");
 
-  long chosen_m=0;
-  amap.arg("m", chosen_m, "use specified value as modulus", NULL);
-
   long repeat=1;
   amap.arg("repeat", repeat,  "number of times to repeat the test");
 
+  long chosen_m=0;
+  amap.arg("m", chosen_m, "use specified value as modulus", NULL);
+
+  Vec<long> mvec;
+  amap.arg("mvec", mvec, "use product of the integers as  modulus", NULL);
+  amap.note("e.g., 'mvec=[5 3 187]' (this overwrite the m argument)");
+
   Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", NULL);
-  amap.note("e.g., 'gens=[17 63 42]'");
+  amap.note("e.g., 'gens=[562 1871 751]'");
 
   Vec<long> ords;
   amap.arg("ords", ords, "use specified vector of orders", NULL);
-  amap.note("e.g., 'ords=[100 20 -4]', negative means 'bad'");
-
+  amap.note("e.g., 'ords=[4 2 -4]', negative means 'bad'");
 
   amap.parse(argc, argv);
   
@@ -315,17 +334,16 @@ int main(int argc, char **argv)
     }
   }
 
-
-
   long w = 64; // Hamming weight of secret key
   //  long L = z*R; // number of levels
 
+  if (mvec.length()>0)
+    chosen_m = computeProd(mvec);
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
   for (long repeat_cnt = 0; repeat_cnt < repeat; repeat_cnt++) {
     TestIt(R, p, r, d, c, k, w, L, m, gens, ords);
   }
-
 }
 
 // call to get our running test case:

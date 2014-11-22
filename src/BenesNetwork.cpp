@@ -13,10 +13,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/**
- * @file BenesNetwork.cpp
- * @brief Auxiliary routines for GeneralBenesNetwork
- */
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
 #include "FHE.h"

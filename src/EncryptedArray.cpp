@@ -562,6 +562,7 @@ void EncryptedArrayDerived<type>::rec_mul(long dim,
 // minimized, and that the work done at the non-leaves is dominated by the
 // work done at the leaves.
 
+//! \cond FALSE (make doxygen ignore these classes)
 template<class type>
 struct MatMulDimComp {
   const EncryptedArrayDerived<type> *ea;
@@ -573,6 +574,7 @@ struct MatMulDimComp {
               (ea->sizeOfDimension(i) < ea->sizeOfDimension(j))  );
   }
 };
+//! \endcond
 
 // Multiply a ciphertext vector by a plaintext dense matrix
 template<class type>

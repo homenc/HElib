@@ -96,12 +96,14 @@ bool parseArgs(int argc,  char *argv[], argmap_t& argmap);
  *
  **/
 
+
 /* doArgProcessing: converts c-string s to value T,
  * returns upon success.  By default, we parse using
  * the istream input operator, except when T = string
  * and just convert without any parsing.
  */
 
+//! \cond FALSE (make doxygen ignore these classes)
 template<class T>
 bool doArgProcessing(T *value, const char *s)
 {
@@ -204,7 +206,7 @@ public:
     return doc.str();
   }
 };
-
+//! \endcond
 
 
 //! @brief Routines for computing mathematically correct mod and div.
@@ -651,11 +653,8 @@ xdouble coeffsL2Norm(const ZZX& f); // l_2 norm
 
 
 
-// Auxilliary classes to facillitiate faster reduction mod Phi_m(X)
-// when the input has degree less than m
-
-
-
+//! Auxilliary classes to facillitiate faster reduction mod Phi_m(X)
+//! when the input has degree less than m
 class zz_pXModulus1 {
 public:
    long m;
@@ -677,8 +676,7 @@ public:
 
 void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff);
 
-// placeholder for ZZ_pX's ...no optimizations
-
+//! placeholder for pXModulus ...no optimizations
 class ZZ_pXModulus1 : public ZZ_pXModulus {
 public:
    ZZ_pXModulus1(long _m, const ZZ_pX& _f) : ZZ_pXModulus(_f) { }
