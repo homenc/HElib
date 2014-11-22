@@ -6,7 +6,9 @@ Currently available is an implementation of the
 [Brakerski-Gentry-Vaikuntanathan] [1] (BGV) scheme, along with many
 optimizations to make homomorphic evaluation runs faster, focusing mostly on
 effective use of the [Smart-Vercauteren] [2] ciphertext packing techniques and
-the [Gentry-Halevi-Smart] [3] optimizations.
+the [Gentry-Halevi-Smart] [3] optimizations. See [this report] [7] for a
+description of a few of the algorithms using in this library. Starting
+December 2014, the library also includes [bootstrapping] [8].
 
 At its present state, this library is mostly meant for researchers working on
 HE and its uses. Also currently it is fairly low-level, and is best thought of
@@ -25,3 +27,5 @@ General Public License] [5] (GPL).
   [4]: http://www.shoup.net/ntl/             "NTL"
   [5]: http://www.gnu.org/licenses/gpl.html  "GPL"
   [6]: http://en.wikipedia.org/wiki/Homomorphic_encryption "Homomorphic encryption"
+  [7]: http://eprint.iacr.org/2014/106       "algorithms"
+  [8]: http://eprint.iacr.org/2014/873       "bootstrapping"
