@@ -14,6 +14,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 #include <cassert>
+#include <memory>
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
 
@@ -32,7 +33,7 @@ private:
   vector< vector< RX > > data;
 
 public:
-  ~RandomMatrix() { cout << "destructor: random matrix\n"; }
+  ~RandomMatrix() { /*cout << "destructor: random matrix\n";*/ }
 
   RandomMatrix(const EncryptedArray& _ea) : ea(_ea) { 
     long n = ea.size();
@@ -85,93 +86,6 @@ buildRandomMatrix(const EncryptedArray& ea)
   }
 }
 
-static void matrixOfPoly(mat_GF2& m, const GF2X& a, const GF2X& f)
-{
-  long d = deg(f);
-  m.SetDims(d, d);
-  GF2X b = a;
-
-  for (long i = 0; i < d; i++) {
-    VectorCopy(m[i], b, d);
-    MulByXMod(b, b, f);
-  }
-}
-
-static void matrixOfPoly(mat_zz_p& m, const zz_pX& a, const zz_pX& f)
-{
-  long d = deg(f);
-  m.SetDims(d, d);
-  zz_pX b = a;
-
-  for (long i = 0; i < d; i++) {
-    VectorCopy(m[i], b, d);
-    MulByXMod(b, b, f);
-  }
-}
-
-template<class type> 
-class PolyBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-
-  vector< vector< mat_R > > data;
-
-public:
-
-  PolyBlockMatrix(const PlaintextMatrixBaseInterface& MM) : ea(MM.getEA()) { 
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
-
-    const PlaintextMatrixInterface<type>& M =
-      dynamic_cast< const PlaintextMatrixInterface<type>& >(MM);
-
-    long n = ea.size();
-    const RX& G = ea.getDerived(type()).getG();
-
-    data.resize(n);
-    for (long i = 0; i < n; i++) {
-      data[i].resize(n);
-      for (long j = 0; j < n; j++) {
-        RX tmp;
-        if (M.get(tmp, i, j)) clear(tmp);
-        matrixOfPoly(data[i][j], tmp, G);
-      }
-    }
-  }
-
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
-  virtual bool get(mat_R& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    out = data[i][j];
-    return false;
-  }
-};
-
-
-PlaintextBlockMatrixBaseInterface *
-buildPolyBlockMatrix(const PlaintextMatrixBaseInterface& M)
-{
-  switch (M.getEA().getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new PolyBlockMatrix<PA_GF2>(M);
-    }
-
-    case PA_zz_p_tag: {
-      return new PolyBlockMatrix<PA_zz_p>(M);
-    }
-
-    default: return 0;
-  }
-}
-
-
-
 template<class type> 
 class RandomBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
 public:
@@ -183,7 +97,7 @@ private:
   vector< vector< mat_R > > data;
 
 public:
-
+  ~RandomBlockMatrix() { /*cout << "destructor: random block matrix\n";*/ }
   RandomBlockMatrix(const EncryptedArray& _ea) : ea(_ea) { 
     long n = ea.size();
     long d = ea.getDegree();
@@ -287,7 +201,7 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
   // Test a "normal" matrix over the extension field
   {
     // choose a random plaintext square matrix
-    PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
+    std::unique_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
 
     // choose a random plaintext vector
     PlaintextArray v(ea);
@@ -340,7 +254,8 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
   // Test a "block matrix" over the base field
   {
     // choose a random plaintext square matrix
-    PlaintextBlockMatrixBaseInterface *ptr = buildRandomBlockMatrix(ea);
+    std::unique_ptr<PlaintextBlockMatrixBaseInterface>
+      ptr(buildRandomBlockMatrix(ea));
 
     // choose a random plaintext vector
     PlaintextArray v(ea);
@@ -447,7 +362,10 @@ int main(int argc, char *argv[])
 
 }
 
-#if 0 // unused code
+/********************************************************************/
+/************               UNUSED CODE                   ***********/
+/********************************************************************/
+#if 0
 template<class type> 
 class RunningSumMatrix : public  PlaintextMatrixInterface<type> {
 public:
@@ -457,7 +375,7 @@ private:
   const EncryptedArray& ea;
 
 public:
-  ~RunningSumMatrix() { cout << "destructor: running sum matrix\n"; }
+  ~RunningSumMatrix() { /* cout << "destructor: running sum matrix\n";*/ }
 
   RunningSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
 
@@ -536,4 +454,88 @@ buildTotalSumMatrix(const EncryptedArray& ea)
   }
 }
 
+template<class type> 
+class PolyBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+  vector< vector< mat_R > > data;
+
+public:
+
+  PolyBlockMatrix(const PlaintextMatrixBaseInterface& MM) : ea(MM.getEA()) { 
+    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+
+    const PlaintextMatrixInterface<type>& M =
+      dynamic_cast< const PlaintextMatrixInterface<type>& >(MM);
+
+    long n = ea.size();
+    const RX& G = ea.getDerived(type()).getG();
+
+    data.resize(n);
+    for (long i = 0; i < n; i++) {
+      data[i].resize(n);
+      for (long j = 0; j < n; j++) {
+        RX tmp;
+        if (M.get(tmp, i, j)) clear(tmp);
+        matrixOfPoly(data[i][j], tmp, G);
+      }
+    }
+  }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual bool get(mat_R& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    out = data[i][j];
+    return false;
+  }
+};
+
+
+PlaintextBlockMatrixBaseInterface *
+buildPolyBlockMatrix(const PlaintextMatrixBaseInterface& M)
+{
+  switch (M.getEA().getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new PolyBlockMatrix<PA_GF2>(M);
+    }
+
+    case PA_zz_p_tag: {
+      return new PolyBlockMatrix<PA_zz_p>(M);
+    }
+
+    default: return 0;
+  }
+}
+
+static void matrixOfPoly(mat_GF2& m, const GF2X& a, const GF2X& f)
+{
+  long d = deg(f);
+  m.SetDims(d, d);
+  GF2X b = a;
+
+  for (long i = 0; i < d; i++) {
+    VectorCopy(m[i], b, d);
+    MulByXMod(b, b, f);
+  }
+}
+
+static void matrixOfPoly(mat_zz_p& m, const zz_pX& a, const zz_pX& f)
+{
+  long d = deg(f);
+  m.SetDims(d, d);
+  zz_pX b = a;
+
+  for (long i = 0; i < d; i++) {
+    VectorCopy(m[i], b, d);
+    MulByXMod(b, b, f);
+  }
+}
 #endif
