@@ -1384,9 +1384,10 @@ public:
 // so they are just declared as separate functions.
 
 //! @brief A ctxt that encrypts \f$(x_1, ..., x_n)\f$ is replaced by an
-//! encryption of \f$(y_1, ..., y_n)\$, where \f$y_i = sum_{j\le i} x_j.\f$
-// The implementation uses O(log n) shift operations.
+//! encryption of \f$(y_1, ..., y_n)\f$, where \f$y_i = sum_{j\le i} x_j\f$.
 void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
+// The implementation uses O(log n) shift operations.
+
 
 //! @brief A ctxt that encrypts \f$(x_1, ..., x_n)\f$ is replaced by an
 //! encryption of \f$(y, ..., y)\$, where \f$y = sum_{j=1}^n x_j.\f$
