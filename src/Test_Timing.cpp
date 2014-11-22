@@ -15,6 +15,7 @@
  */
 #include <cassert>
 #include <cstdio>
+#include <memory>
 #include <NTL/ZZ.h>
 NTL_CLIENT
 
@@ -365,15 +366,16 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
 		 Ctxt& ret, const vector<Ctxt>& c, GeneratorTrees& trees,
 		 long nTests, HighLvlTimingData& td)
 {
-  PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
   Ctxt tmp = c[0];
   tmp.modDownToLevel(td.lvl);
   cerr << "." << std::flush;
+  {
+  std::unique_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
   FHE_NTIMER_START(MatMul);
   ea.mat_mul(tmp, *ptr);      // multiply the ciphertext vector
   FHE_NTIMER_STOP(MatMul);
+  } // free the pointer
   ret = tmp;
-  delete ptr;
 
   for (long i=0; i<nTests; i++) {
     cerr << "." << std::flush;
