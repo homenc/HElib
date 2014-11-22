@@ -9,7 +9,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
              long L, const Vec<long>& mvec, 
              const Vec<long>& gens, const Vec<long>& ords )
 {
-  cerr << "*** TestIt: "
+  cout << "*** TestIt: "
        << "  p=" << p
        << ", r=" << r
        << ", c=" << c
@@ -31,35 +31,32 @@ void  TestIt(long p, long r, long c, long _k, long w,
   long m = computeProd(mvec);
   assert(GCD(p, m) == 1);
 
+  // build a context with these generators and orders
   vector<long> gens1, ords1;
   convert(gens1, gens);
   convert(ords1, ords);
-
-
   FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
-  context.zMStar.printout();
-  cerr << endl;
+
+  context.zMStar.printout(); // print structure of Zm* /(p) to cout
+  cout << endl;
 
   long d = context.zMStar.getOrdP();
   long phim = context.zMStar.getPhiM();
   long nslots = phim/d;
 
-
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(w); // A Hamming-weight-w secret key
 
-  cerr << "generating key-switching matrices... ";
+  cout << "generating key-switching matrices... ";
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cerr << "done\n";
-
+  cout << "done\n";
 
   // GG defines the plaintext space Z_p[X]/GG(X)
   ZZX GG;
   GG = context.alMod.getFactorsOverZZ()[0];
-
   EncryptedArray ea(context, GG);
 
   zz_p::init(context.alMod.getPPowR());
@@ -81,7 +78,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   // Sanity check: convert back and compare
   zz_pX F2;
   pConv.powerfulToPoly(F2, cube);
-  if (F != F2) cerr << " @@@ conversion error ):\n";
+  if (F != F2) cout << " @@@ conversion error ):\n";
 
   // pack the coefficients from cube in the plaintext slots: the j'th
   // slot contains the polynomial pj(X) = \sum_{t=0}^{d-1} cube[jd+t] X^t
@@ -98,7 +95,6 @@ void  TestIt(long p, long r, long c, long _k, long w,
   ea.encrypt(ctxt, publicKey, pa1);
 
   resetAllTimers();
-
   FHE_NTIMER_START(ALL);
 
   // Compute homomorphically the transformation that takes the
@@ -110,7 +106,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   cout << "build EvalMap\n";
   EvalMap map(ea, mvec, false); // compute the transformation to apply
   cout << "apply EvalMap\n";
-  map.apply(ctxt);                     // apply the transformation to ctxt
+  map.apply(ctxt);              // apply the transformation to ctxt
   CheckCtxt(ctxt, "EvalMap");
   cout << "check results\n";
 
@@ -122,10 +118,6 @@ void  TestIt(long p, long r, long c, long _k, long w,
     cout << "EvalMap: GOOD\n";
   else
     cout << "EvalMap: BAD\n";
-
-#if 1
-  // This test no longer works, because the inverse map 
-  // now applies the normal basis transformation
 
   publicKey.Encrypt(ctxt, FF1);
   CheckCtxt(ctxt, "init");
@@ -148,16 +140,29 @@ void  TestIt(long p, long r, long c, long _k, long w,
     cout << "EvalMap: GOOD\n";
   else
     cout << "EvalMap: BAD\n";
-#endif
-
   FHE_NTIMER_STOP(ALL);
 
-  cerr << "\n*********\n";
+  cout << "\n*********\n";
   printAllTimers();
-  cerr << endl;
+  cout << endl;
 }
 
 
+/* Usage: Test_EvalMap_x.exe [ name=value ]...
+ *  p       plaintext base  [ default=2 ]
+ *  r       lifting  [ default=1 ]
+ *  c       number of columns in the key-switching matrices  [ default=2 ]
+ *  k       security parameter  [ default=80 ]
+ *  L       # of levels in the modulus chain  [ default=6 ]
+ *  s       minimum number of slots  [ default=0 ]
+ *  seed    PRG seed  [ default=0 ]
+ *  mvec    use specified factorization of m
+ *             e.g., mvec='[5 3 187]'
+ *  gens    use specified vector of generators
+ *             e.g., gens='[562 1871 751]'
+ *  ords    use specified vector of orders
+ *             e.g., ords='[4 2 -4]', negative means 'bad'
+ */
 int main(int argc, char *argv[])
 {
   ArgMapping amap;
@@ -183,16 +188,17 @@ int main(int argc, char *argv[])
   long seed=0;
   amap.arg("seed", seed, "PRG seed");
 
+  Vec<long> mvec;
+  amap.arg("mvec", mvec, "use specified factorization of m", NULL);
+  amap.note("e.g., mvec='[5 3 187]'");
+
   Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", NULL);
-  amap.note("e.g., 'gens=[17 63 42]'");
+  amap.note("e.g., gens='[562 1871 751]'");
 
   Vec<long> ords;
   amap.arg("ords", ords, "use specified vector of orders", NULL);
-  amap.note("e.g., 'ords=[100 20 -4]', negative means 'bad'");
-
-  Vec<long> mvec;
-  amap.arg("mvec", mvec, "use specified factorization of m", NULL);
+  amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
   amap.parse(argc, argv);
 

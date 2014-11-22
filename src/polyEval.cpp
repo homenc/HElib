@@ -13,11 +13,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/**
- * @file polyEval.cpp
- * @brief Homomorphic Polynomial Evaluation
- */
-
 #include "polyEval.h"
 
 // Returns the e'th power of X, computing it as needed
@@ -311,10 +306,10 @@ public:
     //    cerr << " initial power="<<v[0]<<", initial depth="<<dpth[0];
   }
 
-  //! @brief Returns the e'th power, computing it as needed
+  // Returns the e'th power, computing it as needed
   long getPower(long e); // must use e >= 1, else throws an exception
 
-  //! dp.at(i) and dp[i] both return the i+1st power
+  // dp.at(i) and dp[i] both return the i+1st power
   long at(long i) { return getPower(i+1); }
   long operator[](long i) { return getPower(i+1); }
 

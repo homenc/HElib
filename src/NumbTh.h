@@ -653,8 +653,9 @@ xdouble coeffsL2Norm(const ZZX& f); // l_2 norm
 
 
 
-//! Auxilliary classes to facillitiate faster reduction mod Phi_m(X)
-//! when the input has degree less than m
+//! @class zz_pXModulus1
+//! @brief Auxiliary classes to facillitiate faster reduction mod Phi_m(X)
+//!        when the input has degree less than m
 class zz_pXModulus1 {
 public:
    long m;

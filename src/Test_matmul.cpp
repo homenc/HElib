@@ -22,95 +22,6 @@ NTL_CLIENT
 #include "EncryptedArray.h"
 
 template<class type> 
-class RunningSumMatrix : public  PlaintextMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-
-public:
-  ~RunningSumMatrix() { cerr << "destructor: running sum matrix\n"; }
-
-  RunningSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
-
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
-  virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    if (j >= i)
-      out = 1;
-    else
-      out = 0;
-    return false;
-  }
-};
-
-
-PlaintextMatrixBaseInterface *
-buildRunningSumMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new RunningSumMatrix<PA_GF2>(ea);
-    }
-
-    case PA_zz_p_tag: {
-      return new RunningSumMatrix<PA_zz_p>(ea);
-    }
-
-    default: return 0;
-  }
-}
-
-
-template<class type> 
-class TotalSumMatrix : public  PlaintextMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-
-public:
-  ~TotalSumMatrix() { cerr << "destructor: total sum matrix\n"; }
-
-  TotalSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
-
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
-  virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    out = 1;
-    return false;
-  }
-};
-
-
-PlaintextMatrixBaseInterface *
-buildTotalSumMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new TotalSumMatrix<PA_GF2>(ea);
-    }
-
-    case PA_zz_p_tag: {
-      return new TotalSumMatrix<PA_zz_p>(ea);
-    }
-
-    default: return 0;
-  }
-}
-
-
-template<class type> 
 class RandomMatrix : public  PlaintextMatrixInterface<type> {
 public:
   PA_INJECT(type) 
@@ -121,7 +32,7 @@ private:
   vector< vector< RX > > data;
 
 public:
-  ~RandomMatrix() { cerr << "destructor: random matrix\n"; }
+  ~RandomMatrix() { cout << "destructor: random matrix\n"; }
 
   RandomMatrix(const EncryptedArray& _ea) : ea(_ea) { 
     long n = ea.size();
@@ -157,7 +68,6 @@ public:
     return false;
   }
 };
-
 
 PlaintextMatrixBaseInterface *
 buildRandomMatrix(const EncryptedArray& ea)
@@ -330,11 +240,10 @@ buildRandomBlockMatrix(const EncryptedArray& ea)
   }
 }
 
-void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
+void  TestIt(long p, long r, long d, long c, long k, long w, 
                long L, long m)
 {
-  cerr << "*** TestIt: R=" << R 
-       << ", p=" << p
+  cout << "*** TestIt: p=" << p
        << ", r=" << r
        << ", d=" << d
        << ", c=" << c
@@ -348,7 +257,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   buildModChain(context, L, c);
 
   context.zMStar.printout();
-  cerr << endl;
+  cout << endl;
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
@@ -362,19 +271,20 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   else
     G = makeIrredPoly(p, d); 
 
-  cerr << "G = " << G << "\n";
-  cerr << "generating key-switching matrices... ";
+  cout << "G = " << G << "\n";
+  cout << "generating key-switching matrices... ";
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cerr << "done\n";
+  cout << "done\n";
 
   printAllTimers();
   resetAllTimers();
 
-  cerr << "computing masks and tables for rotation...";
+  cout << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
-  cerr << "done\n";
+  cout << "done\n";
 
+  // Test a "normal" matrix over the extension field
   {
     // choose a random plaintext square matrix
     PlaintextMatrixBaseInterface *ptr = buildRandomMatrix(ea);
@@ -388,7 +298,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
-    cerr << " Multiplying with PlaintextMatrixBaseInterface... " << std::flush;
+    cout << " Multiplying with PlaintextMatrixBaseInterface... " << std::flush;
     v.mat_mul(*ptr);         // multiply the plaintext vector
     ea.mat_mul(ctxt2, *ptr);  // multiply the ciphertext vector
 
@@ -400,29 +310,34 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     else
       cout << "Grrr@*\n";
 
-    {CachedPtxtMatrix zzxMat;
-    ea.compMat(zzxMat, *ptr);
-    ctxt2 = ctxt;
-    cerr << " Multiplying with CachedPtxtMatrix... " << std::flush;
-    mat_mul(ctxt2, zzxMat, ea);
-    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-    if (v.equals(v1))        // check that we've got the right answer
-      cout << "Nice!!\n" << std::flush;
-    else
-      cout << "Grrr@*\n" << std::flush;}
-
-    {CachedDCRTPtxtMatrix dcrtMat;
-    ea.compMat(dcrtMat, *ptr);
-    ctxt2 = ctxt;
-    cerr << " Multiplying with CachedDCRTPtxtMatrix... " << std::flush;
-    mat_mul(ctxt2, dcrtMat, ea);
-    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-    if (v.equals(v1))        // check that we've got the right answer
-      cout << "Nice!!\n\n";
-    else
-      cout << "Grrr@*\n\n";}
+    // Test cached verions of the mult-by-matrix operation
+    {
+      CachedPtxtMatrix zzxMat;
+      ea.compMat(zzxMat, *ptr);
+      ctxt2 = ctxt;
+      cout << " Multiplying with CachedPtxtMatrix... " << std::flush;
+      mat_mul(ctxt2, zzxMat, ea);
+      ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+      if (v.equals(v1))        // check that we've got the right answer
+	cout << "Nice!!\n" << std::flush;
+      else
+	cout << "Grrr@*\n" << std::flush;
+    }
+    {
+      CachedDCRTPtxtMatrix dcrtMat;
+      ea.compMat(dcrtMat, *ptr);
+      ctxt2 = ctxt;
+      cout << " Multiplying with CachedDCRTPtxtMatrix... " << std::flush;
+      mat_mul(ctxt2, dcrtMat, ea);
+      ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+      if (v.equals(v1))        // check that we've got the right answer
+	cout << "Nice!!\n\n";
+      else
+	cout << "Grrr@*\n\n";
+    }
   }
 
+  // Test a "block matrix" over the base field
   {
     // choose a random plaintext square matrix
     PlaintextBlockMatrixBaseInterface *ptr = buildRandomBlockMatrix(ea);
@@ -437,7 +352,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     Ctxt ctxt2 = ctxt;
 
     v.mat_mul(*ptr);         // multiply the plaintext vector
-    cerr << " Multiplying with PlaintextBlockMatrixBaseInterface... " 
+    cout << " Multiplying with PlaintextBlockMatrixBaseInterface... " 
 	 << std::flush;
     ea.mat_mul(ctxt2, *ptr);  // multiply the ciphertext vector
 
@@ -449,48 +364,49 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     else
       cout << "Grrr...\n";
 
-    {CachedPtxtBlockMatrix zzxMat;
-    ea.compMat(zzxMat, *ptr);
-    ctxt2 = ctxt;
-    cerr << " Multiplying with CachedPtxtBlockMatrix... " << std::flush;
-    mat_mul(ctxt2, zzxMat, ea);
-    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-    if (v.equals(v1))        // check that we've got the right answer
-      cout << "Nice!!\n" << std::flush;
-    else
-      cout << "Grrr@*\n" << std::flush;}
-
-    {CachedDCRTPtxtBlockMatrix dcrtMat;
-    ea.compMat(dcrtMat, *ptr);
-    ctxt2 = ctxt;
-    cerr << " Multiplying with CachedDCRTPtxtBlockMatrix... " << std::flush;
-    mat_mul(ctxt2, dcrtMat, ea);
-    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-    if (v.equals(v1))        // check that we've got the right answer
-      cout << "Nice!!\n\n";
-    else
-      cout << "Grrr@*\n\n";}
+    // Test cached verion sof the mult-by-block-matrix operation
+    {
+      CachedPtxtBlockMatrix zzxMat;
+      ea.compMat(zzxMat, *ptr);
+      ctxt2 = ctxt;
+      cout << " Multiplying with CachedPtxtBlockMatrix... " << std::flush;
+      mat_mul(ctxt2, zzxMat, ea);
+      ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+      if (v.equals(v1))        // check that we've got the right answer
+	cout << "Nice!!\n" << std::flush;
+      else
+	cout << "Grrr@*\n" << std::flush;
+    }
+    {
+      CachedDCRTPtxtBlockMatrix dcrtMat;
+      ea.compMat(dcrtMat, *ptr);
+      ctxt2 = ctxt;
+      cout << " Multiplying with CachedDCRTPtxtBlockMatrix... " << std::flush;
+      mat_mul(ctxt2, dcrtMat, ea);
+      ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+      if (v.equals(v1))        // check that we've got the right answer
+	cout << "Nice!!\n";
+      else
+	cout << "Grrr@*\n";
+    }
   }
 }
 
 
-
-
 void usage(char *prog) 
 {
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'R=1 p=2 k=80'\n\n";
-  cerr << "  R is the number of rounds\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  r is the lifting [default=1]" << endl;
-  cerr << "  d is the degree of the field extension [default==1]\n";
-  cerr << "    (d == 0 => factors[0] defined the extension)\n";
-  cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
-  cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  L is the # of primes in the modulus chai [default=4*R]\n";
-  cerr << "  s is the minimum number of slots [default=4]\n";
-  cerr << "  m defined the cyclotomic polynomial Phi_m(X)\n";
+  cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
+  cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cout << "  e.g, 'p=2 k=80'\n\n";
+  cout << "  p is the plaintext base [default=2]" << endl;
+  cout << "  r is the lifting [default=1]" << endl;
+  cout << "  d is the degree of the field extension [default==1]\n";
+  cout << "    (d == 0 => factors[0] defined the extension)\n";
+  cout << "  c is number of columns in the key-switching matrices [default=2]\n";
+  cout << "  k is the security parameter [default=80]\n";
+  cout << "  L is the # of primes in the modulus chai [default=4*R]\n";
+  cout << "  s is the minimum number of slots [default=4]\n";
+  cout << "  m defined the cyclotomic polynomial Phi_m(X)\n";
   exit(0);
 }
 
@@ -498,45 +414,126 @@ void usage(char *prog)
 int main(int argc, char *argv[]) 
 {
   argmap_t argmap;
-  argmap["R"] = "1";
   argmap["p"] = "2";
   argmap["r"] = "1";
   argmap["d"] = "1";
   argmap["c"] = "2";
   argmap["k"] = "80";
-  argmap["L"] = "0";
+  argmap["L"] = "3";
   argmap["s"] = "0";
   argmap["m"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
-  long R = atoi(argmap["R"]);
   long p = atoi(argmap["p"]);
   long r = atoi(argmap["r"]);
   long d = atoi(argmap["d"]);
   long c = atoi(argmap["c"]);
   long k = atoi(argmap["k"]);
-  //  long z = atoi(argmap["z"]);
   long L = atoi(argmap["L"]);
-  if (L==0) { // determine L based on R,r
-    if (r==1) L = 2*R+2;
-    else      L = 4*R;
-  }
   long s = atoi(argmap["s"]);
   long chosen_m = atoi(argmap["m"]);
 
   long w = 64; // Hamming weight of secret key
-  //  long L = z*R; // number of levels
-
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
   //  setTimersOn();
-  TestIt(R, p, r, d, c, k, w, L, m);
-
-  cerr << endl;
+  setTimersOn();
+  TestIt(p, r, d, c, k, w, L, m);
+  cout << endl;
   printAllTimers();
-  cerr << endl;
+  cout << endl;
 
 }
 
+#if 0 // unused code
+template<class type> 
+class RunningSumMatrix : public  PlaintextMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+public:
+  ~RunningSumMatrix() { cout << "destructor: running sum matrix\n"; }
+
+  RunningSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual bool get(RX& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    if (j >= i)
+      out = 1;
+    else
+      out = 0;
+    return false;
+  }
+};
+
+
+PlaintextMatrixBaseInterface *
+buildRunningSumMatrix(const EncryptedArray& ea)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new RunningSumMatrix<PA_GF2>(ea);
+    }
+
+    case PA_zz_p_tag: {
+      return new RunningSumMatrix<PA_zz_p>(ea);
+    }
+
+    default: return 0;
+  }
+}
+
+
+template<class type> 
+class TotalSumMatrix : public  PlaintextMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+public:
+  ~TotalSumMatrix() { cout << "destructor: total sum matrix\n"; }
+
+  TotalSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual bool get(RX& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    out = 1;
+    return false;
+  }
+};
+
+
+PlaintextMatrixBaseInterface *
+buildTotalSumMatrix(const EncryptedArray& ea)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new TotalSumMatrix<PA_GF2>(ea);
+    }
+
+    case PA_zz_p_tag: {
+      return new TotalSumMatrix<PA_zz_p>(ea);
+    }
+
+    default: return 0;
+  }
+}
+
+#endif

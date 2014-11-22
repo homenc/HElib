@@ -267,11 +267,11 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
  *   repeat  number of times to repeat the test  [ default=1 ]
  *   m       use specified value as modulus
  *   mvec    use product of the integers as  modulus
- *              e.g., 'mvec=[5 3 187]' (this overwrite the m argument)
+ *              e.g., mvec='[5 3 187]' (this overwrite the m argument)
  *   gens    use specified vector of generators
- *              e.g., 'gens=[562 1871 751]'
+ *              e.g., gens='[562 1871 751]'
  *   ords    use specified vector of orders
- *              e.g., 'ords=[4 2 -4]', negative means 'bad'
+ *              e.g., ords='[4 2 -4]', negative means 'bad'
  */
 int main(int argc, char **argv) 
 {
@@ -314,15 +314,15 @@ int main(int argc, char **argv)
 
   Vec<long> mvec;
   amap.arg("mvec", mvec, "use product of the integers as  modulus", NULL);
-  amap.note("e.g., 'mvec=[5 3 187]' (this overwrite the m argument)");
+  amap.note("e.g., mvec='[5 3 187]' (this overwrite the m argument)");
 
   Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", NULL);
-  amap.note("e.g., 'gens=[562 1871 751]'");
+  amap.note("e.g., gens='[562 1871 751]'");
 
   Vec<long> ords;
   amap.arg("ords", ords, "use specified vector of orders", NULL);
-  amap.note("e.g., 'ords=[4 2 -4]', negative means 'bad'");
+  amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
   amap.parse(argc, argv);
   
