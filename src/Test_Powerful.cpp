@@ -58,6 +58,7 @@ void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
 
 void usage(char *prog) 
 {
+  cerr << "Test utilities for conversion between representations of polynomials\n";
   cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
   cerr << "  e.g, 'm1=3 m2=5 m3=7 p=2 r=1'\n\n";

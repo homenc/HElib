@@ -73,13 +73,60 @@ On the command line in the HElib src directory:
 
 If you want to build your own program based on HElib, the easiest way
 to do it is to write the program in a file called myprog.cpp and then
-run<
+run
 @code
    make myprog_x
 @endcode
 which will compile `myprog.cpp` and link in `fhe.a` and all required
 support libraries, and create the executable `myprog_x`.
-Take a look at `Test_General.cpp` for an example program using HElib.
+
+\subsection testProgs Test Programs
+
+Take a look at the programs `Test_*.cpp` for examples of using HElib.
+Those include:
+
+  - \ref `Test_General.cpp`.
+    A general test program that uses a mix of operations over four
+    ciphertexts.
+
+  - `Test_Timing.cpp`.
+    A program that tests the timing of various operations, outputs the
+    results in a comma-separate-value (csv) format.
+
+  - `Test_IO.cpp`.
+    Testing the I/O of the important classes of the library (context,
+    keys, ciphertexts).
+
+  - `Test_LinPoly.cpp`.
+    Testing the "linearized polynomials" functionality for computing intra-slot
+    linear functions (over the base field/ring). See algorithmic description in Section 2.8 of the <a href="http://eprint.iacr.org/2014/873">bootstrapping report</a>.
+
+  - `Test_matmul.cpp`.
+    Testing the functionality of multiplying an encrypted vector by a plaintext matrix, either over the extension- or the base-field/ring.
+
+  - `Test_Replicate.cpp`.
+    Testing the functionality of replicating one slot from a vector across the whole vector. (This can be done via the generic matrix-multiply routines, but HElib includes more efficient direct routines for this.)
+
+  - `Test_PolyEval.cpp`.
+    Testing the functionality of evaluating a plaintext polynomial at an encrypted point.
+
+  - `Test_Permutations.cpp`.
+    Testing the functionality of applying an arbitrary plaintext permutation to an encrypted vector.
+
+  - `Test_extractDigits.cpp`.
+    For a plaintext space modulo a prime-power \f$p^e\f$, testing the functionality of extracting the base-\f$p\f$ representation of an encrypted values. See algorithmic description in Section 5.3 of the <a href="http://eprint.iacr.org/2014/873">bootstrapping report</a>.
+
+  - `Test_EvalMap.cpp`.
+    Testing the linear transformations that are used for recryption/bootstrapping.
+
+  - `Test_bootstrapping.cpp`.
+    Testing the recryption procedure.
+
+For a list of command-line arguments that any of these programs accepts, run
+@code
+Test_XYZ --help
+@endcode
+
 
 \subsection remarks Some comments
 HElib uses some features of `C++11` (or the earlier `C++0X`). For gcc, depending on the version that you use, you may need to specify the flags ` '-std=c++11 -lstdc++' ` or ` '-std=c++0x'` to be able to compile.
@@ -121,7 +168,7 @@ There are currently four compilation flags that control some aspects of the libr
      less space but it means that they still need to be converted to
      DoubleCRT's with every recryption operation.</li>
 <li><tt>EVALMAP_CACHED=1</tt> caches these constants directly as DoubleCRT's,
-     this may take a significant amount of memeory.</li>
+     this may take a significant amount of memory.</li>
 </ul>
 </dd>
 

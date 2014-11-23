@@ -13,6 +13,9 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
+/* Test_Timing.cpp - A program that tests the timing of various operations, outputs the results in a comma-separate-value (csv) format.
+ */
 #include <cassert>
 #include <cstdio>
 #include <memory>
@@ -612,6 +615,7 @@ void printTimeData(TimingData& td)
 
 void usage(char *prog) 
 {
+  cerr << "A program that tests the timing of various operations,\n  outputs the results in a comma-separate-value (csv) format.\n"
   cerr << "Usage: "<<prog<<" [ optional parameters ]... 2> logfile > results-file\n";
   cerr << "results on stdout in comma-separated-value format, ";
   cerr << "progress printed on stderr\n";

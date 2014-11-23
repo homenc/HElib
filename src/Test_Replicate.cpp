@@ -13,6 +13,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
+/* Test_Replicate.cpp - Testing the functionality of replicating one
+ * slot from a vector acress the whole vector (or replicating each slot
+ * to a full cipehrtext)
+ */
+
 #include <cassert>
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT

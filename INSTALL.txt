@@ -60,7 +60,7 @@ run
 which will compile myprog.cpp and link in fhe.a and all required
 support libraries, and create the executable myprog_x.
 
-Take a look at Test_General.cpp for an example program using HElib.
+Take a look at the programs Test_*.cpp for examples of using HElib.
 
 Some comments:
 

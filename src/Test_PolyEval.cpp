@@ -14,8 +14,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 /**
- * @file Test_PolyEval.cpp
- * @brief Homomorphic Polynomial Evaluation
+ * Test_PolyEval.cpp - Homomorphic Polynomial Evaluation
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT

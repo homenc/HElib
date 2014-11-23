@@ -13,6 +13,9 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
+/* Test_General.cpp - A general test program that uses a mix of operations over four ciphertexts.
+ */
 #include <NTL/ZZ.h>
 #include "FHE.h"
 #include "timing.h"
@@ -254,7 +257,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 }
 
 
-/* Usage: Test_General_x [ name=value ]...
+/* A general test program that uses a mix of operations over four ciphertexts.
+ * Usage: Test_General_x [ name=value ]...
  *   R       number of rounds  [ default=1 ]
  *   p       plaintext base  [ default=2 ]
  *   r       lifting  [ default=1 ]

@@ -13,7 +13,9 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/* EncryptedArray.cpp - Data-movement operations on arrays of slots
+/* Test_extractDigits.cpp - extracting digits.
+ *   For a plaintext space modulo a prime-power $p^e$, extracting
+ *   the base-$p$ representation of an encrypted values.
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT

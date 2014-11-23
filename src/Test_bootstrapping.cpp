@@ -13,6 +13,9 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
+/* Test_bootstrapping.cpp - Testing the recryption procedure */
+
 #if defined(__unix__) || defined(__unix) || defined(unix)
 #include <sys/time.h>
 #include <sys/resource.h>

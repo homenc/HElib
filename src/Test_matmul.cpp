@@ -13,6 +13,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
+/* Test_matmul.cpp - Testing the functionality of multiplying an encrypted
+ * vector by a plaintext matrix, either over the extension- or the
+ * base-field/ring.
+ */
+
 #include <cassert>
 #include <memory>
 #include <NTL/lzz_pXFactoring.h>
@@ -325,7 +331,9 @@ void usage(char *prog)
   exit(0);
 }
 
-
+/* Testing the functionality of multiplying an encrypted vector by a plaintext
+ * matrix, either over the extension- or the base-field/ring.
+ */
 int main(int argc, char *argv[]) 
 {
   argmap_t argmap;

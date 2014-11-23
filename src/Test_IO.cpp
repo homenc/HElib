@@ -13,6 +13,10 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+
+/* Test_IO.cpp - Testing the I/O of the important classes of the library
+ * (context, keys, ciphertexts).
+ */
 #include <NTL/ZZX.h>
 #include "FHE.h"
 #include "timing.h"
@@ -32,18 +36,27 @@ static long ms[N_TESTS][4] = {
 
 void checkCiphertext(const Ctxt& ctxt, const ZZX& ptxt, const FHESecKey& sk);
 
+// Testing the I/O of the important classes of the library
+// (context, keys, ciphertexts).
 int main(int argc, char *argv[])
 {
-  long c = 1;
-  long w = 5;
-  long ptxtSpace=2;
+  ArgMapping amap;
+
+  long r=1;
+  long p=2;
+  long c = 2;
+  long w = 64;
+
+  amap.arg("p", p, "plaintext base");
+  amap.arg("r", r,  "lifting");
+  amap.arg("c", c, "number of columns in the key-switching matrices");
+  amap.parse(argc, argv);
 
   FHEcontext* contexts[N_TESTS];
   FHESecKey*  sKeys[N_TESTS];
   Ctxt*       ctxts[N_TESTS];
   EncryptedArray* eas[N_TESTS];
   vector<ZZX> ptxts[N_TESTS];
-
 
   // first loop: generate stuff and write it to cout
 
@@ -53,8 +66,8 @@ int main(int argc, char *argv[])
   for (long i=0; i<N_TESTS; i++) {
     long m = ms[i][1];
 
-    contexts[i] = new FHEcontext(m, /*p=*/2, /*r=*/1);
-    buildModChain(*contexts[i], 2, c);  // Set the modulus chain
+    contexts[i] = new FHEcontext(m, ptxtSpace, r);
+    buildModChain(*contexts[i], p, c);  // Set the modulus chain
 
     // Output the FHEcontext to file
     writeContextBase(keyFile, *contexts[i]);
@@ -221,6 +234,7 @@ int main(int argc, char *argv[])
 
     cerr << "test "<<i<<" okay\n\n";
   }}
+  unlink("iotest.txt"); // clean up before exiting
 }
 
 #if 0
