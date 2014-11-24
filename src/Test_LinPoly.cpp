@@ -13,83 +13,163 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include <cassert>
-#include <NTL/mat_lzz_pE.h>
+#include "FHE.h"
+#include "timing.h"
+#include "EncryptedArray.h"
 #include <NTL/lzz_pXFactoring.h>
-#include <NTL/ZZXFactoring.h>
-NTL_CLIENT
+#include <cassert>
+#include <cstdio>
 
-#include "NumbTh.h"
-
-void usage(char *prog)
+void  TestIt(long m, long p, long r, long d)
 {
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'p=5 r=1 m=101'\n\n";
-  cerr << "  p is the plaintext base [default=5]" << endl;
-  cerr << "  r is the lifting [default=1]" << endl;
-  cerr << "  m defines the cyclotomic polynomial Phi_m(X) [default=101]"<< endl;
-  exit(0);
+  cout << "\n\n******** TestIt: m=" << m 
+       << ", p=" << p
+       << ", r=" << r
+       << ", d=" << d
+       << endl;
+
+  FHEcontext context(m, p, r);
+  buildModChain(context, /*L=*/3, /*c=*/2);
+
+  // context.lazy = false;
+  if (context.lazy)
+    cout << "LAZY REDUCTIONS\n";
+  else
+    cout << "NON-LAZY REDUCTIONS\n";
+
+  context.zMStar.printout();
+  cout << endl;
+
+  cout << "generating keys and key-switching matrices... " << std::flush;
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(/*w=*/64);// A Hamming-weight-w secret key
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  addFrbMatrices(secretKey); // compute key-switching matrices that we need
+  cout << "done\n";
+
+  ZZX G;
+  if (d == 0) {
+    G = context.alMod.getFactorsOverZZ()[0];
+    d = deg(G);
+  }
+  else
+    G = makeIrredPoly(p, d);
+  cout << "G = " << G << "\n";
+  cout << "computing masks and tables for rotation... " << std::flush;
+  EncryptedArray ea(context, G);
+  cout << "done\n";
+
+  long nslots = ea.size();
+
+  PlaintextArray p0(ea);
+  PlaintextArray pp0(ea);
+
+  Ctxt c0(publicKey);
+
+  cout << "\nTest #1: pply the same linear transformation to all slots\n";
+  {
+  vector<ZZX> LM(d); // LM selects even coefficients
+  for (long j = 0; j < d; j++) 
+    if (j % 2 == 0) LM[j] = ZZX(j, 1);
+
+  // "building" the linearized-polynomial coefficients
+  vector<ZZX> C;
+  ea.buildLinPolyCoeffs(C, LM);
+
+  p0.random();  
+  ea.encrypt(c0, publicKey, p0);
+  applyLinPoly1(ea, c0, C);
+  ea.decrypt(c0, secretKey, pp0);
+
+  // FIXME: Put a code here to check the result
+  //  p0.print(cout); cout << "\n";
+  //  pp0.print(cout); cout << "\n";
+  }
+
+  cout << "\nTest #2: Apply different transformations to the different slots\n";
+  {
+  vector< vector<ZZX> > LM(nslots); 
+  // LM[i] rotates the coefficients in the i'th slot by (i % d)
+  for (long i = 0; i < nslots; i++) {
+    LM[i].resize(d);
+    for (long j = 0; j < d; j++)  {
+      long jj = (i+j) % d;
+      LM[i][j] = ZZX(jj, 1);
+    }
+  }
+
+  // "building" the linearized-polynomial coefficients
+  vector< vector<ZZX> > C(nslots);
+  for (long i = 0; i < nslots; i++)
+    ea.buildLinPolyCoeffs(C[i], LM[i]);
+
+  p0.random();
+  ea.encrypt(c0, publicKey, p0);
+  applyLinPolyMany(ea, c0, C); // apply the linearized polynomials
+  ea.decrypt(c0, secretKey, pp0);
+
+  // FIXME: Put a code here to check the result
+  }
+
+  cout << "\nTest #3: Testing low-level (cached) implementation\n";
+  {
+  vector< vector<ZZX> > LM(nslots); 
+  // LM[i] adds coefficients (i % d) and (i+1 % d) in the i'th slot
+  for (long i = 0; i < nslots; i++) {
+    LM[i].resize(d);
+    for (long j = 0; j < d; j++)  {
+      if ( j == (i % d) || j == ((i+1)%d) )
+	LM[i][j] = conv<ZZX>(1L);
+    }
+  }
+
+  // "building" the linearized-polynomial coefficients
+  vector< vector<ZZX> > C(nslots);
+  for (long i = 0; i < nslots; i++)
+    ea.buildLinPolyCoeffs(C[i], LM[i]);
+
+  // "encoding" the linearized-polynomial coefficients
+  vector<ZZX> encodedC(d);
+  for (long j = 0; j < d; j++) {
+    vector<ZZX> v(nslots);
+    for (long i = 0; i < nslots; i++) v[i] = LM[i][j];
+    ea.encode(encodedC[j], v);
+  }
+
+  p0.random();  
+  ea.encrypt(c0, publicKey, p0);
+  applyLinPolyLL(ea, c0, encodedC); // apply the linearized polynomials
+  ea.decrypt(c0, secretKey, pp0);
+
+  // FIXME: Put a code here to check the result
+  }
 }
 
-int main(int argc, char *argv[])
+
+int main(int argc, char *argv[]) 
 {
-   argmap_t argmap;
-   argmap["p"] = "5";
-   argmap["m"] = "101";
-   argmap["r"] = "1";
+  ArgMapping amap;
 
-   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
+  long m=91;
+  amap.arg("m", m, "use specified value as modulus");
 
-   long p = atoi(argmap["p"]);
-   long m = atoi(argmap["m"]);
-   long r = atoi(argmap["r"]);
+  long p=2;
+  amap.arg("p", p, "plaintext base");
 
-   cout << "p=" << p << ", m=" << m << ", r=" << r << "\n";
+  long r=1;
+  amap.arg("r", r,  "lifting");
 
-   ZZX phimx = Cyclotomic(m);
+  long d=1;
+  amap.arg("d", d, "degree of the field extension");
+  amap.note("d == 0 => factors[0] defines extension");
 
-   zz_p::init(p);
-   zz_pX phimx_modp = to_zz_pX(phimx);
+  amap.parse(argc, argv);
 
-   
-
-   vec_zz_pX factors = SFCanZass(phimx_modp);
-
-
-   vec_ZZX FFactors;
-   MultiLift(FFactors, factors, phimx, r);
-
-   zz_p::init(power_long(p, r));
-
-   vec_zz_pX Factors;
-   Factors.SetLength(FFactors.length());
-   for (long i = 0; i < Factors.length(); i++)
-      conv(Factors[i], FFactors[i]);
-
-   zz_pX G = Factors[0];
-   long d = deg(G);
-   cout << "d=" << d << "\n";
-
-   zz_pE::init(G);
-
-   // L selects the even coefficients
-   vec_zz_pE L;
-   L.SetLength(d);
-   for (long j = 0; j < d; j++) {
-      if (j % 2 == 0)
-         L[j] = to_zz_pE(zz_pX(j, 1));
-   }
-
-   vec_zz_pE C;
-   buildLinPolyCoeffs(C, L, p, r);
-
-   zz_pE alpha, beta;
-   random(alpha);
-
-   applyLinPoly(beta, C, alpha, p);
-
-   cout << alpha << "\n";
-   cout << beta << "\n";
+  long repeat = 2;
+  setTimersOn();
+  for (long repeat_cnt = 0; repeat_cnt < repeat; repeat_cnt++) {
+    TestIt(m, p, r, d);
+  }
 
 }
