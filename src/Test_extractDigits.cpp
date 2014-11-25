@@ -57,8 +57,8 @@ int main(int argc, char *argv[])
   if (p>2)  L *= 2;
   m = FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
 
-  FHEcontext context(m, p, r);
   cout << "m="<<m<<", p="<<p<<", r="<<r<<", L="<<L<<endl;
+  FHEcontext context(m, p, r);
   buildModChain(context, L, /*c=*/4);
 
   FHESecKey secretKey(context);
@@ -97,6 +97,9 @@ int main(int argc, char *argv[])
     // extract the next digit from the plaintext, compare to pDigits
     for (long j=0; j<(long)v.size(); j++) {
       long digit = tmp[j] % p;
+      if (digit > p/2) digit -= p;
+      else if (digit < -p/2) digit += p;
+
       // assert ((pDigits[j]-digit) % p == 0);
       if ((pDigits[j]-digit) % pp != 0) {
 	cerr << " error: v["<<j<<"]="<<v[j]

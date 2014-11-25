@@ -160,32 +160,26 @@ buildRandomBlockMatrix(const EncryptedArray& ea)
   }
 }
 
-void  TestIt(long p, long r, long d, long c, long k, long w, 
-               long L, long m)
+void  TestIt(long m, long p, long r, long d, long L)
 {
-  cout << "*** TestIt: p=" << p
+  cout << "*** TestIt: m=" << m
+       << ", p=" << p
        << ", r=" << r
        << ", d=" << d
-       << ", c=" << c
-       << ", k=" << k
-       << ", w=" << w
        << ", L=" << L
-       << ", m=" << m
        << endl;
 
   FHEcontext context(m, p, r);
-  buildModChain(context, L, c);
+  buildModChain(context, L, /*c=*/3);
 
   context.zMStar.printout();
   cout << endl;
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-
+  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
   ZZX G;
-
   if (d == 0)
     G = context.alMod.getFactorsOverZZ()[0];
   else
@@ -196,9 +190,6 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
   cout << "done\n";
-
-  printAllTimers();
-  resetAllTimers();
 
   cout << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
@@ -318,16 +309,13 @@ void usage(char *prog)
 {
   cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cout << "  e.g, 'p=2 k=80'\n\n";
+  cout << "  e.g, 'm=2047 p=2 L=4'\n\n";
+  cout << "  m defines the cyclotomic polynomial Phi_m(X)\n";
   cout << "  p is the plaintext base [default=2]" << endl;
   cout << "  r is the lifting [default=1]" << endl;
   cout << "  d is the degree of the field extension [default==1]\n";
   cout << "    (d == 0 => factors[0] defined the extension)\n";
-  cout << "  c is number of columns in the key-switching matrices [default=2]\n";
-  cout << "  k is the security parameter [default=80]\n";
-  cout << "  L is the # of primes in the modulus chai [default=4*R]\n";
-  cout << "  s is the minimum number of slots [default=4]\n";
-  cout << "  m defined the cyclotomic polynomial Phi_m(X)\n";
+  cout << "  L is the # of primes in the modulus chain [default=4]\n";
   exit(0);
 }
 
@@ -337,33 +325,24 @@ void usage(char *prog)
 int main(int argc, char *argv[]) 
 {
   argmap_t argmap;
+  argmap["m"] = "2047";
   argmap["p"] = "2";
   argmap["r"] = "1";
   argmap["d"] = "1";
-  argmap["c"] = "2";
-  argmap["k"] = "80";
-  argmap["L"] = "3";
-  argmap["s"] = "0";
-  argmap["m"] = "0";
+  argmap["L"] = "4";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
+  long m = atoi(argmap["m"]);
   long p = atoi(argmap["p"]);
   long r = atoi(argmap["r"]);
   long d = atoi(argmap["d"]);
-  long c = atoi(argmap["c"]);
-  long k = atoi(argmap["k"]);
   long L = atoi(argmap["L"]);
-  long s = atoi(argmap["s"]);
-  long chosen_m = atoi(argmap["m"]);
-
-  long w = 64; // Hamming weight of secret key
-  long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
   //  setTimersOn();
   setTimersOn();
-  TestIt(p, r, d, c, k, w, L, m);
+  TestIt(m, p, r, d, L);
   cout << endl;
   printAllTimers();
   cout << endl;

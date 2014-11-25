@@ -27,130 +27,108 @@ NTL_CLIENT
 #include "replicate.h"
 #include "timing.h"
 
-static bool decryptAndTest=true;
-
-// k=10 p=5 r=2 -- 3 dimensions: 12, 3, !2
-// p=11 -- 2 dimensions: 16, !4
-// Test_General_x p=23 s=100 z=20  ## a large, realistic example, 48 x 4
-// Test_General_x p=2 r=4 k=10 z=10 m=4369 ## 16 x !16
-// Test_General_x p=2 r=4 k=10 z=10 m=1247 ## 42
-// Test_General_x p=2 r=4 k=10 z=10 m=8191 ## 630
-// Test_General_x p=2 r=4 k=10 z=10 m=3133 ## 60 x !2
+static bool check_replicate(const Ctxt& c1, const Ctxt& c0, long i,
+			    const FHESecKey& sKey, const EncryptedArray& ea)
+{
+  PlaintextArray pa0(ea), pa1(ea);
+  ea.decrypt(c0, sKey, pa0);
+  ea.decrypt(c1, sKey, pa1);
+  pa0.replicate(i);
+  
+  return pa1.equals(pa0); // returns true if replication succeeded
+}
 
 
 class StopReplicate { };
 
+// A class that handles the replicated ciphertexts one at a time
 class ReplicateTester : public ReplicateHandler {
 public:
   const FHESecKey& sKey;
   const EncryptedArray& ea;
   const PlaintextArray& pa;
-  long M;
+  long B;
 
   double t_last, t_total;
   long pos;
+  bool error;
 
   ReplicateTester(const FHESecKey& _sKey, const EncryptedArray& _ea, 
-                  const PlaintextArray& _pa, long _M)
-  : sKey(_sKey), ea(_ea), pa(_pa), M(_M)
+                  const PlaintextArray& _pa, long _B)
+  : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
   {
     t_last = GetTime();
     t_total = 0.0;
     pos = 0;
+    error = false;
   }
 
+  // This method is called for every replicated ciphertext: in the i'th time
+  // that it is called, the cipehrtext will have in all the slots the content
+  // of the i'th input slot. In this test program we only decrypt and check
+  // the result, in a real program it will do something with the cipehrtext.
   virtual void handle(const Ctxt& ctxt) {
 
-    if (decryptAndTest) {
-      double t_new = GetTime();
-      double t_elapsed = t_new - t_last;
+    double t_new = GetTime();
+    double t_elapsed = t_new - t_last;
+    t_total += t_elapsed;
 
-      t_total += t_elapsed;
+    // Decrypt and check
+    PlaintextArray pa1 = pa;
+    pa1.replicate(pos);
+    PlaintextArray pa2(ea);
 
-      cerr << "*** " << pos << " t=" << t_elapsed 
-      	   << ", t_total=" << t_total 
-      	   << ", level=" << ctxt.findBaseLevel() 
-      	   << ", log(noise/modulus)~" << ctxt.log_of_ratio() 
-      	   << "\n";
-    
-      PlaintextArray pa1 = pa;
-      pa1.replicate(pos);
-      PlaintextArray pa2(ea);
+    ea.decrypt(ctxt, sKey, pa2);
+    if (!pa1.equals(pa2)) error = true; // record the error, if any
+    t_last = GetTime();
 
-      ea.decrypt(ctxt, sKey, pa2);
-      if (!pa1.equals(pa2)) {
-	cerr << "error:\n";
-	pa2.print(cerr); cerr << "\n";
-      }
-
-      t_last = GetTime();
-    }
     pos++;
-
-    if (M > 0 && pos >= M) throw StopReplicate();
+    if (B > 0 && pos >= B) throw StopReplicate();
   }
 };
 
 
 
-void  TestIt(long p, long r, long d, long c, long k, long w, 
-               long L, long m, long bnd, long M, long v)
+void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
 {
-  cerr << "*** TestIt: "
-       << "  p=" << p
+  cout << "*** TestIt: m=" << m
+       << ", p=" << p
        << ", r=" << r
        << ", d=" << d
-       << ", c=" << c
-       << ", k=" << k
-       << ", w=" << w
        << ", L=" << L
-       << ", m=" << m
        << ", bnd=" << bnd
-       << ", M=" << bnd
-       << ", v=" << v
-       << ", t=" << decryptAndTest
+       << ", B=" << B
        << endl;
 
+  setTimersOn();
   FHEcontext context(m, p, r);
-  buildModChain(context, L, c);
+  buildModChain(context, L, /*c=*/2);
 
   context.zMStar.printout();
-  cerr << endl;
+  cout << endl;
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-
+  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
   ZZX G;
-
   if (d == 0)
     G = context.alMod.getFactorsOverZZ()[0];
   else
     G = makeIrredPoly(p, d); 
 
-
-
-  cerr << "G = " << G << "\n";
-  cerr << "generating key-switching matrices... ";
+  cout << "G = " << G << "\n";
+  cout << "generating key-switching matrices... ";
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-  cerr << "done\n";
+  cout << "done\n";
 
-  printAllTimers();
-  resetAllTimers();
-
-  cerr << "computing masks and tables for rotation...";
+  cout << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
-  cerr << "done\n";
-
-
+  cout << "done\n";
 
   PlaintextArray xp0(ea), xp1(ea);
-
-
   xp0.random();
   xp1.random();
-
 
   Ctxt xc0(publicKey);
   ea.encrypt(xc0, publicKey, xp0);
@@ -158,22 +136,12 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
   ZZX poly_xp1;
   ea.encode(poly_xp1, xp1);
 
-#if 0
-  double t;
-  cerr << "multiplication test:\n";
-  t = GetTime();
-  for (long i = 0; i < ea.size(); i++) {
-    Ctxt xc2 = xc0;
-    xc2.multByConstant(poly_xp1);
-  }
-  t = GetTime()-t;
-  cerr << "time = " << t << "\n";
-#endif  
-
-  cerr << "** Testing replicate():\n";
+  cout << "** Testing replicate():\n";
+  bool error = false;
   Ctxt xc1 = xc0;
   CheckCtxt(xc1, "before replicate");
   replicate(ea, xc1, ea.size()/2);
+  if (!check_replicate(xc1, xc0, ea.size()/2, secretKey, ea)) error = true;
   CheckCtxt(xc1, "after replicate");
 
   // Get some timing results
@@ -181,87 +149,64 @@ void  TestIt(long p, long r, long d, long c, long k, long w,
     xc1 = xc0;
     FHE_NTIMER_START(replicate);
     replicate(ea, xc1, i);
+    if (!check_replicate(xc1, xc0, i, secretKey, ea)) error = true;
     FHE_NTIMER_STOP(replicate);
   }
+  cout << "  Replicate test " << (error? "failed :(\n" : "succeeded :)")
+       << endl<< endl;
+  printAllTimers();
 
-  cerr << "** Testing replicateAll():\n";
-  replicateVerboseFlag = v;
-  ReplicateHandler *handler = new ReplicateTester(secretKey, ea, xp0, M);
+  cout << "\n** Testing replicateAll()... " << std::flush;
+#ifdef DEBUG_PRINTOUT
+  replicateVerboseFlag = true;
+#else
+  replicateVerboseFlag = false;
+#endif
+
+  error = false;
+  ReplicateTester *handler = new ReplicateTester(secretKey, ea, xp0, B);
   try {
     FHE_NTIMER_START(replicateAll);
     replicateAll(ea, xc0, handler, bnd);
   }
   catch (StopReplicate) {
   }
-
+  cout << (handler->error? "failed :(\n" : "succeeded :)")
+       << ", total time=" << handler->t_total << " ("
+       << ((B>0)? B : ea.size())
+       << " vectors)\n";
   delete handler;
-
-}
-
-
-void usage(char *prog) 
-{
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  r is the lifting [default=1]" << endl;
-  cerr << "  d is the degree of the field extension [default==1]\n";
-  cerr << "    (d == 0 => factors[0] defined the extension)\n";
-  cerr << "  c is number of columns in the key-switching matrices [default=2]\n";
-  cerr << "  k is the security parameter [default=80]\n";
-  cerr << "  z is the # of primes [default=4]\n";
-  cerr << "  s is the minimum number of slots [default=4]\n";
-  cerr << "  m is a specific modulus\n";
-  cerr << "  bnd is a recursion bound for replication\n";
-  cerr << "  M is a bound for # of replications [default=0 => all]\n";
-  cerr << "  v for verbose [default=0]\n";
-  cerr << "  t for decrypt-and-compare [default=1], otherwise just timing\n";
-  exit(0);
 }
 
 
 int main(int argc, char *argv[]) 
 {
-  argmap_t argmap;
-  argmap["p"] = "2";
-  argmap["r"] = "1";
-  argmap["d"] = "1";
-  argmap["c"] = "2";
-  argmap["k"] = "80";
-  argmap["z"] = "4";
-  argmap["s"] = "0";
-  argmap["m"] = "0";
-  argmap["bnd"] = "64";
-  argmap["M"] = "0";
-  argmap["v"] = "0";
-  argmap["t"] = "1";
+  ArgMapping amap;
 
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
+  long m=2047;
+  amap.arg("m", m, "cyclotomic ring");
 
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long d = atoi(argmap["d"]);
-  long c = atoi(argmap["c"]);
-  long k = atoi(argmap["k"]);
-  long z = atoi(argmap["z"]);
-  long s = atoi(argmap["s"]);
-  long chosen_m = atoi(argmap["m"]);
-  long bnd = atoi(argmap["bnd"]);
-  long M = atoi(argmap["M"]);
-  long v = atoi(argmap["v"]);
+  long p=2;
+  amap.arg("p", p, "plaintext base");
 
-  long w = 64; // Hamming weight of secret key
-  long L = z; // number of levels
-  long m = FindM(k, L, c, p, d, s, chosen_m, true);
+  long r=1;
+  amap.arg("r", r,  "lifting");
 
-  decryptAndTest = atoi(argmap["t"]);
+  long d=1;
+  amap.arg("d", d, "degree of the field extension");
+  amap.note("d == 0 => factors[0] defines extension");
 
-  setTimersOn();
+  long L=3;
+  amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
 
-  TestIt(p, r, d, c, k, w, L, m, bnd, M, v);
+  long bnd = 64;
+  amap.arg("bnd", bnd, "recursion bound for replication");
 
-  cerr << endl;
-  printAllTimers();
-  cerr << endl;
+  long B = 0;
+  amap.arg("B", B, "bound for # of replications", "all");
 
+  amap.parse(argc, argv);
+
+  TestIt(m, p, r, d, L, bnd, B);
+  cout << endl;
 }
-

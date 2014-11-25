@@ -460,7 +460,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   resetAllTimers();
   long phim = phi_N(m);
   long L = floor((7.2*phim)/(FHE_pSize* /*cc*/1.33* (110+/*k*/80)));
-  if (L<2) L=2; // Make sure we have at least a few primes
+  if (L<5) L=5; // Make sure we have at least a few primes
 
   buildTimer(_init_timer_2, "init2", FHE_AT);
   buildTimer(_init_timer_4, "init4", FHE_AT);
@@ -615,7 +615,8 @@ void printTimeData(TimingData& td)
 
 void usage(char *prog) 
 {
-  cerr << "A program that tests the timing of various operations,\n  outputs the results in a comma-separate-value (csv) format.\n"
+  cerr << "A program that tests the timing of various operations,\n";
+  cerr << "  outputs the results in a comma-separate-value (csv) format.\n";
   cerr << "Usage: "<<prog<<" [ optional parameters ]... 2> logfile > results-file\n";
   cerr << "results on stdout in comma-separated-value format, ";
   cerr << "progress printed on stderr\n";

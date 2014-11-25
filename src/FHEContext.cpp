@@ -294,6 +294,8 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
 
   // calculate the size of the digits
 
+  if (nDgts > nPrimes) nDgts = nPrimes; // sanity checks
+  if (nDgts <= 0) nDgts = 1;
   context.digits.resize(nDgts); // allocate space
 
   IndexSet s1;
