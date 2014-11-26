@@ -17,11 +17,14 @@
 /* Test_IO.cpp - Testing the I/O of the important classes of the library
  * (context, keys, ciphertexts).
  */
+#include <fstream>
+#include <unistd.h>
+
 #include <NTL/ZZX.h>
+
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
-#include <fstream>
 
 #define N_TESTS 3
 static long ms[N_TESTS][4] = {
