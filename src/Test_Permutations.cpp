@@ -28,19 +28,19 @@ void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 
 void usage(char *prog) 
 {
-  cerr << "Usage: "<<prog<<" [test=? [optional parameters...]]\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'test=1 m=108 p=2 r=1\n";
-  cerr << "  test is either 0 (plaintext) or 1 (ciphertext)[default=1]\n\n";
-  cerr << "test=0, permuting plaintext hypercubes (dimension upto 4):\n";
-  cerr << "  ord1,ord2,ord3,ord4 size of dimensions 1..4 [default ord1=30, ord2,3,4=0]\n";
-  cerr << "  good1,good2,good3,good4 native rotation flags (0/1) [default=1]\n";
-  cerr << "  depth bounds the depth of permutation network [default=5]\n";
-  cerr << "\ntest=1, permuting ciphertext slots:\n";
-  cerr << "  m is the cyclotomic field [default=4369]\n";
-  cerr << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
-  cerr << "  depth bounds the depth of permutation network [default=5]\n";
-  cerr << "  L is number of levels in chain [default=depth]\n";
+  cout << "Usage: "<<prog<<" [test=? [optional parameters...]]\n";
+  cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cout << "  e.g, 'test=1 m=108 p=2 r=1\n";
+  cout << "  test is either 0 (plaintext) or 1 (ciphertext)[default=1]\n\n";
+  cout << "test=0, permuting plaintext hypercubes (dimension upto 4):\n";
+  cout << "  ord1,ord2,ord3,ord4 size of dimensions 1..4 [default ord1=30, ord2,3,4=0]\n";
+  cout << "  good1,good2,good3,good4 native rotation flags (0/1) [default=1]\n";
+  cout << "  depth bounds the depth of permutation network [default=5]\n";
+  cout << "\ntest=1, permuting ciphertext slots:\n";
+  cout << "  m is the cyclotomic field [default=4369]\n";
+  cout << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
+  cout << "  depth bounds the depth of permutation network [default=5]\n";
+  cout << "  L is number of levels in chain [default=depth]\n";
   exit(0);
 }
 
@@ -116,9 +116,8 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   // 1/2 prime per level should be more or less enough, here we use 1 per layer
   if (L<=0) L = 1+trees.numLayers();
   buildModChain(context, /*nLevels=*/L, /*nDigits=*/3);
-  cerr << "**Using "<<L<<" primes\n";
-
-  cerr << context.ctxtPrimes.card() << "\n";
+  cout << "**Using "<<L<<" primes (of which "
+       << context.ctxtPrimes.card() << " are Ctxt-primes)\n";
 
   // Generate a sk/pk pair
   FHESecKey secretKey(context);
