@@ -373,7 +373,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   tmp.modDownToLevel(td.lvl);
   cerr << "." << std::flush;
   {
-  std::unique_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
+  shared_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
   FHE_NTIMER_START(MatMul);
   ea.mat_mul(tmp, *ptr);      // multiply the ciphertext vector
   FHE_NTIMER_STOP(MatMul);

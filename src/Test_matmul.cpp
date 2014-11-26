@@ -20,10 +20,7 @@
  */
 
 #include <cassert>
-#include <memory>
 #include <NTL/lzz_pXFactoring.h>
-NTL_CLIENT
-
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
@@ -198,7 +195,7 @@ void  TestIt(long m, long p, long r, long d, long L)
   // Test a "normal" matrix over the extension field
   {
     // choose a random plaintext square matrix
-    std::unique_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
+    shared_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
 
     // choose a random plaintext vector
     PlaintextArray v(ea);
@@ -251,7 +248,7 @@ void  TestIt(long m, long p, long r, long d, long L)
   // Test a "block matrix" over the base field
   {
     // choose a random plaintext square matrix
-    std::unique_ptr<PlaintextBlockMatrixBaseInterface>
+    shared_ptr<PlaintextBlockMatrixBaseInterface>
       ptr(buildRandomBlockMatrix(ea));
 
     // choose a random plaintext vector

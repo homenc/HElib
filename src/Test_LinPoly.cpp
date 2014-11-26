@@ -16,9 +16,125 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include <NTL/ZZ.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <cassert>
 #include <cstdio>
+
+
+
+
+template<class type> 
+class SingleBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+  Mat<R> data;
+
+public:
+  SingleBlockMatrix(const EncryptedArray& _ea, const vector<ZZX>& vec) : ea(_ea) { 
+    long d = ea.getDegree();
+
+    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+
+    data.SetDims(d, d);
+    for (long i = 0; i < d; i++) 
+      for (long j = 0; j < d; j++) 
+         conv(data[i][j], coeff(vec[i], j));
+  }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual bool get(Mat<R>& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    if (i != j) return true;
+    out = data;
+    return false;
+  }
+};
+
+PlaintextBlockMatrixBaseInterface *buildSingleBlockMatrix(const EncryptedArray& ea,
+                                                          const vector<ZZX>& vec)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new SingleBlockMatrix<PA_GF2>(ea, vec);
+    }
+
+    case PA_zz_p_tag: {
+      return new SingleBlockMatrix<PA_zz_p>(ea, vec);
+    }
+
+    default: return 0;
+  }
+}
+
+
+
+
+
+template<class type> 
+class MultiBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+  Vec< Mat<R> > data;
+
+public:
+  MultiBlockMatrix(const EncryptedArray& _ea, const vector< vector<ZZX> >& vec) : ea(_ea) { 
+    long n = ea.size();
+    long d = ea.getDegree();
+
+    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+
+    data.SetLength(n);
+    for (long k = 0; k < n; k++) {
+      data[k].SetDims(d, d);
+      for (long i = 0; i < d; i++) 
+        for (long j = 0; j < d; j++) 
+           conv(data[k][i][j], coeff(vec[k][i], j));
+    }
+  }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual bool get(Mat<R>& out, long i, long j) const {
+    assert(i >= 0 && i < ea.size());
+    assert(j >= 0 && j < ea.size());
+    if (i != j) return true;
+    out = data[i];
+    return false;
+  }
+};
+
+PlaintextBlockMatrixBaseInterface *buildMultiBlockMatrix(const EncryptedArray& ea,
+                                                          const vector< vector<ZZX> >& vec)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new MultiBlockMatrix<PA_GF2>(ea, vec);
+    }
+
+    case PA_zz_p_tag: {
+      return new MultiBlockMatrix<PA_zz_p>(ea, vec);
+    }
+
+    default: return 0;
+  }
+}
+
+
 
 void  TestIt(long m, long p, long r, long d)
 {
@@ -67,7 +183,7 @@ void  TestIt(long m, long p, long r, long d)
 
   Ctxt c0(publicKey);
 
-  cout << "\nTest #1: pply the same linear transformation to all slots\n";
+  cout << "\nTest #1: Apply the same linear transformation to all slots\n";
   {
   vector<ZZX> LM(d); // LM selects even coefficients
   for (long j = 0; j < d; j++) 
@@ -82,10 +198,15 @@ void  TestIt(long m, long p, long r, long d)
   applyLinPoly1(ea, c0, C);
   ea.decrypt(c0, secretKey, pp0);
 
-  // FIXME: Put a code here to check the result
-  //  p0.print(cout); cout << "\n";
-  //  pp0.print(cout); cout << "\n";
+  shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildSingleBlockMatrix(ea, LM));
+  PlaintextArray p1(p0);
+  p1.mat_mul(*mat);
+  if (pp0.equals(p1))
+    cout << "GOOD\n";
+  else
+    cout << "BAD\n";
   }
+
 
   cout << "\nTest #2: Apply different transformations to the different slots\n";
   {
@@ -109,7 +230,13 @@ void  TestIt(long m, long p, long r, long d)
   applyLinPolyMany(ea, c0, C); // apply the linearized polynomials
   ea.decrypt(c0, secretKey, pp0);
 
-  // FIXME: Put a code here to check the result
+  shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));
+  PlaintextArray p1(p0);
+  p1.mat_mul(*mat);
+  if (pp0.equals(p1))
+    cout << "GOOD\n";
+  else
+    cout << "BAD\n";
   }
 
   cout << "\nTest #3: Testing low-level (cached) implementation\n";
@@ -133,7 +260,7 @@ void  TestIt(long m, long p, long r, long d)
   vector<ZZX> encodedC(d);
   for (long j = 0; j < d; j++) {
     vector<ZZX> v(nslots);
-    for (long i = 0; i < nslots; i++) v[i] = LM[i][j];
+    for (long i = 0; i < nslots; i++) v[i] = C[i][j];
     ea.encode(encodedC[j], v);
   }
 
@@ -142,7 +269,13 @@ void  TestIt(long m, long p, long r, long d)
   applyLinPolyLL(ea, c0, encodedC); // apply the linearized polynomials
   ea.decrypt(c0, secretKey, pp0);
 
-  // FIXME: Put a code here to check the result
+  shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));
+  PlaintextArray p1(p0);
+  p1.mat_mul(*mat);
+  if (pp0.equals(p1))
+    cout << "GOOD\n";
+  else
+    cout << "BAD\n";
   }
 }
 
@@ -160,7 +293,7 @@ int main(int argc, char *argv[])
   long r=1;
   amap.arg("r", r,  "lifting");
 
-  long d=1;
+  long d=0;
   amap.arg("d", d, "degree of the field extension");
   amap.note("d == 0 => factors[0] defines extension");
 
