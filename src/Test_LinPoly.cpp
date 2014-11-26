@@ -146,13 +146,6 @@ void  TestIt(long m, long p, long r, long d)
 
   FHEcontext context(m, p, r);
   buildModChain(context, /*L=*/3, /*c=*/2);
-
-  // context.lazy = false;
-  if (context.lazy)
-    cout << "LAZY REDUCTIONS\n";
-  else
-    cout << "NON-LAZY REDUCTIONS\n";
-
   context.zMStar.printout();
   cout << endl;
 

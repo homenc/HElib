@@ -109,18 +109,14 @@ int main(int argc, char *argv[])
   // Test both monic and non-monic polynomials of this degree
   if (d>=0) {
     testIt(d, k, p, r, m, L, false);
-    testIt(d, k, p, r, m, L, false);
-    testIt(d, k, p, r, m, L, false);
     testIt(d, k, p, r, m, L, true);
     return 0;
   }
 
   // Test degrees 1 to 4 and 25 through 35
   testIt(1, k, p, r, m, L, true);
-  testIt(2, k, p, r, m, L, true);
   testIt(3, k, p, r, m, L, true);
-  testIt(4, k, p, r, m, L, true);
-  for (d=25; d<=35; d++)
+  for (d=25; d<=33; d+=2)
     testIt(d, k, p, r, m, L);
 
   return 0;

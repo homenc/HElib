@@ -23,16 +23,17 @@
 #include "EncryptedArray.h"
 #include <fstream>
 
-#define N_TESTS 5
+#define N_TESTS 3
 static long ms[N_TESTS][4] = {
   //nSlots  m   phi(m) ord(2)
   {   2,    7,    6,    3},
   {   6,   31,   30,    5},
   { 256, 4369, 4096,   16}, // gens=129(16),3(!16)
-  {  378,  5461,  5292, 14}, // gens=3(126),509(3)
+  //  {  378,  5461,  5292, 14}, // gens=3(126),509(3)
   //  {  630,  8191,  8190, 13}, // gens=39(630)
   //  {  600, 13981, 12000, 20}, // gens=10(30),23(10),3(!2)
-  {  682, 15709, 15004, 22}}; // gens=5(682)
+  //  {  682, 15709, 15004, 22} // gens=5(682)
+};
 
 void checkCiphertext(const Ctxt& ctxt, const ZZX& ptxt, const FHESecKey& sk);
 
@@ -52,6 +53,8 @@ int main(int argc, char *argv[])
   amap.arg("c", c, "number of columns in the key-switching matrices");
   amap.parse(argc, argv);
 
+  long ptxtSpace = power_long(p,r);
+
   FHEcontext* contexts[N_TESTS];
   FHESecKey*  sKeys[N_TESTS];
   Ctxt*       ctxts[N_TESTS];
@@ -66,8 +69,10 @@ int main(int argc, char *argv[])
   for (long i=0; i<N_TESTS; i++) {
     long m = ms[i][1];
 
-    contexts[i] = new FHEcontext(m, ptxtSpace, r);
-    buildModChain(*contexts[i], p, c);  // Set the modulus chain
+    cout << "Testing IO: m="<<m<<", p^r="<<p<<"^"<<r<<endl;
+
+    contexts[i] = new FHEcontext(m, p, r);
+    buildModChain(*contexts[i], ptxtSpace, c);  // Set the modulus chain
 
     // Output the FHEcontext to file
     writeContextBase(keyFile, *contexts[i]);
@@ -76,14 +81,9 @@ int main(int argc, char *argv[])
     sKeys[i] = new FHESecKey(*contexts[i]);
     const FHEPubKey& publicKey = *sKeys[i];
     sKeys[i]->GenSecKey(w,ptxtSpace); // A Hamming-weight-w secret key
-
-    cerr << "generating key-switching matrices... ";
     addSome1DMatrices(*sKeys[i]);// compute key-switching matrices that we need
-    cerr << "done\n";
-
-    cerr << "computing masks and tables for rotation...";
     eas[i] = new EncryptedArray(*contexts[i]);
-    cerr << "done\n";
+
     long nslots = eas[i]->size();
 
     // Output the secret key to file, twice. Below we will have two copies

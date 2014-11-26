@@ -78,18 +78,14 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
-  // context.lazy = false;
-
+#ifdef DEBUG_PRINTOUT
   if (context.lazy)
     cerr << "LAZY REDUCTIONS\n";
   else
     cerr << "NON-LAZY REDUCTIONS\n";
-
+#endif
   context.zMStar.printout();
   cerr << endl;
-#ifdef DEBUG
-  cerr << context << endl;
-#endif
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
