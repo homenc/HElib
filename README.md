@@ -16,10 +16,10 @@ as "assembly language for HE". That is, it provides low-level routines (set,
 add, multiply, shift, etc.), with as much access to optimizations as we can
 give. Hopefully in time we will be able to provide higher-level routines.
 
-
 This library is written in C++ and uses the [NTL mathematical library] [4]
 (version 6.1.0 or higher). It is distributed under the terms of the [GNU
-General Public License] [5] (GPL).
+General Public License] [5] (GPL). For more information see the
+[GitHub Pages] [9].
 
   [1]: http://eprint.iacr.org/2011/277       "BGV12"
   [2]: http://eprint.iacr.org/2011/133       "SV11"
@@ -29,3 +29,4 @@ General Public License] [5] (GPL).
   [6]: http://en.wikipedia.org/wiki/Homomorphic_encryption "Homomorphic encryption"
   [7]: http://eprint.iacr.org/2014/106       "algorithms"
   [8]: http://eprint.iacr.org/2014/873       "bootstrapping"
+  [9]: http://shaih.github.io/HElib          "GitHubPages"
