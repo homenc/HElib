@@ -311,6 +311,8 @@ public:
     // constructs a zero ciphertext with same public key and 
     // plaintext space as ctxt
 
+  //! Dummy encryption, just encodes the plaintext in a Ctxt object
+  void DummyEncrypt(const ZZX& ptxt, double size=-1.0);
 
   Ctxt& operator=(const Ctxt& other) {  // public assignment operator
     assert(&context == &other.context);

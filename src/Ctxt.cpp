@@ -18,6 +18,20 @@
 #include "FHE.h"
 #include "timing.h"
 
+// Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
+void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
+{
+  if (size < 0.0) {
+    size = ((double) context.zMStar.getPhiM()) * ptxtSpace*ptxtSpace /4.0;
+  }
+  noiseVar = size;
+  primeSet = context.ctxtPrimes;
+
+  // A single part, with the plaintext as data and handle pointing to 1
+  DoubleCRT dcrt(ptxt, context, primeSet);  
+  parts.assign(1, CtxtPart(dcrt));
+}
+
 
 // Sanity-check: Check that prime-set is "valid", i.e. that it 
 // contains either all the special primes or none of them

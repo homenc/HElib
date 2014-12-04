@@ -124,12 +124,11 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   p3.random();
 
   Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
-  ea.encrypt(c0, publicKey, p0);
-  ea.encrypt(c1, publicKey, p1);
-  ea.encrypt(c2, publicKey, p2);
-  ea.encrypt(c3, publicKey, p3);
-
-
+  //  ea.encrypt(c0, publicKey, p0);
+  {ZZX ppp0; ea.encode(ppp0, p0); c0.DummyEncrypt(ppp0);} // dummy encryption
+  ea.encrypt(c1, publicKey, p1); // real encryption
+  ea.encrypt(c2, publicKey, p2); // real encryption
+  ea.encrypt(c3, publicKey, p3); // real encryption
 
   resetAllTimers();
 
