@@ -41,6 +41,7 @@
 
 // set to true to see some more info... 
 extern bool replicateVerboseFlag;
+// THREADS: thread_local?
 
 
 //! @brief The value in slot #pos is replicated in all other slots.

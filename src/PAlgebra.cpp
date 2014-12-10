@@ -770,6 +770,8 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
 template<class type> 
 void PAlgebraModDerived<type>::genMaskTable() const
 {
+  // THREADS: thread-safe lazy init
+  
   if (maskTable.size() > 0) return;
 
   RBak bak; bak.save(); restoreContext();
@@ -806,6 +808,8 @@ void PAlgebraModDerived<type>::genMaskTable() const
 template<class type> 
 void PAlgebraModDerived<type>::genCrtTable() const
 {
+  // THREADS: thread-safe lazy init
+  
   if (crtTable.size() > 0) return;
 
   RBak bak; bak.save(); restoreContext();

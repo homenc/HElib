@@ -22,6 +22,7 @@
 
 
 bool replicateVerboseFlag = false;
+// THREADS: thread_local?
 
 // The value in slot #pos is replicated in all
 // other slots.  If there are n slots, this algorithm performs

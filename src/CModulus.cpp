@@ -215,3 +215,35 @@ FHE_NTIMER_STOP(iFFT_division);
 template class Cmod<CMOD_zz_p>; // small q
 template class Cmod<CMOD_ZZ_p>; // large q
 
+
+// THREADS: this needs some major reworking to achieve thread safety,
+// and should probably be cleaned up significantly, anyway.
+//
+// First, I don't think there is any reason to have all these
+// pointers, and anyway, if I want to keep them, I should use
+// the copied_ptr class.  I don't think we even use or need the
+// copy constructor or assignemnt operator for this class, anyway.
+// With current version of NTL, it is safe to default construct
+// all these objects "out of context" (and copy them, too...except
+// for fftRep...which I should anyway fix).
+//
+// Second, we should probably get rid of the template stuff.
+// I don't think we need the ZZ_p stuff anywhere, and probably
+// won't ever.
+//
+// Third, all of the quanttites except for Ra and scratch can
+// be pre-computed once and for all.  I could probably get away
+// with making scratch (which is a zz_pX) a thread-local object,
+// even though the modulus is varying (which is a bit dirty).
+// Ra (which is an fftRep) is a bit trickier to make
+// thread local, as the number of FFT primes may vary (as
+// some moduli may be FFT primes and some may not be).
+// I may just consider "lifting out" some of NTL's code here,
+// or add to NTL's interface, something to make this work
+// using thread local storage shared among the different moduli.
+// In fact, I may be able to just make scratch a Vec<long>.
+// It can be made to work, somehow...
+//
+
+
+
