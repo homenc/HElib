@@ -259,7 +259,7 @@ void  TestIt(long m, long p, long r, long d)
 
   p0.random();  
   ea.encrypt(c0, publicKey, p0);
-  applyLinPolyLL(ea, c0, encodedC); // apply the linearized polynomials
+  applyLinPolyLL(c0, encodedC, ea.getDegree()); // apply linearized polynomials
   ea.decrypt(c0, secretKey, pp0);
 
   shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));

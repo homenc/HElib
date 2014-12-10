@@ -979,9 +979,9 @@ void EncryptedArrayDerived<type>::compMat1D(CachedDCRTPtxtMatrix& cmat,
     // DoubleCRT defined relative to all primes, even the "special" ones
 }
 
-template<class Matrix>
+template<class Matrix, class EA>
 static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
-			   const EncryptedArray& ea)
+			   const EA& ea)
 {
   FHE_TIMER_START;
   const FHEcontext& context = ctxt.getContext();
@@ -1010,10 +1010,22 @@ static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
 	       const EncryptedArray& ea)
 { mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
+	       const EncryptedArrayDerived<PA_GF2>& ea)
+{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
+	       const EncryptedArrayDerived<PA_zz_p>& ea)
+{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
 	       const EncryptedArray& ea)
 { mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-
+void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
+	       const EncryptedArrayDerived<PA_GF2>& ea)
+{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
+	       const EncryptedArrayDerived<PA_zz_p>& ea)
+{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
 
 
 // This code has a complexity of N+d (instead of N*d) where N is the number of
@@ -1616,9 +1628,9 @@ void EncryptedArrayDerived<type>::compMat1D(CachedDCRTPtxtBlockMatrix& cmat,
     // DoubleCRT defined relative only to the ciphertxt primes, not the "special" ones
 }
 
-template<class Matrix>
+template<class Matrix, class EA>
 static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
-				const EncryptedArray& ea)
+				const EA& ea)
 {
   FHE_TIMER_START;
   const FHEcontext& context = ctxt.getContext();
@@ -1690,8 +1702,21 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
 	       const EncryptedArray& ea)
 { blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
+	       const EncryptedArrayDerived<PA_GF2>& ea)
+{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
+	       const EncryptedArrayDerived<PA_zz_p>& ea)
+{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
-			   const EncryptedArray& ea)
+	       const EncryptedArray& ea)
+{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
+	       const EncryptedArrayDerived<PA_GF2>& ea)
+{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
+void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
+	       const EncryptedArrayDerived<PA_zz_p>& ea)
 { blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
 
 
@@ -1760,7 +1785,7 @@ void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
     ea.encode(encodedC[j], v);
   }
 
-  applyLinPolyLL(ea, ctxt, encodedC);
+  applyLinPolyLL(ctxt, encodedC, ea.getDegree());
 }
 
 
@@ -1784,15 +1809,13 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
     ea.encode(encodedC[j], v);
   }
 
-  applyLinPolyLL(ea, ctxt, encodedC);
+  applyLinPolyLL(ctxt, encodedC, ea.getDegree());
 }
 
 // A low-level variant: encodedCoeffs has all the linPoly coeffs encoded
 // in slots; different transformations can be encoded in different slots
-void applyLinPolyLL(const EncryptedArray& ea, 
-                    Ctxt& ctxt, const vector<ZZX>& encodedC)
+void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d)
 {
-  long d = ea.getDegree();
   assert(d == lsize(encodedC));
 
   ctxt.cleanUp();  // not sure, but this may be a good idea
