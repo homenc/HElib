@@ -13,17 +13,15 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+#include <algorithm>   // defines count(...), min(...)
 
 #include "PAlgebra.h"
+#include "hypercube.h"
 #include "timing.h"
-
-#include <algorithm>   // defines count(...), min(...)
 
 #include <NTL/ZZXFactoring.h>
 #include <NTL/GF2EXFactoring.h>
 #include <NTL/lzz_pEXFactoring.h>
-
-
 
 // polynomials are sorted lexicographically, with the
 // constant term being the "most significant"
@@ -863,10 +861,15 @@ void PAlgebraModDerived<type>::evalTree(RX& res,
   }
 }
 
-
-
 // Explicit instantiation
 
 template class PAlgebraModDerived<PA_GF2>;
 template class PAlgebraModDerived<PA_zz_p>;
 
+// Helper function
+CubeSignature::CubeSignature(const PAlgebra& alg): ndims(0)
+{
+  Vec<long> _dims(INIT_SIZE, alg.numOfGens());
+  for (long i=0; i<(long)alg.numOfGens(); i++) _dims[i] = alg.OrderOf(i);
+  initSignature(_dims);
+}

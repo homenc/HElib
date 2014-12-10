@@ -22,7 +22,7 @@
 
 #include "NumbTh.h"
 
-
+class PAlgebra; // forward decleration
 
 //! @class CubeSignature
 //! @brief Holds a vector of dimensions for a hypercube and some additional data
@@ -37,6 +37,9 @@ public:
    CubeSignature(): ndims(0) {} // a NULL signature
 
    CubeSignature(const Vec<long>& _dims): ndims(0) { initSignature(_dims); }
+
+   //! Build a CubeSignature to reflect the hypercube structure of Zm* /(p)
+   explicit CubeSignature(const PAlgebra& alg); // in PAlgebra.cpp
 
    /* When we get C++11 support, we could #include <initializer_list>
     * and then do e.g., CubeSignature s {1,2,3};
