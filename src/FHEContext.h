@@ -196,6 +196,13 @@ public:
     return ans;
   }
 
+  //! @brief An estimate for the security-level
+  double securityLevel() const {
+    long phim = zMStar.getPhiM();
+    double bitsize = logOfProduct(allPrimes)/log(2.0);
+    return (7.2*phim/bitsize -110);
+  }
+
   //! @brief Find the next prime and add it to the chain
   long AddPrime(long startFrom, long delta, bool special, bool findRoot=true);
 
