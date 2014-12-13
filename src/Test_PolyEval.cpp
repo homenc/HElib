@@ -21,6 +21,11 @@ NTL_CLIENT
 #include "polyEval.h"
 #include "EncryptedArray.h"
 
+#ifdef DEBUG_PRINTOUT
+extern FHESecKey* dbgKey;
+extern EncryptedArray* dbgEa;
+#endif
+
 void testIt(long d, long k, long p, long r, long m, long L,
 	    bool isMonic=false)
 {

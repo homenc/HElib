@@ -25,18 +25,15 @@
 #include <cassert>
 #include <cstdio>
 
-#ifdef DEBUG
+#ifdef DEBUG_PRINTOUT
 #define debugCompare(ea,sk,p,c) {\
   PlaintextArray pp(ea);\
   ea.decrypt(c, sk, pp);\
-  if (!pp.equals(p)) { cerr << "oops\n"; exit(0); }\
+  if (!pp.equals(p)) { cerr << "oops:\n"<<p<<"!=\n"<<pp<<endl; exit(0); } \
   }
 #else
 #define debugCompare(ea,sk,p,c)
 #endif
-
-
-
 
 /**************
 
@@ -187,7 +184,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
      p3.mul(p2); // c3.multiplyBy(c2) 
      c3.multiplyBy(c2);              CheckCtxt(c3, "c3*=c2");
-     debugCompare(ea,secretKey,p1,c3);
+     debugCompare(ea,secretKey,p3,c3);
 
      p0.sub(p3); // c0 -= c3
      c0 -= c3;                       CheckCtxt(c0, "c0=-c3");
