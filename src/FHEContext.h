@@ -199,6 +199,7 @@ public:
   //! @brief An estimate for the security-level
   double securityLevel() const {
     long phim = zMStar.getPhiM();
+    IndexSet allPrimes(0,numPrimes()-1);
     double bitsize = logOfProduct(allPrimes)/log(2.0);
     return (7.2*phim/bitsize -110);
   }
