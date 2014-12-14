@@ -460,10 +460,12 @@ public:
   //! @brief Is this an empty cipehrtext without any parts
   bool isEmpty() const { return (parts.size()==0); }
 
-  //! @brief A canonical ciphertext has handles pointing to (1,s)
+  //! @brief A canonical ciphertext has (at most) handles pointing to (1,s)
   bool inCanonicalForm(long keyID=0) const {
-    return (parts.size()==2 && 
-	    parts[0].skHandle.isOne() && parts[1].skHandle.isBase(keyID));
+    if (parts.size()>2) return false;
+    if (parts.size()>0 && !parts[0].skHandle.isOne()) return false;
+    if (parts.size()>1 && !parts[1].skHandle.isBase(keyID)) return false;
+    return true;
   }
 
   //! @brief Would this ciphertext be decrypted without errors?
