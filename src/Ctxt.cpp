@@ -22,14 +22,23 @@
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
   if (size < 0.0) {
-    size = ((double) context.zMStar.getPhiM()) * ptxtSpace*ptxtSpace /4.0;
+    size = ((double) context.zMStar.getPhiM()) * ptxtSpace*ptxtSpace /12.0;
   }
   noiseVar = size;
   primeSet = context.ctxtPrimes;
 
   // A single part, with the plaintext as data and handle pointing to 1
-  DoubleCRT dcrt(ptxt, context, primeSet);  
-  parts.assign(1, CtxtPart(dcrt));
+
+  long f = rem(context.productOfPrimes(context.ctxtPrimes),ptxtSpace);
+  if (f == 1) { // scale by constant
+    DoubleCRT dcrt(ptxt, context, primeSet);  
+    parts.assign(1, CtxtPart(dcrt));
+  } else {
+    ZZX tmp;
+    MulMod(tmp, ptxt, f, ptxtSpace, /*positive=*/false);
+    DoubleCRT dcrt(tmp, context, primeSet);  
+    parts.assign(1, CtxtPart(dcrt));
+  }
 }
 
 
@@ -530,20 +539,25 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 {
   // If the size is not given, we use the default value phi(m)*(ptxtSpace/2)^2
   if (size < 0.0) {
-    // WARNING: the following line is written just so to prevent overflow
+    // WARNING: the following line is written to prevent integer overflow
     size = ((double) context.zMStar.getPhiM()) * ptxtSpace*ptxtSpace /4.0;
   }
 
   // Scale the constant, then add it to the part that points to one
   long f = (ptxtSpace>2)? rem(context.productOfPrimes(primeSet),ptxtSpace): 1;
-  if (f!=1) {
-    DoubleCRT tmp = dcrt;
-    tmp *= f;
-    addPart(tmp, SKHandle(0,1,0));
-  }
-  else addPart(dcrt, SKHandle(0,1,0));
-
   noiseVar += (size*f)*f;
+
+  IndexSet delta = dcrt.getIndexSet() / primeSet; // set minus
+  if (f==1 && empty(delta)) { // just add it
+    addPart(dcrt, SKHandle(0,1,0));
+    return;
+  }
+
+  // work with a local copy
+  DoubleCRT tmp = dcrt;
+  if (!empty(delta)) tmp.removePrimes(delta);
+  if (f!=1)          tmp *= f;
+  addPart(tmp, SKHandle(0,1,0));
 }
 
 // Add a constant polynomial
