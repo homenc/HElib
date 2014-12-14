@@ -1814,7 +1814,8 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
 
 // A low-level variant: encodedCoeffs has all the linPoly coeffs encoded
 // in slots; different transformations can be encoded in different slots
-void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d)
+template<class P>
+void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
 {
   assert(d == lsize(encodedC));
 
@@ -1830,6 +1831,8 @@ void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d)
     ctxt += tmp1;
   }
 }
+template void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d);
+template void applyLinPolyLL(Ctxt& ctxt, const vector<DoubleCRT>& encodedC, long d);
 
 #if 0
 /************************* OLD UNUSED CODE *************************/

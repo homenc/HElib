@@ -1234,9 +1234,16 @@ public:
     assert(lsize(_data) == n);
     data = _data;
   }
-
-
+  template <class tt>
+  friend ostream& operator<<(ostream& os, const PlaintextArrayDerived<tt>& pt);
 };
+
+template<class T>
+inline ostream& operator<<(ostream& os, const PlaintextArrayDerived<T>& pt)
+{
+  return (os << pt.data);
+}
+
 
 
 //! @brief A "factory" for building EncryptedArrays
@@ -1324,6 +1331,19 @@ public:
   void print(ostream& s) const { rep->print(s); }
 };
 
+inline ostream& operator<<(ostream& os, const PlaintextArray& pt)
+{
+  switch (pt.getEA().getAlMod().getTag()) {
+    
+    case PA_GF2_tag: 
+      return ( os << pt.getDerived<PA_GF2>(PA_GF2()) );
+
+    case PA_zz_p_tag: 
+      return ( os << pt.getDerived<PA_zz_p>(PA_zz_p()) );
+
+    default: return os;
+  }
+}
 
 // Following are functions for performing "higher level"
 // operations on "encrypted arrays".  There is really no
@@ -1453,7 +1473,8 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
 //! @brief a low-level variant:
 //! @param encodedCoeffs has all the linPoly coeffs encoded  in slots;
 //!        different transformations can be encoded in different slots
-void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d);
+template<class P>  // P can be ZZX or DoubleCRT
+void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d);
 ///@}
 
 #endif /* ifdef _EncryptedArray_H_ */
