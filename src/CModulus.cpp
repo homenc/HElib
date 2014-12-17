@@ -16,42 +16,27 @@
 /* CModulus.cpp - supports forward and backward length-m FFT transformations
  *
  * This is a wrapper around the bluesteinFFT routines, for one modulus q.
- * Two classes are defined here, Cmodulus for a small moduli (long) and
- * CModulus for a large ones (ZZ). These classes are otherwise identical
- * hence they are implemented using a class template.
  *
- * On initialization, it initizlies NTL's zz_pContext/ZZ_pContext for this q
+ * On initialization, it initizlies NTL's zz_pContext for this q
  * and computes a 2m-th root of unity r mod q and also r^{-1} mod q.
  * Thereafter this class provides FFT and iFFT routines that converts between
  * time & frequency domains. Some tables are computed the first time that
- * each dierctions is called, which are then used in subsequent computations.
+ * each directions is called, which are then used in subsequent computations.
  * 
- * The "time domain" polynomials are represented as ZZX, whic are reduced
+ * The "time domain" polynomials are represented as ZZX, which are reduced
  * modulo Phi_m(X). The "frequency domain" are jusr vectors of integers
- * (vec_long or vec_ZZ), that store only the evaluation in primitive m-th
+ * (vec_long), that store only the evaluation in primitive m-th
  * roots of unity.
  */
 
-#include "NumbTh.h"
 #include "CModulus.h"
 #include "timing.h"
 
-// Some simple functions that should have been provided by NTL but are not
-inline bool IsZero(long i) { return (i==0); }
-
-
-inline void SetCoeff(NTL::ZZ_pX& poly, long idx, const NTL::ZZ& val)
-{ SetCoeff(poly, idx, to_ZZ_p(val)); }
 
 // It is assumed that m,q,context, and root are already set. If root is set
 // to zero, it will be computed by the compRoots() method. Then rInv is
 // computed as the inverse of root.
 
-//void Cmod<zz,zp,zpx,zzv,fftrep,zpContext,zpBak>::privateInit(const PAlgebra& zms, const zz& rt)
-
-
-ZZ_pContext BuildContext(const ZZ& p, long maxroot)
-  { return ZZ_pContext(p); }
 
 zz_pContext BuildContext(long p, long maxroot) {
    if (maxroot <= CalcMaxRoot(p))
@@ -63,14 +48,13 @@ zz_pContext BuildContext(long p, long maxroot) {
 
 // Constructor: it is assumed that zms is already set with m>1
 // If q == 0, then the current context is used
-template <class type> Cmod<type>::
-Cmod(const PAlgebra &zms, const zz &qq, const zz &rt)
+Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 {
   assert(zms.getM()>1);
   bool explicitModulus = true;
 
   if (qq == 0) {
-    q = zp::modulus();
+    q = zz_p::modulus();
     explicitModulus = false;
   }
   else
@@ -79,7 +63,7 @@ Cmod(const PAlgebra &zms, const zz &qq, const zz &rt)
   zMStar = &zms;
   root = rt;
 
-  zz mm;
+  long mm;
   mm = zms.getM();
   m_inv = InvMod(mm, q);
 
@@ -93,11 +77,11 @@ Cmod(const PAlgebra &zms, const zz &qq, const zz &rt)
   else
     context.save();
 
-  if (IsZero(root)) { // Find a 2m-th root of unity modulo q, if not given
-    zp rtp;
+  if (root==0) { // Find a 2m-th root of unity modulo q, if not given
+    zz_p rtp;
     long e = 2*zms.getM();
     FindPrimitiveRoot(rtp,e); // NTL routine, relative to current modulus
-    if (IsZero(rtp)) // sanity check
+    if (rtp==0) // sanity check
       Error("Cmod::compRoots(): no 2m'th roots of unity mod q");
     root = rep(rtp);
   }
@@ -106,20 +90,22 @@ Cmod(const PAlgebra &zms, const zz &qq, const zz &rt)
   // Allocate memory (relative to current modulus that was defined above).
   // These objects will be initialized when anyone calls FFT/iFFT.
 
-  zpx phimx_poly;
+  zz_pX phimx_poly;
   conv(phimx_poly, zms.getPhimX());
 
-  powers  = new zpx();
-  Rb      = new fftrep();
-  Ra      = new fftrep();
-  ipowers = new zpx();
-  iRb     = new fftrep();
-  phimx   = new zpxModulus1(zms.getM(), phimx_poly);
-  scratch = new zpx();
+  powers.set_ptr(new zz_pX);
+  Rb.set_ptr(new fftRep);
+  Ra.set_ptr(new fftRep);
+  ipowers.set_ptr(new zz_pX);
+  iRb.set_ptr(new fftRep);
+  phimx.set_ptr(new zz_pXModulus1(zms.getM(), phimx_poly));
+  scratch.set_ptr(new zz_pX);
+
+  BluesteinInit(mm, conv<zz_p>(root), *powers, powers_aux, *Rb);
+  BluesteinInit(mm, conv<zz_p>(rInv), *ipowers, ipowers_aux, *iRb);
 }
 
-template <class type>
-Cmod<type>& Cmod<type>::operator=(const Cmod &other)
+Cmodulus& Cmodulus::operator=(const Cmodulus &other)
 {
   if (this == &other) return *this;
 
@@ -131,40 +117,46 @@ Cmod<type>& Cmod<type>::operator=(const Cmod &other)
   zz_pBak bak; bak.save(); // backup the current modulus
   context.restore();       // Set NTL's current modulus to q
 
+  // NOTE: newer versions of NTL allow fftRep's and zz_pXModulus's to be copied
+  // "out of context" (versions after 7.0.*). However, those copies
+  // are not intended to allow copies out of one context into another,
+  // so we still need to use copied_ptr's (but not context restoration).
+  // All of this is fairly academic, as I don't think we really
+  // copy FHEcontexts around anywhere. Also, it would be cleaner
+  // to make the vector in FHEcontext be a vector of copied_ptr<Cmodulus>
+
   root = other.root;
   rInv = other.rInv;
 
   powers_aux = other.powers_aux;
   ipowers_aux = other.ipowers_aux;
-  Rb_aux = other.Rb_aux;
-  iRb_aux = other.iRb_aux;
 
   // copy data, not pointers in these fields
-  freeSpace(); // just in case
-  if (other.powers)  powers  = new zpx(*(other.powers));
-  if (other.Rb)      Rb      = new fftrep(*(other.Rb));
-  if (other.Ra)      Ra      = new fftrep(*(other.Ra));
-  if (other.ipowers) ipowers = new zpx(*(other.ipowers));
-  if (other.iRb)     iRb     = new fftrep(*(other.iRb));
-  if (other.phimx)   phimx   = new zpxModulus1(*(other.phimx));
-  if (other.scratch) scratch   = new zpx(*(other.scratch));
+  powers = other.powers;
+  Rb = other.Rb;
+  ipowers = other.ipowers;
+  iRb = other.iRb;
+  phimx = other.phimx;
+
+  Ra = other.Ra;
+  scratch = other.scratch;
+
 
   return *this;
 }
 
-template <class type>
-void Cmod<type>::FFT(zzv &y, const ZZX& x) const
+void Cmodulus::FFT(vec_long &y, const ZZX& x) const
 {
   FHE_TIMER_START;
-  zpBak bak; bak.save();
+  zz_pBak bak; bak.save();
   context.restore();
-  zp rt;
-  zpx& tmp = getScratch();
+  zz_p rt;
+  zz_pX& tmp = getScratch();
 
   conv(tmp,x);      // convert input to zpx format
   conv(rt, root);  // convert root to zp format
 
-  BluesteinFFT(tmp, getM(), rt, *powers, powers_aux, *Rb, Rb_aux, *Ra); // call the FFT routine
+  BluesteinFFT(tmp, getM(), rt, *powers, powers_aux, *Rb, *Ra); // call the FFT routine
 
   // copy the result to the output vector y, keeping only the
   // entries corresponding to primitive roots of unity
@@ -173,17 +165,15 @@ void Cmod<type>::FFT(zzv &y, const ZZX& x) const
   long m = getM();
   for (i=j=0; i<m; i++)
     if (zMStar->inZmStar(i)) y[j++] = rep(coeff(tmp,i));
-  FHE_TIMER_STOP;
 }
 
 
-template <class type>
-void Cmod<type>::iFFT(zpx &x, const zzv& y)const
+void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
 {
   FHE_TIMER_START;
-  zpBak bak; bak.save();
+  zz_pBak bak; bak.save();
   context.restore();
-  zp rt;
+  zz_p rt;
 
   long m = getM();
 
@@ -195,7 +185,7 @@ void Cmod<type>::iFFT(zpx &x, const zzv& y)const
   x.normalize();
   conv(rt, rInv);  // convert rInv to zp format
 
-  BluesteinFFT(x, m, rt, *ipowers, ipowers_aux, *iRb, iRb_aux, *Ra); // call the FFT routine
+  BluesteinFFT(x, m, rt, *ipowers, ipowers_aux, *iRb, *Ra); // call the FFT routine
 
   // reduce the result mod (Phi_m(X),q) and copy to the output polynomial x
 FHE_NTIMER_START(iFFT_division);
@@ -203,47 +193,22 @@ FHE_NTIMER_START(iFFT_division);
 FHE_NTIMER_STOP(iFFT_division);
 
   // normalize
-  zp mm_inv;
+  zz_p mm_inv;
   conv(mm_inv, m_inv);
   x *= mm_inv; 
-
-
-  FHE_TIMER_STOP;
 }
 
-// instantiating the template classes
-template class Cmod<CMOD_zz_p>; // small q
-template class Cmod<CMOD_ZZ_p>; // large q
 
 
-// THREADS: this needs some major reworking to achieve thread safety,
-// and should probably be cleaned up significantly, anyway.
-//
-// First, I don't think there is any reason to have all these
-// pointers, and anyway, if I want to keep them, I should use
-// the copied_ptr class.  I don't think we even use or need the
-// copy constructor or assignemnt operator for this class, anyway.
-// With current version of NTL, it is safe to default construct
-// all these objects "out of context" (and copy them, too...except
-// for fftRep...which I should anyway fix).
-//
-// Second, we should probably get rid of the template stuff.
-// I don't think we need the ZZ_p stuff anywhere, and probably
-// won't ever.
-//
-// Third, all of the quanttites except for Ra and scratch can
-// be pre-computed once and for all.  I could probably get away
-// with making scratch (which is a zz_pX) a thread-local object,
-// even though the modulus is varying (which is a bit dirty).
-// Ra (which is an fftRep) is a bit trickier to make
-// thread local, as the number of FFT primes may vary (as
-// some moduli may be FFT primes and some may not be).
-// I may just consider "lifting out" some of NTL's code here,
-// or add to NTL's interface, something to make this work
-// using thread local storage shared among the different moduli.
-// In fact, I may be able to just make scratch a Vec<long>.
-// It can be made to work, somehow...
-//
+// THREADS: I can get away with making scratch thread-local,
+// which is a bit dirty, but it should work.
+// More problematic is Ra: the internal NumPrimes field 
+// may be different for different moduli (esp is some are
+// FFT primes and some are not).  So it will take a bit
+// more tweaking than just making Ra thread-local: I may
+// have to tweak NTL so that it provides a more flexible/forgiving
+// interface for fftReps.  In the worst case, I just copy and paste
+// a few things...
 
 
 

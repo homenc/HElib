@@ -20,153 +20,81 @@
  * @brief Supports forward and backward length-m FFT transformations
  *
  * This is a wrapper around the bluesteinFFT routines, for one modulus q.
- * Two classes are defined here, Cmodulus for a small moduli (long) and
- * CModulus for a large ones (ZZ). These classes are otherwise identical
- * hence they are implemented using a class template.
  **/
 #include "NumbTh.h"
 #include "PAlgebra.h"
 #include "bluestein.h"
 #include "cloned_ptr.h"
 
-/**
- * @class CMOD_zz_p
- * @brief typedefs for smallint Cmodulus
- **/
-class CMOD_zz_p {
-public:
-  typedef long zz;
-  typedef zz_p zp;
-  typedef zz_pX zpx;
-  typedef vec_long zzv;
-  typedef fftRep fftrep;
-  typedef zz_pContext zpContext;
-  typedef zz_pBak zpBak;
-  typedef zz_pXModulus zpxModulus;
-  typedef zz_pXModulus1 zpxModulus1;
-
-};
-
-/**
-* @class CMOD_ZZ_p
-* @brief typedefs for bigint CModulus
-**/
-class CMOD_ZZ_p {
-public:
-  typedef ZZ zz;
-  typedef ZZ_p zp;
-  typedef ZZ_pX zpx;
-  typedef vec_ZZ zzv;
-  typedef FFTRep fftrep;
-  typedef ZZ_pContext zpContext ;
-  typedef ZZ_pBak zpBak;
-  typedef ZZ_pXModulus zpxModulus;
-  typedef ZZ_pXModulus1 zpxModulus1;
-};
-
-#define INJECT_TYPE(type,subtype) typedef typename type::subtype subtype
 
 
 /**
-* @class Cmod
-* @brief template class for both bigint and smallint implementations
+* @class Cmodulus
 *
-* This is a wrapper around the bluesteinFFT routines, for one modulus q.
-* Two classes are defined here, Cmodulus for a small moduli (long) and
-* CModulus for a large ones (ZZ). These classes are otherwise identical
-* hence they are implemented using a class template.
-*
-* On initialization, it initizlies NTL's zz_pContext/ZZ_pContext for this q
+* On initialization, it initizlies NTL's zz_pContext for this q
 * and computes a 2m-th root of unity r mod q and also r^{-1} mod q.
 * Thereafter this class provides FFT and iFFT routines that converts between
 * time & frequency domains. Some tables are computed the first time that
-* each dierctions is called, which are then used in subsequent computations.
+* each directions is called, which are then used in subsequent computations.
 * 
-* The "time domain" polynomials are represented as ZZX, whic are reduced
-* modulo Phi_m(X). The "frequency domain" are jusr vectors of integers
-* (vec_long or vec_ZZ), that store only the evaluation in primitive m-th
+* The "time domain" polynomials are represented as ZZX, which are reduced
+* modulo Phi_m(X). The "frequency domain" are just vectors of integers
+* (vec_long), that store only the evaluation in primitive m-th
 * roots of unity.
 **/
-template <class type>
-class Cmod {
-  INJECT_TYPE(type,zz);
-  INJECT_TYPE(type,zp);
-  INJECT_TYPE(type,zpx);
-  INJECT_TYPE(type,zzv);
-  INJECT_TYPE(type,fftrep);
-  INJECT_TYPE(type,zpContext);
-  INJECT_TYPE(type,zpBak);
-  INJECT_TYPE(type,zpxModulus);
-  INJECT_TYPE(type,zpxModulus1);
 
-  zz          q;       // the modulus
-  zpContext   context; // NTL's tables for this modulus
+class Cmodulus {
+  long          q;       // the modulus
+  zz_pContext   context; // NTL's tables for this modulus
 
   const PAlgebra* zMStar;  // points to the Zm* structure, m is FFT size
 
-  zz          m_inv;   // m^{-1} mod q
+  long        m_inv;   // m^{-1} mod q
 
-  zz          root;    // 2m-th root of unity modulo q
-  zz          rInv;    // root^{-1} mod q
+  long        root;    // 2m-th root of unity modulo q
+  long        rInv;    // root^{-1} mod q
 
-  zpx*        powers;  // tables for forward FFT
-  mutable Vec<mulmod_precon_t> powers_aux;
-  fftrep*     Rb;
-  mutable fftrep_aux Rb_aux;
-  fftrep*     Ra;
+  copied_ptr<zz_pX>    powers;  // tables for forward FFT
+  Vec<mulmod_precon_t> powers_aux;
+  copied_ptr<fftRep>   Rb;
 
-  zpx*        ipowers; // tables for backward FFT
-  mutable Vec<mulmod_precon_t> ipowers_aux;
-  fftrep*     iRb;
-  mutable fftrep_aux iRb_aux;
+  copied_ptr<zz_pX>    ipowers; // tables for backward FFT
+  Vec<mulmod_precon_t> ipowers_aux;
+  copied_ptr<fftRep>   iRb;
 
-  zpxModulus1* phimx; // PhimX modulo q, for faster division w/ remainder
-  zpx*        scratch; // temporary space, to satisfy NTL's rules
+  copied_ptr<zz_pXModulus1> phimx; // PhimX modulo q, for faster division w/ remainder
+
+  mutable copied_ptr<fftRep>  Ra;      // temp space
+  mutable copied_ptr<zz_pX>   scratch; 
 
   // Allocate memory and compute roots
-  void privateInit(const PAlgebra&, const zz& rt);
-
-  void freeSpace() 
-  {
-    if (powers!=NULL)  { delete powers;  powers=NULL; }
-    if (Rb!=NULL)      { delete Rb;      Rb=NULL; }
-    if (Ra!=NULL)      { delete Ra;      Ra=NULL; }
-    if (ipowers!=NULL) { delete ipowers; ipowers=NULL; }
-    if (iRb!=NULL)     { delete iRb;     iRb = NULL; }
-    if (phimx!=NULL)   { delete phimx;     phimx = NULL; }
-    if (scratch!=NULL)   { delete scratch; scratch = NULL; }
-  }
+  void privateInit(const PAlgebra&, long rt);
 
  public:
 
   // Destructor and constructors
 
-  ~Cmod() { freeSpace(); } // destructor
-
   // Default constructor
-  Cmod(): zMStar(NULL), powers(NULL), Rb(NULL), Ra(NULL), ipowers(NULL), iRb(NULL), 
-          phimx(NULL), scratch(NULL) {}
+  Cmodulus() {}
 
-  Cmod(const Cmod &other):
-    zMStar(NULL),powers(NULL),Rb(NULL),Ra(NULL),ipowers(NULL),iRb(NULL),phimx(NULL),scratch(NULL)
-  { *this = other; }
+  Cmodulus(const Cmodulus &other) { *this = other; }
 
   // Specify m and q, and optionally also the root
   // if q == 0, then the current context is used
-  Cmod(const PAlgebra &zms, const zz &qq, const zz &rt);
+  Cmodulus(const PAlgebra &zms, long qq, long rt);
 
   // Copy operator
-  Cmod& operator=(const Cmod &other);
+  Cmodulus& operator=(const Cmodulus &other);
 
   // utility methods
 
   const PAlgebra &getZMStar() const { return *zMStar; }
   unsigned long getM() const    { return zMStar->getM(); }
   unsigned long getPhiM() const { return zMStar->getPhiM(); }
-  const zz& getQ() const          { return q; }
-  const zz& getRoot() const       { return root; }
-  const zpxModulus1& getPhimX() const  { return *phimx; }
-  zpx& getScratch() const { return *scratch; }
+  long getQ() const          { return q; }
+  long getRoot() const       { return root; }
+  const zz_pXModulus1& getPhimX() const  { return *phimx; }
+  zz_pX& getScratch() const { return *scratch; }
 
   //! @brief Restore NTL's current modulus
   void restoreModulus() const {context.restore();}
@@ -174,13 +102,11 @@ class Cmod {
   // FFT routines
 
   // sets zp context internally
-  void FFT(zzv &y, const ZZX& x) const;  // y = FFT(x)
+  void FFT(vec_long &y, const ZZX& x) const;  // y = FFT(x)
 
   // expects zp context to be set externally
-  void iFFT(zpx &x, const zzv& y) const; // x = FFT^{-1}(y)
+  void iFFT(zz_pX &x, const vec_long& y) const; // x = FFT^{-1}(y)
 };
 
-typedef Cmod<CMOD_zz_p> Cmodulus;
-typedef Cmod<CMOD_ZZ_p> CModulus;
 
 #endif // ifdef _CModulus_H_
