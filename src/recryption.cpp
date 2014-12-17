@@ -224,13 +224,14 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
 
   // Mod-switch down if needed
-  const IndexSet& curPS = ctxt.getPrimeSet();
-  if (curPS.card()>2) { // leave only bottom two primes
-    long frst = curPS.first();
-    long scnd = curPS.next(frst);
-    IndexSet s(frst,scnd);
-    ctxt.modDownToSet(s);
+  IndexSet s = ctxt.getPrimeSet() / getContext().specialPrimes; // set minus
+  if (s.card()>2) { // leave only bottom two primes
+    long frst = s.first();
+    long scnd = s.next(frst);
+    IndexSet s2(frst,scnd);
+    s.retain(s2); // retain only first two primes
   }
+  ctxt.modDownToSet(s);
 
   // key-switch to the bootstrapping key
   ctxt.reLinearize(recryptKeyID);
