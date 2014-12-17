@@ -336,6 +336,8 @@ private:
   mutable shared_ptr< Mat<R> > normalBasisMatrix; 
   mutable shared_ptr< Mat<R> > normalBasisMatrixInverse; 
 
+  // THREADS: need to make the above thread-safe lazy
+
 public:
   explicit
   EncryptedArrayDerived(const FHEcontext& _context, const RX& _G,

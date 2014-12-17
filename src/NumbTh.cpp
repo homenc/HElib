@@ -670,6 +670,7 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
 {
   static double const Pi=4.0*atan(1.0); // Pi=3.1415..
   static long const bignum = 0xfffffff;
+  // THREADS: C++11 guarantees these are initialized only once
 
   if (n<=0) n=deg(poly)+1; if (n<=0) return;
   poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial

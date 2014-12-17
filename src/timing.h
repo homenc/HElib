@@ -127,4 +127,10 @@ public:
 
 #define FHE_NTIMER_STOP(n)    _named_local_auto_timer ## n.stop();
 
+
+// THREADS: we need to turn timing off completely if we are running
+// multiple threads: (a) the timing info is not very useful anyway,
+// and (b) the logic makes use of global variables which will
+// break with multiple threads
+
 #endif // _TIMING_H_
