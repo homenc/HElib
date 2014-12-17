@@ -49,6 +49,7 @@ static long mValues[][14] = {
   {  2,  1200,  1705, 20, 11, 155,  0,   156,   936,    0, 10,  6,   0, 100}, // m=(5)*11*{31} m/phim(m)=1.42   C=34  D=2 E=2
   {  2,  1728,  4095, 12,  7,  5, 117,  2341,  3277, 3641,  6,  4,   6, 100}, // m=(3^2)*5*7*{13} m/phim(m)=2.36 C=26 D=3 E=2
   {  2,  2304,  4641, 24,  7,  3, 221,  3979,  3095, 3760,  6,  2,  -8, 100}, // m=3*7*(13)*{17} :-( m/phim(m)=2.01 C=45 D=4 E=3
+  {  2,  4096,  4369, 16, 17, 257,  0,   258,  4115,    0, 16,-16,   0, 100}, // m=17*(257) :-( m/phim(m)=1.06 C=61 D=3 E=4
   {  2, 12800, 17425, 40, 41, 425,  0,  5951,  8078,    0, 40, -8,   0, 100}, // m=(5^2)*{17}*41 m/phim(m)=1.36 C=93  D=3 E=3
   {  2, 15004, 15709, 22, 23, 683,  0,  4099, 13663,    0, 22, 31,   0, 100}, // m=23*(683) m/phim(m)=1.04      C=73  D=2 E=1
   {  2, 16384, 21845, 16, 17,   5,257,  8996, 17477, 21591, 16, 4, -16,1600}, // m=5*17*(257) :-( m/phim(m)=1.33 C=65 D=4 E=4
@@ -100,13 +101,13 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   assert(GCD(p, m) == 1);
 
   append(mvec, mValues[idx][4]);
-  append(mvec, mValues[idx][5]);
+  if (mValues[idx][5]>1) append(mvec, mValues[idx][5]);
   if (mValues[idx][6]>1) append(mvec, mValues[idx][6]);
   gens.push_back(mValues[idx][7]);
-  gens.push_back(mValues[idx][8]);
+  if (mValues[idx][8]>1) gens.push_back(mValues[idx][8]);
   if (mValues[idx][9]>1) gens.push_back(mValues[idx][9]);
   ords.push_back(mValues[idx][10]);
-  ords.push_back(mValues[idx][11]);
+  if (abs(mValues[idx][11])>1) ords.push_back(mValues[idx][11]);
   if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
   cout << "*** TestIt";
