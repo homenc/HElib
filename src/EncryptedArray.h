@@ -390,8 +390,7 @@ public:
 
   virtual const FHEcontext& getContext() const { return context; }
   virtual const long getDegree() const { return mappingData.getDegG(); }
-
-
+  const PAlgebraModDerived<type>& getTab() const { return tab; }
 
   virtual void rotate(Ctxt& ctxt, long k) const;
   virtual void shift(Ctxt& ctxt, long k) const;
