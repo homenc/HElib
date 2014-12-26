@@ -602,10 +602,15 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
 
   // Record the plaintext space for this key-switching matrix
   if (p<2) {
-    if (isBootstrappable())   // use the larger bootstrapping plaintext space
+    if (context.isBootstrappable()) // use larger bootstrapping plaintext space
          p = context.rcData.alMod->getPPowR();
     else p = pubEncrKey.ptxtSpace; // default plaintext space from public key
   }
+  // FIXME: We use context.isBootstrappable() rather than
+  //   this->isBootstrappable(). So we get the larger bootstrapping
+  //   plaintext space even if *this is not currently bootstrapppable,
+  //   in case the calling application will make it bootstrappable later.
+
   assert(p>=2);
   ksMatrix.ptxtSpace = p;
 
@@ -728,7 +733,7 @@ long FHESecKey::genRecryptData()
   if (recryptKeyID>=0) return recryptKeyID;
 
   // Make sure that the context has the bootstrapping EA and PAlgMod
-  assert(isBootstrappable());
+  assert(context.isBootstrappable());
 
   long p2ePr = context.rcData.alMod->getPPowR();// p^{e-e'+r}
   long p2r = context.alMod.getPPowR(); // p^r

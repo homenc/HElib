@@ -143,6 +143,7 @@ public:
   void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
 			  bool conservative=false)
   { rcData.init(*this, mvec, skWht, conservative); }
+  bool isBootstrappable() const { return (rcData.alMod != NULL); }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }

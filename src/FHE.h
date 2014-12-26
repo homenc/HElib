@@ -222,7 +222,7 @@ public:
   long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0,
 	       bool highNoise=false) const;
 
-  bool isBootstrappable() { return (context.rcData.alMod != NULL); }
+  bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
 
   friend class FHESecKey;
