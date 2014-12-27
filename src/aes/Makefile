@@ -18,7 +18,7 @@ LD = g++
 AR = ar
 #
 # CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -std=c++11 -I/usr/local/include -I.. -DUSE_ALT_CRT -DDEBUG_PRINTOUT -DUSE_ZZX_POLY
-CFLAGS = -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include -I..
+CFLAGS = -O2 -Wfatal-errors -Wshadow -Wall -std=c++11 -I/usr/local/include -I..
 GMP=-lgmp 
 LDLIBS = -L/usr/local/lib -lntl $(GMP) -lm
 
