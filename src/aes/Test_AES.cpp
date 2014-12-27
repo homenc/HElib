@@ -99,6 +99,7 @@ int main(int argc, char **argv)
        << endl;
 
   cout << "computing key-independent tables..." << std::flush;
+  double tm = -GetTime();
   FHEcontext context(m, p, /*r=*/1, gens, ords);
 #if (NTL_SP_NBITS>=50) // 64-bit machines
   context.bitsPerLevel = B;
@@ -107,12 +108,26 @@ int main(int argc, char **argv)
   buildModChain(context, L, c);
 
   if (boot) context.makeBootstrappable(mvec);
-  cout << "done\n";
+  tm += GetTime();
+  cout << "done in "<<tm<<" seconds\n";
 
-  context.zMStar.printout();
-  cout << "  Security level: "<<context.securityLevel() << endl;
+  //  context.zMStar.printout();
+  {IndexSet allPrimes(0,context.numPrimes()-1);
+   cout <<"  "<<context.numPrimes()<<" primes ("
+       <<context.ctxtPrimes.card()<<" ctxt/"
+       <<context.specialPrimes.card()<<" special), total bitsize="
+	<<context.logOfProduct(allPrimes)
+	<<", security level: "<<context.securityLevel() << endl;}
+
+  long e = mValues[idx][3] /8; // extension degree
+  cout << "  "<<context.zMStar.getNSlots()<<" slots ("
+       << (context.zMStar.getNSlots()/16)<<" blocks) per ctxt";
+  if (boot && packed)
+    cout << ". x"<<e<<" ctxts";
+  cout << endl;
 
   cout << "computing key-dependent tables..." << std::flush;
+  tm = -GetTime();
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
@@ -135,7 +150,8 @@ int main(int argc, char **argv)
     addSome1DMatrices(secretKey);   // compute more key-switching matrices
     secretKey.genRecryptData();
   }
-  cout << "done\n";
+  tm += GetTime();
+  cout << "done in "<<tm<<" seconds\n";
 
 #ifdef DEBUG_PRINTOUT
   dbgKey = &secretKey; // debugging key and ea
@@ -144,14 +160,15 @@ int main(int argc, char **argv)
   SetCoeff(aesPoly,8);  SetCoeff(aesPoly,4);
   SetCoeff(aesPoly,3);  SetCoeff(aesPoly,1);  SetCoeff(aesPoly,0);
   dbgEa = new EncryptedArray(context, aesPoly);
+  setTimersOn();
 #endif
 
   cout << "computing AES tables..." << std::flush;
+  tm = -GetTime();
   HomAES hAES(context); // compute AES-specific key-independent tables
   const EncryptedArrayDerived<PA_GF2>& ea2 = hAES.getEA();
   long blocksPerCtxt = ea2.size() / 16;
 
-  long e = mValues[idx][3] /8; // extension degree
   long nBlocks;
   if (boot && packed)
     nBlocks = blocksPerCtxt * e;
@@ -173,13 +190,13 @@ int main(int argc, char **argv)
   // Encrypt the AES key under the HE key
   vector< Ctxt > encryptedAESkey;
   hAES.encryptAESkey(encryptedAESkey, aesKey, publicKey);
-  cout << "done\n";
+  tm += GetTime();
+  cout << "done in "<<tm<<" seconds\n";
 
   // Perform homomorphic AES
-  setTimersOn();
   cout << "AES encryption "<< std::flush; 
   vector< Ctxt > doublyEncrypted;
-  double tm = -GetTime();
+  tm = -GetTime();
   hAES.homAESenc(doublyEncrypted, encryptedAESkey, ptxt);
   tm += GetTime();
 
@@ -209,6 +226,11 @@ int main(int argc, char **argv)
   else
     cout << "in "<<tm<<" seconds\n";
 
+#ifdef DEBUG_PRINTOUT
+  printAllTimers();
+  resetAllTimers();
+#endif
+
   // Decrypt and check that you have the same thing as before
   cout << "AES decryption "<< std::flush; 
   tm = -GetTime();
@@ -232,11 +254,13 @@ int main(int argc, char **argv)
   else
     cout << "in "<<tm<<" seconds\n"; 
 
+#ifdef DEBUG_PRINTOUT
   printAllTimers();
+#endif
 #if (defined(__unix__) || defined(__unix) || defined(unix))
   struct rusage rusage;
   getrusage( RUSAGE_SELF, &rusage );
-  cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+  cout << "rusage.ru_maxrss="<<rusage.ru_maxrss << endl << endl;
 #endif
 }
 
