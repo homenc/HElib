@@ -98,8 +98,9 @@ int main(int argc, char **argv)
        << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
        << endl;
 
-  cout << "computing key-independent tables..." << std::flush;
+  setTimersOn();
   double tm = -GetTime();
+  cout << "computing key-independent tables..." << std::flush;
   FHEcontext context(m, p, /*r=*/1, gens, ords);
 #if (NTL_SP_NBITS>=50) // 64-bit machines
   context.bitsPerLevel = B;
@@ -160,7 +161,6 @@ int main(int argc, char **argv)
   SetCoeff(aesPoly,8);  SetCoeff(aesPoly,4);
   SetCoeff(aesPoly,3);  SetCoeff(aesPoly,1);  SetCoeff(aesPoly,0);
   dbgEa = new EncryptedArray(context, aesPoly);
-  setTimersOn();
 #endif
 
   cout << "computing AES tables..." << std::flush;
@@ -223,13 +223,12 @@ int main(int argc, char **argv)
       cerr << "should be "; printState(tmpBytes); cerr << endl;
     }
   }
-  else
+  else {
     cout << "in "<<tm<<" seconds\n";
+    printNamedTimer(cout, "batchRecrypt");
+    printNamedTimer(cout, "recryption");
+  }
 
-#ifdef DEBUG_PRINTOUT
-  printAllTimers();
-  resetAllTimers();
-#endif
 
   // Decrypt and check that you have the same thing as before
   cout << "AES decryption "<< std::flush; 
@@ -251,12 +250,11 @@ int main(int argc, char **argv)
       cerr << "should be "; printState(ptxt); cerr << endl;
     }
   }
-  else
+  else {
     cout << "in "<<tm<<" seconds\n"; 
-
-#ifdef DEBUG_PRINTOUT
-  printAllTimers();
-#endif
+    printNamedTimer(cout, "batchRecrypt");
+    printNamedTimer(cout, "recryption");
+  }
 #if (defined(__unix__) || defined(__unix) || defined(unix))
   struct rusage rusage;
   getrusage( RUSAGE_SELF, &rusage );

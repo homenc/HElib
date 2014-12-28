@@ -154,7 +154,6 @@ void HomAES::encryptAESkey(vector<Ctxt>& eKey, Vec<uint8_t>& aesKey,
 // Compute the packing/unpacking constants
 void HomAES::setPackingConstants()
 {
-  cerr << "* setPackingConstants()\n";
   // Get the context and the ea for "fully packed" polynomials
   const FHEcontext& context = ea2.getContext();
   const EncryptedArrayDerived<PA_GF2>& ea = context.ea->getDerived(PA_GF2());
@@ -353,6 +352,7 @@ void HomAES::homAESdec(vector<Ctxt>& eData, const vector<Ctxt>& aesKey,
 
 void HomAES::batchRecrypt(vector<Ctxt>& data) const
 {
+  FHE_TIMER_START;
   FHEPubKey& pk = (FHEPubKey&) data[0].getPubKey();
   if (!pk.isBootstrappable()) return;
 
@@ -377,10 +377,10 @@ void HomAES::batchRecrypt(vector<Ctxt>& data) const
 #endif
 
   // recrypt each ciphertext in the vector
-  FHE_NTIMER_START(batchRecrypt);
+  FHE_NTIMER_START(recryption);
   for (long i=0; i<(long)pData->size(); i++)
     pk.reCrypt((*pData)[i]);
-  FHE_NTIMER_STOP(batchRecrypt);
+  FHE_NTIMER_STOP(recryption);
 
   // unpack back to the original vector, if needed
   if (fullyPacked.size()>0) {
