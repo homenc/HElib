@@ -228,7 +228,7 @@ int main(int argc, char **argv)
     printNamedTimer(cout, "batchRecrypt");
     printNamedTimer(cout, "recryption");
   }
-
+  resetAllTimers();
 
   // Decrypt and check that you have the same thing as before
   cout << "AES decryption "<< std::flush; 
