@@ -20,6 +20,7 @@
 
 #include "bluestein.h"
 #include "timing.h"
+#include "CModulus.h"
 
 
 
@@ -63,7 +64,7 @@ void BluesteinInit(long n, const zz_p& root, zz_pX& powers,
 
 void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
 		  const zz_pX& powers, const Vec<mulmod_precon_t>& powers_aux, 
-                  const fftRep& Rb, fftRep& Ra)
+                  const fftRep& Rb)
 {
   FHE_TIMER_START;
 
@@ -82,7 +83,7 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
   x.normalize();
 
   long k = NextPowerOfTwo(2*n-1);
-  Ra.SetSize(k);
+  fftRep& Ra = Cmodulus::getScratch_fftRep(k);
   TofftRep(Ra, x, k);
 
   mul(Ra,Ra,Rb);           // multiply in FFT representation

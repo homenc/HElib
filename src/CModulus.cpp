@@ -95,11 +95,9 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 
   powers.set_ptr(new zz_pX);
   Rb.set_ptr(new fftRep);
-  Ra.set_ptr(new fftRep);
   ipowers.set_ptr(new zz_pX);
   iRb.set_ptr(new fftRep);
   phimx.set_ptr(new zz_pXModulus1(zms.getM(), phimx_poly));
-  scratch.set_ptr(new zz_pX);
 
   BluesteinInit(mm, conv<zz_p>(root), *powers, powers_aux, *Rb);
   BluesteinInit(mm, conv<zz_p>(rInv), *ipowers, ipowers_aux, *iRb);
@@ -138,8 +136,6 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
   iRb = other.iRb;
   phimx = other.phimx;
 
-  Ra = other.Ra;
-  scratch = other.scratch;
 
 
   return *this;
@@ -151,12 +147,12 @@ void Cmodulus::FFT(vec_long &y, const ZZX& x) const
   zz_pBak bak; bak.save();
   context.restore();
   zz_p rt;
-  zz_pX& tmp = getScratch();
+  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
 
   conv(tmp,x);      // convert input to zpx format
   conv(rt, root);  // convert root to zp format
 
-  BluesteinFFT(tmp, getM(), rt, *powers, powers_aux, *Rb, *Ra); // call the FFT routine
+  BluesteinFFT(tmp, getM(), rt, *powers, powers_aux, *Rb); // call the FFT routine
 
   // copy the result to the output vector y, keeping only the
   // entries corresponding to primitive roots of unity
@@ -185,7 +181,7 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
   x.normalize();
   conv(rt, rInv);  // convert rInv to zp format
 
-  BluesteinFFT(x, m, rt, *ipowers, ipowers_aux, *iRb, *Ra); // call the FFT routine
+  BluesteinFFT(x, m, rt, *ipowers, ipowers_aux, *iRb); // call the FFT routine
 
   // reduce the result mod (Phi_m(X),q) and copy to the output polynomial x
 FHE_NTIMER_START(iFFT_division);
@@ -199,16 +195,33 @@ FHE_NTIMER_STOP(iFFT_division);
 }
 
 
+zz_pX& Cmodulus::getScratch_zz_pX() 
+{
+   NTL_THREAD_LOCAL static zz_pX scratch;
+   return scratch;
+}
 
-// THREADS: I can get away with making scratch thread-local,
-// which is a bit dirty, but it should work.
-// More problematic is Ra: the internal NumPrimes field 
-// may be different for different moduli (esp is some are
-// FFT primes and some are not).  So it will take a bit
-// more tweaking than just making Ra thread-local: I may
-// have to tweak NTL so that it provides a more flexible/forgiving
-// interface for fftReps.  In the worst case, I just copy and paste
-// a few things...
+
+fftRep& Cmodulus::getScratch_fftRep(long k)
+{
+  NTL_THREAD_LOCAL static fftRep rep;
+  NTL_THREAD_LOCAL static long MaxK[4] = {-1, -1, -1, -1};
+
+  long NumPrimes = zz_pInfo->NumPrimes;
+
+  for (long i = 0; i < NumPrimes; i++) {
+    if (k > MaxK[i]) {
+      rep.tbl[i].SetLength(1L << k);
+      MaxK[i] = k;
+    }
+  }
+
+  rep.NumPrimes = NumPrimes;
+  rep.k = rep.MaxK = k;
+
+  return rep;
+}
+
 
 
 

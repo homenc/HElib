@@ -46,7 +46,6 @@ EncryptedArrayDerived<type>::EncryptedArrayDerived(
    const FHEcontext& _context, const RX& _G, const PAlgebraMod& alMod)
   : context(_context), tab(alMod.getDerived(type()))
 {
-  tab.genMaskTable();
   tab.mapToSlots(mappingData, _G); // Compute the base-G representation maps
 }
 

@@ -62,7 +62,6 @@ int main(int argc, char *argv[])
   cout << "\n";
 
   PAlgebraMod almod(al, r);
-  almod.genMaskTable();
 
   FHEcontext context(m, p, r);
   buildModChain(context, 5, 2);

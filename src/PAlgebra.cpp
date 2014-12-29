@@ -333,6 +333,9 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   factorsOverZZ.resize(nSlots);
   for (long i = 0; i < nSlots; i++)
     conv(factorsOverZZ[i], factors[i]);
+
+  genCrtTable();
+  genMaskTable();
 }
 
 // Assumes current zz_p modulus is p^r
@@ -515,7 +518,6 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
   FHE_TIMER_START;
   long nslots = zMStar.getNSlots();
 
-  genCrtTable();
 
   const vector<RX>& ctab = crtTable;
 
@@ -766,37 +768,32 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
 // the tables are generated "on demand"
 
 template<class type> 
-void PAlgebraModDerived<type>::genMaskTable() const
+void PAlgebraModDerived<type>::genMaskTable() 
 {
-  // THREADS: thread-safe lazy init
+  // This is only called by the constructor, which has already
+  // set the zz_p context
   
-  if (maskTable.size() > 0) return;
-
-  RBak bak; bak.save(); restoreContext();
-
-  // strip const
-  vector< vector< RX > >& mtab = (vector< vector< RX > >&) maskTable;
 
   RX tmp1;
   
-  mtab.resize(zMStar.numOfGens());
+  maskTable.resize(zMStar.numOfGens());
   for (long i = 0; i < (long)zMStar.numOfGens(); i++) {
     long ord = zMStar.OrderOf(i);
-    mtab[i].resize(ord+1);
-    mtab[i][ord] = 0;
+    maskTable[i].resize(ord+1);
+    maskTable[i][ord] = 0;
     for (long j = ord-1; j >= 1; j--) {
       // initialize mask that is 1 whenever the ith coordinate is at least j
-      // Note: mtab[i][0] = constant 1, mtab[i][ord] = constant 0
-      mtab[i][j] = mtab[i][j+1];
+      // Note: maskTable[i][0] = constant 1, maskTable[i][ord] = constant 0
+      maskTable[i][j] = maskTable[i][j+1];
       for (long k = 0; k < (long)zMStar.getNSlots(); k++) {
          if (zMStar.coordinate(i, k) == j) {
            div(tmp1, PhimXMod, factors[k]);
            mul(tmp1, tmp1, crtCoeffs[k]);
-           add(mtab[i][j], mtab[i][j], tmp1);
+           add(maskTable[i][j], maskTable[i][j], tmp1);
          }
       }
     }
-    mtab[i][0] = 1;
+    maskTable[i][0] = 1;
   }
 }
 
@@ -804,27 +801,20 @@ void PAlgebraModDerived<type>::genMaskTable() const
 // the tables are generated "on demand"
 
 template<class type> 
-void PAlgebraModDerived<type>::genCrtTable() const
+void PAlgebraModDerived<type>::genCrtTable() 
 {
-  // THREADS: thread-safe lazy init
-  
-  if (crtTable.size() > 0) return;
+  // This is only called by the constructor, which has already
+  // set the zz_p context
 
-  RBak bak; bak.save(); restoreContext();
-
-  // strip const
-  vector< RX >& tab = (vector< RX >&) crtTable;
-  shared_ptr< TNode<RX> >& tree = (shared_ptr< TNode<RX> >&) crtTree;
-  
   long nslots = zMStar.getNSlots();
-  tab.resize(nslots);
+  crtTable.resize(nslots);
   for (long i = 0; i < nslots; i++) {
     RX allBut_i = PhimXMod / factors[i]; // = \prod_{j \ne i }Fj
     allBut_i *= crtCoeffs[i]; // = 1 mod Fi and = 0 mod Fj for j \ne i
-    tab[i] = allBut_i;
+    crtTable[i] = allBut_i;
   }
 
-  buildTree(tree, 0, nslots);
+  buildTree(crtTree, 0, nslots);
 }
 
 template<class type> 

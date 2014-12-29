@@ -482,7 +482,7 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
 {
   zz_pBak bak; bak.save();   // backup NTL's current modulus
 
-  zz_pX& tmp = context.ithModulus(idx).getScratch();
+  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
   long q = getOneRow(tmp,idx);
   if (q==0) return 0;        // no such index
 
@@ -518,7 +518,7 @@ FHE_TIMER_START;
 
   for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
     context.ithModulus(i).restoreModulus();
-    zz_pX& tmp = context.ithModulus(i).getScratch();
+    zz_pX& tmp = Cmodulus::getScratch_zz_pX();
     context.ithModulus(i).iFFT(tmp, map[i]); 
     CRT(poly, prod, tmp);  // NTL :-)
   }

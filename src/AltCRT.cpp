@@ -709,7 +709,7 @@ void AltCRT::automorph(long k)
 
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
-    zz_pX& tmp = context.ithModulus(i).getScratch();
+    zz_pX& tmp = Cmodulus::getScratch_zz_pX();
     zz_pX& row = map[i];
     long d = deg(row);
 

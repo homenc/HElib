@@ -35,7 +35,7 @@ CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++0x
 
-$(info HElib requires NTL version 6.1.0 or higher, see http://shoup.net/ntl)
+$(info HElib requires NTL version 8.0.0 or higher, see http://shoup.net/ntl)
 $(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
 $(info )
 
@@ -93,7 +93,7 @@ clean:
 	rm -rf *.dSYM
 
 info:
-	: HElib require NTL version 6.1.0 or higher
+	: HElib require NTL version 8.0.0 or higher
 	: Compilation flags are 'CFLAGS=$(CFLAGS)'
 	: If errors occur, try adding/removing '-std=c++11' in Makefile
 	:

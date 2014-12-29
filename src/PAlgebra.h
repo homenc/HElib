@@ -50,6 +50,7 @@
 #include "NumbTh.h"
 #include "cloned_ptr.h"
 
+
 //NTL_CLIENT
 
 class PAlgebra {
@@ -341,25 +342,6 @@ public:
   //! Restores the NTL context for p^r
   virtual void restoreContext() const = 0;
 
-  /**
-     @brief Generates the "mask table" that is used to support rotations
-     
-     maskTable[i][j] is a polynomial representation of a mask that is 1 in
-     all slots whose i'th coordinate is at least j, and 0 elsewhere. We have:
-     \verbatim
-       maskTable.size() == zMStar.numOfGens()     // # of generators
-       for i = 0..maskTable.size()-1:
-         maskTable[i].size() == 1 + zMStar.OrderOf(i) // 1 + order of gen i
-     \endverbatim
-  **/
-  virtual void genMaskTable() const = 0;
-
-  /**
-
-    generates CRT table to speed up mask encoding
-
-  **/
-  virtual void genCrtTable() const = 0;
 };
 
 #ifndef DOXYGEN_IGNORE
@@ -440,6 +422,7 @@ template<class T> shared_ptr< TNode<T> > nullTNode()
 //! \endcond
   
 
+
 //! A concrete instantiation of the virtual class
 template<class type> class PAlgebraModDerived : public PAlgebraModBase {
 public:
@@ -456,10 +439,12 @@ private:
   vec_RX factors;
   vector<ZZX> factorsOverZZ;
   vec_RX crtCoeffs;
-  vector< vector< RX > > maskTable;
+  vector< vector< RX > >  maskTable;
   vector<RX> crtTable;
   shared_ptr< TNode<RX> > crtTree;
 
+  void genMaskTable();
+  void genCrtTable();
 
 public:
 
@@ -517,26 +502,6 @@ public:
   //! Restores the NTL context for p^r
   virtual void restoreContext() const { pPowRContext.restore(); }
 
-  /**
-     @brief Generates the "mask table" that is used to support rotations
-     
-     maskTable[i][j] is a polynomial representation of a mask that is 1 in
-     all slots whose i'th coordinate is at least j, and 0 elsewhere. We have:
-     \verbatim
-       maskTable.size() == zMStar.numOfGens()     // # of generators
-       for i = 0..maskTable.size()-1:
-         maskTable[i].size() == zMStar.OrderOf(i) // order of generator i
-     \endverbatim
-  **/
-  virtual void genMaskTable() const; // logically, but not really, const
-
-  /**
-
-    generates CRT table to speed up mask encoding
-
-  **/
-
-  virtual void genCrtTable() const; // logically, but not really, const
 
   /* In all of the following functions, it is expected that the caller 
      has already restored the relevant modulus (p^r), which
@@ -570,8 +535,6 @@ public:
   **/
   const vector< vector< RX > >& getMaskTable() const // logically, but not really, const
   {
-    if (maskTable.size() == 0) 
-      genMaskTable();
     return maskTable;
   }
 
@@ -716,26 +679,6 @@ public:
   //! Restores the NTL context for p^r
   void restoreContext() const { rep->restoreContext(); }
 
-  /**
-     @brief Generates the "mask table" that is used to support rotations
-     
-     maskTable[i][j] is a polynomial representation of a mask that is 1 in
-     all slots whose i'th coordinate is at least j, and 0 elsewhere. We have:
-     \verbatim
-       maskTable.size() == zMStar.numOfGens()     // # of generators
-       for i = 0..maskTable.size()-1:
-         maskTable[i].size() == zMStar.OrderOf(i) // order of generator i
-     \endverbatim
-  **/
-  void genMaskTable() const { rep->genMaskTable(); }
-
-  /** 
-
-    generates CRT table to speed up mask encoding
- 
-  **/
-
-  void genCrtTable() const { rep->genCrtTable(); }
 };
 
 #endif // #ifdef _PAlgebra_H_

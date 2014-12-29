@@ -64,8 +64,6 @@ class Cmodulus {
 
   copied_ptr<zz_pXModulus1> phimx; // PhimX modulo q, for faster division w/ remainder
 
-  mutable copied_ptr<fftRep>  Ra;      // temp space
-  mutable copied_ptr<zz_pX>   scratch; 
 
   // Allocate memory and compute roots
   void privateInit(const PAlgebra&, long rt);
@@ -94,7 +92,6 @@ class Cmodulus {
   long getQ() const          { return q; }
   long getRoot() const       { return root; }
   const zz_pXModulus1& getPhimX() const  { return *phimx; }
-  zz_pX& getScratch() const { return *scratch; }
 
   //! @brief Restore NTL's current modulus
   void restoreModulus() const {context.restore();}
@@ -106,6 +103,16 @@ class Cmodulus {
 
   // expects zp context to be set externally
   void iFFT(zz_pX &x, const vec_long& y) const; // x = FFT^{-1}(y)
+
+  // returns thread-local scratch space
+  // DIRT: this zz_pX is used for several zz_p moduli,
+  // which is not officially sanctioned by NTL, but should be OK.
+  static zz_pX& getScratch_zz_pX();
+
+  // returns thread-local scratch space
+  // DIRT: this use a couple of internal, undocumented
+  // NTL interfaces
+  static fftRep& getScratch_fftRep(long k);
 };
 
 
