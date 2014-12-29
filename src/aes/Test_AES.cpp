@@ -67,10 +67,10 @@ int main(int argc, char **argv)
   vector<long> ords;
 
   if (boot) { 
-    if (L<22) L=22;
+    if (L<23) L=23;
     if (idx<1) idx=1; // the sz=0 params are incompatible with bootstrapping
   } else { 
-    if (L<44) L=44; 
+    if (L<42) L=42; 
   }
 
   long p = mValues[idx][0];
