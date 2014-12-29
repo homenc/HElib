@@ -45,6 +45,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
   // If the digitPoly in the context is not yet initialized, then compute it
   long p = context.zMStar.getP();
   ZZX& x2p = context.modP_digPoly;
+  // THREADS: need thread-safe lazy init here
   if (r>context.modP_digPoly_r && p>3) { // FIXME: not thread safe...
     buildDigitPolynomial(x2p, p, r);
     context.modP_digPoly_r = r;
