@@ -361,51 +361,58 @@ void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt)
 template<class type>
 void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
 {
-  RBak bak; bak.save(); restoreContext();
-  REBak ebak; ebak.save(); restoreContextForG();
-
-  long d = RE::degree();
-  long p = tab.getZMStar().getP();
-  long r = tab.getR();
-
-  // compute change of basis matrix CB
-  mat_R CB;
-  CB.SetDims(d, d);
-  RE normal_element;
-  RE H;
-  bool got_it = false;
-
-  H = power(conv<RE>(RX(1, 1)), p);
-  
-
   do {
-    NTL::random(normal_element);
- 
-    RE pow;
-    pow = normal_element; 
-    VectorCopy(CB[0], rep(pow), d);
-    for (long i = 1; i < d; i++) {
-      pow = eval(rep(pow), H);
-      VectorCopy(CB[i], rep(pow), d);
-    }
+    typename Lazy< Pair< Mat<R>, Mat<R> > >::Builder 
+      builder(normalBasisMatrices); 
 
-    Mat<ZZ> CB1;
-    conv(CB1, CB);
+    if (!builder()) break;
 
-    {
-       zz_pBak bak1; bak1.save(); zz_p::init(p);
-       Mat<zz_p> CB2;
-       conv(CB2, CB1);
-       got_it = determinant(CB2) != 0;
-    }
-  } while (!got_it);
+    RBak bak; bak.save(); restoreContext();
+    REBak ebak; ebak.save(); restoreContextForG();
 
-  Mat<R> CBi;
-  ppInvert(CBi, CB, p, r);
+    long d = RE::degree();
+    long p = tab.getZMStar().getP();
+    long r = tab.getR();
 
+    // compute change of basis matrix CB
+    mat_R CB;
+    CB.SetDims(d, d);
+    RE normal_element;
+    RE H;
+    bool got_it = false;
 
-  normalBasisMatrix = shared_ptr<mat_R>(new mat_R(CB));
-  normalBasisMatrixInverse = shared_ptr<mat_R>(new mat_R(CBi));
+    H = power(conv<RE>(RX(1, 1)), p);
+    
+
+    do {
+      NTL::random(normal_element);
+   
+      RE pow;
+      pow = normal_element; 
+      VectorCopy(CB[0], rep(pow), d);
+      for (long i = 1; i < d; i++) {
+        pow = eval(rep(pow), H);
+        VectorCopy(CB[i], rep(pow), d);
+      }
+
+      Mat<ZZ> CB1;
+      conv(CB1, CB);
+
+      {
+         zz_pBak bak1; bak1.save(); zz_p::init(p);
+         Mat<zz_p> CB2;
+         conv(CB2, CB1);
+         got_it = determinant(CB2) != 0;
+      }
+    } while (!got_it);
+
+    Mat<R> CBi;
+    ppInvert(CBi, CB, p, r);
+
+    UniquePtr< Pair< Mat<R>, Mat<R> > > ptr;
+    ptr.make(CB, CBi);
+    builder.move(ptr);
+  } while(0);
 }
 
 
@@ -1746,9 +1753,11 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
   RBak bak; bak.save(); restoreContext();
   REBak ebak; ebak.save(); restoreContextForG();
 
-  if (!linPolyMatrix) {
-    FHE_NTIMER_START(buildLinPolyCoeffs_buildMatrix);
+  do {
+    typename Lazy< Mat<RE> >::Builder builder(linPolyMatrix);
+    if (!builder()) break;
 
+   
     long p = tab.getZMStar().getP();
     long r = tab.getR();
 
@@ -1757,8 +1766,10 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
     Mat<RE> M2;
     ppInvert(M2, M1, p, r);
 
-    linPolyMatrix = shared_ptr< Mat<RE> >(new Mat<RE>(M2) );
-  }
+    UniquePtr< Mat<RE> > ptr;
+    ptr.make(M2);
+    builder.move(ptr);
+  } while (0);
 
   Vec<RE> CC, LL;
   convert(LL, L);

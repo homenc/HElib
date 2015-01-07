@@ -467,8 +467,7 @@ FHEcontext::~FHEcontext()
 FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
    const vector<long>& gens, const vector<long>& ords):
   zMStar(m, p, gens, ords), alMod(zMStar, r),
-  ea(new EncryptedArray(*this, alMod)),
-  modP_digPoly(ZZX::zero()), modP_digPoly_r(0)
+  ea(new EncryptedArray(*this, alMod))
 {
   stdev=3.2;  
   bitsPerLevel = FHE_pSize;

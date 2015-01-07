@@ -126,10 +126,6 @@ public:
 
   long fftPrimeCount;
 
-  //! A degree-p polynomial Q(X) s.t. for any t<r and integer z of the
-  //! form z = z0 + p^t*z1 (with 0<=z0<p), we have Q(z) = z0 (mod p^{t+1}).
-  ZZX modP_digPoly;    // Initialized during call to Ctxt::extractDigits(...)
-  long modP_digPoly_r; // relative to which p^r was this computed
 
   //! Bootstrapping-related data in the context
   RecryptData rcData;
