@@ -31,6 +31,15 @@
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
+// #define FHE_THREADS
+#ifdef FHE_THREADS
+#include <thread>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
+#include <NTL/SmartPtr.h>
+#endif
+
 
 // NTL implementation of mat_long
 
@@ -497,6 +506,188 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
   return q;
 }
 
+#ifdef FHE_THREADS
+// experimental multi-threaded version
+
+struct iFFTTaskInfo {
+  const Vec<long> *indexVec;
+  Vec<zz_pX> *tmpVec;
+
+  atomic<long> *globalCtr;
+  mutex *globalMutex;
+  bool *globalReady;
+  condition_variable *globalCV;
+
+  mutex *localMutex;
+  bool *localReady;
+  condition_variable *localCV;
+  
+  long firstIndex;
+  long lastIndex;
+  const FHEcontext *context;
+  const IndexMap<vec_long> *map;
+};
+
+void iFFTTask(iFFTTaskInfo *info)
+{
+  for (;;) {
+    {
+      unique_lock<mutex> lock(*info->localMutex);
+      info->localCV->wait(lock, [&]() { return *info->localReady; });
+      
+      *info->localReady = false;
+
+      for (long j = info->firstIndex; j <= info->lastIndex; j++) {
+        long i = (*info->indexVec)[j];
+        zz_pX& tmp = (*info->tmpVec)[j];
+        info->context->ithModulus(i).iFFT(tmp, (*info->map)[i]); 
+      }
+    }
+
+    if (--(*info->globalCtr) == 0) {
+      lock_guard<mutex> lock(*info->globalMutex);
+      *info->globalReady = true;
+      info->globalCV->notify_one();
+    }
+  }
+} 
+
+
+NTL_THREAD_LOCAL static Vec<iFFTTaskInfo> iFFTTaskInfoVec;
+NTL_THREAD_LOCAL static Vec<zz_pX> iFFTTaskTmpVec;
+NTL_THREAD_LOCAL static Vec<long> iFFTTaskIndexVec;
+
+NTL_THREAD_LOCAL static atomic<long> iFFTTaskGlobalCtr;
+NTL_THREAD_LOCAL static mutex iFFTTaskGlobalMutex;
+NTL_THREAD_LOCAL static bool iFFTTaskGlobalReady;
+NTL_THREAD_LOCAL static condition_variable iFFTTaskGlobalCV;
+
+NTL_THREAD_LOCAL static Vec<mutex> iFFTTaskLocalMutex;
+NTL_THREAD_LOCAL static Vec<bool> iFFTTaskLocalReady;
+NTL_THREAD_LOCAL static Vec<condition_variable> iFFTTaskLocalCV;
+
+
+NTL_THREAD_LOCAL static bool iFFTTaskInitialized = false;
+
+const long iFFTTaskMaxThreads = 4;
+
+void iFFTTaskInit()
+{
+  if (!iFFTTaskInitialized) {
+    iFFTTaskInfoVec.SetLength(iFFTTaskMaxThreads);
+    iFFTTaskLocalMutex.SetLength(iFFTTaskMaxThreads);
+    iFFTTaskLocalReady.SetLength(iFFTTaskMaxThreads);
+    iFFTTaskLocalCV.SetLength(iFFTTaskMaxThreads);
+
+    for (long j = 0; j < iFFTTaskMaxThreads; j++) {
+      iFFTTaskInfo& info = iFFTTaskInfoVec[j];
+
+      info.indexVec = &iFFTTaskIndexVec;
+      info.tmpVec = &iFFTTaskTmpVec;
+      info.globalCtr = &iFFTTaskGlobalCtr;
+      info.globalMutex = &iFFTTaskGlobalMutex;
+      info.globalReady = &iFFTTaskGlobalReady;
+      info.globalCV = &iFFTTaskGlobalCV;
+      info.localMutex = &iFFTTaskLocalMutex[j];
+      info.localReady = &iFFTTaskLocalReady[j];
+      info.localCV = &iFFTTaskLocalCV[j];
+
+      *info.localReady = false;
+
+      thread t(iFFTTask, &info);
+      t.detach();
+    }
+
+    iFFTTaskInitialized = true;
+  }
+}
+
+void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
+		       bool positive) const
+{
+FHE_TIMER_START;
+  if (dryRun) return;
+
+  IndexSet s1 = map.getIndexSet() & s;
+
+  if (empty(s1)) {
+    clear(poly);
+    return;
+  }
+
+  iFFTTaskInit();
+
+
+  zz_pBak bak; bak.save();
+
+  
+  long indexCard = s1.card();
+  iFFTTaskIndexVec.SetLength(indexCard);
+  for (long i = s1.first(), j = 0; i <= s1.last(); i = s1.next(i), j++) 
+    iFFTTaskIndexVec[j] = i;
+
+  iFFTTaskTmpVec.SetLength(indexCard);
+
+
+  long nthreads = iFFTTaskMaxThreads;
+  if (nthreads > indexCard) nthreads = indexCard;
+  
+  long blockSize = (indexCard + nthreads - 1)/nthreads;
+
+  iFFTTaskGlobalCtr = nthreads;
+  iFFTTaskGlobalReady = false;
+
+  for (long t = 0; t < nthreads; t++) {
+    long firstIndex = blockSize*t;
+    long lastIndex = firstIndex + blockSize - 1;
+    if (lastIndex >= indexCard) lastIndex = indexCard-1;
+
+    iFFTTaskInfo& info = iFFTTaskInfoVec[t];
+    info.firstIndex = firstIndex;
+    info.lastIndex = lastIndex;
+    info.context = &context;
+    info.map = &map;
+
+    lock_guard<mutex> lock(*info.localMutex);
+    *info.localReady = true;
+    info.localCV->notify_one();
+  }
+
+  unique_lock<mutex> lock(iFFTTaskGlobalMutex);
+  iFFTTaskGlobalCV.wait(lock, [&]() { return iFFTTaskGlobalReady; });
+
+    
+#if 0
+  for (long j = 0; j < indexCard; j++) {
+    long i = indexVec[j];
+
+    context.ithModulus(i).restoreModulus();
+    zz_pX& tmp = tmpVec[j];
+    context.ithModulus(i).iFFT(tmp, map[i]); 
+  }
+#endif
+
+  clear(poly);
+  ZZ prod;
+  prod = 1;
+
+  for (long j = 0; j < indexCard; j++) {
+    long i = iFFTTaskIndexVec[j];
+    context.ithModulus(i).restoreModulus();
+    zz_pX& tmp = iFFTTaskTmpVec[j];
+    CRT(poly, prod, tmp);  // NTL :-)
+  }
+
+  if (positive) {
+    long d = deg(poly);
+    for (long j = 0; j <= d; j++) 
+      if (poly.rep[j] < 0)
+        poly.rep[j] += prod;   
+
+    // no need to normalize poly here
+  }
+}
+#else
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
@@ -531,8 +722,22 @@ FHE_TIMER_START;
 
     // no need to normalize poly here
   }
-FHE_TIMER_STOP;
 }
+#endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #if 0
 {

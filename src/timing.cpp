@@ -20,6 +20,33 @@
 #include <cstring>
 
 
+#if 0
+
+static
+clock_t GetClock()
+{
+  timespec ts;
+
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+
+  return ts.tv_sec*1000000L + ts.tv_nsec/1000L; 
+}
+
+const long CLOCK_SCALE = 1000000L;
+
+#else
+
+static
+clock_t GetClock()
+{
+  return clock();
+}
+
+const long CLOCK_SCALE = CLOCKS_PER_SEC;
+
+#endif
+
+
 bool FHEtimersOn=false;
 
 bool timer_compare(const FHEtimer *a, const FHEtimer *b)
@@ -41,7 +68,7 @@ void FHEtimer::reset()
 {
   numCalls = 0;
   counter = 0;
-  if (isOn) counter -= std::clock();
+  if (isOn) counter -= GetClock();
 }
 
 // Start a timer
@@ -50,7 +77,7 @@ void FHEtimer::start()
   if (!isOn) {
     isOn = true;
     numCalls++;
-    counter -= std::clock();
+    counter -= GetClock();
   }
 }
 
@@ -59,7 +86,7 @@ void FHEtimer::stop()
 {
   if (isOn) {
     isOn = false;
-    counter += std::clock();
+    counter += GetClock();
   }
 }
 
@@ -67,8 +94,8 @@ void FHEtimer::stop()
 double FHEtimer::getTime() const // returns time in seconds
 {
   // If the counter is currently counting, add the clock() value
-  clock_t c = isOn? (counter + std::clock()) : counter;
-  return ((double)c)/CLOCKS_PER_SEC;
+  clock_t c = isOn? (counter + GetClock()) : counter;
+  return ((double)c)/CLOCK_SCALE;
 }
 
 // Returns number of calls for that timer

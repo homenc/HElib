@@ -66,7 +66,7 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
 		  const zz_pX& powers, const Vec<mulmod_precon_t>& powers_aux, 
                   const fftRep& Rb)
 {
-  FHE_TIMER_START;
+  // FHE_TIMER_START;
 
   if (IsZero(x)) return;
   if (n<=0) {
