@@ -29,6 +29,13 @@
 void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k=0);
      // Note: poly is passed by value, so caller keeps the original
 
+//! @brief Evaluate an encrypted polynomial on an encrypted input
+//! @param[out] res  to hold the return value
+//! @param[in]  poly the degree-d polynomial to evaluate
+//! @param[in]  x    the point on which to evaluate
+void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x);
+
+
 // A useful helper class
 
 //! @brief Store powers of X, compute them synamically as needed.

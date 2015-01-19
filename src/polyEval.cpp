@@ -35,6 +35,68 @@ static void PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long 
 static void degPowerOfTwo(Ctxt& ret, const ZZX& poly, long k, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
 static void recursivePolyEval(Ctxt& ret, const ZZX& poly, long k, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
 
+static void recursivePolyEval(Ctxt& ret, const Ctxt poly[], long nCoeffs,
+			      const Vec<Ctxt>& powers);
+
+
+// Main entry point: Evaluate an encrypted polynomial on an encrypted input
+// return in ret = sum_i poly[i] * x^i
+void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x)
+{
+  if (poly.length()<=1) { // Some special cases
+    if (poly.length()==0) ret.clear();   // empty polynomial
+    else                  ret = poly[0]; // constant polynomial
+    return;
+  }
+  long deg = poly.length()-1;
+
+  long logD = NextPowerOfTwo(divc(poly.length(),3));
+  long d = 1L << logD;
+
+  // We have d <= deg(poly) < 3d
+  assert(d <= deg && deg < 3*d);
+
+  Vec<Ctxt> powers(INIT_SIZE, logD+1, x);
+  if (logD>0) {
+    powers[1].square();
+    for (long i=2; i<=logD; i++) { // powers[i] = x^{2^i}
+      powers[i] = powers[i-1];
+      powers[i].square();
+    }
+  }
+
+  // Compute in three parts p0(X) + ( p1(X) + p2(X)*X^d )*X^d
+  Ctxt tmp(ZeroCtxtLike, ret);
+  recursivePolyEval(ret, &poly[d], min(d,poly.length()-d), powers); // p1(X)
+
+  if (poly.length() > 2*d) {    // p2 is not empty
+    recursivePolyEval(tmp, &poly[2*d], poly.length()-2*d, powers);  // p2(X)
+    tmp.multiplyBy(powers[logD]);
+    ret += tmp;
+  }
+  ret.multiplyBy(powers[logD]); // ( p1(X) + p2(X)*X^d )*X^d
+
+  recursivePolyEval(tmp, &poly[0], d, powers);                      // p0(X)
+  ret += tmp;
+}
+
+static void recursivePolyEval(Ctxt& ret, const Ctxt poly[], long nCoeffs,
+			      const Vec<Ctxt>& powers)
+{
+  if (nCoeffs <= 1) { // edge condition
+    if (nCoeffs == 0) ret.clear();   // empty polynomial
+    else              ret = poly[0]; // constant polynomial
+    return;
+  }
+  long logD = NextPowerOfTwo(nCoeffs)-1;
+  long d = 1L << logD;
+  Ctxt tmp(ZeroCtxtLike, ret);
+  recursivePolyEval(tmp, &(poly[d]), nCoeffs-d, powers);
+  recursivePolyEval(ret, &(poly[0]), d, powers);
+  tmp.multiplyBy(powers[logD]);
+  ret += tmp;
+}
+
 
 // Main entry point: Evaluate a cleartext polynomial on an encrypted input
 void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
@@ -278,6 +340,8 @@ recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
   recursivePolyEval(tmp, r, k, babyStep, giantStep);
   ret += tmp;
 }
+
+
 
 
 #if 0
