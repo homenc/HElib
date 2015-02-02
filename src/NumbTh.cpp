@@ -1404,6 +1404,8 @@ template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
   return s;
 }
 template ostream& printVec(ostream& s, const Vec<zz_p>& v, long nCoeffs);
+template ostream& printVec(ostream& s, const Vec<long>& v, long nCoeffs);
+template ostream& printVec(ostream& s, const Vec<ZZX>& v, long nCoeffs);
 
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs)
 {

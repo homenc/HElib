@@ -466,10 +466,20 @@ public:
     { genericEncrypt(ctxt, pKey, ptxt); }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const
-    { genericDecrypt(ctxt, sKey, ptxt); }
+    { genericDecrypt(ctxt, sKey, ptxt);
+      if (ctxt.getPtxtSpace()<tab.getPPowR()) {
+	for (long i=0; i<(long)ptxt.size(); i++)
+	  ptxt[i] %= ctxt.getPtxtSpace();
+      }
+    }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const
-    { genericDecrypt(ctxt, sKey, ptxt); }
+    { genericDecrypt(ctxt, sKey, ptxt);
+      if (ctxt.getPtxtSpace()<tab.getPPowR()) {
+	for (long i=0; i<(long)ptxt.size(); i++)
+	  PolyRed(ptxt[i], ctxt.getPtxtSpace(),/*abs=*/true);
+      }
+    }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt); }
