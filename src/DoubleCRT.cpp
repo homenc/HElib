@@ -509,18 +509,91 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
 #ifdef FHE_THREADS
 // experimental multi-threaded version
 
+template<class T>
+class SimpleSignal {
+private:
+  T val; 
+  mutex m;
+  condition_variable cv;
+
+  SimpleSignal(const SimpleSignal&); // disabled
+  void operator=(const SimpleSignal&); // disabled
+
+public:
+  SimpleSignal() : val(0) { }
+
+  T wait() 
+  {
+    unique_lock<mutex> lock(m);
+    cv.wait(lock, [&]() { return val; } );
+    T old_val = val;
+    val = 0;
+    return old_val;
+  }
+
+  void send(T new_val)
+  {
+    lock_guard<mutex> lock(m);
+    val = new_val;
+    cv.notify_one();
+  }
+};
+
+
+
+class ConcurrentTask {
+public:
+  virtual void run() = 0;
+};
+
+struct MultiTaskInfo {
+  atomic<long> *counter;
+  SimpleSignal<bool> *globalSignal;
+  SimpleSignal<ConcurrentTask*> *localSignal;
+};
+
+class MultiTask {
+private:
+  atomic<long> counter;
+  SimpleSignal<bool> globalSignal;
+  Vec< SimpleSignal< ConcurrentTask * > > localSignal;
+  Vec<MultiTaskInfo> infoVec;
+  long nthreads;
+
+  MultiTask(const MultiTask&); // disabled
+  void operator=(const MultiTask&); // disabled
+
+public:
+  MultiTask(long n)
+  {
+    localSignal.SetLength(n);
+    infoVec.SetLength(n);
+    nthreads = n;
+
+    for (long i = 0; i < n; i++) {
+      MultiTaskInfo& info = infoVec[i];
+      info.counter = &counter;
+      info.globalSignal = &globalSignal;
+      info.localSignal = &localSignal[i];
+
+      // NOT FINISHED....
+
+    }
+  }
+
+};
+
+
+
 struct iFFTTaskInfo {
   const Vec<long> *indexVec;
   Vec<zz_pX> *tmpVec;
 
   atomic<long> *globalCtr;
-  mutex *globalMutex;
-  bool *globalReady;
-  condition_variable *globalCV;
 
-  mutex *localMutex;
-  bool *localReady;
-  condition_variable *localCV;
+  SimpleSignal<bool> *globalSignal;
+
+  SimpleSignal<bool> *localSignal;
   
   long firstIndex;
   long lastIndex;
@@ -532,10 +605,7 @@ void iFFTTask(iFFTTaskInfo *info)
 {
   for (;;) {
     {
-      unique_lock<mutex> lock(*info->localMutex);
-      info->localCV->wait(lock, [&]() { return *info->localReady; });
-      
-      *info->localReady = false;
+      info->localSignal->wait();
 
       for (long j = info->firstIndex; j <= info->lastIndex; j++) {
         long i = (*info->indexVec)[j];
@@ -545,9 +615,7 @@ void iFFTTask(iFFTTaskInfo *info)
     }
 
     if (--(*info->globalCtr) == 0) {
-      lock_guard<mutex> lock(*info->globalMutex);
-      *info->globalReady = true;
-      info->globalCV->notify_one();
+      info->globalSignal->send(true);
     }
   }
 } 
@@ -558,13 +626,10 @@ NTL_THREAD_LOCAL static Vec<zz_pX> iFFTTaskTmpVec;
 NTL_THREAD_LOCAL static Vec<long> iFFTTaskIndexVec;
 
 NTL_THREAD_LOCAL static atomic<long> iFFTTaskGlobalCtr;
-NTL_THREAD_LOCAL static mutex iFFTTaskGlobalMutex;
-NTL_THREAD_LOCAL static bool iFFTTaskGlobalReady;
-NTL_THREAD_LOCAL static condition_variable iFFTTaskGlobalCV;
 
-NTL_THREAD_LOCAL static Vec<mutex> iFFTTaskLocalMutex;
-NTL_THREAD_LOCAL static Vec<bool> iFFTTaskLocalReady;
-NTL_THREAD_LOCAL static Vec<condition_variable> iFFTTaskLocalCV;
+NTL_THREAD_LOCAL static SimpleSignal<bool> iFFTTaskGlobalSignal;
+
+NTL_THREAD_LOCAL static Vec< SimpleSignal<bool> > iFFTTaskLocalSignal;
 
 
 NTL_THREAD_LOCAL static bool iFFTTaskInitialized = false;
@@ -575,9 +640,7 @@ void iFFTTaskInit()
 {
   if (!iFFTTaskInitialized) {
     iFFTTaskInfoVec.SetLength(iFFTTaskMaxThreads);
-    iFFTTaskLocalMutex.SetLength(iFFTTaskMaxThreads);
-    iFFTTaskLocalReady.SetLength(iFFTTaskMaxThreads);
-    iFFTTaskLocalCV.SetLength(iFFTTaskMaxThreads);
+    iFFTTaskLocalSignal.SetLength(iFFTTaskMaxThreads);
 
     for (long j = 0; j < iFFTTaskMaxThreads; j++) {
       iFFTTaskInfo& info = iFFTTaskInfoVec[j];
@@ -585,14 +648,8 @@ void iFFTTaskInit()
       info.indexVec = &iFFTTaskIndexVec;
       info.tmpVec = &iFFTTaskTmpVec;
       info.globalCtr = &iFFTTaskGlobalCtr;
-      info.globalMutex = &iFFTTaskGlobalMutex;
-      info.globalReady = &iFFTTaskGlobalReady;
-      info.globalCV = &iFFTTaskGlobalCV;
-      info.localMutex = &iFFTTaskLocalMutex[j];
-      info.localReady = &iFFTTaskLocalReady[j];
-      info.localCV = &iFFTTaskLocalCV[j];
-
-      *info.localReady = false;
+      info.globalSignal = &iFFTTaskGlobalSignal;
+      info.localSignal = &iFFTTaskLocalSignal[j];
 
       thread t(iFFTTask, &info);
       t.detach();
@@ -635,7 +692,6 @@ FHE_TIMER_START;
   long blockSize = (indexCard + nthreads - 1)/nthreads;
 
   iFFTTaskGlobalCtr = nthreads;
-  iFFTTaskGlobalReady = false;
 
   for (long t = 0; t < nthreads; t++) {
     long firstIndex = blockSize*t;
@@ -648,13 +704,10 @@ FHE_TIMER_START;
     info.context = &context;
     info.map = &map;
 
-    lock_guard<mutex> lock(*info.localMutex);
-    *info.localReady = true;
-    info.localCV->notify_one();
+    info.localSignal->send(true);
   }
 
-  unique_lock<mutex> lock(iFFTTaskGlobalMutex);
-  iFFTTaskGlobalCV.wait(lock, [&]() { return iFFTTaskGlobalReady; });
+  iFFTTaskGlobalSignal.wait();
 
     
 #if 0
