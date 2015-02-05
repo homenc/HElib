@@ -482,7 +482,9 @@ public:
     }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
-    { genericDecrypt(ctxt, sKey, ptxt); }
+  { genericDecrypt(ctxt, sKey, ptxt); 
+    // FIXME: Recude mod the ciphertext plaintext space as above
+    }
 
 
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const
