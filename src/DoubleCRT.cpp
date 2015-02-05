@@ -664,6 +664,10 @@ FHE_TIMER_START;
   mtask->end();
 
 
+{ FHE_NTIMER_START(toPoly_CRT);
+
+#if 0
+
     
   clear(poly);
   ZZ prod;
@@ -684,6 +688,61 @@ FHE_TIMER_START;
 
     // no need to normalize poly here
   }
+#else
+  // Alternative CRT implementation which is more ammenable
+  // to concurrent implementation...
+  // TODO: fold this into the multithreading stuff
+  //       Also, back port this faster CRT code to the
+  //       single threaded mode
+
+  long phim = context.zMStar.getPhiM();
+  poly.rep.SetLength(phim);
+  for (long h = 0; h < phim; h++) clear(poly.rep[h]);
+
+  ZZ prod;
+  prod = 1;
+  for (long j = 0; j < indexCard; j++) {
+    long i = task->indexVec[j];
+    long q = context.ithModulus(i).getQ();
+    mul(prod, prod, q);
+  }
+
+  ZZ prod1, tc;
+
+  for (long j = 0; j < indexCard; j++) {
+    long i = task->indexVec[j];
+    long q = context.ithModulus(i).getQ();
+    div(prod1, prod, q);
+    long t = rem(prod1, q);
+    t = InvMod(t, q);
+
+    zz_pX& tmp = task->tmpVec[j];
+    long d = deg(tmp);
+    for (long h = 0; h <= d; h++) {
+      long r = rep(tmp.rep[h]);
+      r = MulMod(r, t, q);
+      mul(tc, prod1, r);
+      add(poly.rep[h], poly.rep[h], tc);
+    }
+  }
+
+  ZZ prod_half;
+  if (!positive) prod_half = (prod+1)/2;
+
+  for (long h = 0; h < phim; h++) {
+    rem(poly.rep[h], poly.rep[h], prod);
+    if (!positive) {
+      if (poly.rep[h] >= prod_half)
+        poly.rep[h] -= prod;
+    }
+  }
+
+  poly.normalize();
+
+#endif
+}
+
+
 }
 #else
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,

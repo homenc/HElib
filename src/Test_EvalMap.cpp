@@ -204,8 +204,9 @@ int main(int argc, char *argv[])
 
   long w = 64; // Hamming weight of secret key
 
-  if (seed) SetSeed(conv<ZZ>(seed));
+  SetSeed(conv<ZZ>(seed));
 
   TestIt(p, r, c, k, w, L, mvec, gens, ords);
 }
 
+// ./Test_EvalMap_x mvec="[73 433]" gens="[18620 12995]" ords="[72 -6]"
