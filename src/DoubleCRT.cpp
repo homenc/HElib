@@ -31,13 +31,14 @@
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
-// #define FHE_THREADS
+#define FHE_THREADS
 #ifdef FHE_THREADS
-#include <thread>
-#include <atomic>
-#include <mutex>
-#include <condition_variable>
-#include <NTL/SmartPtr.h>
+#include "multicore.h"
+
+const long FFTMaxThreads = 8;
+NTL_THREAD_LOCAL static MultiTask multiTask(FFTMaxThreads);
+
+
 #endif
 
 
@@ -54,6 +55,90 @@ bool DoubleCRT::dryRun = false;
 // to use is not specified, the resulting object uses all the moduli in
 // the context. If the coefficients of poly are larger than the product of
 // the used moduli, they are effectively reduced modulo that product
+
+
+#ifdef FHE_THREADS
+
+class FFTTaskClass : public ConcurrentTask {
+public:
+  const FHEcontext *context;
+  IndexMap<vec_long> *map;
+  const ZZX *poly;
+
+  Vec<long> indexVec;
+  Vec<long> firstIndex;
+  Vec<long> lastIndex;
+
+  void run(long index) 
+  {
+    long first = firstIndex[index];
+    long last = lastIndex[index];
+    for (long j = first; j <= last; j++) {
+      long i = indexVec[j];
+      context->ithModulus(i).FFT((*map)[i], *poly); 
+    }
+  }
+  
+};
+
+NTL_THREAD_LOCAL static FFTTaskClass FFTTask;
+
+
+void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
+{
+  FHE_TIMER_START;
+
+  if (empty(s)) return;
+
+  MultiTask *mtask = &multiTask;
+  FFTTaskClass *task = &FFTTask;
+
+  task->map = &map;
+  task->context = &context;
+  task->poly = &poly;
+
+  long indexCard = s.card();
+  task->indexVec.SetLength(indexCard);
+  for (long i = s.first(), j = 0; i <= s.last(); i = s.next(i), j++) 
+    task->indexVec[j] = i;
+
+  long nthreads = FFTMaxThreads;
+  if (nthreads > indexCard) nthreads = indexCard;
+
+  task->firstIndex.SetLength(nthreads);
+  task->lastIndex.SetLength(nthreads);
+  
+  long blockSize = (indexCard + nthreads - 1)/nthreads;
+
+  for (long t = 0; t < nthreads; t++) {
+    long firstIndex = blockSize*t;
+    long lastIndex = firstIndex + blockSize - 1;
+    if (lastIndex >= indexCard) lastIndex = indexCard-1;
+    task->firstIndex[t] = firstIndex;
+    task->lastIndex[t] = lastIndex;
+  }
+
+  mtask->begin(nthreads);
+
+  for (long t = 0; t < nthreads; t++) 
+    mtask->launch(task, t);
+
+  mtask->end();
+}
+
+
+#else
+
+void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
+{
+  FHE_TIMER_START;
+
+  if (empty(s)) return;
+  for (long i = s.first(); i <= s.last(); i = s.next(i))
+    context.ithModulus(i).FFT(map[i], poly);
+}
+
+#endif
 
 
 // a "sanity check" function, verifies consistency of matrix with current
@@ -265,9 +350,7 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
   if (dryRun) return;
 
   // fill in new rows
-  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
-    context.ithModulus(i).FFT(map[i], poly); // reduce mod p_i and store FFT image
-  }
+  FFT(poly, s1);
 }
 
 // Expand index set by s1, and multiply by \prod{q \in s1}. s1 is assumed to
@@ -319,11 +402,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet
   if (dryRun) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
-    const Cmodulus &pi = context.ithModulus(i);
-    pi.FFT(map[i], poly); // reduce mod pi and store FFT image
-  }
-  FHE_TIMER_STOP;
+  FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
@@ -337,11 +416,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
   if (dryRun) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
-    const Cmodulus &pi = context.ithModulus(i);
-    pi.FFT(map[i], poly); // reduce mod pi and store FFT image
-  }
-  FHE_TIMER_STOP;
+  FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const ZZX& poly)
@@ -355,11 +430,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly)
   if (dryRun) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
-    const Cmodulus &pi = context.ithModulus(i);
-    pi.FFT(map[i], poly); // reduce mod pi and store FFT image
-  }
-  FHE_TIMER_STOP;
+  FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
@@ -448,8 +519,7 @@ DoubleCRT& DoubleCRT::operator=(const ZZX&poly)
 
   const IndexSet& s = map.getIndexSet();
 
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) 
-    context.ithModulus(i).FFT(map[i],poly); // reduce mod pi and store FFT image
+  FFT(poly, s);
 
   return *this;
 }
@@ -509,155 +579,37 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
 #ifdef FHE_THREADS
 // experimental multi-threaded version
 
-template<class T>
-class SimpleSignal {
-private:
-  T val; 
-  mutex m;
-  condition_variable cv;
 
-  SimpleSignal(const SimpleSignal&); // disabled
-  void operator=(const SimpleSignal&); // disabled
 
+class iFFTTaskClass : public ConcurrentTask {
 public:
-  SimpleSignal() : val(0) { }
-
-  T wait() 
-  {
-    unique_lock<mutex> lock(m);
-    cv.wait(lock, [&]() { return val; } );
-    T old_val = val;
-    val = 0;
-    return old_val;
-  }
-
-  void send(T new_val)
-  {
-    lock_guard<mutex> lock(m);
-    val = new_val;
-    cv.notify_one();
-  }
-};
-
-
-
-class ConcurrentTask {
-public:
-  virtual void run() = 0;
-};
-
-struct MultiTaskInfo {
-  atomic<long> *counter;
-  SimpleSignal<bool> *globalSignal;
-  SimpleSignal<ConcurrentTask*> *localSignal;
-};
-
-class MultiTask {
-private:
-  atomic<long> counter;
-  SimpleSignal<bool> globalSignal;
-  Vec< SimpleSignal< ConcurrentTask * > > localSignal;
-  Vec<MultiTaskInfo> infoVec;
-  long nthreads;
-
-  MultiTask(const MultiTask&); // disabled
-  void operator=(const MultiTask&); // disabled
-
-public:
-  MultiTask(long n)
-  {
-    localSignal.SetLength(n);
-    infoVec.SetLength(n);
-    nthreads = n;
-
-    for (long i = 0; i < n; i++) {
-      MultiTaskInfo& info = infoVec[i];
-      info.counter = &counter;
-      info.globalSignal = &globalSignal;
-      info.localSignal = &localSignal[i];
-
-      // NOT FINISHED....
-
-    }
-  }
-
-};
-
-
-
-struct iFFTTaskInfo {
-  const Vec<long> *indexVec;
-  Vec<zz_pX> *tmpVec;
-
-  atomic<long> *globalCtr;
-
-  SimpleSignal<bool> *globalSignal;
-
-  SimpleSignal<bool> *localSignal;
-  
-  long firstIndex;
-  long lastIndex;
   const FHEcontext *context;
   const IndexMap<vec_long> *map;
+
+  Vec<long> indexVec;
+  Vec<zz_pX> tmpVec;
+  Vec<long> firstIndex;
+  Vec<long> lastIndex;
+
+  void run(long index) 
+  {
+    long first = firstIndex[index];
+    long last = lastIndex[index];
+    for (long j = first; j <= last; j++) {
+      long i = indexVec[j];
+      zz_pX& tmp = tmpVec[j];
+      context->ithModulus(i).iFFT(tmp, (*map)[i]); 
+    }
+  }
+  
 };
 
-void iFFTTask(iFFTTaskInfo *info)
-{
-  for (;;) {
-    {
-      info->localSignal->wait();
-
-      for (long j = info->firstIndex; j <= info->lastIndex; j++) {
-        long i = (*info->indexVec)[j];
-        zz_pX& tmp = (*info->tmpVec)[j];
-        info->context->ithModulus(i).iFFT(tmp, (*info->map)[i]); 
-      }
-    }
-
-    if (--(*info->globalCtr) == 0) {
-      info->globalSignal->send(true);
-    }
-  }
-} 
 
 
-NTL_THREAD_LOCAL static Vec<iFFTTaskInfo> iFFTTaskInfoVec;
-NTL_THREAD_LOCAL static Vec<zz_pX> iFFTTaskTmpVec;
-NTL_THREAD_LOCAL static Vec<long> iFFTTaskIndexVec;
-
-NTL_THREAD_LOCAL static atomic<long> iFFTTaskGlobalCtr;
-
-NTL_THREAD_LOCAL static SimpleSignal<bool> iFFTTaskGlobalSignal;
-
-NTL_THREAD_LOCAL static Vec< SimpleSignal<bool> > iFFTTaskLocalSignal;
 
 
-NTL_THREAD_LOCAL static bool iFFTTaskInitialized = false;
+NTL_THREAD_LOCAL static iFFTTaskClass iFFTTask;
 
-const long iFFTTaskMaxThreads = 4;
-
-void iFFTTaskInit()
-{
-  if (!iFFTTaskInitialized) {
-    iFFTTaskInfoVec.SetLength(iFFTTaskMaxThreads);
-    iFFTTaskLocalSignal.SetLength(iFFTTaskMaxThreads);
-
-    for (long j = 0; j < iFFTTaskMaxThreads; j++) {
-      iFFTTaskInfo& info = iFFTTaskInfoVec[j];
-
-      info.indexVec = &iFFTTaskIndexVec;
-      info.tmpVec = &iFFTTaskTmpVec;
-      info.globalCtr = &iFFTTaskGlobalCtr;
-      info.globalSignal = &iFFTTaskGlobalSignal;
-      info.localSignal = &iFFTTaskLocalSignal[j];
-
-      thread t(iFFTTask, &info);
-      t.detach();
-    }
-
-    iFFTTaskInitialized = true;
-  }
-}
 
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
@@ -672,62 +624,55 @@ FHE_TIMER_START;
     return;
   }
 
-  iFFTTaskInit();
-
-
   zz_pBak bak; bak.save();
 
+  MultiTask *mtask = &multiTask;
+  iFFTTaskClass *task = &iFFTTask;
+
+  task->map = &map;
+  task->context = &context;
   
   long indexCard = s1.card();
-  iFFTTaskIndexVec.SetLength(indexCard);
+  task->indexVec.SetLength(indexCard);
   for (long i = s1.first(), j = 0; i <= s1.last(); i = s1.next(i), j++) 
-    iFFTTaskIndexVec[j] = i;
+    task->indexVec[j] = i;
 
-  iFFTTaskTmpVec.SetLength(indexCard);
+  task->tmpVec.SetLength(indexCard);
 
 
-  long nthreads = iFFTTaskMaxThreads;
+  long nthreads = FFTMaxThreads;
   if (nthreads > indexCard) nthreads = indexCard;
+
+  task->firstIndex.SetLength(nthreads);
+  task->lastIndex.SetLength(nthreads);
   
   long blockSize = (indexCard + nthreads - 1)/nthreads;
-
-  iFFTTaskGlobalCtr = nthreads;
 
   for (long t = 0; t < nthreads; t++) {
     long firstIndex = blockSize*t;
     long lastIndex = firstIndex + blockSize - 1;
     if (lastIndex >= indexCard) lastIndex = indexCard-1;
-
-    iFFTTaskInfo& info = iFFTTaskInfoVec[t];
-    info.firstIndex = firstIndex;
-    info.lastIndex = lastIndex;
-    info.context = &context;
-    info.map = &map;
-
-    info.localSignal->send(true);
+    task->firstIndex[t] = firstIndex;
+    task->lastIndex[t] = lastIndex;
   }
 
-  iFFTTaskGlobalSignal.wait();
+  mtask->begin(nthreads);
+
+  for (long t = 0; t < nthreads; t++) 
+    mtask->launch(task, t);
+
+  mtask->end();
+
 
     
-#if 0
-  for (long j = 0; j < indexCard; j++) {
-    long i = indexVec[j];
-
-    context.ithModulus(i).restoreModulus();
-    zz_pX& tmp = tmpVec[j];
-    context.ithModulus(i).iFFT(tmp, map[i]); 
-  }
-#endif
-
   clear(poly);
   ZZ prod;
   prod = 1;
 
   for (long j = 0; j < indexCard; j++) {
-    long i = iFFTTaskIndexVec[j];
+    long i = task->indexVec[j];
     context.ithModulus(i).restoreModulus();
-    zz_pX& tmp = iFFTTaskTmpVec[j];
+    zz_pX& tmp = task->tmpVec[j];
     CRT(poly, prod, tmp);  // NTL :-)
   }
 

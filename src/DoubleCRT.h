@@ -368,6 +368,11 @@ public:
   // used to implement modulus switching
   void scaleDownToSet(const IndexSet& s, long ptxtSpace);
 
+
+  void FFT(const ZZX& poly, const IndexSet& s);
+  // for internal use
+
+
   void reduce() const {} // place-holder for consistenct with AltCRT
 
 

@@ -271,6 +271,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
  */
 int main(int argc, char **argv) 
 {
+  SetSeed(ZZ(0));
+
   setTimersOn();
 
   ArgMapping amap;

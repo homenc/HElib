@@ -143,7 +143,7 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
 
 void Cmodulus::FFT(vec_long &y, const ZZX& x) const
 {
-  FHE_TIMER_START;
+  // FHE_TIMER_START;
   zz_pBak bak; bak.save();
   context.restore();
   zz_p rt;

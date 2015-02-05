@@ -20,7 +20,7 @@
 #include <cstring>
 
 
-#if 0
+#if 1
 
 static
 clock_t GetClock()
