@@ -31,7 +31,7 @@
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
-#define FHE_THREADS
+// #define FHE_THREADS
 #ifdef FHE_THREADS
 #include "multicore.h"
 
