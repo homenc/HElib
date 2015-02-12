@@ -37,57 +37,46 @@
 
 
 #include "NumbTh.h"
-#include <ctime>
+#include "multicore.h"
 
 
+class FHEtimer;
+void registerTimer(FHEtimer *timer);
+unsigned long GetTimerClock();
 
-//! A simple class to toggle timing information on and off
+//! A simple class to accumulate time
 class FHEtimer {
 public:
   const char *name;
   const char *loc;
-  bool isOn;  // a broken semaphore
-  std::clock_t counter;
-  long numCalls;
+
+  // THREADS: these need to be atomic
+  FHE_atomic_ulong counter;
+  FHE_atomic_long numCalls;
 
   FHEtimer(const char *_name, const char *_loc) :
-    name(_name), loc(_loc), isOn(false), counter(0), numCalls(0) 
-  { }
+    name(_name), loc(_loc), counter(0), numCalls(0) 
+  { registerTimer(this); }
 
   void reset();
-  void start();
-  void stop();
   double getTime() const;
   long getNumCalls() const;
 };
 
 
-// Activate/deactivate/check-status of timing
-extern bool FHEtimersOn;
-
-inline void setTimersOn()  { FHEtimersOn=true; }
-inline void setTimersOff() { FHEtimersOn=false; }
-inline bool areTimersOn()  { return FHEtimersOn; }
-
-void registerTimer(FHEtimer *timer);
-
-inline void buildTimer(FHEtimer*& timer, const char *name, const char *loc)
-{
-  if (areTimersOn() && !timer) {
-    FHEtimer *tmp = new FHEtimer(name, loc);
-    registerTimer(tmp);
-    timer = tmp;
-  }
-}
+// backward compatibility: timers are always on
+inline void setTimersOn()  { }
+inline void setTimersOff() { }
+inline bool areTimersOn()  { return true; }
 
 
 
 void resetAllTimers();
+
 //! Print the value of all timers to stream
 void printAllTimers(std::ostream& str=std::cerr);
 
 // return true if timer was found, false otherwise
-bool getTimerByName(FHEtimer& timer, const char* name);
 bool printNamedTimer(ostream& str, const char* name);
 
 
@@ -95,9 +84,20 @@ bool printNamedTimer(ostream& str, const char* name);
 class auto_timer {
 public:
   FHEtimer *timer;
-  auto_timer(FHEtimer *_timer) : timer(_timer) { if (timer && areTimersOn()) timer->start(); }
-  void stop() { if (timer && areTimersOn()) timer->stop(); }
-  ~auto_timer() { stop(); }
+  unsigned long amt;
+  bool running;
+
+  auto_timer(FHEtimer *_timer) : 
+    timer(_timer), amt(GetTimerClock()), running(true) { }
+
+  void stop() {
+    amt = GetTimerClock() - amt; 
+    timer->counter += amt;
+    timer->numCalls++;
+    running = false;
+  }
+
+  ~auto_timer() { if (running) stop(); }
 };
 //! \endcond
 
@@ -113,24 +113,18 @@ public:
 #define FHE_stringify(s) FHE_stringify_aux(s)
 
 #define FHE_TIMER_START \
-  static FHEtimer *_local_timer = 0; \
-  buildTimer(_local_timer, __func__, FHE_AT ); \
-  auto_timer _local_auto_timer(_local_timer)
+  static FHEtimer _local_timer(__func__, FHE_AT); \
+  auto_timer _local_auto_timer(&_local_timer)
   
 #define FHE_TIMER_STOP  _local_auto_timer.stop()
 
 
 #define FHE_NTIMER_START(n) \
-  static FHEtimer *_named_local_timer ## n = 0; \
-  buildTimer(_named_local_timer ## n, # n, FHE_AT ); \
-  auto_timer _named_local_auto_timer ## n(_named_local_timer ## n)
+  static FHEtimer _named_local_timer ## n(# n, FHE_AT ); \
+  auto_timer _named_local_auto_timer ## n(&_named_local_timer ## n)
 
 #define FHE_NTIMER_STOP(n)    _named_local_auto_timer ## n.stop();
 
 
-// THREADS: we need to turn timing off completely if we are running
-// multiple threads: (a) the timing info is not very useful anyway,
-// and (b) the logic makes use of global variables which will
-// break with multiple threads
 
 #endif // _TIMING_H_

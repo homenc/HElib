@@ -30,6 +30,13 @@ CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include
 #   -DEVALMAP_CACHED=0  tells helib to cache certain constants as ZZX's
 #   -DEVALMAP_CACHED=1  tells helib to cache certain constants as DoubleCRT's
 #                       these flags only affect bootstrapping
+#
+#   -DFHE_THREADS  tells helib to enable generic multithreading capabilities;
+#                  must be used with a thread-enabled NTL and the -pthread
+#                  flag should be passed to gcc
+#
+#   -DFHE_DCRT_THREADS  tells helib to use a multithreading strategy at the
+#                       DoubleCRT level; requires -DFHE_THREADS (see above)
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
 #CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++

@@ -1,6 +1,8 @@
 #ifndef FHE_multicore_H
 #define FHE_multicore_H
 
+#ifdef FHE_THREADS
+
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -108,6 +110,22 @@ inline void doMultiTask(MultiTask *multiTask, long index)
     if (--(multiTask->counter) == 0) multiTask->globalSignal.send(true);
   }
 }
+
+#define FHE_atomic_long atomic_long
+#define FHE_atomic_ulong atomic_ulong
+
+#define FHE_MUTEX_TYPE mutex
+#define FHE_MUTEX_GUARD(mx) lock_guard<mutex> _lock ## __LINE__ (mx)
+
+#else
+
+#define FHE_atomic_long long
+#define FHE_atomic_ulong unsigned long
+
+#define FHE_MUTEX_TYPE int
+#define FHE_MUTEX_GUARD(mx) ((void) mx)
+
+#endif
 
 
 

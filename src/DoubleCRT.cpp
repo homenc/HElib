@@ -22,8 +22,6 @@
  * in use. The list of primes is defined by the data member modChain, which is
  * a vector of Cmodulus objects. 
  */
-#include "DoubleCRT.h"
-#include "timing.h"
 
 #if (ALT_CRT)
 #warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
@@ -31,10 +29,11 @@
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
-#define FHE_THREADS
-#ifdef FHE_THREADS
+#include "DoubleCRT.h"
 #include "multicore.h"
+#include "timing.h"
 
+#ifdef FHE_DCRT_THREADS
 const long FFTMaxThreads = 8;
 NTL_THREAD_LOCAL static MultiTask multiTask(FFTMaxThreads);
 
@@ -57,7 +56,7 @@ bool DoubleCRT::dryRun = false;
 // the used moduli, they are effectively reduced modulo that product
 
 
-#ifdef FHE_THREADS
+#ifdef FHE_DCRT_THREADS
 
 class FFTTaskClass : public ConcurrentTask {
 public:
@@ -576,7 +575,7 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
   return q;
 }
 
-#ifdef FHE_THREADS
+#ifdef FHE_DCRT_THREADS
 // experimental multi-threaded version
 
 
@@ -591,14 +590,24 @@ public:
   Vec<long> firstIndex;
   Vec<long> lastIndex;
 
+  Vec< Vec<long> > *output;
+
   void run(long index) 
   {
     long first = firstIndex[index];
     long last = lastIndex[index];
+    zz_pX& tmp = tmpVec[index];
+
+    long len = (*output).length();
+    Vec<long> *out = (*output).elts();
+
     for (long j = first; j <= last; j++) {
       long i = indexVec[j];
-      zz_pX& tmp = tmpVec[j];
       context->ithModulus(i).iFFT(tmp, (*map)[i]); 
+
+      long d = deg(tmp);
+      for (long h = 0; h <= d; h++) out[h][j] = rep(tmp.rep[h]);
+      for (long h = d+1; h < len; h++) out[h][j] = 0;
     }
   }
   
@@ -609,7 +618,7 @@ NTL_THREAD_LOCAL static iFFTTaskClass iFFTTask;
 class CRTTaskClass : public ConcurrentTask {
 public:
   Vec<ZZ> *poly;
-  Vec<zz_pX> *tmpVec;
+  Vec< Vec<long> > input;
   long len;
   bool positive;
   Vec<long> firstIndex;
@@ -629,11 +638,12 @@ public:
 
     for (long h = first; h <= last; h++) {
       clear(res);
+      long *in = input[h].elts();
       
       for (long j = 0; j < len; j++) {
         long q = qVec[j];
         long t = tVec[j];
-        long r = rep(coeff((*tmpVec)[j], h));
+        long r = in[j];
         r = MulMod(r, t, q);
         MulAddTo(res, prod1Vec[j], r);
       }
@@ -666,24 +676,31 @@ FHE_TIMER_START;
     return;
   }
 
+  long indexCard = s1.card();
+  long phim = context.zMStar.getPhiM();
+  CRTTaskClass *ctask = &CRTTask;
+
+  ctask->input.SetLength(phim);
+  for (long h = 0; h < phim; h++) ctask->input[h].SetLength(indexCard);
+
   MultiTask *mtask = &multiTask;
   iFFTTaskClass *task = &iFFTTask;
 
   task->map = &map;
   task->context = &context;
   
-  long indexCard = s1.card();
   task->indexVec.SetLength(indexCard);
   for (long i = s1.first(), j = 0; i <= s1.last(); i = s1.next(i), j++) 
     task->indexVec[j] = i;
 
-  task->tmpVec.SetLength(indexCard);
+  task->output = &ctask->input;
 
   long nthreads = FFTMaxThreads;
   if (nthreads > indexCard) nthreads = indexCard;
 
   task->firstIndex.SetLength(nthreads);
   task->lastIndex.SetLength(nthreads);
+  task->tmpVec.SetLength(nthreads);
   
   long blockSize = (indexCard + nthreads - 1)/nthreads;
 
@@ -702,17 +719,13 @@ FHE_TIMER_START;
 
   mtask->end();
 
-#if 1
 
 { FHE_NTIMER_START(toPoly_CRT);
 
-  long phim = context.zMStar.getPhiM();
   poly.rep.SetLength(phim);
 
-  CRTTaskClass *ctask = &CRTTask;
 
   ctask->poly = &poly.rep;
-  ctask->tmpVec = &task->tmpVec;
   ctask->len = indexCard;
   ctask->positive = positive;
 
@@ -767,89 +780,8 @@ FHE_TIMER_START;
   
 }
 
-#endif
-
-#if 0
-
-  ZZ prod, prod1, prod_half;
-  long phim = context.zMStar.getPhiM();
-
-{ FHE_NTIMER_START(toPoly_CRT);
-
-  poly.rep.SetLength(phim);
-  for (long h = 0; h < phim; h++) clear(poly.rep[h]);
-
-  prod = 1;
-  for (long j = 0; j < indexCard; j++) {
-    long i = task->indexVec[j];
-    long q = context.ithModulus(i).getQ();
-    mul(prod, prod, q);
-  }
-
-  for (long j = 0; j < indexCard; j++) {
-    long i = task->indexVec[j];
-    long q = context.ithModulus(i).getQ();
-    div(prod1, prod, q);
-    long t = rem(prod1, q);
-    t = InvMod(t, q);
-
-    zz_pX& tmp = task->tmpVec[j];
-    long d = deg(tmp);
-    for (long h = 0; h <= d; h++) {
-      long r = rep(tmp.rep[h]);
-      r = MulMod(r, t, q);
-      MulAddTo(poly.rep[h], prod1, r);
-    }
-  }
-
-  if (!positive) prod_half = (prod+1)/2;
-
-  for (long h = 0; h < phim; h++) {
-    rem(poly.rep[h], poly.rep[h], prod);
-    if (!positive) {
-      if (poly.rep[h] >= prod_half)
-        poly.rep[h] -= prod;
-    }
-  }
-
-  poly.normalize();
 }
 
-#endif
-
-#if 0
-
-{ FHE_NTIMER_START(toPoly_CRT);
-
-  clear(poly);
-  ZZ prod;
-  prod = 1;
-
-  zz_pBak bak; bak.save();
-
-  for (long j = 0; j < indexCard; j++) {
-    long i = task->indexVec[j];
-    context.ithModulus(i).restoreModulus();
-    zz_pX& tmp = task->tmpVec[j];
-    CRT(poly, prod, tmp);  // NTL :-)
-  }
-
-  if (positive) {
-    long d = deg(poly);
-    for (long j = 0; j <= d; j++) 
-      if (poly.rep[j] < 0)
-        poly.rep[j] += prod;   
-
-    // no need to normalize poly here
-  }
-  
-}
-
-
-
-#endif
-
-}
 
 
 

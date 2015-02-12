@@ -226,6 +226,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
  ********************************************************************/
 int main(int argc, char *argv[]) 
 {
+  SetSeed(ZZ(0));
   ArgMapping amap;
 
   long p=2;

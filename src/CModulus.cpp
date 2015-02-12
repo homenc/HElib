@@ -143,7 +143,7 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
 
 void Cmodulus::FFT(vec_long &y, const ZZX& x) const
 {
-  // FHE_TIMER_START;
+  FHE_TIMER_START;
   zz_pBak bak; bak.save();
   context.restore();
   zz_p rt;
@@ -166,7 +166,7 @@ void Cmodulus::FFT(vec_long &y, const ZZX& x) const
 
 void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
 {
-  // FHE_TIMER_START;
+  FHE_TIMER_START;
   zz_pBak bak; bak.save();
   context.restore();
   zz_p rt;
@@ -184,7 +184,7 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
   BluesteinFFT(x, m, rt, *ipowers, ipowers_aux, *iRb); // call the FFT routine
 
   // reduce the result mod (Phi_m(X),q) and copy to the output polynomial x
-  { // FHE_NTIMER_START(iFFT_division);
+  { FHE_NTIMER_START(iFFT_division);
     rem(x, x, *phimx); // out %= (Phi_m(X),q)
   }
 
