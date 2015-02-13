@@ -47,6 +47,17 @@ NTL_THREAD_LOCAL static MultiTask multiTask(FFTMaxThreads);
 //NTL_io_matrix_impl(long,vec_long,vec_vec_long,mat_long)
 //NTL_eq_matrix_impl(long,vec_long,vec_vec_long,mat_long)
 
+static
+long MakeIndexVector(const IndexSet& s, Vec<long>& v)
+{
+  long sz = s.card();
+  v.SetLength(sz);
+  for (long i = s.first(), j = 0; i <= s.last(); i = s.next(i), j++)
+    v[j] = i;
+  return sz;
+}
+
+
 
 bool DoubleCRT::dryRun = false;
 
@@ -134,41 +145,20 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
 
   if (empty(s)) return;
 
-  static thread_local Vec<long> tls_indexVec;
-  static thread_local  Vec<long> tls_firstIndex;
-  static thread_local Vec<long> tls_lastIndex;
+  static thread_local Vec<long> tls_ivec;
+  static thread_local Vec<long> tls_pvec;
+  Vec<long>& ivec = tls_ivec;
+  Vec<long>& pvec = tls_pvec;
 
-  Vec<long>& indexVec = tls_indexVec;
-  Vec<long>& firstIndex = tls_firstIndex;
-  Vec<long>& lastIndex = tls_lastIndex;
-
-  long indexCard = s.card();
-  indexVec.SetLength(indexCard);
-  for (long i = s.first(), j = 0; i <= s.last(); i = s.next(i), j++) 
-    indexVec[j] = i;
-
-  long nthreads = FFTMaxThreads;
-  if (nthreads > indexCard) nthreads = indexCard;
-
-  firstIndex.SetLength(nthreads);
-  lastIndex.SetLength(nthreads);
-  
-  long blockSize = (indexCard + nthreads - 1)/nthreads;
-
-  for (long t = 0; t < nthreads; t++) {
-    long fi = blockSize*t;
-    long li = fi + blockSize - 1;
-    if (li >= indexCard) li = indexCard-1;
-    firstIndex[t] = fi;
-    lastIndex[t] = li;
-  }
+  long icard = MakeIndexVector(s, ivec);
+  long nthreads = SplitProblems(multiTask.getNumThreads(), icard, pvec);
 
   multiTask.exec(nthreads, 
     [&](long index)  {
-      long first = firstIndex[index];
-      long last = lastIndex[index];
-      for (long j = first; j <= last; j++) {
-        long i = indexVec[j];
+      long first = pvec[index];
+      long last = pvec[index+1];
+      for (long j = first; j < last; j++) {
+        long i = ivec[j];
         context.ithModulus(i).FFT(map[i], poly); 
       }
     }
