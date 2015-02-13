@@ -55,7 +55,7 @@ template<class Fct>
 class ConcurrentTaskFct : public ConcurrentTask {
 public:
   Fct fct;
-  ConcurrentTaskFct(Fct _fct) : fct(_fct) { }
+  ConcurrentTaskFct(Fct&& _fct) : fct(std::move(_fct)) { }
 
   void run(long index) { fct(index); }
 };
@@ -73,8 +73,6 @@ struct MultiTask {
 
   MultiTask(const MultiTask&); // disabled
   void operator=(const MultiTask&); // disabled
-
-  long getNumThreads() const { return nthreads; }
 
   MultiTask(long _nthreads) : nthreads(_nthreads), counter(0)
   {
@@ -111,15 +109,40 @@ struct MultiTask {
     localSignal[index].send(task);
   }
 
+  
+
+  // High level interface, intended to be used with lambdas
   template<class Fct>
   void exec(long cnt, Fct fct) 
   {
-    ConcurrentTaskFct<Fct> task(fct);
+    ConcurrentTaskFct<Fct> task(std::move(fct));
 
     begin(cnt);
     for (long t = 0; t < cnt; t++) launch(&task, t);
     end();
   }
+
+
+  // splits nproblems problems among (at most) nthreads threads.
+  // returns the actual number of threads nt to be used, and 
+  // initializes pvec to have length nt+1, so that for t = 0..nt-1,
+  // thread t processes subproblems pvec[t]..pvec[t+1]-1
+  long SplitProblems(long nproblems, Vec<long>& pvec) const
+  {
+    long blocksz = (nproblems + nthreads - 1)/nthreads;
+    long nt = (nproblems + blocksz - 1)/blocksz;
+  
+    pvec.SetLength(nt+1);
+  
+    for (long t = 0; t < nt; t++) pvec[t] = blocksz*t;
+    pvec[nt] = nproblems;
+  
+    return nt;
+  }
+
+
+  long getNumThreads() const { return nthreads; }
+
 
 };
 

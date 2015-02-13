@@ -151,7 +151,7 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
   Vec<long>& pvec = tls_pvec;
 
   long icard = MakeIndexVector(s, ivec);
-  long nthreads = SplitProblems(multiTask.getNumThreads(), icard, pvec);
+  long nthreads = multiTask.SplitProblems(icard, pvec);
 
   multiTask.exec(nthreads, 
     [&](long index)  {

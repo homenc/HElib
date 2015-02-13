@@ -1412,16 +1412,4 @@ ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs)
   return printVec(s, poly.rep, nCoeffs);
 }
 
-long SplitProblems(long numthreads, long numproblems, Vec<long>& pvec)
-{
-  long blocksz = (numproblems + numthreads - 1)/numthreads;
-  long nt = (numproblems + blocksz - 1)/blocksz;
-
-  pvec.SetLength(nt+1);
-
-  for (long t = 0; t < nt; t++) pvec[t] = blocksz*t;
-  pvec[nt] = numproblems;
-
-  return nt;
-}
 

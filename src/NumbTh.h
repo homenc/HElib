@@ -724,12 +724,6 @@ vector<T> atovector(const char *a)
   return v2;
 }
 
-// splits numproblems problems among (at most) numthreads threads.
-// returns the actual number of threads nt to be used, and 
-// initializes pvec to have length nt+1, so that for t = 0..nt-1,
-// thread t processes subproblems pvec[t]..pvec[t+1]-1
-long SplitProblems(long numthreads, long numproblems, Vec<long>& pvec);
-
 
 //! Debug printing routines for vectors, ZZX'es, print only a few entries
 template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
