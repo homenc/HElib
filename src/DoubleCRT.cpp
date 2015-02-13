@@ -58,6 +58,7 @@ bool DoubleCRT::dryRun = false;
 
 #ifdef FHE_DCRT_THREADS
 
+#if 0
 class FFTTaskClass : public ConcurrentTask {
 public:
   const FHEcontext *context;
@@ -124,6 +125,59 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
 
   mtask->end();
 }
+#else
+
+
+void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
+{
+  FHE_TIMER_START;
+
+  if (empty(s)) return;
+
+  static thread_local Vec<long> tls_indexVec;
+  static thread_local  Vec<long> tls_firstIndex;
+  static thread_local Vec<long> tls_lastIndex;
+
+  Vec<long>& indexVec = tls_indexVec;
+  Vec<long>& firstIndex = tls_firstIndex;
+  Vec<long>& lastIndex = tls_lastIndex;
+
+  long indexCard = s.card();
+  indexVec.SetLength(indexCard);
+  for (long i = s.first(), j = 0; i <= s.last(); i = s.next(i), j++) 
+    indexVec[j] = i;
+
+  long nthreads = FFTMaxThreads;
+  if (nthreads > indexCard) nthreads = indexCard;
+
+  firstIndex.SetLength(nthreads);
+  lastIndex.SetLength(nthreads);
+  
+  long blockSize = (indexCard + nthreads - 1)/nthreads;
+
+  for (long t = 0; t < nthreads; t++) {
+    long fi = blockSize*t;
+    long li = fi + blockSize - 1;
+    if (li >= indexCard) li = indexCard-1;
+    firstIndex[t] = fi;
+    lastIndex[t] = li;
+  }
+
+  multiTask.exec(nthreads, 
+    [&](long index)  {
+      long first = firstIndex[index];
+      long last = lastIndex[index];
+      for (long j = first; j <= last; j++) {
+        long i = indexVec[j];
+        context.ithModulus(i).FFT(map[i], poly); 
+      }
+    }
+  );
+}
+
+
+
+#endif
 
 
 #else

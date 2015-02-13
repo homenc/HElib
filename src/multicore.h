@@ -51,6 +51,15 @@ public:
   virtual void run(long index) = 0;
 };
 
+template<class Fct>
+class ConcurrentTaskFct : public ConcurrentTask {
+public:
+  Fct fct;
+  ConcurrentTaskFct(Fct _fct) : fct(_fct) { }
+
+  void run(long index) { fct(index); }
+};
+
 
 struct MultiTask;
 inline void doMultiTask(MultiTask *multiTask, long index);
@@ -64,6 +73,8 @@ struct MultiTask {
 
   MultiTask(const MultiTask&); // disabled
   void operator=(const MultiTask&); // disabled
+
+  long getNumThreads() const { return nthreads; }
 
   MultiTask(long _nthreads) : nthreads(_nthreads), counter(0)
   {
@@ -98,6 +109,16 @@ struct MultiTask {
     assert(task != 0 && index >= 0 && index < nthreads);
 
     localSignal[index].send(task);
+  }
+
+  template<class Fct>
+  void exec(long cnt, Fct fct) 
+  {
+    ConcurrentTaskFct<Fct> task(fct);
+
+    begin(cnt);
+    for (long t = 0; t < cnt; t++) launch(&task, t);
+    end();
   }
 
 };
