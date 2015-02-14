@@ -69,75 +69,6 @@ bool DoubleCRT::dryRun = false;
 
 #ifdef FHE_DCRT_THREADS
 
-#if 0
-class FFTTaskClass : public ConcurrentTask {
-public:
-  const FHEcontext *context;
-  IndexMap<vec_long> *map;
-  const ZZX *poly;
-
-  Vec<long> indexVec;
-  Vec<long> firstIndex;
-  Vec<long> lastIndex;
-
-  void run(long index) 
-  {
-    long first = firstIndex[index];
-    long last = lastIndex[index];
-    for (long j = first; j <= last; j++) {
-      long i = indexVec[j];
-      context->ithModulus(i).FFT((*map)[i], *poly); 
-    }
-  }
-  
-};
-
-NTL_THREAD_LOCAL static FFTTaskClass FFTTask;
-
-
-void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
-{
-  FHE_TIMER_START;
-
-  if (empty(s)) return;
-
-  MultiTask *mtask = &multiTask;
-  FFTTaskClass *task = &FFTTask;
-
-  task->map = &map;
-  task->context = &context;
-  task->poly = &poly;
-
-  long indexCard = s.card();
-  task->indexVec.SetLength(indexCard);
-  for (long i = s.first(), j = 0; i <= s.last(); i = s.next(i), j++) 
-    task->indexVec[j] = i;
-
-  long nthreads = FFTMaxThreads;
-  if (nthreads > indexCard) nthreads = indexCard;
-
-  task->firstIndex.SetLength(nthreads);
-  task->lastIndex.SetLength(nthreads);
-  
-  long blockSize = (indexCard + nthreads - 1)/nthreads;
-
-  for (long t = 0; t < nthreads; t++) {
-    long firstIndex = blockSize*t;
-    long lastIndex = firstIndex + blockSize - 1;
-    if (lastIndex >= indexCard) lastIndex = indexCard-1;
-    task->firstIndex[t] = firstIndex;
-    task->lastIndex[t] = lastIndex;
-  }
-
-  mtask->begin(nthreads);
-
-  for (long t = 0; t < nthreads; t++) 
-    mtask->launch(task, t);
-
-  mtask->end();
-}
-#else
-
 
 void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
 {
@@ -165,9 +96,6 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
   );
 }
 
-
-
-#endif
 
 
 #else
@@ -624,89 +552,6 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
 
 
 
-class iFFTTaskClass : public ConcurrentTask {
-public:
-  const FHEcontext *context;
-  const IndexMap<vec_long> *map;
-
-  Vec<long> indexVec;
-  Vec<zz_pX> tmpVec;
-  Vec<long> firstIndex;
-  Vec<long> lastIndex;
-
-  Vec< Vec<long> > *output;
-
-  void run(long index) 
-  {
-    long first = firstIndex[index];
-    long last = lastIndex[index];
-    zz_pX& tmp = tmpVec[index];
-
-    long len = (*output).length();
-    Vec<long> *out = (*output).elts();
-
-    for (long j = first; j <= last; j++) {
-      long i = indexVec[j];
-      context->ithModulus(i).iFFT(tmp, (*map)[i]); 
-
-      long d = deg(tmp);
-      for (long h = 0; h <= d; h++) out[h][j] = rep(tmp.rep[h]);
-      for (long h = d+1; h < len; h++) out[h][j] = 0;
-    }
-  }
-  
-};
-
-NTL_THREAD_LOCAL static iFFTTaskClass iFFTTask;
-
-class CRTTaskClass : public ConcurrentTask {
-public:
-  Vec<ZZ> *poly;
-  Vec< Vec<long> > input;
-  long len;
-  bool positive;
-  Vec<long> firstIndex;
-  Vec<long> lastIndex;
-  ZZ prod;
-  ZZ prod_half;
-  Vec<ZZ> prod1Vec;
-  Vec<long> qVec;
-  Vec<long> tVec;
-  Vec<ZZ> resVec;
-
-  void run(long index) 
-  {
-    ZZ& res = resVec[index];
-    long first = firstIndex[index];
-    long last = lastIndex[index];
-
-    for (long h = first; h <= last; h++) {
-      clear(res);
-      long *in = input[h].elts();
-      
-      for (long j = 0; j < len; j++) {
-        long q = qVec[j];
-        long t = tVec[j];
-        long r = in[j];
-        r = MulMod(r, t, q);
-        MulAddTo(res, prod1Vec[j], r);
-      }
-
-      rem(res, res, prod);
-      if (!positive && res >= prod_half) 
-        res -= prod;
-
-      (*poly)[h] = res;
-    }
-  }
-
-};
-
-
-NTL_THREAD_LOCAL static CRTTaskClass CRTTask;
-
-
-
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
@@ -720,108 +565,119 @@ FHE_TIMER_START;
     return;
   }
 
-  long indexCard = s1.card();
+
+  static thread_local Vec<long> tls_ivec;
+  static thread_local Vec<long> tls_pvec;
+  static thread_local Vec< Vec<long> > tls_remtab;
+  static thread_local Vec<zz_pX> tls_tmpvec;
+
+  Vec<long>& ivec = tls_ivec;
+  Vec<long>& pvec = tls_pvec;
+  Vec< Vec<long> >& remtab = tls_remtab;
+  Vec<zz_pX>& tmpvec = tls_tmpvec;
+
   long phim = context.zMStar.getPhiM();
-  CRTTaskClass *ctask = &CRTTask;
+  long icard = MakeIndexVector(s1, ivec);
+  long nthreads = multiTask.SplitProblems(icard, pvec);
 
-  ctask->input.SetLength(phim);
-  for (long h = 0; h < phim; h++) ctask->input[h].SetLength(indexCard);
+  remtab.SetLength(phim);
+  for (long h = 0; h < phim; h++) remtab[h].SetLength(icard);
 
-  MultiTask *mtask = &multiTask;
-  iFFTTaskClass *task = &iFFTTask;
-
-  task->map = &map;
-  task->context = &context;
+  tmpvec.SetLength(nthreads);
   
-  task->indexVec.SetLength(indexCard);
-  for (long i = s1.first(), j = 0; i <= s1.last(); i = s1.next(i), j++) 
-    task->indexVec[j] = i;
-
-  task->output = &ctask->input;
-
-  long nthreads = FFTMaxThreads;
-  if (nthreads > indexCard) nthreads = indexCard;
-
-  task->firstIndex.SetLength(nthreads);
-  task->lastIndex.SetLength(nthreads);
-  task->tmpVec.SetLength(nthreads);
+  multiTask.exec(nthreads,
+    [&](long index) {
+      long first = pvec[index];
+      long last = pvec[index+1];
+      zz_pX& tmp = tmpvec[index];
   
-  long blockSize = (indexCard + nthreads - 1)/nthreads;
-
-  for (long t = 0; t < nthreads; t++) {
-    long firstIndex = blockSize*t;
-    long lastIndex = firstIndex + blockSize - 1;
-    if (lastIndex >= indexCard) lastIndex = indexCard-1;
-    task->firstIndex[t] = firstIndex;
-    task->lastIndex[t] = lastIndex;
-  }
-
-  mtask->begin(nthreads);
-
-  for (long t = 0; t < nthreads; t++) 
-    mtask->launch(task, t);
-
-  mtask->end();
-
+      for (long j = first; j < last; j++) {
+        long i = ivec[j];
+        context.ithModulus(i).iFFT(tmp, map[i]); 
+  
+        long d = deg(tmp);
+        for (long h = 0; h <= d; h++) remtab[h][j] = rep(tmp.rep[h]);
+        for (long h = d+1; h < phim; h++) remtab[h][j] = 0;
+      }
+    }
+  );
 
 { FHE_NTIMER_START(toPoly_CRT);
 
   poly.rep.SetLength(phim);
 
+  nthreads = multiTask.SplitProblems(phim, pvec);
 
-  ctask->poly = &poly.rep;
-  ctask->len = indexCard;
-  ctask->positive = positive;
+  static thread_local ZZ tls_prod;
+  static thread_local ZZ tls_prod_half;
+  static thread_local Vec<ZZ> tls_prod1vec;
+  static thread_local Vec<long> tls_qvec;
+  static thread_local Vec<long> tls_tvec;
+  static thread_local Vec<ZZ> tls_resvec;
 
-  long ncthreads = FFTMaxThreads;
-  if (ncthreads > phim) ncthreads = phim;
+  ZZ& prod = tls_prod;
+  ZZ& prod_half = tls_prod_half;
+  Vec<ZZ>& prod1vec = tls_prod1vec;
+  Vec<long>& qvec = tls_qvec;
+  Vec<long>& tvec = tls_tvec;
+  Vec<ZZ>& resvec = tls_resvec;
 
-  ctask->firstIndex.SetLength(ncthreads);
-  ctask->lastIndex.SetLength(ncthreads);
+  prod1vec.SetLength(icard);
+  qvec.SetLength(icard);
+  tvec.SetLength(icard);
 
-  long cblockSize = (phim + ncthreads - 1)/ncthreads;
-
-  for (long t = 0; t < ncthreads; t++) {
-    long firstIndex = cblockSize*t;
-    long lastIndex = firstIndex + cblockSize - 1;
-    if (lastIndex >= phim) lastIndex = phim-1;
-    ctask->firstIndex[t] = firstIndex;
-    ctask->lastIndex[t] = lastIndex;
-  }
-
-  ctask->prod1Vec.SetLength(indexCard);
-  ctask->qVec.SetLength(indexCard);
-  ctask->tVec.SetLength(indexCard);
-
-  ctask->prod = 1;
-  for (long j = 0; j < indexCard; j++) {
-    long i = task->indexVec[j];
+  prod = 1;
+  for (long j = 0; j < icard; j++) {
+    long i = ivec[j];
     long q = context.ithModulus(i).getQ();
-    ctask->qVec[j] = q;
-    mul(ctask->prod, ctask->prod, q);
+    qvec[j] = q;
+    mul(prod, prod, q);
   }
 
-  for (long j = 0; j < indexCard; j++) {
-    long q = ctask->qVec[j];
-    div(ctask->prod1Vec[j], ctask->prod, q);
-    long t = rem(ctask->prod1Vec[j], q);
+  for (long j = 0; j < icard; j++) {
+    long q = qvec[j];
+    div(prod1vec[j], prod, q);
+    long t = rem(prod1vec[j], q);
     t = InvMod(t, q);
-    ctask->tVec[j] = t;
+    tvec[j] = t;
   }
 
-  ctask->resVec.SetLength(ncthreads);
+  resvec.SetLength(nthreads);
 
-  if (!positive) ctask->prod_half = (ctask->prod+1)/2;
+  if (!positive) {
+    // prod_half = (prod+1)/2
+    add(prod_half, prod, 1);
+    div(prod_half, prod_half, 2);
+  }
   
-  mtask->begin(ncthreads);
-
-  for (long t = 0; t < ncthreads; t++) 
-    mtask->launch(ctask, t);
-
-  mtask->end();
+  multiTask.exec(nthreads,
+    [&](long index) {
+      ZZ& res = resvec[index];
+      long first = pvec[index];
+      long last = pvec[index+1];
+  
+      for (long h = first; h < last; h++) {
+        clear(res);
+        long *remvec = remtab[h].elts();
+        
+        for (long j = 0; j < icard; j++) {
+          long q = qvec[j];
+          long t = tvec[j];
+          long r = remvec[j];
+          r = MulMod(r, t, q);
+          MulAddTo(res, prod1vec[j], r);
+        }
+  
+        rem(res, res, prod);
+        if (!positive && res >= prod_half) 
+          res -= prod;
+  
+        poly[h] = res;
+      }
+    }
+  );
 
   poly.normalize();
-  
 }
 
 }
