@@ -378,6 +378,139 @@ template long makeDivisible<vec_ZZ>(vec_ZZ& v, long p2e,
 // template long makeDivisible<vec_long>(vec_long& v, long p2e,
 // 				      long p2r, long q, double alpha);
 
+#ifdef FHE_BOOT_THREADS
+
+// Extract digits from fully packed slots, multithreaded version
+void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
+			 const vector<ZZX>& unpackSlotEncoding)
+{
+  FHE_TIMER_START;
+
+  // Step 1: unpack the slots of ctxt
+  FHE_NTIMER_START(unpack);
+  ctxt.cleanUp();
+
+  // Apply the d automorphisms and store them in scratch area
+  long d = ctxt.getContext().zMStar.getOrdP();
+
+  vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
+  { // explicit scope to force all temporaries to be released
+    vector< shared_ptr<DoubleCRT> > coeff_vector;
+    coeff_vector.resize(d);
+
+    FHE_NTIMER_START(unpack1);
+    for (long i = 0; i < d; i++)
+      coeff_vector[i] = shared_ptr<DoubleCRT>(new 
+        DoubleCRT(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet()) );
+    FHE_NTIMER_STOP(unpack1);
+
+    FHE_NTIMER_START(unpack2);
+    vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
+
+    bootTask.exec1(d,
+      [&](long first, long last) {
+        for (long j = first; j < last; j++) { // process jth Frobenius 
+          frob[j] = ctxt;
+          frob[j].frobeniusAutomorph(j);
+          frob[j].cleanUp();
+        }
+      }
+    );
+
+    FHE_NTIMER_STOP(unpack2);
+
+    FHE_NTIMER_START(unpack3);
+    Ctxt tmp1(ZeroCtxtLike, ctxt);
+    for (long i = 0; i < d; i++) {
+      for (long j = 0; j < d; j++) {
+        tmp1 = frob[j];
+        tmp1.multByConstant(*coeff_vector[mcMod(i+j, d)]);
+        unpacked[i] += tmp1;
+      }
+    }
+    FHE_NTIMER_STOP(unpack3);
+  }
+  FHE_NTIMER_STOP(unpack);
+
+  // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]
+  long p = ctxt.getContext().zMStar.getP();
+  long p2r = power_long(p,r);
+  long topHigh = botHigh + r-1;
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ After unpack ";
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  cerr << "    extracting "<<(topHigh+1)<<" digits\n";
+#endif
+
+  if (p==2 && r>2)
+    topHigh--; // For p==2 we sometime get a bit for free
+
+  FHE_NTIMER_START(extractDigits);
+  bootTask.exec1(d,
+    [&](long first, long last) {
+      for (long i = first; i < last; i++) {
+        vector<Ctxt> scratch;
+    
+        if (topHigh<=0) { // extracting LSB = no-op
+          scratch.assign(1,unpacked[i]);
+        } else {          // extract digits topHigh...0, store them in scratch
+          extractDigits(scratch, unpacked[i], topHigh+1);
+        }
+    
+        // set upacked[i] = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
+        if (topHigh >= (long)scratch.size()) {
+          topHigh = scratch.size() -1;
+          cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
+        }
+    
+        unpacked[i] = scratch[topHigh];
+        for (long j=topHigh-1; j>=botHigh; --j) {
+          unpacked[i].multByP();
+          unpacked[i] += scratch[j];
+        }
+        if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
+          unpacked[i] += scratch[botHigh-1];
+        unpacked[i].negate();
+    
+        if (r>ePrime) {          // Add in digits from the bottom part, if any
+          long topLow = r-1 - ePrime;
+          Ctxt tmp = scratch[topLow];
+          for (long j=topLow-1; j>=0; --j) {
+    	tmp.multByP();
+    	tmp += scratch[j];
+          }
+          if (ePrime>0)
+    	tmp.multByP(ePrime); // multiply by p^e'
+          unpacked[i] += tmp;
+        }
+        unpacked[i].reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
+      }
+    }
+  );
+  FHE_NTIMER_STOP(extractDigits);
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ Before repack ";
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+#endif
+
+  // Step 3: re-pack the slots
+  FHE_NTIMER_START(repack);
+  const EncryptedArray& ea2 = *ctxt.getContext().ea;
+  ZZX xInSlots;
+  vector<ZZX> xVec(ea2.size());
+  ctxt = unpacked[0];
+  for (long i=1; i<d; i++) {
+    x2iInSlots(xInSlots, i, xVec, ea2);
+    unpacked[i].multByConstant(xInSlots);
+    ctxt += unpacked[i];
+  }
+  FHE_NTIMER_STOP(repack);
+}
+
+
+#else
 
 // Extract digits from fully packed slots
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
@@ -431,14 +564,13 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   if (p==2 && r>2)
     topHigh--; // For p==2 we sometime get a bit for free
 
+  FHE_NTIMER_START(extractDigits);
   for (long i=0; i<(long)unpacked.size(); i++) {
-    FHE_NTIMER_START(extractDigits);
     if (topHigh<=0) { // extracting LSB = no-op
       scratch.assign(1,unpacked[i]);
     } else {          // extract digits topHigh...0, store them in scratch
       extractDigits(scratch, unpacked[i], topHigh+1);
     }
-    FHE_NTIMER_STOP(extractDigits);
 
     // set upacked[i] = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
     if (topHigh >= (long)scratch.size()) {
@@ -446,7 +578,6 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
       cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
     }
 
-    FHE_NTIMER_START(combiningDigits);
     unpacked[i] = scratch[topHigh];
     for (long j=topHigh-1; j>=botHigh; --j) {
       unpacked[i].multByP();
@@ -468,8 +599,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
       unpacked[i] += tmp;
     }
     unpacked[i].reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
-    FHE_NTIMER_STOP(combiningDigits);
   }
+  FHE_NTIMER_STOP(extractDigits);
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before repack ";
@@ -489,3 +620,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   }
   FHE_NTIMER_STOP(repack);
 }
+
+#endif
+
+
+

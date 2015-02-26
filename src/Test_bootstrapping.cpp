@@ -89,6 +89,9 @@ static long mValues[][14] = {
 };
 #define num_mValues (sizeof(mValues)/(13*sizeof(long)))
 
+#define OUTER_REP (1)
+#define INNER_REP (1)
+
 
 void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false)
 {
@@ -148,7 +151,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   long p2r = context.alMod.getPPowR();
   context.zMStar.set_cM(mValues[idx][13]/100.0);
 
-  for (long numkey=0; numkey<3; numkey++) { // test with 3 keys
+  for (long numkey=0; numkey<OUTER_REP; numkey++) { // test with 3 keys
 
   t = -GetTime();
   cout << "Generating keys, " << std::flush;
@@ -182,7 +185,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   Ctxt c1(publicKey);
 
   secretKey.Encrypt(c1,ptxt_poly,p2r);
-  for (long num=0; num<2; num++) { // recrypt twice, each time test the result
+  for (long num=0; num<INNER_REP; num++) { 
     publicKey.reCrypt(c1);
     secretKey.Decrypt(poly2,c1);
 

@@ -69,6 +69,7 @@ inline void setTimersOn()  { }
 inline void setTimersOff() { }
 inline bool areTimersOn()  { return true; }
 
+const FHEtimer *getTimerByName(const char *name);
 
 
 void resetAllTimers();

@@ -120,6 +120,16 @@ void printAllTimers(ostream& str)
   }
 }
 
+const FHEtimer *getTimerByName(const char *name)
+{
+  for (long i = 0; i < long(timerMap.size()); i++) {
+    if (strcmp(name, timerMap[i]->name) == 0)
+      return timerMap[i];
+  }
+
+  return 0;
+}
+
 bool printNamedTimer(ostream& str, const char* name)
 {
   for (long i = 0; i < long(timerMap.size()); i++) {

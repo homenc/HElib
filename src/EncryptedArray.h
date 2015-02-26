@@ -24,6 +24,14 @@
 #include <NTL/pair.h>
 #include "FHE.h"
 #include "timing.h"
+#include "multicore.h"
+
+#ifdef FHE_BOOT_THREADS
+const long bootMaxThreads = 8;
+extern NTL_THREAD_LOCAL MultiTask bootTask;
+#endif
+
+
 
 class PlaintextArray; // forward reference
 class EncryptedArray; // forward reference

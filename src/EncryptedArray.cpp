@@ -23,6 +23,11 @@
 #include "cloned_ptr.h"
 
 
+#ifdef FHE_BOOT_THREADS
+NTL_THREAD_LOCAL MultiTask bootTask(bootMaxThreads);
+#endif
+
+
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
 					const PAlgebraMod& alMod)
 {
@@ -985,6 +990,50 @@ void EncryptedArrayDerived<type>::compMat1D(CachedDCRTPtxtMatrix& cmat,
     // DoubleCRT defined relative to all primes, even the "special" ones
 }
 
+#ifdef FHE_BOOT_THREADS
+
+template<class Matrix, class EA>
+static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
+			   const EA& ea)
+{
+  FHE_TIMER_START;
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+
+  ctxt.cleanUp();  // not sure, but this may be a good idea
+  Ctxt res(ZeroCtxtLike, ctxt); // fresh encryption of zero
+
+  Vec< shared_ptr<Ctxt> > tvec;
+  tvec.SetLength(D);
+  for (long i = 0; i < D; i++)
+    tvec[i] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  bootTask.exec1(D,
+    [&](long first, long last) {
+      for (long i = first; i < last; i++) { // process diagonal i
+        if (!cmat[i]) continue;      // zero diagonal
+    
+        // rotate and multiply
+        (*tvec[i]) = ctxt;
+        if (i != 0) ea.rotate1D(*tvec[i], dim, i);   
+        tvec[i]->multByConstant(*cmat[i]);
+      }
+    }
+  );
+
+  for (long i = 0; i < D; i++)
+    res += *tvec[i];
+
+  ctxt = res;
+}
+
+#else
+
 template<class Matrix, class EA>
 static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
 			   const EA& ea)
@@ -1013,6 +1062,12 @@ static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
   }
   ctxt = res;
 }
+
+
+#endif
+
+
+
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
 	       const EncryptedArray& ea)
 { mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
@@ -1634,6 +1689,8 @@ void EncryptedArrayDerived<type>::compMat1D(CachedDCRTPtxtBlockMatrix& cmat,
     // DoubleCRT defined relative only to the ciphertxt primes, not the "special" ones
 }
 
+#ifdef FHE_BOOT_THREADS
+
 template<class Matrix, class EA>
 static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
 				const EA& ea)
@@ -1657,6 +1714,102 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
   for (long k = 0; k < d; k++)
     acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
 
+  FHE_NTIMER_START(blockMat1);
+  vector< vector<Ctxt> > shCtxt;
+
+  shCtxt.resize(D);
+
+  // Process the diagonals one at a time
+  bootTask.exec1(D,
+    [&](long first, long last) {
+      for (long i = first; i < last; i++) { // process diagonal i
+        if (i == 0) {
+          shCtxt[i].resize(1, ctxt);
+        }
+        else if (!bad) {
+          shCtxt[i].resize(1, ctxt);
+          ea.rotate1D(shCtxt[i][0], dim, i);
+          shCtxt[i][0].cleanUp();
+        }
+        else {
+          // we fold the masking constants into the linearized polynomial
+          // constants to save a level. We lift some code out of rotate1D
+          // to do this.
+    
+          shCtxt[i].resize(2, ctxt);
+    
+          long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+          long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+    
+          shCtxt[i][0].smartAutomorph(val); 
+          shCtxt[i][0].cleanUp();
+    
+          shCtxt[i][1].smartAutomorph(ival); 
+          shCtxt[i][1].cleanUp();
+        }
+      }
+    }
+  );
+  FHE_NTIMER_STOP(blockMat1);
+
+
+  FHE_NTIMER_START(blockMat3);
+  bootTask.exec1(d,
+    [&](long first, long last) {
+      for (long k = first; k < last; k++) {
+        for (long i = 0; i < D; i++) {
+          for (long j = 0; j < LONG(shCtxt[i].size()); j++) {
+            if (!cmat[i][k + d*j]) continue; // zero constant
+    
+            Ctxt shCtxt1 = shCtxt[i][j];
+            shCtxt1.multByConstant(*cmat[i][k + d*j]);
+            *acc[k] += shCtxt1;
+          }
+        }
+        acc[k]->frobeniusAutomorph(k);
+      }
+    }
+  );
+  FHE_NTIMER_STOP(blockMat3);
+
+  FHE_NTIMER_START(blockMat4);
+  Ctxt res(ZeroCtxtLike, ctxt);
+  for (long k = 0; k < d; k++) {
+    res += *acc[k];
+  }
+  FHE_NTIMER_STOP(blockMat4);
+
+  ctxt = res;
+}
+
+
+#else
+
+
+template<class Matrix, class EA>
+static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
+				const EA& ea)
+{
+  FHE_TIMER_START;
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
+
+  long m = zMStar.getM();
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+  bool bad = !special && !zMStar.SameOrd(dim);
+  long d = ea.getDegree();
+
+  Vec< shared_ptr<Ctxt> > acc;
+  acc.SetLength(d);
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+  for (long k = 0; k < d; k++)
+    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  FHE_NTIMER_START(blockMat1);
   // Process the diagonals one at a time
   for (long i = 0; i < D; i++) { // process diagonal i
     vector<Ctxt> shCtxt;
@@ -1696,15 +1849,24 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
       }
     }
   }
+  FHE_NTIMER_STOP(blockMat1);
 
+  FHE_NTIMER_START(blockMat2);
   Ctxt res(ZeroCtxtLike, ctxt);
   for (long k = 0; k < d; k++) {
     acc[k]->frobeniusAutomorph(k);
     res += *acc[k];
   }
+  FHE_NTIMER_STOP(blockMat2);
 
   ctxt = res;
 }
+
+
+#endif
+
+
+
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
 	       const EncryptedArray& ea)
 { blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }

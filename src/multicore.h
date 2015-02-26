@@ -60,6 +60,17 @@ public:
   void run(long index) { fct(index); }
 };
 
+template<class Fct>
+class ConcurrentTaskFct1 : public ConcurrentTask {
+public:
+  Fct fct;
+  const Vec<long>& pvec;
+  ConcurrentTaskFct1(Fct&& _fct, const Vec<long>& _pvec) : 
+    fct(std::move(_fct)), pvec(_pvec)  { }
+
+  void run(long index) { fct(pvec[index], pvec[index+1]); }
+};
+
 
 struct MultiTask;
 inline void doMultiTask(MultiTask *multiTask, long index);
@@ -111,11 +122,31 @@ struct MultiTask {
 
   
 
-  // High level interface, intended to be used with lambdas
+  // High level interfaces, intended to be used with lambdas
+
+  // In this version, fct takes one argument, which is
+  // an index in [0..cnt)
+
   template<class Fct>
   void exec(long cnt, Fct fct) 
   {
     ConcurrentTaskFct<Fct> task(std::move(fct));
+
+    begin(cnt);
+    for (long t = 0; t < cnt; t++) launch(&task, t);
+    end();
+  }
+
+  // even higher level version: sz is the number of subproblems,
+  // and fct takes two args, first and last, so that subproblems
+  // [first..last) are processed.
+
+  template<class Fct>
+  void exec1(long sz, Fct fct) 
+  {
+    Vec<long> pvec;
+    long cnt = SplitProblems(sz, pvec);
+    ConcurrentTaskFct1<Fct> task(std::move(fct), pvec);
 
     begin(cnt);
     for (long t = 0; t < cnt; t++) launch(&task, t);
