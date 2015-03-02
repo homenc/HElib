@@ -653,7 +653,7 @@ int main(int argc, char *argv[])
   TimingData td;
   if (m>0) {
     cerr << "\nTesting m="<<m; 
-    if (high) cout << " (including high-level)";
+    if (high) cerr << " (including high-level)";
     TimeIt(m, p, td, high);
     printTimeData(td);
   }
