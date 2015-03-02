@@ -224,7 +224,11 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
     }
   }
   else {
+#ifdef NO_HALF_SIZE_PRIME
+    long sizeBits = context.bitsPerLevel;
+#else
     long sizeBits = 2*context.bitsPerLevel;
+#endif
     if (special) {
       long numPrimes = ceil(totalSize/NTL_SP_NBITS);// how many special primes
       sizeBits = ceil(totalSize/numPrimes);         // what's the size of each
