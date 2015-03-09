@@ -27,8 +27,7 @@
 #include "multicore.h"
 
 #ifdef FHE_BOOT_THREADS
-const long bootMaxThreads = 8;
-extern NTL_THREAD_LOCAL MultiTask bootTask;
+extern NTL_THREAD_LOCAL MultiTask *bootTask;
 #endif
 
 

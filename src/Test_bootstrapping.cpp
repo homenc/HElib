@@ -89,8 +89,8 @@ static long mValues[][14] = {
 };
 #define num_mValues (sizeof(mValues)/(13*sizeof(long)))
 
-#define OUTER_REP (1)
-#define INNER_REP (1)
+#define OUTER_REP (3)
+#define INNER_REP (3)
 
 
 void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false)
@@ -241,6 +241,8 @@ int main(int argc, char *argv[])
   long t=0;
   bool dry=0;
   bool cons=0;
+  long nthreads=4;
+
   amap.arg("p", p, "plaintext base");
 
   amap.arg("r", r,  "exponent");
@@ -253,7 +255,18 @@ int main(int argc, char *argv[])
   amap.arg("t", t, "Hamming weight of recryption secret key", "heuristic");
   amap.arg("dry", dry, "dry=1 for a dry-run");
   amap.arg("cons", cons, "cons=1 for consevative settings (circuit deeper by 1)");
+  amap.arg("nthreads", nthreads, "number of threads");
+
   amap.parse(argc, argv);
+
+#ifdef FHE_BOOT_THREADS
+  bootTask = new MultiTask(nthreads);
+  cout << "*** nthreads = " << nthreads << "\n";
+#else
+  cout << "*** no threads\n";
+#endif
+  
+  
 
   if (B<=0) B=FHE_pSize;
   if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;

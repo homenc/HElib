@@ -407,7 +407,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     FHE_NTIMER_START(unpack2);
     vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
 
-    bootTask.exec1(d,
+    bootTask->exec1(d,
       [&](long first, long last) {
         for (long j = first; j < last; j++) { // process jth Frobenius 
           frob[j] = ctxt;
@@ -447,7 +447,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     topHigh--; // For p==2 we sometime get a bit for free
 
   FHE_NTIMER_START(extractDigits);
-  bootTask.exec1(d,
+  bootTask->exec1(d,
     [&](long first, long last) {
       for (long i = first; i < last; i++) {
         vector<Ctxt> scratch;

@@ -24,7 +24,7 @@
 
 
 #ifdef FHE_BOOT_THREADS
-NTL_THREAD_LOCAL MultiTask bootTask(bootMaxThreads);
+NTL_THREAD_LOCAL MultiTask *bootTask = 0;
 #endif
 
 
@@ -1013,7 +1013,7 @@ static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
   for (long i = 0; i < D; i++)
     tvec[i] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
 
-  bootTask.exec1(D,
+  bootTask->exec1(D,
     [&](long first, long last) {
       for (long i = first; i < last; i++) { // process diagonal i
         if (!cmat[i]) continue;      // zero diagonal
@@ -1720,7 +1720,7 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
   shCtxt.resize(D);
 
   // Process the diagonals one at a time
-  bootTask.exec1(D,
+  bootTask->exec1(D,
     [&](long first, long last) {
       for (long i = first; i < last; i++) { // process diagonal i
         if (i == 0) {
@@ -1754,7 +1754,7 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
 
 
   FHE_NTIMER_START(blockMat3);
-  bootTask.exec1(d,
+  bootTask->exec1(d,
     [&](long first, long last) {
       for (long k = first; k < last; k++) {
         for (long i = 0; i < D; i++) {
