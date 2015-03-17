@@ -123,8 +123,6 @@ class DoubleCRT {
 
 public:
 
-  static bool dryRun; // do not actually perform any of the operations
-
   // Constructors and assignment operators
 
   // representing an integer polynomial as DoubleCRT. If the set of primes
@@ -381,12 +379,6 @@ public:
 
   friend ostream& operator<< (ostream &s, const DoubleCRT &d);
   friend istream& operator>> (istream &s, DoubleCRT &d);
-
-  //! @brief Used for testing/debugging
-  //! The dry-run option disables most operations, to save time. This lets
-  //! us quickly go over the evaluation of a circuit and estimate the
-  //! resulting noise magnitude, without having to actually compute anything. 
-  static bool setDryRun(bool toWhat=true) { dryRun=toWhat; return dryRun; }
 };
 
 

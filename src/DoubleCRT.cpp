@@ -58,9 +58,6 @@ long MakeIndexVector(const IndexSet& s, Vec<long>& v)
 }
 
 
-
-bool DoubleCRT::dryRun = false;
-
 // representing an integer polynomial as DoubleCRT. If the number of moduli
 // to use is not specified, the resulting object uses all the moduli in
 // the context. If the coefficients of poly are larger than the product of
@@ -143,7 +140,7 @@ template<class Fun>
 DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
 			 bool matchIndexSets)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   if (&context != &other.context)
     Error("DoubleCRT::Op: incompatible objects");
@@ -191,7 +188,7 @@ DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const DoubleCRT &other, SubFun fun,
 template<class Fun>
 DoubleCRT& DoubleCRT::Op(const ZZ &num, Fun fun)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
@@ -217,7 +214,7 @@ DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const ZZ &num, SubFun fun);
 
 DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   if (&context != &other.context) 
     Error("DoubleCRT Negate: incompatible contexts");
@@ -240,7 +237,7 @@ DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
 template<class Fun>
 DoubleCRT& DoubleCRT::Op(const ZZX &poly, Fun fun)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
   DoubleCRT other(poly, context, s); // other defined wrt same primes as *this
@@ -265,7 +262,7 @@ void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
   assert(n <= (long)context.digits.size());
 
   digits.resize(n, DoubleCRT(context, IndexSet::emptySet()));
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   for (long i=0; i<(long)digits.size(); i++) {
     digits[i]=*this;
@@ -318,7 +315,7 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
   toPoly(poly); // recover in coefficient representation
 
   map.insert(s1);  // add new rows to the map
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   // fill in new rows
   FFT(poly, s1);
@@ -370,7 +367,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet
   assert(s.last() < context.numPrimes());
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
   FFT(poly, s);
@@ -384,7 +381,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
   // FIXME: maybe the default index set should be determined by context?
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
   FFT(poly, s);
@@ -398,7 +395,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly)
   // FIXME: maybe the default index set should be determined by context?
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
   FFT(poly, s);
@@ -410,7 +407,7 @@ DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
   assert(s.last() < context.numPrimes());
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   long phim = context.zMStar.getPhiM();
 
@@ -427,7 +424,7 @@ DoubleCRT::DoubleCRT(const FHEcontext &_context)
   // FIXME: maybe the default index set should be determined by context?
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   long phim = context.zMStar.getPhiM();
 
@@ -486,7 +483,7 @@ void DoubleCRT::partialCopy(const DoubleCRT& other, const IndexSet& _s)
 
 DoubleCRT& DoubleCRT::operator=(const ZZX&poly)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
 
@@ -498,7 +495,7 @@ DoubleCRT& DoubleCRT::operator=(const ZZX&poly)
 DoubleCRT& DoubleCRT::operator=(const ZZ& num)
 {
   const IndexSet& s = map.getIndexSet();
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   long phim = context.zMStar.getPhiM();
 
@@ -556,7 +553,7 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
 FHE_TIMER_START;
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   IndexSet s1 = map.getIndexSet() & s;
 
@@ -690,7 +687,7 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
 FHE_TIMER_START;
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   IndexSet s1 = map.getIndexSet() & s;
 
@@ -740,7 +737,7 @@ FHE_TIMER_START;
 #if 0
 {
 FHE_TIMER_START;
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   IndexSet s1 = map.getIndexSet() & s;
 
@@ -801,7 +798,7 @@ void DoubleCRT::toPoly(ZZX& p, bool positive) const
 // Division by constant
 DoubleCRT& DoubleCRT::operator/=(const ZZ &num)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
@@ -820,7 +817,7 @@ DoubleCRT& DoubleCRT::operator/=(const ZZ &num)
 // Small-exponent polynomial exponentiation
 void DoubleCRT::Exp(long e)
 {
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
@@ -836,7 +833,7 @@ void DoubleCRT::Exp(long e)
 // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
 void DoubleCRT::automorph(long k)
 {
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   const PAlgebra& zMStar = context.zMStar;
   if (!zMStar.inZmStar(k))
@@ -868,7 +865,7 @@ void DoubleCRT::automorph(long k)
 // fills each row i with random integers mod pi
 void DoubleCRT::randomize(const ZZ* seed) 
 {
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   if (seed != NULL) SetSeed(*seed);
 
@@ -891,7 +888,7 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   assert(diff!=s);          // cannot mod-down to the empty set
   if (empty(diff)) return;  // nothing to do
 
-  if (dryRun) {
+  if (isDryRun()) {
     removePrimes(diff);// remove the primes from consideration
     return;
   }

@@ -21,7 +21,7 @@
 #include <cctype>
 #include <algorithm>   // defines count(...), min(...)
 
-
+bool FHEglobals::dryRun = false;
 
 // Code for parsing command line
 

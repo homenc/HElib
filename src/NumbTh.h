@@ -51,6 +51,16 @@
 using namespace std;
 using namespace NTL;
 
+namespace FHEglobals
+{
+  //! @brief A dry-run flag
+  //! The dry-run option disables most operations, to save time. This lets
+  //! us quickly go over the evaluation of a circuit and estimate the
+  //! resulting noise magnitude, without having to actually compute anything. 
+  extern bool dryRun;
+}
+inline bool setDryRun(bool toWhat=true) { return (FHEglobals::dryRun=toWhat); }
+inline bool isDryRun() { return FHEglobals::dryRun; }
 
 #if (__cplusplus>199711L)
 #include <memory>
