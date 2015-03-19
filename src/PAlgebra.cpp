@@ -72,7 +72,7 @@ bool PAlgebra::operator==(const PAlgebra& other) const
 bool PAlgebra::nextExpVector(vector<unsigned long>& buffer) const
 {
   // increment the vector in lexicographic order
-  for (long i=gens.size()-1; i>=0; i--) {
+  if (!isDryRun()) for (long i=gens.size()-1; i>=0; i--) {
     if (i>=(long)buffer.size()) continue; // sanity check
     // increment current index, set all the ones after it to zero
     if (buffer[i] < OrderOf(i)-1) { 
@@ -87,6 +87,7 @@ bool PAlgebra::nextExpVector(vector<unsigned long>& buffer) const
 
 long PAlgebra::coordinate(long i, long k) const
 {
+  if (isDryRun()) return 0;
   long t = ith_rep(k); // element of Zm^* representing the k'th slot
 
   // dLog returns the representation of t along the generators, so the
@@ -96,6 +97,7 @@ long PAlgebra::coordinate(long i, long k) const
 
 long PAlgebra::addCoord(long i, long k, long offset) const
 {
+  if (isDryRun()) return 0;
   assert(k >= 0 && k < (long) nSlots);
   assert(i >= 0 && i < (long) gens.size());
   
@@ -108,12 +110,12 @@ long PAlgebra::addCoord(long i, long k, long offset) const
   long k1 = k + (k_i1 - k_i) * prods[i+1];
   
   return k1;
-  
 }
 
 unsigned long PAlgebra::exponentiate(const vector<unsigned long>& exps,
 				bool onlySameOrd) const
 {
+  if (isDryRun()) return 1;
   unsigned long t = 1;
   unsigned long n = min(exps.size(),gens.size());
   for (unsigned long i=0; i<n; i++) {
@@ -126,9 +128,12 @@ unsigned long PAlgebra::exponentiate(const vector<unsigned long>& exps,
 
 void PAlgebra::printout() const
 {
-  unsigned long i;
-  cout << "m = " << m << ", p = " << p << ", phi(m) = " << phiM << endl;
+  cout << "m = " << m << ", p = " << p;
+  if (isDryRun()) { cout << " (dry run)\n"; return; }
+  cout << ", phi(m) = " << phiM << endl;
   cout << "  ord(p)=" << ordP << endl;
+
+  unsigned long i;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
       cout << "  generator " << gens[i] << " has order ("
            << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
@@ -148,34 +153,37 @@ void PAlgebra::printout() const
 PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,  
                    const vector<long>& _gens, const vector<long>& _ords )
 {
+  assert( ProbPrime(pp) );
+  assert( (mm % pp) != 0 );
+  assert( mm < NTL_SP_BOUND );
+
+  cM  = 1.0; // default value for the ring constant
   m = mm;
   p = pp;
 
-  assert( ProbPrime(p) );
-  assert( (m % p) != 0 );
-  assert( m < NTL_SP_BOUND );
+  // For dry-run, use a tiny m value for the PAlgebra tables
+  if (isDryRun()) mm = (p==3)? 4 : 3;
 
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
 
-  if (_gens.size() == 0) 
-    ordP = findGenerators(this->gens, this->ords, m, p);
+  if (_gens.size() == 0 || isDryRun()) 
+      ordP = findGenerators(this->gens, this->ords, mm, pp);
   else {
     assert(_gens.size() == _ords.size());
     gens = _gens;
     ords = _ords;
-    ordP = multOrd(p, m);
+    ordP = multOrd(pp, mm);
   }
-
   nSlots = qGrpOrd();
   phiM = ordP * nSlots;
 
   // Allocate space for the various arrays
   T.resize(nSlots);
   dLogT.resize(nSlots*gens.size());
-  Tidx.assign(m,-1);    // allocate m slots, initialize them to -1
-  zmsIdx.assign(m,-1);  // allocate m slots, initialize them to -1
+  Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
+  zmsIdx.assign(mm,-1);  // allocate m slots, initialize them to -1
   long i, idx;
-  for (i=idx=0; i<(long)m; i++) if (GCD(i,m)==1) zmsIdx[i] = idx++;
+  for (i=idx=0; i<(long)mm; i++) if (GCD(i,mm)==1) zmsIdx[i] = idx++;
 
   // Now fill the Tidx and dLogT translation tables. We identify an element
   // t\in T with its representation t = \prod_{i=0}^n gi^{ei} mod m (where
@@ -186,7 +194,6 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   // FIXME: is the comment above about reverse order true? It doesn't 
   // seem like it to me.  VJS.
 
-
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
   vector<unsigned long> buffer(gens.size()); // temporaty holds exponents
   i = idx = 0;
@@ -196,7 +203,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
     unsigned long t = exponentiate(buffer);
     for (unsigned long j=0; j<buffer.size(); j++) dLogT[idx++] = buffer[j];
 
-    assert(GCD(t, m) == 1); // sanity check for user-supplied gens
+    assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
     assert(Tidx[t] == -1);
 
     T[i] = t;       // The i'th element in T it t
@@ -207,7 +214,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
 
   assert(ctr == long(nSlots)); // sanity check for user-supplied gens
 
-  PhimX = Cyclotomic(m); // compute and store Phi_m(X)
+  PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
 
   // initialize prods array
   long ndims = gens.size();
@@ -216,8 +223,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   for (long j = ndims-1; j >= 0; j--) {
     prods[j] = OrderOf(j) * prods[j+1];
   }
-  //  pp_factorize(mFactors, m); // prime-power factorization from NumbTh.cpp
-  cM  = 1.0; // default value for the ring constant
+  //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
 }
 
 /***********************************************************************
@@ -262,12 +268,17 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
 {
   long p = zMStar.getP();
+  long m = zMStar.getM();
+
+  // For dry-run, use a tiny m value for the PAlgebra tables
+  if (isDryRun()) m = (p==3)? 4 : 3;
+
   assert(r > 0);
+
   ZZ BigPPowR = power_ZZ(p, r);
   assert(BigPPowR.SinglePrecision());
   pPowR = to_long(BigPPowR);
 
-  long m = zMStar.getM();
   long nSlots = zMStar.getNSlots();
 
   RBak bak; bak.save();
@@ -437,6 +448,10 @@ void PAlgebraModDerived<type>::CRT_decompose(vector<RX>& crt, const RX& H) const
 {
   unsigned long nSlots = zMStar.getNSlots();
 
+  if (isDryRun()) {
+    crt.clear();
+    return;
+  }
   crt.resize(nSlots);
   for (unsigned long i=0; i<nSlots; i++)
     rem(crt[i], H, factors[i]); // crt[i] = H % factors[i]
@@ -446,6 +461,10 @@ template<class type>
 void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha, 
                                             const MappingData<type>& mappingData) const
 {
+  if (isDryRun()) {
+    H = RX::zero();
+    return;
+  }
   FHE_TIMER_START;
   long nSlots = zMStar.getNSlots();
 
@@ -477,6 +496,10 @@ template<class type>
 void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas, 
                                          const MappingData<type>& mappingData) const
 {
+  if (isDryRun()) {
+    H = RX::zero();
+    return;
+  }
   FHE_TIMER_START;
 
   long nSlots = zMStar.getNSlots();
@@ -516,6 +539,10 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
 template<class type>
 void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
 {
+  if (isDryRun()) {
+    H = RX::zero();
+    return;
+  }
   FHE_TIMER_START;
   long nslots = zMStar.getNSlots();
 
@@ -552,6 +579,10 @@ template<class type>
 void PAlgebraModDerived<type>::mapToFt(RX& w,
 			     const RX& G,unsigned long t,const RX* rF1) const
 {
+  if (isDryRun()) {
+    w = RX::zero();
+    return;
+  }
   long i = zMStar.indexOfRep(t);
   if (i < 0) { clear(w); return; }
 
@@ -610,28 +641,23 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 {
   assert(deg(G) > 0 && zMStar.getOrdP() % deg(G) == 0);
   assert(LeadCoeff(G) == 1);
-
-
   mappingData.G = G;
-  mappingData.degG = deg(G);
-
+  mappingData.degG = deg(mappingData.G);
 
   long nSlots = zMStar.getNSlots();
   long m = zMStar.getM();
 
   mappingData.maps.resize(nSlots);
 
-
-  mapToF1(mappingData.maps[0],G); // mapping from base-G to base-F1
+  mapToF1(mappingData.maps[0],mappingData.G); // mapping from base-G to base-F1
   for (long i=1; i<nSlots; i++)
-    mapToFt(mappingData.maps[i], G, zMStar.ith_rep(i), &(mappingData.maps[0])); 
-
+    mapToFt(mappingData.maps[i], mappingData.G, zMStar.ith_rep(i), &(mappingData.maps[0])); 
 
   REBak bak; bak.save(); 
-  RE::init(G);
+  RE::init(mappingData.G);
   mappingData.contextForG.save();
 
-  if (deg(G)==1) return;
+  if (deg(mappingData.G)==1) return;
 
   mappingData.rmaps.resize(nSlots);
 
@@ -715,6 +741,10 @@ void PAlgebraModDerived<type>::decodePlaintext(
    vector<RX>& alphas, const RX& ptxt, const MappingData<type>& mappingData) const
 {
   long nSlots = zMStar.getNSlots();
+  if (isDryRun()) {
+    alphas.assign(nSlots, RX::zero());
+    return;
+  }
 
   // First decompose p into CRT components
   vector<RX> CRTcomps(nSlots); // allocate space for CRT component
@@ -773,7 +803,6 @@ void PAlgebraModDerived<type>::genMaskTable()
 {
   // This is only called by the constructor, which has already
   // set the zz_p context
-  
 
   RX tmp1;
   

@@ -1912,8 +1912,8 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
 {
   FHE_TIMER_START;
 
-  RBak bak; bak.save(); restoreContext();
-  REBak ebak; ebak.save(); restoreContextForG();
+  RBak bak; bak.save(); restoreContext();  // the NTL context for mod p^r
+  REBak ebak; ebak.save(); restoreContextForG(); // The NTL context for mod G
 
   do {
     typename Lazy< Mat<RE> >::Builder builder(linPolyMatrix);
@@ -1924,9 +1924,10 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
     long r = tab.getR();
 
     Mat<RE> M1;
+    // build d x d matrix, d is taken from the surrent NTL context for G
     buildLinPolyMatrix(M1, p);
     Mat<RE> M2;
-    ppInvert(M2, M1, p, r);
+    ppInvert(M2, M1, p, r); // invert modulo prime-power p^r
 
     UniquePtr< Mat<RE> > ptr;
     ptr.make(M2);
