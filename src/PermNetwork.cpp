@@ -76,6 +76,11 @@ void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
 // Build a full permutation network
 void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
 {
+  if (trees.numTrees()==0) { // the identity permutation, nothing to do
+    layers.SetLength(0);
+    return;
+  }
+
   Vec<long> dims;
   trees.getCubeSubDims(dims);
 

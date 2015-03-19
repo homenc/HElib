@@ -879,11 +879,17 @@ static long copyToGenTree(OneGeneratorTree& gTree, SplitNodePtr& solution)
 long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens, 
 				       long depthBound)
 {
-  assert(gens.length() >= 1);
+  assert(gens.length() >= 0);
+  trees.SetLength(gens.length());    // allocate space if needed
+
+  if (gens.length()==0) {
+    map2cube.SetLength(1,0);
+    map2array.SetLength(1,0);
+    return 0;
+  }
   assert(depthBound > 0);
 
   // reset the trees, starting from only the roots
-  trees.SetLength(gens.length());    // allocate space if needed
   for (long i=0; i<trees.length(); i++) {
     if (trees[i].getNleaves()>1) // tree is not empty/trivial
       trees[i].collapseToRoot();
