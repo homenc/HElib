@@ -55,7 +55,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
                long L, long m, const Vec<long>& gens, const Vec<long>& ords)
 {
   char buffer[32];
-  cerr << "\n\n******** TestIt: R=" << R 
+  cerr << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":");
+  cerr << " R=" << R 
        << ", p=" << p
        << ", r=" << r
        << ", d=" << d
@@ -272,11 +273,12 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 int main(int argc, char **argv) 
 {
   SetSeed(ZZ(0));
-
   setTimersOn();
 
   ArgMapping amap;
 
+  bool dry=false;
+  amap.arg("dry", dry, "dry=1 for a dry-run");
 
   long R=1;
   amap.arg("R", R, "number of rounds");
@@ -339,6 +341,7 @@ int main(int argc, char **argv)
     chosen_m = computeProd(mvec);
   long m = FindM(k, L, c, p, d, s, chosen_m, true);
 
+  setDryRun(dry);
   for (long repeat_cnt = 0; repeat_cnt < repeat; repeat_cnt++) {
     TestIt(R, p, r, d, c, k, w, L, m, gens, ords);
   }

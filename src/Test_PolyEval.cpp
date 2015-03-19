@@ -85,7 +85,8 @@ void testIt(long d, long k, long p, long r, long m, long L,
   dbgKey = &secretKey;
 #endif
 
-  cout << "* degree-"<<d<<", m="<<m<<", L="<<L<<", p^r="<<p2r<<endl;
+  cout << (isDryRun()? "* dry run, " : "* ")
+       << "degree-"<<d<<", m="<<m<<", L="<<L<<", p^r="<<p2r<<endl;
 
   // evaluate encrypted poly at encrypted point
   if (!testEncrypted(d, ea, secretKey)) exit(0);
@@ -122,6 +123,7 @@ void usage(char *prog)
 {
   cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  cout << "  dry=1 for dry run [default=0]\n";
   cerr << "  p is the plaintext base [default=3]" << endl;
   cerr << "  r is the lifting [default=2]" << endl;
   cerr << "  m is a specific cyclotomic ring\n";
@@ -140,6 +142,7 @@ int main(int argc, char *argv[])
   argmap["m"] = "0";
   argmap["d"] = "-1";
   argmap["k"] = "0";
+  argmap["dry"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -149,11 +152,13 @@ int main(int argc, char *argv[])
   long m = atoi(argmap["m"]);
   long d = atoi(argmap["d"]);
   long k = atoi(argmap["k"]);
+  bool dry = atoi(argmap["dry"]);
 
   long max_d = (d<=0)? 35 : d;
   long L = 5+NextPowerOfTwo(max_d);
   if (m<2)
     m = FindM(/*secprm=*/80, L, /*c=*/3, p, 1, 0, m, true);
+  setDryRun(dry);
 
   // Test both monic and non-monic polynomials of this degree
   if (d>=0) {

@@ -91,7 +91,8 @@ public:
 
 void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
 {
-  cout << "*** TestIt: m=" << m
+  cout << "*** TestIt" << (isDryRun()? "(dry run):" : ":")
+       << " m=" << m
        << ", p=" << p
        << ", r=" << r
        << ", d=" << d
@@ -183,6 +184,9 @@ int main(int argc, char *argv[])
 {
   ArgMapping amap;
 
+  bool dry=false;
+  amap.arg("dry", dry, "dry=1 for a dry-run");
+
   long m=2047;
   amap.arg("m", m, "cyclotomic ring");
 
@@ -206,6 +210,7 @@ int main(int argc, char *argv[])
   amap.arg("B", B, "bound for # of replications", "all");
 
   amap.parse(argc, argv);
+  setDryRun(dry);
 
   TestIt(m, p, r, d, L, bnd, B);
   cout << endl;

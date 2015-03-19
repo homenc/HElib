@@ -5,12 +5,15 @@ namespace NTL {} using namespace NTL;
 #include "hypercube.h"
 #include "powerful.h"
 
+static bool dry = false; // a dry-run flag
+
 void  TestIt(long p, long r, long c, long _k, long w,
              long L, const Vec<long>& mvec, 
              const Vec<long>& gens, const Vec<long>& ords )
 {
-  cout << "*** TestIt: "
-       << "  p=" << p
+  cout << "*** TestIt"
+       << (dry? " (dry run):" : ":")
+       << " p=" << p
        << ", r=" << r
        << ", c=" << c
        << ", k=" << _k
@@ -20,6 +23,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
        << endl;
 
   setTimersOn();
+  setDryRun(false); // Need to get a "real context" to test EvalMap
 
   // mvec is supposed to include the prime-power factorization of m
   long nfactors = mvec.length();
@@ -44,6 +48,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
   long d = context.zMStar.getOrdP();
   long phim = context.zMStar.getPhiM();
   long nslots = phim/d;
+
+  setDryRun(dry); // Now we can set the dry-run flag if desired
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
@@ -199,6 +205,8 @@ int main(int argc, char *argv[])
   Vec<long> ords;
   amap.arg("ords", ords, "use specified vector of orders", NULL);
   amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
+
+  amap.arg("dry", dry, "a dry-run flag to check the noise");
 
   amap.parse(argc, argv);
 

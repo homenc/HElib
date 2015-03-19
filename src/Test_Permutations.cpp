@@ -40,7 +40,8 @@ void usage(char *prog)
   cout << "  m is the cyclotomic field [default=4369]\n";
   cout << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
   cout << "  depth bounds the depth of permutation network [default=5]\n";
-  cout << "  L is number of levels in chain [default=depth]\n";
+  cout << "  L is number of levels in chain [default=depth]\n\n";
+  cout << "dry=1 for dry run [default=0]\n";
   exit(0);
 }
 
@@ -206,6 +207,7 @@ int main(int argc, char *argv[])
   argmap["good2"] = "1";
   argmap["good3"] = "1";
   argmap["good4"] = "1";
+  argmap["dry"] = "1";
 
   // get parameters from the command line
 
@@ -227,6 +229,9 @@ int main(int argc, char *argv[])
   long good3 = atoi(argmap["good3"]);
   long good4 = atoi(argmap["good4"]);
 
+  bool dry = atoi(argmap["dry"]);
+
+  setDryRun(dry);
   if (test==0) {
     Vec<GenDescriptor> vec;
     long nGens;
@@ -243,6 +248,7 @@ int main(int argc, char *argv[])
     default: vec[0] = GenDescriptor(ord1, good1, /*genIdx=*/0);
     }
     cout << "***Testing ";
+    if (isDryRun()) cout << "(dry run) ";
     for (long i=0; i<vec.length(); i++)
       cout << "("<<vec[i].order<<","<<vec[i].good<<")";
     cout << ", depth="<<depth<<"\n";

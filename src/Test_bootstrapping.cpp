@@ -92,6 +92,7 @@ static long mValues[][14] = {
 #define OUTER_REP (3)
 #define INNER_REP (3)
 
+static bool dry = false; // a dry-run flag
 
 void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false)
 {
@@ -125,6 +126,8 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
        << endl;
 
   setTimersOn();
+  setDryRun(false); // Need to get a "real context" to test bootstrapping
+
   cout << "Computing key-independent tables..." << std::flush;
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
@@ -141,6 +144,8 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
        << ", t="    << context.rcData.skHwt
        << "\n  ";
   context.zMStar.printout();
+  setDryRun(dry); // Now we can set the dry-run flag if desired
+
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
   double bitsize = context.logOfProduct(allPrimes)/log(2.0);
@@ -239,7 +244,6 @@ int main(int argc, char *argv[])
   long B=23;
   long N=0;
   long t=0;
-  bool dry=0;
   bool cons=0;
   long nthreads=4;
 
@@ -271,7 +275,6 @@ int main(int argc, char *argv[])
   if (B<=0) B=FHE_pSize;
   if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
 
-  setDryRun(dry);
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
       TestIt(i,p,r,L,c,B,t,cons);
