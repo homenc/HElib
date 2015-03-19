@@ -22,16 +22,15 @@
  * in use. The list of primes is defined by the data member modChain, which is
  * a vector of Cmodulus objects. 
  */
+#include "DoubleCRT.h"
+#include "multicore.h"
+#include "timing.h"
 
 #if (ALT_CRT)
 #warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
 #include "AltCRT.cpp"
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
-
-#include "DoubleCRT.h"
-#include "multicore.h"
-#include "timing.h"
 
 #ifdef FHE_DCRT_THREADS
 const long FFTMaxThreads = 8;

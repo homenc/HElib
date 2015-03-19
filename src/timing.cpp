@@ -13,16 +13,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "timing.h"
-
 #include <algorithm>
 #include <utility>
 #include <cstring>
 #include <ctime>
+#include "timing.h"
 
-
-#if 1
-
+#ifdef CLOCK_MONOTONIC
 unsigned long GetTimerClock()
 {
   timespec ts;
@@ -39,6 +36,7 @@ unsigned long GetTimerClock()
 const unsigned long CLOCK_SCALE = 1000000UL;
 
 #else
+#warning "using low-resolution clock"
 
 // NOTE: the clock used by clock_gettime seems to be much higher
 // resolution than that used by clock.
@@ -49,7 +47,6 @@ unsigned long GetTimerClock()
 }
 
 const unsigned long CLOCK_SCALE = (unsigned long) CLOCKS_PER_SEC;
-
 #endif
 
 
