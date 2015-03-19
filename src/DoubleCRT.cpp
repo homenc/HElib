@@ -32,19 +32,11 @@
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
+// A threaded implementation of DoubleCRT operations
+
 #ifdef FHE_DCRT_THREADS
 const long FFTMaxThreads = 8;
 NTL_THREAD_LOCAL static MultiTask multiTask(FFTMaxThreads);
-
-
-#endif
-
-
-// NTL implementation of mat_long
-
-//NTL_matrix_impl(long,vec_long,vec_vec_long,mat_long)
-//NTL_io_matrix_impl(long,vec_long,vec_vec_long,mat_long)
-//NTL_eq_matrix_impl(long,vec_long,vec_vec_long,mat_long)
 
 static
 long MakeIndexVector(const IndexSet& s, Vec<long>& v)
@@ -56,14 +48,10 @@ long MakeIndexVector(const IndexSet& s, Vec<long>& v)
   return sz;
 }
 
-
 // representing an integer polynomial as DoubleCRT. If the number of moduli
 // to use is not specified, the resulting object uses all the moduli in
 // the context. If the coefficients of poly are larger than the product of
 // the used moduli, they are effectively reduced modulo that product
-
-
-#ifdef FHE_DCRT_THREADS
 
 
 void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
@@ -92,8 +80,7 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
   );
 }
 
-
-
+// A non-threaded implementation of DoubleCRT operations
 #else
 
 void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
