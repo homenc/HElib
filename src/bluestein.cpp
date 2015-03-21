@@ -41,7 +41,7 @@ void BluesteinInit(long n, const zz_p& root, zz_pX& powers,
   // powers_aux tracks powers
   powers_aux.SetLength(n);
   for (long i = 0; i < n; i++)
-    powers_aux[i] = PrepMulModPrecon(rep(powers[i]), p, 1/((double) p));
+    powers_aux[i] = PrepMulModPrecon(rep(powers[i]), p);
 
 
   long k = NextPowerOfTwo(2*n-1);

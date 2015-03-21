@@ -1170,7 +1170,7 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
   long ratioModP = MulMod(toModulus % p2r, 
 			  InvMod(rem(fromModulus,p2r),p2r), p2r);
 
-  mulmod_precon_t precon = PrepMulModPrecon(ratioModP, p2r, 1/(double)p2r);
+  mulmod_precon_t precon = PrepMulModPrecon(ratioModP, p2r);
 
   // cerr << "## converting from mod-"<<context.productOfPrimes(getPrimeSet())
   //      << " to mod-"<<toModulus<<" (ratio="<<ratio

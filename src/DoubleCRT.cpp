@@ -331,7 +331,7 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
     long f = rem(factor, qi);     // f = factor % qi
     vec_long& row = map[i];
     // scale row by a factor of f modulo qi
-    mulmod_precon_t bninv = PrepMulModPrecon(f, qi, 1.0/(double)qi);
+    mulmod_precon_t bninv = PrepMulModPrecon(f, qi);
     for (long j=0; j<phim; j++) 
       row[j] = MulModPrecon(row[j], f, qi, bninv);
   }
@@ -793,7 +793,7 @@ DoubleCRT& DoubleCRT::operator/=(const ZZ &num)
     long pi = context.ithPrime(i);
     long n = InvMod(rem(num, pi),pi);  // n = num^{-1} mod pi
     vec_long& row = map[i];
-    mulmod_precon_t precon = PrepMulModPrecon(n, pi, 1/(double)pi);
+    mulmod_precon_t precon = PrepMulModPrecon(n, pi);
     for (long j = 0; j < phim; j++)
       row[j] = MulModPrecon(row[j], n, pi, precon);
   }
@@ -827,7 +827,7 @@ void DoubleCRT::automorph(long k)
 
   long m = zMStar.getM();
   vector<long> tmp(m);  // temporary array of size m
-  mulmod_precon_t precon = PrepMulModPrecon(k, m, 1/(double)m);
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
 
   const IndexSet& s = map.getIndexSet();
 
@@ -900,8 +900,7 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   else {
     long p_over_2 = ptxtSpace/2;
     long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
-    mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace,// optimization
-					      1/(double)ptxtSpace);
+    mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace); // optimization
     for (long i = 0; i < delta_len; i++) {
       long delta_i_modP = rem(delta.rep[i],ptxtSpace);
       if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace

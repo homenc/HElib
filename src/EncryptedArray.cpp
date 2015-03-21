@@ -501,7 +501,7 @@ void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar,
   long d = deg(a);
 
   // compute b(X) = a(X^k) mod (X^m-1)
-  mulmod_precon_t precon = PrepMulModPrecon(k, m, 1/(double)m);
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
   for (long j = 0; j <= d; j++) 
     b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
   b.normalize();
