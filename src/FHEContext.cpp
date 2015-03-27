@@ -369,15 +369,27 @@ bool FHEcontext::operator==(const FHEcontext& other) const
     if (digits[i] != other.digits[i]) return false;
 
   if (stdev != other.stdev) return false;
+
+  if (rcData != other.rcData) return false;
   return true;
 }
 
 void writeContextBase(ostream& str, const FHEcontext& context)
 {
-  str << "[" << context.zMStar.getM() 
+  str << "[" << context.zMStar.getM()
       << " " << context.zMStar.getP()
-      << " " << context.alMod.getR() 
-      << "]\n";
+      << " " << context.alMod.getR()
+      << " [";
+  for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
+    str << context.zMStar.ZmStarGen(i)
+	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
+  }
+  str << " [";
+  for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
+    str << context.zMStar.OrderOf(i)
+	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
+  }
+  str << "]";
 }
 
 ostream& operator<< (ostream &str, const FHEcontext& context)
@@ -403,17 +415,24 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
 
   str <<"\n";
 
+  str << context.rcData.mvec;
+  str << " " << context.rcData.hwt;
+  str << " " << context.rcData.conservative;
+
   str << "]\n";
 
   return str;
 }
 
-void readContextBase(istream& str, unsigned long& m, unsigned long& p, unsigned long& r)
+void readContextBase(istream& str, unsigned long& m, unsigned long& p,
+		     unsigned long& r, vector<long>& gens, vector<long>& ords)
 {
   // Advance str beyond first '[' 
   seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
 
   str >> m >> p >> r;
+  str >> gens;
+  str >> ords;
 
   seekPastChar(str, ']');
 }
@@ -455,6 +474,17 @@ istream& operator>> (istream &str, FHEcontext& context)
   context.digits.resize(nDigits);
   for (long i=0; i<(long)context.digits.size(); i++)
     str >> context.digits[i];
+
+  // Read in the partition of m into co-prime factors (if bootstrappable)
+  Vec<long> mv;
+  long t;
+  bool consFlag;
+  str >> mv;
+  str >> t;
+  str >> consFlag;
+  if (mv.length()>0) {
+    context.makeBootstrappable(mv, t, consFlag);
+  }
 
   seekPastChar(str, ']');
   return str;

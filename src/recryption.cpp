@@ -91,17 +91,31 @@ static void setAlphaE(double& alpha, long& e, double rho, double gamma,
     e = floor(1+ log(2*(t+1)*p2r)/logp);
 }
 
+bool RecryptData::operator==(const RecryptData& other) const
+{
+  if (mvec != other.mvec) return false;
+  if (hwt != other.hwt) return false;
+  if (conservative != other.conservative) return false;
+
+  return true;
+}
+
 // The main method
-void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec,
-		       long t, bool conservative)
+void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
+		       long t, bool consFlag)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to RecryptData::init\n";
     return;
   }
-  assert(computeProd(mvec) == (long)context.zMStar.getM()); // sanity check
+  assert(computeProd(mvec_) == (long)context.zMStar.getM()); // sanity check
+
+  // Record the arguments to this function
+  mvec = mvec_;
+  conservative = consFlag;
 
   if (t <= 0) t = defSkHwt+1; // recryption key Hwt
+  hwt = t;
   long p = context.zMStar.getP();
   long phim = context.zMStar.getPhiM();
   long r = context.alMod.getR();
@@ -622,6 +636,3 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 }
 
 #endif
-
-
-
