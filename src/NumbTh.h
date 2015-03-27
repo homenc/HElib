@@ -708,7 +708,7 @@ ostream& operator<<(ostream& s, vector<T> v)
 }
 
 template<class T>
-istream& operator>>(istream& s, vector<T> v)
+istream& operator>>(istream& s, vector<T>& v)
 {
   Vec<T> vv; // read into an NTL vector, then convert
   s >> vv;
