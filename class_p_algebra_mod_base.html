@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -134,79 +134,16 @@ virtual long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" hr
 virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_p_algebra_mod_base.html#a8ad86a464b7146cbe662e51524a5beeb">restoreContext</a> () const =0</td></tr>
 <tr class="memdesc:a8ad86a464b7146cbe662e51524a5beeb"><td class="mdescLeft">&#160;</td><td class="mdescRight">Restores the NTL context for p^r. <br/></td></tr>
 <tr class="separator:a8ad86a464b7146cbe662e51524a5beeb"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad337e1cb5afe0813d8deceb521e88412"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_p_algebra_mod_base.html#ad337e1cb5afe0813d8deceb521e88412">genMaskTable</a> () const =0</td></tr>
-<tr class="memdesc:ad337e1cb5afe0813d8deceb521e88412"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates the "mask table" that is used to support rotations.  <a href="#ad337e1cb5afe0813d8deceb521e88412">More...</a><br/></td></tr>
-<tr class="separator:ad337e1cb5afe0813d8deceb521e88412"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae8302a7dd330bbbc203d816d3379ed67"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_p_algebra_mod_base.html#ae8302a7dd330bbbc203d816d3379ed67">genCrtTable</a> () const =0</td></tr>
-<tr class="separator:ae8302a7dd330bbbc203d816d3379ed67"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Virtual base class for <a class="el" href="class_p_algebra_mod.html" title="The structure of Z[X]/(Phi_m(X), p) ">PAlgebraMod</a>. </p>
-</div><h2 class="groupheader">Member Function Documentation</h2>
-<a class="anchor" id="ae8302a7dd330bbbc203d816d3379ed67"></a>
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void PAlgebraModBase::genCrtTable </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>generates CRT table to speed up mask encoding </p>
-
-<p>Implemented in <a class="el" href="class_p_algebra_mod_derived.html#a972e19b0fee776e2ecdcf7f596e3281f">PAlgebraModDerived&lt; type &gt;</a>.</p>
-
-</div>
-</div>
-<a class="anchor" id="ad337e1cb5afe0813d8deceb521e88412"></a>
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">virtual void PAlgebraModBase::genMaskTable </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">pure virtual</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Generates the "mask table" that is used to support rotations. </p>
-<p>maskTable[i][j] is a polynomial representation of a mask that is 1 in all slots whose i'th coordinate is at least j, and 0 elsewhere. We have: </p>
-<pre class="fragment">  maskTable.size() == zMStar.numOfGens()     // # of generators
-  for i = 0..maskTable.size()-1:
-    maskTable[i].size() == 1 + zMStar.OrderOf(i) // 1 + order of gen i
-</pre> 
-<p>Implemented in <a class="el" href="class_p_algebra_mod_derived.html#a297171b93785810de523882c5af1e1d7">PAlgebraModDerived&lt; type &gt;</a>.</p>
-
-</div>
-</div>
-<hr/>The documentation for this class was generated from the following file:<ul>
+</div><hr/>The documentation for this class was generated from the following file:<ul>
 <li>src/<a class="el" href="_p_algebra_8h_source.html">PAlgebra.h</a></li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:38 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:17:03 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

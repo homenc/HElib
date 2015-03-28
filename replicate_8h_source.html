@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -112,39 +112,40 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;</div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;</div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="comment">// set to true to see some more info... </span></div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="keyword">extern</span> <span class="keywordtype">bool</span> replicateVerboseFlag;</div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;NTL_THREAD_LOCAL</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="keyword">extern</span> <span class="keywordtype">bool</span> replicateVerboseFlag;</div>
 <div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;</div>
-<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;<span class="keywordtype">void</span> <a class="code" href="replicate_8h.html#ae4296fb3869cca10fa74b49b84a27aa9">replicate</a>(<span class="keyword">const</span> <a class="code" href="class_encrypted_array.html">EncryptedArray</a>&amp; ea, <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctx, <span class="keywordtype">long</span> pos);</div>
-<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;</div>
-<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="keywordtype">void</span> <a class="code" href="replicate_8h.html#a83630e6eca301337ee72696a4ef96955">replicate0</a>(<span class="keyword">const</span> <a class="code" href="class_encrypted_array.html">EncryptedArray</a>&amp; ea, <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctxt, <span class="keywordtype">long</span> pos);</div>
-<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;</div>
-<div class="line"><a name="l00055"></a><span class="lineno"><a class="line" href="class_replicate_handler.html">   55</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_replicate_handler.html">ReplicateHandler</a> {</div>
-<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;<span class="keyword">public</span>:</div>
-<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> handle(<span class="keyword">const</span> <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctxt) = 0;</div>
-<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keyword">virtual</span> ~<a class="code" href="class_replicate_handler.html">ReplicateHandler</a>() {};</div>
-<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;};</div>
-<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;</div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;<span class="keywordtype">void</span> <a class="code" href="replicate_8h.html#abf6c978ae3b8866585a937c721e856d8">replicateAll</a>(<span class="keyword">const</span> <a class="code" href="class_encrypted_array.html">EncryptedArray</a>&amp; ea, <span class="keyword">const</span> <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctxt, </div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;                         <a class="code" href="class_replicate_handler.html">ReplicateHandler</a> *handler, <span class="keywordtype">long</span> recBound = 64);</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;<span class="keywordtype">void</span> <a class="code" href="replicate_8h.html#ae4296fb3869cca10fa74b49b84a27aa9">replicate</a>(<span class="keyword">const</span> <a class="code" href="class_encrypted_array.html">EncryptedArray</a>&amp; ea, <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctx, <span class="keywordtype">long</span> pos);</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;<span class="keywordtype">void</span> <a class="code" href="replicate_8h.html#a83630e6eca301337ee72696a4ef96955">replicate0</a>(<span class="keyword">const</span> <a class="code" href="class_encrypted_array.html">EncryptedArray</a>&amp; ea, <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctxt, <span class="keywordtype">long</span> pos);</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;</div>
+<div class="line"><a name="l00056"></a><span class="lineno"><a class="line" href="class_replicate_handler.html">   56</a></span>&#160;<span class="keyword">class </span><a class="code" href="class_replicate_handler.html">ReplicateHandler</a> {</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;<span class="keyword">public</span>:</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160;  <span class="keyword">virtual</span> <span class="keywordtype">void</span> handle(<span class="keyword">const</span> <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctxt) = 0;</div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;  <span class="keyword">virtual</span> ~<a class="code" href="class_replicate_handler.html">ReplicateHandler</a>() {};</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160;};</div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160;</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;<span class="keywordtype">void</span> <a class="code" href="replicate_8h.html#abf6c978ae3b8866585a937c721e856d8">replicateAll</a>(<span class="keyword">const</span> <a class="code" href="class_encrypted_array.html">EncryptedArray</a>&amp; ea, <span class="keyword">const</span> <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctxt, </div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;                         <a class="code" href="class_replicate_handler.html">ReplicateHandler</a> *handler, <span class="keywordtype">long</span> recBound = 64);</div>
 <div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;<span class="keywordtype">void</span> <a class="code" href="replicate_8h.html#a073cef778dff34a61b588644c76b2fb0">replicateAllOrig</a>(<span class="keyword">const</span> <a class="code" href="class_encrypted_array.html">EncryptedArray</a>&amp; ea, <span class="keyword">const</span> <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctxt,</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;                      <a class="code" href="class_replicate_handler.html">ReplicateHandler</a> *handler);</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;<span class="preprocessor">#endif</span></div>
-<div class="ttc" id="replicate_8h_html_abf6c978ae3b8866585a937c721e856d8"><div class="ttname"><a href="replicate_8h.html#abf6c978ae3b8866585a937c721e856d8">replicateAll</a></div><div class="ttdeci">void replicateAll(const EncryptedArray &amp;ea, const Ctxt &amp;ctxt, ReplicateHandler *handler, long recBound=64)</div><div class="ttdef"><b>Definition:</b> replicate.cpp:568</div></div>
-<div class="ttc" id="class_replicate_handler_html"><div class="ttname"><a href="class_replicate_handler.html">ReplicateHandler</a></div><div class="ttdoc">A virtual class to handle call-backs to get the output of replicate. </div><div class="ttdef"><b>Definition:</b> replicate.h:55</div></div>
-<div class="ttc" id="class_encrypted_array_html"><div class="ttname"><a href="class_encrypted_array.html">EncryptedArray</a></div><div class="ttdoc">A simple wrapper for a smart pointer to an EncryptedArrayBase. This is the interface that higher-leve...</div><div class="ttdef"><b>Definition:</b> EncryptedArray.h:665</div></div>
-<div class="ttc" id="replicate_8h_html_a073cef778dff34a61b588644c76b2fb0"><div class="ttname"><a href="replicate_8h.html#a073cef778dff34a61b588644c76b2fb0">replicateAllOrig</a></div><div class="ttdeci">void replicateAllOrig(const EncryptedArray &amp;ea, const Ctxt &amp;ctxt, ReplicateHandler *handler)</div><div class="ttdef"><b>Definition:</b> replicate.cpp:234</div></div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;<span class="keywordtype">void</span> <a class="code" href="replicate_8h.html#a073cef778dff34a61b588644c76b2fb0">replicateAllOrig</a>(<span class="keyword">const</span> <a class="code" href="class_encrypted_array.html">EncryptedArray</a>&amp; ea, <span class="keyword">const</span> <a class="code" href="class_ctxt.html">Ctxt</a>&amp; ctxt,</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;                      <a class="code" href="class_replicate_handler.html">ReplicateHandler</a> *handler);</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;<span class="preprocessor">#endif</span></div>
+<div class="ttc" id="replicate_8h_html_abf6c978ae3b8866585a937c721e856d8"><div class="ttname"><a href="replicate_8h.html#abf6c978ae3b8866585a937c721e856d8">replicateAll</a></div><div class="ttdeci">void replicateAll(const EncryptedArray &amp;ea, const Ctxt &amp;ctxt, ReplicateHandler *handler, long recBound=64)</div><div class="ttdef"><b>Definition:</b> replicate.cpp:569</div></div>
+<div class="ttc" id="class_replicate_handler_html"><div class="ttname"><a href="class_replicate_handler.html">ReplicateHandler</a></div><div class="ttdoc">A virtual class to handle call-backs to get the output of replicate. </div><div class="ttdef"><b>Definition:</b> replicate.h:56</div></div>
+<div class="ttc" id="class_encrypted_array_html"><div class="ttname"><a href="class_encrypted_array.html">EncryptedArray</a></div><div class="ttdoc">A simple wrapper for a smart pointer to an EncryptedArrayBase. This is the interface that higher-leve...</div><div class="ttdef"><b>Definition:</b> EncryptedArray.h:638</div></div>
+<div class="ttc" id="replicate_8h_html_a073cef778dff34a61b588644c76b2fb0"><div class="ttname"><a href="replicate_8h.html#a073cef778dff34a61b588644c76b2fb0">replicateAllOrig</a></div><div class="ttdeci">void replicateAllOrig(const EncryptedArray &amp;ea, const Ctxt &amp;ctxt, ReplicateHandler *handler)</div><div class="ttdef"><b>Definition:</b> replicate.cpp:235</div></div>
 <div class="ttc" id="_f_h_e_8h_html"><div class="ttname"><a href="_f_h_e_8h.html">FHE.h</a></div><div class="ttdoc">Public/secret keys for the BGV cryptosystem. </div></div>
-<div class="ttc" id="replicate_8h_html_a83630e6eca301337ee72696a4ef96955"><div class="ttname"><a href="replicate_8h.html#a83630e6eca301337ee72696a4ef96955">replicate0</a></div><div class="ttdeci">void replicate0(const EncryptedArray &amp;ea, Ctxt &amp;ctxt, long pos)</div><div class="ttdoc">A lower-level routine. Same as replicate, but assumes all slots are zero except slot #pos...</div><div class="ttdef"><b>Definition:</b> replicate.cpp:44</div></div>
-<div class="ttc" id="replicate_8h_html_ae4296fb3869cca10fa74b49b84a27aa9"><div class="ttname"><a href="replicate_8h.html#ae4296fb3869cca10fa74b49b84a27aa9">replicate</a></div><div class="ttdeci">void replicate(const EncryptedArray &amp;ea, Ctxt &amp;ctx, long pos)</div><div class="ttdoc">The value in slot #pos is replicated in all other slots. On an n-slot ciphertext, this algorithm perf...</div><div class="ttdef"><b>Definition:</b> replicate.cpp:30</div></div>
+<div class="ttc" id="replicate_8h_html_a83630e6eca301337ee72696a4ef96955"><div class="ttname"><a href="replicate_8h.html#a83630e6eca301337ee72696a4ef96955">replicate0</a></div><div class="ttdeci">void replicate0(const EncryptedArray &amp;ea, Ctxt &amp;ctxt, long pos)</div><div class="ttdoc">A lower-level routine. Same as replicate, but assumes all slots are zero except slot #pos...</div><div class="ttdef"><b>Definition:</b> replicate.cpp:45</div></div>
+<div class="ttc" id="replicate_8h_html_ae4296fb3869cca10fa74b49b84a27aa9"><div class="ttname"><a href="replicate_8h.html#ae4296fb3869cca10fa74b49b84a27aa9">replicate</a></div><div class="ttdeci">void replicate(const EncryptedArray &amp;ea, Ctxt &amp;ctx, long pos)</div><div class="ttdoc">The value in slot #pos is replicated in all other slots. On an n-slot ciphertext, this algorithm perf...</div><div class="ttdef"><b>Definition:</b> replicate.cpp:31</div></div>
 <div class="ttc" id="class_ctxt_html"><div class="ttname"><a href="class_ctxt.html">Ctxt</a></div><div class="ttdoc">A Ctxt object holds a single cipehrtext. </div><div class="ttdef"><b>Definition:</b> Ctxt.h:253</div></div>
 <div class="ttc" id="_encrypted_array_8h_html"><div class="ttname"><a href="_encrypted_array_8h.html">EncryptedArray.h</a></div><div class="ttdoc">Data-movement operations on encrypted arrays of slots. </div></div>
 </div><!-- fragment --></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:31 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:16:57 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

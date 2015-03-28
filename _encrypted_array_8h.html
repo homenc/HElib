@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -96,8 +96,11 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 
 <p>Data-movement operations on encrypted arrays of slots.  
 <a href="#details">More...</a></p>
-<div class="textblock"><code>#include &quot;<a class="el" href="_f_h_e_8h_source.html">FHE.h</a>&quot;</code><br/>
+<div class="textblock"><code>#include &lt;NTL/Lazy.h&gt;</code><br/>
+<code>#include &lt;NTL/pair.h&gt;</code><br/>
+<code>#include &quot;<a class="el" href="_f_h_e_8h_source.html">FHE.h</a>&quot;</code><br/>
 <code>#include &quot;<a class="el" href="timing_8h_source.html">timing.h</a>&quot;</code><br/>
+<code>#include &quot;<a class="el" href="multicore_8h_source.html">multicore.h</a>&quot;</code><br/>
 </div>
 <p><a href="_encrypted_array_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
@@ -151,46 +154,21 @@ typedef Mat&lt; DCRTptr &gt;&#160;</td><td class="memItemRight" valign="bottom">
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a9b77a4114eaf5e1db1f7c8d9fc51d85d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_encrypted_array_8h.html#a9b77a4114eaf5e1db1f7c8d9fc51d85d">mat_mul_dense</a> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedPtxtMatrix &amp;cmat, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="memdesc:a9b77a4114eaf5e1db1f7c8d9fc51d85d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Free functions for various flavors of cached matrix multiplication.  <a href="#a9b77a4114eaf5e1db1f7c8d9fc51d85d">More...</a><br/></td></tr>
-<tr class="separator:a9b77a4114eaf5e1db1f7c8d9fc51d85d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a27dd11144fd6163c33a9b2d117ad335e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a27dd11144fd6163c33a9b2d117ad335e"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>mat_mul_dense</b> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedDCRTPtxtMatrix &amp;cmat, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="separator:a27dd11144fd6163c33a9b2d117ad335e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afadddd02af4b74870b5e17a9d7a3ddbd"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afadddd02af4b74870b5e17a9d7a3ddbd"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_encrypted_array_8h.html#afadddd02af4b74870b5e17a9d7a3ddbd">mat_mul</a> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedPtxtMatrix &amp;cmat, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="memdesc:afadddd02af4b74870b5e17a9d7a3ddbd"><td class="mdescLeft">&#160;</td><td class="mdescRight">Functions corresponding to EncryptedArray::mat_mul Caches are computed using EncryptedArray::compMat These functions are designed to work with sparse matrices. The first two work with matrices over Z_{p^r}[X]/(G). The second two work with "block" matrices whose entries are themselves matrices over Z_{p^r}. <br/></td></tr>
-<tr class="separator:afadddd02af4b74870b5e17a9d7a3ddbd"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4fc92644786c180c1201fa3860915b2a"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4fc92644786c180c1201fa3860915b2a"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>mat_mul</b> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedDCRTPtxtMatrix &amp;cmat, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="separator:a4fc92644786c180c1201fa3860915b2a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4ea2fd58d2c2e5ed3d8ddae587ad70f3"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4ea2fd58d2c2e5ed3d8ddae587ad70f3"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>mat_mul</b> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedPtxtBlockMatrix &amp;cmat, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="separator:a4ea2fd58d2c2e5ed3d8ddae587ad70f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afd2f651d193077c2a2b4649a3953b060"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afd2f651d193077c2a2b4649a3953b060"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>mat_mul</b> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedDCRTPtxtBlockMatrix &amp;cmat, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="separator:afd2f651d193077c2a2b4649a3953b060"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa795e4099baa3f41b4a7e3bb23fc53d0"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa795e4099baa3f41b4a7e3bb23fc53d0"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_encrypted_array_8h.html#aa795e4099baa3f41b4a7e3bb23fc53d0">mat_mul1D</a> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedPtxtMatrix &amp;cmat, long dim, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="memdesc:aa795e4099baa3f41b4a7e3bb23fc53d0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Functions corresponding to EncryptedArray::mat_mul1D Caches are computed using EncryptedArray::compMat1D These functions apply a matrix concurrently to all the hypercolumns in a single dimension. The first two work with matrices over Z_{p^r}[X]/(G). The second two work with "block" matrices whose entries are themselves matrices over Z_{p^r}. <br/></td></tr>
-<tr class="separator:aa795e4099baa3f41b4a7e3bb23fc53d0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae7ff310f3628c3c7f974d0f7e81cef11"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae7ff310f3628c3c7f974d0f7e81cef11"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>mat_mul1D</b> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedDCRTPtxtMatrix &amp;cmat, long dim, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="separator:ae7ff310f3628c3c7f974d0f7e81cef11"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a52a9760862b272e482de1da7b0a39e18"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a52a9760862b272e482de1da7b0a39e18"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>mat_mul1D</b> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedPtxtBlockMatrix &amp;cmat, long dim, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="separator:a52a9760862b272e482de1da7b0a39e18"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a176c0a694eca05239a20c935f3b12503"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a176c0a694eca05239a20c935f3b12503"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>mat_mul1D</b> (<a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt, const CachedDCRTPtxtBlockMatrix &amp;cmat, long dim, const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
-<tr class="separator:a176c0a694eca05239a20c935f3b12503"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:af500d2d14aa3ec51684c8f5eb75348da"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="af500d2d14aa3ec51684c8f5eb75348da"></a>
 <a class="el" href="class_encrypted_array_base.html">EncryptedArrayBase</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_encrypted_array_8h.html#af500d2d14aa3ec51684c8f5eb75348da">buildEncryptedArray</a> (const <a class="el" href="class_f_h_econtext.html">FHEcontext</a> &amp;context, const ZZX &amp;G, const <a class="el" href="class_p_algebra_mod.html">PAlgebraMod</a> &amp;alMod)</td></tr>
 <tr class="memdesc:af500d2d14aa3ec51684c8f5eb75348da"><td class="mdescLeft">&#160;</td><td class="mdescRight">A "factory" for building EncryptedArrays. <br/></td></tr>
 <tr class="separator:af500d2d14aa3ec51684c8f5eb75348da"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa27edf67bc8041367fbb50c694d3677"><td class="memTemplParams" colspan="2"><a class="anchor" id="afa27edf67bc8041367fbb50c694d3677"></a>
+template&lt;class T &gt; </td></tr>
+<tr class="memitem:afa27edf67bc8041367fbb50c694d3677"><td class="memTemplItemLeft" align="right" valign="top">ostream &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator&lt;&lt;</b> (ostream &amp;os, const <a class="el" href="class_plaintext_array_derived.html">PlaintextArrayDerived</a>&lt; T &gt; &amp;pt)</td></tr>
+<tr class="separator:afa27edf67bc8041367fbb50c694d3677"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abccd4ae3bfd0a558c9991b520445e80d"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="abccd4ae3bfd0a558c9991b520445e80d"></a>
 <a class="el" href="class_plaintext_array_base.html">PlaintextArrayBase</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_encrypted_array_8h.html#abccd4ae3bfd0a558c9991b520445e80d">buildPlaintextArray</a> (const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea)</td></tr>
 <tr class="memdesc:abccd4ae3bfd0a558c9991b520445e80d"><td class="mdescLeft">&#160;</td><td class="mdescRight">A "factory" for building EncryptedArrays. <br/></td></tr>
 <tr class="separator:abccd4ae3bfd0a558c9991b520445e80d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8f1207423c6d1b34b84126caa5917699"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a8f1207423c6d1b34b84126caa5917699"></a>
+ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator&lt;&lt;</b> (ostream &amp;os, const <a class="el" href="class_plaintext_array.html">PlaintextArray</a> &amp;pt)</td></tr>
+<tr class="separator:a8f1207423c6d1b34b84126caa5917699"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a3b02d4be77b458ecd5ddc3660e185d9a"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a3b02d4be77b458ecd5ddc3660e185d9a"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_encrypted_array_8h.html#a3b02d4be77b458ecd5ddc3660e185d9a">runningSums</a> (const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;ea, <a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt)</td></tr>
 <tr class="memdesc:a3b02d4be77b458ecd5ddc3660e185d9a"><td class="mdescLeft">&#160;</td><td class="mdescRight">A ctxt that encrypts <img class="formulaInl" alt="$(x_1, ..., x_n)$" src="form_2.png"/> is replaced by an encryption of <img class="formulaInl" alt="$(y_1, ..., y_n)$" src="form_3.png"/>, where <img class="formulaInl" alt="$y_i = sum_{j\le i} x_j$" src="form_4.png"/>. <br/></td></tr>
@@ -198,46 +176,10 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_enc
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Data-movement operations on encrypted arrays of slots. </p>
-</div><h2 class="groupheader">Function Documentation</h2>
-<a class="anchor" id="a9b77a4114eaf5e1db1f7c8d9fc51d85d"></a>
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">void mat_mul_dense </td>
-          <td>(</td>
-          <td class="paramtype"><a class="el" href="class_ctxt.html">Ctxt</a> &amp;&#160;</td>
-          <td class="paramname"><em>ctxt</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const CachedPtxtMatrix &amp;&#160;</td>
-          <td class="paramname"><em>cmat</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">const <a class="el" href="class_encrypted_array.html">EncryptedArray</a> &amp;&#160;</td>
-          <td class="paramname"><em>ea</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-
-<p>Free functions for various flavors of cached matrix multiplication. </p>
-<p>To save time, the constants that need to be computed during a matrix-vector multiply can be precomputed and stored. One can store these either as polynomials (ZZX's) using a CachedPtxtMatrix, or as <a class="el" href="class_double_c_r_t.html" title="Implementatigs polynomials (elements in the ring R_Q) in double-CRT form. ">DoubleCRT</a>'s using a CachedDCRTMatrix. These caches are computed using <a class="el" href="class_encrypted_array.html" title="A simple wrapper for a smart pointer to an EncryptedArrayBase. This is the interface that higher-leve...">EncryptedArray</a> methods. Functions corresponding to EncryptedArray::mat_mul_dense Caches are computed using EncryptedArray::compMat_dense These functions are for multiplying dense matrices over Z_{p^r}[X]/(G). </p>
-
-</div>
-</div>
-</div><!-- contents -->
+</div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:31 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:16:58 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

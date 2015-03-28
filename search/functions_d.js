@@ -3,7 +3,7 @@ var searchData=
   ['parseargs',['parseArgs',['../_numb_th_8h.html#ad9b20adf260d5642ad5a408742954d01',1,'NumbTh.cpp']]],
   ['phi_5fn',['phi_N',['../_numb_th_8h.html#a9fa9439a237f62ecfe7dd9269e19d57f',1,'NumbTh.cpp']]],
   ['phin',['phiN',['../_numb_th_8h.html#a5dbff68ba1972c40c085efb6358361dd',1,'NumbTh.cpp']]],
-  ['polyeval',['polyEval',['../poly_eval_8h.html#a024c9d34a5fefc47515261865ee5265f',1,'polyEval.cpp']]],
+  ['polyeval',['polyEval',['../poly_eval_8h.html#a024c9d34a5fefc47515261865ee5265f',1,'polyEval(Ctxt &amp;ret, ZZX poly, const Ctxt &amp;x, long k=0):&#160;polyEval.cpp'],['../poly_eval_8h.html#a882c350e20d4dcc7b0b1ab68f21d7cf7',1,'polyEval(Ctxt &amp;ret, const Vec&lt; Ctxt &gt; &amp;poly, const Ctxt &amp;x):&#160;polyEval.cpp']]],
   ['polyevalmod',['polyEvalMod',['../_numb_th_8h.html#aa9ca8f7dd86f21331657a78b4c82926e',1,'NumbTh.cpp']]],
   ['polyred',['PolyRed',['../_numb_th_8h.html#a20a96d2efeda431830ad371fddae0931',1,'NumbTh.cpp']]],
   ['powerfultopoly',['powerfulToPoly',['../class_powerful_conversion.html#ae33280aec4f324e7e9286c8b41078965',1,'PowerfulConversion']]],

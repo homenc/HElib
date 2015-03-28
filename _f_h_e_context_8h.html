@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -130,14 +130,12 @@ Functions</h2></td></tr>
 <tr class="memitem:a5b44822a09a2985ae116dd8053386818"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_f_h_e_context_8h.html#a5b44822a09a2985ae116dd8053386818">FindM</a> (long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose=false)</td></tr>
 <tr class="memdesc:a5b44822a09a2985ae116dd8053386818"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns smallest parameter m satisfying various constraints:  <a href="#a5b44822a09a2985ae116dd8053386818">More...</a><br/></td></tr>
 <tr class="separator:a5b44822a09a2985ae116dd8053386818"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a50271df2afb81b97bc35dabff8688f20"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a50271df2afb81b97bc35dabff8688f20"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_f_h_e_context_8h.html#a50271df2afb81b97bc35dabff8688f20">writeContextBase</a> (ostream &amp;s, const <a class="el" href="class_f_h_econtext.html">FHEcontext</a> &amp;context)</td></tr>
-<tr class="memdesc:a50271df2afb81b97bc35dabff8688f20"><td class="mdescLeft">&#160;</td><td class="mdescRight">write [m p r] data <br/></td></tr>
+<tr class="memitem:a50271df2afb81b97bc35dabff8688f20"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_f_h_e_context_8h.html#a50271df2afb81b97bc35dabff8688f20">writeContextBase</a> (ostream &amp;s, const <a class="el" href="class_f_h_econtext.html">FHEcontext</a> &amp;context)</td></tr>
+<tr class="memdesc:a50271df2afb81b97bc35dabff8688f20"><td class="mdescLeft">&#160;</td><td class="mdescRight">write [m p r gens ords] data  <a href="#a50271df2afb81b97bc35dabff8688f20">More...</a><br/></td></tr>
 <tr class="separator:a50271df2afb81b97bc35dabff8688f20"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad8750f2845bfdca75206ffd7e7819416"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ad8750f2845bfdca75206ffd7e7819416"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_f_h_e_context_8h.html#ad8750f2845bfdca75206ffd7e7819416">readContextBase</a> (istream &amp;s, unsigned long &amp;m, unsigned long &amp;p, unsigned long &amp;r)</td></tr>
-<tr class="memdesc:ad8750f2845bfdca75206ffd7e7819416"><td class="mdescLeft">&#160;</td><td class="mdescRight">read [m p r] data, needed to construct context <br/></td></tr>
-<tr class="separator:ad8750f2845bfdca75206ffd7e7819416"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae5b11ccce8133016c5e92fbc25eda34d"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_f_h_e_context_8h.html#ae5b11ccce8133016c5e92fbc25eda34d">readContextBase</a> (istream &amp;s, unsigned long &amp;m, unsigned long &amp;p, unsigned long &amp;r, vector&lt; long &gt; &amp;gens, vector&lt; long &gt; &amp;ords)</td></tr>
+<tr class="memdesc:ae5b11ccce8133016c5e92fbc25eda34d"><td class="mdescLeft">&#160;</td><td class="mdescRight">read [m p r gens ords] data, needed to construct context  <a href="#ae5b11ccce8133016c5e92fbc25eda34d">More...</a><br/></td></tr>
+<tr class="separator:ae5b11ccce8133016c5e92fbc25eda34d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr><td colspan="2"><div class="groupHeader">Convenience routines for generating the modulus chain</div></td></tr>
 <tr class="memitem:a21f3eaa249a81c69a2eaadc3b938533b"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a21f3eaa249a81c69a2eaadc3b938533b"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_f_h_e_context_8h.html#a21f3eaa249a81c69a2eaadc3b938533b">AddManyPrimes</a> (<a class="el" href="class_f_h_econtext.html">FHEcontext</a> &amp;context, double totalSize, bool byNumber, bool special=false)</td></tr>
@@ -241,10 +239,92 @@ Variables</h2></td></tr>
 
 </div>
 </div>
+<a class="anchor" id="ae5b11ccce8133016c5e92fbc25eda34d"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void readContextBase </td>
+          <td>(</td>
+          <td class="paramtype">istream &amp;&#160;</td>
+          <td class="paramname"><em>s</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned long &amp;&#160;</td>
+          <td class="paramname"><em>m</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned long &amp;&#160;</td>
+          <td class="paramname"><em>p</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">unsigned long &amp;&#160;</td>
+          <td class="paramname"><em>r</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">vector&lt; long &gt; &amp;&#160;</td>
+          <td class="paramname"><em>gens</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">vector&lt; long &gt; &amp;&#160;</td>
+          <td class="paramname"><em>ords</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>read [m p r gens ords] data, needed to construct context </p>
+<p>read [m p r] data, needed to construct context </p>
+
+</div>
+</div>
+<a class="anchor" id="a50271df2afb81b97bc35dabff8688f20"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">void writeContextBase </td>
+          <td>(</td>
+          <td class="paramtype">ostream &amp;&#160;</td>
+          <td class="paramname"><em>s</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="class_f_h_econtext.html">FHEcontext</a> &amp;&#160;</td>
+          <td class="paramname"><em>context</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>write [m p r gens ords] data </p>
+<p>write [m p r] data </p>
+
+</div>
+</div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:31 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:16:58 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

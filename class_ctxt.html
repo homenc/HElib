@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -105,6 +105,10 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a934abe4d55afb069b2855070c278bfa0"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a934abe4d55afb069b2855070c278bfa0"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>Ctxt</b> (ZeroCtxtLike_type, const <a class="el" href="class_ctxt.html">Ctxt</a> &amp;ctxt)</td></tr>
 <tr class="separator:a934abe4d55afb069b2855070c278bfa0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a186afd3907cee802ce40f8cacb918170"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a186afd3907cee802ce40f8cacb918170"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_ctxt.html#a186afd3907cee802ce40f8cacb918170">DummyEncrypt</a> (const ZZX &amp;ptxt, double size=-1.0)</td></tr>
+<tr class="memdesc:a186afd3907cee802ce40f8cacb918170"><td class="mdescLeft">&#160;</td><td class="mdescRight">Dummy encryption, just encodes the plaintext in a <a class="el" href="class_ctxt.html" title="A Ctxt object holds a single cipehrtext. ">Ctxt</a> object. <br/></td></tr>
+<tr class="separator:a186afd3907cee802ce40f8cacb918170"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a411dec94d9bae84a5fcd07c7de65c419"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a411dec94d9bae84a5fcd07c7de65c419"></a>
 <a class="el" href="class_ctxt.html">Ctxt</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator=</b> (const <a class="el" href="class_ctxt.html">Ctxt</a> &amp;other)</td></tr>
 <tr class="separator:a411dec94d9bae84a5fcd07c7de65c419"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -245,7 +249,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="separator:a07ce8ddedd64cb48884bceda8cc17fb1"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa7a3702e419ac58f6c27bf346b935393"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa7a3702e419ac58f6c27bf346b935393"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_ctxt.html#aa7a3702e419ac58f6c27bf346b935393">inCanonicalForm</a> (long keyID=0) const </td></tr>
-<tr class="memdesc:aa7a3702e419ac58f6c27bf346b935393"><td class="mdescLeft">&#160;</td><td class="mdescRight">A canonical ciphertext has handles pointing to (1,s) <br/></td></tr>
+<tr class="memdesc:aa7a3702e419ac58f6c27bf346b935393"><td class="mdescLeft">&#160;</td><td class="mdescRight">A canonical ciphertext has (at most) handles pointing to (1,s) <br/></td></tr>
 <tr class="separator:aa7a3702e419ac58f6c27bf346b935393"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a4cddbc89526625e81f9f3c00fb61a99e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4cddbc89526625e81f9f3c00fb61a99e"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_ctxt.html#a4cddbc89526625e81f9f3c00fb61a99e">isCorrect</a> () const </td></tr>
@@ -406,12 +410,13 @@ ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>operator&lt;
 </div>
 <hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="_ctxt_8h_source.html">Ctxt.h</a></li>
+<li>src/Ctxt.bak.cpp</li>
 <li>src/Ctxt.cpp</li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:33 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:16:59 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

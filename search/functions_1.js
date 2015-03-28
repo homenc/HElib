@@ -1,7 +1,8 @@
 var searchData=
 [
   ['blindctxt',['blindCtxt',['../class_ctxt.html#aae945608631387aa9d81a4d3c5301e63',1,'Ctxt']]],
-  ['bluesteinfft',['BluesteinFFT',['../bluestein_8h.html#ac0de059ed9b0f07e4af5558c59c53c41',1,'BluesteinFFT(ZZ_pX &amp;x, long n, const ZZ_p &amp;root, ZZ_pX &amp;powers, Vec&lt; mulmod_precon_t &gt; &amp;powers_aux, FFTRep &amp;Rb, fftrep_aux &amp;Rb_aux, FFTRep &amp;Ra):&#160;bluestein.cpp'],['../bluestein_8h.html#a495a21409eaf70d7609ecf90c2bd3f4e',1,'BluesteinFFT(zz_pX &amp;x, long n, const zz_p &amp;root, zz_pX &amp;powers, Vec&lt; mulmod_precon_t &gt; &amp;powers_aux, fftRep &amp;Rb, fftrep_aux &amp;Rb_aux, fftRep &amp;Ra):&#160;bluestein.cpp']]],
+  ['bluesteinfft',['BluesteinFFT',['../bluestein_8h.html#aad62a4d6095bf41f4058627cd55b7346',1,'bluestein.cpp']]],
+  ['bluesteininit',['BluesteinInit',['../bluestein_8h.html#a5c0bae9971cf5ab57e46bc1c08113c0d',1,'bluestein.cpp']]],
   ['breakintodigits',['breakIntoDigits',['../class_double_c_r_t.html#aaf1c74e47e26c843e2c6988cb4771028',1,'DoubleCRT']]],
   ['breakpermbydim',['breakPermByDim',['../permutations_8h.html#acfb69ce1781dcd4e8623060b068dc45e',1,'permutations.cpp']]],
   ['buildencryptedarray',['buildEncryptedArray',['../_encrypted_array_8h.html#af500d2d14aa3ec51684c8f5eb75348da',1,'EncryptedArray.cpp']]],

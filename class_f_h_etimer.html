@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -92,7 +92,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><!--header-->
 <div class="contents">
 
-<p>A simple class to toggle timing information on and off.  
+<p>A simple class to accumulate time.  
  <a href="class_f_h_etimer.html#details">More...</a></p>
 
 <p><code>#include &lt;<a class="el" href="timing_8h_source.html">timing.h</a>&gt;</code></p>
@@ -105,12 +105,6 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:a1fb973434ba47f36500fb72937a345ed"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a1fb973434ba47f36500fb72937a345ed"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>reset</b> ()</td></tr>
 <tr class="separator:a1fb973434ba47f36500fb72937a345ed"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a785b0993701df172dd1179fb825a5a44"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a785b0993701df172dd1179fb825a5a44"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>start</b> ()</td></tr>
-<tr class="separator:a785b0993701df172dd1179fb825a5a44"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1be368c8ed2a017a3f9f4990adc99d11"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a1be368c8ed2a017a3f9f4990adc99d11"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>stop</b> ()</td></tr>
-<tr class="separator:a1be368c8ed2a017a3f9f4990adc99d11"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a5d298272e86f96770a6bbd29a3b39606"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a5d298272e86f96770a6bbd29a3b39606"></a>
 double&#160;</td><td class="memItemRight" valign="bottom"><b>getTime</b> () const </td></tr>
 <tr class="separator:a5d298272e86f96770a6bbd29a3b39606"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -126,18 +120,15 @@ const char *&#160;</td><td class="memItemRight" valign="bottom"><b>name</b></td>
 <tr class="memitem:acfd0b00edc8af20aeab776f8a10cbd09"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="acfd0b00edc8af20aeab776f8a10cbd09"></a>
 const char *&#160;</td><td class="memItemRight" valign="bottom"><b>loc</b></td></tr>
 <tr class="separator:acfd0b00edc8af20aeab776f8a10cbd09"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a66994c90e553f575745c9083a2beb540"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a66994c90e553f575745c9083a2beb540"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>isOn</b></td></tr>
-<tr class="separator:a66994c90e553f575745c9083a2beb540"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:afc5121596b933e5af889ec374f5f69de"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="afc5121596b933e5af889ec374f5f69de"></a>
-std::clock_t&#160;</td><td class="memItemRight" valign="bottom"><b>counter</b></td></tr>
-<tr class="separator:afc5121596b933e5af889ec374f5f69de"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac0316b873e1ead6e67bf1e39983a079e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac0316b873e1ead6e67bf1e39983a079e"></a>
-long&#160;</td><td class="memItemRight" valign="bottom"><b>numCalls</b></td></tr>
-<tr class="separator:ac0316b873e1ead6e67bf1e39983a079e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a031be2ed29ae0f06f2e34f57d6fe1987"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a031be2ed29ae0f06f2e34f57d6fe1987"></a>
+FHE_atomic_ulong&#160;</td><td class="memItemRight" valign="bottom"><b>counter</b></td></tr>
+<tr class="separator:a031be2ed29ae0f06f2e34f57d6fe1987"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acd4505fd7fb7f6acb4f919b2edcac84d"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="acd4505fd7fb7f6acb4f919b2edcac84d"></a>
+FHE_atomic_long&#160;</td><td class="memItemRight" valign="bottom"><b>numCalls</b></td></tr>
+<tr class="separator:acd4505fd7fb7f6acb4f919b2edcac84d"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>A simple class to toggle timing information on and off. </p>
+<div class="textblock"><p>A simple class to accumulate time. </p>
 </div><hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="timing_8h_source.html">timing.h</a></li>
 <li>src/timing.cpp</li>
@@ -145,7 +136,7 @@ long&#160;</td><td class="memItemRight" valign="bottom"><b>numCalls</b></td></tr
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:37 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:17:02 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

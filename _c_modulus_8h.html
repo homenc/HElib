@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -86,9 +86,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#nested-classes">Classes</a> &#124;
-<a href="#define-members">Macros</a> &#124;
-<a href="#typedef-members">Typedefs</a>  </div>
+<a href="#nested-classes">Classes</a>  </div>
   <div class="headertitle">
 <div class="title">CModulus.h File Reference</div>  </div>
 </div><!--header-->
@@ -105,38 +103,16 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_c_m_o_d__zz__p.html">CMOD_zz_p</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">typedefs for smallint Cmodulus  <a href="class_c_m_o_d__zz__p.html#details">More...</a><br/></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_cmodulus.html">Cmodulus</a></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_c_m_o_d___z_z__p.html">CMOD_ZZ_p</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">typedefs for bigint CModulus  <a href="class_c_m_o_d___z_z__p.html#details">More...</a><br/></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_cmod.html">Cmod&lt; type &gt;</a></td></tr>
-<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">template class for both bigint and smallint implementations  <a href="class_cmod.html#details">More...</a><br/></td></tr>
-<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="define-members"></a>
-Macros</h2></td></tr>
-<tr class="memitem:a4ded5bb52e2d7a023f27309a8223625a"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a4ded5bb52e2d7a023f27309a8223625a"></a>
-#define&#160;</td><td class="memItemRight" valign="bottom"><b>INJECT_TYPE</b>(type, subtype)&#160;&#160;&#160;typedef typename type::subtype subtype</td></tr>
-<tr class="separator:a4ded5bb52e2d7a023f27309a8223625a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
-Typedefs</h2></td></tr>
-<tr class="memitem:a72d6b085a27901837d8beae90a973124"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a72d6b085a27901837d8beae90a973124"></a>
-typedef <a class="el" href="class_cmod.html">Cmod</a>&lt; <a class="el" href="class_c_m_o_d__zz__p.html">CMOD_zz_p</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>Cmodulus</b></td></tr>
-<tr class="separator:a72d6b085a27901837d8beae90a973124"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a615a48522bc6e413b38c4d8efde075ac"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a615a48522bc6e413b38c4d8efde075ac"></a>
-typedef <a class="el" href="class_cmod.html">Cmod</a>&lt; <a class="el" href="class_c_m_o_d___z_z__p.html">CMOD_ZZ_p</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>CModulus</b></td></tr>
-<tr class="separator:a615a48522bc6e413b38c4d8efde075ac"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Supports forward and backward length-m FFT transformations. </p>
-<p>This is a wrapper around the bluesteinFFT routines, for one modulus q. Two classes are defined here, Cmodulus for a small moduli (long) and CModulus for a large ones (ZZ). These classes are otherwise identical hence they are implemented using a class template. </p>
+<p>This is a wrapper around the bluesteinFFT routines, for one modulus q. </p>
 </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:31 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:16:58 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

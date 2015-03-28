@@ -1,17 +1,17 @@
 var searchData=
 [
   ['card',['card',['../class_index_set.html#a923b3cd245cda8037afe77105be244ea',1,'IndexSet::card()'],['../_index_set_8h.html#a5b8ef05f26748fd2ca1cbb347666ba89',1,'card():&#160;IndexSet.cpp']]],
-  ['checkctxt',['CheckCtxt',['../_ctxt_8h.html#ab79dffaae6e556fb5432498e1b8db5e9',1,'Ctxt.cpp']]],
+  ['checkctxt',['CheckCtxt',['../_ctxt_8h.html#ab79dffaae6e556fb5432498e1b8db5e9',1,'Ctxt.bak.cpp']]],
   ['clear',['clear',['../class_index_set.html#a8a3d75a9cba3f1a50866691327aa7609',1,'IndexSet']]],
   ['clone',['clone',['../class_alt_c_r_t_helper.html#a9109ca8075197682c70953b424d8c46a',1,'AltCRTHelper::clone()'],['../class_double_c_r_t_helper.html#af02514594c9206fa9e7e7986a1647218',1,'DoubleCRTHelper::clone()'],['../class_index_map_init.html#a73ea7d711b84b0ca1c63c5d6a48facd4',1,'IndexMapInit::clone()'],['../class_p_algebra_mod_derived.html#a45661df5e745972d7e091e798a838917',1,'PAlgebraModDerived::clone()']]],
   ['cloned_5fptr_2eh',['cloned_ptr.h',['../cloned__ptr_8h.html',1,'']]],
-  ['cmod',['Cmod',['../class_cmod.html',1,'']]],
-  ['cmod_5fzz_5fp',['CMOD_zz_p',['../class_c_m_o_d__zz__p.html',1,'CMOD_zz_p'],['../class_c_m_o_d___z_z__p.html',1,'CMOD_ZZ_p']]],
+  ['cmodulus',['Cmodulus',['../class_cmodulus.html',1,'']]],
   ['cmodulus_2eh',['CModulus.h',['../_c_modulus_8h.html',1,'']]],
   ['collapsetoroot',['collapseToRoot',['../class_full_binary_tree.html#af41e37334612459fea39f3d8bfb82ae8',1,'FullBinaryTree']]],
   ['colperm',['ColPerm',['../class_col_perm.html',1,'']]],
   ['computecubemapping',['ComputeCubeMapping',['../class_generator_trees.html#a4ad83ea40dcf1170c8c17dca575d36de',1,'GeneratorTrees']]],
   ['computeprod',['computeProd',['../_numb_th_8h.html#ac0147f54d4c3170e641aa355bcdddbc2',1,'NumbTh.cpp']]],
+  ['conservative',['conservative',['../class_recrypt_data.html#aedaef585bdb0b65a828b6e27a15cdf7e',1,'RecryptData']]],
   ['constcubeslice',['ConstCubeSlice',['../class_const_cube_slice.html',1,'ConstCubeSlice&lt; T &gt;'],['../class_const_cube_slice.html#a9f29a0cb1b589aadaac0c6256321e9ab',1,'ConstCubeSlice::ConstCubeSlice(const HyperCube&lt; T &gt; &amp;_cube)'],['../class_const_cube_slice.html#a3ff41bf8984e597b92bdbb73f1a920e3',1,'ConstCubeSlice::ConstCubeSlice(const ConstCubeSlice &amp;bigger, long i, long _dimOffset=1)']]],
   ['contains',['contains',['../class_index_set.html#afc6417ef777f838df636a118e04212c2',1,'IndexSet::contains(long j) const '],['../class_index_set.html#a5d25e2cd13913dd6ac4f5d5b14418659',1,'IndexSet::contains(const IndexSet &amp;s) const ']]],
   ['containssmallprime',['containsSmallPrime',['../class_f_h_econtext.html#ab7d8151ec76ccf5ae91192eebfd0ebb3',1,'FHEcontext']]],
@@ -25,7 +25,7 @@ var searchData=
   ['ctxtpart',['CtxtPart',['../class_ctxt_part.html',1,'']]],
   ['ctxtprimes',['ctxtPrimes',['../class_f_h_econtext.html#a559afa0acfc5d1abeac7f1f207cf44e0',1,'FHEcontext']]],
   ['cube',['Cube',['../class_cube.html',1,'']]],
-  ['cubesignature',['CubeSignature',['../class_cube_signature.html',1,'']]],
+  ['cubesignature',['CubeSignature',['../class_cube_signature.html',1,'CubeSignature'],['../class_cube_signature.html#a3c8f3d3dfd363167f5c6871a5040b8b3',1,'CubeSignature::CubeSignature()']]],
   ['cubeslice',['CubeSlice',['../class_cube_slice.html',1,'']]],
   ['cyclotomic',['Cyclotomic',['../_numb_th_8h.html#af04b28c17f60ca3cc21f4bf7f5d3abdb',1,'NumbTh.cpp']]]
 ];

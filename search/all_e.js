@@ -20,7 +20,7 @@ var searchData=
   ['plaintextblockmatrixinterface',['PlaintextBlockMatrixInterface',['../class_plaintext_block_matrix_interface.html',1,'']]],
   ['plaintextmatrixbaseinterface',['PlaintextMatrixBaseInterface',['../class_plaintext_matrix_base_interface.html',1,'']]],
   ['plaintextmatrixinterface',['PlaintextMatrixInterface',['../class_plaintext_matrix_interface.html',1,'']]],
-  ['polyeval',['polyEval',['../poly_eval_8h.html#a024c9d34a5fefc47515261865ee5265f',1,'polyEval.cpp']]],
+  ['polyeval',['polyEval',['../poly_eval_8h.html#a024c9d34a5fefc47515261865ee5265f',1,'polyEval(Ctxt &amp;ret, ZZX poly, const Ctxt &amp;x, long k=0):&#160;polyEval.cpp'],['../poly_eval_8h.html#a882c350e20d4dcc7b0b1ab68f21d7cf7',1,'polyEval(Ctxt &amp;ret, const Vec&lt; Ctxt &gt; &amp;poly, const Ctxt &amp;x):&#160;polyEval.cpp']]],
   ['polyeval_2eh',['polyEval.h',['../poly_eval_8h.html',1,'']]],
   ['polyevalmod',['polyEvalMod',['../_numb_th_8h.html#aa9ca8f7dd86f21331657a78b4c82926e',1,'NumbTh.cpp']]],
   ['polyred',['PolyRed',['../_numb_th_8h.html#a20a96d2efeda431830ad371fddae0931',1,'NumbTh.cpp']]],

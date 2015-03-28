@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -88,7 +88,8 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
   <div class="summary">
 <a href="#nested-classes">Classes</a> &#124;
 <a href="#typedef-members">Typedefs</a> &#124;
-<a href="#func-members">Functions</a>  </div>
+<a href="#func-members">Functions</a> &#124;
+<a href="#var-members">Variables</a>  </div>
   <div class="headertitle">
 <div class="title">NumbTh.h File Reference</div>  </div>
 </div><!--header-->
@@ -148,6 +149,12 @@ typedef long&#160;</td><td class="memItemRight" valign="bottom"><b>LONG</b></td>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
+<tr class="memitem:a28a5571ec76757c33d43fe122a1acbad"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a28a5571ec76757c33d43fe122a1acbad"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>setDryRun</b> (bool toWhat=true)</td></tr>
+<tr class="separator:a28a5571ec76757c33d43fe122a1acbad"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad9f71de32822d3f9f651d11347abe0ab"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ad9f71de32822d3f9f651d11347abe0ab"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>isDryRun</b> ()</td></tr>
+<tr class="separator:ad9f71de32822d3f9f651d11347abe0ab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad9b20adf260d5642ad5a408742954d01"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="_numb_th_8h.html#ad9b20adf260d5642ad5a408742954d01">parseArgs</a> (int argc, char *argv[], argmap_t &amp;argmap)</td></tr>
 <tr class="memdesc:ad9b20adf260d5642ad5a408742954d01"><td class="mdescLeft">&#160;</td><td class="mdescRight">Code for parsing command line arguments.  <a href="#ad9b20adf260d5642ad5a408742954d01">More...</a><br/></td></tr>
 <tr class="separator:ad9b20adf260d5642ad5a408742954d01"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -406,10 +413,10 @@ void&#160;</td><td class="memItemRight" valign="bottom"><b>rem</b> (zz_pX &amp;r
 template&lt;class T &gt; </td></tr>
 <tr class="memitem:a58d3e04402105e678c569ed9f98d37cf"><td class="memTemplItemLeft" align="right" valign="top">ostream &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator&lt;&lt;</b> (ostream &amp;s, vector&lt; T &gt; v)</td></tr>
 <tr class="separator:a58d3e04402105e678c569ed9f98d37cf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9c37a53cf2fa71c9ec0230761e133245"><td class="memTemplParams" colspan="2"><a class="anchor" id="a9c37a53cf2fa71c9ec0230761e133245"></a>
+<tr class="memitem:a18210d5a92bfcfbe7fbd08771a473b88"><td class="memTemplParams" colspan="2"><a class="anchor" id="a18210d5a92bfcfbe7fbd08771a473b88"></a>
 template&lt;class T &gt; </td></tr>
-<tr class="memitem:a9c37a53cf2fa71c9ec0230761e133245"><td class="memTemplItemLeft" align="right" valign="top">istream &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator&gt;&gt;</b> (istream &amp;s, vector&lt; T &gt; v)</td></tr>
-<tr class="separator:a9c37a53cf2fa71c9ec0230761e133245"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a18210d5a92bfcfbe7fbd08771a473b88"><td class="memTemplItemLeft" align="right" valign="top">istream &amp;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>operator&gt;&gt;</b> (istream &amp;s, vector&lt; T &gt; &amp;v)</td></tr>
+<tr class="separator:a18210d5a92bfcfbe7fbd08771a473b88"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:aa69949fda8475e66d2aa632d68295392"><td class="memTemplParams" colspan="2"><a class="anchor" id="aa69949fda8475e66d2aa632d68295392"></a>
 template&lt;class T &gt; </td></tr>
 <tr class="memitem:aa69949fda8475e66d2aa632d68295392"><td class="memTemplItemLeft" align="right" valign="top">Vec&lt; T &gt;&#160;</td><td class="memTemplItemRight" valign="bottom"><b>atoVec</b> (const char *a)</td></tr>
@@ -471,6 +478,13 @@ ZZ&#160;</td><td class="memItemRight" valign="bottom"><b>largestCoeff</b> (const
 <tr class="memitem:a523879d44547c1ffd19ca2da625a2bb7"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a523879d44547c1ffd19ca2da625a2bb7"></a>
 xdouble&#160;</td><td class="memItemRight" valign="bottom"><b>coeffsL2Norm</b> (const ZZX &amp;f)</td></tr>
 <tr class="separator:a523879d44547c1ffd19ca2da625a2bb7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="var-members"></a>
+Variables</h2></td></tr>
+<tr class="memitem:a032631a8c2af4f7f9210693856f84ed4"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a032631a8c2af4f7f9210693856f84ed4"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>FHEglobals::dryRun</b> = false</td></tr>
+<tr class="memdesc:a032631a8c2af4f7f9210693856f84ed4"><td class="mdescLeft">&#160;</td><td class="mdescRight">A dry-run flag The dry-run option disables most operations, to save time. This lets us quickly go over the evaluation of a circuit and estimate the resulting noise magnitude, without having to actually compute anything. <br/></td></tr>
+<tr class="separator:a032631a8c2af4f7f9210693856f84ed4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Miscellaneous utility functions. </p>
@@ -942,7 +956,7 @@ template&lt;class zzvec &gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:31 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:16:58 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

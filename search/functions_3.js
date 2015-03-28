@@ -10,5 +10,6 @@ var searchData=
   ['dividebyp',['divideByP',['../class_ctxt.html#a57d96faa5d94c39c3e8062a42fb86e94',1,'Ctxt']]],
   ['dlog',['dLog',['../class_p_algebra.html#aa14a72e5ee4e5ec0319454882496cc9e',1,'PAlgebra']]],
   ['doublecrt',['DoubleCRT',['../class_double_c_r_t.html#a10cdf5d055b30831b958ca1bf58bdbd9',1,'DoubleCRT::DoubleCRT(const ZZX &amp;poly, const FHEcontext &amp;_context, const IndexSet &amp;indexSet)'],['../class_double_c_r_t.html#a4e8a56b5e7ff8d13ff2519f59eca444b',1,'DoubleCRT::DoubleCRT(const ZZX &amp;poly)'],['../class_double_c_r_t.html#a7414a52996d939c6725e6bf2fe070980',1,'DoubleCRT::DoubleCRT(const FHEcontext &amp;_context, const IndexSet &amp;indexSet)']]],
-  ['dummy',['dummy',['../class_key_switch.html#a0c0bd2980985c1be3a03954ef71b34c3',1,'KeySwitch']]]
+  ['dummy',['dummy',['../class_key_switch.html#a0c0bd2980985c1be3a03954ef71b34c3',1,'KeySwitch']]],
+  ['dummyencrypt',['DummyEncrypt',['../class_ctxt.html#a186afd3907cee802ce40f8cacb918170',1,'Ctxt']]]
 ];

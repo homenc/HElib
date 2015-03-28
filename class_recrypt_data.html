@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -100,16 +100,33 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a97ccf93a35875df4076231903ac7cbab"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a97ccf93a35875df4076231903ac7cbab"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_recrypt_data.html#a97ccf93a35875df4076231903ac7cbab">init</a> (const <a class="el" href="class_f_h_econtext.html">FHEcontext</a> &amp;context, const Vec&lt; long &gt; &amp;mvec, long t=0, bool conservative=false)</td></tr>
-<tr class="memdesc:a97ccf93a35875df4076231903ac7cbab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the recryption data in the context. <br/></td></tr>
-<tr class="separator:a97ccf93a35875df4076231903ac7cbab"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae2ed90d6453b832317130b594ad74925"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae2ed90d6453b832317130b594ad74925"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_recrypt_data.html#ae2ed90d6453b832317130b594ad74925">init</a> (const <a class="el" href="class_f_h_econtext.html">FHEcontext</a> &amp;context, const Vec&lt; long &gt; &amp;mvec_, long t=0, bool consFlag=false)</td></tr>
+<tr class="memdesc:ae2ed90d6453b832317130b594ad74925"><td class="mdescLeft">&#160;</td><td class="mdescRight">Initialize the recryption data in the context. <br/></td></tr>
+<tr class="separator:ae2ed90d6453b832317130b594ad74925"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae8b4e96e8157587a775297b3551b7d78"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae8b4e96e8157587a775297b3551b7d78"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator==</b> (const <a class="el" href="class_recrypt_data.html">RecryptData</a> &amp;other) const </td></tr>
+<tr class="separator:ae8b4e96e8157587a775297b3551b7d78"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a84bf8fa052cdf891880ae85f7b37cfa4"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a84bf8fa052cdf891880ae85f7b37cfa4"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>operator!=</b> (const <a class="el" href="class_recrypt_data.html">RecryptData</a> &amp;other) const </td></tr>
+<tr class="separator:a84bf8fa052cdf891880ae85f7b37cfa4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:aa7c7a0cc2ca2e19d4e4daa811ce6a2c5"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa7c7a0cc2ca2e19d4e4daa811ce6a2c5"></a>
-long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_recrypt_data.html#aa7c7a0cc2ca2e19d4e4daa811ce6a2c5">e</a></td></tr>
-<tr class="memdesc:aa7c7a0cc2ca2e19d4e4daa811ce6a2c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">skey encrypted wrt space p^{e-e'+r} <br/></td></tr>
+<tr class="memitem:a5aace60d072c2447608f3e5d39dc8ddf"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a5aace60d072c2447608f3e5d39dc8ddf"></a>
+Vec&lt; long &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_recrypt_data.html#a5aace60d072c2447608f3e5d39dc8ddf">mvec</a></td></tr>
+<tr class="memdesc:a5aace60d072c2447608f3e5d39dc8ddf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Some data members that are only used for I/O. <br/></td></tr>
+<tr class="separator:a5aace60d072c2447608f3e5d39dc8ddf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a28b78359f729dc81655e24aecb88dc1f"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a28b78359f729dc81655e24aecb88dc1f"></a>
+long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_recrypt_data.html#a28b78359f729dc81655e24aecb88dc1f">hwt</a></td></tr>
+<tr class="memdesc:a28b78359f729dc81655e24aecb88dc1f"><td class="mdescLeft">&#160;</td><td class="mdescRight">partition of m into co-prime factors <br/></td></tr>
+<tr class="separator:a28b78359f729dc81655e24aecb88dc1f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aedaef585bdb0b65a828b6e27a15cdf7e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aedaef585bdb0b65a828b6e27a15cdf7e"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_recrypt_data.html#aedaef585bdb0b65a828b6e27a15cdf7e">conservative</a></td></tr>
+<tr class="memdesc:aedaef585bdb0b65a828b6e27a15cdf7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Hamming weight of recryption secret-key. <br/></td></tr>
+<tr class="separator:aedaef585bdb0b65a828b6e27a15cdf7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa7c7a0cc2ca2e19d4e4daa811ce6a2c5"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_recrypt_data.html#aa7c7a0cc2ca2e19d4e4daa811ce6a2c5">e</a></td></tr>
+<tr class="memdesc:aa7c7a0cc2ca2e19d4e4daa811ce6a2c5"><td class="mdescLeft">&#160;</td><td class="mdescRight">flag for choosing more conservatice parameters  <a href="#aa7c7a0cc2ca2e19d4e4daa811ce6a2c5">More...</a><br/></td></tr>
 <tr class="separator:aa7c7a0cc2ca2e19d4e4daa811ce6a2c5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a7514409218606c0b8ce1f20e1de5526f"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a7514409218606c0b8ce1f20e1de5526f"></a>
 long&#160;</td><td class="memItemRight" valign="bottom"><b>ePrime</b></td></tr>
@@ -155,14 +172,30 @@ static const long&#160;</td><td class="memItemRight" valign="bottom"><a class="e
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>A structure to hold recryption-related data inside the <a class="el" href="class_f_h_econtext.html" title="Maintaining the parameters. ">FHEcontext</a>. </p>
-</div><hr/>The documentation for this class was generated from the following files:<ul>
+</div><h2 class="groupheader">Member Data Documentation</h2>
+<a class="anchor" id="aa7c7a0cc2ca2e19d4e4daa811ce6a2c5"></a>
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">long RecryptData::e</td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+
+<p>flag for choosing more conservatice parameters </p>
+<p>skey encrypted wrt space p^{e-e'+r} </p>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="recryption_8h_source.html">recryption.h</a></li>
 <li>src/recryption.cpp</li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:41 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:17:06 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

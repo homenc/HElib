@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -86,49 +86,38 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </div><!-- top -->
 <div class="header">
   <div class="summary">
-<a href="#typedef-members">Typedefs</a> &#124;
 <a href="#func-members">Functions</a>  </div>
   <div class="headertitle">
 <div class="title">bluestein.h File Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
 
-<p>declaration of BluesteinFFT(x, a, n, root, powers, Rb):  
+<p>declaration of BluesteinFFT(x, n, root, powers, powers_aux, Rb):  
 <a href="#details">More...</a></p>
 <div class="textblock"><code>#include &quot;<a class="el" href="_numb_th_8h_source.html">NumbTh.h</a>&quot;</code><br/>
 </div>
 <p><a href="bluestein_8h_source.html">Go to the source code of this file.</a></p>
 <table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="typedef-members"></a>
-Typedefs</h2></td></tr>
-<tr class="memitem:aa34c48e1980564b96f157fadf91fa27b"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aa34c48e1980564b96f157fadf91fa27b"></a>
-typedef Vec&lt; Vec<br class="typebreak"/>
-&lt; mulmod_precon_t &gt; &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>fftrep_aux</b></td></tr>
-<tr class="separator:aa34c48e1980564b96f157fadf91fa27b"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:ac0de059ed9b0f07e4af5558c59c53c41"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac0de059ed9b0f07e4af5558c59c53c41"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="bluestein_8h.html#ac0de059ed9b0f07e4af5558c59c53c41">BluesteinFFT</a> (ZZ_pX &amp;x, long n, const ZZ_p &amp;root, ZZ_pX &amp;powers, Vec&lt; mulmod_precon_t &gt; &amp;powers_aux, FFTRep &amp;Rb, fftrep_aux &amp;Rb_aux, FFTRep &amp;Ra)</td></tr>
-<tr class="memdesc:ac0de059ed9b0f07e4af5558c59c53c41"><td class="mdescLeft">&#160;</td><td class="mdescRight">bigint implementation <br/></td></tr>
-<tr class="separator:ac0de059ed9b0f07e4af5558c59c53c41"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a495a21409eaf70d7609ecf90c2bd3f4e"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a495a21409eaf70d7609ecf90c2bd3f4e"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="bluestein_8h.html#a495a21409eaf70d7609ecf90c2bd3f4e">BluesteinFFT</a> (zz_pX &amp;x, long n, const zz_p &amp;root, zz_pX &amp;powers, Vec&lt; mulmod_precon_t &gt; &amp;powers_aux, fftRep &amp;Rb, fftrep_aux &amp;Rb_aux, fftRep &amp;Ra)</td></tr>
-<tr class="memdesc:a495a21409eaf70d7609ecf90c2bd3f4e"><td class="mdescLeft">&#160;</td><td class="mdescRight">smallint implementation <br/></td></tr>
-<tr class="separator:a495a21409eaf70d7609ecf90c2bd3f4e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5c0bae9971cf5ab57e46bc1c08113c0d"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a5c0bae9971cf5ab57e46bc1c08113c0d"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="bluestein_8h.html#a5c0bae9971cf5ab57e46bc1c08113c0d">BluesteinInit</a> (long n, const zz_p &amp;root, zz_pX &amp;powers, Vec&lt; mulmod_precon_t &gt; &amp;powers_aux, fftRep &amp;Rb)</td></tr>
+<tr class="memdesc:a5c0bae9971cf5ab57e46bc1c08113c0d"><td class="mdescLeft">&#160;</td><td class="mdescRight">initialize bluestein <br/></td></tr>
+<tr class="separator:a5c0bae9971cf5ab57e46bc1c08113c0d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad62a4d6095bf41f4058627cd55b7346"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="aad62a4d6095bf41f4058627cd55b7346"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="bluestein_8h.html#aad62a4d6095bf41f4058627cd55b7346">BluesteinFFT</a> (zz_pX &amp;x, long n, const zz_p &amp;root, const zz_pX &amp;powers, const Vec&lt; mulmod_precon_t &gt; &amp;powers_aux, const fftRep &amp;Rb)</td></tr>
+<tr class="memdesc:aad62a4d6095bf41f4058627cd55b7346"><td class="mdescLeft">&#160;</td><td class="mdescRight">apply bluestein <br/></td></tr>
+<tr class="separator:aad62a4d6095bf41f4058627cd55b7346"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>declaration of BluesteinFFT(x, a, n, root, powers, Rb): </p>
+<div class="textblock"><p>declaration of BluesteinFFT(x, n, root, powers, powers_aux, Rb): </p>
 <p>Compute length-n FFT of the coefficient-vector of x (in place) If the degree of x is less than n then it treats the top coefficients as 0, if the degree of x is more than n then the extra coefficients are ignored. Similarly, if the top entries in x are zeros then x will have degree smaller than n. The argument root is a 2n-th root of unity, namely BluesteinFFT(...,root,...)=DFT(...,root^2,...).</p>
 <p>The inverse-FFT is obtained just by calling BluesteinFFT(... root^{-1}), but this procedure is <em>NOT SCALED</em>, so BluesteinFFT(x,n,root,...) and then BluesteinFFT(x,n,root^{-1},...) will result in x = n * x_original</p>
-<p>In addition, this procedure also returns the powers of root in the powers argument: powers = [1, root, root^4, root^9, ..., root^{(n-1)^2}] and in Rb it returns the size-N FFT representation of the negative powers (with N&gt;=2n-1, N a power of two): b = [0,...,0, root^{-(n-1)^2},...,root^{-4}, root^{-1}, 1, root^{-1},root^{-4},...,root^{-(n-1)^2}, 0...,0] On subsequent calls with these 'powers' and 'Rb', these arrays are not computed again but taken from these pre-comuted variables.</p>
-<p>If the powers and Rb arguments are initialized, then it is assumed that they were computed correctly from root. The bahavior is undefined when calling with initialized powers and Rb but a different root. In particular, to compute the inverse-FFT (using root^{-1}), one must provide different powers and Rb arguments than those that were given when computing in the forward direction using root. To reset these arguments between calls with different root values, use clear(powers); Rb.SetSize(0);</p>
-<p>Ra is just a scratch FFT rep, supplied by the caller to minimize memory allocations.</p>
-<p>This module builds on Shoup's NTL, and contains both a bigint version with types ZZ_p and ZZ_pX and a smallint version with types zz_p and zz_pX. </p>
+<p>The values powers, powers_aux, and Rb must be precomputed by first calling BluesteinInit(n, root, powers, powers_aux, Rb). </p>
 </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:31 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:16:58 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

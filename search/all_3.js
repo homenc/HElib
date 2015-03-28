@@ -16,5 +16,6 @@ var searchData=
   ['doublecrt_2eh',['DoubleCRT.h',['../_double_c_r_t_8h.html',1,'']]],
   ['doublecrthelper',['DoubleCRTHelper',['../class_double_c_r_t_helper.html',1,'']]],
   ['dummy',['dummy',['../class_key_switch.html#a0c0bd2980985c1be3a03954ef71b34c3',1,'KeySwitch']]],
+  ['dummyencrypt',['DummyEncrypt',['../class_ctxt.html#a186afd3907cee802ce40f8cacb918170',1,'Ctxt']]],
   ['dynamicctxtpowers',['DynamicCtxtPowers',['../class_dynamic_ctxt_powers.html',1,'']]]
 ];

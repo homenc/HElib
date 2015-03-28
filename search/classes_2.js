@@ -1,7 +1,6 @@
 var searchData=
 [
-  ['cmod',['Cmod',['../class_cmod.html',1,'']]],
-  ['cmod_5fzz_5fp',['CMOD_zz_p',['../class_c_m_o_d__zz__p.html',1,'CMOD_zz_p'],['../class_c_m_o_d___z_z__p.html',1,'CMOD_ZZ_p']]],
+  ['cmodulus',['Cmodulus',['../class_cmodulus.html',1,'']]],
   ['colperm',['ColPerm',['../class_col_perm.html',1,'']]],
   ['constcubeslice',['ConstCubeSlice',['../class_const_cube_slice.html',1,'']]],
   ['ctxt',['Ctxt',['../class_ctxt.html',1,'']]],

@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -233,6 +233,9 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <tr class="memitem:a8cb96bf696217d94d6daeb7b80fd9d77 inherit pub_methods_class_double_c_r_t"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a8cb96bf696217d94d6daeb7b80fd9d77"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>scaleDownToSet</b> (const <a class="el" href="class_index_set.html">IndexSet</a> &amp;s, long ptxtSpace)</td></tr>
 <tr class="separator:a8cb96bf696217d94d6daeb7b80fd9d77 inherit pub_methods_class_double_c_r_t"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac8df5154f1e8dfd756dd564b1341b82e inherit pub_methods_class_double_c_r_t"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ac8df5154f1e8dfd756dd564b1341b82e"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>FFT</b> (const ZZX &amp;poly, const <a class="el" href="class_index_set.html">IndexSet</a> &amp;s)</td></tr>
+<tr class="separator:ac8df5154f1e8dfd756dd564b1341b82e inherit pub_methods_class_double_c_r_t"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a09896709e08ebd46455f5c5eb7c20cf1 inherit pub_methods_class_double_c_r_t"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a09896709e08ebd46455f5c5eb7c20cf1"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>reduce</b> () const </td></tr>
 <tr class="separator:a09896709e08ebd46455f5c5eb7c20cf1 inherit pub_methods_class_double_c_r_t"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -322,30 +325,19 @@ Public Attributes</h2></td></tr>
 <a class="el" href="class_s_k_handle.html">SKHandle</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_ctxt_part.html#afa10a1dc1b5992d7e96777d5bb4b8cae">skHandle</a></td></tr>
 <tr class="memdesc:afa10a1dc1b5992d7e96777d5bb4b8cae"><td class="mdescLeft">&#160;</td><td class="mdescRight">The handle is a public data member. <br/></td></tr>
 <tr class="separator:afa10a1dc1b5992d7e96777d5bb4b8cae"><td class="memSeparator" colspan="2">&#160;</td></tr>
-</table><table class="memberdecls">
-<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
-Additional Inherited Members</h2></td></tr>
-<tr class="inherit_header pub_static_methods_class_double_c_r_t"><td colspan="2" onclick="javascript:toggleInherit('pub_static_methods_class_double_c_r_t')"><img src="closed.png" alt="-"/>&#160;Static Public Member Functions inherited from <a class="el" href="class_double_c_r_t.html">DoubleCRT</a></td></tr>
-<tr class="memitem:ae8b84646bf0771e745945bea7881cb1e inherit pub_static_methods_class_double_c_r_t"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="ae8b84646bf0771e745945bea7881cb1e"></a>
-static bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_double_c_r_t.html#ae8b84646bf0771e745945bea7881cb1e">setDryRun</a> (bool toWhat=true)</td></tr>
-<tr class="memdesc:ae8b84646bf0771e745945bea7881cb1e inherit pub_static_methods_class_double_c_r_t"><td class="mdescLeft">&#160;</td><td class="mdescRight">Used for testing/debugging The dry-run option disables most operations, to save time. This lets us quickly go over the evaluation of a circuit and estimate the resulting noise magnitude, without having to actually compute anything. <br/></td></tr>
-<tr class="separator:ae8b84646bf0771e745945bea7881cb1e inherit pub_static_methods_class_double_c_r_t"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="inherit_header pub_static_attribs_class_double_c_r_t"><td colspan="2" onclick="javascript:toggleInherit('pub_static_attribs_class_double_c_r_t')"><img src="closed.png" alt="-"/>&#160;Static Public Attributes inherited from <a class="el" href="class_double_c_r_t.html">DoubleCRT</a></td></tr>
-<tr class="memitem:a38580aa5062d9f94005c878138ac80a2 inherit pub_static_attribs_class_double_c_r_t"><td class="memItemLeft" align="right" valign="top"><a class="anchor" id="a38580aa5062d9f94005c878138ac80a2"></a>
-static bool&#160;</td><td class="memItemRight" valign="bottom"><b>dryRun</b> = false</td></tr>
-<tr class="separator:a38580aa5062d9f94005c878138ac80a2 inherit pub_static_attribs_class_double_c_r_t"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>One entry in a ciphertext vector. </p>
 <p>A cipehrtext part consists of a polynomial (element of the ring R_Q) and a handle to the corresponding secret-key polynomial. </p>
 </div><hr/>The documentation for this class was generated from the following files:<ul>
 <li>src/<a class="el" href="_ctxt_8h_source.html">Ctxt.h</a></li>
+<li>src/Ctxt.bak.cpp</li>
 <li>src/Ctxt.cpp</li>
 </ul>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:34 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:16:59 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

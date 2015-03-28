@@ -23,7 +23,7 @@
  <tr style="height: 56px;">
   <td style="padding-left: 0.5em;">
    <div id="projectname">HElib
-   &#160;<span id="projectnumber">1.2</span>
+   &#160;<span id="projectnumber">1.3</span>
    </div>
    <div id="projectbrief">Implementing Homomorphic Encryption</div>
   </td>
@@ -134,11 +134,6 @@ long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_p_algebra_mod.html#aac6235ffc133087fda28737a6c8dd547">restoreContext</a> () const </td></tr>
 <tr class="memdesc:aac6235ffc133087fda28737a6c8dd547"><td class="mdescLeft">&#160;</td><td class="mdescRight">Restores the NTL context for p^r. <br/></td></tr>
 <tr class="separator:aac6235ffc133087fda28737a6c8dd547"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a65c7961474a3287788df92895dc1ff09"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_p_algebra_mod.html#a65c7961474a3287788df92895dc1ff09">genMaskTable</a> () const </td></tr>
-<tr class="memdesc:a65c7961474a3287788df92895dc1ff09"><td class="mdescLeft">&#160;</td><td class="mdescRight">Generates the "mask table" that is used to support rotations.  <a href="#a65c7961474a3287788df92895dc1ff09">More...</a><br/></td></tr>
-<tr class="separator:a65c7961474a3287788df92895dc1ff09"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ace3b6515653cb78cacafbc6bddf4731a"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_p_algebra_mod.html#ace3b6515653cb78cacafbc6bddf4731a">genCrtTable</a> () const </td></tr>
-<tr class="separator:ace3b6515653cb78cacafbc6bddf4731a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>The structure of Z[X]/(Phi_m(X), p) </p>
@@ -154,59 +149,6 @@ void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="clas
 <li>The class <a class="el" href="class_p_algebra_mod.html" title="The structure of Z[X]/(Phi_m(X), p) ">PAlgebraMod</a> is a simple wrapper around a smart pointer to a <a class="el" href="class_p_algebra_mod_base.html" title="Virtual base class for PAlgebraMod. ">PAlgebraModBase</a> object: copying a <a class="el" href="class_p_algebra.html" title="The structure of (Z/mZ)* /(p) ">PAlgebra</a> object results is a "deep copy" of the underlying object of the derived class. It provides dDirect access to the virtual methods of <a class="el" href="class_p_algebra_mod_base.html" title="Virtual base class for PAlgebraMod. ">PAlgebraModBase</a>, along with a "downcast" operator to get a reference to the object as a derived type, and also == and != operators. </li>
 </ul>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a class="anchor" id="ace3b6515653cb78cacafbc6bddf4731a"></a>
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void PAlgebraMod::genCrtTable </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-<p>generates CRT table to speed up mask encoding </p>
-
-</div>
-</div>
-<a class="anchor" id="a65c7961474a3287788df92895dc1ff09"></a>
-<div class="memitem">
-<div class="memproto">
-<table class="mlabels">
-  <tr>
-  <td class="mlabels-left">
-      <table class="memname">
-        <tr>
-          <td class="memname">void PAlgebraMod::genMaskTable </td>
-          <td>(</td>
-          <td class="paramname"></td><td>)</td>
-          <td> const</td>
-        </tr>
-      </table>
-  </td>
-  <td class="mlabels-right">
-<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
-  </tr>
-</table>
-</div><div class="memdoc">
-
-<p>Generates the "mask table" that is used to support rotations. </p>
-<p>maskTable[i][j] is a polynomial representation of a mask that is 1 in all slots whose i'th coordinate is at least j, and 0 elsewhere. We have: </p>
-<pre class="fragment">  maskTable.size() == zMStar.numOfGens()     // # of generators
-  for i = 0..maskTable.size()-1:
-    maskTable[i].size() == zMStar.OrderOf(i) // order of generator i
-</pre> 
-</div>
-</div>
 <a class="anchor" id="afb6b9c48c87f2154318999f93949e954"></a>
 <div class="memitem">
 <div class="memproto">
@@ -240,7 +182,7 @@ template&lt;class type &gt; </div>
 </div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Nov 26 2014 17:35:37 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Fri Mar 27 2015 21:17:03 for HElib by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.6
 </small></address>

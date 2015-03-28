@@ -1,11 +1,9 @@
 var searchData=
 [
-  ['gencrttable',['genCrtTable',['../class_p_algebra_mod_base.html#ae8302a7dd330bbbc203d816d3379ed67',1,'PAlgebraModBase::genCrtTable()'],['../class_p_algebra_mod_derived.html#a972e19b0fee776e2ecdcf7f596e3281f',1,'PAlgebraModDerived::genCrtTable()'],['../class_p_algebra_mod.html#ace3b6515653cb78cacafbc6bddf4731a',1,'PAlgebraMod::genCrtTable()']]],
   ['gendescriptor',['GenDescriptor',['../class_gen_descriptor.html',1,'']]],
   ['generalbenesnetwork',['GeneralBenesNetwork',['../class_general_benes_network.html',1,'']]],
   ['generatortrees',['GeneratorTrees',['../class_generator_trees.html',1,'']]],
   ['genkeyswmatrix',['GenKeySWmatrix',['../class_f_h_e_sec_key.html#ae4d6ffc7a2eb943e1cddf2aeff23d756',1,'FHESecKey']]],
-  ['genmasktable',['genMaskTable',['../class_p_algebra_mod_base.html#ad337e1cb5afe0813d8deceb521e88412',1,'PAlgebraModBase::genMaskTable()'],['../class_p_algebra_mod_derived.html#a297171b93785810de523882c5af1e1d7',1,'PAlgebraModDerived::genMaskTable()'],['../class_p_algebra_mod.html#a65c7961474a3287788df92895dc1ff09',1,'PAlgebraMod::genMaskTable()']]],
   ['genrecryptdata',['genRecryptData',['../class_f_h_e_sec_key.html#a60f82ca4f52c2f8c01d7d63a89ded46f',1,'FHESecKey']]],
   ['genseckey',['GenSecKey',['../class_f_h_e_sec_key.html#a6787cdf607ea55d0d341a3e2f504a061',1,'FHESecKey']]],
   ['getanykeyswmatrix',['getAnyKeySWmatrix',['../class_f_h_e_pub_key.html#a54be171a791d5fd28c4977d300834695',1,'FHEPubKey']]],
