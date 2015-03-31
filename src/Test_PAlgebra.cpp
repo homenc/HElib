@@ -62,7 +62,6 @@ int main(int argc, char *argv[])
   cout << "\n";
 
   PAlgebraMod almod(al, r);
-  almod.genMaskTable();
 
   FHEcontext context(m, p, r);
   buildModChain(context, 5, 2);
@@ -78,9 +77,10 @@ int main(int argc, char *argv[])
   stringstream s3(s2);
 
   unsigned long m1, p1, r1;
-  readContextBase(s3, m1, p1, r1);
+  vector<long> gens, ords;
+  readContextBase(s3, m1, p1, r1, gens, ords);
 
-  FHEcontext c1(m1, p1, r1);
+  FHEcontext c1(m1, p1, r1, gens, ords);
   s3 >> c1;
 
   if (context == c1)

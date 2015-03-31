@@ -15,7 +15,7 @@
 # 
 CC = g++
 #
-CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+#CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
 
 # useful flags:
 #   -std=c++11
@@ -30,12 +30,21 @@ CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include
 #   -DEVALMAP_CACHED=0  tells helib to cache certain constants as ZZX's
 #   -DEVALMAP_CACHED=1  tells helib to cache certain constants as DoubleCRT's
 #                       these flags only affect bootstrapping
+#
+#   -DFHE_THREADS  tells helib to enable generic multithreading capabilities;
+#                  must be used with a thread-enabled NTL and the -pthread
+#                  flag should be passed to gcc
+#
+#   -DFHE_DCRT_THREADS  tells helib to use a multithreading strategy at the
+#                       DoubleCRT level; requires -DFHE_THREADS (see above)
+#
+#   -DFHE_BOOT_THREADS  tells helib to use a multithreading strategy for
+#                       bootstrapping; requires -DFHE_THREADS (see above)
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
-#CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++11 -lstdc++
-#CFLAGS = -g -O2  -Wfatal-errors -Wshadow -Wall -I/usr/local/include -std=c++0x
+CFLAGS = -g -O2 
 
-$(info HElib requires NTL version 6.1.0 or higher, see http://shoup.net/ntl)
+$(info HElib requires NTL version 9.0.1 or higher, see http://shoup.net/ntl)
 $(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
 $(info )
 
@@ -45,7 +54,7 @@ ARFLAGS=ruv
 GMP=-lgmp 
 LDLIBS = -L/usr/local/lib -lntl $(GMP) -lm
 
-HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h
+HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h
 
 SRC = KeySwitching.cpp EncryptedArray.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEContext.cpp PAlgebra.cpp DoubleCRT.cpp NumbTh.cpp bluestein.cpp IndexSet.cpp timing.cpp replicate.cpp hypercube.cpp matching.cpp powerful.cpp BenesNetwork.cpp permutations.cpp PermNetwork.cpp OptimizePermutations.cpp eqtesting.cpp polyEval.cpp extractDigits.cpp EvalMap.cpp OldEvalMap.cpp recryption.cpp debugging.cpp
 
@@ -93,7 +102,7 @@ clean:
 	rm -rf *.dSYM
 
 info:
-	: HElib require NTL version 6.1.0 or higher
+	: HElib require NTL version 9.0.1 or higher
 	: Compilation flags are 'CFLAGS=$(CFLAGS)'
 	: If errors occur, try adding/removing '-std=c++11' in Makefile
 	:

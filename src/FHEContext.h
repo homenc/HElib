@@ -126,10 +126,6 @@ public:
 
   long fftPrimeCount;
 
-  //! A degree-p polynomial Q(X) s.t. for any t<r and integer z of the
-  //! form z = z0 + p^t*z1 (with 0<=z0<p), we have Q(z) = z0 (mod p^{t+1}).
-  ZZX modP_digPoly;    // Initialized during call to Ctxt::extractDigits(...)
-  long modP_digPoly_r; // relative to which p^r was this computed
 
   //! Bootstrapping-related data in the context
   RecryptData rcData;
@@ -233,8 +229,8 @@ public:
     str << context;
   \endcode
 
-  The first function call writes out just [m p r], which is the data needed
-  to invoke the context constructor.
+  The first function call writes out just [m p r gens ords], which is the
+  data needed to invoke the context constructor.
 
   The second call writes out all other information, including the
   stdev field, the prime sequence (including which primes are "special"),
@@ -244,16 +240,18 @@ public:
 
   \code
     unsigned long m, p, r;
-    readContextBase(str, m, p, r);
+    vector<long> gens, ords;
+    
+    readContextBase(str, m, p, r, gens, ords);
 
-    FHEcontext context(m, p, r);
+    FHEcontext context(m, p, r, gens, ords);
 
     str >> context;
   \endcode
 
-  The call to readContextBase just reads the values m, p, r. Then, after
-  constructing the context, the >> operator reads in and attaches all other
-  information.
+  The call to readContextBase just reads the values m, p, r and the set
+  of generators in Zm* /(p) and their order. Then, after constructing the
+  context, the >> operator reads in and attaches all other information.
   **/
 
   //! @brief write [m p r] data
@@ -263,17 +261,19 @@ public:
   friend ostream& operator<< (ostream &str, const FHEcontext& context);
 
   //! @brief read [m p r] data, needed to construct context
-  friend void readContextBase(istream& str, unsigned long& m, unsigned long& p, unsigned long& r);
+  friend void readContextBase(istream& str, unsigned long& m, unsigned long& p, unsigned long& r,
+			      vector<long>& gens, vector<long>& ords);
 
   //! @brief read all other data associated with context
   friend istream& operator>> (istream &str, FHEcontext& context);
   ///@}
 };
 
-//! @brief write [m p r] data
+//! @brief write [m p r gens ords] data
 void writeContextBase(ostream& s, const FHEcontext& context);
-//! @brief read [m p r] data, needed to construct context
-void readContextBase(istream& s, unsigned long& m, unsigned long& p, unsigned long& r);
+//! @brief read [m p r gens ords] data, needed to construct context
+void readContextBase(istream& s, unsigned long& m, unsigned long& p, unsigned long& r,
+		     vector<long>& gens, vector<long>& ords);
 
 // VJS: compiler seems to need these declarations out here...wtf...
 

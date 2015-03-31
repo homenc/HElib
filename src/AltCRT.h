@@ -122,7 +122,6 @@ class AltCRT {
   AltCRT& Op(const ZZX &poly, Fun fun);
 
 public:
-  static bool dryRun; // do not actually perform any of the operations
 
   // Constructors and assignment operators
 
@@ -374,8 +373,6 @@ public:
 
   friend ostream& operator<< (ostream &s, const AltCRT &d);
   friend istream& operator>> (istream &s, AltCRT &d);
-
-  static bool setDryRun(bool toWhat=true) { dryRun=toWhat; return dryRun; }
 };
 
 

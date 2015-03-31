@@ -20,7 +20,7 @@
 
 /**
 * @file bluestein.h
-* @brief declaration of BluesteinFFT(x, n, root, powers, powers_aux, Rb, Ra):
+* @brief declaration of BluesteinFFT(x, n, root, powers, powers_aux, Rb):
 *
 * Compute length-n FFT of the coefficient-vector of x (in place) 
 * If the degree of x is less than n then it treats the top coefficients
@@ -35,7 +35,6 @@
 *
 * The values powers, powers_aux, and Rb must be precomputed by first
 * calling BluesteinInit(n, root, powers, powers_aux, Rb).
-* The value Ra is used for scratch space.
 *
 **/
 
@@ -52,6 +51,6 @@ void BluesteinInit(long n, const zz_p& root, zz_pX& powers,
 //! @brief apply bluestein
 void BluesteinFFT(zz_pX& x, long n, const zz_p& root, 
                   const zz_pX& powers, const Vec<mulmod_precon_t>& powers_aux, 
-                  const fftRep& Rb, fftRep& Ra);
+                  const fftRep& Rb);
 
 #endif

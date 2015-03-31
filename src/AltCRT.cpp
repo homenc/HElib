@@ -35,9 +35,6 @@
  *    we relinearize a ciphertext
  */
 
-
-bool AltCRT::dryRun = false;
-
 void AltCRT::verify()
 {
   assert(map.getIndexSet() <= (context.specialPrimes | context.ctxtPrimes));
@@ -98,7 +95,7 @@ template<class Fun>
 AltCRT& AltCRT::Op(const AltCRT &other, Fun fun,
 			 bool matchIndexSets)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   if (&context != &other.context)
     Error("AltCRT::Op: incompatible objects");
@@ -156,7 +153,7 @@ AltCRT& AltCRT::Op<AltCRT::SubFun>(const AltCRT &other, SubFun fun,
 template<class Fun>
 AltCRT& AltCRT::Op(const ZZ &num, Fun fun)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
 
@@ -185,7 +182,7 @@ AltCRT& AltCRT::Op<AltCRT::SubFun>(const ZZ &num, SubFun fun);
 
 AltCRT& AltCRT::Negate(const AltCRT& other)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   if (&context != &other.context) 
     Error("AltCRT Negate: incompatible contexts");
@@ -212,7 +209,7 @@ AltCRT& AltCRT::Negate(const AltCRT& other)
 template<class Fun>
 AltCRT& AltCRT::Op(const ZZX &poly, Fun fun)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
   AltCRT other(poly, context, s); // other defined wrt same primes as *this
@@ -263,7 +260,7 @@ void AltCRT::breakIntoDigits(vector<AltCRT>& digits, long n) const
   assert(n <= (long)context.digits.size());
 
   digits.resize(n, AltCRT(context, IndexSet::emptySet()));
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   for (long i=0; i<(long)digits.size(); i++) {
     digits[i]=*this;;
@@ -317,7 +314,7 @@ void AltCRT::addPrimes(const IndexSet& s1)
   toPoly(poly); // recover in coefficient representation
 
   map.insert(s1);  // add new rows to the map
-  if (dryRun) return;
+  if (isDryRun()) return;
 
 
   zz_pBak bak; bak.save();
@@ -382,7 +379,7 @@ AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
   assert(s.last() < context.numPrimes());
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   zz_pBak bak; bak.save();
 
@@ -402,7 +399,7 @@ AltCRT::AltCRT(const ZZX& poly, const FHEcontext &_context)
   IndexSet s = IndexSet(0, context.numPrimes()-1);
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
 
   zz_pBak bak; bak.save();
@@ -423,7 +420,7 @@ AltCRT::AltCRT(const ZZX& poly)
   IndexSet s = IndexSet(0, context.numPrimes()-1);
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   zz_pBak bak; bak.save();
 
@@ -443,7 +440,7 @@ AltCRT::AltCRT(const FHEcontext &_context, const IndexSet& s)
   assert(s.last() < context.numPrimes());
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   zz_pBak bak; bak.save();
 
@@ -463,7 +460,7 @@ AltCRT::AltCRT(const FHEcontext &_context)
   IndexSet s = IndexSet(0, context.numPrimes()-1);
 
   map.insert(s);
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   zz_pBak bak; bak.save();
 
@@ -511,7 +508,7 @@ AltCRT& AltCRT::operator=(const AltCRT& other)
 
 AltCRT& AltCRT::operator=(const ZZX&poly)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
   zz_pBak bak; bak.save();
@@ -530,7 +527,7 @@ AltCRT& AltCRT::operator=(const ZZX&poly)
 
 AltCRT& AltCRT::operator=(const ZZ& num)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
   zz_pBak bak; bak.save();
@@ -599,7 +596,7 @@ long AltCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
 void AltCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   IndexSet s1 = map.getIndexSet() & s;
 
@@ -652,7 +649,7 @@ void AltCRT::toPoly(ZZX& p, bool positive) const
 // Division by constant
 AltCRT& AltCRT::operator/=(const ZZ &num)
 {
-  if (dryRun) return *this;
+  if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
   zz_pBak bak; bak.save();
@@ -672,7 +669,7 @@ AltCRT& AltCRT::operator/=(const ZZ &num)
 // Small-exponent polynomial exponentiation
 void AltCRT::Exp(long e)
 {
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   const IndexSet& s = map.getIndexSet();
   zz_pBak bak; bak.save();
@@ -694,7 +691,7 @@ void AltCRT::Exp(long e)
 // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
 void AltCRT::automorph(long k)
 {
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   const PAlgebra& zMStar = context.zMStar;
   if (!zMStar.inZmStar(k))
@@ -709,14 +706,14 @@ void AltCRT::automorph(long k)
 
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     context.ithModulus(i).restoreModulus();
-    zz_pX& tmp = context.ithModulus(i).getScratch();
+    zz_pX& tmp = Cmodulus::getScratch_zz_pX();
     zz_pX& row = map[i];
     long d = deg(row);
 
     tmp.rep.SetLength(m);
     for (long j = 0; j < m; j++) tmp.rep[j] = 0;
 
-    mulmod_precon_t precon = PrepMulModPrecon(k, m, 1/(double)m);
+    mulmod_precon_t precon = PrepMulModPrecon(k, m);
     for (long j = 0; j <= d; j++) 
       tmp.rep[MulModPrecon(j, k, m, precon)] = row.rep[j];
 
@@ -743,7 +740,7 @@ void AltCRT::automorph(long k)
 // fills each row i with random numbers
 void AltCRT::randomize(const ZZ* seed) 
 {
-  if (dryRun) return;
+  if (isDryRun()) return;
 
   if (seed != NULL) SetSeed(*seed);
 
@@ -769,7 +766,7 @@ void AltCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   assert(diff!=s);          // cannot mod-down to the empty set
   if (empty(diff)) return;  // nothing to do
 
-  if (dryRun) {
+  if (isDryRun()) {
     removePrimes(diff);// remove the primes from consideration
     return;
   }
@@ -795,8 +792,7 @@ void AltCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   else {
     long p_over_2 = ptxtSpace/2;
     long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
-    mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace,// optimization
-					      1/(double)ptxtSpace);
+    mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace); // optimization
     for (long i = 0; i < delta_len; i++) {
       long delta_i_modP = rem(delta.rep[i],ptxtSpace);
       if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace

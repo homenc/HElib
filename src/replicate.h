@@ -40,8 +40,8 @@
 
 
 // set to true to see some more info... 
+NTL_THREAD_LOCAL
 extern bool replicateVerboseFlag;
-// THREADS: thread_local?
 
 
 //! @brief The value in slot #pos is replicated in all other slots.

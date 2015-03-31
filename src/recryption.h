@@ -34,6 +34,11 @@ public:
   //! default Hamming weight of recryption key
   static const long defSkHwt=56;
 
+  //! Some data members that are only used for I/O
+  Vec<long> mvec;     //! partition of m into co-prime factors
+  long hwt;           //! Hamming weight of recryption secret-key
+  bool conservative;  //! flag for choosing more conservatice parameters
+
   //! skey encrypted wrt space p^{e-e'+r}
   long e, ePrime;
 
@@ -58,12 +63,20 @@ public:
   //! linPolys for uppacking the slots
   vector<ZZX> unpackSlotEncoding;
 
-  RecryptData() { alMod=NULL; ea=NULL; firstMap=secondMap=NULL;p2dConv=NULL; }
+  RecryptData() {
+    hwt=0; conservative=false; e=ePrime=0; alpha=0.0;
+    alMod=NULL; ea=NULL; firstMap=secondMap=NULL;p2dConv=NULL;
+  }
   ~RecryptData();
 
   //! Initialize the recryption data in the context
-  void init(const FHEcontext& context, const Vec<long>& mvec,
-	    long t=0/*min Hwt for sk*/, bool conservative=false);
+  void init(const FHEcontext& context, const Vec<long>& mvec_,
+	    long t=0/*min Hwt for sk*/, bool consFlag=false);
+
+  bool operator==(const RecryptData& other) const;
+  bool operator!=(const RecryptData& other) const {
+    return !(operator==(other));
+  }
 };
 
 #endif /* _RECRYPTION_H_ */

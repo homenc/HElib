@@ -21,17 +21,18 @@
 #include <unistd.h>
 
 #include <NTL/ZZX.h>
+#include <NTL/vector.h>
 
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
 
 #define N_TESTS 3
-static long ms[N_TESTS][4] = {
+static long ms[N_TESTS][10] = {
   //nSlots  m   phi(m) ord(2)
-  {   2,    7,    6,    3},
-  {   6,   31,   30,    5},
-  { 256, 4369, 4096,   16}, // gens=129(16),3(!16)
+  {   2,    7,    6,    3,   0,0,0,0,0,0},
+  {   6,   31,   30,    5,   0,0,0,0,0,0},
+  {  60, 1023,  600,   10,   11, 93,  838, 584,  10, 6}, // gens=129(16),3(!16)
   //  {  378,  5461,  5292, 14}, // gens=3(126),509(3)
   //  {  630,  8191,  8190, 13}, // gens=39(630)
   //  {  600, 13981, 12000, 20}, // gens=10(30),23(10),3(!2)
@@ -74,8 +75,22 @@ int main(int argc, char *argv[])
 
     cout << "Testing IO: m="<<m<<", p^r="<<p<<"^"<<r<<endl;
 
-    contexts[i] = new FHEcontext(m, p, r);
-    buildModChain(*contexts[i], ptxtSpace, c);  // Set the modulus chain
+    if (i==N_TESTS-1) { // test bootstrapping data I/O
+      Vec<long> mvec(INIT_SIZE,2);
+      mvec[0] = ms[i][4];  mvec[1] = ms[i][5];
+      vector<long> gens(2);
+      gens[0] = ms[i][6];  gens[1] = ms[i][7];
+      vector<long> ords(2);
+      ords[0] = ms[i][8];  ords[1] = ms[i][9];
+
+      contexts[i] = new FHEcontext(m, p, r, gens, ords);
+      buildModChain(*contexts[i], ptxtSpace, c);  // Set the modulus chain
+      contexts[i]->makeBootstrappable(mvec);
+    }
+    else {
+      contexts[i] = new FHEcontext(m, p, r);
+      buildModChain(*contexts[i], ptxtSpace, c);  // Set the modulus chain
+    }
 
     // Output the FHEcontext to file
     writeContextBase(keyFile, *contexts[i]);
@@ -129,8 +144,9 @@ int main(int argc, char *argv[])
 
     // Read context from file
     unsigned long m1, p1, r1;
-    readContextBase(keyFile, m1, p1, r1);
-    FHEcontext tmpContext(m1, p1, r1);
+    vector<long> gens, ords;
+    readContextBase(keyFile, m1, p1, r1, gens, ords);
+    FHEcontext tmpContext(m1, p1, r1, gens, ords);
     keyFile >> tmpContext;
     assert (*contexts[i] == tmpContext);
     cerr << i << ": context matches input\n";
@@ -253,11 +269,8 @@ int main(int argc, char *argv[])
 // #include "parameters.h"  //this has the function get_m_c
 
 
-int main(){
-
-
-
-
+int main()
+{
   string * tmp_ptr;
 
   long LLL, DDD, KKK ;

@@ -89,6 +89,10 @@ static long mValues[][14] = {
 };
 #define num_mValues (sizeof(mValues)/(13*sizeof(long)))
 
+#define OUTER_REP (3)
+#define INNER_REP (3)
+
+static bool dry = false; // a dry-run flag
 
 void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false)
 {
@@ -111,7 +115,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
   cout << "*** TestIt";
-  if (DoubleCRT::dryRun) cout << " (dry run)";
+  if (isDryRun()) cout << " (dry run)";
   cout << ": p=" << p
        << ", r=" << r
        << ", L=" << L
@@ -122,6 +126,8 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
        << endl;
 
   setTimersOn();
+  setDryRun(false); // Need to get a "real context" to test bootstrapping
+
   cout << "Computing key-independent tables..." << std::flush;
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
@@ -138,6 +144,8 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
        << ", t="    << context.rcData.skHwt
        << "\n  ";
   context.zMStar.printout();
+  setDryRun(dry); // Now we can set the dry-run flag if desired
+
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
   double bitsize = context.logOfProduct(allPrimes)/log(2.0);
@@ -148,7 +156,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   long p2r = context.alMod.getPPowR();
   context.zMStar.set_cM(mValues[idx][13]/100.0);
 
-  for (long numkey=0; numkey<3; numkey++) { // test with 3 keys
+  for (long numkey=0; numkey<OUTER_REP; numkey++) { // test with 3 keys
 
   t = -GetTime();
   cout << "Generating keys, " << std::flush;
@@ -182,12 +190,12 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   Ctxt c1(publicKey);
 
   secretKey.Encrypt(c1,ptxt_poly,p2r);
-  for (long num=0; num<2; num++) { // recrypt twice, each time test the result
+  for (long num=0; num<INNER_REP; num++) { 
     publicKey.reCrypt(c1);
     secretKey.Decrypt(poly2,c1);
 
     if (ptxt_poly == poly2) cout << "  *** reCryption succeeds!!\n";
-    else if (!DoubleCRT::dryRun) { // bootsrtapping error
+    else if (!isDryRun()) { // bootsrtapping error
       conv(poly_p,poly2);
       HyperCube<zz_p> powerful2(pConv.getShortSig());
       cout << "\ndecryption error, encrypted ";
@@ -226,6 +234,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
  ********************************************************************/
 int main(int argc, char *argv[]) 
 {
+  SetSeed(ZZ(0));
   ArgMapping amap;
 
   long p=2;
@@ -235,8 +244,9 @@ int main(int argc, char *argv[])
   long B=23;
   long N=0;
   long t=0;
-  bool dry=0;
   bool cons=0;
+  long nthreads=4;
+
   amap.arg("p", p, "plaintext base");
 
   amap.arg("r", r,  "exponent");
@@ -249,12 +259,22 @@ int main(int argc, char *argv[])
   amap.arg("t", t, "Hamming weight of recryption secret key", "heuristic");
   amap.arg("dry", dry, "dry=1 for a dry-run");
   amap.arg("cons", cons, "cons=1 for consevative settings (circuit deeper by 1)");
+  amap.arg("nthreads", nthreads, "number of threads");
+
   amap.parse(argc, argv);
+
+#ifdef FHE_BOOT_THREADS
+  bootTask = new MultiTask(nthreads);
+  cout << "*** nthreads = " << nthreads << "\n";
+#else
+  cout << "*** no threads\n";
+#endif
+  
+  
 
   if (B<=0) B=FHE_pSize;
   if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
 
-  DoubleCRT::dryRun = dry;
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
       TestIt(i,p,r,L,c,B,t,cons);

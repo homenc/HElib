@@ -22,8 +22,6 @@
 #include <cstdio>
 
 
-
-
 template<class type> 
 class SingleBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
 public:
@@ -138,7 +136,8 @@ PlaintextBlockMatrixBaseInterface *buildMultiBlockMatrix(const EncryptedArray& e
 
 void  TestIt(long m, long p, long r, long d)
 {
-  cout << "\n\n******** TestIt: m=" << m 
+  cout << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":")
+       << " m=" << m 
        << ", p=" << p
        << ", r=" << r
        << ", d=" << d
@@ -277,6 +276,9 @@ int main(int argc, char *argv[])
 {
   ArgMapping amap;
 
+  bool dry = false;
+  amap.arg("dry", dry, "dry=1 for a dry-run");
+
   long m=91;
   amap.arg("m", m, "use specified value as modulus");
 
@@ -294,6 +296,7 @@ int main(int argc, char *argv[])
 
   long repeat = 2;
   setTimersOn();
+  setDryRun(dry);
   for (long repeat_cnt = 0; repeat_cnt < repeat; repeat_cnt++) {
     TestIt(m, p, r, d);
   }

@@ -13,14 +13,43 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "timing.h"
-
 #include <algorithm>
 #include <utility>
 #include <cstring>
+#include <ctime>
+#include "timing.h"
+
+#ifdef CLOCK_MONOTONIC
+unsigned long GetTimerClock()
+{
+  timespec ts;
+
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+
+  // Here are some other clocks, but they are not very useful
+  // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+  // clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+
+  return ((unsigned long)ts.tv_sec)*1000000UL + ((unsigned long)ts.tv_nsec/1000); 
+}
+
+const unsigned long CLOCK_SCALE = 1000000UL;
+
+#else
+#warning "using low-resolution clock"
+
+// NOTE: the clock used by clock_gettime seems to be much higher
+// resolution than that used by clock.
+
+unsigned long GetTimerClock()
+{
+  return clock();
+}
+
+const unsigned long CLOCK_SCALE = (unsigned long) CLOCKS_PER_SEC;
+#endif
 
 
-bool FHEtimersOn=false;
 
 bool timer_compare(const FHEtimer *a, const FHEtimer *b)
 {
@@ -30,9 +59,11 @@ bool timer_compare(const FHEtimer *a, const FHEtimer *b)
 
 
 static vector<FHEtimer *> timerMap;
+static FHE_MUTEX_TYPE timerMapMx;
 
 void registerTimer(FHEtimer *timer)
 {
+  FHE_MUTEX_GUARD(timerMapMx);
   timerMap.push_back(timer);
 }
 
@@ -41,34 +72,14 @@ void FHEtimer::reset()
 {
   numCalls = 0;
   counter = 0;
-  if (isOn) counter -= std::clock();
 }
 
-// Start a timer
-void FHEtimer::start()
-{
-  if (!isOn) {
-    isOn = true;
-    numCalls++;
-    counter -= std::clock();
-  }
-}
-
-// Stop a timer
-void FHEtimer::stop()
-{
-  if (isOn) {
-    isOn = false;
-    counter += std::clock();
-  }
-}
 
 // Read the value of a timer (in seconds)
 double FHEtimer::getTime() const // returns time in seconds
 {
   // If the counter is currently counting, add the clock() value
-  clock_t c = isOn? (counter + std::clock()) : counter;
-  return ((double)c)/CLOCKS_PER_SEC;
+  return ((double)counter)/CLOCK_SCALE;
 }
 
 // Returns number of calls for that timer
@@ -106,30 +117,34 @@ void printAllTimers(ostream& str)
   }
 }
 
-bool getTimerByName(FHEtimer& timer, const char* name)
+const FHEtimer *getTimerByName(const char *name)
 {
   for (long i = 0; i < long(timerMap.size()); i++) {
-    if (strcmp(name, timerMap[i]->name) == 0) {
-      timer = *timerMap[i];
-      return true;
-    }
+    if (strcmp(name, timerMap[i]->name) == 0)
+      return timerMap[i];
   }
-  timer.numCalls = timer.counter = 0;
-  return false;
+
+  return 0;
 }
 
 bool printNamedTimer(ostream& str, const char* name)
 {
-  FHEtimer timer(NULL,NULL);
-  getTimerByName(timer, name);
-  long n = timer.getNumCalls();
-  if (n>0) {
-    double t = timer.getTime();
-    double ave = t/n;
-
-    str << "  " << name << ": " << t << " / " << n << " = " 
-	<< ave << "   [" << timer.loc << "]\n";
-    return true;
+  for (long i = 0; i < long(timerMap.size()); i++) {
+    if (strcmp(name, timerMap[i]->name) == 0) {
+      
+      long n = timerMap[i]->getNumCalls();
+      if (n>0) {
+        double t = timerMap[i]->getTime();
+        double ave = t/n;
+    
+        str << "  " << name << ": " << t << " / " << n << " = " 
+    	<< ave << "   [" << timerMap[i]->loc << "]\n";
+      }
+      else {
+        str << "  " << name << " -- [" << timerMap[i]->loc << "]\n";
+      }
+      return true;
+    }
   }
   return false;
 }

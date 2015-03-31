@@ -21,7 +21,7 @@
 #include <cctype>
 #include <algorithm>   // defines count(...), min(...)
 
-
+bool FHEglobals::dryRun = false;
 
 // Code for parsing command line
 
@@ -554,7 +554,7 @@ void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs/*default=true*/)
   out.SetMaxLength(deg(f)+1);               // allocate space if needed
   if (deg(out)>deg(f)) trunc(out,out,deg(f)+1); // remove high degrees
 
-  mulmod_precon_t aqinv = PrepMulModPrecon(a, q, 1/((double)q));
+  mulmod_precon_t aqinv = PrepMulModPrecon(a, q);
   for (long i=0; i<=deg(f); i++) { 
     long c = rem(coeff(f,i), q);
     c = MulModPrecon(c, a, q, aqinv); // returns c \in [0,q-1]
@@ -593,7 +593,7 @@ bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q)
   long q_over_2 = q/2;
   ZZ tmp;
   long vqi;
-  mulmod_precon_t pqInv = PrepMulModPrecon(pInv, q, 1/((double)q));
+  mulmod_precon_t pqInv = PrepMulModPrecon(pInv, q);
   for (long i=0; i<n; i++) {
     conv(vqi, vq[i]); // convert to single precision
     long vq_minus_vp_mod_q = SubMod(vqi, rem(vp[i],q), q);
@@ -739,7 +739,7 @@ long polyEvalMod(const ZZX& poly, long x, long p)
 {
   long ret = 0;
   x %= p; if (x<0) x += p;
-  mulmod_precon_t xpinv = PrepMulModPrecon(x, p, 1/((double)p));
+  mulmod_precon_t xpinv = PrepMulModPrecon(x, p);
   for (long i=deg(poly); i>=0; i--) {
     long coeff = rem(poly[i], p);
     ret = AddMod(ret, coeff, p);      // Add the coefficient of x^i
@@ -1404,8 +1404,12 @@ template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
   return s;
 }
 template ostream& printVec(ostream& s, const Vec<zz_p>& v, long nCoeffs);
+template ostream& printVec(ostream& s, const Vec<long>& v, long nCoeffs);
+template ostream& printVec(ostream& s, const Vec<ZZX>& v, long nCoeffs);
 
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs)
 {
   return printVec(s, poly.rep, nCoeffs);
 }
+
+

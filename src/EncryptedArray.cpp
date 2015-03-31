@@ -23,6 +23,11 @@
 #include "cloned_ptr.h"
 
 
+#ifdef FHE_BOOT_THREADS
+NTL_THREAD_LOCAL MultiTask *bootTask = 0;
+#endif
+
+
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
 					const PAlgebraMod& alMod)
 {
@@ -46,7 +51,6 @@ EncryptedArrayDerived<type>::EncryptedArrayDerived(
    const FHEcontext& _context, const RX& _G, const PAlgebraMod& alMod)
   : context(_context), tab(alMod.getDerived(type()))
 {
-  tab.genMaskTable();
   tab.mapToSlots(mappingData, _G); // Compute the base-G representation maps
 }
 
@@ -362,51 +366,58 @@ void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt)
 template<class type>
 void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
 {
-  RBak bak; bak.save(); restoreContext();
-  REBak ebak; ebak.save(); restoreContextForG();
-
-  long d = RE::degree();
-  long p = tab.getZMStar().getP();
-  long r = tab.getR();
-
-  // compute change of basis matrix CB
-  mat_R CB;
-  CB.SetDims(d, d);
-  RE normal_element;
-  RE H;
-  bool got_it = false;
-
-  H = power(conv<RE>(RX(1, 1)), p);
-  
-
   do {
-    NTL::random(normal_element);
- 
-    RE pow;
-    pow = normal_element; 
-    VectorCopy(CB[0], rep(pow), d);
-    for (long i = 1; i < d; i++) {
-      pow = eval(rep(pow), H);
-      VectorCopy(CB[i], rep(pow), d);
-    }
+    typename Lazy< Pair< Mat<R>, Mat<R> > >::Builder 
+      builder(normalBasisMatrices); 
 
-    Mat<ZZ> CB1;
-    conv(CB1, CB);
+    if (!builder()) break;
 
-    {
-       zz_pBak bak1; bak1.save(); zz_p::init(p);
-       Mat<zz_p> CB2;
-       conv(CB2, CB1);
-       got_it = determinant(CB2) != 0;
-    }
-  } while (!got_it);
+    RBak bak; bak.save(); restoreContext();
+    REBak ebak; ebak.save(); restoreContextForG();
 
-  Mat<R> CBi;
-  ppInvert(CBi, CB, p, r);
+    long d = RE::degree();
+    long p = tab.getZMStar().getP();
+    long r = tab.getR();
 
+    // compute change of basis matrix CB
+    mat_R CB;
+    CB.SetDims(d, d);
+    RE normal_element;
+    RE H;
+    bool got_it = false;
 
-  normalBasisMatrix = shared_ptr<mat_R>(new mat_R(CB));
-  normalBasisMatrixInverse = shared_ptr<mat_R>(new mat_R(CBi));
+    H = power(conv<RE>(RX(1, 1)), p);
+    
+
+    do {
+      NTL::random(normal_element);
+   
+      RE pow;
+      pow = normal_element; 
+      VectorCopy(CB[0], rep(pow), d);
+      for (long i = 1; i < d; i++) {
+        pow = eval(rep(pow), H);
+        VectorCopy(CB[i], rep(pow), d);
+      }
+
+      Mat<ZZ> CB1;
+      conv(CB1, CB);
+
+      {
+         zz_pBak bak1; bak1.save(); zz_p::init(p);
+         Mat<zz_p> CB2;
+         conv(CB2, CB1);
+         got_it = determinant(CB2) != 0;
+      }
+    } while (!got_it);
+
+    Mat<R> CBi;
+    ppInvert(CBi, CB, p, r);
+
+    UniquePtr< Pair< Mat<R>, Mat<R> > > ptr;
+    ptr.make(CB, CBi);
+    builder.move(ptr);
+  } while(0);
 }
 
 
@@ -490,7 +501,7 @@ void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar,
   long d = deg(a);
 
   // compute b(X) = a(X^k) mod (X^m-1)
-  mulmod_precon_t precon = PrepMulModPrecon(k, m, 1/(double)m);
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
   for (long j = 0; j <= d; j++) 
     b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
   b.normalize();
@@ -979,6 +990,50 @@ void EncryptedArrayDerived<type>::compMat1D(CachedDCRTPtxtMatrix& cmat,
     // DoubleCRT defined relative to all primes, even the "special" ones
 }
 
+#ifdef FHE_BOOT_THREADS
+
+template<class Matrix, class EA>
+static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
+			   const EA& ea)
+{
+  FHE_TIMER_START;
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+
+  ctxt.cleanUp();  // not sure, but this may be a good idea
+  Ctxt res(ZeroCtxtLike, ctxt); // fresh encryption of zero
+
+  Vec< shared_ptr<Ctxt> > tvec;
+  tvec.SetLength(D);
+  for (long i = 0; i < D; i++)
+    tvec[i] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  bootTask->exec1(D,
+    [&](long first, long last) {
+      for (long i = first; i < last; i++) { // process diagonal i
+        if (!cmat[i]) continue;      // zero diagonal
+    
+        // rotate and multiply
+        (*tvec[i]) = ctxt;
+        if (i != 0) ea.rotate1D(*tvec[i], dim, i);   
+        tvec[i]->multByConstant(*cmat[i]);
+      }
+    }
+  );
+
+  for (long i = 0; i < D; i++)
+    res += *tvec[i];
+
+  ctxt = res;
+}
+
+#else
+
 template<class Matrix, class EA>
 static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
 			   const EA& ea)
@@ -1007,6 +1062,12 @@ static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
   }
   ctxt = res;
 }
+
+
+#endif
+
+
+
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
 	       const EncryptedArray& ea)
 { mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
@@ -1628,6 +1689,8 @@ void EncryptedArrayDerived<type>::compMat1D(CachedDCRTPtxtBlockMatrix& cmat,
     // DoubleCRT defined relative only to the ciphertxt primes, not the "special" ones
 }
 
+#ifdef FHE_BOOT_THREADS
+
 template<class Matrix, class EA>
 static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
 				const EA& ea)
@@ -1651,6 +1714,102 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
   for (long k = 0; k < d; k++)
     acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
 
+  FHE_NTIMER_START(blockMat1);
+  vector< vector<Ctxt> > shCtxt;
+
+  shCtxt.resize(D);
+
+  // Process the diagonals one at a time
+  bootTask->exec1(D,
+    [&](long first, long last) {
+      for (long i = first; i < last; i++) { // process diagonal i
+        if (i == 0) {
+          shCtxt[i].resize(1, ctxt);
+        }
+        else if (!bad) {
+          shCtxt[i].resize(1, ctxt);
+          ea.rotate1D(shCtxt[i][0], dim, i);
+          shCtxt[i][0].cleanUp();
+        }
+        else {
+          // we fold the masking constants into the linearized polynomial
+          // constants to save a level. We lift some code out of rotate1D
+          // to do this.
+    
+          shCtxt[i].resize(2, ctxt);
+    
+          long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+          long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+    
+          shCtxt[i][0].smartAutomorph(val); 
+          shCtxt[i][0].cleanUp();
+    
+          shCtxt[i][1].smartAutomorph(ival); 
+          shCtxt[i][1].cleanUp();
+        }
+      }
+    }
+  );
+  FHE_NTIMER_STOP(blockMat1);
+
+
+  FHE_NTIMER_START(blockMat3);
+  bootTask->exec1(d,
+    [&](long first, long last) {
+      for (long k = first; k < last; k++) {
+        for (long i = 0; i < D; i++) {
+          for (long j = 0; j < LONG(shCtxt[i].size()); j++) {
+            if (!cmat[i][k + d*j]) continue; // zero constant
+    
+            Ctxt shCtxt1 = shCtxt[i][j];
+            shCtxt1.multByConstant(*cmat[i][k + d*j]);
+            *acc[k] += shCtxt1;
+          }
+        }
+        acc[k]->frobeniusAutomorph(k);
+      }
+    }
+  );
+  FHE_NTIMER_STOP(blockMat3);
+
+  FHE_NTIMER_START(blockMat4);
+  Ctxt res(ZeroCtxtLike, ctxt);
+  for (long k = 0; k < d; k++) {
+    res += *acc[k];
+  }
+  FHE_NTIMER_STOP(blockMat4);
+
+  ctxt = res;
+}
+
+
+#else
+
+
+template<class Matrix, class EA>
+static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
+				const EA& ea)
+{
+  FHE_TIMER_START;
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
+
+  long m = zMStar.getM();
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+  bool bad = !special && !zMStar.SameOrd(dim);
+  long d = ea.getDegree();
+
+  Vec< shared_ptr<Ctxt> > acc;
+  acc.SetLength(d);
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+  for (long k = 0; k < d; k++)
+    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  FHE_NTIMER_START(blockMat1);
   // Process the diagonals one at a time
   for (long i = 0; i < D; i++) { // process diagonal i
     vector<Ctxt> shCtxt;
@@ -1690,15 +1849,24 @@ static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
       }
     }
   }
+  FHE_NTIMER_STOP(blockMat1);
 
+  FHE_NTIMER_START(blockMat2);
   Ctxt res(ZeroCtxtLike, ctxt);
   for (long k = 0; k < d; k++) {
     acc[k]->frobeniusAutomorph(k);
     res += *acc[k];
   }
+  FHE_NTIMER_STOP(blockMat2);
 
   ctxt = res;
 }
+
+
+#endif
+
+
+
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
 	       const EncryptedArray& ea)
 { blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
@@ -1744,22 +1912,27 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
 {
   FHE_TIMER_START;
 
-  RBak bak; bak.save(); restoreContext();
-  REBak ebak; ebak.save(); restoreContextForG();
+  RBak bak; bak.save(); restoreContext();  // the NTL context for mod p^r
+  REBak ebak; ebak.save(); restoreContextForG(); // The NTL context for mod G
 
-  if (!linPolyMatrix) {
-    FHE_NTIMER_START(buildLinPolyCoeffs_buildMatrix);
+  do {
+    typename Lazy< Mat<RE> >::Builder builder(linPolyMatrix);
+    if (!builder()) break;
 
+   
     long p = tab.getZMStar().getP();
     long r = tab.getR();
 
     Mat<RE> M1;
+    // build d x d matrix, d is taken from the surrent NTL context for G
     buildLinPolyMatrix(M1, p);
     Mat<RE> M2;
-    ppInvert(M2, M1, p, r);
+    ppInvert(M2, M1, p, r); // invert modulo prime-power p^r
 
-    linPolyMatrix = shared_ptr< Mat<RE> >(new Mat<RE>(M2) );
-  }
+    UniquePtr< Mat<RE> > ptr;
+    ptr.make(M2);
+    builder.move(ptr);
+  } while (0);
 
   Vec<RE> CC, LL;
   convert(LL, L);

@@ -29,6 +29,8 @@ void usage(char *prog)
   cerr << "  p is the plaintext base [default=3]" << endl;
   cerr << "  r is the lifting [default=floor(log_p(FHE_p2Size))]" << endl;
   cerr << "  m is the cyclotomic ring [default determined by p,r]\n";
+  cerr << "  dry=1 for dry run [default=0]\n";
+
   exit(0);
 }
 
@@ -40,6 +42,7 @@ int main(int argc, char *argv[])
   argmap["p"] = "3";
   argmap["r"] = "0";
   argmap["m"] = "0";
+  argmap["dry"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -47,6 +50,8 @@ int main(int argc, char *argv[])
   long p = atoi(argmap["p"]);
   long r = atoi(argmap["r"]);
   long m = atoi(argmap["m"]);
+  bool dry = atoi(argmap["dry"]);
+
   if (p<2) exit(0);
   long bound = floor(log((double)FHE_p2Size)/log((double)p));
   if (r<2 || r>bound) r = bound;
@@ -56,7 +61,9 @@ int main(int argc, char *argv[])
   long L = r*ll +1; // how many levels do we need
   if (p>2)  L *= 2;
   m = FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
+  setDryRun(dry);
 
+  if (dry) cout << "dry run: ";
   cout << "m="<<m<<", p="<<p<<", r="<<r<<", L="<<L<<endl;
   FHEcontext context(m, p, r);
   buildModChain(context, L, /*c=*/4);

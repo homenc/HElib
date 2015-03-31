@@ -20,8 +20,17 @@
  * @brief Data-movement operations on encrypted arrays of slots
  */
 
+#include <NTL/Lazy.h>
+#include <NTL/pair.h>
 #include "FHE.h"
 #include "timing.h"
+#include "multicore.h"
+
+#ifdef FHE_BOOT_THREADS
+extern NTL_THREAD_LOCAL MultiTask *bootTask;
+#endif
+
+
 
 class PlaintextArray; // forward reference
 class EncryptedArray; // forward reference
@@ -330,13 +339,19 @@ public:
 private:
   const FHEcontext& context;
   const PAlgebraModDerived<type>& tab;
+
+  // FIXME: all of these types should be copyable
+  // out of context, but NTL 8.0 still does not copy
+  // matrix copies out of context correctly, as it
+  // relies on plain SetLength...I need to fix this 
+  // in NTL
+  //
   MappingData<type> mappingData; // MappingData is defined in PAlgebra.h
 
-  mutable shared_ptr< Mat<RE> > linPolyMatrix; // computed once and for all
-  mutable shared_ptr< Mat<R> > normalBasisMatrix; 
-  mutable shared_ptr< Mat<R> > normalBasisMatrixInverse; 
+  Lazy< Mat<RE> > linPolyMatrix;
 
-  // THREADS: need to make the above thread-safe lazy
+  Lazy< Pair< Mat<R>, Mat<R> > > normalBasisMatrices;
+  // a is the matrix, b is its inverse
 
 public:
   explicit
@@ -350,8 +365,7 @@ public:
     REBak ebak; ebak.save(); other.mappingData.restoreContextForG();
     mappingData = other.mappingData;
     linPolyMatrix = other.linPolyMatrix;
-    normalBasisMatrix = other.normalBasisMatrix;
-    normalBasisMatrixInverse = other.normalBasisMatrixInverse;
+    normalBasisMatrices = other.normalBasisMatrices;
   }
 
   EncryptedArrayDerived& operator=(const EncryptedArrayDerived& other) // assignment
@@ -363,8 +377,7 @@ public:
     RBak bak; bak.save(); tab.restoreContext();
     mappingData = other.mappingData;
     linPolyMatrix = other.linPolyMatrix;
-    normalBasisMatrix = other.normalBasisMatrix;
-    normalBasisMatrixInverse = other.normalBasisMatrixInverse;
+    normalBasisMatrices = other.normalBasisMatrices;
     return *this;
   }
 
@@ -373,13 +386,13 @@ public:
   const RX& getG() const { return mappingData.getG(); }
 
   const Mat<R>& getNormalBasisMatrix() const {
-    if (!normalBasisMatrix) initNormalBasisMatrix(); 
-    return *normalBasisMatrix;
+    if (!normalBasisMatrices.built()) initNormalBasisMatrix(); 
+    return normalBasisMatrices->a;
   }
 
   const Mat<R>& getNormalBasisMatrixInverse() const {
-    if (!normalBasisMatrixInverse) initNormalBasisMatrix(); 
-    return *normalBasisMatrixInverse;
+    if (!normalBasisMatrices.built()) initNormalBasisMatrix(); 
+    return normalBasisMatrices->b;
   }
 
   void initNormalBasisMatrix() const;
@@ -460,13 +473,25 @@ public:
     { genericEncrypt(ctxt, pKey, ptxt); }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const
-    { genericDecrypt(ctxt, sKey, ptxt); }
+    { genericDecrypt(ctxt, sKey, ptxt);
+      if (ctxt.getPtxtSpace()<tab.getPPowR()) {
+	for (long i=0; i<(long)ptxt.size(); i++)
+	  ptxt[i] %= ctxt.getPtxtSpace();
+      }
+    }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const
-    { genericDecrypt(ctxt, sKey, ptxt); }
+    { genericDecrypt(ctxt, sKey, ptxt);
+      if (ctxt.getPtxtSpace()<tab.getPPowR()) {
+	for (long i=0; i<(long)ptxt.size(); i++)
+	  PolyRed(ptxt[i], ctxt.getPtxtSpace(),/*abs=*/true);
+      }
+    }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
-    { genericDecrypt(ctxt, sKey, ptxt); }
+  { genericDecrypt(ctxt, sKey, ptxt); 
+    // FIXME: Recude mod the ciphertext plaintext space as above
+    }
 
 
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const

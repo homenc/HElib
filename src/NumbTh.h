@@ -48,9 +48,21 @@
 #include <NTL/GF2EX.h>
 #include <NTL/lzz_pEX.h>
 
+
+
 using namespace std;
 using namespace NTL;
 
+namespace FHEglobals
+{
+  //! @brief A dry-run flag
+  //! The dry-run option disables most operations, to save time. This lets
+  //! us quickly go over the evaluation of a circuit and estimate the
+  //! resulting noise magnitude, without having to actually compute anything. 
+  extern bool dryRun;
+}
+inline bool setDryRun(bool toWhat=true) { return (FHEglobals::dryRun=toWhat); }
+inline bool isDryRun() { return FHEglobals::dryRun; }
 
 #if (__cplusplus>199711L)
 #include <memory>
@@ -696,7 +708,7 @@ ostream& operator<<(ostream& s, vector<T> v)
 }
 
 template<class T>
-istream& operator>>(istream& s, vector<T> v)
+istream& operator>>(istream& s, vector<T>& v)
 {
   Vec<T> vv; // read into an NTL vector, then convert
   s >> vv;
@@ -723,6 +735,7 @@ vector<T> atovector(const char *a)
   convert(v2, v1);
   return v2;
 }
+
 
 //! Debug printing routines for vectors, ZZX'es, print only a few entries
 template<class T> ostream& printVec(ostream& s, const Vec<T>& v,

@@ -86,8 +86,8 @@ public:
   explicit TimingData(long _m=-1) {m=_m;}
 };
 
-static FHEtimer* _init_timer_2 = 0;
-static FHEtimer* _init_timer_4 = 0;
+static FHEtimer _init_timer_2("init2", "--");
+static FHEtimer _init_timer_4("init4", "--");
 
 void timeInit(long m, long p, long r, long d, long L, long nTests)
 {
@@ -95,7 +95,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     cerr << "." << std::flush;
 
     // Complicated mumbo-jumbo to get one of two timers, depending on r
-    auto_timer _init_timer((r>1)? _init_timer_4 : _init_timer_2);
+    auto_timer _init_timer((r>1)? &_init_timer_4 : &_init_timer_2);
 
     FHEcontext context(m, p, r);
 
@@ -274,33 +274,33 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   }
 
   // record the results
-  FHEtimer tmp(NULL,NULL);
+  const FHEtimer *tp;
 
-  getTimerByName(tmp, "addConstant");
-  td.addConst = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("addConstant");
+  td.addConst = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "add");
-  td.add = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("add");
+  td.add = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "multByConstant");
-  td.multConst = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("multByConstant");
+  td.multConst = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "multiplyBy");
-  td.mult = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("multiplyBy");
+  td.mult = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "multiplyBy2");
-  if (tmp.getNumCalls() > 0)
-    td.multBy2 = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("multiplyBy2");
+  if (tp && tp->getNumCalls() > 0)
+    td.multBy2 = tp->getTime() / tp->getNumCalls();
   else td.multBy2 = 0;
 
-  getTimerByName(tmp, "nativeAutomorph");
-  td.autoNative = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("nativeAutomorph");
+  td.autoNative = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "automorph");
-  td.autoTypical = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("automorph");
+  td.autoTypical = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "innerProduct");
-  td.innerProd = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("innerProduct");
+  td.innerProd = tp->getTime() / tp->getNumCalls();
   resetAllTimers();
 }
 
@@ -431,25 +431,25 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   ret +=tmp; // just so the compiler will not optimize it out
 
   // record the timing data
-  FHEtimer ttmp(NULL,NULL);
+  const FHEtimer *tp;
 
-  getTimerByName(ttmp, "rotate");
-  td.rotate = ttmp.getTime() / ttmp.getNumCalls();
+  tp = getTimerByName("rotate");
+  td.rotate = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(ttmp, "shift");
-  td.shift = ttmp.getTime() / ttmp.getNumCalls();
+  tp = getTimerByName("shift");
+  td.shift = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(ttmp, "permutation");
-  td.permute = ttmp.getTime() / ttmp.getNumCalls();
+  tp = getTimerByName("permutation");
+  td.permute = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(ttmp, "MatMul");
-  td.matmul = ttmp.getTime() / ttmp.getNumCalls();
+  tp = getTimerByName("MatMul");
+  td.matmul = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(ttmp, "replicate");
-  td.replicate = ttmp.getTime() / ttmp.getNumCalls();
+  tp = getTimerByName("replicate");
+  td.replicate = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(ttmp, "replicateAll");
-  td.replAll = ttmp.getTime() / ttmp.getNumCalls();
+  tp = getTimerByName("replicateAll");
+  td.replAll = tp->getTime() / tp->getNumCalls();
   resetAllTimers();
 }
 
@@ -462,11 +462,9 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   long L = floor((7.2*phim)/(FHE_pSize* /*cc*/1.33* (110+/*k*/80)));
   if (L<5) L=5; // Make sure we have at least a few primes
 
-  buildTimer(_init_timer_2, "init2", FHE_AT);
-  buildTimer(_init_timer_4, "init4", FHE_AT);
 
   // Initialize a context with r=2,d=1
-  auto_timer _init_timer(_init_timer_4);
+  auto_timer _init_timer(&_init_timer_4);
   FHEcontext context(m, 2, 2);
   buildModChain(context, L, /*c=*/3);
 
@@ -493,40 +491,40 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   timeInit(m, p, /*r=*/2, /*d=*/0, L, /*nTests=*/4);
 
   //  printAllTimers();
-  FHEtimer tmp(NULL,NULL);
+  const FHEtimer *tp;
 
-  getTimerByName(tmp, "init2");
-  data.other.init2 = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("init2");
+  data.other.init2 = tp? tp->getTime() / tp->getNumCalls() : 0;
 
-  getTimerByName(tmp, "init4");
-  data.other.init4 = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("init4");
+  data.other.init4 = tp? tp->getTime() / tp->getNumCalls() : 0;
 
-  getTimerByName(tmp, "keyGen");
-  data.other.keyGen = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("keyGen");
+  data.other.keyGen = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "encode2");
-  data.other.encode2 = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("encode2");
+  data.other.encode2 = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "encode2d");
-  data.other.encode2d = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("encode2d");
+  data.other.encode2d = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "encode4");
-  data.other.encode4 = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("encode4");
+  data.other.encode4 = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "encode4d");
-  data.other.encode4d = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("encode4d");
+  data.other.encode4d = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "encrypt");
-  data.other.encrypt = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("encrypt");
+  data.other.encrypt = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "decrypt");
-  data.other.decrypt = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("decrypt");
+  data.other.decrypt = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "decode2");
-  data.other.decode2 = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("decode2");
+  data.other.decode2 = tp->getTime() / tp->getNumCalls();
 
-  getTimerByName(tmp, "decode4");
-  data.other.decode4 = tmp.getTime() / tmp.getNumCalls();
+  tp = getTimerByName("decode4");
+  data.other.decode4 = tp->getTime() / tp->getNumCalls();
   resetAllTimers();
 
   // time low-level operations
@@ -655,7 +653,7 @@ int main(int argc, char *argv[])
   TimingData td;
   if (m>0) {
     cerr << "\nTesting m="<<m; 
-    if (high) cout << " (including high-level)";
+    if (high) cerr << " (including high-level)";
     TimeIt(m, p, td, high);
     printTimeData(td);
   }
