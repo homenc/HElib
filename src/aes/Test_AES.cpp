@@ -70,7 +70,11 @@ int main(int argc, char **argv)
     if (L<23) L=23;
     if (idx<1) idx=1; // the sz=0 params are incompatible with bootstrapping
   } else { 
+#if (NTL_SP_NBITS<50)
+    if (L<46) L=46; 
+#else
     if (L<42) L=42; 
+#endif
   }
 
   long p = mValues[idx][0];
