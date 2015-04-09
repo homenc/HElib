@@ -16,6 +16,7 @@
 CC = g++
 #
 #CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+CFLAGS = -g -O2 
 
 # useful flags:
 #   -std=c++11
@@ -42,7 +43,6 @@ CC = g++
 #                       bootstrapping; requires -DFHE_THREADS (see above)
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
-CFLAGS = -g -O2 
 
 $(info HElib requires NTL version 9.0.1 or higher, see http://shoup.net/ntl)
 $(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)

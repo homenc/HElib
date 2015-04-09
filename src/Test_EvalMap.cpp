@@ -208,7 +208,21 @@ int main(int argc, char *argv[])
 
   amap.arg("dry", dry, "a dry-run flag to check the noise");
 
+  long nthreads=4;
+  amap.arg("nthreads", nthreads, "number of threads");
+
   amap.parse(argc, argv);
+
+#ifdef FHE_BOOT_THREADS
+  bootTask = new MultiTask(nthreads);
+  cout << "*** nthreads = " << nthreads << "\n";
+#else
+  cout << "*** no threads\n";
+#endif
+
+
+
+
 
   long w = 64; // Hamming weight of secret key
 
