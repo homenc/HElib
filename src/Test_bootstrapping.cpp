@@ -264,7 +264,9 @@ int main(int argc, char *argv[])
   amap.parse(argc, argv);
 
 #ifdef FHE_BOOT_THREADS
-  bootTask = new MultiTask(nthreads);
+  UniquePtr<MultiTask> localBootTask;
+  localBootTask.make(nthreads);
+  bootTask = localBootTask.get();
   cout << "*** nthreads = " << nthreads << "\n";
 #else
   cout << "*** no threads\n";
@@ -280,5 +282,6 @@ int main(int argc, char *argv[])
       TestIt(i,p,r,L,c,B,t,cons);
       break;
     }
+
   return 0;
 }
