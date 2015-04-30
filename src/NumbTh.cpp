@@ -1392,7 +1392,7 @@ void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
 // Debug printing routines for vectors, ZZX'es, print only a few entries
 
 template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
-				    long nCoeffs=40)
+				    long nCoeffs)
 {
   long d = v.length();
   if (d<nCoeffs) return s << v; // just print the whole thing
