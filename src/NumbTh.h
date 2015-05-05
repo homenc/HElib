@@ -121,7 +121,7 @@ bool doArgProcessing(T *value, const char *s)
 {
   string ss(s);
   stringstream sss(ss);
-  return sss >> *value;
+  return bool(sss >> *value);
 }
 
 bool doArgProcessing(string *value, const char *s);
