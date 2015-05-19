@@ -14,10 +14,10 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "recryption.h"
-#include "EncryptedArray.h"
-#include "EvalMap.h"
-#include "powerful.h"
+#include "FHE/recryption.h"
+#include "FHE/EncryptedArray.h"
+#include "FHE/EvalMap.h"
+#include "FHE/powerful.h"
 
 
 

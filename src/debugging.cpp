@@ -16,8 +16,8 @@
 // debugging.cpp - debugging utilities
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include "FHE/FHE.h"
+#include "FHE/EncryptedArray.h"
 
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2

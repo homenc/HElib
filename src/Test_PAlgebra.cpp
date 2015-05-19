@@ -18,8 +18,8 @@
 #include <sstream>
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "NumbTh.h"
-#include "FHEContext.h"
+#include "FHE/NumbTh.h"
+#include "FHE/FHEContext.h"
 
 void usage() 
 {

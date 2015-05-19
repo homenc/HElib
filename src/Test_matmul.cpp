@@ -21,9 +21,9 @@
 
 #include <cassert>
 #include <NTL/lzz_pXFactoring.h>
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "FHE/FHE.h"
+#include "FHE/timing.h"
+#include "FHE/EncryptedArray.h"
 
 template<class type> 
 class RandomMatrix : public  PlaintextMatrixInterface<type> {

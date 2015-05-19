@@ -14,7 +14,7 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "permutations.h"
+#include "FHE/permutations.h"
 
 const Vec<long> SubDimension::dummyBenes; // global variable
 

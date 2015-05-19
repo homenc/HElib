@@ -17,7 +17,7 @@
 #include <utility>
 #include <cstring>
 #include <ctime>
-#include "timing.h"
+#include "FHE/timing.h"
 
 #ifdef CLOCK_MONOTONIC
 unsigned long GetTimerClock()

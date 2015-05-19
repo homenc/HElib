@@ -32,9 +32,9 @@ using namespace tr1;
 
 #include <NTL/vector.h>
 NTL_CLIENT
-#include "NumbTh.h"
-#include "EncryptedArray.h"
-#include "permutations.h"
+#include "FHE/NumbTh.h"
+#include "FHE/EncryptedArray.h"
+#include "FHE/permutations.h"
 
 
 //! \cond FALSE (make doxygen ignore these classes)

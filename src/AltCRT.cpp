@@ -14,9 +14,9 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "AltCRT.h"
-#include "DoubleCRT.h"
-#include "timing.h"
+#include "FHE/AltCRT.h"
+#include "FHE/DoubleCRT.h"
+#include "FHE/timing.h"
 
 
 /*

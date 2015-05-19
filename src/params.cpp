@@ -19,8 +19,8 @@ namespace NTL {}
 using namespace std;
 using namespace NTL;
 
-#include "NumbTh.h"
-#include "PAlgebra.h"
+#include "FHE/NumbTh.h"
+#include "FHE/PAlgebra.h"
 #include <iomanip>
 
 // A heuristic measure for how good a certain (depth,cost) is

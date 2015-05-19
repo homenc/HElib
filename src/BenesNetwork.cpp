@@ -15,8 +15,8 @@
  */
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include "FHE/FHE.h"
+#include "FHE/EncryptedArray.h"
 
 #include <cstdlib>
 #include <cassert>
@@ -30,8 +30,8 @@ NTL_CLIENT
 #endif
 
 #include <NTL/vector.h>
-#include "NumbTh.h"
-#include "permutations.h"
+#include "FHE/NumbTh.h"
+#include "FHE/permutations.h"
 
 static void 
 recursiveGeneralBenesInit(long n, long k, long d, long delta_j,

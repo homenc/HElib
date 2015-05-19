@@ -19,10 +19,10 @@
 #include <NTL/ZZ.h>
 NTL_CLIENT
 
-#include "NumbTh.h"
-#include "timing.h"
-#include "permutations.h"
-#include "EncryptedArray.h"
+#include "FHE/NumbTh.h"
+#include "FHE/timing.h"
+#include "FHE/permutations.h"
+#include "FHE/EncryptedArray.h"
 
 void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 

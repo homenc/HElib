@@ -16,11 +16,11 @@
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
 
-#include "EncryptedArray.h"
+#include "FHE/EncryptedArray.h"
 
 #include <algorithm>
-#include "timing.h"
-#include "cloned_ptr.h"
+#include "FHE/timing.h"
+#include "FHE/cloned_ptr.h"
 
 
 #ifdef FHE_BOOT_THREADS

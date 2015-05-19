@@ -13,8 +13,8 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "EvalMap.h"
-#include "powerful.h"
+#include "FHE/EvalMap.h"
+#include "FHE/powerful.h"
 
 // The callback interface for the matrix-multiplication routines.
 

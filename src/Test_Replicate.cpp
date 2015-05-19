@@ -23,9 +23,9 @@
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
 
-#include "FHE.h"
-#include "replicate.h"
-#include "timing.h"
+#include "FHE/FHE.h"
+#include "FHE/replicate.h"
+#include "FHE/timing.h"
 
 static bool check_replicate(const Ctxt& c1, const Ctxt& c0, long i,
 			    const FHESecKey& sKey, const EncryptedArray& ea)

@@ -19,9 +19,9 @@
  */
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "FHE/FHE.h"
+#include "FHE/timing.h"
+#include "FHE/EncryptedArray.h"
 
 #include <cassert>
 #include <cstdio>

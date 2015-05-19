@@ -22,11 +22,11 @@
 #include <NTL/ZZ.h>
 NTL_CLIENT
 
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
-#include "replicate.h"
-#include "permutations.h"
+#include "FHE/FHE.h"
+#include "FHE/timing.h"
+#include "FHE/EncryptedArray.h"
+#include "FHE/replicate.h"
+#include "FHE/permutations.h"
 
 // We measure low-level timing at all levels
 class LowLvlTimingData {

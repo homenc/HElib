@@ -17,8 +17,8 @@
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "EncryptedArray.h"
-#include "polyEval.h"
+#include "FHE/EncryptedArray.h"
+#include "FHE/polyEval.h"
 
 static void buildDigitPolynomial(ZZX& result, long p, long e);
 

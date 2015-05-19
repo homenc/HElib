@@ -18,9 +18,9 @@
  *
  */
 
-#include "bluestein.h"
-#include "timing.h"
-#include "CModulus.h"
+#include "FHE/bluestein.h"
+#include "FHE/timing.h"
+#include "FHE/CModulus.h"
 
 
 

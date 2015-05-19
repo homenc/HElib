@@ -14,10 +14,10 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "FHE.h"
+#include "FHE/FHE.h"
 
 #include <queue> // used in the breadth-first search in setKeySwitchMap
-#include "timing.h"
+#include "FHE/timing.h"
 
 /******** Utility function to generate RLWE instances *********/
 

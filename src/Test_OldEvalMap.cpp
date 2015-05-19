@@ -1,9 +1,9 @@
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
 
-#include "OldEvalMap.h"
-#include "hypercube.h"
-#include "powerful.h"
+#include "FHE/OldEvalMap.h"
+#include "FHE/hypercube.h"
+#include "FHE/powerful.h"
 
 void  TestIt(long R, long p, long r, long c, long _k, long w,
              long L, const Vec<long>& mvec, long width,

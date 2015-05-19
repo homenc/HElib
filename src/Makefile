@@ -15,7 +15,12 @@
 # 
 CC = g++
 #
-#CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
+INCDIR  = ../include/
+#
+TARGET = fhe.a
+PREFIX = /usr/local/
+#
+CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I$(PREFIX)/include/ -I$(INCDIR)
 
 # useful flags:
 #   -std=c++11
@@ -42,7 +47,7 @@ CC = g++
 #                       bootstrapping; requires -DFHE_THREADS (see above)
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
-CFLAGS = -g -O2 
+CFLAGS = -O3 -I$(INCDIR)
 
 $(info HElib requires NTL version 9.0.1 or higher, see http://shoup.net/ntl)
 $(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
@@ -51,21 +56,21 @@ $(info )
 LD = g++
 AR = ar
 ARFLAGS=ruv
-GMP=-lgmp 
+GMP=-lgmp
 LDLIBS = -L/usr/local/lib -lntl $(GMP) -lm
 
-HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h
-
+_HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h
 SRC = KeySwitching.cpp EncryptedArray.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEContext.cpp PAlgebra.cpp DoubleCRT.cpp NumbTh.cpp bluestein.cpp IndexSet.cpp timing.cpp replicate.cpp hypercube.cpp matching.cpp powerful.cpp BenesNetwork.cpp permutations.cpp PermNetwork.cpp OptimizePermutations.cpp eqtesting.cpp polyEval.cpp extractDigits.cpp EvalMap.cpp OldEvalMap.cpp recryption.cpp debugging.cpp
-
-OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o OldEvalMap.o recryption.o debugging.o
-
+OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o CModulus.o FHEContext.o IndexSet.o DoubleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o OldEvalMap.o recryption.o debugging.o
 TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_LinPoly_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_bootstrapping_x
+CHECKPROGS = Test_General_x Test_LinPoly_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x
+
+HEADER = $(patsubst %,$(INCDIR)/FHE/%, $(_HEADER))
 
 
-all: fhe.a
+all: $(TARGET)
 
-check: Test_General_x Test_LinPoly_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x
+check: $(CHECKPROGS)
 	./Test_General_x R=1 m=255
 	./Test_General_x R=1 k=10 p=2 r=1 d=1
 	./Test_General_x R=1 k=10 p=2 r=2 d=1
@@ -91,11 +96,19 @@ DoubleCRT.o: DoubleCRT.cpp AltCRT.cpp $(HEADER)
 %.o: %.cpp $(HEADER)
 	$(CC) $(CFLAGS) -c $<
 
-fhe.a: $(OBJ)
-	$(AR) $(ARFLAGS) fhe.a $(OBJ)
+$(TARGET): $(OBJ)
+	$(AR) $(ARFLAGS) $(TARGET) $(OBJ)
 
-./%_x: %.cpp fhe.a
-	$(CC) $(CFLAGS) -o $@ $< fhe.a $(LDLIBS)
+./%_x: %.cpp $(TARGET)
+	$(CC) $(CFLAGS) -o $@ $< $(TARGET) $(LDLIBS)
+
+install: $(TARGET)
+	cp -r $(INCDIR) -t $(PREFIX)
+	cp $(TARGET) $(PREFIX)/lib
+
+uninstall:
+	rm -r $(PREFIX)/include/FHE
+	rm $(PREFIX)/lib/$(TARGET)
 
 clean:
 	rm -f *.o *_x *_x.exe *.a core.*

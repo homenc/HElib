@@ -29,8 +29,8 @@
  * roots of unity.
  */
 
-#include "CModulus.h"
-#include "timing.h"
+#include "FHE/CModulus.h"
+#include "FHE/timing.h"
 
 
 // It is assumed that m,q,context, and root are already set. If root is set

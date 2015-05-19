@@ -1,6 +1,6 @@
-#include "hypercube.h"
-#include "powerful.h"
-#include "FHEContext.h"
+#include "FHE/hypercube.h"
+#include "FHE/powerful.h"
+#include "FHE/FHEContext.h"
 
 void testSimpleConversion(const Vec<long>& mvec)
 {

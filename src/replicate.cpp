@@ -14,9 +14,9 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "replicate.h"
-#include "timing.h"
-#include "cloned_ptr.h"
+#include "FHE/replicate.h"
+#include "FHE/timing.h"
+#include "FHE/cloned_ptr.h"
 
 
 

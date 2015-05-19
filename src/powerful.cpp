@@ -2,7 +2,7 @@
  * EXPERIMENTAL CODE, not usable yet
  */
 
-#include "powerful.h"
+#include "FHE/powerful.h"
 
 // powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}
 // computes divVec[d] = m/p_d^{e_d}

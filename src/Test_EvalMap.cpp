@@ -1,9 +1,9 @@
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
 
-#include "EvalMap.h"
-#include "hypercube.h"
-#include "powerful.h"
+#include "FHE/EvalMap.h"
+#include "FHE/hypercube.h"
+#include "FHE/powerful.h"
 
 static bool dry = false; // a dry-run flag
 

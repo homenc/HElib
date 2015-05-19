@@ -14,9 +14,9 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "FHEContext.h"
-#include "EvalMap.h"
-#include "powerful.h"
+#include "FHE/FHEContext.h"
+#include "FHE/EvalMap.h"
+#include "FHE/powerful.h"
 
 
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
@@ -490,7 +490,7 @@ istream& operator>> (istream &str, FHEcontext& context)
   return str;
 }
 
-#include "EncryptedArray.h"
+#include "FHE/EncryptedArray.h"
 FHEcontext::~FHEcontext()
 {
   delete ea;

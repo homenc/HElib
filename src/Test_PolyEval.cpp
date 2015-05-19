@@ -18,8 +18,8 @@
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "polyEval.h"
-#include "EncryptedArray.h"
+#include "FHE/polyEval.h"
+#include "FHE/EncryptedArray.h"
 
 #ifdef DEBUG_PRINTOUT
 extern FHESecKey* dbgKey;

@@ -19,8 +19,8 @@
  */
 #include "NTL/ZZ.h"
 NTL_CLIENT
-#include "FHE.h"
-#include "permutations.h"
+#include "FHE/FHE.h"
+#include "FHE/permutations.h"
 
 // A maximalistic approach: generate matrices s(X^e)->s(X) for all e \in Zm*
 void addAllMatrices(FHESecKey& sKey, long keyID)

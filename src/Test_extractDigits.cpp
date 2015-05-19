@@ -19,8 +19,8 @@
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "EncryptedArray.h"
-#include "polyEval.h"
+#include "FHE/EncryptedArray.h"
+#include "FHE/polyEval.h"
 
 void usage(char *prog) 
 {

@@ -15,9 +15,9 @@
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "Ctxt.h"
-#include "permutations.h"
-#include "EncryptedArray.h"
+#include "FHE/Ctxt.h"
+#include "FHE/permutations.h"
+#include "FHE/EncryptedArray.h"
 
 ostream& operator<< (ostream &s, const PermNetwork &net)
 {

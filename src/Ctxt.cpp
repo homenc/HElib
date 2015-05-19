@@ -14,9 +14,9 @@
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "Ctxt.h"
-#include "FHE.h"
-#include "timing.h"
+#include "FHE/Ctxt.h"
+#include "FHE/FHE.h"
+#include "FHE/timing.h"
 
 // Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
@@ -1152,7 +1152,7 @@ void innerProduct(Ctxt& result,
 // The ciphertext *this is not affected, instead the result is returned in
 // the zzParts vector, as a vector of ZZX'es. Returns an extimate for the
 // noise variance after mod-switching.
-#include "powerful.h"
+#include "FHE/powerful.h"
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 {
   // Ensure that new modulus is co-prime with plaintetx space

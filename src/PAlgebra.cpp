@@ -16,9 +16,9 @@
 
 #include <algorithm>   // defines count(...), min(...)
 
-#include "PAlgebra.h"
-#include "hypercube.h"
-#include "timing.h"
+#include "FHE/PAlgebra.h"
+#include "FHE/hypercube.h"
+#include "FHE/timing.h"
 
 #include <NTL/ZZXFactoring.h>
 #include <NTL/GF2EXFactoring.h>
