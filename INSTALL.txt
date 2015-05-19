@@ -28,14 +28,6 @@ Once GMP is installed, you can install NTL as follows:
 Now that you have these libraries in place, you can cd to the HElib
 src directory to build HElib.
 
-Right now, the "build system" for HElib is very rudimentary: no
-configure script and just a Makefile (with no "make install").
-The Makefile will build the static library fhe.a in the HElib src
-directory, and then one can build applications programs based on
-fhe.a, also in the HElib src directory (or set the include and library
-parameters to include the right things). Hopefully, this build system
-will be improved in the future.
-
 Before building HElib, you may want to look at the Makefile, and
 consider adjusting some of the defaults for CC and CFLAGS. The
 defaults should be OK on most systems, but you can see the suggested
@@ -45,20 +37,24 @@ On the command line in the HElib src directory:
 
    make
 
-will compile and build the library fhe.a. Once built, run
+will compile and build the library. Once built, run
 
    make check
 
 which will compile and runs a series of test programs.
 
+To install HElib, run
+
+   make install
+
+By default this will install the library and headers to /usr/local, but
+you can specify any other path by modifying the PREFIX variable.
+
 If you want to build your own program based on HElib, the easiest way
 to do it is to write the program in a file called myprog.cpp and then
-run
+build it like this:
 
-   make myprog_x
-
-which will compile myprog.cpp and link in fhe.a and all required
-support libraries, and create the executable myprog_x.
+   g++ myprog.cpp -lfhe -lgmp -lntl
 
 Take a look at the programs Test_*.cpp for examples of using HElib.
 
