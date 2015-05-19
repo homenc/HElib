@@ -17,7 +17,7 @@ CC = g++
 #
 INCDIR  = ../include/
 #
-TARGET = fhe.a
+TARGET = libfhe.a
 PREFIX = /usr/local/
 #
 CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I$(PREFIX)/include/ -I$(INCDIR)
