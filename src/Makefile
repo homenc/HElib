@@ -47,7 +47,7 @@ CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I$(PREFIX)/include/ -I$(INCDIR)
 #                       bootstrapping; requires -DFHE_THREADS (see above)
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
-CFLAGS = -O3 -I$(INCDIR)
+# CFLAGS = -O2 -I$(INCDIR)
 
 $(info HElib requires NTL version 9.0.1 or higher, see http://shoup.net/ntl)
 $(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
