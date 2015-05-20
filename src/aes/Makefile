@@ -17,18 +17,18 @@ CC = g++
 LD = g++
 AR = ar
 #
-# CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -std=c++11 -I/usr/local/include -I.. -DUSE_ALT_CRT -DDEBUG_PRINTOUT -DUSE_ZZX_POLY
-CFLAGS = -O2 -Wfatal-errors -Wshadow -Wall -std=c++11 -I/usr/local/include -I..
+# CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -std=c++11 -I/usr/local/include -DUSE_ALT_CRT -DDEBUG_PRINTOUT -DUSE_ZZX_POLY
+CFLAGS = -O2 -Wfatal-errors -Wshadow -Wall -std=c++11 -I/usr/local/include
 GMP=-lgmp 
-LDLIBS = -L/usr/local/lib -lntl $(GMP) -lm
+LDLIBS = -L/usr/local/lib -fhe -lntl $(GMP) -lm
 
 all: Test_AES_x
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $<
 
-Test_AES_x: Test_AES.cpp simpleAES.o homAES.o ../fhe.a
-	$(CC) $(CFLAGS) -o $@ $< simpleAES.o homAES.o ../fhe.a $(LDLIBS)
+Test_AES_x: Test_AES.cpp simpleAES.o homAES.o
+	$(CC) $(CFLAGS) -o $@ $< simpleAES.o homAES.o $(LDLIBS)
 
 clean:
 	rm -f *.o *_x *_x.exe *.a core.*

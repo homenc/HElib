@@ -9,7 +9,7 @@ namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
 #include <cstring>
 #include "homAES.h"
-#include "Ctxt.h"
+#include "FHE/Ctxt.h"
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,   d, m1, m2, m3,   g1,    g2,   g3,ord1,ord2,ord3, c_m}

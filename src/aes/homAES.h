@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <NTL/ZZX.h>
 #include <NTL/GF2X.h>
-#include "EncryptedArray.h"
-#include "hypercube.h"
+#include "FHE/EncryptedArray.h"
+#include "FHE/hypercube.h"
 
 #ifdef USE_ZZX_POLY
 #define PolyType ZZX
