@@ -42,13 +42,13 @@ inline bool isGF2(const SPmodulus& spm) { return spm.modulus()==2; }
 // macro for non-const unary operators (e.g., ++SPX)
 #define sppolyUnary(fnc) SPX& fnc() {			\
     if (isGF2(modulus)) {NTL::fnc(gf2x);}			\
-    else {NTL::zz_pPush(getContext(modulus)); NTL::fnc(zzpx);}	\
+    else {NTL::zz_pPush push(getContext(modulus)); NTL::fnc(zzpx);}	\
     return *this;}
 
 // macro for non-const binary operators that take a long (SPX += long)
 #define sppolyBinaryLeft(fnc) SPX fnc(long y) {		\
   if (isGF2(modulus)) { NTL::fnc(gf2x,y); }			\
-  else { NTL::zz_pPush(getContext(modulus)); NTL::fnc(zzpx,y); }\
+  else { NTL::zz_pPush push(getContext(modulus)); NTL::fnc(zzpx,y); }\
   return *this; }
 
 // macro for non-const binay operators that take another SPX
@@ -56,7 +56,7 @@ inline bool isGF2(const SPmodulus& spm) { return spm.modulus()==2; }
 #define sppolyBinaryBoth(fnc) SPX fnc(const SPX& y) {	\
   ensureConsistency(*this,y);					\
   if (isGF2(modulus)) { NTL::fnc(gf2x,y.gf2x); }               \
-  else { NTL::zz_pPush(getContext(modulus)); NTL::fnc(zzpx,y.zzpx); }	\
+  else { NTL::zz_pPush push(getContext(modulus)); NTL::fnc(zzpx,y.zzpx); }	\
   return *this;}
 
 // The main class SPX, declerations follow GF2X, zz_pX
@@ -77,7 +77,7 @@ public:
       NTL::conv(v2, v);
       NTL::conv(gf2x, v2);
     } else {
-      NTL::zz_pPush(getContext(modulus));
+      NTL::zz_pPush push(getContext(modulus));
       NTL::Vec<NTL::zz_p> vp;
       NTL::conv(vp, v);
       NTL::conv(zzpx, vp);
@@ -94,7 +94,7 @@ public:
       NTL::Vec<NTL::GF2> v2 = NTL::VectorCopy(gf2x, n);
       NTL::conv(v, v2);
     } else {
-      NTL::zz_pPush(getContext(modulus));
+      NTL::zz_pPush push(getContext(modulus));
       NTL::Vec<NTL::zz_p> vp = NTL::VectorCopy(zzpx, n);
       NTL::conv(v, vp);
     }
@@ -205,7 +205,7 @@ public:
   void negate() {
     if (isGF2(modulus)) return; // nothing to do, over GF2 we have X == -X
     else {
-      NTL::zz_pPush(getContext(modulus));
+      NTL::zz_pPush push(getContext(modulus));
       NTL::negate(zzpx, zzpx);
     }
   }
@@ -246,14 +246,14 @@ typedef NTL::Vec<SPX> vec_SPX; // a conveneince vector decleration
 // macro for function with signature void fnc(const SPX& x)
 #define sppolyOnePoly(fnc) fnc(SPX& x) {	 \
     if (isGF2(x.getMod())) NTL::fnc(x.gf2x);	 \
-    else { NTL::zz_pPush(getContext(x.getMod())); \
+    else { NTL::zz_pPush push(getContext(x.getMod())); \
            NTL::fnc(x.zzpx);}}
 
 // macro for function with signature non-void fnc(const type& x)
 // type is either SPX or SPXModulus
 #define sppolyConstOnePoly(fnc, typ) fnc(const typ& x) { \
     if (isGF2(x.getMod())) return NTL::fnc(x.gf2x); \
-    else { NTL::zz_pPush(getContext(x.getMod()));      \
+    else { NTL::zz_pPush push(getContext(x.getMod()));      \
            return NTL::fnc(x.zzpx);}}
 
 // macro for function with signature void fnc(SPX& x, const type& arg)
@@ -261,7 +261,7 @@ typedef NTL::Vec<SPX> vec_SPX; // a conveneince vector decleration
 #define sppolyTwoPoly(fnc,typ) fnc(SPX& x, typ& y) {\
     x.resetMod(y.getMod());				     \
     if (isGF2(x.getMod())) NTL::fnc(x.gf2x, y.gf2x);    \
-    else { NTL::zz_pPush(getContext(x.getMod()));	     \
+    else { NTL::zz_pPush push(getContext(x.getMod()));	     \
            NTL::fnc(x.zzpx, y.zzpx);}}
 
 // macro for function with signature
@@ -272,7 +272,7 @@ typedef NTL::Vec<SPX> vec_SPX; // a conveneince vector decleration
     SPX::ensureConsistency(a,b);\
     x.resetMod(a.getMod());	   \
     if (isGF2(x.getMod())) NTL::fnc(x.gf2x, a.gf2x, b.gf2x);\
-    else { NTL::zz_pPush(getContext(x.getMod()));	   \
+    else { NTL::zz_pPush push(getContext(x.getMod()));	   \
            NTL::fnc(x.zzpx, a.zzpx, b.zzpx);}}
 
 // macro for function with signature
@@ -284,7 +284,7 @@ typedef NTL::Vec<SPX> vec_SPX; // a conveneince vector decleration
     x.resetMod(a.getMod());					    \
     if (isGF2(x.getMod()))					    \
       NTL::fnc(x.gf2x, a.gf2x, b.gf2x, f.gf2x);	    \
-    else { NTL::zz_pPush(getContext(x.getMod()));		    \
+    else { NTL::zz_pPush push(getContext(x.getMod()));		    \
            NTL::fnc(x.zzpx, a.zzpx, b.zzpx, f.zzpx);}}
 
 // macro for function with signature
@@ -293,7 +293,7 @@ typedef NTL::Vec<SPX> vec_SPX; // a conveneince vector decleration
   fnc(SPX& x, const SPX& a, typ b) {		    \
     x.resetMod(a.getMod());					\
     if (isGF2(x.getMod())) NTL::fnc(x.gf2x, a.gf2x, b);\
-    else { NTL::zz_pPush(getContext(x.getMod()));	    \
+    else { NTL::zz_pPush push(getContext(x.getMod()));	    \
            NTL::fnc(x.zzpx, a.zzpx, b);}}
 
 // macro for function with signature
@@ -303,7 +303,7 @@ typedef NTL::Vec<SPX> vec_SPX; // a conveneince vector decleration
     SPX::ensureConsistency(g,F);			      \
     x.resetMod(g.getMod());				      \
     if (isGF2(g.getMod())) NTL::fnc(x.gf2x, g.gf2x, F.gf2x, m);\
-    else { NTL::zz_pPush(getContext(g.getMod()));	      \
+    else { NTL::zz_pPush push(getContext(g.getMod()));	      \
            NTL::fnc(x.zzpx, g.zzpx, F.zzpx, m);}}
 
 /**************************************************************************\
@@ -326,7 +326,7 @@ inline long coeff(const SPX& x, long i)
 {
   if (isGF2(x.getMod())) return NTL::conv<long>(NTL::coeff(x.gf2x, i));
   else { 
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     return NTL::conv<long>(NTL::coeff(x.zzpx,i));
   }
 }
@@ -478,7 +478,7 @@ inline void DivRem(SPX& q, SPX& r, const SPX& a, const T& b)
   if (isGF2(a.getMod()))
     NTL::DivRem(q.gf2x, r.gf2x, a.gf2x, b.gf2x);
   else {
-    NTL::zz_pPush(getContext(a.getMod()));
+    NTL::zz_pPush push(getContext(a.getMod()));
     NTL::DivRem(q.zzpx, r.zzpx, a.zzpx, b.zzpx);
   }
 }
@@ -499,7 +499,7 @@ inline bool divide(SPX& q, const SPX& a, const SPX& b)
   q.resetMod(a.getMod());
   if (isGF2(a.getMod())) return NTL::divide(q.gf2x, a.gf2x, b.gf2x);
   else {
-    NTL::zz_pPush(getContext(a.getMod()));
+    NTL::zz_pPush push(getContext(a.getMod()));
     return NTL::divide(q.zzpx, a.zzpx, b.zzpx);
   }
 }
@@ -510,7 +510,7 @@ inline bool divide(const SPX& a, const SPX& b)
   if (!isGF2(a.getMod()) && !a.getMod().equals(b.getMod())) return false;
   if (isGF2(a.getMod())) return NTL::divide(a.gf2x, b.gf2x);
   else {
-    NTL::zz_pPush(getContext(a.getMod()));
+    NTL::zz_pPush push(getContext(a.getMod()));
     return NTL::divide(a.zzpx, b.zzpx);
   }
 }
@@ -541,7 +541,7 @@ inline void XGCD(SPX& d, SPX& s, SPX& t,
   if (isGF2(a.getMod()))
     NTL::XGCD(d.gf2x, s.gf2x, t.gf2x, a.gf2x, b.gf2x);
   else {
-    NTL::zz_pPush(getContext(a.getMod()));
+    NTL::zz_pPush push(getContext(a.getMod()));
     NTL::XGCD(d.zzpx, s.zzpx, t.zzpx, a.zzpx, b.zzpx);
   }
 }
@@ -568,7 +568,7 @@ inline std::istream& operator>>(std::istream& s, SPX& x)
 {
   if (isGF2(x.getMod())) return s >> x.gf2x;
   else {
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     return s >> x.gf2x;
   }
 }
@@ -577,7 +577,7 @@ inline std::ostream& operator<<(std::ostream& s, const SPX& x)
 {
   if (isGF2(x.getMod())) return s << x.gf2x;
   else {
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     return s << x.zzpx;
   }
 }
@@ -601,7 +601,7 @@ inline void reverse(SPX& x, const SPX& a, long hi=-2)
   x.resetMod(a.getMod());
   if (isGF2(x.getMod())) NTL::reverse(x.gf2x, a.gf2x, hi);
   else {
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     NTL::reverse(x.zzpx, a.zzpx, hi);
   }
 }
@@ -625,7 +625,7 @@ inline void random(SPX& x, long n, const SPmodulus& mod)
   x.resetMod(mod);
   if (isGF2(x.getMod())) NTL::random(x.gf2x, n);
   else {
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     NTL::random(x.zzpx, n);
   }
 }
@@ -720,7 +720,7 @@ inline bool InvModStatus(SPX& x, const SPX& a, const SPX& f)
   if (isGF2(a.getMod()))
     return NTL::InvModStatus(x.gf2x, a.gf2x, f.gf2x);
   else {
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     return NTL::InvModStatus(x.zzpx, a.zzpx, f.zzpx);
   }
 }
@@ -845,7 +845,7 @@ void PowerXMod(SPX& x, T e, const SPXModulus& F)
   x.resetMod(F.getMod());
   if (isGF2(x.getMod())) NTL::PowerXMod(x.gf2x, e, F.gf2x);
   else {
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     NTL::PowerXMod(x.zzpx, e, F.zzpx);
   }
 }
@@ -859,7 +859,7 @@ void PowerMod(SPX& x, const SPX& a, Z e, const SPXModulus& F)
   if (isGF2(a.getMod()))
     NTL::PowerMod(x.gf2x, a.gf2x, e, F.gf2x);
   else {
-    NTL::zz_pPush(getContext(a.getMod()));
+    NTL::zz_pPush push(getContext(a.getMod()));
     NTL::PowerMod(x.zzpx, a.zzpx, e, F.zzpx);
   }
 }
@@ -896,7 +896,7 @@ inline SPX& operator/=(SPX& x, const SPXModulus& F)
   if (isGF2(x.getMod()))
     x.gf2x /= F.gf2x;
   else {
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     x.zzpx /= F.zzpx;
   }
   return x;
@@ -908,7 +908,7 @@ inline SPX& operator%=(SPX& x, const SPXModulus& F)
   if (isGF2(x.getMod()))
     x.gf2x %= F.gf2x;
   else {
-    NTL::zz_pPush(getContext(x.getMod()));
+    NTL::zz_pPush push(getContext(x.getMod()));
     x.zzpx %= F.zzpx;
   }
   return x;
@@ -948,7 +948,7 @@ inline void Comp2Mod(SPX& x1, SPX& x2, const SPX& g1, const SPX& g2,
     NTL::Comp2Mod(x1.gf2x, x2.gf2x,
 	     g1.gf2x, g2.gf2x, h.gf2x, F.gf2x);
   else {
-    NTL::zz_pPush(getContext(F.getMod()));
+    NTL::zz_pPush push(getContext(F.getMod()));
     NTL::Comp2Mod(x1.zzpx, x2.zzpx,
 	     g1.zzpx, g2.zzpx, h.zzpx, F.zzpx);
   }
@@ -967,7 +967,7 @@ inline void Comp3Mod(SPX& x1, SPX& x2, SPX& x3,
     NTL::Comp3Mod(x1.gf2x, x2.gf2x, x3.gf2x,
 	     g1.gf2x, g2.gf2x, g3.gf2x, h.gf2x, F.gf2x);
   else {
-    NTL::zz_pPush(getContext(F.getMod()));
+    NTL::zz_pPush push(getContext(F.getMod()));
     NTL::Comp3Mod(x1.zzpx, x2.zzpx, x3.zzpx,
 	     g1.zzpx, g2.zzpx, g3.zzpx, h.zzpx, F.zzpx);
   }
@@ -1024,7 +1024,7 @@ inline void build(SPXArgument& H,
   if (isGF2(h.getMod()))
     NTL::build(H.gf2x, h.gf2x, F.gf2x, m);
   else {
-    NTL::zz_pPush(getContext(h.getMod()));
+    NTL::zz_pPush push(getContext(h.getMod()));
     NTL::build(H.zzpx, h.zzpx, F.zzpx, m);    
   }
 }
@@ -1038,7 +1038,7 @@ inline void CompMod(SPX& x, const SPX& g,
   if (isGF2(F.getMod()))
     NTL::CompMod(x.gf2x, g.gf2x, H.gf2x, F.gf2x);
   else {
-    NTL::zz_pPush(getContext(F.getMod()));
+    NTL::zz_pPush push(getContext(F.getMod()));
     NTL::CompMod(x.zzpx, g.zzpx, H.zzpx, F.zzpx);
   }
 }
@@ -1074,7 +1074,7 @@ inline void project(long& x, const NTL::Vec<long>& a, const SPX& b)
     NTL::conv(x,x2);
   }
   else {
-    NTL::zz_pPush(getContext(b.getMod()));
+    NTL::zz_pPush push(getContext(b.getMod()));
     NTL::zz_p xp;
     NTL::vec_zz_p ap = NTL::conv<NTL::vec_zz_p>(a);
     NTL::project(xp, ap, b.zzpx);
@@ -1099,7 +1099,7 @@ inline void ProjectPowers(NTL::Vec<long>& x, const NTL::Vec<long>& a, long k,
     NTL::conv(x,x2);
   }
   else {
-    NTL::zz_pPush(getContext(F.getMod()));
+    NTL::zz_pPush push(getContext(F.getMod()));
     NTL::vec_zz_p xp;
     NTL::vec_zz_p ap = NTL::conv<NTL::vec_zz_p>(a);
     NTL::ProjectPowers(xp, ap, k, h.zzpx, F.zzpx);
@@ -1141,7 +1141,7 @@ MinPolySeq(SPX& h, const NTL::Vec<long>& a, long m, const SPmodulus& mod)
     NTL::MinPolySeq(h.gf2x, a2, m);
   }
   else {
-    NTL::zz_pPush(getContext(h.getMod()));
+    NTL::zz_pPush push(getContext(h.getMod()));
     NTL::vec_zz_p ap = NTL::conv<NTL::vec_zz_p>(a);
     NTL::MinPolySeq(h.zzpx, ap, m);
   }
@@ -1215,7 +1215,7 @@ void TraceMod(long& x, const SPX& a, const T& F)
     NTL::TraceMod(x2, a.gf2x, F.gf2x);
     NTL::conv(x,x2);
   } else {
-    NTL::zz_pPush(getContext(a.getMod()));
+    NTL::zz_pPush push(getContext(a.getMod()));
     NTL::zz_p xp;
     NTL::TraceMod(xp, a.zzpx, F.zzpx);
     NTL::conv(x,xp);
@@ -1237,7 +1237,7 @@ inline void TraceVec(NTL::Vec<long>& S, const SPX& f)
     NTL::conv(S,S2);
   }
   else {
-    NTL::zz_pPush(getContext(f.getMod()));
+    NTL::zz_pPush push(getContext(f.getMod()));
     NTL::vec_zz_p Sp;
     TraceVec(Sp, f.zzpx);
     NTL::conv(S,Sp);
@@ -1310,7 +1310,7 @@ inline void EDF(vec_SPX& factors, const SPX& f, long d, long verbose=0)
     for (long i=0; i<factors.length(); i++)
       factors[i].gf2x = fac2[i];
   } else {
-    NTL::zz_pPush(getContext(f.getMod()));
+    NTL::zz_pPush push(getContext(f.getMod()));
     NTL::vec_zz_pX facp;
     NTL::EDF(facp, f.zzpx, PowerXMod(NTL::zz_p::modulus(),f.zzpx), d, verbose);
     factors.SetLength(facp.length(), tmp); // allocate space
@@ -1336,7 +1336,7 @@ inline void SFCanZass(vec_SPX& factors, const SPX& f, long verbose=0)
     for (long i=0; i<factors.length(); i++)
       factors[i].gf2x = fac2[i];
   } else {
-    NTL::zz_pPush(getContext(f.getMod()));
+    NTL::zz_pPush push(getContext(f.getMod()));
     NTL::vec_zz_pX facp;
     NTL::SFCanZass(facp, f.zzpx, verbose);
     factors.SetLength(facp.length(), tmp); // allocate space
@@ -1363,7 +1363,7 @@ inline void CanZass(vec_pair_SPX_long& factors, const SPX& f, long verbose=0)
       factors[i].b = fac2[i].b;
     }
   } else {
-    NTL::zz_pPush(getContext(f.getMod()));
+    NTL::zz_pPush push(getContext(f.getMod()));
     NTL::vec_pair_zz_pX_long facp;
     NTL::CanZass(facp, f.zzpx, verbose);
     factors.SetLength(facp.length(), tmp); // allocate space
@@ -1392,7 +1392,7 @@ inline void mul(SPX& f, const vec_pair_SPX_long& v, const SPmodulus& mod)
     }
     NTL::mul(f.gf2x, v2);
   } else {
-    NTL::zz_pPush(getContext(f.getMod()));
+    NTL::zz_pPush push(getContext(f.getMod()));
     NTL::vec_pair_zz_pX_long vp;
     vp.SetLength(v.length());
     for (long i=0; i<vp.length(); i++) {
@@ -1417,7 +1417,7 @@ inline bool IterIrredTest(const SPX& f)
   if (isGF2(f.getMod()))
     return NTL::IterIrredTest(f.gf2x);
   else {
-    NTL::zz_pPush(getContext(f.getMod()));
+    NTL::zz_pPush push(getContext(f.getMod()));
     return NTL::IterIrredTest(f.zzpx);
   }
 }
@@ -1432,7 +1432,7 @@ inline void BuildSparseIrred(SPX& f, long n, const SPmodulus& mod)
   if (isGF2(mod))
     NTL::BuildSparseIrred(f.gf2x, n);
   else {
-    NTL::zz_pPush(getContext(f.getMod()));
+    NTL::zz_pPush push(getContext(f.getMod()));
     NTL::BuildSparseIrred(f.zzpx, n);
   }
 }
@@ -1464,7 +1464,7 @@ inline void BuildIrred(SPX& f, long n, const SPmodulus& mod)
   if (isGF2(mod))
     NTL::BuildIrred(f.gf2x, n);
   else {
-    NTL::zz_pPush(getContext(f.getMod()));
+    NTL::zz_pPush push(getContext(f.getMod()));
     NTL::BuildIrred(f.zzpx, n);
   }
 }
@@ -1492,7 +1492,7 @@ inline void BuildRandomIrred(SPX& f, const SPX& g)
   if (isGF2(g.getMod()))
     NTL::BuildRandomIrred(f.gf2x, g.gf2x);
   else {
-    NTL::zz_pPush(getContext(g.getMod()));
+    NTL::zz_pPush push(getContext(g.getMod()));
     NTL::BuildRandomIrred(f.zzpx, g.zzpx);
   }
 }
