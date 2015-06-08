@@ -1,3 +1,4 @@
+
 #ifndef _HELIB_SPX_H_
 #define _HELIB_SPX_H_
 /* SPX.h - A MUX class that implements either GF2X or zz_pX: it keeps both
