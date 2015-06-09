@@ -22,6 +22,7 @@
 
 #include <NTL/Lazy.h>
 #include <NTL/pair.h>
+#include <NTL/SmartPtr.h>
 #include "FHE.h"
 #include "timing.h"
 #include "multicore.h"
@@ -29,6 +30,11 @@
 #ifdef FHE_BOOT_THREADS
 extern NTL_THREAD_LOCAL MultiTask *bootTask;
 #endif
+
+
+// DIRT: we're using undocumented NTL interfaces here
+//   also...this probably should be defined in NTL, anyway....
+#define FHE_MORE_UNWRAPARGS(n) NTL_SEPARATOR_##n NTL_REPEATER_##n(NTL_UNWRAPARG)
 
 
 
@@ -158,6 +164,8 @@ public:
 
   virtual EncryptedArrayBase* clone() const = 0;
   // makes this usable with cloned_ptr
+
+  virtual PA_tag getTag() const = 0;
 
   virtual const FHEcontext& getContext() const = 0;
   virtual const long getDegree() const = 0;
@@ -382,6 +390,20 @@ public:
   }
 
   virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
+
+  virtual PA_tag getTag() const { return tag; }
+
+// DIRT: we're using undocumented NTL interfaces here
+#define FHE_DEFINE_LOWER_DISPATCH(n)\
+  template<template <class> class T NTL_MORE_ARGTYPES(n)>\
+  void dispatch(NTL_VARARGS(n)) const\
+  {\
+    T<type>::apply(*this FHE_MORE_UNWRAPARGS(n));\
+  }\
+
+
+  NTL_FOREACH_ARG(FHE_DEFINE_LOWER_DISPATCH)
+
 
   const RX& getG() const { return mappingData.getG(); }
 
@@ -670,6 +692,34 @@ public:
 
   ///@{
   //! @name Direct access to EncryptedArrayBase methods
+
+  PA_tag getTag() const { return rep->getTag(); }
+
+// DIRT: we're using undocumented NTL interfaces here
+#define FHE_DEFINE_UPPER_DISPATCH(n)\
+  template<template <class> class T NTL_MORE_ARGTYPES(n)>\
+  void dispatch(NTL_VARARGS(n)) const\
+  {\
+    switch (getTag()) {\
+      case PA_GF2_tag: {\
+        const EncryptedArrayDerived<PA_GF2> *p = \
+          static_cast< const EncryptedArrayDerived<PA_GF2> *>(rep.get_ptr());\
+        p->dispatch<T>(NTL_PASSARGS(n));\
+        break;\
+      }\
+      case PA_zz_p_tag: {\
+        const EncryptedArrayDerived<PA_zz_p> *p = \
+          static_cast< const EncryptedArrayDerived<PA_zz_p> *>(rep.get_ptr());\
+        p->dispatch<T>(NTL_PASSARGS(n));\
+        break;\
+      }\
+      default: TerminalError("bad tag"); \
+    }\
+  }\
+
+
+NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
+
 
   const FHEcontext& getContext() const { return rep->getContext(); }
   const PAlgebraMod& getAlMod() const { return alMod; }
