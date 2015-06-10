@@ -13,176 +13,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "matrix.h"
 #include <NTL/ZZ.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <cassert>
 #include <cstdio>
 
-
-// Copied from EncryptedArray.cpp -- it shoudn't be there.
-
-// plaintextAutomorph: an auxilliary routine...maybe palce in NumbTh?
-// Compute b(X) = a(X^k) mod Phi_m(X). Result is calclated in the output b
-// "in place", so a should not alias b.
-template <class RX, class RXModulus>
-void free_plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar, 
-                       const RXModulus& PhimX)
-{
-  long m  = zMStar.getM();
-
-  assert(zMStar.inZmStar(k));
-
-  b.SetLength(m);
-  for (long j = 0; j < m; j++) b[j] = 0;
-
-  long d = deg(a);
-
-  // compute b(X) = a(X^k) mod (X^m-1)
-  mulmod_precon_t precon = PrepMulModPrecon(k, m);
-  for (long j = 0; j <= d; j++) 
-    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
-  b.normalize();
-
-  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
-}
-
-
-
-// This code has a complexity of N+d (instead of N*d) where N is the number of
-// nonzero diagonal blocks. However, it requires space for d extra ciphertexts
-template<class type>
-class free_mat_mul_impl {
-public:
-  PA_INJECT(type);
-
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) 
-  {
-    FHE_TIMER_START;
-    assert(&ea == &mat.getEA().getDerived(type()));
-    assert(&ea.getContext() == &ctxt.getContext());
-
-    const PAlgebra& zMStar = ea.getContext().zMStar;
-    long p = zMStar.getP(); 
-    long m = zMStar.getM();
-    const RXModulus& F = ea.getTab().getPhimXMod();
-
-    RBak bak; bak.save(); ea.getTab().restoreContext();
-
-    const PlaintextBlockMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
-
-    ctxt.cleanUp(); // not sure, but this may be a good idea
-
-    long nslots = ea.size();
-    long d = ea.getDegree();
-
-    Vec< shared_ptr<Ctxt> > acc;
-    acc.SetLength(d);
-    for (long k = 0; k < d; k++)
-      acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
-
-    mat_R entry;
-    entry.SetDims(d, d);
-
-    vector<RX> entry1;
-    entry1.resize(d);
-    
-    vector< vector<RX> > diag;
-    diag.resize(nslots);
-    for (long j = 0; j < nslots; j++) diag[j].resize(d);
-
-    for (long i = 0; i < nslots; i++) { // process diagonal i
-      bool zDiag = true;
-      long nzLast = -1;
-
-      for (long j = 0; j < nslots; j++) {
-        bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j);
-        assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
-        // get(...) returns true if the entry is empty, false otherwise
-
-        if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
-
-        if (!zEntry) {    // non-empty entry
-          zDiag = false;  // mark diagonal as non-empty
-
-          // clear entries between last nonzero entry and this one
-          for (long jj = nzLast+1; jj < j; jj++) {
-            for (long k = 0; k < d; k++)
-              clear(diag[jj][k]);
-          }
-          nzLast = j;
-
-          // recode entry as a vector of polynomials
-          for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
-
-          // compute the lin poly coeffs
-          ea.buildLinPolyCoeffs(diag[j], entry1);
-        }
-      }
-      if (zDiag) continue; // zero diagonal, continue
-
-      // clear trailing zero entries    
-      for (long jj = nzLast+1; jj < nslots; jj++) {
-        for (long k = 0; k < d; k++)
-          clear(diag[jj][k]);
-      }
-
-      // now diag[j] contains the lin poly coeffs
-
-      Ctxt shCtxt = ctxt;
-      ea.rotate(shCtxt, i); 
-      shCtxt.cleanUp();
-
-      RX cpoly1, cpoly2;
-      ZZX cpoly;
-
-      // apply the linearlized polynomial
-      for (long k = 0; k < d; k++) {
-
-        // compute the constant
-        bool zConst = true;
-        vector<RX> cvec;
-        cvec.resize(nslots);
-        for (long j = 0; j < nslots; j++) {
-          cvec[j] = diag[j][k];
-          if (!IsZero(cvec[j])) zConst = false;
-        }
-
-        if (zConst) continue;
-
-        ea.encode(cpoly, cvec);
-        conv(cpoly1, cpoly);
-
-        // apply inverse automorphism to constant
-        free_plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar, F);
-        conv(cpoly, cpoly2);
-        Ctxt shCtxt1 = shCtxt;
-        shCtxt1.multByConstant(cpoly);
-        *acc[k] += shCtxt1;
-      }
-    }
-
-    Ctxt res(ZeroCtxtLike, ctxt);
-
-    for (long k = 0; k < d; k++) {
-      acc[k]->frobeniusAutomorph(k);
-      res += *acc[k];
-    }
-
-    ctxt = res;
-  }
-};
-
-
-void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat)
-{
-  ea.dispatch<free_mat_mul_impl>(Fwd(ctxt), mat);
-}
 
 
 
@@ -219,12 +55,15 @@ public:
     out = data;
     return false;
   }
+
 };
+
+
 
 PlaintextBlockMatrixBaseInterface *buildSingleBlockMatrix(const EncryptedArray& ea,
                                                           const vector<ZZX>& vec)
 {
-  switch (ea.getContext().alMod.getTag()) {
+  switch (ea.getTag()) {
     case PA_GF2_tag: {
       return new SingleBlockMatrix<PA_GF2>(ea, vec);
     }
@@ -283,7 +122,7 @@ public:
 PlaintextBlockMatrixBaseInterface *buildMultiBlockMatrix(const EncryptedArray& ea,
                                                           const vector< vector<ZZX> >& vec)
 {
-  switch (ea.getContext().alMod.getTag()) {
+  switch (ea.getTag()) {
     case PA_GF2_tag: {
       return new MultiBlockMatrix<PA_GF2>(ea, vec);
     }
