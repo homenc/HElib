@@ -26,6 +26,11 @@ void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextBlockMatr
 void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat);
 void free_mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat);
 
+void free_compMat(const EncryptedArray& ea, 
+                 CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
+
+void free_compMat(const EncryptedArray& ea, 
+                 CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
 
 #endif /* ifdef FHE_matrix_H_ */
 

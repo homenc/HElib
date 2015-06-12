@@ -201,8 +201,8 @@ public:
   //! a row matrix v, and replaced by an encryption of v * mat.
   //! Optimized for sparse diagonals
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0; // FREE
-  virtual void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const = 0;
-  virtual void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const = 0;
+  virtual void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const = 0; // FREE
+  virtual void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const = 0; //FREE
 
   //! @brief Multiply ctx by plaintext block matrix (over the base field/ring).
   //! Ctxt is treated as a row matrix v, and replaced by an encryption of v*mat.
@@ -446,8 +446,8 @@ public:
   virtual void compMat_dense(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const;
 
   virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const; // FREE
-  virtual void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const;
-  virtual void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const;
+  virtual void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const; // FREE
+  virtual void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const; // FREE
 
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
   virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const;
@@ -744,10 +744,10 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const  // FREE
   { rep->mat_mul(ctxt, mat); }
 
-  void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const
+  void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const // FREE
   { rep->compMat(cmat, mat); }
 
-  void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const
+  void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const // FREE
   { rep->compMat(cmat, mat); }
 
   void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const
@@ -1492,29 +1492,43 @@ void mat_mul(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat,
 //! matrices over Z_{p^r}
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
        	                   const EncryptedArray& ea);
+
+#if 0
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
        	                   const EncryptedArrayDerived<PA_GF2>& ea);
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
        	                   const EncryptedArrayDerived<PA_zz_p>& ea);
+#endif 
+
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
        	                   const EncryptedArray& ea);
+
+#if 0
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
        	                   const EncryptedArrayDerived<PA_GF2>& ea);
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
        	                   const EncryptedArrayDerived<PA_zz_p>& ea);
+#endif
 
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
        	                   const EncryptedArray& ea);
+
+#if 0
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
        	                   const EncryptedArrayDerived<PA_GF2>& ea);
 void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
        	                   const EncryptedArrayDerived<PA_zz_p>& ea);
+#endif
+
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
        	                   const EncryptedArray& ea);
+
+#if 0
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
        	                   const EncryptedArrayDerived<PA_GF2>& ea);
 void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
        	                   const EncryptedArrayDerived<PA_zz_p>& ea);
+#endif
 
 /*************** End linear transformation functions ****************/
 /********************************************************************/

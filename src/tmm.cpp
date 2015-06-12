@@ -220,7 +220,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     // Test cached verions of the mult-by-matrix operation
     {
       CachedPtxtMatrix zzxMat;
-      ea.compMat(zzxMat, *ptr);
+      free_compMat(ea, zzxMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedPtxtMatrix... " << std::flush;
       mat_mul(ctxt2, zzxMat, ea);
@@ -232,7 +232,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     }
     {
       CachedDCRTPtxtMatrix dcrtMat;
-      ea.compMat(dcrtMat, *ptr);
+      free_compMat(ea, dcrtMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedDCRTPtxtMatrix... " << std::flush;
       mat_mul(ctxt2, dcrtMat, ea);

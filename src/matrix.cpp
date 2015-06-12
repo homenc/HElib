@@ -392,5 +392,95 @@ void free_mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMat
 
 
 
+template<class type>
+class free_compMat_impl{
+public:
+  PA_INJECT(type)
+
+  static
+  void apply(const EncryptedArrayDerived<type>& ea, 
+             CachedPtxtMatrix& cmat,
+             const PlaintextMatrixBaseInterface& mat) 
+  {
+    FHE_TIMER_START;
+    assert(&ea == &mat.getEA().getDerived(type()));
+
+    RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    // Get the derived type
+    const PlaintextMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+    long nslots = ea.size();
+    long d = ea.getDegree();
+    RX entry;
+    vector<RX> diag;
+    diag.resize(nslots);
+    cmat.SetLength(nslots);
+
+    // Process the diagonals one at a time
+    for (long i = 0; i < nslots; i++) {  // process diagonal i
+      bool zDiag = true; // is this a zero diagonal?
+      long nzLast = -1;  // index of last non-zero entry on this diagonal
+
+      // Compute constants for each entry on this diagonal
+      for (long j = 0; j < nslots; j++) { // process entry j
+        bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j); // callback
+        assert(zEntry || deg(entry) < d);
+
+        if (!zEntry && IsZero(entry)) zEntry = true; // check for zero
+
+        if (!zEntry) { // non-zero diagonal entry
+
+          zDiag = false; // diagonal is non-zero
+
+          // clear entries between last nonzero entry and this one
+          for (long jj = nzLast+1; jj < j; jj++) clear(diag[jj]);
+          nzLast = j;
+
+          diag[j] = entry;
+        }
+      }
+      
+      if (zDiag) continue; // zero diagonal, continue
+
+      // clear trailing zero entries
+      for (long jj = nzLast+1; jj < nslots; jj++) clear(diag[jj]);
+
+      // Now we have the constants for all the diagonal entries, encode the
+      // diagonal as a single polynomial with these constants in the slots
+      ZZX cpoly;
+      ea.encode(cpoly, diag);
+      cmat[i] = ZZXptr(new ZZX(cpoly));
+    }
+  }
+
+
+};
+
+
+void free_compMat(const EncryptedArray& ea, 
+                 CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat)
+{
+  ea.dispatch<free_compMat_impl>(Fwd(cmat), mat);
+}
+
+
+
+
+void free_compMat(const EncryptedArray& ea, 
+                 CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat)
+{
+  FHE_TIMER_START;
+  CachedPtxtMatrix zzxMat;
+  free_compMat(ea, zzxMat, mat);
+  long n = zzxMat.length();
+  cmat.SetLength(n);
+  for (long i=0; i<n; i++) if (zzxMat[i])
+    cmat[i] = DCRTptr(new DoubleCRT(*zzxMat[i], ea.getContext()));
+    // DoubleCRT defined relative to all primes, even the "special" ones
+}
+
+
 
 
