@@ -219,7 +219,7 @@ public:
   //! We also allow dim to be one greater than the number of generators in
   //! zMStar, as if there were an implicit generator of order 1, this is
   //! convenient in some applications.
-  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
+  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const = 0; // FREE
   virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
   virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
 
@@ -453,7 +453,7 @@ public:
   virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
   virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
 
-  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const;
+  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const; // FREE
   virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const;
   virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const;
 
@@ -735,7 +735,7 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const  // FREE
   { rep->mat_mul(ctxt, mat); }
 
-  void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const 
+  void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const  // FREE
   { rep->mat_mul1D(ctxt, mat, dim); }
 
   void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const 

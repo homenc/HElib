@@ -483,13 +483,13 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 /*****************************************************************/
 /****************** Linear transformation code *******************/
 
-// plaintextAutomorph: an auxilliary routine...maybe palce in NumbTh?
+// plaintextAutomorph: an auxilliary routine...
 // Compute b(X) = a(X^k) mod Phi_m(X). Result is calclated in the output b
 // "in place", so a should not alias b.
 
-template <class RX, class RXModulus>
+template <class RX, class RXModulus> static
 void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar, 
-                       const RXModulus& PhimX)
+                        const RXModulus& PhimX)
 {
   long m  = zMStar.getM();
 

@@ -15,6 +15,7 @@
  */
 #include "EvalMap.h"
 #include "powerful.h"
+#include "matrix.h"
 
 // The callback interface for the matrix-multiplication routines.
 
@@ -397,7 +398,7 @@ void EvalMap::apply(Ctxt& ctxt) const
 #ifdef EVALMAP_CACHED // cached matrix of constants
       mat_mul1D(ctxt, matvec[i], i, ea);
 #else
-      ea.mat_mul1D(ctxt, *matvec[i], i);
+      free_mat_mul1D(ea, ctxt, *matvec[i], i);
 #endif
     }
   }
@@ -406,7 +407,7 @@ void EvalMap::apply(Ctxt& ctxt) const
 #ifdef EVALMAP_CACHED // cached matrix of constants
       mat_mul1D(ctxt, matvec[i], i, ea);
 #else
-      ea.mat_mul1D(ctxt, *matvec[i], i);
+      free_mat_mul1D(ea, ctxt, *matvec[i], i);
 #endif
     }
 
