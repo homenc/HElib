@@ -329,7 +329,6 @@ public:
   // minimized, and that the work done at the non-leaves is dominated by the
   // work done at the leaves.
 
-  //! \cond FALSE (make doxygen ignore these classes)
   struct MatMulDimComp {
     const EncryptedArrayDerived<type> *ea;
     MatMulDimComp(const EncryptedArrayDerived<type> *_ea) : ea(_ea) {}
@@ -340,7 +339,6 @@ public:
                 (ea->sizeOfDimension(i) < ea->sizeOfDimension(j))  );
     }
   };
-  //! \endcond
 
   // Multiply a ciphertext vector by a plaintext dense matrix
   static
@@ -456,7 +454,133 @@ public:
   }
 
 
+  static
+  void apply(const EncryptedArrayDerived<type>& ea, 
+             CachedPtxtBlockMatrix& cmat,
+             const PlaintextBlockMatrixBaseInterface& mat) 
+  {
+    FHE_TIMER_START;
+    assert(&ea == &mat.getEA().getDerived(type()));
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long p = zMStar.getP(); 
+    long m = zMStar.getM();
+    const RXModulus& F = ea.getTab().getPhimXMod();
+
+    RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    // Get the derived type
+    const PlaintextBlockMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
+
+    long nslots = ea.size();
+    long d = ea.getDegree();
+
+    mat_R entry;
+    entry.SetDims(d, d);
+    vector<RX> entry1;
+    entry1.resize(d);
+    
+    vector< vector<RX> > diag;
+    diag.resize(nslots);
+    for (long j = 0; j < nslots; j++) diag[j].resize(d);
+    cmat.SetDims(nslots, d);
+
+    for (long i = 0; i < nslots; i++) { // process diagonal i
+      bool zDiag = true;
+      long nzLast = -1;
+
+      for (long j = 0; j < nslots; j++) {
+        bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j);
+        assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+        // get(...) returns true if the entry is empty, false otherwise
+
+        if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
+
+        if (!zEntry) {    // non-empty entry
+          zDiag = false;  // mark diagonal as non-empty
+
+          // clear entries between last nonzero entry and this one
+          for (long jj = nzLast+1; jj < j; jj++) {
+            for (long k = 0; k < d; k++)
+              clear(diag[jj][k]);
+          }
+          nzLast = j;
+
+          // recode entry as a vector of polynomials
+          for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
+
+          // compute the lin poly coeffs
+          ea.buildLinPolyCoeffs(diag[j], entry1);
+        }
+      }
+      if (zDiag) continue; // zero diagonal, continue
+
+      // clear trailing zero entries    
+      for (long jj = nzLast+1; jj < nslots; jj++) {
+        for (long k = 0; k < d; k++)
+          clear(diag[jj][k]);
+      }
+      // now diag[j] contains the lin poly coeffs
+
+      RX cpoly1, cpoly2;
+      ZZX cpoly;
+
+      // apply the linearlized polynomial
+      for (long k = 0; k < d; k++) {
+
+        // compute the constant
+        bool zConst = true;
+        vector<RX> cvec;
+        cvec.resize(nslots);
+        for (long j = 0; j < nslots; j++) {
+          cvec[j] = diag[j][k];
+          if (!IsZero(cvec[j])) zConst = false;
+        }
+        if (zConst) continue;
+
+        ea.encode(cpoly, cvec);
+        conv(cpoly1, cpoly);
+
+        // apply inverse automorphism to constant
+        free_plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar, F);
+        conv(cpoly, cpoly2);
+        cmat[i][k] = ZZXptr(new ZZX(cpoly));
+      }
+    }
+  }
+
+
+
+
 };
+
+
+// helper routines
+
+
+void CachedMatrixConvert(CachedDCRTPtxtMatrix& v, const CachedPtxtMatrix& w, const FHEcontext& context)
+{
+  long n = w.length();
+  v.SetLength(n);
+  for (long i = 0; i < n; i++)
+    if (w[i]) v[i] = DCRTptr(new DoubleCRT(*w[i], context));
+    // DoubleCRT defined relative to all primes, even the "special" ones
+}
+
+void CachedBlockMatrixConvert(CachedDCRTPtxtBlockMatrix& v, const CachedPtxtBlockMatrix& w, 
+                              const FHEcontext& context)
+{
+  long m = w.NumRows();
+  long n = w.NumCols();
+
+  v.SetDims(m, n);
+  for (long i = 0; i < m; i++)
+    for (long j = 0; j < n; j++)
+    if (w[i][j]) v[i][j] = DCRTptr(new DoubleCRT(*w[i][j], context, context.ctxtPrimes));
+    // DoubleCRT defined relative only to the ciphertxt primes, not the "special" ones
+}
+
+
 
 
 void free_compMat(const EncryptedArray& ea, 
@@ -474,12 +598,32 @@ void free_compMat(const EncryptedArray& ea,
   FHE_TIMER_START;
   CachedPtxtMatrix zzxMat;
   free_compMat(ea, zzxMat, mat);
-  long n = zzxMat.length();
-  cmat.SetLength(n);
-  for (long i=0; i<n; i++) if (zzxMat[i])
-    cmat[i] = DCRTptr(new DoubleCRT(*zzxMat[i], ea.getContext()));
-    // DoubleCRT defined relative to all primes, even the "special" ones
+  CachedMatrixConvert(cmat, zzxMat, ea.getContext());
 }
+
+
+
+void free_compMat(const EncryptedArray& ea, 
+                 CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat)
+{
+  ea.dispatch<free_compMat_impl>(Fwd(cmat), mat);
+}
+
+
+
+
+void free_compMat(const EncryptedArray& ea, 
+                 CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat)
+{
+  FHE_TIMER_START;
+  CachedPtxtBlockMatrix zzxMat;
+  free_compMat(ea, zzxMat, mat);
+  CachedBlockMatrixConvert(cmat, zzxMat, ea.getContext());
+}
+
+
+
+
 
 
 

@@ -208,8 +208,8 @@ public:
   //! Ctxt is treated as a row matrix v, and replaced by an encryption of v*mat.
   //! Optimized for sparse diagonals
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const = 0; // FREE
-  virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const = 0;
-  virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const = 0;
+  virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const = 0; // FREE
+  virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const = 0; // FREE
 
   //! @brief Multiply ctx by plaintext matrix.
   //! Ctxt is treated as a row matrix v, and replaced by en encryption of
@@ -450,8 +450,8 @@ public:
   virtual void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const; // FREE
 
   virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
-  virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const;
-  virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const;
+  virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
+  virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
 
   virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const;
   virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const;
@@ -750,10 +750,10 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const // FREE
   { rep->compMat(cmat, mat); }
 
-  void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const
+  void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const // FREE
   { rep->compMat(cmat, mat); }
 
-  void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const
+  void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const // FREE
   { rep->compMat(cmat, mat); }
 
   void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const

@@ -32,5 +32,13 @@ void free_compMat(const EncryptedArray& ea,
 void free_compMat(const EncryptedArray& ea, 
                  CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
 
+
+void free_compMat(const EncryptedArray& ea, 
+                 CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat);
+
+void free_compMat(const EncryptedArray& ea, 
+                 CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat);
+
+
 #endif /* ifdef FHE_matrix_H_ */
 
