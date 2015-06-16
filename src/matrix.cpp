@@ -58,7 +58,6 @@ public:
   void apply(const EncryptedArrayDerived<type>& ea, 
              Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) 
   {
-    FHE_TIMER_START;
     assert(&ea == &mat.getEA().getDerived(type()));
     assert(&ea.getContext() == &ctxt.getContext());
 
@@ -127,7 +126,6 @@ public:
   void apply(const EncryptedArrayDerived<type>& ea, 
              Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) 
   {
-    FHE_TIMER_START;
     assert(&ea == &mat.getEA().getDerived(type()));
     assert(&ea.getContext() == &ctxt.getContext());
 
@@ -249,11 +247,13 @@ public:
 
 void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat)
 {
+  FHE_TIMER_START;
   ea.dispatch<free_mat_mul_impl>(Fwd(ctxt), mat);
 }
 
 void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat)
 {
+  FHE_TIMER_START;
   ea.dispatch<free_mat_mul_impl>(Fwd(ctxt), mat);
 }
 
@@ -347,7 +347,6 @@ public:
   void apply(const EncryptedArrayDerived<type>& ea, 
              Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) 
   {
-    FHE_TIMER_START;
     assert(&ea == &mat.getEA().getDerived(type()));
     assert(&ea.getContext() == &ctxt.getContext());
 
@@ -387,6 +386,7 @@ public:
 
 void free_mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat)
 {
+  FHE_TIMER_START;
   ea.dispatch<free_mat_mul_dense_impl>(Fwd(ctxt), mat);
 }
 
@@ -402,7 +402,6 @@ public:
              CachedPtxtMatrix& cmat,
              const PlaintextMatrixBaseInterface& mat) 
   {
-    FHE_TIMER_START;
     assert(&ea == &mat.getEA().getDerived(type()));
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
@@ -461,7 +460,6 @@ public:
              CachedPtxtBlockMatrix& cmat,
              const PlaintextBlockMatrixBaseInterface& mat) 
   {
-    FHE_TIMER_START;
     assert(&ea == &mat.getEA().getDerived(type()));
     const PAlgebra& zMStar = ea.getContext().zMStar;
     long p = zMStar.getP(); 
@@ -589,6 +587,7 @@ void CachedBlockMatrixConvert(CachedDCRTPtxtBlockMatrix& v, const CachedPtxtBloc
 void free_compMat(const EncryptedArray& ea, 
                  CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat)
 {
+  FHE_TIMER_START;
   ea.dispatch<free_compMat_impl>(Fwd(cmat), mat);
 }
 
@@ -609,6 +608,7 @@ void free_compMat(const EncryptedArray& ea,
 void free_compMat(const EncryptedArray& ea, 
                  CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat)
 {
+  FHE_TIMER_START;
   ea.dispatch<free_compMat_impl>(Fwd(cmat), mat);
 }
 
@@ -684,7 +684,6 @@ public:
              const PlaintextMatrixBaseInterface& mat,
              long dim) 
   {
-    FHE_TIMER_START;
     const PAlgebra& zMStar = ea.getContext().zMStar;
 
     assert(&ea == &mat.getEA().getDerived(type()));
@@ -736,5 +735,9 @@ void
 free_mat_mul1D(const EncryptedArray& ea, 
                Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) 
 {
+  FHE_TIMER_START;
   ea.dispatch<free_mat_mul1D_impl>(Fwd(ctxt), mat, dim);
 }
+
+
+
