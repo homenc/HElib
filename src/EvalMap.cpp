@@ -376,7 +376,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
           buildAltStep2Matrix(ea, sig_sequence[dim],
                               local_reps[dim], dim, m/mvec[dim], invert));
 #ifdef EVALMAP_CACHED // cache the matrix of constants
-    ea.compMat1D(matvec[dim], *mat_dim, dim);
+    free_compMat1D(ea, matvec[dim], *mat_dim, dim);
 #else
     matvec[dim] = mat_dim;
 #endif

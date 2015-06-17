@@ -740,4 +740,74 @@ free_mat_mul1D(const EncryptedArray& ea,
 }
 
 
+template<class type>
+class free_compMat1D_impl{
+public:
+  PA_INJECT(type)
+
+  static
+  void apply(const EncryptedArrayDerived<type>& ea, 
+             CachedPtxtMatrix& cmat,
+             const PlaintextMatrixBaseInterface& mat, 
+             long dim) 
+  {
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+
+    assert(&ea == &mat.getEA().getDerived(type()));
+    assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
+
+    // special case fo the extra dimension
+    bool special = (dim == LONG(zMStar.numOfGens()));
+    long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+
+    RBak bak; bak.save(); ea.getTab().restoreContext(); // backup the NTL modulus
+
+    // Get the derived type
+    const PlaintextMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+    long nslots = ea.size();
+    long d = ea.getDegree();
+    vector<RX> diag, diag1;
+    diag.resize(D);
+    diag1.resize(nslots);
+    cmat.SetLength(D);
+    ZZX cpoly;
+
+    // Process the diagonals one at a time
+    for (long i = 0; i < D; i++) { // process diagonal i
+      if (processDiagonal(diag1, dim, i, diag, mat1, zMStar, d, special))
+        continue; // zero diagonal
+
+      // encode as a polynomial, then multiply and add
+      ea.encode(cpoly, diag1);
+      cmat[i] = ZZXptr(new ZZX(cpoly));
+    }
+  }
+
+
+};
+
+
+void 
+free_compMat1D(const EncryptedArray& ea, 
+               CachedPtxtMatrix& cmat,
+               const PlaintextMatrixBaseInterface& mat, 
+               long dim) 
+{
+  FHE_TIMER_START;
+  ea.dispatch<free_compMat1D_impl>(Fwd(cmat), mat, dim);
+}
+
+void free_compMat1D(const EncryptedArray& ea, 
+                    CachedDCRTPtxtMatrix& cmat, 
+                    const PlaintextMatrixBaseInterface& mat,
+                    long dim)
+{
+  FHE_TIMER_START;
+  CachedPtxtMatrix zzxMat;
+  free_compMat1D(ea, zzxMat, mat, dim);
+  CachedMatrixConvert(cmat, zzxMat, ea.getContext());
+}
+
 

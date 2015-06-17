@@ -220,8 +220,8 @@ public:
   //! zMStar, as if there were an implicit generator of order 1, this is
   //! convenient in some applications.
   virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const = 0; // FREE
-  virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
-  virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0;
+  virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0; // FREE
+  virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0; // FREE
 
   virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
   virtual void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
@@ -454,8 +454,8 @@ public:
   virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
 
   virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const; // FREE
-  virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const;
-  virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const;
+  virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const; // FREE
+  virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const; // FREE
 
   virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
   virtual void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
@@ -756,13 +756,13 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const // FREE
   { rep->compMat(cmat, mat); }
 
-  void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const
+  void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const // FREE
   { rep->compMat1D(cmat, mat, dim); }
 
   void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
   { rep->compMat1D(cmat, mat, dim); }
 
-  void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const
+  void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const // FREE
   { rep->compMat1D(cmat, mat, dim); }
 
   void compMat1D(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const

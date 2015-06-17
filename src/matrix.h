@@ -45,5 +45,19 @@ free_mat_mul1D(const EncryptedArray& ea,
                Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim); 
 
 
+
+void 
+free_compMat1D(const EncryptedArray& ea, 
+               CachedPtxtMatrix& cmat,
+               const PlaintextMatrixBaseInterface& mat, 
+               long dim); 
+
+void free_compMat1D(const EncryptedArray& ea, 
+                    CachedDCRTPtxtMatrix& cmat, 
+                    const PlaintextMatrixBaseInterface& mat,
+                    long dim);
+
+
+
 #endif /* ifdef FHE_matrix_H_ */
 
