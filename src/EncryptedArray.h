@@ -187,46 +187,8 @@ public:
   //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
-  ///@{
-  //! @name Matrix multiplication routines
 
-  //! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
-  //! a row matrix v, and replaced by an encryption of v * mat.
-  //! Optimized for dense matrices
-  virtual void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0; // FREE
-  virtual void compMat_dense(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const = 0;
-  virtual void compMat_dense(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const = 0;
 
-  //! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
-  //! a row matrix v, and replaced by an encryption of v * mat.
-  //! Optimized for sparse diagonals
-  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const = 0; // FREE
-  virtual void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const = 0; // FREE
-  virtual void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const = 0; //FREE
-
-  //! @brief Multiply ctx by plaintext block matrix (over the base field/ring).
-  //! Ctxt is treated as a row matrix v, and replaced by an encryption of v*mat.
-  //! Optimized for sparse diagonals
-  virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const = 0; // FREE
-  virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const = 0; // FREE
-  virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const = 0; // FREE
-
-  //! @brief Multiply ctx by plaintext matrix.
-  //! Ctxt is treated as a row matrix v, and replaced by en encryption of
-  //! v * mat' where mat' is the block-diagonal matrix defined by mat in
-  //! dimension dim. Here, mat should represent a D x D matrix, where D is
-  //! the order of generator dim.
-  //! We also allow dim to be one greater than the number of generators in
-  //! zMStar, as if there were an implicit generator of order 1, this is
-  //! convenient in some applications.
-  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const = 0; // FREE
-  virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0; // FREE
-  virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const = 0; // FREE
-
-  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
-  virtual void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
-  virtual void compMat1D(CachedDCRTPtxtBlockMatrix& smat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const = 0;
-  ///@}
 
   ///@{
   //! @name Encoding/decoding methods
@@ -432,34 +394,6 @@ public:
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
 
-
-  // helper routine for mat_mul_dense
-  void rec_mul(long dim, 
-               Ctxt& res, 
-               const Ctxt& pdata, 
-               const vector<long>& idx,
-               const PlaintextMatrixInterface<type>& mat,
-               const vector<long>& dimx) const;
-
-  virtual void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const; // FREE
-  virtual void compMat_dense(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const;
-  virtual void compMat_dense(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const;
-
-  virtual void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const; // FREE
-  virtual void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const; // FREE
-  virtual void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const; // FREE
-
-  virtual void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
-  virtual void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
-  virtual void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const; // FREE
-
-  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const; // FREE
-  virtual void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const; // FREE
-  virtual void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const; // FREE
-
-  virtual void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
-  virtual void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
-  virtual void compMat1D(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array);  }
@@ -728,45 +662,6 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
-
-  void mat_mul_dense(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const  // FREE
-  { rep->mat_mul_dense(ctxt, mat); }
-
-  void mat_mul(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) const  // FREE
-  { rep->mat_mul(ctxt, mat); }
-
-  void mat_mul1D(Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) const  // FREE
-  { rep->mat_mul1D(ctxt, mat, dim); }
-
-  void mat_mul1D(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) const 
-  { rep->mat_mul1D(ctxt, mat, dim); }
-
-  void mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const  // FREE
-  { rep->mat_mul(ctxt, mat); }
-
-  void compMat(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const // FREE
-  { rep->compMat(cmat, mat); }
-
-  void compMat(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) const // FREE
-  { rep->compMat(cmat, mat); }
-
-  void compMat(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const // FREE
-  { rep->compMat(cmat, mat); }
-
-  void compMat(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) const // FREE
-  { rep->compMat(cmat, mat); }
-
-  void compMat1D(CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const // FREE
-  { rep->compMat1D(cmat, mat, dim); }
-
-  void compMat1D(CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
-  { rep->compMat1D(cmat, mat, dim); }
-
-  void compMat1D(CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) const // FREE
-  { rep->compMat1D(cmat, mat, dim); }
-
-  void compMat1D(CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, long dim) const
-  { rep->compMat1D(cmat, mat, dim); }
 
   void encode(ZZX& ptxt, const vector< long >& array) const 
     { rep->encode(ptxt, array); }

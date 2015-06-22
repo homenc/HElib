@@ -22,40 +22,81 @@
 
 #include "EncryptedArray.h"
 
-void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat);
-void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat);
+///@{
+//! @name Matrix multiplication routines
+
+
+//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
+//! a row matrix v, and replaced by an encryption of v * mat.
+//! Optimized for dense matrices
 void free_mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat);
 
+
+
+//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
+//! a row matrix v, and replaced by an encryption of v * mat.
+//! Optimized for sparse diagonals
+void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat);
 void free_compMat(const EncryptedArray& ea, 
-                 CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
-
+                  CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
 void free_compMat(const EncryptedArray& ea, 
-                 CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
+                  CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
 
 
+
+
+
+//! @brief Multiply ctx by plaintext block matrix (over the base field/ring).
+//! Ctxt is treated as a row matrix v, and replaced by an encryption of v*mat.
+//! Optimized for sparse diagonals
+void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat);
 void free_compMat(const EncryptedArray& ea, 
                  CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat);
-
 void free_compMat(const EncryptedArray& ea, 
                  CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat);
 
 
+
+//! @brief Multiply ctx by plaintext matrix.
+//! Ctxt is treated as a row matrix v, and replaced by en encryption of
+//! v * mat' where mat' is the block-diagonal matrix defined by mat in
+//! dimension dim. Here, mat should represent a D x D matrix, where D is
+//! the order of generator dim.
+//! We also allow dim to be one greater than the number of generators in
+//! zMStar, as if there were an implicit generator of order 1, this is
+//! convenient in some applications.
 void 
 free_mat_mul1D(const EncryptedArray& ea, 
                Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim); 
-
-
-
 void 
 free_compMat1D(const EncryptedArray& ea, 
                CachedPtxtMatrix& cmat,
                const PlaintextMatrixBaseInterface& mat, 
                long dim); 
-
 void free_compMat1D(const EncryptedArray& ea, 
                     CachedDCRTPtxtMatrix& cmat, 
                     const PlaintextMatrixBaseInterface& mat,
                     long dim);
+
+
+
+void 
+free_mat_mul1D(const EncryptedArray& ea, 
+               Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim);
+void 
+free_compMat1D(const EncryptedArray& ea, 
+               CachedPtxtBlockMatrix& cmat,
+               const PlaintextBlockMatrixBaseInterface& mat, 
+               long dim); 
+void free_compMat1D(const EncryptedArray& ea, 
+                    CachedDCRTPtxtBlockMatrix& cmat, 
+                    const PlaintextBlockMatrixBaseInterface& mat,
+                    long dim);
+
+
+///@}
+
+
 
 
 

@@ -365,7 +365,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
         buildAltStep1Matrix(ea, sig_sequence[dim],
 			    local_reps[dim], dim, m/mvec[dim], invert, normal_basis));
 #ifdef EVALMAP_CACHED // cache the matrix of constants
-  ea.compMat1D(mat1, *blockMat, dim);
+  free_compMat1D(ea, mat1, *blockMat, dim);
 #else
   mat1 = blockMat;
 #endif
@@ -391,7 +391,7 @@ void EvalMap::apply(Ctxt& ctxt) const
 #ifdef EVALMAP_CACHED // cached matrix of constants
     mat_mul1D(ctxt, mat1, nfactors-1, ea);
 #else
-    ea.mat_mul1D(ctxt, *mat1, nfactors-1);
+    free_mat_mul1D(ea, ctxt, *mat1, nfactors-1);
 #endif
 
     for (long i = matvec.length()-1; i >= 0; i--) {
@@ -414,7 +414,7 @@ void EvalMap::apply(Ctxt& ctxt) const
 #ifdef EVALMAP_CACHED // cached matrix of constants
     mat_mul1D(ctxt, mat1, nfactors-1, ea);
 #else
-    ea.mat_mul1D(ctxt, *mat1, nfactors-1);
+    free_mat_mul1D(ea, ctxt, *mat1, nfactors-1);
 #endif
   }
 }

@@ -690,7 +690,7 @@ public:
     assert(&ea.getContext() == &ctxt.getContext());
     assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
 
-    // special case fo the extra dimension
+    // special case for the extra dimension
     bool special = (dim == LONG(zMStar.numOfGens()));
     long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
 
@@ -727,6 +727,174 @@ public:
   }
 
 
+
+
+  static
+  void apply(const EncryptedArrayDerived<type>& ea, 
+             Ctxt& ctxt,
+             const PlaintextBlockMatrixBaseInterface& mat,
+             long dim) 
+  {
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+
+    assert(&ea == &mat.getEA().getDerived(type()));
+    assert(&ea.getContext() == &ctxt.getContext());
+    assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
+
+    long p = zMStar.getP(); 
+    long m = zMStar.getM();
+    const RXModulus& F = ea.getTab().getPhimXMod();
+
+    // special case for the extra dimension
+    bool special = (dim == LONG(zMStar.numOfGens()));
+    long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+    bool bad = !special && !zMStar.SameOrd(dim);
+
+    RBak bak; bak.save(); ea.getTab().restoreContext(); // backup the NTL modulus
+
+    // Get the derived type
+    const PlaintextBlockMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
+
+    ctxt.cleanUp(); // not sure, but this may be a good idea
+
+    long nslots = ea.size();
+    long d = ea.getDegree();
+
+    Vec< shared_ptr<Ctxt> > acc;
+    acc.SetLength(d);
+    for (long k = 0; k < d; k++)
+      acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+    mat_R entry;
+    entry.SetDims(d, d);
+
+    vector<RX> entry1;
+    entry1.resize(d);
+    
+    vector< vector<RX> > diag;
+    diag.resize(D);
+    for (long j = 0; j < D; j++) diag[j].resize(d);
+
+    // Process the diagonals one at a time
+    for (long i = 0; i < D; i++) { // process diagonal i
+      bool zDiag = true; // is this a zero diagonal?
+      long nzLast = -1;  // index of last non-zero entry
+
+      // Process the entries in this diagonal one at a time
+      for (long j = 0; j < D; j++) { // process entry j
+        bool zEntry = mat1.get(entry, mcMod(j-i, D), j); // entry [i,j-i mod D]
+        assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+          // get(...) returns true if the entry is empty, false otherwise
+
+        if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
+
+        if (!zEntry) {    // non-empty entry
+          zDiag = false;  // mark diagonal as non-empty
+
+          // clear entries between last nonzero entry and this one
+          for (long jj = nzLast+1; jj < j; jj++) {
+            for (long k = 0; k < d; k++)
+              clear(diag[jj][k]);
+          }
+          nzLast = j;
+
+          // recode entry as a vector of polynomials
+          for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
+
+          // compute the lin poly coeffs
+          ea.buildLinPolyCoeffs(diag[j], entry1);
+        }
+      }
+      if (zDiag) continue; // zero diagonal, continue
+
+      // clear trailing zero entries    
+      for (long jj = nzLast+1; jj < D; jj++) {
+        for (long k = 0; k < d; k++)
+          clear(diag[jj][k]);
+      }
+
+      // now diag[j] contains the lin poly coeffs
+
+      vector<Ctxt> shCtxt;
+      vector<RX> shMask;
+      if (i == 0) {
+        shCtxt.resize(1, ctxt);
+        shMask.resize(1, conv<RX>(1));
+      }
+      else if (!bad) {
+        shCtxt.resize(1, ctxt);
+        shMask.resize(1, conv<RX>(1));
+        ea.rotate1D(shCtxt[0], dim, i);
+        shCtxt[0].cleanUp();
+      }
+      else {
+        // we fold the masking constants into the linearized polynomial
+        // constants to save a level. We lift some code out of rotate1D
+        // to do this.
+
+        shCtxt.resize(2, ctxt);
+        shMask.resize(2);
+
+        long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+        long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+        const RX& mask = ea.getTab().getMaskTable()[dim][D-i];
+
+        shCtxt[0].smartAutomorph(val); 
+        shCtxt[0].cleanUp();
+
+        shCtxt[1].smartAutomorph(ival); 
+        shCtxt[1].cleanUp();
+
+        plaintextAutomorph(shMask[0], 1 - mask, val, zMStar, F);
+        plaintextAutomorph(shMask[1], mask, ival, zMStar, F);
+      }
+      
+      RX cpoly1, cpoly2, cpoly3;
+      ZZX cpoly;
+
+      // apply the linearlized polynomial
+      for (long k = 0; k < d; k++) {
+
+        // compute the constant
+        bool zConst = true;
+        vector<RX> cvec;
+        cvec.resize(nslots);
+        for (long j = 0; j < nslots; j++) {
+          cvec[j] = diag[ special ? 0 : zMStar.coordinate(dim, j) ][k];
+          if (!IsZero(cvec[j])) zConst = false;
+        }
+
+        if (zConst) continue;
+
+        ea.encode(cpoly, cvec);
+        conv(cpoly1, cpoly);
+
+        // apply inverse automorphism to constant
+        plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar, F);
+
+        for (long j = 0; j < LONG(shCtxt.size()); j++) {
+          MulMod(cpoly3, cpoly2, shMask[j], F);
+          conv(cpoly, cpoly3);
+          Ctxt shCtxt1 = shCtxt[j];;
+          shCtxt1.multByConstant(cpoly);
+          *acc[k] += shCtxt1;
+        }
+      }
+    }
+
+    Ctxt res(ZeroCtxtLike, ctxt);
+
+    for (long k = 0; k < d; k++) {
+      acc[k]->frobeniusAutomorph(k);
+      res += *acc[k];
+    }
+
+    ctxt = res;
+  }
+
+
+
 };
 
 
@@ -738,6 +906,20 @@ free_mat_mul1D(const EncryptedArray& ea,
   FHE_TIMER_START;
   ea.dispatch<free_mat_mul1D_impl>(Fwd(ctxt), mat, dim);
 }
+
+
+
+void 
+free_mat_mul1D(const EncryptedArray& ea, 
+               Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) 
+{
+  FHE_TIMER_START;
+  ea.dispatch<free_mat_mul1D_impl>(Fwd(ctxt), mat, dim);
+}
+
+
+
+
 
 
 template<class type>
@@ -756,7 +938,7 @@ public:
     assert(&ea == &mat.getEA().getDerived(type()));
     assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
 
-    // special case fo the extra dimension
+    // special case for the extra dimension
     bool special = (dim == LONG(zMStar.numOfGens()));
     long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
 
@@ -786,6 +968,147 @@ public:
   }
 
 
+
+  static
+  void apply(const EncryptedArrayDerived<type>& ea, 
+             CachedPtxtBlockMatrix& cmat,
+             const PlaintextBlockMatrixBaseInterface& mat, 
+             long dim) 
+  {
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+
+    assert(&ea == &mat.getEA().getDerived(type()));
+    assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
+
+    long p = zMStar.getP(); 
+    long m = zMStar.getM();
+    const RXModulus& F = ea.getTab().getPhimXMod();
+
+    // special case for the extra dimension
+    bool special = (dim == LONG(zMStar.numOfGens()));
+    long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+    bool bad = !special && !zMStar.SameOrd(dim);
+
+    long nslots = ea.size();
+    long d = ea.getDegree();
+
+    RBak bak; bak.save(); ea.getTab().restoreContext(); // backup the NTL modulus
+
+    // Get the derived type
+    const PlaintextBlockMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
+
+    mat_R entry;
+    entry.SetDims(d, d);
+
+    vector<RX> entry1;
+    entry1.resize(d);
+    
+    if (bad)
+      cmat.SetDims(D, 2*d);
+    else
+      cmat.SetDims(D, d);
+
+    vector< vector<RX> > diag;
+    diag.resize(D);
+    for (long j = 0; j < D; j++) diag[j].resize(d);
+
+    // Process the diagonals one at a time
+    for (long i = 0; i < D; i++) { // process diagonal i
+      bool zDiag = true; // is this a zero diagonal?
+      long nzLast = -1;  // index of last non-zero entry
+
+      // Process the entries in this diagonal one at a time
+      for (long j = 0; j < D; j++) { // process entry j
+        bool zEntry = mat1.get(entry, mcMod(j-i, D), j); // entry [i,j-i mod D]
+        assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+        // get(...) returns true if the entry is empty, false otherwise
+
+        if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
+
+        if (!zEntry) {    // non-empty entry
+          zDiag = false;  // mark diagonal as non-empty
+
+          // clear entries between last nonzero entry and this one
+          for (long jj = nzLast+1; jj < j; jj++) {
+            for (long k = 0; k < d; k++)
+              clear(diag[jj][k]);
+          }
+          nzLast = j;
+
+          // recode entry as a vector of polynomials
+          for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
+
+          // compute the lin poly coeffs
+          ea.buildLinPolyCoeffs(diag[j], entry1);
+        }
+      }
+      if (zDiag) continue; // zero diagonal, continue
+
+      // clear trailing zero entries    
+      for (long jj = nzLast+1; jj < D; jj++) {
+        for (long k = 0; k < d; k++)
+          clear(diag[jj][k]);
+      }
+
+      // now diag[j] contains the lin poly coeffs
+
+      vector<RX> shMask;
+      if (i == 0) {
+        shMask.resize(1, conv<RX>(1));
+      }
+      else if (!bad) {
+        shMask.resize(1, conv<RX>(1));
+      }
+      else {
+        // we fold the masking constants into the linearized polynomial
+        // constants to save a level. We lift some code out of rotate1D
+        // to do this.
+
+        shMask.resize(2);
+
+        long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+        long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+        const RX& mask = ea.getTab().getMaskTable()[dim][D-i];
+
+        plaintextAutomorph(shMask[0], 1 - mask, val, zMStar, F);
+        plaintextAutomorph(shMask[1], mask, ival, zMStar, F);
+      }
+      
+      RX cpoly1, cpoly2, cpoly3;
+      ZZX cpoly;
+
+      // apply the linearlized polynomial
+      for (long k = 0; k < d; k++) {
+
+        // compute the constant
+        bool zConst = true;
+        vector<RX> cvec;
+        cvec.resize(nslots);
+        for (long j = 0; j < nslots; j++) {
+          cvec[j] = diag[ special ? 0 : zMStar.coordinate(dim, j) ][k];
+          if (!IsZero(cvec[j])) zConst = false;
+        }
+
+        if (zConst) continue;
+
+        ea.encode(cpoly, cvec);
+        conv(cpoly1, cpoly);
+
+        // apply inverse automorphism to constant
+        plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar, F);
+
+        for (long j = 0; j < LONG(shMask.size()); j++) {
+          MulMod(cpoly3, cpoly2, shMask[j], F);
+          conv(cpoly, cpoly3);
+          cmat[i][k + d*j] = ZZXptr(new ZZX(cpoly));
+        }
+      }
+    }
+  }
+
+
+
 };
 
 
@@ -809,5 +1132,28 @@ void free_compMat1D(const EncryptedArray& ea,
   free_compMat1D(ea, zzxMat, mat, dim);
   CachedMatrixConvert(cmat, zzxMat, ea.getContext());
 }
+
+
+void 
+free_compMat1D(const EncryptedArray& ea, 
+               CachedPtxtBlockMatrix& cmat,
+               const PlaintextBlockMatrixBaseInterface& mat, 
+               long dim) 
+{
+  FHE_TIMER_START;
+  ea.dispatch<free_compMat1D_impl>(Fwd(cmat), mat, dim);
+}
+
+void free_compMat1D(const EncryptedArray& ea, 
+                    CachedDCRTPtxtBlockMatrix& cmat, 
+                    const PlaintextBlockMatrixBaseInterface& mat,
+                    long dim)
+{
+  FHE_TIMER_START;
+  CachedPtxtBlockMatrix zzxMat;
+  free_compMat1D(ea, zzxMat, mat, dim);
+  CachedBlockMatrixConvert(cmat, zzxMat, ea.getContext());
+}
+
 
 

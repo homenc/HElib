@@ -15,6 +15,7 @@
  */
 #include "OldEvalMap.h"
 #include "powerful.h"
+#include "matrix.h"
 
 //! \cond FALSE (make doxygen ignore these classes)
 template<class type>
@@ -2049,11 +2050,11 @@ void OldEvalMap::apply(Ctxt& ctxt) const
   if (!invert) {
     // forward direction
 
-    ea.mat_mul(ctxt, *mat1);
+    free_mat_mul(ea, ctxt, *mat1);
     if (!easy) shuffle->apply(ctxt);
 
     for (long i = matvec.length()-1; i >= 0; i--) 
-      ea.mat_mul(ctxt, *matvec[i]);
+      free_mat_mul(ea, ctxt, *matvec[i]);
 
     net->applyToCtxt(ctxt, ea);
     frobeniusAutomorph(ctxt, ea, slot_rotate);
@@ -2064,10 +2065,10 @@ void OldEvalMap::apply(Ctxt& ctxt) const
     net->applyToCtxt(ctxt, ea);
 
     for (long i = 0; i < matvec.length(); i++)
-      ea.mat_mul(ctxt, *matvec[i]);
+      free_mat_mul(ea, ctxt, *matvec[i]);
 
     if (!easy) shuffle->apply(ctxt);
-    ea.mat_mul(ctxt, *mat1);
+    free_mat_mul(ea, ctxt, *mat1);
   }
 }
 
