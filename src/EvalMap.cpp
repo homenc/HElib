@@ -365,7 +365,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
         buildAltStep1Matrix(ea, sig_sequence[dim],
 			    local_reps[dim], dim, m/mvec[dim], invert, normal_basis));
 #ifdef EVALMAP_CACHED // cache the matrix of constants
-  free_compMat1D(ea, mat1, *blockMat, dim);
+  compMat1D(ea, mat1, *blockMat, dim);
 #else
   mat1 = blockMat;
 #endif
@@ -376,7 +376,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
           buildAltStep2Matrix(ea, sig_sequence[dim],
                               local_reps[dim], dim, m/mvec[dim], invert));
 #ifdef EVALMAP_CACHED // cache the matrix of constants
-    free_compMat1D(ea, matvec[dim], *mat_dim, dim);
+    compMat1D(ea, matvec[dim], *mat_dim, dim);
 #else
     matvec[dim] = mat_dim;
 #endif
@@ -389,32 +389,32 @@ void EvalMap::apply(Ctxt& ctxt) const
     // forward direction
 
 #ifdef EVALMAP_CACHED // cached matrix of constants
-    mat_mul1D(ctxt, mat1, nfactors-1, ea);
+    mat_mul1D(ea, ctxt, mat1, nfactors-1);
 #else
-    free_mat_mul1D(ea, ctxt, *mat1, nfactors-1);
+    mat_mul1D(ea, ctxt, *mat1, nfactors-1);
 #endif
 
     for (long i = matvec.length()-1; i >= 0; i--) {
 #ifdef EVALMAP_CACHED // cached matrix of constants
-      mat_mul1D(ctxt, matvec[i], i, ea);
+      mat_mul1D(ea, ctxt, matvec[i], i);
 #else
-      free_mat_mul1D(ea, ctxt, *matvec[i], i);
+      mat_mul1D(ea, ctxt, *matvec[i], i);
 #endif
     }
   }
   else {
     for (long i = 0; i < matvec.length(); i++) {
 #ifdef EVALMAP_CACHED // cached matrix of constants
-      mat_mul1D(ctxt, matvec[i], i, ea);
+      mat_mul1D(ea, ctxt, matvec[i], i);
 #else
-      free_mat_mul1D(ea, ctxt, *matvec[i], i);
+      mat_mul1D(ea, ctxt, *matvec[i], i);
 #endif
     }
 
 #ifdef EVALMAP_CACHED // cached matrix of constants
-    mat_mul1D(ctxt, mat1, nfactors-1, ea);
+    mat_mul1D(ea, ctxt, mat1, nfactors-1);
 #else
-    free_mat_mul1D(ea, ctxt, *mat1, nfactors-1);
+    mat_mul1D(ea, ctxt, *mat1, nfactors-1);
 #endif
   }
 }

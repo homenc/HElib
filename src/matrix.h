@@ -22,6 +22,13 @@
 
 #include "EncryptedArray.h"
 
+
+typedef Vec<ZZXptr> CachedPtxtMatrix;
+typedef Mat<ZZXptr> CachedPtxtBlockMatrix;
+typedef Vec<DCRTptr> CachedDCRTPtxtMatrix;
+typedef Mat<DCRTptr> CachedDCRTPtxtBlockMatrix;
+
+
 ///@{
 //! @name Matrix multiplication routines
 
@@ -29,18 +36,20 @@
 //! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
 //! a row matrix v, and replaced by an encryption of v * mat.
 //! Optimized for dense matrices
-void free_mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat);
+void mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextMatrixBaseInterface& mat);
 
 
 
 //! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
 //! a row matrix v, and replaced by an encryption of v * mat.
 //! Optimized for sparse diagonals
-void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat);
-void free_compMat(const EncryptedArray& ea, 
-                  CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
-void free_compMat(const EncryptedArray& ea, 
-                  CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat);
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextMatrixBaseInterface& mat);
+void compMat(const EncryptedArray& ea, CachedPtxtMatrix& cmat, 
+  const PlaintextMatrixBaseInterface& mat);
+void compMat(const EncryptedArray& ea, CachedDCRTPtxtMatrix& cmat, 
+  const PlaintextMatrixBaseInterface& mat);
 
 
 
@@ -49,11 +58,12 @@ void free_compMat(const EncryptedArray& ea,
 //! @brief Multiply ctx by plaintext block matrix (over the base field/ring).
 //! Ctxt is treated as a row matrix v, and replaced by an encryption of v*mat.
 //! Optimized for sparse diagonals
-void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat);
-void free_compMat(const EncryptedArray& ea, 
-                 CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat);
-void free_compMat(const EncryptedArray& ea, 
-                 CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat);
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextBlockMatrixBaseInterface& mat);
+void compMat(const EncryptedArray& ea, CachedPtxtBlockMatrix& cmat, 
+  const PlaintextBlockMatrixBaseInterface& mat);
+void compMat(const EncryptedArray& ea, CachedDCRTPtxtBlockMatrix& cmat, 
+  const PlaintextBlockMatrixBaseInterface& mat);
 
 
 
@@ -65,33 +75,73 @@ void free_compMat(const EncryptedArray& ea,
 //! We also allow dim to be one greater than the number of generators in
 //! zMStar, as if there were an implicit generator of order 1, this is
 //! convenient in some applications.
-void 
-free_mat_mul1D(const EncryptedArray& ea, 
-               Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim); 
-void 
-free_compMat1D(const EncryptedArray& ea, 
-               CachedPtxtMatrix& cmat,
-               const PlaintextMatrixBaseInterface& mat, 
-               long dim); 
-void free_compMat1D(const EncryptedArray& ea, 
-                    CachedDCRTPtxtMatrix& cmat, 
-                    const PlaintextMatrixBaseInterface& mat,
-                    long dim);
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextMatrixBaseInterface& mat, long dim); 
+void compMat1D(const EncryptedArray& ea, CachedPtxtMatrix& cmat,
+  const PlaintextMatrixBaseInterface& mat, long dim); 
+void compMat1D(const EncryptedArray& ea, CachedDCRTPtxtMatrix& cmat, 
+  const PlaintextMatrixBaseInterface& mat, long dim);
 
 
 
-void 
-free_mat_mul1D(const EncryptedArray& ea, 
-               Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim);
-void 
-free_compMat1D(const EncryptedArray& ea, 
-               CachedPtxtBlockMatrix& cmat,
-               const PlaintextBlockMatrixBaseInterface& mat, 
-               long dim); 
-void free_compMat1D(const EncryptedArray& ea, 
-                    CachedDCRTPtxtBlockMatrix& cmat, 
-                    const PlaintextBlockMatrixBaseInterface& mat,
-                    long dim);
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextBlockMatrixBaseInterface& mat, long dim);
+void compMat1D(const EncryptedArray& ea, CachedPtxtBlockMatrix& cmat,
+  const PlaintextBlockMatrixBaseInterface& mat, long dim); 
+void compMat1D(const EncryptedArray& ea, CachedDCRTPtxtBlockMatrix& cmat, 
+  const PlaintextBlockMatrixBaseInterface& mat, long dim);
+
+
+
+
+
+
+
+//! @brief Free functions for various flavors of cached matrix multiplication
+//!
+//! To save time, the constants that need to be computed during a matrix-vector
+//! multiply can be precomputed and stored.  One can store these either
+//! as polynomials (ZZX's) using a CachedPtxtMatrix, or as DoubleCRT's
+//! using a CachedDCRTMatrix.  These caches are computed using EncryptedArray
+//! methods.
+
+
+//! @brief Functions corresponding to EncryptedArray::mat_mul
+//! Caches are computed using EncryptedArray::compMat
+//! These functions are designed to work with sparse matrices.
+//! The first two work with matrices over Z_{p^r}[X]/(G).
+//! The second two work with "block" matrices whose entries are themselves
+//! matrices over Z_{p^r}
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedPtxtMatrix& cmat);
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedDCRTPtxtMatrix& cmat);
+
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedPtxtBlockMatrix& cmat);
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedDCRTPtxtBlockMatrix& cmat);
+
+//! @brief Functions corresponding to EncryptedArray::mat_mul1D
+//! Caches are computed using EncryptedArray::compMat1D
+//! These functions apply a matrix concurrently to all the hypercolumns
+//! in a single dimension.
+//! The first two work with matrices over Z_{p^r}[X]/(G).
+//! The second two work with "block" matrices whose entries are themselves
+//! matrices over Z_{p^r}
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedPtxtMatrix& cmat, long dim);
+
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedDCRTPtxtMatrix& cmat, long dim);
+
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedPtxtBlockMatrix& cmat, long dim);
+
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedDCRTPtxtBlockMatrix& cmat, long dim);
+
+
 
 
 ///@}

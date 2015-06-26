@@ -481,452 +481,6 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 
 
 
-template<class CachedMatrix>
-static void mat_mul_dense_tmpl(Ctxt& ctxt, const CachedMatrix& cmat,
-			       const EncryptedArray& ea)
-{
-  FHE_TIMER_START;
-  NTL::Error("cached mat_mul_dense not implemented yet");
-}
-void mat_mul_dense(Ctxt& ctxt, const CachedPtxtMatrix& cmat,
-		   const EncryptedArray& ea)
-{
-  mat_mul_dense_tmpl(ctxt, cmat, ea);
-}
-void mat_mul_dense(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat,
-		   const EncryptedArray& ea)
-{
-  mat_mul_dense_tmpl(ctxt, cmat, ea);
-}
-
-
-
-template<class CachedMatrix>
-void mat_mul_tmpl(Ctxt& ctxt, const CachedMatrix& cmat,
-		  const EncryptedArray& ea)
-{
-  FHE_TIMER_START;
-  ctxt.cleanUp(); // not sure, but this may be a good idea
-  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace()); // fresh encryption of zero
-
-  // Process the diagonals one at a time
-  long nslots = ea.size();
-  for (long i = 0; i < nslots; i++) {  // process diagonal i
-    if (!cmat[i]) continue; // a zero diagonal
-
-    // rotate by i, multiply, and add to the result
-    Ctxt shCtxt = ctxt;
-    ea.rotate(shCtxt, i); // rotate by i
-    shCtxt.multByConstant(*cmat[i]);
-    res += shCtxt;
-  }
-  ctxt = res;
-}
-void mat_mul(Ctxt& ctxt, const CachedPtxtMatrix& cmat,
-	     const EncryptedArray& ea)
-{
-  mat_mul_tmpl(ctxt, cmat, ea);
-}
-void mat_mul(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat,
-	     const EncryptedArray& ea)
-{
-  mat_mul_tmpl(ctxt, cmat, ea);
-}
-
-
-
-template<class type, class RX>
-static bool processDiagonal(vector<RX>& diag, long dim, long i,
-       vector<RX>& tmpDiag, const PlaintextMatrixInterface<type>& mat,
-       const PAlgebra& zMStar, long d, bool special)
-{
-  long D = tmpDiag.size();
-  long nslots = diag.size();
-  bool zDiag = true; // is this a zero diagonal?
-  long nzLast = -1;  // index of last non-zero entry
-  RX entry;
-
-  // Process the entries in this diagonal one at a time
-  for (long j = 0; j < D; j++) { // process entry j
-    bool zEntry = mat.get(entry, mcMod(j-i, D), j); // entry [i,j-i mod D]
-    assert(zEntry || deg(entry) < d);
-    // get(...) returns true if the entry is empty, false otherwise
-
-    if (!zEntry && IsZero(entry)) zEntry = true; // zero is an empty entry too
-
-    if (!zEntry) {   // not a zero entry
-      zDiag = false; // mark diagonal as non-empty
-
-      // clear entries between last nonzero entry and this one
-      for (long jj = nzLast+1; jj < j; jj++) clear(tmpDiag[jj]);
-      nzLast = j;
-
-      tmpDiag[j] = entry;
-    }
-  }    
-  if (zDiag) return true; // zero diagonal, nothing to do
-
-  // clear trailing zero entries
-  for (long jj = nzLast+1; jj < D; jj++) clear(tmpDiag[jj]);
-
-  if (special) diag.assign(nslots, tmpDiag[0]); // order-1 dimension
-  else for (long j = 0; j < nslots; j++)
-    diag[j] = tmpDiag[ zMStar.coordinate(dim,j) ];
-    // rearrange the indexes based on the current dimension
-
-  return false; // a nonzero diagonal
-}
-
-
-
-#ifdef FHE_BOOT_THREADS
-
-template<class Matrix, class EA>
-static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
-			   const EA& ea)
-{
-  FHE_TIMER_START;
-  const FHEcontext& context = ctxt.getContext();
-  const PAlgebra& zMStar = context.zMStar;
-  assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
-
-  // special case fo the extra dimension
-  bool special = (dim == LONG(zMStar.numOfGens()));
-  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
-
-  ctxt.cleanUp();  // not sure, but this may be a good idea
-  Ctxt res(ZeroCtxtLike, ctxt); // fresh encryption of zero
-
-  Vec< shared_ptr<Ctxt> > tvec;
-  tvec.SetLength(D);
-  for (long i = 0; i < D; i++)
-    tvec[i] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
-
-  bootTask->exec1(D,
-    [&](long first, long last) {
-      for (long i = first; i < last; i++) { // process diagonal i
-        if (!cmat[i]) continue;      // zero diagonal
-    
-        // rotate and multiply
-        (*tvec[i]) = ctxt;
-        if (i != 0) ea.rotate1D(*tvec[i], dim, i);   
-        tvec[i]->multByConstant(*cmat[i]);
-      }
-    }
-  );
-
-  for (long i = 0; i < D; i++)
-    res += *tvec[i];
-
-  ctxt = res;
-}
-
-#else
-
-template<class Matrix, class EA>
-static void mat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
-			   const EA& ea)
-{
-  FHE_TIMER_START;
-  const FHEcontext& context = ctxt.getContext();
-  const PAlgebra& zMStar = context.zMStar;
-  assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
-
-  // special case fo the extra dimension
-  bool special = (dim == LONG(zMStar.numOfGens()));
-  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
-
-  ctxt.cleanUp();  // not sure, but this may be a good idea
-  Ctxt res(ZeroCtxtLike, ctxt); // fresh encryption of zero
-
-  // Process the diagonals one at a time
-  for (long i = 0; i < D; i++) { // process diagonal i
-    if (!cmat[i]) continue;      // zero diagonal
-
-    // rotate, multiply and add
-    Ctxt shCtxt = ctxt;
-    if (i != 0) ea.rotate1D(shCtxt, dim, i);   
-    shCtxt.multByConstant(*cmat[i]);
-    res += shCtxt;
-  }
-  ctxt = res;
-}
-
-
-#endif
-
-
-
-void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
-	       const EncryptedArray& ea)
-{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
-	       const EncryptedArrayDerived<PA_GF2>& ea)
-{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-void mat_mul1D(Ctxt& ctxt, const CachedPtxtMatrix& cmat, long dim,
-	       const EncryptedArrayDerived<PA_zz_p>& ea)
-{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-
-void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
-	       const EncryptedArray& ea)
-{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
-	       const EncryptedArrayDerived<PA_GF2>& ea)
-{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtMatrix& cmat, long dim,
-	       const EncryptedArrayDerived<PA_zz_p>& ea)
-{ mat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-
-
-
-template<class CachedMatrix>
-void blockMat_mul_tmpl(Ctxt& ctxt, const CachedMatrix& cmat,
-		       const EncryptedArray& ea)
-{
-  FHE_TIMER_START;
-  ctxt.cleanUp(); // not sure, but this may be a good idea
-
-  long nslots = ea.size();
-  long d = ea.getDegree();
-
-  Vec< shared_ptr<Ctxt> > acc;
-  acc.SetLength(d);
-  for (long k = 0; k < d; k++)
-    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
-
-  for (long i = 0; i < nslots; i++) { // process diagonal i
-    // apply the linearlized polynomial
-    Ctxt shCtxt = ctxt;
-    ea.rotate(shCtxt, i); 
-    shCtxt.cleanUp();
-
-    for (long k = 0; k < d; k++) {
-      if (!cmat[i][k]) continue; // a zero constant
-      Ctxt shCtxt1 = shCtxt;
-      shCtxt1.multByConstant(*cmat[i][k]);
-      *acc[k] += shCtxt1;
-    }
-  }
-
-  Ctxt res(ZeroCtxtLike, ctxt);
-  for (long k = 0; k < d; k++) {
-    acc[k]->frobeniusAutomorph(k);
-    res += *acc[k];
-  }
-  ctxt = res;
-}
-void mat_mul(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat,
-	     const EncryptedArray& ea)
-{
-  blockMat_mul_tmpl(ctxt, cmat, ea);
-}
-void mat_mul(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat,
-	     const EncryptedArray& ea)
-{
-  blockMat_mul_tmpl(ctxt, cmat, ea);
-}
-
-
-
-#ifdef FHE_BOOT_THREADS
-
-template<class Matrix, class EA>
-static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
-				const EA& ea)
-{
-  FHE_TIMER_START;
-  const FHEcontext& context = ctxt.getContext();
-  const PAlgebra& zMStar = context.zMStar;
-  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
-
-  long m = zMStar.getM();
-
-  // special case fo the extra dimension
-  bool special = (dim == LONG(zMStar.numOfGens()));
-  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
-  bool bad = !special && !zMStar.SameOrd(dim);
-  long d = ea.getDegree();
-
-  Vec< shared_ptr<Ctxt> > acc;
-  acc.SetLength(d);
-  ctxt.cleanUp(); // not sure, but this may be a good idea
-  for (long k = 0; k < d; k++)
-    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
-
-  FHE_NTIMER_START(blockMat1);
-  vector< vector<Ctxt> > shCtxt;
-
-  shCtxt.resize(D);
-
-  // Process the diagonals one at a time
-  bootTask->exec1(D,
-    [&](long first, long last) {
-      for (long i = first; i < last; i++) { // process diagonal i
-        if (i == 0) {
-          shCtxt[i].resize(1, ctxt);
-        }
-        else if (!bad) {
-          shCtxt[i].resize(1, ctxt);
-          ea.rotate1D(shCtxt[i][0], dim, i);
-          shCtxt[i][0].cleanUp();
-        }
-        else {
-          // we fold the masking constants into the linearized polynomial
-          // constants to save a level. We lift some code out of rotate1D
-          // to do this.
-    
-          shCtxt[i].resize(2, ctxt);
-    
-          long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
-          long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
-    
-          shCtxt[i][0].smartAutomorph(val); 
-          shCtxt[i][0].cleanUp();
-    
-          shCtxt[i][1].smartAutomorph(ival); 
-          shCtxt[i][1].cleanUp();
-        }
-      }
-    }
-  );
-  FHE_NTIMER_STOP(blockMat1);
-
-
-  FHE_NTIMER_START(blockMat3);
-  bootTask->exec1(d,
-    [&](long first, long last) {
-      for (long k = first; k < last; k++) {
-        for (long i = 0; i < D; i++) {
-          for (long j = 0; j < LONG(shCtxt[i].size()); j++) {
-            if (!cmat[i][k + d*j]) continue; // zero constant
-    
-            Ctxt shCtxt1 = shCtxt[i][j];
-            shCtxt1.multByConstant(*cmat[i][k + d*j]);
-            *acc[k] += shCtxt1;
-          }
-        }
-        acc[k]->frobeniusAutomorph(k);
-      }
-    }
-  );
-  FHE_NTIMER_STOP(blockMat3);
-
-  FHE_NTIMER_START(blockMat4);
-  Ctxt res(ZeroCtxtLike, ctxt);
-  for (long k = 0; k < d; k++) {
-    res += *acc[k];
-  }
-  FHE_NTIMER_STOP(blockMat4);
-
-  ctxt = res;
-}
-
-
-#else
-
-
-template<class Matrix, class EA>
-static void blockMat_mul1D_tmpl(Ctxt& ctxt, const Matrix& cmat, long dim,
-				const EA& ea)
-{
-  FHE_TIMER_START;
-  const FHEcontext& context = ctxt.getContext();
-  const PAlgebra& zMStar = context.zMStar;
-  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
-
-  long m = zMStar.getM();
-
-  // special case fo the extra dimension
-  bool special = (dim == LONG(zMStar.numOfGens()));
-  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
-  bool bad = !special && !zMStar.SameOrd(dim);
-  long d = ea.getDegree();
-
-  Vec< shared_ptr<Ctxt> > acc;
-  acc.SetLength(d);
-  ctxt.cleanUp(); // not sure, but this may be a good idea
-  for (long k = 0; k < d; k++)
-    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
-
-  FHE_NTIMER_START(blockMat1);
-  // Process the diagonals one at a time
-  for (long i = 0; i < D; i++) { // process diagonal i
-    vector<Ctxt> shCtxt;
-    if (i == 0) {
-      shCtxt.resize(1, ctxt);
-    }
-    else if (!bad) {
-      shCtxt.resize(1, ctxt);
-      ea.rotate1D(shCtxt[0], dim, i);
-      shCtxt[0].cleanUp();
-    }
-    else {
-      // we fold the masking constants into the linearized polynomial
-      // constants to save a level. We lift some code out of rotate1D
-      // to do this.
-
-      shCtxt.resize(2, ctxt);
-
-      long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
-      long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
-
-      shCtxt[0].smartAutomorph(val); 
-      shCtxt[0].cleanUp();
-
-      shCtxt[1].smartAutomorph(ival); 
-      shCtxt[1].cleanUp();
-    }
-
-    // apply the linearlized polynomial
-    for (long k = 0; k < d; k++) {
-      for (long j = 0; j < LONG(shCtxt.size()); j++) {
-        if (!cmat[i][k + d*j]) continue; // zero constant
-
-        Ctxt shCtxt1 = shCtxt[j];
-        shCtxt1.multByConstant(*cmat[i][k + d*j]);
-        *acc[k] += shCtxt1;
-      }
-    }
-  }
-  FHE_NTIMER_STOP(blockMat1);
-
-  FHE_NTIMER_START(blockMat2);
-  Ctxt res(ZeroCtxtLike, ctxt);
-  for (long k = 0; k < d; k++) {
-    acc[k]->frobeniusAutomorph(k);
-    res += *acc[k];
-  }
-  FHE_NTIMER_STOP(blockMat2);
-
-  ctxt = res;
-}
-
-
-#endif
-
-
-
-void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
-	       const EncryptedArray& ea)
-{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
-	       const EncryptedArrayDerived<PA_GF2>& ea)
-{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-void mat_mul1D(Ctxt& ctxt, const CachedPtxtBlockMatrix& cmat, long dim,
-	       const EncryptedArrayDerived<PA_zz_p>& ea)
-{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-
-void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
-	       const EncryptedArray& ea)
-{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
-	       const EncryptedArrayDerived<PA_GF2>& ea)
-{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-void mat_mul1D(Ctxt& ctxt, const CachedDCRTPtxtBlockMatrix& cmat, long dim,
-	       const EncryptedArrayDerived<PA_zz_p>& ea)
-{ blockMat_mul1D_tmpl(ctxt, cmat, dim, ea); }
-
-
 // Linearized polynomials.
 // L describes a linear map M by describing its action on the standard
 // power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.  
@@ -1158,6 +712,172 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
 /********************************************************************/
 
 
+// NewPlaintextArray
+
+#define PA_BOILER \
+    const PAlgebraModDerived<type>& tab = ea.getTab(); \
+    const RX& G = ea.getG(); \
+    long n = ea.size(); \
+    long d = ea.getDegree(); \
+    vector<RX>& data = pa.getData<type>(); \
+
+
+template<class type>
+class rotate_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long k)
+  {
+    PA_BOILER
+
+    RBak bak; bak.save(); tab.restoreContext();
+
+    vector<RX> tmp(n); 
+
+    for (long i = 0; i < n; i++)
+      tmp[((i+k)%n + n)%n] = data[i];
+
+    data = tmp;
+  }
+};
+
+void rotate(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
+{
+  ea.dispatch<rotate_pa_impl>(Fwd(pa), k); 
+}
+
+
+//=======================================================================================
+
+
+template<class type>
+class shift_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long k)
+  {
+    PA_BOILER
+
+    RBak bak; bak.save(); tab.restoreContext();
+
+    for (long i = 0; i < n; i++)
+      if (i + k >= n || i + k < 0)
+        clear(data[i]);
+
+    rotate_pa_impl<type>::apply(ea, pa, k); 
+  }
+};
+
+void shift(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
+{
+  ea.dispatch<shift_pa_impl>(Fwd(pa), k); 
+}
+
+
+
+
+//=======================================================================================
+
+
+
+
+template<class type>
+class encode_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const vector<long>& array)
+  {
+    PA_BOILER
+
+    RBak bak; bak.save(); tab.restoreContext();
+    assert(lsize(array) == n);
+    convert(data, array);
+  }
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const vector<ZZ>& array)
+  {
+    PA_BOILER
+
+    RBak bak; bak.save(); tab.restoreContext();
+    assert(lsize(array) == n);
+    convert(data, array);
+    for (long i = 0; i < n; i++) assert(deg(data[i]) < d);
+  }
+
+};
+
+
+
+void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<long>& array)
+{
+  ea.dispatch<encode_pa_impl>(Fwd(pa), array); 
+}
+
+void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<ZZ>& array)
+{
+  ea.dispatch<encode_pa_impl>(Fwd(pa), array); 
+}
+
+void encode(const EncryptedArray& ea, NewPlaintextArray& pa, long val)
+{
+   long n = ea.size();
+   vector<long> array;
+   array.resize(n);
+   for (long i = 0; i < n; i++) array[i] = val;
+   encode(ea, pa, array);
+}
+
+void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const ZZ& val)
+{
+   long n = ea.size();
+   vector<ZZ> array;
+   array.resize(n);
+   for (long i = 0; i < n; i++) array[i] = val;
+   encode(ea, pa, array);
+}
+
+
+
+//=======================================================================================
+
+
+
+
+template<class type>
+class random_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa)
+  {
+    PA_BOILER
+
+    RBak bak; bak.save(); tab.restoreContext();
+    for (long i = 0; i < n; i++)
+      random(data[i], d);
+  }
+}; 
+
+
+void random(const EncryptedArray& ea, NewPlaintextArray& pa)
+{
+  ea.dispatch<random_pa_impl>(Fwd(pa)); 
+}
+
+
+
+
+
+
+
+
+
+
 // Explicit instantiation
 
 template class EncryptedArrayDerived<PA_GF2>;
@@ -1165,3 +885,8 @@ template class EncryptedArrayDerived<PA_zz_p>;
 
 template class PlaintextArrayDerived<PA_GF2>;
 template class PlaintextArrayDerived<PA_zz_p>;
+
+
+template class NewPlaintextArrayDerived<PA_GF2>;
+template class NewPlaintextArrayDerived<PA_zz_p>;
+

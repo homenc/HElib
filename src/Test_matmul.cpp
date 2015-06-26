@@ -209,7 +209,7 @@ void  TestIt(long m, long p, long r, long d, long L)
 
     cout << " Multiplying with PlaintextMatrixBaseInterface... " << std::flush;
     v.mat_mul(*ptr);         // multiply the plaintext vector
-    free_mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
+    mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
 
     PlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
@@ -222,7 +222,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     // Test cached verions of the mult-by-matrix operation
     {
       CachedPtxtMatrix zzxMat;
-      free_compMat(ea, zzxMat, *ptr);
+      compMat(ea, zzxMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedPtxtMatrix... " << std::flush;
       mat_mul(ctxt2, zzxMat, ea);
@@ -234,7 +234,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     }
     {
       CachedDCRTPtxtMatrix dcrtMat;
-      free_compMat(ea, dcrtMat, *ptr);
+      compMat(ea, dcrtMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedDCRTPtxtMatrix... " << std::flush;
       mat_mul(ctxt2, dcrtMat, ea);
@@ -264,7 +264,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     v.mat_mul(*ptr);         // multiply the plaintext vector
     cout << " Multiplying with PlaintextBlockMatrixBaseInterface... " 
 	 << std::flush;
-    free_mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
+    mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
 
     PlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
@@ -277,7 +277,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     // Test cached verion sof the mult-by-block-matrix operation
     {
       CachedPtxtBlockMatrix zzxMat;
-      free_compMat(ea, zzxMat, *ptr);
+      compMat(ea, zzxMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedPtxtBlockMatrix... " << std::flush;
       mat_mul(ctxt2, zzxMat, ea);
@@ -289,7 +289,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     }
     {
       CachedDCRTPtxtBlockMatrix dcrtMat;
-      free_compMat(ea, dcrtMat, *ptr);
+      compMat(ea, dcrtMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedDCRTPtxtBlockMatrix... " << std::flush;
       mat_mul(ctxt2, dcrtMat, ea);

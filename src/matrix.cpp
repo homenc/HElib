@@ -25,7 +25,7 @@
 // "in place", so a should not alias b.
 template <class RX, class RXModulus> static
 void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar, 
-                        const RXModulus& PhimX)
+  const RXModulus& PhimX)
 {
   long m  = zMStar.getM();
 
@@ -50,13 +50,12 @@ void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar,
 // This code has a complexity of N+d (instead of N*d) where N is the number of
 // nonzero diagonal blocks. However, it requires space for d extra ciphertexts
 template<class type>
-class free_mat_mul_impl {
+class mat_mul_impl {
 public:
   PA_INJECT(type)
 
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) 
+  static void apply(const EncryptedArrayDerived<type>& ea, 
+    Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) 
   {
     assert(&ea == &mat.getEA().getDerived(type()));
     assert(&ea.getContext() == &ctxt.getContext());
@@ -122,9 +121,8 @@ public:
   }
 
 
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) 
+  static void apply(const EncryptedArrayDerived<type>& ea, Ctxt& ctxt, 
+    const PlaintextBlockMatrixBaseInterface& mat) 
   {
     assert(&ea == &mat.getEA().getDerived(type()));
     assert(&ea.getContext() == &ctxt.getContext());
@@ -245,16 +243,18 @@ public:
 };
 
 
-void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat)
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextBlockMatrixBaseInterface& mat)
 {
   FHE_TIMER_START;
-  ea.dispatch<free_mat_mul_impl>(Fwd(ctxt), mat);
+  ea.dispatch<mat_mul_impl>(Fwd(ctxt), mat);
 }
 
-void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat)
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextMatrixBaseInterface& mat)
 {
   FHE_TIMER_START;
-  ea.dispatch<free_mat_mul_impl>(Fwd(ctxt), mat);
+  ea.dispatch<mat_mul_impl>(Fwd(ctxt), mat);
 }
 
 
@@ -263,18 +263,17 @@ void free_mat_mul(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBas
 
 
 template<class type>
-class free_mat_mul_dense_impl {
+class mat_mul_dense_impl {
 public:
   PA_INJECT(type)
 
   // A recursive matrix-by-vector multiply, used by the dense matrix code.
   // This routine is optimized to use only the rotate1D routine rather
   // than the more expensive linear-array rotations.
-  static
-  void rec_mul(const EncryptedArrayDerived<type>& ea,
-               long dim, Ctxt& res, const Ctxt& pdata, const vector<long>& idx,
-               const PlaintextMatrixInterface<type>& mat,
-               const vector<long>& dimx) 
+  static void rec_mul(const EncryptedArrayDerived<type>& ea,
+    long dim, Ctxt& res, const Ctxt& pdata, const vector<long>& idx,
+    const PlaintextMatrixInterface<type>& mat,
+    const vector<long>& dimx) 
   {
     long ndims = ea.dimension();
     long nslots = ea.size();
@@ -343,9 +342,8 @@ public:
   };
 
   // Multiply a ciphertext vector by a plaintext dense matrix
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) 
+  static void apply(const EncryptedArrayDerived<type>& ea, Ctxt& ctxt, 
+    const PlaintextMatrixBaseInterface& mat) 
   {
     assert(&ea == &mat.getEA().getDerived(type()));
     assert(&ea.getContext() == &ctxt.getContext());
@@ -384,23 +382,22 @@ public:
 
 
 
-void free_mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat)
+void mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextMatrixBaseInterface& mat)
 {
   FHE_TIMER_START;
-  ea.dispatch<free_mat_mul_dense_impl>(Fwd(ctxt), mat);
+  ea.dispatch<mat_mul_dense_impl>(Fwd(ctxt), mat);
 }
 
 
 
 template<class type>
-class free_compMat_impl{
+class compMat_impl{
 public:
   PA_INJECT(type)
 
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             CachedPtxtMatrix& cmat,
-             const PlaintextMatrixBaseInterface& mat) 
+  static void apply(const EncryptedArrayDerived<type>& ea, 
+    CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) 
   {
     assert(&ea == &mat.getEA().getDerived(type()));
 
@@ -455,10 +452,8 @@ public:
   }
 
 
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             CachedPtxtBlockMatrix& cmat,
-             const PlaintextBlockMatrixBaseInterface& mat) 
+  static void apply(const EncryptedArrayDerived<type>& ea, 
+    CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) 
   {
     assert(&ea == &mat.getEA().getDerived(type()));
     const PAlgebra& zMStar = ea.getContext().zMStar;
@@ -558,7 +553,8 @@ public:
 // helper routines
 
 
-void CachedMatrixConvert(CachedDCRTPtxtMatrix& v, const CachedPtxtMatrix& w, const FHEcontext& context)
+static void CachedMatrixConvert(CachedDCRTPtxtMatrix& v, 
+  const CachedPtxtMatrix& w, const FHEcontext& context)
 {
   long n = w.length();
   v.SetLength(n);
@@ -567,8 +563,8 @@ void CachedMatrixConvert(CachedDCRTPtxtMatrix& v, const CachedPtxtMatrix& w, con
     // DoubleCRT defined relative to all primes, even the "special" ones
 }
 
-void CachedBlockMatrixConvert(CachedDCRTPtxtBlockMatrix& v, const CachedPtxtBlockMatrix& w, 
-                              const FHEcontext& context)
+static void CachedBlockMatrixConvert(CachedDCRTPtxtBlockMatrix& v, 
+  const CachedPtxtBlockMatrix& w, const FHEcontext& context)
 {
   long m = w.NumRows();
   long n = w.NumCols();
@@ -584,43 +580,43 @@ void CachedBlockMatrixConvert(CachedDCRTPtxtBlockMatrix& v, const CachedPtxtBloc
 
 
 
-void free_compMat(const EncryptedArray& ea, 
-                 CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat)
+void compMat(const EncryptedArray& ea, CachedPtxtMatrix& cmat, 
+  const PlaintextMatrixBaseInterface& mat)
 {
   FHE_TIMER_START;
-  ea.dispatch<free_compMat_impl>(Fwd(cmat), mat);
+  ea.dispatch<compMat_impl>(Fwd(cmat), mat);
 }
 
 
 
 
-void free_compMat(const EncryptedArray& ea, 
-                 CachedDCRTPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat)
+void compMat(const EncryptedArray& ea, CachedDCRTPtxtMatrix& cmat, 
+  const PlaintextMatrixBaseInterface& mat)
 {
   FHE_TIMER_START;
   CachedPtxtMatrix zzxMat;
-  free_compMat(ea, zzxMat, mat);
+  compMat(ea, zzxMat, mat);
   CachedMatrixConvert(cmat, zzxMat, ea.getContext());
 }
 
 
 
-void free_compMat(const EncryptedArray& ea, 
-                 CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat)
+void compMat(const EncryptedArray& ea, CachedPtxtBlockMatrix& cmat, 
+  const PlaintextBlockMatrixBaseInterface& mat)
 {
   FHE_TIMER_START;
-  ea.dispatch<free_compMat_impl>(Fwd(cmat), mat);
+  ea.dispatch<compMat_impl>(Fwd(cmat), mat);
 }
 
 
 
 
-void free_compMat(const EncryptedArray& ea, 
-                 CachedDCRTPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat)
+void compMat(const EncryptedArray& ea, CachedDCRTPtxtBlockMatrix& cmat, 
+  const PlaintextBlockMatrixBaseInterface& mat)
 {
   FHE_TIMER_START;
   CachedPtxtBlockMatrix zzxMat;
-  free_compMat(ea, zzxMat, mat);
+  compMat(ea, zzxMat, mat);
   CachedBlockMatrixConvert(cmat, zzxMat, ea.getContext());
 }
 
@@ -630,8 +626,8 @@ void free_compMat(const EncryptedArray& ea,
 
 template<class type, class RX>
 static bool processDiagonal(vector<RX>& diag, long dim, long i,
-       vector<RX>& tmpDiag, const PlaintextMatrixInterface<type>& mat,
-       const PAlgebra& zMStar, long d, bool special)
+  vector<RX>& tmpDiag, const PlaintextMatrixInterface<type>& mat,
+  const PAlgebra& zMStar, long d, bool special)
 {
   long D = tmpDiag.size();
   long nslots = diag.size();
@@ -674,15 +670,12 @@ static bool processDiagonal(vector<RX>& diag, long dim, long i,
 
 
 template<class type>
-class free_mat_mul1D_impl{
+class mat_mul1D_impl{
 public:
   PA_INJECT(type)
 
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             Ctxt& ctxt,
-             const PlaintextMatrixBaseInterface& mat,
-             long dim) 
+  static void apply(const EncryptedArrayDerived<type>& ea, Ctxt& ctxt,
+    const PlaintextMatrixBaseInterface& mat, long dim) 
   {
     const PAlgebra& zMStar = ea.getContext().zMStar;
 
@@ -729,11 +722,8 @@ public:
 
 
 
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             Ctxt& ctxt,
-             const PlaintextBlockMatrixBaseInterface& mat,
-             long dim) 
+  static void apply(const EncryptedArrayDerived<type>& ea, Ctxt& ctxt,
+    const PlaintextBlockMatrixBaseInterface& mat, long dim) 
   {
     const PAlgebra& zMStar = ea.getContext().zMStar;
 
@@ -899,22 +889,20 @@ public:
 
 
 
-void 
-free_mat_mul1D(const EncryptedArray& ea, 
-               Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat, long dim) 
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextMatrixBaseInterface& mat, long dim) 
 {
   FHE_TIMER_START;
-  ea.dispatch<free_mat_mul1D_impl>(Fwd(ctxt), mat, dim);
+  ea.dispatch<mat_mul1D_impl>(Fwd(ctxt), mat, dim);
 }
 
 
 
-void 
-free_mat_mul1D(const EncryptedArray& ea, 
-               Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat, long dim) 
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const PlaintextBlockMatrixBaseInterface& mat, long dim) 
 {
   FHE_TIMER_START;
-  ea.dispatch<free_mat_mul1D_impl>(Fwd(ctxt), mat, dim);
+  ea.dispatch<mat_mul1D_impl>(Fwd(ctxt), mat, dim);
 }
 
 
@@ -923,15 +911,12 @@ free_mat_mul1D(const EncryptedArray& ea,
 
 
 template<class type>
-class free_compMat1D_impl{
+class compMat1D_impl{
 public:
   PA_INJECT(type)
 
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             CachedPtxtMatrix& cmat,
-             const PlaintextMatrixBaseInterface& mat, 
-             long dim) 
+  static void apply(const EncryptedArrayDerived<type>& ea, 
+    CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) 
   {
     const PAlgebra& zMStar = ea.getContext().zMStar;
 
@@ -969,11 +954,9 @@ public:
 
 
 
-  static
-  void apply(const EncryptedArrayDerived<type>& ea, 
-             CachedPtxtBlockMatrix& cmat,
-             const PlaintextBlockMatrixBaseInterface& mat, 
-             long dim) 
+  static void apply(const EncryptedArrayDerived<type>& ea, 
+    CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, 
+    long dim) 
   {
     const PAlgebra& zMStar = ea.getContext().zMStar;
 
@@ -1112,48 +1095,403 @@ public:
 };
 
 
-void 
-free_compMat1D(const EncryptedArray& ea, 
-               CachedPtxtMatrix& cmat,
-               const PlaintextMatrixBaseInterface& mat, 
-               long dim) 
+void compMat1D(const EncryptedArray& ea, CachedPtxtMatrix& cmat, 
+  const PlaintextMatrixBaseInterface& mat, long dim) 
 {
   FHE_TIMER_START;
-  ea.dispatch<free_compMat1D_impl>(Fwd(cmat), mat, dim);
+  ea.dispatch<compMat1D_impl>(Fwd(cmat), mat, dim);
 }
 
-void free_compMat1D(const EncryptedArray& ea, 
-                    CachedDCRTPtxtMatrix& cmat, 
-                    const PlaintextMatrixBaseInterface& mat,
-                    long dim)
+void compMat1D(const EncryptedArray& ea, CachedDCRTPtxtMatrix& cmat, 
+  const PlaintextMatrixBaseInterface& mat, long dim)
 {
   FHE_TIMER_START;
   CachedPtxtMatrix zzxMat;
-  free_compMat1D(ea, zzxMat, mat, dim);
+  compMat1D(ea, zzxMat, mat, dim);
   CachedMatrixConvert(cmat, zzxMat, ea.getContext());
 }
 
 
-void 
-free_compMat1D(const EncryptedArray& ea, 
-               CachedPtxtBlockMatrix& cmat,
-               const PlaintextBlockMatrixBaseInterface& mat, 
-               long dim) 
+void compMat1D(const EncryptedArray& ea, CachedPtxtBlockMatrix& cmat, 
+  const PlaintextBlockMatrixBaseInterface& mat, long dim) 
 {
   FHE_TIMER_START;
-  ea.dispatch<free_compMat1D_impl>(Fwd(cmat), mat, dim);
+  ea.dispatch<compMat1D_impl>(Fwd(cmat), mat, dim);
 }
 
-void free_compMat1D(const EncryptedArray& ea, 
-                    CachedDCRTPtxtBlockMatrix& cmat, 
-                    const PlaintextBlockMatrixBaseInterface& mat,
-                    long dim)
+void compMat1D(const EncryptedArray& ea, CachedDCRTPtxtBlockMatrix& cmat, 
+  const PlaintextBlockMatrixBaseInterface& mat, long dim)
 {
   FHE_TIMER_START;
   CachedPtxtBlockMatrix zzxMat;
-  free_compMat1D(ea, zzxMat, mat, dim);
+  compMat1D(ea, zzxMat, mat, dim);
   CachedBlockMatrixConvert(cmat, zzxMat, ea.getContext());
 }
+
+
+
+
+
+
+
+template<class CachedMatrix>
+void mat_mul_tmpl(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedMatrix& cmat)
+{
+  FHE_TIMER_START;
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace()); // fresh encryption of zero
+
+  // Process the diagonals one at a time
+  long nslots = ea.size();
+  for (long i = 0; i < nslots; i++) {  // process diagonal i
+    if (!cmat[i]) continue; // a zero diagonal
+
+    // rotate by i, multiply, and add to the result
+    Ctxt shCtxt = ctxt;
+    ea.rotate(shCtxt, i); // rotate by i
+    shCtxt.multByConstant(*cmat[i]);
+    res += shCtxt;
+  }
+  ctxt = res;
+}
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedPtxtMatrix& cmat)
+{
+  mat_mul_tmpl(ea, ctxt, cmat);
+}
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedDCRTPtxtMatrix& cmat)
+{
+  mat_mul_tmpl(ea, ctxt, cmat);
+}
+
+
+
+
+#ifdef FHE_BOOT_THREADS
+
+template<class CachedMatrix>
+static void mat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedMatrix& cmat, long dim)
+{
+  FHE_TIMER_START;
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+
+  ctxt.cleanUp();  // not sure, but this may be a good idea
+  Ctxt res(ZeroCtxtLike, ctxt); // fresh encryption of zero
+
+  Vec< shared_ptr<Ctxt> > tvec;
+  tvec.SetLength(D);
+  for (long i = 0; i < D; i++)
+    tvec[i] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  bootTask->exec1(D,
+    [&](long first, long last) {
+      for (long i = first; i < last; i++) { // process diagonal i
+        if (!cmat[i]) continue;      // zero diagonal
+    
+        // rotate and multiply
+        (*tvec[i]) = ctxt;
+        if (i != 0) ea.rotate1D(*tvec[i], dim, i);   
+        tvec[i]->multByConstant(*cmat[i]);
+      }
+    }
+  );
+
+  for (long i = 0; i < D; i++)
+    res += *tvec[i];
+
+  ctxt = res;
+}
+
+#else
+
+template<class CachedMatrix>
+static void mat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedMatrix& cmat, long dim)
+{
+  FHE_TIMER_START;
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+
+  ctxt.cleanUp();  // not sure, but this may be a good idea
+  Ctxt res(ZeroCtxtLike, ctxt); // fresh encryption of zero
+
+  // Process the diagonals one at a time
+  for (long i = 0; i < D; i++) { // process diagonal i
+    if (!cmat[i]) continue;      // zero diagonal
+
+    // rotate, multiply and add
+    Ctxt shCtxt = ctxt;
+    if (i != 0) ea.rotate1D(shCtxt, dim, i);   
+    shCtxt.multByConstant(*cmat[i]);
+    res += shCtxt;
+  }
+  ctxt = res;
+}
+
+
+#endif
+
+
+
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedPtxtMatrix& cmat, long dim)
+{ mat_mul1D_tmpl(ea, ctxt, cmat, dim); }
+
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedDCRTPtxtMatrix& cmat, long dim)
+{ mat_mul1D_tmpl(ea, ctxt, cmat, dim); }
+
+
+
+template<class CachedMatrix>
+void blockMat_mul_tmpl(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedMatrix& cmat)
+{
+  FHE_TIMER_START;
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+
+  long nslots = ea.size();
+  long d = ea.getDegree();
+
+  Vec< shared_ptr<Ctxt> > acc;
+  acc.SetLength(d);
+  for (long k = 0; k < d; k++)
+    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  for (long i = 0; i < nslots; i++) { // process diagonal i
+    // apply the linearlized polynomial
+    Ctxt shCtxt = ctxt;
+    ea.rotate(shCtxt, i); 
+    shCtxt.cleanUp();
+
+    for (long k = 0; k < d; k++) {
+      if (!cmat[i][k]) continue; // a zero constant
+      Ctxt shCtxt1 = shCtxt;
+      shCtxt1.multByConstant(*cmat[i][k]);
+      *acc[k] += shCtxt1;
+    }
+  }
+
+  Ctxt res(ZeroCtxtLike, ctxt);
+  for (long k = 0; k < d; k++) {
+    acc[k]->frobeniusAutomorph(k);
+    res += *acc[k];
+  }
+  ctxt = res;
+}
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedPtxtBlockMatrix& cmat)
+{
+  blockMat_mul_tmpl(ea, ctxt, cmat);
+}
+void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedDCRTPtxtBlockMatrix& cmat)
+{
+  blockMat_mul_tmpl(ea, ctxt, cmat);
+}
+
+
+
+#ifdef FHE_BOOT_THREADS
+
+template<class CachedMatrix>
+static void blockMat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedMatrix& cmat, long dim)
+{
+  FHE_TIMER_START;
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
+
+  long m = zMStar.getM();
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+  bool bad = !special && !zMStar.SameOrd(dim);
+  long d = ea.getDegree();
+
+  Vec< shared_ptr<Ctxt> > acc;
+  acc.SetLength(d);
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+  for (long k = 0; k < d; k++)
+    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  FHE_NTIMER_START(blockMat1);
+  vector< vector<Ctxt> > shCtxt;
+
+  shCtxt.resize(D);
+
+  // Process the diagonals one at a time
+  bootTask->exec1(D,
+    [&](long first, long last) {
+      for (long i = first; i < last; i++) { // process diagonal i
+        if (i == 0) {
+          shCtxt[i].resize(1, ctxt);
+        }
+        else if (!bad) {
+          shCtxt[i].resize(1, ctxt);
+          ea.rotate1D(shCtxt[i][0], dim, i);
+          shCtxt[i][0].cleanUp();
+        }
+        else {
+          // we fold the masking constants into the linearized polynomial
+          // constants to save a level. We lift some code out of rotate1D
+          // to do this.
+    
+          shCtxt[i].resize(2, ctxt);
+    
+          long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+          long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+    
+          shCtxt[i][0].smartAutomorph(val); 
+          shCtxt[i][0].cleanUp();
+    
+          shCtxt[i][1].smartAutomorph(ival); 
+          shCtxt[i][1].cleanUp();
+        }
+      }
+    }
+  );
+  FHE_NTIMER_STOP(blockMat1);
+
+
+  FHE_NTIMER_START(blockMat3);
+  bootTask->exec1(d,
+    [&](long first, long last) {
+      for (long k = first; k < last; k++) {
+        for (long i = 0; i < D; i++) {
+          for (long j = 0; j < LONG(shCtxt[i].size()); j++) {
+            if (!cmat[i][k + d*j]) continue; // zero constant
+    
+            Ctxt shCtxt1 = shCtxt[i][j];
+            shCtxt1.multByConstant(*cmat[i][k + d*j]);
+            *acc[k] += shCtxt1;
+          }
+        }
+        acc[k]->frobeniusAutomorph(k);
+      }
+    }
+  );
+  FHE_NTIMER_STOP(blockMat3);
+
+  FHE_NTIMER_START(blockMat4);
+  Ctxt res(ZeroCtxtLike, ctxt);
+  for (long k = 0; k < d; k++) {
+    res += *acc[k];
+  }
+  FHE_NTIMER_STOP(blockMat4);
+
+  ctxt = res;
+}
+
+
+#else
+
+
+template<class CachedMatrix>
+static void blockMat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedMatrix& cmat, long dim)
+{
+  FHE_TIMER_START;
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  assert(dim >= 0 && dim <=  LONG(zMStar.numOfGens()));
+
+  long m = zMStar.getM();
+
+  // special case fo the extra dimension
+  bool special = (dim == LONG(zMStar.numOfGens()));
+  long D = special ? 1 : zMStar.OrderOf(dim); // order of current generator
+  bool bad = !special && !zMStar.SameOrd(dim);
+  long d = ea.getDegree();
+
+  Vec< shared_ptr<Ctxt> > acc;
+  acc.SetLength(d);
+  ctxt.cleanUp(); // not sure, but this may be a good idea
+  for (long k = 0; k < d; k++)
+    acc[k] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
+
+  FHE_NTIMER_START(blockMat1);
+  // Process the diagonals one at a time
+  for (long i = 0; i < D; i++) { // process diagonal i
+    vector<Ctxt> shCtxt;
+    if (i == 0) {
+      shCtxt.resize(1, ctxt);
+    }
+    else if (!bad) {
+      shCtxt.resize(1, ctxt);
+      ea.rotate1D(shCtxt[0], dim, i);
+      shCtxt[0].cleanUp();
+    }
+    else {
+      // we fold the masking constants into the linearized polynomial
+      // constants to save a level. We lift some code out of rotate1D
+      // to do this.
+
+      shCtxt.resize(2, ctxt);
+
+      long val = PowerMod(zMStar.ZmStarGen(dim), i, m);
+      long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
+
+      shCtxt[0].smartAutomorph(val); 
+      shCtxt[0].cleanUp();
+
+      shCtxt[1].smartAutomorph(ival); 
+      shCtxt[1].cleanUp();
+    }
+
+    // apply the linearlized polynomial
+    for (long k = 0; k < d; k++) {
+      for (long j = 0; j < LONG(shCtxt.size()); j++) {
+        if (!cmat[i][k + d*j]) continue; // zero constant
+
+        Ctxt shCtxt1 = shCtxt[j];
+        shCtxt1.multByConstant(*cmat[i][k + d*j]);
+        *acc[k] += shCtxt1;
+      }
+    }
+  }
+  FHE_NTIMER_STOP(blockMat1);
+
+  FHE_NTIMER_START(blockMat2);
+  Ctxt res(ZeroCtxtLike, ctxt);
+  for (long k = 0; k < d; k++) {
+    acc[k]->frobeniusAutomorph(k);
+    res += *acc[k];
+  }
+  FHE_NTIMER_STOP(blockMat2);
+
+  ctxt = res;
+}
+
+
+#endif
+
+
+
+void mat_mul1D( const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedPtxtBlockMatrix& cmat, long dim)
+{ blockMat_mul1D_tmpl(ea, ctxt, cmat, dim); }
+
+
+void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt, 
+  const CachedDCRTPtxtBlockMatrix& cmat, long dim)
+{ blockMat_mul1D_tmpl(ea, ctxt, cmat, dim); }
 
 
 

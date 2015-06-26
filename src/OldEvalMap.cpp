@@ -2050,11 +2050,11 @@ void OldEvalMap::apply(Ctxt& ctxt) const
   if (!invert) {
     // forward direction
 
-    free_mat_mul(ea, ctxt, *mat1);
+    mat_mul(ea, ctxt, *mat1);
     if (!easy) shuffle->apply(ctxt);
 
     for (long i = matvec.length()-1; i >= 0; i--) 
-      free_mat_mul(ea, ctxt, *matvec[i]);
+      mat_mul(ea, ctxt, *matvec[i]);
 
     net->applyToCtxt(ctxt, ea);
     frobeniusAutomorph(ctxt, ea, slot_rotate);
@@ -2065,10 +2065,10 @@ void OldEvalMap::apply(Ctxt& ctxt) const
     net->applyToCtxt(ctxt, ea);
 
     for (long i = 0; i < matvec.length(); i++)
-      free_mat_mul(ea, ctxt, *matvec[i]);
+      mat_mul(ea, ctxt, *matvec[i]);
 
     if (!easy) shuffle->apply(ctxt);
-    free_mat_mul(ea, ctxt, *mat1);
+    mat_mul(ea, ctxt, *mat1);
   }
 }
 
