@@ -720,6 +720,18 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
     long n = ea.size(); \
     long d = ea.getDegree(); \
     vector<RX>& data = pa.getData<type>(); \
+    RBak bak; bak.save(); tab.restoreContext(); \
+
+
+#define CPA_BOILER \
+    const PAlgebraModDerived<type>& tab = ea.getTab(); \
+    const RX& G = ea.getG(); \
+    long n = ea.size(); \
+    long d = ea.getDegree(); \
+    const vector<RX>& data = pa.getData<type>(); \
+    RBak bak; bak.save(); tab.restoreContext(); \
+
+
 
 
 template<class type>
@@ -730,8 +742,6 @@ public:
   static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long k)
   {
     PA_BOILER
-
-    RBak bak; bak.save(); tab.restoreContext();
 
     vector<RX> tmp(n); 
 
@@ -760,8 +770,6 @@ public:
   {
     PA_BOILER
 
-    RBak bak; bak.save(); tab.restoreContext();
-
     for (long i = 0; i < n; i++)
       if (i + k >= n || i + k < 0)
         clear(data[i]);
@@ -782,7 +790,6 @@ void shift(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
 
 
 
-
 template<class type>
 class encode_pa_impl {
 public:
@@ -793,17 +800,15 @@ public:
   {
     PA_BOILER
 
-    RBak bak; bak.save(); tab.restoreContext();
     assert(lsize(array) == n);
     convert(data, array);
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const vector<ZZ>& array)
+    const vector<ZZX>& array)
   {
     PA_BOILER
 
-    RBak bak; bak.save(); tab.restoreContext();
     assert(lsize(array) == n);
     convert(data, array);
     for (long i = 0; i < n; i++) assert(deg(data[i]) < d);
@@ -818,7 +823,7 @@ void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<long>&
   ea.dispatch<encode_pa_impl>(Fwd(pa), array); 
 }
 
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<ZZ>& array)
+void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<ZZX>& array)
 {
   ea.dispatch<encode_pa_impl>(Fwd(pa), array); 
 }
@@ -832,10 +837,10 @@ void encode(const EncryptedArray& ea, NewPlaintextArray& pa, long val)
    encode(ea, pa, array);
 }
 
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const ZZ& val)
+void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const ZZX& val)
 {
    long n = ea.size();
-   vector<ZZ> array;
+   vector<ZZX> array;
    array.resize(n);
    for (long i = 0; i < n; i++) array[i] = val;
    encode(ea, pa, array);
@@ -857,7 +862,6 @@ public:
   {
     PA_BOILER
 
-    RBak bak; bak.save(); tab.restoreContext();
     for (long i = 0; i < n; i++)
       random(data[i], d);
   }
@@ -868,6 +872,241 @@ void random(const EncryptedArray& ea, NewPlaintextArray& pa)
 {
   ea.dispatch<random_pa_impl>(Fwd(pa)); 
 }
+
+
+
+//=======================================================================================
+
+
+
+
+template<class type>
+class decode_pa_impl {
+public:
+  PA_INJECT(type)
+
+  template<class T>
+  static void apply(const EncryptedArrayDerived<type>& ea, 
+    vector<T>& array, const NewPlaintextArray& pa)
+  {
+    CPA_BOILER
+
+    convert(array, data);
+  }
+
+}; 
+
+
+void decode(const EncryptedArray& ea, vector<long>& array, const NewPlaintextArray& pa)
+{
+  ea.dispatch<decode_pa_impl>(Fwd(array), pa); 
+}
+
+
+void decode(const EncryptedArray& ea, vector<ZZX>& array, const NewPlaintextArray& pa)
+{
+  ea.dispatch<decode_pa_impl>(Fwd(array), pa); 
+}
+
+
+
+
+//=======================================================================================
+
+
+
+template<class type>
+class equals_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, bool& res, 
+    const NewPlaintextArray& pa, const  NewPlaintextArray& other)
+  {
+    CPA_BOILER
+
+    const vector<RX>& odata = other.getData<type>(); 
+    res = (data == odata);
+  }
+
+
+  static void apply(const EncryptedArrayDerived<type>& ea, bool& res, 
+    const NewPlaintextArray& pa, const vector<long>& other)
+  {
+    CPA_BOILER
+
+    vector<RX> odata;
+    convert(odata, other);
+    res = (data == odata);
+  }
+
+
+  static void apply(const EncryptedArrayDerived<type>& ea, bool& res,
+    const NewPlaintextArray& pa, const vector<ZZX>& other)
+  {
+    CPA_BOILER
+
+    vector<RX> odata;
+    convert(odata, other);
+    res = (data == odata);
+  }
+
+};
+
+
+
+bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const NewPlaintextArray& other)
+{
+  bool res;
+  ea.dispatch<equals_pa_impl>(Fwd(res), pa, other); 
+  return res;
+}
+
+bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<long>& other)
+{
+  bool res;
+  ea.dispatch<equals_pa_impl>(Fwd(res), pa, other); 
+  return res;
+}
+
+
+bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<ZZX>& other)
+{
+  bool res;
+  ea.dispatch<equals_pa_impl>(Fwd(res), pa, other); 
+  return res;
+}
+
+
+
+
+
+//=======================================================================================
+
+
+
+
+template<class type>
+class add_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const NewPlaintextArray& other)
+  {
+    PA_BOILER
+
+    const vector<RX>& odata = other.getData<type>(); 
+
+    for (long i = 0; i < n; i++)
+      data[i] += odata[i];
+  }
+}; 
+
+
+void add(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
+{
+  ea.dispatch<add_pa_impl>(Fwd(pa), other); 
+}
+
+
+
+
+
+//=======================================================================================
+
+
+
+
+template<class type>
+class sub_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const NewPlaintextArray& other)
+  {
+    PA_BOILER
+
+    const vector<RX>& odata = other.getData<type>(); 
+
+    for (long i = 0; i < n; i++)
+      data[i] -= odata[i];
+  }
+}; 
+
+
+void sub(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
+{
+  ea.dispatch<sub_pa_impl>(Fwd(pa), other); 
+}
+
+
+
+//=======================================================================================
+
+
+
+
+template<class type>
+class mul_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const NewPlaintextArray& other)
+  {
+    PA_BOILER
+
+    const vector<RX>& odata = other.getData<type>(); 
+
+    for (long i = 0; i < n; i++)
+      data[i] = (data[i] * odata[i]) % G;
+  }
+}; 
+
+
+void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
+{
+  ea.dispatch<mul_pa_impl>(Fwd(pa), other); 
+}
+
+
+
+
+
+//=======================================================================================
+
+
+
+
+template<class type>
+class negate_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa) 
+  {
+    PA_BOILER
+
+    for (long i = 0; i < n; i++)
+      NTL::negate(data[i], data[i]);
+  }
+}; 
+
+
+void negate(const EncryptedArray& ea, NewPlaintextArray& pa)
+{
+  ea.dispatch<negate_pa_impl>(Fwd(pa)); 
+}
+
+
+
+
+
+
+
+
 
 
 

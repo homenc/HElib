@@ -803,9 +803,21 @@ void shift(const EncryptedArray& ea, NewPlaintextArray& pa, long k);
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<long>& array);
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<ZZ>& array);
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, long val);
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const ZZ& val);
+void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const ZZX& val);
 
 void random(const EncryptedArray& ea, NewPlaintextArray& pa);
+
+void decode(const EncryptedArray& ea, vector<long>& array, const NewPlaintextArray& pa);
+void decode(const EncryptedArray& ea, vector<ZZX>& array, const NewPlaintextArray& pa);
+
+bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const NewPlaintextArray& other);
+bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<long>& other);
+bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<ZZX>& other);
+
+void add(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other);
+void sub(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other);
+void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other);
+void negate(const EncryptedArray& ea, NewPlaintextArray& pa);
 
 
 
