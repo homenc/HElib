@@ -39,6 +39,7 @@ extern NTL_THREAD_LOCAL MultiTask *bootTask;
 
 
 class PlaintextArray; // forward reference
+class NewPlaintextArray; // forward reference
 class EncryptedArray; // forward reference
 
 /********************************************************************/
@@ -192,9 +193,11 @@ public:
   virtual void encode(ZZX& ptxt, const vector< long >& array) const = 0;
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const = 0;
   virtual void encode(ZZX& ptxt, const PlaintextArray& array) const = 0;
+  virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const = 0;
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(PlaintextArray& array, const ZZX& ptxt) const = 0;
+  virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const = 0;
 
   virtual void random(vector< long >& array) const = 0;
   virtual void random(vector< ZZX >& array) const = 0;
@@ -214,14 +217,17 @@ public:
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const = 0;
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const = 0;
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const PlaintextArray& ptxt) const = 0;
+  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const = 0;
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const = 0;
 
   // Also secret-key encryption, for convenience
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const = 0;
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const = 0;
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const = 0;
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const = 0;
 
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const FHESecKey& sKey, long i) const
@@ -235,6 +241,7 @@ public:
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const = 0;
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< ZZX >& selector) const = 0;
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const PlaintextArray& selector) const = 0;
+  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const = 0;
   //@}
 
   //! @brief Linearized polynomials.
@@ -398,6 +405,7 @@ public:
     {  genericEncode(ptxt, array); }
 
   virtual void encode(ZZX& ptxt, const PlaintextArray& array) const;
+  virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
 
   virtual void encodeUnitSelector(ZZX& ptxt, long i) const;
 
@@ -408,6 +416,7 @@ public:
     { genericDecode(array, ptxt); }
 
   virtual void decode(PlaintextArray& array, const ZZX& ptxt) const;
+  virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const;
 
   virtual void random(vector< long  >& array) const
     { genericRandom(array); } // choose at random and convert to vector<long>
@@ -422,6 +431,9 @@ public:
     { genericEncrypt(ctxt, pKey, ptxt); }
 
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const PlaintextArray& ptxt) const
+    { genericEncrypt(ctxt, pKey, ptxt); }
+
+  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const
     { genericEncrypt(ctxt, pKey, ptxt); }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const
@@ -442,9 +454,13 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
   { genericDecrypt(ctxt, sKey, ptxt); 
-    // FIXME: Recude mod the ciphertext plaintext space as above
+    // FIXME: Redudc mod the ciphertext plaintext space as above
     }
 
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
+  { genericDecrypt(ctxt, sKey, ptxt); 
+    // FIXME: Redudc mod the ciphertext plaintext space as above
+    }
 
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
@@ -455,6 +471,9 @@ public:
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const
+    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
+
 
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const
     { genericSelect(ctxt1, ctxt2, selector); }
@@ -463,6 +482,9 @@ public:
     { genericSelect(ctxt1, ctxt2, selector); }
 
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const PlaintextArray& selector) const
+    { genericSelect(ctxt1, ctxt2, selector); }
+
+  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
     { genericSelect(ctxt1, ctxt2, selector); }
 
   virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const;
@@ -665,6 +687,8 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
     { rep->encode(ptxt, array); }
   void encode(ZZX& ptxt, const PlaintextArray& array) const 
     { rep->encode(ptxt, array); }
+  void encode(ZZX& ptxt, const NewPlaintextArray& array) const 
+    { rep->encode(ptxt, array); }
 
   void encodeUnitSelector(ZZX& ptxt, long i) const
     { rep->encodeUnitSelector(ptxt, i); }
@@ -674,6 +698,8 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void decode(vector< ZZX  >& array, const ZZX& ptxt) const 
     { rep->decode(array, ptxt); }
   void decode(PlaintextArray& array, const ZZX& ptxt) const 
+    { rep->decode(array, ptxt); }
+  void decode(NewPlaintextArray& array, const ZZX& ptxt) const 
     { rep->decode(array, ptxt); }
 
   void random(vector< long  >& array) const
@@ -687,6 +713,8 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
     { rep->encrypt(ctxt, pKey, ptxt); }
   void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const PlaintextArray& ptxt) const 
     { rep->encrypt(ctxt, pKey, ptxt); }
+  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const 
+    { rep->encrypt(ctxt, pKey, ptxt); }
 
 
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const 
@@ -694,6 +722,8 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const 
     { rep->decrypt(ctxt, sKey, ptxt); }
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
+    { rep->decrypt(ctxt, sKey, ptxt); }
+  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
     { rep->decrypt(ctxt, sKey, ptxt); }
 
 
@@ -703,6 +733,8 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
     { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
   void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const 
     { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
+  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const 
+    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
 
 
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const 
@@ -710,6 +742,8 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< ZZX >& selector) const 
     { rep->select(ctxt1, ctxt2, selector); }
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const PlaintextArray& selector) const
+    { rep->select(ctxt1, ctxt2, selector); }
+  void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
     { rep->select(ctxt1, ctxt2, selector); }
 
   void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
@@ -818,6 +852,22 @@ void add(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
 void sub(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other);
 void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other);
 void negate(const EncryptedArray& ea, NewPlaintextArray& pa);
+
+
+void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
+  const PlaintextMatrixBaseInterface& mat);
+void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
+  const PlaintextBlockMatrixBaseInterface& mat);
+
+void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i);
+
+
+void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j);
+void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& vec);
+
+void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& pi);
+
+void print(const EncryptedArray& ea, ostream& s, const NewPlaintextArray& pa);
 
 
 
