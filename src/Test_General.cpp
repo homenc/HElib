@@ -25,12 +25,15 @@
 #include <cassert>
 #include <cstdio>
 
-#ifdef DEBUG_PRINTOUT
+#if 1
 #define debugCompare(ea,sk,p,c) {\
-  PlaintextArray pp(ea);\
+  NewPlaintextArray pp(ea);\
   ea.decrypt(c, sk, pp);\
-  if (!pp.equals(p)) { cerr << "oops:\n"<<p<<"!=\n"<<pp<<endl; exit(0); } \
-  }
+  if (!equals(ea, pp, p)) { \
+    cerr << "oops:\n"; print(ea, cerr, p); cerr << "\n"; \
+    print(ea, cerr, pp); cerr << "\n"; \
+    exit(0); \
+  }}
 #else
 #define debugCompare(ea,sk,p,c)
 #endif
@@ -111,15 +114,15 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   long nslots = ea.size();
 
-  PlaintextArray p0(ea);
-  PlaintextArray p1(ea);
-  PlaintextArray p2(ea);
-  PlaintextArray p3(ea);
+  NewPlaintextArray p0(ea);
+  NewPlaintextArray p1(ea);
+  NewPlaintextArray p2(ea);
+  NewPlaintextArray p3(ea);
 
-  p0.random();
-  p1.random();
-  p2.random();
-  p3.random();
+  random(ea, p0);
+  random(ea, p1);
+  random(ea, p2);
+  random(ea, p3);
 
   Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
   //  ea.encrypt(c0, publicKey, p0);
@@ -142,52 +145,52 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
                   // random number in [-(nslots-1)..nslots-1]
 
      // two random constants
-     PlaintextArray const1(ea);
-     PlaintextArray const2(ea);
-     const1.random();
-     const2.random();
+     NewPlaintextArray const1(ea);
+     NewPlaintextArray const2(ea);
+     random(ea, const1);
+     random(ea, const2);
 
      ZZX const1_poly, const2_poly;
      ea.encode(const1_poly, const1);
      ea.encode(const2_poly, const2);
 
-     p1.mul(p0);     // c1.multiplyBy(c0)
+     mul(ea, p1, p0);     // c1.multiplyBy(c0)
      c1.multiplyBy(c0);              CheckCtxt(c1, "c1*=c0");
      debugCompare(ea,secretKey,p1,c1);
 
-     p0.add(const1); // c0 += random constant
+     add(ea, p0, const1); // c0 += random constant
      c0.addConstant(const1_poly);    CheckCtxt(c0, "c0+=k1");
      debugCompare(ea,secretKey,p0,c0);
 
-     p2.mul(const2); // c2 *= random constant
+     mul(ea, p2, const2); // c2 *= random constant
      c2.multByConstant(const2_poly); CheckCtxt(c2, "c2*=k2");
      debugCompare(ea,secretKey,p2,c2);
 
-     PlaintextArray tmp_p(p1); // tmp = c1
+     NewPlaintextArray tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
      sprintf(buffer, "c2>>=%d", (int)shamt);
-     tmp_p.shift(shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
+     shift(ea, tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
      ea.shift(tmp, shamt);           CheckCtxt(tmp, buffer);
      debugCompare(ea,secretKey,tmp_p,tmp);
 
-     p2.add(tmp_p);  // c2 += tmp
+     add(ea, p2, tmp_p);  // c2 += tmp
      c2 += tmp;                      CheckCtxt(c2, "c2+=tmp");
      debugCompare(ea,secretKey,p2,c2);
 
      sprintf(buffer, "c2>>>=%d", (int)rotamt);
-     p2.rotate(rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
+     rotate(ea, p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
      ea.rotate(c2, rotamt);          CheckCtxt(c2, buffer);
      debugCompare(ea,secretKey,p2,c2);
 
-     p1.negate(); // c1.negate()
+     ::negate(ea, p1); // c1.negate()
      c1.negate();                    CheckCtxt(c1, "c1=-c1");
      debugCompare(ea,secretKey,p1,c1);
 
-     p3.mul(p2); // c3.multiplyBy(c2) 
+     mul(ea, p3, p2); // c3.multiplyBy(c2) 
      c3.multiplyBy(c2);              CheckCtxt(c3, "c3*=c2");
      debugCompare(ea,secretKey,p3,c3);
 
-     p0.sub(p3); // c0 -= c3
+     sub(ea, p0, p3); // c0 -= c3
      c0 -= c3;                       CheckCtxt(c0, "c0=-c3");
      debugCompare(ea,secretKey,p0,c0);
 
@@ -202,20 +205,20 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   resetAllTimers();
   FHE_NTIMER_START(Check);
    
-  PlaintextArray pp0(ea);
-  PlaintextArray pp1(ea);
-  PlaintextArray pp2(ea);
-  PlaintextArray pp3(ea);
+  NewPlaintextArray pp0(ea);
+  NewPlaintextArray pp1(ea);
+  NewPlaintextArray pp2(ea);
+  NewPlaintextArray pp3(ea);
    
   ea.decrypt(c0, secretKey, pp0);
   ea.decrypt(c1, secretKey, pp1);
   ea.decrypt(c2, secretKey, pp2);
   ea.decrypt(c3, secretKey, pp3);
    
-  if (!pp0.equals(p0)) cerr << "oops 0\n";
-  if (!pp1.equals(p1)) cerr << "oops 1\n";
-  if (!pp2.equals(p2)) cerr << "oops 2\n";
-  if (!pp3.equals(p3)) cerr << "oops 3\n";
+  if (!equals(ea, pp0, p0))  cerr << "oops 0\n";
+  if (!equals(ea, pp1, p1))  cerr << "oops 1\n";
+  if (!equals(ea, pp2, p2))  cerr << "oops 2\n";
+  if (!equals(ea, pp3, p3))  cerr << "oops 3\n";
    
   FHE_NTIMER_STOP(Check);
    
@@ -227,7 +230,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 #if 0
 
   vector<Ctxt> vc(L,c0);            // A vector of L ciphertexts
-  vector<PlaintextArray> vp(L, p0); // A vector of L plaintexts
+  vector<NewPlaintextArray> vp(L, p0); // A vector of L plaintexts
   for (long i=0; i<L; i++) {
     vp[i].random();                     // choose a random plaintext 
     ea.encrypt(vc[i], publicKey, vp[i]); // encrypt it
