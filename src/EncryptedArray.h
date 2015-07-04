@@ -777,6 +777,7 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
 class NewPlaintextArrayBase { // purely abstract interface
 public:
   virtual ~NewPlaintextArrayBase() {}
+  virtual void print(ostream& s) const = 0;
 
 };
 
@@ -786,6 +787,8 @@ public:
   PA_INJECT(type)
 
   vector< RX > data;
+
+  virtual void print(ostream& s) const { s << data; }
 
 };
 
@@ -828,14 +831,20 @@ public:
     { return (dynamic_cast< NewPlaintextArrayDerived<type>& >(*rep)).data; }
 
 
+  void print(ostream& s) const { rep->print(s); }
+
 };
+
+inline 
+ostream& operator<<(ostream& s, const NewPlaintextArray& pa)
+{  pa.print(s); return s; }
 
 
 void rotate(const EncryptedArray& ea, NewPlaintextArray& pa, long k);
 void shift(const EncryptedArray& ea, NewPlaintextArray& pa, long k);
 
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<long>& array);
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<ZZ>& array);
+void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<ZZX>& array);
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, long val);
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const ZZX& val);
 
@@ -867,7 +876,6 @@ void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const V
 
 void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& pi);
 
-void print(const EncryptedArray& ea, ostream& s, const NewPlaintextArray& pa);
 
 
 

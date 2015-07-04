@@ -25,13 +25,13 @@
 #include <cassert>
 #include <cstdio>
 
-#if 1
+#ifdef DEBUG_PRINTOUT
 #define debugCompare(ea,sk,p,c) {\
   NewPlaintextArray pp(ea);\
   ea.decrypt(c, sk, pp);\
   if (!equals(ea, pp, p)) { \
-    cerr << "oops:\n"; print(ea, cerr, p); cerr << "\n"; \
-    print(ea, cerr, pp); cerr << "\n"; \
+    cerr << "oops:\n"; cerr << p << "\n"; \
+    cerr << pp << "\n"; \
     exit(0); \
   }}
 #else

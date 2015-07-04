@@ -170,8 +170,8 @@ void  TestIt(long m, long p, long r, long d)
 
   long nslots = ea.size();
 
-  PlaintextArray p0(ea);
-  PlaintextArray pp0(ea);
+  NewPlaintextArray p0(ea);
+  NewPlaintextArray pp0(ea);
 
   Ctxt c0(publicKey);
 
@@ -185,15 +185,15 @@ void  TestIt(long m, long p, long r, long d)
   vector<ZZX> C;
   ea.buildLinPolyCoeffs(C, LM);
 
-  p0.random();  
+  random(ea, p0);  
   ea.encrypt(c0, publicKey, p0);
   applyLinPoly1(ea, c0, C);
   ea.decrypt(c0, secretKey, pp0);
 
   shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildSingleBlockMatrix(ea, LM));
-  PlaintextArray p1(p0);
-  p1.mat_mul(*mat);
-  if (pp0.equals(p1))
+  NewPlaintextArray p1(p0);
+  mat_mul(ea, p1, *mat);
+  if (equals(ea, pp0, p1))
     cout << "GOOD\n";
   else
     cout << "BAD\n";
@@ -217,15 +217,15 @@ void  TestIt(long m, long p, long r, long d)
   for (long i = 0; i < nslots; i++)
     ea.buildLinPolyCoeffs(C[i], LM[i]);
 
-  p0.random();
+  random(ea, p0);
   ea.encrypt(c0, publicKey, p0);
   applyLinPolyMany(ea, c0, C); // apply the linearized polynomials
   ea.decrypt(c0, secretKey, pp0);
 
   shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));
-  PlaintextArray p1(p0);
-  p1.mat_mul(*mat);
-  if (pp0.equals(p1))
+  NewPlaintextArray p1(p0);
+  mat_mul(ea, p1, *mat);
+  if (equals(ea, pp0, p1))
     cout << "GOOD\n";
   else
     cout << "BAD\n";
@@ -256,15 +256,15 @@ void  TestIt(long m, long p, long r, long d)
     ea.encode(encodedC[j], v);
   }
 
-  p0.random();  
+  random(ea, p0);  
   ea.encrypt(c0, publicKey, p0);
   applyLinPolyLL(c0, encodedC, ea.getDegree()); // apply linearized polynomials
   ea.decrypt(c0, secretKey, pp0);
 
   shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));
-  PlaintextArray p1(p0);
-  p1.mat_mul(*mat);
-  if (pp0.equals(p1))
+  NewPlaintextArray p1(p0);
+  mat_mul(ea, p1, *mat);
+  if (equals(ea, pp0, p1))
     cout << "GOOD\n";
   else
     cout << "BAD\n";
