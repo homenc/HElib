@@ -38,88 +38,33 @@ extern NTL_THREAD_LOCAL MultiTask *bootTask;
 
 
 
-class PlaintextArray; // forward reference
+
+// these are used to implement NewPlaintextArray stuff routines
+
+#define PA_BOILER \
+    const PAlgebraModDerived<type>& tab = ea.getTab(); \
+    const RX& G = ea.getG(); \
+    long n = ea.size(); \
+    long d = ea.getDegree(); \
+    vector<RX>& data = pa.getData<type>(); \
+    RBak bak; bak.save(); tab.restoreContext(); \
+
+
+#define CPA_BOILER \
+    const PAlgebraModDerived<type>& tab = ea.getTab(); \
+    const RX& G = ea.getG(); \
+    long n = ea.size(); \
+    long d = ea.getDegree(); \
+    const vector<RX>& data = pa.getData<type>(); \
+    RBak bak; bak.save(); tab.restoreContext(); \
+
+
+
+
+
+
 class NewPlaintextArray; // forward reference
 class EncryptedArray; // forward reference
-
-/********************************************************************/
-/****************** Linear transformation classes *******************/
-
-//! @class PlaintextMatrixBaseInterface
-//! @brief An abstract interface for linear transformations.
-//!
-//! A matrix implements linear transformation over an extension field/ring
-//! (e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G). Any class
-//! implementing this interface should be linked to a specific EncryptedArray
-//! object, a reference to which is returned by the getEA() method -- this
-//! method will generally be invoked by an EncryptedArray object to verify
-//! consistent use.
-
-class PlaintextMatrixBaseInterface {
-public:
-  virtual const EncryptedArray& getEA() const = 0;
-
-  virtual ~PlaintextMatrixBaseInterface() {}
-};
-
-
-//! @class PlaintextMatrixInterface
-//! @brief A somewhat less abstract interface for linear transformations.
-//! 
-//! A matrix implements linear transformation over an extension field/ring
-//! (e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G). The method
-//! get(out, i, j) copies the element at row i column j of a matrix into
-//! the variable out. The type of out is RX, which is GF2X if type is PA_GF2,
-//! and zz_pX if type is PA_zz_p. A return value of true means that the
-//! entry is zero, and out is not touched.
-template<class type> 
-class  PlaintextMatrixInterface : public PlaintextMatrixBaseInterface {
-public:
-  PA_INJECT(type)
-
-  virtual bool get(RX& out, long i, long j) const = 0;
-};
-
-
-
-//! @class PlaintextBlockMatrixBaseInterface
-//! @brief An abstract interface for linear transformations.
-//!
-//! A block matrix implements linear transformation over the base field/ring
-//! (e.g., Z_2, Z_3, Z_{2^8}, etc.) Any class implementing this interface
-//! should be linked to a specific EncryptedArray object, a reference to which
-//! is returned by the getEA() method -- this method will generally be invoked
-//! by an EncryptedArray object to verify consistent use.
-
-class PlaintextBlockMatrixBaseInterface {
-public:
-  virtual const EncryptedArray& getEA() const = 0;
-
-  virtual ~PlaintextBlockMatrixBaseInterface() {}
-};
-
-
-//! @class PlaintextBlockMatrixInterface
-//! @brief A somewhat less abstract interface for linear transformations.
-//! 
-//! A block matrix implements linear transformation over the base field/ring
-//! (e.g., Z_2, Z_3, Z_{2^8}, etc.) The method get(out, i, j) copies the
-//! element at row i column j of a matrix into the variable out. The type
-//! of out is mat_R (so either mar_GF2 or mat_zz_p.  A return value of true
-//! means that the entry is zero, and out is not touched.
-
-template<class type> 
-class  PlaintextBlockMatrixInterface : public PlaintextBlockMatrixBaseInterface {
-public:
-  PA_INJECT(type)
-
-  virtual bool get(mat_R& out, long i, long j) const = 0;
-};
-
-
-/**************** End linear transformation classes *****************/
-/********************************************************************/
-
 
 /**
  * @class EncryptedArrayBase
@@ -192,11 +137,9 @@ public:
   // encode/decode arrays into plaintext polynomials
   virtual void encode(ZZX& ptxt, const vector< long >& array) const = 0;
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const = 0;
-  virtual void encode(ZZX& ptxt, const PlaintextArray& array) const = 0;
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const = 0;
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const = 0;
-  virtual void decode(PlaintextArray& array, const ZZX& ptxt) const = 0;
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const = 0;
 
   virtual void random(vector< long >& array) const = 0;
@@ -216,17 +159,14 @@ public:
   //! @name Encoding+encryption/decryption+decoding
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const = 0;
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const = 0;
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const PlaintextArray& ptxt) const = 0;
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const = 0;
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const = 0;
 
   // Also secret-key encryption, for convenience
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const = 0;
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const = 0;
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const = 0;
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const = 0;
 
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
@@ -240,7 +180,6 @@ public:
   //! MUX: ctxt1 = ctxt1*selector + ctxt2*(1-selector)
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const = 0;
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< ZZX >& selector) const = 0;
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const PlaintextArray& selector) const = 0;
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const = 0;
   //@}
 
@@ -404,7 +343,6 @@ public:
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const
     {  genericEncode(ptxt, array); }
 
-  virtual void encode(ZZX& ptxt, const PlaintextArray& array) const;
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
 
   virtual void encodeUnitSelector(ZZX& ptxt, long i) const;
@@ -415,7 +353,6 @@ public:
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const
     { genericDecode(array, ptxt); }
 
-  virtual void decode(PlaintextArray& array, const ZZX& ptxt) const;
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const;
 
   virtual void random(vector< long  >& array) const
@@ -428,9 +365,6 @@ public:
     { genericEncrypt(ctxt, pKey, ptxt); }
 
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const PlaintextArray& ptxt) const
     { genericEncrypt(ctxt, pKey, ptxt); }
 
   virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const
@@ -452,10 +386,6 @@ public:
       }
     }
 
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
-  { genericDecrypt(ctxt, sKey, ptxt); 
-    // FIXME: Redudc mod the ciphertext plaintext space as above
-    }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
   { genericDecrypt(ctxt, sKey, ptxt); 
@@ -468,8 +398,6 @@ public:
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
   virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
@@ -481,8 +409,6 @@ public:
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< ZZX >& selector) const
     { genericSelect(ctxt1, ctxt2, selector); }
 
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const PlaintextArray& selector) const
-    { genericSelect(ctxt1, ctxt2, selector); }
 
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
     { genericSelect(ctxt1, ctxt2, selector); }
@@ -685,8 +611,6 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
     { rep->encode(ptxt, array); }
   void encode(ZZX& ptxt, const vector< ZZX >& array) const 
     { rep->encode(ptxt, array); }
-  void encode(ZZX& ptxt, const PlaintextArray& array) const 
-    { rep->encode(ptxt, array); }
   void encode(ZZX& ptxt, const NewPlaintextArray& array) const 
     { rep->encode(ptxt, array); }
 
@@ -696,8 +620,6 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void decode(vector< long  >& array, const ZZX& ptxt) const 
     { rep->decode(array, ptxt); }
   void decode(vector< ZZX  >& array, const ZZX& ptxt) const 
-    { rep->decode(array, ptxt); }
-  void decode(PlaintextArray& array, const ZZX& ptxt) const 
     { rep->decode(array, ptxt); }
   void decode(NewPlaintextArray& array, const ZZX& ptxt) const 
     { rep->decode(array, ptxt); }
@@ -711,8 +633,6 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
     { rep->encrypt(ctxt, pKey, ptxt); }
   void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const 
     { rep->encrypt(ctxt, pKey, ptxt); }
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const PlaintextArray& ptxt) const 
-    { rep->encrypt(ctxt, pKey, ptxt); }
   void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const 
     { rep->encrypt(ctxt, pKey, ptxt); }
 
@@ -720,8 +640,6 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const 
     { rep->decrypt(ctxt, sKey, ptxt); }
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const 
-    { rep->decrypt(ctxt, sKey, ptxt); }
-  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
     { rep->decrypt(ctxt, sKey, ptxt); }
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
     { rep->decrypt(ctxt, sKey, ptxt); }
@@ -731,8 +649,6 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
     { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
   void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const 
     { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const PlaintextArray& ptxt, long skIdx=0) const 
-    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
   void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const 
     { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
 
@@ -740,8 +656,6 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const 
     { rep->select(ctxt1, ctxt2, selector); }
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< ZZX >& selector) const 
-    { rep->select(ctxt1, ctxt2, selector); }
-  void select(Ctxt& ctxt1, const Ctxt& ctxt2, const PlaintextArray& selector) const
     { rep->select(ctxt1, ctxt2, selector); }
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
     { rep->select(ctxt1, ctxt2, selector); }
@@ -863,12 +777,6 @@ void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
 void negate(const EncryptedArray& ea, NewPlaintextArray& pa);
 
 
-void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
-  const PlaintextMatrixBaseInterface& mat);
-void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
-  const PlaintextBlockMatrixBaseInterface& mat);
-
-void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i);
 
 
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j);
@@ -880,579 +788,6 @@ void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>&
 
 
 
-/**
-@class PlaintextArrayBase
-@brief Virtual class for array of slots, not encrypted
-
-An object pa of type PlaintextArray stores information about an EncryptedArray
-object ea.  The object pa stores a vector of plaintext slots, where each slot
-is an element of the polynomial ring (Z/(p^r)[X])/(G), where p, r, and G are
-as defined in ea. Support for arithemetic on PlaintextArray objects is provided.
-
-Mirroring PAlgebraMod and EncryptedArray, we have the following class heirarchy:
-
-PlaintextArrayBase is a virtual class
-
-PlaintextArrayDerived<type> is a derived template class, where type is either
-PA_GF2 or PA_zz_p.
-
-The class PlaintextArray is a simple wrapper around a smart pointer to a
-PlaintextArray object: copying a PlaintextArray object results is a "deep
-copy" of the underlying object of the derived class.
-**/
-class PlaintextArrayBase { // purely abstract interface
-
-public:
-  virtual ~PlaintextArrayBase() {}
-
-  virtual PlaintextArrayBase* clone() const = 0;
-  // makes this usable with cloned_ptr
-
-  //! Get the EA object (which is needed for the encoding/decoding routines)
-  virtual const EncryptedArray& getEA() const = 0;
-
-  //! Rotation/shift as a linear array
-  virtual void rotate(long k) = 0; 
-
-  //! Non-cyclic shift with zero fill
-  virtual void shift(long k) = 0;
-
-  //! Encode/decode arrays into plaintext polynomials
-  virtual void encode(const vector< long >& array) = 0;
-  virtual void encode(const vector< ZZX >& array) = 0;
-  virtual void decode(vector< long  >& array) const = 0;
-  virtual void decode(vector< ZZX  >& array) const = 0;
-
-  //! Encode with the same value replicated in each slot
-  virtual void encode(long val) = 0;
-  virtual void encode(const ZZX& val) = 0;
-
-  //! Generate a uniformly random element
-  virtual void random() = 0;
-
-  //! Equality testing
-  virtual bool equals(const PlaintextArrayBase& other) const = 0;
-  virtual bool equals(const vector<long>& other) const = 0;
-  virtual bool equals(const vector<ZZX>& other) const = 0;
-
-  // arithmetic
-  virtual void add(const PlaintextArrayBase& other) = 0;
-  virtual void sub(const PlaintextArrayBase& other) = 0;
-  virtual void mul(const PlaintextArrayBase& other) = 0;
-  virtual void negate() = 0;
-
-  // linear algebra
-  virtual void mat_mul(const PlaintextMatrixBaseInterface& mat) = 0;
-  virtual void alt_mul(const PlaintextMatrixBaseInterface& mat) = 0;
-
-  virtual void mat_mul(const PlaintextBlockMatrixBaseInterface& mat) = 0;
-
-  //! Replicate coordinate i at all coordinates
-  virtual void replicate(long i) = 0;
-
-  //! apply x -> x^{p^j} at all coordinates
-  virtual void frobeniusAutomorph(long j) = 0;
-
-  //! apply x-> x^{p^{vec[i]}} to slot i
-  virtual void frobeniusAutomorph(const Vec<long>& vec) = 0;
-  
-
-  //! apply a permutation: new[i] = old[pi[i]]
-  virtual void applyPerm(const Vec<long>& pi) = 0;
-
-  // output
-  virtual void print(ostream& s) const = 0;
-};
-
-
-/**
- * @class PlaintextArrayDerived
- * @brief Derived concrete implementation of PlaintextArrayBase
- */
-template<class type> class PlaintextArrayDerived : public PlaintextArrayBase {
-public:
-  PA_INJECT(type)
-
-private:
-  const EncryptedArray& ea;
-  vector< RX > data;
-
-  /* the following are just for convenience */
-  const PAlgebraModDerived<type>& tab;
-  const RX& G;
-  long degG;
-  long n;
-
-public:
-
-  virtual PlaintextArrayBase* clone() const { return new PlaintextArrayDerived(*this); }
-  virtual const EncryptedArray& getEA() const { return ea; }
-
-  PlaintextArrayDerived(const EncryptedArray& _ea) : 
-    ea(_ea),
-    tab( ea.getAlMod().getDerived(type()) ),
-    G( ea.getDerived(type()).getG() )
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-
-    degG = deg(G);
-    n = ea.size();
-    data.resize(n);
-  }
-
-  PlaintextArrayDerived(const PlaintextArrayDerived& other) // copy constructor
-  : ea(other.ea), tab(other.tab), G(other.G), degG(other.degG), n(other.n) 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    data = other.data;
-  }
-
-
-  PlaintextArrayDerived& operator=(const PlaintextArrayDerived& other) // assignment
-  {
-    if (this == &other) return *this;
-    assert(&ea == &other.ea); 
-    RBak bak; bak.save(); tab.restoreContext();
-    data = other.data;
-    return *this;
-  }
-
-  virtual void rotate(long k) 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-
-    vector<RX> tmp(n); 
-
-    for (long i = 0; i < n; i++)
-      tmp[((i+k)%n + n)%n] = data[i];
-
-    data = tmp;
-  }
-
-  virtual void shift(long k) 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-
-    for (long i = 0; i < n; i++)
-      if (i + k >= n || i + k < 0)
-        clear(data[i]);
-
-    rotate(k);
-  }
-
-  virtual void encode(const vector< long >& array) 
-  {
-    assert(lsize(array) == n);
-    RBak bak; bak.save(); tab.restoreContext();
-    convert(data, array);
-  }
-
-  virtual void encode(const vector< ZZX >& array) 
-  {
-    assert(lsize(array) == n);
-    RBak bak; bak.save(); tab.restoreContext();
-    convert(data, array);
-    for (long i = 0; i < lsize(array); i++) assert(deg(data[i]) < degG);
-  }
-
-  virtual void decode(vector< long  >& array) const
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    convert(array, data);
-  }
-
-  virtual void decode(vector< ZZX  >& array) const 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    convert(array, data);
-  }
-
-  virtual void encode(long val)
-  {
-    vector<long> array;
-    array.resize(n);
-    for (long i = 0; i < n; i++) array[i] = val;
-    encode(array);
-  }
-
-  virtual void encode(const ZZX& val)
-  {
-    vector<ZZX> array;
-    array.resize(n);
-    for (long i = 0; i < n; i++) array[i] = val;
-    encode(array);
-  }
-
-  virtual void random() 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    for (long i = 0; i < n; i++)
-      NTL::random(data[i], degG);
-  }
-
-  virtual bool equals(const PlaintextArrayBase& other) const 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    const PlaintextArrayDerived<type>& other1 = dynamic_cast< const PlaintextArrayDerived<type>& >( other );
-
-    assert(&ea == &other1.ea);
-
-    return data == other1.data;
-  }
-
-  virtual bool equals(const vector<long>& other) const 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    vector<RX> tmp;
-    convert(tmp, other);
-    return data == tmp;
-  }
-
-  virtual bool equals(const vector<ZZX>& other) const 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    vector<RX> tmp;
-    convert(tmp, other);
-    return data == tmp;
-  }
-
-  virtual void add(const PlaintextArrayBase& other) 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    const PlaintextArrayDerived<type>& other1 = 
-      dynamic_cast< const PlaintextArrayDerived<type>& >( other );
-
-    assert(&ea == &other1.ea);
-
-    for (long i = 0; i < n; i++) 
-      data[i] += other1.data[i];
-  }
-
-  virtual void sub(const PlaintextArrayBase& other) 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    const PlaintextArrayDerived<type>& other1 = 
-      dynamic_cast< const PlaintextArrayDerived<type>& >( other );
-
-    assert(&ea == &other1.ea);
-
-    for (long i = 0; i < n; i++) 
-      data[i] -= other1.data[i];
-  }
-
-
-  virtual void negate() 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    for (long i = 0; i < n; i++) 
-      NTL::negate(data[i], data[i]);
-  }
-
-  virtual void mul(const PlaintextArrayBase& other) 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    const PlaintextArrayDerived<type>& other1 = 
-      dynamic_cast< const PlaintextArrayDerived<type>& >( other );
-
-    assert(&ea == &other1.ea);
-
-    for (long i = 0; i < n; i++) 
-      MulMod(data[i], data[i], other1.data[i], G);
-  }
-
-
-
-  virtual void mat_mul(const PlaintextMatrixBaseInterface& mat) 
-  {
-    assert(&ea == &mat.getEA());
-
-    RBak bak; bak.save(); tab.restoreContext();
-    const PlaintextMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
-
-    vector<RX> res;
-    res.resize(n);
-    for (long j = 0; j < n; j++) {
-      RX acc, val, tmp; 
-      acc = 0;
-      for (long i = 0; i < n; i++) {
-        if (!mat1.get(val, i, j)) {
-          NTL::mul(tmp, data[i], val);
-          NTL::add(acc, acc, tmp);
-        }
-      }
-      rem(acc, acc, G);
-      res[j] = acc;
-    }
-
-    data = res;
-  }
-
-  static
-  void rec_mul(long dim, const EncryptedArray& ea,
-               vector<RX>& res, 
-               const vector<RX>& pdata, const vector<long>& idx,
-               const PlaintextMatrixInterface<type>& mat)
-  {
-    long ndims = ea.dimension();
-
-    if (dim >= ndims) {
-      for (long j = 0; j < ea.size(); j++) {
-        long i = idx[j];
-        RX val;
-        if (!mat.get(val, i, j)) res[j] += pdata[j] * val;
-      }
-    }
-    else {
-
-      vector<RX> pdata1;
-      vector<long> idx1;
-
-      for (long offset = 0; offset < ea.sizeOfDimension(dim); offset++) {
-        ea.rotate1D(pdata1, pdata, dim, offset);
-        ea.rotate1D(idx1, idx, dim, offset);
-        rec_mul(dim+1, ea, res, pdata1, idx1, mat);
-      }
-    }
-  }
-
-  virtual void alt_mul(const PlaintextMatrixBaseInterface& mat) 
-  {
-    assert(&ea == &mat.getEA());
-
-    RBak bak; bak.save(); tab.restoreContext();
-    const PlaintextMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
-
-    vector<RX> res;
-    vector<long> idx;
-
-    res.resize(n);
-    idx.resize(n);
-    for (long i = 0; i < n; i++)
-       idx[i] = i;
-
-    rec_mul(0, ea, res, data, idx, mat1);
-
-    for (long i = 0; i < n; i++)
-       data[i] = res[i] % G;
-  }
-
-  virtual void mat_mul(const PlaintextBlockMatrixBaseInterface& mat) 
-  {
-    assert(&ea == &mat.getEA());
-
-    RBak bak; bak.save(); tab.restoreContext();
-    const PlaintextBlockMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
-
-    vector<RX> res;
-    res.resize(n);
-    for (long j = 0; j < n; j++) {
-      vec_R acc, tmp, tmp1;
-      mat_R val;
-
-      acc.SetLength(degG);
-      for (long i = 0; i < n; i++) {
-         if (!mat1.get(val, i, j)) {
-            VectorCopy(tmp1, data[i], degG);
-            NTL::mul(tmp, tmp1, val);
-            NTL::add(acc, acc, tmp);
-         }
-      }
-      conv(res[j], acc);
-    }
-
-    data = res;
-  }
-
-  virtual void replicate(long i)
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-
-    assert(i >= 0 && i < n);
-    for (long j = 0; j < n; j++) {
-      if (j != i) data[j] = data[i];
-    }
-  }
-
-  virtual void frobeniusAutomorph(long j)
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    long d = degG;
-    long p = ea.getAlMod().getZMStar().getP();
-
-    j = mcMod(j, d);
-    RX H = PowerMod(RX(1, 1), power_ZZ(p, j), G);
-
-    for (long i = 0; i < n; i++)
-      data[i] = CompMod(data[i], H, G);
-  }
-
-  virtual void frobeniusAutomorph(const Vec<long>& vec)
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-    long d = degG;
-    long p = ea.getAlMod().getZMStar().getP();
-
-    assert(vec.length() == n);
-
-    for (long i = 0; i < n; i++) {
-      long j = mcMod(vec[i], d);
-      RX H = PowerMod(RX(1, 1), power_ZZ(p, j), G);
-      data[i] = CompMod(data[i], H, G);
-    }
-  }
-
-  virtual void applyPerm(const Vec<long>& pi) 
-  {
-    RBak bak; bak.save(); tab.restoreContext();
-
-    assert(pi.length() == n);
-
-    vector<RX> tmp;
-    tmp.resize(n);
-    for (long i = 0; i < n; i++)
-      tmp[i] = data[pi[i]];
-
-    data = tmp;
-  }
-
-  virtual void print(ostream& s) const 
-  {
-    if (n == 0) 
-      s << "[]";
-    else {
-      if (IsZero(data[0])) s << "[[0]";
-      else                 s << "[" << data[0];
-      for (long i = 1; i < lsize(data); i++)
-        if (IsZero(data[i])) s << " [0]";
-	else                 s << " " << data[i];
-      s << "]";
-    }
-  }
-
-
-
-  /* The follwing two methods assume that the modulus context is already set */
-
-  const vector<RX>& getData() const { return data; }
-
-  void setData(const vector<RX>& _data) 
-  {
-    assert(lsize(_data) == n);
-    data = _data;
-  }
-  template <class tt>
-  friend ostream& operator<<(ostream& os, const PlaintextArrayDerived<tt>& pt);
-};
-
-template<class T>
-inline ostream& operator<<(ostream& os, const PlaintextArrayDerived<T>& pt)
-{
-  return (os << pt.data);
-}
-
-
-
-//! @brief A "factory" for building EncryptedArrays
-PlaintextArrayBase* buildPlaintextArray(const EncryptedArray& ea);
-
-
-//! @class PlaintextArray
-//! @brief A simple wrapper for a pointer to a PlaintextArrayBase.
-//! This is the interface that higher-level code should use.
-class PlaintextArray { 
-private:
-  cloned_ptr<PlaintextArrayBase> rep;
-
-public:
-
-  PlaintextArray(const EncryptedArray& ea)
-  : rep(buildPlaintextArray(ea))
-  { }
-  // constructor
-
-  // copy constructor: default
-  // assignment: default
-
-
-  template<class type> 
-  const PlaintextArrayDerived<type>& getDerived(type) const
-  { return dynamic_cast< const PlaintextArrayDerived<type>& >( *rep ); }
-
-  template<class type> 
-  PlaintextArrayDerived<type>& getDerived(type) 
-  { return dynamic_cast< PlaintextArrayDerived<type>& >( *rep ); }
-
-  // downcast operators (differeing only by const)
-  // example:  const PlaintextArrayDerived<PA_GF2>& rep = pa.getDerived(PA_GF2());
-
-
-  /* direct access to PlaintextArrayBase methods */
-
-  //! Get the EA object (which is needed for the encoding/decoding routines)
-  const EncryptedArray& getEA() const { return rep->getEA(); }
-
-  //! Rotation/shift as a linear array
-  void rotate(long k) { rep->rotate(k); }
-
-  //! Non-cyclic shift with zero fill
-  void shift(long k) { rep->shift(k); }
-
-  //! Encode/decode arrays into plaintext polynomials
-  void encode(const vector< long >& array) { rep->encode(array); }
-  void encode(const vector< ZZX >& array) { rep->encode(array); }
-  void decode(vector< long  >& array) const { rep->decode(array); }
-  void decode(vector< ZZX  >& array) const { rep->decode(array); }
-
-  //! Encode with the same value replicated in each slot
-  void encode(long val) { rep->encode(val); }
-  void encode(const ZZX& val) { rep->encode(val); }
-
-  //! Generate a uniformly random element
-  void random() { rep->random(); }
-
-  //! Equality testing
-  bool equals(const PlaintextArray& other) const { return rep->equals(*other.rep); }
-  bool equals(const vector<long>& other) const { return rep->equals(other); }
-  bool equals(const vector<ZZX>& other) const { return rep->equals(other); }
-
-  void add(const PlaintextArray& other) { rep->add(*other.rep); }
-  void sub(const PlaintextArray& other) { rep->sub(*other.rep); }
-  void negate() { rep->negate(); }
-  void mul(const PlaintextArray& other) { rep->mul(*other.rep); }
-
-  void mat_mul(const PlaintextMatrixBaseInterface& mat) { rep->mat_mul(mat); }
-  void alt_mul(const PlaintextMatrixBaseInterface& mat) { rep->alt_mul(mat); }
-
-  void mat_mul(const PlaintextBlockMatrixBaseInterface& mat) { rep->mat_mul(mat); }
-
-  //! Replicate coordinate i at all coordinates
-  void replicate(long i) { rep->replicate(i); }
-
-  void frobeniusAutomorph(long j) { rep->frobeniusAutomorph(j); }
-
-  void frobeniusAutomorph(const Vec<long>& vec) { rep->frobeniusAutomorph(vec); }
-
-  virtual void applyPerm(const Vec<long>& pi) { rep->applyPerm(pi); }
-
-  void print(ostream& s) const { rep->print(s); }
-};
-
-inline ostream& operator<<(ostream& os, const PlaintextArray& pt)
-{
-  switch (pt.getEA().getAlMod().getTag()) {
-    
-    case PA_GF2_tag: 
-      return ( os << pt.getDerived<PA_GF2>(PA_GF2()) );
-
-    case PA_zz_p_tag: 
-      return ( os << pt.getDerived<PA_zz_p>(PA_zz_p()) );
-
-    default: return os;
-  }
-}
 
 // Following are functions for performing "higher level"
 // operations on "encrypted arrays".  There is really no

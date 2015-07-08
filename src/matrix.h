@@ -23,6 +23,91 @@
 #include "EncryptedArray.h"
 
 
+/********************************************************************/
+/****************** Linear transformation classes *******************/
+
+//! @class PlaintextMatrixBaseInterface
+//! @brief An abstract interface for linear transformations.
+//!
+//! A matrix implements linear transformation over an extension field/ring
+//! (e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G). Any class
+//! implementing this interface should be linked to a specific EncryptedArray
+//! object, a reference to which is returned by the getEA() method -- this
+//! method will generally be invoked by an EncryptedArray object to verify
+//! consistent use.
+
+class PlaintextMatrixBaseInterface {
+public:
+  virtual const EncryptedArray& getEA() const = 0;
+
+  virtual ~PlaintextMatrixBaseInterface() {}
+};
+
+
+//! @class PlaintextMatrixInterface
+//! @brief A somewhat less abstract interface for linear transformations.
+//! 
+//! A matrix implements linear transformation over an extension field/ring
+//! (e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G). The method
+//! get(out, i, j) copies the element at row i column j of a matrix into
+//! the variable out. The type of out is RX, which is GF2X if type is PA_GF2,
+//! and zz_pX if type is PA_zz_p. A return value of true means that the
+//! entry is zero, and out is not touched.
+template<class type> 
+class  PlaintextMatrixInterface : public PlaintextMatrixBaseInterface {
+public:
+  PA_INJECT(type)
+
+  virtual bool get(RX& out, long i, long j) const = 0;
+};
+
+
+
+//! @class PlaintextBlockMatrixBaseInterface
+//! @brief An abstract interface for linear transformations.
+//!
+//! A block matrix implements linear transformation over the base field/ring
+//! (e.g., Z_2, Z_3, Z_{2^8}, etc.) Any class implementing this interface
+//! should be linked to a specific EncryptedArray object, a reference to which
+//! is returned by the getEA() method -- this method will generally be invoked
+//! by an EncryptedArray object to verify consistent use.
+
+class PlaintextBlockMatrixBaseInterface {
+public:
+  virtual const EncryptedArray& getEA() const = 0;
+
+  virtual ~PlaintextBlockMatrixBaseInterface() {}
+};
+
+
+//! @class PlaintextBlockMatrixInterface
+//! @brief A somewhat less abstract interface for linear transformations.
+//! 
+//! A block matrix implements linear transformation over the base field/ring
+//! (e.g., Z_2, Z_3, Z_{2^8}, etc.) The method get(out, i, j) copies the
+//! element at row i column j of a matrix into the variable out. The type
+//! of out is mat_R (so either mar_GF2 or mat_zz_p.  A return value of true
+//! means that the entry is zero, and out is not touched.
+
+template<class type> 
+class  PlaintextBlockMatrixInterface : public PlaintextBlockMatrixBaseInterface {
+public:
+  PA_INJECT(type)
+
+  virtual bool get(mat_R& out, long i, long j) const = 0;
+};
+
+
+/**************** End linear transformation classes *****************/
+/********************************************************************/
+
+
+
+
+
+
+
+
 typedef Vec<ZZXptr> CachedPtxtMatrix;
 typedef Mat<ZZXptr> CachedPtxtBlockMatrix;
 typedef Vec<DCRTptr> CachedDCRTPtxtMatrix;
@@ -146,6 +231,12 @@ void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt,
 
 ///@}
 
+
+
+void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
+  const PlaintextMatrixBaseInterface& mat);
+void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
+  const PlaintextBlockMatrixBaseInterface& mat);
 
 
 

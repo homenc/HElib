@@ -16,6 +16,7 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include "matrix.h"
 #include <NTL/ZZ.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <cassert>

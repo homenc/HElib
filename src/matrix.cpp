@@ -1495,3 +1495,93 @@ void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt,
 
 
 
+
+
+
+
+
+//=======================================================================================
+
+
+
+
+template<class type>
+class mat_mul_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const PlaintextMatrixBaseInterface& mat)
+  {
+    PA_BOILER
+
+    const PlaintextMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+    vector<RX> res;
+    res.resize(n);
+    for (long j = 0; j < n; j++) {
+      RX acc, val, tmp; 
+      acc = 0;
+      for (long i = 0; i < n; i++) {
+        if (!mat1.get(val, i, j)) {
+          NTL::mul(tmp, data[i], val);
+          NTL::add(acc, acc, tmp);
+        }
+      }
+      rem(acc, acc, G);
+      res[j] = acc;
+    }
+
+    data = res;
+  }
+
+
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const PlaintextBlockMatrixBaseInterface& mat)
+  {
+    PA_BOILER
+
+    const PlaintextBlockMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
+
+    vector<RX> res;
+    res.resize(n);
+    for (long j = 0; j < n; j++) {
+      vec_R acc, tmp, tmp1;
+      mat_R val;
+
+      acc.SetLength(d);
+      for (long i = 0; i < n; i++) {
+         if (!mat1.get(val, i, j)) {
+            VectorCopy(tmp1, data[i], d);
+            mul(tmp, tmp1, val);
+            add(acc, acc, tmp);
+         }
+      }
+      conv(res[j], acc);
+    }
+
+    data = res;
+  }
+
+}; 
+
+
+void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
+  const PlaintextMatrixBaseInterface& mat)
+{
+  ea.dispatch<mat_mul_pa_impl>(Fwd(pa), mat); 
+}
+
+
+
+void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
+  const PlaintextBlockMatrixBaseInterface& mat)
+{
+  ea.dispatch<mat_mul_pa_impl>(Fwd(pa), mat); 
+}
+
+
+

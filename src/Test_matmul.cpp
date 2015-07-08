@@ -199,8 +199,8 @@ void  TestIt(long m, long p, long r, long d, long L)
     shared_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
 
     // choose a random plaintext vector
-    PlaintextArray v(ea);
-    v.random();
+    NewPlaintextArray v(ea);
+    random(ea, v);
 
     // encrypt the random vector
     Ctxt ctxt(publicKey);
@@ -208,13 +208,13 @@ void  TestIt(long m, long p, long r, long d, long L)
     Ctxt ctxt2 = ctxt;
 
     cout << " Multiplying with PlaintextMatrixBaseInterface... " << std::flush;
-    v.mat_mul(*ptr);         // multiply the plaintext vector
+    mat_mul(ea, v, *ptr);         // multiply the plaintext vector
     mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
 
-    PlaintextArray v1(ea);
+    NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
-    if (v.equals(v1))        // check that we've got the right answer
+    if (equals(ea, v, v1))        // check that we've got the right answer
       cout << "Nice!!\n";
     else
       cout << "Grrr@*\n";
@@ -225,9 +225,9 @@ void  TestIt(long m, long p, long r, long d, long L)
       compMat(ea, zzxMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedPtxtMatrix... " << std::flush;
-      mat_mul(ctxt2, zzxMat, ea);
+      mat_mul(ea, ctxt2, zzxMat);
       ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (v.equals(v1))        // check that we've got the right answer
+      if (equals(ea, v, v1))        // check that we've got the right answer
 	cout << "Nice!!\n" << std::flush;
       else
 	cout << "Grrr@*\n" << std::flush;
@@ -237,9 +237,9 @@ void  TestIt(long m, long p, long r, long d, long L)
       compMat(ea, dcrtMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedDCRTPtxtMatrix... " << std::flush;
-      mat_mul(ctxt2, dcrtMat, ea);
+      mat_mul(ea, ctxt2, dcrtMat);
       ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (v.equals(v1))        // check that we've got the right answer
+      if (equals(ea, v, v1))        // check that we've got the right answer
 	cout << "Nice!!\n\n";
       else
 	cout << "Grrr@*\n\n";
@@ -253,23 +253,23 @@ void  TestIt(long m, long p, long r, long d, long L)
       ptr(buildRandomBlockMatrix(ea));
 
     // choose a random plaintext vector
-    PlaintextArray v(ea);
-    v.random();
+    NewPlaintextArray v(ea);
+    random(ea, v);
 
     // encrypt the random vector
     Ctxt ctxt(publicKey);
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
-    v.mat_mul(*ptr);         // multiply the plaintext vector
+    mat_mul(ea, v, *ptr);         // multiply the plaintext vector
     cout << " Multiplying with PlaintextBlockMatrixBaseInterface... " 
 	 << std::flush;
     mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
 
-    PlaintextArray v1(ea);
+    NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
-    if (v.equals(v1))        // check that we've got the right answer
+    if (equals(ea, v, v1))        // check that we've got the right answer
       cout << "Nice!!\n";
     else
       cout << "Grrr...\n";
@@ -280,9 +280,9 @@ void  TestIt(long m, long p, long r, long d, long L)
       compMat(ea, zzxMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedPtxtBlockMatrix... " << std::flush;
-      mat_mul(ctxt2, zzxMat, ea);
+      mat_mul(ea, ctxt2, zzxMat);
       ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (v.equals(v1))        // check that we've got the right answer
+      if (equals(ea, v, v1))        // check that we've got the right answer
 	cout << "Nice!!\n" << std::flush;
       else
 	cout << "Grrr@*\n" << std::flush;
@@ -292,9 +292,9 @@ void  TestIt(long m, long p, long r, long d, long L)
       compMat(ea, dcrtMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedDCRTPtxtBlockMatrix... " << std::flush;
-      mat_mul(ctxt2, dcrtMat, ea);
+      mat_mul(ea, ctxt2, dcrtMat);
       ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (v.equals(v1))        // check that we've got the right answer
+      if (equals(ea, v, v1))        // check that we've got the right answer
 	cout << "Nice!!\n";
       else
 	cout << "Grrr@*\n";

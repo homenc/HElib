@@ -573,3 +573,39 @@ void replicateAll(const EncryptedArray& ea, const Ctxt& ctxt,
   replicateAllNextDim(ea, ctxt, 0, 1, recBound, repAux, handler);
 }
 
+
+
+
+
+
+//=======================================================================================
+
+
+
+template<class type>
+class replicate_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long i)
+  {
+    PA_BOILER
+
+    assert(i >= 0 && i < n);
+    for (long j = 0; j < n; j++) {
+      if (j != i) data[j] = data[i];
+    }
+  }
+};
+
+
+
+
+void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i)
+{
+  ea.dispatch<replicate_pa_impl>(Fwd(pa), i); 
+}
+
+
+
+

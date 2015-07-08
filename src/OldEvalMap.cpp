@@ -15,7 +15,6 @@
  */
 #include "OldEvalMap.h"
 #include "powerful.h"
-#include "matrix.h"
 
 //! \cond FALSE (make doxygen ignore these classes)
 template<class type>

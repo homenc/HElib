@@ -335,17 +335,6 @@ void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) c
   FHE_TIMER_STOP;
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const PlaintextArray& array) const
-{
-  assert(this == &(array.getEA().getDerived(type())));
-
-  const PlaintextArrayDerived<type>& arr = array.getDerived(type());
-
-  RBak bak; bak.save(); tab.restoreContext();
-  encode(ptxt, arr.getData());
-}
-
 
 template<class type>
 void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const NewPlaintextArray& array) const
@@ -355,18 +344,6 @@ void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const NewPlaintextArray& arr
 }
 
 
-template<class type>
-void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt) const
-{
-  assert(this == &(array.getEA().getDerived(type())));
-
-  PlaintextArrayDerived<type>& arr = array.getDerived(type());
-
-  RBak bak; bak.save(); tab.restoreContext();
-  vector< RX > array1;
-  decode(array1, ptxt);
-  arr.setData(array1);
-}
 
 
 template<class type>
@@ -438,18 +415,6 @@ void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
 }
 
 
-PlaintextArrayBase* buildPlaintextArray(const EncryptedArray& ea)
-{
-  switch (ea.getAlMod().getTag()) {
-    case PA_GF2_tag: 
-      return new PlaintextArrayDerived<PA_GF2>(ea);
-
-    case PA_zz_p_tag: 
-      return new PlaintextArrayDerived<PA_zz_p>(ea);
-
-    default: return 0;
-  }
-}
 
 // Other functions...
 
@@ -730,25 +695,6 @@ void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrix
 
 
 // NewPlaintextArray
-
-#define PA_BOILER \
-    const PAlgebraModDerived<type>& tab = ea.getTab(); \
-    const RX& G = ea.getG(); \
-    long n = ea.size(); \
-    long d = ea.getDegree(); \
-    vector<RX>& data = pa.getData<type>(); \
-    RBak bak; bak.save(); tab.restoreContext(); \
-
-
-#define CPA_BOILER \
-    const PAlgebraModDerived<type>& tab = ea.getTab(); \
-    const RX& G = ea.getG(); \
-    long n = ea.size(); \
-    long d = ea.getDegree(); \
-    const vector<RX>& data = pa.getData<type>(); \
-    RBak bak; bak.save(); tab.restoreContext(); \
-
-
 
 
 template<class type>
@@ -1122,123 +1068,6 @@ void negate(const EncryptedArray& ea, NewPlaintextArray& pa)
 
 
 
-
-//=======================================================================================
-
-
-
-
-template<class type>
-class mat_mul_pa_impl {
-public:
-  PA_INJECT(type)
-
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const PlaintextMatrixBaseInterface& mat)
-  {
-    PA_BOILER
-
-    const PlaintextMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
-
-    vector<RX> res;
-    res.resize(n);
-    for (long j = 0; j < n; j++) {
-      RX acc, val, tmp; 
-      acc = 0;
-      for (long i = 0; i < n; i++) {
-        if (!mat1.get(val, i, j)) {
-          NTL::mul(tmp, data[i], val);
-          NTL::add(acc, acc, tmp);
-        }
-      }
-      rem(acc, acc, G);
-      res[j] = acc;
-    }
-
-    data = res;
-  }
-
-
-
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const PlaintextBlockMatrixBaseInterface& mat)
-  {
-    PA_BOILER
-
-    const PlaintextBlockMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
-
-    vector<RX> res;
-    res.resize(n);
-    for (long j = 0; j < n; j++) {
-      vec_R acc, tmp, tmp1;
-      mat_R val;
-
-      acc.SetLength(d);
-      for (long i = 0; i < n; i++) {
-         if (!mat1.get(val, i, j)) {
-            VectorCopy(tmp1, data[i], d);
-            mul(tmp, tmp1, val);
-            add(acc, acc, tmp);
-         }
-      }
-      conv(res[j], acc);
-    }
-
-    data = res;
-  }
-
-}; 
-
-
-void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
-  const PlaintextMatrixBaseInterface& mat)
-{
-  ea.dispatch<mat_mul_pa_impl>(Fwd(pa), mat); 
-}
-
-
-
-void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
-  const PlaintextBlockMatrixBaseInterface& mat)
-{
-  ea.dispatch<mat_mul_pa_impl>(Fwd(pa), mat); 
-}
-
-
-
-
-//=======================================================================================
-
-
-
-template<class type>
-class replicate_pa_impl {
-public:
-  PA_INJECT(type)
-
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long i)
-  {
-    PA_BOILER
-
-    assert(i >= 0 && i < n);
-    for (long j = 0; j < n; j++) {
-      if (j != i) data[j] = data[i];
-    }
-  }
-};
-
-
-
-
-void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i)
-{
-  ea.dispatch<replicate_pa_impl>(Fwd(pa), i); 
-}
-
-
-
 //=======================================================================================
 
 
@@ -1388,9 +1217,6 @@ void print(const EncryptedArray& ea, ostream& s, const NewPlaintextArray& pa)
 
 template class EncryptedArrayDerived<PA_GF2>;
 template class EncryptedArrayDerived<PA_zz_p>;
-
-template class PlaintextArrayDerived<PA_GF2>;
-template class PlaintextArrayDerived<PA_zz_p>;
 
 
 template class NewPlaintextArrayDerived<PA_GF2>;
