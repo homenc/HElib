@@ -17,6 +17,7 @@
  */
 
 #include "matrix.h"
+#include <algorithm>
 
 // Copied from EncryptedArray.cpp -- it shoudn't be there.
 
