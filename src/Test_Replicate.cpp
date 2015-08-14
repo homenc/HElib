@@ -54,8 +54,8 @@ public:
   bool error;
 
   ReplicateTester(const FHESecKey& _sKey, const EncryptedArray& _ea, 
-                  const PlaintextArray& _pa, long _B)
-  : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
+                  const PlaintextArray& _pa, long _Bnd)
+  : sKey(_sKey), ea(_ea), pa(_pa), B(_Bnd)
   {
     t_last = GetTime();
     t_total = 0.0;
