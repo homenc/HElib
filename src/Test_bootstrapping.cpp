@@ -22,6 +22,7 @@
 #endif
 
 #include <NTL/ZZ.h>
+#include <NTL/fileio.h>
 NTL_CLIENT
 #include "EncryptedArray.h"
 #include "EvalMap.h"
@@ -234,7 +235,6 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
  ********************************************************************/
 int main(int argc, char *argv[]) 
 {
-  SetSeed(ZZ(0));
   ArgMapping amap;
 
   long p=2;
@@ -246,6 +246,8 @@ int main(int argc, char *argv[])
   long t=0;
   bool cons=0;
   long nthreads=4;
+
+  long seed=0;
 
   amap.arg("p", p, "plaintext base");
 
@@ -261,13 +263,32 @@ int main(int argc, char *argv[])
   amap.arg("cons", cons, "cons=1 for consevative settings (circuit deeper by 1)");
   amap.arg("nthreads", nthreads, "number of threads");
 
+  amap.arg("seed", seed, "random number seed");
+
   amap.parse(argc, argv);
+
+  if (seed) 
+    SetSeed(ZZ(seed));
+  else {
+    cout << "UID: " <<  UniqueID() << "\n";
+#if 0
+    const string& id = UniqueID();
+    ZZ sseed;
+    ZZFromBytes(sseed, (const unsigned char *) id.c_str(), id.length());
+    SetSeed(sseed);
+    cout << "seed: " << sseed << "\n";
+#endif
+  }
 
 #ifdef FHE_BOOT_THREADS
   UniquePtr<MultiTask> localBootTask;
   localBootTask.make(nthreads);
+
+  // MultiTask auxBootTask(5);
+  // localBootTask->move(auxBootTask, 4);
+
   bootTask = localBootTask.get();
-  cout << "*** nthreads = " << nthreads << "\n";
+  cout << "*** nthreads = " << bootTask->getNumThreads() << "\n";
 #else
   cout << "*** no threads\n";
 #endif
