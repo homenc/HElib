@@ -269,23 +269,16 @@ int main(int argc, char *argv[])
 
   if (seed) 
     SetSeed(ZZ(seed));
-  else {
-    cout << "UID: " <<  UniqueID() << "\n";
-#if 0
-    const string& id = UniqueID();
-    ZZ sseed;
-    ZZFromBytes(sseed, (const unsigned char *) id.c_str(), id.length());
-    SetSeed(sseed);
-    cout << "seed: " << sseed << "\n";
-#endif
-  }
 
 #ifdef FHE_BOOT_THREADS
   UniquePtr<MultiTask> localBootTask;
   localBootTask.make(nthreads);
 
-  // MultiTask auxBootTask(5);
-  // localBootTask->move(auxBootTask, 4);
+  // localBootTask->add();
+  // localBootTask->remove(3);
+
+  // MultiTask auxBootTask(6);
+  // localBootTask->move(auxBootTask, 5);
 
   bootTask = localBootTask.get();
   cout << "*** nthreads = " << bootTask->getNumThreads() << "\n";

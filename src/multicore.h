@@ -27,6 +27,7 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include <exception>
 #include <NTL/SmartPtr.h>
 
 using namespace std;
@@ -270,6 +271,9 @@ struct MultiTask {
 
   Vec< UniquePtr<AutomaticThread> > threadVec;
 
+  exception_ptr eptr;
+  mutex eptr_guard;
+
   MultiTask(const MultiTask&); // disabled
   void operator=(const MultiTask&); // disabled
 
@@ -346,6 +350,12 @@ struct MultiTask {
   void end()
   {
     globalSignal.wait();
+
+    if (eptr) {
+      exception_ptr eptr1 = eptr;
+      eptr = nullptr;
+      rethrow_exception(eptr1);
+    }
   }
 
   void launch(ConcurrentTask *task, long index)
@@ -417,7 +427,14 @@ struct MultiTask {
   {
     MultiTask *multiTask = task->getMultiTask();
   
-    task->run(index);
+    try {
+       task->run(index);
+    }
+    catch (...) {
+       lock_guard<mutex> lock(multiTask->eptr_guard);
+       if (!multiTask->eptr) multiTask->eptr = current_exception();
+    }
+
     if (--(multiTask->counter) == 0) multiTask->globalSignal.send(true);
   }
 
