@@ -156,10 +156,19 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   assert( ProbPrime(pp) );
   assert( (mm % pp) != 0 );
   assert( mm < NTL_SP_BOUND );
+  assert( mm > 1 );
 
   cM  = 1.0; // default value for the ring constant
   m = mm;
   p = pp;
+
+  long k = NextPowerOfTwo(m);
+  if (mm == (1L << k))
+    pow2 = k;
+  else
+    pow2 = 0;
+
+   
 
   // For dry-run, use a tiny m value for the PAlgebra tables
   if (isDryRun()) mm = (p==3)? 4 : 3;

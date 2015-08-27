@@ -32,6 +32,9 @@
 #include "CModulus.h"
 #include "timing.h"
 
+#include "FHEContext.h"
+// needed to get ALT_CRT
+
 
 // It is assumed that m,q,context, and root are already set. If root is set
 // to zero, it will be computed by the compRoots() method. Then rInv is
@@ -68,6 +71,42 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
   m_inv = InvMod(mm, q);
 
   zz_pBak bak; 
+
+  if (!ALT_CRT && zms.getPow2()) {
+    // special case when m is a power of 2
+
+    assert( explicitModulus );
+    bak.save();
+    context = zz_pContext(INIT_USER_FFT, q);
+    context.restore();
+
+    powers.set_ptr(new zz_pX);
+    ipowers.set_ptr(new zz_pX);
+
+
+    long k = zms.getPow2();
+    long phim = 1L << (k-1); 
+    long w0 = zz_pInfo->p_info->RootTable[0][k];
+    long w1 = zz_pInfo->p_info->RootTable[1][k];
+
+    powers->rep.SetLength(phim);
+    powers_aux.SetLength(phim);
+    for (long i = 0, w = 1; i < phim; i++) {
+      powers->rep[i] = w;
+      powers_aux[i] = PrepMulModPrecon(w, q);
+      w = MulMod(w, w0, q);
+    }
+
+    ipowers->rep.SetLength(phim);
+    ipowers_aux.SetLength(phim);
+    for (long i = 0, w = 1; i < phim; i++) {
+      ipowers->rep[i] = w;
+      ipowers_aux[i] = PrepMulModPrecon(w, q);
+      w = MulMod(w, w1, q);
+    }
+  
+    return;
+  }
 
   if (explicitModulus) {
     bak.save(); // backup the current modulus
@@ -146,10 +185,38 @@ void Cmodulus::FFT(vec_long &y, const ZZX& x) const
   FHE_TIMER_START;
   zz_pBak bak; bak.save();
   context.restore();
-  zz_p rt;
-  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
 
+  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
   conv(tmp,x);      // convert input to zpx format
+
+  if (!ALT_CRT && zMStar->getPow2()) {
+    // special case when m is a power of 2
+
+    long k = zMStar->getPow2();
+    long phim = (1L << (k-1));
+    long dx = deg(tmp);
+    long p = zz_p::modulus();
+
+    const zz_p *powers_p = (*powers).rep.elts();
+    const mulmod_precon_t *powers_aux_p = powers_aux.elts();
+
+    y.SetLength(phim);
+    long *yp = y.elts();
+
+    zz_p *tmp_p = tmp.rep.elts();
+
+    for (long i = 0; i <= dx; i++)
+      yp[i] = MulModPrecon(rep(tmp_p[i]), rep(powers_p[i]), p, powers_aux_p[i]);
+    for (long i = dx+1; i < phim; i++)
+      yp[i] = 0;
+
+    FFTFwd(yp, yp, k-1, *zz_pInfo->p_info);
+
+    return;
+  }
+    
+
+  zz_p rt;
   conv(rt, root);  // convert root to zp format
 
   BluesteinFFT(tmp, getM(), rt, *powers, powers_aux, *Rb); // call the FFT routine
@@ -169,8 +236,40 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
   FHE_TIMER_START;
   zz_pBak bak; bak.save();
   context.restore();
-  zz_p rt;
 
+  if (!ALT_CRT && zMStar->getPow2()) {
+    // special case when m is a power of 2
+
+    long k = zMStar->getPow2();
+    long phim = (1L << (k-1));
+    long p = zz_p::modulus();
+
+    const zz_p *ipowers_p = (*ipowers).rep.elts();
+    const mulmod_precon_t *ipowers_aux_p = ipowers_aux.elts();
+
+    const long *yp = y.elts();
+
+    vec_long& tmp = Cmodulus::getScratch_vec_long();
+    tmp.SetLength(phim);
+    long *tmp_p = tmp.elts();
+
+    FFTRev1(tmp_p, yp, k-1, *zz_pInfo->p_info);
+
+    x.rep.SetLength(phim);
+    zz_p *xp = x.rep.elts();
+
+    for (long i = 0; i < phim; i++)
+      xp[i].LoopHole() = MulModPrecon(tmp_p[i], rep(ipowers_p[i]), p, ipowers_aux_p[i]);
+
+
+    x.normalize();
+
+    return;
+  }
+
+
+
+  zz_p rt;
   long m = getM();
 
   // convert input to zpx format, initializing only the coeffs i s.t. (i,m)=1
@@ -198,6 +297,12 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
 zz_pX& Cmodulus::getScratch_zz_pX() 
 {
    NTL_THREAD_LOCAL static zz_pX scratch;
+   return scratch;
+}
+
+Vec<long>& Cmodulus::getScratch_vec_long()
+{
+   NTL_THREAD_LOCAL static Vec<long> scratch;
    return scratch;
 }
 

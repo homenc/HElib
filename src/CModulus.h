@@ -109,6 +109,8 @@ class Cmodulus {
   // which is not officially sanctioned by NTL, but should be OK.
   static zz_pX& getScratch_zz_pX();
 
+  static Vec<long>& getScratch_vec_long();
+
   // returns thread-local scratch space
   // DIRT: this use a couple of internal, undocumented
   // NTL interfaces
