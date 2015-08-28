@@ -79,7 +79,7 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
     bak.save();
 
     RandomState state;  SetSeed(conv<ZZ>("84547180875373941534287406458029"));
-    // this ensures the roots are deterministically generated
+    // DIRT: this ensures the roots are deterministically generated
     //    inside the zz_pContext constructor
     context = zz_pContext(INIT_USER_FFT, q);
     state.restore();
