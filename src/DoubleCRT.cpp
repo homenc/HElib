@@ -851,6 +851,8 @@ void DoubleCRT::automorph(long k)
 // fills each row i with random integers mod pi
 void DoubleCRT::randomize(const ZZ* seed) 
 {
+  FHE_TIMER_START;
+
   if (isDryRun()) return;
 
   if (seed != NULL) SetSeed(*seed);
