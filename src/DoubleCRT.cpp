@@ -849,6 +849,7 @@ void DoubleCRT::automorph(long k)
 }
 
 // fills each row i with random integers mod pi
+#if 1
 void DoubleCRT::randomize(const ZZ* seed) 
 {
   FHE_TIMER_START;
@@ -862,11 +863,56 @@ void DoubleCRT::randomize(const ZZ* seed)
   
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     long pi = context.ithPrime(i);
+    long k = NumBits(pi-1);
     vec_long& row = map[i];
-    for (long j = 0; j < phim; j++)
-      row[j] = RandomBnd(pi);   // RandomBnd is defined in NTL's module ZZ
+    for (long j = 0; j < phim; j++) {
+      long tmp;
+      do {
+         tmp = RandomBits_long(k);
+      } while (tmp >= pi);
+
+      row[j] = tmp;
+    }
   }
 }
+#else
+void DoubleCRT::randomize(const ZZ* seed) 
+{
+  FHE_TIMER_START;
+
+  if (isDryRun()) return;
+
+  if (seed != NULL) SetSeed(*seed);
+
+  const IndexSet& s = map.getIndexSet();
+  long phim = context.zMStar.getPhiM();
+
+  ZZ prod;
+  context.productOfPrimes(prod, s);
+
+  Vec<ZZ> vec;
+  vec.SetLength(phim);
+  for (long j = 0; j < phim; j++)
+    RandomBnd(vec[j], prod);
+  
+  zz_pBak bak; bak.save();
+
+  // DIRT: this Vec<zz_p> is used for several moduli
+  NTL_THREAD_LOCAL static Vec<zz_p> vvec_tls;
+  Vec<zz_p>& vvec = vvec_tls;
+  vvec.SetLength(phim);
+  
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    conv(vvec, vec);
+
+    long *row = map[i].elts();
+    const zz_p *vvecp = vvec.elts();
+    for (long j = 0; j < phim; j++)
+      row[j] = rep(vvecp[j]);  
+  }
+}
+#endif
 
 void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 {
