@@ -193,7 +193,9 @@ void Cmodulus::FFT(vec_long &y, const ZZX& x) const
   context.restore();
 
   zz_pX& tmp = Cmodulus::getScratch_zz_pX();
-  conv(tmp,x);      // convert input to zpx format
+  { FHE_NTIMER_START(FFT_remainder);
+    conv(tmp,x);      // convert input to zpx format
+  }
 
   if (!ALT_CRT && zMStar->getPow2()) {
     // special case when m is a power of 2
