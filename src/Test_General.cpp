@@ -275,7 +275,6 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
  */
 int main(int argc, char **argv) 
 {
-  SetSeed(ZZ(0));
   setTimersOn();
 
   ArgMapping amap;
@@ -327,7 +326,12 @@ int main(int argc, char **argv)
   amap.arg("ords", ords, "use specified vector of orders", NULL);
   amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
+  long seed=0;
+  amap.arg("seed", seed, "PRG seed");
+
   amap.parse(argc, argv);
+
+  SetSeed(ZZ(seed));
   
   if (L==0) { // determine L based on R,r
     L = 3*R+3;

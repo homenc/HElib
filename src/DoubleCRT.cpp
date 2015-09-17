@@ -26,11 +26,13 @@
 #include "multicore.h"
 #include "timing.h"
 
+
 #if (ALT_CRT)
 #warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
 #include "AltCRT.cpp"
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
+
 
 // A threaded implementation of DoubleCRT operations
 
@@ -860,21 +862,46 @@ void DoubleCRT::randomize(const ZZ* seed)
 
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
+
+  RandomByteStream& stream = GetCurrentRandomByteStream();
+  const long bufsz = 1600;
+
+  Vec<unsigned char> buf_storage;
+  buf_storage.SetLength(bufsz);
+
+  unsigned char *buf = buf_storage.elts();
+
   
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     long pi = context.ithPrime(i);
     long k = NumBits(pi-1);
-    vec_long& row = map[i];
-    for (long j = 0; j < phim; j++) {
-      long tmp;
-      do {
-         tmp = RandomBits_long(k);
-      } while (tmp >= pi);
+    long nb = (k+7)/8;
+    unsigned long mask = (1UL << k) - 1UL;
 
-      row[j] = tmp;
+    vec_long& row = map[i];
+    long j = 0;
+    
+    for (;;) {
+      stream.get(buf, bufsz);
+
+      for (long pos = 0; pos <= bufsz-nb; pos += nb) {
+        unsigned long utmp = 0;
+        for (long cnt = nb-1;  cnt >= 0; cnt--)
+          utmp = (utmp << 8) | buf[pos+cnt]; 
+        utmp = (utmp & mask);
+        
+        long tmp = utmp;
+
+        row[j] = tmp;
+        j += (tmp < pi);
+        if (j >= phim) break;
+      }
+      if (j >= phim) break;
     }
   }
 }
+
+
 #else
 void DoubleCRT::randomize(const ZZ* seed) 
 {
