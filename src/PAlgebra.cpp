@@ -146,9 +146,6 @@ void PAlgebra::printout() const
   }
 }
 
-// Generate the representation of Z_m^* for a given odd integer m
-// and plaintext base p.  If you know what you are doing, you can 
-// supply your own gens and ords.
 
 PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,  
                    const vector<long>& _gens, const vector<long>& _ords )
@@ -302,7 +299,9 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   vec_RX localFactors;
 
   EDF(localFactors, phimxmod, zMStar.getOrdP()); // equal-degree factorization
+
   
+
   RX* first = &localFactors[0];
   RX* last = first + localFactors.length();
   RX* smallest = min_element(first, last);

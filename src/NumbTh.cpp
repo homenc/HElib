@@ -318,11 +318,17 @@ long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p)
   }
 
   // Start building a representation of (Z/mZ)^*, first use the generator p
-  conjClasses(classes,p,m);  // merge classes that have a factor of p
+  conjClasses(classes,p % m,m);  // merge classes that have a factor of p
 
   // The order of p is the size of the equivalence class of 1
+#if 0
   long ordP = std::count(classes.begin(), classes.end(), 1);
        // count(from,to,val) returns # of elements in (from,to) with value=val
+#else
+   long ordP = 0;
+   for (long i = 0; i < lsize(classes); i++)
+      if (classes[i] == 1) ordP++;
+#endif
 
   // Compute orders in (Z/mZ)^*/<p> while comparing to (Z/mZ)^*
   while (true) {

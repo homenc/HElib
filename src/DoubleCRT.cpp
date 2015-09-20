@@ -864,7 +864,7 @@ void DoubleCRT::randomize(const ZZ* seed)
   long phim = context.zMStar.getPhiM();
 
   RandomByteStream& stream = GetCurrentRandomByteStream();
-  const long bufsz = 1600;
+  const long bufsz = 2048;
 
   Vec<unsigned char> buf_storage;
   buf_storage.SetLength(bufsz);
