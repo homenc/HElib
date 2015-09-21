@@ -318,7 +318,7 @@ long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p)
   }
 
   // Start building a representation of (Z/mZ)^*, first use the generator p
-  conjClasses(classes,p,m);  // merge classes that have a factor of p
+  conjClasses(classes,p % m,m);  // merge classes that have a factor of p
 
   // The order of p is the size of the equivalence class of 1
   long ordP = std::count(classes.begin(), classes.end(), 1);
