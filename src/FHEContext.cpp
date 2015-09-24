@@ -381,15 +381,13 @@ void writeContextBase(ostream& str, const FHEcontext& context)
       << " " << context.alMod.getR()
       << " [";
   for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
-    str << context.zMStar.ZmStarGen(i)
-	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
+    str << context.zMStar.ZmStarGen(i) << " ";
   }
-  str << " [";
+  str << "][";
   for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
-    str << context.zMStar.OrderOf(i)
-	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
+    str << context.zMStar.OrderOf(i) << " ";
   }
-  str << "]";
+  str << "]]";
 }
 
 ostream& operator<< (ostream &str, const FHEcontext& context)
