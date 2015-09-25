@@ -863,7 +863,7 @@ void DoubleCRT::randomize(const ZZ* seed)
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
 
-  RandomByteStream& stream = GetCurrentRandomByteStream();
+  RandomStream& stream = GetCurrentRandomStream();
   const long bufsz = 2048;
 
   Vec<unsigned char> buf_storage;
