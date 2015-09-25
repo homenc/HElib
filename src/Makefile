@@ -20,7 +20,6 @@ CFLAGS = -g -O2
 
 # useful flags:
 #   -std=c++11
-#   -std=c++0x
 #   -DUSE_ALT_CRT  tells helib to use an alterntive to the default DoubleCRT
 #                  representation...experimental...can be faster or slower
 #                  depending on the operation mixture
