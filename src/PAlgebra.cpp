@@ -160,7 +160,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   p = pp;
 
   long k = NextPowerOfTwo(m);
-  if (mm == (1L << k))
+  if (mm == (1UL << k))
     pow2 = k;
   else
     pow2 = 0;

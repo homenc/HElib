@@ -44,7 +44,7 @@ CFLAGS = -g -O2
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
 
-$(info HElib requires NTL version 9.0.1 or higher, see http://shoup.net/ntl)
+$(info HElib requires NTL version 9.4.0 or higher, see http://shoup.net/ntl)
 $(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
 $(info )
 
@@ -102,7 +102,7 @@ clean:
 	rm -rf *.dSYM
 
 info:
-	: HElib require NTL version 9.0.1 or higher
+	: HElib require NTL version 9.4.0 or higher
 	: Compilation flags are 'CFLAGS=$(CFLAGS)'
 	: If errors occur, try adding/removing '-std=c++11' in Makefile
 	:
