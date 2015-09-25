@@ -306,6 +306,7 @@ void Ctxt::reLinearize(long keyID)
     assert (g>1);
     tmp.ptxtSpace = g;
 
+    
     tmp.keySwitchPart(part, W); // switch this part & update noiseVar
   }
   *this = tmp;
@@ -339,6 +340,8 @@ void Ctxt::cleanUp()
 // p.getIndexSet() \union context.specialPrimes
 void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 {
+  FHE_TIMER_START;
+
   // no special primes in the input part
   assert(context.specialPrimes.disjointFrom(p.getIndexSet()));
 

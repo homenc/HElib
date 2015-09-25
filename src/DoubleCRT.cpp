@@ -26,11 +26,13 @@
 #include "multicore.h"
 #include "timing.h"
 
+
 #if (ALT_CRT)
 #warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
 #include "AltCRT.cpp"
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
+
 
 // A threaded implementation of DoubleCRT operations
 
@@ -849,22 +851,95 @@ void DoubleCRT::automorph(long k)
 }
 
 // fills each row i with random integers mod pi
+#if 1
 void DoubleCRT::randomize(const ZZ* seed) 
 {
+  FHE_TIMER_START;
+
   if (isDryRun()) return;
 
   if (seed != NULL) SetSeed(*seed);
 
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
+
+  RandomStream& stream = GetCurrentRandomStream();
+  const long bufsz = 2048;
+
+  Vec<unsigned char> buf_storage;
+  buf_storage.SetLength(bufsz);
+
+  unsigned char *buf = buf_storage.elts();
+
   
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     long pi = context.ithPrime(i);
+    long k = NumBits(pi-1);
+    long nb = (k+7)/8;
+    unsigned long mask = (1UL << k) - 1UL;
+
     vec_long& row = map[i];
-    for (long j = 0; j < phim; j++)
-      row[j] = RandomBnd(pi);   // RandomBnd is defined in NTL's module ZZ
+    long j = 0;
+    
+    for (;;) {
+      stream.get(buf, bufsz);
+
+      for (long pos = 0; pos <= bufsz-nb; pos += nb) {
+        unsigned long utmp = 0;
+        for (long cnt = nb-1;  cnt >= 0; cnt--)
+          utmp = (utmp << 8) | buf[pos+cnt]; 
+        utmp = (utmp & mask);
+        
+        long tmp = utmp;
+
+        row[j] = tmp;
+        j += (tmp < pi);
+        if (j >= phim) break;
+      }
+      if (j >= phim) break;
+    }
   }
 }
+
+
+#else
+void DoubleCRT::randomize(const ZZ* seed) 
+{
+  FHE_TIMER_START;
+
+  if (isDryRun()) return;
+
+  if (seed != NULL) SetSeed(*seed);
+
+  const IndexSet& s = map.getIndexSet();
+  long phim = context.zMStar.getPhiM();
+
+  ZZ prod;
+  context.productOfPrimes(prod, s);
+
+  Vec<ZZ> vec;
+  vec.SetLength(phim);
+  for (long j = 0; j < phim; j++)
+    RandomBnd(vec[j], prod);
+  
+  zz_pBak bak; bak.save();
+
+  // DIRT: this Vec<zz_p> is used for several moduli
+  NTL_THREAD_LOCAL static Vec<zz_p> vvec_tls;
+  Vec<zz_p>& vvec = vvec_tls;
+  vvec.SetLength(phim);
+  
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    conv(vvec, vec);
+
+    long *row = map[i].elts();
+    const zz_p *vvecp = vvec.elts();
+    for (long j = 0; j < phim; j++)
+      row[j] = rep(vvecp[j]);  
+  }
+}
+#endif
 
 void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 {

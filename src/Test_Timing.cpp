@@ -25,6 +25,7 @@ NTL_CLIENT
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include "matrix.h"
 #include "replicate.h"
 #include "permutations.h"
 
@@ -115,8 +116,8 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     FHE_NTIMER_STOP(keyGen);
 
     ZZX poly;
-    PlaintextArray pp(ea);
-    pp.random();
+    NewPlaintextArray pp(ea);
+    random(ea, pp);
 
     Ctxt cc(publicKey);
 
@@ -375,7 +376,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   {
   shared_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
   FHE_NTIMER_START(MatMul);
-  ea.mat_mul(tmp, *ptr);      // multiply the ciphertext vector
+  mat_mul(ea, tmp, *ptr);      // multiply the ciphertext vector
   FHE_NTIMER_STOP(MatMul);
   } // free the pointer
   ret = tmp;
@@ -531,15 +532,15 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   cerr << "#" << std::flush;
 
   ZZX poly;
-  PlaintextArray pp(ea);
-  pp.random();
+  NewPlaintextArray pp(ea);
+  random(ea, pp);
   ea.encode(poly, pp);
 
   Ctxt cc(publicKey);
   long nTests = 10;
   vector<Ctxt> vc(nTests,cc);
   for (long i=0; i<nTests; i++) {
-    pp.random();
+    random(ea, pp);
     ea.encrypt(vc[i], publicKey, pp);
   }
 

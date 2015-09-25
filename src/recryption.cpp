@@ -471,7 +471,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
         } else {          // extract digits topHigh...0, store them in scratch
           extractDigits(scratch, unpacked[i], topHigh+1);
         }
-    
+
         // set upacked[i] = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
         if (topHigh >= (long)scratch.size()) {
           topHigh = scratch.size() -1;

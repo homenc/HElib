@@ -31,6 +31,7 @@
 #include <sstream>
 #include <ctime>
 
+#include <NTL/version.h>
 #include <NTL/ZZ.h>
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_p.h>
@@ -48,7 +49,10 @@
 #include <NTL/GF2EX.h>
 #include <NTL/lzz_pEX.h>
 
-
+// Test for the "right version" of NTL (currently 9.4.0)
+#if ((NTL_MAJOR_VERSION<9)||(NTL_MINOR_VERSION<4)||(NTL_REVISION<0))
+#error "This version of HElib requires NTL version 9.4.0 or above"
+#endif
 
 using namespace std;
 using namespace NTL;

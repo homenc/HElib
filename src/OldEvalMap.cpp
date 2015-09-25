@@ -452,10 +452,10 @@ public:
   }
 
 
-  void print(ostream& s, const PlaintextArray& v, long nrows) const
+  void print(const EncryptedArray& ea, ostream& s, const NewPlaintextArray& v, long nrows) const
   {
     vector<ZZX> v1;
-    v.decode(v1); 
+    decode(ea, v1, v); 
     Vec<RX> v2;
     convert(v2, v1);
     for (long i = 0; i < v2.length(); i++) {
@@ -648,7 +648,7 @@ public:
 
 Vec<long> new_order;
 
-virtual void apply(PlaintextArray& v) const = 0;
+virtual void apply(NewPlaintextArray& v) const = 0;
 virtual void apply(Ctxt& v) const = 0;
 
 };
@@ -659,7 +659,7 @@ class Step2aShuffle : public Step2aShuffleBase
 public:
   PA_INJECT(type)
 
-  virtual void apply(PlaintextArray& v) const
+  virtual void apply(NewPlaintextArray& v) const
   {
     if (invert) 
       applyBack(v);
@@ -701,13 +701,13 @@ private:
 
   typedef bool (Step2aShuffle<type>::*get_type)(Vec<RE>&, long, long) const; 
 
-  void mat_mul(PlaintextArray& ctxt, get_type) const;
+  void mat_mul(NewPlaintextArray& ctxt, get_type) const;
   void mat_mul(Ctxt& ctxt, get_type) const;
 
-  void applyBack(PlaintextArray& v) const;
+  void applyBack(NewPlaintextArray& v) const;
   void applyBack(Ctxt& v) const;
 
-  void applyFwd(PlaintextArray& v) const;
+  void applyFwd(NewPlaintextArray& v) const;
   void applyFwd(Ctxt& v) const;
 
 public:
@@ -938,14 +938,14 @@ bool Step2aShuffle<type>::iget(Vec<RE>& entry, long i, long j) const
 
 
 template<class type>
-void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt, get_type get_fn) const
+void Step2aShuffle<type>::mat_mul(NewPlaintextArray& ctxt, get_type get_fn) const
 {
   Tower<type> *tower = dynamic_cast<Tower<type> *>(towerBase.get());
   long nslots = ea.size();
 
   // ctxt.cleanUp(); 
 
-  PlaintextArray res(ea);
+  NewPlaintextArray res(ea);
 
   Vec<RE> entry;
   entry.SetLength(d2);
@@ -997,8 +997,8 @@ void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt, get_type get_fn) const
 
     // now diag[j] contains the lin poly coeffs
 
-    PlaintextArray shCtxt = ctxt;
-    shCtxt.rotate(i); 
+    NewPlaintextArray shCtxt = ctxt;
+    rotate(ea, shCtxt, i); 
 
     // apply the linearlized polynomial
     for (long k = 0; k < d2; k++) {
@@ -1014,14 +1014,14 @@ void Step2aShuffle<type>::mat_mul(PlaintextArray& ctxt, get_type get_fn) const
 
       if (zConst) continue;
 
-      PlaintextArray cpoly(ea);
-      cpoly.encode(cvec);
+      NewPlaintextArray cpoly(ea);
+      encode(ea, cpoly, cvec);
       // FIXME: record the encoded polynomial for future use
 
-      PlaintextArray shCtxt1 = shCtxt;
-      shCtxt1.frobeniusAutomorph(k*d1);
-      shCtxt1.mul(cpoly);
-      res.add(shCtxt1);
+      NewPlaintextArray shCtxt1 = shCtxt;
+      frobeniusAutomorph(ea, shCtxt1, k*d1);
+      mul(ea, shCtxt1, cpoly);
+      add(ea, res, shCtxt1);
     }
   }
   ctxt = res;
@@ -1124,7 +1124,7 @@ void Step2aShuffle<type>::mat_mul(Ctxt& ctxt, get_type get_fn) const
 
 
 template<class type>
-void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
+void Step2aShuffle<type>::applyFwd(NewPlaintextArray& v) const
 {
   RBak bak; bak.save(); ea.getAlMod().restoreContext();
   REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
@@ -1134,7 +1134,7 @@ void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
 
   // cout << "starting shuffle...\n";
 
-  // tower->print(cout, v, nrows);
+  // tower->print(ea, cout, v, nrows);
 
   // build linPolyCoeffs
 
@@ -1175,32 +1175,32 @@ void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
 
   // mask each sub-slot
 
-  Vec< shared_ptr<PlaintextArray> > frobvec; 
+  Vec< shared_ptr<NewPlaintextArray> > frobvec; 
   frobvec.SetLength(d2);
   for (long j = 0; j < d2; j++) {
-    shared_ptr<PlaintextArray> ptr(new PlaintextArray(v));
-    ptr->frobeniusAutomorph(j*d1);
+    shared_ptr<NewPlaintextArray> ptr(new NewPlaintextArray(v));
+    frobeniusAutomorph(ea, *ptr, j*d1);
     frobvec[j] = ptr;
   }
 
-  Vec< shared_ptr<PlaintextArray> > colvec;
+  Vec< shared_ptr<NewPlaintextArray> > colvec;
   colvec.SetLength(d2);
   for (long i = 0; i < d2; i++) {
-    shared_ptr<PlaintextArray> acc(new PlaintextArray(ea));
+    shared_ptr<NewPlaintextArray> acc(new NewPlaintextArray(ea));
 
     for (long j = 0; j < d2; j++) {
-      PlaintextArray const1(ea);
+      NewPlaintextArray const1(ea);
 
       vector<ZZX> vec1;
       vec1.resize(nslots);
       for (long k = 0; k < nslots; k++)
         vec1[k] = C[i][j][k % nrows];
-      const1.encode(vec1);
+      encode(ea, const1, vec1);
 
-      PlaintextArray ctxt1(*frobvec[j]);
+      NewPlaintextArray ctxt1(*frobvec[j]);
 
-      ctxt1.mul(const1);
-      acc->add(ctxt1);
+      mul(ea, ctxt1, const1);
+      add(ea, *acc, ctxt1);
     }
 
     colvec[i] = acc;
@@ -1208,7 +1208,7 @@ void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
 
   // for (long i = 0; i < d2; i++) {
     // cout << "column " << i << "\n";
-    // tower->print(cout, *colvec[i], nrows);
+    // tower->print(ea, cout, *colvec[i], nrows);
   // }
 
   // rotate each subslot 
@@ -1219,7 +1219,7 @@ void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
     if (nrows == nslots) {
       // simple rotation
 
-      colvec[i]->rotate(cshift[i]);
+      rotate(ea, *colvec[i], cshift[i]);
 
     }
     else {
@@ -1231,32 +1231,32 @@ void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
       for (long j = 0; j < nslots; j++) 
         mask[j] = ((j % nrows) < (nrows - cshift[i]));
 
-      PlaintextArray emask(ea);
-      emask.encode(mask);
+      NewPlaintextArray emask(ea);
+      encode(ea, emask, mask);
 
-      PlaintextArray tmp1(*colvec[i]), tmp2(*colvec[i]);
+      NewPlaintextArray tmp1(*colvec[i]), tmp2(*colvec[i]);
 
-      tmp1.mul(emask);
-      tmp2.sub(tmp1);
+      mul(ea, tmp1, emask);
+      sub(ea, tmp2, tmp1);
 
-      tmp1.rotate(cshift[i]);
-      tmp2.rotate(-(nrows-cshift[i]));
+      rotate(ea, tmp1, cshift[i]);
+      rotate(ea, tmp2, -(nrows-cshift[i]));
       
-      tmp1.add(tmp2);
+      add(ea, tmp1, tmp2);
       *colvec[i] = tmp1;
     }
   }
 
   // for (long i = 0; i < d2; i++) {
     // cout << "column " << i << "\n";
-    // tower->print(cout, *colvec[i], nrows);
+    // tower->print(ea, cout, *colvec[i], nrows);
   // }
 
   // combine columns
 
-  PlaintextArray v1(ea);
+  NewPlaintextArray v1(ea);
   for (long i = 0; i < d2; i++) 
-    v1.add(*colvec[i]);
+    add(ea, v1, *colvec[i]);
 
 
   // apply the matrix
@@ -1268,7 +1268,7 @@ void Step2aShuffle<type>::applyFwd(PlaintextArray& v) const
 
 
 template<class type>
-void Step2aShuffle<type>::applyBack(PlaintextArray& v) const
+void Step2aShuffle<type>::applyBack(NewPlaintextArray& v) const
 {
   RBak bak; bak.save(); ea.getAlMod().restoreContext();
   REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
@@ -1317,32 +1317,32 @@ void Step2aShuffle<type>::applyBack(PlaintextArray& v) const
 
   // mask each sub-slot
 
-  Vec< shared_ptr<PlaintextArray> > frobvec; 
+  Vec< shared_ptr<NewPlaintextArray> > frobvec; 
   frobvec.SetLength(d2);
   for (long j = 0; j < d2; j++) {
-    shared_ptr<PlaintextArray> ptr(new PlaintextArray(v));
-    ptr->frobeniusAutomorph(j*d1);
+    shared_ptr<NewPlaintextArray> ptr(new NewPlaintextArray(v));
+    frobeniusAutomorph(ea, *ptr, j*d1);
     frobvec[j] = ptr;
   }
 
-  Vec< shared_ptr<PlaintextArray> > colvec;
+  Vec< shared_ptr<NewPlaintextArray> > colvec;
   colvec.SetLength(d2);
   for (long i = 0; i < d2; i++) {
-    shared_ptr<PlaintextArray> acc(new PlaintextArray(ea));
+    shared_ptr<NewPlaintextArray> acc(new NewPlaintextArray(ea));
 
     for (long j = 0; j < d2; j++) {
-      PlaintextArray const1(ea);
+      NewPlaintextArray const1(ea);
 
       vector<ZZX> vec1;
       vec1.resize(nslots);
       for (long k = 0; k < nslots; k++)
         vec1[k] = C[i][j][k % nrows];
-      const1.encode(vec1);
+      encode(ea, const1, vec1);
 
-      PlaintextArray ctxt1(*frobvec[j]);
+      NewPlaintextArray ctxt1(*frobvec[j]);
 
-      ctxt1.mul(const1);
-      acc->add(ctxt1);
+      mul(ea, ctxt1, const1);
+      add(ea, *acc, ctxt1);
     }
 
     colvec[i] = acc;
@@ -1359,7 +1359,7 @@ void Step2aShuffle<type>::applyBack(PlaintextArray& v) const
     if (nrows == nslots) {
       // simple rotation
 
-      colvec[i]->rotate(shamt);
+      rotate(ea, *colvec[i], shamt);
 
     }
     else {
@@ -1371,18 +1371,18 @@ void Step2aShuffle<type>::applyBack(PlaintextArray& v) const
       for (long j = 0; j < nslots; j++) 
         mask[j] = ((j % nrows) < (nrows - shamt));
 
-      PlaintextArray emask(ea);
-      emask.encode(mask);
+      NewPlaintextArray emask(ea);
+      encode(ea, emask, mask);
 
-      PlaintextArray tmp1(*colvec[i]), tmp2(*colvec[i]);
+      NewPlaintextArray tmp1(*colvec[i]), tmp2(*colvec[i]);
 
-      tmp1.mul(emask);
-      tmp2.sub(tmp1);
+      mul(ea, tmp1, emask);
+      sub(ea, tmp2, tmp1);
 
-      tmp1.rotate(shamt);
-      tmp2.rotate(-(nrows-shamt));
+      rotate(ea, tmp1, shamt);
+      rotate(ea, tmp2, -(nrows-shamt));
       
-      tmp1.add(tmp2);
+      add(ea, tmp1, tmp2);
       *colvec[i] = tmp1;
     }
   }
@@ -1391,26 +1391,26 @@ void Step2aShuffle<type>::applyBack(PlaintextArray& v) const
   // optimized to avoid unnecessary constant muls
   // when hfactor == 1
 
-  PlaintextArray v1(ea);
+  NewPlaintextArray v1(ea);
 
   if (hfactor == 1) {
     for (long i = 0; i < d2; i++) { 
-      v1.add(*colvec[i]);
+      add(ea, v1, *colvec[i]);
     }
   }
   else {
     for (long i = 0; i < d2; i++) { 
-      PlaintextArray const1(ea);
+      NewPlaintextArray const1(ea);
       vector<ZZX> vec1;
       vec1.resize(nslots);
       for (long k = 0; k < nslots; k++)
         vec1[k] = conv<ZZX>(RX(intraSlotPerm[k%nrows][i], 1) % RE::modulus());
-      const1.encode(vec1);
+      encode(ea, const1, vec1);
 
-      PlaintextArray ctxt1(*colvec[i]);
-      ctxt1.mul(const1);
+      NewPlaintextArray ctxt1(*colvec[i]);
+      mul(ea, ctxt1, const1);
       
-      v1.add(ctxt1);
+      add(ea, v1, ctxt1);
     }
   }
 
@@ -1584,7 +1584,7 @@ void Step2aShuffle<type>::applyFwd(Ctxt& v) const
 
   // cout << "starting shuffle...\n";
 
-  // tower->print(cout, v, nrows);
+  // tower->print(ea, cout, v, nrows);
 
   // build linPolyCoeffs
 
@@ -1668,7 +1668,7 @@ void Step2aShuffle<type>::applyFwd(Ctxt& v) const
 
   // for (long i = 0; i < d2; i++) {
     // cout << "column " << i << "\n";
-    // tower->print(cout, *colvec[i], nrows);
+    // tower->print(ea, cout, *colvec[i], nrows);
   // }
 
   // rotate each subslot 
@@ -1709,7 +1709,7 @@ void Step2aShuffle<type>::applyFwd(Ctxt& v) const
 
   // for (long i = 0; i < d2; i++) {
     // cout << "column " << i << "\n";
-    // tower->print(cout, *colvec[i], nrows);
+    // tower->print(ea, cout, *colvec[i], nrows);
   // }
 
   // conbine columns
@@ -2049,11 +2049,11 @@ void OldEvalMap::apply(Ctxt& ctxt) const
   if (!invert) {
     // forward direction
 
-    ea.mat_mul(ctxt, *mat1);
+    mat_mul(ea, ctxt, *mat1);
     if (!easy) shuffle->apply(ctxt);
 
     for (long i = matvec.length()-1; i >= 0; i--) 
-      ea.mat_mul(ctxt, *matvec[i]);
+      mat_mul(ea, ctxt, *matvec[i]);
 
     net->applyToCtxt(ctxt, ea);
     frobeniusAutomorph(ctxt, ea, slot_rotate);
@@ -2064,10 +2064,10 @@ void OldEvalMap::apply(Ctxt& ctxt) const
     net->applyToCtxt(ctxt, ea);
 
     for (long i = 0; i < matvec.length(); i++)
-      ea.mat_mul(ctxt, *matvec[i]);
+      mat_mul(ea, ctxt, *matvec[i]);
 
     if (!easy) shuffle->apply(ctxt);
-    ea.mat_mul(ctxt, *mat1);
+    mat_mul(ea, ctxt, *mat1);
   }
 }
 

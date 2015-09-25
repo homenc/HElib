@@ -83,4 +83,9 @@ void replicateAll(const EncryptedArray& ea, const Ctxt& ctxt,
 //! less efficient than the function above.
 void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt,
                       ReplicateHandler *handler);
+
+
+
+void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i);
+
 #endif

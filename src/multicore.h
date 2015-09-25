@@ -27,6 +27,7 @@
 #include <atomic>
 #include <mutex>
 #include <condition_variable>
+#include <exception>
 #include <NTL/SmartPtr.h>
 
 using namespace std;
@@ -159,24 +160,69 @@ public:
 };
 
 
+template<class T, class T1>
+class CompositeSignal {
+private:
+  T val; 
+  T1 val1;
+  mutex m;
+  condition_variable cv;
+
+  CompositeSignal(const CompositeSignal&); // disabled
+  void operator=(const CompositeSignal&); // disabled
+
+public:
+  CompositeSignal() : val(0) { }
+
+  T wait(T1& _val1) 
+  {
+    unique_lock<mutex> lock(m);
+    cv.wait(lock, [&]() { return val; } );
+    T _val = val;
+    _val1 = val1;
+    val = 0;
+    return _val;
+  }
+
+  void send(T _val, T1 _val1)
+  {
+    lock_guard<mutex> lock(m);
+    val = _val;
+    val1 = _val1;
+    cv.notify_one();
+  }
+};
+
+
+struct MultiTask;
 
 class ConcurrentTask {
+  MultiTask *multiTask;
 public:
+  ConcurrentTask(MultiTask *_multiTask) : multiTask(_multiTask) { }
+  MultiTask *getMultiTask() const { return multiTask; }
+
   virtual void run(long index) = 0;
 };
+
 
 
 // dummy class, used for signalling termination
 class ConcurrentTaskTerminate : public ConcurrentTask {
 public:
+  ConcurrentTaskTerminate() : ConcurrentTask(0) { }
   void run(long index) { }
 };
+
+
 
 template<class Fct>
 class ConcurrentTaskFct : public ConcurrentTask {
 public:
   Fct fct;
-  ConcurrentTaskFct(Fct&& _fct) : fct(std::move(_fct)) { }
+
+  ConcurrentTaskFct(MultiTask *_multiTask, Fct&& _fct) : 
+    ConcurrentTask(_multiTask), fct(std::move(_fct)) { }
 
   void run(long index) { fct(index); }
 };
@@ -186,34 +232,34 @@ class ConcurrentTaskFct1 : public ConcurrentTask {
 public:
   Fct fct;
   const Vec<long>& pvec;
-  ConcurrentTaskFct1(Fct&& _fct, const Vec<long>& _pvec) : 
-    fct(std::move(_fct)), pvec(_pvec)  { }
+  ConcurrentTaskFct1(MultiTask *_multiTask, Fct&& _fct, const Vec<long>& _pvec) : 
+    ConcurrentTask(_multiTask), fct(std::move(_fct)), pvec(_pvec)  { }
 
   void run(long index) { fct(pvec[index], pvec[index+1]); }
 };
 
 
 struct AutomaticThread;
-struct MultiTask;
 inline void doMultiTask(AutomaticThread *autoThread);
 
 struct AutomaticThread {
-   MultiTask *multiTask;
-   long index;
-   SimpleSignal< ConcurrentTask * > localSignal;
+   CompositeSignal< ConcurrentTask *, long > localSignal;
    thread t;
+   ConcurrentTaskTerminate term;
 
-   ConcurrentTaskTerminate termTask;
-   // dummy task used to signal termination
 
-   AutomaticThread(MultiTask *_multiTask, long _index) 
-     : multiTask(_multiTask), index(_index),
-       t(doMultiTask, this) 
+   AutomaticThread() : t(doMultiTask, this) 
    { 
       // cerr << "starting thread " << t.get_id() << "\n";
    }
 
-   inline ~AutomaticThread();
+   ~AutomaticThread()
+   {
+     // cerr << "stopping thread " << t.get_id() << "...";
+     localSignal.send(&term, -1);
+     t.join();
+     // cerr << "\n";
+   }
 };
 
 struct MultiTask {
@@ -225,6 +271,9 @@ struct MultiTask {
 
   Vec< UniquePtr<AutomaticThread> > threadVec;
 
+  exception_ptr eptr;
+  mutex eptr_guard;
+
   MultiTask(const MultiTask&); // disabled
   void operator=(const MultiTask&); // disabled
 
@@ -232,12 +281,64 @@ struct MultiTask {
   {
     assert(nthreads > 0);
 
-    threadVec.SetLength(nthreads);
+    threadVec.SetLength(nthreads-1);
 
-    for (long i = 0; i < nthreads; i++) {
-      threadVec[i].make(this, i);
+    for (long i = 0; i < nthreads-1; i++) {
+      threadVec[i].make();
     }
   }
+
+  // adding, deleting, moving threads
+
+  void add(long n = 1)
+  {
+    assert(n > 0);
+
+    Vec< UniquePtr<AutomaticThread> > newThreads;
+
+    newThreads.SetLength(n);
+    for (long i = 0; i < n; i++)
+      newThreads[i].make();
+
+    threadVec.SetLength(n + nthreads - 1);
+    for (long i = 0; i < n; i++)
+      threadVec[nthreads-1+i].move(newThreads[i]); 
+
+    nthreads += n;
+  }
+
+
+  void remove(long n = 1)
+  {
+    assert(n > 0);
+    assert(n < nthreads);
+
+    for (long i = nthreads-1-n; i < nthreads-1; i++)
+      threadVec[i] = 0;
+
+    threadVec.SetLength(nthreads-1-n);
+    nthreads -= n;
+  }
+
+  
+  void move(MultiTask& other, long n = 1) 
+  {
+    assert(n > 0);
+    assert(n < other.nthreads);
+
+    if (this == &other) return;
+
+    threadVec.SetLength(n + nthreads - 1);
+    for (long i = 0; i < n; i++)
+       threadVec[nthreads-1+i].move(other.threadVec[other.nthreads-1-n+i]);
+
+    other.threadVec.SetLength(other.nthreads-1-n);
+    other.nthreads -= n;
+
+    nthreads += n;
+  }
+
+
 
   void begin(long cnt)
   {
@@ -249,13 +350,19 @@ struct MultiTask {
   void end()
   {
     globalSignal.wait();
+
+    if (eptr) {
+      exception_ptr eptr1 = eptr;
+      eptr = nullptr;
+      rethrow_exception(eptr1);
+    }
   }
 
   void launch(ConcurrentTask *task, long index)
   {
-    assert(task != 0 && index >= 0 && index < nthreads);
+    assert(task != 0 && index >= 0 && index < nthreads-1);
 
-    threadVec[index]->localSignal.send(task);
+    threadVec[index]->localSignal.send(task, index);
   }
 
   
@@ -268,10 +375,12 @@ struct MultiTask {
   template<class Fct>
   void exec(long cnt, Fct fct) 
   {
-    ConcurrentTaskFct<Fct> task(std::move(fct));
+    assert(cnt > 0);
+    ConcurrentTaskFct<Fct> task(this, std::move(fct));
 
     begin(cnt);
-    for (long t = 0; t < cnt; t++) launch(&task, t);
+    for (long t = 0; t < cnt-1; t++) launch(&task, t);
+    runOneTask(&task, cnt-1);
     end();
   }
 
@@ -282,12 +391,14 @@ struct MultiTask {
   template<class Fct>
   void exec1(long sz, Fct fct) 
   {
+    assert(sz > 0);
     Vec<long> pvec;
     long cnt = SplitProblems(sz, pvec);
-    ConcurrentTaskFct1<Fct> task(std::move(fct), pvec);
+    ConcurrentTaskFct1<Fct> task(this, std::move(fct), pvec);
 
     begin(cnt);
-    for (long t = 0; t < cnt; t++) launch(&task, t);
+    for (long t = 0; t < cnt-1; t++) launch(&task, t);
+    runOneTask(&task, cnt-1);
     end();
   }
 
@@ -312,34 +423,37 @@ struct MultiTask {
 
   long getNumThreads() const { return nthreads; }
 
+  static void runOneTask(ConcurrentTask *task, long index)
+  {
+    MultiTask *multiTask = task->getMultiTask();
+  
+    try {
+       task->run(index);
+    }
+    catch (...) {
+       lock_guard<mutex> lock(multiTask->eptr_guard);
+       if (!multiTask->eptr) multiTask->eptr = current_exception();
+    }
+
+    if (--(multiTask->counter) == 0) multiTask->globalSignal.send(true);
+  }
 
 };
 
 
-inline AutomaticThread::~AutomaticThread()
-{
-  // cerr << "stopping thread " << t.get_id() << "...";
-  localSignal.send(&termTask);
-  t.join();
-  // cerr << "\n";
-}
 
 
 inline void doMultiTask(AutomaticThread *autoThread)
 {
-  MultiTask *multiTask = autoThread->multiTask;
-  long index = autoThread->index;
-
   for (;;) {
-    ConcurrentTask *task = autoThread->localSignal.wait();
+    long index = -1;
+    ConcurrentTask *task = autoThread->localSignal.wait(index);
+    if (index == -1) return; 
 
-    if (task == &autoThread->termTask) return;
-    // special test for termination
-
-    task->run(index);
-    if (--(multiTask->counter) == 0) multiTask->globalSignal.send(true);
+    MultiTask::runOneTask(task, index);
   }
 }
+
 
 #define FHE_atomic_long atomic_long
 #define FHE_atomic_ulong atomic_ulong
