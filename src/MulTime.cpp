@@ -38,20 +38,6 @@
 #define debugCompare(ea,sk,p,c)
 #endif
 
-/**************
-
-1. c1.multiplyBy(c0)
-2. c0 += random constant
-3. c2 *= random constant
-4. tmp = c1
-5. ea.shift(tmp, random amount in [-nSlots/2, nSlots/2])
-6. c2 += tmp
-7. ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
-8. c1.negate()
-9. c3.multiplyBy(c2) 
-10. c0 -= c3
-
-**************/
 
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
@@ -133,10 +119,12 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
   ea.encrypt(c0, publicKey, p0);
-  // {ZZX ppp0; ea.encode(ppp0, p0); c0.DummyEncrypt(ppp0);} // dummy encryption
   ea.encrypt(c1, publicKey, p1); // real encryption
   ea.encrypt(c2, publicKey, p2); // real encryption
   ea.encrypt(c3, publicKey, p3); // real encryption
+
+  c0.cleanUp();
+  c1.cleanUp();
 
   resetAllTimers();
 
@@ -146,67 +134,16 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
     cerr << "*** round " << i << "..."<<endl;
 
-     long shamt = RandomBnd(2*(nslots/2) + 1) - (nslots/2);
-                  // random number in [-nslots/2..nslots/2]
-     long rotamt = RandomBnd(2*nslots - 1) - (nslots - 1);
-                  // random number in [-(nslots-1)..nslots-1]
-
-     // two random constants
-     NewPlaintextArray const1(ea);
-     NewPlaintextArray const2(ea);
-     random(ea, const1);
-     random(ea, const2);
-
-     ZZX const1_poly, const2_poly;
-     ea.encode(const1_poly, const1);
-     ea.encode(const2_poly, const2);
 
      mul(ea, p1, p0);     // c1.multiplyBy(c0)
-     c1.multiplyBy(c0);              CheckCtxt(c1, "c1*=c0");
+     c1.multiplyBy(c0);              
+     CheckCtxt(c1, "c1*=c0");
      debugCompare(ea,secretKey,p1,c1);
 
-     add(ea, p0, const1); // c0 += random constant
-     c0.addConstant(const1_poly);    CheckCtxt(c0, "c0+=k1");
-     debugCompare(ea,secretKey,p0,c0);
-
-     mul(ea, p2, const2); // c2 *= random constant
-     c2.multByConstant(const2_poly); CheckCtxt(c2, "c2*=k2");
-     debugCompare(ea,secretKey,p2,c2);
-
-     NewPlaintextArray tmp_p(p1); // tmp = c1
-     Ctxt tmp(c1);
-     sprintf(buffer, "c2>>=%d", (int)shamt);
-     shift(ea, tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
-     ea.shift(tmp, shamt);           CheckCtxt(tmp, buffer);
-     debugCompare(ea,secretKey,tmp_p,tmp);
-
-     add(ea, p2, tmp_p);  // c2 += tmp
-     c2 += tmp;                      CheckCtxt(c2, "c2+=tmp");
-     debugCompare(ea,secretKey,p2,c2);
-
-     sprintf(buffer, "c2>>>=%d", (int)rotamt);
-     rotate(ea, p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
-     ea.rotate(c2, rotamt);          CheckCtxt(c2, buffer);
-     debugCompare(ea,secretKey,p2,c2);
-
-     ::negate(ea, p1); // c1.negate()
-     c1.negate();                    CheckCtxt(c1, "c1=-c1");
-     debugCompare(ea,secretKey,p1,c1);
-
-     mul(ea, p3, p2); // c3.multiplyBy(c2) 
-     c3.multiplyBy(c2);              CheckCtxt(c3, "c3*=c2");
-     debugCompare(ea,secretKey,p3,c3);
-
-     sub(ea, p0, p3); // c0 -= c3
-     c0 -= c3;                       CheckCtxt(c0, "c0=-c3");
-     debugCompare(ea,secretKey,p0,c0);
 
   }
 
-  c0.cleanUp();
   c1.cleanUp();
-  c2.cleanUp();
-  c3.cleanUp();
 
   FHE_NTIMER_STOP(Circuit);
    
