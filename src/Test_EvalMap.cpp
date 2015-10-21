@@ -93,10 +93,9 @@ void  TestIt(long p, long r, long c, long _k, long w,
   for (long i = 0; i < phim; i++) {
     val1[i/d] += conv<ZZX>(conv<ZZ>(cube[i])) << (i % d);
   }
-  PlaintextArray pa1(ea);
-  pa1.encode(val1);
+  NewPlaintextArray pa1(ea);
+  encode(ea, pa1, val1);
 
-  PlaintextArray check_val(ea);
   Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, pa1);
 
@@ -139,10 +138,10 @@ void  TestIt(long p, long r, long c, long _k, long w,
   CheckCtxt(ctxt, "EvalMap");
   cout << "check results\n";
 
-  PlaintextArray pa2(ea);
+  NewPlaintextArray pa2(ea);
   ea.decrypt(ctxt, secretKey, pa2);
 
-  if (pa1.equals(pa2))
+  if (equals(ea, pa1, pa2))
     cout << "EvalMap: GOOD\n";
   else
     cout << "EvalMap: BAD\n";
@@ -208,7 +207,21 @@ int main(int argc, char *argv[])
 
   amap.arg("dry", dry, "a dry-run flag to check the noise");
 
+  long nthreads=4;
+  amap.arg("nthreads", nthreads, "number of threads");
+
   amap.parse(argc, argv);
+
+#ifdef FHE_BOOT_THREADS
+  bootTask = new MultiTask(nthreads);
+  cout << "*** nthreads = " << nthreads << "\n";
+#else
+  cout << "*** no threads\n";
+#endif
+
+
+
+
 
   long w = 64; // Hamming weight of secret key
 

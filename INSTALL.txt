@@ -1,4 +1,4 @@
-HElib Installation Notes, November 2014
+HElib Installation Notes, October 2015
 ---------------------------------------
 To build HElib, you will need to have GMP and NTL libraries installed.
 
@@ -14,7 +14,7 @@ If not, you can install GMP as follows.
 4. This should install GMP into /usr/local
 
 Once GMP is installed, you can install NTL as follows:
-(NOTE: you will needs NTL v6.1 or higher)
+(NOTE: you will needs NTL v9.4.0 or higher)
 
 1. Download NTL from http://www.shoup.net/ntl/download.html
 2. uncompress and cd into the directory ntl-XXX/src
@@ -64,12 +64,11 @@ Take a look at the programs Test_*.cpp for examples of using HElib.
 
 Some comments:
 
-* HElib uses some features of C++11 (or the earlier C++0X). For gcc,
-depending on the version that you use, you may need to specify the
-flags '-std=c++11 -lstdc++' or '-std=c++0x' to be able to compile.
+* HElib uses C++11, for gcc you may need to specify the flags '-std=c++11'
+to be able to compile (depending on the gcc version that you use).
 
-* There are currently four compilation flags that control some aspects
-of the library, these are:
+* There are a re compilation flags that control some aspects of the
+library, currently these are:
 
   -DUSE_ALT_CRT
     Tells HElib to use an alternative to the default DoubleCRT
@@ -83,8 +82,8 @@ of the library, these are:
 
   -DNO_HALF_SIZE_PRIME
     Tells HElib to not use the half size prime in the prime chain. By
-    default, the modulus-chain in HElib consists of many "full-size
-    primes" (of size n bits, typically n=50 for 64-bit machines) and
+    default, the modulus-chain in HElib consists of many "full-size primes"
+    (of size n bits, typically n=50 or n=60 for 64-bit machines) and
     one "half-size prime" of n/2 bits. A level corresponds to n/2 bits
     in the size of the modulus, and dropping to a lower level is done
     either by dropping the half-size prime (if it is part of the current
@@ -108,6 +107,17 @@ of the library, these are:
 
      EVALMAP_CACHED=1 caches these constants directly as DoubleCRT's,
      this may take a significant amount of memeory.
+
+
+   -DFHE_THREADS  tells HElib to enable generic multithreading capabilities;
+                  must be used with a thread-enabled NTL and the -pthread
+                  flag should be passed to gcc
+
+   -DFHE_DCRT_THREADS  tells HElib to use a multithreading strategy at the
+                       DoubleCRT level; requires -DFHE_THREADS (see above)
+
+   -DFHE_BOOT_THREADS  tells HElib to use a multithreading strategy for
+                       bootstrapping; requires -DFHE_THREADS (see above)
 
 
   -DDEBUG_PRINTOUT

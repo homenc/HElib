@@ -457,6 +457,7 @@ istream& operator>> (istream &str, FHEcontext& context)
 
     if (ALT_CRT) 
       context.moduli.push_back(Cmodulus(context.zMStar,p,1)); // a dummy object
+      // FIXME: this is broken...we are not getting an FFT prime here
     else
       context.moduli.push_back(Cmodulus(context.zMStar,p,0)); // a real object
 

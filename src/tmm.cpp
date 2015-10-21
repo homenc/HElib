@@ -21,9 +21,7 @@
 
 #include <cassert>
 #include <NTL/lzz_pXFactoring.h>
-#include "FHE.h"
 #include "timing.h"
-#include "EncryptedArray.h"
 #include "matrix.h"
 
 template<class type> 
@@ -199,8 +197,8 @@ void  TestIt(long m, long p, long r, long d, long L)
     shared_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
 
     // choose a random plaintext vector
-    NewPlaintextArray v(ea);
-    random(ea, v);
+    PlaintextArray v(ea);
+    v.random();
 
     // encrypt the random vector
     Ctxt ctxt(publicKey);
@@ -208,13 +206,13 @@ void  TestIt(long m, long p, long r, long d, long L)
     Ctxt ctxt2 = ctxt;
 
     cout << " Multiplying with PlaintextMatrixBaseInterface... " << std::flush;
-    mat_mul(ea, v, *ptr);         // multiply the plaintext vector
-    mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
+    v.mat_mul(*ptr);         // multiply the plaintext vector
+    free_mat_mul_dense(ea, ctxt2, *ptr);  // multiply the ciphertext vector
 
-    NewPlaintextArray v1(ea);
+    PlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
-    if (equals(ea, v, v1))        // check that we've got the right answer
+    if (v.equals(v1))        // check that we've got the right answer
       cout << "Nice!!\n";
     else
       cout << "Grrr@*\n";
@@ -222,24 +220,24 @@ void  TestIt(long m, long p, long r, long d, long L)
     // Test cached verions of the mult-by-matrix operation
     {
       CachedPtxtMatrix zzxMat;
-      compMat(ea, zzxMat, *ptr);
+      free_compMat(ea, zzxMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedPtxtMatrix... " << std::flush;
-      mat_mul(ea, ctxt2, zzxMat);
+      mat_mul(ctxt2, zzxMat, ea);
       ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (equals(ea, v, v1))        // check that we've got the right answer
+      if (v.equals(v1))        // check that we've got the right answer
 	cout << "Nice!!\n" << std::flush;
       else
 	cout << "Grrr@*\n" << std::flush;
     }
     {
       CachedDCRTPtxtMatrix dcrtMat;
-      compMat(ea, dcrtMat, *ptr);
+      free_compMat(ea, dcrtMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedDCRTPtxtMatrix... " << std::flush;
-      mat_mul(ea, ctxt2, dcrtMat);
+      mat_mul(ctxt2, dcrtMat, ea);
       ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (equals(ea, v, v1))        // check that we've got the right answer
+      if (v.equals(v1))        // check that we've got the right answer
 	cout << "Nice!!\n\n";
       else
 	cout << "Grrr@*\n\n";
@@ -253,23 +251,23 @@ void  TestIt(long m, long p, long r, long d, long L)
       ptr(buildRandomBlockMatrix(ea));
 
     // choose a random plaintext vector
-    NewPlaintextArray v(ea);
-    random(ea, v);
+    PlaintextArray v(ea);
+    v.random();
 
     // encrypt the random vector
     Ctxt ctxt(publicKey);
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
-    mat_mul(ea, v, *ptr);         // multiply the plaintext vector
+    v.mat_mul(*ptr);         // multiply the plaintext vector
     cout << " Multiplying with PlaintextBlockMatrixBaseInterface... " 
 	 << std::flush;
-    mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
+    free_mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
 
-    NewPlaintextArray v1(ea);
+    PlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
-    if (equals(ea, v, v1))        // check that we've got the right answer
+    if (v.equals(v1))        // check that we've got the right answer
       cout << "Nice!!\n";
     else
       cout << "Grrr...\n";
@@ -277,24 +275,24 @@ void  TestIt(long m, long p, long r, long d, long L)
     // Test cached verion sof the mult-by-block-matrix operation
     {
       CachedPtxtBlockMatrix zzxMat;
-      compMat(ea, zzxMat, *ptr);
+      free_compMat(ea, zzxMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedPtxtBlockMatrix... " << std::flush;
-      mat_mul(ea, ctxt2, zzxMat);
+      mat_mul(ctxt2, zzxMat, ea);
       ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (equals(ea, v, v1))        // check that we've got the right answer
+      if (v.equals(v1))        // check that we've got the right answer
 	cout << "Nice!!\n" << std::flush;
       else
 	cout << "Grrr@*\n" << std::flush;
     }
     {
       CachedDCRTPtxtBlockMatrix dcrtMat;
-      compMat(ea, dcrtMat, *ptr);
+      free_compMat(ea, dcrtMat, *ptr);
       ctxt2 = ctxt;
       cout << " Multiplying with CachedDCRTPtxtBlockMatrix... " << std::flush;
-      mat_mul(ea, ctxt2, dcrtMat);
+      mat_mul(ctxt2, dcrtMat, ea);
       ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (equals(ea, v, v1))        // check that we've got the right answer
+      if (v.equals(v1))        // check that we've got the right answer
 	cout << "Nice!!\n";
       else
 	cout << "Grrr@*\n";

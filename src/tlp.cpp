@@ -13,14 +13,13 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
 #include "matrix.h"
 #include <NTL/ZZ.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <cassert>
 #include <cstdio>
+
+
 
 
 template<class type> 
@@ -56,12 +55,15 @@ public:
     out = data;
     return false;
   }
+
 };
+
+
 
 PlaintextBlockMatrixBaseInterface *buildSingleBlockMatrix(const EncryptedArray& ea,
                                                           const vector<ZZX>& vec)
 {
-  switch (ea.getContext().alMod.getTag()) {
+  switch (ea.getTag()) {
     case PA_GF2_tag: {
       return new SingleBlockMatrix<PA_GF2>(ea, vec);
     }
@@ -120,7 +122,7 @@ public:
 PlaintextBlockMatrixBaseInterface *buildMultiBlockMatrix(const EncryptedArray& ea,
                                                           const vector< vector<ZZX> >& vec)
 {
-  switch (ea.getContext().alMod.getTag()) {
+  switch (ea.getTag()) {
     case PA_GF2_tag: {
       return new MultiBlockMatrix<PA_GF2>(ea, vec);
     }
@@ -145,7 +147,7 @@ void  TestIt(long m, long p, long r, long d)
        << endl;
 
   FHEcontext context(m, p, r);
-  buildModChain(context, /*L=*/3, /*c=*/2);
+  buildModChain(context, /*L=*/10, /*c=*/2);
   context.zMStar.printout();
   cout << endl;
 
@@ -171,10 +173,10 @@ void  TestIt(long m, long p, long r, long d)
 
   long nslots = ea.size();
 
-  NewPlaintextArray p0(ea);
-  NewPlaintextArray pp0(ea);
+  PlaintextArray p0(ea);
+  PlaintextArray pp0(ea);
 
-  Ctxt c0(publicKey);
+  Ctxt c0(publicKey), cc0(publicKey);
 
   cout << "\nTest #1: Apply the same linear transformation to all slots\n";
   {
@@ -186,15 +188,18 @@ void  TestIt(long m, long p, long r, long d)
   vector<ZZX> C;
   ea.buildLinPolyCoeffs(C, LM);
 
-  random(ea, p0);  
+  p0.random();  
   ea.encrypt(c0, publicKey, p0);
+  ea.encrypt(cc0, publicKey, p0);
+
   applyLinPoly1(ea, c0, C);
-  ea.decrypt(c0, secretKey, pp0);
+  ea.decrypt(c0, secretKey, p0);
 
   shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildSingleBlockMatrix(ea, LM));
-  NewPlaintextArray p1(p0);
-  mat_mul(ea, p1, *mat);
-  if (equals(ea, pp0, p1))
+  free_mat_mul(ea, cc0, *mat);
+  ea.decrypt(cc0, secretKey, pp0);
+
+  if (pp0.equals(p0))
     cout << "GOOD\n";
   else
     cout << "BAD\n";
@@ -218,15 +223,18 @@ void  TestIt(long m, long p, long r, long d)
   for (long i = 0; i < nslots; i++)
     ea.buildLinPolyCoeffs(C[i], LM[i]);
 
-  random(ea, p0);
+  p0.random();
   ea.encrypt(c0, publicKey, p0);
+  ea.encrypt(cc0, publicKey, p0);
+
   applyLinPolyMany(ea, c0, C); // apply the linearized polynomials
-  ea.decrypt(c0, secretKey, pp0);
+  ea.decrypt(c0, secretKey, p0);
 
   shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));
-  NewPlaintextArray p1(p0);
-  mat_mul(ea, p1, *mat);
-  if (equals(ea, pp0, p1))
+  free_mat_mul(ea, cc0, *mat);
+  ea.decrypt(cc0, secretKey, pp0);
+
+  if (pp0.equals(p0))
     cout << "GOOD\n";
   else
     cout << "BAD\n";
@@ -257,15 +265,18 @@ void  TestIt(long m, long p, long r, long d)
     ea.encode(encodedC[j], v);
   }
 
-  random(ea, p0);  
+  p0.random();  
   ea.encrypt(c0, publicKey, p0);
+  ea.encrypt(cc0, publicKey, p0);
+
   applyLinPolyLL(c0, encodedC, ea.getDegree()); // apply linearized polynomials
-  ea.decrypt(c0, secretKey, pp0);
+  ea.decrypt(c0, secretKey, p0);
 
   shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));
-  NewPlaintextArray p1(p0);
-  mat_mul(ea, p1, *mat);
-  if (equals(ea, pp0, p1))
+  free_mat_mul(ea, cc0, *mat);
+  ea.decrypt(cc0, secretKey, pp0);
+
+  if (pp0.equals(p0))
     cout << "GOOD\n";
   else
     cout << "BAD\n";

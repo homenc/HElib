@@ -1,3 +1,4 @@
+
 /* Copyright (C) 2012,2013 IBM Corp.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -61,6 +62,8 @@ class PAlgebra {
   unsigned long ordP; // the order of p in (Z/mZ)^*
   unsigned long nSlots; // phi(m)/ordP = # of plaintext slots
 
+  long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
+
   vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
   vector<long> ords; // ords[i] is the order of gens[i] in quotient group kept
                      // with a negative sign if different than order in (Z/mZ)*
@@ -120,6 +123,9 @@ class PAlgebra {
 
   //! The number of plaintext slots = phi(m)/ord(p)
   unsigned long getNSlots() const { return nSlots; }
+
+  //! if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
+  long getPow2() const { return pow2; }
 
   //! The cyclotomix polynomial Phi_m(X)
   const ZZX& getPhimX() const { return PhimX; }

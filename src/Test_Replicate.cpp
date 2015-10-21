@@ -30,12 +30,12 @@ NTL_CLIENT
 static bool check_replicate(const Ctxt& c1, const Ctxt& c0, long i,
 			    const FHESecKey& sKey, const EncryptedArray& ea)
 {
-  PlaintextArray pa0(ea), pa1(ea);
+  NewPlaintextArray pa0(ea), pa1(ea);
   ea.decrypt(c0, sKey, pa0);
   ea.decrypt(c1, sKey, pa1);
-  pa0.replicate(i);
+  replicate(ea, pa0, i);
   
-  return pa1.equals(pa0); // returns true if replication succeeded
+  return equals(ea, pa1, pa0); // returns true if replication succeeded
 }
 
 
@@ -46,7 +46,7 @@ class ReplicateTester : public ReplicateHandler {
 public:
   const FHESecKey& sKey;
   const EncryptedArray& ea;
-  const PlaintextArray& pa;
+  const NewPlaintextArray& pa;
   long B;
 
   double t_last, t_total;
@@ -54,7 +54,7 @@ public:
   bool error;
 
   ReplicateTester(const FHESecKey& _sKey, const EncryptedArray& _ea, 
-                  const PlaintextArray& _pa, long _B)
+                  const NewPlaintextArray& _pa, long _B)
   : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
   {
     t_last = GetTime();
@@ -74,12 +74,12 @@ public:
     t_total += t_elapsed;
 
     // Decrypt and check
-    PlaintextArray pa1 = pa;
-    pa1.replicate(pos);
-    PlaintextArray pa2(ea);
+    NewPlaintextArray pa1 = pa;
+    replicate(ea, pa1, pos);
+    NewPlaintextArray pa2(ea);
 
     ea.decrypt(ctxt, sKey, pa2);
-    if (!pa1.equals(pa2)) error = true; // record the error, if any
+    if (!equals(ea, pa1, pa2)) error = true; // record the error, if any
     t_last = GetTime();
 
     pos++;
@@ -127,9 +127,9 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   EncryptedArray ea(context, G);
   cout << "done\n";
 
-  PlaintextArray xp0(ea), xp1(ea);
-  xp0.random();
-  xp1.random();
+  NewPlaintextArray xp0(ea), xp1(ea);
+  random(ea, xp0);
+  random(ea, xp1);
 
   Ctxt xc0(publicKey);
   ea.encrypt(xc0, publicKey, xp0);
