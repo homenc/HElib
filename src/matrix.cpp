@@ -19,35 +19,6 @@
 #include "matrix.h"
 #include <algorithm>
 
-// Copied from EncryptedArray.cpp -- it shoudn't be there.
-
-// plaintextAutomorph: an auxilliary routine...maybe palce in NumbTh?
-// Compute b(X) = a(X^k) mod Phi_m(X). Result is calclated in the output b
-// "in place", so a should not alias b.
-template <class RX, class RXModulus> static
-void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar, 
-  const RXModulus& PhimX)
-{
-  long m  = zMStar.getM();
-
-  assert(zMStar.inZmStar(k));
-
-  b.SetLength(m);
-  for (long j = 0; j < m; j++) b[j] = 0;
-
-  long d = deg(a);
-
-  // compute b(X) = a(X^k) mod (X^m-1)
-  mulmod_precon_t precon = PrepMulModPrecon(k, m);
-  for (long j = 0; j <= d; j++) 
-    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
-  b.normalize();
-
-  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
-}
-
-
-
 // This code has a complexity of N+d (instead of N*d) where N is the number of
 // nonzero diagonal blocks. However, it requires space for d extra ciphertexts
 template<class type>

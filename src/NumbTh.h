@@ -269,6 +269,28 @@ inline void ppInvert(mat_GF2E& X, const mat_GF2E& A, long p, long r)
 void buildLinPolyMatrix(mat_zz_pE& M, long p);
 void buildLinPolyMatrix(mat_GF2E& M, long p);
 
+/**
+ * @brief Invert A modulo p^r. Use Hensel's lifing when needed.
+ * @warning Hensel's lifting is only implemented for zz_pE elements.
+ * 
+ * @return A^-1 modulo p^r
+ */
+template<class RE>
+RE invMod(const RE& A, long p, long r);
+
+/**
+ * @brief Build inverted linear polynomial matrix
+ * @details Build inverted Vandermonde matrix V(X, X^p, X^p^2, ..., X^p^(n-1))
+ *  modulo p^r where n = RE::degree().
+ *  Assumes zz_p::modulus() == p^r
+ * 
+ * @param output matrix V^-1 (first column or full matrix)
+ * @param full compute entire matrix if true, otherwise only the first column
+ * @tparam RE either zz_pE or GF2E
+ */
+template<class RE>
+void buildInvLinPolyMatrix(Mat<RE>& A, long p, long r, bool full = true);
+
 //! @brief Combination of buildLinPolyMatrix and ppsolve.
 //!
 //! Obtain the linearized polynomial coefficients from a vector L representing 
@@ -379,6 +401,8 @@ void convert(vec_zz_pE& X, const vector<ZZX>& A);
 void convert(mat_zz_pE& X, const vector< vector<ZZX> >& A);
 void convert(vector<ZZX>& X, const vec_zz_pE& A);
 void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A);
+void convert(zz_pE& X, const ZZX& A);
+void convert(ZZX& X, const zz_pE& A);
 ///@}
 
 //! A generic template that resolves to NTL's conv routine

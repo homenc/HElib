@@ -461,6 +461,31 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
   }
 }
 
+/**
+ * @brief Compute first d conjugates of a.
+ *  Return an array [a, a(X^p), a(X^p^2), ..., a(X^p^(d-1))] mod PhimX
+ * @details an auxilliary routine...maybe palce in NumbTh?
+ * 
+ * @param conj conjugates
+ * @param a input plaintext
+ * @param d number of conjugates to compute
+ * @param PhimX modulo poly
+ */
+template <class RX, class RXModulus>
+void plaintextConjugates(vector<RX>& conj, const RX& a, long d, const PAlgebra& zMStar, 
+                       const RXModulus& PhimX)
+{
+  long pmodm = zMStar.getP() % zMStar.getM();
+
+  conj.clear(); 
+  conj.push_back(a);
+  for (long j = 1; j < d; j++) {
+    RX tmp;
+    plaintextAutomorph(tmp, conj[j-1], pmodm, zMStar, PhimX);
+    conj.push_back(tmp);
+  }
+} 
+
 
 
 
@@ -473,77 +498,115 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 //    M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
 template<class type> void
 EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<ZZX>& C, 
-						const vector<ZZX>& L) const
+            const vector<ZZX>& L, bool buildFullMatrix) const
 {
   RBak bak; bak.save(); restoreContext();
   vector<RX> CC, LL;
   convert(LL, L);
-  buildLinPolyCoeffs(CC, LL);
+  buildLinPolyCoeffs(CC, LL, buildFullMatrix);
   convert(C, CC);
 }
 
+
 template<class type> void
 EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C, 
-						const vector<RX>& L) const
+            const vector<RX>& L, bool buildFullMatrix) const
 {
+  buildLinPolyMat(buildFullMatrix);
+
   FHE_TIMER_START;
+
+  assert(lsize(L) == getDegree());
 
   RBak bak; bak.save(); restoreContext();  // the NTL context for mod p^r
   REBak ebak; ebak.save(); restoreContextForG(); // The NTL context for mod G
 
-  do {
-    typename Lazy< Mat<RE> >::Builder builder(linPolyMatrix);
-    if (!builder()) break;
-
-   
-    long p = tab.getZMStar().getP();
-    long r = tab.getR();
-
-    Mat<RE> M1;
-    // build d x d matrix, d is taken from the surrent NTL context for G
-    buildLinPolyMatrix(M1, p);
-    Mat<RE> M2;
-    ppInvert(M2, M1, p, r); // invert modulo prime-power p^r
-
-    UniquePtr< Mat<RE> > ptr;
-    ptr.make(M2);
-    builder.move(ptr);
-  } while (0);
+  const PAlgebra& zMStar = context.zMStar;
 
   Vec<RE> CC, LL;
   convert(LL, L);
-  mul(CC, LL, *linPolyMatrix);
+  if (linPolyMatrix->a) { //full matrix was computed
+    mul(CC, LL, linPolyMatrix->b);
+  } else {                //only first col available, compute rows as needed
+    long d = getDegree();
+    CC.SetLength(d);
+    vector<RX> R;
+    Vec<RE> RR;
+    for (int i = 0; i < d; ++i) {
+      if (not IsZero(LL[i])) {
+        //may be should store computed rows for future reuse?
+        plaintextConjugates(R, rep(linPolyMatrix->b[i][0]), d, zMStar, 
+            RE::modulus());
+        convert(RR, R);
+        mul(RR, RR, LL[i]);
+        add(CC, CC, RR);
+      }
+    }
+  }
   convert(C, CC);
 }
 
 
-// Apply the same linear transformation to all the slots.
-// C is the output of ea.buildLinPolyCoeffs
-void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
-{
-  assert(&ea.getContext() == &ctxt.getContext());
-  long d = ea.getDegree();
-  assert(d == lsize(C));
+template<class type> void
+EncryptedArrayDerived<type>::buildLinPolyMat(bool buildFullMatrix) const
+{  
+  RBak bak; bak.save(); restoreContext();  // the NTL context for mod p^r
+  REBak ebak; ebak.save(); restoreContextForG(); // The NTL context for mod G
 
-  long nslots = ea.size();
+  const PAlgebra& zMStar = context.zMStar;
+  long p = zMStar.getP();
+  long r = tab.getR();
 
-  vector<ZZX> encodedC(d);
-  for (long j = 0; j < d; j++) {
-    vector<ZZX> v(nslots);
-    for (long i = 0; i < nslots; i++) v[i] = C[j];
-    ea.encode(encodedC[j], v);
-  }
+  do {
+    typename Lazy< Pair<bool, Mat<RE>> >::Builder builder(linPolyMatrix);
+    if (!builder()) break;
+ 
+    FHE_TIMER_START;
+ 
+    // build first column of the inversed matrix, 
+    //  d is taken from the current NTL context for G
+    Mat<RE> M_col;
+    buildInvLinPolyMatrix(M_col, p, r, false);
 
-  applyLinPolyLL(ctxt, encodedC, ea.getDegree());
+    Pair<bool, Mat<RE>> bM;
+
+    /* Compute other columns using Frobenius morphism */
+    if (buildFullMatrix) {
+      Mat<RE> M;
+      vector<RX> R;
+      long d = getDegree();
+
+      M.SetDims(d, d);
+      for (int i = 0; i < d; ++i) {
+        plaintextConjugates(R, rep(M_col[i][0]), d, zMStar, 
+            RE::modulus());
+        convert(M[i], R);
+      }
+      bM = cons(buildFullMatrix, M);
+    } else {
+      bM = cons(buildFullMatrix, M_col);
+    }
+
+    UniquePtr< Pair<bool, Mat<RE>> > ptr;
+    ptr.make(bM);
+    builder.move(ptr);
+  } while (0);
 }
 
 
-// Apply different transformations to different slots. Cvec is a vector of
-// length ea.size(), with each entry the output of ea.buildLinPolyCoeffs
-void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
-                      const vector< vector<ZZX> >& Cvec)
+/* See header */
+void encodeLinPoly1(const EncryptedArray& ea, 
+            vector<ZZX>& encodedC, const vector<ZZX>& C) 
 {
-  assert(&ea.getContext() == &ctxt.getContext());
+  encodeLinPolyMany(ea, encodedC, vector_replicate(C, ea.size()));
+}
+
+/* See header */
+void encodeLinPolyMany(const EncryptedArray& ea, 
+            vector<ZZX>& encodedC, const vector< vector<ZZX> >& Cvec)
+{
+  FHE_TIMER_START;
+
   long d = ea.getDegree();
   long nslots = ea.size();
 
@@ -551,37 +614,94 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
   for (long i = 0; i < nslots; i++)
     assert(d == lsize(Cvec[i]));
 
-  vector<ZZX> encodedC(d);
+  encodedC.resize(d);
   for (long j = 0; j < d; j++) {
     vector<ZZX> v(nslots);
     for (long i = 0; i < nslots; i++) v[i] = Cvec[i][j];
     ea.encode(encodedC[j], v);
   }
-
-  applyLinPolyLL(ctxt, encodedC, ea.getDegree());
 }
 
-// A low-level variant: encodedCoeffs has all the linPoly coeffs encoded
-// in slots; different transformations can be encoded in different slots
+/* see header */
+template<class P>
+void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d, 
+            vector<Ctxt>& conj)
+{
+  FHE_TIMER_START;
+
+  assert(lsize(encodedC) == d);
+
+  if (lsize(conj) < d-1) 
+    ctxt.computeConjugates(conj, d);
+  assert(conj[0] == ctxt);    //dummy integrity verification
+
+  innerProduct(ctxt, conj, encodedC);
+}
+template 
+void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d, 
+            vector<Ctxt>& conj);
+template 
+void applyLinPolyLL(Ctxt& ctxt, const vector<DoubleCRT>& encodedC, long d, 
+            vector<Ctxt>& conj);
+
+/* see header */
 template<class P>
 void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
 {
-  assert(d == lsize(encodedC));
-
-  ctxt.cleanUp();  // not sure, but this may be a good idea
-
-  Ctxt tmp(ctxt);
-
-  ctxt.multByConstant(encodedC[0]);
-  for (long j = 1; j < d; j++) {
-    Ctxt tmp1(tmp);
-    tmp1.frobeniusAutomorph(j);
-    tmp1.multByConstant(encodedC[j]);
-    ctxt += tmp1;
-  }
+  vector<Ctxt> conj;
+  applyLinPolyLL(ctxt, encodedC, d, conj);
 }
-template void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d);
-template void applyLinPolyLL(Ctxt& ctxt, const vector<DoubleCRT>& encodedC, long d);
+template 
+void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d);
+template 
+void applyLinPolyLL(Ctxt& ctxt, const vector<DoubleCRT>& encodedC, long d);
+
+/* see header */
+void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, 
+            const vector<ZZX>& C, vector<Ctxt>& conj)
+{
+  FHE_TIMER_START;
+
+  assert(&ea.getContext() == &ctxt.getContext());
+  long d = ea.getDegree();
+
+  vector<ZZX> encodedC;
+  encodeLinPoly1(ea, encodedC, C);
+
+  applyLinPolyLL(ctxt, encodedC, d, conj);
+}
+
+/* see header */
+void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, 
+            const vector<ZZX>& C)
+{
+  vector<Ctxt> conj;
+  applyLinPoly1(ea, ctxt, C, conj);
+}
+
+/* see header */
+void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
+            const vector< vector<ZZX> >& Cvec, vector<Ctxt>& conj)
+{
+  FHE_TIMER_START;
+
+  assert(&ea.getContext() == &ctxt.getContext());
+  long d = ea.getDegree();
+
+  vector<ZZX> encodedC;
+  encodeLinPolyMany(ea, encodedC, Cvec);
+
+  applyLinPolyLL(ctxt, encodedC, d, conj);
+}
+
+/* see header */
+void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
+            const vector< vector<ZZX> >& Cvec)
+{
+  vector<Ctxt> conj;
+  applyLinPolyMany(ea, ctxt, Cvec, conj);
+}
+
 
 #if 0
 /************************* OLD UNUSED CODE *************************/

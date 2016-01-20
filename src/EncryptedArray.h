@@ -72,7 +72,7 @@ class EncryptedArray; // forward reference
  *
  * An object ea of type EncryptedArray stores information about an
  * FHEcontext context, and a monic polynomial G.  If context defines
- * parameters m, p, and r, then ea is a helper abject
+ * parameters m, p, and r, then ea is a helper object
  * that supports encoding/decoding and encryption/decryption
  * of vectors of plaintext slots over the ring (Z/(p^r)[X])/(G). 
  *
@@ -189,9 +189,11 @@ public:
   //! The result is a coefficient vector C for the linearized polynomial
   //! representing M: a polynoamial h in Z/(p^r)[X] of degree < d is sent to
   //! \f[
-  //!  M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
+  //!  M(h(X) \bmod G)= \sum_{j=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
   //! \f]
-  virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const=0;
+  //! @param buildFullMatrix build full matrix or only the first column
+  virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L, bool buildFullMatrix = true) const=0;
+  virtual void buildLinPolyMat(bool buildFullMatrix = true) const=0;
 
   // restore contexts mod p and mod G
   virtual void restoreContext() const = 0;
@@ -260,7 +262,10 @@ private:
   //
   MappingData<type> mappingData; // MappingData is defined in PAlgebra.h
 
-  Lazy< Mat<RE> > linPolyMatrix;
+  // When linPolyMatrix.a is true the full linPoly matrix was computed, 
+  //    otherwise only the first column was computed. In the later case 
+  //    other columns can be computed using relation a_{i+1,j}=a_{i,j}^p.
+  Lazy< Pair<bool, Mat<RE>> > linPolyMatrix;
 
   Lazy< Pair< Mat<R>, Mat<R> > > normalBasisMatrices;
   // a is the matrix, b is its inverse
@@ -413,7 +418,8 @@ public:
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
     { genericSelect(ctxt1, ctxt2, selector); }
 
-  virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const;
+  virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L, bool buildFullMatrix = true) const;
+  virtual void buildLinPolyMat(bool buildFullMatrix = true) const;
 
   /* the following are specialized methods, used to work over extension fields...they assume 
      the modulus context is already set
@@ -438,7 +444,7 @@ public:
   void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< RX >& ptxt, long skIdx=0) const
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
-  virtual void buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L) const;
+  virtual void buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L, bool buildFullMatrix = true) const;
 
 
 private:
@@ -660,8 +666,11 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
     { rep->select(ctxt1, ctxt2, selector); }
 
-  void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const
-    { rep->buildLinPolyCoeffs(C, L); }
+  void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L, bool buildFullMatrix = true) const
+    { rep->buildLinPolyCoeffs(C, L, buildFullMatrix); }
+
+  void buildLinPolyMat(bool buildFullMatrix = true) const
+    { rep->buildLinPolyMat(buildFullMatrix); }
 
   void restoreContext() const { rep->restoreContext(); }
   void restoreContextForG() const { rep->restoreContextForG(); }
@@ -814,41 +823,176 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 // Complexity: O(d + n log d) smart automorphisms
 //             O(n d) 
 
-/*************** End linear transformation functions ****************/
-/********************************************************************/
+
+
+// plaintextAutomorph: an auxilliary routine...maybe palce in NumbTh?
+// Compute b(X) = a(X^k) mod Phi_m(X). Result is calculated in the output b
+// "in place", so a should not alias b.
+template <class RX, class RXModulus> static
+void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar, 
+  const RXModulus& PhimX)
+{
+  long m  = zMStar.getM();
+
+  assert(zMStar.inZmStar(k));
+
+  b.SetLength(m);
+  for (long j = 0; j < m; j++) b[j] = 0;
+
+  long d = deg(a);
+
+  // compute b(X) = a(X^k) mod (X^m-1)
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
+  for (long j = 0; j <= d; j++) 
+    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
+  b.normalize();
+
+  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
+}
+
+
+template
+void plaintextAutomorph(GF2X& b, const GF2X& a, long k, const PAlgebra& zMStar, 
+  const GF2XModulus& PhimX);
+template
+void plaintextAutomorph(zz_pX& b, const zz_pX& a, long k, const PAlgebra& zMStar, 
+  const zz_pXModulus& PhimX);
+
+
+
 
 ///@{
 /**
  * @name Apply linearized polynomials to a ciphertext.
  *
- * Example usage: The map L selects just the even coefficients
+ * Usage example 1, one transformation over a ciphertext:
+ *    The map L selects just the even coefficients from a ciphertext ctxt.
+ *  
  * \code
  *     long d = ea.getDegree();
  *     vector<ZZX> L(d);
  *     for (long j = 0; j < d; j++)
  *       if (j % 2 == 0) L[j] = ZZX(j, 1);
  *
+ *     // One transformation over a ciphertext
+ *     vector<ZZX> C;
+ *     ea.buildLinPolyCoeffs(C, L);
+ *     applyLinPoly1(ea, ctxt, C);
+ * \endcode
+ * 
+ * 
+ * Usage example 2, several transformations over single ciphertext:
+ *    Extracting 10 first lowest-degree polynomial coefficients from 
+ *    a ciphertext ctxt.
+ *    
+ * \code
+ *     long d = ea.getDegree();
+ *     int n = 10;
+ *     vector<Ctxt> conj;
+ *     vector<Ctxt> results;
+ *     for (int i = 0; i < n; ++i) {
+ *       vector<ZZX> L(d);
+ *       L[i] = ZZX(0, 1);
+ *       vector<ZZX> C;
+ *       ea.buildLinPolyCoeffs(C, L);
+ *        
+ *       Ctxt tmp(ctxt);
+ *       applyLinPoly1(ea, tmp, C, conj); //first call fills conjugates vector
+ *       results.push_back(tmp);
+ *     }
+ * \endcode
+ * 
+ * 
+ * Usage example 3, one transformation over several ciphertexts:
+ *    Extracting even coefficients from ciphertexts ctxt1, ctxt2, ctxt3.
+ *    
+ * \code
+ *     long d = ea.getDegree();
+ *     vector<ZZX> L(d);
+ *     for (long j = 0; j < d; j++)
+ *       if (j % 2 == 0) L[j] = ZZX(j, 1);
+ *     
+ *     vector<ZZX> encC;
  *     vector<ZZX> C;
  *     ea.buildLinPolyCoeffs(C, L); 
- *     applyLinPoly1(ea, ctxt, C);
+ *     encodeLinPoly1(ea, encC, C); 
+ *     
+ *     applyLinPolyLL(ctxt1, encC, d);
+ *     applyLinPolyLL(ctxt2, encC, d);
+ *     applyLinPolyLL(ctxt3, encC, d);
  * \endcode
  */
 
-//! @brief Apply the same linear transformation to all the slots
-//! @param C is the output of ea.buildLinPolyCoeffs;
-void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C);
+/**
+ * @brief encodes the same linear transformation into all slots. 
+ *        should be used with applyLinPolyLL with conjugates
+ * 
+ * @param encodedC encoded transformation (size = ea.getDegree())
+ * @param C transformation coefficient
+ *        The output of a buildLinPolyCoeffs execution.
+ */
+void encodeLinPoly1(const EncryptedArray& ea, 
+  vector<ZZX>& encodedC, const vector<ZZX>& C);
 
-//! @brief Apply different transformations to different slots
-//! @param Cvec is a vector of length ea.size(), each entry of which
-//!        is the output of ea.buildLinPolyCoeffs; 
-void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
-                      const vector< vector<ZZX> >& Cvec);
+/**
+ * @brief encodes different linear transformation into different slots.
+ *        should be used with applyLinPolyLL with conjugates
+ * 
+ * @param encodedC encoded transformation (size = ea.getDegree())
+ * @param C transformation coefficients for each slot (size = nslots)
+ *        The outputs of several buildLinPolyCoeffs executions.
+ */
+void encodeLinPolyMany(const EncryptedArray& ea,
+  vector<ZZX>& encodedC, const vector< vector<ZZX> >& C);
 
-//! @brief a low-level variant:
-//! @param encodedCoeffs has all the linPoly coeffs encoded  in slots;
-//!        different transformations can be encoded in different slots
-template<class P>  // P can be ZZX or DoubleCRT
+/**
+ * @brief Applies a linear transformation. A low-level variant.
+ * @details Optimized for the case when multiple transformations per 
+ *        ciphertext are needed.
+ * 
+ * @param ctxt input ciphertext and output result
+ * @param encodedC linPoly coefficients encoded in slots.
+ *        Different transformations can be encoded in different slots.
+ * @param d size of linear transformation (plaintext slot size)
+ * @param conj an optional input/output vector of conjugates of ctxt. 
+ *        Vector is filled with the conjugates of ctxt if conj is empty, 
+ *        otherwise the elements of conj vector are used as ctxt conjugates.
+ * @tparam P can be ZZX or DoubleCRT
+ */
+template<class P>
+void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d, 
+            vector<Ctxt>& conj);
+template<class P>
 void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d);
+
+/**
+ * @brief Apply the same linear transformation to all the slots. 
+ * 
+ * @param ea context
+ * @param ctxt input ciphertext and output result
+ * @param C is the first coefficient of the linear transformation 
+ *        Computed using buildLinPolyCoeffs
+ * @param conj see applyLinPolyLL
+ */
+void applyLinPoly1(const EncryptedArray& ea, 
+  Ctxt& ctxt, const vector<ZZX>& C, vector<Ctxt>& conj);
+void applyLinPoly1(const EncryptedArray& ea, 
+  Ctxt& ctxt, const vector<ZZX>& C);
+
+/**
+ * @brief Apply different transformations to different slots.
+ * 
+ * @param ea context
+ * @param ctxt input ciphertext and output result
+ * @param C is the first coefficient of the linear transformation 
+ *        Computed using several calls to buildLinPolyCoeffs
+ * @param conj see applyLinPolyLL
+ */
+void applyLinPolyMany(const EncryptedArray& ea, 
+  Ctxt& ctxt, const vector< vector<ZZX> >& C, vector<Ctxt>& conj);
+void applyLinPolyMany(const EncryptedArray& ea, 
+  Ctxt& ctxt, const vector< vector<ZZX> >& C);
+
 ///@}
 
 #endif /* ifdef _EncryptedArray_H_ */

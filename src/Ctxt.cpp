@@ -491,6 +491,16 @@ void Ctxt::findBaseSet(IndexSet& s) const
     cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
 }
 
+//! @brief Computes the conjugates: conj = [ctxt, ctxt(X^p),..., ctxt(X^p^(d-1))]
+void Ctxt::computeConjugates(vector<Ctxt>& conj, long d) const
+{
+  FHE_TIMER_START;
+  conj.clear();
+  conj.resize(d, *this);
+  for (int i = 1; i < d; ++i) {
+    conj[i].frobeniusAutomorph(i);
+  }
+}
 
 /********************************************************************/
 // Ciphertext arithmetic

@@ -937,6 +937,14 @@ void convert(vector<ZZX>& X, const vec_zz_pE& A)
       conv(X[i], rep(A[i]));
 }
 
+void convert(zz_pE& X, const ZZX& A) {
+  conv(X, conv<zz_pX>(A));
+}
+
+void convert(ZZX& X, const zz_pE& A) {
+  conv(X, conv<zz_pX>(A));
+}
+
 void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A)
 {
    long n = A.NumRows();
@@ -1093,6 +1101,111 @@ void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
    solve(det, x, A, b);
    if (det == 0) Error("ppsolve: matrix not invertible");
 }
+
+/**
+ * Invert A modulo p^r. Use Hensel's lifing when needed.
+ */
+template<class RE>
+RE invMod(const RE&A, long p, long r) {
+  return inv(A);
+}
+
+/**
+ * Invert A modulo p^r. Use Hensel's lifing when needed. Specialization for
+ *  zz_pE types.
+ */
+template<>
+zz_pE invMod(const zz_pE&A, long p, long r) {
+  if (r==1) 
+    return inv(A);
+
+  zz_pE X;
+
+  // convert to ZZX for a safe transaltion to mod-p objects
+  ZZX tmp;
+  convert(tmp, A);
+  { // open a new block for mod-p computation
+    ZZX G = conv<ZZX>(zz_pE::modulus());
+    zz_pPush zz_pBak(p);  //backup the mod-p^r moduli and set mod-p moduli
+    zz_pEPush zz_pEBak(conv<zz_pX>(G));
+
+    zz_pE A1, Inv1;
+    convert(A1, tmp);   // Recover A as a mat_zz_pE object modulo p
+
+    inv(Inv1, A1);        // Inv1 = A^{-1} (mod p)
+
+    convert(tmp, Inv1); // convert to ZZX for transaltion to a mod-p^r object
+  } // mod-p^r moduli restored on desctuction of bak_pr and bak_prE
+  convert(X, tmp); // X = A^{-1} (mod p)
+
+  // Now lift the solution modulo p^r
+  for (int i = 0; i < NextPowerOfTwo(r); ++i) {
+    X = X*(2-A*X);
+  }
+
+  assert(X*A == 1);  
+
+  return X;
+}
+
+/**
+ * Invert Vandermonde matrix V(X, X^p, X^p^2, ..., X^p^(n-1)) modulo p^r
+ */
+template<class RE>
+void buildInvLinPolyMatrix(Mat<RE>& A, long p, long r, bool full)
+{
+  /* TODO: It would be nice to use struct PA_GF2/PA_zz_p typedefs from PAlgebra.h */
+  typedef typename RE::rep_type RX;
+  typedef typename RE::poly_type REX;
+  typedef typename conditional<is_same<RE, zz_pE>::value, zz_pXArgument, GF2XArgument>::type RXArgument; 
+
+  long n = RE::degree();
+
+  /* Use polynomial composition to compute frobenius endomorphism X -> X^p */
+  RXArgument H;
+  build(H, PowerXMod(p, RE::modulus()), RE::modulus(), n);
+
+  /* Xs = [X^p, X^p^2, ...] */
+  Vec<RE> Xs; 
+  RX temp = RX(1, 1);
+  for (int i = 0; i < n-1; ++i) {
+    CompMod(temp, temp, H, RE::modulus());
+    Xs.append(conv<RE>(temp));
+  }
+
+  /* P(Y) = (Y-Xs[0])*(Y-Xs[1])*...*(Y-Xs[n-1]) */
+  REX P;
+  P = BuildFromRoots(Xs);
+
+  /* beta = 1/P(X) */
+  RE beta = conv<RE>(RX(1, 1));
+  beta = eval(P, beta);
+  beta = invMod(beta, p, r);
+
+  /* First column of the inverted matrix are the coefficients of polynomial P 
+      multiplied by beta */
+  A.SetDims(full ? n : 1, n);
+  A[0] = conv< Vec<RE> >(P);
+  A[0] *= beta;
+  A = transpose(A);
+
+  /* Compute next columns of A from the first one 
+      using relation A(i,j) = frobenius(A(i,j-1)) */
+  if (full) {
+    A.SetDims(n,n);
+    for (int i = 0; i < n; ++i) {
+      temp = conv<RX>(A[i][0]);
+      for (int j = 1; j < n; ++j) {
+        CompMod(temp, temp, H, RE::modulus());
+        A[i][j] = conv<RE>(temp);
+      }
+    }
+  }
+}
+template
+void buildInvLinPolyMatrix(Mat<zz_pE>& A, long p, long r, bool full);
+template
+void buildInvLinPolyMatrix(Mat<GF2E>& A, long p, long r, bool full);
 
 
 // prime power solver

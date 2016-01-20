@@ -444,6 +444,9 @@ public:
   //! @brief compute the power X,X^2,...,X^n
   //  void computePowers(vector<Ctxt>& v, long nPowers) const;
 
+  //! @brief Computes the conjugates: conj = [ctxt, ctxt(X^p),..., ctxt(X^p^(d-1))]
+  void computeConjugates(vector<Ctxt>& conj, long d) const;  
+
   //! @brief Evaluate the cleartext poly on the encrypted ciphertext
   void evalPoly(const ZZX& poly);
   ///@}
