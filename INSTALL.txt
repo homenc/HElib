@@ -14,7 +14,8 @@ If not, you can install GMP as follows.
 4. This should install GMP into /usr/local
 
 Once GMP is installed, you can install NTL as follows:
-(NOTE: you will needs NTL v9.4.0 or higher)
+(NOTE: you will needs NTL v9.4.0 or higher. NTL v9.6.3 or higher is only
+ supported for Intel Haswell processor with AVX2.)
 
 1. Download NTL from http://www.shoup.net/ntl/download.html
 2. uncompress and cd into the directory ntl-XXX/src
