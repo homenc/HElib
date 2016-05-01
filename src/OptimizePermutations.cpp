@@ -22,7 +22,7 @@
 #include <list>
 #include <sstream>
 using namespace std;
-#if (__cplusplus>199711L)
+#if (__cplusplus>199711L) || defined (__APPLE__)
 #include <memory>
 #else
 #include <tr1/memory>
@@ -186,7 +186,7 @@ public:
 static long length(LongNodePtr ptr)
 {
   long res = 0;
-  for (LongNodePtr p = ptr; p != NULL; p = p->next) res++;
+  for (LongNodePtr p = ptr; p != nullptr; p = p->next) res++;
   return res;
 }
 
@@ -197,7 +197,7 @@ static long listToVec(Vec<long>& vec, LongNodePtr ptr)
 
   vec.SetLength(len);
   long i = 0;
-  for (LongNodePtr p = ptr; p != NULL; p = p->next) {
+  for (LongNodePtr p = ptr; p != nullptr; p = p->next) {
     vec[i] = p->count; 
     i++;
   }
@@ -207,10 +207,10 @@ static long listToVec(Vec<long>& vec, LongNodePtr ptr)
 // Prints out a list of integers
 ostream& operator<<(ostream& s, LongNodePtr p)
 {
-  if (p == NULL) return s << "[]";
+  if (p == nullptr) return s << "[]";
 
   s << "[" << p->count;
-  for (p = p->next; p != NULL; p = p->next)
+  for (p = p->next; p != nullptr; p = p->next)
     s << " " << p->count;
   return s << "]";
 }
@@ -235,7 +235,7 @@ public:
   size_t hash() const {
     stringstream s;
     s << i << " " << budget;
-#if (__cplusplus>199711L)
+#if (__cplusplus>199711L) || defined (__APPLE__)
     return std::hash< string >()(s.str());
 #else
     return tr1::hash< string >()(s.str());
@@ -401,7 +401,7 @@ public:
     left = _left; right = _right;
   }
 
-  bool isLeaf() const { return left == NULL && right == NULL; }    
+  bool isLeaf() const { return left == nullptr && right == nullptr; }    
 };
 //! \endcond
 
@@ -450,7 +450,7 @@ public:
   size_t hash() const {
     stringstream s;
     s << order << " " << good << " " << budget << " " << mid;
-#if (__cplusplus>199711L)
+#if (__cplusplus>199711L) || defined(__APPLE__)
     return std::hash< string >()(s.str());
 #else
     return tr1::hash< string >()(s.str());
@@ -500,21 +500,21 @@ public:
 long length(GenNodePtr ptr)
 {
   long res = 0;
-  for (GenNodePtr p = ptr; p != NULL; p = p->next) res++;
+  for (GenNodePtr p = ptr; p != nullptr; p = p->next) res++;
   return res;
 }
 
 
 ostream& operator<<(ostream& s, GenNodePtr p)
 {
-  if (p == NULL) {
+  if (p == nullptr) {
     s << "[]";
     return s;
   }
 
   s << "[" << p->solution;
   p = p->next;
-  while (p != NULL) {
+  while (p != nullptr) {
     s << " " << p->solution;
     p = p->next;
   }
@@ -545,7 +545,7 @@ public:
   size_t hash() const {
     stringstream s;
     s << i << " " << budget << " " << mid;
-#if (__cplusplus>199711L)
+#if (__cplusplus>199711L) || defined(__APPLE__)
     return std::hash< string >()(s.str());
 #else
     return tr1::hash< string >()(s.str());
@@ -907,7 +907,7 @@ long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
   long i=0, treeIdx=0, midIdx=0;
   depth = 0; // Also compute the depth of the permutation network
   for (GenNodePtr genPtr = t.solution;
-       genPtr!=NULL; genPtr = genPtr->next, i++) {
+       genPtr!=nullptr; genPtr = genPtr->next, i++) {
     if (genPtr->solution->mid) { // Keep the "middle tree" for last
       midPtr = genPtr;
       midIdx = i;

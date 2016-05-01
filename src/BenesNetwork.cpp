@@ -23,7 +23,7 @@ NTL_CLIENT
 #include <list>
 #include <sstream>
 
-#if (__cplusplus>199711L)
+#if (__cplusplus>199711L) || defined (__APPLE__)
 #include <memory>
 #else
 #include <tr1/memory>

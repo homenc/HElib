@@ -42,7 +42,7 @@ public:
 //! flexible manner.
 template < class T > class IndexMap {
 
-#if (__cplusplus>199711L)
+#if (__cplusplus>199711L) || defined (__APPLE__)
   std::unordered_map<long, T> map;
 #else
   tr1::unordered_map<long, T> map;
@@ -79,7 +79,7 @@ public:
     assert(indexSet.contains(j)); 
     // unordered_map does not support a const [] operator,
     // so we have to artificially strip away the const-ness here
-#if (__cplusplus>199711L)
+#if (__cplusplus>199711L) || defined (__APPLE__)
     std::unordered_map<long, T> & map1 = 
       const_cast< std::unordered_map<long, T> & > (map);
 #else
