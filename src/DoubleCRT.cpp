@@ -33,6 +33,8 @@
 #else
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
+#include <NTL/ZZVec.h>
+
 
 // A threaded implementation of DoubleCRT operations
 
@@ -671,6 +673,86 @@ FHE_TIMER_START;
 
 
 #else
+
+
+
+#if 1
+// this version is faster than the original, which is based
+// on NTL's built-in CRT routine
+void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
+		       bool positive) const
+{
+FHE_TIMER_START;
+  if (isDryRun()) return;
+
+  IndexSet s1 = map.getIndexSet() & s;
+
+  if (empty(s1)) {
+    clear(poly);
+    return;
+  }
+
+  zz_pBak bak; bak.save();
+
+  long phim = context.zMStar.getPhiM();
+
+  ZZ prod;
+  prod = 1;
+  for (long i = s1.first(); i <= s1.last(); i = s1.next(i))
+    prod *= context.ithModulus(i).getQ();
+
+  long sz = prod.size();
+
+  ZZVec res;
+  res.SetSize(phim, sz+1);
+
+  ZZ prod1;
+
+  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
+    context.ithModulus(i).restoreModulus();
+    zz_pX& tmp = Cmodulus::getScratch_zz_pX();
+    context.ithModulus(i).iFFT(tmp, map[i]); 
+    {
+      FHE_NTIMER_START(toPoly_CRT);
+
+      long q = zz_p::modulus();
+      mulmod_t qinv = zz_p::ModulusInverse();
+      div(prod1, prod, q);
+      long r = rem(prod1, q);
+      long rinv = InvMod(r, q);
+      mulmod_precon_t rinvqinv = PrepMulModPrecon(rinv, q, qinv);
+      long tlen = tmp.rep.length();
+      const zz_p *tp = tmp.rep.elts();
+
+      for (long j = 0; j < tlen; j++) {
+        long s = MulModPrecon(rep(tp[j]), rinv, q, rinvqinv);
+        MulAddTo(res[j], prod1, s);
+      }
+    }
+  }
+
+
+  if (positive) {
+    poly.rep.SetLength(phim);
+    for (long j = 0; j < phim; j++) {
+      rem(poly.rep[j], res[j], prod);
+    }
+    poly.normalize();
+  }
+  else {
+    div(prod1, prod, 2);
+    poly.rep.SetLength(phim);
+    for (long j = 0; j < phim; j++) {
+      rem(res[j], res[j], prod);
+      if (res[j] > prod1)
+        sub(poly.rep[j], res[j], prod);
+      else
+        poly.rep[j] = res[j];
+    }
+    poly.normalize();
+  }
+}
+#else
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
@@ -694,7 +776,10 @@ FHE_TIMER_START;
     context.ithModulus(i).restoreModulus();
     zz_pX& tmp = Cmodulus::getScratch_zz_pX();
     context.ithModulus(i).iFFT(tmp, map[i]); 
-    CRT(poly, prod, tmp);  // NTL :-)
+    {
+       FHE_NTIMER_START(toPoly_CRT);
+       CRT(poly, prod, tmp);  // NTL :-)
+    }
   }
 
   if (positive) {
@@ -706,6 +791,14 @@ FHE_TIMER_START;
     // no need to normalize poly here
   }
 }
+
+
+
+#endif
+
+
+
+
 #endif
 
 
