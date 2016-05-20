@@ -101,6 +101,9 @@ class Cmodulus {
   // sets zp context internally
   void FFT(vec_long &y, const ZZX& x) const;  // y = FFT(x)
 
+  // sz should be a bound (in zzigits) on coeffs of x
+  void FFT(vec_long &y, const ZZX& x, long sz) const;  // y = FFT(x)
+
   // expects zp context to be set externally
   void iFFT(zz_pX &x, const vec_long& y) const; // x = FFT^{-1}(y)
 

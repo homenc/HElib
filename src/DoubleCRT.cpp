@@ -36,6 +36,21 @@
 #include <NTL/ZZVec.h>
 
 
+
+static long MaxSz(const ZZX& poly)
+{
+  long res = 0;
+  long n = poly.rep.length();
+
+  for (long i = 0; i < n; i++) {
+    long sz = poly.rep[i].size();
+    if (sz > res) res = sz;
+  }
+
+  return res;
+}
+
+
 // A threaded implementation of DoubleCRT operations
 
 #ifdef FHE_DCRT_THREADS
@@ -91,9 +106,11 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
 {
   FHE_TIMER_START;
 
+
   if (empty(s)) return;
+  long sz = MaxSz(poly);
   for (long i = s.first(); i <= s.last(); i = s.next(i))
-    context.ithModulus(i).FFT(map[i], poly);
+    context.ithModulus(i).FFT(map[i], poly, sz);
 }
 
 #endif
