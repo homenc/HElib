@@ -34,6 +34,7 @@
 #warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
 
 #include <NTL/ZZVec.h>
+#include <NTL/BasicThreadPool.h>
 
 
 
@@ -54,8 +55,6 @@ static long MaxSz(const ZZX& poly)
 // A threaded implementation of DoubleCRT operations
 
 #ifdef FHE_DCRT_THREADS
-const long FFTMaxThreads = 8;
-NTL_THREAD_LOCAL static MultiTask multiTask(FFTMaxThreads);
 
 static
 long MakeIndexVector(const IndexSet& s, Vec<long>& v)
@@ -80,23 +79,16 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
   if (empty(s)) return;
 
   static thread_local Vec<long> tls_ivec;
-  static thread_local Vec<long> tls_pvec;
   Vec<long>& ivec = tls_ivec;
-  Vec<long>& pvec = tls_pvec;
+  long sz = MaxSz(poly);
 
   long icard = MakeIndexVector(s, ivec);
-  long nthreads = multiTask.SplitProblems(icard, pvec);
-
-  multiTask.exec(nthreads, 
-    [&](long index)  {
-      long first = pvec[index];
-      long last = pvec[index+1];
+  NTL_EXEC_RANGE(icard, first, last)
       for (long j = first; j < last; j++) {
         long i = ivec[j];
-        context.ithModulus(i).FFT(map[i], poly); 
+        context.ithModulus(i).FFT(map[i], poly, sz); 
       }
-    }
-  );
+  NTL_EXEC_RANGE_END
 }
 
 // A non-threaded implementation of DoubleCRT operations
@@ -582,17 +574,19 @@ FHE_TIMER_START;
 
   long phim = context.zMStar.getPhiM();
   long icard = MakeIndexVector(s1, ivec);
-  long nthreads = multiTask.SplitProblems(icard, pvec);
+
+  PartitionInfo pinfo(icard);
+  long cnt = pinfo.NumIntervals();
 
   remtab.SetLength(phim);
   for (long h = 0; h < phim; h++) remtab[h].SetLength(icard);
 
-  tmpvec.SetLength(nthreads);
+  tmpvec.SetLength(cnt);
   
-  multiTask.exec(nthreads,
-    [&](long index) {
-      long first = pvec[index];
-      long last = pvec[index+1];
+  NTL_EXEC_INDEX(cnt, index)
+      long first, last;
+      pinfo.interval(first, last, index);
+
       zz_pX& tmp = tmpvec[index];
   
       for (long j = first; j < last; j++) {
@@ -603,14 +597,14 @@ FHE_TIMER_START;
         for (long h = 0; h <= d; h++) remtab[h][j] = rep(tmp.rep[h]);
         for (long h = d+1; h < phim; h++) remtab[h][j] = 0;
       }
-    }
-  );
+  NTL_EXEC_INDEX_END
 
 { FHE_NTIMER_START(toPoly_CRT);
 
   poly.rep.SetLength(phim);
 
-  nthreads = multiTask.SplitProblems(phim, pvec);
+  PartitionInfo pinfo1(phim);
+  long cnt1 = pinfo1.NumIntervals();
 
   static thread_local ZZ tls_prod;
   static thread_local ZZ tls_prod_half;
@@ -646,7 +640,7 @@ FHE_TIMER_START;
     tvec[j] = t;
   }
 
-  resvec.SetLength(nthreads);
+  resvec.SetLength(cnt1);
 
   if (!positive) {
     // prod_half = (prod+1)/2
@@ -654,11 +648,10 @@ FHE_TIMER_START;
     div(prod_half, prod_half, 2);
   }
   
-  multiTask.exec(nthreads,
-    [&](long index) {
+  NTL_EXEC_INDEX(cnt1, index)
+      long first, last;
+      pinfo1.interval(first, last, index);
       ZZ& res = resvec[index];
-      long first = pvec[index];
-      long last = pvec[index+1];
   
       for (long h = first; h < last; h++) {
         clear(res);
@@ -678,8 +671,7 @@ FHE_TIMER_START;
   
         poly[h] = res;
       }
-    }
-  );
+  NTL_EXEC_INDEX_END
 
   poly.normalize();
 }

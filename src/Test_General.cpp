@@ -17,6 +17,7 @@
 /* Test_General.cpp - A general test program that uses a mix of operations over four ciphertexts.
  */
 #include <NTL/ZZ.h>
+#include <NTL/BasicThreadPool.h>
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
@@ -341,9 +342,13 @@ int main(int argc, char **argv)
   long seed=0;
   amap.arg("seed", seed, "PRG seed");
 
+  long nt=1;
+  amap.arg("nt", nt, "num threads");
+
   amap.parse(argc, argv);
 
   SetSeed(ZZ(seed));
+  SetNumThreads(nt);
   
   if (L==0) { // determine L based on R,r
     L = 3*R+3;
