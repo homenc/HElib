@@ -201,7 +201,7 @@ void Cmodulus::FFT(vec_long &y, const ZZX& x, long sz) const
     long len = x.rep.length();
     tmp.rep.SetLength(len);
     for (long i = 0; i < len; i++) {
-      tmp.rep[i] = prem(x.rep[i]);
+      tmp.rep[i].LoopHole() = prem(x.rep[i]);
     }
     tmp.normalize();
   }
