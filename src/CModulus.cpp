@@ -187,66 +187,6 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
 }
 
 
-
-void Cmodulus::FFT(vec_long &y, const ZZX& x, long sz) const
-{
-  FHE_TIMER_START;
-  zz_pBak bak; bak.save();
-  context.restore();
-
-  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
-  { FHE_NTIMER_START(FFT_remainder);
-
-    PreconditionedRemainder prem(zz_p::modulus(), sz);
-    long len = x.rep.length();
-    tmp.rep.SetLength(len);
-    for (long i = 0; i < len; i++) {
-      tmp.rep[i].LoopHole() = prem(x.rep[i]);
-    }
-    tmp.normalize();
-  }
-
-  if (!ALT_CRT && zMStar->getPow2()) {
-    // special case when m is a power of 2
-
-    long k = zMStar->getPow2();
-    long phim = (1L << (k-1));
-    long dx = deg(tmp);
-    long p = zz_p::modulus();
-
-    const zz_p *powers_p = (*powers).rep.elts();
-    const mulmod_precon_t *powers_aux_p = powers_aux.elts();
-
-    y.SetLength(phim);
-    long *yp = y.elts();
-
-    zz_p *tmp_p = tmp.rep.elts();
-
-    for (long i = 0; i <= dx; i++)
-      yp[i] = MulModPrecon(rep(tmp_p[i]), rep(powers_p[i]), p, powers_aux_p[i]);
-    for (long i = dx+1; i < phim; i++)
-      yp[i] = 0;
-
-    FFTFwd(yp, yp, k-1, *zz_pInfo->p_info);
-
-    return;
-  }
-    
-
-  zz_p rt;
-  conv(rt, root);  // convert root to zp format
-
-  BluesteinFFT(tmp, getM(), rt, *powers, powers_aux, *Rb); // call the FFT routine
-
-  // copy the result to the output vector y, keeping only the
-  // entries corresponding to primitive roots of unity
-  y.SetLength(zMStar->getPhiM());
-  long i,j;
-  long m = getM();
-  for (i=j=0; i<m; i++)
-    if (zMStar->inZmStar(i)) y[j++] = rep(coeff(tmp,i));
-}
-
 void Cmodulus::FFT(vec_long &y, const ZZX& x) const
 {
   FHE_TIMER_START;

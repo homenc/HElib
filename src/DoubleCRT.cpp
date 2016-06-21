@@ -38,19 +38,6 @@
 
 
 
-static long MaxSz(const ZZX& poly)
-{
-  long res = 0;
-  long n = poly.rep.length();
-
-  for (long i = 0; i < n; i++) {
-    long sz = poly.rep[i].size();
-    if (sz > res) res = sz;
-  }
-
-  return res;
-}
-
 
 // A threaded implementation of DoubleCRT operations
 
@@ -80,13 +67,12 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
 
   static thread_local Vec<long> tls_ivec;
   Vec<long>& ivec = tls_ivec;
-  long sz = MaxSz(poly);
 
   long icard = MakeIndexVector(s, ivec);
   NTL_EXEC_RANGE(icard, first, last)
       for (long j = first; j < last; j++) {
         long i = ivec[j];
-        context.ithModulus(i).FFT(map[i], poly, sz); 
+        context.ithModulus(i).FFT(map[i], poly); 
       }
   NTL_EXEC_RANGE_END
 }
@@ -100,9 +86,8 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
 
 
   if (empty(s)) return;
-  long sz = MaxSz(poly);
   for (long i = s.first(); i <= s.last(); i = s.next(i))
-    context.ithModulus(i).FFT(map[i], poly, sz);
+    context.ithModulus(i).FFT(map[i], poly);
 }
 
 #endif
