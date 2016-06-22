@@ -19,6 +19,8 @@
 #include "matrix.h"
 #include <algorithm>
 
+#include <NTL/BasicThreadPool.h>
+
 // Copied from EncryptedArray.cpp -- it shoudn't be there.
 
 // plaintextAutomorph: an auxilliary routine...maybe palce in NumbTh?
@@ -1193,8 +1195,7 @@ static void mat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt,
   for (long i = 0; i < D; i++)
     tvec[i] = shared_ptr<Ctxt>(new Ctxt(ZeroCtxtLike, ctxt));
 
-  bootTask->exec1(D,
-    [&](long first, long last) {
+  NTL_EXEC_RANGE(D, first, last)
       for (long i = first; i < last; i++) { // process diagonal i
         if (!cmat[i]) continue;      // zero diagonal
     
@@ -1203,8 +1204,7 @@ static void mat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt,
         if (i != 0) ea.rotate1D(*tvec[i], dim, i);   
         tvec[i]->multByConstant(*cmat[i]);
       }
-    }
-  );
+  NTL_EXEC_RANGE_END
 
   for (long i = 0; i < D; i++)
     res += *tvec[i];
@@ -1338,8 +1338,7 @@ static void blockMat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt,
   shCtxt.resize(D);
 
   // Process the diagonals one at a time
-  bootTask->exec1(D,
-    [&](long first, long last) {
+  NTL_EXEC_RANGE(D, first, last)
       for (long i = first; i < last; i++) { // process diagonal i
         if (i == 0) {
           shCtxt[i].resize(1, ctxt);
@@ -1366,14 +1365,14 @@ static void blockMat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt,
           shCtxt[i][1].cleanUp();
         }
       }
-    }
-  );
+  NTL_EXEC_RANGE_END
+
   FHE_NTIMER_STOP(blockMat1);
 
 
   FHE_NTIMER_START(blockMat3);
-  bootTask->exec1(d,
-    [&](long first, long last) {
+
+  NTL_EXEC_RANGE(d, first, last)
       for (long k = first; k < last; k++) {
         for (long i = 0; i < D; i++) {
           for (long j = 0; j < LONG(shCtxt[i].size()); j++) {
@@ -1386,8 +1385,8 @@ static void blockMat_mul1D_tmpl(const EncryptedArray& ea, Ctxt& ctxt,
         }
         acc[k]->frobeniusAutomorph(k);
       }
-    }
-  );
+  NTL_EXEC_RANGE_END
+
   FHE_NTIMER_STOP(blockMat3);
 
   FHE_NTIMER_START(blockMat4);

@@ -24,10 +24,6 @@
 #include "cloned_ptr.h"
 
 
-#ifdef FHE_BOOT_THREADS
-NTL_THREAD_LOCAL MultiTask *bootTask = 0;
-#endif
-
 
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
 					const PAlgebraMod& alMod)

@@ -25,11 +25,6 @@
 #include <NTL/SmartPtr.h>
 #include "FHE.h"
 #include "timing.h"
-#include "multicore.h"
-
-#ifdef FHE_BOOT_THREADS
-extern NTL_THREAD_LOCAL MultiTask *bootTask;
-#endif
 
 
 // DIRT: we're using undocumented NTL interfaces here

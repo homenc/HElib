@@ -19,6 +19,7 @@
 #include "EvalMap.h"
 #include "powerful.h"
 
+#include <NTL/BasicThreadPool.h>
 
 
 /************* Some local functions *************/
@@ -421,15 +422,13 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     FHE_NTIMER_START(unpack2);
     vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
 
-    bootTask->exec1(d,
-      [&](long first, long last) {
+    NTL_EXEC_RANGE(d, first, last)
         for (long j = first; j < last; j++) { // process jth Frobenius 
           frob[j] = ctxt;
           frob[j].frobeniusAutomorph(j);
           frob[j].cleanUp();
         }
-      }
-    );
+    NTL_EXEC_RANGE_END
 
     FHE_NTIMER_STOP(unpack2);
 
@@ -461,8 +460,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     topHigh--; // For p==2 we sometime get a bit for free
 
   FHE_NTIMER_START(extractDigits);
-  bootTask->exec1(d,
-    [&](long first, long last) {
+
+  NTL_EXEC_RANGE(d, first, last)
       for (long i = first; i < last; i++) {
         vector<Ctxt> scratch;
     
@@ -500,8 +499,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
         }
         unpacked[i].reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
       }
-    }
-  );
+  NTL_EXEC_RANGE_END
+
   FHE_NTIMER_STOP(extractDigits);
 
 #ifdef DEBUG_PRINTOUT

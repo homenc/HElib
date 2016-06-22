@@ -1,6 +1,8 @@
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
 
+#include <NTL/BasicThreadPool.h>
+
 #include "EvalMap.h"
 #include "hypercube.h"
 #include "powerful.h"
@@ -207,17 +209,12 @@ int main(int argc, char *argv[])
 
   amap.arg("dry", dry, "a dry-run flag to check the noise");
 
-  long nthreads=4;
+  long nthreads=1;
   amap.arg("nthreads", nthreads, "number of threads");
 
   amap.parse(argc, argv);
 
-#ifdef FHE_BOOT_THREADS
-  bootTask = new MultiTask(nthreads);
-  cout << "*** nthreads = " << nthreads << "\n";
-#else
-  cout << "*** no threads\n";
-#endif
+  SetNumThreads(nthreads);
 
 
 

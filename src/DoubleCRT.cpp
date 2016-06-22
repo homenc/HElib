@@ -23,7 +23,6 @@
  * a vector of Cmodulus objects. 
  */
 #include "DoubleCRT.h"
-#include "multicore.h"
 #include "timing.h"
 
 

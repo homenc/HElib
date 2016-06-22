@@ -23,6 +23,7 @@
 
 #include <NTL/ZZ.h>
 #include <NTL/fileio.h>
+#include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 #include "EncryptedArray.h"
 #include "EvalMap.h"
@@ -245,7 +246,7 @@ int main(int argc, char *argv[])
   long N=0;
   long t=0;
   bool cons=0;
-  long nthreads=4;
+  long nthreads=1;
 
   long seed=0;
 
@@ -270,23 +271,8 @@ int main(int argc, char *argv[])
   if (seed) 
     SetSeed(ZZ(seed));
 
-#ifdef FHE_BOOT_THREADS
-  UniquePtr<MultiTask> localBootTask;
-  localBootTask.make(nthreads);
+  SetNumThreads(nthreads);
 
-  // localBootTask->add();
-  // localBootTask->remove(3);
-
-  // MultiTask auxBootTask(6);
-  // localBootTask->move(auxBootTask, 5);
-
-  bootTask = localBootTask.get();
-  cout << "*** nthreads = " << bootTask->getNumThreads() << "\n";
-#else
-  cout << "*** no threads\n";
-#endif
-  
-  
 
   if (B<=0) B=FHE_pSize;
   if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
