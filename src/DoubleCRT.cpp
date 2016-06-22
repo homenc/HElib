@@ -719,8 +719,8 @@ FHE_TIMER_START;
       const zz_p *tp = tmp.rep.elts();
 
       for (long j = 0; j < tlen; j++) {
-        long s = MulModPrecon(rep(tp[j]), rinv, q, rinvqinv);
-        MulAddTo(res[j], prod1, s);
+        long s2 = MulModPrecon(rep(tp[j]), rinv, q, rinvqinv);
+        MulAddTo(res[j], prod1, s2);
       }
     }
   }
