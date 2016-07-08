@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
   long p=2;
   long c = 2;
   long w = 64;
-
+  long L = 5;
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r,  "lifting");
   amap.arg("c", c, "number of columns in the key-switching matrices");
@@ -84,12 +84,12 @@ int main(int argc, char *argv[])
       ords[0] = ms[i][8];  ords[1] = ms[i][9];
 
       contexts[i] = new FHEcontext(m, p, r, gens, ords);
-      buildModChain(*contexts[i], ptxtSpace, c);  // Set the modulus chain
+      buildModChain(*contexts[i], L, c);  // Set the modulus chain
       contexts[i]->makeBootstrappable(mvec);
     }
     else {
       contexts[i] = new FHEcontext(m, p, r);
-      buildModChain(*contexts[i], ptxtSpace, c);  // Set the modulus chain
+      buildModChain(*contexts[i], L, c);  // Set the modulus chain
     }
 
     // Output the FHEcontext to file
