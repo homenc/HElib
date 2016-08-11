@@ -726,21 +726,22 @@ FHE_TIMER_START;
 
 
   if (positive) {
+    FHE_NTIMER_START(toPoly_finish);
     poly.rep.SetLength(phim);
     for (long j = 0; j < phim; j++) {
-      rem(poly.rep[j], res[j], prod);
+      if (res[j] >= prod) rem(res[j], res[j], prod);
+      poly.rep[j] = res[j];
     }
     poly.normalize();
   }
   else {
+    FHE_NTIMER_START(toPoly_finish);
     div(prod1, prod, 2);
     poly.rep.SetLength(phim);
     for (long j = 0; j < phim; j++) {
-      rem(res[j], res[j], prod);
-      if (res[j] > prod1)
-        sub(poly.rep[j], res[j], prod);
-      else
-        poly.rep[j] = res[j];
+      if (res[j] >= prod) rem(res[j], res[j], prod);
+      if (res[j] > prod1) sub(res[j], res[j], prod);
+      poly.rep[j] = res[j];
     }
     poly.normalize();
   }
