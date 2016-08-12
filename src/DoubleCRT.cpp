@@ -566,6 +566,9 @@ FHE_TIMER_START;
   for (long h = 0; h < phim; h++) remtab[h].SetLength(icard);
 
   tmpvec.SetLength(cnt);
+  for (long i = 0; i < cnt; i++) tmpvec[i].SetMaxLength(phim);
+
+  { FHE_NTIMER_START(toPoly_FFT);
   
   NTL_EXEC_INDEX(cnt, index)
       long first, last;
@@ -583,37 +586,51 @@ FHE_TIMER_START;
       }
   NTL_EXEC_INDEX_END
 
-{ FHE_NTIMER_START(toPoly_CRT);
+  }
 
-  poly.rep.SetLength(phim);
+{ FHE_NTIMER_START(toPoly_CRT);
 
   PartitionInfo pinfo1(phim);
   long cnt1 = pinfo1.NumIntervals();
 
   static thread_local ZZ tls_prod;
   static thread_local ZZ tls_prod_half;
-  static thread_local Vec<ZZ> tls_prod1vec;
   static thread_local Vec<long> tls_qvec;
+  static thread_local Vec<double> tls_qrecipvec;
   static thread_local Vec<long> tls_tvec;
-  static thread_local Vec<ZZ> tls_resvec;
+  static thread_local Vec<mulmod_precon_t> tls_tqinvvec;
+
+  static thread_local ZZVec tls_prod1vec;
+  static thread_local ZZVec tls_resvec;
 
   ZZ& prod = tls_prod;
   ZZ& prod_half = tls_prod_half;
-  Vec<ZZ>& prod1vec = tls_prod1vec;
+  ZZVec& prod1vec = tls_prod1vec;
   Vec<long>& qvec = tls_qvec;
+  Vec<double>& qrecipvec = tls_qrecipvec;
   Vec<long>& tvec = tls_tvec;
-  Vec<ZZ>& resvec = tls_resvec;
+  Vec<mulmod_precon_t>& tqinvvec = tls_tqinvvec;
+  ZZVec& resvec = tls_resvec;
 
-  prod1vec.SetLength(icard);
   qvec.SetLength(icard);
+  qrecipvec.SetLength(icard);
   tvec.SetLength(icard);
+  tqinvvec.SetLength(icard);
 
   prod = 1;
   for (long j = 0; j < icard; j++) {
     long i = ivec[j];
     long q = context.ithModulus(i).getQ();
     qvec[j] = q;
+    qrecipvec[j] = 1/double(q);
     mul(prod, prod, q);
+  }
+
+  long sz = prod.size();
+
+  if (prod1vec.length() != icard || prod1vec.BaseSize() != sz+1) {
+    prod1vec.kill();
+    prod1vec.SetSize(icard, sz+1);
   }
 
   for (long j = 0; j < icard; j++) {
@@ -622,9 +639,13 @@ FHE_TIMER_START;
     long t = rem(prod1vec[j], q);
     t = InvMod(t, q);
     tvec[j] = t;
+    tqinvvec[j] = PrepMulModPrecon(t, q);
   }
 
-  resvec.SetLength(cnt1);
+  if (resvec.length() != phim || resvec.BaseSize() != sz+1) {
+    resvec.kill();
+    resvec.SetSize(phim, sz+1);
+  }
 
   if (!positive) {
     // prod_half = (prod+1)/2
@@ -633,31 +654,51 @@ FHE_TIMER_START;
   }
   
   NTL_EXEC_INDEX(cnt1, index)
+  NTL_IMPORT(icard)
       long first, last;
       pinfo1.interval(first, last, index);
-      ZZ& res = resvec[index];
+
+      long *qvecp = qvec.elts();
+      double *qrecipvecp = qrecipvec.elts();
+      long *tvecp = tvec.elts();
+      mulmod_precon_t *tqinvvecp = tqinvvec.elts();
+      ZZ *prod1vecp = prod1vec.elts();
+
+      ZZ tmp;
+      tmp.SetSize(sz+4);
   
       for (long h = first; h < last; h++) {
-        clear(res);
+        clear(tmp);
+        double quotient = 0;
         long *remvec = remtab[h].elts();
         
         for (long j = 0; j < icard; j++) {
-          long q = qvec[j];
-          long t = tvec[j];
+          long q = qvecp[j];
+          long t = tvecp[j];
+          mulmod_precon_t tqinv = tqinvvecp[j];
           long r = remvec[j];
-          r = MulMod(r, t, q);
-          MulAddTo(res, prod1vec[j], r);
+          double qrecip = qrecipvecp[j];
+          r = MulModPrecon(r, t, q, tqinv);
+          MulAddTo(tmp, prod1vecp[j], r);
+          quotient += r*qrecip;
         }
-  
-        rem(res, res, prod);
-        if (!positive && res >= prod_half) 
-          res -= prod;
-  
-        poly[h] = res;
+        
+        MulSubFrom(tmp, prod, long(quotient));
+        while (tmp < 0) add(tmp, tmp, prod);
+        while (tmp >= prod) sub(tmp, tmp, prod);
+        if (!positive && tmp >= prod_half) 
+          tmp -= prod;
+        resvec[h] = tmp;
       }
   NTL_EXEC_INDEX_END
 
+  poly.SetLength(phim);
+  for (long j = 0; j < phim; j++) poly[j] = resvec[j];
   poly.normalize();
+
+  // NOTE: assigning to poly[j] within the parallel loop
+  // leads to horrible performance, as there apparently is
+  // a lot of contention within malloc.
 }
 
 }
@@ -699,6 +740,10 @@ FHE_TIMER_START;
   ZZVec res;
   res.SetSize(phim, sz+1);
 
+  Vec<double> quotients;
+  quotients.SetLength(phim);
+  for (long j = 0; j < phim; j++) quotients[j] = 0;
+
   ZZ prod1;
 
   for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
@@ -716,10 +761,12 @@ FHE_TIMER_START;
       mulmod_precon_t rinvqinv = PrepMulModPrecon(rinv, q, qinv);
       long tlen = tmp.rep.length();
       const zz_p *tp = tmp.rep.elts();
+      double qrecip = 1/double(q);
 
       for (long j = 0; j < tlen; j++) {
         long s2 = MulModPrecon(rep(tp[j]), rinv, q, rinvqinv);
         MulAddTo(res[j], prod1, s2);
+        quotients[j] += s2*qrecip;
       }
     }
   }
@@ -735,6 +782,9 @@ FHE_TIMER_START;
     poly.normalize();
   }
   else {
+
+
+#if 0
     FHE_NTIMER_START(toPoly_finish);
     div(prod1, prod, 2);
     poly.rep.SetLength(phim);
@@ -744,6 +794,61 @@ FHE_TIMER_START;
       poly.rep[j] = res[j];
     }
     poly.normalize();
+#elif 1
+    FHE_NTIMER_START(toPoly_finish);
+    div(prod1, prod, 2);
+    poly.rep.SetLength(phim);
+    ZZ t1;
+    for (long j = 0; j < phim; j++) {
+      t1 = res[j];
+      MulSubFrom(t1, prod, long(quotients[j]));
+      while (t1 < 0) add(t1, t1, prod);
+      while (t1 >= prod) sub(t1, t1, prod);
+      res[j] = t1;
+      if (res[j] > prod1) sub(res[j], res[j], prod);
+      poly.rep[j] = res[j];
+    }
+    poly.normalize();
+#else
+    FHE_NTIMER_START(toPoly_finish1);
+    div(prod1, prod, 2);
+    poly.rep.SetLength(phim);
+    FHE_NTIMER_STOP(toPoly_finish1);
+
+    ZZ t1;
+    
+    FHE_NTIMER_START(toPoly_finish2);
+    for (long j = 0; j < phim; j++) {
+#if 1
+      t1 = res[j];
+      MulSubFrom(t1, prod, long(quotients[j]));
+      while (t1 < 0) add(t1, t1, prod);
+      while (t1 >= prod) sub(t1, t1, prod);
+      res[j] = t1;
+#else
+      if (res[j] >= prod) rem(res[j], res[j], prod);
+#endif
+    }
+    FHE_NTIMER_STOP(toPoly_finish2);
+
+    FHE_NTIMER_START(toPoly_finish3);
+    for (long j = 0; j < phim; j++) {
+      if (res[j] > prod1) sub(res[j], res[j], prod);
+    }
+    FHE_NTIMER_STOP(toPoly_finish3);
+
+    FHE_NTIMER_START(toPoly_finish4);
+    for (long j = 0; j < phim; j++) {
+      poly.rep[j] = res[j];
+    }
+    poly.normalize();
+    FHE_NTIMER_STOP(toPoly_finish4);
+
+#endif
+
+
+
+
   }
 }
 #else
