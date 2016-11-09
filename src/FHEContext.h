@@ -267,6 +267,10 @@ public:
   //! @brief read all other data associated with context
   friend istream& operator>> (istream &str, FHEcontext& context);
   ///@}
+
+  friend void writeContextBinary(ostream& str, const FHEcontext& context);
+  friend void readContextBinary(istream& str, FHEcontext& context);
+
 };
 
 //! @brief write [m p r gens ords] data
@@ -274,6 +278,12 @@ void writeContextBase(ostream& s, const FHEcontext& context);
 //! @brief read [m p r gens ords] data, needed to construct context
 void readContextBase(istream& s, unsigned long& m, unsigned long& p, unsigned long& r,
 		     vector<long>& gens, vector<long>& ords);
+
+void writeContextBinary(ostream& str, const FHEcontext& context);
+void writeContextBaseBinary(ostream& str, const FHEcontext& context);
+void readContextBinary(istream& str, FHEcontext& context);
+void readContextBaseBinary(istream& str, FHEcontext*& context);
+
 
 // VJS: compiler seems to need these declarations out here...wtf...
 

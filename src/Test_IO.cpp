@@ -263,18 +263,13 @@ int main(int argc, char *argv[])
 #include <sstream>
 #include <fstream>
 #include <iostream>
-
 #include "FHE.h"
 #include "EncryptedArray.h"
 // #include "parameters.h"  //this has the function get_m_c
-
-
 int main()
 {
   string * tmp_ptr;
-
   long LLL, DDD, KKK ;
-
   long m; 
   long ccc;
   FHEcontext * context_ptr;
@@ -282,7 +277,6 @@ int main()
   EncryptedArray * ea_ptr;
   
   LLL = 682; DDD=12; KKK=80;
-
   /*
       pair<long, long> m_c  = get_m_c(LLL, DDD, KKK);
       m = m_c.first;
@@ -290,7 +284,6 @@ int main()
   */
   m = 15709;
   ccc = 3;
-
   context_ptr = new FHEcontext(m, 2, 1);
   buildModChain(*context_ptr, DDD, ccc);
   fhekey_ptr = new FHESecKey(*context_ptr);
@@ -298,23 +291,18 @@ int main()
   fhekey_ptr->GenSecKey(64,2);
   addSome1DMatrices(*fhekey_ptr);
   const  FHEPubKey & pub_key =  *fhekey_ptr;
-
   ZZX G;
   G = ZZX(1,1);
   ea_ptr = new EncryptedArray(*context_ptr, G);
-
   // Test I/O, write context and public key, then try to read them back
   cout << "KEY\n";
   cout <<"L= " <<LLL<< " D= " << DDD<< " K= " << KKK << endl<< flush;
-
   {
   stringstream s1;
   writeContextBase(s1, *context_ptr);
   s1 << *context_ptr;
-
   string s2 = s1.str();
   cout << s2 << endl;  // output context also to external cout
-
   // Read back context from input stream (s3)
   unsigned long m1, p1, r1;
   stringstream s3(s2);
@@ -326,10 +314,8 @@ int main()
   {
   stringstream s1;
   s1 << pub_key;
-
   string s2 = s1.str();
   cout << s2 <<"\nENDKEY" << endl; // output public key also to external cout
-
   // Read back cpublic key from input stream (s3)
   stringstream s3(s2);
   FHEPubKey pk1(*context_ptr);

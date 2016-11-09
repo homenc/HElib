@@ -17,6 +17,22 @@
 #include "Ctxt.h"
 #include "FHE.h"
 #include "timing.h"
+#include "binio.h"
+
+
+void SKHandle::read(istream& str)
+{
+  read_raw_long(str, powerOfS);
+  read_raw_long(str, powerOfX);
+  read_raw_long(str, secretKeyID);
+}
+ 
+void SKHandle::write(ostream& str) const
+{
+  write_raw_long(str, powerOfS);
+  write_raw_long(str, powerOfX);
+  write_raw_long(str, secretKeyID);
+}
 
 // Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
@@ -1007,6 +1023,52 @@ void Ctxt::reduce() const
   long n = parts.size();
   for (long i = 0; i < n; i++) parts[i].reduce();
 }
+
+void Ctxt::write(ostream& str) const
+{
+  
+  /*  Writing out in binary:
+    1.  long ptxtSpace
+    2.  xdouble noiseVar
+    3.  IndexSet primeSet;
+    4.  vector<CtxtPart> parts;
+  */  
+  
+  write_raw_long(str, ptxtSpace);
+  write_raw_xdouble(str, noiseVar);
+  primeSet.write(str);
+  write_raw_vector(str, parts);    
+//  cerr << "[Ctxt::write] ctxtparts: " << parts << endl;
+ 
+}
+
+void Ctxt::read(istream& str)
+{
+  
+  read_raw_long(str, ptxtSpace);
+  read_raw_xdouble(str, noiseVar); 
+  primeSet.read(str); 
+  CtxtPart blankCtxtPart(context, IndexSet::emptySet());
+  read_raw_vector(str, parts, blankCtxtPart);    
+//  cerr << "[Ctxt::read] ctxtparts: " << parts << endl;
+
+}
+
+void CtxtPart::write(ostream& str)
+{ 
+  this->DoubleCRT::write(str); // CtxtPart is a child.
+  skHandle.write(str);
+}
+
+
+void CtxtPart::read(istream& str)
+{
+//  cerr << "[CtxtPart::read] before:" << *this << "end of print" << endl;
+  this->DoubleCRT::read(str); // CtxtPart is a child.
+//  cerr << "[CtxtPart::read] after:" << *this << "end of print" << endl;
+  skHandle.read(str);
+}
+
 
 istream& operator>>(istream& str, SKHandle& handle)
 {

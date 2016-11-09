@@ -256,3 +256,35 @@ istream& operator >> (istream& str, IndexSet& set)
 
   return str;
 }
+
+void IndexSet::write(ostream& str) const 
+{
+
+  // Size of Set
+  long sizeOfS = this->card();
+  str.write(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));  
+ 
+  // The data itself
+  for(long n = this->first();
+       n <= this->last(); 
+       n = this->next(n)){
+    str.write(reinterpret_cast<char*>(&n), sizeof(n));
+  }
+
+}
+
+void IndexSet::read(istream& str){
+
+  // Size of Set
+  long sizeOfS;
+  str.read(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));  
+ 
+  // The data itself
+  long n;
+  for(long i=0; i<sizeOfS; i++){     
+    str.read(reinterpret_cast<char*>(&n), sizeof(n));
+    this->insert(n);  
+  }
+  
+}
+

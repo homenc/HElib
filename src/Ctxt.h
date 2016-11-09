@@ -175,6 +175,11 @@ public:
   }
 
   friend istream& operator>>(istream& s, SKHandle& handle);
+
+  // Raw IO
+  void read(istream& str);
+  void write(ostream& str) const;
+
 };
 inline ostream& operator<<(ostream& s, const SKHandle& handle)
 {
@@ -215,6 +220,10 @@ public:
 
   CtxtPart(const DoubleCRT& other, const SKHandle& otherHandle): 
     DoubleCRT(other), skHandle(otherHandle) {}
+
+  void read(istream& str); 
+  void write(ostream& str);
+
 };
 istream& operator>>(istream& s, CtxtPart& p);
 ostream& operator<<(ostream& s, const CtxtPart& p);
@@ -498,6 +507,11 @@ public:
   ///@}
   friend istream& operator>>(istream& str, Ctxt& ctxt);
   friend ostream& operator<<(ostream& str, const Ctxt& ctxt);
+  
+  //Raw IO
+  void write(ostream& str) const;
+  void read(istream& str);
+
 };
 
 inline IndexSet baseSetOf(const Ctxt& c) { 

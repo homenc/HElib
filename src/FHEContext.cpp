@@ -374,6 +374,230 @@ bool FHEcontext::operator==(const FHEcontext& other) const
   return true;
 }
 
+// THis struct at the mo doesn't need to be in header.
+struct BinaryHeader {
+  uint8_t structId[4];
+  uint8_t version[4] = {0, 0, 0, 1};
+  uint64_t id;
+  uint64_t payloadSize;
+};
+
+
+void writeContextBaseBinary(ostream& str, const FHEcontext& context)
+{
+  //Header
+  BinaryHeader bh;
+  memcpy(bh.structId, "BASE", 4);
+  bh.id = 0;
+  bh.payloadSize = 0;  
+  str.write(reinterpret_cast<char*>(&bh), sizeof(bh));
+
+  //Payload
+  long tmp = context.zMStar.getP();
+  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  tmp = context.alMod.getR();
+  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  tmp = context.zMStar.getM();
+  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  tmp = context.zMStar.numOfGens();   
+  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
+    tmp = context.zMStar.ZmStarGen(i);
+    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+    tmp = context.zMStar.OrderOf(i);
+    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  }
+}
+
+void readContextBaseBinary(istream& str, FHEcontext*& context)
+{
+  
+  BinaryHeader bh;
+  str.read(reinterpret_cast<char*>(&bh), sizeof(bh));
+  cerr << "BinaryHeader Read in." << endl;
+    
+  unsigned long m, p, r, numOfGens;
+  str.read(reinterpret_cast<char*>(&p), sizeof(p)); 
+  cout << "p Read in." << p << endl;
+  str.read(reinterpret_cast<char*>(&r), sizeof(r)); 
+  cout << "r Read in." << r << endl;
+  str.read(reinterpret_cast<char*>(&m), sizeof(m)); 
+  cout << "m Read in." << m << endl;
+  str.read(reinterpret_cast<char*>(&numOfGens), sizeof(numOfGens)); 
+  cout << "num of gens Read in." << numOfGens << endl;
+  
+  vector<long> gens(numOfGens), ords(numOfGens);
+  for (unsigned long i=0; i<numOfGens; i++) {
+    cout << "gens and ords reading ..." << endl;
+    str.read(reinterpret_cast<char*>(&gens[i]), sizeof(gens[i])); 
+    cout << "gen" << gens[i] << endl;
+    str.read(reinterpret_cast<char*>(&ords[i]), sizeof(ords[i])); 
+    cout << "ord" << ords[i] << endl;
+  }
+  
+  context = new FHEcontext(m, p, r, gens, ords);
+  cout << "context created." << endl;
+
+}
+
+void writeContextBinary(ostream& str, const FHEcontext& context)
+{
+  
+  //Header
+  BinaryHeader bh;
+  memcpy(bh.structId, "CONT", 4);
+  bh.id = 0;
+  bh.payloadSize = 0;  
+  str.write(reinterpret_cast<char*>(&bh), sizeof(bh));
+
+  // standard-deviation 
+  double tmpDouble = to_double(context.stdev);
+  str.write(reinterpret_cast<char*>(&tmpDouble), sizeof(tmpDouble));
+   
+  long sizeOfS = context.specialPrimes.card();
+  cerr << "Writing sizeOfS " << sizeOfS << endl;
+  str.write(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));
+
+  long tmp;
+  // the "special" index 
+  //for (tmp = context.specialPrimes.next(context.specialPrimes.first()); 
+  for(tmp = context.specialPrimes.first();
+      tmp <= context.specialPrimes.last(); 
+      tmp = context.specialPrimes.next(tmp)){
+    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+    cerr << "specialPrimes loop " << tmp << endl;
+  }
+
+  // output the primes in the chain
+  tmp = context.moduli.size();
+  cerr << "Moduli " << tmp << endl;
+
+  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  for (long i=0; i<(long)context.moduli.size(); i++){
+    tmp = context.moduli[i].getQ();
+    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  }
+
+  // output the digits
+  tmp = context.digits.size();
+  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  for (long i=0; i<(long)context.digits.size(); i++){
+    sizeOfS = context.digits[i].card();
+    str.write(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));
+    for(tmp = context.digits[i].first();
+         tmp <= context.digits[i].last(); 
+         tmp = context.digits[i].next(tmp)){
+      str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+      cerr << "digits loop " << tmp << endl;
+    }
+  }
+
+  tmp = context.rcData.mvec.length();
+  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  for (long i=0; i<(long)context.rcData.mvec.length();i++){
+    tmp = context.rcData.mvec[i];
+    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  }
+
+  tmp = context.rcData.hwt;
+  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  bool tmpBool = context.rcData.conservative;
+  str.write(reinterpret_cast<char*>(&tmpBool), sizeof(tmpBool));
+
+}
+
+
+
+
+void readContextBinary(istream& str, FHEcontext& context)
+{
+
+  BinaryHeader bh;
+  str.read(reinterpret_cast<char*>(&bh), sizeof(bh));
+  cout << "BinaryHeader Read in."  << endl;
+ 
+  // Get the standard deviation
+  double tmpDouble;
+  str.read(reinterpret_cast<char*>(&tmpDouble), sizeof(tmpDouble));
+  context.stdev = tmpDouble;
+  cout << "Std Deviation Read in. " << tmpDouble<< endl;
+
+  long sizeOfS;
+  str.read(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));
+  cout << "sizeOfS Read in. " << sizeOfS << endl;
+
+  IndexSet s;
+  long tmp;
+  for(long i=0; i<sizeOfS; i++){
+    str.read(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+    cerr << "specialPrimes loop " << tmp << endl;
+    s.insert(tmp);
+  }
+  cout << "IndexSet s Read in. " << endl;
+
+  context.moduli.clear();
+  context.specialPrimes.clear();
+  context.ctxtPrimes.clear();
+
+  long nPrimes;
+  str.read(reinterpret_cast<char*>(&nPrimes), sizeof(nPrimes));
+  cout << "number of primes Read in. " << nPrimes << endl;
+
+  for (long p,i=0; i<nPrimes; i++) {
+    str.read(reinterpret_cast<char*>(&p), sizeof(p));
+
+    if (ALT_CRT) 
+      context.moduli.push_back(Cmodulus(context.zMStar,p,1)); // a dummy object
+      // FIXME: this is broken...we are not getting an FFT prime here
+    else
+      context.moduli.push_back(Cmodulus(context.zMStar,p,0)); // a real object
+
+    if (s.contains(i))
+      context.specialPrimes.insert(i); // special prime
+    else
+      context.ctxtPrimes.insert(i);    // ciphertext prime
+  }
+  
+  cout << "Primes Read in." << endl;
+
+  // read in the partition to digits
+  long nDigits;
+  str.read(reinterpret_cast<char*>(&nDigits), sizeof(nDigits));
+  context.digits.resize(nDigits);
+  for(long i=0; i<(long)context.digits.size(); i++){
+    str.read(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));
+    cout << "sizeOfS in digits loop." << sizeOfS<< endl;
+    for(long n=0; n<sizeOfS; n++){
+      str.read(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+      cout << "digit in digits loop." << tmp<< endl;
+      context.digits[i].insert(tmp);
+    }
+  }
+  cout << "Primes Read in digits." << endl;
+
+  // Read in the partition of m into co-prime factors (if bootstrappable)
+  Vec<long> mv;
+  long t;
+  bool consFlag;
+  long nMV; 
+  str.read(reinterpret_cast<char*>(&nMV), sizeof(nMV));
+  mv.SetLength(nMV);
+  for(long i=0; i<nMV; i++){    
+    str.read(reinterpret_cast<char*>(&mv[i]), sizeof(mv[i]));
+  }
+
+  cout << "MV Read in." << endl;
+
+  str.read(reinterpret_cast<char*>(&t), sizeof(t));
+  str.read(reinterpret_cast<char*>(&consFlag), sizeof(consFlag));
+  
+  if (mv.length()>0) {
+    context.makeBootstrappable(mv, t, consFlag);
+  }
+  cout << "mv, t, consFlag Read in." << endl;
+
+}
+
 void writeContextBase(ostream& str, const FHEcontext& context)
 {
   str << "[" << context.zMStar.getM()

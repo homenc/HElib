@@ -1,4 +1,4 @@
-/* Copyright (C) 2012,2013 IBM Corp.
+/* iopyright (C) 2012,2013 IBM Corp.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -18,6 +18,8 @@
 
 #include <queue> // used in the breadth-first search in setKeySwitchMap
 #include "timing.h"
+#include "binio.h"
+
 
 /******** Utility function to generate RLWE instances *********/
 
@@ -215,6 +217,50 @@ void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
   seekPastChar(str,']');
   //  cerr << "]";
 }
+
+
+void KeySwitch::write(ostream& str) const
+{
+/*  
+    Write out raw
+    1. SKHandle fromKey; 
+    2. long     toKeyID;
+    3. long     ptxtSpace;
+    4. vector<DoubleCRT> b;
+    5. ZZ prgSeed;
+*/
+
+  fromKey.write(str);
+  write_raw_long(str, toKeyID);
+  write_raw_long(str, ptxtSpace);
+
+  write_raw_vector(str, b);
+  
+  write_raw_ZZ(str, prgSeed);
+
+//  long noBytes = NumBytes(prgSeed);
+////  cerr << "Number of bytes: " << noBytes << endl;
+//  assert(noBytes > 0);
+//  unsigned char zzBytes[noBytes];
+//  BytesFromZZ(zzBytes, prgSeed, noBytes);
+//  str.write(reinterpret_cast<char*>(zzBytes), noBytes); 
+//  cerr << "[PORK] Complete\n";
+}
+
+void KeySwitch::read(istream& str, const FHEcontext& context)
+{
+  
+  fromKey.read(str);
+  read_raw_long(str, toKeyID);
+  read_raw_long(str, ptxtSpace);
+  DoubleCRT blankDCRT(context, IndexSet::emptySet());
+  read_raw_vector(str, b, blankDCRT);
+  
+  read_raw_ZZ(str, prgSeed);
+
+}
+
+
 
 /******************** FHEPubKey implementation **********************/
 /********************************************************************/
@@ -509,6 +555,64 @@ istream& operator>>(istream& str, FHEPubKey& pk)
 
   seekPastChar(str, ']');
   return str;
+}
+      
+void writePubKeyBinary(ostream& str, const FHEPubKey& pk) 
+{
+// Write out for FHEPubKey
+//  1. Context Base 
+//  2. Ctxt pubEncrKey;
+//  3. vector<long> skHwts; 
+//  4. vector<KeySwitch> keySwitching;
+//  5. vector< vector<long> > keySwitchMap;
+//  6. long recryptKeyID; 
+//  7. Ctxt recryptEkey;
+
+  writeContextBaseBinary(str, pk.getContext());
+  cerr << "[write pub key] write pk.\n";
+  pk.pubEncrKey.write(str);
+  write_raw_vector(str, pk.skHwts);
+
+  // TODO Keyswitch Matrices
+  write_raw_vector(str, pk.keySwitching);
+
+  long sz = pk.keySwitchMap.size();
+  write_raw_long(str, sz);
+  for(auto v: pk.keySwitchMap)
+    write_raw_vector(str, v);
+
+  write_raw_long(str, pk.recryptKeyID);
+  pk.recryptEkey.write(str);
+
+}
+
+void readPubKeyBinary(istream& str, FHEPubKey& pk)
+{
+ 
+  // TODO code to check context object is what it should be 
+  // same as the text IO.
+  FHEcontext * dummy;
+  readContextBaseBinary(str, dummy);
+
+  // Read in the rest
+  cerr << "[read pub key] read pk.\n";
+  pk.pubEncrKey.read(str);
+  read_raw_vector(str, pk.skHwts);
+
+  // TODO Keyswitch Matrices
+  read_raw_vector(str, pk.keySwitching, pk.context);
+
+  long sz; 
+  read_raw_long(str, sz);
+  pk.keySwitchMap.clear();
+  pk.keySwitchMap.resize(sz);
+  for(auto& v: pk.keySwitchMap)
+    read_raw_vector(str, v);
+
+
+  read_raw_long(str, pk.recryptKeyID);
+  pk.recryptEkey.read(str);
+
 }
 
 

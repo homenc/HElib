@@ -111,6 +111,11 @@ public:
 
   //! @brief Read a key-switching matrix from input
   void readMatrix(istream& str, const FHEcontext& context);
+
+  // Raw IO
+  void read(istream& str, const FHEcontext& context);
+  void write(ostream& str) const;
+
 };
 ostream& operator<<(ostream& str, const KeySwitch& matrix);
 // We DO NOT have istream& operator>>(istream& str, KeySwitch& matrix);
@@ -228,10 +233,13 @@ public:
   friend class FHESecKey;
   friend ostream& operator << (ostream& str, const FHEPubKey& pk);
   friend istream& operator >> (istream& str, FHEPubKey& pk);
+  friend void writePubKeyBinary(ostream& str, const FHEPubKey& pk);
+  friend void readPubKeyBinary(istream& str, FHEPubKey& pk);
 
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
 };
+  
 
 /**
  * @class FHESecKey
