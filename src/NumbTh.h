@@ -68,7 +68,7 @@ namespace FHEglobals
 inline bool setDryRun(bool toWhat=true) { return (FHEglobals::dryRun=toWhat); }
 inline bool isDryRun() { return FHEglobals::dryRun; }
 
-#if (__cplusplus>199711L)
+#if (__cplusplus>199711L) || defined (__APPLE__)
 #include <memory>
 #include <unordered_map>
 #else
