@@ -343,6 +343,24 @@ recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
 
 
 
+// raise ciphertext to some power
+void Ctxt::power(long e)
+{
+  if (e <= 1) return; // nothing to do
+
+  long ell = NTL::NumBits(e); // e < 2^l <= 2e
+
+  if (e == (1UL<<(ell-1)) ) { // e is a power of two, just square enough times
+    while (--ell > 0) square();
+    return;
+  }
+
+  // Otherwise use the "DynamicCtxtPowers" from polyEval, it uses e Ctxt
+  // objects as temporary space but keeps the level as low as possible
+  DynamicCtxtPowers pwrs(*this, e);
+  *this = pwrs.getPower(e);
+}
+
 
 #if 0
 /**********************************************************************/

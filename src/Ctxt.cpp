@@ -1096,6 +1096,40 @@ void incrementalProduct(vector<Ctxt>& v)
   if (n > 0) recursiveIncrementalProduct(&v[0], n); // do the actual work
 }
 
+
+static void recursiveTotalProduct(Ctxt& out, const Ctxt array[], long n)
+{
+  if (n <= 3) {
+    out = array[0];
+    if (n == 2)      out.multiplyBy(array[1]);
+    else if (n == 3) out.multiplyBy2(array[1],array[2]);
+    return;
+  }
+
+  // split the array in two
+
+  long ell = NTL::NumBits(n-1); // 2^{l-1} <= n-1
+  long n1 = 1UL << (ell-1);     // n/2 <= n1 = 2^l < n
+
+  // Call the recursive procedure separately on the first and second parts
+  Ctxt out2(ZeroCtxtLike, out);
+  recursiveTotalProduct(out, array, n1);
+  recursiveTotalProduct(out2, &array[n1], n-n1);
+
+  // Multiply the beginning of the two halves
+  out.multiplyBy(out2);
+}
+
+// set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products
+// out could point to v[0], but having it pointing to any other v[i]
+// will make the result unpredictable.
+void totalProduct(Ctxt& out, const vector<Ctxt>& v)
+{
+  long n = v.size();  // how many ciphertexts do we have
+  if (n > 0) recursiveTotalProduct(out, &v[0], n); // do the actual work
+}
+
+
 // Compute the inner product of two vectors of ciphertexts, this routine uses
 // the lower-level *= operator and does only one re-linearization at the end.
 void innerProduct(Ctxt& result, const vector<Ctxt>& v1, const vector<Ctxt>& v2)
