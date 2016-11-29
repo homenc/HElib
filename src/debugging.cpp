@@ -72,3 +72,12 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
     }
   }
 }
+
+bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
+		       const EncryptedArray& ea, const NewPlaintextArray& pa)
+{
+  NewPlaintextArray ppa(ea);
+  ea.decrypt(ctxt, sk, ppa);
+
+  return equals(ea, pa, ppa);
+}

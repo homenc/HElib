@@ -15,7 +15,7 @@
  */
 /*
  * @file eqtesting.cpp
- * @brief Experimental program for equality testing...
+ * @brief Useful fucntions for equality testing...
  */
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
@@ -26,12 +26,37 @@ NTL_CLIENT
 #include <cassert>
 #include <cstdio>
 
+// Map all non-zero slots to 1, leaving zero slots as zero.
+// Assumes that r=1, and that all the slot contain elements from GF(p^d).
+//
+// We compute x^{p^d-1} = x^{(1+p+...+p^{d-1})*(p-1)} by setting y=x^{p-1}
+// and then outputting y * y^p * ... * y^{p^{d-1}}, with exponentiation to
+// powers of p done via Frobenius.
+void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
+{
+  long p = ctxt.getPtxtSpace();
+  if (p != ctxt.getContext().zMStar.getP()) // ptxt space is p^r for r>1
+    std::logic_error("mapTo01 not implemented for r>1");
+
+  if (p>2)
+    ctxt.power(p-1); // set y = x^{p-1}
+
+  long d = ea.getDegree();
+  if (d>1) { // compute the product of the d automorphisms
+    std::vector<Ctxt> v(d, ctxt);
+    for (long i=1; i<d; i++)
+      v[i].frobeniusAutomorph(i);
+    totalProduct(ctxt, v);
+  }
+}
+
 
 // computes ctxt^{2^d-1} using a method that takes
 // O(log d) automorphisms and multiplications
 void fastPower(Ctxt& ctxt, long d) 
 {
-  if (d == 1) return;
+  assert(ctxt.getPtxtSpace()==2);
+  if (d <= 1) return;
 
   Ctxt orig = ctxt;
 
@@ -52,12 +77,10 @@ void fastPower(Ctxt& ctxt, long d)
   }
 }
 
-// incrementalZeroTest sets each res[i], for i=0..n-1, to
-// a ciphertext in which each slot is 0 or 1 according
-// to whether or not bits 0..i of corresponding slot in ctxt
-// is zero (1 if not zero, 0 if zero).
-// It is assumed that res and each res[i] is already initialized
-// by the caller.
+// ===> This function only works for p=2, r=1 <===
+// Test if prefixes of bits in slots are all zero: Set slot j of res[i] to 0
+// if bits 0..i of j'th slot in ctxt are all zero, else it is set to 1
+// It is assumed that res and the res[i]'s are initialized by the caller.
 // Complexity: O(d + n log d) smart automorphisms
 //             O(n d) 
 void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
@@ -120,7 +143,9 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
   FHE_TIMER_STOP;
 }
 
+
 #ifdef DEBUG_TEST
+/************************** debugging code below *********************/
 void printBits(const vector<ZZX>& v, long n) 
 {
   long len = v.size();
@@ -162,18 +187,13 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
   addSome1DMatrices(secretKey);
   cerr << "done\n";
 
-
   cerr << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
   cerr << "done\n";
 
-
-
   long nslots = ea.size();
 
   if (n <= 0 || n > d) n = d;
-  
-
 
   vector<ZZX> v;
   v.resize(nslots);
@@ -189,7 +209,6 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
   ea.encrypt(ctxt, publicKey, v);
   // ctxt encrypts a vector where each slots is a random
   // polynomial of degree < n
-
 
   Ctxt* res[n];
   for (long j = 0; j < n; j++) res[j] = new Ctxt(publicKey); // allocate
@@ -207,7 +226,6 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
   for (long j = 0; j < n; j++) delete res[j]; // cleanup
 }
 
-
 void usage(char *prog) 
 {
   cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
@@ -220,7 +238,6 @@ void usage(char *prog)
   cerr << "  n is the number of masks (defaults to all)\n";
   exit(0);
 }
-
 
 int main(int argc, char *argv[]) 
 {
@@ -253,9 +270,8 @@ int main(int argc, char *argv[])
   cerr << endl;
 
 }
-
 // call to get our running test case:
 // eqtesting_x m=20485 
 // eqtesting_x m=105 for quick testing
 
-#endif
+#endif // #ifdef DEBUG_TEST

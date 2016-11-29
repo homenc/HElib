@@ -772,14 +772,12 @@ void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
 void negate(const EncryptedArray& ea, NewPlaintextArray& pa);
 
 
-
-
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j);
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& vec);
 
 void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& pi);
 
-
+void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e);
 
 
 
@@ -800,10 +798,18 @@ void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 
-//! @brief incrementalZeroTest sets each res[i], for i=0..n-1, to a ciphertext
-//! in which each slot is 0 or 1 according to whether or not bits 0..i of
-//! corresponding slot in ctxt is zero (1 if not zero, 0 if zero). It is
-//! assumed that res and each res[i] is already initialized by the caller.
+//! @brief Map all non-zero slots to 1, leaving zero slots as zero.
+//! Assumes that r=1, and that all the slots contain elements from GF(p^d).
+void mapTo01(const EncryptedArray& ea, Ctxt& ctxt);
+// We compute x^{p^d-1} = x^{(1+p+...+p^{d-1})*(p-1)} by setting y=x^{p-1}
+// and then outputting y * y^p * ... * y^{p^{d-1}}, with exponentiation to
+// powers of p done via Frobenius.
+
+
+//! @brief (only for p=2, r=1), test if prefixes of bits in slots are all zero.
+//! Set slot j of res[i] to 0 if bits 0..i of j'th slot in ctxt are all zero,
+//! else sets slot j of res[i] to 1.
+//! It is assumed that res and the res[i]'s are initialized by the caller.
 void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 			 const Ctxt& ctxt, long n);
 // Complexity: O(d + n log d) smart automorphisms

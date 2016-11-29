@@ -1118,6 +1118,19 @@ void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const V
   ea.dispatch<frobeniusAutomorph_pa_impl>(Fwd(pa), vec); 
 }
 
+void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e)
+{
+  if (e<=1) return;
+
+  NewPlaintextArray pwr = pa; // holds x^{2^i} in i+1'st iteration
+  encode(ea, pa, 1L); // set pa =1 in every slot
+  while(e > 0) {
+    if (e & 1)
+      mul(ea, pa, pwr); // multiply if needed
+    mul(ea, pwr, pwr);  // squre
+    e >>= 1;
+  }
+}
 
 
 

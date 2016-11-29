@@ -388,6 +388,10 @@ public:
   void multiplyBy2(const Ctxt& other1, const Ctxt& other2);
   void square() { multiplyBy(*this); }
   void cube() { multiplyBy2(*this, *this); }
+
+  //! @brief raise ciphertext to some power
+  void power(long e);         // in polyEval.cpp
+
   ///@}
 
   //! @name Ciphertext maintenance
@@ -503,6 +507,11 @@ public:
 inline IndexSet baseSetOf(const Ctxt& c) { 
   IndexSet s; c.findBaseSet(s); return s; 
 }
+
+// set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products
+// out could point to v[0], but having it pointing to any other v[i]
+// will make the result unpredictable.
+void totalProduct(Ctxt& out, const vector<Ctxt>& v);
 
 //! For i=n-1...0, set v[i]=prod_{j<=i} v[j]
 //! This implementation uses depth log n and (nlog n)/2 products
