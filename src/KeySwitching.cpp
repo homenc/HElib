@@ -156,3 +156,17 @@ void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID)
   }
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
+
+void addTheseMatrices(FHESecKey& sKey,
+		      const std::set<long>& automVals, long keyID)
+{
+  cerr << "addTheseMatrices(";
+  std::set<long>::iterator it;
+  for (it=automVals.begin(); it!=automVals.end(); ++it) {
+    long k = *it;
+    cerr << k << " ";
+    sKey.GenKeySWmatrix(1, k, keyID, keyID);
+  }
+  cerr << ")\n";
+  sKey.setKeySwitchMap(); // re-compute the key-switching map
+}
