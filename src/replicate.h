@@ -43,6 +43,8 @@
 NTL_THREAD_LOCAL
 extern bool replicateVerboseFlag;
 
+class RepAux; // forward declerations
+class RepAuxDim;
 
 //! @brief The value in slot #pos is replicated in all other slots.
 //! On an n-slot ciphertext, this algorithm performs O(log n) 1D rotations.  
@@ -52,12 +54,21 @@ void replicate(const EncryptedArray& ea, Ctxt& ctx, long pos);
 //! all slots are zero except slot #pos.
 void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos);
 
-//! A virtual class to handle call-backs to get the output of replicate
+//! A virtual class to handle call-backs to get the output of replicate.
 class ReplicateHandler {
 public:
-  virtual void handle(const Ctxt& ctxt) = 0;
-  virtual ~ReplicateHandler() {};
+  virtual void handle(const Ctxt& ctxt) {}
+  virtual ~ReplicateHandler() {}
+
+  // The earlyStop call can be used to quit the replication mid-way, leaving
+  // a ciphertext with (e.g.) two different entries, each replicated n/2 times
+  virtual bool earlyStop(long d, long k, long prodDim) { return false; }
 };
+// Applications will derive from this class a handler that actually
+// does something with the replicated cipehrtexts. But it can be used
+// by itself as a do-nothing replicator for debugging, or to calculate
+// the required automorphisms (see automorphVals in numbTh.h)
+
 
 /**
  * replicateAll uses a hybrid strategy, combining the O(log n) strategy of the
@@ -75,17 +86,59 @@ public:
  * theoretically runs in time O(n).
  **/
 void replicateAll(const EncryptedArray& ea, const Ctxt& ctxt, 
-                         ReplicateHandler *handler, long recBound = 64);
+		  ReplicateHandler *handler, long recBound = 64,
+		  RepAuxDim* repAuxPtr=NULL);
 
+//! return the result as a vector of ciphertexts, mostly useful for
+//! debugging purposes (for real parameters would take a lot of memory)
+void replicateAll(std::vector<Ctxt>& v, const EncryptedArray& ea,
+       	          const Ctxt& ctxt, long recBound = 64,
+		  RepAuxDim* repAuxPtr=NULL);
 
 //! This function is obsolete, and is kept for historical purposes only. It
 //! was a first attempt at implementing the O(1)-amortized algorithm, but is
 //! less efficient than the function above.
 void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt,
-                      ReplicateHandler *handler);
-
-
+                      ReplicateHandler *handler, RepAux* repAuxPtr=NULL);
 
 void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i);
+
+// Structures to keep tables of maskign constants that are used in
+// replication. A calling application can either supply this structure
+// itself (if it is going to replicate the same tables in multiple
+// replicate operations), or is cal let the repliction code use its
+// own tables (in which case they are destroyed at the end of the
+// replication process)
+
+//! @cond FALSE (make doxygen ignore this class)
+class RepAux { // one table for the whole thing
+private:
+  vector< copied_ptr<DoubleCRT> > _tab;
+
+public:
+  copied_ptr<DoubleCRT>& tab(long i) {
+    if (i >= lsize(_tab)) _tab.resize(i+1);
+    return _tab[i];
+  }
+};
+
+class RepAuxDim { // two tables per dimension
+private:
+  vector< vector< copied_ptr<DoubleCRT> > > _tab, _tab1;
+
+public:
+  copied_ptr<DoubleCRT>& tab(long d, long i) {
+    if (d >= lsize(_tab)) _tab.resize(d+1);
+    if (i >= lsize(_tab[d])) _tab[d].resize(i+1);
+    return _tab[d][i];
+  }
+
+  copied_ptr<DoubleCRT>& tab1(long d, long i) {
+    if (d >= lsize(_tab1)) _tab1.resize(d+1);
+    if (i >= lsize(_tab1[d])) _tab1[d].resize(i+1);
+    return _tab1[d][i];
+  }
+};
+//! @endcond
 
 #endif

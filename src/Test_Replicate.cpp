@@ -78,6 +78,8 @@ public:
     replicate(ea, pa1, pos);
     NewPlaintextArray pa2(ea);
 
+    if (pos==0) CheckCtxt(ctxt, "replicateAll");
+
     ea.decrypt(ctxt, sKey, pa2);
     if (!equals(ea, pa1, pa2)) error = true; // record the error, if any
     t_last = GetTime();
