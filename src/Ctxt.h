@@ -351,19 +351,46 @@ public:
   //! @brief applies the automorphsim p^j using smartAutomorphism
   void frobeniusAutomorph(long j);
 
-  // Add a constant polynomial. If the size is not given, we use
-  // phi(m)*ptxtSpace^2 as the default value.
+  //! Add a constant polynomial. If the size is not given, we use
+  //! phi(m)*ptxtSpace^2 as the default value.
   void addConstant(const DoubleCRT& dcrt, double size=-1.0);
   void addConstant(const ZZX& poly, double size=-1.0)
   { addConstant(DoubleCRT(poly,context,primeSet),size); }
   void addConstant(const ZZ& c);
 
-  // Multiply-by-constant. If the size is not given, we use
-  // phi(m)*ptxtSpace^2 as the default value.
+  //! Multiply-by-constant. If the size is not given, we use
+  //! phi(m)*ptxtSpace^2 as the default value.
   void multByConstant(const DoubleCRT& dcrt, double size=-1.0);
   void multByConstant(const ZZX& poly, double size=-1.0);
   void multByConstant(const ZZ& c);
 
+  //! Convenience method: XOR and nXOR with arbitrary plaintext space:
+  //! a xor b = a+b-2ab = a + (1-2a)*b,
+  //! a nxor b = 1-a-b+2ab = (b-1)(2a-1)+a
+  void xorConstant(const DoubleCRT& poly, double size=-1.0)
+  {
+    DoubleCRT tmp = poly;
+    tmp *= -2;
+    tmp += 1; // tmp = 1-2*poly
+    multByConstant(tmp);
+    addConstant(poly);
+  }
+  void xorConstant(const ZZX& poly, double size=-1.0)
+  { xorConstant(DoubleCRT(poly,context,primeSet),size); }
+
+  void nxorConstant(const DoubleCRT& poly, double size=-1.0)
+  {
+    DoubleCRT tmp = poly;
+    tmp *= 2;
+    tmp -= 1;                // 2a-1
+    addConstant(to_ZZX(-1L));// b11
+    multByConstant(tmp);     // (b-1)(2a-1)
+    addConstant(poly);       // (b-1)(2a-1)+a = 1-a-b+2ab
+  }
+  void nxorConstant(const ZZX& poly, double size=-1.0)
+  { nxorConstant(DoubleCRT(poly,context,primeSet),size); }
+
+  
   //! Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
   //! that the ciphertext encrypts a polynomial which is zero mod p. If this
   //! is not the case then the result will not be a valid ciphertext anymore.
