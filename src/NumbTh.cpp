@@ -433,7 +433,7 @@ long mobius(long n)
 ZZX Cyclotomic(long N)
 {
   ZZX Num,Den,G,F;
-  set(Num); set(Den);
+  NTL::set(Num); NTL::set(Den);
   long m,d;
   for (d=1; d<=N; d++)
     { if ((N%d)==0)

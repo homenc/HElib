@@ -20,6 +20,7 @@
  * @brief Miscellaneous utility functions.
  **/
 #include <vector>
+#include <set>
 #include <cmath>
 #include <cassert>
 #include <string>
@@ -64,9 +65,28 @@ namespace FHEglobals
   //! us quickly go over the evaluation of a circuit and estimate the
   //! resulting noise magnitude, without having to actually compute anything. 
   extern bool dryRun;
+
+  //! @brief A list of required automorphisms
+  //! When non-NULL, causes Ctxt::smartAutomorphism to just record the
+  //! requested automorphism rather than actualy performing it. This can
+  //! be used to get a list of needed automorphisms for certain operations
+  //! and then generate all these key-switching matrices. Should only be
+  //! used in conjunction with dryRun=true
+  extern std::set<long>* automorphVals; 
+  extern std::set<long>* automorphVals2; 
 }
 inline bool setDryRun(bool toWhat=true) { return (FHEglobals::dryRun=toWhat); }
 inline bool isDryRun() { return FHEglobals::dryRun; }
+
+inline void setAutomorphVals(std::set<long>* aVals)
+{ FHEglobals::automorphVals=aVals; }
+inline bool isSetAutomorphVals() { return FHEglobals::automorphVals!=NULL; }
+inline void recordAutomorphVal(long k) { FHEglobals::automorphVals->insert(k); }
+
+inline void setAutomorphVals2(std::set<long>* aVals)
+{ FHEglobals::automorphVals2=aVals; }
+inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=NULL; }
+inline void recordAutomorphVal2(long k) { FHEglobals::automorphVals2->insert(k); }
 
 #if (__cplusplus>199711L)
 #include <memory>

@@ -18,6 +18,10 @@
 #include "FHE.h"
 #include "timing.h"
 
+// A hack for recording required automorphisms (see NumbTh.h)
+std::set<long>* FHEglobals::automorphVals = NULL;
+std::set<long>* FHEglobals::automorphVals2 = NULL;
+
 // Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
@@ -920,16 +924,30 @@ void Ctxt::smartAutomorph(long k)
   // Sanity check: verify that k \in Zm*
   assert (context.zMStar.inZmStar(k));
 
+  // A hack: record this automorphism rather than actually performing it
+  if (isSetAutomorphVals()) { // defined in NumbTh.h
+    recordAutomorphVal(k);
+    return;
+  }
+
   long keyID=getKeyID();
   if (!inCanonicalForm(keyID)) {     // Re-linearize the input, if needed
     reLinearize(keyID);
     assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
   }
-  assert (pubKey.isReachable(k,keyID)); // reachable from 1
-
+  if (!pubKey.isReachable(k,keyID)) {// must have key-switching matrices for it
+    throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
+			   + ", keyID="+std::to_string(keyID));
+  }
   while (k != 1) {
     const KeySwitch& matrix = pubKey.getNextKSWmatrix(k,keyID);
     long amt = matrix.fromKey.getPowerOfX();
+
+    // A hack: record this automorphism rather than actually performing it
+    if (isSetAutomorphVals2()) { // defined in NumbTh.h
+      recordAutomorphVal2(amt);
+      return;
+    }
 
     automorph(amt);
     reLinearize(keyID);
@@ -1010,13 +1028,11 @@ void Ctxt::reduce() const
 
 istream& operator>>(istream& str, SKHandle& handle)
 {
-  //  cerr << "SKHandle[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> handle.powerOfS;
   str >> handle.powerOfX;
   str >> handle.secretKeyID;
   seekPastChar(str,']');
-  //  cerr << "]";  
   return str;
 }
 
@@ -1028,12 +1044,10 @@ ostream& operator<<(ostream& str, const CtxtPart& p)
 
 istream& operator>>(istream& str, CtxtPart& p)
 {
-  //  cerr << "CtxtPart[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> (DoubleCRT&) p;
   str >> p.skHandle;
   seekPastChar(str,']');
-  //  cerr << "]";
   return str;
 }
 
@@ -1048,7 +1062,6 @@ ostream& operator<<(ostream& str, const Ctxt& ctxt)
 
 istream& operator>>(istream& str, Ctxt& ctxt)
 {
-  //  cerr << "Ctxt[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseVar >> ctxt.primeSet;
   long nParts;
@@ -1059,7 +1072,6 @@ istream& operator>>(istream& str, Ctxt& ctxt)
     assert (ctxt.parts[i].getIndexSet()==ctxt.primeSet); // sanity-check
   }
   seekPastChar(str,']');
-  //  cerr << "]";
   return str;
 }
 
