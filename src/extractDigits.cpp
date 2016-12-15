@@ -91,6 +91,7 @@ static void buildDigitPolynomial(ZZX& result, long p, long e)
     long z = bottom+j;
     x[j] = z;
     y[j] = z-PowerMod((z < 0 ? z + p2e : z), p, p2e);  // x - x^p (mod p^e)
+
     while (y[j] > p2e/2)         y[j] -= p2e;
     while (y[j] < -(p2e/2))      y[j] += p2e;
   }
