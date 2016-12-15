@@ -90,9 +90,9 @@ static void buildDigitPolynomial(ZZX& result, long p, long e)
   for (long j=0; j<p; j++) {
     long z = bottom+j;
     x[j] = z;
-    y[j] = z-PowerMod(z,p,p2e);  // x - x^p (mod p^e)
-    if (y[j] > p2e/2)         y[j] -= p2e;
-    else if (y[j] < -(p2e/2)) y[j] += p2e;
+    y[j] = z-PowerMod((z < 0 ? z + p2e : z), p, p2e);  // x - x^p (mod p^e)
+    while (y[j] > p2e/2)         y[j] -= p2e;
+    while (y[j] < -(p2e/2))      y[j] += p2e;
   }
   interpolateMod(result, x, y, p, e);
   assert(deg(result)<p); // interpolating p points, should get deg<=p-1
