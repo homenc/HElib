@@ -36,7 +36,11 @@ private:
 public:
    CubeSignature(): ndims(0) {} // a NULL signature
 
-   CubeSignature(const Vec<long>& _dims): ndims(0) { initSignature(_dims); }
+   CubeSignature(const long _dims[], long _ndims): ndims(0)
+   { initSignature(_dims, _ndims); }
+   CubeSignature(const NTL::Vec<long>& _dims): ndims(0) { initSignature(_dims); }
+   CubeSignature(const std::vector<long>& _dims[]): ndims(0)
+   { initSignature(&_dims[0], _ndims.size()); }
 
    //! Build a CubeSignature to reflect the hypercube structure of Zm* /(p)
    explicit CubeSignature(const PAlgebra& alg); // in PAlgebra.cpp
@@ -55,21 +59,25 @@ public:
    }
    **********************************************************/
 
-   void initSignature(const Vec<long>& _dims)
+   void initSignature(const long _dims[], long _ndims)
    {
      assert(ndims == 0); // can only initialize a NULL signature
-     dims = _dims;
-     ndims = dims.length();
-     assert(ndims > 0);
-      
-     prods.SetLength(ndims+1);
-     prods[ndims] = 1;
-     for (long i = ndims-1; i >= 0; i--) {
-       assert(dims[i] > 0);
-       prods[i] = dims[i]*prods[i+1];
+     assert(_ndims > 0);
+
+     ndims = _ndims;
+     dims.SetLength(_ndims);
+     prods.SetLength(_ndims+1);
+     prods[_ndims] = 1;
+     for (long i = _ndims-1; i >= 0; i--) {
+       assert(_dims[i] > 0);
+       dims[i] = _dims[i];
+       prods[i] = prods[i+1] * _dims[i];
      }
      size = prods[0];
    }
+
+   void initSignature(const Vec<long>& _dims)
+   { initSignature(_dims.elts(), _dims.length()); }
 
    //! total size of cube
    long getSize() const { return size; }
