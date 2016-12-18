@@ -36,29 +36,6 @@ private:
 public:
    CubeSignature(): ndims(0) {} // a NULL signature
 
-   CubeSignature(const long _dims[], long _ndims): ndims(0)
-   { initSignature(_dims, _ndims); }
-   CubeSignature(const NTL::Vec<long>& _dims): ndims(0) { initSignature(_dims); }
-   CubeSignature(const std::vector<long>& _dims[]): ndims(0)
-   { initSignature(&_dims[0], _ndims.size()); }
-
-   //! Build a CubeSignature to reflect the hypercube structure of Zm* /(p)
-   explicit CubeSignature(const PAlgebra& alg); // in PAlgebra.cpp
-
-   /* When we get C++11 support, we could #include <initializer_list>
-    * and then do e.g., CubeSignature s {1,2,3};
-   CubeSignature(std::initializer_list<long> _dims)
-   {
-      dims.SetLength(_dims.size());
-      long i;
-      std::initializer_list<long>::iterator it;
-      for (i=0, it=_dims.begin(); it!=_dims.end(); ++i, ++it)
-	dims[i] = *it;
-
-      [...] // continue as above, ndims = dims.length() etc.
-   }
-   **********************************************************/
-
    void initSignature(const long _dims[], long _ndims)
    {
      assert(ndims == 0); // can only initialize a NULL signature
@@ -78,6 +55,29 @@ public:
 
    void initSignature(const Vec<long>& _dims)
    { initSignature(_dims.elts(), _dims.length()); }
+
+   CubeSignature(const long _dims[], long _ndims): ndims(0)
+   { initSignature(_dims, _ndims); }
+   CubeSignature(const NTL::Vec<long>& _dims): ndims(0) { initSignature(_dims); }
+   CubeSignature(const std::vector<long>& _dims): ndims(0)
+   { initSignature(&(_dims[0]), _dims.size()); }
+
+   //! Build a CubeSignature to reflect the hypercube structure of Zm* /(p)
+   explicit CubeSignature(const PAlgebra& alg); // in PAlgebra.cpp
+
+   /* When we get C++11 support, we could #include <initializer_list>
+    * and then do e.g., CubeSignature s {1,2,3};
+   CubeSignature(std::initializer_list<long> _dims)
+   {
+      dims.SetLength(_dims.size());
+      long i;
+      std::initializer_list<long>::iterator it;
+      for (i=0, it=_dims.begin(); it!=_dims.end(); ++i, ++it)
+	dims[i] = *it;
+
+      [...] // continue as above, ndims = dims.length() etc.
+   }
+   **********************************************************/
 
    //! total size of cube
    long getSize() const { return size; }
