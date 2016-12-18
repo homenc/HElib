@@ -80,19 +80,9 @@ bool PAlgebra::nextExpVector(vector<unsigned long>& buffer) const
       for (unsigned long j=i+1; j<buffer.size(); j++) buffer[j] = 0;
       return true;  // succeeded in incrementing the vector
     }
-    // if buffer[i] >= OrderOf(i)-1, mover to previous index i
+    // if buffer[i] >= OrderOf(i)-1, move to previous index i
   }
   return false;     // cannot increment the vector anymore
-}
-
-long PAlgebra::coordinate(long i, long k) const
-{
-  if (isDryRun()) return 0;
-  long t = ith_rep(k); // element of Zm^* representing the k'th slot
-
-  // dLog returns the representation of t along the generators, so the
-  // i'th entry there is the coordinate relative to i'th geneator
-  return dLog(t)[i];
 }
 
 long PAlgebra::addCoord(long i, long k, long offset) const
@@ -300,8 +290,6 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
   EDF(localFactors, phimxmod, zMStar.getOrdP()); // equal-degree factorization
 
-  
-
   RX* first = &localFactors[0];
   RX* last = first + localFactors.length();
   RX* smallest = min_element(first, last);
@@ -312,10 +300,11 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
   RXModulus F1(localFactors[0]); 
   for (long i=1; i<nSlots; i++) {
-    unsigned long t =zMStar.ith_rep(i); // Ft is minimal polynomial of x^{1/t} mod F1
+    unsigned long t =zMStar.ith_rep(i); // Ft is minimal poly of x^{1/t} mod F1
     unsigned long tInv = InvMod(t, m);  // tInv = t^{-1} mod m
     RX X2tInv = PowerXMod(tInv,F1);     // X2tInv = X^{1/t} mod F1
-    IrredPolyMod(localFactors[i], X2tInv, F1);
+    NTL::IrredPolyMod(localFactors[i], X2tInv, F1);
+          // IrredPolyMod(X,P,Q) returns in X the minimal polynomial of P mod Q
   }
   /* Debugging sanity-check #1: we should have Ft= GCD(F1(X^t),Phi_m(X))
   for (i=1; i<nSlots; i++) {

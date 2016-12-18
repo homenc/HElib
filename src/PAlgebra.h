@@ -1,4 +1,3 @@
-
 /* Copyright (C) 2012,2013 IBM Corp.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,7 +46,7 @@
  * is a primitive m-th root of unity in R), we get that F_t is the minimal
  * polynomial of z^{1/t}.
  */
-
+#include <utility>
 #include "NumbTh.h"
 #include "cloned_ptr.h"
 
@@ -81,12 +80,12 @@ class PAlgebra {
   vector<long> zmsIdx; // if t is the i'th element in (Z/mZ)* then zmsIdx[t]=i
                        // zmsIdx[t]==-1 if t notin (Z/mZ)*
 
-  vector<long> dLogT; 
+  vector<long> dLogT;
   // holds the discrete-logarithms for elements in T: If (z/mZ)^*/(p)
-  // has n generators then dLogT is an array of n*nSlots interest, where
-  // the entries [in, in+1,...,(i+1)n-1] hold the discrete-logarithms for
-  // the i'th element of (z/mZ)^*/(p). 
-  // Namely, for i<nSlots we have dLogT[in,...,(i+1)n-1] = [e1,...,en]
+  // has n generators then dLogT is an array of n*nSlots integers, where
+  // the entries [i*n, i*n+1,...,(i+1)n-1] hold the discrete-logarithms
+  // for the i'th element of (z/mZ)^*/(p). 
+  // Namely, for i<nSlots we have dLogT[i*n,...,(i+1)n-1] = [e1,...,en]
   // s.t. T[i] = prod_{i=1}^n gi^{ei} mod m (with n=gens.size())
 
   //  vector<long> mFactors; // The prime-power factorization of m
@@ -148,6 +147,10 @@ class PAlgebra {
   unsigned long OrderOf(unsigned long i) const
   {  return (i<ords.size())? abs(ords[i]) : 0; }
 
+  //! The product prod_{j=i}^{n-1} OrderOf(i)
+  unsigned long ProdOrdsFrom(unsigned long i) const
+  {  return (i<prods.size())? prods[i] : 0; }
+
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
   bool SameOrd(unsigned long i) const
   {  return (i<ords.size())? (ords[i]>0) : false; }
@@ -174,24 +177,64 @@ class PAlgebra {
   bool inZmStar(unsigned long t) const
   {  return (t>0 && t<m && zmsIdx[t]>-1); }
 
-  //! @brief Returns ith coordinate of index k along the i'th dimension.
-  //! See Section 2.4 in the design document.
-  long coordinate(long i, long k) const;
- 
-  //! @brief adds offset to index k in the i'th dimension
-  long addCoord(long i, long k, long offset) const;
-
   //! @brief Returns prod_i gi^{exps[i]} mod m. If onlySameOrd=true,
   //! use only generators that have the same order as in (Z/mZ)^*.
   unsigned long exponentiate(const vector<unsigned long>& exps, 
 			      bool onlySameOrd=false) const;
 
   //! Inverse of exponentiate
-  const long* dLog(unsigned long t) const {
+  const long* const dLog(unsigned long t) const {
     long i = indexOfRep(t);
     if (i<0) return NULL;
     return &(dLogT[i*gens.size()]); // bug: this should be an iterator
   }
+
+  //! @brief Returns the coordinates of index k along all dimensions.
+  //! See Section 2.4 in the design document.  
+  const long* const coordinates(long k) const {
+    if (isDryRun()) return &(dLogT[0]);
+    return dLog( ith_rep(k) );
+  }
+ 
+  //! @brief Returns coordinate of index k along the i'th dimension.
+  long coordinate(long i, long k) const
+  { return coordinates(k)[i]; }
+
+  //! Break an index into the hypercube to index of the dimension-dim
+  //! subcube and index inside that subcube.
+  std::pair<long,long> breakIndexByDim(long idx, long dim) const {
+    const long* const coords = coordinates(idx);
+    std::pair<long,long> ans(0,coords[dim]);
+    // ans.second is the coordinate in dimension dim, next we compute
+    // ans.first as the index of the hypercube
+    for (long i=0; i<numOfGens(); i++) {
+      if (i==dim) continue;
+      ans.first = ans.first * abs(ords[i]) + coords[i];
+    }
+    return ans;
+  }
+
+  //! The inverse of breakIndexByDim
+  long assembleIndexByDim(std::pair<long,long> idx, long dim) const {
+    // assert(dim>=0 && dim < numOfGens());
+    // assert(idx.first>=0 && idx.first < nSlots/ords[dim]);
+    // assert(idx.second>=0 && idx.second < ords[dim]);
+
+    std::vector<unsigned long> coords(numOfGens());
+    for (long i=numOfGens()-1; i>=0; i--) {
+      if (i==dim)
+	coords[i] = idx.second;
+      else {
+	coords[i] = idx.first % abs(ords[i]);
+	idx.first = (idx.first - coords[i]) / abs(ords[i]);
+      }
+    }
+    long t = exponentiate(coords);
+    return indexOfRep(t);
+  }
+
+  //! @brief adds offset to index k in the i'th dimension
+  long addCoord(long i, long k, long offset) const;
 
   /* Miscellaneous */
 
