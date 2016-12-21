@@ -48,7 +48,7 @@ public:
   void resize(long sz) { polys.resize(sz); }
   void clear() { polys.clear(); }
 
-  bool isZero(int i)  {
+  bool isZero(int i) {
     if (polys.at(i).tag == tagZZX) {
       if ( NTL::IsZero(*(polys[i].zzx)) ) {
 	polys[i].tag = tagZero;
@@ -100,11 +100,21 @@ public:
   }
 };
 
-bool allConstsAvailable(const CachedConstants& cache, long idx, long blockSize)
+inline bool
+allConstsAvailable(const CachedConstants& cache, long idx, long blockSize)
 {
   long offset = idx*blockSize;
   for (long i=0; i<blockSize; i++)
     if (cache.isEmpty(i+offset)) return false;
+  return true;
+}
+
+inline bool
+allConstsZero(CachedConstants& cache, long idx, long blockSize)
+{
+  long offset = idx*blockSize;
+  for (long i=0; i<blockSize; i++)
+    if (!cache.isZero(i+offset)) return false;
   return true;
 }
 
