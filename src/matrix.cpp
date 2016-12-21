@@ -54,7 +54,10 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   return false;
 }
 
+<<<<<<< aa3a6be799ce8b60a1aa2c45b80d89b8f43fba74
 <<<<<<< 0e14759c902bb9ec5ec802f9962a1e9b8db6b477
+=======
+>>>>>>> .
 inline bool
 getDataFromCache(CachedConstants& cache, long i,
 		 CachedConstants::CacheTag tag, const FHEcontext& context,
@@ -75,9 +78,12 @@ getDataFromCache(CachedConstants& cache, long i,
 
   return true;
 }
+<<<<<<< aa3a6be799ce8b60a1aa2c45b80d89b8f43fba74
 =======
 
 
+>>>>>>> .
+=======
 >>>>>>> .
 
 template<class type>
