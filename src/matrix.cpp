@@ -54,6 +54,7 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   return false;
 }
 
+<<<<<<< 85b407b953471dc4cd9b64f291b7ad97ff3fdc7d
 <<<<<<< 17aed8d2618f49d37a469ad62ae35ed9d11fb14a
 <<<<<<< bc3d68831aa4565f106348096e2991e5773b8112
 <<<<<<< aa3a6be799ce8b60a1aa2c45b80d89b8f43fba74
@@ -62,6 +63,8 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
 >>>>>>> .
 =======
 
+>>>>>>> .
+=======
 >>>>>>> .
 inline bool
 getDataFromCache(CachedConstants& cache, long i,
@@ -86,6 +89,7 @@ getDataFromCache(CachedConstants& cache, long i,
 
   return true;
 }
+<<<<<<< 85b407b953471dc4cd9b64f291b7ad97ff3fdc7d
 <<<<<<< aa3a6be799ce8b60a1aa2c45b80d89b8f43fba74
 =======
 
@@ -96,6 +100,8 @@ getDataFromCache(CachedConstants& cache, long i,
 =======
 
 
+>>>>>>> .
+=======
 >>>>>>> .
 
 template<class type>
