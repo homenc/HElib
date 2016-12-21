@@ -54,6 +54,27 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   return false;
 }
 
+inline bool
+getDataFromCache(CachedConstants& cache, long i,
+		 CachedConstants::CacheTag tag, const FHEcontext& context,
+		 NTL::ZZX*& zzxPtr, DoubleCRT*& dcrtPtr)
+{
+  if (cache.isZero(i)) return false; // zero constant
+
+  if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
+  else if (cache.isZZX(i)) {
+    zzxPtr = cache.getZZX(i);
+    if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
+      dcrtPtr = new DoubleCRT(*zzxPtr, context);
+      cache.setAt(i,dcrtPtr);
+      zzxPtr = NULL;
+    }
+  }
+  else throw std::logic_error("cached constant is NULL");
+
+  return true;
+}
+
 template<class type>
 class mat_mul_impl {
 public:
@@ -1909,73 +1930,79 @@ public:
     tmp = ctxt;
     long lastShift = 0;
     for (long e = 0; e < D; e++) { // process diagonal e
+      bool zDiag = true;
       long procDiag = false; // did we call processDiagonal
 
       // For each diagonal e, we update the d accumulators y_0,..,y_{d-1}
       // with y_f += \sigma^{-f}(\lambda_{e,f}) * \rho^e(x)
 
+      std::vector<bool> zero(d, false);
+      std::vector<NTL::ZZX> zpoly(d, NTL::ZZX::zero());
+      std::vector<NTL::ZZX*> zzxPtr(d,NULL);
+      std::vector<DoubleCRT*> dcrtPtr(d,NULL);
+
       for (long f=0; f<d; f++) {
 	long i = e*d + f; // index into cache
-	bool zero = false;
-	ZZX* zzxPtr = NULL;
-	DoubleCRT *dcrtPtr = NULL;
 
-	// If cached constant is available, use it
-	if (cacheAvailable && !cache.isEmpty(i)) {
-	  if (cache.isZero(i)) zero = true; // zero constant
-	  else if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
-	  else if (cache.isZZX(i)) {
-	    zzxPtr = cache.getZZX(i);
-	    if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
-	      dcrtPtr = new DoubleCRT(*zzxPtr, ctxt.getContext());
-	      cache.setAt(i,dcrtPtr);
-	      zzxPtr = NULL;
-	    }
-	  }
-	  else throw std::logic_error("cached constant is NULL");
+	// See if data is available in cache
+        if (cacheAvailable && !cache.isEmpty(i)) {
+	  zero[f] = getDataFromCache(cache,i,tag,ctxt.getContext(),
+				     zzxPtr[f],dcrtPtr[f]);
+	  if (!zero[f]) zDiag = false;
 	}
 	else { // no cache, need to compute this constant
 	  if (!procDiag) { // diag is not set yet
-            if (processDiagonal(diag, dim, e, mats1)) { // zero diagonal
-	      if (tag != CachedConstants::tagEmpty) {  // update cache
-		for (long ii=e*d; ii<(e+1)*d; ii++)
-		  cache.setZero(ii);
-	      }
-	      break; // done with this diagonal
-	    }
+	    zDiag = processDiagonal(diag, dim, e, mats1);
 	    procDiag = true; // mark diag as set
+            if (zDiag && tag != CachedConstants::tagEmpty)  // update cache
+		for (long ii=e*d; ii<(e+1)*d; ii++) cache.setZero(ii);
 	  }
-
-	  // now each diag[j] (j=0..nslots-1) contains d lin poly coeffs
 
 	  // extract f'th "column" from diag and encode it in zpoly
-	  ZZX zpoly;
-	  if (!(zero = shiftedColumInDiag(zpoly, f, diag, ea, zMStar))) {
-	    if (tag == CachedConstants::tagDCRT) // allocate a new DoubleCRT
-	      dcrtPtr = new DoubleCRT(zpoly, ctxt.getContext());
-	    else if (tag != CachedConstants::tagEmpty) // allocate a new ZZX
-	      zzxPtr = new NTL::ZZX(zpoly);
-	    else                                   // just use temporary ZZX
-	      zzxPtr = &zpoly;
+	  if (!zDiag) {
+	    zero[f] = shiftedColumInDiag(zpoly[f], f, diag, ea, zMStar);
+	    if (!zero[f]) {
+	      if (tag == CachedConstants::tagDCRT) // allocate a new DoubleCRT
+		dcrtPtr[f] = new DoubleCRT(zpoly[f], ctxt.getContext());
+	      else if (tag != CachedConstants::tagEmpty) // allocate a new ZZX
+		zzxPtr[f] = new NTL::ZZX(zpoly[f]);
+	      else                                   // just use temporary ZZX
+		zzxPtr[f] = &(zpoly[f]);
+	    }
+
+	    // update the cache if needed
+	    if (tag != CachedConstants::tagEmpty) {
+	      if (zero[f])                 cache.setZero(i);
+	      else if (dcrtPtr[f] != NULL) cache.setAt(i,dcrtPtr[f]);
+	      else if (tag == CachedConstants::tagZZX && zzxPtr[f] != NULL)
+		cache.setAt(i,zzxPtr[f]);
+	    }
 	  }
 	} // end of "else" case (no cache)
+      }
+      // done preparing all the zero, zzxPtr, dcrtPtr variables
 
-	// Depending on zero, zzxPtr, dcrtPtr, update the accumulated sum
-	if (!zero) {
-	  if (i > 0) { // rotate the ciphertext
-	    if (ea.nativeDimension(dim)) // rotate the previous version
-	      ea.rotate1D(tmp, dim, i-lastShift);
-	    else {                       // rotate the original ciphertext
-	      tmp = ctxt;
-	      ea.rotate1D(tmp, dim, i);
-	    }
-	    lastShift = i;
-	  } // if (i>0)
+      if (zDiag) break; // nothing to do for this diagonal
 
-	  if (dcrtPtr != NULL)
-	    tmp.multByConstant(*dcrtPtr);
-	  else if (zzxPtr != NULL)
-	    tmp.multByConstant(*zzxPtr);
+      // Rotate the ciphertext to position corresponding to diagonal e.
+      // The code below uses only rotate-by-one operations if this is
+      // a good dimenssion and the matrix is dense, hence it may require
+      // fewer key-switching matrices
+
+      if (e > 0) { // rotate the ciphertext
+	if (ea.nativeDimension(dim)) // rotate the previous version
+	  ea.rotate1D(tmp, dim, e-lastShift);
+	else {                       // rotate the original ciphertext
+	  tmp = ctxt;
+	  ea.rotate1D(tmp, dim, e);
+	}
+	lastShift = e;
+      } // if (e>0)
+
+      // Depending on zero, zzxPtr, dcrtPtr, update the accumulated sums
+      for (long f=0; f<d; f++) if (!zero[f]) {
+	  if (dcrtPtr[f] != NULL) tmp.multByConstant(*(dcrtPtr[f]));
+	  else                    tmp.multByConstant(*(zzxPtr[f]));
 	  acc[f] += tmp;
 	}
 	// The implementation above incurs an extra mult-by-constant due
@@ -1985,16 +2012,7 @@ public:
 	// than one, namely const*mask and const*(1-mask).
 	// We should implement that optimization at some point.
 
-	// update the cache if needed
-	if (tag != CachedConstants::tagEmpty
-	                          && (!cacheAvailable || cache.isEmpty(i))) {
-	  if (zero)                 cache.setZero(i);
-	  else if (dcrtPtr != NULL) cache.setAt(i,dcrtPtr);
-	  else if (tag == CachedConstants::tagZZX && zzxPtr != NULL)
-	    cache.setAt(i,zzxPtr);
-	}
-      }// end of this diagonal entry
-    }// end of this diagonal
+    } // end of this diagonal
 
     Ctxt res(ZeroCtxtLike, ctxt);
 
