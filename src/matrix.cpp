@@ -15,43 +15,45 @@
  */
 /* matrix.cpp - Data-movement operations on arrays of slots
  */
-
-#include "matrix.h"
 #include <algorithm>
-
 #include <NTL/BasicThreadPool.h>
+#include "matrix.h"
 
-// Copied from EncryptedArray.cpp -- it shoudn't be there.
-
-// plaintextAutomorph: an auxilliary routine...maybe palce in NumbTh?
-// Compute b(X) = a(X^k) mod Phi_m(X). Result is calclated in the output b
-// "in place", so a should not alias b.
-template <class RX, class RXModulus> static
-void plaintextAutomorph(RX& b, const RX& a, long k, const PAlgebra& zMStar, 
-  const RXModulus& PhimX)
+// Extract one "column" from a matrix that was built with buildLinPolyCoeffs
+template<class RX, class EAtype>
+bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
+			const std::vector< std::vector<RX> >& diag,
+			const EAtype& ea, const PAlgebra& zMStar)
 {
-  long m  = zMStar.getM();
+  // extract f "column" and store it in cvev
+  bool zero = true;
+  long nslots = ea.size();
+  vector<RX> cvec(nslots);
+  for (long j = 0; j < nslots; j++) {
+    cvec[j] = diag[j][f];
+    if (!NTL::IsZero(cvec[j])) zero = false;
+  }
+  if (zero) { // all are zeros
+    clear(zpoly);
+    return true;
+  }
+  ea.encode(zpoly, cvec);
 
-  assert(zMStar.inZmStar(k));
+  if (f>0) {
+    long p = zMStar.getP();
+    long m = zMStar.getM();
+    long d = zMStar.getOrdP();
+    long exp = PowerMod(p, d-f, m); // apply inverse automorphism
+    const auto& F = ea.getTab().getPhimXMod();
+    RX rpoly1, rpoly2;
 
-  b.SetLength(m);
-  for (long j = 0; j < m; j++) b[j] = 0;
-
-  long d = deg(a);
-
-  // compute b(X) = a(X^k) mod (X^m-1)
-  mulmod_precon_t precon = PrepMulModPrecon(k, m);
-  for (long j = 0; j <= d; j++) 
-    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
-  b.normalize();
-
-  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
+    conv(rpoly1, zpoly);
+    plaintextAutomorph(rpoly2,rpoly1, exp, m, F);
+    conv(zpoly, rpoly2);
+  }
+  return false;
 }
 
-
-
-// This code has a complexity of N+d (instead of N*d) where N is the number of
-// nonzero diagonal blocks. However, it requires space for d extra ciphertexts
 template<class type>
 class mat_mul_impl {
 public:
@@ -124,6 +126,8 @@ public:
   }
 
 
+// This code has a complexity of N+d (instead of N*d) where N is the number of
+// nonzero diagonal blocks. However, it requires space for d extra ciphertexts
   static void apply(const EncryptedArrayDerived<type>& ea, Ctxt& ctxt, 
     const PlaintextBlockMatrixBaseInterface& mat) 
   {
@@ -223,7 +227,7 @@ public:
         conv(cpoly1, cpoly);
 
         // apply inverse automorphism to constant
-        plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar, F);
+        plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar.getM(), F);
         conv(cpoly, cpoly2);
         Ctxt shCtxt1 = shCtxt;
         shCtxt1.multByConstant(cpoly);
@@ -393,12 +397,14 @@ void mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt,
 }
 
 
-
+// A class that implements the basic caching functionality for (sparse)
+// matrix-vector products
 template<class type>
 class compMat_impl{
 public:
   PA_INJECT(type)
 
+  // This "apply" function only computes the cached matrix cmat
   static void apply(const EncryptedArrayDerived<type>& ea, 
     CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) 
   {
@@ -455,6 +461,7 @@ public:
   }
 
 
+  // This "apply" function only computes the cached block matrix cmat
   static void apply(const EncryptedArrayDerived<type>& ea, 
     CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat) 
   {
@@ -540,16 +547,12 @@ public:
         conv(cpoly1, cpoly);
 
         // apply inverse automorphism to constant
-        plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar, F);
+        plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar.getM(), F);
         conv(cpoly, cpoly2);
         cmat[i][k] = ZZXptr(new ZZX(cpoly));
       }
     }
   }
-
-
-
-
 };
 
 
@@ -625,12 +628,10 @@ void compMat(const EncryptedArray& ea, CachedDCRTPtxtBlockMatrix& cmat,
 
 
 
-
-
 template<class type, class RX>
 static bool processDiagonal(vector<RX>& diag, long dim, long i,
   vector<RX>& tmpDiag, const PlaintextMatrixInterface<type>& mat,
-  const PAlgebra& zMStar, long d, bool special)
+  const PAlgebra& zMStar, long extDeg, bool special)
 {
   long D = tmpDiag.size();
   long nslots = diag.size();
@@ -641,7 +642,7 @@ static bool processDiagonal(vector<RX>& diag, long dim, long i,
   // Process the entries in this diagonal one at a time
   for (long j = 0; j < D; j++) { // process entry j
     bool zEntry = mat.get(entry, mcMod(j-i, D), j); // entry [i,j-i mod D]
-    assert(zEntry || deg(entry) < d);
+    assert(zEntry || deg(entry) < extDeg);
     // get(...) returns true if the entry is empty, false otherwise
 
     if (!zEntry && IsZero(entry)) zEntry = true; // zero is an empty entry too
@@ -669,9 +670,7 @@ static bool processDiagonal(vector<RX>& diag, long dim, long i,
   return false; // a nonzero diagonal
 }
 
-
-
-
+// A class that implements the basic (sparse) 1D matrix-vector functions
 template<class type>
 class mat_mul1D_impl{
 public:
@@ -721,8 +720,6 @@ public:
 
     ctxt = res;
   }
-
-
 
 
   static void apply(const EncryptedArrayDerived<type>& ea, Ctxt& ctxt,
@@ -839,8 +836,8 @@ public:
         shCtxt[1].smartAutomorph(ival); 
         shCtxt[1].cleanUp();
 
-        plaintextAutomorph(shMask[0], 1 - mask, val, zMStar, F);
-        plaintextAutomorph(shMask[1], mask, ival, zMStar, F);
+        plaintextAutomorph(shMask[0], 1 - mask, val, zMStar.getM(), F);
+        plaintextAutomorph(shMask[1], mask, ival, zMStar.getM(), F);
       }
       
       RX cpoly1, cpoly2, cpoly3;
@@ -864,7 +861,7 @@ public:
         conv(cpoly1, cpoly);
 
         // apply inverse automorphism to constant
-        plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar, F);
+        plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar.getM(), F);
 
         for (long j = 0; j < LONG(shCtxt.size()); j++) {
           MulMod(cpoly3, cpoly2, shMask[j], F);
@@ -885,9 +882,6 @@ public:
 
     ctxt = res;
   }
-
-
-
 };
 
 
@@ -910,14 +904,14 @@ void mat_mul1D(const EncryptedArray& ea, Ctxt& ctxt,
 
 
 
-
-
-
+// A class that implements the basic caching functionality for (sparse)
+// 1D matrix-vector products
 template<class type>
 class compMat1D_impl{
 public:
   PA_INJECT(type)
 
+  // This "apply" function only computes the cached 1D matrix cmat
   static void apply(const EncryptedArrayDerived<type>& ea, 
     CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat, long dim) 
   {
@@ -957,6 +951,7 @@ public:
 
 
 
+  // This "apply" function only computes the cached block matrix cmat
   static void apply(const EncryptedArrayDerived<type>& ea, 
     CachedPtxtBlockMatrix& cmat, const PlaintextBlockMatrixBaseInterface& mat, 
     long dim) 
@@ -1057,8 +1052,8 @@ public:
         long ival = PowerMod(zMStar.ZmStarGen(dim), i-D, m);
         const RX& mask = ea.getTab().getMaskTable()[dim][D-i];
 
-        plaintextAutomorph(shMask[0], 1 - mask, val, zMStar, F);
-        plaintextAutomorph(shMask[1], mask, ival, zMStar, F);
+        plaintextAutomorph(shMask[0], 1 - mask, val, zMStar.getM(), F);
+        plaintextAutomorph(shMask[1], mask, ival, zMStar.getM(), F);
       }
       
       RX cpoly1, cpoly2, cpoly3;
@@ -1082,7 +1077,7 @@ public:
         conv(cpoly1, cpoly);
 
         // apply inverse automorphism to constant
-        plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar, F);
+        plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar.getM(), F);
 
         for (long j = 0; j < LONG(shMask.size()); j++) {
           MulMod(cpoly3, cpoly2, shMask[j], F);
@@ -1092,9 +1087,6 @@ public:
       }
     }
   }
-
-
-
 };
 
 
@@ -1585,3 +1577,451 @@ void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa,
 
 
 
+/*********************************************************************/
+/* mat_multi1D: Similar to mat_mul1D but different blocks have
+ * different transformations. This implementation uses one set of
+ * procedures to handle all of the caching options (none/ZZX/DCRT),
+ * at some point we should migrate all the stuff above to the same
+ * format.
+ */
+
+
+// Process a single diagonal with index idx along dimenssion dim,
+// making calls to the get(i,j,k) method and storing the result in the
+// diag vector. If all the calls to get(i,j,k) return empty entries
+// then return true and do not touch the diag vector (in that case we
+// may need to keep in it the last non-zero diagonal)
+template<class type, class RX> static bool
+processDiagonal(vector<RX>& diag, long dim, long idx,
+                PlaintextMultiMatrixInterface<type>& mats,
+                const PAlgebra& zMStar, long extDeg, bool special)
+{
+  long nSlots = diag.size();
+  long nParts = mats.size();
+  long d = special? 1 : zMStar.OrderOf(dim); // size of dimenssion dim
+
+  bool zDiag = true; // is this a zero diagonal?
+  long nzLast = -1;  // index of last non-zero entry
+  RX entry;
+
+  // Process the entries in this diagonal one at a time
+  long blockIdx, innerIdx;
+  for (long j=0; j<nSlots; j++) {
+    if (special) {
+      blockIdx=j; innerIdx = 0;
+    } else {
+      std::pair<long,long> idxes = zMStar.breakIndexByDim(j, dim);
+      blockIdx = idxes.first;  // index into mats,
+      innerIdx = idxes.second; // index along diemnssion dim
+    }
+    // process entry j
+    bool zEntry = mats.get(entry, mcMod(innerIdx-idx, d), innerIdx, blockIdx);
+    // entry [i,j-i mod d] in the block corresponding to blockIdx
+    // get(...) returns true if the entry is empty, false otherwise
+
+    // If non-zero, make sure the degree is not too large
+    assert(zEntry || deg(entry) < extDeg);
+
+    if (!zEntry && IsZero(entry)) zEntry = true; // zero is an empty entry too
+
+    if (!zEntry) {   // not a zero entry
+      zDiag = false; // mark diagonal as non-empty
+
+      // clear entries between last nonzero entry and this one
+      for (long jj = nzLast+1; jj < j; jj++) clear(diag[jj]);
+      nzLast = j;
+      diag[j] = entry;
+    }
+  }    
+  if (zDiag) return true; // zero diagonal, nothing to do
+
+  // clear trailing zero entries
+  for (long jj = nzLast+1; jj < nSlots; jj++) clear(diag[jj]);
+
+  return false; // a nonzero diagonal
+}
+
+
+
+// A class that implements the basic caching functionality for (sparse)
+// 1D matrix-vector products
+template<class type>
+class mat_multi1D_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type> &ea,Ctxt &ctxt,long dim,
+                    const PlaintextMatrixBaseInterface& mats,
+		      CachedConstants::CacheTag tag)
+  {
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+
+    assert(&ea == &(mats.getEA().getDerived(type())));
+    assert(dim >= 0 && dim <= LONG(zMStar.numOfGens()));
+
+    // special case for the extra dimension
+    bool special = (dim == LONG(zMStar.numOfGens()));
+    long D = special ? 1 : ea.sizeOfDimension(dim); // order of current dim
+    long d = ea.getDegree();
+
+    RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
+
+    // Get the derived type (DIRT: need to get rid of const modifier)
+    PlaintextMultiMatrixInterface<type>& mats1 =
+      (PlaintextMultiMatrixInterface<type>&)
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mats );
+
+    CachedConstants& cache = mats1.getCache();
+    std::vector<RX> diag(ea.size()); // scratch space
+    ZZX cpoly;
+
+    // It is assumed that a cache of the right size is ready to use
+    bool cacheAvailable = (cache.size() == D);
+    if (!cacheAvailable) {
+      cache.clear(); // ensure that there is no stale cache
+      if (tag == CachedConstants::tagZZX || tag == CachedConstants::tagDCRT)
+	cache.resize(D);
+    }
+
+    // Process the diagonals one at a time. The code below will use only
+    // rotate-by-one operations if this is a good dimenssion and the
+    // matrix is dense, hence it may require fewer key-switching matrices
+
+    Ctxt shCtxt = ctxt;                  // shifted ciphertext
+    long lastShift = 0;
+    Ctxt acc = Ctxt(ZeroCtxtLike, ctxt); // initialize to zero
+    for (long i = 0; i < D; i++) {       // process diagonal i
+      bool zero = false;
+      ZZX* zzxPtr = NULL;
+      DoubleCRT *dcrtPtr = NULL;
+
+      // If cached constant is available, use it
+      if (cacheAvailable && !cache.isEmpty(i)) {
+        if (cache.isZero(i)) zero = true; // all-zero diagonal
+        else if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
+        else if (cache.isZZX(i)) {
+	  zzxPtr = cache.getZZX(i);
+	  if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
+	    dcrtPtr = new DoubleCRT(*zzxPtr, ctxt.getContext());
+	    cache.setAt(i,dcrtPtr);
+	    zzxPtr = NULL;
+	  }
+	}
+	else throw std::logic_error("cached constant is NULL");
+      }
+      else { // no cached constant, need to compute it
+        zero = processDiagonal(diag, dim, i, mats1, zMStar, d, special);
+	if (!zero) {
+          ea.encode(cpoly, diag); // encode as ZZX
+	  if (tag == CachedConstants::tagDCRT)      // allocate a new DoubleCRT
+	    dcrtPtr = new DoubleCRT(cpoly, ctxt.getContext());
+	  else if (tag != CachedConstants::tagEmpty)// allocate a new ZZX
+	    zzxPtr = new NTL::ZZX(cpoly);
+	  else                                      // just use temporary ZZX
+	    zzxPtr = &cpoly;
+	}
+      }
+
+      // Depending on zero, zzxPtr, dcrtPtr, update the accumulated sum
+      if (!zero) {
+	if (i > 0) { // rotate the ciphertext
+	  if (ea.nativeDimension(dim)) // rotate the previous version
+	    ea.rotate1D(shCtxt, dim, i-lastShift);
+	  else {                       // rotate the original ciphertext
+	    shCtxt = ctxt;
+	    ea.rotate1D(shCtxt, dim, i);
+	  }
+	  lastShift = i;
+	}
+	if (dcrtPtr != NULL)
+	  shCtxt.multByConstant(*dcrtPtr);
+	else if (zzxPtr != NULL)
+	  shCtxt.multByConstant(*zzxPtr);
+	acc += shCtxt;
+      }
+      // The implementation above incurs an extra mult-by-constant due
+      // to the masks in rotate1D when applied in a "bad dimension".
+      // These masks can be folded into the constants here, but then
+      // we would need to store two constants for each (e,f) rather
+      // than one, namely const*mask and const*(1-mask).
+      // We should implement that optimization at some point.
+
+      // update the cache if needed
+      if (tag != CachedConstants::tagEmpty
+	                          && (!cacheAvailable || cache.isEmpty(i))) {
+	if (zero)                 cache.setZero(i);
+	else if (dcrtPtr != NULL) cache.setAt(i,dcrtPtr);
+	else if (tag == CachedConstants::tagZZX && zzxPtr != NULL)
+	  cache.setAt(i,zzxPtr);
+      }
+    }// end of this diagonal
+
+    ctxt = acc; // return the result in ctxt
+
+  }  // end of apply(...)
+};   // end of class mat_multi1D_impl
+
+
+template<class type>
+class mat_multi1D_block_impl {
+public:
+  PA_INJECT(type)
+
+  // Process a single block diagonal with index idx along dimenssion dim,
+  // making calls to the get(i,j,k) method and storing the result in the
+  // diag matrix (# of vectors = extenssion-degree). If all the calls to
+  // get(i,j,k) return empty entries then return true and do not touch
+  // the diag vector (in that case we may need to keep in it the last
+  // non-zero diagonal)
+  static bool
+  processDiagonal(std::vector< std::vector<RX> >& diag, long dim, long idx,
+		  PlaintextMultiBlockMatrixInterface<type>& mats)
+  {
+    const EncryptedArray& ea = mats.getEA();
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long extDeg = zMStar.getOrdP();
+
+    mat_R entry;
+    entry.SetDims(extDeg, extDeg);
+
+    std::vector<RX> entry1;
+    entry1.resize(extDeg);
+    
+    bool zDiag = true; // is this a zero diagonal?
+    long nzLast = -1;  // index of last non-zero entry
+    long D = (dim == ea.dimension())? 1 : ea.sizeOfDimension(dim);
+
+    // Get the slots in this diagonal one at a time
+    long blockIdx, rowIdx, colIdx;
+    for (long j = 0; j < ea.size(); j++) { // process entry j
+      if (dim == ea.dimension()) { // "special" last dimenssion of size 1
+	rowIdx = colIdx = 0; blockIdx=j;
+      } else {
+	std::pair<long,long> idxes = zMStar.breakIndexByDim(j, dim);
+	blockIdx = idxes.first;  // index into mats,
+	colIdx = idxes.second;   // index along diemnssion dim
+	rowIdx = mcMod(colIdx-idx,D);
+      }
+      // process entry j
+      bool zEntry = mats.get(entry,rowIdx,colIdx,blockIdx);
+      // entry [i,j-i mod D] in the block corresponding to blockIdx
+
+      assert(zEntry ||
+             (entry.NumRows() == extDeg && entry.NumCols() == extDeg));
+      // get(...) returns true if the entry is empty, false otherwise
+
+      if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
+
+      if (!zEntry) {    // non-empty entry
+	zDiag = false;  // mark diagonal as non-empty
+
+	// clear entries between last nonzero entry and this one
+	for (long jj = nzLast+1; jj < j; jj++) {
+	  for (long k = 0; k < extDeg; k++)
+	    clear(diag[jj][k]);
+	}
+	nzLast = j;
+
+	// recode entry as a vector of polynomials
+	for (long k = 0; k < extDeg; k++) conv(entry1[k], entry[k]);
+
+	// compute the lin poly coeffs
+	ea.getDerived(type()).buildLinPolyCoeffs(diag[j], entry1);
+      }
+    }    
+    if (zDiag) return true; // zero diagonal, nothing to do
+
+    // clear trailing zero entries
+    for (long jj = nzLast+1; jj < ea.size(); jj++)
+      for (long k = 0; k < extDeg; k++)
+	clear(diag[jj][k]);
+
+    return false; // a nonzero diagonal
+  }
+
+  /************************************************************
+   * The transformation encoded in mats can be described as
+   *
+   * \sum_{e=0}^{D-1}\sum_{f=0}^{d-1} \lambda_{e,f}*\sigma^f(\rho^e(x))
+   *
+   * and currently diag contains the d coefficients \lambda_{i,f}
+   * for f=0...d-1. But our optimization computes the d sums
+   *
+   *     y_f = \sum_{e=0}^{D-1} \sigma^{-f}(\lambda_{e,f})*\rho^e(x)
+   *
+   * and then gets the result as \sum_{f=0}^{d-1} \sigma_f(y_f).
+   *
+   * Hence we need to transform the constants \lambda_{e,f} in diag,
+   * into \lambda'_{e,f} = \sigma^{-f}(\lambda_{e,f}). To do that, we
+   * encode the \lambda_{i,f}'s in d polynomials q_0,...,q_{d-1} and
+   * apply the automorphisms \sigma^{-f}(q_f) to get an encoding of
+   * the \lambda'_{i,f}'s.
+   **/
+
+  static void apply(const EncryptedArrayDerived<type> &ea,Ctxt &ctxt,long dim,
+                    const PlaintextBlockMatrixBaseInterface& mats,
+		    CachedConstants::CacheTag tag)
+  {
+    assert(&ea == &mats.getEA().getDerived(type()));
+    assert(&ea.getContext() == &ctxt.getContext());
+    assert(dim >= 0 && dim <= ea.dimension());
+
+    RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
+
+    long nslots = ea.size();
+    long d = ea.getDegree();
+
+    // special case for the extra dimension
+    bool special = (dim == ea.dimension());
+    long D = special ? 1 : ea.sizeOfDimension(dim);
+    bool bad = !special && !ea.nativeDimension(dim);
+
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long p = zMStar.getP(); 
+    long m = zMStar.getM();
+
+    // Get the derived type (DIRT: need to get rid of const modifier)
+    PlaintextMultiBlockMatrixInterface<type>& mats1 =
+      (PlaintextMultiBlockMatrixInterface<type>&)
+      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mats );
+
+    // It is assumed that a cache of the right size is ready to use
+    CachedConstants& cache = mats1.getCache();
+    long cacheEntrySize = ea.nativeDimension(dim)? d : (2*d);
+    bool cacheAvailable = (cache.size() == D*cacheEntrySize);
+    if (!cacheAvailable) {
+      cache.clear(); // ensure that there is no stale cache
+      if (tag == CachedConstants::tagZZX || tag == CachedConstants::tagDCRT)
+	cache.resize(D*cacheEntrySize);
+    }
+
+    ctxt.cleanUp(); // not sure, but this may be a good idea
+    Ctxt tmp(ZeroCtxtLike, ctxt);
+    std::vector<Ctxt> acc(d, tmp);
+
+    // diag is a scratch space for calculations
+    std::vector< std::vector<RX> > diag;
+    diag.resize(nslots);
+    for (long j = 0; j < nslots; j++) diag[j].resize(d);
+
+    // Process the diagonals one at a time
+
+    tmp = ctxt;
+    long lastShift = 0;
+    for (long e = 0; e < D; e++) { // process diagonal e
+      long procDiag = false; // did we call processDiagonal
+
+      // For each diagonal e, we update the d accumulators y_0,..,y_{d-1}
+      // with y_f += \sigma^{-f}(\lambda_{e,f}) * \rho^e(x)
+
+      for (long f=0; f<d; f++) {
+	long i = e*d + f; // index into cache
+	bool zero = false;
+	ZZX* zzxPtr = NULL;
+	DoubleCRT *dcrtPtr = NULL;
+
+	// If cached constant is available, use it
+	if (cacheAvailable && !cache.isEmpty(i)) {
+	  if (cache.isZero(i)) zero = true; // zero constant
+	  else if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
+	  else if (cache.isZZX(i)) {
+	    zzxPtr = cache.getZZX(i);
+	    if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
+	      dcrtPtr = new DoubleCRT(*zzxPtr, ctxt.getContext());
+	      cache.setAt(i,dcrtPtr);
+	      zzxPtr = NULL;
+	    }
+	  }
+	  else throw std::logic_error("cached constant is NULL");
+	}
+	else { // no cache, need to compute this constant
+	  if (!procDiag) { // diag is not set yet
+            if (processDiagonal(diag, dim, e, mats1)) { // zero diagonal
+	      if (tag != CachedConstants::tagEmpty) {  // update cache
+		for (long ii=e*d; ii<(e+1)*d; ii++)
+		  cache.setZero(ii);
+	      }
+	      break; // done with this diagonal
+	    }
+	    procDiag = true; // mark diag as set
+	  }
+
+	  // now each diag[j] (j=0..nslots-1) contains d lin poly coeffs
+
+	  // extract f'th "column" from diag and encode it in zpoly
+	  ZZX zpoly;
+	  if (!(zero = shiftedColumInDiag(zpoly, f, diag, ea, zMStar))) {
+	    if (tag == CachedConstants::tagDCRT) // allocate a new DoubleCRT
+	      dcrtPtr = new DoubleCRT(zpoly, ctxt.getContext());
+	    else if (tag != CachedConstants::tagEmpty) // allocate a new ZZX
+	      zzxPtr = new NTL::ZZX(zpoly);
+	    else                                   // just use temporary ZZX
+	      zzxPtr = &zpoly;
+	  }
+	} // end of "else" case (no cache)
+
+	// Depending on zero, zzxPtr, dcrtPtr, update the accumulated sum
+	if (!zero) {
+	  if (i > 0) { // rotate the ciphertext
+	    if (ea.nativeDimension(dim)) // rotate the previous version
+	      ea.rotate1D(tmp, dim, i-lastShift);
+	    else {                       // rotate the original ciphertext
+	      tmp = ctxt;
+	      ea.rotate1D(tmp, dim, i);
+	    }
+	    lastShift = i;
+	  } // if (i>0)
+
+	  if (dcrtPtr != NULL)
+	    tmp.multByConstant(*dcrtPtr);
+	  else if (zzxPtr != NULL)
+	    tmp.multByConstant(*zzxPtr);
+	  acc[f] += tmp;
+	}
+	// The implementation above incurs an extra mult-by-constant due
+	// to the masks in rotate1D when applied in a "bad dimension".
+	// These masks can be folded into the constants here, but then
+	// we would need to store two constants for each (e,f) rather
+	// than one, namely const*mask and const*(1-mask).
+	// We should implement that optimization at some point.
+
+	// update the cache if needed
+	if (tag != CachedConstants::tagEmpty
+	                          && (!cacheAvailable || cache.isEmpty(i))) {
+	  if (zero)                 cache.setZero(i);
+	  else if (dcrtPtr != NULL) cache.setAt(i,dcrtPtr);
+	  else if (tag == CachedConstants::tagZZX && zzxPtr != NULL)
+	    cache.setAt(i,zzxPtr);
+	}
+      }// end of this diagonal entry
+    }// end of this diagonal
+
+    Ctxt res(ZeroCtxtLike, ctxt);
+
+    // Finally, compute the result as \sum_{f=0}^{d-1} \sigma_f(y_f)
+    ctxt = acc[0];
+    for (long f = 1; f < d; f++) {
+      acc[f].frobeniusAutomorph(f);
+      ctxt += acc[f];
+    }
+  } // end of apply(...)
+}; // end of class mat_multi1D_block_impl
+
+
+//! @brief Multiply ctx by plaintext matrix
+void mat_multi1D(Ctxt& ctxt, const EncryptedArray& ea, long dim,
+                 const PlaintextMatrixBaseInterface& mats,
+                 CachedConstants::CacheTag tag)
+{
+  FHE_TIMER_START;
+  ea.dispatch<mat_multi1D_impl>(Fwd(ctxt), dim, mats, tag);
+}
+
+//! @brief Multiply ctx by plaintext matrix over the base field/ring
+void mat_multi1D_block(Ctxt& ctxt, const EncryptedArray& ea, long dim,
+		       const PlaintextBlockMatrixBaseInterface& mats,
+		       CachedConstants::CacheTag tag) 
+{
+  FHE_TIMER_START;
+  ea.dispatch<mat_multi1D_block_impl>(Fwd(ctxt), dim, mats, tag);
+}
