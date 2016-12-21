@@ -54,10 +54,6 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   return false;
 }
 
-<<<<<<< HEAD
-
-
-=======
 inline bool
 getDataFromCache(CachedConstants& cache, long i,
 		 CachedConstants::CacheTag tag, const FHEcontext& context,
@@ -78,7 +74,6 @@ getDataFromCache(CachedConstants& cache, long i,
 
   return true;
 }
->>>>>>> 9e1046c1f7f147cb7cb77b7013496539600e8dcb
 
 template<class type>
 class mat_mul_impl {
