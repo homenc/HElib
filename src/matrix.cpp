@@ -54,6 +54,9 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   return false;
 }
 
+
+
+
 template<class type>
 class mat_mul_impl {
 public:

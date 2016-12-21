@@ -414,6 +414,8 @@ public:
 
 #endif
 
+
+
 template<class type> class PAlgebraModDerived;
 // forward declaration
 
