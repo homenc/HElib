@@ -362,6 +362,7 @@ public:
   //! phi(m)*ptxtSpace^2 as the default value.
   void multByConstant(const DoubleCRT& dcrt, double size=-1.0);
   void multByConstant(const ZZX& poly, double size=-1.0);
+  void multByConstant(const zzX& poly, double size=-1.0);
   void multByConstant(const ZZ& c);
 
   //! Convenience method: XOR and nXOR with arbitrary plaintext space:

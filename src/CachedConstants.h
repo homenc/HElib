@@ -41,6 +41,8 @@ private:
     PolyPtr(NTL::ZZX* zzxPtr): tag(tagZZX), zzx(zzxPtr) {}
     PolyPtr(DoubleCRT* dcrtPtr): tag(tagDCRT), dcrt(dcrtPtr) {}
   };
+
+
   std::vector< PolyPtr > polys;
 
 public:
@@ -48,19 +50,26 @@ public:
   void resize(long sz) { polys.resize(sz); }
   void clear() { polys.clear(); }
 
-  bool isZero(int i) {
+  bool isZero(int i) const {
+
+#if 0
+    // This is not thread safe
+
     if (polys.at(i).tag == tagZZX) {
       if ( NTL::IsZero(*(polys[i].zzx)) ) {
 	polys[i].tag = tagZero;
 	polys[i].zzx.reset();
       }
     }
+#endif
+
     // We may want to do the same for DoubleCRT, but checking for zero
     // would be more expensive
     return (polys[i].tag == tagZero);
   }
+
   void setZero(long i) {
-    polys.at(i).tag == tagZero;
+    polys.at(i).tag = tagZero;
     polys[i].zzx.reset();
     polys[i].dcrt.reset();
   }
@@ -100,6 +109,9 @@ public:
   }
 };
 
+
+
+
 inline bool
 allConstsAvailable(const CachedConstants& cache, long idx, long blockSize)
 {
@@ -110,7 +122,7 @@ allConstsAvailable(const CachedConstants& cache, long idx, long blockSize)
 }
 
 inline bool
-allConstsZero(CachedConstants& cache, long idx, long blockSize)
+allConstsZero(const CachedConstants& cache, long idx, long blockSize) 
 {
   long offset = idx*blockSize;
   for (long i=0; i<blockSize; i++)

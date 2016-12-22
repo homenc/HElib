@@ -43,7 +43,7 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
     long p = zMStar.getP();
     long m = zMStar.getM();
     long d = zMStar.getOrdP();
-    long exp = PowerMod(p, d-f, m); // apply inverse automorphism
+    long exp = PowerMod(mcMod(p, m), d-f, m); // apply inverse automorphism
     const auto& F = ea.getTab().getPhimXMod();
     RX rpoly1, rpoly2;
 
@@ -54,17 +54,21 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   return false;
 }
 
+
 inline bool
 getDataFromCache(CachedConstants& cache, long i,
 		 CachedConstants::CacheTag tag, const FHEcontext& context,
 		 NTL::ZZX*& zzxPtr, DoubleCRT*& dcrtPtr)
 {
   if (cache.isZero(i)) return false; // zero constant
+  // DIRT: this seems to return false on zero, which is
+  // the opposite of the convention used elsewhere in the matrix module
 
   if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
   else if (cache.isZZX(i)) {
     zzxPtr = cache.getZZX(i);
     if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
+      // DIRT: this "upgrade" logic may not be thread safe
       dcrtPtr = new DoubleCRT(*zzxPtr, context);
       cache.setAt(i,dcrtPtr);
       zzxPtr = NULL;
@@ -248,7 +252,7 @@ public:
         conv(cpoly1, cpoly);
 
         // apply inverse automorphism to constant
-        plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar.getM(), F);
+        plaintextAutomorph(cpoly2, cpoly1, PowerMod(mcMod(p, m), mcMod(-k, d), m), zMStar.getM(), F);
         conv(cpoly, cpoly2);
         Ctxt shCtxt1 = shCtxt;
         shCtxt1.multByConstant(cpoly);
@@ -568,7 +572,7 @@ public:
         conv(cpoly1, cpoly);
 
         // apply inverse automorphism to constant
-        plaintextAutomorph(cpoly2, cpoly1, PowerMod(p, mcMod(-k, d), m), zMStar.getM(), F);
+        plaintextAutomorph(cpoly2, cpoly1, PowerMod(mcMod(p, m), mcMod(-k, d), m), zMStar.getM(), F);
         conv(cpoly, cpoly2);
         cmat[i][k] = ZZXptr(new ZZX(cpoly));
       }
@@ -882,7 +886,7 @@ public:
         conv(cpoly1, cpoly);
 
         // apply inverse automorphism to constant
-        plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar.getM(), F);
+        plaintextAutomorph(cpoly2,cpoly1, PowerMod(mcMod(p, m), mcMod(-k,d), m), zMStar.getM(), F);
 
         for (long j = 0; j < LONG(shCtxt.size()); j++) {
           MulMod(cpoly3, cpoly2, shMask[j], F);
@@ -1098,7 +1102,7 @@ public:
         conv(cpoly1, cpoly);
 
         // apply inverse automorphism to constant
-        plaintextAutomorph(cpoly2,cpoly1, PowerMod(p, mcMod(-k,d), m), zMStar.getM(), F);
+        plaintextAutomorph(cpoly2,cpoly1, PowerMod(mcMod(p, m), mcMod(-k,d), m), zMStar.getM(), F);
 
         for (long j = 0; j < LONG(shMask.size()); j++) {
           MulMod(cpoly3, cpoly2, shMask[j], F);
