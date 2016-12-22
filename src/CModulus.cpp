@@ -187,16 +187,8 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
 }
 
 
-void Cmodulus::FFT(vec_long &y, const ZZX& x) const
+void Cmodulus::FFT_aux(vec_long &y, zz_pX& tmp) const
 {
-  FHE_TIMER_START;
-  zz_pBak bak; bak.save();
-  context.restore();
-
-  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
-  { FHE_NTIMER_START(FFT_remainder);
-    conv(tmp,x);      // convert input to zpx format
-  }
 
   if (!ALT_CRT && zMStar->getPow2()) {
     // special case when m is a power of 2
@@ -238,6 +230,35 @@ void Cmodulus::FFT(vec_long &y, const ZZX& x) const
   for (i=j=0; i<m; i++)
     if (zMStar->inZmStar(i)) y[j++] = rep(coeff(tmp,i));
 }
+
+void Cmodulus::FFT(vec_long &y, const ZZX& x) const
+{
+  FHE_TIMER_START;
+  zz_pBak bak; bak.save();
+  context.restore();
+
+  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
+  { FHE_NTIMER_START(FFT_remainder);
+    convert(tmp,x);      // convert input to zpx format
+  }
+
+  FFT_aux(y, tmp);
+};
+
+void Cmodulus::FFT(vec_long &y, const zzX& x) const
+{
+  FHE_TIMER_START;
+  zz_pBak bak; bak.save();
+  context.restore();
+
+  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
+  { FHE_NTIMER_START(FFT_remainder);
+    convert(tmp,x);      // convert input to zpx format
+  }
+
+  FFT_aux(y, tmp);
+};
+
 
 
 void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const

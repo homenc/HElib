@@ -100,6 +100,12 @@ class Cmodulus {
 
   // sets zp context internally
   void FFT(vec_long &y, const ZZX& x) const;  // y = FFT(x)
+  void FFT(vec_long &y, const zzX& x) const;  // y = FFT(x)
+
+  // auxilliary routine used by above two routines
+  void FFT_aux(vec_long &y, zz_pX& tmp) const;  
+
+
 
   // expects zp context to be set externally
   void iFFT(zz_pX &x, const vec_long& y) const; // x = FFT^{-1}(y)

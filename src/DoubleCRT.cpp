@@ -76,10 +76,40 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
   NTL_EXEC_RANGE_END
 }
 
+// FIXME: "code bloat": this just replicates the above with ZZX -> zzX
+void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
+{
+  FHE_TIMER_START;
+
+  if (empty(s)) return;
+
+  static thread_local Vec<long> tls_ivec;
+  Vec<long>& ivec = tls_ivec;
+
+  long icard = MakeIndexVector(s, ivec);
+  NTL_EXEC_RANGE(icard, first, last)
+      for (long j = first; j < last; j++) {
+        long i = ivec[j];
+        context.ithModulus(i).FFT(map[i], poly); 
+      }
+  NTL_EXEC_RANGE_END
+}
+
 // A non-threaded implementation of DoubleCRT operations
 #else
 
 void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
+{
+  FHE_TIMER_START;
+
+
+  if (empty(s)) return;
+  for (long i = s.first(); i <= s.last(); i = s.next(i))
+    context.ithModulus(i).FFT(map[i], poly);
+}
+
+// FIXME: "code bloat": this just replicates the above with ZZX -> zzX
+void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
 {
   FHE_TIMER_START;
 
@@ -343,6 +373,9 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
   return logFactor;
 }
 
+
+// *****************************************************
+
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
@@ -384,6 +417,51 @@ DoubleCRT::DoubleCRT(const ZZX& poly)
   FFT(poly, s);
 }
 
+
+// *****************************************************
+// FIXME: "code bloat": this just replicates the above with ZZX -> zzX
+
+DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context, const IndexSet& s)
+: context(_context), map(new DoubleCRTHelper(_context))
+{
+  FHE_TIMER_START;
+  assert(s.last() < context.numPrimes());
+
+  map.insert(s);
+  if (isDryRun()) return;
+
+  // convert the integer polynomial to FFT representation modulo the primes
+  FFT(poly, s);
+}
+
+DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context)
+: context(_context), map(new DoubleCRTHelper(_context))
+{
+  FHE_TIMER_START;
+  IndexSet s = IndexSet(0, context.numPrimes()-1);
+  // FIXME: maybe the default index set should be determined by context?
+
+  map.insert(s);
+  if (isDryRun()) return;
+
+  // convert the integer polynomial to FFT representation modulo the primes
+  FFT(poly, s);
+}
+
+DoubleCRT::DoubleCRT(const zzX& poly)
+: context(*activeContext), map(new DoubleCRTHelper(*activeContext))
+{
+  FHE_TIMER_START;
+  IndexSet s = IndexSet(0, context.numPrimes()-1);
+  // FIXME: maybe the default index set should be determined by context?
+
+  map.insert(s);
+  if (isDryRun()) return;
+
+  // convert the integer polynomial to FFT representation modulo the primes
+  FFT(poly, s);
+}
+
 DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
@@ -399,6 +477,8 @@ DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
     for (long j = 0; j < phim; j++) row[j] = 0;
   }
 }
+
+// *****************************************************
 
 DoubleCRT::DoubleCRT(const FHEcontext &_context)
 : context(_context), map(new DoubleCRTHelper(_context))

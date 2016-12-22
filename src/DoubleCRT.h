@@ -144,6 +144,11 @@ public:
   //  declared "explicit" to avoid implicit type conversion
   explicit DoubleCRT(const ZZX&poly); 
 
+  //! @brief Same as above, but with zzX's
+  DoubleCRT(const zzX&poly, const FHEcontext& _context, const IndexSet& indexSet);
+  DoubleCRT(const zzX&poly, const FHEcontext& _context);
+  explicit DoubleCRT(const zzX&poly); 
+
  // Without specifying a ZZX, we get the zero polynomial
   explicit DoubleCRT(const FHEcontext &_context);
   // declare "explicit" to avoid implicit type conversion
@@ -368,6 +373,7 @@ public:
 
 
   void FFT(const ZZX& poly, const IndexSet& s);
+  void FFT(const zzX& poly, const IndexSet& s);
   // for internal use
 
 

@@ -781,4 +781,21 @@ template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
 				    long nCoeffs=40);
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 
+
+// right now, this is just a place-holder...it may or may not 
+// eventually be further fleshed out
+
+typedef Vec<long> zzX;
+
+inline 
+void convert(zz_pX& x, const zzX& a)
+{
+   conv(x.rep, a);
+   x.normalize();
+}
+
+// NOTE: Maybe NTL should contain conversion routines
+// like this for the various polynomial classes?
+
+
 #endif

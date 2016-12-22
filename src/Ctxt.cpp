@@ -840,6 +840,14 @@ void Ctxt::multByConstant(const ZZX& poly, double size)
   multByConstant(dcrt,size);
 }
 
+void Ctxt::multByConstant(const zzX& poly, double size)
+{
+  if (this->isEmpty()) return;
+  FHE_TIMER_START;
+  DoubleCRT dcrt(poly,context,primeSet);
+  multByConstant(dcrt,size);
+}
+
 // Divide a cipehrtext by 2. It is assumed that the ciphertext
 // encrypts an even polynomial and has plaintext space 2^r for r>1.
 // As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
