@@ -52,7 +52,11 @@ public:
 
   bool isZero(int i) const {
 
+<<<<<<< 32300783d9179c5fe7b2982d743180ab99546561
 <<<<<<< e657e294e21b2b33e4a1c1a8c8a91ddcb953dc92
+=======
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
+>>>>>>> .
 =======
 #if 0
     // This is not thread safe

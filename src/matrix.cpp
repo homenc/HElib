@@ -42,7 +42,11 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   if (f>0) {
     long p = zMStar.getP();
     long m = zMStar.getM();
+<<<<<<< 32300783d9179c5fe7b2982d743180ab99546561
 <<<<<<< e657e294e21b2b33e4a1c1a8c8a91ddcb953dc92
+=======
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
+>>>>>>> .
     long d = ea.getDegree();
 =======
     long d = zMStar.getOrdP();
@@ -58,6 +62,7 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   return false;
 }
 
+<<<<<<< 32300783d9179c5fe7b2982d743180ab99546561
 <<<<<<< 486a37d5aa9be8f1a01f234d7c57097541c1f715
 <<<<<<< 1292de78db7245f71d3046e4c1c5cef3ca04fc1b
 <<<<<<< e657e294e21b2b33e4a1c1a8c8a91ddcb953dc92
@@ -77,6 +82,9 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
 
 =======
 =======
+=======
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
+>>>>>>> .
 <<<<<<< 9bc0383ed69b283c89756fa341c9bdbecbac7818
 >>>>>>> .
 <<<<<<< 8da9e53b6e9f015ed58649480a148eca0aad2656
@@ -84,9 +92,17 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
 =======
 <<<<<<< 0e14759c902bb9ec5ec802f9962a1e9b8db6b477
 =======
+=======
+<<<<<<< bc3d68831aa4565f106348096e2991e5773b8112
+>>>>>>> .
 <<<<<<< aa3a6be799ce8b60a1aa2c45b80d89b8f43fba74
 <<<<<<< 0e14759c902bb9ec5ec802f9962a1e9b8db6b477
 =======
+>>>>>>> .
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
+=======
+=======
+
 >>>>>>> .
 >>>>>>> .
 >>>>>>> .
