@@ -42,7 +42,11 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   if (f>0) {
     long p = zMStar.getP();
     long m = zMStar.getM();
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
     long d = ea.getDegree();
+=======
+    long d = zMStar.getOrdP();
+>>>>>>> .
     long exp = PowerMod(mcMod(p, m), d-f, m); // apply inverse automorphism
     const auto& F = ea.getTab().getPhimXMod();
     RX rpoly1, rpoly2;
@@ -54,15 +58,24 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   return false;
 }
 
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
 <<<<<<< 9bc0383ed69b283c89756fa341c9bdbecbac7818
 <<<<<<< 8da9e53b6e9f015ed58649480a148eca0aad2656
 
 =======
 <<<<<<< 0e14759c902bb9ec5ec802f9962a1e9b8db6b477
 =======
+=======
+<<<<<<< bc3d68831aa4565f106348096e2991e5773b8112
+>>>>>>> .
 <<<<<<< aa3a6be799ce8b60a1aa2c45b80d89b8f43fba74
 <<<<<<< 0e14759c902bb9ec5ec802f9962a1e9b8db6b477
 =======
+>>>>>>> .
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
+=======
+=======
+
 >>>>>>> .
 >>>>>>> .
 inline bool
