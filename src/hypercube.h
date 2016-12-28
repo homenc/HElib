@@ -30,18 +30,15 @@ class CubeSignature {
 private:
    Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
    Vec<long> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
-   long ndims;
-   long size;
 
 public:
-   CubeSignature(): ndims(0) {} // a NULL signature
+   CubeSignature() {} // a NULL signature
 
    void initSignature(const long _dims[], long _ndims)
    {
-     assert(ndims == 0); // can only initialize a NULL signature
+     assert(dims.length() == 0); // can only initialize a NULL signature
      assert(_ndims > 0);
 
-     ndims = _ndims;
      dims.SetLength(_ndims);
      prods.SetLength(_ndims+1);
      prods[_ndims] = 1;
@@ -50,16 +47,16 @@ public:
        dims[i] = _dims[i];
        prods[i] = prods[i+1] * _dims[i];
      }
-     size = prods[0];
    }
-
    void initSignature(const Vec<long>& _dims)
    { initSignature(_dims.elts(), _dims.length()); }
 
-   CubeSignature(const long _dims[], long _ndims): ndims(0)
+   CubeSignature(const long _dims[], long _ndims)
    { initSignature(_dims, _ndims); }
-   CubeSignature(const NTL::Vec<long>& _dims): ndims(0) { initSignature(_dims); }
-   CubeSignature(const std::vector<long>& _dims): ndims(0)
+
+   CubeSignature(const NTL::Vec<long>& _dims) { initSignature(_dims); }
+
+   CubeSignature(const std::vector<long>& _dims)
    { initSignature(&(_dims[0]), _dims.size()); }
 
    //! Build a CubeSignature to reflect the hypercube structure of Zm* /(p)
@@ -79,11 +76,11 @@ public:
    }
    **********************************************************/
 
-   //! total size of cube
-   long getSize() const { return size; }
-
    //! number of dimensions
-   long getNumDims() const { return ndims; }
+   long getNumDims() const { return dims.length(); }
+
+   //! total size of cube
+   long getSize() const { return ((getNumDims()>0)? prods[0]: 0); }
 
    //! size of dimension d
    long getDim(long d) const { return dims.at(d); }
@@ -97,14 +94,14 @@ public:
 
    //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
-      assert(i >= 0 && i < size);
+     assert(i >= 0 && i < getSize());
    
       return (i % prods.at(d)) / prods.at(d+1); 
    }
 
    //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
-      assert(i >= 0 && i < size);
+      assert(i >= 0 && i < getSize());
       
       offset = offset % dims.at(d);
       if (offset < 0) offset += dims.at(d);
