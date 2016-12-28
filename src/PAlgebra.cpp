@@ -888,7 +888,7 @@ template class PAlgebraModDerived<PA_GF2>;
 template class PAlgebraModDerived<PA_zz_p>;
 
 // Helper function
-CubeSignature::CubeSignature(const PAlgebra& alg): ndims(0)
+CubeSignature::CubeSignature(const PAlgebra& alg)
 {
   Vec<long> _dims(INIT_SIZE, alg.numOfGens());
   for (long i=0; i<(long)alg.numOfGens(); i++) _dims[i] = alg.OrderOf(i);
