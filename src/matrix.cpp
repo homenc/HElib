@@ -1708,7 +1708,7 @@ public:
     // Get the derived type (DIRT: need to get rid of const modifier)
     PlaintextMultiMatrixInterface<type>& mats1 =
       (PlaintextMultiMatrixInterface<type>&)
-      dynamic_cast< const PlaintextMatrixInterface<type>& >( mats );
+      dynamic_cast< const PlaintextMultiMatrixInterface<type>& >( mats );
 
     CachedConstants& cache = mats1.getCache();
     std::vector<RX> diag(ea.size()); // scratch space
@@ -1764,7 +1764,8 @@ public:
       // Depending on zero, zzxPtr, dcrtPtr, update the accumulated sum
       if (!zero) {
 	if (i > 0) { // rotate the ciphertext
-	  if (ea.nativeDimension(dim)) // rotate the previous version
+          // FIXME: something is wrong with this optimization
+	  if (0 && ea.nativeDimension(dim)) // rotate the previous version
 	    ea.rotate1D(shCtxt, dim, i-lastShift);
 	  else {                       // rotate the original ciphertext
 	    shCtxt = ctxt;
