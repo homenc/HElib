@@ -69,38 +69,6 @@ bool PAlgebra::operator==(const PAlgebra& other) const
   return true;
 }
 
-bool PAlgebra::nextExpVector(vector<unsigned long>& buffer) const
-{
-  // increment the vector in lexicographic order
-  if (!isDryRun()) for (long i=gens.size()-1; i>=0; i--) {
-    if (i>=(long)buffer.size()) continue; // sanity check
-    // increment current index, set all the ones after it to zero
-    if (buffer[i] < OrderOf(i)-1) { 
-      buffer[i]++;
-      for (unsigned long j=i+1; j<buffer.size(); j++) buffer[j] = 0;
-      return true;  // succeeded in incrementing the vector
-    }
-    // if buffer[i] >= OrderOf(i)-1, move to previous index i
-  }
-  return false;     // cannot increment the vector anymore
-}
-
-long PAlgebra::addCoord(long i, long k, long offset) const
-{
-  if (isDryRun()) return 0;
-  assert(k >= 0 && k < (long) nSlots);
-  assert(i >= 0 && i < (long) gens.size());
-  
-  offset = offset % ((long) OrderOf(i));
-  if (offset < 0) offset += OrderOf(i);
-  
-  long k_i = coordinate(i, k);
-  long k_i1 = (k_i + offset) % OrderOf(i);
-  
-  long k1 = k + (k_i1 - k_i) * prods[i+1];
-  
-  return k1;
-}
 
 unsigned long PAlgebra::exponentiate(const vector<unsigned long>& exps,
 				bool onlySameOrd) const
@@ -129,7 +97,7 @@ void PAlgebra::printout() const
            << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
 	   << OrderOf(i) << endl;
   }
-  if (qGrpOrd()<100) {
+  if (cube.getSize()<100) {
     cout << "  T = [";
     for (i=0; i<T.size(); i++) cout << T[i] << " ";
     cout << "]\n";
@@ -155,40 +123,45 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   else
     pow2 = 0;
 
-   
-
   // For dry-run, use a tiny m value for the PAlgebra tables
   if (isDryRun()) mm = (p==3)? 4 : 3;
 
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
 
+  std::vector<long> tmpOrds;
   if (_gens.size() == 0 || isDryRun()) 
-      ordP = findGenerators(this->gens, this->ords, mm, pp);
+      this->ordP = findGenerators(this->gens, tmpOrds, mm, pp);
   else {
     assert(_gens.size() == _ords.size());
-    gens = _gens;
-    ords = _ords;
-    ordP = multOrd(pp, mm);
+    tmpOrds = _ords;
+    this->gens = _gens;
+    this->ordP = multOrd(pp, mm);
   }
-  nSlots = qGrpOrd();
-  phiM = ordP * nSlots;
+  resize(native, lsize(tmpOrds));
+  for (long j=0; j<lsize(tmpOrds); j++) {
+    native.put(j, (tmpOrds[j]>0));
+    tmpOrds[j] = abs(tmpOrds[j]);
+  }
+  cube.initSignature(tmpOrds);
+
+  phiM = ordP * getNSlots();
 
   // Allocate space for the various arrays
-  T.resize(nSlots);
-  dLogT.resize(nSlots*gens.size());
+  T.resize(getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
   zmsIdx.assign(mm,-1);  // allocate m slots, initialize them to -1
   long i, idx;
   for (i=idx=0; i<(long)mm; i++) if (GCD(i,mm)==1) zmsIdx[i] = idx++;
 
-  // Now fill the Tidx and dLogT translation tables. We identify an element
-  // t\in T with its representation t = \prod_{i=0}^n gi^{ei} mod m (where
-  // the gi's are the generators in gens[]) , represent t by the vector of
+  // Now fill the Tidx translation table. We identify an element t \in T
+  // with its representation t = \prod_{i=0}^n gi^{ei} mod m (where the
+  // gi's are the generators in gens[]) , represent t by the vector of
   // exponents *in reverse order* (en,...,e1,e0), and order these vectors
   // in lexicographic order.
 
-  // FIXME: is the comment above about reverse order true? It doesn't 
-  // seem like it to me.  VJS.
+  // FIXME: is the comment above about reverse order true?
+  // It doesn't seem like it to me, VJS.
+  // The comment about reverse order is correct, SH.
 
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
   vector<unsigned long> buffer(gens.size()); // temporaty holds exponents
@@ -197,7 +170,6 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   do {
     ctr++;
     unsigned long t = exponentiate(buffer);
-    for (unsigned long j=0; j<buffer.size(); j++) dLogT[idx++] = buffer[j];
 
     assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
     assert(Tidx[t] == -1);
@@ -208,17 +180,9 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
     // increment buffer by one (in lexigoraphic order)
   } while (nextExpVector(buffer)); // until we cover all the group
 
-  assert(ctr == long(nSlots)); // sanity check for user-supplied gens
+  assert(ctr == getNSlots()); // sanity check for user-supplied gens
 
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
-
-  // initialize prods array
-  long ndims = gens.size();
-  prods.resize(ndims+1);
-  prods[ndims] = 1;
-  for (long j = ndims-1; j >= 0; j--) {
-    prods[j] = OrderOf(j) * prods[j+1];
-  }
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
 }
 
@@ -408,7 +372,6 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
 {
   long p = zz_p::modulus(); 
   long nSlots = lfactors.length();
-
 
   vec_ZZX vzz;             // need to go via ZZX
 
@@ -886,11 +849,3 @@ void PAlgebraModDerived<type>::evalTree(RX& res,
 
 template class PAlgebraModDerived<PA_GF2>;
 template class PAlgebraModDerived<PA_zz_p>;
-
-// Helper function
-CubeSignature::CubeSignature(const PAlgebra& alg)
-{
-  Vec<long> _dims(INIT_SIZE, alg.numOfGens());
-  for (long i=0; i<(long)alg.numOfGens(); i++) _dims[i] = alg.OrderOf(i);
-  initSignature(_dims);
-}
