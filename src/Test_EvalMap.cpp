@@ -8,12 +8,14 @@ namespace NTL {} using namespace NTL;
 #include "powerful.h"
 
 static bool dry = false; // a dry-run flag
+static bool noPrint = false;
 
 void  TestIt(long p, long r, long c, long _k, long w,
              long L, const Vec<long>& mvec, 
              const Vec<long>& gens, const Vec<long>& ords )
 {
-  cout << "*** TestIt"
+  if (!noPrint)
+    cout << "*** TestIt"
        << (dry? " (dry run):" : ":")
        << " p=" << p
        << ", r=" << r
@@ -44,9 +46,10 @@ void  TestIt(long p, long r, long c, long _k, long w,
   FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
-  context.zMStar.printout(); // print structure of Zm* /(p) to cout
-  cout << endl;
-
+  if (!noPrint) {
+    context.zMStar.printout(); // print structure of Zm* /(p) to cout
+    cout << endl;
+  }
   long d = context.zMStar.getOrdP();
   long phim = context.zMStar.getPhiM();
   long nslots = phim/d;
@@ -56,11 +59,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-
-  cout << "generating key-switching matrices... ";
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cout << "done\n";
 
   // GG defines the plaintext space Z_p[X]/GG(X)
   ZZX GG;
@@ -108,14 +108,14 @@ void  TestIt(long p, long r, long c, long _k, long w,
   // coefficients packed in the slots and produces the polynomial
   // corresponding to cube
 
-  CheckCtxt(ctxt, "init");
+  if (!noPrint) CheckCtxt(ctxt, "init");
 
-  cout << "build EvalMap\n";
+  if (!noPrint) cout << "build EvalMap\n";
   EvalMap map(ea, mvec, false); // compute the transformation to apply
-  cout << "apply EvalMap\n";
+  if (!noPrint) cout << "apply EvalMap\n";
   map.apply(ctxt);              // apply the transformation to ctxt
-  CheckCtxt(ctxt, "EvalMap");
-  cout << "check results\n";
+  if (!noPrint) CheckCtxt(ctxt, "EvalMap");
+  if (!noPrint) cout << "check results\n";
 
   ZZX FF1;
   secretKey.Decrypt(FF1, ctxt);
@@ -127,19 +127,20 @@ void  TestIt(long p, long r, long c, long _k, long w,
     cout << "EvalMap: BAD\n";
 
   publicKey.Encrypt(ctxt, FF1);
-  CheckCtxt(ctxt, "init");
+  if (!noPrint) CheckCtxt(ctxt, "init");
 
   // Compute homomorphically the inverse transformation that takes the
   // polynomial corresponding to cube and produces the coefficients
   // packed in the slots
 
-  cout << "build EvalMap\n";
+  if (!noPrint) cout << "build EvalMap\n";
   EvalMap imap(ea, mvec, true, false); // compute the transformation to apply
-  cout << "apply EvalMap\n";
+  if (!noPrint) cout << "apply EvalMap\n";
   imap.apply(ctxt);                    // apply the transformation to ctxt
-  CheckCtxt(ctxt, "EvalMap");
-  cout << "check results\n";
-
+  if (!noPrint) {
+    CheckCtxt(ctxt, "EvalMap");
+    cout << "check results\n";
+  }
   NewPlaintextArray pa2(ea);
   ea.decrypt(ctxt, secretKey, pa2);
 
@@ -149,9 +150,11 @@ void  TestIt(long p, long r, long c, long _k, long w,
     cout << "EvalMap: BAD\n";
   FHE_NTIMER_STOP(ALL);
 
-  cout << "\n*********\n";
-  printAllTimers();
-  cout << endl;
+  if (!noPrint) {
+    cout << "\n*********\n";
+    printAllTimers();
+    cout << endl;
+  }
 }
 
 
@@ -211,6 +214,8 @@ int main(int argc, char *argv[])
 
   long nthreads=1;
   amap.arg("nthreads", nthreads, "number of threads");
+
+  amap.arg("noPrint", noPrint, "suppress printouts");
 
   amap.parse(argc, argv);
 
