@@ -37,7 +37,7 @@ public:
    void initSignature(const long _dims[], long _ndims)
    {
      assert(dims.length() == 0); // can only initialize a NULL signature
-     assert(_ndims > 0);
+     assert(_ndims >= 0);
 
      dims.SetLength(_ndims);
      prods.SetLength(_ndims+1);
@@ -48,19 +48,14 @@ public:
        prods[i] = prods[i+1] * _dims[i];
      }
    }
-   void initSignature(const Vec<long>& _dims)
-   { initSignature(_dims.elts(), _dims.length()); }
+   // VecType is either std::vector<intType> or NTL:Vec<intType>
+   template <typename VecType> void initSignature(const VecType& _dims)
+   { initSignature(_dims.data(), lsize(_dims)); }
 
    CubeSignature(const long _dims[], long _ndims)
    { initSignature(_dims, _ndims); }
-
    CubeSignature(const NTL::Vec<long>& _dims) { initSignature(_dims); }
-
-   CubeSignature(const std::vector<long>& _dims)
-   { initSignature(&(_dims[0]), _dims.size()); }
-
-   //! Build a CubeSignature to reflect the hypercube structure of Zm* /(p)
-   explicit CubeSignature(const PAlgebra& alg); // in PAlgebra.cpp
+   CubeSignature(const std::vector<long>& _dims) {initSignature(_dims);}
 
    /* When we get C++11 support, we could #include <initializer_list>
     * and then do e.g., CubeSignature s {1,2,3};
@@ -72,7 +67,7 @@ public:
       for (i=0, it=_dims.begin(); it!=_dims.end(); ++i, ++it)
 	dims[i] = *it;
 
-      [...] // continue as above, ndims = dims.length() etc.
+      [...] // continue as above, initialize prods
    }
    **********************************************************/
 
@@ -80,7 +75,7 @@ public:
    long getNumDims() const { return dims.length(); }
 
    //! total size of cube
-   long getSize() const { return ((getNumDims()>0)? prods[0]: 0); }
+   long getSize() const { return ((getNumDims()>0)? prods[0]: 1); }
 
    //! size of dimension d
    long getDim(long d) const { return dims.at(d); }
@@ -114,6 +109,46 @@ public:
       return i1;
    }
 
+   //! Increment the coordinates to point to next index, returning
+   //! false if already at maximum value.
+   //! VecType is either std::vector<intType> or NTL:Vec<intType>
+   template <typename VecType> bool incrementCoords(VecType& v) const {
+     for (long i=getNumDims()-1; i>=0; --i) {
+       if (i>=lsize(v)) continue; // sanity check
+
+       // increment current index, set all the ones after it to zero
+       if (v[i] < getDim(i)-1) { 
+	 v[i]++;
+	 for (long j=i+1; j<lsize(v); j++) v[j] = 0;
+	 return true;  // succeeded in incrementing the vector
+       }
+       // if buffer[i] >= getDim(i)-1, move to previous index i
+     }
+     return false;     // cannot increment the vector anymore
+   }
+
+   //! get the coordinates of index i in all dimensions.
+   //! VecType is either std::vector<intType> or NTL:Vec<intType>
+   template <typename VecType> void getAllCoords(VecType& v, long i) const {
+     assert(i >= 0 && i < getSize());
+     resize(v, getNumDims()); // resize(*), lsize(*) defined in NumbTh.h
+     for (long j=getNumDims()-1; j>=0; --j) {
+       v[j] = i % getDim(j);
+       i = (i - v[j]) / getDim(j);
+     }
+   }
+
+   //! reconstruct index from its coordinates
+   //! VecType is either std::vector<intType> or NTL:Vec<intType>
+   template <typename VecType> long assembleCoords(VecType& v) const {
+     assert(lsize(v)==getNumDims());
+     long idx=0;
+     for (long i=0; i<getNumDims(); i++) {
+       idx += v[i]*prods[i+1];
+     }
+     return idx;
+   }
+   
    //! number of slices
    long numSlices(long d=1) const { return getProd(0, d); }
 
@@ -123,6 +158,13 @@ public:
    //! number of columns
    long numCols() const { return getProd(1); }
 
+  //! Break an index into the hypercube to index of the
+  //! dimension-dim subcube and index inside that subcube.
+   std::pair<long,long> breakIndexByDim(long idx, long dim) const;
+
+   //! The inverse of breakIndexByDim
+   long assembleIndexByDim(std::pair<long,long> idx, long dim) const;
+   
    friend ostream& operator<<(ostream &s, const CubeSignature& sig);
 };
 
