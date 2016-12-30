@@ -652,9 +652,25 @@ template<class T> void rotate(Vec<T>& v, long k)
 // unsigned quantity...this leads to all kinds of annoying warning messages...
 //! @brief Size of STL vector as a long (rather than unsigned long)
 template <typename T>
-inline long lsize(const vector<T>& v) {
+inline long lsize(const std::vector<T>& v) {
   return (long) v.size();
 }
+
+//! NTL/std compatability
+template <typename T>
+inline long lsize(const NTL::Vec<T>& v) {
+  return v.length();
+}
+
+template <typename T>
+inline void resize(NTL::Vec<T>& v, long sz, const T& val=T()) {
+  return v.SetLength(sz, val);
+}
+template <typename T>
+inline void resize(std::vector<T>& v, long sz, const T& val=T()) {
+  return v.resize(sz, val);
+}
+
 
 //! @brief Testing if two vectors point to the same object
 // Believe it or not, this is really the way to do it...
