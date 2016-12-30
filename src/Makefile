@@ -67,16 +67,17 @@ TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_LinPo
 all: fhe.a
 
 check: Test_General_x Test_LinPoly_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x
-	./Test_General_x R=1 k=10 p=2 r=2 d=2
-	./Test_General_x R=2 k=10 p=7 r=2
-	./Test_LinPoly_x
-	./Test_Permutations_x
-	./Test_PolyEval_x p=7 r=2 d=34
-	./Test_Replicate_x m=1247
-	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]"
-	./Test_extractDigits_x m=2047 p=5
-	./Test_bootstrapping_x
-	./Test_bootstrapping_x p=7
+	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
+	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
+	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
+	./Test_LinPoly_x noPrint=1
+	./Test_Permutations_x noPrint=1
+	./Test_PolyEval_x p=7 r=2 d=34 noPrint=1
+	./Test_Replicate_x m=1247 noPrint=1
+	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
+	./Test_extractDigits_x m=2047 p=5 noPrint=1
+	./Test_bootstrapping_x noPrint=1
+	./Test_bootstrapping_x p=7 noPrint=1
 
 test: $(TESTPROGS)
 

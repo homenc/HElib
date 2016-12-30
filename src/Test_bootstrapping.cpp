@@ -29,6 +29,8 @@ NTL_CLIENT
 #include "EvalMap.h"
 #include "powerful.h"
 
+static bool noPrint = false;
+
 // #define DEBUG_PRINTOUT
 #ifdef DEBUG_PRINTOUT
 extern FHESecKey* dbgKey;
@@ -121,21 +123,22 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   if (abs(mValues[idx][11])>1) ords.push_back(mValues[idx][11]);
   if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
-  cout << "*** TestIt";
-  if (isDryRun()) cout << " (dry run)";
-  cout << ": p=" << p
-       << ", r=" << r
-       << ", L=" << L
-       << ", B=" << B
-       << ", c=" << c
-       << ", m=" << m
-       << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
-       << endl;
-
+  if (!noPrint) {
+    cout << "*** TestIt";
+    if (isDryRun()) cout << " (dry run)";
+    cout << ": p=" << p
+	 << ", r=" << r
+	 << ", L=" << L
+	 << ", B=" << B
+	 << ", c=" << c
+	 << ", m=" << m
+	 << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
+	 << endl;
+    cout << "Computing key-independent tables..." << std::flush;
+  }
   setTimersOn();
   setDryRun(false); // Need to get a "real context" to test bootstrapping
 
-  cout << "Computing key-independent tables..." << std::flush;
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
@@ -144,21 +147,24 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   t += GetTime();
 
   if (skHwt>0) context.rcData.skHwt = skHwt;
-  cout << " done in "<<t<<" seconds\n";
-  cout << "  e="    << context.rcData.e
-       << ", e'="   << context.rcData.ePrime
-       << ", alpha="<< context.rcData.alpha
-       << ", t="    << context.rcData.skHwt
-       << "\n  ";
-  context.zMStar.printout();
+  if (!noPrint) {
+    cout << " done in "<<t<<" seconds\n";
+    cout << "  e="    << context.rcData.e
+	 << ", e'="   << context.rcData.ePrime
+	 << ", alpha="<< context.rcData.alpha
+	 << ", t="    << context.rcData.skHwt
+	 << "\n  ";
+    context.zMStar.printout();
+  }
   setDryRun(dry); // Now we can set the dry-run flag if desired
 
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
   double bitsize = context.logOfProduct(allPrimes)/log(2.0);
-  cout << "  "<<nPrimes<<" primes in chain, total bitsize="
-       << ceil(bitsize) << ", secparam="
-       << (7.2*phim/bitsize -110) << endl;
+  if (!noPrint)
+    cout << "  "<<nPrimes<<" primes in chain, total bitsize="
+	 << ceil(bitsize) << ", secparam="
+	 << (7.2*phim/bitsize -110) << endl;
 
   long p2r = context.alMod.getPPowR();
   context.zMStar.set_cM(mValues[idx][13]/100.0);
@@ -166,16 +172,16 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   for (long numkey=0; numkey<OUTER_REP; numkey++) { // test with 3 keys
 
   t = -GetTime();
-  cout << "Generating keys, " << std::flush;
+  if (!noPrint) cout << "Generating keys, " << std::flush;
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
-  cout << "computing key-dependent tables..." << std::flush;
+  if (!noPrint) cout << "computing key-dependent tables..." << std::flush;
   secretKey.genRecryptData();
   t += GetTime();
-  cout << " done in "<<t<<" seconds\n";
+  if (!noPrint) cout << " done in "<<t<<" seconds\n";
 
   zz_p::init(p2r);
   zz_pX poly_p = random_zz_pX(context.zMStar.getPhiM());
@@ -219,8 +225,10 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 	  cout << i << ": " << powerful[i] << " != " << powerful2[i]<<", ";
 	  if (numDiff >5) break;
         }
-      cout << endl<< endl;
-      printAllTimers();
+      if (!noPrint) {
+	cout << endl<< endl;
+	printAllTimers();
+      }
       exit(0);
     }
 #ifdef DEBUG_PRINTOUT
@@ -229,12 +237,12 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 #endif
   }
   }
-  printAllTimers();
+  if (!noPrint) printAllTimers();
   resetAllTimers();
 #if (defined(__unix__) || defined(__unix) || defined(unix))
     struct rusage rusage;
     getrusage( RUSAGE_SELF, &rusage );
-    cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+    if (!noPrint) cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
 #endif
 }
 
@@ -271,6 +279,8 @@ int main(int argc, char *argv[])
   amap.arg("nthreads", nthreads, "number of threads");
 
   amap.arg("seed", seed, "random number seed");
+
+  amap.arg("noPrint", noPrint, "suppress printouts");
 
   amap.parse(argc, argv);
 

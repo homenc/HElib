@@ -26,6 +26,8 @@ extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;
 #endif
 
+static bool noPrint = false;
+
 bool testEncrypted(long d, const EncryptedArray& ea,
 		   const FHESecKey& secretKey)
 {
@@ -62,8 +64,8 @@ bool testEncrypted(long d, const EncryptedArray& ea,
   secretKey.Decrypt(ret, cX);
   zz_pX cres = conv<zz_pX>(ret);
   bool success = (cres == pres);
-  if (success) cout << " encrypted poly match, ";
-  else         cout << " encrypted poly MISMATCH\n";
+  if (success) std::cout << " encrypted poly match, ";
+  else         std::cout << " encrypted poly MISMATCH\n";
   return success;
 }
 
@@ -85,8 +87,8 @@ void testIt(long d, long k, long p, long r, long m, long L,
   dbgKey = &secretKey;
 #endif
 
-  cout << (isDryRun()? "* dry run, " : "* ")
-       << "degree-"<<d<<", m="<<m<<", L="<<L<<", p^r="<<p2r<<endl;
+  if (!noPrint) std::cout << (isDryRun()? "* dry run, " : "* ")
+		     << "degree-"<<d<<", m="<<m<<", L="<<L<<", p^r="<<p2r<<endl;
 
   // evaluate encrypted poly at encrypted point
   if (!testEncrypted(d, ea, secretKey)) exit(0);
@@ -112,25 +114,26 @@ void testIt(long d, long k, long p, long r, long m, long L,
   for (long i=0; i<ea.size(); i++) {
     long ret = polyEvalMod(poly, x[i], p2r);
     if (ret != y[i]) {
-      cout << "plaintext poly MISMATCH\n";
+      std::cout << "plaintext poly MISMATCH\n";
       exit(0);
     }
   }
-  cout << "plaintext poly match\n" << std::flush;
+  std::cout << "plaintext poly match\n" << std::flush;
 }
 
 void usage(char *prog) 
 {
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cout << "  dry=1 for dry run [default=0]\n";
-  cerr << "  p is the plaintext base [default=3]" << endl;
-  cerr << "  r is the lifting [default=2]" << endl;
-  cerr << "  m is a specific cyclotomic ring\n";
-  cerr << "  d is the polynomial degree [default=undefined]" << endl;
-  cerr << "    d=undefined means trying a few powers d=1,...,4,25,...,34"<<endl;
-  cerr << "  k is the baby-step parameter [default=undefined]" << endl;
-  cerr << "    if k is undefined it is computed from d" << endl;
+  std::cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
+  std::cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+  std::cout << "  dry=1 for dry run [default=0]\n";
+  std::cout << "  p is the plaintext base [default=3]" << endl;
+  std::cout << "  r is the lifting [default=2]" << endl;
+  std::cout << "  m is a specific cyclotomic ring\n";
+  std::cout << "  d is the polynomial degree [default=undefined]" << endl;
+  std::cout << "    d=undefined means trying a few powers d=1,...,4,25,...,34"<<endl;
+  std::cout << "  k is the baby-step parameter [default=undefined]" << endl;
+  std::cout << "    if k is undefined it is computed from d" << endl;
+  std::cout << "  noPrint suppresses printouts [default=0]" << endl;
   exit(0);
 }
 
@@ -143,6 +146,7 @@ int main(int argc, char *argv[])
   argmap["d"] = "-1";
   argmap["k"] = "0";
   argmap["dry"] = "0";
+  argmap["noPrint"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -153,11 +157,12 @@ int main(int argc, char *argv[])
   long d = atoi(argmap["d"]);
   long k = atoi(argmap["k"]);
   bool dry = atoi(argmap["dry"]);
+  noPrint = atoi(argmap["noPrint"]);
 
   long max_d = (d<=0)? 35 : d;
   long L = 5+NextPowerOfTwo(max_d);
   if (m<2)
-    m = FindM(/*secprm=*/80, L, /*c=*/3, p, 1, 0, m, true);
+    m = FindM(/*secprm=*/80, L, /*c=*/3, p, 1, 0, m, !noPrint);
   setDryRun(dry);
 
   // Test both monic and non-monic polynomials of this degree
