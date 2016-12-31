@@ -1726,9 +1726,10 @@ public:
     // rotate-by-one operations if this is a good dimenssion and the
     // matrix is dense, hence it may require fewer key-switching matrices
 
-    Ctxt shCtxt = ctxt;                  // shifted ciphertext
     long lastShift = 0;
+    Ctxt shCtxt = ctxt;                  // temporary shifted ciphertext
     Ctxt acc = Ctxt(ZeroCtxtLike, ctxt); // initialize to zero
+
     for (long i = 0; i < D; i++) {       // process diagonal i
       bool zero = false;
       ZZX* zzxPtr = NULL;
@@ -1764,10 +1765,10 @@ public:
       // Depending on zero, zzxPtr, dcrtPtr, update the accumulated sum
       if (!zero) {
 	if (i > 0) { // rotate the ciphertext
-          // FIXME: something is wrong with this optimization
-	  if (0 && ea.nativeDimension(dim)) // rotate the previous version
-	    ea.rotate1D(shCtxt, dim, i-lastShift);
-	  else {                       // rotate the original ciphertext
+	  if (ea.nativeDimension(dim)) { // rotate the previous version
+	    ea.rotate1D(ctxt, dim, i-lastShift);
+	    shCtxt = ctxt;
+	  } else {                       // rotate the original ciphertext
 	    shCtxt = ctxt;
 	    ea.rotate1D(shCtxt, dim, i);
 	  }
