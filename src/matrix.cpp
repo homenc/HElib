@@ -42,7 +42,7 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
   if (f>0) {
     long p = zMStar.getP();
     long m = zMStar.getM();
-    long d = zMStar.getOrdP();
+    long d = ea.getDegree();
     long exp = PowerMod(mcMod(p, m), d-f, m); // apply inverse automorphism
     const auto& F = ea.getTab().getPhimXMod();
     RX rpoly1, rpoly2;
@@ -1820,7 +1820,7 @@ public:
   {
     const EncryptedArray& ea = mats.getEA();
     const PAlgebra& zMStar = ea.getContext().zMStar;
-    long extDeg = zMStar.getOrdP();
+    long extDeg = ea.getDegree();
 
     mat_R entry;
     entry.SetDims(extDeg, extDeg);
@@ -1899,7 +1899,7 @@ public:
    * the \lambda'_{i,f}'s.
    **/
 
-  static void apply(const EncryptedArrayDerived<type> &ea,Ctxt &ctxt,long dim,
+  static void apply(const EncryptedArrayDerived<type> &ea, Ctxt &ctxt, long dim,
                     const PlaintextBlockMatrixBaseInterface& mats,
 		    CachedConstants::CacheTag tag)
   {
@@ -1924,7 +1924,7 @@ public:
     // Get the derived type (DIRT: need to get rid of const modifier)
     PlaintextMultiBlockMatrixInterface<type>& mats1 =
       (PlaintextMultiBlockMatrixInterface<type>&)
-      dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mats );
+      dynamic_cast< const PlaintextMultiBlockMatrixInterface<type>& >( mats );
 
     // It is assumed that a cache of the right size is ready to use
     CachedConstants& cache = mats1.getCache();
@@ -2021,9 +2021,10 @@ public:
 
       // Depending on zero, zzxPtr, dcrtPtr, update the accumulated sums
       for (long f=0; f<d; f++) if (!zero[f]) {
-	  if (dcrtPtr[f] != NULL) tmp.multByConstant(*(dcrtPtr[f]));
-	  else                    tmp.multByConstant(*(zzxPtr[f]));
-	  acc[f] += tmp;
+          Ctxt tmp1(tmp);
+	  if (dcrtPtr[f] != NULL) tmp1.multByConstant(*(dcrtPtr[f]));
+	  else                    tmp1.multByConstant(*(zzxPtr[f]));
+	  acc[f] += tmp1;
 	}
 	// The implementation above incurs an extra mult-by-constant due
 	// to the masks in rotate1D when applied in a "bad dimension".
