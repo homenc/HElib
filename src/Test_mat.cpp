@@ -74,6 +74,46 @@ public:
     }
   }
 
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const PlaintextBlockMatrixBaseInterface& mat, long dim)
+  {
+    PA_BOILER
+
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long D = zMStar.OrderOf(dim);
+
+    const PlaintextMultiBlockMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMultiBlockMatrixInterface<type>& >( mat );
+
+    vector< vector<RX> > data1;
+    data1.resize(n/D);
+    for (long k = 0; k < n/D; k++)
+      data1[k].resize(D);
+
+    for (long i = 0; i < n; i++) {
+      auto p = zMStar.breakIndexByDim(i, dim);
+      long k = p.first; 
+      long j = p.second;
+      data1[k][j] = data[i];
+    }
+
+    for (long k = 0; k < n/D; k++) {
+      for (long j = 0; j < D; j++) {
+	vec_R acc, tmp, tmp1;
+	mat_R val;
+	acc.SetLength(d);
+	for (long i = 0; i < D; i++) {
+	  if (!mat1.get(val, i, j, k)) {
+            VectorCopy(tmp1, data1[k][i], d);
+            mul(tmp, tmp1, val);
+            add(acc, acc, tmp);
+	  }
+	}
+        conv(data[zMStar.assembleIndexByDim(make_pair(k,j), dim)], acc);
+      }
+    }
+  }
+
 }; 
 
 
@@ -83,6 +123,12 @@ void mat_multi1D(const EncryptedArray& ea, NewPlaintextArray& pa,
   ea.dispatch<mat_multi1D_pa_impl>(Fwd(pa), mat, dim); 
 }
 
+
+void mat_multi1D(const EncryptedArray& ea, NewPlaintextArray& pa, 
+  const PlaintextBlockMatrixBaseInterface& mat, long dim)
+{
+  ea.dispatch<mat_multi1D_pa_impl>(Fwd(pa), mat, dim); 
+}
 
 
 
@@ -164,6 +210,87 @@ buildRandomMultiMatrix(const EncryptedArray& ea, long dim)
 }
 
 
+
+template<class type> 
+class RandomMultiBlockMatrix : public  PlaintextMultiBlockMatrixInterface<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  const EncryptedArray& ea;
+
+  vector< vector< vector< mat_R > > > data;
+  long dim;
+
+public:
+  ~RandomMultiBlockMatrix() { /*cout << "destructor: random matrix\n";*/ }
+
+  RandomMultiBlockMatrix(const EncryptedArray& _ea, long _dim) : ea(_ea), dim(_dim) { 
+    long n = ea.size();
+    long d = ea.getDegree();
+
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long D = zMStar.OrderOf(dim);
+
+    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+
+    data.resize(n/D);
+    for (long k = 0; k < n/D; k++) {
+      data[k].resize(D);
+      for (long i = 0; i < D; i++) {
+	data[k][i].resize(D);
+	for (long j = 0; j < D; j++) {
+          data[k][i][j].SetDims(d, d);
+	  for (long u = 0; u < d; u++)
+	    for (long v = 0; v < d; v++) 
+	      random(data[k][i][j][u][v]);
+	}
+      }
+    }
+  }
+
+  virtual const EncryptedArray& getEA() const {
+    return ea;
+  }
+
+  virtual long size() const {
+    long n = ea.size();
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long D = zMStar.OrderOf(dim);
+    return n/D;
+  }
+
+  virtual bool get(mat_R& out, long i, long j, long k) const {
+    long n = ea.size();
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long D = zMStar.OrderOf(dim);
+
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    assert(k >= 0 && k < n/D);
+    if (IsZero(data[k][i][j])) return true;
+    out = data[k][i][j];
+    return false;
+  }
+};
+
+PlaintextBlockMatrixBaseInterface *
+buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim)
+{
+  switch (ea.getContext().alMod.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMultiBlockMatrix<PA_GF2>(ea, dim);
+    }
+
+    case PA_zz_p_tag: {
+      return new RandomMultiBlockMatrix<PA_zz_p>(ea, dim);
+    }
+
+    default: return 0;
+  }
+}
+
+
 //*******************************************
 
 
@@ -212,37 +339,46 @@ public:
   }
 
 
-#if 0
 
   static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const PlaintextBlockMatrixBaseInterface& mat)
+    const PlaintextBlockMatrixBaseInterface& mat, long dim)
   {
     PA_BOILER
+
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long D = zMStar.OrderOf(dim);
 
     const PlaintextBlockMatrixInterface<type>& mat1 = 
       dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
 
-    vector<RX> res;
-    res.resize(n);
-    for (long j = 0; j < n; j++) {
-      vec_R acc, tmp, tmp1;
-      mat_R val;
+    vector< vector<RX> > data1;
+    data1.resize(n/D);
+    for (long k = 0; k < n/D; k++)
+      data1[k].resize(D);
 
-      acc.SetLength(d);
-      for (long i = 0; i < n; i++) {
-         if (!mat1.get(val, i, j)) {
-            VectorCopy(tmp1, data[i], d);
-            mul(tmp, tmp1, val);
-            add(acc, acc, tmp);
-         }
-      }
-      conv(res[j], acc);
+    for (long i = 0; i < n; i++) {
+      auto p = zMStar.breakIndexByDim(i, dim);
+      long k = p.first; 
+      long j = p.second;
+      data1[k][j] = data[i];
     }
 
-    data = res;
+    for (long k = 0; k < n/D; k++) {
+      for (long j = 0; j < D; j++) {
+	vec_R acc, tmp, tmp1;
+	mat_R val;
+	acc.SetLength(d);
+	for (long i = 0; i < D; i++) {
+	  if (!mat1.get(val, i, j)) {
+            VectorCopy(tmp1, data1[k][i], d);
+            mul(tmp, tmp1, val);
+            add(acc, acc, tmp);
+	  }
+	}
+        conv(data[zMStar.assembleIndexByDim(make_pair(k,j), dim)], acc);
+      }
+    }
   }
-
-#endif
 
 }; 
 
@@ -253,18 +389,11 @@ void mat_mul1D(const EncryptedArray& ea, NewPlaintextArray& pa,
   ea.dispatch<mat_mul1D_pa_impl>(Fwd(pa), mat, dim); 
 }
 
-
-#if 0
-
-void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
-  const PlaintextBlockMatrixBaseInterface& mat)
+void mat_mul1D(const EncryptedArray& ea, NewPlaintextArray& pa, 
+  const PlaintextBlockMatrixBaseInterface& mat, long dim)
 {
-  ea.dispatch<mat_mul_pa_impl>(Fwd(pa), mat); 
+  ea.dispatch<mat_mul1D_pa_impl>(Fwd(pa), mat, dim); 
 }
-
-#endif
-
-
 
 
 
@@ -347,31 +476,28 @@ private:
   const EncryptedArray& ea;
 
   vector< vector< mat_R > > data;
+  long dim;
 
 public:
   ~RandomBlockMatrix() { /*cout << "destructor: random block matrix\n";*/ }
-  RandomBlockMatrix(const EncryptedArray& _ea) : ea(_ea) { 
+  RandomBlockMatrix(const EncryptedArray& _ea, long _dim) : ea(_ea), dim(_dim) { 
     long n = ea.size();
     long d = ea.getDegree();
 
-    long bnd = 2*n; // non-zero with probability 1/bnd
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long D = zMStar.OrderOf(dim);
 
     RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
 
-    data.resize(n);
-    for (long i = 0; i < n; i++) {
-      data[i].resize(n);
-      for (long j = 0; j < n; j++) {
+    data.resize(D);
+    for (long i = 0; i < D; i++) {
+      data[i].resize(D);
+      for (long j = 0; j < D; j++) {
         data[i][j].SetDims(d, d);
-
-        bool zEntry = (RandomBnd(bnd) > 0);
 
         for (long u = 0; u < d; u++)
           for (long v = 0; v < d; v++) 
-            if (zEntry) 
-              clear(data[i][j][u][v]);
-            else
-              random(data[i][j][u][v]);
+            random(data[i][j][u][v]);
       }
     }
   }
@@ -381,8 +507,11 @@ public:
   }
 
   virtual bool get(mat_R& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long D = zMStar.OrderOf(dim);
+
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
     if (IsZero(data[i][j])) return true;
     out = data[i][j];
     return false;
@@ -391,15 +520,15 @@ public:
 
 
 PlaintextBlockMatrixBaseInterface *
-buildRandomBlockMatrix(const EncryptedArray& ea)
+buildRandomBlockMatrix(const EncryptedArray& ea, long dim)
 {
   switch (ea.getContext().alMod.getTag()) {
     case PA_GF2_tag: {
-      return new RandomBlockMatrix<PA_GF2>(ea);
+      return new RandomBlockMatrix<PA_GF2>(ea, dim);
     }
 
     case PA_zz_p_tag: {
-      return new RandomBlockMatrix<PA_zz_p>(ea);
+      return new RandomBlockMatrix<PA_zz_p>(ea, dim);
     }
 
     default: return 0;
@@ -498,13 +627,12 @@ void  TestIt(long m, long p, long r, long d, long L, long dim)
 
   }
 
-#if 0
 
   // Test a "block matrix" over the base field
   {
     // choose a random plaintext square matrix
     shared_ptr<PlaintextBlockMatrixBaseInterface>
-      ptr(buildRandomBlockMatrix(ea));
+      ptr(buildRandomBlockMatrix(ea, dim));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -515,10 +643,10 @@ void  TestIt(long m, long p, long r, long d, long L, long dim)
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
-    mat_mul(ea, v, *ptr);         // multiply the plaintext vector
+    mat_mul1D(ea, v, *ptr, dim);         // multiply the plaintext vector
     cout << " Multiplying with PlaintextBlockMatrixBaseInterface... " 
 	 << std::flush;
-    mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
+    mat_mul1D(ea, ctxt2, *ptr, dim);  // multiply the ciphertext vector
 
     NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
@@ -529,7 +657,34 @@ void  TestIt(long m, long p, long r, long d, long L, long dim)
       cout << "Grrr...\n";
 
   }
-#endif
+
+  // Test a "block" matrix over the extension field
+  {
+    // choose a random plaintext square matrix
+    shared_ptr<PlaintextBlockMatrixBaseInterface> ptr(buildRandomMultiBlockMatrix(ea, dim));
+
+    // choose a random plaintext vector
+    NewPlaintextArray v(ea);
+    random(ea, v);
+
+    // encrypt the random vector
+    Ctxt ctxt(publicKey);
+    ea.encrypt(ctxt, publicKey, v);
+    Ctxt ctxt2 = ctxt;
+
+    cout << " Multiplying with PlaintextBlockMatrixBaseInterface... " << std::flush;
+    mat_multi1D(ea, v, *ptr, dim);         // multiply the plaintext vector
+    mat_multi1D_block(ctxt2, ea, dim, *ptr);  // multiply the ciphertext vector
+
+    NewPlaintextArray v1(ea);
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+
+    if (equals(ea, v, v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr@*\n";
+
+  }
 }
 
 
@@ -556,7 +711,7 @@ int main(int argc, char *argv[])
   argmap["m"] = "2047";
   argmap["p"] = "2";
   argmap["r"] = "1";
-  argmap["d"] = "1";
+  argmap["d"] = "0";
   argmap["L"] = "4";
   argmap["dim"] = "0";
 
