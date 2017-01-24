@@ -38,6 +38,7 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
     return true;
   }
   ea.encode(zpoly, cvec);
+<<<<<<< HEAD
 
   if (f>0) {
     long p = zMStar.getP();
@@ -60,7 +61,73 @@ bool shiftedColumInDiag(NTL::ZZX& zpoly, long f,
     conv(zpoly, rpoly2);
   }
   return false;
+=======
+
+  if (f>0) {
+    long p = zMStar.getP();
+    long m = zMStar.getM();
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
+    long d = ea.getDegree();
+=======
+    long d = zMStar.getOrdP();
+>>>>>>> .
+    long exp = PowerMod(mcMod(p, m), d-f, m); // apply inverse automorphism
+    const auto& F = ea.getTab().getPhimXMod();
+    RX rpoly1, rpoly2;
+
+    conv(rpoly1, zpoly);
+    plaintextAutomorph(rpoly2,rpoly1, exp, m, F);
+    conv(zpoly, rpoly2);
+  }
+  return false;
 }
+
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
+<<<<<<< 9bc0383ed69b283c89756fa341c9bdbecbac7818
+<<<<<<< 8da9e53b6e9f015ed58649480a148eca0aad2656
+
+=======
+<<<<<<< 0e14759c902bb9ec5ec802f9962a1e9b8db6b477
+=======
+=======
+<<<<<<< bc3d68831aa4565f106348096e2991e5773b8112
+>>>>>>> .
+<<<<<<< aa3a6be799ce8b60a1aa2c45b80d89b8f43fba74
+<<<<<<< 0e14759c902bb9ec5ec802f9962a1e9b8db6b477
+=======
+>>>>>>> .
+<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
+=======
+=======
+
+>>>>>>> .
+>>>>>>> .
+inline bool
+getDataFromCache(CachedConstants& cache, long i,
+		 CachedConstants::CacheTag tag, const FHEcontext& context,
+		 NTL::ZZX*& zzxPtr, DoubleCRT*& dcrtPtr)
+{
+  if (cache.isZero(i)) return false; // zero constant
+  // DIRT: this seems to return false on zero, which is
+  // the opposite of the convention used elsewhere in the matrix module
+
+  if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
+  else if (cache.isZZX(i)) {
+    zzxPtr = cache.getZZX(i);
+    if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
+      // DIRT: this "upgrade" logic may not be thread safe
+      dcrtPtr = new DoubleCRT(*zzxPtr, context);
+      cache.setAt(i,dcrtPtr);
+      zzxPtr = NULL;
+    }
+  }
+  else throw std::logic_error("cached constant is NULL");
+
+  return true;
+>>>>>>> 16d4870b680f4ba4b493467999cc848e6b1a4696
+}
+<<<<<<< aa3a6be799ce8b60a1aa2c45b80d89b8f43fba74
+=======
 
 <<<<<<< 32300783d9179c5fe7b2982d743180ab99546561
 <<<<<<< 486a37d5aa9be8f1a01f234d7c57097541c1f715
@@ -127,6 +194,7 @@ getDataFromCache(CachedConstants& cache, long i,
   }
   else throw std::logic_error("cached constant is NULL");
 
+<<<<<<< HEAD
   return true;
 }
 <<<<<<< 486a37d5aa9be8f1a01f234d7c57097541c1f715
@@ -153,6 +221,8 @@ getDataFromCache(CachedConstants& cache, long i,
 =======
 >>>>>>> .
 =======
+=======
+>>>>>>> 16d4870b680f4ba4b493467999cc848e6b1a4696
 >>>>>>> .
 =======
 >>>>>>> .
