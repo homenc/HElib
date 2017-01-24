@@ -52,28 +52,6 @@ public:
 
   bool isZero(int i) const {
 
-<<<<<<< HEAD
-<<<<<<< 32300783d9179c5fe7b2982d743180ab99546561
-<<<<<<< e657e294e21b2b33e4a1c1a8c8a91ddcb953dc92
-=======
-<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
->>>>>>> .
-=======
-<<<<<<< febe625a45df829493261ac83d2abdb14e3fff05
->>>>>>> 16d4870b680f4ba4b493467999cc848e6b1a4696
-=======
-#if 0
-    // This is not thread safe
-
-    if (polys.at(i).tag == tagZZX) {
-      if ( NTL::IsZero(*(polys[i].zzx)) ) {
-	polys[i].tag = tagZero;
-	polys[i].zzx.reset();
-      }
-    }
-#endif
-
->>>>>>> .
     // We may want to do the same for DoubleCRT, but checking for zero
     // would be more expensive
     return (polys[i].tag == tagZero);
