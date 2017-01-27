@@ -22,7 +22,7 @@
 #include "FHE.h"
 #include "Ctxt.h"
 #include "EncryptedArray.h"
-#include "matrix.h"
+#include "matmul.h"
 #include "permutations.h"
 
 //! \cond FALSE (make doxygen ignore these classes)

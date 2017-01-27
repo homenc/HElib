@@ -15,7 +15,7 @@
  */
 #include "EvalMap.h"
 #include "powerful.h"
-#include "matrix.h"
+#include "matmul.h"
 
 // The callback interface for the matrix-multiplication routines.
 

@@ -24,7 +24,7 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
-#include "matrix.h"
+#include "matmul.h"
 
 template<class type> 
 class RandomMatrix : public  PlaintextMatrixInterface<type> {

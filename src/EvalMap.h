@@ -20,7 +20,7 @@
  */
 
 #include "EncryptedArray.h"
-#include "matrix.h"
+#include "matmul.h"
 
 //! @class EvalMap
 //! @brief Class that provides the functionality for the 

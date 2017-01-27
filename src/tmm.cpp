@@ -22,7 +22,7 @@
 #include <cassert>
 #include <NTL/lzz_pXFactoring.h>
 #include "timing.h"
-#include "matrix.h"
+#include "matmul.h"
 
 template<class type> 
 class RandomMatrix : public  PlaintextMatrixInterface<type> {

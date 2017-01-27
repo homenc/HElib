@@ -13,11 +13,11 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-/* matrix.cpp - Data-movement operations on arrays of slots
+/* matmul.cpp - Data-movement operations on arrays of slots
  */
 #include <algorithm>
 #include <NTL/BasicThreadPool.h>
-#include "matrix.h"
+#include "matmul.h"
 
 // Extract one "column" from a matrix that was built with buildLinPolyCoeffs
 template<class RX, class EAtype>

@@ -25,7 +25,7 @@ NTL_CLIENT
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
-#include "matrix.h"
+#include "matmul.h"
 #include "replicate.h"
 #include "permutations.h"
 

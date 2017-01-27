@@ -13,7 +13,7 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-#include "matrix.h"
+#include "matmul.h"
 #include <NTL/ZZ.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <cassert>

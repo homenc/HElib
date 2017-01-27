@@ -16,7 +16,7 @@
 #ifndef FHE_matrix_H_
 #define FHE_matrix_H_
 /**
- * @file matrix.h
+ * @file matmul.h
  * @brief some matrix / linear algenra stuff
  */
 #include "EncryptedArray.h"
