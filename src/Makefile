@@ -16,7 +16,7 @@
 CC = g++
 #
 #CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
-CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_DCRT_THREADS -DFHE_BOOT_THREADS
+CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_BOOT_THREADS
 #CFLAGS = -g -O2 -std=c++11 -pthread
 #CFLAGS = -g -O2 -std=c++11 
 
@@ -36,9 +36,6 @@ CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_DCRT_THREADS -DFHE_BOOT_
 #   -DFHE_THREADS  tells helib to enable generic multithreading capabilities;
 #                  must be used with a thread-enabled NTL and the -pthread
 #                  flag should be passed to gcc
-#
-#   -DFHE_DCRT_THREADS  tells helib to use a multithreading strategy at the
-#                       DoubleCRT level; requires -DFHE_THREADS (see above)
 #
 #   -DFHE_BOOT_THREADS  tells helib to use a multithreading strategy for
 #                       bootstrapping; requires -DFHE_THREADS (see above)

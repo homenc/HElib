@@ -36,11 +36,7 @@
 #include <NTL/BasicThreadPool.h>
 
 
-
-
 // A threaded implementation of DoubleCRT operations
-
-#ifdef FHE_DCRT_THREADS
 
 static
 long MakeIndexVector(const IndexSet& s, Vec<long>& v)
@@ -94,32 +90,6 @@ void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
       }
   NTL_EXEC_RANGE_END
 }
-
-// A non-threaded implementation of DoubleCRT operations
-#else
-
-void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
-{
-  FHE_TIMER_START;
-
-
-  if (empty(s)) return;
-  for (long i = s.first(); i <= s.last(); i = s.next(i))
-    context.ithModulus(i).FFT(map[i], poly);
-}
-
-// FIXME: "code bloat": this just replicates the above with ZZX -> zzX
-void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
-{
-  FHE_TIMER_START;
-
-
-  if (empty(s)) return;
-  for (long i = s.first(); i <= s.last(); i = s.next(i))
-    context.ithModulus(i).FFT(map[i], poly);
-}
-
-#endif
 
 
 // a "sanity check" function, verifies consistency of matrix with current
@@ -287,31 +257,12 @@ void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
     IndexSet notInDigit = allPrimes / digits[i].getIndexSet();
     digits[i].addPrimes(notInDigit); // add back all the primes
 
-    // subtract this digits from all the others, then divide by pi
     ZZ pi = context.productOfPrimes(context.digits[i]);
     for (long j=i+1; j<(long)digits.size(); j++) {
       digits[j].Sub(digits[i], /*matchIndexSets=*/false);
       digits[j] /= pi;
     }
   }
-#if 0
-  dgts.resize(n, DoubleCRT(context, IndexSet::emptySet()));
-  for (long i=0; i<n; i++) // copy only the primes for this digit
-    dgts[i].partialCopy(*this, context.digits[i]);
-
-  IndexSet allPrimes = getIndexSet() | context.specialPrimes;
-  for (long i=0; i<n; i++) {
-    IndexSet notInDigit = allPrimes / dgts[i].getIndexSet();
-    dgts[i].addPrimes(notInDigit); // add back all the primes
-
-    // subtract this digits from all the others, then divide by pi
-    ZZ pi = context.productOfPrimes(context.digits[i]);
-    for (long j=i+1; j<n; j++) {
-      dgts[j].Sub(dgts[i], /*matchIndexSets=*/false);
-      dgts[j] /= pi;
-    }
-  }
-#endif
   FHE_TIMER_STOP;
 }
 
@@ -521,28 +472,6 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
    return *this;
 }
 
-#if 0
-// Copy only the primes in s \intersect other.getIndexSet()
-void DoubleCRT::partialCopy(const DoubleCRT& other, const IndexSet& _s)
-{
-   if (&context != &other.context) 
-      Error("DoubleCRT::partialCopy: incompatible contexts");
-
-   // set the primes of *this to s \intersect other.getIndexSet()
-   IndexSet s = _s;
-   s.retain(other.getIndexSet());
-   map.remove(getIndexSet() / s);
-   map.insert(s / getIndexSet());
-
-   long phim = context.zMStar.getPhiM();
-   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
-     vec_long& row = map[i];
-     const vec_long& other_row = other.map[i];
-     for (long j = 0; j < phim; j++)
-       row[j] = other_row[j];
-   }
-}
-#endif
 
 DoubleCRT& DoubleCRT::operator=(const ZZX&poly)
 {
@@ -607,15 +536,11 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
   return q;
 }
 
-#ifdef FHE_DCRT_THREADS
-// experimental multi-threaded version
-
-
 
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
-FHE_TIMER_START;
+  FHE_TIMER_START;
   if (isDryRun()) return;
 
   IndexSet s1 = map.getIndexSet() & s;
@@ -668,7 +593,7 @@ FHE_TIMER_START;
 
   }
 
-{ FHE_NTIMER_START(toPoly_CRT);
+  {FHE_NTIMER_START(toPoly_CRT);
 
   PartitionInfo pinfo1(phim);
   long cnt1 = pinfo1.NumIntervals();
@@ -779,275 +704,11 @@ FHE_TIMER_START;
   // NOTE: assigning to poly[j] within the parallel loop
   // leads to horrible performance, as there apparently is
   // a lot of contention within malloc.
-}
-
-}
-
-
-
-
-#else
-
-
-
-#if 1
-// this version is faster than the original, which is based
-// on NTL's built-in CRT routine
-void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
-		       bool positive) const
-{
-FHE_TIMER_START;
-  if (isDryRun()) return;
-
-  IndexSet s1 = map.getIndexSet() & s;
-
-  if (empty(s1)) {
-    clear(poly);
-    return;
-  }
-
-  zz_pBak bak; bak.save();
-
-  long phim = context.zMStar.getPhiM();
-
-  ZZ prod;
-  prod = 1;
-  for (long i = s1.first(); i <= s1.last(); i = s1.next(i))
-    prod *= context.ithModulus(i).getQ();
-
-  long sz = prod.size();
-
-  ZZVec res;
-  res.SetSize(phim, sz+1);
-
-  Vec<double> quotients;
-  quotients.SetLength(phim);
-  for (long j = 0; j < phim; j++) quotients[j] = 0;
-
-  ZZ prod1;
-
-  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
-    context.ithModulus(i).restoreModulus();
-    zz_pX& tmp = Cmodulus::getScratch_zz_pX();
-    context.ithModulus(i).iFFT(tmp, map[i]); 
-    {
-      FHE_NTIMER_START(toPoly_CRT);
-
-      long q = zz_p::modulus();
-      mulmod_t qinv = zz_p::ModulusInverse();
-      div(prod1, prod, q);
-      long r = rem(prod1, q);
-      long rinv = InvMod(r, q);
-      mulmod_precon_t rinvqinv = PrepMulModPrecon(rinv, q, qinv);
-      long tlen = tmp.rep.length();
-      const zz_p *tp = tmp.rep.elts();
-      double qrecip = 1/double(q);
-
-      for (long j = 0; j < tlen; j++) {
-        long s2 = MulModPrecon(rep(tp[j]), rinv, q, rinvqinv);
-        MulAddTo(res[j], prod1, s2);
-        quotients[j] += s2*qrecip;
-      }
-    }
-  }
-
-
-  if (positive) {
-    FHE_NTIMER_START(toPoly_finish);
-    poly.rep.SetLength(phim);
-    for (long j = 0; j < phim; j++) {
-      if (res[j] >= prod) rem(res[j], res[j], prod);
-      poly.rep[j] = res[j];
-    }
-    poly.normalize();
-  }
-  else {
-
-
-#if 0
-    FHE_NTIMER_START(toPoly_finish);
-    div(prod1, prod, 2);
-    poly.rep.SetLength(phim);
-    for (long j = 0; j < phim; j++) {
-      if (res[j] >= prod) rem(res[j], res[j], prod);
-      if (res[j] > prod1) sub(res[j], res[j], prod);
-      poly.rep[j] = res[j];
-    }
-    poly.normalize();
-#elif 1
-    FHE_NTIMER_START(toPoly_finish);
-    div(prod1, prod, 2);
-    poly.rep.SetLength(phim);
-    ZZ t1;
-    for (long j = 0; j < phim; j++) {
-      t1 = res[j];
-      MulSubFrom(t1, prod, long(quotients[j]));
-      while (t1 < 0) add(t1, t1, prod);
-      while (t1 >= prod) sub(t1, t1, prod);
-      res[j] = t1;
-      if (res[j] > prod1) sub(res[j], res[j], prod);
-      poly.rep[j] = res[j];
-    }
-    poly.normalize();
-#else
-    FHE_NTIMER_START(toPoly_finish1);
-    div(prod1, prod, 2);
-    poly.rep.SetLength(phim);
-    FHE_NTIMER_STOP(toPoly_finish1);
-
-    ZZ t1;
-    
-    FHE_NTIMER_START(toPoly_finish2);
-    for (long j = 0; j < phim; j++) {
-#if 1
-      t1 = res[j];
-      MulSubFrom(t1, prod, long(quotients[j]));
-      while (t1 < 0) add(t1, t1, prod);
-      while (t1 >= prod) sub(t1, t1, prod);
-      res[j] = t1;
-#else
-      if (res[j] >= prod) rem(res[j], res[j], prod);
-#endif
-    }
-    FHE_NTIMER_STOP(toPoly_finish2);
-
-    FHE_NTIMER_START(toPoly_finish3);
-    for (long j = 0; j < phim; j++) {
-      if (res[j] > prod1) sub(res[j], res[j], prod);
-    }
-    FHE_NTIMER_STOP(toPoly_finish3);
-
-    FHE_NTIMER_START(toPoly_finish4);
-    for (long j = 0; j < phim; j++) {
-      poly.rep[j] = res[j];
-    }
-    poly.normalize();
-    FHE_NTIMER_STOP(toPoly_finish4);
-
-#endif
-
-
-
-
-  }
-}
-#else
-void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
-		       bool positive) const
-{
-FHE_TIMER_START;
-  if (isDryRun()) return;
-
-  IndexSet s1 = map.getIndexSet() & s;
-
-  if (empty(s1)) {
-    clear(poly);
-    return;
-  }
-
-  clear(poly);
-  ZZ prod;
-  prod = 1;
-
-  zz_pBak bak; bak.save();
-
-  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
-    context.ithModulus(i).restoreModulus();
-    zz_pX& tmp = Cmodulus::getScratch_zz_pX();
-    context.ithModulus(i).iFFT(tmp, map[i]); 
-    {
-       FHE_NTIMER_START(toPoly_CRT);
-       CRT(poly, prod, tmp);  // NTL :-)
-    }
-  }
-
-  if (positive) {
-    long d = deg(poly);
-    for (long j = 0; j <= d; j++) 
-      if (poly.rep[j] < 0)
-        poly.rep[j] += prod;   
-
-    // no need to normalize poly here
   }
 }
 
 
 
-#endif
-
-
-
-
-#endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#if 0
-{
-FHE_TIMER_START;
-  if (isDryRun()) return;
-
-  IndexSet s1 = map.getIndexSet() & s;
-
-  if (empty(s1)) {
-    clear(poly);
-    return;
-  }
-
-  ZZ p = to_ZZ(context.ithPrime(s1.first()));  // the first modulus
-
-  // Get poly modulo the first prime in coefficent form
-  long i = s1.first();
-  const Cmodulus& mod = context.ithModulus(i);
-  mod.iFFT(poly, map[i]);
-
-  vec_ZZ& vp = poly.rep;
-
-  // ensure that vp is of size phi(m) with entries in [-p/2,p/2]
-  long phim = context.zMStar.getPhiM();
-  long vpLength = vp.length();
-  if (vpLength < phim) { // just in case of leading zeros in poly
-    vp.SetLength(phim);
-    for (long j = vpLength; j < phim; j++) vp[j]=0;
-  }
-  ZZ p_over_2 = p/2;
-  for (long j = 0; j < phim; j++) if (vp[j] > p_over_2) vp[j] -= p;
-
-  // do incremental integer CRT for other levels
-
-  ZZX current;
-  for (i = s1.next(i); i <= s1.last(); i = s1.next(i)) {
-    long q = context.ithPrime(i);          // the next modulus
-    context.ithModulus(i).iFFT(current, map[i]); // Poly mod q in coeff form
-
-    // CRT the coefficient vectors of poly and current
-    intVecCRT(vp, p, current.rep, q);    // defined in the module NumbTh
-    p *= q;     // update the modulus
-  }
-
-  // The above yeilds polynomial with coefficients in [-p/2,p/2]
-  // If we need positive, just add p to all the negative coefficients
-  if (positive) 
-    for (long j=0; j<poly.rep.length(); j++) {
-      if (poly.rep[j] < 0) poly.rep[j] += p;
-    }
-
-  poly.normalize(); // need to call this after we work on the coeffs
-FHE_TIMER_STOP;
-}
-#endif
 
 void DoubleCRT::toPoly(ZZX& p, bool positive) const
 {
@@ -1123,7 +784,6 @@ void DoubleCRT::automorph(long k)
 }
 
 // fills each row i with random integers mod pi
-#if 1
 void DoubleCRT::randomize(const ZZ* seed) 
 {
   FHE_TIMER_START;
@@ -1143,7 +803,6 @@ void DoubleCRT::randomize(const ZZ* seed)
 
   unsigned char *buf = buf_storage.elts();
 
-  
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     long pi = context.ithPrime(i);
     long k = NumBits(pi-1);
@@ -1173,45 +832,6 @@ void DoubleCRT::randomize(const ZZ* seed)
   }
 }
 
-
-#else
-void DoubleCRT::randomize(const ZZ* seed) 
-{
-  FHE_TIMER_START;
-
-  if (isDryRun()) return;
-
-  if (seed != NULL) SetSeed(*seed);
-
-  const IndexSet& s = map.getIndexSet();
-  long phim = context.zMStar.getPhiM();
-
-  ZZ prod;
-  context.productOfPrimes(prod, s);
-
-  Vec<ZZ> vec;
-  vec.SetLength(phim);
-  for (long j = 0; j < phim; j++)
-    RandomBnd(vec[j], prod);
-  
-  zz_pBak bak; bak.save();
-
-  // DIRT: this Vec<zz_p> is used for several moduli
-  NTL_THREAD_LOCAL static Vec<zz_p> vvec_tls;
-  Vec<zz_p>& vvec = vvec_tls;
-  vvec.SetLength(phim);
-  
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
-    context.ithModulus(i).restoreModulus();
-    conv(vvec, vec);
-
-    long *row = map[i].elts();
-    const zz_p *vvecp = vvec.elts();
-    for (long j = 0; j < phim; j++)
-      row[j] = rep(vvecp[j]);  
-  }
-}
-#endif
 
 void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 {
