@@ -127,7 +127,12 @@ ostream& operator<<(ostream& str, const KeySwitch& matrix);
  * @brief The public key
  ********************************************************************/
 class FHEPubKey { // The public key
+
+protected:
+
   const FHEcontext& context; // The context
+
+private:
 
   //! @var Ctxt pubEncrKey
   //! The public encryption key is an encryption of 0,
@@ -304,6 +309,8 @@ public:
 
   friend ostream& operator << (ostream& str, const FHESecKey& sk);
   friend istream& operator >> (istream& str, FHESecKey& sk);
+  friend void writeSecKeyBinary(ostream& str, const FHESecKey& sk);
+  friend void readSecKeyBinary(istream& str, FHESecKey& sk);
 };
 
 //! @name Strategies for generating key-switching matrices

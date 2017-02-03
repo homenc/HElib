@@ -569,7 +569,7 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
 //  7. Ctxt recryptEkey;
 
   writeContextBaseBinary(str, pk.getContext());
-  cerr << "[write pub key] write pk.\n";
+//  cerr << "[write pub key] write pk.\n";
   pk.pubEncrKey.write(str);
   write_raw_vector(str, pk.skHwts);
 
@@ -595,7 +595,7 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   readContextBaseBinary(str, dummy);
 
   // Read in the rest
-  cerr << "[read pub key] read pk.\n";
+//  cerr << "[read pub key] read pk.\n";
   pk.pubEncrKey.read(str);
   read_raw_vector(str, pk.skHwts);
 
@@ -888,5 +888,26 @@ istream& operator>>(istream& str, FHESecKey& sk)
   seekPastChar(str, ']');
   //  cerr << "]\n";
   return str;
+}
+
+
+void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
+{
+// N.B. This does not write out the public key part as the ASCII version does!!!
+
+// Write out 
+// 1. vector<DoubleCRT> sKeys  
+
+  write_raw_vector<DoubleCRT>(str, sk.sKeys); 
+
+}
+
+void readSecKeyBinary(istream& str, FHESecKey& sk)
+{
+// N.B. This does not write out the public key part as the ASCII version does!!!
+  
+  DoubleCRT blankDCRT(sk.context, IndexSet::emptySet());
+  read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
+  
 }
 

@@ -16,7 +16,8 @@
 CC = g++
 #
 #CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
-CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/Users/hamish/HElibBin/local/include -std=c++11 
+#CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/Users/hamish/HElibBin/local/include -std=c++11 
+CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/Users/hamish/Projects/HElibBin/local/include -std=c++11 
 
 # useful flags:
 #   -std=c++11
@@ -51,7 +52,8 @@ LD = g++
 AR = ar
 ARFLAGS=ruv
 GMP=-lgmp 
-LDLIBS = -L/Users/hamish/HElibBin/local/lib -lntl $(GMP) -lm
+#LDLIBS = -L/Users/hamish/HElibBin/local/lib -lntl $(GMP) -lm
+LDLIBS = -L/Users/hamish/Projects/HElibBin/local/lib -lntl $(GMP) -lm
 
 HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h matrix.h binio.h
 

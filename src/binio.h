@@ -29,11 +29,11 @@ template<typename T> void write_raw_vector(ostream& str, const vector<T>& v)
 {
   long sz = v.size();  
   str.write(reinterpret_cast<char*>(&sz), sizeof(sz)); 
-  cerr << "[write_raw_vector] vector size:" << sz << endl;
+//  cerr << "[write_raw_vector] vector size:" << sz << endl;
 
   for(auto n: v){
     n.write(str);
-    cerr << "[write_raw_vector] value:" << n << endl;
+//    cerr << "[write_raw_vector] value:" << n << endl;
   }
 };
 
@@ -44,12 +44,12 @@ template<typename T> void read_raw_vector(istream& str, vector<T>& v, T& init)
 
   long sz; 
   str.read(reinterpret_cast<char*>(&sz), sizeof(sz)); 
-  cerr << "[read_raw_vector] resizing vector to:" << sz << endl;
+//  cerr << "[read_raw_vector] resizing vector to:" << sz << endl;
   v.resize(sz, init); // Make space in vector
 
   for(auto& n: v){
     n.read(str);
-    cerr << "[read_raw_vector] value read:" << n << endl;
+//    cerr << "[read_raw_vector] value read:" << n << endl;
   }   
 
 };
@@ -68,12 +68,12 @@ template<typename T> void read_raw_vector(istream& str, vector<T>& v, const FHEc
  
   long sz; 
   str.read(reinterpret_cast<char*>(&sz), sizeof(sz)); 
-  cerr << "[read_raw_vector] resizing vector to:" << sz << endl;
+//  cerr << "[read_raw_vector] resizing vector to:" << sz << endl;
   v.resize(sz); // Make space in vector
 
   for(auto& n: v){
     n.read(str, context);
-    cerr << "[read_raw_vector] value read:" << n << endl;
+//    cerr << "[read_raw_vector] value read:" << n << endl;
   }   
  
 }

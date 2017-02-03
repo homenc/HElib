@@ -1,0 +1,10 @@
+# Exclude 
+
+*.a
+*.o
+*_x.dSYM
+*_x
+/src/*.sh
+/src/*.txt
+/src/*.bin
+!/src/LICENSE.TXT

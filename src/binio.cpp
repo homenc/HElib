@@ -76,7 +76,7 @@ void write_raw_ZZ(ostream& str, const ZZ& zz)
   str.write(reinterpret_cast<char*>(&noBytes), sizeof(noBytes)); 
   str.write(reinterpret_cast<char*>(zzBytes), noBytes); 
   
-  cerr << "[PORK] Write Complete\n";
+//  cerr << "[PORK] Write Complete\n";
 }
 
 void read_raw_ZZ(istream& str, ZZ& zz)
@@ -89,7 +89,7 @@ void read_raw_ZZ(istream& str, ZZ& zz)
   str.read(reinterpret_cast<char*>(zzBytes), noBytes); 
   zz = ZZFromBytes(zzBytes, noBytes);
 
-  cerr << "[PORK] Read Complete\n";
+//  cerr << "[PORK] Read Complete\n";
 }
 
 
