@@ -107,7 +107,7 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
       {75264, 82603, 56, 36484}, // gens=3(336),24294(2),7(!2)
       {84672, 92837, 56, 38520}  // gens=18(126),1886(6),3(!2)
     };
-    for (i=0; i<sizeof(ms)/sizeof(long[4]); i++) { 
+    for (i=0; i<sizeof(ms)/sizeof(ms[0]); i++) { 
       if (ms[i][0] < N || GCD(p, ms[i][1]) != 1) continue;
       long ordP = multOrd(p, ms[i][1]);
       long nSlots = ms[i][0]/ordP;
