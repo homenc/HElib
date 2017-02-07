@@ -637,7 +637,7 @@ bool FHESecKey::operator==(const FHESecKey& other) const
 // encryption key.
 // It is assumed that the context already contains all parameters.
 long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
-			     long ptxtSpace, bool onlyLinear)
+			     long ptxtSpace, long maxDegKswitch)
 {
   if (sKeys.empty()) { // 1st secret-key, generate corresponding public key
     if (ptxtSpace<2)
@@ -662,10 +662,9 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
   sKeys.push_back(sKey); // add to the list of secret keys
   long keyID = sKeys.size()-1; // not thread-safe?
 
-  if (!onlyLinear) {
-    GenKeySWmatrix(2,1,keyID,keyID); // At least we need the s^2 -> s matrix
-    GenKeySWmatrix(3,1,keyID,keyID); //             and also s^3 -> s
-  }
+  for (long e=2; e<=maxDegKswitch; e++)
+    GenKeySWmatrix(e,1,keyID,keyID); // s^e -> s matrix
+
   return keyID; // return the index where this key is stored
 }
 
@@ -852,7 +851,7 @@ long FHESecKey::genRecryptData()
   const long hwt = context.rcData.skHwt;
   sampleHWt(keyPoly, hwt, context.zMStar.getPhiM());
   DoubleCRT newSk(keyPoly, context); // defined relative to all primes
-  long keyID = ImportSecKey(newSk, hwt, p2r, /*onlyLinear=*/true);
+  long keyID = ImportSecKey(newSk, hwt, p2r, /*maxDegKswitch=*/1);
 
   // Generate a key-switching matrix from key 0 to this key
   GenKeySWmatrix(/*fromSPower=*/1,/*fromXPower=*/1,

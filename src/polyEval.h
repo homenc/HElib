@@ -38,8 +38,8 @@ void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x);
 
 // A useful helper class
 
-//! @brief Store powers of X, compute them synamically as needed.
-// This implementation assumes that the size (# of powers) is determine
+//! @brief Store powers of X, compute them dynamically as needed.
+// This implementation assumes that the size (# of powers) is determined
 // at initialization time, it is not hard to grow the vector as needed,
 // but not clear if there is any application that needs it.
 class DynamicCtxtPowers {

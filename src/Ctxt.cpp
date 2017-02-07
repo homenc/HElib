@@ -34,6 +34,10 @@ void SKHandle::write(ostream& str) const
   write_raw_long(str, secretKeyID);
 }
 
+// A hack for recording required automorphisms (see NumbTh.h)
+std::set<long>* FHEglobals::automorphVals = NULL;
+std::set<long>* FHEglobals::automorphVals2 = NULL;
+
 // Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
@@ -852,6 +856,14 @@ void Ctxt::multByConstant(const ZZX& poly, double size)
   multByConstant(dcrt,size);
 }
 
+void Ctxt::multByConstant(const zzX& poly, double size)
+{
+  if (this->isEmpty()) return;
+  FHE_TIMER_START;
+  DoubleCRT dcrt(poly,context,primeSet);
+  multByConstant(dcrt,size);
+}
+
 // Divide a cipehrtext by 2. It is assumed that the ciphertext
 // encrypts an even polynomial and has plaintext space 2^r for r>1.
 // As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
@@ -936,16 +948,30 @@ void Ctxt::smartAutomorph(long k)
   // Sanity check: verify that k \in Zm*
   assert (context.zMStar.inZmStar(k));
 
+  // A hack: record this automorphism rather than actually performing it
+  if (isSetAutomorphVals()) { // defined in NumbTh.h
+    recordAutomorphVal(k);
+    return;
+  }
+
   long keyID=getKeyID();
   if (!inCanonicalForm(keyID)) {     // Re-linearize the input, if needed
     reLinearize(keyID);
     assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
   }
-  assert (pubKey.isReachable(k,keyID)); // reachable from 1
-
+  if (!pubKey.isReachable(k,keyID)) {// must have key-switching matrices for it
+    throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
+			   + ", keyID="+std::to_string(keyID));
+  }
   while (k != 1) {
     const KeySwitch& matrix = pubKey.getNextKSWmatrix(k,keyID);
     long amt = matrix.fromKey.getPowerOfX();
+
+    // A hack: record this automorphism rather than actually performing it
+    if (isSetAutomorphVals2()) { // defined in NumbTh.h
+      recordAutomorphVal2(amt);
+      return;
+    }
 
     automorph(amt);
     reLinearize(keyID);
@@ -1072,13 +1098,11 @@ void CtxtPart::read(istream& str)
 
 istream& operator>>(istream& str, SKHandle& handle)
 {
-  //  cerr << "SKHandle[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> handle.powerOfS;
   str >> handle.powerOfX;
   str >> handle.secretKeyID;
   seekPastChar(str,']');
-  //  cerr << "]";  
   return str;
 }
 
@@ -1090,12 +1114,10 @@ ostream& operator<<(ostream& str, const CtxtPart& p)
 
 istream& operator>>(istream& str, CtxtPart& p)
 {
-  //  cerr << "CtxtPart[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> (DoubleCRT&) p;
   str >> p.skHandle;
   seekPastChar(str,']');
-  //  cerr << "]";
   return str;
 }
 
@@ -1110,7 +1132,6 @@ ostream& operator<<(ostream& str, const Ctxt& ctxt)
 
 istream& operator>>(istream& str, Ctxt& ctxt)
 {
-  //  cerr << "Ctxt[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseVar >> ctxt.primeSet;
   long nParts;
@@ -1121,7 +1142,6 @@ istream& operator>>(istream& str, Ctxt& ctxt)
     assert (ctxt.parts[i].getIndexSet()==ctxt.primeSet); // sanity-check
   }
   seekPastChar(str,']');
-  //  cerr << "]";
   return str;
 }
 
@@ -1157,6 +1177,40 @@ void incrementalProduct(vector<Ctxt>& v)
   long n = v.size();  // how many ciphertexts do we have
   if (n > 0) recursiveIncrementalProduct(&v[0], n); // do the actual work
 }
+
+
+static void recursiveTotalProduct(Ctxt& out, const Ctxt array[], long n)
+{
+  if (n <= 3) {
+    out = array[0];
+    if (n == 2)      out.multiplyBy(array[1]);
+    else if (n == 3) out.multiplyBy2(array[1],array[2]);
+    return;
+  }
+
+  // split the array in two
+
+  long ell = NTL::NumBits(n-1); // 2^{l-1} <= n-1
+  long n1 = 1UL << (ell-1);     // n/2 <= n1 = 2^l < n
+
+  // Call the recursive procedure separately on the first and second parts
+  Ctxt out2(ZeroCtxtLike, out);
+  recursiveTotalProduct(out, array, n1);
+  recursiveTotalProduct(out2, &array[n1], n-n1);
+
+  // Multiply the beginning of the two halves
+  out.multiplyBy(out2);
+}
+
+// set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products
+// out could point to v[0], but having it pointing to any other v[i]
+// will make the result unpredictable.
+void totalProduct(Ctxt& out, const vector<Ctxt>& v)
+{
+  long n = v.size();  // how many ciphertexts do we have
+  if (n > 0) recursiveTotalProduct(out, &v[0], n); // do the actual work
+}
+
 
 // Compute the inner product of two vectors of ciphertexts, this routine uses
 // the lower-level *= operator and does only one re-linearization at the end.

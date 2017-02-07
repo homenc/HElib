@@ -29,16 +29,20 @@ NTL_CLIENT
 #include "EvalMap.h"
 #include "powerful.h"
 
+static bool noPrint = false;
+
 // #define DEBUG_PRINTOUT
 #ifdef DEBUG_PRINTOUT
 extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;
 extern ZZX dbg_ptxt;
 extern Vec<ZZ> ptxt_pwr;
-
+  
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
+long printFlag = FLAG_PRINT_VEC;
+
 extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 			    const EncryptedArray& ea, long flags=0);
 #endif
@@ -70,6 +74,9 @@ static long mValues[][14] = {
   {  2, 54000, 55831, 25, 31, 1801, 0, 19812, 50593,    0, 30, 72,   0, 100}, // m=31*(1801) m/phim(m)=1.03     C=125 D=2 E=0
   {  2, 60016, 60787, 22, 89, 683,  0,  2050, 58741,    0, 88, 31,   0, 200}, // m=89*(683) m/phim(m)=1.01      C=139 D=2 E=1
 
+  {  7,    36,    57,  3,  3,  19,  0,    20,    40,    0,  2, -6,   0, 100}, // m=3*(19) :-( m/phim(m)=1.58 C=14 D=3 E=0
+
+  { 17,    48,   105, 12,  3,  35,  0,    71,    76,    0,  2,  2,   0, 100}, // m=3*(5)*{7} m/phim(m)=2.18 C=14 D=2 E=2
   { 17,   576,  1365, 12,  7,   3, 65,   976,   911,  463,  6,  2,   4, 100}, // m=3*(5)*7*{13} m/phim(m)=2.36  C=22  D=3
   { 17, 18000, 21917, 30, 101, 217, 0,  5860,  5455,    0, 100, 6,   0, 100}, // m=(7)*{31}*101 m/phim(m)=1.21  C=134 D=2 
   { 17, 30000, 34441, 30, 101, 341, 0,  2729, 31715,    0, 100, 10,  0, 100}, // m=(11)*{31}*101 m/phim(m)=1.14 C=138 D=2
@@ -116,21 +123,22 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   if (abs(mValues[idx][11])>1) ords.push_back(mValues[idx][11]);
   if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
-  cout << "*** TestIt";
-  if (isDryRun()) cout << " (dry run)";
-  cout << ": p=" << p
-       << ", r=" << r
-       << ", L=" << L
-       << ", B=" << B
-       << ", c=" << c
-       << ", m=" << m
-       << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
-       << endl;
-
+  if (!noPrint) {
+    cout << "*** TestIt";
+    if (isDryRun()) cout << " (dry run)";
+    cout << ": p=" << p
+	 << ", r=" << r
+	 << ", L=" << L
+	 << ", B=" << B
+	 << ", c=" << c
+	 << ", m=" << m
+	 << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
+	 << endl;
+    cout << "Computing key-independent tables..." << std::flush;
+  }
   setTimersOn();
   setDryRun(false); // Need to get a "real context" to test bootstrapping
 
-  cout << "Computing key-independent tables..." << std::flush;
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
@@ -139,21 +147,24 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   t += GetTime();
 
   if (skHwt>0) context.rcData.skHwt = skHwt;
-  cout << " done in "<<t<<" seconds\n";
-  cout << "  e="    << context.rcData.e
-       << ", e'="   << context.rcData.ePrime
-       << ", alpha="<< context.rcData.alpha
-       << ", t="    << context.rcData.skHwt
-       << "\n  ";
-  context.zMStar.printout();
+  if (!noPrint) {
+    cout << " done in "<<t<<" seconds\n";
+    cout << "  e="    << context.rcData.e
+	 << ", e'="   << context.rcData.ePrime
+	 << ", alpha="<< context.rcData.alpha
+	 << ", t="    << context.rcData.skHwt
+	 << "\n  ";
+    context.zMStar.printout();
+  }
   setDryRun(dry); // Now we can set the dry-run flag if desired
 
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
   double bitsize = context.logOfProduct(allPrimes)/log(2.0);
-  cout << "  "<<nPrimes<<" primes in chain, total bitsize="
-       << ceil(bitsize) << ", secparam="
-       << (7.2*phim/bitsize -110) << endl;
+  if (!noPrint)
+    cout << "  "<<nPrimes<<" primes in chain, total bitsize="
+	 << ceil(bitsize) << ", secparam="
+	 << (7.2*phim/bitsize -110) << endl;
 
   long p2r = context.alMod.getPPowR();
   context.zMStar.set_cM(mValues[idx][13]/100.0);
@@ -161,16 +172,16 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   for (long numkey=0; numkey<OUTER_REP; numkey++) { // test with 3 keys
 
   t = -GetTime();
-  cout << "Generating keys, " << std::flush;
+  if (!noPrint) cout << "Generating keys, " << std::flush;
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
-  cout << "computing key-dependent tables..." << std::flush;
+  if (!noPrint) cout << "computing key-dependent tables..." << std::flush;
   secretKey.genRecryptData();
   t += GetTime();
-  cout << " done in "<<t<<" seconds\n";
+  if (!noPrint) cout << " done in "<<t<<" seconds\n";
 
   zz_p::init(p2r);
   zz_pX poly_p = random_zz_pX(context.zMStar.getPhiM());
@@ -186,6 +197,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   dbg_ptxt = ptxt_poly;
   context.rcData.p2dConv->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
   vecRed(ptxt_pwr, ptxt_pwr, p2r, true);
+  if (dbgEa->size()>100) printFlag = 0; // don't print too many slots
 #endif
 
   ZZX poly2;
@@ -213,22 +225,24 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 	  cout << i << ": " << powerful[i] << " != " << powerful2[i]<<", ";
 	  if (numDiff >5) break;
         }
-      cout << endl<< endl;
-      printAllTimers();
+      if (!noPrint) {
+	cout << endl<< endl;
+	printAllTimers();
+      }
       exit(0);
     }
 #ifdef DEBUG_PRINTOUT
-    decryptAndPrint(cout, c1, secretKey, *context.ea);
+    decryptAndPrint(cout, c1, secretKey, *context.ea, printFlag);
     cout << endl;
 #endif
   }
   }
-  printAllTimers();
+  if (!noPrint) printAllTimers();
   resetAllTimers();
 #if (defined(__unix__) || defined(__unix) || defined(unix))
     struct rusage rusage;
     getrusage( RUSAGE_SELF, &rusage );
-    cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+    if (!noPrint) cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
 #endif
 }
 
@@ -265,6 +279,8 @@ int main(int argc, char *argv[])
   amap.arg("nthreads", nthreads, "number of threads");
 
   amap.arg("seed", seed, "random number seed");
+
+  amap.arg("noPrint", noPrint, "suppress printouts");
 
   amap.parse(argc, argv);
 

@@ -274,14 +274,14 @@ public:
   //! public encryption key.
   //! It is assumed that the context already contains all parameters.
   long ImportSecKey(const DoubleCRT& sKey, long hwt,
-		    long ptxtSpace=0, bool onlyLinear=false);
+		    long ptxtSpace=0, long maxDegKswitch=3);
 
   //! Key generation: This procedure generates a single secret key,
   //! pushes it onto the sKeys list using ImportSecKey from above.
-  long GenSecKey(long hwt, long ptxtSpace=0, bool onlyLinear=false)
+  long GenSecKey(long hwt, long ptxtSpace=0, long maxDegKswitch=3)
   { DoubleCRT newSk(context); // defined relative to all primes, special or not
     newSk.sampleHWt(hwt);     // samle a Hamming-weight-hwt polynomial
-    return ImportSecKey(newSk, hwt, ptxtSpace, onlyLinear);
+    return ImportSecKey(newSk, hwt, ptxtSpace, maxDegKswitch);
   }
 
   //! Generate a key-switching matrix and store it in the public key. The i'th
@@ -340,6 +340,10 @@ void addFrbMatrices(FHESecKey& sKey, long keyID=0);
 //! Generate all key-switching matrices for a given permutation network
 class PermNetwork;
 void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID=0);
+
+//! Generate specific key-swicthing matrices, described by the given set
+void addTheseMatrices(FHESecKey& sKey,
+		      const std::set<long>& automVals, long keyID=0);
 
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
 void RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,

@@ -27,6 +27,8 @@ NTL_CLIENT
 #include "replicate.h"
 #include "timing.h"
 
+static bool noPrint = false;
+
 static bool check_replicate(const Ctxt& c1, const Ctxt& c0, long i,
 			    const FHESecKey& sKey, const EncryptedArray& ea)
 {
@@ -78,6 +80,8 @@ public:
     replicate(ea, pa1, pos);
     NewPlaintextArray pa2(ea);
 
+    if (pos==0 && !noPrint) CheckCtxt(ctxt, "replicateAll");
+
     ea.decrypt(ctxt, sKey, pa2);
     if (!equals(ea, pa1, pa2)) error = true; // record the error, if any
     t_last = GetTime();
@@ -91,42 +95,39 @@ public:
 
 void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
 {
-  cout << "*** TestIt" << (isDryRun()? "(dry run):" : ":")
-       << " m=" << m
-       << ", p=" << p
-       << ", r=" << r
-       << ", d=" << d
-       << ", L=" << L
-       << ", bnd=" << bnd
-       << ", B=" << B
-       << endl;
+  if (!noPrint)
+    std::cout << "*** TestIt" << (isDryRun()? "(dry run):" : ":")
+	 << " m=" << m
+	 << ", p=" << p
+	 << ", r=" << r
+	 << ", d=" << d
+	 << ", L=" << L
+	 << ", bnd=" << bnd
+	 << ", B=" << B
+	 << endl;
 
   setTimersOn();
   FHEcontext context(m, p, r);
   buildModChain(context, L, /*c=*/2);
 
-  context.zMStar.printout();
-  cout << endl;
-
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
-
   ZZX G;
   if (d == 0)
     G = context.alMod.getFactorsOverZZ()[0];
   else
-    G = makeIrredPoly(p, d); 
+    G = makeIrredPoly(p, d);
 
-  cout << "G = " << G << "\n";
-  cout << "generating key-switching matrices... ";
+  if (!noPrint) {
+    context.zMStar.printout();
+    cout << endl;
+    cout << "G = " << G << "\n";
+  }
+
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-  cout << "done\n";
 
-  cout << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
-  cout << "done\n";
-
   NewPlaintextArray xp0(ea), xp1(ea);
   random(ea, xp0);
   random(ea, xp1);
@@ -137,13 +138,13 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   ZZX poly_xp1;
   ea.encode(poly_xp1, xp1);
 
-  cout << "** Testing replicate():\n";
+  if (!noPrint)  cout << "** Testing replicate():\n";
   bool error = false;
   Ctxt xc1 = xc0;
-  CheckCtxt(xc1, "before replicate");
+  if (!noPrint) CheckCtxt(xc1, "before replicate");
   replicate(ea, xc1, ea.size()/2);
   if (!check_replicate(xc1, xc0, ea.size()/2, secretKey, ea)) error = true;
-  CheckCtxt(xc1, "after replicate");
+  if (!noPrint) CheckCtxt(xc1, "after replicate");
 
   // Get some timing results
   for (long i=0; i<20 && i<ea.size(); i++) {
@@ -154,10 +155,12 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
     FHE_NTIMER_STOP(replicate);
   }
   cout << "  Replicate test " << (error? "failed :(\n" : "succeeded :)")
-       << endl<< endl;
-  printAllTimers();
+       << endl;
 
-  cout << "\n** Testing replicateAll()... " << std::flush;
+  if (!noPrint) {
+    printAllTimers();
+    cout << "\n** Testing replicateAll()... " << std::flush;
+  }
 #ifdef DEBUG_PRINTOUT
   replicateVerboseFlag = true;
 #else
@@ -172,13 +175,13 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   }
   catch (StopReplicate) {
   }
-  cout << (handler->error? "failed :(\n" : "succeeded :)")
-       << ", total time=" << handler->t_total << " ("
-       << ((B>0)? B : ea.size())
-       << " vectors)\n";
+  std::cout << "  replicateAll() "
+	    << (handler->error? "failed :(\n" : "succeeded :)")
+	    << ", total time=" << handler->t_total << " ("
+	    << ((B>0)? B : ea.size())
+	    << " vectors)\n";
   delete handler;
 }
-
 
 int main(int argc, char *argv[]) 
 {
@@ -208,6 +211,8 @@ int main(int argc, char *argv[])
 
   long B = 0;
   amap.arg("B", B, "bound for # of replications", "all");
+
+  amap.arg("noPrint", noPrint, "suppress printouts");
 
   amap.parse(argc, argv);
   setDryRun(dry);

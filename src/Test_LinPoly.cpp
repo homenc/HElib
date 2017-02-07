@@ -22,6 +22,7 @@
 #include <cassert>
 #include <cstdio>
 
+static bool noPrint = false;
 
 template<class type> 
 class SingleBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
@@ -137,7 +138,8 @@ PlaintextBlockMatrixBaseInterface *buildMultiBlockMatrix(const EncryptedArray& e
 
 void  TestIt(long m, long p, long r, long d)
 {
-  cout << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":")
+  if (!noPrint)
+    cout << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":")
        << " m=" << m 
        << ", p=" << p
        << ", r=" << r
@@ -146,16 +148,6 @@ void  TestIt(long m, long p, long r, long d)
 
   FHEcontext context(m, p, r);
   buildModChain(context, /*L=*/3, /*c=*/2);
-  context.zMStar.printout();
-  cout << endl;
-
-  cout << "generating keys and key-switching matrices... " << std::flush;
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64);// A Hamming-weight-w secret key
-  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-  addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cout << "done\n";
 
   ZZX G;
   if (d == 0) {
@@ -164,10 +156,26 @@ void  TestIt(long m, long p, long r, long d)
   }
   else
     G = makeIrredPoly(p, d);
-  cout << "G = " << G << "\n";
-  cout << "computing masks and tables for rotation... " << std::flush;
+
+  if (!noPrint) {
+    context.zMStar.printout();
+    cout << endl;
+    cout << "G = " << G << "\n";
+
+    cout << "generating keys and key-switching matrices... " << std::flush;
+  }
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(/*w=*/64);// A Hamming-weight-w secret key
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  addFrbMatrices(secretKey); // compute key-switching matrices that we need
+  if (!noPrint) {
+    cout << "done\n";
+    cout << "computing masks and tables for rotation... " << std::flush;
+  }
   EncryptedArray ea(context, G);
-  cout << "done\n";
+  if (!noPrint)
+    cout << "done\n";
 
   long nslots = ea.size();
 
@@ -176,7 +184,8 @@ void  TestIt(long m, long p, long r, long d)
 
   Ctxt c0(publicKey);
 
-  cout << "\nTest #1: Apply the same linear transformation to all slots\n";
+  if (!noPrint)
+    cout << "\nTest #1: Apply the same linear transformation to all slots\n";
   {
   vector<ZZX> LM(d); // LM selects even coefficients
   for (long j = 0; j < d; j++) 
@@ -201,7 +210,8 @@ void  TestIt(long m, long p, long r, long d)
   }
 
 
-  cout << "\nTest #2: Apply different transformations to the different slots\n";
+  if (!noPrint)
+    cout << "\nTest #2: Apply different transformations to the different slots\n";
   {
   vector< vector<ZZX> > LM(nslots); 
   // LM[i] rotates the coefficients in the i'th slot by (i % d)
@@ -232,7 +242,8 @@ void  TestIt(long m, long p, long r, long d)
     cout << "BAD\n";
   }
 
-  cout << "\nTest #3: Testing low-level (cached) implementation\n";
+  if (!noPrint)
+    cout << "\nTest #3: Testing low-level (cached) implementation\n";
   {
   vector< vector<ZZX> > LM(nslots); 
   // LM[i] adds coefficients (i % d) and (i+1 % d) in the i'th slot
@@ -292,6 +303,8 @@ int main(int argc, char *argv[])
   long d=0;
   amap.arg("d", d, "degree of the field extension");
   amap.note("d == 0 => factors[0] defines extension");
+
+  amap.arg("noPrint", noPrint, "suppress printouts");
 
   amap.parse(argc, argv);
 
