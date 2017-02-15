@@ -303,4 +303,95 @@ void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa,
 void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
   const PlaintextBlockMatrixBaseInterface& mat);
 
+/********************************************************************/
+/********************************************************************/
+/********************************************************************/
+/********************************************************************/
+#include <cstddef>
+#include <mutex>
+
+typedef std::shared_ptr< NTL::Vec<long> > zzxptr;
+// FIXME:  need to change ZZXptr to zzxptr
+typedef NTL::Vec<ZZXptr> CachedzzxMatrix;
+typedef NTL::Mat<ZZXptr> CachedzzxBlockMatrix;
+
+enum MatrixCacheType { cacheEmpty, cachezzX, cacheDCRT };
+
+//! @class MatMulBase
+//! @brief An abstract interface for linear transformations.
+//!
+//! A matrix implements linear transformation over an extension
+//! field/ring, e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G.
+class MatMulBase {
+  EncryptedArray& ea;
+  std::unique_ptr<CachedzzxMatrix> zzxCache;
+  std::unique_ptr<CachedDCRTPtxtMatrix> dcrtCache;
+  std::mutex cachelock;
+public:
+  MatMulBase(EncryptedArray& _ea): ea(_ea) {}
+  virtual ~MatMulBase() {}
+
+  const EncryptedArray& getEA() const { return ea; }
+
+  bool haszzxcache() const { return (bool)zzxCache; }   // check if not null
+  bool hasDCRTcache() const { return (bool)dcrtCache; } // check if not null
+  MatrixCacheType
+    getCache(CachedzzxMatrix** zcp, CachedDCRTPtxtMatrix** dcp) const
+  {
+    *zcp = zzxCache.get();
+    *dcp = dcrtCache.get();
+    if (*dcp != nullptr )      return cacheDCRT;
+    else if (*zcp != nullptr ) return cachezzX;
+    else                       return cacheEmpty;
+  }
+  bool lockCache(MatrixCacheType ty);
+  void upgradeCache(); // build DCRT cache from zzx cache
+  void installzzxcache(std::unique_ptr<CachedzzxMatrix>& zc)
+  { zzxCache.swap(zc); }
+  void installDCRTcache(std::unique_ptr<CachedDCRTPtxtMatrix>& dc)
+  { dcrtCache.swap(dc); }
+  void releaseCache() { cachelock.unlock(); }
+};
+
+//! @class MatMul
+//! @brief Linear transformation interfaces, specialized to GF2/zz_p
+//!
+//! An implementation call must be derived from MatMul<PA_GF2> or
+//! MatMul<PA_zz_p>. An implementation must implement the function
+//! get(i,j) that theturns the element mat[i,j]. That element is in some
+//! field/ring (e.g., GF(p^d)), and it is returned as a GF2X or a zz_pX.
+template<class type>
+class MatMul : public MatMulBase { // type is PA_GF2 or PA_zz_p
+public:
+  PA_INJECT(type)
+
+public:
+  MatMul(EncryptedArray& _ea): MatMulBase(_ea) {}
+
+   virtual bool get(RX& out, long i, long j) const = 0;
+};
+
+//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
+//! a row matrix v, and replaced by an encryption of v * mat.
+//! If buildCache != cacheEmpty and the cache is not available,
+//! then it will be built (However, a zzx cahce is never built
+//! if the dcrt cache exists).
+void matMul(Ctxt& ctxt, MatMulBase& mat,
+            MatrixCacheType buildCache=cacheEmpty);
+
+//! Build a cache without performing multiplication
+void buildCache4MatMul(MatMulBase& mat, MatrixCacheType buildCache);
+
+
+
+
+//! Same as mat_mul but optimized for matrices with few non-zero diagonals
+void mat_mul_sparse(Ctxt& ctxt, MatMulBase& mat,
+		    MatrixCacheType buildCache=cacheEmpty);
+
+// A Version for plaintext rather than cipehrtext, useful for debugging
+void matMul(NewPlaintextArray& pa, MatMulBase& mat);
+//void mat_mul(NewPlaintextArray& pa, BlockMatMulBase& mat);
+
+
 #endif /* ifdef FHE_matrix_H_ */

@@ -27,6 +27,62 @@
 #include "matmul.h"
 
 template<class type> 
+class RandomDenseMatrix : public MatMul<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  vector< vector< RX > > data;
+
+public:
+  ~RandomDenseMatrix() {/*cout << "destructor: random dense matrix\n";*/}
+
+  RandomDenseMatrix(EncryptedArray& _ea): MatMul<type>(_ea) {
+    long n = _ea.size();
+    long d = _ea.getDegree();
+
+    long bnd = 2*n; // non-zero with probability 1/bnd
+
+    RBak bak; bak.save(); _ea.getContext().alMod.restoreContext();
+
+    data.resize(n);
+    for (long i = 0; i < n; i++) {
+      data[i].resize(n);
+      for (long j = 0; j < n; j++) {
+        bool zEntry = (RandomBnd(bnd) > 0);
+
+        if (zEntry)
+          clear(data[i][j]);
+        else
+          random(data[i][j], d);
+      }
+    }
+  }
+
+  virtual bool get(RX& out, long i, long j) const {
+    assert(i >= 0 && i < this->getEA().size());
+    assert(j >= 0 && j < this->getEA().size());
+    if (IsZero(data[i][j])) return true;
+    out = data[i][j];
+    return false;
+  }
+};
+MatMulBase* buildDenseMatrix(EncryptedArray& ea)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomDenseMatrix<PA_GF2>(ea);
+    }
+    case PA_zz_p_tag: {
+      return new RandomDenseMatrix<PA_zz_p>(ea);
+    }
+    default: return nullptr;
+  }
+}
+
+
+
+template<class type> 
 class RandomMatrix : public  PlaintextMatrixInterface<type> {
 public:
   PA_INJECT(type) 
@@ -193,6 +249,55 @@ void  TestIt(long m, long p, long r, long d, long L)
   EncryptedArray ea(context, G);
   cout << "done\n";
 
+  // Test a "dense" matrix over the extension field
+  {
+    // choose a random plaintext square matrix
+    unique_ptr<MatMulBase> ptr(buildDenseMatrix(ea));
+
+    // choose a random plaintext vector
+    NewPlaintextArray v(ea);
+    random(ea, v);
+
+    // encrypt the random vector
+    Ctxt ctxt(publicKey);
+    ea.encrypt(ctxt, publicKey, v);
+    Ctxt ctxt2 = ctxt;
+
+    cout << " Multiplying with MatMulBase... " << std::flush;
+    matMul(ctxt2, *ptr); // multiply the ciphertext vector
+    matMul(v, *ptr);     // multiply the plaintext vector
+
+    NewPlaintextArray v1(ea);
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+
+    if (equals(ea, v, v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr@*\n";
+
+    cout << " Multiplying with MatMulBase+zzx cache... " << std::flush;
+    ctxt2 = ctxt;
+    matMul(ctxt2, *ptr, cachezzX); // build the cache while using it
+
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+
+    if (equals(ea, v, v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr@*\n";
+
+    cout << " Multiplying with MatMulBase+dcrt cache... " << std::flush;
+    ctxt2 = ctxt;
+    buildCache4MatMul(*ptr, /*MatrixCacheType=*/cacheDCRT);// build the cache
+    matMul(ctxt2, *ptr);                                   // then use it
+
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+
+    if (equals(ea, v, v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr@*\n";
+  }
   // Test a "normal" matrix over the extension field
   {
     // choose a random plaintext square matrix
@@ -314,6 +419,7 @@ void usage(char *prog)
   cout << "  d is the degree of the field extension [default==1]\n";
   cout << "    (d == 0 => factors[0] defined the extension)\n";
   cout << "  L is the # of primes in the modulus chain [default=4]\n";
+  cout << "  verbose print timing info [default=0]\n";
   exit(0);
 }
 
@@ -328,6 +434,7 @@ int main(int argc, char *argv[])
   argmap["r"] = "1";
   argmap["d"] = "1";
   argmap["L"] = "4";
+  argmap["verbose"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -337,14 +444,16 @@ int main(int argc, char *argv[])
   long r = atoi(argmap["r"]);
   long d = atoi(argmap["d"]);
   long L = atoi(argmap["L"]);
+  bool v = atoi(argmap["verbose"]);
 
   //  setTimersOn();
   setTimersOn();
   TestIt(m, p, r, d, L);
   cout << endl;
-  printAllTimers();
-  cout << endl;
-
+  if (v) {
+    printAllTimers();
+    cout << endl;
+  }
 }
 
 /********************************************************************/

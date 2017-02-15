@@ -291,6 +291,7 @@ public:
   virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
 
   virtual PA_tag getTag() const { return tag; }
+  // tag is defined in PA_INJECT, see PAlgebra.h
 
 // DIRT: we're using undocumented NTL interfaces here
 #define FHE_DEFINE_LOWER_DISPATCH(n)\
