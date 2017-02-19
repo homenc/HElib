@@ -19,278 +19,14 @@
 #include <NTL/BasicThreadPool.h>
 #include "matmul.h"
 
-// A useful helper function to get information from cache
-bool
-getDataFromCache(CachedConstants& cache, long i,
-		 CachedConstants::CacheTag tag, const FHEcontext& context,
-		 NTL::ZZX*& zzxPtr, DoubleCRT*& dcrtPtr)
-{
-  if (cache.isZero(i)) return true; // zero constant
-
-  if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
-  else if (cache.isZZX(i)) {
-    zzxPtr = cache.getZZX(i);
-    if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
-      // DIRT: this "upgrade" logic may not be thread safe
-      dcrtPtr = new DoubleCRT(*zzxPtr, context);
-      cache.setAt(i,dcrtPtr);
-      zzxPtr = NULL;
-    }
-  }
-  else throw std::logic_error("cached constant is NULL");
-  return false;
-}
+#ifdef DEBUG
+void printCache(const CachedzzxMatrix& cache);
+void printCache(const CachedDCRTPtxtMatrix& cache);
+#endif
 
 
-template<class type> class mat_mul_impl {
-public:
-  PA_INJECT(type)
-
-  static void apply(const EncryptedArrayDerived<type>& ea, 
-    Ctxt& ctxt, const PlaintextMatrixBaseInterface& mat) 
-  {
-    assert(&ea == &mat.getEA().getDerived(type()));
-    assert(&ea.getContext() == &ctxt.getContext());
-
-    RBak bak; bak.save(); ea.getTab().restoreContext();
-
-    // Get the derived type
-    const PlaintextMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
-
-    ctxt.cleanUp(); // not sure, but this may be a good idea
-
-    Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace()); // fresh encryption of zero
-
-    long nslots = ea.size();
-    long d = ea.getDegree();
-
-    RX entry;
-    vector<RX> diag;
-    diag.resize(nslots);
-
-    // Process the diagonals one at a time
-    for (long i = 0; i < nslots; i++) {  // process diagonal i
-      bool zDiag = true; // is this a zero diagonal?
-      long nzLast = -1;  // index of last non-zero entry on this diagonal
-
-      // Compute constants for each entry on this diagonal
-      for (long j = 0; j < nslots; j++) { // process entry j
-        bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j); // callback
-        assert(zEntry || deg(entry) < d);
-
-        if (!zEntry && IsZero(entry)) zEntry = true; // check for zero
-
-        if (!zEntry) { // non-zero diagonal entry
-
-          zDiag = false; // diagonal is non-zero
-
-          // clear entries between last nonzero entry and this one
-          for (long jj = nzLast+1; jj < j; jj++) clear(diag[jj]);
-          nzLast = j;
-
-          diag[j] = entry;
-        }
-      }
-      
-      if (zDiag) continue; // zero diagonal, continue
-
-      // clear trailing zero entries
-      for (long jj = nzLast+1; jj < nslots; jj++) clear(diag[jj]);
-
-      // Now we have the constants for all the diagonal entries, encode the
-      // diagonal as a single polynomial with these constants in the slots
-      ZZX cpoly;
-      ea.encode(cpoly, diag);
-
-      // rotate by i, multiply by the polynomial, then add to the result
-      Ctxt shCtxt = ctxt;
-      ea.rotate(shCtxt, i); // rotate by i
-      shCtxt.multByConstant(cpoly);
-      res += shCtxt;
-    }
-    ctxt = res;
-  }
-};
-void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
-	     const PlaintextMatrixBaseInterface& mat)
-{
-  FHE_TIMER_START;
-  ea.dispatch<mat_mul_impl>(Fwd(ctxt), mat);
-}
-
-
-
-// A class that implements the basic caching functionality for (sparse)
-// matrix-vector products
-template<class type> class compMat_impl {
-public:
-  PA_INJECT(type)
-
-  // This "apply" function only computes the cached matrix cmat
-  static void apply(const EncryptedArrayDerived<type>& ea, 
-    CachedPtxtMatrix& cmat, const PlaintextMatrixBaseInterface& mat) 
-  {
-    assert(&ea == &mat.getEA().getDerived(type()));
-
-    RBak bak; bak.save(); ea.getTab().restoreContext();
-
-    // Get the derived type
-    const PlaintextMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
-
-    long nslots = ea.size();
-    long d = ea.getDegree();
-    RX entry;
-    vector<RX> diag;
-    diag.resize(nslots);
-    cmat.SetLength(nslots);
-
-    // Process the diagonals one at a time
-    for (long i = 0; i < nslots; i++) {  // process diagonal i
-      bool zDiag = true; // is this a zero diagonal?
-      long nzLast = -1;  // index of last non-zero entry on this diagonal
-
-      // Compute constants for each entry on this diagonal
-      for (long j = 0; j < nslots; j++) { // process entry j
-        bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j); // callback
-        assert(zEntry || deg(entry) < d);
-
-        if (!zEntry && IsZero(entry)) zEntry = true; // check for zero
-
-        if (!zEntry) { // non-zero diagonal entry
-
-          zDiag = false; // diagonal is non-zero
-
-          // clear entries between last nonzero entry and this one
-          for (long jj = nzLast+1; jj < j; jj++) clear(diag[jj]);
-          nzLast = j;
-
-          diag[j] = entry;
-        }
-      }
-      
-      if (zDiag) continue; // zero diagonal, continue
-
-      // clear trailing zero entries
-      for (long jj = nzLast+1; jj < nslots; jj++) clear(diag[jj]);
-
-      // Now we have the constants for all the diagonal entries, encode the
-      // diagonal as a single polynomial with these constants in the slots
-      ZZX cpoly;
-      ea.encode(cpoly, diag);
-      cmat[i] = ZZXptr(new ZZX(cpoly));
-    }
-  }
-};
-
-
-// helper routines
-
-void CachedMatrixConvert(CachedDCRTPtxtMatrix& v, 
-			 const CachedPtxtMatrix& w, const FHEcontext& context)
-{
-  long n = w.length();
-  v.SetLength(n);
-  for (long i = 0; i < n; i++)
-    if (w[i]) v[i] = DCRTptr(new DoubleCRT(*w[i], context));
-    // DoubleCRT defined relative to all primes, even the "special" ones
-}
-
-void compMat(const EncryptedArray& ea, CachedPtxtMatrix& cmat, 
-	     const PlaintextMatrixBaseInterface& mat)
-{
-  FHE_TIMER_START;
-  ea.dispatch<compMat_impl>(Fwd(cmat), mat);
-}
-
-void compMat(const EncryptedArray& ea, CachedDCRTPtxtMatrix& cmat, 
-	     const PlaintextMatrixBaseInterface& mat)
-{
-  FHE_TIMER_START;
-  CachedPtxtMatrix zzxMat;
-  compMat(ea, zzxMat, mat);
-  CachedMatrixConvert(cmat, zzxMat, ea.getContext());
-}
-
-
-
-template<class CachedMatrix>
-void mat_mul_tmpl(const EncryptedArray& ea, Ctxt& ctxt,
-		  const CachedMatrix& cmat)
-{
-  FHE_TIMER_START;
-  ctxt.cleanUp(); // not sure, but this may be a good idea
-  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace()); // fresh encryption of zero
-
-  // Process the diagonals one at a time
-  long nslots = ea.size();
-  for (long i = 0; i < nslots; i++) {  // process diagonal i
-    if (!cmat[i]) continue; // a zero diagonal
-
-    // rotate by i, multiply, and add to the result
-    Ctxt shCtxt = ctxt;
-    ea.rotate(shCtxt, i); // rotate by i
-    shCtxt.multByConstant(*cmat[i]);
-    res += shCtxt;
-  }
-  ctxt = res;
-}
-void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
-  const CachedPtxtMatrix& cmat)
-{
-  mat_mul_tmpl(ea, ctxt, cmat);
-}
-void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
-  const CachedDCRTPtxtMatrix& cmat)
-{
-  mat_mul_tmpl(ea, ctxt, cmat);
-}
-
-
-// Applying matmul to plaintext, useful for debugging
-template<class type>
-class mat_mul_pa_impl {
-public:
-  PA_INJECT(type)
-
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const PlaintextMatrixBaseInterface& mat)
-  {
-    PA_BOILER
-
-    const PlaintextMatrixInterface<type>& mat1 = 
-      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
-
-    vector<RX> res;
-    res.resize(n);
-    for (long j = 0; j < n; j++) {
-      RX acc, val, tmp; 
-      acc = 0;
-      for (long i = 0; i < n; i++) {
-        if (!mat1.get(val, i, j)) {
-          NTL::mul(tmp, data[i], val);
-          NTL::add(acc, acc, tmp);
-        }
-      }
-      rem(acc, acc, G);
-      res[j] = acc;
-    }
-
-    data = res;
-  }
-}; 
-void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
-	     const PlaintextMatrixBaseInterface& mat)
-{
-  ea.dispatch<mat_mul_pa_impl>(Fwd(pa), mat); 
-}
-
-
-/********************************************************************/
-/********************************************************************/
-/********************************************************************/
-/********************************************************************/
+/********************************************************************
+ ************* Helper routines to handle caches *********************/
 
 bool MatMulBase::lockCache(MatrixCacheType ty)
 {
@@ -299,8 +35,7 @@ bool MatMulBase::lockCache(MatrixCacheType ty)
       || (ty==cachezzX && haszzxcache())) // no need to build
     return false;
 
-  // Take the lock
-  cachelock.lock();
+  cachelock.lock();  // Take the lock
 
   // Check again if we need to build the cache
   if (ty==cacheEmpty || hasDCRTcache()
@@ -309,6 +44,12 @@ bool MatMulBase::lockCache(MatrixCacheType ty)
     return false; // no need to build
   }
 
+  // We have the lock, can upgrade zzx to dcrt if needed
+  if (ty==cacheDCRT && haszzxcache()) {
+    upgradeCache();     // upgrade zzx to DCRT
+    cachelock.unlock(); // release the lock
+    return false; // already built
+  }
   return true; // need to build, and we have the lock
 }
 
@@ -323,13 +64,18 @@ void MatMulBase::upgradeCache()
   }
   dcrtCache.swap(dCache);
 }
+/********************************************************************/
 
 
-// An implementation class for dense matmul. Using such a class is
-// convenient since you only need to PA_INJECT once (and the injected
-// names do not pollute the external namespace).
-// We also use it here to store some pieces of data between recursive
-// calls, as well as pointers to temporary caches as we build them.
+/********************************************************************
+ * An implementation class for dense matmul.
+ *
+ * Using such a class (rather than plain functions) is convenient
+ * since you only need to PA_INJECT once (and the injected names do
+ * not pollute the external namespace).
+ * We also use it here to store some pieces of data between recursive
+ * calls, as well as pointers to temporary caches as we build them.
+ *********************************************************************/
 template<class type> class matmul_impl {
   PA_INJECT(type)
   const MatrixCacheType buildCache;
@@ -365,7 +111,6 @@ public:
       mat(dynamic_cast< MatMul<type>& >(_mat)),
       ea(_mat.getEA().getDerived(type()))
   {
-    const EncryptedArrayDerived<type>& ea = mat.getEA().getDerived(type());
     if (buildCache==cachezzX)
       zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,ea.size()));
     else if (buildCache==cacheDCRT)
@@ -501,18 +246,12 @@ public:
   }
 };
 
-// a wrapper around the implemenmtation class
+// Wrapper functions around the implemenmtation class
 static void mat_mul(Ctxt* ctxt, MatMulBase& mat, MatrixCacheType buildCache)
 {
   if (buildCache != cacheEmpty) { // build a cache if it is not there already
     if (!mat.lockCache(buildCache))
       buildCache = cacheEmpty; // no need to build
-
-    else if (buildCache==cacheDCRT && mat.haszzxcache()) {
-      mat.upgradeCache(); // upgrade zzx to DCRT
-      mat.releaseCache(); // release the lock
-      buildCache = cacheEmpty;
-    }
   }
   // If still buildCache != cacheEmpty then we really do need to
   // build the cache, and we also have the lock for it.
@@ -549,6 +288,174 @@ void matMul(Ctxt& ctxt, MatMulBase& mat, MatrixCacheType buildCache)
 
 
 
+/********************************************************************
+ * An implementation class for sparse diagonal matmul.
+ *
+ * Using such a class (rather than plain functions) is convenient
+ * since you only need to PA_INJECT once (and the injected names do
+ * not pollute the external namespace). We also use it here to store
+ * pointers to temporary caches as we build them.
+ ********************************************************************/
+template<class type> class matmul_sparse_impl {
+  PA_INJECT(type)
+  const MatrixCacheType buildCache;
+  std::unique_ptr<CachedzzxMatrix> zCache;
+  std::unique_ptr<CachedDCRTPtxtMatrix> dCache;
+
+  MatMul<type>& mat;
+  const EncryptedArrayDerived<type>& ea;
+public:
+  matmul_sparse_impl(MatMulBase& _mat, MatrixCacheType tag)
+    : buildCache(tag), mat(dynamic_cast< MatMul<type>& >(_mat)),
+      ea(_mat.getEA().getDerived(type()))
+  {
+    if (buildCache==cachezzX)
+      zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,ea.size()));
+    else if (buildCache==cacheDCRT)
+      dCache.reset(new CachedDCRTPtxtMatrix(NTL::INIT_SIZE,ea.size()));
+  }
+
+  // Get a diagonal encoded as a single constant
+  bool processDiagonal(ZZX& cPoly, long diagIdx, long nslots)
+  {
+    bool zDiag = true; // is this a zero diagonal
+    vector<RX> diag(ea.size()); // the plaintext diagonal
+
+    for (long j = 0; j < nslots; j++) { // process entry j
+      long ii = mcMod(j-diagIdx, nslots);    // j-diagIdx mod nslots
+      bool zEntry = mat.get(diag[j], ii, j); // callback
+      assert(zEntry || deg(diag[j]) < ea.getDegree());
+
+      if (zEntry) clear(diag[j]);
+      else if (!IsZero(diag[j]))
+        zDiag = false; // diagonal is non-zero
+    }
+    // Now we have the constants for all the diagonal entries, encode the
+    // diagonal as a single polynomial with these constants in the slots
+    if (!zDiag)
+      ea.encode(cPoly, diag);
+    return zDiag;
+  }
+
+  void matmul(Ctxt* ctxt) 
+  {
+    RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    long nslots = ea.size();
+    bool sequential = (ea.dimension()==1) && ea.nativeDimension(0);
+    // is just a single native dimension, then rotate adds only little noise
+
+    std::unique_ptr<Ctxt> res;
+    if (ctxt!=nullptr) { // we need to do an actual multiplication
+      ctxt->cleanUp(); // not sure, but this may be a good idea
+      res.reset(new Ctxt(ZeroCtxtLike, *ctxt));
+    }
+
+    // Check if we have the relevant constant in cache
+    CachedzzxMatrix* zcp;
+    CachedDCRTPtxtMatrix* dcp;
+    mat.getCache(&zcp, &dcp);
+
+    // Process the diagonals one at a time
+    Ctxt shCtxt = *ctxt;
+    long lastRotate = 0;
+    for (long i = 0; i < nslots; i++) {  // process diagonal i
+      ZZX cpoly;
+      ZZX* zxPtr=nullptr;
+      DoubleCRT* dxPtr=nullptr;
+
+      if (dcp != nullptr)         // DoubleCRT cache exists
+	dxPtr = (*dcp)[i].get();
+      else if (zcp != nullptr)    // zzx cache exists but no DoubleCRT
+	zxPtr = (*zcp)[i].get();
+      else { // no cache, compute const
+        if (!processDiagonal(cpoly,i,nslots)) // returns true if zero
+          zxPtr = &cpoly;   // if it is not a zero value, point to it
+      }
+
+      // if zero diagonal, nothing to do for this iteration
+      if (zxPtr==nullptr && dxPtr==nullptr)
+        continue;
+
+      // Non-zero diagonal, store it in cache and/or multiply/add it
+
+      if (ctxt!=nullptr && res!=nullptr) {
+	// rotate by i, multiply by the polynomial, then add to the result
+	if (sequential) {
+	  ea.rotate(*ctxt, i-lastRotate);
+	  shCtxt = *ctxt;
+	} else {
+	  shCtxt = *ctxt;
+	  ea.rotate(shCtxt, i); // rotate by i
+	}
+	lastRotate = i;
+        if (dxPtr!=nullptr) shCtxt.multByConstant(*dxPtr);
+	else                shCtxt.multByConstant(*zxPtr);
+	*res += shCtxt;
+      }
+      if (buildCache==cachezzX) {
+        (*zCache)[i].reset(new ZZX(*zxPtr));
+      }
+      else if (buildCache==cacheDCRT) {
+        (*dCache)[i].reset(new DoubleCRT(*zxPtr, ea.getContext()));
+      }
+    }
+
+    if (ctxt!=nullptr && res!=nullptr) // copy result back to ctxt
+      *ctxt = *res;
+
+    // "install" the cache and release the lock (if needed)
+    if (buildCache == cachezzX) {
+      mat.installzzxcache(zCache);
+      mat.releaseCache();
+    } else if (buildCache == cacheDCRT) {
+      mat.installDCRTcache(dCache);
+      mat.releaseCache();
+    }
+  } // end of matmul(...)
+};
+
+// Wrapper functions around the implemenmtation class
+static void
+mat_mul_sparse(Ctxt* ctxt, MatMulBase& mat, MatrixCacheType buildCache)
+{
+  if (buildCache != cacheEmpty) { // build a cache if it is not there already
+    if (!mat.lockCache(buildCache))
+      buildCache = cacheEmpty; // no need to build
+  }
+  // If still buildCache != cacheEmpty then we really do need to
+  // build the cache, and we also have the lock for it.
+
+  if (buildCache == cacheEmpty && ctxt==nullptr) //  nothing to do
+    return;
+
+  switch (mat.getEA().getTag()) {
+    case PA_GF2_tag: {
+      matmul_sparse_impl<PA_GF2> M(mat, buildCache);
+      M.matmul(ctxt);
+      break;
+    }
+    case PA_zz_p_tag: {
+      matmul_sparse_impl<PA_zz_p> M(mat, buildCache);
+      M.matmul(ctxt);
+      break;
+    }
+    default:
+      throw std::logic_error("mat_mul_sparse: neither PA_GF2 nor PA_zz_p");
+  }
+}
+// Same as matMul but optimized for matrices with few non-zero diagonals
+void matMul_sparse(Ctxt& ctxt, MatMulBase& mat,
+                   MatrixCacheType buildCache)
+{ mat_mul_sparse(&ctxt, mat, buildCache); }
+
+// Build a cache without performing multiplication
+void buildCache4MatMul_sparse(MatMulBase& mat, MatrixCacheType buildCache)
+{ mat_mul_sparse(nullptr, mat, buildCache); }
+
+
+/********************************************************************
+ ********************************************************************/
 // Applying matmul to plaintext, useful for debugging
 template<class type> class matmul_pa_impl {
 public:
@@ -594,3 +501,34 @@ void matMul(NewPlaintextArray& pa, MatMulBase& mat)
       throw std::logic_error("mat_mul: neither PA_GF2 nor PA_zz_p");
   }
 }
+
+
+#ifdef DEBUG
+void printCache(const CachedzzxMatrix& cache)
+{
+  std::cerr << " zzxCache=[";
+  for (long i=0; i<cache.length(); i++) {
+    if (cache[i]==nullptr)
+      std::cerr << "null ";
+    else {
+      std::cerr << (*(cache[i])) << " ";
+    }
+  }
+  std:cerr << "]\n";
+}
+
+void printCache(const CachedDCRTPtxtMatrix& cache)
+{
+  std::cerr << "dcrtCache=[";
+  for (long i=0; i<cache.length(); i++) {
+    if (cache[i]==nullptr)
+      std::cerr << "null ";
+    else {
+      ZZX poly;
+      cache[i]->toPoly(poly);
+      std::cerr << poly << " ";
+    }
+  }
+  std:cerr << "]\n";
+}
+#endif

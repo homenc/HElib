@@ -26,35 +26,25 @@
 #include "EncryptedArray.h"
 #include "matmul.h"
 
-template<class type> 
-class RandomDenseMatrix : public MatMul<type> {
-public:
+template<class type> class RandomDenseMatrix : public MatMul<type> {
   PA_INJECT(type) 
-
-private:
   vector< vector< RX > > data;
 
 public:
   ~RandomDenseMatrix() {/*cout << "destructor: random dense matrix\n";*/}
-
-  RandomDenseMatrix(EncryptedArray& _ea): MatMul<type>(_ea) {
+  RandomDenseMatrix(const EncryptedArray& _ea): MatMul<type>(_ea) {
     long n = _ea.size();
     long d = _ea.getDegree();
-
     long bnd = 2*n; // non-zero with probability 1/bnd
 
     RBak bak; bak.save(); _ea.getContext().alMod.restoreContext();
-
     data.resize(n);
     for (long i = 0; i < n; i++) {
       data[i].resize(n);
       for (long j = 0; j < n; j++) {
         bool zEntry = (RandomBnd(bnd) > 0);
-
-        if (zEntry)
-          clear(data[i][j]);
-        else
-          random(data[i][j], d);
+        if (zEntry) clear(data[i][j]);
+        else        random(data[i][j], d);
       }
     }
   }
@@ -70,81 +60,12 @@ public:
 MatMulBase* buildDenseMatrix(EncryptedArray& ea)
 {
   switch (ea.getTag()) {
-    case PA_GF2_tag: {
-      return new RandomDenseMatrix<PA_GF2>(ea);
-    }
-    case PA_zz_p_tag: {
-      return new RandomDenseMatrix<PA_zz_p>(ea);
-    }
+    case PA_GF2_tag: { return new RandomDenseMatrix<PA_GF2>(ea); }
+    case PA_zz_p_tag:{ return new RandomDenseMatrix<PA_zz_p>(ea); }
     default: return nullptr;
   }
 }
 
-
-
-template<class type> 
-class RandomMatrix : public  PlaintextMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-
-  vector< vector< RX > > data;
-
-public:
-  ~RandomMatrix() { /*cout << "destructor: random matrix\n";*/ }
-
-  RandomMatrix(const EncryptedArray& _ea) : ea(_ea) { 
-    long n = ea.size();
-    long d = ea.getDegree();
-
-    long bnd = 2*n; // non-zero with probability 1/bnd
-
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
-
-    data.resize(n);
-    for (long i = 0; i < n; i++) {
-      data[i].resize(n);
-      for (long j = 0; j < n; j++) {
-        bool zEntry = (RandomBnd(bnd) > 0);
-
-        if (zEntry)
-          clear(data[i][j]);
-        else
-          random(data[i][j], d);
-      }
-    }
-  }
-
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
-  virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    if (IsZero(data[i][j])) return true;
-    out = data[i][j];
-    return false;
-  }
-};
-
-PlaintextMatrixBaseInterface *
-buildRandomMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new RandomMatrix<PA_GF2>(ea);
-    }
-
-    case PA_zz_p_tag: {
-      return new RandomMatrix<PA_zz_p>(ea);
-    }
-
-    default: return 0;
-  }
-}
 
 template<class type> 
 class RandomBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
@@ -264,7 +185,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     Ctxt ctxt2 = ctxt;
 
     cout << " Multiplying with MatMulBase... " << std::flush;
-    matMul(ctxt2, *ptr); // multiply the ciphertext vector
+    matMul(ctxt2, *ptr, cachezzX); // multiply ciphertext and build cache
     matMul(v, *ptr);     // multiply the plaintext vector
 
     NewPlaintextArray v1(ea);
@@ -277,7 +198,7 @@ void  TestIt(long m, long p, long r, long d, long L)
 
     cout << " Multiplying with MatMulBase+zzx cache... " << std::flush;
     ctxt2 = ctxt;
-    matMul(ctxt2, *ptr, cachezzX); // build the cache while using it
+    matMul(ctxt2, *ptr); // use the cache in multiplication
 
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -298,10 +219,10 @@ void  TestIt(long m, long p, long r, long d, long L)
     else
       cout << "Grrr@*\n";
   }
-  // Test a "normal" matrix over the extension field
+  // Test a "diagonal sparse" matrix over the extension field
   {
     // choose a random plaintext square matrix
-    shared_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
+    unique_ptr<MatMulBase> ptr(buildDenseMatrix(ea));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -312,9 +233,9 @@ void  TestIt(long m, long p, long r, long d, long L)
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
-    cout << " Multiplying with PlaintextMatrixBaseInterface... " << std::flush;
-    mat_mul(ea, v, *ptr);         // multiply the plaintext vector
-    mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
+    cout << " Multiplying with Sparse MatMulBase... " << std::flush;
+    matMul_sparse(ctxt2, *ptr, cachezzX); // multiply ciphertext and build cache
+    matMul(v, *ptr);     // multiply the plaintext vector
 
     NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
@@ -324,31 +245,28 @@ void  TestIt(long m, long p, long r, long d, long L)
     else
       cout << "Grrr@*\n";
 
-    // Test cached verions of the mult-by-matrix operation
-    {
-      CachedPtxtMatrix zzxMat;
-      compMat(ea, zzxMat, *ptr);
-      ctxt2 = ctxt;
-      cout << " Multiplying with CachedPtxtMatrix... " << std::flush;
-      mat_mul(ea, ctxt2, zzxMat);
-      ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (equals(ea, v, v1))        // check that we've got the right answer
-	cout << "Nice!!\n" << std::flush;
-      else
-	cout << "Grrr@*\n" << std::flush;
-    }
-    {
-      CachedDCRTPtxtMatrix dcrtMat;
-      compMat(ea, dcrtMat, *ptr);
-      ctxt2 = ctxt;
-      cout << " Multiplying with CachedDCRTPtxtMatrix... " << std::flush;
-      mat_mul(ea, ctxt2, dcrtMat);
-      ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (equals(ea, v, v1))        // check that we've got the right answer
-	cout << "Nice!!\n\n";
-      else
-	cout << "Grrr@*\n\n";
-    }
+    cout << " Multiplying with Sparse MatMulBase+zzx cache... " << std::flush;
+    ctxt2 = ctxt;
+    matMul_sparse(ctxt2, *ptr); // use the cache
+
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+
+    if (equals(ea, v, v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr@*\n";
+
+    cout << " Multiplying with Sparse MatMulBase+dcrt cache... " << std::flush;
+    ctxt2 = ctxt;
+    buildCache4MatMul_sparse(*ptr, /*MatrixCacheType=*/cacheDCRT);// build the cache
+    matMul_sparse(ctxt2, *ptr);                                   // then use it
+
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+
+    if (equals(ea, v, v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr@*\n";
   }
 
   // Test a "block matrix" over the base field

@@ -856,3 +856,79 @@ void mat_multi1D_block(Ctxt& ctxt, const EncryptedArray& ea, long dim,
   FHE_TIMER_START;
   ea.dispatch<mat_multi1D_block_impl>(Fwd(ctxt), dim, mats, tag);
 }
+
+
+
+
+// A useful helper function to get information from cache
+bool
+getDataFromCache(CachedConstants& cache, long i,
+		 CachedConstants::CacheTag tag, const FHEcontext& context,
+		 NTL::ZZX*& zzxPtr, DoubleCRT*& dcrtPtr)
+{
+  if (cache.isZero(i)) return true; // zero constant
+
+  if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
+  else if (cache.isZZX(i)) {
+    zzxPtr = cache.getZZX(i);
+    if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
+      // DIRT: this "upgrade" logic may not be thread safe
+      dcrtPtr = new DoubleCRT(*zzxPtr, context);
+      cache.setAt(i,dcrtPtr);
+      zzxPtr = NULL;
+    }
+  }
+  else throw std::logic_error("cached constant is NULL");
+  return false;
+}
+
+// helper routines
+
+void CachedMatrixConvert(CachedDCRTPtxtMatrix& v, 
+			 const CachedPtxtMatrix& w, const FHEcontext& context)
+{
+  long n = w.length();
+  v.SetLength(n);
+  for (long i = 0; i < n; i++)
+    if (w[i]) v[i] = DCRTptr(new DoubleCRT(*w[i], context));
+    // DoubleCRT defined relative to all primes, even the "special" ones
+}
+
+
+// Applying matmul to plaintext, useful for debugging
+template<class type>
+class mat_mul_pa_impl {
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
+    const PlaintextMatrixBaseInterface& mat)
+  {
+    PA_BOILER
+
+    const PlaintextMatrixInterface<type>& mat1 = 
+      dynamic_cast< const PlaintextMatrixInterface<type>& >( mat );
+
+    vector<RX> res;
+    res.resize(n);
+    for (long j = 0; j < n; j++) {
+      RX acc, val, tmp; 
+      acc = 0;
+      for (long i = 0; i < n; i++) {
+        if (!mat1.get(val, i, j)) {
+          NTL::mul(tmp, data[i], val);
+          NTL::add(acc, acc, tmp);
+        }
+      }
+      rem(acc, acc, G);
+      res[j] = acc;
+    }
+
+    data = res;
+  }
+}; 
+void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
+	     const PlaintextMatrixBaseInterface& mat)
+{
+  ea.dispatch<mat_mul_pa_impl>(Fwd(pa), mat); 
+}

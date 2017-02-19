@@ -149,15 +149,7 @@ typedef NTL::Mat<DCRTptr> CachedDCRTPtxtBlockMatrix;
 ///@{
 //! @name Matrix multiplication routines
 
-
-//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
-//! a row matrix v, and replaced by an encryption of v * mat.
-//! Optimized for dense matrices
-void mat_mul_dense(const EncryptedArray& ea, Ctxt& ctxt, 
-  const PlaintextMatrixBaseInterface& mat);
-
-
-
+/*
 //! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
 //! a row matrix v, and replaced by an encryption of v * mat.
 //! Optimized for sparse diagonals
@@ -170,7 +162,7 @@ void compMat(const EncryptedArray& ea, CachedDCRTPtxtMatrix& cmat,
 // The latter two functions used a "cached" version of the matrix,
 // which was built from the PlaintextMatrixBaseInterface object,
 // where all the constants are already encoded as ZZX or DoubleCRT.
-
+*/
 
 
 //! @brief Multiply ctx by plaintext block matrix (over the base field/ring).
@@ -323,12 +315,12 @@ enum MatrixCacheType { cacheEmpty, cachezzX, cacheDCRT };
 //! A matrix implements linear transformation over an extension
 //! field/ring, e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G.
 class MatMulBase {
-  EncryptedArray& ea;
+  const EncryptedArray& ea;
   std::unique_ptr<CachedzzxMatrix> zzxCache;
   std::unique_ptr<CachedDCRTPtxtMatrix> dcrtCache;
   std::mutex cachelock;
 public:
-  MatMulBase(EncryptedArray& _ea): ea(_ea) {}
+  MatMulBase(const EncryptedArray& _ea): ea(_ea) {}
   virtual ~MatMulBase() {}
 
   const EncryptedArray& getEA() const { return ea; }
@@ -366,7 +358,7 @@ public:
   PA_INJECT(type)
 
 public:
-  MatMul(EncryptedArray& _ea): MatMulBase(_ea) {}
+  MatMul(const EncryptedArray& _ea): MatMulBase(_ea) {}
 
    virtual bool get(RX& out, long i, long j) const = 0;
 };
@@ -384,10 +376,18 @@ void buildCache4MatMul(MatMulBase& mat, MatrixCacheType buildCache);
 
 
 
-
 //! Same as mat_mul but optimized for matrices with few non-zero diagonals
-void mat_mul_sparse(Ctxt& ctxt, MatMulBase& mat,
-		    MatrixCacheType buildCache=cacheEmpty);
+void matMul_sparse(Ctxt& ctxt, MatMulBase& mat,
+                   MatrixCacheType buildCache=cacheEmpty);
+
+//! Build a cache without performing multiplication
+void buildCache4MatMul_sparse(MatMulBase& mat, MatrixCacheType buildCache);
+
+//FIXME: With the interfaces above, an application can call buildCache4MatMul
+// and then use the cache with matMul_sparse (or vise versa), and currently
+// there is no run-time check to detect that we have the wrong cache.
+
+
 
 // A Version for plaintext rather than cipehrtext, useful for debugging
 void matMul(NewPlaintextArray& pa, MatMulBase& mat);
