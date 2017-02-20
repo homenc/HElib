@@ -126,7 +126,7 @@ public:
   }
 
   // Get a diagonal encoded as a single constant
-  bool processDiagonal(ZZX& epmat, const vector<long>& idxes)
+  bool processDiagonal(zzX& epmat, const vector<long>& idxes)
   {
     vector<RX> pmat;  // the plaintext diagonal
     pmat.resize(ea.size());
@@ -143,8 +143,11 @@ public:
     }
     // Now we have the constants for all the diagonal entries, encode the
     // diagonal as a single polynomial with these constants in the slots
-    if (!zDiag)
-      ea.encode(epmat, pmat);
+    if (!zDiag) {
+      ZZX tmp;
+      ea.encode(tmp, pmat);
+      convert(epmat, tmp);
+    }
     return zDiag;
   }
 
@@ -156,8 +159,8 @@ public:
                const vector<long>& idxes)
   {
     if (dim >= ea.dimension()) { // Last dimension (recursion edge condition)
-      ZZX pt;
-      ZZX* zxPtr=nullptr;
+      zzX pt;
+      zzX* zxPtr=nullptr;
       DoubleCRT* dxPtr=nullptr;
 
       // Check if we have the relevant constant in cache
@@ -189,7 +192,7 @@ public:
       }
 
       if (buildCache==cachezzX) {
-        (*zCache)[idx].reset(new ZZX(*zxPtr));
+        (*zCache)[idx].reset(new zzX(*zxPtr));
       }
       else if (buildCache==cacheDCRT) {
         (*dCache)[idx].reset(new DoubleCRT(*zxPtr, ea.getContext()));
@@ -316,7 +319,7 @@ public:
   }
 
   // Get a diagonal encoded as a single constant
-  bool processDiagonal(ZZX& cPoly, long diagIdx, long nslots)
+  bool processDiagonal(zzX& cPoly, long diagIdx, long nslots)
   {
     bool zDiag = true; // is this a zero diagonal
     vector<RX> diag(ea.size()); // the plaintext diagonal
@@ -332,8 +335,11 @@ public:
     }
     // Now we have the constants for all the diagonal entries, encode the
     // diagonal as a single polynomial with these constants in the slots
-    if (!zDiag)
-      ea.encode(cPoly, diag);
+    if (!zDiag) {
+      ZZX tmp;
+      ea.encode(tmp, diag);
+      convert(cPoly, tmp);
+    }
     return zDiag;
   }
 
@@ -360,8 +366,8 @@ public:
     Ctxt shCtxt = *ctxt;
     long lastRotate = 0;
     for (long i = 0; i < nslots; i++) {  // process diagonal i
-      ZZX cpoly;
-      ZZX* zxPtr=nullptr;
+      zzX cpoly;
+      zzX* zxPtr=nullptr;
       DoubleCRT* dxPtr=nullptr;
 
       if (dcp != nullptr)         // DoubleCRT cache exists
@@ -369,8 +375,9 @@ public:
       else if (zcp != nullptr)    // zzx cache exists but no DoubleCRT
 	zxPtr = (*zcp)[i].get();
       else { // no cache, compute const
-        if (!processDiagonal(cpoly,i,nslots)) // returns true if zero
+        if (!processDiagonal(cpoly,i,nslots)) { // returns true if zero
           zxPtr = &cpoly;   // if it is not a zero value, point to it
+	}
       }
 
       // if zero diagonal, nothing to do for this iteration
@@ -394,7 +401,7 @@ public:
 	*res += shCtxt;
       }
       if (buildCache==cachezzX) {
-        (*zCache)[i].reset(new ZZX(*zxPtr));
+        (*zCache)[i].reset(new zzX(*zxPtr));
       }
       else if (buildCache==cacheDCRT) {
         (*dCache)[i].reset(new DoubleCRT(*zxPtr, ea.getContext()));

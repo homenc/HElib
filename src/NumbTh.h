@@ -399,6 +399,7 @@ void convert(vec_zz_pE& X, const vector<ZZX>& A);
 void convert(mat_zz_pE& X, const vector< vector<ZZX> >& A);
 void convert(vector<ZZX>& X, const vec_zz_pE& A);
 void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A);
+void convert(NTL::Vec<long>& out, const NTL::ZZX& in);
 ///@}
 
 //! A generic template that resolves to NTL's conv routine

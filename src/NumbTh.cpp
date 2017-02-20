@@ -945,6 +945,14 @@ void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A)
       convert(X[i], A[i]);
 }
 
+void convert(NTL::Vec<long>& out, const NTL::ZZX& in)
+{
+  out.SetLength(in.rep.length());
+  for (long i=0; i<out.length(); i++)
+    out[i] = conv<long>(in[i]);
+}
+
+
 void mul(vector<ZZX>& x, const vector<ZZX>& a, long b)
 {
    long n = a.size();

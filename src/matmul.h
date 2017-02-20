@@ -303,9 +303,8 @@ void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa,
 #include <mutex>
 
 typedef std::shared_ptr< NTL::Vec<long> > zzxptr;
-// FIXME:  need to change ZZXptr to zzxptr
-typedef NTL::Vec<ZZXptr> CachedzzxMatrix;
-typedef NTL::Mat<ZZXptr> CachedzzxBlockMatrix;
+typedef NTL::Vec<zzxptr> CachedzzxMatrix;
+typedef NTL::Mat<zzxptr> CachedzzxBlockMatrix;
 
 enum MatrixCacheType { cacheEmpty, cachezzX, cacheDCRT };
 
