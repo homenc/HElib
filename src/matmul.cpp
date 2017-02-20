@@ -144,9 +144,7 @@ public:
     // Now we have the constants for all the diagonal entries, encode the
     // diagonal as a single polynomial with these constants in the slots
     if (!zDiag) {
-      ZZX tmp;
-      ea.encode(tmp, pmat);
-      convert(epmat, tmp);
+      ea.encode(epmat, pmat);
     }
     return zDiag;
   }
@@ -336,9 +334,7 @@ public:
     // Now we have the constants for all the diagonal entries, encode the
     // diagonal as a single polynomial with these constants in the slots
     if (!zDiag) {
-      ZZX tmp;
-      ea.encode(tmp, diag);
-      convert(cPoly, tmp);
+      ea.encode(cPoly, diag);
     }
     return zDiag;
   }

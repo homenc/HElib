@@ -302,7 +302,8 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   FHE_TIMER_STOP;
 }
 
-
+//FIXME: For now replicating the code for ZZX and zzX,
+// but really we need to move to zzX everywhere
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
 {
@@ -332,7 +333,6 @@ void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) c
   FHE_TIMER_STOP;
 }
 
-
 template<class type>
 void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const NewPlaintextArray& array) const
 {
@@ -340,15 +340,59 @@ void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const NewPlaintextArray& arr
   encode(ptxt, array.getData<type>());
 }
 
-
-
-
 template<class type>
 void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const ZZX& ptxt) const
 {
   RBak bak; bak.save(); tab.restoreContext();
   decode(array.getData<type>(), ptxt);
 }
+
+
+//FIXME: For now replicating the code for ZZX and zzX,
+// but really we need to move to zzX everywhere
+template<class type>
+void EncryptedArrayDerived<type>::encodeUnitSelector(NTL::Vec<long>& ptxt, long i) const
+{
+  assert(i >= 0 && i < (long)context.zMStar.getNSlots());
+  RBak bak; bak.save(); tab.restoreContext();
+  RX res;
+  div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
+  mul(res, res, tab.getCrtCoeffs()[i]);
+  convert(ptxt, res);
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::encode(zzX& ptxt, const vector< RX >& array) const
+{
+  RX pp;
+  tab.embedInSlots(pp, array, mappingData); 
+  convert(ptxt,pp); 
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::encode(zzX& ptxt, const NewPlaintextArray& array) const
+{
+  RBak bak; bak.save(); tab.restoreContext();
+  encode(ptxt, array.getData<type>());
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::decode(vector< RX >& array, const NTL::Vec<long>& ptxt) const
+{
+  FHE_TIMER_START;
+  RX pp;
+  convert(pp, ptxt);
+  tab.decodePlaintext(array, pp, mappingData); 
+  FHE_TIMER_STOP;
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const NTL::Vec<long>& ptxt) const
+{
+  RBak bak; bak.save(); tab.restoreContext();
+  decode(array.getData<type>(), ptxt);
+}
+
 
 // this routine generates a random normal element
 // and initializes a matrix mapping from polynomial to 

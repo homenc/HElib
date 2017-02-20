@@ -304,7 +304,6 @@ public:
 
   NTL_FOREACH_ARG(FHE_DEFINE_LOWER_DISPATCH)
 
-
   const RX& getG() const { return mappingData.getG(); }
 
   const Mat<R>& getNormalBasisMatrix() const {
@@ -332,7 +331,6 @@ public:
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
 
-
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array);  }
 
@@ -340,7 +338,9 @@ public:
     {  genericEncode(ptxt, array); }
 
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const;
 
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const;
   virtual void encodeUnitSelector(ZZX& ptxt, long i) const;
 
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const
@@ -350,6 +350,7 @@ public:
     { genericDecode(array, ptxt); }
 
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const;
+  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
 
   virtual void random(vector< long  >& array) const
     { genericRandom(array); } // choose at random and convert to vector<long>
@@ -414,6 +415,9 @@ public:
   /* the following are specialized methods, used to work over extension fields...they assume 
      the modulus context is already set
    */
+
+  void encode(zzX& ptxt, const vector< RX >& array) const;
+  void decode(vector< RX  >& array, const zzX& ptxt) const;
 
   void encode(ZZX& ptxt, const vector< RX >& array) const;
   void decode(vector< RX  >& array, const ZZX& ptxt) const;
