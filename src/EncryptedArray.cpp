@@ -56,53 +56,41 @@ template<class type>
 void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
 {
   FHE_TIMER_START;
-  const PAlgebra& al = context.zMStar;
-
-  const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  assert(&context == &ctxt.getContext());
+  assert(i >= 0 && i < dimension());
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  assert(&context == &ctxt.getContext());
-  assert(i >= 0 && i < (long)al.numOfGens());
-
-  // Make sure amt is in the range [1,ord-1]
-  long ord = al.OrderOf(i);
-  amt %= ord;
+  const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  long m = getContext().zMStar.getM();
+  long g = getContext().zMStar.ZmStarGen(i);
+  long ord = sizeOfDimension(i);
+  amt %= ord;// DIRT: assumes division w/ remainder follows C++11 and C99 rules
   if (amt == 0) return;
-  long signed_amt = amt;
-  if (amt < 0) amt += ord;
 
-  // DIRT: the above assumes division with remainder
-  // follows C++11 and C99 rules
-
-  if (al.SameOrd(i)) { // a "native" rotation
-    long val = PowerMod(al.ZmStarGen(i), amt, al.getM());
+  if (dc || nativeDimension(i)) { // native dimension or don't-care
+    // For don't-care, we assume that any shifts "off the end" are zero
+    long val = PowerMod(g, amt, m);
     ctxt.smartAutomorph(val);
+    return;
   }
-  else if (dc) { 
-    // the "don't care" case...it is presumed that any shifts
-    // "off the end" are zero.  For this, we have to use 
-    // the "signed" version of amt.
-    long val = PowerMod(al.ZmStarGen(i), signed_amt, al.getM());
-    ctxt.smartAutomorph(val);
-  }
-  else {
-    // more expensive "non-native" rotation
-    assert(maskTable[i].size() > 0);
-    long val = PowerMod(al.ZmStarGen(i), amt, al.getM());
-    long ival = PowerMod(al.ZmStarGen(i), amt-ord, al.getM());
 
-    const RX& mask = maskTable[i][ord-amt];
-    DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
-    Ctxt tmp(ctxt); // a copy of the ciphertext
+  // more expensive "non-native" rotation
 
-    tmp.multByConstant(m1);    // only the slots in which m1=1
-    ctxt -= tmp;               // only the slots in which m1=0
-    ctxt.smartAutomorph(val);  // shift left by val
-    tmp.smartAutomorph(ival);  // shift right by ord-val
-    ctxt += tmp;               // combine the two parts
-  }
-  FHE_TIMER_STOP;
+  if (amt < 0) amt += ord;  // Make sure amt is in the range [1,ord-1]
+  assert(maskTable[i].size() > 0);
+  long val = PowerMod(g, amt, m);
+  long ival= PowerMod(g, amt-ord, m);
+
+  const RX& mask = maskTable[i][ord-amt];
+  DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
+  Ctxt tmp(ctxt); // a copy of the ciphertext
+
+  tmp.multByConstant(m1);    // only the slots in which m1=1
+  ctxt -= tmp;               // only the slots in which m1=0
+  ctxt.smartAutomorph(val);  // shift left by val
+  tmp.smartAutomorph(ival);  // shift right by ord-val
+  ctxt += tmp;               // combine the two parts
 }
 
 // Shift k positions along the i'th dimension with zero fill.
