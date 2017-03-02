@@ -164,17 +164,13 @@ public:
       // Check if we have the relevant constant in cache
       CachedzzxMatrix* zcp;
       CachedDCRTPtxtMatrix* dcp;
-
-      if (mat.getCache(&zcp, &dcp) == cacheDCRT) { // DoubleCRT cache exists
+      mat.getCache(&zcp, &dcp);
+      if (zcp != nullptr)         // DoubleCRT cache exists
 	dxPtr = (*dcp)[idx].get();
-      }
-      else if (zcp != nullptr) {        // zzx cache exists but no DoubleCRT
+      else if (zcp != nullptr)    // zzx cache exists but no DoubleCRT
 	zxPtr = (*zcp)[idx].get();
-      }
-      else { // no cache, compute const
-        if (!processDiagonal(pt, idxes))
-          zxPtr = &pt; // if it is not a zero value, point to it
-      }
+      else if (!processDiagonal(pt, idxes)) // no cache, compute const
+	zxPtr = &pt; // if it is not a zero value, point to it
 
       // if constant is zero, return without doing anything
       if (zxPtr==nullptr && dxPtr==nullptr)
@@ -222,7 +218,7 @@ public:
 
   // Multiply a ciphertext vector by a plaintext dense matrix
   // and/or build a cache with the multiplication constants
-  void matmul(Ctxt* ctxt) 
+  void multilpy(Ctxt* ctxt) 
   {
     RBak bak; bak.save(); ea.getTab().restoreContext();
     // idxes describes a genealized diagonal, {(i,idx[i])}_i
@@ -236,28 +232,23 @@ public:
     if (ctxt!=nullptr && res!=nullptr)
       *ctxt = *res; // copy the result back to ctxt
 
-    // "install" the cache and release the lock (if needed)
-    if (buildCache == cachezzX) {
+    // "install" the cache (if needed)
+    if (buildCache == cachezzX)
       mat.installzzxcache(zCache);
-      mat.releaseCache();
-    } else if (buildCache == cacheDCRT) {
+    else if (buildCache == cacheDCRT)
       mat.installDCRTcache(dCache);
-      mat.releaseCache();
-    }
   }
 };
 
 // Wrapper functions around the implemenmtation class
 static void mat_mul(Ctxt* ctxt, MatMulBase& mat, MatrixCacheType buildCache)
 {
-  if (buildCache != cacheEmpty) { // build a cache if it is not there already
-    if (!mat.lockCache(buildCache))
-      buildCache = cacheEmpty; // no need to build
-  }
-  // If still buildCache != cacheEmpty then we really do need to
+  MatMulLock locking(mat, buildCache);
+
+  // If locking.getType()!=cacheEmpty then we really do need to
   // build the cache, and we also have the lock for it.
 
-  if (buildCache == cacheEmpty && ctxt==nullptr) //  nothing to do
+  if (locking.getType() == cacheEmpty && ctxt==nullptr) //  nothing to do
     return;
 
   std::unique_ptr<Ctxt> res;
@@ -268,13 +259,13 @@ static void mat_mul(Ctxt* ctxt, MatMulBase& mat, MatrixCacheType buildCache)
 
   switch (mat.getEA().getTag()) {
     case PA_GF2_tag: {
-      matmul_impl<PA_GF2> M(res.get(), mat, buildCache);
-      M.matmul(ctxt);
+      matmul_impl<PA_GF2> M(res.get(), mat, locking.getType());
+      M.multilpy(ctxt);
       break;
     }
     case PA_zz_p_tag: {
-      matmul_impl<PA_zz_p> M(res.get(), mat, buildCache);
-      M.matmul(ctxt);
+      matmul_impl<PA_zz_p> M(res.get(), mat, locking.getType());
+      M.multilpy(ctxt);
       break;
     }
     default:
@@ -339,7 +330,7 @@ public:
     return zDiag;
   }
 
-  void matmul(Ctxt* ctxt) 
+  void multiply(Ctxt* ctxt) 
   {
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
@@ -347,10 +338,11 @@ public:
     bool sequential = (ea.dimension()==1) && ea.nativeDimension(0);
     // is just a single native dimension, then rotate adds only little noise
 
-    std::unique_ptr<Ctxt> res;
+    std::unique_ptr<Ctxt> res, shCtxt;
     if (ctxt!=nullptr) { // we need to do an actual multiplication
       ctxt->cleanUp(); // not sure, but this may be a good idea
       res.reset(new Ctxt(ZeroCtxtLike, *ctxt));
+      shCtxt.reset(new Ctxt(*ctxt));
     }
 
     // Check if we have the relevant constant in cache
@@ -359,7 +351,6 @@ public:
     mat.getCache(&zcp, &dcp);
 
     // Process the diagonals one at a time
-    Ctxt shCtxt = *ctxt;
     long lastRotate = 0;
     for (long i = 0; i < nslots; i++) {  // process diagonal i
       zzX cpoly;
@@ -383,18 +374,21 @@ public:
       // Non-zero diagonal, store it in cache and/or multiply/add it
 
       if (ctxt!=nullptr && res!=nullptr) {
-	// rotate by i, multiply by the polynomial, then add to the result
-	if (sequential) {
-	  ea.rotate(*ctxt, i-lastRotate);
-	  shCtxt = *ctxt;
-	} else {
-	  shCtxt = *ctxt;
-	  ea.rotate(shCtxt, i); // rotate by i
-	}
-	lastRotate = i;
-        if (dxPtr!=nullptr) shCtxt.multByConstant(*dxPtr);
-	else                shCtxt.multByConstant(*zxPtr);
-	*res += shCtxt;
+        // rotate by i, multiply by the polynomial, then add to the result
+        if (i>0) {
+          if (sequential) {
+            ea.rotate(*ctxt, i-lastRotate);
+            *shCtxt = *ctxt;
+          } else {
+            *shCtxt = *ctxt;
+            ea.rotate(*shCtxt, i); // rotate by i
+          }
+          lastRotate = i;
+	} // if i==0 we already have *shCtxt == *ctxt
+
+        if (dxPtr!=nullptr) shCtxt->multByConstant(*dxPtr);
+	else                shCtxt->multByConstant(*zxPtr);
+	*res += *shCtxt;
       }
       if (buildCache==cachezzX) {
         (*zCache)[i].reset(new zzX(*zxPtr));
@@ -407,40 +401,35 @@ public:
     if (ctxt!=nullptr && res!=nullptr) // copy result back to ctxt
       *ctxt = *res;
 
-    // "install" the cache and release the lock (if needed)
-    if (buildCache == cachezzX) {
+    // "install" the cache (if needed)
+    if (buildCache == cachezzX)
       mat.installzzxcache(zCache);
-      mat.releaseCache();
-    } else if (buildCache == cacheDCRT) {
+    else if (buildCache == cacheDCRT)
       mat.installDCRTcache(dCache);
-      mat.releaseCache();
-    }
-  } // end of matmul(...)
+  } // end of multiply(...)
 };
 
 // Wrapper functions around the implemenmtation class
 static void
 mat_mul_sparse(Ctxt* ctxt, MatMulBase& mat, MatrixCacheType buildCache)
 {
-  if (buildCache != cacheEmpty) { // build a cache if it is not there already
-    if (!mat.lockCache(buildCache))
-      buildCache = cacheEmpty; // no need to build
-  }
-  // If still buildCache != cacheEmpty then we really do need to
+  MatMulLock locking(mat, buildCache);
+
+  // If locking.getType()!=cacheEmpty then we really do need to
   // build the cache, and we also have the lock for it.
 
-  if (buildCache == cacheEmpty && ctxt==nullptr) //  nothing to do
+  if (locking.getType() == cacheEmpty && ctxt==nullptr) //  nothing to do
     return;
 
   switch (mat.getEA().getTag()) {
     case PA_GF2_tag: {
-      matmul_sparse_impl<PA_GF2> M(mat, buildCache);
-      M.matmul(ctxt);
+      matmul_sparse_impl<PA_GF2> M(mat, locking.getType());
+      M.multiply(ctxt);
       break;
     }
     case PA_zz_p_tag: {
-      matmul_sparse_impl<PA_zz_p> M(mat, buildCache);
-      M.matmul(ctxt);
+      matmul_sparse_impl<PA_zz_p> M(mat, locking.getType());
+      M.multiply(ctxt);
       break;
     }
     default:
@@ -466,8 +455,7 @@ public:
 
   static void matmul(NewPlaintextArray& pa, MatMul<type>& mat)
   {
-    const EncryptedArrayDerived<type>& ea
-      = mat.getEA().getDerived(type());
+    const EncryptedArrayDerived<type>& ea = mat.getEA().getDerived(type());
     PA_BOILER
 
     vector<RX> res;

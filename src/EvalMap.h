@@ -44,35 +44,24 @@
 //! the coefficients in each slot into a normal-basis representation,
 //! which helps with the unpacking procedure.
 //! 
-//! The constructor precomputes certain values, but the linear
+//! The constructor precomputes certain values, and the linear
 //! transformation itself is effected using the apply method.
 //!
 //! Note that the factorization in mvec must correspond to the
 //! generators used in PAlgebra.  The best way to ensure this is
-//! to used directly the output of the params program, which
-//! will supply values for mvec (to be used here), and gens and ords
-//! (to be used in initialize the FHEcontext).
+//! to directly use the output of the program in  params.cpp: that
+//! program computes values for mvec (to be used here), and gens
+//! and ords (to be used in initialize the FHEcontext).
 
 class EvalMap {
 private:
   const EncryptedArray& ea;
   bool invert;   // apply transformation in inverser order?
   long nfactors; // how many factors of m
+  std::unique_ptr<MatMulBase>            mat1;   // one block matrix
+  NTL::Vec<std::unique_ptr<MatMulBase> > matvec; // regular matrices
 
-#ifndef EVALMAP_CACHED    // no caching
-  shared_ptr<PlaintextBlockMatrixBaseInterface>   mat1;   // one block matrix
-  Vec< shared_ptr<PlaintextMatrixBaseInterface> > matvec; // regular matrices
-#else
-#if (EVALMAP_CACHED==0) // ZZX caching
-  CachedPtxtBlockMatrix mat1;
-  Vec<CachedPtxtMatrix> matvec;
-#else               // DoubleCRT cashing
-  CachedDCRTPtxtBlockMatrix mat1;
-  Vec<CachedDCRTPtxtMatrix> matvec;
-#endif
-#endif
 public:
-
   EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
           bool normal_basis = true);
 
@@ -80,6 +69,7 @@ public:
   // normal basis transformation when invert == true.
   // On by default, off for testing
 
+  void buildCache(MatrixCacheType cType);
   void apply(Ctxt& ctxt) const;
 };
 

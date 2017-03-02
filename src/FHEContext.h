@@ -137,8 +137,8 @@ public:
              const vector<long>& ords = vector<long>() );  // constructor
 
   void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
-			  bool conservative=false)
-  { rcData.init(*this, mvec, skWht, conservative); }
+			  bool conservative=false, int cacheType=0)
+  { rcData.init(*this, mvec, skWht, conservative, cacheType); }
   bool isBootstrappable() const { return (rcData.alMod != NULL); }
 
   bool operator==(const FHEcontext& other) const;

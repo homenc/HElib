@@ -196,9 +196,9 @@ void  TestIt(long m, long p, long r, long d, long L)
     else
       cout << "Grrr@*\n";
 
-    cout << " Multiplying with MatMulBase+zzx cache... " << std::flush;
+    cout << " Multiplying with MatMulBase+dcrt cache... " << std::flush;
     ctxt2 = ctxt;
-    matMul(ctxt2, *ptr); // use the cache in multiplication
+    matMul(ctxt2, *ptr, cacheDCRT); // upgrade cache and use in multiplication
 
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -206,13 +206,25 @@ void  TestIt(long m, long p, long r, long d, long L)
       cout << "Nice!!\n";
     else
       cout << "Grrr@*\n";
+  }
+  {
+    // choose a random plaintext square matrix
+    unique_ptr<MatMulBase> ptr(buildDenseMatrix(ea));
 
-    cout << " Multiplying with MatMulBase+dcrt cache... " << std::flush;
-    ctxt2 = ctxt;
-    buildCache4MatMul(*ptr, /*MatrixCacheType=*/cacheDCRT);// build the cache
-    matMul(ctxt2, *ptr);                                   // then use it
+    // choose a random plaintext vector
+    NewPlaintextArray v(ea);
+    random(ea, v);
 
-    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+    // encrypt the random vector
+    Ctxt ctxt(publicKey);
+    ea.encrypt(ctxt, publicKey, v);
+    cout << " Multiplying with MatMulBase+zzx cache... " << std::flush;
+    buildCache4MatMul(*ptr, cachezzX);// build the cache
+    matMul(ctxt, *ptr);               // then use it
+    matMul(v, *ptr);     // multiply the plaintext vector
+
+    NewPlaintextArray v1(ea);
+    ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
 
     if (equals(ea, v, v1))        // check that we've got the right answer
       cout << "Nice!!\n";
@@ -245,9 +257,9 @@ void  TestIt(long m, long p, long r, long d, long L)
     else
       cout << "Grrr@*\n";
 
-    cout << " Multiplying with Sparse MatMulBase+zzx cache... " << std::flush;
+    cout << " Multiplying with Sparse MatMulBase+dcrt cache... " << std::flush;
     ctxt2 = ctxt;
-    matMul_sparse(ctxt2, *ptr); // use the cache
+    matMul_sparse(ctxt2, *ptr, cacheDCRT); // upgrade the cache
 
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -255,13 +267,26 @@ void  TestIt(long m, long p, long r, long d, long L)
       cout << "Nice!!\n";
     else
       cout << "Grrr@*\n";
+  }
+  {
+    // choose a random plaintext square matrix
+    unique_ptr<MatMulBase> ptr(buildDenseMatrix(ea));
 
-    cout << " Multiplying with Sparse MatMulBase+dcrt cache... " << std::flush;
-    ctxt2 = ctxt;
-    buildCache4MatMul_sparse(*ptr, /*MatrixCacheType=*/cacheDCRT);// build the cache
-    matMul_sparse(ctxt2, *ptr);                                   // then use it
+    // choose a random plaintext vector
+    NewPlaintextArray v(ea);
+    random(ea, v);
 
-    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+    // encrypt the random vector
+    Ctxt ctxt(publicKey);
+    ea.encrypt(ctxt, publicKey, v);
+
+    cout << " Multiplying with Sparse MatMulBase+zzx cache... " << std::flush;
+    buildCache4MatMul_sparse(*ptr, cachezzX); // build the cache
+    matMul_sparse(ctxt, *ptr);                // then use it
+    matMul(v, *ptr);                          // multiply plaintext vector
+
+    NewPlaintextArray v1(ea);
+    ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
 
     if (equals(ea, v, v1))        // check that we've got the right answer
       cout << "Nice!!\n";

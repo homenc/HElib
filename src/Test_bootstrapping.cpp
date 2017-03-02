@@ -103,7 +103,7 @@ static long mValues[][14] = {
 
 static bool dry = false; // a dry-run flag
 
-void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false)
+void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int cType=0)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -143,7 +143,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
   buildModChain(context, L, c);
-  context.makeBootstrappable(mvec, /*t=*/0, cons);
+  context.makeBootstrappable(mvec, /*t=*/0, cons, cType);
   t += GetTime();
 
   if (skHwt>0) context.rcData.skHwt = skHwt;
@@ -263,6 +263,7 @@ int main(int argc, char *argv[])
   long nthreads=1;
 
   long seed=0;
+  long useCache=0;
 
   amap.arg("p", p, "plaintext base");
 
@@ -277,10 +278,9 @@ int main(int argc, char *argv[])
   amap.arg("dry", dry, "dry=1 for a dry-run");
   amap.arg("cons", cons, "cons=1 for consevative settings (circuit deeper by 1)");
   amap.arg("nthreads", nthreads, "number of threads");
-
   amap.arg("seed", seed, "random number seed");
-
   amap.arg("noPrint", noPrint, "suppress printouts");
+  amap.arg("useCache", useCache, "0: no cache, 1:zzX, 2:DCRT");
 
   amap.parse(argc, argv);
 
@@ -295,7 +295,7 @@ int main(int argc, char *argv[])
 
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
-      TestIt(i,p,r,L,c,B,t,cons);
+      TestIt(i,p,r,L,c,B,t,cons,useCache);
       break;
     }
 

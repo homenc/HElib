@@ -418,6 +418,7 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   str << context.rcData.mvec;
   str << " " << context.rcData.hwt;
   str << " " << context.rcData.conservative;
+  str << " " << context.rcData.cacheType;
 
   str << "]\n";
 
@@ -480,11 +481,13 @@ istream& operator>> (istream &str, FHEcontext& context)
   Vec<long> mv;
   long t;
   bool consFlag;
+  int cType;
   str >> mv;
   str >> t;
   str >> consFlag;
+  str >> cType;
   if (mv.length()>0) {
-    context.makeBootstrappable(mv, t, consFlag);
+    context.makeBootstrappable(mv, t, consFlag, cType);
   }
 
   seekPastChar(str, ']');

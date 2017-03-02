@@ -12,8 +12,9 @@ static bool noPrint = false;
 
 void  TestIt(long p, long r, long c, long _k, long w,
              long L, const Vec<long>& mvec, 
-             const Vec<long>& gens, const Vec<long>& ords )
+             const Vec<long>& gens, const Vec<long>& ords, long useCache)
 {
+  const char * cacheTypes[3] = { "no", "zzX", "DCRT" };
   if (!noPrint)
     cout << "*** TestIt"
        << (dry? " (dry run):" : ":")
@@ -23,7 +24,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
        << ", k=" << _k
        << ", w=" << w
        << ", L=" << L
-       << ", mvec=" << mvec
+       << ", mvec=" << mvec << ", "
+       << cacheTypes[useCache] << " cache"
        << endl;
 
   setTimersOn();
@@ -113,7 +115,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
   if (!noPrint) cout << "build EvalMap\n";
   EvalMap map(ea, mvec, false); // compute the transformation to apply
   if (!noPrint) cout << "apply EvalMap\n";
-  map.apply(ctxt);              // apply the transformation to ctxt
+  map.buildCache(static_cast<MatrixCacheType>(useCache));
+  map.apply(ctxt); // apply the transformation to ctxt
   if (!noPrint) CheckCtxt(ctxt, "EvalMap");
   if (!noPrint) cout << "check results\n";
 
@@ -136,7 +139,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
   if (!noPrint) cout << "build EvalMap\n";
   EvalMap imap(ea, mvec, true, false); // compute the transformation to apply
   if (!noPrint) cout << "apply EvalMap\n";
-  imap.apply(ctxt);                    // apply the transformation to ctxt
+  imap.buildCache(static_cast<MatrixCacheType>(useCache));
+  imap.apply(ctxt); // apply the transformation to ctxt
   if (!noPrint) {
     CheckCtxt(ctxt, "EvalMap");
     cout << "check results\n";
@@ -217,19 +221,15 @@ int main(int argc, char *argv[])
 
   amap.arg("noPrint", noPrint, "suppress printouts");
 
+  long useCache=0;
+  amap.arg("useCache", useCache, "0: no cache, 1:zzX, 2:DCRT");
+
   amap.parse(argc, argv);
 
   SetNumThreads(nthreads);
 
-
-
-
-
-  long w = 64; // Hamming weight of secret key
-
   SetSeed(conv<ZZ>(seed));
-
-  TestIt(p, r, c, k, w, L, mvec, gens, ords);
+  TestIt(p, r, c, k, /*Key Hamming weight=*/64, L, mvec, gens, ords, useCache);
 }
 
 // ./Test_EvalMap_x mvec="[73 433]" gens="[18620 12995]" ords="[72 -6]"

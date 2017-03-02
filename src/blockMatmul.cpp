@@ -19,11 +19,39 @@
 #include <NTL/BasicThreadPool.h>
 #include "matmul.h"
 
-// A useful utility function from matmul.cpp, returns true if cache[i] is zero
-extern bool
+// A useful helper function to get information from cache
+bool
 getDataFromCache(CachedConstants& cache, long i,
 		 CachedConstants::CacheTag tag, const FHEcontext& context,
-		 NTL::ZZX*& zzxPtr, DoubleCRT*& dcrtPtr);
+		 NTL::ZZX*& zzxPtr, DoubleCRT*& dcrtPtr)
+{
+  if (cache.isZero(i)) return true; // zero constant
+
+  if (cache.isDCRT(i)) dcrtPtr = cache.getDCRT(i);
+  else if (cache.isZZX(i)) {
+    zzxPtr = cache.getZZX(i);
+    if (tag == CachedConstants::tagDCRT) { // upgrade cache to DoubleCRT
+      // DIRT: this "upgrade" logic may not be thread safe
+      dcrtPtr = new DoubleCRT(*zzxPtr, context);
+      cache.setAt(i,dcrtPtr);
+      zzxPtr = NULL;
+    }
+  }
+  else throw std::logic_error("cached constant is NULL");
+  return false;
+}
+
+// helper routines
+
+void CachedMatrixConvert(CachedDCRTPtxtMatrix& v, 
+			 const CachedPtxtMatrix& w, const FHEcontext& context)
+{
+  long n = w.length();
+  v.SetLength(n);
+  for (long i = 0; i < n; i++)
+    if (w[i]) v[i] = DCRTptr(new DoubleCRT(*w[i], context));
+    // DoubleCRT defined relative to all primes, even the "special" ones
+}
 
 // Utility function to ocnvert cache formats
 void CachedBlockMatrixConvert(CachedDCRTPtxtBlockMatrix& v, 
