@@ -165,7 +165,7 @@ public:
       CachedzzxMatrix* zcp;
       CachedDCRTPtxtMatrix* dcp;
       mat.getCache(&zcp, &dcp);
-      if (zcp != nullptr)         // DoubleCRT cache exists
+      if (dcp != nullptr)         // DoubleCRT cache exists
 	dxPtr = (*dcp)[idx].get();
       else if (zcp != nullptr)    // zzx cache exists but no DoubleCRT
 	zxPtr = (*zcp)[idx].get();
