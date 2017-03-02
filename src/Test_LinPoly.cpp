@@ -38,7 +38,7 @@ public:
   SingleBlockMatrix(const EncryptedArray& _ea, const vector<ZZX>& vec) : ea(_ea) { 
     long d = ea.getDegree();
 
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+    RBak bak; bak.save(); ea.getAlMod().restoreContext();
 
     data.SetDims(d, d);
     for (long i = 0; i < d; i++) 
@@ -94,7 +94,7 @@ public:
     long n = ea.size();
     long d = ea.getDegree();
 
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+    RBak bak; bak.save(); ea.getAlMod().restoreContext();
 
     data.SetLength(n);
     for (long k = 0; k < n; k++) {
