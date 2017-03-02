@@ -19,140 +19,21 @@
  * @file matmul.h
  * @brief some matrix / linear algenra stuff
  */
-#include <tuple>
-#include "EncryptedArray.h"
-#include "CachedConstants.h"
-
-/********************************************************************/
-/****************** Linear transformation classes *******************/
-
-//! @class PlaintextBlockMatrixBaseInterface
-//! @brief An abstract interface for linear transformations.
-//!
-//! A block matrix implements linear transformation over the base field/ring
-//! (e.g., Z_2, Z_3, Z_{2^8}, etc.) Any class implementing this interface
-//! should be linked to a specific EncryptedArray object, a reference to which
-//! is returned by the getEA() method -- this method will generally be invoked
-//! by an EncryptedArray object to verify consistent use.
-
-class PlaintextBlockMatrixBaseInterface {
-  CachedConstants cache;
-public:
-  virtual const EncryptedArray& getEA() const = 0;
-  virtual ~PlaintextBlockMatrixBaseInterface() {}
-
-  CachedConstants& getCache() { return cache; }
-};
-
-
-//! @class PlaintextBlockMatrixInterface
-//! @brief A somewhat less abstract interface for linear transformations.
-//! 
-//! A block matrix implements linear transformation over the base field/ring
-//! (e.g., Z_2, Z_3, Z_{2^8}, etc.) An object of this type specifies a
-//! particular linear transformation, represented as a matrix of small
-//! matrices. The method get(out,i,j) copies the small matrix ar row i,
-//! column j into the variable out. The type of out is mat_R (so either
-//! mat_GF2 or mat_zz_p). The dimenssion of our is d-by-d, where d is
-//! the extension degree of the slots (per the EncryptedArray object).
-//! A return value of true means that the entry is zero, and out is not
-//! touched.
-
-template<class type> 
-class  PlaintextBlockMatrixInterface : public PlaintextBlockMatrixBaseInterface {
-public:
-  PA_INJECT(type)
-
-  virtual bool get(mat_R& out, long i, long j) const = 0;
-};
-
-
-
-/**************** End linear transformation classes *****************/
-/********************************************************************/
-
-
-typedef NTL::Vec<ZZXptr> CachedPtxtMatrix;
-typedef NTL::Mat<ZZXptr> CachedPtxtBlockMatrix;
-typedef NTL::Vec<DCRTptr> CachedDCRTPtxtMatrix;
-typedef NTL::Mat<DCRTptr> CachedDCRTPtxtBlockMatrix;
-// ZZXptr is std::shared_ptr<NTL::ZZX>
-// DCRTptr is std::shared_ptr<DoubleCRT>
-
-
-///@{
-//! @name Matrix multiplication routines
-
-/*
-//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
-//! a row matrix v, and replaced by an encryption of v * mat.
-//! Optimized for sparse diagonals
-void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
-  const PlaintextMatrixBaseInterface& mat);
-void compMat(const EncryptedArray& ea, CachedPtxtMatrix& cmat, 
-  const PlaintextMatrixBaseInterface& mat);
-void compMat(const EncryptedArray& ea, CachedDCRTPtxtMatrix& cmat, 
-  const PlaintextMatrixBaseInterface& mat);
-// The latter two functions used a "cached" version of the matrix,
-// which was built from the PlaintextMatrixBaseInterface object,
-// where all the constants are already encoded as ZZX or DoubleCRT.
-*/
-
-
-//! @brief Multiply ctx by plaintext block matrix (over the base field/ring).
-//! Ctxt is treated as a row matrix v, and replaced by an encryption of v*mat.
-//! Optimized for sparse diagonals
-void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
-  const PlaintextBlockMatrixBaseInterface& mat);
-void compMat(const EncryptedArray& ea, CachedPtxtBlockMatrix& cmat, 
-  const PlaintextBlockMatrixBaseInterface& mat);
-void compMat(const EncryptedArray& ea, CachedDCRTPtxtBlockMatrix& cmat, 
-  const PlaintextBlockMatrixBaseInterface& mat);
-// The latter two functions used a "cached" version of the matrix,
-// which was built from the PlaintextMatrixBaseInterface object,
-// where all the constants are already encoded as ZZX or DoubleCRT.
-
-///@}
-
-
-//! @brief Functions for various flavors of cached matrix multiplication
-//!
-//! To save time, the constants that need to be computed during a matrix-vector
-//! multiply can be precomputed and stored.  One can store these either
-//! as polynomials (ZZX's) using a CachedPtxtMatrix, or as DoubleCRT's
-//! using a CachedDCRTMatrix. These caches are computed using EncryptedArray
-//! methods.
-
-
-//! @brief Functions corresponding to EncryptedArray::mat_mul
-//! Caches are computed using EncryptedArray::compMat
-//! These functions are designed to work with sparse matrices.
-//! The first two work with matrices over Z_{p^r}[X]/(G).
-//! The second two work with "block" matrices whose entries are themselves
-//! matrices over Z_{p^r}
-void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
-  const CachedPtxtBlockMatrix& cmat);
-void mat_mul(const EncryptedArray& ea, Ctxt& ctxt, 
-  const CachedDCRTPtxtBlockMatrix& cmat);
-
-///@}
-
-// Versions of the matrix-vector functions that work on plaintext
-// rather than cipehrtext, useful for debugging.
-void mat_mul(const EncryptedArray& ea, NewPlaintextArray& pa, 
-  const PlaintextBlockMatrixBaseInterface& mat);
-
-/********************************************************************/
-/********************************************************************/
-/********************************************************************/
-/********************************************************************/
 #include <cstddef>
 #include <mutex>
+#include <tuple>
+#include "EncryptedArray.h"
 
 typedef std::shared_ptr< zzX > zzxptr; // zzX=Vec<long> defined in NumbTh.h
 typedef NTL::Vec<zzxptr> CachedzzxMatrix;
 
+typedef NTL::Vec<DCRTptr> CachedDCRTMatrix;
+typedef NTL::Mat<DCRTptr> CachedDCRTBlockMatrix;
+
 enum MatrixCacheType : int { cacheEmpty=0, cachezzX=1, cacheDCRT=2 };
+
+/********************************************************************/
+/****************** Linear transformation classes *******************/
 
 //! @class MatMulBase
 //! @brief An abstract interface for linear transformations.
@@ -162,7 +43,7 @@ enum MatrixCacheType : int { cacheEmpty=0, cachezzX=1, cacheDCRT=2 };
 class MatMulBase {
   const EncryptedArray& ea;
   std::unique_ptr<CachedzzxMatrix> zzxCache;
-  std::unique_ptr<CachedDCRTPtxtMatrix> dcrtCache;
+  std::unique_ptr<CachedDCRTMatrix> dcrtCache;
   std::mutex cachelock;
 public:
   MatMulBase(const EncryptedArray& _ea): ea(_ea) {}
@@ -172,7 +53,7 @@ public:
 
   bool haszzxcache() const { return (bool)zzxCache; }   // check if not null
   bool hasDCRTcache() const { return (bool)dcrtCache; } // check if not null
-  void getCache(CachedzzxMatrix** zcp, CachedDCRTPtxtMatrix** dcp) const
+  void getCache(CachedzzxMatrix** zcp, CachedDCRTMatrix** dcp) const
   { *zcp = zzxCache.get(); *dcp = dcrtCache.get(); }
 
   bool lockCache(MatrixCacheType ty);
@@ -182,7 +63,7 @@ public:
 
   void installzzxcache(std::unique_ptr<CachedzzxMatrix>& zc)
   { zzxCache.swap(zc); }
-  void installDCRTcache(std::unique_ptr<CachedDCRTPtxtMatrix>& dc)
+  void installDCRTcache(std::unique_ptr<CachedDCRTMatrix>& dc)
   { dcrtCache.swap(dc); }
 };
 

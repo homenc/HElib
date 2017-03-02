@@ -26,114 +26,9 @@
 #include "EncryptedArray.h"
 #include "matmul.h"
 
-template<class type> class RandomDenseMatrix : public MatMul<type> {
-  PA_INJECT(type) 
-  vector< vector< RX > > data;
+static MatMulBase* buildRandomMatrix(EncryptedArray& ea);
+static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea);
 
-public:
-  ~RandomDenseMatrix() {/*cout << "destructor: random dense matrix\n";*/}
-  RandomDenseMatrix(const EncryptedArray& _ea): MatMul<type>(_ea) {
-    long n = _ea.size();
-    long d = _ea.getDegree();
-    long bnd = 2*n; // non-zero with probability 1/bnd
-
-    RBak bak; bak.save(); _ea.getContext().alMod.restoreContext();
-    data.resize(n);
-    for (long i = 0; i < n; i++) {
-      data[i].resize(n);
-      for (long j = 0; j < n; j++) {
-        bool zEntry = (RandomBnd(bnd) > 0);
-        if (zEntry) clear(data[i][j]);
-        else        random(data[i][j], d);
-      }
-    }
-  }
-
-  virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < this->getEA().size());
-    assert(j >= 0 && j < this->getEA().size());
-    if (IsZero(data[i][j])) return true;
-    out = data[i][j];
-    return false;
-  }
-};
-MatMulBase* buildDenseMatrix(EncryptedArray& ea)
-{
-  switch (ea.getTag()) {
-    case PA_GF2_tag: { return new RandomDenseMatrix<PA_GF2>(ea); }
-    case PA_zz_p_tag:{ return new RandomDenseMatrix<PA_zz_p>(ea); }
-    default: return nullptr;
-  }
-}
-
-
-template<class type> 
-class RandomBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-
-  vector< vector< mat_R > > data;
-
-public:
-  ~RandomBlockMatrix() { /*cout << "destructor: random block matrix\n";*/ }
-  RandomBlockMatrix(const EncryptedArray& _ea) : ea(_ea) { 
-    long n = ea.size();
-    long d = ea.getDegree();
-
-    long bnd = 2*n; // non-zero with probability 1/bnd
-
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
-
-    data.resize(n);
-    for (long i = 0; i < n; i++) {
-      data[i].resize(n);
-      for (long j = 0; j < n; j++) {
-        data[i][j].SetDims(d, d);
-
-        bool zEntry = (RandomBnd(bnd) > 0);
-
-        for (long u = 0; u < d; u++)
-          for (long v = 0; v < d; v++) 
-            if (zEntry) 
-              clear(data[i][j][u][v]);
-            else
-              random(data[i][j][u][v]);
-      }
-    }
-  }
-
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
-  virtual bool get(mat_R& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    if (IsZero(data[i][j])) return true;
-    out = data[i][j];
-    return false;
-  }
-};
-
-
-PlaintextBlockMatrixBaseInterface *
-buildRandomBlockMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new RandomBlockMatrix<PA_GF2>(ea);
-    }
-
-    case PA_zz_p_tag: {
-      return new RandomBlockMatrix<PA_zz_p>(ea);
-    }
-
-    default: return 0;
-  }
-}
 
 void  TestIt(long m, long p, long r, long d, long L)
 {
@@ -173,7 +68,7 @@ void  TestIt(long m, long p, long r, long d, long L)
   // Test a "dense" matrix over the extension field
   {
     // choose a random plaintext square matrix
-    unique_ptr<MatMulBase> ptr(buildDenseMatrix(ea));
+    unique_ptr<MatMulBase> ptr(buildRandomMatrix(ea));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -209,7 +104,7 @@ void  TestIt(long m, long p, long r, long d, long L)
   }
   {
     // choose a random plaintext square matrix
-    unique_ptr<MatMulBase> ptr(buildDenseMatrix(ea));
+    unique_ptr<MatMulBase> ptr(buildRandomMatrix(ea));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -234,7 +129,7 @@ void  TestIt(long m, long p, long r, long d, long L)
   // Test a "diagonal sparse" matrix over the extension field
   {
     // choose a random plaintext square matrix
-    unique_ptr<MatMulBase> ptr(buildDenseMatrix(ea));
+    unique_ptr<MatMulBase> ptr(buildRandomMatrix(ea));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -245,7 +140,7 @@ void  TestIt(long m, long p, long r, long d, long L)
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
-    cout << " Multiplying with Sparse MatMulBase... " << std::flush;
+    cout << "\n Multiplying with Sparse MatMulBase... " << std::flush;
     matMul_sparse(ctxt2, *ptr, cachezzX); // multiply ciphertext and build cache
     matMul(v, *ptr);     // multiply the plaintext vector
 
@@ -270,7 +165,7 @@ void  TestIt(long m, long p, long r, long d, long L)
   }
   {
     // choose a random plaintext square matrix
-    unique_ptr<MatMulBase> ptr(buildDenseMatrix(ea));
+    unique_ptr<MatMulBase> ptr(buildRandomMatrix(ea));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -297,8 +192,7 @@ void  TestIt(long m, long p, long r, long d, long L)
   // Test a "block matrix" over the base field
   {
     // choose a random plaintext square matrix
-    shared_ptr<PlaintextBlockMatrixBaseInterface>
-      ptr(buildRandomBlockMatrix(ea));
+    std::unique_ptr<MatMulBase> ptr(buildRandomBlockMatrix(ea));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -309,10 +203,9 @@ void  TestIt(long m, long p, long r, long d, long L)
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
-    mat_mul(ea, v, *ptr);         // multiply the plaintext vector
-    cout << " Multiplying with PlaintextBlockMatrixBaseInterface... " 
-	 << std::flush;
-    mat_mul(ea, ctxt2, *ptr);  // multiply the ciphertext vector
+    cout << "\n Multiplying with BlockMatMul... "  << std::flush;
+    blockMatMul(ctxt2, *ptr, cachezzX); // multiply ciphertext and build cache
+    blockMatMul(v, *ptr);      // multiply the plaintext vector
 
     NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
@@ -322,31 +215,40 @@ void  TestIt(long m, long p, long r, long d, long L)
     else
       cout << "Grrr...\n";
 
-    // Test cached verion sof the mult-by-block-matrix operation
-    {
-      CachedPtxtBlockMatrix zzxMat;
-      compMat(ea, zzxMat, *ptr);
-      ctxt2 = ctxt;
-      cout << " Multiplying with CachedPtxtBlockMatrix... " << std::flush;
-      mat_mul(ea, ctxt2, zzxMat);
-      ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (equals(ea, v, v1))        // check that we've got the right answer
-	cout << "Nice!!\n" << std::flush;
-      else
-	cout << "Grrr@*\n" << std::flush;
-    }
-    {
-      CachedDCRTPtxtBlockMatrix dcrtMat;
-      compMat(ea, dcrtMat, *ptr);
-      ctxt2 = ctxt;
-      cout << " Multiplying with CachedDCRTPtxtBlockMatrix... " << std::flush;
-      mat_mul(ea, ctxt2, dcrtMat);
-      ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
-      if (equals(ea, v, v1))        // check that we've got the right answer
-	cout << "Nice!!\n";
-      else
-	cout << "Grrr@*\n";
-    }
+    cout << " Multiplying with BlockMatMul+dcrt cache... " << std::flush;
+    ctxt2 = ctxt;
+    blockMatMul(ctxt2, *ptr, cacheDCRT); // upgrade the cache
+
+    ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
+    if (equals(ea, v, v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr@*\n";
+  }
+  {
+    // choose a random plaintext square matrix
+    std::unique_ptr<MatMulBase> ptr(buildRandomBlockMatrix(ea));
+
+    // choose a random plaintext vector
+    NewPlaintextArray v(ea);
+    random(ea, v);
+
+    // encrypt the random vector
+    Ctxt ctxt(publicKey);
+    ea.encrypt(ctxt, publicKey, v);
+
+    cout << " Multiplying with BlockMatMul+zzx cache... " << std::flush;
+    buildCache4BlockMatMul(*ptr, cachezzX); // build the cache
+    blockMatMul(ctxt, *ptr);                // then use it
+    blockMatMul(v, *ptr);     // multiply the plaintext vector
+
+    NewPlaintextArray v1(ea);
+    ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
+
+    if (equals(ea, v, v1))        // check that we've got the right answer
+      cout << "Nice!!\n";
+    else
+      cout << "Grrr@*\n";
   }
 }
 
@@ -399,180 +301,104 @@ int main(int argc, char *argv[])
   }
 }
 
-/********************************************************************/
-/************               UNUSED CODE                   ***********/
-/********************************************************************/
-#if 0
-template<class type> 
-class RunningSumMatrix : public  PlaintextMatrixInterface<type> {
-public:
+
+
+
+template<class type> class RandomMatrix : public MatMul<type> {
   PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
+  vector< vector< RX > > data;
 
 public:
-  ~RunningSumMatrix() { /* cout << "destructor: running sum matrix\n";*/ }
+  ~RandomMatrix() {/*cout << "destructor: random dense matrix\n";*/}
+  RandomMatrix(const EncryptedArray& _ea): MatMul<type>(_ea) {
+    long n = _ea.size();
+    long d = _ea.getDegree();
+    long bnd = 2*n; // non-zero with probability 1/bnd
 
-  RunningSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
-
-  virtual const EncryptedArray& getEA() const {
-    return ea;
+    RBak bak; bak.save(); _ea.getContext().alMod.restoreContext();
+    data.resize(n);
+    for (long i = 0; i < n; i++) {
+      data[i].resize(n);
+      for (long j = 0; j < n; j++) {
+        bool zEntry = (RandomBnd(bnd) > 0);
+        if (zEntry) clear(data[i][j]);
+        else        random(data[i][j], d);
+      }
+    }
   }
 
   virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    if (j >= i)
-      out = 1;
-    else
-      out = 0;
+    assert(i >= 0 && i < this->getEA().size());
+    assert(j >= 0 && j < this->getEA().size());
+    if (IsZero(data[i][j])) return true;
+    out = data[i][j];
     return false;
   }
 };
-
-
-PlaintextMatrixBaseInterface *
-buildRunningSumMatrix(const EncryptedArray& ea)
+static MatMulBase* buildRandomMatrix(EncryptedArray& ea)
 {
-  switch (ea.getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new RunningSumMatrix<PA_GF2>(ea);
-    }
-
-    case PA_zz_p_tag: {
-      return new RunningSumMatrix<PA_zz_p>(ea);
-    }
-
-    default: return 0;
+  switch (ea.getTag()) {
+    case PA_GF2_tag: { return new RandomMatrix<PA_GF2>(ea); }
+    case PA_zz_p_tag:{ return new RandomMatrix<PA_zz_p>(ea); }
+    default: return nullptr;
   }
 }
 
 
-template<class type> 
-class TotalSumMatrix : public  PlaintextMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
+template<class type> class RandomBlockMatrix : public BlockMatMul<type> {
+  PA_INJECT(type)
 
-private:
-  const EncryptedArray& ea;
+  std::vector< std::vector< mat_R > > data;
 
 public:
-  ~TotalSumMatrix() { cout << "destructor: total sum matrix\n"; }
-
-  TotalSumMatrix(const EncryptedArray& _ea) : ea(_ea) { }
-
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
-  virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    out = 1;
-    return false;
-  }
-};
-
-
-PlaintextMatrixBaseInterface *
-buildTotalSumMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new TotalSumMatrix<PA_GF2>(ea);
-    }
-
-    case PA_zz_p_tag: {
-      return new TotalSumMatrix<PA_zz_p>(ea);
-    }
-
-    default: return 0;
-  }
-}
-
-template<class type> 
-class PolyBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-
-  vector< vector< mat_R > > data;
-
-public:
-
-  PolyBlockMatrix(const PlaintextMatrixBaseInterface& MM) : ea(MM.getEA()) { 
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
-
-    const PlaintextMatrixInterface<type>& M =
-      dynamic_cast< const PlaintextMatrixInterface<type>& >(MM);
-
-    long n = ea.size();
-    const RX& G = ea.getDerived(type()).getG();
+  virtual ~RandomBlockMatrix() {}
+  RandomBlockMatrix(const EncryptedArray& _ea): BlockMatMul<type>(_ea)
+  { 
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long n = _ea.size();
+    long d = _ea.getDegree();
+    long bnd = 2*n; // non-zero with probability 1/bnd
 
     data.resize(n);
     for (long i = 0; i < n; i++) {
       data[i].resize(n);
       for (long j = 0; j < n; j++) {
-        RX tmp;
-        if (M.get(tmp, i, j)) clear(tmp);
-        matrixOfPoly(data[i][j], tmp, G);
+        data[i][j].SetDims(d, d);
+
+        bool zEntry = (RandomBnd(bnd) > 0);
+
+        for (long u = 0; u < d; u++)
+          for (long v = 0; v < d; v++) 
+            if (zEntry) 
+              clear(data[i][j][u][v]);
+            else
+              random(data[i][j][u][v]);
       }
     }
   }
 
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
   virtual bool get(mat_R& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
+    assert(i >= 0 && i < this->getEA().size());
+    assert(j >= 0 && j < this->getEA().size());
+    if (IsZero(data[i][j])) return true;
     out = data[i][j];
     return false;
   }
+
+  const std::vector< std::vector< mat_R > >& getData() const {return data;}
 };
 
-
-PlaintextBlockMatrixBaseInterface *
-buildPolyBlockMatrix(const PlaintextMatrixBaseInterface& M)
+static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea)
 {
-  switch (M.getEA().getContext().alMod.getTag()) {
+  switch (ea.getTag()) {
     case PA_GF2_tag: {
-      return new PolyBlockMatrix<PA_GF2>(M);
+      return new RandomBlockMatrix<PA_GF2>(ea);
     }
 
     case PA_zz_p_tag: {
-      return new PolyBlockMatrix<PA_zz_p>(M);
+      return new RandomBlockMatrix<PA_zz_p>(ea);
     }
 
     default: return 0;
   }
 }
-
-static void matrixOfPoly(mat_GF2& m, const GF2X& a, const GF2X& f)
-{
-  long d = deg(f);
-  m.SetDims(d, d);
-  GF2X b = a;
-
-  for (long i = 0; i < d; i++) {
-    VectorCopy(m[i], b, d);
-    MulByXMod(b, b, f);
-  }
-}
-
-static void matrixOfPoly(mat_zz_p& m, const zz_pX& a, const zz_pX& f)
-{
-  long d = deg(f);
-  m.SetDims(d, d);
-  zz_pX b = a;
-
-  for (long i = 0; i < d; i++) {
-    VectorCopy(m[i], b, d);
-    MulByXMod(b, b, f);
-  }
-}
-#endif

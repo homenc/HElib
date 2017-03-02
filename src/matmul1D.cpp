@@ -24,7 +24,7 @@ template<class type> class matmul1D_impl {
   PA_INJECT(type)
   const MatrixCacheType buildCache;
   std::unique_ptr<CachedzzxMatrix> zCache;
-  std::unique_ptr<CachedDCRTPtxtMatrix> dCache;
+  std::unique_ptr<CachedDCRTMatrix> dCache;
 
   MatMul<type>& mat;
   const EncryptedArrayDerived<type>& ea;
@@ -37,7 +37,7 @@ public:
     if (buildCache==cachezzX)
       zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,ea.size()));
     else if (buildCache==cacheDCRT)
-      dCache.reset(new CachedDCRTPtxtMatrix(NTL::INIT_SIZE,ea.size()));
+      dCache.reset(new CachedDCRTMatrix(NTL::INIT_SIZE,ea.size()));
   }
 
   // Get the i'th diagonal along dimension dim, encoded as a
@@ -144,7 +144,7 @@ public:
 
     // Check if we have the relevant constant in cache
     CachedzzxMatrix* zcp;
-    CachedDCRTPtxtMatrix* dcp;
+    CachedDCRTMatrix* dcp;
     mat.getCache(&zcp, &dcp);
 
     // Process the diagonals one at a time

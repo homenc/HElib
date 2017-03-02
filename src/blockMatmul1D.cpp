@@ -24,7 +24,7 @@ template<class type> class blockMatmul1D_impl {
   PA_INJECT(type)
   const MatrixCacheType buildCache;
   std::unique_ptr<CachedzzxMatrix> zCache;
-  std::unique_ptr<CachedDCRTPtxtMatrix> dCache;
+  std::unique_ptr<CachedDCRTMatrix> dCache;
 
   BlockMatMul<type>& mat;
   const EncryptedArrayDerived<type>& ea;
@@ -38,7 +38,7 @@ public:
     if (buildCache==cachezzX)
       zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE, n));
     else if (buildCache==cacheDCRT)
-      dCache.reset(new CachedDCRTPtxtMatrix(NTL::INIT_SIZE, n));
+      dCache.reset(new CachedDCRTMatrix(NTL::INIT_SIZE, n));
   }
 
   // Extract one "column" from a matrix that was built with buildLinPolyCoeffs
@@ -207,7 +207,7 @@ public:
 
     // Check if we have the relevant constant in cache
     CachedzzxMatrix* zcp;
-    CachedDCRTPtxtMatrix* dcp;
+    CachedDCRTMatrix* dcp;
     mat.getCache(&zcp, &dcp);
 
     // Process the diagonals one at a time
@@ -217,7 +217,6 @@ public:
       // For each diagonal e, we update the d accumulators y_0,..,y_{d-1}
       // with y_f += \sigma^{-f}(\lambda_{e,f}) * \rho^e(x)
 
-      std::vector<bool> zero(d, false);
       std::vector<zzX> zpoly(d, zzX());
       std::vector<zzX*> zzxPtr(d,NULL);
       std::vector<DoubleCRT*> dcrtPtr(d,NULL);
@@ -240,7 +239,7 @@ public:
         }
       }
       if (zeroDiag) continue; // nothing to do for this diagonal
-      // done preparing all the zero, zzxPtr, dcrtPtr variables
+      // done preparing all the zzxPtr, dcrtPtr variables
 
       // Rotate the ciphertext to position corresponding to diagonal e.
       // The code below uses only rotate-by-one operations if this is
@@ -264,7 +263,7 @@ public:
 	// namely const*mask and const*(1-mask).
 	// We should implement that optimization at some point.
 
-	// Depending on zero, zzxPtr, dcrtPtr, update the accumulated sums
+	// Depending on zzxPtr, dcrtPtr, update the accumulated sums
 	for (long f=0; f<d; f++) if (dcrtPtr[f]!=NULL || zzxPtr[f]!=NULL) {
             Ctxt tmp1(*shCtxt);
             if (dcrtPtr[f] != NULL) tmp1.multByConstant(*(dcrtPtr[f]));
@@ -272,13 +271,15 @@ public:
             acc[f] += tmp1;
           }
       } // if (ctxt!=nullptr)
-      if (buildCache==cachezzX) for (long f=0; f<d; f++) {
+ 
+      // allocate constants and store in the cache, if needed
+     if (buildCache==cachezzX) for (long f=0; f<d; f++) {
           (*zCache)[d*e +f].reset( new zzX(*(zzxPtr[f])) );
       }
       else if (buildCache==cacheDCRT) for (long f=0; f<d; f++) {
           (*dCache)[d*e +f].reset(new DoubleCRT(*(zzxPtr[f]),ea.getContext()));
       }
-    } // end of this diagonal
+    } // end of e'th diagonal
 
     // Finally, compute the result as \sum_{f=0}^{d-1} \sigma_f(y_f)
     if (ctxt!=nullptr) {

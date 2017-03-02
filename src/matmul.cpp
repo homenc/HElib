@@ -21,7 +21,7 @@
 
 #ifdef DEBUG
 void printCache(const CachedzzxMatrix& cache);
-void printCache(const CachedDCRTPtxtMatrix& cache);
+void printCache(const CachedDCRTMatrix& cache);
 #endif
 
 
@@ -56,7 +56,7 @@ bool MatMulBase::lockCache(MatrixCacheType ty)
 // This function assumes that we have the lock
 void MatMulBase::upgradeCache()
 {
-  std::unique_ptr<CachedDCRTPtxtMatrix> dCache(new CachedDCRTPtxtMatrix());
+  std::unique_ptr<CachedDCRTMatrix> dCache(new CachedDCRTMatrix());
   dCache->SetLength(zzxCache->length());
   for (long i=0; i<zzxCache->length(); i++) {
     if ((*zzxCache)[i] != nullptr)
@@ -80,7 +80,7 @@ template<class type> class matmul_impl {
   PA_INJECT(type)
   const MatrixCacheType buildCache;
   std::unique_ptr<CachedzzxMatrix> zCache;
-  std::unique_ptr<CachedDCRTPtxtMatrix> dCache;
+  std::unique_ptr<CachedDCRTMatrix> dCache;
 
   Ctxt* res;
   MatMul<type>& mat;
@@ -114,7 +114,7 @@ public:
     if (buildCache==cachezzX)
       zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,ea.size()));
     else if (buildCache==cacheDCRT)
-      dCache.reset(new CachedDCRTPtxtMatrix(NTL::INIT_SIZE,ea.size()));
+      dCache.reset(new CachedDCRTMatrix(NTL::INIT_SIZE,ea.size()));
 
     // dims stores the order of dimensions
     dims.resize(ea.dimension());
@@ -163,7 +163,7 @@ public:
 
       // Check if we have the relevant constant in cache
       CachedzzxMatrix* zcp;
-      CachedDCRTPtxtMatrix* dcp;
+      CachedDCRTMatrix* dcp;
       mat.getCache(&zcp, &dcp);
       if (dcp != nullptr)         // DoubleCRT cache exists
 	dxPtr = (*dcp)[idx].get();
@@ -292,7 +292,7 @@ template<class type> class matmul_sparse_impl {
   PA_INJECT(type)
   const MatrixCacheType buildCache;
   std::unique_ptr<CachedzzxMatrix> zCache;
-  std::unique_ptr<CachedDCRTPtxtMatrix> dCache;
+  std::unique_ptr<CachedDCRTMatrix> dCache;
 
   MatMul<type>& mat;
   const EncryptedArrayDerived<type>& ea;
@@ -304,7 +304,7 @@ public:
     if (buildCache==cachezzX)
       zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,ea.size()));
     else if (buildCache==cacheDCRT)
-      dCache.reset(new CachedDCRTPtxtMatrix(NTL::INIT_SIZE,ea.size()));
+      dCache.reset(new CachedDCRTMatrix(NTL::INIT_SIZE,ea.size()));
   }
 
   // Get a diagonal encoded as a single constant
@@ -336,7 +336,7 @@ public:
 
     long nslots = ea.size();
     bool sequential = (ea.dimension()==1) && ea.nativeDimension(0);
-    // is just a single native dimension, then rotate adds only little noise
+    // if just a single native dimension, then rotate adds only little noise
 
     std::unique_ptr<Ctxt> res, shCtxt;
     if (ctxt!=nullptr) { // we need to do an actual multiplication
@@ -347,7 +347,7 @@ public:
 
     // Check if we have the relevant constant in cache
     CachedzzxMatrix* zcp;
-    CachedDCRTPtxtMatrix* dcp;
+    CachedDCRTMatrix* dcp;
     mat.getCache(&zcp, &dcp);
 
     // Process the diagonals one at a time
@@ -508,7 +508,7 @@ void printCache(const CachedzzxMatrix& cache)
   std:cerr << "]\n";
 }
 
-void printCache(const CachedDCRTPtxtMatrix& cache)
+void printCache(const CachedDCRTMatrix& cache)
 {
   std::cerr << "dcrtCache=[";
   for (long i=0; i<cache.length(); i++) {
