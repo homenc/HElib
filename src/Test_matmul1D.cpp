@@ -269,7 +269,7 @@ static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea, long dim)
 }
 //! \endcond
 
-void  TestIt(long m, long p, long r, long d, long L, long dim)
+void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
 {
   cout << "*** TestIt: m=" << m
        << ", p=" << p
@@ -282,9 +282,6 @@ void  TestIt(long m, long p, long r, long d, long L, long dim)
   FHEcontext context(m, p, r);
   buildModChain(context, L, /*c=*/3);
 
-  context.zMStar.printout();
-  cout << endl;
-
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
@@ -295,15 +292,15 @@ void  TestIt(long m, long p, long r, long d, long L, long dim)
   else
     G = makeIrredPoly(p, d); 
 
-  cout << "G = " << G << "\n";
-  cout << "generating key-switching matrices... ";
+  if (verbose) {
+    context.zMStar.printout();
+    cout << endl;
+    cout << "G = " << G << "\n";
+  }
+
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cout << "done\n";
-
-  cout << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
-  cout << "done\n";
 
   // Test a "normal" matrix over the extension field
   {
@@ -535,6 +532,7 @@ void usage(char *prog)
   cout << "  d is the degree of the field extension [default==1]\n";
   cout << "    (d == 0 => factors[0] defined the extension)\n";
   cout << "  L is the # of primes in the modulus chain [default=4]\n";
+  cout << "  verbose print timing info [default=0]\n";
   exit(0);
 }
 
@@ -550,6 +548,7 @@ int main(int argc, char *argv[])
   argmap["d"] = "0";
   argmap["L"] = "4";
   argmap["dim"] = "0";
+  argmap["verbose"] = "0";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -560,8 +559,13 @@ int main(int argc, char *argv[])
   long d = atoi(argmap["d"]);
   long L = atoi(argmap["L"]);
   long dim = atoi(argmap["dim"]);
+  bool v = atoi(argmap["verbose"]);
 
   setTimersOn();
-  TestIt(m, p, r, d, L, dim);
+  TestIt(m, p, r, d, L, dim, v);
   cout << endl;
+  if (v) {
+    printAllTimers();
+    cout << endl;
+  }
 }

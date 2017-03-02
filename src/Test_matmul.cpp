@@ -30,7 +30,7 @@ static MatMulBase* buildRandomMatrix(EncryptedArray& ea);
 static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea);
 
 
-void  TestIt(long m, long p, long r, long d, long L)
+void  TestIt(long m, long p, long r, long d, long L, bool verbose)
 {
   cout << "*** TestIt: m=" << m
        << ", p=" << p
@@ -42,9 +42,6 @@ void  TestIt(long m, long p, long r, long d, long L)
   FHEcontext context(m, p, r);
   buildModChain(context, L, /*c=*/3);
 
-  context.zMStar.printout();
-  cout << endl;
-
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
@@ -55,15 +52,15 @@ void  TestIt(long m, long p, long r, long d, long L)
   else
     G = makeIrredPoly(p, d); 
 
-  cout << "G = " << G << "\n";
-  cout << "generating key-switching matrices... ";
+  if (verbose) {
+    context.zMStar.printout();
+    cout << endl;
+    cout << "G = " << G << "\n";
+  }
+
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cout << "done\n";
-
-  cout << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
-  cout << "done\n";
 
   // Test a "dense" matrix over the extension field
   {
@@ -293,7 +290,7 @@ int main(int argc, char *argv[])
 
   //  setTimersOn();
   setTimersOn();
-  TestIt(m, p, r, d, L);
+  TestIt(m, p, r, d, L, v);
   cout << endl;
   if (v) {
     printAllTimers();
