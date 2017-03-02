@@ -29,10 +29,6 @@ CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-error
 #   -DNO_HALF_SIZE_PRIME  tells helib to not use the half size prime
 #                         in the prime chain
 #
-#   -DEVALMAP_CACHED=0  tells helib to cache certain constants as ZZX's
-#   -DEVALMAP_CACHED=1  tells helib to cache certain constants as DoubleCRT's
-#                       these flags only affect bootstrapping
-#
 #   -DFHE_THREADS  tells helib to enable generic multithreading capabilities;
 #                  must be used with a thread-enabled NTL and the -pthread
 #                  flag should be passed to gcc
@@ -52,7 +48,7 @@ ARFLAGS=rv
 GMP=-lgmp 
 LDLIBS = -L/usr/local/lib -lntl $(GMP) -lm
 
-HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h EvalMap.h matmul.h CachedConstants.h
+HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h EvalMap.h matmul.h
 
 SRC = KeySwitching.cpp EncryptedArray.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEContext.cpp PAlgebra.cpp DoubleCRT.cpp NumbTh.cpp bluestein.cpp IndexSet.cpp timing.cpp replicate.cpp hypercube.cpp matching.cpp powerful.cpp BenesNetwork.cpp permutations.cpp PermNetwork.cpp OptimizePermutations.cpp eqtesting.cpp polyEval.cpp extractDigits.cpp EvalMap.cpp recryption.cpp debugging.cpp matmul.cpp matmul1D.cpp blockMatmul.cpp blockMatmul1D.cpp
 
@@ -63,7 +59,7 @@ TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_LinPo
 
 all: fhe.a
 
-check: Test_General_x Test_LinPoly_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x
+check: Test_General_x Test_matmul_x Test_matmul1D_x Test_LinPoly_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
 	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
 	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
