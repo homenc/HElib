@@ -199,7 +199,10 @@ extern EncryptedArray* dbgEa;
 extern ZZX dbg_ptxt;
 ZZX dbgPoly, skPoly;
 extern Vec<ZZ> ptxt_pwr;
-extern long printFlag;
+#define FLAG_PRINT_ZZX  1
+#define FLAG_PRINT_POLY 2
+#define FLAG_PRINT_VEC  4
+long printFlag = FLAG_PRINT_VEC;
 extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 			    const EncryptedArray& ea, long flags=0);
 

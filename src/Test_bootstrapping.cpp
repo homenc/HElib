@@ -41,7 +41,7 @@ extern Vec<ZZ> ptxt_pwr;
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
-long printFlag = FLAG_PRINT_VEC;
+extern long printFlag;
 
 extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 			    const EncryptedArray& ea, long flags=0);
