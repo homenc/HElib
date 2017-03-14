@@ -87,6 +87,15 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 
     long k = zms.getPow2();
     long phim = 1L << (k-1); 
+
+    assert(k <= zz_pInfo->MaxRoot); 
+    // rootTables get initialized 0..zz_pInfo->Maxroot
+
+#ifdef FHE_OPENCL
+    altFFTInfo = MakeSmart<AltFFTPrimeInfo>();
+    InitAltFFTPrimeInfo(*altFFTInfo, *zz_pInfo->p_info, k-1);
+#endif
+
     long w0 = zz_pInfo->p_info->RootTable[0][k];
     long w1 = zz_pInfo->p_info->RootTable[1][k];
 
@@ -105,6 +114,7 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
       ipowers_aux[i] = PrepMulModPrecon(w, q);
       w = MulMod(w, w1, q);
     }
+
   
     return;
   }
@@ -176,6 +186,10 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
   iRb = other.iRb;
   phimx = other.phimx;
 
+#ifdef FHE_OPENCL
+  altFFTInfo = other.altFFTInfo;
+#endif
+
 
 
   return *this;
@@ -206,7 +220,11 @@ void Cmodulus::FFT_aux(vec_long &y, zz_pX& tmp) const
     for (long i = dx+1; i < phim; i++)
       yp[i] = 0;
 
+#ifdef FHE_OPENCL
+    AltFFTFwd(yp, yp, k-1, *altFFTInfo);
+#else
     FFTFwd(yp, yp, k-1, *zz_pInfo->p_info);
+#endif
 
     return;
   }
@@ -278,7 +296,11 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
     tmp.SetLength(phim);
     long *tmp_p = tmp.elts();
 
+#ifdef FHE_OPENCL
+    AltFFTRev1(tmp_p, yp, k-1, *altFFTInfo);
+#else
     FFTRev1(tmp_p, yp, k-1, *zz_pInfo->p_info);
+#endif
 
     x.rep.SetLength(phim);
     zz_p *xp = x.rep.elts();
