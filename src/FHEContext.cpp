@@ -386,7 +386,7 @@ void writeContextBase(ostream& str, const FHEcontext& context)
   }
   str << " [";
   for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
-    str << context.zMStar.OrderOf(i)
+    str << context.zMStar.OrderOf4IO(i)
 	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
   }
   str << "]";

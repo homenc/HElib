@@ -148,6 +148,10 @@ class PAlgebra {
   unsigned long OrderOf(unsigned long i) const
   {  return (i<ords.size())? abs(ords[i]) : 0; }
 
+  //! The order of i'th generator (if any) with sign indicator (good/bad) for the purpose of I/O
+  long OrderOf4IO(unsigned long i) const
+  {  return (i<ords.size())? ords[i] : 0; }
+
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
   bool SameOrd(unsigned long i) const
   {  return (i<ords.size())? (ords[i]>0) : false; }

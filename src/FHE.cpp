@@ -471,7 +471,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   assert( gens.size() == pk.getContext().zMStar.numOfGens() );
   for (long i=0; i<(long)gens.size(); i++)
     assert(gens[i]==(long)pk.getContext().zMStar.ZmStarGen(i) 
-	   && ords[i]==(long) pk.getContext().zMStar.OrderOf(i));
+	   && ords[i]==(long) pk.getContext().zMStar.OrderOf4IO(i));
 
   // Get the public encryption key itself
   str >> pk.pubEncrKey;
