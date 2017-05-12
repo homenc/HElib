@@ -199,47 +199,57 @@ long FHEcontext::AddFFTPrime(bool special)
   return p;
 }
 
-// Adds several primes to the chain. If byNumber=true then totalSize specifies
-// the number of primes to add. If byNumber=false then totalSize specifies the
-// target total bitsize of all the added primes.
-// The function returns the total bitsize of all the added primes.
+// Adds several primes to the chain. If byNumber=true then totalSize
+// specifies the number of primes to add. If byNumber=false then
+// totalSize specifies the target natural log all the added primes.
+// Returns natural log of the product of all added primes.
 double AddManyPrimes(FHEcontext& context, double totalSize, 
 		     bool byNumber, bool special)
 {
-  double nBits = 0.0;     // How many bits added so far
-  double sizeSoFar = 0.0;
   if (!context.zMStar.getM() || context.zMStar.getM()>(1<<20))// sanity checks
     Error("AddManyPrimes: m undefined or larger than 2^20");
+  // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
+
+  // cout << "AddManyPrimes(..., totalSize="<<((int)totalSize)
+  //      << ",byNumber="<<byNumber<<",special="<<special<<")\n";
+  // cout << "  context.bitsPerLevel="<<context.bitsPerLevel<<endl;
+
+  double sizeLogSoFar = 0.0; // log of added primes so far
+  double addedSoFar = 0.0;   // Either size or number, depending on 'byNumber'
 
 #ifdef NO_HALF_SIZE_PRIME
   long sizeBits = context.bitsPerLevel;
 #else
   long sizeBits = 2*context.bitsPerLevel;
 #endif
-  if (special) {
-    long numPrimes = ceil(totalSize/NTL_SP_NBITS);// how many special primes
-    sizeBits = ceil(totalSize/numPrimes);         // what's the size of each
+  if (special) { // try to use similar size for all the special primes
+    // how many special primes would we need
+    long numPrimes = ceil(totalSize/(NTL_SP_NBITS*log(2.0)));
+    sizeBits = 1+ceil(totalSize/(log(2.0)*numPrimes)); // bitsize of each prime
+    // Added one so we don't undershoot our target
   }
-  long twoM = 2 * context.zMStar.getM();
-
   if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
   long sizeBound = 1L << sizeBits;
-  if (sizeBound < twoM*log2(twoM)*8) {
-    sizeBits = ceil(log2(twoM*log2(twoM)))+3;
+
+  // Make sure that you have enough primes such that p-1 is divisible by 2m
+  long twoM = 2 * context.zMStar.getM();
+  if (sizeBound < twoM*log2(twoM)*8) { // bound too small to have such primes
+    sizeBits = ceil(log2(twoM*log2(twoM)))+3; // increase prime size-bound
     sizeBound = 1L << sizeBits;
   }
 
   // make p-1 divisible by m*2^k for as large k as possible
-  while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
+  if (context.zMStar.getPow2()!=0) // if m is not a power of two
+    while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
 
   long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
-  long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
+  long p = bigP+twoM; // twoM is subtracted in the AddPrime function
 
-  // FIXME: The last prime could be smaller
-  while (sizeSoFar < totalSize) {
+  // FIXME: The last prime could sometimes be slightly smaller
+  while (addedSoFar < totalSize) {
     if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
-      nBits += log((double)p);
-      sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
+      sizeLogSoFar += log((double)p);
+      addedSoFar = byNumber? (addedSoFar+1.0) : sizeLogSoFar;
     }
     else { // we ran out of primes, try a lower power of two
       twoM /= 2;
@@ -247,22 +257,21 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
       p = bigP;
     }
   }
-  return nBits;
+  return sizeLogSoFar;
 }
 
 void buildModChain(FHEcontext &context, long nLevels, long nDgts)
 {
+  //  cout << "buildModChain called with "<<nLevels
+  //       <<" levels and "<<nDgts<<" digits\n";
 #ifdef NO_HALF_SIZE_PRIME
   long nPrimes = nLevels;
 #else
   long nPrimes = (nLevels+1)/2;
   // The first prime should be of half the size. The code below tries to find
   // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
-  // Then if the plaintext space is a power of two it tries to choose the
-  // second prime q1 so that q0*q1 = 1 mod ptxtSpace. All the other primes are
-  // chosen so that qi-1 is divisible by 2^k * m for as large k as possible.
-  long twoM = 2 * context.zMStar.getM();
 
+  long twoM = 2 * context.zMStar.getM();
   long bound = (1L << (context.bitsPerLevel-1));
   while (twoM < bound/(2*context.bitsPerLevel))
     twoM *= 2; // divisible by 2^k * m  for a larger k
@@ -285,17 +294,21 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
   context.digits.resize(nDgts); // allocate space
 
   IndexSet s1;
-  double sizeSoFar = 0.0;
+  double sizeLogSoFar = 0.0;
   double maxDigitSize = 0.0;
   if (nDgts>1) { // we break ciphetext into a few digits when key-switching
     double dsize = context.logOfProduct(context.ctxtPrimes)/nDgts; // estimate
+
+    // A hack: we break the current digit after the total size of all digits
+    // so far "almost reaches" the next multiple of dsize, upto 1/3 of a level
     double target = dsize-(context.bitsPerLevel/3.0);
     long idx = context.ctxtPrimes.first();
-    for (long i=0; i<nDgts-1; i++) { // compute next digit
+    for (long i=0; i<nDgts-1; i++) { // set all digits but the last
       IndexSet s;
-      while (idx <= context.ctxtPrimes.last() && (empty(s)||sizeSoFar<target)) {
+      while (idx <= context.ctxtPrimes.last()
+             && (empty(s)||sizeLogSoFar<target)) {
         s.insert(idx);
-	sizeSoFar += log((double)context.ithPrime(idx));
+	sizeLogSoFar += log((double)context.ithPrime(idx));
 	idx = context.ctxtPrimes.next(idx);
       }
       assert (!empty(s));
@@ -305,7 +318,8 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
       if (maxDigitSize < thisDigitSize) maxDigitSize = thisDigitSize;
       target += dsize;
     }
-    IndexSet s = context.ctxtPrimes / s1; // all the remaining primes
+    // The ctxt primes that are left (if any) form the last digit
+    IndexSet s = context.ctxtPrimes / s1;
     if (!empty(s)) {
       context.digits[nDgts-1] = s;
       double thisDigitSize = context.logOfProduct(s);
@@ -316,16 +330,16 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
       context.digits.resize(nDgts);
     }
   }
-  else { 
+  else { // only one digit
     maxDigitSize = context.logOfProduct(context.ctxtPrimes);
     context.digits[0] = context.ctxtPrimes;
   }
 
-  // Add primes to the chain for the P factor of key-switching
+  // Add special primes to the chain for the P factor of key-switching
   long p2r = (context.rcData.alMod)? context.rcData.alMod->getPPowR()
                                    : context.alMod.getPPowR();
   double sizeOfSpecialPrimes
-    = maxDigitSize + log(nDgts/32.0)/2 + log(context.stdev *2)
+    = maxDigitSize + log(nDgts) + log(context.stdev *2)
       + log((double)p2r);
 
   AddPrimesBySize(context, sizeOfSpecialPrimes, true);
