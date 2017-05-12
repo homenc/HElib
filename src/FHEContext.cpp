@@ -13,11 +13,12 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
-
+#include <cstring>
 #include "FHEContext.h"
 #include "EvalMap.h"
 #include "powerful.h"
 
+using namespace std;
 
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
@@ -542,11 +543,7 @@ void readContextBinary(istream& str, FHEcontext& context)
   for (long p,i=0; i<nPrimes; i++) {
     str.read(reinterpret_cast<char*>(&p), sizeof(p));
 
-    if (ALT_CRT) 
-      context.moduli.push_back(Cmodulus(context.zMStar,p,1)); // a dummy object
-      // FIXME: this is broken...we are not getting an FFT prime here
-    else
-      context.moduli.push_back(Cmodulus(context.zMStar,p,0)); // a real object
+    context.moduli.push_back(Cmodulus(context.zMStar,p,0));
 
     if (s.contains(i))
       context.specialPrimes.insert(i); // special prime
