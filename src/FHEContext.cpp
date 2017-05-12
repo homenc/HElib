@@ -158,13 +158,8 @@ void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
 }
 
 // Find the next prime and add it to the chain
-long FHEcontext::AddPrime(long initialP, long delta, bool special, 
-                          bool findRoot)
+long FHEcontext::AddPrime(long initialP, long delta, bool special)
 {
-  // long twoM = 2 * zMStar.getM();
-  // assert((initialP % twoM == 1) && (delta % twoM == 0));
-  // NOTE: this assertion will fail for the half-prime in ALT_CRT
-
   long p = initialP;
   do { p += delta; } // delta could be positive or negative
   while (p>initialP/16 && p<NTL_SP_BOUND && !(ProbPrime(p) && !inChain(p)));
@@ -172,7 +167,7 @@ long FHEcontext::AddPrime(long initialP, long delta, bool special,
   if (p<=initialP/16 || p>=NTL_SP_BOUND) return 0; // no prime found
 
   long i = moduli.size(); // The index of the new prime in the list
-  moduli.push_back( Cmodulus(zMStar, p, findRoot ? 0 : 1) );
+  moduli.push_back( Cmodulus(zMStar, p, 0) );
 
   if (special)
     specialPrimes.insert(i);
@@ -216,49 +211,40 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   if (!context.zMStar.getM() || context.zMStar.getM()>(1<<20))// sanity checks
     Error("AddManyPrimes: m undefined or larger than 2^20");
 
-  if (ALT_CRT) {
-    while (sizeSoFar < totalSize) {
-      long p = context.AddFFTPrime(special);
+#ifdef NO_HALF_SIZE_PRIME
+  long sizeBits = context.bitsPerLevel;
+#else
+  long sizeBits = 2*context.bitsPerLevel;
+#endif
+  if (special) {
+    long numPrimes = ceil(totalSize/NTL_SP_NBITS);// how many special primes
+    sizeBits = ceil(totalSize/numPrimes);         // what's the size of each
+  }
+  long twoM = 2 * context.zMStar.getM();
+
+  if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
+  long sizeBound = 1L << sizeBits;
+  if (sizeBound < twoM*log2(twoM)*8) {
+    sizeBits = ceil(log2(twoM*log2(twoM)))+3;
+    sizeBound = 1L << sizeBits;
+  }
+
+  // make p-1 divisible by m*2^k for as large k as possible
+  while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
+
+  long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
+  long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
+
+  // FIXME: The last prime could be smaller
+  while (sizeSoFar < totalSize) {
+    if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
       nBits += log((double)p);
       sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
     }
-  }
-  else {
-#ifdef NO_HALF_SIZE_PRIME
-    long sizeBits = context.bitsPerLevel;
-#else
-    long sizeBits = 2*context.bitsPerLevel;
-#endif
-    if (special) {
-      long numPrimes = ceil(totalSize/NTL_SP_NBITS);// how many special primes
-      sizeBits = ceil(totalSize/numPrimes);         // what's the size of each
-    }
-    long twoM = 2 * context.zMStar.getM();
-
-    if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
-    long sizeBound = 1L << sizeBits;
-    if (sizeBound < twoM*log2(twoM)*8) {
-      sizeBits = ceil(log2(twoM*log2(twoM)))+3;
-      sizeBound = 1L << sizeBits;
-    }
-
-    // make p-1 divisible by m*2^k for as large k as possible
-    while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
-
-    long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
-    long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
-
-    // FIXME: The last prime could be smaller
-    while (sizeSoFar < totalSize) {
-      if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
-        nBits += log((double)p);
-        sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
-      }
-      else { // we ran out of primes, try a lower power of two
-        twoM /= 2;
-        assert(twoM > (long)context.zMStar.getM()); // can we go lower?
-        p = bigP;
-      }
+    else { // we ran out of primes, try a lower power of two
+      twoM /= 2;
+      assert(twoM > (long)context.zMStar.getM()); // can we go lower?
+      p = bigP;
     }
   }
   return nBits;
@@ -275,18 +261,14 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
   // Then if the plaintext space is a power of two it tries to choose the
   // second prime q1 so that q0*q1 = 1 mod ptxtSpace. All the other primes are
   // chosen so that qi-1 is divisible by 2^k * m for as large k as possible.
-  long twoM;
-  if (ALT_CRT) 
-    twoM = 2;
-  else
-    twoM = 2 * context.zMStar.getM();
+  long twoM = 2 * context.zMStar.getM();
 
   long bound = (1L << (context.bitsPerLevel-1));
   while (twoM < bound/(2*context.bitsPerLevel))
     twoM *= 2; // divisible by 2^k * m  for a larger k
 
   bound = bound - (bound % twoM) +1; // = 1 mod 2m
-  long q0 = context.AddPrime(bound, twoM, false, !ALT_CRT); 
+  long q0 = context.AddPrime(bound, twoM, false); 
   // add next prime to chain
   
   assert(q0 != 0);
@@ -458,11 +440,7 @@ istream& operator>> (istream &str, FHEcontext& context)
     long p;
     str >> p; 
 
-    if (ALT_CRT) 
-      context.moduli.push_back(Cmodulus(context.zMStar,p,1)); // a dummy object
-      // FIXME: this is broken...we are not getting an FFT prime here
-    else
-      context.moduli.push_back(Cmodulus(context.zMStar,p,0)); // a real object
+    context.moduli.push_back(Cmodulus(context.zMStar,p,0));
 
     if (s.contains(i))
       context.specialPrimes.insert(i); // special prime
@@ -510,10 +488,4 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   stdev=3.2;  
   bitsPerLevel = FHE_pSize;
   fftPrimeCount = 0; 
-
-  lazy = ALT_CRT && 
-    NextPowerOfTwo(zMStar.getM()) == NextPowerOfTwo(zMStar.getPhiM());
-  // we only set the lazy flag if we are using ALT_CRT and if the size of
-  // NTL's FFTs for m and phi(m) are the same. If NTL didn't have these
-  // power-of-two jumps, we would possibly want to change this.
 }

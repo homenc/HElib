@@ -22,10 +22,6 @@ CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-error
 
 # useful flags:
 #   -std=c++11
-#   -DUSE_ALT_CRT  tells helib to use an alterntive to the default DoubleCRT
-#                  representation...experimental...can be faster or slower
-#                  depending on the operation mixture
-#
 #   -DNO_HALF_SIZE_PRIME  tells helib to not use the half size prime
 #                         in the prime chain
 #
@@ -77,7 +73,7 @@ test: $(TESTPROGS)
 
 obj: $(OBJ)
 
-DoubleCRT.o: DoubleCRT.cpp AltCRT.cpp $(HEADER)
+DoubleCRT.o: DoubleCRT.cpp $(HEADER)
 	$(CC) $(CFLAGS) -c DoubleCRT.cpp
 
 %.o: %.cpp $(HEADER)

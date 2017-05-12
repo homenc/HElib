@@ -28,13 +28,8 @@
  * (vec_long), that store only the evaluation in primitive m-th
  * roots of unity.
  */
-
 #include "CModulus.h"
 #include "timing.h"
-
-#include "FHEContext.h"
-// needed to get ALT_CRT
-
 
 // It is assumed that m,q,context, and root are already set. If root is set
 // to zero, it will be computed by the compRoots() method. Then rInv is
@@ -72,7 +67,7 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 
   zz_pBak bak; 
 
-  if (!ALT_CRT && zms.getPow2()) {
+  if (zms.getPow2()) {
     // special case when m is a power of 2
 
     assert( explicitModulus );
@@ -190,7 +185,7 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
 void Cmodulus::FFT_aux(vec_long &y, zz_pX& tmp) const
 {
 
-  if (!ALT_CRT && zMStar->getPow2()) {
+  if (zMStar->getPow2()) {
     // special case when m is a power of 2
 
     long k = zMStar->getPow2();
@@ -267,7 +262,7 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
   zz_pBak bak; bak.save();
   context.restore();
 
-  if (!ALT_CRT && zMStar->getPow2()) {
+  if (zMStar->getPow2()) {
     // special case when m is a power of 2
 
     long k = zMStar->getPow2();

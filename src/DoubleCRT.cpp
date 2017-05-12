@@ -22,18 +22,11 @@
  * in use. The list of primes is defined by the data member modChain, which is
  * a vector of Cmodulus objects. 
  */
-#include "DoubleCRT.h"
-#include "timing.h"
-
-
-#if (ALT_CRT)
-#warning "Polynomial Arithmetic Implementation in AltCRT.cpp"
-#include "AltCRT.cpp"
-#else
-#warning "Polynomial Arithmetic Implementation in DoubleCRT.cpp"
-
 #include <NTL/ZZVec.h>
 #include <NTL/BasicThreadPool.h>
+
+#include "DoubleCRT.h"
+#include "timing.h"
 
 
 // A threaded implementation of DoubleCRT operations
@@ -925,5 +918,3 @@ istream& operator>> (istream &str, DoubleCRT &d)
   //  cerr << "]";
   return str;
 }
-#endif
-

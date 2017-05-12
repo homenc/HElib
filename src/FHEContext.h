@@ -40,14 +40,8 @@
  **/
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose=false);
 
-#ifdef USE_ALT_CRT
-#define ALT_CRT (1)
-#else
-#define ALT_CRT (0)
-#endif
-
 // FIXME: The size of primes in the chain should be computed at run-time
-#if (NTL_SP_NBITS<44)  //#if (ALT_CRT || NTL_SP_NBITS<44)
+#if (NTL_SP_NBITS<44)
 #define FHE_p2Size NTL_SP_NBITS
 #else
 #define FHE_p2Size 44
@@ -120,12 +114,7 @@ public:
   **/
   vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
 
-  //! @brief Flag to allow lazy reductions. Only has an effect 
-  //! when the flag ALT_CRT is set.
-  mutable bool lazy;
-
   long fftPrimeCount;
-
 
   //! Bootstrapping-related data in the context
   RecryptData rcData;
@@ -202,7 +191,7 @@ public:
   }
 
   //! @brief Find the next prime and add it to the chain
-  long AddPrime(long startFrom, long delta, bool special, bool findRoot=true);
+  long AddPrime(long startFrom, long delta, bool special);
 
   //! @brief Add an FFT prime to the chain, if it's not already there
   //! returns the value of the prime

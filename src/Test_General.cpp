@@ -82,13 +82,6 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
-#ifdef DEBUG_PRINTOUT
-  if (context.lazy)
-    std::cout << "LAZY REDUCTIONS\n";
-  else
-    std::cout << "NON-LAZY REDUCTIONS\n";
-#endif
-
   ZZX G;
   if (d == 0)
     G = context.alMod.getFactorsOverZZ()[0];

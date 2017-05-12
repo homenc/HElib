@@ -13,6 +13,8 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
+#ifndef _DoubleCRT_H_
+#define _DoubleCRT_H_
 /**
  * @file DoubleCRT.h
  * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
@@ -21,15 +23,6 @@
 #include "NumbTh.h"
 #include "IndexMap.h"
 #include "FHEContext.h"
-
-#if (ALT_CRT)
-#define DoubleCRT AltCRT
-#include "AltCRT.h"
-
-#else
-#ifndef _DoubleCRT_H_
-#define _DoubleCRT_H_
-
 
 /**
 * @class DoubleCRTHelper
@@ -404,5 +397,3 @@ typedef shared_ptr<DoubleCRT> DCRTptr;
 typedef shared_ptr<ZZX> ZZXptr;
 
 #endif // #ifndef _DoubleCRT_H_
-
-#endif // DoubleCRT or AltCRT
