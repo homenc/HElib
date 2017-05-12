@@ -31,8 +31,8 @@
   NewPlaintextArray pp(ea);\
   ea.decrypt(c, sk, pp);\
   if (!equals(ea, pp, p)) { \
-    cerr << "oops:\n"; cerr << p << "\n"; \
-    cerr << pp << "\n"; \
+    std::cout << "oops:\n"; std::cout << p << "\n"; \
+    std::cout << pp << "\n"; \
     exit(0); \
   }}
 #else
@@ -54,25 +54,27 @@
 
 **************/
 
+static bool noPrint = false;
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
                long L, long m, const Vec<long>& gens, const Vec<long>& ords)
 {
   char buffer[32];
-  cerr << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":");
-  cerr << " R=" << R 
-       << ", p=" << p
-       << ", r=" << r
-       << ", d=" << d
-       << ", c=" << c
-       << ", k=" << k
-       << ", w=" << w
-       << ", L=" << L
-       << ", m=" << m
-       << ", gens=" << gens
-       << ", ords=" << ords
-       << endl;
-
+  if (!noPrint) {
+    std::cout << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":");
+    std::cout << " R=" << R 
+	      << ", p=" << p
+	      << ", r=" << r
+	      << ", d=" << d
+	      << ", c=" << c
+	      << ", k=" << k
+	      << ", w=" << w
+	      << ", L=" << L
+	      << ", m=" << m
+	      << ", gens=" << gens
+	      << ", ords=" << ords
+	      << endl;
+  }
   vector<long> gens1, ords1;
   convert(gens1, gens);
   convert(ords1, ords);
@@ -80,46 +82,31 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
-#ifdef DEBUG_PRINTOUT
-  if (context.lazy)
-    cerr << "LAZY REDUCTIONS\n";
-  else
-    cerr << "NON-LAZY REDUCTIONS\n";
-#endif
-  context.zMStar.printout();
-  cerr << endl;
-
-  cerr << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
-  cerr << "# bits in ctxt primes = " 
-       << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
-  cerr << "# special primes = " << context.specialPrimes.card() << "\n";
-  cerr << "# bits in special primes = " 
-       << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
-
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-
-
   ZZX G;
-
   if (d == 0)
     G = context.alMod.getFactorsOverZZ()[0];
   else
     G = makeIrredPoly(p, d); 
 
-  cerr << "G = " << G << "\n";
-  cerr << "generating key-switching matrices... ";
+  if (!noPrint) {
+    context.zMStar.printout();
+    std::cout << endl;
+
+    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+    std::cout << "# bits in ctxt primes = " 
+	 << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
+    std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
+    std::cout << "# bits in special primes = " 
+	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
+    std::cout << "G = " << G << "\n";
+  }
+
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-  cerr << "done\n";
 
-
-  cerr << "computing masks and tables for rotation...";
   EncryptedArray ea(context, G);
-  cerr << "done\n";
-
-
-
   long nslots = ea.size();
 
   NewPlaintextArray p0(ea);
@@ -145,7 +132,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   for (long i = 0; i < R; i++) {
 
-    cerr << "*** round " << i << "..."<<endl;
+    if (!noPrint) std::cout << "*** round " << i << "..."<<endl;
 
      long shamt = RandomBnd(2*(nslots/2) + 1) - (nslots/2);
                   // random number in [-nslots/2..nslots/2]
@@ -163,43 +150,52 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      ea.encode(const2_poly, const2);
 
      mul(ea, p1, p0);     // c1.multiplyBy(c0)
-     c1.multiplyBy(c0);              CheckCtxt(c1, "c1*=c0");
+     c1.multiplyBy(c0);
+     if (!noPrint) CheckCtxt(c1, "c1*=c0");
      debugCompare(ea,secretKey,p1,c1);
 
      add(ea, p0, const1); // c0 += random constant
-     c0.addConstant(const1_poly);    CheckCtxt(c0, "c0+=k1");
+     c0.addConstant(const1_poly);
+     if (!noPrint) CheckCtxt(c0, "c0+=k1");
      debugCompare(ea,secretKey,p0,c0);
 
      mul(ea, p2, const2); // c2 *= random constant
-     c2.multByConstant(const2_poly); CheckCtxt(c2, "c2*=k2");
+     c2.multByConstant(const2_poly);
+     if (!noPrint) CheckCtxt(c2, "c2*=k2");
      debugCompare(ea,secretKey,p2,c2);
 
      NewPlaintextArray tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
      sprintf(buffer, "c2>>=%d", (int)shamt);
      shift(ea, tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
-     ea.shift(tmp, shamt);           CheckCtxt(tmp, buffer);
+     ea.shift(tmp, shamt);
+     if (!noPrint) CheckCtxt(tmp, buffer);
      debugCompare(ea,secretKey,tmp_p,tmp);
 
      add(ea, p2, tmp_p);  // c2 += tmp
-     c2 += tmp;                      CheckCtxt(c2, "c2+=tmp");
+     c2 += tmp;
+     if (!noPrint) CheckCtxt(c2, "c2+=tmp");
      debugCompare(ea,secretKey,p2,c2);
 
      sprintf(buffer, "c2>>>=%d", (int)rotamt);
      rotate(ea, p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
-     ea.rotate(c2, rotamt);          CheckCtxt(c2, buffer);
+     ea.rotate(c2, rotamt);
+     if (!noPrint) CheckCtxt(c2, buffer);
      debugCompare(ea,secretKey,p2,c2);
 
      ::negate(ea, p1); // c1.negate()
-     c1.negate();                    CheckCtxt(c1, "c1=-c1");
+     c1.negate();
+     if (!noPrint) CheckCtxt(c1, "c1=-c1");
      debugCompare(ea,secretKey,p1,c1);
 
      mul(ea, p3, p2); // c3.multiplyBy(c2) 
-     c3.multiplyBy(c2);              CheckCtxt(c3, "c3*=c2");
+     c3.multiplyBy(c2);
+     if (!noPrint) CheckCtxt(c3, "c3*=c2");
      debugCompare(ea,secretKey,p3,c3);
 
      sub(ea, p0, p3); // c0 -= c3
-     c0 -= c3;                       CheckCtxt(c0, "c0=-c3");
+     c0 -= c3;
+     if (!noPrint) CheckCtxt(c0, "c0=-c3");
      debugCompare(ea,secretKey,p0,c0);
 
   }
@@ -210,11 +206,12 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   c3.cleanUp();
 
   FHE_NTIMER_STOP(Circuit);
-   
-  cerr << endl;
-  printAllTimers();
-  cerr << endl;
-   
+
+  if (!noPrint) {
+    std::cout << endl;
+    printAllTimers();
+    std::cout << endl;
+  }
   resetAllTimers();
   FHE_NTIMER_START(Check);
    
@@ -228,20 +225,20 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   ea.decrypt(c2, secretKey, pp2);
   ea.decrypt(c3, secretKey, pp3);
    
-  if (!equals(ea, pp0, p0))  cerr << "oops 0\n";
-  if (!equals(ea, pp1, p1))  cerr << "oops 1\n";
-  if (!equals(ea, pp2, p2))  cerr << "oops 2\n";
-  if (!equals(ea, pp3, p3))  cerr << "oops 3\n";
-   
+  if (equals(ea, pp0, p0) && equals(ea, pp1, p1)
+      && equals(ea, pp2, p2) && equals(ea, pp3, p3))
+       std::cout << "GOOD\n";
+  else std::cout << "BAD\n";
+
   FHE_NTIMER_STOP(Check);
    
-  cerr << endl;
-  printAllTimers();
-  cerr << endl;
-   
+  std::cout << endl;
+  if (!noPrint) {
+    printAllTimers();
+    std::cout << endl;
+  }
 
 #if 0
-
   vector<Ctxt> vc(L,c0);            // A vector of L ciphertexts
   vector<NewPlaintextArray> vp(L, p0); // A vector of L plaintexts
   for (long i=0; i<L; i++) {
@@ -257,12 +254,11 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     ea.decrypt(vc[i], secretKey, p0); // decrypt it
     if (!p0.equals(vp[i])) {
       fail = true;
-      cerr << "incrementalProduct oops "<<i<< endl;
+      std::cout << "incrementalProduct oops "<<i<< endl;
     }
   }
-  if (!fail) cerr << "incrementalProduct works\n";
+  if (!fail) std::cout << "incrementalProduct works\n";
 #endif
-
 }
 
 
@@ -345,6 +341,8 @@ int main(int argc, char **argv)
   long nt=1;
   amap.arg("nt", nt, "num threads");
 
+  amap.arg("noPrint", noPrint, "suppress printouts");
+
   amap.parse(argc, argv);
 
   SetSeed(ZZ(seed));
@@ -363,7 +361,8 @@ int main(int argc, char **argv)
 
   if (mvec.length()>0)
     chosen_m = computeProd(mvec);
-  long m = FindM(k, L, c, p, d, s, chosen_m, true);
+  std::cout << argv[0] << ": ";
+  long m = FindM(k, L, c, p, d, s, chosen_m, !noPrint);
 
   setDryRun(dry);
   for (long repeat_cnt = 0; repeat_cnt < repeat; repeat_cnt++) {

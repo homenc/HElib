@@ -56,6 +56,7 @@ public:
 
   //! linear maps
   EvalMap *firstMap, *secondMap;
+  int cacheType;
 
   //! conversion between ZZX and Powerful
   PowerfulDCRT *p2dConv;
@@ -65,13 +66,14 @@ public:
 
   RecryptData() {
     hwt=0; conservative=false; e=ePrime=0; alpha=0.0;
-    alMod=NULL; ea=NULL; firstMap=secondMap=NULL;p2dConv=NULL;
+    alMod=NULL; ea=NULL; firstMap=secondMap=NULL;cacheType=0;p2dConv=NULL;
   }
   ~RecryptData();
 
   //! Initialize the recryption data in the context
   void init(const FHEcontext& context, const Vec<long>& mvec_,
-	    long t=0/*min Hwt for sk*/, bool consFlag=false);
+            long t=0/*min Hwt for sk*/, bool consFlag=false,
+            int cacheType=0/*0: no cache, 1:zzX, 2:DCRT*/);
 
   bool operator==(const RecryptData& other) const;
   bool operator!=(const RecryptData& other) const {

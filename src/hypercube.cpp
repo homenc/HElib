@@ -17,6 +17,24 @@
 #include <iomanip>
 
 
+  //! Break an index into the hypercube to index of the
+  //! dimension-dim subcube and index inside that subcube.
+std::pair<long,long> CubeSignature::breakIndexByDim(long idx, long dim) const
+{
+  std::pair<long,long> ans;
+  ans.first = (idx%prods[dim+1]) + (idx/prods[dim])*prods[dim+1];
+  ans.second = (idx % prods[dim]) / prods[dim+1];
+  return ans;
+}
+
+   //! The inverse of breakIndexByDim
+long CubeSignature::assembleIndexByDim(std::pair<long,long> idx, long dim) const
+{
+  long third = idx.first % prods[dim+1];
+  idx.first = (idx.first - third) * dims[dim];
+  return idx.first + idx.second*prods[dim+1] + third;
+}
+
 // Rotate k positions along the d'th dimension: The content of slot j that has
 // coordinate j_d in the d'th dimension is moved to j' that has coordinates the
 // same as j in all the dimensions except d, and has coordinate at dimension d

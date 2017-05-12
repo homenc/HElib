@@ -24,6 +24,8 @@ NTL_CLIENT
 #include "permutations.h"
 #include "EncryptedArray.h"
 
+static bool noPrint = false;
+
 void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 
 void usage(char *prog) 
@@ -49,8 +51,10 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
 {
   GeneratorTrees trees;
   long cost = trees.buildOptimalTrees(vec, widthBound);
-  cout << "@TestCube: trees=" << trees << endl;
-  cout << " cost =" << cost << endl;
+  if (!noPrint) {
+    cout << "@TestCube: trees=" << trees << endl;
+    cout << " cost =" << cost << endl;
+  }
   Vec<long> dims;
   trees.getCubeDims(dims);
   CubeSignature sig(dims);
@@ -58,14 +62,9 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
   for (long cnt=0; cnt<3; cnt++) {
     Permut pi;
     randomPerm(pi, trees.getSize());
-    //    if (pi.length()<100)  cout << "pi="<<pi<<endl;
 
     PermNetwork net;
     net.buildNetwork(pi, trees);
-    //    if (pi.length()<100) {
-    //      cout << "permutations network {[gIdx,e,isID,shifts]} = " << endl;
-    //      cout << net << endl;
-    //    }
 
     HyperCube<long> cube1(sig), cube2(sig);
     for (long i=0; i<cube1.getSize(); i++) cube1[i] = i;
@@ -86,7 +85,8 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
 
 void testCtxt(long m, long p, long widthBound, long L, long r)
 {
-  cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ",r="<<r<<")";
+  if (!noPrint)
+    cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ",r="<<r<<")";
 
   FHEcontext context(m,p,r);
   EncryptedArray ea(context); // Use G(X)=X for this ea object
@@ -107,9 +107,10 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   // Get the generator-tree structures and the corresponding hypercube
   GeneratorTrees trees;
   long cost = trees.buildOptimalTrees(vec, widthBound);
-  cout << ": trees=" << trees << endl;
-  cout << " cost =" << cost << endl;
-
+  if (!noPrint) {
+    cout << ": trees=" << trees << endl;
+    cout << " cost =" << cost << endl;
+  }
   //  Vec<long> dims;
   //  trees.getCubeDims(dims);
   //  CubeSignature sig(dims);
@@ -117,8 +118,8 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   // 1/2 prime per level should be more or less enough, here we use 1 per layer
   if (L<=0) L = 1+trees.numLayers();
   buildModChain(context, /*nLevels=*/L, /*nDigits=*/3);
-  cout << "**Using "<<L<<" primes (of which "
-       << context.ctxtPrimes.card() << " are Ctxt-primes)\n";
+  if (!noPrint) cout << "**Using "<<L<<" primes (of which "
+		     << context.ctxtPrimes.card() << " are Ctxt-primes)\n";
 
   // Generate a sk/pk pair
   FHESecKey secretKey(context);
@@ -131,20 +132,13 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
     // Choose a random permutation
     Permut pi;
     randomPerm(pi, trees.getSize());
-    //    if (pi.length()<100)  cout << "pi="<<pi<<endl;
 
     // Build a permutation network for pi
     PermNetwork net;
     net.buildNetwork(pi, trees);
-    //    if (pi.length()<100) {
-    //      cout << "permutations network {[gIdx,e,isID,shifts]} = " << endl;
-    //      cout << net << endl;
-    //    }
 
     // make sure we have the key-switching matrices needed for this network
-    cout << "  ** generating matrices... " << flush;
     addMatrices4Network(secretKey, net);
-    cout << "done" << endl;
 
     // Apply the permutation pi to the plaintext
     vector<long> out1(ea.size());
@@ -153,11 +147,13 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
 
     // Encrypt plaintext array, then apply permutation network to ciphertext
     ea.encrypt(ctxt, publicKey, in);
-    cout << "  ** applying permutation network to ciphertext... " << flush;
+    if (!noPrint)
+      cout << "  ** applying permutation network to ciphertext... " << flush;
     double t = GetTime();
     net.applyToCtxt(ctxt, ea); // applying permutation netwrok
     t = GetTime() -t;
-    cout << "done in " << t << " seconds" << endl;
+    if (!noPrint)
+      cout << "done in " << t << " seconds" << endl;
     ea.decrypt(ctxt, secretKey, out2);
 
     if (out1==out2) cout << "GOOD\n";
@@ -208,6 +204,7 @@ int main(int argc, char *argv[])
   argmap["good3"] = "1";
   argmap["good4"] = "1";
   argmap["dry"] = "1";
+  argmap["noPrint"] = "0";
 
   // get parameters from the command line
 
@@ -230,6 +227,7 @@ int main(int argc, char *argv[])
   long good4 = atoi(argmap["good4"]);
 
   bool dry = atoi(argmap["dry"]);
+  noPrint = atoi(argmap["noPrint"]);
 
   setDryRun(dry);
   if (test==0) {

@@ -291,6 +291,7 @@ public:
   virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
 
   virtual PA_tag getTag() const { return tag; }
+  // tag is defined in PA_INJECT, see PAlgebra.h
 
 // DIRT: we're using undocumented NTL interfaces here
 #define FHE_DEFINE_LOWER_DISPATCH(n)\
@@ -302,7 +303,6 @@ public:
 
 
   NTL_FOREACH_ARG(FHE_DEFINE_LOWER_DISPATCH)
-
 
   const RX& getG() const { return mappingData.getG(); }
 
@@ -331,7 +331,6 @@ public:
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
 
-
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array);  }
 
@@ -339,7 +338,9 @@ public:
     {  genericEncode(ptxt, array); }
 
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const;
 
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const;
   virtual void encodeUnitSelector(ZZX& ptxt, long i) const;
 
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const
@@ -349,6 +350,7 @@ public:
     { genericDecode(array, ptxt); }
 
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const;
+  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
 
   virtual void random(vector< long  >& array) const
     { genericRandom(array); } // choose at random and convert to vector<long>
@@ -413,6 +415,9 @@ public:
   /* the following are specialized methods, used to work over extension fields...they assume 
      the modulus context is already set
    */
+
+  void encode(zzX& ptxt, const vector< RX >& array) const;
+  void decode(vector< RX  >& array, const zzX& ptxt) const;
 
   void encode(ZZX& ptxt, const vector< RX >& array) const;
   void decode(vector< RX  >& array, const ZZX& ptxt) const;
@@ -772,14 +777,12 @@ void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
 void negate(const EncryptedArray& ea, NewPlaintextArray& pa);
 
 
-
-
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j);
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& vec);
 
 void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& pi);
 
-
+void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e);
 
 
 
@@ -800,10 +803,19 @@ void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 
-//! @brief incrementalZeroTest sets each res[i], for i=0..n-1, to a ciphertext
-//! in which each slot is 0 or 1 according to whether or not bits 0..i of
-//! corresponding slot in ctxt is zero (1 if not zero, 0 if zero). It is
-//! assumed that res and each res[i] is already initialized by the caller.
+//! @brief Map all non-zero slots to 1, leaving zero slots as zero.
+//! Assumes that r=1, and that all the slots contain elements from GF(p^d).
+void mapTo01(const EncryptedArray& ea, Ctxt& ctxt);
+// Implemented in eqtesting.cpp. We compute
+//             x^{p^d-1} = x^{(1+p+...+p^{d-1})*(p-1)}
+// by setting y=x^{p-1} and then outputting y * y^p * ... * y^{p^{d-1}},
+// with exponentiation to powers of p done via Frobenius.
+
+
+//! @brief (only for p=2, r=1), test if prefixes of bits in slots are all zero.
+//! Set slot j of res[i] to 0 if bits 0..i of j'th slot in ctxt are all zero,
+//! else sets slot j of res[i] to 1.
+//! It is assumed that res and the res[i]'s are initialized by the caller.
 void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 			 const Ctxt& ctxt, long n);
 // Complexity: O(d + n log d) smart automorphisms

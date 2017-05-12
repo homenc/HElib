@@ -16,28 +16,29 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
-#include "matrix.h"
+#include "matmul.h"
 #include <NTL/ZZ.h>
 #include <NTL/lzz_pXFactoring.h>
 #include <cassert>
 #include <cstdio>
 
+static bool noPrint = false;
 
-template<class type> 
-class SingleBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
-public:
+static MatMulBase*
+buildSingleBlockMatrix(const EncryptedArray& ea, const vector<ZZX>& vec);
+
+
+template<class type> class SingleBlockMatrix : public BlockMatMul<type> {
   PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
 
   Mat<R> data;
 
 public:
-  SingleBlockMatrix(const EncryptedArray& _ea, const vector<ZZX>& vec) : ea(_ea) { 
-    long d = ea.getDegree();
-
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+  SingleBlockMatrix(const EncryptedArray& _ea, const vector<ZZX>& vec) :
+    BlockMatMul<type>(_ea)
+  { 
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long d = _ea.getDegree();
 
     data.SetDims(d, d);
     for (long i = 0; i < d; i++) 
@@ -45,55 +46,43 @@ public:
          conv(data[i][j], coeff(vec[i], j));
   }
 
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
-  virtual bool get(Mat<R>& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
+  virtual bool get(Mat<R>& out, long i, long j) const
+  {
+    assert(i >= 0 && i < this->getEA().size());
+    assert(j >= 0 && j < this->getEA().size());
     if (i != j) return true;
     out = data;
     return false;
   }
 };
 
-PlaintextBlockMatrixBaseInterface *buildSingleBlockMatrix(const EncryptedArray& ea,
-                                                          const vector<ZZX>& vec)
+static MatMulBase*
+buildSingleBlockMatrix(const EncryptedArray& ea, const vector<ZZX>& vec)
 {
-  switch (ea.getContext().alMod.getTag()) {
+  switch (ea.getTag()) {
     case PA_GF2_tag: {
       return new SingleBlockMatrix<PA_GF2>(ea, vec);
     }
-
     case PA_zz_p_tag: {
       return new SingleBlockMatrix<PA_zz_p>(ea, vec);
     }
-
-    default: return 0;
+    default: return nullptr;
   }
 }
 
 
-
-
-
-template<class type> 
-class MultiBlockMatrix : public  PlaintextBlockMatrixInterface<type> {
-public:
+template<class type> class MultiBlockMatrix : public BlockMatMul<type> {
   PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
 
   Vec< Mat<R> > data;
 
 public:
-  MultiBlockMatrix(const EncryptedArray& _ea, const vector< vector<ZZX> >& vec) : ea(_ea) { 
-    long n = ea.size();
-    long d = ea.getDegree();
-
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+  MultiBlockMatrix(const EncryptedArray& _ea, const vector<vector<ZZX> >& vec):
+    BlockMatMul<type>(_ea)
+  { 
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long n = _ea.size();
+    long d = _ea.getDegree();
 
     data.SetLength(n);
     for (long k = 0; k < n; k++) {
@@ -104,32 +93,26 @@ public:
     }
   }
 
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
   virtual bool get(Mat<R>& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
+    assert(i >= 0 && i < this->getEA().size());
+    assert(j >= 0 && j < this->getEA().size());
     if (i != j) return true;
     out = data[i];
     return false;
   }
 };
 
-PlaintextBlockMatrixBaseInterface *buildMultiBlockMatrix(const EncryptedArray& ea,
-                                                          const vector< vector<ZZX> >& vec)
+static MatMulBase* buildMultiBlockMatrix(const EncryptedArray& ea,
+					 const vector< vector<ZZX> >& vec)
 {
-  switch (ea.getContext().alMod.getTag()) {
+  switch (ea.getTag()) {
     case PA_GF2_tag: {
       return new MultiBlockMatrix<PA_GF2>(ea, vec);
     }
-
     case PA_zz_p_tag: {
       return new MultiBlockMatrix<PA_zz_p>(ea, vec);
     }
-
-    default: return 0;
+    default: return nullptr;
   }
 }
 
@@ -137,7 +120,8 @@ PlaintextBlockMatrixBaseInterface *buildMultiBlockMatrix(const EncryptedArray& e
 
 void  TestIt(long m, long p, long r, long d)
 {
-  cout << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":")
+  if (!noPrint)
+    cout << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":")
        << " m=" << m 
        << ", p=" << p
        << ", r=" << r
@@ -146,16 +130,6 @@ void  TestIt(long m, long p, long r, long d)
 
   FHEcontext context(m, p, r);
   buildModChain(context, /*L=*/3, /*c=*/2);
-  context.zMStar.printout();
-  cout << endl;
-
-  cout << "generating keys and key-switching matrices... " << std::flush;
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64);// A Hamming-weight-w secret key
-  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-  addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cout << "done\n";
 
   ZZX G;
   if (d == 0) {
@@ -164,10 +138,26 @@ void  TestIt(long m, long p, long r, long d)
   }
   else
     G = makeIrredPoly(p, d);
-  cout << "G = " << G << "\n";
-  cout << "computing masks and tables for rotation... " << std::flush;
+
+  if (!noPrint) {
+    context.zMStar.printout();
+    cout << endl;
+    cout << "G = " << G << "\n";
+
+    cout << "generating keys and key-switching matrices... " << std::flush;
+  }
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(/*w=*/64);// A Hamming-weight-w secret key
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  addFrbMatrices(secretKey); // compute key-switching matrices that we need
+  if (!noPrint) {
+    cout << "done\n";
+    cout << "computing masks and tables for rotation... " << std::flush;
+  }
   EncryptedArray ea(context, G);
-  cout << "done\n";
+  if (!noPrint)
+    cout << "done\n";
 
   long nslots = ea.size();
 
@@ -176,7 +166,8 @@ void  TestIt(long m, long p, long r, long d)
 
   Ctxt c0(publicKey);
 
-  cout << "\nTest #1: Apply the same linear transformation to all slots\n";
+  if (!noPrint)
+    cout << "\nTest #1: Apply the same linear transformation to all slots\n";
   {
   vector<ZZX> LM(d); // LM selects even coefficients
   for (long j = 0; j < d; j++) 
@@ -191,9 +182,9 @@ void  TestIt(long m, long p, long r, long d)
   applyLinPoly1(ea, c0, C);
   ea.decrypt(c0, secretKey, pp0);
 
-  shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildSingleBlockMatrix(ea, LM));
+  shared_ptr<MatMulBase> mat(buildSingleBlockMatrix(ea, LM));
   NewPlaintextArray p1(p0);
-  mat_mul(ea, p1, *mat);
+  blockMatMul(p1, *mat);
   if (equals(ea, pp0, p1))
     cout << "GOOD\n";
   else
@@ -201,7 +192,8 @@ void  TestIt(long m, long p, long r, long d)
   }
 
 
-  cout << "\nTest #2: Apply different transformations to the different slots\n";
+  if (!noPrint)
+    cout << "\nTest #2: Apply different transformations to the different slots\n";
   {
   vector< vector<ZZX> > LM(nslots); 
   // LM[i] rotates the coefficients in the i'th slot by (i % d)
@@ -223,16 +215,17 @@ void  TestIt(long m, long p, long r, long d)
   applyLinPolyMany(ea, c0, C); // apply the linearized polynomials
   ea.decrypt(c0, secretKey, pp0);
 
-  shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));
+  shared_ptr<MatMulBase> mat(buildMultiBlockMatrix(ea, LM));
   NewPlaintextArray p1(p0);
-  mat_mul(ea, p1, *mat);
+  blockMatMul(p1, *mat);
   if (equals(ea, pp0, p1))
     cout << "GOOD\n";
   else
     cout << "BAD\n";
   }
 
-  cout << "\nTest #3: Testing low-level (cached) implementation\n";
+  if (!noPrint)
+    cout << "\nTest #3: Testing low-level (cached) implementation\n";
   {
   vector< vector<ZZX> > LM(nslots); 
   // LM[i] adds coefficients (i % d) and (i+1 % d) in the i'th slot
@@ -262,9 +255,9 @@ void  TestIt(long m, long p, long r, long d)
   applyLinPolyLL(c0, encodedC, ea.getDegree()); // apply linearized polynomials
   ea.decrypt(c0, secretKey, pp0);
 
-  shared_ptr<PlaintextBlockMatrixBaseInterface> mat(buildMultiBlockMatrix(ea, LM));
+  shared_ptr<MatMulBase> mat(buildMultiBlockMatrix(ea, LM));
   NewPlaintextArray p1(p0);
-  mat_mul(ea, p1, *mat);
+  blockMatMul(p1, *mat);
   if (equals(ea, pp0, p1))
     cout << "GOOD\n";
   else
@@ -292,6 +285,8 @@ int main(int argc, char *argv[])
   long d=0;
   amap.arg("d", d, "degree of the field extension");
   amap.note("d == 0 => factors[0] defines extension");
+
+  amap.arg("noPrint", noPrint, "suppress printouts");
 
   amap.parse(argc, argv);
 

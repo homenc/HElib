@@ -433,7 +433,7 @@ long mobius(long n)
 ZZX Cyclotomic(long N)
 {
   ZZX Num,Den,G,F;
-  set(Num); set(Den);
+  NTL::set(Num); NTL::set(Den);
   long m,d;
   for (d=1; d<=N; d++)
     { if ((N%d)==0)
@@ -944,6 +944,47 @@ void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A)
    for (long i = 0; i < n; i++)
       convert(X[i], A[i]);
 }
+
+void convert(NTL::Vec<long>& out, const NTL::ZZX& in)
+{
+  out.SetLength(in.rep.length());
+  for (long i=0; i<out.length(); i++)
+    out[i] = conv<long>(in[i]);
+}
+
+
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in)
+{
+  out.SetLength(in.rep.length());
+  for (long i=0; i<out.length(); i++)
+    out[i] = conv<long>(in[i]);
+}
+
+
+void convert(NTL::Vec<long>& out, const NTL::GF2X& in)
+{
+  out.SetLength(1+deg(in));
+  for (long i=0; i<out.length(); i++)
+    out[i] = conv<long>(in[i]);
+}
+
+
+void convert(NTL::ZZX& out, const NTL::Vec<long>& in)
+{
+  out.SetLength(in.length());
+  for (long i=0; i<in.length(); i++)
+    out[i] = conv<ZZ>(in[i]);
+  out.normalize();
+}
+
+void convert(NTL::GF2X& out, const NTL::Vec<long>& in)
+{
+  out.SetLength(in.length());
+  for (long i=0; i<in.length(); i++)
+    out[i] = conv<GF2>(in[i]);
+  out.normalize();
+}
+
 
 void mul(vector<ZZX>& x, const vector<ZZX>& a, long b)
 {

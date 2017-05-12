@@ -103,7 +103,7 @@ bool RecryptData::operator==(const RecryptData& other) const
 
 // The main method
 void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
-		       long t, bool consFlag)
+		       long t, bool consFlag, int _cacheType)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to RecryptData::init\n";
@@ -114,6 +114,7 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   // Record the arguments to this function
   mvec = mvec_;
   conservative = consFlag;
+  cacheType = _cacheType;
 
   if (t <= 0) t = defSkHwt+1; // recryption key Hwt
   hwt = t;
@@ -158,6 +159,10 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
   firstMap  = new EvalMap(*ea, mvec, true);
   secondMap = new EvalMap(*context.ea, mvec, false);
+  if (cacheType>0) {
+    firstMap->buildCache(static_cast<MatrixCacheType>(cacheType));
+    secondMap->buildCache(static_cast<MatrixCacheType>(cacheType));
+  }
 
   p2dConv = new PowerfulDCRT(context, mvec);
 
@@ -194,12 +199,13 @@ extern EncryptedArray* dbgEa;
 extern ZZX dbg_ptxt;
 ZZX dbgPoly, skPoly;
 extern Vec<ZZ> ptxt_pwr;
-
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
+long printFlag = FLAG_PRINT_VEC;
 extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 			    const EncryptedArray& ea, long flags=0);
+
 extern void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
 #endif                /********* End Debugging utilities **************/
 
@@ -277,7 +283,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // Multiply the post-processed cipehrtext by the encrypted sKey
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before recryption ";
-  decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa, printFlag);
 #endif
 
   double p0size = to_double(coeffsL2Norm(zzParts[0]));
@@ -288,7 +294,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans1 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
   FHE_NTIMER_STOP(preProcess);
 
@@ -299,7 +305,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After linearTrans1 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
@@ -308,7 +314,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans2 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
 
   // Move the slots back to powerful-basis coefficients
@@ -452,7 +458,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After unpack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
   cerr << "    extracting "<<(topHigh+1)<<" digits\n";
 #endif
 
@@ -505,7 +511,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before repack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
 #endif
 
   // Step 3: re-pack the slots
@@ -570,7 +576,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After unpack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
   cerr << "    extracting "<<(topHigh+1)<<" digits\n";
 #endif
 
@@ -617,7 +623,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before repack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
 #endif
 
   // Step 3: re-pack the slots
