@@ -329,6 +329,9 @@ public:
   virtual void rotate(Ctxt& ctxt, long k) const;
   virtual void shift(Ctxt& ctxt, long k) const;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
+  template<class U> void // avoid this being "hidden" by other rotate1D's
+    rotate1D(vector<U>& out, const vector<U>& in, long i, long offset) const
+    { EncryptedArrayBase::rotate1D(out, in, i, offset); }
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
