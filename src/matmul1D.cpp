@@ -17,7 +17,16 @@
  */
 #include <algorithm>
 #include <NTL/BasicThreadPool.h>
+#include "EncryptedArray.h"
 #include "matmul.h"
+
+struct PtxtPtr {
+  enum Type { ZERO=0, ZZX=1, DCRT=2 };
+  zzX*       zp;
+  DoubleCRT* dp;
+
+  PtxtPtr(): zp(nullptr), dp(nullptr) {}
+};
 
 // A class that implements the basic (sparse) 1D matrix-vector functions
 template<class type> class matmul1D_impl {
@@ -30,21 +39,22 @@ template<class type> class matmul1D_impl {
   const EncryptedArrayDerived<type>& ea;
 
 public:
-  matmul1D_impl(MatMulBase& _mat, MatrixCacheType tag)
+  matmul1D_impl(MatMulBase& _mat, long dim, MatrixCacheType tag)
     : buildCache(tag), mat(dynamic_cast< MatMul<type>& >(_mat)),
       ea(_mat.getEA().getDerived(type()))
   {
-    if (buildCache==cachezzX)
-      zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,ea.size()));
-    else if (buildCache==cacheDCRT)
-      dCache.reset(new CachedDCRTMatrix(NTL::INIT_SIZE,ea.size()));
+    if (buildCache==cachezzX) {
+      zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,ea.sizeOfDimension(dim)));
+    } else if (buildCache==cacheDCRT) {
+      dCache.reset(new CachedDCRTMatrix(NTL::INIT_SIZE,ea.sizeOfDimension(dim)));
+    }
   }
 
   // Get the i'th diagonal along dimension dim, encoded as a
   // single constant. All blocks use the same transofmration.
   // Returns true if this is a zero diagonal, false otherwise
-  bool processDiagonal1(zzX& cPoly, long dim, long i, long D)
-  {  
+  bool processDiagonal1(zzX& cPoly, long dim, long i, long D, long rotAmt)
+  {
     vector<RX> tmpDiag(D);
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
@@ -52,7 +62,8 @@ public:
 
     // Process the entries in this diagonal one at a time
     for (long j = 0; j < D; j++) { // process entry j
-      bool zEntry = mat.get(entry, mcMod(j-i, D), j); // entry [j-i mod D, j]
+      long rotJ = (j+rotAmt) % D;  // need to rotate constant by rotAmt
+      bool zEntry = mat.get(entry, mcMod(rotJ-i, D), rotJ); // entry [j-i mod D, j]
       assert(zEntry || deg(entry) < ea.getDegree());
       // get(...) returns true if the entry is empty, false otherwise
 
@@ -85,7 +96,7 @@ public:
   // Get the i'th diagonal along dimension dim, encoded as a
   // single constant. Different blocks use different transofmrations.
   // Returns true if this is a zero diagonal, false otherwise
-  bool processDiagonal2(zzX& poly, long dim, long idx, long D)
+  bool processDiagonal2(zzX& poly, long dim, long idx, long D, long rotAmt)
   {
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
@@ -102,6 +113,7 @@ public:
 	  = ea.getContext().zMStar.breakIndexByDim(j, dim);
 	//	blockIdx = idxes.first;  // which transformation
 	//	innerIdx = idxes.second; // index along diemnssion dim
+        innerIdx = (innerIdx+rotAmt) % D;  // need to rotate constant by rotAmt
       }
       // process entry j
       bool zEntry=mat.multiGet(entry,mcMod(innerIdx-idx,D),innerIdx,blockIdx);
@@ -126,20 +138,77 @@ public:
 
     // clear trailing zero entries
     for (long jj = nzLast+1; jj < ea.size(); jj++) clear(diag[jj]);
+
     ea.encode(poly, diag);
     return false; // a nonzero diagonal
   }
 
-  void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
+  // Returns in vec all the constants needed for a single giant-step.
+  // The return value is ZERO(=0) if all these constants are zero.
+  // Otherwise it is ZZX(=1) if using zzX or DCRT(=2) if using DoubleCRT
+  PtxtPtr::Type getConsts(std::vector<PtxtPtr>& vec, std::vector<zzX>& polys,
+                          CachedzzxMatrix* zcp, CachedDCRTMatrix* dcp,
+                          long dim, long jg, long D, bool oneTrans)
+  {
+    PtxtPtr::Type typ = PtxtPtr::ZERO;
+    long g = polys.size(); // how many constants do we need
+    vec.assign(g,PtxtPtr());
+
+    //    cout << "getConsts(j="<<(jg/g)<<")\n";
+    if (dcp!=nullptr) {        // we have DCRT cache
+      for (long i=0, idx=jg; i<g && idx<D; i++, idx++) {
+        if ((vec[i].dp = (*dcp)[idx].get()) != nullptr)
+          typ = PtxtPtr::DCRT;
+      }
+    } else if (zcp!=nullptr) { // we have ZZX cache
+      for (long i=0, idx=jg; i<g && idx<D; i++, idx++) {
+        if ((vec[i].zp = (*zcp)[idx].get()) != nullptr)
+          typ = PtxtPtr::ZZX;
+      }
+    } else {                   // no cache, compute consts
+      for (long i=0, idx=jg; i<g && idx<D; i++, idx++) {
+        bool zero = oneTrans? processDiagonal1(polys[i], dim, idx, D, i)
+                            : processDiagonal2(polys[i], dim, idx, D, i);
+        if (!zero) {
+          vec[i].zp = &(polys[i]); // if not a zero, point to it
+          typ = PtxtPtr::ZZX;
+        }
+      }
+    }
+    return typ;
+  }
+
+  // g is the "giant-step" size
+  void multiply(Ctxt* ctxt, long dim, bool oneTransform, long g=1) 
   {
     assert(dim >= 0 && dim <= ea.dimension());
     RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
 
-    std::unique_ptr<Ctxt> res, shCtxt;
-    if (ctxt!=nullptr) { // we need to do an actual multiplication
-      ctxt->cleanUp(); // not sure, but this may be a good idea
-      res.reset(new Ctxt(ZeroCtxtLike, *ctxt));
-      shCtxt.reset(new Ctxt(*ctxt));
+    // Process the diagonals in baby-step/giant-step ordering.
+    //   sum_{i=0}^{d-1} const_i rot^i(X)
+    //   = \sum_{i=0}^{g-1} \sum_{j=0}^{d/g -1} const_{i+g*j} rot^{i+g*j}(X)
+    //   = \sum_{i=0}^{g-1} rot^i(sum_j rot^{-i}(const_{i+g*j}) rot^{g*j}(X))
+    //
+    // so for i=0..g-1 we let
+    //    Y_i = sum_j rot^{-i}(const_{i+g*j}) rot^{g*j}(X)
+    // then compute \sum_{i=0}^{g-1} rot^i(Y_i).
+    //
+    // Computing the Y_i's, we initialize an accumulator for each Y_i,
+    // then compute the rotations X_j = rot^{g*j}(X), j=0,...,d/g-1.
+    // Each X_j is multiplied by all the constants rot^{-i}(const_{i+g*j}),
+    // i=0,...,g-1, and the i'th product is added to the accumulator for
+    // the corresponding Y_i.
+
+    long D = (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
+    if (g<1 || g>=D) g=1;
+    long dDivg = divc(D,g);
+
+    long lastRotate = 0;
+    std::vector<Ctxt> acc; // accumulators
+    if (ctxt!=nullptr) {   // we need to do an actual multiplication
+      ctxt->cleanUp();     // not sure, but this may be a good idea
+      Ctxt tmp(ZeroCtxtLike, *ctxt);
+      acc.resize(g, tmp);
     }
 
     // Check if we have the relevant constant in cache
@@ -147,59 +216,72 @@ public:
     CachedDCRTMatrix* dcp;
     mat.getCache(&zcp, &dcp);
 
-    // Process the diagonals one at a time
-    zzX cpoly;
-    long lastRotate = 0;
-    long D = (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
-    for (long i = 0; i < D; i++) { // process diagonal i
-      zzX* zxPtr=nullptr;
-      DoubleCRT* dxPtr=nullptr;
+    // Process the diagonals in giant-step/baby-step order
+    std::vector<zzX> cpolys(g); // scratch space for encoding consts
+    std::vector<PtxtPtr> ptrs;  // pointers to these constants
+    for (long j = 0; j < dDivg; j++) { // giant steps
+      long jg = j*g;            // beginning index of this giant step
 
-      if (dcp != nullptr)         // DoubleCRT cache exists
-	dxPtr = (*dcp)[i].get();
-      else if (zcp != nullptr)    // zzx cache exists but no DoubleCRT
-	zxPtr = (*zcp)[i].get();
-      else { // no cache, compute const
-	bool zero = oneTransform? processDiagonal1(cpoly, dim, i, D)
-	                        : processDiagonal2(cpoly, dim, i, D);
-        if (!zero) zxPtr = &cpoly; // if it is not a zero value, point to it
-      }
+      // get all the constants rot^{-i}(const_{i+g*j}) for this step
+      PtxtPtr::Type ty = getConsts(ptrs, cpolys, zcp, dcp,
+                                   dim, jg, D, oneTransform);
 
-      // if zero diagonal, nothing to do for this iteration
-      if (zxPtr==nullptr && dxPtr==nullptr)
-        continue;
+      if (ty==PtxtPtr::ZERO) continue; // all consts are zero
 
-      // Non-zero diagonal, store it in cache and/or multiply/add it
+      // Store constants in cache and/or multiply/add them
 
-      if (ctxt!=nullptr && res!=nullptr) {
-        // rotate by i, multiply by the polynomial, then add to the result
-        if (i>0) {
+      if (ctxt!=nullptr) {  // rotate by jg, multiply & add
+        Ctxt shCtxt(*ctxt); // temporary to hold current rot^{g*j}(X)
+
+        // For native dimensions we do sequential rotations by g,2g,3g,...
+        // This way we only need a single key-switching matrix for g-rotation
+        // (For bad dimension this approach will induce too much noise.)
+        if (j>0) {
           if (ea.nativeDimension(dim)) {
-            ea.rotate1D(*ctxt, dim, i-lastRotate);
-            *shCtxt = *ctxt;
+            ea.rotate1D(*ctxt, dim, jg-lastRotate);
+            shCtxt = *ctxt;
           } else {
-            *shCtxt = *ctxt;
-            ea.rotate1D(*shCtxt, dim, i); // rotate by i
+            shCtxt = *ctxt;
+            ea.rotate1D(shCtxt, dim, jg); // rotate by i
           }
-          lastRotate = i;
-	} // if i==0 we already have *shCtxt == *ctxt
+          lastRotate = jg;
+	} // if j==0 we already have *shCtxt == *ctxt
 
-        if (dxPtr!=nullptr) shCtxt->multByConstant(*dxPtr);
-	else                shCtxt->multByConstant(*zxPtr);
-	*res += *shCtxt;
+        if (ty==PtxtPtr::DCRT) for (long i=0; i<min(g,D-jg); i++) {
+            if (ptrs[i].dp!=nullptr) {
+              Ctxt tmp(shCtxt);
+              tmp.multByConstant(*(ptrs[i].dp));
+              acc[i] += tmp;
+            }
+          }
+        else /*ty==PtxtPtr::ZZX*/ for (long i=0; i<min(g,D-jg); i++) {
+            if (ptrs[i].zp!=nullptr) {
+              Ctxt tmp(shCtxt);
+              tmp.multByConstant(*(ptrs[i].zp));
+              acc[i] += tmp;
+            }
+          }
       }
-      if (buildCache==cachezzX) {
-        (*zCache)[i].reset(new zzX(*zxPtr));
-      }
-      else if (buildCache==cacheDCRT) {
-        (*dCache)[i].reset(new DoubleCRT(*zxPtr, ea.getContext()));
-      }
-    } // end of loop over diagonals
 
-    if (ctxt!=nullptr && res!=nullptr) // copy result back to ctxt
-      *ctxt = *res;
-
-    // "install" the cache (if needed)
+      if (buildCache==cachezzX) for (long i=0; i<min(g,D-jg); i++) {
+          if (ptrs[i].zp!=nullptr)
+            (*zCache)[i+jg].reset(new zzX(*(ptrs[i].zp)));
+        }
+      else if (buildCache==cacheDCRT) for (long i=0; i<min(g,D-jg); i++) {
+          if (ptrs[i].zp!=nullptr)
+            (*dCache)[i+jg].reset(new DoubleCRT(*(ptrs[i].zp),ea.getContext()));
+        }
+      // end of giant-step loop
+    }
+    // Compute the result as \sum_{i=0}^{g-1} rho^i(Y_i)
+    if (ctxt!=nullptr) {
+      *ctxt = acc[0];
+      for (long i = 1; i < g; i++) {
+        ea.rotate1D(acc[i], dim, i);
+        *ctxt += acc[i];
+      }
+    }
+    // "install" the cache if needed
     if (buildCache == cachezzX)
       mat.installzzxcache(zCache);
     else if (buildCache == cacheDCRT)
@@ -208,8 +290,8 @@ public:
 };
 
 // Wrapper functions around the implemenmtation class
-static void matmul1d(Ctxt* ctxt, MatMulBase& mat, long dim,
-		     bool oneTransform, MatrixCacheType buildCache)
+static void matmul1d(Ctxt* ctxt, MatMulBase& mat, long dim, bool oneTransform,
+                     MatrixCacheType buildCache, long giantStep)
 {
   MatMulLock locking(mat, buildCache);
 
@@ -221,30 +303,34 @@ static void matmul1d(Ctxt* ctxt, MatMulBase& mat, long dim,
 
   switch (mat.getEA().getTag()) {
     case PA_GF2_tag: {
-      matmul1D_impl<PA_GF2> M(mat, locking.getType());
-      M.multiply(ctxt, dim, oneTransform);
+      matmul1D_impl<PA_GF2> M(mat, dim, locking.getType());
+      M.multiply(ctxt, dim, oneTransform, giantStep);
       break;
     }
     case PA_zz_p_tag: {
-      matmul1D_impl<PA_zz_p> M(mat, locking.getType());
-      M.multiply(ctxt, dim, oneTransform);
+      matmul1D_impl<PA_zz_p> M(mat, dim, locking.getType());
+      M.multiply(ctxt, dim, oneTransform, giantStep);
       break;
     }
     default:
       throw std::logic_error("matmul1d: neither PA_GF2 nor PA_zz_p");
   }
 }
-void buildCache4MatMul1D(MatMulBase& mat, long dim, MatrixCacheType buildCache)
-{ matmul1d(nullptr, mat, dim, true, buildCache); }
+void buildCache4MatMul1D(MatMulBase& mat, long dim,
+                         MatrixCacheType buildCache, long giantStep)
+{ matmul1d(nullptr, mat, dim, true, buildCache, giantStep); }
 
-void matMul1D(Ctxt& ctxt, MatMulBase& mat,long dim, MatrixCacheType buildCache)
-{ matmul1d(&ctxt, mat, dim, true, buildCache); }
+void matMul1D(Ctxt& ctxt, MatMulBase& mat,long dim,
+              MatrixCacheType buildCache, long giantStep)
+{ matmul1d(&ctxt, mat, dim, true, buildCache, giantStep); }
 
-void buildCache4MatMulti1D(MatMulBase& mat,long dim,MatrixCacheType buildCache)
-{ matmul1d(nullptr, mat, dim, false, buildCache); }
+void buildCache4MatMulti1D(MatMulBase& mat,long dim,
+                           MatrixCacheType buildCache, long giantStep)
+{ matmul1d(nullptr, mat, dim, false, buildCache, giantStep); }
 
-void matMulti1D(Ctxt& ctxt,MatMulBase& mat,long dim,MatrixCacheType buildCache)
-{ matmul1d(&ctxt, mat, dim, false, buildCache); }
+void matMulti1D(Ctxt& ctxt,MatMulBase& mat,long dim,
+                MatrixCacheType buildCache, long giantStep)
+{ matmul1d(&ctxt, mat, dim, false, buildCache, giantStep); }
 
 
 /********************************************************************

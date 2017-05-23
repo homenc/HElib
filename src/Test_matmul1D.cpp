@@ -269,34 +269,23 @@ static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea, long dim)
 }
 //! \endcond
 
-void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
+void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
 {
-  cout << "*** TestIt: m=" << m
-       << ", p=" << p
-       << ", r=" << r
-       << ", d=" << d
-       << ", L=" << L
-       << ", dim=" << dim
-       << endl;
-
-  FHEcontext context(m, p, r);
-  buildModChain(context, L, /*c=*/3);
-
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
-
   ZZX G;
   if (d == 0)
     G = context.alMod.getFactorsOverZZ()[0];
   else
-    G = makeIrredPoly(p, d); 
+    G = makeIrredPoly(context.zMStar.getP(), d); 
 
   if (verbose) {
     context.zMStar.printout();
     cout << endl;
     cout << "G = " << G << "\n";
   }
+
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
@@ -318,7 +307,8 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
 
     cout << " Multiplying 1D with MatMulBase... " << std::flush;
     matMul1D(v, *ptr, dim);
-    matMul1D(ctxt2, *ptr, dim, cachezzX);// multiply ciphertext and build cache
+    matMul1D(ctxt2, *ptr, dim, cachezzX, /*giantStep=*/2);
+       // multiply ciphertext and build cache
     NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -329,7 +319,8 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
 
     cout << " Multiplying 1D with MatMulBase+dcrt cache... " << std::flush;
     ctxt2 = ctxt;
-    matMul1D(ctxt2, *ptr, dim, cacheDCRT); // upgrade cache and use in multiplication
+    matMul1D(ctxt2, *ptr, dim, cacheDCRT, /*giantStep=*/2);
+       // upgrade cache and use in multiplication
 
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -352,8 +343,8 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
     Ctxt ctxt2 = ctxt;
 
     cout << " Multiplying 1D with MatMulBase+zzx cache... " << std::flush;
-    buildCache4MatMul1D(*ptr, dim, cachezzX);// build the cache
-    matMul1D(ctxt, *ptr, dim);               // then use it
+    buildCache4MatMul1D(*ptr, dim, cachezzX, /*giantStep=*/2);// build the cache
+    matMul1D(ctxt, *ptr, dim, cacheEmpty, /*giantStep=*/2);   // then use it
     matMul1D(v, *ptr, dim);     // multiply the plaintext vector
 
     NewPlaintextArray v1(ea);
@@ -381,7 +372,8 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
 
     cout << "\n Multiplying multi 1D with MatMulBase... " << std::flush;
     matMulti1D(v, *ptr, dim);
-    matMulti1D(ctxt2, *ptr, dim, cachezzX);// multiply ciphertext and build cache
+    matMulti1D(ctxt2, *ptr, dim, cachezzX, /*giantStep=*/2);
+       // multiply ciphertext and build cache
     NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -392,7 +384,8 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
 
     cout <<" Multiplying multi 1D with MatMulBase+dcrt cache... "<< std::flush;
     ctxt2 = ctxt;
-    matMulti1D(ctxt2, *ptr, dim, cacheDCRT); // upgrade cache and use in multiplication
+    matMulti1D(ctxt2, *ptr, dim, cacheDCRT, /*giantStep=*/2);
+       // upgrade cache and use in multiplication
 
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -415,8 +408,8 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
     Ctxt ctxt2 = ctxt;
 
     cout << " Multiplying multi 1D with MatMulBase+zzx cache... " << std::flush;
-    buildCache4MatMulti1D(*ptr, dim, cachezzX);// build the cache
-    matMulti1D(ctxt, *ptr, dim);               // then use it
+    buildCache4MatMulti1D(*ptr, dim, cachezzX, /*giantStep=*/2);// build the cache
+    matMulti1D(ctxt, *ptr, dim, cacheEmpty, /*giantStep=*/2);   // then use it
     matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
 
     NewPlaintextArray v1(ea);
@@ -453,7 +446,7 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
     if (equals(ea, v, v1))        // check that we've got the right answer
       cout << "Nice!!\n";
     else
-      cout << "Grrr...\n";
+      cout << "Grrr@*\n";
 
     cout << " Multiplying 1D with BlockMatMul+dcrt cache... " << std::flush;
     ctxt2 = ctxt;
@@ -489,7 +482,7 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
     if (equals(ea, v, v1))        // check that we've got the right answer
       cout << "Nice!!\n";
     else
-      cout << "Grrr...\n";
+      cout << "Grrr@*\n";
   }
   // Test multiple "block" matrices over the base field
   {
@@ -521,50 +514,71 @@ void  TestIt(long m, long p, long r, long d, long L, long dim, bool verbose)
 }
 
 
-void usage(char *prog) 
-{
-  cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cout << "  e.g, 'm=2047 p=2 L=4'\n\n";
-  cout << "  m defines the cyclotomic polynomial Phi_m(X)\n";
-  cout << "  p is the plaintext base [default=2]" << endl;
-  cout << "  r is the lifting [default=1]" << endl;
-  cout << "  d is the degree of the field extension [default==1]\n";
-  cout << "    (d == 0 => factors[0] defined the extension)\n";
-  cout << "  L is the # of primes in the modulus chain [default=4]\n";
-  cout << "  verbose print timing info [default=0]\n";
-  exit(0);
-}
-
-/* Testing the functionality of multiplying an encrypted vector by a plaintext
- * matrix, either over the extension- or the base-field/ring.
+/* Testing the functionality of multiplying an encrypted vector by a
+ * plaintext matrix, either over the extension- or the base-field/ring.
+ *
+ * Usage: Test_matmul1D [m p r d L dim verbose]
+ *
+ *  m defines the cyclotomic polynomial Phi_m(X)
+ *  p is the plaintext base [default=2]
+ *  r is the lifting [default=1]
+ *  d is the degree of the field extension [default==1]
+ *    (d == 0 => factors[0] defined the extension)
+ *  L is the # of primes in the modulus chain [default=4]
+ *  dim is the dimension alng which we multiply [default=0]
+ *  verbose print timing info [default=0]
  */
 int main(int argc, char *argv[]) 
 {
-  argmap_t argmap;
-  argmap["m"] = "2047";
-  argmap["p"] = "2";
-  argmap["r"] = "1";
-  argmap["d"] = "0";
-  argmap["L"] = "4";
-  argmap["dim"] = "0";
-  argmap["verbose"] = "0";
+  ArgMapping amap;
 
-  // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
+  long m=2047;
+  amap.arg("m", m, "defines the cyclotomic polynomial Phi_m(X)");
+  long p=2;
+  amap.arg("p", p, "plaintext base");
+  long r=1;
+  amap.arg("r", r,  "lifting");
+  long d=0;
+  amap.arg("d", d, "degree of the field extension");
+  amap.note("d == 0 => factors[0] defines extension");
+  long L=4;
+  amap.arg("L", L, "# of levels in the modulus chain");
+  long dim=0;
+  amap.arg("dim", dim, "dimension along which to multiply");
+  long verbose=0;
+  amap.arg("verbose", verbose, "print timing and other info");
 
-  long m = atoi(argmap["m"]);
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long d = atoi(argmap["d"]);
-  long L = atoi(argmap["L"]);
-  long dim = atoi(argmap["dim"]);
-  bool v = atoi(argmap["verbose"]);
+  NTL::Vec<long> gens;
+  amap.arg("gens", gens, "use specified vector of generators", NULL);
+  amap.note("e.g., gens='[562 1871 751]'");
+  NTL::Vec<long> ords;
+  amap.arg("ords", ords, "use specified vector of orders", NULL);
+  amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
+
+  amap.parse(argc, argv);
+
+  cout << "*** matmul1D: m=" << m
+       << ", p=" << p
+       << ", r=" << r
+       << ", d=" << d
+       << ", L=" << L
+       << ", dim=" << dim
+       // << ", gens=" << gens
+       // << ", ords=" << ords
+       << endl;
+
+  vector<long> gens1, ords1;
+  convert(gens1, gens);
+  convert(ords1, ords);
 
   setTimersOn();
-  TestIt(m, p, r, d, L, dim, v);
+
+  FHEcontext context(m, p, r, gens1, ords1);
+  buildModChain(context, L, /*c=*/3);
+
+  TestIt(context, d, dim, verbose);
   cout << endl;
-  if (v) {
+  if (verbose) {
     printAllTimers();
     cout << endl;
   }

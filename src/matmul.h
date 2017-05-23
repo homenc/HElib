@@ -136,14 +136,16 @@ void buildCache4MatMul_sparse(MatMulBase& mat, MatrixCacheType buildCache);
 //! cache exists).
 
 void matMul1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-               MatrixCacheType buildCache=cacheEmpty);
+               MatrixCacheType buildCache=cacheEmpty, long giantStep=1);
 //! Build a cache without performing multiplication
-void buildCache4MatMul1D(MatMulBase& mat, long dim,MatrixCacheType buildCache);
+void buildCache4MatMul1D(MatMulBase& mat, long dim,
+                         MatrixCacheType buildCache, long giantStep=1);
 
 void matMulti1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-               MatrixCacheType buildCache=cacheEmpty);
+               MatrixCacheType buildCache=cacheEmpty, long giantStep=1);
 //! Build a cache without performing multiplication
-void buildCache4MatMulti1D(MatMulBase& mat,long dim,MatrixCacheType buildCache);
+void buildCache4MatMulti1D(MatMulBase& mat,long dim,
+                           MatrixCacheType buildCache, long giantStep=1);
 
 // Versions for plaintext rather than cipehrtext, useful for debugging
 void matMul(NewPlaintextArray& pa, MatMulBase& mat);
