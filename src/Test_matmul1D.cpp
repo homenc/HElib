@@ -25,11 +25,14 @@
 #include "matmul.h"
 
 // Forward declerations
-static MatMulBase* buildRandomMatrix(const EncryptedArray& ea, long dim);
-static MatMulBase* buildRandomMultiMatrix(const EncryptedArray& ea, long dim);
-static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea, long dim);
-static MatMulBase*
-buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim);
+static MatMulBase* buildRandomMatrix(const EncryptedArray& ea,
+                                     long dim, long giantStep);
+static MatMulBase* buildRandomMultiMatrix(const EncryptedArray& ea,
+                                          long dim, long giantStep);
+static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea,
+                                          long dim);
+static MatMulBase* buildRandomMultiBlockMatrix(const EncryptedArray& ea,
+                                               long dim);
 
 
 // The callback interface for the matrix-multiplication routines.
@@ -45,8 +48,8 @@ private:
 
 public:
   virtual ~RandomMultiMatrix() {}
-  RandomMultiMatrix(const EncryptedArray& _ea, long _dim)
-    : MatMul<type>(_ea), dim(_dim)
+  RandomMultiMatrix(const EncryptedArray& _ea, long _dim, long g)
+    : MatMul<type>(_ea, g), dim(_dim)
   {
     RBak bak; bak.save(); _ea.getAlMod().restoreContext();
     long n = _ea.size();
@@ -77,14 +80,15 @@ public:
   }
 };
 
-static MatMulBase* buildRandomMultiMatrix(const EncryptedArray& ea, long dim)
+static MatMulBase*
+buildRandomMultiMatrix(const EncryptedArray& ea, long dim, long giantStep)
 {
   switch (ea.getTag()) {
     case PA_GF2_tag: {
-      return new RandomMultiMatrix<PA_GF2>(ea, dim);
+      return new RandomMultiMatrix<PA_GF2>(ea, dim, giantStep);
     }
     case PA_zz_p_tag: {
-      return new RandomMultiMatrix<PA_zz_p>(ea, dim);
+      return new RandomMultiMatrix<PA_zz_p>(ea, dim, giantStep);
     }
     default: return 0;
   }
@@ -171,8 +175,8 @@ private:
 
 public:
   virtual ~RandomMatrix() {}
-  RandomMatrix(const EncryptedArray& _ea, long _dim): 
-    MatMul<type>(_ea), dim(_dim)
+  RandomMatrix(const EncryptedArray& _ea, long _dim, long g): 
+    MatMul<type>(_ea,g), dim(_dim)
   {
     RBak bak; bak.save(); _ea.getAlMod().restoreContext();
     long n = _ea.size();
@@ -199,14 +203,15 @@ public:
   }
 };
 
-static MatMulBase* buildRandomMatrix(const EncryptedArray& ea, long dim)
+static MatMulBase*
+buildRandomMatrix(const EncryptedArray& ea, long dim, long giantStep)
 {
   switch (ea.getTag()) {
     case PA_GF2_tag: {
-      return new RandomMatrix<PA_GF2>(ea, dim);
+      return new RandomMatrix<PA_GF2>(ea, dim, giantStep);
     }
     case PA_zz_p_tag: {
-      return new RandomMatrix<PA_zz_p>(ea, dim);
+      return new RandomMatrix<PA_zz_p>(ea, dim, giantStep);
     }
     default: return 0;
   }
@@ -255,7 +260,8 @@ public:
   }
 };
 
-static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea, long dim)
+static MatMulBase*
+buildRandomBlockMatrix(const EncryptedArray& ea, long dim)
 {
   switch (ea.getTag()) {
     case PA_GF2_tag: {
@@ -269,18 +275,11 @@ static MatMulBase* buildRandomBlockMatrix(const EncryptedArray& ea, long dim)
 }
 //! \endcond
 
-void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
+void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 {
-  ZZX G;
-  if (d == 0)
-    G = context.alMod.getFactorsOverZZ()[0];
-  else
-    G = makeIrredPoly(context.zMStar.getP(), d); 
-
   if (verbose) {
     context.zMStar.printout();
     cout << endl;
-    cout << "G = " << G << "\n";
   }
 
   FHESecKey secretKey(context);
@@ -289,12 +288,12 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
 
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  EncryptedArray ea(context, G);
+  EncryptedArray ea(context, context.alMod);
 
   // Test a "normal" matrix over the extension field
   {
     // choose a random plaintext square matrix
-    std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea, dim));
+    std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea, dim, g));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -307,7 +306,7 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
 
     cout << " Multiplying 1D with MatMulBase... " << std::flush;
     matMul1D(v, *ptr, dim);
-    matMul1D(ctxt2, *ptr, dim, cachezzX, /*giantStep=*/2);
+    matMul1D(ctxt2, *ptr, dim, cachezzX);
        // multiply ciphertext and build cache
     NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
@@ -319,8 +318,7 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
 
     cout << " Multiplying 1D with MatMulBase+dcrt cache... " << std::flush;
     ctxt2 = ctxt;
-    matMul1D(ctxt2, *ptr, dim, cacheDCRT, /*giantStep=*/2);
-       // upgrade cache and use in multiplication
+    matMul1D(ctxt2, *ptr, dim, cacheDCRT); // upgrade cache and use in multiplication
 
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -331,7 +329,7 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
   }
   {
     // choose a random plaintext square matrix
-    std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim));
+    std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -343,8 +341,8 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
     Ctxt ctxt2 = ctxt;
 
     cout << " Multiplying 1D with MatMulBase+zzx cache... " << std::flush;
-    buildCache4MatMul1D(*ptr, dim, cachezzX, /*giantStep=*/2);// build the cache
-    matMul1D(ctxt, *ptr, dim, cacheEmpty, /*giantStep=*/2);   // then use it
+    buildCache4MatMul1D(*ptr, dim, cachezzX);// build the cache
+    matMul1D(ctxt, *ptr, dim);               // then use it
     matMul1D(v, *ptr, dim);     // multiply the plaintext vector
 
     NewPlaintextArray v1(ea);
@@ -359,7 +357,7 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
   // Test a "multi" matrix over the extension field
   {
     // choose a random plaintext square matrix
-    std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim));
+    std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -372,8 +370,7 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
 
     cout << "\n Multiplying multi 1D with MatMulBase... " << std::flush;
     matMulti1D(v, *ptr, dim);
-    matMulti1D(ctxt2, *ptr, dim, cachezzX, /*giantStep=*/2);
-       // multiply ciphertext and build cache
+    matMulti1D(ctxt2, *ptr, dim, cachezzX); // multiply ciphertext and build cache
     NewPlaintextArray v1(ea);
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -384,8 +381,7 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
 
     cout <<" Multiplying multi 1D with MatMulBase+dcrt cache... "<< std::flush;
     ctxt2 = ctxt;
-    matMulti1D(ctxt2, *ptr, dim, cacheDCRT, /*giantStep=*/2);
-       // upgrade cache and use in multiplication
+    matMulti1D(ctxt2, *ptr, dim, cacheDCRT); // upgrade cache and use in multiplication
 
     ea.decrypt(ctxt2, secretKey, v1); // decrypt the ciphertext vector
 
@@ -396,7 +392,7 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
   }
   {
     // choose a random plaintext square matrix
-    std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim));
+    std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
 
     // choose a random plaintext vector
     NewPlaintextArray v(ea);
@@ -408,8 +404,8 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
     Ctxt ctxt2 = ctxt;
 
     cout << " Multiplying multi 1D with MatMulBase+zzx cache... " << std::flush;
-    buildCache4MatMulti1D(*ptr, dim, cachezzX, /*giantStep=*/2);// build the cache
-    matMulti1D(ctxt, *ptr, dim, cacheEmpty, /*giantStep=*/2);   // then use it
+    buildCache4MatMulti1D(*ptr, dim, cachezzX);// build the cache
+    matMulti1D(ctxt, *ptr, dim);               // then use it
     matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
 
     NewPlaintextArray v1(ea);
@@ -517,13 +513,12 @@ void  TestIt(FHEcontext& context, long d, long dim, bool verbose)
 /* Testing the functionality of multiplying an encrypted vector by a
  * plaintext matrix, either over the extension- or the base-field/ring.
  *
- * Usage: Test_matmul1D [m p r d L dim verbose]
+ * Usage: Test_matmul1D [optional params]
  *
  *  m defines the cyclotomic polynomial Phi_m(X)
  *  p is the plaintext base [default=2]
  *  r is the lifting [default=1]
- *  d is the degree of the field extension [default==1]
- *    (d == 0 => factors[0] defined the extension)
+ *  g is the giant-step parameter [defauls=2]
  *  L is the # of primes in the modulus chain [default=4]
  *  dim is the dimension alng which we multiply [default=0]
  *  verbose print timing info [default=0]
@@ -538,9 +533,8 @@ int main(int argc, char *argv[])
   amap.arg("p", p, "plaintext base");
   long r=1;
   amap.arg("r", r,  "lifting");
-  long d=0;
-  amap.arg("d", d, "degree of the field extension");
-  amap.note("d == 0 => factors[0] defines extension");
+  long g=2;
+  amap.arg("g", g,  "giant-step parameter");
   long L=4;
   amap.arg("L", L, "# of levels in the modulus chain");
   long dim=0;
@@ -560,8 +554,8 @@ int main(int argc, char *argv[])
   cout << "*** matmul1D: m=" << m
        << ", p=" << p
        << ", r=" << r
-       << ", d=" << d
        << ", L=" << L
+       << ", g=" << g
        << ", dim=" << dim
        // << ", gens=" << gens
        // << ", ords=" << ords
@@ -576,7 +570,7 @@ int main(int argc, char *argv[])
   FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, /*c=*/3);
 
-  TestIt(context, d, dim, verbose);
+  TestIt(context, g, dim, verbose);
   cout << endl;
   if (verbose) {
     printAllTimers();

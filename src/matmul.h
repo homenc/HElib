@@ -45,8 +45,11 @@ class MatMulBase {
   std::unique_ptr<CachedzzxMatrix> zzxCache;
   std::unique_ptr<CachedDCRTMatrix> dcrtCache;
   std::mutex cachelock;
+
+  long gStep; // the giant-step parameter (if used)
+
 public:
-  MatMulBase(const EncryptedArray& _ea): ea(_ea) {}
+  MatMulBase(const EncryptedArray& _ea, long g=1): ea(_ea), gStep(g) {}
   virtual ~MatMulBase() {}
 
   const EncryptedArray& getEA() const { return ea; }
@@ -60,11 +63,21 @@ public:
   void releaseCache() { cachelock.unlock(); }
 
   void upgradeCache(); // build DCRT cache from zzx cache
-
   void installzzxcache(std::unique_ptr<CachedzzxMatrix>& zc)
   { zzxCache.swap(zc); }
   void installDCRTcache(std::unique_ptr<CachedDCRTMatrix>& dc)
   { dcrtCache.swap(dc); }
+
+  // setGstep is *not* thread safe and should never be called if
+  // there are threads using the current cache.
+  void setGstep(long g) {
+    if (g != gStep && g>0) {
+      zzxCache.reset();
+      dcrtCache.reset();
+      gStep = g;
+    }
+  }
+  long getGstep() const { return gStep; }
 };
 
 //! @class MatMul
@@ -79,7 +92,7 @@ template<class type>
 class MatMul : public MatMulBase { // type is PA_GF2 or PA_zz_p
 public:
   PA_INJECT(type)
-  MatMul(const EncryptedArray& _ea): MatMulBase(_ea) {}
+  MatMul(const EncryptedArray& _ea, long g=1): MatMulBase(_ea,g) {}
 
   // Should return true when the entry is a zero. An application must
   // implement (at least) one of these get functions, calling the base
@@ -136,16 +149,14 @@ void buildCache4MatMul_sparse(MatMulBase& mat, MatrixCacheType buildCache);
 //! cache exists).
 
 void matMul1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-               MatrixCacheType buildCache=cacheEmpty, long giantStep=1);
+              MatrixCacheType buildCache=cacheEmpty);
 //! Build a cache without performing multiplication
-void buildCache4MatMul1D(MatMulBase& mat, long dim,
-                         MatrixCacheType buildCache, long giantStep=1);
+void buildCache4MatMul1D(MatMulBase& mat,long dim,MatrixCacheType buildCache);
 
 void matMulti1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-               MatrixCacheType buildCache=cacheEmpty, long giantStep=1);
+                MatrixCacheType buildCache=cacheEmpty);
 //! Build a cache without performing multiplication
-void buildCache4MatMulti1D(MatMulBase& mat,long dim,
-                           MatrixCacheType buildCache, long giantStep=1);
+void buildCache4MatMulti1D(MatMulBase& mat,long dim,MatrixCacheType buildCache);
 
 // Versions for plaintext rather than cipehrtext, useful for debugging
 void matMul(NewPlaintextArray& pa, MatMulBase& mat);

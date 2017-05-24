@@ -154,7 +154,6 @@ public:
     long g = polys.size(); // how many constants do we need
     vec.assign(g,PtxtPtr());
 
-    //    cout << "getConsts(j="<<(jg/g)<<")\n";
     if (dcp!=nullptr) {        // we have DCRT cache
       for (long i=0, idx=jg; i<g && idx<D; i++, idx++) {
         if ((vec[i].dp = (*dcp)[idx].get()) != nullptr)
@@ -179,10 +178,15 @@ public:
   }
 
   // g is the "giant-step" size
-  void multiply(Ctxt* ctxt, long dim, bool oneTransform, long g=1) 
+  void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
   {
     assert(dim >= 0 && dim <= ea.dimension());
     RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
+
+    long D = (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
+    long g = mat.getGstep();
+    if (g<1 || g>=D) g=1; // sanity check
+    long dDivg = divc(D,g);
 
     // Process the diagonals in baby-step/giant-step ordering.
     //   sum_{i=0}^{d-1} const_i rot^i(X)
@@ -198,10 +202,6 @@ public:
     // Each X_j is multiplied by all the constants rot^{-i}(const_{i+g*j}),
     // i=0,...,g-1, and the i'th product is added to the accumulator for
     // the corresponding Y_i.
-
-    long D = (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
-    if (g<1 || g>=D) g=1;
-    long dDivg = divc(D,g);
 
     long lastRotate = 0;
     std::vector<Ctxt> acc; // accumulators
@@ -291,7 +291,7 @@ public:
 
 // Wrapper functions around the implemenmtation class
 static void matmul1d(Ctxt* ctxt, MatMulBase& mat, long dim, bool oneTransform,
-                     MatrixCacheType buildCache, long giantStep)
+                     MatrixCacheType buildCache)
 {
   MatMulLock locking(mat, buildCache);
 
@@ -304,12 +304,12 @@ static void matmul1d(Ctxt* ctxt, MatMulBase& mat, long dim, bool oneTransform,
   switch (mat.getEA().getTag()) {
     case PA_GF2_tag: {
       matmul1D_impl<PA_GF2> M(mat, dim, locking.getType());
-      M.multiply(ctxt, dim, oneTransform, giantStep);
+      M.multiply(ctxt, dim, oneTransform);
       break;
     }
     case PA_zz_p_tag: {
       matmul1D_impl<PA_zz_p> M(mat, dim, locking.getType());
-      M.multiply(ctxt, dim, oneTransform, giantStep);
+      M.multiply(ctxt, dim, oneTransform);
       break;
     }
     default:
@@ -317,20 +317,20 @@ static void matmul1d(Ctxt* ctxt, MatMulBase& mat, long dim, bool oneTransform,
   }
 }
 void buildCache4MatMul1D(MatMulBase& mat, long dim,
-                         MatrixCacheType buildCache, long giantStep)
-{ matmul1d(nullptr, mat, dim, true, buildCache, giantStep); }
+                         MatrixCacheType buildCache)
+{ matmul1d(nullptr, mat, dim, true, buildCache); }
 
 void matMul1D(Ctxt& ctxt, MatMulBase& mat,long dim,
-              MatrixCacheType buildCache, long giantStep)
-{ matmul1d(&ctxt, mat, dim, true, buildCache, giantStep); }
+              MatrixCacheType buildCache)
+{ matmul1d(&ctxt, mat, dim, true, buildCache); }
 
 void buildCache4MatMulti1D(MatMulBase& mat,long dim,
-                           MatrixCacheType buildCache, long giantStep)
-{ matmul1d(nullptr, mat, dim, false, buildCache, giantStep); }
+                           MatrixCacheType buildCache)
+{ matmul1d(nullptr, mat, dim, false, buildCache); }
 
 void matMulti1D(Ctxt& ctxt,MatMulBase& mat,long dim,
-                MatrixCacheType buildCache, long giantStep)
-{ matmul1d(&ctxt, mat, dim, false, buildCache, giantStep); }
+                MatrixCacheType buildCache)
+{ matmul1d(&ctxt, mat, dim, false, buildCache); }
 
 
 /********************************************************************
