@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #ifndef FHE_matrix_H_
 #define FHE_matrix_H_
@@ -45,8 +41,11 @@ class MatMulBase {
   std::unique_ptr<CachedzzxMatrix> zzxCache;
   std::unique_ptr<CachedDCRTMatrix> dcrtCache;
   std::mutex cachelock;
+
+  long gStep; // the giant-step parameter (if used)
+
 public:
-  MatMulBase(const EncryptedArray& _ea): ea(_ea) {}
+  MatMulBase(const EncryptedArray& _ea, long g=1): ea(_ea), gStep(g) {}
   virtual ~MatMulBase() {}
 
   const EncryptedArray& getEA() const { return ea; }
@@ -60,11 +59,21 @@ public:
   void releaseCache() { cachelock.unlock(); }
 
   void upgradeCache(); // build DCRT cache from zzx cache
-
   void installzzxcache(std::unique_ptr<CachedzzxMatrix>& zc)
   { zzxCache.swap(zc); }
   void installDCRTcache(std::unique_ptr<CachedDCRTMatrix>& dc)
   { dcrtCache.swap(dc); }
+
+  // setGstep is *not* thread safe and should never be called if
+  // there are threads using the current cache.
+  void setGstep(long g) {
+    if (g != gStep && g>0) {
+      zzxCache.reset();
+      dcrtCache.reset();
+      gStep = g;
+    }
+  }
+  long getGstep() const { return gStep; }
 };
 
 //! @class MatMul
@@ -79,7 +88,7 @@ template<class type>
 class MatMul : public MatMulBase { // type is PA_GF2 or PA_zz_p
 public:
   PA_INJECT(type)
-  MatMul(const EncryptedArray& _ea): MatMulBase(_ea) {}
+  MatMul(const EncryptedArray& _ea, long g=1): MatMulBase(_ea,g) {}
 
   // Should return true when the entry is a zero. An application must
   // implement (at least) one of these get functions, calling the base
@@ -136,12 +145,12 @@ void buildCache4MatMul_sparse(MatMulBase& mat, MatrixCacheType buildCache);
 //! cache exists).
 
 void matMul1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-               MatrixCacheType buildCache=cacheEmpty);
+              MatrixCacheType buildCache=cacheEmpty);
 //! Build a cache without performing multiplication
-void buildCache4MatMul1D(MatMulBase& mat, long dim,MatrixCacheType buildCache);
+void buildCache4MatMul1D(MatMulBase& mat,long dim,MatrixCacheType buildCache);
 
 void matMulti1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-               MatrixCacheType buildCache=cacheEmpty);
+                MatrixCacheType buildCache=cacheEmpty);
 //! Build a cache without performing multiplication
 void buildCache4MatMulti1D(MatMulBase& mat,long dim,MatrixCacheType buildCache);
 

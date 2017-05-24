@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #ifndef _EncryptedArray_H_
 #define _EncryptedArray_H_
@@ -329,6 +325,9 @@ public:
   virtual void rotate(Ctxt& ctxt, long k) const;
   virtual void shift(Ctxt& ctxt, long k) const;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
+  template<class U> void // avoid this being "hidden" by other rotate1D's
+    rotate1D(vector<U>& out, const vector<U>& in, long i, long offset) const
+    { EncryptedArrayBase::rotate1D(out, in, i, offset); }
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
