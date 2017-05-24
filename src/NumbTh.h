@@ -50,9 +50,9 @@
 #include <NTL/GF2EX.h>
 #include <NTL/lzz_pEX.h>
 
-// Test for the "right version" of NTL (currently 9.4.0)
-#if ((NTL_MAJOR_VERSION<9)||(NTL_MAJOR_VERSION==9 && NTL_MINOR_VERSION<4))
-#error "This version of HElib requires NTL version 9.4.0 or above"
+// Test for the "right version" of NTL (currently 10.0.0)
+#if (NTL_MAJOR_VERSION<10)
+#error "This version of HElib requires NTL version 10.0.0 or above"
 #endif
 
 using namespace std;

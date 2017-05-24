@@ -1,24 +1,20 @@
-# Copyright (C) 2012,2013 IBM Corp.
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
+# Copyright (C) 2012-2017 IBM Corp.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-# See the GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License along
-# with this program; if not, write to the Free Software Foundation, Inc.,
-# 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+# This program is Licensed under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at
+#   http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License. See accompanying LICENSE file.
 # 
 CC = g++
 #
 #CFLAGS = -g -O2 -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
-CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
-#CFLAGS = -g -O2 -std=c++11 -pthread
-#CFLAGS = -g -O2 -std=c++11 
+#CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
+CFLAGS = -g -O2 -std=c++11 -fmax-errors=2
 
 # useful flags:
 #   -std=c++11
@@ -34,15 +30,19 @@ CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-error
 
 #  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
 
-$(info HElib requires NTL version 9.4.0 or higher, see http://shoup.net/ntl)
+$(info HElib requires NTL version 10.0.0 or higher, see http://shoup.net/ntl)
 $(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
 $(info )
 
 LD = g++
 AR = ar
 ARFLAGS=rv
-GMP=-lgmp 
-LDLIBS = -L/usr/local/lib -lntl $(GMP) -lm
+GMP=-lgmp
+NTL=-lntl
+
+# NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
+#       against them as dynamic libraries.
+LDLIBS = -L/usr/local/lib $(NTL) $(GMP) -lm
 
 HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h EvalMap.h matmul.h
 
@@ -91,7 +91,7 @@ clean:
 	rm -rf *.dSYM
 
 info:
-	: HElib require NTL version 9.4.0 or higher
+	: HElib require NTL version 10.0.0 or higher
 	: Compilation flags are 'CFLAGS=$(CFLAGS)'
 	: If errors occur, try adding/removing '-std=c++11' in Makefile
 	:
