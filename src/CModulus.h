@@ -27,6 +27,10 @@
 #include "cloned_ptr.h"
 
 
+#ifdef FHE_OPENCL
+#include "FFT.h"
+#endif
+
 
 /**
 * @class Cmodulus
@@ -69,6 +73,12 @@ class Cmodulus {
   void privateInit(const PAlgebra&, long rt);
 
  public:
+
+#ifdef FHE_OPENCL
+  SmartPtr<AltFFTPrimeInfo> altFFTInfo;
+  // We need to allow copying...the underlying object
+  // is immutable
+#endif
 
   // Destructor and constructors
 

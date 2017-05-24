@@ -98,8 +98,7 @@ public:
         zDiag = false; // mark diagonal as non-empty
 
 	for (long jj = nzLast+1; jj < j; jj++) {// clear from last nonzero entry
-          for (long k = 0; k < d; k++)
-            clear(tmpDiag[jj][k]);
+          tmpDiag[jj].assign(d, RX());
         }
         nzLast = j; // current entry is the last nonzero one
 
@@ -113,9 +112,9 @@ public:
     if (zDiag) return true; // zero diagonal, nothing to do
 
     // clear trailing zero entries
-    for (long jj = nzLast+1; jj < D; jj++)
-      for (long k = 0; k < d; k++)
-        clear(tmpDiag[jj][k]);
+    for (long jj = nzLast+1; jj < D; jj++) {
+      tmpDiag[jj].assign(d, RX());
+    }
 
     if (D==1) diag.assign(ea.size(), tmpDiag[0]); // dimension of size one
     else for (long j = 0; j < ea.size(); j++)
