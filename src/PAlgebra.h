@@ -516,7 +516,7 @@ public:
      @brief Returns ref to maskTable, which is used to implement rotations
      (in the EncryptedArray module).
 
-     maskTable[i][j] is a polynomial representation of a mask that is 1 in
+     `maskTable[i][j]` is a polynomial representation of a mask that is 1 in
      all slots whose i'th coordinate is at least j, and 0 elsewhere. We have:
      \verbatim
        maskTable.size() == zMStar.numOfGens()     // # of generators
