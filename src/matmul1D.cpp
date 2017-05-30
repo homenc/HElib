@@ -173,7 +173,6 @@ public:
     return typ;
   }
 
-  // g is the "giant-step" size
   void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
   {
     assert(dim >= 0 && dim <= ea.dimension());
@@ -229,18 +228,9 @@ public:
       if (ctxt!=nullptr) {  // rotate by jg, multiply & add
         Ctxt shCtxt(*ctxt); // temporary to hold current rot^{g*j}(X)
 
-        // For native dimensions we do sequential rotations by g,2g,3g,...
-        // This way we only need a single key-switching matrix for g-rotation
-        // (For bad dimension this approach will induce too much noise.)
         if (j>0) {
-          if (ea.nativeDimension(dim)) {
-            ea.rotate1D(*ctxt, dim, jg-lastRotate);
-            shCtxt = *ctxt;
-          } else {
-            shCtxt = *ctxt;
-            ea.rotate1D(shCtxt, dim, jg); // rotate by i
-          }
-          lastRotate = jg;
+          shCtxt = *ctxt;
+          ea.rotate1D(shCtxt, dim, jg); // rotate by i
 	} // if j==0 we already have *shCtxt == *ctxt
 
         if (ty==PtxtPtr::DCRT) for (long i=0; i<min(g,D-jg); i++) {
