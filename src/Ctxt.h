@@ -60,6 +60,7 @@
 class KeySwitch;
 class FHEPubKey;
 class FHESecKey;
+class AutomorphHandler;
 
 /**
  * @class SKHandle
@@ -285,6 +286,9 @@ class Ctxt {
   // result to *this.
   void keySwitchPart(const CtxtPart& p, const KeySwitch& W);
 
+  // interenal procedure used in key-swtching
+  void keySwitchDigits(const KeySwitch& W, std::vector<DoubleCRT>& digits);
+
   long getPartIndexByHandle(const SKHandle& hanle) const {
     for (size_t i=0; i<parts.size(); i++) 
       if (parts[i].skHandle==hanle) return i;
@@ -335,6 +339,7 @@ public:
 
   Ctxt& operator*=(const Ctxt& other); // Multiply by aonther ciphertext
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
+  void multiAutomorph(const std::vector<long>& vals,AutomorphHandler &handler);
   Ctxt& operator>>=(long k) { automorph(k); return *this; }
 
   //! @brief automorphism with re-lienarization

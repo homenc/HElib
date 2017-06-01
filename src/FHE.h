@@ -81,11 +81,10 @@ class KeySwitch {
 public:
   SKHandle fromKey;  // A handle for the key s'
   long     toKeyID;  // Index of the key s that we are switching into
-  long     ptxtSpace;  // either 2 or 2^r
+  long     ptxtSpace;  // either p or p^r
 
   vector<DoubleCRT> b;  // The top row, consisting of the bi's
   ZZ prgSeed;        // a seed to generate the random ai's in the bottom row
-                     // NOTE: THIS USE OF THE NTL PRG IS NOT THREAD-SAFE 
 
   explicit
   KeySwitch(long sPow=0, long xPow=0, long fromID=0, long toID=0, long p=0):
@@ -177,6 +176,8 @@ public:
 
   ///@{
   //! @name Find key-switching matrices
+
+  const std::vector<KeySwitch>& keySWlist() const { return keySwitching; }
 
   //! @brief Find a key-switching matrix by its indexes. 
   //! If no such matrix exists it returns a dummy matrix with toKeyID==-1.

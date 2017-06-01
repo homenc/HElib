@@ -54,6 +54,79 @@ bool Ctxt::verifyPrimeSet() const
 }
 
 
+// Compute the number of digits that we need and the esitmated
+// added noise from switching this ciphertext part.
+static std::pair<long, NTL::xdouble>
+computeKSNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
+{
+  const FHEcontext& context = p.getContext();
+  long nDigits = 0;
+  xdouble addedNoise = to_xdouble(0.0);
+  double sizeLeft = context.logOfProduct(p.getIndexSet());
+  for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
+    nDigits++;
+
+    double digitSize = context.logOfProduct(context.digits[i]);
+    if (sizeLeft<digitSize) digitSize=sizeLeft;// need only part of this digit
+
+    // Added noise due to this digit is phi(m) *sigma^2 *pSpace^2 *|Di|^2/4, 
+    // where |Di| is the magnitude of the digit
+
+    // WARNING: the following line is written just so to prevent overflow
+    addedNoise += to_xdouble(context.zMStar.getPhiM()) * pSpace*pSpace
+      * xexp(2*digitSize) * context.stdev*context.stdev / 4.0;
+
+    sizeLeft -= digitSize;
+  }
+
+  // Sanity-check: make sure that the added noise is not more than the special
+  // primes can handle: After dividing the added noise by the product of all
+  // the special primes, it should be smaller than the added noise term due
+  // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 12
+
+  long keyWeight = pubKey.getSKeyWeight(p.skHandle.getSecretKeyID());
+  double phim = context.zMStar.getPhiM();
+  double logModSwitchNoise = log((double)keyWeight) 
+    +2*log((double)pSpace) +log(phim) -log(12.0);
+  double logKeySwitchNoise = log(addedNoise) 
+    -2*context.logOfProduct(context.specialPrimes);
+  assert(logKeySwitchNoise < logModSwitchNoise);
+
+  return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
+}
+
+// Multiply vector of digits by key-switching matrix and add to *this.
+// It is assumed that W has at least as many b[i]'s as there are digits.
+// The vector of digits is modified in place.
+void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
+{  // An object to hold the pseudorandom ai's, note that it must be defined
+  // with the maximum number of levels, else the PRG will go out of synch.
+  // FIXME: This is a bug waiting to happen.
+  DoubleCRT ai(context);
+
+  // Subsequent ai's use the evolving RNG state
+  RandomState state; // backup the NTL PRG seed
+  NTL::SetSeed(W.prgSeed);
+
+  // Add the columns in, one by one
+  DoubleCRT tmpDCRT(context, IndexSet::emptySet());  
+  for (size_t i=0; i<digits.size(); i++) {
+    ai.randomize();
+    tmpDCRT = digits[i];
+  
+    // The operations below all use the IndexSet of tmpDCRT
+  
+    // add digit*a[i] with a handle pointing to base of W.toKeyID
+    tmpDCRT.Mul(ai,  /*matchIndexSet=*/false);
+    this->addPart(tmpDCRT, SKHandle(1,1,W.toKeyID), /*matchPrimeSet=*/true);
+  
+    // add digit*b[i] with a handle pointing to one
+    digits[i].Mul(W.b[i], /*matchIndexSet=*/false);
+    this->addPart(digits[i], SKHandle(), /*matchPrimeSet=*/true);
+  }
+}
+
+
 //! @brief How many levels in the "base-set" for that ciphertext
 long Ctxt::findBaseLevel() const 
 {
@@ -311,15 +384,6 @@ void Ctxt::reLinearize(long keyID)
   }
   *this = tmp;
 
-#if 0
-  // alternative strategy: get rid of special primes
-  // after each reLin...
-  if (!primeSet.disjointFrom(context.specialPrimes)) {
-    modDownToSet(primeSet / context.specialPrimes);
-    // cout << ">>> special primes\n";
-  }
-#endif
-
   FHE_TIMER_STOP;
 }
 
@@ -356,40 +420,11 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // some sanity checks
   assert(W.fromKey == p.skHandle);  // the handles must match
 
-  // Compute the number of digits that we need and the esitmated added noise
-  // from switching this ciphertext part.
-  long pSpace = W.ptxtSpace;
-  long nDigits = 0;
-  xdouble addedNoise = to_xdouble(0.0);
-  double sizeLeft = context.logOfProduct(p.getIndexSet());
-  for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
-    nDigits++;
-
-    double digitSize = context.logOfProduct(context.digits[i]);
-    if (sizeLeft<digitSize) digitSize=sizeLeft; // need only part of this digit
-
-    // Added noise due to this digit is phi(m) * sigma^2 * pSpace^2 * |Di|^2/4, 
-    // where |Di| is the magnitude of the digit
-
-    // WARNING: the following line is written just so to prevent overflow
-    addedNoise += to_xdouble(context.zMStar.getPhiM()) * pSpace*pSpace
-      * xexp(2*digitSize) * context.stdev*context.stdev / 4.0;
-
-    sizeLeft -= digitSize;
-  }
-
-  // Sanity-check: make sure that the added noise is not more than the special
-  // primes can handle: After dividing the added noise by the product of all
-  // the special primes, it should be smaller than the added noise term due
-  // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 12
-
-  long keyWeight = pubKey.getSKeyWeight(p.skHandle.getSecretKeyID());
-  double phim = context.zMStar.getPhiM();
-  double logModSwitchNoise = log((double)keyWeight) 
-    +2*log((double)pSpace) +log(phim) -log(12.0);
-  double logKeySwitchNoise = log(addedNoise) 
-    -2*context.logOfProduct(context.specialPrimes);
-  assert(logKeySwitchNoise < logModSwitchNoise);
+  // Compute the number of digits that we need and the esitmated
+  // added noise from switching this ciphertext part.
+  long nDigits;
+  NTL::xdouble addedNoise;
+  std::tie(nDigits,addedNoise)= computeKSNoise(p, pubKey, W.ptxtSpace);
 
   // Break the ciphertext part into digits, if needed, and scale up these
   // digits using the special primes. This is the most expensive operation
@@ -399,37 +434,10 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   p.breakIntoDigits(polyDigits, nDigits);
 
   // Finally we multiply the vector of digits by the key-switching matrix
-
-  // An object to hold the pseudorandom ai's, note that it must be defined
-  // with the maximum number of levels, else the PRG will go out of synch.
-  // FIXME: This is a bug waiting to happen.
-  DoubleCRT ai(context);
-
-  // Set the first ai using the seed, subsequent ai's (if any) will
-  // use the evolving RNG state (NOTE: this is not thread-safe)
-
-  RandomState state;
-  SetSeed(W.prgSeed);
-
-  // Add the columns in, one by one
-  DoubleCRT tmp(context, IndexSet::emptySet());
-  
-  for (unsigned long i=0; i<polyDigits.size(); i++) {
-    ai.randomize();
-    tmp = polyDigits[i];
-  
-    // The operations below all use the IndexSet of tmp
-  
-    // add part*a[i] with a handle pointing to base of W.toKeyID
-    tmp.Mul(ai,  /*matchIndexSet=*/false);
-    addPart(tmp, SKHandle(1,1,W.toKeyID), /*matchPrimeSet=*/true);
-  
-    // add part*b[i] with a handle pointing to one
-    polyDigits[i].Mul(W.b[i], /*matchIndexSet=*/false);
-    addPart(polyDigits[i], SKHandle(), /*matchPrimeSet=*/true);
-  }
-  noiseVar += addedNoise;
+  keySwitchDigits(W, polyDigits);
+  noiseVar += addedNoise; // update the noise estimate
 } // restore random state upon destruction of the RandomState, see NumbTh.h
+
 
 // Find the IndexSet such that modDown to that set of primes makes the
 // additive term due to rounding into the dominant noise term 
@@ -502,19 +510,22 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
 {
   assert (&part.getContext() == &context);
 
-  // add to the the prime-set of *this, if needed (this is expensive)
-  if (matchPrimeSet && !(part.getIndexSet() <= primeSet)) {
-    IndexSet setDiff = part.getIndexSet() / primeSet; // set minus
-    for (size_t i=0; i<parts.size(); i++) parts[i].addPrimes(setDiff);
-    primeSet.insert(setDiff);
-  }
-
   if (parts.size()==0) { // inserting 1st part 
     primeSet = part.getIndexSet();
     parts.push_back(CtxtPart(part,handle));
     if (negative) parts.back().Negate(); // not thread-safe??
-  } else {               // adding to a ciphertext with existing parts
-    assert(part.getIndexSet() <= primeSet);  // Sanity check
+  }
+  else {       // adding to a ciphertext with existing parts
+    if (!(part.getIndexSet() <= primeSet)) {
+      // add to the the prime-set of *this, if needed (this is expensive)
+      if (matchPrimeSet) {
+        IndexSet setDiff = part.getIndexSet() / primeSet; // set minus
+        for (size_t i=0; i<parts.size(); i++) parts[i].addPrimes(setDiff);
+        primeSet.insert(setDiff);
+      }
+      else // this should never happen
+        throw std::logic_error("part has too many primes and matchPrimeSet==false");
+    }
 
     DoubleCRT tmp(context, IndexSet::emptySet());
     const DoubleCRT* ptr = &part;
@@ -918,31 +929,30 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
 void Ctxt::smartAutomorph(long k) 
 {
   FHE_TIMER_START;
-  // Special case: if *this is empty then do nothing
-  if (this->isEmpty()) return;
-
-  long m = context.zMStar.getM();
-
-  k = mcMod(k, m);
-
-  // Sanity check: verify that k \in Zm*
-  assert (context.zMStar.inZmStar(k));
-
   // A hack: record this automorphism rather than actually performing it
   if (isSetAutomorphVals()) { // defined in NumbTh.h
     recordAutomorphVal(k);
     return;
   }
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
+  // Sanity check: verify that k \in Zm*
+  long m = context.zMStar.getM();
+  k = mcMod(k, m);
+  assert (context.zMStar.inZmStar(k));
 
   long keyID=getKeyID();
+  if (!pubKey.isReachable(k,keyID)) {// must have key-switching matrices for it
+    throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
+                           + ", keyID="+std::to_string(keyID));
+  }
+
   if (!inCanonicalForm(keyID)) {     // Re-linearize the input, if needed
     reLinearize(keyID);
     assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
   }
-  if (!pubKey.isReachable(k,keyID)) {// must have key-switching matrices for it
-    throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
-			   + ", keyID="+std::to_string(keyID));
-  }
+
   while (k != 1) {
     const KeySwitch& matrix = pubKey.getNextKSWmatrix(k,keyID);
     long amt = matrix.fromKey.getPowerOfX();
@@ -952,10 +962,8 @@ void Ctxt::smartAutomorph(long k)
       recordAutomorphVal2(amt);
       return;
     }
-
     automorph(amt);
     reLinearize(keyID);
-
     k = MulMod(k, InvMod(amt,m), m);
   }
   FHE_TIMER_STOP;
@@ -1262,4 +1270,63 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 
   // Return an estimate for the noise
   return conv<double>(noiseVar*ratio*ratio + modSwitchAddedNoiseVar());
+}
+
+#include "multiAutomorph.h"
+void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
+{
+  FHE_TIMER_START;
+  long keyID=getKeyID();
+  if (!inCanonicalForm(keyID)) {     // Re-linearize the input, if needed
+    reLinearize(keyID);
+    assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
+  }
+  cleanUp();
+
+  // Compute the number of digits that we need and the esitmated
+  // added noise from switching this ciphertext.
+  long nDigits;
+  NTL::xdouble noise;
+  std::tie(nDigits, noise)
+      = computeKSNoise(parts[1], pubKey, pubKey.keySWlist()[0].ptxtSpace);
+
+  cout << "Using "<<nDigits<<" digits\n";
+  double logProd = context.logOfProduct(context.specialPrimes);
+  noise += noiseVar * xexp(2*logProd);
+
+  // Break the ciphertext part into digits, if needed, and scale up these
+  // digits using the special primes.
+
+  CtxtPart tmpPart(context, IndexSet::emptySet());
+  vector<DoubleCRT> polyDigits, tmpDigits;
+  {FHE_NTIMER_START(mAutBrk2digits);
+  parts[1].breakIntoDigits(polyDigits, nDigits);
+  }
+
+  for (long k: vals) {
+    Ctxt tmpCtxt(ZeroCtxtLike,*this);// empty ciphertext, same plaintext space
+    tmpCtxt.noiseVar = noise;        // noise estimate
+
+    // Find a key-switching matrix to re-linearize this automorphism
+    const KeySwitch& W = pubKey.getKeySWmatrix(1,k);
+    {FHE_NTIMER_START(mAutBody);
+
+    // Add in the constant part
+    tmpPart = parts[0];
+    tmpPart.automorph(k);
+    tmpPart.addPrimesAndScale(context.specialPrimes);
+    tmpCtxt.addPart(tmpPart, /*matchPrimeSet=*/true);
+
+    // "rotate" the digits before key-switching them
+    tmpDigits = polyDigits;
+    for (size_t i=0; i<tmpDigits.size(); i++) // rotate each of the digits
+      tmpDigits[i].automorph(k);
+
+    // Finally we multiply the vector of digits by the key-switching matrix
+    tmpCtxt.keySwitchDigits(W, tmpDigits);
+    }
+    // Call the callback function to process this rotated ciphertext
+    if (!handler.handle(tmpCtxt, k))
+      break;
+  }
 }
