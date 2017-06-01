@@ -17,13 +17,19 @@ class Ctxt; // forward decleration
 //! A virtual class to handle call-backs to get the output of multiAutomorph.
 class AutomorphHandler {
 public:
-  virtual bool handle(const Ctxt& ctxt, long amt) {return true;}
+  virtual bool handle(std::unique_ptr<Ctxt>& ctxt, long amt) {return true;}
           // returns false to stop processing, true otherwise
   virtual ~AutomorphHandler() {}
 };
-// Applications will derive from this class a handler that actually
-// does something with the "rotated" cipehrtexts. But it can be used
-// by itself as a do-nothing processor for debugging, or to calculate
-// the required automorphisms (see automorphVals in numbTh.h)
-
+/* Applications will derive from this class a handler that actually
+ * does something with the "rotated" cipehrtexts. The AutomorphHandler
+ * class above can also be used by itself as a do-nothing processor
+ * for debugging, or to calculate the required automorphisms (see
+ * automorphVals in numbTh.h)
+ *
+ * Upon calling handle, the multiAutomorph routine has ownership of
+ * Ctxt object. The application can take ownership, e.g., by calling
+ * ctxt.swap(...) or std::move(ctxt), and then the application must
+ * make sure that it frees the object when it no longer needs it.
+ */
 #endif // _MULTIAUTOMORPH_H

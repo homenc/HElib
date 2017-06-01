@@ -1302,10 +1302,15 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
   {FHE_NTIMER_START(mAutBrk2digits);
   parts[1].breakIntoDigits(polyDigits, nDigits);
   }
+  unique_ptr<Ctxt> tmpCtxt;
 
   for (long k: vals) {
-    Ctxt tmpCtxt(ZeroCtxtLike,*this);// empty ciphertext, same plaintext space
-    tmpCtxt.noiseVar = noise;        // noise estimate
+    if (tmpCtxt==nullptr) // allocate empty ciphertext, same plaintext space
+      tmpCtxt.reset(new Ctxt(ZeroCtxtLike,*this));
+    else
+      tmpCtxt->clear();
+
+    tmpCtxt->noiseVar = noise;        // noise estimate
 
     // Find a key-switching matrix to re-linearize this automorphism
     const KeySwitch& W = pubKey.getKeySWmatrix(1,k);
@@ -1315,7 +1320,7 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
     tmpPart = parts[0];
     tmpPart.automorph(k);
     tmpPart.addPrimesAndScale(context.specialPrimes);
-    tmpCtxt.addPart(tmpPart, /*matchPrimeSet=*/true);
+    tmpCtxt->addPart(tmpPart, /*matchPrimeSet=*/true);
 
     // "rotate" the digits before key-switching them
     tmpDigits = polyDigits;
@@ -1323,7 +1328,7 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
       tmpDigits[i].automorph(k);
 
     // Finally we multiply the vector of digits by the key-switching matrix
-    tmpCtxt.keySwitchDigits(W, tmpDigits);
+    tmpCtxt->keySwitchDigits(W, tmpDigits);
     }
     // Call the callback function to process this rotated ciphertext
     if (!handler.handle(tmpCtxt, k))
