@@ -1272,6 +1272,8 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
   return conv<double>(noiseVar*ratio*ratio + modSwitchAddedNoiseVar());
 }
 
+#include <unordered_set>
+#include <unordered_map>
 #include "multiAutomorph.h"
 void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
 {
@@ -1334,4 +1336,29 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
     if (!handler.handle(tmpCtxt, k))
       break;
   }
+}
+
+class GraphHandler: public AutomorphHandler {
+public:
+  const AutGraph& tree;
+  std::unordered_set<long> keys;
+  AutomorphHandler& appHandler; // Handler of the calling application
+
+  GraphHandler(const AutGraph& t, AutomorphHandler& h):
+    tree(t), appHandler(h) { for (auto x : t) keys.insert(x.first); }
+
+  bool handle(std::unique_ptr<Ctxt>& ctxt, long amt) override {
+    if (keys.count(amt)) { // internal node
+      keys.erase(amt);     // don't visit it again
+      ctxt->multiAutomorph(tree.at(amt), *this); // recursive call
+    }
+    return appHandler.handle(ctxt, amt);
+  }
+};
+
+void
+multiAutomorph(Ctxt& ctxt, const AutGraph& tree, AutomorphHandler& handler)
+{
+  GraphHandler h(tree, handler);
+  ctxt.multiAutomorph(tree.at(1), h);
 }
