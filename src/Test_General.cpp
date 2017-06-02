@@ -52,6 +52,10 @@
 
 static bool noPrint = false;
 
+extern long total_count0;
+extern long total_count1;
+extern long total_count2;
+
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
                long L, long m, const Vec<long>& gens, const Vec<long>& ords)
 {
@@ -208,6 +212,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     printAllTimers();
     std::cout << endl;
   }
+
   resetAllTimers();
   FHE_NTIMER_START(Check);
    
