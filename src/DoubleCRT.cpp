@@ -805,9 +805,26 @@ void DoubleCRT::randomize(const ZZ* seed)
       stream.get(buf, bufsz);
 
       for (long pos = 0; pos <= bufsz-nb; pos += nb) {
+#if 0
         unsigned long utmp = 0;
         for (long cnt = nb-1;  cnt >= 0; cnt--)
           utmp = (utmp << 8) | buf[pos+cnt]; 
+#else
+
+        // "Duff's device" to avoid loops
+        // It's a bit faster...but not much
+       
+        unsigned long utmp = buf[pos+nb-1];
+        switch (nb) {
+        case 8: utmp = (utmp << 8) | buf[pos+6];
+        case 7: utmp = (utmp << 8) | buf[pos+5];
+        case 6: utmp = (utmp << 8) | buf[pos+4];
+        case 5: utmp = (utmp << 8) | buf[pos+3];
+        case 4: utmp = (utmp << 8) | buf[pos+2];
+        case 3: utmp = (utmp << 8) | buf[pos+1];
+        case 2: utmp = (utmp << 8) | buf[pos+0];
+        }
+#endif
         utmp = (utmp & mask);
         
         long tmp = utmp;

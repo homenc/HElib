@@ -413,8 +413,11 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 
   // Add the columns in, one by one
   DoubleCRT tmp(context, IndexSet::emptySet());
+
   
   for (unsigned long i=0; i<polyDigits.size(); i++) {
+    FHE_NTIMER_START(applyKSMatrix);
+
     ai.randomize();
     tmp = polyDigits[i];
   
