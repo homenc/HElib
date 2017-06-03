@@ -16,9 +16,11 @@
    @file FHE.h
    @brief Public/secret keys for the BGV cryptosystem
 */
+#include <climits>
 #include "DoubleCRT.h"
 #include "FHEContext.h"
 #include "Ctxt.h"
+#include "multiAutomorph.h"
 
 /**
  * @class KeySwitch
@@ -123,14 +125,31 @@ class FHEPubKey { // The public key
   //! relative to the first secret key
   Ctxt pubEncrKey;
 
-  vector<long> skHwts; // The Hamming weight of the secret keys
-  vector<KeySwitch> keySwitching; // The key-switching matrices
+  std::vector<long> skHwts; // The Hamming weight of the secret keys
+  std::vector<KeySwitch> keySwitching; // The key-switching matrices
 
   // The keySwitchMap structure contains pointers to key-switching matrices
   // for re-linearizing automorphisms. The entry keySwitchMap[i][n] contains
   // the index j such that keySwitching[j] is the first matrix one needs to
   // use when re-linearizing s_i(X^n). 
-  vector< vector<long> > keySwitchMap;
+  std::vector< std::vector<long> > keySwitchMap;
+
+  /* multAutomorphTrees keeps for every keyID and every dimension a
+   * "tree" that specifies the order of automorphism to apply in order
+   * to get all the rotations for this diemnsion.
+   * multAutomorphTrees[i][j] is the tree for keyID i and dimension j.
+   * An automorphism tree is represented by a list of the form:
+   *
+   *   fromNode1: list of toNodes
+   *   fromNode2: list of toNodes
+   *   [...]
+   *
+   * where each node is represented by its representative in Zm*, and
+   * having an edge a->b in the tree implies that we have a key-switching
+   * matrix for k = b * a^{-1} mod m. The root of the tree is always 1
+   * (which in particular means that autGraph[1] must exist).
+   */
+  std::vector< std::vector<AutGraph> > multAutomorphTrees;
 
   // bootstrapping data
 
@@ -211,6 +230,9 @@ public:
   //! @brief Compute the reachability graph of key-switching matrices
   //! See Section 3.2.2 in the design document (KeySwitchMap)
   void setKeySwitchMap(long keyId=0);  // Computes the keySwitchMap pointers
+
+  void add2tree(long dim, long from, const std::vector<long>& vals, long keyID=0)
+  { multAutomorphTrees[keyID][dim][from]=vals; }
 
   //! @brief Encrypts plaintext, result returned in the ciphertext argument.
   //! The returned value is the plaintext-space for that ciphertext. When
@@ -305,18 +327,21 @@ void addAllMatrices(FHESecKey& sKey, long keyID=0);
 //! in at most two steps
 void addFewMatrices(FHESecKey& sKey, long keyID=0);
 
-//! @brief Generate all matrices s(X^{g^i})->s(X) for generators g of
-//! Zm* /(p) and i<ord(g). If g has different orders in Zm* and Zm* /(p)
-//! then generate also matrices of the form s(X^{g^{-i}})->s(X)
-void add1DMatrices(FHESecKey& sKey, long keyID=0);
-
 //! @brief Generate some matrices of the form s(X^{g^i})->s(X), but not all.
 //! For a generator g whose order is larger than bound, generate only enough
 //! matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
-void addSome1DMatrices(FHESecKey& sKey, long bound=100, long keyID=0);
+void addSome1DMatrices(FHESecKey& sKey, long bound=50, long keyID=0);
 
-//! Generate all Frobenius matrices of the form s(X^{2^i})->s(X)
-void addFrbMatrices(FHESecKey& sKey, long keyID=0);
+//! @brief Generate all matrices s(X^{g^i})->s(X) for generators g of
+//! Zm* /(p) and i<ord(g). If g has different orders in Zm* and Zm* /(p)
+//! then generate also matrices of the form s(X^{g^{-i}})->s(X)
+inline void add1DMatrices(FHESecKey& sKey, long keyID=0)
+{ addSome1DMatrices(sKey, LONG_MAX, keyID); }
+
+//! Generate all/some Frobenius matrices of the form s(X^{p^i})->s(X)
+void addSomeFrbMatrices(FHESecKey& sKey, long bound=50, long keyID=0);
+inline void addFrbMatrices(FHESecKey& sKey, long keyID=0)
+{ addSomeFrbMatrices(sKey, LONG_MAX, keyID); }
 
 //! Generate all key-switching matrices for a given permutation network
 class PermNetwork;

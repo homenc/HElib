@@ -38,26 +38,111 @@ void addFewMatrices(FHESecKey& sKey, long keyID)
   NTL::Error("addFewMatrices Not implemented yet");
 }
 
-// generate all matrices of the form s(X^{g^i})->s(X) for generators g of
-// Zm* /<2> and i<ord(g). If g has different orders in Zm* and Zm* /<2>
-// then generate also matrices of the form s(X^{g^{-i}})->s(X)
-void add1DMatrices(FHESecKey& sKey, long keyID)
+static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
   long m = context.zMStar.getM();
 
-  // key-switching matrices for the automorphisms
-  for (long i = 0; i < (long)context.zMStar.numOfGens(); i++) {
-    for (long j = 1; j < (long)context.zMStar.OrderOf(i); j++) {
-      long val = PowerMod(context.zMStar.ZmStarGen(i), j, m); // val = g^j
-      // From s(X^val) to s(X)
-      sKey.GenKeySWmatrix(1, val, keyID, keyID);
-      if (!context.zMStar.SameOrd(i))
-	// also from s(X^{1/val}) to s(X)
-	sKey.GenKeySWmatrix(1, InvMod(val,m), keyID, keyID);
+  bool native;
+  long ord, gi, ginv;
+  NTL::mulmod_precon_t gminv;
+  if (i==context.zMStar.numOfGens()) { // Frobenius matrices
+    ord = context.zMStar.getOrdP();
+    gi = context.zMStar.getP();
+    native = true;
+  }
+  else { // one of the "regular" dimensions
+    ord = context.zMStar.OrderOf(i);
+    gi = context.zMStar.ZmStarGen(i), ginv;
+    native = context.zMStar.SameOrd(i);
+    if (!native) {
+      ginv = NTL::InvMod(PowerMod(gi,ord,m), m); // g^{-ord} mod m
+      gminv = PrepMulModPrecon(ginv, m);
     }
   }
-  sKey.setKeySwitchMap(); // re-compute the key-switching map
+  for (long j = 1; j < ord; j++) {
+    long val = PowerMod(gi, j, m); // val = g^j
+    // From s(X^val) to s(X)
+    sKey.GenKeySWmatrix(1, val, keyID, keyID);
+    if (!native) { // also from s(X^{g^{i-ord}}) to s(X)
+      long val2 = MulModPrecon(val,ginv,m,gminv);
+      sKey.GenKeySWmatrix(1, val2, keyID, keyID);
+    }
+  }
+}
+
+static std::pair<long,long>
+computeSteps(long m, long ord, long bound, bool native)
+{
+  long baby,giant;
+  if (native) { // using giant+baby matrices
+    if (bound*bound >= 4*m)
+      giant = ceil(bound - sqrt((double)bound*bound -4*m)/2.0);
+    else
+      giant = sqrt(double(m));
+  }
+  else { // using giant+2*baby matrices
+    if (bound*bound >= 8*m)
+      giant = ceil(bound - sqrt((double)bound*bound -8*m)/2.0);
+    else
+      giant = sqrt(double(m));
+  }
+  baby = m/giant;
+  if (baby*giant<m) baby++;
+  return std::pair<long,long>(baby,giant);
+}
+
+static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
+{
+  const FHEcontext &context = sKey.getContext();
+  long m = context.zMStar.getM();
+
+  bool native;
+  long ord, gi, ginv;
+  NTL::mulmod_precon_t gminv;
+  if (i==context.zMStar.numOfGens()) { // Frobenius matrices
+    ord = context.zMStar.getOrdP();
+    gi = context.zMStar.getP();
+    native = true;
+  }
+  else { // one of the "regular" dimensions
+    ord = context.zMStar.OrderOf(i);
+    gi = context.zMStar.ZmStarGen(i), ginv;
+    native = context.zMStar.SameOrd(i);
+    if (!native) {
+      ginv = NTL::InvMod(PowerMod(gi,ord,m), m); // g^{-ord} mod m
+      gminv = PrepMulModPrecon(ginv, m);
+    }
+  }
+  long baby, giant;
+  std::tie(baby,giant) = computeSteps(m, ord, bound, native);
+
+  for (long j=1; j <= baby; j++) { // Add matrices for baby steps
+    long val = PowerMod(gi, j, m);  // g^j
+    sKey.GenKeySWmatrix(1, val, keyID, keyID);
+    if (!native) {
+      long val2 = MulModPrecon(val,ginv,m,gminv);
+      sKey.GenKeySWmatrix(1, val2, keyID, keyID);
+    }
+  }
+  for (long j=1; j <= giant; j++) { // Add matrices for giant steps
+    long val = PowerMod(gi, j*baby, m);  // g^{j*baby}
+    sKey.GenKeySWmatrix(1, val, keyID, keyID);
+  }
+
+  // VJS: experimantal feature...because the replication code
+  // uses rotations by -1, -2, -4, -8, we add a few
+  // of these as well...only the small ones are important,
+  // and we only need them if SameOrd(i)...
+  // Note: we do indeed get a nontrivial speed-up
+
+  if (native && i<context.zMStar.numOfGens()) {
+    for (long k = 1; k <= giant; k = 2*k) {
+      long j = ord - k;
+      long val = PowerMod(gi, j, m); // val = g^j
+      sKey.GenKeySWmatrix(1, val, keyID, keyID);
+    }
+  }
 }
 
 // generate only matrices of the form s(X^{g^i})->s(X), but not all of them.
@@ -66,69 +151,27 @@ void add1DMatrices(FHESecKey& sKey, long keyID)
 void addSome1DMatrices(FHESecKey& sKey, long bound, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
-  long m = context.zMStar.getM();
 
   // key-switching matrices for the automorphisms
   for (long i = 0; i < (long)context.zMStar.numOfGens(); i++) {
-    // For generators of small order, add all the powers
-    if (bound >= (long)context.zMStar.OrderOf(i))
-      for (long j = 1; j < (long)context.zMStar.OrderOf(i); j++) {
-	long val = PowerMod(context.zMStar.ZmStarGen(i), j, m); // val = g^j
-	// From s(X^val) to s(X)
-	sKey.GenKeySWmatrix(1, val, keyID, keyID);
-	if (!context.zMStar.SameOrd(i))
-	  // also from s(X^{1/val}) to s(X)
-	  sKey.GenKeySWmatrix(1, InvMod(val,m), keyID, keyID);
-      }
-    else { // For generators of large order, add only some of the powers
-      long num = SqrRoot(context.zMStar.OrderOf(i)); // floor(ord^{1/2})
-      if (num*num < (long) context.zMStar.OrderOf(i)) num++; // ceil(ord^{1/2})
-
-      // VJS: the above two lines replaces the following inexact calculation
-      // with an exact calculation
-      // long num = ceil(sqrt((double)context.zMStar.OrderOf(i)));
-
-      for (long j=1; j <= num; j++) { // Add matrices for g^j and g^{j*num}
-	long val1 = PowerMod(context.zMStar.ZmStarGen(i), j, m);  // g^j
-	long val2 = PowerMod(context.zMStar.ZmStarGen(i),num*j,m);// g^{j*num}
-	if (j < num) {
-	  sKey.GenKeySWmatrix(1, val1, keyID, keyID);
-	  sKey.GenKeySWmatrix(1, val2, keyID, keyID);
-	}
-	if (!context.zMStar.SameOrd(i)) {
-	  //	  sKey.GenKeySWmatrix(1, InvMod(val1,m), keyID, keyID);
-	  sKey.GenKeySWmatrix(1, InvMod(val2,m), keyID, keyID);
-	}
-      }
-
-      // VJS: experimantal feature...because the replication code
-      // uses rotations by -1, -2, -4, -8, we add a few
-      // of these as well...only the small ones are important,
-      // and we only need them if SameOrd(i)...
-      // Note: we do indeed get a nontrivial speed-up
-
-      if (context.zMStar.SameOrd(i)) {
-        for (long k = 1; k <= num; k = 2*k) {
-          long j = context.zMStar.OrderOf(i) - k;
-          long val = PowerMod(context.zMStar.ZmStarGen(i), j, m); // val = g^j
-          sKey.GenKeySWmatrix(1, val, keyID, keyID);
-        }
-      }
-    }
+          // For generators of small order, add all the powers
+    if (bound >= context.zMStar.OrderOf(i))
+      add1Dmats4dim(sKey, i, keyID);
+    else  // For generators of large order, add only some of the powers
+      addSome1Dmats4dim(sKey, i, bound, keyID);
   }
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
-// Generate all Frobenius matrices of the form s(X^{2^i})->s(X)
-void addFrbMatrices(FHESecKey& sKey, long keyID)
+// Generate all Frobenius matrices of the form s(X^{p^i})->s(X)
+void addSomeFrbMatrices(FHESecKey& sKey, long bound, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
-  long m = context.zMStar.getM();
+  if (bound >= (long)context.zMStar.getOrdP())
+    add1Dmats4dim(sKey, context.zMStar.numOfGens(), keyID);
+  else  // For generators of large order, add only some of the powers
+    addSome1Dmats4dim(sKey, context.zMStar.numOfGens(), bound, keyID);
 
-  for (long j = 1; j < (long)context.zMStar.getOrdP(); j++) {
-    long val = PowerMod(context.zMStar.getP(), j, m); // val = p^j mod m
-    sKey.GenKeySWmatrix(1, val, keyID, keyID);
-  }
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
@@ -156,13 +199,10 @@ void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID)
 void addTheseMatrices(FHESecKey& sKey,
 		      const std::set<long>& automVals, long keyID)
 {
-  cerr << "addTheseMatrices(";
   std::set<long>::iterator it;
   for (it=automVals.begin(); it!=automVals.end(); ++it) {
     long k = *it;
-    cerr << k << " ";
     sKey.GenKeySWmatrix(1, k, keyID, keyID);
   }
-  cerr << ")\n";
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
