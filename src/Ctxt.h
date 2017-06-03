@@ -339,7 +339,8 @@ public:
 
   Ctxt& operator*=(const Ctxt& other); // Multiply by aonther ciphertext
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
-  void multiAutomorph(const std::vector<long>& vals,AutomorphHandler &handler);
+  void multiAutomorph(const vector<long>& toVals, AutomorphHandler& handler,
+                      long fromVal=1, long KeyID=0);
   Ctxt& operator>>=(long k) { automorph(k); return *this; }
 
   //! @brief automorphism with re-lienarization

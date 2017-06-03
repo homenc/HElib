@@ -16,7 +16,6 @@
    @file FHE.h
    @brief Public/secret keys for the BGV cryptosystem
 */
-
 #include "DoubleCRT.h"
 #include "FHEContext.h"
 #include "Ctxt.h"
@@ -100,6 +99,7 @@ public:
 
   //! @brief returns a dummy static matrix with toKeyId == -1
   static const KeySwitch& dummy();
+  bool isDummy() const { return (toKeyID==-1); }
 
   //! A debugging method
   void verify(FHESecKey& sk);
@@ -110,7 +110,6 @@ public:
 ostream& operator<<(ostream& str, const KeySwitch& matrix);
 // We DO NOT have istream& operator>>(istream& str, KeySwitch& matrix);
 // instead must use the readMatrix method above, where you can specify context
-
 
 /**
  * @class FHEPubKey

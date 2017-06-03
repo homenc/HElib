@@ -1275,7 +1275,8 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 #include <unordered_set>
 #include <unordered_map>
 #include "multiAutomorph.h"
-void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
+void Ctxt::multiAutomorph(const vector<long>& toVals,
+                          AutomorphHandler& handler, long fromVal, long KeyID)
 {
   FHE_TIMER_START;
   long keyID=getKeyID();
@@ -1285,6 +1286,10 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
   }
   cleanUp();
 
+  long m = context.zMStar.getM();
+  long finv = NTL::InvMod(fromVal, m);
+  NTL::mulmod_precon_t fminv = PrepMulModPrecon(finv, m);
+
   // Compute the number of digits that we need and the esitmated
   // added noise from switching this ciphertext.
   long nDigits;
@@ -1292,7 +1297,7 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
   std::tie(nDigits, noise)
       = computeKSNoise(parts[1], pubKey, pubKey.keySWlist()[0].ptxtSpace);
 
-  cout << "Using "<<nDigits<<" digits\n";
+  //  cout << "Using "<<nDigits<<" digits\n";
   double logProd = context.logOfProduct(context.specialPrimes);
   noise += noiseVar * xexp(2*logProd);
 
@@ -1306,7 +1311,8 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
   }
   unique_ptr<Ctxt> tmpCtxt;
 
-  for (long k: vals) {
+  for (long v: toVals) {
+    long k = NTL::MulModPrecon(v, finv, m, fminv);;
     if (tmpCtxt==nullptr) // allocate empty ciphertext, same plaintext space
       tmpCtxt.reset(new Ctxt(ZeroCtxtLike,*this));
     else
@@ -1315,7 +1321,11 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
     tmpCtxt->noiseVar = noise;        // noise estimate
 
     // Find a key-switching matrix to re-linearize this automorphism
-    const KeySwitch& W = pubKey.getKeySWmatrix(1,k);
+
+    const KeySwitch& W = pubKey.getKeySWmatrix(1,k,KeyID,KeyID);
+    if (W.isDummy()) continue; // no such key-switching matrix exist
+    // FIXME: We should probably throw an exception in this case
+
     {FHE_NTIMER_START(mAutBody);
 
     // Add in the constant part
@@ -1333,32 +1343,38 @@ void Ctxt::multiAutomorph(const vector<long>& vals, AutomorphHandler& handler)
     tmpCtxt->keySwitchDigits(W, tmpDigits);
     }
     // Call the callback function to process this rotated ciphertext
-    if (!handler.handle(tmpCtxt, k))
+    if (!handler.handle(tmpCtxt, v))
       break;
   }
 }
 
 class GraphHandler: public AutomorphHandler {
 public:
+  long keyID;
   const AutGraph& tree;
   std::unordered_set<long> keys;
   AutomorphHandler& appHandler; // Handler of the calling application
 
-  GraphHandler(const AutGraph& t, AutomorphHandler& h):
-    tree(t), appHandler(h) { for (auto x : t) keys.insert(x.first); }
+  GraphHandler(const AutGraph& t, AutomorphHandler& h, long kid):
+    keyID(kid), tree(t), appHandler(h)
+  { // Insert all keys except 1 (1 is assumed)
+    for (auto x: t) if (x.first!=1) keys.insert(x.first);
+  }
 
   bool handle(std::unique_ptr<Ctxt>& ctxt, long amt) override {
     if (keys.count(amt)) { // internal node
       keys.erase(amt);     // don't visit it again
-      ctxt->multiAutomorph(tree.at(amt), *this); // recursive call
+      ctxt->multiAutomorph(tree.at(amt), *this, amt, keyID); // recursive call
     }
     return appHandler.handle(ctxt, amt);
   }
 };
 
-void
-multiAutomorph(Ctxt& ctxt, const AutGraph& tree, AutomorphHandler& handler)
+void multiAutomorph(Ctxt& ctxt, const AutGraph& tree,
+                    AutomorphHandler& handler, long keyID)
 {
-  GraphHandler h(tree, handler);
-  ctxt.multiAutomorph(tree.at(1), h);
+  GraphHandler h(tree, handler, keyID);
+  ctxt.multiAutomorph(tree.at(1), h, 1, keyID);
+  // logically we couls call h.handle here, but then
+  // we would have to allocate a unique_ptr.
 }

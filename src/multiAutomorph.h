@@ -56,7 +56,7 @@ typedef std::unordered_map< long, std::vector<long> > AutGraph;
  * for the different vectors. (A cycle in the underlying graph may
  * cause the same rotation amount to be returned more than once.)
  */
-void
-multiAutomorph(Ctxt& ctxt, const AutGraph& tree, AutomorphHandler& handler);
+void multiAutomorph(Ctxt& ctxt, const AutGraph& tree,
+                    AutomorphHandler& handler, long KeyID=0);
 
 #endif // _MULTIAUTOMORPH_H
