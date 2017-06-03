@@ -38,28 +38,32 @@ void addFewMatrices(FHESecKey& sKey, long keyID)
   NTL::Error("addFewMatrices Not implemented yet");
 }
 
+// This code block appears at least twice below
+#define computeParams(context,m,i)\
+  bool native;\
+  long ord, gi, ginv;\
+  NTL::mulmod_precon_t gminv;\
+  if (i==context.zMStar.numOfGens()) { /* Frobenius matrices */\
+    ord = context.zMStar.getOrdP();\
+    gi = context.zMStar.getP();\
+    native = true;\
+  }\
+  else { /* one of the "regular" dimensions */\
+    ord = context.zMStar.OrderOf(i);\
+    gi = context.zMStar.ZmStarGen(i), ginv;\
+    native = context.zMStar.SameOrd(i);\
+    if (!native) {\
+      ginv = NTL::InvMod(PowerMod(gi,ord,m), m); /* g^{-ord} mod m */\
+      gminv = PrepMulModPrecon(ginv, m);\
+    }\
+  }
+
 static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
   long m = context.zMStar.getM();
+  computeParams(context,m,i); // defines vars: native, ord, gi, ginv, gminv
 
-  bool native;
-  long ord, gi, ginv;
-  NTL::mulmod_precon_t gminv;
-  if (i==context.zMStar.numOfGens()) { // Frobenius matrices
-    ord = context.zMStar.getOrdP();
-    gi = context.zMStar.getP();
-    native = true;
-  }
-  else { // one of the "regular" dimensions
-    ord = context.zMStar.OrderOf(i);
-    gi = context.zMStar.ZmStarGen(i), ginv;
-    native = context.zMStar.SameOrd(i);
-    if (!native) {
-      ginv = NTL::InvMod(PowerMod(gi,ord,m), m); // g^{-ord} mod m
-      gminv = PrepMulModPrecon(ginv, m);
-    }
-  }
   for (long j = 1; j < ord; j++) {
     long val = PowerMod(gi, j, m); // val = g^j
     // From s(X^val) to s(X)
@@ -96,24 +100,8 @@ static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
   long m = context.zMStar.getM();
+  computeParams(context,m,i); // defines vars: native, ord, gi, ginv, gminv
 
-  bool native;
-  long ord, gi, ginv;
-  NTL::mulmod_precon_t gminv;
-  if (i==context.zMStar.numOfGens()) { // Frobenius matrices
-    ord = context.zMStar.getOrdP();
-    gi = context.zMStar.getP();
-    native = true;
-  }
-  else { // one of the "regular" dimensions
-    ord = context.zMStar.OrderOf(i);
-    gi = context.zMStar.ZmStarGen(i), ginv;
-    native = context.zMStar.SameOrd(i);
-    if (!native) {
-      ginv = NTL::InvMod(PowerMod(gi,ord,m), m); // g^{-ord} mod m
-      gminv = PrepMulModPrecon(ginv, m);
-    }
-  }
   long baby, giant;
   std::tie(baby,giant) = computeSteps(m, ord, bound, native);
 
