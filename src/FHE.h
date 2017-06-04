@@ -158,18 +158,18 @@ class FHEPubKey { // The public key
 
 public:
   FHEPubKey(): // this constructor thorws run-time error if activeContext=NULL
-    context(*activeContext), pubEncrKey(*this), recryptEkey(*this)
-      { recryptKeyID=-1; }
+    context(*activeContext), pubEncrKey(*this),
+    recryptEkey(*this), multAutomorphTrees(1) { recryptKeyID=-1; }
 
-  explicit
-  FHEPubKey(const FHEcontext& _context): 
-    context(_context), pubEncrKey(*this), recryptEkey(*this)
-      { recryptKeyID=-1; }
+  explicit FHEPubKey(const FHEcontext& _context): 
+    context(_context), pubEncrKey(*this), recryptEkey(*this),
+    multAutomorphTrees(1) { recryptKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
     context(other.context), pubEncrKey(*this), skHwts(other.skHwts),
     keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
-    recryptKeyID(other.recryptKeyID), recryptEkey(*this)
+    recryptKeyID(other.recryptKeyID), recryptEkey(*this),
+    multAutomorphTrees(other.multAutomorphTrees)
   { // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
     pubEncrKey.privateAssign(other.pubEncrKey);
     recryptEkey.privateAssign(other.recryptEkey);
@@ -231,8 +231,29 @@ public:
   //! See Section 3.2.2 in the design document (KeySwitchMap)
   void setKeySwitchMap(long keyId=0);  // Computes the keySwitchMap pointers
 
-  void add2tree(long dim, long from, const std::vector<long>& vals, long keyID=0)
-  { multAutomorphTrees[keyID][dim][from]=vals; }
+  ///@{
+  //! @name Manage Automorphism trees for all the dimensions
+
+  //! Removes all existing trees (if any) for a given dimension
+  void resetTree(long dim, long keyID=0)
+  {
+    if (multAutomorphTrees.size()>keyID
+        && multAutomorphTrees[keyID].size()>dim)
+      multAutomorphTrees[keyID][dim] = AutGraph(); // reset to an empty tree
+  }
+
+  //! Returns the tree for the given dimension (throw exception if non exists)
+  const AutGraph& getTree4dim(long dim, long keyID=0) const
+  { return multAutomorphTrees.at(keyID).at(dim); }
+
+  //! Adds an internal node with all its children to a tree.
+  //! Creates the tree if it does not exist yet.
+  void add2tree(long dim, long from, const std::vector<long>& vals,long keyID=0);
+
+  //! Returns the children of one internal node
+  const std::vector<long>& getChildrenInTree(long dim, long from, long keyID=0)
+    const { return multAutomorphTrees.at(keyID).at(dim).at(from); }
+  ///@}
 
   //! @brief Encrypts plaintext, result returned in the ciphertext argument.
   //! The returned value is the plaintext-space for that ciphertext. When

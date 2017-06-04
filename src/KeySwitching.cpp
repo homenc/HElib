@@ -13,6 +13,7 @@
  *
  * Copyright IBM Corporation 2012 All rights reserved.
  */
+#include <unordered_set>
 #include "NTL/ZZ.h"
 NTL_CLIENT
 #include "FHE.h"
@@ -41,8 +42,8 @@ void addFewMatrices(FHESecKey& sKey, long keyID)
 // This code block appears at least twice below
 #define computeParams(context,m,i)\
   bool native;\
-  long ord, gi, ginv;\
-  NTL::mulmod_precon_t gminv;\
+  long ord, gi, g2md;\
+  NTL::mulmod_precon_t g2mdminv;\
   if (i==context.zMStar.numOfGens()) { /* Frobenius matrices */\
     ord = context.zMStar.getOrdP();\
     gi = context.zMStar.getP();\
@@ -50,49 +51,55 @@ void addFewMatrices(FHESecKey& sKey, long keyID)
   }\
   else { /* one of the "regular" dimensions */\
     ord = context.zMStar.OrderOf(i);\
-    gi = context.zMStar.ZmStarGen(i), ginv;\
+    gi = context.zMStar.ZmStarGen(i);\
     native = context.zMStar.SameOrd(i);\
     if (!native) {\
-      ginv = NTL::InvMod(PowerMod(gi,ord,m), m); /* g^{-ord} mod m */\
-      gminv = PrepMulModPrecon(ginv, m);\
+      g2md = PowerMod(gi,-ord,m); /* g^{-ord} mod m */\
+      g2mdminv = PrepMulModPrecon(g2md, m);\
     }\
-  }
+  }\
+  NTL::mulmod_precon_t giminv = PrepMulModPrecon(gi, m);
+
 
 static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
   long m = context.zMStar.getM();
-  computeParams(context,m,i); // defines vars: native, ord, gi, ginv, gminv
+  computeParams(context,m,i); // defines vars: native, ord, gi, g2md, giminv, g2mdminv
 
-  for (long j = 1; j < ord; j++) {
-    long val = PowerMod(gi, j, m); // val = g^j
+  vector<long> vals;
+  for (long j=1,val=gi; j < ord; j++) {
     // From s(X^val) to s(X)
     sKey.GenKeySWmatrix(1, val, keyID, keyID);
     if (!native) { // also from s(X^{g^{i-ord}}) to s(X)
-      long val2 = MulModPrecon(val,ginv,m,gminv);
+      long val2 = MulModPrecon(val,g2md,m,g2mdminv);
       sKey.GenKeySWmatrix(1, val2, keyID, keyID);
+      vals.push_back(val2);
     }
+    vals.push_back(val);
+    val = MulModPrecon(val, gi, m, giminv); // val *= g mod m (= g^{j+1})
   }
+  sKey.resetTree(i,keyID); // remove existing tree, if any
+  sKey.add2tree(i, 1, vals, keyID);
 }
 
-static std::pair<long,long>
-computeSteps(long m, long ord, long bound, bool native)
+static std::pair<long,long> computeSteps(long ord, long bound, bool native)
 {
   long baby,giant;
   if (native) { // using giant+baby matrices
-    if (bound*bound >= 4*m)
-      giant = ceil(bound - sqrt((double)bound*bound -4*m)/2.0);
+    if (bound*bound >= 4*ord)
+      giant = ceil((bound - sqrt((double)bound*bound -4*ord))/2.0);
     else
-      giant = sqrt(double(m));
+      giant = sqrt((double)ord);
   }
   else { // using giant+2*baby matrices
-    if (bound*bound >= 8*m)
-      giant = ceil(bound - sqrt((double)bound*bound -8*m)/2.0);
+    if (bound*bound >= 8*ord)
+      giant = ceil((bound - sqrt((double)bound*bound -8*ord))/2.0);
     else
-      giant = sqrt(double(m));
+      giant = sqrt((double)ord);
   }
-  baby = m/giant;
-  if (baby*giant<m) baby++;
+  baby = ord/giant;
+  if (baby*giant<ord) baby++;
   return std::pair<long,long>(baby,giant);
 }
 
@@ -100,21 +107,24 @@ static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
   long m = context.zMStar.getM();
-  computeParams(context,m,i); // defines vars: native, ord, gi, ginv, gminv
+  computeParams(context,m,i); // defines vars: native, ord, gi, g2md, giminv, g2mdminv
 
   long baby, giant;
-  std::tie(baby,giant) = computeSteps(m, ord, bound, native);
+  std::tie(baby,giant) = computeSteps(ord, bound, native);
 
-  for (long j=1; j <= baby; j++) { // Add matrices for baby steps
-    long val = PowerMod(gi, j, m);  // g^j
+  for (long j=1,val=gi; j<=baby; j++) { // Add matrices for baby steps
     sKey.GenKeySWmatrix(1, val, keyID, keyID);
     if (!native) {
-      long val2 = MulModPrecon(val,ginv,m,gminv);
+      long val2 = MulModPrecon(val,g2md,m,g2mdminv);
       sKey.GenKeySWmatrix(1, val2, keyID, keyID);
     }
-  }
-  for (long j=1; j <= giant; j++) { // Add matrices for giant steps
-    long val = PowerMod(gi, j*baby, m);  // g^{j*baby}
+    val = MulModPrecon(val, gi, m, giminv); // val *= g mod m (= g^{j+1})
+   }
+
+  long gb = PowerMod(gi,baby,m); // g^baby
+  NTL::mulmod_precon_t gbminv = PrepMulModPrecon(gb, m);  
+  for (long j=2,val=gb; j < giant; j++) { // Add matrices for giant steps
+    val = MulModPrecon(val, gb, m, gbminv); // val = g^{(j+1)*baby}
     sKey.GenKeySWmatrix(1, val, keyID, keyID);
   }
 
@@ -125,12 +135,60 @@ static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
   // Note: we do indeed get a nontrivial speed-up
 
   if (native && i<context.zMStar.numOfGens()) {
-    for (long k = 1; k <= giant; k = 2*k) {
+    for (long k = 1; k < giant; k = 2*k) {
       long j = ord - k;
       long val = PowerMod(gi, j, m); // val = g^j
       sKey.GenKeySWmatrix(1, val, keyID, keyID);
     }
   }
+
+  // build the tree for this dimension, the internal nodes are 1 and
+  // (subset of) gi^{giant}, gi^{2*giant}, ..., gi^{baby*giant}. We
+
+  sKey.resetTree(i,keyID); // remove existing tree, if any
+
+  // keep a list of all the elements that are covered by the tree so far,
+  // initialized to only the root (=1).
+  std::unordered_set<long> covered({1});
+
+  // Make a list of the automorphisms for this dimension
+  std::vector<long> autos;
+  for (long j=1,val=gi; j<ord; j++) {
+    // Do we have matrices for val and/or val/gi^{di}?
+    if (!native) {
+      long val2 = MulModPrecon(val, g2md, m, g2mdminv);
+      if (sKey.haveKeySWmatrix(1,val2,keyID,keyID)) {
+        autos.push_back(val2);
+      }
+    }
+    if (sKey.haveKeySWmatrix(1,val,keyID,keyID)) {
+      autos.push_back(val);
+    }
+    val = MulModPrecon(val, gi, m, giminv); // g^{j+1}
+  }
+
+  // Insert internal nodes and their children to tree
+  for (long j=0,fromVal=1; j<giant; j++) {
+    NTL::mulmod_precon_t fromminv = PrepMulModPrecon(fromVal, m);      
+    vector<long> children;
+    for (long k: autos) {
+      long toVal = MulModPrecon(k, fromVal, m, fromminv);
+      if (covered.count(toVal)==0) { // toVal not covered yet
+        covered.insert(toVal);
+        children.push_back(toVal);
+      }
+    }
+    if (!children.empty()) { // insert fromVal with its children
+      sKey.add2tree(i, fromVal, children, keyID);
+    }
+    fromVal = MulModPrecon(fromVal, gb, m, gbminv); // g^{(j+1)*baby}
+  }
+
+  // Sanity-check, did we cover everything?
+  long toCover = native? ord: (2*ord-1);
+  if (covered.size()<toCover)
+    cerr << "**Warning: order-"<<ord<<" dimension, covered "<<covered.size()
+         << " of "<<toCover<<endl;
 }
 
 // generate only matrices of the form s(X^{g^i})->s(X), but not all of them.
