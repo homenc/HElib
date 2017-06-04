@@ -19,6 +19,7 @@
 #include "NumbTh.h"
 #include "IndexMap.h"
 #include "FHEContext.h"
+#include "timing.h"
 
 /**
 * @class DoubleCRTHelper
@@ -102,6 +103,9 @@ class DoubleCRT {
 
   template<class Fun>
   DoubleCRT& Op(const DoubleCRT &other, Fun fun,
+		bool matchIndexSets=true);
+
+  DoubleCRT& do_mul(const DoubleCRT &other, 
 		bool matchIndexSets=true);
 
   template<class Fun>
@@ -274,7 +278,8 @@ public:
 
   // Multiplication
   DoubleCRT& operator*=(const DoubleCRT &other) {
-    return Op(other,MulFun());
+    //return Op(other,MulFun());
+    return do_mul(other);
   }
 
   DoubleCRT& operator*=(const ZZX &poly) {
@@ -300,7 +305,8 @@ public:
   }
 
   void Mul(const DoubleCRT &other, bool matchIndexSets=true) {
-    Op(other, MulFun(), matchIndexSets); 
+    // Op(other, MulFun(), matchIndexSets); 
+    do_mul(other, matchIndexSets); 
   }
 
   // Division by constant
