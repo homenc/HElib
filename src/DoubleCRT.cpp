@@ -138,16 +138,65 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
     long pi = context.ithPrime(i);
     vec_long& row = map[i];
     const vec_long& other_row = (*other_map)[i];
-    
+
     for (long j = 0; j < phim; j++)
       row[j] = fun.apply(row[j], other_row[j], pi);
+
   }
   return *this;
 }
 
+
+
+// Victor says: I added this routine so I could look
+// examine its performance more carefully
+
+DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other, 
+			     bool matchIndexSets)
+{
+  FHE_TIMER_START;
+
+  if (isDryRun()) return *this;
+
+  if (&context != &other.context)
+    Error("DoubleCRT::Op: incompatible objects");
+
+  // Match the index sets, if needed
+  if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet()))
+    addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
+
+  // If you need to mod-up the other, do it on a temporary scratch copy
+  DoubleCRT tmp(context, IndexSet()); 
+  const IndexMap<vec_long>* other_map = &other.map;
+  if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
+    tmp = other;
+    tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
+    other_map = &tmp.map;
+  }
+
+  const IndexSet& s = map.getIndexSet();
+  long phim = context.zMStar.getPhiM();
+
+  // add/sub/mul the data, element by element, modulo the respective primes
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    long pi = context.ithPrime(i);
+    mulmod_t pi_inv = PrepMulMod(pi);
+    vec_long& row = map[i];
+    const vec_long& other_row = (*other_map)[i];
+
+
+    for (long j = 0; j < phim; j++)
+      row[j] = MulMod(row[j], other_row[j], pi, pi_inv);
+
+  }
+  return *this;
+}
+
+#if 0
 template
 DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const DoubleCRT &other, MulFun fun,
 			 bool matchIndexSets);
+#endif
 
 template
 DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const DoubleCRT &other, AddFun fun,
