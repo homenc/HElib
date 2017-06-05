@@ -53,14 +53,14 @@
  * lists of handles is a prefix of the other. For example, one can add a
  * ciphertext wrt (1,s(X^2)) to another wrt (1,s(X^2),s^2(X^2)), but not
  * to another ciphertext wrt (1,s).
- **/ 
-
+ **/
 #include "DoubleCRT.h"
 
 class KeySwitch;
 class FHEPubKey;
 class FHESecKey;
 class AutomorphHandler;
+class AutomorphVecIterator;
 
 /**
  * @class SKHandle
@@ -250,6 +250,7 @@ const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
 class Ctxt {
   friend class FHEPubKey;
   friend class FHESecKey;
+  friend class AutomorphVecIterator;
 
   const FHEcontext& context; // points to the parameters of this FHE instance
   const FHEPubKey& pubKey;   // points to the public encryption key;
@@ -339,8 +340,8 @@ public:
 
   Ctxt& operator*=(const Ctxt& other); // Multiply by aonther ciphertext
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
-  void multiAutomorph(const vector<long>& toVals, AutomorphHandler& handler,
-                      long fromVal=1, long KeyID=0);
+  void multiAutomorph(const vector<long>& toVals,
+                      AutomorphHandler& handler, long fromVal=1);
   Ctxt& operator>>=(long k) { automorph(k); return *this; }
 
   //! @brief automorphism with re-lienarization

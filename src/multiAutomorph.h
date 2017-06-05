@@ -11,31 +11,9 @@
  */
 #ifndef _MULTIAUTOMORPH_H
 #define _MULTIAUTOMORPH_H
-
-class Ctxt; // forward decleration
-
-// A virtual class to handle call-backs to get the output of the "low
-// level" multiAutomorph implementation. This "low level" is called as
-// ctxt.multiAutomorph(vec, handler), where vec is a vector of values
-// to use for automorphism and handler is derived from AutomorphHandler.
-class AutomorphHandler {
-public:
-  virtual bool handle(std::unique_ptr<Ctxt>& ctxt, long amt) {return true;}
-          // returns false to stop processing, true otherwise
-  virtual ~AutomorphHandler() {}
-};
-/* Applications will derive from this class a handler that actually
- * does something with the "rotated" cipehrtexts. The AutomorphHandler
- * class above can also be used by itself as a do-nothing processor
- * for debugging, or to calculate the required automorphisms (see
- * automorphVals in numbTh.h)
- *
- * Upon calling handle, the multiAutomorph routine has ownership of
- * Ctxt object. The application can take ownership, e.g., by calling
- * ctxt.swap(...) or std::move(ctxt), and then the application must
- * make sure that it frees the object when it no longer needs it.
- */
-
+#include <memory>
+#include <vector>
+#include <unordered_map>
 
 typedef std::unordered_map< long, std::vector<long> > AutGraph;
 /* The automorphism tree is represented by a list of the form:
@@ -56,7 +34,55 @@ typedef std::unordered_map< long, std::vector<long> > AutGraph;
  * for the different vectors. (A cycle in the underlying graph may
  * cause the same rotation amount to be returned more than once.)
  */
-void multiAutomorph(Ctxt& ctxt, const AutGraph& tree,
-                    AutomorphHandler& handler, long KeyID=0);
 
+
+// Interface #1: using call-backs:
+//--------------------------------
+// The AutomorphHandler class below is a virtual class for call-backs
+// to get the output of the multiAutomorph implementation. This is called
+// as ctxt.multiAutomorph(tree, handler), where tree is a tree as above
+// and handler is derived from AutomorphHandler.
+class Ctxt; // forward decleration
+class AutomorphHandler {
+public:
+  virtual bool handle(std::unique_ptr<Ctxt>& ctxt, long amt) {return true;}
+          // returns false to stop processing, true otherwise
+  virtual ~AutomorphHandler() {}
+};
+/* Applications can derive from this class a handler that actually
+ * does something with the "rotated" cipehrtexts. The AutomorphHandler
+ * class above can also be used by itself as a do-nothing processor
+ * for debugging, or to calculate the required automorphisms (see
+ * automorphVals in numbTh.h)
+ *
+ * The application can take ownership of Ctxt object, e.g., by calling
+ * ctxt.swap(...) or std::move(ctxt), and then the application must
+ * make sure that it frees the object when it no longer needs it.
+ */
+
+void multiAutomorph(Ctxt& ctxt, const AutGraph& tree,
+                    AutomorphHandler& handler);
+
+
+// Interface #2: using an iterator:
+//---------------------------------
+// The AutoIterator::next(ctxt) method will be called repeatedly by the
+// application, each time returning in ctxt the next automorphed ctxt
+// and returning the automorphism amount in its return value as an
+// elemnt in Zm*. Returns 0 When no more automorphisms are available.
+class AutoIterator {
+public:
+  static AutoIterator* build(Ctxt& c, const AutGraph& tree); // factory
+  virtual ~AutoIterator() {} // virtual destructor
+  virtual long next(Ctxt& c) =0;
+};
+/* Applications will use code similar to this:
+ *
+ *     const AutGraph& tree = publicKey.getTree4dim(i);
+ *     std::unique_ptr<AutoIterator> it(AutoIterator::build(ctxt,tree));
+ *     Ctxt tmp(ZeroCtxtLike, ctxt);
+ *     while (long val = it->next(tmp)) {
+ *       ... do something with val and tmp ...
+ *     }
+ */
 #endif // _MULTIAUTOMORPH_H
