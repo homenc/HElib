@@ -15,7 +15,6 @@
 #include <vector>
 #include <unordered_map>
 
-typedef std::unordered_map< long, std::vector<long> > AutGraph;
 /* The automorphism tree is represented by a list of the form:
  *
  *   fromNode1: list of toNodes
@@ -34,6 +33,24 @@ typedef std::unordered_map< long, std::vector<long> > AutGraph;
  * for the different vectors. (A cycle in the underlying graph may
  * cause the same rotation amount to be returned more than once.)
  */
+class AutGraph: public std::unordered_map< long, std::vector<long> >
+{
+  void dfsOrder(std::vector<long>& vec, long from) const
+  {
+    for (long v : this->at(from)) {
+      vec.push_back(v);
+      if (this->count(v) > 0) // internal node
+        dfsOrder(vec,v);
+    }
+  }
+public:
+  void getDFSorder(std::vector<long>& vec)
+  {
+    vec.clear();
+    vec.push_back(1);
+    dfsOrder(vec,1);
+  }
+};
 
 
 // Interface #1: using call-backs:
