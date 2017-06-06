@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 
 #include "FHE.h"
@@ -533,7 +529,7 @@ bool FHESecKey::operator==(const FHESecKey& other) const
 // encryption key.
 // It is assumed that the context already contains all parameters.
 long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
-			     long ptxtSpace, bool onlyLinear)
+			     long ptxtSpace, long maxDegKswitch)
 {
   if (sKeys.empty()) { // 1st secret-key, generate corresponding public key
     if (ptxtSpace<2)
@@ -558,10 +554,9 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
   sKeys.push_back(sKey); // add to the list of secret keys
   long keyID = sKeys.size()-1; // not thread-safe?
 
-  if (!onlyLinear) {
-    GenKeySWmatrix(2,1,keyID,keyID); // At least we need the s^2 -> s matrix
-    GenKeySWmatrix(3,1,keyID,keyID); //             and also s^3 -> s
-  }
+  for (long e=2; e<=maxDegKswitch; e++)
+    GenKeySWmatrix(e,1,keyID,keyID); // s^e -> s matrix
+
   return keyID; // return the index where this key is stored
 }
 
@@ -748,7 +743,7 @@ long FHESecKey::genRecryptData()
   const long hwt = context.rcData.skHwt;
   sampleHWt(keyPoly, hwt, context.zMStar.getPhiM());
   DoubleCRT newSk(keyPoly, context); // defined relative to all primes
-  long keyID = ImportSecKey(newSk, hwt, p2r, /*onlyLinear=*/true);
+  long keyID = ImportSecKey(newSk, hwt, p2r, /*maxDegKswitch=*/1);
 
   // Generate a key-switching matrix from key 0 to this key
   GenKeySWmatrix(/*fromSPower=*/1,/*fromXPower=*/1,

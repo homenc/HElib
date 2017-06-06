@@ -1,18 +1,16 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
+#ifndef _DoubleCRT_H_
+#define _DoubleCRT_H_
 /**
  * @file DoubleCRT.h
  * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
@@ -21,15 +19,6 @@
 #include "NumbTh.h"
 #include "IndexMap.h"
 #include "FHEContext.h"
-
-#if (ALT_CRT)
-#define DoubleCRT AltCRT
-#include "AltCRT.h"
-
-#else
-#ifndef _DoubleCRT_H_
-#define _DoubleCRT_H_
-
 
 /**
 * @class DoubleCRTHelper
@@ -143,6 +132,11 @@ public:
   //  (run-time error if active context is NULL)
   //  declared "explicit" to avoid implicit type conversion
   explicit DoubleCRT(const ZZX&poly); 
+
+  //! @brief Same as above, but with zzX's
+  DoubleCRT(const zzX&poly, const FHEcontext& _context, const IndexSet& indexSet);
+  DoubleCRT(const zzX&poly, const FHEcontext& _context);
+  explicit DoubleCRT(const zzX&poly); 
 
  // Without specifying a ZZX, we get the zero polynomial
   explicit DoubleCRT(const FHEcontext &_context);
@@ -368,6 +362,7 @@ public:
 
 
   void FFT(const ZZX& poly, const IndexSet& s);
+  void FFT(const zzX& poly, const IndexSet& s);
   // for internal use
 
 
@@ -398,5 +393,3 @@ typedef shared_ptr<DoubleCRT> DCRTptr;
 typedef shared_ptr<ZZX> ZZXptr;
 
 #endif // #ifndef _DoubleCRT_H_
-
-#endif // DoubleCRT or AltCRT

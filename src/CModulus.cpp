@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 /* CModulus.cpp - supports forward and backward length-m FFT transformations
  *
@@ -28,13 +24,8 @@
  * (vec_long), that store only the evaluation in primitive m-th
  * roots of unity.
  */
-
 #include "CModulus.h"
 #include "timing.h"
-
-#include "FHEContext.h"
-// needed to get ALT_CRT
-
 
 // It is assumed that m,q,context, and root are already set. If root is set
 // to zero, it will be computed by the compRoots() method. Then rInv is
@@ -72,7 +63,7 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 
   zz_pBak bak; 
 
-  if (!ALT_CRT && zms.getPow2()) {
+  if (zms.getPow2()) {
     // special case when m is a power of 2
 
     assert( explicitModulus );
@@ -92,6 +83,15 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 
     long k = zms.getPow2();
     long phim = 1L << (k-1); 
+
+    assert(k <= zz_pInfo->MaxRoot); 
+    // rootTables get initialized 0..zz_pInfo->Maxroot
+
+#ifdef FHE_OPENCL
+    altFFTInfo = MakeSmart<AltFFTPrimeInfo>();
+    InitAltFFTPrimeInfo(*altFFTInfo, *zz_pInfo->p_info, k-1);
+#endif
+
     long w0 = zz_pInfo->p_info->RootTable[0][k];
     long w1 = zz_pInfo->p_info->RootTable[1][k];
 
@@ -110,6 +110,7 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
       ipowers_aux[i] = PrepMulModPrecon(w, q);
       w = MulMod(w, w1, q);
     }
+
   
     return;
   }
@@ -181,24 +182,20 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
   iRb = other.iRb;
   phimx = other.phimx;
 
+#ifdef FHE_OPENCL
+  altFFTInfo = other.altFFTInfo;
+#endif
+
 
 
   return *this;
 }
 
 
-void Cmodulus::FFT(vec_long &y, const ZZX& x) const
+void Cmodulus::FFT_aux(vec_long &y, zz_pX& tmp) const
 {
-  FHE_TIMER_START;
-  zz_pBak bak; bak.save();
-  context.restore();
 
-  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
-  { FHE_NTIMER_START(FFT_remainder);
-    conv(tmp,x);      // convert input to zpx format
-  }
-
-  if (!ALT_CRT && zMStar->getPow2()) {
+  if (zMStar->getPow2()) {
     // special case when m is a power of 2
 
     long k = zMStar->getPow2();
@@ -219,7 +216,11 @@ void Cmodulus::FFT(vec_long &y, const ZZX& x) const
     for (long i = dx+1; i < phim; i++)
       yp[i] = 0;
 
+#ifdef FHE_OPENCL
+    AltFFTFwd(yp, yp, k-1, *altFFTInfo);
+#else
     FFTFwd(yp, yp, k-1, *zz_pInfo->p_info);
+#endif
 
     return;
   }
@@ -239,6 +240,35 @@ void Cmodulus::FFT(vec_long &y, const ZZX& x) const
     if (zMStar->inZmStar(i)) y[j++] = rep(coeff(tmp,i));
 }
 
+void Cmodulus::FFT(vec_long &y, const ZZX& x) const
+{
+  FHE_TIMER_START;
+  zz_pBak bak; bak.save();
+  context.restore();
+
+  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
+  { FHE_NTIMER_START(FFT_remainder);
+    convert(tmp,x);      // convert input to zpx format
+  }
+
+  FFT_aux(y, tmp);
+};
+
+void Cmodulus::FFT(vec_long &y, const zzX& x) const
+{
+  FHE_TIMER_START;
+  zz_pBak bak; bak.save();
+  context.restore();
+
+  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
+  { FHE_NTIMER_START(FFT_remainder);
+    convert(tmp,x);      // convert input to zpx format
+  }
+
+  FFT_aux(y, tmp);
+};
+
+
 
 void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
 {
@@ -246,7 +276,7 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
   zz_pBak bak; bak.save();
   context.restore();
 
-  if (!ALT_CRT && zMStar->getPow2()) {
+  if (zMStar->getPow2()) {
     // special case when m is a power of 2
 
     long k = zMStar->getPow2();
@@ -262,7 +292,11 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
     tmp.SetLength(phim);
     long *tmp_p = tmp.elts();
 
+#ifdef FHE_OPENCL
+    AltFFTRev1(tmp_p, yp, k-1, *altFFTInfo);
+#else
     FFTRev1(tmp_p, yp, k-1, *zz_pInfo->p_info);
+#endif
 
     x.rep.SetLength(phim);
     zz_p *xp = x.rep.elts();

@@ -1,18 +1,13 @@
-
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #ifndef _PAlgebra_H_
 #define _PAlgebra_H_
@@ -47,10 +42,10 @@
  * is a primitive m-th root of unity in R), we get that F_t is the minimal
  * polynomial of z^{1/t}.
  */
-
+#include <utility>
 #include "NumbTh.h"
 #include "cloned_ptr.h"
-
+#include "hypercube.h"
 
 //NTL_CLIENT
 
@@ -60,43 +55,32 @@ class PAlgebra {
 
   unsigned long phiM; // phi(m)
   unsigned long ordP; // the order of p in (Z/mZ)^*
-  unsigned long nSlots; // phi(m)/ordP = # of plaintext slots
 
   long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
 
   vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
-  vector<long> ords; // ords[i] is the order of gens[i] in quotient group kept
-                     // with a negative sign if different than order in (Z/mZ)*
 
+  //  native[i]==1 is gens[i] has the same order in the quotient
+  //  group as its order in Zm*. else native[i]==0.
+  NTL::Vec<GF2> native;
 
-  vector<long> prods; // \prods[i] = \prod_{j=i}^{gens.size()-1} |ords[i]|
+  CubeSignature cube; // the hypercube structure of Zm* /(p)
 
   ZZX PhimX;   // Holds the integer polynomial Phi_m(X)
   double cM;   // the ring constant c_m for Z[X]/Phi_m(X)
 
-  vector<unsigned long> T; // The representatives for the quotient group (Z/mZ)^*/(p)
+  vector<unsigned long> T; // The representatives for the quotient group Zm* /(p)
   vector<long> Tidx;  // i=Tidx[t] is the index i s.t. T[i]=t. 
                       // Tidx[t]==-1 if t notin T
 
-  vector<long> zmsIdx; // if t is the i'th element in (Z/mZ)* then zmsIdx[t]=i
-                       // zmsIdx[t]==-1 if t notin (Z/mZ)*
-
-  vector<long> dLogT; 
-  // holds the discrete-logarithms for elements in T: If (z/mZ)^*/(p)
-  // has n generators then dLogT is an array of n*nSlots interest, where
-  // the entries [in, in+1,...,(i+1)n-1] hold the discrete-logarithms for
-  // the i'th element of (z/mZ)^*/(p). 
-  // Namely, for i<nSlots we have dLogT[in,...,(i+1)n-1] = [e1,...,en]
-  // s.t. T[i] = prod_{i=1}^n gi^{ei} mod m (with n=gens.size())
-
-  //  vector<long> mFactors; // The prime-power factorization of m
+  vector<long> zmsIdx; // if t is the i'th element in Zm* then zmsIdx[t]=i
+                       // zmsIdx[t]==-1 if t notin Zm*
 
  public:
 
   PAlgebra(unsigned long mm, unsigned long pp = 2,
            const vector<long>& _gens = vector<long>(), 
            const vector<long>& _ords = vector<long>() );  // constructor
-
 
   bool operator==(const PAlgebra& other) const;
   bool operator!=(const PAlgebra& other) const {return !(*this==other);}
@@ -122,7 +106,7 @@ class PAlgebra {
   unsigned long getOrdP() const { return ordP; }
 
   //! The number of plaintext slots = phi(m)/ord(p)
-  unsigned long getNSlots() const { return nSlots; }
+  unsigned long getNSlots() const { return cube.getSize(); }
 
   //! if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
   long getPow2() const { return pow2; }
@@ -146,17 +130,21 @@ class PAlgebra {
 
   //! The order of i'th generator (if any)
   unsigned long OrderOf(unsigned long i) const
-  {  return (i<ords.size())? abs(ords[i]) : 0; }
+  {  return cube.getDim(i); }
+
+  //! The product prod_{j=i}^{n-1} OrderOf(i)
+  unsigned long ProdOrdsFrom(unsigned long i) const
+  {  return cube.getProd(i); }
 
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
   bool SameOrd(unsigned long i) const
-  {  return (i<ords.size())? (ords[i]>0) : false; }
+  {  return NTL::IsOne(native[i]); }
 
   //! @name Translation between index, represnetatives, and exponents
 
   //! Returns the i'th element in T
   unsigned long ith_rep(unsigned long i) const
-  {  return (i<nSlots)? T[i]: 0; }
+  {  return (i<getNSlots())? T[i]: 0; }
 
   //! Returns the index of t in T
   long indexOfRep(unsigned long t) const
@@ -170,45 +158,40 @@ class PAlgebra {
   long indexInZmstar(unsigned long t) const
   {  return (t>0 && t<m)? zmsIdx[t]: -1; }
 
-  //! Is t in [0,m-1] with (t,m)=1?
   bool inZmStar(unsigned long t) const
   {  return (t>0 && t<m && zmsIdx[t]>-1); }
-
-  //! @brief Returns ith coordinate of index k along the i'th dimension.
-  //! See Section 2.4 in the design document.
-  long coordinate(long i, long k) const;
- 
-  //! @brief adds offset to index k in the i'th dimension
-  long addCoord(long i, long k, long offset) const;
 
   //! @brief Returns prod_i gi^{exps[i]} mod m. If onlySameOrd=true,
   //! use only generators that have the same order as in (Z/mZ)^*.
   unsigned long exponentiate(const vector<unsigned long>& exps, 
 			      bool onlySameOrd=false) const;
 
-  //! Inverse of exponentiate
-  const long* dLog(unsigned long t) const {
-    long i = indexOfRep(t);
-    if (i<0) return NULL;
-    return &(dLogT[i*gens.size()]); // bug: this should be an iterator
+  //! @brief Returns coordinate of index k along the i'th dimension.
+  long coordinate(long i, long k) const { return cube.getCoord(k,i); }
+
+  //! Break an index into the hypercube to index of the dimension-dim
+  //! subcube and index inside that subcube.
+  std::pair<long,long> breakIndexByDim(long idx, long dim) const {
+    return cube.breakIndexByDim(idx, dim);
+  }
+  //! The inverse of breakIndexByDim
+  long assembleIndexByDim(std::pair<long,long> idx, long dim) const {
+    return cube.assembleIndexByDim(idx, dim);
+  }
+
+  //! @brief adds offset to index k in the i'th dimension
+  long addCoord(long i, long k, long offset) const {
+    return cube.addCoord(k,i,offset);
   }
 
   /* Miscellaneous */
 
-  //! The order of the quoteint group (Z/mZ)^* /(p) (if flag=false), or the
-  //! subgroup of elements with the same order as in (Z/mZ)^* (if flag=true)
-  unsigned long qGrpOrd(bool onlySameOrd=false) const { 
-    if (gens.size()<=0) return 1;
-    unsigned long ord = 1;
-    for (unsigned long i=0; i<ords.size(); i++)
-      if (!onlySameOrd || SameOrd(i)) ord *= abs(ords[i]);
-    return ord;
-  }
-
-  //! exps is an array of exponents (the dLog of some t in T), this function
+//! exps is an array of exponents (the dLog of some t in T), this function
   //! incerement exps lexicographic order, reutrn false if it cannot be
   //! incremented (because it is at its maximum value)
-  bool nextExpVector(vector<unsigned long>& exps) const;
+  bool nextExpVector(vector<unsigned long>& exps) const {
+    return cube.incrementCoords(exps);
+  }
 };
 
 
@@ -371,6 +354,8 @@ public:
 
 #endif
 
+
+
 template<class type> class PAlgebraModDerived;
 // forward declaration
 
@@ -531,7 +516,7 @@ public:
      @brief Returns ref to maskTable, which is used to implement rotations
      (in the EncryptedArray module).
 
-     maskTable[i][j] is a polynomial representation of a mask that is 1 in
+     `maskTable[i][j]` is a polynomial representation of a mask that is 1 in
      all slots whose i'th coordinate is at least j, and 0 elsewhere. We have:
      \verbatim
        maskTable.size() == zMStar.numOfGens()     // # of generators

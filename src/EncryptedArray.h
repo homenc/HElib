@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #ifndef _EncryptedArray_H_
 #define _EncryptedArray_H_
@@ -304,6 +300,7 @@ public:
   virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
 
   virtual PA_tag getTag() const { return tag; }
+  // tag is defined in PA_INJECT, see PAlgebra.h
 
 // DIRT: we're using undocumented NTL interfaces here
 #define FHE_DEFINE_LOWER_DISPATCH(n)\
@@ -315,7 +312,6 @@ public:
 
 
   NTL_FOREACH_ARG(FHE_DEFINE_LOWER_DISPATCH)
-
 
   const RX& getG() const { return mappingData.getG(); }
 
@@ -342,8 +338,10 @@ public:
   virtual void rotate(Ctxt& ctxt, long k) const;
   virtual void shift(Ctxt& ctxt, long k) const;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
+  template<class U> void // avoid this being "hidden" by other rotate1D's
+    rotate1D(vector<U>& out, const vector<U>& in, long i, long offset) const
+    { EncryptedArrayBase::rotate1D(out, in, i, offset); }
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
-
 
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array);  }
@@ -352,7 +350,9 @@ public:
     {  genericEncode(ptxt, array); }
 
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const;
 
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const;
   virtual void encodeUnitSelector(ZZX& ptxt, long i) const;
 
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const
@@ -362,6 +362,7 @@ public:
     { genericDecode(array, ptxt); }
 
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const;
+  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
 
   void decodeSomeSlots(std::vector< long > &array, const ZZX &ptxt, const std::vector< long > &positions) const;
 
@@ -430,6 +431,9 @@ public:
   /* the following are specialized methods, used to work over extension fields...they assume 
      the modulus context is already set
    */
+
+  void encode(zzX& ptxt, const vector< RX >& array) const;
+  void decode(vector< RX  >& array, const zzX& ptxt) const;
 
   void encode(ZZX& ptxt, const vector< RX >& array) const;
   void decode(vector< RX  >& array, const ZZX& ptxt) const;
@@ -794,14 +798,12 @@ void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
 void negate(const EncryptedArray& ea, NewPlaintextArray& pa);
 
 
-
-
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j);
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& vec);
 
 void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& pi);
 
-
+void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e);
 
 
 
@@ -822,10 +824,19 @@ void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 
-//! @brief incrementalZeroTest sets each res[i], for i=0..n-1, to a ciphertext
-//! in which each slot is 0 or 1 according to whether or not bits 0..i of
-//! corresponding slot in ctxt is zero (1 if not zero, 0 if zero). It is
-//! assumed that res and each res[i] is already initialized by the caller.
+//! @brief Map all non-zero slots to 1, leaving zero slots as zero.
+//! Assumes that r=1, and that all the slots contain elements from GF(p^d).
+void mapTo01(const EncryptedArray& ea, Ctxt& ctxt);
+// Implemented in eqtesting.cpp. We compute
+//             x^{p^d-1} = x^{(1+p+...+p^{d-1})*(p-1)}
+// by setting y=x^{p-1} and then outputting y * y^p * ... * y^{p^{d-1}},
+// with exponentiation to powers of p done via Frobenius.
+
+
+//! @brief (only for p=2, r=1), test if prefixes of bits in slots are all zero.
+//! Set slot j of res[i] to 0 if bits 0..i of j'th slot in ctxt are all zero,
+//! else sets slot j of res[i] to 1.
+//! It is assumed that res and the res[i]'s are initialized by the caller.
 void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 			 const Ctxt& ctxt, long n);
 // Complexity: O(d + n log d) smart automorphisms

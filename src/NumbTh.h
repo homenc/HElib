@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #ifndef _NumbTh
 #define _NumbTh
@@ -20,6 +16,7 @@
  * @brief Miscellaneous utility functions.
  **/
 #include <vector>
+#include <set>
 #include <cmath>
 #include <cassert>
 #include <string>
@@ -49,9 +46,9 @@
 #include <NTL/GF2EX.h>
 #include <NTL/lzz_pEX.h>
 
-// Test for the "right version" of NTL (currently 9.4.0)
-#if ((NTL_MAJOR_VERSION<9)||(NTL_MINOR_VERSION<4)||(NTL_REVISION<0))
-#error "This version of HElib requires NTL version 9.4.0 or above"
+// Test for the "right version" of NTL (currently 10.0.0)
+#if (NTL_MAJOR_VERSION<10)
+#error "This version of HElib requires NTL version 10.0.0 or above"
 #endif
 
 using namespace std;
@@ -64,9 +61,28 @@ namespace FHEglobals
   //! us quickly go over the evaluation of a circuit and estimate the
   //! resulting noise magnitude, without having to actually compute anything. 
   extern bool dryRun;
+
+  //! @brief A list of required automorphisms
+  //! When non-NULL, causes Ctxt::smartAutomorphism to just record the
+  //! requested automorphism rather than actualy performing it. This can
+  //! be used to get a list of needed automorphisms for certain operations
+  //! and then generate all these key-switching matrices. Should only be
+  //! used in conjunction with dryRun=true
+  extern std::set<long>* automorphVals; 
+  extern std::set<long>* automorphVals2; 
 }
 inline bool setDryRun(bool toWhat=true) { return (FHEglobals::dryRun=toWhat); }
 inline bool isDryRun() { return FHEglobals::dryRun; }
+
+inline void setAutomorphVals(std::set<long>* aVals)
+{ FHEglobals::automorphVals=aVals; }
+inline bool isSetAutomorphVals() { return FHEglobals::automorphVals!=NULL; }
+inline void recordAutomorphVal(long k) { FHEglobals::automorphVals->insert(k); }
+
+inline void setAutomorphVals2(std::set<long>* aVals)
+{ FHEglobals::automorphVals2=aVals; }
+inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=NULL; }
+inline void recordAutomorphVal2(long k) { FHEglobals::automorphVals2->insert(k); }
 
 #if (__cplusplus>199711L)
 #include <memory>
@@ -81,8 +97,9 @@ using namespace tr1;
 //! @typedef
 typedef unordered_map<string, const char *> argmap_t;
 
-typedef long LONG; // using this to identify casts that we should really get rid of
-                   // at some point in the future
+typedef long LONG; // using this to identify casts that we should
+                   // really get rid of at some point in the future
+typedef NTL::Vec<long> zzX;
 
 //! @brief Code for parsing command line arguments.
 /**
@@ -379,6 +396,11 @@ void convert(vec_zz_pE& X, const vector<ZZX>& A);
 void convert(mat_zz_pE& X, const vector< vector<ZZX> >& A);
 void convert(vector<ZZX>& X, const vec_zz_pE& A);
 void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A);
+void convert(NTL::Vec<long>& out, const NTL::ZZX& in);
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in);
+void convert(NTL::Vec<long>& out, const NTL::GF2X& in);
+void convert(NTL::ZZX& out, const NTL::Vec<long>& in);
+void convert(NTL::GF2X& out, const NTL::Vec<long>& in);
 ///@}
 
 //! A generic template that resolves to NTL's conv routine
@@ -632,9 +654,25 @@ template<class T> void rotate(Vec<T>& v, long k)
 // unsigned quantity...this leads to all kinds of annoying warning messages...
 //! @brief Size of STL vector as a long (rather than unsigned long)
 template <typename T>
-inline long lsize(const vector<T>& v) {
+inline long lsize(const std::vector<T>& v) {
   return (long) v.size();
 }
+
+//! NTL/std compatability
+template <typename T>
+inline long lsize(const NTL::Vec<T>& v) {
+  return v.length();
+}
+
+template <typename T>
+inline void resize(NTL::Vec<T>& v, long sz, const T& val=T()) {
+  return v.SetLength(sz, val);
+}
+template <typename T>
+inline void resize(std::vector<T>& v, long sz, const T& val=T()) {
+  return v.resize(sz, val);
+}
+
 
 //! @brief Testing if two vectors point to the same object
 // Believe it or not, this is really the way to do it...
@@ -740,10 +778,38 @@ vector<T> atovector(const char *a)
   return v2;
 }
 
+// plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
+// Result is calclated in the output b "in place", so a should not alias b.
+template <class RX, class RXModulus>
+void plaintextAutomorph(RX& b, const RX& a, long k, long m, const RXModulus& PhimX)
+{
+  // compute b(X) = a(X^k) mod (X^m-1)
+  b.SetLength(m);
+  for (long j = 0; j < m; j++) b[j] = 0;
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
+  for (long j = 0; j <= deg(a); j++) 
+    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
+  b.normalize();
+
+  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
+}
 
 //! Debug printing routines for vectors, ZZX'es, print only a few entries
 template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
 				    long nCoeffs=40);
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
+
+
+// right now, this is just a place-holder...it may or may not 
+// eventually be further fleshed out
+
+inline void convert(zz_pX& x, const zzX& a)
+{
+   conv(x.rep, a);
+   x.normalize();
+}
+
+// NOTE: Maybe NTL should contain conversion routines
+// like this for the various polynomial classes?
 
 #endif

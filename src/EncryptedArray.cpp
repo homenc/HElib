@@ -1,18 +1,13 @@
-
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
@@ -56,53 +51,41 @@ template<class type>
 void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
 {
   FHE_TIMER_START;
-  const PAlgebra& al = context.zMStar;
-
-  const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  assert(&context == &ctxt.getContext());
+  assert(i >= 0 && i < dimension());
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  assert(&context == &ctxt.getContext());
-  assert(i >= 0 && i < (long)al.numOfGens());
-
-  // Make sure amt is in the range [1,ord-1]
-  long ord = al.OrderOf(i);
-  amt %= ord;
+  const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  long m = getContext().zMStar.getM();
+  long g = getContext().zMStar.ZmStarGen(i);
+  long ord = sizeOfDimension(i);
+  amt %= ord;// DIRT: assumes division w/ remainder follows C++11 and C99 rules
   if (amt == 0) return;
-  long signed_amt = amt;
-  if (amt < 0) amt += ord;
 
-  // DIRT: the above assumes division with remainder
-  // follows C++11 and C99 rules
-
-  if (al.SameOrd(i)) { // a "native" rotation
-    long val = PowerMod(al.ZmStarGen(i), amt, al.getM());
+  if (dc || nativeDimension(i)) { // native dimension or don't-care
+    // For don't-care, we assume that any shifts "off the end" are zero
+    long val = PowerMod(g, amt, m);
     ctxt.smartAutomorph(val);
+    return;
   }
-  else if (dc) { 
-    // the "don't care" case...it is presumed that any shifts
-    // "off the end" are zero.  For this, we have to use 
-    // the "signed" version of amt.
-    long val = PowerMod(al.ZmStarGen(i), signed_amt, al.getM());
-    ctxt.smartAutomorph(val);
-  }
-  else {
-    // more expensive "non-native" rotation
-    assert(maskTable[i].size() > 0);
-    long val = PowerMod(al.ZmStarGen(i), amt, al.getM());
-    long ival = PowerMod(al.ZmStarGen(i), amt-ord, al.getM());
 
-    const RX& mask = maskTable[i][ord-amt];
-    DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
-    Ctxt tmp(ctxt); // a copy of the ciphertext
+  // more expensive "non-native" rotation
 
-    tmp.multByConstant(m1);    // only the slots in which m1=1
-    ctxt -= tmp;               // only the slots in which m1=0
-    ctxt.smartAutomorph(val);  // shift left by val
-    tmp.smartAutomorph(ival);  // shift right by ord-val
-    ctxt += tmp;               // combine the two parts
-  }
-  FHE_TIMER_STOP;
+  if (amt < 0) amt += ord;  // Make sure amt is in the range [1,ord-1]
+  assert(maskTable[i].size() > 0);
+  long val = PowerMod(g, amt, m);
+  long ival= PowerMod(g, amt-ord, m);
+
+  const RX& mask = maskTable[i][ord-amt];
+  DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
+  Ctxt tmp(ctxt); // a copy of the ciphertext
+
+  tmp.multByConstant(m1);    // only the slots in which m1=1
+  ctxt -= tmp;               // only the slots in which m1=0
+  ctxt.smartAutomorph(val);  // shift left by val
+  tmp.smartAutomorph(ival);  // shift right by ord-val
+  ctxt += tmp;               // combine the two parts
 }
 
 // Shift k positions along the i'th dimension with zero fill.
@@ -123,7 +106,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   long ord = al.OrderOf(i);
 
   if (k <= -ord || k >= ord) {
-    ctxt.multByConstant(to_ZZX(0));
+    ctxt.multByConstant(to_ZZ(0));
     return;
   }
 
@@ -141,7 +124,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
     mask = 1 - mask;
     val = PowerMod(al.ZmStarGen(i), amt, al.getM());
   }
-  DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
+  DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
   ctxt.multByConstant(m1);   // zero out slots where mask=0
   ctxt.smartAutomorph(val);  // shift left by val
   FHE_TIMER_STOP;
@@ -195,7 +178,8 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     long val = PowerMod(al.ZmStarGen(i), v, al.getM());
     long ival = PowerMod(al.ZmStarGen(i), v-ord, al.getM());
 
-    DoubleCRT m1(conv<ZZX>(maskTable[i][ord-v]), context, ctxt.getPrimeSet());
+    DoubleCRT m1(convert<zzX,RX>(maskTable[i][ord-v]),
+                 context, ctxt.getPrimeSet());
     tmp = ctxt;  // a copy of the ciphertext
 
     tmp.multByConstant(m1);    // only the slots in which m1=1
@@ -220,7 +204,7 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   for (i--; i >= 0; i--) {
     v = al.coordinate(i, amt);
 
-    DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
+    DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
     tmp = ctxt;
     tmp.multByConstant(m1); // only the slots in which mask=1
     ctxt -= tmp;            // only the slots in which mask=0
@@ -260,7 +244,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   // Shifting by more than the number of slots gives an all-zero cipehrtext
   if (k <= -nSlots || k >= nSlots) {
-    ctxt.multByConstant(to_ZZX(0));
+    ctxt.multByConstant(to_ZZ(0));
     return;
   }
 
@@ -280,7 +264,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   for (i--; i >= 0; i--) {
     v = al.coordinate(i, amt);
 
-    DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
+    DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
     tmp = ctxt;
     tmp.multByConstant(m1); // only the slots in which mask=1
     ctxt -= tmp;            // only the slots in which mask=0
@@ -302,7 +286,8 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   FHE_TIMER_STOP;
 }
 
-
+//FIXME: For now replicating the code for ZZX and zzX,
+// but really we need to move to zzX everywhere
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
 {
@@ -371,15 +356,59 @@ void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const NewPlaintextArray& arr
   encode(ptxt, array.getData<type>());
 }
 
-
-
-
 template<class type>
 void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const ZZX& ptxt) const
 {
   RBak bak; bak.save(); tab.restoreContext();
   decode(array.getData<type>(), ptxt);
 }
+
+
+//FIXME: For now replicating the code for ZZX and zzX,
+// but really we need to move to zzX everywhere
+template<class type>
+void EncryptedArrayDerived<type>::encodeUnitSelector(NTL::Vec<long>& ptxt, long i) const
+{
+  assert(i >= 0 && i < (long)context.zMStar.getNSlots());
+  RBak bak; bak.save(); tab.restoreContext();
+  RX res;
+  div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
+  mul(res, res, tab.getCrtCoeffs()[i]);
+  convert(ptxt, res);
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::encode(zzX& ptxt, const vector< RX >& array) const
+{
+  RX pp;
+  tab.embedInSlots(pp, array, mappingData); 
+  convert(ptxt,pp); 
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::encode(zzX& ptxt, const NewPlaintextArray& array) const
+{
+  RBak bak; bak.save(); tab.restoreContext();
+  encode(ptxt, array.getData<type>());
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::decode(vector< RX >& array, const NTL::Vec<long>& ptxt) const
+{
+  FHE_TIMER_START;
+  RX pp;
+  convert(pp, ptxt);
+  tab.decodePlaintext(array, pp, mappingData); 
+  FHE_TIMER_STOP;
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const NTL::Vec<long>& ptxt) const
+{
+  RBak bak; bak.save(); tab.restoreContext();
+  decode(array.getData<type>(), ptxt);
+}
+
 
 // this routine generates a random normal element
 // and initializes a matrix mapping from polynomial to 
@@ -527,7 +556,7 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
     long r = tab.getR();
 
     Mat<RE> M1;
-    // build d x d matrix, d is taken from the surrent NTL context for G
+    // build d x d matrix, d is taken from the current NTL context for G
     buildLinPolyMatrix(M1, p);
     Mat<RE> M2;
     ppInvert(M2, M1, p, r); // invert modulo prime-power p^r
@@ -545,7 +574,7 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
 
 
 // Apply the same linear transformation to all the slots.
-// C is the output of ea.buildLinPolyCoeffs
+// C[0...d-1] is the output of ea.buildLinPolyCoeffs
 void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 {
   assert(&ea.getContext() == &ctxt.getContext());
@@ -556,7 +585,7 @@ void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 
   vector<ZZX> encodedC(d);
   for (long j = 0; j < d; j++) {
-    vector<ZZX> v(nslots);
+    vector<ZZX> v(nslots); // all the slots of v equal C[j]
     for (long i = 0; i < nslots; i++) v[i] = C[j];
     ea.encode(encodedC[j], v);
   }
@@ -565,8 +594,9 @@ void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 }
 
 
-// Apply different transformations to different slots. Cvec is a vector of
-// length ea.size(), with each entry the output of ea.buildLinPolyCoeffs
+// Apply different transformations to different slots. Each row in
+// the matrix Cvec[0...nslots-1][0...d-1] is a length-d vector which
+// is the output of ea.buildLinPolyCoeffs
 void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
                       const vector< vector<ZZX> >& Cvec)
 {
@@ -579,10 +609,10 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
     assert(d == lsize(Cvec[i]));
 
   vector<ZZX> encodedC(d);
-  for (long j = 0; j < d; j++) {
-    vector<ZZX> v(nslots);
+  for (long j = 0; j < d; j++) { // encodedC[j] encodes j'th column in Cvec
+    vector<ZZX> v(nslots);       // copy j'th column to v
     for (long i = 0; i < nslots; i++) v[i] = Cvec[i][j];
-    ea.encode(encodedC[j], v);
+    ea.encode(encodedC[j], v);   // then encode it
   }
 
   applyLinPolyLL(ctxt, encodedC, ea.getDegree());
@@ -607,117 +637,10 @@ void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
     ctxt += tmp1;
   }
 }
+template void applyLinPolyLL(Ctxt& ctxt, const vector<zzX>& encodedC, long d);
 template void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d);
 template void applyLinPolyLL(Ctxt& ctxt, const vector<DoubleCRT>& encodedC, long d);
 
-#if 0
-/************************* OLD UNUSED CODE *************************/
-template<class type>
-void EncryptedArrayDerived<type>::mat_mul(Ctxt& ctxt, const PlaintextBlockMatrixBaseInterface& mat) const
-{
-  FHE_TIMER_START;
-  assert(this == &mat.getEA().getDerived(type()));
-  assert(&context == &ctxt.getContext());
-
-  RBak bak; bak.save(); tab.restoreContext();
-
-  const PlaintextBlockMatrixInterface<type>& mat1 = 
-    dynamic_cast< const PlaintextBlockMatrixInterface<type>& >( mat );
-
-  ctxt.cleanUp(); // not sure, but this may be a good idea
-
-  Ctxt res(ctxt.getPubKey(), ctxt.getPtxtSpace());
-  // a new ciphertext, encrypting zero
-  
-
-  long nslots = size();
-  long d = getDegree();
-
-  mat_R entry;
-  entry.SetDims(d, d);
-
-  vector<RX> entry1;
-  entry1.resize(d);
-  
-  vector< vector<RX> > diag;
-  diag.resize(nslots);
-  for (long j = 0; j < nslots; j++) diag[j].resize(d);
-
-  for (long i = 0; i < nslots; i++) {
-    // process diagonal i
-
-
-    bool zDiag = true;
-    long nzLast = -1;
-
-    for (long j = 0; j < nslots; j++) {
-      bool zEntry = mat1.get(entry, mcMod(j-i, nslots), j);
-      assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
-        // get(...) returns true if the entry is empty, false otherwise
-
-      if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
-
-      if (!zEntry) {    // non-empty entry
-
-        zDiag = false;  // mark diagonal as non-empty
-
-        // clear entries between last nonzero entry and this one
-
-        for (long jj = nzLast+1; jj < j; jj++) {
-          for (long k = 0; k < d; k++)
-            clear(diag[jj][k]);
-        }
-
-        nzLast = j;
-
-        // recode entry as a vector of polynomials
-        for (long k = 0; k < d; k++) conv(entry1[k], entry[k]);
-
-        // compute the lin poly coeffs
-        buildLinPolyCoeffs(diag[j], entry1);
-      }
-    }
-
-    if (zDiag) continue; // zero diagonal, continue
-
-    // clear trailing zero entries    
-    for (long jj = nzLast+1; jj < nslots; jj++) {
-      for (long k = 0; k < d; k++)
-        clear(diag[jj][k]);
-    }
-
-    // now diag[j] contains the lin poly coeffs
-
-    Ctxt shCtxt = ctxt;
-    rotate(shCtxt, i); 
-
-    // apply the linearlized polynomial
-    for (long k = 0; k < d; k++) {
-
-      // compute the constant
-      bool zConst = true;
-      vector<RX> cvec;
-      cvec.resize(nslots);
-      for (long j = 0; j < nslots; j++) {
-        cvec[j] = diag[j][k];
-        if (!IsZero(cvec[j])) zConst = false;
-      }
-
-      if (zConst) continue;
-
-      ZZX cpoly;
-      encode(cpoly, cvec);
-      // FIXME: record the encoded polynomial for future use
-
-      Ctxt shCtxt1 = shCtxt;
-      shCtxt1.frobeniusAutomorph(k);
-      shCtxt1.multByConstant(cpoly);
-      res += shCtxt1;
-    }
-  }
-  ctxt = res;
-}
-#endif
 /****************** End linear transformation code ******************/
 /********************************************************************/
 
@@ -748,9 +671,7 @@ void rotate(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
   ea.dispatch<rotate_pa_impl>(Fwd(pa), k); 
 }
 
-
-//=======================================================================================
-
+//=============================================================================
 
 template<class type>
 class shift_pa_impl {
@@ -774,20 +695,15 @@ void shift(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
   ea.dispatch<shift_pa_impl>(Fwd(pa), k); 
 }
 
-
-
-
-//=======================================================================================
-
-
+//=============================================================================
 
 template<class type>
 class encode_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const vector<long>& array)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    NewPlaintextArray& pa, const vector<long>& array)
   {
     PA_BOILER
 
@@ -795,8 +711,8 @@ public:
     convert(data, array);
   }
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const vector<ZZX>& array)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    NewPlaintextArray& pa, const vector<ZZX>& array)
   {
     PA_BOILER
 
@@ -837,12 +753,7 @@ void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const ZZX& val)
    encode(ea, pa, array);
 }
 
-
-
-//=======================================================================================
-
-
-
+//=============================================================================
 
 template<class type>
 class random_pa_impl {
@@ -864,12 +775,7 @@ void random(const EncryptedArray& ea, NewPlaintextArray& pa)
   ea.dispatch<random_pa_impl>(Fwd(pa)); 
 }
 
-
-
-//=======================================================================================
-
-
-
+//=============================================================================
 
 template<class type>
 class decode_pa_impl {
@@ -899,12 +805,7 @@ void decode(const EncryptedArray& ea, vector<ZZX>& array, const NewPlaintextArra
   ea.dispatch<decode_pa_impl>(Fwd(array), pa); 
 }
 
-
-
-
-//=======================================================================================
-
-
+//=============================================================================
 
 template<class type>
 class equals_pa_impl {
@@ -968,14 +869,7 @@ bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<
   return res;
 }
 
-
-
-
-
-//=======================================================================================
-
-
-
+//=============================================================================
 
 template<class type>
 class add_pa_impl {
@@ -1000,14 +894,7 @@ void add(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
   ea.dispatch<add_pa_impl>(Fwd(pa), other); 
 }
 
-
-
-
-
-//=======================================================================================
-
-
-
+//=============================================================================
 
 template<class type>
 class sub_pa_impl {
@@ -1032,12 +919,7 @@ void sub(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
   ea.dispatch<sub_pa_impl>(Fwd(pa), other); 
 }
 
-
-
-//=======================================================================================
-
-
-
+//=============================================================================
 
 template<class type>
 class mul_pa_impl {
@@ -1062,14 +944,7 @@ void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
   ea.dispatch<mul_pa_impl>(Fwd(pa), other); 
 }
 
-
-
-
-
-//=======================================================================================
-
-
-
+//=============================================================================
 
 template<class type>
 class negate_pa_impl {
@@ -1091,14 +966,7 @@ void negate(const EncryptedArray& ea, NewPlaintextArray& pa)
   ea.dispatch<negate_pa_impl>(Fwd(pa)); 
 }
 
-
-
-
-
-
-//=======================================================================================
-
-
+//=============================================================================
 
 template<class type>
 class frobeniusAutomorph_pa_impl {
@@ -1149,12 +1017,21 @@ void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const V
   ea.dispatch<frobeniusAutomorph_pa_impl>(Fwd(pa), vec); 
 }
 
+void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e)
+{
+  if (e<=1) return;
 
+  NewPlaintextArray pwr = pa; // holds x^{2^i} in i+1'st iteration
+  encode(ea, pa, 1L); // set pa =1 in every slot
+  while(e > 0) {
+    if (e & 1)
+      mul(ea, pa, pwr); // multiply if needed
+    mul(ea, pwr, pwr);  // squre
+    e >>= 1;
+  }
+}
 
-
-//=======================================================================================
-
-
+//=============================================================================
 
 template<class type>
 class applyPerm_pa_impl {
@@ -1185,12 +1062,7 @@ void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>&
   ea.dispatch<applyPerm_pa_impl>(Fwd(pa), pi); 
 }
 
-
-
-//=======================================================================================
-
-
-
+//=============================================================================
 
 template<class type>
 class print_pa_impl {
@@ -1222,23 +1094,6 @@ void print(const EncryptedArray& ea, ostream& s, const NewPlaintextArray& pa)
 {
   ea.dispatch<print_pa_impl>(Fwd(s), pa); 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 // Explicit instantiation

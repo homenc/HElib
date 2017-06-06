@@ -1,26 +1,22 @@
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
 #ifndef _EVAL_MAP_H_
 #define _EVAL_MAP_H_
-/* Copyright (C) 2012-2014 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
- */
 /** @file EvalMap.h
  *  @brief Implementing the recryption linear transformations
  */
 
 #include "EncryptedArray.h"
-#include "matrix.h"
+#include "matmul.h"
 
 //! @class EvalMap
 //! @brief Class that provides the functionality for the 
@@ -44,35 +40,24 @@
 //! the coefficients in each slot into a normal-basis representation,
 //! which helps with the unpacking procedure.
 //! 
-//! The constructor precomputes certain values, but the linear
+//! The constructor precomputes certain values, and the linear
 //! transformation itself is effected using the apply method.
 //!
 //! Note that the factorization in mvec must correspond to the
 //! generators used in PAlgebra.  The best way to ensure this is
-//! to used directly the output of the params program, which
-//! will supply values for mvec (to be used here), and gens and ords
-//! (to be used in initialize the FHEcontext).
+//! to directly use the output of the program in  params.cpp: that
+//! program computes values for mvec (to be used here), and gens
+//! and ords (to be used in initialize the FHEcontext).
 
 class EvalMap {
 private:
   const EncryptedArray& ea;
   bool invert;   // apply transformation in inverser order?
   long nfactors; // how many factors of m
+  std::unique_ptr<MatMulBase>            mat1;   // one block matrix
+  NTL::Vec<std::unique_ptr<MatMulBase> > matvec; // regular matrices
 
-#ifndef EVALMAP_CACHED    // no caching
-  shared_ptr<PlaintextBlockMatrixBaseInterface>   mat1;   // one block matrix
-  Vec< shared_ptr<PlaintextMatrixBaseInterface> > matvec; // regular matrices
-#else
-#if (EVALMAP_CACHED==0) // ZZX caching
-  CachedPtxtBlockMatrix mat1;
-  Vec<CachedPtxtMatrix> matvec;
-#else               // DoubleCRT cashing
-  CachedDCRTPtxtBlockMatrix mat1;
-  Vec<CachedDCRTPtxtMatrix> matvec;
-#endif
-#endif
 public:
-
   EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
           bool normal_basis = true);
 
@@ -80,6 +65,7 @@ public:
   // normal basis transformation when invert == true.
   // On by default, off for testing
 
+  void buildCache(MatrixCacheType cType);
   void apply(Ctxt& ctxt) const;
 };
 

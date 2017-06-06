@@ -1,21 +1,35 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #include "hypercube.h"
 #include <iomanip>
 
+
+  //! Break an index into the hypercube to index of the
+  //! dimension-dim subcube and index inside that subcube.
+std::pair<long,long> CubeSignature::breakIndexByDim(long idx, long dim) const
+{
+  std::pair<long,long> ans;
+  ans.first = (idx%prods[dim+1]) + (idx/prods[dim])*prods[dim+1];
+  ans.second = (idx % prods[dim]) / prods[dim+1];
+  return ans;
+}
+
+   //! The inverse of breakIndexByDim
+long CubeSignature::assembleIndexByDim(std::pair<long,long> idx, long dim) const
+{
+  long third = idx.first % prods[dim+1];
+  idx.first = (idx.first - third) * dims[dim];
+  return idx.first + idx.second*prods[dim+1] + third;
+}
 
 // Rotate k positions along the d'th dimension: The content of slot j that has
 // coordinate j_d in the d'th dimension is moved to j' that has coordinates the

@@ -1,0 +1,4 @@
+src/fhe.a
+src/*.o
+src/*_x
+src/*_x.exe
