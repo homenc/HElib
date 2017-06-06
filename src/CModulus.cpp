@@ -54,6 +54,8 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
   else
     q = qq;
 
+  qinv = PrepMulMod(q);
+
   zMStar = &zms;
   root = rt;
 
@@ -155,6 +157,7 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
 
   zMStar  =  other.zMStar; // Yes, really copy this pointer
   q       = other.q;
+  qinv    = other.qinv;
   m_inv   = other.m_inv;
 
   context = other.context;
