@@ -24,7 +24,7 @@ static bool noPrint = false;
 
 void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 
-void usage(char *prog) 
+void usage(char *prog)
 {
   cout << "Usage: "<<prog<<" [test=? [optional parameters...]]\n";
   cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
@@ -39,7 +39,7 @@ void usage(char *prog)
   cout << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
   cout << "  depth bounds the depth of permutation network [default=5]\n";
   cout << "  L is number of levels in chain [default=depth]\n\n";
-  cout << "dry=1 for dry run [default=0]\n";
+  cout << "dry=1 for dry run [default=1]\n";
   exit(0);
 }
 

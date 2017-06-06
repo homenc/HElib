@@ -136,11 +136,24 @@ public:
   virtual void random(vector< long >& array) const = 0;
   virtual void random(vector< ZZX >& array) const = 0;
 
-  // FIXME: Inefficient implementation, calls usual decode and returns one slot
+  virtual void decodeSomeSlots(std::vector< long > &array, const ZZX &ptxt, const std::vector< long > &positions) const = 0;
+  virtual void decodeSomeSlots(std::vector< NTL::ZZX > &array, const ZZX &ptxt, const std::vector< long > &positions) const = 0;
+  // backard compatibility
   long decode1Slot(const ZZX& ptxt, long i) const
-  { vector< long > v; decode(v, ptxt); return v.at(i); }
+  { long slot; decode1Slot(slot, ptxt, i); return slot; }
+  void decode1Slot(long &slot, const ZZX& ptxt, long i) const
+  {
+    std::vector<long> array, position(1, i);
+    decodeSomeSlots(array, ptxt, position);
+    slot = array.front();
+  }
   void decode1Slot(ZZX& slot, const ZZX& ptxt, long i) const
-  { vector< ZZX > v; decode(v, ptxt); slot=v.at(i); }
+  {
+    std::vector<NTL::ZZX> array;
+    std::vector<long> position(1, i);
+    decodeSomeSlots(array, ptxt, position);
+    slot = array.front();
+  }
 
   //! @brief Encodes a vector with 1 at position i and 0 everywhere else
   virtual void encodeUnitSelector(ZZX& ptxt, long i) const = 0;
@@ -350,6 +363,10 @@ public:
 
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const;
   virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
+
+  void decodeSomeSlots(std::vector< long > &array, const ZZX &ptxt, const std::vector< long > &positions) const;
+
+  void decodeSomeSlots(std::vector< NTL::ZZX > &array, const ZZX &ptxt, const std::vector< long > &positions) const;
 
   virtual void random(vector< long  >& array) const
     { genericRandom(array); } // choose at random and convert to vector<long>
@@ -622,6 +639,11 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
     { rep->decode(array, ptxt); }
   void decode(NewPlaintextArray& array, const ZZX& ptxt) const 
     { rep->decode(array, ptxt); }
+
+  void decodeSomeSlots(std::vector< long > &array, const ZZX &ptxt, const std::vector< long > &positions) const
+    { rep->decodeSomeSlots(array, ptxt, positions); }
+  void decodeSomeSlots(std::vector< NTL::ZZX > &array, const ZZX &ptxt, const std::vector< long > &positions) const
+    { rep->decodeSomeSlots(array, ptxt, positions); }
 
   void random(vector< long  >& array) const
     { rep->random(array); }

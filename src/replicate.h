@@ -46,6 +46,8 @@ class RepAuxDim;
 //! On an n-slot ciphertext, this algorithm performs O(log n) 1D rotations.  
 void replicate(const EncryptedArray& ea, Ctxt& ctx, long pos);
 
+void replicate(const EncryptedArray& ea, Ctxt& ctx, long pos, const long onlyFirstK);
+
 //! @brief A lower-level routine. Same as replicate, but assumes
 //! all slots are zero except slot #pos.
 void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos);
