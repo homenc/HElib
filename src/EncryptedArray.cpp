@@ -331,6 +331,37 @@ void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const ZZX& pt
   decode(array.getData<type>(), ptxt);
 }
 
+template<class type>
+void EncryptedArrayDerived<type>::decodeSomeSlots(std::vector< long > &array, const ZZX &ptxt, const std::vector< long > &positions) const
+{
+  for (long p : positions)
+      assert(p >= 0 && p < size() && "Invalid position for decodeSomeSlots");
+  FHE_TIMER_START;
+  RBak bak; bak.save(); tab.restoreContext(); // call as in genericDecode
+  RX pp;
+  conv(pp, ptxt);
+
+  std::vector< RX > slots;
+  tab.decodeSomePlaintexts(slots, pp, positions, mappingData);
+  convert(array, slots);
+  FHE_TIMER_STOP;
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::decodeSomeSlots(std::vector< NTL::ZZX > &array, const ZZX &ptxt, const std::vector< long > &positions) const
+{
+  for (long p : positions)
+      assert(p >= 0 && p < size() && "Invalid position for decodeSomeSlots");
+  FHE_TIMER_START;
+  RBak bak; bak.save(); tab.restoreContext(); // call as in genericDecode
+  RX pp;
+  conv(pp, ptxt);
+
+  std::vector< RX > slots;
+  tab.decodeSomePlaintexts(slots, pp, positions, mappingData);
+  convert(array, slots);
+  FHE_TIMER_STOP;
+}
 
 //FIXME: For now replicating the code for ZZX and zzX,
 // but really we need to move to zzX everywhere
