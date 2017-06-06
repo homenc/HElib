@@ -106,7 +106,7 @@ library, currently these are:
      DoubleCRT's with every recryption operation. 
 
      EVALMAP_CACHED=1 caches these constants directly as DoubleCRT's,
-     this may take a significant amount of memeory.
+     this may take a significant amount of memory.
 
 
    -DFHE_THREADS  tells HElib to enable generic multithreading capabilities;
