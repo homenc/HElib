@@ -180,7 +180,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     long pi = context.ithPrime(i);
-    mulmod_t pi_inv = PrepMulMod(pi);
+    mulmod_t pi_inv = context.ithModulus(i).getQInv(); 
     vec_long& row = map[i];
     const vec_long& other_row = (*other_map)[i];
 
@@ -851,14 +851,16 @@ void DoubleCRT::randomize(const ZZ* seed)
     long j = 0;
     
     for (;;) {
+      { FHE_NTIMER_START(randomize_stream);
       stream.get(buf, bufsz);
+      }
 
       for (long pos = 0; pos <= bufsz-nb; pos += nb) {
-#if 0
+#if 1
         unsigned long utmp = 0;
         for (long cnt = nb-1;  cnt >= 0; cnt--)
           utmp = (utmp << 8) | buf[pos+cnt]; 
-#else
+#elif 0
 
         // "Duff's device" to avoid loops
         // It's a bit faster...but not much
@@ -873,6 +875,31 @@ void DoubleCRT::randomize(const ZZ* seed)
         case 3: utmp = (utmp << 8) | buf[pos+1];
         case 2: utmp = (utmp << 8) | buf[pos+0];
         }
+
+#else
+        unsigned long utmp = buf[pos+nb-1];
+
+        {
+
+        // This is gcc non-standard. Works also on clang and icc.
+        
+        static void *dispatch_table[] =
+           { &&L0, &&L1, &&L2, &&L3, &&L4, &&L5, &&L6, &&L7, &&L8 };
+
+        goto *dispatch_table[nb];
+   
+
+        L8: utmp = (utmp << 8) | buf[pos+6];
+        L7: utmp = (utmp << 8) | buf[pos+5];
+        L6: utmp = (utmp << 8) | buf[pos+4];
+        L5: utmp = (utmp << 8) | buf[pos+3];
+        L4: utmp = (utmp << 8) | buf[pos+2];
+        L3: utmp = (utmp << 8) | buf[pos+1];
+        L2: utmp = (utmp << 8) | buf[pos+0];
+        L1: ;
+        L0: ;
+        }
+
 #endif
         utmp = (utmp & mask);
         
