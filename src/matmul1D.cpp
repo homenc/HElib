@@ -16,7 +16,7 @@
 #include "EncryptedArray.h"
 #include "matmul.h"
 
-#if 1
+#if 0
 
 
 // A class that implements the basic (sparse) 1D matrix-vector functions
