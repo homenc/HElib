@@ -287,7 +287,7 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
   EncryptedArray ea(context, context.alMod);
 
   // Test a "normal" matrix over the extension field
-  {
+  if (0) {
     // choose a random plaintext square matrix
     std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea, dim, g));
 
@@ -323,7 +323,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
     else
       cout << "Grrr@*\n";
   }
-  {
+
+  if (1) {
     // choose a random plaintext square matrix
     std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
 
@@ -336,9 +337,16 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
-    cout << " Multiplying 1D with MatMulBase+zzx cache... " << std::flush;
-    buildCache4MatMul1D(*ptr, dim, cachezzX);// build the cache
+    cout << " Multiplying 1D with MatMulBase+CDRT cache... " << std::flush;
+    { FHE_NTIMER_START(aaaa_matmul1D_cache);
+    buildCache4MatMul1D(*ptr, dim, cacheDCRT);// build the cache
+    }
+
+
+    { FHE_NTIMER_START(aaaa_matmul1D_apply);
     matMul1D(ctxt, *ptr, dim);               // then use it
+    }
+
     matMul1D(v, *ptr, dim);     // multiply the plaintext vector
 
     NewPlaintextArray v1(ea);
@@ -348,10 +356,12 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
       cout << "Nice!!\n";
     else
       cout << "Grrr@*\n";
+    printNamedTimer(cout, "aaaa_matmul1D_cache");
+    printNamedTimer(cout, "aaaa_matmul1D_apply");
   }
 
   // Test a "multi" matrix over the extension field
-  {
+  if (0) {
     // choose a random plaintext square matrix
     std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
 
@@ -386,7 +396,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
     else
       cout << "Grrr@*\n";
   }
-  {
+
+  if (0) {
     // choose a random plaintext square matrix
     std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
 
@@ -414,7 +425,7 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
   }
 
   // Test a "block matrix" over the base field
-  {
+  if (0) {
     // choose a random plaintext square matrix
     shared_ptr<MatMulBase> ptr(buildRandomBlockMatrix(ea,dim));
 
@@ -451,7 +462,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
     else
       cout << "Grrr@*\n";
   }
-  {
+
+  if (0) {
     // choose a random plaintext square matrix
     shared_ptr<MatMulBase> ptr(buildRandomBlockMatrix(ea,dim));
 
@@ -476,8 +488,9 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
     else
       cout << "Grrr@*\n";
   }
+
   // Test multiple "block" matrices over the base field
-  {
+  if (0) {
     // choose a random plaintext square matrix
     shared_ptr<MatMulBase> ptr(buildRandomMultiBlockMatrix(ea,dim));
 

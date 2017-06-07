@@ -307,6 +307,9 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
 void FHEPubKey::add2tree(long dim, long from,
                          const std::vector<long>& vals,long keyID)
 {
+  //cerr << "*** add2tree: " << dim << " " << from << " ";
+  //for (auto val: vals) cerr << val << " ";
+  //cerr << "\n";
   if (multAutomorphTrees.size()<=keyID)
     multAutomorphTrees.resize(keyID+1);
   if (multAutomorphTrees[keyID].size()<=dim)

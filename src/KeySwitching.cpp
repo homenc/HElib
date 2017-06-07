@@ -100,6 +100,8 @@ static std::pair<long,long> computeSteps(long ord, long bound, bool native)
   }
   baby = ord/giant;
   if (baby*giant<ord) baby++;
+
+  //cerr << "*** giant steps = " << giant << "\n";
   return std::pair<long,long>(baby,giant);
 }
 
