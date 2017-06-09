@@ -15,8 +15,55 @@
 #include <NTL/BasicThreadPool.h>
 #include "EncryptedArray.h"
 #include "matmul.h"
+#include "multiAutomorph.h"
 
-#if 0
+#if 1
+
+
+// Translate a value x in Zm* to the index e s.t. g_i^e=x (mod m)
+// in a native dimension, returns e in 0..ord_i-1
+// in a non-native dimension, returns e in -ord_i+1..ord_i-1
+// returns -ord_i if it can't find such an e
+
+// For now, this is just done by brute-force search, which is
+// probably good enough.
+static
+long val2index(const PAlgebra& zMStar, long dim, long x)
+{
+  long m = zMStar.getM();
+  long g = zMStar.ZmStarGen(dim);
+  long ord = zMStar.OrderOf(dim);
+
+  long e = 0;
+  long g2e = 1;
+
+  mulmod_precon_t gminv = PrepMulModPrecon(g, m);
+
+  while (e < ord && g2e != x) {
+    e++;
+    g2e = MulModPrecon(g2e, g, m, gminv);
+  }
+
+  if (e < ord) return e;
+
+  if (zMStar.SameOrd(dim)) return -ord;
+
+  x = MulMod(x, g2e, m);
+
+  e = 0;
+  g2e = 1;
+
+  while (e < ord && g2e != x) {
+    e++;
+    g2e = MulModPrecon(g2e, g, m, gminv);
+  }
+
+  if (e < ord) return e-ord;
+
+  return -ord;
+
+}
+
 
 
 // A class that implements the basic (sparse) 1D matrix-vector functions
@@ -132,14 +179,16 @@ public:
 
   void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
   {
-    assert(dim >= 0 && dim <= ea.dimension());
+    assert(dim >= 0 && dim < ea.dimension());
     RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
+
+    if (!ea.nativeDimension(dim)) Error("not handled yet");
 
     std::unique_ptr<Ctxt> res, shCtxt;
     if (ctxt!=nullptr) { // we need to do an actual multiplication
       ctxt->cleanUp(); // not sure, but this may be a good idea
       res.reset(new Ctxt(ZeroCtxtLike, *ctxt));
-      shCtxt.reset(new Ctxt(*ctxt));
+      shCtxt.reset(new Ctxt(ZeroCtxtLike, *ctxt));
     }
 
     // Check if we have the relevant constant in cache
@@ -147,11 +196,33 @@ public:
     CachedDCRTMatrix* dcp;
     mat.getCache(&zcp, &dcp);
 
+    // set up the AutoIterator, if we have a ctxt
+    std::unique_ptr<AutoIterator> autoIterator;
+    if (ctxt) {
+      autoIterator.reset(AutoIterator::build(*ctxt, ctxt->getPubKey().getTree4dim(dim)));
+    }
+
     // Process the diagonals one at a time
     zzX cpoly;
-    long lastRotate = 0;
-    long D = (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
-    for (long i = 0; i < D; i++) { // process diagonal i
+    long D = ea.sizeOfDimension(dim);
+    for (long cnt = 0; cnt < D; cnt++) { // process one diagonal 
+      long i; //process diagonal i
+
+      if (!ctxt) {
+        i = cnt;
+      }
+      else if (cnt == 0) {
+        i = 0;
+        *shCtxt = *ctxt;
+      }
+      else {
+        long x = autoIterator->next(*shCtxt);
+        assert(x !=0);
+        i = val2index(ea.getContext().zMStar, dim, x);
+        assert(i >= 0);
+      }
+
+
       zzX* zxPtr=nullptr;
       DoubleCRT* dxPtr=nullptr;
 
@@ -171,19 +242,7 @@ public:
 
       // Non-zero diagonal, store it in cache and/or multiply/add it
 
-      if (ctxt!=nullptr && res!=nullptr) {
-        // rotate by i, multiply by the polynomial, then add to the result
-        if (i>0) {
-          if (ea.nativeDimension(dim)) { 
-            ea.rotate1D(*ctxt, dim, i-lastRotate);
-            *shCtxt = *ctxt;
-          } else {
-            *shCtxt = *ctxt;
-            ea.rotate1D(*shCtxt, dim, i); // rotate by i
-          }
-          lastRotate = i;
-	} // if i==0 we already have *shCtxt == *ctxt
-
+      if (ctxt) {
         if (dxPtr!=nullptr) shCtxt->multByConstant(*dxPtr);
 	else                shCtxt->multByConstant(*zxPtr);
 	*res += *shCtxt;
@@ -196,7 +255,7 @@ public:
       }
     } // end of loop over diagonals
 
-    if (ctxt!=nullptr && res!=nullptr) // copy result back to ctxt
+    if (ctxt) // copy result back to ctxt
       *ctxt = *res;
 
     // "install" the cache (if needed)

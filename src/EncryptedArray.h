@@ -220,6 +220,7 @@ public:
     return getContext().zMStar.addCoord(i, k, offset);
   }
 
+
   //! @brief rotate an array by offset in the i'th dimension
   //! (output should not alias input)
   template<class U> void rotate1D(vector<U>& out, const vector<U>& in,

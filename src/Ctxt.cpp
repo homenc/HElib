@@ -111,6 +111,7 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
   // Add the columns in, one by one
   DoubleCRT tmpDCRT(context, IndexSet::emptySet());  
   for (size_t i=0; i<digits.size(); i++) {
+    FHE_NTIMER_START(KS_loop);
     ai.randomize();
     tmpDCRT = digits[i];
   
