@@ -77,14 +77,17 @@ template<class type> class matmul1D_impl {
   const EncryptedArrayDerived<type>& ea;
 
 public:
-  matmul1D_impl(MatMulBase& _mat, MatrixCacheType tag)
+  matmul1D_impl(MatMulBase& _mat, MatrixCacheType tag, long dim)
     : buildCache(tag), mat(dynamic_cast< MatMul<type>& >(_mat)),
       ea(_mat.getEA().getDerived(type()))
   {
+    long D = ea.sizeOfDimension(dim);
+    long sz = ea.nativeDimension(dim) ? D : (2*D-1);
+   
     if (buildCache==cachezzX)
-      zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,ea.size()));
+      zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,sz));
     else if (buildCache==cacheDCRT)
-      dCache.reset(new CachedDCRTMatrix(NTL::INIT_SIZE,ea.size()));
+      dCache.reset(new CachedDCRTMatrix(NTL::INIT_SIZE,sz));
   }
 
   // Get the i'th diagonal along dimension dim, encoded as a
@@ -177,12 +180,33 @@ public:
     return false; // a nonzero diagonal
   }
 
+  void fixup(zzX& cpoly, const RX& c, long i, long signed_i, long dim)
+  {
+    const PAlgebraModDerived<type>& tab = ea.getTab();
+    const vector< vector< RX > >& maskTable = tab.getMaskTable();
+    const RXModulus& PhimXMod = tab.getPhimXMod();
+
+    long D = ea.sizeOfDimension(dim);
+
+    if (signed_i > 0) {
+      RX mask = maskTable[dim][i];
+      MulMod(mask, mask, c, PhimXMod);
+      convert(cpoly, mask);
+    }
+    else {
+      RX mask;
+      NTL::negate(mask, maskTable[dim][i]);
+      MulMod(mask, mask, c, PhimXMod);
+      add(mask, mask, c);
+      convert(cpoly, mask);
+    }
+  }
+
   void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
   {
     assert(dim >= 0 && dim < ea.dimension());
     RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
 
-    if (!ea.nativeDimension(dim)) Error("not handled yet");
 
     std::unique_ptr<Ctxt> res, shCtxt;
     if (ctxt!=nullptr) { // we need to do an actual multiplication
@@ -203,57 +227,149 @@ public:
     }
 
     // Process the diagonals one at a time
-    zzX cpoly;
-    long D = ea.sizeOfDimension(dim);
-    for (long cnt = 0; cnt < D; cnt++) { // process one diagonal 
-      long i; //process diagonal i
+    if (ea.nativeDimension(dim)) {
+      zzX cpoly;
+      long D = ea.sizeOfDimension(dim);
 
-      if (!ctxt) {
-        i = cnt;
-      }
-      else if (cnt == 0) {
-        i = 0;
-        *shCtxt = *ctxt;
-      }
-      else {
-        long x = autoIterator->next(*shCtxt);
-        assert(x !=0);
-        i = val2index(ea.getContext().zMStar, dim, x);
-        assert(i >= 0);
-      }
+      for (long cnt = 0; cnt < D; cnt++) { // process one diagonal 
+	long i; //process diagonal i
+
+	if (!ctxt) {
+	  i = cnt;
+	}
+	else if (cnt == 0) {
+	  i = 0;
+	  *shCtxt = *ctxt;
+	}
+	else {
+	  long x = autoIterator->next(*shCtxt);
+	  assert(x !=0);
+	  i = val2index(ea.getContext().zMStar, dim, x);
+	  assert(i >= 0);
+	}
 
 
-      zzX* zxPtr=nullptr;
-      DoubleCRT* dxPtr=nullptr;
+	zzX* zxPtr=nullptr;
+	DoubleCRT* dxPtr=nullptr;
 
-      if (dcp != nullptr)         // DoubleCRT cache exists
-	dxPtr = (*dcp)[i].get();
-      else if (zcp != nullptr)    // zzx cache exists but no DoubleCRT
-	zxPtr = (*zcp)[i].get();
-      else { // no cache, compute const
-	bool zero = oneTransform? processDiagonal1(cpoly, dim, i, D)
-	                        : processDiagonal2(cpoly, dim, i, D);
-        if (!zero) zxPtr = &cpoly; // if it is not a zero value, point to it
-      }
+	if (dcp != nullptr)         // DoubleCRT cache exists
+	  dxPtr = (*dcp)[i].get();
+	else if (zcp != nullptr)    // zzx cache exists but no DoubleCRT
+	  zxPtr = (*zcp)[i].get();
+	else { // no cache, compute const
+	  bool zero = oneTransform? processDiagonal1(cpoly, dim, i, D)
+				  : processDiagonal2(cpoly, dim, i, D);
+	  if (!zero) zxPtr = &cpoly; // if it is not a zero value, point to it
+	}
 
-      // if zero diagonal, nothing to do for this iteration
-      if (zxPtr==nullptr && dxPtr==nullptr)
-        continue;
+	// if zero diagonal, nothing to do for this iteration
+	if (zxPtr==nullptr && dxPtr==nullptr)
+	  continue;
 
-      // Non-zero diagonal, store it in cache and/or multiply/add it
+	// Non-zero diagonal, store it in cache and/or multiply/add it
 
-      if (ctxt) {
-        if (dxPtr!=nullptr) shCtxt->multByConstant(*dxPtr);
-	else                shCtxt->multByConstant(*zxPtr);
-	*res += *shCtxt;
+	if (ctxt) {
+	  if (dxPtr!=nullptr) shCtxt->multByConstant(*dxPtr);
+	  else                shCtxt->multByConstant(*zxPtr);
+	  *res += *shCtxt;
+	}
+	if (buildCache==cachezzX) {
+	  (*zCache)[i].reset(new zzX(*zxPtr));
+	}
+	else if (buildCache==cacheDCRT) {
+	  (*dCache)[i].reset(new DoubleCRT(*zxPtr, ea.getContext()));
+	}
+      } // end of loop over diagonals
+    }
+    else {
+
+      zzX cpoly;
+      long D = ea.sizeOfDimension(dim);
+
+      std::vector< unique_ptr<RX> > local_cache;
+      if (!dcp && !zcp) {
+        local_cache.resize(D);
       }
-      if (buildCache==cachezzX) {
-        (*zCache)[i].reset(new zzX(*zxPtr));
-      }
-      else if (buildCache==cacheDCRT) {
-        (*dCache)[i].reset(new DoubleCRT(*zxPtr, ea.getContext()));
-      }
-    } // end of loop over diagonals
+     
+
+      for (long cnt = 0; cnt < 2*D-1; cnt++) { // process one diagonal 
+	long i; //process diagonal i
+        long signed_i;
+        
+
+	if (!ctxt) {
+          if (cnt == 0) {
+             i = 0;
+             signed_i = 0;
+          }
+          else {
+             i = (cnt+1)/2;
+             signed_i = (cnt % 2) ? (i - D) : i;
+          }
+	}
+	else if (cnt == 0) {
+	  i = 0;
+          signed_i = 0;
+	  *shCtxt = *ctxt;
+	}
+	else {
+	  long x = autoIterator->next(*shCtxt);
+	  assert(x !=0);
+	  signed_i = val2index(ea.getContext().zMStar, dim, x);
+          i = signed_i;
+          if (i < 0) i += D;
+	}
+
+        long i_off = signed_i + (D-1);
+
+	zzX* zxPtr=nullptr;
+	DoubleCRT* dxPtr=nullptr;
+
+	if (dcp != nullptr)         // DoubleCRT cache exists
+	  dxPtr = (*dcp)[i_off].get();
+	else if (zcp != nullptr)    // zzx cache exists but no DoubleCRT
+	  zxPtr = (*zcp)[i_off].get();
+	else if (local_cache[i]) {
+          if (*local_cache[i] != 0) {
+             convert(cpoly, *local_cache[i]);
+             zxPtr = &cpoly;
+             if (i) fixup(cpoly, *local_cache[i], i, signed_i, dim);
+          }
+          local_cache[i].reset(); // we've used it, so we can kill it
+        }
+        else { // no cache, compute const
+	  bool zero = oneTransform? processDiagonal1(cpoly, dim, i, D)
+				  : processDiagonal2(cpoly, dim, i, D);
+	  if (!zero) {
+            zxPtr = &cpoly; // if it is not a zero value, point to it
+            local_cache[i].reset(new RX());
+            convert(*local_cache[i], cpoly);
+            if (i) fixup(cpoly, *local_cache[i], i, signed_i, dim);
+          }
+          else {
+            local_cache[i].reset(new RX());
+          }
+	}
+
+	// if zero diagonal, nothing to do for this iteration
+	if (zxPtr==nullptr && dxPtr==nullptr)
+	  continue;
+
+	// Non-zero diagonal, store it in cache and/or multiply/add it
+
+	if (ctxt) {
+	  if (dxPtr!=nullptr) shCtxt->multByConstant(*dxPtr);
+	  else                shCtxt->multByConstant(*zxPtr);
+	  *res += *shCtxt;
+	}
+	if (buildCache==cachezzX) {
+	  (*zCache)[i_off].reset(new zzX(*zxPtr));
+	}
+	else if (buildCache==cacheDCRT) {
+	  (*dCache)[i_off].reset(new DoubleCRT(*zxPtr, ea.getContext()));
+	}
+      } // end of loop over diagonals
+    }
 
     if (ctxt) // copy result back to ctxt
       *ctxt = *res;
@@ -280,12 +396,12 @@ static void matmul1d(Ctxt* ctxt, MatMulBase& mat, long dim,
 
   switch (mat.getEA().getTag()) {
     case PA_GF2_tag: {
-      matmul1D_impl<PA_GF2> M(mat, locking.getType());
+      matmul1D_impl<PA_GF2> M(mat, locking.getType(), dim);
       M.multiply(ctxt, dim, oneTransform);
       break;
     }
     case PA_zz_p_tag: {
-      matmul1D_impl<PA_zz_p> M(mat, locking.getType());
+      matmul1D_impl<PA_zz_p> M(mat, locking.getType(), dim);
       M.multiply(ctxt, dim, oneTransform);
       break;
     }

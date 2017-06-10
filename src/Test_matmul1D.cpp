@@ -337,10 +337,12 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
     ea.encrypt(ctxt, publicKey, v);
     Ctxt ctxt2 = ctxt;
 
+#if 1
     cout << " Multiplying 1D with MatMulBase+CDRT cache... " << std::flush;
     { FHE_NTIMER_START(aaaa_matmul1D_cache);
     buildCache4MatMul1D(*ptr, dim, cacheDCRT);// build the cache
     }
+#endif
 
 
     { FHE_NTIMER_START(aaaa_matmul1D_apply);
