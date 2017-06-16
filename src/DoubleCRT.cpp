@@ -856,7 +856,7 @@ void DoubleCRT::randomize(const ZZ* seed)
       }
 
       for (long pos = 0; pos <= bufsz-nb; pos += nb) {
-#if 1
+#if 0
         unsigned long utmp = 0;
         for (long cnt = nb-1;  cnt >= 0; cnt--)
           utmp = (utmp << 8) | buf[pos+cnt]; 
