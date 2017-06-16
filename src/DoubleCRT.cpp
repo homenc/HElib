@@ -901,6 +901,7 @@ void DoubleCRT::randomize(const ZZ* seed)
         }
 
 #endif
+
         utmp = (utmp & mask);
         
         long tmp = utmp;
