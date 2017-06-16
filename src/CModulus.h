@@ -45,6 +45,8 @@
 
 class Cmodulus {
   long          q;       // the modulus
+  mulmod_t      qinv;    // PrepMulMod(q);
+
   zz_pContext   context; // NTL's tables for this modulus
 
   const PAlgebra* zMStar;  // points to the Zm* structure, m is FFT size
@@ -96,6 +98,7 @@ class Cmodulus {
   unsigned long getM() const    { return zMStar->getM(); }
   unsigned long getPhiM() const { return zMStar->getPhiM(); }
   long getQ() const          { return q; }
+  mulmod_t getQInv() const          { return qinv; }
   long getRoot() const       { return root; }
   const zz_pXModulus1& getPhimX() const  { return *phimx; }
 
