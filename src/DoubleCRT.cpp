@@ -138,16 +138,65 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
     long pi = context.ithPrime(i);
     vec_long& row = map[i];
     const vec_long& other_row = (*other_map)[i];
-    
+
     for (long j = 0; j < phim; j++)
       row[j] = fun.apply(row[j], other_row[j], pi);
+
   }
   return *this;
 }
 
+
+
+// Victor says: I added this routine so I could look
+// examine its performance more carefully
+
+DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other, 
+			     bool matchIndexSets)
+{
+  FHE_TIMER_START;
+
+  if (isDryRun()) return *this;
+
+  if (&context != &other.context)
+    Error("DoubleCRT::Op: incompatible objects");
+
+  // Match the index sets, if needed
+  if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet()))
+    addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
+
+  // If you need to mod-up the other, do it on a temporary scratch copy
+  DoubleCRT tmp(context, IndexSet()); 
+  const IndexMap<vec_long>* other_map = &other.map;
+  if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
+    tmp = other;
+    tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
+    other_map = &tmp.map;
+  }
+
+  const IndexSet& s = map.getIndexSet();
+  long phim = context.zMStar.getPhiM();
+
+  // add/sub/mul the data, element by element, modulo the respective primes
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    long pi = context.ithPrime(i);
+    mulmod_t pi_inv = context.ithModulus(i).getQInv(); 
+    vec_long& row = map[i];
+    const vec_long& other_row = (*other_map)[i];
+
+
+    for (long j = 0; j < phim; j++)
+      row[j] = MulMod(row[j], other_row[j], pi, pi_inv);
+
+  }
+  return *this;
+}
+
+#if 0
 template
 DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const DoubleCRT &other, MulFun fun,
 			 bool matchIndexSets);
+#endif
 
 template
 DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const DoubleCRT &other, AddFun fun,
@@ -802,12 +851,56 @@ void DoubleCRT::randomize(const ZZ* seed)
     long j = 0;
     
     for (;;) {
+      { FHE_NTIMER_START(randomize_stream);
       stream.get(buf, bufsz);
+      }
 
       for (long pos = 0; pos <= bufsz-nb; pos += nb) {
+#if 1
         unsigned long utmp = 0;
         for (long cnt = nb-1;  cnt >= 0; cnt--)
           utmp = (utmp << 8) | buf[pos+cnt]; 
+#elif 0
+
+        // "Duff's device" to avoid loops
+        // It's a bit faster...but not much
+       
+        unsigned long utmp = buf[pos+nb-1];
+        switch (nb) {
+        case 8: utmp = (utmp << 8) | buf[pos+6];
+        case 7: utmp = (utmp << 8) | buf[pos+5];
+        case 6: utmp = (utmp << 8) | buf[pos+4];
+        case 5: utmp = (utmp << 8) | buf[pos+3];
+        case 4: utmp = (utmp << 8) | buf[pos+2];
+        case 3: utmp = (utmp << 8) | buf[pos+1];
+        case 2: utmp = (utmp << 8) | buf[pos+0];
+        }
+
+#else
+        unsigned long utmp = buf[pos+nb-1];
+
+        {
+
+        // This is gcc non-standard. Works also on clang and icc.
+        
+        static void *dispatch_table[] =
+           { &&L0, &&L1, &&L2, &&L3, &&L4, &&L5, &&L6, &&L7, &&L8 };
+
+        goto *dispatch_table[nb];
+   
+
+        L8: utmp = (utmp << 8) | buf[pos+6];
+        L7: utmp = (utmp << 8) | buf[pos+5];
+        L6: utmp = (utmp << 8) | buf[pos+4];
+        L5: utmp = (utmp << 8) | buf[pos+3];
+        L4: utmp = (utmp << 8) | buf[pos+2];
+        L3: utmp = (utmp << 8) | buf[pos+1];
+        L2: utmp = (utmp << 8) | buf[pos+0];
+        L1: ;
+        L0: ;
+        }
+
+#endif
         utmp = (utmp & mask);
         
         long tmp = utmp;
