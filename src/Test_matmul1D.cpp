@@ -338,16 +338,21 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
     Ctxt ctxt2 = ctxt;
 
 #if 1
-    cout << " Multiplying 1D with MatMulBase+CDRT cache... " << std::flush;
-    { FHE_NTIMER_START(aaaa_matmul1D_cache);
+    cout << " Multiplying 1D with MatMulBase+CDRT cache...\n" << std::flush;
+    { FHE_NTIMER_START(AAAA_matmul1D_cache);
     buildCache4MatMul1D(*ptr, dim, cacheDCRT);// build the cache
     }
 #endif
 
+    printNamedTimer(cout, "AAAA_matmul1D_cache");
+    resetAllTimers();
 
-    { FHE_NTIMER_START(aaaa_matmul1D_apply);
+
+    { FHE_NTIMER_START(AAAA_matmul1D_apply);
     matMul1D(ctxt, *ptr, dim);               // then use it
     }
+
+    printAllTimers();
 
     matMul1D(v, *ptr, dim);     // multiply the plaintext vector
 
@@ -358,8 +363,6 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
       cout << "Nice!!\n";
     else
       cout << "Grrr@*\n";
-    printNamedTimer(cout, "aaaa_matmul1D_cache");
-    printNamedTimer(cout, "aaaa_matmul1D_apply");
   }
 
   // Test a "multi" matrix over the extension field
@@ -583,7 +586,7 @@ int main(int argc, char *argv[])
 
   TestIt(context, g, dim, verbose);
   cout << endl;
-  if (verbose) {
+  if (0 && verbose) {
     printAllTimers();
     cout << endl;
   }
