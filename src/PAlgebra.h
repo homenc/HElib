@@ -76,6 +76,8 @@ class PAlgebra {
   vector<long> zmsIdx; // if t is the i'th element in Zm* then zmsIdx[t]=i
                        // zmsIdx[t]==-1 if t notin Zm*
 
+  vector<long> zmsRep; // inverse of zmsIdx
+
  public:
 
   PAlgebra(unsigned long mm, unsigned long pp = 2,
@@ -157,6 +159,15 @@ class PAlgebra {
   //! Returns the index of t in (Z/mZ)*
   long indexInZmstar(unsigned long t) const
   {  return (t>0 && t<m)? zmsIdx[t]: -1; }
+
+  //! Returns the index of t in (Z/mZ)* -- no range checking
+  long indexInZmstar_unchecked(unsigned long t) const
+  {  return zmsIdx[t]; }
+
+  //! Returns rep whose index is i
+  long repInZmstar_unchecked(long idx) const
+  {  return zmsRep[idx]; }
+
 
   bool inZmStar(unsigned long t) const
   {  return (t>0 && t<m && zmsIdx[t]>-1); }

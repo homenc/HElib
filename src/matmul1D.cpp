@@ -30,6 +30,8 @@
 static
 long val2index(const PAlgebra& zMStar, long dim, long x)
 {
+  FHE_TIMER_START;
+ 
   long m = zMStar.getM();
   long g = zMStar.ZmStarGen(dim);
   long ord = zMStar.OrderOf(dim);
@@ -204,6 +206,8 @@ public:
 
   void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
   {
+    FHE_TIMER_START;
+
     assert(dim >= 0 && dim < ea.dimension());
     RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
 
@@ -223,6 +227,7 @@ public:
     // set up the AutoIterator, if we have a ctxt
     std::unique_ptr<AutoIterator> autoIterator;
     if (ctxt) {
+      FHE_NTIMER_START(AutoIterator_build);
       autoIterator.reset(AutoIterator::build(*ctxt, ctxt->getPubKey().getTree4dim(dim)));
     }
 
@@ -234,6 +239,7 @@ public:
       for (long cnt = 0; cnt < D; cnt++) { // process one diagonal 
 	long i; //process diagonal i
 
+
 	if (!ctxt) {
 	  i = cnt;
 	}
@@ -242,15 +248,16 @@ public:
 	  *shCtxt = *ctxt;
 	}
 	else {
+          FHE_NTIMER_START(AutoIterator_next);
 	  long x = autoIterator->next(*shCtxt);
 	  assert(x !=0);
 	  i = val2index(ea.getContext().zMStar, dim, x);
 	  assert(i >= 0);
 	}
 
-
 	zzX* zxPtr=nullptr;
 	DoubleCRT* dxPtr=nullptr;
+
 
 	if (dcp != nullptr)         // DoubleCRT cache exists
 	  dxPtr = (*dcp)[i].get();
@@ -271,8 +278,11 @@ public:
 	if (ctxt) {
 	  if (dxPtr!=nullptr) shCtxt->multByConstant(*dxPtr);
 	  else                shCtxt->multByConstant(*zxPtr);
+
 	  *res += *shCtxt;
+
 	}
+
 	if (buildCache==cachezzX) {
 	  (*zCache)[i].reset(new zzX(*zxPtr));
 	}

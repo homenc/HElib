@@ -118,12 +118,23 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
     // The operations below all use the IndexSet of tmpDCRT
   
     // add digit*a[i] with a handle pointing to base of W.toKeyID
+{ FHE_NTIMER_START(KS_loop_1);
     tmpDCRT.Mul(ai,  /*matchIndexSet=*/false);
+}
+
+{ FHE_NTIMER_START(KS_loop_2);
     this->addPart(tmpDCRT, SKHandle(1,1,W.toKeyID), /*matchPrimeSet=*/true);
+}
   
     // add digit*b[i] with a handle pointing to one
+{ FHE_NTIMER_START(KS_loop_3);
     digits[i].Mul(W.b[i], /*matchIndexSet=*/false);
+}
+
+{ FHE_NTIMER_START(KS_loop_4);
     this->addPart(digits[i], SKHandle(), /*matchPrimeSet=*/true);
+}
+
   }
 }
 
@@ -509,6 +520,8 @@ void Ctxt::findBaseSet(IndexSet& s) const
 void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle, 
 		   bool matchPrimeSet, bool negative)
 {
+  FHE_TIMER_START;
+
   assert (&part.getContext() == &context);
 
   if (parts.size()==0) { // inserting 1st part 
@@ -596,6 +609,8 @@ void Ctxt::negate()
 // Add/subtract another ciphertxt (depending on the negative flag)
 void Ctxt::addCtxt(const Ctxt& other, bool negative)
 {
+  FHE_TIMER_START;
+
   // Sanity check: same context and public key
   assert (&context==&other.context && &pubKey==&other.pubKey);
 
@@ -1434,7 +1449,6 @@ public:
   // in ctxt. Before calling next, idx points to the next index in the array.
   long next(Ctxt& ctxt)
   {
-    FHE_TIMER_START;
     if (idx >= lsize(toVals)) return 0;
 
     // Find a key-switching matrix to re-linearize this automorphism
@@ -1451,19 +1465,26 @@ public:
     ctxt.clear();  
     ctxt.noiseVar = noise; // noise estimate
 
+{ FHE_NTIMER_START(next_1);
+
     // Add in the constant part
     CtxtPart tmpPart = part0;
     tmpPart.automorph(k);
     tmpPart.addPrimesAndScale(context.specialPrimes);
     ctxt.addPart(tmpPart, /*matchPrimeSet=*/true);
+}
 
+{ FHE_NTIMER_START(next_2);
     // "rotate" the digits before key-switching them
     tmpDigits = polyDigits;
     for (size_t i=0; i<tmpDigits.size(); i++) // rotate each of the digits
       tmpDigits[i].automorph(k);
+}
 
+{ FHE_NTIMER_START(next_3); 
     // Finally we multiply the vector of digits by the key-switching matrix
     ctxt.keySwitchDigits(W, tmpDigits);
+}
 
     return toVals[idx++];
   }
@@ -1480,6 +1501,7 @@ public:
 
   long next(Ctxt& c) override
   {
+
     long v;
     while (!stk.empty()) {
       AutomorphVecIterator& it = stk.top();
@@ -1499,4 +1521,7 @@ public:
 };
 
 AutoIterator* AutoIterator::build(Ctxt& c, const AutGraph& t)
-{ return new AutoIteratorImpl(c, t); }
+{ 
+  FHE_TIMER_START;
+  return new AutoIteratorImpl(c, t); 
+}

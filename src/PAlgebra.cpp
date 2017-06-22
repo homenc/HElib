@@ -146,8 +146,14 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   T.resize(getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
   zmsIdx.assign(mm,-1);  // allocate m slots, initialize them to -1
+  zmsRep.resize(phiM);
   long i, idx;
-  for (i=idx=0; i<(long)mm; i++) if (GCD(i,mm)==1) zmsIdx[i] = idx++;
+  for (i=idx=0; i<(long)mm; i++) {
+    if (GCD(i,mm)==1) {
+      zmsIdx[i] = idx++;
+      zmsRep[zmsIdx[i]] = i;
+    }
+  }
 
   // Now fill the Tidx translation table. We identify an element t \in T
   // with its representation t = \prod_{i=0}^n gi^{ei} mod m (where the
