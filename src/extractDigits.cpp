@@ -59,7 +59,10 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
       tmp.divideByP();
     }
     w[i] = tmp; // needed in the next round
-    if (shortCut) digits[i] = tmp; // digits[i]=i'th lowest digit
+    if (shortCut) {
+      digits[i] = tmp; // digits[i]=i'th lowest digit
+      digits[i].reducePtxtSpace(p);
+    }
   }
   // If not shortCut, copy w into digits
   if (!shortCut) for (long i=0; i<r; i++) digits[i] = w[i];
