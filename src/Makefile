@@ -91,7 +91,7 @@ clean:
 	rm -rf *.dSYM
 
 info:
-	: HElib require NTL version 10.0.0 or higher
+	: HElib requires NTL version 10.0.0 or higher
 	: Compilation flags are 'CFLAGS=$(CFLAGS)'
 	: If errors occur, try adding/removing '-std=c++11' in Makefile
 	:
