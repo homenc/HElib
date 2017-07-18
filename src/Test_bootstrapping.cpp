@@ -92,14 +92,14 @@ static long mValues[][14] = {
   {127, 54400, 61787, 40, 41, 1507, 0, 30141, 46782,    0, 40, 34,   0, 100}, // m=(11)*41*{137} m/phim(m)=1.13  C=112 D=2
   {127, 72000, 77531, 30, 61, 1271, 0,  7627, 34344,    0, 60, 40,   0, 100}  // m=(31)*{41}*61 m/phim(m)=1.07   C=128 D=2
 };
-#define num_mValues (sizeof(mValues)/(13*sizeof(long)))
+#define num_mValues (sizeof(mValues)/(14*sizeof(long)))
 
 #define OUTER_REP (3)
 #define INNER_REP (3)
 
 static bool dry = false; // a dry-run flag
 
-void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int cType=0)
+void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int cacheType=0)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -138,8 +138,14 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
-  buildModChain(context, L, c);
-  context.makeBootstrappable(mvec, /*t=*/0, cons, cType);
+  buildModChain(context, L, c,/*extraBits=*/7);
+
+  // FIXME: The extraBits is an exceedingly ugly patch, used to bypass the
+  //   issue that buildModChain must be called BEFORE the context is made
+  //   bootstrappable (else the "powerful" basis is not initialized correctly.)
+  //   This is a bug, the value 7 is sometimes the right one, but seriously??
+
+  context.makeBootstrappable(mvec, /*t=*/0, cons, cacheType);
   t += GetTime();
 
   if (skHwt>0) context.rcData.skHwt = skHwt;
