@@ -55,7 +55,8 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
   if (chosen_m) {
     if (GCD(p, chosen_m) == 1) {
       long ordP = multOrd(p, chosen_m);
-      if (d == 0 || ordP % d == 0) {
+      long nSlots = phi_N(chosen_m) / ordP;
+      if ( nSlots >= s && (d == 0 || ordP % d == 0)) {
         // chosen_m is OK
         m = chosen_m;
       }
@@ -129,6 +130,9 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
 
       long n = phi_N(candidate); // compute phi(m)
       if (n < N) continue;       // phi(m) too small
+
+      long nSlots = n / ordP;
+      if (nSlots < s) continue;
 
       m = candidate;  // all tests passed, return this value of m
       break;
