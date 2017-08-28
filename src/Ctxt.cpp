@@ -989,7 +989,7 @@ const long Ctxt::getKeyID() const
   for (size_t i=0; i<parts.size(); i++)
     if (!parts[i].skHandle.isOne()) return parts[i].skHandle.getSecretKeyID();
 
-  return -1;
+  return 0; // no part pointing to anything, return the default key
 }
 
 // Estimates the added noise variance from mod-switching down
