@@ -423,6 +423,11 @@ public:
   //! Reduce plaintext space to a divisor of the original plaintext space
   void reducePtxtSpace(long newPtxtSpace);
 
+  // This method can be used to increase the plaintext space, but the
+  // high-order digits that you get this way are noise. Do not use it
+  // unless you know what you are doing.
+  void hackPtxtSpace(long newPtxtSpace) { ptxtSpace=newPtxtSpace; }
+
   void reLinearize(long keyIdx=0);
           // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
