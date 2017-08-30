@@ -584,16 +584,26 @@ void CheckCtxt(const Ctxt& c, const char* label);
  * nonzero. If that assumptions does not hold then the result will not be
  * a valid ciphertext anymore.
  *
- * If the shortCut flag is set then digits[j] contains the j'th digits
- * wrt mod-p plaintext space and the highest possible level (for all j).
- * Otherwise digits[j] still contains the j'th digit in the base-p expansion,
- * but wrt mod-p^{r-j} plaintext space, and all the ciphertexts are at the
- * same level.
+ * The "shortcut" flag is deprecated, it often leads to catastrophic failure
+ * in the noise estimate. Calling the function with shortcut=true has not
+ * effect, except printing a warning message to cerr.
+ *
+ * The output ciphertext digits[j] contains the j'th digit in the base-p
+ * expansion of the input, and its plaintext space is modulo p^{r-j}. All
+ * the ciphertexts in the output are at the same level.
  **/
-void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r=0, bool shortCut=false);
-  // implemented in extractDigits.cpp
+void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r=0);
+// implemented in extractDigits.cpp
+
+inline void
+extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
+{
+  if (shortCut)
+    std::cerr << "extractDigits: the shortCut flag is disabled\n";
+  extractDigits(digits, c, r);
+}
 
 inline void Ctxt::extractBits(vector<Ctxt>& bits, long nBits2extract)
-{ extractDigits(bits, *this, nBits2extract, true); }
+{ extractDigits(bits, *this, nBits2extract); }
 
 #endif // ifndef _Ctxt_H_

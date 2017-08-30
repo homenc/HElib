@@ -26,13 +26,11 @@ int main(int argc, char *argv[])
   long p = 3;
   long r=0;
   long m = 0;
-  bool shortCut = false;
   bool dry = false;
 
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r, "lifting");
   amap.arg("m", m, "the cyclotomic ring", "heuristic");
-  amap.arg("shortCut", shortCut, "shortCut flag (see extractDigits.cpp))");
   amap.arg("noPrint", noPrint, "suppress printouts");
   amap.arg("dry", dry, "dry=1 for a dry-run");
 
@@ -40,7 +38,7 @@ int main(int argc, char *argv[])
   amap.parse(argc, argv);
 
   if (p<2) exit(0);
-  long bound = floor(log((double)FHE_p2Size)/log((double)p));
+  long bound = floor(log((double)FHE_p2Bound)/log((double)p));
   if (r<2 || r>bound) r = bound;
   long p2r = power_long(p,r); // p^r
 
@@ -81,7 +79,7 @@ int main(int argc, char *argv[])
     cout << " done\n" << std::flush;
 
   vector<long> tmp = v;
-  long pp = shortCut? p : p2r;
+  long pp = p2r;
   for (long i=0; i<(long)digits.size(); i++) {
     if (!digits[i].isCorrect()) {
       cout << " potential decryption error for "<<i<<"th digit ";
@@ -108,7 +106,7 @@ int main(int argc, char *argv[])
       tmp[j] -= digit;
       tmp[j] /= p;
     }
-    if (!shortCut) pp /= p;
+    pp /= p;
   }
   cout << "digit extraction successful\n\n";
 }
