@@ -401,6 +401,14 @@ void convert(NTL::Vec<long>& out, const NTL::zz_pX& in);
 void convert(NTL::Vec<long>& out, const NTL::GF2X& in);
 void convert(NTL::ZZX& out, const NTL::Vec<long>& in);
 void convert(NTL::GF2X& out, const NTL::Vec<long>& in);
+// right now, this is just a place-holder...it may or may not 
+// eventually be further fleshed out
+
+inline void convert(zz_pX& x, const zzX& a)
+{
+   conv(x.rep, a);
+   x.normalize();
+}
 ///@}
 
 //! A generic template that resolves to NTL's conv routine
@@ -799,15 +807,6 @@ template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
 				    long nCoeffs=40);
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 
-
-// right now, this is just a place-holder...it may or may not 
-// eventually be further fleshed out
-
-inline void convert(zz_pX& x, const zzX& a)
-{
-   conv(x.rep, a);
-   x.normalize();
-}
 
 // NOTE: Maybe NTL should contain conversion routines
 // like this for the various polynomial classes?

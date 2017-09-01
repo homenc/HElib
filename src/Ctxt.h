@@ -428,6 +428,8 @@ public:
   // unless you know what you are doing.
   void hackPtxtSpace(long newPtxtSpace) { ptxtSpace=newPtxtSpace; }
 
+  void bumpNoiseEstimate(double factor) { noiseVar *= factor; }
+
   void reLinearize(long keyIdx=0);
           // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
