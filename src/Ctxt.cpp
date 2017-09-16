@@ -1082,7 +1082,7 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
+  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << ", p^r="<<c.getPtxtSpace()<<endl;
 }
 
 // The recursive incremental-product function that does the actual work
