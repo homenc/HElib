@@ -798,12 +798,13 @@ void Ctxt::multByConstant(const ZZ& c)
   FHE_TIMER_START;
 
   long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
+  if (cc > ptxtSpace/2) cc -= ptxtSpace;
+  else if (cc < -ptxtSpace/2) cc += ptxtSpace;
   ZZ tmp = to_ZZ(cc);
 
   // multiply all the parts by this constant
   for (size_t i=0; i<parts.size(); i++) parts[i] *= tmp;
 
-  if (cc > ptxtSpace/2) cc -= ptxtSpace;
   double size = to_double(cc);
   noiseVar *= size*size * context.zMStar.get_cM();
 }
