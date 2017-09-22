@@ -20,45 +20,30 @@ NTL_CLIENT
 
 static bool noPrint = false;
 
-void usage(char *prog) 
-{
-  cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cout << "  p is the plaintext base [default=3]" << endl;
-  cout << "  r is the lifting [default=floor(log_p(FHE_p2Size))]" << endl;
-  cout << "  m is the cyclotomic ring [default determined by p,r]\n";
-  cout << "  dry=1 for dry run [default=0]\n";
-
-  exit(0);
-}
-
-
 int main(int argc, char *argv[])
 {
-  argmap_t argmap;
+  ArgMapping amap;
+  long p = 3;
+  long r=0;
+  long m = 0;
+  bool dry = false;
 
-  argmap["p"] = "3";
-  argmap["r"] = "0";
-  argmap["m"] = "0";
-  argmap["dry"] = "0";
-  argmap["noPrint"] = "0";
+  amap.arg("p", p, "plaintext base");
+  amap.arg("r", r, "lifting");
+  amap.arg("m", m, "the cyclotomic ring", "heuristic");
+  amap.arg("noPrint", noPrint, "suppress printouts");
+  amap.arg("dry", dry, "dry=1 for a dry-run");
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
-
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long m = atoi(argmap["m"]);
-  bool dry = atoi(argmap["dry"]);
-  noPrint =  atoi(argmap["noPrint"]);
+  amap.parse(argc, argv);
 
   if (p<2) exit(0);
-  long bound = floor(log((double)FHE_p2Size)/log((double)p));
+  long bound = floor(log((double)FHE_p2Bound)/log((double)p));
   if (r<2 || r>bound) r = bound;
   long p2r = power_long(p,r); // p^r
 
   long ll = NextPowerOfTwo(p);
-  long L = r*ll +1; // how many levels do we need
+  long L = r*ll +2; // how many levels do we need
   if (p>2)  L *= 2;
   m = FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
   setDryRun(dry);

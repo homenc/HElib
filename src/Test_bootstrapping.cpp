@@ -61,6 +61,7 @@ static long mValues[][14] = {
   {  2, 23040, 28679, 24, 17,  7, 241, 15184,  4098,28204, 16,  6, -10,1000}, // m=7*17*(241) m/phim(m)=1.24    C=63  D=4 E=3
   {  2, 24000, 31775, 20, 41, 775,  0,  6976, 24806,    0, 40, 30,   0, 100}, // m=(5^2)*{31}*41 m/phim(m)=1.32 C=88  D=2 E=2
   {  2, 26400, 27311, 55, 31, 881,  0, 21145,  1830,    0, 30, 16,   0, 100}, // m=31*(881) m/phim(m)=1.03      C=99  D=2 E=0
+  {  2, 27000, 32767, 15, 31,  7, 151, 11628, 28087,25824, 30,  6, -10, 150},
   {  2, 31104, 35113, 36, 37, 949,  0, 16134,  8548,    0, 36, 24,   0, 400}, // m=(13)*37*{73} m/phim(m)=1.12  C=94  D=2 E=2
   {  2, 34848, 45655, 44, 23, 1985, 0, 33746, 27831,    0, 22, 36,   0, 100}, // m=(5)*23*{397} m/phim(m)=1.31  C=100 D=2 E=2
   {  2, 42336, 42799, 21, 127, 337, 0, 25276, 40133,    0,126, 16,   0,  20}, // m=127*(337) m/phim(m)=1.01     C=161 D=2 E=0
@@ -92,14 +93,14 @@ static long mValues[][14] = {
   {127, 54400, 61787, 40, 41, 1507, 0, 30141, 46782,    0, 40, 34,   0, 100}, // m=(11)*41*{137} m/phim(m)=1.13  C=112 D=2
   {127, 72000, 77531, 30, 61, 1271, 0,  7627, 34344,    0, 60, 40,   0, 100}  // m=(31)*{41}*61 m/phim(m)=1.07   C=128 D=2
 };
-#define num_mValues (sizeof(mValues)/(13*sizeof(long)))
+#define num_mValues (sizeof(mValues)/(14*sizeof(long)))
 
 #define OUTER_REP (3)
 #define INNER_REP (3)
 
 static bool dry = false; // a dry-run flag
 
-void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int cType=0)
+void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int cacheType=0)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -138,8 +139,14 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
-  buildModChain(context, L, c);
-  context.makeBootstrappable(mvec, /*t=*/0, cons, cType);
+  buildModChain(context, L, c,/*extraBits=*/7);
+
+  // FIXME: The extraBits is an exceedingly ugly patch, used to bypass the
+  //   issue that buildModChain must be called BEFORE the context is made
+  //   bootstrappable (else the "powerful" basis is not initialized correctly.)
+  //   This is a bug, the value 7 is sometimes the right one, but seriously??
+
+  context.makeBootstrappable(mvec, /*t=*/0, cons, cacheType);
   t += GetTime();
 
   if (skHwt>0) context.rcData.skHwt = skHwt;

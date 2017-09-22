@@ -113,7 +113,7 @@ public:
        if (i>=lsize(v)) continue; // sanity check
 
        // increment current index, set all the ones after it to zero
-       if (v[i] < getDim(i)-1) { 
+       if (long(v[i]) < getDim(i)-1) { 
 	 v[i]++;
 	 for (long j=i+1; j<lsize(v); j++) v[j] = 0;
 	 return true;  // succeeded in incrementing the vector

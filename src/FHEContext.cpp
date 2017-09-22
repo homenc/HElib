@@ -195,9 +195,9 @@ long FHEcontext::AddFFTPrime(bool special)
   return p;
 }
 
-// Adds several primes to the chain. If byNumber=true then totalSize
-// specifies the number of primes to add. If byNumber=false then
-// totalSize specifies the target natural log all the added primes.
+// Adds several primes to the chain. If byNumber=true then totalSize specifies
+// the number of primes to add. If byNumber=false then totalSize specifies the
+// target natural log all the added primes.
 // Returns natural log of the product of all added primes.
 double AddManyPrimes(FHEcontext& context, double totalSize, 
 		     bool byNumber, bool special)
@@ -205,10 +205,6 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   if (!context.zMStar.getM() || context.zMStar.getM()>(1<<20))// sanity checks
     Error("AddManyPrimes: m undefined or larger than 2^20");
   // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
-
-  // cout << "AddManyPrimes(..., totalSize="<<((int)totalSize)
-  //      << ",byNumber="<<byNumber<<",special="<<special<<")\n";
-  // cout << "  context.bitsPerLevel="<<context.bitsPerLevel<<endl;
 
   double sizeLogSoFar = 0.0; // log of added primes so far
   double addedSoFar = 0.0;   // Either size or number, depending on 'byNumber'
@@ -219,9 +215,9 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   long sizeBits = 2*context.bitsPerLevel;
 #endif
   if (special) { // try to use similar size for all the special primes
-    // how many special primes would we need
-    long numPrimes = ceil(totalSize/(NTL_SP_NBITS*log(2.0)));
-    sizeBits = 1+ceil(totalSize/(log(2.0)*numPrimes)); // bitsize of each prime
+    double totalBits = totalSize/log(2.0);
+    long numPrimes = ceil(totalBits/NTL_SP_NBITS);// how many special primes
+    sizeBits = 1+ceil(totalBits/numPrimes);       // what's the size of each
     // Added one so we don't undershoot our target
   }
   if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
@@ -235,7 +231,9 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   }
 
   // make p-1 divisible by m*2^k for as large k as possible
-  if (context.zMStar.getPow2()!=0) // if m is not a power of two
+  // (not needed when m itself a power of two)
+
+  if (context.zMStar.getM() & 1) // m is odd, so not power of two
     while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
 
   long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
@@ -256,10 +254,8 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   return sizeLogSoFar;
 }
 
-void buildModChain(FHEcontext &context, long nLevels, long nDgts)
+void buildModChain(FHEcontext &context, long nLevels, long nDgts,long extraBits)
 {
-  //  cout << "buildModChain called with "<<nLevels
-  //       <<" levels and "<<nDgts<<" digits\n";
 #ifdef NO_HALF_SIZE_PRIME
   long nPrimes = nLevels;
 #else
@@ -290,7 +286,7 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
   context.digits.resize(nDgts); // allocate space
 
   IndexSet s1;
-  double sizeLogSoFar = 0.0;
+  double sizeSoFar = 0.0;
   double maxDigitSize = 0.0;
   if (nDgts>1) { // we break ciphetext into a few digits when key-switching
     double dsize = context.logOfProduct(context.ctxtPrimes)/nDgts; // estimate
@@ -301,10 +297,9 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
     long idx = context.ctxtPrimes.first();
     for (long i=0; i<nDgts-1; i++) { // set all digits but the last
       IndexSet s;
-      while (idx <= context.ctxtPrimes.last()
-             && (empty(s)||sizeLogSoFar<target)) {
+      while (idx <= context.ctxtPrimes.last() && (empty(s)||sizeSoFar<target)) {
         s.insert(idx);
-	sizeLogSoFar += log((double)context.ithPrime(idx));
+	sizeSoFar += log((double)context.ithPrime(idx));
 	idx = context.ctxtPrimes.next(idx);
       }
       assert (!empty(s));
@@ -332,11 +327,10 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
   }
 
   // Add special primes to the chain for the P factor of key-switching
-  long p2r = (context.rcData.alMod)? context.rcData.alMod->getPPowR()
-                                   : context.alMod.getPPowR();
+  long p2r = context.alMod.getPPowR();
   double sizeOfSpecialPrimes
     = maxDigitSize + log(nDgts) + log(context.stdev *2)
-      + log((double)p2r);
+      + log((double)p2r) + (extraBits*log(2.0));
 
   AddPrimesBySize(context, sizeOfSpecialPrimes, true);
 }

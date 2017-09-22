@@ -289,7 +289,11 @@ inline double AddPrimesByNumber(FHEcontext& context, long nPrimes,
 }
 
 //! @brief Build modulus chain with nLevels levels, using c digits in key-switching
-void buildModChain(FHEcontext &context, long nLevels, long c=3);
+void buildModChain(FHEcontext &context, long nLevels, long c=3,
+                   long extraBits=0);
+//FIXME: The extraBits params is a hack, used to get around some
+//       circularity when making the context boostrappable
+
 ///@}
 extern FHEcontext* activeContext; // Should point to the "current" context
 #endif // ifndef _FHEcontext_H_

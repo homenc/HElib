@@ -825,12 +825,13 @@ void Ctxt::multByConstant(const ZZ& c)
   FHE_TIMER_START;
 
   long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
+  if (cc > ptxtSpace/2) cc -= ptxtSpace;
+  else if (cc < -ptxtSpace/2) cc += ptxtSpace;
   ZZ tmp = to_ZZ(cc);
 
   // multiply all the parts by this constant
   for (size_t i=0; i<parts.size(); i++) parts[i] *= tmp;
 
-  if (cc > ptxtSpace/2) cc -= ptxtSpace;
   double size = to_double(cc);
   noiseVar *= size*size * context.zMStar.get_cM();
 }
@@ -1013,7 +1014,7 @@ const long Ctxt::getKeyID() const
   for (size_t i=0; i<parts.size(); i++)
     if (!parts[i].skHandle.isOne()) return parts[i].skHandle.getSecretKeyID();
 
-  return -1;
+  return 0; // no part pointing to anything, return the default key
 }
 
 // Estimates the added noise variance from mod-switching down
@@ -1106,7 +1107,7 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
+  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << ", p^r="<<c.getPtxtSpace()<<endl;
 }
 
 // The recursive incremental-product function that does the actual work
