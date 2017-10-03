@@ -16,99 +16,92 @@
  * @brief some matrix / linear algenra stuff
  */
 #include <cstddef>
+#include <mutex>
 #include <tuple>
 #include "EncryptedArray.h"
 
+typedef std::shared_ptr< zzX > zzxptr; // zzX=Vec<long> defined in NumbTh.h
+typedef NTL::Vec<zzxptr> CachedzzxMatrix;
+
+typedef NTL::Vec<DCRTptr> CachedDCRTMatrix;
+typedef NTL::Mat<DCRTptr> CachedDCRTBlockMatrix;
+
+enum MatrixCacheType : int { cacheEmpty=0, cachezzX=1, cacheDCRT=2 };
 
 /********************************************************************/
 /****************** Linear transformation classes *******************/
 
+//! @class MatMulBase
+//! @brief An abstract interface for linear transformations.
+//!
+//! A matrix implements linear transformation over an extension
+//! field/ring, e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G.
+class MatMulBase {
+  const EncryptedArray& ea;
+  std::unique_ptr<CachedzzxMatrix> zzxCache;
+  std::unique_ptr<CachedDCRTMatrix> dcrtCache;
+  std::mutex cachelock;
 
+  long gStep; // the giant-step parameter (if used)
 
-class MatMul {
 public:
-  virtual ~MatMul() {}
-  virtual const EncryptedArray& getEA() const = 0;
+  MatMulBase(const EncryptedArray& _ea, long g=1): ea(_ea), gStep(g) {}
+  virtual ~MatMulBase() {}
+
+  const EncryptedArray& getEA() const { return ea; }
+
+  bool haszzxcache() const { return (bool)zzxCache; }   // check if not null
+  bool hasDCRTcache() const { return (bool)dcrtCache; } // check if not null
+  void getCache(CachedzzxMatrix** zcp, CachedDCRTMatrix** dcp) const
+  { *zcp = zzxCache.get(); *dcp = dcrtCache.get(); }
+
+  bool lockCache(MatrixCacheType ty);
+  void releaseCache() { cachelock.unlock(); }
+
+  void upgradeCache(); // build DCRT cache from zzx cache
+  void installzzxcache(std::unique_ptr<CachedzzxMatrix>& zc)
+  { zzxCache.swap(zc); }
+  void installDCRTcache(std::unique_ptr<CachedDCRTMatrix>& dc)
+  { dcrtCache.swap(dc); }
+
+  // setGstep is *not* thread safe and should never be called if
+  // there are threads using the current cache.
+  void setGstep(long g) {
+    if (g != gStep && g>0) {
+      zzxCache.reset();
+      dcrtCache.reset();
+      gStep = g;
+    }
+  }
+  long getGstep() const { return gStep; }
 };
 
+//! @class MatMul
+//! @brief Linear transformation interfaces, specialized to GF2/zz_p
+//!
+//! An implementation that specifies particular transformation(s) is
+//! derived from MatMul<PA_GF2> or MatMul<PA_zz_p>. It should implement
+//! either get(i,j) or multiGet(i,j,k). They return the element mat[i,j])
+//! (in the k'th trasformation in the latter case), which is in some
+//! field/ring (e.g., GF(p^d)), and is returned as a GF2X or a zz_pX.
 template<class type>
-class MatMul_derived : public MatMul { 
+class MatMul : public MatMulBase { // type is PA_GF2 or PA_zz_p
 public:
   PA_INJECT(type)
+  MatMul(const EncryptedArray& _ea, long g=1): MatMulBase(_ea,g) {}
 
-  // Should return true when the entry is a zero. 
-  virtual bool get(RX& out, long i, long j) const = 0;
-
-  // Should return true when the entry is a zero. 
-  virtual bool multiGet(RX& out, long i, long j, long k) const = 0;
+  // Should return true when the entry is a zero. An application must
+  // implement (at least) one of these get functions, calling the base
+  // methods below will throw an exception.
+  virtual bool get(RX& out, long i, long j) const {
+    throw std::logic_error("MatMul: get() not implemented in base class");
+    return true;
+  }
+  virtual bool multiGet(RX& out, long i, long j, long k) const {
+    throw std::logic_error("MatMul: multiGet() not implemented in base class");
+    return true;
+  }
 };
-
-class MatMul1D {
-public:
-  virtual ~MatMul1D() {}
-  virtual const EncryptedArray& getEA() const = 0;
-  virtual bool multiple_transforms() const = 0;
-};
-
-template<class type>
-class MatMul1D_derived : public MatMul1D { 
-public:
-  PA_INJECT(type)
-
-  // Should return true when the entry is a zero. 
-  virtual bool multiGet(RX& out, long i, long j, long k) const = 0;
-};
-
-
-class ConstMultiplier {
-// stores a constant in either zzX or DoubleCRT format
-
-public:
-
-  virtual ~ConstMultiplier() {}
-
-  virtual void mul(Ctxt& ctxt) = 0;
-
-};
-
-class ConstMultiplier_zzX : public ConstMultiplier {
-private:
-
-  zzX data;
-
-public:
-
-  ConstMultiplier_zzX(const zzX& _data) : data(_data) { }
-
-  virtual void mul(Ctxt& ctxt) {
-    ctxt.multByConstant(data);
-  } 
-
-};
-
-class ConstMultiplier_DoubleCRT : public ConstMultiplier {
-private:
-
-  DoubleCRT data;
-
-public:
-  ConstMultiplier_DoubleCRT(const DoubleCRT& _data) : data(_data) { }
-
-  virtual void mul(Ctxt& ctxt) {
-    ctxt.multByConstant(data);
-  } 
-
-};
-
-
-class ConstMultiplierCache {
-public:
-
-  vector<shared_ptr<ConstMultiplier>> multiplier;
-
-};
-
-
 
 //! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
 //! a row matrix v, and replaced by an encryption of v * mat.
