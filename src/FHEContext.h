@@ -121,11 +121,13 @@ public:
              const vector<long>& gens = vector<long>(), 
              const vector<long>& ords = vector<long>() );  // constructor
 
+  FHEcontext(FHEcontext const& oth);
   void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
 			  bool conservative=false, int cacheType=0)
   { rcData.init(*this, mvec, skWht, conservative, cacheType); }
   bool isBootstrappable() const { return (rcData.alMod != NULL); }
 
+  FHEcontext& operator=(const FHEcontext& other);
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }
 
