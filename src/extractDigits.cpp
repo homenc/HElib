@@ -18,7 +18,6 @@ NTL_CLIENT
 
 static void buildDigitPolynomial(ZZX& result, long p, long e);
 
-
 // extractDigits assumes that the slots of *this contains integers mod p^r
 // i.e., that only the free terms are nonzero. (If that assumptions does
 // not hold then the result will not be a valid ciphertext anymore.)
@@ -26,13 +25,9 @@ static void buildDigitPolynomial(ZZX& result, long p, long e);
 // It returns in the slots of digits[j] the j'th-lowest gigits from the
 // integers in the slots of the input. Namely, the i'th slot of digits[j]
 // contains the j'th digit in the p-base expansion of the integer in the
-// i'th slot of the *this.
-//
-// If the shortCut flag is set then digits[j] contains the j'th digits wrt
-// mod-p plaintext space and the highest possible level (for all j). Otherwise
-// digits[j] still contains the j'th digit in the base-p expansion, but wrt
-// mod-p^{r-j} plaintext space, and all the ciphertexts are at the same level.
-void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
+// i'th slot of the *this. The plaintext space of digits[j] is mod p^{r-j},
+// and all the digits are at the same level.
+void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
 {
   FHEcontext& context = (FHEcontext&) c.getContext();
   long rr = c.effectiveR();
@@ -46,23 +41,17 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
 
   Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
   digits.resize(r, tmp);      // allocate space
-  vector<Ctxt> w(r, tmp);
   for (long i=0; i<r; i++) {
     tmp = c;
     for (long j=0; j<i; j++) {
-      FHE_NTIMER_START(square);
-      if (p==2) w[j].square();
-      else if (p==3) w[j].cube();
-      else polyEval(w[j], x2p, w[j]); // "in spirit" w[j] = w[j]^p
-      FHE_NTIMER_STOP(square);
-      tmp -= w[j];
+      if (p==2) digits[j].square();
+      else if (p==3) digits[j].cube();
+      else polyEval(digits[j], x2p, digits[j]); // "in spirit" digits[j] = digits[j]^p
+      tmp -= digits[j];
       tmp.divideByP();
     }
-    w[i] = tmp; // needed in the next round
-    if (shortCut) digits[i] = tmp; // digits[i]=i'th lowest digit
+    digits[i] = tmp; // needed in the next round
   }
-  // If not shortCut, copy w into digits
-  if (!shortCut) for (long i=0; i<r; i++) digits[i] = w[i];
 }
 
 

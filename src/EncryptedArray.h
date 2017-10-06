@@ -126,9 +126,14 @@ public:
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
+  virtual void encode(zzX& ptxt, const vector< long >& array) const = 0;
+  virtual void encode(zzX& ptxt, const vector< zzX >& array) const = 0;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const = 0;
+
   virtual void encode(ZZX& ptxt, const vector< long >& array) const = 0;
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const = 0;
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const = 0;
+
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const = 0;
@@ -344,7 +349,13 @@ public:
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array);  }
 
+  virtual void encode(zzX& ptxt, const vector< long >& array) const
+    { genericEncode(ptxt, array);  }
+
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const
+    {  genericEncode(ptxt, array); }
+
+  virtual void encode(zzX& ptxt, const vector< zzX >& array) const
     {  genericEncode(ptxt, array); }
 
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
@@ -461,6 +472,16 @@ private:
 
   template<class T> 
   void genericEncode(ZZX& ptxt, const T& array) const
+  {
+    RBak bak; bak.save(); tab.restoreContext();
+
+    vector< RX > array1;
+    convert(array1, array);
+    encode(ptxt, array1);
+  }
+
+  template<class T> 
+  void genericEncode(zzX& ptxt, const T& array) const
   {
     RBak bak; bak.save(); tab.restoreContext();
 
@@ -626,6 +647,13 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void encode(ZZX& ptxt, const vector< ZZX >& array) const 
     { rep->encode(ptxt, array); }
   void encode(ZZX& ptxt, const NewPlaintextArray& array) const 
+    { rep->encode(ptxt, array); }
+
+  void encode(zzX& ptxt, const vector< long >& array) const 
+    { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const vector< zzX >& array) const 
+    { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const NewPlaintextArray& array) const 
     { rep->encode(ptxt, array); }
 
   void encodeUnitSelector(ZZX& ptxt, long i) const

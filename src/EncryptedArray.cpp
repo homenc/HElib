@@ -409,13 +409,17 @@ void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const NTL::Ve
 }
 
 
-// this routine generates a random normal element
-// and initializes a matrix mapping from polynomial to 
-// normal basis and its inverse.  
+// this routine generates a "random" normal element and initializes a
+// matrix mapping from polynomial to normal basis and its inverse. It
+// uses a randomized algorithm to find the normal basis, but we init
+// the PRG seed deterministically to ensure that we always get the
+// same one (for a given set of parameters)
 
 template<class type>
 void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
 {
+  RandomState state;
+  SetSeed(to_ZZ(1));
   do {
     typename Lazy< Pair< Mat<R>, Mat<R> > >::Builder 
       builder(normalBasisMatrices); 
