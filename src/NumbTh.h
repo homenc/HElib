@@ -101,6 +101,12 @@ typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future
 typedef NTL::Vec<long> zzX;
 
+inline
+bool IsZero(const zzX& a) { return a.length() == 0; }
+
+inline 
+void clear(zzX& a) { a.SetLength(0); }
+
 //! @brief Code for parsing command line arguments.
 /**
  * Tries to parse each argument as arg=val, and returns a correspinding map.
