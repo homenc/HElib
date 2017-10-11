@@ -305,20 +305,6 @@ struct MatMul1DExec_construct {
 
 
 
-    // Process the diagonals in baby-step/giant-step ordering.
-    //   sum_{i=0}^{D-1} const_i rot^i(X)
-    //   = \sum_{i=0}^{g-1} \sum_{j=0}^{ngs-1} const_{i+g*j} rot^{i+g*j}(X)
-    //   = \sum_i rot^i(sum_j rot^{-i}(const_{i+g*j}) rot^{g*j}(X))
-    //
-    // so for i=0..g-1 we let
-    //    Y_i = sum_j rot^{-i}(const_{i+g*j}) rot^{g*j}(X)
-    // then compute \sum_{i=0}^{g-1} rot^i(Y_i).
-    //
-    // Computing the Y_i's, we initialize an accumulator for each Y_i,
-    // then compute the rotations X_j = rot^{g*j}(X), j=0,...,ngs-1.
-    // Each X_j is multiplied by all the constants rot^{-i}(const_{i+g*j}),
-    // i=0,...,g-1, and the i'th product is added to the accumulator for
-    // the corresponding Y_i.
 
 
 
@@ -338,6 +324,23 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
 
     ea.dispatch<MatMul1DExec_construct>(mat, Fwd(cache.multiplier), g);
 }
+
+
+/***************************************************************************
+
+BS/GS logic:
+
+  \sum_{i=0}^{D-1} const_i rot^i(v)
+    = \sum_k \sum_j const_{j+g*k} rot^{j+g*k}(v)
+    = \sum_k rot^{g*k}[ \sum_j rot^{-g*k}(const_{j+g*k}) rot^j(v) ]
+
+So we first compute baby_steps[j] = rot^j(v) for j in [0..g).
+Then for each k in [0..ceil(D/g)), we compute 
+   giant_steps[k] = \rot^{g*k}[ rot^{-g*k}(const_{j+g*k}) baby_steps[j] ] 
+Then we add up all the giant_steps.
+
+***************************************************************************/
+
 
 void
 MatMul1DExec::apply(Ctxt& ctxt)
