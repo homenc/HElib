@@ -127,9 +127,7 @@ template<class type>
 struct MatMul1DExec_construct {
   PA_INJECT(type)
 
-
-  // Get the i'th diagonal along dimension dim, encoded as a
-  // single constant. All blocks use the same transofmration.
+  static
   void processDiagonal1(zzX& poly, long dim, long i, long D, long rotAmt,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
@@ -181,10 +179,8 @@ struct MatMul1DExec_construct {
   }
 
 
-  // Get the i'th diagonal along dimension dim, encoded as a
-  // single constant. Different blocks use different transofmrations.
-  // Returns true if this is a zero diagonal, false otherwise
-  bool processDiagonal2(zzX& poly, long dim, long idx, long D, long rotAmt,
+  static
+  void processDiagonal2(zzX& poly, long dim, long idx, long D, long rotAmt,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
@@ -240,15 +236,56 @@ struct MatMul1DExec_construct {
     }
   }
 
+  // Get the i'th diagonal along dimension dim, encoded as a
+  // single constant. 
+  static
+  void processDiagonal(zzX& poly, long dim, long i, long D, long rotAmt,
+                        const EncryptedArrayDerived<type>& ea,
+                        const MatMul1D_derived<type>& mat)
+  {
+    if (mat.multipleTransforms())
+      processDiagonal2(poly, dim, i, D, rotAmt, ea, mat);
+    else
+      processDiagonal1(poly, dim, i, D, rotAmt, ea, mat);
+  }
+
   static
   void apply(const EncryptedArrayDerived<type>& ea,
              const MatMul1D& mat_basetype,
-             MatMul1DExec& exec) 
+             vector<shared_ptr<ConstMultiplier>>& vec,
+             long dim, long D, long gs)
   {
     const MatMul1D_derived<type>& mat =
       dynamic_cast< const MatMul1D_derived<type>& >(mat_basetype);
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    vec.resize(D);
+
+    for (long i = 0; i < D; i++) {
+      // i == j + gs*k
+      long j = i % D;
+      long k = i / D;
+
+      long rotAmt = gs*k;
+      // This assumes we process baby steps first, then giant steps.
+      // For the reverse, set rotAmt = j
+
+      zzX poly;
+      processDiagonal(poly, dim, i, D, rotAmt, ea, mat);
+
+      if (IsZero(poly))
+         vec[i] = nullptr;
+      else
+         vec[i] = shared_ptr<ConstMultiplier>(new ConstMultiplier_zzX(poly));
+    }
+
+  }
+
+#if 0
+
+    ConstMultiplierCache& cache = exec.cache;
+    cache.multiplier.resize(D);
 
     long dim = mat.getDim();
     assert(dim >= 0 && dim <= ea.dimension());
@@ -282,6 +319,7 @@ struct MatMul1DExec_construct {
     }
 
   }
+#endif
 
 
 };
@@ -290,8 +328,8 @@ struct MatMul1DExec_construct {
 
 MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
 {
-  const EncryptedArray& ea = mat.getEA();
-  ea.dispatch<MatMul1DExec_construct>(mat, Fwd(*this));
+  //const EncryptedArray& ea = mat.getEA();
+  //ea.dispatch<MatMul1DExec_construct>(mat, Fwd(*this));
 }
 
 int main() { }
