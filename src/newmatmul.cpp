@@ -264,8 +264,8 @@ struct MatMul1DExec_construct {
 
     for (long i = 0; i < D; i++) {
       // i == j + gs*k
-      long j = i % D;
-      long k = i / D;
+      long j = i % gs;
+      long k = i / gs;
 
       long rotAmt = gs*k;
       // This assumes we process baby steps first, then giant steps.
