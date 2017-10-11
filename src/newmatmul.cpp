@@ -44,7 +44,7 @@ class MatMul1D {
 public:
   virtual ~MatMul1D() {}
   virtual const EncryptedArray& getEA() const = 0;
-  virtual bool multiple_transforms() const = 0;
+  virtual bool multipleTransforms() const = 0;
   virtual long getDim() const = 0;
 };
 
@@ -109,11 +109,12 @@ public:
 class MatMul1DExec {
 public:
 
-  int strategy;
-  // 0 => BS/GS
+  const EncryptedArray& ea;
+  long dim;
+  long D;
 
-  long gs;
-  // # of GS
+  long g;
+
 
   ConstMultiplierCache cache;
 
@@ -123,15 +124,29 @@ public:
 };
 
 
+static inline long dimSz(const EncryptedArray& ea, long dim)
+{
+   return (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
+}
+
+static inline long dimSz(const EncryptedArrayBase& ea, long dim)
+{
+   return (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
+}
+
+
 template<class type>
 struct MatMul1DExec_construct {
   PA_INJECT(type)
 
   static
-  void processDiagonal1(zzX& poly, long dim, long i, long D, long rotAmt,
+  void processDiagonal1(zzX& poly, long i, long rotAmt,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
+    long dim = mat.getDim();
+    long D = dimSz(ea, dim);
+
     vector<RX> tmpDiag(D);
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
@@ -180,10 +195,13 @@ struct MatMul1DExec_construct {
 
 
   static
-  void processDiagonal2(zzX& poly, long dim, long idx, long D, long rotAmt,
+  void processDiagonal2(zzX& poly, long idx, long rotAmt,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
+    long dim = mat.getDim();
+    long D = dimSz(ea, dim);
+
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
     RX entry;
@@ -236,43 +254,46 @@ struct MatMul1DExec_construct {
     }
   }
 
-  // Get the i'th diagonal along dimension dim, encoded as a
-  // single constant. 
+  // Get the i'th diagonal, encoded as a single constant. 
   static
-  void processDiagonal(zzX& poly, long dim, long i, long D, long rotAmt,
+  void processDiagonal(zzX& poly, long i, long rotAmt,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
     if (mat.multipleTransforms())
-      processDiagonal2(poly, dim, i, D, rotAmt, ea, mat);
+      processDiagonal2(poly, i, rotAmt, ea, mat);
     else
-      processDiagonal1(poly, dim, i, D, rotAmt, ea, mat);
+      processDiagonal1(poly, i, rotAmt, ea, mat);
   }
 
   static
   void apply(const EncryptedArrayDerived<type>& ea,
              const MatMul1D& mat_basetype,
              vector<shared_ptr<ConstMultiplier>>& vec,
-             long dim, long D, long gs)
+             long g)
   {
+
     const MatMul1D_derived<type>& mat =
       dynamic_cast< const MatMul1D_derived<type>& >(mat_basetype);
+
+    long dim = mat.getDim();
+    long D = dimSz(ea, dim);
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
     vec.resize(D);
 
     for (long i = 0; i < D; i++) {
-      // i == j + gs*k
-      long j = i % gs;
-      long k = i / gs;
+      // i == j + g*k
+      long j = i % g;
+      long k = i / g;
 
-      long rotAmt = gs*k;
+      long rotAmt = g*k;
       // This assumes we process baby steps first, then giant steps.
       // For the reverse, set rotAmt = j
 
       zzX poly;
-      processDiagonal(poly, dim, i, D, rotAmt, ea, mat);
+      processDiagonal(poly, i, rotAmt, ea, mat);
 
       if (IsZero(poly))
          vec[i] = nullptr;
@@ -282,44 +303,23 @@ struct MatMul1DExec_construct {
 
   }
 
-#if 0
 
-    ConstMultiplierCache& cache = exec.cache;
-    cache.multiplier.resize(D);
-
-    long dim = mat.getDim();
-    assert(dim >= 0 && dim <= ea.dimension());
-    long D = (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
-
-    long gs = SqrRoot(D);
-    if (gs*gs < D) gs++;  // gs = ceiling(sqrt(D))
-
-    long ngs = divc(D, gs); // ngs = ceiling(D/gs)
 
     // Process the diagonals in baby-step/giant-step ordering.
     //   sum_{i=0}^{D-1} const_i rot^i(X)
-    //   = \sum_{i=0}^{gs-1} \sum_{j=0}^{ngs-1} const_{i+gs*j} rot^{i+gs*j}(X)
-    //   = \sum_i rot^i(sum_j rot^{-i}(const_{i+gs*j}) rot^{gs*j}(X))
+    //   = \sum_{i=0}^{g-1} \sum_{j=0}^{ngs-1} const_{i+g*j} rot^{i+g*j}(X)
+    //   = \sum_i rot^i(sum_j rot^{-i}(const_{i+g*j}) rot^{g*j}(X))
     //
-    // so for i=0..gs-1 we let
-    //    Y_i = sum_j rot^{-i}(const_{i+gs*j}) rot^{gs*j}(X)
-    // then compute \sum_{i=0}^{gs-1} rot^i(Y_i).
+    // so for i=0..g-1 we let
+    //    Y_i = sum_j rot^{-i}(const_{i+g*j}) rot^{g*j}(X)
+    // then compute \sum_{i=0}^{g-1} rot^i(Y_i).
     //
     // Computing the Y_i's, we initialize an accumulator for each Y_i,
-    // then compute the rotations X_j = rot^{gs*j}(X), j=0,...,ngs-1.
-    // Each X_j is multiplied by all the constants rot^{-i}(const_{i+gs*j}),
-    // i=0,...,gs-1, and the i'th product is added to the accumulator for
+    // then compute the rotations X_j = rot^{g*j}(X), j=0,...,ngs-1.
+    // Each X_j is multiplied by all the constants rot^{-i}(const_{i+g*j}),
+    // i=0,...,g-1, and the i'th product is added to the accumulator for
     // the corresponding Y_i.
 
-    ConstMultiplierCache& cache = exec.cache;
-    cache.multiplier.resize(D);
-
-    for (long j = 0; j < ngs; j++) {
-
-    }
-
-  }
-#endif
 
 
 };
@@ -327,9 +327,57 @@ struct MatMul1DExec_construct {
 
 
 MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
+  : ea(mat.getEA())
 {
-  //const EncryptedArray& ea = mat.getEA();
-  //ea.dispatch<MatMul1DExec_construct>(mat, Fwd(*this));
+    dim = mat.getDim();
+    assert(dim >= 0 && dim <= ea.dimension());
+    D = dimSz(ea, dim);
+
+    g = SqrRoot(D);
+    if (g*g < D) g++;  // g = ceiling(sqrt(D))
+
+    ea.dispatch<MatMul1DExec_construct>(mat, Fwd(cache.multiplier), g);
 }
+
+void
+MatMul1DExec::apply(Ctxt& ctxt)
+{
+   ctxt.cleanUp();
+
+   long ngs = divc(D, g);
+
+   vector<Ctxt> baby_steps(g, ctxt);
+
+   // FIXME: use parallel for loop
+   for (long j = 1; j < g; j++) {
+     ea.rotate1D(baby_steps[j], dim, j);
+     baby_steps[j].cleanUp();
+   }
+
+   vector<Ctxt> giant_steps(ngs, Ctxt(ZeroCtxtLike, ctxt));
+
+   // FIXME: use parallel for loop
+   for (long k = 0; k < ngs; k++) {
+      for (long j = 0; j < g; j++) {
+         long i = j + g*k;
+         if (i >= D) break;
+         if (cache.multiplier[i]) {
+            Ctxt tmp(baby_steps[j]);
+            cache.multiplier[i]->mul(tmp);
+            giant_steps[k] += tmp;
+         }
+      }
+
+      if (k > 0) ea.rotate1D(giant_steps[k], dim, g*k);
+   }
+
+   Ctxt acc(ZeroCtxtLike, ctxt);
+   for (long k = 0; k < ngs; k++) {
+      acc += giant_steps[k];
+   }
+
+   ctxt = acc;
+}
+
 
 int main() { }
