@@ -105,8 +105,9 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
     };
     for (i=0; i<sizeof(ms)/sizeof(long[4]); i++) { 
       if (ms[i][0] < N || GCD(p, ms[i][1]) != 1) continue;
-      long ordP = multOrd(p, ms[i][1]);
-      long nSlots = ms[i][0]/ordP;
+      long ordP = multOrd(p, ms[i][1]); // The function multOrd returns zero
+      assert(ordP != 0); // Sanity-check
+      long nSlots = ms[i][0]/ordP; // The divisor cannot be zero
       if (d != 0 && ordP % d != 0) continue;
       if (nSlots < s) continue;
 
