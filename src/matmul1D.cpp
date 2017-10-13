@@ -15,9 +15,9 @@
 #include <NTL/BasicThreadPool.h>
 #include "EncryptedArray.h"
 #include "matmul.h"
-#include "multiAutomorph.h"
+//#include "multiAutomorph.h"
 
-#if 1
+#if 0
 
 
 // Translate a value x in Zm* to the index e s.t. g_i^e=x (mod m)

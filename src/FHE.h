@@ -113,6 +113,8 @@ ostream& operator<<(ostream& str, const KeySwitch& matrix);
 // We DO NOT have istream& operator>>(istream& str, KeySwitch& matrix);
 // instead must use the readMatrix method above, where you can specify context
 
+
+
 /**
  * @class FHEPubKey
  * @brief The public key
@@ -149,7 +151,9 @@ class FHEPubKey { // The public key
    * matrix for k = b * a^{-1} mod m. The root of the tree is always 1
    * (which in particular means that autGraph[1] must exist).
    */
+/* MAUTO
   std::vector< std::vector<AutGraph> > multAutomorphTrees;
+*/
 
   // bootstrapping data
 
@@ -159,17 +163,17 @@ class FHEPubKey { // The public key
 public:
   FHEPubKey(): // this constructor thorws run-time error if activeContext=NULL
     context(*activeContext), pubEncrKey(*this),
-    recryptEkey(*this), multAutomorphTrees(1) { recryptKeyID=-1; }
+    recryptEkey(*this) /* MAUTO , multAutomorphTrees(1) */ { recryptKeyID=-1; } 
 
   explicit FHEPubKey(const FHEcontext& _context): 
-    context(_context), pubEncrKey(*this), recryptEkey(*this),
-    multAutomorphTrees(1) { recryptKeyID=-1; }
+    context(_context), pubEncrKey(*this), recryptEkey(*this)
+    /*  MAUTO , multAutomorphTrees(1) */ { recryptKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
     context(other.context), pubEncrKey(*this), skHwts(other.skHwts),
     keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
-    recryptKeyID(other.recryptKeyID), recryptEkey(*this),
-    multAutomorphTrees(other.multAutomorphTrees)
+    recryptKeyID(other.recryptKeyID), recryptEkey(*this)
+    /* MAUTO , multAutomorphTrees(other.multAutomorphTrees) */
   { // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
     pubEncrKey.privateAssign(other.pubEncrKey);
     recryptEkey.privateAssign(other.recryptEkey);
@@ -234,6 +238,7 @@ public:
   ///@{
   //! @name Manage Automorphism trees for all the dimensions
 
+/* MAUTO
   //! Removes all existing trees (if any) for a given dimension
   void resetTree(long dim, long keyID=0)
   {
@@ -254,6 +259,7 @@ public:
   const std::vector<long>& getChildrenInTree(long dim, long from, long keyID=0)
     const { return multAutomorphTrees.at(keyID).at(dim).at(from); }
   ///@}
+*/
 
   //! @brief Encrypts plaintext, result returned in the ciphertext argument.
   //! The returned value is the plaintext-space for that ciphertext. When

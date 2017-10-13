@@ -67,20 +67,22 @@ static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
   long m = context.zMStar.getM();
   computeParams(context,m,i); // defines vars: native, ord, gi, g2md, giminv, g2mdminv
 
-  vector<long> vals;
+  /* MAUTO vector<long> vals; */
   for (long j=1,val=gi; j < ord; j++) {
     // From s(X^val) to s(X)
     sKey.GenKeySWmatrix(1, val, keyID, keyID);
     if (!native) { // also from s(X^{g^{i-ord}}) to s(X)
       long val2 = MulModPrecon(val,g2md,m,g2mdminv);
       sKey.GenKeySWmatrix(1, val2, keyID, keyID);
-      vals.push_back(val2);
+      /* MAUTO vals.push_back(val2); */
     }
-    vals.push_back(val);
+    /* MAUTO vals.push_back(val); */
     val = MulModPrecon(val, gi, m, giminv); // val *= g mod m (= g^{j+1})
   }
+/* MAUTO
   sKey.resetTree(i,keyID); // remove existing tree, if any
   sKey.add2tree(i, 1, vals, keyID);
+*/
 }
 
 static std::pair<long,long> computeSteps(long ord, long bound, bool native)
@@ -144,10 +146,13 @@ static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
     }
   }
 
+#if 0 
+MAUTO
+
   // build the tree for this dimension, the internal nodes are 1 and
   // (subset of) gi^{giant}, gi^{2*giant}, ..., gi^{baby*giant}. We
 
-  sKey.resetTree(i,keyID); // remove existing tree, if any
+  MAUTO sKey.resetTree(i,keyID); // remove existing tree, if any 
 
   // keep a list of all the elements that are covered by the tree so far,
   // initialized to only the root (=1).
@@ -191,6 +196,7 @@ static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
   if (covered.size()<toCover)
     cerr << "**Warning: order-"<<ord<<" dimension, covered "<<covered.size()
          << " of "<<toCover<<endl;
+#endif
 }
 
 // generate only matrices of the form s(X^{g^i})->s(X), but not all of them.

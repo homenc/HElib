@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <tuple>
 #include "EncryptedArray.h"
+#include "matmul.h"
 
 
 /********************************************************************/
@@ -24,14 +25,14 @@
 
 
 
-class MatMul {
+class MatMul_new {
 public:
-  virtual ~MatMul() {}
+  virtual ~MatMul_new() {}
   virtual const EncryptedArray& getEA() const = 0;
 };
 
 template<class type>
-class MatMul_derived : public MatMul { 
+class MatMul_derived : public MatMul_new { 
 public:
   PA_INJECT(type)
 
@@ -44,8 +45,8 @@ class MatMul1D {
 public:
   virtual ~MatMul1D() {}
   virtual const EncryptedArray& getEA() const = 0;
-  virtual bool multipleTransforms() const = 0;
   virtual long getDim() const = 0;
+  virtual bool multipleTransforms() const = 0;
 };
 
 template<class type>
@@ -65,22 +66,10 @@ public:
 
   virtual ~ConstMultiplier() {}
 
-  virtual void mul(Ctxt& ctxt) = 0;
+  virtual void mul(Ctxt& ctxt) const = 0;
 
-};
-
-class ConstMultiplier_zzX : public ConstMultiplier {
-private:
-
-  zzX data;
-
-public:
-
-  ConstMultiplier_zzX(const zzX& _data) : data(_data) { }
-
-  virtual void mul(Ctxt& ctxt) {
-    ctxt.multByConstant(data);
-  } 
+  virtual ConstMultiplier *upgrade(const FHEcontext& context) const = 0;
+  // Upgrade to DCRT. Returns null of no upgrade required
 
 };
 
@@ -92,17 +81,48 @@ private:
 public:
   ConstMultiplier_DoubleCRT(const DoubleCRT& _data) : data(_data) { }
 
-  virtual void mul(Ctxt& ctxt) {
+  void mul(Ctxt& ctxt) const override {
     ctxt.multByConstant(data);
   } 
+
+  ConstMultiplier *upgrade(const FHEcontext& context) const override {
+    return nullptr;
+  }
 
 };
 
 
-class ConstMultiplierCache {
+class ConstMultiplier_zzX : public ConstMultiplier {
+private:
+
+  zzX data;
+
 public:
 
+  ConstMultiplier_zzX(const zzX& _data) : data(_data) { }
+
+  void mul(Ctxt& ctxt) const override {
+    ctxt.multByConstant(data);
+  } 
+
+  ConstMultiplier *upgrade(const FHEcontext& context) const override {
+    return new ConstMultiplier_DoubleCRT(DoubleCRT(data, context));
+  }
+
+};
+
+
+
+class ConstMultiplierCache {
+public:
   vector<shared_ptr<ConstMultiplier>> multiplier;
+
+  void upgrade(const FHEcontext& context) {
+    for (auto&& ptr: multiplier) 
+      if (ptr) 
+        if (auto newptr = ptr->upgrade(context)) 
+          ptr = shared_ptr<ConstMultiplier>(newptr); 
+  }
 
 };
 
@@ -112,15 +132,13 @@ public:
   const EncryptedArray& ea;
   long dim;
   long D;
-
   long g;
-
-
   ConstMultiplierCache cache;
 
 
-  MatMul1DExec(const MatMul1D& data);
-  void apply(Ctxt& ctxt);
+  MatMul1DExec(const MatMul1D& mat);
+  void mul(Ctxt& ctxt);
+  void upgrade() { cache.upgrade(ea.getContext()); }
 };
 
 
@@ -343,11 +361,11 @@ Then we add up all the giant_steps.
 
 
 void
-MatMul1DExec::apply(Ctxt& ctxt)
+MatMul1DExec::mul(Ctxt& ctxt)
 {
    ctxt.cleanUp();
 
-   long ngs = divc(D, g);
+   long nintervals = divc(D, g);
 
    vector<Ctxt> baby_steps(g, ctxt);
 
@@ -357,30 +375,254 @@ MatMul1DExec::apply(Ctxt& ctxt)
      baby_steps[j].cleanUp();
    }
 
-   vector<Ctxt> giant_steps(ngs, Ctxt(ZeroCtxtLike, ctxt));
+   Ctxt acc(ZeroCtxtLike, ctxt);
 
    // FIXME: use parallel for loop
-   for (long k = 0; k < ngs; k++) {
+   for (long k = 0; k < nintervals; k++) {
+      Ctxt acc1(ZeroCtxtLike, ctxt);
+
       for (long j = 0; j < g; j++) {
          long i = j + g*k;
          if (i >= D) break;
          if (cache.multiplier[i]) {
             Ctxt tmp(baby_steps[j]);
             cache.multiplier[i]->mul(tmp);
-            giant_steps[k] += tmp;
+            acc1 += tmp;
          }
       }
 
-      if (k > 0) ea.rotate1D(giant_steps[k], dim, g*k);
-   }
-
-   Ctxt acc(ZeroCtxtLike, ctxt);
-   for (long k = 0; k < ngs; k++) {
-      acc += giant_steps[k];
+      if (k > 0) ea.rotate1D(acc1, dim, g*k);
+      acc += acc1;
    }
 
    ctxt = acc;
 }
 
+template<class type> class RandomMatrix_new : public  MatMul1D_derived<type> {
+public:
+  PA_INJECT(type) 
 
-int main() { }
+private:
+  vector< vector< RX > > data;
+  const EncryptedArray& ea;
+  long dim;
+
+public:
+  virtual ~RandomMatrix_new() {}
+  RandomMatrix_new(const EncryptedArray& _ea, long _dim): 
+    ea(_ea), dim(_dim)
+  {
+    RBak bak; bak.save(); ea.getAlMod().restoreContext();
+    long n = ea.size();
+    long d = ea.getDegree();
+    long D = ea.sizeOfDimension(dim);
+
+    RandomStreamPush push;
+    SetSeed(ZZ(123));
+
+    data.resize(D);
+    for (long i = 0; i < D; i++) {
+      data[i].resize(D);
+      for (long j = 0; j < D; j++) {
+        random(data[i][j], d);
+      }
+    }
+  }
+
+  const EncryptedArray& getEA() const override { return ea; }
+  bool multipleTransforms() const override { return false; }
+  long getDim() const override { return dim; }
+
+  bool get(RX& out, long i, long j, long k) const override {
+    long D = ea.sizeOfDimension(dim);
+
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    if (IsZero(data[i][j])) return true;
+    out = data[i][j];
+    return false;
+  }
+};
+
+
+static MatMul1D*
+buildRandomMatrix_new(const EncryptedArray& ea, long dim)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMatrix_new<PA_GF2>(ea, dim);
+    }
+    case PA_zz_p_tag: {
+      return new RandomMatrix_new<PA_zz_p>(ea, dim);
+    }
+    default: return 0;
+  }
+}
+
+
+template<class type> class RandomMatrix : public  MatMul<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  vector< vector< RX > > data;
+  long dim;
+
+public:
+  virtual ~RandomMatrix() {}
+  RandomMatrix(const EncryptedArray& _ea, long _dim, long g): 
+    MatMul<type>(_ea,g), dim(_dim)
+  {
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long n = _ea.size();
+    long d = _ea.getDegree();
+    long D = _ea.sizeOfDimension(dim);
+
+    RandomStreamPush push;
+    SetSeed(ZZ(123));
+
+    data.resize(D);
+    for (long i = 0; i < D; i++) {
+      data[i].resize(D);
+      for (long j = 0; j < D; j++) {
+        random(data[i][j], d);
+      }
+    }
+  }
+
+  virtual bool get(RX& out, long i, long j) const {
+    long D = this->getEA().sizeOfDimension(dim);
+
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    if (IsZero(data[i][j])) return true;
+    out = data[i][j];
+    return false;
+  }
+};
+
+
+static MatMulBase*
+buildRandomMatrix(const EncryptedArray& ea, long dim, long giantStep)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMatrix<PA_GF2>(ea, dim, giantStep);
+    }
+    case PA_zz_p_tag: {
+      return new RandomMatrix<PA_zz_p>(ea, dim, giantStep);
+    }
+    default: return 0;
+  }
+}
+
+
+void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
+{
+  if (verbose) {
+    context.zMStar.printout();
+    cout << endl;
+  }
+
+  FHESecKey secretKey(context);
+  const FHEPubKey& publicKey = secretKey;
+  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
+
+  addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+  addFrbMatrices(secretKey); // compute key-switching matrices that we need
+  EncryptedArray ea(context, context.alMod);
+
+
+  // choose a random plaintext square matrix
+  std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
+  std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
+
+  MatMul1DExec mat_exec(*ptr_new);
+  mat_exec.upgrade();
+
+  // choose a random plaintext vector
+  NewPlaintextArray v(ea);
+  random(ea, v);
+
+  // encrypt the random vector
+  Ctxt ctxt(publicKey);
+  ea.encrypt(ctxt, publicKey, v);
+  Ctxt ctxt2 = ctxt;
+
+  resetAllTimers();
+
+  { FHE_NTIMER_START(AAA_matmul1D);
+  //matMul1D(ctxt, *ptr, dim);               // then use it
+  mat_exec.mul(ctxt);
+  }
+
+  printAllTimers();
+
+  matMul1D(v, *ptr, dim);     // multiply the plaintext vector
+
+  NewPlaintextArray v1(ea);
+  ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
+
+  if (equals(ea, v, v1))        // check that we've got the right answer
+    cout << "Nice!!\n";
+  else
+    cout << "Grrr@*\n";
+
+
+}
+
+
+int main(int argc, char *argv[]) 
+{
+  ArgMapping amap;
+
+  long m=2047;
+  amap.arg("m", m, "defines the cyclotomic polynomial Phi_m(X)");
+  long p=2;
+  amap.arg("p", p, "plaintext base");
+  long r=1;
+  amap.arg("r", r,  "lifting");
+  long g=2;
+  amap.arg("g", g,  "giant-step parameter");
+  long L=4;
+  amap.arg("L", L, "# of levels in the modulus chain");
+  long dim=0;
+  amap.arg("dim", dim, "dimension along which to multiply");
+  long verbose=0;
+  amap.arg("verbose", verbose, "print timing and other info");
+
+  NTL::Vec<long> gens;
+  amap.arg("gens", gens, "use specified vector of generators", NULL);
+  amap.note("e.g., gens='[562 1871 751]'");
+  NTL::Vec<long> ords;
+  amap.arg("ords", ords, "use specified vector of orders", NULL);
+  amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
+
+  amap.parse(argc, argv);
+
+  cout << "*** matmul1D: m=" << m
+       << ", p=" << p
+       << ", r=" << r
+       << ", L=" << L
+       << ", g=" << g
+       << ", dim=" << dim
+       // << ", gens=" << gens
+       // << ", ords=" << ords
+       << endl;
+
+  vector<long> gens1, ords1;
+  convert(gens1, gens);
+  convert(ords1, ords);
+
+  setTimersOn();
+
+  FHEcontext context(m, p, r, gens1, ords1);
+  buildModChain(context, L, /*c=*/3);
+
+  TestIt(context, g, dim, verbose);
+  cout << endl;
+  if (0 && verbose) {
+    printAllTimers();
+    cout << endl;
+  }
+}
