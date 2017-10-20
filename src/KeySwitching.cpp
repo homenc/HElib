@@ -19,6 +19,14 @@ NTL_CLIENT
 #include "FHE.h"
 #include "permutations.h"
 
+long KSGiantStepSize(long D)
+{
+  assert(D > 0);
+  long g = SqrRoot(D);
+  if (g*g < D) g++;  // g = ceiling(sqrt(D))
+  return g;
+}
+
 // A maximalistic approach: generate matrices s(X^e)->s(X) for all e \in Zm*
 void addAllMatrices(FHESecKey& sKey, long keyID)
 {
@@ -61,6 +69,7 @@ void addFewMatrices(FHESecKey& sKey, long keyID)
   NTL::mulmod_precon_t giminv = PrepMulModPrecon(gi, m);
 
 
+#if 0
 static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
@@ -79,11 +88,43 @@ static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
     /* MAUTO vals.push_back(val); */
     val = MulModPrecon(val, gi, m, giminv); // val *= g mod m (= g^{j+1})
   }
+
+  if (!native) {
+    sKey.GenKeySWmatrix(1, context.zMStar.genToPow(i, -ord), keyID, keyID);
+  }
+
+
 /* MAUTO
   sKey.resetTree(i,keyID); // remove existing tree, if any
   sKey.add2tree(i, 1, vals, keyID);
 */
 }
+#else
+static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
+{
+  const PAlgebra& zMStar = sKey.getContext().zMStar;
+  long ord;
+  bool native;
+
+  if (i < zMStar.numOfGens()) {
+    ord = zMStar.OrderOf(i);
+    native = zMStar.SameOrd(i);\
+  }
+  else {
+    // Frobenius
+    ord = zMStar.getOrdP();
+    native = true;
+  }
+
+  for (long j = 1; j < ord; j++) 
+    sKey.GenKeySWmatrix(1, zMStar.genToPow(i, j), keyID, keyID);
+
+  if (!native)
+    sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
+}
+
+
+#endif
 
 static std::pair<long,long> computeSteps(long ord, long bound, bool native)
 {
@@ -107,6 +148,7 @@ static std::pair<long,long> computeSteps(long ord, long bound, bool native)
   return std::pair<long,long>(baby,giant);
 }
 
+#if 0
 static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
@@ -130,6 +172,10 @@ static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
   for (long j=2,val=gb; j < giant; j++) { // Add matrices for giant steps
     val = MulModPrecon(val, gb, m, gbminv); // val = g^{(j+1)*baby}
     sKey.GenKeySWmatrix(1, val, keyID, keyID);
+  }
+
+  if (!native) {
+    sKey.GenKeySWmatrix(1, context.zMStar.genToPow(i, -ord), keyID, keyID);
   }
 
   // VJS: experimantal feature...because the replication code
@@ -199,6 +245,48 @@ MAUTO
 #endif
 }
 
+
+#else
+static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
+{
+  const PAlgebra& zMStar = sKey.getContext().zMStar;
+  long ord;
+  bool native;
+
+  if (i < zMStar.numOfGens()) {
+    ord = zMStar.OrderOf(i);
+    native = zMStar.SameOrd(i);\
+  }
+  else {
+    // Frobenius
+    ord = zMStar.getOrdP();
+    native = true;
+  }
+
+  long g = KSGiantStepSize(ord);
+
+  // baby steps
+  for (long j = 1; j < g; j++)
+    sKey.GenKeySWmatrix(1, zMStar.genToPow(i, j), keyID, keyID);
+
+  // giant steps
+  for (long j = g; j < ord; j += g)
+    sKey.GenKeySWmatrix(1, zMStar.genToPow(i, j), keyID, keyID);
+
+  if (!native)
+    sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
+
+  // NOTE: the old code also added matrices for ord-2^k for small k,
+  // in the case of (native && i<context.zMStar.numOfGens()).
+  // This supposedly speeds up the replication code, but for now
+  // we are leaving this out, for simplicity.   Also, it is a waste
+  // of space for applications that don't use replication.
+
+}
+
+
+#endif
+
 // generate only matrices of the form s(X^{g^i})->s(X), but not all of them.
 // For a generator g whose order is larger than bound, generate only enough
 // matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
@@ -207,7 +295,7 @@ void addSome1DMatrices(FHESecKey& sKey, long bound, long keyID)
   const FHEcontext &context = sKey.getContext();
 
   // key-switching matrices for the automorphisms
-  for (long i = 0; i < (long)context.zMStar.numOfGens(); i++) {
+  for (long i = 0; i < long(context.zMStar.numOfGens()); i++) {
           // For generators of small order, add all the powers
     if (bound >= context.zMStar.OrderOf(i))
       add1Dmats4dim(sKey, i, keyID);

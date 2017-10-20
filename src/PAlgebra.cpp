@@ -135,7 +135,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   }
   resize(native, lsize(tmpOrds));
   for (long j=0; j<lsize(tmpOrds); j++) {
-    native.put(j, (tmpOrds[j]>0));
+    native[j] = (tmpOrds[j]>0);
     tmpOrds[j] = abs(tmpOrds[j]);
   }
   cube.initSignature(tmpOrds);
@@ -186,6 +186,25 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
 
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
+}
+
+
+long PAlgebra::frobenuisPow(long j) const
+{
+  return PowerMod(mcMod(p, m), j, m);
+  // Don't forget to reduce p mod m!!
+}
+
+long PAlgebra::genToPow(long i, long j) const
+{
+  assert(i >= 0 && i <= gens.size());
+  long res;
+  if (i < gens.size())
+    res = PowerMod(gens[i], j, m);
+  else
+    res = frobenuisPow(j);
+
+  return res;
 }
 
 /***********************************************************************

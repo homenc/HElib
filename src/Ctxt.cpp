@@ -945,6 +945,7 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
 // result of every step.
 void Ctxt::smartAutomorph(long k) 
 {
+  //cerr << "****** smartAutomorph " << k << "\n";
   FHE_TIMER_START;
   // A hack: record this automorphism rather than actually performing it
   if (isSetAutomorphVals()) { // defined in NumbTh.h
@@ -979,6 +980,7 @@ void Ctxt::smartAutomorph(long k)
       recordAutomorphVal2(amt);
       return;
     }
+    //cerr << "********* automorph " << amt << "\n";
     automorph(amt);
     reLinearize(keyID);
     k = MulMod(k, InvMod(amt,m), m);

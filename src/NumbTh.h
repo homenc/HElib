@@ -678,13 +678,28 @@ inline long lsize(const NTL::Vec<T>& v) {
   return v.length();
 }
 
+
+// VJS: I changed the resize functions so that the
+// optional arg is handled as in C++11
+
 template <typename T>
-inline void resize(NTL::Vec<T>& v, long sz, const T& val=T()) {
+void resize(NTL::Vec<T>& v, long sz, const T& val) {
   return v.SetLength(sz, val);
 }
+
 template <typename T>
-inline void resize(std::vector<T>& v, long sz, const T& val=T()) {
+void resize(std::vector<T>& v, long sz, const T& val) {
   return v.resize(sz, val);
+}
+
+template <typename T>
+void resize(NTL::Vec<T>& v, long sz) {
+  return v.SetLength(sz);
+}
+
+template <typename T>
+void resize(std::vector<T>& v, long sz) {
+  return v.resize(sz);
 }
 
 
@@ -792,21 +807,6 @@ vector<T> atovector(const char *a)
   return v2;
 }
 
-// plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
-// Result is calclated in the output b "in place", so a should not alias b.
-template <class RX, class RXModulus>
-void plaintextAutomorph(RX& b, const RX& a, long k, long m, const RXModulus& PhimX)
-{
-  // compute b(X) = a(X^k) mod (X^m-1)
-  b.SetLength(m);
-  for (long j = 0; j < m; j++) b[j] = 0;
-  mulmod_precon_t precon = PrepMulModPrecon(k, m);
-  for (long j = 0; j <= deg(a); j++) 
-    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
-  b.normalize();
-
-  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
-}
 
 //! Debug printing routines for vectors, ZZX'es, print only a few entries
 template<class T> ostream& printVec(ostream& s, const Vec<T>& v,

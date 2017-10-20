@@ -57,6 +57,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   RBak bak; bak.save(); tab.restoreContext();
 
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  const PAlgebra& zMStar = getContext().zMStar;
   long m = getContext().zMStar.getM();
   long g = getContext().zMStar.ZmStarGen(i);
   long ord = sizeOfDimension(i);
@@ -66,7 +67,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   if (dc || nativeDimension(i)) { // native dimension or don't-care
     // For don't-care, we assume that any shifts "off the end" are zero
     long val = PowerMod(g, amt, m);
-    ctxt.smartAutomorph(val);
+    ctxt.smartAutomorph(zMStar.genToPow(i, amt));
     return;
   }
 
@@ -74,8 +75,13 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
 
   if (amt < 0) amt += ord;  // Make sure amt is in the range [1,ord-1]
   assert(maskTable[i].size() > 0);
-  long val = PowerMod(g, amt, m);
-  long ival= PowerMod(g, amt-ord, m);
+
+  //cerr << "*** rotate1D " << i << " " << amt << "\n";
+
+#if 0
+
+  long j = zMStar.genToPow(i, amt);
+  long j1= zMStar.genToPow(i, amt-ord);
 
   const RX& mask = maskTable[i][ord-amt];
   DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
@@ -83,9 +89,35 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
 
   tmp.multByConstant(m1);    // only the slots in which m1=1
   ctxt -= tmp;               // only the slots in which m1=0
-  ctxt.smartAutomorph(val);  // shift left by val
-  tmp.smartAutomorph(ival);  // shift right by ord-val
+  ctxt.smartAutomorph(j);    // shift left by val
+  tmp.smartAutomorph(j1);    // shift right by ord-val
   ctxt += tmp;               // combine the two parts
+
+#else
+
+
+  ctxt.smartAutomorph(zMStar.genToPow(i, amt));
+  // ctxt = \rho_i^{amt}(originalCtxt)
+
+  Ctxt T(ctxt);
+  T.smartAutomorph(zMStar.genToPow(i, -ord));
+  // T = \rho_i^{amt-ord}(originalCtxt).
+  // This strategy assumes is geared toward the
+  // assumption that we have the key switch matrix 
+  // for \rho_i^{-ord}
+
+  const RX& mask = maskTable[i][amt];
+  DoubleCRT m1(convert<zzX>(mask), context, 
+               ctxt.getPrimeSet() | T.getPrimeSet());
+  // m1 will be used to multiply both ctxt and T
+  
+  // Compute ctxt = ctxt*m1 + T - T*m1
+  ctxt.multByConstant(m1);
+  ctxt += T;
+  T.multByConstant(m1);
+  ctxt -= T;
+
+#endif
 }
 
 // Shift k positions along the i'th dimension with zero fill.
@@ -101,7 +133,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   RBak bak; bak.save(); tab.restoreContext();
 
   assert(&context == &ctxt.getContext());
-  assert(i >= 0 && i < (long)al.numOfGens());
+  assert(i >= 0 && i < long(al.numOfGens()));
 
   long ord = al.OrderOf(i);
 
@@ -119,10 +151,10 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 
   long val;
   if (k < 0)
-    val = PowerMod(al.ZmStarGen(i), amt-ord, al.getM());
+    val = al.genToPow(i, amt-ord);
   else {
     mask = 1 - mask;
-    val = PowerMod(al.ZmStarGen(i), amt, al.getM());
+    val = al.genToPow(i, amt);
   }
   DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
   ctxt.multByConstant(m1);   // zero out slots where mask=0
@@ -174,7 +206,11 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 
   if (al.SameOrd(i) || v==0) rotate1D(ctxt, i, v); // no need to optimize
   else {
+
+
     long ord = al.OrderOf(i);
+
+#if 0
     long val = PowerMod(al.ZmStarGen(i), v, al.getM());
     long ival = PowerMod(al.ZmStarGen(i), v-ord, al.getM());
 
@@ -186,6 +222,30 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     ctxt -= tmp;               // only the slots in which m1=0
     ctxt.smartAutomorph(val);  // shift left by val
     tmp.smartAutomorph(ival);  // shift right by ord-val
+#else
+
+  ctxt.smartAutomorph(al.genToPow(i, v));
+  // ctxt = \rho_i^{v}(originalCtxt)
+
+  tmp = ctxt;
+  tmp.smartAutomorph(al.genToPow(i, -ord));
+  // tmp = \rho_i^{v-ord}(originalCtxt).
+  // This strategy assumes is geared toward the
+  // assumption that we have the key switch matrix 
+  // for \rho_i^{-ord}
+
+  DoubleCRT m1(convert<zzX>(maskTable[i][v]), context, 
+               ctxt.getPrimeSet() | tmp.getPrimeSet());
+  // m1 will be used to multiply both ctxt and tmp
+  
+  // Compute ctxt = ctxt*m1, tmp = tmp*(1-m1)
+  ctxt.multByConstant(m1);
+
+  Ctxt tmp1(tmp);
+  tmp1.multByConstant(m1);
+  tmp -= tmp1;
+
+#endif
 
     // apply rotation relative to next generator before combining the parts
     --i;
@@ -315,6 +375,18 @@ void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) c
   conv(pp, ptxt);
   tab.decodePlaintext(array, pp, mappingData); 
   FHE_TIMER_STOP;
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::encode(RX& ptxt, const vector< RX >& array) const
+{
+  tab.embedInSlots(ptxt, array, mappingData); 
+}
+
+template<class type>
+void EncryptedArrayDerived<type>::decode(vector< RX >& array, const RX& ptxt) const
+{
+  tab.decodePlaintext(array, ptxt, mappingData); 
 }
 
 template<class type>

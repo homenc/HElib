@@ -132,13 +132,19 @@ public:
   const EncryptedArray& ea;
   long dim;
   long D;
+  bool native;
   long g;
+
   ConstMultiplierCache cache;
+  ConstMultiplierCache cache1; // only for non-native dimension
 
 
   MatMul1DExec(const MatMul1D& mat);
   void mul(Ctxt& ctxt);
-  void upgrade() { cache.upgrade(ea.getContext()); }
+  void upgrade() { 
+    cache.upgrade(ea.getContext()); 
+    cache1.upgrade(ea.getContext()); 
+  }
 };
 
 
@@ -152,13 +158,23 @@ static inline long dimSz(const EncryptedArrayBase& ea, long dim)
    return (dim==ea.dimension())? 1 : ea.sizeOfDimension(dim);
 }
 
+static inline long dimNative(const EncryptedArray& ea, long dim)
+{
+   return (dim==ea.dimension())? true : ea.nativeDimension(dim);
+}
+
+static inline long dimNative(const EncryptedArrayBase& ea, long dim)
+{
+   return (dim==ea.dimension())? true : ea.nativeDimension(dim);
+}
+
 
 template<class type>
 struct MatMul1DExec_construct {
   PA_INJECT(type)
 
   static
-  void processDiagonal1(zzX& poly, long i, long rotAmt,
+  void processDiagonal1(RX& poly, long i, long rotAmt,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
@@ -213,7 +229,7 @@ struct MatMul1DExec_construct {
 
 
   static
-  void processDiagonal2(zzX& poly, long idx, long rotAmt,
+  void processDiagonal2(RX& poly, long idx, long rotAmt,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
@@ -274,7 +290,7 @@ struct MatMul1DExec_construct {
 
   // Get the i'th diagonal, encoded as a single constant. 
   static
-  void processDiagonal(zzX& poly, long i, long rotAmt,
+  void processDiagonal(RX& poly, long i, long rotAmt,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
@@ -288,6 +304,7 @@ struct MatMul1DExec_construct {
   void apply(const EncryptedArrayDerived<type>& ea,
              const MatMul1D& mat_basetype,
              vector<shared_ptr<ConstMultiplier>>& vec,
+             vector<shared_ptr<ConstMultiplier>>& vec1,
              long g)
   {
 
@@ -296,29 +313,44 @@ struct MatMul1DExec_construct {
 
     long dim = mat.getDim();
     long D = dimSz(ea, dim);
+    bool native = dimNative(ea, dim);
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
     vec.resize(D);
+    if (!native) vec1.resize(D);
 
     for (long i = 0; i < D; i++) {
       // i == j + g*k
       long j = i % g;
       long k = i / g;
 
-      long rotAmt = g*k;
+      // long rotAmt = g*k;
       // This assumes we process baby steps first, then giant steps.
       // For the reverse, set rotAmt = j
 
-      zzX poly;
-      processDiagonal(poly, i, rotAmt, ea, mat);
+      RX poly;
+      processDiagonal(poly, i, 0, ea, mat);
 
-      if (IsZero(poly))
-         vec[i] = nullptr;
-      else
-         vec[i] = shared_ptr<ConstMultiplier>(new ConstMultiplier_zzX(poly));
+      // FIXME: not quite right. Need to multiply by mask constants
+      // in non-native dimension
+
+      if (IsZero(poly)) {
+        vec[i] = nullptr; 
+        if (!native) vec1[i] = nullptr;
+      }
+      else {
+        RX poly1;
+        plaintextAutomorph(poly1, poly, dim, -g*k, ea); 
+        vec[i] = shared_ptr<ConstMultiplier>(new ConstMultiplier_zzX(convert<zzX>(poly1)));
+
+        if (!native) {
+          RX poly2;
+          plaintextAutomorph(poly1, poly, dim, D, ea); 
+          vec1[i] = shared_ptr<ConstMultiplier>(new ConstMultiplier_zzX(convert<zzX>(poly2)));
+        }
+      }
     }
-
   }
 
 
@@ -336,9 +368,8 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
     dim = mat.getDim();
     assert(dim >= 0 && dim <= ea.dimension());
     D = dimSz(ea, dim);
-
-    g = SqrRoot(D);
-    if (g*g < D) g++;  // g = ceiling(sqrt(D))
+    native = dimNative(ea, dim);
+    g = KSGiantStepSize(D);
 
     ea.dispatch<MatMul1DExec_construct>(mat, Fwd(cache.multiplier), g);
 }
@@ -356,6 +387,34 @@ So we first compute baby_steps[j] = rot^j(v) for j in [0..g).
 Then for each k in [0..ceil(D/g)), we compute 
    giant_steps[k] = \rot^{g*k}[ rot^{-g*k}(const_{j+g*k}) baby_steps[j] ] 
 Then we add up all the giant_steps.
+
+In bad dimesnions:
+
+We need to compute
+\[
+  \sum_{j,k} c_{j+gk} r^{j+gk}(x)
+\]
+where $r^i$ denotes rotation by $i$.
+In bad dimensions, we have
+\[
+ r^i(x) = d_i \rho^i(x) + e_i \rho^{i-D}(x)
+\]
+for constants $d_i$ and $e_i$.
+Here, d_i is maskTable[i][amt] and e_i = 1-d_i
+
+So putting it all together
+\[
+  \sum_{j,k} c_{j+gk} r^{j+gk}(x)
+= \sum_{j,k} d'_{j+gk} \rho^{j+gk}(x) + e'_{j+gk} \rho^{j+gk-D}(x) 
+     \text{where $d'_i=c_i d_i$ and $e'_i = c_i e_i$}
+
+
+=               \sum_k \rho^{gk}[ \sum_j d''_{j+gk} \rho^j(x) ]
+   + \rho^{-D}[ \sum_k \rho^{gk}[ \sum_j e''_{j+gk} \rho^j(x) ] ]
+      \text{where $d''_{j+gk} = \rho^{-gk}(d'_{j+gk})$ and
+                  $e''_{j+gk} = \rho^{D-gk}(d'_{j+gk})$}
+ 
+\]
 
 ***************************************************************************/
 

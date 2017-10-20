@@ -346,6 +346,14 @@ public:
 //! @name Strategies for generating key-switching matrices
 //! These functions are implemented in KeySwitching.cpp
 
+//! @brief Constant defining threshold above which a baby-set/giant-step
+//! strategy is used
+#define FHE_KEYSWITCH_THRESH (50)
+
+//! @brief Function that returns number of baby steps.  Used to keep
+//! this and matmul routines "in sync".
+long KSGiantStepSize(long D);
+
 //! @brief Maximalistic approach:
 //! generate matrices s(X^e)->s(X) for all e in Zm*
 void addAllMatrices(FHESecKey& sKey, long keyID=0);
@@ -357,7 +365,7 @@ void addFewMatrices(FHESecKey& sKey, long keyID=0);
 //! @brief Generate some matrices of the form s(X^{g^i})->s(X), but not all.
 //! For a generator g whose order is larger than bound, generate only enough
 //! matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
-void addSome1DMatrices(FHESecKey& sKey, long bound=50, long keyID=0);
+void addSome1DMatrices(FHESecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
 
 //! @brief Generate all matrices s(X^{g^i})->s(X) for generators g of
 //! Zm* /(p) and i<ord(g). If g has different orders in Zm* and Zm* /(p)
@@ -366,7 +374,7 @@ inline void add1DMatrices(FHESecKey& sKey, long keyID=0)
 { addSome1DMatrices(sKey, LONG_MAX, keyID); }
 
 //! Generate all/some Frobenius matrices of the form s(X^{p^i})->s(X)
-void addSomeFrbMatrices(FHESecKey& sKey, long bound=50, long keyID=0);
+void addSomeFrbMatrices(FHESecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
 inline void addFrbMatrices(FHESecKey& sKey, long keyID=0)
 { addSomeFrbMatrices(sKey, LONG_MAX, keyID); }
 

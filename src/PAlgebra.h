@@ -60,9 +60,10 @@ class PAlgebra {
 
   vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
 
-  //  native[i]==1 is gens[i] has the same order in the quotient
-  //  group as its order in Zm*. else native[i]==0.
-  NTL::Vec<GF2> native;
+  //  native[i] is true iff gens[i] has the same order in the quotient
+  //  group as its order in Zm*. 
+  //  VJS: I changed this from a Vec<GF2> to Vec<bool>.
+  NTL::Vec<bool> native;
 
   CubeSignature cube; // the hypercube structure of Zm* /(p)
 
@@ -130,6 +131,14 @@ class PAlgebra {
   unsigned long ZmStarGen(unsigned long i) const
   {  return (i<gens.size())? gens[i] : 0; }
 
+  //! the i'th generator to the power j mod m
+  // VJS: I'm moving away from all of this unsigned stuff...
+  // Also, note that j really may be negative
+  long genToPow(long i, long j) const;
+
+  // p to the power j mod m
+  long frobenuisPow(long j) const;
+
   //! The order of i'th generator (if any)
   unsigned long OrderOf(unsigned long i) const
   {  return cube.getDim(i); }
@@ -140,7 +149,7 @@ class PAlgebra {
 
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
   bool SameOrd(unsigned long i) const
-  {  return NTL::IsOne(native[i]); }
+  {  return native[i]; }
 
   //! @name Translation between index, represnetatives, and exponents
 

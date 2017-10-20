@@ -433,6 +433,9 @@ public:
   void encode(ZZX& ptxt, const vector< RX >& array) const;
   void decode(vector< RX  >& array, const ZZX& ptxt) const;
 
+  void encode(RX& ptxt, const vector< RX >& array) const;
+  void decode(vector< RX  >& array, const RX& ptxt) const;
+
   // Choose random polynomial of the right degree, coeffs in GF2 or zz_p
   void random(vector< RX  >& array) const
   { 
@@ -546,6 +549,39 @@ private:
     ctxt1 -= tmp;
   }
 };
+
+
+// plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
+// Result is calclated in the output b "in place", so a should not alias b.
+template <class RX, class RXModulus>
+void plaintextAutomorph(RX& b, const RX& a, long k, long m, const RXModulus& PhimX)
+{
+  // compute b(X) = a(X^k) mod (X^m-1)
+  b.SetLength(m);
+  for (long j = 0; j < m; j++) b[j] = 0;
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
+  for (long j = 0; j <= deg(a); j++) 
+    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
+  b.normalize();
+
+  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
+}
+
+// same as above, but k = g_i^j mod m.
+// also works with i == ea.getContext().zMStar.numOfGens(),
+// which means Frobenius
+
+template<class RX, class type>
+void plaintextAutomorph(RX& b, const RX& a, long i, long j, 
+                        const EncryptedArrayDerived<type>& ea)
+{
+  const PAlgebra& zMStar = ea.getContext().zMStar;
+  const auto& F = ea.getTab().getPhimXMod();
+  long k = zMStar.genToPow(i, j);
+  long m = zMStar.getM();
+  plaintextAutomorph(b, a, k, m, F);
+}
+
 
 //! @brief A "factory" for building EncryptedArrays
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,

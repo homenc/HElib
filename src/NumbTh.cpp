@@ -293,10 +293,24 @@ compOrder(vector<long>& orders, vector<long>& classes, bool flag, long m)
 }
 
 // Compare numbers based on their absolute value
+#if 1
+
+// This version prefers positive numbers over negative
 static bool gtAbsVal(long a, long b)
 {
   return (abs(a)>abs(b) || (abs(a)==abs(b) && a>b));
 }
+
+
+#else
+
+// This version does not have a preference...
+// useful in generating test cases with "bad" dimensions
+static bool gtAbsVal(long a, long b)
+{
+  return (abs(a)>abs(b));
+}
+#endif
 
 // Returns in gens a generating set for Zm* /<p>, and in ords the
 // order of these generators. Return value is the order of p in Zm*.
