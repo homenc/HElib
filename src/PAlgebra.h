@@ -541,7 +541,7 @@ public:
      \verbatim
        maskTable.size() == zMStar.numOfGens()     // # of generators
        for i = 0..maskTable.size()-1:
-         maskTable[i].size() == zMStar.OrderOf(i) // order of generator i
+         maskTable[i].size() == zMStar.OrderOf(i)+1 // order of generator i
      \endverbatim
   **/
   const vector< vector< RX > >& getMaskTable() const // logically, but not really, const

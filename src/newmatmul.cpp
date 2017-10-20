@@ -307,7 +307,6 @@ struct MatMul1DExec_construct {
              vector<shared_ptr<ConstMultiplier>>& vec1,
              long g)
   {
-
     const MatMul1D_derived<type>& mat =
       dynamic_cast< const MatMul1D_derived<type>& >(mat_basetype);
 
@@ -317,38 +316,79 @@ struct MatMul1DExec_construct {
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
-    vec.resize(D);
-    if (!native) vec1.resize(D);
+    if (native) {
 
-    for (long i = 0; i < D; i++) {
-      // i == j + g*k
-      long j = i % g;
-      long k = i / g;
+      vec.resize(D);
 
-      // long rotAmt = g*k;
-      // This assumes we process baby steps first, then giant steps.
-      // For the reverse, set rotAmt = j
+      for (long i = 0; i < D; i++) {
+	// i == j + g*k
+	long j = i % g;
+	long k = i / g;
 
-      RX poly;
-      processDiagonal(poly, i, 0, ea, mat);
+	RX poly;
+	processDiagonal(poly, i, 0, ea, mat);
 
-      // FIXME: not quite right. Need to multiply by mask constants
-      // in non-native dimension
+        // vec[i] = rho_dim^{-g*k}(poly)
 
-      if (IsZero(poly)) {
-        vec[i] = nullptr; 
-        if (!native) vec1[i] = nullptr;
+	if (IsZero(poly)) {
+	  vec[i] = nullptr; 
+          continue;
+	}
+
+	plaintextAutomorph(poly, poly, dim, -g*k, ea); 
+	vec[i] = shared_ptr<ConstMultiplier>(
+		   new ConstMultiplier_zzX(convert<zzX>(poly)));
       }
-      else {
-        RX poly1;
-        plaintextAutomorph(poly1, poly, dim, -g*k, ea); 
-        vec[i] = shared_ptr<ConstMultiplier>(new ConstMultiplier_zzX(convert<zzX>(poly1)));
+    }
+    else {
+      vec.resize(D);
+      vec1.resize(D);
 
-        if (!native) {
-          RX poly2;
-          plaintextAutomorph(poly1, poly, dim, D, ea); 
-          vec1[i] = shared_ptr<ConstMultiplier>(new ConstMultiplier_zzX(convert<zzX>(poly2)));
+      for (long i = 0; i < D; i++) {
+	// i == j + g*k
+	long j = i % g;
+	long k = i / g;
+
+	RX poly;
+	processDiagonal(poly, i, 0, ea, mat);
+
+        if (IsZero(poly)) {
+          vec[i] = nullptr;
+          vec1[i] = nullptr;
+          continue;
         }
+
+        const RX& mask = ea.getTab().getMaskTable()[dim][i];
+        const RXModulus& PhimXMod = ea.getTab().getPhimXMod();
+
+        RX poly1, poly2;
+        MulMod(poly1, poly, mask, PhimXMod);
+        sub(poly2, poly, poly1);
+
+        // poly1 = poly w/ first i slots zeroed out
+        // poly2 = poly w/ last D-i slots zeroed out
+
+        // vec[i] = rho_dim^{-g*k}(poly1)
+
+        if (IsZero(poly1)) {
+          vec[i] = nullptr;
+        }
+        else {
+	  plaintextAutomorph(poly1, poly1, dim, -g*k, ea); 
+	  vec[i] = shared_ptr<ConstMultiplier>(
+                     new ConstMultiplier_zzX(convert<zzX>(poly1)));
+	}
+
+        // vec1[i] = rho_dim^{D-g*k}(poly2)
+
+        if (IsZero(poly2)) {
+          vec1[i] = nullptr;
+        }
+        else {
+	  plaintextAutomorph(poly2, poly2, dim, D-g*k, ea); 
+	  vec1[i] = shared_ptr<ConstMultiplier>(
+                      new ConstMultiplier_zzX(convert<zzX>(poly2)));
+	}
       }
     }
   }
@@ -371,7 +411,8 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
     native = dimNative(ea, dim);
     g = KSGiantStepSize(D);
 
-    ea.dispatch<MatMul1DExec_construct>(mat, Fwd(cache.multiplier), g);
+    ea.dispatch<MatMul1DExec_construct>(mat, Fwd(cache.multiplier), 
+                                        Fwd(cache1.multiplier), g);
 }
 
 
@@ -422,6 +463,7 @@ So putting it all together
 void
 MatMul1DExec::mul(Ctxt& ctxt)
 {
+   const PAlgebra& zMStar = ea.getContext().zMStar;
    ctxt.cleanUp();
 
    long nintervals = divc(D, g);
@@ -430,31 +472,71 @@ MatMul1DExec::mul(Ctxt& ctxt)
 
    // FIXME: use parallel for loop
    for (long j = 1; j < g; j++) {
-     ea.rotate1D(baby_steps[j], dim, j);
+     baby_steps[j].smartAutomorph(zMStar.genToPow(dim, j));
      baby_steps[j].cleanUp();
    }
 
-   Ctxt acc(ZeroCtxtLike, ctxt);
 
-   // FIXME: use parallel for loop
-   for (long k = 0; k < nintervals; k++) {
-      Ctxt acc1(ZeroCtxtLike, ctxt);
+   if (native) {
+      Ctxt acc(ZeroCtxtLike, ctxt);
 
-      for (long j = 0; j < g; j++) {
-         long i = j + g*k;
-         if (i >= D) break;
-         if (cache.multiplier[i]) {
-            Ctxt tmp(baby_steps[j]);
-            cache.multiplier[i]->mul(tmp);
-            acc1 += tmp;
-         }
+      // FIXME: use parallel for loop
+      for (long k = 0; k < nintervals; k++) {
+	 Ctxt acc_inner(ZeroCtxtLike, ctxt);
+
+	 for (long j = 0; j < g; j++) {
+	    long i = j + g*k;
+	    if (i >= D) break;
+	    if (cache.multiplier[i]) {
+	       Ctxt tmp(baby_steps[j]);
+	       cache.multiplier[i]->mul(tmp);
+	       acc_inner += tmp;
+	    }
+	 }
+
+	 if (k > 0) acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
+	 acc += acc_inner;
       }
 
-      if (k > 0) ea.rotate1D(acc1, dim, g*k);
-      acc += acc1;
+      ctxt = acc;
    }
+   else {
+      Ctxt acc(ZeroCtxtLike, ctxt);
+      Ctxt acc1(ZeroCtxtLike, ctxt);
 
-   ctxt = acc;
+      // FIXME: use parallel for loop
+      for (long k = 0; k < nintervals; k++) {
+	 Ctxt acc_inner(ZeroCtxtLike, ctxt);
+	 Ctxt acc_inner1(ZeroCtxtLike, ctxt);
+
+	 for (long j = 0; j < g; j++) {
+	    long i = j + g*k;
+	    if (i >= D) break;
+	    if (cache.multiplier[i]) {
+	       Ctxt tmp(baby_steps[j]);
+	       cache.multiplier[i]->mul(tmp);
+	       acc_inner += tmp;
+	    }
+	    if (cache1.multiplier[i]) {
+	       Ctxt tmp(baby_steps[j]);
+	       cache1.multiplier[i]->mul(tmp);
+	       acc_inner1 += tmp;
+	    }
+	 }
+
+	 if (k > 0) {
+            acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
+            acc_inner1.smartAutomorph(zMStar.genToPow(dim, g*k));
+         }
+
+	 acc += acc_inner;
+	 acc1 += acc_inner1;
+      }
+
+      acc1.smartAutomorph(zMStar.genToPow(dim, -D));
+      acc += acc1;
+      ctxt = acc;
+   }
 }
 
 template<class type> class RandomMatrix_new : public  MatMul1D_derived<type> {
