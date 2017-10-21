@@ -68,7 +68,7 @@ public:
 
   virtual void mul(Ctxt& ctxt) const = 0;
 
-  virtual ConstMultiplier *upgrade(const FHEcontext& context) const = 0;
+  virtual shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const = 0;
   // Upgrade to DCRT. Returns null of no upgrade required
 
 };
@@ -85,7 +85,7 @@ public:
     ctxt.multByConstant(data);
   } 
 
-  ConstMultiplier *upgrade(const FHEcontext& context) const override {
+  shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override {
     return nullptr;
   }
 
@@ -105,8 +105,8 @@ public:
     ctxt.multByConstant(data);
   } 
 
-  ConstMultiplier *upgrade(const FHEcontext& context) const override {
-    return new ConstMultiplier_DoubleCRT(DoubleCRT(data, context));
+  shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override {
+    return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context));
   }
 
 };
@@ -336,8 +336,7 @@ struct MatMul1DExec_construct {
 	}
 
 	plaintextAutomorph(poly, poly, dim, -g*k, ea); 
-	vec[i] = shared_ptr<ConstMultiplier>(
-		   new ConstMultiplier_zzX(convert<zzX>(poly)));
+	vec[i] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
       }
     }
     else {
@@ -375,8 +374,7 @@ struct MatMul1DExec_construct {
         }
         else {
 	  plaintextAutomorph(poly1, poly1, dim, -g*k, ea); 
-	  vec[i] = shared_ptr<ConstMultiplier>(
-                     new ConstMultiplier_zzX(convert<zzX>(poly1)));
+	  vec[i] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
 	}
 
         // vec1[i] = rho_dim^{D-g*k}(poly2)
@@ -386,8 +384,7 @@ struct MatMul1DExec_construct {
         }
         else {
 	  plaintextAutomorph(poly2, poly2, dim, D-g*k, ea); 
-	  vec1[i] = shared_ptr<ConstMultiplier>(
-                      new ConstMultiplier_zzX(convert<zzX>(poly2)));
+	  vec1[i] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly2));
 	}
       }
     }

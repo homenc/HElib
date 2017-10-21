@@ -134,6 +134,7 @@ class PAlgebra {
   //! the i'th generator to the power j mod m
   // VJS: I'm moving away from all of this unsigned stuff...
   // Also, note that j really may be negative
+  // NOTE: i == -1 means Frobenius
   long genToPow(long i, long j) const;
 
   // p to the power j mod m

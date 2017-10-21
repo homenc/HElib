@@ -556,6 +556,11 @@ template <class RX, class RXModulus>
 void plaintextAutomorph(RX& bb, const RX& a, long k, long m, const RXModulus& PhimX)
 {
   // compute b(X) = a(X^k) mod (X^m-1)
+  if (k == 1 || deg(a) <= 0) {
+    bb = a;
+    return;
+  }
+
   RX b;
   b.SetLength(m);
   mulmod_precon_t precon = PrepMulModPrecon(k, m);

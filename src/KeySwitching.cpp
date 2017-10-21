@@ -100,13 +100,16 @@ static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 */
 }
 #else
+// adds all matrices for dim i.
+// i == -1 => Frobenius (NOTE: in matmul1D, i ==#gens means something else,
+//   so it is best to avoid that).
 static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 {
   const PAlgebra& zMStar = sKey.getContext().zMStar;
   long ord;
   bool native;
 
-  if (i < zMStar.numOfGens()) {
+  if (i != -1) {
     ord = zMStar.OrderOf(i);
     native = zMStar.SameOrd(i);\
   }
@@ -247,13 +250,14 @@ MAUTO
 
 
 #else
+// same as above, but uses BS/GS strategy
 static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
 {
   const PAlgebra& zMStar = sKey.getContext().zMStar;
   long ord;
   bool native;
 
-  if (i < zMStar.numOfGens()) {
+  if (i != -1) {
     ord = zMStar.OrderOf(i);
     native = zMStar.SameOrd(i);\
   }
@@ -295,7 +299,7 @@ void addSome1DMatrices(FHESecKey& sKey, long bound, long keyID)
   const FHEcontext &context = sKey.getContext();
 
   // key-switching matrices for the automorphisms
-  for (long i = 0; i < long(context.zMStar.numOfGens()); i++) {
+  for (long i = 0; i < LONG(context.zMStar.numOfGens()); i++) {
           // For generators of small order, add all the powers
     if (bound >= context.zMStar.OrderOf(i))
       add1Dmats4dim(sKey, i, keyID);
@@ -309,10 +313,10 @@ void addSome1DMatrices(FHESecKey& sKey, long bound, long keyID)
 void addSomeFrbMatrices(FHESecKey& sKey, long bound, long keyID)
 {
   const FHEcontext &context = sKey.getContext();
-  if (bound >= (long)context.zMStar.getOrdP())
-    add1Dmats4dim(sKey, context.zMStar.numOfGens(), keyID);
+  if (bound >= LONG(context.zMStar.getOrdP()))
+    add1Dmats4dim(sKey, -1, keyID);
   else  // For generators of large order, add only some of the powers
-    addSome1Dmats4dim(sKey, context.zMStar.numOfGens(), bound, keyID);
+    addSome1Dmats4dim(sKey, -1, bound, keyID);
 
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }

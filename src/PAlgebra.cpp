@@ -197,9 +197,10 @@ long PAlgebra::frobenuisPow(long j) const
 
 long PAlgebra::genToPow(long i, long j) const
 {
-  assert(i >= 0 && i <= gens.size());
+  assert(i >= -1 && i < LONG(gens.size()));
+
   long res;
-  if (i < gens.size())
+  if (i != -1)
     res = PowerMod(gens[i], j, m);
   else
     res = frobenuisPow(j);
