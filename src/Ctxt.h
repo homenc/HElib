@@ -251,6 +251,7 @@ class Ctxt {
   friend class FHEPubKey;
   friend class FHESecKey;
   friend class AutomorphVecIterator;
+  friend class BasicAutomorphPrecon;
 
   const FHEcontext& context; // points to the parameters of this FHE instance
   const FHEPubKey& pubKey;   // points to the public encryption key;

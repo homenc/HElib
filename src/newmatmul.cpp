@@ -21,6 +21,134 @@
 
 
 /********************************************************************/
+/****************** Auxiliary stuff: should go elsewhere   **********/
+
+
+
+// FIXME: this is copied verbatim comes from Ctxt.cpp
+// Compute the number of digits that we need and the esitmated
+// added noise from switching this ciphertext part.
+static std::pair<long, NTL::xdouble>
+computeKSNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
+{
+  const FHEcontext& context = p.getContext();
+  long nDigits = 0;
+  xdouble addedNoise = to_xdouble(0.0);
+  double sizeLeft = context.logOfProduct(p.getIndexSet());
+  for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
+    nDigits++;
+
+    double digitSize = context.logOfProduct(context.digits[i]);
+    if (sizeLeft<digitSize) digitSize=sizeLeft;// need only part of this digit
+
+    // Added noise due to this digit is phi(m) *sigma^2 *pSpace^2 *|Di|^2/4, 
+    // where |Di| is the magnitude of the digit
+
+    // WARNING: the following line is written just so to prevent overflow
+    addedNoise += to_xdouble(context.zMStar.getPhiM()) * pSpace*pSpace
+      * xexp(2*digitSize) * context.stdev*context.stdev / 4.0;
+
+    sizeLeft -= digitSize;
+  }
+
+  // Sanity-check: make sure that the added noise is not more than the special
+  // primes can handle: After dividing the added noise by the product of all
+  // the special primes, it should be smaller than the added noise term due
+  // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 12
+
+  long keyWeight = pubKey.getSKeyWeight(p.skHandle.getSecretKeyID());
+  double phim = context.zMStar.getPhiM();
+  double logModSwitchNoise = log((double)keyWeight) 
+    +2*log((double)pSpace) +log(phim) -log(12.0);
+  double logKeySwitchNoise = log(addedNoise) 
+    -2*context.logOfProduct(context.specialPrimes);
+  assert(logKeySwitchNoise < logModSwitchNoise);
+
+  return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
+}
+
+class BasicAutomorphPrecon {
+  CtxtPart part0;
+  Ctxt zeroCtxt;
+  NTL::xdouble noise;
+  long keyID;
+  std::vector<DoubleCRT> polyDigits;
+
+public:
+  BasicAutomorphPrecon(const Ctxt& ctxt):
+    part0(ctxt.getContext(), IndexSet::emptySet()),
+    zeroCtxt(ZeroCtxtLike, ctxt)
+  {
+    FHE_TIMER_START;
+    const FHEcontext& context = ctxt.getContext();
+    const FHEPubKey& pubKey = ctxt.getPubKey();
+
+    keyID = ctxt.getKeyID();
+
+    // one should call Ctxt::cleanUp() before constructing
+    // this object.  The following assertions checks that. 
+
+    assert(ctxt.parts.size() == 2); 
+    assert(ctxt.parts[0].skHandle.isOne());
+    assert(ctxt.parts[1].skHandle.isBase(keyID));
+    assert(ctxt.getPrimeSet().disjointFrom(context.specialPrimes));
+    
+
+    part0 = ctxt.parts[0];
+
+    // Compute the number of digits that we need and the esitmated
+    // added noise from switching this ciphertext.
+    long nDigits;
+    std::tie(nDigits, noise)
+      = computeKSNoise(ctxt.parts[1], pubKey, pubKey.keySWlist().at(0).ptxtSpace);
+
+    double logProd = context.logOfProduct(context.specialPrimes);
+    noise += ctxt.getNoiseVar() * xexp(2*logProd);
+
+    // Break the ciphertext part into digits, if needed, and scale up these
+    // digits using the special primes.
+
+    ctxt.parts[1].breakIntoDigits(polyDigits, nDigits);
+  }
+
+  
+  shared_ptr<Ctxt>
+  automorph(long k) const
+  {
+    FHE_TIMER_START;
+
+    const FHEcontext& context = zeroCtxt.getContext();
+    const FHEPubKey& pubKey = zeroCtxt.getPubKey();
+
+    assert(pubKey.haveKeySWmatrix(1,k,keyID,keyID));
+    const KeySwitch& W = pubKey.getKeySWmatrix(1,k,keyID,keyID);
+
+    shared_ptr<Ctxt> result = make_shared<Ctxt>(zeroCtxt);
+
+    result->noiseVar = noise; // noise estimate
+
+
+    // Add in the constant part
+    CtxtPart tmpPart = part0;
+    tmpPart.automorph(k);
+    tmpPart.addPrimesAndScale(context.specialPrimes);
+    result->addPart(tmpPart, /*matchPrimeSet=*/true);
+
+    // "rotate" the digits before key-switching them
+    vector<DoubleCRT> tmpDigits = polyDigits;
+    for (auto&& tmp: tmpDigits) // rotate each of the digits
+      tmp.automorph(k);
+
+    result->keySwitchDigits(W, tmpDigits);
+
+    return result;
+  }
+};
+
+
+
+
+/********************************************************************/
 /****************** Linear transformation classes *******************/
 
 
@@ -402,6 +530,8 @@ struct MatMul1DExec_construct {
 MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
   : ea(mat.getEA())
 {
+    FHE_TIMER_START;
+
     dim = mat.getDim();
     assert(dim >= 0 && dim <= ea.dimension());
     D = dimSz(ea, dim);
@@ -456,23 +586,49 @@ So putting it all together
 
 ***************************************************************************/
 
+void VectorAutomorph(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
+{
+  long n = v.size();
+  assert(n > 0);
+
+  v[0] = make_shared<Ctxt>(ctxt);
+
+  if (n > 1) {
+    const PAlgebra& zMStar = ctxt.getContext().zMStar;
+
+    // FIXME: add test to make sure we have all the KS matrices we need
+    if (true) {
+      BasicAutomorphPrecon precon(ctxt);
+
+      for (long j = 1; j < n; j++) {
+	 v[j] = precon.automorph(zMStar.genToPow(dim, j));
+	 v[j]->cleanUp();
+      }
+    }
+    else {
+      for (long j = 1; j < n; j++) {
+	 v[j] = make_shared<Ctxt>(ctxt);
+	 v[j]->smartAutomorph(zMStar.genToPow(dim, j));
+	 v[j]->cleanUp();
+      }
+    }
+
+  }
+  
+}
 
 void
 MatMul1DExec::mul(Ctxt& ctxt)
 {
+   assert(&ea.getContext() == &ctxt.getContext());
    const PAlgebra& zMStar = ea.getContext().zMStar;
    ctxt.cleanUp();
 
    long nintervals = divc(D, g);
 
-   vector<Ctxt> baby_steps(g, ctxt);
+   vector<shared_ptr<Ctxt>> baby_steps(g);
 
-   // FIXME: use parallel for loop
-   for (long j = 1; j < g; j++) {
-     baby_steps[j].smartAutomorph(zMStar.genToPow(dim, j));
-     baby_steps[j].cleanUp();
-   }
-
+   VectorAutomorph(baby_steps, ctxt, dim);
 
    if (native) {
       Ctxt acc(ZeroCtxtLike, ctxt);
@@ -485,7 +641,7 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	    long i = j + g*k;
 	    if (i >= D) break;
 	    if (cache.multiplier[i]) {
-	       Ctxt tmp(baby_steps[j]);
+	       Ctxt tmp(*baby_steps[j]);
 	       cache.multiplier[i]->mul(tmp);
 	       acc_inner += tmp;
 	    }
@@ -510,12 +666,12 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	    long i = j + g*k;
 	    if (i >= D) break;
 	    if (cache.multiplier[i]) {
-	       Ctxt tmp(baby_steps[j]);
+	       Ctxt tmp(*baby_steps[j]);
 	       cache.multiplier[i]->mul(tmp);
 	       acc_inner += tmp;
 	    }
 	    if (cache1.multiplier[i]) {
-	       Ctxt tmp(baby_steps[j]);
+	       Ctxt tmp(*baby_steps[j]);
 	       cache1.multiplier[i]->mul(tmp);
 	       acc_inner1 += tmp;
 	    }
@@ -675,8 +831,12 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
   std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
   std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
 
+  resetAllTimers();
   MatMul1DExec mat_exec(*ptr_new);
-  mat_exec.upgrade();
+  //printAllTimers();
+  //cerr << "\n\n*****\n\n\n";
+
+  //mat_exec.upgrade();
 
   // choose a random plaintext vector
   NewPlaintextArray v(ea);
