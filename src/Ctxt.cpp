@@ -947,6 +947,7 @@ void Ctxt::smartAutomorph(long k)
 {
   //cerr << "****** smartAutomorph " << k << "\n";
   FHE_TIMER_START;
+
   // A hack: record this automorphism rather than actually performing it
   if (isSetAutomorphVals()) { // defined in NumbTh.h
     recordAutomorphVal(k);

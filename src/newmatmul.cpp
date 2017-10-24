@@ -18,6 +18,7 @@
 #include <tuple>
 #include "EncryptedArray.h"
 #include "matmul.h"
+#include <NTL/BasicThreadPool.h>
 
 
 /********************************************************************/
@@ -68,33 +69,27 @@ computeKSNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
 }
 
 class BasicAutomorphPrecon {
-  CtxtPart part0;
-  Ctxt zeroCtxt;
+  Ctxt ctxt;
   NTL::xdouble noise;
-  long keyID;
   std::vector<DoubleCRT> polyDigits;
 
 public:
-  BasicAutomorphPrecon(const Ctxt& ctxt):
-    part0(ctxt.getContext(), IndexSet::emptySet()),
-    zeroCtxt(ZeroCtxtLike, ctxt)
+  BasicAutomorphPrecon(const Ctxt& _ctxt) : ctxt(_ctxt)
   {
     FHE_TIMER_START;
+    ctxt.cleanUp();
+
     const FHEcontext& context = ctxt.getContext();
     const FHEPubKey& pubKey = ctxt.getPubKey();
+    long keyID = ctxt.getKeyID();
 
-    keyID = ctxt.getKeyID();
-
-    // one should call Ctxt::cleanUp() before constructing
-    // this object.  The following assertions checks that. 
+    // The call to cleanUp() should ensure that these assertions pass.
 
     assert(ctxt.parts.size() == 2); 
     assert(ctxt.parts[0].skHandle.isOne());
     assert(ctxt.parts[1].skHandle.isBase(keyID));
     assert(ctxt.getPrimeSet().disjointFrom(context.specialPrimes));
     
-
-    part0 = ctxt.parts[0];
 
     // Compute the number of digits that we need and the esitmated
     // added noise from switching this ciphertext.
@@ -117,19 +112,22 @@ public:
   {
     FHE_TIMER_START;
 
-    const FHEcontext& context = zeroCtxt.getContext();
-    const FHEPubKey& pubKey = zeroCtxt.getPubKey();
+    if (k == 1) return make_shared<Ctxt>(ctxt);
+
+    const FHEcontext& context = ctxt.getContext();
+    const FHEPubKey& pubKey = ctxt.getPubKey();
+    long keyID = ctxt.getKeyID();
 
     assert(pubKey.haveKeySWmatrix(1,k,keyID,keyID));
     const KeySwitch& W = pubKey.getKeySWmatrix(1,k,keyID,keyID);
 
-    shared_ptr<Ctxt> result = make_shared<Ctxt>(zeroCtxt);
+    shared_ptr<Ctxt> result = make_shared<Ctxt>(Ctxt(ZeroCtxtLike, ctxt));
 
     result->noiseVar = noise; // noise estimate
 
 
     // Add in the constant part
-    CtxtPart tmpPart = part0;
+    CtxtPart tmpPart = ctxt.parts[0];
     tmpPart.automorph(k);
     tmpPart.addPrimesAndScale(context.specialPrimes);
     result->addPart(tmpPart, /*matchPrimeSet=*/true);
@@ -591,28 +589,34 @@ void VectorAutomorph(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
   long n = v.size();
   assert(n > 0);
 
-  v[0] = make_shared<Ctxt>(ctxt);
+  if (n == 1) {
+    v[0] = make_shared<Ctxt>(ctxt);
+    v[0]->cleanUp();
+    return;
+  }
 
-  if (n > 1) {
-    const PAlgebra& zMStar = ctxt.getContext().zMStar;
+  const PAlgebra& zMStar = ctxt.getContext().zMStar;
 
-    // FIXME: add test to make sure we have all the KS matrices we need
-    if (true) {
-      BasicAutomorphPrecon precon(ctxt);
+  // FIXME: add test to make sure we have all the KS matrices we need
+  if (true) {
+    BasicAutomorphPrecon precon(ctxt);
 
-      for (long j = 1; j < n; j++) {
+    NTL_EXEC_RANGE(n, first, last)
+      for (long j = first; j < last; j++) {
 	 v[j] = precon.automorph(zMStar.genToPow(dim, j));
 	 v[j]->cleanUp();
       }
+    NTL_EXEC_RANGE_END
+  }
+  else {
+    Ctxt ctxt0(ctxt);
+    ctxt0.cleanUp();
+ 
+    for (long j = 0; j < n; j++) {
+       v[j] = make_shared<Ctxt>(ctxt0);
+       v[j]->smartAutomorph(zMStar.genToPow(dim, j));
+       v[j]->cleanUp();
     }
-    else {
-      for (long j = 1; j < n; j++) {
-	 v[j] = make_shared<Ctxt>(ctxt);
-	 v[j]->smartAutomorph(zMStar.genToPow(dim, j));
-	 v[j]->cleanUp();
-      }
-    }
-
   }
   
 }
@@ -622,7 +626,6 @@ MatMul1DExec::mul(Ctxt& ctxt)
 {
    assert(&ea.getContext() == &ctxt.getContext());
    const PAlgebra& zMStar = ea.getContext().zMStar;
-   ctxt.cleanUp();
 
    long nintervals = divc(D, g);
 
@@ -631,64 +634,87 @@ MatMul1DExec::mul(Ctxt& ctxt)
    VectorAutomorph(baby_steps, ctxt, dim);
 
    if (native) {
-      Ctxt acc(ZeroCtxtLike, ctxt);
+      PartitionInfo pinfo(nintervals);
+      long cnt = pinfo.NumIntervals();
 
-      // FIXME: use parallel for loop
-      for (long k = 0; k < nintervals; k++) {
-	 Ctxt acc_inner(ZeroCtxtLike, ctxt);
+      vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
-	 for (long j = 0; j < g; j++) {
-	    long i = j + g*k;
-	    if (i >= D) break;
-	    if (cache.multiplier[i]) {
-	       Ctxt tmp(*baby_steps[j]);
-	       cache.multiplier[i]->mul(tmp);
-	       acc_inner += tmp;
+      // parallel for loop: k in [0..nintervals)
+      NTL_EXEC_INDEX(cnt, index)
+         long first, last;
+         pinfo.interval(first, last, index);
+
+	 for (long k = first; k < last; k++) {
+	    Ctxt acc_inner(ZeroCtxtLike, ctxt);
+
+	    for (long j = 0; j < g; j++) {
+	       long i = j + g*k;
+	       if (i >= D) break;
+	       if (cache.multiplier[i]) {
+		  Ctxt tmp(*baby_steps[j]);
+		  cache.multiplier[i]->mul(tmp);
+		  acc_inner += tmp;
+	       }
 	    }
+
+	    if (k > 0) acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
+	    acc[index] += acc_inner;
 	 }
+      NTL_EXEC_INDEX_END
 
-	 if (k > 0) acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
-	 acc += acc_inner;
-      }
-
-      ctxt = acc;
+      ctxt = acc[0];
+      for (long i = 1; i < cnt; i++)
+         ctxt += acc[i];
    }
    else {
-      Ctxt acc(ZeroCtxtLike, ctxt);
-      Ctxt acc1(ZeroCtxtLike, ctxt);
+      PartitionInfo pinfo(nintervals);
+      long cnt = pinfo.NumIntervals();
 
-      // FIXME: use parallel for loop
-      for (long k = 0; k < nintervals; k++) {
-	 Ctxt acc_inner(ZeroCtxtLike, ctxt);
-	 Ctxt acc_inner1(ZeroCtxtLike, ctxt);
+      vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+      vector<Ctxt> acc1(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
-	 for (long j = 0; j < g; j++) {
-	    long i = j + g*k;
-	    if (i >= D) break;
-	    if (cache.multiplier[i]) {
-	       Ctxt tmp(*baby_steps[j]);
-	       cache.multiplier[i]->mul(tmp);
-	       acc_inner += tmp;
+      // parallel for loop: k in [0..nintervals)
+      NTL_EXEC_INDEX(cnt, index)
+
+         long first, last;
+         pinfo.interval(first, last, index);
+
+	 for (long k = first; k < last; k++) {
+	    Ctxt acc_inner(ZeroCtxtLike, ctxt);
+	    Ctxt acc_inner1(ZeroCtxtLike, ctxt);
+
+	    for (long j = 0; j < g; j++) {
+	       long i = j + g*k;
+	       if (i >= D) break;
+	       if (cache.multiplier[i]) {
+		  Ctxt tmp(*baby_steps[j]);
+		  cache.multiplier[i]->mul(tmp);
+		  acc_inner += tmp;
+	       }
+	       if (cache1.multiplier[i]) {
+		  Ctxt tmp(*baby_steps[j]);
+		  cache1.multiplier[i]->mul(tmp);
+		  acc_inner1 += tmp;
+	       }
 	    }
-	    if (cache1.multiplier[i]) {
-	       Ctxt tmp(*baby_steps[j]);
-	       cache1.multiplier[i]->mul(tmp);
-	       acc_inner1 += tmp;
+
+	    if (k > 0) {
+	       acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
+	       acc_inner1.smartAutomorph(zMStar.genToPow(dim, g*k));
 	    }
+
+	    acc[index] += acc_inner;
+	    acc1[index] += acc_inner1;
 	 }
 
-	 if (k > 0) {
-            acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
-            acc_inner1.smartAutomorph(zMStar.genToPow(dim, g*k));
-         }
+      NTL_EXEC_INDEX_END
 
-	 acc += acc_inner;
-	 acc1 += acc_inner1;
-      }
+      for (long i = 1; i < cnt; i++) acc[0] += acc[i];
+      for (long i = 1; i < cnt; i++) acc1[0] += acc1[i];
 
-      acc1.smartAutomorph(zMStar.genToPow(dim, -D));
-      acc += acc1;
-      ctxt = acc;
+      acc1[0].smartAutomorph(zMStar.genToPow(dim, -D));
+      acc[0] += acc1[0];
+      ctxt = acc[0];
    }
 }
 
@@ -836,7 +862,7 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
   //printAllTimers();
   //cerr << "\n\n*****\n\n\n";
 
-  //mat_exec.upgrade();
+  mat_exec.upgrade();
 
   // choose a random plaintext vector
   NewPlaintextArray v(ea);
@@ -888,6 +914,8 @@ int main(int argc, char *argv[])
   amap.arg("dim", dim, "dimension along which to multiply");
   long verbose=0;
   amap.arg("verbose", verbose, "print timing and other info");
+  long nt=1;
+  amap.arg("nt", nt, "# threads");
 
   NTL::Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", NULL);
@@ -904,6 +932,7 @@ int main(int argc, char *argv[])
        << ", L=" << L
        << ", g=" << g
        << ", dim=" << dim
+       << ", nt=" << nt
        // << ", gens=" << gens
        // << ", ords=" << ords
        << endl;
@@ -911,6 +940,8 @@ int main(int argc, char *argv[])
   vector<long> gens1, ords1;
   convert(gens1, gens);
   convert(ords1, ords);
+
+  SetNumThreads(nt);
 
   setTimersOn();
 
