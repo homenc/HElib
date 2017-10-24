@@ -612,6 +612,7 @@ void VectorAutomorph(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
     Ctxt ctxt0(ctxt);
     ctxt0.cleanUp();
  
+    // FIXME: parallelize
     for (long j = 0; j < n; j++) {
        v[j] = make_shared<Ctxt>(ctxt0);
        v[j]->smartAutomorph(zMStar.genToPow(dim, j));
