@@ -168,7 +168,10 @@ public:
   shared_ptr<Ctxt> operator()(long i) const override
   {
     shared_ptr<Ctxt> result = make_shared<Ctxt>(ctxt);
-    result->smartAutomorph(zMStar.genToPow(dim, i));
+
+    // guard against i == 0, as dim may be #gens
+    if (i != 0) result->smartAutomorph(zMStar.genToPow(dim, i));
+
     return result;
   }
 };
@@ -191,19 +194,63 @@ public:
 
 };
 
+class GeneralAutomorphPrecon_BSGS : public GeneralAutomorphPrecon {
+private:
+  long dim;
+  const PAlgebra& zMStar;
+
+  long D;
+  long g;
+  long nintervals;
+  vector<shared_ptr<BasicAutomorphPrecon>> precon;
+
+public:
+  GeneralAutomorphPrecon_BSGS(const Ctxt& _ctxt, long _dim) :
+    dim(_dim), zMStar(_ctxt.getContext().zMStar)
+  { 
+    D = (dim == -1) ? zMStar.getOrdP() : zMStar.OrderOf(dim);
+    g = KSGiantStepSize(D);
+    nintervals = divc(D, g);
+
+    BasicAutomorphPrecon precon0(_ctxt);
+    precon.resize(nintervals);
+
+    // parallel for k in [0..nintervals)
+    NTL_EXEC_RANGE(nintervals, first, last)
+      for (long k = first; k < last; k++) {
+	shared_ptr<Ctxt> p = precon0.automorph(zMStar.genToPow(dim, g*k));
+	precon[k] = make_shared<BasicAutomorphPrecon>(*p);
+      }
+    NTL_EXEC_RANGE_END
+  }
+
+  shared_ptr<Ctxt> operator()(long i) const override
+  {
+    assert(i >= 0 && i < D);
+    long j = i % g;
+    long k = i / g;
+    // i == j + g*k
+    return precon[k]->automorph(zMStar.genToPow(dim, j));
+  }
+
+};
+
 shared_ptr<GeneralAutomorphPrecon>
 buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim)
 {
-  assert(dim >= -1 && dim < long(ctxt.getContext().zMStar.numOfGens()));
+  // allow dim == -1 (Frobenius)
+  // allow dim == #gens (the dummy generator of order 1)
+  assert(dim >= -1 && dim <= long(ctxt.getContext().zMStar.numOfGens()));
 
   switch (ctxt.getPubKey().getKSStrategy(dim)) {
+    case FHE_KSS_BSGS:
+      return make_shared<GeneralAutomorphPrecon_BSGS>(ctxt, dim);
+
     case FHE_KSS_FULL:
       return make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim);
       
     default:
       return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
-
-    // FIXME: need to implement BSGS
   }
 }
 
@@ -603,12 +650,14 @@ struct MatMul1DExec_construct {
 
 
 #define FHE_BSGS_MUL_THRESH (50)
+// uses a BSGS multiplication strategy if sizeof(dim) > FHE_BSGS_MUL_THRESH;
+// otherwise uses the old strategy (but potentially with hoisting)
 
-// should not exceed FHE_KEYSWITCH_THRESH
-#if (FHE_BSGS_MUL_THRESH > FHE_KEYSWITCH_THRESH)
-#undef FHE_BSGS_MUL_THRESH
-#define FHE_BSGS_MUL_THRESH FHE_KEYSWITCH_THRESH
-#endif
+// For performace purposes, should not exceed FHE_KEYSWITCH_THRESH
+// For testing purposes: 
+//    set to 1 to always use BSGS
+//    set to infty to never use BSGS            
+
 
 
 MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
@@ -623,9 +672,9 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
 
     // FIXME: performance tune
     if (D <= FHE_BSGS_MUL_THRESH)
-       g = 0;
+       g = 0; // do not use BSGS
     else
-       g = KSGiantStepSize(D);
+       g = KSGiantStepSize(D); // use BSGS
 
     ea.dispatch<MatMul1DExec_construct>(mat, Fwd(cache.multiplier), 
                                         Fwd(cache1.multiplier), g);
@@ -702,12 +751,13 @@ void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
     Ctxt ctxt0(ctxt);
     ctxt0.cleanUp();
  
-    // FIXME: parallelize
-    for (long j = 0; j < n; j++) {
-       v[j] = make_shared<Ctxt>(ctxt0);
-       v[j]->smartAutomorph(zMStar.genToPow(dim, j));
-       v[j]->cleanUp();
-    }
+    NTL_EXEC_RANGE(n, first, last)
+      for (long j = first; j < last; j++) {
+	 v[j] = make_shared<Ctxt>(ctxt0);
+	 v[j]->smartAutomorph(zMStar.genToPow(dim, j));
+	 v[j]->cleanUp();
+      }
+    NTL_EXEC_RANGE_END
   }
   
 }
@@ -1012,6 +1062,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
+
+  // encrypted array with "full slots"
   EncryptedArray ea(context, context.alMod);
 
 
