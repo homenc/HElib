@@ -171,8 +171,23 @@ public:
     result->smartAutomorph(zMStar.genToPow(dim, i));
     return result;
   }
+};
 
-  
+class GeneralAutomorphPrecon_FULL : public GeneralAutomorphPrecon {
+private:
+  BasicAutomorphPrecon precon;
+  long dim;
+  const PAlgebra& zMStar;
+
+public:
+  GeneralAutomorphPrecon_FULL(const Ctxt& _ctxt, long _dim) :
+    precon(_ctxt), dim(_dim), zMStar(_ctxt.getContext().zMStar)
+  { }
+
+  shared_ptr<Ctxt> operator()(long i) const override
+  {
+    return precon.automorph(zMStar.genToPow(dim, i));
+  }
 
 };
 
@@ -181,8 +196,15 @@ buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim)
 {
   assert(dim >= -1 && dim < long(ctxt.getContext().zMStar.numOfGens()));
 
-  // FIXME: need to implement other strategies
-  return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
+  switch (ctxt.getPubKey().getKSStrategy(dim)) {
+    case FHE_KSS_FULL:
+      return make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim);
+      
+    default:
+      return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
+
+    // FIXME: need to implement BSGS
+  }
 }
 
 
@@ -488,8 +510,16 @@ struct MatMul1DExec_construct {
 
       for (long i = 0; i < D; i++) {
 	// i == j + g*k
-	long j = i % g;
-	long k = i / g;
+        long j, k;
+      
+        if (g) {
+          j = i % g;
+          k = i / g;
+        }
+        else {
+          j = i;
+          k = 1;
+        }
 
 	RX poly;
 	processDiagonal(poly, i, 0, ea, mat);
@@ -511,8 +541,16 @@ struct MatMul1DExec_construct {
 
       for (long i = 0; i < D; i++) {
 	// i == j + g*k
-	long j = i % g;
-	long k = i / g;
+        long j, k;
+      
+        if (g) {
+          j = i % g;
+          k = i / g;
+        }
+        else {
+          j = i;
+          k = 1;
+        }
 
 	RX poly;
 	processDiagonal(poly, i, 0, ea, mat);
@@ -564,6 +602,14 @@ struct MatMul1DExec_construct {
 };
 
 
+#define FHE_BSGS_MUL_THRESH (50)
+
+// should not exceed FHE_KEYSWITCH_THRESH
+#if (FHE_BSGS_MUL_THRESH > FHE_KEYSWITCH_THRESH)
+#undef FHE_BSGS_MUL_THRESH
+#define FHE_BSGS_MUL_THRESH FHE_KEYSWITCH_THRESH
+#endif
+
 
 MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
   : ea(mat.getEA())
@@ -574,7 +620,12 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
     assert(dim >= 0 && dim <= ea.dimension());
     D = dimSz(ea, dim);
     native = dimNative(ea, dim);
-    g = KSGiantStepSize(D);
+
+    // FIXME: performance tune
+    if (D <= FHE_BSGS_MUL_THRESH)
+       g = 0;
+    else
+       g = KSGiantStepSize(D);
 
     ea.dispatch<MatMul1DExec_construct>(mat, Fwd(cache.multiplier), 
                                         Fwd(cache1.multiplier), g);
@@ -667,94 +718,165 @@ MatMul1DExec::mul(Ctxt& ctxt)
    assert(&ea.getContext() == &ctxt.getContext());
    const PAlgebra& zMStar = ea.getContext().zMStar;
 
-   long nintervals = divc(D, g);
+   if (g != 0) {
+      // baby-step / giant-step
 
-   vector<shared_ptr<Ctxt>> baby_steps(g);
+      long nintervals = divc(D, g);
 
-   GenBabySteps(baby_steps, ctxt, dim);
+      vector<shared_ptr<Ctxt>> baby_steps(g);
 
-   if (native) {
-      PartitionInfo pinfo(nintervals);
-      long cnt = pinfo.NumIntervals();
+      GenBabySteps(baby_steps, ctxt, dim);
 
-      vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+      if (native) {
+	 PartitionInfo pinfo(nintervals);
+	 long cnt = pinfo.NumIntervals();
 
-      // parallel for loop: k in [0..nintervals)
-      NTL_EXEC_INDEX(cnt, index)
-         long first, last;
-         pinfo.interval(first, last, index);
+	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
-	 for (long k = first; k < last; k++) {
-	    Ctxt acc_inner(ZeroCtxtLike, ctxt);
+	 // parallel for loop: k in [0..nintervals)
+	 NTL_EXEC_INDEX(cnt, index)
+	    long first, last;
+	    pinfo.interval(first, last, index);
 
-	    for (long j = 0; j < g; j++) {
-	       long i = j + g*k;
-	       if (i >= D) break;
-	       if (cache.multiplier[i]) {
-		  Ctxt tmp(*baby_steps[j]);
-		  cache.multiplier[i]->mul(tmp);
-		  acc_inner += tmp;
+	    for (long k = first; k < last; k++) {
+	       Ctxt acc_inner(ZeroCtxtLike, ctxt);
+
+	       for (long j = 0; j < g; j++) {
+		  long i = j + g*k;
+		  if (i >= D) break;
+		  if (cache.multiplier[i]) {
+		     Ctxt tmp(*baby_steps[j]);
+		     cache.multiplier[i]->mul(tmp);
+		     acc_inner += tmp;
+		  }
 	       }
+
+	       if (k > 0) acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
+	       acc[index] += acc_inner;
+	    }
+	 NTL_EXEC_INDEX_END
+
+	 ctxt = acc[0];
+	 for (long i = 1; i < cnt; i++)
+	    ctxt += acc[i];
+      }
+      else {
+	 PartitionInfo pinfo(nintervals);
+	 long cnt = pinfo.NumIntervals();
+
+	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 vector<Ctxt> acc1(cnt, Ctxt(ZeroCtxtLike, ctxt));
+
+	 // parallel for loop: k in [0..nintervals)
+	 NTL_EXEC_INDEX(cnt, index)
+
+	    long first, last;
+	    pinfo.interval(first, last, index);
+
+	    for (long k = first; k < last; k++) {
+	       Ctxt acc_inner(ZeroCtxtLike, ctxt);
+	       Ctxt acc_inner1(ZeroCtxtLike, ctxt);
+
+	       for (long j = 0; j < g; j++) {
+		  long i = j + g*k;
+		  if (i >= D) break;
+		  if (cache.multiplier[i]) {
+		     Ctxt tmp(*baby_steps[j]);
+		     cache.multiplier[i]->mul(tmp);
+		     acc_inner += tmp;
+		  }
+		  if (cache1.multiplier[i]) {
+		     Ctxt tmp(*baby_steps[j]);
+		     cache1.multiplier[i]->mul(tmp);
+		     acc_inner1 += tmp;
+		  }
+	       }
+
+	       if (k > 0) {
+		  acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
+		  acc_inner1.smartAutomorph(zMStar.genToPow(dim, g*k));
+	       }
+
+	       acc[index] += acc_inner;
+	       acc1[index] += acc_inner1;
 	    }
 
-	    if (k > 0) acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
-	    acc[index] += acc_inner;
-	 }
-      NTL_EXEC_INDEX_END
+	 NTL_EXEC_INDEX_END
 
-      ctxt = acc[0];
-      for (long i = 1; i < cnt; i++)
-         ctxt += acc[i];
+	 for (long i = 1; i < cnt; i++) acc[0] += acc[i];
+	 for (long i = 1; i < cnt; i++) acc1[0] += acc1[i];
+
+	 acc1[0].smartAutomorph(zMStar.genToPow(dim, -D));
+	 acc[0] += acc1[0];
+	 ctxt = acc[0];
+      }
    }
    else {
-      PartitionInfo pinfo(nintervals);
-      long cnt = pinfo.NumIntervals();
+      if (native) {
+         shared_ptr<GeneralAutomorphPrecon> precon =
+            buildGeneralAutomorphPrecon(ctxt, dim);
 
-      vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
-      vector<Ctxt> acc1(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 PartitionInfo pinfo(D);
+	 long cnt = pinfo.NumIntervals();
 
-      // parallel for loop: k in [0..nintervals)
-      NTL_EXEC_INDEX(cnt, index)
+	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
-         long first, last;
-         pinfo.interval(first, last, index);
+	 // parallel for loop: i in [0..D)
+	 NTL_EXEC_INDEX(cnt, index)
+	    long first, last;
+	    pinfo.interval(first, last, index);
 
-	 for (long k = first; k < last; k++) {
-	    Ctxt acc_inner(ZeroCtxtLike, ctxt);
-	    Ctxt acc_inner1(ZeroCtxtLike, ctxt);
-
-	    for (long j = 0; j < g; j++) {
-	       long i = j + g*k;
-	       if (i >= D) break;
+	    for (long i = first; i < last; i++) {
 	       if (cache.multiplier[i]) {
-		  Ctxt tmp(*baby_steps[j]);
-		  cache.multiplier[i]->mul(tmp);
-		  acc_inner += tmp;
-	       }
-	       if (cache1.multiplier[i]) {
-		  Ctxt tmp(*baby_steps[j]);
-		  cache1.multiplier[i]->mul(tmp);
-		  acc_inner1 += tmp;
+		  shared_ptr<Ctxt> tmp = (*precon)(i);
+		  cache.multiplier[i]->mul(*tmp);
+		  acc[index] += *tmp;
 	       }
 	    }
+	 NTL_EXEC_INDEX_END
 
-	    if (k > 0) {
-	       acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
-	       acc_inner1.smartAutomorph(zMStar.genToPow(dim, g*k));
+	 ctxt = acc[0];
+	 for (long i = 1; i < cnt; i++)
+	    ctxt += acc[i];
+      }
+      else {
+         shared_ptr<GeneralAutomorphPrecon> precon =
+            buildGeneralAutomorphPrecon(ctxt, dim);
+
+	 PartitionInfo pinfo(D);
+	 long cnt = pinfo.NumIntervals();
+
+	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 vector<Ctxt> acc1(cnt, Ctxt(ZeroCtxtLike, ctxt));
+
+	 // parallel for loop: i in [0..D)
+	 NTL_EXEC_INDEX(cnt, index)
+	    long first, last;
+	    pinfo.interval(first, last, index);
+
+	    for (long i = first; i < last; i++) {
+	       if (cache.multiplier[i] || cache1.multiplier[i]) {
+		  shared_ptr<Ctxt> tmp = (*precon)(i);
+                  shared_ptr<Ctxt> tmp1 = make_shared<Ctxt>(*tmp);
+		  if (cache.multiplier[i]) {
+                     cache.multiplier[i]->mul(*tmp);
+		     acc[index] += *tmp;
+                  }
+		  if (cache1.multiplier[i]) {
+                     cache1.multiplier[i]->mul(*tmp1);
+		     acc1[index] += *tmp1;
+                  }
+	       }
 	    }
+	 NTL_EXEC_INDEX_END
 
-	    acc[index] += acc_inner;
-	    acc1[index] += acc_inner1;
-	 }
+	 for (long i = 1; i < cnt; i++) acc[0] += acc[i];
+	 for (long i = 1; i < cnt; i++) acc1[0] += acc1[i];
 
-      NTL_EXEC_INDEX_END
-
-      for (long i = 1; i < cnt; i++) acc[0] += acc[i];
-      for (long i = 1; i < cnt; i++) acc1[0] += acc1[i];
-
-      acc1[0].smartAutomorph(zMStar.genToPow(dim, -D));
-      acc[0] += acc1[0];
-      ctxt = acc[0];
+	 acc1[0].smartAutomorph(zMStar.genToPow(dim, -D));
+	 acc[0] += acc1[0];
+	 ctxt = acc[0];
+      }
    }
 }
 
