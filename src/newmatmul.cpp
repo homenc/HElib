@@ -144,6 +144,46 @@ public:
 };
 
 
+class GeneralAutomorphPrecon {
+public:
+  virtual ~GeneralAutomorphPrecon() {}
+
+  virtual shared_ptr<Ctxt> operator()(long i) const = 0;
+
+};
+
+class GeneralAutomorphPrecon_UNKNOWN : public GeneralAutomorphPrecon {
+private:
+  Ctxt ctxt;
+  long dim;
+  const PAlgebra& zMStar;
+
+public:
+  GeneralAutomorphPrecon_UNKNOWN(const Ctxt& _ctxt, long _dim) :
+    ctxt(_ctxt), dim(_dim), zMStar(_ctxt.getContext().zMStar)
+  {
+    ctxt.cleanUp();
+  }
+
+  shared_ptr<Ctxt> operator()(long i) const override
+  {
+    shared_ptr<Ctxt> result = make_shared<Ctxt>(ctxt);
+    result->smartAutomorph(zMStar.genToPow(dim, i));
+    return result;
+  }
+
+  
+
+};
+
+shared_ptr<GeneralAutomorphPrecon>
+buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim)
+{
+  assert(dim >= -1 && dim < long(ctxt.getContext().zMStar.numOfGens()));
+
+  // FIXME: need to implement other strategies
+  return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
+}
 
 
 /********************************************************************/
@@ -584,7 +624,7 @@ So putting it all together
 
 ***************************************************************************/
 
-void VectorAutomorph(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
+void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
 {
   long n = v.size();
   assert(n > 0);
@@ -597,8 +637,7 @@ void VectorAutomorph(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
 
   const PAlgebra& zMStar = ctxt.getContext().zMStar;
 
-  // FIXME: add test to make sure we have all the KS matrices we need
-  if (true) {
+  if (ctxt.getPubKey().getKSStrategy(dim) != FHE_KSS_UNKNOWN) {
     BasicAutomorphPrecon precon(ctxt);
 
     NTL_EXEC_RANGE(n, first, last)
@@ -632,7 +671,7 @@ MatMul1DExec::mul(Ctxt& ctxt)
 
    vector<shared_ptr<Ctxt>> baby_steps(g);
 
-   VectorAutomorph(baby_steps, ctxt, dim);
+   GenBabySteps(baby_steps, ctxt, dim);
 
    if (native) {
       PartitionInfo pinfo(nintervals);

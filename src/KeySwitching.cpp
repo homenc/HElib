@@ -124,6 +124,8 @@ static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 
   if (!native)
     sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
+
+  sKey.setKSStrategy(i, FHE_KSS_FULL);
 }
 
 
@@ -279,6 +281,8 @@ static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
 
   if (!native)
     sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
+
+  sKey.setKSStrategy(i, FHE_KSS_BSGS);
 
   // NOTE: the old code also added matrices for ord-2^k for small k,
   // in the case of (native && i<context.zMStar.numOfGens()).

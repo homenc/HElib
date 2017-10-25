@@ -114,6 +114,16 @@ ostream& operator<<(ostream& str, const KeySwitch& matrix);
 // instead must use the readMatrix method above, where you can specify context
 
 
+#define FHE_KSS_UNKNOWN (0)
+// unknown KS strategy
+
+#define FHE_KSS_FULL    (1)
+// all KS matrices
+
+#define FHE_KSS_BSGS    (2)
+// baby step/giant step strategy
+
+
 
 /**
  * @class FHEPubKey
@@ -151,6 +161,8 @@ class FHEPubKey { // The public key
    * matrix for k = b * a^{-1} mod m. The root of the tree is always 1
    * (which in particular means that autGraph[1] must exist).
    */
+
+  std::vector<int> KS_strategy;
 /* MAUTO
   std::vector< std::vector<AutGraph> > multAutomorphTrees;
 */
@@ -234,6 +246,24 @@ public:
   //! @brief Compute the reachability graph of key-switching matrices
   //! See Section 3.2.2 in the design document (KeySwitchMap)
   void setKeySwitchMap(long keyId=0);  // Computes the keySwitchMap pointers
+
+  //! @brief get KS strategy for dimension dim  
+  //! dim == -1 is Frobenius
+  long getKSStrategy(long dim) const {
+    long index = dim+1;
+    if (index >= lsize(KS_strategy)) return FHE_KSS_UNKNOWN;
+    return KS_strategy.at(index);
+  }
+
+  //! @brief set KS strategy for dimension dim  
+  //! dim == -1 is Frobenius
+  long setKSStrategy(long dim, int val) {
+    long index = dim+1;
+    assert(index >= 0);
+    if (index >= lsize(KS_strategy)) 
+      KS_strategy.resize(index+1, FHE_KSS_UNKNOWN);
+    KS_strategy[index] = val;
+  }
 
   ///@{
   //! @name Manage Automorphism trees for all the dimensions
