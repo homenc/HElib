@@ -649,7 +649,7 @@ struct MatMul1DExec_construct {
 };
 
 
-#define FHE_BSGS_MUL_THRESH (50)
+#define FHE_BSGS_MUL_THRESH FHE_KEYSWITCH_THRESH
 // uses a BSGS multiplication strategy if sizeof(dim) > FHE_BSGS_MUL_THRESH;
 // otherwise uses the old strategy (but potentially with hoisting)
 
