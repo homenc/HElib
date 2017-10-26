@@ -403,6 +403,8 @@ static inline long dimNative(const EncryptedArrayBase& ea, long dim)
    return (dim==ea.dimension())? true : ea.nativeDimension(dim);
 }
 
+#define ALT_BAD_BSGS (1)
+
 
 template<class type>
 struct MatMul1DExec_construct {
@@ -634,7 +636,12 @@ struct MatMul1DExec_construct {
           vec1[i] = nullptr;
         }
         else {
-	  plaintextAutomorph(poly2, poly2, dim, D-g*k, ea); 
+#if ALT_BAD_BSGS
+          long amt = (!g) ? D : -g*k;
+#else
+          long amt = D-g*k;
+#endif
+	  plaintextAutomorph(poly2, poly2, dim, amt, ea); 
 	  vec1[i] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly2));
 	}
       }
@@ -768,13 +775,14 @@ MatMul1DExec::mul(Ctxt& ctxt)
    assert(&ea.getContext() == &ctxt.getContext());
    const PAlgebra& zMStar = ea.getContext().zMStar;
 
+   ctxt.cleanUp();
+
    if (g != 0) {
       // baby-step / giant-step
 
       long nintervals = divc(D, g);
 
       vector<shared_ptr<Ctxt>> baby_steps(g);
-
       GenBabySteps(baby_steps, ctxt, dim);
 
       if (native) {
@@ -811,6 +819,52 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	    ctxt += acc[i];
       }
       else {
+#if ALT_BAD_BSGS
+         Ctxt ctxt1(ctxt);
+         ctxt1.smartAutomorph(zMStar.genToPow(dim, -D));
+
+	 vector<shared_ptr<Ctxt>> baby_steps1(g);
+	 GenBabySteps(baby_steps1, ctxt1, dim);
+
+	 PartitionInfo pinfo(nintervals);
+	 long cnt = pinfo.NumIntervals();
+
+	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+
+	 // parallel for loop: k in [0..nintervals)
+	 NTL_EXEC_INDEX(cnt, index)
+
+	    long first, last;
+	    pinfo.interval(first, last, index);
+
+	    for (long k = first; k < last; k++) {
+	       Ctxt acc_inner(ZeroCtxtLike, ctxt);
+
+	       for (long j = 0; j < g; j++) {
+		  long i = j + g*k;
+		  if (i >= D) break;
+		  if (cache.multiplier[i]) {
+		     Ctxt tmp(*baby_steps[j]);
+		     cache.multiplier[i]->mul(tmp);
+		     acc_inner += tmp;
+		  }
+		  if (cache1.multiplier[i]) {
+		     Ctxt tmp(*baby_steps1[j]);
+		     cache1.multiplier[i]->mul(tmp);
+		     acc_inner += tmp;
+		  }
+	       }
+
+	       if (k > 0) acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
+	       acc[index] += acc_inner;
+	    }
+
+	 NTL_EXEC_INDEX_END
+
+	 ctxt = acc[0];
+	 for (long i = 1; i < cnt; i++)
+	    ctxt += acc[i];
+#else
 	 PartitionInfo pinfo(nintervals);
 	 long cnt = pinfo.NumIntervals();
 
@@ -859,6 +913,7 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	 acc1[0].smartAutomorph(zMStar.genToPow(dim, -D));
 	 acc[0] += acc1[0];
 	 ctxt = acc[0];
+#endif
       }
    }
    else {
