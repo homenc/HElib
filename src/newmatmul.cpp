@@ -731,14 +731,15 @@ So putting it all together
 
 ***************************************************************************/
 
-void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
+void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim, 
+                  bool clean)
 {
   long n = v.size();
   assert(n > 0);
 
   if (n == 1) {
     v[0] = make_shared<Ctxt>(ctxt);
-    v[0]->cleanUp();
+    if (clean) v[0]->cleanUp();
     return;
   }
 
@@ -750,7 +751,7 @@ void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
     NTL_EXEC_RANGE(n, first, last)
       for (long j = first; j < last; j++) {
 	 v[j] = precon.automorph(zMStar.genToPow(dim, j));
-	 v[j]->cleanUp();
+	 if (clean) v[j]->cleanUp();
       }
     NTL_EXEC_RANGE_END
   }
@@ -762,7 +763,7 @@ void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim)
       for (long j = first; j < last; j++) {
 	 v[j] = make_shared<Ctxt>(ctxt0);
 	 v[j]->smartAutomorph(zMStar.genToPow(dim, j));
-	 v[j]->cleanUp();
+	 if (clean) v[j]->cleanUp();
       }
     NTL_EXEC_RANGE_END
   }
@@ -780,12 +781,11 @@ MatMul1DExec::mul(Ctxt& ctxt)
    if (g != 0) {
       // baby-step / giant-step
 
-      long nintervals = divc(D, g);
-
-      vector<shared_ptr<Ctxt>> baby_steps(g);
-      GenBabySteps(baby_steps, ctxt, dim);
-
       if (native) {
+	 long nintervals = divc(D, g);
+	 vector<shared_ptr<Ctxt>> baby_steps(g);
+	 GenBabySteps(baby_steps, ctxt, dim, true);
+
 	 PartitionInfo pinfo(nintervals);
 	 long cnt = pinfo.NumIntervals();
 
@@ -820,11 +820,15 @@ MatMul1DExec::mul(Ctxt& ctxt)
       }
       else {
 #if ALT_BAD_BSGS
+	 long nintervals = divc(D, g);
+	 vector<shared_ptr<Ctxt>> baby_steps(g);
+	 GenBabySteps(baby_steps, ctxt, dim, false);
+
          Ctxt ctxt1(ctxt);
          ctxt1.smartAutomorph(zMStar.genToPow(dim, -D));
 
 	 vector<shared_ptr<Ctxt>> baby_steps1(g);
-	 GenBabySteps(baby_steps1, ctxt1, dim);
+	 GenBabySteps(baby_steps1, ctxt1, dim, false);
 
 	 PartitionInfo pinfo(nintervals);
 	 long cnt = pinfo.NumIntervals();
@@ -865,6 +869,10 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	 for (long i = 1; i < cnt; i++)
 	    ctxt += acc[i];
 #else
+	 long nintervals = divc(D, g);
+	 vector<shared_ptr<Ctxt>> baby_steps(g);
+	 GenBabySteps(baby_steps, ctxt, dim, true);
+
 	 PartitionInfo pinfo(nintervals);
 	 long cnt = pinfo.NumIntervals();
 
