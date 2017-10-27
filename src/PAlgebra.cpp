@@ -200,10 +200,10 @@ long PAlgebra::genToPow(long i, long j) const
   assert(i >= -1 && i < LONG(gens.size()));
 
   long res;
-  if (i != -1)
-    res = PowerMod(gens[i], j, m);
-  else
+  if (i == -1)
     res = frobenuisPow(j);
+  else
+    res = PowerMod(gens[i], j, m);
 
   return res;
 }

@@ -365,6 +365,8 @@ class MatMul1DExec {
 public:
 
   const EncryptedArray& ea;
+  bool minimal;
+
   long dim;
   long D;
   bool native;
@@ -374,8 +376,14 @@ public:
   ConstMultiplierCache cache1; // only for non-native dimension
 
 
-  MatMul1DExec(const MatMul1D& mat);
+  // If minimal, then it is assumed minimal KS matrices will
+  // be present (one for the generator g, and one for g^{-D} 
+  // for non-native dimensions).  With this flag set, all BS/GS
+  // and parallel strategies area voided.
+  MatMul1DExec(const MatMul1D& mat, bool minimal=false);
+
   void mul(Ctxt& ctxt);
+
   void upgrade() { 
     cache.upgrade(ea.getContext()); 
     cache1.upgrade(ea.getContext()); 
@@ -402,8 +410,6 @@ static inline long dimNative(const EncryptedArrayBase& ea, long dim)
 {
    return (dim==ea.dimension())? true : ea.nativeDimension(dim);
 }
-
-#define ALT_BAD_BSGS (1)
 
 
 template<class type>
@@ -636,12 +642,7 @@ struct MatMul1DExec_construct {
           vec1[i] = nullptr;
         }
         else {
-#if ALT_BAD_BSGS
-          long amt = (!g) ? D : -g*k;
-#else
-          long amt = D-g*k;
-#endif
-	  plaintextAutomorph(poly2, poly2, dim, amt, ea); 
+	  plaintextAutomorph(poly2, poly2, dim, D-g*k, ea); 
 	  vec1[i] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly2));
 	}
       }
@@ -667,8 +668,8 @@ struct MatMul1DExec_construct {
 
 
 
-MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
-  : ea(mat.getEA())
+MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal)
+  : ea(mat.getEA()), minimal(_minimal)
 {
     FHE_TIMER_START;
 
@@ -678,7 +679,7 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat)
     native = dimNative(ea, dim);
 
     // FIXME: performance tune
-    if (D <= FHE_BSGS_MUL_THRESH)
+    if (D <= FHE_BSGS_MUL_THRESH || minimal)
        g = 0; // do not use BSGS
     else
        g = KSGiantStepSize(D); // use BSGS
@@ -819,56 +820,6 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	    ctxt += acc[i];
       }
       else {
-#if ALT_BAD_BSGS
-	 long nintervals = divc(D, g);
-	 vector<shared_ptr<Ctxt>> baby_steps(g);
-	 GenBabySteps(baby_steps, ctxt, dim, false);
-
-         Ctxt ctxt1(ctxt);
-         ctxt1.smartAutomorph(zMStar.genToPow(dim, -D));
-
-	 vector<shared_ptr<Ctxt>> baby_steps1(g);
-	 GenBabySteps(baby_steps1, ctxt1, dim, false);
-
-	 PartitionInfo pinfo(nintervals);
-	 long cnt = pinfo.NumIntervals();
-
-	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
-
-	 // parallel for loop: k in [0..nintervals)
-	 NTL_EXEC_INDEX(cnt, index)
-
-	    long first, last;
-	    pinfo.interval(first, last, index);
-
-	    for (long k = first; k < last; k++) {
-	       Ctxt acc_inner(ZeroCtxtLike, ctxt);
-
-	       for (long j = 0; j < g; j++) {
-		  long i = j + g*k;
-		  if (i >= D) break;
-		  if (cache.multiplier[i]) {
-		     Ctxt tmp(*baby_steps[j]);
-		     cache.multiplier[i]->mul(tmp);
-		     acc_inner += tmp;
-		  }
-		  if (cache1.multiplier[i]) {
-		     Ctxt tmp(*baby_steps1[j]);
-		     cache1.multiplier[i]->mul(tmp);
-		     acc_inner += tmp;
-		  }
-	       }
-
-	       if (k > 0) acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
-	       acc[index] += acc_inner;
-	    }
-
-	 NTL_EXEC_INDEX_END
-
-	 ctxt = acc[0];
-	 for (long i = 1; i < cnt; i++)
-	    ctxt += acc[i];
-#else
 	 long nintervals = divc(D, g);
 	 vector<shared_ptr<Ctxt>> baby_steps(g);
 	 GenBabySteps(baby_steps, ctxt, dim, true);
@@ -921,10 +872,9 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	 acc1[0].smartAutomorph(zMStar.genToPow(dim, -D));
 	 acc[0] += acc1[0];
 	 ctxt = acc[0];
-#endif
       }
    }
-   else {
+   else if (!minimal) {
       if (native) {
          shared_ptr<GeneralAutomorphPrecon> precon =
             buildGeneralAutomorphPrecon(ctxt, dim);
@@ -989,6 +939,48 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	 acc1[0].smartAutomorph(zMStar.genToPow(dim, -D));
 	 acc[0] += acc1[0];
 	 ctxt = acc[0];
+      }
+   }
+   else /* minimal */ {
+      if (native) {
+	 Ctxt acc(ZeroCtxtLike, ctxt);
+         Ctxt sh_ctxt(ctxt);
+ 
+         for (long i = 0; i < D; i++) {
+	    if (i > 0) sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
+
+	    if (cache.multiplier[i]) {
+	       Ctxt tmp(sh_ctxt);
+	       cache.multiplier[i]->mul(tmp);
+	       acc += tmp;
+	    }
+         }
+
+	 ctxt = acc;
+      }
+      else {
+	 Ctxt acc(ZeroCtxtLike, ctxt);
+	 Ctxt acc1(ZeroCtxtLike, ctxt);
+         Ctxt sh_ctxt(ctxt);
+ 
+         for (long i = 0; i < D; i++) {
+	    if (i > 0) sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
+
+	    if (cache.multiplier[i]) {
+	       Ctxt tmp(sh_ctxt);
+	       cache.multiplier[i]->mul(tmp);
+	       acc += tmp;
+	    }
+	    if (cache1.multiplier[i]) {
+	       Ctxt tmp(sh_ctxt);
+	       cache1.multiplier[i]->mul(tmp);
+	       acc1 += tmp;
+	    }
+         }
+
+	 acc1.smartAutomorph(zMStar.genToPow(dim, -D));
+	 acc += acc1;
+	 ctxt = acc;
       }
    }
 }
