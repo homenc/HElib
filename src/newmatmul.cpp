@@ -293,6 +293,23 @@ public:
   virtual bool get(RX& out, long i, long j, long k) const = 0;
 };
 
+class BlockMatMul1D {
+public:
+  virtual ~BlockMatMul1D() {}
+  virtual const EncryptedArray& getEA() const = 0;
+  virtual long getDim() const = 0;
+  virtual bool multipleTransforms() const = 0;
+};
+
+template<class type>
+class BlockMatMul1D_derived : public BlockMatMul1D { 
+public:
+  PA_INJECT(type)
+
+  // Should return true when the entry is a zero. 
+  virtual bool get(mat_R& out, long i, long j, long k) const = 0;
+};
+
 
 class ConstMultiplier {
 // stores a constant in either zzX or DoubleCRT format
@@ -380,7 +397,37 @@ public:
   // be present (one for the generator g, and one for g^{-D} 
   // for non-native dimensions).  With this flag set, all BS/GS
   // and parallel strategies area voided.
+  explicit
   MatMul1DExec(const MatMul1D& mat, bool minimal=false);
+
+  void mul(Ctxt& ctxt);
+
+  void upgrade() { 
+    cache.upgrade(ea.getContext()); 
+    cache1.upgrade(ea.getContext()); 
+  }
+};
+
+class BlockMatMul1DExec {
+public:
+
+  const EncryptedArray& ea;
+
+  long dim;
+  long D;
+  long d;
+  bool native;
+
+  ConstMultiplierCache cache;
+  ConstMultiplierCache cache1; // only for non-native dimension
+
+
+  // If minimal, then it is assumed minimal KS matrices will
+  // be present (one for the generator g, and one for g^{-D} 
+  // for non-native dimensions).  With this flag set, all BS/GS
+  // and parallel strategies area voided.
+  explicit
+  BlockMatMul1DExec(const BlockMatMul1D& mat);
 
   void mul(Ctxt& ctxt);
 
@@ -985,6 +1032,268 @@ MatMul1DExec::mul(Ctxt& ctxt)
    }
 }
 
+
+
+// ========================== BlockMatMul1D stuff =====================
+
+template<class type>
+struct BlockMatMul1DExec_construct {
+  PA_INJECT(type)
+
+  // return true if zero
+  static
+  bool processDiagonal1(vector<RX>& poly, long i, 
+                        const EncryptedArrayDerived<type>& ea,
+                        const BlockMatMul1D_derived<type>& mat)
+  {
+    long dim = mat.getDim();
+    long D = dimSz(ea, dim);
+    long nslots = ea.size();
+    long d = ea.getDegree();
+
+    bool zDiag = true; // is this a zero diagonal?
+    long nzLast = -1;  // index of last non-zero entry
+
+    mat_R entry(INIT_SIZE, d, d);
+    std::vector<RX> entry1(d);
+    std::vector< std::vector<RX> > tmpDiag(D);
+
+    vector<vector<RX>> diag(nslots);
+
+    // Process the entries in this diagonal one at a time
+    for (long j: range(D)) { // process entry j
+      bool zEntry = mat.get(entry, mcMod(j-i, D), j, 0); // entry [j-i mod D, j]
+      // get(...) returns true if the entry is empty, false otherwise
+
+      if (!zEntry && IsZero(entry)) zEntry = true;// zero is an empty entry too
+      assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+
+      if (!zEntry) {   // not a zero entry
+        zDiag = false; // mark diagonal as non-empty
+
+	for (long jj: range(nzLast+1, j)) {// clear from last nonzero entry
+          tmpDiag[jj].assign(d, RX());
+        }
+        nzLast = j; // current entry is the last nonzero one
+
+        // recode entry as a vector of polynomials
+        for (long k: range(d)) conv(entry1[k], entry[k]);
+
+        // compute the linearlized polynomial coefficients
+	ea.buildLinPolyCoeffs(tmpDiag[j], entry1);
+      }
+    }
+    if (zDiag) return true; // zero diagonal, nothing to do
+
+    // clear trailing zero entries
+    for (long jj: range(nzLast+1, D)) {
+      tmpDiag[jj].assign(d, RX());
+    }
+
+    if (D==1) 
+       diag.assign(nslots, tmpDiag[0]); // dimension of size one
+    else {
+      for (long j: range(nslots))
+        diag[j] = tmpDiag[ ea.coordinate(dim,j) ];
+           // rearrange the indexes based on the current dimension
+    }
+
+    // transpose and encode diag to form polys
+
+    vector<RX> slots(nslots);
+    poly.resize(d);
+    for (long i: range(d)) {
+      for (long j: range(nslots)) slots[j] = diag[i][j];
+      ea.encode(poly[i], slots);
+    }
+
+    return false; // a nonzero diagonal
+
+
+  }
+
+  // return true if zero
+  static
+  bool processDiagonal2(vector<RX>& poly, long idx,
+                        const EncryptedArrayDerived<type>& ea,
+                        const BlockMatMul1D_derived<type>& mat)
+  {
+    long dim = mat.getDim();
+    long D = dimSz(ea, dim);
+    long nslots = ea.size();
+    long d = ea.getDegree();
+
+    bool zDiag = true; // is this a zero diagonal?
+    long nzLast = -1;  // index of last non-zero entry
+
+    mat_R entry(INIT_SIZE, d, d);
+    std::vector<RX> entry1(d);
+
+    vector<vector<RX>> diag(nslots);
+
+    // Get the slots in this diagonal one at a time
+    long blockIdx, rowIdx, colIdx;
+    for (long j: range(nslots)) { // process entry j
+      if (dim == ea.dimension()) { // "special" last dimenssion of size 1
+	rowIdx = colIdx = 0; blockIdx=j;
+      } 
+      else {
+        std::tie(blockIdx, colIdx)
+	  = ea.getContext().zMStar.breakIndexByDim(j, dim);
+	rowIdx = mcMod(colIdx-idx,D);
+      }
+      bool zEntry = mat.get(entry,rowIdx,colIdx,blockIdx);
+      // entry [i,j-i mod D] in the block corresponding to blockIdx
+      // get(...) returns true if the entry is empty, false otherwise
+
+      if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
+      assert(zEntry ||
+             (entry.NumRows() == d && entry.NumCols() == d));
+
+      if (!zEntry) {    // non-empty entry
+	zDiag = false;  // mark diagonal as non-empty
+
+	for (long jj: range(nzLast+1, j)) // clear from last nonzero entry
+          diag[jj].assign(d, RX());
+
+	nzLast = j; // current entry is the last nonzero one
+
+	// recode entry as a vector of polynomials
+	for (long k: range(d)) conv(entry1[k], entry[k]);
+
+        // compute the linearlized polynomial coefficients
+	ea.buildLinPolyCoeffs(diag[j], entry1);
+      }
+    }
+    if (zDiag) return true; // zero diagonal, nothing to do
+
+    // clear trailing zero entries
+    for (long jj: range(nzLast+1, nslots))
+      diag[jj].assign(d, RX());
+
+    // transpose and encode diag to form polys
+
+    vector<RX> slots(nslots);
+    poly.resize(d);
+    for (long i: range(d)) {
+      for (long j: range(nslots)) slots[j] = diag[i][j];
+      ea.encode(poly[i], slots);
+    }
+
+    return false; // a nonzero diagonal
+  }
+
+  // return true if zero
+  static
+  bool processDiagonal(vector<RX>& poly, long i,
+                        const EncryptedArrayDerived<type>& ea,
+                        const BlockMatMul1D_derived<type>& mat)
+  {
+    if (mat.multipleTransforms())
+      return processDiagonal2(poly, i, ea, mat);
+    else
+      return processDiagonal1(poly, i,  ea, mat);
+
+  }
+
+  static
+  void apply(const EncryptedArrayDerived<type>& ea,
+             const BlockMatMul1D& mat_basetype,
+             vector<shared_ptr<ConstMultiplier>>& vec,
+             vector<shared_ptr<ConstMultiplier>>& vec1,
+             bool factor_frobenius)
+  {
+    const BlockMatMul1D_derived<type>& mat =
+      dynamic_cast< const BlockMatMul1D_derived<type>& >(mat_basetype);
+
+    long dim = mat.getDim();
+    long D = dimSz(ea, dim);
+    long d = ea.getDegree();
+    bool native = dimNative(ea, dim);
+
+    RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    vector<RX> poly;
+
+    if (factor_frobenius) {
+      if (native) {
+        vec.resize(D*d);
+        for (long i: range(D)) {
+          bool zero = processDiagonal(poly, i, ea, mat);
+          if (zero) {
+            for (long j: range(d)) vec[i*d+j] = nullptr;
+          }
+          else {
+	    for (long j: range(d)) {
+	      plaintextAutomorph(poly[j], poly[j], -1, -j, ea);
+	      vec[i*d+j] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly[j]));
+	    }
+          }
+        }
+      }
+      else {
+        Error("not implemented");
+      }
+    }
+    else {
+      Error("not implemented");
+    }
+
+  }
+
+};
+
+
+BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat)
+  : ea(mat.getEA())
+{
+    FHE_TIMER_START;
+
+    dim = mat.getDim();
+    assert(dim >= 0 && dim <= ea.dimension());
+    D = dimSz(ea, dim);
+    d = ea.getDegree();
+    native = dimNative(ea, dim);
+
+    ea.dispatch<BlockMatMul1DExec_construct>(mat, Fwd(cache.multiplier), 
+                                        Fwd(cache1.multiplier), true);
+}
+
+
+void
+BlockMatMul1DExec::mul(Ctxt& ctxt)
+{
+   assert(&ea.getContext() == &ctxt.getContext());
+   const PAlgebra& zMStar = ea.getContext().zMStar;
+
+   ctxt.cleanUp();
+
+   vector<Ctxt> acc(d, Ctxt(ZeroCtxtLike, ctxt));
+
+   shared_ptr<GeneralAutomorphPrecon> precon =
+            buildGeneralAutomorphPrecon(ctxt, dim);
+
+   for (long i: range(D)) {
+      shared_ptr<Ctxt> tmp = (*precon)(i);
+      for (long j: range(d)) {
+         if (cache.multiplier[i*d+j]) {
+            Ctxt tmp1(tmp1);
+            cache.multiplier[i*d+j]->mul(tmp1);
+            acc[j] += tmp1;
+         }
+      }
+   }
+
+   Ctxt sum(ZeroCtxtLike, ctxt);
+   for (long j: range(d)) {
+      if (j > 0) acc[j].smartAutomorph(zMStar.genToPow(-1, j));
+      sum += acc[j];
+   }
+}
+
+
+// ====================================================================
+
 template<class type> class RandomMatrix_new : public  MatMul1D_derived<type> {
 public:
   PA_INJECT(type) 
@@ -1103,6 +1412,130 @@ buildRandomMatrix(const EncryptedArray& ea, long dim, long giantStep)
   }
 }
 
+template<class type> class RandomMultiMatrix_new : public  MatMul1D_derived<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  vector< vector< vector< RX > > > data;
+  const EncryptedArray& ea;
+  long dim;
+
+public:
+  virtual ~RandomMultiMatrix_new() {}
+  RandomMultiMatrix_new(const EncryptedArray& _ea, long _dim): 
+    ea(_ea), dim(_dim)
+  {
+    RBak bak; bak.save(); ea.getAlMod().restoreContext();
+    long n = ea.size();
+    long d = ea.getDegree();
+    long D = ea.sizeOfDimension(dim);
+
+    RandomStreamPush push;
+    SetSeed(ZZ(123));
+
+    data.resize(n/D);
+    for (long k = 0; k < n/D; k++) {
+      data[k].resize(D);
+      for (long i = 0; i < D; i++) {
+	data[k][i].resize(D);
+	for (long j = 0; j < D; j++) {
+	  random(data[k][i][j], d);
+	}
+      }
+    }
+  }
+
+  const EncryptedArray& getEA() const override { return ea; }
+  bool multipleTransforms() const override { return true; }
+  long getDim() const override { return dim; }
+
+  bool get(RX& out, long i, long j, long k) const override {
+    long n = ea.size();
+    long D = ea.sizeOfDimension(dim);
+
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    assert(k >= 0 && k < n/D);
+    if (IsZero(data[k][i][j])) return true;
+    out = data[k][i][j];
+    return false;
+  }
+};
+
+
+static MatMul1D*
+buildRandomMultiMatrix_new(const EncryptedArray& ea, long dim)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMultiMatrix_new<PA_GF2>(ea, dim);
+    }
+    case PA_zz_p_tag: {
+      return new RandomMultiMatrix_new<PA_zz_p>(ea, dim);
+    }
+    default: return 0;
+  }
+}
+
+template<class type> class RandomMultiMatrix : public  MatMul<type> {
+public:
+  PA_INJECT(type) 
+
+private:
+  vector< vector< vector< RX > > > data;
+  long dim;
+
+public:
+  virtual ~RandomMultiMatrix() {}
+  RandomMultiMatrix(const EncryptedArray& _ea, long _dim, long g)
+    : MatMul<type>(_ea, g), dim(_dim)
+  {
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long n = _ea.size();
+    long d = _ea.getDegree();
+    long D = _ea.sizeOfDimension(dim);
+
+    RandomStreamPush push;
+    SetSeed(ZZ(123));
+
+    data.resize(n/D);
+    for (long k = 0; k < n/D; k++) {
+      data[k].resize(D);
+      for (long i = 0; i < D; i++) {
+	data[k][i].resize(D);
+	for (long j = 0; j < D; j++) {
+	  random(data[k][i][j], d);
+	}
+      }
+    }
+  }
+
+  virtual bool multiGet(RX& out, long i, long j, long k) const
+  {
+    long D = this->getEA().sizeOfDimension(dim);
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    assert(k >= 0 && k < this->getEA().size()/D);
+    if (IsZero(data[k][i][j])) return true;
+    out = data[k][i][j];
+    return false;
+  }
+};
+
+static MatMulBase*
+buildRandomMultiMatrix(const EncryptedArray& ea, long dim, long giantStep)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMultiMatrix<PA_GF2>(ea, dim, giantStep);
+    }
+    case PA_zz_p_tag: {
+      return new RandomMultiMatrix<PA_zz_p>(ea, dim, giantStep);
+    }
+    default: return 0;
+  }
+}
 
 void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 {
@@ -1123,6 +1556,9 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
 
   // choose a random plaintext square matrix
+  //std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
+  //std::unique_ptr< MatMul1D > ptr_new(buildRandomMultiMatrix_new(ea,dim));
+
   std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
   std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
 
@@ -1151,6 +1587,7 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
   printAllTimers();
 
+  matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
   matMul1D(v, *ptr, dim);     // multiply the plaintext vector
 
   NewPlaintextArray v1(ea);

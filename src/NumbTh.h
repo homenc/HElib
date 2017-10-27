@@ -51,6 +51,8 @@
 #error "This version of HElib requires NTL version 10.0.0 or above"
 #endif
 
+#include "range.h"
+
 using namespace std;
 using namespace NTL;
 
