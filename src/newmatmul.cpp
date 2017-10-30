@@ -718,7 +718,7 @@ struct MatMul1DExec_construct {
 MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal)
   : ea(mat.getEA()), minimal(_minimal)
 {
-    FHE_TIMER_START;
+    FHE_NTIMER_START(MatMul1DExec);
 
     dim = mat.getDim();
     assert(dim >= 0 && dim <= ea.dimension());
@@ -1103,7 +1103,7 @@ struct BlockMatMul1DExec_construct {
     vector<RX> slots(nslots);
     poly.resize(d);
     for (long i: range(d)) {
-      for (long j: range(nslots)) slots[j] = diag[i][j];
+      for (long j: range(nslots)) slots[j] = diag[j][i];
       ea.encode(poly[i], slots);
     }
 
@@ -1176,7 +1176,7 @@ struct BlockMatMul1DExec_construct {
     vector<RX> slots(nslots);
     poly.resize(d);
     for (long i: range(d)) {
-      for (long j: range(nslots)) slots[j] = diag[i][j];
+      for (long j: range(nslots)) slots[j] = diag[j][i];
       ea.encode(poly[i], slots);
     }
 
@@ -1277,7 +1277,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
       shared_ptr<Ctxt> tmp = (*precon)(i);
       for (long j: range(d)) {
          if (cache.multiplier[i*d+j]) {
-            Ctxt tmp1(tmp1);
+            Ctxt tmp1(*tmp);
             cache.multiplier[i*d+j]->mul(tmp1);
             acc[j] += tmp1;
          }
@@ -1289,6 +1289,8 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
       if (j > 0) acc[j].smartAutomorph(zMStar.genToPow(-1, j));
       sum += acc[j];
    }
+
+   ctxt = sum;
 }
 
 
@@ -1537,6 +1539,135 @@ buildRandomMultiMatrix(const EncryptedArray& ea, long dim, long giantStep)
   }
 }
 
+
+
+//********************************
+
+template<class type> 
+class RandomBlockMatrix : public BlockMatMul<type> {
+  PA_INJECT(type) 
+
+  vector< vector< mat_R > > data;
+  long dim;
+
+public:
+  ~RandomBlockMatrix() { /*cout << "destructor: random matrix\n";*/ }
+
+  RandomBlockMatrix(const EncryptedArray& _ea, long _dim):
+    BlockMatMul<type>(_ea), dim(_dim)
+  {
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long n = _ea.size();
+    long d = _ea.getDegree();
+    long D = _ea.sizeOfDimension(dim);
+
+
+    RandomStreamPush push;
+    SetSeed(ZZ(123));
+
+    data.resize(D);
+    for (long i = 0; i < D; i++) {
+      data[i].resize(D);
+      for (long j = 0; j < D; j++) {
+        data[i][j].SetDims(d, d);
+        for (long u = 0; u < d; u++)
+          for (long v = 0; v < d; v++) 
+            random(data[i][j][u][v]);
+      }
+    }
+  }
+
+  virtual bool get(mat_R& out, long i, long j) const
+  {
+    const EncryptedArray& ea = this->getEA();
+    long D = ea.sizeOfDimension(dim);
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    if (IsZero(data[i][j])) return true;
+    out = data[i][j];
+    return false;
+  }
+};
+
+static MatMulBase*
+buildRandomBlockMatrix(const EncryptedArray& ea, long dim)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomBlockMatrix<PA_GF2>(ea,dim);
+    }
+    case PA_zz_p_tag: {
+      return new RandomBlockMatrix<PA_zz_p>(ea, dim);
+    }
+    default: return 0;
+  }
+}
+
+template<class type> 
+class RandomBlockMatrix_new : public BlockMatMul1D_derived<type> {
+  PA_INJECT(type) 
+
+  const EncryptedArray& ea;
+  long dim;
+
+  vector< vector< mat_R > > data;
+
+public:
+
+  RandomBlockMatrix_new(const EncryptedArray& _ea, long _dim):
+    ea(_ea), dim(_dim)
+  {
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long n = _ea.size();
+    long d = _ea.getDegree();
+    long D = _ea.sizeOfDimension(dim);
+
+
+    RandomStreamPush push;
+    SetSeed(ZZ(123));
+
+    data.resize(D);
+    for (long i = 0; i < D; i++) {
+      data[i].resize(D);
+      for (long j = 0; j < D; j++) {
+        data[i][j].SetDims(d, d);
+        for (long u = 0; u < d; u++)
+          for (long v = 0; v < d; v++) 
+            random(data[i][j][u][v]);
+      }
+    }
+  }
+
+  bool get(mat_R& out, long i, long j, long k) const override
+  {
+    long D = ea.sizeOfDimension(dim);
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    if (IsZero(data[i][j])) return true;
+    out = data[i][j];
+    return false;
+  }
+
+  const EncryptedArray& getEA() const override { return ea; }
+  long getDim() const override { return dim; }
+  bool multipleTransforms() const override { return false; }
+};
+
+static BlockMatMul1D*
+buildRandomBlockMatrix_new(const EncryptedArray& ea, long dim)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomBlockMatrix_new<PA_GF2>(ea,dim);
+    }
+    case PA_zz_p_tag: {
+      return new RandomBlockMatrix_new<PA_zz_p>(ea, dim);
+    }
+    default: return 0;
+  }
+}
+
+
 void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 {
   if (verbose) {
@@ -1559,12 +1690,15 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
   //std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
   //std::unique_ptr< MatMul1D > ptr_new(buildRandomMultiMatrix_new(ea,dim));
 
-  std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
-  std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
+  //std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
+  //std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
+
+  std::unique_ptr< MatMulBase > ptr(buildRandomBlockMatrix(ea,dim));
+  std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomBlockMatrix_new(ea,dim));
 
   resetAllTimers();
-  MatMul1DExec mat_exec(*ptr_new);
-  //printAllTimers();
+  BlockMatMul1DExec mat_exec(*ptr_new);
+  printAllTimers();
   //cerr << "\n\n*****\n\n\n";
 
   mat_exec.upgrade();
@@ -1587,8 +1721,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
   printAllTimers();
 
-  matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
-  matMul1D(v, *ptr, dim);     // multiply the plaintext vector
+  //matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
+  blockMatMul1D(v, *ptr, dim);     // multiply the plaintext vector
 
   NewPlaintextArray v1(ea);
   ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
