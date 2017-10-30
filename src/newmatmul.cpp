@@ -1196,6 +1196,23 @@ struct BlockMatMul1DExec_construct {
 
   }
 
+
+  // Basic logic:
+  // We are computing \sum_i \sum_j c_{ij} \sigma^j rot^i(v),
+  // where \sigma = frobenius, rot = rotation 
+  // For good dimensions, rot = \rho (the basic automorphism),
+  // so we need to compute
+  //     \sum_i \sum_j c_{ij} \sigma^j \rho^i(v)
+  //  =  \sum_j \sigma^j[ \sigma^{-j}(c_{ij}) \rho^i(v) ]
+
+  // For bad dimensions, we have 
+  //   rot^i(v) = d_i \rho^i(v) + e_i \rho^{i-D}(v)
+  // and so we need to compute
+  //   \sum_i \sum_j c_{ij} \sigma^j (d_i \rho^i(v) + e_i \rho^{i-D}(v))
+  // =      \sum_j \sigma_j[  \sigma^{-j}(c_{ij}) d_i \rho^i(v) ] +
+  //   \rho^{-D}[ \sum_j \sigma_j[ \rho^{D}{\sigma^{-j}(c_{ij}) e_i} \rho^i(v) ] ]
+   
+
   static
   void apply(const EncryptedArrayDerived<type>& ea,
              const BlockMatMul1D& mat_basetype,
@@ -1232,7 +1249,41 @@ struct BlockMatMul1DExec_construct {
         }
       }
       else {
-        Error("not implemented");
+        vec.resize(D*d);
+        vec1.resize(D*d);
+        for (long i: range(D)) {
+          bool zero = processDiagonal(poly, i, ea, mat);
+          if (zero) {
+            for (long j: range(d)) {
+              vec [i*d+j] = nullptr;
+              vec1[i*d+j] = nullptr;
+            }
+          }
+          else {
+	    const RX& mask = ea.getTab().getMaskTable()[dim][i];
+	    const RXModulus& F = ea.getTab().getPhimXMod();
+
+            for (long j: range(d)) {
+              plaintextAutomorph(poly[j], poly[j], -1, -j, ea);
+
+              RX poly1;
+              MulMod(poly1, poly[j], mask, F); // poly[j] w/ first i slots zeroed out
+              if (IsZero(poly1)) 
+                vec[i*d+j] = nullptr;
+              else 
+	        vec[i*d+j] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+
+              sub(poly1, poly[j], poly1); // poly[j] w/ last D-i slots zeroed out
+              if (IsZero(poly1)) {
+                vec1[i*d+j] = nullptr;
+              }
+              else {
+                plaintextAutomorph(poly1, poly1, dim, D, ea);
+	        vec1[i*d+j] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+              }
+            }
+          }
+        }
       }
     }
     else {
@@ -1268,29 +1319,69 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
    ctxt.cleanUp();
 
-   vector<Ctxt> acc(d, Ctxt(ZeroCtxtLike, ctxt));
+   if (native) {
+      vector<Ctxt> acc(d, Ctxt(ZeroCtxtLike, ctxt));
 
-   shared_ptr<GeneralAutomorphPrecon> precon =
-            buildGeneralAutomorphPrecon(ctxt, dim);
+      shared_ptr<GeneralAutomorphPrecon> precon =
+	       buildGeneralAutomorphPrecon(ctxt, dim);
 
-   for (long i: range(D)) {
-      shared_ptr<Ctxt> tmp = (*precon)(i);
-      for (long j: range(d)) {
-         if (cache.multiplier[i*d+j]) {
-            Ctxt tmp1(*tmp);
-            cache.multiplier[i*d+j]->mul(tmp1);
-            acc[j] += tmp1;
-         }
+      for (long i: range(D)) {
+	 shared_ptr<Ctxt> tmp = (*precon)(i);
+	 for (long j: range(d)) {
+	    if (cache.multiplier[i*d+j]) {
+	       Ctxt tmp1(*tmp);
+	       cache.multiplier[i*d+j]->mul(tmp1);
+	       acc[j] += tmp1;
+	    }
+	 }
       }
-   }
 
-   Ctxt sum(ZeroCtxtLike, ctxt);
-   for (long j: range(d)) {
-      if (j > 0) acc[j].smartAutomorph(zMStar.genToPow(-1, j));
-      sum += acc[j];
-   }
+      Ctxt sum(ZeroCtxtLike, ctxt);
+      for (long j: range(d)) {
+	 if (j > 0) acc[j].smartAutomorph(zMStar.genToPow(-1, j));
+	 sum += acc[j];
+      }
 
-   ctxt = sum;
+      ctxt = sum;
+   }
+   else {
+      vector<Ctxt> acc(d, Ctxt(ZeroCtxtLike, ctxt));
+      vector<Ctxt> acc1(d, Ctxt(ZeroCtxtLike, ctxt));
+
+      shared_ptr<GeneralAutomorphPrecon> precon =
+	       buildGeneralAutomorphPrecon(ctxt, dim);
+
+      for (long i: range(D)) {
+	 shared_ptr<Ctxt> tmp = (*precon)(i);
+	 for (long j: range(d)) {
+	    if (cache.multiplier[i*d+j]) {
+	       Ctxt tmp1(*tmp);
+	       cache.multiplier[i*d+j]->mul(tmp1);
+	       acc[j] += tmp1;
+	    }
+	    if (cache1.multiplier[i*d+j]) {
+	       Ctxt tmp1(*tmp);
+	       cache1.multiplier[i*d+j]->mul(tmp1);
+	       acc1[j] += tmp1;
+	    }
+	 }
+      }
+
+      Ctxt sum(ZeroCtxtLike, ctxt);
+      Ctxt sum1(ZeroCtxtLike, ctxt);
+      for (long j: range(d)) {
+	 if (j > 0) {
+            acc[j].smartAutomorph(zMStar.genToPow(-1, j));
+            acc1[j].smartAutomorph(zMStar.genToPow(-1, j));
+         }
+	 sum += acc[j];
+	 sum1 += acc1[j];
+      }
+
+      sum1.smartAutomorph(zMStar.genToPow(dim, -D));
+      sum += sum1;
+      ctxt = sum;
+   }
 }
 
 
