@@ -505,6 +505,8 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
     // general case...still try to avoid CompMod when possible,
     // which is the common case for encoding masks
 
+    FHE_NTIMER_START(CompMod);
+
     for (long i=0; i<nSlots; i++) {   // crt[i] = alpha(maps[i]) mod Ft
       if (deg(alphas[i]) <= 0) 
         crt[i] = alphas[i];

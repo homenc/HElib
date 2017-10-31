@@ -370,6 +370,7 @@ public:
   vector<shared_ptr<ConstMultiplier>> multiplier;
 
   void upgrade(const FHEcontext& context) {
+    FHE_TIMER_START;
     for (auto&& ptr: multiplier) 
       if (ptr) 
         if (auto newptr = ptr->upgrade(context)) 
@@ -417,6 +418,7 @@ public:
   long D;
   long d;
   bool native;
+  long strategy;
 
   ConstMultiplierCache cache;
   ConstMultiplierCache cache1; // only for non-native dimension
@@ -1211,6 +1213,12 @@ struct BlockMatMul1DExec_construct {
   //   \sum_i \sum_j c_{ij} \sigma^j (d_i \rho^i(v) + e_i \rho^{i-D}(v))
   // =      \sum_j \sigma_j[  \sigma^{-j}(c_{ij}) d_i \rho^i(v) ] +
   //   \rho^{-D}[ \sum_j \sigma_j[ \rho^{D}{\sigma^{-j}(c_{ij}) e_i} \rho^i(v) ] ]
+
+
+  // strategy == +1 : factor \sigma
+  // strategy == -1 : factor \rho
+  // strategy ==  0 : no factoring
+
    
 
   static
@@ -1218,7 +1226,7 @@ struct BlockMatMul1DExec_construct {
              const BlockMatMul1D& mat_basetype,
              vector<shared_ptr<ConstMultiplier>>& vec,
              vector<shared_ptr<ConstMultiplier>>& vec1,
-             bool factor_frobenius)
+             long strategy)
   {
     const BlockMatMul1D_derived<type>& mat =
       dynamic_cast< const BlockMatMul1D_derived<type>& >(mat_basetype);
@@ -1232,7 +1240,9 @@ struct BlockMatMul1DExec_construct {
 
     vector<RX> poly;
 
-    if (factor_frobenius) {
+    switch (strategy) {
+    case +1: // factor \sigma
+
       if (native) {
         vec.resize(D*d);
         for (long i: range(D)) {
@@ -1285,11 +1295,74 @@ struct BlockMatMul1DExec_construct {
           }
         }
       }
-    }
-    else {
-      Error("not implemented");
-    }
+      break;
 
+    case -1: // factor \rho
+
+      if (native) {
+        vec.resize(D*d);
+        for (long i: range(D)) {
+          bool zero = processDiagonal(poly, i, ea, mat);
+          if (zero) {
+            for (long j: range(d)) vec[i+j*D] = nullptr;
+          }
+          else {
+	    for (long j: range(d)) {
+	      plaintextAutomorph(poly[j], poly[j], dim, -i, ea);
+	      vec[i+j*D] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly[j]));
+	    }
+          }
+        }
+      }
+      else {
+        vec.resize(D*d);
+        vec1.resize(D*d);
+        for (long i: range(D)) {
+          bool zero = processDiagonal(poly, i, ea, mat);
+          if (zero) {
+            for (long j: range(d)) {
+              vec [i+j*D] = nullptr;
+              vec1[i+j*D] = nullptr;
+            }
+          }
+          else {
+	    const RX& mask = ea.getTab().getMaskTable()[dim][i];
+	    const RXModulus& F = ea.getTab().getPhimXMod();
+
+            for (long j: range(d)) {
+              RX poly1, poly2;
+              MulMod(poly1, poly[j], mask, F); // poly[j] w/ first i slots zeroed out
+              sub(poly2, poly[j], poly1);      // poly[j] w/ last D-i slots zeroed out
+
+              if (IsZero(poly1)) {
+                vec[i+j*D] = nullptr;
+              }
+              else {
+                plaintextAutomorph(poly1, poly1, dim, -i, ea);
+	        vec[i+j*D] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+              }
+
+              if (IsZero(poly2)) {
+                vec1[i+j*D] = nullptr;
+              }
+              else {
+                plaintextAutomorph(poly2, poly2, dim, D-i, ea);
+	        vec1[i+j*D] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly2));
+              }
+            }
+          }
+        }
+      }
+
+      break;
+
+    case 0:
+      Error("not implemented");
+
+    default:
+      Error("unknown strategy");
+    }
+      
   }
 
 };
@@ -1305,9 +1378,14 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat)
     D = dimSz(ea, dim);
     d = ea.getDegree();
     native = dimNative(ea, dim);
+    
+    if (D >= d) 
+      strategy = +1;
+    else
+      strategy = -1;
 
     ea.dispatch<BlockMatMul1DExec_construct>(mat, Fwd(cache.multiplier), 
-                                        Fwd(cache1.multiplier), true);
+                                        Fwd(cache1.multiplier), strategy);
 }
 
 
@@ -1319,49 +1397,66 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
    ctxt.cleanUp();
 
+   long d0, d1;
+   long dim0, dim1;
+
+   if (strategy == +1) {
+      d0 = D;
+      dim0 = dim;
+      d1 = d;
+      dim1 = -1;
+   }
+   else {
+      d1 = D;
+      dim1 = dim;
+      d0 = d;
+      dim0 = -1;
+   }
+
+
    if (native) {
-      vector<Ctxt> acc(d, Ctxt(ZeroCtxtLike, ctxt));
+      vector<Ctxt> acc(d1, Ctxt(ZeroCtxtLike, ctxt));
 
       shared_ptr<GeneralAutomorphPrecon> precon =
-	       buildGeneralAutomorphPrecon(ctxt, dim);
+	       buildGeneralAutomorphPrecon(ctxt, dim0);
 
-      for (long i: range(D)) {
+      for (long i: range(d0)) {
 	 shared_ptr<Ctxt> tmp = (*precon)(i);
-	 for (long j: range(d)) {
-	    if (cache.multiplier[i*d+j]) {
+	 for (long j: range(d1)) {
+	    if (cache.multiplier[i*d1+j]) {
 	       Ctxt tmp1(*tmp);
-	       cache.multiplier[i*d+j]->mul(tmp1);
+	       cache.multiplier[i*d1+j]->mul(tmp1);
 	       acc[j] += tmp1;
 	    }
 	 }
       }
 
       Ctxt sum(ZeroCtxtLike, ctxt);
-      for (long j: range(d)) {
-	 if (j > 0) acc[j].smartAutomorph(zMStar.genToPow(-1, j));
+      for (long j: range(d1)) {
+	 if (j > 0) acc[j].smartAutomorph(zMStar.genToPow(dim1, j));
 	 sum += acc[j];
       }
 
       ctxt = sum;
    }
    else {
-      vector<Ctxt> acc(d, Ctxt(ZeroCtxtLike, ctxt));
-      vector<Ctxt> acc1(d, Ctxt(ZeroCtxtLike, ctxt));
+      vector<Ctxt> acc(d1, Ctxt(ZeroCtxtLike, ctxt));
+      vector<Ctxt> acc1(d1, Ctxt(ZeroCtxtLike, ctxt));
 
       shared_ptr<GeneralAutomorphPrecon> precon =
-	       buildGeneralAutomorphPrecon(ctxt, dim);
+	       buildGeneralAutomorphPrecon(ctxt, dim0);
 
-      for (long i: range(D)) {
+      for (long i: range(d0)) {
 	 shared_ptr<Ctxt> tmp = (*precon)(i);
-	 for (long j: range(d)) {
-	    if (cache.multiplier[i*d+j]) {
+	 for (long j: range(d1)) {
+	    if (cache.multiplier[i*d1+j]) {
 	       Ctxt tmp1(*tmp);
-	       cache.multiplier[i*d+j]->mul(tmp1);
+	       cache.multiplier[i*d1+j]->mul(tmp1);
 	       acc[j] += tmp1;
 	    }
-	    if (cache1.multiplier[i*d+j]) {
+	    if (cache1.multiplier[i*d1+j]) {
 	       Ctxt tmp1(*tmp);
-	       cache1.multiplier[i*d+j]->mul(tmp1);
+	       cache1.multiplier[i*d1+j]->mul(tmp1);
 	       acc1[j] += tmp1;
 	    }
 	 }
@@ -1369,10 +1464,10 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
       Ctxt sum(ZeroCtxtLike, ctxt);
       Ctxt sum1(ZeroCtxtLike, ctxt);
-      for (long j: range(d)) {
+      for (long j: range(d1)) {
 	 if (j > 0) {
-            acc[j].smartAutomorph(zMStar.genToPow(-1, j));
-            acc1[j].smartAutomorph(zMStar.genToPow(-1, j));
+            acc[j].smartAutomorph(zMStar.genToPow(dim1, j));
+            acc1[j].smartAutomorph(zMStar.genToPow(dim1, j));
          }
 	 sum += acc[j];
 	 sum1 += acc1[j];
@@ -1789,10 +1884,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
   resetAllTimers();
   BlockMatMul1DExec mat_exec(*ptr_new);
-  printAllTimers();
-  //cerr << "\n\n*****\n\n\n";
-
   mat_exec.upgrade();
+  printAllTimers();
 
   // choose a random plaintext vector
   NewPlaintextArray v(ea);
