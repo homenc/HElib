@@ -489,7 +489,8 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
   long nSlots = zMStar.getNSlots();
   assert(lsize(alphas) == nSlots);
 
-  for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < mappingData.degG); 
+  long d = mappingData.degG;
+  for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d); 
  
   vector<RX> crt(nSlots); // alloate space for CRT components
 
@@ -509,12 +510,27 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
 
     FHE_NTIMER_START(CompMod);
 
+#if 0
     for (long i: range(nSlots)) {
       if (deg(alphas[i]) <= 0) 
         crt[i] = alphas[i];
       else
         CompMod(crt[i], alphas[i], mappingData.maps[i], factors[i]);
     }
+#else
+    vec_R in, out;
+    long ordp = zMStar.getOrdP();
+
+    for (long i: range(nSlots)) {
+      if (deg(alphas[i]) <= 0) 
+        crt[i] = alphas[i];
+      else {
+        VectorCopy(in, alphas[i], ordp);
+        mul(out, in, mappingData.matrix_maps[i]);
+        conv(crt[i], out);
+      }
+    }
+#endif
   }
 
   CRT_reconstruct(H,crt); // interpolate to get p
@@ -629,6 +645,8 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   assert(LeadCoeff(G) == 1);
   mappingData.G = G;
   mappingData.degG = deg(mappingData.G);
+  long d = deg(G);
+  long ordp = zMStar.getOrdP();
 
   long nSlots = zMStar.getNSlots();
   long m = zMStar.getM();
@@ -638,6 +656,21 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   mapToF1(mappingData.maps[0],mappingData.G); // mapping from base-G to base-F1
   for (long i=1; i<nSlots; i++)
     mapToFt(mappingData.maps[i], mappingData.G, zMStar.ith_rep(i), &(mappingData.maps[0])); 
+
+
+  // create matrices to streamline CompMod operations
+  mappingData.matrix_maps.resize(nSlots);
+  for (long i: range(nSlots)) {
+    mat_R& mat = mappingData.matrix_maps[i];
+    mat.SetDims(ordp, ordp);
+    RX pow;
+    pow = 1;
+    for (long j: range(ordp)) {
+      VectorCopy(mat[j], pow, ordp);
+      if (j < ordp-1) MulMod(pow, pow, mappingData.maps[i], factors[i]);
+    }
+  }
+
 
   REBak bak; bak.save(); 
   RE::init(mappingData.G);

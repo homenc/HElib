@@ -397,6 +397,7 @@ private:
   /* the remaining fields are visible only to PAlgebraModDerived */
 
   vector<RX> maps;
+  vector<mat_R> matrix_maps;
   vector<REX> rmaps;
 
 public:
