@@ -373,13 +373,13 @@ public:
     FHE_TIMER_START;
 
     long n = multiplier.size();
-    NTL_EXEC_RANGE(n, first, last)
+    NTL_GEXEC_RANGE(false, n, first, last)
     for (long i: range(first, last)) {
       if (multiplier[i]) 
         if (auto newptr = multiplier[i]->upgrade(context)) 
           multiplier[i] = shared_ptr<ConstMultiplier>(newptr); 
     }
-    NTL_EXEC_RANGE_END
+    NTL_GEXEC_RANGE_END
   }
 
 };
@@ -1053,6 +1053,8 @@ struct BlockMatMul1DExec_construct {
                         const EncryptedArrayDerived<type>& ea,
                         const BlockMatMul1D_derived<type>& mat)
   {
+    FHE_TIMER_START;
+
     long dim = mat.getDim();
     long D = dimSz(ea, dim);
     long nslots = ea.size();
@@ -1107,12 +1109,13 @@ struct BlockMatMul1DExec_construct {
 
     // transpose and encode diag to form polys
 
-    vector<RX> slots(nslots);
     poly.resize(d);
+    vector<RX> slots(nslots);
+
     for (long i: range(d)) {
       for (long j: range(nslots)) slots[j] = diag[j][i];
       ea.encode(poly[i], slots);
-    }
+    } 
 
     return false; // a nonzero diagonal
 
@@ -1243,14 +1246,19 @@ struct BlockMatMul1DExec_construct {
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
-    vector<RX> poly;
 
     switch (strategy) {
     case +1: // factor \sigma
 
       if (native) {
         vec.resize(D*d);
-        for (long i: range(D)) {
+
+
+        // FIXME: there seems to be a performace issue with multithreading here
+        NTL_GEXEC_RANGE(true, D, first, last) 
+        ea.getTab().restoreContext();
+        vector<RX> poly;
+        for (long i: range(first, last)) {
           bool zero = processDiagonal(poly, i, ea, mat);
           if (zero) {
             for (long j: range(d)) vec[i*d+j] = nullptr;
@@ -1261,12 +1269,18 @@ struct BlockMatMul1DExec_construct {
 	      vec[i*d+j] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly[j]));
 	    }
           }
-        }
+        } NTL_GEXEC_RANGE_END
+       
       }
       else {
         vec.resize(D*d);
         vec1.resize(D*d);
-        for (long i: range(D)) {
+
+        // FIXME: there seems to be a performace issue with multithreading here
+        NTL_GEXEC_RANGE(true, D, first, last) 
+        ea.getTab().restoreContext();
+        vector<RX> poly;
+        for (long i: range(first, last)) {
           bool zero = processDiagonal(poly, i, ea, mat);
           if (zero) {
             for (long j: range(d)) {
@@ -1298,7 +1312,8 @@ struct BlockMatMul1DExec_construct {
               }
             }
           }
-        }
+        } NTL_GEXEC_RANGE_END
+
       }
       break;
 
@@ -1306,7 +1321,12 @@ struct BlockMatMul1DExec_construct {
 
       if (native) {
         vec.resize(D*d);
-        for (long i: range(D)) {
+
+        // FIXME: there seems to be a performace issue with multithreading here
+        NTL_GEXEC_RANGE(true, D, first, last) 
+        ea.getTab().restoreContext();
+        vector<RX> poly;
+        for (long i: range(first, last)) {
           bool zero = processDiagonal(poly, i, ea, mat);
           if (zero) {
             for (long j: range(d)) vec[i+j*D] = nullptr;
@@ -1317,12 +1337,18 @@ struct BlockMatMul1DExec_construct {
 	      vec[i+j*D] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly[j]));
 	    }
           }
-        }
+        } NTL_GEXEC_RANGE_END
+
       }
       else {
         vec.resize(D*d);
         vec1.resize(D*d);
-        for (long i: range(D)) {
+
+        // FIXME: there seems to be a performace issue with multithreading here
+        NTL_GEXEC_RANGE(true, D, first, last) 
+        ea.getTab().restoreContext();
+        vector<RX> poly;
+        for (long i: range(first, last)) {
           bool zero = processDiagonal(poly, i, ea, mat);
           if (zero) {
             for (long j: range(d)) {
@@ -1356,7 +1382,8 @@ struct BlockMatMul1DExec_construct {
               }
             }
           }
-        }
+        } NTL_GEXEC_RANGE_END
+
       }
 
       break;
@@ -1952,6 +1979,7 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
   resetAllTimers();
   BlockMatMul1DExec mat_exec(*ptr_new);
+
   mat_exec.upgrade();
   printAllTimers();
 

@@ -20,6 +20,8 @@
 #include <NTL/GF2EXFactoring.h>
 #include <NTL/lzz_pEXFactoring.h>
 
+#include <NTL/BasicThreadPool.h>
+
 // polynomials are sorted lexicographically, with the
 // constant term being the "most significant"
 
@@ -507,7 +509,7 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
 
     FHE_NTIMER_START(CompMod);
 
-    for (long i=0; i<nSlots; i++) {   // crt[i] = alpha(maps[i]) mod Ft
+    for (long i: range(nSlots)) {
       if (deg(alphas[i]) <= 0) 
         crt[i] = alphas[i];
       else

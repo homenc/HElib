@@ -20,7 +20,7 @@ unsigned long GetTimerClock()
 {
   timespec ts;
 
-  clock_gettime(CLOCK_MONOTONIC, &ts);
+  clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 
   // Here are some other clocks, but they are not very useful
   // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
