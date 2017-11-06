@@ -148,7 +148,7 @@ class GeneralAutomorphPrecon {
 public:
   virtual ~GeneralAutomorphPrecon() {}
 
-  virtual shared_ptr<Ctxt> operator()(long i) const = 0;
+  virtual shared_ptr<Ctxt> automorph(long i) const = 0;
 
 };
 
@@ -165,7 +165,7 @@ public:
     ctxt.cleanUp();
   }
 
-  shared_ptr<Ctxt> operator()(long i) const override
+  shared_ptr<Ctxt> automorph(long i) const override
   {
     shared_ptr<Ctxt> result = make_shared<Ctxt>(ctxt);
 
@@ -187,7 +187,7 @@ public:
     precon(_ctxt), dim(_dim), zMStar(_ctxt.getContext().zMStar)
   { }
 
-  shared_ptr<Ctxt> operator()(long i) const override
+  shared_ptr<Ctxt> automorph(long i) const override
   {
     return precon.automorph(zMStar.genToPow(dim, i));
   }
@@ -224,7 +224,7 @@ public:
     NTL_EXEC_RANGE_END
   }
 
-  shared_ptr<Ctxt> operator()(long i) const override
+  shared_ptr<Ctxt> automorph(long i) const override
   {
     assert(i >= 0 && i < D);
     long j = i % g;
@@ -957,7 +957,7 @@ MatMul1DExec::mul(Ctxt& ctxt)
 
 	    for (long i = first; i < last; i++) {
 	       if (cache.multiplier[i]) {
-		  shared_ptr<Ctxt> tmp = (*precon)(i);
+		  shared_ptr<Ctxt> tmp = precon->automorph(i);
 		  cache.multiplier[i]->mul(*tmp);
 		  acc[index] += *tmp;
 	       }
@@ -985,7 +985,7 @@ MatMul1DExec::mul(Ctxt& ctxt)
 
 	    for (long i = first; i < last; i++) {
 	       if (cache.multiplier[i] || cache1.multiplier[i]) {
-		  shared_ptr<Ctxt> tmp = (*precon)(i);
+		  shared_ptr<Ctxt> tmp = precon->automorph(i);
                   shared_ptr<Ctxt> tmp1 = make_shared<Ctxt>(*tmp);
 		  if (cache.multiplier[i]) {
                      cache.multiplier[i]->mul(*tmp);
@@ -1442,7 +1442,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
       // This is the original code
 
       for (long i: range(d0)) {
-	 shared_ptr<Ctxt> tmp = (*precon)(i);
+	 shared_ptr<Ctxt> tmp = precon->automorph(i);
 	 for (long j: range(d1)) {
 	    if (cache.multiplier[i*d1+j]) {
 	       Ctxt tmp1(*tmp);
@@ -1477,7 +1477,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
   
             for (long idx: range(first, last)) {
               long i = idx + first_i;
-              par_buf[idx] = (*precon)(i);
+              par_buf[idx] = precon->automorph(i);
             }
 
          NTL_EXEC_RANGE_END
@@ -1532,7 +1532,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
 
       for (long i: range(d0)) {
-	 shared_ptr<Ctxt> tmp = (*precon)(i);
+	 shared_ptr<Ctxt> tmp = precon->automorph(i);
 	 for (long j: range(d1)) {
 	    if (cache.multiplier[i*d1+j]) {
 	       Ctxt tmp1(*tmp);
@@ -1579,7 +1579,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
   
             for (long idx: range(first, last)) {
               long i = idx + first_i;
-              par_buf[idx] = (*precon)(i);
+              par_buf[idx] = precon->automorph(i);
             }
 
          NTL_EXEC_RANGE_END
