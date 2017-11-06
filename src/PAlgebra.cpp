@@ -468,6 +468,9 @@ void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha,
   else {
     // general case...
 
+    // FIXME: should update this to use matrix_maps, but this routine
+    // isn't actually used anywhere
+
     for (long i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
       CompMod(crt[i], alpha, mappingData.maps[i], factors[i]);
   }

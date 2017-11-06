@@ -363,6 +363,18 @@ public:
 
 };
 
+shared_ptr<ConstMultiplier> 
+build_ConstMultiplier(const GF2X& poly)
+{
+   return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
+}
+
+shared_ptr<ConstMultiplier> 
+build_ConstMultiplier(const zz_pX& poly)
+{
+   return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
+}
+
 
 
 class ConstMultiplierCache {
@@ -641,7 +653,7 @@ struct MatMul1DExec_construct {
 	}
 
 	plaintextAutomorph(poly, poly, dim, -g*k, ea); 
-	vec[i] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
+	vec[i] = build_ConstMultiplier(poly);
       }
     }
     else {
@@ -687,7 +699,7 @@ struct MatMul1DExec_construct {
         }
         else {
 	  plaintextAutomorph(poly1, poly1, dim, -g*k, ea); 
-	  vec[i] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+	  vec[i] = build_ConstMultiplier(poly1);
 	}
 
         // vec1[i] = rho_dim^{D-g*k}(poly2)
@@ -697,7 +709,7 @@ struct MatMul1DExec_construct {
         }
         else {
 	  plaintextAutomorph(poly2, poly2, dim, D-g*k, ea); 
-	  vec1[i] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly2));
+	  vec1[i] = build_ConstMultiplier(poly2); 
 	}
       }
     }
@@ -1258,7 +1270,7 @@ struct BlockMatMul1DExec_construct {
           else {
 	    for (long j: range(d)) {
 	      plaintextAutomorph(poly[j], poly[j], -1, -j, ea);
-	      vec[i*d+j] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly[j]));
+	      vec[i*d+j] = build_ConstMultiplier(poly[j]);
 	    }
           }
         }
@@ -1286,7 +1298,7 @@ struct BlockMatMul1DExec_construct {
               if (IsZero(poly1)) 
                 vec[i*d+j] = nullptr;
               else 
-	        vec[i*d+j] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+	        vec[i*d+j] = build_ConstMultiplier(poly1);
 
               sub(poly1, poly[j], poly1); // poly[j] w/ last D-i slots zeroed out
               if (IsZero(poly1)) {
@@ -1294,7 +1306,7 @@ struct BlockMatMul1DExec_construct {
               }
               else {
                 plaintextAutomorph(poly1, poly1, dim, D, ea);
-	        vec1[i*d+j] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+	        vec1[i*d+j] = build_ConstMultiplier(poly1);
               }
             }
           }
@@ -1314,7 +1326,7 @@ struct BlockMatMul1DExec_construct {
           else {
 	    for (long j: range(d)) {
 	      plaintextAutomorph(poly[j], poly[j], dim, -i, ea);
-	      vec[i+j*D] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly[j]));
+	      vec[i+j*D] = build_ConstMultiplier(poly[j]);
 	    }
           }
         }
@@ -1344,7 +1356,7 @@ struct BlockMatMul1DExec_construct {
               }
               else {
                 plaintextAutomorph(poly1, poly1, dim, -i, ea);
-	        vec[i+j*D] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+	        vec[i+j*D] = build_ConstMultiplier(poly1);
               }
 
               if (IsZero(poly2)) {
@@ -1352,7 +1364,7 @@ struct BlockMatMul1DExec_construct {
               }
               else {
                 plaintextAutomorph(poly2, poly2, dim, D-i, ea);
-	        vec1[i+j*D] = make_shared<ConstMultiplier_zzX>(convert<zzX>(poly2));
+	        vec1[i+j*D] = build_ConstMultiplier(poly2);
               }
             }
           }
