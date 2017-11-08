@@ -414,7 +414,7 @@ public:
   // If minimal, then it is assumed minimal KS matrices will
   // be present (one for the generator g, and one for g^{-D} 
   // for non-native dimensions).  With this flag set, all BS/GS
-  // and parallel strategies area voided.
+  // and parallel strategies are avoided.
   explicit
   MatMul1DExec(const MatMul1D& mat, bool minimal=false);
 
@@ -441,12 +441,12 @@ public:
   ConstMultiplierCache cache1; // only for non-native dimension
 
 
-  // If minimal, then it is assumed minimal KS matrices will
-  // be present (one for the generator g, and one for g^{-D} 
-  // for non-native dimensions).  With this flag set, all BS/GS
-  // and parallel strategies area voided.
+  // If minimal, then it is assumed minimal KS matrices will be present (one
+  // for Frobenius, one for the generator g, and one for g^{-D} for non-native
+  // dimensions).  With this flag set, all BS/GS and parallel strategies are
+  // avoided.
   explicit
-  BlockMatMul1DExec(const BlockMatMul1D& mat);
+  BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal=false);
 
   void mul(Ctxt& ctxt);
 
@@ -1234,7 +1234,7 @@ struct BlockMatMul1DExec_construct {
 
   // strategy == +1 : factor \sigma
   // strategy == -1 : factor \rho
-  // strategy ==  0 : no factoring
+  // strategy ==  0 : no factoring (used to implemengt minimal KS strategy)
 
    
 
@@ -1373,8 +1373,62 @@ struct BlockMatMul1DExec_construct {
 
       break;
 
-    case 0:
-      Error("not implemented");
+    case 0: // no factoring
+
+      if (native) {
+        vec.resize(D*d);
+        for (long i: range(D)) {
+          bool zero = processDiagonal(poly, i, ea, mat);
+          if (zero) {
+            for (long j: range(d)) vec[i*d+j] = nullptr;
+          }
+          else {
+	    for (long j: range(d)) {
+	      vec[i*d+j] = build_ConstMultiplier(poly[j]);
+	    }
+          }
+        }
+      }
+      else {
+        vec.resize(D*d);
+        vec1.resize(D*d);
+        for (long i: range(D)) {
+          bool zero = processDiagonal(poly, i, ea, mat);
+          if (zero) {
+            for (long j: range(d)) {
+              vec [i*d+j] = nullptr;
+              vec1[i*d+j] = nullptr;
+            }
+          }
+          else {
+	    const RX& mask = ea.getTab().getMaskTable()[dim][i];
+	    const RXModulus& F = ea.getTab().getPhimXMod();
+
+            for (long j: range(d)) {
+              RX poly1, poly2;
+              MulMod(poly1, poly[j], mask, F); // poly[j] w/ first i slots zeroed out
+              sub(poly2, poly[j], poly1);      // poly[j] w/ last D-i slots zeroed out
+
+              if (IsZero(poly1)) {
+                vec[i*d+j] = nullptr;
+              }
+              else {
+	        vec[i*d+j] = build_ConstMultiplier(poly1);
+              }
+
+              if (IsZero(poly2)) {
+                vec1[i*d+j] = nullptr;
+              }
+              else {
+                plaintextAutomorph(poly2, poly2, dim, D, ea);
+	        vec1[i*d+j] = build_ConstMultiplier(poly2);
+              }
+            }
+          }
+        }
+      }
+
+      break;
 
     default:
       Error("unknown strategy");
@@ -1385,7 +1439,7 @@ struct BlockMatMul1DExec_construct {
 };
 
 
-BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat)
+BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal)
   : ea(mat.getEA())
 {
     FHE_TIMER_START;
@@ -1396,7 +1450,9 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat)
     d = ea.getDegree();
     native = dimNative(ea, dim);
     
-    if (D >= d) 
+    if (minimal) 
+      strategy = 0;
+    else if (D >= d) 
       strategy = +1;
     else
       strategy = -1;
@@ -1413,6 +1469,63 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
    const PAlgebra& zMStar = ea.getContext().zMStar;
 
    ctxt.cleanUp();
+
+   if (strategy == 0) {
+      // assumes minimal KS matrices present
+
+      if (native) {
+	 Ctxt acc(ZeroCtxtLike, ctxt);
+         Ctxt sh_ctxt(ctxt);
+ 
+         for (long i: range(D)) {
+	    if (i > 0) sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
+            Ctxt sh_ctxt1(sh_ctxt);
+
+            for (long j: range(d)) {
+	       if (j > 0) sh_ctxt1.smartAutomorph(zMStar.genToPow(-1, 1));
+
+	       if (cache.multiplier[i*d+j]) {
+		  Ctxt tmp(sh_ctxt1);
+		  cache.multiplier[i*d+j]->mul(tmp);
+		  acc += tmp;
+	       }
+            }
+         }
+
+	 ctxt = acc;
+      }
+      else {
+	 Ctxt acc(ZeroCtxtLike, ctxt);
+	 Ctxt acc1(ZeroCtxtLike, ctxt);
+         Ctxt sh_ctxt(ctxt);
+ 
+         for (long i: range(D)) {
+	    if (i > 0) sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
+            Ctxt sh_ctxt1(sh_ctxt);
+
+            for (long j: range(d)) {
+	       if (j > 0) sh_ctxt1.smartAutomorph(zMStar.genToPow(-1, 1));
+
+	       if (cache.multiplier[i*d+j]) {
+		  Ctxt tmp(sh_ctxt1);
+		  cache.multiplier[i*d+j]->mul(tmp);
+		  acc += tmp;
+	       }
+	       if (cache1.multiplier[i*d+j]) {
+		  Ctxt tmp(sh_ctxt1);
+		  cache1.multiplier[i*d+j]->mul(tmp);
+		  acc1 += tmp;
+	       }
+            }
+         }
+
+	 acc1.smartAutomorph(zMStar.genToPow(dim, -D));
+	 acc += acc1;
+	 ctxt = acc;
+      }
+
+      return;
+   }
 
    long d0, d1;
    long dim0, dim1;
@@ -2011,6 +2124,154 @@ buildRandomBlockMatrix_new(const EncryptedArray& ea, long dim)
 }
 
 
+//********************************
+
+template<class type> 
+class RandomMultiBlockMatrix : public BlockMatMul<type> {
+  PA_INJECT(type) 
+
+  vector< vector< vector< mat_R > > > data;
+  long dim;
+
+public:
+  virtual ~RandomMultiBlockMatrix() {}
+  RandomMultiBlockMatrix(const EncryptedArray& _ea, long _dim):
+    BlockMatMul<type>(_ea), dim(_dim)
+  {
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long n = _ea.size();
+    long d = _ea.getDegree();
+    long D = _ea.sizeOfDimension(dim);
+
+    RandomStreamPush push;
+    SetSeed(ZZ(123));
+
+    data.resize(n/D);
+    for (long k = 0; k < n/D; k++) {
+      data[k].resize(D);
+      for (long i = 0; i < D; i++) {
+	data[k][i].resize(D);
+	for (long j = 0; j < D; j++) {
+          data[k][i][j].SetDims(d, d);
+	  for (long u = 0; u < d; u++)
+	    for (long v = 0; v < d; v++) 
+	      random(data[k][i][j][u][v]);
+	}
+      }
+    }
+  }
+
+  virtual long size() const // how many transformations
+  {
+    const EncryptedArray& ea = this->getEA();
+    long n = ea.size();
+    long D = ea.sizeOfDimension(dim);
+    return n/D;
+  }
+
+  virtual bool multiGet(mat_R& out, long i, long j, long k) const
+  {
+    const EncryptedArray& ea = this->getEA();
+    long n = ea.size();
+    long D = ea.sizeOfDimension(dim);
+
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    assert(k >= 0 && k < n/D);
+    if (IsZero(data[k][i][j])) return true;
+    out = data[k][i][j];
+    return false;
+  }
+};
+
+static MatMulBase*
+buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMultiBlockMatrix<PA_GF2>(ea, dim);
+    }
+    case PA_zz_p_tag: {
+      return new RandomMultiBlockMatrix<PA_zz_p>(ea, dim);
+    }
+    default: return 0;
+  }
+}
+
+
+template<class type> 
+class RandomMultiBlockMatrix_new : public BlockMatMul1D_derived<type> {
+  PA_INJECT(type) 
+
+  const EncryptedArray& ea;
+  long dim;
+
+  vector< vector< vector< mat_R > > > data;
+
+public:
+
+  RandomMultiBlockMatrix_new(const EncryptedArray& _ea, long _dim):
+    ea(_ea), dim(_dim)
+  {
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    long n = _ea.size();
+    long d = _ea.getDegree();
+    long D = _ea.sizeOfDimension(dim);
+
+    RandomStreamPush push;
+    SetSeed(ZZ(123));
+
+    data.resize(n/D);
+    for (long k = 0; k < n/D; k++) {
+      data[k].resize(D);
+      for (long i = 0; i < D; i++) {
+	data[k][i].resize(D);
+	for (long j = 0; j < D; j++) {
+          data[k][i][j].SetDims(d, d);
+	  for (long u = 0; u < d; u++)
+	    for (long v = 0; v < d; v++) 
+	      random(data[k][i][j][u][v]);
+	}
+      }
+    }
+  }
+
+
+  bool get(mat_R& out, long i, long j, long k) const override
+  {
+    long n = ea.size();
+    long D = ea.sizeOfDimension(dim);
+
+    assert(i >= 0 && i < D);
+    assert(j >= 0 && j < D);
+    assert(k >= 0 && k < n/D);
+    if (IsZero(data[k][i][j])) return true;
+    out = data[k][i][j];
+    return false;
+  }
+
+  const EncryptedArray& getEA() const override { return ea; }
+  long getDim() const override { return dim; }
+  bool multipleTransforms() const override { return true; }
+};
+
+static BlockMatMul1D*
+buildRandomMultiBlockMatrix_new(const EncryptedArray& ea, long dim)
+{
+  switch (ea.getTag()) {
+    case PA_GF2_tag: {
+      return new RandomMultiBlockMatrix_new<PA_GF2>(ea, dim);
+    }
+    case PA_zz_p_tag: {
+      return new RandomMultiBlockMatrix_new<PA_zz_p>(ea, dim);
+    }
+    default: return 0;
+  }
+}
+
+
+
+
 void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 {
   if (verbose) {
@@ -2036,11 +2297,14 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
   //std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
   //std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
 
-  std::unique_ptr< MatMulBase > ptr(buildRandomBlockMatrix(ea,dim));
-  std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomBlockMatrix_new(ea,dim));
+  //std::unique_ptr< MatMulBase > ptr(buildRandomBlockMatrix(ea,dim));
+  //std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomBlockMatrix_new(ea,dim));
+
+  std::unique_ptr< MatMulBase > ptr(buildRandomMultiBlockMatrix(ea,dim));
+  std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomMultiBlockMatrix_new(ea,dim));
 
   resetAllTimers();
-  BlockMatMul1DExec mat_exec(*ptr_new);
+  BlockMatMul1DExec mat_exec(*ptr_new, false);
   mat_exec.upgrade();
   printAllTimers();
 
@@ -2063,7 +2327,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
   printAllTimers();
 
   //matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
-  blockMatMul1D(v, *ptr, dim);     // multiply the plaintext vector
+  //blockMatMul1D(v, *ptr, dim);     // multiply the plaintext vector
+  blockMatMulti1D(v, *ptr, dim);     // multiply the plaintext vector
 
   NewPlaintextArray v1(ea);
   ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
