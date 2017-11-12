@@ -363,18 +363,49 @@ public:
 
 };
 
+template<class RX>
 shared_ptr<ConstMultiplier> 
-build_ConstMultiplier(const GF2X& poly)
+build_ConstMultiplier(const RX& poly)
 {
-   return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
+   if (IsZero(poly))
+      return nullptr;
+   else
+      return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
 }
 
+template<class RX, class type>
 shared_ptr<ConstMultiplier> 
-build_ConstMultiplier(const zz_pX& poly)
+build_ConstMultiplier(const RX& poly, 
+                      long dim, long amt, const EncryptedArrayDerived<type>& ea)
 {
-   return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
+   if (IsZero(poly))
+      return nullptr;
+   else {
+      RX poly1;
+      plaintextAutomorph(poly1, poly, dim, amt, ea);
+      return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+   }
 }
 
+
+void MulAdd(Ctxt& x, const shared_ptr<ConstMultiplier>& a, const Ctxt& b)
+// x += a*b
+{
+   if (a) {
+      Ctxt tmp(b);
+      a->mul(tmp);
+      x += tmp;
+   }
+}
+
+void DestMulAdd(Ctxt& x, const shared_ptr<ConstMultiplier>& a, Ctxt& b)
+// x += a*b, b may be modified
+{
+   if (a) {
+      a->mul(b);
+      x += b;
+   }
+}
 
 
 class ConstMultiplierCache {
@@ -629,7 +660,7 @@ struct MatMul1DExec_construct {
 
       vec.resize(D);
 
-      for (long i = 0; i < D; i++) {
+      for (long i: range(D)) {
 	// i == j + g*k
         long j, k;
       
@@ -644,23 +675,14 @@ struct MatMul1DExec_construct {
 
 	RX poly;
 	processDiagonal(poly, i, 0, ea, mat);
-
-        // vec[i] = rho_dim^{-g*k}(poly)
-
-	if (IsZero(poly)) {
-	  vec[i] = nullptr; 
-          continue;
-	}
-
-	plaintextAutomorph(poly, poly, dim, -g*k, ea); 
-	vec[i] = build_ConstMultiplier(poly);
+        vec[i] = build_ConstMultiplier(poly, dim, -g*k, ea);
       }
     }
     else {
       vec.resize(D);
       vec1.resize(D);
 
-      for (long i = 0; i < D; i++) {
+      for (long i: range(D)) {
 	// i == j + g*k
         long j, k;
       
@@ -692,25 +714,8 @@ struct MatMul1DExec_construct {
         // poly1 = poly w/ first i slots zeroed out
         // poly2 = poly w/ last D-i slots zeroed out
 
-        // vec[i] = rho_dim^{-g*k}(poly1)
-
-        if (IsZero(poly1)) {
-          vec[i] = nullptr;
-        }
-        else {
-	  plaintextAutomorph(poly1, poly1, dim, -g*k, ea); 
-	  vec[i] = build_ConstMultiplier(poly1);
-	}
-
-        // vec1[i] = rho_dim^{D-g*k}(poly2)
-
-        if (IsZero(poly2)) {
-          vec1[i] = nullptr;
-        }
-        else {
-	  plaintextAutomorph(poly2, poly2, dim, D-g*k, ea); 
-	  vec1[i] = build_ConstMultiplier(poly2); 
-	}
+        vec[i] = build_ConstMultiplier(poly1, dim, -g*k, ea);
+        vec1[i] = build_ConstMultiplier(poly2, dim, D-g*k, ea);
       }
     }
   }
@@ -869,11 +874,7 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	       for (long j = 0; j < g; j++) {
 		  long i = j + g*k;
 		  if (i >= D) break;
-		  if (cache.multiplier[i]) {
-		     Ctxt tmp(*baby_steps[j]);
-		     cache.multiplier[i]->mul(tmp);
-		     acc_inner += tmp;
-		  }
+                  MulAdd(acc_inner, cache.multiplier[i], *baby_steps[j]); 
 	       }
 
 	       if (k > 0) acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
@@ -909,16 +910,8 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	       for (long j = 0; j < g; j++) {
 		  long i = j + g*k;
 		  if (i >= D) break;
-		  if (cache.multiplier[i]) {
-		     Ctxt tmp(*baby_steps[j]);
-		     cache.multiplier[i]->mul(tmp);
-		     acc_inner += tmp;
-		  }
-		  if (cache1.multiplier[i]) {
-		     Ctxt tmp(*baby_steps[j]);
-		     cache1.multiplier[i]->mul(tmp);
-		     acc_inner1 += tmp;
-		  }
+                  MulAdd(acc_inner, cache.multiplier[i], *baby_steps[j]);
+                  MulAdd(acc_inner1, cache1.multiplier[i], *baby_steps[j]);
 	       }
 
 	       if (k > 0) {
@@ -958,8 +951,7 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	    for (long i = first; i < last; i++) {
 	       if (cache.multiplier[i]) {
 		  shared_ptr<Ctxt> tmp = precon->automorph(i);
-		  cache.multiplier[i]->mul(*tmp);
-		  acc[index] += *tmp;
+                  DestMulAdd(acc[index], cache.multiplier[i], *tmp);
 	       }
 	    }
 	 NTL_EXEC_INDEX_END
@@ -986,15 +978,8 @@ MatMul1DExec::mul(Ctxt& ctxt)
 	    for (long i = first; i < last; i++) {
 	       if (cache.multiplier[i] || cache1.multiplier[i]) {
 		  shared_ptr<Ctxt> tmp = precon->automorph(i);
-                  shared_ptr<Ctxt> tmp1 = make_shared<Ctxt>(*tmp);
-		  if (cache.multiplier[i]) {
-                     cache.multiplier[i]->mul(*tmp);
-		     acc[index] += *tmp;
-                  }
-		  if (cache1.multiplier[i]) {
-                     cache1.multiplier[i]->mul(*tmp1);
-		     acc1[index] += *tmp1;
-                  }
+                  MulAdd(acc[index], cache.multiplier[i], *tmp);
+                  DestMulAdd(acc1[index], cache1.multiplier[i], *tmp);
 	       }
 	    }
 	 NTL_EXEC_INDEX_END
@@ -1014,12 +999,7 @@ MatMul1DExec::mul(Ctxt& ctxt)
  
          for (long i = 0; i < D; i++) {
 	    if (i > 0) sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
-
-	    if (cache.multiplier[i]) {
-	       Ctxt tmp(sh_ctxt);
-	       cache.multiplier[i]->mul(tmp);
-	       acc += tmp;
-	    }
+            MulAdd(acc, cache.multiplier[i], sh_ctxt);
          }
 
 	 ctxt = acc;
@@ -1031,17 +1011,8 @@ MatMul1DExec::mul(Ctxt& ctxt)
  
          for (long i = 0; i < D; i++) {
 	    if (i > 0) sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
-
-	    if (cache.multiplier[i]) {
-	       Ctxt tmp(sh_ctxt);
-	       cache.multiplier[i]->mul(tmp);
-	       acc += tmp;
-	    }
-	    if (cache1.multiplier[i]) {
-	       Ctxt tmp(sh_ctxt);
-	       cache1.multiplier[i]->mul(tmp);
-	       acc1 += tmp;
-	    }
+            MulAdd(acc, cache.multiplier[i], sh_ctxt);
+            MulAdd(acc1, cache1.multiplier[i], sh_ctxt);
          }
 
 	 acc1.smartAutomorph(zMStar.genToPow(dim, -D));
@@ -2291,8 +2262,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
 
   // choose a random plaintext square matrix
-  //std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
-  //std::unique_ptr< MatMul1D > ptr_new(buildRandomMultiMatrix_new(ea,dim));
+  std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
+  std::unique_ptr< MatMul1D > ptr_new(buildRandomMultiMatrix_new(ea,dim));
 
   //std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
   //std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
@@ -2300,11 +2271,11 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
   //std::unique_ptr< MatMulBase > ptr(buildRandomBlockMatrix(ea,dim));
   //std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomBlockMatrix_new(ea,dim));
 
-  std::unique_ptr< MatMulBase > ptr(buildRandomMultiBlockMatrix(ea,dim));
-  std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomMultiBlockMatrix_new(ea,dim));
+  //std::unique_ptr< MatMulBase > ptr(buildRandomMultiBlockMatrix(ea,dim));
+  //std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomMultiBlockMatrix_new(ea,dim));
 
   resetAllTimers();
-  BlockMatMul1DExec mat_exec(*ptr_new, false);
+  MatMul1DExec mat_exec(*ptr_new, false);
   mat_exec.upgrade();
   printAllTimers();
 
@@ -2326,9 +2297,9 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
   printAllTimers();
 
-  //matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
+  matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
   //blockMatMul1D(v, *ptr, dim);     // multiply the plaintext vector
-  blockMatMulti1D(v, *ptr, dim);     // multiply the plaintext vector
+  //blockMatMulti1D(v, *ptr, dim);     // multiply the plaintext vector
 
   NewPlaintextArray v1(ea);
   ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
