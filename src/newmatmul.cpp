@@ -1240,8 +1240,7 @@ struct BlockMatMul1DExec_construct {
           }
           else {
 	    for (long j: range(d)) {
-	      plaintextAutomorph(poly[j], poly[j], -1, -j, ea);
-	      vec[i*d+j] = build_ConstMultiplier(poly[j]);
+	      vec[i*d+j] = build_ConstMultiplier(poly[j], -1, -j, ea);
 	    }
           }
         }
@@ -1266,19 +1265,10 @@ struct BlockMatMul1DExec_construct {
 
               RX poly1;
               MulMod(poly1, poly[j], mask, F); // poly[j] w/ first i slots zeroed out
-              if (IsZero(poly1)) 
-                vec[i*d+j] = nullptr;
-              else 
-	        vec[i*d+j] = build_ConstMultiplier(poly1);
+              vec[i*d+j] = build_ConstMultiplier(poly1);
 
               sub(poly1, poly[j], poly1); // poly[j] w/ last D-i slots zeroed out
-              if (IsZero(poly1)) {
-                vec1[i*d+j] = nullptr;
-              }
-              else {
-                plaintextAutomorph(poly1, poly1, dim, D, ea);
-	        vec1[i*d+j] = build_ConstMultiplier(poly1);
-              }
+              vec1[i*d+j] = build_ConstMultiplier(poly1, dim, D, ea);
             }
           }
         }
@@ -1296,8 +1286,7 @@ struct BlockMatMul1DExec_construct {
           }
           else {
 	    for (long j: range(d)) {
-	      plaintextAutomorph(poly[j], poly[j], dim, -i, ea);
-	      vec[i+j*D] = build_ConstMultiplier(poly[j]);
+	      vec[i+j*D] = build_ConstMultiplier(poly[j], dim, -i, ea);
 	    }
           }
         }
@@ -1322,21 +1311,8 @@ struct BlockMatMul1DExec_construct {
               MulMod(poly1, poly[j], mask, F); // poly[j] w/ first i slots zeroed out
               sub(poly2, poly[j], poly1);      // poly[j] w/ last D-i slots zeroed out
 
-              if (IsZero(poly1)) {
-                vec[i+j*D] = nullptr;
-              }
-              else {
-                plaintextAutomorph(poly1, poly1, dim, -i, ea);
-	        vec[i+j*D] = build_ConstMultiplier(poly1);
-              }
-
-              if (IsZero(poly2)) {
-                vec1[i+j*D] = nullptr;
-              }
-              else {
-                plaintextAutomorph(poly2, poly2, dim, D-i, ea);
-	        vec1[i+j*D] = build_ConstMultiplier(poly2);
-              }
+              vec[i+j*D] = build_ConstMultiplier(poly1, dim, -i, ea);
+              vec1[i+j*D] = build_ConstMultiplier(poly2, dim, D-i, ea);
             }
           }
         }
@@ -1380,20 +1356,8 @@ struct BlockMatMul1DExec_construct {
               MulMod(poly1, poly[j], mask, F); // poly[j] w/ first i slots zeroed out
               sub(poly2, poly[j], poly1);      // poly[j] w/ last D-i slots zeroed out
 
-              if (IsZero(poly1)) {
-                vec[i*d+j] = nullptr;
-              }
-              else {
-	        vec[i*d+j] = build_ConstMultiplier(poly1);
-              }
-
-              if (IsZero(poly2)) {
-                vec1[i*d+j] = nullptr;
-              }
-              else {
-                plaintextAutomorph(poly2, poly2, dim, D, ea);
-	        vec1[i*d+j] = build_ConstMultiplier(poly2);
-              }
+              vec[i*d+j] = build_ConstMultiplier(poly1);
+              vec1[i*d+j] = build_ConstMultiplier(poly2, dim, D, ea);
             }
           }
         }
@@ -1454,12 +1418,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
             for (long j: range(d)) {
 	       if (j > 0) sh_ctxt1.smartAutomorph(zMStar.genToPow(-1, 1));
-
-	       if (cache.multiplier[i*d+j]) {
-		  Ctxt tmp(sh_ctxt1);
-		  cache.multiplier[i*d+j]->mul(tmp);
-		  acc += tmp;
-	       }
+               MulAdd(acc, cache.multiplier[i*d+j], sh_ctxt1);
             }
          }
 
@@ -1476,17 +1435,8 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
             for (long j: range(d)) {
 	       if (j > 0) sh_ctxt1.smartAutomorph(zMStar.genToPow(-1, 1));
-
-	       if (cache.multiplier[i*d+j]) {
-		  Ctxt tmp(sh_ctxt1);
-		  cache.multiplier[i*d+j]->mul(tmp);
-		  acc += tmp;
-	       }
-	       if (cache1.multiplier[i*d+j]) {
-		  Ctxt tmp(sh_ctxt1);
-		  cache1.multiplier[i*d+j]->mul(tmp);
-		  acc1 += tmp;
-	       }
+               MulAdd(acc, cache.multiplier[i*d+j], sh_ctxt1);
+               MulAdd(acc1, cache1.multiplier[i*d+j], sh_ctxt1);
             }
          }
 
@@ -1528,11 +1478,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
       for (long i: range(d0)) {
 	 shared_ptr<Ctxt> tmp = precon->automorph(i);
 	 for (long j: range(d1)) {
-	    if (cache.multiplier[i*d1+j]) {
-	       Ctxt tmp1(*tmp);
-	       cache.multiplier[i*d1+j]->mul(tmp1);
-	       acc[j] += tmp1;
-	    }
+            MulAdd(acc[j], cache.multiplier[i*d1+j], *tmp);
 	 }
       }
 
@@ -1570,13 +1516,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
             for (long j: range(first, last)) {
                for (long i: range(first_i, last_i)) {
-                  // acc[j] += cache.multiplier[i*d1+j]*par_buf[i-first_i] 
-
-                  if (cache.multiplier[i*d1+j]) {
-                     Ctxt tmp1(*par_buf[i-first_i]);
-                     cache.multiplier[i*d1+j]->mul(tmp1);
-                     acc[j] += tmp1;
-                  }
+                  MulAdd(acc[j], cache.multiplier[i*d1+j], *par_buf[i-first_i]);
                }
             }
 
@@ -1617,18 +1557,8 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
       for (long i: range(d0)) {
 	 shared_ptr<Ctxt> tmp = precon->automorph(i);
-	 for (long j: range(d1)) {
-	    if (cache.multiplier[i*d1+j]) {
-	       Ctxt tmp1(*tmp);
-	       cache.multiplier[i*d1+j]->mul(tmp1);
-	       acc[j] += tmp1;
-	    }
-	    if (cache1.multiplier[i*d1+j]) {
-	       Ctxt tmp1(*tmp);
-	       cache1.multiplier[i*d1+j]->mul(tmp1);
-	       acc1[j] += tmp1;
-	    }
-	 }
+         MulAdd(acc[j], cache.multiplier[i*d1+j], *tmp);
+         MulAdd(acc1[j], cache1.multiplier[i*d1+j], *tmp);
       }
 
       Ctxt sum(ZeroCtxtLike, ctxt);
@@ -1672,18 +1602,8 @@ BlockMatMul1DExec::mul(Ctxt& ctxt)
 
             for (long j: range(first, last)) {
                for (long i: range(first_i, last_i)) {
-                  // acc[j] += cache.multiplier[i*d1+j]*par_buf[i-first_i] 
-
-                  if (cache.multiplier[i*d1+j]) {
-                     Ctxt tmp1(*par_buf[i-first_i]);
-                     cache.multiplier[i*d1+j]->mul(tmp1);
-                     acc[j] += tmp1;
-                  }
-		  if (cache1.multiplier[i*d1+j]) {
-                     Ctxt tmp1(*par_buf[i-first_i]);
-		     cache1.multiplier[i*d1+j]->mul(tmp1);
-		     acc1[j] += tmp1;
-		  }
+                  MulAdd(acc[j], cache.multiplier[i*d1+j], *par_buf[i-first_i]);
+                  MulAdd(acc1[j], cache1.multiplier[i*d1+j], *par_buf[i-first_i]);
                }
             }
 
@@ -2262,20 +2182,20 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
 
   // choose a random plaintext square matrix
-  std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
-  std::unique_ptr< MatMul1D > ptr_new(buildRandomMultiMatrix_new(ea,dim));
+  //std::unique_ptr< MatMulBase > ptr(buildRandomMultiMatrix(ea,dim,g));
+  //std::unique_ptr< MatMul1D > ptr_new(buildRandomMultiMatrix_new(ea,dim));
 
   //std::unique_ptr< MatMulBase > ptr(buildRandomMatrix(ea,dim,g));
   //std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
 
-  //std::unique_ptr< MatMulBase > ptr(buildRandomBlockMatrix(ea,dim));
-  //std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomBlockMatrix_new(ea,dim));
+  std::unique_ptr< MatMulBase > ptr(buildRandomBlockMatrix(ea,dim));
+  std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomBlockMatrix_new(ea,dim));
 
   //std::unique_ptr< MatMulBase > ptr(buildRandomMultiBlockMatrix(ea,dim));
   //std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomMultiBlockMatrix_new(ea,dim));
 
   resetAllTimers();
-  MatMul1DExec mat_exec(*ptr_new, false);
+  BlockMatMul1DExec mat_exec(*ptr_new, false);
   mat_exec.upgrade();
   printAllTimers();
 
@@ -2297,8 +2217,8 @@ void  TestIt(FHEcontext& context, long g, long dim, bool verbose)
 
   printAllTimers();
 
-  matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
-  //blockMatMul1D(v, *ptr, dim);     // multiply the plaintext vector
+  //matMulti1D(v, *ptr, dim);     // multiply the plaintext vector
+  blockMatMul1D(v, *ptr, dim);     // multiply the plaintext vector
   //blockMatMulti1D(v, *ptr, dim);     // multiply the plaintext vector
 
   NewPlaintextArray v1(ea);
