@@ -25,7 +25,6 @@ void  TestIt(long p, long r, long c, long _k, long w,
              long L, const Vec<long>& mvec, 
              const Vec<long>& gens, const Vec<long>& ords, long useCache)
 {
-  const char * cacheTypes[3] = { "no", "zzX", "DCRT" };
   if (!noPrint)
     cout << "*** TestIt"
        << (dry? " (dry run):" : ":")
@@ -36,7 +35,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
        << ", w=" << w
        << ", L=" << L
        << ", mvec=" << mvec << ", "
-       << cacheTypes[useCache] << " cache"
+       << ", useCache = " << useCache
        << endl;
 
   setTimersOn();
@@ -126,7 +125,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   if (!noPrint) cout << "build EvalMap\n";
   EvalMap map(ea, mvec, false); // compute the transformation to apply
   if (!noPrint) cout << "apply EvalMap\n";
-  map.buildCache(static_cast<MatrixCacheType>(useCache));
+  if (useCache) map.upgrade();
   map.apply(ctxt); // apply the transformation to ctxt
   if (!noPrint) CheckCtxt(ctxt, "EvalMap");
   if (!noPrint) cout << "check results\n";
@@ -150,7 +149,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   if (!noPrint) cout << "build EvalMap\n";
   EvalMap imap(ea, mvec, true, false); // compute the transformation to apply
   if (!noPrint) cout << "apply EvalMap\n";
-  imap.buildCache(static_cast<MatrixCacheType>(useCache));
+  if (useCache) imap.upgrade();
   imap.apply(ctxt); // apply the transformation to ctxt
   if (!noPrint) {
     CheckCtxt(ctxt, "EvalMap");
@@ -233,7 +232,7 @@ int main(int argc, char *argv[])
   amap.arg("noPrint", noPrint, "suppress printouts");
 
   long useCache=0;
-  amap.arg("useCache", useCache, "0: no cache, 1:zzX, 2:DCRT");
+  amap.arg("useCache", useCache, "0: zzX cache, 2: DCRT cache");
 
   amap.parse(argc, argv);
 

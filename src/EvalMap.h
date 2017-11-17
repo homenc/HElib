@@ -16,7 +16,7 @@
  */
 
 #include "EncryptedArray.h"
-#include "matmul.h"
+#include "newmatmul.h"
 
 //! @class EvalMap
 //! @brief Class that provides the functionality for the 
@@ -54,8 +54,8 @@ private:
   const EncryptedArray& ea;
   bool invert;   // apply transformation in inverser order?
   long nfactors; // how many factors of m
-  std::unique_ptr<MatMulBase>            mat1;   // one block matrix
-  NTL::Vec<std::unique_ptr<MatMulBase> > matvec; // regular matrices
+  std::unique_ptr<BlockMatMul1DExec>       mat1;   // one block matrix
+  NTL::Vec<std::unique_ptr<MatMul1DExec>>  matvec; // regular matrices
 
 public:
   EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
@@ -65,7 +65,7 @@ public:
   // normal basis transformation when invert == true.
   // On by default, off for testing
 
-  void buildCache(MatrixCacheType cType);
+  void upgrade();
   void apply(Ctxt& ctxt) const;
 };
 

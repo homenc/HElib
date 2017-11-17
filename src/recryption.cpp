@@ -99,7 +99,7 @@ bool RecryptData::operator==(const RecryptData& other) const
 
 // The main method
 void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
-		       long t, bool consFlag, int _cacheType)
+		       long t, bool consFlag, int build_cache)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to RecryptData::init\n";
@@ -110,7 +110,6 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   // Record the arguments to this function
   mvec = mvec_;
   conservative = consFlag;
-  cacheType = _cacheType;
 
   if (t <= 0) t = defSkHwt+1; // recryption key Hwt
   hwt = t;
@@ -155,9 +154,9 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
   firstMap  = new EvalMap(*ea, mvec, true);
   secondMap = new EvalMap(*context.ea, mvec, false);
-  if (cacheType>0) {
-    firstMap->buildCache(static_cast<MatrixCacheType>(cacheType));
-    secondMap->buildCache(static_cast<MatrixCacheType>(cacheType));
+  if (build_cache) {
+    firstMap->upgrade();
+    secondMap->upgrade();
   }
 
   p2dConv = new PowerfulDCRT(context, mvec);

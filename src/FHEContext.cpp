@@ -463,13 +463,13 @@ istream& operator>> (istream &str, FHEcontext& context)
   Vec<long> mv;
   long t;
   bool consFlag;
-  int cType;
+  int build_cache;
   str >> mv;
   str >> t;
   str >> consFlag;
-  str >> cType;
+  str >> build_cache;
   if (mv.length()>0) {
-    context.makeBootstrappable(mv, t, consFlag, cType);
+    context.makeBootstrappable(mv, t, consFlag, build_cache);
   }
 
   seekPastChar(str, ']');
