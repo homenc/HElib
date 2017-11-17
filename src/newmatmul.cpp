@@ -1253,6 +1253,7 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal)
 
 
 
+
 void
 BlockMatMul1DExec::mul(Ctxt& ctxt) const
 {
