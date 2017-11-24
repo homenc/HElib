@@ -126,4 +126,8 @@ public:
 };
 
 
+void mul(NewPlaintextArray& pa, const MatMul1D& mat);
+void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat);
+
+
 #endif

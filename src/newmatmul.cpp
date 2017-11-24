@@ -1496,3 +1496,130 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
       ctxt += sum1[0];
    }
 }
+
+
+template<class type>
+struct mul_MatMul1D_impl {
+  PA_INJECT(type)
+
+  static 
+  void apply(const EncryptedArrayDerived<type>& ea,
+             NewPlaintextArray& pa,
+             const MatMul1D& mat_basetype)
+  {
+    const MatMul1D_derived<type>& mat =
+	  dynamic_cast< const MatMul1D_derived<type>& >(mat_basetype);
+    long dim = mat.getDim();
+
+    RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    long n = ea.size();
+    long D = ea.sizeOfDimension(dim);
+
+    vector< vector<RX> > data1(n/D);
+    for (long k: range(n/D))
+      data1[k].resize(D);
+
+    // copy the data into a vector of 1D vectors
+    vector<RX>& data = pa.getData<type>();
+    for (long i: range(n)) {
+      long k, j;
+      std::tie(k, j) = ea.getContext().zMStar.breakIndexByDim(i, dim);
+      data1[k][j] = data[i];       // k= along dim, j = the rest of i
+    }
+
+    // multiply each one of the vectors by the same matrix
+    for (long k: range(n/D)) {
+      for (long j: range(D)) { // simple matrix-vector multiplication
+	std::pair<long,long> p(k, j);
+	long idx = ea.getContext().zMStar.assembleIndexByDim(p, dim);
+
+	RX acc, val, tmp; 
+	acc = 0;
+        for (long i: range(D)) {
+          bool zero = mat.get(val, i, j, k);
+          if (!zero) {
+            NTL::mul(tmp, data1[k][i], val);
+            NTL::add(acc, acc, tmp);
+          }
+        }
+        rem(data[idx], acc, ea.getG()); // store the result in the data array
+      }
+    }
+  }
+
+
+};
+
+
+
+void mul(NewPlaintextArray& pa, const MatMul1D& mat)
+{
+  const EncryptedArray& ea = mat.getEA();
+  ea.dispatch<mul_MatMul1D_impl>(Fwd(pa), mat);
+}
+
+
+
+template<class type>
+struct mul_BlockMatMul1D_impl {
+  PA_INJECT(type)
+
+  static 
+  void apply(const EncryptedArrayDerived<type>& ea,
+             NewPlaintextArray& pa,
+             const BlockMatMul1D& mat_basetype)
+  {
+    const BlockMatMul1D_derived<type>& mat =
+	  dynamic_cast< const BlockMatMul1D_derived<type>& >(mat_basetype);
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long dim = mat.getDim();
+
+    RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    long n = ea.size();
+    long D = ea.sizeOfDimension(dim);
+    long d = ea.getDegree();
+
+    vector< vector<RX> > data1(n/D);
+    for (long k: range(n/D))
+      data1[k].resize(D);
+
+    // copy the data into a vector of 1D vectors
+    vector<RX>& data = pa.getData<type>();
+    for (long i: range(n)) {
+      long k, j;
+      std::tie(k,j) = zMStar.breakIndexByDim(i, dim);
+      data1[k][j] = data[i];       // k= along dim, j = the rest of i
+    }
+
+    for (long k: range(n/D)) { // multiply each vector by a matrix
+      for (long j: range(D)) { // matrix-vector multiplication
+	vec_R acc, tmp, tmp1;
+	mat_R val;
+	acc.SetLength(d);
+	for (long i = 0; i < D; i++) {
+          bool zero = mat.get(val, i, j, k);
+	  if (!zero) { // if non-zero, multiply and add
+            VectorCopy(tmp1, data1[k][i], d);
+            mul(tmp, tmp1, val);
+            add(acc, acc, tmp);
+	  }
+	}
+	long idx = zMStar.assembleIndexByDim(make_pair(k, j), dim);
+        conv(data[idx], acc);
+      }
+    }
+  }
+
+
+};
+
+
+void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat)
+{
+  const EncryptedArray& ea = mat.getEA();
+  ea.dispatch<mul_BlockMatMul1D_impl>(Fwd(pa), mat);
+}
+
+
