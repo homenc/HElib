@@ -5,6 +5,21 @@
 #include "EncryptedArray.h"
 
 
+class MatMulFull {
+public:
+  virtual ~MatMulFull() {}
+  virtual const EncryptedArray& getEA() const = 0;
+};
+  
+template<class type>
+class MatMulFull_derived : public MatMulFull { 
+public:
+  PA_INJECT(type)
+
+  // Should return true when the entry is a zero. 
+  virtual bool get(RX& out, long i, long j) const = 0;
+};
+
 
 class MatMul1D {
 public:
@@ -125,9 +140,32 @@ public:
   const EncryptedArray& getEA() const override { return ea; }
 };
 
+class MatMulFullExec : public MatMulExecBase {
+public:
+
+  const EncryptedArray& ea;
+  bool minimal;
+  std::vector<long> dims;
+  ConstMultiplierCache cache;
+
+  explicit
+  MatMulFullExec(const MatMulFull& mat, bool minimal=false);
+
+  void mul(Ctxt& ctxt) const override;
+
+  void upgrade() override { 
+    cache.upgrade(ea.getContext()); 
+  }
+
+  const EncryptedArray& getEA() const override { return ea; }
+
+  long rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim, long idx) const;
+
+};
 
 void mul(NewPlaintextArray& pa, const MatMul1D& mat);
 void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat);
+void mul(NewPlaintextArray& pa, const MatMulFull& mat);
 
 
 #endif
