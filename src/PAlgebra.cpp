@@ -522,13 +522,12 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
     }
 #else
     vec_R in, out;
-    long ordp = zMStar.getOrdP();
 
     for (long i: range(nSlots)) {
       if (deg(alphas[i]) <= 0) 
         crt[i] = alphas[i];
       else {
-        VectorCopy(in, alphas[i], ordp);
+        VectorCopy(in, alphas[i], d);
         mul(out, in, mappingData.matrix_maps[i]);
         conv(crt[i], out);
       }
@@ -665,12 +664,12 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   mappingData.matrix_maps.resize(nSlots);
   for (long i: range(nSlots)) {
     mat_R& mat = mappingData.matrix_maps[i];
-    mat.SetDims(ordp, ordp);
+    mat.SetDims(d, ordp);
     RX pow;
     pow = 1;
-    for (long j: range(ordp)) {
+    for (long j: range(d)) {
       VectorCopy(mat[j], pow, ordp);
-      if (j < ordp-1) MulMod(pow, pow, mappingData.maps[i], factors[i]);
+      if (j < d-1) MulMod(pow, pow, mappingData.maps[i], factors[i]);
     }
   }
 
