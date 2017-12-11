@@ -1642,6 +1642,7 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
     long dim = dims[dim_idx];
     long sdim = ea.sizeOfDimension(dim);
     bool native = ea.nativeDimension(dim);
+    const PAlgebra& zMStar = ea.getContext().zMStar;
 
     if (!minimal) {
 
@@ -1655,7 +1656,6 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 	}
       }
       else {
-	const PAlgebra& zMStar = ea.getContext().zMStar;
 	Ctxt ctxt1 = ctxt;
 	ctxt1.smartAutomorph(zMStar.genToPow(dim, -sdim));
 	shared_ptr<GeneralAutomorphPrecon> precon =
@@ -1672,10 +1672,8 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, i);
 
-	    FHE_NTIMER_START(AAA_mask);
 	    DoubleCRT m1(mask, ea.getContext(),
 		 tmp->getPrimeSet() | tmp1->getPrimeSet());
-	    FHE_NTIMER_STOP(AAA_mask);
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
 	    tmp->multByConstant(m1);
@@ -1691,10 +1689,44 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 
     }
     else {
-      Ctxt ctxt1 = ctxt;
-      for (long offset: range(sdim)) {
-	if (offset > 0) ea.rotate1D(ctxt1, dim, 1);
-	idx = rec_mul(acc, ctxt1, dim_idx+1, idx);
+
+      if (native) {
+	Ctxt sh_ctxt = ctxt;
+	for (long offset: range(sdim)) {
+	  if (offset > 0) sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
+	  idx = rec_mul(acc, sh_ctxt, dim_idx+1, idx);
+	}
+      }
+      else {
+        Ctxt sh_ctxt = ctxt;
+        Ctxt sh_ctxt1 = ctxt;
+        sh_ctxt1.smartAutomorph(zMStar.genToPow(dim, -sdim));
+
+        for (long offset: range(sdim)) {
+          if (offset == 0) 
+	    idx = rec_mul(acc, ctxt, dim_idx+1, idx);
+          else {
+            sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
+            sh_ctxt1.smartAutomorph(zMStar.genToPow(dim, 1));
+
+	    zzX mask = ea.getAlMod().getMask_zzX(dim, offset);
+
+            Ctxt tmp = sh_ctxt;
+            Ctxt tmp1 = sh_ctxt1;
+
+	    DoubleCRT m1(mask, ea.getContext(),
+		 tmp.getPrimeSet() | tmp1.getPrimeSet());
+
+	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
+	    tmp.multByConstant(m1);
+	    tmp += tmp1;
+	    tmp1.multByConstant(m1);
+	    tmp -= tmp1;
+
+	    idx = rec_mul(acc, tmp, dim_idx+1, idx);
+          }
+        }
+        
       }
     }
 
