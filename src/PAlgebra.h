@@ -352,6 +352,8 @@ public:
   //! Restores the NTL context for p^r
   virtual void restoreContext() const = 0;
 
+  virtual zzX getMask_zzX(long i, long j) const = 0;
+
 };
 
 #ifndef DOXYGEN_IGNORE
@@ -551,6 +553,11 @@ public:
     return maskTable;
   }
 
+  zzX getMask_zzX(long i, long j) const override
+  {
+    return convert<zzX>(maskTable.at(i).at(j));
+  }
+
 
   ///@{
   //! @name Embedding in the plaintext slots and decoding back
@@ -691,6 +698,8 @@ public:
   long getPPowR() const { return rep->getPPowR(); }
   //! Restores the NTL context for p^r
   void restoreContext() const { rep->restoreContext(); }
+
+  zzX getMask_zzX(long i, long j) const { return rep->getMask_zzX(i, j); }
 
 };
 

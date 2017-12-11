@@ -59,14 +59,12 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
   const PAlgebra& zMStar = getContext().zMStar;
   long m = getContext().zMStar.getM();
-  long g = getContext().zMStar.ZmStarGen(i);
   long ord = sizeOfDimension(i);
   amt %= ord;// DIRT: assumes division w/ remainder follows C++11 and C99 rules
   if (amt == 0) return;
 
   if (dc || nativeDimension(i)) { // native dimension or don't-care
     // For don't-care, we assume that any shifts "off the end" are zero
-    long val = PowerMod(g, amt, m);
     ctxt.smartAutomorph(zMStar.genToPow(i, amt));
     return;
   }
