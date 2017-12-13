@@ -904,8 +904,9 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 
 // ========================== BlockMatMul1D stuff =====================
 
+
 template<class type>
-struct BlockMatMul1DExec_construct {
+struct BlockMatMul1D_derived_impl {
   PA_INJECT(type)
 
   // return true if zero
@@ -1063,6 +1064,31 @@ struct BlockMatMul1DExec_construct {
       return processDiagonal1(poly, i,  ea, mat);
 
   }
+};
+
+
+template<class type>
+bool BlockMatMul1D_derived<type>::processDiagonal(vector<RX>& poly, long i,
+        const EncryptedArrayDerived<type>& ea) const
+{
+  return BlockMatMul1D_derived_impl<type>::processDiagonal(poly, i, ea, *this);
+}
+
+// explicit instantiations
+template
+bool BlockMatMul1D_derived<PA_GF2>::processDiagonal(vector<RX>& poly, long i,
+        const EncryptedArrayDerived<PA_GF2>& ea) const;
+
+template
+bool BlockMatMul1D_derived<PA_zz_p>::processDiagonal(vector<RX>& poly, long i,
+        const EncryptedArrayDerived<PA_zz_p>& ea) const;
+
+
+
+template<class type>
+struct BlockMatMul1DExec_construct {
+  PA_INJECT(type)
+
 
 
   // Basic logic:
@@ -1112,7 +1138,7 @@ struct BlockMatMul1DExec_construct {
       if (native) {
         vec.resize(D*d);
         for (long i: range(D)) {
-          bool zero = processDiagonal(poly, i, ea, mat);
+          bool zero = mat.processDiagonal(poly, i, ea);
           if (zero) {
             for (long j: range(d)) vec[i*d+j] = nullptr;
           }
@@ -1127,7 +1153,7 @@ struct BlockMatMul1DExec_construct {
         vec.resize(D*d);
         vec1.resize(D*d);
         for (long i: range(D)) {
-          bool zero = processDiagonal(poly, i, ea, mat);
+          bool zero = mat.processDiagonal(poly, i, ea);
           if (zero) {
             for (long j: range(d)) {
               vec [i*d+j] = nullptr;
@@ -1158,7 +1184,7 @@ struct BlockMatMul1DExec_construct {
       if (native) {
         vec.resize(D*d);
         for (long i: range(D)) {
-          bool zero = processDiagonal(poly, i, ea, mat);
+          bool zero = mat.processDiagonal(poly, i, ea);
           if (zero) {
             for (long j: range(d)) vec[i+j*D] = nullptr;
           }
@@ -1173,7 +1199,7 @@ struct BlockMatMul1DExec_construct {
         vec.resize(D*d);
         vec1.resize(D*d);
         for (long i: range(D)) {
-          bool zero = processDiagonal(poly, i, ea, mat);
+          bool zero = mat.processDiagonal(poly, i, ea);
           if (zero) {
             for (long j: range(d)) {
               vec [i+j*D] = nullptr;
@@ -1203,7 +1229,7 @@ struct BlockMatMul1DExec_construct {
       if (native) {
         vec.resize(D*d);
         for (long i: range(D)) {
-          bool zero = processDiagonal(poly, i, ea, mat);
+          bool zero = mat.processDiagonal(poly, i, ea);
           if (zero) {
             for (long j: range(d)) vec[i*d+j] = nullptr;
           }
@@ -1218,7 +1244,7 @@ struct BlockMatMul1DExec_construct {
         vec.resize(D*d);
         vec1.resize(D*d);
         for (long i: range(D)) {
-          bool zero = processDiagonal(poly, i, ea, mat);
+          bool zero = mat.processDiagonal(poly, i, ea);
           if (zero) {
             for (long j: range(d)) {
               vec [i*d+j] = nullptr;
@@ -1520,6 +1546,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
    }
 }
 
+// ===================== MatMulFull stuff ==================
 
 template<class type>
 class MatMulFullHelper : public MatMul1D_derived<type> {
@@ -1622,19 +1649,23 @@ struct MatMulFullExec_construct {
   }
 
   // helper class to sort dimensions, so that
-  //  - we small dimensions to come before big dimensions
-  //  - we effectively divide the size of bad dimensions by 2,
-  //    to move them towards the beginning
+  //  - small dimensions come before large dimesnions
+  //  - we break ties by putting good dimensions before
+  //    bad dimensions...by doing so, we may save on
+  //    some noise if the last dimension is bad (as it gets
+  //    processes by MatMul1D).
+  
   struct MatMulDimComp {
     const EncryptedArrayDerived<type> *ea;
     MatMulDimComp(const EncryptedArrayDerived<type> *_ea) : ea(_ea) {}
 
     bool operator()(long i, long j) {
-      double si = ea->sizeOfDimension(i);
-      if (!ea->nativeDimension(i)) si /= 2;
-      double sj = ea->sizeOfDimension(j);
-      if (!ea->nativeDimension(j)) sj /= 2;
-      return si < sj;
+      long si = ea->sizeOfDimension(i);
+      bool ni = ea->nativeDimension(i);
+      long sj = ea->sizeOfDimension(j);
+      bool nj = ea->nativeDimension(j);
+
+      return (si < sj) || ((si == sj) && ni && !nj);
     }
 
   };
@@ -1805,6 +1836,11 @@ MatMulFullExec::mul(Ctxt& ctxt) const
 {
   assert(&ea.getContext() == &ctxt.getContext());
 
+  assert(ea.size() > 1);
+  // FIXME: right now, the code does not work if ea.size() == 1
+  // (which means that # dimensions == 0).  This is a corner case
+  // that is hardly worth dealing with (although we could).
+
   ctxt.cleanUp();
 
   Ctxt acc(ZeroCtxtLike, ctxt);
@@ -1814,6 +1850,349 @@ MatMulFullExec::mul(Ctxt& ctxt) const
 
 }
 
+// ================= BlockMatMulFull stuff ===============
+
+// lightly massaged version of MatMulFull code...some unfortunate
+// code duplication here
+
+template<class type>
+class BlockMatMulFullHelper : public BlockMatMul1D_derived<type> {
+public:
+  PA_INJECT(type)
+
+  const EncryptedArray& ea_basetype;
+  const BlockMatMulFull_derived<type>& mat;
+  vector<long> init_idxes;
+  long dim;
+
+  BlockMatMulFullHelper(const EncryptedArray& _ea_basetype, 
+                   const BlockMatMulFull_derived<type>& _mat,
+                   const vector<long>& _init_idxes,
+                   long _dim)
+
+    : ea_basetype(_ea_basetype),
+      mat(_mat),
+      init_idxes(_init_idxes),
+      dim(_dim) 
+
+    { }
+
+
+  bool
+  processDiagonal(vector<RX>& poly, long offset,
+                  const EncryptedArrayDerived<type>& ea) const override
+  {
+    vector<long> idxes;
+    ea.EncryptedArrayBase::rotate1D(idxes, init_idxes, dim, offset);
+
+    long d = ea.getDegree();
+    long nslots = ea.size();
+    bool zDiag = true; // is this a zero diagonal?
+    long nzLast = -1;  // index of last non-zero entry
+
+    mat_R entry(INIT_SIZE, d, d);
+    std::vector<RX> entry1(d);
+
+    vector<vector<RX>> diag(nslots);
+
+    for (long j: range(nslots)) {
+      long i = idxes[j];
+      bool zEntry = mat.get(entry, i, j);
+
+      // the remainder is copied and pasted from the processDiagonal2 logic
+      // for BlockMatMul1D....FIXME: code duplication
+
+      if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
+      assert(zEntry ||
+             (entry.NumRows() == d && entry.NumCols() == d));
+
+      if (!zEntry) {    // non-empty entry
+	zDiag = false;  // mark diagonal as non-empty
+
+	for (long jj: range(nzLast+1, j)) // clear from last nonzero entry
+          diag[jj].assign(d, RX());
+
+	nzLast = j; // current entry is the last nonzero one
+
+	// recode entry as a vector of polynomials
+	for (long k: range(d)) conv(entry1[k], entry[k]);
+
+        // compute the linearlized polynomial coefficients
+	ea.buildLinPolyCoeffs(diag[j], entry1);
+      }
+    }
+    if (zDiag) return true; // zero diagonal, nothing to do
+
+    // clear trailing zero entries
+    for (long jj: range(nzLast+1, nslots))
+      diag[jj].assign(d, RX());
+
+    // transpose and encode diag to form polys
+
+    vector<RX> slots(nslots);
+    poly.resize(d);
+    for (long i: range(d)) {
+      for (long j: range(nslots)) slots[j] = diag[j][i];
+      ea.encode(poly[i], slots);
+    }
+
+    return false; // a nonzero diagonal
+  }
+
+  const EncryptedArray& getEA() const override { return ea_basetype; }
+  bool multipleTransforms() const override { return false; }
+  long getDim() const override { return dim; }
+  bool get(mat_R& out, long i, long j, long k) const override { return false; }
+
+
+};
+
+
+template<class type>
+struct BlockMatMulFullExec_construct {
+  PA_INJECT(type)
+
+
+  static 
+  long rec_mul(long dim, long idx, const vector<long>& idxes,
+               vector<BlockMatMul1DExec>& transforms, 
+               bool minimal,
+               const vector<long>& dims,
+               const EncryptedArray& ea_basetype,
+               const EncryptedArrayDerived<type>& ea,
+               const BlockMatMulFull_derived<type>& mat)
+  {
+    if (dim >= ea.dimension()-1) {
+      // Last dimension (recursion edge condition)
+
+      BlockMatMulFullHelper<type> helper(ea_basetype, mat, idxes, dims[dim]);
+      transforms.emplace_back(helper, minimal);
+      idx++;
+      return idx;
+    }
+
+    // not the last dimension, make a recursive call
+    long sdim = ea.sizeOfDimension(dims[dim]);
+
+    // compute "in spirit" sum_i (pdata >> i) * i'th-diagonal, but
+    // adjust the indexes so that we only need to rotate the ciphertext
+    // along the different dimensions separately
+    for (long offset: range(sdim)) {
+      vector<long> idxes1;
+      ea.EncryptedArrayBase::rotate1D(idxes1, idxes, dims[dim], offset);
+      idx = rec_mul(dim+1, idx, idxes1, transforms, minimal, 
+                    dims, ea_basetype, ea, mat);
+    }
+
+    return idx;
+  }
+
+  // helper class to sort dimensions, so that
+  //  - small dimensions come before large dimesnions
+  //  - we break ties by putting good dimensions before
+  //    bad dimensions...by doing so, we may save on
+  //    some noise if the last dimension is bad (as it gets
+  //    processes by BlockMatMul1D).
+  
+  struct BlockMatMulDimComp {
+    const EncryptedArrayDerived<type> *ea;
+    BlockMatMulDimComp(const EncryptedArrayDerived<type> *_ea) : ea(_ea) {}
+
+    bool operator()(long i, long j) {
+      long si = ea->sizeOfDimension(i);
+      bool ni = ea->nativeDimension(i);
+      long sj = ea->sizeOfDimension(j);
+      bool nj = ea->nativeDimension(j);
+
+      return (si < sj) || ((si == sj) && ni && !nj);
+    }
+
+  };
+
+  static
+  void apply(const EncryptedArrayDerived<type>& ea,
+             const EncryptedArray& ea_basetype,
+             const BlockMatMulFull& mat_basetype,
+             vector<BlockMatMul1DExec>& transforms,
+             bool minimal,
+             vector<long>& dims)
+  {
+    const BlockMatMulFull_derived<type>& mat =
+      dynamic_cast< const BlockMatMulFull_derived<type>& >(mat_basetype);
+
+    long nslots = ea.size();
+    long ndims = ea.dimension();
+
+    RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    dims.resize(ndims);
+    for (long i: range(ndims)) dims[i] = i;
+    sort(dims.begin(), dims.end(), BlockMatMulDimComp(&ea));
+
+    vector<long> idxes(nslots);
+    for (long i: range(nslots)) idxes[i] = i;
+
+    rec_mul(0, 0, idxes, transforms, minimal, dims, ea_basetype, ea, mat);
+  }
+
+
+};
+
+
+
+BlockMatMulFullExec::BlockMatMulFullExec(const BlockMatMulFull& mat, bool _minimal)
+  : ea(mat.getEA()), minimal(_minimal)
+{
+  FHE_NTIMER_START(BlockMatMulFullExec);
+
+  ea.dispatch<BlockMatMulFullExec_construct>(ea, mat, Fwd(transforms), minimal,
+                                        Fwd(dims));
+}
+
+long
+BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) const
+{
+  if (dim_idx >= ea.dimension()-1) {
+    // Last dimension (recursion edge condition)
+
+    Ctxt tmp = ctxt;
+    transforms[idx].mul(tmp);
+    acc += tmp;
+
+    idx++;
+    
+  }
+  else {
+#if 0
+    // not the last dimension, make a recursive call
+    long sdim = ea.sizeOfDimension(dims[dim_idx]);
+
+    for (long offset: range(sdim)) {
+      Ctxt ctxt1 = ctxt;
+      ea.rotate1D(ctxt1, dims[dim_idx], offset);
+      idx = rec_mul(acc, ctxt1, dim_idx+1, idx);
+    }
+#else
+    long dim = dims[dim_idx];
+    long sdim = ea.sizeOfDimension(dim);
+    bool native = ea.nativeDimension(dim);
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+
+    if (!minimal) {
+
+      if (native) {
+	shared_ptr<GeneralAutomorphPrecon> precon =
+	  buildGeneralAutomorphPrecon(ctxt, dim);
+
+	for (long i: range(sdim)) {
+	  shared_ptr<Ctxt> tmp = precon->automorph(i);
+	  idx = rec_mul(acc, *tmp, dim_idx+1, idx);
+	}
+      }
+      else {
+	Ctxt ctxt1 = ctxt;
+	ctxt1.smartAutomorph(zMStar.genToPow(dim, -sdim));
+	shared_ptr<GeneralAutomorphPrecon> precon =
+	  buildGeneralAutomorphPrecon(ctxt, dim);
+	shared_ptr<GeneralAutomorphPrecon> precon1 =
+	  buildGeneralAutomorphPrecon(ctxt1, dim);
+
+	for (long i: range(sdim)) {
+	  if (i == 0) 
+	     idx = rec_mul(acc, ctxt, dim_idx+1, idx);
+	  else {
+	    shared_ptr<Ctxt> tmp = precon->automorph(i);
+	    shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
+
+	    zzX mask = ea.getAlMod().getMask_zzX(dim, i);
+
+	    DoubleCRT m1(mask, ea.getContext(),
+		 tmp->getPrimeSet() | tmp1->getPrimeSet());
+
+	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
+	    tmp->multByConstant(m1);
+	    *tmp += *tmp1;
+	    tmp1->multByConstant(m1);
+	    *tmp -= *tmp1;
+
+	    idx = rec_mul(acc, *tmp, dim_idx+1, idx);
+	  }
+	}
+	
+      }
+
+    }
+    else {
+
+      if (native) {
+	Ctxt sh_ctxt = ctxt;
+	for (long offset: range(sdim)) {
+	  if (offset > 0) sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
+	  idx = rec_mul(acc, sh_ctxt, dim_idx+1, idx);
+	}
+      }
+      else {
+        Ctxt sh_ctxt = ctxt;
+        Ctxt sh_ctxt1 = ctxt;
+        sh_ctxt1.smartAutomorph(zMStar.genToPow(dim, -sdim));
+
+        for (long offset: range(sdim)) {
+          if (offset == 0) 
+	    idx = rec_mul(acc, ctxt, dim_idx+1, idx);
+          else {
+            sh_ctxt.smartAutomorph(zMStar.genToPow(dim, 1));
+            sh_ctxt1.smartAutomorph(zMStar.genToPow(dim, 1));
+
+	    zzX mask = ea.getAlMod().getMask_zzX(dim, offset);
+
+            Ctxt tmp = sh_ctxt;
+            Ctxt tmp1 = sh_ctxt1;
+
+	    DoubleCRT m1(mask, ea.getContext(),
+		 tmp.getPrimeSet() | tmp1.getPrimeSet());
+
+	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
+	    tmp.multByConstant(m1);
+	    tmp += tmp1;
+	    tmp1.multByConstant(m1);
+	    tmp -= tmp1;
+
+	    idx = rec_mul(acc, tmp, dim_idx+1, idx);
+          }
+        }
+        
+      }
+    }
+
+#endif
+  }
+
+  return idx;
+}
+
+void
+BlockMatMulFullExec::mul(Ctxt& ctxt) const
+{
+  assert(&ea.getContext() == &ctxt.getContext());
+
+  assert(ea.size() > 1);
+  // FIXME: right now, the code does not work if ea.size() == 1
+  // (which means that # dimensions == 0).  This is a corner case
+  // that is hardly worth dealing with (although we could).
+
+  ctxt.cleanUp();
+
+  Ctxt acc(ZeroCtxtLike, ctxt);
+  rec_mul(acc, ctxt, 0, 0);
+
+  ctxt = acc;
+
+}
+
+
+
+
+// ================= plaintext mul stuff stuff ===============
 
 
 template<class type>
@@ -1987,4 +2366,50 @@ void mul(NewPlaintextArray& pa, const MatMulFull& mat)
   ea.dispatch<mul_MatMulFull_impl>(Fwd(pa), mat);
 }
 
+
+template<class type>
+struct mul_BlockMatMulFull_impl {
+  PA_INJECT(type)
+
+  static
+  void apply(const EncryptedArrayDerived<type>& ea,
+             NewPlaintextArray& pa,
+             const BlockMatMulFull& mat_basetype)
+  {
+    const BlockMatMulFull_derived<type>& mat =
+          dynamic_cast< const BlockMatMulFull_derived<type>& >(mat_basetype);
+    const PAlgebra& zMStar = ea.getContext().zMStar;
+    long n = ea.size();
+    long d = ea.getDegree();
+    vector<RX>& data = pa.getData<type>();
+
+    RBak bak; bak.save(); ea.getTab().restoreContext();
+
+    vector<RX> res;
+    res.resize(n);
+    for (long j: range(n)) {
+      vec_R acc, tmp, tmp1; 
+      mat_R val;
+      acc.SetLength(d);
+      for (long i: range(n)) {
+        if (!mat.get(val, i, j)) {
+          VectorCopy(tmp1, data[i], d);
+          mul(tmp, tmp1, val);
+          add(acc, acc, tmp);
+        }
+      }
+      conv(res[j], acc);
+    }
+
+    data = res;
+  }
+};
+
+
+
+void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat)
+{
+  const EncryptedArray& ea = mat.getEA();
+  ea.dispatch<mul_BlockMatMulFull_impl>(Fwd(pa), mat);
+}
 

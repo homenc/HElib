@@ -21,6 +21,24 @@ public:
   virtual bool get(RX& out, long i, long j) const = 0;
 };
 
+//====================================
+
+class BlockMatMulFull {
+public:
+  virtual ~BlockMatMulFull() {}
+  virtual const EncryptedArray& getEA() const = 0;
+};
+  
+template<class type>
+class BlockMatMulFull_derived : public BlockMatMulFull { 
+public:
+  PA_INJECT(type)
+
+  // Should return true when the entry is a zero. 
+  virtual bool get(mat_R& out, long i, long j) const = 0;
+};
+
+//====================================
 
 class MatMul1D {
 public:
@@ -39,13 +57,14 @@ public:
   virtual bool get(RX& out, long i, long j, long k) const = 0;
 
   // Get the i'th diagonal, encoded as a single constant.
-  // A default implementation is provided, but it can be overriden
+  // A default implementation is provided, but it can be overridden
   // for special purposes.
   virtual void 
   processDiagonal(RX& poly, long i,
                   const EncryptedArrayDerived<type>& ea) const;
 };
 
+//====================================
 
 class BlockMatMul1D {
 public:
@@ -62,8 +81,16 @@ public:
 
   // Should return true when the entry is a zero. 
   virtual bool get(mat_R& out, long i, long j, long k) const = 0;
+
+  // return true if zero.
+  // A default implementation is provided, but it can be overridden
+  // for special purposes.
+  virtual bool
+  processDiagonal(vector<RX>& poly, long i,
+                  const EncryptedArrayDerived<type>& ea) const;
 };
 
+//====================================
 
 
 struct ConstMultiplier;
@@ -73,6 +100,7 @@ struct ConstMultiplierCache {
   void upgrade(const FHEcontext& context);
 };
 
+//====================================
 
 class MatMulExecBase {
 public:
@@ -83,6 +111,7 @@ public:
   virtual void mul(Ctxt& ctxt) const = 0;
 };
 
+//====================================
 
 class MatMul1DExec : public MatMulExecBase {
 public:
@@ -116,6 +145,8 @@ public:
   const EncryptedArray& getEA() const override { return ea; }
 };
 
+//====================================
+
 class BlockMatMul1DExec : public MatMulExecBase {
 public:
 
@@ -148,6 +179,8 @@ public:
   const EncryptedArray& getEA() const override { return ea; }
 };
 
+//====================================
+
 class MatMulFullExec : public MatMulExecBase {
 public:
 
@@ -171,9 +204,37 @@ public:
 
 };
 
+//====================================
+
+class BlockMatMulFullExec : public MatMulExecBase {
+public:
+
+  const EncryptedArray& ea;
+  bool minimal;
+  std::vector<long> dims;
+  std::vector<BlockMatMul1DExec> transforms;
+
+  explicit
+  BlockMatMulFullExec(const BlockMatMulFull& mat, bool minimal=false);
+
+  void mul(Ctxt& ctxt) const override;
+
+  void upgrade() override { 
+    for (auto& t: transforms) t.upgrade();
+  }
+
+  const EncryptedArray& getEA() const override { return ea; }
+
+  long rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim, long idx) const;
+
+};
+
+//====================================
+
 void mul(NewPlaintextArray& pa, const MatMul1D& mat);
 void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat);
 void mul(NewPlaintextArray& pa, const MatMulFull& mat);
+void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat);
 
 
 #endif
