@@ -1,3 +1,4 @@
+
 #ifndef _newmatmul
 #define _newmatmul
 
@@ -36,6 +37,13 @@ public:
 
   // Should return true when the entry is a zero. 
   virtual bool get(RX& out, long i, long j, long k) const = 0;
+
+  // Get the i'th diagonal, encoded as a single constant.
+  // A default implementation is provided, but it can be overriden
+  // for special purposes.
+  virtual void 
+  processDiagonal(RX& poly, long i,
+                  const EncryptedArrayDerived<type>& ea) const;
 };
 
 
@@ -146,7 +154,7 @@ public:
   const EncryptedArray& ea;
   bool minimal;
   std::vector<long> dims;
-  ConstMultiplierCache cache;
+  std::vector<MatMul1DExec> transforms;
 
   explicit
   MatMulFullExec(const MatMulFull& mat, bool minimal=false);
@@ -154,7 +162,7 @@ public:
   void mul(Ctxt& ctxt) const override;
 
   void upgrade() override { 
-    cache.upgrade(ea.getContext()); 
+    for (auto& t: transforms) t.upgrade();
   }
 
   const EncryptedArray& getEA() const override { return ea; }

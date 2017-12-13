@@ -372,11 +372,11 @@ static inline long dimNative(const EncryptedArrayBase& ea, long dim)
 
 
 template<class type>
-struct MatMul1DExec_construct {
+struct MatMul1D_derived_impl {
   PA_INJECT(type)
 
   static
-  void processDiagonal1(RX& poly, long i, long rotAmt,
+  void processDiagonal1(RX& poly, long i,
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
@@ -390,8 +390,7 @@ struct MatMul1DExec_construct {
 
     // Process the entries in this diagonal one at a time
     for (long j = 0; j < D; j++) { // process entry j
-      long rotJ = (j+rotAmt) % D;  // need to rotate constant by rotAmt
-      bool zEntry = mat.get(entry, mcMod(rotJ-i, D), rotJ, 0); 
+      bool zEntry = mat.get(entry, mcMod(j-i, D), j, 0); 
         // entry [j-i mod D, j]
 
       assert(zEntry || deg(entry) < ea.getDegree());
@@ -431,7 +430,7 @@ struct MatMul1DExec_construct {
 
 
   static
-  void processDiagonal2(RX& poly, long idx, long rotAmt,
+  void processDiagonal2(RX& poly, long idx, 
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
@@ -457,7 +456,6 @@ struct MatMul1DExec_construct {
 	  = ea.getContext().zMStar.breakIndexByDim(j, dim);
 	//	blockIdx = idxes.first;  // which transformation
 	//	innerIdx = idxes.second; // index along dimension dim
-        innerIdx = (innerIdx+rotAmt) % D;  // need to rotate constant by rotAmt
       }
       // process entry j
       bool zEntry=mat.get(entry, mcMod(innerIdx-idx,D), innerIdx, blockIdx);
@@ -492,15 +490,39 @@ struct MatMul1DExec_construct {
 
   // Get the i'th diagonal, encoded as a single constant. 
   static
-  void processDiagonal(RX& poly, long i, long rotAmt,
+  void processDiagonal(RX& poly, long i, 
                         const EncryptedArrayDerived<type>& ea,
                         const MatMul1D_derived<type>& mat)
   {
     if (mat.multipleTransforms())
-      processDiagonal2(poly, i, rotAmt, ea, mat);
+      processDiagonal2(poly, i, ea, mat);
     else
-      processDiagonal1(poly, i, rotAmt, ea, mat);
+      processDiagonal1(poly, i, ea, mat);
   }
+
+};
+
+template<class type>
+void MatMul1D_derived<type>::processDiagonal(RX& poly, long i,
+        const EncryptedArrayDerived<type>& ea) const
+{
+  MatMul1D_derived_impl<type>::processDiagonal(poly, i, ea, *this);
+}
+
+// explicit instantiations
+template
+void MatMul1D_derived<PA_GF2>::processDiagonal(RX& poly, long i,
+        const EncryptedArrayDerived<PA_GF2>& ea) const;
+
+template
+void MatMul1D_derived<PA_zz_p>::processDiagonal(RX& poly, long i,
+        const EncryptedArrayDerived<PA_zz_p>& ea) const;
+
+
+template<class type>
+struct MatMul1DExec_construct {
+  PA_INJECT(type)
+
 
   static
   void apply(const EncryptedArrayDerived<type>& ea,
@@ -536,7 +558,7 @@ struct MatMul1DExec_construct {
         }
 
 	RX poly;
-	processDiagonal(poly, i, 0, ea, mat);
+	mat.processDiagonal(poly, i, ea);
         vec[i] = build_ConstMultiplier(poly, dim, -g*k, ea);
       }
     }
@@ -558,7 +580,7 @@ struct MatMul1DExec_construct {
         }
 
 	RX poly;
-	processDiagonal(poly, i, 0, ea, mat);
+	mat.processDiagonal(poly, i, ea);
 
         if (IsZero(poly)) {
           vec[i] = nullptr;
@@ -1500,16 +1522,35 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
 
 
 template<class type>
-struct MatMulFullExec_construct {
+class MatMulFullHelper : public MatMul1D_derived<type> {
+public:
   PA_INJECT(type)
 
+  const EncryptedArray& ea_basetype;
+  const MatMulFull_derived<type>& mat;
+  vector<long> init_idxes;
+  long dim;
 
-  // return true if zero
-  static
-  void processDiagonal(RX& epmat, const vector<long>& idxes,
-                       const EncryptedArrayDerived<type>& ea,
-                       const MatMulFull_derived<type>& mat)
+  MatMulFullHelper(const EncryptedArray& _ea_basetype, 
+                   const MatMulFull_derived<type>& _mat,
+                   const vector<long>& _init_idxes,
+                   long _dim)
+
+    : ea_basetype(_ea_basetype),
+      mat(_mat),
+      init_idxes(_init_idxes),
+      dim(_dim) 
+
+    { }
+
+
+  void
+  processDiagonal(RX& epmat, long offset,
+                  const EncryptedArrayDerived<type>& ea) const override
   {
+    vector<long> idxes;
+    ea.EncryptedArrayBase::rotate1D(idxes, init_idxes, dim, offset);
+
     vector<RX> pmat;  // the plaintext diagonal
     pmat.resize(ea.size());
     bool zDiag = true; // is this a zero diagonal
@@ -1529,21 +1570,38 @@ struct MatMulFullExec_construct {
       ea.encode(epmat, pmat);
     else
       epmat = 0;
+
   }
+
+  const EncryptedArray& getEA() const override { return ea_basetype; }
+  bool multipleTransforms() const override { return false; }
+  long getDim() const override { return dim; }
+  bool get(RX& out, long i, long j, long k) const override { return false; }
+
+
+};
+
+
+template<class type>
+struct MatMulFullExec_construct {
+  PA_INJECT(type)
+
 
   static 
   long rec_mul(long dim, long idx, const vector<long>& idxes,
-               vector<shared_ptr<ConstMultiplier>>& vec, 
+               vector<MatMul1DExec>& transforms, 
+               bool minimal,
                const vector<long>& dims,
+               const EncryptedArray& ea_basetype,
                const EncryptedArrayDerived<type>& ea,
                const MatMulFull_derived<type>& mat)
   {
-    if (dim >= ea.dimension()) {
+    if (dim >= ea.dimension()-1) {
       // Last dimension (recursion edge condition)
 
-      RX poly;
-      processDiagonal(poly, idxes, ea, mat);
-      vec[idx++] = build_ConstMultiplier(poly);
+      MatMulFullHelper<type> helper(ea_basetype, mat, idxes, dims[dim]);
+      transforms.emplace_back(helper, minimal);
+      idx++;
       return idx;
     }
 
@@ -1556,7 +1614,8 @@ struct MatMulFullExec_construct {
     for (long offset: range(sdim)) {
       vector<long> idxes1;
       ea.EncryptedArrayBase::rotate1D(idxes1, idxes, dims[dim], offset);
-      idx = rec_mul(dim+1, idx, idxes1, vec, dims, ea, mat);
+      idx = rec_mul(dim+1, idx, idxes1, transforms, minimal, 
+                    dims, ea_basetype, ea, mat);
     }
 
     return idx;
@@ -1582,8 +1641,10 @@ struct MatMulFullExec_construct {
 
   static
   void apply(const EncryptedArrayDerived<type>& ea,
+             const EncryptedArray& ea_basetype,
              const MatMulFull& mat_basetype,
-             vector<shared_ptr<ConstMultiplier>>& vec,
+             vector<MatMul1DExec>& transforms,
+             bool minimal,
              vector<long>& dims)
   {
     const MatMulFull_derived<type>& mat =
@@ -1601,9 +1662,7 @@ struct MatMulFullExec_construct {
     vector<long> idxes(nslots);
     for (long i: range(nslots)) idxes[i] = i;
 
-    vec.resize(nslots);
-
-    rec_mul(0, 0, idxes, vec, dims, ea, mat);
+    rec_mul(0, 0, idxes, transforms, minimal, dims, ea_basetype, ea, mat);
   }
 
 
@@ -1616,17 +1675,22 @@ MatMulFullExec::MatMulFullExec(const MatMulFull& mat, bool _minimal)
 {
   FHE_NTIMER_START(MatMulFullExec);
 
-  ea.dispatch<MatMulFullExec_construct>(mat, Fwd(cache.multiplier), 
-                                             Fwd(dims));
+  ea.dispatch<MatMulFullExec_construct>(ea, mat, Fwd(transforms), minimal,
+                                        Fwd(dims));
 }
 
 long
 MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) const
 {
-  if (dim_idx >= ea.dimension()) {
+  if (dim_idx >= ea.dimension()-1) {
     // Last dimension (recursion edge condition)
 
-    MulAdd(acc, cache.multiplier[idx++], ctxt);
+    Ctxt tmp = ctxt;
+    transforms[idx].mul(tmp);
+    acc += tmp;
+
+    idx++;
+    
   }
   else {
 #if 0
