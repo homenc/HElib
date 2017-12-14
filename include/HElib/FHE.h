@@ -163,7 +163,9 @@ public:
     keySwitching.clear(); keySwitchMap.clear();
     recryptKeyID=-1; recryptEkey.clear();
   }
-
+  void makeSymmetric() { // clear the public key and remains the key-switch data
+    pubEncrKey.clear();
+  } 
   bool operator==(const FHEPubKey& other) const;
   bool operator!=(const FHEPubKey& other) const {return !(*this==other);}
 
