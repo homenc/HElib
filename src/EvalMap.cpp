@@ -10,7 +10,6 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include "EvalMap.h"
-#include "powerful.h"
 #include "matmul.h"
 
 // Forward declerations
