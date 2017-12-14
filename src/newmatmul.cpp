@@ -531,8 +531,8 @@ struct MatMul1DExec_construct {
              vector<shared_ptr<ConstMultiplier>>& vec1,
              long g)
   {
-    const MatMul1D_derived<type>& mat =
-      dynamic_cast< const MatMul1D_derived<type>& >(mat_basetype);
+    const MatMul1D_partial<type>& mat =
+      dynamic_cast< const MatMul1D_partial<type>& >(mat_basetype);
 
     long dim = mat.getDim();
     long D = dimSz(ea, dim);
@@ -1120,8 +1120,8 @@ struct BlockMatMul1DExec_construct {
              vector<shared_ptr<ConstMultiplier>>& vec1,
              long strategy)
   {
-    const BlockMatMul1D_derived<type>& mat =
-      dynamic_cast< const BlockMatMul1D_derived<type>& >(mat_basetype);
+    const BlockMatMul1D_partial<type>& mat =
+      dynamic_cast< const BlockMatMul1D_partial<type>& >(mat_basetype);
 
     long dim = mat.getDim();
     long D = dimSz(ea, dim);
@@ -1549,7 +1549,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
 // ===================== MatMulFull stuff ==================
 
 template<class type>
-class MatMulFullHelper : public MatMul1D_derived<type> {
+class MatMulFullHelper : public MatMul1D_partial<type> {
 public:
   PA_INJECT(type)
 
@@ -1601,9 +1601,7 @@ public:
   }
 
   const EncryptedArray& getEA() const override { return ea_basetype; }
-  bool multipleTransforms() const override { return false; }
   long getDim() const override { return dim; }
-  bool get(RX& out, long i, long j, long k) const override { return false; }
 
 
 };
@@ -1856,7 +1854,7 @@ MatMulFullExec::mul(Ctxt& ctxt) const
 // code duplication here
 
 template<class type>
-class BlockMatMulFullHelper : public BlockMatMul1D_derived<type> {
+class BlockMatMulFullHelper : public BlockMatMul1D_partial<type> {
 public:
   PA_INJECT(type)
 
@@ -1940,9 +1938,7 @@ public:
   }
 
   const EncryptedArray& getEA() const override { return ea_basetype; }
-  bool multipleTransforms() const override { return false; }
   long getDim() const override { return dim; }
-  bool get(mat_R& out, long i, long j, long k) const override { return false; }
 
 
 };

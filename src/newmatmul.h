@@ -45,23 +45,39 @@ public:
   virtual ~MatMul1D() {}
   virtual const EncryptedArray& getEA() const = 0;
   virtual long getDim() const = 0;
-  virtual bool multipleTransforms() const = 0;
 };
 
 template<class type>
-class MatMul1D_derived : public MatMul1D { 
+class MatMul1D_partial : public MatMul1D {
 public:
   PA_INJECT(type)
 
-  // Should return true when the entry is a zero. 
-  virtual bool get(RX& out, long i, long j, long k) const = 0;
-
   // Get the i'th diagonal, encoded as a single constant.
-  // A default implementation is provided, but it can be overridden
-  // for special purposes.
+  // MatMul1D_derived (below) supplies a default implementation,
+  // which can be overriden in special circumstances.
   virtual void 
   processDiagonal(RX& poly, long i,
-                  const EncryptedArrayDerived<type>& ea) const;
+                  const EncryptedArrayDerived<type>& ea) const = 0;
+
+};
+
+template<class type>
+class MatMul1D_derived : public MatMul1D_partial<type> { 
+public:
+  PA_INJECT(type)
+
+  // return true if their are multiple (different) transforms
+  // among the various components (as opposed to performing 
+  // the same transform in each component).
+  virtual bool multipleTransforms() const = 0;
+
+  // Should return true when the entry is a zero. 
+  // Selects coordinate (i, j) of the kth component
+  virtual bool get(RX& out, long i, long j, long k) const = 0;
+
+  void 
+  processDiagonal(RX& poly, long i,
+                  const EncryptedArrayDerived<type>& ea) const override;
 };
 
 //====================================
@@ -71,23 +87,41 @@ public:
   virtual ~BlockMatMul1D() {}
   virtual const EncryptedArray& getEA() const = 0;
   virtual long getDim() const = 0;
-  virtual bool multipleTransforms() const = 0;
 };
 
 template<class type>
-class BlockMatMul1D_derived : public BlockMatMul1D { 
+class BlockMatMul1D_partial : public BlockMatMul1D {
 public:
   PA_INJECT(type)
 
-  // Should return true when the entry is a zero. 
-  virtual bool get(mat_R& out, long i, long j, long k) const = 0;
-
+  // Get the i'th diagonal, encoded as a vector of d constants,
+  // where d i sthe order of p.
+  // BlockMatMul1D_derived (below) supplies a default implementation,
+  // which can be overriden in special circumstances.
   // return true if zero.
-  // A default implementation is provided, but it can be overridden
-  // for special purposes.
   virtual bool
   processDiagonal(vector<RX>& poly, long i,
-                  const EncryptedArrayDerived<type>& ea) const;
+                  const EncryptedArrayDerived<type>& ea) const = 0;
+
+};
+
+template<class type>
+class BlockMatMul1D_derived : public BlockMatMul1D_partial<type> { 
+public:
+  PA_INJECT(type)
+
+  // return true if their are multiple (different) transforms
+  // among the various components (as opposed to performing 
+  // the same transform in each component).
+  virtual bool multipleTransforms() const = 0;
+
+  // Should return true when the entry is a zero. 
+  // Selects coordinate (i, j) of the kth component
+  virtual bool get(mat_R& out, long i, long j, long k) const = 0;
+
+  bool
+  processDiagonal(vector<RX>& poly, long i,
+                  const EncryptedArrayDerived<type>& ea) const override;
 };
 
 //====================================
