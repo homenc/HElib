@@ -667,6 +667,19 @@ inline long lsize(const std::vector<T>& v) {
 }
 
 //! NTL/std compatability
+
+// Utility functions, release memory of std::vector and NTL::Vec
+template<typename T> void killVec(std::vector<T>& vec)
+{ std::vector<T>().swap(vec); }
+template<typename T> void killVec(NTL::Vec<T>& vec)
+{ vec.kill(); }
+
+// Set length to zero, but don't necessarily release memory
+template<typename T> void setLengthZero(std::vector<T>& vec)
+{ if (vec.size()>0) vec.resize(0, vec[0]); }
+template<typename T> void setLengthZero(NTL::Vec<T>& vec)
+{ if (vec.length()>0) vec.SetLength(0, vec[0]); }
+
 template <typename T>
 inline long lsize(const NTL::Vec<T>& v) {
   return v.length();
