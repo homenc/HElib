@@ -303,7 +303,7 @@ void addSome1DMatrices(FHESecKey& sKey, long bound, long keyID)
   const FHEcontext &context = sKey.getContext();
 
   // key-switching matrices for the automorphisms
-  for (long i = 0; i < LONG(context.zMStar.numOfGens()); i++) {
+  for (long i: range(context.zMStar.numOfGens())) {
           // For generators of small order, add all the powers
     if (bound >= context.zMStar.OrderOf(i))
       add1Dmats4dim(sKey, i, keyID);
