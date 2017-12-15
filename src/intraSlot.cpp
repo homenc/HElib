@@ -101,7 +101,7 @@ void unpack(const CtPtrs& unpacked, const Ctxt& packed,
 // 	    const Ctxt& ctxt, 
 // 	    const std::vector<zzX>& unpackSlotEncoding)
 {
-  ea.dispatch<unpack_pa_impl>(Fwd((CtPtrs&)unpacked), packed, unpackSlotEncoding);
+  ea.dispatch<unpack_pa_impl>(unpacked, packed, unpackSlotEncoding);
 }
 
 // unpack many ciphertexts, returns the number of unpacked ciphertexts
@@ -116,8 +116,8 @@ long unpack(const CtPtrs& unpacked, const CtPtrs& packed,
   long idx = 0;
   while (num2unpack > 0) {
     if (num2unpack < d) d = num2unpack;
-    CtPtrs_slice nextSlice((CtPtrs&)unpacked, offset, d);
-    ea.dispatch<unpack_pa_impl>(Fwd(nextSlice),
+    const CtPtrs_slice nextSlice(unpacked, offset, d);
+    ea.dispatch<unpack_pa_impl>(nextSlice,
                                 *(packed[idx++]), unpackSlotEncoding);
     num2unpack -= d;
     offset += d;
@@ -171,7 +171,7 @@ long repack(const CtPtrs& packed, const CtPtrs& unpacked, const EncryptedArray& 
   long idx = 0;
   while (num2pack > 0) {
     if (num2pack < d) d = num2pack;
-    const CtPtrs_slice nextSlice((CtPtrs&)unpacked, offset, d);
+    const CtPtrs_slice nextSlice(unpacked, offset, d);
     ea.dispatch<repack_pa_impl>(Fwd(*(packed[idx++])), nextSlice);
     num2pack -= d;
     offset += d;
