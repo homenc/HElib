@@ -18,42 +18,39 @@ struct PtrVector {
   virtual ~PtrVector(){}
 
   // How many non-null entries there are (beginning at startFrom)
-  virtual long numNonNull(long startFrom=0, long last=LONG_MAX) const=0;
+  virtual long numNonNull(long first=0, long last=LONG_MAX) const
+  {
+    if (first<0) first = 0;
+    if (last>size()) last = size();
+    long count = 0;
+    for (long i=first; i<last; i++) if ((*this)[i]!=nullptr) count++;
+    return count;
+  }
 
   // Return a pointer to some non-Null T, if it can find one.
-  // This is convenient since T doesn't have an empty constructor
-  virtual const T* ptr2nonNull() const =0;
+  // This is convenient since T may not have an empty constructor
+  virtual const T* ptr2nonNull() const
+  {
+    for (long i=0; i<size(); i++)
+      if ((*this)[i]!=nullptr) return (*this)[i];
+    return nullptr;
+  }
 };
 
-// This header provides five implementations of these interfaces,
+// This header provides five implementations of these interfaces, but
 // users can define their own as needed. The ones defined here are:
 
 //struct PtrVector_VecT;    // constrcuted as PtrVector_VecT(NTL::Vec<T>)
-//struct PtrVector_VecPt;    // constrcuted as PtrVector_VecPt(NTL::Vec<T*>)
-//struct PtrVector_vectorT; // constrcuted as PtrVector_vectorT(std::vector<T>)
-//struct PtrVector_vectorPt; // constrcuted as PtrVector_vectorPt(std::vector<T*>)
+//struct PtrVector_VecPt;   // constrcuted as PtrVector_VecPt(NTL::Vec<T*>)
+//struct PtrVector_vectorT;// constrcuted as PtrVector_vectorT(std::vector<T>)
+//struct PtrVector_vectorPt;// constrcuted PtrVector_vectorPt(std::vector<T*>)
 
-//struct PtrVector_slice;    // A slice, PtrVector_slice(PtrVector, start, length)
+//struct PtrVector_slice;// A slice, PtrVector_slice(PtrVector, start, length)
 
 
 /*******************************************************************/
 /* Implementation details: applications should not care about them */
 /*******************************************************************/
-
-// Convenient functions for use in the pointer-based derived classes
-template<typename T>
-long countNonNull(const T** ptrs, long first, long last)
-{
-  long count = 0;
-  for (long i=first; i<last; i++) if (ptrs[i]!=nullptr) count++;
-  return count;
-}
-template<typename T>
-const T* findNonNull(const T** ptrs, long nn)
-{
-  for (long i=0; i<nn; i++) if (ptrs[i]!=nullptr) return ptrs[i];
-  return nullptr;
-}
 
 // An implementation using Vec<T*>
 template<typename T>
@@ -65,15 +62,6 @@ struct PtrVector_VecPt : PtrVector<T> {
 
   void resize(long newSize, const PtrVector<T>* another=nullptr) override
   { v.SetLength(newSize, nullptr); }
-
-  long numNonNull(long first=0, long last=LONG_MAX) const override
-  {
-    if (first<0) first = 0;
-    if (last>v.length()) last = v.length();
-    return countNonNull((const T**)v.elts(), first, last);
-  }
-  const T* ptr2nonNull() const override
-  { return findNonNull((const T**)v.elts(), v.length()); }
 };
 
 // An implementation using vector<T*>
@@ -86,15 +74,6 @@ struct PtrVector_vectorPt : PtrVector<T> {
 
   void resize(long newSize, const PtrVector<T>* another=nullptr) override
   { v.resize(newSize, nullptr); }
-
-  long numNonNull(long first=0, long last=LONG_MAX) const override
-  {
-    if (first<0) first = 0;
-    if (last>long(v.size())) last = long(v.size());
-    return countNonNull((const T**)v.data(), first, last);
-  }
-  const T* ptr2nonNull() const override
-  { return findNonNull((const T**)v.data(), v.size()); }
 };
 
 // An implementation using Vec<T>
@@ -109,10 +88,11 @@ struct PtrVector_VecT : PtrVector<T> {
   {
     if (newSize==0) setLengthZero(v);
     else {
+      // Try to find a non-null pointer to T that you can give to resize
       if (another==nullptr) another = this;
       const T* pt = another->ptr2nonNull();
       assert(pt!=nullptr);
-      v.SetLength(newSize, *pt);
+      v.SetLength(newSize, *pt); // Do the actual resize
     }
   }
 
@@ -138,10 +118,11 @@ struct PtrVector_vectorT : PtrVector<T> {
   {
     if (newSize==0) setLengthZero(v);
     else {
+      // Try to find a non-null pointer to T that you can give to resize
       if (another==nullptr) another = this;
       const T* pt = another->ptr2nonNull();
       assert(pt!=nullptr);
-      v.resize(newSize, *pt);
+      v.resize(newSize, *pt); // do the actual resize
     }
   }
   long numNonNull(long first=0, long last=LONG_MAX) const override
@@ -150,10 +131,9 @@ struct PtrVector_vectorT : PtrVector<T> {
     if (last>long(v.size())) last = long(v.size());
     return last - first;
   }
-  const T* ptr2nonNull() const override
-  { return ((v.size()>0)? &(v[0]) : nullptr); }
 };
 
+// Implementing a slice of a vector
 template<typename T>
 struct PtrVector_slice : PtrVector<T> {
   const PtrVector<T>& orig;
