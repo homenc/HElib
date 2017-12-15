@@ -31,8 +31,10 @@ struct PtrVector {
   // This is convenient since T may not have an empty constructor
   virtual const T* ptr2nonNull() const
   {
-    for (long i=0; i<size(); i++)
-      if ((*this)[i]!=nullptr) return (*this)[i];
+    for (long i=0; i<size(); i++) {
+      T* pt = (*this)[i];
+      if (pt!=nullptr) return pt;
+    }
     return nullptr;
   }
 };
