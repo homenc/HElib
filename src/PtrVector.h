@@ -1,8 +1,7 @@
 #ifndef _PTRVECTOR_H
 #define _PTRVECTOR_H
 /** PtrVector.h: convenience class templates providing a unified
- * interface for a collection of objects, returning pointers to these
- * object. ciphertexts.
+ * interface for a collection of objects, returning pointers to these objects.
  */
 #include <stdexcept>
 #include <climits>
@@ -14,8 +13,15 @@ struct PtrVector {
   virtual T* operator[](long) const =0;
     // NOTE: the PtrVector is const, but the pointer T* is not
   virtual long size() const =0;
-  virtual void resize(long newSize, const PtrVector* another=nullptr)=0;
+  virtual void resize(long newSize, const PtrVector* another=nullptr)
+  { throw(std::logic_error("Cannot resize a generic PtrVector")); }
   virtual ~PtrVector(){}
+
+  bool isSet(long i) const
+  {
+    if (i<0 || i>=size()) return false;
+    return ((*this)[i] != nullptr);
+  }
 
   // How many non-null entries there are (beginning at startFrom)
   virtual long numNonNull(long first=0, long last=LONG_MAX) const
@@ -48,6 +54,66 @@ struct PtrVector {
 //struct PtrVector_vectorPt;// constrcuted PtrVector_vectorPt(std::vector<T*>)
 
 //struct PtrVector_slice;// A slice, PtrVector_slice(PtrVector, start, length)
+
+
+template<typename T> long lsize(const PtrVector<T>& v) {return v.size();}
+template<typename T> void setLengthZero(PtrVector<T>& v){v.resize(0);}
+template<typename T> void resize(PtrVector<T>& v, long newSize, const T& val);
+  // implementation of resize function below
+template<typename T> void resize(PtrVector<T>& v, long newSize, const T* val)
+{ resize<T>(v, newSize, *val); }
+
+
+// Templates for element-wies vector-copy
+
+// Generic version for std::vector, NTL::Vec
+template<typename V1, typename V2>
+void vecCopy(V1& v1, const V2& v2)
+{
+  int n = lsize(v2);
+  if (n==0)
+    setLengthZero(v1);
+  else {
+    resize(v1, n, v2[0]);
+    for (int i=0; i<n; i++) v1[i] = v2[i];
+  }
+}
+
+// Specializations for PtrVector
+template<typename V, typename T> // V is either Vec<T> or vector<T>
+void vecCopy(V& v1, const PtrVector<T>& v2)
+{
+  int n = lsize(v2);
+  if (n==0)
+    setLengthZero(v1);
+  else {
+    resize(v1, n, *(v2[0]));
+    for (int i=0; i<n; i++) v1[i] = *(v2[i]);
+  }
+}
+template<typename V, typename T> // V is either Vec<T> or vector<T>
+void vecCopy(PtrVector<T>& v1, const V& v2)
+{
+  int n = lsize(v2);
+  if (n==0)
+    setLengthZero(v1);
+  else {
+    resize(v1, n, v2[0]);
+    for (int i=0; i<n; i++) *(v1[i]) = v2[i];
+  }
+}
+template<typename T> // V is either Vec<T> or vector<T>
+void vecCopy(PtrVector<T>& v1, const PtrVector<T>& v2)
+{
+  int n = lsize(v2);
+  if (n==0)
+    setLengthZero(v1);
+  else {
+    resize(v1, n, *(v2[0]));
+    for (int i=0; i<n; i++) *(v1[i]) = *(v2[i]);
+  }
+}
+
 
 
 /*******************************************************************/
@@ -159,12 +225,24 @@ struct PtrVector_slice : PtrVector<T> {
   T* operator[](long i) const override { return orig[i+start]; }
   long size() const override { return sz; }
 
-  void resize(long newSize, const PtrVector<T>* another=nullptr) override
-  { throw(std::logic_error("Cannot resize a slice")); }
-
   long numNonNull(long first=0, long last=LONG_MAX) const override
   { return orig.numNonNull(start+first, start+std::min(sz,last)); }
   const T* ptr2nonNull() const override { return orig.ptr2nonNull(); }
 };
+
+// An implementation using a single T*
+template<typename T>
+struct PtrVector_Singleton : PtrVector<T> {
+  const T* v;
+  PtrVector_Singleton(const T* _v) : v(_v){}
+  T* operator[](long i) const override {return (i==0)? ((T*)v) : nullptr;}
+  long size() const override { return 1L; }
+};
+
+template<typename T> void resize(PtrVector<T>& v, long newSize, const T& val)
+{
+  PtrVector_Singleton<T> t(&val);
+  v.resize(newSize, &t);
+}
 
 #endif // _PTRVECTOR_H

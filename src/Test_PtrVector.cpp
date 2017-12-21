@@ -3,6 +3,7 @@
 #include <NTL/tools.h>
 #include "NumbTh.h"
 #include "PtrVector.h"
+#include "PtrMatrix.h"
 
 
 // A class with no default constructor
@@ -23,6 +24,21 @@ typedef PtrVector_vectorPt<MyClass> MyPtrVec_vectorPt;
 
 typedef PtrVector_slice<MyClass> MyPtrVec_slice; // A slice of MyPtrVec
 
+typedef PtrMatrix<MyClass> MyPtrMat;
+typedef PtrMatrix_Vec<MyClass> MyPtrMat_Vec;
+typedef PtrMatrix_ptVec<MyClass> MyPtrMat_ptVec;
+typedef PtrMatrix_vector<MyClass> MyPtrMat_vector;
+typedef PtrMatrix_ptvector<MyClass> MyPtrMat_ptvector;
+
+// compare a "generic" vectors to pointers to vector to objects
+template<typename T2>
+bool compPointers(const MyPtrVec& a, T2& b)
+{
+  if (lsize(a)!=lsize(b)) return false;
+  for (long i=0; i<lsize(b); i++)
+    if (a[i]!=&b[i]) return false;
+  return true;
+}
 
 void test1(MyClass array[], int length, const MyPtrVec& ptrs)
 {
@@ -68,6 +84,25 @@ void test3(MyPtrVec& ptrs)
   std::cout << std::endl;
 }
 
+template<typename T>
+void test4(const MyPtrMat& mat, const T& array)
+{
+  std::cout <<"test4 "<<std::flush;
+  assert(mat.size()==lsize(array));
+  for (int i=0; i<lsize(array); i++)
+    assert(compPointers(mat[i], array[i]));
+}
+
+template<typename T>
+void test5(const MyPtrMat& mat, const T& array)
+{
+  std::cout <<"test5 "<<std::flush;
+  assert(mat.size()==lsize(array));
+  for (int i=0; i<lsize(array); i++)
+    assert(compPointers(mat[i], *array[i]));
+}
+
+
 main()
 {
   const int vLength=6;
@@ -102,6 +137,24 @@ main()
   test2(&v4[2], 3, vss4);
 
   test3(vv1);
+
+  std::vector< std::vector<MyClass> > mat1(6);
+  std::vector< std::vector<MyClass>* > mat2(6);
+  NTL::Vec< NTL::Vec<MyClass> > mat3(NTL::INIT_SIZE, 6);
+  NTL::Vec< NTL::Vec<MyClass>* > mat4(NTL::INIT_SIZE, 6);
+  for (long i=0; i<6; i++) {
+    mat1[i].resize(4, MyClass(i));
+    mat2[5-i] = &mat1[i];
+
+    mat3[i].SetLength(3, MyClass(i+10));
+    mat4[5-i] = &mat3[i];
+  }
+
+  test4(MyPtrMat_vector(mat1), mat1);
+  test4(MyPtrMat_Vec(mat3), mat3);
+
+  test5(MyPtrMat_ptvector(mat2), mat2);
+  test5(MyPtrMat_ptVec(mat4), mat4);
 
   std::cout <<"All done\n";
 }
