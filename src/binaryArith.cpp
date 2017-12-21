@@ -32,6 +32,7 @@ public:
   std::atomic_long childrenLeft; // how many children were not computed yet
   DAGnode *parent1, *parent2;
 
+  std::mutex ct_mtx; // controls access to ctxt pointer (and the ctxt itself)
   Ctxt* ct;          // points to the actual ciphertext (or NULL)
 
   DAGnode(NodeIdx ii, bool qq, long lvl, long chl=0,
@@ -87,6 +88,7 @@ class AddDAG {
 
   void addCtxtFromNode(Ctxt& c, DAGnode* node,
                        const CtPtrs& a, const CtPtrs& b) {
+    std::unique_lock<std::mutex> lck(node->ct_mtx);
     c += getCtxt(node, a, b);
     if (--(node->childrenLeft) == 0) markAsAvailable(node);
   }
@@ -242,7 +244,9 @@ void AddDAG::apply(CtPtrs& sum,
   if (sizeLimit==0) sizeLimit = bSize+1;
   sum.resize(sizeLimit, &b); // allocate space for the output
 
-  for (long i=0; i<sizeLimit; i++) {
+  // Allow multi-threading in this loop
+  NTL_EXEC_RANGE(sizeLimit, first, last)
+  for (long i=first; i<last; i++) {
     if (i<bSize)
       addCtxtFromNode(*(sum[i]), this->findP(i,i), a, b);
     for (long j=std::min(i-1, aSize-1); j>=0; --j) {
@@ -250,20 +254,19 @@ void AddDAG::apply(CtPtrs& sum,
       if (node!=nullptr) addCtxtFromNode(*(sum[i]), node, a, b);
     }
   }
-  // Once getCtxt is thread-safe, we can replace the outer loop above with:
-  //      NTL_EXEC_RANGE(sizeLimit, first, last)
-  //        for (int i=first; i<last; i++) {
-  //          ...
-  //        }
-  //      NTL_EXEC_RANGE_END
+  NTL_EXEC_RANGE_END
 }
 
 const Ctxt& AddDAG::getCtxt(DAGnode* node,
                             const CtPtrs& a, const CtPtrs& b)
 {
+  // NOTE: node->ct_mtx should be locked before calling this function
+
   if (node->ct == nullptr) { // ciphertext not computed yet, do it now
     if (node->parent1!=nullptr && node->parent2!=nullptr) { // internal node
+      std::unique_lock<std::mutex> pt1_lck(node->parent1->ct_mtx);
       const Ctxt& c1 = getCtxt(node->parent1, a, b); // get the parents
+      std::unique_lock<std::mutex> pt2_lck(node->parent2->ct_mtx);
       const Ctxt& c2 = getCtxt(node->parent2, a, b);
       long n1 = --(node->parent1->childrenLeft);
       long n2 = --(node->parent2->childrenLeft);
@@ -330,6 +333,8 @@ Ctxt* AddDAG::allocateCtxtLike(const Ctxt& c)
 // object then the object is unused.
 void AddDAG::markAsAvailable(DAGnode* node)
 {
+  // NOTE: node->ct_mtx should be locked before calling this function
+  // NOTE: somewhat inefficient, use linear search for the raw pointer
   for (long i=0; i<(long)scratch.size(); i++)
     if (scratch[i].ct.get()==node->ct)
       scratch[i].used = false;
