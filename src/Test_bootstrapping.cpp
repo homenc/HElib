@@ -29,21 +29,9 @@ static bool noPrint = false;
 
 // #define DEBUG_PRINTOUT
 #ifdef DEBUG_PRINTOUT
-extern FHESecKey* dbgKey;
-extern EncryptedArray* dbgEa;
-extern ZZX dbg_ptxt;
-extern Vec<ZZ> ptxt_pwr;
-  
-#define FLAG_PRINT_ZZX  1
-#define FLAG_PRINT_POLY 2
-#define FLAG_PRINT_VEC  4
+#include "debugging.h"
 extern long printFlag;
-
-extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
-			    const EncryptedArray& ea, long flags=0);
 #endif
-
-//void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
