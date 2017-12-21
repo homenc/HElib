@@ -67,7 +67,7 @@ check: Test_General_x Test_matmul_x Test_matmul1D_x Test_LinPoly_x Test_Permutat
 	./Test_Replicate_x m=1247 noPrint=1
 	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
 	./Test_extractDigits_x m=2047 p=5 noPrint=1
-	./Test_bootstrapping_x noPrint=1
+	./Test_bootstrapping_x noPrint=1 N=512
 	./Test_bootstrapping_x p=7 noPrint=1
 
 test: $(TESTPROGS)
