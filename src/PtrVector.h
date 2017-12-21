@@ -1,3 +1,14 @@
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
 #ifndef _PTRVECTOR_H
 #define _PTRVECTOR_H
 /** PtrVector.h: convenience class templates providing a unified
@@ -68,9 +79,10 @@ template<typename T> void resize(PtrVector<T>& v, long newSize, const T* val)
 
 // Generic version for std::vector, NTL::Vec
 template<typename V1, typename V2>
-void vecCopy(V1& v1, const V2& v2)
+  void vecCopy(V1& v1, const V2& v2, long sizeLimit=0)
 {
   int n = lsize(v2);
+  if (sizeLimit>0 && sizeLimit<n) n = sizeLimit;
   if (n==0)
     setLengthZero(v1);
   else {
@@ -81,9 +93,10 @@ void vecCopy(V1& v1, const V2& v2)
 
 // Specializations for PtrVector
 template<typename V, typename T> // V is either Vec<T> or vector<T>
-void vecCopy(V& v1, const PtrVector<T>& v2)
+void vecCopy(V& v1, const PtrVector<T>& v2, long sizeLimit=0)
 {
   int n = lsize(v2);
+  if (sizeLimit>0 && sizeLimit<n) n = sizeLimit;
   if (n==0)
     setLengthZero(v1);
   else {
@@ -92,9 +105,10 @@ void vecCopy(V& v1, const PtrVector<T>& v2)
   }
 }
 template<typename V, typename T> // V is either Vec<T> or vector<T>
-void vecCopy(PtrVector<T>& v1, const V& v2)
+void vecCopy(PtrVector<T>& v1, const V& v2, long sizeLimit=0)
 {
   int n = lsize(v2);
+  if (sizeLimit>0 && sizeLimit<n) n = sizeLimit;
   if (n==0)
     setLengthZero(v1);
   else {
@@ -103,9 +117,10 @@ void vecCopy(PtrVector<T>& v1, const V& v2)
   }
 }
 template<typename T> // V is either Vec<T> or vector<T>
-void vecCopy(PtrVector<T>& v1, const PtrVector<T>& v2)
+void vecCopy(PtrVector<T>& v1, const PtrVector<T>& v2, long sizeLimit=0)
 {
   int n = lsize(v2);
+  if (sizeLimit>0 && sizeLimit<n) n = sizeLimit;
   if (n==0)
     setLengthZero(v1);
   else {
