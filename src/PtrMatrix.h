@@ -29,11 +29,8 @@ struct PtrMatrix {
   virtual const T* ptr2nonNull() const
   {
     for (long i=0; i<size(); i++) {
-      const PtrVector<T>& row = (*this)[i];
-      for (long j=0; j<row.size(); j++) {
-        T* pt = row[j];
-        if (pt!=nullptr) return pt;
-      }
+      const T* pt = (*this)[i].ptr2nonNull();
+      if (pt!=nullptr) return pt;
     }
     return nullptr;
   }
@@ -52,6 +49,17 @@ template<typename T> void setLengthZero(PtrMatrix<T>& v){v.resize(0);}
 //struct PtrMatrix_vector; // std::vector<std::vector<T>>
 //struct PtrMatrix_ptVec;    // NTL::Vec<NTL::Vec<T>*>
 //struct PtrMatrix_ptvector; // std::vector<std::vector<T>*>
+
+#include <initializer_list>
+template<typename T>
+const T* ptr2nonNull(std::initializer_list<const PtrVector<T>*> list)
+{
+  for (auto elem : list) {
+    const T* ptr = elem->ptr2nonNull();
+    if (ptr != nullptr) return ptr;
+  }
+  return nullptr;
+}
 
 
 /*******************************************************************/

@@ -26,6 +26,8 @@
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
+
+void decryptAndSum(ostream& s, const CtPtrMat& numbers);
 #endif
 
 
@@ -597,7 +599,11 @@ void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
                     std::vector<zzX>* unpackSlotEncoding)
 {
   FHE_TIMER_START;
-  if (lsize(numbers)<1) return;
+  const Ctxt* ct_ptr = numbers.ptr2nonNull();
+  if (lsize(numbers)<1 || ct_ptr==nullptr) { // nothign to add
+    setLengthZero(sum);
+    return;
+  }
   if (lsize(numbers)==1) { vecCopy(sum, numbers[0]); return; }
 
   // if just 2 numbers to add then use normal binary addition
@@ -609,23 +615,20 @@ void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
     long h2 = (head+1) % lsize(numbers);
     long h3 = (head+2) % lsize(numbers);
     long t2 = (tail+1) % lsize(numbers);
+    const CtPtrs& h1ct = numbers[head];
+    const CtPtrs& h2ct = numbers[h2];
+    const CtPtrs& h3ct = numbers[h3];
 
     // If any of head,h1,h2 are too low level, then bootstrap everything
-    if (findMinLevel({&(numbers[head]),&(numbers[h2]),&(numbers[h3])}) < 2) {
-      assert(unpackSlotEncoding!=nullptr);
-
-      const Ctxt* ct = numbers[head].ptr2nonNull(); // find some non-null Ctxt
-      if (ct==nullptr) ct = numbers[h2].ptr2nonNull();
-      if (ct==nullptr) ct = numbers[h3].ptr2nonNull();
-      assert(ct!=nullptr && ct->getPubKey().isBootstrappable());
-
-      const EncryptedArray& ea = *(ct->getContext().ea);
-
-      packedRecrypt(numbers, *unpackSlotEncoding, ea, /*belowLvl=*/10);
+    if (findMinLevel({&h1ct, &h2ct, &h3ct}) < 3) {
+      assert(unpackSlotEncoding!=nullptr
+             && ct_ptr->getPubKey().isBootstrappable());
+      packedRecrypt(numbers, *unpackSlotEncoding,
+                    *(ct_ptr->getContext().ea), /*belowLvl=*/10);
     }
 
-    three4Two(numbers[tail], numbers[t2], // three4Two can work in-place
-              numbers[head], numbers[h2], numbers[h3], sizeLimit);
+    // three4Two can work in-place
+    three4Two(numbers[tail], numbers[t2], h1ct, h2ct, h3ct, sizeLimit);
 
     head = (head+3) % lsize(numbers);    
     tail = (tail+2) % lsize(numbers);
@@ -657,22 +660,14 @@ static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
       }
       else numbers[i][j] = numbers[i][i+lsize(b)-1]; // sign extension
   }
+  CtPtrMat_VecCt nums(numbers); // Wrapper around numbers
 #ifdef DEBUG_PRINTOUT
+  long pa, pb;
   vector<long> slots;
-  cout << " multByNegative: ";
-  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
-  cout << slots[0] << " * ";
-  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, true);
-  cout << slots[0] << "=sum(";
-  long sum=0;
-  for (NTL::Vec<Ctxt>& num : numbers) {
-    decryptBinaryNums(slots, CtPtrs_VecCt(num), *dbgKey, *dbgEa, true);
-    cout << slots[0] << ' ';
-    sum += slots[0];
-  }
-  cout << ")="<<sum<<endl;
+  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false); pa=slots[0];
+  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, true);  pb=slots[0];
+  decryptAndSum((cout<<" multByNegative: "<<pa<<'*'<<pb<<" = "), nums);
 #endif
-  CtPtrMat_VecCt nums(numbers);
   addManyNumbers(product, nums, resSize);
 }
 
@@ -739,22 +734,14 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
       }
     }
   }
+  CtPtrMat_VecCt nums(numbers); // A wrapper aroune numbers
 #ifdef DEBUG_PRINTOUT
+  long pa, pb;
   vector<long> slots;
-  cout << " multTwoNumbers: ";
-  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
-  cout << slots[0] << " * ";
-  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, false);
-  cout << slots[0] << "=sum(";
-  long sum=0;
-  for (NTL::Vec<Ctxt>& num : numbers) {
-    decryptBinaryNums(slots, CtPtrs_VecCt(num), *dbgKey, *dbgEa, false);
-    cout << slots[0] << ' ';
-    sum += slots[0];
-  }
-  cout << ")="<<sum<<endl;
+  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false); pa=slots[0];
+  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, false);  pb=slots[0];
+  decryptAndSum((cout<<" multTwoNumbers: "<<pa<<'*'<<pb<<" = "), nums);
 #endif
-  CtPtrMat_VecCt nums(numbers);
   addManyNumbers(product, nums, sizeLimit, unpackSlotEncoding);
 }
 
@@ -984,4 +971,19 @@ void AddDAG::printAddDAG(bool printCT)
   }
   cout << endl;
 }
+
+void decryptAndSum(ostream& s, const CtPtrMat& numbers)
+{
+  s << "sum(";
+  long sum=0;
+  for (long i=0; i<numbers.size(); i++) {
+    vector<long> slots;
+    const CtPtrs& num = numbers[i];
+    decryptBinaryNums(slots, num, *dbgKey, *dbgEa, true);
+    s << slots[0] << ' ';
+    sum += slots[0];
+  }
+  s << ")="<<sum<<endl;
+}
+
 #endif // ifdef DEBUG_PRINTOUT
