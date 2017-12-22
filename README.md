@@ -1,6 +1,19 @@
 HElib
 =====
 
+***Dec 2017:*** Added some routines for addition/multiplication of integers in
+binary representation. See the supported interfaces in `binaryArith.h`, and some
+examples in `Test_binaryArith.cpp`.
+
+The inputs and putputs to the new routines are logically vectors of Ctxt objects
+(one Ctxt per bit in the binary representation). These vectors are wrapped by the
+new `CtPtrs` wrapper (see `CtPtrs.h` and the underlying `PtrsVector.h` and `PtrsMatrix.h`).
+Hence the same logic will work for any type of input that can be mapped logically
+to arrays of `Ctxt`s, as long as one can wrap them with the same wrapper class. In
+particular, we implementated wrappers for `std::vector<Ctxt>`, `std::vector<Ctxt*>`,
+`NTL::Vec<Ctxt>` and `NTL::Vec<Ctxt*>`.
+
+-----------------------------------------------------------------------------
 HElib is a software library that implements [homomorphic encryption][6] (HE).
 Currently available is an implementation of the
 [Brakerski-Gentry-Vaikuntanathan][1] (BGV) scheme, along with many
