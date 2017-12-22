@@ -730,52 +730,6 @@ void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
     DoTest(*ptr, ea, secretKey);
   }
 
-#if 0
-
-  // choose a random plaintext square matrix
-  std::unique_ptr< MatMul1D > ptr_new(buildRandomMultiMatrix_new(ea,dim));
-
-  //std::unique_ptr< MatMul1D > ptr_new(buildRandomMatrix_new(ea,dim));
-
-  //std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomBlockMatrix_new(ea,dim));
-
-  //std::unique_ptr< BlockMatMul1D > ptr_new(buildRandomMultiBlockMatrix_new(ea,dim));
-  //std::unique_ptr< MatMulFull > ptr_new(buildRandomFullMatrix(ea));
-  //std::unique_ptr< BlockMatMulFull > ptr_new(buildRandomFullBlockMatrix(ea));
-
-  resetAllTimers();
-  MatMul1DExec mat_exec(*ptr_new, publicKey);
-  mat_exec.upgrade();
-  printAllTimers();
-
-  // choose a random plaintext vector
-  NewPlaintextArray v(ea);
-  random(ea, v);
-
-  // encrypt the random vector
-  Ctxt ctxt(publicKey);
-  ea.encrypt(ctxt, publicKey, v);
-  Ctxt ctxt2 = ctxt;
-
-  resetAllTimers();
-
-  mat_exec.mul(ctxt);
-
-  printAllTimers();
-
-
-  mul(v, *ptr_new);     // multiply the plaintext vector
-
-  NewPlaintextArray v1(ea);
-  ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
-
-  if (equals(ea, v, v1))        // check that we've got the right answer
-    cout << "Nice!!\n";
-  else
-    cout << "Grrr@*\n";
-#endif
-
-
 }
 
 
