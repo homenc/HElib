@@ -115,10 +115,11 @@ int main(int argc, char *argv[])
   dbgEa = (EncryptedArray*) context.ea;
   dbgKey = &secKey;
 #endif
-  /*
+
   for (long i=0; i<nTests; i++)
     test15for4(secKey);
 
+  /*
   for (long i=0; i<nTests; i++)
     testAddTwo(secKey, bitSize, outSize);
 
@@ -135,6 +136,43 @@ int main(int argc, char *argv[])
 
 void test15for4(FHESecKey& secKey)
 {
+  std::vector<Ctxt> inBuf(15, Ctxt(secKey));
+  std::vector<Ctxt*> inPtrs(15, nullptr);
+
+  std::vector<Ctxt> outBuf(5, Ctxt(secKey));
+
+  long sum=0;
+  std::string inputBits = "(";
+  for (int i=0; i<15; i++) {
+    if (NTL::RandomBnd(10)>0) { // leave empty with small probability
+      inPtrs[i] = &(inBuf[i]);
+      long bit = NTL::RandomBnd(2);  // a random bit
+      secKey.Encrypt(inBuf[i], ZZX(bit));
+      inputBits += std::to_string(bit) + ",";
+      sum += bit;
+    }
+    else inputBits += "-,";
+  }
+  inputBits += ")";
+
+  // Add these bits
+  long numOutputs
+    = fifteenOrLess4Four(CtPtrs_vectorCt(outBuf), CtPtrs_vectorPt(inPtrs));
+
+  // Check the result
+  long sum2=0;
+  for (int i=0; i<numOutputs; i++) {
+    ZZX poly;
+    secKey.Decrypt(poly, outBuf[i]);
+    sum2 += to_long(ConstTerm(poly)) << i;
+  }
+  if (sum != sum2) {
+    cout << "15to4 error: inputs="<<inputBits<<", sum="<<sum;
+    cout << " but sum2="<<sum2<<endl;
+    exit(0);
+  }
+  else if (verbose)
+    cout << "15to4 succeeded, sum"<<inputBits<<"="<<sum2<<endl;
 }
 
 void testAddTwo(FHESecKey& secKey, long bitSize, long outSize)
