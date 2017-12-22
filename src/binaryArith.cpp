@@ -27,7 +27,7 @@
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 
-void decryptAndSum(ostream& s, const CtPtrMat& numbers);
+void decryptAndSum(ostream& s, const CtPtrMat& numbers, bool negative=false);
 #endif
 
 
@@ -431,18 +431,27 @@ void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
   else if (lsize(b)<1) { vecCopy(sum,a,sizeLimit); return; }
 
   // Work out the order of multiplications to compute all the carry bits
-  AddDAG mults(a,b);
+  AddDAG addPlan(a,b);
 
   // Ensure that we have enough levels to compute everything,
   // bootstrap otherwise
-  if (mults.lowLvl()<1) {
+  if (addPlan.lowLvl()<1) {
     packedRecrypt(a,b,unpackSlotEncoding);
-    mults.init(a,b); // Re-compute the DAG
-    if (mults.lowLvl()<1) { // still not enough levels
+    addPlan.init(a,b); // Re-compute the DAG
+    if (addPlan.lowLvl()<1) { // still not enough levels
       throw std::logic_error("not enough levels for addition DAG");
     }
   }
-  mults.apply(sum, a, b, sizeLimit);    // perform the actual addition
+#ifdef DEBUG_PRINTOUT // print level before and after
+  long lvl = findMinLevel({&a, &b});
+  cout << " addTwoNumbers: level before addition="<<lvl
+       << ", planned output level="<<addPlan.lowLvl()<<endl;
+#endif
+  addPlan.apply(sum, a, b, sizeLimit);    // perform the actual addition
+#ifdef DEBUG_PRINTOUT // print level before and after
+  cout << " after computing a "<<sum.size()<<"-bit sum, level="
+       << findMinLevel(sum) << endl;
+#endif
 }
 
 // Return pointers to the three inputs, ordered by size
@@ -598,6 +607,10 @@ static void three4Two(CtPtrs& lsb, CtPtrs& msb,
 void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
                     std::vector<zzX>* unpackSlotEncoding)
 {
+#ifdef DEBUG_PRINTOUT
+  cout << " addManyNumbers: "<<numbers.size()
+       << " numbers with size-limit="<<sizeLimit<<endl;
+#endif
   FHE_TIMER_START;
   const Ctxt* ct_ptr = numbers.ptr2nonNull();
   if (lsize(numbers)<1 || ct_ptr==nullptr) { // nothign to add
@@ -666,9 +679,10 @@ static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   vector<long> slots;
   decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false); pa=slots[0];
   decryptBinaryNums(slots, b, *dbgKey, *dbgEa, true);  pb=slots[0];
-  decryptAndSum((cout<<" multByNegative: "<<pa<<'*'<<pb<<" = "), nums);
+  decryptAndSum((cout<<" multByNegative: "<<pa<<'*'<<pb<<" = "),
+                nums, true);
 #endif
-  addManyNumbers(product, nums, resSize);
+  addManyNumbers(product, nums, resSize, unpackSlotEncoding);
 }
 
 // Multiply two integers (i.e. an array of bits) a, b.
@@ -681,13 +695,18 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   FHE_TIMER_START;
   long aSize = lsize(a);
   long bSize = lsize(b);
-  long resSize = aSize+bSize-1;
+  long resSize = aSize+bSize;
   if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
 
   if (a.numNonNull()<1 || b.numNonNull()<1) {
     product.resize(0);
     return; // return 0
   }
+
+#ifdef DEBUG_PRINTOUT
+  cout << " before multiplication, level="<<findMinLevel({&a, &b})
+       << endl;
+#endif
   // Edge case, if a or b is 1 bit
   if (aSize==1) {
     if (a[0]->isEmpty()) {
@@ -740,9 +759,10 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   vector<long> slots;
   decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false); pa=slots[0];
   decryptBinaryNums(slots, b, *dbgKey, *dbgEa, false);  pb=slots[0];
-  decryptAndSum((cout<<" multTwoNumbers: "<<pa<<'*'<<pb<<" = "), nums);
+  decryptAndSum((cout<<" multTwoNumbers: "<<pa<<'*'<<pb<<" = "),
+                nums, false);
 #endif
-  addManyNumbers(product, nums, sizeLimit, unpackSlotEncoding);
+  addManyNumbers(product, nums, resSize, unpackSlotEncoding);
 }
 
 /* seven4Three: adding seven input bits, getting a 3-bit counter
@@ -972,14 +992,14 @@ void AddDAG::printAddDAG(bool printCT)
   cout << endl;
 }
 
-void decryptAndSum(ostream& s, const CtPtrMat& numbers)
+void decryptAndSum(ostream& s, const CtPtrMat& numbers, bool negative)
 {
   s << "sum(";
   long sum=0;
   for (long i=0; i<numbers.size(); i++) {
     vector<long> slots;
     const CtPtrs& num = numbers[i];
-    decryptBinaryNums(slots, num, *dbgKey, *dbgEa, true);
+    decryptBinaryNums(slots, num, *dbgKey, *dbgEa, negative);
     s << slots[0] << ' ';
     sum += slots[0];
   }

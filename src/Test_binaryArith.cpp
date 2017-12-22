@@ -42,9 +42,8 @@ static long mValues[][15] = {
 };
 
 void test15for4(FHESecKey& secKey);
-void testAddTwo(FHESecKey& secKey, long bitSize, long outSize);
-void testAddMany(FHESecKey& secKey, long bitSize, long outSize);
-void testProduct(FHESecKey& secKey, long bitSize, long outSize);
+void testProduct(FHESecKey& secKey, long bitSize, long outSize,
+                 bool bootstrap = false);
 
 int main(int argc, char *argv[])
 {
@@ -52,11 +51,13 @@ int main(int argc, char *argv[])
   long prm=1;
   amap.arg("prm", prm, "parameter size (0-tiny,...,3-huge)");
   long bitSize = 5;
-  amap.arg("bitSize", bitSize, "bitSize of input integers (<=10)");
+  amap.arg("bitSize", bitSize, "bitSize of input integers (<=32)");
   long outSize = 0;
   amap.arg("outSize", outSize, "bitSize of output integers", "as many as needed");
   long nTests = 3;
   amap.arg("nTests", nTests, "number of tests to run");
+  bool bootstrap = false;
+  amap.arg("bootstrap", bootstrap, "test multiplication with bootstrapping");
   long seed=0;
   amap.arg("seed", seed, "PRG seed");
   amap.arg("verbose", verbose, "print more information");
@@ -65,7 +66,7 @@ int main(int argc, char *argv[])
   assert(prm >= 0 && prm < 4);
   if (seed) NTL::SetSeed(ZZ(seed));
   if (bitSize<=0) bitSize=5;
-  else if (bitSize>10) bitSize=10;
+  else if (bitSize>32) bitSize=32;
 
   long* vals = mValues[prm];
   long p = vals[0];
@@ -90,24 +91,41 @@ int main(int argc, char *argv[])
   long B = vals[13];
   long c = vals[14];
 
-  if (verbose)
+  // Compute the number of levels
+  long L;
+  if (bootstrap) L=30; // that should be enough
+  else {
+    double nBits =
+      (outSize>0 && outSize<2*bitSize)? outSize : (2*bitSize);
+    double three4twoLvls = log(nBits/2) / log(1.5);
+    double add2NumsLvls = log(nBits) / log(2.0);
+    L = 2 + ceil(three4twoLvls + add2NumsLvls);
+  }
+  
+  if (verbose) {
+    cout <<"input bitSize="<<bitSize<<", output size bound="<<outSize
+         <<", running "<<nTests<<" tests for each function\n";
     cout << "computing key-independent tables..." << std::flush;
+  }
   FHEcontext context(m, p, /*r=*/1, gens, ords);
   context.bitsPerLevel = B;
-  buildModChain(context, /*L=*/bitSize+5, c,/*extraBits=*/8);
-  context.makeBootstrappable(mvec, /*t=*/0,
-                             /*flag=*/false, /*cacheType=DCRT*/2);
+  buildModChain(context, L, c,/*extraBits=*/8);
+  if (bootstrap) {
+    context.makeBootstrappable(mvec, /*t=*/0,
+                               /*flag=*/false, /*cacheType=DCRT*/2);
+  }
   buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
   if (verbose) {
     cout << " done.\n";
     context.zMStar.printout();
+    cout << " L="<<L<<", B="<<B<<endl;
     cout << "\ncomputing key-dependent tables..." << std::flush;
   }
   FHESecKey secKey(context);
   secKey.GenSecKey(/*Hweight=*/128);
   addSome1DMatrices(secKey); // compute key-switching matrices
   addFrbMatrices(secKey);
-  secKey.genRecryptData();
+  if (bootstrap) secKey.genRecryptData();
   if (verbose) cout << " done\n";
 
   activeContext = &context; // make things a little easier sometimes
@@ -118,19 +136,13 @@ int main(int argc, char *argv[])
 
   for (long i=0; i<nTests; i++)
     test15for4(secKey);
-
-  /*
+  cout << "  *** test15for4 PASS ***\n";
+  
   for (long i=0; i<nTests; i++)
-    testAddTwo(secKey, bitSize, outSize);
-
-  for (long i=0; i<nTests; i++)
-    testAddMany(secKey, bitSize, outSize);
-  */
-  for (long i=0; i<nTests; i++)
-    testProduct(secKey, bitSize, outSize);
+    testProduct(secKey, bitSize, outSize, bootstrap);
+  cout << "  *** testProduct PASS ***\n";
 
   if (verbose) printAllTimers(cout);
-  cout << "=== all tests pass ===\n";
   return 0;
 }
 
@@ -175,15 +187,8 @@ void test15for4(FHESecKey& secKey)
     cout << "15to4 succeeded, sum"<<inputBits<<"="<<sum2<<endl;
 }
 
-void testAddTwo(FHESecKey& secKey, long bitSize, long outSize)
-{
-}
-
-void testAddMany(FHESecKey& secKey, long bitSize, long outSize)
-{
-}
-
-void testProduct(FHESecKey& secKey, long bitSize, long outSize)
+void testProduct(FHESecKey& secKey, long bitSize, long outSize,
+                 bool bootstrap)
 {
   const EncryptedArray& ea = *(secKey.getContext().ea);
   long mask = (outSize? ((1L<<outSize)-1) : -1);
@@ -200,6 +205,10 @@ void testProduct(FHESecKey& secKey, long bitSize, long outSize)
   for (long i=0; i<bitSize; i++) {
     secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
     secKey.Encrypt(encb[i], ZZX((pb>>i)&1));
+    if (bootstrap) { // put them at a lower level
+      enca[i].modDownToLevel(5);
+      encb[i].modDownToLevel(5);
+    }
   }
 
   // Test positive multiplication
@@ -254,7 +263,8 @@ void testProduct(FHESecKey& secKey, long bitSize, long outSize)
       minLvl = lvl;
     }
   }
-  decryptAndPrint(cout, *minCtxt, secKey, ea,0);
+  decryptAndPrint((cout<<" after multiplication: "), *minCtxt, secKey, ea,0);
+  cout << endl;
 #endif
 }
 
