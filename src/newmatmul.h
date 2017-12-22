@@ -6,10 +6,14 @@
 #include "EncryptedArray.h"
 
 
+class MatMulFullExec;
+
 class MatMulFull {
 public:
   virtual ~MatMulFull() {}
   virtual const EncryptedArray& getEA() const = 0;
+  typedef MatMulFullExec ExecType;
+  
 };
   
 template<class type>
@@ -23,10 +27,14 @@ public:
 
 //====================================
 
+class BlockMatMulFullExec;
+
 class BlockMatMulFull {
 public:
   virtual ~BlockMatMulFull() {}
   virtual const EncryptedArray& getEA() const = 0;
+  typedef BlockMatMulFullExec ExecType;
+
 };
   
 template<class type>
@@ -40,11 +48,14 @@ public:
 
 //====================================
 
+class MatMul1DExec;
+
 class MatMul1D {
 public:
   virtual ~MatMul1D() {}
   virtual const EncryptedArray& getEA() const = 0;
   virtual long getDim() const = 0;
+  typedef MatMul1DExec ExecType;
 };
 
 template<class type>
@@ -82,11 +93,14 @@ public:
 
 //====================================
 
+class BlockMatMul1DExec;
+
 class BlockMatMul1D {
 public:
   virtual ~BlockMatMul1D() {}
   virtual const EncryptedArray& getEA() const = 0;
   virtual long getDim() const = 0;
+  typedef BlockMatMul1DExec ExecType;
 };
 
 template<class type>
@@ -151,23 +165,19 @@ class MatMul1DExec : public MatMulExecBase {
 public:
 
   const EncryptedArray& ea;
-  bool minimal;
 
   long dim;
   long D;
   bool native;
+  bool minimal;
   long g;
 
   ConstMultiplierCache cache;
   ConstMultiplierCache cache1; // only for non-native dimension
 
 
-  // If minimal, then it is assumed minimal KS matrices will
-  // be present (one for the generator g, and one for g^{-D} 
-  // for non-native dimensions).  With this flag set, all BS/GS
-  // and parallel strategies are avoided.
   explicit
-  MatMul1DExec(const MatMul1D& mat, bool minimal=false);
+  MatMul1DExec(const MatMul1D& mat, const FHEPubKey& pkey);
 
   void mul(Ctxt& ctxt) const override;
 
@@ -196,12 +206,8 @@ public:
   ConstMultiplierCache cache1; // only for non-native dimension
 
 
-  // If minimal, then it is assumed minimal KS matrices will be present (one
-  // for Frobenius, one for the generator g, and one for g^{-D} for non-native
-  // dimensions).  With this flag set, all BS/GS and parallel strategies are
-  // avoided.
   explicit
-  BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal=false);
+  BlockMatMul1DExec(const BlockMatMul1D& mat, const FHEPubKey& pkey);
 
   void mul(Ctxt& ctxt) const override;
 
@@ -219,12 +225,11 @@ class MatMulFullExec : public MatMulExecBase {
 public:
 
   const EncryptedArray& ea;
-  bool minimal;
   std::vector<long> dims;
   std::vector<MatMul1DExec> transforms;
 
   explicit
-  MatMulFullExec(const MatMulFull& mat, bool minimal=false);
+  MatMulFullExec(const MatMulFull& mat, const FHEPubKey& pkey);
 
   void mul(Ctxt& ctxt) const override;
 
@@ -244,12 +249,11 @@ class BlockMatMulFullExec : public MatMulExecBase {
 public:
 
   const EncryptedArray& ea;
-  bool minimal;
   std::vector<long> dims;
   std::vector<BlockMatMul1DExec> transforms;
 
   explicit
-  BlockMatMulFullExec(const BlockMatMulFull& mat, bool minimal=false);
+  BlockMatMulFullExec(const BlockMatMulFull& mat, const FHEPubKey& pkey);
 
   void mul(Ctxt& ctxt) const override;
 
@@ -270,5 +274,8 @@ void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat);
 void mul(NewPlaintextArray& pa, const MatMulFull& mat);
 void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat);
 
+
+extern int fhe_test_force_bsgs;
+extern int fhe_test_force_hoist;
 
 #endif

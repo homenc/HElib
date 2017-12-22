@@ -5,6 +5,27 @@
 #include <NTL/BasicThreadPool.h>
 
 
+
+
+int fhe_test_force_bsgs=0;
+int fhe_test_force_hoist=0;
+
+
+static bool comp_bsgs(bool bsgs)
+{
+   if (fhe_test_force_bsgs > 0) return true;
+   if (fhe_test_force_bsgs < 0) return false;
+   return bsgs;
+}
+
+static bool comp_hoist(bool hoist)
+{
+   if (fhe_test_force_hoist > 0) return true;
+   if (fhe_test_force_hoist < 0) return false;
+   return hoist;
+}
+
+
 /********************************************************************/
 /****************** Auxiliary stuff: should go elsewhere   **********/
 
@@ -226,15 +247,20 @@ buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim)
   // allow dim == #gens (the dummy generator of order 1)
   assert(dim >= -1 && dim <= long(ctxt.getContext().zMStar.numOfGens()));
 
-  switch (ctxt.getPubKey().getKSStrategy(dim)) {
-    case FHE_KSS_BSGS:
-      return make_shared<GeneralAutomorphPrecon_BSGS>(ctxt, dim);
+  if (fhe_test_force_hoist >= 0) {
+    switch (ctxt.getPubKey().getKSStrategy(dim)) {
+      case FHE_KSS_BSGS:
+	return make_shared<GeneralAutomorphPrecon_BSGS>(ctxt, dim);
 
-    case FHE_KSS_FULL:
-      return make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim);
-      
-    default:
-      return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
+      case FHE_KSS_FULL:
+	return make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim);
+	
+      default:
+	return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
+    }
+  }
+  else {
+    return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
   }
 }
 
@@ -617,8 +643,8 @@ struct MatMul1DExec_construct {
 
 
 
-MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal)
-  : ea(mat.getEA()), minimal(_minimal)
+MatMul1DExec::MatMul1DExec(const MatMul1D& mat, const FHEPubKey& pkey)
+  : ea(mat.getEA())
 {
     FHE_NTIMER_START(MatMul1DExec);
 
@@ -627,8 +653,12 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal)
     D = dimSz(ea, dim);
     native = dimNative(ea, dim);
 
+    minimal = pkey.getKSStrategy(dim) == FHE_KSS_MIN;
+
     // FIXME: performance tune
-    if (D <= FHE_BSGS_MUL_THRESH || minimal)
+    bool bsgs = comp_bsgs(D > FHE_BSGS_MUL_THRESH);
+
+    if (!bsgs || minimal)
        g = 0; // do not use BSGS
     else
        g = KSGiantStepSize(D); // use BSGS
@@ -695,7 +725,8 @@ void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim,
 
   const PAlgebra& zMStar = ctxt.getContext().zMStar;
 
-  if (ctxt.getPubKey().getKSStrategy(dim) != FHE_KSS_UNKNOWN) {
+  if (fhe_test_force_hoist >= 0 &&
+      ctxt.getPubKey().getKSStrategy(dim) != FHE_KSS_UNKNOWN) {
     BasicAutomorphPrecon precon(ctxt);
 
     NTL_EXEC_RANGE(n, first, last)
@@ -723,6 +754,8 @@ void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim,
 void
 MatMul1DExec::mul(Ctxt& ctxt) const
 {
+   FHE_NTIMER_START(mul_MatMul1DExec);
+
    assert(&ea.getContext() == &ctxt.getContext());
    const PAlgebra& zMStar = ea.getContext().zMStar;
 
@@ -1278,7 +1311,8 @@ struct BlockMatMul1DExec_construct {
 };
 
 
-BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal)
+BlockMatMul1DExec::BlockMatMul1DExec(
+  const BlockMatMul1D& mat, const FHEPubKey& pkey)
   : ea(mat.getEA())
 {
     FHE_TIMER_START;
@@ -1288,7 +1322,15 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal)
     D = dimSz(ea, dim);
     d = ea.getDegree();
     native = dimNative(ea, dim);
-    
+
+    // FIXME: if either the given dimension or Frobenius
+    // are minimal, we employ a minimal strategy.
+    // It might be possible to employ a better srategy
+    // if only one is minimal.
+
+    bool minimal = pkey.getKSStrategy(dim) == FHE_KSS_MIN ||
+                   pkey.getKSStrategy(-1) == FHE_KSS_MIN; 
+
     if (minimal) 
       strategy = 0;
     else if (D >= d) 
@@ -1306,6 +1348,7 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal)
 void
 BlockMatMul1DExec::mul(Ctxt& ctxt) const
 {
+   FHE_NTIMER_START(mul_BlockMatMul1DExec);
    assert(&ea.getContext() == &ctxt.getContext());
    const PAlgebra& zMStar = ea.getContext().zMStar;
 
@@ -1615,7 +1658,7 @@ struct MatMulFullExec_construct {
   static 
   long rec_mul(long dim, long idx, const vector<long>& idxes,
                vector<MatMul1DExec>& transforms, 
-               bool minimal,
+               const FHEPubKey& pkey,
                const vector<long>& dims,
                const EncryptedArray& ea_basetype,
                const EncryptedArrayDerived<type>& ea,
@@ -1625,7 +1668,7 @@ struct MatMulFullExec_construct {
       // Last dimension (recursion edge condition)
 
       MatMulFullHelper<type> helper(ea_basetype, mat, idxes, dims[dim]);
-      transforms.emplace_back(helper, minimal);
+      transforms.emplace_back(helper, pkey);
       idx++;
       return idx;
     }
@@ -1639,7 +1682,7 @@ struct MatMulFullExec_construct {
     for (long offset: range(sdim)) {
       vector<long> idxes1;
       ea.EncryptedArrayBase::rotate1D(idxes1, idxes, dims[dim], offset);
-      idx = rec_mul(dim+1, idx, idxes1, transforms, minimal, 
+      idx = rec_mul(dim+1, idx, idxes1, transforms, pkey, 
                     dims, ea_basetype, ea, mat);
     }
 
@@ -1673,7 +1716,7 @@ struct MatMulFullExec_construct {
              const EncryptedArray& ea_basetype,
              const MatMulFull& mat_basetype,
              vector<MatMul1DExec>& transforms,
-             bool minimal,
+             const FHEPubKey& pkey,
              vector<long>& dims)
   {
     const MatMulFull_derived<type>& mat =
@@ -1691,7 +1734,7 @@ struct MatMulFullExec_construct {
     vector<long> idxes(nslots);
     for (long i: range(nslots)) idxes[i] = i;
 
-    rec_mul(0, 0, idxes, transforms, minimal, dims, ea_basetype, ea, mat);
+    rec_mul(0, 0, idxes, transforms, pkey, dims, ea_basetype, ea, mat);
   }
 
 
@@ -1699,12 +1742,12 @@ struct MatMulFullExec_construct {
 
 
 
-MatMulFullExec::MatMulFullExec(const MatMulFull& mat, bool _minimal)
-  : ea(mat.getEA()), minimal(_minimal)
+MatMulFullExec::MatMulFullExec(const MatMulFull& mat, const FHEPubKey& pkey)
+  : ea(mat.getEA())
 {
   FHE_NTIMER_START(MatMulFullExec);
 
-  ea.dispatch<MatMulFullExec_construct>(ea, mat, Fwd(transforms), minimal,
+  ea.dispatch<MatMulFullExec_construct>(ea, mat, Fwd(transforms), pkey,
                                         Fwd(dims));
 }
 
@@ -1737,7 +1780,7 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
     bool native = ea.nativeDimension(dim);
     const PAlgebra& zMStar = ea.getContext().zMStar;
 
-    if (!minimal) {
+    if (ctxt.getPubKey().getKSStrategy(dim) != FHE_KSS_MIN)  {
 
       if (native) {
 	shared_ptr<GeneralAutomorphPrecon> precon =
@@ -1832,6 +1875,7 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 void
 MatMulFullExec::mul(Ctxt& ctxt) const
 {
+  FHE_NTIMER_START(mul_MatMulFullExec);
   assert(&ea.getContext() == &ctxt.getContext());
 
   assert(ea.size() > 1);
@@ -1952,7 +1996,7 @@ struct BlockMatMulFullExec_construct {
   static 
   long rec_mul(long dim, long idx, const vector<long>& idxes,
                vector<BlockMatMul1DExec>& transforms, 
-               bool minimal,
+               const FHEPubKey& pkey,
                const vector<long>& dims,
                const EncryptedArray& ea_basetype,
                const EncryptedArrayDerived<type>& ea,
@@ -1962,7 +2006,7 @@ struct BlockMatMulFullExec_construct {
       // Last dimension (recursion edge condition)
 
       BlockMatMulFullHelper<type> helper(ea_basetype, mat, idxes, dims[dim]);
-      transforms.emplace_back(helper, minimal);
+      transforms.emplace_back(helper, pkey);
       idx++;
       return idx;
     }
@@ -1976,7 +2020,7 @@ struct BlockMatMulFullExec_construct {
     for (long offset: range(sdim)) {
       vector<long> idxes1;
       ea.EncryptedArrayBase::rotate1D(idxes1, idxes, dims[dim], offset);
-      idx = rec_mul(dim+1, idx, idxes1, transforms, minimal, 
+      idx = rec_mul(dim+1, idx, idxes1, transforms, pkey, 
                     dims, ea_basetype, ea, mat);
     }
 
@@ -2010,7 +2054,7 @@ struct BlockMatMulFullExec_construct {
              const EncryptedArray& ea_basetype,
              const BlockMatMulFull& mat_basetype,
              vector<BlockMatMul1DExec>& transforms,
-             bool minimal,
+             const FHEPubKey& pkey,
              vector<long>& dims)
   {
     const BlockMatMulFull_derived<type>& mat =
@@ -2028,7 +2072,7 @@ struct BlockMatMulFullExec_construct {
     vector<long> idxes(nslots);
     for (long i: range(nslots)) idxes[i] = i;
 
-    rec_mul(0, 0, idxes, transforms, minimal, dims, ea_basetype, ea, mat);
+    rec_mul(0, 0, idxes, transforms, pkey, dims, ea_basetype, ea, mat);
   }
 
 
@@ -2036,12 +2080,13 @@ struct BlockMatMulFullExec_construct {
 
 
 
-BlockMatMulFullExec::BlockMatMulFullExec(const BlockMatMulFull& mat, bool _minimal)
-  : ea(mat.getEA()), minimal(_minimal)
+BlockMatMulFullExec::BlockMatMulFullExec(
+    const BlockMatMulFull& mat, const FHEPubKey& pkey)
+  : ea(mat.getEA())
 {
   FHE_NTIMER_START(BlockMatMulFullExec);
 
-  ea.dispatch<BlockMatMulFullExec_construct>(ea, mat, Fwd(transforms), minimal,
+  ea.dispatch<BlockMatMulFullExec_construct>(ea, mat, Fwd(transforms), pkey,
                                         Fwd(dims));
 }
 
@@ -2074,7 +2119,7 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
     bool native = ea.nativeDimension(dim);
     const PAlgebra& zMStar = ea.getContext().zMStar;
 
-    if (!minimal) {
+    if (ctxt.getPubKey().getKSStrategy(dim) != FHE_KSS_MIN) {
 
       if (native) {
 	shared_ptr<GeneralAutomorphPrecon> precon =
@@ -2169,6 +2214,7 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
 void
 BlockMatMulFullExec::mul(Ctxt& ctxt) const
 {
+  FHE_NTIMER_START(mul_BlockMatMulFullExec);
   assert(&ea.getContext() == &ctxt.getContext());
 
   assert(ea.size() > 1);

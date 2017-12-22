@@ -325,6 +325,50 @@ void addSomeFrbMatrices(FHESecKey& sKey, long bound, long keyID)
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
+static void addMinimal1Dmats4dim(FHESecKey& sKey, long i, long keyID)
+{
+  const PAlgebra& zMStar = sKey.getContext().zMStar;
+  long ord;
+  bool native;
+
+  if (i != -1) {
+    ord = zMStar.OrderOf(i);
+    native = zMStar.SameOrd(i);\
+  }
+  else {
+    // Frobenius
+    ord = zMStar.getOrdP();
+    native = true;
+  }
+
+  sKey.GenKeySWmatrix(1, zMStar.genToPow(i, 1), keyID, keyID);
+
+  if (!native)
+    sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
+
+  sKey.setKSStrategy(i, FHE_KSS_MIN);
+
+}
+
+void addMinimal1DMatrices(FHESecKey& sKey, long keyID)
+{
+  const FHEcontext &context = sKey.getContext();
+
+  // key-switching matrices for the automorphisms
+  for (long i: range(context.zMStar.numOfGens())) {
+    addMinimal1Dmats4dim(sKey, i, keyID);
+  }
+  sKey.setKeySwitchMap(); // re-compute the key-switching map
+}
+
+// Generate all Frobenius matrices of the form s(X^{p^i})->s(X)
+void addMinimalFrbMatrices(FHESecKey& sKey, long keyID)
+{
+  const FHEcontext &context = sKey.getContext();
+  addMinimal1Dmats4dim(sKey, -1, keyID);
+  sKey.setKeySwitchMap(); // re-compute the key-switching map
+}
+
 // Generate all key-switching matrices for a given permutation network
 void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID)
 {

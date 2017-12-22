@@ -404,7 +404,7 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   str << context.rcData.mvec;
   str << " " << context.rcData.hwt;
   str << " " << context.rcData.conservative;
-  str << " " << context.rcData.cacheType;
+  str << " " << context.rcData.build_cache;
 
   str << "]\n";
 

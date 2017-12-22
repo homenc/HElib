@@ -22,6 +22,12 @@ class  EncryptedArray;
 class  EvalMap;
 class  PowerfulDCRT;
 class  FHEcontext;
+class  FHEPubKey;
+
+// This is needed to work around some C++ issues
+struct EvalMapDeleter {
+  static void deleter(EvalMap *p);
+};
 
 //! @class RecryptData
 //! @brief A structure to hold recryption-related data inside the FHEcontext
@@ -50,9 +56,12 @@ public:
   //! for plaintext space p^{e-e'+r}
   EncryptedArray *ea;
 
+  bool build_cache;
+
+  const FHEcontext *original_context;
+
   //! linear maps
-  EvalMap *firstMap, *secondMap;
-  int cacheType;
+  Lazy<EvalMap,EvalMapDeleter> firstMap, secondMap;
 
   //! conversion between ZZX and Powerful
   PowerfulDCRT *p2dConv;
@@ -62,14 +71,21 @@ public:
 
   RecryptData() {
     hwt=0; conservative=false; e=ePrime=0; alpha=0.0;
-    alMod=NULL; ea=NULL; firstMap=secondMap=NULL;cacheType=0;p2dConv=NULL;
+    alMod=NULL; ea=NULL; p2dConv=NULL;
+    build_cache = false;
+    original_context = NULL;
   }
   ~RecryptData();
 
   //! Initialize the recryption data in the context
   void init(const FHEcontext& context, const Vec<long>& mvec_,
             long t=0/*min Hwt for sk*/, bool consFlag=false,
-            int cacheType=0/*0: no cache, 1:zzX, 2:DCRT*/);
+            bool build_cache=false);
+
+  //! make sure the linear maps are initialized.
+  //! it's not really necessary to call this funcion.
+  //! logically const
+  void initMaps(const FHEPubKey& pkey) const;
 
   bool operator==(const RecryptData& other) const;
   bool operator!=(const RecryptData& other) const {

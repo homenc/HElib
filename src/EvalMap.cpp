@@ -29,7 +29,9 @@ init_representatives(Vec<long>& representatives, long dim,
 
 // Constructor: initializing tables for the evaluation-map transformations
 
-EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
+EvalMap::EvalMap(const EncryptedArray& _ea, const FHEPubKey& pkey,
+                 const Vec<long>& mvec, bool _invert,
+                 bool build_cache,
                  bool normal_basis)
 
   : ea(_ea), invert(_invert)
@@ -114,7 +116,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
   unique_ptr<BlockMatMul1D> mat1_data;
   mat1_data.reset(buildStep1Matrix(ea, sig_sequence[dim],
        	          local_reps[dim], dim, m/mvec[dim], invert, normal_basis));
-  mat1.reset(new BlockMatMul1DExec(*mat1_data));
+  mat1.reset(new BlockMatMul1DExec(*mat1_data, pkey));
 
   matvec.SetLength(nfactors-1);
   for (dim=nfactors-2; dim>=0; --dim) {
@@ -122,8 +124,10 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
 
     mat_data.reset(buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim],
 				       dim, m/mvec[dim], invert));
-    matvec[dim].reset(new MatMul1DExec(*mat_data));
+    matvec[dim].reset(new MatMul1DExec(*mat_data, pkey));
   }
+
+  if (build_cache) upgrade();
 }
 
 void EvalMap::upgrade()

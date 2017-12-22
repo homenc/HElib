@@ -123,6 +123,9 @@ ostream& operator<<(ostream& str, const KeySwitch& matrix);
 #define FHE_KSS_BSGS    (2)
 // baby step/giant step strategy
 
+#define FHE_KSS_MIN     (3)
+// minimal strategy (for g_i, and for g_i^{-ord_i} for bad dims)
+
 
 
 /**
@@ -407,6 +410,11 @@ inline void add1DMatrices(FHESecKey& sKey, long keyID=0)
 void addSomeFrbMatrices(FHESecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
 inline void addFrbMatrices(FHESecKey& sKey, long keyID=0)
 { addSomeFrbMatrices(sKey, LONG_MAX, keyID); }
+
+
+//! These routines just add a single matrix (or two, for bad dimensions)
+void addMinimal1DMatrices(FHESecKey& sKey, long keyID=0);
+void addMinimalFrbMatrices(FHESecKey& sKey, long keyID=0);
 
 //! Generate all key-switching matrices for a given permutation network
 class PermNetwork;

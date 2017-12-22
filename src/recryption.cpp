@@ -36,10 +36,10 @@ RecryptData::~RecryptData()
 {
   if (alMod!=NULL)     delete alMod;
   if (ea!=NULL)        delete ea;
-  if (firstMap!=NULL)  delete firstMap;
-  if (secondMap!=NULL) delete secondMap;
   if (p2dConv!=NULL)   delete p2dConv;
 }
+
+void EvalMapDeleter::deleter(EvalMap *p) { delete p; }
 
 /** Computing the recryption parameters
  *
@@ -97,9 +97,16 @@ bool RecryptData::operator==(const RecryptData& other) const
   return true;
 }
 
+
+void RecryptData::initMaps(const FHEPubKey& pkey) const
+{
+   make_lazy(firstMap, *ea, pkey, mvec, true, build_cache);
+   make_lazy(secondMap, *original_context->ea, pkey, mvec, false, build_cache);
+}
+
 // The main method
 void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
-		       long t, bool consFlag, int build_cache)
+		       long t, bool consFlag, bool build_cache_)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to RecryptData::init\n";
@@ -110,6 +117,8 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   // Record the arguments to this function
   mvec = mvec_;
   conservative = consFlag;
+  build_cache = build_cache_;
+  original_context = &context; // needed for initMaps
 
   if (t <= 0) t = defSkHwt+1; // recryption key Hwt
   hwt = t;
@@ -152,12 +161,6 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   ea = new EncryptedArray(context, *alMod);
          // Polynomial defaults to F0, PAlgebraMod explicitly given
 
-  firstMap  = new EvalMap(*ea, mvec, true);
-  secondMap = new EvalMap(*context.ea, mvec, false);
-  if (build_cache) {
-    firstMap->upgrade();
-    secondMap->upgrade();
-  }
 
   p2dConv = new PowerfulDCRT(context, mvec);
 
@@ -213,6 +216,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 {
   FHE_TIMER_START;
   assert(recryptKeyID>=0); // check that we have bootstrapping data
+
+  ctxt.getContext().rcData.initMaps(ctxt.getPubKey());
 
   long p = getContext().zMStar.getP();
   long r = getContext().alMod.getR();

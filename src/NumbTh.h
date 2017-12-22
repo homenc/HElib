@@ -818,11 +818,26 @@ ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 // NOTE: Maybe NTL should contain conversion routines
 // like this for the various polynomial classes?
 
+#if 0
 //! @brief stand-in for make_unique, which is C++14, not C++11
 template<typename T, typename... Args>
 std::unique_ptr<T> build_unique(Args&&... args)
 {
     return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+#endif
+
+//! This should go in NTL some day...
+//! Just call as make_lazy(obj, ...) to initialize a lazy object
+//! via a call to a constructor T(...)
+template<class T, class P, class... Args>
+void make_lazy(const Lazy<T,P>& obj, Args&&... args)
+{
+   typename Lazy<T,P>::Builder builder(obj);
+   if (!builder()) return;
+   UniquePtr<T,P> ptr;
+   ptr.make(std::forward<Args>(args)...);
+   builder.move(ptr);
 }
 
 
