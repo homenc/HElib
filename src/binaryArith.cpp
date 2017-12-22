@@ -390,7 +390,8 @@ static void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
     const CtPtrs& a;
     const CtPtrs& b;
     CtPtrs_pair(const CtPtrs &_a, const CtPtrs &_b): a(_a), b(_b) {}
-    Ctxt* operator[](long i) const override {return (i<a.size())? a[i] : b[i];}
+    Ctxt* operator[](long i) const override
+    { return (i<a.size())? a[i] : b[i-lsize(a)]; }
     long size() const override { return a.size() + b.size(); }
   };
   const CtPtrs_pair ab(a,b);
@@ -762,7 +763,7 @@ static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
                            long sizeLimit,std::vector<zzX>* unpackSlotEncoding)
 {
   long resSize = lsize(a)+lsize(b);
-  //  if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
+  if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
 
   NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(a),resSize));
   for (long i=0; i<lsize(numbers); i++) {
@@ -793,7 +794,7 @@ static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   cout << ")="<<sum<<endl;
 #endif
   CtPtrMat_VecCt nums(numbers);
-  addManyNumbers(product, nums, sizeLimit);
+  addManyNumbers(product, nums, resSize);
 }
 
 // Multiply two integers (i.e. an array of bits) a, b.
