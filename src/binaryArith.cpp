@@ -28,11 +28,13 @@
 #include "debugging.h"
 #endif
 
+
 typedef std::pair<long,long> NodeIdx; // nodes are indexed by a pair (i,j)
 
 /**
  * @class DAGnode
  * @brief A node in an addition-DAG structure.
+ *
  **/
 class DAGnode {
 public:
@@ -61,6 +63,7 @@ public:
             +std::to_string(idx.first)+','+ std::to_string(idx.second) +')');}
 };
 
+//! A class to help manage the allocation of temporary Ctxt objects
 class ScratchCell {
 public:
   std::atomic_bool used;
@@ -81,10 +84,12 @@ public:
  * are of the forms (a[i]*b[i]) and (a[i]+b[i]), and each non-source node has
  * exactly two parents, whose product yeilds that node.
  *
- * When building the DAG, we attempt to keep the level of each node as high as
- * possible. So for example q_{i,j} can be computed either as p_{i,k}*q_{k-1,j}
- * or p_{i,k+1}*q_{k,j} (among other options), and we choose the option that
- * results in the largest possible level.
+ * When building the DAG, we keep the level of each node as high as possible.
+ * For example we can set q_{i,j}=p_{i,k}*q_{k-1,j} or q_{i,j}=p_{i,k+1}*q_{k,j}
+ * (among other options), and we choose the option that results in the highest
+ * level. In addition, we try to minimize the number of nodes in the DAG that
+ * actually need to be computed while adding the two numbers (subject to still
+ * consuming as few levels as possible).
  **/
 class AddDAG {
   std::vector<ScratchCell> scratch; // scratch space for ciphertexts
@@ -92,11 +97,12 @@ class AddDAG {
   std::map<NodeIdx,DAGnode> q; // q[i,j]= a[j]b[j]*prod_{t=j+1}^i (a[t]+b[t])
   long aSize, bSize;
 
-  Ctxt* allocateCtxtLike(const Ctxt& c);
-  void markAsAvailable(DAGnode* node);
-  const Ctxt& getCtxt(DAGnode* node,
+  Ctxt* allocateCtxtLike(const Ctxt& c); // Allocate a new ciphertext if needed
+  void markAsAvailable(DAGnode* node);  // Mark temporary Ctxt object as unused
+  const Ctxt& getCtxt(DAGnode* node,    // Compute a new Ctxt if neeed
                       const CtPtrs& a, const CtPtrs& b);
 
+  // Add to c the Ctxt from the given node
   void addCtxtFromNode(Ctxt& c, DAGnode* node,
                        const CtPtrs& a, const CtPtrs& b) {
     std::unique_lock<std::mutex> lck(node->ct_mtx);
@@ -105,20 +111,22 @@ class AddDAG {
   }
 
 public:
-  long getAsize() const { return aSize; }
-  long getBsize() const { return bSize; }
-
+  //! Build a plan to add a and b
   void init(const CtPtrs& a, const CtPtrs& b);
-  void apply(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b, long sizeLimit=0);
 
-  // build the addition DAG
+  // Build the addition DAG
   AddDAG(const CtPtrs& a, const CtPtrs& b) { init(a,b); }
 
+  //! Perform the actual addition
+  void apply(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b, long sizeLimit=0);
+
+  //! Returns the lowest level in this DAG
   long lowLvl() const
   {
     if (aSize<1) return 0;
     return findQ(bSize-1,0)->level;
   }
+  //! Returns a pointer to the a 'p' node of index (i,j)
   DAGnode* findP(long i, long j) const { // returns NULL if not exists
     auto it = p.find(NodeIdx(i,j));
     if (it == p.end()) {
@@ -127,6 +135,7 @@ public:
     }
     return (DAGnode*)&(it->second);
   }
+  //! Returns a pointer to the a 'q' node of index (i,j)
   DAGnode* findQ(long i, long j) const { // returns NULL if not exists
     auto it = q.find(NodeIdx(i,j));
     if (it == q.end()) {
@@ -135,6 +144,9 @@ public:
     }
     return (DAGnode*)&(it->second);
   }
+#ifdef DEBUG_PRINTOUT
+  void printAddDAG(bool printCT=false);
+#endif
 };
 
 
@@ -155,14 +167,12 @@ inline long defaultQmiddle(long delta)
   return 1 << (NTL::NumBits(delta)-1);
 }
 
-// Initialize the DAG
-// FIXME: We often have at the bottom of a/b bits that are known to be zero,
-//    the procedures below do not take any advantage of this.
+//! Build a plan to add a and b
 void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
 {
   // make sure that lsize(b) >= lsize(a)
-  const CtPtrs& a = (bb.size()>=aa.size())? aa : bb;
-  const CtPtrs& b = (bb.size()>=aa.size())? bb : aa;
+  const CtPtrs& a = (lsize(bb)>=lsize(aa))? aa : bb;
+  const CtPtrs& b = (lsize(bb)>=lsize(aa))? bb : aa;
 
   aSize = lsize(a);
   bSize = lsize(b);
@@ -173,13 +183,15 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
   q.clear();
   for (long i=0; i<bSize; i++) {
     NodeIdx idx(i,i);
-    long lvl = (b.isSet(i) && !(b[i]->isEmpty()))?
+    long lvl = (b.isSet(i) && !(b[i]->isEmpty()))? // The level of b[i]
       b[i]->findBaseLevel() : LONG_MAX;
     if (i<aSize) {
-      long aLvl = (a.isSet(i) && !(a[i]->isEmpty()))?
+      long aLvl = (a.isSet(i) && !(a[i]->isEmpty()))? // The level of a[i]
         a[i]->findBaseLevel() : LONG_MAX;
       lvl = std::min(lvl, aLvl);
-      q.emplace(idx,DAGnode(idx, true, lvl-1, 1));
+      if (lvl==LONG_MAX || aLvl==LONG_MAX) // is either a[i] or b[i] is empty
+           q.emplace(idx,DAGnode(idx, true, LONG_MAX, 1));
+      else q.emplace(idx,DAGnode(idx, true, lvl-1, 1));
     }
     p.emplace(idx,DAGnode(idx, false, lvl, 1));
   }
@@ -253,14 +265,14 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
     }
 }
 
-// Apply the DAG
+//! Apply the DAG to actually compute the sum
 void AddDAG::apply(CtPtrs& sum,
                    const CtPtrs& aa, const CtPtrs& bb, long sizeLimit)
 {
   // make sure that lsize(b) >= lsize(a)
-  const CtPtrs& a = (bb.size()>=aa.size())? aa : bb;
-  const CtPtrs& b = (bb.size()>=aa.size())? bb : aa;
-  if (aSize != a.size() || bSize != b.size())
+  const CtPtrs& a = (lsize(bb)>=lsize(aa))? aa : bb;
+  const CtPtrs& b = (lsize(bb)>=lsize(aa))? bb : aa;
+  if (aSize != lsize(a) || bSize != lsize(b))
     throw std::logic_error("DAG applied to wrong vectors");
 
   if (sizeLimit==0) sizeLimit = bSize+1;
@@ -279,6 +291,7 @@ void AddDAG::apply(CtPtrs& sum,
   NTL_EXEC_RANGE_END
 }
 
+//! Get the ciphertext for a node, compiuting it as needed
 const Ctxt& AddDAG::getCtxt(DAGnode* node,
                             const CtPtrs& a, const CtPtrs& b)
 {
@@ -286,13 +299,17 @@ const Ctxt& AddDAG::getCtxt(DAGnode* node,
 
   if (node->ct == nullptr) { // ciphertext not computed yet, do it now
     if (node->parent1!=nullptr && node->parent2!=nullptr) { // internal node
+      // Obtain locks and ciphertexts for both parents. Also reduce the
+      // number of children of that parents that still need to be computed
       std::unique_lock<std::mutex> pt1_lck(node->parent1->ct_mtx);
-      const Ctxt& c1 = getCtxt(node->parent1, a, b); // get the parents
+      const Ctxt& c1 = getCtxt(node->parent1, a, b);
+      long n1 = --(node->parent1->childrenLeft);
+
       std::unique_lock<std::mutex> pt2_lck(node->parent2->ct_mtx);
       const Ctxt& c2 = getCtxt(node->parent2, a, b);
-      long n1 = --(node->parent1->childrenLeft);
       long n2 = --(node->parent2->childrenLeft);
-      if (n1==0) {                 // reuse space from parent1
+
+      if (n1==0) {              // reuse space from parent1
         node->parent1->ct = nullptr;
         node->ct = (Ctxt*) &c1;
         if (c1.isEmpty() || c2.isEmpty())
@@ -301,25 +318,29 @@ const Ctxt& AddDAG::getCtxt(DAGnode* node,
         if (n2==0)
           markAsAvailable(node->parent2);
       }
-      else if (n2==0) {            // reuse space from parent2
+      else if (n2==0) {         // reuse space from parent2
         node->parent2->ct = nullptr;
         node->ct = (Ctxt*) &c2;
         if (c1.isEmpty() || c2.isEmpty())
              node->ct->clear(); // ct is zero if any of the parents is
 	else node->ct->multiplyBy(c1);
       }
-      else {                       // allocate new space
+      else {                    // allocate new space
         node->ct = allocateCtxtLike(c2);
-        *(node->ct) = c2;
         if (c1.isEmpty() || c2.isEmpty())
-             node->ct->clear(); // ct is zero if any of the parents is
-	else node->ct->multiplyBy(c1);
+          node->ct->clear();    // ct is zero if any of the parents is
+        else {
+          *(node->ct) = c2;
+          node->ct->multiplyBy(c1);
+        }
       }
     }
     else { // no parents, either a[i]+b[i] or a[i]*b[i]
       long i = node->idx.first;
       long j = node->idx.second; // we expect i==j
-      node->ct = allocateCtxtLike(*(b[0]));
+      const Ctxt* ct_ptr = b.ptr2nonNull();
+      assert(ct_ptr != nullptr);
+      node->ct = allocateCtxtLike(*ct_ptr);
 
       if (node->isQ) { // This is b[i]*a[j]
         if (b.isSet(i) && !(b[i]->isEmpty())
@@ -342,7 +363,7 @@ const Ctxt& AddDAG::getCtxt(DAGnode* node,
 }
 
 
-// Adds another cell to scratch space, or use an existing one that's free
+//! Adds another cell to scratch space, or use an existing one that's free
 Ctxt* AddDAG::allocateCtxtLike(const Ctxt& c)
 {
   // look for an unused cell in the scratch array
@@ -391,19 +412,21 @@ static void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
     const CtPtrs& b;
     CtPtrs_pair(const CtPtrs &_a, const CtPtrs &_b): a(_a), b(_b) {}
     Ctxt* operator[](long i) const override
-    { return (i<a.size())? a[i] : b[i-lsize(a)]; }
-    long size() const override { return a.size() + b.size(); }
+    { return (i<lsize(a))? a[i] : b[i-lsize(a)]; }
+    long size() const override { return lsize(a) + lsize(b); }
   };
   const CtPtrs_pair ab(a,b);
 
   packedRecrypt(ab, *unpackSlotEncoding, *(ct->getContext().ea));
 }
 
+//! Add two integers in binary representation
 void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
                    long sizeLimit, std::vector<zzX>* unpackSlotEncoding)
 {
-  if (a.size()<1)      { vecCopy(sum,b); return; }
-  else if (b.size()<1) { vecCopy(sum,a); return; }
+  FHE_TIMER_START;
+  if (lsize(a)<1)      { vecCopy(sum,b,sizeLimit); return; }
+  else if (lsize(b)<1) { vecCopy(sum,a,sizeLimit); return; }
 
   // Work out the order of multiplications to compute all the carry bits
   AddDAG mults(a,b);
@@ -414,29 +437,27 @@ void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
     packedRecrypt(a,b,unpackSlotEncoding);
     mults.init(a,b); // Re-compute the DAG
     if (mults.lowLvl()<1) { // still not enough levels
-      throw std::logic_error("not enough levels for multiplication DAG");
+      throw std::logic_error("not enough levels for addition DAG");
     }
   }
-
-  //  printAddDAG(mults);
   mults.apply(sum, a, b, sizeLimit);    // perform the actual addition
 }
 
-// An object of type T must have an lsize() function
+// Return pointers to the three inputs, ordered by size
 static std::tuple<const CtPtrs*,const CtPtrs*,const CtPtrs*>
 orderBySize(const CtPtrs& a, const CtPtrs& b, const CtPtrs& c)
 {
-  if (a.size() <= b.size()) {
-    if (b.size() <= c.size())
+  if (lsize(a) <= lsize(b)) {
+    if (lsize(b) <= lsize(c))
       return std::make_tuple(&a,&b,&c); // a <= b <= c
-    else if (a.size() <= c.size())
+    else if (lsize(a) <= lsize(c))
       return std::make_tuple(&a,&c,&b); // a <= c < b
     else
       return std::make_tuple(&c,&a,&b); // c < a <= b
   } else { // lsize(b) < lsize(a)
-    if (a.size() <= c.size())
+    if (lsize(a) <= lsize(c))
       return std::make_tuple(&b,&a,&c); // b < a <= c
-    else if (b.size() <= c.size())
+    else if (lsize(b) <= lsize(c))
       return std::make_tuple(&b,&c,&a); // b <= c < a
     else
       return std::make_tuple(&c,&b,&a); // c < b < a
@@ -444,9 +465,8 @@ orderBySize(const CtPtrs& a, const CtPtrs& b, const CtPtrs& c)
 }
 
 
-// Implementing the basic 3-for-2 trick: u,v,w encrypt bits, the
-// procedure computes x,y such that x+2y = u+v+w over the integers.
-// outputs can alias the inputs
+// Implementing the basic 3-for-2 trick: u,v,w encrypt bits, return two bits
+// x,y such that x+2y = u+v+w over the integers. Outputs can alias the inputs.
 static void three4Two(Ctxt& lsb, Ctxt& msb,
                       const Ctxt& u, const Ctxt& v, const Ctxt& w)
 {
@@ -472,39 +492,270 @@ static long three4Two(Ctxt* lsb, Ctxt* msb, Ctxt* u, Ctxt* v, Ctxt* w)
 {
   if (u!=nullptr && !u->isEmpty()
       && v!=nullptr && !v->isEmpty()
-      && w!=nullptr && !w->isEmpty()) {
-    three4Two(*lsb,*msb, *u, *v, *w);
+      && w!=nullptr && !w->isEmpty()) { // if none are empty
+    three4Two(*lsb,*msb, *u, *v, *w);   // call the function above
     return 2;
   }
   if ((u==nullptr||u->isEmpty())
       && (v==nullptr||v->isEmpty())
-      && (w==nullptr||w->isEmpty())) {
-    lsb->clear();
+      && (w==nullptr||w->isEmpty())) {  // if all are empty
+    lsb->clear();                       // result is emptry too
     msb->clear();
     return 0;
   }
 
-  // Some are null, others are not, arrange so that nulls are at the end
+  // Some are empty, others are not, arrange so that emptys are at the end
   if (u==nullptr||u->isEmpty()) {
-    if (v==nullptr||v->isEmpty()) u=w;
-     else { u=v; v=w; }
+    if (v==nullptr||v->isEmpty()) u=w;    // only w was non-empty
+    else { u=v; v=w; }                    // v,w were non-empty
   }
-  else if (v==nullptr||v->isEmpty()) v=w;
-  w = nullptr;
+  else if (v==nullptr||v->isEmpty()) v=w; // u is non-empty, v was empty
+  w = nullptr;                            // we don't use w anymore
 
-  if (v==nullptr||v->isEmpty()) { // only u is non-null
+  if (v==nullptr||v->isEmpty()) {         // only u is non-empty
     *lsb = *u;
     msb->clear();
     return 1;
   }
 
-  // both u,v are non-null
+  // both u,v are non-empty
   Ctxt tmp = *v;
   *lsb = *u;
   *msb = *u;
   *lsb += tmp;
   msb->multiplyBy(tmp);
   return 2;
+}
+
+// Apply the 3-for-2 routine to integers (i.e., an array of bits). The
+// inputs need not be of the same size, and size of the output x is
+// equal to the largest of them, and the size of the output y is one
+// larger. This is safe even when the outputs alias some of the inputs
+static void three4Two(CtPtrs& lsb, CtPtrs& msb,
+                      const CtPtrs& u, const CtPtrs& v, const CtPtrs& w,
+                      long sizeLimit)
+{
+  FHE_TIMER_START;
+  // Arrange u,v,w by size from smallest to largest
+  const CtPtrs *p1, *p2, *p3;
+  std::tie(p1,p2,p3) = orderBySize(u,v,w); // size(p3)>=size(p2)>=size(p1)
+
+  if (p3->size() <= 0) { // empty input
+    lsb.resize(0);
+    msb.resize(0);
+    return;
+  }
+  if (p1->size()<=0) { // two or less inputs
+    std::vector<Ctxt> tmp;
+    vecCopy(tmp,*p2,sizeLimit); // just in case p2, msb share pointers
+    vecCopy(msb,*p3,sizeLimit);
+    vecCopy(lsb,tmp);
+    return;
+  }
+  if (sizeLimit==0) sizeLimit = p3->size()+1;
+
+  // Allocate space in the output vectors
+
+  const Ctxt* ctptr = p3->ptr2nonNull();
+  std::vector<Ctxt> tmpMsb, tmpLsb;
+
+  long lsbSize = std::min(sizeLimit, lsize(*p3));
+  long msbSize = lsbSize;
+  if (lsize(*p2)==lsize(*p3) && lsbSize<sizeLimit)
+    msbSize++;                  // possible carry out of last position
+
+  resize(tmpLsb, lsbSize, Ctxt(ZeroCtxtLike,*ctptr));
+  resize(tmpMsb, msbSize, Ctxt(ZeroCtxtLike,*ctptr));
+
+  for (long i=0; i<std::min(lsize(*p1),lsbSize); i++)
+    if (i<lsize(tmpMsb)-1)
+      three4Two(&tmpLsb[i], &tmpMsb[i+1], (*p1)[i], (*p2)[i], (*p3)[i]);
+    else {
+      if (p1->isSet(i)) tmpLsb[i] =  *((*p1)[i]);
+      if (p2->isSet(i)) tmpLsb[i] += *((*p2)[i]);
+      if (p3->isSet(i)) tmpLsb[i] += *((*p3)[i]);
+    }
+
+  for (long i=p1->size(); i<std::min(lsize(*p2),lsbSize); i++) {
+    if (p2->isSet(i)) tmpLsb[i] =  *((*p2)[i]);
+    if (p3->isSet(i)) tmpLsb[i] += *((*p3)[i]);
+    if (i<lsize(tmpMsb)-1 && p2->isSet(i) && p3->isSet(i)) {
+      tmpMsb[i+1] = *((*p2)[i]);
+      tmpMsb[i+1].multiplyBy(*((*p3)[i]));
+    }
+  }
+  for (long i=p2->size(); i<std::min(lsize(*p3),lsbSize); i++)
+    if (p3->isSet(i)) tmpLsb[i] = *((*p3)[i]);
+
+  vecCopy(lsb, tmpLsb);
+  vecCopy(msb, tmpMsb);
+}
+
+
+// Calculates the sum of many numbers using the 3-for-2 method
+void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
+                    std::vector<zzX>* unpackSlotEncoding)
+{
+  FHE_TIMER_START;
+  if (lsize(numbers)<1) return;
+  if (lsize(numbers)==1) { vecCopy(sum, numbers[0]); return; }
+
+  // if just 2 numbers to add then use normal binary addition
+  // else enter loop below. We view numbers as a FIFO queue, each
+  // time removing the first three entries at the head and adding
+  // two new ones at the tail.
+  long head=0, tail=0;
+  for (long leftInQ=lsize(numbers); leftInQ>2; leftInQ--) {
+    long h2 = (head+1) % lsize(numbers);
+    long h3 = (head+2) % lsize(numbers);
+    long t2 = (tail+1) % lsize(numbers);
+
+    // If any of head,h1,h2 are too low level, then bootstrap everything
+    if (findMinLevel({&(numbers[head]),&(numbers[h2]),&(numbers[h3])}) < 2) {
+      assert(unpackSlotEncoding!=nullptr);
+
+      const Ctxt* ct = numbers[head].ptr2nonNull(); // find some non-null Ctxt
+      if (ct==nullptr) ct = numbers[h2].ptr2nonNull();
+      if (ct==nullptr) ct = numbers[h3].ptr2nonNull();
+      assert(ct!=nullptr && ct->getPubKey().isBootstrappable());
+
+      const EncryptedArray& ea = *(ct->getContext().ea);
+
+      packedRecrypt(numbers, *unpackSlotEncoding, ea, /*belowLvl=*/10);
+    }
+
+    three4Two(numbers[tail], numbers[t2], // three4Two can work in-place
+              numbers[head], numbers[h2], numbers[h3], sizeLimit);
+
+    head = (head+3) % lsize(numbers);    
+    tail = (tail+2) % lsize(numbers);
+  }
+  // final addition
+  long h2 = (head+1) % lsize(numbers);
+  addTwoNumbers(sum, numbers[head], numbers[h2], sizeLimit, unpackSlotEncoding);
+} // NOTE: It'd be a little challenging to parallelize this
+
+
+// Multiply a positive a by a potentially negative b, we need to sign-extend b
+static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
+                           long sizeLimit,std::vector<zzX>* unpackSlotEncoding)
+{
+  FHE_TIMER_START;
+  long resSize = lsize(a)+lsize(b);
+  if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
+
+  NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(a),resSize));
+  for (long i=0; i<lsize(numbers); i++) {
+    numbers[i].SetLength(resSize, Ctxt(ZeroCtxtLike,*(a[0])));
+    for (long j=i; j<resSize; j++)
+      if (j<i+lsize(b)) {
+        if (b.isSet(j-i) && !b[j-i]->isEmpty()
+            && a.isSet(i) && !a[i]->isEmpty()) {
+          numbers[i][j] = *(b[j-i]);
+          numbers[i][j].multiplyBy(*(a[i]));   // multiply by the bit of a
+        }
+      }
+      else numbers[i][j] = numbers[i][i+lsize(b)-1]; // sign extension
+  }
+#ifdef DEBUG_PRINTOUT
+  vector<long> slots;
+  cout << " multByNegative: ";
+  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
+  cout << slots[0] << " * ";
+  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, true);
+  cout << slots[0] << "=sum(";
+  long sum=0;
+  for (NTL::Vec<Ctxt>& num : numbers) {
+    decryptBinaryNums(slots, CtPtrs_VecCt(num), *dbgKey, *dbgEa, true);
+    cout << slots[0] << ' ';
+    sum += slots[0];
+  }
+  cout << ")="<<sum<<endl;
+#endif
+  CtPtrMat_VecCt nums(numbers);
+  addManyNumbers(product, nums, resSize);
+}
+
+// Multiply two integers (i.e. an array of bits) a, b.
+// Computes the pairwise products x_{i,j} = a_i * b_j
+// then sums the prodcuts using the 3-for-2 method.
+void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
+                    bool bNegative, long sizeLimit,
+                    std::vector<zzX>* unpackSlotEncoding)
+{
+  FHE_TIMER_START;
+  long aSize = lsize(a);
+  long bSize = lsize(b);
+  long resSize = aSize+bSize-1;
+  if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
+
+  if (a.numNonNull()<1 || b.numNonNull()<1) {
+    product.resize(0);
+    return; // return 0
+  }
+  // Edge case, if a or b is 1 bit
+  if (aSize==1) {
+    if (a[0]->isEmpty()) {
+      product.resize(0);
+      return;
+    }
+    vecCopy(product,b,resSize);
+    for (long i=0; i<resSize; i++)
+      product[i]->multiplyBy(*(a[0]));
+    return;
+  }
+  if (bNegative) { // somewhat different implementation for 2s complement
+    multByNegative(product, a, b, sizeLimit, unpackSlotEncoding);
+    return;
+  }
+  if (bSize==1) {
+    if (b[0]->isEmpty()) {
+      product.resize(0);
+      return;
+    }
+    vecCopy(product,a,resSize);
+    for (long i=0; i<resSize; i++)
+      a[i]->multiplyBy(*(b[0]));
+    return;
+  }
+
+  // We make sure aa is the larger of the two integers
+  // to keep the number of additions to a minimum
+  const CtPtrs& aa = (aSize>=bSize)? a : b;
+  const CtPtrs& bb = (aSize>=bSize)? b : a;
+  aSize = lsize(aa);
+  bSize = lsize(bb);
+
+  NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(b),resSize));
+  const Ctxt* ct_ptr = a.ptr2nonNull();
+  for (long i=0; i<lsize(numbers); i++) {
+    numbers[i].SetLength(std::min((i+aSize),resSize),
+                         Ctxt( ZeroCtxtLike,*ct_ptr ) );
+    for (long j=i; j<lsize(numbers[i]); j++) {
+      if (a.isSet(j-i) && !(a[j-i]->isEmpty())
+          &&  b.isSet(i) && !(b[i]->isEmpty()) ) {
+        numbers[i][j] = *(a[j-i]);
+        numbers[i][j].multiplyBy(*(b[i])); // multiply by the bit of b
+      }
+    }
+  }
+#ifdef DEBUG_PRINTOUT
+  vector<long> slots;
+  cout << " multTwoNumbers: ";
+  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
+  cout << slots[0] << " * ";
+  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, false);
+  cout << slots[0] << "=sum(";
+  long sum=0;
+  for (NTL::Vec<Ctxt>& num : numbers) {
+    decryptBinaryNums(slots, CtPtrs_VecCt(num), *dbgKey, *dbgEa, false);
+    cout << slots[0] << ' ';
+    sum += slots[0];
+  }
+  cout << ")="<<sum<<endl;
+#endif
+  CtPtrMat_VecCt nums(numbers);
+  addManyNumbers(product, nums, sizeLimit, unpackSlotEncoding);
 }
 
 /* seven4Three: adding seven input bits, getting a 3-bit counter
@@ -650,233 +901,6 @@ long fifteenOrLess4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
   return numNonNull;
 }
 
-// Apply the 3-for-2 routine to integers (i.e., an array of bits). The
-// inputs need not be of the same size, and size of the output x is
-// equal to the largest of them, and the size of the output y is one
-// larger. This is safe even when the outputs alias some of the inputs
-static void three4Two(CtPtrs& lsb, CtPtrs& msb,
-                      const CtPtrs& u, const CtPtrs& v, const CtPtrs& w,
-                      long sizeLimit)
-{
-  // Arrange u,v,w by size from smallest to largest
-  const CtPtrs *p1, *p2, *p3;
-  std::tie(p1,p2,p3) = orderBySize(u,v,w); // size(p3)>=size(p2)>=size(p1)
-
-  if (p3->size() <= 0) { // empty input
-    lsb.resize(0);
-    msb.resize(0);
-    return;
-  }
-  if (p1->size()<=0) { // two or less inputs
-    std::vector<Ctxt> tmp;
-    vecCopy(tmp,*p2); // just in case p2, msb share pointers
-    vecCopy(msb,*p3);
-    vecCopy(lsb,tmp);
-    return;
-  }
-  if (sizeLimit==0) sizeLimit = p3->size()+1;
-
-  // Allocate space in the output vectors
-
-  const Ctxt* ctptr = p3->ptr2nonNull();
-  std::vector<Ctxt> tmpMsb, tmpLsb;
-
-  long lsbSize = std::min(sizeLimit, p3->size());
-  long msbSize = lsbSize;
-  if (p2->size()==p3->size() && lsbSize<sizeLimit)
-    msbSize++;                  // possible carry out of last position
-
-  resize(tmpLsb, lsbSize, Ctxt(ZeroCtxtLike,*ctptr));
-  resize(tmpMsb, msbSize, Ctxt(ZeroCtxtLike,*ctptr));
-
-  for (long i=0; i<std::min(lsize(*p1),lsbSize); i++)
-    if (i<lsize(tmpMsb)-1)
-      three4Two(&tmpLsb[i], &tmpMsb[i+1], (*p1)[i], (*p2)[i], (*p3)[i]);
-    else {
-      if (p1->isSet(i)) tmpLsb[i] =  *((*p1)[i]);
-      if (p2->isSet(i)) tmpLsb[i] += *((*p2)[i]);
-      if (p3->isSet(i)) tmpLsb[i] += *((*p3)[i]);
-    }
-
-  for (long i=p1->size(); i<std::min(lsize(*p2),lsbSize); i++) {
-    if (p2->isSet(i)) tmpLsb[i] =  *((*p2)[i]);
-    if (p3->isSet(i)) tmpLsb[i] += *((*p3)[i]);
-    if (i<lsize(tmpMsb)-1 && p2->isSet(i) && p3->isSet(i)) {
-      tmpMsb[i+1] = *((*p2)[i]);
-      tmpMsb[i+1].multiplyBy(*((*p3)[i]));
-    }
-  }
-  for (long i=p2->size(); i<std::min(lsize(*p3),lsbSize); i++)
-    if (p3->isSet(i)) tmpLsb[i] = *((*p3)[i]);
-
-  vecCopy(lsb, tmpLsb);
-  vecCopy(msb, tmpMsb);
-}
-
-
-// Calculates the sum of many numbers using the 3-for-2 method
-void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
-                    std::vector<zzX>* unpackSlotEncoding)
-{
-  FHE_TIMER_START;
-  if (lsize(numbers)<1) return;
-  if (lsize(numbers)==1) { vecCopy(sum, numbers[0]); return; }
-
-  // if just 2 numbers to add then use normal binary addition
-  // else enter loop below. We view numbers as a FIFO queue, each
-  // time removing the first three entries at the head and adding
-  // two new ones at the tail.
-  long head=0, tail=0;
-  for (long leftInQ=lsize(numbers); leftInQ>2; leftInQ--) {
-    long h2 = (head+1) % lsize(numbers);
-    long h3 = (head+2) % lsize(numbers);
-    long t2 = (tail+1) % lsize(numbers);
-
-    // If any of head,h1,h2 are too low level, then bootstrap everything
-    if (findMinLevel({&(numbers[head]),&(numbers[h2]),&(numbers[h3])}) < 2) {
-      assert(unpackSlotEncoding!=nullptr);
-
-      const Ctxt* ct = numbers[head].ptr2nonNull(); // find some non-null Ctxt
-      if (ct==nullptr) ct = numbers[h2].ptr2nonNull();
-      if (ct==nullptr) ct = numbers[h3].ptr2nonNull();
-      assert(ct!=nullptr && ct->getPubKey().isBootstrappable());
-
-      const EncryptedArray& ea = *(ct->getContext().ea);
-
-      packedRecrypt(numbers, *unpackSlotEncoding, ea, /*belowLvl=*/10);
-    }
-
-    three4Two(numbers[tail], numbers[t2], // three4Two can work in-place
-              numbers[head], numbers[h2], numbers[h3], sizeLimit);
-
-    head = (head+3) % lsize(numbers);    
-    tail = (tail+2) % lsize(numbers);
-  }
-  // final addition
-  long h2 = (head+1) % lsize(numbers);
-  addTwoNumbers(sum, numbers[head], numbers[h2], sizeLimit, unpackSlotEncoding);
-} // NOTE: It'd be a little challenging to parallelize this
-
-
-// Multiply a positive a by a potentially negative b, we need to sign-extend b
-static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
-                           long sizeLimit,std::vector<zzX>* unpackSlotEncoding)
-{
-  long resSize = lsize(a)+lsize(b);
-  if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
-
-  NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(a),resSize));
-  for (long i=0; i<lsize(numbers); i++) {
-    numbers[i].SetLength(resSize, Ctxt(ZeroCtxtLike,*(a[0])));
-    for (long j=i; j<resSize; j++)
-      if (j<i+lsize(b)) {
-        if (b.isSet(j-i) && !b[j-i]->isEmpty()
-            && a.isSet(i) && !a[i]->isEmpty()) {
-          numbers[i][j] = *(b[j-i]);
-          numbers[i][j].multiplyBy(*(a[i]));   // multiply by the bit of a
-        }
-      }
-      else numbers[i][j] = numbers[i][i+lsize(b)-1]; // sign extension
-  }
-#ifdef DEBUG_PRINTOUT
-  vector<long> slots;
-  cout << " multByNegative: ";
-  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
-  cout << slots[0] << " * ";
-  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, true);
-  cout << slots[0] << "=sum(";
-  long sum=0;
-  for (NTL::Vec<Ctxt>& num : numbers) {
-    decryptBinaryNums(slots, CtPtrs_VecCt(num), *dbgKey, *dbgEa, true);
-    cout << slots[0] << ' ';
-    sum += slots[0];
-  }
-  cout << ")="<<sum<<endl;
-#endif
-  CtPtrMat_VecCt nums(numbers);
-  addManyNumbers(product, nums, resSize);
-}
-
-// Multiply two integers (i.e. an array of bits) a, b.
-// Computes the pairwise products x_{i,j} = a_i * b_j
-// then sums the prodcuts using the 3-for-2 method.
-void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
-                    bool bNegative, long sizeLimit,
-                    std::vector<zzX>* unpackSlotEncoding)
-{
-  long aSize = lsize(a);
-  long bSize = lsize(b);
-  long resSize = aSize+bSize-1;
-  if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
-
-  if (a.numNonNull()<1 || b.numNonNull()<1) {
-    product.resize(0);
-    return; // return 0
-  }
-  // Edge case, if a or b is 1 bit
-  if (aSize==1) {
-    if (a[0]->isEmpty()) {
-      product.resize(0);
-      return;
-    }
-    vecCopy(product,b,resSize);
-    for (long i=0; i<resSize; i++)
-      product[i]->multiplyBy(*(a[0]));
-    return;
-  }
-  if (bNegative) { // somewhat different implementation for 2s complement
-    multByNegative(product, a, b, sizeLimit, unpackSlotEncoding);
-    return;
-  }
-  if (bSize==1) {
-    if (b[0]->isEmpty()) {
-      product.resize(0);
-      return;
-    }
-    vecCopy(product,a,resSize);
-    for (long i=0; i<resSize; i++)
-      a[i]->multiplyBy(*(b[0]));
-    return;
-  }
-
-  // We make sure aa is the larger of the two integers
-  // to keep the number of additions to a minimum
-  const CtPtrs& aa = (aSize>=bSize)? a : b;
-  const CtPtrs& bb = (aSize>=bSize)? b : a;
-  aSize = lsize(aa);
-  bSize = lsize(bb);
-
-  NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(b),resSize));
-  const Ctxt* ct_ptr = a.ptr2nonNull();
-  for (long i=0; i<lsize(numbers); i++) {
-    numbers[i].SetLength(std::min((i+aSize),resSize),
-                         Ctxt( ZeroCtxtLike,*ct_ptr ) );
-    for (long j=i; j<lsize(numbers[i]); j++) {
-      if (a.isSet(j-i) && !(a[j-i]->isEmpty())
-          &&  b.isSet(i) && !(b[i]->isEmpty()) ) {
-        numbers[i][j] = *(a[j-i]);
-        numbers[i][j].multiplyBy(*(b[i])); // multiply by the bit of b
-      }
-    }
-  }
-#ifdef DEBUG_PRINTOUT
-  vector<long> slots;
-  cout << " multTwoNumbers: ";
-  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
-  cout << slots[0] << " * ";
-  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, false);
-  cout << slots[0] << "=sum(";
-  long sum=0;
-  for (NTL::Vec<Ctxt>& num : numbers) {
-    decryptBinaryNums(slots, CtPtrs_VecCt(num), *dbgKey, *dbgEa, false);
-    cout << slots[0] << ' ';
-    sum += slots[0];
-  }
-  cout << ")="<<sum<<endl;
-#endif
-  CtPtrMat_VecCt nums(numbers);
-  addManyNumbers(product, nums, sizeLimit, unpackSlotEncoding);
-}
 
 /********************************************************************/
 /***************** test/debugging functions *************************/
@@ -913,17 +937,15 @@ void decryptBinaryNums(vector<long>& pNums, const CtPtrs& eNums,
 #ifdef DEBUG_PRINTOUT
 #include <cstdio>
 
-void printAddDAG(const AddDAG& md, bool printCT)
+void AddDAG::printAddDAG(bool printCT)
 {
-  long aSize = md.getAsize();
-  long bSize = md.getBsize();
   cout << "aSize="<<aSize<<", bSize="<<bSize<<endl;
   cout << "The p[i,j]'s\n============\n";  
   for (long delta=0; delta<bSize; delta++) {
     cout << "delta="<<delta<<endl;
     for (long j=0; j<bSize-delta; j++) {
       long i = j+delta;
-      DAGnode* node = md.findP(i,j);
+      DAGnode* node = findP(i,j);
       if (node==nullptr) continue;
       cout << node->nodeName()<<":{ lvl=";
       if (node->level==LONG_MAX) cout << "XX";
@@ -944,7 +966,7 @@ void printAddDAG(const AddDAG& md, bool printCT)
     cout << "delta="<<delta<<endl;
     for (long j=0; j<std::min(aSize, bSize-delta); j++) {
       long i = j+delta;
-      DAGnode* node = md.findQ(i,j);
+      DAGnode* node = findQ(i,j);
       if (node==nullptr) continue;
       cout << node->nodeName() <<":{ lvl=";
       if (node->level==LONG_MAX) cout << "XX";
