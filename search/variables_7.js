@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['lazy',['lazy',['../class_f_h_econtext.html#a2a0b10a6ab38dd4999662689f50ca2d1',1,'FHEcontext']]]
+  ['mvec',['mvec',['../class_recrypt_data.html#a5aace60d072c2447608f3e5d39dc8ddf',1,'RecryptData']]]
 ];

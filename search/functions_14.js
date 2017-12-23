@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['zmstargen',['ZmStarGen',['../class_p_algebra.html#a7b5e459b55b412fdf0591df8b8215ffd',1,'PAlgebra']]]
+  ['xorconstant',['xorConstant',['../class_ctxt.html#a56ccd1c961e37ea0810b9552984d66d5',1,'Ctxt']]]
 ];

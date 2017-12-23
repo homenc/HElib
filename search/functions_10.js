@@ -15,7 +15,7 @@ var searchData=
   ['setkeyswitchmap',['setKeySwitchMap',['../class_f_h_e_pub_key.html#a14c0e9cc2c31a0e6512d8b066e66a610',1,'FHEPubKey']]],
   ['setone',['setOne',['../class_s_k_handle.html#ae0cc4aad9de1edcac0fcb2a4fdc63202',1,'SKHandle']]],
   ['shamt',['shamt',['../class_general_benes_network.html#ad87b88b451555e5387052ea542750583',1,'GeneralBenesNetwork']]],
-  ['shift',['shift',['../class_encrypted_array_base.html#ae2c9ef29215e37e92eb6311060cfb93c',1,'EncryptedArrayBase::shift()'],['../class_encrypted_array_derived.html#ad4d2cc4fc6c9d4c456647876724a2356',1,'EncryptedArrayDerived::shift()'],['../class_plaintext_array_base.html#a1332194e00c55fd52a2c9ce9e51bf5db',1,'PlaintextArrayBase::shift()'],['../class_plaintext_array_derived.html#ae654d3f88865b114c50d7d46d3c1108a',1,'PlaintextArrayDerived::shift()'],['../class_plaintext_array.html#a02f90ec10a11ef3f08b6a634d00bb645',1,'PlaintextArray::shift()']]],
+  ['shift',['shift',['../class_encrypted_array_base.html#ae2c9ef29215e37e92eb6311060cfb93c',1,'EncryptedArrayBase::shift()'],['../class_encrypted_array_derived.html#ad4d2cc4fc6c9d4c456647876724a2356',1,'EncryptedArrayDerived::shift()']]],
   ['shift1d',['shift1D',['../class_encrypted_array_base.html#a18b293fe6c73c8e066f704716075f80d',1,'EncryptedArrayBase::shift1D()'],['../class_encrypted_array_derived.html#a5949a5618291f180e191859295bb12c8',1,'EncryptedArrayDerived::shift1D()'],['../class_hyper_cube.html#a089f4e9d48ef2f746e9a16ede057b70b',1,'HyperCube::shift1D()']]],
   ['size',['size',['../class_encrypted_array_base.html#a4e471b367cd63c94e8357b0c0d11c3c3',1,'EncryptedArrayBase']]],
   ['sizeofdimension',['sizeOfDimension',['../class_encrypted_array_base.html#a8e0e7c7e8aea964fcdb0578863dab3bc',1,'EncryptedArrayBase']]],

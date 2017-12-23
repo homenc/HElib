@@ -1,6 +1,5 @@
 var searchData=
 [
-  ['oldevalmap_2eh',['OldEvalMap.h',['../_old_eval_map_8h.html',1,'']]],
   ['operator_26',['operator&amp;',['../_index_set_8h.html#acedbd96e1d7736050c148d203d845c54',1,'IndexSet.cpp']]],
   ['operator_2f',['operator/',['../_index_set_8h.html#abb08647d74d01af112e1ccb01800de7b',1,'IndexSet.cpp']]],
   ['operator_3c',['operator&lt;',['../_index_set_8h.html#a348f567247eac257c67ba34619b2c731',1,'IndexSet.cpp']]],

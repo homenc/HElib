@@ -1,10 +1,22 @@
 var searchData=
 [
-  ['nativedimension',['nativeDimension',['../class_encrypted_array_base.html#acefe1ea064deee5d0ac418d4d2fbec80',1,'EncryptedArrayBase']]],
-  ['next',['next',['../class_index_set.html#afbea26242c2490dc6bdcd2484333e34f',1,'IndexSet']]],
-  ['nextexpvector',['nextExpVector',['../class_p_algebra.html#a78a0a480a762c5ea962edf92b6b49611',1,'PAlgebra']]],
-  ['numcols',['numCols',['../class_cube_signature.html#a8fe9b687f4d1f3e64e1d90d86eb19fd3',1,'CubeSignature::numCols()'],['../class_hyper_cube.html#a29f6b01ec78b80f486c9a4bd4694fc9e',1,'HyperCube::numCols()'],['../class_const_cube_slice.html#a29c5f65c7ad86e5adb4312d2dac0e960',1,'ConstCubeSlice::numCols()']]],
-  ['numofgens',['numOfGens',['../class_p_algebra.html#a21297b51dc6aceb03a3a1846259271f8',1,'PAlgebra']]],
-  ['numprimes',['numPrimes',['../class_f_h_econtext.html#af2c0668bb5a3553b14acd345c4e2a224',1,'FHEcontext']]],
-  ['numslices',['numSlices',['../class_cube_signature.html#a7f8a252b33ac49ef2b6bb86174139821',1,'CubeSignature::numSlices()'],['../class_hyper_cube.html#a6488a665f8f7d5e78d07d112ed09b8d7',1,'HyperCube::numSlices()'],['../class_const_cube_slice.html#ac75cfa4edf54ead2cd28970d13461dc9',1,'ConstCubeSlice::numSlices()']]]
+  ['makeirredpoly',['makeIrredPoly',['../_numb_th_8h.html#a5a97a87708a5be4df9307d13c9df9798',1,'NumbTh.cpp']]],
+  ['maptoslots',['mapToSlots',['../class_p_algebra_mod_derived.html#a9e11cf0dd11db8daa0da4be1fd97d1ac',1,'PAlgebraModDerived']]],
+  ['matmul',['matMul',['../matmul_8h.html#afaab78d1a612bc153cc8199a568f5717',1,'matmul.cpp']]],
+  ['matmul1d',['matMul1D',['../matmul_8h.html#a744c73fb0299ac834fb49188ef9c3621',1,'matmul1D.cpp']]],
+  ['matmul_5fsparse',['matMul_sparse',['../matmul_8h.html#a443667e5184093c7ebb060fe090a11e8',1,'matmul.cpp']]],
+  ['maximum_5fflow',['maximum_flow',['../matching_8h.html#aa852be1b5ea042ce6e8047e53ba2d6ce',1,'matching.cpp']]],
+  ['mcmod',['mcMod',['../_numb_th_8h.html#a752ff32e0774942d0411e0022d80277c',1,'NumbTh.cpp']]],
+  ['mobius',['mobius',['../_numb_th_8h.html#aed2212168d62459736eb33482aa03c4f',1,'NumbTh.cpp']]],
+  ['modcomp',['ModComp',['../_numb_th_8h.html#a353fb64d9105252fbde0ab147063a506',1,'NumbTh.cpp']]],
+  ['moddowntolevel',['modDownToLevel',['../class_ctxt.html#a7947baccd9d1422968f6f84cc789b482',1,'Ctxt']]],
+  ['moddowntoset',['modDownToSet',['../class_ctxt.html#a393fba128062930f79b364e60d6ada7a',1,'Ctxt']]],
+  ['modswitchaddednoisevar',['modSwitchAddedNoiseVar',['../class_ctxt.html#a5052c1d64bd87968415b6f89f7c8974b',1,'Ctxt']]],
+  ['moduptoset',['modUpToSet',['../class_ctxt.html#ae907f977841484be6fe83df0ae26b190',1,'Ctxt']]],
+  ['mul',['mul',['../class_s_k_handle.html#aedaccf4c19061bef92fbfca39d88079c',1,'SKHandle']]],
+  ['mulmod',['MulMod',['../_numb_th_8h.html#ac209d82c1cbb2c9a1c06994b912ca976',1,'NumbTh.cpp']]],
+  ['multbyconstant',['multByConstant',['../class_ctxt.html#a890a4e39554a3d38bc2fbc425d0954eb',1,'Ctxt']]],
+  ['multbyp',['multByP',['../class_ctxt.html#a3473cf0a620be6f7441592a01cd56f05',1,'Ctxt']]],
+  ['multord',['multOrd',['../_numb_th_8h.html#a7be07a4c8f732b42ba90dd1bbc115629',1,'NumbTh.cpp']]],
+  ['multtwonumbers',['multTwoNumbers',['../binary_arith_8h.html#a0683040eebf2892ccc9ba08f4bc155e4',1,'binaryArith-new.cpp']]]
 ];

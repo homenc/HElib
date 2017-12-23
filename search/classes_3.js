@@ -1,5 +1,6 @@
 var searchData=
 [
+  ['dagnode',['DAGnode',['../class_d_a_gnode.html',1,'']]],
   ['deep_5fclone',['deep_clone',['../classdeep__clone.html',1,'']]],
   ['doublecrt',['DoubleCRT',['../class_double_c_r_t.html',1,'']]],
   ['doublecrthelper',['DoubleCRTHelper',['../class_double_c_r_t_helper.html',1,'']]],

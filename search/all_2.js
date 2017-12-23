@@ -1,9 +1,9 @@
 var searchData=
 [
   ['card',['card',['../class_index_set.html#a923b3cd245cda8037afe77105be244ea',1,'IndexSet::card()'],['../_index_set_8h.html#a5b8ef05f26748fd2ca1cbb347666ba89',1,'card():&#160;IndexSet.cpp']]],
-  ['checkctxt',['CheckCtxt',['../_ctxt_8h.html#ab79dffaae6e556fb5432498e1b8db5e9',1,'Ctxt.bak.cpp']]],
+  ['checkctxt',['CheckCtxt',['../_ctxt_8h.html#ab79dffaae6e556fb5432498e1b8db5e9',1,'Ctxt.cpp']]],
   ['clear',['clear',['../class_index_set.html#a8a3d75a9cba3f1a50866691327aa7609',1,'IndexSet']]],
-  ['clone',['clone',['../class_alt_c_r_t_helper.html#a9109ca8075197682c70953b424d8c46a',1,'AltCRTHelper::clone()'],['../class_double_c_r_t_helper.html#af02514594c9206fa9e7e7986a1647218',1,'DoubleCRTHelper::clone()'],['../class_index_map_init.html#a73ea7d711b84b0ca1c63c5d6a48facd4',1,'IndexMapInit::clone()'],['../class_p_algebra_mod_derived.html#a45661df5e745972d7e091e798a838917',1,'PAlgebraModDerived::clone()']]],
+  ['clone',['clone',['../class_double_c_r_t_helper.html#af02514594c9206fa9e7e7986a1647218',1,'DoubleCRTHelper::clone()'],['../class_index_map_init.html#a73ea7d711b84b0ca1c63c5d6a48facd4',1,'IndexMapInit::clone()'],['../class_p_algebra_mod_derived.html#a45661df5e745972d7e091e798a838917',1,'PAlgebraModDerived::clone()']]],
   ['cloned_5fptr_2eh',['cloned_ptr.h',['../cloned__ptr_8h.html',1,'']]],
   ['cmodulus',['Cmodulus',['../class_cmodulus.html',1,'']]],
   ['cmodulus_2eh',['CModulus.h',['../_c_modulus_8h.html',1,'']]],
@@ -20,12 +20,13 @@ var searchData=
   ['crt_5fdecompose',['CRT_decompose',['../class_p_algebra_mod_derived.html#a01dd45346eb1bff8069378fc46e45c38',1,'PAlgebraModDerived']]],
   ['crt_5freconstruct',['CRT_reconstruct',['../class_p_algebra_mod_derived.html#ada5ed2c281a48cc323d11d614db16120',1,'PAlgebraModDerived']]],
   ['crtcoeff',['CRTcoeff',['../_numb_th_8h.html#a5f08d67e325d43d1c168d927fb54df81',1,'NumbTh.h']]],
+  ['ctptrs_2eh',['CtPtrs.h',['../_ct_ptrs_8h.html',1,'']]],
   ['ctxt',['Ctxt',['../class_ctxt.html',1,'']]],
   ['ctxt_2eh',['Ctxt.h',['../_ctxt_8h.html',1,'']]],
   ['ctxtpart',['CtxtPart',['../class_ctxt_part.html',1,'']]],
   ['ctxtprimes',['ctxtPrimes',['../class_f_h_econtext.html#a559afa0acfc5d1abeac7f1f207cf44e0',1,'FHEcontext']]],
   ['cube',['Cube',['../class_cube.html',1,'']]],
-  ['cubesignature',['CubeSignature',['../class_cube_signature.html',1,'CubeSignature'],['../class_cube_signature.html#a3c8f3d3dfd363167f5c6871a5040b8b3',1,'CubeSignature::CubeSignature()']]],
+  ['cubesignature',['CubeSignature',['../class_cube_signature.html',1,'']]],
   ['cubeslice',['CubeSlice',['../class_cube_slice.html',1,'']]],
   ['cyclotomic',['Cyclotomic',['../_numb_th_8h.html#af04b28c17f60ca3cc21f4bf7f5d3abdb',1,'NumbTh.cpp']]]
 ];

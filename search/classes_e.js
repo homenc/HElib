@@ -1,6 +1,6 @@
 var searchData=
 [
-  ['shallow_5fclone',['shallow_clone',['../classshallow__clone.html',1,'']]],
-  ['skhandle',['SKHandle',['../class_s_k_handle.html',1,'']]],
-  ['subdimension',['SubDimension',['../class_sub_dimension.html',1,'']]]
+  ['randomstate',['RandomState',['../class_random_state.html',1,'']]],
+  ['recryptdata',['RecryptData',['../class_recrypt_data.html',1,'']]],
+  ['replicatehandler',['ReplicateHandler',['../class_replicate_handler.html',1,'']]]
 ];

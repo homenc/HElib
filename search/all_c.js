@@ -1,6 +1,9 @@
 var searchData=
 [
   ['nativedimension',['nativeDimension',['../class_encrypted_array_base.html#acefe1ea064deee5d0ac418d4d2fbec80',1,'EncryptedArrayBase']]],
+  ['newplaintextarray',['NewPlaintextArray',['../class_new_plaintext_array.html',1,'']]],
+  ['newplaintextarraybase',['NewPlaintextArrayBase',['../class_new_plaintext_array_base.html',1,'']]],
+  ['newplaintextarrayderived',['NewPlaintextArrayDerived',['../class_new_plaintext_array_derived.html',1,'']]],
   ['next',['next',['../class_index_set.html#afbea26242c2490dc6bdcd2484333e34f',1,'IndexSet']]],
   ['nextexpvector',['nextExpVector',['../class_p_algebra.html#a78a0a480a762c5ea962edf92b6b49611',1,'PAlgebra']]],
   ['numbth_2eh',['NumbTh.h',['../_numb_th_8h.html',1,'']]],

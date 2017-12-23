@@ -1,16 +1,10 @@
 var searchData=
 [
-  ['operator_26',['operator&amp;',['../_index_set_8h.html#acedbd96e1d7736050c148d203d845c54',1,'IndexSet.cpp']]],
-  ['operator_2f',['operator/',['../_index_set_8h.html#abb08647d74d01af112e1ccb01800de7b',1,'IndexSet.cpp']]],
-  ['operator_3c',['operator&lt;',['../_index_set_8h.html#a348f567247eac257c67ba34619b2c731',1,'IndexSet.cpp']]],
-  ['operator_3c_3d',['operator&lt;=',['../_index_set_8h.html#a384993506b6a5bb18153e3dc6ad43dab',1,'IndexSet.cpp']]],
-  ['operator_3d',['operator=',['../class_hyper_cube.html#a08fbbb77d4579a0cbf298464ce0ded4f',1,'HyperCube']]],
-  ['operator_3d_3d',['operator==',['../class_hyper_cube.html#a0e4bdae3bb35fc33db167682426b7cd5',1,'HyperCube::operator==()'],['../_index_map_8h.html#ab827e73f45431e9890458b941aef69e2',1,'operator==():&#160;IndexMap.h']]],
-  ['operator_3e',['operator&gt;',['../_index_set_8h.html#a0fe0ccafc725f909004b42232d4622ef',1,'IndexSet.cpp']]],
-  ['operator_3e_3d',['operator&gt;=',['../_index_set_8h.html#a406c4d88ceb8f10a92987064f41ab296',1,'IndexSet.cpp']]],
-  ['operator_5b_5d',['operator[]',['../class_hyper_cube.html#a7c81c0d13ff23e75e5e241a05bfb7f08',1,'HyperCube::operator[](long i)'],['../class_hyper_cube.html#aacad22f301e3d5cf36484600694cfab0',1,'HyperCube::operator[](long i) const '],['../class_const_cube_slice.html#a88b3c7152e46de4f5028578ed14195d7',1,'ConstCubeSlice::operator[]()'],['../class_index_map.html#a2336298347c7e53c188aca216efebec4',1,'IndexMap::operator[]()']]],
-  ['operator_5e',['operator^',['../_index_set_8h.html#ae97bb5abcc7a5701ac021f3e0cbd917a',1,'IndexSet.cpp']]],
-  ['operator_7c',['operator|',['../_index_set_8h.html#a95fdd977f3a818a9d0e811339934bafa',1,'IndexSet.cpp']]],
-  ['ord',['ord',['../_numb_th_8h.html#a6779694666a828e7508e5ad5d6111d25',1,'NumbTh.cpp']]],
-  ['orderof',['OrderOf',['../class_p_algebra.html#af12e29261ea583272b93db2e5d040d67',1,'PAlgebra']]]
+  ['nativedimension',['nativeDimension',['../class_encrypted_array_base.html#acefe1ea064deee5d0ac418d4d2fbec80',1,'EncryptedArrayBase']]],
+  ['next',['next',['../class_index_set.html#afbea26242c2490dc6bdcd2484333e34f',1,'IndexSet']]],
+  ['nextexpvector',['nextExpVector',['../class_p_algebra.html#a78a0a480a762c5ea962edf92b6b49611',1,'PAlgebra']]],
+  ['numcols',['numCols',['../class_cube_signature.html#a8fe9b687f4d1f3e64e1d90d86eb19fd3',1,'CubeSignature::numCols()'],['../class_hyper_cube.html#a29f6b01ec78b80f486c9a4bd4694fc9e',1,'HyperCube::numCols()'],['../class_const_cube_slice.html#a29c5f65c7ad86e5adb4312d2dac0e960',1,'ConstCubeSlice::numCols()']]],
+  ['numofgens',['numOfGens',['../class_p_algebra.html#a21297b51dc6aceb03a3a1846259271f8',1,'PAlgebra']]],
+  ['numprimes',['numPrimes',['../class_f_h_econtext.html#af2c0668bb5a3553b14acd345c4e2a224',1,'FHEcontext']]],
+  ['numslices',['numSlices',['../class_cube_signature.html#a7f8a252b33ac49ef2b6bb86174139821',1,'CubeSignature::numSlices()'],['../class_hyper_cube.html#a6488a665f8f7d5e78d07d112ed09b8d7',1,'HyperCube::numSlices()'],['../class_const_cube_slice.html#ac75cfa4edf54ead2cd28970d13461dc9',1,'ConstCubeSlice::numSlices()']]]
 ];

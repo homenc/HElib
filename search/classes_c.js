@@ -1,19 +1,6 @@
 var searchData=
 [
-  ['palgebra',['PAlgebra',['../class_p_algebra.html',1,'']]],
-  ['palgebramod',['PAlgebraMod',['../class_p_algebra_mod.html',1,'']]],
-  ['palgebramodbase',['PAlgebraModBase',['../class_p_algebra_mod_base.html',1,'']]],
-  ['palgebramodderived',['PAlgebraModDerived',['../class_p_algebra_mod_derived.html',1,'']]],
-  ['permnetlayer',['PermNetLayer',['../class_perm_net_layer.html',1,'']]],
-  ['permnetwork',['PermNetwork',['../class_perm_network.html',1,'']]],
-  ['plaintextarray',['PlaintextArray',['../class_plaintext_array.html',1,'']]],
-  ['plaintextarraybase',['PlaintextArrayBase',['../class_plaintext_array_base.html',1,'']]],
-  ['plaintextarrayderived',['PlaintextArrayDerived',['../class_plaintext_array_derived.html',1,'']]],
-  ['plaintextblockmatrixbaseinterface',['PlaintextBlockMatrixBaseInterface',['../class_plaintext_block_matrix_base_interface.html',1,'']]],
-  ['plaintextblockmatrixinterface',['PlaintextBlockMatrixInterface',['../class_plaintext_block_matrix_interface.html',1,'']]],
-  ['plaintextmatrixbaseinterface',['PlaintextMatrixBaseInterface',['../class_plaintext_matrix_base_interface.html',1,'']]],
-  ['plaintextmatrixinterface',['PlaintextMatrixInterface',['../class_plaintext_matrix_interface.html',1,'']]],
-  ['powerfulconversion',['PowerfulConversion',['../class_powerful_conversion.html',1,'']]],
-  ['powerfuldcrt',['PowerfulDCRT',['../class_powerful_d_c_r_t.html',1,'']]],
-  ['powerfultranslationindexes',['PowerfulTranslationIndexes',['../class_powerful_translation_indexes.html',1,'']]]
+  ['newplaintextarray',['NewPlaintextArray',['../class_new_plaintext_array.html',1,'']]],
+  ['newplaintextarraybase',['NewPlaintextArrayBase',['../class_new_plaintext_array_base.html',1,'']]],
+  ['newplaintextarrayderived',['NewPlaintextArrayDerived',['../class_new_plaintext_array_derived.html',1,'']]]
 ];

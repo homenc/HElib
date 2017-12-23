@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['unpackslotencoding',['unpackSlotEncoding',['../class_recrypt_data.html#abc7e16e8e412a9d6db7818b2cb1bbb55',1,'RecryptData']]]
+  ['verify',['verify',['../class_key_switch.html#af5e6b4dc00b5536e92d4e3b29ab774fc',1,'KeySwitch']]]
 ];

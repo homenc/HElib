@@ -7,14 +7,17 @@ var searchData=
   ['fhepubkey',['FHEPubKey',['../class_f_h_e_pub_key.html',1,'']]],
   ['fheseckey',['FHESecKey',['../class_f_h_e_sec_key.html',1,'']]],
   ['fhetimer',['FHEtimer',['../class_f_h_etimer.html',1,'']]],
+  ['fifteenorless4four',['fifteenOrLess4Four',['../binary_arith_8h.html#ad2979d8648492e454d5c9b6a01bbe02b',1,'binaryArith-new.cpp']]],
   ['findbaselevel',['findBaseLevel',['../class_ctxt.html#af792bd8b080b5509022ad450bda6352b',1,'Ctxt']]],
   ['findbaseset',['findBaseSet',['../class_ctxt.html#ac46a7515d8135de739ab8f2b9f793054',1,'Ctxt']]],
   ['findgenerators',['findGenerators',['../_numb_th_8h.html#a04853489e3f8f2edbc70a41653cdf48a',1,'NumbTh.cpp']]],
   ['findm',['FindM',['../_f_h_e_context_8h.html#a5b44822a09a2985ae116dd8053386818',1,'FHEContext.cpp']]],
+  ['findp',['findP',['../class_add_d_a_g.html#a368e7b7eec80c228df7158d5aaf1cae7',1,'AddDAG::findP(long i, long j) const '],['../class_add_d_a_g.html#a368e7b7eec80c228df7158d5aaf1cae7',1,'AddDAG::findP(long i, long j) const ']]],
   ['findprimitiveroot',['FindPrimitiveRoot',['../_numb_th_8h.html#abca78470fdeb0ecc102e15bc05a1693b',1,'NumbTh.cpp']]],
+  ['findq',['findQ',['../class_add_d_a_g.html#a5640d628a1469e36cbb4aeb96c9ed7fa',1,'AddDAG::findQ(long i, long j) const '],['../class_add_d_a_g.html#a5640d628a1469e36cbb4aeb96c9ed7fa',1,'AddDAG::findQ(long i, long j) const ']]],
   ['first',['first',['../class_index_set.html#aced27318ae95e1ce31a33b1bb9f3a806',1,'IndexSet']]],
   ['firstmap',['firstMap',['../class_recrypt_data.html#a880435dd4dccb05b498e2a648bb0b75e',1,'RecryptData']]],
   ['flowedge',['FlowEdge',['../class_flow_edge.html',1,'']]],
-  ['frobeniusautomorph',['frobeniusAutomorph',['../class_ctxt.html#a6edeacc5375a2660558628b288127dcd',1,'Ctxt::frobeniusAutomorph()'],['../class_plaintext_array_base.html#a511867a202874c3eb34db88769c9e4e8',1,'PlaintextArrayBase::frobeniusAutomorph(long j)=0'],['../class_plaintext_array_base.html#a115b35eddd06d1811395182119291458',1,'PlaintextArrayBase::frobeniusAutomorph(const Vec&lt; long &gt; &amp;vec)=0'],['../class_plaintext_array_derived.html#a58d260e1297524e570664e62433a51aa',1,'PlaintextArrayDerived::frobeniusAutomorph(long j)'],['../class_plaintext_array_derived.html#a55110f8d822f49b2cf370623a56c9903',1,'PlaintextArrayDerived::frobeniusAutomorph(const Vec&lt; long &gt; &amp;vec)']]],
+  ['frobeniusautomorph',['frobeniusAutomorph',['../class_ctxt.html#a6edeacc5375a2660558628b288127dcd',1,'Ctxt']]],
   ['fullbinarytree',['FullBinaryTree',['../class_full_binary_tree.html',1,'']]]
 ];
