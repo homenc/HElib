@@ -22,6 +22,7 @@
 // buildUnpackSlotEncoding_pa_impl prepares the constants for the linear
 // transformation, and unpack_pa_impl uses them to do the actual uppacking.
 
+//! \cond FALSE (make doxygen ignore this code)
 template<class type>
 class buildUnpackSlotEncoding_pa_impl {
 public:
@@ -103,6 +104,8 @@ public:
     } // NOTE: why aren't we using multi-threading here?
   }
 };
+//! \endcond
+
 // A wrapper function, calls the apply method of the class above
 void unpack(const CtPtrs& unpacked, const Ctxt& packed, 
             const EncryptedArray& ea,
@@ -138,6 +141,7 @@ long unpack(const CtPtrs& unpacked, const CtPtrs& packed,
 
 // An implementation classes for (re)packing.
 
+//! \cond FALSE (make doxygen ignore this code)
 template<class type>
 class repack_pa_impl {
 public:
@@ -166,6 +170,8 @@ public:
     }
   }
 };
+//! \endcond
+
 // A wrapper function, calls the apply method of the class above
 void repack(Ctxt& packed, const CtPtrs& unpacked, const EncryptedArray& ea)
 {
@@ -191,6 +197,7 @@ long repack(const CtPtrs& packed, const CtPtrs& unpacked, const EncryptedArray& 
 }
 
 
+//! \cond FALSE (make doxygen ignore this code)
 template<class type>
 class packConstant_pa_impl {
 
@@ -250,6 +257,7 @@ public:
     ea.encode(result, vec);
   }
 };
+//! \endcond
 
 // this packs the low-order nbits of data into each slot,
 // where the bits get mapped to coefficients on the normal basis
@@ -268,7 +276,7 @@ void packConstants(zzX& result, const std::vector<unsigned long>& data,
   ea.dispatch<packConstant_pa_impl>(data, nbits, Fwd(result));
 }
 
-
+//! \cond FALSE (make doxygen ignore this code)
 template<class type>
 class unpackSlots_pa_impl {
 public:
@@ -293,6 +301,7 @@ public:
     }
   }
 };
+//! \endcond
 
 
 // Sets value to be a vector of size nslots.

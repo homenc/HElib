@@ -11,11 +11,14 @@
  */
 #ifndef _PTRMATRIX_H
 #define _PTRMATRIX_H
-/** PtrMatrix.h: convenience class templates providing a unified
- * interface for a matrix of objects, returning pointers to these objects.
- */
+/**
+ * @file PtrMatrix.h
+ * @brief Convenience class templates providing a unified interface
+ *    for a matrix of objects, returning pointers to these objects.
+ **/
 #include "PtrVector.h"
 
+//! @brief An abstract class for an array of PtrVectors
 template<typename T>
 struct PtrMatrix {
   virtual PtrVector<T>& operator[](long) =0;             // returns a row
@@ -66,7 +69,7 @@ const T* ptr2nonNull(std::initializer_list<const PtrVector<T>*> list)
 /* Implementation details: applications should not care about them */
 /*******************************************************************/
 
-// An implementation using Vec< Vec<T> >
+//! @brief An implementation of PtrMatrix using Vec< Vec<T> >
 template<typename T>
 struct PtrMatrix_Vec : PtrMatrix<T> {
   NTL::Vec< NTL::Vec<T> >& buffer;
@@ -102,7 +105,7 @@ struct PtrMatrix_Vec : PtrMatrix<T> {
   }
 };
 
-// An implementation using Vec< Vec<T>* >
+//! @brief An implementation of PtrMatrix using Vec< Vec<T>* >
 template<typename T>
 struct PtrMatrix_ptVec : PtrMatrix<T> {
   NTL::Vec< NTL::Vec<T>* >& buffer;
@@ -125,7 +128,7 @@ struct PtrMatrix_ptVec : PtrMatrix<T> {
   { throw(std::logic_error("Cannot resize PtrMatrix_ptVec")); }
 };
 
-// An implementation using vector<vector<T>>
+//! @brief An implementation of PtrMatrix using vector< vector<T> >
 template<typename T>
 struct PtrMatrix_vector : PtrMatrix<T> {
   std::vector< std::vector<T> >& buffer;
@@ -160,7 +163,7 @@ struct PtrMatrix_vector : PtrMatrix<T> {
   }
 };
 
-// An implementation using vector<vector<T>*>
+//! @brief An implementation of PtrMatrix using vector< vector<T>* >
 template<typename T>
 struct PtrMatrix_ptvector : PtrMatrix<T> {
   std::vector< std::vector<T>* >& buffer;

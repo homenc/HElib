@@ -9,9 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-// intraSlot.h - Packing/unpacking of mod-p integers in GF(p^d) slots.
 #ifndef _INTRASLOT_H_
 #define _INTRASLOT_H_
+//! @file intraSlot.h
+//! @brief Packing/unpacking of mod-p integers in GF(p^d) slots.
 
 #include <NTL/BasicThreadPool.h>
 

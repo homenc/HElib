@@ -1,5 +1,3 @@
-#ifndef _DEBUGGING_H_
-#define _DEBUGGING_H_
 /* Copyright (C) 2012-2017 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
@@ -11,7 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-// debugging.h - debugging utilities
+#ifndef _DEBUGGING_H_
+#define _DEBUGGING_H_
+//! @file debugging.h
+//! @brief debugging utilities
 #include <iostream>
 #include <NTL/ZZ.h>
 #include "FHE.h"

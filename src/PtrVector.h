@@ -11,14 +11,17 @@
  */
 #ifndef _PTRVECTOR_H
 #define _PTRVECTOR_H
-/** PtrVector.h: convenience class templates providing a unified
- * interface for a collection of objects, returning pointers to these objects.
- */
+/**
+ * @file PtrVector.h
+ * @brief Convenience class templates providing a unified interface
+ *    for a collection of objects, returning pointers to these objects.
+ **/
 #include <stdexcept>
 #include <climits>
 #include <vector>
 #include <NTL/vector.h>
 
+//! @brief Abstract class for an array of objects
 template<typename T>
 struct PtrVector {
   virtual T* operator[](long) const =0;
@@ -135,7 +138,7 @@ void vecCopy(PtrVector<T>& v1, const PtrVector<T>& v2, long sizeLimit=0)
 /* Implementation details: applications should not care about them */
 /*******************************************************************/
 
-// An implementation using Vec<T*>
+//! @brief An implementation of PtrVector using Vec<T*>
 template<typename T>
 struct PtrVector_VecPt : PtrVector<T> {
   NTL::Vec<T*>& v;
@@ -147,7 +150,7 @@ struct PtrVector_VecPt : PtrVector<T> {
   { v.SetLength(newSize, nullptr); }
 };
 
-// An implementation using vector<T*>
+//! @brief An implementation of PtrVector using vector<T*>
 template<typename T>
 struct PtrVector_vectorPt : PtrVector<T> {
   std::vector<T*>& v;
@@ -159,7 +162,7 @@ struct PtrVector_vectorPt : PtrVector<T> {
   { v.resize(newSize, nullptr); }
 };
 
-// An implementation using Vec<T>
+//! @brief An implementation of PtrVector using Vec<T>
 template<typename T>
 struct PtrVector_VecT : PtrVector<T> {
   NTL::Vec<T>& v;
@@ -189,7 +192,7 @@ struct PtrVector_VecT : PtrVector<T> {
   { return ((v.length()>0)? &(v[0]) : nullptr); }
 };
 
-// An implementation using vector<T>
+//! @brief An implementation of PtrVector using vector<T>
 template<typename T>
 struct PtrVector_vectorT : PtrVector<T> {
   std::vector<T>& v;
@@ -216,7 +219,7 @@ struct PtrVector_vectorT : PtrVector<T> {
   }
 };
 
-// Implementing a slice of a vector
+//! @brief An implementation of PtrVector as a slice of another PtrVector
 template<typename T>
 struct PtrVector_slice : PtrVector<T> {
   const PtrVector<T>& orig;
@@ -245,7 +248,7 @@ struct PtrVector_slice : PtrVector<T> {
   const T* ptr2nonNull() const override { return orig.ptr2nonNull(); }
 };
 
-// An implementation using a single T*
+//! @brief An implementation of PtrVector from a single T object
 template<typename T>
 struct PtrVector_Singleton : PtrVector<T> {
   const T* v;

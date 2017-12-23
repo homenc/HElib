@@ -11,9 +11,10 @@
  */
 #ifndef _BINARY_ARITH_H_
 #define _BINARY_ARITH_H_
-/* binaryArith.h
- * Implementing integer addition and multiplication in binary representation.
- */
+/**
+ * @file binaryArith.h
+ * @brief Implementing integer addition and multiplication in binary representation.
+ **/
 #include "EncryptedArray.h"
 #include "CtPtrs.h" //  defines CtPtrs, CtPtrMat
 
