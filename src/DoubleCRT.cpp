@@ -925,15 +925,15 @@ std::ostream& operator<< (std::ostream &str, const DoubleCRT &d)
   d.toPoly(poly, true);
   const FHEcontext &context = d.context;
   double bits = context.logOfProduct(set);
-  long bytes = long(bits) >> 2;
+  bits /= std::log(2.);
+  long bytes = long(bits) >> 3;
   long phim = context.zMStar.getPhiM();
-  unsigned char *buff = new unsigned char[bytes];
+  std::vector<uint8_t> buff(bytes);
   for (long i = 0; i < phim; i++) {
       const NTL::ZZ &e = NTL::coeff(poly, i);
-      BytesFromZZ(buff, e, bytes);
-      str.write(reinterpret_cast<char *>(buff), bytes);
+      BytesFromZZ(buff.data(), e, bytes);
+      str.write(reinterpret_cast<char *>(buff.data()), bytes);
   }
-  delete []buff;
   return str;
 }
 
@@ -952,15 +952,15 @@ std::istream& operator>> (std::istream &str, DoubleCRT &d)
   NTL::ZZX poly;
   poly.SetLength(phim + 1);
   double bits = context.logOfProduct(set);
-  long bytes = long(bits) >> 2;
-  unsigned char *buff = new unsigned char[bytes];
+  bits /= std::log(2.0);
+  long bytes = long(bits) >> 3;
+  std::vector<uint8_t> buff(bytes);
   NTL::ZZ e;
   for (long i = 0; i < phim; i++) {
-      str.read(reinterpret_cast<char *>(buff), bytes);
-      NTL::ZZFromBytes(e, buff, bytes);
+      str.read(reinterpret_cast<char *>(buff.data()), bytes);
+      NTL::ZZFromBytes(e, buff.data(), bytes);
       NTL::SetCoeff(poly, i, e);
   }
   d = poly;
-  delete []buff;
   return str;
 }
