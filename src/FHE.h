@@ -406,10 +406,17 @@ void addSome1DMatrices(FHESecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long ke
 inline void add1DMatrices(FHESecKey& sKey, long keyID=0)
 { addSome1DMatrices(sKey, LONG_MAX, keyID); }
 
+inline void addBSGS1DMatrices(FHESecKey& sKey, long keyID=0)
+{ addSome1DMatrices(sKey, 0, keyID); }
+
 //! Generate all/some Frobenius matrices of the form s(X^{p^i})->s(X)
 void addSomeFrbMatrices(FHESecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
+
 inline void addFrbMatrices(FHESecKey& sKey, long keyID=0)
 { addSomeFrbMatrices(sKey, LONG_MAX, keyID); }
+
+inline void addBSGSFrbMatrices(FHESecKey& sKey, long keyID=0)
+{ addSomeFrbMatrices(sKey, 0, keyID); }
 
 
 //! These routines just add a single matrix (or two, for bad dimensions)

@@ -679,7 +679,11 @@ void DoTest(const Matrix& mat, const EncryptedArray& ea,
 }
 
 
-int fhe_test_force_minimal = 0;
+int ks_strategy = 0;
+// 0 == default
+// 1 == full
+// 2 == BSGS
+// 3 == minimal
 
 
 void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
@@ -693,17 +697,29 @@ void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
-  bool minimal = fhe_test_force_minimal > 0;
+  bool minimal = ks_strategy == 3;
 
-
-  if (minimal) {
+  switch (ks_strategy) {
+  case 0: 
+    addSome1DMatrices(secretKey);
+    addSomeFrbMatrices(secretKey);
+    break;
+  case 1: 
+    add1DMatrices(secretKey);
+    addFrbMatrices(secretKey);
+    break;
+  case 2: 
+    addBSGS1DMatrices(secretKey);
+    addBSGSFrbMatrices(secretKey);
+    break;
+  case 3: 
     addMinimal1DMatrices(secretKey);
     addMinimalFrbMatrices(secretKey);
-  }
-  else {
-    addSome1DMatrices(secretKey);
-    addSomeFrbMatrices(secretKey); 
-  }
+    break;
+
+   default:
+     Error("bad ks_strategy");
+   }
 
   // encrypted array with "full slots"
 #if 1
@@ -758,14 +774,14 @@ int main(int argc, char *argv[])
            "1 to force on, -1 to force off"); 
   amap.arg("force_hoist", fhe_test_force_hoist, 
            "-1 to force off"); 
-  amap.arg("force_minimal", fhe_test_force_minimal, 
-           "1 to force on"); 
+  amap.arg("ks_strategy", ks_strategy,
+           "0: default, 1:full, 2:bsgs, 3:minimal"); 
 
   long full = 0; 
-  amap.arg("full", full, "0: 1D, 1: block");
+  amap.arg("full", full, "0: 1D, 1: full");
 
   long block = 0; 
-  amap.arg("block", block, "0: 1D, 1: block");
+  amap.arg("block", block, "0: normal, 1: block");
 
   NTL::Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", NULL);
@@ -788,7 +804,7 @@ int main(int argc, char *argv[])
        << ", block=" << block
        << ", force_bsgs=" << fhe_test_force_bsgs
        << ", force_hoist=" << fhe_test_force_hoist
-       << ", force_minimal=" << fhe_test_force_minimal
+       << ", ks_strategy=" << ks_strategy
        << endl;
 
   vector<long> gens1, ords1;
