@@ -644,10 +644,10 @@ static BlockMatMulFull* buildRandomFullBlockMatrix(EncryptedArray& ea)
 
 template<class Matrix>
 void DoTest(const Matrix& mat, const EncryptedArray& ea, 
-            const FHESecKey& secretKey)
+            const FHESecKey& secretKey, bool minimal)
 {
   resetAllTimers();
-  typename Matrix::ExecType mat_exec(mat, secretKey);
+  typename Matrix::ExecType mat_exec(mat, minimal);
   mat_exec.upgrade();
   printAllTimers();
 
@@ -693,8 +693,10 @@ void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
+  bool minimal = fhe_test_force_minimal > 0;
 
-  if (fhe_test_force_minimal > 0) {
+
+  if (minimal) {
     addMinimal1DMatrices(secretKey);
     addMinimalFrbMatrices(secretKey);
   }
@@ -715,19 +717,19 @@ void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
 
   if (full == 0 && block == 0) {
     std::unique_ptr< MatMul1D > ptr(buildRandomMatrix_new(ea,dim));
-    DoTest(*ptr, ea, secretKey);
+    DoTest(*ptr, ea, secretKey, minimal);
   }
   else if (full == 0 && block == 1) {
     std::unique_ptr< BlockMatMul1D > ptr(buildRandomBlockMatrix_new(ea,dim));
-    DoTest(*ptr, ea, secretKey);
+    DoTest(*ptr, ea, secretKey, minimal);
   }
   else if (full == 1 && block == 0) {
     std::unique_ptr< MatMulFull > ptr(buildRandomFullMatrix(ea));
-    DoTest(*ptr, ea, secretKey);
+    DoTest(*ptr, ea, secretKey, minimal);
   }
   else if (full == 1 && block == 1) {
     std::unique_ptr< BlockMatMulFull > ptr(buildRandomFullBlockMatrix(ea));
-    DoTest(*ptr, ea, secretKey);
+    DoTest(*ptr, ea, secretKey, minimal);
   }
 
 }

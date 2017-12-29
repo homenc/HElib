@@ -177,7 +177,7 @@ public:
 
 
   explicit
-  MatMul1DExec(const MatMul1D& mat, const FHEPubKey& pkey);
+  MatMul1DExec(const MatMul1D& mat, bool minimal=false);
 
   void mul(Ctxt& ctxt) const override;
 
@@ -207,7 +207,7 @@ public:
 
 
   explicit
-  BlockMatMul1DExec(const BlockMatMul1D& mat, const FHEPubKey& pkey);
+  BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal=false);
 
   void mul(Ctxt& ctxt) const override;
 
@@ -225,11 +225,12 @@ class MatMulFullExec : public MatMulExecBase {
 public:
 
   const EncryptedArray& ea;
+  bool minimal;
   std::vector<long> dims;
   std::vector<MatMul1DExec> transforms;
 
   explicit
-  MatMulFullExec(const MatMulFull& mat, const FHEPubKey& pkey);
+  MatMulFullExec(const MatMulFull& mat, bool minimal=false);
 
   void mul(Ctxt& ctxt) const override;
 
@@ -249,11 +250,12 @@ class BlockMatMulFullExec : public MatMulExecBase {
 public:
 
   const EncryptedArray& ea;
+  bool minimal;
   std::vector<long> dims;
   std::vector<BlockMatMul1DExec> transforms;
 
   explicit
-  BlockMatMulFullExec(const BlockMatMulFull& mat, const FHEPubKey& pkey);
+  BlockMatMulFullExec(const BlockMatMulFull& mat, bool minimal=false);
 
   void mul(Ctxt& ctxt) const override;
 

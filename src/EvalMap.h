@@ -58,7 +58,7 @@ private:
   NTL::Vec<std::unique_ptr<MatMul1DExec>>  matvec; // regular matrices
 
 public:
-  EvalMap(const EncryptedArray& _ea, const FHEPubKey& pkey, 
+  EvalMap(const EncryptedArray& _ea, bool minimal, 
           const Vec<long>& mvec, bool _invert,
           bool build_cache,
           bool normal_basis = true);
