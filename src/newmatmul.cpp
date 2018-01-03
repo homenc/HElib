@@ -545,6 +545,8 @@ void MatMul1D_derived<PA_zz_p>::processDiagonal(RX& poly, long i,
         const EncryptedArrayDerived<PA_zz_p>& ea) const;
 
 
+#define ALT_MATMUL (1)
+
 template<class type>
 struct MatMul1DExec_construct {
   PA_INJECT(type)
@@ -625,7 +627,14 @@ struct MatMul1DExec_construct {
         // poly2 = poly w/ last D-i slots zeroed out
 
         vec[i] = build_ConstMultiplier(poly1, dim, -g*k, ea);
+
+#if (ALT_MATMUL)
+        long DD = D;
+        if (g) DD = 0;
+        vec1[i] = build_ConstMultiplier(poly2, dim, DD-g*k, ea);
+#else
         vec1[i] = build_ConstMultiplier(poly2, dim, D-g*k, ea);
+#endif
       }
     }
   }
@@ -796,6 +805,55 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 	    ctxt += acc[i];
       }
       else {
+
+
+#if (ALT_MATMUL)
+
+	 long nintervals = divc(D, g);
+	 vector<shared_ptr<Ctxt>> baby_steps(g);
+	 vector<shared_ptr<Ctxt>> baby_steps1(g);
+
+	 GenBabySteps(baby_steps, ctxt, dim, false);
+
+         Ctxt ctxt1(ctxt);
+         ctxt1.smartAutomorph(zMStar.genToPow(dim, -D));
+	 GenBabySteps(baby_steps1, ctxt1, dim, false);
+
+	 PartitionInfo pinfo(nintervals);
+	 long cnt = pinfo.NumIntervals();
+
+	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+
+	 // parallel for loop: k in [0..nintervals)
+	 NTL_EXEC_INDEX(cnt, index)
+
+	    long first, last;
+	    pinfo.interval(first, last, index);
+
+	    for (long k: range(first, last)) {
+	       Ctxt acc_inner(ZeroCtxtLike, ctxt);
+
+	       for (long j: range(g)) {
+		  long i = j + g*k;
+		  if (i >= D) break;
+                  MulAdd(acc_inner, cache.multiplier[i], *baby_steps[j]);
+                  MulAdd(acc_inner, cache1.multiplier[i], *baby_steps1[j]);
+	       }
+
+	       if (k > 0) {
+		  acc_inner.smartAutomorph(zMStar.genToPow(dim, g*k));
+	       }
+
+	       acc[index] += acc_inner;
+	    }
+
+	 NTL_EXEC_INDEX_END
+
+	 for (long i: range(1, cnt)) acc[0] += acc[i];
+	 ctxt = acc[0];
+
+#else
+
 	 long nintervals = divc(D, g);
 	 vector<shared_ptr<Ctxt>> baby_steps(g);
 	 GenBabySteps(baby_steps, ctxt, dim, true);
@@ -840,6 +898,14 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 	 acc1[0].smartAutomorph(zMStar.genToPow(dim, -D));
 	 acc[0] += acc1[0];
 	 ctxt = acc[0];
+
+#endif
+
+
+
+
+
+
       }
    }
    else if (!minimal) {
@@ -1142,6 +1208,9 @@ struct BlockMatMul1DExec_construct {
   // strategy == -1 : factor \rho
   // strategy ==  0 : no factoring (used to implemengt minimal KS strategy)
 
+#define ALT_MATMUL_BLOCK (0)
+// not fully implemented, and not as effective
+// across a wider range of parameters as the non-block ALT strategy
    
 
   static
@@ -1203,7 +1272,12 @@ struct BlockMatMul1DExec_construct {
               vec[i*d+j] = build_ConstMultiplier(poly1);
 
               sub(poly1, poly[j], poly1); // poly[j] w/ last D-i slots zeroed out
+#if (ALT_MATMUL_BLOCK)
+              vec1[i*d+j] = build_ConstMultiplier(poly1);
+#else
               vec1[i*d+j] = build_ConstMultiplier(poly1, dim, D, ea);
+#endif
+
             }
           }
         }
@@ -1247,7 +1321,11 @@ struct BlockMatMul1DExec_construct {
               sub(poly2, poly[j], poly1);      // poly[j] w/ last D-i slots zeroed out
 
               vec[i+j*D] = build_ConstMultiplier(poly1, dim, -i, ea);
+#if (ALT_MATMUL_BLOCK)
+              vec1[i+j*D] = build_ConstMultiplier(poly2, dim, -i, ea);
+#else
               vec1[i+j*D] = build_ConstMultiplier(poly2, dim, D-i, ea);
+#endif
             }
           }
         }
@@ -1484,6 +1562,41 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
    }
    else {
 
+#if (ALT_MATMUL_BLOCK)
+      vector<Ctxt> acc(d1, Ctxt(ZeroCtxtLike, ctxt));
+
+      shared_ptr<GeneralAutomorphPrecon> precon =
+	       buildGeneralAutomorphPrecon(ctxt, dim0);
+
+      Ctxt ctxt1(ctxt);
+      ctxt1.smartAutomorph(zMStar.genToPow(dim, -D));
+
+      shared_ptr<GeneralAutomorphPrecon> precon1 =
+	       buildGeneralAutomorphPrecon(ctxt1, dim0);
+
+
+#if 1
+      // original code
+
+
+      for (long i: range(d0)) {
+	 shared_ptr<Ctxt> tmp = precon->automorph(i);
+         for (long j: range(d1)) MulAdd(acc[j], cache.multiplier[i*d1+j], *tmp);
+	 shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
+         for (long j: range(d1)) MulAdd(acc[j], cache1.multiplier[i*d1+j], *tmp1);
+      }
+
+      Ctxt sum(ZeroCtxtLike, ctxt);
+      for (long j: range(d1)) {
+	 if (j > 0) {
+            acc[j].smartAutomorph(zMStar.genToPow(dim1, j));
+         }
+	 sum += acc[j];
+      }
+
+      ctxt = sum;
+#endif
+#else
       vector<Ctxt> acc(d1, Ctxt(ZeroCtxtLike, ctxt));
       vector<Ctxt> acc1(d1, Ctxt(ZeroCtxtLike, ctxt));
 
@@ -1576,6 +1689,8 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
       sum1[0].smartAutomorph(zMStar.genToPow(dim, -D));
       ctxt = sum[0];
       ctxt += sum1[0];
+
+#endif
    }
 }
 

@@ -20,6 +20,12 @@
 
 
 
+#if (defined(__unix__) || defined(__unix) || defined(unix))
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
+
 
 template<class type> class RandomMatrix_new : public  MatMul1D_derived<type> {
 public:
@@ -824,4 +830,10 @@ int main(int argc, char *argv[])
     printAllTimers();
     cout << endl;
   }
+
+#if (defined(__unix__) || defined(__unix) || defined(unix))
+    struct rusage rusage;
+    getrusage( RUSAGE_SELF, &rusage );
+    if (verbose) cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+#endif
 }

@@ -593,6 +593,8 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
     typename Lazy< Mat<RE> >::Builder builder(linPolyMatrix);
     if (!builder()) break;
 
+    FHE_NTIMER_START(buildLinPolyCoeffs_invert);
+
    
     long p = tab.getZMStar().getP();
     long r = tab.getR();
