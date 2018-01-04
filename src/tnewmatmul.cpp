@@ -671,6 +671,11 @@ void DoTest(const Matrix& mat, const EncryptedArray& ea,
   mat_exec.mul(ctxt);
 
   printAllTimers();
+#if (defined(__unix__) || defined(__unix) || defined(unix))
+    struct rusage rusage;
+    getrusage( RUSAGE_SELF, &rusage );
+    cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+#endif
 
 
   mul(v, mat);     // multiply the plaintext vector
@@ -705,6 +710,8 @@ void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
 
   bool minimal = ks_strategy == 3;
 
+  // we call addSomeFrbMatrices for all strategies except minimal
+
   switch (ks_strategy) {
   case 0: 
     addSome1DMatrices(secretKey);
@@ -712,11 +719,11 @@ void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
     break;
   case 1: 
     add1DMatrices(secretKey);
-    addFrbMatrices(secretKey);
+    addSomeFrbMatrices(secretKey);
     break;
   case 2: 
     addBSGS1DMatrices(secretKey);
-    addBSGSFrbMatrices(secretKey);
+    addSomeFrbMatrices(secretKey);
     break;
   case 3: 
     addMinimal1DMatrices(secretKey);
@@ -831,9 +838,4 @@ int main(int argc, char *argv[])
     cout << endl;
   }
 
-#if (defined(__unix__) || defined(__unix) || defined(unix))
-    struct rusage rusage;
-    getrusage( RUSAGE_SELF, &rusage );
-    if (verbose) cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
-#endif
 }
