@@ -383,6 +383,11 @@ public:
 //! strategy is used
 #define FHE_KEYSWITCH_THRESH (50)
 
+//! @brief Constant defining threshold above which a single 
+//! giant step matrix is added even in FHE_KSS_MIN mode.
+//! This helps in the matmul routines.
+#define FHE_KEYSWITCH_MIN_THRESH (8)
+
 //! @brief Function that returns number of baby steps.  Used to keep
 //! this and matmul routines "in sync".
 long KSGiantStepSize(long D);

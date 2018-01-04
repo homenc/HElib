@@ -346,6 +346,11 @@ static void addMinimal1Dmats4dim(FHESecKey& sKey, long i, long keyID)
   if (!native)
     sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
 
+  if (ord > FHE_KEYSWITCH_MIN_THRESH) {
+    long g = KSGiantStepSize(ord);
+    sKey.GenKeySWmatrix(1, zMStar.genToPow(i, g), keyID, keyID);
+  }
+
   sKey.setKSStrategy(i, FHE_KSS_MIN);
 
 }
