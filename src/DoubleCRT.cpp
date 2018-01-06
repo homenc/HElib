@@ -926,7 +926,7 @@ std::ostream& operator<< (std::ostream &str, const DoubleCRT &d)
   const FHEcontext &context = d.context;
   double bits = context.logOfProduct(set);
   bits /= std::log(2.);
-  long bytes = long(std::ceil(bits)) >> 3;
+  long bytes = long(std::ceil(bits) + 7) >> 3;
   long phim = context.zMStar.getPhiM();
   std::vector<uint8_t> buff(bytes);
   for (long i = 0; i < phim; i++) {
@@ -953,7 +953,7 @@ std::istream& operator>> (std::istream &str, DoubleCRT &d)
   poly.SetLength(phim + 1);
   double bits = context.logOfProduct(set);
   bits /= std::log(2.0);
-  long bytes = long(std::ceil(bits)) >> 3;
+  long bytes = long(std::ceil(bits) + 7) >> 3;
   std::vector<uint8_t> buff(bytes);
   NTL::ZZ e;
   for (long i = 0; i < phim; i++) {
