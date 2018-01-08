@@ -24,7 +24,8 @@ struct PtrMatrix {
   virtual PtrVector<T>& operator[](long) =0;             // returns a row
   virtual const PtrVector<T>& operator[](long) const =0; // returns a row
   virtual long size() const =0;        // How many rows
-  virtual void resize(long newSize)=0; // reset the number of rows
+  virtual void resize(long newSize)    // reset the number of rows
+  { throw(std::logic_error("Cannot resize generic PtrMatrix")); }
   virtual ~PtrMatrix(){}
 
   // Return a pointer to some non-Null T, if it can find one.
@@ -124,8 +125,6 @@ struct PtrMatrix_ptVec : PtrMatrix<T> {
   const PtrVector<T>& operator[](long i) const override // returns a row
   { return rows[i]; }
   long size() const override { return lsize(rows); }    // How many rows
-  void resize(long newSize) override         // reset the number of rows
-  { throw(std::logic_error("Cannot resize PtrMatrix_ptVec")); }
 };
 
 //! @brief An implementation of PtrMatrix using vector< vector<T> >
@@ -181,7 +180,5 @@ struct PtrMatrix_ptvector : PtrMatrix<T> {
   const PtrVector<T>& operator[](long i) const override // returns a row
   { return rows[i]; }
   long size() const override { return lsize(rows); }    // How many rows
-  void resize(long newSize) override         // reset the number of rows
-  { throw(std::logic_error("Cannot resize PtrMatrix_ptvector")); }
 };
 #endif // _PTRMATRIX_H
