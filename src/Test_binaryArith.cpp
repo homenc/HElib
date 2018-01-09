@@ -60,11 +60,15 @@ int main(int argc, char *argv[])
   amap.arg("bootstrap", bootstrap, "test multiplication with bootstrapping");
   long seed=0;
   amap.arg("seed", seed, "PRG seed");
+  long nthreads=1;
+  amap.arg("nthreads", nthreads, "number of threads");
   amap.arg("verbose", verbose, "print more information");
 
   amap.parse(argc, argv);
   assert(prm >= 0 && prm < 4);
   if (seed) NTL::SetSeed(ZZ(seed));
+  if (nthreads>1) NTL::SetNumThreads(nthreads);
+
   if (bitSize<=0) bitSize=5;
   else if (bitSize>32) bitSize=32;
 
@@ -105,6 +109,7 @@ int main(int argc, char *argv[])
   if (verbose) {
     cout <<"input bitSize="<<bitSize<<", output size bound="<<outSize
          <<", running "<<nTests<<" tests for each function\n";
+    if (nthreads>1) cout << "  using "<<nthreads<<" threads\n";
     cout << "computing key-independent tables..." << std::flush;
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);

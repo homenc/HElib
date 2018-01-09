@@ -94,6 +94,7 @@ public:
  * consuming as few levels as possible).
  **/
 class AddDAG {
+  std::mutex scratch_mtx;  // controls access to scratch vector
   std::vector<ScratchCell> scratch; // scratch space for ciphertexts
   std::map<NodeIdx,DAGnode> p; // p[i,j]= prod_{t=j}^i (a[t]+b[t])
   std::map<NodeIdx,DAGnode> q; // q[i,j]= a[j]b[j]*prod_{t=j+1}^i (a[t]+b[t])
@@ -278,11 +279,12 @@ void AddDAG::apply(CtPtrs& sum,
     throw std::logic_error("DAG applied to wrong vectors");
 
   if (sizeLimit==0) sizeLimit = bSize+1;
-  sum.resize(sizeLimit, &b); // allocate space for the output
+  if (lsize(sum)!=sizeLimit)
+    sum.resize(sizeLimit, &b); // allocate space for the output
 
   // Allow multi-threading in this loop
   NTL_EXEC_RANGE(sizeLimit, first, last)
-  for (long i=first; i<last; i++) {
+  for (long i=first; i<last; i++) { //  for (long i=0; i<sizeLimit; i++) {
     if (i<bSize)
       addCtxtFromNode(*(sum[i]), this->findP(i,i), a, b);
     for (long j=std::min(i-1, aSize-1); j>=0; --j) {
@@ -369,7 +371,7 @@ const Ctxt& AddDAG::getCtxt(DAGnode* node,
 Ctxt* AddDAG::allocateCtxtLike(const Ctxt& c)
 {
   // look for an unused cell in the scratch array
-  for (long i=0; i<(long)scratch.size(); i++)
+  for (long i=0; i<lsize(scratch); i++)
     if (scratch[i].used == false) { // found a free one, try to use it
       bool used = scratch[i].used.exchange(true); // mark it as used
       if (used==false)     // make sure no other thread got there first
@@ -379,8 +381,9 @@ Ctxt* AddDAG::allocateCtxtLike(const Ctxt& c)
   // If not found, allocate a new cell
   ScratchCell sc(c);      // cell points to new ctxt, with used=true
   Ctxt* pt = sc.ct.get(); // remember the raw pointer
-  scratch.push_back(std::move(sc));  // scratch now owns the pointer
-  return pt;         // return the raw pointer
+  std::unique_lock<std::mutex> lck(scratch_mtx);   // protect scratch vector
+  scratch.emplace_back(std::move(sc));  // scratch now owns the pointer
+  return pt;              // return the raw pointer
 }
 
 // Mark a scratch ciphertext as unused. We assume that no two nodes
@@ -602,6 +605,17 @@ static void three4Two(CtPtrs& lsb, CtPtrs& msb,
   vecCopy(msb, tmpMsb);
 }
 
+//! @brief An implementation of PtrMatrix using vector< PtrVector<T>* >
+template<typename T>
+struct PtrMatrix_PtPtrVector : PtrMatrix<T> {
+  std::vector< PtrVector<T>* >& rows;
+  PtrMatrix_PtPtrVector(std::vector< PtrVector<T>* >& mat): rows(mat) {}
+  PtrVector<T>& operator[](long i) override             // returns a row
+  { return *rows[i]; }
+  const PtrVector<T>& operator[](long i) const override // returns a row
+  { return *rows[i]; }
+  long size() const override { return lsize(rows); }    // How many rows
+};
 
 // Calculates the sum of many numbers using the 3-for-2 method
 void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
@@ -619,37 +633,46 @@ void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
   }
   if (lsize(numbers)==1) { vecCopy(sum, numbers[0]); return; }
 
-  // if just 2 numbers to add then use normal binary addition
-  // else enter loop below. We view numbers as a FIFO queue, each
-  // time removing the first three entries at the head and adding
-  // two new ones at the tail.
-  long head=0, tail=0;
-  for (long leftInQ=lsize(numbers); leftInQ>2; leftInQ--) {
-    long h2 = (head+1) % lsize(numbers);
-    long h3 = (head+2) % lsize(numbers);
-    long t2 = (tail+1) % lsize(numbers);
-    const CtPtrs& h1ct = numbers[head];
-    const CtPtrs& h2ct = numbers[h2];
-    const CtPtrs& h3ct = numbers[h3];
+  bool bootstrappable = ct_ptr->getPubKey().isBootstrappable();
+  const EncryptedArray& ea = *(ct_ptr->getContext().ea);
 
-    // If any of head,h1,h2 are too low level, then bootstrap everything
-    if (findMinLevel({&h1ct, &h2ct, &h3ct}) < 3) {
-      assert(unpackSlotEncoding!=nullptr
-             && ct_ptr->getPubKey().isBootstrappable());
-      packedRecrypt(numbers, *unpackSlotEncoding,
-                    *(ct_ptr->getContext().ea), /*belowLvl=*/10);
+  long leftInQ = lsize(numbers);
+  std::vector<CtPtrs*> numPtrs(leftInQ);
+  for (long i=0; i<leftInQ; i++) numPtrs[i] = &(numbers[i]);
+
+  // use 3-for-2 repeatedly until only two numbers are leff to add
+  while (leftInQ>2) {
+    // If any number is too low level, then bootstrap everything
+    PtrMatrix_PtPtrVector<Ctxt> wrapper(numPtrs);
+    if (findMinLevel(wrapper)<3) {
+      assert(bootstrappable && unpackSlotEncoding!=nullptr);
+      packedRecrypt(wrapper, *unpackSlotEncoding, ea, /*belowLvl=*/10);
     }
+    // Prepare a vector for pointers to the output of this iteration
+    long nTriples = leftInQ/3;
+    long leftOver = leftInQ - (3*nTriples);
+    std::vector<CtPtrs*> numPtrs2(2*nTriples +leftOver);
 
-    // three4Two can work in-place
-    three4Two(numbers[tail], numbers[t2], h1ct, h2ct, h3ct, sizeLimit);
+    if (leftOver>0) { // copy the leftover pointers
+      numPtrs2[0] = numPtrs[3*nTriples];
+      if (leftOver>1) numPtrs2[1] = numPtrs[3*nTriples +1];
+    }
+    // Allow multi-threading in this loop
+    NTL_EXEC_RANGE(nTriples, first, last)
+    for (long i=first; i<last; i++) {   // call the three-for-two procedure
+      three4Two(*numPtrs[3*i], *numPtrs[3*i+1], // three4Two works in-place
+                *numPtrs[3*i], *numPtrs[3*i+1], *numPtrs[3*i+2], sizeLimit);
 
-    head = (head+3) % lsize(numbers);    
-    tail = (tail+2) % lsize(numbers);
+      numPtrs2[leftOver +2*i]    = numPtrs[3*i]; // copy the output pointers
+      numPtrs2[leftOver +2*i +1] = numPtrs[3*i +1];
+    }
+    NTL_EXEC_RANGE_END
+    numPtrs.swap(numPtrs2);   // swap input/output vectors
+    leftInQ = lsize(numPtrs); // update the size
   }
   // final addition
-  long h2 = (head+1) % lsize(numbers);
-  addTwoNumbers(sum, numbers[head], numbers[h2], sizeLimit, unpackSlotEncoding);
-} // NOTE: It'd be a little challenging to parallelize this
+  addTwoNumbers(sum, *numPtrs[0], *numPtrs[1], sizeLimit, unpackSlotEncoding);
+}
 
 
 // Multiply a positive a by a potentially negative b, we need to sign-extend b
