@@ -581,26 +581,22 @@ static void three4Two(CtPtrs& lsb, CtPtrs& msb,
   resize(tmpLsb, lsbSize, Ctxt(ZeroCtxtLike,*ctptr));
   resize(tmpMsb, msbSize, Ctxt(ZeroCtxtLike,*ctptr));
 
-  for (long i=0; i<std::min(lsize(*p1),lsbSize); i++)
-    if (i<lsize(tmpMsb)-1)
+  NTL_EXEC_RANGE(msbSize-1, first, last)
+  for (long i=first; i<last; i++) {
+    if (i<lsize(*p1))
       three4Two(&tmpLsb[i], &tmpMsb[i+1], (*p1)[i], (*p2)[i], (*p3)[i]);
-    else {
-      if (p1->isSet(i)) tmpLsb[i] =  *((*p1)[i]);
-      if (p2->isSet(i)) tmpLsb[i] += *((*p2)[i]);
-      if (p3->isSet(i)) tmpLsb[i] += *((*p3)[i]);
+    else if (i<lsize(*p2)) {
+      three4Two(&tmpLsb[i], &tmpMsb[i+1], (*p2)[i], (*p3)[i], nullptr);
     }
-
-  for (long i=p1->size(); i<std::min(lsize(*p2),lsbSize); i++) {
-    if (p2->isSet(i)) tmpLsb[i] =  *((*p2)[i]);
-    if (p3->isSet(i)) tmpLsb[i] += *((*p3)[i]);
-    if (i<lsize(tmpMsb)-1 && p2->isSet(i) && p3->isSet(i)) {
-      tmpMsb[i+1] = *((*p2)[i]);
-      tmpMsb[i+1].multiplyBy(*((*p3)[i]));
-    }
+    else if (p3->isSet(i)) tmpLsb[i] = *((*p3)[i]);
   }
-  for (long i=p2->size(); i<std::min(lsize(*p3),lsbSize); i++)
-    if (p3->isSet(i)) tmpLsb[i] = *((*p3)[i]);
+  NTL_EXEC_RANGE_END
 
+  if (msbSize==lsbSize) { // we only computed upto lsbSize-1, do the last LSB
+    if (p1->isSet(lsbSize-1)) tmpLsb[lsbSize-1] =  *((*p1)[lsbSize-1]);
+    if (p2->isSet(lsbSize-1)) tmpLsb[lsbSize-1] += *((*p2)[lsbSize-1]);
+    if (p3->isSet(lsbSize-1)) tmpLsb[lsbSize-1] += *((*p3)[lsbSize-1]);
+  }
   vecCopy(lsb, tmpLsb);
   vecCopy(msb, tmpMsb);
 }
@@ -658,15 +654,16 @@ void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
       if (leftOver>1) numPtrs2[1] = numPtrs[3*nTriples +1];
     }
     // Allow multi-threading in this loop
-    NTL_EXEC_RANGE(nTriples, first, last)
-    for (long i=first; i<last; i++) {   // call the three-for-two procedure
+    //    NTL_EXEC_RANGE(nTriples, first, last)
+    //    for (long i=first; i<last; i++) {   // call the three-for-two procedure
+    for (long i=0; i<nTriples; i++) {   // call the three-for-two procedure
       three4Two(*numPtrs[3*i], *numPtrs[3*i+1], // three4Two works in-place
                 *numPtrs[3*i], *numPtrs[3*i+1], *numPtrs[3*i+2], sizeLimit);
 
       numPtrs2[leftOver +2*i]    = numPtrs[3*i]; // copy the output pointers
       numPtrs2[leftOver +2*i +1] = numPtrs[3*i +1];
     }
-    NTL_EXEC_RANGE_END
+    //    NTL_EXEC_RANGE_END
     numPtrs.swap(numPtrs2);   // swap input/output vectors
     leftInQ = lsize(numPtrs); // update the size
   }
