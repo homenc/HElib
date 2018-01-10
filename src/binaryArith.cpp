@@ -681,18 +681,31 @@ static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
 
   NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(a),resSize));
-  for (long i=0; i<lsize(numbers); i++) {
+  long nNums = lsize(numbers);
+  for (long i=0; i<nNums; i++)
     numbers[i].SetLength(resSize, Ctxt(ZeroCtxtLike,*(a[0])));
-    for (long j=i; j<resSize; j++)
-      if (j<i+lsize(b)) {
-        if (b.isSet(j-i) && !b[j-i]->isEmpty()
-            && a.isSet(i) && !a[i]->isEmpty()) {
-          numbers[i][j] = *(b[j-i]);
-          numbers[i][j].multiplyBy(*(a[i]));   // multiply by the bit of a
-        }
-      }
-      else numbers[i][j] = numbers[i][i+lsize(b)-1]; // sign extension
+
+  std::vector<std::pair<long,long> > pairs;
+  for (long i=0; i<nNums; i++) for (long j=i; j<resSize; j++)
+    if (j<i+lsize(b) && a.isSet(i)  && !a[i]->isEmpty()
+                     && b.isSet(j-i)&& !b[j-i]->isEmpty()) {
+      pairs.push_back(std::pair<long,long>(i,j));
+    }
+  long nPairs = lsize(pairs);
+
+  NTL_EXEC_RANGE(nPairs, first, last)
+  for (long idx=first; idx<last; idx++) {
+    long i,j; std::tie(i,j) = pairs[idx];
+    numbers[i][j] = *(b[j-i]);
+    numbers[i][j].multiplyBy(*(a[i]));   // multiply by the bit of a
   }
+  NTL_EXEC_RANGE_END
+
+  // sign extension
+  for (long i=0; i<nNums; i++) for (long j=i+lsize(b); j<resSize; j++) {
+      numbers[i][j] = numbers[i][i+lsize(b)-1]; // sign extension
+    }
+
   CtPtrMat_VecCt nums(numbers); // Wrapper around numbers
 #ifdef DEBUG_PRINTOUT
   long pa, pb;
@@ -762,17 +775,24 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
 
   NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(b),resSize));
   const Ctxt* ct_ptr = a.ptr2nonNull();
-  for (long i=0; i<lsize(numbers); i++) {
+  long nNums = lsize(numbers);
+  for (long i=0; i<nNums; i++)
     numbers[i].SetLength(std::min((i+aSize),resSize),
                          Ctxt( ZeroCtxtLike,*ct_ptr ) );
-    for (long j=i; j<lsize(numbers[i]); j++) {
-      if (a.isSet(j-i) && !(a[j-i]->isEmpty())
-          &&  b.isSet(i) && !(b[i]->isEmpty()) ) {
-        numbers[i][j] = *(a[j-i]);
-        numbers[i][j].multiplyBy(*(b[i])); // multiply by the bit of b
-      }
-    }
+  std::vector<std::pair<long,long> > pairs;
+  for (long i=0; i<nNums; i++) for (long j=i; j<lsize(numbers[i]); j++) {
+    if (a.isSet(j-i)&& !(a[j-i]->isEmpty())&& b.isSet(i)&& !(b[i]->isEmpty()))
+      pairs.push_back(std::pair<long,long>(i,j));
   }
+  long nPairs = lsize(pairs);
+  NTL_EXEC_RANGE(nPairs, first, last)
+  for (long idx=first; idx<last; idx++) {
+    long i,j; std::tie(i,j) = pairs[idx];
+    numbers[i][j] = *(a[j-i]);
+    numbers[i][j].multiplyBy(*(b[i])); // multiply by the bit of b
+  }
+  NTL_EXEC_RANGE_END
+
   CtPtrMat_VecCt nums(numbers); // A wrapper aroune numbers
 #ifdef DEBUG_PRINTOUT
   long pa, pb;
@@ -931,6 +951,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
 // Returns number of output bits that are not identically zero.
 long fifteenOrLess4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
 {
+  FHE_TIMER_START;
   long numNonNull = in.numNonNull();
   if (numNonNull>7) {
     fifteen4Four(out, in, sizeLimit);
