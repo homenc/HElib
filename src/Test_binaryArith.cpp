@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
   if (verbose) {
     cout <<"input bitSize="<<bitSize<<", output size bound="<<outSize
          <<", running "<<nTests<<" tests for each function\n";
-    if (nthreads>1) cout << "  using "<<nthreads<<" threads\n";
+    if (nthreads>1) cout << "  using "<<NTL::AvailableThreads()<<" threads\n";
     cout << "computing key-independent tables..." << std::flush;
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);

@@ -874,32 +874,58 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
   Ctxt& d2=b7;  Ctxt& d3=b9;  Ctxt& d4=f2;
   Ctxt& e2=c1;  Ctxt& e3=c2;  Ctxt& e4=f2;
 
-  three4Two(&b1,&b2,in[0],in[1],in[2]); // b2 b1 = 3for2(in[0..2])
-  three4Two(&b3,&b4,in[3],in[4],in[5]); // b4 b3 = 3for2(in[3..5])
-  three4Two(&b5,&b6,in[6],in[7],in[8]); // b6 b5 = 3for2(in[6..8])
+  long nThreads = std::min(NTL::AvailableThreads(), 3L);
+  NTL_EXEC_INDEX(nThreads, index)     // run these three lines in parallel
+  switch (index) {
+  case 0: three4Two(&b1,&b2,in[0],in[1],in[2]); // b2 b1 = 3for2(in[0..2])
+    if (nThreads>1) break;
+  case 1: three4Two(&b3,&b4,in[3],in[4],in[5]); // b4 b3 = 3for2(in[3..5])
+    if (nThreads>2) break;
+  default: three4Two(&b5,&b6,in[6],in[7],in[8]);// b6 b5 = 3for2(in[6..8])
+  }
+  NTL_EXEC_INDEX_END
 
-  three4Two(c1,c2, b1, b3, b5);        // c2 c1 = 3for2(b1,b3,b5)
+  three4Two(c1,c2, b1, b3, b5);         // c2 c1 = 3for2(b1,b3,b5)
 
-  three4Two(c3,c4, b2, b4, b6);          // c4 c3 = 3for2(b2,b4,b6)
+  three4Two(c3,c4, b2, b4, b6);         // c4 c3 = 3for2(b2,b4,b6)
 
-  three4Two(&b7,&b8,in[9],in[10],in[11]);  // b8 b7 = 3for2(in[9..11])
-  three4Two(&b9,&b10,in[12],in[13],in[14]);// b10 b9 = 3for2(in[12..14])
+  nThreads = std::min(NTL::AvailableThreads(), 2L);
+  NTL_EXEC_INDEX(nThreads, index)       // run these two lines in parallel
+  switch (index) {
+  case 0: three4Two(&b7,&b8,in[9],in[10],in[11]);   // b8 b7 = 3for2(in[9..11])
+    if (nThreads>1) break;
+  default: three4Two(&b9,&b10,in[12],in[13],in[14]);// b10 b9 = 3for2(in[12..14])
+  }
+  NTL_EXEC_INDEX_END
 
-  three4Two(d1,d2, b7, b9, c1);        // d2 d1 = 3for2(b7,b9,c1)
+  NTL_EXEC_INDEX(nThreads, index)       // run these two lines in parallel
+  switch (index) {
+  case 0: three4Two(d1,d2, b7, b9, c1); // d2 d1 = 3for2(b7,b9,c1)
+    if (nThreads>1) break;
+  default: if (sizeLimit >= 2)
+      three4Two(d3,d4, b8, b10, c2);    // d4 d3 = 3for2(b8,b10,c2)
+  }
+  NTL_EXEC_INDEX_END
   if (sizeLimit < 2) return;
-  three4Two(d3,d4, b8, b10, c2);       // d4 d3 = 3for2(b8,b10,c2)
 
-  three4Two(e1,e2, c3, d2, d3);        // e2 e1 = 3for2(c3,d2,d3)
+  NTL_EXEC_INDEX(nThreads, index)       // run these two blocks in parallel
+  switch (index) {
+  case 0: three4Two(e1,e2, c3, d2, d3); // e2 e1 = 3for2(c3,d2,d3)
+    if (nThreads>1) break;
+  default: if (sizeLimit >= 3) {
+      e3 = c4;
+      e3 += d4;                         // e3 = c4 ^ d4
+      e4.multiplyBy(c4);                // e4 = c4 * d4 (e4 alias d4)
+    }
+  }
+  NTL_EXEC_INDEX_END
   if (sizeLimit < 3) return;
-  e3 = c4;
-  e3 += d4;                            // e3 = c4 ^ d4
-  e4.multiplyBy(c4);                   // e4 = c4 * d4 (e4 alias d4)
 
   f1 = e2;
-  f1 += e3;                            // f1 = e2 ^ e3
+  f1 += e3;                             // f1 = e2 ^ e3
   if (sizeLimit < 4) return;
   e2.multiplyBy(e3);
-  f2 += e2;                            // f2 = e4^(e2*e3)  (f2 alias e4)
+  f2 += e2;                             // f2 = e4^(e2*e3)  (f2 alias e4)
 }
 // Same as above, but some of the pointers may be null.
 // Returns number of output bits that are not identically zero.
