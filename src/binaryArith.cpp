@@ -9,8 +9,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-/* binaryArith.cpp
- * Implementing integer addition and multiplication in binary representation.
+/**
+ * @file binaryArith.cpp
+ * @brief Implementing integer addition, multiplication in binary representation
  */
 #include <numeric>
 #include <climits>
@@ -403,8 +404,8 @@ void AddDAG::markAsAvailable(DAGnode* node)
 /********************************************************************/
 
 // Use packed bootstrapping, so we can bootstrap all in just one go.
-static void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
-                          std::vector<zzX>* unpackSlotEncoding)
+void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
+                   std::vector<zzX>* unpackSlotEncoding)
 {
   const Ctxt* ct = b.ptr2nonNull(); // find some non-null Ctxt
   if (ct==nullptr) ct = a.ptr2nonNull();

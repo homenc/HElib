@@ -13,7 +13,7 @@
 #define _BINARY_ARITH_H_
 /**
  * @file binaryArith.h
- * @brief Implementing integer addition and multiplication in binary representation.
+ * @brief Implementing integer addition, multiplication in binary representation
  **/
 #include "EncryptedArray.h"
 #include "CtPtrs.h" //  defines CtPtrs, CtPtrMat
@@ -50,5 +50,9 @@ void decryptBinaryNums(vector<long>& pNums, const CtPtrs& eNums,
 // If allSlots==false then we only return the subcube with index i=0
 // in the last dimension within each ciphertext. Namely, the bit for
 // the j'th counter is found in slot of index j*sizeOf(lastDim).
+
+//! Use packed bootstrapping, so we can bootstrap all in just one go.
+void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
+                   std::vector<zzX>* unpackSlotEncoding);
 
 #endif // ifndef _BINARY_ARITH_H_
