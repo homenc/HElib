@@ -278,6 +278,7 @@ public:
 
   // Decryption
   void Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt) const;
+  void Decrypt(DoubleCRT & plaintxt, const Ctxt &ciphertxt) const;
 
   //! @brief Debugging version, returns in f the polynomial
   //! before reduction modulo the ptxtSpace
