@@ -41,6 +41,7 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
                        const CtPtrs& aa, const CtPtrs& bb,
                        std::vector<zzX>* unpackSlotEncoding)
 {
+  FHE_TIMER_START;
   // make sure that lsize(b) >= lsize(a)
   const CtPtrs& a = (lsize(bb)>=lsize(aa))? aa : bb;
   const CtPtrs& b = (lsize(bb)>=lsize(aa))? bb : aa;
