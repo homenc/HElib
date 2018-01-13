@@ -24,11 +24,4 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
                        const CtPtrs& a, const CtPtrs& b,
                        std::vector<zzX>* unpackSlotEncoding=nullptr);
 
-// The functions below are not implemeted
-
-void findMaxDestructive(NTL::Vec<Ctxt>& a, NTL::Vec<Ctxt>& data, long n);
-
-void findLargestK(CtPtrMat& result, CtPtrs& a,
-                  CtPtrs& data, long n, long k);
-
 #endif // ifdef _BINARY_COMPARE_H_
