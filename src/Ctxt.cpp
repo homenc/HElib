@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+#include <NTL/BasicThreadPool.h>
 #include "Ctxt.h"
 #include "FHE.h"
 #include "timing.h"
@@ -1102,7 +1103,14 @@ static void recursiveIncrementalProduct(Ctxt array[], long n)
   recursiveIncrementalProduct(&array[n1], n-n1);
 
   // Multiply the last product in the 1st part into every product in the 2nd
-  for (long i=n1; i<n; i++) array[i].multiplyBy(array[n1-1]);
+  if (n-n1 > 1) {
+    NTL_EXEC_RANGE(n-n1, first, last)
+    for (long i=n1+first; i<n1+last; i++)
+      array[i].multiplyBy(array[n1-1]);
+    NTL_EXEC_RANGE_END
+  }
+  else
+    for (long i=n1; i<n; i++) array[i].multiplyBy(array[n1-1]);
 }
 
 // For i=n-1...0, set v[i]=prod_{j<=i} v[j]
