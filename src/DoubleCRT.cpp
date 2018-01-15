@@ -922,7 +922,9 @@ std::ostream& operator<< (std::ostream &str, const DoubleCRT &d)
   str << set;
   str << ']';
   NTL::ZZX poly;
+  FHE_NTIMER_START(TO_POLY_OUTPUT);
   d.toPoly(poly, true);
+  FHE_NTIMER_STOP(TO_POLY_OUTPUT);
   const FHEcontext &context = d.context;
   double bits = context.logOfProduct(set);
   bits /= std::log(2.);
@@ -961,6 +963,8 @@ std::istream& operator>> (std::istream &str, DoubleCRT &d)
       NTL::ZZFromBytes(e, buff.data(), bytes);
       NTL::SetCoeff(poly, i, e);
   }
+  FHE_NTIMER_START(FROM_POLY_OUTPUT);
   d = poly;
+  FHE_NTIMER_STOP(FROM_POLY_OUTPUT);
   return str;
 }
