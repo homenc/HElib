@@ -40,11 +40,12 @@ void runningSums(CtPtrs& v)
 // e'[i] = prod_{j>=i} e[i] and g'[i] = e'[i+1] \cdot g[i]
 static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
 {
-#ifdef DEBUG_PRINTOUT
-  cout << "compProducts("<<g.start<<".."<<(g.start+g.sz-1)<<")\n";
-#endif
   long n = lsize(e);
   if (n <= 1) return; // nothing to do
+#ifdef DEBUG_PRINTOUT
+  cout << "compProducts(g["<<g.start<<".."<<(g.start+g.sz-1)<<"],e["
+       << e.start<<".."<<(e.start+e.sz-1)<<"])\n";
+#endif
 
   // split the array in two, second part has size the largest 2^l < n,
   // and first part is the rest
@@ -59,17 +60,18 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
   // Multiply the first product in the 2nd part into every product in the 1st
   NTL_EXEC_RANGE(2*n1, first, last)
   for (long i=first; i<last; i++) {
-    if (i<n1) e[i]->multiplyBy(*e[n1]);
-    else      g[i-n1]->multiplyBy(*e[n1]);
+    if (i<n1)               e[i]->multiplyBy(*e[n1]);
+    else if (i-n1<g.size()) g[i-n1]->multiplyBy(*e[n1]);
   }
   NTL_EXEC_RANGE_END
 #ifdef DEBUG_PRINTOUT
-  cout << " g["<<g.start<<".."<<(g.start+g.sz-1)<<"]:\n";
+  cout << " g["<<g.start<<".."<<(g.start+g.sz-1)<<"], "
+       << " e["<<e.start<<".."<<(e.start+e.sz-1)<<"]:\n";
   for (long i=0; i<g.size(); i++)
     decryptAndPrint((cout<<"   g["<<(i+g.start)<<"] ("<<((void*)g[i])<<"): "),
                     *g[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
-  for (long i=0; i<g.size(); i++)
-    decryptAndPrint((cout<<"   e["<<(i+g.start)<<"] ("<<((void*)e[i])<<"): "),
+  for (long i=0; i<e.size(); i++)
+    decryptAndPrint((cout<<"   e["<<(i+e.start)<<"] ("<<((void*)e[i])<<"): "),
                     *e[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
 
   cout << endl;
@@ -85,10 +87,11 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
   DoubleCRT one(zeroCtxt.getContext()); one += 1L;
   
   resize(aeqb, lsize(b), zeroCtxt);
-  resize(agtb, lsize(b), zeroCtxt);
+  resize(agtb, lsize(a), zeroCtxt);
 
   // First compute the local bits e[i]=(a[i]==b[i]), gt[i]=(a[i]>b[i])
-  NTL_EXEC_RANGE(lsize(a), first, last)
+  long aSize = lsize(a);
+  NTL_EXEC_RANGE(aSize, first, last)
   for (long i=first; i<last; i++) {
     *aeqb[i] = *b[i];               // b
     aeqb[i]->addConstant(one, 1.0); // b+1
@@ -97,15 +100,25 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
     agtb[i]->multiplyBy(*a[i]);     // a(b+1)
   }
   NTL_EXEC_RANGE_END
-  for (long i=lsize(a); i<lsize(b); i++) {
-    *aeqb[i] = *b[i];
-    aeqb[i]->addConstant(one, 1.0); // b+1
-  }
 
+  // NOTE: Usually there isn't much gain in multi-threading the loop below,
+  //    but computing b[i] can be expensive in some implementations of CtPtrs
+  if (lsize(b)-aSize >1) {
+    NTL_EXEC_RANGE(lsize(b)-aSize, first, last)
+    for (long i=first; i<last; i++) {
+      *aeqb[i+aSize] = *b[i+aSize];         // b
+      aeqb[i+aSize]->addConstant(one, 1.0); // b+1
+    }
+    NTL_EXEC_RANGE_END
+  }
+  else if (lsize(b)-aSize == 1) {
+    *aeqb[aSize] = *b[aSize];         // b
+    aeqb[aSize]->addConstant(one, 1.0); // b+1
+  }
 #ifdef DEBUG_PRINTOUT
   for (long i=0; i<lsize(b); i++)
     decryptAndPrint((cout<<" e["<<i<<"]: "), *aeqb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
-  for (long i=0; i<lsize(b); i++)
+  for (long i=0; i<lsize(a); i++)
     decryptAndPrint((cout<<" ag["<<i<<"]: "), *agtb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
   cout << endl;
 #endif
@@ -139,45 +152,38 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
     return;
   }
 
-  // Begin by checking that we have enough levels
+  // Check that we have enough levels, try to bootstrap otherwise
   if (findMinLevel({&a,&b}) < NTL::NumBits(bSize+1)+2)
     packedRecrypt(a,b,unpackSlotEncoding);
-  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize)+1)
+  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize)+1) // the bear minimum
     throw std::logic_error("not enough levels for comparison");
 
   // NOTE: this procedure minimizes the number of multiplications,
-  //       but it uses 1-2 level too many. Can we optimize it?
+  //       but it may use one level too many. Can we optimize it?
 
-  /* We first compute for each position i the value
-   *    e_i = (a[i]==b[i]) = (a[i]+b[i]+1),
-   * NOTE: e must be a std::vector in reverse order, so we
-   *       can later use the incrementalProduct function of HElib.
+  /* We first compute for each position i the values
+   *   e[i] = (a==b upto position i)
+   *   ag[i] = (a>b upto position i)
    */
 
-  const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
-  DoubleCRT one(zeroCtxt.getContext()); one += 1L;
-
-  resize(max, bSize, zeroCtxt); // ensure enough space
-  resize(min, aSize, zeroCtxt); // ensure enough space
-
-  std::vector<Ctxt> e(bSize, zeroCtxt);
-  std::vector<Ctxt> ag(bSize, zeroCtxt);
-  CtPtrs_vectorCt eWrap(e), agWrap(ag);
-  compEqGt(eWrap, agWrap, a, b);
+  // We use max, min to hold the intermediate values e, ag
+  CtPtrs& e = max;
+  CtPtrs& ag = min;
+  compEqGt(e, ag, a, b);
 
   // We are now ready to compute the bits of the result.
 
-  mu = ag[0];               // a>b
-  ni = ag[0];
-  ni.addConstant(one, 1.0); // a <= b
-  ni += e[0];               // a < b
+  mu = *ag[0];             // a > b
+  ni = *ag[0];
+  ni.addConstant(ZZ(1L));  // a <= b
+  ni += *e[0];             // a < b
 
   //  for (long i=0; i<bSize; i++) {
   NTL_EXEC_RANGE(aSize, first, last)
   for (long i=first; i<last; i++) {
     *max[i] = *a[i];
     *max[i] -= *b[i];
-    max[i]->multiplyBy(ag[i]);
+    max[i]->multiplyBy(*ag[i]);
 
     *min[i] = *max[i];
     *max[i] += *b[i];
