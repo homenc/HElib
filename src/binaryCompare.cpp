@@ -32,12 +32,16 @@
 // returns new v[i] = \sum_{j>=i} old v[i]
 void runningSums(CtPtrs& v)
 {
+  FHE_TIMER_START;
   for (long i=lsize(v)-1; i>0; i--) *v[i-1] += *v[i];
 }
 
 
 // a recursive function that computes
-// e'[i] = prod_{j>=i} e[i] and g'[i] = e'[i+1] \cdot g[i]
+//      e*[i] = prod_{j>=i} e[i]  and  g*[i] = e*[i+1] \cdot g[i]
+// This function is optimized, so that instead of all the e*[i]'s
+// it only computes e*[0] and the e*[i]'s that are used in the
+// computation of the g*[i]'d
 static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
 {
   long n = lsize(e);
@@ -58,10 +62,10 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
   compProducts(CtPtrs_slice(e,n1,n-n1), CtPtrs_slice(g,n1,n-n1));// second half
 
   // Multiply the first product in the 2nd part into every product in the 1st
-  NTL_EXEC_RANGE(2*n1, first, last)
+  NTL_EXEC_RANGE(1+n1, first, last)
   for (long i=first; i<last; i++) {
-    if (i<n1)               e[i]->multiplyBy(*e[n1]);
-    else if (i-n1<g.size()) g[i-n1]->multiplyBy(*e[n1]);
+    if (i==0)               e[0]->multiplyBy(*e[n1]);
+    else if (i-1<g.size()) g[i-1]->multiplyBy(*e[n1]);
   }
   NTL_EXEC_RANGE_END
 #ifdef DEBUG_PRINTOUT
@@ -83,6 +87,7 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
 static void
 compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
 {
+  FHE_TIMER_START;
   const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
   DoubleCRT one(zeroCtxt.getContext()); one += 1L;
   
@@ -90,6 +95,7 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
   resize(agtb, lsize(a), zeroCtxt);
 
   // First compute the local bits e[i]=(a[i]==b[i]), gt[i]=(a[i]>b[i])
+  FHE_NTIMER_START(compEqGt1);
   long aSize = lsize(a);
   NTL_EXEC_RANGE(aSize, first, last)
   for (long i=first; i<last; i++) {
@@ -100,9 +106,11 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
     agtb[i]->multiplyBy(*a[i]);     // a(b+1)
   }
   NTL_EXEC_RANGE_END
+  FHE_NTIMER_STOP(compEqGt1);
 
   // NOTE: Usually there isn't much gain in multi-threading the loop below,
   //    but computing b[i] can be expensive in some implementations of CtPtrs
+  FHE_NTIMER_START(compEqGt2);
   if (lsize(b)-aSize >1) {
     NTL_EXEC_RANGE(lsize(b)-aSize, first, last)
     for (long i=first; i<last; i++) {
@@ -115,6 +123,8 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
     *aeqb[aSize] = *b[aSize];         // b
     aeqb[aSize]->addConstant(one, 1.0); // b+1
   }
+  FHE_NTIMER_STOP(compEqGt2);
+
 #ifdef DEBUG_PRINTOUT
   for (long i=0; i<lsize(b); i++)
     decryptAndPrint((cout<<" e["<<i<<"]: "), *aeqb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
@@ -125,9 +135,10 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
 
   // Call a recursive function to compute:
   // e*_i = \prod_{j>=i} aeqb_i, g*_i = aeqb*_{i+1} \cdot agtb_i
+  FHE_NTIMER_START(compEqGt3);
   compProducts(CtPtrs_slice(aeqb,0), CtPtrs_slice(agtb,0));
-
   runningSums(agtb); // now ag[i] = (a>b upto bit i)
+  FHE_NTIMER_STOP(compEqGt3);
 }
 
 
@@ -173,12 +184,12 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
 
   // We are now ready to compute the bits of the result.
 
+  FHE_NTIMER_START(compResults);
   mu = *ag[0];             // a > b
   ni = *ag[0];
   ni.addConstant(ZZ(1L));  // a <= b
   ni += *e[0];             // a < b
 
-  //  for (long i=0; i<bSize; i++) {
   NTL_EXEC_RANGE(aSize, first, last)
   for (long i=first; i<last; i++) {
     *max[i] = *a[i];
@@ -192,4 +203,5 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
   NTL_EXEC_RANGE_END
   for (long i=aSize; i<bSize; i++)
     *max[i] = *b[i];
+  FHE_NTIMER_STOP(compResults);
 }
