@@ -19,7 +19,7 @@
 #include "CtPtrs.h" //  defines CtPtrs, CtPtrMat
 
 //! Compares two integers in binary a,b.
-//! Returns max(a,b), min(a,b) and indicator bits mu=(a>=b) and ni=(a<b)
+//! Returns max(a,b), min(a,b) and indicator bits mu=(a>b) and ni=(a<b)
 void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
                        const CtPtrs& a, const CtPtrs& b,
                        std::vector<zzX>* unpackSlotEncoding=nullptr);

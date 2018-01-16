@@ -29,11 +29,94 @@
 #include "debugging.h"
 #endif
 
-// returns new v[i] = \sum_{j=0}^i old v[i]
-void runningSums(std::vector<Ctxt>& v)
+// returns new v[i] = \sum_{j>=i} old v[i]
+void runningSums(CtPtrs& v)
 {
-  for (long i=1; i<lsize(v); i++) v[i] += v[i-1];
+  for (long i=lsize(v)-1; i>0; i--) *v[i-1] += *v[i];
 }
+
+
+// a recursive function that computes
+// e'[i] = prod_{j>=i} e[i] and g'[i] = e'[i+1] \cdot g[i]
+static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
+{
+#ifdef DEBUG_PRINTOUT
+  cout << "compProducts("<<g.start<<".."<<(g.start+g.sz-1)<<")\n";
+#endif
+  long n = lsize(e);
+  if (n <= 1) return; // nothing to do
+
+  // split the array in two, second part has size the largest 2^l < n,
+  // and first part is the rest
+
+  long ell = NTL::NumBits(n-1) -1; // n/2 <= 2^l < n
+  long n1 = n - (1UL<<ell);        // n1 \in [1, n/2]
+
+  // Call the recursive procedure separately on the first and second parts
+  compProducts(CtPtrs_slice(e,0,n1), CtPtrs_slice(g,0,n1));      // first half
+  compProducts(CtPtrs_slice(e,n1,n-n1), CtPtrs_slice(g,n1,n-n1));// second half
+
+  // Multiply the first product in the 2nd part into every product in the 1st
+  NTL_EXEC_RANGE(2*n1, first, last)
+  for (long i=first; i<last; i++) {
+    if (i<n1) e[i]->multiplyBy(*e[n1]);
+    else      g[i-n1]->multiplyBy(*e[n1]);
+  }
+  NTL_EXEC_RANGE_END
+#ifdef DEBUG_PRINTOUT
+  cout << " g["<<g.start<<".."<<(g.start+g.sz-1)<<"]:\n";
+  for (long i=0; i<g.size(); i++)
+    decryptAndPrint((cout<<"   g["<<(i+g.start)<<"] ("<<((void*)g[i])<<"): "),
+                    *g[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
+  for (long i=0; i<g.size(); i++)
+    decryptAndPrint((cout<<"   e["<<(i+g.start)<<"] ("<<((void*)e[i])<<"): "),
+                    *e[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
+
+  cout << endl;
+#endif
+}
+
+// Compute aeqb[i] = (a==b upto bit i), agtb[i] = (aeqb[i+1] and ai>bi)
+// We assume that b.size()>a.size()
+static void
+compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
+{
+  const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
+  DoubleCRT one(zeroCtxt.getContext()); one += 1L;
+  
+  resize(aeqb, lsize(b), zeroCtxt);
+  resize(agtb, lsize(b), zeroCtxt);
+
+  // First compute the local bits e[i]=(a[i]==b[i]), gt[i]=(a[i]>b[i])
+  NTL_EXEC_RANGE(lsize(a), first, last)
+  for (long i=first; i<last; i++) {
+    *aeqb[i] = *b[i];               // b
+    aeqb[i]->addConstant(one, 1.0); // b+1
+    *agtb[i] = *aeqb[i];            // b+1
+    *aeqb[i] += *a[i];              // a+b+1
+    agtb[i]->multiplyBy(*a[i]);     // a(b+1)
+  }
+  NTL_EXEC_RANGE_END
+  for (long i=lsize(a); i<lsize(b); i++) {
+    *aeqb[i] = *b[i];
+    aeqb[i]->addConstant(one, 1.0); // b+1
+  }
+
+#ifdef DEBUG_PRINTOUT
+  for (long i=0; i<lsize(b); i++)
+    decryptAndPrint((cout<<" e["<<i<<"]: "), *aeqb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
+  for (long i=0; i<lsize(b); i++)
+    decryptAndPrint((cout<<" ag["<<i<<"]: "), *agtb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
+  cout << endl;
+#endif
+
+  // Call a recursive function to compute:
+  // e*_i = \prod_{j>=i} aeqb_i, g*_i = aeqb*_{i+1} \cdot agtb_i
+  compProducts(CtPtrs_slice(aeqb,0), CtPtrs_slice(agtb,0));
+
+  runningSums(agtb); // now ag[i] = (a>b upto bit i)
+}
+
 
 // Compares two integers in binary a,b.
 // Returns max(a,b), min(a,b) and indicator bits mu=(a>b) and ni=(a<b)
@@ -57,9 +140,9 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
   }
 
   // Begin by checking that we have enough levels
-  if (findMinLevel({&a,&b}) < NTL::NumBits(long(bSize))+2)
+  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize+1)+2)
     packedRecrypt(a,b,unpackSlotEncoding);
-  if (findMinLevel({&a,&b}) < NTL::NumBits(long(bSize))+1)
+  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize)+1)
     throw std::logic_error("not enough levels for comparison");
 
   // NOTE: this procedure minimizes the number of multiplications,
@@ -74,61 +157,33 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
   const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
   DoubleCRT one(zeroCtxt.getContext()); one += 1L;
 
-  std::vector<Ctxt> e(bSize, zeroCtxt);
-  for (long i=0; i<bSize; i++) {
-    e[bSize-i-1] = *b[i]; // e = rev(b)
-    e[bSize-i-1].addConstant(one, 1.0);
-    if (i<aSize)
-      e[bSize-i-1] += *a[i];
-  }
-  // Compute e*_i = prod_{j=i}^{bSize-1} e_j
-  incrementalProduct(e); // e[bSize-i-1] = e*_i
-
-  // Now compute the bits ag[bSize-i-1] = (ai>bi, and a==b upto bit i+1)
-  std::vector<Ctxt> ag = e;
-  //  for (long i=0; i<bSize; i++) {
-  NTL_EXEC_RANGE(bSize, first, last)
-  for (long i=first; i<last; i++) {
-    if (i<aSize) {
-      ag[bSize-i-1] = *a[i];
-      ag[bSize-i-1].multiplyBy(*b[i]);
-      ag[bSize-i-1] -= *a[i]; // now ag[bSize-i-1] = ai(bi-1) = (ai>bi)
-      if (i<bSize-1)          // multiply by e*_{i+1}
-        ag[bSize-i-1].multiplyBy(e[bSize-i-2]);
-    }
-    else ag[bSize-i-1].clear();
-  }
-  NTL_EXEC_RANGE_END
-  runningSums(ag); // now ag[bSize-i-1] = (a>b upto bit i)
-
-  // We are now ready to compute the bits of the result.
-
-  mu = ag[bSize-1];  // a>b
-  ni = ag[bSize-1];
-  ni.addConstant(one, 1.0); // a <= b
-  ni += e[bSize-1];         // a < b
-
   resize(max, bSize, zeroCtxt); // ensure enough space
   resize(min, aSize, zeroCtxt); // ensure enough space
 
-  //  for (long i=0; i<bSize; i++) {
-  NTL_EXEC_RANGE(bSize, first, last)
-  for (long i=first; i<last; i++) {
-    *max[i] = *b[i];
-    if (i<aSize) {
-      max[i]->multiplyBy(ag[bSize-i-1]);
-      *max[i] -= *b[i];      // b[i] * (b>=a upto bit i)
-      Ctxt tmp = ag[bSize-i-1];
-      tmp.multiplyBy(*a[i]); // a[i] * (a>b upto bit i)
-      *max[i] += tmp;
+  std::vector<Ctxt> e(bSize, zeroCtxt);
+  std::vector<Ctxt> ag(bSize, zeroCtxt);
+  CtPtrs_vectorCt eWrap(e), agWrap(ag);
+  compEqGt(eWrap, agWrap, a, b);
 
-      *min[i] = *a[i];
-      min[i]->multiplyBy(ag[bSize-i-1]);
-      *min[i] -= *a[i];      // a[i] * (b>=a upto bit i)
-      tmp = ag[bSize-i-1];
-      tmp.multiplyBy(*b[i]); // b[i] * (a>b upto bit i)
-      *min[i] += tmp;
-    }
+  // We are now ready to compute the bits of the result.
+
+  mu = ag[0];               // a>b
+  ni = ag[0];
+  ni.addConstant(one, 1.0); // a <= b
+  ni += e[0];               // a < b
+
+  //  for (long i=0; i<bSize; i++) {
+  NTL_EXEC_RANGE(aSize, first, last)
+  for (long i=first; i<last; i++) {
+    *max[i] = *a[i];
+    *max[i] -= *b[i];
+    max[i]->multiplyBy(ag[i]);
+
+    *min[i] = *max[i];
+    *max[i] += *b[i];
+    *min[i] -= *a[i];
   }
   NTL_EXEC_RANGE_END
+  for (long i=aSize; i<bSize; i++)
+    *max[i] = *b[i];
 }
