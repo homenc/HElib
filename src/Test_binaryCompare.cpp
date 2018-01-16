@@ -95,8 +95,8 @@ int main(int argc, char *argv[])
   // Compute the number of levels
   long L;
   if (bootstrap) L = 30; // that should be enough
-  else           L = 3+ NTL::NumBits(bitSize);
-  
+  else           L = 3+ NTL::NumBits(bitSize+2);
+
   if (verbose) {
     cout <<"input bitSize="<<bitSize
          <<", running "<<nTests<<" tests for each function\n";
@@ -145,7 +145,7 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
 
   // Choose two random n-bit integers
   long pa = RandomBits_long(bitSize);
-  long pb = RandomBits_long(bitSize);
+  long pb = RandomBits_long(bitSize+1);
   long pMax = std::max(pa,pb);
   long pMin = std::min(pa,pb);
   bool pMu = pa>pb;
@@ -156,15 +156,18 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
 
   Ctxt mu(secKey), ni(secKey);
   resize(enca, bitSize, mu);
-  resize(encb, bitSize, ni);
-  for (long i=0; i<bitSize; i++) {
-    secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
+  resize(encb, bitSize+1, ni);
+  for (long i=0; i<=bitSize; i++) {
+    if (i<bitSize) secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
     secKey.Encrypt(encb[i], ZZX((pb>>i)&1));
     if (bootstrap) { // put them at a lower level
-      enca[i].modDownToLevel(5);
+      if (i<bitSize) enca[i].modDownToLevel(5);
       encb[i].modDownToLevel(5);
     }
   }
+#ifdef DEBUG_PRINTOUT
+  decryptAndPrint((cout<<" before comparison: "), encb[0], secKey, ea,0);
+#endif
 
   vector<long> slotsMin, slotsMax, slotsMu, slotsNi;
   {CtPtrs_VecCt wMin(eMin), wMax(eMax); // A wrappers around output vectors
