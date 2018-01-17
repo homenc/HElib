@@ -88,6 +88,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     context.zMStar.printout();
     std::cout << endl;
 
+    std::cout << "security=" << context.securityLevel()<<endl;
     std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
     std::cout << "# bits in ctxt primes = " 
 	 << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";

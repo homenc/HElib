@@ -39,6 +39,7 @@ static long mValues[][15] = {
   {  2,    48,   105, 12,  3, 35,  0,    71,    76,    0,   2,  2,   0, 25, 2},
   {  2 ,  600,  1023, 10, 11, 93,  0,   838,   584,    0,  10,  6,   0, 25, 2},
   {  2,  2304,  4641, 24,  7,  3,221,  3979,  3095, 3760,   6,  2,  -8, 25, 3},
+  {  2, 15004, 15709, 22, 23,683,  0,  4099, 13663,    0,  22, 31,   0, 25, 3},
   {  2, 27000, 32767, 15, 31,  7, 151, 11628, 28087,25824, 30,  6, -10, 28, 4}
 };
 
@@ -48,7 +49,7 @@ int main(int argc, char *argv[])
 {
   ArgMapping amap;
   long prm=1;
-  amap.arg("prm", prm, "parameter size (0-tiny,...,3-huge)");
+  amap.arg("prm", prm, "parameter size (0-tiny,...,4-huge)");
   long bitSize = 5;
   amap.arg("bitSize", bitSize, "bitSize of input integers (<=32)");
   long nTests = 3;
@@ -62,7 +63,7 @@ int main(int argc, char *argv[])
   amap.arg("verbose", verbose, "print more information");
 
   amap.parse(argc, argv);
-  assert(prm >= 0 && prm < 4);
+  assert(prm >= 0 && prm < 5);
   if (seed) NTL::SetSeed(ZZ(seed));
   if (nthreads>1) NTL::SetNumThreads(nthreads);
 
