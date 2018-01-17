@@ -38,11 +38,11 @@ void packedRecrypt(const CtPtrs& cPtrs,
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea);
 
-// recrypt all ctxt at level < belowLvl
-void packedRecrypt(const CtPtrs& array,
+// recrypt all ctxt below level 'belowLvl'
+void packedRecrypt(const CtPtrs& array, // vector of Ctxts
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea, long belowLvl);
-void packedRecrypt(const CtPtrMat& m,
+void packedRecrypt(const CtPtrMat& m,   // matrix of Ctxts
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea, long belowLvl=LONG_MAX);
 
