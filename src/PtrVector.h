@@ -27,8 +27,11 @@ struct PtrVector {
   virtual T* operator[](long) const =0;
     // NOTE: the PtrVector is const, but the pointer T* is not
   virtual long size() const =0;
+
   virtual void resize(long newSize, const PtrVector* another=nullptr)
-  { throw(std::logic_error("Cannot resize a generic PtrVector")); }
+  { if (size()!=newSize)
+      throw(std::logic_error("Cannot resize a generic PtrVector"));
+  }
   virtual ~PtrVector(){}
 
   bool isSet(long i) const
