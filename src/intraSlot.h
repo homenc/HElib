@@ -45,6 +45,12 @@ long repack(const CtPtrs& packed, const CtPtrs& unpacked, const EncryptedArray& 
 // the content of the i'th slot pa[i], as represented on the normal basis
 void unpackSlots(std::vector<unsigned long>& value,
                  NewPlaintextArray& pa, const EncryptedArray& ea);
+inline void unpackSlots(std::vector<unsigned long>& value,
+                        NTL::ZZX& pa, const EncryptedArray& ea)
+{
+  NewPlaintextArray ar(ea); ea.decode(ar, pa); // convert ZZX to PtxtArray
+  unpackSlots(value, ar, ea);
+}
 
 
 // Packs the low-order nbits of the integer 'data' into each slot,
