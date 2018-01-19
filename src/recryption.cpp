@@ -199,6 +199,20 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 void FHEPubKey::reCrypt(Ctxt &ctxt)
 {
   FHE_TIMER_START;
+
+  // Some sanity checks for dummy ciphertext
+  long ptxtSpace = ctxt.getPtxtSpace();
+  if (ctxt.isEmpty()) return;
+  if (ctxt.parts.size()==1 && ctxt.parts[0].skHandle.isOne()) {
+    // Dummy encryption, just ensure that it is reduced mod p
+    ZZX poly = to_ZZX(ctxt.parts[0]);
+    for (long i=0; i<poly.rep.length(); i++)
+      poly[i] = to_ZZ( rem(poly[i],ptxtSpace) );
+    poly.normalize();
+    ctxt.DummyEncrypt(poly);
+    return;
+  }
+
   assert(recryptKeyID>=0); // check that we have bootstrapping data
 
   long p = getContext().zMStar.getP();
@@ -218,7 +232,6 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  long ptxtSpace = ctxt.getPtxtSpace();
   assert(p2r % ptxtSpace == 0);
 
   FHE_NTIMER_START(preProcess);
@@ -256,7 +269,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
   // Check that the estimated noise is still low
   if (noise + maxU*p2r*(skHwts[recryptKeyID]+1) > q/2) 
-    cerr << " * noise/q after makeDisivible = "
+    cerr << " * noise/q after makeDivisible = "
 	 << ((noise + maxU*p2r*(skHwts[recryptKeyID]+1))/q) << endl;
 
   for (long i=0; i<(long)zzParts.size(); i++)
@@ -508,6 +521,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     ctxt += unpacked[i];
   }
   FHE_NTIMER_STOP(repack);
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ After repack ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+#endif
 }
 
 
