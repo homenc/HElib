@@ -1,282 +1,33 @@
-/* Copyright (C) 2012-2014 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #include "EvalMap.h"
 #include "powerful.h"
-#include "matrix.h"
+#include "matmul.h"
 
-// The callback interface for the matrix-multiplication routines.
-
-//! \cond FALSE (make doxygen ignore these classes)
-template<class type>
-class AltStep2Matrix : public PlaintextMatrixInterface<type> 
-{
-public:
-  PA_INJECT(type)
-
-private:
-  const EncryptedArray& ea;
-  shared_ptr<CubeSignature> sig;
-  long dim;
-
-  Mat<RX> A;
-
-public:
-  // constructor
-  AltStep2Matrix(const EncryptedArray& _ea, 
-              shared_ptr<CubeSignature> _sig,
-              const Vec<long>& reps,
-              long _dim,
-              long cofactor,
-              bool invert = false);
-
-  virtual const EncryptedArray& getEA() const { return ea; }
-
-  virtual bool get(RX& out, long i, long j) const;
-              
-};
-
-template<class type>
-bool AltStep2Matrix<type>::get(RX& out, long i, long j) const
-{
-  out = A[i][j];
-  return false;
-}
-
-template<class type>
-AltStep2Matrix<type>::AltStep2Matrix(const EncryptedArray& _ea, 
-                               shared_ptr<CubeSignature> _sig,
-                               const Vec<long>& reps,
-                               long _dim,
-                               long cofactor,
-                               bool invert)
-: ea(_ea), sig(_sig), dim(_dim)
-{
-  RBak bak; bak.save(); ea.getAlMod().restoreContext();
-  const RX& G = ea.getDerived(type()).getG();
-
-  long sz = sig->getDim(dim);
-  assert(sz == reps.length());
+// Forward declerations
+static MatMulBase*
+buildStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
+                 const Vec<long>& reps, long dim, long cofactor, bool invert,
+                 bool normal_basis);
+static MatMulBase*
+buildStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
+                 const Vec<long>& reps, long dim, long cofactor,
+                 bool invert);
+static void
+init_representatives(Vec<long>& representatives, long dim, 
+                     const Vec<long>& mvec, const PAlgebra& zMStar);
 
 
-  Vec<RX> points;
-  points.SetLength(sz);
-  for (long j = 0; j < sz; j++) 
-    points[j] = RX(reps[j]*cofactor, 1) % G;
-
-  A.SetDims(sz, sz);
-  for (long j = 0; j < sz; j++)
-    A[0][j] = 1;
-
-  for (long i = 1; i < sz; i++)
-    for (long j = 0; j < sz; j++)
-      A[i][j] = (A[i-1][j] * points[j]) % G;
-
-  if (invert) {
-    REBak ebak; ebak.save(); ea.getDerived(type()).restoreContextForG();
-
-    mat_RE A1, A2;
-    conv(A1, A);
-
-    long p = ea.getAlMod().getZMStar().getP();
-    long r = ea.getAlMod().getR();
-
-    ppInvert(A2, A1, p, r);
-    conv(A, A2);
- }
-}
-
-
-PlaintextMatrixBaseInterface*
-buildAltStep2Matrix(const EncryptedArray& ea, 
-                 shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps,
-                 long dim,
-                 long cofactor,
-                 bool invert = false)
-{
-  switch (ea.getAlMod().getTag()) {
-  case PA_GF2_tag: 
-    return new AltStep2Matrix<PA_GF2>(ea, sig, reps, dim, cofactor, invert);
-
-  case PA_zz_p_tag: 
-    return new AltStep2Matrix<PA_zz_p>(ea, sig, reps, dim, cofactor, invert);
-
-  default: return 0;
-  }
-}
-
-template<class type>
-class AltStep1Matrix : public PlaintextBlockMatrixInterface<type> 
-{
-public:
-  PA_INJECT(type)
-
-private:
-  const EncryptedArray& ea;
-
-  shared_ptr<CubeSignature> sig;
-  long dim;
-
-  Mat< mat_R > A;
-
-public:
-  // constructor
-  AltStep1Matrix(const EncryptedArray& _ea, 
-              shared_ptr<CubeSignature> _sig,
-              const Vec<long>& reps,
-              long _dim,
-              long cofactor,
-              bool invert,
-              bool normal_basis);
-
-  virtual const EncryptedArray& getEA() const { return ea; }
-
-  virtual bool get(mat_R& out, long i, long j) const;
-              
-};
-
-template<class type>
-bool AltStep1Matrix<type>::get(mat_R& out, long i, long j) const
-{
-  out = A[i][j];
-  return false;
-}
-
-template<class type>
-AltStep1Matrix<type>::AltStep1Matrix(const EncryptedArray& _ea, 
-                               shared_ptr<CubeSignature> _sig,
-                               const Vec<long>& reps,
-                               long _dim,
-                               long cofactor,
-                               bool invert,
-                               bool normal_basis)
-: ea(_ea), sig(_sig), dim(_dim)
-{
-  RBak bak; bak.save(); ea.getAlMod().restoreContext();
-  const RX& G = ea.getDerived(type()).getG();
-
-  assert(dim == sig->getNumDims() - 1);
-  assert(sig->getSize() == ea.size());
-
-  long sz = sig->getDim(dim);
-  assert(sz == reps.length());
-
-  long d = deg(G);
-
-  // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
-
-  Vec<RX> points;
-  points.SetLength(sz);
-  for (long j = 0; j < sz; j++) 
-    points[j] = RX(reps[j]*cofactor, 1) % G;
-
-  Mat<RX> AA;
-
-  AA.SetDims(sz*d, sz);
-  for (long j = 0; j < sz; j++)
-    AA[0][j] = 1;
-
-  for (long i = 1; i < sz*d; i++)
-    for (long j = 0; j < sz; j++)
-      AA[i][j] = (AA[i-1][j] * points[j]) % G;
-
-  A.SetDims(sz, sz);
-  for (long i = 0; i < sz; i++)
-    for (long j = 0; j < sz; j++) {
-      A[i][j].SetDims(d, d);
-      for (long k = 0; k < d; k++)
-        VectorCopy(A[i][j][k], AA[i*d + k][j], d);
-    }
-
-
-  if (invert) {
-
-    mat_R A1, A2;
-
-    A1.SetDims(sz*d, sz*d);
-    for (long i = 0; i < sz*d; i++)
-      for (long j = 0; j < sz*d; j++)
-        A1[i][j] = A[i/d][j/d][i%d][j%d];
-
-
-    long p = ea.getAlMod().getZMStar().getP();
-    long r = ea.getAlMod().getR();
-
-    ppInvert(A2, A1, p, r);
-
-    for (long i = 0; i < sz*d; i++)
-      for (long j = 0; j < sz*d; j++)
-        A[i/d][j/d][i%d][j%d] = A2[i][j];
-    
-    
-    if (normal_basis) {
-      const Mat<R>& CB = ea.getDerived(type()).getNormalBasisMatrix();
-
-      // multiply each entry of A on the right by CB
-      for (long i = 0; i < sz; i++)
-        for (long j = 0; j < sz; j++)
-          A[i][j] =  A[i][j] * CB;
-    }
-  }
-}
-
-
-PlaintextBlockMatrixBaseInterface*
-buildAltStep1Matrix(const EncryptedArray& ea, 
-                 shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps,
-                 long dim,
-                 long cofactor,
-                 bool invert,
-                 bool normal_basis)
-{
-  switch (ea.getAlMod().getTag()) {
-  case PA_GF2_tag: 
-    return new AltStep1Matrix<PA_GF2>(ea, sig, reps, dim, cofactor, invert, normal_basis);
-
-  case PA_zz_p_tag: 
-    return new AltStep1Matrix<PA_zz_p>(ea, sig, reps, dim, cofactor, invert, normal_basis);
-
-  default: return 0;
-  }
-}
-//! \endcond
-
-
-void init_representatives(Vec<long>& representatives, long dim, 
-                          const Vec<long>& mvec, const PAlgebra& zMStar)
-{
-  assert(dim >= 0 && dim < mvec.length());
-
-  // special case
-  if (dim >= LONG(zMStar.numOfGens())) {
-    representatives.SetLength(1);
-    representatives[0] = 1;
-    return;
-  }
-  
-  long m = mvec[dim];
-  long D = zMStar.OrderOf(dim);
-  long g = InvMod(zMStar.ZmStarGen(dim) % m, m);
-
-  representatives.SetLength(D);
-  for (long i = 0; i < D; i++)
-    representatives[i] = PowerMod(g, i, m);
-}
-
+// Constructor: initializing tables for the evaluation-map transformations
 
 EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
                  bool normal_basis)
@@ -297,7 +48,6 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
   // could certainly be greatly simplified
 
   nfactors = mvec.length();
-
   assert(nfactors > 0);
 
   for (long i = 0; i < nfactors; i++)
@@ -360,61 +110,232 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
       shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
   }
 
-  {long dim = nfactors - 1;
-  shared_ptr<PlaintextBlockMatrixBaseInterface> blockMat(
-        buildAltStep1Matrix(ea, sig_sequence[dim],
-			    local_reps[dim], dim, m/mvec[dim], invert, normal_basis));
-#ifdef EVALMAP_CACHED // cache the matrix of constants
-  compMat1D(ea, mat1, *blockMat, dim);
-#else
-  mat1 = blockMat;
-#endif
-  }
+  long dim = nfactors - 1;
+  mat1.reset(buildStep1Matrix(ea, sig_sequence[dim],
+       	          local_reps[dim], dim, m/mvec[dim], invert, normal_basis));
+
   matvec.SetLength(nfactors-1);
-  for (long dim=nfactors-2; dim>=0; --dim) {
-    shared_ptr<PlaintextMatrixBaseInterface> mat_dim(
-          buildAltStep2Matrix(ea, sig_sequence[dim],
-                              local_reps[dim], dim, m/mvec[dim], invert));
-#ifdef EVALMAP_CACHED // cache the matrix of constants
-    compMat1D(ea, matvec[dim], *mat_dim, dim);
-#else
-    matvec[dim] = mat_dim;
-#endif
+  for (dim=nfactors-2; dim>=0; --dim) {
+    matvec[dim].reset(buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim],
+				       dim, m/mvec[dim], invert));
   }
 }
 
+void EvalMap::buildCache(MatrixCacheType cType)
+{
+  if (cType==cacheEmpty) return; // nothing to do
+
+  buildCache4BlockMatMul1D(*mat1, nfactors-1, cType);
+  for (long i = 0; i < matvec.length(); i++)
+    buildCache4MatMul1D(*matvec[i], i, cType);
+}
+
+// Applying the evaluation (or its inverse) map to a ciphertext
 void EvalMap::apply(Ctxt& ctxt) const
 {
-  if (!invert) {
-    // forward direction
+  if (!invert) { // forward direction
+    blockMatMul1D(ctxt, *mat1, nfactors-1); // the actual transformation
 
-#ifdef EVALMAP_CACHED // cached matrix of constants
-    mat_mul1D(ea, ctxt, mat1, nfactors-1);
-#else
-    mat_mul1D(ea, ctxt, *mat1, nfactors-1);
-#endif
-
-    for (long i = matvec.length()-1; i >= 0; i--) {
-#ifdef EVALMAP_CACHED // cached matrix of constants
-      mat_mul1D(ea, ctxt, matvec[i], i);
-#else
-      mat_mul1D(ea, ctxt, *matvec[i], i);
-#endif
-    }
+    for (long i = matvec.length()-1; i >= 0; i--)
+      matMul1D(ctxt, *matvec[i], i); // the actual transformation
   }
-  else {
-    for (long i = 0; i < matvec.length(); i++) {
-#ifdef EVALMAP_CACHED // cached matrix of constants
-      mat_mul1D(ea, ctxt, matvec[i], i);
-#else
-      mat_mul1D(ea, ctxt, *matvec[i], i);
-#endif
-    }
+  else {         // inverse transformation
+    for (long i = 0; i < matvec.length(); i++)
+      matMul1D(ctxt, *matvec[i], i); // the actual transformation
 
-#ifdef EVALMAP_CACHED // cached matrix of constants
-    mat_mul1D(ea, ctxt, mat1, nfactors-1);
-#else
-    mat_mul1D(ea, ctxt, *mat1, nfactors-1);
-#endif
+    blockMatMul1D(ctxt, *mat1, nfactors-1); // the actual transformation
   }
 }
+
+
+static void
+init_representatives(Vec<long>& representatives, long dim, 
+                     const Vec<long>& mvec, const PAlgebra& zMStar)
+{
+  assert(dim >= 0 && dim < mvec.length());
+
+  // special case
+  if (dim >= LONG(zMStar.numOfGens())) {
+    representatives.SetLength(1);
+    representatives[0] = 1;
+    return;
+  }
+  
+  long m = mvec[dim];
+  long D = zMStar.OrderOf(dim);
+  long g = InvMod(zMStar.ZmStarGen(dim) % m, m);
+
+  representatives.SetLength(D);
+  for (long i = 0; i < D; i++)
+    representatives[i] = PowerMod(g, i, m);
+}
+
+// The callback interface for the matrix-multiplication routines.
+
+//! \cond FALSE (make doxygen ignore these classes)
+template<class type> class Step2Matrix : public MatMul<type> 
+{
+  PA_INJECT(type)
+
+  shared_ptr<CubeSignature> sig;
+  long dim;
+  Mat<RX> A;
+
+public:
+  // constructor
+  Step2Matrix(const EncryptedArray& _ea,
+              shared_ptr<CubeSignature> _sig, const Vec<long>& reps,
+              long _dim, long cofactor, bool invert=false)
+    : MatMul<type>(_ea), sig(_sig), dim(_dim)
+  {
+    long sz = sig->getDim(dim);
+    assert(sz == reps.length());
+
+    const EncryptedArrayDerived<type>& ea = _ea.getDerived(type());
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    const RX& G = ea.getG();
+
+    Vec<RX> points(INIT_SIZE, sz);
+    for (long j = 0; j < sz; j++) 
+      points[j] = RX(reps[j]*cofactor, 1) % G;
+
+    A.SetDims(sz, sz);
+    for (long j = 0; j < sz; j++)
+      A[0][j] = 1;
+
+    for (long i = 1; i < sz; i++)
+      for (long j = 0; j < sz; j++)
+	A[i][j] = (A[i-1][j] * points[j]) % G;
+
+    if (invert) {
+      REBak ebak; ebak.save(); ea.restoreContextForG();
+
+      mat_RE A1, A2;
+      conv(A1, A);
+
+      long p = _ea.getAlMod().getZMStar().getP();
+      long r = _ea.getAlMod().getR();
+
+      ppInvert(A2, A1, p, r);
+      conv(A, A2);
+    }
+  }
+
+  virtual bool get(RX& out, long i, long j) const {
+    out = A[i][j];
+    return false;
+  }
+};
+
+static MatMulBase*
+buildStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
+                 const Vec<long>& reps, long dim, long cofactor,
+                 bool invert)
+{
+  switch (ea.getTag()) {
+  case PA_GF2_tag: 
+    return new Step2Matrix<PA_GF2>(ea, sig, reps, dim, cofactor, invert);
+
+  case PA_zz_p_tag: 
+    return new Step2Matrix<PA_zz_p>(ea, sig, reps, dim, cofactor, invert);
+
+  default: return 0;
+  }
+}
+
+template<class type> class Step1Matrix : public BlockMatMul<type> 
+{
+  PA_INJECT(type)
+
+  shared_ptr<CubeSignature> sig;
+  long dim;
+  Mat< mat_R > A;
+
+public:
+  // constructor
+  Step1Matrix(const EncryptedArray& _ea, shared_ptr<CubeSignature> _sig,
+              const Vec<long>& reps, long _dim, long cofactor, bool invert,
+              bool normal_basis)
+    : BlockMatMul<type>(_ea), sig(_sig), dim(_dim)
+  {
+    const EncryptedArrayDerived<type>& ea = _ea.getDerived(type());
+    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    const RX& G = ea.getG();
+    long d = deg(G);
+
+    long sz = sig->getDim(dim);
+    assert(sz == reps.length());
+    assert(dim == sig->getNumDims() - 1);
+    assert(sig->getSize() == ea.size());
+
+    // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
+
+    Vec<RX> points(INIT_SIZE, sz);
+    for (long j = 0; j < sz; j++) 
+      points[j] = RX(reps[j]*cofactor, 1) % G;
+
+    Mat<RX> AA(INIT_SIZE, sz*d, sz);
+    for (long j = 0; j < sz; j++)
+      AA[0][j] = 1;
+
+    for (long i = 1; i < sz*d; i++)
+      for (long j = 0; j < sz; j++)
+	AA[i][j] = (AA[i-1][j] * points[j]) % G;
+
+    A.SetDims(sz, sz);
+    for (long i = 0; i < sz; i++)
+      for (long j = 0; j < sz; j++) {
+	A[i][j].SetDims(d, d);
+	for (long k = 0; k < d; k++)
+	  VectorCopy(A[i][j][k], AA[i*d + k][j], d);
+      }
+
+    if (invert) {
+      mat_R A1, A2;
+      A1.SetDims(sz*d, sz*d);
+      for (long i = 0; i < sz*d; i++)
+	for (long j = 0; j < sz*d; j++)
+	  A1[i][j] = A[i/d][j/d][i%d][j%d];
+
+      long p = _ea.getAlMod().getZMStar().getP();
+      long r = _ea.getAlMod().getR();
+
+      ppInvert(A2, A1, p, r);
+
+      for (long i = 0; i < sz*d; i++)
+	for (long j = 0; j < sz*d; j++)
+	  A[i/d][j/d][i%d][j%d] = A2[i][j];
+    
+      if (normal_basis) {
+	const Mat<R>& CB = ea.getNormalBasisMatrix();
+
+	// multiply each entry of A on the right by CB
+	for (long i = 0; i < sz; i++)
+	  for (long j = 0; j < sz; j++)
+	    A[i][j] =  A[i][j] * CB;
+      } // if (normal_basis)
+    } // if (invert)
+  } // constructor
+
+  virtual bool get(mat_R& out, long i, long j) const {
+    out = A[i][j];
+    return false;
+  }
+};
+
+static MatMulBase*
+buildStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
+                 const Vec<long>& reps, long dim, long cofactor, bool invert,
+                 bool normal_basis)
+{
+  switch (ea.getTag()) {
+  case PA_GF2_tag: 
+    return new Step1Matrix<PA_GF2>(ea, sig, reps, dim, cofactor, invert, normal_basis);
+
+  case PA_zz_p_tag: 
+    return new Step1Matrix<PA_zz_p>(ea, sig, reps, dim, cofactor, invert, normal_basis);
+
+  default: return 0;
+  }
+}
+//! \endcond

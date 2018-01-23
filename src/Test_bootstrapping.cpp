@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 
 /* Test_bootstrapping.cpp - Testing the recryption procedure */
@@ -41,7 +37,7 @@ extern Vec<ZZ> ptxt_pwr;
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
-long printFlag = FLAG_PRINT_VEC;
+extern long printFlag;
 
 extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 			    const EncryptedArray& ea, long flags=0);
@@ -103,7 +99,7 @@ static long mValues[][14] = {
 
 static bool dry = false; // a dry-run flag
 
-void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false)
+void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int cType=0)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -143,7 +139,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
   buildModChain(context, L, c);
-  context.makeBootstrappable(mvec, /*t=*/0, cons);
+  context.makeBootstrappable(mvec, /*t=*/0, cons, cType);
   t += GetTime();
 
   if (skHwt>0) context.rcData.skHwt = skHwt;
@@ -263,6 +259,7 @@ int main(int argc, char *argv[])
   long nthreads=1;
 
   long seed=0;
+  long useCache=0;
 
   amap.arg("p", p, "plaintext base");
 
@@ -277,10 +274,9 @@ int main(int argc, char *argv[])
   amap.arg("dry", dry, "dry=1 for a dry-run");
   amap.arg("cons", cons, "cons=1 for consevative settings (circuit deeper by 1)");
   amap.arg("nthreads", nthreads, "number of threads");
-
   amap.arg("seed", seed, "random number seed");
-
   amap.arg("noPrint", noPrint, "suppress printouts");
+  amap.arg("useCache", useCache, "0: no cache, 1:zzX, 2:DCRT");
 
   amap.parse(argc, argv);
 
@@ -295,7 +291,7 @@ int main(int argc, char *argv[])
 
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
-      TestIt(i,p,r,L,c,B,t,cons);
+      TestIt(i,p,r,L,c,B,t,cons,useCache);
       break;
     }
 

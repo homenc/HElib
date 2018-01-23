@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #ifndef _NumbTh
 #define _NumbTh
@@ -50,9 +46,9 @@
 #include <NTL/GF2EX.h>
 #include <NTL/lzz_pEX.h>
 
-// Test for the "right version" of NTL (currently 9.4.0)
-#if ((NTL_MAJOR_VERSION<9)||(NTL_MAJOR_VERSION==9 && NTL_MINOR_VERSION<4))
-#error "This version of HElib requires NTL version 9.4.0 or above"
+// Test for the "right version" of NTL (currently 10.0.0)
+#if (NTL_MAJOR_VERSION<10)
+#error "This version of HElib requires NTL version 10.0.0 or above"
 #endif
 
 using namespace std;
@@ -101,8 +97,9 @@ using namespace tr1;
 //! @typedef
 typedef unordered_map<string, const char *> argmap_t;
 
-typedef long LONG; // using this to identify casts that we should really get rid of
-                   // at some point in the future
+typedef long LONG; // using this to identify casts that we should
+                   // really get rid of at some point in the future
+typedef NTL::Vec<long> zzX;
 
 //! @brief Code for parsing command line arguments.
 /**
@@ -399,6 +396,11 @@ void convert(vec_zz_pE& X, const vector<ZZX>& A);
 void convert(mat_zz_pE& X, const vector< vector<ZZX> >& A);
 void convert(vector<ZZX>& X, const vec_zz_pE& A);
 void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A);
+void convert(NTL::Vec<long>& out, const NTL::ZZX& in);
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in);
+void convert(NTL::Vec<long>& out, const NTL::GF2X& in);
+void convert(NTL::ZZX& out, const NTL::Vec<long>& in);
+void convert(NTL::GF2X& out, const NTL::Vec<long>& in);
 ///@}
 
 //! A generic template that resolves to NTL's conv routine
@@ -801,10 +803,7 @@ ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 // right now, this is just a place-holder...it may or may not 
 // eventually be further fleshed out
 
-typedef Vec<long> zzX;
-
-inline 
-void convert(zz_pX& x, const zzX& a)
+inline void convert(zz_pX& x, const zzX& a)
 {
    conv(x.rep, a);
    x.normalize();
@@ -812,6 +811,5 @@ void convert(zz_pX& x, const zzX& a)
 
 // NOTE: Maybe NTL should contain conversion routines
 // like this for the various polynomial classes?
-
 
 #endif
