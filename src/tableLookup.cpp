@@ -50,6 +50,8 @@ void computeAllProducts(/*Output*/CtPtrs& products,
 
   if (lsize(products)==0) // try to set the output size
     products.resize(1L << nBits, &array);
+  for (long i=0; i<lsize(products); i++)
+    products[i]->clear();
 
   // Check that we have enough levels, try to bootstrap otherwise
   if (findMinLevel(array) < NTL::NumBits(nBits)+1) {

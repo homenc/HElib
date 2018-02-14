@@ -279,9 +279,12 @@ void AddDAG::apply(CtPtrs& sum,
   if (aSize != lsize(a) || bSize != lsize(b))
     throw std::logic_error("DAG applied to wrong vectors");
 
-  if (sizeLimit==0) sizeLimit = bSize+1;
+  if (sizeLimit==0)
+    sizeLimit = bSize+1;
   if (lsize(sum)!=sizeLimit)
     sum.resize(sizeLimit, &b); // allocate space for the output
+  for (long i=0; i<lsize(sum); i++)
+    sum[i]->clear();
 
   // Allow multi-threading in this loop
   NTL_EXEC_RANGE(sizeLimit, first, last)
@@ -437,6 +440,10 @@ void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
   // Work out the order of multiplications to compute all the carry bits
   AddDAG addPlan(a,b);
 
+#ifdef DEBUG_PRINTOUT // print plan
+  addPlan.printAddDAG();
+#endif
+
   // Ensure that we have enough levels to compute everything,
   // bootstrap otherwise
   if (addPlan.lowLvl()<1) {
@@ -446,16 +453,7 @@ void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
       throw std::logic_error("not enough levels for addition DAG");
     }
   }
-#ifdef DEBUG_PRINTOUT // print level before and after
-  long lvl = findMinLevel({&a, &b});
-  cout << " addTwoNumbers: level before addition="<<lvl
-       << ", planned output level="<<addPlan.lowLvl()<<endl;
-#endif
   addPlan.apply(sum, a, b, sizeLimit);    // perform the actual addition
-#ifdef DEBUG_PRINTOUT // print level before and after
-  cout << " after computing a "<<sum.size()<<"-bit sum, level="
-       << findMinLevel(sum) << endl;
-#endif
 }
 
 // Return pointers to the three inputs, ordered by size
@@ -556,8 +554,8 @@ static void three4Two(CtPtrs& lsb, CtPtrs& msb,
   std::tie(p1,p2,p3) = orderBySize(u,v,w); // size(p3)>=size(p2)>=size(p1)
 
   if (p3->size() <= 0) { // empty input
-    lsb.resize(0);
-    msb.resize(0);
+    setLengthZero(lsb);
+    setLengthZero(msb);
     return;
   }
   if (p1->size()<=0) { // two or less inputs
@@ -733,7 +731,7 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
 
   if (a.numNonNull()<1 || b.numNonNull()<1) {
-    product.resize(0);
+    setLengthZero(product);
     return; // return 0
   }
 
@@ -744,7 +742,7 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   // Edge case, if a or b is 1 bit
   if (aSize==1) {
     if (a[0]->isEmpty()) {
-      product.resize(0);
+      setLengthZero(product);
       return;
     }
     vecCopy(product,b,resSize);
@@ -758,7 +756,7 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   }
   if (bSize==1) {
     if (b[0]->isEmpty()) {
-      product.resize(0);
+      setLengthZero(product);
       return;
     }
     vecCopy(product,a,resSize);
