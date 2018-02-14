@@ -52,14 +52,14 @@ void computeAllProducts(/*Output*/CtPtrs& products,
     products.resize(1L << nBits, &array);
 
   // Check that we have enough levels, try to bootstrap otherwise
-  if (findMinLevel(array) < nBits +2) {
+  if (findMinLevel(array) < NTL::NumBits(nBits)+1) {
     const Ctxt* ct = array.ptr2nonNull(); // find some non-null Ctxt
     assert(unpackSlotEncoding!=nullptr &&
            ct!=nullptr && ct->getPubKey().isBootstrappable());
     packedRecrypt(array, *unpackSlotEncoding,
                   *(ct->getContext().ea), /*belowLevel=*/nBits +3);
   }
-  if (findMinLevel(array) < nBits +2)
+  if (findMinLevel(array) < NTL::NumBits(nBits)+1)
     throw std::logic_error("not enough levels for table lookup");
 
   // Call the recursive function that copmutes the products
