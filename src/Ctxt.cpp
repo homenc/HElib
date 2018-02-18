@@ -9,10 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
+#include <NTL/BasicThreadPool.h>
+#include "timing.h"
 #include "Ctxt.h"
 #include "FHE.h"
-#include "timing.h"
 
 // A hack for recording required automorphisms (see NumbTh.h)
 std::set<long>* FHEglobals::automorphVals = NULL;
@@ -208,6 +208,7 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
 // between different public keys.
 Ctxt& Ctxt::privateAssign(const Ctxt& other)
 {
+  FHE_TIMER_START;
   if (this == &other) return *this; // both point to the same object
 
   parts = other.parts;
@@ -766,6 +767,7 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
 
 void Ctxt::multiplyBy(const Ctxt& other)
 {
+  FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
@@ -775,6 +777,7 @@ void Ctxt::multiplyBy(const Ctxt& other)
 
 void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 {
+  FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
@@ -1129,7 +1132,14 @@ static void recursiveIncrementalProduct(Ctxt array[], long n)
   recursiveIncrementalProduct(&array[n1], n-n1);
 
   // Multiply the last product in the 1st part into every product in the 2nd
-  for (long i=n1; i<n; i++) array[i].multiplyBy(array[n1-1]);
+  if (n-n1 > 1) {
+    NTL_EXEC_RANGE(n-n1, first, last)
+    for (long i=n1+first; i<n1+last; i++)
+      array[i].multiplyBy(array[n1-1]);
+    NTL_EXEC_RANGE_END
+  }
+  else
+    for (long i=n1; i<n; i++) array[i].multiplyBy(array[n1-1]);
 }
 
 // For i=n-1...0, set v[i]=prod_{j<=i} v[j]

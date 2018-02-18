@@ -9,39 +9,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+#ifndef _BINARY_COMPARE_H_
+#define _BINARY_COMPARE_H_
 /**
- * @file multicore.h
- * @brief Support for multi-threaded implementations
+ * @file binaryCompare.h
+ * @brief Implementing integer comparison in binary representation.
  **/
+#include "EncryptedArray.h"
+#include "CtPtrs.h" //  defines CtPtrs, CtPtrMat
 
-#ifndef FHE_multicore_H
-#define FHE_multicore_H
+//! Compares two integers in binary a,b.
+//! Returns max(a,b), min(a,b) and indicator bits mu=(a>b) and ni=(a<b)
+void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
+                       const CtPtrs& a, const CtPtrs& b,
+                       std::vector<zzX>* unpackSlotEncoding=nullptr);
 
-#ifdef FHE_THREADS
-
-#include <atomic>
-#include <mutex>
-
-
-
-
-
-#define FHE_atomic_long atomic_long
-#define FHE_atomic_ulong atomic_ulong
-
-#define FHE_MUTEX_TYPE mutex
-#define FHE_MUTEX_GUARD(mx) lock_guard<mutex> _lock ## __LINE__ (mx)
-
-#else
-
-#define FHE_atomic_long long
-#define FHE_atomic_ulong unsigned long
-
-#define FHE_MUTEX_TYPE int
-#define FHE_MUTEX_GUARD(mx) ((void) mx)
-
-#endif
-
-
-
-#endif
+#endif // ifdef _BINARY_COMPARE_H_

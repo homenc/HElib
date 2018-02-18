@@ -537,7 +537,8 @@ public:
 
   //! @brief Returns log(noise-variance)/2 - log(q)
   double log_of_ratio() const
-  {return (log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet()));}
+  {return (getNoiseVar()==0.0)? (-context.logOfProduct(getPrimeSet()))
+      : ((log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet())) );}
   ///@}
   friend istream& operator>>(istream& str, Ctxt& ctxt);
   friend ostream& operator<<(ostream& str, const Ctxt& ctxt);

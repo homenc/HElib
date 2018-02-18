@@ -309,6 +309,9 @@ public:
 
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
+
+  // A hack to increase the plaintext space
+  void hackPtxtSpace(long p2r) { pubEncrKey.ptxtSpace = p2r; }
 };
 
 /**
