@@ -57,7 +57,7 @@ bool Ctxt::verifyPrimeSet() const
 // Compute the number of digits that we need and the esitmated
 // added noise from switching this ciphertext part.
 static std::pair<long, NTL::xdouble>
-computeKSNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
+keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
 {
   const FHEcontext& context = p.getContext();
   long nDigits = 0;
@@ -93,6 +93,11 @@ computeKSNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
   assert(logKeySwitchNoise < logModSwitchNoise);
 
   return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
+}
+std::pair<long, NTL::xdouble> Ctxt::computeKSNoise(long partIdx, long pSpace)
+{
+  if (pSpace<=1) pSpace = ptxtSpace;
+  return keySwitchNoise(parts.at(partIdx), pubKey, pSpace);
 }
 
 // Multiply vector of digits by key-switching matrix and add to *this.
@@ -437,7 +442,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // added noise from switching this ciphertext part.
   long nDigits;
   NTL::xdouble addedNoise;
-  std::tie(nDigits,addedNoise)= computeKSNoise(p, pubKey, W.ptxtSpace);
+  std::tie(nDigits,addedNoise)= keySwitchNoise(p, pubKey, W.ptxtSpace);
 
   // Break the ciphertext part into digits, if needed, and scale up these
   // digits using the special primes. This is the most expensive operation
@@ -948,7 +953,6 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
 // result of every step.
 void Ctxt::smartAutomorph(long k) 
 {
-  //cerr << "****** smartAutomorph " << k << "\n";
   FHE_TIMER_START;
 
   // A hack: record this automorphism rather than actually performing it
@@ -1300,242 +1304,4 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 
   // Return an estimate for the noise
   return conv<double>(noiseVar*ratio*ratio + modSwitchAddedNoiseVar());
-}
-
-/********************************************************************/
-/***************** multi-automorphism implementation ****************/
-#include "multiAutomorph.h"
-#include <stack>
-#include <unordered_set>
-
-// Interface #1: using a call-back handler
-//----------------------------------------
-
-void Ctxt::multiAutomorph(const vector<long>& toVals,
-                          AutomorphHandler& handler, long fromVal)
-{
-  FHE_TIMER_START;
-  cleanUp();
-
-  long m = context.zMStar.getM();
-  long finv = NTL::InvMod(fromVal, m);
-  NTL::mulmod_precon_t fminv = PrepMulModPrecon(finv, m);
-
-  // Compute the number of digits that we need and the esitmated
-  // added noise from switching this ciphertext.
-  long nDigits;
-  NTL::xdouble noise;
-  std::tie(nDigits, noise)
-      = computeKSNoise(parts[1], pubKey, pubKey.keySWlist()[0].ptxtSpace);
-
-  //  cout << "Using "<<nDigits<<" digits\n";
-  double logProd = context.logOfProduct(context.specialPrimes);
-  noise += noiseVar * xexp(2*logProd);
-
-  // Break the ciphertext part into digits, if needed, and scale up these
-  // digits using the special primes.
-
-  CtxtPart tmpPart(context, IndexSet::emptySet());
-  vector<DoubleCRT> polyDigits, tmpDigits;
-  {FHE_NTIMER_START(mAutBrk2digits);
-  parts[1].breakIntoDigits(polyDigits, nDigits);
-  }
-  unique_ptr<Ctxt> tmpCtxt;
-
-  for (long v: toVals) {
-    long k = NTL::MulModPrecon(v, finv, m, fminv);;
-    if (tmpCtxt==nullptr) // allocate empty ciphertext, same plaintext space
-      tmpCtxt.reset(new Ctxt(ZeroCtxtLike,*this));
-    else
-      tmpCtxt->clear();
-
-    tmpCtxt->noiseVar = noise;        // noise estimate
-
-    // Find a key-switching matrix to re-linearize this automorphism
-
-    long keyID=getKeyID();
-    const KeySwitch& W = pubKey.getKeySWmatrix(1,k,keyID,keyID);
-    if (W.isDummy()) continue; // no such key-switching matrix exist
-    // FIXME: We should probably throw an exception in this case
-
-    {FHE_NTIMER_START(mAutBody);
-
-    // Add in the constant part
-    tmpPart = parts[0];
-    tmpPart.automorph(k);
-    tmpPart.addPrimesAndScale(context.specialPrimes);
-    tmpCtxt->addPart(tmpPart, /*matchPrimeSet=*/true);
-
-    // "rotate" the digits before key-switching them
-    tmpDigits = polyDigits;
-    for (size_t i=0; i<tmpDigits.size(); i++) // rotate each of the digits
-      tmpDigits[i].automorph(k);
-
-    // Finally we multiply the vector of digits by the key-switching matrix
-    tmpCtxt->keySwitchDigits(W, tmpDigits);
-    }
-    // Call the callback function to process this rotated ciphertext
-    if (!handler.handle(tmpCtxt, v))
-      break;
-  }
-}
-
-class GraphHandler: public AutomorphHandler {
-public:
-  long keyID;
-  const AutGraph& tree;
-  std::unordered_set<long> keys;
-  AutomorphHandler& appHandler; // Handler of the calling application
-
-  GraphHandler(const AutGraph& t, AutomorphHandler& h, long kid):
-    keyID(kid), tree(t), appHandler(h)
-  { // Insert all keys except 1 (1 is assumed)
-    for (auto x: t) if (x.first!=1) keys.insert(x.first);
-  }
-
-  bool handle(std::unique_ptr<Ctxt>& ctxt, long amt) override {
-    if (keys.count(amt)) { // internal node
-      keys.erase(amt);     // don't visit it again
-      ctxt->multiAutomorph(tree.at(amt), *this, amt); // recursive call
-    }
-    return appHandler.handle(ctxt, amt);
-  }
-};
-
-void multiAutomorph(Ctxt& ctxt, const AutGraph& tree,
-                    AutomorphHandler& handler)
-{
-  GraphHandler h(tree, handler, ctxt.getKeyID());
-  ctxt.multiAutomorph(tree.at(1), h, 1);
-  // logically we couls call h.handle here, but then
-  // we would have to allocate a unique_ptr.
-}
-
-
-// Interface #2: using an interator
-//---------------------------------
-
-class AutomorphVecIterator {
-  // 'from' and vector of 'to's, and the position in this vector
-  long idx;
-  long fromVal;
-  const std::vector<long>& toVals;
-
-  // Temporaty structures, some for scratch calculations
-  long finv;
-  NTL::mulmod_precon_t fminv;
-  CtxtPart part0;
-  NTL::xdouble noise;
-  std::vector<DoubleCRT> polyDigits, tmpDigits;
-
-public:
-  AutomorphVecIterator(Ctxt& ctxt, long from, const std::vector<long>& to):
-    part0(ctxt.getContext(), IndexSet::emptySet()),
-    idx(0), fromVal(from), toVals(to)
-  {
-    FHE_TIMER_START;
-    const FHEcontext& context = ctxt.getContext();
-    const FHEPubKey& pubKey = ctxt.getPubKey();
-    ctxt.cleanUp();
-    part0 = ctxt.parts[0];
-
-    long m = context.zMStar.getM();
-    finv = NTL::InvMod(from, m);
-    fminv = PrepMulModPrecon(finv, m);
-
-    // Compute the number of digits that we need and the esitmated
-    // added noise from switching this ciphertext.
-    long nDigits;
-    std::tie(nDigits, noise)
-      = computeKSNoise(ctxt.parts[1], pubKey, pubKey.keySWlist()[0].ptxtSpace);
-
-    double logProd = context.logOfProduct(context.specialPrimes);
-    noise += ctxt.getNoiseVar() * xexp(2*logProd);
-
-    // Break the ciphertext part into digits, if needed, and scale up these
-    // digits using the special primes.
-
-    FHE_NTIMER_START(AutIterBrk2digits);
-    ctxt.parts[1].breakIntoDigits(polyDigits, nDigits);
-  }
-
-  // Returns the node number (as element in Zm*) and the ciphertext itself
-  // in ctxt. Before calling next, idx points to the next index in the array.
-  long next(Ctxt& ctxt)
-  {
-    if (idx >= lsize(toVals)) return 0;
-
-    // Find a key-switching matrix to re-linearize this automorphism
-
-    long keyID = part0.skHandle.getSecretKeyID();
-    const FHEcontext& context = ctxt.getContext();
-    const FHEPubKey& pubKey = ctxt.getPubKey();
-    long k = NTL::MulModPrecon(toVals[idx], finv,
-                               context.zMStar.getM(), fminv);
-    const KeySwitch& W = pubKey.getKeySWmatrix(1,k,keyID,keyID);
-    if (W.isDummy()) return 0;
-    // FIXME: We should probably throw an exception in this case
-
-    ctxt.clear();  
-    ctxt.noiseVar = noise; // noise estimate
-
-{ FHE_NTIMER_START(next_1);
-
-    // Add in the constant part
-    CtxtPart tmpPart = part0;
-    tmpPart.automorph(k);
-    tmpPart.addPrimesAndScale(context.specialPrimes);
-    ctxt.addPart(tmpPart, /*matchPrimeSet=*/true);
-}
-
-{ FHE_NTIMER_START(next_2);
-    // "rotate" the digits before key-switching them
-    tmpDigits = polyDigits;
-    for (size_t i=0; i<tmpDigits.size(); i++) // rotate each of the digits
-      tmpDigits[i].automorph(k);
-}
-
-{ FHE_NTIMER_START(next_3); 
-    // Finally we multiply the vector of digits by the key-switching matrix
-    ctxt.keySwitchDigits(W, tmpDigits);
-}
-
-    return toVals[idx++];
-  }
-};
-
-
-class AutoIteratorImpl : public AutoIterator {
-  const AutGraph& tree; // the automorphism tree
-  std::stack<AutomorphVecIterator> stk;
-public:
-  AutoIteratorImpl(Ctxt& c, const AutGraph& t): tree(t)
-  { stk.emplace(c,1,t.at(1)); } // new AutomorphVecIterator
-  //  ~AutoIteratorImpl() {}
-
-  long next(Ctxt& c) override
-  {
-
-    long v;
-    while (!stk.empty()) {
-      AutomorphVecIterator& it = stk.top();
-      v = it.next(c);
-      if (v == 0) // no more automorphisms for this iterator
-        stk.pop();
-      else {
-        if (tree.count(v)>0) { // internal node
-          // construct & push a new iterator
-          stk.emplace(c, v, tree.at(v));
-        }
-        break;
-      }
-    }
-    return v;
-  }
-};
-
-AutoIterator* AutoIterator::build(Ctxt& c, const AutGraph& t)
-{ 
-  FHE_TIMER_START;
-  return new AutoIteratorImpl(c, t); 
 }
