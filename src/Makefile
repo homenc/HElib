@@ -58,8 +58,8 @@ check: Test_General_x Test_matmul_x Test_matmul1D_x Test_LinPoly_x Test_Permutat
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
 	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
 	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
-	./Test_matmul_x m=1365
-	./Test_matmul1D_x m=96 p=7
+	./Test_matmul_x m=18631 L=8 
+	./Test_matmul_x block=1 m=24295 gens="[16386 16427]" ords="[42 16]" L=8
 	./Test_LinPoly_x noPrint=1
 	./Test_Permutations_x noPrint=1
 	./Test_PolyEval_x p=7 r=2 d=34 noPrint=1
