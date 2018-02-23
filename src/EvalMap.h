@@ -16,7 +16,7 @@
  */
 
 #include "EncryptedArray.h"
-#include "newmatmul.h"
+#include "matmul.h"
 
 //! @class EvalMap
 //! @brief Class that provides the functionality for the 

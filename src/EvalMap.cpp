@@ -10,7 +10,6 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include "EvalMap.h"
-#include "matmul.h"
 
 // Forward declerations
 static BlockMatMul1D*
