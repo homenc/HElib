@@ -134,7 +134,10 @@ public:
     // Add in the constant part
     CtxtPart tmpPart = ctxt.parts[0];
     tmpPart.automorph(k);
+
+{ FHE_NTIMER_START(automorph_addPrimesAndScale);
     tmpPart.addPrimesAndScale(context.specialPrimes);
+}
     result->addPart(tmpPart, /*matchPrimeSet=*/true);
 
     // "rotate" the digits before key-switching them
