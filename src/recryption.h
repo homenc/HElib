@@ -30,7 +30,7 @@ class  FHEPubKey;
 class RecryptData {
 public:
   //! default Hamming weight of recryption key
-  static const long defSkHwt=56;
+  static const long defSkHwt=100;
 
   //! Some data members that are only used for I/O
   Vec<long> mvec;     //! partition of m into co-prime factors

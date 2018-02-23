@@ -476,16 +476,21 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   //  cerr << "FHEPubKey[";
   seekPastChar(str, '['); // defined in NumbTh.cpp
 
-  // sanity check, verify that basic ocntext parameters are correct
+  // sanity check, verify that basic context parameters are correct
   unsigned long m, p, r;
   vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
-  assert( m == pk.getContext().zMStar.getM() );
-  assert( p == pk.getContext().zMStar.getP() );
-  assert( gens.size() == pk.getContext().zMStar.numOfGens() );
-  for (long i=0; i<(long)gens.size(); i++)
-    assert(gens[i]==(long)pk.getContext().zMStar.ZmStarGen(i) 
-	   && ords[i]==(long) pk.getContext().zMStar.OrderOf(i));
+  const PAlgebra& palg = pk.getContext().zMStar;
+  assert( m == palg.getM() );
+  assert( p == palg.getP() );
+  assert( gens.size() == palg.numOfGens() );
+  for (long i=0; i<(long)gens.size(); i++) {
+    assert(gens[i]==(long)palg.ZmStarGen(i));
+    if (palg.SameOrd(i))
+      assert(ords[i]==(long) pk.getContext().zMStar.OrderOf(i));
+    else
+      assert(-ords[i]==(long) pk.getContext().zMStar.OrderOf(i));
+  }
 
   // Get the public encryption key itself
   str >> pk.pubEncrKey;

@@ -29,78 +29,44 @@ static bool comp_hoist(bool hoist)
 /********************************************************************/
 /****************** Auxiliary stuff: should go elsewhere   **********/
 
-
-
-// FIXME: this is copied verbatim comes from Ctxt.cpp
-// Compute the number of digits that we need and the esitmated
-// added noise from switching this ciphertext part.
-static std::pair<long, NTL::xdouble>
-computeKSNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
-{
-  const FHEcontext& context = p.getContext();
-  long nDigits = 0;
-  xdouble addedNoise = to_xdouble(0.0);
-  double sizeLeft = context.logOfProduct(p.getIndexSet());
-  for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
-    nDigits++;
-
-    double digitSize = context.logOfProduct(context.digits[i]);
-    if (sizeLeft<digitSize) digitSize=sizeLeft;// need only part of this digit
-
-    // Added noise due to this digit is phi(m) *sigma^2 *pSpace^2 *|Di|^2/4, 
-    // where |Di| is the magnitude of the digit
-
-    // WARNING: the following line is written just so to prevent overflow
-    addedNoise += to_xdouble(context.zMStar.getPhiM()) * pSpace*pSpace
-      * xexp(2*digitSize) * context.stdev*context.stdev / 4.0;
-
-    sizeLeft -= digitSize;
-  }
-
-  // Sanity-check: make sure that the added noise is not more than the special
-  // primes can handle: After dividing the added noise by the product of all
-  // the special primes, it should be smaller than the added noise term due
-  // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 12
-
-  long keyWeight = pubKey.getSKeyWeight(p.skHandle.getSecretKeyID());
-  double phim = context.zMStar.getPhiM();
-  double logModSwitchNoise = log((double)keyWeight) 
-    +2*log((double)pSpace) +log(phim) -log(12.0);
-  double logKeySwitchNoise = log(addedNoise) 
-    -2*context.logOfProduct(context.specialPrimes);
-  assert(logKeySwitchNoise < logModSwitchNoise);
-
-  return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
-}
-
+/**
+ * @class BasicAutomorphPrecon
+ * @brief Pre-computation to speed many automorphism on the same ciphertext.
+ * 
+ * The expensive part of homomorphic automorphism is braking the ciphertext
+ * parts into digits. The usual setting is we first rotate the ciphertext
+ * parts, then break them into digits. But when we apply many automorphisms
+ * it is faster to break the original ciphertext into digits, then rotate
+ * the digits (as opposed to first rotate, then break).
+ * An BasicAutomorphPrecon object breaks the original ciphertext and keeps
+ * the digits, then when you call automorph is only needs to apply the
+ * native automorphism and key switching to the digits, which is fast(er).
+ **/
 class BasicAutomorphPrecon {
   Ctxt ctxt;
   NTL::xdouble noise;
   std::vector<DoubleCRT> polyDigits;
 
 public:
-  BasicAutomorphPrecon(const Ctxt& _ctxt) : ctxt(_ctxt)
+  BasicAutomorphPrecon(const Ctxt& _ctxt) : ctxt(_ctxt), noise(1.0)
   {
     FHE_TIMER_START;
-    ctxt.cleanUp();
+    if (ctxt.parts.size() >= 1) assert(ctxt.parts[0].skHandle.isOne());
+    if (ctxt.parts.size() <= 1) return; // nothing to do
 
+    ctxt.cleanUp();
     const FHEcontext& context = ctxt.getContext();
     const FHEPubKey& pubKey = ctxt.getPubKey();
     long keyID = ctxt.getKeyID();
 
-    // The call to cleanUp() should ensure that these assertions pass.
-
-    assert(ctxt.parts.size() == 2); 
-    assert(ctxt.parts[0].skHandle.isOne());
-    assert(ctxt.parts[1].skHandle.isBase(keyID));
-    assert(ctxt.getPrimeSet().disjointFrom(context.specialPrimes));
-    
+    // The call to cleanUp() should ensure that this assertions passes.
+    assert(ctxt.inCanonicalForm(keyID));
 
     // Compute the number of digits that we need and the esitmated
     // added noise from switching this ciphertext.
     long nDigits;
     std::tie(nDigits, noise)
-      = computeKSNoise(ctxt.parts[1], pubKey, pubKey.keySWlist().at(0).ptxtSpace);
+      = ctxt.computeKSNoise(1, pubKey.keySWlist().at(0).ptxtSpace);
 
     double logProd = context.logOfProduct(context.specialPrimes);
     noise += ctxt.getNoiseVar() * xexp(2*logProd);
@@ -117,36 +83,56 @@ public:
   {
     FHE_TIMER_START;
 
-    if (k == 1) return make_shared<Ctxt>(ctxt);
+    // A hack: record this automorphism rather than actually performing it
+    if (isSetAutomorphVals()) { // defined in NumbTh.h
+      recordAutomorphVal(k);
+      return make_shared<Ctxt>(ctxt);
+    }
+
+    if (k==1 || ctxt.isEmpty()) return make_shared<Ctxt>(ctxt);// nothing to do
 
     const FHEcontext& context = ctxt.getContext();
     const FHEPubKey& pubKey = ctxt.getPubKey();
-    long keyID = ctxt.getKeyID();
-
-    assert(pubKey.haveKeySWmatrix(1,k,keyID,keyID));
-    const KeySwitch& W = pubKey.getKeySWmatrix(1,k,keyID,keyID);
-
-    shared_ptr<Ctxt> result = make_shared<Ctxt>(Ctxt(ZeroCtxtLike, ctxt));
-
+    shared_ptr<Ctxt> result = make_shared<Ctxt>(Ctxt(pubKey)); // empty ctxt
     result->noiseVar = noise; // noise estimate
 
+    if (ctxt.parts.size()==1) { // only constant part, no need to key-switch
+      CtxtPart tmpPart = ctxt.parts[0];
+      tmpPart.automorph(k);
+      tmpPart.addPrimesAndScale(context.specialPrimes);
+      result->addPart(tmpPart, /*matchPrimeSet=*/true);
+      return result;
+    }
 
-    // Add in the constant part
+    // Ensure that we have a key-switching matrices for this automorphism
+    long keyID = ctxt.getKeyID();
+    if (!pubKey.isReachable(k,keyID)) {
+      throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
+                             + ", keyID="+std::to_string(keyID));
+    }
+
+    // Get the first key-switching matrix for this automorphism
+    const KeySwitch& W = pubKey.getNextKSWmatrix(k,keyID);
+    long amt = W.fromKey.getPowerOfX();
+
+    // Start by rotating the constant part, no need to key-switch it
     CtxtPart tmpPart = ctxt.parts[0];
-    tmpPart.automorph(k);
-
-{ FHE_NTIMER_START(automorph_addPrimesAndScale);
+    tmpPart.automorph(amt);
     tmpPart.addPrimesAndScale(context.specialPrimes);
-}
     result->addPart(tmpPart, /*matchPrimeSet=*/true);
 
-    // "rotate" the digits before key-switching them
+    // Then rotate the digits and key-switch them
     vector<DoubleCRT> tmpDigits = polyDigits;
     for (auto&& tmp: tmpDigits) // rotate each of the digits
-      tmp.automorph(k);
+      tmp.automorph(amt);
 
-    result->keySwitchDigits(W, tmpDigits);
+    result->keySwitchDigits(W, tmpDigits); // key-switch the digits
 
+    long m = context.zMStar.getM();
+    if ((amt-k)%m != 0) { // amt != k (mod m), more automorphisms to do
+      k = MulMod(k, InvMod(amt,m), m); // k *= amt^{-1} mod m
+      result->smartAutomorph(k);       // call usual smartAutomorph
+    }
     return result;
   }
 };

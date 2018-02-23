@@ -372,10 +372,12 @@ void writeContextBase(ostream& str, const FHEcontext& context)
   }
   str << " [";
   for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
-    str << context.zMStar.OrderOf(i)
-	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
+    long ord = context.zMStar.OrderOf(i);
+    if (context.zMStar.SameOrd(i)) str << ord;
+    else                           str << (-ord);
+    if (i<(long)context.zMStar.numOfGens()-1) str << ' ';
   }
-  str << "]";
+  str << "]]";
 }
 
 ostream& operator<< (ostream &str, const FHEcontext& context)

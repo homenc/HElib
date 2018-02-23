@@ -9,13 +9,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+#include <NTL/BasicThreadPool.h>
 
 #include "recryption.h"
 #include "EncryptedArray.h"
 #include "EvalMap.h"
 #include "powerful.h"
-
-#include <NTL/BasicThreadPool.h>
+#include "CtPtrs.h"
+#include "intraSlot.h"
 
 
 /************* Some local functions *************/
@@ -26,11 +27,7 @@ static void x2iInSlots(ZZX& poly, long i,
 // of p^r and q, while keeping the added multiples small. 
 template<class VecInt>
 long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha);
-
-double pow(long a, long b)
-{
-  return pow(double(a), double(b));
-}
+static inline double pow(long a, long b) {return pow(double(a), double(b));}
 
 RecryptData::~RecryptData()
 {
@@ -188,21 +185,10 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 /********************************************************************/
 /********************************************************************/
 
-#ifdef DEBUG_PRINTOUT /*********** Debugging utilities **************/
-extern FHESecKey* dbgKey;
-extern EncryptedArray* dbgEa;
-extern ZZX dbg_ptxt;
-ZZX dbgPoly, skPoly;
-extern Vec<ZZ> ptxt_pwr;
-#define FLAG_PRINT_ZZX  1
-#define FLAG_PRINT_POLY 2
-#define FLAG_PRINT_VEC  4
+#ifdef DEBUG_PRINTOUT
+#include "debugging.h"
 long printFlag = FLAG_PRINT_VEC;
-extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
-			    const EncryptedArray& ea, long flags=0);
-
-extern void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
-#endif                /********* End Debugging utilities **************/
+#endif
 
 // Extract digits from fully packed slots
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
@@ -212,6 +198,20 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 void FHEPubKey::reCrypt(Ctxt &ctxt)
 {
   FHE_TIMER_START;
+
+  // Some sanity checks for dummy ciphertext
+  long ptxtSpace = ctxt.getPtxtSpace();
+  if (ctxt.isEmpty()) return;
+  if (ctxt.parts.size()==1 && ctxt.parts[0].skHandle.isOne()) {
+    // Dummy encryption, just ensure that it is reduced mod p
+    ZZX poly = to_ZZX(ctxt.parts[0]);
+    for (long i=0; i<poly.rep.length(); i++)
+      poly[i] = to_ZZ( rem(poly[i],ptxtSpace) );
+    poly.normalize();
+    ctxt.DummyEncrypt(poly);
+    return;
+  }
+
   assert(recryptKeyID>=0); // check that we have bootstrapping data
 
   long p = getContext().zMStar.getP();
@@ -231,7 +231,6 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  long ptxtSpace = ctxt.getPtxtSpace();
   assert(p2r % ptxtSpace == 0);
 
   FHE_NTIMER_START(preProcess);
@@ -269,7 +268,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
   // Check that the estimated noise is still low
   if (noise + maxU*p2r*(skHwts[recryptKeyID]+1) > q/2) 
-    cerr << " * noise/q after makeDisivible = "
+    cerr << " * noise/q after makeDivisible = "
 	 << ((noise + maxU*p2r*(skHwts[recryptKeyID]+1))/q) << endl;
 
   for (long i=0; i<(long)zzParts.size(); i++)
@@ -521,6 +520,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     ctxt += unpacked[i];
   }
   FHE_NTIMER_STOP(repack);
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ After repack ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+#endif
 }
 
 
@@ -636,3 +639,57 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 }
 
 #endif
+
+
+// Use packed bootstrapping, so we can bootstrap all in just one go.
+void packedRecrypt(const CtPtrs& cPtrs,
+                   const std::vector<zzX>& unpackConsts,
+                   const EncryptedArray& ea)
+{
+  FHEPubKey& pKey = (FHEPubKey&)cPtrs[0]->getPubKey();
+
+  // Allocate temporary ciphertexts for the recryption
+  int nPacked = divc(cPtrs.size(), ea.getDegree()); // ceil(totoalNum/d)
+  std::vector<Ctxt> cts(nPacked, Ctxt(pKey));
+
+  repack(CtPtrs_vectorCt(cts), cPtrs, ea);  // pack ciphertexts
+  //  cout << "@"<< lsize(cts)<<std::flush;
+  for (Ctxt& c: cts) {     // then recrypt them
+    c.reducePtxtSpace(2);  // we only have recryption data for binary ctxt
+#ifdef DEBUG_PRINTOUT
+    ZZX ptxt;
+    decryptAndPrint((cout<<"  before recryption "), c, *dbgKey, *dbgEa);
+    dbgKey->Decrypt(ptxt, c);
+    c.DummyEncrypt(ptxt);
+    decryptAndPrint((cout<<"  after recryption "), c, *dbgKey, *dbgEa);
+#else
+    pKey.reCrypt(c);
+#endif
+  }
+  unpack(cPtrs, CtPtrs_vectorCt(cts), ea, unpackConsts);
+}
+
+// recrypt all ctxt at level < belowLvl
+void packedRecrypt(const CtPtrs& array,
+                   const std::vector<zzX>& unpackConsts,
+                   const EncryptedArray& ea, long belowLvl)
+{
+  std::vector<Ctxt*> v;
+  for (long i=0; i<array.size(); i++)
+    if ( array.isSet(i) && !array[i]->isEmpty()
+         && array[i]->findBaseLevel()<belowLvl )
+      v.push_back(array[i]);
+  packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
+}
+void packedRecrypt(const CtPtrMat& m,
+                   const std::vector<zzX>& unpackConsts,
+                   const EncryptedArray& ea, long belowLvl)
+{
+  std::vector<Ctxt*> v;
+  for (long i=0; i<m.size(); i++)
+    for (long j=0; j<m[i].size(); j++)
+      if ( m[i].isSet(j) && !m[i][j]->isEmpty()
+           && m[i][j]->findBaseLevel()<belowLvl )
+        v.push_back(m[i][j]);
+  packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
+}

@@ -59,8 +59,6 @@
 class KeySwitch;
 class FHEPubKey;
 class FHESecKey;
-class AutomorphHandler;
-class AutomorphVecIterator;
 
 /**
  * @class SKHandle
@@ -250,7 +248,6 @@ const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
 class Ctxt {
   friend class FHEPubKey;
   friend class FHESecKey;
-  friend class AutomorphVecIterator;
   friend class BasicAutomorphPrecon;
 
   const FHEcontext& context; // points to the parameters of this FHE instance
@@ -341,8 +338,6 @@ public:
 
   Ctxt& operator*=(const Ctxt& other); // Multiply by aonther ciphertext
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
-  void multiAutomorph(const vector<long>& toVals,
-                      AutomorphHandler& handler, long fromVal=1);
   Ctxt& operator>>=(long k) { automorph(k); return *this; }
 
   //! @brief automorphism with re-lienarization
@@ -428,6 +423,11 @@ public:
 
   //! @name Ciphertext maintenance
   ///@{
+
+  //! The number of digits needed, and added noise effect, of
+  //! key-switching one ciphertext part
+  std::pair<long, NTL::xdouble> computeKSNoise(long partIdx, long pSpace=0);
+
   //! Reduce plaintext space to a divisor of the original plaintext space
   void reducePtxtSpace(long newPtxtSpace);
 
@@ -537,7 +537,8 @@ public:
 
   //! @brief Returns log(noise-variance)/2 - log(q)
   double log_of_ratio() const
-  {return (log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet()));}
+  {return (getNoiseVar()==0.0)? (-context.logOfProduct(getPrimeSet()))
+      : ((log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet())) );}
   ///@}
   friend istream& operator>>(istream& str, Ctxt& ctxt);
   friend ostream& operator<<(ostream& str, const Ctxt& ctxt);

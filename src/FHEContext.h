@@ -9,11 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
 #ifndef _FHEcontext_H_
 #define _FHEcontext_H_
 /**
- * @file FHEcontext.h
+ * @file FHEContext.h
  * @brief Keeps the parameters of an instance of the cryptosystem
  **/
 
