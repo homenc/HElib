@@ -342,7 +342,8 @@ long phi_N(long N);
 
 //! Returns in gens a generating set for Zm* /<p>, and in ords the
 //! order of these generators. Return value is the order of p in Zm*.
-long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p);
+long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p,
+                    const vector<long>& candidates=vector<long>());
 
 //! Find e-th root of unity modulo the current modulus.
 void FindPrimitiveRoot(zz_p &r, unsigned long e);

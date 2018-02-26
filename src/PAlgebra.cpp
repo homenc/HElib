@@ -127,20 +127,24 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
 
   std::vector<long> tmpOrds;
-  if (_gens.size() == 0 || isDryRun()) 
-      this->ordP = findGenerators(this->gens, tmpOrds, mm, pp);
-  else {
-    assert(_gens.size() == _ords.size());
+  if (_gens.size() == _ords.size() && !isDryRun()) {
+    // externally supplied generator,orders
     tmpOrds = _ords;
     this->gens = _gens;
     this->ordP = multOrd(pp, mm);
   }
+  else
+    // treat externally supplied generators (if any) as candidates
+    this->ordP = findGenerators(this->gens, tmpOrds, mm, pp, _gens);
+
+  // Record for each generator gi whether it has the same order in
+  // ZM* as in Zm* /(p,g1,...,g_{i-1})
   resize(native, lsize(tmpOrds));
   for (long j=0; j<lsize(tmpOrds); j++) {
     native[j] = (tmpOrds[j]>0);
     tmpOrds[j] = abs(tmpOrds[j]);
   }
-  cube.initSignature(tmpOrds);
+  cube.initSignature(tmpOrds); // set hypercume with these dimensions
 
   phiM = ordP * getNSlots();
 
