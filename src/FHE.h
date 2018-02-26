@@ -165,7 +165,9 @@ class FHEPubKey { // The public key
    * (which in particular means that autGraph[1] must exist).
    */
 
-  std::vector<int> KS_strategy;
+  NTL::Vec<int> KS_strategy; // NTL Vec's support I/O, which is
+                             // more convenient
+
 /* MAUTO
   std::vector< std::vector<AutGraph> > multAutomorphTrees;
 */
@@ -254,8 +256,9 @@ public:
   //! dim == -1 is Frobenius
   long getKSStrategy(long dim) const {
     long index = dim+1;
-    if (index >= lsize(KS_strategy)) return FHE_KSS_UNKNOWN;
-    return KS_strategy.at(index);
+    assert(index >= 0);
+    if (index >= KS_strategy.length()) return FHE_KSS_UNKNOWN;
+    return KS_strategy[index];
   }
 
   //! @brief set KS strategy for dimension dim  
@@ -263,8 +266,8 @@ public:
   long setKSStrategy(long dim, int val) {
     long index = dim+1;
     assert(index >= 0);
-    if (index >= lsize(KS_strategy)) 
-      KS_strategy.resize(index+1, FHE_KSS_UNKNOWN);
+    if (index >= KS_strategy.length()) 
+      KS_strategy.SetLength(index+1, FHE_KSS_UNKNOWN);
     KS_strategy[index] = val;
   }
 

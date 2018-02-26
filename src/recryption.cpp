@@ -423,10 +423,12 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
 
     NTL_EXEC_RANGE(d, first, last)
+    // FIXME: implement using hoisting!
         for (long j = first; j < last; j++) { // process jth Frobenius 
           frob[j] = ctxt;
           frob[j].frobeniusAutomorph(j);
           frob[j].cleanUp();
+          // FIXME: not clear if we should call cleanUp here
         }
     NTL_EXEC_RANGE_END
 
@@ -553,10 +555,12 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     Ctxt tmp1(ZeroCtxtLike, ctxt);
     Ctxt tmp2(ZeroCtxtLike, ctxt);
 
+    // FIXME: implement using hoisting!
     for (long j = 0; j < d; j++) { // process jth Frobenius 
       tmp1 = ctxt;
       tmp1.frobeniusAutomorph(j);
       tmp1.cleanUp();
+      // FIXME: not clear if we should call cleanUp here
 
       for (long i = 0; i < d; i++) {
         tmp2 = tmp1;
