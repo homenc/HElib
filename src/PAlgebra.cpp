@@ -127,7 +127,7 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
 
   std::vector<long> tmpOrds;
-  if (_gens.size() == _ords.size() && !isDryRun()) {
+  if (_gens.size()>0 && _gens.size() == _ords.size() && !isDryRun()) {
     // externally supplied generator,orders
     tmpOrds = _ords;
     this->gens = _gens;
