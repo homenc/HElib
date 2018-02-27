@@ -304,6 +304,8 @@ class Ctxt {
   Ctxt& privateAssign(const Ctxt& other);
  
 public:
+  //__attribute__((deprecated))
+  explicit
   Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace=0); // constructor
 
   Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt); 
