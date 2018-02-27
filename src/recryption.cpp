@@ -484,8 +484,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
           unpacked[i].multByP();
           unpacked[i] += scratch[j];
         }
-        if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
-          unpacked[i] += scratch[botHigh-1];
+        if (p==2 && botHigh>0) {   // For p==2, subtract also the previous bit
+          //cerr << scratch.size() << " " <<  botHigh-1 << "\n";
+          unpacked.at(i) += scratch.at(botHigh-1);
+        }
         unpacked[i].negate();
     
         if (r>ePrime) {          // Add in digits from the bottom part, if any
