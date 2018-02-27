@@ -32,24 +32,27 @@ long compareFiles(string filename1, string filename2){
   if(file1size != file2size){ 
     file1.close();
     file2.close();
+    cerr << "Files "<<filename1<<" and "<<filename2<<" not the same size :("<< endl;
     return -1;
   }
 
-  const size_t BLOCKSIZE = 4096; // 4 MB
+  // Now compare byte blocks at a time.
+  const size_t BLOCKSIZE = 4096; // 4 kB
 
   char buffer1[BLOCKSIZE];
   char buffer2[BLOCKSIZE];
-  size_t blocksize = 0; // Actual blocksize
+  size_t curBlckSz = 0;
 
-  for(size_t i=file1size; i >= blocksize ; i-=blocksize) {
+  for(size_t i=file1size, cnt=0; i > 0; i-=curBlckSz, cnt++) {
 
-    blocksize = std::min(BLOCKSIZE, i);
+    curBlckSz = std::min(BLOCKSIZE, i);
 
-    file1.read(buffer1, blocksize);
-    file2.read(buffer2, blocksize);
+    file1.read(buffer1, curBlckSz);
+    file2.read(buffer2, curBlckSz);
 
-    if(memcmp(buffer1, buffer2, blocksize)){
-      return 1; // Eventually tell you which block maybe even byte!
+    if(memcmp(buffer1, buffer2, curBlckSz)){
+      cerr << "Block "<<cnt<<" (block size: "<<BLOCKSIZE<<" bytes) "<<cnt<<" does not match :("<<endl;
+      return 1; 
     }
 
   }
@@ -104,6 +107,7 @@ int main(int argc, char *argv[])
   FHEPubKey* pubKey = secKey;
   secKey->GenSecKey(w);
   addSome1DMatrices(*secKey);
+  addFrbMatrices(*secKey);
 
   // ASCII 
   cout << "\tWriting ASCII1 file " << asciiFile1 << endl;
@@ -168,11 +172,10 @@ int main(int argc, char *argv[])
 {
   cout << "Comparing the two ASCII files\n"; 
   
-//  long differ = compareFiles("tmpfile.a.txt", "tmpfile.b.txt"); 
   long differ = compareFiles(asciiFile1, asciiFile2); 
 
   if(differ != 0){
-    cout << "\tFAIL - Files differ. Reason: " << differ << endl;
+    cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
     cout << "Test failed.\n";
     exit(EXIT_FAILURE);
   } else {

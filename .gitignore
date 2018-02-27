@@ -1,5 +1,6 @@
 # Exclude 
 
+**DS_Store
 *.a
 *.o
 *_x.dSYM
