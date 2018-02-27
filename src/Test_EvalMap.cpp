@@ -123,7 +123,10 @@ void  TestIt(long p, long r, long c, long _k, long w,
   if (!noPrint) CheckCtxt(ctxt, "init");
 
   if (!noPrint) cout << "build EvalMap\n";
-  EvalMap map(ea, mvec, false); // compute the transformation to apply
+  EvalMap map(ea, /*minimal=*/false, mvec, 
+    /*invert=*/false, /*build_cache=*/false, /*normal_basis=*/false); 
+  // compute the transformation to apply
+
   if (!noPrint) cout << "apply EvalMap\n";
   if (useCache) map.upgrade();
   map.apply(ctxt); // apply the transformation to ctxt
@@ -147,7 +150,9 @@ void  TestIt(long p, long r, long c, long _k, long w,
   // packed in the slots
 
   if (!noPrint) cout << "build EvalMap\n";
-  EvalMap imap(ea, mvec, true, false); // compute the transformation to apply
+  EvalMap imap(ea, /*minimal=*/false, mvec, 
+    /*invert=*/true, /*build_cache=*/false, /*normal_basis=*/false); 
+  // compute the transformation to apply
   if (!noPrint) cout << "apply EvalMap\n";
   if (useCache) imap.upgrade();
   imap.apply(ctxt); // apply the transformation to ctxt

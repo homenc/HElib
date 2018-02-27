@@ -27,8 +27,10 @@ init_representatives(Vec<long>& representatives, long dim,
 
 // Constructor: initializing tables for the evaluation-map transformations
 
-EvalMap::EvalMap(const EncryptedArray& _ea, bool minimal,
-                 const Vec<long>& mvec, bool _invert,
+EvalMap::EvalMap(const EncryptedArray& _ea, 
+                 bool minimal,
+                 const Vec<long>& mvec, 
+                 bool _invert,
                  bool build_cache,
                  bool normal_basis)
 
