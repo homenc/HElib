@@ -93,7 +93,7 @@ public:
 
     const FHEcontext& context = ctxt.getContext();
     const FHEPubKey& pubKey = ctxt.getPubKey();
-    shared_ptr<Ctxt> result = make_shared<Ctxt>(Ctxt(pubKey)); // empty ctxt
+    shared_ptr<Ctxt> result = make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
     result->noiseVar = noise; // noise estimate
 
     if (ctxt.parts.size()==1) { // only constant part, no need to key-switch
