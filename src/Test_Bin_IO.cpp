@@ -75,19 +75,20 @@ int main(int argc, char *argv[])
   long c=2;
   long w=64;
   long L=5;
+  long cleanup=1;
  
   amap.arg("m", m, "order of cyclotomic polynomial");
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r, "lifting");
   amap.arg("c", c, "number of columns in the key-switching matrices");
   amap.arg("L", L, "number of levels wanted");
+  amap.arg("cleanup", cleanup, "cleanup files created");
   amap.parse(argc, argv);
 
   const char* asciiFile1 = "iotest_ascii1.txt"; 
   const char* asciiFile2 = "iotest_ascii2.txt"; 
   const char* binFile1 = "iotest_bin.bin"; 
 
-  
 // Write ASCII and bin files.
 {   
 
@@ -229,14 +230,21 @@ int main(int argc, char *argv[])
   ea.decrypt(c1, *secKey, pp1);     
 	
   if(!equals(ea, p1, pp1)){
-    cout << "\tpolynomials are not equal\n";
+    cout << "\tFAIL - polynomials are not equal\n";
     cout << "Test failed.\n";
     exit(EXIT_FAILURE);
   }  
   
-  cout << "\tpolynomials are equal\n";
+  cout << "\tGOOD - polynomials are equal\n";
 
   inFile.close(); 
+
+  if(cleanup){
+    cout << "Clean up. Deleting created files." << endl;
+    if(unlink(asciiFile1)) cerr << "Delete of "<<asciiFile1<<" failed."<<endl; 
+    if(unlink(asciiFile2)) cerr << "Delete of "<<asciiFile2<<" failed."<<endl; 
+    if(unlink(binFile1)) cerr << "Delete of "<<binFile1<<" failed."<<endl;  
+  }
 
   cout << "Test successful.\n\n";
 

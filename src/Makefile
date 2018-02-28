@@ -70,6 +70,7 @@ check: Test_General_x Test_matmul_x Test_matmul1D_x Test_LinPoly_x Test_Permutat
 	./Test_extractDigits_x m=2047 p=5 noPrint=1
 	./Test_bootstrapping_x noPrint=1
 	./Test_bootstrapping_x p=7 noPrint=1
+	./Test_Bin_IO_x p=257  m=11008 r=1
 
 test: $(TESTPROGS)
 
