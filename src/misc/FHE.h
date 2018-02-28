@@ -20,6 +20,7 @@
 #include "DoubleCRT.h"
 #include "FHEContext.h"
 #include "Ctxt.h"
+#include "multiAutomorph.h"
 
 /**
  * @class KeySwitch
@@ -148,8 +149,28 @@ class FHEPubKey { // The public key
   // use when re-linearizing s_i(X^n). 
   std::vector< std::vector<long> > keySwitchMap;
 
+  /* multAutomorphTrees keeps for every keyID and every dimension a
+   * "tree" that specifies the order of automorphism to apply in order
+   * to get all the rotations for this diemnsion.
+   * multAutomorphTrees[i][j] is the tree for keyID i and dimension j.
+   * An automorphism tree is represented by a list of the form:
+   *
+   *   fromNode1: list of toNodes
+   *   fromNode2: list of toNodes
+   *   [...]
+   *
+   * where each node is represented by its representative in Zm*, and
+   * having an edge a->b in the tree implies that we have a key-switching
+   * matrix for k = b * a^{-1} mod m. The root of the tree is always 1
+   * (which in particular means that autGraph[1] must exist).
+   */
+
   NTL::Vec<int> KS_strategy; // NTL Vec's support I/O, which is
                              // more convenient
+
+/* MAUTO
+  std::vector< std::vector<AutGraph> > multAutomorphTrees;
+*/
 
   // bootstrapping data
 
@@ -159,16 +180,17 @@ class FHEPubKey { // The public key
 public:
   FHEPubKey(): // this constructor thorws run-time error if activeContext=NULL
     context(*activeContext), pubEncrKey(*this),
-    recryptEkey(*this) { recryptKeyID=-1; } 
+    recryptEkey(*this) /* MAUTO , multAutomorphTrees(1) */ { recryptKeyID=-1; } 
 
   explicit FHEPubKey(const FHEcontext& _context): 
     context(_context), pubEncrKey(*this), recryptEkey(*this)
-    { recryptKeyID=-1; }
+    /*  MAUTO , multAutomorphTrees(1) */ { recryptKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
     context(other.context), pubEncrKey(*this), skHwts(other.skHwts),
     keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
     recryptKeyID(other.recryptKeyID), recryptEkey(*this)
+    /* MAUTO , multAutomorphTrees(other.multAutomorphTrees) */
   { // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
     pubEncrKey.privateAssign(other.pubEncrKey);
     recryptEkey.privateAssign(other.recryptEkey);
@@ -248,6 +270,32 @@ public:
       KS_strategy.SetLength(index+1, FHE_KSS_UNKNOWN);
     KS_strategy[index] = val;
   }
+
+  ///@{
+  //! @name Manage Automorphism trees for all the dimensions
+
+/* MAUTO
+  //! Removes all existing trees (if any) for a given dimension
+  void resetTree(long dim, long keyID=0)
+  {
+    if (multAutomorphTrees.size()>keyID
+        && multAutomorphTrees[keyID].size()>dim)
+      multAutomorphTrees[keyID][dim] = AutGraph(); // reset to an empty tree
+  }
+
+  //! Returns the tree for the given dimension (throw exception if non exists)
+  const AutGraph& getTree4dim(long dim, long keyID=0) const
+  { return multAutomorphTrees.at(keyID).at(dim); }
+
+  //! Adds an internal node with all its children to a tree.
+  //! Creates the tree if it does not exist yet.
+  void add2tree(long dim, long from, const std::vector<long>& vals,long keyID=0);
+
+  //! Returns the children of one internal node
+  const std::vector<long>& getChildrenInTree(long dim, long from, long keyID=0)
+    const { return multAutomorphTrees.at(keyID).at(dim).at(from); }
+  ///@}
+*/
 
   //! @brief Encrypts plaintext, result returned in the ciphertext argument.
   //! The returned value is the plaintext-space for that ciphertext. When
