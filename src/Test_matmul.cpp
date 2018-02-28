@@ -404,16 +404,15 @@ static BlockMatMulFull* buildRandomFullBlockMatrix(EncryptedArray& ea)
 }
 
 template<class Matrix>
-void DoTest(const Matrix& mat, const EncryptedArray& ea, 
+bool DoTest(const Matrix& mat, const EncryptedArray& ea, 
             const FHESecKey& secretKey, bool minimal, bool verbose)
 {
-  resetAllTimers();
+  FHE_NTIMER_START(EncodeMartix_MatMul);
   typename Matrix::ExecType mat_exec(mat, minimal);
   mat_exec.upgrade();
+  FHE_NTIMER_STOP(EncodeMartix_MatMul);
 
-  if (verbose) printAllTimers();
-
-  // choose a random plaintext vector
+  // choose a random plaintext vector and encrypt it
   NewPlaintextArray v(ea);
   random(ea, v);
 
@@ -422,31 +421,15 @@ void DoTest(const Matrix& mat, const EncryptedArray& ea,
   ea.encrypt(ctxt, secretKey, v);
   Ctxt ctxt2 = ctxt;
 
-  resetAllTimers();
-
   mat_exec.mul(ctxt);
-
-  if (verbose) {
-    printAllTimers();
-#if (defined(__unix__) || defined(__unix) || defined(unix))
-      struct rusage rusage;
-      getrusage( RUSAGE_SELF, &rusage );
-      cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
-#endif
-  }
-
 
   mul(v, mat);     // multiply the plaintext vector
 
   NewPlaintextArray v1(ea);
   ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
 
-  if (equals(ea, v, v1))        // check that we've got the right answer
-    cout << "Nice!!\n";
-  else
-    cout << "Grrr@*\n";
+  return equals(ea, v, v1);        // check that we've got the right answer
 }
-
 
 int ks_strategy = 0;
 // 0 == default
@@ -455,12 +438,11 @@ int ks_strategy = 0;
 // 3 == minimal
 
 
-void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
+void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
 {
-  if (verbose) {
+  resetAllTimers();
+  if (verbose)
     context.zMStar.printout();
-    cout << endl;
-  }
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
@@ -501,24 +483,53 @@ void  TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
   EncryptedArray ea(context, G);
 #endif
 
-
-  if (full == 0 && block == 0) {
-    std::unique_ptr< MatMul1D > ptr(buildRandomMatrix(ea,dim));
-    DoTest(*ptr, ea, secretKey, minimal, verbose);
-  }
-  else if (full == 0 && block == 1) {
-    std::unique_ptr< BlockMatMul1D > ptr(buildRandomBlockMatrix(ea,dim));
-    DoTest(*ptr, ea, secretKey, minimal, verbose);
-  }
-  else if (full == 1 && block == 0) {
-    std::unique_ptr< MatMulFull > ptr(buildRandomFullMatrix(ea));
-    DoTest(*ptr, ea, secretKey, minimal, verbose);
-  }
-  else if (full == 1 && block == 1) {
-    std::unique_ptr< BlockMatMulFull > ptr(buildRandomFullBlockMatrix(ea));
-    DoTest(*ptr, ea, secretKey, minimal, verbose);
+  if (verbose) {
+    {std::stringstream ss;
+    ss << publicKey;
+    cout << "\n  |pubKey|="<<ss.tellp()<<" bytes";}
+    cout << ", security=" << context.securityLevel()<<endl;
+    cout << "  #threads="<<NTL::AvailableThreads();
+    if (block)
+      cout << "block-size="<<(context.zMStar.getOrdP());
+    cout << ", vector-dimension="
+         << (full? ea.size() : ea.sizeOfDimension(dim))<<", ";
+    if (!full)
+      cout << (ea.size()/ea.sizeOfDimension(dim))<<" products in parallel, ";
   }
 
+  bool okSoFar = true;
+  for (long i=0; i<5; i++) {
+    if (full == 0 && block == 0) {
+      std::unique_ptr< MatMul1D > ptr(buildRandomMatrix(ea,dim));
+      if (!DoTest(*ptr, ea, secretKey, minimal, verbose))
+        okSoFar = false;
+    }
+    else if (full == 0 && block == 1) {
+      std::unique_ptr< BlockMatMul1D > ptr(buildRandomBlockMatrix(ea,dim));
+      if (!DoTest(*ptr, ea, secretKey, minimal, verbose))
+        okSoFar = false;
+    }
+    else if (full == 1 && block == 0) {
+      std::unique_ptr< MatMulFull > ptr(buildRandomFullMatrix(ea));
+      if (!DoTest(*ptr, ea, secretKey, minimal, verbose))
+        okSoFar = false;
+    }
+    else if (full == 1 && block == 1) {
+      std::unique_ptr< BlockMatMulFull > ptr(buildRandomFullBlockMatrix(ea));
+      if (!DoTest(*ptr, ea, secretKey, minimal, verbose))
+        okSoFar = false;
+    }
+  }
+  cout << (okSoFar? "Nice!!\n\n" : "Grrr@*\n\n");
+
+  if (verbose) {
+    printAllTimers(cout);
+#if (defined(__unix__) || defined(__unix) || defined(unix))
+      struct rusage rusage;
+      getrusage( RUSAGE_SELF, &rusage );
+      cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+#endif
+  }
 }
 
 
@@ -532,7 +543,7 @@ int main(int argc, char *argv[])
   amap.arg("p", p, "plaintext base");
   long r=1;
   amap.arg("r", r,  "lifting");
-  long L=4;
+  long L=3;
   amap.arg("L", L, "# of levels in the modulus chain");
   long dim=0;
   amap.arg("dim", dim, "dimension along which to multiply");
@@ -556,15 +567,15 @@ int main(int argc, char *argv[])
 
   NTL::Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", NULL);
-  amap.note("e.g., gens='[562 1871 751]'");
+  amap.note("e.g., gens='[420 1105 1425]'");
   NTL::Vec<long> ords;
   amap.arg("ords", ords, "use specified vector of orders", NULL);
-  amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
+  amap.note("e.g., ords='[11 8 2]', negative means 'bad'");
 
   amap.parse(argc, argv);
 
   if (verbose) {
-    cout << "*** matmul1D: m=" << m
+    cout << "*** Test_MatMul: m=" << m
 	 << ", p=" << p
 	 << ", r=" << r
 	 << ", L=" << L
@@ -592,9 +603,4 @@ int main(int argc, char *argv[])
   buildModChain(context, L, /*c=*/3);
 
   TestIt(context, dim, verbose, full, block);
-  if (0 && verbose) {
-    printAllTimers();
-    cout << endl;
-  }
-
 }
