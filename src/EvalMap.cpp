@@ -37,7 +37,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
   : ea(_ea), invert(_invert)
 {
   const FHEcontext& context = ea.getContext();
-  const PAlgebra& zMStar = context.zMStar;
+  const PAlgebra& zMStar = ea.getPAlgebra();
   
   long p = zMStar.getP();
   long d = zMStar.getOrdP();

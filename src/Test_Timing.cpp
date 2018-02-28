@@ -164,7 +164,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
 long rotationAmount(const EncryptedArray& ea, const FHEPubKey& publicKey,
 	       bool onlyWithMatrix)
 {
-  const PAlgebra& pa = ea.getContext().zMStar;
+  const PAlgebra& pa = ea.getPAlgebra();
   long nSlots = pa.getNSlots();
   long r = RandomBnd(nSlots);
   long k = pa.ith_rep(r);

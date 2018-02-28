@@ -49,7 +49,7 @@ SRC = KeySwitching.cpp EncryptedArray.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEConte
 
 OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o recryption.o debugging.o matmul.o intraSlot.o binaryArith.o binaryCompare.o tableLookup.o
 
-TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_LinPoly_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_bootstrapping_x Test_PtrVector_x Test_intraSlot_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
+TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_bootstrapping_x Test_PtrVector_x Test_intraSlot_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
 
 
 all: fhe.a
@@ -75,9 +75,6 @@ check_General: Test_General_x
 check_matmul: Test_matmul_x 
 	./Test_matmul_x m=18631 L=8 
 	./Test_matmul_x block=1 m=24295 gens="[16386 16427]" ords="[42 16]" L=8
-
-check_LinPoly: Test_LinPoly_x 
-	./Test_LinPoly_x noPrint=1
 
 check_Permutations: Test_Permutations_x 
 	./Test_Permutations_x noPrint=1
@@ -108,13 +105,12 @@ check_tableLookup: Test_tableLookup_x
 	./Test_tableLookup_x
 
 
-check_all: Test_General_x Test_matmul_x Test_LinPoly_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
+check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
 	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
 	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
 	./Test_matmul_x m=18631 L=8 
 	./Test_matmul_x block=1 m=24295 gens="[16386 16427]" ords="[42 16]" L=8
-	./Test_LinPoly_x noPrint=1
 	./Test_Permutations_x noPrint=1
 	./Test_PolyEval_x p=7 r=2 d=34 noPrint=1
 	./Test_Replicate_x m=1247 noPrint=1

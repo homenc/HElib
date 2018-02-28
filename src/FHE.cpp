@@ -304,23 +304,6 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
 }
 
 
-/* MAUTO
-
-void FHEPubKey::add2tree(long dim, long from,
-                         const std::vector<long>& vals,long keyID)
-{
-  //cerr << "*** add2tree: " << dim << " " << from << " ";
-  //for (auto val: vals) cerr << val << " ";
-  //cerr << "\n";
-  if (multAutomorphTrees.size()<=keyID)
-    multAutomorphTrees.resize(keyID+1);
-  if (multAutomorphTrees[keyID].size()<=dim)
-    multAutomorphTrees[keyID].resize(getContext().zMStar.numOfGens()+1);
-  multAutomorphTrees[keyID][dim][from]=vals;
-}
-
-*/
-
 // Encrypts plaintext, result returned in the ciphertext argument. The
 // returned value is the plaintext-space for that ciphertext. When called
 // with highNoise=true, returns a ciphertext with noise level~q/8.

@@ -1,15 +1,22 @@
-#include "matmul.h"
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
 #include <cstddef>
 #include <tuple>
 #include <algorithm>
 #include <NTL/BasicThreadPool.h>
-
-
-
+#include "matmul.h"
 
 int fhe_test_force_bsgs=0;
 int fhe_test_force_hoist=0;
-
 
 static bool comp_bsgs(bool bsgs)
 {
@@ -468,7 +475,7 @@ struct MatMul1D_derived_impl {
       } 
       else {
 	std::tie(blockIdx, innerIdx) // std::pair<long,long> idxes
-	  = ea.getContext().zMStar.breakIndexByDim(j, dim);
+	  = ea.getPAlgebra().breakIndexByDim(j, dim);
 	//	blockIdx = idxes.first;  // which transformation
 	//	innerIdx = idxes.second; // index along dimension dim
       }
@@ -753,7 +760,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
    FHE_NTIMER_START(mul_MatMul1DExec);
 
    assert(&ea.getContext() == &ctxt.getContext());
-   const PAlgebra& zMStar = ea.getContext().zMStar;
+   const PAlgebra& zMStar = ea.getPAlgebra();
 
    ctxt.cleanUp();
 
@@ -1218,7 +1225,7 @@ struct BlockMatMul1D_derived_impl {
       } 
       else {
         std::tie(blockIdx, colIdx)
-	  = ea.getContext().zMStar.breakIndexByDim(j, dim);
+	  = ea.getPAlgebra().breakIndexByDim(j, dim);
 	rowIdx = mcMod(colIdx-idx,D);
       }
       bool zEntry = mat.get(entry,rowIdx,colIdx,blockIdx);
@@ -1470,7 +1477,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
 {
    FHE_NTIMER_START(mul_BlockMatMul1DExec);
    assert(&ea.getContext() == &ctxt.getContext());
-   const PAlgebra& zMStar = ea.getContext().zMStar;
+   const PAlgebra& zMStar = ea.getPAlgebra();
 
    ctxt.cleanUp();
 
@@ -1976,7 +1983,7 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
     long dim = dims[dim_idx];
     long sdim = ea.sizeOfDimension(dim);
     bool native = ea.nativeDimension(dim);
-    const PAlgebra& zMStar = ea.getContext().zMStar;
+    const PAlgebra& zMStar = ea.getPAlgebra();
 
     bool iterative = false;
     if (ctxt.getPubKey().getKSStrategy(dim) == FHE_KSS_MIN)
@@ -2319,7 +2326,7 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
     long dim = dims[dim_idx];
     long sdim = ea.sizeOfDimension(dim);
     bool native = ea.nativeDimension(dim);
-    const PAlgebra& zMStar = ea.getContext().zMStar;
+    const PAlgebra& zMStar = ea.getPAlgebra();
 
     bool iterative = false;
     if (ctxt.getPubKey().getKSStrategy(dim) == FHE_KSS_MIN)
@@ -2517,7 +2524,7 @@ struct mul_BlockMatMul1D_impl {
   {
     const BlockMatMul1D_derived<type>& mat =
 	  dynamic_cast< const BlockMatMul1D_derived<type>& >(mat_basetype);
-    const PAlgebra& zMStar = ea.getContext().zMStar;
+    const PAlgebra& zMStar = ea.getPAlgebra();
     long dim = mat.getDim();
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
@@ -2579,7 +2586,7 @@ struct mul_MatMulFull_impl {
   {
     const MatMulFull_derived<type>& mat =
           dynamic_cast< const MatMulFull_derived<type>& >(mat_basetype);
-    const PAlgebra& zMStar = ea.getContext().zMStar;
+    const PAlgebra& zMStar = ea.getPAlgebra();
     long n = ea.size();
     const RX& G = ea.getG();
     vector<RX>& data = pa.getData<type>();
@@ -2626,7 +2633,7 @@ struct mul_BlockMatMulFull_impl {
   {
     const BlockMatMulFull_derived<type>& mat =
           dynamic_cast< const BlockMatMulFull_derived<type>& >(mat_basetype);
-    const PAlgebra& zMStar = ea.getContext().zMStar;
+    const PAlgebra& zMStar = ea.getPAlgebra();
     long n = ea.size();
     long d = ea.getDegree();
     vector<RX>& data = pa.getData<type>();

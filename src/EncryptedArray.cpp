@@ -57,8 +57,8 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   RBak bak; bak.save(); tab.restoreContext();
 
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
-  const PAlgebra& zMStar = getContext().zMStar;
-  long m = getContext().zMStar.getM();
+  const PAlgebra& zMStar = getPAlgebra();
+  long m = zMStar.getM();
   long ord = sizeOfDimension(i);
   amt %= ord;// DIRT: assumes division w/ remainder follows C++11 and C99 rules
   if (amt == 0) return;
@@ -124,7 +124,7 @@ template<class type>
 void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 {
   FHE_TIMER_START;
-  const PAlgebra& al = context.zMStar;
+  const PAlgebra& al = getPAlgebra();
 
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
 
@@ -170,7 +170,7 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 {
   FHE_TIMER_START;
 
-  const PAlgebra& al = context.zMStar;
+  const PAlgebra& al = getPAlgebra();
 
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
 
@@ -284,7 +284,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   FHE_TIMER_START;
 
 
-  const PAlgebra& al = context.zMStar;
+  const PAlgebra& al = getPAlgebra();
 
   const vector< vector< RX > >& maskTable = tab.getMaskTable();
 
@@ -349,7 +349,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
 {
-  assert(i >= 0 && i < (long)context.zMStar.getNSlots());
+  assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
   RBak bak; bak.save(); tab.restoreContext();
   RX res;
   div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
@@ -407,7 +407,7 @@ void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const ZZX& pt
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(NTL::Vec<long>& ptxt, long i) const
 {
-  assert(i >= 0 && i < (long)context.zMStar.getNSlots());
+  assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
   RBak bak; bak.save(); tab.restoreContext();
   RX res;
   div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
@@ -469,7 +469,7 @@ void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
     REBak ebak; ebak.save(); restoreContextForG();
 
     long d = RE::degree();
-    long p = tab.getZMStar().getP();
+    long p = getPAlgebra().getP();
     long r = tab.getR();
 
     // compute change of basis matrix CB
@@ -596,7 +596,7 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
     FHE_NTIMER_START(buildLinPolyCoeffs_invert);
 
    
-    long p = tab.getZMStar().getP();
+    long p = getPAlgebra().getP();
     long r = tab.getR();
 
     Mat<RE> M1;
@@ -1021,7 +1021,7 @@ public:
   {
     PA_BOILER
 
-    long p = ea.getTab().getZMStar().getP();
+    long p = ea.getPAlgebra().getP();
 
     j = mcMod(j, d);
     RX H = PowerMod(RX(1, 1), power_ZZ(p, j), G);
@@ -1037,7 +1037,7 @@ public:
 
     assert(vec.length() == n);
 
-    long p = ea.getTab().getZMStar().getP();
+    long p = ea.getPAlgebra().getP();
 
     for (long i = 0; i < n; i++) {
       long j = mcMod(vec[i], d);

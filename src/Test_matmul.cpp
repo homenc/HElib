@@ -475,13 +475,7 @@ void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
    }
 
   // encrypted array with "full slots"
-#if 1
   EncryptedArray ea(context, context.alMod);
-#else
-  long p = publicKey.getContext().zMStar.getP();
-  ZZX G = makeIrredPoly(p, 10);
-  EncryptedArray ea(context, G);
-#endif
 
   if (verbose) {
     {std::stringstream ss;
@@ -490,7 +484,7 @@ void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
     cout << ", security=" << context.securityLevel()<<endl;
     cout << "  #threads="<<NTL::AvailableThreads();
     if (block)
-      cout << "block-size="<<(context.zMStar.getOrdP());
+      cout << "block-size="<<(ea.getPAlgebra().getOrdP());
     cout << ", vector-dimension="
          << (full? ea.size() : ea.sizeOfDimension(dim))<<", ";
     if (!full)

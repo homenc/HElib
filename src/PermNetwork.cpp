@@ -206,7 +206,7 @@ makeMask(vector<long>& mask, Vec<long>& haystack, long needle)
 // Apply a permutation network to a ciphertext
 void PermNetwork::applyToCtxt(Ctxt& c, const EncryptedArray& ea) const
 {
-  const PAlgebra& al = c.getContext().zMStar;
+  const PAlgebra& al = ea.getPAlgebra();
 
   // Apply the layers, one at a time
   for (long i=0; i<layers.length(); i++) {

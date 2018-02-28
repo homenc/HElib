@@ -101,6 +101,7 @@ public:
   virtual PA_tag getTag() const = 0;
 
   virtual const FHEcontext& getContext() const = 0;
+  virtual const PAlgebra& getPAlgebra() const = 0;
   virtual const long getDegree() const = 0;
 
   //! @brief Right rotation as a linear array.
@@ -197,32 +198,32 @@ public:
 
   //! @brief Total size (# of slots) of hypercube
   long size() const { 
-    return getContext().zMStar.getNSlots(); 
+    return getPAlgebra().getNSlots(); 
   } 
 
   //! @brief Number of dimensions of hypercube
   long dimension() const { 
-    return getContext().zMStar.numOfGens(); 
+    return getPAlgebra().numOfGens(); 
   }
 
   //! @brief Size of given dimension
   long sizeOfDimension(long i) const {
-    return getContext().zMStar.OrderOf(i);
+    return getPAlgebra().OrderOf(i);
   }
 
   //! @brief Is rotations in given dimension a "native" operation?
   bool nativeDimension(long i) const {
-    return getContext().zMStar.SameOrd(i);
+    return getPAlgebra().SameOrd(i);
   }
 
   //! @brief returns coordinate of index k along the i'th dimension
   long coordinate(long i, long k) const {
-    return getContext().zMStar.coordinate(i, k); 
+    return getPAlgebra().coordinate(i, k); 
   }
- 
+
   //! @brief adds offset to index k in the i'th dimension
   long addCoord(long i, long k, long offset) const {
-    return getContext().zMStar.addCoord(i, k, offset);
+    return getPAlgebra().addCoord(i, k, offset);
   }
 
 
@@ -324,7 +325,8 @@ public:
   virtual void restoreContextForG() const { mappingData.restoreContextForG(); }
 
 
-  virtual const FHEcontext& getContext() const { return context; }
+  virtual const FHEcontext& getContext() const override { return context; }
+  virtual const PAlgebra& getPAlgebra() const override { return tab.getZMStar(); }
   virtual const long getDegree() const { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
@@ -572,14 +574,14 @@ void plaintextAutomorph(RX& bb, const RX& a, long k, long m, const RXModulus& Ph
 }
 
 // same as above, but k = g_i^j mod m.
-// also works with i == ea.getContext().zMStar.numOfGens(),
+// also works with i == ea.getPalgebra().numOfGens(),
 // which means Frobenius
 
 template<class RX, class type>
 void plaintextAutomorph(RX& b, const RX& a, long i, long j, 
                         const EncryptedArrayDerived<type>& ea)
 {
-  const PAlgebra& zMStar = ea.getContext().zMStar;
+  const PAlgebra& zMStar = ea.getPAlgebra();
   const auto& F = ea.getTab().getPhimXMod();
   long k = zMStar.genToPow(i, j);
   long m = zMStar.getM();
@@ -662,6 +664,7 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
 
   const FHEcontext& getContext() const { return rep->getContext(); }
   const PAlgebraMod& getAlMod() const { return alMod; }
+  const PAlgebra& getPAlgebra() const { return rep->getPAlgebra(); }
   const long getDegree() const { return rep->getDegree(); }
   void rotate(Ctxt& ctxt, long k) const { rep->rotate(ctxt, k); }
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
