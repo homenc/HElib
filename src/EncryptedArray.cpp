@@ -78,7 +78,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   long ival= PowerMod(g, amt-ord, m);
 
   const RX& mask = maskTable[i][ord-amt];
-  DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
+  DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
   Ctxt tmp(ctxt); // a copy of the ciphertext
 
   tmp.multByConstant(m1);    // only the slots in which m1=1
@@ -106,7 +106,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   long ord = al.OrderOf(i);
 
   if (k <= -ord || k >= ord) {
-    ctxt.multByConstant(to_ZZX(0));
+    ctxt.multByConstant(to_ZZ(0));
     return;
   }
 
@@ -124,7 +124,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
     mask = 1 - mask;
     val = PowerMod(al.ZmStarGen(i), amt, al.getM());
   }
-  DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
+  DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
   ctxt.multByConstant(m1);   // zero out slots where mask=0
   ctxt.smartAutomorph(val);  // shift left by val
   FHE_TIMER_STOP;
@@ -178,7 +178,8 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     long val = PowerMod(al.ZmStarGen(i), v, al.getM());
     long ival = PowerMod(al.ZmStarGen(i), v-ord, al.getM());
 
-    DoubleCRT m1(conv<ZZX>(maskTable[i][ord-v]), context, ctxt.getPrimeSet());
+    DoubleCRT m1(convert<zzX,RX>(maskTable[i][ord-v]),
+                 context, ctxt.getPrimeSet());
     tmp = ctxt;  // a copy of the ciphertext
 
     tmp.multByConstant(m1);    // only the slots in which m1=1
@@ -203,7 +204,7 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   for (i--; i >= 0; i--) {
     v = al.coordinate(i, amt);
 
-    DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
+    DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
     tmp = ctxt;
     tmp.multByConstant(m1); // only the slots in which mask=1
     ctxt -= tmp;            // only the slots in which mask=0
@@ -243,7 +244,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   // Shifting by more than the number of slots gives an all-zero cipehrtext
   if (k <= -nSlots || k >= nSlots) {
-    ctxt.multByConstant(to_ZZX(0));
+    ctxt.multByConstant(to_ZZ(0));
     return;
   }
 
@@ -263,7 +264,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   for (i--; i >= 0; i--) {
     v = al.coordinate(i, amt);
 
-    DoubleCRT m1(conv<ZZX>(mask), context, ctxt.getPrimeSet());
+    DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
     tmp = ctxt;
     tmp.multByConstant(m1); // only the slots in which mask=1
     ctxt -= tmp;            // only the slots in which mask=0
@@ -604,6 +605,7 @@ void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
     ctxt += tmp1;
   }
 }
+template void applyLinPolyLL(Ctxt& ctxt, const vector<zzX>& encodedC, long d);
 template void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d);
 template void applyLinPolyLL(Ctxt& ctxt, const vector<DoubleCRT>& encodedC, long d);
 
@@ -668,8 +670,8 @@ class encode_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const vector<long>& array)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    NewPlaintextArray& pa, const vector<long>& array)
   {
     PA_BOILER
 
@@ -677,8 +679,8 @@ public:
     convert(data, array);
   }
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const vector<ZZX>& array)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    NewPlaintextArray& pa, const vector<ZZX>& array)
   {
     PA_BOILER
 

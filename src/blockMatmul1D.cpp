@@ -206,7 +206,6 @@ public:
     mat.getCache(&zcp, &dcp);
 
     // Process the diagonals one at a time
-    long lastShift = 0;
     for (long e = 0; e < D; e++) { // process diagonal e
       bool zeroDiag = true;
       // For each diagonal e, we update the d accumulators y_0,..,y_{d-1}
@@ -243,13 +242,8 @@ public:
 
       if (ctxt!=nullptr) {
 	if (e > 0) { // rotate the ciphertext
-	  if (ea.nativeDimension(dim)) // rotate the previous version
-	    ea.rotate1D(*shCtxt, dim, e-lastShift);
-	  else {                       // rotate the original ciphertext
-	    *shCtxt = *ctxt;
-	    ea.rotate1D(*shCtxt, dim, e);
-	  }
-	  lastShift = e;
+          *shCtxt = *ctxt;
+          ea.rotate1D(*shCtxt, dim, e);
 	} // if (e>0)
 	// The implementation above incurs an extra mult-by-constant due
 	// to the masks in rotate1D when applied in a "bad dimension".
