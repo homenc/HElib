@@ -160,8 +160,9 @@ private:
   const PAlgebra& zMStar;
 
 public:
-  GeneralAutomorphPrecon_UNKNOWN(const Ctxt& _ctxt, long _dim) :
-    ctxt(_ctxt), dim(_dim), zMStar(_ctxt.getContext().zMStar)
+  GeneralAutomorphPrecon_UNKNOWN(const Ctxt& _ctxt, long _dim,
+                                 const EncryptedArray& ea) :
+    ctxt(_ctxt), dim(_dim), zMStar(ea.getPAlgebra())
   {
     ctxt.cleanUp();
   }
@@ -184,8 +185,9 @@ private:
   const PAlgebra& zMStar;
 
 public:
-  GeneralAutomorphPrecon_FULL(const Ctxt& _ctxt, long _dim) :
-    precon(_ctxt), dim(_dim), zMStar(_ctxt.getContext().zMStar)
+  GeneralAutomorphPrecon_FULL(const Ctxt& _ctxt, long _dim,
+                              const EncryptedArray& ea) :
+    precon(_ctxt), dim(_dim), zMStar(ea.getPAlgebra())
   { }
 
   shared_ptr<Ctxt> automorph(long i) const override
@@ -206,8 +208,9 @@ private:
   vector<shared_ptr<BasicAutomorphPrecon>> precon;
 
 public:
-  GeneralAutomorphPrecon_BSGS(const Ctxt& _ctxt, long _dim) :
-    dim(_dim), zMStar(_ctxt.getContext().zMStar)
+  GeneralAutomorphPrecon_BSGS(const Ctxt& _ctxt, long _dim,
+                              const EncryptedArray& ea) :
+    dim(_dim), zMStar(ea.getPAlgebra())
   { 
     D = (dim == -1) ? zMStar.getOrdP() : zMStar.OrderOf(dim);
     g = KSGiantStepSize(D);
@@ -237,26 +240,27 @@ public:
 };
 
 shared_ptr<GeneralAutomorphPrecon>
-buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim)
+buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim,
+                            const EncryptedArray& ea)
 {
   // allow dim == -1 (Frobenius)
   // allow dim == #gens (the dummy generator of order 1)
-  assert(dim >= -1 && dim <= long(ctxt.getContext().zMStar.numOfGens()));
+  assert(dim >= -1 && dim <= ea.dimension());
 
   if (fhe_test_force_hoist >= 0) {
     switch (ctxt.getPubKey().getKSStrategy(dim)) {
       case FHE_KSS_BSGS:
-	return make_shared<GeneralAutomorphPrecon_BSGS>(ctxt, dim);
+	return make_shared<GeneralAutomorphPrecon_BSGS>(ctxt, dim, ea);
 
       case FHE_KSS_FULL:
-	return make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim);
+	return make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim, ea);
 	
       default:
-	return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
+	return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim, ea);
     }
   }
   else {
-    return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim);
+    return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim, ea);
   }
 }
 
@@ -1025,7 +1029,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
    else if (!iterative) {
       if (native) {
          shared_ptr<GeneralAutomorphPrecon> precon =
-            buildGeneralAutomorphPrecon(ctxt, dim);
+           buildGeneralAutomorphPrecon(ctxt, dim, ea);
 
 	 PartitionInfo pinfo(D);
 	 long cnt = pinfo.NumIntervals();
@@ -1051,7 +1055,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
       }
       else {
          shared_ptr<GeneralAutomorphPrecon> precon =
-            buildGeneralAutomorphPrecon(ctxt, dim);
+           buildGeneralAutomorphPrecon(ctxt, dim, ea);
 
 	 PartitionInfo pinfo(D);
 	 long cnt = pinfo.NumIntervals();
@@ -1573,7 +1577,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
       else {
 
 	 shared_ptr<GeneralAutomorphPrecon> precon =
-		  buildGeneralAutomorphPrecon(ctxt, dim0);
+		  buildGeneralAutomorphPrecon(ctxt, dim0, ea);
 
 #if 0
 	 // This is the original code
@@ -1683,7 +1687,7 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
       else {
 
 	 shared_ptr<GeneralAutomorphPrecon> precon =
-		  buildGeneralAutomorphPrecon(ctxt, dim0);
+		  buildGeneralAutomorphPrecon(ctxt, dim0, ea);
 
 #if 0
 	 // original code
@@ -1993,7 +1997,7 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 
       if (native) {
 	shared_ptr<GeneralAutomorphPrecon> precon =
-	  buildGeneralAutomorphPrecon(ctxt, dim);
+	  buildGeneralAutomorphPrecon(ctxt, dim, ea);
 
 	for (long i: range(sdim)) {
 	  shared_ptr<Ctxt> tmp = precon->automorph(i);
@@ -2004,9 +2008,9 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 	Ctxt ctxt1 = ctxt;
 	ctxt1.smartAutomorph(zMStar.genToPow(dim, -sdim));
 	shared_ptr<GeneralAutomorphPrecon> precon =
-	  buildGeneralAutomorphPrecon(ctxt, dim);
+	  buildGeneralAutomorphPrecon(ctxt, dim, ea);
 	shared_ptr<GeneralAutomorphPrecon> precon1 =
-	  buildGeneralAutomorphPrecon(ctxt1, dim);
+	  buildGeneralAutomorphPrecon(ctxt1, dim, ea);
 
 	for (long i: range(sdim)) {
 	  if (i == 0) 
@@ -2336,7 +2340,7 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
 
       if (native) {
 	shared_ptr<GeneralAutomorphPrecon> precon =
-	  buildGeneralAutomorphPrecon(ctxt, dim);
+	  buildGeneralAutomorphPrecon(ctxt, dim, ea);
 
 	for (long i: range(sdim)) {
 	  shared_ptr<Ctxt> tmp = precon->automorph(i);
@@ -2347,9 +2351,9 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
 	Ctxt ctxt1 = ctxt;
 	ctxt1.smartAutomorph(zMStar.genToPow(dim, -sdim));
 	shared_ptr<GeneralAutomorphPrecon> precon =
-	  buildGeneralAutomorphPrecon(ctxt, dim);
+	  buildGeneralAutomorphPrecon(ctxt, dim, ea);
 	shared_ptr<GeneralAutomorphPrecon> precon1 =
-	  buildGeneralAutomorphPrecon(ctxt1, dim);
+	  buildGeneralAutomorphPrecon(ctxt1, dim, ea);
 
 	for (long i: range(sdim)) {
 	  if (i == 0) 
