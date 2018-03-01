@@ -841,10 +841,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
          }
       }
       else {
-
-
 #if (ALT_MATMUL)
-
          if (iterative) {
 
 	    vector<Ctxt> baby_steps(g, Ctxt(ZeroCtxtLike, ctxt));
@@ -865,8 +862,6 @@ MatMul1DExec::mul(Ctxt& ctxt) const
                baby_steps1[j].cleanUp();
             }
 
-    
-
 	    long h = divc(D, g);
             Ctxt sum(ZeroCtxtLike, ctxt);
             for (long k = h-1; k >= 0; k--) {
@@ -882,12 +877,9 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 		  MulAdd(sum, cache1.multiplier[i], baby_steps1[j]);
                }
             }
-
             ctxt = sum;
-
          }
          else {
-
 	    long h = divc(D, g);
 	    vector<shared_ptr<Ctxt>> baby_steps(g);
 	    vector<shared_ptr<Ctxt>> baby_steps1(g);
@@ -931,9 +923,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 	    for (long i: range(1, cnt)) acc[0] += acc[i];
 	    ctxt = acc[0];
          }
-
 #else
-
          if (iterative) {
 
 	    vector<Ctxt> baby_steps(g, Ctxt(ZeroCtxtLike, ctxt));
@@ -962,15 +952,11 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 		  MulAdd(sum1, cache1.multiplier[i], baby_steps[j]);
                }
             }
-
 	    sum1.smartAutomorph(zMStar.genToPow(dim, -D));
             sum += sum1;
             ctxt = sum;
-
          }
          else {
-
-
 	    long h = divc(D, g);
 	    vector<shared_ptr<Ctxt>> baby_steps(g);
 	    GenBabySteps(baby_steps, ctxt, dim, true);
@@ -1006,7 +992,6 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 		  acc[index] += acc_inner;
 		  acc1[index] += acc_inner1;
 	       }
-
 	    NTL_EXEC_INDEX_END
 
 	    for (long i: range(1, cnt)) acc[0] += acc[i];
@@ -1016,14 +1001,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 	    acc[0] += acc1[0];
 	    ctxt = acc[0];
          }
-
 #endif
-
-
-
-
-
-
       }
    }
    else if (!iterative) {
@@ -1327,10 +1305,8 @@ struct BlockMatMul1DExec_construct {
   // =      \sum_j \sigma_j[  \sigma^{-j}(c_{ij}) d_i \rho^i(v) ] +
   //   \rho^{-D}[ \sum_j \sigma_j[ \rho^{D}{\sigma^{-j}(c_{ij}) e_i} \rho^i(v) ] ]
 
-
   // strategy == +1 : factor \sigma
   // strategy == -1 : factor \rho
-
 
   static
   void apply(const EncryptedArrayDerived<type>& ea,
@@ -1579,25 +1555,6 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
 	 shared_ptr<GeneralAutomorphPrecon> precon =
 		  buildGeneralAutomorphPrecon(ctxt, dim0, ea);
 
-#if 0
-	 // This is the original code
-
-	 for (long i: range(d0)) {
-	    shared_ptr<Ctxt> tmp = precon->automorph(i);
-	    for (long j: range(d1)) {
-	       MulAdd(acc[j], cache.multiplier[i*d1+j], *tmp);
-	    }
-	 }
-
-	 Ctxt sum(ZeroCtxtLike, ctxt);
-	 for (long j: range(d1)) {
-	    if (j > 0) acc[j].smartAutomorph(zMStar.genToPow(dim1, j));
-	    sum += acc[j];
-	 }
-
-	 ctxt = sum;
-#endif
-
 	 long par_buf_sz = 1;
 	 if (AvailableThreads() > 1) 
 	    par_buf_sz = min(d0, par_buf_max);
@@ -1688,32 +1645,6 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
 
 	 shared_ptr<GeneralAutomorphPrecon> precon =
 		  buildGeneralAutomorphPrecon(ctxt, dim0, ea);
-
-#if 0
-	 // original code
-
-
-	 for (long i: range(d0)) {
-	    shared_ptr<Ctxt> tmp = precon->automorph(i);
-	    MulAdd(acc[j], cache.multiplier[i*d1+j], *tmp);
-	    MulAdd(acc1[j], cache1.multiplier[i*d1+j], *tmp);
-	 }
-
-	 Ctxt sum(ZeroCtxtLike, ctxt);
-	 Ctxt sum1(ZeroCtxtLike, ctxt);
-	 for (long j: range(d1)) {
-	    if (j > 0) {
-	       acc[j].smartAutomorph(zMStar.genToPow(dim1, j));
-	       acc1[j].smartAutomorph(zMStar.genToPow(dim1, j));
-	    }
-	    sum += acc[j];
-	    sum1 += acc1[j];
-	 }
-
-	 sum1.smartAutomorph(zMStar.genToPow(dim, -D));
-	 sum += sum1;
-	 ctxt = sum;
-#endif
 
 	 long par_buf_sz = 1;
 	 if (AvailableThreads() > 1) 
@@ -1974,16 +1905,6 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
     
   }
   else {
-#if 0
-    // not the last dimension, make a recursive call
-    long sdim = ea.sizeOfDimension(dims[dim_idx]);
-
-    for (long offset: range(sdim)) {
-      Ctxt ctxt1 = ctxt;
-      ea.rotate1D(ctxt1, dims[dim_idx], offset);
-      idx = rec_mul(acc, ctxt1, dim_idx+1, idx);
-    }
-#else
     long dim = dims[dim_idx];
     long sdim = ea.sizeOfDimension(dim);
     bool native = ea.nativeDimension(dim);
@@ -2078,8 +1999,6 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
         
       }
     }
-
-#endif
   }
 
   return idx;
@@ -2317,16 +2236,6 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
     
   }
   else {
-#if 0
-    // not the last dimension, make a recursive call
-    long sdim = ea.sizeOfDimension(dims[dim_idx]);
-
-    for (long offset: range(sdim)) {
-      Ctxt ctxt1 = ctxt;
-      ea.rotate1D(ctxt1, dims[dim_idx], offset);
-      idx = rec_mul(acc, ctxt1, dim_idx+1, idx);
-    }
-#else
     long dim = dims[dim_idx];
     long sdim = ea.sizeOfDimension(dim);
     bool native = ea.nativeDimension(dim);
@@ -2421,8 +2330,6 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
         
       }
     }
-
-#endif
   }
 
   return idx;
