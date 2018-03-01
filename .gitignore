@@ -1,5 +1,6 @@
 # Exclude 
 
+Makefile.dev
 **DS_Store
 *.a
 *.o
@@ -8,4 +9,3 @@
 /src/*.sh
 /src/*.txt
 /src/*.bin
-!/src/LICENSE.TXT
