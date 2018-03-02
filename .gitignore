@@ -1,11 +1,11 @@
-# Exclude 
+src/fhe.a
+src/*.o
+src/*_x
+src/*_x.exe
 
 Makefile.dev
-**DS_Store
-*.a
-*.o
-*_x.dSYM
-*_x
-/src/*.sh
-/src/*.txt
-/src/*.bin
+**.DS_Store
+src/*_x.dSYM
+src/*.sh
+src/*.txt
+src/*.bin
