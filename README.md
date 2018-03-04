@@ -1,5 +1,6 @@
 HElib
 =====
+***March 2018:*** Re-implementation of homomorphic linear transformations, featuring speedups of 15x to 75x.
 
 ***Dec 2017-Jan 2018:*** Added some routines for addition/multiplication and
 comparisons of integers in binary representation, and for homomorphic table
