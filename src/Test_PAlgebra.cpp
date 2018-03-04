@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
 {
   ArgMapping amap;
 
-  long m=0;
-  amap.arg("m", m, "cyclotomic index", NULL);
+  long m=17;
+  amap.arg("m", m, "cyclotomic index");
   amap.note("e.g., m=2047");
 
   long p=2;
