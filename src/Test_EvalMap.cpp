@@ -22,9 +22,15 @@ static bool dry = false; // a dry-run flag
 static bool noPrint = false;
 
 void  TestIt(long p, long r, long c, long _k, long w,
-             long L, const Vec<long>& mvec, 
-             const Vec<long>& gens, const Vec<long>& ords, long useCache)
+             long L, Vec<long>& mvec, 
+             Vec<long>& gens, Vec<long>& ords, long useCache)
 {
+  if (lsize(mvec)<1) { // use default values
+    mvec.SetLength(3); gens.SetLength(3); ords.SetLength(3);
+    mvec[0] = 7;    mvec[1] = 3;    mvec[2] = 221;
+    gens[0] = 3979; gens[1] = 3095; gens[2] = 3760;
+    ords[0] = 6;    ords[1] = 2;    ords[2] = -8;
+  }
   if (!noPrint)
     cout << "*** TestIt"
        << (dry? " (dry run):" : ":")
@@ -219,15 +225,15 @@ int main(int argc, char *argv[])
 
   Vec<long> mvec;
   amap.arg("mvec", mvec, "use specified factorization of m", NULL);
-  amap.note("e.g., mvec='[5 3 187]'");
+  amap.note("e.g., mvec='[7 3 221]'");
 
   Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", NULL);
-  amap.note("e.g., gens='[562 1871 751]'");
+  amap.note("e.g., gens='[3979 3095 3760]'");
 
   Vec<long> ords;
   amap.arg("ords", ords, "use specified vector of orders", NULL);
-  amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
+  amap.note("e.g., ords='[6 2 -8]', negative means 'bad'");
 
   amap.arg("dry", dry, "a dry-run flag to check the noise");
 
