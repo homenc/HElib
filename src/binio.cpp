@@ -33,6 +33,11 @@ void read_ntl_vec_long(istream& str, vec_long& vl)
   str.read(reinterpret_cast<char*>(&sizeOfVL), sizeof(sizeOfVL)); 
 //  cerr << "[read ntl vec long] size of vec long " << sizeOfVL << endl;
 
+  // Remeber to check and increase Vec before trying to fill it.
+  if(vl.length() < sizeOfVL){
+    vl.SetLength(sizeOfVL);
+  }
+
   for(long i=0, tmp=0; i<sizeOfVL; i++){
     str.read(reinterpret_cast<char*>(&tmp), sizeof(tmp)); 
     vl[i] = tmp;

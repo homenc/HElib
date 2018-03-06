@@ -114,7 +114,7 @@ void test5(const MyPtrMat& mat, const T& array)
 }
 
 
-main()
+int main(void)
 {
   const int vLength=6;
 

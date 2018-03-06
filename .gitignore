@@ -8,3 +8,5 @@ Makefile.dev
 **.DS_Store
 src/*_x.dSYM
 src/*.bin
+src/*.txt
+src/*.sh

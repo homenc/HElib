@@ -580,8 +580,9 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
 //  3. vector<long> skHwts; 
 //  4. vector<KeySwitch> keySwitching;
 //  5. vector< vector<long> > keySwitchMap;
-//  6. long recryptKeyID; 
-//  7. Ctxt recryptEkey;
+//  6. Vec<long> KS_strategy
+//  7. long recryptKeyID; 
+//  8. Ctxt recryptEkey;
 
   writeContextBaseBinary(str, pk.getContext());
 //  cerr << "[write pub key] write pk.\n";
@@ -595,6 +596,8 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
   write_raw_long(str, sz);
   for(auto v: pk.keySwitchMap)
     write_raw_vector(str, v);
+
+  write_ntl_vec_long(str, pk.KS_strategy); 
 
   write_raw_long(str, pk.recryptKeyID);
   pk.recryptEkey.write(str);
@@ -624,6 +627,7 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   for(auto& v: pk.keySwitchMap)
     read_raw_vector(str, v);
 
+  read_ntl_vec_long(str, pk.KS_strategy); 
 
   read_raw_long(str, pk.recryptKeyID);
   pk.recryptEkey.read(str);

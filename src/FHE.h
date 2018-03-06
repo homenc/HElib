@@ -158,7 +158,7 @@ private:
   // use when re-linearizing s_i(X^n). 
   std::vector< std::vector<long> > keySwitchMap;
 
-  NTL::Vec<int> KS_strategy; // NTL Vec's support I/O, which is
+  NTL::Vec<long> KS_strategy; // NTL Vec's support I/O, which is
                              // more convenient
 
   // bootstrapping data
