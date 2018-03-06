@@ -28,21 +28,27 @@ void usage()
 
 int main(int argc, char *argv[]) 
 {
+  ArgMapping amap;
 
-  argmap_t argmap;
-  argmap["m"] = "0"; 
-  argmap["p"] = "2";
-  argmap["r"] = "1";
+  long m=17;
+  amap.arg("m", m, "cyclotomic index");
+  amap.note("e.g., m=2047");
 
-  if (!parseArgs(argc, argv, argmap)) usage();
+  long p=2;
+  amap.arg("p", p, "plaintext base");
 
-  unsigned long m = atoi(argmap["m"]);
+  long r=1;
+  amap.arg("r", r,  "lifting");
 
-  if (!m) usage();
+  Vec<long> gens0;
+  amap.arg("gens", gens0, "use specified vector of generators", NULL);
+  amap.note("e.g., gens='[562 1871 751]'");
 
-  unsigned long p = atoi(argmap["p"]);
+  Vec<long> ords0;
+  amap.arg("ords", ords0, "use specified vector of orders", NULL);
+  amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
-  unsigned long r = atoi(argmap["r"]);
+  amap.parse(argc, argv);
 
   cout << "m = " << m << ", p = " << p <<  ", r = " << r << endl;
 
@@ -53,7 +59,11 @@ int main(int argc, char *argv[])
     cout << f[i] << " ";
   cout << "]\n";
 
-  PAlgebra al(m, p);
+  vector<long> gens1, ords1;
+  convert(gens1, gens0);
+  convert(ords1, ords0);
+
+  PAlgebra al(m, p, gens1, ords1);
   al.printout();
   cout << "\n";
 

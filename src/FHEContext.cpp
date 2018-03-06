@@ -593,10 +593,12 @@ void writeContextBase(ostream& str, const FHEcontext& context)
   }
   str << " [";
   for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
-    str << context.zMStar.OrderOf(i)
-	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
+    long ord = context.zMStar.OrderOf(i);
+    if (context.zMStar.SameOrd(i)) str << ord;
+    else                           str << (-ord);
+    if (i<(long)context.zMStar.numOfGens()-1) str << ' ';
   }
-  str << "]";
+  str << "]]";
 }
 
 ostream& operator<< (ostream &str, const FHEcontext& context)
@@ -625,7 +627,7 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   str << context.rcData.mvec;
   str << " " << context.rcData.hwt;
   str << " " << context.rcData.conservative;
-  str << " " << context.rcData.cacheType;
+  str << " " << context.rcData.build_cache;
 
   str << "]\n";
 
@@ -684,13 +686,13 @@ istream& operator>> (istream &str, FHEcontext& context)
   Vec<long> mv;
   long t;
   bool consFlag;
-  int cType;
+  int build_cache;
   str >> mv;
   str >> t;
   str >> consFlag;
-  str >> cType;
+  str >> build_cache;
   if (mv.length()>0) {
-    context.makeBootstrappable(mv, t, consFlag, cType);
+    context.makeBootstrappable(mv, t, consFlag, build_cache);
   }
 
   seekPastChar(str, ']');

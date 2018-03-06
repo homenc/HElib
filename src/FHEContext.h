@@ -9,11 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
 #ifndef _FHEcontext_H_
 #define _FHEcontext_H_
 /**
- * @file FHEcontext.h
+ * @file FHEContext.h
  * @brief Keeps the parameters of an instance of the cryptosystem
  **/
 
@@ -122,8 +121,8 @@ public:
              const vector<long>& ords = vector<long>() );  // constructor
 
   void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
-			  bool conservative=false, int cacheType=0)
-  { rcData.init(*this, mvec, skWht, conservative, cacheType); }
+			  bool conservative=false, bool build_cache=false)
+  { rcData.init(*this, mvec, skWht, conservative, build_cache); }
   bool isBootstrappable() const { return (rcData.alMod != NULL); }
 
   bool operator==(const FHEcontext& other) const;

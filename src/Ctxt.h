@@ -53,8 +53,7 @@
  * lists of handles is a prefix of the other. For example, one can add a
  * ciphertext wrt (1,s(X^2)) to another wrt (1,s(X^2),s^2(X^2)), but not
  * to another ciphertext wrt (1,s).
- **/ 
-
+ **/
 #include "DoubleCRT.h"
 
 class KeySwitch;
@@ -258,6 +257,7 @@ const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
 class Ctxt {
   friend class FHEPubKey;
   friend class FHESecKey;
+  friend class BasicAutomorphPrecon;
 
   const FHEcontext& context; // points to the parameters of this FHE instance
   const FHEPubKey& pubKey;   // points to the public encryption key;
@@ -294,6 +294,9 @@ class Ctxt {
   // result to *this.
   void keySwitchPart(const CtxtPart& p, const KeySwitch& W);
 
+  // interenal procedure used in key-swtching
+  void keySwitchDigits(const KeySwitch& W, std::vector<DoubleCRT>& digits);
+
   long getPartIndexByHandle(const SKHandle& hanle) const {
     for (size_t i=0; i<parts.size(); i++) 
       if (parts[i].skHandle==hanle) return i;
@@ -310,6 +313,8 @@ class Ctxt {
   Ctxt& privateAssign(const Ctxt& other);
  
 public:
+  //__attribute__((deprecated))
+  explicit
   Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace=0); // constructor
 
   Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt); 
@@ -429,8 +434,20 @@ public:
 
   //! @name Ciphertext maintenance
   ///@{
+
+  //! The number of digits needed, and added noise effect, of
+  //! key-switching one ciphertext part
+  std::pair<long, NTL::xdouble> computeKSNoise(long partIdx, long pSpace=0);
+
   //! Reduce plaintext space to a divisor of the original plaintext space
   void reducePtxtSpace(long newPtxtSpace);
+
+  // This method can be used to increase the plaintext space, but the
+  // high-order digits that you get this way are noise. Do not use it
+  // unless you know what you are doing.
+  void hackPtxtSpace(long newPtxtSpace) { ptxtSpace=newPtxtSpace; }
+
+  void bumpNoiseEstimate(double factor) { noiseVar *= factor; }
 
   void reLinearize(long keyIdx=0);
           // key-switch to (1,s_i), s_i is the base key with index keyIdx
@@ -531,7 +548,8 @@ public:
 
   //! @brief Returns log(noise-variance)/2 - log(q)
   double log_of_ratio() const
-  {return (log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet()));}
+  {return (getNoiseVar()==0.0)? (-context.logOfProduct(getPrimeSet()))
+      : ((log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet())) );}
   ///@}
   friend istream& operator>>(istream& str, Ctxt& ctxt);
   friend ostream& operator<<(ostream& str, const Ctxt& ctxt);
@@ -593,16 +611,26 @@ void CheckCtxt(const Ctxt& c, const char* label);
  * nonzero. If that assumptions does not hold then the result will not be
  * a valid ciphertext anymore.
  *
- * If the shortCut flag is set then digits[j] contains the j'th digits
- * wrt mod-p plaintext space and the highest possible level (for all j).
- * Otherwise digits[j] still contains the j'th digit in the base-p expansion,
- * but wrt mod-p^{r-j} plaintext space, and all the ciphertexts are at the
- * same level.
+ * The "shortcut" flag is deprecated, it often leads to catastrophic failure
+ * in the noise estimate. Calling the function with shortcut=true has not
+ * effect, except printing a warning message to cerr.
+ *
+ * The output ciphertext digits[j] contains the j'th digit in the base-p
+ * expansion of the input, and its plaintext space is modulo p^{r-j}. All
+ * the ciphertexts in the output are at the same level.
  **/
-void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r=0, bool shortCut=false);
-  // implemented in extractDigits.cpp
+void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r=0);
+// implemented in extractDigits.cpp
+
+inline void
+extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
+{
+  if (shortCut)
+    std::cerr << "extractDigits: the shortCut flag is disabled\n";
+  extractDigits(digits, c, r);
+}
 
 inline void Ctxt::extractBits(vector<Ctxt>& bits, long nBits2extract)
-{ extractDigits(bits, *this, nBits2extract, true); }
+{ extractDigits(bits, *this, nBits2extract); }
 
 #endif // ifndef _Ctxt_H_

@@ -118,13 +118,16 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
     Error("DoubleCRT::Op: incompatible objects");
 
   // Match the index sets, if needed
-  if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet()))
+  if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
+    FHE_NTIMER_START(addPrimes_1); 
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
+  }
 
   // If you need to mod-up the other, do it on a temporary scratch copy
   DoubleCRT tmp(context, IndexSet()); 
   const IndexMap<vec_long>* other_map = &other.map;
   if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
+    FHE_NTIMER_START(addPrimes_2); 
     tmp = other;
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
     other_map = &tmp.map;
@@ -141,7 +144,6 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
 
     for (long j = 0; j < phim; j++)
       row[j] = fun.apply(row[j], other_row[j], pi);
-
   }
   return *this;
 }
@@ -162,13 +164,16 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
     Error("DoubleCRT::Op: incompatible objects");
 
   // Match the index sets, if needed
-  if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet()))
+  if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
+    FHE_NTIMER_START(addPrimes_3);
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
+  }
 
   // If you need to mod-up the other, do it on a temporary scratch copy
   DoubleCRT tmp(context, IndexSet()); 
   const IndexMap<vec_long>* other_map = &other.map;
   if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
+    FHE_NTIMER_START(addPrimes_4);
     tmp = other;
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
     other_map = &tmp.map;
@@ -187,7 +192,6 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
 
     for (long j = 0; j < phim; j++)
       row[j] = MulMod(row[j], other_row[j], pi, pi_inv);
-
   }
   return *this;
 }
@@ -292,6 +296,7 @@ void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
   }
   
   for (long i=0; i<(long)digits.size(); i++) {
+    FHE_NTIMER_START(addPrimes_5);
     IndexSet notInDigit = allPrimes / digits[i].getIndexSet();
     digits[i].addPrimes(notInDigit); // add back all the primes
 
@@ -789,6 +794,8 @@ void DoubleCRT::Exp(long e)
   }
 }
 
+#if 1
+
 // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
 void DoubleCRT::automorph(long k)
 {
@@ -799,6 +806,7 @@ void DoubleCRT::automorph(long k)
     Error("DoubleCRT::automorph: k not in Zm*");
 
   long m = zMStar.getM();
+  long phim = zMStar.getPhiM();
   vector<long> tmp(m);  // temporary array of size m
   mulmod_precon_t precon = PrepMulModPrecon(k, m);
 
@@ -808,18 +816,72 @@ void DoubleCRT::automorph(long k)
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     vec_long& row = map[i];
 
+#if 0
     for (long j=1; j<m; j++) { // 1st pass: copy to temporary array
-      long idx = zMStar.indexInZmstar(j); // returns -1 if j \notin (Z/mZ)*
+      long idx = zMStar.indexInZmstar_unchecked(j); // returns -1 if j \notin (Z/mZ)*
       if (idx>=0) tmp[j] = row[idx];
     }
 
     for (long j=1; j<m; j++) { // 2nd pass: copy back from temporary array
-      long idx = zMStar.indexInZmstar(j); // returns -1 if j \notin (Z/mZ)*
+      long idx = zMStar.indexInZmstar_unchecked(j); // returns -1 if j \notin (Z/mZ)*
       if (idx>=0) row[idx] = tmp[MulModPrecon(j,k,m,precon)];
                                            // new[j] = old[j*k mod m]
     }    
+#else
+    // slightly faster...
+
+    for (long j = 0; j < phim; j++) {
+       tmp[zMStar.repInZmstar_unchecked(j)] = row[j];
+    }
+
+    for (long j = 0; j < phim; j++) {
+       row[j] = tmp[ MulModPrecon( zMStar.repInZmstar_unchecked(j), k, m, precon) ];
+    }
+
+#endif
   }
 }
+
+#else
+
+// VJS: I tried this as an alternative...it is slower :-(
+
+// Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
+void DoubleCRT::automorph(long k)
+{
+  if (isDryRun()) return;
+
+  const PAlgebra& zMStar = context.zMStar;
+  if (!zMStar.inZmStar(k))
+    Error("DoubleCRT::automorph: k not in Zm*");
+
+  long m = zMStar.getM();
+  long phim = zMStar.getPhiM();
+  vector<long> tmp(phim);  // temporary array of size m
+
+  k = InvMod(k, m);
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
+
+  const IndexSet& s = map.getIndexSet();
+
+  // go over the rows, permute them one at a time
+  // new[j*k mod m] = old[j]
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    vec_long& row = map[i];
+
+    for (long j = 0; j < phim; j++) tmp[j] = row[j];
+
+    for (long j = 0; j < phim; j++) {
+       long rep = zMStar.repInZmstar_unchecked(j);
+       rep = MulModPrecon(rep, k, m, precon);
+       long idx = zMStar.indexInZmstar_unchecked(rep);
+       row[idx] = tmp[j];
+    }
+  }
+
+}
+
+#endif
 
 // fills each row i with random integers mod pi
 void DoubleCRT::randomize(const ZZ* seed) 
@@ -856,7 +918,7 @@ void DoubleCRT::randomize(const ZZ* seed)
       }
 
       for (long pos = 0; pos <= bufsz-nb; pos += nb) {
-#if 1
+#if 0
         unsigned long utmp = 0;
         for (long cnt = nb-1;  cnt >= 0; cnt--)
           utmp = (utmp << 8) | buf[pos+cnt]; 

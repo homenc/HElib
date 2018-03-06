@@ -20,6 +20,8 @@
 #include <NTL/GF2EXFactoring.h>
 #include <NTL/lzz_pEXFactoring.h>
 
+#include <NTL/BasicThreadPool.h>
+
 // polynomials are sorted lexicographically, with the
 // constant term being the "most significant"
 
@@ -125,20 +127,24 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
 
   std::vector<long> tmpOrds;
-  if (_gens.size() == 0 || isDryRun()) 
-      this->ordP = findGenerators(this->gens, tmpOrds, mm, pp);
-  else {
-    assert(_gens.size() == _ords.size());
+  if (_gens.size()>0 && _gens.size() == _ords.size() && !isDryRun()) {
+    // externally supplied generator,orders
     tmpOrds = _ords;
     this->gens = _gens;
     this->ordP = multOrd(pp, mm);
   }
+  else
+    // treat externally supplied generators (if any) as candidates
+    this->ordP = findGenerators(this->gens, tmpOrds, mm, pp, _gens);
+
+  // Record for each generator gi whether it has the same order in
+  // ZM* as in Zm* /(p,g1,...,g_{i-1})
   resize(native, lsize(tmpOrds));
   for (long j=0; j<lsize(tmpOrds); j++) {
-    native.put(j, (tmpOrds[j]>0));
+    native[j] = (tmpOrds[j]>0);
     tmpOrds[j] = abs(tmpOrds[j]);
   }
-  cube.initSignature(tmpOrds);
+  cube.initSignature(tmpOrds); // set hypercume with these dimensions
 
   phiM = ordP * getNSlots();
 
@@ -146,8 +152,14 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   T.resize(getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
   zmsIdx.assign(mm,-1);  // allocate m slots, initialize them to -1
+  zmsRep.resize(phiM);
   long i, idx;
-  for (i=idx=0; i<(long)mm; i++) if (GCD(i,mm)==1) zmsIdx[i] = idx++;
+  for (i=idx=0; i<(long)mm; i++) {
+    if (GCD(i,mm)==1) {
+      zmsIdx[i] = idx++;
+      zmsRep[zmsIdx[i]] = i;
+    }
+  }
 
   // Now fill the Tidx translation table. We identify an element t \in T
   // with its representation t = \prod_{i=0}^n gi^{ei} mod m (where the
@@ -180,6 +192,26 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
 
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
+}
+
+
+long PAlgebra::frobenuisPow(long j) const
+{
+  return PowerMod(mcMod(p, m), j, m);
+  // Don't forget to reduce p mod m!!
+}
+
+long PAlgebra::genToPow(long i, long j) const
+{
+  assert(i >= -1 && i < LONG(gens.size()));
+
+  long res;
+  if (i == -1)
+    res = frobenuisPow(j);
+  else
+    res = PowerMod(gens[i], j, m);
+
+  return res;
 }
 
 /***********************************************************************
@@ -440,6 +472,9 @@ void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha,
   else {
     // general case...
 
+    // FIXME: should update this to use matrix_maps, but this routine
+    // isn't actually used anywhere
+
     for (long i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
       CompMod(crt[i], alpha, mappingData.maps[i], factors[i]);
   }
@@ -461,7 +496,8 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
   long nSlots = zMStar.getNSlots();
   assert(lsize(alphas) == nSlots);
 
-  for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < mappingData.degG); 
+  long d = mappingData.degG;
+  for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d); 
  
   vector<RX> crt(nSlots); // alloate space for CRT components
 
@@ -479,12 +515,28 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
     // general case...still try to avoid CompMod when possible,
     // which is the common case for encoding masks
 
-    for (long i=0; i<nSlots; i++) {   // crt[i] = alpha(maps[i]) mod Ft
+    FHE_NTIMER_START(CompMod);
+
+#if 0
+    for (long i: range(nSlots)) {
       if (deg(alphas[i]) <= 0) 
         crt[i] = alphas[i];
       else
         CompMod(crt[i], alphas[i], mappingData.maps[i], factors[i]);
     }
+#else
+    vec_R in, out;
+
+    for (long i: range(nSlots)) {
+      if (deg(alphas[i]) <= 0) 
+        crt[i] = alphas[i];
+      else {
+        VectorCopy(in, alphas[i], d);
+        mul(out, in, mappingData.matrix_maps[i]);
+        conv(crt[i], out);
+      }
+    }
+#endif
   }
 
   CRT_reconstruct(H,crt); // interpolate to get p
@@ -599,6 +651,8 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   assert(LeadCoeff(G) == 1);
   mappingData.G = G;
   mappingData.degG = deg(mappingData.G);
+  long d = deg(G);
+  long ordp = zMStar.getOrdP();
 
   long nSlots = zMStar.getNSlots();
   long m = zMStar.getM();
@@ -608,6 +662,21 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   mapToF1(mappingData.maps[0],mappingData.G); // mapping from base-G to base-F1
   for (long i=1; i<nSlots; i++)
     mapToFt(mappingData.maps[i], mappingData.G, zMStar.ith_rep(i), &(mappingData.maps[0])); 
+
+
+  // create matrices to streamline CompMod operations
+  mappingData.matrix_maps.resize(nSlots);
+  for (long i: range(nSlots)) {
+    mat_R& mat = mappingData.matrix_maps[i];
+    mat.SetDims(d, ordp);
+    RX pow;
+    pow = 1;
+    for (long j: range(d)) {
+      VectorCopy(mat[j], pow, ordp);
+      if (j < d-1) MulMod(pow, pow, mappingData.maps[i], factors[i]);
+    }
+  }
+
 
   REBak bak; bak.save(); 
   RE::init(mappingData.G);

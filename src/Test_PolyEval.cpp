@@ -31,7 +31,7 @@ bool testEncrypted(long d, const EncryptedArray& ea,
   const FHEPubKey& publicKey = secretKey;
   long p = publicKey.getPtxtSpace();
   zz_pBak bak; bak.save(); zz_p::init(p);
-  zz_pXModulus phimX = conv<zz_pX>(context.zMStar.getPhimX());
+  zz_pXModulus phimX = conv<zz_pX>(ea.getPAlgebra().getPhimX());
 
   // Choose random plaintext polynomials
   zz_pX pX = random_zz_pX(deg(phimX)-1);

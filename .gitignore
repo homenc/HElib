@@ -1,3 +1,4 @@
+gh-pages/
 src/fhe.a
 src/*.o
 src/*_x
@@ -6,6 +7,4 @@ src/*_x.exe
 Makefile.dev
 **.DS_Store
 src/*_x.dSYM
-src/*.sh
-src/*.txt
 src/*.bin

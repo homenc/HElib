@@ -26,9 +26,10 @@
 #define N_TESTS 3
 static long ms[N_TESTS][10] = {
   //nSlots  m   phi(m) ord(2)
-  {   2,    7,    6,    3,   0,0,0,0,0,0},
+  //  {   2,    7,    6,    3,   0,0,0,0,0,0},
   {   6,   31,   30,    5,   0,0,0,0,0,0},
-  {  60, 1023,  600,   10,   11, 93,  838, 584,  10, 6}, // gens=129(16),3(!16)
+  {   6,  127,  126,    7,  127,  1,  108,  24,   6,-3}, // gens=108(6), 24(!3)
+  {  60, 1023,  600,   10,   11, 93,  838, 584,  10, 6}, // gens=838(10),584(6)
   //  {  378,  5461,  5292, 14}, // gens=3(126),509(3)
   //  {  630,  8191,  8190, 13}, // gens=39(630)
   //  {  600, 13981, 12000, 20}, // gens=10(30),23(10),3(!2)
@@ -71,25 +72,25 @@ int main(int argc, char *argv[])
 
     cout << "Testing IO: m="<<m<<", p^r="<<p<<"^"<<r<<endl;
 
-    if (i==N_TESTS-1) { // test bootstrapping data I/O
-      Vec<long> mvec(INIT_SIZE,2);
-      mvec[0] = ms[i][4];  mvec[1] = ms[i][5];
-      vector<long> gens(2);
-      gens[0] = ms[i][6];  gens[1] = ms[i][7];
-      vector<long> ords(2);
-      ords[0] = ms[i][8];  ords[1] = ms[i][9];
+    Vec<long> mvec(INIT_SIZE,2);
+    mvec[0] = ms[i][4];  mvec[1] = ms[i][5];
+    vector<long> gens(2);
+    gens[0] = ms[i][6];  gens[1] = ms[i][7];
+    vector<long> ords(2);
+    ords[0] = ms[i][8];  ords[1] = ms[i][9];
 
+    if (gens[0]>0)
       contexts[i] = new FHEcontext(m, p, r, gens, ords);
-      buildModChain(*contexts[i], L, c);  // Set the modulus chain
-      contexts[i]->makeBootstrappable(mvec);
-    }
-    else {
+    else
       contexts[i] = new FHEcontext(m, p, r);
-      buildModChain(*contexts[i], L, c);  // Set the modulus chain
-    }
+    contexts[i]->zMStar.printout();
+
+    buildModChain(*contexts[i], L, c);  // Set the modulus chain
+    if (i==N_TESTS-1) contexts[i]->makeBootstrappable(mvec);
 
     // Output the FHEcontext to file
     writeContextBase(keyFile, *contexts[i]);
+    writeContextBase(cout, *contexts[i]);
     keyFile << *contexts[i] << endl;
 
     sKeys[i] = new FHESecKey(*contexts[i]);
@@ -127,10 +128,10 @@ int main(int argc, char *argv[])
     // Output the ciphertext to file
     keyFile << *ctxts[i] << endl;
     keyFile << *ctxts[i] << endl;
-    cerr << "okay " << i << endl;
+    cerr << "okay " << i << endl<< endl;
   }
   keyFile.close();}
-  cerr << "so far, so good\n";
+  cerr << "so far, so good\n\n";
 
   // second loop: read from input and repeat the computation
 

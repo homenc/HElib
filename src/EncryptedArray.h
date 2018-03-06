@@ -101,6 +101,7 @@ public:
   virtual PA_tag getTag() const = 0;
 
   virtual const FHEcontext& getContext() const = 0;
+  virtual const PAlgebra& getPAlgebra() const = 0;
   virtual const long getDegree() const = 0;
 
   //! @brief Right rotation as a linear array.
@@ -126,9 +127,14 @@ public:
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
+  virtual void encode(zzX& ptxt, const vector< long >& array) const = 0;
+  virtual void encode(zzX& ptxt, const vector< zzX >& array) const = 0;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const = 0;
+
   virtual void encode(ZZX& ptxt, const vector< long >& array) const = 0;
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const = 0;
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const = 0;
+
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const = 0;
@@ -192,33 +198,34 @@ public:
 
   //! @brief Total size (# of slots) of hypercube
   long size() const { 
-    return getContext().zMStar.getNSlots(); 
+    return getPAlgebra().getNSlots(); 
   } 
 
   //! @brief Number of dimensions of hypercube
   long dimension() const { 
-    return getContext().zMStar.numOfGens(); 
+    return getPAlgebra().numOfGens(); 
   }
 
   //! @brief Size of given dimension
   long sizeOfDimension(long i) const {
-    return getContext().zMStar.OrderOf(i);
+    return getPAlgebra().OrderOf(i);
   }
 
   //! @brief Is rotations in given dimension a "native" operation?
   bool nativeDimension(long i) const {
-    return getContext().zMStar.SameOrd(i);
+    return getPAlgebra().SameOrd(i);
   }
 
   //! @brief returns coordinate of index k along the i'th dimension
   long coordinate(long i, long k) const {
-    return getContext().zMStar.coordinate(i, k); 
+    return getPAlgebra().coordinate(i, k); 
   }
- 
+
   //! @brief adds offset to index k in the i'th dimension
   long addCoord(long i, long k, long offset) const {
-    return getContext().zMStar.addCoord(i, k, offset);
+    return getPAlgebra().addCoord(i, k, offset);
   }
+
 
   //! @brief rotate an array by offset in the i'th dimension
   //! (output should not alias input)
@@ -318,7 +325,8 @@ public:
   virtual void restoreContextForG() const { mappingData.restoreContextForG(); }
 
 
-  virtual const FHEcontext& getContext() const { return context; }
+  virtual const FHEcontext& getContext() const override { return context; }
+  virtual const PAlgebra& getPAlgebra() const override { return tab.getZMStar(); }
   virtual const long getDegree() const { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
@@ -333,7 +341,13 @@ public:
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array);  }
 
+  virtual void encode(zzX& ptxt, const vector< long >& array) const
+    { genericEncode(ptxt, array);  }
+
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const
+    {  genericEncode(ptxt, array); }
+
+  virtual void encode(zzX& ptxt, const vector< zzX >& array) const
     {  genericEncode(ptxt, array); }
 
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
@@ -421,6 +435,9 @@ public:
   void encode(ZZX& ptxt, const vector< RX >& array) const;
   void decode(vector< RX  >& array, const ZZX& ptxt) const;
 
+  void encode(RX& ptxt, const vector< RX >& array) const;
+  void decode(vector< RX  >& array, const RX& ptxt) const;
+
   // Choose random polynomial of the right degree, coeffs in GF2 or zz_p
   void random(vector< RX  >& array) const
   { 
@@ -446,6 +463,16 @@ private:
 
   template<class T> 
   void genericEncode(ZZX& ptxt, const T& array) const
+  {
+    RBak bak; bak.save(); tab.restoreContext();
+
+    vector< RX > array1;
+    convert(array1, array);
+    encode(ptxt, array1);
+  }
+
+  template<class T> 
+  void genericEncode(zzX& ptxt, const T& array) const
   {
     RBak bak; bak.save(); tab.restoreContext();
 
@@ -525,6 +552,43 @@ private:
   }
 };
 
+
+// plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
+template <class RX, class RXModulus>
+void plaintextAutomorph(RX& bb, const RX& a, long k, long m, const RXModulus& PhimX)
+{
+  // compute b(X) = a(X^k) mod (X^m-1)
+  if (k == 1 || deg(a) <= 0) {
+    bb = a;
+    return;
+  }
+
+  RX b;
+  b.SetLength(m);
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
+  for (long j = 0; j <= deg(a); j++) 
+    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
+  b.normalize();
+
+  rem(bb, b, PhimX); // reduce modulo the m'th cyclotomic
+}
+
+// same as above, but k = g_i^j mod m.
+// also works with i == ea.getPalgebra().numOfGens(),
+// which means Frobenius
+
+template<class RX, class type>
+void plaintextAutomorph(RX& b, const RX& a, long i, long j, 
+                        const EncryptedArrayDerived<type>& ea)
+{
+  const PAlgebra& zMStar = ea.getPAlgebra();
+  const auto& F = ea.getTab().getPhimXMod();
+  long k = zMStar.genToPow(i, j);
+  long m = zMStar.getM();
+  plaintextAutomorph(b, a, k, m, F);
+}
+
+
 //! @brief A "factory" for building EncryptedArrays
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
 					const ZZX& G, const PAlgebraMod& alMod);
@@ -600,6 +664,7 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
 
   const FHEcontext& getContext() const { return rep->getContext(); }
   const PAlgebraMod& getAlMod() const { return alMod; }
+  const PAlgebra& getPAlgebra() const { return rep->getPAlgebra(); }
   const long getDegree() const { return rep->getDegree(); }
   void rotate(Ctxt& ctxt, long k) const { rep->rotate(ctxt, k); }
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
@@ -611,6 +676,13 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void encode(ZZX& ptxt, const vector< ZZX >& array) const 
     { rep->encode(ptxt, array); }
   void encode(ZZX& ptxt, const NewPlaintextArray& array) const 
+    { rep->encode(ptxt, array); }
+
+  void encode(zzX& ptxt, const vector< long >& array) const 
+    { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const vector< zzX >& array) const 
+    { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const NewPlaintextArray& array) const 
     { rep->encode(ptxt, array); }
 
   void encodeUnitSelector(ZZX& ptxt, long i) const
