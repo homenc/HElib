@@ -58,7 +58,7 @@ public:
 void buildUnpackSlotEncoding(std::vector<zzX>& unpackSlotEncoding,
                              const EncryptedArray& ea)
 {
-  ea.dispatch<buildUnpackSlotEncoding_pa_impl>(Fwd(unpackSlotEncoding));
+  ea.dispatch<buildUnpackSlotEncoding_pa_impl>(unpackSlotEncoding);
 }
 
 template<class type>
@@ -175,7 +175,7 @@ public:
 // A wrapper function, calls the apply method of the class above
 void repack(Ctxt& packed, const CtPtrs& unpacked, const EncryptedArray& ea)
 {
-  ea.dispatch<repack_pa_impl>(Fwd(packed), unpacked);
+  ea.dispatch<repack_pa_impl>(packed, unpacked);
 }
 
 // pack many ciphertexts, returns the number of packed ciphertexts
@@ -189,7 +189,7 @@ long repack(const CtPtrs& packed, const CtPtrs& unpacked, const EncryptedArray& 
   while (num2pack > 0) {
     if (num2pack < d) d = num2pack;
     const CtPtrs_slice nextSlice(unpacked, offset, d);
-    ea.dispatch<repack_pa_impl>(Fwd(*(packed[idx++])), nextSlice);
+    ea.dispatch<repack_pa_impl>(*(packed[idx++]), nextSlice);
     num2pack -= d;
     offset += d;
   }
@@ -264,7 +264,7 @@ public:
 void packConstant(zzX& result, unsigned long data, long nbits,
                   const EncryptedArray& ea)
 {
-  ea.dispatch<packConstant_pa_impl>(data, nbits, Fwd(result));
+  ea.dispatch<packConstant_pa_impl>(data, nbits, result);
 }
 
 
@@ -273,7 +273,7 @@ void packConstant(zzX& result, unsigned long data, long nbits,
 void packConstants(zzX& result, const std::vector<unsigned long>& data,
                    long nbits, const EncryptedArray& ea)
 {
-  ea.dispatch<packConstant_pa_impl>(data, nbits, Fwd(result));
+  ea.dispatch<packConstant_pa_impl>(data, nbits, result);
 }
 
 //! \cond FALSE (make doxygen ignore this code)
@@ -310,5 +310,5 @@ public:
 void unpackSlots(std::vector<unsigned long>& value,
                  NewPlaintextArray& pa, const EncryptedArray& ea)
 {
-   ea.dispatch<unpackSlots_pa_impl>(Fwd(pa), Fwd(value));
+   ea.dispatch<unpackSlots_pa_impl>(pa, value);
 }

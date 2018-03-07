@@ -630,7 +630,7 @@ public:
 
 void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i)
 {
-  ea.dispatch<replicate_pa_impl>(Fwd(pa), i); 
+  ea.dispatch<replicate_pa_impl>(pa, i); 
 }
 
 
