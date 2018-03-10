@@ -1,17 +1,38 @@
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
+
+#include <NTL/BasicThreadPool.h>
 
 #include "EvalMap.h"
 #include "hypercube.h"
 #include "powerful.h"
 
 static bool dry = false; // a dry-run flag
+static bool noPrint = false;
 
 void  TestIt(long p, long r, long c, long _k, long w,
-             long L, const Vec<long>& mvec, 
-             const Vec<long>& gens, const Vec<long>& ords )
+             long L, Vec<long>& mvec, 
+             Vec<long>& gens, Vec<long>& ords, long useCache)
 {
-  cout << "*** TestIt"
+  if (lsize(mvec)<1) { // use default values
+    mvec.SetLength(3); gens.SetLength(3); ords.SetLength(3);
+    mvec[0] = 7;    mvec[1] = 3;    mvec[2] = 221;
+    gens[0] = 3979; gens[1] = 3095; gens[2] = 3760;
+    ords[0] = 6;    ords[1] = 2;    ords[2] = -8;
+  }
+  if (!noPrint)
+    cout << "*** TestIt"
        << (dry? " (dry run):" : ":")
        << " p=" << p
        << ", r=" << r
@@ -19,7 +40,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
        << ", k=" << _k
        << ", w=" << w
        << ", L=" << L
-       << ", mvec=" << mvec
+       << ", mvec=" << mvec << ", "
+       << ", useCache = " << useCache
        << endl;
 
   setTimersOn();
@@ -42,9 +64,10 @@ void  TestIt(long p, long r, long c, long _k, long w,
   FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
-  context.zMStar.printout(); // print structure of Zm* /(p) to cout
-  cout << endl;
-
+  if (!noPrint) {
+    context.zMStar.printout(); // print structure of Zm* /(p) to cout
+    cout << endl;
+  }
   long d = context.zMStar.getOrdP();
   long phim = context.zMStar.getPhiM();
   long nslots = phim/d;
@@ -54,11 +77,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-
-  cout << "generating key-switching matrices... ";
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
-  cout << "done\n";
 
   // GG defines the plaintext space Z_p[X]/GG(X)
   ZZX GG;
@@ -106,14 +126,18 @@ void  TestIt(long p, long r, long c, long _k, long w,
   // coefficients packed in the slots and produces the polynomial
   // corresponding to cube
 
-  CheckCtxt(ctxt, "init");
+  if (!noPrint) CheckCtxt(ctxt, "init");
 
-  cout << "build EvalMap\n";
-  EvalMap map(ea, mvec, false); // compute the transformation to apply
-  cout << "apply EvalMap\n";
-  map.apply(ctxt);              // apply the transformation to ctxt
-  CheckCtxt(ctxt, "EvalMap");
-  cout << "check results\n";
+  if (!noPrint) cout << "build EvalMap\n";
+  EvalMap map(ea, /*minimal=*/false, mvec, 
+    /*invert=*/false, /*build_cache=*/false, /*normal_basis=*/false); 
+  // compute the transformation to apply
+
+  if (!noPrint) cout << "apply EvalMap\n";
+  if (useCache) map.upgrade();
+  map.apply(ctxt); // apply the transformation to ctxt
+  if (!noPrint) CheckCtxt(ctxt, "EvalMap");
+  if (!noPrint) cout << "check results\n";
 
   ZZX FF1;
   secretKey.Decrypt(FF1, ctxt);
@@ -125,19 +149,23 @@ void  TestIt(long p, long r, long c, long _k, long w,
     cout << "EvalMap: BAD\n";
 
   publicKey.Encrypt(ctxt, FF1);
-  CheckCtxt(ctxt, "init");
+  if (!noPrint) CheckCtxt(ctxt, "init");
 
   // Compute homomorphically the inverse transformation that takes the
   // polynomial corresponding to cube and produces the coefficients
   // packed in the slots
 
-  cout << "build EvalMap\n";
-  EvalMap imap(ea, mvec, true, false); // compute the transformation to apply
-  cout << "apply EvalMap\n";
-  imap.apply(ctxt);                    // apply the transformation to ctxt
-  CheckCtxt(ctxt, "EvalMap");
-  cout << "check results\n";
-
+  if (!noPrint) cout << "build EvalMap\n";
+  EvalMap imap(ea, /*minimal=*/false, mvec, 
+    /*invert=*/true, /*build_cache=*/false, /*normal_basis=*/false); 
+  // compute the transformation to apply
+  if (!noPrint) cout << "apply EvalMap\n";
+  if (useCache) imap.upgrade();
+  imap.apply(ctxt); // apply the transformation to ctxt
+  if (!noPrint) {
+    CheckCtxt(ctxt, "EvalMap");
+    cout << "check results\n";
+  }
   NewPlaintextArray pa2(ea);
   ea.decrypt(ctxt, secretKey, pa2);
 
@@ -147,9 +175,11 @@ void  TestIt(long p, long r, long c, long _k, long w,
     cout << "EvalMap: BAD\n";
   FHE_NTIMER_STOP(ALL);
 
-  cout << "\n*********\n";
-  printAllTimers();
-  cout << endl;
+  if (!noPrint) {
+    cout << "\n*********\n";
+    printAllTimers();
+    cout << endl;
+  }
 }
 
 
@@ -195,39 +225,32 @@ int main(int argc, char *argv[])
 
   Vec<long> mvec;
   amap.arg("mvec", mvec, "use specified factorization of m", NULL);
-  amap.note("e.g., mvec='[5 3 187]'");
+  amap.note("e.g., mvec='[7 3 221]'");
 
   Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", NULL);
-  amap.note("e.g., gens='[562 1871 751]'");
+  amap.note("e.g., gens='[3979 3095 3760]'");
 
   Vec<long> ords;
   amap.arg("ords", ords, "use specified vector of orders", NULL);
-  amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
+  amap.note("e.g., ords='[6 2 -8]', negative means 'bad'");
 
   amap.arg("dry", dry, "a dry-run flag to check the noise");
 
-  long nthreads=4;
+  long nthreads=1;
   amap.arg("nthreads", nthreads, "number of threads");
+
+  amap.arg("noPrint", noPrint, "suppress printouts");
+
+  long useCache=0;
+  amap.arg("useCache", useCache, "0: zzX cache, 2: DCRT cache");
 
   amap.parse(argc, argv);
 
-#ifdef FHE_BOOT_THREADS
-  bootTask = new MultiTask(nthreads);
-  cout << "*** nthreads = " << nthreads << "\n";
-#else
-  cout << "*** no threads\n";
-#endif
-
-
-
-
-
-  long w = 64; // Hamming weight of secret key
+  SetNumThreads(nthreads);
 
   SetSeed(conv<ZZ>(seed));
-
-  TestIt(p, r, c, k, w, L, mvec, gens, ords);
+  TestIt(p, r, c, k, /*Key Hamming weight=*/64, L, mvec, gens, ords, useCache);
 }
 
 // ./Test_EvalMap_x mvec="[73 433]" gens="[18620 12995]" ords="[72 -6]"

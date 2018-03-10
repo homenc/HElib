@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #include "NumbTh.h"
 
@@ -297,14 +293,29 @@ compOrder(vector<long>& orders, vector<long>& classes, bool flag, long m)
 }
 
 // Compare numbers based on their absolute value
+#if 1
+
+// This version prefers positive numbers over negative
 static bool gtAbsVal(long a, long b)
 {
   return (abs(a)>abs(b) || (abs(a)==abs(b) && a>b));
 }
 
+
+#else
+
+// This version does not have a preference...
+// useful in generating test cases with "bad" dimensions
+static bool gtAbsVal(long a, long b)
+{
+  return (abs(a)>abs(b));
+}
+#endif
+
 // Returns in gens a generating set for Zm* /<p>, and in ords the
 // order of these generators. Return value is the order of p in Zm*.
-long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p)
+long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p,
+                    const vector<long>& candidates)
 {
   gens.clear();
   ords.clear();
@@ -323,20 +334,28 @@ long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p)
   // The order of p is the size of the equivalence class of 1
 #if 0
   long ordP = std::count(classes.begin(), classes.end(), 1);
-       // count(from,to,val) returns # of elements in (from,to) with value=val
+    // count(from,to,val) returns # of elements in (from,to) with value=val
 #else
-   long ordP = 0;
-   for (long i = 0; i < lsize(classes); i++)
-      if (classes[i] == 1) ordP++;
+  long ordP = 0;
+  for (long i = 0; i < lsize(classes); i++)
+    if (classes[i] == 1) ordP++;
 #endif
 
-  // Compute orders in (Z/mZ)^*/<p> while comparing to (Z/mZ)^*
+  // Compute orders in (Z/mZ)^* /<p> while comparing to (Z/mZ)^*
+  long candIdx=0;
   while (true) {
     compOrder(orders,classes,true,m);
     // if the orders of i in Zm* /<p> and Zm* are not the same, then
     // order[i] contains the order in Zm* /<p> with negative sign
 
-    long idx = argmax(orders, &gtAbsVal); // find the element with largest order
+    long idx=0;
+    if (candIdx<lsize(candidates)) { // try next candidate
+      idx = candidates[candIdx++];
+      if (abs(orders[idx])<=1)
+        idx=0;
+    }
+    if (idx==0) // no viable candidates supplied externally
+      idx = argmax(orders, &gtAbsVal);// find the element with largest order
     long largest = orders[idx];
 
     if (abs(largest) == 1) break;   // Trivial group, we are done
@@ -433,7 +452,7 @@ long mobius(long n)
 ZZX Cyclotomic(long N)
 {
   ZZX Num,Den,G,F;
-  set(Num); set(Den);
+  NTL::set(Num); NTL::set(Den);
   long m,d;
   for (d=1; d<=N; d++)
     { if ((N%d)==0)
@@ -952,6 +971,47 @@ void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A)
    for (long i = 0; i < n; i++)
       convert(X[i], A[i]);
 }
+
+void convert(NTL::Vec<long>& out, const NTL::ZZX& in)
+{
+  out.SetLength(in.rep.length());
+  for (long i=0; i<out.length(); i++)
+    out[i] = conv<long>(in[i]);
+}
+
+
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in)
+{
+  out.SetLength(in.rep.length());
+  for (long i=0; i<out.length(); i++)
+    out[i] = conv<long>(in[i]);
+}
+
+
+void convert(NTL::Vec<long>& out, const NTL::GF2X& in)
+{
+  out.SetLength(1+deg(in));
+  for (long i=0; i<out.length(); i++)
+    out[i] = conv<long>(in[i]);
+}
+
+
+void convert(NTL::ZZX& out, const NTL::Vec<long>& in)
+{
+  out.SetLength(in.length());
+  for (long i=0; i<in.length(); i++)
+    out[i] = conv<ZZ>(in[i]);
+  out.normalize();
+}
+
+void convert(NTL::GF2X& out, const NTL::Vec<long>& in)
+{
+  out.SetLength(in.length());
+  for (long i=0; i<in.length(); i++)
+    out[i] = conv<GF2>(in[i]);
+  out.normalize();
+}
+
 
 void mul(vector<ZZX>& x, const vector<ZZX>& a, long b)
 {

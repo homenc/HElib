@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 
 /* Test_Permutations.cpp - Applying plaintext permutation to encrypted vector
@@ -23,6 +19,8 @@ NTL_CLIENT
 #include "timing.h"
 #include "permutations.h"
 #include "EncryptedArray.h"
+
+static bool noPrint = false;
 
 void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 
@@ -49,8 +47,10 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
 {
   GeneratorTrees trees;
   long cost = trees.buildOptimalTrees(vec, widthBound);
-  cout << "@TestCube: trees=" << trees << endl;
-  cout << " cost =" << cost << endl;
+  if (!noPrint) {
+    cout << "@TestCube: trees=" << trees << endl;
+    cout << " cost =" << cost << endl;
+  }
   Vec<long> dims;
   trees.getCubeDims(dims);
   CubeSignature sig(dims);
@@ -58,14 +58,9 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
   for (long cnt=0; cnt<3; cnt++) {
     Permut pi;
     randomPerm(pi, trees.getSize());
-    //    if (pi.length()<100)  cout << "pi="<<pi<<endl;
 
     PermNetwork net;
     net.buildNetwork(pi, trees);
-    //    if (pi.length()<100) {
-    //      cout << "permutations network {[gIdx,e,isID,shifts]} = " << endl;
-    //      cout << net << endl;
-    //    }
 
     HyperCube<long> cube1(sig), cube2(sig);
     for (long i=0; i<cube1.getSize(); i++) cube1[i] = i;
@@ -86,7 +81,8 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
 
 void testCtxt(long m, long p, long widthBound, long L, long r)
 {
-  cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ",r="<<r<<")";
+  if (!noPrint)
+    cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ",r="<<r<<")";
 
   FHEcontext context(m,p,r);
   EncryptedArray ea(context); // Use G(X)=X for this ea object
@@ -107,9 +103,10 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   // Get the generator-tree structures and the corresponding hypercube
   GeneratorTrees trees;
   long cost = trees.buildOptimalTrees(vec, widthBound);
-  cout << ": trees=" << trees << endl;
-  cout << " cost =" << cost << endl;
-
+  if (!noPrint) {
+    cout << ": trees=" << trees << endl;
+    cout << " cost =" << cost << endl;
+  }
   //  Vec<long> dims;
   //  trees.getCubeDims(dims);
   //  CubeSignature sig(dims);
@@ -117,8 +114,8 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   // 1/2 prime per level should be more or less enough, here we use 1 per layer
   if (L<=0) L = 1+trees.numLayers();
   buildModChain(context, /*nLevels=*/L, /*nDigits=*/3);
-  cout << "**Using "<<L<<" primes (of which "
-       << context.ctxtPrimes.card() << " are Ctxt-primes)\n";
+  if (!noPrint) cout << "**Using "<<L<<" primes (of which "
+		     << context.ctxtPrimes.card() << " are Ctxt-primes)\n";
 
   // Generate a sk/pk pair
   FHESecKey secretKey(context);
@@ -131,20 +128,13 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
     // Choose a random permutation
     Permut pi;
     randomPerm(pi, trees.getSize());
-    //    if (pi.length()<100)  cout << "pi="<<pi<<endl;
 
     // Build a permutation network for pi
     PermNetwork net;
     net.buildNetwork(pi, trees);
-    //    if (pi.length()<100) {
-    //      cout << "permutations network {[gIdx,e,isID,shifts]} = " << endl;
-    //      cout << net << endl;
-    //    }
 
     // make sure we have the key-switching matrices needed for this network
-    cout << "  ** generating matrices... " << flush;
     addMatrices4Network(secretKey, net);
-    cout << "done" << endl;
 
     // Apply the permutation pi to the plaintext
     vector<long> out1(ea.size());
@@ -153,11 +143,13 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
 
     // Encrypt plaintext array, then apply permutation network to ciphertext
     ea.encrypt(ctxt, publicKey, in);
-    cout << "  ** applying permutation network to ciphertext... " << flush;
+    if (!noPrint)
+      cout << "  ** applying permutation network to ciphertext... " << flush;
     double t = GetTime();
     net.applyToCtxt(ctxt, ea); // applying permutation netwrok
     t = GetTime() -t;
-    cout << "done in " << t << " seconds" << endl;
+    if (!noPrint)
+      cout << "done in " << t << " seconds" << endl;
     ea.decrypt(ctxt, secretKey, out2);
 
     if (out1==out2) cout << "GOOD\n";
@@ -208,6 +200,7 @@ int main(int argc, char *argv[])
   argmap["good3"] = "1";
   argmap["good4"] = "1";
   argmap["dry"] = "1";
+  argmap["noPrint"] = "0";
 
   // get parameters from the command line
 
@@ -230,6 +223,7 @@ int main(int argc, char *argv[])
   long good4 = atoi(argmap["good4"]);
 
   bool dry = atoi(argmap["dry"]);
+  noPrint = atoi(argmap["noPrint"]);
 
   setDryRun(dry);
   if (test==0) {

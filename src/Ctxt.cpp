@@ -1,22 +1,22 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
-
+#include <NTL/BasicThreadPool.h>
+#include "timing.h"
 #include "Ctxt.h"
 #include "FHE.h"
-#include "timing.h"
+
+// A hack for recording required automorphisms (see NumbTh.h)
+std::set<long>* FHEglobals::automorphVals = NULL;
+std::set<long>* FHEglobals::automorphVals2 = NULL;
 
 // Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
@@ -51,6 +51,96 @@ bool Ctxt::verifyPrimeSet() const
 
   s = primeSet / s;                              // ctxt primes in primeSet
   return (s.isInterval() && s.first()<=1 && !empty(s));
+}
+
+
+// Compute the number of digits that we need and the esitmated
+// added noise from switching this ciphertext part.
+static std::pair<long, NTL::xdouble>
+keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
+{
+  const FHEcontext& context = p.getContext();
+  long nDigits = 0;
+  xdouble addedNoise = to_xdouble(0.0);
+  double sizeLeft = context.logOfProduct(p.getIndexSet());
+  for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
+    nDigits++;
+
+    double digitSize = context.logOfProduct(context.digits[i]);
+    if (sizeLeft<digitSize) digitSize=sizeLeft;// need only part of this digit
+
+    // Added noise due to this digit is phi(m) *sigma^2 *pSpace^2 *|Di|^2/4, 
+    // where |Di| is the magnitude of the digit
+
+    // WARNING: the following line is written just so to prevent overflow
+    addedNoise += to_xdouble(context.zMStar.getPhiM()) * pSpace*pSpace
+      * xexp(2*digitSize) * context.stdev*context.stdev / 4.0;
+
+    sizeLeft -= digitSize;
+  }
+
+  // Sanity-check: make sure that the added noise is not more than the special
+  // primes can handle: After dividing the added noise by the product of all
+  // the special primes, it should be smaller than the added noise term due
+  // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 12
+
+  long keyWeight = pubKey.getSKeyWeight(p.skHandle.getSecretKeyID());
+  double phim = context.zMStar.getPhiM();
+  double logModSwitchNoise = log((double)keyWeight) 
+    +2*log((double)pSpace) +log(phim) -log(12.0);
+  double logKeySwitchNoise = log(addedNoise) 
+    -2*context.logOfProduct(context.specialPrimes);
+  assert(logKeySwitchNoise < logModSwitchNoise);
+
+  return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
+}
+std::pair<long, NTL::xdouble> Ctxt::computeKSNoise(long partIdx, long pSpace)
+{
+  if (pSpace<=1) pSpace = ptxtSpace;
+  return keySwitchNoise(parts.at(partIdx), pubKey, pSpace);
+}
+
+// Multiply vector of digits by key-switching matrix and add to *this.
+// It is assumed that W has at least as many b[i]'s as there are digits.
+// The vector of digits is modified in place.
+void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
+{  // An object to hold the pseudorandom ai's, note that it must be defined
+  // with the maximum number of levels, else the PRG will go out of synch.
+  // FIXME: This is a bug waiting to happen.
+  DoubleCRT ai(context);
+
+  // Subsequent ai's use the evolving RNG state
+  RandomState state; // backup the NTL PRG seed
+  NTL::SetSeed(W.prgSeed);
+
+  // Add the columns in, one by one
+  DoubleCRT tmpDCRT(context, IndexSet::emptySet());  
+  for (size_t i=0; i<digits.size(); i++) {
+    FHE_NTIMER_START(KS_loop);
+    ai.randomize();
+    tmpDCRT = digits[i];
+  
+    // The operations below all use the IndexSet of tmpDCRT
+  
+    // add digit*a[i] with a handle pointing to base of W.toKeyID
+{ FHE_NTIMER_START(KS_loop_1);
+    tmpDCRT.Mul(ai,  /*matchIndexSet=*/false);
+}
+
+{ FHE_NTIMER_START(KS_loop_2);
+    this->addPart(tmpDCRT, SKHandle(1,1,W.toKeyID), /*matchPrimeSet=*/true);
+}
+  
+    // add digit*b[i] with a handle pointing to one
+{ FHE_NTIMER_START(KS_loop_3);
+    digits[i].Mul(W.b[i], /*matchIndexSet=*/false);
+}
+
+{ FHE_NTIMER_START(KS_loop_4);
+    this->addPart(digits[i], SKHandle(), /*matchPrimeSet=*/true);
+}
+
+  }
 }
 
 
@@ -123,6 +213,7 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
 // between different public keys.
 Ctxt& Ctxt::privateAssign(const Ctxt& other)
 {
+  FHE_TIMER_START;
   if (this == &other) return *this; // both point to the same object
 
   parts = other.parts;
@@ -311,15 +402,6 @@ void Ctxt::reLinearize(long keyID)
   }
   *this = tmp;
 
-#if 0
-  // alternative strategy: get rid of special primes
-  // after each reLin...
-  if (!primeSet.disjointFrom(context.specialPrimes)) {
-    modDownToSet(primeSet / context.specialPrimes);
-    // cout << ">>> special primes\n";
-  }
-#endif
-
   FHE_TIMER_STOP;
 }
 
@@ -356,40 +438,11 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // some sanity checks
   assert(W.fromKey == p.skHandle);  // the handles must match
 
-  // Compute the number of digits that we need and the esitmated added noise
-  // from switching this ciphertext part.
-  long pSpace = W.ptxtSpace;
-  long nDigits = 0;
-  xdouble addedNoise = to_xdouble(0.0);
-  double sizeLeft = context.logOfProduct(p.getIndexSet());
-  for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
-    nDigits++;
-
-    double digitSize = context.logOfProduct(context.digits[i]);
-    if (sizeLeft<digitSize) digitSize=sizeLeft; // need only part of this digit
-
-    // Added noise due to this digit is phi(m) * sigma^2 * pSpace^2 * |Di|^2/4, 
-    // where |Di| is the magnitude of the digit
-
-    // WARNING: the following line is written just so to prevent overflow
-    addedNoise += to_xdouble(context.zMStar.getPhiM()) * pSpace*pSpace
-      * xexp(2*digitSize) * context.stdev*context.stdev / 4.0;
-
-    sizeLeft -= digitSize;
-  }
-
-  // Sanity-check: make sure that the added noise is not more than the special
-  // primes can handle: After dividing the added noise by the product of all
-  // the special primes, it should be smaller than the added noise term due
-  // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 12
-
-  long keyWeight = pubKey.getSKeyWeight(p.skHandle.getSecretKeyID());
-  double phim = context.zMStar.getPhiM();
-  double logModSwitchNoise = log((double)keyWeight) 
-    +2*log((double)pSpace) +log(phim) -log(12.0);
-  double logKeySwitchNoise = log(addedNoise) 
-    -2*context.logOfProduct(context.specialPrimes);
-  assert(logKeySwitchNoise < logModSwitchNoise);
+  // Compute the number of digits that we need and the esitmated
+  // added noise from switching this ciphertext part.
+  long nDigits;
+  NTL::xdouble addedNoise;
+  std::tie(nDigits,addedNoise)= keySwitchNoise(p, pubKey, W.ptxtSpace);
 
   // Break the ciphertext part into digits, if needed, and scale up these
   // digits using the special primes. This is the most expensive operation
@@ -399,37 +452,10 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   p.breakIntoDigits(polyDigits, nDigits);
 
   // Finally we multiply the vector of digits by the key-switching matrix
-
-  // An object to hold the pseudorandom ai's, note that it must be defined
-  // with the maximum number of levels, else the PRG will go out of synch.
-  // FIXME: This is a bug waiting to happen.
-  DoubleCRT ai(context);
-
-  // Set the first ai using the seed, subsequent ai's (if any) will
-  // use the evolving RNG state (NOTE: this is not thread-safe)
-
-  RandomState state;
-  SetSeed(W.prgSeed);
-
-  // Add the columns in, one by one
-  DoubleCRT tmp(context, IndexSet::emptySet());
-  
-  for (unsigned long i=0; i<polyDigits.size(); i++) {
-    ai.randomize();
-    tmp = polyDigits[i];
-  
-    // The operations below all use the IndexSet of tmp
-  
-    // add part*a[i] with a handle pointing to base of W.toKeyID
-    tmp.Mul(ai,  /*matchIndexSet=*/false);
-    addPart(tmp, SKHandle(1,1,W.toKeyID), /*matchPrimeSet=*/true);
-  
-    // add part*b[i] with a handle pointing to one
-    polyDigits[i].Mul(W.b[i], /*matchIndexSet=*/false);
-    addPart(polyDigits[i], SKHandle(), /*matchPrimeSet=*/true);
-  }
-  noiseVar += addedNoise;
+  keySwitchDigits(W, polyDigits);
+  noiseVar += addedNoise; // update the noise estimate
 } // restore random state upon destruction of the RandomState, see NumbTh.h
+
 
 // Find the IndexSet such that modDown to that set of primes makes the
 // additive term due to rounding into the dominant noise term 
@@ -510,21 +536,26 @@ void Ctxt::computeConjugates(vector<Ctxt>& conj, long d) const
 void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle, 
 		   bool matchPrimeSet, bool negative)
 {
-  assert (&part.getContext() == &context);
+  FHE_TIMER_START;
 
-  // add to the the prime-set of *this, if needed (this is expensive)
-  if (matchPrimeSet && !(part.getIndexSet() <= primeSet)) {
-    IndexSet setDiff = part.getIndexSet() / primeSet; // set minus
-    for (size_t i=0; i<parts.size(); i++) parts[i].addPrimes(setDiff);
-    primeSet.insert(setDiff);
-  }
+  assert (&part.getContext() == &context);
 
   if (parts.size()==0) { // inserting 1st part 
     primeSet = part.getIndexSet();
     parts.push_back(CtxtPart(part,handle));
     if (negative) parts.back().Negate(); // not thread-safe??
-  } else {               // adding to a ciphertext with existing parts
-    assert(part.getIndexSet() <= primeSet);  // Sanity check
+  }
+  else {       // adding to a ciphertext with existing parts
+    if (!(part.getIndexSet() <= primeSet)) {
+      // add to the the prime-set of *this, if needed (this is expensive)
+      if (matchPrimeSet) {
+        IndexSet setDiff = part.getIndexSet() / primeSet; // set minus
+        for (size_t i=0; i<parts.size(); i++) parts[i].addPrimes(setDiff);
+        primeSet.insert(setDiff);
+      }
+      else // this should never happen
+        throw std::logic_error("part has too many primes and matchPrimeSet==false");
+    }
 
     DoubleCRT tmp(context, IndexSet::emptySet());
     const DoubleCRT* ptr = &part;
@@ -594,6 +625,8 @@ void Ctxt::negate()
 // Add/subtract another ciphertxt (depending on the negative flag)
 void Ctxt::addCtxt(const Ctxt& other, bool negative)
 {
+  FHE_TIMER_START;
+
   // Sanity check: same context and public key
   assert (&context==&other.context && &pubKey==&other.pubKey);
 
@@ -749,6 +782,7 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
 
 void Ctxt::multiplyBy(const Ctxt& other)
 {
+  FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
@@ -758,6 +792,7 @@ void Ctxt::multiplyBy(const Ctxt& other)
 
 void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 {
+  FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
@@ -808,12 +843,13 @@ void Ctxt::multByConstant(const ZZ& c)
   FHE_TIMER_START;
 
   long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
+  if (cc > ptxtSpace/2) cc -= ptxtSpace;
+  else if (cc < -ptxtSpace/2) cc += ptxtSpace;
   ZZ tmp = to_ZZ(cc);
 
   // multiply all the parts by this constant
   for (size_t i=0; i<parts.size(); i++) parts[i] *= tmp;
 
-  if (cc > ptxtSpace/2) cc -= ptxtSpace;
   double size = to_double(cc);
   noiseVar *= size*size * context.zMStar.get_cM();
 }
@@ -839,6 +875,14 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 }
 
 void Ctxt::multByConstant(const ZZX& poly, double size)
+{
+  if (this->isEmpty()) return;
+  FHE_TIMER_START;
+  DoubleCRT dcrt(poly,context,primeSet);
+  multByConstant(dcrt,size);
+}
+
+void Ctxt::multByConstant(const zzX& poly, double size)
 {
   if (this->isEmpty()) return;
   FHE_TIMER_START;
@@ -920,30 +964,43 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
 void Ctxt::smartAutomorph(long k) 
 {
   FHE_TIMER_START;
+
+  // A hack: record this automorphism rather than actually performing it
+  if (isSetAutomorphVals()) { // defined in NumbTh.h
+    recordAutomorphVal(k);
+    return;
+  }
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
-  long m = context.zMStar.getM();
-
-  k = mcMod(k, m);
-
   // Sanity check: verify that k \in Zm*
+  long m = context.zMStar.getM();
+  k = mcMod(k, m);
   assert (context.zMStar.inZmStar(k));
 
   long keyID=getKeyID();
+  if (!pubKey.isReachable(k,keyID)) {// must have key-switching matrices for it
+    throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
+                           + ", keyID="+std::to_string(keyID));
+  }
+
   if (!inCanonicalForm(keyID)) {     // Re-linearize the input, if needed
     reLinearize(keyID);
     assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
   }
-  assert (pubKey.isReachable(k,keyID)); // reachable from 1
 
   while (k != 1) {
     const KeySwitch& matrix = pubKey.getNextKSWmatrix(k,keyID);
     long amt = matrix.fromKey.getPowerOfX();
 
+    // A hack: record this automorphism rather than actually performing it
+    if (isSetAutomorphVals2()) { // defined in NumbTh.h
+      recordAutomorphVal2(amt);
+      return;
+    }
+    //cerr << "********* automorph " << amt << "\n";
     automorph(amt);
     reLinearize(keyID);
-
     k = MulMod(k, InvMod(amt,m), m);
   }
   FHE_TIMER_STOP;
@@ -977,7 +1034,7 @@ const long Ctxt::getKeyID() const
   for (size_t i=0; i<parts.size(); i++)
     if (!parts[i].skHandle.isOne()) return parts[i].skHandle.getSecretKeyID();
 
-  return -1;
+  return 0; // no part pointing to anything, return the default key
 }
 
 // Estimates the added noise variance from mod-switching down
@@ -1020,13 +1077,11 @@ void Ctxt::reduce() const
 
 istream& operator>>(istream& str, SKHandle& handle)
 {
-  //  cerr << "SKHandle[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> handle.powerOfS;
   str >> handle.powerOfX;
   str >> handle.secretKeyID;
   seekPastChar(str,']');
-  //  cerr << "]";  
   return str;
 }
 
@@ -1038,12 +1093,10 @@ ostream& operator<<(ostream& str, const CtxtPart& p)
 
 istream& operator>>(istream& str, CtxtPart& p)
 {
-  //  cerr << "CtxtPart[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> (DoubleCRT&) p;
   str >> p.skHandle;
   seekPastChar(str,']');
-  //  cerr << "]";
   return str;
 }
 
@@ -1058,7 +1111,6 @@ ostream& operator<<(ostream& str, const Ctxt& ctxt)
 
 istream& operator>>(istream& str, Ctxt& ctxt)
 {
-  //  cerr << "Ctxt[";
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseVar >> ctxt.primeSet;
   long nParts;
@@ -1069,14 +1121,13 @@ istream& operator>>(istream& str, Ctxt& ctxt)
     assert (ctxt.parts[i].getIndexSet()==ctxt.primeSet); // sanity-check
   }
   seekPastChar(str,']');
-  //  cerr << "]";
   return str;
 }
 
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << endl;
+  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << ", p^r="<<c.getPtxtSpace()<<endl;
 }
 
 // The recursive incremental-product function that does the actual work
@@ -1095,7 +1146,14 @@ static void recursiveIncrementalProduct(Ctxt array[], long n)
   recursiveIncrementalProduct(&array[n1], n-n1);
 
   // Multiply the last product in the 1st part into every product in the 2nd
-  for (long i=n1; i<n; i++) array[i].multiplyBy(array[n1-1]);
+  if (n-n1 > 1) {
+    NTL_EXEC_RANGE(n-n1, first, last)
+    for (long i=n1+first; i<n1+last; i++)
+      array[i].multiplyBy(array[n1-1]);
+    NTL_EXEC_RANGE_END
+  }
+  else
+    for (long i=n1; i<n; i++) array[i].multiplyBy(array[n1-1]);
 }
 
 // For i=n-1...0, set v[i]=prod_{j<=i} v[j]
@@ -1105,6 +1163,40 @@ void incrementalProduct(vector<Ctxt>& v)
   long n = v.size();  // how many ciphertexts do we have
   if (n > 0) recursiveIncrementalProduct(&v[0], n); // do the actual work
 }
+
+
+static void recursiveTotalProduct(Ctxt& out, const Ctxt array[], long n)
+{
+  if (n <= 3) {
+    out = array[0];
+    if (n == 2)      out.multiplyBy(array[1]);
+    else if (n == 3) out.multiplyBy2(array[1],array[2]);
+    return;
+  }
+
+  // split the array in two
+
+  long ell = NTL::NumBits(n-1); // 2^{l-1} <= n-1
+  long n1 = 1UL << (ell-1);     // n/2 <= n1 = 2^l < n
+
+  // Call the recursive procedure separately on the first and second parts
+  Ctxt out2(ZeroCtxtLike, out);
+  recursiveTotalProduct(out, array, n1);
+  recursiveTotalProduct(out2, &array[n1], n-n1);
+
+  // Multiply the beginning of the two halves
+  out.multiplyBy(out2);
+}
+
+// set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products
+// out could point to v[0], but having it pointing to any other v[i]
+// will make the result unpredictable.
+void totalProduct(Ctxt& out, const vector<Ctxt>& v)
+{
+  long n = v.size();  // how many ciphertexts do we have
+  if (n > 0) recursiveTotalProduct(out, &v[0], n); // do the actual work
+}
+
 
 // Compute the inner product of two vectors of ciphertexts, this routine uses
 // the lower-level *= operator and does only one re-linearization at the end.
@@ -1142,7 +1234,23 @@ void innerProduct(Ctxt& result,
 }
 
 void innerProduct(Ctxt& result,
-		  const vector<Ctxt>& v1, const vector<ZZX>& v2)
+      const vector<Ctxt>& v1, const vector<ZZX>& v2)
+{
+  long n = min(v1.size(), v2.size());
+  if (n<=0) {
+    result.clear();
+    return;
+  }
+  result = v1[0]; result.multByConstant(v2[0]);
+  for (long i=1; i<n; i++) {
+    Ctxt tmp = v1[i];
+    tmp.multByConstant(v2[i]);
+    result += tmp;
+  }
+}
+
+void innerProduct(Ctxt& result,
+		  const vector<Ctxt>& v1, const vector<zzX>& v2)
 {
   long n = min(v1.size(), v2.size());
   if (n<=0) {

@@ -1,24 +1,22 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
+#include <NTL/BasicThreadPool.h>
 
 #include "recryption.h"
 #include "EncryptedArray.h"
 #include "EvalMap.h"
 #include "powerful.h"
-
+#include "CtPtrs.h"
+#include "intraSlot.h"
 
 
 /************* Some local functions *************/
@@ -29,11 +27,7 @@ static void x2iInSlots(ZZX& poly, long i,
 // of p^r and q, while keeping the added multiples small. 
 template<class VecInt>
 long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha);
-
-double pow(long a, long b)
-{
-  return pow(double(a), double(b));
-}
+static inline double pow(long a, long b) {return pow(double(a), double(b));}
 
 RecryptData::~RecryptData()
 {
@@ -43,6 +37,7 @@ RecryptData::~RecryptData()
   if (secondMap!=NULL) delete secondMap;
   if (p2dConv!=NULL)   delete p2dConv;
 }
+
 
 /** Computing the recryption parameters
  *
@@ -100,9 +95,11 @@ bool RecryptData::operator==(const RecryptData& other) const
   return true;
 }
 
+
+
 // The main method
 void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
-		       long t, bool consFlag)
+		       long t, bool consFlag, bool build_cache_, bool minimal)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to RecryptData::init\n";
@@ -113,6 +110,7 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   // Record the arguments to this function
   mvec = mvec_;
   conservative = consFlag;
+  build_cache = build_cache_;
 
   if (t <= 0) t = defSkHwt+1; // recryption key Hwt
   hwt = t;
@@ -155,8 +153,6 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   ea = new EncryptedArray(context, *alMod);
          // Polynomial defaults to F0, PAlgebraMod explicitly given
 
-  firstMap  = new EvalMap(*ea, mvec, true);
-  secondMap = new EvalMap(*context.ea, mvec, false);
 
   p2dConv = new PowerfulDCRT(context, mvec);
 
@@ -182,25 +178,17 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
     for (long k = 0; k < nslots; k++) v[k] = C[j];
     ea->encode(unpackSlotEncoding[j], v);
   }
+  firstMap = new EvalMap(*ea, minimal, mvec, true, build_cache);
+  secondMap = new EvalMap(*context.ea, minimal, mvec, false, build_cache);
 }
 
 /********************************************************************/
 /********************************************************************/
 
-#ifdef DEBUG_PRINTOUT /*********** Debugging utilities **************/
-extern FHESecKey* dbgKey;
-extern EncryptedArray* dbgEa;
-extern ZZX dbg_ptxt;
-ZZX dbgPoly, skPoly;
-extern Vec<ZZ> ptxt_pwr;
-
-#define FLAG_PRINT_ZZX  1
-#define FLAG_PRINT_POLY 2
-#define FLAG_PRINT_VEC  4
-extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
-			    const EncryptedArray& ea, long flags=0);
-extern void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
-#endif                /********* End Debugging utilities **************/
+#ifdef DEBUG_PRINTOUT
+#include "debugging.h"
+long printFlag = FLAG_PRINT_VEC;
+#endif
 
 // Extract digits from fully packed slots
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
@@ -210,6 +198,20 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 void FHEPubKey::reCrypt(Ctxt &ctxt)
 {
   FHE_TIMER_START;
+
+  // Some sanity checks for dummy ciphertext
+  long ptxtSpace = ctxt.getPtxtSpace();
+  if (ctxt.isEmpty()) return;
+  if (ctxt.parts.size()==1 && ctxt.parts[0].skHandle.isOne()) {
+    // Dummy encryption, just ensure that it is reduced mod p
+    ZZX poly = to_ZZX(ctxt.parts[0]);
+    for (long i=0; i<poly.rep.length(); i++)
+      poly[i] = to_ZZ( rem(poly[i],ptxtSpace) );
+    poly.normalize();
+    ctxt.DummyEncrypt(poly);
+    return;
+  }
+
   assert(recryptKeyID>=0); // check that we have bootstrapping data
 
   long p = getContext().zMStar.getP();
@@ -229,7 +231,6 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  long ptxtSpace = ctxt.getPtxtSpace();
   assert(p2r % ptxtSpace == 0);
 
   FHE_NTIMER_START(preProcess);
@@ -267,7 +268,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
   // Check that the estimated noise is still low
   if (noise + maxU*p2r*(skHwts[recryptKeyID]+1) > q/2) 
-    cerr << " * noise/q after makeDisivible = "
+    cerr << " * noise/q after makeDivisible = "
 	 << ((noise + maxU*p2r*(skHwts[recryptKeyID]+1))/q) << endl;
 
   for (long i=0; i<(long)zzParts.size(); i++)
@@ -276,7 +277,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // Multiply the post-processed cipehrtext by the encrypted sKey
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before recryption ";
-  decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa, printFlag);
 #endif
 
   double p0size = to_double(coeffsL2Norm(zzParts[0]));
@@ -287,7 +288,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans1 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
   FHE_NTIMER_STOP(preProcess);
 
@@ -298,7 +299,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After linearTrans1 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
@@ -307,7 +308,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans2 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
 
   // Move the slots back to powerful-basis coefficients
@@ -421,15 +422,15 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     FHE_NTIMER_START(unpack2);
     vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
 
-    bootTask->exec1(d,
-      [&](long first, long last) {
+    NTL_EXEC_RANGE(d, first, last)
+    // FIXME: implement using hoisting!
         for (long j = first; j < last; j++) { // process jth Frobenius 
           frob[j] = ctxt;
           frob[j].frobeniusAutomorph(j);
           frob[j].cleanUp();
+          // FIXME: not clear if we should call cleanUp here
         }
-      }
-    );
+    NTL_EXEC_RANGE_END
 
     FHE_NTIMER_STOP(unpack2);
 
@@ -453,7 +454,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After unpack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
   cerr << "    extracting "<<(topHigh+1)<<" digits\n";
 #endif
 
@@ -461,8 +462,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     topHigh--; // For p==2 we sometime get a bit for free
 
   FHE_NTIMER_START(extractDigits);
-  bootTask->exec1(d,
-    [&](long first, long last) {
+
+  NTL_EXEC_RANGE(d, first, last)
       for (long i = first; i < last; i++) {
         vector<Ctxt> scratch;
     
@@ -483,8 +484,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
           unpacked[i].multByP();
           unpacked[i] += scratch[j];
         }
-        if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
-          unpacked[i] += scratch[botHigh-1];
+        if (p==2 && botHigh>0) {   // For p==2, subtract also the previous bit
+          //cerr << scratch.size() << " " <<  botHigh-1 << "\n";
+          unpacked.at(i) += scratch.at(botHigh-1);
+        }
         unpacked[i].negate();
     
         if (r>ePrime) {          // Add in digits from the bottom part, if any
@@ -500,13 +503,13 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
         }
         unpacked[i].reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
       }
-    }
-  );
+  NTL_EXEC_RANGE_END
+
   FHE_NTIMER_STOP(extractDigits);
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before repack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
 #endif
 
   // Step 3: re-pack the slots
@@ -521,6 +524,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     ctxt += unpacked[i];
   }
   FHE_NTIMER_STOP(repack);
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ After repack ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+#endif
 }
 
 
@@ -550,10 +557,12 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     Ctxt tmp1(ZeroCtxtLike, ctxt);
     Ctxt tmp2(ZeroCtxtLike, ctxt);
 
+    // FIXME: implement using hoisting!
     for (long j = 0; j < d; j++) { // process jth Frobenius 
       tmp1 = ctxt;
       tmp1.frobeniusAutomorph(j);
       tmp1.cleanUp();
+      // FIXME: not clear if we should call cleanUp here
 
       for (long i = 0; i < d; i++) {
         tmp2 = tmp1;
@@ -571,7 +580,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After unpack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
   cerr << "    extracting "<<(topHigh+1)<<" digits\n";
 #endif
 
@@ -618,7 +627,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before repack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa);
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
 #endif
 
   // Step 3: re-pack the slots
@@ -636,3 +645,57 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 }
 
 #endif
+
+
+// Use packed bootstrapping, so we can bootstrap all in just one go.
+void packedRecrypt(const CtPtrs& cPtrs,
+                   const std::vector<zzX>& unpackConsts,
+                   const EncryptedArray& ea)
+{
+  FHEPubKey& pKey = (FHEPubKey&)cPtrs[0]->getPubKey();
+
+  // Allocate temporary ciphertexts for the recryption
+  int nPacked = divc(cPtrs.size(), ea.getDegree()); // ceil(totoalNum/d)
+  std::vector<Ctxt> cts(nPacked, Ctxt(pKey));
+
+  repack(CtPtrs_vectorCt(cts), cPtrs, ea);  // pack ciphertexts
+  //  cout << "@"<< lsize(cts)<<std::flush;
+  for (Ctxt& c: cts) {     // then recrypt them
+    c.reducePtxtSpace(2);  // we only have recryption data for binary ctxt
+#ifdef DEBUG_PRINTOUT
+    ZZX ptxt;
+    decryptAndPrint((cout<<"  before recryption "), c, *dbgKey, *dbgEa);
+    dbgKey->Decrypt(ptxt, c);
+    c.DummyEncrypt(ptxt);
+    decryptAndPrint((cout<<"  after recryption "), c, *dbgKey, *dbgEa);
+#else
+    pKey.reCrypt(c);
+#endif
+  }
+  unpack(cPtrs, CtPtrs_vectorCt(cts), ea, unpackConsts);
+}
+
+// recrypt all ctxt at level < belowLvl
+void packedRecrypt(const CtPtrs& array,
+                   const std::vector<zzX>& unpackConsts,
+                   const EncryptedArray& ea, long belowLvl)
+{
+  std::vector<Ctxt*> v;
+  for (long i=0; i<array.size(); i++)
+    if ( array.isSet(i) && !array[i]->isEmpty()
+         && array[i]->findBaseLevel()<belowLvl )
+      v.push_back(array[i]);
+  packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
+}
+void packedRecrypt(const CtPtrMat& m,
+                   const std::vector<zzX>& unpackConsts,
+                   const EncryptedArray& ea, long belowLvl)
+{
+  std::vector<Ctxt*> v;
+  for (long i=0; i<m.size(); i++)
+    for (long j=0; j<m[i].size(); j++)
+      if ( m[i].isSet(j) && !m[i][j]->isEmpty()
+           && m[i][j]->findBaseLevel()<belowLvl )
+        v.push_back(m[i][j]);
+  packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
+}

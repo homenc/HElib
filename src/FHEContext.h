@@ -1,23 +1,18 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
-
 #ifndef _FHEcontext_H_
 #define _FHEcontext_H_
 /**
- * @file FHEcontext.h
+ * @file FHEContext.h
  * @brief Keeps the parameters of an instance of the cryptosystem
  **/
 
@@ -40,14 +35,8 @@
  **/
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose=false);
 
-#ifdef USE_ALT_CRT
-#define ALT_CRT (1)
-#else
-#define ALT_CRT (0)
-#endif
-
 // FIXME: The size of primes in the chain should be computed at run-time
-#if (NTL_SP_NBITS<44)  //#if (ALT_CRT || NTL_SP_NBITS<44)
+#if (NTL_SP_NBITS<44)
 #define FHE_p2Size NTL_SP_NBITS
 #else
 #define FHE_p2Size 44
@@ -120,12 +109,7 @@ public:
   **/
   vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
 
-  //! @brief Flag to allow lazy reductions. Only has an effect 
-  //! when the flag ALT_CRT is set.
-  mutable bool lazy;
-
   long fftPrimeCount;
-
 
   //! Bootstrapping-related data in the context
   RecryptData rcData;
@@ -137,8 +121,8 @@ public:
              const vector<long>& ords = vector<long>() );  // constructor
 
   void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
-			  bool conservative=false)
-  { rcData.init(*this, mvec, skWht, conservative); }
+			  bool conservative=false, bool build_cache=false)
+  { rcData.init(*this, mvec, skWht, conservative, build_cache); }
   bool isBootstrappable() const { return (rcData.alMod != NULL); }
 
   bool operator==(const FHEcontext& other) const;
@@ -202,7 +186,7 @@ public:
   }
 
   //! @brief Find the next prime and add it to the chain
-  long AddPrime(long startFrom, long delta, bool special, bool findRoot=true);
+  long AddPrime(long startFrom, long delta, bool special);
 
   //! @brief Add an FFT prime to the chain, if it's not already there
   //! returns the value of the prime
@@ -304,7 +288,11 @@ inline double AddPrimesByNumber(FHEcontext& context, long nPrimes,
 }
 
 //! @brief Build modulus chain with nLevels levels, using c digits in key-switching
-void buildModChain(FHEcontext &context, long nLevels, long c=3);
+void buildModChain(FHEcontext &context, long nLevels, long c=3,
+                   long extraBits=0);
+//FIXME: The extraBits params is a hack, used to get around some
+//       circularity when making the context boostrappable
+
 ///@}
 extern FHEcontext* activeContext; // Should point to the "current" context
 #endif // ifndef _FHEcontext_H_

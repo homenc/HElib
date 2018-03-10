@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 #ifndef _EncryptedArray_H_
 #define _EncryptedArray_H_
@@ -25,11 +21,6 @@
 #include <NTL/SmartPtr.h>
 #include "FHE.h"
 #include "timing.h"
-#include "multicore.h"
-
-#ifdef FHE_BOOT_THREADS
-extern NTL_THREAD_LOCAL MultiTask *bootTask;
-#endif
 
 
 // DIRT: we're using undocumented NTL interfaces here
@@ -110,6 +101,7 @@ public:
   virtual PA_tag getTag() const = 0;
 
   virtual const FHEcontext& getContext() const = 0;
+  virtual const PAlgebra& getPAlgebra() const = 0;
   virtual const long getDegree() const = 0;
 
   //! @brief Right rotation as a linear array.
@@ -135,9 +127,14 @@ public:
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
+  virtual void encode(zzX& ptxt, const vector< long >& array) const = 0;
+  virtual void encode(zzX& ptxt, const vector< zzX >& array) const = 0;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const = 0;
+
   virtual void encode(ZZX& ptxt, const vector< long >& array) const = 0;
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const = 0;
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const = 0;
+
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const = 0;
@@ -203,33 +200,34 @@ public:
 
   //! @brief Total size (# of slots) of hypercube
   long size() const { 
-    return getContext().zMStar.getNSlots(); 
+    return getPAlgebra().getNSlots(); 
   } 
 
   //! @brief Number of dimensions of hypercube
   long dimension() const { 
-    return getContext().zMStar.numOfGens(); 
+    return getPAlgebra().numOfGens(); 
   }
 
   //! @brief Size of given dimension
   long sizeOfDimension(long i) const {
-    return getContext().zMStar.OrderOf(i);
+    return getPAlgebra().OrderOf(i);
   }
 
   //! @brief Is rotations in given dimension a "native" operation?
   bool nativeDimension(long i) const {
-    return getContext().zMStar.SameOrd(i);
+    return getPAlgebra().SameOrd(i);
   }
 
   //! @brief returns coordinate of index k along the i'th dimension
   long coordinate(long i, long k) const {
-    return getContext().zMStar.coordinate(i, k); 
+    return getPAlgebra().coordinate(i, k); 
   }
- 
+
   //! @brief adds offset to index k in the i'th dimension
   long addCoord(long i, long k, long offset) const {
-    return getContext().zMStar.addCoord(i, k, offset);
+    return getPAlgebra().addCoord(i, k, offset);
   }
+
 
   //! @brief rotate an array by offset in the i'th dimension
   //! (output should not alias input)
@@ -301,17 +299,13 @@ public:
   virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
 
   virtual PA_tag getTag() const { return tag; }
+  // tag is defined in PA_INJECT, see PAlgebra.h
 
-// DIRT: we're using undocumented NTL interfaces here
-#define FHE_DEFINE_LOWER_DISPATCH(n)\
-  template<template <class> class T NTL_MORE_ARGTYPES(n)>\
-  void dispatch(NTL_VARARGS(n)) const\
-  {\
-    T<type>::apply(*this FHE_MORE_UNWRAPARGS(n));\
-  }\
-
-
-  NTL_FOREACH_ARG(FHE_DEFINE_LOWER_DISPATCH)
+  template<template <class> class T, class... Args>
+  void dispatch(Args&&... args) const
+  {
+    T<type>::apply(*this, std::forward<Args>(args)...);
+  }
 
 
   const RX& getG() const { return mappingData.getG(); }
@@ -332,24 +326,35 @@ public:
   virtual void restoreContextForG() const { mappingData.restoreContextForG(); }
 
 
-  virtual const FHEcontext& getContext() const { return context; }
+  virtual const FHEcontext& getContext() const override { return context; }
+  virtual const PAlgebra& getPAlgebra() const override { return tab.getZMStar(); }
   virtual const long getDegree() const { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
   virtual void rotate(Ctxt& ctxt, long k) const;
   virtual void shift(Ctxt& ctxt, long k) const;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
+  template<class U> void // avoid this being "hidden" by other rotate1D's
+    rotate1D(vector<U>& out, const vector<U>& in, long i, long offset) const
+    { EncryptedArrayBase::rotate1D(out, in, i, offset); }
   virtual void shift1D(Ctxt& ctxt, long i, long k) const;
 
-
   virtual void encode(ZZX& ptxt, const vector< long >& array) const
+    { genericEncode(ptxt, array);  }
+
+  virtual void encode(zzX& ptxt, const vector< long >& array) const
     { genericEncode(ptxt, array);  }
 
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const
     {  genericEncode(ptxt, array); }
 
-  virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
+  virtual void encode(zzX& ptxt, const vector< zzX >& array) const
+    {  genericEncode(ptxt, array); }
 
+  virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const;
+
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const;
   virtual void encodeUnitSelector(ZZX& ptxt, long i) const;
 
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const
@@ -359,6 +364,7 @@ public:
     { genericDecode(array, ptxt); }
 
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const;
+  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
 
   virtual void random(vector< long  >& array) const
     { genericRandom(array); } // choose at random and convert to vector<long>
@@ -425,8 +431,14 @@ public:
      the modulus context is already set
    */
 
+  void encode(zzX& ptxt, const vector< RX >& array) const;
+  void decode(vector< RX  >& array, const zzX& ptxt) const;
+
   void encode(ZZX& ptxt, const vector< RX >& array) const;
   void decode(vector< RX  >& array, const ZZX& ptxt) const;
+
+  void encode(RX& ptxt, const vector< RX >& array) const;
+  void decode(vector< RX  >& array, const RX& ptxt) const;
 
   // Choose random polynomial of the right degree, coeffs in GF2 or zz_p
   void random(vector< RX  >& array) const
@@ -453,6 +465,16 @@ private:
 
   template<class T> 
   void genericEncode(ZZX& ptxt, const T& array) const
+  {
+    RBak bak; bak.save(); tab.restoreContext();
+
+    vector< RX > array1;
+    convert(array1, array);
+    encode(ptxt, array1);
+  }
+
+  template<class T> 
+  void genericEncode(zzX& ptxt, const T& array) const
   {
     RBak bak; bak.save(); tab.restoreContext();
 
@@ -532,6 +554,43 @@ private:
   }
 };
 
+
+// plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
+template <class RX, class RXModulus>
+void plaintextAutomorph(RX& bb, const RX& a, long k, long m, const RXModulus& PhimX)
+{
+  // compute b(X) = a(X^k) mod (X^m-1)
+  if (k == 1 || deg(a) <= 0) {
+    bb = a;
+    return;
+  }
+
+  RX b;
+  b.SetLength(m);
+  mulmod_precon_t precon = PrepMulModPrecon(k, m);
+  for (long j = 0; j <= deg(a); j++) 
+    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
+  b.normalize();
+
+  rem(bb, b, PhimX); // reduce modulo the m'th cyclotomic
+}
+
+// same as above, but k = g_i^j mod m.
+// also works with i == ea.getPalgebra().numOfGens(),
+// which means Frobenius
+
+template<class RX, class type>
+void plaintextAutomorph(RX& b, const RX& a, long i, long j, 
+                        const EncryptedArrayDerived<type>& ea)
+{
+  const PAlgebra& zMStar = ea.getPAlgebra();
+  const auto& F = ea.getTab().getPhimXMod();
+  long k = zMStar.genToPow(i, j);
+  long m = zMStar.getM();
+  plaintextAutomorph(b, a, k, m, F);
+}
+
+
 //! @brief A "factory" for building EncryptedArrays
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
 					const ZZX& G, const PAlgebraMod& alMod);
@@ -579,34 +638,31 @@ public:
 
   PA_tag getTag() const { return rep->getTag(); }
 
-// DIRT: we're using undocumented NTL interfaces here
-#define FHE_DEFINE_UPPER_DISPATCH(n)\
-  template<template <class> class T NTL_MORE_ARGTYPES(n)>\
-  void dispatch(NTL_VARARGS(n)) const\
-  {\
-    switch (getTag()) {\
-      case PA_GF2_tag: {\
-        const EncryptedArrayDerived<PA_GF2> *p = \
-          static_cast< const EncryptedArrayDerived<PA_GF2> *>(rep.get_ptr());\
-        p->dispatch<T>(NTL_PASSARGS(n));\
-        break;\
-      }\
-      case PA_zz_p_tag: {\
-        const EncryptedArrayDerived<PA_zz_p> *p = \
-          static_cast< const EncryptedArrayDerived<PA_zz_p> *>(rep.get_ptr());\
-        p->dispatch<T>(NTL_PASSARGS(n));\
-        break;\
-      }\
-      default: TerminalError("bad tag"); \
-    }\
-  }\
+  template<template <class> class T, class... Args>
+  void dispatch(Args&&... args) const
+  {
+    switch (getTag()) {
+      case PA_GF2_tag: {
+        const EncryptedArrayDerived<PA_GF2> *p = 
+          static_cast< const EncryptedArrayDerived<PA_GF2> *>(rep.get_ptr());
+        p->dispatch<T>(std::forward<Args>(args)...);
+        break;
+      }
+      case PA_zz_p_tag: {
+        const EncryptedArrayDerived<PA_zz_p> *p = 
+          static_cast< const EncryptedArrayDerived<PA_zz_p> *>(rep.get_ptr());
+        p->dispatch<T>(std::forward<Args>(args)...);
+        break;
+      }
+      default: TerminalError("bad tag"); 
+    }
+  }
 
-
-NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
 
 
   const FHEcontext& getContext() const { return rep->getContext(); }
   const PAlgebraMod& getAlMod() const { return alMod; }
+  const PAlgebra& getPAlgebra() const { return rep->getPAlgebra(); }
   const long getDegree() const { return rep->getDegree(); }
   void rotate(Ctxt& ctxt, long k) const { rep->rotate(ctxt, k); }
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
@@ -618,6 +674,13 @@ NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
   void encode(ZZX& ptxt, const vector< ZZX >& array) const 
     { rep->encode(ptxt, array); }
   void encode(ZZX& ptxt, const NewPlaintextArray& array) const 
+    { rep->encode(ptxt, array); }
+
+  void encode(zzX& ptxt, const vector< long >& array) const 
+    { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const vector< zzX >& array) const 
+    { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const NewPlaintextArray& array) const 
     { rep->encode(ptxt, array); }
 
   void encodeUnitSelector(ZZX& ptxt, long i) const
@@ -738,7 +801,7 @@ private:
 public:
   
   NewPlaintextArray(const EncryptedArray& ea)  
-    { ea.dispatch<ConstructorImpl>(Fwd(*this)); }
+    { ea.dispatch<ConstructorImpl>(*this); }
 
   NewPlaintextArray(const NewPlaintextArray& other) : rep(other.rep.clone()) { }
   NewPlaintextArray& operator=(const NewPlaintextArray& other) 
@@ -786,14 +849,12 @@ void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArra
 void negate(const EncryptedArray& ea, NewPlaintextArray& pa);
 
 
-
-
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j);
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& vec);
 
 void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& pi);
 
-
+void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e);
 
 
 
@@ -814,10 +875,19 @@ void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 
-//! @brief incrementalZeroTest sets each res[i], for i=0..n-1, to a ciphertext
-//! in which each slot is 0 or 1 according to whether or not bits 0..i of
-//! corresponding slot in ctxt is zero (1 if not zero, 0 if zero). It is
-//! assumed that res and each res[i] is already initialized by the caller.
+//! @brief Map all non-zero slots to 1, leaving zero slots as zero.
+//! Assumes that r=1, and that all the slots contain elements from GF(p^d).
+void mapTo01(const EncryptedArray& ea, Ctxt& ctxt);
+// Implemented in eqtesting.cpp. We compute
+//             x^{p^d-1} = x^{(1+p+...+p^{d-1})*(p-1)}
+// by setting y=x^{p-1} and then outputting y * y^p * ... * y^{p^{d-1}},
+// with exponentiation to powers of p done via Frobenius.
+
+
+//! @brief (only for p=2, r=1), test if prefixes of bits in slots are all zero.
+//! Set slot j of res[i] to 0 if bits 0..i of j'th slot in ctxt are all zero,
+//! else sets slot j of res[i] to 1.
+//! It is assumed that res and the res[i]'s are initialized by the caller.
 void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 			 const Ctxt& ctxt, long n);
 // Complexity: O(d + n log d) smart automorphisms

@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 
 /* Test_IO.cpp - Testing the I/O of the important classes of the library
@@ -30,9 +26,10 @@
 #define N_TESTS 3
 static long ms[N_TESTS][10] = {
   //nSlots  m   phi(m) ord(2)
-  {   2,    7,    6,    3,   0,0,0,0,0,0},
+  //  {   2,    7,    6,    3,   0,0,0,0,0,0},
   {   6,   31,   30,    5,   0,0,0,0,0,0},
-  {  60, 1023,  600,   10,   11, 93,  838, 584,  10, 6}, // gens=129(16),3(!16)
+  {   6,  127,  126,    7,  127,  1,  108,  24,   6,-3}, // gens=108(6), 24(!3)
+  {  60, 1023,  600,   10,   11, 93,  838, 584,  10, 6}, // gens=838(10),584(6)
   //  {  378,  5461,  5292, 14}, // gens=3(126),509(3)
   //  {  630,  8191,  8190, 13}, // gens=39(630)
   //  {  600, 13981, 12000, 20}, // gens=10(30),23(10),3(!2)
@@ -51,7 +48,7 @@ int main(int argc, char *argv[])
   long p=2;
   long c = 2;
   long w = 64;
-
+  long L = 5;
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r,  "lifting");
   amap.arg("c", c, "number of columns in the key-switching matrices");
@@ -75,25 +72,25 @@ int main(int argc, char *argv[])
 
     cout << "Testing IO: m="<<m<<", p^r="<<p<<"^"<<r<<endl;
 
-    if (i==N_TESTS-1) { // test bootstrapping data I/O
-      Vec<long> mvec(INIT_SIZE,2);
-      mvec[0] = ms[i][4];  mvec[1] = ms[i][5];
-      vector<long> gens(2);
-      gens[0] = ms[i][6];  gens[1] = ms[i][7];
-      vector<long> ords(2);
-      ords[0] = ms[i][8];  ords[1] = ms[i][9];
+    Vec<long> mvec(INIT_SIZE,2);
+    mvec[0] = ms[i][4];  mvec[1] = ms[i][5];
+    vector<long> gens(2);
+    gens[0] = ms[i][6];  gens[1] = ms[i][7];
+    vector<long> ords(2);
+    ords[0] = ms[i][8];  ords[1] = ms[i][9];
 
+    if (gens[0]>0)
       contexts[i] = new FHEcontext(m, p, r, gens, ords);
-      buildModChain(*contexts[i], ptxtSpace, c);  // Set the modulus chain
-      contexts[i]->makeBootstrappable(mvec);
-    }
-    else {
+    else
       contexts[i] = new FHEcontext(m, p, r);
-      buildModChain(*contexts[i], ptxtSpace, c);  // Set the modulus chain
-    }
+    contexts[i]->zMStar.printout();
+
+    buildModChain(*contexts[i], L, c);  // Set the modulus chain
+    if (i==N_TESTS-1) contexts[i]->makeBootstrappable(mvec);
 
     // Output the FHEcontext to file
     writeContextBase(keyFile, *contexts[i]);
+    writeContextBase(cout, *contexts[i]);
     keyFile << *contexts[i] << endl;
 
     sKeys[i] = new FHESecKey(*contexts[i]);
@@ -131,10 +128,10 @@ int main(int argc, char *argv[])
     // Output the ciphertext to file
     keyFile << *ctxts[i] << endl;
     keyFile << *ctxts[i] << endl;
-    cerr << "okay " << i << endl;
+    cerr << "okay " << i << endl<< endl;
   }
   keyFile.close();}
-  cerr << "so far, so good\n";
+  cerr << "so far, so good\n\n";
 
   // second loop: read from input and repeat the computation
 

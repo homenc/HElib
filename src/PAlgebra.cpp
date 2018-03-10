@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 
 #include <algorithm>   // defines count(...), min(...)
@@ -23,6 +19,8 @@
 #include <NTL/ZZXFactoring.h>
 #include <NTL/GF2EXFactoring.h>
 #include <NTL/lzz_pEXFactoring.h>
+
+#include <NTL/BasicThreadPool.h>
 
 // polynomials are sorted lexicographically, with the
 // constant term being the "most significant"
@@ -69,48 +67,6 @@ bool PAlgebra::operator==(const PAlgebra& other) const
   return true;
 }
 
-bool PAlgebra::nextExpVector(vector<unsigned long>& buffer) const
-{
-  // increment the vector in lexicographic order
-  if (!isDryRun()) for (long i=gens.size()-1; i>=0; i--) {
-    if (i>=(long)buffer.size()) continue; // sanity check
-    // increment current index, set all the ones after it to zero
-    if (buffer[i] < OrderOf(i)-1) { 
-      buffer[i]++;
-      for (unsigned long j=i+1; j<buffer.size(); j++) buffer[j] = 0;
-      return true;  // succeeded in incrementing the vector
-    }
-    // if buffer[i] >= OrderOf(i)-1, mover to previous index i
-  }
-  return false;     // cannot increment the vector anymore
-}
-
-long PAlgebra::coordinate(long i, long k) const
-{
-  if (isDryRun()) return 0;
-  long t = ith_rep(k); // element of Zm^* representing the k'th slot
-
-  // dLog returns the representation of t along the generators, so the
-  // i'th entry there is the coordinate relative to i'th geneator
-  return dLog(t)[i];
-}
-
-long PAlgebra::addCoord(long i, long k, long offset) const
-{
-  if (isDryRun()) return 0;
-  assert(k >= 0 && k < (long) nSlots);
-  assert(i >= 0 && i < (long) gens.size());
-  
-  offset = offset % ((long) OrderOf(i));
-  if (offset < 0) offset += OrderOf(i);
-  
-  long k_i = coordinate(i, k);
-  long k_i1 = (k_i + offset) % OrderOf(i);
-  
-  long k1 = k + (k_i1 - k_i) * prods[i+1];
-  
-  return k1;
-}
 
 unsigned long PAlgebra::exponentiate(const vector<unsigned long>& exps,
 				bool onlySameOrd) const
@@ -139,7 +95,7 @@ void PAlgebra::printout() const
            << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
 	   << OrderOf(i) << endl;
   }
-  if (qGrpOrd()<100) {
+  if (cube.getSize()<100) {
     cout << "  T = [";
     for (i=0; i<T.size(); i++) cout << T[i] << " ";
     cout << "]\n";
@@ -165,40 +121,55 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   else
     pow2 = 0;
 
-   
-
   // For dry-run, use a tiny m value for the PAlgebra tables
   if (isDryRun()) mm = (p==3)? 4 : 3;
 
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
 
-  if (_gens.size() == 0 || isDryRun()) 
-      ordP = findGenerators(this->gens, this->ords, mm, pp);
-  else {
-    assert(_gens.size() == _ords.size());
-    gens = _gens;
-    ords = _ords;
-    ordP = multOrd(pp, mm);
+  std::vector<long> tmpOrds;
+  if (_gens.size()>0 && _gens.size() == _ords.size() && !isDryRun()) {
+    // externally supplied generator,orders
+    tmpOrds = _ords;
+    this->gens = _gens;
+    this->ordP = multOrd(pp, mm);
   }
-  nSlots = qGrpOrd();
-  phiM = ordP * nSlots;
+  else
+    // treat externally supplied generators (if any) as candidates
+    this->ordP = findGenerators(this->gens, tmpOrds, mm, pp, _gens);
+
+  // Record for each generator gi whether it has the same order in
+  // ZM* as in Zm* /(p,g1,...,g_{i-1})
+  resize(native, lsize(tmpOrds));
+  for (long j=0; j<lsize(tmpOrds); j++) {
+    native[j] = (tmpOrds[j]>0);
+    tmpOrds[j] = abs(tmpOrds[j]);
+  }
+  cube.initSignature(tmpOrds); // set hypercume with these dimensions
+
+  phiM = ordP * getNSlots();
 
   // Allocate space for the various arrays
-  T.resize(nSlots);
-  dLogT.resize(nSlots*gens.size());
+  T.resize(getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
   zmsIdx.assign(mm,-1);  // allocate m slots, initialize them to -1
+  zmsRep.resize(phiM);
   long i, idx;
-  for (i=idx=0; i<(long)mm; i++) if (GCD(i,mm)==1) zmsIdx[i] = idx++;
+  for (i=idx=0; i<(long)mm; i++) {
+    if (GCD(i,mm)==1) {
+      zmsIdx[i] = idx++;
+      zmsRep[zmsIdx[i]] = i;
+    }
+  }
 
-  // Now fill the Tidx and dLogT translation tables. We identify an element
-  // t\in T with its representation t = \prod_{i=0}^n gi^{ei} mod m (where
-  // the gi's are the generators in gens[]) , represent t by the vector of
+  // Now fill the Tidx translation table. We identify an element t \in T
+  // with its representation t = \prod_{i=0}^n gi^{ei} mod m (where the
+  // gi's are the generators in gens[]) , represent t by the vector of
   // exponents *in reverse order* (en,...,e1,e0), and order these vectors
   // in lexicographic order.
 
-  // FIXME: is the comment above about reverse order true? It doesn't 
-  // seem like it to me.  VJS.
+  // FIXME: is the comment above about reverse order true?
+  // It doesn't seem like it to me, VJS.
+  // The comment about reverse order is correct, SH.
 
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
   vector<unsigned long> buffer(gens.size()); // temporaty holds exponents
@@ -207,7 +178,6 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   do {
     ctr++;
     unsigned long t = exponentiate(buffer);
-    for (unsigned long j=0; j<buffer.size(); j++) dLogT[idx++] = buffer[j];
 
     assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
     assert(Tidx[t] == -1);
@@ -218,18 +188,30 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
     // increment buffer by one (in lexigoraphic order)
   } while (nextExpVector(buffer)); // until we cover all the group
 
-  assert(ctr == long(nSlots)); // sanity check for user-supplied gens
+  assert(ctr == getNSlots()); // sanity check for user-supplied gens
 
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
-
-  // initialize prods array
-  long ndims = gens.size();
-  prods.resize(ndims+1);
-  prods[ndims] = 1;
-  for (long j = ndims-1; j >= 0; j--) {
-    prods[j] = OrderOf(j) * prods[j+1];
-  }
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
+}
+
+
+long PAlgebra::frobenuisPow(long j) const
+{
+  return PowerMod(mcMod(p, m), j, m);
+  // Don't forget to reduce p mod m!!
+}
+
+long PAlgebra::genToPow(long i, long j) const
+{
+  assert(i >= -1 && i < LONG(gens.size()));
+
+  long res;
+  if (i == -1)
+    res = frobenuisPow(j);
+  else
+    res = PowerMod(gens[i], j, m);
+
+  return res;
 }
 
 /***********************************************************************
@@ -300,8 +282,6 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
   EDF(localFactors, phimxmod, zMStar.getOrdP()); // equal-degree factorization
 
-  
-
   RX* first = &localFactors[0];
   RX* last = first + localFactors.length();
   RX* smallest = min_element(first, last);
@@ -312,10 +292,11 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
   RXModulus F1(localFactors[0]); 
   for (long i=1; i<nSlots; i++) {
-    unsigned long t =zMStar.ith_rep(i); // Ft is minimal polynomial of x^{1/t} mod F1
+    unsigned long t =zMStar.ith_rep(i); // Ft is minimal poly of x^{1/t} mod F1
     unsigned long tInv = InvMod(t, m);  // tInv = t^{-1} mod m
     RX X2tInv = PowerXMod(tInv,F1);     // X2tInv = X^{1/t} mod F1
-    IrredPolyMod(localFactors[i], X2tInv, F1);
+    NTL::IrredPolyMod(localFactors[i], X2tInv, F1);
+          // IrredPolyMod(X,P,Q) returns in X the minimal polynomial of P mod Q
   }
   /* Debugging sanity-check #1: we should have Ft= GCD(F1(X^t),Phi_m(X))
   for (i=1; i<nSlots; i++) {
@@ -420,7 +401,6 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
   long p = zz_p::modulus(); 
   long nSlots = lfactors.length();
 
-
   vec_ZZX vzz;             // need to go via ZZX
 
   // lift the factors of Phi_m(X) from mod-2 to mod-2^r
@@ -492,6 +472,9 @@ void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha,
   else {
     // general case...
 
+    // FIXME: should update this to use matrix_maps, but this routine
+    // isn't actually used anywhere
+
     for (long i=0; i<nSlots; i++)   // crt[i] = alpha(maps[i]) mod Ft
       CompMod(crt[i], alpha, mappingData.maps[i], factors[i]);
   }
@@ -513,7 +496,8 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
   long nSlots = zMStar.getNSlots();
   assert(lsize(alphas) == nSlots);
 
-  for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < mappingData.degG); 
+  long d = mappingData.degG;
+  for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d); 
  
   vector<RX> crt(nSlots); // alloate space for CRT components
 
@@ -531,12 +515,28 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
     // general case...still try to avoid CompMod when possible,
     // which is the common case for encoding masks
 
-    for (long i=0; i<nSlots; i++) {   // crt[i] = alpha(maps[i]) mod Ft
+    FHE_NTIMER_START(CompMod);
+
+#if 0
+    for (long i: range(nSlots)) {
       if (deg(alphas[i]) <= 0) 
         crt[i] = alphas[i];
       else
         CompMod(crt[i], alphas[i], mappingData.maps[i], factors[i]);
     }
+#else
+    vec_R in, out;
+
+    for (long i: range(nSlots)) {
+      if (deg(alphas[i]) <= 0) 
+        crt[i] = alphas[i];
+      else {
+        VectorCopy(in, alphas[i], d);
+        mul(out, in, mappingData.matrix_maps[i]);
+        conv(crt[i], out);
+      }
+    }
+#endif
   }
 
   CRT_reconstruct(H,crt); // interpolate to get p
@@ -651,6 +651,8 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   assert(LeadCoeff(G) == 1);
   mappingData.G = G;
   mappingData.degG = deg(mappingData.G);
+  long d = deg(G);
+  long ordp = zMStar.getOrdP();
 
   long nSlots = zMStar.getNSlots();
   long m = zMStar.getM();
@@ -660,6 +662,21 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   mapToF1(mappingData.maps[0],mappingData.G); // mapping from base-G to base-F1
   for (long i=1; i<nSlots; i++)
     mapToFt(mappingData.maps[i], mappingData.G, zMStar.ith_rep(i), &(mappingData.maps[0])); 
+
+
+  // create matrices to streamline CompMod operations
+  mappingData.matrix_maps.resize(nSlots);
+  for (long i: range(nSlots)) {
+    mat_R& mat = mappingData.matrix_maps[i];
+    mat.SetDims(d, ordp);
+    RX pow;
+    pow = 1;
+    for (long j: range(d)) {
+      VectorCopy(mat[j], pow, ordp);
+      if (j < d-1) MulMod(pow, pow, mappingData.maps[i], factors[i]);
+    }
+  }
+
 
   REBak bak; bak.save(); 
   RE::init(mappingData.G);
@@ -897,11 +914,3 @@ void PAlgebraModDerived<type>::evalTree(RX& res,
 
 template class PAlgebraModDerived<PA_GF2>;
 template class PAlgebraModDerived<PA_zz_p>;
-
-// Helper function
-CubeSignature::CubeSignature(const PAlgebra& alg): ndims(0)
-{
-  Vec<long> _dims(INIT_SIZE, alg.numOfGens());
-  for (long i=0; i<(long)alg.numOfGens(); i++) _dims[i] = alg.OrderOf(i);
-  initSignature(_dims);
-}

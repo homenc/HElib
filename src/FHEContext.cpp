@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 
 #include "FHEContext.h"
@@ -158,13 +154,8 @@ void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
 }
 
 // Find the next prime and add it to the chain
-long FHEcontext::AddPrime(long initialP, long delta, bool special, 
-                          bool findRoot)
+long FHEcontext::AddPrime(long initialP, long delta, bool special)
 {
-  // long twoM = 2 * zMStar.getM();
-  // assert((initialP % twoM == 1) && (delta % twoM == 0));
-  // NOTE: this assertion will fail for the half-prime in ALT_CRT
-
   long p = initialP;
   do { p += delta; } // delta could be positive or negative
   while (p>initialP/16 && p<NTL_SP_BOUND && !(ProbPrime(p) && !inChain(p)));
@@ -172,7 +163,7 @@ long FHEcontext::AddPrime(long initialP, long delta, bool special,
   if (p<=initialP/16 || p>=NTL_SP_BOUND) return 0; // no prime found
 
   long i = moduli.size(); // The index of the new prime in the list
-  moduli.push_back( Cmodulus(zMStar, p, findRoot ? 0 : 1) );
+  moduli.push_back( Cmodulus(zMStar, p, 0) );
 
   if (special)
     specialPrimes.insert(i);
@@ -206,65 +197,64 @@ long FHEcontext::AddFFTPrime(bool special)
 
 // Adds several primes to the chain. If byNumber=true then totalSize specifies
 // the number of primes to add. If byNumber=false then totalSize specifies the
-// target total bitsize of all the added primes.
-// The function returns the total bitsize of all the added primes.
+// target natural log all the added primes.
+// Returns natural log of the product of all added primes.
 double AddManyPrimes(FHEcontext& context, double totalSize, 
 		     bool byNumber, bool special)
 {
-  double nBits = 0.0;     // How many bits added so far
-  double sizeSoFar = 0.0;
   if (!context.zMStar.getM() || context.zMStar.getM()>(1<<20))// sanity checks
     Error("AddManyPrimes: m undefined or larger than 2^20");
+  // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
 
-  if (ALT_CRT) {
-    while (sizeSoFar < totalSize) {
-      long p = context.AddFFTPrime(special);
-      nBits += log((double)p);
-      sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
-    }
-  }
-  else {
+  double sizeLogSoFar = 0.0; // log of added primes so far
+  double addedSoFar = 0.0;   // Either size or number, depending on 'byNumber'
+
 #ifdef NO_HALF_SIZE_PRIME
-    long sizeBits = context.bitsPerLevel;
+  long sizeBits = context.bitsPerLevel;
 #else
-    long sizeBits = 2*context.bitsPerLevel;
+  long sizeBits = 2*context.bitsPerLevel;
 #endif
-    if (special) {
-      long numPrimes = ceil(totalSize/NTL_SP_NBITS);// how many special primes
-      sizeBits = ceil(totalSize/numPrimes);         // what's the size of each
-    }
-    long twoM = 2 * context.zMStar.getM();
+  if (special) { // try to use similar size for all the special primes
+    double totalBits = totalSize/log(2.0);
+    long numPrimes = ceil(totalBits/NTL_SP_NBITS);// how many special primes
+    sizeBits = 1+ceil(totalBits/numPrimes);       // what's the size of each
+    // Added one so we don't undershoot our target
+  }
+  if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
+  long sizeBound = 1L << sizeBits;
 
-    if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
-    long sizeBound = 1L << sizeBits;
-    if (sizeBound < twoM*log2(twoM)*8) {
-      sizeBits = ceil(log2(twoM*log2(twoM)))+3;
-      sizeBound = 1L << sizeBits;
-    }
+  // Make sure that you have enough primes such that p-1 is divisible by 2m
+  long twoM = 2 * context.zMStar.getM();
+  if (sizeBound < twoM*log2(twoM)*8) { // bound too small to have such primes
+    sizeBits = ceil(log2(twoM*log2(twoM)))+3; // increase prime size-bound
+    sizeBound = 1L << sizeBits;
+  }
 
-    // make p-1 divisible by m*2^k for as large k as possible
+  // make p-1 divisible by m*2^k for as large k as possible
+  // (not needed when m itself a power of two)
+
+  if (context.zMStar.getM() & 1) // m is odd, so not power of two
     while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
 
-    long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
-    long p = bigP+twoM; // The twoM is subtracted in the AddPrime function
+  long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
+  long p = bigP+twoM; // twoM is subtracted in the AddPrime function
 
-    // FIXME: The last prime could be smaller
-    while (sizeSoFar < totalSize) {
-      if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
-        nBits += log((double)p);
-        sizeSoFar = byNumber? (sizeSoFar+1.0) : nBits;
-      }
-      else { // we ran out of primes, try a lower power of two
-        twoM /= 2;
-        assert(twoM > (long)context.zMStar.getM()); // can we go lower?
-        p = bigP;
-      }
+  // FIXME: The last prime could sometimes be slightly smaller
+  while (addedSoFar < totalSize) {
+    if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
+      sizeLogSoFar += log((double)p);
+      addedSoFar = byNumber? (addedSoFar+1.0) : sizeLogSoFar;
+    }
+    else { // we ran out of primes, try a lower power of two
+      twoM /= 2;
+      assert(twoM > (long)context.zMStar.getM()); // can we go lower?
+      p = bigP;
     }
   }
-  return nBits;
+  return sizeLogSoFar;
 }
 
-void buildModChain(FHEcontext &context, long nLevels, long nDgts)
+void buildModChain(FHEcontext &context, long nLevels, long nDgts,long extraBits)
 {
 #ifdef NO_HALF_SIZE_PRIME
   long nPrimes = nLevels;
@@ -272,21 +262,14 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
   long nPrimes = (nLevels+1)/2;
   // The first prime should be of half the size. The code below tries to find
   // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
-  // Then if the plaintext space is a power of two it tries to choose the
-  // second prime q1 so that q0*q1 = 1 mod ptxtSpace. All the other primes are
-  // chosen so that qi-1 is divisible by 2^k * m for as large k as possible.
-  long twoM;
-  if (ALT_CRT) 
-    twoM = 2;
-  else
-    twoM = 2 * context.zMStar.getM();
 
+  long twoM = 2 * context.zMStar.getM();
   long bound = (1L << (context.bitsPerLevel-1));
   while (twoM < bound/(2*context.bitsPerLevel))
     twoM *= 2; // divisible by 2^k * m  for a larger k
 
   bound = bound - (bound % twoM) +1; // = 1 mod 2m
-  long q0 = context.AddPrime(bound, twoM, false, !ALT_CRT); 
+  long q0 = context.AddPrime(bound, twoM, false); 
   // add next prime to chain
   
   assert(q0 != 0);
@@ -307,9 +290,12 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
   double maxDigitSize = 0.0;
   if (nDgts>1) { // we break ciphetext into a few digits when key-switching
     double dsize = context.logOfProduct(context.ctxtPrimes)/nDgts; // estimate
+
+    // A hack: we break the current digit after the total size of all digits
+    // so far "almost reaches" the next multiple of dsize, upto 1/3 of a level
     double target = dsize-(context.bitsPerLevel/3.0);
     long idx = context.ctxtPrimes.first();
-    for (long i=0; i<nDgts-1; i++) { // compute next digit
+    for (long i=0; i<nDgts-1; i++) { // set all digits but the last
       IndexSet s;
       while (idx <= context.ctxtPrimes.last() && (empty(s)||sizeSoFar<target)) {
         s.insert(idx);
@@ -323,7 +309,8 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
       if (maxDigitSize < thisDigitSize) maxDigitSize = thisDigitSize;
       target += dsize;
     }
-    IndexSet s = context.ctxtPrimes / s1; // all the remaining primes
+    // The ctxt primes that are left (if any) form the last digit
+    IndexSet s = context.ctxtPrimes / s1;
     if (!empty(s)) {
       context.digits[nDgts-1] = s;
       double thisDigitSize = context.logOfProduct(s);
@@ -334,17 +321,16 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts)
       context.digits.resize(nDgts);
     }
   }
-  else { 
+  else { // only one digit
     maxDigitSize = context.logOfProduct(context.ctxtPrimes);
     context.digits[0] = context.ctxtPrimes;
   }
 
-  // Add primes to the chain for the P factor of key-switching
-  long p2r = (context.rcData.alMod)? context.rcData.alMod->getPPowR()
-                                   : context.alMod.getPPowR();
+  // Add special primes to the chain for the P factor of key-switching
+  long p2r = context.alMod.getPPowR();
   double sizeOfSpecialPrimes
-    = maxDigitSize + log(nDgts/32.0)/2 + log(context.stdev *2)
-      + log((double)p2r);
+    = maxDigitSize + log(nDgts) + log(context.stdev *2)
+      + log((double)p2r) + (extraBits*log(2.0));
 
   AddPrimesBySize(context, sizeOfSpecialPrimes, true);
 }
@@ -381,11 +367,15 @@ void writeContextBase(ostream& str, const FHEcontext& context)
       << " " << context.alMod.getR()
       << " [";
   for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
-    str << context.zMStar.ZmStarGen(i) << " ";
+    str << context.zMStar.ZmStarGen(i)
+	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
   }
-  str << "][";
+  str << " [";
   for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
-    str << context.zMStar.OrderOf(i) << " ";
+    long ord = context.zMStar.OrderOf(i);
+    if (context.zMStar.SameOrd(i)) str << ord;
+    else                           str << (-ord);
+    if (i<(long)context.zMStar.numOfGens()-1) str << ' ';
   }
   str << "]]";
 }
@@ -416,6 +406,7 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   str << context.rcData.mvec;
   str << " " << context.rcData.hwt;
   str << " " << context.rcData.conservative;
+  str << " " << context.rcData.build_cache;
 
   str << "]\n";
 
@@ -455,11 +446,7 @@ istream& operator>> (istream &str, FHEcontext& context)
     long p;
     str >> p; 
 
-    if (ALT_CRT) 
-      context.moduli.push_back(Cmodulus(context.zMStar,p,1)); // a dummy object
-      // FIXME: this is broken...we are not getting an FFT prime here
-    else
-      context.moduli.push_back(Cmodulus(context.zMStar,p,0)); // a real object
+    context.moduli.push_back(Cmodulus(context.zMStar,p,0));
 
     if (s.contains(i))
       context.specialPrimes.insert(i); // special prime
@@ -478,11 +465,13 @@ istream& operator>> (istream &str, FHEcontext& context)
   Vec<long> mv;
   long t;
   bool consFlag;
+  int build_cache;
   str >> mv;
   str >> t;
   str >> consFlag;
+  str >> build_cache;
   if (mv.length()>0) {
-    context.makeBootstrappable(mv, t, consFlag);
+    context.makeBootstrappable(mv, t, consFlag, build_cache);
   }
 
   seekPastChar(str, ']');
@@ -505,10 +494,4 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   stdev=3.2;  
   bitsPerLevel = FHE_pSize;
   fftPrimeCount = 0; 
-
-  lazy = ALT_CRT && 
-    NextPowerOfTwo(zMStar.getM()) == NextPowerOfTwo(zMStar.getPhiM());
-  // we only set the lazy flag if we are using ALT_CRT and if the size of
-  // NTL's FFTs for m and phi(m) are the same. If NTL didn't have these
-  // power-of-two jumps, we would possibly want to change this.
 }

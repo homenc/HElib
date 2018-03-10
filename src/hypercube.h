@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 /**
  * @file hypercube.h
@@ -30,16 +26,32 @@ class CubeSignature {
 private:
    Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
    Vec<long> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
-   long ndims;
-   long size;
 
 public:
-   CubeSignature(): ndims(0) {} // a NULL signature
+   CubeSignature() {} // a NULL signature
 
-   CubeSignature(const Vec<long>& _dims): ndims(0) { initSignature(_dims); }
+   void initSignature(const long _dims[], long _ndims)
+   {
+     assert(dims.length() == 0); // can only initialize a NULL signature
+     assert(_ndims >= 0);
 
-   //! Build a CubeSignature to reflect the hypercube structure of Zm* /(p)
-   explicit CubeSignature(const PAlgebra& alg); // in PAlgebra.cpp
+     dims.SetLength(_ndims);
+     prods.SetLength(_ndims+1);
+     prods[_ndims] = 1;
+     for (long i = _ndims-1; i >= 0; i--) {
+       assert(_dims[i] > 0);
+       dims[i] = _dims[i];
+       prods[i] = prods[i+1] * _dims[i];
+     }
+   }
+   // VecType is either std::vector<intType> or NTL:Vec<intType>
+   template <typename VecType> void initSignature(const VecType& _dims)
+   { initSignature(_dims.data(), lsize(_dims)); }
+
+   CubeSignature(const long _dims[], long _ndims)
+   { initSignature(_dims, _ndims); }
+   CubeSignature(const NTL::Vec<long>& _dims) { initSignature(_dims); }
+   CubeSignature(const std::vector<long>& _dims) {initSignature(_dims);}
 
    /* When we get C++11 support, we could #include <initializer_list>
     * and then do e.g., CubeSignature s {1,2,3};
@@ -51,31 +63,15 @@ public:
       for (i=0, it=_dims.begin(); it!=_dims.end(); ++i, ++it)
 	dims[i] = *it;
 
-      [...] // continue as above, ndims = dims.length() etc.
+      [...] // continue as above, initialize prods
    }
    **********************************************************/
 
-   void initSignature(const Vec<long>& _dims)
-   {
-     assert(ndims == 0); // can only initialize a NULL signature
-     dims = _dims;
-     ndims = dims.length();
-     assert(ndims > 0);
-      
-     prods.SetLength(ndims+1);
-     prods[ndims] = 1;
-     for (long i = ndims-1; i >= 0; i--) {
-       assert(dims[i] > 0);
-       prods[i] = dims[i]*prods[i+1];
-     }
-     size = prods[0];
-   }
+   //! number of dimensions
+   long getNumDims() const { return dims.length(); }
 
    //! total size of cube
-   long getSize() const { return size; }
-
-   //! number of dimensions
-   long getNumDims() const { return ndims; }
+   long getSize() const { return ((getNumDims()>0)? prods[0]: 1); }
 
    //! size of dimension d
    long getDim(long d) const { return dims.at(d); }
@@ -89,14 +85,14 @@ public:
 
    //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
-      assert(i >= 0 && i < size);
+     assert(i >= 0 && i < getSize());
    
       return (i % prods.at(d)) / prods.at(d+1); 
    }
 
    //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
-      assert(i >= 0 && i < size);
+      assert(i >= 0 && i < getSize());
       
       offset = offset % dims.at(d);
       if (offset < 0) offset += dims.at(d);
@@ -109,6 +105,46 @@ public:
       return i1;
    }
 
+   //! Increment the coordinates to point to next index, returning
+   //! false if already at maximum value.
+   //! VecType is either std::vector<intType> or NTL:Vec<intType>
+   template <typename VecType> bool incrementCoords(VecType& v) const {
+     for (long i=getNumDims()-1; i>=0; --i) {
+       if (i>=lsize(v)) continue; // sanity check
+
+       // increment current index, set all the ones after it to zero
+       if (long(v[i]) < getDim(i)-1) { 
+	 v[i]++;
+	 for (long j=i+1; j<lsize(v); j++) v[j] = 0;
+	 return true;  // succeeded in incrementing the vector
+       }
+       // if buffer[i] >= getDim(i)-1, move to previous index i
+     }
+     return false;     // cannot increment the vector anymore
+   }
+
+   //! get the coordinates of index i in all dimensions.
+   //! VecType is either std::vector<intType> or NTL:Vec<intType>
+   template <typename VecType> void getAllCoords(VecType& v, long i) const {
+     assert(i >= 0 && i < getSize());
+     resize(v, getNumDims()); // resize(*), lsize(*) defined in NumbTh.h
+     for (long j=getNumDims()-1; j>=0; --j) {
+       v[j] = i % getDim(j);
+       i = (i - v[j]) / getDim(j);
+     }
+   }
+
+   //! reconstruct index from its coordinates
+   //! VecType is either std::vector<intType> or NTL:Vec<intType>
+   template <typename VecType> long assembleCoords(VecType& v) const {
+     assert(lsize(v)==getNumDims());
+     long idx=0;
+     for (long i=0; i<getNumDims(); i++) {
+       idx += v[i]*prods[i+1];
+     }
+     return idx;
+   }
+   
    //! number of slices
    long numSlices(long d=1) const { return getProd(0, d); }
 
@@ -118,6 +154,13 @@ public:
    //! number of columns
    long numCols() const { return getProd(1); }
 
+  //! Break an index into the hypercube to index of the
+  //! dimension-dim subcube and index inside that subcube.
+   std::pair<long,long> breakIndexByDim(long idx, long dim) const;
+
+   //! The inverse of breakIndexByDim
+   long assembleIndexByDim(std::pair<long,long> idx, long dim) const;
+   
    friend ostream& operator<<(ostream &s, const CubeSignature& sig);
 };
 

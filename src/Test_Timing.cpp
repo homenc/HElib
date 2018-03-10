@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 
 /* Test_Timing.cpp - A program that tests the timing of various operations, outputs the results in a comma-separate-value (csv) format.
@@ -25,7 +21,7 @@ NTL_CLIENT
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
-#include "matrix.h"
+#include "matmul.h"
 #include "replicate.h"
 #include "permutations.h"
 
@@ -113,6 +109,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     const FHEPubKey& publicKey = secretKey;
     secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
     addSome1DMatrices(secretKey); // compute key-switching matrices
+    addSomeFrbMatrices(secretKey);
     FHE_NTIMER_STOP(keyGen);
 
     ZZX poly;
@@ -168,7 +165,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
 long rotationAmount(const EncryptedArray& ea, const FHEPubKey& publicKey,
 	       bool onlyWithMatrix)
 {
-  const PAlgebra& pa = ea.getContext().zMStar;
+  const PAlgebra& pa = ea.getPAlgebra();
   long nSlots = pa.getNSlots();
   long r = RandomBnd(nSlots);
   long k = pa.ith_rep(r);
@@ -305,60 +302,28 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   resetAllTimers();
 }
 
+// Implementation of the various random matrices is found here
+#include "randomMatrices.h"
+/*
+ * Defined in this file are the following class templates:
+ *
+ *   class RandomMatrix: public MatMul1D_derived<type>
+ *   class RandomMultiMatrix: public MatMul1D_derived<type>
+ *   class RandomBlockMatrix: public BlockMatMul1D_derived<type>
+ *   class RandomMultiBlockMatrix: public BlockMatMul1D_derived<type>
+ *   class RandomFullMatrix: public MatMulFull_derived<type>
+ *   class RandomFullBlockMatrix : public BlockMatMulFull_derived<type>
+ *
+ * Each of them has a corresponding build function, namely:
+ *
+ *   MatMul1D* buildRandomMatrix(const EncryptedArray& ea, long dim);
+ *   MatMul1D* buildRandomMultiMatrix(const EncryptedArray& ea, long dim);
+ *   BlockMatMul1D* buildRandomBlockMatrix(const EncryptedArray& ea, long dim);
+ *   BlockMatMul1D* buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim);
+ *   MatMulFull* buildRandomFullMatrix(EncryptedArray& ea);
+ *   BlockMatMulFull* buildRandomFullBlockMatrix(EncryptedArray& ea);
+ */
 
-template<class type> 
-class RandomMatrix : public  PlaintextMatrixInterface<type> {
-public:
-  PA_INJECT(type) 
-
-private:
-  const EncryptedArray& ea;
-
-  vector< vector< RX > > data;
-
-public:
-  //  ~RandomMatrix() { cerr << "destructor: random matrix\n"; }
-
-  RandomMatrix(const EncryptedArray& _ea) : ea(_ea) { 
-    long n = ea.size();
-    long d = ea.getDegree();
-
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
-
-    data.resize(n);
-    for (long i = 0; i < n; i++) {
-      data[i].resize(n);
-      for (long j = 0; j < n; j++)
-        random(data[i][j], d);
-    }
-  }
-
-  virtual const EncryptedArray& getEA() const {
-    return ea;
-  }
-
-  virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
-    out = data[i][j];
-    return false;
-  }
-};
-
-PlaintextMatrixBaseInterface *buildRandomMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getContext().alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new RandomMatrix<PA_GF2>(ea);
-    }
-
-    case PA_zz_p_tag: {
-      return new RandomMatrix<PA_zz_p>(ea);
-    }
-
-    default: return 0;
-  }
-}
 
 class ReplicateDummy : public ReplicateHandler {
 public:
@@ -373,12 +338,20 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   Ctxt tmp = c[0];
   tmp.modDownToLevel(td.lvl);
   cerr << "." << std::flush;
-  {
-  shared_ptr<PlaintextMatrixBaseInterface> ptr(buildRandomMatrix(ea));
-  FHE_NTIMER_START(MatMul);
-  mat_mul(ea, tmp, *ptr);      // multiply the ciphertext vector
-  FHE_NTIMER_STOP(MatMul);
-  } // free the pointer
+  std::unique_ptr< MatMulFull > ptr(buildRandomFullMatrix(ea));
+  if (ea.getTag()==PA_GF2_tag) {
+    RandomFullMatrix<PA_GF2>::ExecType mat_exec(*ptr);
+    mat_exec.upgrade();
+    FHE_NTIMER_START(MatMul);
+    mat_exec.mul(tmp);
+    FHE_NTIMER_STOP(MatMul);
+  } else {
+    RandomFullMatrix<PA_zz_p>::ExecType mat_exec(*ptr);
+    mat_exec.upgrade();
+    FHE_NTIMER_START(MatMul);
+    mat_exec.mul(tmp);
+    FHE_NTIMER_STOP(MatMul);
+  }
   ret = tmp;
 
   for (long i=0; i<nTests; i++) {

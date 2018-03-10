@@ -1,17 +1,13 @@
-/* Copyright (C) 2012,2013 IBM Corp.
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* Copyright (C) 2012-2017 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
  */
 
 /* Test_bootstrapping.cpp - Testing the recryption procedure */
@@ -23,29 +19,23 @@
 
 #include <NTL/ZZ.h>
 #include <NTL/fileio.h>
+#include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 #include "EncryptedArray.h"
 #include "EvalMap.h"
 #include "powerful.h"
 
+static bool noPrint = false;
+
 // #define DEBUG_PRINTOUT
 #ifdef DEBUG_PRINTOUT
-extern FHESecKey* dbgKey;
-extern EncryptedArray* dbgEa;
-extern ZZX dbg_ptxt;
-extern Vec<ZZ> ptxt_pwr;
-
-#define FLAG_PRINT_ZZX  1
-#define FLAG_PRINT_POLY 2
-#define FLAG_PRINT_VEC  4
-extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
-			    const EncryptedArray& ea, long flags=0);
+#include "debugging.h"
+extern long printFlag;
 #endif
-
-//void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
+  {  2,    48,   105, 12,  3,  35,  0,    71,    76,    0,  2,  2,   0, 100},
   {  2,   600,  1023, 10, 11,  93,  0,   838,   584,    0, 10,  6,   0, 100}, // m=(3)*11*{31} m/phim(m)=1.7    C=24  D=2 E=1
   {  2,  1200,  1705, 20, 11, 155,  0,   156,   936,    0, 10,  6,   0, 100}, // m=(5)*11*{31} m/phim(m)=1.42   C=34  D=2 E=2
   {  2,  1728,  4095, 12,  7,  5, 117,  2341,  3277, 3641,  6,  4,   6, 100}, // m=(3^2)*5*7*{13} m/phim(m)=2.36 C=26 D=3 E=2
@@ -60,6 +50,7 @@ static long mValues[][14] = {
   {  2, 23040, 28679, 24, 17,  7, 241, 15184,  4098,28204, 16,  6, -10,1000}, // m=7*17*(241) m/phim(m)=1.24    C=63  D=4 E=3
   {  2, 24000, 31775, 20, 41, 775,  0,  6976, 24806,    0, 40, 30,   0, 100}, // m=(5^2)*{31}*41 m/phim(m)=1.32 C=88  D=2 E=2
   {  2, 26400, 27311, 55, 31, 881,  0, 21145,  1830,    0, 30, 16,   0, 100}, // m=31*(881) m/phim(m)=1.03      C=99  D=2 E=0
+  {  2, 27000, 32767, 15, 31,  7, 151, 11628, 28087,25824, 30,  6, -10, 150},
   {  2, 31104, 35113, 36, 37, 949,  0, 16134,  8548,    0, 36, 24,   0, 400}, // m=(13)*37*{73} m/phim(m)=1.12  C=94  D=2 E=2
   {  2, 34848, 45655, 44, 23, 1985, 0, 33746, 27831,    0, 22, 36,   0, 100}, // m=(5)*23*{397} m/phim(m)=1.31  C=100 D=2 E=2
   {  2, 42336, 42799, 21, 127, 337, 0, 25276, 40133,    0,126, 16,   0,  20}, // m=127*(337) m/phim(m)=1.01     C=161 D=2 E=0
@@ -69,6 +60,9 @@ static long mValues[][14] = {
   {  2, 54000, 55831, 25, 31, 1801, 0, 19812, 50593,    0, 30, 72,   0, 100}, // m=31*(1801) m/phim(m)=1.03     C=125 D=2 E=0
   {  2, 60016, 60787, 22, 89, 683,  0,  2050, 58741,    0, 88, 31,   0, 200}, // m=89*(683) m/phim(m)=1.01      C=139 D=2 E=1
 
+  {  7,    36,    57,  3,  3,  19,  0,    20,    40,    0,  2, -6,   0, 100}, // m=3*(19) :-( m/phim(m)=1.58 C=14 D=3 E=0
+
+  { 17,    48,   105, 12,  3,  35,  0,    71,    76,    0,  2,  2,   0, 100}, // m=3*(5)*{7} m/phim(m)=2.18 C=14 D=2 E=2
   { 17,   576,  1365, 12,  7,   3, 65,   976,   911,  463,  6,  2,   4, 100}, // m=3*(5)*7*{13} m/phim(m)=2.36  C=22  D=3
   { 17, 18000, 21917, 30, 101, 217, 0,  5860,  5455,    0, 100, 6,   0, 100}, // m=(7)*{31}*101 m/phim(m)=1.21  C=134 D=2 
   { 17, 30000, 34441, 30, 101, 341, 0,  2729, 31715,    0, 100, 10,  0, 100}, // m=(11)*{31}*101 m/phim(m)=1.14 C=138 D=2
@@ -88,14 +82,14 @@ static long mValues[][14] = {
   {127, 54400, 61787, 40, 41, 1507, 0, 30141, 46782,    0, 40, 34,   0, 100}, // m=(11)*41*{137} m/phim(m)=1.13  C=112 D=2
   {127, 72000, 77531, 30, 61, 1271, 0,  7627, 34344,    0, 60, 40,   0, 100}  // m=(31)*{41}*61 m/phim(m)=1.07   C=128 D=2
 };
-#define num_mValues (sizeof(mValues)/(13*sizeof(long)))
+#define num_mValues (sizeof(mValues)/(14*sizeof(long)))
 
 #define OUTER_REP (3)
 #define INNER_REP (3)
 
 static bool dry = false; // a dry-run flag
 
-void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false)
+void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int build_cache=0)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -115,44 +109,54 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   if (abs(mValues[idx][11])>1) ords.push_back(mValues[idx][11]);
   if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
-  cout << "*** TestIt";
-  if (isDryRun()) cout << " (dry run)";
-  cout << ": p=" << p
-       << ", r=" << r
-       << ", L=" << L
-       << ", B=" << B
-       << ", c=" << c
-       << ", m=" << m
-       << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
-       << endl;
-
+  if (!noPrint) {
+    cout << "*** TestIt";
+    if (isDryRun()) cout << " (dry run)";
+    cout << ": p=" << p
+	 << ", r=" << r
+	 << ", L=" << L
+	 << ", B=" << B
+	 << ", c=" << c
+	 << ", m=" << m
+	 << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
+	 << endl;
+    cout << "Computing key-independent tables..." << std::flush;
+  }
   setTimersOn();
   setDryRun(false); // Need to get a "real context" to test bootstrapping
 
-  cout << "Computing key-independent tables..." << std::flush;
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
-  buildModChain(context, L, c);
-  context.makeBootstrappable(mvec, /*t=*/0, cons);
+  buildModChain(context, L, c,/*extraBits=*/7);
+
+  // FIXME: The extraBits is an exceedingly ugly patch, used to bypass the
+  //   issue that buildModChain must be called BEFORE the context is made
+  //   bootstrappable (else the "powerful" basis is not initialized correctly.)
+  //   This is a bug, the value 7 is sometimes the right one, but seriously??
+
+  context.makeBootstrappable(mvec, /*t=*/0, cons, build_cache);
   t += GetTime();
 
   if (skHwt>0) context.rcData.skHwt = skHwt;
-  cout << " done in "<<t<<" seconds\n";
-  cout << "  e="    << context.rcData.e
-       << ", e'="   << context.rcData.ePrime
-       << ", alpha="<< context.rcData.alpha
-       << ", t="    << context.rcData.skHwt
-       << "\n  ";
-  context.zMStar.printout();
+  if (!noPrint) {
+    cout << " done in "<<t<<" seconds\n";
+    cout << "  e="    << context.rcData.e
+	 << ", e'="   << context.rcData.ePrime
+	 << ", alpha="<< context.rcData.alpha
+	 << ", t="    << context.rcData.skHwt
+	 << "\n  ";
+    context.zMStar.printout();
+  }
   setDryRun(dry); // Now we can set the dry-run flag if desired
 
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
   double bitsize = context.logOfProduct(allPrimes)/log(2.0);
-  cout << "  "<<nPrimes<<" primes in chain, total bitsize="
-       << ceil(bitsize) << ", secparam="
-       << (7.2*phim/bitsize -110) << endl;
+  if (!noPrint)
+    cout << "  "<<nPrimes<<" primes in chain, total bitsize="
+	 << ceil(bitsize) << ", secparam="
+	 << (7.2*phim/bitsize -110) << endl;
 
   long p2r = context.alMod.getPPowR();
   context.zMStar.set_cM(mValues[idx][13]/100.0);
@@ -160,16 +164,16 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   for (long numkey=0; numkey<OUTER_REP; numkey++) { // test with 3 keys
 
   t = -GetTime();
-  cout << "Generating keys, " << std::flush;
+  if (!noPrint) cout << "Generating keys, " << std::flush;
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
-  cout << "computing key-dependent tables..." << std::flush;
+  if (!noPrint) cout << "computing key-dependent tables..." << std::flush;
   secretKey.genRecryptData();
   t += GetTime();
-  cout << " done in "<<t<<" seconds\n";
+  if (!noPrint) cout << " done in "<<t<<" seconds\n";
 
   zz_p::init(p2r);
   zz_pX poly_p = random_zz_pX(context.zMStar.getPhiM());
@@ -185,6 +189,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   dbg_ptxt = ptxt_poly;
   context.rcData.p2dConv->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
   vecRed(ptxt_pwr, ptxt_pwr, p2r, true);
+  if (dbgEa->size()>100) printFlag = 0; // don't print too many slots
 #endif
 
   ZZX poly2;
@@ -212,22 +217,24 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 	  cout << i << ": " << powerful[i] << " != " << powerful2[i]<<", ";
 	  if (numDiff >5) break;
         }
-      cout << endl<< endl;
-      printAllTimers();
+      if (!noPrint) {
+	cout << endl<< endl;
+	printAllTimers();
+      }
       exit(0);
     }
 #ifdef DEBUG_PRINTOUT
-    decryptAndPrint(cout, c1, secretKey, *context.ea);
+    decryptAndPrint(cout, c1, secretKey, *context.ea, printFlag);
     cout << endl;
 #endif
   }
   }
-  printAllTimers();
+  if (!noPrint) printAllTimers();
   resetAllTimers();
 #if (defined(__unix__) || defined(__unix) || defined(unix))
     struct rusage rusage;
     getrusage( RUSAGE_SELF, &rusage );
-    cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+    if (!noPrint) cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
 #endif
 }
 
@@ -245,9 +252,10 @@ int main(int argc, char *argv[])
   long N=0;
   long t=0;
   bool cons=0;
-  long nthreads=4;
+  long nthreads=1;
 
   long seed=0;
+  long useCache=0;
 
   amap.arg("p", p, "plaintext base");
 
@@ -262,38 +270,24 @@ int main(int argc, char *argv[])
   amap.arg("dry", dry, "dry=1 for a dry-run");
   amap.arg("cons", cons, "cons=1 for consevative settings (circuit deeper by 1)");
   amap.arg("nthreads", nthreads, "number of threads");
-
   amap.arg("seed", seed, "random number seed");
+  amap.arg("noPrint", noPrint, "suppress printouts");
+  amap.arg("useCache", useCache, "0: zzX cache, 1: DCRT cache");
 
   amap.parse(argc, argv);
 
   if (seed) 
     SetSeed(ZZ(seed));
 
-#ifdef FHE_BOOT_THREADS
-  UniquePtr<MultiTask> localBootTask;
-  localBootTask.make(nthreads);
+  SetNumThreads(nthreads);
 
-  // localBootTask->add();
-  // localBootTask->remove(3);
-
-  // MultiTask auxBootTask(6);
-  // localBootTask->move(auxBootTask, 5);
-
-  bootTask = localBootTask.get();
-  cout << "*** nthreads = " << bootTask->getNumThreads() << "\n";
-#else
-  cout << "*** no threads\n";
-#endif
-  
-  
 
   if (B<=0) B=FHE_pSize;
   if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
 
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
-      TestIt(i,p,r,L,c,B,t,cons);
+      TestIt(i,p,r,L,c,B,t,cons,useCache);
       break;
     }
 
