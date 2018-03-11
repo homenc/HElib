@@ -1,57 +1,31 @@
-set(SRC
-BenesNetwork.cpp
-blockMatmul1D.cpp
-blockMatmul.cpp
-bluestein.cpp
-CModulus.cpp
-Ctxt.cpp
-debugging.cpp
-DoubleCRT.cpp
-EncryptedArray.cpp
-EvalMap.cpp
-extractDigits.cpp
-FHEContext.cpp
-FHE.cpp
-hypercube.cpp
-IndexSet.cpp
-KeySwitching.cpp
-matching.cpp
-matmul1D.cpp
-matmul.cpp
-NumbTh.cpp
-OptimizePermutations.cpp
-PAlgebra.cpp
-PermNetwork.cpp
-permutations.cpp
-polyEval.cpp
-powerful.cpp
-recryption.cpp
-replicate.cpp
-rotations.cpp
-timing.cpp
-)
-if(FHE_THREADS)
-    add_definitions(-DFHE_THREADS)
-    set(RUN_LIB fhe ntl gmp pthread)
-else(FHE_THREADS)
-    set(RUN_LIB fhe ntl gmp)
-endif(FHE_THREADS)
+file(GLOB HELIB_SRC_FILES RELATIVE "${CMAKE_SOURCE_DIR}/src" "*.cpp")
+file(GLOB TEST_FILES RELATIVE "${CMAKE_SOURCE_DIR}/src" "Test_*.cpp")
+## This OTHER_PRG list hope to be more automatic
+set(OTHER_PRG MulTime.cpp cgauss.cpp params.cpp eqtesting.cpp)
 
-add_library(fhe STATIC SHARED ${SRC})
+foreach(prg ${OTHER_PRG})
+	list(FILTER HELIB_SRC_FILES EXCLUDE REGEX ${prg})
+endforeach(prg)
+
+foreach(prg ${TEST_FILES})
+	list(FILTER HELIB_SRC_FILES EXCLUDE REGEX ${prg})
+endforeach(prg)
+
+if (BUILD_SHARED)
+add_library(fhe SHARED ${HELIB_SRC_FILES})
+else (BUILD_SHARED)
+add_library(fhe STATIC ${HELIB_SRC_FILES})
+endif (BUILD_SHARED)
+
+message(STATUS ${BUILD_AES})
+if (BUILD_AES)
+include_directories("${CMAKE_SOURCE_DIR}/src")
+add_subdirectory(aes)
+endif(BUILD_AES)
 
 if (ENABLE_TEST)
-    file(GLOB TEST_FILES RELATIVE "${CMAKE_SOURCE_DIR}/src" "Test_*.cpp")
     foreach(TEST_FILE ${TEST_FILES})
         add_executable(${TEST_FILE}_exe ${TEST_FILE})
         target_link_libraries(${TEST_FILE}_exe ${RUN_LIB})
     endforeach(TEST_FILE)
-    set(OTHER_PRG 
-        MulTime.cpp
-        cgauss.cpp
-        params.cpp
-        eqtesting.cpp)
-    foreach(PRG ${OTHER_PRG})
-        add_executable(${PRG}_exe ${PRG})
-        target_link_libraries(${PRG}_exe ${RUN_LIB})
-    endforeach(PRG)
 endif(ENABLE_TEST)
