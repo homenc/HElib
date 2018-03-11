@@ -9,261 +9,377 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef FHE_matrix_H_
-#define FHE_matrix_H_
-/**
- * @file matmul.h
- * @brief some matrix / linear algenra stuff
- */
-#include <cstddef>
-#include <mutex>
-#include <tuple>
+#ifndef _matmul_H
+#define _matmul_H
+
 #include "EncryptedArray.h"
 
-typedef std::shared_ptr< zzX > zzxptr; // zzX=Vec<long> defined in NumbTh.h
-typedef NTL::Vec<zzxptr> CachedzzxMatrix;
 
-typedef NTL::Vec<DCRTptr> CachedDCRTMatrix;
-typedef NTL::Mat<DCRTptr> CachedDCRTBlockMatrix;
+class MatMulFullExec;
 
-enum MatrixCacheType : int { cacheEmpty=0, cachezzX=1, cacheDCRT=2 };
+// Abstract base class for representing a linear transformation on a full vector.
+class MatMulFull {
+public:
+  virtual ~MatMulFull() {}
+  virtual const EncryptedArray& getEA() const = 0; 
+  typedef MatMulFullExec ExecType;
+  
+};
+  
+// Concrete derived class that defines the matrix entries.
+template<class type>
+class MatMulFull_derived : public MatMulFull { 
+public:
+  PA_INJECT(type)
 
-/********************************************************************/
-/****************** Linear transformation classes *******************/
+  // Get (i, j) entry of matrix.
+  // Should return true when the entry is a zero. 
+  virtual bool get(RX& out, long i, long j) const = 0;
+};
 
-//! @class MatMulBase
-//! @brief An abstract interface for linear transformations.
-//!
-//! A matrix implements linear transformation over an extension
-//! field/ring, e.g., GF(2^d) or Z_{2^8}[X]/G(X) for irreducible G.
-class MatMulBase {
+//====================================
+
+class BlockMatMulFullExec;
+
+// Abstract base class for representing a block linear transformation on a full vector.
+class BlockMatMulFull {
+public:
+  virtual ~BlockMatMulFull() {}
+  virtual const EncryptedArray& getEA() const = 0;
+  typedef BlockMatMulFullExec ExecType;
+
+};
+  
+// Concrete derived class that defines the matrix entries.
+template<class type>
+class BlockMatMulFull_derived : public BlockMatMulFull { 
+public:
+  PA_INJECT(type)
+
+  // Get (i, j) entry of matrix.
+  // Each entry is a d x d matrix over the base ring.
+  // Should return true when the entry is a zero. 
+  virtual bool get(mat_R& out, long i, long j) const = 0;
+};
+
+//====================================
+
+class MatMul1DExec;
+
+// Abstract base class for representing a 1D linear transformation.
+class MatMul1D {
+public:
+  virtual ~MatMul1D() {}
+  virtual const EncryptedArray& getEA() const = 0;
+  virtual long getDim() const = 0;
+  typedef MatMul1DExec ExecType;
+};
+
+// An intermediate class that is mainly intended for internal use.
+template<class type>
+class MatMul1D_partial : public MatMul1D {
+public:
+  PA_INJECT(type)
+
+  // Get the i'th diagonal, encoded as a single constant.
+  // MatMul1D_derived (below) supplies a default implementation,
+  // which can be overriden in special circumstances.
+  virtual void 
+  processDiagonal(RX& poly, long i,
+                  const EncryptedArrayDerived<type>& ea) const = 0;
+
+};
+
+// Concrete derived class that defines the matrix entries.
+template<class type>
+class MatMul1D_derived : public MatMul1D_partial<type> { 
+public:
+  PA_INJECT(type)
+
+  // Should return true if their are multiple (different) transforms
+  // among the various components.
+  virtual bool multipleTransforms() const = 0;
+
+  // Get coordinate (i, j) of the kth component.
+  // Should return true when the entry is a zero. 
+  virtual bool get(RX& out, long i, long j, long k) const = 0;
+
+  void 
+  processDiagonal(RX& poly, long i,
+                  const EncryptedArrayDerived<type>& ea) const override;
+};
+
+//====================================
+
+class BlockMatMul1DExec;
+
+// Abstract base class for representing a block 1D linear transformation.
+class BlockMatMul1D {
+public:
+  virtual ~BlockMatMul1D() {}
+  virtual const EncryptedArray& getEA() const = 0;
+  virtual long getDim() const = 0;
+  typedef BlockMatMul1DExec ExecType;
+};
+
+
+// An intermediate class that is mainly intended for internal use.
+template<class type>
+class BlockMatMul1D_partial : public BlockMatMul1D {
+public:
+  PA_INJECT(type)
+
+  // Get the i'th diagonal, encoded as a vector of d constants,
+  // where d is the order of p.
+  // BlockMatMul1D_derived (below) supplies a default implementation,
+  // which can be overriden in special circumstances.
+  virtual bool
+  processDiagonal(vector<RX>& poly, long i,
+                  const EncryptedArrayDerived<type>& ea) const = 0;
+
+};
+
+// Concrete derived class that defines the matrix entries.
+template<class type>
+class BlockMatMul1D_derived : public BlockMatMul1D_partial<type> { 
+public:
+  PA_INJECT(type)
+
+  // Should return true if their are multiple (different) transforms
+  // among the various components.
+  virtual bool multipleTransforms() const = 0;
+
+  // Get coordinate (i, j) of the kth component.
+  // Each entry is a d x d matrix over the base ring.
+  // Should return true when the entry is a zero. 
+  virtual bool get(mat_R& out, long i, long j, long k) const = 0;
+
+  bool
+  processDiagonal(vector<RX>& poly, long i,
+                  const EncryptedArrayDerived<type>& ea) const override;
+};
+
+//====================================
+
+
+struct ConstMultiplier; 
+// Defined in matmul.cpp.
+// Holds a constant by which a ciphertext can be multiplied.
+// Internally, it is represented as either zzX or a DoubleCRT.
+// The former occupies less space, but the latter makes for
+// much faster multiplication.
+
+struct ConstMultiplierCache {
+  std::vector<std::shared_ptr<ConstMultiplier>> multiplier;
+
+  // Upgrade zzX constants to DoubleCRT constants.
+  void upgrade(const FHEcontext& context);
+};
+
+//====================================
+
+
+// Abstract base case for multiplying an encrypted vector by a plaintext matrix.
+class MatMulExecBase {
+public:
+  virtual ~MatMulExecBase() { }
+
+  virtual const EncryptedArray& getEA() const = 0;
+
+  // Upgrade zzX constants to DoubleCRT constants.
+  virtual void upgrade() = 0;
+
+  // If ctxt enctrypts a row vector v, then this replaces ctxt
+  // by an encryption of the row vector v*mat, where mat is 
+  // a matrix provided to the constructor of one of the
+  // concrete subclasses MatMul1DExec, BlockMatMul1DExec,
+  // MatMulFullExec, BlockMatMulFullExec, defined below.
+  virtual void mul(Ctxt& ctxt) const = 0;
+};
+
+//====================================
+
+// Class used to multiply an encrypted row vector by a 1D linear transformation.
+class MatMul1DExec : public MatMulExecBase {
+public:
+
   const EncryptedArray& ea;
-  std::unique_ptr<CachedzzxMatrix> zzxCache;
-  std::unique_ptr<CachedDCRTMatrix> dcrtCache;
-  std::mutex cachelock;
 
-  long gStep; // the giant-step parameter (if used)
+  long dim;
+  long D;
+  bool native;
+  bool minimal;
+  long g;
 
-public:
-  MatMulBase(const EncryptedArray& _ea, long g=1): ea(_ea), gStep(g) {}
-  virtual ~MatMulBase() {}
+  ConstMultiplierCache cache;
+  ConstMultiplierCache cache1; // only for non-native dimension
 
-  const EncryptedArray& getEA() const { return ea; }
 
-  bool haszzxcache() const { return (bool)zzxCache; }   // check if not null
-  bool hasDCRTcache() const { return (bool)dcrtCache; } // check if not null
-  void getCache(CachedzzxMatrix** zcp, CachedDCRTMatrix** dcp) const
-  { *zcp = zzxCache.get(); *dcp = dcrtCache.get(); }
+  // The constructor encodes all the constants for a given
+  // matrix in zzX format.
+  // The mat argument defines the entries of the matrix.
+  // Use the upgrade method (below) to convert to DoubleCRT format.
+  // If the minimal flag is set to true, a strategy that relies
+  // on a minimal number of key switching matrices will be used;
+  // this is intended for use in conjunction with the 
+  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // If the minimal flag is false, it is best to use the
+  // addSome{1D,Frb}Matrices routines declared in FHE.h.
+  explicit
+  MatMul1DExec(const MatMul1D& mat, bool minimal=false);
 
-  bool lockCache(MatrixCacheType ty);
-  void releaseCache() { cachelock.unlock(); }
+  // Replaces an encryption of row vector v by encryption of v*mat
+  void mul(Ctxt& ctxt) const override;
 
-  void upgradeCache(); // build DCRT cache from zzx cache
-  void installzzxcache(std::unique_ptr<CachedzzxMatrix>& zc)
-  { zzxCache.swap(zc); }
-  void installDCRTcache(std::unique_ptr<CachedDCRTMatrix>& dc)
-  { dcrtCache.swap(dc); }
-
-  // setGstep is *not* thread safe and should never be called if
-  // there are threads using the current cache.
-  void setGstep(long g) {
-    if (g != gStep && g>0) {
-      zzxCache.reset();
-      dcrtCache.reset();
-      gStep = g;
-    }
+  // Upgrades encoded constants from zzX to DoubleCRT.
+  void upgrade() override { 
+    cache.upgrade(ea.getContext()); 
+    cache1.upgrade(ea.getContext()); 
   }
-  long getGstep() const { return gStep; }
+
+  const EncryptedArray& getEA() const override { return ea; }
 };
 
-//! @class MatMul
-//! @brief Linear transformation interfaces, specialized to GF2/zz_p
-//!
-//! An implementation that specifies particular transformation(s) is
-//! derived from MatMul<PA_GF2> or MatMul<PA_zz_p>. It should implement
-//! either get(i,j) or multiGet(i,j,k). They return the element mat[i,j])
-//! (in the k'th trasformation in the latter case), which is in some
-//! field/ring (e.g., GF(p^d)), and is returned as a GF2X or a zz_pX.
-template<class type>
-class MatMul : public MatMulBase { // type is PA_GF2 or PA_zz_p
-public:
-  PA_INJECT(type)
-  MatMul(const EncryptedArray& _ea, long g=1): MatMulBase(_ea,g) {}
+//====================================
 
-  // Should return true when the entry is a zero. An application must
-  // implement (at least) one of these get functions, calling the base
-  // methods below will throw an exception.
-  virtual bool get(RX& out, long i, long j) const {
-    throw std::logic_error("MatMul: get() not implemented in base class");
-    return true;
+// Class used to multiply an encrypted row vector by a block 1D linear transformation.
+class BlockMatMul1DExec : public MatMulExecBase {
+public:
+
+  const EncryptedArray& ea;
+
+  long dim;
+  long D;
+  long d;
+  bool native;
+  long strategy;
+
+  ConstMultiplierCache cache;
+  ConstMultiplierCache cache1; // only for non-native dimension
+
+
+  // The constructor encodes all the constants for a given
+  // matrix in zzX format.
+  // The mat argument defines the entries of the matrix.
+  // Use the upgrade method (below) to convert to DoubleCRT format.
+  // If the minimal flag is set to true, a strategy that relies
+  // on a minimal number of key switching matrices will be used;
+  // this is intended for use in conjunction with the 
+  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // If the minimal flag is false, it is best to use the
+  // addSome{1D,Frb}Matrices routines declared in FHE.h.
+  explicit
+  BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal=false);
+
+  // Replaces an encryption of row vector v by encryption of v*mat
+  void mul(Ctxt& ctxt) const override;
+
+  // Upgrades encoded constants from zzX to DoubleCRT.
+  void upgrade() override { 
+    cache.upgrade(ea.getContext()); 
+    cache1.upgrade(ea.getContext()); 
   }
-  virtual bool multiGet(RX& out, long i, long j, long k) const {
-    throw std::logic_error("MatMul: multiGet() not implemented in base class");
-    return true;
-  }
+
+  const EncryptedArray& getEA() const override { return ea; }
 };
 
-//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
-//! a row matrix v, and replaced by an encryption of v * mat.
-//! If buildCache != cacheEmpty and the cache is not available,
-//! then it will be built (However, a zzx cahce is never built
-//! if the dcrt cache exists).
-void matMul(Ctxt& ctxt, MatMulBase& mat,
-            MatrixCacheType buildCache=cacheEmpty);
+//====================================
 
-//! Build a cache without performing multiplication
-void buildCache4MatMul(MatMulBase& mat, MatrixCacheType buildCache);
-
-
-//! Same as mat_mul but optimized for matrices with few non-zero diagonals
-void matMul_sparse(Ctxt& ctxt, MatMulBase& mat,
-                   MatrixCacheType buildCache=cacheEmpty);
-
-//! Build a cache without performing multiplication
-void buildCache4MatMul_sparse(MatMulBase& mat, MatrixCacheType buildCache);
-
-//FIXME: With the interfaces above, an application can call buildCache4MatMul
-// and then use the cache with matMul_sparse (or vise versa), and currently
-// there is no run-time check to detect that we have the wrong cache.
-
-
-///@{
-//! @name 1D Matrix multiplication routines
-//! A single ciphertext holds many vectors, all of length equal to the
-//! the size of the relevant dimenssion. Each vector is multiplied by
-//! a potentially different matrix, all products done in SIMD.
-
-
-//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as a row
-//! matrix v, and replaced by an encryption of v * mat, where mat is a
-//! D x D matrix (where D is the order of generator dim).  We allow
-//! dim to be one greater than the number of generators in zMStar, as
-//! if there were an implicit generator of order 1, this is convenient
-//! in some applications.
-//! If buildCache != cacheEmpty and the cache is not available, then
-//! it will be built (However, a zzx cahce is never built if the dcrt
-//! cache exists).
-
-void matMul1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-              MatrixCacheType buildCache=cacheEmpty);
-//! Build a cache without performing multiplication
-void buildCache4MatMul1D(MatMulBase& mat,long dim,MatrixCacheType buildCache);
-
-void matMulti1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-                MatrixCacheType buildCache=cacheEmpty);
-//! Build a cache without performing multiplication
-void buildCache4MatMulti1D(MatMulBase& mat,long dim,MatrixCacheType buildCache);
-
-// Versions for plaintext rather than cipehrtext, useful for debugging
-void matMul(NewPlaintextArray& pa, MatMulBase& mat);
-void matMul1D(NewPlaintextArray& pa, MatMulBase& mat, long dim);
-void matMulti1D(NewPlaintextArray& pa, MatMulBase& mat, long dim);
-///@}
-
-
-//! @class BlockMatMul
-//! @brief Linear transformation interfaces, specialized to GF2/zz_p
-//!
-//! An implementation that specifies particular transformation(s) is
-//! derived from BlockMatMul<PA_GF2> or BlockMatMul<PA_zz_p>. It should
-//! implement either get(i,j) or multiGet(i,j,k). They return the element
-//! mat[i,j]) (in the k'th trasformation in the latter case), which is a
-//! small matrix over the base ring (e.g., Z_p), and is returned as a
-//! NTL::Mat<GF2> or NTL::Mat<zz_p>.
-template<class type>
-class BlockMatMul : public MatMulBase { // type is PA_GF2 or PA_zz_p
+// Class used to multiply an encrypted row vector by a full linear transformation.
+class MatMulFullExec : public MatMulExecBase {
 public:
-  PA_INJECT(type)
-  BlockMatMul(const EncryptedArray& _ea): MatMulBase(_ea) {}
 
-  // Should return true when the entry is a zero. An application must
-  // implement (at least) one of these get functions, calling the base
-  // methods below will throw an exception.
-  virtual bool get(mat_R& out, long i, long j) const {
-    throw std::logic_error("MatMul: get() not implemented in base class");
-    return true;
+  const EncryptedArray& ea;
+  bool minimal;
+  std::vector<long> dims;
+  std::vector<MatMul1DExec> transforms;
+
+  // The constructor encodes all the constants for a given
+  // matrix in zzX format.
+  // The mat argument defines the entries of the matrix.
+  // Use the upgrade method (below) to convert to DoubleCRT format.
+  // If the minimal flag is set to true, a strategy that relies
+  // on a minimal number of key switching matrices will be used;
+  // this is intended for use in conjunction with the 
+  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // If the minimal flag is false, it is best to use the
+  // addSome{1D,Frb}Matrices routines declared in FHE.h.
+  explicit
+  MatMulFullExec(const MatMulFull& mat, bool minimal=false);
+
+  // Replaces an encryption of row vector v by encryption of v*mat
+  void mul(Ctxt& ctxt) const override;
+
+  // Upgrades encoded constants from zzX to DoubleCRT.
+  void upgrade() override { 
+    for (auto& t: transforms) t.upgrade();
   }
-  virtual bool multiGet(mat_R& out, long i, long j, long k) const {
-    throw std::logic_error("MatMul: multiGet() not implemented in base class");
-    return true;
-  }
+
+  const EncryptedArray& getEA() const override { return ea; }
+
+  // This really should be private.
+  long rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim, long idx) const;
+
 };
 
-//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as
-//! a row matrix v, and replaced by an encryption of v * mat.
-//! If buildCache != cacheEmpty and the cache is not available,
-//! then it will be built (However, a zzx cahce is never built
-//! if the dcrt cache exists).
-void blockMatMul(Ctxt& ctxt, MatMulBase& mat,
-		 MatrixCacheType buildCache=cacheEmpty);
+//====================================
 
-//! Build a cache without performing multiplication
-void buildCache4BlockMatMul(MatMulBase& mat, MatrixCacheType buildCache);
-
-
-///@{
-//! @name 1D block Matrix multiplication routines
-//! A single ciphertext holds many vectors, all of length equal to the
-//! the size of the relevant dimenssion (times slot size). Each vector is
-//! multiplied by a potentially different matrix, all products done in SIMD.
-
-
-//! @brief Multiply ctx by plaintext matrix. Ctxt is treated as a row
-//! matrix v, and replaced by an encryption of v * mat, where mat is a
-//! Dd x Dd matrix (where D is the order of generator dim, and d is the
-//! size of slots). We allow dim to be one greater than the number of
-//! generators in zMStar, as if there were an implicit generator of order 1,
-//! this is convenient in some applications.
-//! If buildCache != cacheEmpty and the cache is not available, then
-//! it will be built (However, a zzx cahce is never built if the dcrt
-//! cache exists).
-
-void blockMatMul1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-               MatrixCacheType buildCache=cacheEmpty);
-//! Build a cache without performing multiplication
-void buildCache4BlockMatMul1D(MatMulBase& mat,
-			      long dim, MatrixCacheType buildCache);
-
-void blockMatMulti1D(Ctxt& ctxt, MatMulBase& mat, long dim,
-		     MatrixCacheType buildCache=cacheEmpty);
-//! Build a cache without performing multiplication
-void buildCache4BlockMatMulti1D(MatMulBase& mat,
-				long dim, MatrixCacheType buildCache);
-
-// Versions for plaintext rather than cipehrtext, useful for debugging
-void blockMatMul(NewPlaintextArray& pa, MatMulBase& mat);
-void blockMatMul1D(NewPlaintextArray& pa, MatMulBase& mat, long dim);
-void blockMatMulti1D(NewPlaintextArray& pa, MatMulBase& mat, long dim);
-///@}
-
-
-/*********************************************************************
- * MatMulLock: A helper class that handles the lock in MatMulBase.
- * It is used in a function as follows:
- *
- *   void some_Function(...)
- *   {
- *       MatMulLock locking(mat, cachetype);
- *       if (locking.getType()!=cacheEmpty) {
- *           // we need to build a cache and we have the lock
- *           ...
- *       }
- *   } // Lock is released by MatMulLock destructor
- *
- ********************************************************************/
-class MatMulLock {
-  MatMulBase& mat;
-  MatrixCacheType ctype;
+// Class used to multiply an encrypted row vector by a full block linear transformation.
+class BlockMatMulFullExec : public MatMulExecBase {
 public:
-  MatMulLock(MatMulBase& _mat, MatrixCacheType _ctype): mat(_mat),ctype(_ctype)
-  {
-    if (ctype != cacheEmpty) { // build a cache if it is not there already
-      if (!mat.lockCache(ctype))
-	ctype = cacheEmpty; // no need to build
-    }
+
+  const EncryptedArray& ea;
+  bool minimal;
+  std::vector<long> dims;
+  std::vector<BlockMatMul1DExec> transforms;
+
+  // The constructor encodes all the constants for a given
+  // matrix in zzX format.
+  // The mat argument defines the entries of the matrix.
+  // Use the upgrade method (below) to convert to DoubleCRT format.
+  // If the minimal flag is set to true, a strategy that relies
+  // on a minimal number of key switching matrices will be used;
+  // this is intended for use in conjunction with the 
+  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // If the minimal flag is false, it is best to use the
+  // addSome{1D,Frb}Matrices routines declared in FHE.h.
+  explicit
+  BlockMatMulFullExec(const BlockMatMulFull& mat, bool minimal=false);
+
+  // Replaces an encryption of row vector v by encryption of v*mat
+  void mul(Ctxt& ctxt) const override;
+
+  // Upgrades encoded constants from zzX to DoubleCRT.
+  void upgrade() override { 
+    for (auto& t: transforms) t.upgrade();
   }
-  MatrixCacheType getType() const { return ctype; }
-  ~MatMulLock() { if (ctype != cacheEmpty) mat.releaseCache(); }
+
+  const EncryptedArray& getEA() const override { return ea; }
+
+  // This really should be private.
+  long rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim, long idx) const;
+
 };
 
-#endif /* ifdef FHE_matrix_H_ */
+//====================================
+
+// These routines apply linear transformation to plaintext arrays.
+// Mainly for testing purposes.
+void mul(NewPlaintextArray& pa, const MatMul1D& mat);
+void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat);
+void mul(NewPlaintextArray& pa, const MatMulFull& mat);
+void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat);
+
+
+// These are used mainly for performance evaluation.
+
+extern int fhe_test_force_bsgs;
+// Controls whether or not we use BSGS multiplication.
+// 1 to force on, -1 to force off, 0 for default behaviour.
+
+
+extern int fhe_test_force_hoist;
+// Controls whether ot not we use hoisting.
+// -1 to force off, 0 for default behaviour.
+
+#endif

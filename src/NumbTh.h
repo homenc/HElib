@@ -51,6 +51,8 @@
 #error "This version of HElib requires NTL version 10.0.0 or above"
 #endif
 
+#include "range.h"
+
 using namespace std;
 using namespace NTL;
 
@@ -100,6 +102,12 @@ typedef unordered_map<string, const char *> argmap_t;
 typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future
 typedef NTL::Vec<long> zzX;
+
+inline
+bool IsZero(const zzX& a) { return a.length() == 0; }
+
+inline 
+void clear(zzX& a) { a.SetLength(0); }
 
 //! @brief Code for parsing command line arguments.
 /**
@@ -334,7 +342,8 @@ long phi_N(long N);
 
 //! Returns in gens a generating set for Zm* /<p>, and in ords the
 //! order of these generators. Return value is the order of p in Zm*.
-long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p);
+long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p,
+                    const vector<long>& candidates=vector<long>());
 
 //! Find e-th root of unity modulo the current modulus.
 void FindPrimitiveRoot(zz_p &r, unsigned long e);
@@ -667,18 +676,46 @@ inline long lsize(const std::vector<T>& v) {
 }
 
 //! NTL/std compatability
+
+// Utility functions, release memory of std::vector and NTL::Vec
+template<typename T> void killVec(std::vector<T>& vec)
+{ std::vector<T>().swap(vec); }
+template<typename T> void killVec(NTL::Vec<T>& vec)
+{ vec.kill(); }
+
+// Set length to zero, but don't necessarily release memory
+template<typename T> void setLengthZero(std::vector<T>& vec)
+{ if (vec.size()>0) vec.resize(0, vec[0]); }
+template<typename T> void setLengthZero(NTL::Vec<T>& vec)
+{ if (vec.length()>0) vec.SetLength(0, vec[0]); }
+
 template <typename T>
 inline long lsize(const NTL::Vec<T>& v) {
   return v.length();
 }
 
+
+// VJS: I changed the resize functions so that the
+// optional arg is handled as in C++11
+
 template <typename T>
-inline void resize(NTL::Vec<T>& v, long sz, const T& val=T()) {
+void resize(NTL::Vec<T>& v, long sz, const T& val) {
   return v.SetLength(sz, val);
 }
+
 template <typename T>
-inline void resize(std::vector<T>& v, long sz, const T& val=T()) {
+void resize(std::vector<T>& v, long sz, const T& val) {
   return v.resize(sz, val);
+}
+
+template <typename T>
+void resize(NTL::Vec<T>& v, long sz) {
+  return v.SetLength(sz);
+}
+
+template <typename T>
+void resize(std::vector<T>& v, long sz) {
+  return v.resize(sz);
 }
 
 
@@ -786,29 +823,36 @@ vector<T> atovector(const char *a)
   return v2;
 }
 
-// plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
-// Result is calclated in the output b "in place", so a should not alias b.
-template <class RX, class RXModulus>
-void plaintextAutomorph(RX& b, const RX& a, long k, long m, const RXModulus& PhimX)
-{
-  // compute b(X) = a(X^k) mod (X^m-1)
-  b.SetLength(m);
-  for (long j = 0; j < m; j++) b[j] = 0;
-  mulmod_precon_t precon = PrepMulModPrecon(k, m);
-  for (long j = 0; j <= deg(a); j++) 
-    b[MulModPrecon(j, k, m, precon)] = a[j]; // b[j*k mod m] = a[j]
-  b.normalize();
-
-  rem(b, b, PhimX); // reduce modulo the m'th cyclotomic
-}
 
 //! Debug printing routines for vectors, ZZX'es, print only a few entries
 template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
 				    long nCoeffs=40);
 ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
 
-
 // NOTE: Maybe NTL should contain conversion routines
 // like this for the various polynomial classes?
+
+#if 0
+//! @brief stand-in for make_unique, which is C++14, not C++11
+template<typename T, typename... Args>
+std::unique_ptr<T> build_unique(Args&&... args)
+{
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+#endif
+
+//! This should go in NTL some day...
+//! Just call as make_lazy(obj, ...) to initialize a lazy object
+//! via a call to a constructor T(...)
+template<class T, class P, class... Args>
+void make_lazy(const Lazy<T,P>& obj, Args&&... args)
+{
+   typename Lazy<T,P>::Builder builder(obj);
+   if (!builder()) return;
+   UniquePtr<T,P> ptr;
+   ptr.make(std::forward<Args>(args)...);
+   builder.move(ptr);
+}
+
 
 #endif

@@ -22,14 +22,9 @@
 #include "bluestein.h"
 #include "cloned_ptr.h"
 
-
-#ifdef FHE_OPENCL
-#include "FFT.h"
-#endif
-
-
 /**
 * @class Cmodulus
+* @brief Provides FFT and iFFT routines modulo a single-precision prime
 *
 * On initialization, it initizlies NTL's zz_pContext for this q
 * and computes a 2m-th root of unity r mod q and also r^{-1} mod q.
@@ -42,9 +37,10 @@
 * (vec_long), that store only the evaluation in primitive m-th
 * roots of unity.
 **/
-
 class Cmodulus {
   long          q;       // the modulus
+  mulmod_t      qinv;    // PrepMulMod(q);
+
   zz_pContext   context; // NTL's tables for this modulus
 
   const PAlgebra* zMStar;  // points to the Zm* structure, m is FFT size
@@ -96,6 +92,7 @@ class Cmodulus {
   unsigned long getM() const    { return zMStar->getM(); }
   unsigned long getPhiM() const { return zMStar->getPhiM(); }
   long getQ() const          { return q; }
+  mulmod_t getQInv() const          { return qinv; }
   long getRoot() const       { return root; }
   const zz_pXModulus1& getPhimX() const  { return *phimx; }
 

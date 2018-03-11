@@ -21,8 +21,8 @@ as much access to optimizations as we can give. Hopefully in time we
 will be able to provide higher-level routines.
 
 This library is written in C++ and uses the NTL mathematical
-library, over GMP. It is distributed under the terms of the GNU
-General Public License (GPL).
+library, over GMP. It is distributed under the terms of the
+Apache License, Version 2.0.
 
 \section building Building HElib
 To build HElib, you will need to have GMP and NTL libraries installed.
@@ -39,12 +39,12 @@ GMP as follows.
 
 This should install GMP into `/usr/local`.
 Once GMP is installed, you can install NTL as follows:
-(NOTE: you will needs NTL version 9.0.1 or higher)
+(NOTE: you will needs NTL version 10.0.0 or higher)
   -# Download NTL from http://www.shoup.net/ntl/
   -# Uncompress and cd into the directory `ntl-XXX/src`
   -# On the command line:
 @code
-      ./configure NTL_GMP_LIP=on
+      ./configure NTL_THREADS=on NTL_THREAD_BOOST=on NTL_EXCEPTIONS=on
       make
       sudo make install
 @endcode
@@ -122,6 +122,9 @@ Those include:
   - `Test_bootstrapping.cpp`.
     Testing the recryption procedure.
 
+  - `Test_binaryArith.cpp`.
+    Testing the implementation of integer arithmetic in binary representation
+
 For a list of command-line arguments that any of these programs accepts, run
 @code
 Test_XYZ --help
@@ -132,16 +135,6 @@ Test_XYZ --help
 HElib uses some features of `C++11`. For gcc, depending on the version that you use, you may need to specify the flag '<tt>-std=c++11 -lstdc++</tt>' to be able to compile. There are several compilation flags that control some aspects of the library:
 
 <dl>
-<dt><tt>-DUSE_ALT_CRT</tt></dt>
-<dd>Tells HElib to use an alternative to the default DoubleCRT representation
- of polynomials. The DoubleCRT class is described in Section 2.8 in the
- <a href="http://people.csail.mit.edu/shaih/pubs/he-library.pdf">design
- document</a>. Specifying the flag <tt>USE_ALT_CRT</tt> invokes a different
- implementation of the same interfaces. This is an experimental feature, the
- alternative implementation can be either faster or slower, depending on the
- operation mixture in use by the application.
-</dd>
-
 <dt><tt>-DNO_HALF_SIZE_PRIME</tt></dt>
 <dd>    Tells HElib to not use the half size prime in the prime chain.
     By default, the modulus-chain in HElib consists of many "full-size
@@ -156,27 +149,11 @@ HElib uses some features of `C++11`. For gcc, depending on the version that you 
     a lower level means dropping one of the primes).
 </dd>
 
-<dt><tt>-DEVALMAP_CACHED=0</tt></dt>
-<dt><tt>-DEVALMAP_CACHED=1</tt></dt>
-<dd>     This flag only affect bootstrapping, it tells HElib to cache some
-     constants that are used during recryption (rather than having to
-     encode then anew with every recryption operation).
-<ul>
-<li><tt>EVALMAP_CACHED=0</tt> caches these constants as ZZX'es, this takes
-     less space but it means that they still need to be converted to
-     DoubleCRT's with every recryption operation.</li>
-<li><tt>EVALMAP_CACHED=1</tt> caches these constants directly as DoubleCRT's,
-     this may take a significant amount of memory.</li>
-</ul>
-</dd>
-
 <dt><tt>-DFHE_THREADS</tt></dt>
 <dd>  tells HElib to enable generic multithreading capabilities;
       must be used with a thread-enabled NTL and the <tt>-pthread</tt>
       flag should be passed to <tt>gcc</tt></dd>
-<dt><tt>-DFHE_DCRT_THREADS</tt></dt>
-<dd>  tells HElib to use a multithreading strategy at the DoubleCRT level;
-      requires <tt>-DFHE_THREADS</tt></dd>
+
 <dt><tt>-DFHE_BOOT_THREADS</tt></dt>
 <dd>  tells HElib to use a multithreading strategy for bootstrapping;
       requires <tt>-DFHE_THREADS</tt></dd>

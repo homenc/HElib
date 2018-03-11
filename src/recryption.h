@@ -22,13 +22,15 @@ class  EncryptedArray;
 class  EvalMap;
 class  PowerfulDCRT;
 class  FHEcontext;
+class  FHEPubKey;
+
 
 //! @class RecryptData
 //! @brief A structure to hold recryption-related data inside the FHEcontext
 class RecryptData {
 public:
   //! default Hamming weight of recryption key
-  static const long defSkHwt=56;
+  static const long defSkHwt=100;
 
   //! Some data members that are only used for I/O
   Vec<long> mvec;     //! partition of m into co-prime factors
@@ -50,9 +52,11 @@ public:
   //! for plaintext space p^{e-e'+r}
   EncryptedArray *ea;
 
+  bool build_cache;
+
+
   //! linear maps
   EvalMap *firstMap, *secondMap;
-  int cacheType;
 
   //! conversion between ZZX and Powerful
   PowerfulDCRT *p2dConv;
@@ -62,14 +66,17 @@ public:
 
   RecryptData() {
     hwt=0; conservative=false; e=ePrime=0; alpha=0.0;
-    alMod=NULL; ea=NULL; firstMap=secondMap=NULL;cacheType=0;p2dConv=NULL;
+    alMod=NULL; ea=NULL; firstMap=NULL; secondMap=NULL; p2dConv=NULL;
+    build_cache = false;
   }
   ~RecryptData();
 
   //! Initialize the recryption data in the context
   void init(const FHEcontext& context, const Vec<long>& mvec_,
-            long t=0/*min Hwt for sk*/, bool consFlag=false,
-            int cacheType=0/*0: no cache, 1:zzX, 2:DCRT*/);
+            long t=0/*min Hwt for sk*/, 
+            bool consFlag=false,
+            bool build_cache=false,
+            bool minimal=false);
 
   bool operator==(const RecryptData& other) const;
   bool operator!=(const RecryptData& other) const {

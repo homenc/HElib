@@ -293,14 +293,29 @@ compOrder(vector<long>& orders, vector<long>& classes, bool flag, long m)
 }
 
 // Compare numbers based on their absolute value
+#if 1
+
+// This version prefers positive numbers over negative
 static bool gtAbsVal(long a, long b)
 {
   return (abs(a)>abs(b) || (abs(a)==abs(b) && a>b));
 }
 
+
+#else
+
+// This version does not have a preference...
+// useful in generating test cases with "bad" dimensions
+static bool gtAbsVal(long a, long b)
+{
+  return (abs(a)>abs(b));
+}
+#endif
+
 // Returns in gens a generating set for Zm* /<p>, and in ords the
 // order of these generators. Return value is the order of p in Zm*.
-long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p)
+long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p,
+                    const vector<long>& candidates)
 {
   gens.clear();
   ords.clear();
@@ -319,20 +334,28 @@ long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p)
   // The order of p is the size of the equivalence class of 1
 #if 0
   long ordP = std::count(classes.begin(), classes.end(), 1);
-       // count(from,to,val) returns # of elements in (from,to) with value=val
+    // count(from,to,val) returns # of elements in (from,to) with value=val
 #else
-   long ordP = 0;
-   for (long i = 0; i < lsize(classes); i++)
-      if (classes[i] == 1) ordP++;
+  long ordP = 0;
+  for (long i = 0; i < lsize(classes); i++)
+    if (classes[i] == 1) ordP++;
 #endif
 
-  // Compute orders in (Z/mZ)^*/<p> while comparing to (Z/mZ)^*
+  // Compute orders in (Z/mZ)^* /<p> while comparing to (Z/mZ)^*
+  long candIdx=0;
   while (true) {
     compOrder(orders,classes,true,m);
     // if the orders of i in Zm* /<p> and Zm* are not the same, then
     // order[i] contains the order in Zm* /<p> with negative sign
 
-    long idx = argmax(orders, &gtAbsVal); // find the element with largest order
+    long idx=0;
+    if (candIdx<lsize(candidates)) { // try next candidate
+      idx = candidates[candIdx++];
+      if (abs(orders[idx])<=1)
+        idx=0;
+    }
+    if (idx==0) // no viable candidates supplied externally
+      idx = argmax(orders, &gtAbsVal);// find the element with largest order
     long largest = orders[idx];
 
     if (abs(largest) == 1) break;   // Trivial group, we are done

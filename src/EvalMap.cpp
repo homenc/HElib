@@ -10,14 +10,13 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include "EvalMap.h"
-#include "matmul.h"
 
 // Forward declerations
-static MatMulBase*
+static BlockMatMul1D*
 buildStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
                  const Vec<long>& reps, long dim, long cofactor, bool invert,
                  bool normal_basis);
-static MatMulBase*
+static MatMul1D*
 buildStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
                  const Vec<long>& reps, long dim, long cofactor,
                  bool invert);
@@ -28,13 +27,17 @@ init_representatives(Vec<long>& representatives, long dim,
 
 // Constructor: initializing tables for the evaluation-map transformations
 
-EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
+EvalMap::EvalMap(const EncryptedArray& _ea, 
+                 bool minimal,
+                 const Vec<long>& mvec, 
+                 bool _invert,
+                 bool build_cache,
                  bool normal_basis)
 
   : ea(_ea), invert(_invert)
 {
   const FHEcontext& context = ea.getContext();
-  const PAlgebra& zMStar = context.zMStar;
+  const PAlgebra& zMStar = ea.getPAlgebra();
   
   long p = zMStar.getP();
   long d = zMStar.getOrdP();
@@ -110,39 +113,44 @@ EvalMap::EvalMap(const EncryptedArray& _ea, const Vec<long>& mvec, bool _invert,
   }
 
   long dim = nfactors - 1;
-  mat1.reset(buildStep1Matrix(ea, sig_sequence[dim],
+  unique_ptr<BlockMatMul1D> mat1_data;
+  mat1_data.reset(buildStep1Matrix(ea, sig_sequence[dim],
        	          local_reps[dim], dim, m/mvec[dim], invert, normal_basis));
+  mat1.reset(new BlockMatMul1DExec(*mat1_data, minimal));
 
   matvec.SetLength(nfactors-1);
   for (dim=nfactors-2; dim>=0; --dim) {
-    matvec[dim].reset(buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim],
+    unique_ptr<MatMul1D> mat_data;
+
+    mat_data.reset(buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim],
 				       dim, m/mvec[dim], invert));
+    matvec[dim].reset(new MatMul1DExec(*mat_data, minimal));
   }
+
+  if (build_cache) upgrade();
 }
 
-void EvalMap::buildCache(MatrixCacheType cType)
+void EvalMap::upgrade()
 {
-  if (cType==cacheEmpty) return; // nothing to do
-
-  buildCache4BlockMatMul1D(*mat1, nfactors-1, cType);
+  mat1->upgrade();
   for (long i = 0; i < matvec.length(); i++)
-    buildCache4MatMul1D(*matvec[i], i, cType);
+    matvec[i]->upgrade();
 }
 
 // Applying the evaluation (or its inverse) map to a ciphertext
 void EvalMap::apply(Ctxt& ctxt) const
 {
   if (!invert) { // forward direction
-    blockMatMul1D(ctxt, *mat1, nfactors-1); // the actual transformation
+    mat1->mul(ctxt); 
 
     for (long i = matvec.length()-1; i >= 0; i--)
-      matMul1D(ctxt, *matvec[i], i); // the actual transformation
+      matvec[i]->mul(ctxt);
   }
   else {         // inverse transformation
     for (long i = 0; i < matvec.length(); i++)
-      matMul1D(ctxt, *matvec[i], i); // the actual transformation
+      matvec[i]->mul(ctxt);
 
-    blockMatMul1D(ctxt, *mat1, nfactors-1); // the actual transformation
+    mat1->mul(ctxt); 
   }
 }
 
@@ -172,10 +180,11 @@ init_representatives(Vec<long>& representatives, long dim,
 // The callback interface for the matrix-multiplication routines.
 
 //! \cond FALSE (make doxygen ignore these classes)
-template<class type> class Step2Matrix : public MatMul<type> 
+template<class type> class Step2Matrix : public MatMul1D_derived<type> 
 {
   PA_INJECT(type)
 
+  const EncryptedArray& base_ea;
   shared_ptr<CubeSignature> sig;
   long dim;
   Mat<RX> A;
@@ -185,7 +194,7 @@ public:
   Step2Matrix(const EncryptedArray& _ea,
               shared_ptr<CubeSignature> _sig, const Vec<long>& reps,
               long _dim, long cofactor, bool invert=false)
-    : MatMul<type>(_ea), sig(_sig), dim(_dim)
+    : base_ea(_ea), sig(_sig), dim(_dim)
   {
     long sz = sig->getDim(dim);
     assert(sz == reps.length());
@@ -220,13 +229,17 @@ public:
     }
   }
 
-  virtual bool get(RX& out, long i, long j) const {
+  bool get(RX& out, long i, long j, long k) const override {
     out = A[i][j];
     return false;
   }
+
+  const EncryptedArray& getEA() const override { return base_ea; }
+  bool multipleTransforms() const override { return false; }
+  long getDim() const override { return dim; }
 };
 
-static MatMulBase*
+static MatMul1D*
 buildStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
                  const Vec<long>& reps, long dim, long cofactor,
                  bool invert)
@@ -242,10 +255,11 @@ buildStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
   }
 }
 
-template<class type> class Step1Matrix : public BlockMatMul<type> 
+template<class type> class Step1Matrix : public BlockMatMul1D_derived<type> 
 {
   PA_INJECT(type)
 
+  const EncryptedArray& base_ea;
   shared_ptr<CubeSignature> sig;
   long dim;
   Mat< mat_R > A;
@@ -255,7 +269,7 @@ public:
   Step1Matrix(const EncryptedArray& _ea, shared_ptr<CubeSignature> _sig,
               const Vec<long>& reps, long _dim, long cofactor, bool invert,
               bool normal_basis)
-    : BlockMatMul<type>(_ea), sig(_sig), dim(_dim)
+    : base_ea(_ea), sig(_sig), dim(_dim)
   {
     const EncryptedArrayDerived<type>& ea = _ea.getDerived(type());
     RBak bak; bak.save(); _ea.getAlMod().restoreContext();
@@ -316,13 +330,17 @@ public:
     } // if (invert)
   } // constructor
 
-  virtual bool get(mat_R& out, long i, long j) const {
+  bool get(mat_R& out, long i, long j, long k) const override {
     out = A[i][j];
     return false;
   }
+
+  const EncryptedArray& getEA() const override { return base_ea; }
+  bool multipleTransforms() const override { return false; }
+  long getDim() const override { return dim; }
 };
 
-static MatMulBase*
+static BlockMatMul1D*
 buildStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
                  const Vec<long>& reps, long dim, long cofactor, bool invert,
                  bool normal_basis)

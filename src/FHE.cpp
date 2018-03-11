@@ -303,6 +303,7 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
   return KeySwitch::dummy(); // return this if nothing is found
 }
 
+
 // Encrypts plaintext, result returned in the ciphertext argument. The
 // returned value is the plaintext-space for that ciphertext. When called
 // with highNoise=true, returns a ciphertext with noise level~q/8.
@@ -408,6 +409,16 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
       if (keySwitchMap[i][j] != other.keySwitchMap[i][j]) return false;
   }
 
+  // compare KS_strategy, ignoring trailing FHE_KSS_UNKNOWN
+  long n = KS_strategy.length();
+  while (n >= 0 && KS_strategy[n-1] == FHE_KSS_UNKNOWN) n--;
+  long n1 = other.KS_strategy.length();
+  while (n1 >= 0 && other.KS_strategy[n1-1] == FHE_KSS_UNKNOWN) n1--;
+  if (n != n1) return false;
+  for (long i: range(n)) {
+    if (KS_strategy[i] != other.KS_strategy[i]) return false;
+  }
+
   if (recryptKeyID!=other.recryptKeyID) return false;
   if (recryptKeyID>=0 && 
       !recryptEkey.equalsTo(other.recryptEkey, /*comparePkeys=*/false))
@@ -445,6 +456,8 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
     str << "]\n ";
   }
   str << "]\n";
+
+  str << pk.KS_strategy << "\n";
 
   // output the bootstrapping key, if any
   str << pk.recryptKeyID << " ";
@@ -503,6 +516,8 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   // build the key-switching map for all keys
   for (long i=pk.skHwts.size()-1; i>=0; i--)
     pk.setKeySwitchMap(i);
+
+  str >> pk.KS_strategy; 
 
   // Get the bootstrapping key, if any
   str >> pk.recryptKeyID;

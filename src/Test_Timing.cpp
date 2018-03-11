@@ -109,6 +109,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     const FHEPubKey& publicKey = secretKey;
     secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
     addSome1DMatrices(secretKey); // compute key-switching matrices
+    addSomeFrbMatrices(secretKey);
     FHE_NTIMER_STOP(keyGen);
 
     ZZX poly;
@@ -164,7 +165,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
 long rotationAmount(const EncryptedArray& ea, const FHEPubKey& publicKey,
 	       bool onlyWithMatrix)
 {
-  const PAlgebra& pa = ea.getContext().zMStar;
+  const PAlgebra& pa = ea.getPAlgebra();
   long nSlots = pa.getNSlots();
   long r = RandomBnd(nSlots);
   long k = pa.ith_rep(r);
@@ -301,46 +302,27 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   resetAllTimers();
 }
 
-
-template<class type> class RandomMatrix : public MatMul<type> {
-  PA_INJECT(type) 
-  vector< vector< RX > > data;
-
-public:
-  ~RandomMatrix() {/*cout << "destructor: random dense matrix\n";*/}
-  RandomMatrix(const EncryptedArray& _ea): MatMul<type>(_ea) {
-    long n = _ea.size();
-    long d = _ea.getDegree();
-    long bnd = 2*n; // non-zero with probability 1/bnd
-
-    RBak bak; bak.save(); _ea.getContext().alMod.restoreContext();
-    data.resize(n);
-    for (long i = 0; i < n; i++) {
-      data[i].resize(n);
-      for (long j = 0; j < n; j++) {
-        bool zEntry = (RandomBnd(bnd) > 0);
-        if (zEntry) clear(data[i][j]);
-        else        random(data[i][j], d);
-      }
-    }
-  }
-
-  virtual bool get(RX& out, long i, long j) const {
-    assert(i >= 0 && i < this->getEA().size());
-    assert(j >= 0 && j < this->getEA().size());
-    if (IsZero(data[i][j])) return true;
-    out = data[i][j];
-    return false;
-  }
-};
-MatMulBase* buildRandomMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getTag()) {
-    case PA_GF2_tag: { return new RandomMatrix<PA_GF2>(ea); }
-    case PA_zz_p_tag:{ return new RandomMatrix<PA_zz_p>(ea); }
-    default: return nullptr;
-  }
-}
+// Implementation of the various random matrices is found here
+#include "randomMatrices.h"
+/*
+ * Defined in this file are the following class templates:
+ *
+ *   class RandomMatrix: public MatMul1D_derived<type>
+ *   class RandomMultiMatrix: public MatMul1D_derived<type>
+ *   class RandomBlockMatrix: public BlockMatMul1D_derived<type>
+ *   class RandomMultiBlockMatrix: public BlockMatMul1D_derived<type>
+ *   class RandomFullMatrix: public MatMulFull_derived<type>
+ *   class RandomFullBlockMatrix : public BlockMatMulFull_derived<type>
+ *
+ * Each of them has a corresponding build function, namely:
+ *
+ *   MatMul1D* buildRandomMatrix(const EncryptedArray& ea, long dim);
+ *   MatMul1D* buildRandomMultiMatrix(const EncryptedArray& ea, long dim);
+ *   BlockMatMul1D* buildRandomBlockMatrix(const EncryptedArray& ea, long dim);
+ *   BlockMatMul1D* buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim);
+ *   MatMulFull* buildRandomFullMatrix(EncryptedArray& ea);
+ *   BlockMatMulFull* buildRandomFullBlockMatrix(EncryptedArray& ea);
+ */
 
 
 class ReplicateDummy : public ReplicateHandler {
@@ -356,12 +338,20 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   Ctxt tmp = c[0];
   tmp.modDownToLevel(td.lvl);
   cerr << "." << std::flush;
-  {
-  shared_ptr<MatMulBase> ptr(buildRandomMatrix(ea));
-  FHE_NTIMER_START(MatMul);
-  matMul(tmp, *ptr);      // multiply the ciphertext vector
-  FHE_NTIMER_STOP(MatMul);
-  } // free the pointer
+  std::unique_ptr< MatMulFull > ptr(buildRandomFullMatrix(ea));
+  if (ea.getTag()==PA_GF2_tag) {
+    RandomFullMatrix<PA_GF2>::ExecType mat_exec(*ptr);
+    mat_exec.upgrade();
+    FHE_NTIMER_START(MatMul);
+    mat_exec.mul(tmp);
+    FHE_NTIMER_STOP(MatMul);
+  } else {
+    RandomFullMatrix<PA_zz_p>::ExecType mat_exec(*ptr);
+    mat_exec.upgrade();
+    FHE_NTIMER_START(MatMul);
+    mat_exec.mul(tmp);
+    FHE_NTIMER_STOP(MatMul);
+  }
   ret = tmp;
 
   for (long i=0; i<nTests; i++) {

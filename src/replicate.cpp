@@ -583,10 +583,11 @@ replicateAll(const EncryptedArray& ea, const Ctxt& ctxt,
 }
 
 
-// An implementation that explicitly returns all the replicated
-// cipehrtexts in one big vector. This is useful mostly for debugging
-// purposes, for real parameters it would take a lot of memory.
-
+//! @brief An implementation of ReplicateHandler that explicitly returns
+//!   all the replicated cipehrtexts in one big vector.
+//!
+//! This is useful mostly for debugging purposes, for real parameters
+//! it would take a lot of memory.
 class ExplicitReplicator : public ReplicateHandler {
   std::vector<Ctxt>& v; // space to store all cipehrtexts
   long slot;
@@ -629,7 +630,7 @@ public:
 
 void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i)
 {
-  ea.dispatch<replicate_pa_impl>(Fwd(pa), i); 
+  ea.dispatch<replicate_pa_impl>(pa, i); 
 }
 
 

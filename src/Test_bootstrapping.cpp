@@ -29,24 +29,13 @@ static bool noPrint = false;
 
 // #define DEBUG_PRINTOUT
 #ifdef DEBUG_PRINTOUT
-extern FHESecKey* dbgKey;
-extern EncryptedArray* dbgEa;
-extern ZZX dbg_ptxt;
-extern Vec<ZZ> ptxt_pwr;
-  
-#define FLAG_PRINT_ZZX  1
-#define FLAG_PRINT_POLY 2
-#define FLAG_PRINT_VEC  4
+#include "debugging.h"
 extern long printFlag;
-
-extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
-			    const EncryptedArray& ea, long flags=0);
 #endif
-
-//void baseRep(Vec<long>& rep, long nDigits, ZZ num, long base=2);
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
+  {  2,    48,   105, 12,  3,  35,  0,    71,    76,    0,  2,  2,   0, 100},
   {  2,   600,  1023, 10, 11,  93,  0,   838,   584,    0, 10,  6,   0, 100}, // m=(3)*11*{31} m/phim(m)=1.7    C=24  D=2 E=1
   {  2,  1200,  1705, 20, 11, 155,  0,   156,   936,    0, 10,  6,   0, 100}, // m=(5)*11*{31} m/phim(m)=1.42   C=34  D=2 E=2
   {  2,  1728,  4095, 12,  7,  5, 117,  2341,  3277, 3641,  6,  4,   6, 100}, // m=(3^2)*5*7*{13} m/phim(m)=2.36 C=26 D=3 E=2
@@ -100,7 +89,7 @@ static long mValues[][14] = {
 
 static bool dry = false; // a dry-run flag
 
-void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int cacheType=0)
+void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int build_cache=0)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -146,7 +135,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   //   bootstrappable (else the "powerful" basis is not initialized correctly.)
   //   This is a bug, the value 7 is sometimes the right one, but seriously??
 
-  context.makeBootstrappable(mvec, /*t=*/0, cons, cacheType);
+  context.makeBootstrappable(mvec, /*t=*/0, cons, build_cache);
   t += GetTime();
 
   if (skHwt>0) context.rcData.skHwt = skHwt;
@@ -283,7 +272,7 @@ int main(int argc, char *argv[])
   amap.arg("nthreads", nthreads, "number of threads");
   amap.arg("seed", seed, "random number seed");
   amap.arg("noPrint", noPrint, "suppress printouts");
-  amap.arg("useCache", useCache, "0: no cache, 1:zzX, 2:DCRT");
+  amap.arg("useCache", useCache, "0: zzX cache, 1: DCRT cache");
 
   amap.parse(argc, argv);
 

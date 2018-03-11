@@ -31,7 +31,7 @@ NTL_CLIENT
 void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
 {
   long p = ctxt.getPtxtSpace();
-  if (p != ctxt.getContext().zMStar.getP()) // ptxt space is p^r for r>1
+  if (p != ea.getPAlgebra().getP()) // ptxt space is p^r for r>1
     std::logic_error("mapTo01 not implemented for r>1");
 
   if (p>2)

@@ -10,20 +10,13 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 // debugging.cpp - debugging utilities
-#include <NTL/ZZ.h>
+#include "debugging.h"
 NTL_CLIENT
-#include "FHE.h"
-#include "EncryptedArray.h"
 
-#define FLAG_PRINT_ZZX  1
-#define FLAG_PRINT_POLY 2
-#define FLAG_PRINT_VEC  4
-
-FHESecKey* dbgKey=NULL;
-EncryptedArray* dbgEa=NULL;
-ZZX dbg_ptxt;
-Vec<ZZ> ptxt_pwr;
-
+FHESecKey* dbgKey;
+EncryptedArray* dbgEa;
+NTL::ZZX dbg_ptxt;
+NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
 void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags)

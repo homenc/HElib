@@ -60,9 +60,10 @@ class PAlgebra {
 
   vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
 
-  //  native[i]==1 is gens[i] has the same order in the quotient
-  //  group as its order in Zm*. else native[i]==0.
-  NTL::Vec<GF2> native;
+  //  native[i] is true iff gens[i] has the same order in the quotient
+  //  group as its order in Zm*. 
+  //  VJS: I changed this from a Vec<GF2> to Vec<bool>.
+  NTL::Vec<bool> native;
 
   CubeSignature cube; // the hypercube structure of Zm* /(p)
 
@@ -75,6 +76,8 @@ class PAlgebra {
 
   vector<long> zmsIdx; // if t is the i'th element in Zm* then zmsIdx[t]=i
                        // zmsIdx[t]==-1 if t notin Zm*
+
+  vector<long> zmsRep; // inverse of zmsIdx
 
  public:
 
@@ -128,6 +131,15 @@ class PAlgebra {
   unsigned long ZmStarGen(unsigned long i) const
   {  return (i<gens.size())? gens[i] : 0; }
 
+  //! the i'th generator to the power j mod m
+  // VJS: I'm moving away from all of this unsigned stuff...
+  // Also, note that j really may be negative
+  // NOTE: i == -1 means Frobenius
+  long genToPow(long i, long j) const;
+
+  // p to the power j mod m
+  long frobenuisPow(long j) const;
+
   //! The order of i'th generator (if any)
   unsigned long OrderOf(unsigned long i) const
   {  return cube.getDim(i); }
@@ -138,7 +150,7 @@ class PAlgebra {
 
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
   bool SameOrd(unsigned long i) const
-  {  return NTL::IsOne(native[i]); }
+  {  return native[i]; }
 
   //! @name Translation between index, represnetatives, and exponents
 
@@ -157,6 +169,15 @@ class PAlgebra {
   //! Returns the index of t in (Z/mZ)*
   long indexInZmstar(unsigned long t) const
   {  return (t>0 && t<m)? zmsIdx[t]: -1; }
+
+  //! Returns the index of t in (Z/mZ)* -- no range checking
+  long indexInZmstar_unchecked(unsigned long t) const
+  {  return zmsIdx[t]; }
+
+  //! Returns rep whose index is i
+  long repInZmstar_unchecked(long idx) const
+  {  return zmsRep[idx]; }
+
 
   bool inZmStar(unsigned long t) const
   {  return (t>0 && t<m && zmsIdx[t]>-1); }
@@ -331,6 +352,8 @@ public:
   //! Restores the NTL context for p^r
   virtual void restoreContext() const = 0;
 
+  virtual zzX getMask_zzX(long i, long j) const = 0;
+
 };
 
 #ifndef DOXYGEN_IGNORE
@@ -376,6 +399,7 @@ private:
   /* the remaining fields are visible only to PAlgebraModDerived */
 
   vector<RX> maps;
+  vector<mat_R> matrix_maps;
   vector<REX> rmaps;
 
 public:
@@ -521,12 +545,17 @@ public:
      \verbatim
        maskTable.size() == zMStar.numOfGens()     // # of generators
        for i = 0..maskTable.size()-1:
-         maskTable[i].size() == zMStar.OrderOf(i) // order of generator i
+         maskTable[i].size() == zMStar.OrderOf(i)+1 // order of generator i
      \endverbatim
   **/
   const vector< vector< RX > >& getMaskTable() const // logically, but not really, const
   {
     return maskTable;
+  }
+
+  zzX getMask_zzX(long i, long j) const override
+  {
+    return convert<zzX>(maskTable.at(i).at(j));
   }
 
 
@@ -669,6 +698,8 @@ public:
   long getPPowR() const { return rep->getPPowR(); }
   //! Restores the NTL context for p^r
   void restoreContext() const { rep->restoreContext(); }
+
+  zzX getMask_zzX(long i, long j) const { return rep->getMask_zzX(i, j); }
 
 };
 
