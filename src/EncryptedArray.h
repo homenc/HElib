@@ -296,16 +296,12 @@ public:
   virtual PA_tag getTag() const { return tag; }
   // tag is defined in PA_INJECT, see PAlgebra.h
 
-// DIRT: we're using undocumented NTL interfaces here
-#define FHE_DEFINE_LOWER_DISPATCH(n)\
-  template<template <class> class T NTL_MORE_ARGTYPES(n)>\
-  void dispatch(NTL_VARARGS(n)) const\
-  {\
-    T<type>::apply(*this FHE_MORE_UNWRAPARGS(n));\
-  }\
+  template<template <class> class T, class... Args>
+  void dispatch(Args&&... args) const
+  {
+    T<type>::apply(*this, std::forward<Args>(args)...);
+  }
 
-
-  NTL_FOREACH_ARG(FHE_DEFINE_LOWER_DISPATCH)
 
   const RX& getG() const { return mappingData.getG(); }
 
@@ -636,30 +632,26 @@ public:
 
   PA_tag getTag() const { return rep->getTag(); }
 
-// DIRT: we're using undocumented NTL interfaces here
-#define FHE_DEFINE_UPPER_DISPATCH(n)\
-  template<template <class> class T NTL_MORE_ARGTYPES(n)>\
-  void dispatch(NTL_VARARGS(n)) const\
-  {\
-    switch (getTag()) {\
-      case PA_GF2_tag: {\
-        const EncryptedArrayDerived<PA_GF2> *p = \
-          static_cast< const EncryptedArrayDerived<PA_GF2> *>(rep.get_ptr());\
-        p->dispatch<T>(NTL_PASSARGS(n));\
-        break;\
-      }\
-      case PA_zz_p_tag: {\
-        const EncryptedArrayDerived<PA_zz_p> *p = \
-          static_cast< const EncryptedArrayDerived<PA_zz_p> *>(rep.get_ptr());\
-        p->dispatch<T>(NTL_PASSARGS(n));\
-        break;\
-      }\
-      default: TerminalError("bad tag"); \
-    }\
-  }\
+  template<template <class> class T, class... Args>
+  void dispatch(Args&&... args) const
+  {
+    switch (getTag()) {
+      case PA_GF2_tag: {
+        const EncryptedArrayDerived<PA_GF2> *p = 
+          static_cast< const EncryptedArrayDerived<PA_GF2> *>(rep.get_ptr());
+        p->dispatch<T>(std::forward<Args>(args)...);
+        break;
+      }
+      case PA_zz_p_tag: {
+        const EncryptedArrayDerived<PA_zz_p> *p = 
+          static_cast< const EncryptedArrayDerived<PA_zz_p> *>(rep.get_ptr());
+        p->dispatch<T>(std::forward<Args>(args)...);
+        break;
+      }
+      default: TerminalError("bad tag"); 
+    }
+  }
 
-
-NTL_FOREACH_ARG(FHE_DEFINE_UPPER_DISPATCH)
 
 
   const FHEcontext& getContext() const { return rep->getContext(); }
@@ -800,7 +792,7 @@ private:
 public:
   
   NewPlaintextArray(const EncryptedArray& ea)  
-    { ea.dispatch<ConstructorImpl>(Fwd(*this)); }
+    { ea.dispatch<ConstructorImpl>(*this); }
 
   NewPlaintextArray(const NewPlaintextArray& other) : rep(other.rep.clone()) { }
   NewPlaintextArray& operator=(const NewPlaintextArray& other) 
