@@ -495,3 +495,23 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   bitsPerLevel = FHE_pSize;
   fftPrimeCount = 0; 
 }
+
+FHEcontext::FHEcontext(const FHEcontext &oth):
+    zMStar(oth.zMStar), alMod(oth.alMod)
+{
+    stdev = oth.stdev;
+    bitsPerLevel = oth.bitsPerLevel;
+    fftPrimeCount = oth.fftPrimeCount;
+    ea = new EncryptedArray(*oth.ea);
+}
+
+FHEcontext& FHEcontext::operator=(const FHEcontext &oth)
+{
+    zMStar = oth.zMStar;
+    alMod = oth.alMod;
+    stdev = oth.stdev;
+    bitsPerLevel = oth.bitsPerLevel;
+    fftPrimeCount = oth.fftPrimeCount;
+    ea = new EncryptedArray(*oth.ea);
+    return *this;
+}

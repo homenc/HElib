@@ -712,6 +712,55 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
   }
   PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
 }
+void FHESecKey::Decrypt(DoubleCRT &ptxt, const Ctxt &ciphertxt) const 
+{
+#ifdef DEBUG_PRINTOUT
+  // The call to findBaseSet is only for the purpose of printing a
+  // warning if the noise is large enough so as to risk decryption error
+  IndexSet s; ciphertxt.findBaseSet(s);
+#endif
+  FHE_TIMER_START;
+  assert(getContext()==ciphertxt.getContext());
+  const IndexSet& ptxtPrimes = ciphertxt.primeSet;
+
+  // for each ciphertext part, fetch the right key, multiply and add
+  for (size_t i=0; i<ciphertxt.parts.size(); i++) {
+    const CtxtPart& part = ciphertxt.parts[i];
+    //  cout << "decrypt part: "<<part.skHandle<<" "<< part.getIndexSet()<<"\n";
+    if (part.skHandle.isOne()) { // No need to multiply
+      ptxt += part;
+      continue;
+    }
+
+    long keyIdx = part.skHandle.getSecretKeyID();
+    DoubleCRT key = sKeys.at(keyIdx); // copy object, not a reference
+    const IndexSet extraPrimes = key.getIndexSet() / ptxtPrimes;
+    key.removePrimes(extraPrimes);    // drop extra primes, for efficiency
+
+    /* Perhaps a slightly more efficient way of doing the same thing is:
+       DoubleCRT key(context, ptxtPrimes); // a zero object wrt ptxtPrimes
+       key.Add(sKeys.at(keyIdx), false); // add without mathcing primesSet
+    */
+    long xPower = part.skHandle.getPowerOfX();
+    long sPower = part.skHandle.getPowerOfS();
+    if (xPower>1) { 
+      key.automorph(xPower); // s(X^t)
+    }
+    if (sPower>1) {
+      key.Exp(sPower);       // s^r(X^t)
+    }
+    key *= part;
+    ptxt += key;
+  }
+  if (ciphertxt.ptxtSpace>2) { // if p>2, multiply by Q^{-1} mod p
+    long qModP = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
+		     ciphertxt.ptxtSpace);
+    if (qModP != 1) {
+      qModP = InvMod(qModP, ciphertxt.ptxtSpace);
+	  ptxt *= qModP;
+    }
+  }
+}
 
 // Encryption using the secret key, this is useful, e.g., to put an
 // encryption of the secret key into the public key.

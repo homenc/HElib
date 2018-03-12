@@ -1030,7 +1030,7 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   *this -= delta;    // convert delta to DoubleCRT, then subtract
   *this /= diffProd; // *this is divisible by diffProd, so this operation actually scales it down
 }
-
+#if 0 // By riku.
 ostream& operator<< (ostream &str, const DoubleCRT &d)
 {
   const IndexSet& set = d.map.getIndexSet();
@@ -1070,5 +1070,59 @@ istream& operator>> (istream &str, DoubleCRT &d)
   // Advance str beyond closing ']'
   seekPastChar(str, ']');
   //  cerr << "]";
+  return str;
+}
+#endif
+std::ostream& operator<< (std::ostream &str, const DoubleCRT &d)
+{
+  const IndexSet& set = d.map.getIndexSet();
+  str << '[';
+  str << set;
+  str << ']';
+  NTL::ZZX poly;
+  FHE_NTIMER_START(TO_POLY_OUTPUT);
+  d.toPoly(poly, true);
+  FHE_NTIMER_STOP(TO_POLY_OUTPUT);
+  const FHEcontext &context = d.context;
+  double bits = context.logOfProduct(set);
+  bits /= std::log(2.);
+  long bytes = long(std::ceil(bits) + 7) >> 3;
+  long phim = context.zMStar.getPhiM();
+  std::vector<uint8_t> buff(bytes);
+  for (long i = 0; i < phim; i++) {
+      const NTL::ZZ &e = NTL::coeff(poly, i);
+      BytesFromZZ(buff.data(), e, bytes);
+      str.write(reinterpret_cast<char *>(buff.data()), bytes);
+  }
+  return str;
+}
+
+std::istream& operator>> (std::istream &str, DoubleCRT &d)
+{
+  IndexSet set;
+  const FHEcontext& context = d.context;
+  long phim = context.zMStar.getPhiM();
+  seekPastChar(str, '[');
+  str >> set; // read in the indexSet
+  seekPastChar(str, ']');
+  assert(set <= (context.specialPrimes | context.ctxtPrimes));
+  d.map.clear();
+  d.map.insert(set); // fix the index set for the data
+
+  NTL::ZZX poly;
+  poly.SetLength(phim + 1);
+  double bits = context.logOfProduct(set);
+  bits /= std::log(2.0);
+  long bytes = long(std::ceil(bits) + 7) >> 3;
+  std::vector<uint8_t> buff(bytes);
+  NTL::ZZ e;
+  for (long i = 0; i < phim; i++) {
+      str.read(reinterpret_cast<char *>(buff.data()), bytes);
+      NTL::ZZFromBytes(e, buff.data(), bytes);
+      NTL::SetCoeff(poly, i, e);
+  }
+  FHE_NTIMER_START(FROM_POLY_OUTPUT);
+  d = poly;
+  FHE_NTIMER_STOP(FROM_POLY_OUTPUT);
   return str;
 }

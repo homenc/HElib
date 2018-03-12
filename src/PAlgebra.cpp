@@ -794,6 +794,40 @@ void PAlgebraModDerived<type>::decodePlaintext(
   }
 }
 
+template<class type>
+void PAlgebraModDerived<type>::decodeSomePlaintexts(std::vector<RX> &alphas,
+                                                    const RX& ptxt,
+                                                    const std::vector<long> &positions,
+                                                    const MappingData<type> &mappingData) const
+{
+  long nSlots = zMStar.getNSlots();
+  size_t nPositions = positions.size();
+  if (isDryRun()) {
+    alphas.assign(nPositions, RX::zero());
+    return;
+  }
+
+  std::vector<RX> CRTcomps(nPositions);
+  for (size_t i = 0; i < nPositions; i++)
+      rem(CRTcomps[i], ptxt, factors[positions[i]]); // CRTcomp = H % factors[positions[i]]
+
+  if (mappingData.degG == 1) {
+    alphas = CRTcomps;
+    return;
+  }
+
+  alphas.resize(nPositions);
+  REBak bak; bak.save(); mappingData.contextForG.restore();
+  for (size_t i = 0; i < nPositions; i++) {
+    REX te;
+    conv(te, CRTcomps[i]);
+    te %= mappingData.rmaps[positions[i]];
+
+    // the free term (no Y component) should be our answer (as a poly(X))
+    alphas[i] = rep(ConstTerm(te));
+  }
+}
+
 template<class type> 
 void PAlgebraModDerived<type>::
 buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,

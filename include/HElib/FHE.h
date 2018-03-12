@@ -16,7 +16,7 @@
    @file FHE.h
    @brief Public/secret keys for the BGV cryptosystem
 */
-#include <climits>
+
 #include "DoubleCRT.h"
 #include "FHEContext.h"
 #include "Ctxt.h"
@@ -81,10 +81,11 @@ class KeySwitch {
 public:
   SKHandle fromKey;  // A handle for the key s'
   long     toKeyID;  // Index of the key s that we are switching into
-  long     ptxtSpace;  // either p or p^r
+  long     ptxtSpace;  // either 2 or 2^r
 
   vector<DoubleCRT> b;  // The top row, consisting of the bi's
   ZZ prgSeed;        // a seed to generate the random ai's in the bottom row
+                     // NOTE: THIS USE OF THE NTL PRG IS NOT THREAD-SAFE 
 
   explicit
   KeySwitch(long sPow=0, long xPow=0, long fromID=0, long toID=0, long p=0):
@@ -100,7 +101,6 @@ public:
 
   //! @brief returns a dummy static matrix with toKeyId == -1
   static const KeySwitch& dummy();
-  bool isDummy() const { return (toKeyID==-1); }
 
   //! A debugging method
   void verify(FHESecKey& sk);
@@ -111,20 +111,6 @@ public:
 ostream& operator<<(ostream& str, const KeySwitch& matrix);
 // We DO NOT have istream& operator>>(istream& str, KeySwitch& matrix);
 // instead must use the readMatrix method above, where you can specify context
-
-
-#define FHE_KSS_UNKNOWN (0)
-// unknown KS strategy
-
-#define FHE_KSS_FULL    (1)
-// all KS matrices
-
-#define FHE_KSS_BSGS    (2)
-// baby step/giant step strategy
-
-#define FHE_KSS_MIN     (3)
-// minimal strategy (for g_i, and for g_i^{-ord_i} for bad dims)
-
 
 
 /**
@@ -139,17 +125,14 @@ class FHEPubKey { // The public key
   //! relative to the first secret key
   Ctxt pubEncrKey;
 
-  std::vector<long> skHwts; // The Hamming weight of the secret keys
-  std::vector<KeySwitch> keySwitching; // The key-switching matrices
+  vector<long> skHwts; // The Hamming weight of the secret keys
+  vector<KeySwitch> keySwitching; // The key-switching matrices
 
   // The keySwitchMap structure contains pointers to key-switching matrices
   // for re-linearizing automorphisms. The entry keySwitchMap[i][n] contains
   // the index j such that keySwitching[j] is the first matrix one needs to
   // use when re-linearizing s_i(X^n). 
-  std::vector< std::vector<long> > keySwitchMap;
-
-  NTL::Vec<int> KS_strategy; // NTL Vec's support I/O, which is
-                             // more convenient
+  vector< vector<long> > keySwitchMap;
 
   // bootstrapping data
 
@@ -158,12 +141,13 @@ class FHEPubKey { // The public key
 
 public:
   FHEPubKey(): // this constructor thorws run-time error if activeContext=NULL
-    context(*activeContext), pubEncrKey(*this),
-    recryptEkey(*this) { recryptKeyID=-1; } 
+    context(*activeContext), pubEncrKey(*this), recryptEkey(*this)
+      { recryptKeyID=-1; }
 
-  explicit FHEPubKey(const FHEcontext& _context): 
+  explicit
+  FHEPubKey(const FHEcontext& _context): 
     context(_context), pubEncrKey(*this), recryptEkey(*this)
-    { recryptKeyID=-1; }
+      { recryptKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
     context(other.context), pubEncrKey(*this), skHwts(other.skHwts),
@@ -179,7 +163,9 @@ public:
     keySwitching.clear(); keySwitchMap.clear();
     recryptKeyID=-1; recryptEkey.clear();
   }
-
+  void makeSymmetric() { // clear the public key and remains the key-switch data
+    pubEncrKey.clear();
+  } 
   bool operator==(const FHEPubKey& other) const;
   bool operator!=(const FHEPubKey& other) const {return !(*this==other);}
 
@@ -193,8 +179,6 @@ public:
 
   ///@{
   //! @name Find key-switching matrices
-
-  const std::vector<KeySwitch>& keySWlist() const { return keySwitching; }
 
   //! @brief Find a key-switching matrix by its indexes. 
   //! If no such matrix exists it returns a dummy matrix with toKeyID==-1.
@@ -230,25 +214,6 @@ public:
   //! See Section 3.2.2 in the design document (KeySwitchMap)
   void setKeySwitchMap(long keyId=0);  // Computes the keySwitchMap pointers
 
-  //! @brief get KS strategy for dimension dim  
-  //! dim == -1 is Frobenius
-  long getKSStrategy(long dim) const {
-    long index = dim+1;
-    assert(index >= 0);
-    if (index >= KS_strategy.length()) return FHE_KSS_UNKNOWN;
-    return KS_strategy[index];
-  }
-
-  //! @brief set KS strategy for dimension dim  
-  //! dim == -1 is Frobenius
-  long setKSStrategy(long dim, int val) {
-    long index = dim+1;
-    assert(index >= 0);
-    if (index >= KS_strategy.length()) 
-      KS_strategy.SetLength(index+1, FHE_KSS_UNKNOWN);
-    KS_strategy[index] = val;
-  }
-
   //! @brief Encrypts plaintext, result returned in the ciphertext argument.
   //! The returned value is the plaintext-space for that ciphertext. When
   //! called with highNoise=true, returns a ciphertext with noise level~q/8.
@@ -264,9 +229,6 @@ public:
 
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
-
-  // A hack to increase the plaintext space
-  void hackPtxtSpace(long p2r) { pubEncrKey.ptxtSpace = p2r; }
 };
 
 /**
@@ -318,7 +280,7 @@ public:
 
   // Decryption
   void Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt) const;
-  void Decrypt(DoubleCRT & plaintxt, const Ctxt &ciphertxt) const;
+  void Decrypt(DoubleCRT &plaintxt, const Ctxt &ciphertxt) const;
 
   //! @brief Debugging version, returns in f the polynomial
   //! before reduction modulo the ptxtSpace
@@ -338,19 +300,6 @@ public:
 //! @name Strategies for generating key-switching matrices
 //! These functions are implemented in KeySwitching.cpp
 
-//! @brief Constant defining threshold above which a baby-set/giant-step
-//! strategy is used
-#define FHE_KEYSWITCH_THRESH (50)
-
-//! @brief Constant defining threshold above which a single 
-//! giant step matrix is added even in FHE_KSS_MIN mode.
-//! This helps in the matmul routines.
-#define FHE_KEYSWITCH_MIN_THRESH (8)
-
-//! @brief Function that returns number of baby steps.  Used to keep
-//! this and matmul routines "in sync".
-long KSGiantStepSize(long D);
-
 //! @brief Maximalistic approach:
 //! generate matrices s(X^e)->s(X) for all e in Zm*
 void addAllMatrices(FHESecKey& sKey, long keyID=0);
@@ -359,33 +308,18 @@ void addAllMatrices(FHESecKey& sKey, long keyID=0);
 //! in at most two steps
 void addFewMatrices(FHESecKey& sKey, long keyID=0);
 
-//! @brief Generate some matrices of the form s(X^{g^i})->s(X), but not all.
-//! For a generator g whose order is larger than bound, generate only enough
-//! matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
-void addSome1DMatrices(FHESecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
-
 //! @brief Generate all matrices s(X^{g^i})->s(X) for generators g of
 //! Zm* /(p) and i<ord(g). If g has different orders in Zm* and Zm* /(p)
 //! then generate also matrices of the form s(X^{g^{-i}})->s(X)
-inline void add1DMatrices(FHESecKey& sKey, long keyID=0)
-{ addSome1DMatrices(sKey, LONG_MAX, keyID); }
+void add1DMatrices(FHESecKey& sKey, long keyID=0);
 
-inline void addBSGS1DMatrices(FHESecKey& sKey, long keyID=0)
-{ addSome1DMatrices(sKey, 0, keyID); }
+//! @brief Generate some matrices of the form s(X^{g^i})->s(X), but not all.
+//! For a generator g whose order is larger than bound, generate only enough
+//! matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
+void addSome1DMatrices(FHESecKey& sKey, long bound=100, long keyID=0);
 
-//! Generate all/some Frobenius matrices of the form s(X^{p^i})->s(X)
-void addSomeFrbMatrices(FHESecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
-
-inline void addFrbMatrices(FHESecKey& sKey, long keyID=0)
-{ addSomeFrbMatrices(sKey, LONG_MAX, keyID); }
-
-inline void addBSGSFrbMatrices(FHESecKey& sKey, long keyID=0)
-{ addSomeFrbMatrices(sKey, 0, keyID); }
-
-
-//! These routines just add a single matrix (or two, for bad dimensions)
-void addMinimal1DMatrices(FHESecKey& sKey, long keyID=0);
-void addMinimalFrbMatrices(FHESecKey& sKey, long keyID=0);
+//! Generate all Frobenius matrices of the form s(X^{2^i})->s(X)
+void addFrbMatrices(FHESecKey& sKey, long keyID=0);
 
 //! Generate all key-switching matrices for a given permutation network
 class PermNetwork;
