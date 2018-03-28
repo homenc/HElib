@@ -670,8 +670,8 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal)
     else
        g = KSGiantStepSize(D); // use BSGS
 
-    ea.dispatch<MatMul1DExec_construct>(mat, Fwd(cache.multiplier), 
-                                        Fwd(cache1.multiplier), g);
+    ea.dispatch<MatMul1DExec_construct>(mat, cache.multiplier, 
+                                        cache1.multiplier, g);
 }
 
 
@@ -1445,8 +1445,8 @@ BlockMatMul1DExec::BlockMatMul1DExec(
     else
       strategy = -1;
 
-    ea.dispatch<BlockMatMul1DExec_construct>(mat, Fwd(cache.multiplier), 
-                                        Fwd(cache1.multiplier), strategy);
+    ea.dispatch<BlockMatMul1DExec_construct>(mat, cache.multiplier, 
+                                        cache1.multiplier, strategy);
 }
 
 
@@ -1887,8 +1887,8 @@ MatMulFullExec::MatMulFullExec(const MatMulFull& mat, bool _minimal)
 {
   FHE_NTIMER_START(MatMulFullExec);
 
-  ea.dispatch<MatMulFullExec_construct>(ea, mat, Fwd(transforms), minimal,
-                                        Fwd(dims));
+  ea.dispatch<MatMulFullExec_construct>(ea, mat, transforms, minimal,
+                                        dims);
 }
 
 long
@@ -2218,8 +2218,8 @@ BlockMatMulFullExec::BlockMatMulFullExec(
 {
   FHE_NTIMER_START(BlockMatMulFullExec);
 
-  ea.dispatch<BlockMatMulFullExec_construct>(ea, mat, Fwd(transforms), minimal,
-                                        Fwd(dims));
+  ea.dispatch<BlockMatMulFullExec_construct>(ea, mat, transforms, minimal,
+                                        dims);
 }
 
 long
@@ -2419,7 +2419,7 @@ struct mul_MatMul1D_impl {
 void mul(NewPlaintextArray& pa, const MatMul1D& mat)
 {
   const EncryptedArray& ea = mat.getEA();
-  ea.dispatch<mul_MatMul1D_impl>(Fwd(pa), mat);
+  ea.dispatch<mul_MatMul1D_impl>(pa, mat);
 }
 
 
@@ -2482,7 +2482,7 @@ struct mul_BlockMatMul1D_impl {
 void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat)
 {
   const EncryptedArray& ea = mat.getEA();
-  ea.dispatch<mul_BlockMatMul1D_impl>(Fwd(pa), mat);
+  ea.dispatch<mul_BlockMatMul1D_impl>(pa, mat);
 }
 
 
@@ -2529,7 +2529,7 @@ struct mul_MatMulFull_impl {
 void mul(NewPlaintextArray& pa, const MatMulFull& mat)
 {
   const EncryptedArray& ea = mat.getEA();
-  ea.dispatch<mul_MatMulFull_impl>(Fwd(pa), mat);
+  ea.dispatch<mul_MatMulFull_impl>(pa, mat);
 }
 
 
@@ -2576,6 +2576,6 @@ struct mul_BlockMatMulFull_impl {
 void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat)
 {
   const EncryptedArray& ea = mat.getEA();
-  ea.dispatch<mul_BlockMatMulFull_impl>(Fwd(pa), mat);
+  ea.dispatch<mul_BlockMatMulFull_impl>(pa, mat);
 }
 

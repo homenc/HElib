@@ -712,7 +712,7 @@ public:
 
 void rotate(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
 {
-  ea.dispatch<rotate_pa_impl>(Fwd(pa), k); 
+  ea.dispatch<rotate_pa_impl>(pa, k); 
 }
 
 //=============================================================================
@@ -736,7 +736,7 @@ public:
 
 void shift(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
 {
-  ea.dispatch<shift_pa_impl>(Fwd(pa), k); 
+  ea.dispatch<shift_pa_impl>(pa, k); 
 }
 
 //=============================================================================
@@ -771,12 +771,12 @@ public:
 
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<long>& array)
 {
-  ea.dispatch<encode_pa_impl>(Fwd(pa), array); 
+  ea.dispatch<encode_pa_impl>(pa, array); 
 }
 
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<ZZX>& array)
 {
-  ea.dispatch<encode_pa_impl>(Fwd(pa), array); 
+  ea.dispatch<encode_pa_impl>(pa, array); 
 }
 
 void encode(const EncryptedArray& ea, NewPlaintextArray& pa, long val)
@@ -816,7 +816,7 @@ public:
 
 void random(const EncryptedArray& ea, NewPlaintextArray& pa)
 {
-  ea.dispatch<random_pa_impl>(Fwd(pa)); 
+  ea.dispatch<random_pa_impl>(pa); 
 }
 
 //=============================================================================
@@ -840,13 +840,13 @@ public:
 
 void decode(const EncryptedArray& ea, vector<long>& array, const NewPlaintextArray& pa)
 {
-  ea.dispatch<decode_pa_impl>(Fwd(array), pa); 
+  ea.dispatch<decode_pa_impl>(array, pa); 
 }
 
 
 void decode(const EncryptedArray& ea, vector<ZZX>& array, const NewPlaintextArray& pa)
 {
-  ea.dispatch<decode_pa_impl>(Fwd(array), pa); 
+  ea.dispatch<decode_pa_impl>(array, pa); 
 }
 
 //=============================================================================
@@ -894,14 +894,14 @@ public:
 bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const NewPlaintextArray& other)
 {
   bool res;
-  ea.dispatch<equals_pa_impl>(Fwd(res), pa, other); 
+  ea.dispatch<equals_pa_impl>(res, pa, other); 
   return res;
 }
 
 bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<long>& other)
 {
   bool res;
-  ea.dispatch<equals_pa_impl>(Fwd(res), pa, other); 
+  ea.dispatch<equals_pa_impl>(res, pa, other); 
   return res;
 }
 
@@ -909,7 +909,7 @@ bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<
 bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<ZZX>& other)
 {
   bool res;
-  ea.dispatch<equals_pa_impl>(Fwd(res), pa, other); 
+  ea.dispatch<equals_pa_impl>(res, pa, other); 
   return res;
 }
 
@@ -935,7 +935,7 @@ public:
 
 void add(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
 {
-  ea.dispatch<add_pa_impl>(Fwd(pa), other); 
+  ea.dispatch<add_pa_impl>(pa, other); 
 }
 
 //=============================================================================
@@ -960,7 +960,7 @@ public:
 
 void sub(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
 {
-  ea.dispatch<sub_pa_impl>(Fwd(pa), other); 
+  ea.dispatch<sub_pa_impl>(pa, other); 
 }
 
 //=============================================================================
@@ -985,7 +985,7 @@ public:
 
 void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
 {
-  ea.dispatch<mul_pa_impl>(Fwd(pa), other); 
+  ea.dispatch<mul_pa_impl>(pa, other); 
 }
 
 //=============================================================================
@@ -1007,7 +1007,7 @@ public:
 
 void negate(const EncryptedArray& ea, NewPlaintextArray& pa)
 {
-  ea.dispatch<negate_pa_impl>(Fwd(pa)); 
+  ea.dispatch<negate_pa_impl>(pa); 
 }
 
 //=============================================================================
@@ -1052,13 +1052,13 @@ public:
 
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j)
 {
-  ea.dispatch<frobeniusAutomorph_pa_impl>(Fwd(pa), j); 
+  ea.dispatch<frobeniusAutomorph_pa_impl>(pa, j); 
 }
 
 
 void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& vec)
 {
-  ea.dispatch<frobeniusAutomorph_pa_impl>(Fwd(pa), vec); 
+  ea.dispatch<frobeniusAutomorph_pa_impl>(pa, vec); 
 }
 
 void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e)
@@ -1103,7 +1103,7 @@ public:
 
 void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& pi)
 {
-  ea.dispatch<applyPerm_pa_impl>(Fwd(pa), pi); 
+  ea.dispatch<applyPerm_pa_impl>(pa, pi); 
 }
 
 //=============================================================================
@@ -1136,7 +1136,7 @@ public:
 
 void print(const EncryptedArray& ea, ostream& s, const NewPlaintextArray& pa)
 {
-  ea.dispatch<print_pa_impl>(Fwd(s), pa); 
+  ea.dispatch<print_pa_impl>(s, pa); 
 }
 
 
