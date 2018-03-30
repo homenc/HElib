@@ -15,7 +15,7 @@ set(NTL_LIB /usr/local/lib)
 include_directories(${NTL_HEADER})
 link_directories(${NTL_LIB})
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-## Use -std=c++11 as dedeault. 
+## Use -std=c++11 as default. 
 set(CMAKE_CXX_STANDARD 11)
 ## On old platform, might change to -std=c++0x
 #set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
