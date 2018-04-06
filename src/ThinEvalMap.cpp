@@ -1419,6 +1419,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   else
     cerr << "BAD\n";
 
+
   cerr << convert<Vec<ZZX>>(val1) << "\n";
 
   }
