@@ -470,7 +470,7 @@ void Ctxt::findBaseSet(IndexSet& s) const
   bool halfSize = context.containsSmallPrime();
   double curNoise = log(getNoiseVar())/2;
   double firstNoise = context.logOfPrime(0);
-  double noiseThreshold = log(modSwitchAddedNoiseVar())*0.55;
+  double noiseThreshold = log(modSwitchAddedNoiseVar())*0.55; 
   // FIXME: The above should have been 0.5. Making it a bit more means
   // that we will mod-switch a little less frequently, whether this is
   // a good thing needs to be tested.

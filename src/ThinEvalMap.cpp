@@ -1,3 +1,4 @@
+#include <NTL/BasicThreadPool.h>
 
 //=================== ThinEvalMap.h ================//
 
@@ -62,32 +63,6 @@ public:
 #include <NTL/lzz_pXFactoring.h>
 #include <NTL/GF2XFactoring.h>
 
-// computes the trace map
-// FIXME: should make it iterative for minimal KS strategy
-// FIXME: should make this public
-void traceMap(Ctxt& ctxt) 
-{
-  const FHEcontext& context = ctxt.getContext();
-  long d = context.zMStar.getOrdP();
-
-  Ctxt orig = ctxt;
-
-  long k = NumBits(d);
-  long e = 1;
-
-  for (long i = k-2; i >= 0; i--) {
-    Ctxt tmp1 = ctxt;
-    tmp1.frobeniusAutomorph(e);
-    ctxt += tmp1;
-    e = 2*e;
-
-    if (bit(d, i)) {
-      ctxt.frobeniusAutomorph(1);
-      ctxt += orig;
-      e += 1;
-    }
-  }
-}
 
 // needed to make generic programming work
 
@@ -828,6 +803,7 @@ struct FHEPubKeyHack { // The public key
 
 };
 
+#define PRINT_LEVELS
 
 // bootstrap a ciphertext to reduce noise
 void thinRecrypt(Ctxt &ctxt, const ThinRecryptData& rcData)
@@ -886,12 +862,20 @@ void thinRecrypt(Ctxt &ctxt, const ThinRecryptData& rcData)
   // can only bootstrap ciphertext with plaintext-space dividing p^r
   assert(p2r % ptxtSpace == 0);
 
-  // Move the slots to powerful-basis coefficients
-  FHE_NTIMER_START(slotToCoeff);
-  rcData.slotToCoeff->apply(ctxt);
-  FHE_NTIMER_STOP(slotToCoeff);
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "init");
+#endif
 
-  FHE_NTIMER_START(bootKeySwitch);
+  // Move the slots to powerful-basis coefficients
+  FHE_NTIMER_START(AAA_slotToCoeff);
+  rcData.slotToCoeff->apply(ctxt);
+  FHE_NTIMER_STOP(AAA_slotToCoeff);
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after slotToCoeff");
+#endif
+
+  FHE_NTIMER_START(AAA_bootKeySwitch);
 
   // Make sure that this ciphertxt is in canonical form
   if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
@@ -948,12 +932,21 @@ void thinRecrypt(Ctxt &ctxt, const ThinRecryptData& rcData)
   cerr << "+ Before linearTrans1 ";
   decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
-  FHE_NTIMER_STOP(bootKeySwitch);
+  FHE_NTIMER_STOP(AAA_bootKeySwitch);
+
+#ifdef PRINT_LEVELS
+   CheckCtxt(ctxt, "after bootKeySwitch");
+#endif
 
   // Move the powerful-basis coefficients to the plaintext slots
-  FHE_NTIMER_START(coeffToSlot);
+  FHE_NTIMER_START(AAA_coeffToSlot);
   rcData.coeffToSlot->apply(ctxt);
-  FHE_NTIMER_STOP(coeffToSlot);
+  FHE_NTIMER_STOP(AAA_coeffToSlot);
+
+
+#ifdef PRINT_LEVELS
+   CheckCtxt(ctxt, "after coeffToSlot");
+#endif
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After linearTrans1 ";
@@ -961,7 +954,14 @@ void thinRecrypt(Ctxt &ctxt, const ThinRecryptData& rcData)
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
+  FHE_NTIMER_START(AAA_extractDigitsThin);
   extractDigitsThin(ctxt, e-ePrime, r, ePrime);
+  FHE_NTIMER_STOP(AAA_extractDigitsThin);
+
+
+#ifdef PRINT_LEVELS
+   CheckCtxt(ctxt, "after extractDigitsThin");
+#endif
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans2 ";
@@ -971,7 +971,7 @@ void thinRecrypt(Ctxt &ctxt, const ThinRecryptData& rcData)
 
 #if 0
 
-//================== Thest_ThinEvalMap.cpp ==================//
+//================== Test_ThinEvalMap.cpp ==================//
 
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
@@ -982,7 +982,7 @@ namespace NTL {} using namespace NTL;
 #include "EvalMap.h"
 
 static bool dry = false; // a dry-run flag
-static bool noPrint = true;
+static bool noPrint = false;
 
 void  TestIt(long p, long r, long c, long _k, long w,
              long L, Vec<long>& mvec, 
@@ -1289,8 +1289,8 @@ static long mValues[][14] = {
 };
 #define num_mValues (sizeof(mValues)/(14*sizeof(long)))
 
-#define OUTER_REP (3)
-#define INNER_REP (3)
+#define OUTER_REP (1)
+#define INNER_REP (1)
 
 static bool dry = false; // a dry-run flag
 
@@ -1321,6 +1321,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 	 << ", r=" << r
 	 << ", L=" << L
 	 << ", B=" << B
+	 << ", t=" << skHwt
 	 << ", c=" << c
 	 << ", m=" << m
 	 << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
@@ -1343,7 +1344,10 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   context.makeBootstrappable(mvec, /*t=*/0, cons, build_cache);
 
   ThinRecryptData rcData;
+
+  FHE_NTIMER_START(AAA_rcDAta_init);
   rcData.init(context, mvec, 0, cons, build_cache);
+  FHE_NTIMER_STOP(AAA_rcDAta_init);
 
 
   t += GetTime();
@@ -1408,8 +1412,10 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   ea.encrypt(c1, publicKey, val1);
 
   Ctxt c2(c1);
+  CheckCtxt(c2, "before");
 
   thinRecrypt(c2, rcData);
+  CheckCtxt(c2, "after");
 
   vector<ZZX> val2;
   ea.decrypt(c2, secretKey, val2);
@@ -1420,10 +1426,11 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
     cerr << "BAD\n";
 
 
-  cerr << convert<Vec<ZZX>>(val1) << "\n";
+  //cerr << convert<Vec<ZZX>>(val1) << "\n";
 
   }
 
+  printAllTimers();
   
 }
 
@@ -1468,8 +1475,7 @@ int main(int argc, char *argv[])
   if (seed) 
     SetSeed(ZZ(seed));
 
-  // FIXME
-  //SetNumThreads(nthreads);
+  SetNumThreads(nthreads);
 
 
   if (B<=0) B=FHE_pSize;

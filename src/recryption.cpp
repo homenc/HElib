@@ -18,6 +18,8 @@
 #include "CtPtrs.h"
 #include "intraSlot.h"
 
+#define PRINT_LEVELS
+
 
 /************* Some local functions *************/
 static void x2iInSlots(ZZX& poly, long i,
@@ -233,7 +235,12 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // can only bootstrap ciphertext with plaintext-space dividing p^r
   assert(p2r % ptxtSpace == 0);
 
-  FHE_NTIMER_START(preProcess);
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "init");
+#endif
+
+  FHE_NTIMER_START(AAA_preProcess);
 
   // Make sure that this ciphertxt is in canonical form
   if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
@@ -290,12 +297,22 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   cerr << "+ Before linearTrans1 ";
   decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
-  FHE_NTIMER_STOP(preProcess);
+  FHE_NTIMER_STOP(AAA_preProcess);
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after preProcess");
+#endif
+
 
   // Move the powerful-basis coefficients to the plaintext slots
-  FHE_NTIMER_START(LinearTransform1);
+  FHE_NTIMER_START(AAA_LinearTransform1);
   ctxt.getContext().rcData.firstMap->apply(ctxt);
-  FHE_NTIMER_STOP(LinearTransform1);
+  FHE_NTIMER_STOP(AAA_LinearTransform1);
+
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after LinearTransform1");
+#endif
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After linearTrans1 ";
@@ -303,8 +320,15 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
+  FHE_NTIMER_START(AAA_extractDigitsPacked);
   extractDigitsPacked(ctxt, e-ePrime, r, ePrime,
 		      context.rcData.unpackSlotEncoding);
+  FHE_NTIMER_STOP(AAA_extractDigitsPacked);
+
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after extractDigitsPacked");
+#endif
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans2 ";
@@ -312,9 +336,14 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // Move the slots back to powerful-basis coefficients
-  FHE_NTIMER_START(LinearTransform2);
+  FHE_NTIMER_START(AAA_LinearTransform2);
   ctxt.getContext().rcData.secondMap->apply(ctxt);
-  FHE_NTIMER_STOP(LinearTransform2);
+  FHE_NTIMER_STOP(AAA_LinearTransform2);
+
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after linearTransform2");
+#endif
 }
 
 /*********************************************************************/

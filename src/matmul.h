@@ -361,6 +361,13 @@ public:
 
 };
 
+//===================================
+
+// ctxt = \sum_{i=0}^{d-1} \sigma^i(ctxt),
+//   where d = order of p mod m, and \sigma is the Frobenius map
+
+void traceMap(Ctxt& ctxt);
+
 //====================================
 
 // These routines apply linear transformation to plaintext arrays.

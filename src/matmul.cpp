@@ -2579,3 +2579,52 @@ void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat)
   ea.dispatch<mul_BlockMatMulFull_impl>(pa, mat);
 }
 
+
+//================= traceMap ====================
+
+void traceMap(Ctxt& ctxt) 
+{
+  const FHEcontext& context = ctxt.getContext();
+  const PAlgebra& zMStar = context.zMStar;
+  long d = context.zMStar.getOrdP();
+
+  if (d == 1) return;
+
+  Ctxt orig = ctxt;
+
+  long strategy = ctxt.getPubKey().getKSStrategy(-1);
+
+  if (strategy == FHE_KSS_FULL) {
+    BasicAutomorphPrecon precon(ctxt);
+    Ctxt acc(ctxt);
+
+    for (long i = 1; i < d; i++) {
+       shared_ptr<Ctxt> tmp = precon.automorph(zMStar.genToPow(-1, i));
+       acc += *tmp;
+    }
+
+    ctxt = acc;
+  }
+  else {
+
+    long k = NumBits(d);
+    long e = 1;
+
+    for (long i = k-2; i >= 0; i--) {
+      Ctxt tmp1 = ctxt;
+      tmp1.frobeniusAutomorph(e);
+      ctxt += tmp1;
+      e = 2*e;
+
+      if (bit(d, i)) {
+	ctxt.frobeniusAutomorph(1);
+	ctxt += orig;
+	e += 1;
+      }
+    }
+
+  }
+}
+
+
+

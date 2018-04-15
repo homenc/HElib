@@ -84,8 +84,8 @@ static long mValues[][14] = {
 };
 #define num_mValues (sizeof(mValues)/(14*sizeof(long)))
 
-#define OUTER_REP (3)
-#define INNER_REP (3)
+#define OUTER_REP (1)
+#define INNER_REP (1)
 
 static bool dry = false; // a dry-run flag
 
@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
   long nthreads=1;
 
   long seed=0;
-  long useCache=0;
+  long useCache=1;
 
   amap.arg("p", p, "plaintext base");
 
