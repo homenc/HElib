@@ -2582,6 +2582,10 @@ void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat)
 
 //================= traceMap ====================
 
+#define FHE_TRACE_THRESH (50)
+// This should probably just be the same as FHE_KEYSWITCH_THRESH,
+// but it can be adjusted.
+
 void traceMap(Ctxt& ctxt) 
 {
   const FHEcontext& context = ctxt.getContext();
@@ -2594,16 +2598,73 @@ void traceMap(Ctxt& ctxt)
 
   long strategy = ctxt.getPubKey().getKSStrategy(-1);
 
-  if (strategy == FHE_KSS_FULL) {
+  if (strategy == FHE_KSS_FULL && d <= FHE_TRACE_THRESH) {
     BasicAutomorphPrecon precon(ctxt);
     Ctxt acc(ctxt);
 
-    for (long i = 1; i < d; i++) {
+    for (long i: range(1, d)) {
        shared_ptr<Ctxt> tmp = precon.automorph(zMStar.genToPow(-1, i));
        acc += *tmp;
     }
 
     ctxt = acc;
+  }
+  else if (strategy == FHE_KSS_MIN) {
+    if (d <= FHE_KEYSWITCH_MIN_THRESH) {
+      // simple iterative procedure
+
+      Ctxt acc(ctxt);
+      for (long i: range(1, d)) {
+         acc.frobeniusAutomorph(1);
+         acc += ctxt;
+      }
+      ctxt = acc;
+    }
+    else {
+      long g = KSGiantStepSize(d);
+      long q = d/g;
+      long r = d - g*q; // d = g*q + r 
+
+      if (r == 0) {
+	// baby step / giant step w/ no remainder
+
+	// compute baby_sum = sum_{i=0}^{g-1} \sigma^i(ctxt)
+	Ctxt baby_sum(ctxt);
+	for (long i: range(1, g)) {
+	  baby_sum.frobeniusAutomorph(1);
+	  baby_sum += ctxt;
+	}
+
+	Ctxt acc(baby_sum);
+	for (long i: range(1, q)) {
+	  acc.frobeniusAutomorph(g);
+	  acc += baby_sum;
+	}
+
+        ctxt = acc;
+      }
+      else {
+	// baby step / giant step w/ remainder
+
+	// compute baby_sum = sum_{i=0}^{g-1} \sigma^i(ctxt)
+        //   and store rem_sum = sum_{i=0}^{r-1} \sigma^i(ctxt)
+	Ctxt baby_sum(ctxt);
+        Ctxt rem_sum(ZeroCtxtLike, ctxt);
+	for (long i: range(1, g)) {
+	  if (i == r) rem_sum = baby_sum;
+	  baby_sum.frobeniusAutomorph(1);
+	  baby_sum += ctxt;
+	}
+
+	Ctxt acc(rem_sum);
+	for (long i: range(q)) {
+	  acc.frobeniusAutomorph(g);
+	  acc += baby_sum;
+	}
+
+        ctxt = acc;
+      }
+    }
   }
   else {
 
