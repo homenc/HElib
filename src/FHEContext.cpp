@@ -13,6 +13,7 @@
 #include "FHEContext.h"
 #include "EvalMap.h"
 #include "powerful.h"
+#include "binio.h"
 
 using namespace std;
 
@@ -361,23 +362,10 @@ bool FHEcontext::operator==(const FHEcontext& other) const
   return true;
 }
 
-// THis struct at the mo doesn't need to be in header.
-struct BinaryHeader {
-  uint8_t structId[4];
-  uint8_t version[4] = {0, 0, 0, 1};
-  uint64_t id;
-  uint64_t payloadSize;
-};
-
 
 void writeContextBaseBinary(ostream& str, const FHEcontext& context)
 {
-  //Header
-  BinaryHeader bh;
-  memcpy(bh.structId, "BASE", 4);
-  bh.id = 0;
-  bh.payloadSize = 0;  
-  str.write(reinterpret_cast<char*>(&bh), sizeof(bh));
+  writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
 
   //Payload
   long tmp = context.zMStar.getP();
@@ -394,14 +382,15 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
     tmp = context.zMStar.OrderOf(i);
     str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
   }
+
+  writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
+
 }
 
 void readContextBaseBinary(istream& str, FHEcontext*& context)
 {
   
-  BinaryHeader bh;
-  str.read(reinterpret_cast<char*>(&bh), sizeof(bh));
-//  cerr << "BinaryHeader Read in." << endl;
+  readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
     
   unsigned long m, p, r, numOfGens;
   str.read(reinterpret_cast<char*>(&p), sizeof(p)); 
@@ -422,20 +411,16 @@ void readContextBaseBinary(istream& str, FHEcontext*& context)
  //   cout << "ord" << ords[i] << endl;
   }
   
+  readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
+
   context = new FHEcontext(m, p, r, gens, ords);
-//  cout << "context created." << endl;
 
 }
 
 void writeContextBinary(ostream& str, const FHEcontext& context)
 {
   
-  //Header
-  BinaryHeader bh;
-  memcpy(bh.structId, "CONT", 4);
-  bh.id = 0;
-  bh.payloadSize = 0;  
-  str.write(reinterpret_cast<char*>(&bh), sizeof(bh));
+  writeEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
 
   // standard-deviation 
   double tmpDouble = to_double(context.stdev);
@@ -491,18 +476,14 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
   bool tmpBool = context.rcData.conservative;
   str.write(reinterpret_cast<char*>(&tmpBool), sizeof(tmpBool));
 
+  writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
-
-
 
 
 void readContextBinary(istream& str, FHEcontext& context)
 {
+  readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
 
-  BinaryHeader bh;
-  str.read(reinterpret_cast<char*>(&bh), sizeof(bh));
-//  cout << "BinaryHeader Read in."  << endl;
- 
   // Get the standard deviation
   double tmpDouble;
   str.read(reinterpret_cast<char*>(&tmpDouble), sizeof(tmpDouble));
@@ -579,6 +560,7 @@ void readContextBinary(istream& str, FHEcontext& context)
   }
 //  cout << "mv, t, consFlag Read in." << endl;
 
+  readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
 
 void writeContextBase(ostream& str, const FHEcontext& context)

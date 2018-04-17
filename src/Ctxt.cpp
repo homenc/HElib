@@ -1082,6 +1082,7 @@ void Ctxt::reduce() const
 
 void Ctxt::write(ostream& str) const
 {
+  writeEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
   
   /*  Writing out in binary:
     1.  long ptxtSpace
@@ -1096,10 +1097,13 @@ void Ctxt::write(ostream& str) const
   write_raw_vector(str, parts);    
 //  cerr << "[Ctxt::write] ctxtparts: " << parts << endl;
  
+  writeEyeCatcher(str, BINIO_EYE_CTXT_END);
 }
 
 void Ctxt::read(istream& str)
 {
+
+  readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
   
   read_raw_long(str, ptxtSpace);
   read_raw_xdouble(str, noiseVar); 
@@ -1108,6 +1112,7 @@ void Ctxt::read(istream& str)
   read_raw_vector(str, parts, blankCtxtPart);    
 //  cerr << "[Ctxt::read] ctxtparts: " << parts << endl;
 
+  readEyeCatcher(str, BINIO_EYE_CTXT_END);
 }
 
 void CtxtPart::write(ostream& str)

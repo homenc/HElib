@@ -216,6 +216,7 @@ void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
 
 void KeySwitch::write(ostream& str) const
 {
+  writeEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
 /*  
     Write out raw
     1. SKHandle fromKey; 
@@ -239,12 +240,15 @@ void KeySwitch::write(ostream& str) const
 //  unsigned char zzBytes[noBytes];
 //  BytesFromZZ(zzBytes, prgSeed, noBytes);
 //  str.write(reinterpret_cast<char*>(zzBytes), noBytes); 
-//  cerr << "[PORK] Complete\n";
+
+  writeEyeCatcher(str, BINIO_EYE_SKM_END);
 }
 
 void KeySwitch::read(istream& str, const FHEcontext& context)
 {
-  
+   
+  readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
+
   fromKey.read(str);
   read_raw_long(str, toKeyID);
   read_raw_long(str, ptxtSpace);
@@ -253,6 +257,7 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
   
   read_raw_ZZ(str, prgSeed);
 
+  readEyeCatcher(str, BINIO_EYE_SKM_END);
 }
 
 
@@ -574,6 +579,9 @@ istream& operator>>(istream& str, FHEPubKey& pk)
       
 void writePubKeyBinary(ostream& str, const FHEPubKey& pk) 
 {
+
+  writeEyeCatcher(str, BINIO_EYE_PK_BEGIN);  
+
 // Write out for FHEPubKey
 //  1. Context Base 
 //  2. Ctxt pubEncrKey;
@@ -602,10 +610,12 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
   write_raw_long(str, pk.recryptKeyID);
   pk.recryptEkey.write(str);
 
+  writeEyeCatcher(str, BINIO_EYE_PK_END);
 }
 
 void readPubKeyBinary(istream& str, FHEPubKey& pk)
 {
+  readEyeCatcher(str, BINIO_EYE_PK_BEGIN);  
  
   // TODO code to check context object is what it should be 
   // same as the text IO.
@@ -631,6 +641,8 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
 
   read_raw_long(str, pk.recryptKeyID);
   pk.recryptEkey.read(str);
+
+  readEyeCatcher(str, BINIO_EYE_PK_END);
 
 }
 
@@ -911,6 +923,9 @@ istream& operator>>(istream& str, FHESecKey& sk)
 
 void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
 {
+
+  writeEyeCatcher(str, BINIO_EYE_SK_BEGIN);
+
 // N.B. This does not write out the public key part as the ASCII version does!!!
 
 // Write out 
@@ -918,14 +933,19 @@ void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
 
   write_raw_vector<DoubleCRT>(str, sk.sKeys); 
 
+  writeEyeCatcher(str, BINIO_EYE_SK_END);
 }
 
 void readSecKeyBinary(istream& str, FHESecKey& sk)
 {
+
+  readEyeCatcher(str, BINIO_EYE_SK_BEGIN);
+
 // N.B. This does not write out the public key part as the ASCII version does!!!
   
   DoubleCRT blankDCRT(sk.context, IndexSet::emptySet());
   read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
   
+  readEyeCatcher(str, BINIO_EYE_SK_END);
 }
 

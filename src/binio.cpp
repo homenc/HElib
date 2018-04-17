@@ -10,51 +10,83 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
+#include <cstring>
 #include "binio.h"
 
 /* Some utility functions for binary IO */
 
-void write_ntl_vec_long(ostream& str, const vec_long& vl)
+int readEyeCatcher(istream& str, const char * expect)
 {
-  
-  long sizeOfVL = vl.length();
-  str.write(reinterpret_cast<char*>(&sizeOfVL), sizeof(sizeOfVL)); 
+  char eye[BINIO_EYE_SIZE];
+  str.read(eye, BINIO_EYE_SIZE); 
+  return memcmp(eye, expect, BINIO_EYE_SIZE);
+}
 
-  for(long i=0, tmp=0; i<sizeOfVL; i++){ 
-    tmp=vl[i];
-    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp)); 
-//    cerr << "[write ntl vec long] value:" << tmp << endl;
+void writeEyeCatcher(ostream& str, const char* eyeStr)
+{
+  char eye[BINIO_EYE_SIZE];
+  memcpy(eye, eyeStr, BINIO_EYE_SIZE);
+  str.write(eye, BINIO_EYE_SIZE);
+}
+
+// compile only 64-bit (-m64) therefore long must be at least 64-bit
+long read_raw_int(istream& str, long intSize)
+{
+  long result = 0;
+  char byte;
+
+  for(long i=0; i<intSize; i++){
+    str.read(&byte, 1); // read a byte
+    result |= (static_cast<long>(byte)&0xff) << i*8; // must be in little endian
+  }
+
+  return result;
+}
+
+// compile only 64-bit (-m64) therefore long must be at least 64-bit
+void write_raw_int(ostream& str, long num, long intSize) 
+{
+  char byte;
+
+  for(long i=0; i<intSize; i++){
+    byte = num >> 8*i; // serializing in little endian
+    str.write(&byte, 1);  // write byte out
+  }
+}
+
+void write_ntl_vec_long(ostream& str, const vec_long& vl, long intSize)
+{
+  write_raw_int(str, vl.length(), BINIO_32BIT); 
+  write_raw_int(str, intSize, BINIO_32BIT); 
+
+  for(long i=0, tmp; i<vl.length(); i++){
+    write_raw_int(str, vl[i], intSize); 
   }
 }
 
 void read_ntl_vec_long(istream& str, vec_long& vl)
 {
-  long sizeOfVL;
-  str.read(reinterpret_cast<char*>(&sizeOfVL), sizeof(sizeOfVL)); 
-//  cerr << "[read ntl vec long] size of vec long " << sizeOfVL << endl;
+  long sizeOfVL = read_raw_int(str, BINIO_32BIT);
+  long intSize  = read_raw_int(str, BINIO_32BIT);
 
-  // Remeber to check and increase Vec before trying to fill it.
+  // Remember to check and increase Vec before trying to fill it.
   if(vl.length() < sizeOfVL){
     vl.SetLength(sizeOfVL);
   }
 
-  for(long i=0, tmp=0; i<sizeOfVL; i++){
-    str.read(reinterpret_cast<char*>(&tmp), sizeof(tmp)); 
-    vl[i] = tmp;
-//    cerr << "[read ntl vec long] value:" << vl[i] << endl;
+  for(long i=0, tmp; i<sizeOfVL; i++){
+    vl[i] = read_raw_int(str, intSize);
   }
 }
 
 void write_raw_long(ostream& str, long n)
 {  
   str.write(reinterpret_cast<char*>(&n), sizeof(n)); 
-//  cerr << "Look at what I am writting out:" << n << endl;
 }
 
 void read_raw_long(istream& str, long& n)
 {  
   str.read(reinterpret_cast<char*>(&n), sizeof(n)); 
-//  cerr << "Look at what I am reading in:" << n << endl;
 }
 
 
@@ -62,71 +94,61 @@ void write_raw_xdouble(ostream& str, const xdouble xd)
 {
   
   double m = xd.mantissa();
-  long e = xd. exponent();
+  long e = xd.exponent();
 
-  str.write(reinterpret_cast<char*>(&m), sizeof(m)); 
-  str.write(reinterpret_cast<char*>(&e), sizeof(e)); 
-  
+  long *pm = reinterpret_cast<long*>(&m); 
+  write_raw_int(str, *pm);
+  write_raw_int(str, e);
 }
 
 void read_raw_xdouble(istream& str, xdouble& xd)
 {
 
-  double m;
-  long e;
+  long m = read_raw_int(str);
+  long e = read_raw_int(str);
+  double* pm = reinterpret_cast<double*>(&m);
 
-  str.read(reinterpret_cast<char*>(&m), sizeof(m)); 
-  str.read(reinterpret_cast<char*>(&e), sizeof(e)); 
-
-  xd = xdouble(m,e);
+  xd = xdouble(*pm,e);
 
 }
 
 void write_raw_ZZ(ostream& str, const ZZ& zz)
 {
   long noBytes = NumBytes(zz);
-//  cerr << "Number of bytes: " << noBytes << endl;
   assert(noBytes > 0);
   unsigned char zzBytes[noBytes];
-  // From ZZ.h
-  BytesFromZZ(zzBytes, zz, noBytes);
-  str.write(reinterpret_cast<char*>(&noBytes), sizeof(noBytes)); 
+  BytesFromZZ(zzBytes, zz, noBytes); // From ZZ.h
+  write_raw_int(str, noBytes); 
+  // TODO
   str.write(reinterpret_cast<char*>(zzBytes), noBytes); 
-  
-//  cerr << "[PORK] Write Complete\n";
 }
 
 void read_raw_ZZ(istream& str, ZZ& zz)
 {
-  long noBytes = 0;
-//  cerr << "Number of bytes: " << noBytes << endl;
-  str.read(reinterpret_cast<char*>(&noBytes), sizeof(noBytes)); 
+  long noBytes = read_raw_int(str);
   assert(noBytes > 0);
   unsigned char zzBytes[noBytes];
+  // TODO  
   str.read(reinterpret_cast<char*>(zzBytes), noBytes); 
   zz = ZZFromBytes(zzBytes, noBytes);
-
-//  cerr << "[PORK] Read Complete\n";
 }
-
 
 template<> void read_raw_vector<long>(istream& str, vector<long>& v)
 {
 
-  long sz; 
-  str.read(reinterpret_cast<char*>(&sz), sizeof(sz)); 
+  long sz = read_raw_int(str);
   v.resize(sz); // Make space in vector
 
-  for(long i=0, n=0; i<sz; v[i]=n, i++)
-    str.read(reinterpret_cast<char*>(&n), sizeof(n)); 
+  for(long i=0; i<sz; i++)
+    v[i] = read_raw_int(str); 
     
 };
 
 template<> void write_raw_vector<long>(ostream& str, const vector<long>& v)
 {
   long sz = v.size();  
-  str.write(reinterpret_cast<char*>(&sz), sizeof(sz)); 
+  write_raw_int(str, sz); 
 
   for(long n: v)
-    str.write(reinterpret_cast<char*>(&n), sizeof(n)); 
+    write_raw_int(str, n); 
 };
