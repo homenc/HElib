@@ -101,14 +101,14 @@ void write_raw_xdouble(ostream& str, const xdouble xd)
   write_raw_int(str, e);
 }
 
-void read_raw_xdouble(istream& str, xdouble& xd)
+xdouble read_raw_xdouble(istream& str)
 {
 
   long m = read_raw_int(str);
   long e = read_raw_int(str);
   double* pm = reinterpret_cast<double*>(&m);
 
-  xd = xdouble(*pm,e);
+  return xdouble(*pm,e);
 
 }
 

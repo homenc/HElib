@@ -227,19 +227,12 @@ void KeySwitch::write(ostream& str) const
 */
 
   fromKey.write(str);
-  write_raw_long(str, toKeyID);
-  write_raw_long(str, ptxtSpace);
+  write_raw_int(str, toKeyID);
+  write_raw_int(str, ptxtSpace);
 
   write_raw_vector(str, b);
   
   write_raw_ZZ(str, prgSeed);
-
-//  long noBytes = NumBytes(prgSeed);
-////  cerr << "Number of bytes: " << noBytes << endl;
-//  assert(noBytes > 0);
-//  unsigned char zzBytes[noBytes];
-//  BytesFromZZ(zzBytes, prgSeed, noBytes);
-//  str.write(reinterpret_cast<char*>(zzBytes), noBytes); 
 
   writeEyeCatcher(str, BINIO_EYE_SKM_END);
 }
@@ -250,8 +243,8 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
   readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
 
   fromKey.read(str);
-  read_raw_long(str, toKeyID);
-  read_raw_long(str, ptxtSpace);
+  toKeyID = read_raw_int(str);
+  ptxtSpace = read_raw_int(str);
   DoubleCRT blankDCRT(context, IndexSet::emptySet());
   read_raw_vector(str, b, blankDCRT);
   

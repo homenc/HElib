@@ -58,7 +58,7 @@ long read_raw_int(istream& str, long intSize=BINIO_64BIT);
 void write_raw_int(ostream& str, long num, long intSize=BINIO_64BIT);
 
 void write_raw_xdouble(ostream& str, const xdouble xd);
-void read_raw_xdouble(istream& str, xdouble& xd);
+xdouble read_raw_xdouble(istream& str);
 
 void write_raw_ZZ(ostream& str, const ZZ& zz);
 void read_raw_ZZ(istream& str, ZZ& zz);

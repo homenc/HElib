@@ -11,6 +11,7 @@
  */
 
 #include "IndexSet.h"
+#include "binio.h"
 
 const IndexSet& IndexSet::emptySet()
 {
@@ -255,30 +256,26 @@ istream& operator >> (istream& str, IndexSet& set)
 
 void IndexSet::write(ostream& str) const 
 {
-
   // Size of Set
-  long sizeOfS = this->card();
-  str.write(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));  
+  write_raw_int(str, this->card());
  
   // The data itself
   for(long n = this->first();
        n <= this->last(); 
        n = this->next(n)){
-    str.write(reinterpret_cast<char*>(&n), sizeof(n));
+    write_raw_int(str, n);
   }
 
 }
 
-void IndexSet::read(istream& str){
-
+void IndexSet::read(istream& str)
+{
   // Size of Set
-  long sizeOfS;
-  str.read(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));  
- 
+  long sizeOfS = read_raw_int(str); 
+
   // The data itself
-  long n;
-  for(long i=0; i<sizeOfS; i++){     
-    str.read(reinterpret_cast<char*>(&n), sizeof(n));
+  for(long i=0, n; i<sizeOfS; i++){     
+    n = read_raw_int(str); 
     this->insert(n);  
   }
   

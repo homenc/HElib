@@ -1106,11 +1106,10 @@ void Ctxt::read(istream& str)
   readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
   
   read_raw_long(str, ptxtSpace);
-  read_raw_xdouble(str, noiseVar); 
+  noiseVar = read_raw_xdouble(str); 
   primeSet.read(str); 
   CtxtPart blankCtxtPart(context, IndexSet::emptySet());
   read_raw_vector(str, parts, blankCtxtPart);    
-//  cerr << "[Ctxt::read] ctxtparts: " << parts << endl;
 
   readEyeCatcher(str, BINIO_EYE_CTXT_END);
 }

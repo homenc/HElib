@@ -367,20 +367,14 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
 {
   writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
 
-  //Payload
-  long tmp = context.zMStar.getP();
-  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-  tmp = context.alMod.getR();
-  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-  tmp = context.zMStar.getM();
-  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-  tmp = context.zMStar.numOfGens();   
-  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-  for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
-    tmp = context.zMStar.ZmStarGen(i);
-    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-    tmp = context.zMStar.OrderOf(i);
-    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  write_raw_int(str, context.zMStar.getP());
+  write_raw_int(str, context.alMod.getR());
+  write_raw_int(str, context.zMStar.getM());
+  write_raw_int(str, context.zMStar.numOfGens());
+
+  for(long i=0; i<(long) context.zMStar.numOfGens(); i++) {
+    write_raw_int(str, context.zMStar.ZmStarGen(i));
+    write_raw_int(str, context.zMStar.OrderOf(i));
   }
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
@@ -392,23 +386,18 @@ void readContextBaseBinary(istream& str, FHEcontext*& context)
   
   readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
     
-  unsigned long m, p, r, numOfGens;
-  str.read(reinterpret_cast<char*>(&p), sizeof(p)); 
-//  cout << "p Read in." << p << endl;
-  str.read(reinterpret_cast<char*>(&r), sizeof(r)); 
-//  cout << "r Read in." << r << endl;
-  str.read(reinterpret_cast<char*>(&m), sizeof(m)); 
-//  cout << "m Read in." << m << endl;
-  str.read(reinterpret_cast<char*>(&numOfGens), sizeof(numOfGens)); 
-//  cout << "num of gens Read in." << numOfGens << endl;
-  
+  unsigned long p = read_raw_int(str);
+  unsigned long r = read_raw_int(str);
+  unsigned long m = read_raw_int(str);
+  unsigned long numOfGens = read_raw_int(str);
+
+  //TODO - Simplified? May need to change write method  
+
   vector<long> gens(numOfGens), ords(numOfGens);
   for (unsigned long i=0; i<numOfGens; i++) {
- //   cout << "gens and ords reading ..." << endl;
-    str.read(reinterpret_cast<char*>(&gens[i]), sizeof(gens[i])); 
- //   cout << "gen" << gens[i] << endl;
-    str.read(reinterpret_cast<char*>(&ords[i]), sizeof(ords[i])); 
- //   cout << "ord" << ords[i] << endl;
+    gens[i] = read_raw_int(str);
+    ords[i] = read_raw_int(str);
+
   }
   
   readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
@@ -423,58 +412,45 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
 
   // standard-deviation 
-  double tmpDouble = to_double(context.stdev);
-  str.write(reinterpret_cast<char*>(&tmpDouble), sizeof(tmpDouble));
+  write_raw_xdouble(str, context.stdev);
    
-  long sizeOfS = context.specialPrimes.card();
-//  cerr << "Writing sizeOfS " << sizeOfS << endl;
-  str.write(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));
+  write_raw_int(str, context.specialPrimes.card());
 
   long tmp;
   // the "special" index 
-  //for (tmp = context.specialPrimes.next(context.specialPrimes.first()); 
   for(tmp = context.specialPrimes.first();
       tmp <= context.specialPrimes.last(); 
       tmp = context.specialPrimes.next(tmp)){
-    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-//    cerr << "specialPrimes loop " << tmp << endl;
+    write_raw_int(str, tmp);
   }
 
   // output the primes in the chain
-  tmp = context.moduli.size();
-//  cerr << "Moduli " << tmp << endl;
+  write_raw_int(str, context.moduli.size());
 
-  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
   for (long i=0; i<(long)context.moduli.size(); i++){
-    tmp = context.moduli[i].getQ();
-    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+    write_raw_int(str, context.moduli[i].getQ());
   }
 
   // output the digits
-  tmp = context.digits.size();
-  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-  for (long i=0; i<(long)context.digits.size(); i++){
-    sizeOfS = context.digits[i].card();
-    str.write(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));
+  write_raw_int(str, context.digits.size());
+
+  for(long i=0; i<(long)context.digits.size(); i++){
+    write_raw_int(str, context.digits[i].card());
     for(tmp = context.digits[i].first();
          tmp <= context.digits[i].last(); 
          tmp = context.digits[i].next(tmp)){
-      str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-//      cerr << "digits loop " << tmp << endl;
+      write_raw_int(str, tmp);
     }
   }
 
-  tmp = context.rcData.mvec.length();
-  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+  write_raw_int(str, context.rcData.mvec.length());
+
   for (long i=0; i<(long)context.rcData.mvec.length();i++){
-    tmp = context.rcData.mvec[i];
-    str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
+    write_raw_int(str, context.rcData.mvec[i]);
   }
 
-  tmp = context.rcData.hwt;
-  str.write(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-  bool tmpBool = context.rcData.conservative;
-  str.write(reinterpret_cast<char*>(&tmpBool), sizeof(tmpBool));
+  write_raw_int(str, context.rcData.hwt);
+  write_raw_int(str, context.rcData.conservative);
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
@@ -485,34 +461,25 @@ void readContextBinary(istream& str, FHEcontext& context)
   readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
 
   // Get the standard deviation
-  double tmpDouble;
-  str.read(reinterpret_cast<char*>(&tmpDouble), sizeof(tmpDouble));
-  context.stdev = tmpDouble;
-//  cout << "Std Deviation Read in. " << tmpDouble<< endl;
+  context.stdev = read_raw_xdouble(str);
 
-  long sizeOfS;
-  str.read(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));
-//  cout << "sizeOfS Read in. " << sizeOfS << endl;
+  long sizeOfS = read_raw_int(str);
 
   IndexSet s;
   long tmp;
   for(long i=0; i<sizeOfS; i++){
-    str.read(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-//    cerr << "specialPrimes loop " << tmp << endl;
+    tmp = read_raw_int(str);
     s.insert(tmp);
   }
-//  cout << "IndexSet s Read in. " << endl;
 
   context.moduli.clear();
   context.specialPrimes.clear();
   context.ctxtPrimes.clear();
 
-  long nPrimes;
-  str.read(reinterpret_cast<char*>(&nPrimes), sizeof(nPrimes));
-//  cout << "number of primes Read in. " << nPrimes << endl;
+  long nPrimes = read_raw_int(str);
 
   for (long p,i=0; i<nPrimes; i++) {
-    str.read(reinterpret_cast<char*>(&p), sizeof(p));
+    p = read_raw_int(str);
 
     context.moduli.push_back(Cmodulus(context.zMStar,p,0));
 
@@ -522,43 +489,32 @@ void readContextBinary(istream& str, FHEcontext& context)
       context.ctxtPrimes.insert(i);    // ciphertext prime
   }
   
-//  cout << "Primes Read in." << endl;
+  long nDigits = read_raw_int(str);
 
-  // read in the partition to digits
-  long nDigits;
-  str.read(reinterpret_cast<char*>(&nDigits), sizeof(nDigits));
   context.digits.resize(nDigits);
   for(long i=0; i<(long)context.digits.size(); i++){
-    str.read(reinterpret_cast<char*>(&sizeOfS), sizeof(sizeOfS));
-//    cout << "sizeOfS in digits loop." << sizeOfS<< endl;
+    sizeOfS = read_raw_int(str);
+
     for(long n=0; n<sizeOfS; n++){
-      str.read(reinterpret_cast<char*>(&tmp), sizeof(tmp));
-//      cout << "digit in digits loop." << tmp<< endl;
+      tmp = read_raw_int(str);
       context.digits[i].insert(tmp);
     }
   }
-//  cout << "Primes Read in digits." << endl;
 
   // Read in the partition of m into co-prime factors (if bootstrappable)
   Vec<long> mv;
-  long t;
-  bool consFlag;
-  long nMV; 
-  str.read(reinterpret_cast<char*>(&nMV), sizeof(nMV));
+  long nMV = read_raw_int(str);
   mv.SetLength(nMV);
   for(long i=0; i<nMV; i++){    
-    str.read(reinterpret_cast<char*>(&mv[i]), sizeof(mv[i]));
+    mv[i] = read_raw_int(str);
   }
 
-//  cout << "MV Read in." << endl;
+  long t = read_raw_int(str);
+  bool consFlag = read_raw_int(str);  
 
-  str.read(reinterpret_cast<char*>(&t), sizeof(t));
-  str.read(reinterpret_cast<char*>(&consFlag), sizeof(consFlag));
-  
   if (mv.length()>0) {
     context.makeBootstrappable(mv, t, consFlag);
   }
-//  cout << "mv, t, consFlag Read in." << endl;
 
   readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
