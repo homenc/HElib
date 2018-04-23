@@ -51,9 +51,6 @@ void writeEyeCatcher(ostream& str, const char* eye);
 void write_ntl_vec_long(ostream& str, const vec_long& vl, long intSize=BINIO_64BIT);
 void read_ntl_vec_long(istream& str, vec_long& vl);
 
-void write_raw_long(ostream& str, long n);
-void read_raw_long(istream& str, long& n);
-
 long read_raw_int(istream& str, long intSize=BINIO_64BIT);
 void write_raw_int(ostream& str, long num, long intSize=BINIO_64BIT);
 

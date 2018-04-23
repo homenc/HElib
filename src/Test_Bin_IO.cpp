@@ -20,6 +20,11 @@
 #include "timing.h"
 #include "EncryptedArray.h"
 
+int isLittleEndian()
+{
+    int i=1;
+    return *reinterpret_cast<char *>(&i);
+}
 
 long compareFiles(string filename1, string filename2){
 
@@ -260,6 +265,59 @@ int main(int argc, char *argv[])
 
   cout << "Test successful.\n\n";
 
+}
+
+// Read in binary from opposite little endian and print ASCII and compare.
+{
+  cout << "Test to read binary file and write it out as ASCII" << endl;
+ 
+  string otherEndianFileIn = isLittleEndian()?"iotest_binBE.bin":"iotest_binLE.bin";
+  string otherEndianFileOut = "iotest_ascii3.txt";  
+
+  ifstream inFile(otherEndianFileIn, ios::binary);
+  ofstream outFile(otherEndianFileOut);
+  
+  // Read in context,
+  FHEcontext* context;
+
+  readContextBaseBinary(inFile, context);  
+  readContextBinary(inFile, *context);  
+
+  // Read in SecKey and PubKey.
+  // Got to insert pubKey into seckey obj first.
+  FHESecKey* secKey = new FHESecKey(*context);
+  FHEPubKey* pubKey = secKey;
+  
+  readPubKeyBinary(inFile, *pubKey);
+//  readSecKeyBinary(inFile, *secKey);
+// 
+//  // ASCII 
+//  cout << "\tWriting other endian file." << endl;
+//  writeContextBase(outFile, *context);
+//  outFile << *context << endl << endl;
+//  outFile << *pubKey << endl << endl;
+//  outFile << *secKey << endl << endl;
+//
+//  inFile.close();
+//  outFile.close();
+//
+//  cout << "Test successful.\n\n";
+//
+//  // Compare byte-wise the two ASCII files
+//
+//  cout << "Comparing the two ASCII files\n"; 
+//  
+//  long differ = compareFiles(asciiFile1, otherEndianFileOut); 
+//
+//  if(differ != 0){
+//    cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
+//    cout << "Test failed.\n";
+//    exit(EXIT_FAILURE);
+//  } else {
+//    cout << "\tSUCCESS - Files are identical.\n";
+//  }
+//
+//  cout << "Test successful.\n\n";
 }
 
   return 0;

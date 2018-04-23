@@ -594,13 +594,13 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
   write_raw_vector(str, pk.keySwitching);
 
   long sz = pk.keySwitchMap.size();
-  write_raw_long(str, sz);
+  write_raw_int(str, sz);
   for(auto v: pk.keySwitchMap)
     write_raw_vector(str, v);
 
   write_ntl_vec_long(str, pk.KS_strategy); 
 
-  write_raw_long(str, pk.recryptKeyID);
+  write_raw_int(str, pk.recryptKeyID);
   pk.recryptEkey.write(str);
 
   writeEyeCatcher(str, BINIO_EYE_PK_END);
@@ -623,8 +623,7 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   // TODO Keyswitch Matrices
   read_raw_vector(str, pk.keySwitching, pk.context);
 
-  long sz; 
-  read_raw_long(str, sz);
+  long sz = read_raw_int(str);
   pk.keySwitchMap.clear();
   pk.keySwitchMap.resize(sz);
   for(auto& v: pk.keySwitchMap)
@@ -632,7 +631,7 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
 
   read_ntl_vec_long(str, pk.KS_strategy); 
 
-  read_raw_long(str, pk.recryptKeyID);
+  pk.recryptKeyID = read_raw_int(str);
   pk.recryptEkey.read(str);
 
   readEyeCatcher(str, BINIO_EYE_PK_END);

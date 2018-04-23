@@ -79,16 +79,6 @@ void read_ntl_vec_long(istream& str, vec_long& vl)
   }
 }
 
-void write_raw_long(ostream& str, long n)
-{  
-  str.write(reinterpret_cast<char*>(&n), sizeof(n)); 
-}
-
-void read_raw_long(istream& str, long& n)
-{  
-  str.read(reinterpret_cast<char*>(&n), sizeof(n)); 
-}
-
 
 void write_raw_xdouble(ostream& str, const xdouble xd)
 {

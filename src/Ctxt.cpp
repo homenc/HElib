@@ -17,16 +17,16 @@
 
 void SKHandle::read(istream& str)
 {
-  read_raw_long(str, powerOfS);
-  read_raw_long(str, powerOfX);
-  read_raw_long(str, secretKeyID);
+  powerOfS = read_raw_int(str);
+  powerOfX = read_raw_int(str);
+  secretKeyID = read_raw_int(str);
 }
  
 void SKHandle::write(ostream& str) const
 {
-  write_raw_long(str, powerOfS);
-  write_raw_long(str, powerOfX);
-  write_raw_long(str, secretKeyID);
+  write_raw_int(str, powerOfS);
+  write_raw_int(str, powerOfX);
+  write_raw_int(str, secretKeyID);
 }
 
 // A hack for recording required automorphisms (see NumbTh.h)
@@ -1091,11 +1091,10 @@ void Ctxt::write(ostream& str) const
     4.  vector<CtxtPart> parts;
   */  
   
-  write_raw_long(str, ptxtSpace);
+  write_raw_int(str, ptxtSpace);
   write_raw_xdouble(str, noiseVar);
   primeSet.write(str);
   write_raw_vector(str, parts);    
-//  cerr << "[Ctxt::write] ctxtparts: " << parts << endl;
  
   writeEyeCatcher(str, BINIO_EYE_CTXT_END);
 }
@@ -1105,7 +1104,7 @@ void Ctxt::read(istream& str)
 
   readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
   
-  read_raw_long(str, ptxtSpace);
+  ptxtSpace = read_raw_int(str);
   noiseVar = read_raw_xdouble(str); 
   primeSet.read(str); 
   CtxtPart blankCtxtPart(context, IndexSet::emptySet());
@@ -1123,9 +1122,7 @@ void CtxtPart::write(ostream& str)
 
 void CtxtPart::read(istream& str)
 {
-//  cerr << "[CtxtPart::read] before:" << *this << "end of print" << endl;
   this->DoubleCRT::read(str); // CtxtPart is a child.
-//  cerr << "[CtxtPart::read] after:" << *this << "end of print" << endl;
   skHandle.read(str);
 }
 
