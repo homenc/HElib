@@ -274,7 +274,7 @@ int main(int argc, char *argv[])
  
   string otherEndianFileIn = isLittleEndian()?"iotest_binBE.bin":"iotest_binLE.bin";
   string otherEndianASCII = isLittleEndian()?"iotest_asciiBE.txt":"iotest_asciiLE.txt";
-  cout << "Sample file used: " << otherEndianFileIn << endl;
+  cout << "\tSample file used: " << otherEndianFileIn << endl;
 
   string otherEndianFileOut = "iotest_ascii3.txt";  
 
@@ -319,6 +319,12 @@ int main(int argc, char *argv[])
     exit(EXIT_FAILURE);
   } else {
     cout << "\tSUCCESS - Files are identical.\n";
+  }
+
+  if(cleanup){
+    cout << "Clean up. Deleting created files." << endl;
+    if(unlink(otherEndianFileOut.c_str())) 
+      cerr << "Delete of "<<otherEndianFileOut<<" failed."<<endl; 
   }
 
   cout << "Test successful.\n\n";
