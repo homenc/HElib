@@ -269,10 +269,13 @@ int main(int argc, char *argv[])
 
 // Read in binary from opposite little endian and print ASCII and compare.
 {
+ 
   cout << "Test to read binary file and write it out as ASCII" << endl;
  
   string otherEndianFileIn = isLittleEndian()?"iotest_binBE.bin":"iotest_binLE.bin";
   string otherEndianASCII = isLittleEndian()?"iotest_asciiBE.txt":"iotest_asciiLE.txt";
+  cout << "Sample file used: " << otherEndianFileIn << endl;
+
   string otherEndianFileOut = "iotest_ascii3.txt";  
 
   ifstream inFile(otherEndianFileIn, ios::binary);

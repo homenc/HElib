@@ -10,3 +10,9 @@ src/*_x.dSYM
 src/*.bin
 src/*.txt
 src/*.sh
+
+# Exception for sample files
+!src/iotest_asciiBE.txt
+!src/iotest_asciiLE.txt
+!src/iotest_binBE.bin
+!src/iotest_binLE.bin
