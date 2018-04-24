@@ -272,6 +272,7 @@ int main(int argc, char *argv[])
   cout << "Test to read binary file and write it out as ASCII" << endl;
  
   string otherEndianFileIn = isLittleEndian()?"iotest_binBE.bin":"iotest_binLE.bin";
+  string otherEndianASCII = isLittleEndian()?"iotest_asciiBE.txt":"iotest_asciiLE.txt";
   string otherEndianFileOut = "iotest_ascii3.txt";  
 
   ifstream inFile(otherEndianFileIn, ios::binary);
@@ -289,35 +290,35 @@ int main(int argc, char *argv[])
   FHEPubKey* pubKey = secKey;
   
   readPubKeyBinary(inFile, *pubKey);
-//  readSecKeyBinary(inFile, *secKey);
-// 
-//  // ASCII 
-//  cout << "\tWriting other endian file." << endl;
-//  writeContextBase(outFile, *context);
-//  outFile << *context << endl << endl;
-//  outFile << *pubKey << endl << endl;
-//  outFile << *secKey << endl << endl;
-//
-//  inFile.close();
-//  outFile.close();
-//
-//  cout << "Test successful.\n\n";
-//
-//  // Compare byte-wise the two ASCII files
-//
-//  cout << "Comparing the two ASCII files\n"; 
-//  
-//  long differ = compareFiles(asciiFile1, otherEndianFileOut); 
-//
-//  if(differ != 0){
-//    cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
-//    cout << "Test failed.\n";
-//    exit(EXIT_FAILURE);
-//  } else {
-//    cout << "\tSUCCESS - Files are identical.\n";
-//  }
-//
-//  cout << "Test successful.\n\n";
+  readSecKeyBinary(inFile, *secKey);
+ 
+  // ASCII 
+  cout << "\tWriting other endian file." << endl;
+  writeContextBase(outFile, *context);
+  outFile << *context << endl << endl;
+  outFile << *pubKey << endl << endl;
+  outFile << *secKey << endl << endl;
+
+  inFile.close();
+  outFile.close();
+
+  cout << "Test successful.\n\n";
+
+  // Compare byte-wise the two ASCII files
+
+  cout << "Comparing the two ASCII files\n"; 
+  
+  long differ = compareFiles(otherEndianASCII, otherEndianFileOut); 
+
+  if(differ != 0){
+    cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
+    cout << "Test failed.\n";
+    exit(EXIT_FAILURE);
+  } else {
+    cout << "\tSUCCESS - Files are identical.\n";
+  }
+
+  cout << "Test successful.\n\n";
 }
 
   return 0;
