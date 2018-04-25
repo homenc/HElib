@@ -109,7 +109,7 @@ void write_raw_ZZ(ostream& str, const ZZ& zz)
   unsigned char zzBytes[noBytes];
   BytesFromZZ(zzBytes, zz, noBytes); // From ZZ.h
   write_raw_int(str, noBytes); 
-  // TODO
+  // TODO - ZZ appears to be endian agnostic
   str.write(reinterpret_cast<char*>(zzBytes), noBytes); 
 }
 
@@ -118,7 +118,7 @@ void read_raw_ZZ(istream& str, ZZ& zz)
   long noBytes = read_raw_int(str);
   assert(noBytes > 0);
   unsigned char zzBytes[noBytes];
-  // TODO  
+  // TODO - ZZ appears to be endian agnostic
   str.read(reinterpret_cast<char*>(zzBytes), noBytes); 
   zz = ZZFromBytes(zzBytes, noBytes);
 }

@@ -370,10 +370,17 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
   write_raw_int(str, context.zMStar.getP());
   write_raw_int(str, context.alMod.getR());
   write_raw_int(str, context.zMStar.getM());
-  write_raw_int(str, context.zMStar.numOfGens());
 
-  for(long i=0; i<(long) context.zMStar.numOfGens(); i++) {
+  write_raw_int(str, context.zMStar.numOfGens());
+  
+  // There aren't simple getters to get the gens and ords vectors
+  for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
     write_raw_int(str, context.zMStar.ZmStarGen(i));
+  }
+
+  write_raw_int(str, context.zMStar.numOfGens());
+  
+  for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
     write_raw_int(str, context.zMStar.OrderOf(i));
   }
 
@@ -381,7 +388,7 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
 
 }
 
-void readContextBaseBinary(istream& str, FHEcontext*& context)
+FHEcontext* readContextBaseBinary(istream& str)
 {
   
   readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
@@ -389,20 +396,15 @@ void readContextBaseBinary(istream& str, FHEcontext*& context)
   unsigned long p = read_raw_int(str);
   unsigned long r = read_raw_int(str);
   unsigned long m = read_raw_int(str);
-  unsigned long numOfGens = read_raw_int(str);
 
-  //TODO - Simplified? May need to change write method  
-
-  vector<long> gens(numOfGens), ords(numOfGens);
-  for (unsigned long i=0; i<numOfGens; i++) {
-    gens[i] = read_raw_int(str);
-    ords[i] = read_raw_int(str);
-
-  }
+  // Number of gens and ords saved in fornt of vectors
+  vector<long> gens, ords;
+  read_raw_vector(str, gens);  
+  read_raw_vector(str, ords);
   
   readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
 
-  context = new FHEcontext(m, p, r, gens, ords);
+  return new FHEcontext(m, p, r, gens, ords);
 
 }
 
@@ -416,9 +418,8 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
    
   write_raw_int(str, context.specialPrimes.card());
 
-  long tmp;
   // the "special" index 
-  for(tmp = context.specialPrimes.first();
+  for(long tmp = context.specialPrimes.first();
       tmp <= context.specialPrimes.last(); 
       tmp = context.specialPrimes.next(tmp)){
     write_raw_int(str, tmp);
@@ -436,18 +437,14 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 
   for(long i=0; i<(long)context.digits.size(); i++){
     write_raw_int(str, context.digits[i].card());
-    for(tmp = context.digits[i].first();
+    for(long tmp = context.digits[i].first();
          tmp <= context.digits[i].last(); 
          tmp = context.digits[i].next(tmp)){
       write_raw_int(str, tmp);
     }
   }
 
-  write_raw_int(str, context.rcData.mvec.length());
-
-  for (long i=0; i<(long)context.rcData.mvec.length();i++){
-    write_raw_int(str, context.rcData.mvec[i]);
-  }
+  write_ntl_vec_long(str, context.rcData.mvec);
 
   write_raw_int(str, context.rcData.hwt);
   write_raw_int(str, context.rcData.conservative);
@@ -466,8 +463,7 @@ void readContextBinary(istream& str, FHEcontext& context)
   long sizeOfS = read_raw_int(str);
 
   IndexSet s;
-  long tmp;
-  for(long i=0; i<sizeOfS; i++){
+  for(long tmp, i=0; i<sizeOfS; i++){
     tmp = read_raw_int(str);
     s.insert(tmp);
   }
@@ -495,7 +491,7 @@ void readContextBinary(istream& str, FHEcontext& context)
   for(long i=0; i<(long)context.digits.size(); i++){
     sizeOfS = read_raw_int(str);
 
-    for(long n=0; n<sizeOfS; n++){
+    for(long tmp, n=0; n<sizeOfS; n++){
       tmp = read_raw_int(str);
       context.digits[i].insert(tmp);
     }
@@ -503,11 +499,7 @@ void readContextBinary(istream& str, FHEcontext& context)
 
   // Read in the partition of m into co-prime factors (if bootstrappable)
   Vec<long> mv;
-  long nMV = read_raw_int(str);
-  mv.SetLength(nMV);
-  for(long i=0; i<nMV; i++){    
-    mv[i] = read_raw_int(str);
-  }
+  read_ntl_vec_long(str, mv);
 
   long t = read_raw_int(str);
   bool consFlag = read_raw_int(str);  

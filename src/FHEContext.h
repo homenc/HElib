@@ -266,7 +266,7 @@ void readContextBase(istream& s, unsigned long& m, unsigned long& p, unsigned lo
 void writeContextBinary(ostream& str, const FHEcontext& context);
 void writeContextBaseBinary(ostream& str, const FHEcontext& context);
 void readContextBinary(istream& str, FHEcontext& context);
-void readContextBaseBinary(istream& str, FHEcontext*& context);
+FHEcontext* readContextBaseBinary(istream& str);
 
 
 // VJS: compiler seems to need these declarations out here...wtf...

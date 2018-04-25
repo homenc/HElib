@@ -156,10 +156,8 @@ int main(int argc, char *argv[])
   ofstream outFile(asciiFile2);
   
   // Read in context,
-  FHEcontext* context;
-
 //  cout << "\tReading Binary Base." << endl;
-  readContextBaseBinary(inFile, context);  
+  FHEcontext* context = readContextBaseBinary(inFile);  
 //  cout << "\tReading Binary Context." << endl;
   readContextBinary(inFile, *context);  
 
@@ -211,10 +209,8 @@ int main(int argc, char *argv[])
   ifstream inFile(binFile1, ios::binary);
 
   // Read in context,
-  FHEcontext* context;
-
 //  cout << "Reading Binary Base." << endl;
-  readContextBaseBinary(inFile, context);  
+  FHEcontext* context = readContextBaseBinary(inFile);
 //  cout << "Reading Binary Context." << endl;
   readContextBinary(inFile, *context);  
 
@@ -282,9 +278,7 @@ int main(int argc, char *argv[])
   ofstream outFile(otherEndianFileOut);
   
   // Read in context,
-  FHEcontext* context;
-
-  readContextBaseBinary(inFile, context);  
+  FHEcontext* context = readContextBaseBinary(inFile);  
   readContextBinary(inFile, *context);  
 
   // Read in SecKey and PubKey.

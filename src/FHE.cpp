@@ -247,7 +247,6 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
   ptxtSpace = read_raw_int(str);
   DoubleCRT blankDCRT(context, IndexSet::emptySet());
   read_raw_vector(str, b, blankDCRT);
-  
   read_raw_ZZ(str, prgSeed);
 
   readEyeCatcher(str, BINIO_EYE_SKM_END);
@@ -586,11 +585,10 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
 //  8. Ctxt recryptEkey;
 
   writeContextBaseBinary(str, pk.getContext());
-//  cerr << "[write pub key] write pk.\n";
   pk.pubEncrKey.write(str);
   write_raw_vector(str, pk.skHwts);
 
-  // TODO Keyswitch Matrices
+  // Keyswitch Matrices
   write_raw_vector(str, pk.keySwitching);
 
   long sz = pk.keySwitchMap.size();
@@ -611,16 +609,14 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   readEyeCatcher(str, BINIO_EYE_PK_BEGIN);  
  
   // TODO code to check context object is what it should be 
-  // same as the text IO.
-  FHEcontext * dummy;
-  readContextBaseBinary(str, dummy);
+  // same as the text IO. May be worth putting it in helper func.
+  FHEcontext * dummy = readContextBaseBinary(str);
 
   // Read in the rest
-//  cerr << "[read pub key] read pk.\n";
   pk.pubEncrKey.read(str);
   read_raw_vector(str, pk.skHwts);
 
-  // TODO Keyswitch Matrices
+  // Keyswitch Matrices
   read_raw_vector(str, pk.keySwitching, pk.context);
 
   long sz = read_raw_int(str);
