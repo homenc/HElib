@@ -276,6 +276,13 @@ int main(int argc, char *argv[])
 
   ifstream inFile(otherEndianFileIn, ios::binary);
   ofstream outFile(otherEndianFileOut);
+
+  if(!inFile.is_open()) {
+    cout << "File " << otherEndianFileIn 
+         << " could not be opened.\n";
+    cout << "Test failed.\n";
+    exit(EXIT_FAILURE);
+  }
   
   // Read in context,
   FHEcontext* context = readContextBaseBinary(inFile);  
