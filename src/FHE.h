@@ -257,6 +257,8 @@ public:
 
   bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
+  void thinReCrypt(Ctxt &ctxt);  // bootstrap a "thin" ciphertext, where
+                                 // slots are assumed to contain constants
 
   friend class FHESecKey;
   friend ostream& operator << (ostream& str, const FHEPubKey& pk);

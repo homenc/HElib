@@ -20,6 +20,7 @@
 class  PAlgebraMod;
 class  EncryptedArray;
 class  EvalMap;
+class  ThinEvalMap;
 class  PowerfulDCRT;
 class  FHEcontext;
 class  FHEPubKey;
@@ -83,5 +84,61 @@ public:
     return !(operator==(other));
   }
 };
+
+
+//! @class ThinRecryptData
+//! @brief Same as above, but for "thin" bootstrapping, where the slots 
+//! are assumed to contain constants
+class ThinRecryptData {
+public:
+  //! default Hamming weight of recryption key
+  static const long defSkHwt=100;
+
+  //! Some data members that are only used for I/O
+  Vec<long> mvec;     //! partition of m into co-prime factors
+  long hwt;           //! Hamming weight of recryption secret-key
+  bool conservative;  //! flag for choosing more conservatice parameters
+
+  //! skey encrypted wrt space p^{e-e'+r}
+  long e, ePrime;
+
+  //! Hamming weight of recryption secret key
+  long skHwt;
+
+  //! an optimization parameter
+  double alpha;
+
+  //! for plaintext space p^{e-e'+r}
+  PAlgebraMod *alMod;
+
+  //! for plaintext space p^{e-e'+r}
+  EncryptedArray *ea;
+
+  bool build_cache;
+
+
+  //! linear maps
+  ThinEvalMap *coeffToSlot, *slotToCoeff;
+
+  ThinRecryptData() {
+    hwt=0; conservative=false; e=ePrime=0; alpha=0.0;
+    alMod=NULL; ea=NULL; coeffToSlot=NULL; slotToCoeff=NULL; 
+    build_cache = false;
+  }
+  ~ThinRecryptData();
+
+  //! Initialize the recryption data in the context
+  void init(const FHEcontext& context, const Vec<long>& mvec_,
+            long t=0/*min Hwt for sk*/, 
+            bool consFlag=false,
+            bool build_cache=false,
+            bool minimal=false);
+
+  bool operator==(const ThinRecryptData& other) const;
+  bool operator!=(const ThinRecryptData& other) const {
+    return !(operator==(other));
+  }
+};
+
 
 #endif /* _RECRYPTION_H_ */

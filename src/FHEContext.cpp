@@ -357,6 +357,7 @@ bool FHEcontext::operator==(const FHEcontext& other) const
   if (stdev != other.stdev) return false;
 
   if (rcData != other.rcData) return false;
+  if (trcData != other.trcData) return false;
   return true;
 }
 
@@ -407,6 +408,7 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   str << " " << context.rcData.hwt;
   str << " " << context.rcData.conservative;
   str << " " << context.rcData.build_cache;
+  // NOTE: the data for trcData will always be the same as for rcData
 
   str << "]\n";
 

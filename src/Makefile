@@ -49,7 +49,7 @@ SRC = KeySwitching.cpp EncryptedArray.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEConte
 
 OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o recryption.o debugging.o matmul.o intraSlot.o binaryArith.o binaryCompare.o tableLookup.o
 
-TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_bootstrapping_x Test_PtrVector_x Test_intraSlot_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
+TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_ThinEvalMap_x Test_bootstrapping_x Test_ThinBootstrapping_x Test_PtrVector_x Test_intraSlot_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
 
 
 all: fhe.a
@@ -63,6 +63,7 @@ check:
 	$(MAKE) check_EvalMap
 	$(MAKE) check_extractDigits
 	$(MAKE) check_bootstrapping
+	$(MAKE) check_ThinBootstrapping
 	$(MAKE) check_binaryArith
 	$(MAKE) check_binaryCompare
 	$(MAKE) check_tableLookup
@@ -88,12 +89,19 @@ check_Replicate: Test_Replicate_x
 check_EvalMap: Test_EvalMap_x 
 	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
 
+check_ThinEvalMap: Test_ThinEvalMap_x 
+	./Test_ThinEvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
+
 check_extractDigits: Test_extractDigits_x 
 	./Test_extractDigits_x m=2047 p=5 noPrint=1
 
 check_bootstrapping: Test_bootstrapping_x 
 	./Test_bootstrapping_x noPrint=1 N=512
 	./Test_bootstrapping_x p=7 noPrint=1
+
+check_ThinBootstrapping: Test_ThinBootstrapping_x 
+	./Test_ThinBootstrapping_x noPrint=1 N=512
+	./Test_ThinBootstrapping_x p=7 noPrint=1
 
 check_binaryArith: Test_binaryArith_x 
 	./Test_binaryArith_x
@@ -105,7 +113,7 @@ check_tableLookup: Test_tableLookup_x
 	./Test_tableLookup_x
 
 
-check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
+check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_ThinEvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_ThinBootstrapping Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
 	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
 	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
@@ -115,9 +123,12 @@ check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test
 	./Test_PolyEval_x p=7 r=2 d=34 noPrint=1
 	./Test_Replicate_x m=1247 noPrint=1
 	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
+	./Test_ThinEvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
 	./Test_extractDigits_x m=2047 p=5 noPrint=1
 	./Test_bootstrapping_x noPrint=1 N=512
 	./Test_bootstrapping_x p=7 noPrint=1
+	./Test_ThinBootstrapping_x noPrint=1 N=512
+	./Test_ThinBootstrapping_x p=7 noPrint=1
 	./Test_binaryArith_x
 	./Test_binaryCompare_x
 	./Test_tableLookup_x

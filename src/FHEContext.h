@@ -113,6 +113,7 @@ public:
 
   //! Bootstrapping-related data in the context
   RecryptData rcData;
+  ThinRecryptData trcData;
 
   /******************************************************************/
   ~FHEcontext(); // destructor
@@ -122,7 +123,11 @@ public:
 
   void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
 			  bool conservative=false, bool build_cache=false)
-  { rcData.init(*this, mvec, skWht, conservative, build_cache); }
+  { 
+    rcData.init(*this, mvec, skWht, conservative, build_cache); 
+    trcData.init(*this, mvec, skWht, conservative, build_cache); 
+  }
+
   bool isBootstrappable() const { return (rcData.alMod != NULL); }
 
   bool operator==(const FHEcontext& other) const;
