@@ -193,7 +193,7 @@ public:
   long AddFFTPrime(bool special); 
 
   //! @brief Test if the chain contains a "half-size" ciphertext prime
-  // If it exists, the half-size prime must be the first cipehrtext prime.
+  // If it exists, the half-size prime must be the first ciphertext prime.
   // All other primes are assumed to have roughly the same size.
   bool containsSmallPrime() const {
     if (card(ctxtPrimes)<2) return false;

@@ -19,7 +19,7 @@
  * @brief The structure of (Z/mZ)* /(p)
  *
  * A PAlgebra object is determined by an integer m and a prime p, where p does
- * not divide m. It holds information descrtibing the structure of (Z/mZ)^*,
+ * not divide m. It holds information describing the structure of (Z/mZ)^*,
  * which is isomorphic to the Galois group over A = Z[X]/Phi_m(X)). 
  *
  * We represent (Z/mZ)^* as (Z/mZ)^* = (p) x (g1,g2,...) x (h1,h2,...)

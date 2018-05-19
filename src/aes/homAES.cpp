@@ -15,7 +15,7 @@ extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;
 #endif
 
-// Decletration of local functions
+// Declaration of local functions
 
 static void buildAffine(vector<PolyType>& binMat, PolyType* binVec,
 			const unsigned char cc[],
@@ -59,18 +59,18 @@ inline void buildAffineDec(vector<PolyType>& binMat,
   buildAffine(binMat, NULL, cc, ea2);
 }
 
-// FIXME: The implementation below relies on the first generator in thw
+// FIXME: The implementation below relies on the first generator in the
 //   PAlgebra corresponding to the MSB of the slot number. A more robust
 //   implementation would use the Hypercube class for slot index arithmetic.
 
 
-// Compute the constants for the shoftRow/mixCol transformations
+// Compute the constants for the shiftRow/mixCol transformations
 static void buildLinEnc(vector<PolyType>& encLinTran,
 			const EncryptedArrayDerived<PA_GF2>& ea2);
 static void buildLinDec(vector<PolyType>& decLinTran,
 			const EncryptedArrayDerived<PA_GF2>& ea2);
 
-// Apply the shoftRow/mixCol transformations
+// Apply the shiftRow/mixCol transformations
 static void encRowColTran(Ctxt& eData, const vector<PolyType>& encLinTran,
 			  const EncryptedArrayDerived<PA_GF2>& ea2);
 static void encRowShift(Ctxt& c, const vector<PolyType>& encLinTran,
@@ -82,7 +82,7 @@ static void decRowShift(Ctxt& c, const vector<PolyType>& decLinTran,
 
 static void invert(vector<Ctxt>& data); // Z -> Z^{-1} in GF(2^8)
 
-// Pack the ciphertexts in c in as few "fully packed" cipehrtext as possible.
+// Pack the ciphertexts in c in as few "fully packed" ciphertext as possible.
 static void packCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
 		     const GF2X& XinSlots);
 
@@ -199,7 +199,7 @@ void HomAES::setPackingConstants()
 // The input and AES key are encrypted under HE. The output is doubly-encrypted,
 // out=Enc_HE(Enc_AES(X)). The aesKey array contains an encryption of the
 // expanded AES key, the number of AES rounds is aesKey.size() -1.
-// It is assumed that all the input data cipehrtexts are at the same
+// It is assumed that all the input data ciphertexts are at the same
 // level, as they will be recrypted together.
 void HomAES::homAESenc(vector<Ctxt>& eData, const vector<Ctxt>& aesKey) const
 {
@@ -273,11 +273,11 @@ void HomAES::homAESenc(vector<Ctxt>& eData, const vector<Ctxt>& aesKey,
 
 
 // Perform in-place AES decryption on Doubly encrypted bytes (ECB mode).
-// The input is a doubly encrypted cipehrtext, in=Enc_HE(Enc_AES(X)), and
+// The input is a doubly encrypted ciphertext, in=Enc_HE(Enc_AES(X)), and
 // the HE-encrypted AES key. The output is a "plaintext" (but encrypted
 // under the HE scheme), out=Enc_HE(X). The aesKey array containsencryption
 // of the expanded AES key, the number of AES rounds is aesKey.length()-1.
-// It is assumed that all the input data cipehrtexts are at the same
+// It is assumed that all the input data ciphertexts are at the same
 // level, as they will be recrypted together.
 void HomAES::homAESdec(vector<Ctxt>& eData, const vector<Ctxt>& aesKey) const
 {
@@ -454,7 +454,7 @@ static void buildAffine(vector<PolyType>& binMat, PolyType* binVec,
 }
 
 
-// Compute the constants for the shoftRow/mixCol transformations
+// Compute the constants for the shiftRow/mixCol transformations
 static void buildLinEnc(vector<PolyType>& encLinTran,
 			const EncryptedArrayDerived<PA_GF2>& ea2)
 {
@@ -493,7 +493,7 @@ static void buildLinEnc(vector<PolyType>& encLinTran,
   }
 }
 
-// Apply the shoftRow/mixCol transformations
+// Apply the shiftRow/mixCol transformations
 static void encRowColTran(Ctxt& c, const vector<PolyType>& encLinTran,
 			  const EncryptedArrayDerived<PA_GF2>& ea2)
 {
@@ -720,7 +720,7 @@ void encode4AES(Vec<ZZX>& encData, const Vec<uint8_t>& data,
   // We encode blocksPerCtxt = n/16 blocks in the slots of one ctxt.
   encData.SetLength(nCtxt);
 
-  for (long i=0; i<nCtxt; i++) {         // i is the cipehrtext number
+  for (long i=0; i<nCtxt; i++) {         // i is the ciphertext number
     // Copy the bytes into Hypercube<GF2X>'es to be used for encoding
     vector<GF2X> slots(ea2.size(), GF2X::zero());
     for (long j=0; j<blocksPerCtxt; j++) { // j is the block number in this ctxt
@@ -752,7 +752,7 @@ void decode4AES(Vec<uint8_t>& data, const Vec<ZZX>& encData,
   // We encode blocksPerCtxt = n/16 blocks in the slots of one ctxt.
 
   vector<GF2X> slots;
-  for (long i=0; i<nCtxt; i++) {         // i is the cipehrtext number
+  for (long i=0; i<nCtxt; i++) {         // i is the ciphertext number
     ea2.decode(slots, encData[i]);
     for (long j=0; j<blocksPerCtxt; j++) { // j is the block number in this ctxt
       long blockShift = (i*blocksPerCtxt +j)*16;  // point to block
@@ -783,7 +783,7 @@ static void invert(vector<Ctxt>& data)
   }
 }
 
-// Pack the ciphertexts in c in as few "fully packed" cipehrtext as possible.
+// Pack the ciphertexts in c in as few "fully packed" ciphertext as possible.
 static void packCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
 		     const GF2X& XinSlots)
 {
@@ -799,7 +799,7 @@ static void packCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
   long e = ea.getDegree() / 8; // the extension degree
   long nPacked = divc(from.size(), e); // How many fully-packed ciphertexts
 
-  // Initialize the vector 'to' with empty cipehrtexts
+  // Initialize the vector 'to' with empty ciphertexts
   to.assign(nPacked, Ctxt(ZeroCtxtLike, from[0]));
 
   // Each ctxt in 'to' is the result of packing <= e ctxts from 'from'

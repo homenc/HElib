@@ -85,7 +85,7 @@ public:
  * a term either of the form p_{i,j} = \prod_{t=j}^i (a[t]+b[t]), or of the
  * form q_{i,j} = (a[j]*b[j]) * \prod_{t=j+1}^i (a[t]+b[t]). The source nodes
  * are of the forms (a[i]*b[i]) and (a[i]+b[i]), and each non-source node has
- * exactly two parents, whose product yeilds that node.
+ * exactly two parents, whose product yields that node.
  *
  * When building the DAG, we keep the level of each node as high as possible.
  * For example we can set q_{i,j}=p_{i,k}*q_{k-1,j} or q_{i,j}=p_{i,k+1}*q_{k,j}
@@ -299,7 +299,7 @@ void AddDAG::apply(CtPtrs& sum,
   NTL_EXEC_RANGE_END
 }
 
-//! Get the ciphertext for a node, compiuting it as needed
+//! Get the ciphertext for a node, computing it as needed
 const Ctxt& AddDAG::getCtxt(DAGnode* node,
                             const CtPtrs& a, const CtPtrs& b)
 {

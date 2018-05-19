@@ -222,7 +222,7 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the 
-  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // addMinimal{1D,Frb}Matrices routines declared in FHE.h.
   // If the minimal flag is false, it is best to use the
   // addSome{1D,Frb}Matrices routines declared in FHE.h.
   explicit
@@ -265,7 +265,7 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the 
-  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // addMinimal{1D,Frb}Matrices routines declared in FHE.h.
   // If the minimal flag is false, it is best to use the
   // addSome{1D,Frb}Matrices routines declared in FHE.h.
   explicit
@@ -301,7 +301,7 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the 
-  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // addMinimal{1D,Frb}Matrices routines declared in FHE.h.
   // If the minimal flag is false, it is best to use the
   // addSome{1D,Frb}Matrices routines declared in FHE.h.
   explicit
@@ -340,7 +340,7 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the 
-  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // addMinimal{1D,Frb}Matrices routines declared in FHE.h.
   // If the minimal flag is false, it is best to use the
   // addSome{1D,Frb}Matrices routines declared in FHE.h.
   explicit

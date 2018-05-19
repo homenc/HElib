@@ -243,6 +243,6 @@ void PermNetwork::applyToCtxt(Ctxt& c, const EncryptedArray& ea) const
 
       else break; // unused is all-zero, done with this layer
     }
-    c = sum; // update the cipehrtext c before the next layer
+    c = sum; // update the ciphertext c before the next layer
   }
 }

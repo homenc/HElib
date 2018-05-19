@@ -13,7 +13,7 @@
 #define _Ctxt_H_
 /**
  * @file Ctxt.h
- * @brief Declerations of a BGV-type cipehrtext and key-switching matrices
+ * @brief Declarations of a BGV-type ciphertext and key-switching matrices
  *
  * A ciphertext is a vector of "ciphertext parts", each part consists of
  * a polynomial (element of polynomial ring R_Q) and a "handle" describing
@@ -30,17 +30,17 @@
  *
  * This type of representation lets you in principle add ciphertexts that
  * are defined with respect to different keys:
- * + For parts of the two cipehrtexts that point to the same secret-key
+ * + For parts of the two ciphertexts that point to the same secret-key
  *   polynomial, you just add the two Double-CRT polynomials
  * + Parts in one ciphertext that do not have counter-part in the other
- *   cipehrtext will just be included in the result intact.
+ *   ciphertext will just be included in the result intact.
  * For example, you have the ciphertexts
  *    C1 = (a relative to 1, b relative to s)
  *    C2 = (u relative to 1, v relative to s(X^3))
  * Then their sum will be
  *    C1+C2 = (a+u relative to 1, b relative to s, v relative to s(X^3))
  *
- * Similarly, in principle you can also multiply arbitrary cipehrtexts, even
+ * Similarly, in principle you can also multiply arbitrary ciphertexts, even
  * ones that are defined with respect to different keys, and the result will
  * be defined with respect to the tensor product of the two keys. 
  *
@@ -181,7 +181,7 @@ inline ostream& operator<<(ostream& s, const SKHandle& handle)
  * @class CtxtPart
  * @brief One entry in a ciphertext vector
  * 
- * A cipehrtext part consists of a polynomial (element of the ring R_Q)
+ * A ciphertext part consists of a polynomial (element of the ring R_Q)
  * and a handle to the corresponding secret-key polynomial.
  **/
 class CtxtPart: public DoubleCRT {
@@ -221,7 +221,7 @@ const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
 
 /**
  * @class Ctxt
- * @brief A Ctxt object holds a single cipehrtext
+ * @brief A Ctxt object holds a single ciphertext
  *
  * The class Ctxt includes a vector<CtxtPart>: For a Ctxt c, c[i] is the i'th
  * ciphertext part, which can be used also as a DoubleCRT object (since
@@ -393,7 +393,7 @@ public:
   { nxorConstant(DoubleCRT(poly,context,primeSet),size); }
 
   
-  //! Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
+  //! Divide a ciphertext by p, for plaintext space p^r, r>1. It is assumed
   //! that the ciphertext encrypts a polynomial which is zero mod p. If this
   //! is not the case then the result will not be a valid ciphertext anymore.
   //! As a side-effect, the plaintext space is reduced from p^r to p^{r-1}.
@@ -454,7 +454,7 @@ public:
   //! @brief Estimate the added noise variance
   xdouble modSwitchAddedNoiseVar() const;
 
-  //! @brief Find the "natural level" of a cipehrtext.
+  //! @brief Find the "natural level" of a ciphertext.
   // Find the level such that modDown to that level makes the
   // additive term due to rounding into the dominant noise term 
   long findBaseLevel() const;
@@ -481,7 +481,7 @@ public:
   //! Returns an extimate for the noise variance after mod-switching.
   double rawModSwitch(vector<ZZX>& zzParts, long toModulus) const;
 
-  //! @brief Find the "natural prime-set" of a cipehrtext.
+  //! @brief Find the "natural prime-set" of a ciphertext.
   //! Find the highest IndexSet so that mod-switching down to that set results
   //! in the dominant noise term being the additive term due to rounding
   void findBaseSet(IndexSet& s) const;
@@ -502,7 +502,7 @@ public:
     noiseVar = to_xdouble(0.0);
   }
 
-  //! @brief Is this an empty cipehrtext without any parts
+  //! @brief Is this an empty ciphertext without any parts
   bool isEmpty() const { return (parts.size()==0); }
 
   //! @brief A canonical ciphertext has (at most) handles pointing to (1,s)

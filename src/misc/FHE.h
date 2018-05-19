@@ -46,7 +46,7 @@
  * t columns.
  *
  * A key-switch matrix W[s'->s] converts a ciphertext-part with respect to
- * secret-key polynomial s' into a canonical cipehrtext (i.e. a two-part
+ * secret-key polynomial s' into a canonical ciphertext (i.e. a two-part
  * ciphertext with respect to (1,s)). The matrix W is a 2-by-t matrix of
  * DoubleCRT objects. The bottom row are just (psudo)random elements. Then
  * for column i, if the bottom element is ai then the top element is set as
@@ -61,7 +61,7 @@
  * In this implementation we save some space, by keeping only a PRG seed for
  * generating the pseudo-random elements, rather than the elements themselves.
  *
- * To convert a cipehrtext part R, we break R into digits R = sum_i Bi Ri,
+ * To convert a ciphertext part R, we break R into digits R = sum_i Bi Ri,
  * then set (q0,q1)^T = sum_i Ri * column-i. Note that we have
  * <(1,s),(q0,q1)> = sum_i Ri*(s*ai - s*ai + p*ei +P*Bi*s')
  *       = P * sum_i Bi*Ri * s' + p sum_i Ri*ei

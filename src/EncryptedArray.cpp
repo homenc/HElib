@@ -300,7 +300,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   long nSlots = al.getNSlots();
 
-  // Shifting by more than the number of slots gives an all-zero cipehrtext
+  // Shifting by more than the number of slots gives an all-zero ciphertext
   if (k <= -nSlots || k >= nSlots) {
     ctxt.multByConstant(to_ZZ(0));
     return;

@@ -274,7 +274,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
-  // Multiply the post-processed cipehrtext by the encrypted sKey
+  // Multiply the post-processed ciphertext by the encrypted sKey
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before recryption ";
   decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa, printFlag);

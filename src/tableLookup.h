@@ -46,7 +46,7 @@ void tableWriteIn(const CtPtrs& table, const CtPtrs& idx,
  * FIXED-POINT CONVENTIONS:
  * Fixed-point numbers are specified by a triple (nbits,scale,signed).
  * Such a number is represented as an integer x with nbits bits. If
- * signed == 1, then x is treated as a signed integer in 2's compliment;
+ * signed == 1, then x is treated as a signed integer in 2's complement;
  * otherwise it is as an unsigned integer. The value represented by x
  * is x*2^{scale}.
  * 
