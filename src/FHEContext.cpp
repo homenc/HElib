@@ -15,8 +15,6 @@
 #include "powerful.h"
 #include "binio.h"
 
-using namespace std;
-
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
   // get a lower-bound on the parameter N=phi(m):
