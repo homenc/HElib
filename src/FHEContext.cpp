@@ -389,8 +389,7 @@ void readContextBaseBinary(istream& str, unsigned long& m,
                            unsigned long& p, unsigned long& r,
                            vector<long>& gens, vector<long>& ords)
 {
-  
-  readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
+  assert(readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN)==0);
     
   p = read_raw_int(str);
   r = read_raw_int(str);
@@ -400,7 +399,7 @@ void readContextBaseBinary(istream& str, unsigned long& m,
   read_raw_vector(str, gens);  
   read_raw_vector(str, ords);
   
-  readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
+  assert(readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END)==0);
 }
 std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str)
 {
@@ -457,7 +456,7 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 
 void readContextBinary(istream& str, FHEcontext& context)
 {
-  readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
+  assert(readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN)==0);
 
   // Get the standard deviation
   context.stdev = read_raw_xdouble(str);
@@ -510,7 +509,7 @@ void readContextBinary(istream& str, FHEcontext& context)
     context.makeBootstrappable(mv, t, consFlag);
   }
 
-  readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
+  assert(readEyeCatcher(str, BINIO_EYE_CONTEXT_END)==0);
 }
 
 void writeContextBase(ostream& str, const FHEcontext& context)

@@ -239,8 +239,7 @@ void KeySwitch::write(ostream& str) const
 
 void KeySwitch::read(istream& str, const FHEcontext& context)
 {
-   
-  readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
+  assert(readEyeCatcher(str, BINIO_EYE_SKM_BEGIN)==0);
 
   fromKey.read(str);
   toKeyID = read_raw_int(str);
@@ -249,7 +248,7 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
   read_raw_vector(str, b, blankDCRT);
   read_raw_ZZ(str, prgSeed);
 
-  readEyeCatcher(str, BINIO_EYE_SKM_END);
+  assert(readEyeCatcher(str, BINIO_EYE_SKM_END)==0);
 }
 
 
@@ -596,7 +595,7 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
 
 void readPubKeyBinary(istream& str, FHEPubKey& pk)
 {
-  readEyeCatcher(str, BINIO_EYE_PK_BEGIN);  
+  assert(readEyeCatcher(str, BINIO_EYE_PK_BEGIN)==0);
  
   //  // TODO code to check context object is what it should be 
   //  // same as the text IO. May be worth putting it in helper func.
@@ -611,7 +610,7 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   read_raw_vector(str, pk.skHwts);
 
   // Keyswitch Matrices
-  read_raw_vector(str, pk.keySwitching, pk.context);
+  read_raw_vector(str, pk.keySwitching, pk.getContext());
 
   long sz = read_raw_int(str);
   pk.keySwitchMap.clear();
@@ -624,7 +623,7 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   pk.recryptKeyID = read_raw_int(str);
   pk.recryptEkey.read(str);
 
-  readEyeCatcher(str, BINIO_EYE_PK_END);
+  assert(readEyeCatcher(str, BINIO_EYE_PK_END)==0);
 }
 
 
@@ -907,7 +906,7 @@ void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
   writeEyeCatcher(str, BINIO_EYE_SK_BEGIN);
 
 // N.B. This does not write out the public key part as the ASCII version does!!!
-#error This is a bug, needs to write also the public key part
+//#error This is a bug, needs to write also the public key part
 
 // Write out 
 // 1. vector<DoubleCRT> sKeys  
@@ -919,15 +918,14 @@ void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
 
 void readSecKeyBinary(istream& str, FHESecKey& sk)
 {
-
-  readEyeCatcher(str, BINIO_EYE_SK_BEGIN);
+  assert(readEyeCatcher(str, BINIO_EYE_SK_BEGIN)==0);
 
 // N.B. This does not read the public key part as the ASCII version does!!!
-#error This is a bug, needs to read also the public key part
+//#error This is a bug, needs to read also the public key part
 
-    DoubleCRT blankDCRT(sk.getContext(), IndexSet::emptySet());
+  DoubleCRT blankDCRT(sk.getContext(), IndexSet::emptySet());
   read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
-  
-  readEyeCatcher(str, BINIO_EYE_SK_END);
+
+  assert(readEyeCatcher(str, BINIO_EYE_SK_END)==0);
 }
 

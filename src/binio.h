@@ -69,40 +69,35 @@ template<typename T> void write_raw_vector(ostream& str, const vector<T>& v)
     n.write(str);
   }
 };
-
+// vector<long> has adifferent implementation, since long.write does not work
 template<> void write_raw_vector<long>(ostream& str, const vector<long>& v);
 
 template<typename T> void read_raw_vector(istream& str, vector<T>& v, T& init)
 {
-
   long sz = read_raw_int(str);
   v.resize(sz, init); // Make space in vector
 
   for(auto& n: v){
     n.read(str);
-  }   
-
+  }
 };
 
 template<typename T> void read_raw_vector(istream& str, vector<T>& v)
 {
-  T init = T(); 
-  read_raw_vector<T>(str, v, init);  
+  read_raw_vector<T>(str, v, T());
 }
-
+// vector<long> has adifferent implementation, since long.read does not work
 template<> void read_raw_vector<long>(istream& str, vector<long>& v);
 
-// At least KeySwitch requires the context.
+// KeySwitch::read(...) (in FHE.cpp) requires the context.
 template<typename T> void read_raw_vector(istream& str, vector<T>& v, const FHEcontext& context)
-{
- 
+{ 
   long sz = read_raw_int(str);
   v.resize(sz); // Make space in vector
 
   for(auto& n: v){
     n.read(str, context);
-  }   
- 
+  }
 }
 
 #endif // ifndef _BINIO_H_

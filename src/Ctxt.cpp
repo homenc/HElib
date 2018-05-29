@@ -1101,8 +1101,7 @@ void Ctxt::write(ostream& str) const
 
 void Ctxt::read(istream& str)
 {
-
-  readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
+  assert(readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN)==0);
   
   ptxtSpace = read_raw_int(str);
   noiseVar = read_raw_xdouble(str); 
@@ -1110,7 +1109,7 @@ void Ctxt::read(istream& str)
   CtxtPart blankCtxtPart(context, IndexSet::emptySet());
   read_raw_vector(str, parts, blankCtxtPart);    
 
-  readEyeCatcher(str, BINIO_EYE_CTXT_END);
+  assert(readEyeCatcher(str, BINIO_EYE_CTXT_END)==0);
 }
 
 void CtxtPart::write(ostream& str)
