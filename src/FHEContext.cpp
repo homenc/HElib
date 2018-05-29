@@ -383,27 +383,31 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
   }
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
-
 }
 
-FHEcontext* readContextBaseBinary(istream& str)
+void readContextBaseBinary(istream& str, unsigned long& m,
+                           unsigned long& p, unsigned long& r,
+                           vector<long>& gens, vector<long>& ords)
 {
   
   readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
     
-  unsigned long p = read_raw_int(str);
-  unsigned long r = read_raw_int(str);
-  unsigned long m = read_raw_int(str);
+  p = read_raw_int(str);
+  r = read_raw_int(str);
+  m = read_raw_int(str);
 
   // Number of gens and ords saved in fornt of vectors
-  vector<long> gens, ords;
   read_raw_vector(str, gens);  
   read_raw_vector(str, ords);
   
   readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
-
-  return new FHEcontext(m, p, r, gens, ords);
-
+}
+std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str)
+{
+  unsigned long m, p, r;
+  vector<long> gens, ords;
+  readContextBaseBinary(str, m, p, r, gens, ords);
+  return std::unique_ptr<FHEcontext>(new FHEcontext(m,p,r,gens,ords));
 }
 
 void writeContextBinary(ostream& str, const FHEcontext& context)
@@ -573,6 +577,13 @@ void readContextBase(istream& str, unsigned long& m, unsigned long& p,
   str >> ords;
 
   seekPastChar(str, ']');
+}
+std::unique_ptr<FHEcontext> buildContextFromAscii(istream& str)
+{
+  unsigned long m, p, r;
+  vector<long> gens, ords;
+  readContextBase(str, m, p, r, gens, ords);
+  return std::unique_ptr<FHEcontext>(new FHEcontext(m,p,r,gens,ords));
 }
 
 istream& operator>> (istream &str, FHEcontext& context)

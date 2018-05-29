@@ -260,13 +260,21 @@ public:
 //! @brief write [m p r gens ords] data
 void writeContextBase(ostream& s, const FHEcontext& context);
 //! @brief read [m p r gens ords] data, needed to construct context
-void readContextBase(istream& s, unsigned long& m, unsigned long& p, unsigned long& r,
+void readContextBase(istream& s, unsigned long& m,
+                     unsigned long& p, unsigned long& r,
 		     vector<long>& gens, vector<long>& ords);
+std::unique_ptr<FHEcontext> buildContextFromAscii(istream& str);
 
-void writeContextBinary(ostream& str, const FHEcontext& context);
+//! @brief write [m p r gens ords] data
 void writeContextBaseBinary(ostream& str, const FHEcontext& context);
+void writeContextBinary(ostream& str, const FHEcontext& context);
+
+//! @brief read [m p r gens ords] data, needed to construct context
+void readContextBaseBinary(istream& s, unsigned long& m,
+                           unsigned long& p, unsigned long& r,
+                           vector<long>& gens, vector<long>& ords);
+std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str);
 void readContextBinary(istream& str, FHEcontext& context);
-FHEcontext* readContextBaseBinary(istream& str);
 
 
 // VJS: compiler seems to need these declarations out here...wtf...

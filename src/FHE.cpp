@@ -517,17 +517,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   unsigned long m, p, r;
   vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
-  const PAlgebra& palg = pk.getContext().zMStar;
-  assert( m == palg.getM() );
-  assert( p == palg.getP() );
-  assert( gens.size() == palg.numOfGens() );
-  for (long i=0; i<(long)gens.size(); i++) {
-    assert(gens[i]==(long)palg.ZmStarGen(i));
-    if (palg.SameOrd(i))
-      assert(ords[i]==(long) pk.getContext().zMStar.OrderOf(i));
-    else
-      assert(-ords[i]==(long) pk.getContext().zMStar.OrderOf(i));
-  }
+  assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
 
   // Get the public encryption key itself
   str >> pk.pubEncrKey;
@@ -608,9 +598,13 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
 {
   readEyeCatcher(str, BINIO_EYE_PK_BEGIN);  
  
-  // TODO code to check context object is what it should be 
-  // same as the text IO. May be worth putting it in helper func.
-  FHEcontext * dummy = readContextBaseBinary(str);
+  //  // TODO code to check context object is what it should be 
+  //  // same as the text IO. May be worth putting it in helper func.
+  //  std::unique_ptr<FHEcontext> dummy = buildContextFromBinary(str);
+  unsigned long m, p, r;
+  vector<long> gens, ords;
+  readContextBaseBinary(str, m, p, r, gens, ords);
+  assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
 
   // Read in the rest
   pk.pubEncrKey.read(str);
@@ -631,7 +625,6 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   pk.recryptEkey.read(str);
 
   readEyeCatcher(str, BINIO_EYE_PK_END);
-
 }
 
 
@@ -911,10 +904,10 @@ istream& operator>>(istream& str, FHESecKey& sk)
 
 void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
 {
-
   writeEyeCatcher(str, BINIO_EYE_SK_BEGIN);
 
 // N.B. This does not write out the public key part as the ASCII version does!!!
+#error This is a bug, needs to write also the public key part
 
 // Write out 
 // 1. vector<DoubleCRT> sKeys  
@@ -929,8 +922,9 @@ void readSecKeyBinary(istream& str, FHESecKey& sk)
 
   readEyeCatcher(str, BINIO_EYE_SK_BEGIN);
 
-// N.B. This does not write out the public key part as the ASCII version does!!!
-  
+// N.B. This does not read the public key part as the ASCII version does!!!
+#error This is a bug, needs to read also the public key part
+
   DoubleCRT blankDCRT(sk.context, IndexSet::emptySet());
   read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
   
