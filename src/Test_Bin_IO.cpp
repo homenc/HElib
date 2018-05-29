@@ -104,9 +104,9 @@ int main(int argc, char *argv[])
   amap.arg("cleanup", cleanup, "cleanup files created");
   amap.parse(argc, argv);
 
-  const char* asciiFile1 = "iotest_ascii1.txt"; 
-  const char* asciiFile2 = "iotest_ascii2.txt"; 
-  const char* binFile1 = "iotest_bin.bin"; 
+  const char* asciiFile1 = "misc/iotest_ascii1.txt"; 
+  const char* asciiFile2 = "misc/iotest_ascii2.txt"; 
+  const char* binFile1 = "misc/iotest_bin.bin"; 
 
   { // 1. Write ASCII and bin files.
 
@@ -254,12 +254,12 @@ int main(int argc, char *argv[])
     cout << "Test to read binary file and write it out as ASCII" << endl;
  
     string otherEndianFileIn
-      = isLittleEndian()? "iotest_binBE.bin" : "iotest_binLE.bin";
+      = isLittleEndian()? "misc/iotest_binBE.bin" : "misc/iotest_binLE.bin";
     string otherEndianASCII
-      = isLittleEndian()? "iotest_asciiBE.txt" : "iotest_asciiLE.txt";
+      = isLittleEndian()? "misc/iotest_asciiBE.txt" : "misc/iotest_asciiLE.txt";
     cout << "\tSample file used: " << otherEndianFileIn << endl;
 
-    string otherEndianFileOut = "iotest_ascii3.txt";  
+    string otherEndianFileOut = "misc/iotest_ascii3.txt";  
     ifstream inFile(otherEndianFileIn, ios::binary);
     ofstream outFile(otherEndianFileOut);
 
