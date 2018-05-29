@@ -703,4 +703,8 @@ public:
 
 };
 
+//! returns true if the palg parameters match the rest, false otherwise
+bool comparePAlgebra(const PAlgebra& palg,
+                     unsigned long m, unsigned long p, unsigned long r,
+                     const vector<long>& gens, const vector<long>& ords);
 #endif // #ifdef _PAlgebra_H_
