@@ -925,7 +925,7 @@ void readSecKeyBinary(istream& str, FHESecKey& sk)
 // N.B. This does not read the public key part as the ASCII version does!!!
 #error This is a bug, needs to read also the public key part
 
-  DoubleCRT blankDCRT(sk.context, IndexSet::emptySet());
+    DoubleCRT blankDCRT(sk.getContext(), IndexSet::emptySet());
   read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
   
   readEyeCatcher(str, BINIO_EYE_SK_END);

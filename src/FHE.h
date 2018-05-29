@@ -137,9 +137,6 @@ ostream& operator<<(ostream& str, const KeySwitch& matrix);
  * @brief The public key
  ********************************************************************/
 class FHEPubKey { // The public key
-
-protected:
-
   const FHEcontext& context; // The context
 
 private:
