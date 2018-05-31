@@ -905,8 +905,8 @@ void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
 {
   writeEyeCatcher(str, BINIO_EYE_SK_BEGIN);
 
-// N.B. This does not write out the public key part as the ASCII version does!!!
-#error This is a bug, needs to write also the public key part
+  // Write out the public key part first.
+  writePubKeyBinary(str, sk);
 
 // Write out 
 // 1. vector<DoubleCRT> sKeys  
@@ -920,8 +920,8 @@ void readSecKeyBinary(istream& str, FHESecKey& sk)
 {
   assert(readEyeCatcher(str, BINIO_EYE_SK_BEGIN)==0);
 
-// N.B. This does not read the public key part as the ASCII version does!!!
-#error This is a bug, needs to read also the public key part
+  // Read in the public key part first.
+  readPubKeyBinary(str, sk);
 
   DoubleCRT blankDCRT(sk.getContext(), IndexSet::emptySet());
   read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);

@@ -395,12 +395,13 @@ void readContextBaseBinary(istream& str, unsigned long& m,
   r = read_raw_int(str);
   m = read_raw_int(str);
 
-  // Number of gens and ords saved in fornt of vectors
+  // Number of gens and ords saved in front of vectors
   read_raw_vector(str, gens);  
   read_raw_vector(str, ords);
   
   assert(readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END)==0);
 }
+
 std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str)
 {
   unsigned long m, p, r;

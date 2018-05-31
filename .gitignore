@@ -7,12 +7,14 @@ src/*_x.exe
 Makefile.dev
 **.DS_Store
 src/*_x.dSYM
+src/*.sh
 src/*.bin
 src/*.txt
-src/*.sh
+src/misc/*.bin
+src/misc/*.txt
 
 # Exception for sample files
-!src/iotest_asciiBE.txt
-!src/iotest_asciiLE.txt
-!src/iotest_binBE.bin
-!src/iotest_binLE.bin
+!src/misc/iotest_asciiBE.txt
+!src/misc/iotest_asciiLE.txt
+!src/misc/iotest_binBE.bin
+!src/misc/iotest_binLE.bin
