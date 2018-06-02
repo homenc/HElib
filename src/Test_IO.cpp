@@ -56,8 +56,9 @@ int main(int argc, char *argv[])
   amap.arg("m", mm, "cyclotomic index","{31,127,1023}");
   amap.parse(argc, argv);
 
+  bool useTable = (mm==0 && p==2);
   long ptxtSpace = power_long(p,r);
-  long numTests = (mm==0)? N_TESTS : 1;
+  long numTests = useTable? N_TESTS : 1;
 
   std::unique_ptr<FHEcontext> contexts[numTests];
   std::unique_ptr<FHESecKey> sKeys[numTests];
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
     vector<long> ords(2);
     ords[0] = ms[i][8];  ords[1] = ms[i][9];
 
-    if (mm==0 && gens[0]>0)
+    if (useTable && gens[0]>0)
       contexts[i].reset(new FHEcontext(m, p, r, gens, ords));
     else
       contexts[i].reset(new FHEcontext(m, p, r));
