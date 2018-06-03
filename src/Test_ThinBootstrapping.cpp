@@ -1,5 +1,6 @@
 #include "FHE.h"
 #include "EncryptedArray.h"
+#include "matmul.h"
 #include <NTL/BasicThreadPool.h>
 
 static bool noPrint = true;
@@ -102,6 +103,14 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   context.bitsPerLevel = B;
   buildModChain(context, L, c,/*extraBits=*/7);
 
+  long nPrimes = context.numPrimes();
+  IndexSet allPrimes(0,nPrimes-1);
+  double bitsize = context.logOfProduct(allPrimes)/log(2.0);
+  if (!noPrint)
+    cout << "  "<<nPrimes<<" primes in chain, total bitsize="
+	 << ceil(bitsize) << ", secparam="
+	 << (7.2*phim/bitsize -110) << endl;
+
   // FIXME: The extraBits is an exceedingly ugly patch, used to bypass the
   //   issue that buildModChain must be called BEFORE the context is made
   //   bootstrappable (else the "powerful" basis is not initialized correctly.)
@@ -123,13 +132,6 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   }
   setDryRun(dry); // Now we can set the dry-run flag if desired
 
-  long nPrimes = context.numPrimes();
-  IndexSet allPrimes(0,nPrimes-1);
-  double bitsize = context.logOfProduct(allPrimes)/log(2.0);
-  if (!noPrint)
-    cout << "  "<<nPrimes<<" primes in chain, total bitsize="
-	 << ceil(bitsize) << ", secparam="
-	 << (7.2*phim/bitsize -110) << endl;
 
   long p2r = context.alMod.getPPowR();
   context.zMStar.set_cM(mValues[idx][13]/100.0);
@@ -231,6 +233,11 @@ int main(int argc, char *argv[])
   amap.arg("seed", seed, "random number seed");
   amap.arg("noPrint", noPrint, "suppress printouts");
   amap.arg("useCache", useCache, "0: zzX cache, 1: DCRT cache");
+
+  amap.arg("force_bsgs", fhe_test_force_bsgs);
+  amap.arg("force_hoist", fhe_test_force_hoist);
+  amap.arg("init_level", thinRecrypt_initial_level);
+
 
   amap.parse(argc, argv);
 

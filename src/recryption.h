@@ -17,6 +17,8 @@
 
 #include "NumbTh.h"
 
+extern long thinRecrypt_initial_level;
+
 class  PAlgebraMod;
 class  EncryptedArray;
 class  EvalMap;

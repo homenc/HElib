@@ -18,6 +18,8 @@
 #include "CtPtrs.h"
 #include "intraSlot.h"
 
+long thinRecrypt_initial_level=0;
+
 //#define PRINT_LEVELS
 
 
@@ -909,7 +911,7 @@ struct FHEPubKeyHack { // The public key
 
 };
 
-//#define PRINT_LEVELS
+#define PRINT_LEVELS
 
 // bootstrap a ciphertext to reduce noise
 void FHEPubKey::thinReCrypt(Ctxt &ctxt)
@@ -955,6 +957,19 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
 #ifdef PRINT_LEVELS
   CheckCtxt(ctxt, "init");
+#endif
+
+  if (thinRecrypt_initial_level) {
+    // experimental code...we should drop down
+    // to a reasonably small level before doing the 
+    // first linear map.
+    // TODO: we should also check that we have enough
+    // levels to do the first linear map.
+    ctxt.modDownToLevel(thinRecrypt_initial_level);
+  }
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after mod down");
 #endif
 
   // Move the slots to powerful-basis coefficients

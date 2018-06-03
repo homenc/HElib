@@ -24,6 +24,7 @@ NTL_CLIENT
 #include "EncryptedArray.h"
 #include "EvalMap.h"
 #include "powerful.h"
+#include "matmul.h"
 
 static bool noPrint = false;
 
@@ -273,6 +274,10 @@ int main(int argc, char *argv[])
   amap.arg("seed", seed, "random number seed");
   amap.arg("noPrint", noPrint, "suppress printouts");
   amap.arg("useCache", useCache, "0: zzX cache, 1: DCRT cache");
+
+
+  amap.arg("force_bsgs", fhe_test_force_bsgs);
+  amap.arg("force_hoist", fhe_test_force_hoist);
 
   amap.parse(argc, argv);
 

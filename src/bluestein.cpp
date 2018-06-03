@@ -80,6 +80,8 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
 
   long k = NextPowerOfTwo(2*n-1);
   fftRep& Ra = Cmodulus::getScratch_fftRep(k);
+
+  // FIXME: TofftRep_trunc(Ra, x, k, 2*n-1);
   TofftRep(Ra, x, k);
 
   mul(Ra,Ra,Rb);           // multiply in FFT representation
