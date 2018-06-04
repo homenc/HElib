@@ -14,28 +14,37 @@
 /**
  * @file sample.h - implementing various sampling routines 
  **/
+typedef NTL::Vec<long> zzX; // same as in NumbTh.h
 
-// Sample polynomials with entries {-1,0,1}. These functions are similar to
-// the SampleSmall class from v1, but without a class around it.
-
-// In sampleSmall, 
-// sampleHWt, min(Hwt,n) random coefficients are chosen at random in {-1,+1}
-// and the others are set to zero. If n=0 then n=poly.deg()+1 is used. 
-
-//! @brief Sample polynomials with entries {-1,0,1}. Each coefficient is 0 with probability 1/2 and +-1 with probability 1/4.
+//! Sample a degree-(n-1) poly, with -1/0/+1 coefficients. Each
+//! coefficient is 0 with probability 1/2 and +-1 with probability 1/4.
+void sampleSmall(zzX &poly, long n);
 void sampleSmall(NTL::ZZX &poly, long n=0);
 
-//! @brief Sample polynomials with entries {-1,0,1} with a given HAming weight.
-//!
-//! Choose min(Hwt,n) coefficients at random in {-1,+1} and the others are set
-//! to zero. If n=0 then n=poly.deg()+1 is used. 
-void sampleHWt(NTL::ZZX &poly, long Hwt, long n=0);
+//! Sample a degree-(n-1) poly as bove, with only Hwt nonzero coefficients
+void sampleHWt(zzX &poly, long n, long Hwt=100);
+void sampleHWt(NTL::ZZX &poly, long n, long Hwt=100);
 
 //! Sample polynomials with Gaussian coefficients.
-void sampleGaussian(NTL::ZZX &poly, long n=0, double stdev=1.0);
+void sampleGaussian(zzX &poly, long n, double stdev);
+void sampleGaussian(NTL::ZZX &poly, long n, double stdev);
 
-//! Sample polynomials with coefficients sampled uniformy
-//! over [-B..B]
-void sampleUniform(NTL::ZZX& poly, const NTL::ZZ& B, long n=0);
+//! Sample a degree-(n-1) ZZX, with coefficients uniform in [-B,B]
+void sampleUniform(zzX& poly, long n, long B=100);
+void sampleUniform(NTL::ZZX& poly, long n, const NTL::ZZ& B=NTL::ZZ(100L));
+
+//! Choose a vector of continuous Gaussians
+void sampleGaussian(std::vector<double> &dvec, long n, double stdev);
+
+class PAlgebra;
+// Same as above, but sample mod X^m-1 and then reduce mod Phi_m(X)
+void sampleHWt(zzX &poly, const PAlgebra& palg, long Hwt=100);
+void sampleSmall(zzX &poly, const PAlgebra& palg);
+void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev);
+void sampleUniform(zzX &poly, const PAlgebra& palg, long B=100);
+
+//! Implementing the Ducas-Durmus error procedure
+void sampleErrorDD(zzX& err, const PAlgebra& palg, double stdev);
+void sampleErrorDD(NTL::ZZX& err, const PAlgebra& palg, double stdev);
 
 #endif // _SAMPLE_H_

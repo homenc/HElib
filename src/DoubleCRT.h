@@ -344,7 +344,7 @@ public:
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
   void sampleHWt(long Hwt) {
     ZZX poly; 
-    ::sampleHWt(poly,Hwt,context.zMStar.getPhiM());
+    ::sampleHWt(poly,context.zMStar.getPhiM(),Hwt);
     *this = poly; // convert to DoubleCRT
   }
 
@@ -359,7 +359,7 @@ public:
   //! @brief Coefficients are uniform in [-B..B]
   void sampleUniform(const ZZ& B) {
     ZZX poly;
-    ::sampleUniform(poly, B, context.zMStar.getPhiM());
+    ::sampleUniform(poly, context.zMStar.getPhiM(), B);
     *this = poly;
   }
 

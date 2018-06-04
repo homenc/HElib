@@ -761,7 +761,7 @@ long FHESecKey::genRecryptData()
   // Generate a new bootstrapping key
   ZZX keyPoly;
   const long hwt = context.rcData.skHwt;
-  sampleHWt(keyPoly, hwt, context.zMStar.getPhiM());
+  sampleHWt(keyPoly, context.zMStar.getPhiM(), hwt);
   DoubleCRT newSk(keyPoly, context); // defined relative to all primes
   long keyID = ImportSecKey(newSk, hwt, p2r, /*maxDegKswitch=*/1);
 
