@@ -337,14 +337,14 @@ public:
 
   //! @brief Coefficients are -1/0/1, Prob[0]=1/2
   void sampleSmall() {
-    zzX poly; 
+    zzX poly;
     ::sampleSmall(poly,context.zMStar.getPhiM()); // degree-(phi(m)-1) polynomial
     *this = poly; // convert to DoubleCRT
   }
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
   void sampleHWt(long Hwt) {
-    zzX poly; 
+    zzX poly;
     ::sampleHWt(poly,context.zMStar.getPhiM(),Hwt);
     *this = poly; // convert to DoubleCRT
   }
@@ -352,7 +352,7 @@ public:
   //! @brief Coefficients are Gaussians
   void sampleGaussian(double stdev=0.0) {
     if (stdev==0.0) stdev=to_double(context.stdev); 
-    zzX poly; 
+    zzX poly;
     ::sampleGaussian(poly, context.zMStar.getPhiM(), stdev);
     *this = poly; // convert to DoubleCRT
   }
