@@ -271,6 +271,15 @@ void sampleUniform(zzX &poly, const PAlgebra& palg, long B)
   else // power of two
     sampleUniform(poly, palg.getPhiM(), B);
 }
+void sampleUniform(ZZX &poly, const PAlgebra& palg, const ZZ& B)
+{
+  if (palg.getPow2() > 0) { // not power of two
+    sampleUniform(poly, palg.getM(), B);
+    NTL::rem(poly, poly, palg.getPhimX());
+  }
+  else // power of two
+    sampleUniform(poly, palg.getPhiM(), B);
+}
 
 
 // Implementing the Ducas-Durmus error procedure

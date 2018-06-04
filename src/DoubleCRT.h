@@ -338,14 +338,14 @@ public:
   //! @brief Coefficients are -1/0/1, Prob[0]=1/2
   void sampleSmall() {
     zzX poly;
-    ::sampleSmall(poly,context.zMStar.getPhiM()); // degree-(phi(m)-1) polynomial
+    ::sampleSmall(poly,context.zMStar); // degree-(phi(m)-1) polynomial
     *this = poly; // convert to DoubleCRT
   }
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
   void sampleHWt(long Hwt) {
     zzX poly;
-    ::sampleHWt(poly,context.zMStar.getPhiM(),Hwt);
+    ::sampleHWt(poly,context.zMStar,Hwt);
     *this = poly; // convert to DoubleCRT
   }
 
@@ -353,19 +353,19 @@ public:
   void sampleGaussian(double stdev=0.0) {
     if (stdev==0.0) stdev=to_double(context.stdev); 
     zzX poly;
-    ::sampleGaussian(poly, context.zMStar.getPhiM(), stdev);
+    ::sampleGaussian(poly, context.zMStar, stdev);
     *this = poly; // convert to DoubleCRT
   }
 
   //! @brief Coefficients are uniform in [-B..B]
   void sampleUniform(const ZZ& B) {
     ZZX poly;
-    ::sampleUniform(poly, context.zMStar.getPhiM(), B);
+    ::sampleUniform(poly, context.zMStar, B);
     *this = poly;
   }
   void sampleUniform(long B) {
     zzX poly;
-    ::sampleUniform(poly, context.zMStar.getPhiM(), B);
+    ::sampleUniform(poly, context.zMStar, B);
     *this = poly;
   }
 

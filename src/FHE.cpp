@@ -338,7 +338,9 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
       B = context.productOfPrimes(context.ctxtPrimes);
       B /= ptxtSpace;
       B /= 8;
-      e.sampleUniform(B);
+      ZZX tmp;
+      sampleUniform(tmp, context.zMStar.getPhiM(), B);
+      e = tmp;
     }
     else { 
       e.sampleGaussian();
@@ -759,9 +761,9 @@ long FHESecKey::genRecryptData()
   long p2r = context.alMod.getPPowR(); // p^r
 
   // Generate a new bootstrapping key
-  ZZX keyPoly;
+  zzX keyPoly;
   const long hwt = context.rcData.skHwt;
-  sampleHWt(keyPoly, context.zMStar.getPhiM(), hwt);
+  sampleHWt(keyPoly, context.zMStar, hwt);
   DoubleCRT newSk(keyPoly, context); // defined relative to all primes
   long keyID = ImportSecKey(newSk, hwt, p2r, /*maxDegKswitch=*/1);
 

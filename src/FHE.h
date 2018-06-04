@@ -254,6 +254,12 @@ public:
   //! called with highNoise=true, returns a ciphertext with noise level~q/8.
   long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0,
 	       bool highNoise=false) const;
+  long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0,
+	       bool highNoise=false) const {
+    ZZX tmp;
+    convert(tmp, plaintxt);
+    Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
+  }
 
   bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
@@ -326,6 +332,12 @@ public:
   //! @brief Symmetric encryption using the secret key.
   long Encrypt(Ctxt &ctxt, const ZZX& ptxt,
 	       long ptxtSpace=0, long skIdx=0) const;
+  long Encrypt(Ctxt &ctxt, const zzX& ptxt,
+	       long ptxtSpace=0, long skIdx=0) const {
+    ZZX tmp;
+    convert(tmp,ptxt);
+    Encrypt(ctxt, tmp, ptxtSpace, skIdx);
+  }
 
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();
