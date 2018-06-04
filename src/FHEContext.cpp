@@ -377,9 +377,14 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
   }
 
   write_raw_int(str, context.zMStar.numOfGens());
-  
+ 
+  // Copying the way it is done in ASCII IO. 
+  // Bad dimensions are represented as a negated ord 
   for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
-    write_raw_int(str, context.zMStar.OrderOf(i));
+    if(context.zMStar.SameOrd(i))
+      write_raw_int(str, context.zMStar.OrderOf(i));
+    else 
+      write_raw_int(str, -context.zMStar.OrderOf(i));
   }
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);

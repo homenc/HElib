@@ -26,7 +26,7 @@ bool isLittleEndian()
     return static_cast<bool>(*reinterpret_cast<char *>(&i));
 }
 
-// compare two binary files, return 0 if they are equal, -1 if they
+// Compare two binary files, return 0 if they are equal, -1 if they
 // have different length, and 1 if they have the same length but
 // different content.
 long compareFiles(string filename1, string filename2)
