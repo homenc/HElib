@@ -18,6 +18,7 @@
 
 #include "NumbTh.h"
 #include "IndexMap.h"
+#include "sample.h"
 #include "FHEContext.h"
 #include "timing.h"
 

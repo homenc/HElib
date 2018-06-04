@@ -564,30 +564,6 @@ inline long argmax(vector<long>& v, bool (*moreThan)(long, long))
   return (long) idx;
 }
 
-// Sample polynomials with entries {-1,0,1}. These functions are similar to
-// the SampleSmall class from v1, but without a class around it.
-
-// In sampleSmall, 
-// sampleHWt, min(Hwt,n) random coefficients are chosen at random in {-1,+1}
-// and the others are set to zero. If n=0 then n=poly.deg()+1 is used. 
-
-//! @brief Sample polynomials with entries {-1,0,1}. Each coefficient is 0 with probability 1/2 and +-1 with probability 1/4.
-void sampleSmall(ZZX &poly, long n=0);
-
-//! @brief Sample polynomials with entries {-1,0,1} with a given HAming weight.
-//!
-//! Choose min(Hwt,n) coefficients at random in {-1,+1} and the others are set
-//! to zero. If n=0 then n=poly.deg()+1 is used. 
- void sampleHWt(ZZX &poly, long Hwt, long n=0);
-
-//! Sample polynomials with Gaussian coefficients.
-void sampleGaussian(ZZX &poly, long n=0, double stdev=1.0);
-
-//! Sample polynomials with coefficients sampled uniformy
-//! over [-B..B]
-void sampleUniform(ZZX& poly, const ZZ& B, long n=0);
-
-
 /**
  * @brief Facility for "restoring" the NTL PRG state.
  *
