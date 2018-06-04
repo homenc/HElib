@@ -160,6 +160,7 @@ public:
   // Copy only the primes in s \intersect other.getIndexSet()
   //  void partialCopy(const DoubleCRT& other, const IndexSet& s);
 
+  DoubleCRT& operator=(const zzX& poly);
   DoubleCRT& operator=(const ZZX& poly);
   DoubleCRT& operator=(const ZZ& num);
   DoubleCRT& operator=(const long num) { *this = to_ZZ(num); return *this; }
@@ -336,14 +337,14 @@ public:
 
   //! @brief Coefficients are -1/0/1, Prob[0]=1/2
   void sampleSmall() {
-    ZZX poly; 
+    zzX poly; 
     ::sampleSmall(poly,context.zMStar.getPhiM()); // degree-(phi(m)-1) polynomial
     *this = poly; // convert to DoubleCRT
   }
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
   void sampleHWt(long Hwt) {
-    ZZX poly; 
+    zzX poly; 
     ::sampleHWt(poly,context.zMStar.getPhiM(),Hwt);
     *this = poly; // convert to DoubleCRT
   }
@@ -351,7 +352,7 @@ public:
   //! @brief Coefficients are Gaussians
   void sampleGaussian(double stdev=0.0) {
     if (stdev==0.0) stdev=to_double(context.stdev); 
-    ZZX poly; 
+    zzX poly; 
     ::sampleGaussian(poly, context.zMStar.getPhiM(), stdev);
     *this = poly; // convert to DoubleCRT
   }
@@ -359,6 +360,11 @@ public:
   //! @brief Coefficients are uniform in [-B..B]
   void sampleUniform(const ZZ& B) {
     ZZX poly;
+    ::sampleUniform(poly, context.zMStar.getPhiM(), B);
+    *this = poly;
+  }
+  void sampleUniform(long B) {
+    zzX poly;
     ::sampleUniform(poly, context.zMStar.getPhiM(), B);
     *this = poly;
   }

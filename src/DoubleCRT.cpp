@@ -518,14 +518,20 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
 }
 
 
-DoubleCRT& DoubleCRT::operator=(const ZZX&poly)
+DoubleCRT& DoubleCRT::operator=(const ZZX& poly)
 {
   if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
-
   FFT(poly, s);
+  return *this;
+}
+DoubleCRT& DoubleCRT::operator=(const zzX& poly)
+{
+  if (isDryRun()) return *this;
 
+  const IndexSet& s = map.getIndexSet();
+  FFT(poly, s);
   return *this;
 }
 
