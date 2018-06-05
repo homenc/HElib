@@ -68,8 +68,6 @@ check:
 	$(MAKE) check_tableLookup
 	$(MAKE) check_Test_Bin_IO_x
 
-check_all: check_General_x check_matmul_x check_Permutations_x check_PolyEval_x check_Replicate_x check_EvalMap_x check_extractDigits_x check_bootstrapping_x check_binaryArith_x check_binaryCompare_x check_tableLookup_x check_Bin_IO_x
-
 check_General: Test_General_x 
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
 	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
@@ -109,6 +107,25 @@ check_tableLookup: Test_tableLookup_x
 
 check_Bin_IO_x: Test_Bin_IO_x
 	./Test_Bin_IO_x p=257 m=11008 r=1
+
+
+check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
+	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
+	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
+	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
+	./Test_matmul_x m=18631 L=8
+	./Test_matmul_x block=1 m=24295 gens="[16386 16427]" ords="[42 16]" L=8
+	./Test_Permutations_x noPrint=1
+	./Test_PolyEval_x p=7 r=2 d=34 noPrint=1
+	./Test_Replicate_x m=1247 noPrint=1
+	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
+	./Test_extractDigits_x m=2047 p=5 noPrint=1
+	./Test_bootstrapping_x noPrint=1 N=512
+	./Test_bootstrapping_x p=7 noPrint=1
+	./Test_binaryArith_x
+	./Test_binaryCompare_x
+	./Test_tableLookup_x
+	./Test_Bin_IO_x
 
 test: $(TESTPROGS)
 
