@@ -406,7 +406,7 @@ void convert(mat_zz_pE& X, const vector< vector<ZZX> >& A);
 void convert(vector<ZZX>& X, const vec_zz_pE& A);
 void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A);
 void convert(NTL::Vec<long>& out, const NTL::ZZX& in);
-void convert(NTL::Vec<long>& out, const NTL::zz_pX& in);
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric=true);
 void convert(NTL::Vec<long>& out, const NTL::GF2X& in);
 void convert(NTL::ZZX& out, const NTL::Vec<long>& in);
 void convert(NTL::GF2X& out, const NTL::Vec<long>& in);

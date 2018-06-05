@@ -873,11 +873,18 @@ void convert(NTL::Vec<long>& out, const NTL::ZZX& in)
 }
 
 
-void convert(NTL::Vec<long>& out, const NTL::zz_pX& in)
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric)
 {
   out.SetLength(in.rep.length());
   for (long i=0; i<out.length(); i++)
     out[i] = conv<long>(in[i]);
+
+  if (symmetric) { // convert to representation symmetric around 0
+    long p = zz_p::modulus();
+    for (long i=0; i<out.length(); i++)
+      if (out[i] > p/2)
+        out[i] -= p;
+  }
 }
 
 
