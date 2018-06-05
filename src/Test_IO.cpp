@@ -49,26 +49,30 @@ int main(int argc, char *argv[])
   long c = 2;
   long w = 64;
   long L = 5;
+  long mm=0;
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r,  "lifting");
   amap.arg("c", c, "number of columns in the key-switching matrices");
+  amap.arg("m", mm, "cyclotomic index","{31,127,1023}");
   amap.parse(argc, argv);
 
+  bool useTable = (mm==0 && p==2);
   long ptxtSpace = power_long(p,r);
+  long numTests = useTable? N_TESTS : 1;
 
-  FHEcontext* contexts[N_TESTS];
-  FHESecKey*  sKeys[N_TESTS];
-  Ctxt*       ctxts[N_TESTS];
-  EncryptedArray* eas[N_TESTS];
-  vector<ZZX> ptxts[N_TESTS];
+  std::unique_ptr<FHEcontext> contexts[numTests];
+  std::unique_ptr<FHESecKey> sKeys[numTests];
+  std::unique_ptr<Ctxt> ctxts[numTests];
+  std::unique_ptr<EncryptedArray> eas[numTests];
+  vector<ZZX> ptxts[numTests];
 
   // first loop: generate stuff and write it to cout
 
   // open file for writing
   {fstream keyFile("iotest.txt", fstream::out|fstream::trunc);
    assert(keyFile.is_open());
-  for (long i=0; i<N_TESTS; i++) {
-    long m = ms[i][1];
+  for (long i=0; i<numTests; i++) {
+    long m = (mm==0)? ms[i][1] : mm;
 
     cout << "Testing IO: m="<<m<<", p^r="<<p<<"^"<<r<<endl;
 
@@ -79,25 +83,25 @@ int main(int argc, char *argv[])
     vector<long> ords(2);
     ords[0] = ms[i][8];  ords[1] = ms[i][9];
 
-    if (gens[0]>0)
-      contexts[i] = new FHEcontext(m, p, r, gens, ords);
+    if (useTable && gens[0]>0)
+      contexts[i].reset(new FHEcontext(m, p, r, gens, ords));
     else
-      contexts[i] = new FHEcontext(m, p, r);
+      contexts[i].reset(new FHEcontext(m, p, r));
     contexts[i]->zMStar.printout();
 
     buildModChain(*contexts[i], L, c);  // Set the modulus chain
-    if (i==N_TESTS-1) contexts[i]->makeBootstrappable(mvec);
+    if (mm==0 && m==1023) contexts[i]->makeBootstrappable(mvec);
 
     // Output the FHEcontext to file
     writeContextBase(keyFile, *contexts[i]);
     writeContextBase(cout, *contexts[i]);
     keyFile << *contexts[i] << endl;
 
-    sKeys[i] = new FHESecKey(*contexts[i]);
+    sKeys[i].reset(new FHESecKey(*contexts[i]));
     const FHEPubKey& publicKey = *sKeys[i];
     sKeys[i]->GenSecKey(w,ptxtSpace); // A Hamming-weight-w secret key
     addSome1DMatrices(*sKeys[i]);// compute key-switching matrices that we need
-    eas[i] = new EncryptedArray(*contexts[i]);
+    eas[i].reset(new EncryptedArray(*contexts[i]));
 
     long nslots = eas[i]->size();
 
@@ -111,7 +115,7 @@ int main(int argc, char *argv[])
     ZZX poly = RandPoly(0,to_ZZ(p2r)); // choose a random constant polynomial
     eas[i]->decode(ptxts[i], poly);
 
-    ctxts[i] = new Ctxt(publicKey);
+    ctxts[i].reset(new Ctxt(publicKey));
     eas[i]->encrypt(*ctxts[i], publicKey, ptxts[i]);
     eas[i]->decrypt(*ctxts[i], *sKeys[i], b);
     assert(ptxts[i].size() == b.size());
@@ -137,7 +141,7 @@ int main(int argc, char *argv[])
 
   // open file for read
   {fstream keyFile("iotest.txt", fstream::in);
-  for (long i=0; i<N_TESTS; i++) {
+  for (long i=0; i<numTests; i++) {
 
     // Read context from file
     unsigned long m1, p1, r1;
@@ -252,86 +256,3 @@ int main(int argc, char *argv[])
   }}
   unlink("iotest.txt"); // clean up before exiting
 }
-
-#if 0
-/************************ OLD CODE ************************/
-#include <cstdlib> 
-#include <string>
-#include <sstream>
-#include <fstream>
-#include <iostream>
-
-#include "FHE.h"
-#include "EncryptedArray.h"
-// #include "parameters.h"  //this has the function get_m_c
-
-
-int main()
-{
-  string * tmp_ptr;
-
-  long LLL, DDD, KKK ;
-
-  long m; 
-  long ccc;
-  FHEcontext * context_ptr;
-  FHESecKey  * fhekey_ptr;
-  EncryptedArray * ea_ptr;
-  
-  LLL = 682; DDD=12; KKK=80;
-
-  /*
-      pair<long, long> m_c  = get_m_c(LLL, DDD, KKK);
-      m = m_c.first;
-      ccc = m_c.second;
-  */
-  m = 15709;
-  ccc = 3;
-
-  context_ptr = new FHEcontext(m, 2, 1);
-  buildModChain(*context_ptr, DDD, ccc);
-  fhekey_ptr = new FHESecKey(*context_ptr);
-  fhekey_ptr->clear();
-  fhekey_ptr->GenSecKey(64,2);
-  addSome1DMatrices(*fhekey_ptr);
-  const  FHEPubKey & pub_key =  *fhekey_ptr;
-
-  ZZX G;
-  G = ZZX(1,1);
-  ea_ptr = new EncryptedArray(*context_ptr, G);
-
-  // Test I/O, write context and public key, then try to read them back
-  cout << "KEY\n";
-  cout <<"L= " <<LLL<< " D= " << DDD<< " K= " << KKK << endl<< flush;
-
-  {
-  stringstream s1;
-  writeContextBase(s1, *context_ptr);
-  s1 << *context_ptr;
-
-  string s2 = s1.str();
-  cout << s2 << endl;  // output context also to external cout
-
-  // Read back context from input stream (s3)
-  unsigned long m1, p1, r1;
-  stringstream s3(s2);
-  readContextBase(s3, m1, p1, r1);
-  FHEcontext c1(m1, p1, r1);
-  s3 >> c1;
-  assert(c1 == *context_ptr);
-  }
-  {
-  stringstream s1;
-  s1 << pub_key;
-
-  string s2 = s1.str();
-  cout << s2 <<"\nENDKEY" << endl; // output public key also to external cout
-
-  // Read back cpublic key from input stream (s3)
-  stringstream s3(s2);
-  FHEPubKey pk1(*context_ptr);
-  s3 >> pk1;
-  assert(pk1 == pub_key);
-  }
-}
-#endif

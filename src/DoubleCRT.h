@@ -374,6 +374,9 @@ public:
 
   void reduce() const {} // place-holder for consistenct with AltCRT
 
+  // Raw I/O
+  void read(istream& str);
+  void write(ostream& str) const;
 
   // I/O: ONLY the matrix is outputted/recovered, not the moduli chain!! An
   // error is raised on input if this is not consistent with the current chain

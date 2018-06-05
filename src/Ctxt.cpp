@@ -13,6 +13,21 @@
 #include "timing.h"
 #include "Ctxt.h"
 #include "FHE.h"
+#include "binio.h"
+
+void SKHandle::read(istream& str)
+{
+  powerOfS = read_raw_int(str);
+  powerOfX = read_raw_int(str);
+  secretKeyID = read_raw_int(str);
+}
+ 
+void SKHandle::write(ostream& str) const
+{
+  write_raw_int(str, powerOfS);
+  write_raw_int(str, powerOfX);
+  write_raw_int(str, secretKeyID);
+}
 
 // A hack for recording required automorphisms (see NumbTh.h)
 std::set<long>* FHEglobals::automorphVals = NULL;
@@ -1064,6 +1079,52 @@ void Ctxt::reduce() const
   long n = parts.size();
   for (long i = 0; i < n; i++) parts[i].reduce();
 }
+
+void Ctxt::write(ostream& str) const
+{
+  writeEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
+  
+  /*  Writing out in binary:
+    1.  long ptxtSpace
+    2.  xdouble noiseVar
+    3.  IndexSet primeSet;
+    4.  vector<CtxtPart> parts;
+  */  
+  
+  write_raw_int(str, ptxtSpace);
+  write_raw_xdouble(str, noiseVar);
+  primeSet.write(str);
+  write_raw_vector(str, parts);    
+ 
+  writeEyeCatcher(str, BINIO_EYE_CTXT_END);
+}
+
+void Ctxt::read(istream& str)
+{
+  assert(readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN)==0);
+  
+  ptxtSpace = read_raw_int(str);
+  noiseVar = read_raw_xdouble(str); 
+  primeSet.read(str); 
+  CtxtPart blankCtxtPart(context, IndexSet::emptySet());
+  read_raw_vector(str, parts, blankCtxtPart);    
+
+  assert(readEyeCatcher(str, BINIO_EYE_CTXT_END)==0);
+}
+
+void CtxtPart::write(ostream& str)
+{ 
+  this->DoubleCRT::write(str); // CtxtPart is a child.
+  skHandle.write(str);
+}
+
+
+void CtxtPart::read(istream& str)
+{
+  this->DoubleCRT::read(str); // CtxtPart is a child.
+  skHandle.read(str);
+}
+
 
 istream& operator>>(istream& str, SKHandle& handle)
 {

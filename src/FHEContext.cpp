@@ -9,11 +9,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
+#include <cstring>
 #include "FHEContext.h"
 #include "EvalMap.h"
 #include "powerful.h"
-
+#include "binio.h"
 
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
@@ -360,6 +360,164 @@ bool FHEcontext::operator==(const FHEcontext& other) const
   return true;
 }
 
+
+void writeContextBaseBinary(ostream& str, const FHEcontext& context)
+{
+  writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
+
+  write_raw_int(str, context.zMStar.getP());
+  write_raw_int(str, context.alMod.getR());
+  write_raw_int(str, context.zMStar.getM());
+
+  write_raw_int(str, context.zMStar.numOfGens());
+  
+  // There aren't simple getters to get the gens and ords vectors
+  for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
+    write_raw_int(str, context.zMStar.ZmStarGen(i));
+  }
+
+  write_raw_int(str, context.zMStar.numOfGens());
+ 
+  // Copying the way it is done in ASCII IO. 
+  // Bad dimensions are represented as a negated ord 
+  for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
+    if(context.zMStar.SameOrd(i))
+      write_raw_int(str, context.zMStar.OrderOf(i));
+    else 
+      write_raw_int(str, -context.zMStar.OrderOf(i));
+  }
+
+  writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
+}
+
+void readContextBaseBinary(istream& str, unsigned long& m,
+                           unsigned long& p, unsigned long& r,
+                           vector<long>& gens, vector<long>& ords)
+{
+  assert(readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN)==0);
+    
+  p = read_raw_int(str);
+  r = read_raw_int(str);
+  m = read_raw_int(str);
+
+  // Number of gens and ords saved in front of vectors
+  read_raw_vector(str, gens);  
+  read_raw_vector(str, ords);
+  
+  assert(readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END)==0);
+}
+
+std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str)
+{
+  unsigned long m, p, r;
+  vector<long> gens, ords;
+  readContextBaseBinary(str, m, p, r, gens, ords);
+  return std::unique_ptr<FHEcontext>(new FHEcontext(m,p,r,gens,ords));
+}
+
+void writeContextBinary(ostream& str, const FHEcontext& context)
+{
+  
+  writeEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
+
+  // standard-deviation 
+  write_raw_xdouble(str, context.stdev);
+   
+  write_raw_int(str, context.specialPrimes.card());
+
+  // the "special" index 
+  for(long tmp = context.specialPrimes.first();
+      tmp <= context.specialPrimes.last(); 
+      tmp = context.specialPrimes.next(tmp)){
+    write_raw_int(str, tmp);
+  }
+
+  // output the primes in the chain
+  write_raw_int(str, context.moduli.size());
+
+  for (long i=0; i<(long)context.moduli.size(); i++){
+    write_raw_int(str, context.moduli[i].getQ());
+  }
+
+  // output the digits
+  write_raw_int(str, context.digits.size());
+
+  for(long i=0; i<(long)context.digits.size(); i++){
+    write_raw_int(str, context.digits[i].card());
+    for(long tmp = context.digits[i].first();
+         tmp <= context.digits[i].last(); 
+         tmp = context.digits[i].next(tmp)){
+      write_raw_int(str, tmp);
+    }
+  }
+
+  write_ntl_vec_long(str, context.rcData.mvec);
+
+  write_raw_int(str, context.rcData.hwt);
+  write_raw_int(str, context.rcData.conservative);
+
+  writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
+}
+
+
+void readContextBinary(istream& str, FHEcontext& context)
+{
+  assert(readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN)==0);
+
+  // Get the standard deviation
+  context.stdev = read_raw_xdouble(str);
+
+  long sizeOfS = read_raw_int(str);
+
+  IndexSet s;
+  for(long tmp, i=0; i<sizeOfS; i++){
+    tmp = read_raw_int(str);
+    s.insert(tmp);
+  }
+
+  context.moduli.clear();
+  context.specialPrimes.clear();
+  context.ctxtPrimes.clear();
+
+  long nPrimes = read_raw_int(str);
+
+  for (long p,i=0; i<nPrimes; i++) {
+    p = read_raw_int(str);
+
+    context.moduli.push_back(Cmodulus(context.zMStar,p,0));
+
+    if (s.contains(i))
+      context.specialPrimes.insert(i); // special prime
+    else
+      context.ctxtPrimes.insert(i);    // ciphertext prime
+  }
+  
+  long nDigits = read_raw_int(str);
+
+  context.digits.resize(nDigits);
+  for(long i=0; i<(long)context.digits.size(); i++){
+    sizeOfS = read_raw_int(str);
+
+    for(long tmp, n=0; n<sizeOfS; n++){
+      tmp = read_raw_int(str);
+      context.digits[i].insert(tmp);
+    }
+  }
+
+  // Read in the partition of m into co-prime factors (if bootstrappable)
+  Vec<long> mv;
+  read_ntl_vec_long(str, mv);
+
+  long t = read_raw_int(str);
+  bool consFlag = read_raw_int(str);  
+
+  if (mv.length()>0) {
+    context.makeBootstrappable(mv, t, consFlag);
+  }
+
+  assert(readEyeCatcher(str, BINIO_EYE_CONTEXT_END)==0);
+}
+
 void writeContextBase(ostream& str, const FHEcontext& context)
 {
   str << "[" << context.zMStar.getM()
@@ -424,6 +582,13 @@ void readContextBase(istream& str, unsigned long& m, unsigned long& p,
   str >> ords;
 
   seekPastChar(str, ']');
+}
+std::unique_ptr<FHEcontext> buildContextFromAscii(istream& str)
+{
+  unsigned long m, p, r;
+  vector<long> gens, ords;
+  readContextBase(str, m, p, r, gens, ords);
+  return std::unique_ptr<FHEcontext>(new FHEcontext(m,p,r,gens,ords));
 }
 
 istream& operator>> (istream &str, FHEcontext& context)
