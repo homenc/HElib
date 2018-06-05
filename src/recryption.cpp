@@ -17,7 +17,7 @@
 #include "powerful.h"
 #include "CtPtrs.h"
 #include "intraSlot.h"
-
+#include "norms.h"
 
 /************* Some local functions *************/
 static void x2iInSlots(ZZX& poly, long i,

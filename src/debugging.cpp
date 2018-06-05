@@ -11,6 +11,7 @@
  */
 // debugging.cpp - debugging utilities
 #include "debugging.h"
+#include "norms.h"
 NTL_CLIENT
 
 FHESecKey* dbgKey;

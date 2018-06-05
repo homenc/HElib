@@ -734,33 +734,6 @@ void interpolateMod(ZZX& poly, const vec_long& x, const vec_long& y,
   recursiveInterpolateMod(poly, x, ytmp, xmod, ymod, p, p2e);
 }
 
-ZZ largestCoeff(const ZZX& f)
-{
-  ZZ mx = ZZ::zero();
-  for (long i=0; i<=deg(f); i++) {
-    if (mx < abs(coeff(f,i)))
-      mx = abs(coeff(f,i));
-  }
-  return mx;
-}
-
-ZZ sumOfCoeffs(const ZZX& f) // = f(1)
-{
-  ZZ sum = ZZ::zero();
-  for (long i=0; i<=deg(f); i++) sum += coeff(f,i);
-  return sum;
-}
-
-xdouble coeffsL2Norm(const ZZX& f) // l_2 norm
-{
-  xdouble s = to_xdouble(0.0);
-  for (long i=0; i<=deg(f); i++) {
-    xdouble coef = to_xdouble(coeff(f,i));
-    s += coef * coef;
-  }
-  return sqrt(s);
-}
-
 // advance the input stream beyond white spaces and a single instance of cc
 void seekPastChar(istream& str, int cc)
 {

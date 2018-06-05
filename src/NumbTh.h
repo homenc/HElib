@@ -719,15 +719,6 @@ inline long divc(long a, long b)
   return (a + b - 1)/b;
 }
 
-///@{
-//! @name The size of the coefficient vector of a polynomial.
-ZZ sumOfCoeffs(const ZZX& f);  // = f(1)
-ZZ largestCoeff(const ZZX& f); // l_infty norm
-xdouble coeffsL2Norm(const ZZX& f); // l_2 norm
-///@}
-
-
-
 //! @class zz_pXModulus1
 //! @brief Auxiliary classes to facillitiate faster reduction mod Phi_m(X)
 //!        when the input has degree less than m
