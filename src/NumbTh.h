@@ -46,6 +46,8 @@
 #include <NTL/GF2EX.h>
 #include <NTL/lzz_pEX.h>
 
+#include <NTL/FFT.h>
+
 // Test for the "right version" of NTL (currently 10.0.0)
 #if (NTL_MAJOR_VERSION<10)
 #error "This version of HElib requires NTL version 10.0.0 or above"
@@ -822,6 +824,19 @@ vector<T> atovector(const char *a)
   convert(v2, v1);
   return v2;
 }
+
+
+
+
+#ifndef NTL_PROVIDES_TRUNC_FFT
+// Define truncated FFT routines if not provided by NTL
+inline void TofftRep_trunc(fftRep& y, const zz_pX& x, long k, long len,
+                    long lo, long hi)
+{  TofftRep(y, x, k, lo, hi); }
+
+inline void TofftRep_trunc(fftRep& y, const zz_pX& x, long k, long len)
+{ TofftRep_trunc(y, x, k, len, 0, deg(x)); }
+#endif
 
 
 //! Debug printing routines for vectors, ZZX'es, print only a few entries
