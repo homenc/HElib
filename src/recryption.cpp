@@ -911,7 +911,7 @@ struct FHEPubKeyHack { // The public key
 
 };
 
-#define PRINT_LEVELS
+//#define PRINT_LEVELS
 
 // bootstrap a ciphertext to reduce noise
 void FHEPubKey::thinReCrypt(Ctxt &ctxt)

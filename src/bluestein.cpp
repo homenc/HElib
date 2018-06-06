@@ -81,7 +81,10 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
   long k = NextPowerOfTwo(2*n-1);
   fftRep& Ra = Cmodulus::getScratch_fftRep(k);
 
-  TofftRep(Ra, x, k);
+  // Careful! we are multiplying polys of degrees 2*(n-1)
+  // and (n-1) modulo x^k-1.  This gives us some
+  // truncation in ceratin cases.
+  TofftRep_trunc(Ra, x, k, 3*(n-1)+1);
 
   mul(Ra,Ra,Rb);           // multiply in FFT representation
 
