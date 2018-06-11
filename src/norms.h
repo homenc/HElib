@@ -55,6 +55,8 @@ inline NTL::xdouble embeddingL2Norm(const NTL::ZZX& f, long m)
 inline NTL::xdouble embeddingL2Norm(const DoubleCRT& f)
 { return sqrt(embeddingL2NormSquared(f)); }
 
+//! Computing the canonical embedding, returning only the first half
+//! of the entries, the others are v[phi(m)-i] = conj(v[i])
 void canonicalEmbedding(std::vector<dcomplex>& v, const zzX& f, long m);
 void canonicalEmbedding(std::vector<xcomplex>& v, const NTL::ZZX& f, long m);
 void canonicalEmbedding(std::vector<xcomplex>& v, const DoubleCRT& f);

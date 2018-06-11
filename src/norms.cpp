@@ -160,25 +160,27 @@ xdouble embeddingL2NormSquared(const DoubleCRT& f)
 
 void canonicalEmbedding(std::vector<dcomplex>& v, const zzX& f, long m)
 {
-  cout << "canonicalEmbedding: m="<<m<<", phi(m)="<<phi_N(m)
-       << ", m'th ROU="<<std::polar<double>(1.0, (2*pi)/m)<<endl;
   v.resize(phi_N(m)/2);
-  long idx = 0;
-  for (long i=1; i <= m/2; ++i) // no need to compute the second half
+  std::atomic<long> idx(-1);
+  NTL_EXEC_RANGE(m/2, first, last) // no need to compute the second half
+  for (long i=first+1; i <= last; ++i)
     if (NTL::GCD(i,m)==1) {
       auto rou = std::polar<double>(1.0, (2*pi*i)/m); // root of unity
-      v[idx++] = complexEvalPoly(f,rou);
+      v[++idx] = complexEvalPoly(f,rou);
     }
+  NTL_EXEC_RANGE_END
 }
 void canonicalEmbedding(std::vector<xcomplex>& v, const NTL::ZZX& f, long m)
 {
   v.resize(phi_N(m)/2);
-  long idx = 0;
-  for (long i=1; i <= m/2; ++i) // no need to compute the second half
+  std::atomic<long> idx(-1);
+  NTL_EXEC_RANGE(m/2, first, last) // no need to compute the second half
+  for (long i=first+1; i <= last; ++i)
     if (NTL::GCD(i,m)==1) {
       auto rou = std::polar<double>(1.0, (2*pi*i)/m); // root of unity
-      v[idx++] = complexEvalPoly(f,rou);
+      v[++idx] = complexEvalPoly(f,rou);
     }
+  NTL_EXEC_RANGE_END
 }
 void canonicalEmbedding(std::vector<xcomplex>& v, const DoubleCRT& f)
 {
