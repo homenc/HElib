@@ -317,3 +317,46 @@ void sampleErrorDD(ZZX& err, const PAlgebra& palg, double stdev)
   convert(err.rep, pp);
   err.normalize();
 }
+
+// Helper function, returns a bound B such that for terms
+// of the form f = SampleSmall*SampleUniform(p), we have
+// Pr[|canonicalEmbed(f)|_{\infty} > B/3] < epsilon.
+// (The default is epsilon = 2^{-40}.)
+double boundCanonEmb(long m, long phim, long p, double epsilon)
+{
+  // The various constants in this function were determined experimentally.
+
+  /* We begin by computing the standard deviation of the magnitude of
+   * f(zeta), where f= sampleSmall*sampleUniform(p) +sampleUniform(p),
+   * and zeta is an m'th root-of-unity, which we approximate as:
+   */
+  double stdev = m*(p+0.5)*0.41;
+
+  //  cout << " p="<<p<<", stdev="<<stdev<<endl;
+
+  /* Then we use the following rules:
+   *      Pr[|f(zeta)| > stdev] = 0.28
+   *      Pr[|f(zeta)| > 2*stdev] = 0.05
+   *      Pr[|f(zeta)| > 3*stdev] = 0.0078
+   *      Pr[|f(zeta)| > 4*stdev] = 0.0012
+   *      Pr[|f(zeta)| > 5*stdev] = 1.7e-4
+   *      Pr[|f(zeta)| > n*stdev] = 1.7e-4 * 7.1^{5-n} for n>5
+   *
+   * We return the smallest number of standard deviations n satifying
+   *      Pr[|f(zeta)|>(n stdev)/3] = epsilon / phi(m)
+   */
+  epsilon /= phim;
+
+  if (epsilon >= 1.7e-4) { // use the values from above
+    if (epsilon >= 0.28)        { return stdev; }
+    else if (epsilon >= 0.05)   { return 2*stdev; }
+    else if (epsilon >= 0.0078) { return 3*stdev; }
+    else if (epsilon >= 0.0012) { return 4*stdev; }
+    else                        { return 5*stdev; }
+  }
+  long num = 6;
+  for (double prob=(1.7e-4)/(7.1); prob>epsilon; prob /= 7.1)
+    num++;
+
+  return stdev * num * 3;
+}

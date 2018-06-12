@@ -49,4 +49,10 @@ void sampleUniform(NTL::ZZX&poly, const PAlgebra& palg,
 void sampleErrorDD(zzX& err, const PAlgebra& palg, double stdev);
 void sampleErrorDD(NTL::ZZX& err, const PAlgebra& palg, double stdev);
 
+//! Helper function, returns a bound B such that for terms
+//! of the form f = SampleSmall*SampleUniform(p), we have
+//! Pr[|canonicalEmbed(f)|_{\infty} > B/3] < epsilon.
+//! (The default is epsilon = 2^{-40}.)
+double boundCanonEmb(long m, long phim, long p, double epsilon=9e-13);
+
 #endif // _SAMPLE_H_
