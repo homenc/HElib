@@ -44,6 +44,7 @@
  */
 #include <utility>
 #include "NumbTh.h"
+#include "zzX.h"
 #include "cloned_ptr.h"
 #include "hypercube.h"
 

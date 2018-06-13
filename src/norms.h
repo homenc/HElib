@@ -17,6 +17,9 @@
 #include <complex>
 #include <NTL/ZZX.h>
 #include <NTL/xdouble.h>
+#include "zzX.h"
+
+class DoubleCRT;
 
 long sumOfCoeffs(const zzX& f);         // = f(1)
 NTL::ZZ sumOfCoeffs(const NTL::ZZX& f); // = f(1)
@@ -42,11 +45,11 @@ inline NTL::xdouble coeffsL2Norm(const DoubleCRT& f) // l2 norm
 
 //! The L2-norm of the canonical embedding of an element
 double embeddingL2NormSquared(const zzX& f, long m);
-NTL::xdouble embeddingL2NormSquared(const ZZX& f, long m);
+NTL::xdouble embeddingL2NormSquared(const NTL::ZZX& f, long m);
 NTL::xdouble embeddingL2NormSquared(const DoubleCRT& f);
 
-typedef complex<double> dcomplex;
-typedef complex<NTL::xdouble> xcomplex;
+typedef std::complex<double> cx_double;
+typedef std::complex<NTL::xdouble> cx_xdouble;
 
 inline double embeddingL2Norm(const zzX& f, long m)
 { return sqrt(embeddingL2NormSquared(f,m)); }
@@ -57,7 +60,7 @@ inline NTL::xdouble embeddingL2Norm(const DoubleCRT& f)
 
 //! Computing the canonical embedding, returning only the first half
 //! of the entries, the others are v[phi(m)-i] = conj(v[i])
-void canonicalEmbedding(std::vector<dcomplex>& v, const zzX& f, long m);
-void canonicalEmbedding(std::vector<xcomplex>& v, const NTL::ZZX& f, long m);
-void canonicalEmbedding(std::vector<xcomplex>& v, const DoubleCRT& f);
+void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, long m);
+void canonicalEmbedding(std::vector<cx_xdouble>& v, const NTL::ZZX& f, long m);
+void canonicalEmbedding(std::vector<cx_xdouble>& v, const DoubleCRT& f);
 #endif // _NORMS_H_

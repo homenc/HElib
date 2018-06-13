@@ -15,8 +15,9 @@
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 #include <NTL/BasicThreadPool.h>
-#include "sample.h"
 #include "NumbTh.h"
+#include "PAlgebra.h"
+#include "sample.h"
 NTL_CLIENT
 
 // Sample a degree-(n-1) poly, with only Hwt nonzero coefficients
@@ -180,55 +181,6 @@ void sampleUniform(ZZX& poly, long n, const ZZ& B)
   }
 }
 
-
-#include <mutex>
-#include <map>
-#include "PAlgebra.h"
-// Helper functions, returns a zz_pXModulus object, modulo Phi_m(X)
-// and a single 60-bit prime. Can be used to get fatser operation
-// modulo Phi_m(X), where we know apriori that the numbers do not wrap.
-// This function changes the NTL current zz_p modulus.
-const zz_pXModulus& getPhimXMod(const PAlgebra& palg)
-{
-  static std::map<long,zz_pXModulus*> moduli; // pointer per value of m
-  static std::mutex pt_mtx;      // control access to modifying the map
-
-  zz_p::FFTInit(0); // set "the best FFT prime" as NTL's current modulus
-
-  long m = palg.getM();
-  auto it = moduli.find(m); // check if we already have zz_pXModulus for m
-
-  if (it==moduli.end()) {   // init a new zz_pXModulus for this value of m
-    std::unique_lock<std::mutex> lck(pt_mtx); // try to get a lock
-
-    // Got the lock, insert a new entry for this malue of m into the map
-    zz_pX phimX = conv<zz_pX>(palg.getPhimX());
-    zz_pXModulus* ptr = new zz_pXModulus(phimX); // will "never" be deleted
-
-    // insert returns a pair (iterator, bool)
-    auto ret = moduli.insert(std::pair<long,zz_pXModulus*>(m,ptr));
-    if (ret.second==false) // Another thread interted it, delete your copy
-      delete ptr;
-    // FIXME: Could leak memory if insert throws an exception
-    //        without inserting the element (but who cares)
-
-    it = ret.first; // point to the entry in the map
-  }
-  return *(it->second);
-}
-
-// DIRT: We use modular arithmetic mod p \approx 2^{60} as a
-//       substitute for computing on rational numbers
-static void reduceModPhimX(zzX& poly, const PAlgebra& palg)
-{
-  zz_pPush push; // backup the NTL current modulus
-  const zz_pXModulus& phimX = getPhimXMod(palg);
-
-  zz_pX pp;
-  convert(pp, poly);   // convert to zz_pX
-  rem(pp, pp, phimX);
-  convert(poly, pp);
-}
 
 /********************************************************************
  * Below are versions of the sampling routines that sample modulo

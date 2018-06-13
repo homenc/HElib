@@ -101,13 +101,6 @@ typedef unordered_map<string, const char *> argmap_t;
 
 typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future
-typedef NTL::Vec<long> zzX;
-
-inline
-bool IsZero(const zzX& a) { return a.length() == 0; }
-
-inline 
-void clear(zzX& a) { a.SetLength(0); }
 
 //! @brief Code for parsing command line arguments.
 /**
@@ -413,11 +406,6 @@ void convert(NTL::GF2X& out, const NTL::Vec<long>& in);
 // right now, this is just a place-holder...it may or may not 
 // eventually be further fleshed out
 
-inline void convert(zz_pX& x, const zzX& a)
-{
-   conv(x.rep, a);
-   x.normalize();
-}
 ///@}
 
 //! A generic template that resolves to NTL's conv routine
@@ -820,6 +808,4 @@ void make_lazy(const Lazy<T,P>& obj, Args&&... args)
    ptr.make(std::forward<Args>(args)...);
    builder.move(ptr);
 }
-
-
 #endif

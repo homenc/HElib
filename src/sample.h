@@ -14,7 +14,8 @@
 /**
  * @file sample.h - implementing various sampling routines 
  **/
-typedef NTL::Vec<long> zzX; // same as in NumbTh.h
+#include <NTL/ZZX.h>
+#include "zzX.h"
 
 //! Sample a degree-(n-1) poly, with -1/0/+1 coefficients. Each
 //! coefficient is 0 with probability 1/2 and +-1 with probability 1/4.
@@ -54,5 +55,9 @@ void sampleErrorDD(NTL::ZZX& err, const PAlgebra& palg, double stdev);
 //! Pr[|canonicalEmbed(f)|_{\infty} > B/3] < epsilon.
 //! (The default is epsilon = 2^{-40}.)
 double boundCanonEmb(long m, long phim, long p, double epsilon=9e-13);
+
+void reduceModPhimX(zzX& poly, const PAlgebra& palg);
+#include <NTL/ZZ_pX.h>
+const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg);
 
 #endif // _SAMPLE_H_

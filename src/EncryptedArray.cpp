@@ -11,10 +11,10 @@
  */
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
-
+#include <algorithm>
+#include "zzX.h"
 #include "EncryptedArray.h"
 
-#include <algorithm>
 #include "timing.h"
 #include "cloned_ptr.h"
 
