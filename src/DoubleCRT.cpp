@@ -587,7 +587,7 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
   return q;
 }
 
-
+// A parallelizable implementation of toPoly
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
@@ -595,37 +595,44 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   if (isDryRun()) return;
 
   IndexSet s1 = map.getIndexSet() & s;
-
-  if (empty(s1)) {
+  if (empty(s1)) { // nothing to do
     clear(poly);
     return;
   }
 
-
+  // To avoid allocating these with every call, they are defined static
+  // but thread_local, so concurrent calls to toPoly by multiple threads
+  // will have different copies. (tls_ = "Thread-Local Storage")
   static thread_local Vec<long> tls_ivec;
   static thread_local Vec<long> tls_pvec;
   static thread_local Vec< Vec<long> > tls_remtab;
   static thread_local Vec<zz_pX> tls_tmpvec;
 
-  Vec<long>& ivec = tls_ivec;
+  // For readability, call them by names without the tls_
+  Vec<long>& ivec = tls_ivec;      // the indexes of the active primes
   Vec<long>& pvec = tls_pvec;
-  Vec< Vec<long> >& remtab = tls_remtab;
-  Vec<zz_pX>& tmpvec = tls_tmpvec;
+  Vec< Vec<long> >& remtab = tls_remtab;// remtab[*][i] = coeffs of tmpvec[i]
+  Vec<zz_pX>& tmpvec = tls_tmpvec; // tmpvec[i] = current poly in i'th thread
 
+  // initialize the ivec vector, ivec[j] = index of j'th active prime
   long phim = context.zMStar.getPhiM();
-  long icard = MakeIndexVector(s1, ivec);
+  long icard = MakeIndexVector(s1, ivec); // icard = how many active primes
 
-  PartitionInfo pinfo(icard);
-  long cnt = pinfo.NumIntervals();
+  // Which primes are handled by what thread
+  PartitionInfo pinfo(icard);      // allocate threads to handle icard primes
+  long cnt = pinfo.NumIntervals(); // how many threads are allocated
 
+  // allocate space for all the coefficients modulo all the primes
   remtab.SetLength(phim);
   for (long h = 0; h < phim; h++) remtab[h].SetLength(icard);
 
+  // allocate space for the polynomials modulo all the primes
   tmpvec.SetLength(cnt);
   for (long i = 0; i < cnt; i++) tmpvec[i].SetMaxLength(phim);
 
-  { FHE_NTIMER_START(toPoly_FFT);
-  
+  // Run the inverse FFT modulo the different primes in parallel
+  {
+  FHE_NTIMER_START(toPoly_FFT);  
   NTL_EXEC_INDEX(cnt, index)
       long first, last;
       pinfo.interval(first, last, index);
@@ -634,21 +641,22 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   
       for (long j = first; j < last; j++) {
         long i = ivec[j];
-        context.ithModulus(i).iFFT(tmp, map[i]); 
+        context.ithModulus(i).iFFT(tmp, map[i]); // inverse FFT
   
-        long d = deg(tmp);
+        long d = deg(tmp); // copy the coefficents, pad by zeros if needed
         for (long h = 0; h <= d; h++) remtab[h][j] = rep(tmp.rep[h]);
         for (long h = d+1; h < phim; h++) remtab[h][j] = 0;
       }
   NTL_EXEC_INDEX_END
+  } // release space of local variables
 
-  }
-
-  {FHE_NTIMER_START(toPoly_CRT);
-
+  // Run the integer CRT in parallel for the different coefficients
+  {
+  FHE_NTIMER_START(toPoly_CRT);
   PartitionInfo pinfo1(phim);
   long cnt1 = pinfo1.NumIntervals();
 
+  // static thread-local variables to avoid re-allocation
   static thread_local ZZ tls_prod;
   static thread_local ZZ tls_prod_half;
   static thread_local Vec<long> tls_qvec;
@@ -659,13 +667,13 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   static thread_local ZZVec tls_prod1vec;
   static thread_local ZZVec tls_resvec;
 
-  ZZ& prod = tls_prod;
-  ZZ& prod_half = tls_prod_half;
-  ZZVec& prod1vec = tls_prod1vec;
-  Vec<long>& qvec = tls_qvec;
-  Vec<double>& qrecipvec = tls_qrecipvec;
-  Vec<long>& tvec = tls_tvec;
-  Vec<mulmod_precon_t>& tqinvvec = tls_tqinvvec;
+  ZZ& prod = tls_prod;                   // product of all the primes
+  ZZ& prod_half = tls_prod_half;         // = (prod+1)/2
+  ZZVec& prod1vec = tls_prod1vec;        // prod1vec[i] = prod / qi
+  Vec<long>& qvec = tls_qvec;            // vector of the primes themselves
+  Vec<double>& qrecipvec = tls_qrecipvec;// keeps 1/qi for each prime qi
+  Vec<long>& tvec = tls_tvec;            // tvec[i] = (prod / qi)^{-1} mod qi
+  Vec<mulmod_precon_t>& tqinvvec = tls_tqinvvec; // tvec with extra tables
   ZZVec& resvec = tls_resvec;
 
   qvec.SetLength(icard);
@@ -673,22 +681,24 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   tvec.SetLength(icard);
   tqinvvec.SetLength(icard);
 
+  // store the primes and reciprocals, and compute their product
   prod = 1;
   for (long j = 0; j < icard; j++) {
     long i = ivec[j];
-    long q = context.ithModulus(i).getQ();
+    long q = context.ithModulus(i).getQ(); // the prime
     qvec[j] = q;
     qrecipvec[j] = 1/double(q);
     mul(prod, prod, q);
   }
+  long sz = prod.size(); // size of the product
 
-  long sz = prod.size();
-
+  // reallocate space only if needed
   if (prod1vec.length() != icard || prod1vec.BaseSize() != sz+1) {
     prod1vec.kill();
-    prod1vec.SetSize(icard, sz+1);
+    prod1vec.SetSize(icard, sz+1); // icard integers of size<=sz+1 each
   }
 
+  // compute (prod / qi)^{-1} mod qi
   for (long j = 0; j < icard; j++) {
     long q = qvec[j];
     div(prod1vec[j], prod, q);
@@ -703,12 +713,12 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
     resvec.SetSize(phim, sz+1);
   }
 
-  if (!positive) {
-    // prod_half = (prod+1)/2
+  if (!positive) { // prod_half = (prod+1)/2
     add(prod_half, prod, 1);
     div(prod_half, prod_half, 2);
   }
   
+  // Compute the actual CRT reconstruction
   NTL_EXEC_INDEX(cnt1, index)
   NTL_IMPORT(icard)
       long first, last;
@@ -722,13 +732,13 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 
       ZZ tmp;
       tmp.SetSize(sz+4);
-  
-      for (long h = first; h < last; h++) {
+
+      for (long h = first; h < last; h++) { // CRT the h'th coefficient
         clear(tmp);
         double quotient = 0;
         long *remvec = remtab[h].elts();
         
-        for (long j = 0; j < icard; j++) {
+        for (long j = 0; j < icard; j++) { // Add one prime at a time
           long q = qvecp[j];
           long t = tvecp[j];
           mulmod_precon_t tqinv = tqinvvecp[j];
@@ -738,10 +748,11 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
           MulAddTo(tmp, prod1vecp[j], r);
           quotient += r*qrecip;
         }
-        
+        // reduce modulo prod
         MulSubFrom(tmp, prod, long(quotient));
         while (tmp < 0) add(tmp, tmp, prod);
         while (tmp >= prod) sub(tmp, tmp, prod);
+        // if !positive, reduce to the interval [-prod/2, prod/2]
         if (!positive && tmp >= prod_half) 
           tmp -= prod;
         resvec[h] = tmp;
