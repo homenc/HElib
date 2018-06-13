@@ -89,19 +89,3 @@ xdouble coeffsL2NormSquared(const DoubleCRT& f) // l2 norm^2
   f.toPoly(poly);
   return coeffsL2NormSquared(poly);
 }
-
-// Canonical embedding on DoubleCRT arguments, just calling
-// the corresponding ZZX functions
-
-xdouble embeddingL2NormSquared(const DoubleCRT& f)
-{
-  ZZX tmp;
-  f.toPoly(tmp);
-  return embeddingL2NormSquared(tmp, f.getContext().zMStar.getM());
-}
-void canonicalEmbedding(std::vector<cx_xdouble>& v, const DoubleCRT& f)
-{
-  ZZX tmp;
-  f.toPoly(tmp);
-  canonicalEmbedding(v, tmp, f.getContext().zMStar.getM());
-}
