@@ -44,6 +44,26 @@ void add(zzX& res, const zzX& a, const zzX& b)
   for (long i=lsize(aa); i<lsize(bb); i++)
     res[i] = bb[i];
 }
+void mul(zzX& res, const zzX& a, long b)
+{
+  res.SetLength(lsize(a));
+  for (long i=0; i<lsize(a); i++)
+    res[i] *= a[i]*b;
+}
+
+void div(zzX& res, const zzX& a, long b)
+{
+  res.SetLength(lsize(a));
+  for (long i=0; i<lsize(a); i++)
+    res[i] = a[i]/b;
+}
+
+void normalize(zzX& f)
+{
+  long deg = f.length()-1;
+  while (f[deg]==0) deg--;
+  f.SetLength(deg+1);
+}
 
 
 // Helper functions, returns a zz_pXModulus object, modulo Phi_m(X)

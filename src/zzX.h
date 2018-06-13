@@ -37,6 +37,39 @@ inline zzX operator+(const zzX& a, const zzX& b)
   add(tmp, a, b);
   return tmp;
 }
+inline zzX& operator+=(zzX& a, const zzX& b)
+{
+  add(a, a, b);
+  return a;
+}
+
+void div(zzX& res, const zzX& a, long b);
+inline zzX operator/(const zzX& a, long b)
+{
+  zzX tmp;
+  div(tmp, a, b);
+  return tmp;
+}
+inline zzX& operator/=(zzX& a, long b)
+{
+  div(a, a, b);
+  return a;
+}
+
+void mul(zzX& res, const zzX& a, long b);
+inline zzX operator*(const zzX& a, long b)
+{
+  zzX tmp;
+  mul(tmp, a, b);
+  return tmp;
+}
+inline zzX& operator*=(zzX& a, long b)
+{
+  mul(a, a, b);
+  return a;
+}
+
+void normalize(zzX& f);
 
 const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg);
 void reduceModPhimX(zzX& poly, const PAlgebra& palg);

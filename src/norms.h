@@ -49,10 +49,11 @@ typedef std::complex<NTL::xdouble> cx_xdouble;
 
 //! Computing the canonical embedding, returning only the first half
 //! of the entries, the others are v[phi(m)-i] = conj(v[i])
-void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, long m);
+void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra& palg);
+void canonicalUnEmbedding(zzX& f, const std::vector<cx_double>& v, const PAlgebra& palg);
 
-double embeddingL2NormSquared(const zzX& f, long m);
-inline double embeddingL2Norm(const zzX& f, long m)
-{ return sqrt(embeddingL2NormSquared(f,m)); }
+double embeddingL2NormSquared(const zzX& f, const PAlgebra& palg);
+inline double embeddingL2Norm(const zzX& f, const PAlgebra& palg)
+{ return sqrt(embeddingL2NormSquared(f,palg)); }
 
 #endif // _NORMS_H_
