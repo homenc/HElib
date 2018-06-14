@@ -81,10 +81,11 @@ class KeySwitch {
 public:
   SKHandle fromKey;  // A handle for the key s'
   long     toKeyID;  // Index of the key s that we are switching into
-  long     ptxtSpace;  // either p or p^r
+  long     ptxtSpace;// either p or p^r
 
-  vector<DoubleCRT> b;  // The top row, consisting of the bi's
-  ZZ prgSeed;        // a seed to generate the random ai's in the bottom row
+  vector<DoubleCRT> b;// The top row, consisting of the bi's
+  ZZ prgSeed;         // a seed to generate the random ai's in the bottom row
+  xdouble noiseVar;   // estimate for the noise variance in each column
 
   explicit
   KeySwitch(long sPow=0, long xPow=0, long fromID=0, long toID=0, long p=0):
@@ -407,10 +408,11 @@ void addTheseMatrices(FHESecKey& sKey,
 		      const std::set<long>& automVals, long keyID=0);
 
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
-void RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
+//! Returns the variance of the noise canonical-embedding entries
+double RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
 	  ZZ* prgSeed=NULL);
 
 //! Same as RLWE, but assumes that c1 is already chosen by the caller
-void RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);
+double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);
 
 #endif // ifndef _FHE_H_

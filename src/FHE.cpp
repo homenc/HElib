@@ -18,7 +18,8 @@
 /******** Utility function to generate RLWE instances *********/
 
 // Assumes that c1 is already chosen by the caller
-void RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
+double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
+// Returns the variance of the noise canonical-embedding entries
 {
   assert (p>0); // Can be used with p=1, but we always use with p>=2
   const FHEcontext& context = s.getContext();
@@ -38,14 +39,19 @@ void RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
   DoubleCRT tmp(c1);
   tmp.Mul(s, /*matchIndexSets=*/false); // multiply but don't mod-up
   c0 -= tmp;
+
+  return stdev*stdev * p*p *
+         ((palg.getPow2()>0)? palg.getM() : palg.getPhiM());
 }
 
 // Choose random c0,c1 such that c0+s*c1 = p*e for a short e
-void RLWE(DoubleCRT& c0,DoubleCRT& c1, const DoubleCRT &s, long p, ZZ* prgSeed)
+// Returns the variance of the noise canonical-embedding entries
+double RLWE(DoubleCRT& c0,DoubleCRT& c1, const DoubleCRT &s, long p,
+            ZZ* prgSeed)
 {
   // choose c1 at random (using prgSeed if not NULL)
   c1.randomize(prgSeed);
-  RLWE1(c0, c1, s, p);
+  return RLWE1(c0, c1, s, p);
 }
 
 /******************** KeySwitch implementation **********************/
@@ -321,6 +327,10 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
   DoubleCRT r(context, context.ctxtPrimes);
   r.sampleSmall();
 
+  double stdev = to_double(context.stdev);
+  if (context.zMStar.getPow2()==0) // not power of two
+    stdev *= sqrt(context.zMStar.getM());
+
   for (size_t i=0; i<ctxt.parts.size(); i++) {  // add noise to all the parts
     ctxt.parts[i] *= r;
 
@@ -334,9 +344,6 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
       e.sampleUniform(B);
     }
     else { 
-      double stdev = to_double(context.stdev);
-      if (context.zMStar.getPow2()==0) // not power of two
-        stdev *= sqrt(context.zMStar.getM());
       e.sampleGaussian(stdev);
     }
 
@@ -361,23 +368,25 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     // hack: we set noiseVar to Q^2/8, which is just below threshold 
     // that will signal an error
 
-    ctxt.noiseVar = xexp(2*context.logOfProduct(context.ctxtPrimes) - log(8.0));
+    ctxt.noiseVar = xexp(2*context.logOfProduct(context.ctxtPrimes)-log(8.0));
 
   }
   else {
-    // We have <skey,ctxt>= r*<skey,pkey> +p*(e0+e1*s) +m, where VAR(<skey,pkey>)
-    // is recorded in pubEncrKey.noiseVar, VAR(ei)=sigma^2*phi(m), and VAR(s) is
-    // determined by the secret-key Hamming weight (skHwt). 
-    // VAR(r)=phi(m)/2, hence the expected size squared is bounded by:
-    // E(X^2) <= pubEncrKey.noiseVar *phi(m) *stdev^2
-    //                               + p^2*sigma^2 *phi(m) *(skHwt+1) + p^2
-  
-    long hwt = skHwts[0];
-    xdouble phim = to_xdouble(context.zMStar.getPhiM());
-    xdouble sigma2 = context.stdev * context.stdev;
-    xdouble p2 = to_xdouble(ptxtSpace) * to_xdouble(ptxtSpace);
-    ctxt.noiseVar = pubEncrKey.noiseVar*phim*0.5 
-                    + p2*sigma2*phim*(hwt+1)*context.zMStar.get_cM() + p2;
+    // We have <skey,ctxt>= r*<skey,pkey> +p*(e0+e1*s) +m,
+    // where VAR(<skey,pkey>) is recorded in pubEncrKey.noiseVar,
+    //       VAR(r)=phi(m)/2        or m/2
+    //       VAR(ei)=sigma^2*phi(m) or sigma^2*m^2
+    //       both depend on whether m is a power of two,
+    //       and VAR(s) depends by the secret-key Hamming weight (skHwt).
+    // Hence the expected size squared is bounded by:
+    // VAR(X)= pubEncrKey.noiseVar*VAR(r) + p^2*(1 + VAR(s)*(VAR(ei)+1))
+
+    double rVar = (context.zMStar.getPow2()==0)?
+      (context.zMStar.getPhiM()/2.0) : (context.zMStar.getM()/2.0);
+    double eVar = stdev*stdev;
+    double sVar = skHwts[0];
+    double p2 = ptxtSpace*double(ptxtSpace);
+    ctxt.noiseVar = pubEncrKey.noiseVar*rVar + p2*(1+sVar*(eVar+1));
   }
   return ptxtSpace;
 }
@@ -551,8 +560,11 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
     if (ptxtSpace<2)
       ptxtSpace = context.alMod.getPPowR(); // default plaintext space is p^r
 
-    pubEncrKey.parts.assign(2,CtxtPart(context,context.ctxtPrimes));// allocate space
-    RLWE(pubEncrKey.parts[0], pubEncrKey.parts[1], sKey, ptxtSpace); // a new RLWE instance
+    // allocate space
+    pubEncrKey.parts.assign(2,CtxtPart(context,context.ctxtPrimes));
+    // Choose a new RLWE instance
+    pubEncrKey.noiseVar
+      = RLWE(pubEncrKey.parts[0], pubEncrKey.parts[1], sKey, ptxtSpace);
 
     // make parts[0],parts[1] point to (1,s)
     pubEncrKey.parts[0].skHandle.setOne();
@@ -561,10 +573,6 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
     // Set the other Ctxt bookeeping parameters in pubEncrKey
     pubEncrKey.primeSet = context.ctxtPrimes;
     pubEncrKey.ptxtSpace = ptxtSpace;
-
-    xdouble phim = to_xdouble(context.zMStar.getPhiM());
-    pubEncrKey.noiseVar = context.stdev * context.stdev
-      * phim * ptxtSpace * ptxtSpace;
   }
   skHwts.push_back(Hwt); // record the Hamming weight of the new secret-key
   sKeys.push_back(sKey); // add to the list of secret keys
@@ -633,7 +641,7 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   // generate the RLWE instances with pseudorandom ai's
 
   for (long i = 0; i < n; i++) {
-    RLWE1(ksMatrix.b[i], a[i], toKey, p); 
+    ksMatrix.noiseVar = RLWE1(ksMatrix.b[i], a[i], toKey, p);
   }
   // Add in the multiples of the fromKey secret key
   fromKey *= context.productOfPrimes(context.specialPrimes);
@@ -727,15 +735,15 @@ long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   // Set Ctxt bookeeping parameters
   ctxt.ptxtSpace = ptxtSpace;
-  xdouble phim = to_xdouble(context.zMStar.getPhiM());
-  ctxt.noiseVar = context.stdev*context.stdev * phim * ptxtSpace*ptxtSpace;
 
   // make parts[0],parts[1] point to (1,s)
   ctxt.parts[0].skHandle.setOne();
   ctxt.parts[1].skHandle.setBase(skIdx);
 
   const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
-  RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace); // a new RLWE instance
+  ctxt.noiseVar           // Sample a new RLWE instance
+    = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace)
+    + (ptxtSpace*ptxtSpace)/4;
 
   // add in the plaintext
   ctxt.addConstant(ptxt);

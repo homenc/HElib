@@ -256,6 +256,7 @@ class Ctxt {
   IndexSet primeSet; // the primes relative to which the parts are defined
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
   xdouble noiseVar;  // estimating the noise variance in this ciphertext
+  long highWaterMark;// keep track of number of multiplications
 
   // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
   // are defined relative to the same set of primes and plaintext space,

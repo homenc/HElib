@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
   // Compute the number of levels
   long L;
   if (bootstrap) L = 30; // that should be enough
-  else           L = 3+ NTL::NumBits(bitSize+2);
+  else           L = 5+ NTL::NumBits(bitSize+2);
 
   if (verbose) {
     cout <<"input bitSize="<<bitSize

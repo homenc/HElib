@@ -22,7 +22,7 @@ std::set<long>* FHEglobals::automorphVals2 = NULL;
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
   if (size < 0.0) {
-    size = ((double) context.zMStar.getPhiM()) * ptxtSpace*ptxtSpace /12.0;
+    size = context.zMStar.getPhiM() * (ptxtSpace/2.0)*(ptxtSpace/2.0);
   }
   noiseVar = size;
   primeSet = context.ctxtPrimes;
@@ -60,6 +60,14 @@ static std::pair<long, NTL::xdouble>
 keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
 {
   const FHEcontext& context = p.getContext();
+  const PAlgebra& palg = context.zMStar;
+  // WARNING: the following lines are written to prevent integer overflow
+  double ksSize2 = to_double(context.stdev) * pSpace/2.0;
+  if (palg.getPow2() > 0) // power of two
+    ksSize2 *= ksSize2 * palg.getPhiM();
+  else                    // not power of two
+    ksSize2 *= (ksSize2 * palg.getM()) * palg.getM();
+
   long nDigits = 0;
   xdouble addedNoise = to_xdouble(0.0);
   double sizeLeft = context.logOfProduct(p.getIndexSet());
@@ -69,12 +77,9 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
     double digitSize = context.logOfProduct(context.digits[i]);
     if (sizeLeft<digitSize) digitSize=sizeLeft;// need only part of this digit
 
-    // Added noise due to this digit is phi(m) *sigma^2 *pSpace^2 *|Di|^2/4, 
+    // Added noise due to this digit is keySwMatrixNoise^2 * |Di|^2, 
     // where |Di| is the magnitude of the digit
-
-    // WARNING: the following line is written just so to prevent overflow
-    addedNoise += to_xdouble(context.zMStar.getPhiM()) * pSpace*pSpace
-      * xexp(2*digitSize) * context.stdev*context.stdev / 4.0;
+    addedNoise += ksSize2 * xexp(2*digitSize);
 
     sizeLeft -= digitSize;
   }
@@ -82,12 +87,12 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
   // Sanity-check: make sure that the added noise is not more than the special
   // primes can handle: After dividing the added noise by the product of all
   // the special primes, it should be smaller than the added noise term due
-  // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 12
+  // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 4
 
   long keyWeight = pubKey.getSKeyWeight(p.skHandle.getSecretKeyID());
-  double phim = context.zMStar.getPhiM();
+  double phim = palg.getPhiM();
   double logModSwitchNoise = log((double)keyWeight) 
-    +2*log((double)pSpace) +log(phim) -log(12.0);
+    +2*log((double)pSpace) +log(phim) -log(4.0);
   double logKeySwitchNoise = log(addedNoise) 
     -2*context.logOfProduct(context.specialPrimes);
   assert(logKeySwitchNoise < logModSwitchNoise);
@@ -853,8 +858,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 
    // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
   if (size < 0.0) {
-    // WARNING: the following line is written just so to prevent overflow
-    size = ((double) context.zMStar.getPhiM()) * ptxtSpace * (ptxtSpace /4.0);
+    size = context.zMStar.getPhiM() * (ptxtSpace/2.0)*(ptxtSpace/2.0);
   }
 
   // multiply all the parts by this constant
@@ -1052,10 +1056,10 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
     }
   }
   // WARNING: the following line is written just so to prevent overflow
-  addedNoise = (addedNoise * context.zMStar.getPhiM()) 
-               * ptxtSpace * (ptxtSpace/ 12.0);
+  double roundingNoise
+    = context.zMStar.getPhiM() * (ptxtSpace/2.0) * (ptxtSpace/ 2.0);
 
-  return addedNoise;
+  return addedNoise * roundingNoise;
 }
 
 
