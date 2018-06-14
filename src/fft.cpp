@@ -84,7 +84,10 @@ void convert(arma::vec& to, const zzX& from)
   NTL_EXEC_RANGE_END
 }
 
-void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra& palg)
+// Computing the canonical embedding. This function returns in v only
+// the first half of the entries, the others are v[phi(m)-i]=conj(v[i])
+void canonicalEmbedding(std::vector<cx_double>& v,
+                        const zzX& f, const PAlgebra& palg)
 {
   FHE_TIMER_START;
   long m = palg.getM();
@@ -97,10 +100,19 @@ void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra&
   for (long i=1, idx=0; i<=m/2; i++)
     if (palg.inZmStar(i)) v[idx++] = avv[i];
 }
-void canonicalUnEmbedding(zzX& f, const std::vector<cx_double>& v, const PAlgebra& palg)
+
+// Roughly the inverse of canonicalEmbedding, except for rounding issues.
+// Calling embedInSlots(f,v,palg,strictInverse=true) after setting
+// canonicalEmbedding(v, f, palg), is sure to recover the same f.
+// Calling embedInSlots(f,v,palg,strictInverse=false) when m is
+// not a power of two may fail to recover the same f, however.
+// When m is a power of two, the strictInverse flag has no effect.
+void embedInSlots(zzX& f, const std::vector<cx_double>& v,
+                  const PAlgebra& palg, bool strictInverse)
 {
   FHE_TIMER_START;
   long m = palg.getM();
+  if (0==(m & 1)) strictInverse=true; // m even => power of two
   arma::cx_vec avv(m);
   for (long i=1, idx=0; i<=m/2; i++) {
     if (palg.inZmStar(i)) {
@@ -110,24 +122,18 @@ void canonicalUnEmbedding(zzX& f, const std::vector<cx_double>& v, const PAlgebr
     else
       avv[m-i] = avv[i] = std::complex<double>(0.0,0.0);
   }
-  arma::vec av = (m*256)*arma::real(arma::ifft(avv, m));
-  convert(f, av);
+  arma::vec av = arma::real(arma::ifft(avv,m));
+
+  // If v was obtained by canonicalEmbedding(v,f,palg) then we have
+  // the guarantee that m*av is an integral polynomial, and moreover
+  // m*av mod Phi_m(x) is in m*Z[X].
+  if (strictInverse) av *= m; // scale up by m
+  convert(f, av);    // round to an integer polynomial
   reduceModPhimX(f, palg);
-  f /= (m*256);
+  if (strictInverse) f /= m;  // scale down by m
   normalize(f);
 }
 #else // ifdef FFT_ARMA
 #error "No implementation found for canonicalEmbedding"
 #endif // ifdef FFT_ARMA
 #endif // ifdef FFT_NATIVE
-
-// l_2 norm square of canonical embedding
-double embeddingL2NormSquared(const zzX& f, const PAlgebra& palg)
-{
-  std::vector<cx_double> emb;
-  canonicalEmbedding(emb, f, palg);
-  double acc = 0.0;
-  for (auto& x : emb)
-    acc += std::norm(x);
-  return 2*acc;
-}

@@ -89,3 +89,27 @@ xdouble coeffsL2NormSquared(const DoubleCRT& f) // l2 norm^2
   f.toPoly(poly);
   return coeffsL2NormSquared(poly);
 }
+
+// l_2 norm square of canonical embedding
+double embeddingL2NormSquared(const zzX& f, const PAlgebra& palg)
+{
+  std::vector<cx_double> emb;
+  canonicalEmbedding(emb, f, palg);
+  double acc = 0.0;
+  for (auto& x : emb)
+    acc += std::norm(x);
+  return 2*acc;
+}
+
+//! Computing the L-infinity norm of the canonical embedding
+double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg)
+{
+  std::vector<cx_double> emb;
+  canonicalEmbedding(emb, f, palg);
+  double mx = 0.0;
+  for (auto& x : emb) {
+    double n = std::norm(x);
+    if (mx < n) mx = n;
+  }
+  return sqrt(mx);
+}

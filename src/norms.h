@@ -43,17 +43,30 @@ inline NTL::xdouble coeffsL2Norm(const DoubleCRT& f) // l2 norm
 { return sqrt(coeffsL2NormSquared(f)); }
 
 
-//! The L2-norm of the canonical embedding of an element
 typedef std::complex<double> cx_double;
 typedef std::complex<NTL::xdouble> cx_xdouble;
 
-//! Computing the canonical embedding, returning only the first half
-//! of the entries, the others are v[phi(m)-i] = conj(v[i])
-void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra& palg);
-void canonicalUnEmbedding(zzX& f, const std::vector<cx_double>& v, const PAlgebra& palg);
-
+//! Computing the L2 norm of the canonical embedding
 double embeddingL2NormSquared(const zzX& f, const PAlgebra& palg);
 inline double embeddingL2Norm(const zzX& f, const PAlgebra& palg)
 { return sqrt(embeddingL2NormSquared(f,palg)); }
+
+//! Computing the L-infinity norm of the canonical embedding
+double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg);
+
+//! Computing the canonical embedding (in fft.cpp). This function
+//! returns in v only the first half of the entries, the others are
+//! v[phi(m)-i] = conj(v[i])
+void canonicalEmbedding(std::vector<cx_double>& v,
+                        const zzX& f, const PAlgebra& palg);
+
+//! Roughly the inverse of canonicalEmbedding, except for rounding issues
+void embedInSlots(zzX& f, const std::vector<cx_double>& v,
+                  const PAlgebra& palg, bool strictInverse=false);
+// Calling embedInSlots(f,v,palg,strictInverse=true) after setting
+// canonicalEmbedding(v, f, palg), is sure to recover the same f.
+// Calling embedInSlots(f,v,palg,strictInverse=false) when m is
+// not a power of two may fail to recover the same f, however.
+// When m is apower of two, the strictInverse flag has no effect.
 
 #endif // _NORMS_H_

@@ -237,7 +237,7 @@ void sampleUniform(ZZX &poly, const PAlgebra& palg, const ZZ& B)
 // Implementing the Ducas-Durmus error procedure
 void sampleErrorDD(zzX& err, const PAlgebra& palg, double stdev)
 {
-  static long const factor = 1L<<32;
+  constexpr long factor = 1L<<32;
 
   long m = palg.getM();
 
