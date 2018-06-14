@@ -17,41 +17,35 @@
 
 /******** Utility function to generate RLWE instances *********/
 
-// Choose random c0,c1 such that c0+s*c1 = p*e for a short e
-void RLWE(DoubleCRT& c0,DoubleCRT& c1, const DoubleCRT &s, long p, ZZ* prgSeed)
+// Assumes that c1 is already chosen by the caller
+void RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
 {
   assert (p>0); // Can be used with p=1, but we always use with p>=2
+  const FHEcontext& context = s.getContext();
+  const PAlgebra& palg = context.zMStar;
 
-  // choose c1 at random (using prgSeed if not NULL)
-  c1.randomize(prgSeed);
+  // choose a short error e
+  double stdev = to_double(context.stdev);
+  if (palg.getPow2() == 0) // not power of two
+    stdev *= sqrt(palg.getM());
+  c0.sampleGaussian(stdev);
 
-  // choose a short error e, set c0 =  p*e - c1*s
-  c0.sampleGaussian();
-  c0 *= p;
-
+  // Set c0 =  p*e - c1*s.
   // It is assumed that c0,c1 are defined with respect to the same set of
   // primes, but s may be defined relative to a different set. Either way
   // the primes for of c0,c1 are unchanged.
+  c0 *= p;
   DoubleCRT tmp(c1);
   tmp.Mul(s, /*matchIndexSets=*/false); // multiply but don't mod-up
   c0 -= tmp;
 }
 
-// same as above, but assumes that c1 is already chosen by the caller
-void RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
+// Choose random c0,c1 such that c0+s*c1 = p*e for a short e
+void RLWE(DoubleCRT& c0,DoubleCRT& c1, const DoubleCRT &s, long p, ZZ* prgSeed)
 {
-  assert (p>0); // Can be used with p=1, but we always use with p>=2
-
-  // choose a short error e, set c0 =  p*e - c1*s
-  c0.sampleGaussian();
-  c0 *= p;
-
-  // It is assumed that c0,c1 are defined with respect to the same set of
-  // primes, but s may be defined relative to a different set. Either way
-  // the primes for of c0,c1 are unchanged.
-  DoubleCRT tmp(c1);
-  tmp.Mul(s, /*matchIndexSets=*/false); // multiply but don't mod-up
-  c0 -= tmp;
+  // choose c1 at random (using prgSeed if not NULL)
+  c1.randomize(prgSeed);
+  RLWE1(c0, c1, s, p);
 }
 
 /******************** KeySwitch implementation **********************/
@@ -336,14 +330,14 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
       ZZ B;
       B = context.productOfPrimes(context.ctxtPrimes);
-      B /= ptxtSpace;
-      B /= 8;
-      ZZX tmp;
-      sampleUniform(tmp, context.zMStar.getPhiM(), B);
-      e = tmp;
+      B /= (ptxtSpace*8);
+      e.sampleUniform(B);
     }
     else { 
-      e.sampleGaussian();
+      double stdev = to_double(context.stdev);
+      if (context.zMStar.getPow2()==0) // not power of two
+        stdev *= sqrt(context.zMStar.getM());
+      e.sampleGaussian(stdev);
     }
 
     e *= ptxtSpace;
