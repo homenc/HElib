@@ -189,7 +189,7 @@ void sampleUniform(ZZX& poly, long n, const ZZ& B)
  ********************************************************************/
 void sampleHWt(zzX &poly, const PAlgebra& palg, long Hwt)
 {
-  if (palg.getPow2() > 0) { // not power of two
+  if (palg.getPow2() == 0) { // not power of two
     sampleHWt(poly, palg.getM(), Hwt);
     reduceModPhimX(poly, palg);
   }
@@ -198,7 +198,7 @@ void sampleHWt(zzX &poly, const PAlgebra& palg, long Hwt)
 }
 void sampleSmall(zzX &poly, const PAlgebra& palg)
 {
-  if (palg.getPow2() > 0) { // not power of two
+  if (palg.getPow2() == 0) { // not power of two
     sampleSmall(poly, palg.getM());
     reduceModPhimX(poly, palg);
   }
@@ -207,7 +207,7 @@ void sampleSmall(zzX &poly, const PAlgebra& palg)
 }
 void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev)
 {
-  if (palg.getPow2() > 0) { // not power of two
+  if (palg.getPow2() == 0) { // not power of two
     sampleGaussian(poly, palg.getM(), stdev);
     reduceModPhimX(poly, palg);
   }
@@ -216,7 +216,7 @@ void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev)
 }
 void sampleUniform(zzX &poly, const PAlgebra& palg, long B)
 {
-  if (palg.getPow2() > 0) { // not power of two
+  if (palg.getPow2() == 0) { // not power of two
     sampleUniform(poly, palg.getM(), B);
     reduceModPhimX(poly, palg);
   }
@@ -225,7 +225,7 @@ void sampleUniform(zzX &poly, const PAlgebra& palg, long B)
 }
 void sampleUniform(ZZX &poly, const PAlgebra& palg, const ZZ& B)
 {
-  if (palg.getPow2() > 0) { // not power of two
+  if (palg.getPow2() == 0) { // not power of two
     sampleUniform(poly, palg.getM(), B);
     NTL::rem(poly, poly, palg.getPhimX());
   }
@@ -233,42 +233,6 @@ void sampleUniform(ZZX &poly, const PAlgebra& palg, const ZZ& B)
     sampleUniform(poly, palg.getPhiM(), B);
 }
 
-
-// Implementing the Ducas-Durmus error procedure
-void sampleErrorDD(zzX& err, const PAlgebra& palg, double stdev)
-{
-  constexpr long factor = 1L<<32;
-
-  long m = palg.getM();
-
-  // Choose a continuous Gaussiam mod X^m-1, with param srqt(m)*stdev
-  std::vector<double> dvec;
-  sampleGaussian(dvec, m, stdev * sqrt(double(m)));
-
-  // Now we need to reduce it modulo Phi_m(X), then round to integers
-
-  // Since NTL doesn't support polynomial arithmetic with floating point
-  // polynomials, we scale dvec up to by 32 bits and use zz_pX arithmetic,
-  // then scale back down and round after the modular reduction.
-
-  err.SetLength(m, 0); // allocate space
-  for (long i=0; i<m; i++)
-    err[i] = round(dvec[i]*factor);
-
-  reduceModPhimX(err, palg);
-
-  for (long i=0; i<lsize(err); i++) { // scale down and round
-    err[i] += factor/2;
-    err[i] /= factor;
-  }
-}
-void sampleErrorDD(ZZX& err, const PAlgebra& palg, double stdev)
-{
-  zzX pp;
-  sampleErrorDD(pp, palg, stdev);
-  convert(err.rep, pp);
-  err.normalize();
-}
 
 // Helper function, returns a bound B such that for terms
 // of the form f = SampleSmall*SampleUniform(p), we have

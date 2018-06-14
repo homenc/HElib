@@ -46,10 +46,6 @@ void sampleUniform(zzX &poly, const PAlgebra& palg, long B=100);
 void sampleUniform(NTL::ZZX&poly, const PAlgebra& palg,
                    const NTL::ZZ& B=NTL::ZZ(100L));
 
-//! Implementing the Ducas-Durmus error procedure
-void sampleErrorDD(zzX& err, const PAlgebra& palg, double stdev);
-void sampleErrorDD(NTL::ZZX& err, const PAlgebra& palg, double stdev);
-
 //! Helper function, returns a bound B such that for terms
 //! of the form f = SampleSmall*SampleUniform(p), we have
 //! Pr[|canonicalEmbed(f)|_{\infty} > B/3] < epsilon.
