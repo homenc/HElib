@@ -501,6 +501,7 @@ public:
     primeSet=context.ctxtPrimes;
     parts.clear();
     noiseVar = to_xdouble(0.0);
+    highWaterMark = findBaseLevel();
   }
 
   //! @brief Is this an empty cipehrtext without any parts

@@ -26,6 +26,7 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
   }
   noiseVar = size;
   primeSet = context.ctxtPrimes;
+  highWaterMark = findBaseLevel();
 
   // A single part, with the plaintext as data and handle pointing to 1
 
@@ -128,23 +129,19 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
     // The operations below all use the IndexSet of tmpDCRT
   
     // add digit*a[i] with a handle pointing to base of W.toKeyID
-{ FHE_NTIMER_START(KS_loop_1);
-    tmpDCRT.Mul(ai,  /*matchIndexSet=*/false);
-}
-
-{ FHE_NTIMER_START(KS_loop_2);
-    this->addPart(tmpDCRT, SKHandle(1,1,W.toKeyID), /*matchPrimeSet=*/true);
-}
-  
+    {FHE_NTIMER_START(KS_loop_1);
+     tmpDCRT.Mul(ai,  /*matchIndexSet=*/false);
+    }
+    {FHE_NTIMER_START(KS_loop_2);
+     this->addPart(tmpDCRT, SKHandle(1,1,W.toKeyID), /*matchPrimeSet=*/true);
+    }
     // add digit*b[i] with a handle pointing to one
-{ FHE_NTIMER_START(KS_loop_3);
-    digits[i].Mul(W.b[i], /*matchIndexSet=*/false);
-}
-
-{ FHE_NTIMER_START(KS_loop_4);
-    this->addPart(digits[i], SKHandle(), /*matchPrimeSet=*/true);
-}
-
+    {FHE_NTIMER_START(KS_loop_3);
+     digits[i].Mul(W.b[i], /*matchIndexSet=*/false);
+    }
+    {FHE_NTIMER_START(KS_loop_4);
+     this->addPart(digits[i], SKHandle(), /*matchPrimeSet=*/true);
+    }
   }
 }
 
@@ -198,6 +195,7 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   if (ptxtSpace<=0) ptxtSpace = pubKey.getPtxtSpace();
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
+  highWaterMark = findBaseLevel();
 }
 
 // Constructor
@@ -210,6 +208,7 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   if (ptxtSpace<=0) ptxtSpace = pubKey.getPtxtSpace();
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
+  highWaterMark = findBaseLevel();
 }
 
 
@@ -225,6 +224,7 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   primeSet = other.primeSet;
   ptxtSpace = other.ptxtSpace;
   noiseVar  = other.noiseVar;
+  highWaterMark = other.highWaterMark;
   return *this;
 }
 
@@ -234,7 +234,6 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
 // have s<=primeSet. s must contain either all special primes or none of them.
 void Ctxt::modUpToSet(const IndexSet &s)
 {
-  //  FHE_TIMER_START;
   IndexSet setDiff = s/primeSet; // set minus (primes in s but not in primeSet)
   if (empty(setDiff)) return;    // nothing to do, no primes are added
 
@@ -251,7 +250,6 @@ void Ctxt::modUpToSet(const IndexSet &s)
 
   primeSet.insert(setDiff); // add setDiff to primeSet
   assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
-  //  FHE_TIMER_STOP;
 }
 
 // mod-switch down to primeSet \intersect s, after this call we have
@@ -665,6 +663,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     }
   }
   noiseVar += other_pt->noiseVar;
+  highWaterMark = std::min(highWaterMark, other_pt->highWaterMark);
 }
 
 // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
@@ -740,8 +739,13 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   this->ptxtSpace = g;
   Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
 
-  if (this == &other) { // a squaring operation
-    modDownToLevel(findBaseLevel());      // mod-down if needed
+  long lvl = findBaseLevel();
+  if (lvl > highWaterMark) {
+    lvl = highWaterMark;
+    std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
+  }
+  if (this == &other) {  // a squaring operation
+    modDownToLevel(lvl); // mod-down if needed
     tmpCtxt.tensorProduct(*this, other);  // compute the actual product
     tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
   }
@@ -750,8 +754,11 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
     assert (&context==&other.context && &pubKey==&other.pubKey);
 
     // Match the levels, mod-DOWN the arguments if needed
-    long lvl = findBaseLevel();
     long otherLvl = other.findBaseLevel();
+    if (otherLvl > other.highWaterMark) {
+      otherLvl = other.highWaterMark;
+      std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
+    }
     if (lvl > otherLvl) lvl = otherLvl; // the smallest of the two
 
     // mod-DOWN *this, if needed (also removes special primes, if any)
@@ -767,6 +774,7 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
       tmpCtxt.tensorProduct(*this, other);   // compute the actual product
   }
   *this = tmpCtxt; // copy the result into *this
+  highWaterMark = lvl-1;
 
   FHE_TIMER_STOP;
   return *this;

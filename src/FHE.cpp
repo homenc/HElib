@@ -369,7 +369,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     // that will signal an error
 
     ctxt.noiseVar = xexp(2*context.logOfProduct(context.ctxtPrimes)-log(8.0));
-
+    ctxt.highWaterMark = 0;
   }
   else {
     // We have <skey,ctxt>= r*<skey,pkey> +p*(e0+e1*s) +m,
@@ -387,6 +387,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     double sVar = skHwts[0];
     double p2 = ptxtSpace*double(ptxtSpace);
     ctxt.noiseVar = pubEncrKey.noiseVar*rVar + p2*(1+sVar*(eVar+1));
+    ctxt.highWaterMark = ctxt.findBaseLevel();
   }
   return ptxtSpace;
 }
@@ -747,6 +748,7 @@ long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   // add in the plaintext
   ctxt.addConstant(ptxt);
+  ctxt.highWaterMark = ctxt.findBaseLevel();
   return ptxtSpace;
 }
 
