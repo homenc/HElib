@@ -52,25 +52,41 @@ void sampleHWt(ZZX &poly, long n, long Hwt)
   convert(poly, pp);
 }
 
-// Sample a degree-(n-1) ZZX, with -1/0/+1 coefficients
-void sampleSmall(zzX &poly, long n)
+// Sample a degree-(n-1) poly, with -1/0/+1 coefficients.
+// Each coefficients is +-1 with probability prob/2 each,
+// and 0 with probability 1-prob. By default, pr[nonzero]=1/2.
+void sampleSmall(zzX &poly, long n, double prob)
 {
   if (n<=0) n=lsize(poly); if (n<=0) return;
+  assert(prob>3.05e-5 && prob<=1); // prob must be in [2^{-15},1/2]
   poly.SetLength(n);
+
+  constexpr long bitSize=16;
+  constexpr long hiMask = (1<<(bitSize-1)); // top bit = 2^15
+  constexpr long loMask = hiMask-1;         // bottom 15 bits
+
+  long threshold = round(hiMask*prob); // threshold/2^15 = Pr[nonzero]
 
   NTL_EXEC_RANGE(n, first, last)
   for (long i=first; i<last; i++) {
-    long u = NTL::RandomBits_long(2);
-    if (u&1) poly[i] = (u & 2) -1; // with prob. 1/2 choose between +-1
+    long u = NTL::RandomBits_long(bitSize); // a random 16-bit number
+    long uLo = u & loMask; // bottom 15 bits
+    long uHi = u & hiMask; // top bit
+
+    // with probability threshold/2^15, choose between +-1
+    if (uLo<threshold) { // compare low 15 bits to threshold
+      poly[i] = (uHi>>(bitSize-2))-1; // topBit*2 - 1 \in {+-1}
+    }
+
+    // with probability 1-prob, set to zero
     else poly[i] = 0;
   }
   NTL_EXEC_RANGE_END
 }
-// Sample a degree-(n-1) ZZX, with -1/0/+1 coefficients
-void sampleSmall(ZZX &poly, long n)
+void sampleSmall(ZZX &poly, long n, double prob)
 {  
   zzX pp;
-  sampleSmall(pp, n);
+  sampleSmall(pp, n, prob);
   convert(poly.rep, pp);
   poly.normalize();
 }
@@ -199,7 +215,9 @@ void sampleHWt(zzX &poly, const PAlgebra& palg, long Hwt)
 void sampleSmall(zzX &poly, const PAlgebra& palg)
 {
   if (palg.getPow2() == 0) { // not power of two
-    sampleSmall(poly, palg.getM());
+    long m = palg.getM();
+    long phim = palg.getPhiM();
+    sampleSmall(poly, m, phim/(2.0*m)); // nonzero with prob phi(m)/2m
     reduceModPhimX(poly, palg);
   }
   else // power of two
@@ -238,7 +256,7 @@ void sampleUniform(ZZX &poly, const PAlgebra& palg, const ZZ& B)
 // of the form f = SampleSmall*SampleUniform(p), we have
 // Pr[|canonicalEmbed(f)|_{\infty} > B/3] < epsilon.
 // (The default is epsilon = 2^{-40}.)
-double boundCanonEmb(long m, long phim, long p, double epsilon)
+double boundCanonEmb(long m, long phim, long p2r, double epsilon)
 {
   // The various constants in this function were determined experimentally.
 
@@ -246,7 +264,7 @@ double boundCanonEmb(long m, long phim, long p, double epsilon)
    * f(zeta), where f= sampleSmall*sampleUniform(p) +sampleUniform(p),
    * and zeta is an m'th root-of-unity, which we approximate as:
    */
-  double stdev = m*(p+0.5)*0.41;
+  double stdev = (2*p2r+1)*phim/8.0;
 
   //  cout << " p="<<p<<", stdev="<<stdev<<endl;
 

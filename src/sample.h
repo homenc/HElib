@@ -17,10 +17,11 @@
 #include <NTL/ZZX.h>
 #include "zzX.h"
 
-//! Sample a degree-(n-1) poly, with -1/0/+1 coefficients. Each
-//! coefficient is 0 with probability 1/2 and +-1 with probability 1/4.
-void sampleSmall(zzX &poly, long n);
-void sampleSmall(NTL::ZZX &poly, long n=0);
+//! Sample a degree-(n-1) poly, with -1/0/+1 coefficients.
+//! Each coefficients is +-1 with probability prob/2 each,
+//! and 0 with probability 1-prob. By default, pr[nonzero]=1/2.
+void sampleSmall(zzX &poly, long n, double prob=0.5);
+void sampleSmall(NTL::ZZX &poly, long n, double prob=0.5);
 
 //! Sample a degree-(n-1) poly as bove, with only Hwt nonzero coefficients
 void sampleHWt(zzX &poly, long n, long Hwt=100);
