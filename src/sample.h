@@ -15,6 +15,7 @@
  * @file sample.h - implementing various sampling routines 
  **/
 #include <NTL/ZZX.h>
+#include <NTL/ZZ_pX.h>
 #include "zzX.h"
 
 //! Sample a degree-(n-1) poly, with -1/0/+1 coefficients.
@@ -47,14 +48,15 @@ void sampleUniform(zzX &poly, const PAlgebra& palg, long B=100);
 void sampleUniform(NTL::ZZX&poly, const PAlgebra& palg,
                    const NTL::ZZ& B=NTL::ZZ(100L));
 
-//! Helper function, returns a bound B such that for terms
-//! of the form f = SampleSmall*SampleUniform(p), we have
-//! Pr[|canonicalEmbed(f)|_{\infty} > B/3] < epsilon.
+//! Helper functions, return a bound B such that for random noise
+//! terms we have Pr[|canonicalEmbed(noise)|_{\infty} > B] < epsilon.
 //! (The default is epsilon = 2^{-40}.)
-double boundCanonEmb(long m, long phim, long p, double epsilon=9e-13);
+///@{
+double boundFreshNoise(long m, long phim, long p2r, double epsilon=9e-13);
+double boundRoundingNoise(long m, long phim, long p2r, double epsilon=9e-13);
+///@}
 
 void reduceModPhimX(zzX& poly, const PAlgebra& palg);
-#include <NTL/ZZ_pX.h>
 const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg);
 
 #endif // _SAMPLE_H_

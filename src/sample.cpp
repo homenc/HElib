@@ -252,11 +252,34 @@ void sampleUniform(ZZX &poly, const PAlgebra& palg, const ZZ& B)
 }
 
 
-// Helper function, returns a bound B such that for terms
-// of the form f = SampleSmall*SampleUniform(p), we have
-// Pr[|canonicalEmbed(f)|_{\infty} > B/3] < epsilon.
+// Helper functions, return a bound B such that for random noise
+// terms we have Pr[|canonicalEmbed(noise)|_{\infty} > B] < epsilon.
 // (The default is epsilon = 2^{-40}.)
-double boundCanonEmb(long m, long phim, long p2r, double epsilon)
+double boundFreshNoise(long m, long phim, double sigma, double epsilon)
+{
+  // The various constants in this function were determined experimentally.
+
+  /* We begin by computing the standard deviation of the magnitude of
+   * f(zeta), where f = sampleSmall*sampleGaussian(sigma)
+   *                 +  sampleSmall*sampleGaussian(sigma) + sampleGaussian(sigma)
+   * and zeta is an m'th root-of-unity, which we approximate as:
+   */
+  double stdev = 0.56*sigma*((m&1)? sqrt(m*phim) : phim);
+
+  /* Then we use the following rules:
+   *      Pr[|f(zeta)| > stdev] = 0.63
+   *      Pr[|f(zeta)| > 2*stdev] = 0.25
+   *      Pr[|f(zeta)| > 3*stdev] = 8.14e-2
+   *      Pr[|f(zeta)| > 4*stdev] = 2.38e-2
+   *      Pr[|f(zeta)| > 5*stdev] = 6.5e-3
+   *      Pr[|f(zeta)| > n*stdev] = 6.5e-3 * 4^{5-n} for n>5
+   *
+   * We return the smallest number of standard deviations n satifying
+   *      Pr[|f(zeta)|>(n stdev)] = epsilon / phi(m)
+   */
+  epsilon /= phim;
+}
+double boundRoundingNoise(long m, long phim, long p2r, double epsilon)
 {
   // The various constants in this function were determined experimentally.
 
@@ -266,31 +289,29 @@ double boundCanonEmb(long m, long phim, long p2r, double epsilon)
    */
   double stdev = (2*p2r+1)*phim/8.0;
 
-  //  cout << " p="<<p<<", stdev="<<stdev<<endl;
-
   /* Then we use the following rules:
-   *      Pr[|f(zeta)| > stdev] = 0.28
-   *      Pr[|f(zeta)| > 2*stdev] = 0.05
-   *      Pr[|f(zeta)| > 3*stdev] = 0.0078
-   *      Pr[|f(zeta)| > 4*stdev] = 0.0012
-   *      Pr[|f(zeta)| > 5*stdev] = 1.7e-4
-   *      Pr[|f(zeta)| > n*stdev] = 1.7e-4 * 7.1^{5-n} for n>5
+   *      Pr[|f(zeta)| > stdev] = 0.508
+   *      Pr[|f(zeta)| > 2*stdev] = 0.189
+   *      Pr[|f(zeta)| > 3*stdev] = 6.46e-2
+   *      Pr[|f(zeta)| > 4*stdev] = 2.11e-2
+   *      Pr[|f(zeta)| > 5*stdev] = 6.75e-3
+   *      Pr[|f(zeta)| > n*stdev] = 6.75e-3 * 3.2^{5-n} for n>5
    *
    * We return the smallest number of standard deviations n satifying
-   *      Pr[|f(zeta)|>(n stdev)/3] = epsilon / phi(m)
+   *      Pr[|f(zeta)|>(n stdev)] = epsilon / phi(m)
    */
   epsilon /= phim;
 
-  if (epsilon >= 1.7e-4) { // use the values from above
-    if (epsilon >= 0.28)        { return stdev; }
-    else if (epsilon >= 0.05)   { return 2*stdev; }
-    else if (epsilon >= 0.0078) { return 3*stdev; }
-    else if (epsilon >= 0.0012) { return 4*stdev; }
-    else                        { return 5*stdev; }
+  if (epsilon >= 6.75e-3) { // use the values from above
+    if (epsilon >= 0.508)        { return stdev; }
+    else if (epsilon >= 0.189)   { return 2*stdev; }
+    else if (epsilon >= 6.46e-2) { return 3*stdev; }
+    else if (epsilon >= 2.11e-2) { return 4*stdev; }
+    else                         { return 5*stdev; }
   }
   long num = 6;
-  for (double prob=(1.7e-4)/(7.1); prob>epsilon; prob /= 7.1)
+  for (double prob=(6.75e-3)/(3.2); prob>epsilon; prob /= 3.2)
     num++;
 
-  return stdev * num * 3;
+  return stdev * num;
 }
