@@ -104,6 +104,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   GeneratorTrees trees;
   long cost = trees.buildOptimalTrees(vec, widthBound);
   if (!noPrint) {
+    context.zMStar.printout();
     cout << ": trees=" << trees << endl;
     cout << " cost =" << cost << endl;
   }
@@ -199,7 +200,7 @@ int main(int argc, char *argv[])
   argmap["good2"] = "1";
   argmap["good3"] = "1";
   argmap["good4"] = "1";
-  argmap["dry"] = "1";
+  argmap["dry"] = "0";
   argmap["noPrint"] = "0";
 
   // get parameters from the command line
@@ -226,7 +227,7 @@ int main(int argc, char *argv[])
   noPrint = atoi(argmap["noPrint"]);
 
   setDryRun(dry);
-  if (test==0) {
+  if (test==0 || dry!=0) {
     Vec<GenDescriptor> vec;
     long nGens;
     if (ord2<=1) nGens=1;
