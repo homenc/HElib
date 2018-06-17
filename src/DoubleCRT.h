@@ -341,6 +341,11 @@ public:
     ::sampleSmall(poly,context.zMStar); // degree-(phi(m)-1) polynomial
     *this = poly; // convert to DoubleCRT
   }
+  void sampleSmallBounded() {
+    zzX poly;
+    ::sampleSmallBounded(poly,context.zMStar); // degree-(phi(m)-1) polynomial
+    *this = poly; // convert to DoubleCRT
+  }
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
   void sampleHWt(long Hwt) {
@@ -356,6 +361,13 @@ public:
     ::sampleGaussian(poly, context.zMStar, stdev);
     *this = poly; // convert to DoubleCRT
   }
+  void sampleGaussianBounded(double stdev=0.0) {
+    if (stdev==0.0) stdev=to_double(context.stdev);
+    zzX poly;
+    ::sampleGaussianBounded(poly, context.zMStar, stdev);
+    *this = poly; // convert to DoubleCRT
+  }
+
 
   //! @brief Coefficients are uniform in [-B..B]
   void sampleUniform(const ZZ& B) {

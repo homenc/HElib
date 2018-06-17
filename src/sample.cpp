@@ -18,6 +18,7 @@
 #include "NumbTh.h"
 #include "PAlgebra.h"
 #include "sample.h"
+#include "norms.h"
 NTL_CLIENT
 
 // Sample a degree-(n-1) poly, with only Hwt nonzero coefficients
@@ -223,6 +224,19 @@ void sampleSmall(zzX &poly, const PAlgebra& palg)
   else // power of two
     sampleSmall(poly, palg.getPhiM());
 }
+// Same as above, but ensure the result is not too much larger than typical
+void sampleSmallBounded(zzX &poly, const PAlgebra& palg)
+{
+  long phim = palg.getPhiM();
+  // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
+  double bound = (1+sqrt(phim*log(phim)))*0.85;
+  do {
+    sampleSmall(poly, palg);
+  }
+  while (embeddingLargestCoeff(poly,palg)>bound); // repeat until <=bound
+  // if (nTrials>1)
+  //   cerr<<"sampleSmallBounded: "<<nTrials<<" trials\n";
+}
 void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev)
 {
   if (palg.getPow2() == 0) { // not power of two
@@ -231,6 +245,21 @@ void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev)
   }
   else // power of two
     sampleGaussian(poly, palg.getPhiM(), stdev);
+}
+// Same as above, but ensure the result is not too much larger than typical
+void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev)
+{
+  long m = palg.getM();
+  long phim = palg.getPhiM();  
+  // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
+  double bound
+    = stdev*1.15*(2+((m&1)? sqrt(m*log(phim)): sqrt(phim*log(phim))));
+  do {
+    sampleGaussian(poly, palg, stdev);
+  }
+  while (embeddingLargestCoeff(poly,palg)>bound); // repeat until <=bound
+  // if (nTrials>1)
+  //   cerr<<"sampleGaussianBounded: "<<nTrials<<" trials\n";
 }
 void sampleUniform(zzX &poly, const PAlgebra& palg, long B)
 {
@@ -260,57 +289,78 @@ double boundFreshNoise(long m, long phim, double sigma, double epsilon)
   // The various constants in this function were determined experimentally.
 
   /* We begin by computing the standard deviation of the magnitude of
-   * f(zeta), where f = sampleSmall*sampleGaussian(sigma)
-   *                 +  sampleSmall*sampleGaussian(sigma) + sampleGaussian(sigma)
+   * f(zeta), where f = sampleSmallBounded * sampleGaussian(sigma)
+   *                 +  sampleSmall * sampleGaussianBounded(sigma)
+   *                 + sampleGaussian(sigma)
    * and zeta is an m'th root-of-unity, which we approximate as:
    */
-  double stdev = 0.56*sigma*((m&1)? sqrt(m*phim) : phim);
+  double stdev = (sigma+0.1)*0.54*(1+((m&1)? sqrt(phim*m): phim));
 
   /* Then we use the following rules:
-   *      Pr[|f(zeta)| > stdev] = 0.63
-   *      Pr[|f(zeta)| > 2*stdev] = 0.25
-   *      Pr[|f(zeta)| > 3*stdev] = 8.14e-2
-   *      Pr[|f(zeta)| > 4*stdev] = 2.38e-2
-   *      Pr[|f(zeta)| > 5*stdev] = 6.5e-3
-   *      Pr[|f(zeta)| > n*stdev] = 6.5e-3 * 4^{5-n} for n>5
+   *      Pr[|f(zeta)| > stdev] = 0.644
+   *      Pr[|f(zeta)| > 2*stdev] = 0.266
+   *      Pr[|f(zeta)| > 3*stdev] = 9.04e-2
+   *      Pr[|f(zeta)| > 4*stdev] = 2.76e-2
+   *      Pr[|f(zeta)| > 5*stdev] = 7.89e-3
+   *      Pr[|f(zeta)| > 6*stdev] = 2.16e-3
+   *      Pr[|f(zeta)| > n*stdev] = 2.16e-3 * 4^{6-n} for n>6
    *
    * We return the smallest number of standard deviations n satifying
    *      Pr[|f(zeta)|>(n stdev)] = epsilon / phi(m)
    */
   epsilon /= phim;
+
+  if (epsilon >= 1.87e-3) { // use the values from above
+    if (epsilon >= 0.64)        { return stdev; }
+    else if (epsilon >= 0.26)   { return 2*stdev; }
+    else if (epsilon >= 8.52e-2) { return 3*stdev; }
+    else if (epsilon >= 2.54e-2) { return 4*stdev; }
+    else if (epsilon >= 7.06e-3) { return 5*stdev; }
+    else                         { return 6*stdev; }
+  }
+  long num = 7;
+  for (double prob=(1.87e-3)/(4.1); prob>epsilon; prob /= 4.1)
+    num++;
+
+  return stdev * num;
 }
 double boundRoundingNoise(long m, long phim, long p2r, double epsilon)
 {
   // The various constants in this function were determined experimentally.
 
   /* We begin by computing the standard deviation of the magnitude of
-   * f(zeta), where f= sampleSmall*sampleUniform(p) +sampleUniform(p),
+   * f(zeta), where
+   *          f= sampleSmallBounded*sampleUniform(p) +sampleUniform(p),
    * and zeta is an m'th root-of-unity, which we approximate as:
    */
-  double stdev = (2*p2r+1)*phim/8.0;
+  double stdev = (2*p2r+1)*(phim-2)/8.0;
 
   /* Then we use the following rules:
-   *      Pr[|f(zeta)| > stdev] = 0.508
-   *      Pr[|f(zeta)| > 2*stdev] = 0.189
-   *      Pr[|f(zeta)| > 3*stdev] = 6.46e-2
-   *      Pr[|f(zeta)| > 4*stdev] = 2.11e-2
-   *      Pr[|f(zeta)| > 5*stdev] = 6.75e-3
-   *      Pr[|f(zeta)| > n*stdev] = 6.75e-3 * 3.2^{5-n} for n>5
+   *      Pr[|f(zeta)| > stdev] = 0.514
+   *      Pr[|f(zeta)| > 2*stdev] = 0.194
+   *      Pr[|f(zeta)| > 3*stdev] = 6.7e-2
+   *      Pr[|f(zeta)| > 4*stdev] = 2.23e-2
+   *      Pr[|f(zeta)| > 5*stdev] = 7.21e-3
+   *      Pr[|f(zeta)| > 6*stdev] = 2.31e-3
+   *      Pr[|f(zeta)| > 7*stdev] = 7.25e-4
+   *      Pr[|f(zeta)| > n*stdev] = 7.25e-4 * 3.3^{7-n} for n>5
    *
    * We return the smallest number of standard deviations n satifying
    *      Pr[|f(zeta)|>(n stdev)] = epsilon / phi(m)
    */
   epsilon /= phim;
 
-  if (epsilon >= 6.75e-3) { // use the values from above
-    if (epsilon >= 0.508)        { return stdev; }
-    else if (epsilon >= 0.189)   { return 2*stdev; }
-    else if (epsilon >= 6.46e-2) { return 3*stdev; }
-    else if (epsilon >= 2.11e-2) { return 4*stdev; }
-    else                         { return 5*stdev; }
+  if (epsilon >= 7.25e-4) { // use the values from above
+    if (epsilon >= 0.514)        { return stdev; }
+    else if (epsilon >= 0.194)   { return 2*stdev; }
+    else if (epsilon >= 6.7e-2)  { return 3*stdev; }
+    else if (epsilon >= 2.23e-2) { return 4*stdev; }
+    else if (epsilon >= 7.21e-3) { return 5*stdev; }
+    else if (epsilon >= 2.31e-3) { return 6*stdev; }
+    else                         { return 7*stdev; }
   }
-  long num = 6;
-  for (double prob=(6.75e-3)/(3.2); prob>epsilon; prob /= 3.2)
+  long num = 8;
+  for (double prob=(7.25e-4)/(3.3); prob>epsilon; prob /= 3.3)
     num++;
 
   return stdev * num;

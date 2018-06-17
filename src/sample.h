@@ -43,7 +43,13 @@ class PAlgebra;
 // Same as above, but sample mod X^m-1 and then reduce mod Phi_m(X)
 void sampleHWt(zzX &poly, const PAlgebra& palg, long Hwt=100);
 void sampleSmall(zzX &poly, const PAlgebra& palg);
+// Same as above, but ensure the result is not too much larger than typical
+void sampleSmallBounded(zzX &poly, const PAlgebra& palg);
+
 void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev);
+// Same as above, but ensure the result is not too much larger than typical
+void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev);
+
 void sampleUniform(zzX &poly, const PAlgebra& palg, long B=100);
 void sampleUniform(NTL::ZZX&poly, const PAlgebra& palg,
                    const NTL::ZZ& B=NTL::ZZ(100L));
