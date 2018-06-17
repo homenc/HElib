@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 
     sKeys[i] = new FHESecKey(*contexts[i]);
     const FHEPubKey& publicKey = *sKeys[i];
-    sKeys[i]->GenSecKey(w,ptxtSpace); // A Hamming-weight-w secret key
+    sKeys[i]->GenSecKey(0,ptxtSpace); // A +-1/0 secret key
     addSome1DMatrices(*sKeys[i]);// compute key-switching matrices that we need
     eas[i] = new EncryptedArray(*contexts[i]);
 
@@ -292,7 +292,7 @@ int main()
   buildModChain(*context_ptr, DDD, ccc);
   fhekey_ptr = new FHESecKey(*context_ptr);
   fhekey_ptr->clear();
-  fhekey_ptr->GenSecKey(64,2);
+  fhekey_ptr->GenSecKey(0,2);
   addSome1DMatrices(*fhekey_ptr);
   const  FHEPubKey & pub_key =  *fhekey_ptr;
 

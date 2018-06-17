@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 
   EncryptedArray ea(context);

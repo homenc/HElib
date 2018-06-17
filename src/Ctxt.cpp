@@ -1058,7 +1058,7 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
       // added noise is d! h^d
       t = h;
       for (long j = 2; j <= d; j++)
-        t = t * h * j;
+        t *= h * j;
 
       addedNoise += t;
     }

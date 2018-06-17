@@ -308,10 +308,17 @@ public:
 
   //! Key generation: This procedure generates a single secret key,
   //! pushes it onto the sKeys list using ImportSecKey from above.
-  long GenSecKey(long hwt, long ptxtSpace=0, long maxDegKswitch=3)
+  long GenSecKey(long hwt=0, long ptxtSpace=0, long maxDegKswitch=3)
   { DoubleCRT newSk(context); // defined relative to all primes, special or not
-    newSk.sampleHWt(hwt);     // samle a Hamming-weight-hwt polynomial
-    return ImportSecKey(newSk, hwt, ptxtSpace, maxDegKswitch);
+    if (hwt>0) {
+      newSk.sampleHWt(hwt);     // samle a Hamming-weight-hwt polynomial
+      return ImportSecKey(newSk, hwt, ptxtSpace, maxDegKswitch);
+    }
+    else {
+      newSk.sampleSmallBounded();// samle a 0/+-1 polynomial
+      return ImportSecKey(newSk, context.zMStar.getPhiM(),
+                          ptxtSpace, maxDegKswitch);
+    }
   }
 
   //! Generate a key-switching matrix and store it in the public key. The i'th

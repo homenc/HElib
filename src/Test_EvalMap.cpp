@@ -21,7 +21,7 @@ namespace NTL {} using namespace NTL;
 static bool dry = false; // a dry-run flag
 static bool noPrint = false;
 
-void  TestIt(long p, long r, long c, long _k, long w,
+void  TestIt(long p, long r, long c, long _k,
              long L, Vec<long>& mvec, 
              Vec<long>& gens, Vec<long>& ords, long useCache)
 {
@@ -38,7 +38,6 @@ void  TestIt(long p, long r, long c, long _k, long w,
        << ", r=" << r
        << ", c=" << c
        << ", k=" << _k
-       << ", w=" << w
        << ", L=" << L
        << ", mvec=" << mvec << ", "
        << ", useCache = " << useCache
@@ -76,7 +75,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A Hamming-weight-w secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
 
@@ -250,7 +249,7 @@ int main(int argc, char *argv[])
   SetNumThreads(nthreads);
 
   SetSeed(conv<ZZ>(seed));
-  TestIt(p, r, c, k, /*Key Hamming weight=*/64, L, mvec, gens, ords, useCache);
+  TestIt(p, r, c, k, L, mvec, gens, ords, useCache);
 }
 
 // ./Test_EvalMap_x mvec="[73 433]" gens="[18620 12995]" ords="[72 -6]"

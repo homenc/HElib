@@ -86,7 +86,7 @@ void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A Hamming-weight-w secret key
 
   bool minimal = ks_strategy == 3;
 

@@ -376,8 +376,8 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     // where VAR(<skey,pkey>) is recorded in pubEncrKey.noiseVar,
     //       VAR(r)=phi(m)/2        or m/2
     //       VAR(ei)=sigma^2*phi(m) or sigma^2*m^2
-    //       both depend on whether m is a power of two,
-    //       and VAR(s) depends by the secret-key Hamming weight (skHwt).
+    //                   (both depending on whether m is a power of two),
+    //       and VAR(s) depends by the secret-key Hamming size (skSizes).
     // Hence the expected size squared is bounded by:
     // VAR(X)= pubEncrKey.noiseVar*VAR(r) + p^2*(1 + VAR(s)*(VAR(ei)+1))
 

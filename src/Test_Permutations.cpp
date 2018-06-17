@@ -121,7 +121,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   // Generate a sk/pk pair
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   Ctxt ctxt(publicKey);
 
   for (long cnt=0; cnt<3; cnt++) {

@@ -167,7 +167,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   if (!noPrint) cout << "Generating keys, " << std::flush;
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
+  secretKey.GenSecKey();      // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
   if (!noPrint) cout << "computing key-dependent tables..." << std::flush;

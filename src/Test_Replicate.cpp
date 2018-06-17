@@ -120,7 +120,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 
   EncryptedArray ea(context, G);

@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
     cout << "\ncomputing key-dependent tables..." << std::flush;
   }
   FHESecKey secKey(context);
-  secKey.GenSecKey(/*Hweight=*/128);
+  secKey.GenSecKey();
   addSome1DMatrices(secKey); // compute key-switching matrices
   addFrbMatrices(secKey);
   if (bootstrap) secKey.genRecryptData();

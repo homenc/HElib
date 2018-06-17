@@ -75,7 +75,7 @@ void testIt(long d, long k, long p, long r, long m, long L,
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64);// A Hamming-weight-64 secret key
+  secretKey.GenSecKey();// A +-1/0 secret key
   //  addSome1DMatrices(secretKey); // compute key-switching matrices
 
 #ifdef DEBUG_PRINTOUT

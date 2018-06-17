@@ -107,7 +107,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     FHE_NTIMER_START(keyGen);
     FHESecKey secretKey(context);
     const FHEPubKey& publicKey = secretKey;
-    secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
+    secretKey.GenSecKey(); // A +-1/0 secret key
     addSome1DMatrices(secretKey); // compute key-switching matrices
     addSomeFrbMatrices(secretKey);
     FHE_NTIMER_STOP(keyGen);
@@ -449,7 +449,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   FHE_NTIMER_START(keyGen);
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices
   FHE_NTIMER_STOP(keyGen);
 
