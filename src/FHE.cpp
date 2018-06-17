@@ -29,7 +29,7 @@ double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
   double stdev = to_double(context.stdev);
   if (palg.getPow2() == 0) // not power of two
     stdev *= sqrt(palg.getM());
-  c0.sampleGaussian(stdev);
+  c0.sampleGaussianBounded(stdev);
 
   // Set c0 =  p*e - c1*s.
   // It is assumed that c0,c1 are defined with respect to the same set of
@@ -218,7 +218,7 @@ void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
 
 void FHEPubKey::setKeySwitchMap(long keyId)
 {
-  assert(keyId>=0 && keyId<(long)skHwts.size()); // Sanity-check, do we have such a key?
+  assert(keyId>=0 && keyId<(long)skSizes.size()); // Sanity-check, do we have such a key?
   long m = context.zMStar.getM();
 
   // Initialize an aray of "edges" (this is easier than searching through
@@ -384,7 +384,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     double rVar = (context.zMStar.getPow2()==0)?
       (context.zMStar.getPhiM()/2.0) : (context.zMStar.getM()/2.0);
     double eVar = stdev*stdev;
-    double sVar = skHwts[0];
+    double sVar = skSizes[0];
     double p2 = ptxtSpace*double(ptxtSpace);
     ctxt.noiseVar = pubEncrKey.noiseVar*rVar + p2*(1+sVar*(eVar+1));
     ctxt.highWaterMark = ctxt.findBaseLevel();
@@ -400,9 +400,9 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
   if (!pubEncrKey.equalsTo(other.pubEncrKey, /*comparePkeys=*/false))
     return false;
 
-  if (skHwts.size() != other.skHwts.size()) return false;
-  for (size_t i=0; i<skHwts.size(); i++)
-    if (skHwts[i] != other.skHwts[i]) return false;
+  if (skSizes.size() != other.skSizes.size()) return false;
+  for (size_t i=0; i<skSizes.size(); i++)
+    if (skSizes[i] != other.skSizes[i]) return false;
 
   if (keySwitching.size() != other.keySwitching.size()) return true;
   for (size_t i=0; i<keySwitching.size(); i++)
@@ -442,10 +442,10 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
   // output the public encryption key itself
   str << pk.pubEncrKey << endl;
 
-  // output skHwts in the same format as vec_long
+  // output skSizes in the same format as vec_long
   str << "[";
-  for (long i=0; i<(long)pk.skHwts.size(); i++)
-    str << pk.skHwts[i]<<" ";
+  for (long i=0; i<(long)pk.skSizes.size(); i++)
+    str << pk.skSizes[i]<<" ";
   str << "]\n";
 
   // output the key-switching matrices
@@ -499,8 +499,8 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   // Get the vector of secret-key Hamming-weights
   vec_long vl;
   str >> vl;
-  pk.skHwts.resize(vl.length());
-  for (long i=0; i<(long)pk.skHwts.size(); i++) pk.skHwts[i] = vl[i];
+  pk.skSizes.resize(vl.length());
+  for (long i=0; i<(long)pk.skSizes.size(); i++) pk.skSizes[i] = vl[i];
 
   // Get the key-switching matrices
   long nMatrices;
@@ -520,7 +520,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   }
 
   // build the key-switching map for all keys
-  for (long i=pk.skHwts.size()-1; i>=0; i--)
+  for (long i=pk.skSizes.size()-1; i>=0; i--)
     pk.setKeySwitchMap(i);
 
   str >> pk.KS_strategy; 
@@ -575,7 +575,7 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
     pubEncrKey.primeSet = context.ctxtPrimes;
     pubEncrKey.ptxtSpace = ptxtSpace;
   }
-  skHwts.push_back(Hwt); // record the Hamming weight of the new secret-key
+  skSizes.push_back(Hwt); // record the Hamming weight of the new secret-key
   sKeys.push_back(sKey); // add to the list of secret keys
   long keyID = sKeys.size()-1; // not thread-safe?
 

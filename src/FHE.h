@@ -140,7 +140,7 @@ class FHEPubKey { // The public key
   //! relative to the first secret key
   Ctxt pubEncrKey;
 
-  std::vector<long> skHwts; // The Hamming weight of the secret keys
+  std::vector<long> skSizes; // The size of the secret keys
   std::vector<KeySwitch> keySwitching; // The key-switching matrices
 
   // The keySwitchMap structure contains pointers to key-switching matrices
@@ -167,7 +167,7 @@ public:
     { recryptKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
-    context(other.context), pubEncrKey(*this), skHwts(other.skHwts),
+    context(other.context), pubEncrKey(*this), skSizes(other.skSizes),
     keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
     recryptKeyID(other.recryptKeyID), recryptEkey(*this)
   { // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
@@ -176,7 +176,7 @@ public:
   }
 
   void clear() { // clear all public-key data
-    pubEncrKey.clear(); skHwts.clear(); 
+    pubEncrKey.clear(); skSizes.clear();
     keySwitching.clear(); keySwitchMap.clear();
     recryptKeyID=-1; recryptEkey.clear();
   }
@@ -187,10 +187,10 @@ public:
   // Access methods
   const FHEcontext& getContext() const {return context;}
   long getPtxtSpace() const { return pubEncrKey.ptxtSpace; }
-  bool keyExists(long keyID) { return (keyID<(long)skHwts.size()); }
+  bool keyExists(long keyID) { return (keyID<(long)skSizes.size()); }
 
   //! @brief The Hamming weight of the secret key
-  long getSKeyWeight(long keyID=0) const {return skHwts.at(keyID);}
+  long getSKeySize(long keyID=0) const {return skSizes.at(keyID);}
 
   ///@{
   //! @name Find key-switching matrices

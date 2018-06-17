@@ -267,9 +267,9 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skHwts[recryptKeyID]+1) > q/2) 
+  if (noise + maxU*p2r*(skSizes[recryptKeyID]+1) > q/2) 
     cerr << " * noise/q after makeDivisible = "
-	 << ((noise + maxU*p2r*(skHwts[recryptKeyID]+1))/q) << endl;
+	 << ((noise + maxU*p2r*(skSizes[recryptKeyID]+1))/q) << endl;
 
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}

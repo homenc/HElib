@@ -90,7 +90,7 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
   // the special primes, it should be smaller than the added noise term due
   // to modulus switching, i.e., keyWeight * phi(m) * pSpace^2 / 4
 
-  long keyWeight = pubKey.getSKeyWeight(p.skHandle.getSecretKeyID());
+  long keyWeight = pubKey.getSKeySize(p.skHandle.getSecretKeyID());
   double phim = palg.getPhiM();
   double logModSwitchNoise = log((double)keyWeight) 
     +2*log((double)pSpace) +log(phim) -log(4.0);
@@ -1053,7 +1053,7 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
       long keyId = parts[i].skHandle.getSecretKeyID();
       long d = parts[i].skHandle.getPowerOfS();
       xdouble h, t;
-      h = pubKey.getSKeyWeight(keyId);
+      h = pubKey.getSKeySize(keyId);
 
       // added noise is d! h^d
       t = h;
