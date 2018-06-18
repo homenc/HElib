@@ -319,7 +319,7 @@ double boundFreshNoise(long m, long phim, double sigma, double epsilon)
     else                         { return 6*stdev; }
   }
   long num = 7;
-  for (double prob=(1.87e-3)/(4.1); prob>epsilon; prob /= 4.1)
+  for (double prob=(1.87e-3)/4; prob>epsilon; prob /= 4)
     num++;
 
   return stdev * num;
@@ -360,7 +360,7 @@ double boundRoundingNoise(long m, long phim, long p2r, double epsilon)
     else                         { return 7*stdev; }
   }
   long num = 8;
-  for (double prob=(7.25e-4)/(3.3); prob>epsilon; prob /= 3.3)
+  for (double prob=(7.25e-4)/3.2; prob>epsilon; prob /= 3.2)
     num++;
 
   return stdev * num;

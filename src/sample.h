@@ -58,7 +58,7 @@ void sampleUniform(NTL::ZZX&poly, const PAlgebra& palg,
 //! terms we have Pr[|canonicalEmbed(noise)|_{\infty} > B] < epsilon.
 //! (The default is epsilon = 2^{-40}.)
 ///@{
-double boundFreshNoise(long m, long phim, long p2r, double epsilon=9e-13);
+double boundFreshNoise(long m, long phim, double sigma,double epsilon=9e-13);
 double boundRoundingNoise(long m, long phim, long p2r, double epsilon=9e-13);
 ///@}
 
