@@ -24,49 +24,8 @@ NTL_CLIENT
 
 constexpr double pi = 4 * std::atan(1);
 
-#ifdef FFT_NATIVE
-#warning "canonicalEmbedding implemented via slow DFT, expect very slow key-generation"
-// An extremely lame implementation of the canonical embedding
-
-// evaluate poly(x) using Horner's rule
-cx_double complexEvalPoly(const zzX& poly, const cx_double& x)
-{
-  if (lsize(poly)<=0) return cx_double(0.0,0.0);
-  cx_double res(double(poly[0]), 0.0);
-  for (long i=1; i<lsize(poly); i++) {
-    res *= x;
-    res += cx_double(double(poly[i]));
-  }
-  return res;
-}
-
-void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra& palg)
-{
-  FHE_TIMER_START;
-  long m = palg.getM();
-  long phimBy2 = divc(palg.getPhiM(),2);
-  vector<long> zmstar(phimBy2); // the first half of Zm*
-  for (long i=1, idx=0; i<=m/2; i++)
-    if (palg.inZmStar(i)) zmstar[idx++] = i;
-
-  v.resize(phimBy2);
-  NTL_EXEC_RANGE(phimBy2, first, last)
-  for (long i=first; i < last; ++i) {
-    auto rou = std::polar<double>(1.0, -(2*pi*zmstar[i])/m); // root of unity
-    v[i] = complexEvalPoly(f,rou);
-  }
-  NTL_EXEC_RANGE_END
-  FHE_TIMER_STOP;
-}
-void embedInSlots(zzX& f, const std::vector<cx_double>& v,
-                  const PAlgebra& palg, bool strictInverse)
-{
-  NTL::Error("embedInSlots not implemented\n");
-}
-#else // ifdef FFT_NATIVE
 #ifdef FFT_ARMA
 #warning "canonicalEmbedding implemented via Armadillo"
-
 #include <armadillo>
 void convert(zzX& to, const arma::vec& from)
 {
@@ -135,5 +94,45 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
   if (strictInverse) f /= m;  // scale down by m
   normalize(f);
 }
-#endif // ifdef FFT_ARMA
+#else
+#ifdef FFT_NATIVE
+#warning "canonicalEmbedding implemented via slow DFT, expect very slow key-generation"
+// An extremely lame implementation of the canonical embedding
+
+// evaluate poly(x) using Horner's rule
+cx_double complexEvalPoly(const zzX& poly, const cx_double& x)
+{
+  if (lsize(poly)<=0) return cx_double(0.0,0.0);
+  cx_double res(double(poly[0]), 0.0);
+  for (long i=1; i<lsize(poly); i++) {
+    res *= x;
+    res += cx_double(double(poly[i]));
+  }
+  return res;
+}
+
+void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra& palg)
+{
+  FHE_TIMER_START;
+  long m = palg.getM();
+  long phimBy2 = divc(palg.getPhiM(),2);
+  vector<long> zmstar(phimBy2); // the first half of Zm*
+  for (long i=1, idx=0; i<=m/2; i++)
+    if (palg.inZmStar(i)) zmstar[idx++] = i;
+
+  v.resize(phimBy2);
+  NTL_EXEC_RANGE(phimBy2, first, last)
+  for (long i=first; i < last; ++i) {
+    auto rou = std::polar<double>(1.0, -(2*pi*zmstar[i])/m); // root of unity
+    v[i] = complexEvalPoly(f,rou);
+  }
+  NTL_EXEC_RANGE_END
+  FHE_TIMER_STOP;
+}
+void embedInSlots(zzX& f, const std::vector<cx_double>& v,
+                  const PAlgebra& palg, bool strictInverse)
+{
+  NTL::Error("embedInSlots not implemented\n");
+}
 #endif // ifdef FFT_NATIVE
+#endif // ifdef FFT_ARMA
