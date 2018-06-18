@@ -64,5 +64,4 @@ double boundRoundingNoise(long m, long phim, long p2r, double epsilon=9e-13);
 
 void reduceModPhimX(zzX& poly, const PAlgebra& palg);
 const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg);
-
 #endif // _SAMPLE_H_

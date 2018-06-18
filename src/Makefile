@@ -11,12 +11,23 @@
 # limitations under the License. See accompanying LICENSE file.
 # 
 CC = g++
+LD = g++
+AR = ar
+ARFLAGS=rv
+GMP=-lgmp
+NTL=-lntl
+ARMA=-larmadillo
 #
-#CFLAGS = -g -O2 -std=c++11 -DDEBUG_PRINTOUT -Wfatal-errors -Wshadow -Wall -I/usr/local/include 
-CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
+CFLAGS = -g -O2 -std=c++11 -pthread -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
+#CFLAGS = -g -O2 -std=c++11 -DFFT_NATIVE -fmax-errors=2
+
+# NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
+#       against them as dynamic libraries.
+LDLIBS = -L/usr/local/lib $(NTL) $(GMP) $(ARMA) -lm
+#LDLIBS = -L/usr/local/lib $(NTL) $(GMP) -lm
+
 
 # useful flags:
-#   -std=c++11
 #   -DNO_HALF_SIZE_PRIME  tells helib to not use the half size prime
 #                         in the prime chain
 #
@@ -26,22 +37,19 @@ CFLAGS = -g -O2 -std=c++11 -pthread -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-error
 #
 #   -DFHE_BOOT_THREADS  tells helib to use a multithreading strategy for
 #                       bootstrapping; requires -DFHE_THREADS (see above)
-
-#  If you get compilation errors, you may need to add -std=c++11 or -std=c++0x
+#   -DFFT_NATIVE or -DFFT_ARMA
+#                use slow-DFT (NATIVE) or Armadillo-based FFT (ARMA) to
+#                compute the canonical embedding of small polynomials.
+#                -DFFT_ARMA requires the Armadillo library
+#                -DFFT_NATIVE effects a considerable slowdown in key-generation
+#                If neither is defined, some noise terms may be larger
+#                than expected, possibly causing decryption errors.
+#
+#  If you get compilation errors, you may need to add -std=c++11
 
 $(info HElib requires NTL version 10.0.0 or higher, see http://shoup.net/ntl)
-$(info If you get compilation errors, try to add/remove -std=c++11 in Makefile)
+$(info Some functionality also needs Armadillo, see http://arma.sourceforge.net/)
 $(info )
-
-LD = g++
-AR = ar
-ARFLAGS=rv
-GMP=-lgmp
-NTL=-lntl
-
-# NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
-#       against them as dynamic libraries.
-LDLIBS = -L/usr/local/lib $(NTL) $(GMP) -larmadillo -lm
 
 HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h EvalMap.h matmul.h PtrVector.h PtrMatrix.h intraSlot.h recryption.h debugging.h binaryArith.h binaryCompare.h tableLookup.h sample.h norms.h zzX.h
 

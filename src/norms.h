@@ -42,6 +42,12 @@ inline NTL::xdouble coeffsL2Norm(const NTL::ZZX& f) // l2 norm
 inline NTL::xdouble coeffsL2Norm(const DoubleCRT& f) // l2 norm
 { return sqrt(coeffsL2NormSquared(f)); }
 
+// Choosing between implementations 
+#if defined(FFT_NATIVE) || defined(FFT_ARMA)
+#define FFT_IMPL 1
+#else
+#define FFT_IMPL 0 // no implementation of FFT
+#endif
 
 typedef std::complex<double> cx_double;
 typedef std::complex<NTL::xdouble> cx_xdouble;

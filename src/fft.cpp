@@ -24,9 +24,8 @@ NTL_CLIENT
 
 constexpr double pi = 4 * std::atan(1);
 
-#define FFT_ARMA
-
 #ifdef FFT_NATIVE
+#warning "canonicalEmbedding implemented via slow DFT, expect very slow key-generation"
 // An extremely lame implementation of the canonical embedding
 
 // evaluate poly(x) using Horner's rule
@@ -57,10 +56,12 @@ void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra&
     v[i] = complexEvalPoly(f,rou);
   }
   NTL_EXEC_RANGE_END
+  FHE_TIMER_STOP;
 }
-void canonicalUnEmbedding(zzX& f, const std::vector<cx_double>& v, const PAlgebra& palg)
+void embedInSlots(zzX& f, const std::vector<cx_double>& v,
+                  const PAlgebra& palg, bool strictInverse)
 {
-  NTL::Error("canonicalUnEmbedding not implemented\n");
+  NTL::Error("embedInSlots not implemented\n");
 }
 #else // ifdef FFT_NATIVE
 #ifdef FFT_ARMA
@@ -99,6 +100,7 @@ void canonicalEmbedding(std::vector<cx_double>& v,
   v.resize(phimBy2); // the first half of Zm*
   for (long i=1, idx=0; i<=m/2; i++)
     if (palg.inZmStar(i)) v[idx++] = avv[i];
+  FHE_TIMER_STOP;
 }
 
 // Roughly the inverse of canonicalEmbedding, except for rounding issues.
@@ -133,7 +135,5 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
   if (strictInverse) f /= m;  // scale down by m
   normalize(f);
 }
-#else // ifdef FFT_ARMA
-#error "No implementation found for canonicalEmbedding"
 #endif // ifdef FFT_ARMA
 #endif // ifdef FFT_NATIVE

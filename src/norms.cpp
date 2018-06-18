@@ -90,6 +90,7 @@ xdouble coeffsL2NormSquared(const DoubleCRT& f) // l2 norm^2
   return coeffsL2NormSquared(poly);
 }
 
+#if FFT_IMPL
 // l_2 norm square of canonical embedding
 double embeddingL2NormSquared(const zzX& f, const PAlgebra& palg)
 {
@@ -113,3 +114,4 @@ double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg)
   }
   return sqrt(mx);
 }
+#endif

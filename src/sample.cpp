@@ -227,6 +227,7 @@ void sampleSmall(zzX &poly, const PAlgebra& palg)
 // Same as above, but ensure the result is not too much larger than typical
 void sampleSmallBounded(zzX &poly, const PAlgebra& palg)
 {
+#if FFT_IMPL // is there any implementation of canonicalEmbedding?
   long phim = palg.getPhiM();
   // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
   double bound = (1+sqrt(phim*log(phim)))*0.85;
@@ -236,6 +237,10 @@ void sampleSmallBounded(zzX &poly, const PAlgebra& palg)
   while (embeddingLargestCoeff(poly,palg)>bound); // repeat until <=bound
   // if (nTrials>1)
   //   cerr<<"sampleSmallBounded: "<<nTrials<<" trials\n";
+#else
+#warning "No FFT, sampleSmallBounded degenerates to sampleSmall"
+  sampleSmall(poly, palg);
+#endif
 }
 void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev)
 {
@@ -249,6 +254,7 @@ void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev)
 // Same as above, but ensure the result is not too much larger than typical
 void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev)
 {
+#if FFT_IMPL // is there any implementation of canonicalEmbedding?
   long m = palg.getM();
   long phim = palg.getPhiM();  
   // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
@@ -260,6 +266,10 @@ void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev)
   while (embeddingLargestCoeff(poly,palg)>bound); // repeat until <=bound
   // if (nTrials>1)
   //   cerr<<"sampleGaussianBounded: "<<nTrials<<" trials\n";
+#else
+#warning "No FFT, sampleGaussianBounded degenerates to sampleGaussian"
+  sampleGaussian(poly, palg, stdev);
+#endif
 }
 void sampleUniform(zzX &poly, const PAlgebra& palg, long B)
 {
