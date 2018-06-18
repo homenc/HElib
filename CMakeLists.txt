@@ -24,12 +24,20 @@ set(CMAKE_CXX_STANDARD 11)
 ## Make sure the NTL is built with NTL_THREADS=on
 ## For NTL's verison older than 7.0, should turn FHE_THREADS off.
 if (ENABLE_THREADS)
-set(FHE_THREADS ON) 
-add_definitions(-DFHE_THREADS)
-set(RUN_LIB fhe ntl gmp pthread)
+  set(FHE_THREADS ON) 
+  add_definitions(-DFHE_THREADS)
+  set(RUN_LIB fhe ntl gmp pthread)
 else (ENABLE_THREADS)
-set(FHE_THREADS OFF) 
-set(RUN_LIB fhe ntl gmp)
+  set(FHE_THREADS OFF) 
+  set(RUN_LIB fhe ntl gmp)
 endif (ENABLE_THREADS)
+
+# Use Armadillo if you can find it
+find_package(Armadillo)
+if (ARMADILLO_FOUND)
+  include_directories(${ARMADILLO_INCLUDE_DIRS})
+  link_libraries(${ARMADILLO_LIBRARIES})
+  add_definitions(-DFFT_ARMA)
+endif (ARMADILLO_FOUND)
 
 add_subdirectory(src)
