@@ -128,12 +128,11 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
-  buildModChain(context, L, c,/*extraBits=*/7);
+  buildModChain(context, L, c,/*willBeBootstrappable=*/true);
 
-  // FIXME: The extraBits is an exceedingly ugly patch, used to bypass the
+  // FIXME: The willBeBootstrappable flag is a hack, used to bypass the
   //   issue that buildModChain must be called BEFORE the context is made
-  //   bootstrappable (else the "powerful" basis is not initialized correctly.)
-  //   This is a bug, the value 7 is sometimes the right one, but seriously??
+  //   botstrappable (else the "powerful" basis is not initialized correctly.)
 
   context.makeBootstrappable(mvec, /*t=*/0, cons, build_cache);
   t += GetTime();

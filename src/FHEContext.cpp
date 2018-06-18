@@ -254,7 +254,7 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   return sizeLogSoFar;
 }
 
-void buildModChain(FHEcontext &context, long nLevels, long nDgts,long extraBits)
+void buildModChain(FHEcontext &context, long nLevels, long nDgts,bool willBeBootstrappable)
 {
 #ifdef NO_HALF_SIZE_PRIME
   long nPrimes = nLevels;
@@ -329,8 +329,11 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts,long extraBits)
   // Add special primes to the chain for the P factor of key-switching
   long p2r = context.alMod.getPPowR();
   double sizeOfSpecialPrimes
-    = maxDigitSize + log(nDgts) + log(context.stdev *2)
-      + log((double)p2r) + (extraBits*log(2.0));
+    = maxDigitSize + log(nDgts) + log(context.stdev *2) + log((double)p2r);
+
+  if (willBeBootstrappable)
+    sizeOfSpecialPrimes += 8*log(2.0);
+  // FIXME: replace 8.0 by some way of computing the real number that's needed
 
   AddPrimesBySize(context, sizeOfSpecialPrimes, true);
 }

@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);
   context.bitsPerLevel = B;
-  buildModChain(context, L, c,/*extraBits=*/8);
+  buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
     context.makeBootstrappable(mvec, /*t=*/0,
                                /*flag=*/false, /*cacheType=DCRT*/2);
