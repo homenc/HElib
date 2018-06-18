@@ -85,6 +85,39 @@ static void setAlphaE(double& alpha, long& e, double rho, double gamma,
   else
     e = floor(1+ log(2*(t+1)*p2r)/logp);
 }
+double
+RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
+                       const FHEcontext& context, bool conservative, long t)
+{
+  long p = context.zMStar.getP();
+  long phim = context.zMStar.getPhiM();
+  long r = context.alMod.getR();
+  long p2r = context.alMod.getPPowR();
+  double logp = log((double)p);
+
+  double noise = p2r * sqrt((t+1)*phim/3.0);
+  double gamma = 2*(t+noise)/((t+1)*p2r); // ratio between numerators
+
+  long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
+  double rho = (t+1)/pow(p,logT);
+
+  if (!conservative) {   // try alpha, e with this "aggresive" setting
+    ::setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
+    ePrime = e -r +1 -logT;
+
+    // If e is too large, try again with rho/p instead of rho
+    long bound = (1L << (context.bitsPerLevel-1)); // halfSizePrime/2
+    if (pow(p,e) > bound) { // try the conservative setting instead
+      cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
+      conservative = true;
+    }
+  }
+  if (conservative) { // set alpha, e with a "conservative" rho/p
+    ::setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
+    ePrime = e -r -logT;
+  }
+  return noise;
+}
 
 bool RecryptData::operator==(const RecryptData& other) const
 {
@@ -114,33 +147,10 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
   if (t <= 0) t = defSkHwt+1; // recryption key Hwt
   hwt = t;
+
+  double noise = setAlphaE(alpha,e,ePrime, context, conservative, t);
   long p = context.zMStar.getP();
-  long phim = context.zMStar.getPhiM();
   long r = context.alMod.getR();
-  long p2r = context.alMod.getPPowR();
-  double logp = log((double)p);
-
-  double noise = p2r * sqrt((t+1)*phim/3.0);
-  double gamma = 2*(t+noise)/((t+1)*p2r); // ratio between numerators
-
-  long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
-  double rho = (t+1)/pow(p,logT);
-
-  if (!conservative) {   // try alpha, e with this "aggresive" setting
-    setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
-    ePrime = e -r +1 -logT;
-
-    // If e is too large, try again with rho/p instead of rho
-    long bound = (1L << (context.bitsPerLevel-1)); // halfSizePrime/2
-    if (pow(p,e) > bound) { // try the conservative setting instead
-      cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
-      conservative = true;
-    }
-  }
-  if (conservative) { // set alpha, e with a "conservative" rho/p
-    setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
-    ePrime = e -r -logT;
-  }
 
   // Compute highest key-Hamming-weight that still works (not more than 256)
   double qOver4 = (pow(p,e)+1)/4;
@@ -152,7 +162,6 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   alMod = new PAlgebraMod(context.zMStar, e-ePrime+r);
   ea = new EncryptedArray(context, *alMod);
          // Polynomial defaults to F0, PAlgebraMod explicitly given
-
 
   p2dConv = new PowerfulDCRT(context, mvec);
 

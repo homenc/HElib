@@ -82,6 +82,30 @@ public:
   bool operator!=(const RecryptData& other) const {
     return !(operator==(other));
   }
+
+  //! Helper function for computing the recryption parameters
+  static double
+    setAlphaE(double& alpha, long& e, long& ePrime,
+              const FHEcontext& context, bool conservative=false, long=0);
+  /** To get the smallest value of e-e', the params need to satisfy:
+   *  (p^e +1)/4 =>
+   *   max { (t+1)( 1+ (alpha/2)*(p^e/p^{ceil(log_p(t+2))}) ) + noise      }
+   *       { (t+1)( 1+ ((1-alpha)/2)*(p^e/p^{ceil(log_p(t+2))}) +p^r/2) +1 },
+   *
+   * where noise is taken to be twice the mod-switching additive term,
+   * namely noise = p^r *sqrt((t+1)*phi(m)/3).
+   * Denoting rho=(t+1)/p^{ceil(log_p(t+2))} (and ignoring fome +1 terms),
+   * this is equivalent to:
+   *
+   *   p^e > max{4(t+noise)/(1-2*alpha*rho), 2(t+1)p^r/(1-2(1-alpha)rho)}.
+   *
+   * We first compute the optimal value for alpha (which must be in [0,1]),
+   * that makes the two terms in the max{...} as close as possible, and
+   * then compute the smallest value of e satisfying this constraint.
+   *
+   * If this value is too big then we try again with e-e' one larger,
+   * which means that rho is a factor of p smaller.
+   */
 };
 
 #endif /* _RECRYPTION_H_ */
