@@ -89,6 +89,7 @@ double
 RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
                        const FHEcontext& context, bool conservative, long t)
 {
+  if (t <= 0) t = RecryptData::defSkHwt+1; // recryption key Hwt
   long p = context.zMStar.getP();
   long phim = context.zMStar.getPhiM();
   long r = context.alMod.getR();

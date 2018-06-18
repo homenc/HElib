@@ -254,8 +254,36 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   return sizeLogSoFar;
 }
 
-void buildModChain(FHEcontext &context, long nLevels, long nDgts,bool willBeBootstrappable)
+void buildModChain(FHEcontext &context, long nLevels, long nDgts,
+                   bool willBeBootstrappable)
 {
+  const PAlgebra& palg = context.zMStar;
+  long p = palg.getP();
+  long m = palg.getM();
+  long p2r = context.alMod.getPPowR();
+
+  // Ensure bitsPerLevel is large enough to surpress high-order noise terms
+  { long phim = palg.getPhiM();
+    double stdev = to_double(context.stdev);
+    if (palg.getPow2() == 0) // not power of two
+      stdev *= sqrt(m);
+    long p2e = p2r;
+    if (willBeBootstrappable) { // bigger p^e for bootstrapping
+      double alpha; long e, ePrime;
+      RecryptData::setAlphaE(alpha,e,ePrime, context);
+      p2e = NTL::power_long(p, e-ePrime);
+      if (p2e < p2r) p2e = p2r; // sanity check
+    }
+    double dBound = std::max<double>(boundFreshNoise(m, phim, stdev),
+                                     boundRoundingNoise(m, phim, p2e));
+    long lBound = round(log2(dBound));
+    if (context.bitsPerLevel < lBound) {
+      cerr << "buildModChain: context.bitsPerLevel upped from "
+           << context.bitsPerLevel<<" to "<<lBound<< endl;
+      context.bitsPerLevel = lBound;
+    }
+  }
+
 #ifdef NO_HALF_SIZE_PRIME
   long nPrimes = nLevels;
 #else
@@ -263,7 +291,7 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts,bool willBeBoot
   // The first prime should be of half the size. The code below tries to find
   // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
 
-  long twoM = 2 * context.zMStar.getM();
+  long twoM = 2 * m;
   long bound = (1L << (context.bitsPerLevel-1));
   while (twoM < bound/(2*context.bitsPerLevel))
     twoM *= 2; // divisible by 2^k * m  for a larger k
@@ -327,7 +355,6 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts,bool willBeBoot
   }
 
   // Add special primes to the chain for the P factor of key-switching
-  long p2r = context.alMod.getPPowR();
   double sizeOfSpecialPrimes
     = maxDigitSize + log(nDgts) + log(context.stdev *2) + log((double)p2r);
 
