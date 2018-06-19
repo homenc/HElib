@@ -19,6 +19,9 @@
 #include "CModulus.h"
 
 
+#define NEW_BLUE (1)
+
+
 
 void BluesteinInit(long n, const zz_p& root, zz_pX& powers, 
                    Vec<mulmod_precon_t>& powers_aux, fftRep& Rb)
@@ -28,9 +31,15 @@ void BluesteinInit(long n, const zz_p& root, zz_pX& powers,
   zz_p one; one=1;
   powers.SetMaxLength(n);
 
+  long e;
+  if (n % 2 == 0)
+    e = 2*n;
+  else
+    e = n;
+
   SetCoeff(powers,0,one);
   for (long i=1; i<n; i++) {
-    long iSqr = MulMod(i, i, 2*n); // i^2 mod 2n
+    long iSqr = MulMod(i, i, e); // i^2 mod 2n
     SetCoeff(powers,i, power(root,iSqr)); // powers[i] = root^{i^2}
   }
 
@@ -44,15 +53,27 @@ void BluesteinInit(long n, const zz_p& root, zz_pX& powers,
   long k2 = 1L << k; // k2 = 2^k
 
   Rb.SetSize(k);
+
   zz_pX b(INIT_SIZE, k2);
 
-  zz_p rInv = inv(root);
-  SetCoeff(b,n-1,one); // b[n-1] = 1
-  for (long i=1; i<n; i++) {
-    long iSqr = MulMod(i, i, 2*n); // i^2 mod 2n
-    zz_p bi = power(rInv,iSqr);
-    SetCoeff(b,n-1+i, bi); // b[n-1+i] = b[n-1-i] = root^{-i^2}
-    SetCoeff(b,n-1-i,bi);              
+  if (NEW_BLUE && n == e) {
+    zz_p rInv = inv(root);
+    for (long i=0; i<n; i++) {
+      long iSqr = MulMod(i, i, e); // i^2 mod 2n
+      zz_p bi = power(rInv,iSqr);
+      SetCoeff(b,i,bi);              
+    }
+  }
+  else {
+    zz_p rInv = inv(root);
+    SetCoeff(b,n-1,one); // b[n-1] = 1
+    for (long i=1; i<n; i++) {
+      long iSqr = MulMod(i, i, e); // i^2 mod 2n
+      zz_p bi = power(rInv,iSqr);
+      // b[n-1+i] = b[n-1-i] = root^{-i^2}
+      SetCoeff(b,n-1+i, bi); 
+      SetCoeff(b,n-1-i,bi);              
+    }
   }
 
   TofftRep(Rb, b, k);
@@ -80,16 +101,45 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
 
   long k = NextPowerOfTwo(2*n-1);
   fftRep& Ra = Cmodulus::getScratch_fftRep(k);
-  TofftRep(Ra, x, k);
 
-  mul(Ra,Ra,Rb);           // multiply in FFT representation
+  // Careful! we are multiplying polys of degrees 2*(n-1)
+  // and (n-1) modulo x^k-1.  This gives us some
+  // truncation in ceratin cases.
 
-  FromfftRep(x, Ra, n-1, 2*(n-1)); // then convert back
-  dx = deg(x); 
-  for (long i=0; i<=dx; i++) {
-    x[i].LoopHole() = MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
+  if (NEW_BLUE && n % 2 != 0) {
+    TofftRep_trunc(Ra, x, k, 2*n-1);
+
+    mul(Ra,Ra,Rb);           // multiply in FFT representation
+
+    FromfftRep(x, Ra, 0, 2*(n-1)); // then convert back
+    dx = deg(x); 
+    if (dx >= n) {
+      // reduce mod x^n-1
+      for (long i = n; i <= dx; i++) {
+        x[i-n].LoopHole() = AddMod(rep(x[i-n]), rep(x[i]), p);
+      }
+      x.SetLength(n);
+      x.normalize();
+      dx = deg(x);
+    }
+
+    for (long i=0; i<=dx; i++) {
+      x[i].LoopHole() = MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
+    }
+    x.normalize();
   }
-  x.normalize();
+  else {
+    TofftRep_trunc(Ra, x, k, 3*(n-1)+1);
+
+    mul(Ra,Ra,Rb);           // multiply in FFT representation
+
+    FromfftRep(x, Ra, n-1, 2*(n-1)); // then convert back
+    dx = deg(x); 
+    for (long i=0; i<=dx; i++) {
+      x[i].LoopHole() = MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
+    }
+    x.normalize();
+  }
 }
 
 

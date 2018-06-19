@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <memory>
 #include <NTL/ZZ.h>
+#include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 
 #include "FHE.h"
@@ -599,6 +600,8 @@ void usage(char *prog)
   cerr << "          18631,20485,21845, 49981,53261       }\n";
   cerr << "  p is the plaintext base [default=2]" << endl;
   cerr << "  high=1 will time also high-level procedures [default==0]\n";
+  cerr << "  nthreads defines the NTL Thread Pool size for multi-threaded computations [default==1]\n";
+  cerr << "           do not exceed the number of available cores or SMT threads on your system.\n";
   exit(0);
 }
 
@@ -608,6 +611,7 @@ int main(int argc, char *argv[])
   argmap["p"] = "2";
   argmap["m"] = "0";
   argmap["high"] = "0";
+  argmap["nthreads"] = "1";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
@@ -615,10 +619,14 @@ int main(int argc, char *argv[])
   long p = atoi(argmap["p"]);
   long m = atoi(argmap["m"]);
   long high = atoi(argmap["high"]);
+  long nthreads = atoi(argmap["nthreads"]);
 
 #define numTests 11
   long ms[numTests] = { 4051, 4369, 4859, 10261,11023,11441,
 		 18631,20485,21845, 49981,53261};
+
+  // set NTL Thread pool size
+  if (nthreads>1) NTL::SetNumThreads(nthreads);
 
   cout << "p,m,phim,nSlots,init(p),init(p^2),keyGen,encode(F_p),encode(F_p^d),encode(Z_p^r),encode(R_(p^r)^d),encrypt,decrypt,decode(p),decode(p^2),level,addConst,add,multConst,mult,mult2,autoNative,autoTypical,inProd10";
   if (high) cout << ",rotate,shift,permute,matmul,replicate,replAll\n";

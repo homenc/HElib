@@ -1321,7 +1321,8 @@ void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
 
    fftRep R2, R3;
 
-   TofftRep(R2, a, k, n, m-1);
+   //TofftRep(R2, a, k, n, m-1);
+   TofftRep_trunc(R2, a, k, 2*(m-1-n)+1, n, m-1);
    mul(R2, R2, R0);
    FromfftRep(P3, R2, m-1-n, 2*(m-1-n));
    

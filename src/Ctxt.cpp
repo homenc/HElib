@@ -13,6 +13,21 @@
 #include "timing.h"
 #include "Ctxt.h"
 #include "FHE.h"
+#include "binio.h"
+
+void SKHandle::read(istream& str)
+{
+  powerOfS = read_raw_int(str);
+  powerOfX = read_raw_int(str);
+  secretKeyID = read_raw_int(str);
+}
+ 
+void SKHandle::write(ostream& str) const
+{
+  write_raw_int(str, powerOfS);
+  write_raw_int(str, powerOfX);
+  write_raw_int(str, secretKeyID);
+}
 
 // A hack for recording required automorphisms (see NumbTh.h)
 std::set<long>* FHEglobals::automorphVals = NULL;
@@ -473,7 +488,7 @@ void Ctxt::findBaseSet(IndexSet& s) const
   bool halfSize = context.containsSmallPrime();
   double curNoise = log(getNoiseVar())/2;
   double firstNoise = context.logOfPrime(0);
-  double noiseThreshold = log(modSwitchAddedNoiseVar())*0.55;
+  double noiseThreshold = log(modSwitchAddedNoiseVar())*0.55; 
   // FIXME: The above should have been 0.5. Making it a bit more means
   // that we will mod-switch a little less frequently, whether this is
   // a good thing needs to be tested.
@@ -1077,6 +1092,54 @@ void Ctxt::reduce() const
   for (long i = 0; i < n; i++) parts[i].reduce();
 }
 
+void Ctxt::write(ostream& str) const
+{
+  writeEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
+  
+  /*  Writing out in binary:
+    1.  long ptxtSpace
+    2.  xdouble noiseVar
+    3.  IndexSet primeSet;
+    4.  vector<CtxtPart> parts;
+  */  
+  
+  write_raw_int(str, ptxtSpace);
+  write_raw_int(str, highWaterMark);
+  write_raw_xdouble(str, noiseVar);
+  primeSet.write(str);
+  write_raw_vector(str, parts);    
+ 
+  writeEyeCatcher(str, BINIO_EYE_CTXT_END);
+}
+
+void Ctxt::read(istream& str)
+{
+  assert(readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN)==0);
+  
+  ptxtSpace = read_raw_int(str);
+  highWaterMark = read_raw_int(str);
+  noiseVar = read_raw_xdouble(str); 
+  primeSet.read(str); 
+  CtxtPart blankCtxtPart(context, IndexSet::emptySet());
+  read_raw_vector(str, parts, blankCtxtPart);    
+
+  assert(readEyeCatcher(str, BINIO_EYE_CTXT_END)==0);
+}
+
+void CtxtPart::write(ostream& str)
+{ 
+  this->DoubleCRT::write(str); // CtxtPart is a child.
+  skHandle.write(str);
+}
+
+
+void CtxtPart::read(istream& str)
+{
+  this->DoubleCRT::read(str); // CtxtPart is a child.
+  skHandle.read(str);
+}
+
+
 istream& operator>>(istream& str, SKHandle& handle)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
@@ -1105,7 +1168,7 @@ istream& operator>>(istream& str, CtxtPart& p)
 ostream& operator<<(ostream& str, const Ctxt& ctxt)
 {
   str << "["<<ctxt.ptxtSpace<<" "<<ctxt.noiseVar<<" "<<ctxt.primeSet
-      << " "<<ctxt.parts.size() << endl;
+      << ctxt.highWaterMark << " "<<ctxt.parts.size() << endl;
   for (size_t i=0; i<ctxt.parts.size(); i++)
     str << ctxt.parts[i] << endl;
   return str << "]";
@@ -1114,7 +1177,7 @@ ostream& operator<<(ostream& str, const Ctxt& ctxt)
 istream& operator>>(istream& str, Ctxt& ctxt)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
-  str >> ctxt.ptxtSpace >> ctxt.noiseVar >> ctxt.primeSet;
+  str >> ctxt.ptxtSpace >> ctxt.noiseVar >> ctxt.primeSet >> ctxt.highWaterMark;
   long nParts;
   str >> nParts;
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));
