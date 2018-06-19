@@ -263,7 +263,7 @@ public:
 
   //! @brief set KS strategy for dimension dim  
   //! dim == -1 is Frobenius
-  long setKSStrategy(long dim, int val) {
+  void setKSStrategy(long dim, int val) {
     long index = dim+1;
     assert(index >= 0);
     if (index >= KS_strategy.length()) 

@@ -20,10 +20,10 @@
  */
 #include <NTL/ZZVec.h>
 #include <NTL/BasicThreadPool.h>
+#include "binio.h"
 
 #include "DoubleCRT.h"
 #include "timing.h"
-
 
 // A threaded implementation of DoubleCRT operations
 
@@ -144,7 +144,6 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
 
     for (long j = 0; j < phim; j++)
       row[j] = fun.apply(row[j], other_row[j], pi);
-
   }
   return *this;
 }
@@ -193,7 +192,6 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
 
     for (long j = 0; j < phim; j++)
       row[j] = MulMod(row[j], other_row[j], pi, pi_inv);
-
   }
   return *this;
 }
@@ -965,7 +963,6 @@ void DoubleCRT::randomize(const ZZ* seed)
         }
 
 #endif
-
         utmp = (utmp & mask);
         
         long tmp = utmp;
@@ -1072,3 +1069,30 @@ istream& operator>> (istream &str, DoubleCRT &d)
   //  cerr << "]";
   return str;
 }
+
+void DoubleCRT::write(ostream& str) const
+{
+  const IndexSet& set = map.getIndexSet(); 
+//  cerr << "[DCRT::write] set: " << set << endl;
+  set.write(str);
+  
+  for(long i = set.first(); i <= set.last(); i = set.next(i)) {
+    write_ntl_vec_long(str, map[i]);
+ //   cerr << "[DCRT::write] map[i]: " << map[i] << endl;
+  }
+}
+
+void DoubleCRT::read(istream& str)
+{
+  IndexSet set;
+  set.read(str); // read in the indexSet
+  map.clear();
+  map.insert(set); // fix the index set for the data
+//  cerr << "[DCRT::read] set: " << set << endl;
+ 
+  for(long i = set.first(); i <= set.last(); i = set.next(i)) {
+    read_ntl_vec_long(str, map[i]);    
+ //   cerr << "[DCRT::read] map[i]: " << map[i] << endl;
+  }
+}
+

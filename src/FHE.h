@@ -107,6 +107,11 @@ public:
 
   //! @brief Read a key-switching matrix from input
   void readMatrix(istream& str, const FHEcontext& context);
+
+  // Raw IO
+  void read(istream& str, const FHEcontext& context);
+  void write(ostream& str) const;
+
 };
 ostream& operator<<(ostream& str, const KeySwitch& matrix);
 // We DO NOT have istream& operator>>(istream& str, KeySwitch& matrix);
@@ -134,6 +139,8 @@ ostream& operator<<(ostream& str, const KeySwitch& matrix);
 class FHEPubKey { // The public key
   const FHEcontext& context; // The context
 
+private:
+
   //! @var Ctxt pubEncrKey
   //! The public encryption key is an encryption of 0,
   //! relative to the first secret key
@@ -148,7 +155,7 @@ class FHEPubKey { // The public key
   // use when re-linearizing s_i(X^n). 
   std::vector< std::vector<long> > keySwitchMap;
 
-  NTL::Vec<int> KS_strategy; // NTL Vec's support I/O, which is
+  NTL::Vec<long> KS_strategy; // NTL Vec's support I/O, which is
                              // more convenient
 
   // bootstrapping data
@@ -241,7 +248,7 @@ public:
 
   //! @brief set KS strategy for dimension dim  
   //! dim == -1 is Frobenius
-  long setKSStrategy(long dim, int val) {
+  void setKSStrategy(long dim, int val) {
     long index = dim+1;
     assert(index >= 0);
     if (index >= KS_strategy.length()) 
@@ -263,6 +270,8 @@ public:
   friend class FHESecKey;
   friend ostream& operator << (ostream& str, const FHEPubKey& pk);
   friend istream& operator >> (istream& str, FHEPubKey& pk);
+  friend void writePubKeyBinary(ostream& str, const FHEPubKey& pk);
+  friend void readPubKeyBinary(istream& str, FHEPubKey& pk);
 
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
@@ -270,6 +279,7 @@ public:
   // A hack to increase the plaintext space
   void hackPtxtSpace(long p2r) { pubEncrKey.ptxtSpace = p2r; }
 };
+  
 
 /**
  * @class FHESecKey
@@ -334,6 +344,8 @@ public:
 
   friend ostream& operator << (ostream& str, const FHESecKey& sk);
   friend istream& operator >> (istream& str, FHESecKey& sk);
+  friend void writeSecKeyBinary(ostream& str, const FHESecKey& sk);
+  friend void readSecKeyBinary(istream& str, FHESecKey& sk);
 };
 
 //! @name Strategies for generating key-switching matrices

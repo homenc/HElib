@@ -9,11 +9,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
 #include "FHE.h"
 
 #include <queue> // used in the breadth-first search in setKeySwitchMap
 #include "timing.h"
+#include "binio.h"
+
 
 /******** Utility function to generate RLWE instances *********/
 
@@ -211,6 +212,46 @@ void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
   seekPastChar(str,']');
   //  cerr << "]";
 }
+
+
+void KeySwitch::write(ostream& str) const
+{
+  writeEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
+/*  
+    Write out raw
+    1. SKHandle fromKey; 
+    2. long     toKeyID;
+    3. long     ptxtSpace;
+    4. vector<DoubleCRT> b;
+    5. ZZ prgSeed;
+*/
+
+  fromKey.write(str);
+  write_raw_int(str, toKeyID);
+  write_raw_int(str, ptxtSpace);
+
+  write_raw_vector(str, b);
+  
+  write_raw_ZZ(str, prgSeed);
+
+  writeEyeCatcher(str, BINIO_EYE_SKM_END);
+}
+
+void KeySwitch::read(istream& str, const FHEcontext& context)
+{
+  assert(readEyeCatcher(str, BINIO_EYE_SKM_BEGIN)==0);
+
+  fromKey.read(str);
+  toKeyID = read_raw_int(str);
+  ptxtSpace = read_raw_int(str);
+  DoubleCRT blankDCRT(context, IndexSet::emptySet());
+  read_raw_vector(str, b, blankDCRT);
+  read_raw_ZZ(str, prgSeed);
+
+  assert(readEyeCatcher(str, BINIO_EYE_SKM_END)==0);
+}
+
+
 
 /******************** FHEPubKey implementation **********************/
 /********************************************************************/
@@ -475,17 +516,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   unsigned long m, p, r;
   vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
-  const PAlgebra& palg = pk.getContext().zMStar;
-  assert( m == palg.getM() );
-  assert( p == palg.getP() );
-  assert( gens.size() == palg.numOfGens() );
-  for (long i=0; i<(long)gens.size(); i++) {
-    assert(gens[i]==(long)palg.ZmStarGen(i));
-    if (palg.SameOrd(i))
-      assert(ords[i]==(long) pk.getContext().zMStar.OrderOf(i));
-    else
-      assert(-ords[i]==(long) pk.getContext().zMStar.OrderOf(i));
-  }
+  assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
 
   // Get the public encryption key itself
   str >> pk.pubEncrKey;
@@ -525,6 +556,74 @@ istream& operator>>(istream& str, FHEPubKey& pk)
 
   seekPastChar(str, ']');
   return str;
+}
+      
+void writePubKeyBinary(ostream& str, const FHEPubKey& pk) 
+{
+
+  writeEyeCatcher(str, BINIO_EYE_PK_BEGIN);  
+
+// Write out for FHEPubKey
+//  1. Context Base 
+//  2. Ctxt pubEncrKey;
+//  3. vector<long> skHwts; 
+//  4. vector<KeySwitch> keySwitching;
+//  5. vector< vector<long> > keySwitchMap;
+//  6. Vec<long> KS_strategy
+//  7. long recryptKeyID; 
+//  8. Ctxt recryptEkey;
+
+  writeContextBaseBinary(str, pk.getContext());
+  pk.pubEncrKey.write(str);
+  write_raw_vector(str, pk.skHwts);
+
+  // Keyswitch Matrices
+  write_raw_vector(str, pk.keySwitching);
+
+  long sz = pk.keySwitchMap.size();
+  write_raw_int(str, sz);
+  for(auto v: pk.keySwitchMap)
+    write_raw_vector(str, v);
+
+  write_ntl_vec_long(str, pk.KS_strategy); 
+
+  write_raw_int(str, pk.recryptKeyID);
+  pk.recryptEkey.write(str);
+
+  writeEyeCatcher(str, BINIO_EYE_PK_END);
+}
+
+void readPubKeyBinary(istream& str, FHEPubKey& pk)
+{
+  assert(readEyeCatcher(str, BINIO_EYE_PK_BEGIN)==0);
+ 
+  //  // TODO code to check context object is what it should be 
+  //  // same as the text IO. May be worth putting it in helper func.
+  //  std::unique_ptr<FHEcontext> dummy = buildContextFromBinary(str);
+  unsigned long m, p, r;
+  vector<long> gens, ords;
+  readContextBaseBinary(str, m, p, r, gens, ords);
+  assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
+
+  // Read in the rest
+  pk.pubEncrKey.read(str);
+  read_raw_vector(str, pk.skHwts);
+
+  // Keyswitch Matrices
+  read_raw_vector(str, pk.keySwitching, pk.getContext());
+
+  long sz = read_raw_int(str);
+  pk.keySwitchMap.clear();
+  pk.keySwitchMap.resize(sz);
+  for(auto& v: pk.keySwitchMap)
+    read_raw_vector(str, v);
+
+  read_ntl_vec_long(str, pk.KS_strategy); 
+
+  pk.recryptKeyID = read_raw_int(str);
+  pk.recryptEkey.read(str);
+
+  assert(readEyeCatcher(str, BINIO_EYE_PK_END)==0);
 }
 
 
@@ -799,5 +898,34 @@ istream& operator>>(istream& str, FHESecKey& sk)
   seekPastChar(str, ']');
   //  cerr << "]\n";
   return str;
+}
+
+
+void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
+{
+  writeEyeCatcher(str, BINIO_EYE_SK_BEGIN);
+
+  // Write out the public key part first.
+  writePubKeyBinary(str, sk);
+
+// Write out 
+// 1. vector<DoubleCRT> sKeys  
+
+  write_raw_vector<DoubleCRT>(str, sk.sKeys); 
+
+  writeEyeCatcher(str, BINIO_EYE_SK_END);
+}
+
+void readSecKeyBinary(istream& str, FHESecKey& sk)
+{
+  assert(readEyeCatcher(str, BINIO_EYE_SK_BEGIN)==0);
+
+  // Read in the public key part first.
+  readPubKeyBinary(str, sk);
+
+  DoubleCRT blankDCRT(sk.getContext(), IndexSet::emptySet());
+  read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
+
+  assert(readEyeCatcher(str, BINIO_EYE_SK_END)==0);
 }
 

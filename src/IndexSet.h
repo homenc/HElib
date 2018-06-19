@@ -126,6 +126,11 @@ public:
 
   //! @brief Is this set a contiguous interval?
   bool isInterval() const {return (_card==(1+_last-_first));}
+
+  /*** raw IO ***/ 
+  void read(istream& str);  
+  void write(ostream& str) const;
+
 };
 
 // some high-level convenience methods...not very efficient...
