@@ -51,11 +51,11 @@
 //NTL_CLIENT
 
 class PAlgebra {
-  unsigned long m;   // the integer m defines (Z/mZ)^*, Phi_m(X), etc.
-  unsigned long p;   // the prime base of the plaintext space
+  long m;   // the integer m defines (Z/mZ)^*, Phi_m(X), etc.
+  long p;   // the prime base of the plaintext space
 
-  unsigned long phiM; // phi(m)
-  unsigned long ordP; // the order of p in (Z/mZ)^*
+  long phiM; // phi(m)
+  long ordP; // the order of p in (Z/mZ)^*
 
   long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
 
@@ -71,7 +71,7 @@ class PAlgebra {
   ZZX PhimX;   // Holds the integer polynomial Phi_m(X)
   double cM;   // the ring constant c_m for Z[X]/Phi_m(X)
 
-  vector<unsigned long> T; // The representatives for the quotient group Zm* /(p)
+  vector<long> T; // The representatives for the quotient group Zm* /(p)
   vector<long> Tidx;  // i=Tidx[t] is the index i s.t. T[i]=t. 
                       // Tidx[t]==-1 if t notin T
 
@@ -82,7 +82,7 @@ class PAlgebra {
 
  public:
 
-  PAlgebra(unsigned long mm, unsigned long pp = 2,
+  PAlgebra(long mm, long pp = 2,
            const vector<long>& _gens = vector<long>(), 
            const vector<long>& _ords = vector<long>() );  // constructor
 
@@ -98,19 +98,19 @@ class PAlgebra {
   /* Access methods */
 
   //! Returns m
-  unsigned long getM() const { return m; }
+  long getM() const { return m; }
 
   //! Returns p
-  unsigned long getP() const { return p; }
+  long getP() const { return p; }
 
   //! Returns phi(m)
-  unsigned long getPhiM() const { return phiM; }
+  long getPhiM() const { return phiM; }
 
   //! The order of p in (Z/mZ)^*
-  unsigned long getOrdP() const { return ordP; }
+  long getOrdP() const { return ordP; }
 
   //! The number of plaintext slots = phi(m)/ord(p)
-  unsigned long getNSlots() const { return cube.getSize(); }
+  long getNSlots() const { return cube.getSize(); }
 
   //! if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
   long getPow2() const { return pow2; }
@@ -126,10 +126,10 @@ class PAlgebra {
   //  const vector<long> getMfactors() const { return mFactors; }
 
   //! The number of generators in (Z/mZ)^* /(p)
-  unsigned long numOfGens() const { return gens.size(); }
+  long numOfGens() const { return gens.size(); }
 
   //! the i'th generator in (Z/mZ)^* /(p) (if any)
-  unsigned long ZmStarGen(unsigned long i) const
+  long ZmStarGen(long i) const
   {  return (i<gens.size())? gens[i] : 0; }
 
   //! the i'th generator to the power j mod m
@@ -142,37 +142,37 @@ class PAlgebra {
   long frobenuisPow(long j) const;
 
   //! The order of i'th generator (if any)
-  unsigned long OrderOf(unsigned long i) const
+  long OrderOf(long i) const
   {  return cube.getDim(i); }
 
   //! The product prod_{j=i}^{n-1} OrderOf(i)
-  unsigned long ProdOrdsFrom(unsigned long i) const
+  long ProdOrdsFrom(long i) const
   {  return cube.getProd(i); }
 
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
-  bool SameOrd(unsigned long i) const
+  bool SameOrd(long i) const
   {  return native[i]; }
 
   //! @name Translation between index, represnetatives, and exponents
 
   //! Returns the i'th element in T
-  unsigned long ith_rep(unsigned long i) const
+  long ith_rep(long i) const
   {  return (i<getNSlots())? T[i]: 0; }
 
   //! Returns the index of t in T
-  long indexOfRep(unsigned long t) const
+  long indexOfRep(long t) const
   {  return (t>0 && t<m)? Tidx[t]: -1; }
 
   //! Is t in T?
-  bool isRep(unsigned long t) const
+  bool isRep(long t) const
   {  return (t>0 && t<m && Tidx[t]>-1); }
 
   //! Returns the index of t in (Z/mZ)*
-  long indexInZmstar(unsigned long t) const
+  long indexInZmstar(long t) const
   {  return (t>0 && t<m)? zmsIdx[t]: -1; }
 
   //! Returns the index of t in (Z/mZ)* -- no range checking
-  long indexInZmstar_unchecked(unsigned long t) const
+  long indexInZmstar_unchecked(long t) const
   {  return zmsIdx[t]; }
 
   //! Returns rep whose index is i
@@ -180,12 +180,12 @@ class PAlgebra {
   {  return zmsRep[idx]; }
 
 
-  bool inZmStar(unsigned long t) const
+  bool inZmStar(long t) const
   {  return (t>0 && t<m && zmsIdx[t]>-1); }
 
   //! @brief Returns prod_i gi^{exps[i]} mod m. If onlySameOrd=true,
   //! use only generators that have the same order as in (Z/mZ)^*.
-  unsigned long exponentiate(const vector<unsigned long>& exps, 
+  long exponentiate(const vector<long>& exps, 
 			      bool onlySameOrd=false) const;
 
   //! @brief Returns coordinate of index k along the i'th dimension.
@@ -211,7 +211,7 @@ class PAlgebra {
 //! exps is an array of exponents (the dLog of some t in T), this function
   //! incerement exps lexicographic order, reutrn false if it cannot be
   //! incremented (because it is at its maximum value)
-  bool nextExpVector(vector<unsigned long>& exps) const {
+  bool nextExpVector(vector<long>& exps) const {
     return cube.incrementCoords(exps);
   }
 };
@@ -628,7 +628,7 @@ private:
 
   //! Same as above, but embeds relative to Ft rather than F1. The
   //! optional rF1 contains the output of mapToF1, to speed this operation.
-  void mapToFt(RX& w, const RX& G, unsigned long t, const RX* rF1=NULL) const;
+  void mapToFt(RX& w, const RX& G, long t, const RX* rF1=NULL) const;
 
   void buildTree(shared_ptr< TNode<RX> >& res, long offset, long extent) const;
 

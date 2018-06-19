@@ -68,15 +68,15 @@ bool PAlgebra::operator==(const PAlgebra& other) const
 }
 
 
-unsigned long PAlgebra::exponentiate(const vector<unsigned long>& exps,
+long PAlgebra::exponentiate(const vector<long>& exps,
 				bool onlySameOrd) const
 {
   if (isDryRun()) return 1;
-  unsigned long t = 1;
-  unsigned long n = min(exps.size(),gens.size());
-  for (unsigned long i=0; i<n; i++) {
+  long t = 1;
+  long n = min(exps.size(),gens.size());
+  for (long i=0; i<n; i++) {
     if (onlySameOrd && !SameOrd(i)) continue;
-    unsigned long g = PowerMod(gens[i] ,exps[i], m); 
+    long g = PowerMod(gens[i] ,exps[i], m); 
     t = MulMod(t, g, m);
   }
   return t;
@@ -89,7 +89,7 @@ void PAlgebra::printout() const
   cout << ", phi(m) = " << phiM << endl;
   cout << "  ord(p)=" << ordP << endl;
 
-  unsigned long i;
+  long i;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
       cout << "  generator " << gens[i] << " has order ("
            << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
@@ -103,13 +103,12 @@ void PAlgebra::printout() const
 }
 
 
-PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,  
+PAlgebra::PAlgebra(long mm, long pp,
                    const vector<long>& _gens, const vector<long>& _ords )
 {
   assert( ProbPrime(pp) );
   assert( (mm % pp) != 0 );
-  assert( mm < NTL_SP_BOUND );
-  assert( mm > 1 );
+  assert( mm < NTL_SP_BOUND && mm > 1 );
 
   cM  = 1.0; // default value for the ring constant
   m = mm;
@@ -172,12 +171,12 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   // The comment about reverse order is correct, SH.
 
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
-  vector<unsigned long> buffer(gens.size()); // temporaty holds exponents
+  vector<long> buffer(gens.size()); // temporaty holds exponents
   i = idx = 0;
   long ctr = 0;
   do {
     ctr++;
-    unsigned long t = exponentiate(buffer);
+    long t = exponentiate(buffer);
 
     assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
     assert(Tidx[t] == -1);
@@ -222,7 +221,7 @@ long PAlgebra::genToPow(long i, long j) const
 
 PAlgebraModBase *buildPAlgebraMod(const PAlgebra& zMStar, long r)
 {
-  unsigned long p = zMStar.getP();
+  long p = zMStar.getP();
   assert(r > 0);
 
   if (p == 2 && r == 1) 
@@ -292,15 +291,15 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
   RXModulus F1(localFactors[0]); 
   for (long i=1; i<nSlots; i++) {
-    unsigned long t =zMStar.ith_rep(i); // Ft is minimal poly of x^{1/t} mod F1
-    unsigned long tInv = InvMod(t, m);  // tInv = t^{-1} mod m
+    long t =zMStar.ith_rep(i); // Ft is minimal poly of x^{1/t} mod F1
+    long tInv = InvMod(t, m);  // tInv = t^{-1} mod m
     RX X2tInv = PowerXMod(tInv,F1);     // X2tInv = X^{1/t} mod F1
     NTL::IrredPolyMod(localFactors[i], X2tInv, F1);
           // IrredPolyMod(X,P,Q) returns in X the minimal polynomial of P mod Q
   }
   /* Debugging sanity-check #1: we should have Ft= GCD(F1(X^t),Phi_m(X))
   for (i=1; i<nSlots; i++) {
-    unsigned long t = T[i];
+    long t = T[i];
     RX X2t = PowerXMod(t,phimxmod);  // X2t = X^t mod Phi_m(X)
     RX Ft = GCD(CompMod(F1,X2t,phimxmod),phimxmod);
     if (Ft != localFactors[i]) {
@@ -434,14 +433,14 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
 template<class type> 
 void PAlgebraModDerived<type>::CRT_decompose(vector<RX>& crt, const RX& H) const
 {
-  unsigned long nSlots = zMStar.getNSlots();
+  long nSlots = zMStar.getNSlots();
 
   if (isDryRun()) {
     crt.clear();
     return;
   }
   crt.resize(nSlots);
-  for (unsigned long i=0; i<nSlots; i++)
+  for (long i=0; i<nSlots; i++)
     rem(crt[i], H, factors[i]); // crt[i] = H % factors[i]
 }
 
@@ -585,7 +584,7 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
 
 template<class type>
 void PAlgebraModDerived<type>::mapToFt(RX& w,
-			     const RX& G,unsigned long t,const RX* rF1) const
+			     const RX& G,long t,const RX* rF1) const
 {
   if (isDryRun()) {
     w = RX::zero();
