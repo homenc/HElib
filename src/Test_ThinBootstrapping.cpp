@@ -160,8 +160,9 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   EncryptedArray ea(context, GG);
 
   zz_p::init(p2r);
-  Vec<zz_p> val0;
-  random(val0, nslots);
+  Vec<zz_p> val0(INIT_SIZE, nslots);
+  for (auto& x: val0)
+    random(x);
 
   vector<ZZX> val1;
   val1.resize(nslots);

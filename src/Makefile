@@ -113,7 +113,7 @@ check_tableLookup: Test_tableLookup_x
 	./Test_tableLookup_x
 
 
-check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_ThinEvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_ThinBootstrapping Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
+check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_ThinEvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_ThinBootstrapping_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
 	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
 	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
