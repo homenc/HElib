@@ -73,4 +73,31 @@ public:
   void apply(Ctxt& ctxt) const;
 };
 
+
+//! @class ThinEvalMap
+//! @brief Class that provides the functionality for the
+//! linear transforms used in "thin" boostrapping,
+//! where slots are assumed to contain constants.
+//! The interface is exactly the same as for EvalMap,
+//! except that the constructor does not have a normal_basis
+//! parameter.
+
+class ThinEvalMap {
+private:
+  const EncryptedArray& ea;
+  bool invert;   // apply transformation in inverser order?
+  long nfactors; // how many factors of m
+  NTL::Vec<std::unique_ptr<MatMulExecBase>>  matvec; // regular matrices
+
+public:
+  ThinEvalMap(const EncryptedArray& _ea, 
+          bool minimal, 
+          const Vec<long>& mvec, 
+          bool _invert,
+          bool build_cache);
+
+  void upgrade();
+  void apply(Ctxt& ctxt) const;
+};
+
 #endif

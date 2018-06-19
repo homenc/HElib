@@ -1,38 +1,10 @@
-/* Copyright (C) 2012-2017 IBM Corp.
- * This program is Licensed under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
- *   http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License. See accompanying LICENSE file.
- */
-
-/* Test_bootstrapping.cpp - Testing the recryption procedure */
-
-#if defined(__unix__) || defined(__unix) || defined(unix)
-#include <sys/time.h>
-#include <sys/resource.h>
-#endif
-
-#include <NTL/ZZ.h>
-#include <NTL/fileio.h>
-#include <NTL/BasicThreadPool.h>
-NTL_CLIENT
+#include "FHE.h"
 #include "EncryptedArray.h"
-#include "EvalMap.h"
-#include "powerful.h"
 #include "matmul.h"
+#include <NTL/BasicThreadPool.h>
 
-static bool noPrint = false;
+static bool noPrint = true;
 
-// #define DEBUG_PRINTOUT
-#ifdef DEBUG_PRINTOUT
-#include "debugging.h"
-extern long printFlag;
-#endif
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
@@ -86,7 +58,6 @@ static long mValues[][14] = {
 #define num_mValues (sizeof(mValues)/(14*sizeof(long)))
 
 #define OUTER_REP (1)
-#define INNER_REP (1)
 
 static bool dry = false; // a dry-run flag
 
@@ -117,6 +88,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 	 << ", r=" << r
 	 << ", L=" << L
 	 << ", B=" << B
+	 << ", t=" << skHwt
 	 << ", c=" << c
 	 << ", m=" << m
 	 << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
@@ -129,26 +101,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
   context.bitsPerLevel = B;
-  buildModChain(context, L, c,/*willBeBootstrappable=*/true);
-
-  // FIXME: The willBeBootstrappable flag is a hack, used to bypass the
-  //   issue that buildModChain must be called BEFORE the context is made
-  //   botstrappable (else the "powerful" basis is not initialized correctly.)
-
-  context.makeBootstrappable(mvec, /*t=*/0, cons, build_cache);
-  t += GetTime();
-
-  if (skHwt>0) context.rcData.skHwt = skHwt;
-  if (!noPrint) {
-    cout << " done in "<<t<<" seconds\n";
-    cout << "  e="    << context.rcData.e
-	 << ", e'="   << context.rcData.ePrime
-	 << ", alpha="<< context.rcData.alpha
-	 << ", t="    << context.rcData.skHwt
-	 << "\n  ";
-    context.zMStar.printout();
-  }
-  setDryRun(dry); // Now we can set the dry-run flag if desired
+  buildModChain(context, L, c,/*extraBits=*/7);
 
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
@@ -157,6 +110,28 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
     cout << "  "<<nPrimes<<" primes in chain, total bitsize="
 	 << ceil(bitsize) << ", secparam="
 	 << (7.2*phim/bitsize -110) << endl;
+
+  // FIXME: The extraBits is an exceedingly ugly patch, used to bypass the
+  //   issue that buildModChain must be called BEFORE the context is made
+  //   bootstrappable (else the "powerful" basis is not initialized correctly.)
+  //   This is a bug, the value 7 is sometimes the right one, but seriously??
+
+  context.makeBootstrappable(mvec, /*t=*/0, cons, build_cache);
+
+  t += GetTime();
+
+  if (skHwt>0) context.trcData.skHwt = skHwt;
+  if (!noPrint) {
+    cout << " done in "<<t<<" seconds\n";
+    cout << "  e="    << context.trcData.e
+	 << ", e'="   << context.trcData.ePrime
+	 << ", alpha="<< context.trcData.alpha
+	 << ", t="    << context.trcData.skHwt
+	 << "\n  ";
+    context.zMStar.printout();
+  }
+  setDryRun(dry); // Now we can set the dry-run flag if desired
+
 
   long p2r = context.alMod.getPPowR();
   context.zMStar.set_cM(mValues[idx][13]/100.0);
@@ -167,7 +142,7 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   if (!noPrint) cout << "Generating keys, " << std::flush;
   FHESecKey secretKey(context);
   FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey();      // A +-1/0 secret key
+  secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
   if (!noPrint) cout << "computing key-dependent tables..." << std::flush;
@@ -175,68 +150,54 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   t += GetTime();
   if (!noPrint) cout << " done in "<<t<<" seconds\n";
 
+  long d = context.zMStar.getOrdP();
+  long phim = context.zMStar.getPhiM();
+  long nslots = phim/d;
+
+  // GG defines the plaintext space Z_p[X]/GG(X)
+  ZZX GG;
+  GG = context.alMod.getFactorsOverZZ()[0];
+  EncryptedArray ea(context, GG);
+
   zz_p::init(p2r);
-  zz_pX poly_p = random_zz_pX(context.zMStar.getPhiM());
-  PowerfulConversion pConv(context.rcData.p2dConv->getIndexTranslation());
-  HyperCube<zz_p> powerful(pConv.getShortSig());
-  pConv.polyToPowerful(powerful, poly_p);
-  ZZX ptxt_poly = conv<ZZX>(poly_p);
-  PolyRed(ptxt_poly, p2r, true); // reduce to the symmetric interval
+  Vec<zz_p> val0(INIT_SIZE, nslots);
+  for (auto& x: val0)
+    random(x);
 
-#ifdef DEBUG_PRINTOUT
-  dbgKey = &secretKey; // debugging key and ea
-  dbgEa = context.rcData.ea; // EA for plaintext space p^{e+r-e'}
-  dbg_ptxt = ptxt_poly;
-  context.rcData.p2dConv->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
-  vecRed(ptxt_pwr, ptxt_pwr, p2r, true);
-  if (dbgEa->size()>100) printFlag = 0; // don't print too many slots
-#endif
+  vector<ZZX> val1;
+  val1.resize(nslots);
+  for (long i = 0; i < nslots; i++) {
+    val1[i] = conv<ZZX>(conv<ZZ>(rep(val0[i])));
+  }
 
-  ZZX poly2;
   Ctxt c1(publicKey);
+  ea.encrypt(c1, publicKey, val1);
 
-  secretKey.Encrypt(c1,ptxt_poly,p2r);
-  for (long num=0; num<INNER_REP; num++) { 
-    publicKey.reCrypt(c1);
-    secretKey.Decrypt(poly2,c1);
+  Ctxt c2(c1);
+  if (!noPrint) CheckCtxt(c2, "before");
 
-    if (ptxt_poly == poly2) cout << "  *** reCryption succeeds!!\n";
-    else if (!isDryRun()) { // bootsrtapping error
-      conv(poly_p,poly2);
-      HyperCube<zz_p> powerful2(pConv.getShortSig());
-      cout << "\ndecryption error, encrypted ";
-      printVec(cout, powerful.getData())<<endl;
+  publicKey.thinReCrypt(c2);
+  if (!noPrint) CheckCtxt(c2, "after");
 
-      pConv.polyToPowerful(powerful2, poly_p);
-      cout << "                after reCrypt ";
-      printVec(cout, powerful2.getData())<<endl;
-      long numDiff = 0;
-      for (long i=0; i<powerful.getSize(); i++) 
-	if (powerful[i] != powerful2[i]) {
-          numDiff++;
-	  cout << i << ": " << powerful[i] << " != " << powerful2[i]<<", ";
-	  if (numDiff >5) break;
-        }
-      if (!noPrint) {
-	cout << endl<< endl;
-	printAllTimers();
-      }
-      exit(0);
-    }
-#ifdef DEBUG_PRINTOUT
-    decryptAndPrint(cout, c1, secretKey, *context.ea, printFlag);
-    cout << endl;
-#endif
+  vector<ZZX> val2;
+  ea.decrypt(c2, secretKey, val2);
+
+  if (val1 == val2) 
+    cerr << "GOOD\n";
+  else
+    cerr << "BAD\n";
+
+
+  //cerr << convert<Vec<ZZX>>(val1) << "\n";
+
   }
-  }
+
   if (!noPrint) printAllTimers();
-  resetAllTimers();
-#if (defined(__unix__) || defined(__unix) || defined(unix))
-    struct rusage rusage;
-    getrusage( RUSAGE_SELF, &rusage );
-    if (!noPrint) cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
-#endif
+  
 }
+
+
+
 
 /********************************************************************
  ********************************************************************/
@@ -274,9 +235,10 @@ int main(int argc, char *argv[])
   amap.arg("noPrint", noPrint, "suppress printouts");
   amap.arg("useCache", useCache, "0: zzX cache, 1: DCRT cache");
 
-
   amap.arg("force_bsgs", fhe_test_force_bsgs);
   amap.arg("force_hoist", fhe_test_force_hoist);
+  amap.arg("init_level", thinRecrypt_initial_level);
+
 
   amap.parse(argc, argv);
 

@@ -19,6 +19,11 @@
 #include "intraSlot.h"
 #include "norms.h"
 
+long thinRecrypt_initial_level=0;
+
+//#define PRINT_LEVELS
+
+
 /************* Some local functions *************/
 static void x2iInSlots(ZZX& poly, long i,
 		       vector<ZZX>& xVec, const EncryptedArray& ea);
@@ -243,7 +248,12 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // can only bootstrap ciphertext with plaintext-space dividing p^r
   assert(p2r % ptxtSpace == 0);
 
-  FHE_NTIMER_START(preProcess);
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "init");
+#endif
+
+  FHE_NTIMER_START(AAA_preProcess);
 
   // Make sure that this ciphertxt is in canonical form
   if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
@@ -300,12 +310,22 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   cerr << "+ Before linearTrans1 ";
   decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
-  FHE_NTIMER_STOP(preProcess);
+  FHE_NTIMER_STOP(AAA_preProcess);
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after preProcess");
+#endif
+
 
   // Move the powerful-basis coefficients to the plaintext slots
-  FHE_NTIMER_START(LinearTransform1);
+  FHE_NTIMER_START(AAA_LinearTransform1);
   ctxt.getContext().rcData.firstMap->apply(ctxt);
-  FHE_NTIMER_STOP(LinearTransform1);
+  FHE_NTIMER_STOP(AAA_LinearTransform1);
+
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after LinearTransform1");
+#endif
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After linearTrans1 ";
@@ -313,8 +333,15 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
+  FHE_NTIMER_START(AAA_extractDigitsPacked);
   extractDigitsPacked(ctxt, e-ePrime, r, ePrime,
 		      context.rcData.unpackSlotEncoding);
+  FHE_NTIMER_STOP(AAA_extractDigitsPacked);
+
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after extractDigitsPacked");
+#endif
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans2 ";
@@ -322,9 +349,14 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // Move the slots back to powerful-basis coefficients
-  FHE_NTIMER_START(LinearTransform2);
+  FHE_NTIMER_START(AAA_LinearTransform2);
   ctxt.getContext().rcData.secondMap->apply(ctxt);
-  FHE_NTIMER_STOP(LinearTransform2);
+  FHE_NTIMER_STOP(AAA_LinearTransform2);
+
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after linearTransform2");
+#endif
 }
 
 /*********************************************************************/
@@ -709,3 +741,350 @@ void packedRecrypt(const CtPtrMat& m,
         v.push_back(m[i][j]);
   packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
 }
+
+
+
+//===================== Thin Bootstrapping stuff ==================
+
+ThinRecryptData::~ThinRecryptData()
+{
+  if (alMod!=NULL)     delete alMod;
+  if (ea!=NULL)        delete ea;
+  if (coeffToSlot!=NULL)  delete coeffToSlot;
+  if (slotToCoeff!=NULL) delete slotToCoeff;
+}
+
+bool ThinRecryptData::operator==(const ThinRecryptData& other) const
+{
+  if (mvec != other.mvec) return false;
+  if (hwt != other.hwt) return false;
+  if (conservative != other.conservative) return false;
+
+  return true;
+}
+
+
+// The main method
+void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
+		       long t, bool consFlag, bool build_cache_, bool minimal)
+{
+  if (alMod != NULL) { // were we called for a second time?
+    cerr << "@Warning: multiple calls to ThinRecryptData::init\n";
+    return;
+  }
+  assert(computeProd(mvec_) == (long)context.zMStar.getM()); // sanity check
+
+  // Record the arguments to this function
+  mvec = mvec_;
+  conservative = consFlag;
+  build_cache = build_cache_;
+
+  if (t <= 0) t = defSkHwt+1; // recryption key Hwt
+  hwt = t;
+  long p = context.zMStar.getP();
+  long phim = context.zMStar.getPhiM();
+  long r = context.alMod.getR();
+  long p2r = context.alMod.getPPowR();
+  double logp = log((double)p);
+
+  double noise = p2r * sqrt((t+1)*phim/3.0);
+  double gamma = 2*(t+noise)/((t+1)*p2r); // ratio between numerators
+
+  long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
+  double rho = (t+1)/pow(p,logT);
+
+  if (!conservative) {   // try alpha, e with this "aggresive" setting
+    setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
+    ePrime = e -r +1 -logT;
+
+    // If e is too large, try again with rho/p instead of rho
+    long bound = (1L << (context.bitsPerLevel-1)); // halfSizePrime/2
+    if (pow(p,e) > bound) { // try the conservative setting instead
+      cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
+      conservative = true;
+    }
+  }
+  if (conservative) { // set alpha, e with a "conservative" rho/p
+    setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
+    ePrime = e -r -logT;
+  }
+
+  // Compute highest key-Hamming-weight that still works (not more than 256)
+  double qOver4 = (pow(p,e)+1)/4;
+  for (t-=10; qOver4>=lowerBound2(p,r,ePrime,t,alpha)
+	 &&  qOver4>=lowerBound1(p,r,ePrime,t,alpha,noise) && t<257; t++);
+  skHwt = t-1;
+
+  // First part of Bootstrapping works wrt plaintext space p^{r'}
+  alMod = new PAlgebraMod(context.zMStar, e-ePrime+r);
+  ea = new EncryptedArray(context, *alMod);
+         // Polynomial defaults to F0, PAlgebraMod explicitly given
+
+  coeffToSlot = new ThinEvalMap(*ea, minimal, mvec, true, build_cache);
+  slotToCoeff = new ThinEvalMap(*context.ea, minimal, mvec, false, build_cache);
+}
+
+
+// Extract digits from thinly packed slots
+void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
+{
+  FHE_TIMER_START;
+
+  Ctxt unpacked(ctxt);
+  unpacked.cleanUp();
+
+  vector<Ctxt> scratch;
+
+
+  // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]
+  long p = ctxt.getContext().zMStar.getP();
+  long p2r = power_long(p,r);
+  long topHigh = botHigh + r-1;
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ After unpack ";
+  decryptAndPrint(cerr, unpacked, *dbgKey, *dbgEa, printFlag);
+  cerr << "    extracting "<<(topHigh+1)<<" digits\n";
+#endif
+
+  if (p==2 && r>2)
+    topHigh--; // For p==2 we sometime get a bit for free
+
+  if (topHigh<=0) { // extracting LSB = no-op
+    scratch.assign(1, unpacked);
+  } else {          // extract digits topHigh...0, store them in scratch
+    extractDigits(scratch, unpacked, topHigh+1);
+  }
+
+  // set upacked = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
+  if (topHigh >= LONG(scratch.size())) {
+    topHigh = scratch.size() -1;
+    cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
+  }
+
+  unpacked = scratch[topHigh];
+  for (long j=topHigh-1; j>=botHigh; --j) {
+    unpacked.multByP();
+    unpacked += scratch[j];
+  }
+  if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
+    unpacked += scratch[botHigh-1];
+  unpacked.negate();
+
+  if (r>ePrime) {          // Add in digits from the bottom part, if any
+    long topLow = r-1 - ePrime;
+    Ctxt tmp = scratch[topLow];
+    for (long j=topLow-1; j>=0; --j) {
+      tmp.multByP();
+      tmp += scratch[j];
+    }
+    if (ePrime>0)
+      tmp.multByP(ePrime); // multiply by p^e'
+    unpacked += tmp;
+  }
+  unpacked.reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ Before repack ";
+  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
+#endif
+
+  ctxt = unpacked;
+
+}
+
+
+// Hack to get at private fields of public key
+struct FHEPubKeyHack { // The public key
+  const FHEcontext& context; // The context
+
+  //! @var Ctxt pubEncrKey
+  //! The public encryption key is an encryption of 0,
+  //! relative to the first secret key
+  Ctxt pubEncrKey;
+
+  std::vector<long> skHwts; // The Hamming weight of the secret keys
+  std::vector<KeySwitch> keySwitching; // The key-switching matrices
+
+  // The keySwitchMap structure contains pointers to key-switching matrices
+  // for re-linearizing automorphisms. The entry keySwitchMap[i][n] contains
+  // the index j such that keySwitching[j] is the first matrix one needs to
+  // use when re-linearizing s_i(X^n). 
+  std::vector< std::vector<long> > keySwitchMap;
+
+  NTL::Vec<int> KS_strategy; // NTL Vec's support I/O, which is
+                             // more convenient
+
+  // bootstrapping data
+
+  long recryptKeyID; // index of the bootstrapping key
+  Ctxt recryptEkey;  // the key itself, encrypted under key #0
+
+};
+
+//#define PRINT_LEVELS
+
+// bootstrap a ciphertext to reduce noise
+void FHEPubKey::thinReCrypt(Ctxt &ctxt)
+{
+  FHE_TIMER_START;
+
+  // Some sanity checks for dummy ciphertext
+  long ptxtSpace = ctxt.getPtxtSpace();
+  if (ctxt.isEmpty()) return;
+
+  if (ctxt.parts.size()==1 && ctxt.parts[0].skHandle.isOne()) {
+    // Dummy encryption, just ensure that it is reduced mod p
+    ZZX poly = to_ZZX(ctxt.parts[0]);
+    for (long i=0; i<poly.rep.length(); i++)
+      poly[i] = to_ZZ( rem(poly[i],ptxtSpace) );
+    poly.normalize();
+    ctxt.DummyEncrypt(poly);
+    return;
+  }
+
+  assert(recryptKeyID>=0); // check that we have bootstrapping data
+
+  long p = ctxt.getContext().zMStar.getP();
+  long r = ctxt.getContext().alMod.getR();
+  long p2r = ctxt.getContext().alMod.getPPowR();
+
+  const ThinRecryptData& trcData = ctxt.getContext().trcData;
+
+  // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
+  long e = trcData.e;
+  long ePrime = trcData.ePrime;
+  long p2ePrime = power_long(p,ePrime);
+  long q = power_long(p,e)+1;
+  assert(e>=r);
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "reCrypt: p="<<p<<", r="<<r<<", e="<<e<<" ePrime="<<ePrime
+       << ", q="<<q<<endl;
+#endif
+
+  // can only bootstrap ciphertext with plaintext-space dividing p^r
+  assert(p2r % ptxtSpace == 0);
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "init");
+#endif
+
+  if (thinRecrypt_initial_level) {
+    // experimental code...we should drop down
+    // to a reasonably small level before doing the 
+    // first linear map.
+    // TODO: we should also check that we have enough
+    // levels to do the first linear map.
+    ctxt.modDownToLevel(thinRecrypt_initial_level);
+  }
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after mod down");
+#endif
+
+  // Move the slots to powerful-basis coefficients
+  FHE_NTIMER_START(AAA_slotToCoeff);
+  trcData.slotToCoeff->apply(ctxt);
+  FHE_NTIMER_STOP(AAA_slotToCoeff);
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after slotToCoeff");
+#endif
+
+  FHE_NTIMER_START(AAA_bootKeySwitch);
+
+  // Make sure that this ciphertxt is in canonical form
+  if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
+
+  // Mod-switch down if needed
+  IndexSet s = ctxt.getPrimeSet() / ctxt.getContext().specialPrimes; // set minus
+  if (s.card()>2) { // leave only bottom two primes
+    long frst = s.first();
+    long scnd = s.next(frst);
+    IndexSet s2(frst,scnd);
+    s.retain(s2); // retain only first two primes
+  }
+  ctxt.modDownToSet(s);
+
+  // key-switch to the bootstrapping key
+  ctxt.reLinearize(recryptKeyID);
+
+  // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
+  vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
+  double noise = ctxt.rawModSwitch(zzParts, q);
+  noise = sqrt(noise);
+
+  // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
+  long maxU=0;
+  for (long i=0; i<(long)zzParts.size(); i++) {
+    // make divisible by p^{e'}
+    long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
+				trcData.alpha);
+    zzParts[i].normalize();   // normalize after working directly on the rep
+    if (maxU < newMax)  maxU = newMax;
+  }
+
+  // Check that the estimated noise is still low
+  if (noise + maxU*p2r*(skSizes[recryptKeyID]+1) > q/2) 
+    cerr << " * noise/q after makeDivisible = "
+	 << ((noise + maxU*p2r*(skSizes[recryptKeyID]+1))/q) << endl;
+
+  for (long i=0; i<(long)zzParts.size(); i++)
+    zzParts[i] /= p2ePrime;   // divide by p^{e'}
+
+  // Multiply the post-processed cipehrtext by the encrypted sKey
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ Before recryption ";
+  decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa, printFlag);
+#endif
+
+  double p0size = to_double(coeffsL2Norm(zzParts[0]));
+  double p1size = to_double(coeffsL2Norm(zzParts[1]));
+  ctxt = recryptEkey;
+  ctxt.multByConstant(zzParts[1], p1size*p1size);
+  ctxt.addConstant(zzParts[0], p0size*p0size);
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ Before linearTrans1 ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+#endif
+  FHE_NTIMER_STOP(AAA_bootKeySwitch);
+
+#ifdef PRINT_LEVELS
+   CheckCtxt(ctxt, "after bootKeySwitch");
+#endif
+
+  // Move the powerful-basis coefficients to the plaintext slots
+  FHE_NTIMER_START(AAA_coeffToSlot);
+  trcData.coeffToSlot->apply(ctxt);
+  FHE_NTIMER_STOP(AAA_coeffToSlot);
+
+
+#ifdef PRINT_LEVELS
+   CheckCtxt(ctxt, "after coeffToSlot");
+#endif
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ After linearTrans1 ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+#endif
+
+  // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
+  FHE_NTIMER_START(AAA_extractDigitsThin);
+  extractDigitsThin(ctxt, e-ePrime, r, ePrime);
+  FHE_NTIMER_STOP(AAA_extractDigitsThin);
+
+
+#ifdef PRINT_LEVELS
+   CheckCtxt(ctxt, "after extractDigitsThin");
+#endif
+
+#ifdef DEBUG_PRINTOUT
+  cerr << "+ Before linearTrans2 ";
+  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+#endif
+}
+
+
+

@@ -127,7 +127,16 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 
   if (root==0) { // Find a 2m-th root of unity modulo q, if not given
     zz_p rtp;
-    long e = 2*zms.getM();
+    long m = zms.getM();
+    long e;
+    if (m % 2 == 0)
+      e = 2*m;
+    else
+      e = m; 
+    // for odd m, we can use a primitive m'th roots of unity,
+    // which will facilitate the use of a truncated FFT
+    // in the Bluestein FFT implementation
+    
     FindPrimitiveRoot(rtp,e); // NTL routine, relative to current modulus
     if (rtp==0) // sanity check
       Error("Cmod::compRoots(): no 2m'th roots of unity mod q");

@@ -28,6 +28,10 @@ NTL_CLIENT
 // We compute x^{p^d-1} = x^{(1+p+...+p^{d-1})*(p-1)} by setting y=x^{p-1}
 // and then outputting y * y^p * ... * y^{p^{d-1}}, with exponentiation to
 // powers of p done via Frobenius.
+
+// FIXME: the computation of the "norm" y * y^p * ... * y^{p^{d-1}}
+// can be done using O(log d) automorphisms, rather than O(d).
+
 void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
 {
   long p = ctxt.getPtxtSpace();

@@ -194,6 +194,25 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
 }
 
+bool comparePAlgebra(const PAlgebra& palg,
+                     unsigned long m, unsigned long p, unsigned long r,
+                     const vector<long>& gens, const vector<long>& ords)
+{
+  if (palg.getM() != m ||
+      palg.getP() != p ||
+      palg.numOfGens() != gens.size()||
+      palg.numOfGens() != ords.size() ) return false;
+
+  for (long i=0; i<(long)gens.size(); i++) {
+    if (long(palg.ZmStarGen(i)) != gens[i]) return false;
+
+    if ((palg.SameOrd(i) && palg.OrderOf(i) !=ords[i]) ||
+        (!palg.SameOrd(i)&& palg.OrderOf(i)!=-ords[i]))
+      return false;
+  }
+  return true;
+}
+
 
 long PAlgebra::frobenuisPow(long j) const
 {
