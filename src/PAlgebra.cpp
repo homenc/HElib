@@ -106,22 +106,25 @@ void PAlgebra::printout() const
 PAlgebra::PAlgebra(long mm, long pp,
                    const vector<long>& _gens, const vector<long>& _ords )
 {
-  assert( ProbPrime(pp) );
-  assert( (mm % pp) != 0 );
   assert( mm < NTL_SP_BOUND && mm > 1 );
-
   cM  = 1.0; // default value for the ring constant
   m = mm;
   p = pp;
+  if (pp==-1) // pp==-1 signals using the complex field for plaintext
+    pp = m-1;
+  else {
+    assert( ProbPrime(pp) );
+    assert( (mm % pp) != 0 );
+  }
 
-  long k = NextPowerOfTwo(m);
-  if (mm == (1UL << k))
+  long k = NextPowerOfTwo(mm);
+  if (mm == (1UL << k)) // m is a power of two
     pow2 = k;
-  else
+  else // FIXME: Verify that m is odd?
     pow2 = 0;
 
   // For dry-run, use a tiny m value for the PAlgebra tables
-  if (isDryRun()) mm = (p==3)? 4 : 3;
+  if (isDryRun()) m = (p==3)? 4 : 3;
 
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
 
@@ -153,7 +156,7 @@ PAlgebra::PAlgebra(long mm, long pp,
   zmsIdx.assign(mm,-1);  // allocate m slots, initialize them to -1
   zmsRep.resize(phiM);
   long i, idx;
-  for (i=idx=0; i<(long)mm; i++) {
+  for (i=idx=0; i<mm; i++) {
     if (GCD(i,mm)==1) {
       zmsIdx[i] = idx++;
       zmsRep[zmsIdx[i]] = i;
