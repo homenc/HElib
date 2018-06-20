@@ -151,10 +151,10 @@ PAlgebra::PAlgebra(long mm, long pp,
   phiM = ordP * getNSlots();
 
   // Allocate space for the various arrays
-  T.resize(getNSlots());
+  resize(T,getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
   zmsIdx.assign(mm,-1);  // allocate m slots, initialize them to -1
-  zmsRep.resize(phiM);
+  resize(zmsRep,phiM);
   long i, idx;
   for (i=idx=0; i<mm; i++) {
     if (GCD(i,mm)==1) {
@@ -304,7 +304,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   EDF(localFactors, phimxmod, zMStar.getOrdP()); // equal-degree factorization
 
   RX* first = &localFactors[0];
-  RX* last = first + localFactors.length();
+  RX* last = first + lsize(localFactors);
   RX* smallest = min_element(first, last);
   swap(*first, *smallest);
 
@@ -336,7 +336,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
     pPowRContext.save();
 
     // Compute the CRT coefficients for the Ft's
-    crtCoeffs.SetLength(nSlots);
+    resize(crtCoeffs,nSlots);
     for (long i=0; i<nSlots; i++) {
       RX te = phimxmod / factors[i]; // \prod_{j\ne i} Fj
       te %= factors[i];              // \prod_{j\ne i} Fj mod Fi
@@ -352,7 +352,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   }
 
   // set factorsOverZZ
-  factorsOverZZ.resize(nSlots);
+  resize(factorsOverZZ,nSlots);
   for (long i = 0; i < nSlots; i++)
     conv(factorsOverZZ[i], factors[i]);
 
@@ -420,15 +420,15 @@ template<>
 void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factors, vec_zz_pX& crtc, long r)
 {
   long p = zz_p::modulus(); 
-  long nSlots = lfactors.length();
+  long nSlots = lsize(lfactors);
 
   vec_ZZX vzz;             // need to go via ZZX
 
   // lift the factors of Phi_m(X) from mod-2 to mod-2^r
-  if (lfactors.length() > 1)
+  if (lsize(lfactors) > 1)
     MultiLift(vzz, lfactors, phimx, r); // defined in NTL::ZZXFactoring
   else {
-    vzz.SetLength(1);
+    resize(vzz,1);
     vzz[0] = phimx;
   }
 
@@ -436,12 +436,12 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
   zz_p::init(power_long(p, r));
 
   zz_pX phimxmod = to_zz_pX(phimx);
-  factors.SetLength(nSlots);
+  resize(factors,nSlots);
   for (long i=0; i<nSlots; i++)             // Convert from ZZX to zz_pX
     conv(factors[i], vzz[i]);
 
   // Finally compute the CRT coefficients for the factors
-  crtc.SetLength(nSlots);
+  resize(crtc, nSlots);
   for (long i=0; i<nSlots; i++) {
     zz_pX& fct = factors[i];
     zz_pX te = phimxmod / fct; // \prod_{j\ne i} Fj
@@ -461,7 +461,7 @@ void PAlgebraModDerived<type>::CRT_decompose(vector<RX>& crt, const RX& H) const
     crt.clear();
     return;
   }
-  crt.resize(nSlots);
+  resize(crt,nSlots);
   for (long i=0; i<nSlots; i++)
     rem(crt[i], H, factors[i]); // crt[i] = H % factors[i]
 }
@@ -595,7 +595,7 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
   }
   else {
     vector<RX> crt1;
-    crt1.resize(nslots);
+    resize(crt1,nslots);
     for (long i = 0; i < nslots; i++)
        MulMod(crt1[i], crt[i], crtCoeffs[i], factors[i]);
 
@@ -640,7 +640,7 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
     vec_RE roots;
     FindRoots(roots, Ga);        // Find roots of G in this field
     RE* first = &roots[0];
-    RE* last = first + roots.length();
+    RE* last = first + lsize(roots);
     RE* smallest = min_element(first, last);
                                 // make a canonical choice
     w=rep(*smallest);         
@@ -678,7 +678,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   long nSlots = zMStar.getNSlots();
   long m = zMStar.getM();
 
-  mappingData.maps.resize(nSlots);
+  resize(mappingData.maps,nSlots);
 
   mapToF1(mappingData.maps[0],mappingData.G); // mapping from base-G to base-F1
   for (long i=1; i<nSlots; i++)
@@ -686,7 +686,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 
 
   // create matrices to streamline CompMod operations
-  mappingData.matrix_maps.resize(nSlots);
+  resize(mappingData.matrix_maps,nSlots);
   for (long i: range(nSlots)) {
     mat_R& mat = mappingData.matrix_maps[i];
     mat.SetDims(d, ordp);
@@ -705,7 +705,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 
   if (deg(mappingData.G)==1) return;
 
-  mappingData.rmaps.resize(nSlots);
+  resize(mappingData.rmaps,nSlots);
 
   if (G == factors[0]) {
     // an important special case
@@ -751,7 +751,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 
       // need to choose the right factor, the one that gives us back X
       long j;
-      for (j=0; j<FRts.length(); j++) { 
+      for (j=0; j<lsize(FRts); j++) { 
         // lift maps[i] to (R[X]/G(X))[Y] and reduce mod j'th factor of Fi
 
         REX FRtsj;
@@ -776,7 +776,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
         } // If this does not happen then move to the next factor of Fi
       }
 
-      assert(j < FRts.length());
+      assert(j < lsize(FRts));
       mappingData.rmaps[i] = Qi;
     }
   }
@@ -801,7 +801,7 @@ void PAlgebraModDerived<type>::decodePlaintext(
     return;
   }
 
-  alphas.resize(nSlots);
+  resize(alphas,nSlots);
 
   REBak bak; bak.save(); mappingData.contextForG.restore();
 
@@ -828,7 +828,7 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
   assert(lsize(L) == d);
 
   vec_RE LL;
-  LL.SetLength(d);
+  resize(LL,d);
 
   for (long i = 0; i < d; i++)
     conv(LL[i], L[i]);
@@ -836,7 +836,7 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
   vec_RE CC;
   ::buildLinPolyCoeffs(CC, LL, p, r);
 
-  C.resize(d);
+  resize(C,d);
   for (long i = 0; i < d; i++)
     C[i] = rep(CC[i]);
 }
@@ -852,10 +852,10 @@ void PAlgebraModDerived<type>::genMaskTable()
 
   RX tmp1;
   
-  maskTable.resize(zMStar.numOfGens());
+  resize(maskTable,zMStar.numOfGens());
   for (long i = 0; i < (long)zMStar.numOfGens(); i++) {
     long ord = zMStar.OrderOf(i);
-    maskTable[i].resize(ord+1);
+    resize(maskTable[i],ord+1);
     maskTable[i][ord] = 0;
     for (long j = ord-1; j >= 1; j--) {
       // initialize mask that is 1 whenever the ith coordinate is at least j
@@ -883,7 +883,7 @@ void PAlgebraModDerived<type>::genCrtTable()
   // set the zz_p context
 
   long nslots = zMStar.getNSlots();
-  crtTable.resize(nslots);
+  resize(crtTable,nslots);
   for (long i = 0; i < nslots; i++) {
     RX allBut_i = PhimXMod / factors[i]; // = \prod_{j \ne i }Fj
     allBut_i *= crtCoeffs[i]; // = 1 mod Fi and = 0 mod Fj for j \ne i
