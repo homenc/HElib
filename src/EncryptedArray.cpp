@@ -671,13 +671,11 @@ void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
 
   ctxt.cleanUp();  // not sure, but this may be a good idea
 
-  Ctxt tmp(ctxt);
-
   ctxt.multByConstant(encodedC[0]);
+  Ctxt tmp(ctxt);
   for (long j = 1; j < d; j++) {
     Ctxt tmp1(tmp);
-    tmp1.frobeniusAutomorph(j);
-    tmp1.multByConstant(encodedC[j]);
+    tmp1.frobeniusAutomorph(j); // we have encodedC[j] = encodedC[0].frobeniusAutomorph(j)
     ctxt += tmp1;
   }
 }
