@@ -22,7 +22,7 @@
 #include "PAlgebra.h"
 NTL_CLIENT
 
-constexpr double pi = 4 * std::atan(1);
+const double pi = 4 * std::atan(1);
 
 #ifdef FFT_ARMA
 #warning "canonicalEmbedding implemented via Armadillo"
