@@ -794,14 +794,6 @@ inline void TofftRep_trunc(fftRep& y, const zz_pX& x, long k, long len)
 #endif
 
 
-//! Debug printing routines for vectors, ZZX'es, print only a few entries
-template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
-				    long nCoeffs=40);
-ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
-
-// NOTE: Maybe NTL should contain conversion routines
-// like this for the various polynomial classes?
-
 #if 0
 //! @brief stand-in for make_unique, which is C++14, not C++11
 template<typename T, typename... Args>

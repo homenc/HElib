@@ -32,4 +32,27 @@ void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 
 bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
 		       const EncryptedArray& ea, const NewPlaintextArray& pa);
+
+// Debug printing routines for vectors, ZZX'es, print only a few entries
+
+template<class T> std::ostream&
+printVec(std::ostream& s, const NTL::Vec<T>& v, long nCoeffs=40)
+{
+  long d = v.length();
+  if (d<nCoeffs) return s << v; // just print the whole thing
+
+  // otherwise print only 1st nCoeffs coefficiants
+  s << '[';
+  for (long i=0; i<nCoeffs-2; i++) s << v[i] << ' ';
+  s << "... " << v[d-2] << ' ' << v[d-1] << ']';
+  return s;
+}
+
+inline std::ostream&
+printZZX(std::ostream& s, const NTL::ZZX& poly, long nCoeffs=40)
+{
+  return printVec(s, poly.rep, nCoeffs);
+}
+
+
 #endif // _DEBUGGING_H_
