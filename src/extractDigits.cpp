@@ -15,6 +15,9 @@
 NTL_CLIENT
 #include "EncryptedArray.h"
 #include "polyEval.h"
+#ifdef DEBUG_PRINTOUT
+#include "debugging.h"
+#endif
 
 static void buildDigitPolynomial(ZZX& result, long p, long e);
 
@@ -51,6 +54,13 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
       tmp.divideByP();
     }
     digits[i] = tmp; // needed in the next round
+#ifdef DEBUG_PRINTOUT
+    for (long j=0; j<=i; j++) {
+      decryptAndPrint((cout << "digits["<<i<<"]["<<j<<"]:"),
+                      digits[j], *dbgKey, *dbgEa);
+      CheckCtxt(digits[j], "       ");
+    }
+#endif
   }
 }
 

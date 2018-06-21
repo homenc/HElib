@@ -28,12 +28,17 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
   vector<ZZX> ptxt;
   ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
+  xdouble actualNoise = coeffsL2Norm(pp);
 
   s << "plaintext space mod "<<ctxt.getPtxtSpace()
-       << ", level="<<ctxt.findBaseLevel()
-       << ", \n           |noise|=q*" << (coeffsL2Norm(pp)/modulus)
-       << ", |noiseEst|=q*" << (noiseEst/modulus)
-       <<endl;
+    << ", level="<<ctxt.findBaseLevel()
+    << ", \n           |noise|=q*" << (actualNoise/modulus)
+    << ", |noiseEst|=q*" << (noiseEst/modulus);
+#if FFT_IMPL
+  xdouble embL2 = embeddingL2Norm(pp, ea.getPAlgebra());
+  cout << ", |noise|_canonical=q*"<< (embL2/modulus);
+#endif
+  cout << endl;
 
   if (flags & FLAG_PRINT_ZZX) {
     s << "   before mod-p reduction=";

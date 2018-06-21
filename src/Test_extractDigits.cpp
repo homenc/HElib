@@ -20,6 +20,10 @@ NTL_CLIENT
 
 static bool noPrint = false;
 
+#ifdef DEBUG_PRINTOUT
+#include "debugging.h"
+#endif
+
 int main(int argc, char *argv[])
 {
   ArgMapping amap;
@@ -46,7 +50,8 @@ int main(int argc, char *argv[])
 
   long ll = NextPowerOfTwo(p);
   long L = r*ll*3 +2; // how many levels do we need
-  m = p+1; // FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
+  if (m==0)
+    m = p+1; // FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
   setDryRun(dry);
 
   if (!noPrint) {
@@ -60,6 +65,10 @@ int main(int argc, char *argv[])
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+#ifdef DEBUG_PRINTOUT
+  dbgKey = &secretKey; // debugging key and ea
+  dbgEa = (EncryptedArray*)context.ea;
+#endif
 
   EncryptedArray ea(context);
   vector<long> v;
