@@ -11,6 +11,7 @@
  */
 #include <cstring>
 #include <fstream>
+#include <utility>
 #include <unistd.h>
 
 #include <NTL/ZZX.h>
@@ -95,18 +96,21 @@ int main(int argc, char *argv[])
   long w=64;
   long L=5;
   long cleanup=1;
+  string sampleFilePrefix; 
  
   amap.arg("m", m, "order of cyclotomic polynomial");
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r, "lifting");
   amap.arg("c", c, "number of columns in the key-switching matrices");
   amap.arg("L", L, "number of levels wanted");
+  amap.arg("sample", sampleFilePrefix, "sample file prefix e.g. <prefix>_BE.txt");
   amap.arg("cleanup", cleanup, "cleanup files created");
   amap.parse(argc, argv);
 
   const char* asciiFile1 = "misc/iotest_ascii1.txt"; 
   const char* asciiFile2 = "misc/iotest_ascii2.txt"; 
   const char* binFile1 = "misc/iotest_bin.bin"; 
+  const char* otherEndianFileOut = "misc/iotest_ascii3.txt";  
 
   { // 1. Write ASCII and bin files.
 
@@ -154,13 +158,10 @@ int main(int argc, char *argv[])
     ofstream outFile(asciiFile2);
   
     // Read in context,
-    //  cout << "\tReading Binary Base." << endl;
     std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);  
-    //  cout << "\tReading Binary Context." << endl;
     readContextBinary(inFile, *context);  
 
     // Read in SecKey and PubKey.
-    // Got to insert pubKey into seckey obj first.
     std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
     FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
   
@@ -200,9 +201,7 @@ int main(int argc, char *argv[])
     ifstream inFile(binFile1, ios::binary);
 
     // Read in context,
-    //  cout << "Reading Binary Base." << endl;
     std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
-    //  cout << "Reading Binary Context." << endl;
     readContextBinary(inFile, *context);  
 
     // Read in PubKey.
@@ -227,7 +226,6 @@ int main(int argc, char *argv[])
 
     // Operation multiply and add.
     mul(ea, p1, p2);
-    //  random(ea, p1);
     c1 *= c2;
 
     // Decrypt and Compare.
@@ -251,68 +249,75 @@ int main(int argc, char *argv[])
     cout << "Test successful.\n\n";
   }
   { // 5. Read in binary from opposite little endian and print ASCII and compare.
-    cout << "Test to read binary file and write it out as ASCII" << endl;
- 
+
+    bool littleEndian = isLittleEndian(); 
+
     string otherEndianFileIn
-      = isLittleEndian()? "misc/iotest_binBE.bin" : "misc/iotest_binLE.bin";
+      = sampleFilePrefix + (littleEndian? "_BE.bin" : "_LE.bin");
     string otherEndianASCII
-      = isLittleEndian()? "misc/iotest_asciiBE.txt" : "misc/iotest_asciiLE.txt";
-    cout << "\tSample file used: " << otherEndianFileIn << endl;
+      = sampleFilePrefix + (littleEndian? "_BE.txt" : "_LE.txt");
 
-    string otherEndianFileOut = "misc/iotest_ascii3.txt";  
-    ifstream inFile(otherEndianFileIn, ios::binary);
-    ofstream outFile(otherEndianFileOut);
+    cout << "Test to read in" << (littleEndian? " BE ":" LE ") 
+         << "binary file and write it out as ASCII" << endl;
 
-    if(!inFile.is_open()) {
-      cout << "File " << otherEndianFileIn 
-           << " could not be opened.\n";
-      cout << "Test failed.\n";
-      exit(EXIT_FAILURE);
-    }
-  
-    // Read in context,
-    std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
-    readContextBinary(inFile, *context);  
-
-    // Read in SecKey and PubKey.
-    // Got to insert pubKey into seckey obj first.
-    std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
-    FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
-  
-    readPubKeyBinary(inFile, *pubKey);
-    readSecKeyBinary(inFile, *secKey);
-    inFile.close();
- 
-    // ASCII 
-    cout << "\tWriting other endian file." << endl;
-    writeContextBase(outFile, *context);
-    outFile << *context << endl << endl;
-    outFile << *pubKey << endl << endl;
-    outFile << *secKey << endl << endl;
-    outFile.close();
-
-    cout << "Test successful.\n\n";
-
-    // Compare byte-wise the two ASCII files
-
-    cout << "Comparing the two ASCII files\n"; 
-  
-    long differ = compareFiles(otherEndianASCII, otherEndianFileOut); 
-
-    if(differ != 0){
-      cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
-      cout << "Test failed.\n";
-      exit(EXIT_FAILURE);
+    if(sampleFilePrefix.empty()){
+      cout << "\tSample prefix not provided, test not done." << endl;
     } else {
-      cout << "\tSUCCESS - Files are identical.\n";
-    }
 
-    if(cleanup){
-      cout << "Clean up. Deleting created files." << endl;
-      if(unlink(otherEndianFileOut.c_str())) 
-        cerr << "Delete of "<<otherEndianFileOut<<" failed."<<endl; 
+      cout << "\tSample file used: " << otherEndianFileIn << endl;
+
+      ifstream inFile(otherEndianFileIn, ios::binary);
+      ofstream outFile(otherEndianFileOut);
+
+      if(!inFile.is_open()) {
+        cout << "File " << otherEndianFileIn 
+             << " could not be opened.\n";
+        cout << "Test failed.\n";
+        exit(EXIT_FAILURE);
+      }
+    
+      // Read in context,
+      std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
+      readContextBinary(inFile, *context);  
+
+      // Read in SecKey and PubKey.
+      std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
+      FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+    
+      readPubKeyBinary(inFile, *pubKey);
+      readSecKeyBinary(inFile, *secKey);
+      inFile.close();
+   
+      // ASCII 
+      cout << "\tWriting other endian file." << endl;
+      writeContextBase(outFile, *context);
+      outFile << *context << endl << endl;
+      outFile << *pubKey << endl << endl;
+      outFile << *secKey << endl << endl;
+      outFile.close();
+
+      cout << "Test successful.\n\n";
+
+      // Compare byte-wise the two ASCII files
+      cout << "Comparing the two ASCII files\n"; 
+    
+      long differ = compareFiles(otherEndianASCII, otherEndianFileOut); 
+
+      if(differ != 0){
+        cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
+        cout << "Test failed.\n";
+        exit(EXIT_FAILURE);
+      } else {
+        cout << "\tSUCCESS - Files are identical.\n";
+      }
+
+      if(cleanup){
+        cout << "Clean up. Deleting created files." << endl;
+        if(unlink(otherEndianFileOut)) 
+          cerr << "Delete of "<<otherEndianFileOut<<" failed."<<endl; 
+      }
+      cout << "Test successful.\n\n";
     }
-    cout << "Test successful.\n\n";
   }
 
   return 0;
