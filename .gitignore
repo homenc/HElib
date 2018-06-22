@@ -4,7 +4,7 @@ src/*.o
 src/*_x
 src/*_x.exe
 
-Makefile.dev
+Makefile-*
 **.DS_Store
 src/*_x.dSYM
 src/*.sh

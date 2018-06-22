@@ -497,25 +497,25 @@ public:
   }
 
   //! Returns a pointer to a "clone"
-  virtual PAlgebraModBase* clone() const { return new PAlgebraModDerived(*this); }
+  virtual PAlgebraModBase* clone() const override { return new PAlgebraModDerived(*this); }
 
   //! Returns the type tag: PA_GF2_tag or PA_zz_p_tag
-  virtual PA_tag getTag() const { return tag; }
+  virtual PA_tag getTag() const override { return tag; }
 
   //! Returns reference to underlying PAlgebra object
-  virtual const PAlgebra& getZMStar() const { return zMStar; }
+  virtual const PAlgebra& getZMStar() const override { return zMStar; }
 
   //! Returns reference to the factorization of Phi_m(X) mod p^r, but as ZZX's
-  virtual const vector<ZZX>& getFactorsOverZZ() const { return factorsOverZZ; }
+  virtual const vector<ZZX>& getFactorsOverZZ() const override { return factorsOverZZ; }
 
   //! The value r
-  virtual long getR() const { return r; }
+  virtual long getR() const override { return r; }
 
   //! The value p^r
-  virtual long getPPowR() const { return pPowR; }
+  virtual long getPPowR() const override { return pPowR; }
 
   //! Restores the NTL context for p^r
-  virtual void restoreContext() const { pPowRContext.restore(); }
+  virtual void restoreContext() const override { pPowRContext.restore(); }
 
 
   /* In all of the following functions, it is expected that the caller 

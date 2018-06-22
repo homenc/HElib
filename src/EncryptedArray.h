@@ -291,9 +291,9 @@ public:
     return *this;
   }
 
-  virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
+  virtual EncryptedArrayBase* clone() const override { return new EncryptedArrayDerived(*this); }
 
-  virtual PA_tag getTag() const { return tag; }
+  virtual PA_tag getTag() const override { return tag; }
   // tag is defined in PA_INJECT, see PAlgebra.h
 
   template<template <class> class T, class... Args>
@@ -317,66 +317,66 @@ public:
 
   void initNormalBasisMatrix() const;
 
-  virtual void restoreContext() const { tab.restoreContext(); }
-  virtual void restoreContextForG() const { mappingData.restoreContextForG(); }
+  virtual void restoreContext() const override { tab.restoreContext(); }
+  virtual void restoreContextForG() const override { mappingData.restoreContextForG(); }
 
 
   virtual const FHEcontext& getContext() const override { return context; }
   virtual const PAlgebra& getPAlgebra() const override { return tab.getZMStar(); }
-  virtual const long getDegree() const { return mappingData.getDegG(); }
+  virtual const long getDegree() const override { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
-  virtual void rotate(Ctxt& ctxt, long k) const;
-  virtual void shift(Ctxt& ctxt, long k) const;
-  virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
+  virtual void rotate(Ctxt& ctxt, long k) const override;
+  virtual void shift(Ctxt& ctxt, long k) const override;
+  virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
   template<class U> void // avoid this being "hidden" by other rotate1D's
     rotate1D(vector<U>& out, const vector<U>& in, long i, long offset) const
     { EncryptedArrayBase::rotate1D(out, in, i, offset); }
-  virtual void shift1D(Ctxt& ctxt, long i, long k) const;
+  virtual void shift1D(Ctxt& ctxt, long i, long k) const override;
 
-  virtual void encode(ZZX& ptxt, const vector< long >& array) const
+  virtual void encode(ZZX& ptxt, const vector< long >& array) const override
     { genericEncode(ptxt, array);  }
 
-  virtual void encode(zzX& ptxt, const vector< long >& array) const
+  virtual void encode(zzX& ptxt, const vector< long >& array) const override   
     { genericEncode(ptxt, array);  }
 
-  virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const
+  virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const override
     {  genericEncode(ptxt, array); }
 
-  virtual void encode(zzX& ptxt, const vector< zzX >& array) const
+  virtual void encode(zzX& ptxt, const vector< zzX >& array) const override
     {  genericEncode(ptxt, array); }
 
-  virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const;
-  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const;
+  virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const override;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const override;
 
-  virtual void encodeUnitSelector(zzX& ptxt, long i) const;
-  virtual void encodeUnitSelector(ZZX& ptxt, long i) const;
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const; // this is not an override
+  virtual void encodeUnitSelector(ZZX& ptxt, long i) const override;
 
-  virtual void decode(vector< long  >& array, const ZZX& ptxt) const
+  virtual void decode(vector< long  >& array, const ZZX& ptxt) const override
     { genericDecode(array, ptxt); }
 
-  virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const
+  virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const override
     { genericDecode(array, ptxt); }
 
-  virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const;
-  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
+  virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const override;
+  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const; // this is not an override
 
-  virtual void random(vector< long  >& array) const
+  virtual void random(vector< long  >& array) const override
     { genericRandom(array); } // choose at random and convert to vector<long>
 
-  virtual void random(vector< ZZX  >& array) const
+  virtual void random(vector< ZZX  >& array) const override
     { genericRandom(array); } // choose at random and convert to vector<ZZX>
 
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const
+  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const override
     { genericEncrypt(ctxt, pKey, ptxt); }
 
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const
+  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const override
     { genericEncrypt(ctxt, pKey, ptxt); }
 
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const
+  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const override
     { genericEncrypt(ctxt, pKey, ptxt); }
 
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const override
     { genericDecrypt(ctxt, sKey, ptxt);
       if (ctxt.getPtxtSpace()<tab.getPPowR()) {
 	for (long i=0; i<(long)ptxt.size(); i++)
@@ -384,7 +384,7 @@ public:
       }
     }
 
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const override
     { genericDecrypt(ctxt, sKey, ptxt);
       if (ctxt.getPtxtSpace()<tab.getPPowR()) {
 	for (long i=0; i<(long)ptxt.size(); i++)
@@ -393,33 +393,33 @@ public:
     }
 
 
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const override
   { genericDecrypt(ctxt, sKey, ptxt); 
     // FIXME: Redudc mod the ciphertext plaintext space as above
     }
 
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const override
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
-
-
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const override
     { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
 
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const
+  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const override
+    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
+
+
+  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const override
     { genericSelect(ctxt1, ctxt2, selector); }
 
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< ZZX >& selector) const
+  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< ZZX >& selector) const override
     { genericSelect(ctxt1, ctxt2, selector); }
 
 
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
+  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const override
     { genericSelect(ctxt1, ctxt2, selector); }
 
-  virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const;
+  virtual void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const override;
 
   /* the following are specialized methods, used to work over extension fields...they assume 
      the modulus context is already set
