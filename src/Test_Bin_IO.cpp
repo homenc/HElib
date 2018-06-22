@@ -27,6 +27,16 @@ bool isLittleEndian()
     return static_cast<bool>(*reinterpret_cast<char *>(&i));
 }
 
+void cleanupFiles(const char* file){
+  if(unlink(file)) cerr<< "Delete of "<< file <<" failed."<<endl; 
+}
+
+template<class... Files>
+void cleanupFiles(const char * file, Files... files){
+  cleanupFiles(file);
+  cleanupFiles(files...);
+}
+
 // Compare two binary files, return 0 if they are equal, -1 if they
 // have different length, and 1 if they have the same length but
 // different content.
@@ -86,7 +96,7 @@ long compareFiles(string filename1, string filename2)
 int main(int argc, char *argv[])
 { 
   cout << "\n*** TEST BINARY IO " << endl << endl;
-   
+
   ArgMapping amap;
 
   long m=7;
@@ -241,9 +251,7 @@ int main(int argc, char *argv[])
 
     if(cleanup) {
       cout << "Clean up. Deleting created files." << endl;
-      if(unlink(asciiFile1)) cerr<< "Delete of "<<asciiFile1<<" failed."<<endl; 
-      if(unlink(asciiFile2)) cerr<< "Delete of "<<asciiFile2<<" failed."<<endl; 
-      if(unlink(binFile1)) cerr << "Delete of "<<binFile1<<" failed."<<endl;  
+      cleanupFiles(asciiFile1, asciiFile2, binFile1);     
     }
 
     cout << "Test successful.\n\n";
@@ -267,7 +275,6 @@ int main(int argc, char *argv[])
       cout << "\tSample file used: " << otherEndianFileIn << endl;
 
       ifstream inFile(otherEndianFileIn, ios::binary);
-      ofstream outFile(otherEndianFileOut);
 
       if(!inFile.is_open()) {
         cout << "File " << otherEndianFileIn 
@@ -275,6 +282,8 @@ int main(int argc, char *argv[])
         cout << "Test failed.\n";
         exit(EXIT_FAILURE);
       }
+
+      ofstream outFile(otherEndianFileOut);
     
       // Read in context,
       std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
@@ -313,8 +322,7 @@ int main(int argc, char *argv[])
 
       if(cleanup){
         cout << "Clean up. Deleting created files." << endl;
-        if(unlink(otherEndianFileOut)) 
-          cerr << "Delete of "<<otherEndianFileOut<<" failed."<<endl; 
+        cleanupFiles(otherEndianFileOut); 
       }
       cout << "Test successful.\n\n";
     }
