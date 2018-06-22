@@ -62,7 +62,6 @@ void read_raw_ZZ(istream& str, ZZ& zz);
 
 template<typename T> void write_raw_vector(ostream& str, const vector<T>& v)
 {
-  long sz = v.size(); 
   write_raw_int(str, v.size()); 
 
   for(auto n: v){

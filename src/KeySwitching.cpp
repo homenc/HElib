@@ -369,7 +369,6 @@ void addMinimal1DMatrices(FHESecKey& sKey, long keyID)
 // Generate all Frobenius matrices of the form s(X^{p^i})->s(X)
 void addMinimalFrbMatrices(FHESecKey& sKey, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
   addMinimal1Dmats4dim(sKey, -1, keyID);
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
