@@ -3,7 +3,7 @@
 #include "matmul.h"
 #include <NTL/BasicThreadPool.h>
 
-static bool noPrint = true;
+static bool noPrint = false;
 
 
 static long mValues[][14] = { 
