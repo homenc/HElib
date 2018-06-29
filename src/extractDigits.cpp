@@ -227,11 +227,19 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
   for (long i: range(r)) {
     tmp = c;
     for (long j: range(i)) {
-      if (p==2) digits0[j].square();
-      else if (p==3) digits0[j].cube();
-      else polyEval(digits0[j], x2p, digits0[j]); // "in spirit" digits0[j] = digits0[j]^p
+      if (digits[j].findBaseLevel() >= digits0[j].findBaseLevel()) {
+         // optimization: digits[j] is better than digits0[j],
+         // so just use it
 
-      tmp -= digits0[j];
+         tmp -= digits[j];
+      }
+      else {
+	if (p==2) digits0[j].square();
+	else if (p==3) digits0[j].cube();
+	else polyEval(digits0[j], x2p, digits0[j]); // "in spirit" digits0[j] = digits0[j]^p
+
+	tmp -= digits0[j];
+      }
 
       tmp.divideByP();
     }
@@ -239,3 +247,4 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
     polyEval(digits[i], G[i], tmp);
   }
 }
+
