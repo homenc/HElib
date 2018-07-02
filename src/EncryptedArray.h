@@ -524,7 +524,7 @@ private:
     assert(&context == &ctxt.getContext());
     ZZX pp;
     encode(pp, array); // Convert the array of slots into a plaintext polynomial
-    sKey.Encrypt(ctxt, pp, tab.getPPowR(), skIdx); // encrypt the plaintext polynomial
+    sKey.skEncrypt(ctxt, pp, tab.getPPowR(), skIdx); // encrypt the plaintext polynomial
   }
 
 

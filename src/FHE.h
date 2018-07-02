@@ -260,14 +260,22 @@ public:
   //! @brief Encrypts plaintext, result returned in the ciphertext argument.
   //! The returned value is the plaintext-space for that ciphertext. When
   //! called with highNoise=true, returns a ciphertext with noise level~q/8.
-  long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0,
-	       bool highNoise=false) const;
-  long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0,
-	       bool highNoise=false) const {
+  long Encrypt(Ctxt &ciphertxt,
+               const ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
+  long Encrypt(Ctxt &ciphertxt,
+               const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
     ZZX tmp;
     convert(tmp, plaintxt);
     Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
   }
+  // These methods are overridden by secret-key Encrypt
+  virtual long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0) const
+  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
+  virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const
+  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
+
+  // These functions are virtual, to make it easier to override
+  // them for secret-key encryption
 
   bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
@@ -350,14 +358,17 @@ public:
   void Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt, ZZX& f) const;
 
   //! @brief Symmetric encryption using the secret key.
-  long Encrypt(Ctxt &ctxt, const ZZX& ptxt,
-	       long ptxtSpace=0, long skIdx=0) const;
-  long Encrypt(Ctxt &ctxt, const zzX& ptxt,
-	       long ptxtSpace=0, long skIdx=0) const {
+  long skEncrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace, long skIdx) const;
+  long skEncrypt(Ctxt &ctxt, const zzX& ptxt, long ptxtSpace, long skIdx) const {
     ZZX tmp;
     convert(tmp,ptxt);
-    Encrypt(ctxt, tmp, ptxtSpace, skIdx);
+    skEncrypt(ctxt, tmp, ptxtSpace, skIdx);
   }
+  // These methods override the public-key Encrypt methods
+  long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0) const override
+  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, 0); }
+  long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const override
+  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, 0); }
 
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();

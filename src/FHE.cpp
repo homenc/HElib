@@ -822,8 +822,8 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 
 // Encryption using the secret key, this is useful, e.g., to put an
 // encryption of the secret key into the public key.
-long FHESecKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt,
-			long ptxtSpace, long skIdx) const
+long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
+                          long ptxtSpace, long skIdx) const
 {
   FHE_TIMER_START;
   assert(((FHEPubKey*)this) == &ctxt.pubKey);
