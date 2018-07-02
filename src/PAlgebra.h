@@ -42,6 +42,7 @@
  * is a primitive m-th root of unity in R), we get that F_t is the minimal
  * polynomial of z^{1/t}.
  */
+#include <exception>
 #include <utility>
 #include "NumbTh.h"
 #include "zzX.h"
@@ -217,7 +218,7 @@ class PAlgebra {
 };
 
 
-enum PA_tag { PA_GF2_tag, PA_zz_p_tag };
+enum PA_tag { PA_GF2_tag, PA_zz_p_tag, PA_cx_tag };
 
 /**
 @class: PAlgebraMod 
@@ -638,6 +639,31 @@ private:
               long offset, long extent) const;
 };
 
+//! A different derived class to be used for the approximate-numbers scheme
+//! This is mostly a dummy class, but needed since the context always has a
+//! PAlgeberaMod data member.
+class PAlgebraModCx : public PAlgebraModBase {
+  const PAlgebra& zMStar;
+
+public:
+
+  PAlgebraModCx(const PAlgebra& palg): zMStar(palg) {}
+
+  PAlgebraModBase* clone() const override { return new PAlgebraModCx(*this); }
+  PA_tag getTag() const override { return PA_cx_tag; }
+
+  const PAlgebra& getZMStar() const override { return zMStar; }
+
+  long getR() const override {return 1L;}
+  long getPPowR() const override { return 1L; }
+  void restoreContext() const override {}
+
+  // These function make no sense for PAlgebraModCx
+  const vector<ZZX>& getFactorsOverZZ() const override
+  { throw std::logic_error("PAlgebraModCx::getFactorsOverZZ undefined"); }
+  zzX getMask_zzX(long i, long j) const override
+  { throw std::logic_error("PAlgebraModCx::getMask_zzX undefined"); }
+};
 
 
 //! Builds a table, of type PA_GF2 if p == 2 and r == 1, and PA_zz_p otherwise
