@@ -114,4 +114,33 @@ double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg)
   }
   return sqrt(mx);
 }
+
+static xdouble convertAndScale(zzX& ff, const NTL::ZZX& f)
+{
+  xdouble factor(1.0);
+  long size = NTL::MaxBits(f);
+  if (size > NTL_SP_BOUND-15) {
+    ZZ zzFactor(1L);
+    zzFactor <<= (NTL_SP_BOUND-15); // divide f by this factor
+    ZZX scaled = f / zzFactor;
+    convert(factor, zzFactor);      // remember the factor
+    convert(ff, scaled);            // convert to zzX
+  }
+  else
+    convert(ff, f);                 // convert to zzX
+  return factor;
+}
+
+xdouble embeddingL2NormSquared(const NTL::ZZX& f, const PAlgebra& palg)
+{
+  zzX ff; // to hold a scaled-down version of ff;
+  xdouble factor = convertAndScale(ff, f);
+  return embeddingL2NormSquared(ff, palg)*factor;
+}
+xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
+{
+  zzX ff; // to hold a scaled-down version of ff;
+  xdouble factor = convertAndScale(ff, f);
+  return embeddingLargestCoeff(ff, palg)*factor;
+}
 #endif

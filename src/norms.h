@@ -52,6 +52,7 @@ inline NTL::xdouble coeffsL2Norm(const DoubleCRT& f) // l2 norm
 typedef std::complex<double> cx_double;
 typedef std::complex<NTL::xdouble> cx_xdouble;
 
+#if FFT_IMPL
 //! Computing the L2 norm of the canonical embedding
 double embeddingL2NormSquared(const zzX& f, const PAlgebra& palg);
 inline double embeddingL2Norm(const zzX& f, const PAlgebra& palg)
@@ -59,6 +60,12 @@ inline double embeddingL2Norm(const zzX& f, const PAlgebra& palg)
 
 //! Computing the L-infinity norm of the canonical embedding
 double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg);
+
+// Same as above, for ZZX
+xdouble embeddingL2NormSquared(const NTL::ZZX& f, const PAlgebra& palg);
+inline xdouble embeddingL2Norm(const NTL::ZZX& f, const PAlgebra& palg)
+{ return sqrt(embeddingL2NormSquared(f,palg)); }
+xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg);
 
 //! Computing the canonical embedding (in fft.cpp). This function
 //! returns in v only the first half of the entries, the others are
@@ -74,5 +81,7 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
 // Calling embedInSlots(f,v,palg,strictInverse=false) when m is
 // not a power of two may fail to recover the same f, however.
 // When m is apower of two, the strictInverse flag has no effect.
+
+#endif // FFT_IMPL
 
 #endif // _NORMS_H_

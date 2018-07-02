@@ -794,14 +794,6 @@ inline void TofftRep_trunc(fftRep& y, const zz_pX& x, long k, long len)
 #endif
 
 
-//! Debug printing routines for vectors, ZZX'es, print only a few entries
-template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
-				    long nCoeffs=40);
-ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs=40);
-
-// NOTE: Maybe NTL should contain conversion routines
-// like this for the various polynomial classes?
-
 #if 0
 //! @brief stand-in for make_unique, which is C++14, not C++11
 template<typename T, typename... Args>
@@ -821,6 +813,20 @@ void make_lazy(const Lazy<T,P>& obj, Args&&... args)
    if (!builder()) return;
    UniquePtr<T,P> ptr;
    ptr.make(std::forward<Args>(args)...);
+   builder.move(ptr);
+}
+
+//! This should go in NTL some day...
+//! Just call as make_lazy(obj, f, ....) to initialize a lazy object
+//! via a call to f(*obj, ...)
+template<class T, class P, class F, class... Args>
+void make_lazy_with_fun(const Lazy<T,P>& obj, F f, Args&&... args)
+{
+   typename Lazy<T,P>::Builder builder(obj);
+   if (!builder()) return;
+   UniquePtr<T,P> ptr;
+   ptr.make();
+   f(*ptr, std::forward<Args>(args)...);
    builder.move(ptr);
 }
 #endif

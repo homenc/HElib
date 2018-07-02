@@ -29,8 +29,8 @@ NTL_CLIENT
 static bool noPrint = false;
 
 // #define DEBUG_PRINTOUT
-#ifdef DEBUG_PRINTOUT
 #include "debugging.h"
+#ifdef DEBUG_PRINTOUT
 extern long printFlag;
 #endif
 
