@@ -636,4 +636,19 @@ extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
 inline void Ctxt::extractBits(vector<Ctxt>& bits, long nBits2extract)
 { extractDigits(bits, *this, nBits2extract); }
 
+
+// @brief Extract the mod-p digits of a mod-p^{r+e} ciphertext.
+
+// extendExtractDigits assumes that the slots of *this contains integers mod
+// p^{r+e} i.e., that only the free terms are nonzero. (If that assumptions
+// does not hold then the result will not be a valid ciphertext anymore.)
+// 
+// It returns in the slots of digits[j] the j'th-lowest digits from the
+// integers in the slots of the input. Namely, the i'th slot of digits[j]
+// contains the j'th digit in the p-base expansion of the integer in the i'th
+// slot of the *this.  The plaintext space of digits[j] is mod p^{e+r-j}.
+
+void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e);
+// implemented in extractDigits.cpp
+
 #endif // ifndef _Ctxt_H_

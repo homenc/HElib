@@ -208,6 +208,9 @@ long printFlag = FLAG_PRINT_VEC;
 // Extract digits from fully packed slots
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 			 const vector<ZZX>& unpackSlotEncoding);
+
+// Extract digits from unpacked slots
+void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
  
 // bootstrap a ciphertext to reduce noise
 void FHEPubKey::reCrypt(Ctxt &ctxt)
@@ -489,65 +492,17 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   }
   FHE_NTIMER_STOP(unpack);
 
-  // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]
-  long p = ctxt.getContext().zMStar.getP();
-  long p2r = power_long(p,r);
-  long topHigh = botHigh + r-1;
-
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After unpack ";
   decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
   cerr << "    extracting "<<(topHigh+1)<<" digits\n";
 #endif
 
-  if (p==2 && r>2)
-    topHigh--; // For p==2 we sometime get a bit for free
-
-  FHE_NTIMER_START(extractDigits);
-
   NTL_EXEC_RANGE(d, first, last)
       for (long i = first; i < last; i++) {
-        vector<Ctxt> scratch;
-    
-        if (topHigh<=0) { // extracting LSB = no-op
-          scratch.assign(1,unpacked[i]);
-        } else {          // extract digits topHigh...0, store them in scratch
-          extractDigits(scratch, unpacked[i], topHigh+1);
-        }
-
-        // set upacked[i] = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
-        if (topHigh >= (long)scratch.size()) {
-          topHigh = scratch.size() -1;
-          cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
-        }
-    
-        unpacked[i] = scratch[topHigh];
-        for (long j=topHigh-1; j>=botHigh; --j) {
-          unpacked[i].multByP();
-          unpacked[i] += scratch[j];
-        }
-        if (p==2 && botHigh>0) {   // For p==2, subtract also the previous bit
-          //cerr << scratch.size() << " " <<  botHigh-1 << "\n";
-          unpacked.at(i) += scratch.at(botHigh-1);
-        }
-        unpacked[i].negate();
-    
-        if (r>ePrime) {          // Add in digits from the bottom part, if any
-          long topLow = r-1 - ePrime;
-          Ctxt tmp = scratch[topLow];
-          for (long j=topLow-1; j>=0; --j) {
-    	tmp.multByP();
-    	tmp += scratch[j];
-          }
-          if (ePrime>0)
-    	tmp.multByP(ePrime); // multiply by p^e'
-          unpacked[i] += tmp;
-        }
-        unpacked[i].reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
+        extractDigitsThin(unpacked[i], botHigh, r, ePrime);
       }
   NTL_EXEC_RANGE_END
-
-  FHE_NTIMER_STOP(extractDigits);
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before repack ";
@@ -588,7 +543,6 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   // Apply the d automorphisms and store them in scratch area
   long d = ctxt.getContext().zMStar.getOrdP();
 
-  vector<Ctxt> scratch; // used below 
   vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
     vector< shared_ptr<DoubleCRT> > coeff_vector;
@@ -615,57 +569,15 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   }
   FHE_NTIMER_STOP(unpack);
 
-  // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]
-  long p = ctxt.getContext().zMStar.getP();
-  long p2r = power_long(p,r);
-  long topHigh = botHigh + r-1;
-
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After unpack ";
   decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
   cerr << "    extracting "<<(topHigh+1)<<" digits\n";
 #endif
 
-  if (p==2 && r>2)
-    topHigh--; // For p==2 we sometime get a bit for free
-
-  FHE_NTIMER_START(extractDigits);
   for (long i=0; i<(long)unpacked.size(); i++) {
-    if (topHigh<=0) { // extracting LSB = no-op
-      scratch.assign(1,unpacked[i]);
-    } else {          // extract digits topHigh...0, store them in scratch
-      extractDigits(scratch, unpacked[i], topHigh+1);
-    }
-
-    // set upacked[i] = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
-    if (topHigh >= (long)scratch.size()) {
-      topHigh = scratch.size() -1;
-      cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
-    }
-
-    unpacked[i] = scratch[topHigh];
-    for (long j=topHigh-1; j>=botHigh; --j) {
-      unpacked[i].multByP();
-      unpacked[i] += scratch[j];
-    }
-    if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
-      unpacked[i] += scratch[botHigh-1];
-    unpacked[i].negate();
-
-    if (r>ePrime) {          // Add in digits from the bottom part, if any
-      long topLow = r-1 - ePrime;
-      Ctxt tmp = scratch[topLow];
-      for (long j=topLow-1; j>=0; --j) {
-	tmp.multByP();
-	tmp += scratch[j];
-      }
-      if (ePrime>0)
-	tmp.multByP(ePrime); // multiply by p^e'
-      unpacked[i] += tmp;
-    }
-    unpacked[i].reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
+    extractDigitsThin(unpacked[i], botHigh, r, ePrime); 
   }
-  FHE_NTIMER_STOP(extractDigits);
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before repack ";
@@ -826,6 +738,9 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
 
 // Extract digits from thinly packed slots
+
+
+
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 {
   FHE_TIMER_START;
@@ -835,61 +750,81 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 
   vector<Ctxt> scratch;
 
-
-  // Step 2: extract the digits top-1,...,0 from the slots of unpacked[i]
   long p = ctxt.getContext().zMStar.getP();
   long p2r = power_long(p,r);
   long topHigh = botHigh + r-1;
 
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ After unpack ";
-  decryptAndPrint(cerr, unpacked, *dbgKey, *dbgEa, printFlag);
-  cerr << "    extracting "<<(topHigh+1)<<" digits\n";
-#endif
+  if (r > 1) {
+    // use Chen and Han technique
 
-  if (p==2 && r>2)
-    topHigh--; // For p==2 we sometime get a bit for free
+    extendExtractDigits(scratch, unpacked, botHigh, r);
 
-  if (topHigh<=0) { // extracting LSB = no-op
-    scratch.assign(1, unpacked);
-  } else {          // extract digits topHigh...0, store them in scratch
-    extractDigits(scratch, unpacked, topHigh+1);
-  }
-
-  // set upacked = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
-  if (topHigh >= LONG(scratch.size())) {
-    topHigh = scratch.size() -1;
-    cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
-  }
-
-  unpacked = scratch[topHigh];
-  for (long j=topHigh-1; j>=botHigh; --j) {
-    unpacked.multByP();
-    unpacked += scratch[j];
-  }
-  if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
-    unpacked += scratch[botHigh-1];
-  unpacked.negate();
-
-  if (r>ePrime) {          // Add in digits from the bottom part, if any
-    long topLow = r-1 - ePrime;
-    Ctxt tmp = scratch[topLow];
-    for (long j=topLow-1; j>=0; --j) {
-      tmp.multByP();
-      tmp += scratch[j];
+#if 0
+    for (long i: range(scratch.size())) {
+      CheckCtxt(scratch[i], "**");
     }
-    if (ePrime>0)
-      tmp.multByP(ePrime); // multiply by p^e'
-    unpacked += tmp;
-  }
-  unpacked.reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
-
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ Before repack ";
-  decryptAndPrint(cerr, unpacked, *dbgKey, *dbgEa, printFlag);
 #endif
 
-  ctxt = unpacked;
+    for (long j = 0; j < botHigh; j++) {
+      unpacked -= scratch[j];
+      unpacked.divideByP();
+    }
+
+    if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
+      unpacked += scratch[botHigh-1];
+    unpacked.negate();
+
+    if (r>ePrime) {          // Add in digits from the bottom part, if any
+      long topLow = r-1 - ePrime;
+      Ctxt tmp = scratch[topLow];
+      for (long j=topLow-1; j>=0; --j) {
+	tmp.multByP();
+	tmp += scratch[j];
+      }
+      if (ePrime>0)
+	tmp.multByP(ePrime); // multiply by p^e'
+      unpacked += tmp;
+    }
+    unpacked.reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
+
+    ctxt = unpacked;
+  }
+  else {
+
+    if (p==2 && r>1 && topHigh+1 > 2)
+      topHigh--; // For p==2 we sometime get a bit for free
+
+    extractDigits(scratch, unpacked, topHigh+1);
+
+    // set upacked = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
+    if (topHigh >= LONG(scratch.size())) {
+      topHigh = scratch.size() -1;
+      cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
+    }
+
+    unpacked = scratch[topHigh];
+    for (long j=topHigh-1; j>=botHigh; --j) {
+      unpacked.multByP();
+      unpacked += scratch[j];
+    }
+    if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
+      unpacked += scratch[botHigh-1];
+    unpacked.negate();
+
+    if (r>ePrime) {          // Add in digits from the bottom part, if any
+      long topLow = r-1 - ePrime;
+      Ctxt tmp = scratch[topLow];
+      for (long j=topLow-1; j>=0; --j) {
+	tmp.multByP();
+	tmp += scratch[j];
+      }
+      if (ePrime>0)
+	tmp.multByP(ePrime); // multiply by p^e'
+      unpacked += tmp;
+    }
+    unpacked.reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
+    ctxt = unpacked;
+  }
 
 }
 

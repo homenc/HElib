@@ -21,6 +21,8 @@
 #include "IndexSet.h"
 #include "recryption.h"
 
+#include <NTL/Lazy.h>
+
 /**
  * @brief Returns smallest parameter m satisfying various constraints:
  * @param k security parameter
@@ -114,6 +116,8 @@ public:
   //! Bootstrapping-related data in the context
   RecryptData rcData;
   ThinRecryptData trcData;
+
+  //Lazy<ZZX> LiftingPoly;
 
   /******************************************************************/
   ~FHEcontext(); // destructor
