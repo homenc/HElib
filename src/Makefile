@@ -74,7 +74,7 @@ check:
 	$(MAKE) check_binaryArith
 	$(MAKE) check_binaryCompare
 	$(MAKE) check_tableLookup
-	$(MAKE) check_Test_Bin_IO_x
+	$(MAKE) check_Bin_IO_x
 
 check_General: Test_General_x 
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
@@ -105,7 +105,7 @@ check_extractDigits: Test_extractDigits_x
 
 check_bootstrapping: Test_bootstrapping_x 
 	./Test_bootstrapping_x noPrint=1 N=512
-	./Test_ThinBootstrapping_x noPrint=1 N=512 r=4 L=50
+	./Test_bootstrapping_x noPrint=1 N=512 r=4 L=50
 	./Test_bootstrapping_x p=7 noPrint=1
 
 check_ThinBootstrapping: Test_ThinBootstrapping_x 
@@ -123,7 +123,8 @@ check_tableLookup: Test_tableLookup_x
 	./Test_tableLookup_x
 
 check_Bin_IO_x: Test_Bin_IO_x
-	./Test_Bin_IO_x p=257 m=11008 r=1
+	./Test_Bin_IO_x p=2 r=2 m=127
+	./Test_Bin_IO_x p=275 m=127
 
 
 check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_ThinEvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_ThinBootstrapping_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x Test_Bin_IO_x
