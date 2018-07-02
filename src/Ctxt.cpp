@@ -1106,6 +1106,7 @@ void Ctxt::write(ostream& str) const
   write_raw_int(str, ptxtSpace);
   write_raw_int(str, highWaterMark);
   write_raw_int(str, intFactor);
+  write_raw_xdouble(str, ratFactor);
   write_raw_xdouble(str, noiseVar);
   primeSet.write(str);
   write_raw_vector(str, parts);    
@@ -1119,7 +1120,8 @@ void Ctxt::read(istream& str)
   
   ptxtSpace = read_raw_int(str);
   highWaterMark = read_raw_int(str);
-  intFactor =  read_raw_int(str);
+  intFactor = read_raw_int(str);
+  ratFactor = read_raw_xdouble(str);
   noiseVar = read_raw_xdouble(str); 
   primeSet.read(str); 
   CtxtPart blankCtxtPart(context, IndexSet::emptySet());
@@ -1170,7 +1172,8 @@ istream& operator>>(istream& str, CtxtPart& p)
 ostream& operator<<(ostream& str, const Ctxt& ctxt)
 {
   str << "["<<ctxt.ptxtSpace<<" "<<ctxt.noiseVar<<" "<<ctxt.primeSet
-      << ctxt.highWaterMark << " "<< ctxt.intFactor << " "
+      << ctxt.highWaterMark << " "
+      << ctxt.intFactor << " " << ctxt.ratFactor << " "
       << ctxt.parts.size() << endl;
   for (size_t i=0; i<ctxt.parts.size(); i++)
     str << ctxt.parts[i] << endl;
@@ -1181,7 +1184,7 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseVar >> ctxt.primeSet
-      >> ctxt.highWaterMark >> ctxt.intFactor;
+      >> ctxt.highWaterMark >> ctxt.intFactor >> ctxt.ratFactor;
   long nParts;
   str >> nParts;
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));
