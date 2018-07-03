@@ -29,7 +29,7 @@ void replicate(const EncryptedArray& ea, Ctxt& ctxt, long pos)
   long nSlots = ea.size();
   assert(pos >= 0 && pos < nSlots); 
 
-  ZZX mask;
+  zzX mask;
   ea.encodeUnitSelector(mask, pos);
   ctxt.multByConstant(mask);
   replicate0(ea, ctxt, pos);

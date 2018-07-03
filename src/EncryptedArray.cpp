@@ -344,19 +344,6 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   FHE_TIMER_STOP;
 }
 
-//FIXME: For now replicating the code for ZZX and zzX,
-// but really we need to move to zzX everywhere
-template<class type>
-void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
-{
-  assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
-  RBak bak; bak.save(); tab.restoreContext();
-  RX res;
-  div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
-  mul(res, res, tab.getCrtCoeffs()[i]);
-  conv(ptxt, res);
-}
-
 template<class type>
 void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) const
 {
@@ -402,10 +389,8 @@ void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const ZZX& pt
 }
 
 
-//FIXME: For now replicating the code for ZZX and zzX,
-// but really we need to move to zzX everywhere
 template<class type>
-void EncryptedArrayDerived<type>::encodeUnitSelector(NTL::Vec<long>& ptxt, long i) const
+void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
 {
   assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
   RBak bak; bak.save(); tab.restoreContext();

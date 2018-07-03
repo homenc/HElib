@@ -150,7 +150,7 @@ public:
   { vector< ZZX > v; decode(v, ptxt); slot=v.at(i); }
 
   //! @brief Encodes a vector with 1 at position i and 0 everywhere else
-  virtual void encodeUnitSelector(ZZX& ptxt, long i) const = 0;
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const = 0;
   ///@}
 
   ///@{
@@ -355,7 +355,6 @@ public:
   virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const;
 
   virtual void encodeUnitSelector(zzX& ptxt, long i) const;
-  virtual void encodeUnitSelector(ZZX& ptxt, long i) const;
 
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const
     { genericDecode(array, ptxt); }
@@ -374,7 +373,7 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt);
-      if (ctxt.getPtxtSpace()<tab.getPPowR()) {
+      if (ctxt.getPtxtSpace()<getP2R()) {
 	for (long i=0; i<(long)ptxt.size(); i++)
 	  ptxt[i] %= ctxt.getPtxtSpace();
       }
@@ -382,7 +381,7 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt);
-      if (ctxt.getPtxtSpace()<tab.getPPowR()) {
+      if (ctxt.getPtxtSpace()<getP2R()) {
 	for (long i=0; i<(long)ptxt.size(); i++)
 	  PolyRed(ptxt[i], ctxt.getPtxtSpace(),/*abs=*/true);
       }
@@ -635,7 +634,7 @@ public:
   void encode(zzX& ptxt, const NewPlaintextArray& array) const 
     { rep->encode(ptxt, array); }
 
-  void encodeUnitSelector(ZZX& ptxt, long i) const
+  void encodeUnitSelector(zzX& ptxt, long i) const
     { rep->encodeUnitSelector(ptxt, i); }
 
   void decode(vector< long  >& array, const ZZX& ptxt) const 
