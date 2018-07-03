@@ -27,9 +27,6 @@
 //   also...this probably should be defined in NTL, anyway....
 #define FHE_MORE_UNWRAPARGS(n) NTL_SEPARATOR_##n NTL_REPEATER_##n(NTL_UNWRAPARG)
 
-
-
-
 // these are used to implement NewPlaintextArray stuff routines
 
 #define PA_BOILER \
@@ -103,6 +100,7 @@ public:
   virtual const FHEcontext& getContext() const = 0;
   virtual const PAlgebra& getPAlgebra() const = 0;
   virtual const long getDegree() const = 0;
+  virtual const long getP2R() const = 0;
 
   //! @brief Right rotation as a linear array.
   //! E.g., rotating ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(n 1 2 ... n-1)
@@ -135,6 +133,9 @@ public:
   virtual void encode(ZZX& ptxt, const vector< ZZX >& array) const = 0;
   virtual void encode(ZZX& ptxt, const NewPlaintextArray& array) const = 0;
 
+  void encode(zzX& ptxt, const vector< ZZX >& array) const
+  { ZZX tmp; encode(tmp, array); convert(ptxt, tmp); }
+
   virtual void decode(vector< long  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(vector< ZZX  >& array, const ZZX& ptxt) const = 0;
   virtual void decode(NewPlaintextArray& array, const ZZX& ptxt) const = 0;
@@ -154,17 +155,19 @@ public:
 
   ///@{
   //! @name Encoding+encryption/decryption+decoding
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const = 0;
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const = 0;
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const = 0;
+  template<class PTXT>
+  void encrypt(Ctxt& ctxt, const FHEPubKey& key, const PTXT& ptxt) const
+  {
+    assert(&getContext() == &ctxt.getContext());
+    zzX pp;
+    encode(pp, ptxt); // Convert array of slots into a plaintext polynomial
+    key.Encrypt(ctxt, pp, getP2R()); // encrypt the plaintext polynomial
+    // NOTE: If secret key, will call the overridden FHESecKey::Encrypt
+  }
+
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const = 0;
-
-  // Also secret-key encryption, for convenience
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const = 0;
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const = 0;
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const = 0;
 
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const FHESecKey& sKey, long i) const
@@ -326,6 +329,8 @@ public:
   virtual const long getDegree() const { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
+  const long getP2R() const override {return getTab().getPPowR();}
+
   virtual void rotate(Ctxt& ctxt, long k) const;
   virtual void shift(Ctxt& ctxt, long k) const;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
@@ -367,15 +372,6 @@ public:
   virtual void random(vector< ZZX  >& array) const
     { genericRandom(array); } // choose at random and convert to vector<ZZX>
 
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt);
       if (ctxt.getPtxtSpace()<tab.getPPowR()) {
@@ -397,17 +393,6 @@ public:
   { genericDecrypt(ctxt, sKey, ptxt); 
     // FIXME: Redudc mod the ciphertext plaintext space as above
     }
-
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
-
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
-
-
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
-
 
   virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const
     { genericSelect(ctxt1, ctxt2, selector); }
@@ -441,14 +426,8 @@ public:
     for (long i=0; i<size(); i++) NTL::random(array[i], getDegree());
   }
 
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< RX >& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< RX >& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt); }
-
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< RX >& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
   virtual void buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L) const;
 
@@ -498,16 +477,6 @@ private:
   }
 
   template<class T>
-  void genericEncrypt(Ctxt& ctxt, const FHEPubKey& pKey, 
-                      const T& array) const
-  {
-    assert(&context == &ctxt.getContext());
-    ZZX pp;
-    encode(pp, array); // Convert the array of slots into a plaintext polynomial
-    pKey.Encrypt(ctxt, pp, tab.getPPowR()); // encrypt the plaintext polynomial
-  }
-
-  template<class T>
   void genericDecrypt(const Ctxt& ctxt, const FHESecKey& sKey, 
                       T& array) const
   {
@@ -516,17 +485,6 @@ private:
     sKey.Decrypt(pp, ctxt);
     decode(array, pp);
   }
-
-  template<class T>
-  void genericSkEncrypt(Ctxt& ctxt, const FHESecKey& sKey, 
-                      const T& array, long skIdx=0) const
-  {
-    assert(&context == &ctxt.getContext());
-    ZZX pp;
-    encode(pp, array); // Convert the array of slots into a plaintext polynomial
-    sKey.skEncrypt(ctxt, pp, tab.getPPowR(), skIdx); // encrypt the plaintext polynomial
-  }
-
 
   template<class T>
   void genericSelect(Ctxt& ctxt1, const Ctxt& ctxt2,
@@ -692,13 +650,9 @@ public:
   void random(vector< ZZX  >& array) const
     { rep->random(array); }
 
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< long >& ptxt) const 
+  template<class T>
+  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const T& ptxt) const 
     { rep->encrypt(ctxt, pKey, ptxt); }
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const vector< ZZX >& ptxt) const 
-    { rep->encrypt(ctxt, pKey, ptxt); }
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const 
-    { rep->encrypt(ctxt, pKey, ptxt); }
-
 
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const 
     { rep->decrypt(ctxt, sKey, ptxt); }
@@ -706,14 +660,6 @@ public:
     { rep->decrypt(ctxt, sKey, ptxt); }
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
     { rep->decrypt(ctxt, sKey, ptxt); }
-
-
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< long >& ptxt, long skIdx=0) const 
-    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const vector< ZZX >& ptxt, long skIdx=0) const 
-    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const 
-    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
 
 
   void select(Ctxt& ctxt1, const Ctxt& ctxt2, const vector< long >& selector) const 
