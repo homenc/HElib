@@ -22,7 +22,7 @@ EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
 					const PAlgebraMod& alMod, const ZZX& G)
 {
   if (alMod.getTag()==PA_cx_tag)
-    return new EncryptedArrayCx(context);
+    return new EncryptedArrayCx(context, alMod.getCx());
 
   // By defualt use the 1st factor F0
   const ZZX& GG = NTL::IsZero(G)? alMod.getFactorsOverZZ()[0]: G;

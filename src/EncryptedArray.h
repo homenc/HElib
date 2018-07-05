@@ -509,15 +509,13 @@ private:
 //! A different derived class to be used for the approximate-numbers scheme
 class EncryptedArrayCx : public EncryptedArrayBase {
   const FHEcontext& context;
+  const PAlgebraModCx& alMod;
 
 public:
-  explicit EncryptedArrayCx(const FHEcontext& _context): context(_context){}
-
-  // The scaling factor to use when encoding/decoding plaintext elements
-  static double encodeScalingFactor(const FHEcontext& context) {
-    return 16*conv<double>(context.stdev) * context.zMStar.getPhiM();
-    // 16 sigma phi(m) is about 2*B_clean from CKKS17, Lemma 1
-  }
+  explicit EncryptedArrayCx(const FHEcontext& _context)
+    : context(_context), alMod(context.alMod.getCx()) {}
+  EncryptedArrayCx(const FHEcontext& _context, const PAlgebraModCx& _alMod)
+    : context(_context), alMod(_alMod) {}
 
   // convertion between vectors of complex, real, and integers
   static void convert(std::vector<cx_double>& out,
@@ -546,7 +544,7 @@ public:
 
   PA_tag getTag() const override { return PA_cx_tag; }
   const FHEcontext& getContext() const override { return context; }
-  const PAlgebra& getPAlgebra() const override { return context.zMStar; }
+  const PAlgebra& getPAlgebra() const override { return alMod.getZMStar(); }
   const long getDegree() const override { return 2L; }
 
   void rotate(Ctxt& ctxt, long k) const override; 
@@ -554,9 +552,11 @@ public:
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
   void shift1D(Ctxt& ctxt, long i, long k) const override;
 
-  const long getP2R() const override {return 1L;}
+  const long getP2R() const override {return 1L<<(alMod.getR());}
 
-  void encode(zzX& ptxt, const vector<cx_double>& array) const override;
+  void encode(zzX& ptxt, const vector<cx_double>& array, long precision) const;
+  void encode(zzX& ptxt, const vector<cx_double>& array) const override
+  { encode(ptxt, array, /*use default precision*/0); }
   void encode(ZZX& ptxt, const vector<cx_double>& array) const override
   { zzX tmp; encode(tmp, array); ::convert(ptxt, tmp); }
 
@@ -715,44 +715,27 @@ public:
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
 
-  void encode(ZZX& ptxt, const vector< long >& array) const 
-    { rep->encode(ptxt, array); }
-  void encode(ZZX& ptxt, const vector< ZZX >& array) const 
-    { rep->encode(ptxt, array); }
-  void encode(ZZX& ptxt, const NewPlaintextArray& array) const 
-    { rep->encode(ptxt, array); }
-
-  void encode(zzX& ptxt, const vector< long >& array) const 
-    { rep->encode(ptxt, array); }
-  void encode(zzX& ptxt, const vector< zzX >& array) const 
-    { rep->encode(ptxt, array); }
-  void encode(zzX& ptxt, const NewPlaintextArray& array) const 
+  template<class PTXT, class ARRAY>
+  void encode(PTXT& ptxt, const ARRAY& array) const 
     { rep->encode(ptxt, array); }
 
   void encodeUnitSelector(zzX& ptxt, long i) const
     { rep->encodeUnitSelector(ptxt, i); }
 
-  void decode(vector< long  >& array, const ZZX& ptxt) const 
-    { rep->decode(array, ptxt); }
-  void decode(vector< ZZX  >& array, const ZZX& ptxt) const 
-    { rep->decode(array, ptxt); }
-  void decode(NewPlaintextArray& array, const ZZX& ptxt) const 
+  template<class PTXT, class ARRAY>
+  void decode(ARRAY& array, const PTXT& ptxt) const 
     { rep->decode(array, ptxt); }
 
-  void random(vector< long  >& array) const
-    { rep->random(array); }
-  void random(vector< ZZX  >& array) const
+  template<class T>
+  void random(vector< T >& array) const
     { rep->random(array); }
 
   template<class T>
   void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const T& ptxt) const 
     { rep->encrypt(ctxt, pKey, ptxt); }
 
-  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< long >& ptxt) const 
-    { rep->decrypt(ctxt, sKey, ptxt); }
-  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, vector< ZZX >& ptxt) const 
-    { rep->decrypt(ctxt, sKey, ptxt); }
-  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
+  template<class T>
+  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, T& ptxt) const 
     { rep->decrypt(ctxt, sKey, ptxt); }
 
   void buildLinPolyCoeffs(vector<ZZX>& C, const vector<ZZX>& L) const

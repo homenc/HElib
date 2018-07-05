@@ -51,16 +51,17 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
   shift1D(ctxt, 0, amt);
 }
 
-void EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array) const
+void EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
+                              long precision) const
 {
-  double factor = EncryptedArrayCx::encodeScalingFactor(getContext());
+  double factor = alMod.encodeScalingFactor(precision);
   embedInSlots(ptxt, array, getPAlgebra(), factor);
 }
 
 void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt) const
 {
   canonicalEmbedding(array, ptxt, getPAlgebra());
-  double factor = EncryptedArrayCx::encodeScalingFactor(getContext());
+  double factor = alMod.encodeScalingFactor();
   for (auto& x: array) x /= factor;
 }
 

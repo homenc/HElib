@@ -17,25 +17,17 @@ NTL_CLIENT
 #include "NumbTh.h"
 #include "FHEContext.h"
 
-void usage() 
-{
-  cout << "Usage: Test_PAlgebra_x m=<int> [ p=<int> ] [ r=<int> ]" << endl;
-  cout << "  m is an integer that determines Z_m^*" << endl;
-  cout << "  p is an integer that determines the plaintext base [default=2]" << endl;
-  cout << "  r is an integer that determines the lifting [default=1]" << endl;
-  exit(0);
-}
-
 int main(int argc, char *argv[]) 
 {
   ArgMapping amap;
 
   long m=17;
   amap.arg("m", m, "cyclotomic index");
-  amap.note("e.g., m=2047");
+  amap.note("e.g., m=1024, m=2047");
 
   long p=2;
   amap.arg("p", p, "plaintext base");
+  amap.note("use p=-1 for the complex field");
 
   long r=1;
   amap.arg("r", r,  "lifting");
@@ -50,8 +42,6 @@ int main(int argc, char *argv[])
 
   amap.parse(argc, argv);
 
-  cout << "m = " << m << ", p = " << p <<  ", r = " << r << endl;
-
   vector<long> f;
   factorize(f,m);
   cout << "factoring "<<m<<" gives [";
@@ -63,14 +53,10 @@ int main(int argc, char *argv[])
   convert(gens1, gens0);
   convert(ords1, ords0);
 
-  PAlgebra al(m, p, gens1, ords1);
-  al.printout();
-  cout << "\n";
-
-  PAlgebraMod almod(al, r);
-
-  FHEcontext context(m, p, r);
+  FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, 5, 2);
+  context.zMStar.printout();
+  cout << endl;
 
   stringstream s1;
   writeContextBase(s1, context);

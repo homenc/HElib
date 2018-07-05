@@ -62,17 +62,16 @@ void canonicalEmbedding(std::vector<cx_double>& v,
   FHE_TIMER_STOP;
 }
 
-// Roughly the inverse of canonicalEmbedding, except for scaling and rounding
-// issues. When m is a power of two, the strictInverse flag has no effect.
-// Otherwise, calling embedInSlots(f,v,palg,1.0,strictInverse=true) after
-// setting canonicalEmbedding(v, f, palg), is sure to recover the same f, but
-// embedInSlots(f,v,palg,1.0,strictInverse=false) may fail to recover the same f.
+// Roughly the inverse of canonicalEmbedding, except for scaling and
+// rounding issues. Calling embedInSlots(f,v,palg,1.0,strictInverse=true)
+// after setting canonicalEmbedding(v, f, palg), is sure to recover the
+// same f, but embedInSlots(f,v,palg,1.0,strictInverse=false) may return
+// a different "nearby" f.
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
                   const PAlgebra& palg, double scaling, bool strictInverse)
 {
   FHE_TIMER_START;
   long m = palg.getM();
-  if (0==(m & 1)) strictInverse=true; // m even => power of two
   arma::cx_vec avv(m);
   for (long i=1, idx=0; i<=m/2; i++) {
     if (palg.inZmStar(i)) {

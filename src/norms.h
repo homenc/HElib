@@ -14,6 +14,7 @@
 /**
  * @file norms.h - computing various norms of ring elements
  **/
+#include <vector>
 #include <complex>
 #include <NTL/ZZX.h>
 #include <NTL/xdouble.h>

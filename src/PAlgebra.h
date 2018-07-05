@@ -644,18 +644,20 @@ private:
 //! PAlgeberaMod data member.
 class PAlgebraModCx : public PAlgebraModBase {
   const PAlgebra& zMStar;
+  long r; // counts bits of precision
 
 public:
 
-  PAlgebraModCx(const PAlgebra& palg): zMStar(palg) {}
+ PAlgebraModCx(const PAlgebra& palg, long _r): zMStar(palg), r(_r) {
+    assert(r>0 || r<NTL_SP_NBITS);
+  }
 
   PAlgebraModBase* clone() const override { return new PAlgebraModCx(*this); }
   PA_tag getTag() const override { return PA_cx_tag; }
 
   const PAlgebra& getZMStar() const override { return zMStar; }
-
-  long getR() const override {return 1L;}
-  long getPPowR() const override { return 1L; }
+  long getR() const override {return r;}
+  long getPPowR() const override { return 1L<<r; }
   void restoreContext() const override {}
 
   // These function make no sense for PAlgebraModCx
@@ -663,6 +665,16 @@ public:
   { throw std::logic_error("PAlgebraModCx::getFactorsOverZZ undefined"); }
   zzX getMask_zzX(long i, long j) const override
   { throw std::logic_error("PAlgebraModCx::getMask_zzX undefined"); }
+
+  // The scaling factor to use when encoding/decoding plaintext elements
+  double encodeScalingFactor(long precision=0) const {
+    assert(precision>=0 && precision<NTL_SP_BOUND);
+    if (precision==0)
+      precision=(1L<<(r-1));
+    double m = getZMStar().getM();
+    return precision * std::sqrt(m*log2(m));
+    // Experimentally, X * sqrt(m log m) yeilds precision of 1/2X to 1/4X
+  }
 };
 
 
@@ -697,7 +709,8 @@ public:
   template<class type> 
   const PAlgebraModDerived<type>& getDerived(type) const
   { return dynamic_cast< const PAlgebraModDerived<type>& >( *rep ); }
-  
+  const PAlgebraModCx& getCx() const
+  { return dynamic_cast< const PAlgebraModCx& >( *rep ); }
   
   bool operator==(const PAlgebraMod& other) const
   {

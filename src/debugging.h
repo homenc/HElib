@@ -35,10 +35,10 @@ bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
 
 // Debug printing routines for vectors, ZZX'es, print only a few entries
 
-template<class T> std::ostream&
-printVec(std::ostream& s, const NTL::Vec<T>& v, long nCoeffs=40)
+template<class VEC> std::ostream&
+printVec(std::ostream& s, const VEC& v, long nCoeffs=40)
 {
-  long d = v.length();
+  long d = lsize(v);
   if (d<nCoeffs) return s << v; // just print the whole thing
 
   // otherwise print only 1st nCoeffs coefficiants
