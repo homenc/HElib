@@ -511,9 +511,13 @@ class EncryptedArrayCx : public EncryptedArrayBase {
   const FHEcontext& context;
 
 public:
-  // The scaling factor to use when encoding plaintext elements.
-  // This factor dependson the cyclotomic index m, it is O(sqrt(m))
-  static double encodeScalingFactor(long m);
+  explicit EncryptedArrayCx(const FHEcontext& _context): context(_context){}
+
+  // The scaling factor to use when encoding/decoding plaintext elements
+  static double encodeScalingFactor(const FHEcontext& context) {
+    return 16*conv<double>(context.stdev) * context.zMStar.getPhiM();
+    // 16 sigma phi(m) is about 2*B_clean from CKKS17, Lemma 1
+  }
 
   // convertion between vectors of complex, real, and integers
   static void convert(std::vector<cx_double>& out,
@@ -572,7 +576,11 @@ public:
     encode(ptxt, v);
   }
 
-  void decode(vector<cx_double>& array, const ZZX& ptxt) const override;
+  void decode(vector<cx_double>& array, const zzX& ptxt) const;
+  void decode(vector<cx_double>& array, const ZZX& ptxt) const override
+  { zzX tmp; ::convert(tmp, ptxt); decode(array, tmp); }
+  void decode(vector<double>& array, const zzX& ptxt) const
+  { std::vector<cx_double> v; decode(v, ptxt); convert(array, v); }
   void decode(vector<double>& array, const ZZX& ptxt) const override
   { std::vector<cx_double> v; decode(v, ptxt); convert(array, v); }
 
@@ -632,10 +640,9 @@ void plaintextAutomorph(RX& b, const RX& a, long i, long j,
 
 
 //! @brief A "factory" for building EncryptedArrays
-EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
-					const ZZX& G, const PAlgebraMod& alMod);
-
-
+EncryptedArrayBase*
+buildEncryptedArray(const FHEcontext& context, const PAlgebraMod& alMod,
+                    const ZZX& G=NTL::ZZX::zero());
 
 //! @class EncryptedArray
 //! @brief A simple wrapper for a smart pointer to an EncryptedArrayBase.
@@ -649,12 +656,11 @@ public:
 
   //! constructor: G defaults to the monomial X, PAlgebraMod from context
   EncryptedArray(const FHEcontext& context, const ZZX& G = ZZX(1, 1))
-    : alMod(context.alMod), rep(buildEncryptedArray(context,G,context.alMod))
+    : alMod(context.alMod), rep(buildEncryptedArray(context,context.alMod,G))
   { }
   //! constructor: G defaults to F0, PAlgebraMod explicitly given
   EncryptedArray(const FHEcontext& context, const PAlgebraMod& _alMod)
-    : alMod(_alMod), 
-      rep(buildEncryptedArray(context, _alMod.getFactorsOverZZ()[0], _alMod))
+    : alMod(_alMod), rep(buildEncryptedArray(context,_alMod))
   { }
 
   // copy constructor: 

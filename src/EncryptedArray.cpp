@@ -14,25 +14,27 @@
 #include <algorithm>
 #include "zzX.h"
 #include "EncryptedArray.h"
-
 #include "timing.h"
 #include "cloned_ptr.h"
 
 
-
-EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
-					const PAlgebraMod& alMod)
+EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
+					const PAlgebraMod& alMod, const ZZX& G)
 {
+  if (alMod.getTag()==PA_cx_tag)
+    return new EncryptedArrayCx(context);
+
+  // By defualt use the 1st factor F0
+  const ZZX& GG = NTL::IsZero(G)? alMod.getFactorsOverZZ()[0]: G;
+
   switch (alMod.getTag()) {
     case PA_GF2_tag: {
-      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(G), alMod);
+      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(GG), alMod);
     }
-
     case PA_zz_p_tag: {
       zz_pBak bak; bak.save(); alMod.restoreContext();
-      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(G), alMod);
+      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(GG), alMod);
     }
-
     default: return NULL;
   }
 }
