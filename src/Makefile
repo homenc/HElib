@@ -59,12 +59,7 @@ OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet
 
 TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_ThinEvalMap_x Test_bootstrapping_x Test_ThinBootstrapping_x Test_PtrVector_x Test_intraSlot_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x Test_Bin_IO_x
 
-all: fhe.a makedep.d
-
-# if makedep.d exists in the current directory, include it
-include $(wildcard makedep.d)
-
-
+all: fhe.a
 
 check:
 	$(MAKE) check_General
@@ -79,7 +74,7 @@ check:
 	$(MAKE) check_binaryArith
 	$(MAKE) check_binaryCompare
 	$(MAKE) check_tableLookup
-	$(MAKE) check_Bin_IO_x
+	$(MAKE) check_Bin_IO
 
 check_General: Test_General_x 
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
@@ -127,7 +122,7 @@ check_binaryCompare: Test_binaryCompare_x
 check_tableLookup: Test_tableLookup_x
 	./Test_tableLookup_x
 
-check_Bin_IO_x: Test_Bin_IO_x
+check_Bin_IO: Test_Bin_IO_x
 	./Test_Bin_IO_x p=2 r=2 m=127
 	./Test_Bin_IO_x p=275 m=127
 
@@ -157,28 +152,26 @@ test: $(TESTPROGS)
 
 obj: $(OBJ)
 
+DoubleCRT.o: DoubleCRT.cpp
+	$(CC) $(CFLAGS) -c DoubleCRT.cpp
+
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $<
 
 fhe.a: $(OBJ)
 	$(AR) $(ARFLAGS) fhe.a $(OBJ)
+	g++ -std=gnu++11 -MM *.cpp > makedep.d
 
 ./%_x: %.cpp fhe.a
 	$(CC) $(CFLAGS) -o $@ $< fhe.a $(LDLIBS)
 
-# old-style make depend (FIXME: change to modern style?)
-makedep.d: fhe.a
-	g++ -std=gnu++11 -MM *.cpp > makedep.d
-
-depend:
-	g++ -std=gnu++11 -MM *.cpp > makedep.d
-
-# if makedep.d exists in the current directory, include it
-include $(wildcard makedep.d)
-
 clean:
-	rm -f *.o *_x *_x.exe *.a core.*
+	rm -f *.d *.o *_x *_x.exe *.a core.*
 	rm -rf *.dSYM
+
+# old-style make depend (FIXME: change to modern style?)
+makedep:
+	g++ -std=gnu++11 -MM *.cpp > makedep.d
 
 info:
 	: HElib require NTL version 10.0.0 or higher
