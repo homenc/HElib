@@ -15,12 +15,12 @@
  * @file DoubleCRT.h
  * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
  **/
-
+#include "zzX.h"
 #include "NumbTh.h"
 #include "IndexMap.h"
-#include "sample.h"
-#include "FHEContext.h"
 #include "timing.h"
+
+class FHEcontext;
 
 /**
 * @class DoubleCRTHelper
@@ -33,9 +33,7 @@ private:
   long val;
 
 public:
-  DoubleCRTHelper(const FHEcontext& context) { 
-    val = context.zMStar.getPhiM(); 
-  }
+  DoubleCRTHelper(const FHEcontext& context);
 
   /** @brief the init method ensures that all rows have the same size */
   virtual void init(vec_long& v) { 
@@ -336,51 +334,19 @@ public:
   void randomize(const ZZ* seed=NULL);
 
   //! @brief Coefficients are -1/0/1, Prob[0]=1/2
-  void sampleSmall() {
-    zzX poly;
-    ::sampleSmall(poly,context.zMStar); // degree-(phi(m)-1) polynomial
-    *this = poly; // convert to DoubleCRT
-  }
-  void sampleSmallBounded() {
-    zzX poly;
-    ::sampleSmallBounded(poly,context.zMStar); // degree-(phi(m)-1) polynomial
-    *this = poly; // convert to DoubleCRT
-  }
+  void sampleSmall();
+  void sampleSmallBounded();
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
-  void sampleHWt(long Hwt) {
-    zzX poly;
-    ::sampleHWt(poly,context.zMStar,Hwt);
-    *this = poly; // convert to DoubleCRT
-  }
+  void sampleHWt(long Hwt);
 
   //! @brief Coefficients are Gaussians
-  void sampleGaussian(double stdev=0.0) {
-    if (stdev==0.0) stdev=to_double(context.stdev); 
-    zzX poly;
-    ::sampleGaussian(poly, context.zMStar, stdev);
-    *this = poly; // convert to DoubleCRT
-  }
-  void sampleGaussianBounded(double stdev=0.0) {
-    if (stdev==0.0) stdev=to_double(context.stdev);
-    zzX poly;
-    ::sampleGaussianBounded(poly, context.zMStar, stdev);
-    *this = poly; // convert to DoubleCRT
-  }
-
+  void sampleGaussian(double stdev=0.0);
+  void sampleGaussianBounded(double stdev=0.0);
 
   //! @brief Coefficients are uniform in [-B..B]
-  void sampleUniform(const ZZ& B) {
-    ZZX poly;
-    ::sampleUniform(poly, context.zMStar, B);
-    *this = poly;
-  }
-  void sampleUniform(long B) {
-    zzX poly;
-    ::sampleUniform(poly, context.zMStar, B);
-    *this = poly;
-  }
-
+  void sampleUniform(const ZZ& B);
+  void sampleUniform(long B);
 
   // used to implement modulus switching
   void scaleDownToSet(const IndexSet& s, long ptxtSpace);

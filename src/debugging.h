@@ -14,13 +14,18 @@
 //! @file debugging.h
 //! @brief debugging utilities
 #include <iostream>
-#include <NTL/ZZ.h>
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include <NTL/ZZX.h>
+#include "NumbTh.h"
 
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
+
+// forward declerations
+class Ctxt;
+class FHESecKey;
+class EncryptedArray;
+class NewPlaintextArray;
 
 extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;

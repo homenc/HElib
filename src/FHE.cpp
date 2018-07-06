@@ -14,6 +14,7 @@
 #include <queue> // used in the breadth-first search in setKeySwitchMap
 #include "timing.h"
 #include "binio.h"
+#include "sample.h"
 
 
 /******** Utility function to generate RLWE instances *********/

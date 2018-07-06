@@ -10,8 +10,13 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 // debugging.cpp - debugging utilities
+#include <NTL/xdouble.h>
 #include "debugging.h"
 #include "norms.h"
+#include "FHEContext.h"
+#include "Ctxt.h"
+#include "EncryptedArray.h"
+
 NTL_CLIENT
 
 FHESecKey* dbgKey;

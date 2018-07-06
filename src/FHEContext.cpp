@@ -14,6 +14,7 @@
 #include "EvalMap.h"
 #include "powerful.h"
 #include "binio.h"
+#include "sample.h"
 
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
 {

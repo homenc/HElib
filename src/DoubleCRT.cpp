@@ -20,10 +20,12 @@
  */
 #include <NTL/ZZVec.h>
 #include <NTL/BasicThreadPool.h>
-#include "binio.h"
 
-#include "DoubleCRT.h"
 #include "timing.h"
+#include "binio.h"
+#include "sample.h"
+#include "DoubleCRT.h"
+#include "FHEContext.h"
 
 // A threaded implementation of DoubleCRT operations
 
@@ -369,6 +371,10 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 
 
 // *****************************************************
+DoubleCRTHelper::DoubleCRTHelper(const FHEcontext& context)
+{ 
+  val = context.zMStar.getPhiM(); 
+}
 
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
@@ -993,6 +999,58 @@ void DoubleCRT::randomize(const ZZ* seed)
   }
 }
 
+// Coefficients are -1/0/1, Prob[0]=1/2
+void DoubleCRT::sampleSmall()
+{
+  zzX poly;
+  ::sampleSmall(poly,context.zMStar); // degree-(phi(m)-1) polynomial
+  *this = poly; // convert to DoubleCRT
+}
+void DoubleCRT::sampleSmallBounded()
+{
+  zzX poly;
+  ::sampleSmallBounded(poly,context.zMStar); // degree-(phi(m)-1) polynomial
+  *this = poly; // convert to DoubleCRT
+}
+
+// Coefficients are -1/0/1 with pre-specified number of nonzeros
+void DoubleCRT::sampleHWt(long Hwt)
+{
+  zzX poly;
+  ::sampleHWt(poly,context.zMStar,Hwt);
+  *this = poly; // convert to DoubleCRT
+}
+
+// Coefficients are Gaussians
+void DoubleCRT::sampleGaussian(double stdev)
+{
+  if (stdev==0.0) stdev=to_double(context.stdev); 
+  zzX poly;
+  ::sampleGaussian(poly, context.zMStar, stdev);
+  *this = poly; // convert to DoubleCRT
+}
+void DoubleCRT::sampleGaussianBounded(double stdev)
+{
+  if (stdev==0.0) stdev=to_double(context.stdev);
+  zzX poly;
+  ::sampleGaussianBounded(poly, context.zMStar, stdev);
+  *this = poly; // convert to DoubleCRT
+}
+
+
+// Coefficients are uniform in [-B..B]
+void DoubleCRT::sampleUniform(const ZZ& B)
+{
+  ZZX poly;
+  ::sampleUniform(poly, context.zMStar, B);
+  *this = poly;
+}
+void DoubleCRT::sampleUniform(long B)
+{
+  zzX poly;
+  ::sampleUniform(poly, context.zMStar, B);
+  *this = poly;
+}
 
 void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 {
