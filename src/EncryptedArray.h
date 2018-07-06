@@ -552,9 +552,12 @@ public:
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
   void shift1D(Ctxt& ctxt, long i, long k) const override;
 
-  const long getP2R() const override {return 1L<<(alMod.getR());}
+  const long getP2R() const override {return alMod.getPPowR();}
 
   void encode(zzX& ptxt, const vector<cx_double>& array, long precision) const;
+
+  // The versions below use precision=0, where the encode/decode
+  // error bound defaults to at most 2^{-alMod.getR()-1}
   void encode(zzX& ptxt, const vector<cx_double>& array) const override
   { encode(ptxt, array, /*use default precision*/0); }
   void encode(ZZX& ptxt, const vector<cx_double>& array) const override

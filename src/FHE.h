@@ -109,7 +109,7 @@ public:
   //! @brief Read a key-switching matrix from input
   void readMatrix(istream& str, const FHEcontext& context);
 
-  // Raw IO
+  //! Raw IO
   void read(istream& str, const FHEcontext& context);
   void write(ostream& str) const;
 
@@ -156,8 +156,7 @@ private:
   // use when re-linearizing s_i(X^n). 
   std::vector< std::vector<long> > keySwitchMap;
 
-  NTL::Vec<long> KS_strategy; // NTL Vec's support I/O, which is
-                             // more convenient
+  NTL::Vec<long> KS_strategy; // NTL Vec's support I/O, which is more convenient
 
   // bootstrapping data
 
@@ -196,7 +195,7 @@ public:
   long getPtxtSpace() const { return pubEncrKey.ptxtSpace; }
   bool keyExists(long keyID) { return (keyID<(long)skSizes.size()); }
 
-  //! @brief The Hamming weight of the secret key
+  //! @brief The size of the secret key
   long getSKeySize(long keyID=0) const {return skSizes.at(keyID);}
 
   ///@{
@@ -257,9 +256,19 @@ public:
     KS_strategy[index] = val;
   }
 
-  //! @brief Encrypts plaintext, result returned in the ciphertext argument.
-  //! The returned value is the plaintext-space for that ciphertext. When
-  //! called with highNoise=true, returns a ciphertext with noise level~q/8.
+  /**
+   * Encrypts plaintext, result returned in the ciphertext argument. When
+   * called with highNoise=true, returns a ciphertext with noise level~q/8.
+   * For BGV, ptxtSpace is the intended plaintext space, which cannot be
+   *   co-prime with pubEncrKey.ptxtSpace. The returned value is the
+   *   plaintext-space for the resulting ciphertext, which is their GCD/
+   * For CKKS, ptxtSpace is a bound on the size of the complex plaintext
+   *   elements that are encoded in ptxt (before scaling). It is assumed that
+   *   they are scaled duing encoding by context.alMod.encodeScalingFactor().
+   *   The returned value is the scaling factor in the resulting ciphertexe
+   *   (which can be larger than the input scaling). The same returned factor
+   *   is also recorded in ctxt.ratFactor.
+   **/
   long Encrypt(Ctxt &ciphertxt,
                const ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
   long Encrypt(Ctxt &ciphertxt,
@@ -268,14 +277,13 @@ public:
     convert(tmp, plaintxt);
     Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
   }
+  long CKKSencrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSize) const;
+
   // These methods are overridden by secret-key Encrypt
   virtual long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0) const
   { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
   virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const
   { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
-
-  // These functions are virtual, to make it easier to override
-  // them for secret-key encryption
 
   bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
@@ -291,7 +299,8 @@ public:
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
 
-  // A hack to increase the plaintext space
+  // A hack to increase the plaintext space, you'd better
+  // know what you are doing when using it.
   void hackPtxtSpace(long p2r) { pubEncrKey.ptxtSpace = p2r; }
 };
   

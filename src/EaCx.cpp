@@ -54,6 +54,8 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 void EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
                               long precision) const
 {
+  // This factor ensures that encode/decode introduce less than 1/precision
+  // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}.  
   double factor = alMod.encodeScalingFactor(precision);
   embedInSlots(ptxt, array, getPAlgebra(), factor);
 }

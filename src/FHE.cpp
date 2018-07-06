@@ -348,14 +348,27 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
 }
 
 
-// Encrypts plaintext, result returned in the ciphertext argument. The
-// returned value is the plaintext-space for that ciphertext. When called
-// with highNoise=true, returns a ciphertext with noise level~q/8.
+// Encrypts plaintext, result returned in the ciphertext argument. When
+// called with highNoise=true, returns a ciphertext with noise level~q/8.
+// For BGV, ptxtSpace is the intended plaintext space, which cannot be
+//     co-prime with pubEncrKey.ptxtSpace. The returned value is the
+//     plaintext-space for the resulting ciphertext, which is their GCD/
+// For CKKS, ptxtSpace is a bound on the size of the complex plaintext
+//     elements that are encoded in ptxt (before scaling). It is assumed that
+//     they are scaled duing encoding by context.alMod.encodeScalingFactor().
+//     The returned value is the scaling factor in the resulting ciphertexe
+//     (which can be larger than the input scaling). The same returned factor
+//     is also recorded in ctxt.ratFactor.
 long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 			bool highNoise) const
 {
   FHE_TIMER_START;
+  if (getContext().alMod.getTag()==PA_cx_tag)
+    return CKKSencrypt(ctxt, ptxt, ptxtSpace);
+  // NOTE: Is taking the alMod from the context the right thing to do here?
+
   assert(this == &ctxt.pubKey);
+  cout << "FHEPubKey::Encrypt\n";
 
   if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mistamtch
     ptxtSpace = GCD(ptxtSpace, pubEncrKey.ptxtSpace);
@@ -434,6 +447,57 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     ctxt.highWaterMark = ctxt.findBaseLevel();
   }
   return ptxtSpace;
+}
+
+// FIXME: Some code duplication between here and Encrypt above
+long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
+{
+  assert(this == &ctxt.pubKey);
+
+  cout << "FHEPubKey::CKKSencrypt\n";
+
+  // generate a random encryption of zero from the public encryption key
+  ctxt = pubEncrKey;  // already an encryption of zero, just not a random one
+
+  // choose a random small scalar r and a small random error vector e,
+  // then set ctxt = r*pubEncrKey + ptstSpace*e + (ptxt,0)
+  DoubleCRT e(context, context.ctxtPrimes);
+  DoubleCRT r(context, context.ctxtPrimes);
+  r.sampleSmall();
+
+  double stdev = to_double(context.stdev);
+  if (context.zMStar.getPow2()==0) // not power of two
+    stdev *= sqrt(context.zMStar.getM());
+
+  for (size_t i=0; i<ctxt.parts.size(); i++) {  // add noise to all the parts
+    ctxt.parts[i] *= r;
+    e.sampleGaussian(stdev);
+    ctxt.parts[i] += e;
+  }
+
+  // Compute the noise magnitude, and ensure that the plaintext is
+  // scaled up by at least this much
+  double rVar = (context.zMStar.getPow2()==0)?
+    (context.zMStar.getPhiM()/2.0) : (context.zMStar.getM()/2.0);
+  double eVar = stdev*stdev;
+  double sVar = skSizes[0];
+  double noiseVar = conv<double>(pubEncrKey.noiseVar)*rVar + sVar*(eVar+1);
+
+  double factor = getContext().alMod.getCx().encodeScalingFactor();
+  if (factor*factor < noiseVar) { // scale up some more
+    long extraFactor = ceil(std::sqrt(noiseVar)/factor);
+    factor *= extraFactor;
+    ctxt.parts[0] += ptxt * extraFactor;
+  }
+  else // no need for extra scaling
+    ctxt.parts[0] += ptxt;
+
+  ctxt.noiseVar = noiseVar + (factor*ptxtSize)*(factor*ptxtSize)*rVar;
+  ctxt.ptxtSpace = 1;
+  ctxt.highWaterMark = ctxt.findBaseLevel();
+  ctxt.ratFactor = factor;
+
+  return std::round(factor);
 }
 
 bool FHEPubKey::operator==(const FHEPubKey& other) const
@@ -656,18 +720,23 @@ bool FHESecKey::operator==(const FHESecKey& other) const
 // FHESecKey object, then the procedure below generates a corresponding public
 // encryption key.
 // It is assumed that the context already contains all parameters.
-long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
+long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long size,
 			     long ptxtSpace, long maxDegKswitch)
 {
+  bool ckks = (getContext().alMod.getTag()==PA_cx_tag);
+  
   if (sKeys.empty()) { // 1st secret-key, generate corresponding public key
     if (ptxtSpace<2)
-      ptxtSpace = context.alMod.getPPowR(); // default plaintext space is p^r
+      ptxtSpace = ckks? 1 : context.alMod.getPPowR();
+    // default plaintext space is p^r for BGV, 1 for CKKS
 
     // allocate space
     pubEncrKey.parts.assign(2,CtxtPart(context,context.ctxtPrimes));
     // Choose a new RLWE instance
     pubEncrKey.noiseVar
       = RLWE(pubEncrKey.parts[0], pubEncrKey.parts[1], sKey, ptxtSpace);
+    if (ckks)
+      pubEncrKey.ratFactor = sqrt(pubEncrKey.noiseVar);
 
     // make parts[0],parts[1] point to (1,s)
     pubEncrKey.parts[0].skHandle.setOne();
@@ -677,12 +746,15 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long Hwt,
     pubEncrKey.primeSet = context.ctxtPrimes;
     pubEncrKey.ptxtSpace = ptxtSpace;
   }
-  skSizes.push_back(Hwt); // record the Hamming weight of the new secret-key
+  skSizes.push_back(size); // record the size of the new secret-key
   sKeys.push_back(sKey); // add to the list of secret keys
   long keyID = sKeys.size()-1; // not thread-safe?
 
   for (long e=2; e<=maxDegKswitch; e++)
     GenKeySWmatrix(e,1,keyID,keyID); // s^e -> s matrix
+
+  if (keyID==0)
+    pubEncrKey.highWaterMark = pubEncrKey.findBaseLevel();
 
   return keyID; // return the index where this key is stored
 }
@@ -826,32 +898,59 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
                           long ptxtSpace, long skIdx) const
 {
   FHE_TIMER_START;
+
+  bool ckks = (getContext().alMod.getTag()==PA_cx_tag);
+  // NOTE: Is taking the alMod from the context the right thing to do here?
+
   assert(((FHEPubKey*)this) == &ctxt.pubKey);
 
-  if (ptxtSpace<2) 
-    ptxtSpace = pubEncrKey.ptxtSpace; // default plaintext space is p^r
-  assert(ptxtSpace >= 2);
+  long ptxtSize = 0;
+  if (ckks) {
+    ptxtSize = ptxtSpace;
+    ptxtSpace = 1;
+  }
+  else { // BGV
+    if (ptxtSpace<2) 
+      ptxtSpace = pubEncrKey.ptxtSpace; // default plaintext space is p^r
+    assert(ptxtSpace >= 2);
+  }
+  ctxt.ptxtSpace = ptxtSpace;
 
   ctxt.primeSet = context.ctxtPrimes; // initialize the primeSet
   {CtxtPart tmpPart(context, context.ctxtPrimes);
   ctxt.parts.assign(2,tmpPart);}      // allocate space
 
   // Set Ctxt bookeeping parameters
-  ctxt.ptxtSpace = ptxtSpace;
 
   // make parts[0],parts[1] point to (1,s)
   ctxt.parts[0].skHandle.setOne();
   ctxt.parts[1].skHandle.setBase(skIdx);
 
   const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
-  ctxt.noiseVar           // Sample a new RLWE instance
-    = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace)
-    + (ptxtSpace*ptxtSpace)/4;
+  // Sample a new RLWE instance
+  double noiseVar = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
 
-  // add in the plaintext
-  ctxt.addConstant(ptxt);
-  ctxt.highWaterMark = ctxt.findBaseLevel();
-  return ptxtSpace;
+  if (ckks) {
+    double factor = getContext().alMod.getCx().encodeScalingFactor();
+    if (factor*factor < noiseVar) { // scale up some more
+      long extraFactor = ceil(std::sqrt(noiseVar)/factor);
+      factor *= extraFactor;
+      ctxt.parts[0] += extraFactor * ptxt;
+    }
+    else ctxt.ratFactor = factor;
+
+    double rVar = (getContext().zMStar.getPow2()==0)?
+      (getContext().zMStar.getPhiM()/4.0) : (getContext().zMStar.getM()/4.0);
+    ctxt.noiseVar = noiseVar + (factor*ptxtSize)*(factor*ptxtSize)*rVar;
+    ctxt.highWaterMark = ctxt.findBaseLevel();
+    return std::round(factor);
+  }
+  else { // BGV
+    ctxt.noiseVar = noiseVar;
+    ctxt.highWaterMark = ctxt.findBaseLevel();
+    ctxt.addConstant(ptxt);  // add in the plaintext
+    return ctxt.ptxtSpace;
+  }
 }
 
 
