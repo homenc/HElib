@@ -48,31 +48,31 @@
  * secret-key polynomial s' into a canonical cipehrtext (i.e. a two-part
  * ciphertext with respect to (1,s)). The matrix W is a 2-by-t matrix of
  * DoubleCRT objects. The bottom row are just (psudo)random elements. Then
- * for column i, if the bottom element is ai then the top element is set as
- *     bi = P*Bi*s' + p*ei - s * ai mod P*q0,
- * where p is the plaintext space (i.e. 2 or 2^r) and Bi is the product of the
- * digits-sizes corresponding to columns 0...i-1. (For example if we have
- * digit sizes 3,5,7 then B0=1, B1=3, B2=15 and B3=105.) Also, q0 is the
- * product of all the "ciphertext primes" and P is roughly the product of all
- * the special primes. (Actually, if Q is the product of all the special
- * primes then P=Q*(Q^{-1} mod p).)
+ * for column j, if the bottom element is aj then the top element is set as
+ *     bj = P*Bj*s' + p*ej - s * aj mod P*q0,
+ * where p is the plaintext space (i.e. 2 or 2^r, or 1 for CKKS) and Bj
+ * is the product of the digits-sizes corresponding to columns 0...i-1.
+ * (For example if we have digit sizes 3,5,7 then B0=1, B1=3, B2=15 and
+ * B3=105.) Also, q0 is the product of all the "ciphertext primes" and
+ * P is roughly the product of all the special primes. (Actually, for BGV,
+ * if Q is the product of all the special primes then P=Q*(Q^{-1} mod p).)
  * 
  * In this implementation we save some space, by keeping only a PRG seed for
  * generating the pseudo-random elements, rather than the elements themselves.
  *
- * To convert a cipehrtext part R, we break R into digits R = sum_i Bi Ri,
- * then set (q0,q1)^T = sum_i Ri * column-i. Note that we have
- * <(1,s),(q0,q1)> = sum_i Ri*(s*ai - s*ai + p*ei +P*Bi*s')
- *       = P * sum_i Bi*Ri * s' + p sum_i Ri*ei
+ * To convert a cipehrtext part R, we break R into digits R = sum_j Bj Rj,
+ * then set (q0,q1)^T = sum_j Rj * column-j. Note that we have
+ * <(1,s),(q0,q1)> = sum_j Rj*(s*aj - s*aj + p*ej +P*Bj*s')
+ *       = P * sum_j Bj*Rj * s' + p sum_j Rj*ej
  *       = P * R * s' + p*a-small-element (mod P*q0)
- * where the last element is small since the ei's are small and |Ri|<B.
+ * where the last element is small since the ej's are small and |Rj|<B.
  * Note that if the ciphertext is encrypted relative to plaintext space p'
- * and then key-switched with matrices W relative to plaintext space p, then
- * we get a mew ciphertxt with noise p'*small+p*small, so it is valid relative
- * to plaintext space GCD(p',p).
+ * and then key-switched with matrices W relative to plaintext space p,
+ * then we get a mew ciphertxt with noise p'*small+p*small, so it is valid
+ * relative to plaintext space GCD(p',p).
  *
  * The matrix W is defined modulo Q>t*B*sigma*q0 (with sigma a bound on the
- * size of the ei's), and Q is the product of all the small primes in our
+ * size of the ej's), and Q is the product of all the small primes in our
  * moduli chain. However, if p is much smaller than B then is is enough to
  * use W mod Qi with Qi a smaller modulus, Q>p*sigma*q0. Also note that if
  * p<Br then we will be using only first r columns of the matrix W.
@@ -83,9 +83,9 @@ public:
   long     toKeyID;  // Index of the key s that we are switching into
   long     ptxtSpace;// either p or p^r
 
-  vector<DoubleCRT> b;// The top row, consisting of the bi's
-  ZZ prgSeed;         // a seed to generate the random ai's in the bottom row
-  xdouble noiseVar;   // estimate for the noise variance in each column
+  std::vector<DoubleCRT> b;// The top row, consisting of the bj's
+  NTL::ZZ prgSeed;   // a seed to generate the random aj's in the bottom row
+  NTL::xdouble noiseVar;   // estimate for the noise variance in each column
 
   explicit
   KeySwitch(long sPow=0, long xPow=0, long fromID=0, long toID=0, long p=0):
@@ -270,17 +270,17 @@ public:
    *   is also recorded in ctxt.ratFactor.
    **/
   long Encrypt(Ctxt &ciphertxt,
-               const ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
+               const NTL::ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
   long Encrypt(Ctxt &ciphertxt,
                const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
-    ZZX tmp;
+    NTL::ZZX tmp;
     convert(tmp, plaintxt);
     Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
   }
-  long CKKSencrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSize) const;
+  long CKKSencrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSize) const;
 
   // These methods are overridden by secret-key Encrypt
-  virtual long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0) const
+  virtual long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const
   { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
   virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const
   { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
@@ -312,7 +312,7 @@ public:
 class FHESecKey: public FHEPubKey { // The secret key
   FHESecKey(){} // disable default constructor
 public:
-  vector<DoubleCRT> sKeys; // The secret key(s) themselves
+  std::vector<DoubleCRT> sKeys; // The secret key(s) themselves
 
 public:
 
@@ -360,21 +360,21 @@ public:
 		      long toKeyIdx=0, long ptxtSpace=0);
 
   // Decryption
-  void Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt) const;
+  void Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt) const;
 
   //! @brief Debugging version, returns in f the polynomial
   //! before reduction modulo the ptxtSpace
-  void Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt, ZZX& f) const;
+  void Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt, NTL::ZZX& f) const;
 
   //! @brief Symmetric encryption using the secret key.
-  long skEncrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace, long skIdx) const;
+  long skEncrypt(Ctxt &ctxt, const NTL::ZZX& ptxt, long ptxtSpace, long skIdx) const;
   long skEncrypt(Ctxt &ctxt, const zzX& ptxt, long ptxtSpace, long skIdx) const {
-    ZZX tmp;
+    NTL::ZZX tmp;
     convert(tmp,ptxt);
     skEncrypt(ctxt, tmp, ptxtSpace, skIdx);
   }
   // These methods override the public-key Encrypt methods
-  long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0) const override
+  long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const override
   { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, 0); }
   long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const override
   { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, 0); }
@@ -451,7 +451,7 @@ void addTheseMatrices(FHESecKey& sKey,
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
 //! Returns the variance of the noise canonical-embedding entries
 double RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
-	  ZZ* prgSeed=NULL);
+	  NTL::ZZ* prgSeed=NULL);
 
 //! Same as RLWE, but assumes that c1 is already chosen by the caller
 double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);

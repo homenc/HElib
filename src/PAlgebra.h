@@ -667,12 +667,12 @@ public:
   { throw std::logic_error("PAlgebraModCx::getMask_zzX undefined"); }
 
   // The scaling factor to use when encoding/decoding plaintext elements
-  double encodeScalingFactor(long precision=0) const {
+  long encodeScalingFactor(long precision=0) const {
     assert(precision>=0 && precision<NTL_SP_BOUND);
     if (precision==0)
       precision=(1L<<r);
     double m = getZMStar().getM();
-    return precision * std::sqrt(m*log2(m));
+    return ceil(precision * std::sqrt(m*log2(m)));
     // Experimentally, X * sqrt(m log m) yeilds precision of 1/2X to 1/4X
   }
 };

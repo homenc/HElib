@@ -484,7 +484,7 @@ long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
   double sVar = skSizes[0];
   double noiseVar = conv<double>(pubEncrKey.noiseVar)*rVar + sVar*(eVar+1);
 
-  double factor = getContext().alMod.getCx().encodeScalingFactor();
+  long factor = getContext().alMod.getCx().encodeScalingFactor();
   if (factor*factor < noiseVar) { // scale up some more
     long extraFactor = ceil(std::sqrt(noiseVar)/factor);
     factor *= extraFactor;
@@ -493,12 +493,12 @@ long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
   else // no need for extra scaling
     ctxt.parts[0] += ptxt;
 
-  ctxt.noiseVar = noiseVar + (factor*ptxtSize)*(factor*ptxtSize)*rVar;
+  ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
   ctxt.ptxtSpace = 1;
   ctxt.highWaterMark = ctxt.findBaseLevel();
   ctxt.ratFactor = factor;
 
-  return std::round(factor);
+  return factor;
 }
 
 bool FHEPubKey::operator==(const FHEPubKey& other) const
@@ -932,7 +932,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
   double noiseVar = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
 
   if (ckks) {
-    double factor = getContext().alMod.getCx().encodeScalingFactor();
+    long factor = getContext().alMod.getCx().encodeScalingFactor();
     if (factor*factor < noiseVar) { // scale up some more
       long extraFactor = ceil(std::sqrt(noiseVar)/factor);
       factor *= extraFactor;
@@ -942,9 +942,9 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 
     double rVar = (getContext().zMStar.getPow2()==0)?
       (getContext().zMStar.getPhiM()/4.0) : (getContext().zMStar.getM()/4.0);
-    ctxt.noiseVar = noiseVar + (factor*ptxtSize)*(factor*ptxtSize)*rVar;
+    ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
     ctxt.highWaterMark = ctxt.findBaseLevel();
-    return std::round(factor);
+    return factor;
   }
   else { // BGV
     ctxt.noiseVar = noiseVar;
