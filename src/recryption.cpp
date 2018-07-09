@@ -457,7 +457,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     BasicAutomorphPrecon hoisting(ctxt);
     NTL_EXEC_RANGE(d, first, last)
         for (long j = first; j < last; j++) { // process jth Frobenius 
-          frob[j] = *hoisting.frobeniusAutomorph(j);
+          hoisting.frobeniusAutomorph(frob[j], j);
           frob[j].cleanUp();
           // FIXME: not clear if we should call cleanUp here
         }
@@ -591,7 +591,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     BasicAutomorphPrecon hoisting(ctxt);
 
     for (long j = 0; j < d; j++) { // process jth Frobenius 
-      tmp1 = *hoisting.frobeniusAutomorph(j);
+      hoisting.frobeniusAutomorph(tmp1, j);
       tmp1.cleanUp();
       // FIXME: not clear if we should call cleanUp here
 

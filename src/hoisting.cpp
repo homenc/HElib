@@ -36,28 +36,32 @@ struct BasicAutomorphPrecon::Impl {
         ctxt.parts[1].breakIntoDigits(polyDigits, nDigits);
     }
 
-    std::shared_ptr<Ctxt> automorph(long k) const {
+    void automorph(Ctxt &result, long k) const {
         FHE_TIMER_START;
 
         // A hack: record this automorphism rather than actually performing it
         if (isSetAutomorphVals()) { // defined in NumbTh.h
             recordAutomorphVal(k);
-            return make_shared<Ctxt>(ctxt);
+            result = ctxt;
+            return;
         }
 
-        if (k==1 || ctxt.isEmpty()) return make_shared<Ctxt>(ctxt);// nothing to do
+        if (k==1 || ctxt.isEmpty()) {
+            result = ctxt;// nothing to do
+            return;
+        }
 
         const FHEcontext& context = ctxt.getContext();
         const FHEPubKey& pubKey = ctxt.getPubKey();
-        shared_ptr<Ctxt> result = make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
-        result->noiseVar = noise; // noise estimate
+        result.clear(); // empty ctxt
+        result.noiseVar = noise; // noise estimate
 
         if (ctxt.parts.size()==1) { // only constant part, no need to key-switch
             CtxtPart tmpPart = ctxt.parts[0];
             tmpPart.automorph(k);
             tmpPart.addPrimesAndScale(context.specialPrimes);
-            result->addPart(tmpPart, /*matchPrimeSet=*/true);
-            return result;
+            result.addPart(tmpPart, /*matchPrimeSet=*/true);
+            return;
         }
 
         // Ensure that we have a key-switching matrices for this automorphism
@@ -75,29 +79,40 @@ struct BasicAutomorphPrecon::Impl {
         CtxtPart tmpPart = ctxt.parts[0];
         tmpPart.automorph(amt);
         tmpPart.addPrimesAndScale(context.specialPrimes);
-        result->addPart(tmpPart, /*matchPrimeSet=*/true);
+        result.addPart(tmpPart, /*matchPrimeSet=*/true);
 
         // Then rotate the digits and key-switch them
         vector<DoubleCRT> tmpDigits = polyDigits;
         for (auto&& tmp: tmpDigits) // rotate each of the digits
             tmp.automorph(amt);
 
-        result->keySwitchDigits(W, tmpDigits); // key-switch the digits
+        result.keySwitchDigits(W, tmpDigits); // key-switch the digits
 
         long m = context.zMStar.getM();
         if ((amt-k)%m != 0) { // amt != k (mod m), more automorphisms to do
             k = MulMod(k, InvMod(amt,m), m); // k *= amt^{-1} mod m
-            result->smartAutomorph(k);       // call usual smartAutomorph
+            result.smartAutomorph(k);       // call usual smartAutomorph
         }
+    }
+
+    std::shared_ptr<Ctxt> automorph(long k) const {
+        shared_ptr<Ctxt> result = make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
+        automorph(*result, k);
         return result;
     }
 
-    std::shared_ptr<Ctxt> frobeniusAutomorph(long j) const {
+    void frobeniusAutomorph(Ctxt &result, long j) const {
         long m = ctxt.getContext().zMStar.getPhiM();
         long p = ctxt.getContext().zMStar.getP();
         long d = ctxt.getContext().zMStar.getOrdP();
         j = mcMod(j, d);
-        return automorph(NTL::PowerMod(p, j, m));
+        automorph(result, NTL::PowerMod(p, j, m));
+    }
+
+    std::shared_ptr<Ctxt> frobeniusAutomorph(long j) const {
+        shared_ptr<Ctxt> result = make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
+        frobeniusAutomorph(*result, j);
+        return result;
     }
 };
 
@@ -112,9 +127,19 @@ std::shared_ptr<Ctxt> BasicAutomorphPrecon::automorph(long k) const {
     return nullptr;
 }
 
+void BasicAutomorphPrecon::automorph(Ctxt &result, long k) const {
+    if (impl_)
+        impl_->automorph(result, k);
+}
+
 std::shared_ptr<Ctxt> BasicAutomorphPrecon::frobeniusAutomorph(long j) const {
     if (impl_)
         return impl_->frobeniusAutomorph(j);
     return nullptr;
+}
+
+void BasicAutomorphPrecon::frobeniusAutomorph(Ctxt &result, long j) const {
+    if (impl_)
+        impl_->frobeniusAutomorph(result, j);
 }
 
