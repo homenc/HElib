@@ -22,20 +22,20 @@
 
 
 //! A simple permutation is just a vector with p[i]=\pi_i
-typedef Vec<long> Permut;
+typedef NTL::Vec<long> Permut;
 
 //! Apply a permutation to a vector, out[i]=in[p1[i]] (NOT in-place)
 template<class T>
-void applyPermToVec(Vec<T>& out, const Vec<T>& in, const Permut& p1);
+void applyPermToVec(NTL::Vec<T>& out, const NTL::Vec<T>& in, const Permut& p1);
 template<class T>
-void applyPermToVec(vector<T>& out, const vector<T>& in, const Permut& p1);
+void applyPermToVec(std::vector<T>& out, const std::vector<T>& in, const Permut& p1);
 
 //! Apply two permutations to a vector out[i]=in[p2[p1[i]]] (NOT in-place)
 template<class T>
-void applyPermsToVec(Vec<T>& out, const Vec<T>& in,
+void applyPermsToVec(NTL::Vec<T>& out, const NTL::Vec<T>& in,
 		      const Permut& p2, const Permut& p1);
 template<class T>
-void applyPermsToVec(vector<T>& out, const vector<T>& in,
+void applyPermsToVec(std::vector<T>& out, const std::vector<T>& in,
 		      const Permut& p2, const Permut& p1);
 
 //! @brief A random size-n permutation
@@ -106,7 +106,7 @@ public:
   //! Get multiple layers of a Benes permutation network. Returns in out[i][j]
   //! the shift amount to move item j in the i'th layer. Also isID[i]=true if
   //! the i'th layer is the identity (i.e., contains only 0 shift amounts).
-  void getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& idID, const Vec<long>& benesLvls) const;
+  void getBenesShiftAmounts(NTL::Vec<Permut>& out, NTL::Vec<bool>& idID, const NTL::Vec<long>& benesLvls) const;
 
 
  //! A test/debugging method
@@ -124,7 +124,7 @@ ostream& operator<< (ostream &s, const ColPerm& p);
  * each rho_i is a column permutation along one dimension. Specifically for
  * i<m, the permutations rho_i and rho_{2(m-1)-i} permute the i'th dimension
  **/
-void breakPermByDim(vector<ColPerm>& out, 
+void breakPermByDim(std::vector<ColPerm>& out, 
 		    const Permut &pi, const CubeSignature& sig);
 
 /**
@@ -136,7 +136,7 @@ private:
   long n; // size of perm, n > 1, not necessarily power of 2
   long k; // recursion depth, k = least integer k s/t 2^k >= n
 
-  Vec< Vec<short> > level;
+  NTL::Vec< NTL::Vec<short> > level;
     // there are 2*k - 1 levels, each wity n nodes.
     // level[i][j] is 0, 1, or -1, 
     //   which designates an edge from node j at level i 
@@ -171,7 +171,7 @@ public:
   long getSize() const { return n; }
   long getNumLevels() const { return 2*k-1; }
 
-  const Vec<short>& getLevel(long i) const 
+  const NTL::Vec<short>& getLevel(long i) const 
   { 
     assert(i >= 0 && i < 2*k-1);
     return level[i];
@@ -227,7 +227,7 @@ public:
 // A binary tree, the root is always the node at index 0
 template<class T> class FullBinaryTree {
   long aux;       // a "foreign key" for this tree (holds generator index)
-  vector< TreeNode<T> > nodes;
+  std::vector< TreeNode<T> > nodes;
   long nLeaves;           // how many leaves in this tree
   long frstLeaf, lstLeaf; // index of the first/last leaves
 
@@ -377,7 +377,7 @@ public:
 
 //! A node in a tree relative to some generator
 class SubDimension {
-  static const Vec<long> dummyBenes; // Useful for initialization
+  static const NTL::Vec<long> dummyBenes; // Useful for initialization
  public:
   long size;   // size of cube slice, same as 'order' in GenDescriptor
   bool good;   // good or bad
@@ -388,12 +388,12 @@ class SubDimension {
   // then scndBenes.length()==0, else scndBenes.length()>=1. Each of the two
   // Benes network can be "trivial", i.e., collapsed to a single layer, which
   // is denoted by benes.length()==1.
-  Vec<long> frstBenes;
-  Vec<long> scndBenes;
+  NTL::Vec<long> frstBenes;
+  NTL::Vec<long> scndBenes;
 
   explicit SubDimension(long sz=0,bool gd=false,long ee=0, 
-			const Vec<long>& bns1=dummyBenes,
-			const Vec<long>& bns2=dummyBenes)
+			const NTL::Vec<long>& bns1=dummyBenes,
+			const NTL::Vec<long>& bns2=dummyBenes)
   { size=sz; good=gd; e=ee; frstBenes=bns1; scndBenes=bns2; }
 
   long totalLength() const { return frstBenes.length()+scndBenes.length(); }
@@ -411,7 +411,7 @@ typedef FullBinaryTree<SubDimension> OneGeneratorTree;// tree for one generator
 //! A vector of generator trees, one per generator in Zm*/(p)
 class GeneratorTrees  {
   long depth; // How many layers in this permutation network
-  Vec<OneGeneratorTree> trees;
+  NTL::Vec<OneGeneratorTree> trees;
   Permut map2cube, map2array;
 
  public:
@@ -445,11 +445,11 @@ class GeneratorTrees  {
 
   //! Get the "crude" cube dimensions corresponding to the vector of trees,
   //! the ordered vector with one dimension per tree
-  void getCubeDims(Vec<long>& dims) const;
+  void getCubeDims(NTL::Vec<long>& dims) const;
 
   //! Get the "fine" cube dimensions corresponding to the vector of trees,
   //! the ordered vector with one dimension per leaf in all the trees.
-  void getCubeSubDims(Vec<long>& dims) const;
+  void getCubeSubDims(NTL::Vec<long>& dims) const;
 
   // Returns coordinates of i relative to leaves of the tree
   //  void getCoordinates(Vec<long>&, long i) const;
@@ -458,7 +458,7 @@ class GeneratorTrees  {
   //! a permutation into dimensions, subject to some constraints. Returns
   //! the cost (# of 1D shifts) of this colution.
   //! Returns NTL_MAX_LONG if no solution
-  long buildOptimalTrees(const Vec<GenDescriptor>& vec, long depthBound);
+  long buildOptimalTrees(const NTL::Vec<GenDescriptor>& vec, long depthBound);
 
   /**
    * @brief Computes permutations mapping between linear array and the cube.
@@ -493,7 +493,7 @@ class PermNetwork;
 class PermNetLayer {
   long genIdx; // shift-by-1 in this layer is done via X -> X^{g^e}
   long e;
-  Vec<long> shifts; // shifts[i] is how much to shift slot i
+  NTL::Vec<long> shifts; // shifts[i] is how much to shift slot i
   bool isID; // a silly optimization, does this layer copmute the identity?
 
   friend class PermNetwork;
@@ -501,18 +501,18 @@ class PermNetLayer {
  public:
   long getGenIdx() const { return genIdx; }
   long getE() const { return e; }
-  const Vec<long>& getShifts() const { return shifts; }
+  const NTL::Vec<long>& getShifts() const { return shifts; }
   bool isIdentity() const { return isID; }
 };
 
 //! A full permutation network
 class PermNetwork {
-  Vec<PermNetLayer> layers;
+  NTL::Vec<PermNetLayer> layers;
 
   //! Copmute one or more layers corresponding to one network of a leaf
-  void setLayers4Leaf(long lyrIdx, const ColPerm& p, const Vec<long>& benesLvls,
-		      long gIdx, const SubDimension& leafData,
-		      const Permut& map2cube);
+  void setLayers4Leaf(long lyrIdx, const ColPerm& p,
+                      const NTL::Vec<long>& benesLvls, long gIdx,
+                      const SubDimension& leafData, const Permut& map2cube);
 
 public:
   PermNetwork() {}; // empty network
@@ -532,7 +532,7 @@ public:
   void applyToCube(HyperCube<long>& v) const;
 
   //! Apply network to plaintext polynomial, used mostly for debugging
-  void applyToPtxt(ZZX& p, const EncryptedArray& ea) const;
+  void applyToPtxt(NTL::ZZX& p, const EncryptedArray& ea) const;
 
   const PermNetLayer& getLayer(long i) const {return layers[i];}
 

@@ -15,9 +15,9 @@
  */
 #include <unordered_set>
 #include "NTL/ZZ.h"
+#include "permutations.h"
 NTL_CLIENT
 #include "FHE.h"
-#include "permutations.h"
 
 long KSGiantStepSize(long D)
 {
