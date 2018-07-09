@@ -265,6 +265,16 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   return *this;
 }
 
+// explicitly multiply intFactor by e
+void Ctxt::mulIntFactor(long e)
+{
+  if (e==1) return; // nothing to do
+  intFactor = MulMod(intFactor, e, ptxtSpace);
+  long bal_e = balRem(e, ptxtSpace);
+  for (auto& part : parts) part *= bal_e;
+  noiseVar *= fsquare(bal_e); // because every product was scaled by bal_e
+}
+
 // Ciphertext maintenance
 
 // mod-switch up to add the primes in s \setminus primeSet, after this call we
@@ -390,6 +400,7 @@ void Ctxt::blindCtxt(const ZZX& poly)
   *this += tmp;
   // FIXME: This implementation is not optimized, the levels in the
   //  modulus chain should be handled much better.
+  // FIXME: Need to blind the intFactor too
 }
 
 // Reduce plaintext space to a divisor of the original plaintext space
@@ -398,6 +409,7 @@ void Ctxt::reducePtxtSpace(long newPtxtSpace)
   long g = GCD(ptxtSpace, newPtxtSpace);
   assert (g>1); // NOTE: Will trigger if called for CKKS ciphertext
   ptxtSpace = g;
+  intFactor %= g;
 }
 
 
@@ -615,6 +627,8 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
     return;
   }
 
+  // FIXME: need to handle intFactor
+
   // If the size is not given, use size = phi(m)*(ptxtSpace/2)^2
   if (size < 0.0)
       size = ((double) context.zMStar.getPhiM()) * ptxtSpace*ptxtSpace /4.0;
@@ -768,6 +782,9 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   // Sanity check: same context and public key
   assert (&context==&other.context && &pubKey==&other.pubKey);
 
+  // FIXME: handle intFactor
+  // FIXME: does this work of *this aliases other?
+
   // Special case: if *this is empty then just copy other
   if (this->isEmpty()) {
     *this = other;
@@ -816,6 +833,9 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
 // and that *this DOES NOT point to the same object as c1,c2
 void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 {
+
+  // FIXME: handle intFactor 
+
   // c1,c2 may be scaled, so multiply by the inverse scalar if needed
   long f = 1;
   if (c1.ptxtSpace>2) 
@@ -1081,6 +1101,7 @@ void Ctxt::divideBy2()
 
   noiseVar /= 4;  // noise is halved by this operation
   ptxtSpace /= 2; // and so is the plaintext space
+  // FIXME: handle IntFactor...or go through reducePtxtSpace
 }
 
 // Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
@@ -1102,8 +1123,9 @@ void Ctxt::divideByP()
   for (size_t i=0; i<parts.size(); i++)
     parts[i] *= pInverse;
 
-  noiseVar /= (p * (double)p);  // noise is reduced by a p factor
-  ptxtSpace /= p;               // and so is the plaintext space
+  noiseVar  /= fsquare(p);  // noise is reduced by a p factor
+  ptxtSpace /= p;           // and so is the plaintext space
+  // FIXME: handle IntFactor...or go through reducePtxtSpace
 }
 
 void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
@@ -1485,6 +1507,8 @@ void innerProduct(Ctxt& result,
 #include "powerful.h"
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 {
+  // FIXME: handle intFactor
+
   // Ensure that new modulus is co-prime with plaintetx space
   assert(toModulus>1 && GCD(toModulus, getPtxtSpace())==1);
   const long p2r = getPtxtSpace();

@@ -314,6 +314,9 @@ class Ctxt {
   // public key, this is needed when we copy the pubEncrKey member between
   // different public keys.
   Ctxt& privateAssign(const Ctxt& other);
+
+  // explicitly multiply intFactor by e
+  void mulIntFactor(long e);
  
 public:
   //__attribute__((deprecated))

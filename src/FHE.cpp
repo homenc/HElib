@@ -882,6 +882,8 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
   ptxt.toPoly(plaintxt);
   f = plaintxt;
 
+  // FIXME: handle intFactor
+
   if (ciphertxt.ptxtSpace>2) { // if p>2, multiply by Q^{-1} mod p
     long qModP = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
 		     ciphertxt.ptxtSpace);
