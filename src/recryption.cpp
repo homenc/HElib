@@ -17,6 +17,7 @@
 #include "powerful.h"
 #include "CtPtrs.h"
 #include "intraSlot.h"
+#include "hoisting.h"
 
 long thinRecrypt_initial_level=0;
 
@@ -453,11 +454,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     FHE_NTIMER_START(unpack2);
     vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
 
+    BasicAutomorphPrecon hoisting(ctxt);
     NTL_EXEC_RANGE(d, first, last)
-    // FIXME: implement using hoisting!
         for (long j = first; j < last; j++) { // process jth Frobenius 
-          frob[j] = ctxt;
-          frob[j].frobeniusAutomorph(j);
+          frob[j] = *hoisting.frobeniusAutomorph(j);
           frob[j].cleanUp();
           // FIXME: not clear if we should call cleanUp here
         }
@@ -588,10 +588,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     Ctxt tmp1(ZeroCtxtLike, ctxt);
     Ctxt tmp2(ZeroCtxtLike, ctxt);
 
-    // FIXME: implement using hoisting!
+    BasicAutomorphPrecon hoisting(ctxt);
+
     for (long j = 0; j < d; j++) { // process jth Frobenius 
-      tmp1 = ctxt;
-      tmp1.frobeniusAutomorph(j);
+      tmp1 = *hoisting.frobeniusAutomorph(j);
       tmp1.cleanUp();
       // FIXME: not clear if we should call cleanUp here
 

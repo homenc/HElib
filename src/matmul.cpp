@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <NTL/BasicThreadPool.h>
 #include "matmul.h"
+#include "hoisting.h"
 
 int fhe_test_force_bsgs=0;
 int fhe_test_force_hoist=0;
@@ -33,6 +34,8 @@ static bool comp_hoist(bool hoist)
 }
 
 
+// moved to hoisting.h
+#if 0
 /********************************************************************/
 /****************** Auxiliary stuff: should go elsewhere   **********/
 
@@ -143,6 +146,7 @@ public:
     return result;
   }
 };
+#endif
 
 
 class GeneralAutomorphPrecon {
