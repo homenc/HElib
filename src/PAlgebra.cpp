@@ -22,6 +22,8 @@
 
 #include <NTL/BasicThreadPool.h>
 
+NTL_CLIENT
+
 // polynomials are sorted lexicographically, with the
 // constant term being the "most significant"
 

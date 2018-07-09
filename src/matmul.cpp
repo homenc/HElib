@@ -15,6 +15,8 @@
 #include <NTL/BasicThreadPool.h>
 #include "matmul.h"
 
+NTL_CLIENT
+
 int fhe_test_force_bsgs=0;
 int fhe_test_force_hoist=0;
 

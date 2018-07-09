@@ -17,6 +17,7 @@
 #include "EvalMap.h"
 #include <NTL/BasicThreadPool.h>
 
+NTL_CLIENT
 
 static bool dry = false; // a dry-run flag
 static bool noPrint = true;

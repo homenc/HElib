@@ -18,7 +18,7 @@
 #include "timing.h"
 #include "cloned_ptr.h"
 
-
+NTL_CLIENT
 
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
 					const PAlgebraMod& alMod)

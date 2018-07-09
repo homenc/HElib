@@ -11,6 +11,8 @@
  */
 #include "polyEval.h"
 
+NTL_CLIENT
+
 // Returns the e'th power of X, computing it as needed
 Ctxt& DynamicCtxtPowers::getPower(long e)
 {

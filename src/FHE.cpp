@@ -15,6 +15,7 @@
 #include "timing.h"
 #include "binio.h"
 
+NTL_CLIENT
 
 /******** Utility function to generate RLWE instances *********/
 

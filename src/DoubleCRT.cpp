@@ -25,6 +25,8 @@
 #include "DoubleCRT.h"
 #include "timing.h"
 
+NTL_CLIENT
+
 // A threaded implementation of DoubleCRT operations
 
 static

@@ -27,17 +27,17 @@
 //! \endcode
 class IndexSet {
 
-  vector<bool> rep;
+  std::vector<bool> rep;
   // NOTE: modern versions of C++ are supposed
   // to implement this efficiently as a "specialized template class".
-  // Older versions of C++ define the equivalent class bit_vector.
+  // Older versions of C++ define the equivalent class bit_std::vector.
 
   long _first, _last, _card;
 
   // Invariant: if _card == 0, then _first = 0, _last = -1;
   // otherwise, _first (resp. _last) is the lowest (resp. highest)
   // index in the set.
-  // In any case, the vector rep always defines the characterstic
+  // In any case, the std::vector rep always defines the characterstic
   // function of the set.
 
   // private helper function
@@ -128,8 +128,8 @@ public:
   bool isInterval() const {return (_card==(1+_last-_first));}
 
   /*** raw IO ***/ 
-  void read(istream& str);  
-  void write(ostream& str) const;
+  void read(std::istream& str);  
+  void write(std::ostream& str) const;
 
 };
 
@@ -149,8 +149,8 @@ IndexSet operator^(const IndexSet& s, const IndexSet& t);
 IndexSet operator/(const IndexSet& s, const IndexSet& t);
 
 // I/O operator
-ostream& operator << (ostream& str, const IndexSet& set);
-istream& operator >> (istream& str, IndexSet& set);
+std::ostream& operator << (std::ostream& str, const IndexSet& set);
+std::istream& operator >> (std::istream& str, IndexSet& set);
 
 //! @brief Functional cardinality
 long card(const IndexSet& s);

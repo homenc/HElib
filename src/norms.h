@@ -62,10 +62,10 @@ inline double embeddingL2Norm(const zzX& f, const PAlgebra& palg)
 double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg);
 
 // Same as above, for ZZX
-xdouble embeddingL2NormSquared(const NTL::ZZX& f, const PAlgebra& palg);
-inline xdouble embeddingL2Norm(const NTL::ZZX& f, const PAlgebra& palg)
+NTL::xdouble embeddingL2NormSquared(const NTL::ZZX& f, const PAlgebra& palg);
+inline NTL::xdouble embeddingL2Norm(const NTL::ZZX& f, const PAlgebra& palg)
 { return sqrt(embeddingL2NormSquared(f,palg)); }
-xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg);
+NTL::xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg);
 
 //! Computing the canonical embedding (in fft.cpp). This function
 //! returns in v only the first half of the entries, the others are

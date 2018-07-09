@@ -18,10 +18,9 @@
 #include "timing.h"
 #include "CModulus.h"
 
-
 #define NEW_BLUE (1)
 
-
+NTL_CLIENT
 
 void BluesteinInit(long n, const zz_p& root, zz_pX& powers, 
                    Vec<mulmod_precon_t>& powers_aux, fftRep& Rb)

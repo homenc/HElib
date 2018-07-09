@@ -15,6 +15,8 @@
 #include "FHE.h"
 #include "binio.h"
 
+NTL_CLIENT
+
 void SKHandle::read(istream& str)
 {
   powerOfS = read_raw_int(str);

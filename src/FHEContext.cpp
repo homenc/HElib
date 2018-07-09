@@ -15,6 +15,8 @@
 #include "powerful.h"
 #include "binio.h"
 
+NTL_CLIENT
+
 long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
   // get a lower-bound on the parameter N=phi(m):

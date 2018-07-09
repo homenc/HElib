@@ -15,6 +15,8 @@
 #include <NTL/lzz_pXFactoring.h>
 #include <NTL/GF2XFactoring.h>
 
+NTL_CLIENT
+
 // Forward declerations
 static BlockMatMul1D*
 buildStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,

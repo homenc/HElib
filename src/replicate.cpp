@@ -15,7 +15,7 @@
 #include "cloned_ptr.h"
 
 
-
+NTL_CLIENT
 
 NTL_THREAD_LOCAL 
 bool replicateVerboseFlag = false;

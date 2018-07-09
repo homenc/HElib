@@ -18,6 +18,8 @@
 #include "replicate.h"
 #include "intraSlot.h"
 
+NTL_CLIENT
+
 // Implementation classes for unpacking:
 // buildUnpackSlotEncoding_pa_impl prepares the constants for the linear
 // transformation, and unpack_pa_impl uses them to do the actual uppacking.
@@ -237,7 +239,7 @@ public:
     RX acc_poly;
     int2Poly(acc_poly, ea, data, nbits);     // endoce data as a polynomial RX
     long nslots = ea.size(); // how many slots
-    vector<RX> acc_poly_vec(nslots, acc_poly);
+    std::vector<RX> acc_poly_vec(nslots, acc_poly);
     ea.encode(result, acc_poly_vec);
   }
 
@@ -249,7 +251,7 @@ public:
     long nslots = ea.size(); // how many slots
     assert(lsize(data)==nslots);
     RBak bak; bak.save(); ea.restoreContext(); // the NTL context for mod p^r
-    vector<RX> vec(nslots, RX::zero());
+    std::vector<RX> vec(nslots, RX::zero());
     RX acc_poly;
     for (long i=0; i<nslots; i++)
       int2Poly(vec[i], ea, data[i], nbits); // endoce data as a polynomial RX

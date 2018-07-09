@@ -27,22 +27,22 @@ class PowerfulTranslationIndexes {
  public:
   long m;     // product of mi's
   long phim;  // phi(m) = product of phi(mi)'s
-  Vec<long> mvec;   // mvec[i] = mi
-  Vec<long> phivec; // phivec[i] = phi(mi)
-  Vec<long> divvec; // divvec[i] = m/mi
-  Vec<long> invvec; // invvec[i] = (m/mi)^{-1} mod mi
+  NTL::Vec<long> mvec;   // mvec[i] = mi
+  NTL::Vec<long> phivec; // phivec[i] = phi(mi)
+  NTL::Vec<long> divvec; // divvec[i] = m/mi
+  NTL::Vec<long> invvec; // invvec[i] = (m/mi)^{-1} mod mi
 
   CubeSignature longSig;  // hypercube of dimensions mi
   CubeSignature shortSig; // hypercube of dimensions phi(mi)
 
-  Vec<long> polyToCubeMap; // index translation tables
-  Vec<long> cubeToPolyMap;
-  Vec<long> shortToLongMap;
+  NTL::Vec<long> polyToCubeMap; // index translation tables
+  NTL::Vec<long> cubeToPolyMap;
+  NTL::Vec<long> shortToLongMap;
 
-  Vec<ZZX> cycVec; // cycvec[i] = Phi_mi(X)
-  ZZX phimX;
+  NTL::Vec<NTL::ZZX> cycVec; // cycvec[i] = Phi_mi(X)
+  NTL::ZZX phimX;
 
-  PowerfulTranslationIndexes(const Vec<long>& mv);
+  PowerfulTranslationIndexes(const NTL::Vec<long>& mv);
 };
 
 /**
@@ -78,9 +78,9 @@ class PowerfulTranslationIndexes {
  **/
 class PowerfulConversion {
   const PowerfulTranslationIndexes* indexes;
-  zz_pContext zzpContext;
-  Vec<zz_pXModulus> cycVec_p; // cycvec[i] = Phi_mi(X)
-  zz_pXModulus phimX_p;
+  NTL::zz_pContext zzpContext;
+  NTL::Vec<NTL::zz_pXModulus> cycVec_p; // cycvec[i] = Phi_mi(X)
+  NTL::zz_pXModulus phimX_p;
 
 public:
 
@@ -97,9 +97,9 @@ public:
     cycVec_p.SetLength(ind.cycVec.length());
     zzpContext.save(); // store the current modulus
     for (long i=0; i<ind.cycVec.length(); i++) {
-      cycVec_p[i] = conv<zz_pX>(ind.cycVec[i]); // convert to zz_pXModulus
+      cycVec_p[i] = NTL::conv<NTL::zz_pX>(ind.cycVec[i]); // convert to zz_pXModulus
     }
-    phimX_p = conv<zz_pX>(ind.phimX); // convert to zz_pXModulus
+    phimX_p = NTL::conv<NTL::zz_pX>(ind.phimX); // convert to zz_pXModulus
   }
 
   void restoreModulus() const { zzpContext.restore(); }
@@ -108,8 +108,8 @@ public:
 
   //! The conversion routines return the value of the modulus q.
   //! It is assumed that the modulus is already set before calling them
-  long powerfulToPoly(zz_pX& poly, const HyperCube<zz_p>& powerful) const;
-  long polyToPowerful(HyperCube<zz_p>& powerful, const zz_pX& poly) const;
+  long powerfulToPoly(NTL::zz_pX& poly, const HyperCube<NTL::zz_p>& powerful) const;
+  long polyToPowerful(HyperCube<NTL::zz_p>& powerful, const NTL::zz_pX& poly) const;
 };
 
 /**
@@ -122,24 +122,24 @@ class PowerfulDCRT {
   PowerfulTranslationIndexes indexes; // modulus-independent tables
 
   // a vector of PowerfulConversion tables, one for each modulus in the chain
-  Vec<PowerfulConversion> pConvVec;
+  NTL::Vec<PowerfulConversion> pConvVec;
 
 public:
-  PowerfulDCRT(const FHEcontext& _context, const Vec<long>& mvec);
+  PowerfulDCRT(const FHEcontext& _context, const NTL::Vec<long>& mvec);
 
   const PowerfulTranslationIndexes& getIndexTranslation() const
   { return indexes; }
   const PowerfulConversion& getPConv(long i) const
   { return pConvVec.at(i); }
 
-  void dcrtToPowerful(Vec<ZZ>& powerful, const DoubleCRT& dcrt) const;
-  void powerfulToDCRT(DoubleCRT& dcrt, const Vec<ZZ>& powerful) const;
+  void dcrtToPowerful(NTL::Vec<NTL::ZZ>& powerful, const DoubleCRT& dcrt) const;
+  void powerfulToDCRT(DoubleCRT& dcrt, const NTL::Vec<NTL::ZZ>& powerful) const;
 
   // If the IndexSet is omitted, default to all the primes in the chain
-  void ZZXtoPowerful(Vec<ZZ>& powerful, const ZZX& poly,
-		     IndexSet s=IndexSet::emptySet()    ) const;
-  void powerfulToZZX(ZZX& poly, const Vec<ZZ>& powerful,
-		     IndexSet s=IndexSet::emptySet()    ) const;
+  void ZZXtoPowerful(NTL::Vec<NTL::ZZ>& powerful, const NTL::ZZX& poly,
+		     IndexSet s=IndexSet::emptySet()) const;
+  void powerfulToZZX(NTL::ZZX& poly, const NTL::Vec<NTL::ZZ>& powerful,
+		     IndexSet s=IndexSet::emptySet()) const;
 };
 
 

@@ -23,6 +23,9 @@
 
 // Implementation of the various random matrices is found here
 #include "randomMatrices.h"
+
+NTL_CLIENT
+
 /*
  * Defined in this file are the following class templates:
  *

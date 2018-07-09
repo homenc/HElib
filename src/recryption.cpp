@@ -19,6 +19,8 @@
 #include "intraSlot.h"
 #include "norms.h"
 
+NTL_CLIENT
+
 long thinRecrypt_initial_level=0;
 
 //#define PRINT_LEVELS

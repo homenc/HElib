@@ -15,7 +15,7 @@
  * @file Ctxt.h
  * @brief Declerations of a BGV-type cipehrtext and key-switching matrices
  *
- * A ciphertext is a vector of "ciphertext parts", each part consists of
+ * A ciphertext is a std::vector of "ciphertext parts", each part consists of
  * a polynomial (element of polynomial ring R_Q) and a "handle" describing
  * the secret-key polynomial that this part multiplies during decryption.
  * For example:
@@ -169,14 +169,14 @@ public:
     return true;
   }
 
-  friend istream& operator>>(istream& s, SKHandle& handle);
+  friend std::istream& operator>>(std::istream& s, SKHandle& handle);
 
   // Raw IO
-  void read(istream& str);
-  void write(ostream& str) const;
+  void read(std::istream& str);
+  void write(std::ostream& str) const;
 
 };
-inline ostream& operator<<(ostream& s, const SKHandle& handle)
+inline std::ostream& operator<<(std::ostream& s, const SKHandle& handle)
 {
   return s << "[" << handle.getPowerOfS()    << " " << handle.getPowerOfX()
 	   << " " << handle.getSecretKeyID() << "]";
@@ -184,7 +184,7 @@ inline ostream& operator<<(ostream& s, const SKHandle& handle)
 
 /**
  * @class CtxtPart
- * @brief One entry in a ciphertext vector
+ * @brief One entry in a ciphertext std::vector
  * 
  * A cipehrtext part consists of a polynomial (element of the ring R_Q)
  * and a handle to the corresponding secret-key polynomial.
@@ -216,12 +216,12 @@ public:
   CtxtPart(const DoubleCRT& other, const SKHandle& otherHandle): 
     DoubleCRT(other), skHandle(otherHandle) {}
 
-  void read(istream& str); 
-  void write(ostream& str);
+  void read(std::istream& str); 
+  void write(std::ostream& str);
 
 };
-istream& operator>>(istream& s, CtxtPart& p);
-ostream& operator<<(ostream& s, const CtxtPart& p);
+std::istream& operator>>(std::istream& s, CtxtPart& p);
+std::ostream& operator<<(std::ostream& s, const CtxtPart& p);
 
 //! \cond FALSE (make doxygen ignore this code)
 struct ZeroCtxtLike_type {}; // used to select a constructor
@@ -232,10 +232,10 @@ const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
  * @class Ctxt
  * @brief A Ctxt object holds a single cipehrtext
  *
- * The class Ctxt includes a vector<CtxtPart>: For a Ctxt c, c[i] is the i'th
+ * The class Ctxt includes a std::vector<CtxtPart>: For a Ctxt c, c[i] is the i'th
  * ciphertext part, which can be used also as a DoubleCRT object (since
  * CtxtPart is derived from DoubleCRT). By convention, c[0], the first
- * CtxtPart object in the vector, has skHndl that points to 1 (i.e., it
+ * CtxtPart object in the std::vector, has skHndl that points to 1 (i.e., it
  * is just added in upon decryption, without being multiplied by anything).
  * We maintain the invariance that all the parts of a ciphertext are defined
  * relative to the same set of primes.
@@ -261,10 +261,10 @@ class Ctxt {
 
   const FHEcontext& context; // points to the parameters of this FHE instance
   const FHEPubKey& pubKey;   // points to the public encryption key;
-  vector<CtxtPart> parts;    // the ciphertexe parts
+  std::vector<CtxtPart> parts;    // the ciphertexe parts
   IndexSet primeSet; // the primes relative to which the parts are defined
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
-  xdouble noiseVar;  // estimating the noise variance in this ciphertext
+  NTL::xdouble noiseVar;  // estimating the noise variance in this ciphertext
   long highWaterMark;// keep track of number of multiplications
   long intFactor;    // an integer factor to multiply by on decryption
 
@@ -324,7 +324,7 @@ public:
     // plaintext space as ctxt
 
   //! Dummy encryption, just encodes the plaintext in a Ctxt object
-  void DummyEncrypt(const ZZX& ptxt, double size=-1.0);
+  void DummyEncrypt(const NTL::ZZX& ptxt, double size=-1.0);
 
   Ctxt& operator=(const Ctxt& other) {  // public assignment operator
     assert(&context == &other.context);
@@ -366,16 +366,16 @@ public:
   //! Add a constant polynomial. If the size is not given, we use
   //! phi(m)*ptxtSpace^2 as the default value.
   void addConstant(const DoubleCRT& dcrt, double size=-1.0);
-  void addConstant(const ZZX& poly, double size=-1.0)
+  void addConstant(const NTL::ZZX& poly, double size=-1.0)
   { addConstant(DoubleCRT(poly,context,primeSet),size); }
-  void addConstant(const ZZ& c);
+  void addConstant(const NTL::ZZ& c);
 
   //! Multiply-by-constant. If the size is not given, we use
   //! phi(m)*ptxtSpace^2 as the default value.
   void multByConstant(const DoubleCRT& dcrt, double size=-1.0);
-  void multByConstant(const ZZX& poly, double size=-1.0);
+  void multByConstant(const NTL::ZZX& poly, double size=-1.0);
   void multByConstant(const zzX& poly, double size=-1.0);
-  void multByConstant(const ZZ& c);
+  void multByConstant(const NTL::ZZ& c);
 
   //! Convenience method: XOR and nXOR with arbitrary plaintext space:
   //! a xor b = a+b-2ab = a + (1-2a)*b,
@@ -388,7 +388,7 @@ public:
     multByConstant(tmp);
     addConstant(poly);
   }
-  void xorConstant(const ZZX& poly, double size=-1.0)
+  void xorConstant(const NTL::ZZX& poly, double size=-1.0)
   { xorConstant(DoubleCRT(poly,context,primeSet),size); }
 
   void nxorConstant(const DoubleCRT& poly, double size=-1.0)
@@ -396,11 +396,11 @@ public:
     DoubleCRT tmp = poly;
     tmp *= 2;
     tmp -= 1;                // 2a-1
-    addConstant(to_ZZX(-1L));// b11
+    addConstant(NTL::to_ZZX(-1L));// b11
     multByConstant(tmp);     // (b-1)(2a-1)
     addConstant(poly);       // (b-1)(2a-1)+a = 1-a-b+2ab
   }
-  void nxorConstant(const ZZX& poly, double size=-1.0)
+  void nxorConstant(const NTL::ZZX& poly, double size=-1.0)
   { nxorConstant(DoubleCRT(poly,context,primeSet),size); }
 
   
@@ -414,14 +414,14 @@ public:
   //! the side-effect of increasing the plaintext space to p^{r+e}.
   void multByP(long e=1)
   {
-    long p2e = power_long(context.zMStar.getP(), e);
+    long p2e = NTL::power_long(context.zMStar.getP(), e);
     ptxtSpace *= p2e;
-    multByConstant(to_ZZ(p2e));
+    multByConstant(NTL::to_ZZ(p2e));
   }
 
   // For backward compatibility
   void divideBy2();
-  void extractBits(vector<Ctxt>& bits, long nBits2extract=0);
+  void extractBits(std::vector<Ctxt>& bits, long nBits2extract=0);
 
   // Higher-level multiply routines
   void multiplyBy(const Ctxt& other);
@@ -460,10 +460,10 @@ public:
   void reduce() const;
 
   //! @brief Add a high-noise encryption of the given constant
-  void blindCtxt(const ZZX& poly);
+  void blindCtxt(const NTL::ZZX& poly);
 
   //! @brief Estimate the added noise variance
-  xdouble modSwitchAddedNoiseVar() const;
+  NTL::xdouble modSwitchAddedNoiseVar() const;
 
   //! @brief Find the "natural level" of a cipehrtext.
   // Find the level such that modDown to that level makes the
@@ -488,9 +488,9 @@ public:
   //! Mod-switch to an externally-supplied modulus. The modulus need not be in
   //! the moduli-chain in the context, and does not even need to be a prime.
   //! The ciphertext *this is not affected, instead the result is returned in
-  //! the zzParts vector, as a vector of ZZX'es.
+  //! the zzParts std::vector, as a std::vector of ZZX'es.
   //! Returns an extimate for the noise variance after mod-switching.
-  double rawModSwitch(vector<ZZX>& zzParts, long toModulus) const;
+  double rawModSwitch(std::vector<NTL::ZZX>& zzParts, long toModulus) const;
 
   //! @brief Find the "natural prime-set" of a cipehrtext.
   //! Find the highest IndexSet so that mod-switching down to that set results
@@ -498,10 +498,10 @@ public:
   void findBaseSet(IndexSet& s) const;
 
   //! @brief compute the power X,X^2,...,X^n
-  //  void computePowers(vector<Ctxt>& v, long nPowers) const;
+  //  void computePowers(std::vector<Ctxt>& v, long nPowers) const;
 
   //! @brief Evaluate the cleartext poly on the encrypted ciphertext
-  void evalPoly(const ZZX& poly);
+  void evalPoly(const NTL::ZZX& poly);
   ///@}
 
   //! @name Utility methods
@@ -510,7 +510,7 @@ public:
   void clear() { // set as an empty ciphertext
     primeSet=context.ctxtPrimes;
     parts.clear();
-    noiseVar = to_xdouble(0.0);
+    noiseVar = NTL::to_xdouble(0.0);
     highWaterMark = findBaseLevel();
   }
 
@@ -527,14 +527,14 @@ public:
 
   //! @brief Would this ciphertext be decrypted without errors?
   bool isCorrect() const {
-    ZZ q = context.productOfPrimes(primeSet);
+    NTL::ZZ q = context.productOfPrimes(primeSet);
     return (to_xdouble(q) > sqrt(noiseVar)*2);
   }
 
   const FHEcontext& getContext() const { return context; }
   const FHEPubKey& getPubKey() const   { return pubKey; }
   const IndexSet& getPrimeSet() const  { return primeSet; }
-  const xdouble& getNoiseVar() const   { return noiseVar; }
+  const NTL::xdouble& getNoiseVar() const   { return noiseVar; }
   const long getPtxtSpace() const      { return ptxtSpace;}
   const long getKeyID() const;
 
@@ -554,12 +554,12 @@ public:
   {return (getNoiseVar()==0.0)? (-context.logOfProduct(getPrimeSet()))
       : ((log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet())) );}
   ///@}
-  friend istream& operator>>(istream& str, Ctxt& ctxt);
-  friend ostream& operator<<(ostream& str, const Ctxt& ctxt);
+  friend std::istream& operator>>(std::istream& str, Ctxt& ctxt);
+  friend std::ostream& operator<<(std::ostream& str, const Ctxt& ctxt);
   
   //Raw IO
-  void write(ostream& str) const;
-  void read(istream& str);
+  void write(std::ostream& str) const;
+  void read(std::istream& str);
 
 };
 
@@ -570,30 +570,30 @@ inline IndexSet baseSetOf(const Ctxt& c) {
 // set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products
 // out could point to v[0], but having it pointing to any other v[i]
 // will make the result unpredictable.
-void totalProduct(Ctxt& out, const vector<Ctxt>& v);
+void totalProduct(Ctxt& out, const std::vector<Ctxt>& v);
 
 //! For i=n-1...0, set v[i]=prod_{j<=i} v[j]
 //! This implementation uses depth log n and (nlog n)/2 products
-void incrementalProduct(vector<Ctxt>& v);
+void incrementalProduct(std::vector<Ctxt>& v);
 
-//! Compute the inner product of two vectors of ciphertexts
-void innerProduct(Ctxt& result, const vector<Ctxt>& v1, const vector<Ctxt>& v2);
-inline Ctxt innerProduct(const vector<Ctxt>& v1, const vector<Ctxt>& v2)
+//! Compute the inner product of two std::vectors of ciphertexts
+void innerProduct(Ctxt& result, const std::vector<Ctxt>& v1, const std::vector<Ctxt>& v2);
+inline Ctxt innerProduct(const std::vector<Ctxt>& v1, const std::vector<Ctxt>& v2)
 { Ctxt ret(v1[0].getPubKey());
   innerProduct(ret, v1, v2); return ret; 
 }
 
-//! Compute the inner product of a vectors of ciphertexts and a constant vector
+//! Compute the inner product of a std::vectors of ciphertexts and a constant std::vector
 void innerProduct(Ctxt& result,
-		  const vector<Ctxt>& v1, const vector<DoubleCRT>& v2);
-inline Ctxt innerProduct(const vector<Ctxt>& v1, const vector<DoubleCRT>& v2)
+		  const std::vector<Ctxt>& v1, const std::vector<DoubleCRT>& v2);
+inline Ctxt innerProduct(const std::vector<Ctxt>& v1, const std::vector<DoubleCRT>& v2)
 { Ctxt ret(v1[0].getPubKey());
   innerProduct(ret, v1, v2); return ret; 
 }
 
 void innerProduct(Ctxt& result,
-		  const vector<Ctxt>& v1, const vector<ZZX>& v2);
-inline Ctxt innerProduct(const vector<Ctxt>& v1, const vector<ZZX>& v2)
+		  const std::vector<Ctxt>& v1, const std::vector<NTL::ZZX>& v2);
+inline Ctxt innerProduct(const std::vector<Ctxt>& v1, const std::vector<NTL::ZZX>& v2)
 { Ctxt ret(v1[0].getPubKey());
   innerProduct(ret, v1, v2); return ret; 
 }
@@ -622,18 +622,18 @@ void CheckCtxt(const Ctxt& c, const char* label);
  * expansion of the input, and its plaintext space is modulo p^{r-j}. All
  * the ciphertexts in the output are at the same level.
  **/
-void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r=0);
+void extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r=0);
 // implemented in extractDigits.cpp
 
 inline void
-extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
+extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, bool shortCut)
 {
   if (shortCut)
     std::cerr << "extractDigits: the shortCut flag is disabled\n";
   extractDigits(digits, c, r);
 }
 
-inline void Ctxt::extractBits(vector<Ctxt>& bits, long nBits2extract)
+inline void Ctxt::extractBits(std::vector<Ctxt>& bits, long nBits2extract)
 { extractDigits(bits, *this, nBits2extract); }
 
 
@@ -648,7 +648,7 @@ inline void Ctxt::extractBits(vector<Ctxt>& bits, long nBits2extract)
 // contains the j'th digit in the p-base expansion of the integer in the i'th
 // slot of the *this.  The plaintext space of digits[j] is mod p^{e+r-j}.
 
-void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e);
+void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long e);
 // implemented in extractDigits.cpp
 
 #endif // ifndef _Ctxt_H_

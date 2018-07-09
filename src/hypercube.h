@@ -24,8 +24,8 @@ class PAlgebra; // forward decleration
 //! @brief Holds a vector of dimensions for a hypercube and some additional data
 class CubeSignature {
 private:
-   Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
-   Vec<long> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
+   NTL::Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
+   NTL::Vec<long> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
 
 public:
    CubeSignature() {} // a NULL signature
@@ -161,10 +161,10 @@ public:
    //! The inverse of breakIndexByDim
    long assembleIndexByDim(std::pair<long,long> idx, long dim) const;
    
-   friend ostream& operator<<(ostream &s, const CubeSignature& sig);
+   friend std::ostream& operator<<(std::ostream &s, const CubeSignature& sig);
 };
 
-inline ostream& operator<<(ostream &s, const CubeSignature& sig)
+inline std::ostream& operator<<(std::ostream &s, const CubeSignature& sig)
 { return s << sig.dims; }
 
 
@@ -178,7 +178,7 @@ template<class T>
 class HyperCube {
 private:
    const CubeSignature& sig;
-   Vec<T> data;
+   NTL::Vec<T> data;
 
    HyperCube(); // disable default constructor
 
@@ -218,10 +218,10 @@ public:
    //! read/write ref to the data vector.
    //! Note that the length of data is fixed upon construction,
    //! so it cannot be changed through this ref.
-   Vec<T>& getData() { return data; }
+   NTL::Vec<T>& getData() { return data; }
 
    //! read-only ref to data vector
-   const Vec<T>& getData() const { return data; } 
+   const NTL::Vec<T>& getData() const { return data; } 
 
    //! total size of cube
    long getSize() const { return sig.getSize(); }
@@ -287,7 +287,7 @@ public:
 template<class T>
 class ConstCubeSlice {
 private:
-   const Vec<T>* data;
+   const NTL::Vec<T>* data;
    const CubeSignature* sig;
    long dimOffset; // # of "missing dimensions" is this slice vs. the full cube
    long sizeOffset; // index in the cube of the first element in this slice
@@ -304,7 +304,7 @@ public:
      sizeOffset = 0; 
    }
 
-   ConstCubeSlice(const Vec<T>& _data, const CubeSignature& _sig) { 
+   ConstCubeSlice(const NTL::Vec<T>& _data, const CubeSignature& _sig) { 
      assert(_data.length() == _sig.getSize());
      data = &_data;
      sig = &_sig;
@@ -385,7 +385,7 @@ public:
    // initialize the slice to the full cube
    explicit CubeSlice(HyperCube<T>& _cube) : ConstCubeSlice<T>(_cube) {}
 
-   CubeSlice(Vec<T>& _data, const CubeSignature& _sig) : ConstCubeSlice<T>(_data, _sig) {}
+   CubeSlice(NTL::Vec<T>& _data, const CubeSignature& _sig) : ConstCubeSlice<T>(_data, _sig) {}
 
    // initialize the slice to point to the i-th subcube
    // of the cube pointed to by bigger
@@ -416,17 +416,17 @@ public:
 //! coordinate in the lower dimensional subcube is equal to pos. The length
 //! of v will be set to s.getDim(0).
 template<class T>
-void getHyperColumn(Vec<T>& v, const ConstCubeSlice<T>& s, long pos);
+void getHyperColumn(NTL::Vec<T>& v, const ConstCubeSlice<T>& s, long pos);
 
 //! setHyperColumn does the reverse of getHyperColumn, setting the column
 //! to the given vector
 template<class T>
-void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos);
+void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos);
 
 //! this version of setHyperColumn implicitly pads v with a default value,
 //! if v is too short
 template<class T>
-void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos, const T& val);
+void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos, const T& val);
 
 template<class T>
 void print3D(const HyperCube<T>& c);
