@@ -15,6 +15,8 @@
 #include "FHE.h"
 #include "binio.h"
 
+extern int fhe_watcher;
+
 void SKHandle::read(istream& str)
 {
   powerOfS = read_raw_int(str);
@@ -690,7 +692,23 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   long f = 1;
   if (c1.ptxtSpace>2) 
     f = rem(context.productOfPrimes(c1.primeSet),c1.ptxtSpace);
+
+
+
+
   if (f!=1) f = InvMod(f,c1.ptxtSpace);
+  if (fhe_watcher) cerr << "*** f value = " << f << "\n";
+  if (fhe_watcher) {
+    for (long i = c1.primeSet.first(); i <= c1.primeSet.last(); i = c1.primeSet.next(i)) {
+      long p = context.ithPrime(i);
+      long q = p % c1.ptxtSpace;
+      if (q != 1) {
+         cerr << "== " << i << " " << p << " " << c1.ptxtSpace << "\n";
+      }
+    }
+
+  }
+
 
   clear();                // clear *this, before we start adding things to it
   primeSet = c1.primeSet; // set the correct prime-set before we begin
@@ -735,11 +753,16 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   for (long i=n1+1; i<=n1+n2; i++) factor *= i;
   for (long i=n2  ; i>1     ; i--) factor /= i;
 
+
   noiseVar = c1.noiseVar * c2.noiseVar * factor * context.zMStar.get_cM();
   if (f!=1) {
     // WARNING: the following line is written just so to prevent overflow
     noiseVar = (noiseVar*f)*f; // because every product was scaled by f
   }
+
+  if (fhe_watcher) cerr << "end of tensor " << this->findBaseLevel() << "\n";
+
+  
 }
 
 Ctxt& Ctxt::operator*=(const Ctxt& other)
@@ -790,6 +813,8 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   }
   *this = tmpCtxt; // copy the result into *this
   highWaterMark = lvl-1;
+
+  
 
   FHE_TIMER_STOP;
   return *this;

@@ -21,7 +21,7 @@
 
 long thinRecrypt_initial_level=0;
 
-//#define PRINT_LEVELS
+#define PRINT_LEVELS
 
 
 /************* Some local functions *************/
@@ -754,7 +754,9 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   long p2r = power_long(p,r);
   long topHigh = botHigh + r-1;
 
-  if (r > 1) {
+  if (0) {
+  // FIXME
+  //if (r > 1) {
     // use Chen and Han technique
 
     extendExtractDigits(scratch, unpacked, botHigh, r);

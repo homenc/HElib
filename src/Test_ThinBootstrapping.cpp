@@ -249,7 +249,7 @@ int main(int argc, char *argv[])
 
 
   if (B<=0) B=FHE_pSize;
-  if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
+  //if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
 
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {

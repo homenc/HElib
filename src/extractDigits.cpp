@@ -63,6 +63,8 @@ static void buildDigitPolynomial(ZZX& result, long p, long e)
 // i'th slot of the *this. The plaintext space of digits[j] is mod p^{r-j},
 // and all the digits are at the same level.
 
+int fhe_watcher = 0;
+
 void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
 {
   const FHEcontext& context = c.getContext();
@@ -83,6 +85,11 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
   // for the ptxt hack (see below) this is necessary to ensure that
   // the "free bit" hack in extractDigitsThin works
 
+//#define VIEW_LEVELS
+
+#ifdef VIEW_LEVELS
+  fprintf(stderr, "***\n");
+#endif
   for (long i=0; i<r; i++) {
     tmp = c;
     for (long j=0; j<i; j++) {
@@ -92,15 +99,29 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
       // for p==2, it doesn't seem to help, and sometimes seems
       // to make things worse
 
+      if (j==0) fhe_watcher = 1;
+
       if (p==2) digits[j].square();
       else if (p==3) digits[j].cube();
       else polyEval(digits[j], x2p, digits[j]); 
       // "in spirit" digits[j] = digits[j]^p
 
+      if (j==0) fhe_watcher = 0;
+
+
+#ifdef VIEW_LEVELS
+      fprintf(stderr, "%3ld", digits[j].findBaseLevel());
+#endif
+
       tmp -= digits[j];
       tmp.divideByP();
     }
     digits[i] = tmp; // needed in the next round
+
+#ifdef VIEW_LEVELS
+    fprintf(stderr, "%3ld --- %3ld\n", digits[i].findBaseLevel(), digits[i].getPtxtSpace());
+#endif
+
 #ifdef DEBUG_PRINTOUT
     for (long j=0; j<=i; j++) {
       decryptAndPrint((cout << "digits["<<i<<"]["<<j<<"]:"),
@@ -109,6 +130,11 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
     }
 #endif
   }
+
+
+#ifdef VIEW_LEVELS
+  fprintf(stderr, "***\n");
+#endif
 }
 
 
