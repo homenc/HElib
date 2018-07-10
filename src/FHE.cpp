@@ -16,6 +16,7 @@
 #include "binio.h"
 #include "sample.h"
 
+NTL_CLIENT
 
 /******** Utility function to generate RLWE instances *********/
 
@@ -23,7 +24,7 @@
 double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
 // Returns the variance of the noise canonical-embedding entries
 {
-  assert (p>0); // Can be used with p=1, but we always use with p>=2
+  assert (p>0); // Used with p=1 for CKKS, p>=2 for BGV
   const FHEcontext& context = s.getContext();
   const PAlgebra& palg = context.zMStar;
 
@@ -37,7 +38,8 @@ double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
   // It is assumed that c0,c1 are defined with respect to the same set of
   // primes, but s may be defined relative to a different set. Either way
   // the primes for of c0,c1 are unchanged.
-  c0 *= p;
+  if (p>1)
+    c0 *= p;
   DoubleCRT tmp(c1);
   tmp.Mul(s, /*matchIndexSets=*/false); // multiply but don't mod-up
   c0 -= tmp;
@@ -801,17 +803,21 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   } // restore state upon destruction of state
 
   // Record the plaintext space for this key-switching matrix
-  if (p<2) {
-    if (context.isBootstrappable()) // use larger bootstrapping plaintext space
-         p = context.rcData.alMod->getPPowR();
-    else p = pubEncrKey.ptxtSpace; // default plaintext space from public key
-  }
-  // FIXME: We use context.isBootstrappable() rather than
-  //   this->isBootstrappable(). So we get the larger bootstrapping
-  //   plaintext space even if *this is not currently bootstrapppable,
-  //   in case the calling application will make it bootstrappable later.
+  if (getContext().alMod.getTag()==PA_cx_tag) // CKKS
+    p = 1;
+  else {                                      // BGV
+    if (p<2) {
+      if (context.isBootstrappable()) // use larger bootstrapping plaintext space
+        p = context.rcData.alMod->getPPowR();
+      else p = pubEncrKey.ptxtSpace; // default plaintext space from public key
+    }
+    // FIXME: We use context.isBootstrappable() rather than
+    //   this->isBootstrappable(). So we get the larger bootstrapping
+    //   plaintext space even if *this is not currently bootstrapppable,
+    //   in case the calling application will make it bootstrappable later.
 
-  assert(p>=2);
+    assert(p>=2);
+  }
   ksMatrix.ptxtSpace = p;
 
   // generate the RLWE instances with pseudorandom ai's

@@ -21,6 +21,8 @@
 #include "timing.h"
 #include "EncryptedArray.h"
 
+NTL_CLIENT
+
 bool isLittleEndian()
 {
     int i=1;

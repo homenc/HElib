@@ -83,8 +83,8 @@ public:
   long     toKeyID;  // Index of the key s that we are switching into
   long     ptxtSpace;// either p or p^r
 
-  std::vector<DoubleCRT> b;// The top row, consisting of the bj's
-  NTL::ZZ prgSeed;   // a seed to generate the random aj's in the bottom row
+  std::vector<DoubleCRT> b;// The top row, consisting of the bi's
+  NTL::ZZ prgSeed;         // a seed to generate the random ai's in the bottom row
   NTL::xdouble noiseVar;   // estimate for the noise variance in each column
 
   explicit
@@ -107,15 +107,15 @@ public:
   void verify(FHESecKey& sk);
 
   //! @brief Read a key-switching matrix from input
-  void readMatrix(istream& str, const FHEcontext& context);
+  void readMatrix(std::istream& str, const FHEcontext& context);
 
   //! Raw IO
-  void read(istream& str, const FHEcontext& context);
-  void write(ostream& str) const;
+  void read(std::istream& str, const FHEcontext& context);
+  void write(std::ostream& str) const;
 
 };
-ostream& operator<<(ostream& str, const KeySwitch& matrix);
-// We DO NOT have istream& operator>>(istream& str, KeySwitch& matrix);
+std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix);
+// We DO NOT have std::istream& operator>>(std::istream& str, KeySwitch& matrix);
 // instead must use the readMatrix method above, where you can specify context
 
 
@@ -269,10 +269,10 @@ public:
    *   (which can be larger than the input scaling). The same returned factor
    *   is also recorded in ctxt.ratFactor.
    **/
-  long Encrypt(Ctxt &ciphertxt,
-               const NTL::ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
-  long Encrypt(Ctxt &ciphertxt,
-               const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
+    long Encrypt(Ctxt &ciphertxt,
+                 const NTL::ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
+    long Encrypt(Ctxt &ciphertxt,
+                 const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
     NTL::ZZX tmp;
     convert(tmp, plaintxt);
     Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
@@ -291,10 +291,10 @@ public:
                                  // slots are assumed to contain constants
 
   friend class FHESecKey;
-  friend ostream& operator << (ostream& str, const FHEPubKey& pk);
-  friend istream& operator >> (istream& str, FHEPubKey& pk);
-  friend void writePubKeyBinary(ostream& str, const FHEPubKey& pk);
-  friend void readPubKeyBinary(istream& str, FHEPubKey& pk);
+  friend std::ostream& operator << (std::ostream& str, const FHEPubKey& pk);
+  friend std::istream& operator >> (std::istream& str, FHEPubKey& pk);
+  friend void writePubKeyBinary(std::ostream& str, const FHEPubKey& pk);
+  friend void readPubKeyBinary(std::istream& str, FHEPubKey& pk);
 
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
@@ -382,10 +382,10 @@ public:
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();
 
-  friend ostream& operator << (ostream& str, const FHESecKey& sk);
-  friend istream& operator >> (istream& str, FHESecKey& sk);
-  friend void writeSecKeyBinary(ostream& str, const FHESecKey& sk);
-  friend void readSecKeyBinary(istream& str, FHESecKey& sk);
+  friend std::ostream& operator << (std::ostream& str, const FHESecKey& sk);
+  friend std::istream& operator >> (std::istream& str, FHESecKey& sk);
+  friend void writeSecKeyBinary(std::ostream& str, const FHESecKey& sk);
+  friend void readSecKeyBinary(std::istream& str, FHESecKey& sk);
 };
 
 //! @name Strategies for generating key-switching matrices

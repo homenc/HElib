@@ -18,6 +18,8 @@ namespace NTL {} using namespace NTL;
 #include "hypercube.h"
 #include "powerful.h"
 
+NTL_CLIENT
+
 static bool dry = false; // a dry-run flag
 static bool noPrint = false;
 

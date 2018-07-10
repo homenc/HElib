@@ -223,7 +223,7 @@ bool operator>(const IndexSet& s1, const IndexSet& s2) {
 }
 
 
-ostream& operator << (ostream& str, const IndexSet& set)
+std::ostream& operator << (std::ostream& str, const IndexSet& set)
 {
   if (set.card() == 0) {
     str << "[]";
@@ -254,7 +254,7 @@ istream& operator >> (istream& str, IndexSet& set)
   return str;
 }
 
-void IndexSet::write(ostream& str) const 
+void IndexSet::write(std::ostream& str) const 
 {
   // Size of Set
   write_raw_int(str, this->card());

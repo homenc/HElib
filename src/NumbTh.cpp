@@ -17,6 +17,8 @@
 #include <cctype>
 #include <algorithm>   // defines count(...), min(...)
 
+NTL_CLIENT
+
 bool FHEglobals::dryRun = false;
 
 // Code for parsing command line
@@ -1211,7 +1213,40 @@ void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p)
    beta = res;
 }
 
-// Auxilliary classes to facillitiate faster reduction mod Phi_m(X)
+// use continued fractios to get "best" rational approximation
+std::pair<long,long> rationalApprox(double x, long denomBound)
+{
+  int sign = 1;
+  if (x<0) {
+    sign = -1;
+    x = -x;
+  }
+  double epsilon = 1.0/(denomBound*16.0); // "smudge factor"
+  double xi = x - floor(x+epsilon);
+  long prevDenom = 0;
+  long denom = 1;
+
+  // Continued fractions: a_{i+1}=floor(1/xi), x_{i+1} = 1/xi - a_{i+1}
+  while (xi>0) {
+    xi = 1/xi;
+    double ai = floor(xi+epsilon);
+    // NOTE: epsilon is meant to counter rounding errors
+    xi = xi - ai;
+
+    double tmpDenom = denom*ai + prevDenom;
+    if (tmpDenom > denomBound) // bound exceeded: return previous denominator
+      break;
+    // update denominator
+    prevDenom = denom;
+    denom = tmpDenom;
+    //    cout << "  ai="<<ai<<", xi="<<xi<<", denominator="<<denom<<endl;
+  }
+  long numer = long(round(denom*x))*sign;
+
+  return std::make_pair(numer,denom);
+}
+
+// Auxilliary classes to facilitate faster reduction mod Phi_m(X)
 // when the input has degree less than m
 
 

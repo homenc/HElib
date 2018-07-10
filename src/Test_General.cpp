@@ -22,6 +22,8 @@
 #include <cassert>
 #include <cstdio>
 
+NTL_CLIENT
+
 #ifdef DEBUG_PRINTOUT
 #define debugCompare(ea,sk,p,c) {\
   NewPlaintextArray pp(ea);\

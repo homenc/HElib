@@ -22,7 +22,7 @@ public:
   PA_INJECT(type) 
 
 private:
-  vector< vector< RX > > data;
+  std::vector< std::vector< RX > > data;
   const EncryptedArray& ea;
   long dim;
 
@@ -36,8 +36,8 @@ public:
     long d = ea.getDegree();
     long D = ea.sizeOfDimension(dim);
 
-    RandomStreamPush push;
-    SetSeed(ZZ(123));
+    NTL::RandomStreamPush push;
+    NTL::SetSeed(NTL::ZZ(123));
 
     data.resize(D);
     for (long i = 0; i < D; i++) {
@@ -85,7 +85,7 @@ public:
   PA_INJECT(type) 
 
 private:
-  vector< vector< vector< RX > > > data;
+  std::vector< std::vector< std::vector< RX > > > data;
   const EncryptedArray& ea;
   long dim;
 
@@ -99,8 +99,8 @@ public:
     long d = ea.getDegree();
     long D = ea.sizeOfDimension(dim);
 
-    RandomStreamPush push;
-    SetSeed(ZZ(123));
+    NTL::RandomStreamPush push;
+    SetSeed(NTL::ZZ(123));
 
     data.resize(n/D);
     for (long k = 0; k < n/D; k++) {
@@ -158,7 +158,7 @@ class RandomBlockMatrix : public BlockMatMul1D_derived<type> {
   const EncryptedArray& ea;
   long dim;
 
-  vector< vector< mat_R > > data;
+  std::vector< std::vector< mat_R > > data;
 
 public:
 
@@ -171,8 +171,8 @@ public:
     long D = _ea.sizeOfDimension(dim);
 
 
-    RandomStreamPush push;
-    SetSeed(ZZ(123));
+    NTL::RandomStreamPush push;
+    SetSeed(NTL::ZZ(123));
 
     data.resize(D);
     for (long i = 0; i < D; i++) {
@@ -227,7 +227,7 @@ class RandomMultiBlockMatrix : public BlockMatMul1D_derived<type> {
   const EncryptedArray& ea;
   long dim;
 
-  vector< vector< vector< mat_R > > > data;
+  std::vector< std::vector< std::vector< mat_R > > > data;
 
 public:
 
@@ -239,8 +239,8 @@ public:
     long d = _ea.getDegree();
     long D = _ea.sizeOfDimension(dim);
 
-    RandomStreamPush push;
-    SetSeed(ZZ(123));
+    NTL::RandomStreamPush push;
+    SetSeed(NTL::ZZ(123));
 
     data.resize(n/D);
     for (long k = 0; k < n/D; k++) {
@@ -297,7 +297,7 @@ template<class type>
 class RandomFullMatrix : public MatMulFull_derived<type> {
   PA_INJECT(type) 
   const EncryptedArray& ea;
-  vector<vector<RX>> data;
+  std::vector<std::vector<RX>> data;
 
 public:
   RandomFullMatrix(const EncryptedArray& _ea): ea(_ea) {
@@ -346,7 +346,7 @@ template<class type>
 class RandomFullBlockMatrix : public BlockMatMulFull_derived<type> {
   PA_INJECT(type) 
   const EncryptedArray& ea;
-  vector<vector<mat_R>> data;
+  std::vector<std::vector<mat_R>> data;
 
 public:
   RandomFullBlockMatrix(const EncryptedArray& _ea): ea(_ea) {

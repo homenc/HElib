@@ -27,6 +27,8 @@
 #include "DoubleCRT.h"
 #include "FHEContext.h"
 
+NTL_CLIENT
+
 // A threaded implementation of DoubleCRT operations
 
 static

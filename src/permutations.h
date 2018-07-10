@@ -24,13 +24,13 @@
 //! A simple permutation is just a vector with p[i]=\pi_i
 typedef NTL::Vec<long> Permut;
 
-//! Apply a permutation to a vector, out[i]=in[p1[i]] (NOT in-place)
+//! Apply a permutation to a std::vector, out[i]=in[p1[i]] (NOT in-place)
 template<class T>
 void applyPermToVec(NTL::Vec<T>& out, const NTL::Vec<T>& in, const Permut& p1);
 template<class T>
 void applyPermToVec(std::vector<T>& out, const std::vector<T>& in, const Permut& p1);
 
-//! Apply two permutations to a vector out[i]=in[p2[p1[i]]] (NOT in-place)
+//! Apply two permutations to a std::vector out[i]=in[p2[p1[i]]] (NOT in-place)
 template<class T>
 void applyPermsToVec(NTL::Vec<T>& out, const NTL::Vec<T>& in,
 		      const Permut& p2, const Permut& p1);
@@ -64,7 +64,7 @@ void randomPerm(Permut& perm, long n);
  * Another way is to use the getCoord and addCoord methods.
  * 
  * For example, permuting a 2x3x2 cube along dim=1 (the 2nd dimention), we
- * could have the data vector as  [ 1  1  0  2  2  0  2  0  1  1  0  2 ]. 
+ * could have the data std::vector as  [ 1  1  0  2  2  0  2  0  1  1  0  2 ]. 
  * This means the four columns are
  * permuted by the permutations     [ 1     0     2                      ]
  *                                  [    1     2     0                   ]
@@ -98,7 +98,7 @@ public:
 
   void makeExplicit(Permut& out) const;    // Write the permutation explicitly
 
-  //! For each position in the data vector, compute how many slots it should be
+  //! For each position in the data std::vector, compute how many slots it should be
   //! shifted inside its small permutation. Returns zero if all the shift amount
   //! are zero, nonzero values otherwise.
   long getShiftAmounts(Permut& out) const;
@@ -110,13 +110,13 @@ public:
 
 
  //! A test/debugging method
-  void printout(ostream& s) { // a test/debugging method
-    s << "Cube signature: " << getSig() << endl;
-    s << "  dim="<<dim<<endl;
-    s << "  data="<<getData()<<endl;
+  void printout(std::ostream& s) { // a test/debugging method
+    s << "Cube signature: " << getSig() << std::endl;
+    s << "  dim="<<dim<<std::endl;
+    s << "  data="<<getData()<<std::endl;
   }
 };
-ostream& operator<< (ostream &s, const ColPerm& p);
+std::ostream& operator<< (std::ostream &s, const ColPerm& p);
 
 /**
  * @brief Takes a permutation pi over m-dimensional cube C=Z_{n1} x...x Z_{nm}
@@ -198,7 +198,7 @@ template<class T> class FullBinaryTree;
 //! @class TreeNode
 //! @brief A node in a full binary tree.
 //!
-//! These nodes are in a vector, so we use indexes rather than pointers
+//! These nodes are in a std::vector, so we use indexes rather than pointers
 template<class T> class TreeNode {
   T data;
   long parent;
@@ -255,7 +255,7 @@ public:
     else nodes[0].data = d; // Root exists, just update data
   }
 
-  // Provide some of the interfaces of the underlying vector
+  // Provide some of the interfaces of the underlying std::vector
   long size() { return (long) nodes.size(); }
 
   TreeNode<T>& operator[](long i) { return nodes[i]; }
@@ -281,14 +281,14 @@ public:
   long leftChildIdx(long i) const { return nodes.at(i).leftChild; }
   long rightChildIdx(long i) const { return nodes.at(i).rightChild; }
 
-  void printout(ostream &s, long idx=0) const {
+  void printout(std::ostream &s, long idx=0) const {
     s << "[" <<aux<<" ";
     s << nodes[idx].getData();
     if (leftChildIdx(idx)>=0) printout(s, leftChildIdx(idx));
     if (rightChildIdx(idx)>=0) printout(s, rightChildIdx(idx));
     s << "] ";
   }
-  //  friend istream& operator>> (istream &s, DoubleCRT &d);
+  //  friend std::istream& operator>> (std::istream &s, DoubleCRT &d);
 
   //! If the parent is a leaf, add to it tho children with the given data,
   //! else just update the data of the two children of this parent.
@@ -316,9 +316,9 @@ long FullBinaryTree<T>::addChildren(long prntIdx,
   if (nodes[prntIdx].leftChild==-1 && nodes[prntIdx].rightChild==-1) {
     long childIdx = nodes.size();
     TreeNode<T> n1(leftData);
-    nodes.push_back(n1); // add left child to vector
+    nodes.push_back(n1); // add left child to std::vector
     TreeNode<T> n2(rightData);
-    nodes.push_back(n2);// add right child to vector
+    nodes.push_back(n2);// add right child to std::vector
 
     TreeNode<T>& parent = nodes[prntIdx];
     TreeNode<T>& left = nodes[childIdx];
@@ -403,12 +403,12 @@ class SubDimension {
       return *this;
       } 
   */
-  friend ostream& operator<< (ostream &s, const SubDimension &tree);
+  friend std::ostream& operator<< (std::ostream &s, const SubDimension &tree);
 };
 typedef FullBinaryTree<SubDimension> OneGeneratorTree;// tree for one generator
 
 
-//! A vector of generator trees, one per generator in Zm*/(p)
+//! A std::vector of generator trees, one per generator in Zm*/(p)
 class GeneratorTrees  {
   long depth; // How many layers in this permutation network
   NTL::Vec<OneGeneratorTree> trees;
@@ -478,7 +478,7 @@ class GeneratorTrees  {
    **/
   void ComputeCubeMapping();
 
-  friend ostream& operator<< (ostream &s, const GeneratorTrees &t);
+  friend std::ostream& operator<< (std::ostream &s, const GeneratorTrees &t);
 };
 
 
@@ -497,7 +497,7 @@ class PermNetLayer {
   bool isID; // a silly optimization, does this layer copmute the identity?
 
   friend class PermNetwork;
-  friend ostream& operator<< (ostream &s, const PermNetwork &net);
+  friend std::ostream& operator<< (std::ostream &s, const PermNetwork &net);
  public:
   long getGenIdx() const { return genIdx; }
   long getE() const { return e; }
@@ -536,7 +536,7 @@ public:
 
   const PermNetLayer& getLayer(long i) const {return layers[i];}
 
-  friend ostream& operator<< (ostream &s, const PermNetwork &net);
+  friend std::ostream& operator<< (std::ostream &s, const PermNetwork &net);
 };
 
 #endif /* ifndef _PERMUTATIONS_H_ */

@@ -74,7 +74,7 @@ void resetAllTimers();
 void printAllTimers(std::ostream& str=std::cerr);
 
 // return true if timer was found, false otherwise
-bool printNamedTimer(ostream& str, const char* name);
+bool printNamedTimer(std::ostream& str, const char* name);
 
 
 //! \cond FALSE (make doxygen ignore these classes)

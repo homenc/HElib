@@ -25,6 +25,8 @@
 #include <NTL/BasicThreadPool.h>
 #include "binaryArith.h"
 
+NTL_CLIENT
+
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 #endif

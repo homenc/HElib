@@ -40,7 +40,7 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
                     std::vector<zzX>* unpackSlotEncoding=nullptr);
 
 //! Decrypt the binary numbers that are encrypted in eNums.
-void decryptBinaryNums(vector<long>& pNums, const CtPtrs& eNums,
+void decryptBinaryNums(std::vector<long>& pNums, const CtPtrs& eNums,
                   const FHESecKey& sKey, const EncryptedArray& ea,
                   bool negative=false, bool allSlots=true);
 // The bits are encrypted in a bit-sliced manner. Namely, encNums[0]

@@ -27,6 +27,8 @@
 #include "CModulus.h"
 #include "timing.h"
 
+NTL_CLIENT
+
 // It is assumed that m,q,context, and root are already set. If root is set
 // to zero, it will be computed by the compRoots() method. Then rInv is
 // computed as the inverse of root.

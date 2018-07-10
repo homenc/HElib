@@ -60,7 +60,7 @@ class PAlgebra {
 
   long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
 
-  vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
+  std::vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
 
   //  native[i] is true iff gens[i] has the same order in the quotient
   //  group as its order in Zm*. 
@@ -69,23 +69,23 @@ class PAlgebra {
 
   CubeSignature cube; // the hypercube structure of Zm* /(p)
 
-  ZZX PhimX;   // Holds the integer polynomial Phi_m(X)
+  NTL::ZZX PhimX;   // Holds the integer polynomial Phi_m(X)
   double cM;   // the ring constant c_m for Z[X]/Phi_m(X)
 
-  vector<long> T; // The representatives for the quotient group Zm* /(p)
-  vector<long> Tidx;  // i=Tidx[t] is the index i s.t. T[i]=t. 
+  std::vector<long> T; // The representatives for the quotient group Zm* /(p)
+  std::vector<long> Tidx;  // i=Tidx[t] is the index i s.t. T[i]=t. 
                       // Tidx[t]==-1 if t notin T
 
-  vector<long> zmsIdx; // if t is the i'th element in Zm* then zmsIdx[t]=i
+  std::vector<long> zmsIdx; // if t is the i'th element in Zm* then zmsIdx[t]=i
                        // zmsIdx[t]==-1 if t notin Zm*
 
-  vector<long> zmsRep; // inverse of zmsIdx
+  std::vector<long> zmsRep; // inverse of zmsIdx
 
  public:
 
   PAlgebra(long mm, long pp = 2,
-           const vector<long>& _gens = vector<long>(), 
-           const vector<long>& _ords = vector<long>() );  // constructor
+           const std::vector<long>& _gens = std::vector<long>(), 
+           const std::vector<long>& _ords = std::vector<long>() );  // constructor
 
   bool operator==(const PAlgebra& other) const;
   bool operator!=(const PAlgebra& other) const {return !(*this==other);}
@@ -117,14 +117,14 @@ class PAlgebra {
   long getPow2() const { return pow2; }
 
   //! The cyclotomix polynomial Phi_m(X)
-  const ZZX& getPhimX() const { return PhimX; }
+  const NTL::ZZX& getPhimX() const { return PhimX; }
 
   //! The ring constant cM
   void set_cM(double c) { cM=c; }
   const double get_cM() const { return cM; }
 
   //! The prime-power factorization of m
-  //  const vector<long> getMfactors() const { return mFactors; }
+  //  const std::vector<long> getMfactors() const { return mFactors; }
 
   //! The number of generators in (Z/mZ)^* /(p)
   long numOfGens() const { return gens.size(); }
@@ -186,7 +186,7 @@ class PAlgebra {
 
   //! @brief Returns prod_i gi^{exps[i]} mod m. If onlySameOrd=true,
   //! use only generators that have the same order as in (Z/mZ)^*.
-  long exponentiate(const vector<long>& exps, 
+  long exponentiate(const std::vector<long>& exps, 
 			      bool onlySameOrd=false) const;
 
   //! @brief Returns coordinate of index k along the i'th dimension.
@@ -212,7 +212,7 @@ class PAlgebra {
 //! exps is an array of exponents (the dLog of some t in T), this function
   //! incerement exps lexicographic order, reutrn false if it cannot be
   //! incremented (because it is at its maximum value)
-  bool nextExpVector(vector<long>& exps) const {
+  bool nextExpVector(std::vector<long>& exps) const {
     return cube.incrementCoords(exps);
   }
 };
@@ -272,12 +272,12 @@ template<class R>
 struct GenericModulus { };
 
 template<> 
-struct GenericModulus<zz_p> {
-  static void init(long p) { zz_p::init(p); }
+struct GenericModulus<NTL::zz_p> {
+  static void init(long p) { NTL::zz_p::init(p); }
 };
 
 template<> 
-struct GenericModulus<GF2> {
+struct GenericModulus<NTL::GF2> {
   static void init(long p) { assert(p == 2); }
 };
 
@@ -286,21 +286,21 @@ class PA_GF2 {
 
 public:
   static const PA_tag tag = PA_GF2_tag;
-  typedef GF2 R;
-  typedef GF2X RX;
-  typedef vec_GF2X vec_RX;
-  typedef GF2XModulus RXModulus;
+  typedef NTL::GF2 R;
+  typedef NTL::GF2X RX;
+  typedef NTL::vec_GF2X vec_RX;
+  typedef NTL::GF2XModulus RXModulus;
   typedef DummyBak RBak;
   typedef DummyContext RContext;
-  typedef GF2E RE;
-  typedef vec_GF2E vec_RE;
-  typedef mat_GF2E mat_RE;
-  typedef GF2EX REX;
-  typedef GF2EBak REBak;
-  typedef vec_GF2EX vec_REX;
-  typedef GF2EContext REContext;
-  typedef mat_GF2 mat_R;
-  typedef vec_GF2 vec_R;
+  typedef NTL::GF2E RE;
+  typedef NTL::vec_GF2E vec_RE;
+  typedef NTL::mat_GF2E mat_RE;
+  typedef NTL::GF2EX REX;
+  typedef NTL::GF2EBak REBak;
+  typedef NTL::vec_GF2EX vec_REX;
+  typedef NTL::GF2EContext REContext;
+  typedef NTL::mat_GF2 mat_R;
+  typedef NTL::vec_GF2 vec_R;
 };
 
 
@@ -309,21 +309,21 @@ class PA_zz_p {
 
 public:
   static const PA_tag tag = PA_zz_p_tag;
-  typedef zz_p R;
-  typedef zz_pX RX;
-  typedef vec_zz_pX vec_RX;
-  typedef zz_pXModulus RXModulus;
-  typedef zz_pBak RBak;
-  typedef zz_pContext RContext;
-  typedef zz_pE RE;
-  typedef vec_zz_pE vec_RE;
-  typedef mat_zz_pE mat_RE;
-  typedef zz_pEX REX;
-  typedef zz_pEBak REBak;
-  typedef vec_zz_pEX vec_REX;
-  typedef zz_pEContext REContext;
-  typedef mat_zz_p mat_R;
-  typedef vec_zz_p vec_R;
+  typedef NTL::zz_p R;
+  typedef NTL::zz_pX RX;
+  typedef NTL::vec_zz_pX vec_RX;
+  typedef NTL::zz_pXModulus RXModulus;
+  typedef NTL::zz_pBak RBak;
+  typedef NTL::zz_pContext RContext;
+  typedef NTL::zz_pE RE;
+  typedef NTL::vec_zz_pE vec_RE;
+  typedef NTL::mat_zz_pE mat_RE;
+  typedef NTL::zz_pEX REX;
+  typedef NTL::zz_pEBak REBak;
+  typedef NTL::vec_zz_pEX vec_REX;
+  typedef NTL::zz_pEContext REContext;
+  typedef NTL::mat_zz_p mat_R;
+  typedef NTL::vec_zz_p vec_R;
 };
 //! \endcond
 
@@ -343,7 +343,7 @@ public:
   virtual const PAlgebra& getZMStar() const = 0;
 
   //! Returns reference to the factorization of Phi_m(X) mod p^r, but as ZZX's
-  virtual const vector<ZZX>& getFactorsOverZZ() const = 0;
+  virtual const std::vector<NTL::ZZX>& getFactorsOverZZ() const = 0;
 
   //! The value r
   virtual long getR() const  = 0;
@@ -400,9 +400,9 @@ private:
 
   /* the remaining fields are visible only to PAlgebraModDerived */
 
-  vector<RX> maps;
-  vector<mat_R> matrix_maps;
-  vector<REX> rmaps;
+  std::vector<RX> maps;
+  std::vector<mat_R> matrix_maps;
+  std::vector<REX> rmaps;
 
 public:
   const RX& getG() const { return G; }
@@ -416,25 +416,25 @@ public:
 template<class T> 
 class TNode {
 public:
-  shared_ptr< TNode<T> > left, right;
+  std::shared_ptr< TNode<T> > left, right;
   T data;
 
-  TNode(shared_ptr< TNode<T> > _left, shared_ptr< TNode<T> > _right,
+  TNode(std::shared_ptr< TNode<T> > _left, std::shared_ptr< TNode<T> > _right,
            const T& _data) : left(_left), right(_right), data(_data) { }
 };
 
 template<class T>
-shared_ptr< TNode<T> > 
-  buildTNode(shared_ptr< TNode<T> > left, 
-                shared_ptr< TNode<T> > right,
+std::shared_ptr< TNode<T> > 
+  buildTNode(std::shared_ptr< TNode<T> > left, 
+                std::shared_ptr< TNode<T> > right,
                 const T& data)
 {
-  return shared_ptr< TNode<T> >(new TNode<T>(left, right, data));
+  return std::shared_ptr< TNode<T> >(new TNode<T>(left, right, data));
 }
 
-template<class T> shared_ptr< TNode<T> > nullTNode()
+template<class T> std::shared_ptr< TNode<T> > nullTNode()
 {
-  return shared_ptr< TNode<T> >();
+  return std::shared_ptr< TNode<T> >();
 }
 //! \endcond
   
@@ -454,11 +454,11 @@ private:
   RXModulus PhimXMod;
 
   vec_RX factors;
-  vector<ZZX> factorsOverZZ;
+  std::vector<NTL::ZZX> factorsOverZZ;
   vec_RX crtCoeffs;
-  vector< vector< RX > >  maskTable;
-  vector<RX> crtTable;
-  shared_ptr< TNode<RX> > crtTree;
+  std::vector< std::vector< RX > >  maskTable;
+  std::vector<RX> crtTable;
+  std::shared_ptr< TNode<RX> > crtTree;
 
   void genMaskTable();
   void genCrtTable();
@@ -508,7 +508,7 @@ public:
   virtual const PAlgebra& getZMStar() const { return zMStar; }
 
   //! Returns reference to the factorization of Phi_m(X) mod p^r, but as ZZX's
-  virtual const vector<ZZX>& getFactorsOverZZ() const { return factorsOverZZ; }
+  virtual const std::vector<NTL::ZZX>& getFactorsOverZZ() const { return factorsOverZZ; }
 
   //! The value r
   virtual long getR() const { return r; }
@@ -550,7 +550,7 @@ public:
          maskTable[i].size() == zMStar.OrderOf(i)+1 // order of generator i
      \endverbatim
   **/
-  const vector< vector< RX > >& getMaskTable() const // logically, but not really, const
+  const std::vector< std::vector< RX > >& getMaskTable() const // logically, but not really, const
   {
     return maskTable;
   }
@@ -568,12 +568,12 @@ public:
   //! (as returned by zMStar.getOrdP()).
   //! In addition, when r > 1, G must be the monomial X (RX(1, 1))
 
-  //! @brief Returns a vector crt[] such that crt[i] = H mod Ft (with t = T[i])
-  void CRT_decompose(vector<RX>& crt, const RX& H) const;
+  //! @brief Returns a std::vector crt[] such that crt[i] = H mod Ft (with t = T[i])
+  void CRT_decompose(std::vector<RX>& crt, const RX& H) const;
 
   //! @brief Returns H in R[X]/Phi_m(X) s.t. for every i<nSlots and t=T[i],
   //! we have H == crt[i] (mod Ft)
-  void CRT_reconstruct(RX& H, vector<RX>& crt) const;
+  void CRT_reconstruct(RX& H, std::vector<RX>& crt) const;
 
   //! @brief Compute the maps for all the slots.
   //! In the current implementation, we if r > 1, then
@@ -595,17 +595,17 @@ public:
   //!
   //! Must have deg(alpha[i])<deg(G). The mappingData argument should contain
   //! the output of mapToSlots(G).
-  void embedInSlots(RX& H, const vector<RX>& alphas, 
+  void embedInSlots(RX& H, const std::vector<RX>& alphas, 
                     const MappingData<type>& mappingData) const;
 
   //! @brief Return an array such that alphas[i] in R[X]/G(X) represent the
   //! same element as rt = (H mod Ft) in R[X]/Ft(X) where t=T[i].
   //!
   //! The mappingData argument should contain the output of mapToSlots(G).
-  void decodePlaintext(vector<RX>& alphas, const RX& ptxt,
+  void decodePlaintext(std::vector<RX>& alphas, const RX& ptxt,
 		       const MappingData<type>& mappingData) const;
 
-  //! @brief Returns a coefficient vector C for the linearized polynomial
+  //! @brief Returns a coefficient std::vector C for the linearized polynomial
   //! representing M.
   //!
   //! For h in Z/(p^r)[X] of degree < d,
@@ -613,7 +613,7 @@ public:
   //! G is assumed to be defined in mappingData, with d = deg(G).
   //! L describes a linear map M by describing its action on the standard
   //! power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.  
-  void buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
+  void buildLinPolyCoeffs(std::vector<RX>& C, const std::vector<RX>& L,
                           const MappingData<type>& mappingData) const;
   ///@}
 private:
@@ -631,12 +631,12 @@ private:
   //! optional rF1 contains the output of mapToF1, to speed this operation.
   void mapToFt(RX& w, const RX& G, long t, const RX* rF1=NULL) const;
 
-  void buildTree(shared_ptr< TNode<RX> >& res, long offset, long extent) const;
+  void buildTree(std::shared_ptr< TNode<RX> >& res, long offset, long extent) const;
 
   void evalTree(RX& res, 
-              shared_ptr< TNode<RX> > tree,
-              const vector<RX>& crt1,
-              long offset, long extent) const;
+  std::shared_ptr< TNode<RX> > tree,
+  const std::vector<RX>& crt1,
+  long offset, long extent) const;
 };
 
 //! A different derived class to be used for the approximate-numbers scheme
@@ -661,7 +661,7 @@ public:
   void restoreContext() const override {}
 
   // These function make no sense for PAlgebraModCx
-  const vector<ZZX>& getFactorsOverZZ() const override
+  const std::vector<NTL::ZZX>& getFactorsOverZZ() const override
   { throw std::logic_error("PAlgebraModCx::getFactorsOverZZ undefined"); }
   zzX getMask_zzX(long i, long j) const override
   { throw std::logic_error("PAlgebraModCx::getMask_zzX undefined"); }
@@ -731,7 +731,7 @@ public:
   //! Returns reference to underlying PAlgebra object
   const PAlgebra& getZMStar() const { return rep->getZMStar(); }
   //! Returns reference to the factorization of Phi_m(X) mod p^r, but as ZZX's
-  const vector<ZZX>& getFactorsOverZZ() const { return rep->getFactorsOverZZ(); }
+  const std::vector<NTL::ZZX>& getFactorsOverZZ() const { return rep->getFactorsOverZZ(); }
   //! The value r
   long getR() const { return rep->getR(); } 
   //! The value p^r
@@ -746,5 +746,5 @@ public:
 //! returns true if the palg parameters match the rest, false otherwise
 bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
-                     const vector<long>& gens, const vector<long>& ords);
+                     const std::vector<long>& gens, const std::vector<long>& ords);
 #endif // #ifdef _PAlgebra_H_

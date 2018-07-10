@@ -30,7 +30,7 @@ void computeAllProducts(CtPtrs& products, const CtPtrs& array,
 //! The input is a plaintext table T[] and an array of encrypted bits
 //! I[], holding the binary representation of an index i into T.
 //! The output is the encrypted value T[i].
-void tableLookup(Ctxt& out, const vector<zzX>& table, const CtPtrs& idx,
+void tableLookup(Ctxt& out, const std::vector<zzX>& table, const CtPtrs& idx,
                  std::vector<zzX>* unpackSlotEncoding=nullptr);
 
 //! The input is an encrypted table T[] and an array of encrypted bits

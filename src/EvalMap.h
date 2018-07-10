@@ -60,7 +60,7 @@ private:
 public:
   EvalMap(const EncryptedArray& _ea, 
           bool minimal, 
-          const Vec<long>& mvec, 
+          const NTL::Vec<long>& mvec, 
           bool _invert,
           bool build_cache,
           bool normal_basis = true);
@@ -92,7 +92,7 @@ private:
 public:
   ThinEvalMap(const EncryptedArray& _ea, 
           bool minimal, 
-          const Vec<long>& mvec, 
+          const NTL::Vec<long>& mvec, 
           bool _invert,
           bool build_cache);
 

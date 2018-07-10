@@ -15,6 +15,8 @@
 #include <ctime>
 #include "timing.h"
 
+using namespace std;
+
 #ifdef CLOCK_MONOTONIC
 unsigned long GetTimerClock()
 {
