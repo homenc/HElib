@@ -17,9 +17,10 @@
 #include "timing.h"
 #include "cloned_ptr.h"
 
+NTL_CLIENT
 
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
-					const PAlgebraMod& alMod, const ZZX& G)
+                                        const PAlgebraMod& alMod, const ZZX& G)
 {
   if (alMod.getTag()==PA_cx_tag)
     return new EncryptedArrayCx(context, alMod.getCx());

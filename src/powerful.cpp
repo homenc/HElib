@@ -15,6 +15,8 @@
 
 #include "powerful.h"
 
+NTL_CLIENT
+
 // powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}
 // computes divVec[d] = m/p_d^{e_d}
 inline void computeDivVec(Vec<long>& divVec, long m,

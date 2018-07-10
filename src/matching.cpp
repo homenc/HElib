@@ -12,6 +12,8 @@
 #include "matching.h"
 #include <queue>
 
+using namespace std;
+
 static long augmenting_path(vector<long>& p, FlowGraph& g, long src, long sink);
 // Run BFS to find a shortest augmenting path
 

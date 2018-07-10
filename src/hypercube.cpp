@@ -12,6 +12,7 @@
 #include "hypercube.h"
 #include <iomanip>
 
+NTL_CLIENT
 
   //! Break an index into the hypercube to index of the
   //! dimension-dim subcube and index inside that subcube.

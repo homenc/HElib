@@ -12,6 +12,8 @@
 
 #include "permutations.h"
 
+NTL_CLIENT
+
 const Vec<long> SubDimension::dummyBenes; // global variable
 
 // Apply a permutation to a vector, out[i]=in[p1[i]]

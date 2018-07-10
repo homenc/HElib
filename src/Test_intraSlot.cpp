@@ -12,6 +12,8 @@
 // testPacking.cxx - testing uppack/repack functionality
 #include "intraSlot.h"
 
+NTL_CLIENT
+
 int main(int argc, char **argv)
 {
   ArgMapping amap;

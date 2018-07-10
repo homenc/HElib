@@ -16,6 +16,7 @@
 #include "binio.h"
 #include "sample.h"
 
+NTL_CLIENT
 
 /******** Utility function to generate RLWE instances *********/
 

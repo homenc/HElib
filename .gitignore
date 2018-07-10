@@ -5,6 +5,7 @@ src/*_x
 src/*_x.exe
 
 Makefile-*
+src/makedep.d
 **.DS_Store
 src/*_x.dSYM
 src/*.sh

@@ -17,6 +17,8 @@
 #include <cctype>
 #include <algorithm>   // defines count(...), min(...)
 
+NTL_CLIENT
+
 bool FHEglobals::dryRun = false;
 
 // Code for parsing command line

@@ -3,6 +3,8 @@
 #include "matmul.h"
 #include <NTL/BasicThreadPool.h>
 
+NTL_CLIENT
+
 static bool noPrint = false;
 
 

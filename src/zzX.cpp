@@ -19,6 +19,8 @@
 #include "timing.h"
 #include "zzX.h"
 
+NTL_CLIENT
+
 void MulMod(zzX& res, const zzX& a, const zzX& b, const PAlgebra& palg)
 {
   FHE_TIMER_START;

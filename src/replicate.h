@@ -17,17 +17,17 @@
  *
  * This module implements a recursive, O(1)-amortized algorithm for
  * replications. On an input ciphertext that encrypts (x_1, ..., x_n), we
- * generate the n encrypted vectors (x_1, ..., x_1), ..., (x_n, ..., x_n),
+ * generate the n encrypted std::vectors (x_1, ..., x_1), ..., (x_n, ..., x_n),
  * in that order.
  *
- * To process the output vectors, a "call back" mechanism is used (so that we
+ * To process the output std::vectors, a "call back" mechanism is used (so that we
  * do not need to generate them all, and instead can return them one by one).
  * For this purpose, the caller should pass a pointer to a class derived from
  * the purely abstract class ReplicateHandler.
  *
  * The replication procedures are meant to be used for linear algebra operation
- * where a matrix-vector multiplication can be implemented for example by
- * replicating each entry of the vector as a stand-alone ciphertext, then use
+ * where a matrix-std::vector multiplication can be implemented for example by
+ * replicating each entry of the std::vector as a stand-alone ciphertext, then use
  * the SIMD operations on these ciphertexts.
  **/
 
@@ -85,7 +85,7 @@ void replicateAll(const EncryptedArray& ea, const Ctxt& ctxt,
 		  ReplicateHandler *handler, long recBound = 64,
 		  RepAuxDim* repAuxPtr=NULL);
 
-//! return the result as a vector of ciphertexts, mostly useful for
+//! return the result as a std::vector of ciphertexts, mostly useful for
 //! debugging purposes (for real parameters would take a lot of memory)
 void replicateAll(std::vector<Ctxt>& v, const EncryptedArray& ea,
        	          const Ctxt& ctxt, long recBound = 64,
@@ -109,7 +109,7 @@ void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i);
 //! @cond FALSE (make doxygen ignore this class)
 class RepAux { // one table for the whole thing
 private:
-  vector< copied_ptr<DoubleCRT> > _tab;
+  std::vector< copied_ptr<DoubleCRT> > _tab;
 
 public:
   copied_ptr<DoubleCRT>& tab(long i) {
@@ -120,7 +120,7 @@ public:
 
 class RepAuxDim { // two tables per dimension
 private:
-  vector< vector< copied_ptr<DoubleCRT> > > _tab, _tab1;
+  std::vector< std::vector< copied_ptr<DoubleCRT> > > _tab, _tab1;
 
 public:
   copied_ptr<DoubleCRT>& tab(long d, long i) {

@@ -23,6 +23,8 @@
 #include "timing.h"
 #include "EncryptedArray.h"
 
+NTL_CLIENT
+
 #define N_TESTS 3
 static long ms[N_TESTS][10] = {
   //nSlots  m   phi(m) ord(2)

@@ -20,6 +20,8 @@ NTL_CLIENT;
 
 extern int fhe_watcher;
 
+NTL_CLIENT
+
 void SKHandle::read(istream& str)
 {
   powerOfS = read_raw_int(str);

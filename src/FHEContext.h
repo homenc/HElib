@@ -52,7 +52,7 @@ class EncryptedArray;
  * @brief Maintaining the parameters
  **/
 class FHEcontext {
-  vector<Cmodulus> moduli;    // Cmodulus objects for the different primes
+  std::vector<Cmodulus> moduli;    // Cmodulus objects for the different primes
   // This is private since the implementation assumes that the list of
   // primes only grows and no prime is ever modified or removed.
 
@@ -70,7 +70,7 @@ public:
   const EncryptedArray* ea;
 
   //! @brief sqrt(variance) of the LWE error (default=3.2)
-  xdouble stdev;
+  NTL::xdouble stdev;
 
   //! @brief number of bits per level
   long bitsPerLevel;
@@ -104,12 +104,12 @@ public:
    *
    * The number of Bi's is one less than the number of columns in the key
    * switching matrices (since the 1st column encrypts sk, without any Bi's),
-   * but we keep in the digits vector also an entry for the primes that do
+   * but we keep in the digits std::vector also an entry for the primes that do
    * not participate in any Bi (so digits.size() is the same as the number
    * of columns in the key switching matrices).
    * See section 3.1.6 in the design document (key-switching).
   **/
-  vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
+  std::vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
 
   long fftPrimeCount;
 
@@ -122,10 +122,10 @@ public:
   /******************************************************************/
   ~FHEcontext(); // destructor
   FHEcontext(unsigned long m, unsigned long p, unsigned long r,
-             const vector<long>& gens = vector<long>(), 
-             const vector<long>& ords = vector<long>() );  // constructor
+             const std::vector<long>& gens = std::vector<long>(), 
+             const std::vector<long>& ords = std::vector<long>() );  // constructor
 
-  void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
+  void makeBootstrappable(const NTL::Vec<long>& mvec, long skWht=0,
 			  bool conservative=false, bool build_cache=false)
   { 
     rcData.init(*this, mvec, skWht, conservative, build_cache); 
@@ -148,7 +148,7 @@ public:
   long numPrimes() const { return moduli.size(); }
 
   //! @brief Is num divisible by any of the primes in the chain?
-  bool isZeroDivisor(const ZZ& num) const {
+  bool isZeroDivisor(const NTL::ZZ& num) const {
     for (unsigned long i=0; i<moduli.size(); i++) 
       if (divide(num,moduli[i].getQ())) return true;
     return false;
@@ -163,9 +163,9 @@ public:
 
   ///@{
   //! @brief The product of all the primes in the given set
-  void productOfPrimes(ZZ& p, const IndexSet& s) const;
-  ZZ productOfPrimes(const IndexSet& s) const {
-    ZZ p;
+  void productOfPrimes(NTL::ZZ& p, const IndexSet& s) const;
+  NTL::ZZ productOfPrimes(const IndexSet& s) const {
+    NTL::ZZ p;
     productOfPrimes(p,s);
     return p;
   }
@@ -178,7 +178,7 @@ public:
   //! @brief Returns the natural logarithm of productOfPrimes(s)
   double logOfProduct(const IndexSet& s) const {
     if (s.last() >= numPrimes())
-      Error("FHEContext::logOfProduct: IndexSet has too many rows");
+      NTL::Error("FHEContext::logOfProduct: IndexSet has too many rows");
 
     double ans = 0.0;
     for (long i = s.first(); i <= s.last(); i = s.next(i))
@@ -233,7 +233,7 @@ public:
 
   \code
     unsigned long m, p, r;
-    vector<long> gens, ords;
+    std::vector<long> gens, ords;
     
     readContextBase(str, m, p, r, gens, ords);
 
@@ -248,42 +248,42 @@ public:
   **/
 
   //! @brief write [m p r] data
-  friend void writeContextBase(ostream& str, const FHEcontext& context);
+  friend void writeContextBase(std::ostream& str, const FHEcontext& context);
 
   //! @brief Write all other data
-  friend ostream& operator<< (ostream &str, const FHEcontext& context);
+  friend std::ostream& operator<< (std::ostream &str, const FHEcontext& context);
 
   //! @brief read [m p r] data, needed to construct context
-  friend void readContextBase(istream& str, unsigned long& m, unsigned long& p, unsigned long& r,
-			      vector<long>& gens, vector<long>& ords);
+  friend void readContextBase(std::istream& str, unsigned long& m, unsigned long& p, unsigned long& r,
+			      std::vector<long>& gens, std::vector<long>& ords);
 
   //! @brief read all other data associated with context
-  friend istream& operator>> (istream &str, FHEcontext& context);
+  friend std::istream& operator>> (std::istream &str, FHEcontext& context);
   ///@}
 
-  friend void writeContextBinary(ostream& str, const FHEcontext& context);
-  friend void readContextBinary(istream& str, FHEcontext& context);
+  friend void writeContextBinary(std::ostream& str, const FHEcontext& context);
+  friend void readContextBinary(std::istream& str, FHEcontext& context);
 
 };
 
 //! @brief write [m p r gens ords] data
-void writeContextBase(ostream& s, const FHEcontext& context);
+void writeContextBase(std::ostream& s, const FHEcontext& context);
 //! @brief read [m p r gens ords] data, needed to construct context
-void readContextBase(istream& s, unsigned long& m,
+void readContextBase(std::istream& s, unsigned long& m,
                      unsigned long& p, unsigned long& r,
-		     vector<long>& gens, vector<long>& ords);
-std::unique_ptr<FHEcontext> buildContextFromAscii(istream& str);
+		     std::vector<long>& gens, std::vector<long>& ords);
+std::unique_ptr<FHEcontext> buildContextFromAscii(std::istream& str);
 
 //! @brief write [m p r gens ords] data
-void writeContextBaseBinary(ostream& str, const FHEcontext& context);
-void writeContextBinary(ostream& str, const FHEcontext& context);
+void writeContextBaseBinary(std::ostream& str, const FHEcontext& context);
+void writeContextBinary(std::ostream& str, const FHEcontext& context);
 
 //! @brief read [m p r gens ords] data, needed to construct context
-void readContextBaseBinary(istream& s, unsigned long& m,
+void readContextBaseBinary(std::istream& s, unsigned long& m,
                            unsigned long& p, unsigned long& r,
-                           vector<long>& gens, vector<long>& ords);
-std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str);
-void readContextBinary(istream& str, FHEcontext& context);
+                           std::vector<long>& gens, std::vector<long>& ords);
+std::unique_ptr<FHEcontext> buildContextFromBinary(std::istream& str);
+void readContextBinary(std::istream& str, FHEcontext& context);
 
 
 // VJS: compiler seems to need these declarations out here...wtf...

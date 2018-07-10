@@ -55,9 +55,6 @@
 
 #include "range.h"
 
-using namespace std;
-using namespace NTL;
-
 namespace FHEglobals
 {
   //! @brief A dry-run flag
@@ -99,7 +96,7 @@ using namespace tr1;
 
 
 //! @typedef
-typedef unordered_map<string, const char *> argmap_t;
+typedef std::unordered_map<std::string, const char *> argmap_t;
 
 typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future
@@ -143,12 +140,12 @@ bool parseArgs(int argc,  char *argv[], argmap_t& argmap);
 template<class T>
 bool doArgProcessing(T *value, const char *s)
 {
-  string ss(s);
-  stringstream sss(ss);
+  std::string ss(s);
+  std::stringstream sss(ss);
   return bool(sss >> *value);
 }
 
-bool doArgProcessing(string *value, const char *s);
+bool doArgProcessing(std::string *value, const char *s);
 
 /* ArgProcessor: virtual base class */
 
@@ -174,15 +171,15 @@ public:
 
 class ArgMapping {
 public:
-  unordered_map< string, shared_ptr<ArgProcessor> > map;
-  stringstream doc;
+  std::unordered_map< std::string, std::shared_ptr<ArgProcessor> > map;
+  std::stringstream doc;
 
   // no documentation
   template<class T>
   void arg(const char *name, T& value) 
   { 
-    shared_ptr<ArgProcessor> ap = 
-      shared_ptr<ArgProcessor>(new ArgProcessorDerived<T>(&value));
+    std::shared_ptr<ArgProcessor> ap = 
+      std::shared_ptr<ArgProcessor>(new ArgProcessorDerived<T>(&value));
 
     assert(!map[name]);
     map[name] = ap;
@@ -216,8 +213,8 @@ public:
 
   void usage(const char *prog) 
   {
-    cerr << "Usage: " << prog << " [ name=value ]...\n";
-    cerr << documentation();
+    std::cerr << "Usage: " << prog << " [ name=value ]...\n";
+    std::cerr << documentation();
     exit(0);
   }
 
@@ -228,16 +225,16 @@ public:
       long j = 0;
       while (x[j] != '=' && x[j] != '\0') j++; 
       if (x[j] == '\0') usage(argv[0]);
-      string name(x, j);
+      std::string name(x, j);
       const char *s = x+j+1;
 
-      shared_ptr<ArgProcessor> ap = map[name];
+      std::shared_ptr<ArgProcessor> ap = map[name];
       if (!ap) return usage(argv[0]);
       if (!ap->process(s)) usage(argv[0]);
     }
   }
 
-  string documentation() 
+  std::string documentation() 
   {
     return doc.str();
   }
@@ -265,11 +262,11 @@ long multOrd(long p, long m);
 //!
 //! NTL's current smallint modulus, zz_p::modulus(), is assumed to be p^r,
 //! for p prime, r >= 1 integer.
-void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
+void ppsolve(NTL::vec_zz_pE& x, const NTL::mat_zz_pE& A, const NTL::vec_zz_pE& b,
              long p, long r); 
 
 //! @brief A version for GF2: must have p == 2 and r == 1
-void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
+void ppsolve(NTL::vec_GF2E& x, const NTL::mat_GF2E& A, const NTL::vec_GF2E& b,
              long p, long r);
 
 //! @brief Compute the inverse mod p^r of an n x n matrix.
@@ -277,17 +274,17 @@ void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
 //! NTL's current smallint modulus zz_p::modulus() is assumed to be p^r for
 //! p prime, r >= 1 integer. For the zz_pE variant also zz_pE::modulus() must
 //! be initialized. An error is raised if A is not inverible mod p.
-void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r);
-void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r);
+void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r);
+void ppInvert(NTL::mat_zz_pE& X, const NTL::mat_zz_pE& A, long p, long r);
 
 // variants for GF2/GF2E to help with template code
-inline void ppInvert(mat_GF2& X, const mat_GF2& A, long p, long r)
+inline void ppInvert(NTL::mat_GF2& X, const NTL::mat_GF2& A, long p, long r)
 { NTL::inv(X, A); }
-inline void ppInvert(mat_GF2E& X, const mat_GF2E& A, long p, long r)
+inline void ppInvert(NTL::mat_GF2E& X, const NTL::mat_GF2E& A, long p, long r)
 { NTL::inv(X, A); }
 
-void buildLinPolyMatrix(mat_zz_pE& M, long p);
-void buildLinPolyMatrix(mat_GF2E& M, long p);
+void buildLinPolyMatrix(NTL::mat_zz_pE& M, long p);
+void buildLinPolyMatrix(NTL::mat_GF2E& M, long p);
 
 //! @brief Combination of buildLinPolyMatrix and ppsolve.
 //!
@@ -296,62 +293,62 @@ void buildLinPolyMatrix(mat_GF2E& M, long p);
 //!
 //! NTL's current smallint modulus, zz_p::modulus(), is assumed to be p^r,
 //! for p prime, r >= 1 integer.
-void buildLinPolyCoeffs(vec_zz_pE& C, const vec_zz_pE& L, long p, long r);
+void buildLinPolyCoeffs(NTL::vec_zz_pE& C, const NTL::vec_zz_pE& L, long p, long r);
 
 //! @brief A version for GF2: must be called with p == 2 and r == 1
-void buildLinPolyCoeffs(vec_GF2E& C, const vec_GF2E& L, long p, long r);
+void buildLinPolyCoeffs(NTL::vec_GF2E& C, const NTL::vec_GF2E& L, long p, long r);
 
 //! @brief Apply a linearized polynomial with coefficient vector C.
 //!
 //! NTL's current smallint modulus, zz_p::modulus(), is assumed to be p^r,
 //! for p prime, r >= 1 integer.
-void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p);
+void applyLinPoly(NTL::zz_pE& beta, const NTL::vec_zz_pE& C, const NTL::zz_pE& alpha, long p);
 
 //! @brief A version for GF2: must be called with p == 2 and r == 1
-void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p);
+void applyLinPoly(NTL::GF2E& beta, const NTL::vec_GF2E& C, const NTL::GF2E& alpha, long p);
 
 
 //! Base-2 logarithm
-inline double log2(const xdouble& x){ return log(x) * 1.442695040889; }
+inline double log2(const NTL::xdouble& x){ return log(x) * 1.442695040889; }
 inline double log2(const double x){ return log(x) * 1.442695040889; }
 
 //! @brief Factoring by trial division, only works for N<2^{60}, only the
 //! primes are recorded, not their multiplicity.
-void factorize(vector<long> &factors, long N);
-void factorize(vector<ZZ> &factors, const ZZ& N);
+void factorize(std::vector<long> &factors, long N);
+void factorize(std::vector<NTL::ZZ> &factors, const NTL::ZZ& N);
 
 
 //! @brief Factoring by trial division, only works for N<2^{60}
 //! primes and multiplicities are recorded
-void factorize(Vec< Pair<long, long> > &factors, long N);
+void factorize(NTL::Vec< NTL::Pair<long, long> > &factors, long N);
 
 //! @brief Prime-power factorization
-void pp_factorize(vector<long>& factors, long N);
+void pp_factorize(std::vector<long>& factors, long N);
 
 //! Compute Phi(N) and also factorize N.
-void phiN(long &phiN, vector<long> &facts, long N);
-void phiN(ZZ &phiN, vector<ZZ> &facts, const ZZ &N);
+void phiN(long &phiN, std::vector<long> &facts, long N);
+void phiN(NTL::ZZ &phiN, std::vector<NTL::ZZ> &facts, const NTL::ZZ &N);
 
 //! Compute Phi(N).
 long phi_N(long N);
 
 //! Returns in gens a generating set for Zm* /<p>, and in ords the
 //! order of these generators. Return value is the order of p in Zm*.
-long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p,
-                    const vector<long>& candidates=vector<long>());
+long findGenerators(std::vector<long>& gens, std::vector<long>& ords, long m, long p,
+                    const std::vector<long>& candidates=std::vector<long>());
 
 //! Find e-th root of unity modulo the current modulus.
-void FindPrimitiveRoot(zz_p &r, unsigned long e);
-void FindPrimitiveRoot(ZZ_p &r, unsigned long e);
+void FindPrimitiveRoot(NTL::zz_p &r, unsigned long e);
+void FindPrimitiveRoot(NTL::ZZ_p &r, unsigned long e);
 
 //! Compute mobius function (naive method as n is small).
 long mobius(long n);
 
 //! Compute cyclotomic polynomial.
-ZZX Cyclotomic(long N);
+NTL::ZZX Cyclotomic(long N);
 
 //! Return a degree-d irreducible polynomial mod p
-ZZX makeIrredPoly(long p, long d);
+NTL::ZZX makeIrredPoly(long p, long d);
 
 //! Find a primitive root modulo N.
 long primroot(long N,long phiN);
@@ -361,7 +358,7 @@ long ord(long N,long p);
 
 
 // Returns a random mod p polynomial of degree < n
-ZZX RandPoly(long n,const ZZ& p);
+NTL::ZZX RandPoly(long n,const NTL::ZZ& p);
 
 ///@{
 /**
@@ -370,36 +367,36 @@ ZZX RandPoly(long n,const ZZ& p);
  * When abs=false reduce to interval (-q/2,...,q/2), when abs=true reduce
  * to [0,q). When abs=false and q=2, maintains the same sign as the input.
  */
-void PolyRed(ZZX& out, const ZZX& in,       long q, bool abs=false);
-void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs=false);
-inline void PolyRed(ZZX& F, long q, bool abs=false) { PolyRed(F,F,q,abs); }
-inline void PolyRed(ZZX& F, const ZZ& q, bool abs=false)
+void PolyRed(NTL::ZZX& out, const NTL::ZZX& in, long q, bool abs=false);
+void PolyRed(NTL::ZZX& out, const NTL::ZZX& in, const NTL::ZZ& q, bool abs=false);
+inline void PolyRed(NTL::ZZX& F, long q, bool abs=false) { PolyRed(F,F,q,abs); }
+inline void PolyRed(NTL::ZZX& F, const NTL::ZZ& q, bool abs=false)
 { PolyRed(F,F,q,abs); }
-void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, long q, bool abs);
+void vecRed(NTL::Vec<NTL::ZZ>& out, const NTL::Vec<NTL::ZZ>& in, long q, bool abs);
 ///@}
 
 //! Multiply the polynomial f by the integer a modulo q
-void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs=true);
-inline ZZX MulMod(const ZZX& f, long a, long q, bool abs=true) {
-  ZZX res;
+void MulMod(NTL::ZZX& out, const NTL::ZZX& f, long a, long q, bool abs=true);
+inline NTL::ZZX MulMod(const NTL::ZZX& f, long a, long q, bool abs=true) {
+  NTL::ZZX res;
   MulMod(res, f, a, q, abs);
   return res;
 }
 
 ///@{
 //! @name Some enhanced conversion routines
-inline void convert(long& x1, const GF2X& x2)
+inline void convert(long& x1, const NTL::GF2X& x2)
 {
    x1 = rep(ConstTerm(x2));
 }
-inline void convert(long& x1, const zz_pX& x2)
+inline void convert(long& x1, const NTL::zz_pX& x2)
 {
    x1 = rep(ConstTerm(x2));
 }
-void convert(vec_zz_pE& X, const vector<ZZX>& A);
-void convert(mat_zz_pE& X, const vector< vector<ZZX> >& A);
-void convert(vector<ZZX>& X, const vec_zz_pE& A);
-void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A);
+void convert(NTL::vec_zz_pE& X, const std::vector<NTL::ZZX>& A);
+void convert(NTL::mat_zz_pE& X, const std::vector< std::vector<NTL::ZZX> >& A);
+void convert(std::vector<NTL::ZZX>& X, const NTL::vec_zz_pE& A);
+void convert(std::vector< std::vector<NTL::ZZX> >& X, const NTL::mat_zz_pE& A);
 void convert(NTL::Vec<long>& out, const NTL::ZZX& in);
 void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric=true);
 void convert(NTL::Vec<long>& out, const NTL::GF2X& in);
@@ -414,12 +411,12 @@ void convert(NTL::GF2X& out, const NTL::Vec<long>& in);
 template<class T1, class T2>
 void convert(T1& x1, const T2& x2) 
 {
-   conv(x1, x2);
+   NTL::conv(x1, x2);
 }
 
 //! generic vector conversion routines
 template<class T1, class T2> 
-void convert(vector<T1>& v1, const vector<T2>& v2)
+void convert(std::vector<T1>& v1, const std::vector<T2>& v2)
 {
    long n = v2.size();
    v1.resize(n);
@@ -428,7 +425,7 @@ void convert(vector<T1>& v1, const vector<T2>& v2)
 }
 
 template<class T1, class T2> 
-void convert(vector<T1>& v1, const Vec<T2>& v2)
+void convert(std::vector<T1>& v1, const NTL::Vec<T2>& v2)
 {
    long n = v2.length();
    v1.resize(n);
@@ -437,7 +434,7 @@ void convert(vector<T1>& v1, const Vec<T2>& v2)
 }
 
 template<class T1, class T2> 
-void convert(Vec<T1>& v1, const vector<T2>& v2)
+void convert(NTL::Vec<T1>& v1, const std::vector<T2>& v2)
 {
    long n = v2.size();
    v1.SetLength(n);
@@ -455,31 +452,31 @@ T1 convert(const T2& v2)
 
 
 template<class T>
-vector<T> vector_replicate(const T& a, long n)
+std::vector<T> vector_replicate(const T& a, long n)
 {
-   vector<T> res;
+   std::vector<T> res;
    res.resize(n);
    for (long i = 0; i < n; i++) res[i] = a;
    return res;
 }
 
 template<class T>
-vector<T> Vec_replicate(const T& a, long n)
+std::vector<T> Vec_replicate(const T& a, long n)
 {
-   Vec<T> res;
+   NTL::Vec<T> res;
    res.SetLength(n);
    for (long i = 0; i < n; i++) res[i] = a;
    return res;
 }
 
 //! returns \prod_d vec[d]
-long computeProd(const Vec<long>& vec);
-long computeProd(const vector<long>& vec);
+long computeProd(const NTL::Vec<long>& vec);
+long computeProd(const std::vector<long>& vec);
 
 // some useful operations
-void mul(vector<ZZX>& x, const vector<ZZX>& a, long b);
-void div(vector<ZZX>& x, const vector<ZZX>& a, long b);
-void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b);
+void mul(std::vector<NTL::ZZX>& x, const std::vector<NTL::ZZX>& a, long b);
+void div(std::vector<NTL::ZZX>& x, const std::vector<NTL::ZZX>& a, long b);
+void add(std::vector<NTL::ZZX>& x, const std::vector<NTL::ZZX>& a, const std::vector<NTL::ZZX>& b);
 
 
 
@@ -492,10 +489,10 @@ long is_in(long x,int* X,long sz);
 //! If symmetric is set then x \in [-pq/2, pq/2), else x \in [0,pq)
 inline long CRTcoeff(long p, long q, bool symmetric=false)
 {
-  long pInv = InvMod(p,q); // p^-1 mod q \in [0,q)
+  long pInv = NTL::InvMod(p,q); // p^-1 mod q \in [0,q)
   if (symmetric && 2*pInv >= q) return p*(pInv-q);
   else                          return p*pInv;
-}
+}             
 
 /**
  * @brief Incremental integer CRT for vectors.
@@ -511,8 +508,8 @@ inline long CRTcoeff(long p, long q, bool symmetric=false)
  *
  * Return true is both vectors are of the same length, false otherwise
  */
-template <class zzvec>     // zzvec can be vec_ZZ, vec_long, or Vec<zz_p>
-bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q);
+template <class zzvec>     // zzvec can be vec_NTL::ZZ, vec_long, or Vec<zz_p>
+bool intVecCRT(NTL::vec_ZZ& vp, const NTL::ZZ& p, const zzvec& vq, long q);
 
 /**
  * @brief Find the index of the (first) largest/smallest element.
@@ -525,7 +522,7 @@ bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q);
  * @tparam maxFlag A boolean value: true - argmax, false - argmin
  **/
 template <class T, bool maxFlag>
-long argminmax(vector<T>& v)
+long argminmax(std::vector<T>& v)
 {
   if (v.size()<1) return -1; // error: this is an empty array
   unsigned long idx = 0;
@@ -536,15 +533,15 @@ long argminmax(vector<T>& v)
   return (long) idx;
 }
 
-template <class T> long argmax(vector<T>& v)
+template <class T> long argmax(std::vector<T>& v)
 {  return argminmax<T,true>(v); }
 
-template <class T> long argmin(vector<T>& v)
+template <class T> long argmin(std::vector<T>& v)
 {  return argminmax<T,false>(v); }
 
 //! @brief A variant with a specialized comparison function
 //! (*moreThan)(a,b) returns the comparison a>b
-inline long argmax(vector<long>& v, bool (*moreThan)(long, long))
+inline long argmax(std::vector<long>& v, bool (*moreThan)(long, long))
 {
   if (v.size()<1) return -INT_MAX; // error: this is an empty array
   unsigned long idx = 0;
@@ -586,7 +583,7 @@ rationalApprox(double x, long denomBound=(1L<<(NTL_SP_NBITS/2)));
  **/
 class RandomState {
 private:
-  ZZ state;
+  NTL::ZZ state;
   bool restored;
 
 public:
@@ -613,10 +610,10 @@ private:
 };
 
 //! @brief Advance the input stream beyond white spaces and a single instance of the char cc
-void seekPastChar(istream& str, int cc);
+void seekPastChar(std::istream& str, int cc);
 
 //! @brief Reverse a vector in place
-template<class T> void reverse(Vec<T>& v, long lo, long hi)
+template<class T> void reverse(NTL::Vec<T>& v, long lo, long hi)
 {
   long n = v.length();
   assert(lo >= 0 && lo <= hi && hi < n);
@@ -629,7 +626,7 @@ template<class T> void reverse(Vec<T>& v, long lo, long hi)
 //! @brief Rotate a vector in place using swaps
 // Example: rotate by 1 means [0 1 2 3] -> [3 0 1 2]
 //          rotate by -1 means [0 1 2 3] -> [1 2 3 0]
-template<class T> void rotate(Vec<T>& v, long k)
+template<class T> void rotate(NTL::Vec<T>& v, long k)
 {
   long n = v.length();
   if (n <= 1) return;
@@ -704,14 +701,14 @@ bool sameObject(const T1* p1, const T2* p2) {
 }
 
 //! @brief Modular composition of polynomials: res = g(h) mod f
-void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f);
+void ModComp(NTL::ZZX& res, const NTL::ZZX& g, const NTL::ZZX& h, const NTL::ZZX& f);
 
 //! @brief Evaluates a modular integer polynomial, returns poly(x) mod p
-long polyEvalMod(const ZZX& poly, long x, long p);
+long polyEvalMod(const NTL::ZZX& poly, long x, long p);
 
 //! @brief Interpolate polynomial such that poly(x[i] mod p)=y[i] (mod p^e)
 //! It is assumed that the points x[i] are all distinct modulo p
-void interpolateMod(ZZX& poly, const vec_long& x, const vec_long& y,
+void interpolateMod(NTL::ZZX& poly, const NTL::vec_long& x, const NTL::vec_long& y,
 		    long p, long e=1);
 
 //! @brief returns ceiling(a/b); assumes a >=0, b>0, a+b <= MAX_LONG
@@ -726,33 +723,33 @@ inline long divc(long a, long b)
 class zz_pXModulus1 {
 public:
    long m;
-   zz_pX f;
+   NTL::zz_pX f;
    long n;
 
    bool specialLogic;
 
    long k, k1;
-   fftRep R0, R1;
+   NTL::fftRep R0, R1;
 
-   zz_pXModulus fm; // just in case...
+   NTL::zz_pXModulus fm; // just in case...
 
-   zz_pXModulus1(long _m, const zz_pX& _f);
+   zz_pXModulus1(long _m, const NTL::zz_pX& _f);
 
-   const zz_pXModulus& upcast() const { return fm; } 
+   const NTL::zz_pXModulus& upcast() const { return fm; } 
 };
 
 
-void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff);
+void rem(NTL::zz_pX& r, const NTL::zz_pX& a, const zz_pXModulus1& ff);
 
 //! placeholder for pXModulus ...no optimizations
-class ZZ_pXModulus1 : public ZZ_pXModulus {
+class ZZ_pXModulus1 : public NTL::ZZ_pXModulus {
 public:
-   ZZ_pXModulus1(long _m, const ZZ_pX& _f) : ZZ_pXModulus(_f) { }
-   const ZZ_pXModulus& upcast() const { return *this; }
+   ZZ_pXModulus1(long _m, const NTL::ZZ_pX& _f) : NTL::ZZ_pXModulus(_f) { }
+   const NTL::ZZ_pXModulus& upcast() const { return *this; }
 };
 
 template<class T>
-ostream& operator<<(ostream& s, vector<T> v)
+std::ostream& operator<<(std::ostream& s, std::vector<T> v)
 {
   if (v.size()==0) return (s << "[]");
 
@@ -763,9 +760,9 @@ ostream& operator<<(ostream& s, vector<T> v)
 }
 
 template<class T>
-istream& operator>>(istream& s, vector<T>& v)
+std::istream& operator>>(std::istream& s, std::vector<T>& v)
 {
-  Vec<T> vv; // read into an NTL vector, then convert
+  NTL::Vec<T> vv; // read into an NTL vector, then convert
   s >> vv;
   convert(v, vv);
   return s;
@@ -773,34 +770,32 @@ istream& operator>>(istream& s, vector<T>& v)
 
 
 template<class T>
-Vec<T> atoVec(const char *a) 
+NTL::Vec<T> atoVec(const char *a) 
 {
-  Vec<T> v;
-  string s(a);
-  stringstream ss(s);
+  NTL::Vec<T> v;
+  std::string s(a);
+  std::stringstream ss(s);
   ss >> v;
   return v;
 }
 
 template<class T>
-vector<T> atovector(const char *a)
+std::vector<T> atovector(const char *a)
 {
-  Vec<T> v1 = atoVec<T>(a);
-  vector<T> v2;
+  NTL::Vec<T> v1 = atoVec<T>(a);
+  std::vector<T> v2;
   convert(v2, v1);
   return v2;
 }
 
 
-
-
 #ifndef NTL_PROVIDES_TRUNC_FFT
 // Define truncated FFT routines if not provided by NTL
-inline void TofftRep_trunc(fftRep& y, const zz_pX& x, long k, long len,
+inline void TofftRep_trunc(NTL::fftRep& y, const NTL::zz_pX& x, long k, long len,
                     long lo, long hi)
 {  TofftRep(y, x, k, lo, hi); }
 
-inline void TofftRep_trunc(fftRep& y, const zz_pX& x, long k, long len)
+inline void TofftRep_trunc(NTL::fftRep& y, const NTL::zz_pX& x, long k, long len)
 { TofftRep_trunc(y, x, k, len, 0, deg(x)); }
 #endif
 
@@ -818,11 +813,11 @@ std::unique_ptr<T> build_unique(Args&&... args)
 //! Just call as make_lazy(obj, ...) to initialize a lazy object
 //! via a call to a constructor T(...)
 template<class T, class P, class... Args>
-void make_lazy(const Lazy<T,P>& obj, Args&&... args)
+void make_lazy(const NTL::Lazy<T,P>& obj, Args&&... args)
 {
-   typename Lazy<T,P>::Builder builder(obj);
+   typename NTL::Lazy<T,P>::Builder builder(obj);
    if (!builder()) return;
-   UniquePtr<T,P> ptr;
+   NTL::UniquePtr<T,P> ptr;
    ptr.make(std::forward<Args>(args)...);
    builder.move(ptr);
 }
@@ -831,11 +826,11 @@ void make_lazy(const Lazy<T,P>& obj, Args&&... args)
 //! Just call as make_lazy(obj, f, ....) to initialize a lazy object
 //! via a call to f(*obj, ...)
 template<class T, class P, class F, class... Args>
-void make_lazy_with_fun(const Lazy<T,P>& obj, F f, Args&&... args)
+void make_lazy_with_fun(const NTL::Lazy<T,P>& obj, F f, Args&&... args)
 {
-   typename Lazy<T,P>::Builder builder(obj);
+   typename NTL::Lazy<T,P>::Builder builder(obj);
    if (!builder()) return;
-   UniquePtr<T,P> ptr;
+   NTL::UniquePtr<T,P> ptr;
    ptr.make();
    f(*ptr, std::forward<Args>(args)...);
    builder.move(ptr);

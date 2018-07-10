@@ -19,6 +19,8 @@
 #include "cloned_ptr.h"
 #include "norms.h"
 
+NTL_CLIENT
+
 // rotate ciphertext in dimension 0 by amt
 void EncryptedArrayCx::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
 {

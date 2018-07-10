@@ -22,6 +22,8 @@
 #include "intraSlot.h"
 #include "tableLookup.h"
 
+NTL_CLIENT
+
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 #endif

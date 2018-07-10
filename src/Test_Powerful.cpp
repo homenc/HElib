@@ -13,6 +13,8 @@
 #include "powerful.h"
 #include "FHEContext.h"
 
+NTL_CLIENT
+
 void testSimpleConversion(const Vec<long>& mvec)
 {
   PowerfulTranslationIndexes ind(mvec);
