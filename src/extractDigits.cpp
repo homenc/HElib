@@ -99,8 +99,9 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
       // for p==2, it doesn't seem to help, and sometimes seems
       // to make things worse
 
+#ifdef VIEW_LEVELS
       if (j==0) fhe_watcher = 1;
-
+#endif
       if (p==2) digits[j].square();
       else if (p==3) digits[j].cube();
       else polyEval(digits[j], x2p, digits[j]); 
