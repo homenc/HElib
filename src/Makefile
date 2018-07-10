@@ -61,6 +61,9 @@ TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_matmu
 
 all: fhe.a
 
+# if makedep.d exists in the current directory, include it
+include $(wildcard makedep.d)
+
 check:
 	$(MAKE) check_General
 	$(MAKE) check_matmul
