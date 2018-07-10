@@ -554,6 +554,17 @@ inline long argmax(vector<long>& v, bool (*moreThan)(long, long))
   return (long) idx;
 }
 
+// Check that x is in 1 += epsilon
+inline bool closeToOne(const NTL::xdouble& x, long p)
+{
+  double pinv = 1.0/p;
+  return (x<(1.0+pinv) && x>(1-pinv));
+}
+
+// Use continued fractions to approximate a float x as x ~ a/b
+std::pair<long,long>
+rationalApprox(double x, long denomBound=(1L<<(NTL_SP_NBITS/2)));
+
 /**
  * @brief Facility for "restoring" the NTL PRG state.
  *

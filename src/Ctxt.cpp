@@ -663,7 +663,7 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
   if (IsZero(factor))
     conv(factor, getContext().alMod.getCx().encodeScalingFactor());
 
-  // If the size is not given, use size = phi(m)*(ptxtSpace/2)^2
+  // If the size is not given, use size = phi(m)*factor^2
   xdouble xfactor = to_xdouble(factor);
   if (size < 0.0) {
     size = context.zMStar.getPhiM() * xfactor * xfactor;
@@ -760,6 +760,42 @@ void Ctxt::negate()
   for (size_t i=0; i<parts.size(); i++) parts[i].Negate();
 }
 
+// scale up c1, c2 so they have the same factor
+void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
+                                   pair<long,long> factors)
+{
+  long targetPrecision = c1.getContext().alMod.getPPowR()*2;
+
+  // if factors are given, use them
+  if (factors.first>0 && factors.second>0) {
+    c1.multByConstant(to_ZZ(factors.first)); // small times a
+    c1.ratFactor *= factors.first;
+    c2.multByConstant(to_ZZ(factors.second));  // big times b
+    c2.ratFactor *= factors.second;
+    assert(closeToOne(c1.ratFactor/c2.ratFactor, targetPrecision));
+    return;
+  }
+  // If factors are not given, compute them
+  Ctxt& big  = (c1.ratFactor>c2.ratFactor)? c1 : c2;
+  Ctxt& small= (c1.ratFactor>c2.ratFactor)? c2 : c1;
+
+  xdouble ratio = big.ratFactor / small.ratFactor;
+  if (ratio > targetPrecision) { // just scale up small
+    small.multByConstant(to_ZZ(floor(ratio+0.5)));
+    small.ratFactor *= ratio;
+    return;
+  }
+
+  // Otherwise, need to scale both big and small
+
+  // approximate ratio as a fraction a/b
+  factors = rationalApprox(to_double(ratio), targetPrecision);
+  small.multByConstant(to_ZZ(factors.first)); // small times a
+  small.ratFactor *= factors.first;
+  big.multByConstant(to_ZZ(factors.second));  // big times b
+  big.ratFactor *= factors.second;
+}
+
 // Add/subtract another ciphertxt (depending on the negative flag)
 void Ctxt::addCtxt(const Ctxt& other, bool negative)
 {
@@ -776,9 +812,13 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   }
 
   // Sanity check: verify that the plaintext spaces are compatible
-  long g = GCD(this->ptxtSpace, other.ptxtSpace);
-  assert (g>1);
-  this->ptxtSpace = g;
+  if (getPtxtSpace() > 1) {
+    long g = GCD(this->ptxtSpace, other.ptxtSpace);
+    assert (g>1);
+    this->ptxtSpace = g;
+  }
+  else
+    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
 
   // Match the prime-sets, mod-UP the arguments if needed
   IndexSet s = other.primeSet / primeSet; // set-minus
@@ -792,6 +832,17 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     tmp = other;
     tmp.modUpToSet(s);
     other_pt = &tmp;
+  }
+
+  // If approximate numbers, make sure the scaling factors are the same
+  if (getPtxtSpace()==1 && ratFactor != other_pt->ratFactor
+       && !closeToOne(ratFactor/other_pt->ratFactor,
+                      getContext().alMod.getPPowR()*2)      ) {
+    if (other_pt != &tmp) {
+      tmp = other;
+      other_pt = &tmp;
+    }
+    equalizeRationalFactors(*this, tmp);
   }
 
   // Go over the parts of other, for each one check if
@@ -812,19 +863,16 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
 }
 
 // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
-// are defined relative to the same set of primes and plaintext space,
-// and that *this DOES NOT point to the same object as c1,c2
+// are defined relative to the same set of primes and plaintext space.
+// It is also assumed that *this DOES NOT alias neither c1 nor c2.
 void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 {
   // c1,c2 may be scaled, so multiply by the inverse scalar if needed
   long f = 1;
-  if (c1.ptxtSpace>2) 
-    f = rem(context.productOfPrimes(c1.primeSet),c1.ptxtSpace);
+  if (c1.getPtxtSpace()>2) 
+    f = rem(context.productOfPrimes(c1.getPrimeSet()),c1.getPtxtSpace());
 
-
-
-
-  if (f!=1) f = InvMod(f,c1.ptxtSpace);
+  if (f!=1) f = InvMod(f,c1.getPtxtSpace());
   if (fhe_watcher) cerr << "*** f value = " << f << "\n";
   if (fhe_watcher) {
     for (long i = c1.primeSet.first(); i <= c1.primeSet.last(); i = c1.primeSet.next(i)) {
@@ -834,9 +882,7 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
          cerr << "== " << i << " " << p << " " << c1.ptxtSpace << "\n";
       }
     }
-
   }
-
 
   clear();                // clear *this, before we start adding things to it
   primeSet = c1.primeSet; // set the correct prime-set before we begin
@@ -881,17 +927,15 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   for (long i=n1+1; i<=n1+n2; i++) factor *= i;
   for (long i=n2  ; i>1     ; i--) factor /= i;
 
-
   noiseVar = c1.noiseVar * c2.noiseVar * factor * context.zMStar.get_cM();
   if (f!=1) {
     // WARNING: the following line is written just so to prevent overflow
     noiseVar = (noiseVar*f)*f; // because every product was scaled by f
   }
-
+  ratFactor = c1.ratFactor * c2.ratFactor * f;
   if (fhe_watcher) cerr << "end of tensor " << this->findBaseLevel() << "\n";
-
-  
 }
+
 
 Ctxt& Ctxt::operator*=(const Ctxt& other)
 {
@@ -900,11 +944,15 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   if (this->isEmpty()) return  *this;
 
   // Sanity check: plaintext spaces are compatible
-  long g = GCD(ptxtSpace, other.ptxtSpace);
-  assert (g>1);
-  this->ptxtSpace = g;
-  Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
+  if (getPtxtSpace() > 1) {
+    long g = GCD(this->ptxtSpace, other.ptxtSpace);
+    assert (g>1);
+    this->ptxtSpace = g;
+  }
+  else
+    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
 
+  Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
   long lvl = findBaseLevel();
   if (lvl > highWaterMark) {
     lvl = highWaterMark;
@@ -942,9 +990,6 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   *this = tmpCtxt; // copy the result into *this
   highWaterMark = lvl-1;
 
-  
-
-  FHE_TIMER_STOP;
   return *this;
 }
 
@@ -1013,26 +1058,40 @@ void Ctxt::multByConstant(const ZZ& c)
   if (this->isEmpty()) return;
   FHE_TIMER_START;
 
-  long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
-  if (cc > ptxtSpace/2) cc -= ptxtSpace;
-  else if (cc < -ptxtSpace/2) cc += ptxtSpace;
-  ZZ tmp = to_ZZ(cc);
+  const ZZ* cPtr = &c;
+  if (getPtxtSpace()>1) {
+    long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
+    if (cc > ptxtSpace/2) cc -= ptxtSpace;
+    else if (cc < -ptxtSpace/2) cc += ptxtSpace;
+
+    double size = to_double(cc);
+    noiseVar *= size*size * getContext().zMStar.get_cM();
+
+    ZZ tmp = to_ZZ(cc);
+    cPtr = &tmp;
+  }
+  else {
+    xdouble size = to_xdouble(c);
+    noiseVar *= size*size * getContext().zMStar.get_cM();
+  }
 
   // multiply all the parts by this constant
-  for (size_t i=0; i<parts.size(); i++) parts[i] *= tmp;
-
-  double size = to_double(cc);
-  noiseVar *= size*size * context.zMStar.get_cM();
+  for (size_t i=0; i<parts.size(); i++) parts[i] *= (*cPtr);
 }
 
-// Multiply-by-constant
+// Multiply-by-constant, it is assumed that the size of this
+// constant fits in a double float
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
+  FHE_TIMER_START;
+  if (getPtxtSpace()==1) {
+    multByConstantCKKS(dcrt, to_xdouble(size));
+    return;
+  }
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
-  FHE_TIMER_START;
 
-   // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
+  // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
   if (size < 0.0) {
     size = context.zMStar.getPhiM() * (ptxtSpace/2.0)*(ptxtSpace/2.0);
   }
@@ -1046,18 +1105,39 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 
 void Ctxt::multByConstant(const ZZX& poly, double size)
 {
-  if (this->isEmpty()) return;
   FHE_TIMER_START;
+  if (this->isEmpty()) return;
   DoubleCRT dcrt(poly,context,primeSet);
   multByConstant(dcrt,size);
 }
 
 void Ctxt::multByConstant(const zzX& poly, double size)
 {
-  if (this->isEmpty()) return;
   FHE_TIMER_START;
+  if (this->isEmpty()) return;
   DoubleCRT dcrt(poly,context,primeSet);
   multByConstant(dcrt,size);
+}
+
+void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
+{
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
+  if (IsZero(factor))
+    conv(factor, getContext().alMod.getCx().encodeScalingFactor());
+
+  // If the size is not given, use size = phi(m)*factor^2
+  xdouble xfactor = to_xdouble(factor);
+  if (size < 0.0)
+    size = context.zMStar.getPhiM() * xfactor * xfactor;
+
+  noiseVar *= size * context.zMStar.get_cM();
+  ratFactor *= xfactor;
+
+  // multiply all the parts by this constant
+  for (size_t i=0; i<parts.size(); i++) 
+    parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 }
 
 // Divide a cipehrtext by 2. It is assumed that the ciphertext
@@ -1093,7 +1173,7 @@ void Ctxt::divideByP()
   if (this->isEmpty()) return;
 
   long p = getContext().zMStar.getP();
-  assert (ptxtSpace>p);
+  assert (ptxtSpace % p == 0 && ptxtSpace>p);
 
   // multiply all the parts by p^{-1} mod Q (Q=productOfPrimes)
   ZZ pInverse, Q;
@@ -1231,9 +1311,10 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
       addedNoise += t;
     }
   }
-  // WARNING: the following line is written just so to prevent overflow
-  double roundingNoise
-    = context.zMStar.getPhiM() * (ptxtSpace/2.0) * (ptxtSpace/ 2.0);
+  double roundingNoise = context.zMStar.getPhiM();
+  if (getPtxtSpace()>1)
+    roundingNoise *= (ptxtSpace/2.0) * (ptxtSpace/ 2.0);
+    // WARNING: the line above is written to prevent overflow
 
   return addedNoise * roundingNoise;
 }
@@ -1486,8 +1567,8 @@ void innerProduct(Ctxt& result,
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 {
   // Ensure that new modulus is co-prime with plaintetx space
-  assert(toModulus>1 && GCD(toModulus, getPtxtSpace())==1);
   const long p2r = getPtxtSpace();
+  assert(toModulus>1 && p2r>1 && GCD(toModulus,p2r)==1);
 
   // Compute the ratio between the current modulus and the new one.
   // NOTE: toModulus is a long int, so a double for the logarithms and

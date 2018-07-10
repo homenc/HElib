@@ -385,6 +385,13 @@ public:
   void multByConstant(const zzX& poly, double size=-1.0);
   void multByConstant(const NTL::ZZ& c);
 
+  void multByConstantCKKS(const DoubleCRT& dcrt,
+                          NTL::xdouble size=NTL::xdouble(-1.0),
+                          NTL::ZZ factor=NTL::ZZ::zero());
+  void multByConstantCKKS(const NTL::ZZX& poly,
+                          NTL::xdouble size=NTL::xdouble(-1.0),
+                          NTL::ZZ factor=NTL::ZZ::zero());
+
   //! Convenience method: XOR and nXOR with arbitrary plaintext space:
   //! a xor b = a+b-2ab = a + (1-2a)*b,
   //! a nxor b = 1-a-b+2ab = (b-1)(2a-1)+a
@@ -569,6 +576,9 @@ public:
   void write(ostream& str) const;
   void read(istream& str);
 
+  // scale up c1, c2 so they have the same ratFactor
+  static void equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
+                      std::pair<long,long> f=std::pair<long,long>(0,0));
 };
 
 inline IndexSet baseSetOf(const Ctxt& c) { 
