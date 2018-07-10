@@ -21,7 +21,7 @@
 #include "hypercube.h"
 
 
-//! A simple permutation is just a std::vector with p[i]=\pi_i
+//! A simple permutation is just a vector with p[i]=\pi_i
 typedef NTL::Vec<long> Permut;
 
 //! Apply a permutation to a std::vector, out[i]=in[p1[i]] (NOT in-place)
@@ -443,12 +443,12 @@ class GeneratorTrees  {
   long mapToCube(long i) const { return map2cube[i]; }
   long mapToArray(long i) const { return map2array[i]; }
 
-  //! Get the "crude" cube dimensions corresponding to the std::vector of trees,
-  //! the ordered std::vector with one dimension per tree
+  //! Get the "crude" cube dimensions corresponding to the vector of trees,
+  //! the ordered vector with one dimension per tree
   void getCubeDims(NTL::Vec<long>& dims) const;
 
-  //! Get the "fine" cube dimensions corresponding to the std::vector of trees,
-  //! the ordered std::vector with one dimension per leaf in all the trees.
+  //! Get the "fine" cube dimensions corresponding to the vector of trees,
+  //! the ordered vector with one dimension per leaf in all the trees.
   void getCubeSubDims(NTL::Vec<long>& dims) const;
 
   // Returns coordinates of i relative to leaves of the tree
@@ -510,9 +510,9 @@ class PermNetwork {
   NTL::Vec<PermNetLayer> layers;
 
   //! Copmute one or more layers corresponding to one network of a leaf
-  void setLayers4Leaf(long lyrIdx, const ColPerm& p, const NTL::Vec<long>& benesLvls,
-		      long gIdx, const SubDimension& leafData,
-		      const Permut& map2cube);
+  void setLayers4Leaf(long lyrIdx, const ColPerm& p,
+                      const NTL::Vec<long>& benesLvls, long gIdx,
+                      const SubDimension& leafData, const Permut& map2cube);
 
 public:
   PermNetwork() {}; // empty network

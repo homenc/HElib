@@ -42,6 +42,7 @@
  * is a primitive m-th root of unity in R), we get that F_t is the minimal
  * polynomial of z^{1/t}.
  */
+#include <exception>
 #include <utility>
 #include "NumbTh.h"
 #include "zzX.h"
@@ -217,7 +218,7 @@ class PAlgebra {
 };
 
 
-enum PA_tag { PA_GF2_tag, PA_zz_p_tag };
+enum PA_tag { PA_GF2_tag, PA_zz_p_tag, PA_cx_tag };
 
 /**
 @class: PAlgebraMod 
@@ -638,6 +639,43 @@ private:
   long offset, long extent) const;
 };
 
+//! A different derived class to be used for the approximate-numbers scheme
+//! This is mostly a dummy class, but needed since the context always has a
+//! PAlgeberaMod data member.
+class PAlgebraModCx : public PAlgebraModBase {
+  const PAlgebra& zMStar;
+  long r; // counts bits of precision
+
+public:
+
+ PAlgebraModCx(const PAlgebra& palg, long _r): zMStar(palg), r(_r) {
+    assert(r>0 || r<NTL_SP_NBITS);
+  }
+
+  PAlgebraModBase* clone() const override { return new PAlgebraModCx(*this); }
+  PA_tag getTag() const override { return PA_cx_tag; }
+
+  const PAlgebra& getZMStar() const override { return zMStar; }
+  long getR() const override {return r;}
+  long getPPowR() const override { return 1L<<r; }
+  void restoreContext() const override {}
+
+  // These function make no sense for PAlgebraModCx
+  const std::vector<NTL::ZZX>& getFactorsOverZZ() const override
+  { throw std::logic_error("PAlgebraModCx::getFactorsOverZZ undefined"); }
+  zzX getMask_zzX(long i, long j) const override
+  { throw std::logic_error("PAlgebraModCx::getMask_zzX undefined"); }
+
+  // The scaling factor to use when encoding/decoding plaintext elements
+  long encodeScalingFactor(long precision=0) const {
+    assert(precision>=0 && precision<NTL_SP_BOUND);
+    if (precision==0)
+      precision=(1L<<r);
+    double m = getZMStar().getM();
+    return ceil(precision * std::sqrt(m*log2(m)));
+    // Experimentally, X * sqrt(m log m) yeilds precision of 1/2X to 1/4X
+  }
+};
 
 
 //! Builds a table, of type PA_GF2 if p == 2 and r == 1, and PA_zz_p otherwise
@@ -671,7 +709,8 @@ public:
   template<class type> 
   const PAlgebraModDerived<type>& getDerived(type) const
   { return dynamic_cast< const PAlgebraModDerived<type>& >( *rep ); }
-  
+  const PAlgebraModCx& getCx() const
+  { return dynamic_cast< const PAlgebraModCx& >( *rep ); }
   
   bool operator==(const PAlgebraMod& other) const
   {

@@ -62,30 +62,28 @@ void canonicalEmbedding(std::vector<cx_double>& v,
   FHE_TIMER_STOP;
 }
 
-// Roughly the inverse of canonicalEmbedding, except for rounding issues.
-// Calling embedInSlots(f,v,palg,strictInverse=true) after setting
-// canonicalEmbedding(v, f, palg), is sure to recover the same f.
-// Calling embedInSlots(f,v,palg,strictInverse=false) when m is
-// not a power of two may fail to recover the same f, however.
-// When m is a power of two, the strictInverse flag has no effect.
+// Roughly the inverse of canonicalEmbedding, except for scaling and
+// rounding issues. Calling embedInSlots(f,v,palg,1.0,strictInverse=true)
+// after setting canonicalEmbedding(v, f, palg), is sure to recover the
+// same f, but embedInSlots(f,v,palg,1.0,strictInverse=false) may return
+// a different "nearby" f.
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
-                  const PAlgebra& palg, bool strictInverse)
+                  const PAlgebra& palg, double scaling, bool strictInverse)
 {
   FHE_TIMER_START;
   long m = palg.getM();
-  if (0==(m & 1)) strictInverse=true; // m even => power of two
   arma::cx_vec avv(m);
   for (long i=1, idx=0; i<=m/2; i++) {
     if (palg.inZmStar(i)) {
-      avv[i] = v[idx++];
+      avv[i] = scaling*v[idx++];
       avv[m-i] = std::conj(avv[i]);
     }
-    else
+    else // not in Zm*
       avv[m-i] = avv[i] = std::complex<double>(0.0,0.0);
   }
   arma::vec av = arma::real(arma::ifft(avv,m));
 
-  // If v was obtained by canonicalEmbedding(v,f,palg) then we have
+  // If v was obtained by canonicalEmbedding(v,f,palg,1.0) then we have
   // the guarantee that m*av is an integral polynomial, and moreover
   // m*av mod Phi_m(x) is in m*Z[X].
   if (strictInverse) av *= m; // scale up by m

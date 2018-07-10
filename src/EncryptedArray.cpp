@@ -14,25 +14,28 @@
 #include <algorithm>
 #include "zzX.h"
 #include "EncryptedArray.h"
-
 #include "timing.h"
 #include "cloned_ptr.h"
 
 NTL_CLIENT
 
-EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
-					const PAlgebraMod& alMod)
+EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
+                                        const PAlgebraMod& alMod, const ZZX& G)
 {
+  if (alMod.getTag()==PA_cx_tag)
+    return new EncryptedArrayCx(context, alMod.getCx());
+
+  // By defualt use the 1st factor F0
+  const ZZX& GG = NTL::IsZero(G)? alMod.getFactorsOverZZ()[0]: G;
+
   switch (alMod.getTag()) {
     case PA_GF2_tag: {
-      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(G), alMod);
+      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(GG), alMod);
     }
-
     case PA_zz_p_tag: {
       zz_pBak bak; bak.save(); alMod.restoreContext();
-      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(G), alMod);
+      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(GG), alMod);
     }
-
     default: return NULL;
   }
 }
@@ -344,19 +347,6 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   FHE_TIMER_STOP;
 }
 
-//FIXME: For now replicating the code for ZZX and zzX,
-// but really we need to move to zzX everywhere
-template<class type>
-void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
-{
-  assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
-  RBak bak; bak.save(); tab.restoreContext();
-  RX res;
-  div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
-  mul(res, res, tab.getCrtCoeffs()[i]);
-  conv(ptxt, res);
-}
-
 template<class type>
 void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) const
 {
@@ -402,10 +392,8 @@ void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const ZZX& pt
 }
 
 
-//FIXME: For now replicating the code for ZZX and zzX,
-// but really we need to move to zzX everywhere
 template<class type>
-void EncryptedArrayDerived<type>::encodeUnitSelector(NTL::Vec<long>& ptxt, long i) const
+void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
 {
   assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
   RBak bak; bak.save(); tab.restoreContext();

@@ -266,7 +266,8 @@ class Ctxt {
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
   NTL::xdouble noiseVar;  // estimating the noise variance in this ciphertext
   long highWaterMark;// keep track of number of multiplications
-  long intFactor;    // an integer factor to multiply by on decryption
+  long intFactor;    // an integer factor to multiply by on decryption (for BGV)
+  NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
 
   // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
   // are defined relative to the same set of primes and plaintext space,
@@ -369,6 +370,13 @@ public:
   void addConstant(const NTL::ZZX& poly, double size=-1.0)
   { addConstant(DoubleCRT(poly,context,primeSet),size); }
   void addConstant(const NTL::ZZ& c);
+  void addConstantCKKS(const DoubleCRT& dcrt,
+                       NTL::xdouble size=NTL::xdouble(-1.0),
+                       NTL::ZZ factor=NTL::ZZ::zero());
+  void addConstantCKKS(const NTL::ZZX& poly,
+                       NTL::xdouble size=NTL::xdouble(-1.0),
+                       NTL::ZZ factor=NTL::ZZ::zero());
+  void addConstantCKKS(const NTL::ZZ& c); // note: c will be scaled up
 
   //! Multiply-by-constant. If the size is not given, we use
   //! phi(m)*ptxtSpace^2 as the default value.
@@ -457,7 +465,7 @@ public:
   void cleanUp();
          // relinearize, then reduce, then drop special primes 
 
-  void reduce() const;
+  // void reduce() const;
 
   //! @brief Add a high-noise encryption of the given constant
   void blindCtxt(const NTL::ZZX& poly);
@@ -528,7 +536,7 @@ public:
   //! @brief Would this ciphertext be decrypted without errors?
   bool isCorrect() const {
     NTL::ZZ q = context.productOfPrimes(primeSet);
-    return (to_xdouble(q) > sqrt(noiseVar)*2);
+    return (NTL::to_xdouble(q) > sqrt(noiseVar)*2);
   }
 
   const FHEcontext& getContext() const { return context; }
@@ -576,25 +584,29 @@ void totalProduct(Ctxt& out, const std::vector<Ctxt>& v);
 //! This implementation uses depth log n and (nlog n)/2 products
 void incrementalProduct(std::vector<Ctxt>& v);
 
-//! Compute the inner product of two std::vectors of ciphertexts
 void innerProduct(Ctxt& result, const std::vector<Ctxt>& v1, const std::vector<Ctxt>& v2);
 inline Ctxt innerProduct(const std::vector<Ctxt>& v1, const std::vector<Ctxt>& v2)
-{ Ctxt ret(v1[0].getPubKey());
+{ 
+  Ctxt ret(v1[0].getPubKey());
   innerProduct(ret, v1, v2); return ret; 
 }
 
-//! Compute the inner product of a std::vectors of ciphertexts and a constant std::vector
-void innerProduct(Ctxt& result,
-		  const std::vector<Ctxt>& v1, const std::vector<DoubleCRT>& v2);
-inline Ctxt innerProduct(const std::vector<Ctxt>& v1, const std::vector<DoubleCRT>& v2)
-{ Ctxt ret(v1[0].getPubKey());
+//! Compute the inner product of a vectors of ciphertexts and a constant vector
+void innerProduct(Ctxt& result, const std::vector<Ctxt>& v1,
+                                const std::vector<DoubleCRT>& v2);
+inline Ctxt innerProduct(const std::vector<Ctxt>& v1,
+                         const std::vector<DoubleCRT>& v2)
+{ 
+  Ctxt ret(v1[0].getPubKey());
   innerProduct(ret, v1, v2); return ret; 
 }
 
-void innerProduct(Ctxt& result,
-		  const std::vector<Ctxt>& v1, const std::vector<NTL::ZZX>& v2);
-inline Ctxt innerProduct(const std::vector<Ctxt>& v1, const std::vector<NTL::ZZX>& v2)
-{ Ctxt ret(v1[0].getPubKey());
+void innerProduct(Ctxt& result, const std::vector<Ctxt>& v1,
+                                const std::vector<NTL::ZZX>& v2);
+inline Ctxt innerProduct(const std::vector<Ctxt>& v1,
+                         const std::vector<NTL::ZZX>& v2)
+{ 
+  Ctxt ret(v1[0].getPubKey());
   innerProduct(ret, v1, v2); return ret; 
 }
 

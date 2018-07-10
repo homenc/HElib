@@ -26,8 +26,8 @@
 
 
 
-#define FHE_atomic_long atomic_long
-#define FHE_atomic_ulong atomic_ulong
+#define FHE_atomic_long std::atomic_long
+#define FHE_atomic_ulong std::atomic_ulong
 
 #define FHE_MUTEX_TYPE mutex
 #define FHE_MUTEX_GUARD(mx) lock_guard<mutex> _lock ## __LINE__ (mx)

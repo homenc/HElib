@@ -246,8 +246,11 @@ long PAlgebra::genToPow(long i, long j) const
 PAlgebraModBase *buildPAlgebraMod(const PAlgebra& zMStar, long r)
 {
   long p = zMStar.getP();
-  assert(r > 0);
 
+  if (p==-1) // complex plaintext space
+    return new PAlgebraModCx(zMStar,r);
+
+  assert(p>=2 && r > 0);
   if (p == 2 && r == 1) 
     return new PAlgebraModDerived<PA_GF2>(zMStar, r);
   else

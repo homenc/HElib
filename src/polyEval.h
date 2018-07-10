@@ -14,7 +14,7 @@
  * @brief Homomorphic Polynomial Evaluation
  */
 
-
+#include "FHEContext.h"
 #include "Ctxt.h"
 
 //! @brief Evaluate a cleartext polynomial on an encrypted input

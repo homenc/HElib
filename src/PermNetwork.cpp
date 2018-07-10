@@ -11,6 +11,7 @@
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT
+#include "FHEContext.h"
 #include "Ctxt.h"
 #include "permutations.h"
 #include "EncryptedArray.h"

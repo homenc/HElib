@@ -15,20 +15,18 @@
  * @file EncryptedArray.h
  * @brief Data-movement operations on encrypted arrays of slots
  */
-
+#include <exception>
+#include <complex>
 #include <NTL/Lazy.h>
 #include <NTL/pair.h>
 #include <NTL/SmartPtr.h>
 #include "FHE.h"
-#include "timing.h"
 
+typedef std::complex<double> cx_double;
 
 // DIRT: we're using undocumented NTL interfaces here
 //   also...this probably should be defined in NTL, anyway....
 #define FHE_MORE_UNWRAPARGS(n) NTL_SEPARATOR_##n NTL_REPEATER_##n(NTL_UNWRAPARG)
-
-
-
 
 // these are used to implement NewPlaintextArray stuff routines
 
@@ -103,6 +101,7 @@ public:
   virtual const FHEcontext& getContext() const = 0;
   virtual const PAlgebra& getPAlgebra() const = 0;
   virtual const long getDegree() const = 0;
+  virtual const long getP2R() const = 0;
 
   //! @brief Right rotation as a linear array.
   //! E.g., rotating ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(n 1 2 ... n-1)
@@ -121,26 +120,57 @@ public:
   //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
-
-
-
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
+
+  // must be defined for all derived classes
   virtual void encode(zzX& ptxt, const std::vector< long >& array) const = 0;
-  virtual void encode(zzX& ptxt, const std::vector< zzX >& array) const = 0;
-  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const = 0;
-
   virtual void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const = 0;
-  virtual void encode(NTL::ZZX& ptxt, const std::vector< NTL::ZZX >& array) const = 0;
-  virtual void encode(NTL::ZZX& ptxt, const NewPlaintextArray& array) const = 0;
 
-  virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const = 0;
-  virtual void decode(std::vector< NTL::ZZX  >& array, const NTL::ZZX& ptxt) const = 0;
-  virtual void decode(NewPlaintextArray& array, const NTL::ZZX& ptxt) const = 0;
+  // These methods are only defined for some of the derived calsses
+  virtual void encode(zzX& ptxt, const std::vector< zzX >& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  virtual void encode(zzX& ptxt, const std::vector<double>& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  virtual void encode(zzX& ptxt, const std::vector<cx_double>& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
 
-  virtual void random(std::vector< long >& array) const = 0;
-  virtual void random(std::vector< NTL::ZZX >& array) const = 0;
+  virtual void encode(NTL::ZZX& ptxt, const std::vector< NTL::ZZX >& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  virtual void encode(NTL::ZZX& ptxt, const NewPlaintextArray& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  virtual void encode(NTL::ZZX& ptxt, const std::vector<double>& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  virtual void encode(NTL::ZZX& ptxt, const std::vector<cx_double>& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+
+  void encode(zzX& ptxt, const std::vector< NTL::ZZX >& array) const
+  { NTL::ZZX tmp; encode(tmp, array); convert(ptxt, tmp); }
+
+  // These methods are only defined for some of the derived calsses
+  virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  virtual void decode(std::vector< NTL::ZZX  >& array, const NTL::ZZX& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  virtual void decode(NewPlaintextArray& array, const NTL::ZZX& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  virtual void decode(std::vector<double>& array, const NTL::ZZX& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  virtual void decode(std::vector<cx_double>& array, const NTL::ZZX& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+
+  virtual void random(std::vector< long >& array) const = 0; // must be defined
+
+  // These methods are only defined for some of the derived calsses
+  virtual void random(std::vector< NTL::ZZX >& array) const
+  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  virtual void random(std::vector<double>& array) const
+  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  virtual void random(std::vector<cx_double>& array) const
+  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
 
   // FIXME: Inefficient implementation, calls usual decode and returns one slot
   long decode1Slot(const NTL::ZZX& ptxt, long i) const
@@ -149,22 +179,31 @@ public:
   { std::vector< NTL::ZZX > v; decode(v, ptxt); slot=v.at(i); }
 
   //! @brief Encodes a std::vector with 1 at position i and 0 everywhere else
-  virtual void encodeUnitSelector(NTL::ZZX& ptxt, long i) const = 0;
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const = 0;
   ///@}
 
   ///@{
   //! @name Encoding+encryption/decryption+decoding
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const std::vector< long >& ptxt) const = 0;
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const std::vector< NTL::ZZX >& ptxt) const = 0;
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const = 0;
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const = 0;
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< NTL::ZZX >& ptxt) const = 0;
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const = 0;
+  template<class PTXT>
+  void encrypt(Ctxt& ctxt, const FHEPubKey& key, const PTXT& ptxt) const
+  {
+    assert(&getContext() == &ctxt.getContext());
+    zzX pp;
+    encode(pp, ptxt); // Convert array of slots into a plaintext polynomial
+    key.Encrypt(ctxt, pp, getP2R()); // encrypt the plaintext polynomial
+    // NOTE: If secret key, will call the overridden FHESecKey::Encrypt
+  }
 
-  // Also secret-key encryption, for convenience
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const std::vector< long >& ptxt, long skIdx=0) const = 0;
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const std::vector< NTL::ZZX >& ptxt, long skIdx=0) const = 0;
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const = 0;
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< NTL::ZZX >& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector<double>& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector<cx_double>& ptxt) const
+  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
 
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const FHESecKey& sKey, long i) const
@@ -172,13 +211,6 @@ public:
   void decrypt1Slot(NTL::ZZX& slot, const Ctxt& ctxt, const FHESecKey& sKey, long i) const
   { std::vector< NTL::ZZX > v; decrypt(ctxt, sKey, v); slot = v.at(i); }
   ///@}
-
-  //@{
-  //! MUX: ctxt1 = ctxt1*selector + ctxt2*(1-selector)
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const std::vector< long >& selector) const = 0;
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const std::vector< NTL::ZZX >& selector) const = 0;
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const = 0;
-  //@}
 
   //! @brief Linearized polynomials.
   //! L describes a linear map M by describing its action on the standard
@@ -188,11 +220,11 @@ public:
   //! \f[
   //!  M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
   //! \f]
-  virtual void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, const std::vector<NTL::ZZX>& L) const=0;
+  virtual void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, const std::vector<NTL::ZZX>& L) const {}
 
   // restore contexts mod p and mod G
-  virtual void restoreContext() const = 0;
-  virtual void restoreContextForG() const = 0;
+  virtual void restoreContext() const {}
+  virtual void restoreContextForG() const {}
 
   /* some non-virtual convenience functions */
 
@@ -326,6 +358,8 @@ public:
   virtual const long getDegree() const { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
+  const long getP2R() const override {return getTab().getPPowR();}
+
   virtual void rotate(Ctxt& ctxt, long k) const;
   virtual void shift(Ctxt& ctxt, long k) const;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
@@ -350,7 +384,6 @@ public:
   virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const;
 
   virtual void encodeUnitSelector(zzX& ptxt, long i) const;
-  virtual void encodeUnitSelector(NTL::ZZX& ptxt, long i) const;
 
   virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const
     { genericDecode(array, ptxt); }
@@ -367,18 +400,9 @@ public:
   virtual void random(std::vector< NTL::ZZX  >& array) const
     { genericRandom(array); } // choose at random and convert to std::vector<ZZX>
 
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const std::vector< long >& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const std::vector< NTL::ZZX >& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
-  virtual void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt);
-      if (ctxt.getPtxtSpace()<tab.getPPowR()) {
+      if (ctxt.getPtxtSpace()<getP2R()) {
 	for (long i=0; i<(long)ptxt.size(); i++)
 	  ptxt[i] %= ctxt.getPtxtSpace();
       }
@@ -386,7 +410,7 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< NTL::ZZX >& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt);
-      if (ctxt.getPtxtSpace()<tab.getPPowR()) {
+      if (ctxt.getPtxtSpace()<getP2R()) {
 	for (long i=0; i<(long)ptxt.size(); i++)
 	  PolyRed(ptxt[i], ctxt.getPtxtSpace(),/*abs=*/true);
       }
@@ -397,27 +421,6 @@ public:
   { genericDecrypt(ctxt, sKey, ptxt); 
     // FIXME: Redudc mod the ciphertext plaintext space as above
     }
-
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const std::vector< long >& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
-
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const std::vector< NTL::ZZX >& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
-
-
-  virtual void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
-
-
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const std::vector< long >& selector) const
-    { genericSelect(ctxt1, ctxt2, selector); }
-
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const std::vector< NTL::ZZX >& selector) const
-    { genericSelect(ctxt1, ctxt2, selector); }
-
-
-  virtual void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
-    { genericSelect(ctxt1, ctxt2, selector); }
 
   virtual void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, const std::vector<NTL::ZZX>& L) const;
 
@@ -441,14 +444,8 @@ public:
     for (long i=0; i<size(); i++) NTL::random(array[i], getDegree());
   }
 
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const std::vector< RX >& ptxt) const
-    { genericEncrypt(ctxt, pKey, ptxt); }
-
   void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< RX >& ptxt) const
     { genericDecrypt(ctxt, sKey, ptxt); }
-
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const std::vector< RX >& ptxt, long skIdx=0) const
-    { genericSkEncrypt(ctxt, sKey, ptxt, skIdx); }
 
   virtual void buildLinPolyCoeffs(std::vector<RX>& C, const std::vector<RX>& L) const;
 
@@ -498,16 +495,6 @@ private:
   }
 
   template<class T>
-  void genericEncrypt(Ctxt& ctxt, const FHEPubKey& pKey, 
-                      const T& array) const
-  {
-    assert(&context == &ctxt.getContext());
-    NTL::ZZX pp;
-    encode(pp, array); // Convert the array of slots into a plaintext polynomial
-    pKey.Encrypt(ctxt, pp, tab.getPPowR()); // encrypt the plaintext polynomial
-  }
-
-  template<class T>
   void genericDecrypt(const Ctxt& ctxt, const FHESecKey& sKey, 
                       T& array) const
   {
@@ -516,36 +503,105 @@ private:
     sKey.Decrypt(pp, ctxt);
     decode(array, pp);
   }
+};
 
-  template<class T>
-  void genericSkEncrypt(Ctxt& ctxt, const FHESecKey& sKey, 
-                      const T& array, long skIdx=0) const
-  {
-    assert(&context == &ctxt.getContext());
+//! A different derived class to be used for the approximate-numbers scheme
+class EncryptedArrayCx : public EncryptedArrayBase {
+  const FHEcontext& context;
+  const PAlgebraModCx& alMod;
+
+public:
+  explicit EncryptedArrayCx(const FHEcontext& _context)
+    : context(_context), alMod(context.alMod.getCx()) {}
+  EncryptedArrayCx(const FHEcontext& _context, const PAlgebraModCx& _alMod)
+    : context(_context), alMod(_alMod) {}
+
+  // convertion between std::vectors of complex, real, and integers
+  static void convert(std::vector<cx_double>& out,
+                      const std::vector<double>& in) {
+    resize(out,lsize(in));
+    for (long i=0; i<lsize(in); i++) out[i] = in[i];
+  }
+  static void convert(std::vector<double>& out,
+                      const std::vector<cx_double>& in) {
+    resize(out,lsize(in));
+    for (long i=0; i<lsize(in); i++) out[i] = in[i].real();
+  }
+  static void convert(std::vector<cx_double>& out,
+                      const std::vector<long>& in) {
+    resize(out,lsize(in));
+    for (long i=0; i<lsize(in); i++) out[i] = in[i];
+  }
+  static void convert(std::vector<long>& out,
+                      const std::vector<cx_double>& in) {
+    resize(out,lsize(in));
+    for (long i=0; i<lsize(in); i++) out[i] = std::round(in[i].real());
+  }
+
+  EncryptedArrayBase* clone() const override
+  { return  new EncryptedArrayCx(*this); }
+
+  PA_tag getTag() const override { return PA_cx_tag; }
+  const FHEcontext& getContext() const override { return context; }
+  const PAlgebra& getPAlgebra() const override { return alMod.getZMStar(); }
+  const long getDegree() const override { return 2L; }
+
+  void rotate(Ctxt& ctxt, long k) const override; 
+  void shift(Ctxt& ctxt, long k) const override;
+  void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
+  void shift1D(Ctxt& ctxt, long i, long k) const override;
+
+  const long getP2R() const override {return alMod.getPPowR();}
+
+  void encode(zzX& ptxt, const std::vector<cx_double>& array, long precision) const;
+
+  // The versions below use precision=0, where the encode/decode
+  // error bound defaults to at most 2^{-alMod.getR()-1}
+  void encode(zzX& ptxt, const std::vector<cx_double>& array) const override
+  { encode(ptxt, array, /*use default precision*/0); }
+  void encode(NTL::ZZX& ptxt, const std::vector<cx_double>& array) const override
+  { zzX tmp; encode(tmp, array); ::convert(ptxt, tmp); }
+
+  void encode(zzX& ptxt, const std::vector<double>& array) const override
+  { std::vector<cx_double> v; convert(v,array); encode(ptxt, v); }
+  void encode(NTL::ZZX& ptxt, const std::vector<double>& array) const override
+  { zzX tmp; encode(tmp, array); ::convert(ptxt, tmp); }
+
+  void encode(zzX& ptxt, const std::vector< long >& array) const override
+  { std::vector<cx_double> v; convert(v,array); encode(ptxt, v); }
+  void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const override
+  { zzX tmp; encode(tmp, array); ::convert(ptxt, tmp); }
+
+  void encodeUnitSelector(zzX& ptxt, long i) const override {
+    std::vector<cx_double> v(this->size(), cx_double(0.0));
+    v.at(i) = cx_double(1.0, 0.0);
+    encode(ptxt, v);
+  }
+
+  void decode(std::vector<cx_double>& array, const zzX& ptxt) const;
+  void decode(std::vector<cx_double>& array, const NTL::ZZX& ptxt) const override
+  { zzX tmp; ::convert(tmp, ptxt); decode(array, tmp); }
+  void decode(std::vector<double>& array, const zzX& ptxt) const
+  { std::vector<cx_double> v; decode(v, ptxt); convert(array, v); }
+  void decode(std::vector<double>& array, const NTL::ZZX& ptxt) const override
+  { std::vector<cx_double> v; decode(v, ptxt); convert(array, v); }
+
+  void random(std::vector<cx_double>& array) const override;
+  void random(std::vector<double>& array) const override
+  { std::vector<cx_double> v; random(v); convert(array, v); }
+  void random(std::vector<long>& array) const override
+  { std::vector<cx_double> v; random(v); convert(array, v); }
+
+  void decrypt(const Ctxt& ctxt,
+               const FHESecKey& sKey, std::vector<cx_double>& ptxt) const override {
+    assert(&getContext() == &ctxt.getContext());
     NTL::ZZX pp;
-    encode(pp, array); // Convert the array of slots into a plaintext polynomial
-    sKey.Encrypt(ctxt, pp, tab.getPPowR(), skIdx); // encrypt the plaintext polynomial
+    sKey.Decrypt(pp, ctxt);
+    decode(ptxt, pp);
   }
-
-
-  template<class T>
-  void genericSelect(Ctxt& ctxt1, const Ctxt& ctxt2,
-			    const T& selector) const
-  {
-    if (&ctxt1 == &ctxt2) return; // nothing to do
-
-    assert(&context == &ctxt1.getContext() && &context == &ctxt2.getContext());
-    NTL::ZZX poly; 
-    encode(poly,selector);                             // encode as polynomial
-    DoubleCRT dcrt(poly, context, ctxt1.getPrimeSet());// convert to DoubleCRT
-
-    ctxt1.multByConstant(dcrt); // keep only the slots with 1's
-
-    dcrt -= 1;      // convert 1 => 0, 0 => -1
-    Ctxt tmp=ctxt2; // a copy of ctxt2
-    tmp.multByConstant(dcrt);// keep (but negate) only the slots with 0's
-    ctxt1 -= tmp;
-  }
+  void decrypt(const Ctxt& ctxt,
+               const FHESecKey& sKey, std::vector<double>& ptxt) const override
+  { std::vector<cx_double> v; decrypt(ctxt,sKey,v); convert(ptxt,v); }
 };
 
 
@@ -586,10 +642,9 @@ void plaintextAutomorph(RX& b, const RX& a, long i, long j,
 
 
 //! @brief A "factory" for building EncryptedArrays
-EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
-					const NTL::ZZX& G, const PAlgebraMod& alMod);
-
-
+EncryptedArrayBase*
+buildEncryptedArray(const FHEcontext& context, const PAlgebraMod& alMod,
+                    const NTL::ZZX& G=NTL::ZZX::zero());
 
 //! @class EncryptedArray
 //! @brief A simple wrapper for a smart pointer to an EncryptedArrayBase.
@@ -603,12 +658,11 @@ public:
 
   //! constructor: G defaults to the monomial X, PAlgebraMod from context
   EncryptedArray(const FHEcontext& context, const NTL::ZZX& G = NTL::ZZX(1, 1))
-    : alMod(context.alMod), rep(buildEncryptedArray(context,G,context.alMod))
+    : alMod(context.alMod), rep(buildEncryptedArray(context,context.alMod,G))
   { }
   //! constructor: G defaults to F0, PAlgebraMod explicitly given
   EncryptedArray(const FHEcontext& context, const PAlgebraMod& _alMod)
-    : alMod(_alMod), 
-      rep(buildEncryptedArray(context, _alMod.getFactorsOverZZ()[0], _alMod))
+    : alMod(_alMod), rep(buildEncryptedArray(context,_alMod))
   { }
 
   // copy constructor: 
@@ -663,65 +717,28 @@ public:
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
 
-  void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const 
-    { rep->encode(ptxt, array); }
-  void encode(NTL::ZZX& ptxt, const std::vector< NTL::ZZX >& array) const 
-    { rep->encode(ptxt, array); }
-  void encode(NTL::ZZX& ptxt, const NewPlaintextArray& array) const 
+  template<class PTXT, class ARRAY>
+  void encode(PTXT& ptxt, const ARRAY& array) const 
     { rep->encode(ptxt, array); }
 
-  void encode(zzX& ptxt, const std::vector< long >& array) const 
-    { rep->encode(ptxt, array); }
-  void encode(zzX& ptxt, const std::vector< zzX >& array) const 
-    { rep->encode(ptxt, array); }
-  void encode(zzX& ptxt, const NewPlaintextArray& array) const 
-    { rep->encode(ptxt, array); }
-
-  void encodeUnitSelector(NTL::ZZX& ptxt, long i) const
+  void encodeUnitSelector(zzX& ptxt, long i) const
     { rep->encodeUnitSelector(ptxt, i); }
 
-  void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const 
-    { rep->decode(array, ptxt); }
-  void decode(std::vector< NTL::ZZX  >& array, const NTL::ZZX& ptxt) const 
-    { rep->decode(array, ptxt); }
-  void decode(NewPlaintextArray& array, const NTL::ZZX& ptxt) const 
+  template<class PTXT, class ARRAY>
+  void decode(ARRAY& array, const PTXT& ptxt) const 
     { rep->decode(array, ptxt); }
 
-  void random(std::vector< long  >& array) const
-    { rep->random(array); }
-  void random(std::vector< NTL::ZZX  >& array) const
+  template<class T>
+  void random(std::vector< T >& array) const
     { rep->random(array); }
 
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const std::vector< long >& ptxt) const 
-    { rep->encrypt(ctxt, pKey, ptxt); }
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const std::vector< NTL::ZZX >& ptxt) const 
-    { rep->encrypt(ctxt, pKey, ptxt); }
-  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const NewPlaintextArray& ptxt) const 
+  template<class T>
+  void encrypt(Ctxt& ctxt, const FHEPubKey& pKey, const T& ptxt) const 
     { rep->encrypt(ctxt, pKey, ptxt); }
 
-
-  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const 
+  template<class T>
+  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, T& ptxt) const 
     { rep->decrypt(ctxt, sKey, ptxt); }
-  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< NTL::ZZX >& ptxt) const 
-    { rep->decrypt(ctxt, sKey, ptxt); }
-  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
-    { rep->decrypt(ctxt, sKey, ptxt); }
-
-
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const std::vector< long >& ptxt, long skIdx=0) const 
-    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const std::vector< NTL::ZZX >& ptxt, long skIdx=0) const 
-    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
-  void skEncrypt(Ctxt& ctxt, const FHESecKey& sKey, const NewPlaintextArray& ptxt, long skIdx=0) const 
-    { rep->skEncrypt(ctxt, sKey, ptxt, skIdx); }
-
-
-  void select(Ctxt& ctxt1, const Ctxt& ctxt2, const std::vector< long >& selector) const 
-    { rep->select(ctxt1, ctxt2, selector); }
-  void select(Ctxt& ctxt1, const Ctxt& ctxt2, const std::vector< NTL::ZZX >& selector) const 
-    { rep->select(ctxt1, ctxt2, selector); }
-  void select(Ctxt& ctxt1, const Ctxt& ctxt2, const NewPlaintextArray& selector) const
-    { rep->select(ctxt1, ctxt2, selector); }
 
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, const std::vector<NTL::ZZX>& L) const
     { rep->buildLinPolyCoeffs(C, L); }

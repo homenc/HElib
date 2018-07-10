@@ -48,31 +48,31 @@
  * secret-key polynomial s' into a canonical cipehrtext (i.e. a two-part
  * ciphertext with respect to (1,s)). The matrix W is a 2-by-t matrix of
  * DoubleCRT objects. The bottom row are just (psudo)random elements. Then
- * for column i, if the bottom element is ai then the top element is set as
- *     bi = P*Bi*s' + p*ei - s * ai mod P*q0,
- * where p is the plaintext space (i.e. 2 or 2^r) and Bi is the product of the
- * digits-sizes corresponding to columns 0...i-1. (For example if we have
- * digit sizes 3,5,7 then B0=1, B1=3, B2=15 and B3=105.) Also, q0 is the
- * product of all the "ciphertext primes" and P is roughly the product of all
- * the special primes. (Actually, if Q is the product of all the special
- * primes then P=Q*(Q^{-1} mod p).)
+ * for column j, if the bottom element is aj then the top element is set as
+ *     bj = P*Bj*s' + p*ej - s * aj mod P*q0,
+ * where p is the plaintext space (i.e. 2 or 2^r, or 1 for CKKS) and Bj
+ * is the product of the digits-sizes corresponding to columns 0...i-1.
+ * (For example if we have digit sizes 3,5,7 then B0=1, B1=3, B2=15 and
+ * B3=105.) Also, q0 is the product of all the "ciphertext primes" and
+ * P is roughly the product of all the special primes. (Actually, for BGV,
+ * if Q is the product of all the special primes then P=Q*(Q^{-1} mod p).)
  * 
  * In this implementation we save some space, by keeping only a PRG seed for
  * generating the pseudo-random elements, rather than the elements themselves.
  *
- * To convert a cipehrtext part R, we break R into digits R = sum_i Bi Ri,
- * then set (q0,q1)^T = sum_i Ri * column-i. Note that we have
- * <(1,s),(q0,q1)> = sum_i Ri*(s*ai - s*ai + p*ei +P*Bi*s')
- *       = P * sum_i Bi*Ri * s' + p sum_i Ri*ei
+ * To convert a cipehrtext part R, we break R into digits R = sum_j Bj Rj,
+ * then set (q0,q1)^T = sum_j Rj * column-j. Note that we have
+ * <(1,s),(q0,q1)> = sum_j Rj*(s*aj - s*aj + p*ej +P*Bj*s')
+ *       = P * sum_j Bj*Rj * s' + p sum_j Rj*ej
  *       = P * R * s' + p*a-small-element (mod P*q0)
- * where the last element is small since the ei's are small and |Ri|<B.
+ * where the last element is small since the ej's are small and |Rj|<B.
  * Note that if the ciphertext is encrypted relative to plaintext space p'
- * and then key-switched with matrices W relative to plaintext space p, then
- * we get a mew ciphertxt with noise p'*small+p*small, so it is valid relative
- * to plaintext space GCD(p',p).
+ * and then key-switched with matrices W relative to plaintext space p,
+ * then we get a mew ciphertxt with noise p'*small+p*small, so it is valid
+ * relative to plaintext space GCD(p',p).
  *
  * The matrix W is defined modulo Q>t*B*sigma*q0 (with sigma a bound on the
- * size of the ei's), and Q is the product of all the small primes in our
+ * size of the ej's), and Q is the product of all the small primes in our
  * moduli chain. However, if p is much smaller than B then is is enough to
  * use W mod Qi with Qi a smaller modulus, Q>p*sigma*q0. Also note that if
  * p<Br then we will be using only first r columns of the matrix W.
@@ -109,7 +109,7 @@ public:
   //! @brief Read a key-switching matrix from input
   void readMatrix(std::istream& str, const FHEcontext& context);
 
-  // Raw IO
+  //! Raw IO
   void read(std::istream& str, const FHEcontext& context);
   void write(std::ostream& str) const;
 
@@ -156,8 +156,7 @@ private:
   // use when re-linearizing s_i(X^n). 
   std::vector< std::vector<long> > keySwitchMap;
 
-  NTL::Vec<long> KS_strategy; // NTL Vec's support I/O, which is
-                             // more convenient
+  NTL::Vec<long> KS_strategy; // NTL Vec's support I/O, which is more convenient
 
   // bootstrapping data
 
@@ -196,7 +195,7 @@ public:
   long getPtxtSpace() const { return pubEncrKey.ptxtSpace; }
   bool keyExists(long keyID) { return (keyID<(long)skSizes.size()); }
 
-  //! @brief The Hamming weight of the secret key
+  //! @brief The size of the secret key
   long getSKeySize(long keyID=0) const {return skSizes.at(keyID);}
 
   ///@{
@@ -257,17 +256,34 @@ public:
     KS_strategy[index] = val;
   }
 
-  //! @brief Encrypts plaintext, result returned in the ciphertext argument.
-  //! The returned value is the plaintext-space for that ciphertext. When
-  //! called with highNoise=true, returns a ciphertext with noise level~q/8.
-  long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0,
-	       bool highNoise=false) const;
-  long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0,
-	       bool highNoise=false) const {
+  /**
+   * Encrypts plaintext, result returned in the ciphertext argument. When
+   * called with highNoise=true, returns a ciphertext with noise level~q/8.
+   * For BGV, ptxtSpace is the intended plaintext space, which cannot be
+   *   co-prime with pubEncrKey.ptxtSpace. The returned value is the
+   *   plaintext-space for the resulting ciphertext, which is their GCD/
+   * For CKKS, ptxtSpace is a bound on the size of the complex plaintext
+   *   elements that are encoded in ptxt (before scaling). It is assumed that
+   *   they are scaled duing encoding by context.alMod.encodeScalingFactor().
+   *   The returned value is the scaling factor in the resulting ciphertexe
+   *   (which can be larger than the input scaling). The same returned factor
+   *   is also recorded in ctxt.ratFactor.
+   **/
+    long Encrypt(Ctxt &ciphertxt,
+                 const NTL::ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
+    long Encrypt(Ctxt &ciphertxt,
+                 const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
     NTL::ZZX tmp;
     convert(tmp, plaintxt);
     Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
   }
+  long CKKSencrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSize) const;
+
+  // These methods are overridden by secret-key Encrypt
+  virtual long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const
+  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
+  virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const
+  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
 
   bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
@@ -283,7 +299,8 @@ public:
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
 
-  // A hack to increase the plaintext space
+  // A hack to increase the plaintext space, you'd better
+  // know what you are doing when using it.
   void hackPtxtSpace(long p2r) { pubEncrKey.ptxtSpace = p2r; }
 };
   
@@ -350,14 +367,17 @@ public:
   void Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt, NTL::ZZX& f) const;
 
   //! @brief Symmetric encryption using the secret key.
-  long Encrypt(Ctxt &ctxt, const NTL::ZZX& ptxt,
-	       long ptxtSpace=0, long skIdx=0) const;
-  long Encrypt(Ctxt &ctxt, const zzX& ptxt,
-	       long ptxtSpace=0, long skIdx=0) const {
+  long skEncrypt(Ctxt &ctxt, const NTL::ZZX& ptxt, long ptxtSpace, long skIdx) const;
+  long skEncrypt(Ctxt &ctxt, const zzX& ptxt, long ptxtSpace, long skIdx) const {
     NTL::ZZX tmp;
     convert(tmp,ptxt);
-    Encrypt(ctxt, tmp, ptxtSpace, skIdx);
+    skEncrypt(ctxt, tmp, ptxtSpace, skIdx);
   }
+  // These methods override the public-key Encrypt methods
+  long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const override
+  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, 0); }
+  long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const override
+  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, 0); }
 
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();

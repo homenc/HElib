@@ -14,6 +14,7 @@
 #include "EvalMap.h"
 #include "powerful.h"
 #include "binio.h"
+#include "sample.h"
 
 NTL_CLIENT
 
