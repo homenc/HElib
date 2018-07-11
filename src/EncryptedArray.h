@@ -381,7 +381,7 @@ public:
   virtual void encode(NTL::ZZX& ptxt, const NewPlaintextArray& array) const override;
   virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const override;
 
-  virtual void encodeUnitSelector(zzX& ptxt, long i) const; // this is not an override
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const override;
 
   virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const override
     { genericDecode(array, ptxt); }
@@ -390,15 +390,15 @@ public:
     { genericDecode(array, ptxt); }
 
   virtual void decode(NewPlaintextArray& array, const NTL::ZZX& ptxt) const override;
-  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const; // this is not an override
+  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
 
   virtual void random(std::vector< long  >& array) const override
     { genericRandom(array); } // choose at random and convert to std::vector<long>
 
-  virtual void random(std::vector< NTL::ZZX  >& array) const override
+  virtual void random(std::vector< NTL::ZZX  >& array) const override 
     { genericRandom(array); } // choose at random and convert to std::vector<ZZX>
 
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const override
     { genericDecrypt(ctxt, sKey, ptxt);
       if (ctxt.getPtxtSpace()<getP2R()) {
 	for (long i=0; i<(long)ptxt.size(); i++)
