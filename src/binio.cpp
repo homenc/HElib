@@ -60,7 +60,7 @@ void write_ntl_vec_long(ostream& str, const vec_long& vl, long intSize)
   write_raw_int(str, vl.length(), BINIO_32BIT); 
   write_raw_int(str, intSize, BINIO_32BIT); 
 
-  for(long i=0, tmp; i<vl.length(); i++){
+  for(long i=0; i<vl.length(); i++){
     write_raw_int(str, vl[i], intSize); 
   }
 }
@@ -75,7 +75,7 @@ void read_ntl_vec_long(istream& str, vec_long& vl)
     vl.SetLength(sizeOfVL);
   }
 
-  for(long i=0, tmp; i<sizeOfVL; i++){
+  for(long i=0; i<sizeOfVL; i++){
     vl[i] = read_raw_int(str, intSize);
   }
 }

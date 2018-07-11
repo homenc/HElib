@@ -49,9 +49,6 @@ typedef std::complex<double> cx_double;
 
 
 
-
-
-
 class NewPlaintextArray; // forward reference
 class EncryptedArray; // forward reference
 
@@ -323,9 +320,9 @@ public:
     return *this;
   }
 
-  virtual EncryptedArrayBase* clone() const { return new EncryptedArrayDerived(*this); }
+  virtual EncryptedArrayBase* clone() const override { return new EncryptedArrayDerived(*this); }
 
-  virtual PA_tag getTag() const { return tag; }
+  virtual PA_tag getTag() const override { return tag; }
   // tag is defined in PA_INJECT, see PAlgebra.h
 
   template<template <class> class T, class... Args>
@@ -349,55 +346,56 @@ public:
 
   void initNormalBasisMatrix() const;
 
-  virtual void restoreContext() const { tab.restoreContext(); }
-  virtual void restoreContextForG() const { mappingData.restoreContextForG(); }
+  virtual void restoreContext() const override { tab.restoreContext(); }
+  virtual void restoreContextForG() const override { mappingData.restoreContextForG(); }
 
 
   virtual const FHEcontext& getContext() const override { return context; }
   virtual const PAlgebra& getPAlgebra() const override { return tab.getZMStar(); }
-  virtual const long getDegree() const { return mappingData.getDegG(); }
+  virtual const long getDegree() const override { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
   const long getP2R() const override {return getTab().getPPowR();}
 
-  virtual void rotate(Ctxt& ctxt, long k) const;
-  virtual void shift(Ctxt& ctxt, long k) const;
-  virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const;
+  virtual void rotate(Ctxt& ctxt, long k) const override;
+  virtual void shift(Ctxt& ctxt, long k) const override;
+  virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
+
   template<class U> void // avoid this being "hidden" by other rotate1D's
     rotate1D(std::vector<U>& out, const std::vector<U>& in, long i, long offset) const
     { EncryptedArrayBase::rotate1D(out, in, i, offset); }
-  virtual void shift1D(Ctxt& ctxt, long i, long k) const;
+  virtual void shift1D(Ctxt& ctxt, long i, long k) const override;
 
-  virtual void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const
+  virtual void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const override
     { genericEncode(ptxt, array);  }
 
-  virtual void encode(zzX& ptxt, const std::vector< long >& array) const
+  virtual void encode(zzX& ptxt, const std::vector< long >& array) const override
     { genericEncode(ptxt, array);  }
 
-  virtual void encode(NTL::ZZX& ptxt, const std::vector< NTL::ZZX >& array) const
+  virtual void encode(NTL::ZZX& ptxt, const std::vector< NTL::ZZX >& array) const override
     {  genericEncode(ptxt, array); }
 
-  virtual void encode(zzX& ptxt, const std::vector< zzX >& array) const
+  virtual void encode(zzX& ptxt, const std::vector< zzX >& array) const override
     {  genericEncode(ptxt, array); }
 
-  virtual void encode(NTL::ZZX& ptxt, const NewPlaintextArray& array) const;
-  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const;
+  virtual void encode(NTL::ZZX& ptxt, const NewPlaintextArray& array) const override;
+  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const override;
 
-  virtual void encodeUnitSelector(zzX& ptxt, long i) const;
+  virtual void encodeUnitSelector(zzX& ptxt, long i) const; // this is not an override
 
-  virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const
+  virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const override
     { genericDecode(array, ptxt); }
 
-  virtual void decode(std::vector< NTL::ZZX  >& array, const NTL::ZZX& ptxt) const
+  virtual void decode(std::vector< NTL::ZZX  >& array, const NTL::ZZX& ptxt) const override
     { genericDecode(array, ptxt); }
 
-  virtual void decode(NewPlaintextArray& array, const NTL::ZZX& ptxt) const;
-  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
+  virtual void decode(NewPlaintextArray& array, const NTL::ZZX& ptxt) const override;
+  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const; // this is not an override
 
-  virtual void random(std::vector< long  >& array) const
+  virtual void random(std::vector< long  >& array) const override
     { genericRandom(array); } // choose at random and convert to std::vector<long>
 
-  virtual void random(std::vector< NTL::ZZX  >& array) const
+  virtual void random(std::vector< NTL::ZZX  >& array) const override
     { genericRandom(array); } // choose at random and convert to std::vector<ZZX>
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const
@@ -408,7 +406,7 @@ public:
       }
     }
 
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< NTL::ZZX >& ptxt) const
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< NTL::ZZX >& ptxt) const override
     { genericDecrypt(ctxt, sKey, ptxt);
       if (ctxt.getPtxtSpace()<getP2R()) {
 	for (long i=0; i<(long)ptxt.size(); i++)
@@ -417,12 +415,12 @@ public:
     }
 
 
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const override
   { genericDecrypt(ctxt, sKey, ptxt); 
     // FIXME: Redudc mod the ciphertext plaintext space as above
     }
 
-  virtual void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, const std::vector<NTL::ZZX>& L) const;
+  virtual void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, const std::vector<NTL::ZZX>& L) const override;
 
   /* the following are specialized methods, used to work over extension fields...they assume 
      the modulus context is already set
