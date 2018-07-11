@@ -251,9 +251,9 @@ long mcMod(long a, long b);
 long mcDiv(long a, long b);
 
 //! Return balanced remainder. Assumes a in [0, q) and returns 
-//! balanced remainder in [-q/2, q/2)
+//! balanced remainder in (-q/2, q/2]
 inline long balRem(long a, long q)
-{ if (a >= q/2) return a-q/2; else return a; }
+{ if (a > q/2) return a-q; else return a; }
 
 //! Return the square of a number as a double 
 inline double fsquare(double x) { return x*x; }

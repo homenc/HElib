@@ -104,6 +104,7 @@ public:
     const FHEPubKey& pubKey = ctxt.getPubKey();
     shared_ptr<Ctxt> result = make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
     result->noiseVar = noise; // noise estimate
+    result->intFactor = ctxt.intFactor;
 
     if (ctxt.parts.size()==1) { // only constant part, no need to key-switch
       CtxtPart tmpPart = ctxt.parts[0];
