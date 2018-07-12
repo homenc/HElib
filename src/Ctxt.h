@@ -552,8 +552,9 @@ public:
   const FHEcontext& getContext() const { return context; }
   const FHEPubKey& getPubKey() const   { return pubKey; }
   const IndexSet& getPrimeSet() const  { return primeSet; }
-  const NTL::xdouble& getNoiseVar() const   { return noiseVar; }
   const long getPtxtSpace() const      { return ptxtSpace;}
+  const NTL::xdouble& getNoiseVar() const { return noiseVar; }
+  const NTL::xdouble& getRatFactor() const { return ratFactor; }
   const long getKeyID() const;
 
   // Return r such that p^r = ptxtSpace

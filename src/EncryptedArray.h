@@ -593,12 +593,7 @@ public:
   { std::vector<cx_double> v; random(v); convert(array, v); }
 
   void decrypt(const Ctxt& ctxt,
-               const FHESecKey& sKey, std::vector<cx_double>& ptxt) const override {
-    assert(&getContext() == &ctxt.getContext());
-    NTL::ZZX pp;
-    sKey.Decrypt(pp, ctxt);
-    decode(ptxt, pp);
-  }
+               const FHESecKey& sKey, std::vector<cx_double>& ptxt) const override;
   void decrypt(const Ctxt& ctxt,
                const FHESecKey& sKey, std::vector<double>& ptxt) const override
   { std::vector<cx_double> v; decrypt(ctxt,sKey,v); convert(ptxt,v); }

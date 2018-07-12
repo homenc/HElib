@@ -358,7 +358,7 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
 //     plaintext-space for the resulting ciphertext, which is their GCD/
 // For CKKS, ptxtSpace is a bound on the size of the complex plaintext
 //     elements that are encoded in ptxt (before scaling). It is assumed that
-//     they are scaled duing encoding by context.alMod.encodeScalingFactor().
+//     they are scaled in encoding by context.alMod.encodeScalingFactor().
 //     The returned value is the scaling factor in the resulting ciphertexe
 //     (which can be larger than the input scaling). The same returned factor
 //     is also recorded in ctxt.ratFactor.
@@ -457,8 +457,6 @@ long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
 {
   assert(this == &ctxt.pubKey);
 
-  cout << "FHEPubKey::CKKSencrypt\n";
-
   // generate a random encryption of zero from the public encryption key
   ctxt = pubEncrKey;  // already an encryption of zero, just not a random one
 
@@ -468,9 +466,10 @@ long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
   DoubleCRT r(context, context.ctxtPrimes);
   r.sampleSmall();
 
+  long m = context.zMStar.getM();
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2()==0) // not power of two
-    stdev *= sqrt(context.zMStar.getM());
+    stdev *= sqrt(m);
 
   for (size_t i=0; i<ctxt.parts.size(); i++) {  // add noise to all the parts
     ctxt.parts[i] *= r;
@@ -481,19 +480,23 @@ long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
   // Compute the noise magnitude, and ensure that the plaintext is
   // scaled up by at least this much
   double rVar = (context.zMStar.getPow2()==0)?
-    (context.zMStar.getPhiM()/2.0) : (context.zMStar.getM()/2.0);
+    (context.zMStar.getPhiM()/2.0) : (m/2.0);
   double eVar = stdev*stdev;
   double sVar = skSizes[0];
   double noiseVar = conv<double>(pubEncrKey.noiseVar)*rVar + sVar*(eVar+1);
 
   long factor = getContext().alMod.getCx().encodeScalingFactor();
-  if (factor*factor < noiseVar) { // scale up some more
-    long extraFactor = ceil(std::sqrt(noiseVar)/factor);
+  long precision = getContext().alMod.getPPowR();
+  long extraFactor = ceil(precision*std::sqrt(noiseVar)*log2(m)/factor);
+  if (extraFactor>1) { // scale up some more
     factor *= extraFactor;
     ctxt.parts[0] += ptxt * extraFactor;
+    cout << "pkEncrypt: extraFactor="<<extraFactor<<", factor="<<factor<<endl;
   }
-  else // no need for extra scaling
+  else { // no need for extra scaling
     ctxt.parts[0] += ptxt;
+    cout << "pkEncrypt: factor="<<factor<<endl;
+  }
 
   ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
   ctxt.ptxtSpace = 1;
@@ -845,12 +848,12 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt) const
 void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 			ZZX& f) const // plaintext before modular reduction
 {
+  FHE_TIMER_START;
 #ifdef DEBUG_PRINTOUT
   // The call to findBaseSet is only for the purpose of printing a
   // warning if the noise is large enough so as to risk decryption error
   IndexSet s; ciphertxt.findBaseSet(s);
 #endif
-  FHE_TIMER_START;
   assert(getContext()==ciphertxt.getContext());
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
   DoubleCRT ptxt(context, ptxtPrimes); // Set to zero
@@ -858,7 +861,6 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
   // for each ciphertext part, fetch the right key, multiply and add
   for (size_t i=0; i<ciphertxt.parts.size(); i++) {
     const CtxtPart& part = ciphertxt.parts[i];
-    //  cout << "decrypt part: "<<part.skHandle<<" "<< part.getIndexSet()<<"\n";
     if (part.skHandle.isOne()) { // No need to multiply
       ptxt += part;
       continue;
@@ -886,13 +888,16 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
   }
   // convert to coefficient representation & reduce modulo the plaintext space
   ptxt.toPoly(plaintxt);
-  f = plaintxt;
+  f = plaintxt; // f used only for debugging
 
   // FIXME: handle intFactor
 
-  if (ciphertxt.ptxtSpace>2) { // if p>2, multiply by Q^{-1} mod p
+  if (ciphertxt.getPtxtSpace() == 1) // CKKS encryption
+    return;
+
+  if (ciphertxt.getPtxtSpace()>2) { // if p>2, multiply by Q^{-1} mod p
     long qModP = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
-		     ciphertxt.ptxtSpace);
+                     ciphertxt.ptxtSpace);
     if (qModP != 1) {
       qModP = InvMod(qModP, ciphertxt.ptxtSpace);
       MulMod(plaintxt, plaintxt, qModP, ciphertxt.ptxtSpace);
@@ -913,6 +918,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   assert(((FHEPubKey*)this) == &ctxt.pubKey);
 
+  long m = getContext().zMStar.getM();
   long ptxtSize = 0;
   if (ckks) {
     ptxtSize = ptxtSpace;
@@ -941,15 +947,20 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   if (ckks) {
     long factor = getContext().alMod.getCx().encodeScalingFactor();
-    if (factor*factor < noiseVar) { // scale up some more
-      long extraFactor = ceil(std::sqrt(noiseVar)/factor);
+    long precision = getContext().alMod.getPPowR();
+    long extraFactor = ceil(precision*std::sqrt(noiseVar)*log2(m)/factor);
+    if (extraFactor>1) { // scale up some more
       factor *= extraFactor;
       ctxt.parts[0] += extraFactor * ptxt;
+      cout << "skEncrypt: extraFactor="<<extraFactor<<", factor="<<factor<<endl;
     }
-    else ctxt.ratFactor = factor;
-
+    else {
+      ctxt.parts[0] += ptxt;
+      cout << "skEncrypt: factor="<<factor<<endl;
+    }
+    ctxt.ratFactor = factor;
     double rVar = (getContext().zMStar.getPow2()==0)?
-      (getContext().zMStar.getPhiM()/4.0) : (getContext().zMStar.getM()/4.0);
+      (getContext().zMStar.getPhiM()/4.0) : (m/4.0);
     ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
     ctxt.highWaterMark = ctxt.findBaseLevel();
     return factor;
