@@ -366,8 +366,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 			bool highNoise) const
 {
   FHE_TIMER_START;
-  if (getContext().alMod.getTag()==PA_cx_tag)
-    return CKKSencrypt(ctxt, ptxt, ptxtSpace);
+  if (isCKKS()) return CKKSencrypt(ctxt, ptxt, ptxtSpace);
   // NOTE: Is taking the alMod from the context the right thing to do here?
 
   assert(this == &ctxt.pubKey);
@@ -729,11 +728,9 @@ bool FHESecKey::operator==(const FHESecKey& other) const
 long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long size,
 			     long ptxtSpace, long maxDegKswitch)
 {
-  bool ckks = (getContext().alMod.getTag()==PA_cx_tag);
-  
   if (sKeys.empty()) { // 1st secret-key, generate corresponding public key
     if (ptxtSpace<2)
-      ptxtSpace = ckks? 1 : context.alMod.getPPowR();
+      ptxtSpace = isCKKS()? 1 : context.alMod.getPPowR();
     // default plaintext space is p^r for BGV, 1 for CKKS
 
     // allocate space
@@ -741,7 +738,7 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long size,
     // Choose a new RLWE instance
     pubEncrKey.noiseVar
       = RLWE(pubEncrKey.parts[0], pubEncrKey.parts[1], sKey, ptxtSpace);
-    if (ckks)
+    if (isCKKS())
       pubEncrKey.ratFactor = sqrt(pubEncrKey.noiseVar);
 
     // make parts[0],parts[1] point to (1,s)
@@ -806,9 +803,8 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   } // restore state upon destruction of state
 
   // Record the plaintext space for this key-switching matrix
-  if (getContext().alMod.getTag()==PA_cx_tag) // CKKS
-    p = 1;
-  else {                                      // BGV
+  if (isCKKS()) p = 1;
+  else {        // BGV
     if (p<2) {
       if (context.isBootstrappable()) // use larger bootstrapping plaintext space
         p = context.rcData.alMod->getPPowR();
@@ -892,8 +888,7 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 
   // FIXME: handle intFactor
 
-  if (ciphertxt.getPtxtSpace() == 1) // CKKS encryption
-    return;
+  if (isCKKS()) return; // CKKS encryption, nothing else to do
 
   if (ciphertxt.getPtxtSpace()>2) { // if p>2, multiply by Q^{-1} mod p
     long qModP = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
@@ -913,14 +908,11 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 {
   FHE_TIMER_START;
 
-  bool ckks = (getContext().alMod.getTag()==PA_cx_tag);
-  // NOTE: Is taking the alMod from the context the right thing to do here?
-
   assert(((FHEPubKey*)this) == &ctxt.pubKey);
 
   long m = getContext().zMStar.getM();
   long ptxtSize = 0;
-  if (ckks) {
+  if (isCKKS()) {
     ptxtSize = ptxtSpace;
     ptxtSpace = 1;
   }
@@ -945,7 +937,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
   // Sample a new RLWE instance
   double noiseVar = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
 
-  if (ckks) {
+  if (isCKKS()) {
     long factor = getContext().alMod.getCx().encodeScalingFactor();
     long precision = getContext().alMod.getPPowR();
     long extraFactor = ceil(precision*std::sqrt(noiseVar)*log2(m)/factor);

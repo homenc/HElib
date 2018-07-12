@@ -557,6 +557,9 @@ public:
   const NTL::xdouble& getRatFactor() const { return ratFactor; }
   const long getKeyID() const;
 
+  bool isCKKS() const
+  { return (getContext().alMod.getTag()==PA_cx_tag); }
+
   // Return r such that p^r = ptxtSpace
   const long effectiveR() const {
     long p = context.zMStar.getP();

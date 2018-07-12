@@ -285,6 +285,10 @@ public:
   virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const
   { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
 
+  bool isCKKS() const
+  { return (getContext().alMod.getTag()==PA_cx_tag); }
+  // NOTE: Is taking the alMod from the context the right thing to do?
+
   bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
   void thinReCrypt(Ctxt &ctxt);  // bootstrap a "thin" ciphertext, where

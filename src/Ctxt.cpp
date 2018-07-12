@@ -43,8 +43,7 @@ std::set<long>* FHEglobals::automorphVals2 = NULL;
 // Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
-  bool ckks = (getContext().alMod.getTag()==PA_cx_tag);
-  if (ckks) {
+  if (isCKKS()) {
     ptxtSpace=1;
     long factor = getContext().alMod.getCx().encodeScalingFactor();
     if (size < 0.0)
@@ -60,9 +59,9 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 
   // A single part, with the plaintext as data and handle pointing to 1
 
-  long f = (ckks)? 1
-    : rem(context.productOfPrimes(context.ctxtPrimes),ptxtSpace);
-  if (f == 1) { // scale by constant
+  long f = isCKKS()?
+    1 : rem(context.productOfPrimes(context.ctxtPrimes),ptxtSpace);
+  if (f == 1) {
     DoubleCRT dcrt(ptxt, context, primeSet);  
     parts.assign(1, CtxtPart(dcrt));
   } else {
@@ -346,9 +345,15 @@ void Ctxt::modDownToSet(const IndexSet &s)
 
     // update the noise estimate
     double f = context.logOfProduct(setDiff);
+    cout << " + setDiff="<<setDiff<<", product="<<xexp(f)<<endl;
+    cout << "   noiseVar "<<noiseVar;
     noiseVar /= xexp(2*f);
+    cout << " -> "<<noiseVar;
     noiseVar += addedNoiseVar;
+    cout << " -> "<<noiseVar<<endl;
+    cout << "   ratFactor "<<ratFactor;
     ratFactor /= xexp(f); // The factor in CKKS encryption
+    cout << " -> "<<ratFactor<<endl;
   }
   primeSet.remove(setDiff); // remove the primes not in s
   assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
@@ -656,7 +661,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 // Add a constant polynomial
 void Ctxt::addConstant(const ZZ& c)
 {
-  if (getContext().alMod.getTag()==PA_cx_tag) {
+  if (isCKKS()) {
     addConstantCKKS(c);
     return;
   }
@@ -831,13 +836,13 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   }
 
   // Sanity check: verify that the plaintext spaces are compatible
-  if (getPtxtSpace() > 1) {
+  if (isCKKS())
+    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
+  else { // BGV
     long g = GCD(this->ptxtSpace, other.ptxtSpace);
     assert (g>1);
     this->ptxtSpace = g;
   }
-  else
-    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
 
   // Match the prime-sets, mod-UP the arguments if needed
   IndexSet s = other.primeSet / primeSet; // set-minus
@@ -854,9 +859,8 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   }
 
   // If approximate numbers, make sure the scaling factors are the same
-  if (getPtxtSpace()==1 && ratFactor != other_pt->ratFactor
-       && !closeToOne(ratFactor/other_pt->ratFactor,
-                      getContext().alMod.getPPowR()*2)      ) {
+  if (isCKKS() && !closeToOne(ratFactor/other_pt->ratFactor,
+                              getContext().alMod.getPPowR()*2)) {
     if (other_pt != &tmp) {
       tmp = other;
       other_pt = &tmp;
@@ -966,13 +970,13 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   if (this->isEmpty()) return  *this;
 
   // Sanity check: plaintext spaces are compatible
-  if (getPtxtSpace() > 1) {
+  if (isCKKS())
+    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
+  else { // GBV
     long g = GCD(this->ptxtSpace, other.ptxtSpace);
     assert (g>1);
     this->ptxtSpace = g;
   }
-  else
-    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
 
   Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
   long lvl = findBaseLevel();
@@ -1081,7 +1085,11 @@ void Ctxt::multByConstant(const ZZ& c)
   FHE_TIMER_START;
 
   const ZZ* cPtr = &c;
-  if (getPtxtSpace()>1) {
+  if (isCKKS()) {
+    xdouble size = to_xdouble(c);
+    noiseVar *= size*size * getContext().zMStar.get_cM();
+  }
+  else { // BGV
     long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
     if (cc > ptxtSpace/2) cc -= ptxtSpace;
     else if (cc < -ptxtSpace/2) cc += ptxtSpace;
@@ -1091,10 +1099,6 @@ void Ctxt::multByConstant(const ZZ& c)
 
     ZZ tmp = to_ZZ(cc);
     cPtr = &tmp;
-  }
-  else {
-    xdouble size = to_xdouble(c);
-    noiseVar *= size*size * getContext().zMStar.get_cM();
   }
 
   // multiply all the parts by this constant
@@ -1106,7 +1110,7 @@ void Ctxt::multByConstant(const ZZ& c)
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
   FHE_TIMER_START;
-  if (getPtxtSpace()==1) {
+  if (isCKKS()) {
     multByConstantCKKS(dcrt, to_xdouble(size));
     return;
   }
