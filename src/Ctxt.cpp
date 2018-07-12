@@ -302,7 +302,7 @@ void Ctxt::modUpToSet(const IndexSet &s)
   noiseVar *= xexp(2*f);
 
   // If CKKS, the rational factor grows by a factor of exp(f)
-  ratFactor *= exp(f);
+  ratFactor *= xexp(f);
 
   primeSet.insert(setDiff); // add setDiff to primeSet
   assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
@@ -891,13 +891,24 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     long f2 = other_pt->intFactor;
 
     long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace);
-    xdouble noise_min = this->noiseVar*fsquare(ratio) + other_pt->noiseVar;
 
-    for (long ee2 = 1; ee2 < ptxtSpace; ee2++) {
+    xdouble noise_min = 
+      noiseVar*fsquare(balRem(ratio, ptxtSpace)) + other_pt->noiseVar;
+
+    // set e1, e2 so that e1*f1 == e2*f2 (mod ptxtSpace),
+    // minimizing the increase in noise.
+
+    e1 = ratio; 
+    // Initial choise is e1 == ratio and e2 == 1.
+    // Now look for better choices
+
+    for (long ee2 = 2; ee2 < ptxtSpace; ee2++) {
       if (GCD(ee2, ptxtSpace) == 1) {
 	long ee1 = MulMod(ee2, ratio, ptxtSpace);
 	xdouble noise_est = 
-	  this->noiseVar*fsquare(ee1) + other_pt->noiseVar*fsquare(ee2);
+	  noiseVar*fsquare(balRem(ee1, ptxtSpace)) + 
+          other_pt->noiseVar*fsquare(balRem(ee2, ptxtSpace));
+
 	if (noise_est < noise_min) {
 	  noise_min = noise_est;
 	  e1 = ee1;

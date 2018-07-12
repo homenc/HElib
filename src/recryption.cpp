@@ -752,6 +752,7 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 // Extract digits from thinly packed slots
 
 
+long fhe_disable_chen_han = 0;
 
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 {
@@ -766,8 +767,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   long p2r = power_long(p,r);
   long topHigh = botHigh + r-1;
 
-  //if (0) {
-  if (r > 1) {
+  if (r > 1 && !fhe_disable_chen_han) {
     // use Chen and Han technique
 
     extendExtractDigits(scratch, unpacked, botHigh, r);

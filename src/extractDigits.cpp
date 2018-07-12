@@ -85,7 +85,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
   // for the ptxt hack (see below) this is necessary to ensure that
   // the "free bit" hack in extractDigitsThin works
 
-//#define VIEW_LEVELS
+#define VIEW_LEVELS
 
 #ifdef VIEW_LEVELS
   fprintf(stderr, "***\n");
@@ -94,20 +94,17 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
     tmp = c;
     for (long j=0; j<i; j++) {
 
-      if (p > 2) digits[j].hackPtxtSpace(power_long(p,i-j+delta));
-      // perform ptxt hack for odd p...seems to reduce the noise.
-      // for p==2, it doesn't seem to help, and sometimes seems
-      // to make things worse
+      if (p > 2) {
+         digits[j].hackPtxtSpace(power_long(p,i-j+delta));
+	 // perform ptxt hack for odd p...seems to reduce the noise.
+	 // for p==2, it doesn't seem to help, and sometimes seems
+	 // to make things worse
+      }
 
-#ifdef VIEW_LEVELS
-      if (j==0) fhe_watcher = 1;
-#endif
       if (p==2) digits[j].square();
       else if (p==3) digits[j].cube();
       else polyEval(digits[j], x2p, digits[j]); 
       // "in spirit" digits[j] = digits[j]^p
-
-      if (j==0) fhe_watcher = 0;
 
 
 #ifdef VIEW_LEVELS
@@ -120,7 +117,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
     digits[i] = tmp; // needed in the next round
 
 #ifdef VIEW_LEVELS
-    fprintf(stderr, "%3ld --- %3ld\n", digits[i].findBaseLevel(), digits[i].getPtxtSpace());
+    fprintf(stderr, "%3ld\n", digits[i].findBaseLevel());
 #endif
 
 #ifdef DEBUG_PRINTOUT
@@ -261,6 +258,9 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
   digits.resize(r, tmp);      // allocate space
   digits0.resize(r, tmp);
 
+#ifdef VIEW_LEVELS
+  fprintf(stderr, "***\n");
+#endif
   for (long i: range(r)) {
     tmp = c;
     for (long j: range(i)) {
@@ -269,6 +269,9 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
          // so just use it
 
          tmp -= digits[j];
+#ifdef VIEW_LEVELS
+      fprintf(stderr, "%3ld*", digits[j].findBaseLevel());
+#endif
       }
       else {
 	if (p==2) digits0[j].square();
@@ -276,12 +279,19 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 	else polyEval(digits0[j], x2p, digits0[j]); // "in spirit" digits0[j] = digits0[j]^p
 
 	tmp -= digits0[j];
+#ifdef VIEW_LEVELS
+      fprintf(stderr, "%3ld ", digits0[j].findBaseLevel());
+#endif
       }
 
       tmp.divideByP();
     }
     digits0[i] = tmp; // needed in the next round
     polyEval(digits[i], G[i], tmp);
+
+#ifdef VIEW_LEVELS
+    fprintf(stderr, "%3ld  --- %3ld\n", digits0[i].findBaseLevel(), digits[i].findBaseLevel());
+#endif
   }
 }
 
