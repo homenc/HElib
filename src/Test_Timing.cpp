@@ -114,7 +114,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     FHE_NTIMER_STOP(keyGen);
 
     ZZX poly;
-    NewPlaintextArray pp(ea);
+    PlaintextArray pp(ea);
     random(ea, pp);
 
     Ctxt cc(publicKey);
@@ -506,7 +506,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   cerr << "#" << std::flush;
 
   ZZX poly;
-  NewPlaintextArray pp(ea);
+  PlaintextArray pp(ea);
   random(ea, pp);
   ea.encode(poly, pp);
 

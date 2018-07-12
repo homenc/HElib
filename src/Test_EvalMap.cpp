@@ -114,7 +114,7 @@ void  TestIt(long p, long r, long c, long _k,
   for (long i = 0; i < phim; i++) {
     val1[i/d] += conv<ZZX>(conv<ZZ>(cube[i])) << (i % d);
   }
-  NewPlaintextArray pa1(ea);
+  PlaintextArray pa1(ea);
   encode(ea, pa1, val1);
 
   Ctxt ctxt(publicKey);
@@ -167,7 +167,7 @@ void  TestIt(long p, long r, long c, long _k,
     CheckCtxt(ctxt, "EvalMap");
     cout << "check results\n";
   }
-  NewPlaintextArray pa2(ea);
+  PlaintextArray pa2(ea);
   ea.decrypt(ctxt, secretKey, pa2);
 
   if (equals(ea, pa1, pa2))

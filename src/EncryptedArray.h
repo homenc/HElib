@@ -28,7 +28,7 @@ typedef std::complex<double> cx_double;
 //   also...this probably should be defined in NTL, anyway....
 #define FHE_MORE_UNWRAPARGS(n) NTL_SEPARATOR_##n NTL_REPEATER_##n(NTL_UNWRAPARG)
 
-// these are used to implement NewPlaintextArray stuff routines
+// these are used to implement PlaintextArray stuff routines
 
 #define PA_BOILER \
     const PAlgebraModDerived<type>& tab = ea.getTab(); \
@@ -49,7 +49,7 @@ typedef std::complex<double> cx_double;
 
 
 
-class NewPlaintextArray; // forward reference
+class PlaintextArray; // forward reference
 class EncryptedArray; // forward reference
 
 /**
@@ -128,7 +128,7 @@ public:
   // These methods are only defined for some of the derived calsses
   virtual void encode(zzX& ptxt, const std::vector< zzX >& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
-  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const
+  virtual void encode(zzX& ptxt, const PlaintextArray& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
   virtual void encode(zzX& ptxt, const std::vector<double>& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
@@ -137,7 +137,7 @@ public:
 
   virtual void encode(NTL::ZZX& ptxt, const std::vector< NTL::ZZX >& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
-  virtual void encode(NTL::ZZX& ptxt, const NewPlaintextArray& array) const
+  virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
   virtual void encode(NTL::ZZX& ptxt, const std::vector<double>& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
@@ -152,7 +152,7 @@ public:
   {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
   virtual void decode(std::vector< NTL::ZZX  >& array, const NTL::ZZX& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
-  virtual void decode(NewPlaintextArray& array, const NTL::ZZX& ptxt) const
+  virtual void decode(PlaintextArray& array, const NTL::ZZX& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
   virtual void decode(std::vector<double>& array, const NTL::ZZX& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
@@ -195,7 +195,7 @@ public:
   {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< NTL::ZZX >& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector<double>& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
@@ -378,8 +378,8 @@ public:
   virtual void encode(zzX& ptxt, const std::vector< zzX >& array) const override
     {  genericEncode(ptxt, array); }
 
-  virtual void encode(NTL::ZZX& ptxt, const NewPlaintextArray& array) const override;
-  virtual void encode(zzX& ptxt, const NewPlaintextArray& array) const override;
+  virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const override;
+  virtual void encode(zzX& ptxt, const PlaintextArray& array) const override;
 
   virtual void encodeUnitSelector(zzX& ptxt, long i) const override;
 
@@ -389,8 +389,8 @@ public:
   virtual void decode(std::vector< NTL::ZZX  >& array, const NTL::ZZX& ptxt) const override
     { genericDecode(array, ptxt); }
 
-  virtual void decode(NewPlaintextArray& array, const NTL::ZZX& ptxt) const override;
-  virtual void decode(NewPlaintextArray& array, const zzX& ptxt) const;
+  virtual void decode(PlaintextArray& array, const NTL::ZZX& ptxt) const override;
+  virtual void decode(PlaintextArray& array, const zzX& ptxt) const;
 
   virtual void random(std::vector< long  >& array) const override
     { genericRandom(array); } // choose at random and convert to std::vector<long>
@@ -415,7 +415,7 @@ public:
     }
 
 
-  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, NewPlaintextArray& ptxt) const override
+  virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const override
   { genericDecrypt(ctxt, sKey, ptxt); 
     // FIXME: Redudc mod the ciphertext plaintext space as above
     }
@@ -766,15 +766,15 @@ public:
 // NewPlaintaxtArray
 
 
-class NewPlaintextArrayBase { // purely abstract interface
+class PlaintextArrayBase { // purely abstract interface
 public:
-  virtual ~NewPlaintextArrayBase() {}
+  virtual ~PlaintextArrayBase() {}
   virtual void print(std::ostream& s) const = 0;
 
 };
 
 
-template<class type> class NewPlaintextArrayDerived : public NewPlaintextArrayBase {
+template<class type> class PlaintextArrayDerived : public PlaintextArrayBase {
 public:
   PA_INJECT(type)
 
@@ -785,20 +785,20 @@ public:
 };
 
 
-class NewPlaintextArray {
+class PlaintextArray {
 private:
 
-  NTL::CloneablePtr<NewPlaintextArrayBase> rep;
+  NTL::CloneablePtr<PlaintextArrayBase> rep;
 
   template<class type>
   class ConstructorImpl {
   public:
     PA_INJECT(type)
 
-    static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa)
+    static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa)
     {
-      NTL::CloneablePtr< NewPlaintextArrayDerived<type> > ptr =
-         NTL::MakeCloneable< NewPlaintextArrayDerived<type> >();
+      NTL::CloneablePtr< PlaintextArrayDerived<type> > ptr =
+         NTL::MakeCloneable< PlaintextArrayDerived<type> >();
       ptr->data.resize(ea.size());
       pa.rep = ptr;
     }
@@ -806,21 +806,21 @@ private:
 
 public:
   
-  NewPlaintextArray(const EncryptedArray& ea)  
+  PlaintextArray(const EncryptedArray& ea)  
     { ea.dispatch<ConstructorImpl>(*this); }
 
-  NewPlaintextArray(const NewPlaintextArray& other) : rep(other.rep.clone()) { }
-  NewPlaintextArray& operator=(const NewPlaintextArray& other) 
+  PlaintextArray(const PlaintextArray& other) : rep(other.rep.clone()) { }
+  PlaintextArray& operator=(const PlaintextArray& other) 
     { rep = other.rep.clone(); return *this; }
 
   template<class type>
     std::vector<typename type::RX>& getData() 
-    { return (dynamic_cast< NewPlaintextArrayDerived<type>& >(*rep)).data; }
+    { return (dynamic_cast< PlaintextArrayDerived<type>& >(*rep)).data; }
 
 
   template<class type>
     const std::vector<typename type::RX>& getData() const
-    { return (dynamic_cast< NewPlaintextArrayDerived<type>& >(*rep)).data; }
+    { return (dynamic_cast< PlaintextArrayDerived<type>& >(*rep)).data; }
 
 
   void print(std::ostream& s) const { rep->print(s); }
@@ -828,39 +828,39 @@ public:
 };
 
 inline 
-std::ostream& operator<<(std::ostream& s, const NewPlaintextArray& pa)
+std::ostream& operator<<(std::ostream& s, const PlaintextArray& pa)
 {  pa.print(s); return s; }
 
 
-void rotate(const EncryptedArray& ea, NewPlaintextArray& pa, long k);
-void shift(const EncryptedArray& ea, NewPlaintextArray& pa, long k);
+void rotate(const EncryptedArray& ea, PlaintextArray& pa, long k);
+void shift(const EncryptedArray& ea, PlaintextArray& pa, long k);
 
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const std::vector<long>& array);
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const std::vector<NTL::ZZX>& array);
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, long val);
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const NTL::ZZX& val);
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const std::vector<long>& array);
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const std::vector<NTL::ZZX>& array);
+void encode(const EncryptedArray& ea, PlaintextArray& pa, long val);
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const NTL::ZZX& val);
 
-void random(const EncryptedArray& ea, NewPlaintextArray& pa);
+void random(const EncryptedArray& ea, PlaintextArray& pa);
 
-void decode(const EncryptedArray& ea, std::vector<long>& array, const NewPlaintextArray& pa);
-void decode(const EncryptedArray& ea, std::vector<NTL::ZZX>& array, const NewPlaintextArray& pa);
+void decode(const EncryptedArray& ea, std::vector<long>& array, const PlaintextArray& pa);
+void decode(const EncryptedArray& ea, std::vector<NTL::ZZX>& array, const PlaintextArray& pa);
 
-bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const NewPlaintextArray& other);
-bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const std::vector<long>& other);
-bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const std::vector<NTL::ZZX>& other);
+bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const PlaintextArray& other);
+bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const std::vector<long>& other);
+bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const std::vector<NTL::ZZX>& other);
 
-void add(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other);
-void sub(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other);
-void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other);
-void negate(const EncryptedArray& ea, NewPlaintextArray& pa);
+void add(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other);
+void sub(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other);
+void mul(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other);
+void negate(const EncryptedArray& ea, PlaintextArray& pa);
 
 
-void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j);
-void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const NTL::Vec<long>& vec);
+void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, long j);
+void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, const NTL::Vec<long>& vec);
 
-void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const NTL::Vec<long>& pi);
+void applyPerm(const EncryptedArray& ea, PlaintextArray& pa, const NTL::Vec<long>& pi);
 
-void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e);
+void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
 
 
 
