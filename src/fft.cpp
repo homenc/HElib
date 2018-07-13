@@ -57,8 +57,8 @@ void canonicalEmbedding(std::vector<cx_double>& v,
   arma::cx_vec avv = arma::fft(av,m); // compute the full FFT
 
   v.resize(phimBy2); // the first half of Zm*
-  for (long i=1, idx=0; i<=m/2; i++)
-    if (palg.inZmStar(i)) v[idx++] = avv[i];
+  for (long i=0; i<palg.getNSlots(); i++)
+    v[palg.getNSlots()-i-1] = avv[palg.ith_rep(i)];
   FHE_TIMER_STOP;
 }
 
@@ -73,15 +73,13 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
   FHE_TIMER_START;
   long m = palg.getM();
   arma::cx_vec avv(m);
-  for (long i=1, idx=0; i<=m/2; i++) {
-    if (palg.inZmStar(i)) {
-      avv[i] = scaling*v[idx++];
-      avv[m-i] = std::conj(avv[i]);
-    }
-    else // not in Zm*
-      avv[m-i] = avv[i] = std::complex<double>(0.0,0.0);
+  for (auto& x: avv) x = 0.0;
+  for (long i=0; i<palg.getNSlots(); i++) {
+    long j = palg.ith_rep(i);
+    avv[j] = scaling*v[palg.getNSlots()-i-1];
+    avv[m-j] = std::conj(avv[j]);
   }
-  arma::vec av = arma::real(arma::ifft(avv,m));
+  arma::vec av = arma::real(arma::ifft(avv,m)); // compute the inverse FFT
 
   // If v was obtained by canonicalEmbedding(v,f,palg,1.0) then we have
   // the guarantee that m*av is an integral polynomial, and moreover

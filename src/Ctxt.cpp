@@ -100,12 +100,11 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
 {
   const FHEcontext& context = p.getContext();
   const PAlgebra& palg = context.zMStar;
-  // WARNING: the following lines are written to prevent integer overflow
-  double ksSize2 = to_double(context.stdev) * pSpace/2.0;
+  double ksSize2 = to_double(context.stdev) * pSpace;
   if (palg.getPow2() > 0) // power of two
-    ksSize2 *= ksSize2 * palg.getPhiM();
+    ksSize2 *= ksSize2 * palg.getPhiM() / 2.0;
   else                    // not power of two
-    ksSize2 *= ksSize2 * fsquare(palg.getM());
+    ksSize2 *= ksSize2 * fsquare(palg.getM()) / 2.0;
   // FIXME: Can we instead use the KeySwitch::noiseVar value?
 
   long nDigits = 0;
@@ -752,24 +751,23 @@ void Ctxt::addConstant(const ZZ& c)
 // Add a constant polynomial for CKKS encryption. We assume that
 // the constant is scaled by PAlgebraModCx::encodeScalingFactor()
 void addSomePrimes(Ctxt& c);
-void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
+void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, xdouble factor)
 {
-  if (IsZero(factor))
+  if (factor<1.0)
     conv(factor, getContext().alMod.getCx().encodeScalingFactor());
 
   // If the size is not given, use size = phi(m)*factor^2
-  xdouble xfactor = to_xdouble(factor);
   if (size < 0.0) {
-    size = context.zMStar.getPhiM() * xfactor * xfactor;
+    size = context.zMStar.getPhiM() * factor * factor;
   }
 
-  xdouble ratio = floor((ratFactor/xfactor) +0.5); // round to integer
-  double inaccuracy = abs(conv<double>(ratio*xfactor/ratFactor) - 1.0);
+  xdouble ratio = floor((ratFactor/factor) +0.5); // round to integer
+  double inaccuracy = abs(conv<double>(ratio*factor/ratFactor) - 1.0);
 
   // Check if you need to scale up to get target accuracy of 2^{-r}
   if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0) {
     addSomePrimes(*this);                   // This increases ratFactor
-    ratio = floor((ratFactor/xfactor) +0.5); // re-compute the ratio
+    ratio = floor((ratFactor/factor) +0.5); // re-compute the ratio
   }
   noiseVar += size*ratio*ratio;
 
@@ -792,14 +790,13 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
   addPart(tmp, SKHandle(0,1,0));
 }
 
-void Ctxt::addConstantCKKS(const ZZX& poly, xdouble size, ZZ factor)
+void Ctxt::addConstantCKKS(const ZZX& poly, xdouble size, xdouble factor)
 {
-  if (IsZero(factor))
+  if (factor<1.0)
     conv(factor, getContext().alMod.getCx().encodeScalingFactor());
 
-  xdouble xfactor = to_xdouble(factor);
-  xdouble ratio = floor((ratFactor/xfactor) +0.5); // round to integer
-  double inaccuracy = abs(conv<double>(ratio*xfactor/ratFactor) - 1.0);
+  xdouble ratio = floor((ratFactor/factor) +0.5); // round to integer
+  double inaccuracy = abs(conv<double>(ratio*factor/ratFactor) - 1.0);
 
   // Check if you need to scale up to get target accuracy of 2^{-r}
   if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0)
@@ -811,14 +808,13 @@ void Ctxt::addConstantCKKS(const ZZX& poly, xdouble size, ZZ factor)
 
 void Ctxt::addConstantCKKS(const ZZ& c)
 {
-  ZZ factor = to_ZZ(floor(ratFactor +0.5));
-  ZZ tmp = c * factor;
+  xdouble xc = to_xdouble(c);
+  xdouble scaled = floor(ratFactor*xc +0.5); // scaled up and rounded
 
   DoubleCRT dcrt(getContext(), getPrimeSet());
-  dcrt = tmp;
+  dcrt = to_ZZ(scaled);
 
-  xdouble size = to_xdouble(tmp);
-  addConstantCKKS(dcrt, size*size, factor);
+  addConstantCKKS(dcrt, /*size=*/xc*xc, /*factor=*/scaled/xc);
 }
 
 // Add at least one prime to the primeSet of c
@@ -1484,10 +1480,9 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
       addedNoise += t;
     }
   }
-  double roundingNoise = context.zMStar.getPhiM();
+  double roundingNoise = context.zMStar.getPhiM() * context.zMStar.get_cM();
   if (getPtxtSpace()>1)
-    roundingNoise *= fsquare(ptxtSpace/2.0);
-    // WARNING: the line above is written to prevent overflow
+    roundingNoise *= fsquare(ptxtSpace)/2.0;
 
   return addedNoise * roundingNoise;
 }
