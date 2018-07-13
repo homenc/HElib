@@ -281,7 +281,7 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts,
     }
     double dBound = std::max<double>(boundFreshNoise(m, phim, stdev),
                                      boundRoundingNoise(m, phim, p2e));
-    long lBound = round(log2(dBound));
+    long lBound = min(long(round(log2(dBound))),NTL_SP_NBITS/2);
     if (context.bitsPerLevel < lBound) {
       cerr << "buildModChain: context.bitsPerLevel upped from "
            << context.bitsPerLevel<<" to "<<lBound<< endl;

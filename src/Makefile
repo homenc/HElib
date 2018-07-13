@@ -120,8 +120,8 @@ check_bootstrapping: Test_bootstrapping_x
 
 check_ThinBootstrapping: Test_ThinBootstrapping_x 
 	./Test_ThinBootstrapping_x noPrint=1 N=512
-	./Test_ThinBootstrapping_x noPrint=1 N=512 r=4 L=50
-	./Test_ThinBootstrapping_x p=7 noPrint=1
+	./Test_ThinBootstrapping_x noPrint=1 N=512 r=4 L=31
+	./Test_ThinBootstrapping_x p=7 L=31 noPrint=1
 
 check_binaryArith: Test_binaryArith_x 
 	./Test_binaryArith_x

@@ -297,7 +297,7 @@ void Ctxt::modUpToSet(const IndexSet &s)
   noiseVar *= xexp(2*f);
 
   // If CKKS, the rational factor grows by a factor of exp(f)
-  ratFactor *= exp(f);
+  ratFactor *= xexp(f);
 
   primeSet.insert(setDiff); // add setDiff to primeSet
   assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
