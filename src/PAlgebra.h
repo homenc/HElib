@@ -95,6 +95,7 @@ class PAlgebra {
 
   //! Prints the structure in a readable form
   void printout() const;
+  void printAll() const; // print even more
 
   /* Access methods */
 
