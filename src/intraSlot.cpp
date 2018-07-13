@@ -285,7 +285,7 @@ public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea, 
-                    NewPlaintextArray& pa, std::vector<unsigned long>& value)
+                    PlaintextArray& pa, std::vector<unsigned long>& value)
   {
     PA_BOILER
     const Mat<R>& CBi=ea.getNormalBasisMatrixInverse();
@@ -310,7 +310,7 @@ public:
 // The bits of value[i] are equal to the coeffs of pa[i],
 // as represented on the normal basis
 void unpackSlots(std::vector<unsigned long>& value,
-                 NewPlaintextArray& pa, const EncryptedArray& ea)
+                 PlaintextArray& pa, const EncryptedArray& ea)
 {
    ea.dispatch<unpackSlots_pa_impl>(pa, value);
 }

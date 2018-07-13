@@ -26,7 +26,7 @@ NTL_CLIENT
 
 #ifdef DEBUG_PRINTOUT
 #define debugCompare(ea,sk,p,c) {\
-  NewPlaintextArray pp(ea);\
+  PlaintextArray pp(ea);\
   ea.decrypt(c, sk, pp);\
   if (!equals(ea, pp, p)) { \
     std::cout << "oops:\n"; std::cout << p << "\n"; \
@@ -108,10 +108,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   EncryptedArray ea(context, G);
   long nslots = ea.size();
 
-  NewPlaintextArray p0(ea);
-  NewPlaintextArray p1(ea);
-  NewPlaintextArray p2(ea);
-  NewPlaintextArray p3(ea);
+  PlaintextArray p0(ea);
+  PlaintextArray p1(ea);
+  PlaintextArray p2(ea);
+  PlaintextArray p3(ea);
 
   random(ea, p0);
   random(ea, p1);
@@ -139,8 +139,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
                   // random number in [-(nslots-1)..nslots-1]
 
      // two random constants
-     NewPlaintextArray const1(ea);
-     NewPlaintextArray const2(ea);
+     PlaintextArray const1(ea);
+     PlaintextArray const2(ea);
      random(ea, const1);
      random(ea, const2);
 
@@ -163,7 +163,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      if (!noPrint) CheckCtxt(c2, "c2*=k2");
      debugCompare(ea,secretKey,p2,c2);
 
-     NewPlaintextArray tmp_p(p1); // tmp = c1
+     PlaintextArray tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
      sprintf(buffer, "c2>>=%d", (int)shamt);
      shift(ea, tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
@@ -214,10 +214,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   resetAllTimers();
   FHE_NTIMER_START(Check);
    
-  NewPlaintextArray pp0(ea);
-  NewPlaintextArray pp1(ea);
-  NewPlaintextArray pp2(ea);
-  NewPlaintextArray pp3(ea);
+  PlaintextArray pp0(ea);
+  PlaintextArray pp1(ea);
+  PlaintextArray pp2(ea);
+  PlaintextArray pp3(ea);
    
   ea.decrypt(c0, secretKey, pp0);
   ea.decrypt(c1, secretKey, pp1);
@@ -239,7 +239,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
 #if 0
   vector<Ctxt> vc(L,c0);            // A vector of L ciphertexts
-  vector<NewPlaintextArray> vp(L, p0); // A vector of L plaintexts
+  vector<PlaintextArray> vp(L, p0); // A vector of L plaintexts
   for (long i=0; i<L; i++) {
     vp[i].random();                     // choose a random plaintext 
     ea.encrypt(vc[i], publicKey, vp[i]); // encrypt it

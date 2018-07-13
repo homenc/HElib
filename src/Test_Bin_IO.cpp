@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
  
     // Setup some ptxts and ctxts.
     Ctxt c1(*pubKey), c2(*pubKey);
-    NewPlaintextArray p1(ea),  p2(ea);
+    PlaintextArray p1(ea),  p2(ea);
 
     random(ea, p1);
     random(ea, p2);
@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
     c1 *= c2;
 
     // Decrypt and Compare.
-    NewPlaintextArray pp1(ea);
+    PlaintextArray pp1(ea);
     ea.decrypt(c1, *secKey, pp1);     
 	
     if(!equals(ea, p1, pp1)){

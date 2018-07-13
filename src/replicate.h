@@ -97,7 +97,7 @@ void replicateAll(std::vector<Ctxt>& v, const EncryptedArray& ea,
 void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt,
                       ReplicateHandler *handler, RepAux* repAuxPtr=NULL);
 
-void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i);
+void replicate(const EncryptedArray& ea, PlaintextArray& pa, long i);
 
 // Structures to keep tables of maskign constants that are used in
 // replication. A calling application can either supply this structure

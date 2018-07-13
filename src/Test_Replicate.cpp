@@ -28,7 +28,7 @@ static bool noPrint = false;
 static bool check_replicate(const Ctxt& c1, const Ctxt& c0, long i,
 			    const FHESecKey& sKey, const EncryptedArray& ea)
 {
-  NewPlaintextArray pa0(ea), pa1(ea);
+  PlaintextArray pa0(ea), pa1(ea);
   ea.decrypt(c0, sKey, pa0);
   ea.decrypt(c1, sKey, pa1);
   replicate(ea, pa0, i);
@@ -44,7 +44,7 @@ class ReplicateTester : public ReplicateHandler {
 public:
   const FHESecKey& sKey;
   const EncryptedArray& ea;
-  const NewPlaintextArray& pa;
+  const PlaintextArray& pa;
   long B;
 
   double t_last, t_total;
@@ -52,7 +52,7 @@ public:
   bool error;
 
   ReplicateTester(const FHESecKey& _sKey, const EncryptedArray& _ea, 
-                  const NewPlaintextArray& _pa, long _B)
+                  const PlaintextArray& _pa, long _B)
   : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
   {
     t_last = GetTime();
@@ -72,9 +72,9 @@ public:
     t_total += t_elapsed;
 
     // Decrypt and check
-    NewPlaintextArray pa1 = pa;
+    PlaintextArray pa1 = pa;
     replicate(ea, pa1, pos);
-    NewPlaintextArray pa2(ea);
+    PlaintextArray pa2(ea);
 
     if (pos==0 && !noPrint) CheckCtxt(ctxt, "replicateAll");
 
@@ -124,7 +124,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 
   EncryptedArray ea(context, G);
-  NewPlaintextArray xp0(ea), xp1(ea);
+  PlaintextArray xp0(ea), xp1(ea);
   random(ea, xp0);
   random(ea, xp1);
 

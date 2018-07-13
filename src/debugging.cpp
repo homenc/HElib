@@ -74,9 +74,9 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 }
 
 bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
-		       const EncryptedArray& ea, const NewPlaintextArray& pa)
+		       const EncryptedArray& ea, const PlaintextArray& pa)
 {
-  NewPlaintextArray ppa(ea);
+  PlaintextArray ppa(ea);
   ea.decrypt(ctxt, sk, ppa);
 
   return equals(ea, pa, ppa);
