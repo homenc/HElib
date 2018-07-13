@@ -196,6 +196,13 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
   Ctxt c1(publicKey);
 
   secretKey.Encrypt(c1,ptxt_poly,p2r);
+
+
+  Ctxt c_const1(publicKey);
+  secretKey.Encrypt(c_const1, ZZX(1), p2r);
+
+  c1.multiplyBy(c_const1);
+
   for (long num=0; num<INNER_REP; num++) { 
     publicKey.reCrypt(c1);
     secretKey.Decrypt(poly2,c1);

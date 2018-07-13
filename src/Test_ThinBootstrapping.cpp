@@ -172,8 +172,18 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
     val1[i] = conv<ZZX>(conv<ZZ>(rep(val0[i])));
   }
 
+  vector<ZZX> val_const1;
+  val_const1.resize(nslots);
+  for (long i = 0; i < nslots; i++) {
+    val_const1[i] = 1;
+  }
+
+  Ctxt c_const1(publicKey);
+  ea.encrypt(c_const1, publicKey, val_const1);
+
   Ctxt c1(publicKey);
   ea.encrypt(c1, publicKey, val1);
+  c1.multiplyBy(c_const1);
 
   Ctxt c2(c1);
   if (!noPrint) CheckCtxt(c2, "before");
@@ -199,6 +209,9 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 }
 
 
+
+extern long fhe_disable_intFactor;
+extern long fhe_disable_chen_han;
 
 
 /********************************************************************
@@ -240,6 +253,9 @@ int main(int argc, char *argv[])
   amap.arg("force_bsgs", fhe_test_force_bsgs);
   amap.arg("force_hoist", fhe_test_force_hoist);
   amap.arg("init_level", thinRecrypt_initial_level);
+
+  amap.arg("disable_intFactor", fhe_disable_intFactor);
+  amap.arg("disable_chen_han", fhe_disable_chen_han);
 
 
   amap.parse(argc, argv);

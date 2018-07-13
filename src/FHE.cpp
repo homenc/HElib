@@ -421,6 +421,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
   // fill in the other ciphertext data members
   ctxt.ptxtSpace = ptxtSpace;
+  ctxt.intFactor = 1; // FIXME: is this necessary?
 
   if (highNoise) {
     // hack: we set noiseVar to Q^2/8, which is just below threshold 
@@ -838,6 +839,7 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt) const
   ZZX f;
   Decrypt(plaintxt, ciphertxt, f);
 }
+
 void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 			ZZX& f) const // plaintext before modular reduction
 {
@@ -883,7 +885,6 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
   ptxt.toPoly(plaintxt);
   f = plaintxt; // f used only for debugging
 
-  // FIXME: handle intFactor
 
   if (isCKKS()) return; // CKKS encryption, nothing else to do
 
@@ -895,6 +896,12 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
       MulMod(plaintxt, plaintxt, qModP, ciphertxt.ptxtSpace);
     }
   }
+
+  if (ciphertxt.intFactor != 1) {
+     long intFactorInv = InvMod(ciphertxt.intFactor, ciphertxt.ptxtSpace);
+     MulMod(plaintxt, plaintxt, intFactorInv, ciphertxt.ptxtSpace);
+  }
+
   PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
 }
 
@@ -925,6 +932,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
   ctxt.parts.assign(2,tmpPart);}      // allocate space
 
   // Set Ctxt bookeeping parameters
+  ctxt.intFactor = 1; // FIXME: is this necessary
 
   // make parts[0],parts[1] point to (1,s)
   ctxt.parts[0].skHandle.setOne();

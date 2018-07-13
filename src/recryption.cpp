@@ -238,6 +238,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   long r = getContext().alMod.getR();
   long p2r = getContext().alMod.getPPowR();
 
+  long intFactor = ctxt.intFactor;
+
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
   long e = getContext().rcData.e;
   long ePrime = getContext().rcData.ePrime;
@@ -307,7 +309,11 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
   double p0size = to_double(coeffsL2Norm(zzParts[0]));
   double p1size = to_double(coeffsL2Norm(zzParts[1]));
+
+  // NOTE: here we lose the intFactor associated with ctxt.
+  // We will restore it below.
   ctxt = recryptEkey;
+
   ctxt.multByConstant(zzParts[1], p1size*p1size);
   ctxt.addConstant(zzParts[0], p0size*p0size);
 
@@ -362,6 +368,10 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #ifdef PRINT_LEVELS
   CheckCtxt(ctxt, "after linearTransform2");
 #endif
+
+  // restore intFactor
+  if (intFactor != 1)
+    ctxt.intFactor = MulMod(ctxt.intFactor, intFactor, ptxtSpace);
 }
 
 /*********************************************************************/
@@ -742,6 +752,7 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 // Extract digits from thinly packed slots
 
 
+long fhe_disable_chen_han = 0;
 
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 {
@@ -756,9 +767,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   long p2r = power_long(p,r);
   long topHigh = botHigh + r-1;
 
-  if (0) {
-  // FIXME
-  //if (r > 1) {
+  if (r > 1 && !fhe_disable_chen_han) {
     // use Chen and Han technique
 
     extendExtractDigits(scratch, unpacked, botHigh, r);
@@ -888,6 +897,8 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   long r = ctxt.getContext().alMod.getR();
   long p2r = ctxt.getContext().alMod.getPPowR();
 
+  long intFactor = ctxt.intFactor;
+
   const ThinRecryptData& trcData = ctxt.getContext().trcData;
 
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
@@ -980,7 +991,11 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
   double p0size = to_double(coeffsL2Norm(zzParts[0]));
   double p1size = to_double(coeffsL2Norm(zzParts[1]));
+
+  // NOTE: here we lose the intFactor associated with ctxt.
+  // We will restore it below.
   ctxt = recryptEkey;
+
   ctxt.multByConstant(zzParts[1], p1size*p1size);
   ctxt.addConstant(zzParts[0], p0size*p0size);
 
@@ -1023,6 +1038,10 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   cerr << "+ Before linearTrans2 ";
   decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
 #endif
+
+  // restore intFactor
+  if (intFactor != 1)
+    ctxt.intFactor = MulMod(ctxt.intFactor, intFactor, ptxtSpace);
 }
 
 

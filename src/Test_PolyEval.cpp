@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
   noPrint = atoi(argmap["noPrint"]);
 
   long max_d = (d<=0)? 35 : d;
-  long L = 5+NextPowerOfTwo(max_d);
+  long L = 7+NextPowerOfTwo(max_d);
   if (m<2)
     m = FindM(/*secprm=*/80, L, /*c=*/3, p, 1, 0, m, !noPrint);
   setDryRun(dry);

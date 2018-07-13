@@ -41,6 +41,10 @@ std::set<long>* FHEglobals::automorphVals = NULL;
 std::set<long>* FHEglobals::automorphVals2 = NULL;
 
 // Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
+// NOTE: for now, it leaves the intFactor field of *this alone.
+// This assumption is relied upon in the reCrypt() and thinReCrypt()
+// routines in recryption.cpp.
+
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
   if (isCKKS()) {
@@ -439,6 +443,7 @@ void Ctxt::reLinearize(long keyID)
 
   long g = ptxtSpace;
   Ctxt tmp(pubKey, ptxtSpace); // an empty ciphertext, same plaintext space
+  tmp.intFactor = intFactor;   // same intFactor, too
 
   double logProd = context.logOfProduct(context.specialPrimes);
   tmp.noiseVar = noiseVar * xexp(2*logProd);  // The noise after mod-UP
@@ -699,16 +704,23 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
     return;
   }
 
-  // FIXME: need to handle intFactor
+  // FIXME: the other addConstant variants should do the scaling
+  // in the plaintext space, so as to not add noise
+  
 
   // If the size is not given, use size = phi(m)*(ptxtSpace/2)^2
   if (size < 0.0)
-      size = ((double) context.zMStar.getPhiM()) * ptxtSpace*ptxtSpace /4.0;
-  // WARNING: the line above is written to prevent integer overflow
+      size = double(context.zMStar.getPhiM()) * fsquare(ptxtSpace) / 4.0;
 
   // Scale the constant, then add it to the part that points to one
-  long f = (ptxtSpace>2)? rem(context.productOfPrimes(primeSet),ptxtSpace): 1;
-  noiseVar += (size*f)*f;
+  long f = 1;
+  if (ptxtSpace > 2) {
+    f = rem(context.productOfPrimes(primeSet),ptxtSpace);
+    f = MulMod(intFactor, f, ptxtSpace);
+    f = balRem(f, ptxtSpace);
+  }
+
+  noiseVar += size*fsquare(f);
 
   IndexSet delta = dcrt.getIndexSet() / primeSet; // set minus
   if (f==1 && empty(delta)) { // just add it
@@ -890,9 +902,6 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   // Sanity check: same context and public key
   assert (&context==&other.context && &pubKey==&other.pubKey);
 
-  // FIXME: handle intFactor
-  // FIXME: does this work of *this aliases other?
-
   // Special case: if *this is empty then just copy other
   if (this->isEmpty()) {
     *this = other;
@@ -900,38 +909,85 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     return;
   }
 
-  // Sanity check: verify that the plaintext spaces are compatible
+  // Verify that the plaintext spaces are compatible
   if (isCKKS())
     assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
-  else { // BGV
-    long g = GCD(this->ptxtSpace, other.ptxtSpace);
-    assert (g>1);
-    this->ptxtSpace = g;
+  else // BGV
+    this->reducePtxtSpace(other.getPtxtSpace());
+
+  Ctxt tmp(pubKey, other.ptxtSpace); // a temporaty empty ciphertext
+  const Ctxt* other_pt = &other;
+
+  // make other ptxtSpace match
+  if (ptxtSpace != other_pt->ptxtSpace) {
+    tmp = other;
+    tmp.reducePtxtSpace(ptxtSpace);
+    other_pt = &tmp;
   }
 
   // Match the prime-sets, mod-UP the arguments if needed
-  IndexSet s = other.primeSet / primeSet; // set-minus
+  IndexSet s = other_pt->primeSet / primeSet; // set-minus
   if (!empty(s)) modUpToSet(s);
 
-  const Ctxt* other_pt = &other;
-  Ctxt tmp(pubKey, other.ptxtSpace); // a temporaty empty ciphertext
-
-  s = primeSet / other.primeSet; // set-minus
+  s = primeSet / other_pt->primeSet; // set-minus
   if (!empty(s)) { // need to mod-UP the other, use a temporary copy
-    tmp = other;
+    if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     tmp.modUpToSet(s);
-    other_pt = &tmp;
   }
 
   // If approximate numbers, make sure the scaling factors are the same
   if (isCKKS() && !closeToOne(ratFactor/other_pt->ratFactor,
                               getContext().alMod.getPPowR()*2)) {
-    if (other_pt != &tmp) {
-      tmp = other;
-      other_pt = &tmp;
-    }
+    if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     equalizeRationalFactors(*this, tmp);
   }
+
+#if 0
+  if (intFactor != other_pt->intFactor) { // harmonize factors
+    long f1 = this->intFactor;
+    long f2 = other_pt->intFactor;
+    long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace);
+    mulIntFactor(ratio);
+  } 
+#else // FIXME: The part upto endif should go in a separate function?
+  long e1 = 1, e2 = 1;
+
+  if (intFactor != other_pt->intFactor) { // harmonize factors
+    long f1 = this->intFactor;
+    long f2 = other_pt->intFactor;
+    long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace);
+
+    xdouble noise_min = 
+      noiseVar*fsquare(balRem(ratio, ptxtSpace)) + other_pt->noiseVar;
+
+    // set e1, e2 so that e1*f1 == e2*f2 (mod ptxtSpace),
+    // minimizing the increase in noise.
+
+    e1 = ratio; 
+    // Initial choise is e1 == ratio and e2 == 1.
+    // Now look for better choices
+
+    for (long ee2 = 2; ee2 < ptxtSpace; ee2++) {
+      if (GCD(ee2, ptxtSpace) == 1) {
+	long ee1 = MulMod(ee2, ratio, ptxtSpace);
+	xdouble noise_est = 
+	  noiseVar*fsquare(balRem(ee1, ptxtSpace)) + 
+          other_pt->noiseVar*fsquare(balRem(ee2, ptxtSpace));
+
+	if (noise_est < noise_min) {
+	  noise_min = noise_est;
+	  e1 = ee1;
+	  e2 = ee2;
+	}
+      }
+    }
+  } 
+  if (e2 != 1) {
+    if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
+    tmp.mulIntFactor(e2);
+  }
+  if (e1 != 1) mulIntFactor(e1);
+#endif
 
   // Go over the parts of other, for each one check if
   // there is a matching part in *this
@@ -950,33 +1006,33 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   highWaterMark = std::min(highWaterMark, other_pt->highWaterMark);
 }
 
+long fhe_disable_intFactor = 0;
+
 // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
 // are defined relative to the same set of primes and plaintext space.
 // It is also assumed that *this DOES NOT alias neither c1 nor c2.
 void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 {
+  clear();                // clear *this, before we start adding things to it
+  primeSet = c1.primeSet; // set the correct prime-set before we begin
 
-  // FIXME: handle intFactor 
+  long ptxtSp = c1.getPtxtSpace();
 
-  // c1,c2 may be scaled, so multiply by the inverse scalar if needed
   long f = 1;
-  if (c1.getPtxtSpace()>2) 
-    f = rem(context.productOfPrimes(c1.getPrimeSet()),c1.getPtxtSpace());
 
-  if (f!=1) f = InvMod(f,c1.getPtxtSpace());
-  if (fhe_watcher) cerr << "*** f value = " << f << "\n";
-  if (fhe_watcher) {
-    for (long i = c1.primeSet.first(); i <= c1.primeSet.last(); i = c1.primeSet.next(i)) {
-      long p = context.ithPrime(i);
-      long q = p % c1.ptxtSpace;
-      if (q != 1) {
-         cerr << "== " << i << " " << p << " " << c1.ptxtSpace << "\n";
-      }
+  if (ptxtSp > 2) {
+    if (fhe_disable_intFactor) {
+      // c1,c2 may be scaled, so multiply by the inverse scalar if needed
+      f = rem(context.productOfPrimes(c1.getPrimeSet()),ptxtSp);
+      if (f!=1) f = InvMod(f, ptxtSp);
+    }
+    else {
+      long q = rem(context.productOfPrimes(c1.getPrimeSet()),ptxtSp);
+      intFactor = MulMod(c1.intFactor, c2.intFactor, ptxtSp);
+      intFactor = MulMod(intFactor, q, ptxtSp);
     }
   }
 
-  clear();                // clear *this, before we start adding things to it
-  primeSet = c1.primeSet; // set the correct prime-set before we begin
 
   // The actual tensoring
   CtxtPart tmpPart(context, IndexSet::emptySet()); // a scratch CtxtPart
@@ -1019,12 +1075,8 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   for (long i=n2  ; i>1     ; i--) factor /= i;
 
   noiseVar = c1.noiseVar * c2.noiseVar * factor * context.zMStar.get_cM();
-  if (f!=1) {
-    // WARNING: the following line is written just so to prevent overflow
-    noiseVar = (noiseVar*f)*f; // because every product was scaled by f
-  }
+  noiseVar *= fsquare(f);
   ratFactor = c1.ratFactor * c2.ratFactor * f;
-  if (fhe_watcher) cerr << "end of tensor " << this->findBaseLevel() << "\n";
 }
 
 
@@ -1033,6 +1085,10 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return  *this;
+
+  // FIXME: what if other.isEmpty()? should we just
+  // do the following?
+  //   *this = other;
 
   // Sanity check: plaintext spaces are compatible
   if (isCKKS())
@@ -1260,7 +1316,7 @@ void Ctxt::divideBy2()
 
   noiseVar /= 4;  // noise is halved by this operation
   ptxtSpace /= 2; // and so is the plaintext space
-  // FIXME: handle IntFactor...or go through reducePtxtSpace
+  intFactor %= ptxtSpace; // adjust intFactor
 }
 
 // Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
@@ -1284,7 +1340,7 @@ void Ctxt::divideByP()
 
   noiseVar  /= fsquare(p);  // noise is reduced by a p factor
   ptxtSpace /= p;           // and so is the plaintext space
-  // FIXME: handle IntFactor...or go through reducePtxtSpace
+  intFactor %= ptxtSpace; // adjust intFactor
 }
 
 void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
@@ -1667,8 +1723,6 @@ void innerProduct(Ctxt& result,
 #include "powerful.h"
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 {
-  // FIXME: handle intFactor
-
   // Ensure that new modulus is co-prime with plaintetx space
   const long p2r = getPtxtSpace();
   assert(toModulus>1 && p2r>1 && GCD(toModulus,p2r)==1);
