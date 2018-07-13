@@ -132,7 +132,8 @@ public:
     trcData.init(*this, mvec, skWht, conservative, build_cache); 
   }
 
-  bool isBootstrappable() const { return (rcData.alMod != NULL); }
+  bool isBootstrappable() const 
+    { return rcData.alMod != NULL; }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }

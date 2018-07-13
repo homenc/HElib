@@ -16,6 +16,10 @@
 #include "Ctxt.h"
 #include "FHE.h"
 
+#ifdef DEBUG_PRINTOUT
+#include "debugging.h"
+#endif
+
 NTL_CLIENT;
 
 extern int fhe_watcher;
@@ -1045,8 +1049,14 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   }
   if (this == &other) {  // a squaring operation
     modDownToLevel(lvl); // mod-down if needed
+#ifdef DEBUG_PRINTOUT
+      checkNoise(*this, *dbgKey, "modDown " + to_string(size_t(this)));
+#endif
     tmpCtxt.tensorProduct(*this, other);  // compute the actual product
     tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
+#ifdef DEBUG_PRINTOUT
+      checkNoise(tmpCtxt, *dbgKey, "tensorProduct " + to_string(size_t(this)));
+#endif
   }
   else {                // standard multiplication between two ciphertexts
     // Sanity check: same context and public key
@@ -1089,6 +1099,9 @@ void Ctxt::multiplyBy(const Ctxt& other)
 
   *this *= other;  // perform the multiplication
   reLinearize();   // re-linearize
+#ifdef DEBUG_PRINTOUT
+      checkNoise(*this, *dbgKey, "reLinearize " + to_string(size_t(this)));
+#endif
 }
 
 void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)

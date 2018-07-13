@@ -106,13 +106,28 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
       else polyEval(digits[j], x2p, digits[j]); 
       // "in spirit" digits[j] = digits[j]^p
 
+#ifdef DEBUG_PRINTOUT
+      checkNoise(digits[j], *dbgKey, "sqr " + to_string(i) + " " + to_string(j));
+#endif
+
 
 #ifdef VIEW_LEVELS
       fprintf(stderr, "%3ld", digits[j].findBaseLevel());
 #endif
 
       tmp -= digits[j];
+
+#ifdef DEBUG_PRINTOUT
+      checkNoise(tmp, *dbgKey, "sub " + to_string(i) + " " + to_string(j));
+#endif
+
+
       tmp.divideByP();
+
+#ifdef DEBUG_PRINTOUT
+      checkNoise(tmp, *dbgKey, "div " + to_string(i) + " " + to_string(j));
+#endif
+
     }
     digits[i] = tmp; // needed in the next round
 
@@ -120,7 +135,8 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
     fprintf(stderr, "%3ld\n", digits[i].findBaseLevel());
 #endif
 
-#ifdef DEBUG_PRINTOUT
+//#ifdef DEBUG_PRINTOUT
+#if 0
     for (long j=0; j<=i; j++) {
       decryptAndPrint((cout << "digits["<<i<<"]["<<j<<"]:"),
                       digits[j], *dbgKey, *dbgEa);
@@ -269,6 +285,9 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
          // so just use it
 
          tmp -= digits[j];
+#ifdef DEBUG_PRINTOUT
+      checkNoise(tmp, *dbgKey, "sub " + to_string(i) + " " + to_string(j));
+#endif
 #ifdef VIEW_LEVELS
       fprintf(stderr, "%3ld*", digits[j].findBaseLevel());
 #endif
@@ -278,16 +297,29 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 	else if (p==3) digits0[j].cube();
 	else polyEval(digits0[j], x2p, digits0[j]); // "in spirit" digits0[j] = digits0[j]^p
 
+#ifdef DEBUG_PRINTOUT
+      checkNoise(digits0[j], *dbgKey, "sqr " + to_string(i) + " " + to_string(j));
+#endif
+
 	tmp -= digits0[j];
+#ifdef DEBUG_PRINTOUT
+      checkNoise(tmp, *dbgKey, "sub " + to_string(i) + " " + to_string(j));
+#endif
 #ifdef VIEW_LEVELS
       fprintf(stderr, "%3ld ", digits0[j].findBaseLevel());
 #endif
       }
 
       tmp.divideByP();
+#ifdef DEBUG_PRINTOUT
+      checkNoise(tmp, *dbgKey, "div " + to_string(i) + " " + to_string(j));
+#endif
     }
     digits0[i] = tmp; // needed in the next round
     polyEval(digits[i], G[i], tmp);
+#ifdef DEBUG_PRINTOUT
+    checkNoise(digits[i], *dbgKey, "poly " + to_string(i));
+#endif
 
 #ifdef VIEW_LEVELS
     fprintf(stderr, "%3ld  --- %3ld\n", digits0[i].findBaseLevel(), digits[i].findBaseLevel());

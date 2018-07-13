@@ -808,9 +808,13 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
     p = 1;
   else {                                      // BGV
     if (p<2) {
-      if (context.isBootstrappable()) // use larger bootstrapping plaintext space
+      if (context.isBootstrappable()) { 
+        // use larger bootstrapping plaintext space
         p = context.rcData.alMod->getPPowR();
-      else p = pubEncrKey.ptxtSpace; // default plaintext space from public key
+      }
+      else {
+        p = pubEncrKey.ptxtSpace; // default plaintext space from public key
+      }
     }
     // FIXME: We use context.isBootstrappable() rather than
     //   this->isBootstrappable(). So we get the larger bootstrapping

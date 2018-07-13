@@ -14,6 +14,7 @@
 //! @file debugging.h
 //! @brief debugging utilities
 #include <iostream>
+#include <string>
 #include <NTL/ZZX.h>
 #include "NumbTh.h"
 
@@ -34,6 +35,10 @@ extern NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
 void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags=0);
+
+double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk);
+
+void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, double thresh=10.0);
 
 bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
 		       const EncryptedArray& ea, const NewPlaintextArray& pa);

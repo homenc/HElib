@@ -24,6 +24,25 @@ EncryptedArray* dbgEa;
 NTL::ZZX dbg_ptxt;
 NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
+double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
+{
+  ZZX p, pp;
+
+  xdouble noiseEst = sqrt(ctxt.getNoiseVar());
+  sk.Decrypt(p, ctxt, pp);
+  xdouble actualNoise = coeffsL2Norm(pp);
+
+  return conv<double>(actualNoise/noiseEst);
+}
+
+void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, double thresh)
+{
+   double ratio;
+   if ((ratio=realToEstimatedNoise(ctxt, sk)) > thresh) {
+      std::cerr << "\n*** too much noise: " << msg << ": " << ratio << "\n";
+   }
+}
+
 void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags)
 {
@@ -39,7 +58,9 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
     << ", level="<<ctxt.findBaseLevel()
     << ", \n           |noise|=q*" << (actualNoise/modulus)
     << ", |noiseEst|=q*" << (noiseEst/modulus);
-#if FFT_IMPL
+//#if FFT_IMPL
+// FIXME
+#if 0
   xdouble embL2 = embeddingL2Norm(pp, ea.getPAlgebra());
   cout << ", |noise|_canonical=q*"<< (embL2/modulus);
 #endif
