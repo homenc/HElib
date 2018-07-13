@@ -240,6 +240,8 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
     while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
 
   long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
+  while (bigP>NTL_SP_BOUND) bigP -= twoM; // sanity check
+
   long p = bigP+twoM; // twoM is subtracted in the AddPrime function
 
   // FIXME: The last prime could sometimes be slightly smaller
