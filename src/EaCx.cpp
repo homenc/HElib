@@ -29,24 +29,20 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   sKey.Decrypt(pp, ctxt);
 
   // convert to zzX, if the pp is too big, scale it down
-  long nBits = NTL::MaxBits(pp);
+  long nBits = NTL::MaxBits(pp) - NTL_SP_NBITS;
   zzX zpp(INIT_SIZE, deg(pp)+1);
-  for (long i=0; i<lsize(zpp); i++) {
-    if (nBits<=NTL_SP_NBITS)
+  double factor;
+  if (nBits<=0) { // convert to zzX, double
+    for (long i=0; i<lsize(zpp); i++)
       conv(zpp[i], pp[i]);
-    else
-      conv(zpp[i], pp[i]>>(nBits-NTL_SP_NBITS));
+    factor = to_double(ctxt.getRatFactor());
+  } else { // scale and then convert to zzX, double
+    for (long i=0; i<lsize(zpp); i++)
+      conv(zpp[i], pp[i]>>nBits);
+    factor = to_double(ctxt.getRatFactor()/power2_xdouble(nBits));
   }
   canonicalEmbedding(ptxt, zpp, getPAlgebra()); // decode without scaling
-
-  // divide by some factor
-  double factor;
-  if (nBits <= NTL_SP_NBITS)
-    factor = to_double(ctxt.getRatFactor());
-  else
-    factor = to_double(ctxt.getRatFactor()/power2_xdouble(nBits-NTL_SP_NBITS));
-
-  for (cx_double& cx : ptxt)
+  for (cx_double& cx : ptxt)  // divide by the factor
     cx /= factor;
 }
 

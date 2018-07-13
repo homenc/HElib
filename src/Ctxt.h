@@ -501,6 +501,9 @@ public:
   //! @brief Modulus-switching down.
   void modDownToLevel(long lvl);
 
+  //! Modulus-switching up or down
+  void bringToLevel(long lvl);
+
   //! @brief Special-purpose modulus-switching for bootstrapping.
   //!
   //! Mod-switch to an externally-supplied modulus. The modulus need not be in
@@ -514,6 +517,7 @@ public:
   //! Find the highest IndexSet so that mod-switching down to that set results
   //! in the dominant noise term being the additive term due to rounding
   void findBaseSet(IndexSet& s) const;
+  void findBaseSetCKKS(IndexSet& s) const;
 
   //! @brief compute the power X,X^2,...,X^n
   //  void computePowers(std::vector<Ctxt>& v, long nPowers) const;

@@ -345,21 +345,25 @@ void Ctxt::modDownToSet(const IndexSet &s)
 
     // update the noise estimate
     double f = context.logOfProduct(setDiff);
-    cout << " + setDiff="<<setDiff<<", product="<<xexp(f)<<endl;
-    cout << "   noiseVar "<<noiseVar;
     noiseVar /= xexp(2*f);
-    cout << " -> "<<noiseVar;
     noiseVar += addedNoiseVar;
-    cout << " -> "<<noiseVar<<endl;
-    cout << "   ratFactor "<<ratFactor;
     ratFactor /= xexp(f); // The factor in CKKS encryption
-    cout << " -> "<<ratFactor<<endl;
   }
   primeSet.remove(setDiff); // remove the primes not in s
   assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
   FHE_TIMER_STOP;
 }
 
+void Ctxt::bringToLevel(long lvl)
+{
+  IndexSet target = (context.containsSmallPrime())?
+    ((lvl&1)? IndexSet(0,(lvl-1)/2) : IndexSet(1,(lvl-1)/2))
+    : IndexSet(0,lvl-1);
+  assert(empty(target &context.specialPrimes));// no special primes in target
+
+  modUpToSet(target);   // add any missing primes from target
+  modDownToSet(target); // remove any primes not in target
+}
 
 // Modulus-switching down
 void Ctxt::modDownToLevel(long lvl)
@@ -438,7 +442,7 @@ void Ctxt::reLinearize(long keyID)
 
   double logProd = context.logOfProduct(context.specialPrimes);
   tmp.noiseVar = noiseVar * xexp(2*logProd);  // The noise after mod-UP
-  tmp.ratFactor = ratFactor * xexp(2*logProd);// CKKS factor after mod-up
+  tmp.ratFactor = ratFactor * xexp(logProd);// CKKS factor after mod-up
 
   for (CtxtPart& part : parts) {
     // For a part relative to 1 or base,  only scale and add
@@ -520,11 +524,15 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 // additive term due to rounding into the dominant noise term 
 void Ctxt::findBaseSet(IndexSet& s) const
 {
+  if (isCKKS()) {
+    findBaseSetCKKS(s);
+    return;
+  }
+
   if (getNoiseVar()<=0.0) { // an empty ciphertext
     s = context.ctxtPrimes;
     return;
   }
-
   assert(verifyPrimeSet());
   bool halfSize = context.containsSmallPrime();
   double curNoise = log(getNoiseVar())/2;
@@ -574,6 +582,63 @@ void Ctxt::findBaseSet(IndexSet& s) const
 
   if (curNoise>noiseThreshold && log_of_ratio()>-0.5)
     cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
+}
+
+// Find the IndexSet such that modDown to that set of primes makes the
+// ratFactor only a bit bigger than the additive noise term due to rounding
+void Ctxt::findBaseSetCKKS(IndexSet& s) const
+{
+  if (getNoiseVar()<=0.0) { // an empty ciphertext
+    s = context.ctxtPrimes;
+    return;
+  }
+  // check that either all specialPrimes are in, or they are all out
+  assert(verifyPrimeSet());
+
+  bool halfSize = context.containsSmallPrime();
+  double first = halfSize? context.logOfPrime(0): 0.0;
+
+  double curFactor = log(getRatFactor());
+  double threshold = log(modSwitchAddedNoiseVar())
+    + log(context.alMod.getPPowR()) + log(log(context.zMStar.getM()));
+
+  // remove special primes, if they are included in this->primeSet
+  s = getPrimeSet();
+  if (!s.disjointFrom(context.specialPrimes)) { 
+    // scale down noise
+    curFactor -= context.logOfProduct(context.specialPrimes);
+    s.remove(context.specialPrimes);
+  }
+
+  /* We compare below to threshold+1 rather than to threshold
+   * to make sure that if you mod-switch down to c.findBaseSet()
+   * and then immediately call c.findBaseSet() again, it will not
+   * tell you to mod-switch further down.
+   */
+  if (curFactor<=threshold+1) return; // no need to mod down
+
+  // if the first prime in half size, begin by removing it
+  if (halfSize && s.contains(0)) {
+    curFactor -= first;
+    if (curFactor<threshold) return; // cannot even remove the half prime
+    s.remove(0);
+  }
+
+  // while noise is larger than threshold, scale down by the next prime
+  while (!empty(s)) {
+    curFactor -= context.logOfPrime(s.last());
+    if (curFactor + first < threshold) break; // canot remove this prime
+    s.remove(s.last());
+  }
+
+  // If curNoise < threshold, add back 1st prime
+  if (empty(s) || curFactor < threshold) {
+    long idx = (context.ctxtPrimes / s).first(); // 1st prime not in s
+    s.insert(idx);
+  }
+
+  if (log_of_ratio()>-0.5)
+    cerr << "Ctxt::findBaseSetCKKS warning: already at lowest level\n";
 }
 
 /********************************************************************/
@@ -986,8 +1051,8 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   }
   if (this == &other) {  // a squaring operation
     modDownToLevel(lvl); // mod-down if needed
-    tmpCtxt.tensorProduct(*this, other);  // compute the actual product
-    tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
+    tmpCtxt.tensorProduct(*this, other); // compute the actual product
+    tmpCtxt.noiseVar *= 2; // a correction factor due to dependency
   }
   else {                // standard multiplication between two ciphertexts
     // Sanity check: same context and public key
@@ -999,22 +1064,29 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
       otherLvl = other.highWaterMark;
       std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
     }
-    if (lvl > otherLvl) lvl = otherLvl; // the smallest of the two
+    if (isCKKS()) {
+      highWaterMark = lvl-1;
+      if (lvl < otherLvl)
+        lvl = otherLvl; // the larger of the two
+    }
+    else {
+      if (lvl > otherLvl) lvl = otherLvl; // the smaller of the two
+      highWaterMark = lvl-1;
+    }
 
     // mod-DOWN *this, if needed (also removes special primes, if any)
-    modDownToLevel(lvl);
+    bringToLevel(lvl);
 
     // mod-DOWN other, if needed
     if (primeSet!=other.primeSet){ // use temporary copy to mod-DOWN other
       Ctxt tmpCtxt1 = other;
-      tmpCtxt1.modDownToLevel(lvl);
+      tmpCtxt1.bringToLevel(lvl);
       tmpCtxt.tensorProduct(*this,tmpCtxt1); // compute the actual product
     }
     else 
       tmpCtxt.tensorProduct(*this, other);   // compute the actual product
   }
   *this = tmpCtxt; // copy the result into *this
-  highWaterMark = lvl-1;
 
   return *this;
 }
@@ -1053,7 +1125,8 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   }
 
   const Ctxt *first, *second;
-  if (lvl<lvl2) { // lvl1<=lvl<lvl2, multiply by other2, then by other1
+  if (lvl<lvl2 || lvl1<lvl2) { // lvl1<=lvl<lvl2 or lvl1<=lvl,lvl2
+                               // multiply by other2, then by other1
     first = &other2;
     second = &other1;
   }

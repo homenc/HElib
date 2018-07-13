@@ -370,7 +370,6 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
   // NOTE: Is taking the alMod from the context the right thing to do here?
 
   assert(this == &ctxt.pubKey);
-  cout << "FHEPubKey::Encrypt\n";
 
   if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mistamtch
     ptxtSpace = GCD(ptxtSpace, pubEncrKey.ptxtSpace);
@@ -490,11 +489,9 @@ long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
   if (extraFactor>1) { // scale up some more
     factor *= extraFactor;
     ctxt.parts[0] += ptxt * extraFactor;
-    cout << "pkEncrypt: extraFactor="<<extraFactor<<", factor="<<factor<<endl;
   }
   else { // no need for extra scaling
     ctxt.parts[0] += ptxt;
-    cout << "pkEncrypt: factor="<<factor<<endl;
   }
 
   ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
@@ -944,11 +941,9 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
     if (extraFactor>1) { // scale up some more
       factor *= extraFactor;
       ctxt.parts[0] += extraFactor * ptxt;
-      cout << "skEncrypt: extraFactor="<<extraFactor<<", factor="<<factor<<endl;
     }
     else {
       ctxt.parts[0] += ptxt;
-      cout << "skEncrypt: factor="<<factor<<endl;
     }
     ctxt.ratFactor = factor;
     double rVar = (getContext().zMStar.getPow2()==0)?

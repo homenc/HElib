@@ -675,6 +675,8 @@ public:
   const EncryptedArrayDerived<type>& getDerived(type) const
   { return dynamic_cast< const EncryptedArrayDerived<type>& >( *rep ); }
 
+  const EncryptedArrayCx& getCx() const
+  { return dynamic_cast<const EncryptedArrayCx&>( *rep ); }
 
   ///@{
   //! @name Direct access to EncryptedArrayBase methods
