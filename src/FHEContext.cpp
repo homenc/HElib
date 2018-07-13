@@ -240,6 +240,8 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
     while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
 
   long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
+  while (bigP>NTL_SP_BOUND) bigP -= twoM; // sanity check
+
   long p = bigP+twoM; // twoM is subtracted in the AddPrime function
 
   // FIXME: The last prime could sometimes be slightly smaller
@@ -279,13 +281,11 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts,
     }
     double dBound = std::max<double>(boundFreshNoise(m, phim, stdev),
                                      boundRoundingNoise(m, phim, p2e));
-
     long lBound = round(log2(dBound));
     
 #ifndef NO_HALF_SIZE_PRIME
     lBound = min(lBound, NTL_SP_NBITS/2);
 #endif
-
 
     if (context.bitsPerLevel < lBound) {
       cerr << "buildModChain: context.bitsPerLevel upped from "

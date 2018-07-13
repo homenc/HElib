@@ -1056,12 +1056,11 @@ void DoubleCRT::sampleUniform(long B)
 
 void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
 {
-  assert(ptxtSpace >= 2);
-
   IndexSet diff = getIndexSet() / s;
-  assert(diff!=s);          // cannot mod-down to the empty set
-  if (empty(diff)) return;  // nothing to do
+  if (empty(diff)) return;     // nothing to do
 
+  assert(ptxtSpace >= 1);
+  assert(diff!=getIndexSet()); // cannot mod-down to the empty set
   if (isDryRun()) {
     removePrimes(diff);// remove the primes from consideration
     return;
@@ -1071,35 +1070,36 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   ZZ diffProd = context.productOfPrimes(diff); // mod-down by this factor
   toPoly(delta, diff); // convert to coeff-representation modulo diffProd
 
-  long delta_len = delta.rep.length();
-  if (ptxtSpace == 2) { // simpler handling for plaintext space mod 2
-    for (long i = 0; i < delta_len; i++) {
-      if (IsOdd(delta.rep[i])) { // add or subtract diffProd to make it even
-	if (sign(delta.rep[i]) < 0) delta.rep[i] += diffProd;
-	else                        delta.rep[i] -= diffProd;
+  if (ptxtSpace > 1) { // make delta divisible by ptxtSpace
+    long delta_len = delta.rep.length();
+    if (ptxtSpace == 2) { // simpler handling for plaintext space mod 2
+      for (long i = 0; i < delta_len; i++) {
+        if (IsOdd(delta.rep[i])) { // add or subtract diffProd to make it even
+          if (sign(delta.rep[i]) < 0) delta.rep[i] += diffProd;
+          else                        delta.rep[i] -= diffProd;
+        }
       }
     }
-  }
-  // The general case of plaintext space modulo some p > 2, we need to
-  // subtract from each coefficient delta[i] the ineteger
-  //               diffProd * (delta[i] * diffProd^{-1} mod ptxtSpace).
-  // This does not change delta modulo diffProd, but makes it divisible
-  // by ptxtSpace.
-  else {
-    long p_over_2 = ptxtSpace/2;
-    long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
-    mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace); // optimization
-    for (long i = 0; i < delta_len; i++) {
-      long delta_i_modP = rem(delta.rep[i],ptxtSpace);
-      if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
-	delta_i_modP = MulModPrecon(delta_i_modP, prodInv, ptxtSpace, precon);
-	if (delta_i_modP > p_over_2) delta_i_modP -= ptxtSpace;
-	delta.rep[i] -= diffProd * delta_i_modP;
+    // The general case of plaintext space modulo some p > 2, we
+    // need to subtract from each coefficient delta[i] the ineteger
+    //          diffProd * (delta[i] * diffProd^{-1} mod ptxtSpace).
+    // This does not change delta modulo diffProd, but makes it
+    // divisible by ptxtSpace.
+    else {
+      long p_over_2 = ptxtSpace/2;
+      long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
+      mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace); // optimization
+      for (long i = 0; i < delta_len; i++) {
+        long delta_i_modP = rem(delta.rep[i],ptxtSpace);
+        if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
+          delta_i_modP = MulModPrecon(delta_i_modP, prodInv, ptxtSpace, precon);
+          if (delta_i_modP > p_over_2) delta_i_modP -= ptxtSpace;
+          delta.rep[i] -= diffProd * delta_i_modP;
+        }
       }
     }
+    delta.normalize(); // normalize after working directly on the coeffs
   }
-  delta.normalize(); // need to normalize after working directly on then coeffs
-
   removePrimes(diff);// remove the primes from consideration
   *this -= delta;    // convert delta to DoubleCRT, then subtract
   *this /= diffProd; // *this is divisible by diffProd, so this operation actually scales it down

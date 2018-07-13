@@ -17,14 +17,21 @@ ARFLAGS=rv
 GMP=-lgmp
 NTL=-lntl
 ARMA=-larmadillo
+# INC and LIB changed to when GMP and/or NTL not in default locations
+INC_NTL=
+LIB_NTL=-L/usr/local/lib
+
+INC_GMP=
+LIB_GMP=-L/usr/local/lib
+
 #
-CFLAGS = -g -O2 -std=c++11 -pthread -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
-#CFLAGS = -g -O2 -std=c++11 -DFFT_NATIVE -fmax-errors=2
+CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
+#CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -DFFT_NATIVE -fmax-errors=2
 
 # NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
 #       against them as dynamic libraries.
-LDLIBS = -L/usr/local/lib $(NTL) $(GMP) $(ARMA) -lm
-#LDLIBS = -L/usr/local/lib $(NTL) $(GMP) -lm
+LDLIBS = $(LIB_NTL) $(LIB_GMP) $(NTL) $(GMP) $(ARMA) -lm
+#LDLIBS = $(LIB_NTL) $(LIB_GMP) $(NTL) $(GMP) -lm
 
 
 # useful flags:
@@ -113,8 +120,8 @@ check_bootstrapping: Test_bootstrapping_x
 
 check_ThinBootstrapping: Test_ThinBootstrapping_x 
 	./Test_ThinBootstrapping_x noPrint=1 N=512
-	./Test_ThinBootstrapping_x noPrint=1 N=512 r=4 L=50
-	./Test_ThinBootstrapping_x p=7 noPrint=1
+	./Test_ThinBootstrapping_x noPrint=1 N=512 r=4 L=31
+	./Test_ThinBootstrapping_x p=7 L=31 noPrint=1
 
 check_binaryArith: Test_binaryArith_x 
 	./Test_binaryArith_x
@@ -163,7 +170,7 @@ DoubleCRT.o: DoubleCRT.cpp
 
 fhe.a: $(OBJ)
 	$(AR) $(ARFLAGS) fhe.a $(OBJ)
-	g++ -std=gnu++11 -MM *.cpp > makedep.d
+	g++ $(INC_GMP) $(INC_NTL) -std=gnu++11 -MM *.cpp > makedep.d
 
 ./%_x: %.cpp fhe.a
 	$(CC) $(CFLAGS) -o $@ $< fhe.a $(LDLIBS)
@@ -174,7 +181,7 @@ clean:
 
 # old-style make depend (FIXME: change to modern style?)
 makedep:
-	g++ -std=gnu++11 -MM *.cpp > makedep.d
+	g++ $(INC_GMP) $(INC_NTL) -std=gnu++11 -MM *.cpp > makedep.d
 
 info:
 	: HElib require NTL version 10.0.0 or higher

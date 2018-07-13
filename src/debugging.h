@@ -26,7 +26,7 @@
 class Ctxt;
 class FHESecKey;
 class EncryptedArray;
-class NewPlaintextArray;
+class PlaintextArray;
 
 extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;
@@ -41,7 +41,7 @@ double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk);
 void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, double thresh=10.0);
 
 bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
-		       const EncryptedArray& ea, const NewPlaintextArray& pa);
+		       const EncryptedArray& ea, const PlaintextArray& pa);
 
 // Debug printing routines for vectors, ZZX'es, print only a few entries
 

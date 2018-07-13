@@ -56,7 +56,7 @@ bool DoTest(const Matrix& mat, const EncryptedArray& ea,
   FHE_NTIMER_STOP(EncodeMartix_MatMul);
 
   // choose a random plaintext vector and encrypt it
-  NewPlaintextArray v(ea);
+  PlaintextArray v(ea);
   random(ea, v);
 
   // encrypt the random vector
@@ -68,7 +68,7 @@ bool DoTest(const Matrix& mat, const EncryptedArray& ea,
 
   mul(v, mat);     // multiply the plaintext vector
 
-  NewPlaintextArray v1(ea);
+  PlaintextArray v1(ea);
   ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
 
   return equals(ea, v, v1);        // check that we've got the right answer

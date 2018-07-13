@@ -269,14 +269,15 @@ public:
    *   (which can be larger than the input scaling). The same returned factor
    *   is also recorded in ctxt.ratFactor.
    **/
-    long Encrypt(Ctxt &ciphertxt,
-                 const NTL::ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
-    long Encrypt(Ctxt &ciphertxt,
-                 const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
+  long Encrypt(Ctxt &ciphertxt,
+               const NTL::ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
+  long Encrypt(Ctxt &ciphertxt,
+               const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
     NTL::ZZX tmp;
     convert(tmp, plaintxt);
-    Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
+    return Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
   }
+
   long CKKSencrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSize) const;
 
   // These methods are overridden by secret-key Encrypt
@@ -284,6 +285,10 @@ public:
   { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
   virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const
   { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
+
+  bool isCKKS() const
+  { return (getContext().alMod.getTag()==PA_cx_tag); }
+  // NOTE: Is taking the alMod from the context the right thing to do?
 
   bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
@@ -371,7 +376,7 @@ public:
   long skEncrypt(Ctxt &ctxt, const zzX& ptxt, long ptxtSpace, long skIdx) const {
     NTL::ZZX tmp;
     convert(tmp,ptxt);
-    skEncrypt(ctxt, tmp, ptxtSpace, skIdx);
+    return skEncrypt(ctxt, tmp, ptxtSpace, skIdx);
   }
   // These methods override the public-key Encrypt methods
   long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const override

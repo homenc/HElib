@@ -2370,7 +2370,7 @@ struct mul_MatMul1D_impl {
 
   static 
   void apply(const EncryptedArrayDerived<type>& ea,
-             NewPlaintextArray& pa,
+             PlaintextArray& pa,
              const MatMul1D& mat_basetype)
   {
     const MatMul1D_derived<type>& mat =
@@ -2419,7 +2419,7 @@ struct mul_MatMul1D_impl {
 
 
 
-void mul(NewPlaintextArray& pa, const MatMul1D& mat)
+void mul(PlaintextArray& pa, const MatMul1D& mat)
 {
   const EncryptedArray& ea = mat.getEA();
   ea.dispatch<mul_MatMul1D_impl>(pa, mat);
@@ -2433,7 +2433,7 @@ struct mul_BlockMatMul1D_impl {
 
   static 
   void apply(const EncryptedArrayDerived<type>& ea,
-             NewPlaintextArray& pa,
+             PlaintextArray& pa,
              const BlockMatMul1D& mat_basetype)
   {
     const BlockMatMul1D_derived<type>& mat =
@@ -2482,7 +2482,7 @@ struct mul_BlockMatMul1D_impl {
 };
 
 
-void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat)
+void mul(PlaintextArray& pa, const BlockMatMul1D& mat)
 {
   const EncryptedArray& ea = mat.getEA();
   ea.dispatch<mul_BlockMatMul1D_impl>(pa, mat);
@@ -2495,7 +2495,7 @@ struct mul_MatMulFull_impl {
 
   static
   void apply(const EncryptedArrayDerived<type>& ea,
-             NewPlaintextArray& pa,
+             PlaintextArray& pa,
              const MatMulFull& mat_basetype)
   {
     const MatMulFull_derived<type>& mat =
@@ -2529,7 +2529,7 @@ struct mul_MatMulFull_impl {
 
 
 
-void mul(NewPlaintextArray& pa, const MatMulFull& mat)
+void mul(PlaintextArray& pa, const MatMulFull& mat)
 {
   const EncryptedArray& ea = mat.getEA();
   ea.dispatch<mul_MatMulFull_impl>(pa, mat);
@@ -2542,7 +2542,7 @@ struct mul_BlockMatMulFull_impl {
 
   static
   void apply(const EncryptedArrayDerived<type>& ea,
-             NewPlaintextArray& pa,
+             PlaintextArray& pa,
              const BlockMatMulFull& mat_basetype)
   {
     const BlockMatMulFull_derived<type>& mat =
@@ -2576,7 +2576,7 @@ struct mul_BlockMatMulFull_impl {
 
 
 
-void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat)
+void mul(PlaintextArray& pa, const BlockMatMulFull& mat)
 {
   const EncryptedArray& ea = mat.getEA();
   ea.dispatch<mul_BlockMatMulFull_impl>(pa, mat);

@@ -51,16 +51,15 @@ std::set<long>* FHEglobals::automorphVals2 = NULL;
 
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
-  bool ckks = (getContext().alMod.getTag()==PA_cx_tag);
-  if (ckks) {
+  if (isCKKS()) {
     ptxtSpace=1;
     long factor = getContext().alMod.getCx().encodeScalingFactor();
     if (size < 0.0)
       size = getContext().zMStar.getPhiM();
-    noiseVar = size * factor*factor;
+    noiseVar = size * fsquare(factor);
   } else { // BGV
     if (size < 0.0)
-      size = getContext().zMStar.getPhiM() * (ptxtSpace/2.0)*(ptxtSpace/2.0);
+      size = getContext().zMStar.getPhiM() * fsquare(ptxtSpace/2.0);
     noiseVar = size;
   }
   primeSet = context.ctxtPrimes;
@@ -68,9 +67,9 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 
   // A single part, with the plaintext as data and handle pointing to 1
 
-  long f = (ckks)? 1
-    : rem(context.productOfPrimes(context.ctxtPrimes),ptxtSpace);
-  if (f == 1) { // scale by constant
+  long f = isCKKS()?
+    1 : rem(context.productOfPrimes(context.ctxtPrimes),ptxtSpace);
+  if (f == 1) {
     DoubleCRT dcrt(ptxt, context, primeSet);  
     parts.assign(1, CtxtPart(dcrt));
   } else {
@@ -106,7 +105,7 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, long pSpace)
   if (palg.getPow2() > 0) // power of two
     ksSize2 *= ksSize2 * palg.getPhiM();
   else                    // not power of two
-    ksSize2 *= (ksSize2 * palg.getM()) * palg.getM();
+    ksSize2 *= ksSize2 * fsquare(palg.getM());
   // FIXME: Can we instead use the KeySwitch::noiseVar value?
 
   long nDigits = 0;
@@ -334,7 +333,7 @@ void Ctxt::modDownToSet(const IndexSet &s)
 
   // Get an estimate for the added noise term for modulus switching
   xdouble addedNoiseVar = modSwitchAddedNoiseVar();
-  if (noiseVar*ptxtSpace*ptxtSpace < addedNoiseVar) { // just "drop down"
+  if (noiseVar*fsquare(ptxtSpace) < addedNoiseVar) { // just "drop down"
     for (size_t i=0; i<parts.size(); i++)
       parts[i].removePrimes(setDiff);       // remove the primes not in s
     long prodInv = 1;
@@ -343,8 +342,7 @@ void Ctxt::modDownToSet(const IndexSet &s)
     if (prodInv > 1) {
       for (size_t i=0; i<parts.size(); i++)
         parts[i] *= prodInv;
-      noiseVar = (noiseVar*prodInv)*prodInv;
-      // WARNING: the above line is written just so to prevent overflow
+      noiseVar = noiseVar*fsquare(prodInv);
     }
     // cerr << "DEGENERATE DROP\n";
   } 
@@ -363,6 +361,16 @@ void Ctxt::modDownToSet(const IndexSet &s)
   FHE_TIMER_STOP;
 }
 
+void Ctxt::bringToLevel(long lvl)
+{
+  IndexSet target = (context.containsSmallPrime())?
+    ((lvl&1)? IndexSet(0,(lvl-1)/2) : IndexSet(1,(lvl-1)/2))
+    : IndexSet(0,lvl-1);
+  assert(empty(target &context.specialPrimes));// no special primes in target
+
+  modUpToSet(target);   // add any missing primes from target
+  modDownToSet(target); // remove any primes not in target
+}
 
 // Modulus-switching down
 void Ctxt::modDownToLevel(long lvl)
@@ -442,7 +450,7 @@ void Ctxt::reLinearize(long keyID)
 
   double logProd = context.logOfProduct(context.specialPrimes);
   tmp.noiseVar = noiseVar * xexp(2*logProd);  // The noise after mod-UP
-  tmp.ratFactor = ratFactor * xexp(2*logProd);// CKKS factor after mod-up
+  tmp.ratFactor = ratFactor * xexp(logProd);// CKKS factor after mod-up
 
   for (CtxtPart& part : parts) {
     // For a part relative to 1 or base,  only scale and add
@@ -524,11 +532,15 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 // additive term due to rounding into the dominant noise term 
 void Ctxt::findBaseSet(IndexSet& s) const
 {
+  if (isCKKS()) {
+    findBaseSetCKKS(s);
+    return;
+  }
+
   if (getNoiseVar()<=0.0) { // an empty ciphertext
     s = context.ctxtPrimes;
     return;
   }
-
   assert(verifyPrimeSet());
   bool halfSize = context.containsSmallPrime();
   double curNoise = log(getNoiseVar())/2;
@@ -578,6 +590,56 @@ void Ctxt::findBaseSet(IndexSet& s) const
 
   if (curNoise>noiseThreshold && log_of_ratio()>-0.5)
     cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
+}
+
+// Find the IndexSet such that modDown to that set of primes makes the
+// ratFactor only a bit bigger than the additive noise term due to rounding
+void Ctxt::findBaseSetCKKS(IndexSet& s) const
+{
+  if (getNoiseVar()<=0.0) { // an empty ciphertext
+    s = context.ctxtPrimes;
+    return;
+  }
+  // check that either all specialPrimes are in, or they are all out
+  assert(verifyPrimeSet());
+
+  bool halfSize = context.containsSmallPrime();
+  double first = halfSize? context.logOfPrime(0): 0.0;
+
+  double curFactor = log(getRatFactor());
+  double threshold = log(modSwitchAddedNoiseVar())
+    + log(context.alMod.getPPowR()) + log(context.zMStar.getM())/2;
+
+  // remove special primes, if they are included in this->primeSet
+  s = getPrimeSet();
+  if (!s.disjointFrom(context.specialPrimes)) { 
+    // scale down noise
+    curFactor -= context.logOfProduct(context.specialPrimes);
+    s.remove(context.specialPrimes);
+  }
+
+  // if the first prime in half size, begin by removing it
+  if (halfSize && s.contains(0)) {
+    curFactor -= first;
+    if (curFactor<threshold) return; // cannot even remove the half prime
+    s.remove(0);
+  }
+
+  // while noise is larger than threshold, scale down by the next prime
+  while (!empty(s)) {
+    curFactor -= context.logOfPrime(s.last());
+    if (curFactor + first < threshold) break; // canot remove this prime
+    s.remove(s.last());
+  }
+
+  // If curNoise < threshold, add back 1st prime
+  if (empty(s) || curFactor < threshold) {
+    long idx = (context.ctxtPrimes / s).first(); // 1st prime not in s
+    s.insert(idx);
+  }
+
+  if (log_of_ratio()>-0.5)
+    cerr << "Ctxt::findBaseSetCKKS warning: already at lowest level\n";
 }
 
 /********************************************************************/
@@ -644,7 +706,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 
   // If the size is not given, use size = phi(m)*(ptxtSpace/2)^2
   if (size < 0.0)
-      size = double(context.zMStar.getPhiM()) * fsquare(ptxtSpace) / 4.0;
+      size = double(context.zMStar.getPhiM()) * fsquare(ptxtSpace/2.0);
 
   // Scale the constant, then add it to the part that points to one
   long f = 1;
@@ -672,7 +734,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 // Add a constant polynomial
 void Ctxt::addConstant(const ZZ& c)
 {
-  if (getContext().alMod.getTag()==PA_cx_tag) {
+  if (isCKKS()) {
     addConstantCKKS(c);
     return;
   }
@@ -683,7 +745,7 @@ void Ctxt::addConstant(const ZZ& c)
 
   double size = to_double(cc);
 
-  addConstant(dcrt, size*size);
+  addConstant(dcrt, fsquare(size));
 }
 
 
@@ -805,6 +867,10 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
     c2.multByConstant(to_ZZ(factors.second));  // big times b
     c2.ratFactor *= factors.second;
     assert(closeToOne(c1.ratFactor/c2.ratFactor, targetPrecision));
+    cerr << "equalizeFactors using provided scaling factors ["
+         << factors.first<<','<<factors.second<<endl;
+    cerr << "    resulting ratFactors are ["
+         << c1.ratFactor<<','<< c1.ratFactor<<"]\n";
     return;
   }
   // If factors are not given, compute them
@@ -814,7 +880,10 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
   xdouble ratio = big.ratFactor / small.ratFactor;
   if (ratio > targetPrecision) { // just scale up small
     small.multByConstant(to_ZZ(floor(ratio+0.5)));
+    cerr << "equalizeFactors scaling small factor from "<<small.ratFactor
+         << "to "<<small.ratFactor<<'*'<<ratio<<'=';
     small.ratFactor *= ratio;
+    cerr << small.ratFactor<<"\n    large factor is "<<big.ratFactor<<endl;
     return;
   }
 
@@ -826,6 +895,10 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
   small.ratFactor *= factors.first;
   big.multByConstant(to_ZZ(factors.second));  // big times b
   big.ratFactor *= factors.second;
+  cerr << "equalizeFactors scalign both factor by "
+       << factors.first<<','<<factors.second<<endl;
+  cerr << "    resulting ratFactors are ["
+         << small.ratFactor<<','<< big.ratFactor<<"]\n";
 }
 
 // Add/subtract another ciphertxt (depending on the negative flag)
@@ -843,28 +916,25 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     return;
   }
 
-  // Sanity check: verify that the plaintext spaces are compatible
-  if (getPtxtSpace() > 1) {
-    reducePtxtSpace(other.ptxtSpace);
-  }
-  else {
+  // Verify that the plaintext spaces are compatible
+  if (isCKKS())
     assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
-  }
+  else // BGV
+    this->reducePtxtSpace(other.getPtxtSpace());
 
-  const Ctxt* other_pt = &other;
   Ctxt tmp(pubKey, other.ptxtSpace); // a temporaty empty ciphertext
+  const Ctxt* other_pt = &other;
 
   // make other ptxtSpace match
   if (ptxtSpace != other_pt->ptxtSpace) {
-    if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
+    tmp = other;
     tmp.reducePtxtSpace(ptxtSpace);
+    other_pt = &tmp;
   }
-
 
   // Match the prime-sets, mod-UP the arguments if needed
   IndexSet s = other_pt->primeSet / primeSet; // set-minus
   if (!empty(s)) modUpToSet(s);
-
 
   s = primeSet / other_pt->primeSet; // set-minus
   if (!empty(s)) { // need to mod-UP the other, use a temporary copy
@@ -873,9 +943,8 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   }
 
   // If approximate numbers, make sure the scaling factors are the same
-  if (getPtxtSpace()==1 && ratFactor != other_pt->ratFactor
-       && !closeToOne(ratFactor/other_pt->ratFactor,
-                      getContext().alMod.getPPowR()*2)      ) {
+  if (isCKKS() && !closeToOne(ratFactor/other_pt->ratFactor,
+                              getContext().alMod.getPPowR()*2)) {
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     equalizeRationalFactors(*this, tmp);
   }
@@ -887,13 +956,12 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace);
     mulIntFactor(ratio);
   } 
-#else
+#else // FIXME: The part upto endif should go in a separate function?
   long e1 = 1, e2 = 1;
 
   if (intFactor != other_pt->intFactor) { // harmonize factors
     long f1 = this->intFactor;
     long f2 = other_pt->intFactor;
-
     long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace);
 
     xdouble noise_min = 
@@ -921,14 +989,11 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
       }
     }
   } 
-
   if (e2 != 1) {
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     tmp.mulIntFactor(e2);
   }
-
   if (e1 != 1) mulIntFactor(e1);
-
 #endif
 
   // Go over the parts of other, for each one check if
@@ -1033,13 +1098,13 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   //   *this = other;
 
   // Sanity check: plaintext spaces are compatible
-  if (getPtxtSpace() > 1) {
+  if (isCKKS())
+    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
+  else { // GBV
     long g = GCD(this->ptxtSpace, other.ptxtSpace);
     assert (g>1);
     this->ptxtSpace = g;
   }
-  else
-    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
 
   Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
   long lvl = findBaseLevel();
@@ -1068,22 +1133,29 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
       otherLvl = other.highWaterMark;
       std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
     }
-    if (lvl > otherLvl) lvl = otherLvl; // the smallest of the two
+    if (isCKKS()) {
+      highWaterMark = lvl-1;
+      if (lvl < otherLvl)
+        lvl = otherLvl; // the larger of the two
+    }
+    else {
+      if (lvl > otherLvl) lvl = otherLvl; // the smaller of the two
+      highWaterMark = lvl-1;
+    }
 
     // mod-DOWN *this, if needed (also removes special primes, if any)
-    modDownToLevel(lvl);
+    bringToLevel(lvl);
 
     // mod-DOWN other, if needed
     if (primeSet!=other.primeSet){ // use temporary copy to mod-DOWN other
       Ctxt tmpCtxt1 = other;
-      tmpCtxt1.modDownToLevel(lvl);
+      tmpCtxt1.bringToLevel(lvl);
       tmpCtxt.tensorProduct(*this,tmpCtxt1); // compute the actual product
     }
     else 
       tmpCtxt.tensorProduct(*this, other);   // compute the actual product
   }
   *this = tmpCtxt; // copy the result into *this
-  highWaterMark = lvl-1;
 
   return *this;
 }
@@ -1125,7 +1197,8 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   }
 
   const Ctxt *first, *second;
-  if (lvl<lvl2) { // lvl1<=lvl<lvl2, multiply by other2, then by other1
+  if (lvl<lvl2 || lvl1<lvl2) { // lvl1<=lvl<lvl2 or lvl1<=lvl,lvl2
+                               // multiply by other2, then by other1
     first = &other2;
     second = &other1;
   }
@@ -1157,20 +1230,20 @@ void Ctxt::multByConstant(const ZZ& c)
   FHE_TIMER_START;
 
   const ZZ* cPtr = &c;
-  if (getPtxtSpace()>1) {
+  if (isCKKS()) {
+    xdouble size = to_xdouble(c);
+    noiseVar *= size*size * getContext().zMStar.get_cM();
+  }
+  else { // BGV
     long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
     if (cc > ptxtSpace/2) cc -= ptxtSpace;
     else if (cc < -ptxtSpace/2) cc += ptxtSpace;
 
     double size = to_double(cc);
-    noiseVar *= size*size * getContext().zMStar.get_cM();
+    noiseVar *= fsquare(size) * getContext().zMStar.get_cM();
 
     ZZ tmp = to_ZZ(cc);
     cPtr = &tmp;
-  }
-  else {
-    xdouble size = to_xdouble(c);
-    noiseVar *= size*size * getContext().zMStar.get_cM();
   }
 
   // multiply all the parts by this constant
@@ -1182,16 +1255,16 @@ void Ctxt::multByConstant(const ZZ& c)
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
   FHE_TIMER_START;
-  if (getPtxtSpace()==1) {
+  if (isCKKS()) {
     multByConstantCKKS(dcrt, to_xdouble(size));
     return;
   }
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
-  // If the size is not given, we use the default value phi(m)*ptxtSpace^2/2
+  // If the size is not given, we use the default value phi(m)*ptxtSpace^2/4
   if (size < 0.0) {
-    size = context.zMStar.getPhiM() * (ptxtSpace/2.0)*(ptxtSpace/2.0);
+    size = context.zMStar.getPhiM() * fsquare(ptxtSpace/2.0);
   }
 
   // multiply all the parts by this constant
@@ -1413,7 +1486,7 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
   }
   double roundingNoise = context.zMStar.getPhiM();
   if (getPtxtSpace()>1)
-    roundingNoise *= (ptxtSpace/2.0) * (ptxtSpace/ 2.0);
+    roundingNoise *= fsquare(ptxtSpace/2.0);
     // WARNING: the line above is written to prevent overflow
 
   return addedNoise * roundingNoise;

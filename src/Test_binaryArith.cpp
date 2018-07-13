@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
       (outSize>0 && outSize<2*bitSize)? outSize : (2*bitSize);
     double three4twoLvls = log(nBits/2) / log(1.5);
     double add2NumsLvls = log(nBits) / log(2.0);
-    L = 3 + ceil(three4twoLvls + add2NumsLvls);
+    L = 5 + ceil(three4twoLvls + add2NumsLvls);
   }
   
   if (verbose) {

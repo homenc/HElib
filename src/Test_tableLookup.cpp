@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
   // Compute the number of levels
   long L;
   if (bootstrap) L=30; // that should be enough
-  else           L = 3 +bitSize;
+  else           L = 5 +bitSize;
   
   if (verbose) {
     cout <<"input bitSize="<<bitSize<<", output size bound="<<outSize

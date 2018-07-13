@@ -616,7 +616,7 @@ class replicate_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long i)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long i)
   {
     PA_BOILER
 
@@ -628,7 +628,7 @@ public:
 };
 
 
-void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i)
+void replicate(const EncryptedArray& ea, PlaintextArray& pa, long i)
 {
   ea.dispatch<replicate_pa_impl>(pa, i); 
 }

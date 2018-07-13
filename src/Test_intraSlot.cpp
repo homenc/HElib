@@ -52,7 +52,7 @@ int main(int argc, char **argv)
   vector<Ctxt> unpacked(d*n -1, Ctxt(publicKey));
 
   // generate (almost) d*n ciphertexts, with only integrs in the slots
-  std::vector<NewPlaintextArray> p1(lsize(unpacked), NewPlaintextArray(ea));
+  std::vector<PlaintextArray> p1(lsize(unpacked), PlaintextArray(ea));
   for (long i=0; i<lsize(unpacked); i++) {
     vector<long> slots;
     ea.random(slots);
@@ -70,7 +70,7 @@ int main(int argc, char **argv)
   buildUnpackSlotEncoding(unpackSlotEncoding, ea);
   unpack(CtPtrs_vectorCt(unpacked), CtPtrs_vectorCt(ct), ea, unpackSlotEncoding);
 
-  NewPlaintextArray p2(ea);
+  PlaintextArray p2(ea);
   for (long i=0; i<lsize(unpacked); i++) {
     ea.decrypt(unpacked[i], secretKey, p2);
 

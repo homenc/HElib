@@ -372,10 +372,10 @@ void traceMap(Ctxt& ctxt);
 
 // These routines apply linear transformation to plaintext arrays.
 // Mainly for testing purposes.
-void mul(NewPlaintextArray& pa, const MatMul1D& mat);
-void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat);
-void mul(NewPlaintextArray& pa, const MatMulFull& mat);
-void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat);
+void mul(PlaintextArray& pa, const MatMul1D& mat);
+void mul(PlaintextArray& pa, const BlockMatMul1D& mat);
+void mul(PlaintextArray& pa, const MatMulFull& mat);
+void mul(PlaintextArray& pa, const BlockMatMulFull& mat);
 
 
 // These are used mainly for performance evaluation.

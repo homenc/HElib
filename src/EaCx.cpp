@@ -21,6 +21,31 @@
 
 NTL_CLIENT
 
+void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
+                               const FHESecKey& sKey, vector<cx_double>& ptxt) const
+{
+  assert(&getContext() == &ctxt.getContext());
+  NTL::ZZX pp;
+  sKey.Decrypt(pp, ctxt);
+
+  // convert to zzX, if the pp is too big, scale it down
+  long nBits = NTL::MaxBits(pp) - NTL_SP_NBITS;
+  zzX zpp(INIT_SIZE, deg(pp)+1);
+  double factor;
+  if (nBits<=0) { // convert to zzX, double
+    for (long i=0; i<lsize(zpp); i++)
+      conv(zpp[i], pp[i]);
+    factor = to_double(ctxt.getRatFactor());
+  } else { // scale and then convert to zzX, double
+    for (long i=0; i<lsize(zpp); i++)
+      conv(zpp[i], pp[i]>>nBits);
+    factor = to_double(ctxt.getRatFactor()/power2_xdouble(nBits));
+  }
+  canonicalEmbedding(ptxt, zpp, getPAlgebra()); // decode without scaling
+  for (cx_double& cx : ptxt)  // divide by the factor
+    cx /= factor;
+}
+
 // rotate ciphertext in dimension 0 by amt
 void EncryptedArrayCx::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
 {
