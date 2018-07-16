@@ -57,9 +57,13 @@ void canonicalEmbedding(std::vector<cx_double>& v,
   arma::cx_vec avv = arma::fft(av,m); // compute the full FFT
 
   v.resize(phimBy2); // the first half of Zm*
-  for (long i=0; i<palg.getNSlots(); i++)
-    v[palg.getNSlots()-i-1] = avv[palg.ith_rep(i)];
-  FHE_TIMER_STOP;
+
+  if (palg.getNSlots()==phimBy2) // order roots by the palg order
+    for (long i=0; i<phimBy2; i++)
+      v[phimBy2-i-1] = avv[palg.ith_rep(i)];
+  else                           // order roots sequentially
+    for (long i=1, idx=0; i<=m/2; i++)
+      if (palg.inZmStar(i)) v[idx++] = avv[i];
 }
 
 // Roughly the inverse of canonicalEmbedding, except for scaling and
@@ -72,13 +76,23 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
 {
   FHE_TIMER_START;
   long m = palg.getM();
+  long phimBy2 = divc(palg.getPhiM(),2);
   arma::cx_vec avv(m);
   for (auto& x: avv) x = 0.0;
-  for (long i=0; i<palg.getNSlots(); i++) {
-    long j = palg.ith_rep(i);
-    avv[j] = scaling*v[palg.getNSlots()-i-1];
-    avv[m-j] = std::conj(avv[j]);
-  }
+
+  if (palg.getNSlots()==phimBy2) // roots ordered by the palg order
+    for (long i=0; i<palg.getNSlots(); i++) {
+      long j = palg.ith_rep(i);
+      avv[j] = scaling*v[palg.getNSlots()-i-1];
+      avv[m-j] = std::conj(avv[j]);
+    }
+  else                           // roots ordered sequentially
+    for (long i=1, idx=0; i<=m/2; i++) {
+      if (palg.inZmStar(i)) {
+        avv[i] = scaling*v[idx++];
+        avv[m-i] = std::conj(avv[i]);
+      }
+    }
   arma::vec av = arma::real(arma::ifft(avv,m)); // compute the inverse FFT
 
   // If v was obtained by canonicalEmbedding(v,f,palg,1.0) then we have
@@ -113,8 +127,13 @@ void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra&
   long m = palg.getM();
   long phimBy2 = divc(palg.getPhiM(),2);
   vector<long> zmstar(phimBy2); // the first half of Zm*
-  for (long i=1, idx=0; i<=m/2; i++)
-    if (palg.inZmStar(i)) zmstar[idx++] = i;
+
+  if (palg.getNSlots()==phimBy2) // order roots by the palg order
+    for (long i=0; i<phimBy2; i++)
+      zmstar[phimBy2-i-1] = palg.ith_rep(i);
+  else                           // order roots sequentially
+    for (long i=1, idx=0; i<=m/2; i++)
+      if (palg.inZmStar(i)) zmstar[idx++] = i;
 
   v.resize(phimBy2);
   NTL_EXEC_RANGE(phimBy2, first, last)
