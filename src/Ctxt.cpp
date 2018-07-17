@@ -1375,6 +1375,21 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   // no change in noise variance
   FHE_TIMER_STOP;
 }
+void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
+{
+  FHE_TIMER_START;
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+
+  // Apply this automorphism to all the parts
+  for (size_t i=0; i<parts.size(); i++) { 
+    parts[i].complexConj();
+    if (!parts[i].skHandle.isOne()) {
+      parts[i].skHandle.powerOfX
+        = context.zMStar.getM() - parts[i].skHandle.powerOfX;
+    }
+  } // no change in noise variance
+}
 
 
 // Apply F(X)->F(X^k) followed by re-liearization. The automorphism is possibly

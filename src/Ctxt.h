@@ -356,6 +356,7 @@ public:
   Ctxt& operator*=(const Ctxt& other); // Multiply by aonther ciphertext
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
   Ctxt& operator>>=(long k) { automorph(k); return *this; }
+  void complexConj();     // Complex conjugate, same as automorph(m-1)
 
   //! @brief automorphism with re-lienarization
   void smartAutomorph(long k);
