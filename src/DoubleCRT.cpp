@@ -819,9 +819,8 @@ void DoubleCRT::Exp(long e)
   }
 }
 
-#if 1
-
 // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
+#if 1
 void DoubleCRT::automorph(long k)
 {
   if (isDryRun()) return;
@@ -841,52 +840,43 @@ void DoubleCRT::automorph(long k)
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
     vec_long& row = map[i];
 
-#if 0
-    for (long j=1; j<m; j++) { // 1st pass: copy to temporary array
-      long idx = zMStar.indexInZmstar_unchecked(j); // returns -1 if j \notin (Z/mZ)*
-      if (idx>=0) tmp[j] = row[idx];
-    }
+    // Compute new[j] = old[j*k mod m]
 
-    for (long j=1; j<m; j++) { // 2nd pass: copy back from temporary array
-      long idx = zMStar.indexInZmstar_unchecked(j); // returns -1 if j \notin (Z/mZ)*
-      if (idx>=0) row[idx] = tmp[MulModPrecon(j,k,m,precon)];
-                                           // new[j] = old[j*k mod m]
-    }    
-#else
+    // for (long j=1; j<m; j++) { // 1st pass: copy to temporary array
+    //   long idx = zMStar.indexInZmstar_unchecked(j);
+    //   if (idx>=0) tmp[j] = row[idx];
+    // }
+    // for (long j=1; j<m; j++) { // 2nd pass: copy back from temporary array
+    //   long idx = zMStar.indexInZmstar_unchecked(j);
+    //   if (idx>=0) row[idx] = tmp[MulModPrecon(j,k,m,precon)];
+    //                                        // new[j] = old[j*k mod m]
+    // }
+
     // slightly faster...
 
-    for (long j = 0; j < phim; j++) {
+    for (long j = 0; j < phim; j++) {// 1st pass: copy to temporary array
        tmp[zMStar.repInZmstar_unchecked(j)] = row[j];
     }
-
-    for (long j = 0; j < phim; j++) {
-       row[j] = tmp[ MulModPrecon( zMStar.repInZmstar_unchecked(j), k, m, precon) ];
+    for (long j = 0; j < phim; j++) {// 2nd pass: copy back from temp array
+       row[j] = tmp[MulModPrecon(zMStar.repInZmstar_unchecked(j),k,m,precon)];
     }
-
-#endif
   }
 }
 
 #else
-
 // VJS: I tried this as an alternative...it is slower :-(
-
-// Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
 void DoubleCRT::automorph(long k)
 {
   if (isDryRun()) return;
-
   const PAlgebra& zMStar = context.zMStar;
   if (!zMStar.inZmStar(k))
     Error("DoubleCRT::automorph: k not in Zm*");
-
   long m = zMStar.getM();
   long phim = zMStar.getPhiM();
   vector<long> tmp(phim);  // temporary array of size m
 
   k = InvMod(k, m);
   mulmod_precon_t precon = PrepMulModPrecon(k, m);
-
   const IndexSet& s = map.getIndexSet();
 
   // go over the rows, permute them one at a time
@@ -903,10 +893,28 @@ void DoubleCRT::automorph(long k)
        row[idx] = tmp[j];
     }
   }
+}
+#endif
 
+// Compute the complex conjugate, this is the same as automorph(m-1)
+void DoubleCRT::complexConj()
+{
+  if (isDryRun()) return;
+
+  const PAlgebra& zMStar = context.zMStar;
+  long phim = zMStar.getPhiM();
+
+  const IndexSet& s = map.getIndexSet();
+
+  // go over the rows, permute them one at a time
+  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+    vec_long& row = map[i];
+    for (long j = 0; j < phim/2; j++) {// swap i <-> phi(m)-i-1
+      std::swap(row[j], row[phim-j-1]);
+    }
+  }
 }
 
-#endif
 
 // fills each row i with random integers mod pi
 void DoubleCRT::randomize(const ZZ* seed) 

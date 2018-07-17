@@ -316,9 +316,12 @@ public:
   //! @brief Small-exponent polynomial exponentiation
   void Exp(long k);
 
-  // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
+  //! Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
   void automorph(long k);
   DoubleCRT& operator>>=(long k) { automorph(k); return *this; }
+
+  //! Compute the complex conjugate, the same as automorph(m-1)
+  void complexConj();
   ///@}
 
   // Utilities
