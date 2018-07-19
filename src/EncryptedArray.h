@@ -507,12 +507,15 @@ private:
 class EncryptedArrayCx : public EncryptedArrayBase {
   const FHEcontext& context;
   const PAlgebraModCx& alMod;
+  zzX iEncoded; // an encoded plaintext with i in all the slots
 
 public:
+  void encodei(zzX& ptxt, long precision) const; // encode i in all slots
+
   explicit EncryptedArrayCx(const FHEcontext& _context)
-    : context(_context), alMod(context.alMod.getCx()) {}
+    : context(_context), alMod(context.alMod.getCx()) {encodei(iEncoded,0);}
   EncryptedArrayCx(const FHEcontext& _context, const PAlgebraModCx& _alMod)
-    : context(_context), alMod(_alMod) {}
+    : context(_context), alMod(_alMod) {encodei(iEncoded,0);}
 
   // convertion between std::vectors of complex, real, and integers
   static void convert(std::vector<cx_double>& out,
@@ -539,6 +542,7 @@ public:
   EncryptedArrayBase* clone() const override
   { return  new EncryptedArrayCx(*this); }
 
+  const zzX& getiEncoded() const {return iEncoded;}
   PA_tag getTag() const override { return PA_cx_tag; }
   const FHEcontext& getContext() const override { return context; }
   const PAlgebra& getPAlgebra() const override { return alMod.getZMStar(); }
@@ -595,6 +599,34 @@ public:
   void decrypt(const Ctxt& ctxt,
                const FHESecKey& sKey, std::vector<double>& ptxt) const override
   { std::vector<cx_double> v; decrypt(ctxt,sKey,v); convert(ptxt,v); }
+
+  void extractRealPart(Ctxt& c);
+
+  //! Note: If called with dcrt==nullptr, extractImPart will perform FFT's
+  //! when encoding i as a DoubleCRT object. If called with dcrt!=nullptr,
+  //! it assumes that dcrt points to an object that encodes i.
+  void extractImPart(Ctxt& c, DoubleCRT* dcrt=nullptr);
+
+  //! @name Linearized polynomials for EncryptedArrayCx
+  ///@{
+  //! buildLinPolyCoeffs returns in C two encoded constants such that the
+  //! linear transformation(s) defined as L(1) = oneImage and L(i)=iImage
+  //! can be computed as:      L(x) = C[0]*x + C[1]*conjugate(x).
+  //! Once C is computed, we can apply this linear transformation to a
+  //! cipehrtext can be done by calling applyLinPolyLL(ctxt, C, 2).
+  //! Alternatively, we can convert C to a vector of two DoubleCRT objects,
+  //! then call applyLinPolyLL(ctxt, dcrtVec, 2). This lets us compute the
+  //! DoubleCRT object just once, then use them many times.
+
+  //! First variant: same linear transformation in all the slots
+  void buildLinPolyCoeffs(std::vector<zzX>& C,
+            const cx_double& oneImage, const cx_double& iImage) const;
+
+  //! Second variant: different linear transformation in each slots
+  void buildLinPolyCoeffs(std::vector<zzX>& C,
+                          const std::vector<cx_double>&oneImages,
+                          const std::vector<cx_double>&iImages) const;
+  ///@}
 };
 
 

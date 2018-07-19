@@ -21,6 +21,8 @@
 
 NTL_CLIENT
 
+static constexpr cx_double the_imaginary_i = cx_double(0.0, 1.0);
+
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
                                const FHESecKey& sKey, vector<cx_double>& ptxt) const
 {
@@ -84,7 +86,14 @@ void EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
   // This factor ensures that encode/decode introduce less than 1/precision
   // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}.  
   double factor = alMod.encodeScalingFactor(precision);
+         // if precision==0 use the default PAlgebraCx::encodeScalingFactor()
   embedInSlots(ptxt, array, getPAlgebra(), factor);
+}
+
+void EncryptedArrayCx::encodei(zzX& ptxt, long precision) const
+{
+  vector<cx_double> v(size(), the_imaginary_i); // i in all the slots
+  this->encode(ptxt, v, precision);
 }
 
 void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt) const
@@ -106,4 +115,68 @@ void EncryptedArrayCx::random(vector<cx_double>& array) const
     double theta = twoPi * ((bits>>16)& 0xffff) / 65536.0; // uniform(0,2pi)
     x = std::polar(r,theta);
   }
+}
+
+void EncryptedArrayCx::extractRealPart(Ctxt& c)
+{
+  Ctxt tmp = c;
+  tmp.complexConj(); // the complex conjugate of c
+  c += tmp;          // c + conj(c) = 2*real(c)
+  c.multByConstantCKKS(0.5); // divide by two
+}
+
+// Note: If called with dcrt==nullptr, it will perform FFT's when
+// encoding i as a DoubleCRT object. If called with dcrt!=nullptr,
+// it assumes that dcrt points to an object that encodes i. If the
+// primeSet of the given DoubleCRT is missing some of the moduli in
+// c.getPrimeSet(), many extra FFTs/iFFTs will be called.
+void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr)
+{
+  DoubleCRT tmpDcrt(getContext(), IndexSet::emptySet());
+  Ctxt tmp = c;
+  c.negate();
+  tmp.complexConj(); // the complex conjugate of c
+  c += tmp;          // -c + conj(c) = -2*i*imaginary(c)
+
+  if (iDcrtPtr==nullptr) { // Need to encode i in a DoubleCRt object
+    tmpDcrt.FFT(getiEncoded(), c.getPrimeSet());
+    // FFT is a low-level DoubleCRT procedure to initialize an
+    // existing object with a given PrimeSet and a given polynomial
+    iDcrtPtr = &tmpDcrt;
+  }
+  c.multByConstantCKKS(*iDcrtPtr); // multiply by i
+  c.multByConstantCKKS(0.5);       // divide by two
+}
+
+void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+              const cx_double& oneImage, const cx_double& iImage) const
+{
+  resize(C,2); // allocate space
+
+  // Compute the constants x,y such that L(z) = x*z + y*conjugate(z)
+  cx_double x = (oneImage - the_imaginary_i*iImage)*0.5;
+  cx_double y = (oneImage + the_imaginary_i*iImage)*0.5;
+
+  // Encode x,y in zzX objects
+  vector<cx_double> v(size(), x); // x in all the slots
+  encode(C[0], v);
+  v.assign(size(), y);            // y in all the slots
+  encode(C[1], v);
+}
+
+void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+     const vector<cx_double>&oneImages, const vector<cx_double>&iImages) const
+{
+  resize(C,2); // allocate space
+
+  // Compute the constants x,y such that L(z) = x*z + y*conjugate(z)
+  vector<cx_double> x(size());
+  vector<cx_double> y(size());
+  for (long j=0; j<size(); j++) {
+    x[j] = (oneImages[j] - the_imaginary_i*iImages[j])*0.5;
+    y[j] = (oneImages[j] + the_imaginary_i*iImages[j])*0.5;
+  }
+  // Encode x,y in zzX objects
+  encode(C[0], x);
+  encode(C[1], y);
 }
