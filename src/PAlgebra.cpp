@@ -139,7 +139,7 @@ PAlgebra::PAlgebra(long mm, long pp,
   long k = NextPowerOfTwo(mm);
   if (mm == (1UL << k)) // m is a power of two
     pow2 = k;
-  else // FIXME: Verify that m is odd?
+  else // is not power of two, set to zero (even if m is even!)
     pow2 = 0;
 
   // For dry-run, use a tiny m value for the PAlgebra tables

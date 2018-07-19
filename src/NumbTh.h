@@ -364,6 +364,10 @@ long primroot(long N,long phiN);
 //! Compute the highest power of p that divides N.
 long ord(long N,long p);
 
+inline bool is2power(long m) {
+  long k = NTL::NextPowerOfTwo(m);
+  return (((unsigned long)m) == (1UL << k));
+}
 
 // Returns a random mod p polynomial of degree < n
 NTL::ZZX RandPoly(long n,const NTL::ZZ& p);

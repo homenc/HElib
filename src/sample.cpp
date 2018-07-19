@@ -231,12 +231,18 @@ void sampleSmallBounded(zzX &poly, const PAlgebra& palg)
   long phim = palg.getPhiM();
   // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
   double bound = (1+sqrt(phim*log(phim)))*0.85;
+  double val;
+  long count = 0;
   do {
     sampleSmall(poly, palg);
+    val = embeddingLargestCoeff(poly,palg);
   }
-  while (embeddingLargestCoeff(poly,palg)>bound); // repeat until <=bound
-  // if (nTrials>1)
-  //   cerr<<"sampleSmallBounded: "<<nTrials<<" trials\n";
+  while (++count<1000 && val>bound); // repeat until <= bound
+  if (val>bound) {
+    cerr << "Warning: sampleSmallBounded, after "
+         << count<<" trials, still val="<<val
+         << '>'<<"bound="<<bound<<endl;
+  }
 #else
 #warning "No FFT, sampleSmallBounded degenerates to sampleSmall"
   sampleSmall(poly, palg);
@@ -259,13 +265,20 @@ void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev)
   long phim = palg.getPhiM();  
   // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
   double bound
-    = stdev*1.15*(2+((m&1)? sqrt(m*log(phim)): sqrt(phim*log(phim))));
+    = stdev*1.15*(2+((palg.getPow2()==0)?
+                     sqrt(m*log(phim)) : sqrt(phim*log(phim))));
+  double val;
+  long count = 0;
   do {
     sampleGaussian(poly, palg, stdev);
+    val = embeddingLargestCoeff(poly,palg);
   }
-  while (embeddingLargestCoeff(poly,palg)>bound); // repeat until <=bound
-  // if (nTrials>1)
-  //   cerr<<"sampleGaussianBounded: "<<nTrials<<" trials\n";
+  while (++count<1000 && val>bound); // repeat until <=bound
+  if (val>bound) {
+    cerr << "Warning: sampleGaussianBounded, after "
+         << count<<" trials, still val="<<val
+         << '>'<<"bound="<<bound<<endl;
+  }
 #else
 #warning "No FFT, sampleGaussianBounded degenerates to sampleGaussian"
   sampleGaussian(poly, palg, stdev);
@@ -304,7 +317,7 @@ double boundFreshNoise(long m, long phim, double sigma, double epsilon)
    *                 + sampleGaussian(sigma)
    * and zeta is an m'th root-of-unity, which we approximate as:
    */
-  double stdev = (sigma+0.1)*0.54*(1+((m&1)? sqrt(phim*m): phim));
+  double stdev = (sigma+0.1)*0.54*(1+(is2power(m)? sqrt(phim*m): phim));
 
   /* Then we use the following rules:
    *      Pr[|f(zeta)| > stdev] = 0.644
