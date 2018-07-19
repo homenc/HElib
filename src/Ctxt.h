@@ -374,13 +374,16 @@ public:
   void addConstant(const NTL::ZZX& poly, double size=-1.0)
   { addConstant(DoubleCRT(poly,context,primeSet),size); }
   void addConstant(const NTL::ZZ& c);
+  //! add a rational number in the form a/b, a,b are long
+  void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
+  void addConstantCKKS(double x) { addConstantCKKS(rationalApprox(x)); }
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size=NTL::xdouble(-1.0),
                        NTL::xdouble factor=NTL::xdouble(0.0));
   void addConstantCKKS(const NTL::ZZX& poly,
                        NTL::xdouble size=NTL::xdouble(-1.0),
                        NTL::xdouble factor=NTL::xdouble(0.0));
-  void addConstantCKKS(const NTL::ZZ& c); // note: c will be scaled up
+  void addConstantCKKS(const NTL::ZZ& c);
 
   //! Multiply-by-constant. If the size is not given, we use
   //! phi(m)*ptxtSpace^2 as the default value.
@@ -388,6 +391,10 @@ public:
   void multByConstant(const NTL::ZZX& poly, double size=-1.0);
   void multByConstant(const zzX& poly, double size=-1.0);
   void multByConstant(const NTL::ZZ& c);
+
+  //! multiply by a rational number in the form a/b, a,b are long
+  void multByConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
+  void multByConstantCKKS(double x);
 
   void multByConstantCKKS(const DoubleCRT& dcrt,
                           NTL::xdouble size=NTL::xdouble(-1.0),

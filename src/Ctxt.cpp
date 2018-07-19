@@ -817,6 +817,26 @@ void Ctxt::addConstantCKKS(const ZZ& c)
   addConstantCKKS(dcrt, /*size=*/xc*xc, /*factor=*/scaled/xc);
 }
 
+// Add the rational constant num.first / num.second
+void Ctxt::addConstantCKKS(std::pair<long,long> num)
+{
+  // Check if you need to scale up to get target accuracy of 2^{-r}
+  xdouble xb = to_xdouble(num.second);        // denominator
+  xdouble ratio = floor((ratFactor/xb) +0.5); // round to integer
+  double inaccuracy = abs(conv<double>(ratio*xb/ratFactor) - 1.0);
+  if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0)
+    addSomePrimes(*this); // This increases ratFactor
+
+  // scaled up and round the numerator
+  xdouble scaled = floor(num.first*ratFactor/xb +0.5);
+
+  DoubleCRT dcrt(getContext(), getPrimeSet());
+  dcrt = to_ZZ(scaled);
+
+  addConstantCKKS(dcrt, /*size=*/to_xdouble(fsquare(num.second)),
+                  /*factor=*/ratFactor);  
+}
+
 // Add at least one prime to the primeSet of c
 void addSomePrimes(Ctxt& c)
 {
@@ -1307,6 +1327,22 @@ void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 }
 
+void Ctxt::multByConstantCKKS(std::pair<long,long> num)
+{
+  multByConstant(to_ZZ(num.first)); // multiply by numerator
+  ratFactor *= num.second;    // increase the scaling factor  
+}
+
+void Ctxt::multByConstantCKKS(double x)
+{
+  xdouble target = ratFactor/x;
+  if (target < getContext().alMod.getCx().encodeScalingFactor())
+    multByConstantCKKS(rationalApprox(x)); // "actual multiplication"
+  else
+    ratFactor = target;             // just adjust the scaling factor
+}
+
+
 // Divide a cipehrtext by 2. It is assumed that the ciphertext
 // encrypts an even polynomial and has plaintext space 2^r for r>1.
 // As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
@@ -1447,16 +1483,20 @@ void Ctxt::frobeniusAutomorph(long j)
 {
   FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
-  if (this->isEmpty()) return;
+  if (this->isEmpty() || j==0) return;
 
-  long m = context.zMStar.getM();
-  long p = context.zMStar.getP();
-  long d = context.zMStar.getOrdP();
+  if (isCKKS()) { // For CKKS compute complex conjugate
+    if (j&1) complexConj(); // If j is even do nothing
+  }
+  else {          // For BGV compute frobenius
+    long m = context.zMStar.getM();
+    long p = context.zMStar.getP();
+    long d = context.zMStar.getOrdP();
 
-  j = mcMod(j, d);
-  long val = PowerMod(p, j, m);
-  smartAutomorph(val);
-  FHE_TIMER_STOP;
+    j = mcMod(j, d);
+    long val = PowerMod(p, j, m);
+    smartAutomorph(val);
+  }
 }
 
 
