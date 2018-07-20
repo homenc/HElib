@@ -158,9 +158,10 @@ void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
   cx_double y = (oneImage + the_imaginary_i*iImage)*0.5;
 
   // Encode x,y in zzX objects
-  vector<cx_double> v(size(), x); // x in all the slots
+  long n = size();
+  vector<cx_double> v(n, x); // x in all the slots
   encode(C[0], v);
-  v.assign(size(), y);            // y in all the slots
+  v.assign(n, y);            // y in all the slots
   encode(C[1], v);
 }
 
