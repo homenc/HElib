@@ -673,8 +673,10 @@ public:
     if (precision==0)
       precision=(1L<<r);
     double m = getZMStar().getM();
-    return ceil(precision * std::sqrt(m*log2(m)));
     // Experimentally, X * sqrt(m log m) yeilds precision of 1/2X to 1/4X
+    // We round it up to the next power of two
+    long f = ceil(precision * std::sqrt(m*log2(m)));
+    return (1L<<NTL::NextPowerOfTwo(f));
   }
 };
 
