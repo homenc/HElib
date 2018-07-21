@@ -16,15 +16,11 @@
 #include "Ctxt.h"
 #include "FHE.h"
 
-#ifdef DEBUG_PRINTOUT
 #include "debugging.h"
-#endif
-
-NTL_CLIENT;
-
-extern int fhe_watcher;
 
 NTL_CLIENT
+
+extern int fhe_watcher;
 
 void SKHandle::read(istream& str)
 {
@@ -883,10 +879,13 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
     c2.multByConstant(to_ZZ(factors.second));  // big times b
     c2.ratFactor *= factors.second;
     assert(closeToOne(c1.ratFactor/c2.ratFactor, targetPrecision));
+
+#ifdef DEBUG_PRINTOUT
     cerr << "equalizeFactors using provided scaling factors ["
-         << factors.first<<','<<factors.second<<endl;
+         << factors.first<<','<<factors.second<<"]\n";
     cerr << "    resulting ratFactors are ["
          << c1.ratFactor<<','<< c1.ratFactor<<"]\n";
+#endif
     return;
   }
   // If factors are not given, compute them
@@ -896,10 +895,14 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
   xdouble ratio = big.ratFactor / small.ratFactor;
   if (ratio > targetPrecision) { // just scale up small
     small.multByConstant(to_ZZ(floor(ratio+0.5)));
+
+#ifdef DEBUG_PRINTOUT
     cerr << "equalizeFactors scaling small factor from "<<small.ratFactor
-         << "to "<<small.ratFactor<<'*'<<ratio<<'=';
+         << " to "<<small.ratFactor<<'*'<<ratio<<" = "
+         << (small.ratFactor*ratio) << endl;
+    cerr << "    large factor is "<<big.ratFactor<<endl;
+#endif
     small.ratFactor *= ratio;
-    cerr << small.ratFactor<<"\n    large factor is "<<big.ratFactor<<endl;
     return;
   }
 
@@ -911,10 +914,12 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
   small.ratFactor *= factors.first;
   big.multByConstant(to_ZZ(factors.second));  // big times b
   big.ratFactor *= factors.second;
-  cerr << "equalizeFactors scalign both factor by "
-       << factors.first<<','<<factors.second<<endl;
+#ifdef DEBUG_PRINTOUT
+  cerr << "equalizeFactors scaling both factor by ["
+       << factors.first<<','<<factors.second<<"]\n";
   cerr << "    resulting ratFactors are ["
-         << small.ratFactor<<','<< big.ratFactor<<"]\n";
+       << small.ratFactor<<','<< big.ratFactor<<"]\n";
+#endif
 }
 
 // Add/subtract another ciphertxt (depending on the negative flag)

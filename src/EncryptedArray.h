@@ -612,8 +612,8 @@ public:
   //! buildLinPolyCoeffs returns in C two encoded constants such that the
   //! linear transformation(s) defined as L(1) = oneImage and L(i)=iImage
   //! can be computed as:      L(x) = C[0]*x + C[1]*conjugate(x).
-  //! Once C is computed, we can apply this linear transformation to a
-  //! cipehrtext can be done by calling applyLinPolyLL(ctxt, C, 2).
+  //! Once C is computed, we can apply this L to a cipehrtext by calling
+  //! applyLinPolyLL(ctxt, C, 2).
   //! Alternatively, we can convert C to a vector of two DoubleCRT objects,
   //! then call applyLinPolyLL(ctxt, dcrtVec, 2). This lets us compute the
   //! DoubleCRT object just once, then use them many times.
