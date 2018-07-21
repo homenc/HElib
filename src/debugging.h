@@ -20,7 +20,9 @@
 
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
-#define FLAG_PRINT_VEC  4
+#define FLAG_PRINT_VEC  4 /* decode to ZZX */
+#define FLAG_PRINT_DVEC 8 /* decode to double float */
+#define FLAG_PRINT_XVEC 16 /* decode to complex numbers */
 
 // forward declerations
 class Ctxt;

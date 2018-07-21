@@ -62,9 +62,9 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 // FIXME
 #if 0
   xdouble embL2 = embeddingL2Norm(pp, ea.getPAlgebra());
-  cout << ", |noise|_canonical=q*"<< (embL2/modulus);
+  s << ", |noise|_canonical=q*"<< (embL2/modulus);
 #endif
-  cout << endl;
+  s << endl;
 
   if (flags & FLAG_PRINT_ZZX) {
     s << "   before mod-p reduction=";
@@ -74,7 +74,7 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
     s << "   after mod-p reduction=";
     printZZX(s,p) <<endl;
   }
-  if (flags & FLAG_PRINT_VEC) {
+  if (flags & FLAG_PRINT_VEC) { // decode to a vector of ZZX
     ea.decode(ptxt, p);
     if (ea.getAlMod().getTag() == PA_zz_p_tag
 	&& ctxt.getPtxtSpace() != ea.getAlMod().getPPowR()) {
@@ -91,6 +91,18 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
       printZZX(s, ptxt[0],20) << "--";
       printZZX(s, ptxt[ptxt.size()-1], 20) <<endl;      
     }
+  }
+  else if (flags & FLAG_PRINT_DVEC) { // decode to a vector of doubles
+    const EncryptedArrayCx& eacx = ea.getCx();
+    vector<double> v;
+    eacx.decrypt(ctxt, sk, v);
+    printVec(s<<"           ", v)<<endl;
+  }
+  else if (flags & FLAG_PRINT_XVEC) { // decode to a vector of complex
+    const EncryptedArrayCx& eacx = ea.getCx();
+    vector<cx_double> v;
+    eacx.decrypt(ctxt, sk, v);
+    printVec(s<<"           ", v)<<endl;
   }
 }
 
