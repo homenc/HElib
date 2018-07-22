@@ -154,7 +154,7 @@ void matMulti1D(Ctxt& ctxt, MatMulBase& mat, long dim,
 //! Build a cache without performing multiplication
 void buildCache4MatMulti1D(MatMulBase& mat,long dim,MatrixCacheType buildCache);
 
-// Versions for plaintext rather than cipehrtext, useful for debugging
+// Versions for plaintext rather than ciphertext, useful for debugging
 void matMul(NewPlaintextArray& pa, MatMulBase& mat);
 void matMul1D(NewPlaintextArray& pa, MatMulBase& mat, long dim);
 void matMulti1D(NewPlaintextArray& pa, MatMulBase& mat, long dim);
@@ -230,7 +230,7 @@ void blockMatMulti1D(Ctxt& ctxt, MatMulBase& mat, long dim,
 void buildCache4BlockMatMulti1D(MatMulBase& mat,
 				long dim, MatrixCacheType buildCache);
 
-// Versions for plaintext rather than cipehrtext, useful for debugging
+// Versions for plaintext rather than ciphertext, useful for debugging
 void blockMatMul(NewPlaintextArray& pa, MatMulBase& mat);
 void blockMatMul1D(NewPlaintextArray& pa, MatMulBase& mat, long dim);
 void blockMatMulti1D(NewPlaintextArray& pa, MatMulBase& mat, long dim);

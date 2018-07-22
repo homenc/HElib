@@ -61,7 +61,7 @@ public:
   virtual bool earlyStop(long d, long k, long prodDim) { return false; }
 };
 // Applications will derive from this class a handler that actually
-// does something with the replicated cipehrtexts. But it can be used
+// does something with the replicated ciphertexts. But it can be used
 // by itself as a do-nothing replicator for debugging, or to calculate
 // the required automorphisms (see automorphVals in numbTh.h)
 

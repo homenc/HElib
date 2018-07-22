@@ -194,7 +194,7 @@ public:
     long sdim = ea.sizeOfDimension(dims[dim]);
 
     // compute "in spirit" sum_i (pdata >> i) * i'th-diagonal, but
-    // adjust the indexes so that we only need to rotate the cipehrtext
+    // adjust the indexes so that we only need to rotate the ciphertext
     // along the different dimensions separately
     for (long offset = 0; offset < sdim; offset++) {
       vector<long> idxes1;

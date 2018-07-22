@@ -584,12 +584,12 @@ replicateAll(const EncryptedArray& ea, const Ctxt& ctxt,
 
 
 //! @brief An implementation of ReplicateHandler that explicitly returns
-//!   all the replicated cipehrtexts in one big vector.
+//!   all the replicated ciphertexts in one big vector.
 //!
 //! This is useful mostly for debugging purposes, for real parameters
 //! it would take a lot of memory.
 class ExplicitReplicator : public ReplicateHandler {
-  std::vector<Ctxt>& v; // space to store all cipehrtexts
+  std::vector<Ctxt>& v; // space to store all ciphertexts
   long slot;
 public:
   // _v must already be of the right size (=number-of-slots)

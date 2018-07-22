@@ -895,7 +895,7 @@ void Ctxt::multByConstant(const zzX& poly, double size)
   multByConstant(dcrt,size);
 }
 
-// Divide a cipehrtext by 2. It is assumed that the ciphertext
+// Divide a ciphertext by 2. It is assumed that the ciphertext
 // encrypts an even polynomial and has plaintext space 2^r for r>1.
 // As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
 // If these assumptions are not met then the result will not be a
@@ -918,7 +918,7 @@ void Ctxt::divideBy2()
   ptxtSpace /= 2; // and so is the plaintext space
 }
 
-// Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
+// Divide a ciphertext by p, for plaintext space p^r, r>1. It is assumed
 // that the ciphertext encrypts a polynomial which is zero mod p. If this
 // is not the case then the result will not be a valid ciphertext anymore.
 // As a side-effect, the plaintext space is reduced from p^r to p^{r-1}.

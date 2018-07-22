@@ -67,7 +67,7 @@ public:
   virtual ~AutomorphHandler() {}
 };
 /* Applications can derive from this class a handler that actually
- * does something with the "rotated" cipehrtexts. The AutomorphHandler
+ * does something with the "rotated" ciphertexts. The AutomorphHandler
  * class above can also be used by itself as a do-nothing processor
  * for debugging, or to calculate the required automorphisms (see
  * automorphVals in numbTh.h)
