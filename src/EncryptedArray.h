@@ -63,7 +63,7 @@ class EncryptedArray; // forward reference
  *
  * An object ea of type EncryptedArray stores information about an
  * FHEcontext context, and a monic polynomial G.  If context defines
- * parameters m, p, and r, then ea is a helper abject
+ * parameters m, p, and r, then ea is a helper object
  * that supports encoding/decoding and encryption/decryption
  * of vectors of plaintext slots over the ring (Z/(p^r)[X])/(G). 
  *
