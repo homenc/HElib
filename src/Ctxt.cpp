@@ -328,6 +328,22 @@ void Ctxt::modDownToSet(const IndexSet &s)
 
   // Get an estimate for the added noise term for modulus switching
   xdouble addedNoiseVar = modSwitchAddedNoiseVar();
+
+  // For approximate nums, make sure that scaling factor is large enough
+  if (isCKKS()) {
+    // Factor after mod-switching is ratFactor/(prod_{i\in setDiff} qi),
+    // it must be sufficiently larger than sqrt(addedNoiseVar)
+    double extraFactor = (log(addedNoiseVar)/2)
+      + log(context.alMod.getPPowR()) + log(context.zMStar.getM())/2
+      - ( log(ratFactor) - getContext().logOfProduct(setDiff) );
+    // If factor is too small, scale up before mod-down
+    if (extraFactor > 0) {
+      xdouble xf = ceil(xexp(extraFactor));
+      multByConstant(conv<ZZ>(xf)); // Increases noiseVar
+      ratFactor *= xf;              // Up the factor accordingly
+    }
+  }
+
   if (noiseVar*fsquare(ptxtSpace) < addedNoiseVar) { // just "drop down"
     for (size_t i=0; i<parts.size(); i++)
       parts[i].removePrimes(setDiff);       // remove the primes not in s
@@ -339,7 +355,7 @@ void Ctxt::modDownToSet(const IndexSet &s)
         parts[i] *= prodInv;
       noiseVar = noiseVar*fsquare(prodInv);
     }
-    // cerr << "DEGENERATE DROP\n";
+    cerr << "Ctxt::modDownToSet: DEGENERATE DROP\n";
   } 
   else {                                       // do real mod switching
     for (size_t i=0; i<parts.size(); i++) 
@@ -527,11 +543,6 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 // additive term due to rounding into the dominant noise term 
 void Ctxt::findBaseSet(IndexSet& s) const
 {
-  if (isCKKS()) {
-    findBaseSetCKKS(s);
-    return;
-  }
-
   if (getNoiseVar()<=0.0) { // an empty ciphertext
     s = context.ctxtPrimes;
     return;
@@ -587,55 +598,6 @@ void Ctxt::findBaseSet(IndexSet& s) const
     cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
 }
 
-// Find the IndexSet such that modDown to that set of primes makes the
-// ratFactor only a bit bigger than the additive noise term due to rounding
-void Ctxt::findBaseSetCKKS(IndexSet& s) const
-{
-  if (getNoiseVar()<=0.0) { // an empty ciphertext
-    s = context.ctxtPrimes;
-    return;
-  }
-  // check that either all specialPrimes are in, or they are all out
-  assert(verifyPrimeSet());
-
-  bool halfSize = context.containsSmallPrime();
-  double first = halfSize? context.logOfPrime(0): 0.0;
-
-  double curFactor = log(getRatFactor());
-  double threshold = log(modSwitchAddedNoiseVar())
-    + log(context.alMod.getPPowR()) + log(context.zMStar.getM())/2;
-
-  // remove special primes, if they are included in this->primeSet
-  s = getPrimeSet();
-  if (!s.disjointFrom(context.specialPrimes)) { 
-    // scale down noise
-    curFactor -= context.logOfProduct(context.specialPrimes);
-    s.remove(context.specialPrimes);
-  }
-
-  // if the first prime in half size, begin by removing it
-  if (halfSize && s.contains(0)) {
-    curFactor -= first;
-    if (curFactor<threshold) return; // cannot even remove the half prime
-    s.remove(0);
-  }
-
-  // while noise is larger than threshold, scale down by the next prime
-  while (!empty(s)) {
-    curFactor -= context.logOfPrime(s.last());
-    if (curFactor + first < threshold) break; // canot remove this prime
-    s.remove(s.last());
-  }
-
-  // If curNoise < threshold, add back 1st prime
-  if (empty(s) || curFactor < threshold) {
-    long idx = (context.ctxtPrimes / s).first(); // 1st prime not in s
-    s.insert(idx);
-  }
-
-  if (log_of_ratio()>-0.5)
-    cerr << "Ctxt::findBaseSetCKKS warning: already at lowest level\n";
-}
 
 /********************************************************************/
 // Ciphertext arithmetic
@@ -1849,3 +1811,57 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
   // Return an estimate for the noise
   return conv<double>(noiseVar*ratio*ratio + modSwitchAddedNoiseVar());
 }
+
+
+#if 0 /********************* UNUSED CODE *******************************/
+
+// Find the IndexSet such that modDown to that set of primes makes the
+// ratFactor only a bit bigger than the additive noise term due to rounding
+void Ctxt::findBaseSetCKKS(IndexSet& s) const
+{
+  if (getNoiseVar()<=0.0) { // an empty ciphertext
+    s = context.ctxtPrimes;
+    return;
+  }
+  // check that either all specialPrimes are in, or they are all out
+  assert(verifyPrimeSet());
+
+  bool halfSize = context.containsSmallPrime();
+  double first = halfSize? context.logOfPrime(0): 0.0;
+
+  double curFactor = log(getRatFactor());
+  double threshold = log(modSwitchAddedNoiseVar())
+    + log(context.alMod.getPPowR()) + log(context.zMStar.getM())/2;
+
+  // remove special primes, if they are included in this->primeSet
+  s = getPrimeSet();
+  if (!s.disjointFrom(context.specialPrimes)) { 
+    // scale down noise
+    curFactor -= context.logOfProduct(context.specialPrimes);
+    s.remove(context.specialPrimes);
+  }
+
+  // if the first prime in half size, begin by removing it
+  if (halfSize && s.contains(0)) {
+    curFactor -= first;
+    if (curFactor<threshold) return; // cannot even remove the half prime
+    s.remove(0);
+  }
+
+  // while noise is larger than threshold, scale down by the next prime
+  while (!empty(s)) {
+    curFactor -= context.logOfPrime(s.last());
+    if (curFactor + first < threshold) break; // canot remove this prime
+    s.remove(s.last());
+  }
+
+  // If curNoise < threshold, add back 1st prime
+  if (empty(s) || curFactor < threshold) {
+    long idx = (context.ctxtPrimes / s).first(); // 1st prime not in s
+    s.insert(idx);
+  }
+
+  if (log_of_ratio()>-0.5)
+    cerr << "Ctxt::findBaseSetCKKS warning: already at lowest level\n";
+}
+#endif
