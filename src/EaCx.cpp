@@ -132,7 +132,7 @@ void EncryptedArrayCx::extractRealPart(Ctxt& c)
 // c.getPrimeSet(), many extra FFTs/iFFTs will be called.
 void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr)
 {
-  DoubleCRT tmpDcrt(getContext(), IndexSet::emptySet());
+  DoubleCRT tmpDcrt(getContext(), c.getPrimeSet());
   Ctxt tmp = c;
   c.negate();
   tmp.complexConj(); // the complex conjugate of c
