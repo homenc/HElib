@@ -600,12 +600,12 @@ public:
                const FHESecKey& sKey, std::vector<double>& ptxt) const override
   { std::vector<cx_double> v; decrypt(ctxt,sKey,v); convert(ptxt,v); }
 
-  void extractRealPart(Ctxt& c);
+  void extractRealPart(Ctxt& c) const;
 
   //! Note: If called with dcrt==nullptr, extractImPart will perform FFT's
   //! when encoding i as a DoubleCRT object. If called with dcrt!=nullptr,
   //! it assumes that dcrt points to an object that encodes i.
-  void extractImPart(Ctxt& c, DoubleCRT* dcrt=nullptr);
+  void extractImPart(Ctxt& c, DoubleCRT* dcrt=nullptr) const;
 
   //! @name Linearized polynomials for EncryptedArrayCx
   ///@{

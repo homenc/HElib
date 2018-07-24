@@ -117,7 +117,7 @@ void EncryptedArrayCx::random(vector<cx_double>& array) const
   }
 }
 
-void EncryptedArrayCx::extractRealPart(Ctxt& c)
+void EncryptedArrayCx::extractRealPart(Ctxt& c) const
 {
   Ctxt tmp = c;
   tmp.complexConj(); // the complex conjugate of c
@@ -130,7 +130,7 @@ void EncryptedArrayCx::extractRealPart(Ctxt& c)
 // it assumes that dcrt points to an object that encodes i. If the
 // primeSet of the given DoubleCRT is missing some of the moduli in
 // c.getPrimeSet(), many extra FFTs/iFFTs will be called.
-void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr)
+void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
 {
   DoubleCRT tmpDcrt(getContext(), c.getPrimeSet());
   Ctxt tmp = c;
