@@ -210,12 +210,15 @@ class PAlgebra {
 
   /* Miscellaneous */
 
-//! exps is an array of exponents (the dLog of some t in T), this function
+  //! exps is an array of exponents (the dLog of some t in T), this function
   //! incerement exps lexicographic order, reutrn false if it cannot be
   //! incremented (because it is at its maximum value)
   bool nextExpVector(std::vector<long>& exps) const {
     return cube.incrementCoords(exps);
   }
+
+  //! The largest FFT we need to handle degree-m polynomials
+  long fftSizeNeeded() const {return NTL::NextPowerOfTwo(getM()) +1;}
 };
 
 

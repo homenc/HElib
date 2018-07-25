@@ -121,7 +121,8 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 
   if (explicitModulus) {
     bak.save(); // backup the current modulus
-    context = BuildContext(q, NextPowerOfTwo(zms.getM()) + 1);
+    context = BuildContext(q, zms.fftSizeNeeded());
+    // fftSizeNeeded() returns next power of 2 after 2m
     context.restore();       // set NTL's current modulus to q
   }
   else
