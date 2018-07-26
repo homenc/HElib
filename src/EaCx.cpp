@@ -132,13 +132,13 @@ void EncryptedArrayCx::extractRealPart(Ctxt& c) const
 // c.getPrimeSet(), many extra FFTs/iFFTs will be called.
 void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
 {
-  DoubleCRT tmpDcrt(getContext(), c.getPrimeSet());
-  Ctxt tmp = c;
-  c.negate();
-  tmp.complexConj(); // the complex conjugate of c
-  c += tmp;          // -c + conj(c) = -2*i*imaginary(c)
-
+  DoubleCRT tmpDcrt(getContext(), IndexSet::emptySet());
+  {Ctxt tmp = c;
+  c.complexConj(); // the complex conjugate of c
+  c -= tmp;        // conj(c) - c = -2*i*imaginary(c)
+  }
   if (iDcrtPtr==nullptr) { // Need to encode i in a DoubleCRt object
+    tmpDcrt.addPrimes(c.getPrimeSet());
     tmpDcrt.FFT(getiEncoded(), c.getPrimeSet());
     // FFT is a low-level DoubleCRT procedure to initialize an
     // existing object with a given PrimeSet and a given polynomial

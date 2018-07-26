@@ -322,6 +322,10 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
   if (empty(s1)) return; // nothing to do
   assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
 
+  if (empty(getIndexSet())) {   // special case for empty DCRT
+    map.insert(s1); // just add new rows to the map and return
+    return;
+  }
   ZZX poly;
   toPoly(poly); // recover in coefficient representation
 
@@ -339,6 +343,10 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
   if (empty(s1)) return 0.0; // nothing to do
   assert(empty(s1 & map.getIndexSet())); // s1 is disjoint from *this
 
+  if (empty(getIndexSet())) {   // special case for empty DCRT
+    map.insert(s1); // just add new rows to the map and return
+    return 0.0;
+  }
   // compute factor to scale existing rows
   ZZ factor = to_ZZ(1);
   double logFactor = 0.0;
