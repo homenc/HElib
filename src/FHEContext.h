@@ -75,23 +75,21 @@ public:
   //! @brief number of bits per level
   long bitsPerLevel;
   /**
-   * @brief The "ciphertext primes", used for fresh ciphertexts.
-   *
-   * The public encryption key and "fresh" ciphertexts are encrypted relative
-   * to only a subset of the primes, to allow for mod-UP during key-switching.
-   * See section 3.1.6 in the design document (key-switching). 
-   * In ctxtPrimes we keep the indexes of this subset. Namely, for a ciphertext
-   * part p in a fresh ciphertext we have p.getMap().getIndexSet()==ctxtPrimes.
-   * It is assumed that all the "ciphertext primes" are roughly the same size,
-   * except perhaps the first one (with index 0), which could be smaller.
+   * The "ciphertext primes" are the "normal" primes that are used to
+   * represent the public encryption key and ciphertexts. These are all
+   * "large" single=precision primes, or bit-size roughly NTL_SP_SIZE bits.
    **/
   IndexSet ctxtPrimes;
 
-  //! @brief All the other primes in the chain.
-  //!
-  //! For convenience, we also keep in specialPrimes the complemeting subset,
-  //! i.e., specialPrimes = [0,numPrimes()-1] setminus ctxtPrimes.
+  //! A disjoint set of primes, used for key switching. See section 3.1.6
+  //! in the design document (key-switching). These too are "large"
+  //! single=precision primes, or bit-size close to NTL_SP_SIZE bits.
   IndexSet specialPrimes;
+
+  //! Yet a third set of primes, aimed at allowing modulus-switching with
+  //! higher resolution. These are somewhat smaller single-precision
+  //! primes, of size from NTL_SP_SIZE-20 to NTL_SP_SIZE-1.
+  IndexSet smallPrimes;
 
   /**
    * @brief The set of primes for the digits.
@@ -196,11 +194,7 @@ public:
   }
 
   //! @brief Find the next prime and add it to the chain
-  long AddPrime(long startFrom, long delta, bool special);
-
-  //! @brief Add an FFT prime to the chain, if it's not already there
-  //! returns the value of the prime
-  long AddFFTPrime(bool special); 
+  long AddPrime(long startFrom, long delta, IndexSet& s);
 
   //! @brief Test if the chain contains a "half-size" ciphertext prime
   // If it exists, the half-size prime must be the first cipehrtext prime.
@@ -314,6 +308,10 @@ inline double AddPrimesByNumber(FHEcontext& context, long nPrimes,
 {
   return AddManyPrimes(context, (double)nPrimes, true, special);
 }
+
+//! @brief Add small primes to get target resolution
+void addSmallPrimes(FHEcontext& context, long resolution=3);
+
 
 //! @brief Build modulus chain with nLevels levels, using c digits in key-switching
 void buildModChain(FHEcontext &context, long nLevels, long c=3,

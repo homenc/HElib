@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <cstring>
+#include <algorithm>
 #include "FHEContext.h"
 #include "EvalMap.h"
 #include "powerful.h"
@@ -157,7 +158,7 @@ void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
 }
 
 // Find the next prime and add it to the chain
-long FHEcontext::AddPrime(long initialP, long delta, bool special)
+long FHEcontext::AddPrime(long initialP, long delta, IndexSet &s)
 {
   long p = initialP;
   do { p += delta; } // delta could be positive or negative
@@ -167,19 +168,77 @@ long FHEcontext::AddPrime(long initialP, long delta, bool special)
 
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back( Cmodulus(zMStar, p, 0) );
-
-  if (special)
-    specialPrimes.insert(i);
-  else
-    ctxtPrimes.insert(i);
-
+  s.insert(i);
   return p;
 }
 
+//! @brief Add small primes to get target resolution
+void addSmallPrimes(FHEcontext& context, long resolution)
+{
+  long m = context.zMStar.getM();
+  if (m<=0 || m>(1<<20))// sanity checks
+    Error("AddManyPrimes: m undefined or larger than 2^20");
+  // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
+
+  if (resolution<1 || resolution>10) // set to default of 3-bit resolution
+    resolution = 3;
+
+  vector<long> sizes;
+  if (NTL_SP_NBITS>=60) { // make the smallest primes 40-bit primes
+    sizes.push_back(40);
+    sizes.push_back(40);
+  }
+  else if (NTL_SP_NBITS >=50) { // make the smallest primes 35-bit primes
+    sizes.push_back(35);
+    sizes.push_back(35);
+  }
+  else { // Make the smallest ones 22-bit primes
+    assert(NTL_SP_NBITS >=30);
+    sizes.push_back(22);
+    sizes.push_back(22);
+    sizes.push_back(22);
+  }
+
+  // use sizes 60-r, 60-2r, 60-4r,... downto the sizes above
+  for (long delta=resolution; NTL_SP_NBITS-delta>sizes[0]; delta*=2)
+    sizes.push_back(NTL_SP_NBITS-delta);
+
+  // Special cases: add also NTL_SP_NBITS-3*resolution,
+  // and for resolution=1 also NTL_SP_NBITS-11
+  if (NTL_SP_NBITS - 3*resolution > sizes[0])
+    sizes.push_back(NTL_SP_NBITS- 3*resolution);
+  if (resolution==1 && NTL_SP_NBITS-11 > sizes[0])
+    sizes.push_back(NTL_SP_NBITS- 11);
+
+  std::sort(sizes.begin(), sizes.end()); // order by size
+
+  // Look for primes equal to 1 mod m*2^e for large enough e
+  long e = context.zMStar.fftSizeNeeded();
+  if (NTL_SP_NBITS < e + NTL::NextPowerOfTwo(m))
+    e = 1;  // Sanity check: m*2^e must fit in a single-precision integer
+  long m2e = m*(1L<<e);      // m times 2^e
+
+  for (long sz : sizes) {
+    long top = 1L << sz;
+    long initial = top - (top % m2e) +1; // Try p= 1 mod m*2^e
+
+    // ensure initial >= top, since addPrime will subtract m2e
+    if (initial <= top) initial += m2e;
+    if (context.AddPrime(initial, m2e, context.smallPrimes)==0) {
+      long twoM = m*2;   // If failed, try again with e=1
+      initial = top - (top % twoM) +1;
+      if (initial <= top) initial += twoM;
+      if (context.AddPrime(initial, twoM, context.smallPrimes)==0)
+        throw(std::logic_error("addSmallPrimes: failed to find "
+              +to_string(sz)+"-bit prime =1 mod "+to_string(2*m)));
+    }
+  }
+}
+
+/********** Not used, FFT-primes are handled in CModulus.cpp *********
 long FHEcontext::AddFFTPrime(bool special)
 {
   zz_pBak bak; bak.save(); // Backup the NTL context
-
   do {
     zz_p::FFTInit(fftPrimeCount);
     fftPrimeCount++;
@@ -187,16 +246,15 @@ long FHEcontext::AddFFTPrime(bool special)
 
   long i = moduli.size(); // The index of the new prime in the list
   long p = zz_p::modulus();
-
   moduli.push_back( Cmodulus(zMStar, 0, 1) ); // a dummy Cmodulus object
 
   if (special)
     specialPrimes.insert(i);
   else
     ctxtPrimes.insert(i);
-
   return p;
 }
+*********************************************************************/
 
 // Adds several primes to the chain. If byNumber=true then totalSize specifies
 // the number of primes to add. If byNumber=false then totalSize specifies the
@@ -246,7 +304,8 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
 
   // FIXME: The last prime could sometimes be slightly smaller
   while (addedSoFar < totalSize) {
-    if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
+    if ((p = context.AddPrime(p,-twoM,               // found a prime
+                     special? context.specialPrimes: context.ctxtPrimes))) {
       sizeLogSoFar += log((double)p);
       addedSoFar = byNumber? (addedSoFar+1.0) : sizeLogSoFar;
     }
@@ -306,7 +365,7 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts,
     twoM *= 2; // divisible by 2^k * m  for a larger k
 
   bound = bound - (bound % twoM) +1; // = 1 mod 2m
-  long q0 = context.AddPrime(bound, twoM, false); 
+  long q0 = context.AddPrime(bound, twoM, context.ctxtPrimes); 
   // add next prime to chain
   
   assert(q0 != 0);
