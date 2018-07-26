@@ -23,7 +23,7 @@ NTL_CLIENT
 
 long thinRecrypt_initial_level=0;
 
-#define PRINT_LEVELS
+//#define PRINT_LEVELS
 
 
 /************* Some local functions *************/
@@ -138,6 +138,8 @@ bool RecryptData::operator==(const RecryptData& other) const
 
 
 
+long fhe_disable_fat_boot = 0;
+
 // The main method
 void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 		       long t, bool consFlag, bool build_cache_, bool minimal)
@@ -172,6 +174,8 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
          // Polynomial defaults to F0, PAlgebraMod explicitly given
 
   p2dConv = new PowerfulDCRT(context, mvec);
+
+  if (fhe_disable_fat_boot) return;
 
   // Initialize the linear polynomial for unpacking the slots
   zz_pBak bak; bak.save(); ea->getAlMod().restoreContext();
@@ -752,7 +756,7 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 // Extract digits from thinly packed slots
 
 
-long fhe_disable_chen_han = 0;
+long fhe_force_chen_han = 0;
 
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 {
@@ -767,7 +771,42 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   long p2r = power_long(p,r);
   long topHigh = botHigh + r-1;
 
-  if (r > 1 && !fhe_disable_chen_han) {
+
+  // degree Chen/Han technique is p^{bot-1}(p-1)r
+  // degree of basic technique is p^{bot-1}p^r, 
+  //     or p^{bot-1}p^{r-1} if p==2, r > 1, and bot+r > 2
+
+  bool use_chen_han = false;
+  if (r > 1) {
+    double chen_han_cost = log(p-1) + log(r);
+    double basic_cost;
+    if (p == 2 && botHigh + r > 2)
+       basic_cost = (r-1)*log(p);
+    else
+       basic_cost = r*log(p);
+
+    //cerr << "*** basic: " << basic_cost << "\n";
+    //cerr << "*** chen/han: " << chen_han_cost << "\n";
+
+
+    double thresh = 1.5;
+    if (p == 2) thresh = 1.75;
+    // increasing thresh makes chen_han less likely to be chosen.
+    // For p == 2, the basic algorithm is just squaring, 
+    // and so is a bit cheaper, so we raise thresh a bit.
+    // This is all a bit heuristic.
+
+    if (basic_cost > thresh*chen_han_cost)
+      use_chen_han = true;
+  }
+
+  if (fhe_force_chen_han > 0)
+    use_chen_han = true;
+  else if (fhe_force_chen_han < 0)
+    use_chen_han = false;
+
+
+  if (use_chen_han) {
     // use Chen and Han technique
 
     extendExtractDigits(scratch, unpacked, botHigh, r);

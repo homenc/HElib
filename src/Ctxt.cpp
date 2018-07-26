@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/BasicThreadPool.h>
+
 #include "binio.h"
 #include "timing.h"
 #include "FHEContext.h"
@@ -274,7 +275,8 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   return *this;
 }
 
-// explicitly multiply intFactor by e
+// explicitly multiply intFactor by e, which should be
+// in the interval [0, ptxtSpace)
 void Ctxt::mulIntFactor(long e)
 {
   if (e==1) return; // nothing to do
@@ -901,6 +903,12 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
          << small.ratFactor<<','<< big.ratFactor<<"]\n";
 }
 
+static xdouble 
+NoiseNorm(xdouble noise1, xdouble noise2, long e1, long e2, long p)
+{
+  return noise1*fsquare(balRem(e1, p)) + noise2*fsquare(balRem(e2, p));
+}
+
 // Add/subtract another ciphertxt (depending on the negative flag)
 void Ctxt::addCtxt(const Ctxt& other, bool negative)
 {
@@ -956,7 +964,264 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace);
     mulIntFactor(ratio);
   } 
-#else // FIXME: The part upto endif should go in a separate function?
+#endif
+
+#if 1
+  long e1 = 1, e2 = 1;
+
+
+  if (intFactor != other_pt->intFactor) { // harmonize factors
+    long f1 = intFactor;
+    long f2 = other_pt->intFactor;
+    // set e1, e2 so that e1*f1 == e2*f2 (mod ptxtSpace),
+    // minimizing the increase in noise.
+
+    long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace); // f2/f1
+    // so equivalently, we want e1 = e2*ratio (mod ptxtSpace)
+
+    xdouble noise1 = noiseVar;
+    xdouble noise2 = other_pt->noiseVar;
+
+    // now we run the extended Euclidean on (ptxtSpace, ratio)
+    // to generate pairs (r_i, t_i) such that r_i = t_i*ratio (mod ptxtSpace).
+
+    long r0 = ptxtSpace, t0 = 0;
+    long r1 = ratio,     t1 = 1;
+
+    long e1_best = r1,   e2_best = t1;
+    xdouble noise_best = NoiseNorm(noise1, noise2, e1_best, e2_best, ptxtSpace);
+
+    long p = context.zMStar.getP();
+
+    while (r1 != 0) {
+       long q = r0/r1;
+       long r2 = r0 % r1;
+       long t2 = t0 - t1*q;
+       r0 = r1; r1 = r2;
+       t0 = t1; t1 = t2;
+
+       long e1_try = mcMod(r1, ptxtSpace), e2_try = mcMod(t1, ptxtSpace);
+       if (e1_try % p != 0) {
+	 xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
+	 if (noise_try < noise_best) {
+	    e1_best = e1_try;
+	    e2_best = e2_try;
+	    noise_best = noise_try;
+	 }
+       }
+    }
+
+    e1 = e1_best;
+    e2 = e2_best;
+
+    assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
+    assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
+  } 
+
+  if (e2 != 1) {
+    if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
+    tmp.mulIntFactor(e2);
+  }
+  if (e1 != 1) mulIntFactor(e1);
+#endif 
+
+
+#if 0
+  long e1 = 1, e2 = 1;
+  // set e1, e2 so that e1*f1 == e2*f2 (mod ptxtSpace),
+  // minimizing the increase in noise.
+
+
+  if (intFactor != other_pt->intFactor) { // harmonize factors
+    long f1 = intFactor;
+    long f2 = other_pt->intFactor;
+
+    // we just compare two choices for (e1, e1):
+    // (f2/f1, 1) and (1, f1/f2)
+
+    long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace); // f2/f1
+
+    xdouble noise1 = noiseVar;
+    xdouble noise2 = other_pt->noiseVar;
+
+    xdouble noise_min = NoiseNorm(noise1, noise2, ratio, 1, ptxtSpace);
+
+    e1 = ratio; 
+    // Initial choise is e1 == ratio and e2 == 1.
+    // Now look try e1 == 1 and e2 == ratio^{-1}
+
+    long ee2 = InvMod(ratio, ptxtSpace);
+    long ee1 = 1;
+
+    xdouble noise_est = NoiseNorm(noise1, noise2, ee1, ee2, ptxtSpace);
+
+    if (noise_est < noise_min) {
+      e1 = ee1;
+      e2 = ee2;
+      noise_min = noise_est;
+    }
+
+    // now try runnig extended Euclid on (ptxtSpace, ratio)
+
+    {
+      long r0 = ptxtSpace, t0 = 0;
+      long r1 = ratio,     t1 = 1;
+
+      long e1_best = r1,   e2_best = t1;
+      xdouble noise_best = NoiseNorm(noise1, noise2, e1_best, e2_best, ptxtSpace);
+
+      long p = context.zMStar.getP();
+
+      while (r1 != 0) {
+         long q = r0/r1;
+         long r2 = r0 % r1;
+         long t2 = t0 - t1*q;
+         r0 = r1; r1 = r2;
+         t0 = t1; t1 = t2;
+
+         long e1_try = mcMod(r1, ptxtSpace), e2_try = mcMod(t1, ptxtSpace);
+         if (e1_try % p != 0) {
+	   xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
+	   if (noise_try < noise_best) {
+              e1_best = e1_try;
+              e2_best = e2_try;
+              noise_best = noise_try;
+           }
+         }
+      }
+
+      assert(MulMod(e1_best, f1, ptxtSpace) == MulMod(e2_best, f2, ptxtSpace));
+      assert(GCD(e1_best, ptxtSpace) == 1 && GCD(e2_best, ptxtSpace) == 1);
+
+      if (noise_best < noise_min) {
+        cerr << ">>>> improved: " << (noise_min/noise_best) << "\n";
+        e1 = e1_best;
+        e2 = e2_best;
+        noise_min = noise_best;
+      }
+      else {
+         cerr << "|";
+      }
+    }
+
+    if (noise1 > 1 && noise2 > 1) {
+      FHE_NTIMER_START(LLL_PROCEDURE);
+      // experimental version: try using LLL to find a close-to-optimal
+      // solution
+
+      xdouble sqrt_noise1 = sqrt(noise1);
+      xdouble sqrt_noise2 = sqrt(noise2);
+
+      // we need to compute integers u1, u2 which are 
+      // good approximations to c*sqrt_noise1 and c*sqrt_noise2
+      // for some scaling factor c.  The approximations
+      // should have a relative error << 1/ptxtSpace^2 to ensure
+      // that LLL gives us something close to optimal
+
+      long bits_sqrt_noise1 = long(log(sqrt_noise1)/log(2));
+      long bits_sqrt_noise2 = long(log(sqrt_noise2)/log(2));
+
+      long min_bits = min(bits_sqrt_noise1, bits_sqrt_noise2);
+
+      long precision = long(log(fsquare(ptxtSpace))/log(2)) + 16;
+
+      long scaling_bits = precision-min_bits;
+
+      xdouble scaling_factor = power2_xdouble(scaling_bits);
+      // this is scaling factor above, c=2^{scaling_bits}
+
+      ZZ u1, u2;
+      conv(u1, sqrt_noise1*scaling_factor);
+      conv(u2, sqrt_noise2*scaling_factor);
+
+      // now we construct a 3x3 matrix 
+      //
+      //       /  f1*Delta   u1    0  \
+      //   B = | -f2*Delta    0   u2  |
+      //       \  p^r*Delta   0    0  /
+      //
+      // so that v = (e1, e2, z)*B = ((e1*f1-e2*f2+z*p^r)*Delta, e1*u1, e2*u2) 
+      //
+      // We then run LLL to find a short vector in the lattice spanned
+      // by the rows of B
+      //
+      // If we choose Delta >> p^r*(u1+u2), then if the first entry is
+      // non-zero, then length(v) >> sqrt(p^{2r}*u1+p^{2r}*u2)
+      //                          >= length(shortest vector in lattice)
+
+      ZZ Delta = ((u1+u2)*ZZ(ptxtSpace)) << 8; 
+
+      Mat<ZZ> B, U;
+      ZZ det2;
+
+      B.SetDims(3, 3);
+      B[0][0] = f1*Delta;        B[0][1] = u1;    B[0][2] = 0;
+      B[1][0] = -f2*Delta;       B[1][1] = 0;     B[1][2] = u2;
+      B[2][0] = ptxtSpace*Delta; B[2][1] = 0;     B[2][2] = 0;
+
+      LLL(det2, B, U); 
+
+      assert(B[0][0] == 0);
+
+      long ex1, ex2;
+
+      bool good = false;
+
+#if 0
+      if (abs(U[0][0]) < ptxtSpace && abs(U[0][1]) < ptxtSpace) {
+	conv(ex1, U[0][0]);
+	conv(ex2, U[0][1]);
+	ee1 = mcMod(ex1, ptxtSpace);
+	ee2 = mcMod(ex2, ptxtSpace);
+        if (GCD(ee1, ptxtSpace) == 1 && GCD(ee2, ptxtSpace) == 1) {
+          good = true;
+          cerr << "+++ good " << precision << "\n";;
+          assert(MulMod(ee1, f1, ptxtSpace) == MulMod(ee2, f2, ptxtSpace));
+        }
+        else {
+          cerr << "+++ bad gcd\n";
+        }
+      }
+      else {
+         cerr << "+++ too big " << precision << "\n";
+      }
+#else
+      ee1 = rem(U[0][0], ptxtSpace);
+      ee2 = rem(U[0][1], ptxtSpace);
+
+      if (GCD(ee1, ptxtSpace) == 1 && GCD(ee2, ptxtSpace) == 1) {
+         //cerr << "+++ good " << (noise1/noise2) << "\n";
+         good = true;
+      }
+      else {
+         //cerr << "+++ bad " << (noise1/noise2) << "\n";
+      }
+#endif
+
+      if (good) {
+        noise_est = NoiseNorm(noise1, noise2, ee1, ee2, ptxtSpace);
+
+	if (noise_est < noise_min) {
+	  e1 = ee1;
+	  e2 = ee2;
+          cerr << "****>>>> improved: " << (noise_min/noise_est) << "\n";
+	  noise_min = noise_est;
+	}
+      }
+
+    }
+  } 
+
+   
+  if (e2 != 1) {
+    if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
+    tmp.mulIntFactor(e2);
+  }
+  if (e1 != 1) mulIntFactor(e1);
+#endif 
+
+#if 0
+  // THIS IS TOO SLOW
   long e1 = 1, e2 = 1;
 
   if (intFactor != other_pt->intFactor) { // harmonize factors
@@ -974,6 +1239,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     // Initial choise is e1 == ratio and e2 == 1.
     // Now look for better choices
 
+    {FHE_NTIMER_START(smart_add);
     for (long ee2 = 2; ee2 < ptxtSpace; ee2++) {
       if (GCD(ee2, ptxtSpace) == 1) {
 	long ee1 = MulMod(ee2, ratio, ptxtSpace);
@@ -987,6 +1253,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
 	  e2 = ee2;
 	}
       }
+    }
     }
   } 
   if (e2 != 1) {
@@ -1035,6 +1302,7 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
     }
     else {
       long q = rem(context.productOfPrimes(c1.getPrimeSet()),ptxtSp);
+      //if (q > 1) cerr << "(*)";
       intFactor = MulMod(c1.intFactor, c2.intFactor, ptxtSp);
       intFactor = MulMod(intFactor, q, ptxtSp);
     }
@@ -1086,6 +1354,13 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   ratFactor = c1.ratFactor * c2.ratFactor * f;
 }
 
+
+void bringToBaseLevel(Ctxt& ctxt)
+{
+   if (ctxt.isEmpty()) return;
+   long lvl = ctxt.findBaseLevel();
+   ctxt.modDownToLevel(4); // FIXME: should be lvl
+}
 
 Ctxt& Ctxt::operator*=(const Ctxt& other)
 {

@@ -81,11 +81,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
   Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
   digits.resize(r, tmp);      // allocate space
 
-  long delta = (p==2 && r>2)? 2 : 1;
-  // for the ptxt hack (see below) this is necessary to ensure that
-  // the "free bit" hack in extractDigitsThin works
-
-#define VIEW_LEVELS
+//#define VIEW_LEVELS
 
 #ifdef VIEW_LEVELS
   fprintf(stderr, "***\n");
@@ -93,13 +89,6 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
   for (long i=0; i<r; i++) {
     tmp = c;
     for (long j=0; j<i; j++) {
-
-      if (p > 2) {
-         digits[j].hackPtxtSpace(power_long(p,i-j+delta));
-	 // perform ptxt hack for odd p...seems to reduce the noise.
-	 // for p==2, it doesn't seem to help, and sometimes seems
-	 // to make things worse
-      }
 
       if (p==2) digits[j].square();
       else if (p==3) digits[j].cube();

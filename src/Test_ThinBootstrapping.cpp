@@ -23,7 +23,7 @@ static long mValues[][14] = {
   {  2, 12800, 17425, 40, 41, 425,  0,  5951,  8078,    0, 40, -8,   0, 100}, // m=(5^2)*{17}*41 m/phim(m)=1.36 C=93  D=3 E=3
   {  2, 15004, 15709, 22, 23, 683,  0,  4099, 13663,    0, 22, 31,   0, 100}, // m=23*(683) m/phim(m)=1.04      C=73  D=2 E=1
   {  2, 16384, 21845, 16, 17,   5,257,  8996, 17477, 21591, 16, 4, -16,1600}, // m=5*17*(257) :-( m/phim(m)=1.33 C=65 D=4 E=4
-  {  2, 18000, 18631, 25, 31, 601,  0, 15627,  1334,    0, 30, 24,   0, 050}, // m=31*(601) m/phim(m)=1.03      C=77  D=2 E=0
+  {  2, 18000, 18631, 25, 31, 601,  0, 15627,  1334,    0, 30, 24,   0, 100}, // m=31*(601) m/phim(m)=1.03      C=77  D=2 E=0
   {  2, 18816, 24295, 28, 43, 565,  0, 16386, 16427,    0, 42, 16,   0, 100}, // m=(5)*43*{113} m/phim(m)=1.29  C=84  D=2 E=2
   {  2, 21168, 27305, 28, 43, 635,  0, 10796, 26059,    0, 42, 18,   0, 100}, // m=(5)*43*{127} m/phim(m)=1.28  C=86  D=2 E=2
   {  2, 23040, 28679, 24, 17,  7, 241, 15184,  4098,28204, 16,  6, -10,1000}, // m=7*17*(241) m/phim(m)=1.24    C=63  D=4 E=3
@@ -219,8 +219,8 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 
 
 extern long fhe_disable_intFactor;
-extern long fhe_disable_chen_han;
-
+extern long fhe_disable_fat_boot;
+extern long fhe_force_chen_han;
 
 /********************************************************************
  ********************************************************************/
@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
   amap.arg("init_level", thinRecrypt_initial_level);
 
   amap.arg("disable_intFactor", fhe_disable_intFactor);
-  amap.arg("disable_chen_han", fhe_disable_chen_han);
+  amap.arg("chen_han", fhe_force_chen_han);
 
 
   amap.parse(argc, argv);
@@ -272,6 +272,9 @@ int main(int argc, char *argv[])
     SetSeed(ZZ(seed));
 
   SetNumThreads(nthreads);
+
+  fhe_disable_fat_boot = 1;
+  // save time...disable some fat boot precomputation
 
 
   if (B<=0) B=FHE_pSize;
