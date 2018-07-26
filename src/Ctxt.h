@@ -315,7 +315,8 @@ class Ctxt {
   // different public keys.
   Ctxt& privateAssign(const Ctxt& other);
 
-  // explicitly multiply intFactor by e
+  // explicitly multiply intFactor by e, which should be
+  // in the interval [0, ptxtSpace)
   void mulIntFactor(long e);
  
 public:
@@ -691,5 +692,8 @@ inline void Ctxt::extractBits(std::vector<Ctxt>& bits, long nBits2extract)
 
 void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long e);
 // implemented in extractDigits.cpp
+
+//! mod down to base level
+void bringToBaseLevel(Ctxt& ctxt);
 
 #endif // ifndef _Ctxt_H_

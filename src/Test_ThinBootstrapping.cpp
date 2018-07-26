@@ -219,8 +219,8 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 
 
 extern long fhe_disable_intFactor;
-extern long fhe_disable_chen_han;
-
+extern long fhe_disable_fat_boot;
+extern long fhe_force_chen_han;
 
 /********************************************************************
  ********************************************************************/
@@ -263,7 +263,7 @@ int main(int argc, char *argv[])
   amap.arg("init_level", thinRecrypt_initial_level);
 
   amap.arg("disable_intFactor", fhe_disable_intFactor);
-  amap.arg("disable_chen_han", fhe_disable_chen_han);
+  amap.arg("chen_han", fhe_force_chen_han);
 
 
   amap.parse(argc, argv);
@@ -272,6 +272,9 @@ int main(int argc, char *argv[])
     SetSeed(ZZ(seed));
 
   SetNumThreads(nthreads);
+
+  fhe_disable_fat_boot = 1;
+  // save time...disable some fat boot precomputation
 
 
   if (B<=0) B=FHE_pSize;

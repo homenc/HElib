@@ -276,8 +276,7 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts,
     if (willBeBootstrappable) { // bigger p^e for bootstrapping
       double alpha; long e, ePrime;
       RecryptData::setAlphaE(alpha,e,ePrime, context);
-      p2e = NTL::power_long(p, e-ePrime);
-      if (p2e < p2r) p2e = p2r; // sanity check
+      p2e *= NTL::power_long(p, e-ePrime);
     }
     double dBound = std::max<double>(boundFreshNoise(m, phim, stdev),
                                      boundRoundingNoise(m, phim, p2e));
