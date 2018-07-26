@@ -97,12 +97,29 @@ void PAlgebra::printout() const
            << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
 	   << OrderOf(i) << endl;
   }
-  if (cube.getSize()<100) {
+  if (cube.getSize()<40) {
     cout << "  T = [";
     for (i=0; i<T.size(); i++) cout << T[i] << " ";
     cout << "]\n";
   }
 }
+
+void PAlgebra::printAll() const
+{
+  printout();
+  if (cube.getSize()<40) {
+    cout << "  Tidx = [";
+    for (auto& x: Tidx) cout << x << " ";
+    cout << "]\n";
+    cout << "  zmsIdx = [";
+    for (auto& x: zmsIdx) cout << x << " ";
+    cout << "]\n";
+    cout << "  zmsRep = [";
+    for (auto& x: zmsRep) cout << x << " ";
+    cout << "]\n";
+  }
+}
+
 
 
 PAlgebra::PAlgebra(long mm, long pp,

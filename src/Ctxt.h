@@ -376,10 +376,10 @@ public:
   void addConstant(const NTL::ZZ& c);
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size=NTL::xdouble(-1.0),
-                       NTL::ZZ factor=NTL::ZZ::zero());
+                       NTL::xdouble factor=NTL::xdouble(0.0));
   void addConstantCKKS(const NTL::ZZX& poly,
                        NTL::xdouble size=NTL::xdouble(-1.0),
-                       NTL::ZZ factor=NTL::ZZ::zero());
+                       NTL::xdouble factor=NTL::xdouble(0.0));
   void addConstantCKKS(const NTL::ZZ& c); // note: c will be scaled up
 
   //! Multiply-by-constant. If the size is not given, we use
