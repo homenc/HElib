@@ -15,11 +15,11 @@
  * @file FHEContext.h
  * @brief Keeps the parameters of an instance of the cryptosystem
  **/
-
 #include "PAlgebra.h"
 #include "CModulus.h"
 #include "IndexSet.h"
 #include "recryption.h"
+#include "primeChain.h"
 
 #include <NTL/Lazy.h>
 
@@ -90,6 +90,11 @@ public:
   //! higher resolution. These are somewhat smaller single-precision
   //! primes, of size from NTL_SP_SIZE-20 to NTL_SP_SIZE-1.
   IndexSet smallPrimes;
+
+  //! A helper table to map required modulo-sizes to primeSets
+  ModuliSizes modSizes;
+  void setModSizeTable()
+       { modSizes.init(moduli, ctxtPrimes, smallPrimes); }
 
   /**
    * @brief The set of primes for the digits.
