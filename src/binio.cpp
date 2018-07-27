@@ -80,27 +80,32 @@ void read_ntl_vec_long(istream& str, vec_long& vl)
   }
 }
 
+void write_raw_double(ostream& str, const double d)
+{
+  const long *pd = reinterpret_cast<const long*>(&d);
+  write_raw_int(str, *pd);
+}
+
+double read_raw_double(istream& str)
+{
+  long d = read_raw_int(str);
+  double* pd = reinterpret_cast<double*>(&d);
+  return *pd;
+}
 
 void write_raw_xdouble(ostream& str, const xdouble xd)
 {
-  
   double m = xd.mantissa();
   long e = xd.exponent();
-
-  long *pm = reinterpret_cast<long*>(&m); 
-  write_raw_int(str, *pm);
+  write_raw_double(str, m);
   write_raw_int(str, e);
 }
 
 xdouble read_raw_xdouble(istream& str)
 {
-
-  long m = read_raw_int(str);
+  double m = read_raw_double(str);
   long e = read_raw_int(str);
-  double* pm = reinterpret_cast<double*>(&m);
-
-  return xdouble(*pm,e);
-
+  return xdouble(m,e);
 }
 
 void write_raw_ZZ(ostream& str, const ZZ& zz)

@@ -55,6 +55,9 @@ void read_ntl_vec_long(std::istream& str, NTL::vec_long& vl);
 long read_raw_int(std::istream& str, long intSize=BINIO_64BIT);
 void write_raw_int(std::ostream& str, long num, long intSize=BINIO_64BIT);
 
+void write_raw_double(std::ostream& str, const double d);
+double read_raw_double(std::istream& str);
+
 void write_raw_xdouble(std::ostream& str, const NTL::xdouble xd);
 NTL::xdouble read_raw_xdouble(std::istream& str);
 
