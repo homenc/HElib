@@ -25,7 +25,7 @@ INC_GMP=
 LIB_GMP=-L/usr/local/lib
 
 #
-CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
+CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DNO_HALF_SIZE_PRIME -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
 #CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -DFFT_NATIVE -fmax-errors=2
 
 # NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
