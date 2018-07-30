@@ -324,6 +324,7 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
 
   if (empty(getIndexSet())) {   // special case for empty DCRT
     map.insert(s1); // just add new rows to the map and return
+    SetZero();
     return;
   }
   ZZX poly;
@@ -345,6 +346,7 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 
   if (empty(getIndexSet())) {   // special case for empty DCRT
     map.insert(s1); // just add new rows to the map and return
+    SetZero();
     return 0.0;
   }
   // compute factor to scale existing rows

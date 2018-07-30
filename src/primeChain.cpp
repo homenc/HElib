@@ -103,6 +103,7 @@ void ModuliSizes::init(const std::vector<Cmodulus>& chain,
 IndexSet ModuliSizes::getSet4Size(double low, double high,
                                   const IndexSet& fromSet)
 {
+  high += 0.00001; // to compensate for rounding errors
   // lower_bound returns an iterator to the first element with size>=low
   auto it = std::lower_bound(sizes.begin(), sizes.end(),
                              Entry(low, IndexSet::emptySet()));
@@ -113,7 +114,7 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
   for (long i=idx; i<lsize(sizes) && sizes[i].first <= high; i++) {
     long setDiffSize = empty(fromSet)?
       card(sizes[i].second) : card(fromSet / sizes[i].second);
-    if (setDiffSize < bestCost) {
+    if (setDiffSize <= bestCost) {
       bestOption = i;
       bestCost = setDiffSize;
     }
@@ -144,6 +145,7 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
 IndexSet ModuliSizes::getSet4Size(double low, double high,
                                   const IndexSet& from1, const IndexSet& from2)
 {
+  high += 0.00001; // to compensate for rounding errors
   // lower_bound returns an iterator to the first element with size>=low
   auto it = std::lower_bound(sizes.begin(), sizes.end(),
                              Entry(low, IndexSet::emptySet()));
@@ -154,7 +156,7 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
   for (long i=idx; i<lsize(sizes) && sizes[i].first <= high; i++) {
     long setDiffSize =
       card(from1 / sizes[i].second) + card(from2 / sizes[i].second);
-    if (setDiffSize < bestCost) {
+    if (setDiffSize <= bestCost) {
       bestOption = i;
       bestCost = setDiffSize;
     }
