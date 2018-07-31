@@ -21,17 +21,15 @@ RUN wget ftp://ftp.gnu.org/gnu/gmp/gmp-6.1.2.tar.lz && \
 	make install
 
 # Download and install NTL (threadsafe)
-RUN wget http://www.shoup.net/ntl/ntl-11.2.1.tar.gz && \
-	tar -xf ntl-11.2.1.tar.gz && \
-	cd ntl-11.2.0/src && \
+RUN wget http://www.shoup.net/ntl/ntl-10.5.0.tar.gz && \
+	tar -xf ntl-10.5.0.tar.gz && \
+	cd ntl-10.5.0/src && \
 	./configure NTL_GMP_LIP=on NTL_THREADS=on NTL_THREAD_BOOST=on NTL_EXCEPTIONS=on NTL_STD_CXX11=on && \
 	make && \
 	make install
 
 # Download and install HElib (threadsafe, with debug info)
-RUN git clone https://github.com/AlexanderViand/HElib.git HElib && \
+RUN git clone https://github.com/shaih/HElib.git && \
 	cd HElib/src && \
-	git checkout working &&\
-	cmake . -DCMAKE_BUILD_TYPE=Debug && \
-    make install_fhe
+	make
 
