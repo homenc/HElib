@@ -17,12 +17,12 @@ ARFLAGS=rv
 GMP=-lgmp
 NTL=-lntl
 ARMA=-larmadillo
-# INC and LIB changed to when GMP and/or NTL not in default locations
-INC_NTL=
-LIB_NTL=-L/usr/local/lib
 
-INC_GMP=
-LIB_GMP=-L/usr/local/lib
+# INC and LIB changed to when GMP and/or NTL not in default locations
+# Put these definitions in the file local-defs, which will be included
+# if found.  ====> PUT ONLY *ABSOLUTE PATHS* IN local-defs <====
+# See local-def.example for an example.
+include $(wildcard local-defs)
 
 #
 CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DNO_HALF_SIZE_PRIME -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
