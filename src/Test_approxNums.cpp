@@ -105,7 +105,7 @@ try{
 
 } 
 catch (exception& e) {
-  e.what();
+  cerr << e.what() << endl;
   cerr << "***Major FAIL***" << endl;  
 }
 
