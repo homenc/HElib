@@ -85,6 +85,7 @@ check:
 	$(MAKE) check_binaryCompare
 	$(MAKE) check_tableLookup
 	$(MAKE) check_Bin_IO
+	$(MAKE) check_approxNums
 
 check_General: Test_General_x 
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
@@ -136,6 +137,8 @@ check_Bin_IO: Test_Bin_IO_x
 	./Test_Bin_IO_x p=2 r=2 m=127
 	./Test_Bin_IO_x p=257 m=127
 
+check_approxNums: Test_approxNums_x
+	./Test_approxNums_x m=1024 r=8 ep=0.01
 
 check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_ThinEvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_ThinBootstrapping_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x Test_Bin_IO_x Test_approxNums_x
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1

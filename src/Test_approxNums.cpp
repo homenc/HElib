@@ -20,7 +20,6 @@
 
 NTL_CLIENT
 
-
 double calcMaxDiff(const vector<cx_double>& v1, 
                    const vector<cx_double>& v2){
 
@@ -70,44 +69,48 @@ int main(int argc, char *argv[])
   long r=8;
   long L=5;
   double epsilon=0.01; // Accepted accuracy
+  bool verbose=false;
 
   amap.arg("m", m, "Cyclotomic index");
   amap.note("e.g., m=1024, m=2047");
   amap.arg("r", r, "Bits of precision");
   amap.arg("L", L, "Number of levels");
   amap.arg("ep", epsilon, "Accepted accuracy");
+  amap.arg("verbose", verbose, "more printouts");
 
   amap.parse(argc, argv);
 
-try{
+  try{
 
-  // FHE setup keys, context, SKMs, etc
+    // FHE setup keys, context, SKMs, etc
 
-  FHEcontext context(m, /*p=*/-1, r);
-  buildModChain(context, L, /*c=*/2);
+    FHEcontext context(m, /*p=*/-1, r);
+    buildModChain(context, L, /*c=*/2);
 
-  FHESecKey secretKey(context);
-  secretKey.GenSecKey(); // A +-1/0 secret key
-  addSome1DMatrices(secretKey); // compute key-switching matrices
+    FHESecKey secretKey(context);
+    secretKey.GenSecKey(); // A +-1/0 secret key
+    addSome1DMatrices(secretKey); // compute key-switching matrices
 
-  const FHEPubKey publicKey = secretKey;
-  const EncryptedArrayCx& ea = context.ea->getCx();
-  
-  ea.getPAlgebra().printout();
-  cout << "r = " << ea.getContext().alMod.getR() << endl;
-  cout << "ctxtPrimes="<<context.ctxtPrimes
-       << ", specialPrimes="<<context.specialPrimes<<endl<<endl;
+    const FHEPubKey publicKey = secretKey;
+    const EncryptedArrayCx& ea = context.ea->getCx();
 
-  // Run the tests.
-  testBasicArith(publicKey, secretKey, ea, epsilon);
-  testComplexArith(publicKey, secretKey, ea, epsilon);
-  testRotsNShifts(publicKey, secretKey, ea, epsilon);
+    if (verbose) {
+      ea.getPAlgebra().printout();
+      cout << "r = " << ea.getContext().alMod.getR() << endl;
+      cout << "ctxtPrimes="<<context.ctxtPrimes
+           << ", specialPrimes="<<context.specialPrimes<<endl<<endl;
+    }
 
-} 
-catch (exception& e) {
-  cerr << e.what() << endl;
-  cerr << "***Major FAIL***" << endl;  
-}
+    // Run the tests.
+    testBasicArith(publicKey, secretKey, ea, epsilon);
+    testComplexArith(publicKey, secretKey, ea, epsilon);
+    testRotsNShifts(publicKey, secretKey, ea, epsilon);
+
+  } 
+  catch (exception& e) {
+    cerr << e.what() << endl;
+    cerr << "***Major FAIL***" << endl;  
+  }
 
   return 0;
 }
@@ -118,7 +121,7 @@ void testBasicArith(const FHEPubKey& publicKey,
                     const EncryptedArrayCx& ea, double epsilon)
 {
   
-  cout << "Test - Arithmetic\n\n"; 
+  cout << "Test Arithmetic "; 
   // Test objects
 
   Ctxt c1(publicKey), c2(publicKey), c3(publicKey);
@@ -165,13 +168,15 @@ void testBasicArith(const FHEPubKey& publicKey,
 
   // Diff between approxNums HE scheme and plaintext floating  
   ea.decrypt(c1, secretKey, vd);
+#ifdef DEBUG_PRINTOUT
   printVec(cout<<"res=", vd, 10)<<endl;
   printVec(cout<<"vec=", vd1, 10)<<endl;
-  cout << "  max |res-vec|_{infty}="<< calcMaxDiff(vd, vd1) << endl;
+#endif
+  cout << "(max |res-vec|_{infty}="<< calcMaxDiff(vd, vd1) << "): ";
 
   cx_equals(vd, vd1, epsilon)?
-    cout << "PASS\n"<< endl:
-    cout << "max diff larger than epsilon.\nFAIL\n" << endl;
+    cout << "PASS\n":
+    cout << "max diff larger than epsilon.\nFAIL\n";
 
 }
 
@@ -192,24 +197,24 @@ void testComplexArith(const FHEPubKey& publicKey,
   ea.encrypt(c1, publicKey, vd1);
   ea.encrypt(c2, publicKey, vd2);
 
-  cout << "Test - Conjugate\n\n";
-  printVec(cout<<"vd1=", vd1, 10)<<endl;
+  cout << "Test Conjugate: ";
   for_each(vd1.begin(), vd1.end(), [](cx_double& d){d=std::conj(d);});
-  printVec(cout<<"vd1=", vd1, 10)<<endl;
   c1.complexConj();  
   ea.decrypt(c1, secretKey, vd);
+#ifdef DEBUG_PRINTOUT
+  printVec(cout<<"vd1=", vd1, 10)<<endl;
   printVec(cout<<"res=", vd, 10)<<endl;
-
+#endif
   cx_equals(vd, vd1, epsilon)?
-    cout << "PASS\n"<< endl:
-    cout << "max diff larger than epsilon.\nFAIL\n" << endl;
+    cout << "PASS\n":
+    cout << "max diff larger than epsilon.\nFAIL\n";
 
   // Test that real and imaginary parts are actually extracted.
   Ctxt realCtxt(c2), imCtxt(c2);
   vector<cx_double> realParts(vd2), real_dec;
   vector<cx_double> imParts(vd2), im_dec;
 
-  cout << "Test - Real and Im parts\n\n";
+  cout << "Test Real and Im parts: ";
   for_each(realParts.begin(), realParts.end(), [](cx_double& d){d=std::real(d);});
   for_each(imParts.begin(), imParts.end(), [](cx_double& d){d=std::imag(d);});
 
@@ -219,15 +224,16 @@ void testComplexArith(const FHEPubKey& publicKey,
   ea.extractImPart(imCtxt);
   ea.decrypt(imCtxt, secretKey, im_dec);
 
+#ifdef DEBUG_PRINTOUT
   printVec(cout<<"vd2=", vd2, 10)<<endl;
   printVec(cout<<"real=", realParts, 10)<<endl;
   printVec(cout<<"res=", real_dec, 10)<<endl;
   printVec(cout<<"im=", imParts, 10)<<endl;
   printVec(cout<<"res=", im_dec, 10)<<endl;
-
+#endif
   cx_equals(realParts, real_dec, epsilon) && cx_equals(imParts, im_dec, epsilon)?
-    cout << "PASS\n"<< endl:
-    cout << "max diff larger than epsilon.\nFAIL\n" << endl;
+    cout << "PASS\n":
+    cout << "max diff larger than epsilon.\nFAIL\n";
 
 }
 
@@ -239,7 +245,7 @@ void testRotsNShifts(const FHEPubKey& publicKey,
   std::srand(std::time(0)); // set seed, current time.
   int nplaces = rand() % static_cast<int>(ea.size()/2.0) + 1;
 
-  cout << "Test - Rotation of " << nplaces << endl<<endl;  
+  cout << "Test Rotation of " << nplaces << ": ";  
 
   Ctxt c1(publicKey);
   vector<cx_double> vd1;
@@ -247,16 +253,18 @@ void testRotsNShifts(const FHEPubKey& publicKey,
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1);
 
+#ifdef DEBUG_PRINTOUT
   printVec(cout<< "vd1=", vd1, 10)<<endl;
+#endif
   std::rotate(vd1.begin(), vd1.end()-nplaces, vd1.end());
-  printVec(cout<< "vd1(rot)=", vd1, 10)<<endl;
-
   ea.rotate(c1, nplaces);
   ea.decrypt(c1, secretKey, vd_dec);
+#ifdef DEBUG_PRINTOUT
+  printVec(cout<< "vd1(rot)=", vd1, 10)<<endl;
   printVec(cout<<"res: ", vd_dec, 10)<<endl;
+#endif
 
   cx_equals(vd1, vd_dec, epsilon)?
-    cout << "PASS\n"<< endl:
-    cout << "max diff larger than epsilon.\nFAIL\n" << endl;
-
+    cout << "PASS\n":
+    cout << "max diff larger than epsilon.\nFAIL\n";
 }
