@@ -334,7 +334,10 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
   if (isDryRun()) return;
 
   // fill in new rows
-  FFT(poly, s1);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s1);
 }
 
 // Expand index set by s1, and multiply by \prod{q \in s1}. s1 is assumed to
@@ -398,7 +401,10 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
@@ -412,7 +418,10 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const ZZX& poly)
@@ -426,7 +435,10 @@ DoubleCRT::DoubleCRT(const ZZX& poly)
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
 
@@ -443,7 +455,10 @@ DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context, const IndexSet
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  if (lsize(poly)<=1) // special case for a constant polynomial
+    *this = (lsize(poly)==1)? poly[0] : 0;  // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context)
@@ -457,7 +472,11 @@ DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context)
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  // convert the integer polynomial to FFT representation modulo the primes
+  if (lsize(poly)<=1) // special case for a constant polynomial
+    *this = (lsize(poly)==1)? poly[0] : 0;  // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const zzX& poly)
@@ -471,7 +490,11 @@ DoubleCRT::DoubleCRT(const zzX& poly)
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  // convert the integer polynomial to FFT representation modulo the primes
+  if (lsize(poly)<=1) // special case for a constant polynomial
+    *this = (lsize(poly)==1)? poly[0] : 0;  // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
@@ -539,7 +562,10 @@ DoubleCRT& DoubleCRT::operator=(const ZZX& poly)
   if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
-  FFT(poly, s);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s);
   return *this;
 }
 DoubleCRT& DoubleCRT::operator=(const zzX& poly)
@@ -547,7 +573,11 @@ DoubleCRT& DoubleCRT::operator=(const zzX& poly)
   if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
-  FFT(poly, s);
+  // convert the integer polynomial to FFT representation modulo the primes
+  if (lsize(poly)<=1) // special case for a constant polynomial
+    *this = (lsize(poly)==1)? poly[0] : 0;  // no FFT is needed
+  else
+    FFT(poly, s);
   return *this;
 }
 
