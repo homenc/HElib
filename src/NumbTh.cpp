@@ -665,7 +665,7 @@ void sampleHWt(ZZX &poly, long Hwt, long n)
   while (i<Hwt) {  // continue until exactly Hwt nonzero coefficients
     u=lrand48()%n; // The next coefficient to choose
     if (IsZero(coeff(poly,u))) { // if we didn't choose it already
-      b = lrand48()&2; // b random in {0,2}
+      b = NTL::RandomBnd(3); // b random in {0,2}
       b--;             //   random in {-1,1}
       SetCoeff(poly,u,b);
 
@@ -681,7 +681,7 @@ void sampleSmall(ZZX &poly, long n)
   poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
 
   for (long i=0; i<n; i++) {    // Chosse coefficients, one by one
-    long u = lrand48();
+    long u = NTL::RandomWord();
     if (u&1) {                 // with prob. 1/2 choose between -1 and +1
       u = (u & 2) -1;
       SetCoeff(poly, i, u);
