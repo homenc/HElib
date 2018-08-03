@@ -90,6 +90,16 @@ void EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
   embedInSlots(ptxt, array, getPAlgebra(), factor);
 }
 
+void EncryptedArrayCx::encode(zzX& ptxt, double num, long precision) const
+{
+  // This factor ensures that encode/decode introduce less than 1/precision
+  // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}.  
+  num *= alMod.encodeScalingFactor(precision);
+         // if precision==0 use the default PAlgebraCx::encodeScalingFactor()
+
+  resize(ptxt, 1, long(round(num))); // Constant polynomial
+}
+
 void EncryptedArrayCx::encodei(zzX& ptxt, long precision) const
 {
   vector<cx_double> v(size(), the_imaginary_i); // i in all the slots

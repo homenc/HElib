@@ -557,6 +557,10 @@ public:
 
   void encode(zzX& ptxt, const std::vector<cx_double>& array, long precision) const;
 
+  void encode(zzX& ptxt, double aSingleNumber, long precision=0) const;
+  void encode(NTL::ZZX& ptxt, double aSingleNumber, long precision=0) const
+  { zzX tmp; encode(tmp, aSingleNumber, precision); ::convert(ptxt, tmp); }
+
   // The versions below use precision=0, where the encode/decode
   // error bound defaults to at most 2^{-alMod.getR()-1}
   void encode(zzX& ptxt, const std::vector<cx_double>& array) const override
