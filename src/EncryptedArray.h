@@ -561,7 +561,7 @@ public:
   void encode(NTL::ZZX& ptxt, double aSingleNumber, long precision=0) const
   { zzX tmp; encode(tmp, aSingleNumber, precision); ::convert(ptxt, tmp); }
 
-  void encrypt(Ctxt& ctxt, const FHEPubKey& key, double num) const
+  void encryptOneNum(Ctxt& ctxt, const FHEPubKey& key, double num) const
   {
     assert(&getContext() == &ctxt.getContext());
     zzX pp;
