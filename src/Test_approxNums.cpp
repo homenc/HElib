@@ -130,7 +130,11 @@ void testBasicArith(const FHEPubKey& publicKey,
   ea.random(vd1);
   ea.random(vd2);
 
+  // test encoding of shorter vectors
+  vd1.resize(vd1.size()-2);
   ea.encrypt(c1, publicKey, vd1);
+  vd1.resize(vd1.size()+2, 0.0);
+
   ea.encrypt(c2, publicKey, vd2);
 
 

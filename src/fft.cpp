@@ -83,11 +83,14 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
   if (palg.getNSlots()==phimBy2) // roots ordered by the palg order
     for (long i=0; i<palg.getNSlots(); i++) {
       long j = palg.ith_rep(i);
-      avv[j] = scaling*v[palg.getNSlots()-i-1];
-      avv[m-j] = std::conj(avv[j]);
+      long ii = palg.getNSlots()-i-1;
+      if (ii < lsize(v)) {
+        avv[j] = scaling*v[ii];
+        avv[m-j] = std::conj(avv[j]);
+      }
     }
   else                           // roots ordered sequentially
-    for (long i=1, idx=0; i<=m/2; i++) {
+    for (long i=1, idx=0; i<=m/2 && idx<lsize(v); i++) {
       if (palg.inZmStar(i)) {
         avv[i] = scaling*v[idx++];
         avv[m-i] = std::conj(avv[i]);
