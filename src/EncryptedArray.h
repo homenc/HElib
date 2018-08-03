@@ -561,6 +561,15 @@ public:
   void encode(NTL::ZZX& ptxt, double aSingleNumber, long precision=0) const
   { zzX tmp; encode(tmp, aSingleNumber, precision); ::convert(ptxt, tmp); }
 
+  void encrypt(Ctxt& ctxt, const FHEPubKey& key, double num) const
+  {
+    assert(&getContext() == &ctxt.getContext());
+    zzX pp;
+    encode(pp, num); // Convert array of slots into a plaintext polynomial
+    key.Encrypt(ctxt, pp); // encrypt the plaintext polynomial
+  }
+
+  
   // The versions below use precision=0, where the encode/decode
   // error bound defaults to at most 2^{-alMod.getR()-1}
   void encode(zzX& ptxt, const std::vector<cx_double>& array) const override
