@@ -20,13 +20,12 @@
 
 NTL_CLIENT
 
+// Compute the L-infinity distance between two vectors
 double calcMaxDiff(const vector<cx_double>& v1, 
                    const vector<cx_double>& v2){
 
-  if(lsize(v1)!=lsize(v2)){
-    cerr << "Vector sizes differ.\nFAILED" << endl;
-    exit(1);
-  }
+  if(lsize(v1)!=lsize(v2))
+    NTL::Error("Vector sizes differ.\nFAILED\n");
 
   double maxDiff = 0.0;  
   for (long i=0; i<lsize(v1); i++) {
@@ -38,11 +37,11 @@ double calcMaxDiff(const vector<cx_double>& v1,
   return maxDiff;
 }
 
-bool cx_equals(const vector<cx_double>& v1, 
-               const vector<cx_double>& v2, 
-               double epsilon)
+inline bool cx_equals(const vector<cx_double>& v1, 
+                      const vector<cx_double>& v2, 
+                      double epsilon)
 {
-  return (calcMaxDiff(v1,v2) < epsilon)? true: false;
+  return (calcMaxDiff(v1,v2) < epsilon);
 }
 
 
@@ -96,7 +95,7 @@ int main(int argc, char *argv[])
 
     if (verbose) {
       ea.getPAlgebra().printout();
-      cout << "r = " << ea.getContext().alMod.getR() << endl;
+      cout << "r = " << context.alMod.getR() << endl;
       cout << "ctxtPrimes="<<context.ctxtPrimes
            << ", specialPrimes="<<context.specialPrimes<<endl<<endl;
     }
@@ -144,6 +143,12 @@ void testBasicArith(const FHEPubKey& publicKey,
   ea.encode(poly,vd3);
   c1.addConstant(poly); // vd1*vd2 + vd3
   for (long i=0; i<lsize(vd1); i++) vd1[i] += vd3[i];
+
+  // Test encoding, encryption of a single number
+  double xx = NTL::RandomLen_long(16)/double(1L<<16); // random in [0,1]
+  ea.encryptOneNum(c2, publicKey, xx);
+  c1 += c2;
+  for (auto& x : vd1) x += xx;
 
   // Test - Multiply by a mask
   vector<long> mask(lsize(vd1), 1);
