@@ -16,6 +16,7 @@
 #include "FHEContext.h"
 #include "Ctxt.h"
 #include "FHE.h"
+#include "CtPtrs.h"
 
 #include "debugging.h"
 
@@ -1971,20 +1972,26 @@ void totalProduct(Ctxt& out, const vector<Ctxt>& v)
 
 // Compute the inner product of two vectors of ciphertexts, this routine uses
 // the lower-level *= operator and does only one re-linearization at the end.
-void innerProduct(Ctxt& result, const vector<Ctxt>& v1, const vector<Ctxt>& v2)
+void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2)
 {
   long n = min(v1.size(), v2.size());
   if (n<=0) {
     result.clear();
     return;
   }
-  result = v1[0]; result *= v2[0];
+  result = *v1[0]; result *= *v2[0];
   for (long i=1; i<n; i++) {
-    Ctxt tmp = v1[i];
-    tmp *= v2[i];
+    Ctxt tmp = *v1[i];
+    tmp *= *v2[i];
     result += tmp;
   }
   result.reLinearize();
+}
+void innerProduct(Ctxt& result, const vector<Ctxt>& v1,
+                  const vector<Ctxt>& v2)
+{
+  innerProduct(result, CtPtrs_vectorCt((vector<Ctxt>&)v1),
+               CtPtrs_vectorCt((vector<Ctxt>&)v2));
 }
 
 // Compute the inner product of a ciphertext vector and a constant vector

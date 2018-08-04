@@ -72,4 +72,12 @@ inline long findMinLevel(std::initializer_list<const CtPtrs*> list)
   return lvl;
 }
 
+void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2);
+inline Ctxt innerProduct(const CtPtrs& v1, const CtPtrs& v2)
+{ 
+  Ctxt ret(ZeroCtxtLike, *v1[0]);
+  innerProduct(ret, v1, v2);
+  return ret; 
+}
+
 #endif // _CTPTRS_H
