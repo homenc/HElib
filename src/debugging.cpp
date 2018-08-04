@@ -124,13 +124,13 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
     const EncryptedArrayCx& eacx = ea.getCx();
     vector<double> v;
     eacx.decrypt(ctxt, sk, v);
-    printVec(s<<"           ", v)<<endl;
+    printVec(s<<"           ", v,20)<<endl;
   }
   else if (flags & FLAG_PRINT_XVEC) { // decode to a vector of complex
     const EncryptedArrayCx& eacx = ea.getCx();
     vector<cx_double> v;
     eacx.decrypt(ctxt, sk, v);
-    printVec(s<<"           ", v)<<endl;
+    printVec(s<<"           ", v,20)<<endl;
   }
 }
 
