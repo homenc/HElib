@@ -377,7 +377,9 @@ public:
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
-  void addConstantCKKS(double x) { addConstantCKKS(rationalApprox(x)); }
+  void addConstantCKKS(double x) {
+    addConstantCKKS(rationalApprox(x, /*denomBound=*/1<<getContext().alMod.getR()));
+  }
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size=NTL::xdouble(-1.0),
                        NTL::xdouble factor=NTL::xdouble(0.0));
