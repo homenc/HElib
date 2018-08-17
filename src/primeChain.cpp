@@ -211,6 +211,104 @@ void ModuliSizes::read(istream& str)
 }
 
 
+// You initialize a PrimeGenerator with values len and m.
+// Each call to next() generates a prime p with 
+// (3/4)*2^len <= p < 2^len and p = 2^k*t*m + 1,
+// where t is odd and k is as large as possible.
+
+struct PrimeGenerator {
+  long len, m;
+  long k, t;
+
+  PrimeGenerator(long _len, long _m) : len(_len), m(_m)
+  {
+    if (len > NTL_SP_NBITS || len < 2 || m >= NTL_SP_BOUND || m <= 0)
+      Error("PrimeGenerator: bad args");
+
+    // compute k as smallest nonnegative integer such that
+    // 2^{len-2} < 2^k*m
+    k = 0;
+    while ((m << k) <= (1L << (len-2))) k++;
+
+    t = 8; // with above setting for k, we have 2^{len-1}/(2^k*m) < 4,
+           // so setting t = 8 will trigger a new k-value with the
+           // first call to next()
+  }
+
+  long next()
+  {
+    // we consider all odd t in the interval 
+    // [ ((3/4)*2^len-1)/(2^k*m), (2^len-1)/(2^k*m) ).
+    // For k satisfyng 2^{len-2} >= 2^k*m, this interval is
+    // nonnegative.
+    // Also, it is equivalent to consider the interval
+    // of integers [tlb, tub), where tlb = ceil(((3/4)*2^len-1)/(2^k*m))
+    // and tub = ceil((2^len-1)/(2^k*m)).
+
+    long tub = divc((1L << len)-1, m << k);
+
+    for (;;) {
+
+      t++;
+
+      if (t >= tub) {
+	// move to smaller value of k, reset t and tub
+   
+	k--;
+
+	long klb;
+	if (m%2 == 0) 
+	  klb = 0;
+	else
+	  klb = 1;
+
+	if (k < klb) Error("PrimeGenerator: ran out of primes");
+	// we run k down to 0  if m is even, and down to 1
+	// if m is odd.
+
+	t = divc(3*(1L << (len-2))-1, m << k);
+	tub = divc((1L << len)-1, m << k);
+      }
+
+      if (t%2 == 0) continue; // we only want to consider odd t
+
+      long cand = ((t*m) << k) + 1; // = 2^k*t*m + 1
+
+      // double check that cand is in the prescribed interval
+      assert(cand >= (1L << (len-2))*3 && cand < (1L << len));
+
+      if (ProbPrime(cand, 60)) return cand;
+      // iteration count == 60 implies 2^{-120} error probability
+    }
+
+  }
+
+};
+
+void FHEcontext::AddSmallPrime(long q)
+{
+  assert(!inChain(q));
+  long i = moduli.size(); // The index of the new prime in the list
+  moduli.push_back( Cmodulus(zMStar, q, 0) );
+  smallPrimes.insert(i);
+}
+
+void FHEcontext::AddCtxtPrime(long q)
+{
+  assert(!inChain(q));
+  long i = moduli.size(); // The index of the new prime in the list
+  moduli.push_back( Cmodulus(zMStar, q, 0) );
+  ctxtPrimes.insert(i);
+}
+
+void FHEcontext::AddSpecialPrime(long q)
+{
+  assert(!inChain(q));
+  long i = moduli.size(); // The index of the new prime in the list
+  moduli.push_back( Cmodulus(zMStar, q, 0) );
+  specialPrimes.insert(i);
+}
+
 // Find the next prime and add it to the chain
 long FHEcontext::AddPrime(long initialP, long delta, IndexSet &s)
 {
@@ -226,68 +324,6 @@ long FHEcontext::AddPrime(long initialP, long delta, IndexSet &s)
   return p;
 }
 
-//! @brief Add small primes to get target resolution
-void addSmallPrimes(FHEcontext& context, long resolution)
-{
-  long m = context.zMStar.getM();
-  if (m<=0 || m>(1<<20))// sanity checks
-    Error("AddManyPrimes: m undefined or larger than 2^20");
-  // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
-
-  if (resolution<1 || resolution>10) // set to default of 3-bit resolution
-    resolution = 3;
-
-  vector<long> sizes;
-  if (NTL_SP_NBITS>=60) { // make the smallest primes 40-bit primes
-    sizes.push_back(40);
-    sizes.push_back(40);
-  }
-  else if (NTL_SP_NBITS >=50) { // make the smallest primes 35-bit primes
-    sizes.push_back(35);
-    sizes.push_back(35);
-  }
-  else { // Make the smallest ones 22-bit primes
-    assert(NTL_SP_NBITS >=30);
-    sizes.push_back(22);
-    sizes.push_back(22);
-    sizes.push_back(22);
-  }
-
-  // use sizes 60-r, 60-2r, 60-4r,... downto the sizes above
-  for (long delta=resolution; NTL_SP_NBITS-delta>sizes[0]; delta*=2)
-    sizes.push_back(NTL_SP_NBITS-delta);
-
-  // Special cases: add also NTL_SP_NBITS-3*resolution,
-  // and for resolution=1 also NTL_SP_NBITS-11
-  if (NTL_SP_NBITS - 3*resolution > sizes[0])
-    sizes.push_back(NTL_SP_NBITS- 3*resolution);
-  if (resolution==1 && NTL_SP_NBITS-11 > sizes[0])
-    sizes.push_back(NTL_SP_NBITS- 11);
-
-  std::sort(sizes.begin(), sizes.end()); // order by size
-
-  // Look for primes equal to 1 mod m*2^e for large enough e
-  long e = context.zMStar.fftSizeNeeded();
-  if (NTL_SP_NBITS < e + NTL::NextPowerOfTwo(m))
-    e = 1;  // Sanity check: m*2^e must fit in a single-precision integer
-  long m2e = m*(1L<<e);      // m times 2^e
-
-  for (long sz : sizes) {
-    long top = 1L << sz;
-    long initial = top - (top % m2e) +1; // Try p= 1 mod m*2^e
-
-    // ensure initial >= top, since addPrime will subtract m2e
-    if (initial <= top) initial += m2e;
-    if (context.AddPrime(initial, m2e, context.smallPrimes)==0) {
-      long twoM = m*2;   // If failed, try again with e=1
-      initial = top - (top % twoM) +1;
-      if (initial <= top) initial += twoM;
-      if (context.AddPrime(initial, twoM, context.smallPrimes)==0)
-        throw(std::logic_error("addSmallPrimes: failed to find "
-              +to_string(sz)+"-bit prime =1 mod "+to_string(2*m)));
-    }
-  }
-}
 
 // Adds several primes to the chain. If byNumber=true then totalSize specifies
 // the number of primes to add. If byNumber=false then totalSize specifies the
@@ -351,9 +387,200 @@ double AddManyPrimes(FHEcontext& context, double totalSize,
   return sizeLogSoFar;
 }
 
+//! @brief Add small primes to get target resolution
+void addSmallPrimes(FHEcontext& context, long resolution)
+{
+  long m = context.zMStar.getM();
+  if (m<=0 || m>(1<<20))// sanity checks
+    Error("addSmallPrimes: m undefined or larger than 2^20");
+  // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
+
+  if (resolution<1 || resolution>10) // set to default of 3-bit resolution
+    resolution = 3;
+
+  vector<long> sizes;
+  if (NTL_SP_NBITS>=60) { // make the smallest primes 40-bit primes
+    sizes.push_back(40);
+    sizes.push_back(40);
+  }
+  else if (NTL_SP_NBITS >=50) { // make the smallest primes 35-bit primes
+    sizes.push_back(35);
+    sizes.push_back(35);
+  }
+  else { // Make the smallest ones 22-bit primes
+    assert(NTL_SP_NBITS >=30);
+    sizes.push_back(22);
+    sizes.push_back(22);
+    sizes.push_back(22);
+  }
+
+  // This ensures we can express everything to given resolution.
+
+  // use sizes 60-r, 60-2r, 60-4r,... downto the sizes above
+  for (long delta=resolution; NTL_SP_NBITS-delta>sizes[0]; delta*=2)
+    sizes.push_back(NTL_SP_NBITS-delta);
+
+  // This helps to minimize the number of small primes needed
+  // to express any particular resolution.
+  // This could be removed...need to experiment.
+
+  // Special cases: add also NTL_SP_NBITS-3*resolution,
+  // and for resolution=1 also NTL_SP_NBITS-11
+  if (NTL_SP_NBITS - 3*resolution > sizes[0])
+    sizes.push_back(NTL_SP_NBITS- 3*resolution);
+  if (resolution==1 && NTL_SP_NBITS-11 > sizes[0])
+    sizes.push_back(NTL_SP_NBITS- 11);
+
+  std::sort(sizes.begin(), sizes.end()); // order by size
+
+  long last_sz = 0;
+  long sz_cnt = 0;
+  std::unique_ptr<PrimeGenerator> gen;
+  for (long sz : sizes) {
+    if (sz != last_sz) gen.reset(new PrimeGenerator(sz, m));
+    long q = gen->next();
+    context.AddSmallPrime(q);
+  }
+}
+
+void addCtxtPrimes(FHEcontext& context, long nBits)
+{
+  // we simply add enough primes of size NTL_SP_NBITS
+  // until their product is at least 2^{nBits}
+
+  const PAlgebra& palg = context.zMStar;
+  long m = palg.getM();
+
+  double bitlen = 0;
+
+  PrimeGenerator gen(NTL_SP_NBITS, m);
+
+  while (bitlen < nBits) {
+    long q = gen.next();
+    context.AddCtxtPrime(q);
+    bitlen += log2(q);
+  }
+
+
+}
+
+
+void addSpecialPrimes(FHEcontext& context, long nDgts, 
+                      bool willBeBootstrappable)
+{
+  const PAlgebra& palg = context.zMStar;
+  long p = palg.getP();
+  long m = palg.getM();
+  long p2r = context.alMod.getPPowR();
+
+  long p2e = p2r;
+  if (willBeBootstrappable) { // bigger p^e for bootstrapping
+    double alpha; long e, ePrime;
+    RecryptData::setAlphaE(alpha,e,ePrime, context);
+    p2e *= NTL::power_long(p, e-ePrime);
+  }
+
+  long nCtxtPrimes = context.ctxtPrimes.card();
+  if (nDgts > nCtxtPrimes) nDgts = nCtxtPrimes; // sanity checks
+  if (nDgts <= 0) nDgts = 1;
+
+  context.digits.resize(nDgts); // allocate space
+
+  double maxDigitLog = 0.0;
+  if (nDgts>1) { // we break ciphertext into a few digits when key-switching
+    double dlog = context.logOfProduct(context.ctxtPrimes)/nDgts; 
+    // estimate log of each digit
+
+    IndexSet s1;
+    double logSoFar = 0.0;
+
+    double target = dlog;
+    long idx = context.ctxtPrimes.first();
+    for (long i=0; i<nDgts-1; i++) { // set all digits but the last
+      IndexSet s;
+      while (idx <= context.ctxtPrimes.last() && (empty(s)||logSoFar<target)) {
+        s.insert(idx);
+	logSoFar += log(context.ithPrime(idx));
+	idx = context.ctxtPrimes.next(idx);
+      }
+      assert (!empty(s));
+      context.digits[i] = s;
+      s1.insert(s);
+      double thisDigitLog = context.logOfProduct(s);
+      if (maxDigitLog < thisDigitLog) maxDigitLog = thisDigitLog;
+      target += dlog;
+    }
+    // The ctxt primes that are left (if any) form the last digit
+    IndexSet s = context.ctxtPrimes / s1;
+    if (!empty(s)) {
+      context.digits[nDgts-1] = s;
+      double thisDigitLog = context.logOfProduct(s);
+      if (maxDigitLog < thisDigitLog) maxDigitLog = thisDigitLog;
+    }
+    else { // If last digit is empty, remove it
+      nDgts--;
+      context.digits.resize(nDgts);
+    }
+  }
+  else { // only one digit
+    maxDigitLog = context.logOfProduct(context.ctxtPrimes);
+    context.digits[0] = context.ctxtPrimes;
+  }
+
+  // Add special primes to the chain for the P factor of key-switching
+  double logOfSpecialPrimes
+    = maxDigitLog + log(nDgts) + log(context.stdev *2) + log(p2e);
+
+  // we now add enough special primes so that the sum of their
+  // logs is at least logOfSpecial primes
+
+  // we first calculate nbits, which is the bit length of each
+  // special prime.  This is calculated so that we don't overshoot
+  // logOfSpecial primes by too much because of granularity
+
+  double totalBits = logOfSpecialPrimes/log(2.0);
+  long numPrimes = ceil(totalBits/NTL_SP_NBITS);  
+  // initial estimate # of special primes
+  long nbits = ceil(totalBits/numPrimes);         
+  // estimated size of each special prime
+
+  nbits++;
+  // add 1 so we don't undershoot 
+
+  if (nbits > NTL_SP_NBITS) nbits = NTL_SP_NBITS;
+  // make sure nbits not too large
+
+  // now add special primes of size nbits
+
+  PrimeGenerator gen(nbits, m);
+
+  double logSoFar = 0.0;
+  while (logSoFar < logOfSpecialPrimes) {
+    long q = gen.next();
+
+    if (context.inChain(q)) continue;
+    // nbits could equal NTL_SP_BITS or the size of one 
+    // of the small primes, so we have to check for duplicates here...
+    // this is not the most efficient way to do this,
+    // but it doesn't matter
+
+    context.AddSpecialPrime(q);
+    logSoFar += log(q);
+  }
+}
+
+void newBuildModChain(FHEcontext& context, long nBits, long nDgts,
+                      bool willBeBootstrappable, long resolution)
+{
+   addSmallPrimes(context, resolution);
+   addCtxtPrimes(context, nBits);
+   addSpecialPrimes(context, nDgts, willBeBootstrappable);
+}
+
 void buildModChain(FHEcontext &context, long nLevels, long nDgts,
                    bool willBeBootstrappable)
 {
+
   const PAlgebra& palg = context.zMStar;
   long p = palg.getP();
   long m = palg.getM();
@@ -458,6 +685,8 @@ void buildModChain(FHEcontext &context, long nLevels, long nDgts,
   // Add special primes to the chain for the P factor of key-switching
   double sizeOfSpecialPrimes
     = maxDigitSize + log(nDgts) + log(context.stdev *2) + log((double)p2r);
+  // FIXME: just use p2e instead of p2r in above calculation and delete the
+  // if-statement below
 
   if (willBeBootstrappable)
     sizeOfSpecialPrimes += 8*log(2.0);

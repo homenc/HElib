@@ -265,7 +265,10 @@ class Ctxt {
   IndexSet primeSet; // the primes relative to which the parts are defined
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
   NTL::xdouble noiseVar;  // estimating the noise variance in this ciphertext
+
   long highWaterMark;// keep track of number of multiplications
+  // XXX 
+
   long intFactor;    // an integer factor to multiply by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
 
@@ -496,6 +499,7 @@ public:
   // Find the level such that modDown to that level makes the
   // additive term due to rounding into the dominant noise term 
   long findBaseLevel() const;
+  // XXX
 
   //! @brief Modulus-switching up (to a larger modulus).
   //! Must have primeSet <= s, and s must contain
@@ -509,9 +513,11 @@ public:
 
   //! @brief Modulus-switching down.
   void modDownToLevel(long lvl);
+  // XXX
 
   //! Modulus-switching up or down
   void bringToLevel(long lvl);
+  // XXX
 
   //! @brief Special-purpose modulus-switching for bootstrapping.
   //!
@@ -542,7 +548,9 @@ public:
     primeSet=context.ctxtPrimes;
     parts.clear();
     noiseVar = NTL::to_xdouble(0.0);
+
     highWaterMark = findBaseLevel();
+    // XXX
   }
 
   //! @brief Is this an empty cipehrtext without any parts
@@ -695,5 +703,6 @@ void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long 
 
 //! mod down to base level
 void bringToBaseLevel(Ctxt& ctxt);
+// XXX
 
 #endif // ifndef _Ctxt_H_

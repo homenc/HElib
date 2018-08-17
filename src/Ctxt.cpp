@@ -59,8 +59,11 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
       size = getContext().zMStar.getPhiM() * fsquare(ptxtSpace/2.0);
     noiseVar = size;
   }
+
   primeSet = context.ctxtPrimes;
+
   highWaterMark = findBaseLevel();
+  // XXX
 
   // A single part, with the plaintext as data and handle pointing to 1
 
@@ -183,6 +186,7 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
 
 
 //! @brief How many levels in the "base-set" for that ciphertext
+// XXX
 long Ctxt::findBaseLevel() const 
 {
   IndexSet s;
@@ -232,6 +236,7 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
   highWaterMark = findBaseLevel();
+  // XXX
   intFactor = 1;
   ratFactor = 1.0;
 }
@@ -247,6 +252,7 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
   highWaterMark = findBaseLevel();
+  // XXX
   intFactor = 1;
   ratFactor = 1.0;
 }
@@ -265,6 +271,7 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   ptxtSpace = other.ptxtSpace;
   noiseVar  = other.noiseVar;
   highWaterMark = other.highWaterMark;
+  // XXX
   intFactor = other.intFactor;
   ratFactor = other.ratFactor;
   return *this;
@@ -347,6 +354,9 @@ void Ctxt::modDownToSet(const IndexSet &s)
   }
 
   if (noiseVar*fsquare(ptxtSpace) < addedNoiseVar) { // just "drop down"
+    // XXX: we might want to just get rid of this, if it causes
+    // complications
+
     for (size_t i=0; i<parts.size(); i++)
       parts[i].removePrimes(setDiff);       // remove the primes not in s
     long prodInv = 1;
@@ -374,6 +384,7 @@ void Ctxt::modDownToSet(const IndexSet &s)
   FHE_TIMER_STOP;
 }
 
+// XXX
 void Ctxt::bringToLevel(long lvl)
 {
   IndexSet target = (context.containsSmallPrime())?
@@ -386,6 +397,7 @@ void Ctxt::bringToLevel(long lvl)
 }
 
 // Modulus-switching down
+// XXX
 void Ctxt::modDownToLevel(long lvl)
 {
   long currentLvl;
@@ -442,6 +454,7 @@ void Ctxt::reducePtxtSpace(long newPtxtSpace)
   ptxtSpace = g;
   intFactor %= g;
 }
+
 
 
 // key-switch to (1,s_i), s_i is the base key with index keyID. If
@@ -543,6 +556,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 
 // Find the IndexSet such that modDown to that set of primes makes the
 // additive term due to rounding into the dominant noise term 
+// XXX
 void Ctxt::findBaseSet(IndexSet& s) const
 {
   if (getNoiseVar()<=0.0) { // an empty ciphertext
@@ -601,6 +615,8 @@ void Ctxt::findBaseSet(IndexSet& s) const
 }
 
 
+// HERE
+
 /********************************************************************/
 // Ciphertext arithmetic
 
@@ -623,7 +639,10 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
       // add to the the prime-set of *this, if needed (this is expensive)
       if (matchPrimeSet) {
         IndexSet setDiff = part.getIndexSet() / primeSet; // set minus
-        for (size_t i=0; i<parts.size(); i++) parts[i].addPrimes(setDiff);
+        for (size_t i=0; i<parts.size(); i++) {
+           Warning("addPrimes called in addPart");
+           parts[i].addPrimes(setDiff);
+        }
         primeSet.insert(setDiff);
       }
       else // this should never happen

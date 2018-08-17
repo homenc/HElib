@@ -198,6 +198,11 @@ public:
     return (7.2*phim/bitsize -110);
   }
 
+  //! @brief Just add the given prime to the chain
+  void AddSmallPrime(long q);
+  void AddCtxtPrime(long q);
+  void AddSpecialPrime(long q);
+
   //! @brief Find the next prime and add it to the chain
   long AddPrime(long startFrom, long delta, IndexSet& s);
 

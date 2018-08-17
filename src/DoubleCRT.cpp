@@ -124,6 +124,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
     FHE_NTIMER_START(addPrimes_1); 
+    Warning("addPrimes called (1) in DoubleCRT::op");
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
   }
 
@@ -133,6 +134,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
   if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
     FHE_NTIMER_START(addPrimes_2); 
     tmp = other;
+    Warning("addPrimes called (2) in DoubleCRT::op");
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
     other_map = &tmp.map;
   }
@@ -170,6 +172,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
     FHE_NTIMER_START(addPrimes_3);
+    Warning("addPrimes called (1) in DoubleCRT::op");
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
   }
 
@@ -179,6 +182,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
   if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
     FHE_NTIMER_START(addPrimes_4);
     tmp = other;
+    Warning("addPrimes called (2) in DoubleCRT::op");
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
     other_map = &tmp.map;
   }
