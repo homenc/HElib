@@ -131,6 +131,31 @@ public:
   void read(std::istream& str);  
   void write(std::ostream& str) const;
 
+  /*** code to allow one to write "for (long i: set)" ***/
+
+  class iterator  {
+  friend class IndexSet;
+  public:
+    long operator *() const { return i_; }
+    iterator& operator ++() { i_ = s_.next(i_); } 
+
+    bool operator ==(const iterator &other) const 
+    { return &s_ == &other.s_ && i_ == other.i_; }
+
+    bool operator !=(const iterator &other) const { return !(*this == other); }
+
+  protected:
+    iterator(const IndexSet& s, long i) : s_(s),  i_(i) { }
+
+  private:
+
+    const IndexSet& s_;
+    long i_;
+  };
+
+  iterator begin() const { return iterator(*this, this->first()); }
+  iterator end() const { return iterator(*this, this->last()+1); }
+
 };
 
 // some high-level convenience methods...not very efficient...

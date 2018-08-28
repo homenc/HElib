@@ -35,16 +35,8 @@
  * Fails with an error message if no suitable m is found
  * prints an informative message if verbose == true
  **/
-long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose=false);
+long newFindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose=false);
 
-// FIXME: The size of primes in the chain should be computed at run-time
-#if (NTL_SP_NBITS<44)
-#define FHE_p2Size NTL_SP_NBITS
-#else
-#define FHE_p2Size 44
-#endif
-#define FHE_p2Bound (1L<<FHE_p2Size)
-#define FHE_pSize (FHE_p2Size/2) /* The size of levels in the chain */
 
 class EncryptedArray;
 /**
@@ -68,12 +60,11 @@ public:
 
   //! @breif A default EncryptedArray
   const EncryptedArray* ea;
+  // FIXME: should this be a unique_ptr??
 
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   NTL::xdouble stdev;
 
-  //! @brief number of bits per level
-  long bitsPerLevel;
   /**
    * The "ciphertext primes" are the "normal" primes that are used to
    * represent the public encryption key and ciphertexts. These are all
@@ -114,13 +105,9 @@ public:
   **/
   std::vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
 
-  long fftPrimeCount;
-
   //! Bootstrapping-related data in the context
   RecryptData rcData;
   ThinRecryptData trcData;
-
-  //Lazy<ZZX> LiftingPoly;
 
   /******************************************************************/
   ~FHEcontext(); // destructor
@@ -131,8 +118,11 @@ public:
   void makeBootstrappable(const NTL::Vec<long>& mvec, long skWht=0,
 			  bool conservative=false, bool build_cache=false)
   { 
+// FIXME-bootstrap
+#if 0
     rcData.init(*this, mvec, skWht, conservative, build_cache); 
     trcData.init(*this, mvec, skWht, conservative, build_cache); 
+#endif
   }
 
   bool isBootstrappable() const 
@@ -153,14 +143,14 @@ public:
 
   //! @brief Is num divisible by any of the primes in the chain?
   bool isZeroDivisor(const NTL::ZZ& num) const {
-    for (unsigned long i=0; i<moduli.size(); i++) 
+    for (long i: range(moduli.size())) 
       if (divide(num,moduli[i].getQ())) return true;
     return false;
   }
 
   //! @brief Is p already in the chain?
   bool inChain(long p) const {
-    for (unsigned long i=0; i<moduli.size(); i++) 
+    for (long i: range(moduli.size())) 
       if (p==moduli[i].getQ()) return true;
     return false;
   }
@@ -185,7 +175,7 @@ public:
       NTL::Error("FHEContext::logOfProduct: IndexSet has too many rows");
 
     double ans = 0.0;
-    for (long i = s.first(); i <= s.last(); i = s.next(i))
+    for (long i: s) 
       ans += logOfPrime(i);
     return ans;
   }
@@ -193,8 +183,7 @@ public:
   //! @brief An estimate for the security-level
   double securityLevel() const {
     long phim = zMStar.getPhiM();
-    IndexSet allPrimes(0,numPrimes()-1);
-    double bitsize = logOfProduct(allPrimes)/log(2.0);
+    double bitsize = logOfProduct(ctxtPrimes | specialPrimes)/log(2.0);
     return (7.2*phim/bitsize -110);
   }
 
@@ -203,18 +192,6 @@ public:
   void AddCtxtPrime(long q);
   void AddSpecialPrime(long q);
 
-  //! @brief Find the next prime and add it to the chain
-  long AddPrime(long startFrom, long delta, IndexSet& s);
-
-  //! @brief Test if the chain contains a "half-size" ciphertext prime
-  // If it exists, the half-size prime must be the first cipehrtext prime.
-  // All other primes are assumed to have roughly the same size.
-  bool containsSmallPrime() const {
-    if (card(ctxtPrimes)<2) return false;
-    long fst = ctxtPrimes.first();
-    long scnd= ctxtPrimes.next(fst);
-    return (logOfPrime(fst) < (0.75 * logOfPrime(scnd)));
-  }
   
   ///@{
   /**
@@ -291,43 +268,17 @@ std::unique_ptr<FHEcontext> buildContextFromBinary(std::istream& str);
 void readContextBinary(std::istream& str, FHEcontext& context);
 
 
-// VJS: compiler seems to need these declarations out here...wtf...
-
-//@{
-//! @name Convenience routines for generating the modulus chain
-
-//! @brief Adds several primes to the chain. If byNumber=true then totalSize
-//! specifies the number of primes to add. If byNumber=false then totalSize
-//! specifies the target naturals log all the added primes.
-//! Returns natural log of the product of all added primes.
-double AddManyPrimes(FHEcontext& context, double totalSize, 
-		     bool byNumber, bool special=false);
-
-//! @brief Adds to the chain primes whose product is at least e^totalSize, 
-//! Returns natural log of the product of all added primes.
-inline double AddPrimesBySize(FHEcontext& context, double totalSize,
-			      bool special=false)
-{
-  return AddManyPrimes(context, totalSize, false, special);
-}
-
-//! @brief Adds n primes to the chain
-//! Returns natural log of the product of all added primes.
-inline double AddPrimesByNumber(FHEcontext& context, long nPrimes, 
-				bool special=false) 
-{
-  return AddManyPrimes(context, (double)nPrimes, true, special);
-}
-
-//! @brief Add small primes to get target resolution
-void addSmallPrimes(FHEcontext& context, long resolution=3);
-
-
-//! @brief Build modulus chain with nLevels levels, using c digits in key-switching
 void buildModChain(FHEcontext &context, long nLevels, long c=3,
                    bool willBeBootstrappable=false);
-//FIXME: The willBeBootstrappable flag is a hack, used to get around some
-//       circularity when making the context boostrappable
+
+// Build modulus chain with nBits worth of ctxt primes, 
+// using nDgts digits in key-switching.
+// willBeBootstrappable flag is a hack, used to get around some
+// circularity when making the context boostrappable.
+// resolution ... FIXME
+
+void newBuildModChain(FHEcontext& context, long nBits, long nDgts=3,
+                      bool willBeBootstrappable=false, long resolution=3);
 
 ///@}
 extern FHEcontext* activeContext; // Should point to the "current" context

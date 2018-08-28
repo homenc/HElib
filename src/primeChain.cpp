@@ -63,8 +63,7 @@ void ModuliSizes::init(const std::vector<Cmodulus>& chain,
   sizes.push_back(make_pair(0.0,IndexSet::emptySet())); // the empty set
   long idx = 1;                      // first index that's still not set
 
-  for (long i=smallPrimes.first();   // add i to all sets upto idx-1
-       i <= smallPrimes.last(); i = smallPrimes.next(i)) {
+  for (long i: smallPrimes) {   // add i to all sets upto idx-1
     double sizeOfQi = log(chain[i].getQ());
     for (long j=idx; j<2*idx; j++) {
       sizes.push_back(sizes[j-idx]); // make a copy
@@ -79,8 +78,7 @@ void ModuliSizes::init(const std::vector<Cmodulus>& chain,
 
   IndexSet s; // empty set
   double intervalSize = 0.0;
-  for (long i=ctxtPrimes.first(); // add i to all sets upto idx-1
-       i <= ctxtPrimes.last(); i = ctxtPrimes.next(i)) {
+  for (long i: ctxtPrimes) { // add i to all sets upto idx-1
     s.insert(i);                          // add prime to the interval
     intervalSize += log(chain[i].getQ()); // add its size to intervalSize
     for (long j=0; j<idx; j++) {
@@ -211,10 +209,12 @@ void ModuliSizes::read(istream& str)
 }
 
 
-// You initialize a PrimeGenerator with values len and m.
-// Each call to next() generates a prime p with 
+// You initialize a PrimeGenerator as follows:
+//    PrimeGenerator gen(len, m);
+// Each call to gen.next() generates a prime p with 
 // (3/4)*2^len <= p < 2^len and p = 2^k*t*m + 1,
 // where t is odd and k is as large as possible.
+// If no such prime is found, then an error is raised.
 
 struct PrimeGenerator {
   long len, m;
@@ -240,8 +240,8 @@ struct PrimeGenerator {
     // we consider all odd t in the interval 
     // [ ((3/4)*2^len-1)/(2^k*m), (2^len-1)/(2^k*m) ).
     // For k satisfyng 2^{len-2} >= 2^k*m, this interval is
-    // nonnegative.
-    // Also, it is equivalent to consider the interval
+    // non-empty.
+    // It is equivalent to consider the interval
     // of integers [tlb, tub), where tlb = ceil(((3/4)*2^len-1)/(2^k*m))
     // and tub = ceil((2^len-1)/(2^k*m)).
 
@@ -309,84 +309,6 @@ void FHEcontext::AddSpecialPrime(long q)
   specialPrimes.insert(i);
 }
 
-// Find the next prime and add it to the chain
-long FHEcontext::AddPrime(long initialP, long delta, IndexSet &s)
-{
-  long p = initialP;
-  do { p += delta; } // delta could be positive or negative
-  while (p>initialP/16 && p<NTL_SP_BOUND && !(ProbPrime(p) && !inChain(p)));
-
-  if (p<=initialP/16 || p>=NTL_SP_BOUND) return 0; // no prime found
-
-  long i = moduli.size(); // The index of the new prime in the list
-  moduli.push_back( Cmodulus(zMStar, p, 0) );
-  s.insert(i);
-  return p;
-}
-
-
-// Adds several primes to the chain. If byNumber=true then totalSize specifies
-// the number of primes to add. If byNumber=false then totalSize specifies the
-// target natural log all the added primes.
-// Returns natural log of the product of all added primes.
-double AddManyPrimes(FHEcontext& context, double totalSize, 
-		     bool byNumber, bool special)
-{
-  if (!context.zMStar.getM() || context.zMStar.getM()>(1<<20))// sanity checks
-    Error("AddManyPrimes: m undefined or larger than 2^20");
-  // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
-
-  double sizeLogSoFar = 0.0; // log of added primes so far
-  double addedSoFar = 0.0;   // Either size or number, depending on 'byNumber'
-
-#ifdef NO_HALF_SIZE_PRIME
-  long sizeBits = context.bitsPerLevel;
-#else
-  long sizeBits = 2*context.bitsPerLevel;
-#endif
-  if (special) { // try to use similar size for all the special primes
-    double totalBits = totalSize/log(2.0);
-    long numPrimes = ceil(totalBits/NTL_SP_NBITS);// how many special primes
-    sizeBits = 1+ceil(totalBits/numPrimes);       // what's the size of each
-    // Added one so we don't undershoot our target
-  }
-  if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
-  long sizeBound = 1L << sizeBits;
-
-  // Make sure that you have enough primes such that p-1 is divisible by 2m
-  long twoM = 2 * context.zMStar.getM();
-  if (sizeBound < twoM*log2(twoM)*8) { // bound too small to have such primes
-    sizeBits = ceil(log2(twoM*log2(twoM)))+3; // increase prime size-bound
-    sizeBound = 1L << sizeBits;
-  }
-
-  // make p-1 divisible by m*2^k for as large k as possible
-  // (not needed when m itself a power of two)
-
-  if (context.zMStar.getM() & 1) // m is odd, so not power of two
-    while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
-
-  long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
-  while (bigP>NTL_SP_BOUND) bigP -= twoM; // sanity check
-
-  long p = bigP+twoM; // twoM is subtracted in the AddPrime function
-
-  // FIXME: The last prime could sometimes be slightly smaller
-  while (addedSoFar < totalSize) {
-    if ((p = context.AddPrime(p,-twoM,               // found a prime
-                     special? context.specialPrimes: context.ctxtPrimes))) {
-      sizeLogSoFar += log((double)p);
-      addedSoFar = byNumber? (addedSoFar+1.0) : sizeLogSoFar;
-    }
-    else { // we ran out of primes, try a lower power of two
-      twoM /= 2;
-      assert(twoM > (long)context.zMStar.getM()); // can we go lower?
-      p = bigP;
-    }
-  }
-  return sizeLogSoFar;
-}
-
 //! @brief Add small primes to get target resolution
 void addSmallPrimes(FHEcontext& context, long resolution)
 {
@@ -440,6 +362,7 @@ void addSmallPrimes(FHEcontext& context, long resolution)
     if (sz != last_sz) gen.reset(new PrimeGenerator(sz, m));
     long q = gen->next();
     context.AddSmallPrime(q);
+    last_sz = sz;
   }
 }
 
@@ -476,8 +399,11 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
   long p2e = p2r;
   if (willBeBootstrappable) { // bigger p^e for bootstrapping
     double alpha; long e, ePrime;
+// FIXME-bootstrap
+#if 0
     RecryptData::setAlphaE(alpha,e,ePrime, context);
     p2e *= NTL::power_long(p, e-ePrime);
+#endif
   }
 
   long nCtxtPrimes = context.ctxtPrimes.card();
@@ -562,7 +488,7 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
     // nbits could equal NTL_SP_BITS or the size of one 
     // of the small primes, so we have to check for duplicates here...
     // this is not the most efficient way to do this,
-    // but it doesn't matter
+    // but it doesn't make sense to optimize this any further
 
     context.AddSpecialPrime(q);
     logSoFar += log(q);
@@ -575,123 +501,7 @@ void newBuildModChain(FHEcontext& context, long nBits, long nDgts,
    addSmallPrimes(context, resolution);
    addCtxtPrimes(context, nBits);
    addSpecialPrimes(context, nDgts, willBeBootstrappable);
+   context.setModSizeTable();
 }
 
-void buildModChain(FHEcontext &context, long nLevels, long nDgts,
-                   bool willBeBootstrappable)
-{
-
-  const PAlgebra& palg = context.zMStar;
-  long p = palg.getP();
-  long m = palg.getM();
-  long p2r = context.alMod.getPPowR();
-
-  // Ensure bitsPerLevel is large enough to surpress high-order noise terms
-  { long phim = palg.getPhiM();
-    double stdev = to_double(context.stdev);
-    if (palg.getPow2() == 0) // not power of two
-      stdev *= sqrt(m);
-    long p2e = p2r;
-    if (willBeBootstrappable) { // bigger p^e for bootstrapping
-      double alpha; long e, ePrime;
-      RecryptData::setAlphaE(alpha,e,ePrime, context);
-      p2e *= NTL::power_long(p, e-ePrime);
-    }
-    double dBound = std::max<double>(boundFreshNoise(m, phim, stdev),
-                                     boundRoundingNoise(m, phim, p2e));
-    long lBound = round(log2(dBound));
-    
-#ifndef NO_HALF_SIZE_PRIME
-    lBound = min(lBound, NTL_SP_NBITS/2);
-#endif
-
-    if (context.bitsPerLevel < lBound) {
-      cerr << "buildModChain: context.bitsPerLevel upped from "
-           << context.bitsPerLevel<<" to "<<lBound<< endl;
-      context.bitsPerLevel = lBound;
-    }
-  }
-
-#ifdef NO_HALF_SIZE_PRIME
-  long nPrimes = nLevels;
-#else
-  long nPrimes = (nLevels+1)/2;
-  // The first prime should be of half the size. The code below tries to find
-  // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
-
-  long twoM = 2 * m;
-  long bound = (1L << (context.bitsPerLevel-1));
-  while (twoM < bound/(2*context.bitsPerLevel))
-    twoM *= 2; // divisible by 2^k * m  for a larger k
-
-  bound = bound - (bound % twoM) +1; // = 1 mod 2m
-  long q0 = context.AddPrime(bound, twoM, context.ctxtPrimes); 
-  // add next prime to chain
-  
-  assert(q0 != 0);
-  nPrimes--;
-#endif
-
-  // Choose the next primes as large as possible
-  if (nPrimes>0) AddPrimesByNumber(context, nPrimes);
-
-  // calculate the size of the digits
-
-  if (nDgts > nPrimes) nDgts = nPrimes; // sanity checks
-  if (nDgts <= 0) nDgts = 1;
-  context.digits.resize(nDgts); // allocate space
-
-  IndexSet s1;
-  double sizeSoFar = 0.0;
-  double maxDigitSize = 0.0;
-  if (nDgts>1) { // we break ciphetext into a few digits when key-switching
-    double dsize = context.logOfProduct(context.ctxtPrimes)/nDgts; // estimate
-
-    // A hack: we break the current digit after the total size of all digits
-    // so far "almost reaches" the next multiple of dsize, upto 1/3 of a level
-    double target = dsize-(context.bitsPerLevel/3.0);
-    long idx = context.ctxtPrimes.first();
-    for (long i=0; i<nDgts-1; i++) { // set all digits but the last
-      IndexSet s;
-      while (idx <= context.ctxtPrimes.last() && (empty(s)||sizeSoFar<target)) {
-        s.insert(idx);
-	sizeSoFar += log((double)context.ithPrime(idx));
-	idx = context.ctxtPrimes.next(idx);
-      }
-      assert (!empty(s));
-      context.digits[i] = s;
-      s1.insert(s);
-      double thisDigitSize = context.logOfProduct(s);
-      if (maxDigitSize < thisDigitSize) maxDigitSize = thisDigitSize;
-      target += dsize;
-    }
-    // The ctxt primes that are left (if any) form the last digit
-    IndexSet s = context.ctxtPrimes / s1;
-    if (!empty(s)) {
-      context.digits[nDgts-1] = s;
-      double thisDigitSize = context.logOfProduct(s);
-      if (maxDigitSize < thisDigitSize) maxDigitSize = thisDigitSize;
-    }
-    else { // If last digit is empty, remove it
-      nDgts--;
-      context.digits.resize(nDgts);
-    }
-  }
-  else { // only one digit
-    maxDigitSize = context.logOfProduct(context.ctxtPrimes);
-    context.digits[0] = context.ctxtPrimes;
-  }
-
-  // Add special primes to the chain for the P factor of key-switching
-  double sizeOfSpecialPrimes
-    = maxDigitSize + log(nDgts) + log(context.stdev *2) + log((double)p2r);
-  // FIXME: just use p2e instead of p2r in above calculation and delete the
-  // if-statement below
-
-  if (willBeBootstrappable)
-    sizeOfSpecialPrimes += 8*log(2.0);
-  // FIXME: replace 8.0 by some way of computing the real number that's needed
-
-  AddPrimesBySize(context, sizeOfSpecialPrimes, true);
-}
 

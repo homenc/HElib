@@ -19,17 +19,38 @@
 
 NTL_CLIENT
 
-long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
+// FIXME-bootstrap
+#if 1
+RecryptData::~RecryptData()
+{
+  if (alMod!=NULL)     delete alMod;
+  if (ea!=NULL)        delete ea;
+  if (firstMap!=NULL)  delete firstMap;
+  if (secondMap!=NULL) delete secondMap;
+  if (p2dConv!=NULL)   delete p2dConv;
+}
+
+ThinRecryptData::~ThinRecryptData()
+{
+  if (alMod!=NULL)     delete alMod;
+  if (ea!=NULL)        delete ea;
+  if (coeffToSlot!=NULL)  delete coeffToSlot;
+  if (slotToCoeff!=NULL) delete slotToCoeff;
+}
+#endif
+
+long newFindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
   // get a lower-bound on the parameter N=phi(m):
   // 1. Each level in the modulus chain corresponds to pSize=p2Size/2
   //    bits (where we have one prime of this size, and all the others are of
   //    size p2Size).
   //    When using DoubleCRT, we need 2m to divide q-1 for every prime q.
-  // 2. With L levels, the largest modulus for "fresh ciphertexts" has size
-  //          Q0 ~ p^{L+1} ~ 2^{(L+1)*pSize}
+  // 2. With nBits of ctxt primes, 
+  //    the largest modulus for "fresh ciphertexts" has size
+  //          Q0 ~ 2^{nBits}
   // 3. We break each ciphertext into upto c digits, do each digit is as large
-  //    as    D=2^{(L+1)*pSize/c}
+  //    as    D=2^{nBits/c}
   // 4. The added noise variance term from the key-switching operation is
   //    c*N*sigma^2*D^2, and this must be mod-switched down to w*N (so it is
   //    on par with the added noise from modulus-switching). Hence the ratio
@@ -37,13 +58,17 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
   //    or    P > sqrt(c/w) * sigma * 2^{(L+1)*pSize/c}
   // 5. With this extra P factor, the key-switching matrices are defined
   //    relative to a modulus of size
-  //          Q0 = q0*P ~ sqrt{c/w} sigma 2^{(L+1)*pSize*(1+1/c)}
+  //          Q0 = q0*P ~ sqrt{c/w} sigma 2^{nBits*(1+1/c)}
   // 6. To get k-bit security we need N>log(Q0/sigma)(k+110)/7.2, i.e. roughly
-  //          N > (L+1)*pSize*(1+1/c)(k+110) / 7.2
+  //          N > nBits*(1+1/c)(k+110) / 7.2
 
   // Compute a bound on m, and make sure that it is not too large
   double cc = 1.0+(1.0/(double)c);
-  double dN = ceil((L+1)*FHE_pSize*cc*(k+110)/7.2);
+
+  double dN = ceil(nBits*cc*(k+110)/7.2);
+  // FIXME: the bound for dN is not conservative enough...
+  // this should be re-worked.
+
   long N = NTL_SP_BOUND;
   if (N > dN) N = dN;
   else {
@@ -153,7 +178,7 @@ FHEcontext* activeContext = NULL;
 void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
 {
   p = 1;
-  for (long i = s.first(); i <= s.last(); i = s.next(i))
+  for (long i: s)
     p *= ithPrime(i);
 }
 
@@ -169,6 +194,7 @@ bool FHEcontext::operator==(const FHEcontext& other) const
     if (m1.getQ() != m2.getQ()) return false;
   }
 
+  if (smallPrimes != other.smallPrimes) return false;
   if (ctxtPrimes != other.ctxtPrimes) return false;
   if (specialPrimes != other.specialPrimes) return false;
 
@@ -178,8 +204,11 @@ bool FHEcontext::operator==(const FHEcontext& other) const
 
   if (stdev != other.stdev) return false;
 
+// FIXME-bootstrap
+#if 0
   if (rcData != other.rcData) return false;
   if (trcData != other.trcData) return false;
+#endif
   return true;
 }
 
@@ -246,12 +275,17 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
   // standard-deviation 
   write_raw_xdouble(str, context.stdev);
    
+  write_raw_int(str, context.smallPrimes.card());
+
+  // the "special" index 
+  for(long tmp: context.smallPrimes) {;
+    write_raw_int(str, tmp);
+  }
+   
   write_raw_int(str, context.specialPrimes.card());
 
   // the "special" index 
-  for(long tmp = context.specialPrimes.first();
-      tmp <= context.specialPrimes.last(); 
-      tmp = context.specialPrimes.next(tmp)){
+  for(long tmp: context.specialPrimes) {
     write_raw_int(str, tmp);
   }
 
@@ -267,17 +301,18 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 
   for(long i=0; i<(long)context.digits.size(); i++){
     write_raw_int(str, context.digits[i].card());
-    for(long tmp = context.digits[i].first();
-         tmp <= context.digits[i].last(); 
-         tmp = context.digits[i].next(tmp)){
+    for(long tmp: context.digits[i]) {
       write_raw_int(str, tmp);
     }
   }
 
+// FIXME-bootstrap
+#if 0
   write_ntl_vec_long(str, context.rcData.mvec);
 
   write_raw_int(str, context.rcData.hwt);
   write_raw_int(str, context.rcData.conservative);
+#endif
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
@@ -290,15 +325,23 @@ void readContextBinary(istream& str, FHEcontext& context)
   // Get the standard deviation
   context.stdev = read_raw_xdouble(str);
 
-  long sizeOfS = read_raw_int(str);
 
-  IndexSet s;
-  for(long tmp, i=0; i<sizeOfS; i++){
+  IndexSet smallPrimes;
+  long smallPrimes_sz = read_raw_int(str);
+  for(long tmp, i=0; i<smallPrimes_sz; i++){
     tmp = read_raw_int(str);
-    s.insert(tmp);
+    smallPrimes.insert(tmp);
+  }
+
+  IndexSet specialPrimes;
+  long specialPrimes_sz = read_raw_int(str);
+  for(long tmp, i=0; i<specialPrimes_sz; i++){
+    tmp = read_raw_int(str);
+    specialPrimes.insert(tmp);
   }
 
   context.moduli.clear();
+  context.smallPrimes.clear();
   context.specialPrimes.clear();
   context.ctxtPrimes.clear();
 
@@ -309,7 +352,9 @@ void readContextBinary(istream& str, FHEcontext& context)
 
     context.moduli.push_back(Cmodulus(context.zMStar,p,0));
 
-    if (s.contains(i))
+    if (smallPrimes.contains(i))
+      context.smallPrimes.insert(i);   // small prime
+    else if (specialPrimes.contains(i))
       context.specialPrimes.insert(i); // special prime
     else
       context.ctxtPrimes.insert(i);    // ciphertext prime
@@ -319,7 +364,7 @@ void readContextBinary(istream& str, FHEcontext& context)
 
   context.digits.resize(nDigits);
   for(long i=0; i<(long)context.digits.size(); i++){
-    sizeOfS = read_raw_int(str);
+    long sizeOfS = read_raw_int(str);
 
     for(long tmp, n=0; n<sizeOfS; n++){
       tmp = read_raw_int(str);
@@ -368,6 +413,9 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   // standard-deviation
   str << context.stdev << "\n";
 
+  // the "small" index 
+  str << context.smallPrimes << "\n ";
+
   // the "special" index 
   str << context.specialPrimes << "\n ";
 
@@ -384,11 +432,14 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
 
   str <<"\n";
 
+// FIXME-bootstrap
+#if 0
   str << context.rcData.mvec;
   str << " " << context.rcData.hwt;
   str << " " << context.rcData.conservative;
   str << " " << context.rcData.build_cache;
   // NOTE: the data for trcData will always be the same as for rcData
+#endif
 
   str << "]\n";
 
@@ -422,10 +473,14 @@ istream& operator>> (istream &str, FHEcontext& context)
   // Get the standard deviation
   str >> context.stdev;
 
-  IndexSet s;
-  str >> s; // read the special set
+  IndexSet smallPrimes;
+  str >> smallPrimes; 
+
+  IndexSet specialPrimes;
+  str >> specialPrimes; 
 
   context.moduli.clear();
+  context.smallPrimes.clear();
   context.specialPrimes.clear();
   context.ctxtPrimes.clear();
 
@@ -437,7 +492,9 @@ istream& operator>> (istream &str, FHEcontext& context)
 
     context.moduli.push_back(Cmodulus(context.zMStar,p,0));
 
-    if (s.contains(i))
+    if (smallPrimes.contains(i))
+      context.smallPrimes.insert(i);   // small prime
+    else if (specialPrimes.contains(i))
       context.specialPrimes.insert(i); // special prime
     else
       context.ctxtPrimes.insert(i);    // ciphertext prime
@@ -478,9 +535,12 @@ FHEcontext::~FHEcontext()
 FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
    const vector<long>& gens, const vector<long>& ords):
   zMStar(m, p, gens, ords), alMod(zMStar, r),
+// FIXME-EncryptedArray
+#if 0
   ea(new EncryptedArray(*this, alMod))
+#else
+  ea(0)
+#endif
 {
   stdev=3.2;  
-  bitsPerLevel = FHE_pSize;
-  fftPrimeCount = 0; 
 }
