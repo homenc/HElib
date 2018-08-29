@@ -199,9 +199,12 @@ public:
 
   // Copy constructor from the base class
 
+// FIXME-IndexSet
+#if 0
   explicit
   CtxtPart(const FHEcontext& _context): DoubleCRT(_context)
   { skHandle.setOne(); }
+#endif
 
   CtxtPart(const FHEcontext& _context, const IndexSet& s): 
     DoubleCRT(_context,s) { skHandle.setOne(); }
@@ -266,8 +269,7 @@ class Ctxt {
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
   NTL::xdouble noiseVar;  // estimating the noise variance in this ciphertext
 
-  long highWaterMark;// keep track of number of multiplications
-  // XXX 
+  double highWaterMark;// keep track of number of multiplications
 
   long intFactor;    // an integer factor to multiply by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
@@ -495,11 +497,13 @@ public:
   //! @brief Estimate the added noise variance
   NTL::xdouble modSwitchAddedNoiseVar() const;
 
-  //! @brief Find the "natural level" of a cipehrtext.
-  // Find the level such that modDown to that level makes the
-  // additive term due to rounding into the dominant noise term 
-  long findBaseLevel() const;
-  // XXX
+  //! @brief returns the natural "height" of a ciphertext
+  //! Returns log(q'), where N*(q'/q)^2 = A,
+  //!   and N = current noise variance,
+  //!   A = additive noise variance,
+  //!   q = current modulus
+  double findNaturalHeight() const;
+
 
   //! @brief Modulus-switching up (to a larger modulus).
   //! Must have primeSet <= s, and s must contain
@@ -511,13 +515,6 @@ public:
   //! primeSet<=s. s must contain either all special primes or none of them
   void modDownToSet(const IndexSet &s);
 
-  //! @brief Modulus-switching down.
-  void modDownToLevel(long lvl);
-  // XXX
-
-  //! Modulus-switching up or down
-  void bringToLevel(long lvl);
-  // XXX
 
   //! @brief Special-purpose modulus-switching for bootstrapping.
   //!
@@ -527,12 +524,6 @@ public:
   //! the zzParts std::vector, as a std::vector of ZZX'es.
   //! Returns an extimate for the noise variance after mod-switching.
   double rawModSwitch(std::vector<NTL::ZZX>& zzParts, long toModulus) const;
-
-  //! @brief Find the "natural prime-set" of a cipehrtext.
-  //! Find the highest IndexSet so that mod-switching down to that set results
-  //! in the dominant noise term being the additive term due to rounding
-  void findBaseSet(IndexSet& s) const;
-  void findBaseSetCKKS(IndexSet& s) const;
 
   //! @brief compute the power X,X^2,...,X^n
   //  void computePowers(std::vector<Ctxt>& v, long nPowers) const;
@@ -549,8 +540,7 @@ public:
     parts.clear();
     noiseVar = NTL::to_xdouble(0.0);
 
-    highWaterMark = findBaseLevel();
-    // XXX
+    highWaterMark = findNaturalLevel();
   }
 
   //! @brief Is this an empty cipehrtext without any parts
@@ -701,8 +691,5 @@ inline void Ctxt::extractBits(std::vector<Ctxt>& bits, long nBits2extract)
 void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long e);
 // implemented in extractDigits.cpp
 
-//! mod down to base level
-void bringToBaseLevel(Ctxt& ctxt);
-// XXX
 
 #endif // ifndef _Ctxt_H_

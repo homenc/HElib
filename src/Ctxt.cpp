@@ -62,8 +62,7 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 
   primeSet = context.ctxtPrimes;
 
-  highWaterMark = findBaseLevel();
-  // XXX
+  highWaterMark = findNaturalHeight();
 
   // A single part, with the plaintext as data and handle pointing to 1
 
@@ -152,7 +151,8 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
 {  // An object to hold the pseudorandom ai's, note that it must be defined
   // with the maximum number of levels, else the PRG will go out of synch.
   // FIXME: This is a bug waiting to happen.
-  DoubleCRT ai(context);
+
+  DoubleCRT ai(context, context.ctxtPrimes | context.specialPrimes);
 
   // Subsequent ai's use the evolving RNG state
   RandomState state; // backup the NTL PRG seed
@@ -185,20 +185,6 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
 } // restore random state upon destruction of the RandomState, see NumbTh.h
 
 
-//! @brief How many levels in the "base-set" for that ciphertext
-// XXX
-long Ctxt::findBaseLevel() const 
-{
-  IndexSet s;
-  findBaseSet(s);
-  if (context.containsSmallPrime()) {
-    if (s.contains(context.ctxtPrimes.first()))
-      return 2*card(s) -1; // 1st prime is half size
-    else
-      return 2*card(s);
-  }
-  else return card(s);     // one prime per level
-}
 
 bool CtxtPart::operator==(const CtxtPart& other) const
 {
@@ -235,8 +221,7 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
-  highWaterMark = findBaseLevel();
-  // XXX
+  highWaterMark = findNaturalHeight();
   intFactor = 1;
   ratFactor = 1.0;
 }
@@ -251,8 +236,7 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
-  highWaterMark = findBaseLevel();
-  // XXX
+  highWaterMark = findNaturalHeight();
   intFactor = 1;
   ratFactor = 1.0;
 }
@@ -271,7 +255,6 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   ptxtSpace = other.ptxtSpace;
   noiseVar  = other.noiseVar;
   highWaterMark = other.highWaterMark;
-  // XXX
   intFactor = other.intFactor;
   ratFactor = other.ratFactor;
   return *this;
@@ -554,68 +537,18 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 }
 
 
-// Find the IndexSet such that modDown to that set of primes makes the
-// additive term due to rounding into the dominant noise term 
-// XXX
-void Ctxt::findBaseSet(IndexSet& s) const
+double Ctxt::findNaturalHeight() const
 {
-  if (getNoiseVar()<=0.0) { // an empty ciphertext
-    s = context.ctxtPrimes;
-    return;
-  }
-  assert(verifyPrimeSet());
-  bool halfSize = context.containsSmallPrime();
-  double curNoise = log(getNoiseVar())/2;
-  double firstNoise = context.logOfPrime(0);
-  double noiseThreshold = log(modSwitchAddedNoiseVar())*0.55; 
-  // FIXME: The above should have been 0.5. Making it a bit more means
-  // that we will mod-switch a little less frequently, whether this is
-  // a good thing needs to be tested.
+  // FIXME: may need to adjust
 
-  // remove special primes, if they are included in this->primeSet
-  s = getPrimeSet();
-  if (!s.disjointFrom(context.specialPrimes)) { 
-    // scale down noise
-    curNoise -= context.logOfProduct(context.specialPrimes);
-    s.remove(context.specialPrimes);
-  }
-
-  /* We compare below to noiseThreshold+1 rather than to noiseThreshold
-   * to make sure that if you mod-switch down to c.findBaseSet() and
-   * then immediately call c.findBaseSet() again, it will not tell you
-   * to mod-switch further down. Note that mod-switching adds close to
-   * noiseThreshold to the scaled noise, so if the scaled noise was
-   * equal to noiseThreshold then after mod-switchign you would have
-   * roughly twice as much noise. Since we're mesuring the log, it means
-   * that you may have as much as noiseThreshold+log(2), which we round
-   * up to noiseThreshold+1 in the test below.
-   */
-  if (curNoise<=noiseThreshold+1) return; // no need to mod down
-
-  // if the first prime in half size, begin by removing it
-  if (halfSize && s.contains(0)) {
-    curNoise -= firstNoise;
-    s.remove(0);
-  }
-
-  // while noise is larger than threshold, scale down by the next prime
-  while (curNoise>noiseThreshold && !empty(s)) {
-    curNoise -= context.logOfPrime(s.last());
-    s.remove(s.last());
-  }
-
-  // Add 1st prime if s is empty or if this does not increase noise too much
-  if (empty(s) || (!s.contains(0) && curNoise+firstNoise<=noiseThreshold)) {
-    s.insert(0);
-    curNoise += firstNoise;
-  }
-
-  if (curNoise>noiseThreshold && log_of_ratio()>-0.5)
-    cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
+  // Returns log(q'), where N*(q'/q)^2 = A,
+  //   and N = current noise variance,
+  //   A = additive noise variance,
+  //   q = current modulus
+  return log(modSwitchAddedNoiseVar()) - log(getNoiseVar())/2
+         + logOfProduct(getPrimeSet());
 }
 
-
-// HERE
 
 /********************************************************************/
 // Ciphertext arithmetic
@@ -1356,13 +1289,18 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   ratFactor = c1.ratFactor * c2.ratFactor * f;
 }
 
-
-void bringToBaseLevel(Ctxt& ctxt)
+double ComputeDelta(const Context& context, long ptxt)
 {
-   if (ctxt.isEmpty()) return;
-   long lvl = ctxt.findBaseLevel();
-   ctxt.modDownToLevel(4); // FIXME: should be lvl
+  const PAlgebra& palg = context.zMStar;
+  long m = palg.getM();
+  long phim = palg.getPhiM();
+  long stdev = context.stdev;
+
+  double dBound = std::max<double>(boundFreshNoise(m, phim, stdev),
+                                    boundRoundingNoise(m, phim, ptxt));
+  return log(dBound);
 }
+
 
 Ctxt& Ctxt::operator*=(const Ctxt& other)
 {
@@ -1383,33 +1321,41 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
     this->ptxtSpace = g;
   }
 
-  Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
-  long lvl = findBaseLevel();
-  if (lvl > highWaterMark) {
-    lvl = highWaterMark;
-    std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
-  }
-  if (this == &other) {  // a squaring operation
-    modDownToLevel(lvl); // mod-down if needed
-#ifdef DEBUG_PRINTOUT
-      checkNoise(*this, *dbgKey, "modDown " + to_string(size_t(this)));
-#endif
-    tmpCtxt.tensorProduct(*this, other);  // compute the actual product
-    tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
-#ifdef DEBUG_PRINTOUT
-      checkNoise(tmpCtxt, *dbgKey, "tensorProduct " + to_string(size_t(this)));
-#endif
-  }
-  else {                // standard multiplication between two ciphertexts
+  if (this != &other) {  
     // Sanity check: same context and public key
     assert (&context==&other.context && &pubKey==&other.pubKey);
+  }
+
+  double delta = ComputeDelta(context, g);
+
+  Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
+  double ht = findNaturalHeight();
+
+  // ht = min(ht, highWaterMark-delta);
+  if (ht > highWaterMark-delta) {
+    ht = highWaterMark-delta;
+    std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
+  }
+
+  if (this == &other) {  // a squaring operation
+    modDownToHeight(ht); // mod-down if needed
+    tmpCtxt.tensorProduct(*this, other);  // compute the actual product
+    tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
+  }
+  else {                // standard multiplication between two ciphertexts
 
     // Match the levels, mod-DOWN the arguments if needed
-    long otherLvl = other.findBaseLevel();
-    if (otherLvl > other.highWaterMark) {
-      otherLvl = other.highWaterMark;
+    double otherHt = other.findNaturalHeight();
+
+    if (otherHt > other.highWaterMark-delta) {
+      otherHt = other.highWaterMark-delta;
       std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
     }
+
+// HERE
+
+// FIXME
+#if 0
     if (isCKKS()) {
       highWaterMark = lvl-1;
       if (lvl < otherLvl)
@@ -1419,8 +1365,10 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
       if (lvl > otherLvl) lvl = otherLvl; // the smaller of the two
       highWaterMark = lvl-1;
     }
+#endif
 
     // mod-DOWN *this, if needed (also removes special primes, if any)
+    // FIXME: need to do something here
     bringToLevel(lvl);
 
     // mod-DOWN other, if needed
@@ -1436,6 +1384,31 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
 
   return *this;
 }
+
+#if 0
+
+Just before tensor product:
+  Bring both ciphertexts to a common modulus q
+  Set high-water mark of the result to log(q).
+
+At the *next* multiplication, must drop to level high-water mark - log(Delta)
+N_i = natural size of ciphertext i = 1,2
+lowTarget = min(N_1-fudge,N_2-fudge,HWM_1-Delta,HWM_2-Delta)
+  ===>  fudge = Delta is a safe worst case estimate
+highTarget = min(max(N_1,N_2), HWM_1, HWM_2) -  Delta
+
+*** Initial attempt:
+lowTarget = min(N_1,N_2,HWM_1-Delta,HWM_2-Delta)
+
+Delta = bits per level, but scaled to natural log, and calculated
+using current plaintext space
+
+
+
+#endif
+
+
+
 
 // Higher-level multiply routines that include also modulus-switching
 // and re-linearization
