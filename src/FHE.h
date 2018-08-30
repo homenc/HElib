@@ -344,7 +344,6 @@ public:
   //! pushes it onto the sKeys list using ImportSecKey from above.
   long GenSecKey(long hwt=0, long ptxtSpace=0, long maxDegKswitch=3)
   { DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes); 
-    // FIXME: check if that is the right prime set
 
     if (hwt>0) {
       newSk.sampleHWt(hwt);     // samle a Hamming-weight-hwt polynomial

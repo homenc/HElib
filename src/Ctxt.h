@@ -269,8 +269,6 @@ class Ctxt {
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
   NTL::xdouble noiseVar;  // estimating the noise variance in this ciphertext
 
-  double highWaterMark;// keep track of number of multiplications
-
   long intFactor;    // an integer factor to multiply by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
 
@@ -497,14 +495,6 @@ public:
   //! @brief Estimate the added noise variance
   NTL::xdouble modSwitchAddedNoiseVar() const;
 
-  //! @brief returns the natural "height" of a ciphertext
-  //! Returns log(q'), where N*(q'/q)^2 = A,
-  //!   and N = current noise variance,
-  //!   A = additive noise variance,
-  //!   q = current modulus
-  double findNaturalHeight() const;
-
-
   //! @brief Modulus-switching up (to a larger modulus).
   //! Must have primeSet <= s, and s must contain
   //! either all the special primes or none of them.
@@ -514,6 +504,36 @@ public:
   //! mod-switch down to primeSet \intersect s, after this call we have
   //! primeSet<=s. s must contain either all special primes or none of them
   void modDownToSet(const IndexSet &s);
+
+  //! @brief make the primeSet equal to newPrimeSet,
+  //! via modUpToSet and modDownToSet
+  void bringToSet(const IndexSet& s) 
+  {
+    modUpToSet(s);
+    modDownToSet(s);
+  }
+
+  //! @brief drop all smallPrimes, adding ctxtPrimes as necessary
+  //! to compensate
+  void dropSmallPrimes()
+  {
+    NTL::Error("dropSmallPrimes: not implemented");
+  }
+
+  //! @brief drop all smallPrimes, adding ctxtPrimes as necessary
+  //! to compensate, and also drop all specialPrimes
+  void dropSmallAndSpecialPrimes()
+  {
+    NTL::Error("dropSmallAndSpecialPrimes: not implemented");
+  }
+
+  //! @brief returns the "capacity" of a ciphertext,
+  //! which is the log of the ratio of the modulus to the
+  //! estimated noise
+  double capacity() const
+  {
+    return context.logOfProduct(getPrimeSet()) - log(getNoiseVar())/2;
+  }
 
 
   //! @brief Special-purpose modulus-switching for bootstrapping.
@@ -539,8 +559,6 @@ public:
     primeSet=context.ctxtPrimes;
     parts.clear();
     noiseVar = NTL::to_xdouble(0.0);
-
-    highWaterMark = findNaturalLevel();
   }
 
   //! @brief Is this an empty cipehrtext without any parts
@@ -582,6 +600,7 @@ public:
     return 0; // just to keep the compiler happy
   }
 
+
   //! @brief Returns log(noise-variance)/2 - log(q)
   double log_of_ratio() const
   {return (getNoiseVar()==0.0)? (-context.logOfProduct(getPrimeSet()))
@@ -599,9 +618,6 @@ public:
                       std::pair<long,long> f=std::pair<long,long>(0,0));
 };
 
-inline IndexSet baseSetOf(const Ctxt& c) { 
-  IndexSet s; c.findBaseSet(s); return s; 
-}
 
 // set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products
 // out could point to v[0], but having it pointing to any other v[i]

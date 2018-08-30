@@ -99,7 +99,7 @@ void ModuliSizes::init(const std::vector<Cmodulus>& chain,
 // If no IndexSet exsists that fits in the target interval, returns
 // the IndexSet that gives the largest value smaller than low.
 IndexSet ModuliSizes::getSet4Size(double low, double high,
-                                  const IndexSet& fromSet)
+                                  const IndexSet& fromSet) const
 {
   high += 0.00001; // to compensate for rounding errors
   // lower_bound returns an iterator to the first element with size>=low
@@ -141,7 +141,7 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
 //! If no IndexSet exsists that fits in the target interval, returns
 //! the IndexSet that gives the largest value smaller than low.
 IndexSet ModuliSizes::getSet4Size(double low, double high,
-                                  const IndexSet& from1, const IndexSet& from2)
+                                  const IndexSet& from1, const IndexSet& from2) const
 {
   high += 0.00001; // to compensate for rounding errors
   // lower_bound returns an iterator to the first element with size>=low

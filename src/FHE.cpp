@@ -428,7 +428,6 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     // that will signal an error
 
     ctxt.noiseVar = xexp(2*context.logOfProduct(context.ctxtPrimes)-log(8.0));
-    ctxt.highWaterMark = 0;
   }
   else {
     // We have <skey,ctxt>= r*<skey,pkey> +p*(e0+e1*s) +m,
@@ -446,7 +445,6 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     double sVar = skSizes[0];
     double p2 = ptxtSpace*double(ptxtSpace);
     ctxt.noiseVar = pubEncrKey.noiseVar*rVar + p2*(1+sVar*(eVar+1));
-    ctxt.highWaterMark = ctxt.findBaseLevel();
   }
   return ptxtSpace;
 }
@@ -497,7 +495,6 @@ long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
 
   ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
   ctxt.ptxtSpace = 1;
-  ctxt.highWaterMark = ctxt.findBaseLevel();
   ctxt.ratFactor = factor;
 
   return factor;
@@ -754,9 +751,6 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long size,
   for (long e=2; e<=maxDegKswitch; e++)
     GenKeySWmatrix(e,1,keyID,keyID); // s^e -> s matrix
 
-  if (keyID==0)
-    pubEncrKey.highWaterMark = pubEncrKey.findBaseLevel();
-
   return keyID; // return the index where this key is stored
 }
 
@@ -789,10 +783,11 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
 
   long n = context.digits.size();
 
-  ksMatrix.b.resize(n, DoubleCRT(context)); // size-n vector
+  // size-n vector
+  ksMatrix.b.resize(n, DoubleCRT(context, context.ctxtPrimes | context.specialPrimes)); 
 
   vector<DoubleCRT> a; 
-  a.resize(n, DoubleCRT(context));
+  a.resize(n, DoubleCRT(context, context.ctxtPrimes | context.specialPrimes));
 
   { RandomState state;
     SetSeed(ksMatrix.prgSeed);
@@ -961,12 +956,10 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
     double rVar = (getContext().zMStar.getPow2()==0)?
       (getContext().zMStar.getPhiM()/4.0) : (m/4.0);
     ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
-    ctxt.highWaterMark = ctxt.findBaseLevel();
     return factor;
   }
   else { // BGV
     ctxt.noiseVar = noiseVar;
-    ctxt.highWaterMark = ctxt.findBaseLevel();
     ctxt.addConstant(ptxt);  // add in the plaintext
     return ctxt.ptxtSpace;
   }
@@ -988,7 +981,10 @@ long FHESecKey::genRecryptData()
   zzX keyPoly;
   const long hwt = context.rcData.skHwt;
   sampleHWt(keyPoly, context.zMStar, hwt);
-  DoubleCRT newSk(keyPoly, context); // defined relative to all primes
+
+  DoubleCRT newSk(keyPoly, context, context.ctxtPrimes | context.specialPrimes); 
+  // defined relative to all primes
+
   long keyID = ImportSecKey(newSk, hwt, p2r, /*maxDegKswitch=*/1);
 
   // Generate a key-switching matrix from key 0 to this key

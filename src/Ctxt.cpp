@@ -62,8 +62,6 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 
   primeSet = context.ctxtPrimes;
 
-  highWaterMark = findNaturalHeight();
-
   // A single part, with the plaintext as data and handle pointing to 1
 
   long f = isCKKS()?
@@ -221,7 +219,6 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
-  highWaterMark = findNaturalHeight();
   intFactor = 1;
   ratFactor = 1.0;
 }
@@ -236,7 +233,6 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
-  highWaterMark = findNaturalHeight();
   intFactor = 1;
   ratFactor = 1.0;
 }
@@ -254,7 +250,6 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   primeSet = other.primeSet;
   ptxtSpace = other.ptxtSpace;
   noiseVar  = other.noiseVar;
-  highWaterMark = other.highWaterMark;
   intFactor = other.intFactor;
   ratFactor = other.ratFactor;
   return *this;
@@ -367,58 +362,6 @@ void Ctxt::modDownToSet(const IndexSet &s)
   FHE_TIMER_STOP;
 }
 
-// XXX
-void Ctxt::bringToLevel(long lvl)
-{
-  IndexSet target = (context.containsSmallPrime())?
-    ((lvl&1)? IndexSet(0,(lvl-1)/2) : IndexSet(1,(lvl-1)/2))
-    : IndexSet(0,lvl-1);
-  assert(empty(target &context.specialPrimes));// no special primes in target
-
-  modUpToSet(target);   // add any missing primes from target
-  modDownToSet(target); // remove any primes not in target
-}
-
-// Modulus-switching down
-// XXX
-void Ctxt::modDownToLevel(long lvl)
-{
-  long currentLvl;
-  IndexSet targetSet;
-  IndexSet currentSet = primeSet & context.ctxtPrimes;
-  if (context.containsSmallPrime()) {
-    currentLvl = 2*card(currentSet);
-    if (currentSet.contains(0))
-      currentLvl--;  // first prime is half the size
-
-    if (lvl & 1) {   // odd level, includes the half-size prime
-      targetSet = IndexSet(0,(lvl-1)/2);
-    } else {
-      targetSet = IndexSet(1,lvl/2);
-    }
-  }
-  else {
-    currentLvl = card(currentSet);
-    targetSet = IndexSet(0,lvl-1);    // one prime per level
-  }
-
-  // If target is not below the current level, nothing to do
-  if (lvl >= currentLvl && currentSet==primeSet) return;
-
-  if (lvl >= currentLvl) { // just remove the special primes
-    targetSet = currentSet;
-  }
-
-  // sanity-check: interval does not contain special primes
-  assert(targetSet.disjointFrom(context.specialPrimes));
-
-  // may need to mod-UP to include the smallest prime
-  if (targetSet.contains(0) && !currentSet.contains(0))
-    modUpToSet(targetSet); // adds the primes in targetSet / primeSet
-
-  modDownToSet(targetSet); // removes the primes in primeSet / targetSet
-}
-
 void Ctxt::blindCtxt(const ZZX& poly)
 {
   Ctxt tmp(pubKey);
@@ -449,9 +392,7 @@ void Ctxt::reLinearize(long keyID)
   if (this->isEmpty() || this->inCanonicalForm(keyID)) return;
   // this->reduce();
 
-  // To relinearize, the primeSet must be disjoint from the special primes
-  if (!primeSet.disjointFrom(context.specialPrimes))
-    modDownToSet(primeSet / context.specialPrimes);
+  dropSmallAndSpecialPrimes();
 
   long g = ptxtSpace;
   Ctxt tmp(pubKey, ptxtSpace); // an empty ciphertext, same plaintext space
@@ -536,18 +477,6 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   noiseVar += addedNoise; // update the noise estimate
 }
 
-
-double Ctxt::findNaturalHeight() const
-{
-  // FIXME: may need to adjust
-
-  // Returns log(q'), where N*(q'/q)^2 = A,
-  //   and N = current noise variance,
-  //   A = additive noise variance,
-  //   q = current modulus
-  return log(modSwitchAddedNoiseVar()) - log(getNoiseVar())/2
-         + logOfProduct(getPrimeSet());
-}
 
 
 /********************************************************************/
@@ -750,6 +679,8 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
 }
 
 // Add at least one prime to the primeSet of c
+// FIXME: this currently does not attempt to add anything
+// from smallPrimes...not sure if this matters
 void addSomePrimes(Ctxt& c)
 {
   const FHEcontext& context = c.getContext();
@@ -763,11 +694,6 @@ void addSomePrimes(Ctxt& c)
   if (!s.contains(context.ctxtPrimes)) {
     IndexSet delta = context.ctxtPrimes / s;  // set minus
     long idx = delta.first(); // We know that |delta| >= 1
-
-    // If this is the small prime, try to add a full-size prime instead
-    if (context.containsSmallPrime()
-        && idx == context.ctxtPrimes.first() && delta.card()>1) 
-      idx = delta.next(idx);
 
     s.insert(idx);
   }
@@ -1212,7 +1138,6 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     }
   }
   noiseVar += other_pt->noiseVar;
-  highWaterMark = std::min(highWaterMark, other_pt->highWaterMark);
 }
 
 long fhe_disable_intFactor = 0;
@@ -1246,10 +1171,10 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 
   // The actual tensoring
   CtxtPart tmpPart(context, IndexSet::emptySet()); // a scratch CtxtPart
-  for (size_t i=0; i<c1.parts.size(); i++) {
+  for (long i: range(c1.parts.size())) { 
     CtxtPart thisPart = c1.parts[i];
     if (f!=1) thisPart *= f;
-    for (size_t j=0; j<c2.parts.size(); j++) {
+    for (long j: range(c2.parts.size())) { 
       tmpPart = c2.parts[j];
       // What secret key will the product point to?
       if (!tmpPart.skHandle.mul(thisPart.skHandle, tmpPart.skHandle))
@@ -1272,10 +1197,10 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
    * have factor = ((n1+n2) choose n2).
    */
   long n1=0,  n2=0;
-  for (size_t i=0; i<c1.parts.size(); i++) // get largest powerOfS in c1
+  for (long i: range(c1.parts.size())) // get largest powerOfS in c1
     if (c1.parts[i].skHandle.getPowerOfS() > n1)
       n1 = c1.parts[i].skHandle.getPowerOfS();
-  for (size_t i=0; i<c2.parts.size(); i++) // get largest powerOfS in c2
+  for (long i: range(c2.parts.size())) // get largest powerOfS in c2
     if (c2.parts[i].skHandle.getPowerOfS() > n2)
       n2 = c2.parts[i].skHandle.getPowerOfS();
 
@@ -1289,6 +1214,8 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   ratFactor = c1.ratFactor * c2.ratFactor * f;
 }
 
+#if 0
+// NOTE: we probably don't need this
 double ComputeDelta(const Context& context, long ptxt)
 {
   const PAlgebra& palg = context.zMStar;
@@ -1300,7 +1227,115 @@ double ComputeDelta(const Context& context, long ptxt)
                                     boundRoundingNoise(m, phim, ptxt));
   return log(dBound);
 }
+#endif
 
+
+void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt& ctxt2)
+{
+  // FIXME: this is just a placeholder
+  const FHEcontext& context = ctxt1.getContext();
+  hi = min(context.logOfProduct(ctxt1.getPrimeSet()), 
+           context.logOfProduct(ctxt2.getPrimeSet())) - 50*log(2.0);
+  lo = hi - 10*log(2.0);
+}
+
+void computeIntervalForSqr(double& lo, double& hi, const Ctxt& ctxt)
+{
+  computeIntervalForMul(lo, hi, ctxt, ctxt);
+}
+
+
+Ctxt& Ctxt::operator*=(const Ctxt& other_orig)
+{
+  FHE_TIMER_START;
+
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) 
+    return *this;
+
+  if (other_orig.isEmpty()) {
+    *this = other_orig;
+    return *this;
+  }
+
+  if (this == &other_orig) {
+    if (isCKKS()) {
+      // squaring, CKKS
+      // TODO
+    }
+    else {
+      // squaring, BGV
+
+      // Compute newPrimeSet, which defines
+      // the modulus q of the product
+
+      // To do this, we first compute an interval [lo, hi] in which
+      // log(q) should lie in order to properly manage noise growth
+      double lo, hi; 
+      computeIntervalForSqr(lo, hi, *this);
+
+      // We then compute newPrimeSet in a way that minimizes
+      // the computational cost of dropping to it
+      IndexSet newPrimeSet = 
+        context.modSizes.getSet4Size(lo, hi, primeSet);
+
+      // drop to newPrimeSet
+      bringToSet(newPrimeSet);
+
+      // Perform the actual tensor product
+      Ctxt tmpCtxt(pubKey, ptxtSpace);
+      tmpCtxt.tensorProduct(*this, *this); 
+      *this = tmpCtxt;
+    }
+  }
+  else {
+    if (isCKKS()) {
+      // real mul, CKKS
+      // TODO
+    }
+    else {
+      // real mul, BGV
+
+      // sanity check
+      assert (&context==&other_orig.context && &pubKey==&other_orig.pubKey);
+
+      Ctxt other = other_orig; // work with a copy
+
+      // equalize plaintext spaces
+      long g = GCD(ptxtSpace, other.ptxtSpace);
+      assert (g>1);
+      ptxtSpace = other.ptxtSpace = g;
+
+
+      // Compute commonPrimeSet, which defines
+      // the modulus q of the product
+
+      // To do this, we first compute an interval [lo, hi] in which
+      // log(q) should lie in order to properly manage noise growth
+      double lo, hi; 
+      computeIntervalForMul(lo, hi, *this, other);
+
+      // We then compute commonPrimeSet in a way that minimizes
+      // the computational cost of dropping to it
+      IndexSet commonPrimeSet = 
+        context.modSizes.getSet4Size(lo, hi, primeSet, other.primeSet);
+
+      // drop the prime sets of *this and other
+      bringToSet(commonPrimeSet);
+      other.bringToSet(commonPrimeSet);
+
+      // Perform the actual tensor product
+      Ctxt tmpCtxt(pubKey, ptxtSpace);
+      tmpCtxt.tensorProduct(*this, other); 
+      *this = tmpCtxt;
+    }
+  }
+
+}
+
+#if 0
+// This is here just so we can "harvest" some of the CKKS logic,
+// if that is convenient.
 
 Ctxt& Ctxt::operator*=(const Ctxt& other)
 {
@@ -1338,7 +1373,7 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   }
 
   if (this == &other) {  // a squaring operation
-    modDownToHeight(ht); // mod-down if needed
+    bringDownToHeight(ht); // mod-down if needed
     tmpCtxt.tensorProduct(*this, other);  // compute the actual product
     tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
   }
@@ -1351,8 +1386,6 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
       otherHt = other.highWaterMark-delta;
       std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
     }
-
-// HERE
 
 // FIXME
 #if 0
@@ -1369,12 +1402,16 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
 
     // mod-DOWN *this, if needed (also removes special primes, if any)
     // FIXME: need to do something here
-    bringToLevel(lvl);
+
+    double commonHt = min(ht, otherHt);
+
+    IndexSet commonPrimeSet = findCommonPrimeSet(*this, other, commonHt);
+    bringToPrimeSet(commonPrimeSet);
 
     // mod-DOWN other, if needed
     if (primeSet!=other.primeSet){ // use temporary copy to mod-DOWN other
       Ctxt tmpCtxt1 = other;
-      tmpCtxt1.bringToLevel(lvl);
+      tmpCtxt1.bringToPrimeSet(commonPrimeSet);
       tmpCtxt.tensorProduct(*this,tmpCtxt1); // compute the actual product
     }
     else 
@@ -1382,32 +1419,12 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
   }
   *this = tmpCtxt; // copy the result into *this
 
+  setHighWaterMark();
+
   return *this;
 }
 
-#if 0
-
-Just before tensor product:
-  Bring both ciphertexts to a common modulus q
-  Set high-water mark of the result to log(q).
-
-At the *next* multiplication, must drop to level high-water mark - log(Delta)
-N_i = natural size of ciphertext i = 1,2
-lowTarget = min(N_1-fudge,N_2-fudge,HWM_1-Delta,HWM_2-Delta)
-  ===>  fudge = Delta is a safe worst case estimate
-highTarget = min(max(N_1,N_2), HWM_1, HWM_2) -  Delta
-
-*** Initial attempt:
-lowTarget = min(N_1,N_2,HWM_1-Delta,HWM_2-Delta)
-
-Delta = bits per level, but scaled to natural log, and calculated
-using current plaintext space
-
-
-
 #endif
-
-
 
 
 // Higher-level multiply routines that include also modulus-switching
@@ -1418,6 +1435,11 @@ void Ctxt::multiplyBy(const Ctxt& other)
   FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
+
+  if (other.isEmpty()) {
+    *this = other;
+    return;
+  }
 
   *this *= other;  // perform the multiplication
   reLinearize();   // re-linearize
@@ -1432,11 +1454,21 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
-  long lvl = findBaseLevel();
-  long lvl1 = other1.findBaseLevel();
-  long lvl2 = other2.findBaseLevel();
+  if (other1.isEmpty()) {
+    *this = other1;
+    return;
+  }
 
-  if (lvl<lvl1 && lvl<lvl2){ // if both others at higher levels than this,
+  if (other2.isEmpty()) {
+    *this = other2;
+    return;
+  }
+
+  long cap = capacity();
+  long cap1 = other1.capacity();
+  long cap2 = other2.capacity();
+
+  if (cap<cap1 && cap<cap2){ // if both others at higher levels than this,
     Ctxt tmp = other1;       // multiply others by each other, then by this
     if (&other1 == &other2) tmp *= tmp; // squaring rather than multiplication
     else                    tmp *= other2;
@@ -1447,7 +1479,7 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   }
 
   const Ctxt *first, *second;
-  if (lvl<lvl2 || lvl1<lvl2) { // lvl1<=lvl<lvl2 or lvl1<=lvl,lvl2
+  if (cap<cap2 || cap1<cap2) { // cap1<=cap<cap2 or cap1<=cap,cap2
                                // multiply by other2, then by other1
     first = &other2;
     second = &other1;
@@ -1463,8 +1495,10 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
     *this *= tmp;
     if (this == first) // cubing operation
       noiseVar *= 3;   // a correction factor due to dependency
+                       // FIXME: this should be handled elsewhere
     else
       noiseVar *= 2;   // a correction factor due to dependency
+                       // FIXME: this should be handled elsewhere
   } else {
     *this *= *first;
     *this *= *second;
@@ -1479,25 +1513,20 @@ void Ctxt::multByConstant(const ZZ& c)
   if (this->isEmpty()) return;
   FHE_TIMER_START;
 
-  const ZZ* cPtr = &c;
+  ZZ c_copy = c;
+
   if (isCKKS()) {
     xdouble size = to_xdouble(c);
     noiseVar *= size*size * getContext().zMStar.get_cM();
   }
   else { // BGV
-    long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
-    if (cc > ptxtSpace/2) cc -= ptxtSpace;
-    else if (cc < -ptxtSpace/2) cc += ptxtSpace;
-
-    double size = to_double(cc);
-    noiseVar *= fsquare(size) * getContext().zMStar.get_cM();
-
-    ZZ tmp = to_ZZ(cc);
-    cPtr = &tmp;
+    long cc = balRem(rem(c, ptxtSpace), ptxtSpace); // reduce modulo plaintext space
+    noiseVar *= fsquare(cc) * getContext().zMStar.get_cM();
+    c_copy = cc;
   }
 
   // multiply all the parts by this constant
-  for (size_t i=0; i<parts.size(); i++) parts[i] *= (*cPtr);
+  for (long i: range(parts.size())) parts[i] *= c_copy;
 }
 
 // Multiply-by-constant, it is assumed that the size of this
@@ -1518,7 +1547,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   }
 
   // multiply all the parts by this constant
-  for (size_t i=0; i<parts.size(); i++) 
+  for (long i: range(parts.size()))
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 
   noiseVar *= size * context.zMStar.get_cM();
@@ -1557,7 +1586,7 @@ void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
   ratFactor *= xfactor;
 
   // multiply all the parts by this constant
-  for (size_t i=0; i<parts.size(); i++) 
+  for (long i: range(parts.size()))
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 }
 
@@ -1593,7 +1622,7 @@ void Ctxt::divideBy2()
   getContext().productOfPrimes(twoInverse, getPrimeSet());
   twoInverse += 1;
   twoInverse /= 2;
-  for (size_t i=0; i<parts.size(); i++)
+  for (long i: range(parts.size()))
     parts[i] *= twoInverse;
 
   noiseVar /= 4;  // noise is halved by this operation
@@ -1617,7 +1646,7 @@ void Ctxt::divideByP()
   ZZ pInverse, Q;
   getContext().productOfPrimes(Q, getPrimeSet());
   InvMod(pInverse, conv<ZZ>(p), Q);
-  for (size_t i=0; i<parts.size(); i++)
+  for (long i: range(parts.size()))
     parts[i] *= pInverse;
 
   noiseVar  /= fsquare(p);  // noise is reduced by a p factor
@@ -1636,7 +1665,7 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   long m = context.zMStar.getM();
 
   // Apply this automorphism to all the parts
-  for (size_t i=0; i<parts.size(); i++) { 
+  for (long i: range(parts.size())) { 
     parts[i].automorph(k);
     if (!parts[i].skHandle.isOne()) {
       parts[i].skHandle.powerOfX = MulMod(parts[i].skHandle.powerOfX,k,m);
@@ -1652,7 +1681,7 @@ void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
   if (this->isEmpty()) return;
 
   // Apply this automorphism to all the parts
-  for (size_t i=0; i<parts.size(); i++) { 
+  for (long i: range(parts.size())) { 
     parts[i].complexConj();
     if (!parts[i].skHandle.isOne()) {
       parts[i].skHandle.powerOfX
@@ -1739,7 +1768,7 @@ void Ctxt::frobeniusAutomorph(long j)
 
 const long Ctxt::getKeyID() const
 {
-  for (size_t i=0; i<parts.size(); i++)
+  for (long i: range(parts.size()))
     if (!parts[i].skHandle.isOne()) return parts[i].skHandle.getSecretKeyID();
 
   return 0; // no part pointing to anything, return the default key
@@ -1751,7 +1780,7 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
   xdouble addedNoise = to_xdouble(0.0);
 
   // incorporate the secret keys' Hamming-weight
-  for (size_t i=0; i<parts.size(); i++) {
+  for (long i: range(parts.size())) { 
     if (parts[i].skHandle.isOne()) {
       addedNoise += 1.0;
     }
@@ -1795,7 +1824,6 @@ void Ctxt::write(ostream& str) const
   */  
   
   write_raw_int(str, ptxtSpace);
-  write_raw_int(str, highWaterMark);
   write_raw_int(str, intFactor);
   write_raw_xdouble(str, ratFactor);
   write_raw_xdouble(str, noiseVar);
@@ -1810,7 +1838,6 @@ void Ctxt::read(istream& str)
   assert(readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN)==0);
   
   ptxtSpace = read_raw_int(str);
-  highWaterMark = read_raw_int(str);
   intFactor = read_raw_int(str);
   ratFactor = read_raw_xdouble(str);
   noiseVar = read_raw_xdouble(str); 
@@ -1863,10 +1890,9 @@ istream& operator>>(istream& str, CtxtPart& p)
 ostream& operator<<(ostream& str, const Ctxt& ctxt)
 {
   str << "["<<ctxt.ptxtSpace<<" "<<ctxt.noiseVar<<" "<<ctxt.primeSet
-      << ctxt.highWaterMark << " "
       << ctxt.intFactor << " " << ctxt.ratFactor << " "
       << ctxt.parts.size() << endl;
-  for (size_t i=0; i<ctxt.parts.size(); i++)
+  for (long i: range(ctxt.parts.size()))
     str << ctxt.parts[i] << endl;
   return str << "]";
 }
@@ -1875,11 +1901,11 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseVar >> ctxt.primeSet
-      >> ctxt.highWaterMark >> ctxt.intFactor >> ctxt.ratFactor;
+      >> ctxt.intFactor >> ctxt.ratFactor;
   long nParts;
   str >> nParts;
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));
-  for (long i=0; i<nParts; i++) {
+  for (long i: range(nParts)) {
     str >> ctxt.parts[i];
     assert (ctxt.parts[i].getIndexSet()==ctxt.primeSet); // sanity-check
   }
@@ -1890,7 +1916,7 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << ", p^r="<<c.getPtxtSpace()<<endl;
+  cerr << "  "<<label << ", log(noise/modulus)~" << c.log_of_ratio() << ", p^r="<<c.getPtxtSpace()<<endl;
 }
 
 // The recursive incremental-product function that does the actual work

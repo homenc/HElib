@@ -35,7 +35,7 @@ public:
   //! If no IndexSet exsists that fits in the target interval, returns
   //! the IndexSet that gives the largest value smaller than low.
   IndexSet getSet4Size(double low, double high,
-                       const IndexSet& fromSet=IndexSet::emptySet());
+                       const IndexSet& fromSet=IndexSet::emptySet()) const;
 
   //! Find a suitable IndexSet of primes whose total size is in the
   //! target interval [low,high], trying to minimize the total number
@@ -43,7 +43,7 @@ public:
   //! If no IndexSet exists that fits in the target interval, returns
   //! the IndexSet that gives the largest value smaller than low.
   IndexSet getSet4Size(double low, double high,
-                       const IndexSet& from1, const IndexSet& from2);
+                       const IndexSet& from1, const IndexSet& from2) const;
 
   // ASCII I/O
   friend std::istream& operator>>(std::istream& s, ModuliSizes& szs);
