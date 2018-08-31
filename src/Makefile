@@ -1,3 +1,4 @@
+:16
 # Copyright (C) 2012-2017 IBM Corp.
 #
 # This program is Licensed under the Apache License, Version 2.0
@@ -66,7 +67,7 @@ check:
 	$(MAKE) check_binaryArith
 	$(MAKE) check_binaryCompare
 	$(MAKE) check_tableLookup
-	$(MAKE) check_Test_Bin_IO_x
+	$(MAKE) check_Bin_IO_x
 
 check_General: Test_General_x 
 	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
