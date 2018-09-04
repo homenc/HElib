@@ -1346,11 +1346,11 @@ void bringToBaseLevel(Ctxt& ctxt)
    ctxt.modDownToLevel(4); // FIXME: should be lvl
 }
 
-Ctxt& Ctxt::operator*=(const Ctxt& other)
+void Ctxt::multLowLvl(const Ctxt& other, bool destructive)
 {
   FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
-  if (this->isEmpty()) return  *this;
+  if (this->isEmpty()) return;
 
   // FIXME: what if other.isEmpty()? should we just
   // do the following?
@@ -1407,16 +1407,20 @@ Ctxt& Ctxt::operator*=(const Ctxt& other)
 
     // mod-DOWN other, if needed
     if (primeSet!=other.primeSet){ // use temporary copy to mod-DOWN other
-      Ctxt tmpCtxt1 = other;
-      tmpCtxt1.bringToLevel(lvl);
-      tmpCtxt.tensorProduct(*this,tmpCtxt1); // compute the actual product
+      if (destructive) {
+        ((Ctxt&)other).bringToLevel(lvl);
+        tmpCtxt.tensorProduct(*this, other);   // compute the actual product
+      }
+      else {
+        Ctxt tmpCtxt1 = other;
+        tmpCtxt1.bringToLevel(lvl);
+        tmpCtxt.tensorProduct(*this,tmpCtxt1); // compute the actual product
+      }
     }
     else 
-      tmpCtxt.tensorProduct(*this, other);   // compute the actual product
+      tmpCtxt.tensorProduct(*this, other);     // compute the actual product
   }
   *this = tmpCtxt; // copy the result into *this
-
-  return *this;
 }
 
 // Higher-level multiply routines that include also modulus-switching

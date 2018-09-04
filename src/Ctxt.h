@@ -354,7 +354,8 @@ public:
   Ctxt& operator-=(const Ctxt& other) { addCtxt(other,true); return *this; }
   void addCtxt(const Ctxt& other, bool negative=false);
 
-  Ctxt& operator*=(const Ctxt& other); // Multiply by aonther ciphertext
+  void multLowLvl(const Ctxt& other, bool destructive=false); // Multiply by aonther ciphertext
+  Ctxt& operator*=(const Ctxt& other){  multLowLvl(other); return *this; }
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
   Ctxt& operator>>=(long k) { automorph(k); return *this; }
   void complexConj();     // Complex conjugate, same as automorph(m-1)
