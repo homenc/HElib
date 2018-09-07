@@ -522,10 +522,7 @@ public:
 
   //! @brief drop all smallPrimes, adding ctxtPrimes as necessary
   //! to compensate, and also drop all specialPrimes
-  void dropSmallAndSpecialPrimes()
-  {
-    NTL::Error("dropSmallAndSpecialPrimes: not implemented");
-  }
+  void dropSmallAndSpecialPrimes();
 
   //! @brief returns the "capacity" of a ciphertext,
   //! which is the log of the ratio of the modulus to the

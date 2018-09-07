@@ -85,8 +85,8 @@ bool Ctxt::verifyPrimeSet() const
   IndexSet s = primeSet & context.specialPrimes; // special primes in primeSet
   if (!empty(s) && s!=context.specialPrimes) return false;
 
-  s = primeSet / s;                              // ctxt primes in primeSet
-  return (s.isInterval() && s.first()<=1 && !empty(s));
+  s = primeSet & context.ctxtPrimes;   // ctxt primes in primeSet
+  return s.isInterval();
 }
 
 
@@ -381,6 +381,46 @@ void Ctxt::reducePtxtSpace(long newPtxtSpace)
   intFactor %= g;
 }
 
+
+// drop all smallPrimes, adding ctxtPrimes as necessary
+// to compensate, and also drop all specialPrimes
+void Ctxt::dropSmallAndSpecialPrimes()
+{
+  if (primeSet.disjointFrom(context.smallPrimes)) {
+    // nothing to do except drop the special primes, if any
+    modDownToSet(context.ctxtPrimes);
+  }
+  else {
+    // we will be dropping some smallPrimes, and we need to 
+    // figure out how much we have to compensate with
+    // other ctxtPrimes
+
+    double fudge = 3*log(2.0);
+    double log_modswitch_noise = log(modSwitchAddedNoiseVar())/2 + fudge;
+    double log_noise = log(getNoiseVar())/2;
+
+    IndexSet dropping = primeSet / (context.smallPrimes | context.specialPrimes);
+    double log_dropping = context.logOfProduct(dropping);
+
+    IndexSet compensate;
+    if (log_noise - log_dropping < log_modswitch_noise) {
+      double log_compensation = log_modswitch_noise - (log_noise - log_dropping);
+      // add ctxtPrimes whose log adds up to at least log_compensation,
+      // if possible
+
+      IndexSet candidates = context.ctxtPrimes / primeSet;
+      for (long i: candidates) {
+         if (log_compensation <= 0) break;
+         compensate.insert(i);
+         log_compensation -= log(context.ithPrime(i));
+      }
+    }
+
+    IndexSet target = (primeSet & context.ctxtPrimes) | compensate;
+    bringToSet(target);
+  }
+
+}
 
 
 // key-switch to (1,s_i), s_i is the base key with index keyID. If
@@ -1230,13 +1270,32 @@ double ComputeDelta(const Context& context, long ptxt)
 #endif
 
 
+#if 0
 void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt& ctxt2)
 {
   // FIXME: this is just a placeholder
   const FHEcontext& context = ctxt1.getContext();
   hi = min(context.logOfProduct(ctxt1.getPrimeSet()), 
-           context.logOfProduct(ctxt2.getPrimeSet())) - 50*log(2.0);
-  lo = hi - 10*log(2.0);
+           context.logOfProduct(ctxt2.getPrimeSet())) - 47*log(2.0);
+  lo = hi - 12*log(2.0);
+}
+#endif
+
+void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt& ctxt2)
+{
+  const FHEcontext& context = ctxt1.getContext();
+
+  double lvl1 = ctxt1.capacity();
+  double lvl2 = ctxt2.capacity();
+
+  double adn = log(ctxt1.modSwitchAddedNoiseVar())/2;
+  // should be the same for both ciphertexts
+
+  hi = min(lvl1, lvl2) + adn;
+
+  lo = hi - 5*log(2.0);
+  // FIXME: 5 bits of slack...could be something more dynamic
+
 }
 
 void computeIntervalForSqr(double& lo, double& hi, const Ctxt& ctxt)
@@ -1916,7 +1975,11 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  cerr << "  "<<label << ", log(noise/modulus)~" << c.log_of_ratio() << ", p^r="<<c.getPtxtSpace()<<endl;
+  cerr << "  "<<label 
+       << ", log2(modulus/noise)=" << (-c.log_of_ratio()/log(2.0)) 
+       << ", p^r=" << c.getPtxtSpace() 
+       << ", #smallPrimes=" << (c.getPrimeSet() & c.getContext().smallPrimes).card()
+       << endl;
 }
 
 // The recursive incremental-product function that does the actual work
@@ -2046,6 +2109,9 @@ void innerProduct(Ctxt& result,
 // The ciphertext *this is not affected, instead the result is returned in
 // the zzParts vector, as a vector of ZZX'es. Returns an extimate for the
 // noise variance after mod-switching.
+
+// FIXME: put this function back soon!
+#if 0
 #include "powerful.h"
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 {
@@ -2104,6 +2170,7 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
   // Return an estimate for the noise
   return conv<double>(noiseVar*ratio*ratio + modSwitchAddedNoiseVar());
 }
+#endif
 
 
 #if 0 /********************* UNUSED CODE *******************************/
