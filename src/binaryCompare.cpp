@@ -166,9 +166,10 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
   }
 
   // Check that we have enough levels, try to bootstrap otherwise
-  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize+1)+2)
+  if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize+1)+2)*mu.getContext().BPL())
     packedRecrypt(a,b,unpackSlotEncoding);
-  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize)+1) // the bear minimum
+  if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize)+1)*mu.getContext().BPL()) 
+    // the bare minimum
     throw std::logic_error("not enough levels for comparison");
 
   // NOTE: this procedure minimizes the number of multiplications,

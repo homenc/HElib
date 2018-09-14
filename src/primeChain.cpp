@@ -399,11 +399,8 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
   long p2e = p2r;
   if (willBeBootstrappable) { // bigger p^e for bootstrapping
     double alpha; long e, ePrime;
-// FIXME-bootstrap
-#if 0
     RecryptData::setAlphaE(alpha,e,ePrime, context);
     p2e *= NTL::power_long(p, e-ePrime);
-#endif
   }
 
   long nCtxtPrimes = context.ctxtPrimes.card();
@@ -495,7 +492,7 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
   }
 }
 
-void newBuildModChain(FHEcontext& context, long nBits, long nDgts,
+void buildModChain(FHEcontext& context, long nBits, long nDgts,
                       bool willBeBootstrappable, long resolution)
 {
    addSmallPrimes(context, resolution);

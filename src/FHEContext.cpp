@@ -19,27 +19,8 @@
 
 NTL_CLIENT
 
-// FIXME-bootstrap
-#if 1
-RecryptData::~RecryptData()
-{
-  if (alMod!=NULL)     delete alMod;
-  if (ea!=NULL)        delete ea;
-  if (firstMap!=NULL)  delete firstMap;
-  if (secondMap!=NULL) delete secondMap;
-  if (p2dConv!=NULL)   delete p2dConv;
-}
 
-ThinRecryptData::~ThinRecryptData()
-{
-  if (alMod!=NULL)     delete alMod;
-  if (ea!=NULL)        delete ea;
-  if (coeffToSlot!=NULL)  delete coeffToSlot;
-  if (slotToCoeff!=NULL) delete slotToCoeff;
-}
-#endif
-
-long newFindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose)
+long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
   // get a lower-bound on the parameter N=phi(m):
   // 1. Each level in the modulus chain corresponds to pSize=p2Size/2
@@ -204,11 +185,8 @@ bool FHEcontext::operator==(const FHEcontext& other) const
 
   if (stdev != other.stdev) return false;
 
-// FIXME-bootstrap
-#if 0
   if (rcData != other.rcData) return false;
   if (trcData != other.trcData) return false;
-#endif
   return true;
 }
 
@@ -306,13 +284,10 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
     }
   }
 
-// FIXME-bootstrap
-#if 0
   write_ntl_vec_long(str, context.rcData.mvec);
 
   write_raw_int(str, context.rcData.hwt);
   write_raw_int(str, context.rcData.conservative);
-#endif
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
@@ -432,14 +407,11 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
 
   str <<"\n";
 
-// FIXME-bootstrap
-#if 0
   str << context.rcData.mvec;
   str << " " << context.rcData.hwt;
   str << " " << context.rcData.conservative;
   str << " " << context.rcData.build_cache;
   // NOTE: the data for trcData will always be the same as for rcData
-#endif
 
   str << "]\n";
 
@@ -535,12 +507,7 @@ FHEcontext::~FHEcontext()
 FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
    const vector<long>& gens, const vector<long>& ords):
   zMStar(m, p, gens, ords), alMod(zMStar, r),
-// FIXME-EncryptedArray
-#if 0
   ea(new EncryptedArray(*this, alMod))
-#else
-  ea(0)
-#endif
 {
   stdev=3.2;  
 }

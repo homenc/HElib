@@ -67,7 +67,7 @@ static long mValues[][14] = {
 
 static bool dry = false; // a dry-run flag
 
-void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool cons=false, int build_cache=0)
+void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=false, int build_cache=0)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -93,7 +93,6 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
     cout << ": p=" << p
 	 << ", r=" << r
 	 << ", L=" << L
-	 << ", B=" << B
 	 << ", t=" << skHwt
 	 << ", c=" << c
 	 << ", m=" << m
@@ -106,7 +105,6 @@ void TestIt(long idx, long p, long r, long L, long c, long B, long skHwt, bool c
 
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
-  context.bitsPerLevel = B;
   buildModChain(context, L, c,/*extraBits=*/7);
 
   long nPrimes = context.numPrimes();
@@ -231,8 +229,7 @@ int main(int argc, char *argv[])
   long p=2;
   long r=1;
   long c=3;
-  long L=25;
-  long B=23;
+  long L=600;
   long N=0;
   long t=0;
   bool cons=0;
@@ -248,7 +245,6 @@ int main(int argc, char *argv[])
 
   amap.arg("c", c, "number of columns in the key-switching matrices");
   amap.arg("L", L, "# of levels in the modulus chain");
-  amap.arg("B", B, "# of bits per level");
   amap.arg("N", N, "lower-bound on phi(m)");
   amap.arg("t", t, "Hamming weight of recryption secret key", "heuristic");
   amap.arg("dry", dry, "dry=1 for a dry-run");
@@ -276,13 +272,9 @@ int main(int argc, char *argv[])
   fhe_disable_fat_boot = 1;
   // save time...disable some fat boot precomputation
 
-
-  if (B<=0) B=FHE_pSize;
-  //if (B>NTL_SP_NBITS/2) B = NTL_SP_NBITS/2;
-
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
-      TestIt(i,p,r,L,c,B,t,cons,useCache);
+      TestIt(i,p,r,L,c,t,cons,useCache);
       break;
     }
 

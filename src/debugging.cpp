@@ -35,7 +35,6 @@ double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
   return conv<double>(actualNoise/noiseEst);
 }
 
-#if 0
 void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, double thresh)
 {
    double ratio;
@@ -43,33 +42,6 @@ void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, d
       std::cerr << "\n*** too much noise: " << msg << ": " << ratio << "\n";
    }
 }
-
-#else
-void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, double thresh) {
-  Ctxt tmp(ctxt);
-
-  bringToBaseLevel(tmp);
-
-  xdouble noiseEst = sqrt(tmp.getNoiseVar());
-
-  ZZX p, pp;
-  sk.Decrypt(p, tmp, pp);
-
-  xdouble actualNoise = coeffsL2Norm(pp);
-  double ratio =  conv<double>(actualNoise/noiseEst);
-
-  xdouble canon = embeddingLargestCoeff(pp, tmp.getContext().zMStar);
-  double log_canon = log(canon)/log(2.0);
-
-  if (log_canon > ctxt.getContext().bitsPerLevel || ratio > 10) {
-      std::cerr << "\n*** too much noise: " << msg << ": " << ratio
-                << ", " << log_canon << "\n";
-  }
-
-}
-
-
-#endif
 
 void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags)
@@ -83,7 +55,7 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
   xdouble actualNoise = coeffsL2Norm(pp);
 
   s << "plaintext space mod "<<ctxt.getPtxtSpace()
-    << ", level="<<ctxt.findBaseLevel()
+    << ", bitCapacity="<<ctxt.bitCapacity()
     << ", \n           |noise|=q*" << (actualNoise/modulus)
     << ", |noiseEst|=q*" << (noiseEst/modulus);
 //#if FFT_IMPL
@@ -94,6 +66,7 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 #endif
   s << endl;
 
+#if 0
   if (flags & FLAG_PRINT_ZZX) {
     s << "   before mod-p reduction=";
     printZZX(s,pp) <<endl;
@@ -132,6 +105,7 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
     eacx.decrypt(ctxt, sk, v);
     printVec(s<<"           ", v)<<endl;
   }
+#endif
 }
 
 bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,

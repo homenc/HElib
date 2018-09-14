@@ -532,6 +532,12 @@ public:
     return context.logOfProduct(getPrimeSet()) - log(getNoiseVar())/2;
   }
 
+  //! @brief the capacity in bits, returned as an integer
+  long bitCapacity() const
+  {
+    return long(capacity()/log(2.0));
+  }
+
 
   //! @brief Special-purpose modulus-switching for bootstrapping.
   //!

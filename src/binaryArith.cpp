@@ -641,7 +641,7 @@ void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
   while (leftInQ>2) {
     // If any number is too low level, then bootstrap everything
     PtrMatrix_PtPtrVector<Ctxt> wrapper(numPtrs);
-    if (findMinLevel(wrapper)<3) {
+    if (findMinBitCapacity(wrapper)<3*ct_ptr->getContext().BPL()) {
       assert(bootstrappable && unpackSlotEncoding!=nullptr);
       packedRecrypt(wrapper, *unpackSlotEncoding, ea, /*belowLvl=*/10);
     }
@@ -738,7 +738,7 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   }
 
 #ifdef DEBUG_PRINTOUT
-  cout << " before multiplication, level="<<findMinLevel({&a, &b})
+  cout << " before multiplication, capacity="<<findMinBitCapacity({&a, &b})
        << endl;
 #endif
   // Edge case, if a or b is 1 bit

@@ -1291,7 +1291,10 @@ void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt
   double adn = log(ctxt1.modSwitchAddedNoiseVar())/2;
   // should be the same for both ciphertexts
 
-  hi = min(lvl1, lvl2) + adn;
+  double safety = 1*log(2.0); // 1 bits of safety
+
+  hi = min(lvl1, lvl2) + adn - safety;
+  // FIXME: this is a bit hackish...should we really 
 
   lo = hi - 5*log(2.0);
   // FIXME: 5 bits of slack...could be something more dynamic
@@ -2110,8 +2113,6 @@ void innerProduct(Ctxt& result,
 // the zzParts vector, as a vector of ZZX'es. Returns an extimate for the
 // noise variance after mod-switching.
 
-// FIXME: put this function back soon!
-#if 0
 #include "powerful.h"
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 {
@@ -2170,7 +2171,6 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
   // Return an estimate for the noise
   return conv<double>(noiseVar*ratio*ratio + modSwitchAddedNoiseVar());
 }
-#endif
 
 
 #if 0 /********************* UNUSED CODE *******************************/

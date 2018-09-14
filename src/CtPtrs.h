@@ -47,19 +47,21 @@ void packedRecrypt(const CtPtrMat& m,   // matrix of Ctxts
                    const EncryptedArray& ea, long belowLvl=LONG_MAX);
 
 // Find the lowest level among many ciphertexts
-inline long findMinLevel(const CtPtrs& v)
+// FIXME: using bitCapacity isn't really the right thing...
+// this could break some code
+inline long findMinBitCapacity(const CtPtrs& v)
 {
   long lvl = LONG_MAX;
   for (long i=0; i<v.size(); i++)
     if (v.isSet(i) && !v[i]->isEmpty())
-      lvl = std::min(lvl, v[i]->findBaseLevel());
+      lvl = std::min(lvl, v[i]->bitCapacity());
   return lvl;
 }
-inline long findMinLevel(const CtPtrMat& m)
+inline long findMinBitCapacity(const CtPtrMat& m)
 {
   long lvl = LONG_MAX;
   for (long i=0; i<m.size(); i++)
-    lvl = std::min(lvl, findMinLevel(m[i]));
+    lvl = std::min(lvl, findMinBitCapacity(m[i]));
   return lvl;
 }
 
@@ -68,7 +70,7 @@ inline long findMinLevel(std::initializer_list<const CtPtrs*> list)
 {
   long lvl = LONG_MAX;
   for (auto elem : list)
-    lvl = std::min(lvl, findMinLevel(*elem));
+    lvl = std::min(lvl, findMinBitCapacity(*elem));
   return lvl;
 }
 

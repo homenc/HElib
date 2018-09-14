@@ -35,7 +35,7 @@
  * Fails with an error message if no suitable m is found
  * prints an informative message if verbose == true
  **/
-long newFindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose=false);
+long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose=false);
 
 
 class EncryptedArray;
@@ -118,15 +118,20 @@ public:
   void makeBootstrappable(const NTL::Vec<long>& mvec, long skWht=0,
 			  bool conservative=false, bool build_cache=false)
   { 
-// FIXME-bootstrap
-#if 0
     rcData.init(*this, mvec, skWht, conservative, build_cache); 
     trcData.init(*this, mvec, skWht, conservative, build_cache); 
-#endif
   }
 
   bool isBootstrappable() const 
     { return rcData.alMod != NULL; }
+
+  IndexSet fullPrimes() const 
+  {
+    return ctxtPrimes | specialPrimes;
+  }
+
+  // FIXME: replacement for bitsPerLevel...placeholder for now
+  long BPL() const { return 30; }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }
@@ -268,18 +273,16 @@ std::unique_ptr<FHEcontext> buildContextFromBinary(std::istream& str);
 void readContextBinary(std::istream& str, FHEcontext& context);
 
 
-void buildModChain(FHEcontext &context, long nLevels, long c=3,
-                   bool willBeBootstrappable=false);
-
 // Build modulus chain with nBits worth of ctxt primes, 
 // using nDgts digits in key-switching.
 // willBeBootstrappable flag is a hack, used to get around some
 // circularity when making the context boostrappable.
 // resolution ... FIXME
 
-void newBuildModChain(FHEcontext& context, long nBits, long nDgts=3,
+void buildModChain(FHEcontext& context, long nBits, long nDgts=3,
                       bool willBeBootstrappable=false, long resolution=3);
 
 ///@}
 extern FHEcontext* activeContext; // Should point to the "current" context
+
 #endif // ifndef _FHEcontext_H_
