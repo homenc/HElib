@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
   long r=1;
   amap.arg("r", r,  "lifting");
   long L=200;
-  amap.arg("L", L, "# of levels in the modulus chain");
+  amap.arg("L", L, "# of bits in the modulus chain");
   long dim=0;
   amap.arg("dim", dim, "dimension along which to multiply");
   long verbose=0;

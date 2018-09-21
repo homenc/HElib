@@ -529,7 +529,10 @@ public:
   //! estimated noise
   double capacity() const
   {
-    return context.logOfProduct(getPrimeSet()) - log(getNoiseVar())/2;
+    if (getNoiseVar() <= 1.0) 
+      return context.logOfProduct(getPrimeSet());
+    else
+      return context.logOfProduct(getPrimeSet()) - log(getNoiseVar())/2;
   }
 
   //! @brief the capacity in bits, returned as an integer

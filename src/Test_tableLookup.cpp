@@ -91,8 +91,8 @@ int main(int argc, char *argv[])
 
   // Compute the number of levels
   long L;
-  if (bootstrap) L=30; // that should be enough
-  else           L = 5 +bitSize;
+  if (bootstrap) L=900; // that should be enough
+  else           L = 30*(5 +bitSize);
   
   if (verbose) {
     cout <<"input bitSize="<<bitSize<<", output size bound="<<outSize
@@ -101,7 +101,6 @@ int main(int argc, char *argv[])
     cout << "computing key-independent tables..." << std::flush;
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);
-  context.bitsPerLevel = B;
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
     context.makeBootstrappable(mvec, /*t=*/0,

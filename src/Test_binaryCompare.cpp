@@ -95,8 +95,8 @@ int main(int argc, char *argv[])
 
   // Compute the number of levels
   long L;
-  if (bootstrap) L = 30; // that should be enough
-  else           L = 7+ NTL::NumBits(bitSize+2);
+  if (bootstrap) L = 900; // that should be enough
+  else           L = 30*(7+ NTL::NumBits(bitSize+2));
 
   if (verbose) {
     cout <<"input bitSize="<<bitSize
@@ -105,7 +105,6 @@ int main(int argc, char *argv[])
     cout << "computing key-independent tables..." << std::flush;
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);
-  context.bitsPerLevel = B;
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
     context.makeBootstrappable(mvec, /*t=*/0,
@@ -142,7 +141,8 @@ int main(int argc, char *argv[])
 
 void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
 {
-  const EncryptedArray& ea = *(secKey.getContext().ea);
+  const FHEcontext& context = secKey.getContext();
+  const EncryptedArray& ea = *(context.ea);
 
   // Choose two random n-bit integers
   long pa = RandomBits_long(bitSize);
@@ -162,8 +162,8 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
     if (i<bitSize) secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
     secKey.Encrypt(encb[i], ZZX((pb>>i)&1));
     if (bootstrap) { // put them at a lower level
-      if (i<bitSize) enca[i].modDownToLevel(5);
-      encb[i].modDownToLevel(5);
+      if (i<bitSize) enca[i].bringToSet(context.getCtxtPrimes(5));
+      encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
 #ifdef DEBUG_PRINTOUT

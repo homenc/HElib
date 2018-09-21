@@ -111,13 +111,13 @@ int main(int argc, char *argv[])
 
   // Compute the number of levels
   long L;
-  if (bootstrap) L=30; // that should be enough
+  if (bootstrap) L=900; // that should be enough
   else {
     double nBits =
       (outSize>0 && outSize<2*bitSize)? outSize : (2*bitSize);
     double three4twoLvls = log(nBits/2) / log(1.5);
     double add2NumsLvls = log(nBits) / log(2.0);
-    L = 5 + ceil(three4twoLvls + add2NumsLvls);
+    L = (5 + ceil(three4twoLvls + add2NumsLvls))*30;
   }
   
   if (verbose) {
@@ -128,7 +128,6 @@ int main(int argc, char *argv[])
     cout << "computing key-independent tables..." << std::flush;
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);
-  context.bitsPerLevel = B;
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
     context.makeBootstrappable(mvec, /*t=*/0,
@@ -223,7 +222,8 @@ void test15for4(FHESecKey& secKey)
 void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
                  long outSize, bool bootstrap)
 {
-  const EncryptedArray& ea = *(secKey.getContext().ea);
+  const FHEcontext& context = secKey.getContext();
+  const EncryptedArray& ea = *(context.ea);
   long mask = (outSize? ((1L<<outSize)-1) : -1);
 
   // Choose two random n-bit integers
@@ -237,14 +237,14 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
   for (long i=0; i<bitSize; i++) {
     secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
     if (bootstrap) { // put them at a lower level
-      enca[i].modDownToLevel(5);
+      enca[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
   resize(encb, bitSize2, Ctxt(secKey));
   for (long i=0; i<bitSize2; i++) {
     secKey.Encrypt(encb[i], ZZX((pb>>i)&1));
     if (bootstrap) { // put them at a lower level
-      encb[i].modDownToLevel(5);
+      encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
   if (verbose) {
@@ -317,7 +317,8 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
 void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
              long outSize, bool bootstrap)
 {
-  const EncryptedArray& ea = *(secKey.getContext().ea);
+  const FHEcontext& context = secKey.getContext();
+  const EncryptedArray& ea = *(context.ea);
   long mask = (outSize? ((1L<<outSize)-1) : -1);
 
   // Choose two random n-bit integers
@@ -331,14 +332,14 @@ void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
   for (long i=0; i<bitSize1; i++) {
     secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
     if (bootstrap) { // put them at a lower level
-      enca[i].modDownToLevel(5);
+      enca[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
   resize(encb, bitSize2, Ctxt(secKey));
   for (long i=0; i<bitSize2; i++) {
     secKey.Encrypt(encb[i], ZZX((pb>>i)&1));
     if (bootstrap) { // put them at a lower level
-      encb[i].modDownToLevel(5);
+      encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
   if (verbose) {

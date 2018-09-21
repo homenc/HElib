@@ -23,7 +23,7 @@ NTL_CLIENT
 
 long thinRecrypt_initial_level=0;
 
-#define PRINT_LEVELS
+//#define PRINT_LEVELS
 
 
 /************* Some local functions *************/

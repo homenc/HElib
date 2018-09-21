@@ -38,7 +38,7 @@ void usage(char *prog)
   cout << "  m is the cyclotomic field [default=4369]\n";
   cout << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
   cout << "  depth bounds the depth of permutation network [default=5]\n";
-  cout << "  L is number of levels in chain [default=depth]\n\n";
+  cout << "  L is number of bits in chain [default=30*depth]\n\n";
   cout << "dry=1 for dry run [default=0]\n";
   exit(0);
 }
@@ -113,10 +113,10 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   //  CubeSignature sig(dims);
 
   // 1/2 prime per level should be more or less enough, here we use 1 per layer
-  if (L<=0) L = 1+trees.numLayers();
+  if (L<=0) L = (1+trees.numLayers())*context.BPL();
   buildModChain(context, /*nLevels=*/L, /*nDigits=*/3);
-  if (!noPrint) cout << "**Using "<<L<<" primes (of which "
-		     << context.ctxtPrimes.card() << " are Ctxt-primes)\n";
+  if (!noPrint) cout << "**Using "<<L<<" and "
+		     << context.ctxtPrimes.card() << " Ctxt-primes\n";
 
   // Generate a sk/pk pair
   FHESecKey secretKey(context);

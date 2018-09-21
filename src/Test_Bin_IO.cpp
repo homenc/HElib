@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
   long p=2;
   long c=2;
   long w=64;
-  long L=5;
+  long L=300;
   long cleanup=1;
   string sampleFilePrefix; 
  

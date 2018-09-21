@@ -253,16 +253,14 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
   // standard-deviation 
   write_raw_xdouble(str, context.stdev);
    
+  // the "small" index 
   write_raw_int(str, context.smallPrimes.card());
-
-  // the "special" index 
   for(long tmp: context.smallPrimes) {;
     write_raw_int(str, tmp);
   }
    
-  write_raw_int(str, context.specialPrimes.card());
-
   // the "special" index 
+  write_raw_int(str, context.specialPrimes.card());
   for(long tmp: context.specialPrimes) {
     write_raw_int(str, tmp);
   }

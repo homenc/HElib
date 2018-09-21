@@ -42,14 +42,13 @@ int main(int argc, char *argv[])
   amap.parse(argc, argv);
 
   if (p<2) exit(0);
-  double lBound = (double)FHE_p2Bound;
-  if (lBound>40.0) lBound=20.0;
+  double lBound = 30.0;
   long bound = floor(lBound/log2((double)p));
   if (r<2 || r>bound) r = bound;
   long p2r = power_long(p,r); // p^r
 
   long ll = NextPowerOfTwo(p);
-  long L = r*ll*3 +2; // how many levels do we need
+  long L = (r*ll*3 +2)*30; // how many levels do we need
   if (m==0)
     m = p+1; // FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
   setDryRun(dry);

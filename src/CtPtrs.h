@@ -66,7 +66,7 @@ inline long findMinBitCapacity(const CtPtrMat& m)
 }
 
 #include <initializer_list>
-inline long findMinLevel(std::initializer_list<const CtPtrs*> list)
+inline long findMinBitCapacity(std::initializer_list<const CtPtrs*> list)
 {
   long lvl = LONG_MAX;
   for (auto elem : list)

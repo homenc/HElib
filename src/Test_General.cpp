@@ -271,7 +271,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
  *              d == 0 => factors[0] defines extension
  *   c       number of columns in the key-switching matrices  [ default=2 ]
  *   k       security parameter  [ default=80 ]
- *   L       # of levels in the modulus chain  [ default=heuristic ]
+ *   L       # of bits in the modulus chain  [ default=heuristic ]
  *   s       minimum number of slots  [ default=0 ]
  *   repeat  number of times to repeat the test  [ default=1 ]
  *   m       use specified value as modulus
@@ -312,7 +312,7 @@ int main(int argc, char **argv)
   amap.arg("k", k, "security parameter");
 
   long L=500;
-  amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
+  amap.arg("L", L, "# of bits in the modulus chain");
 
   long s=0;
   amap.arg("s", s, "minimum number of slots");
@@ -350,7 +350,6 @@ int main(int argc, char **argv)
   
 
   long w = 64; // Hamming weight of secret key
-  //  long L = z*R; // number of levels
 
   if (mvec.length()>0)
     chosen_m = computeProd(mvec);
@@ -363,9 +362,3 @@ int main(int argc, char **argv)
   }
 }
 
-// call to get our running test case:
-// Test_General_x p=23 m=20485 L=10 R=5
-//
-// another call to get an example where phi(m) is very
-// close to m:
-// Test_General_x m=18631 L=10 R=5

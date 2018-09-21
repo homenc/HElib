@@ -60,8 +60,9 @@ void computeAllProducts(/*Output*/CtPtrs& products,
   long bpl = array.ptr2nonNull()->getContext().BPL();
   if (findMinBitCapacity(array) < (NTL::NumBits(nBits)+1)*bpl) {
     const Ctxt* ct = array.ptr2nonNull(); // find some non-null Ctxt
-    assert(unpackSlotEncoding!=nullptr &&
-           ct!=nullptr && ct->getPubKey().isBootstrappable());
+    assert(unpackSlotEncoding!=nullptr);
+    assert(ct!=nullptr);
+    assert(ct->getPubKey().isBootstrappable());
     packedRecrypt(array, *unpackSlotEncoding,
                   *(ct->getContext().ea), /*belowLevel=*/nBits +3);
   }

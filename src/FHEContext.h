@@ -130,6 +130,19 @@ public:
     return ctxtPrimes | specialPrimes;
   }
 
+  IndexSet allPrimes() const
+  {
+    return smallPrimes | ctxtPrimes | specialPrimes;
+  }
+
+  // retuens first nprimes ctxtPrimes
+  IndexSet getCtxtPrimes(long nprimes) const
+  {
+    long first = ctxtPrimes.first();
+    long last = std::min(ctxtPrimes.last(), first + nprimes - 1);
+    return IndexSet(first, last);
+  }
+
   // FIXME: replacement for bitsPerLevel...placeholder for now
   long BPL() const { return 30; }
 
