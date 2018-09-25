@@ -875,7 +875,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before repack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
+  decryptAndPrint(cerr, unpacked, *dbgKey, *dbgEa, printFlag);
 #endif
 
   ctxt = unpacked;
