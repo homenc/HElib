@@ -356,7 +356,10 @@ void readContextBinary(istream& str, FHEcontext& context)
     context.makeBootstrappable(mv, t, consFlag);
   }
 
+  context.setModSizeTable();
+
   assert(readEyeCatcher(str, BINIO_EYE_CONTEXT_END)==0);
+
 }
 
 void writeContextBase(ostream& str, const FHEcontext& context)
