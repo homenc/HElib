@@ -1254,51 +1254,60 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   ratFactor = c1.ratFactor * c2.ratFactor * f;
 }
 
-#if 0
-// NOTE: we probably don't need this
-double ComputeDelta(const Context& context, long ptxt)
-{
-  const PAlgebra& palg = context.zMStar;
-  long m = palg.getM();
-  long phim = palg.getPhiM();
-  long stdev = context.stdev;
-
-  double dBound = std::max<double>(boundFreshNoise(m, phim, stdev),
-                                    boundRoundingNoise(m, phim, ptxt));
-  return log(dBound);
-}
-#endif
-
-
-#if 0
-void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt& ctxt2)
-{
-  // FIXME: this is just a placeholder
-  const FHEcontext& context = ctxt1.getContext();
-  hi = min(context.logOfProduct(ctxt1.getPrimeSet()), 
-           context.logOfProduct(ctxt2.getPrimeSet())) - 47*log(2.0);
-  lo = hi - 12*log(2.0);
-}
-#endif
 
 void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt& ctxt2)
 {
+  const double slack = 5*log(2.0);
+  // FIXME: 5 bits of slack...could be something more dynamic
+
   const FHEcontext& context = ctxt1.getContext();
 
-  double lvl1 = ctxt1.capacity();
-  double lvl2 = ctxt2.capacity();
+  double cap1 = ctxt1.capacity();
+  double cap2 = ctxt2.capacity();
 
   double adn = log(ctxt1.modSwitchAddedNoiseVar())/2;
   // should be the same for both ciphertexts
 
   double safety = 1*log(2.0); // 1 bits of safety
 
-  hi = min(lvl1, lvl2) + adn - safety;
-  // FIXME: this is a bit hackish...should we really 
+  hi = min(cap1, cap2) + adn - safety;
+  lo = hi - slack;
+  // FIXME: this is a bit hackish...
 
-  lo = hi - 5*log(2.0);
-  // FIXME: 5 bits of slack...could be something more dynamic
+  // The idea is that for a given ctxt with modulus q and noise
+  // variance n, we want to mod switch to a new modulus q'
+  // such that n/(q/q')^2 \approx AddedNoiseVar.
+  // Taking logs, this is the same as saying that
+  // log(q') \approx adn + (log(q) - 0.5*log(n)) = adn + ctxt.capacity();
 
+  // Right now, we just set hi to the minimum for both ciphertexts,
+  // and set lo a few bits lower, so that we have some flexibility in
+  // finding an efficient dropping strategy.
+
+  // It may be worthwhile to experiment with other strategies,
+  // such as setting hi = max(cap1, cap2) + adn - safety,
+  // and lo = min(hi - slack, min(cap1, cap2) + adn - safety.
+
+
+  if (ctxt1.isCKKS()) {
+    double lvl1 = ctxt1.logOfPrimeSet();
+    double rf1 = log(ctxt1.getRatFactor());
+    double nrf1 = rf1 - (lvl1-lo); // log of ratFactor after scaling
+
+    double lvl2 = ctxt2.logOfPrimeSet();
+    double rf2 = log(ctxt2.getRatFactor());
+    double nrf2 = rf2 - (lvl2-lo); // log of ratFactor after scaling
+
+    double nrf = min(nrf1, nrf2);
+    // now, we increase lo as necessary to ensure that nrf is at least adn
+    // FIXME: should we ensure that nrf exceeds adn by a significant amount?
+
+    if (nrf < adn) {
+      lo += adn - nrf;
+      hi = max(hi, lo + 0.01); 
+      // make sure that hi is a little bigger than lo
+    }
+  }
 }
 
 void computeIntervalForSqr(double& lo, double& hi, const Ctxt& ctxt)
@@ -1320,79 +1329,69 @@ Ctxt& Ctxt::operator*=(const Ctxt& other_orig)
     return *this;
   }
 
+  assert(isCKKS() == other_orig.isCKKS());
+  assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
+  assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1)); 
+
   if (this == &other_orig) {
-    if (isCKKS()) {
-      // squaring, CKKS
-      // TODO
-    }
-    else {
-      // squaring, BGV
+    // squaring
 
-      // Compute newPrimeSet, which defines
-      // the modulus q of the product
+    // Compute newPrimeSet, which defines
+    // the modulus q of the product
 
-      // To do this, we first compute an interval [lo, hi] in which
-      // log(q) should lie in order to properly manage noise growth
-      double lo, hi; 
-      computeIntervalForSqr(lo, hi, *this);
+    // To do this, we first compute an interval [lo, hi] in which
+    // log(q) should lie in order to properly manage noise growth
+    double lo, hi; 
+    computeIntervalForSqr(lo, hi, *this);
 
-      // We then compute newPrimeSet in a way that minimizes
-      // the computational cost of dropping to it
-      IndexSet newPrimeSet = 
-        context.modSizes.getSet4Size(lo, hi, primeSet);
+    // We then compute newPrimeSet in a way that minimizes
+    // the computational cost of dropping to it
+    IndexSet newPrimeSet = 
+      context.modSizes.getSet4Size(lo, hi, primeSet, isCKKS());
 
-      // drop to newPrimeSet
-      bringToSet(newPrimeSet);
+    // drop to newPrimeSet
+    bringToSet(newPrimeSet);
 
-      // Perform the actual tensor product
-      Ctxt tmpCtxt(pubKey, ptxtSpace);
-      tmpCtxt.tensorProduct(*this, *this); 
-      *this = tmpCtxt;
-    }
+    // Perform the actual tensor product
+    Ctxt tmpCtxt(pubKey, ptxtSpace);
+    tmpCtxt.tensorProduct(*this, *this); 
+    *this = tmpCtxt;
   }
   else {
-    if (isCKKS()) {
-      // real mul, CKKS
-      // TODO
-    }
-    else {
-      // real mul, BGV
+    // real mul
 
-      // sanity check
-      assert (&context==&other_orig.context && &pubKey==&other_orig.pubKey);
+    Ctxt other = other_orig; // work with a copy
 
-      Ctxt other = other_orig; // work with a copy
-
-      // equalize plaintext spaces
+    // equalize plaintext spaces
+    if (!isCKKS()) {
       long g = GCD(ptxtSpace, other.ptxtSpace);
       assert (g>1);
       ptxtSpace = other.ptxtSpace = g;
-
-
-      // Compute commonPrimeSet, which defines
-      // the modulus q of the product
-
-      // To do this, we first compute an interval [lo, hi] in which
-      // log(q) should lie in order to properly manage noise growth
-      double lo, hi; 
-      computeIntervalForMul(lo, hi, *this, other);
-
-      // We then compute commonPrimeSet in a way that minimizes
-      // the computational cost of dropping to it
-      IndexSet commonPrimeSet = 
-        context.modSizes.getSet4Size(lo, hi, primeSet, other.primeSet);
-
-      // drop the prime sets of *this and other
-      bringToSet(commonPrimeSet);
-      other.bringToSet(commonPrimeSet);
-
-      // Perform the actual tensor product
-      Ctxt tmpCtxt(pubKey, ptxtSpace);
-      tmpCtxt.tensorProduct(*this, other); 
-      *this = tmpCtxt;
     }
-  }
 
+
+    // Compute commonPrimeSet, which defines
+    // the modulus q of the product
+
+    // To do this, we first compute an interval [lo, hi] in which
+    // log(q) should lie in order to properly manage noise growth
+    double lo, hi; 
+    computeIntervalForMul(lo, hi, *this, other);
+
+    // We then compute commonPrimeSet in a way that minimizes
+    // the computational cost of dropping to it
+    IndexSet commonPrimeSet = 
+      context.modSizes.getSet4Size(lo, hi, primeSet, other.primeSet, isCKKS());
+
+    // drop the prime sets of *this and other
+    bringToSet(commonPrimeSet);
+    other.bringToSet(commonPrimeSet);
+
+    // Perform the actual tensor product
+    Ctxt tmpCtxt(pubKey, ptxtSpace);
+    tmpCtxt.tensorProduct(*this, other); 
+    *this = tmpCtxt;
+  }
 }
 
 #if 0

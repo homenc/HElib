@@ -99,9 +99,11 @@ void ModuliSizes::init(const std::vector<Cmodulus>& chain,
 // If no IndexSet exsists that fits in the target interval, returns
 // the IndexSet that gives the largest value smaller than low.
 IndexSet ModuliSizes::getSet4Size(double low, double high,
-                                  const IndexSet& fromSet) const
+                                  const IndexSet& fromSet,
+                                  bool reverse) const
 {
-  high += 0.00001; // to compensate for rounding errors
+  long n = sizes.size();
+
   // lower_bound returns an iterator to the first element with size>=low
   auto it = std::lower_bound(sizes.begin(), sizes.end(),
                              Entry(low, IndexSet::emptySet()));
@@ -109,27 +111,47 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
 
   long bestOption = -1;
   long bestCost = LONG_MAX;
-  for (long i=idx; i<lsize(sizes) && sizes[i].first <= high; i++) {
-    long setDiffSize = empty(fromSet)?
-      card(sizes[i].second) : card(fromSet / sizes[i].second);
+  long ii = idx;
+  for (; ii < n && sizes[ii].first <= high; ii++) {
+    long setDiffSize = card(fromSet / sizes[ii].second);
     if (setDiffSize <= bestCost) {
-      bestOption = i;
+      bestOption = ii;
       bestCost = setDiffSize;
     }
   }
 
-  // If nothing was found, use the closest thing below 'low'
-  if (bestOption==-1 && idx>0) {
-    double lowerBound = sizes[idx-1].first - 1;
-    for (long i=idx-1; i>=0 && sizes[i].first >= lowerBound; --i) {
-      long setDiffSize = empty(fromSet)?
-        card(sizes[i].second) : card(fromSet / sizes[i].second);
-      if (setDiffSize < bestCost) {
-        bestOption = i;
-        bestCost = setDiffSize;
+  // If nothing was found, use the closest set below 'low'
+  // (or above 'high' if reverse).  We actually one bit of slack,
+  // examining the not just the closest set, but those sets
+  // whose size is within 1 bit of the closest.
+  
+  if (bestOption == -1) {
+    if (reverse) {
+      if (ii < n) {
+	double upperBound = sizes[ii].first + 1.0*log(2.0);
+	for (long i=ii; i < n && sizes[i].first <= upperBound; ++i) {
+	  long setDiffSize = card(fromSet / sizes[i].second);
+	  if (setDiffSize < bestCost) {
+	    bestOption = i;
+	    bestCost = setDiffSize;
+	  }
+	}
+      }
+    }
+    else {
+      if (idx>0) {
+	double lowerBound = sizes[idx-1].first - 1.0*log(2.0);
+	for (long i=idx-1; i>=0 && sizes[i].first >= lowerBound; --i) {
+	  long setDiffSize = card(fromSet / sizes[i].second);
+	  if (setDiffSize < bestCost) {
+	    bestOption = i;
+	    bestCost = setDiffSize;
+	  }
+	}
       }
     }
   }
+
   assert(bestOption != -1); // make sure that soemthing was found
 
   return sizes[bestOption].second; // return the best IndexSet
@@ -141,9 +163,11 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
 //! If no IndexSet exsists that fits in the target interval, returns
 //! the IndexSet that gives the largest value smaller than low.
 IndexSet ModuliSizes::getSet4Size(double low, double high,
-                                  const IndexSet& from1, const IndexSet& from2) const
+                                  const IndexSet& from1, const IndexSet& from2,
+                                  bool reverse) const
 {
-  high += 0.00001; // to compensate for rounding errors
+  long n = sizes.size();
+
   // lower_bound returns an iterator to the first element with size>=low
   auto it = std::lower_bound(sizes.begin(), sizes.end(),
                              Entry(low, IndexSet::emptySet()));
@@ -151,30 +175,55 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
 
   long bestOption = -1;
   long bestCost = LONG_MAX;
-  for (long i=idx; i<lsize(sizes) && sizes[i].first <= high; i++) {
-    long setDiffSize =
-      card(from1 / sizes[i].second) + card(from2 / sizes[i].second);
+  long ii = idx;
+  for (; ii < n && sizes[ii].first <= high; ii++) {
+    long setDiffSize = card(from1 / sizes[ii].second) + 
+                       card(from2 / sizes[ii].second);
     if (setDiffSize <= bestCost) {
-      bestOption = i;
+      bestOption = ii;
       bestCost = setDiffSize;
     }
   }
 
-  // If nothing was found, use the closest thing below 'low'
-  if (bestOption==-1 && idx>0) {
-    double lowerBound = sizes[idx-1].first - 1;
-    for (long i=idx-1; i>=0 && sizes[i].first >= lowerBound; --i) {
-      long setDiffSize =
-        card(from1 / sizes[i].second) + card(from2 / sizes[i].second);
-      if (setDiffSize < bestCost) {
-        bestOption = i;
-        bestCost = setDiffSize;
+  // If nothing was found, use the closest set below 'low'
+  // (or above 'high' if reverse).  We actually one bit of slack,
+  // examining the not just the closest set, but those sets
+  // whose size is within 1 bit of the closest.
+  
+  if (bestOption == -1) {
+    if (reverse) {
+      if (ii < n) {
+	double upperBound = sizes[ii].first + 1.0*log(2.0);
+	for (long i=ii; i < n && sizes[i].first <= upperBound; ++i) {
+	  long setDiffSize = card(from1 / sizes[i].second) + 
+			     card(from2 / sizes[i].second);
+	  if (setDiffSize < bestCost) {
+	    bestOption = i;
+	    bestCost = setDiffSize;
+	  }
+	}
+      }
+    }
+    else {
+      if (idx>0) {
+	double lowerBound = sizes[idx-1].first - 1.0*log(2.0);
+	for (long i=idx-1; i>=0 && sizes[i].first >= lowerBound; --i) {
+	  long setDiffSize = card(from1 / sizes[i].second) + 
+			     card(from2 / sizes[i].second);
+	  if (setDiffSize < bestCost) {
+	    bestOption = i;
+	    bestCost = setDiffSize;
+	  }
+	}
       }
     }
   }
+
   assert(bestOption != -1); // make sure that soemthing was found
 
   return sizes[bestOption].second; // return the best IndexSet
+
+
 }
 
 ostream& operator<<(ostream& s, const ModuliSizes& szs)

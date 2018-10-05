@@ -541,6 +541,13 @@ public:
     return long(capacity()/log(2.0));
   }
 
+  //! @brief returns the log of the prime set
+  double logOfPrimeSet() const
+  {
+    return context.logOfProduct(getPrimeSet());
+  }
+
+
 
   //! @brief Special-purpose modulus-switching for bootstrapping.
   //!
