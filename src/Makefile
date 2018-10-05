@@ -25,7 +25,7 @@ ARMA=-larmadillo
 include $(wildcard local-defs)
 
 #
-CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DNO_HALF_SIZE_PRIME -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2
+CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2 
 #CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -DFFT_NATIVE -fmax-errors=2
 
 # NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
@@ -35,9 +35,6 @@ LDLIBS = $(LIB_NTL) $(LIB_GMP) $(NTL) $(GMP) $(ARMA) -lm
 
 
 # useful flags:
-#   -DNO_HALF_SIZE_PRIME  tells helib to not use the half size prime
-#                         in the prime chain
-#
 #   -DFHE_THREADS  tells helib to enable generic multithreading capabilities;
 #                  must be used with a thread-enabled NTL and the -pthread
 #                  flag should be passed to gcc
@@ -62,7 +59,7 @@ HEADER = EncryptedArray.h FHE.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h Double
 
 SRC = KeySwitching.cpp EncryptedArray.cpp EaCx.cpp FHE.cpp Ctxt.cpp CModulus.cpp FHEContext.cpp PAlgebra.cpp DoubleCRT.cpp NumbTh.cpp bluestein.cpp IndexSet.cpp timing.cpp replicate.cpp hypercube.cpp matching.cpp powerful.cpp BenesNetwork.cpp permutations.cpp PermNetwork.cpp OptimizePermutations.cpp eqtesting.cpp polyEval.cpp extractDigits.cpp EvalMap.cpp recryption.cpp debugging.cpp matmul.cpp intraSlot.cpp binaryArith.cpp binaryCompare.cpp tableLookup.cpp binio.cpp sample.cpp norms.cpp zzX.cpp fft.cpp primeChain.cpp
 
-OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o EaCx.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o recryption.o debugging.o matmul.o intraSlot.o binaryArith.o binaryCompare.o tableLookup.o binio.o sample.o norms.o zzX.o fft.o primeChain.o
+OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o FHE.o KeySwitching.o Ctxt.o EncryptedArray.o EaCx.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o recryption.o debugging.o matmul.o intraSlot.o tableLookup.o binio.o sample.o norms.o zzX.o fft.o primeChain.o binaryArith.o binaryCompare.o
 
 TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Replicate_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_ThinEvalMap_x Test_bootstrapping_x Test_ThinBootstrapping_x Test_PtrVector_x Test_intraSlot_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x Test_Bin_IO_x
 
@@ -93,8 +90,8 @@ check_General: Test_General_x
 	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
 
 check_matmul: Test_matmul_x 
-	./Test_matmul_x m=18631 L=8 
-	./Test_matmul_x block=1 m=24295 gens="[16386 16427]" ords="[42 16]" L=8
+	./Test_matmul_x m=18631 L=300 
+	./Test_matmul_x block=1 m=24295 gens="[16386 16427]" ords="[42 16]" L=300
 
 check_Permutations: Test_Permutations_x 
 	./Test_Permutations_x noPrint=1
@@ -116,13 +113,13 @@ check_extractDigits: Test_extractDigits_x
 
 check_bootstrapping: Test_bootstrapping_x 
 	./Test_bootstrapping_x noPrint=1 N=512
-	./Test_bootstrapping_x noPrint=1 N=512 r=4 L=50
+	./Test_bootstrapping_x noPrint=1 N=512 r=4 
 	./Test_bootstrapping_x p=7 noPrint=1
 
 check_ThinBootstrapping: Test_ThinBootstrapping_x 
 	./Test_ThinBootstrapping_x noPrint=1 N=512
-	./Test_ThinBootstrapping_x noPrint=1 N=512 r=4 L=31
-	./Test_ThinBootstrapping_x p=7 L=31 noPrint=1
+	./Test_ThinBootstrapping_x noPrint=1 N=512 r=4 
+	./Test_ThinBootstrapping_x p=7 noPrint=1
 
 check_binaryArith: Test_binaryArith_x 
 	./Test_binaryArith_x
@@ -138,29 +135,6 @@ check_Bin_IO: Test_Bin_IO_x
 	./Test_Bin_IO_x p=257 m=127
 
 check_approxNums: Test_approxNums_x
-	./Test_approxNums_x m=1024 r=8 ep=0.01
-
-check_all: Test_General_x Test_matmul_x Test_Permutations_x Test_PolyEval_x Test_Replicate_x Test_EvalMap_x Test_ThinEvalMap_x Test_extractDigits_x Test_bootstrapping_x Test_ThinBootstrapping_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x Test_Bin_IO_x Test_approxNums_x
-	./Test_General_x R=1 k=10 p=2 r=2 noPrint=1
-	./Test_General_x R=1 k=10 p=2 d=2 noPrint=1
-	./Test_General_x R=2 k=10 p=7 r=2 noPrint=1
-	./Test_matmul_x m=18631 L=8
-	./Test_matmul_x block=1 m=24295 gens="[16386 16427]" ords="[42 16]" L=8
-	./Test_Permutations_x noPrint=1
-	./Test_PolyEval_x p=7 r=2 d=34 noPrint=1
-	./Test_Replicate_x m=1247 noPrint=1
-	./Test_EvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
-	./Test_ThinEvalMap_x mvec="[7 3 221]" gens="[3979 3095 3760]" ords="[6 2 -8]" noPrint=1
-	./Test_extractDigits_x m=2047 p=5 noPrint=1
-	./Test_bootstrapping_x noPrint=1 N=512
-	./Test_bootstrapping_x p=7 noPrint=1
-	./Test_ThinBootstrapping_x noPrint=1 N=512
-	./Test_ThinBootstrapping_x p=7 noPrint=1
-	./Test_binaryArith_x
-	./Test_binaryCompare_x
-	./Test_tableLookup_x
-	./Test_Bin_IO_x p=2 r=2 m=127
-	./Test_Bin_IO_x p=257 m=127
 	./Test_approxNums_x m=1024 r=8 ep=0.01
 
 test: $(TESTPROGS)
@@ -180,6 +154,7 @@ fhe.a: $(OBJ)
 ./%_x: %.cpp fhe.a
 	$(CC) $(CFLAGS) -o $@ $< fhe.a $(LDLIBS)
 
+
 clean:
 	rm -f *.d *.o *_x *_x.exe *.a core.*
 	rm -rf *.dSYM
@@ -193,3 +168,5 @@ info:
 	: Compilation flags are 'CFLAGS=$(CFLAGS)'
 	: If errors occur, try adding '-std=c++11' in Makefile
 	:
+
+
