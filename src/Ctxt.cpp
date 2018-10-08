@@ -68,12 +68,12 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
   long f = isCKKS()?
     1 : rem(context.productOfPrimes(context.ctxtPrimes),ptxtSpace);
   if (f == 1) {
-    DoubleCRT dcrt(ptxt, context, primeSet);  
+    DoubleCRT dcrt(ptxt, context, primeSet);
     parts.assign(1, CtxtPart(dcrt));
   } else {
     ZZX tmp;
     MulMod(tmp, ptxt, f, ptxtSpace, /*positive=*/false);
-    DoubleCRT dcrt(tmp, context, primeSet);  
+    DoubleCRT dcrt(tmp, context, primeSet);
     parts.assign(1, CtxtPart(dcrt));
   }
 }
@@ -158,7 +158,7 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
   NTL::SetSeed(W.prgSeed);
 
   // Add the columns in, one by one
-  DoubleCRT tmpDCRT(context, IndexSet::emptySet());  
+  DoubleCRT tmpDCRT(context, IndexSet::emptySet());
   for (size_t i=0; i<digits.size(); i++) {
     FHE_NTIMER_START(KS_loop);
     ai.randomize();
@@ -495,7 +495,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
     CtxtPart pp = p;
     pp.addPrimesAndScale(context.specialPrimes);
     addPart(pp, /*matchPrimeSet=*/true);
-    return; 
+    return;
   }
 
   // some sanity checks
@@ -717,7 +717,7 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
   dcrt = to_ZZ(scaled);
 
   addConstantCKKS(dcrt, /*size=*/to_xdouble(fsquare(num.second)),
-                  /*factor=*/ratFactor);  
+                  /*factor=*/ratFactor);
 }
 
 // Add at least one prime to the primeSet of c
@@ -1062,6 +1062,19 @@ void computeIntervalForSqr(double& lo, double& hi, const Ctxt& ctxt)
   computeIntervalForMul(lo, hi, ctxt, ctxt);
 }
 
+double Ctxt::naturalSize() const
+{
+  double lo, hi;
+  computeIntervalForSqr(lo, hi, *this);
+  return lo;
+}
+IndexSet Ctxt::naturalPrimeSet() const
+{
+  double lo, hi;
+  computeIntervalForSqr(lo, hi, *this);
+  return context.modSizes.getSet4Size(lo, hi, primeSet, isCKKS());
+}
+
 
 // This is essentially operator*=, but with an extra parameter
 void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
@@ -1079,37 +1092,17 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
 
   assert(isCKKS() == other_orig.isCKKS());
   assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
-  assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1)); 
+  assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1));
 
-  if (this == &other_orig) {
-    // squaring
-
-    // Compute newPrimeSet, which defines
-    // the modulus q of the product
-
-    // To do this, we first compute an interval [lo, hi] in which
-    // log(q) should lie in order to properly manage noise growth
-    double lo, hi; 
-    computeIntervalForSqr(lo, hi, *this);
-
-    // We then compute newPrimeSet in a way that minimizes
-    // the computational cost of dropping to it
-    IndexSet newPrimeSet = 
-      context.modSizes.getSet4Size(lo, hi, primeSet, isCKKS());
-
-    // drop to newPrimeSet
-    bringToSet(newPrimeSet);
-
-    // Perform the actual tensor product
-    Ctxt tmpCtxt(pubKey, ptxtSpace);
-    tmpCtxt.tensorProduct(*this, *this); 
-    *this = tmpCtxt;
+  Ctxt* other_pt = nullptr;
+  unique_ptr<Ctxt> ct; // scratch space if needed
+  if (this == &other_orig) { // squaring
+    bringToSet(naturalPrimeSet()); // drop to the "natural" primeSet
+    other_pt = this;
   }
   else { // real multiplication
 
     // If this is a non-destructive call, make a copy of other
-    Ctxt* other_pt = nullptr;
-    unique_ptr<Ctxt> ct; // scratch space if needed
     if (destructive)
       other_pt = (Ctxt*) &other_orig; // cast away const-ness
     else {  // work with a copy
@@ -1128,7 +1121,7 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
 
     // To do this, we first compute an interval [lo, hi] in which
     // log(q) should lie in order to properly manage noise growth
-    double lo, hi; 
+    double lo, hi;
     computeIntervalForMul(lo, hi, *this, *other_pt);
 
     // We then compute commonPrimeSet in a way that minimizes
@@ -1140,12 +1133,11 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     // drop the prime sets of *this and other
     bringToSet(commonPrimeSet);
     other_pt->bringToSet(commonPrimeSet);
-
-    // Perform the actual tensor product
-    Ctxt tmpCtxt(pubKey, ptxtSpace);
-    tmpCtxt.tensorProduct(*this, *other_pt); 
-    *this = tmpCtxt;
   }
+  // Perform the actual tensor product
+  Ctxt tmpCtxt(pubKey, ptxtSpace);
+  tmpCtxt.tensorProduct(*this, *other_pt);
+  *this = tmpCtxt;
 }
 
 
@@ -1550,7 +1542,7 @@ void Ctxt::write(ostream& str) const
   write_raw_xdouble(str, ratFactor);
   write_raw_xdouble(str, noiseVar);
   primeSet.write(str);
-  write_raw_vector(str, parts);    
+  write_raw_vector(str, parts);
  
   writeEyeCatcher(str, BINIO_EYE_CTXT_END);
 }
@@ -1562,10 +1554,10 @@ void Ctxt::read(istream& str)
   ptxtSpace = read_raw_int(str);
   intFactor = read_raw_int(str);
   ratFactor = read_raw_xdouble(str);
-  noiseVar = read_raw_xdouble(str); 
-  primeSet.read(str); 
+  noiseVar = read_raw_xdouble(str);
+  primeSet.read(str);
   CtxtPart blankCtxtPart(context, IndexSet::emptySet());
-  read_raw_vector(str, parts, blankCtxtPart);    
+  read_raw_vector(str, parts, blankCtxtPart);
 
   assert(readEyeCatcher(str, BINIO_EYE_CTXT_END)==0);
 }
@@ -1597,7 +1589,7 @@ istream& operator>>(istream& str, SKHandle& handle)
 ostream& operator<<(ostream& str, const CtxtPart& p)
 {
   return str << "[" << ((const DoubleCRT&)p) << endl 
-	     << p.skHandle << "]"; 
+	     << p.skHandle << "]";
 }
 
 istream& operator>>(istream& str, CtxtPart& p)

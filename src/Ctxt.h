@@ -512,19 +512,24 @@ public:
   //! via modUpToSet and modDownToSet
   void bringToSet(const IndexSet& s) 
   {
-    modUpToSet(s);
-    modDownToSet(s);
+    IndexSet tmp; // an empty set
+    const IndexSet* s_pt = &s;
+    if (empty(s)) { // If emptry, use a singleton with 1st ctxt prime
+      std::cerr << "Ctct::bringToSet called with empty set\n";
+      tmp.insert(getContext().ctxtPrimes.first());
+      s_pt = &tmp;
+    }
+    modUpToSet(*s_pt);
+    modDownToSet(*s_pt);
   }
 
-  //! @brief drop all smallPrimes, adding ctxtPrimes as necessary
-  //! to compensate
-  void dropSmallPrimes()
-  {
-    NTL::Error("dropSmallPrimes: not implemented");
-  }
+  // Finding the "natural" state of a cipehrtext
+  double naturalSize() const; //! "natural size" is size before suqaring
+  IndexSet naturalPrimeSet() const; //! the corresponding primeSet
 
-  //! @brief drop all smallPrimes, adding ctxtPrimes as necessary
-  //! to compensate, and also drop all specialPrimes
+  //! @brief drop all smallPrimes and specialPrimes, adding ctxtPrimes
+  //! as necessary to ensure that the scaled noise is above the
+  //! modulus-switching added noise term.
   void dropSmallAndSpecialPrimes();
 
   //! @brief returns the "capacity" of a ciphertext,
