@@ -216,7 +216,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
 
 
 
-extern long fhe_disable_intFactor;
+//extern long fhe_disable_intFactor;
 extern long fhe_disable_fat_boot;
 extern long fhe_force_chen_han;
 
@@ -258,7 +258,7 @@ int main(int argc, char *argv[])
   amap.arg("force_hoist", fhe_test_force_hoist);
   amap.arg("init_level", thinRecrypt_initial_level);
 
-  amap.arg("disable_intFactor", fhe_disable_intFactor);
+  //  amap.arg("disable_intFactor", fhe_disable_intFactor);
   amap.arg("chen_han", fhe_force_chen_han);
 
 
