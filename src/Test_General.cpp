@@ -91,6 +91,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     std::cout << endl;
 
     std::cout << "security=" << context.securityLevel()<<endl;
+    std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
     std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
     std::cout << "# bits in ctxt primes = " 
 	 << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
@@ -270,7 +271,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
  *              d == 0 => factors[0] defines extension
  *   c       number of columns in the key-switching matrices  [ default=2 ]
  *   k       security parameter  [ default=80 ]
- *   L       # of levels in the modulus chain  [ default=heuristic ]
+ *   L       # of bits in the modulus chain  [ default=heuristic ]
  *   s       minimum number of slots  [ default=0 ]
  *   repeat  number of times to repeat the test  [ default=1 ]
  *   m       use specified value as modulus
@@ -310,8 +311,8 @@ int main(int argc, char **argv)
   long k=80;
   amap.arg("k", k, "security parameter");
 
-  long L=0;
-  amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
+  long L=500;
+  amap.arg("L", L, "# of bits in the modulus chain");
 
   long s=0;
   amap.arg("s", s, "minimum number of slots");
@@ -347,16 +348,8 @@ int main(int argc, char **argv)
   SetSeed(ZZ(seed));
   SetNumThreads(nt);
   
-  if (L==0) { // determine L based on R,r
-    L = 3*R+3;
-    if (p>2 || r>1) { // add some more primes for each round
-      long addPerRound = 2*ceil(log((double)p)*r*3)/(log(2.0)*FHE_p2Size) +1;
-      L += R * addPerRound;
-    }
-  }
 
   long w = 64; // Hamming weight of secret key
-  //  long L = z*R; // number of levels
 
   if (mvec.length()>0)
     chosen_m = computeProd(mvec);
@@ -369,9 +362,3 @@ int main(int argc, char **argv)
   }
 }
 
-// call to get our running test case:
-// Test_General_x p=23 m=20485 L=10 R=5
-//
-// another call to get an example where phi(m) is very
-// close to m:
-// Test_General_x m=18631 L=10 R=5

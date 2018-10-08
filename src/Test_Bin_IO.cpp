@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
   long p=2;
   long c=2;
   long w=64;
-  long L=5;
+  long L=300;
   long cleanup=1;
   string sampleFilePrefix; 
  
@@ -216,6 +216,17 @@ int main(int argc, char *argv[])
     std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
     readContextBinary(inFile, *context);  
 
+#if 0
+    context->zMStar.printout(); 
+    std::cout << "# small primes = " << context->smallPrimes.card() << "\n";
+    std::cout << "# ctxt primes = " << context->ctxtPrimes.card() << "\n";
+    std::cout << "# bits in ctxt primes = "
+         << long(context->logOfProduct(context->ctxtPrimes)/log(2.0) + 0.5) << "\n";
+    std::cout << "# special primes = " << context->specialPrimes.card() << "\n";
+    std::cout << "# bits in special primes = "
+         << long(context->logOfProduct(context->specialPrimes)/log(2.0) + 0.5) << "\n";
+#endif
+
     // Read in PubKey.
     std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
     FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
@@ -235,6 +246,12 @@ int main(int argc, char *argv[])
 
     ea.encrypt(c1, *pubKey, p1);
     ea.encrypt(c2, *pubKey, p2);
+
+    //CheckCtxt(c1, "c1");
+    //CheckCtxt(c2, "c2");
+
+
+
 
     // Operation multiply and add.
     mul(ea, p1, p2);

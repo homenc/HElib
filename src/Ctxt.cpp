@@ -60,8 +60,8 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
       size = getContext().zMStar.getPhiM() * fsquare(ptxtSpace/2.0);
     noiseVar = size;
   }
+
   primeSet = context.ctxtPrimes;
-  highWaterMark = findBaseLevel();
 
   // A single part, with the plaintext as data and handle pointing to 1
 
@@ -86,8 +86,8 @@ bool Ctxt::verifyPrimeSet() const
   IndexSet s = primeSet & context.specialPrimes; // special primes in primeSet
   if (!empty(s) && s!=context.specialPrimes) return false;
 
-  s = primeSet / s;                              // ctxt primes in primeSet
-  return (s.isInterval() && s.first()<=1 && !empty(s));
+  s = primeSet & context.ctxtPrimes;   // ctxt primes in primeSet
+  return s.isInterval();
 }
 
 
@@ -150,7 +150,8 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
 {  // An object to hold the pseudorandom ai's, note that it must be defined
   // with the maximum number of levels, else the PRG will go out of synch.
   // FIXME: This is a bug waiting to happen.
-  DoubleCRT ai(context);
+
+  DoubleCRT ai(context, context.ctxtPrimes | context.specialPrimes);
 
   // Subsequent ai's use the evolving RNG state
   RandomState state; // backup the NTL PRG seed
@@ -183,19 +184,6 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
 } // restore random state upon destruction of the RandomState, see NumbTh.h
 
 
-//! @brief How many levels in the "base-set" for that ciphertext
-long Ctxt::findBaseLevel() const 
-{
-  IndexSet s;
-  findBaseSet(s);
-  if (context.containsSmallPrime()) {
-    if (s.contains(context.ctxtPrimes.first()))
-      return 2*card(s) -1; // 1st prime is half size
-    else
-      return 2*card(s);
-  }
-  else return card(s);     // one prime per level
-}
 
 bool CtxtPart::operator==(const CtxtPart& other) const
 {
@@ -232,7 +220,6 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
-  highWaterMark = findBaseLevel();
   intFactor = 1;
   ratFactor = 1.0;
 }
@@ -247,7 +234,6 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
-  highWaterMark = findBaseLevel();
   intFactor = 1;
   ratFactor = 1.0;
 }
@@ -265,7 +251,6 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   primeSet = other.primeSet;
   ptxtSpace = other.ptxtSpace;
   noiseVar  = other.noiseVar;
-  highWaterMark = other.highWaterMark;
   intFactor = other.intFactor;
   ratFactor = other.ratFactor;
   return *this;
@@ -348,6 +333,9 @@ void Ctxt::modDownToSet(const IndexSet &s)
   }
 
   if (noiseVar*fsquare(ptxtSpace) < addedNoiseVar) { // just "drop down"
+    // XXX: we might want to just get rid of this, if it causes
+    // complications
+
     for (size_t i=0; i<parts.size(); i++)
       parts[i].removePrimes(setDiff);       // remove the primes not in s
     long prodInv = 1;
@@ -375,56 +363,6 @@ void Ctxt::modDownToSet(const IndexSet &s)
   FHE_TIMER_STOP;
 }
 
-void Ctxt::bringToLevel(long lvl)
-{
-  IndexSet target = (context.containsSmallPrime())?
-    ((lvl&1)? IndexSet(0,(lvl-1)/2) : IndexSet(1,(lvl-1)/2))
-    : IndexSet(0,lvl-1);
-  assert(empty(target &context.specialPrimes));// no special primes in target
-
-  modUpToSet(target);   // add any missing primes from target
-  modDownToSet(target); // remove any primes not in target
-}
-
-// Modulus-switching down
-void Ctxt::modDownToLevel(long lvl)
-{
-  long currentLvl;
-  IndexSet targetSet;
-  IndexSet currentSet = primeSet & context.ctxtPrimes;
-  if (context.containsSmallPrime()) {
-    currentLvl = 2*card(currentSet);
-    if (currentSet.contains(0))
-      currentLvl--;  // first prime is half the size
-
-    if (lvl & 1) {   // odd level, includes the half-size prime
-      targetSet = IndexSet(0,(lvl-1)/2);
-    } else {
-      targetSet = IndexSet(1,lvl/2);
-    }
-  }
-  else {
-    currentLvl = card(currentSet);
-    targetSet = IndexSet(0,lvl-1);    // one prime per level
-  }
-
-  // If target is not below the current level, nothing to do
-  if (lvl >= currentLvl && currentSet==primeSet) return;
-
-  if (lvl >= currentLvl) { // just remove the special primes
-    targetSet = currentSet;
-  }
-
-  // sanity-check: interval does not contain special primes
-  assert(targetSet.disjointFrom(context.specialPrimes));
-
-  // may need to mod-UP to include the smallest prime
-  if (targetSet.contains(0) && !currentSet.contains(0))
-    modUpToSet(targetSet); // adds the primes in targetSet / primeSet
-
-  modDownToSet(targetSet); // removes the primes in primeSet / targetSet
-}
-
 void Ctxt::blindCtxt(const ZZX& poly)
 {
   Ctxt tmp(pubKey);
@@ -444,6 +382,48 @@ void Ctxt::reducePtxtSpace(long newPtxtSpace)
   intFactor %= g;
 }
 
+// Drop sll smallPrimes and specialPrimes, adding ctxtPrimes
+// as necessary to ensure that the scaled noise is above the
+// modulus-switching added noise term.
+void Ctxt::dropSmallAndSpecialPrimes()
+{
+  if (primeSet.disjointFrom(context.smallPrimes)) {
+    // nothing to do except drop the special primes, if any
+    modDownToSet(context.ctxtPrimes);
+  }
+  else {
+    // we will be dropping some smallPrimes, and we need to 
+    // figure out how much we have to compensate with
+    // other ctxtPrimes
+
+    double fudge = 3*log(2.0); // give ourselve 3 bits of elbow room
+    double log_modswitch_noise = log(modSwitchAddedNoiseVar())/2 + fudge;
+    double log_noise = log(getNoiseVar())/2;
+
+    // Compute the set of remaining primes and its total size
+    IndexSet dropping= primeSet/ (context.smallPrimes | context.specialPrimes);
+    double log_dropping = context.logOfProduct(dropping);
+
+    // Try to ensure that scaled noise is no less than mod-switch added term
+    IndexSet compensate;
+    if (log_noise - log_dropping < log_modswitch_noise) {
+      double log_compensation = log_modswitch_noise - (log_noise - log_dropping);
+      // add ctxtPrimes whose log adds up to at least log_compensation,
+      // if possible
+
+      IndexSet candidates = context.ctxtPrimes / primeSet;
+      for (long i: candidates) {
+         if (log_compensation <= 0) break;
+         compensate.insert(i);
+         log_compensation -= log(context.ithPrime(i));
+      }
+    }
+
+    IndexSet target = (primeSet & context.ctxtPrimes) | compensate;
+    bringToSet(target);
+  }
+}
+
 
 // key-switch to (1,s_i), s_i is the base key with index keyID. If
 // keyID<0 then re-linearize to any key for which a switching matrix exists
@@ -454,9 +434,7 @@ void Ctxt::reLinearize(long keyID)
   if (this->isEmpty() || this->inCanonicalForm(keyID)) return;
   // this->reduce();
 
-  // To relinearize, the primeSet must be disjoint from the special primes
-  if (!primeSet.disjointFrom(context.specialPrimes))
-    modDownToSet(primeSet / context.specialPrimes);
+  dropSmallAndSpecialPrimes();
 
   long g = ptxtSpace;
   Ctxt tmp(pubKey, ptxtSpace); // an empty ciphertext, same plaintext space
@@ -542,65 +520,6 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 }
 
 
-// Find the IndexSet such that modDown to that set of primes makes the
-// additive term due to rounding into the dominant noise term 
-void Ctxt::findBaseSet(IndexSet& s) const
-{
-  if (getNoiseVar()<=0.0) { // an empty ciphertext
-    s = context.ctxtPrimes;
-    return;
-  }
-  assert(verifyPrimeSet());
-  bool halfSize = context.containsSmallPrime();
-  double curNoise = log(getNoiseVar())/2;
-  double firstNoise = context.logOfPrime(0);
-  double noiseThreshold = log(modSwitchAddedNoiseVar())*0.55; 
-  // FIXME: The above should have been 0.5. Making it a bit more means
-  // that we will mod-switch a little less frequently, whether this is
-  // a good thing needs to be tested.
-
-  // remove special primes, if they are included in this->primeSet
-  s = getPrimeSet();
-  if (!s.disjointFrom(context.specialPrimes)) { 
-    // scale down noise
-    curNoise -= context.logOfProduct(context.specialPrimes);
-    s.remove(context.specialPrimes);
-  }
-
-  /* We compare below to noiseThreshold+1 rather than to noiseThreshold
-   * to make sure that if you mod-switch down to c.findBaseSet() and
-   * then immediately call c.findBaseSet() again, it will not tell you
-   * to mod-switch further down. Note that mod-switching adds close to
-   * noiseThreshold to the scaled noise, so if the scaled noise was
-   * equal to noiseThreshold then after mod-switchign you would have
-   * roughly twice as much noise. Since we're mesuring the log, it means
-   * that you may have as much as noiseThreshold+log(2), which we round
-   * up to noiseThreshold+1 in the test below.
-   */
-  if (curNoise<=noiseThreshold+1) return; // no need to mod down
-
-  // if the first prime in half size, begin by removing it
-  if (halfSize && s.contains(0)) {
-    curNoise -= firstNoise;
-    s.remove(0);
-  }
-
-  // while noise is larger than threshold, scale down by the next prime
-  while (curNoise>noiseThreshold && !empty(s)) {
-    curNoise -= context.logOfPrime(s.last());
-    s.remove(s.last());
-  }
-
-  // Add 1st prime if s is empty or if this does not increase noise too much
-  if (empty(s) || (!s.contains(0) && curNoise+firstNoise<=noiseThreshold)) {
-    s.insert(0);
-    curNoise += firstNoise;
-  }
-
-  if (curNoise>noiseThreshold && log_of_ratio()>-0.5)
-    cerr << "Ctxt::findBaseSet warning: already at lowest level\n";
-}
-
 
 /********************************************************************/
 // Ciphertext arithmetic
@@ -624,7 +543,10 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
       // add to the the prime-set of *this, if needed (this is expensive)
       if (matchPrimeSet) {
         IndexSet setDiff = part.getIndexSet() / primeSet; // set minus
-        for (size_t i=0; i<parts.size(); i++) parts[i].addPrimes(setDiff);
+        for (size_t i=0; i<parts.size(); i++) {
+           Warning("addPrimes called in addPart");
+           parts[i].addPrimes(setDiff);
+        }
         primeSet.insert(setDiff);
       }
       else // this should never happen
@@ -799,6 +721,8 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
 }
 
 // Add at least one prime to the primeSet of c
+// FIXME: this currently does not attempt to add anything
+// from smallPrimes...not sure if this matters
 void addSomePrimes(Ctxt& c)
 {
   const FHEcontext& context = c.getContext();
@@ -812,11 +736,6 @@ void addSomePrimes(Ctxt& c)
   if (!s.contains(context.ctxtPrimes)) {
     IndexSet delta = context.ctxtPrimes / s;  // set minus
     long idx = delta.first(); // We know that |delta| >= 1
-
-    // If this is the small prime, try to add a full-size prime instead
-    if (context.containsSmallPrime()
-        && idx == context.ctxtPrimes.first() && delta.card()>1) 
-      idx = delta.next(idx);
 
     s.insert(idx);
   }
@@ -1261,7 +1180,6 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     }
   }
   noiseVar += other_pt->noiseVar;
-  highWaterMark = std::min(highWaterMark, other_pt->highWaterMark);
 }
 
 long fhe_disable_intFactor = 0;
@@ -1295,10 +1213,10 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 
   // The actual tensoring
   CtxtPart tmpPart(context, IndexSet::emptySet()); // a scratch CtxtPart
-  for (size_t i=0; i<c1.parts.size(); i++) {
+  for (long i: range(c1.parts.size())) { 
     CtxtPart thisPart = c1.parts[i];
     if (f!=1) thisPart *= f;
-    for (size_t j=0; j<c2.parts.size(); j++) {
+    for (long j: range(c2.parts.size())) { 
       tmpPart = c2.parts[j];
       // What secret key will the product point to?
       if (!tmpPart.skHandle.mul(thisPart.skHandle, tmpPart.skHandle))
@@ -1321,10 +1239,10 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
    * have factor = ((n1+n2) choose n2).
    */
   long n1=0,  n2=0;
-  for (size_t i=0; i<c1.parts.size(); i++) // get largest powerOfS in c1
+  for (long i: range(c1.parts.size())) // get largest powerOfS in c1
     if (c1.parts[i].skHandle.getPowerOfS() > n1)
       n1 = c1.parts[i].skHandle.getPowerOfS();
-  for (size_t i=0; i<c2.parts.size(); i++) // get largest powerOfS in c2
+  for (long i: range(c2.parts.size())) // get largest powerOfS in c2
     if (c2.parts[i].skHandle.getPowerOfS() > n2)
       n2 = c2.parts[i].skHandle.getPowerOfS();
 
@@ -1339,18 +1257,161 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 }
 
 
-void bringToBaseLevel(Ctxt& ctxt)
+void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt& ctxt2)
 {
-   if (ctxt.isEmpty()) return;
-   long lvl = ctxt.findBaseLevel();
-   ctxt.modDownToLevel(4); // FIXME: should be lvl
+  const double slack = 5*log(2.0);
+  // FIXME: 5 bits of slack...could be something more dynamic
+
+  const FHEcontext& context = ctxt1.getContext();
+
+  double cap1 = ctxt1.capacity();
+  double cap2 = ctxt2.capacity();
+
+  double adn = log(ctxt1.modSwitchAddedNoiseVar())/2;
+  // should be the same for both ciphertexts
+
+  double safety = 1*log(2.0); // 1 bits of safety
+
+  hi = min(cap1, cap2) + adn - safety;
+  lo = hi - slack;
+  // FIXME: this is a bit hackish...
+
+  // The idea is that for a given ctxt with modulus q and noise
+  // variance n, we want to mod switch to a new modulus q'
+  // such that n/(q/q')^2 \approx AddedNoiseVar.
+  // Taking logs, this is the same as saying that
+  // log(q') \approx adn + (log(q) - 0.5*log(n)) = adn + ctxt.capacity();
+
+  // Right now, we just set hi to the minimum for both ciphertexts,
+  // and set lo a few bits lower, so that we have some flexibility in
+  // finding an efficient dropping strategy.
+
+  // It may be worthwhile to experiment with other strategies,
+  // such as setting hi = max(cap1, cap2) + adn - safety,
+  // and lo = min(hi - slack, min(cap1, cap2) + adn - safety.
+
+
+  if (ctxt1.isCKKS()) {
+    double lvl1 = ctxt1.logOfPrimeSet();
+    double rf1 = log(ctxt1.getRatFactor());
+    double nrf1 = rf1 - (lvl1-lo); // log of ratFactor after scaling
+
+    double lvl2 = ctxt2.logOfPrimeSet();
+    double rf2 = log(ctxt2.getRatFactor());
+    double nrf2 = rf2 - (lvl2-lo); // log of ratFactor after scaling
+
+    double nrf = min(nrf1, nrf2);
+    // now, we increase lo as necessary to ensure that nrf is at least adn
+    // FIXME: should we ensure that nrf exceeds adn by a significant amount?
+
+    if (nrf < adn) {
+      lo += adn - nrf;
+      hi = max(hi, lo + 0.01); 
+      // make sure that hi is a little bigger than lo
+    }
+  }
 }
 
-void Ctxt::multLowLvl(const Ctxt& other, bool destructive)
+void computeIntervalForSqr(double& lo, double& hi, const Ctxt& ctxt)
+{
+  computeIntervalForMul(lo, hi, ctxt, ctxt);
+}
+
+
+// This is essentially operator*=, but with an extra parameter
+void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
+{
+  FHE_TIMER_START;
+
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) 
+    return;
+
+  if (other_orig.isEmpty()) {
+    *this = other_orig;
+    return;
+  }
+
+  assert(isCKKS() == other_orig.isCKKS());
+  assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
+  assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1)); 
+
+  if (this == &other_orig) {
+    // squaring
+
+    // Compute newPrimeSet, which defines
+    // the modulus q of the product
+
+    // To do this, we first compute an interval [lo, hi] in which
+    // log(q) should lie in order to properly manage noise growth
+    double lo, hi; 
+    computeIntervalForSqr(lo, hi, *this);
+
+    // We then compute newPrimeSet in a way that minimizes
+    // the computational cost of dropping to it
+    IndexSet newPrimeSet = 
+      context.modSizes.getSet4Size(lo, hi, primeSet, isCKKS());
+
+    // drop to newPrimeSet
+    bringToSet(newPrimeSet);
+
+    // Perform the actual tensor product
+    Ctxt tmpCtxt(pubKey, ptxtSpace);
+    tmpCtxt.tensorProduct(*this, *this); 
+    *this = tmpCtxt;
+  }
+  else { // real multiplication
+
+    // If this is a non-destructive call, make a copy of other
+    Ctxt* other_pt = nullptr;
+    unique_ptr<Ctxt> ct; // scratch space if needed
+    if (destructive)
+      other_pt = (Ctxt*) &other_orig; // cast away const-ness
+    else {  // work with a copy
+      ct.reset(new Ctxt(other_orig)); // make a copy
+      other_pt = ct.get();            // point to it
+    }
+
+    // equalize plaintext spaces
+    if (!isCKKS()) {
+      long g = GCD(ptxtSpace, other_pt->ptxtSpace);
+      assert (g>1);
+      ptxtSpace = other_pt->ptxtSpace = g;
+    }
+
+    // Compute commonPrimeSet, which defines the modulus q of the product
+
+    // To do this, we first compute an interval [lo, hi] in which
+    // log(q) should lie in order to properly manage noise growth
+    double lo, hi; 
+    computeIntervalForMul(lo, hi, *this, *other_pt);
+
+    // We then compute commonPrimeSet in a way that minimizes
+    // the computational cost of dropping to it
+    IndexSet commonPrimeSet = 
+      context.modSizes.getSet4Size(lo, hi,
+                                   primeSet, other_pt->primeSet, isCKKS());
+
+    // drop the prime sets of *this and other
+    bringToSet(commonPrimeSet);
+    other_pt->bringToSet(commonPrimeSet);
+
+    // Perform the actual tensor product
+    Ctxt tmpCtxt(pubKey, ptxtSpace);
+    tmpCtxt.tensorProduct(*this, *other_pt); 
+    *this = tmpCtxt;
+  }
+}
+
+#if 0
+// This is here just so we can "harvest" some of the CKKS logic,
+// if that is convenient.
+
+Ctxt& Ctxt::operator*=(const Ctxt& other)
 {
   FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
-  if (this->isEmpty()) return;
+  if (this->isEmpty()) return  *this;
 
   // FIXME: what if other.isEmpty()? should we just
   // do the following?
@@ -1365,33 +1426,39 @@ void Ctxt::multLowLvl(const Ctxt& other, bool destructive)
     this->ptxtSpace = g;
   }
 
-  Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
-  long lvl = findBaseLevel();
-  if (lvl > highWaterMark) {
-    lvl = highWaterMark;
-    std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
-  }
-  if (this == &other) {  // a squaring operation
-    modDownToLevel(lvl); // mod-down if needed
-#ifdef DEBUG_PRINTOUT
-      checkNoise(*this, *dbgKey, "modDown " + to_string(size_t(this)));
-#endif
-    tmpCtxt.tensorProduct(*this, other);  // compute the actual product
-    tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
-#ifdef DEBUG_PRINTOUT
-      checkNoise(tmpCtxt, *dbgKey, "tensorProduct " + to_string(size_t(this)));
-#endif
-  }
-  else {                // standard multiplication between two ciphertexts
+  if (this != &other) {  
     // Sanity check: same context and public key
     assert (&context==&other.context && &pubKey==&other.pubKey);
+  }
+
+  double delta = ComputeDelta(context, g);
+
+  Ctxt tmpCtxt(this->pubKey, this->ptxtSpace); // a scratch ciphertext
+  double ht = findNaturalHeight();
+
+  // ht = min(ht, highWaterMark-delta);
+  if (ht > highWaterMark-delta) {
+    ht = highWaterMark-delta;
+    std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
+  }
+
+  if (this == &other) {  // a squaring operation
+    bringDownToHeight(ht); // mod-down if needed
+    tmpCtxt.tensorProduct(*this, other);  // compute the actual product
+    tmpCtxt.noiseVar *= 2;     // a correction factor due to dependency
+  }
+  else {                // standard multiplication between two ciphertexts
 
     // Match the levels, mod-DOWN the arguments if needed
-    long otherLvl = other.findBaseLevel();
-    if (otherLvl > other.highWaterMark) {
-      otherLvl = other.highWaterMark;
+    double otherHt = other.findNaturalHeight();
+
+    if (otherHt > other.highWaterMark-delta) {
+      otherHt = other.highWaterMark-delta;
       std::cerr << "Ctxt::operator*=: dropping level due to high-water mark\n";
     }
+
+// FIXME
+#if 0
     if (isCKKS()) {
       highWaterMark = lvl-1;
       if (lvl < otherLvl)
@@ -1401,27 +1468,34 @@ void Ctxt::multLowLvl(const Ctxt& other, bool destructive)
       if (lvl > otherLvl) lvl = otherLvl; // the smaller of the two
       highWaterMark = lvl-1;
     }
+#endif
 
     // mod-DOWN *this, if needed (also removes special primes, if any)
-    bringToLevel(lvl);
+    // FIXME: need to do something here
+
+    double commonHt = min(ht, otherHt);
+
+    IndexSet commonPrimeSet = findCommonPrimeSet(*this, other, commonHt);
+    bringToPrimeSet(commonPrimeSet);
 
     // mod-DOWN other, if needed
     if (primeSet!=other.primeSet){ // use temporary copy to mod-DOWN other
-      if (destructive) {
-        ((Ctxt&)other).bringToLevel(lvl);
-        tmpCtxt.tensorProduct(*this, other);   // compute the actual product
-      }
-      else {
-        Ctxt tmpCtxt1 = other;
-        tmpCtxt1.bringToLevel(lvl);
-        tmpCtxt.tensorProduct(*this,tmpCtxt1); // compute the actual product
-      }
+      Ctxt tmpCtxt1 = other;
+      tmpCtxt1.bringToPrimeSet(commonPrimeSet);
+      tmpCtxt.tensorProduct(*this,tmpCtxt1); // compute the actual product
     }
     else 
-      tmpCtxt.tensorProduct(*this, other);     // compute the actual product
+      tmpCtxt.tensorProduct(*this, other);   // compute the actual product
   }
   *this = tmpCtxt; // copy the result into *this
+
+  setHighWaterMark();
+
+  return *this;
 }
+
+#endif
+
 
 // Higher-level multiply routines that include also modulus-switching
 // and re-linearization
@@ -1431,6 +1505,11 @@ void Ctxt::multiplyBy(const Ctxt& other)
   FHE_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
+
+  if (other.isEmpty()) {
+    *this = other;
+    return;
+  }
 
   *this *= other;  // perform the multiplication
   reLinearize();   // re-linearize
@@ -1445,11 +1524,21 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
-  long lvl = findBaseLevel();
-  long lvl1 = other1.findBaseLevel();
-  long lvl2 = other2.findBaseLevel();
+  if (other1.isEmpty()) {
+    *this = other1;
+    return;
+  }
 
-  if (lvl<lvl1 && lvl<lvl2){ // if both others at higher levels than this,
+  if (other2.isEmpty()) {
+    *this = other2;
+    return;
+  }
+
+  long cap = capacity();
+  long cap1 = other1.capacity();
+  long cap2 = other2.capacity();
+
+  if (cap<cap1 && cap<cap2){ // if both others at higher levels than this,
     Ctxt tmp = other1;       // multiply others by each other, then by this
     if (&other1 == &other2) tmp *= tmp; // squaring rather than multiplication
     else                    tmp *= other2;
@@ -1460,7 +1549,7 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   }
 
   const Ctxt *first, *second;
-  if (lvl<lvl2 || lvl1<lvl2) { // lvl1<=lvl<lvl2 or lvl1<=lvl,lvl2
+  if (cap<cap2 || cap1<cap2) { // cap1<=cap<cap2 or cap1<=cap,cap2
                                // multiply by other2, then by other1
     first = &other2;
     second = &other1;
@@ -1476,8 +1565,10 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
     *this *= tmp;
     if (this == first) // cubing operation
       noiseVar *= 3;   // a correction factor due to dependency
+                       // FIXME: this should be handled elsewhere
     else
       noiseVar *= 2;   // a correction factor due to dependency
+                       // FIXME: this should be handled elsewhere
   } else {
     *this *= *first;
     *this *= *second;
@@ -1492,25 +1583,20 @@ void Ctxt::multByConstant(const ZZ& c)
   if (this->isEmpty()) return;
   FHE_TIMER_START;
 
-  const ZZ* cPtr = &c;
+  ZZ c_copy = c;
+
   if (isCKKS()) {
     xdouble size = to_xdouble(c);
     noiseVar *= size*size * getContext().zMStar.get_cM();
   }
   else { // BGV
-    long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
-    if (cc > ptxtSpace/2) cc -= ptxtSpace;
-    else if (cc < -ptxtSpace/2) cc += ptxtSpace;
-
-    double size = to_double(cc);
-    noiseVar *= fsquare(size) * getContext().zMStar.get_cM();
-
-    ZZ tmp = to_ZZ(cc);
-    cPtr = &tmp;
+    long cc = balRem(rem(c, ptxtSpace), ptxtSpace); // reduce modulo plaintext space
+    noiseVar *= fsquare(cc) * getContext().zMStar.get_cM();
+    c_copy = cc;
   }
 
   // multiply all the parts by this constant
-  for (size_t i=0; i<parts.size(); i++) parts[i] *= (*cPtr);
+  for (long i: range(parts.size())) parts[i] *= c_copy;
 }
 
 // Multiply-by-constant, it is assumed that the size of this
@@ -1531,7 +1617,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   }
 
   // multiply all the parts by this constant
-  for (size_t i=0; i<parts.size(); i++) 
+  for (long i: range(parts.size()))
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 
   noiseVar *= size * context.zMStar.get_cM();
@@ -1570,7 +1656,7 @@ void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
   ratFactor *= xfactor;
 
   // multiply all the parts by this constant
-  for (size_t i=0; i<parts.size(); i++) 
+  for (long i: range(parts.size()))
     parts[i].Mul(dcrt,/*matchIndexSets=*/false);
 }
 
@@ -1606,7 +1692,7 @@ void Ctxt::divideBy2()
   getContext().productOfPrimes(twoInverse, getPrimeSet());
   twoInverse += 1;
   twoInverse /= 2;
-  for (size_t i=0; i<parts.size(); i++)
+  for (long i: range(parts.size()))
     parts[i] *= twoInverse;
 
   noiseVar /= 4;  // noise is halved by this operation
@@ -1630,7 +1716,7 @@ void Ctxt::divideByP()
   ZZ pInverse, Q;
   getContext().productOfPrimes(Q, getPrimeSet());
   InvMod(pInverse, conv<ZZ>(p), Q);
-  for (size_t i=0; i<parts.size(); i++)
+  for (long i: range(parts.size()))
     parts[i] *= pInverse;
 
   noiseVar  /= fsquare(p);  // noise is reduced by a p factor
@@ -1649,7 +1735,7 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   long m = context.zMStar.getM();
 
   // Apply this automorphism to all the parts
-  for (size_t i=0; i<parts.size(); i++) { 
+  for (long i: range(parts.size())) { 
     parts[i].automorph(k);
     if (!parts[i].skHandle.isOne()) {
       parts[i].skHandle.powerOfX = MulMod(parts[i].skHandle.powerOfX,k,m);
@@ -1665,7 +1751,7 @@ void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
   if (this->isEmpty()) return;
 
   // Apply this automorphism to all the parts
-  for (size_t i=0; i<parts.size(); i++) { 
+  for (long i: range(parts.size())) { 
     parts[i].complexConj();
     if (!parts[i].skHandle.isOne()) {
       parts[i].skHandle.powerOfX
@@ -1752,7 +1838,7 @@ void Ctxt::frobeniusAutomorph(long j)
 
 const long Ctxt::getKeyID() const
 {
-  for (size_t i=0; i<parts.size(); i++)
+  for (long i: range(parts.size()))
     if (!parts[i].skHandle.isOne()) return parts[i].skHandle.getSecretKeyID();
 
   return 0; // no part pointing to anything, return the default key
@@ -1764,7 +1850,7 @@ xdouble Ctxt::modSwitchAddedNoiseVar() const
   xdouble addedNoise = to_xdouble(0.0);
 
   // incorporate the secret keys' Hamming-weight
-  for (size_t i=0; i<parts.size(); i++) {
+  for (long i: range(parts.size())) { 
     if (parts[i].skHandle.isOne()) {
       addedNoise += 1.0;
     }
@@ -1808,7 +1894,6 @@ void Ctxt::write(ostream& str) const
   */  
   
   write_raw_int(str, ptxtSpace);
-  write_raw_int(str, highWaterMark);
   write_raw_int(str, intFactor);
   write_raw_xdouble(str, ratFactor);
   write_raw_xdouble(str, noiseVar);
@@ -1823,7 +1908,6 @@ void Ctxt::read(istream& str)
   assert(readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN)==0);
   
   ptxtSpace = read_raw_int(str);
-  highWaterMark = read_raw_int(str);
   intFactor = read_raw_int(str);
   ratFactor = read_raw_xdouble(str);
   noiseVar = read_raw_xdouble(str); 
@@ -1876,10 +1960,9 @@ istream& operator>>(istream& str, CtxtPart& p)
 ostream& operator<<(ostream& str, const Ctxt& ctxt)
 {
   str << "["<<ctxt.ptxtSpace<<" "<<ctxt.noiseVar<<" "<<ctxt.primeSet
-      << ctxt.highWaterMark << " "
       << ctxt.intFactor << " " << ctxt.ratFactor << " "
       << ctxt.parts.size() << endl;
-  for (size_t i=0; i<ctxt.parts.size(); i++)
+  for (long i: range(ctxt.parts.size()))
     str << ctxt.parts[i] << endl;
   return str << "]";
 }
@@ -1888,11 +1971,11 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseVar >> ctxt.primeSet
-      >> ctxt.highWaterMark >> ctxt.intFactor >> ctxt.ratFactor;
+      >> ctxt.intFactor >> ctxt.ratFactor;
   long nParts;
   str >> nParts;
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));
-  for (long i=0; i<nParts; i++) {
+  for (long i: range(nParts)) {
     str >> ctxt.parts[i];
     assert (ctxt.parts[i].getIndexSet()==ctxt.primeSet); // sanity-check
   }
@@ -1903,7 +1986,11 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  cerr << "  "<<label << ", level=" << c.findBaseLevel() << ", log(noise/modulus)~" << c.log_of_ratio() << ", p^r="<<c.getPtxtSpace()<<endl;
+  cerr << "  "<<label 
+       << ", log2(modulus/noise)=" << (-c.log_of_ratio()/log(2.0)) 
+       << ", p^r=" << c.getPtxtSpace() 
+       << ", #smallPrimes=" << (c.getPrimeSet() & c.getContext().smallPrimes).card()
+       << endl;
 }
 
 // The recursive incremental-product function that does the actual work
@@ -2039,6 +2126,7 @@ void innerProduct(Ctxt& result,
 // The ciphertext *this is not affected, instead the result is returned in
 // the zzParts vector, as a vector of ZZX'es. Returns an extimate for the
 // noise variance after mod-switching.
+
 #include "powerful.h"
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 {

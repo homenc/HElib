@@ -150,7 +150,7 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
       // need to generate mask
       ZZX mask;
       SelectRange(ea, mask, 0, nSlots - (1L << n));
-      repAux.tab(0).set_ptr(new DoubleCRT(mask, ea.getContext()));
+      repAux.tab(0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
 
 
@@ -188,7 +188,7 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
 
         ZZX mask;
         ea.encode(mask, maskArray);
-        repAux.tab(k+1).set_ptr(new DoubleCRT(mask, ea.getContext()));
+        repAux.tab(k+1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       }
 
       ctxt_masked.multByConstant(*repAux.tab(k+1));
@@ -215,9 +215,15 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
   recursiveReplicate(ea, ctxt_right, n, k, pos, limit, repAux, handler);
 }
 
-void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt,
+void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt_orig,
                       ReplicateHandler *handler, RepAux* repAuxPtr)
 {
+  Ctxt ctxt = ctxt_orig;
+  ctxt.cleanUp();
+  // clean up the ciphertext -- this gets rid of all small primes,
+  // so that DoubleCRT constant can leave them out
+
+
   long nSlots = ea.size();
   long n = GreatestPowerOfTwo(nSlots); // 2^n <= nSlots
 
@@ -371,7 +377,7 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
     if (repAux.tab(d,0).null()) { // generate mask if not there already
       ZZX mask;
       SelectRangeDim(ea, mask, 0, dSize - extent, d);
-      repAux.tab(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext()));
+      repAux.tab(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
 
     Ctxt ctxt_tmp = ctxt;
@@ -407,7 +413,7 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
 	// store this mask in the repAux table
         ZZX mask;
         ea.encode(mask, maskArray);
-        repAux.tab(d, k+1).set_ptr(new DoubleCRT(mask, ea.getContext()));
+        repAux.tab(d, k+1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       }
 
       // Apply mask to zero out slots in ctxt
@@ -517,7 +523,7 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     if (repAux.tab1(d, 0).null()) { // generate mask if not already there
       ZZX mask;
       SelectRangeDim(ea, mask, 0, extent, d);
-      repAux.tab1(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext()));
+      repAux.tab1(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       // store mask in 2nd table (tab1)
     }
     ctxt1.multByConstant(*repAux.tab1(d, 0)); // mult by mask to zero out slots
@@ -551,7 +557,7 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     if (repAux.tab1(d, 1).null()) { // generate mask if not already there
       ZZX mask;
       SelectRangeDim(ea, mask, extent, dSize, d);
-      repAux.tab1(d, 1).set_ptr(new DoubleCRT(mask, ea.getContext()));
+      repAux.tab1(d, 1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
     ctxt1.multByConstant(*repAux.tab1(d,1)); // mult by mask to zero out slots
 
@@ -573,10 +579,16 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
 // otherwise, a recursion depth is chosen heuristically,
 //   but is capped at recBound
 void
-replicateAll(const EncryptedArray& ea, const Ctxt& ctxt, 
+replicateAll(const EncryptedArray& ea, const Ctxt& ctxt_orig, 
 	     ReplicateHandler *handler, long recBound, RepAuxDim* repAuxPtr)
 {
   FHE_TIMER_START;
+
+  Ctxt ctxt = ctxt_orig;
+  ctxt.cleanUp();
+  // clean up the ciphertext -- this gets rid of all small primes,
+  // so that DoubleCRT constant can leave them out
+
   RepAuxDim repAux;
   if (repAuxPtr==NULL) repAuxPtr = &repAux;
   replicateAllNextDim(ea, ctxt, 0, 1, recBound, *repAuxPtr, handler);

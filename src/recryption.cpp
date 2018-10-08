@@ -92,6 +92,7 @@ static void setAlphaE(double& alpha, long& e, double rho, double gamma,
   else
     e = floor(1+ log(2*(t+1)*p2r)/logp);
 }
+
 double
 RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
                        const FHEcontext& context, bool conservative, long t)
@@ -109,6 +110,7 @@ RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
   long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
   double rho = (t+1)/pow(p,logT);
 
+#if 0
   if (!conservative) {   // try alpha, e with this "aggresive" setting
     ::setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
     ePrime = e -r +1 -logT;
@@ -120,6 +122,11 @@ RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
       conservative = true;
     }
   }
+#else
+  // FIXME: I don't know what to do with bitsPerLevel
+  conservative = true;
+#endif
+
   if (conservative) { // set alpha, e with a "conservative" rho/p
     ::setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
     ePrime = e -r -logT;
@@ -511,7 +518,6 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 #ifdef DEBUG_PRINTOUT
   cerr << "+ After unpack ";
   decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
-  cerr << "    extracting "<<(topHigh+1)<<" digits\n";
 #endif
 
   NTL_EXEC_RANGE(d, first, last)
@@ -653,7 +659,7 @@ void packedRecrypt(const CtPtrs& array,
   std::vector<Ctxt*> v;
   for (long i=0; i<array.size(); i++)
     if ( array.isSet(i) && !array[i]->isEmpty()
-         && array[i]->findBaseLevel()<belowLvl )
+         && array[i]->bitCapacity()<belowLvl*(array[i]->getContext().BPL()) )
       v.push_back(array[i]);
   packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
 }
@@ -665,7 +671,7 @@ void packedRecrypt(const CtPtrMat& m,
   for (long i=0; i<m.size(); i++)
     for (long j=0; j<m[i].size(); j++)
       if ( m[i].isSet(j) && !m[i][j]->isEmpty()
-           && m[i][j]->findBaseLevel()<belowLvl )
+           && m[i][j]->bitCapacity()<belowLvl*(m[i][j]->getContext().BPL()) )
         v.push_back(m[i][j]);
   packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
 }
@@ -721,6 +727,7 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
   double rho = (t+1)/pow(p,logT);
 
+#if 0
   if (!conservative) {   // try alpha, e with this "aggresive" setting
     setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
     ePrime = e -r +1 -logT;
@@ -732,6 +739,11 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
       conservative = true;
     }
   }
+#else
+  // FIXME: I don't know what to do with bitsPerLevel
+  conservative = true;
+#endif
+
   if (conservative) { // set alpha, e with a "conservative" rho/p
     setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
     ePrime = e -r -logT;
@@ -959,13 +971,14 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   CheckCtxt(ctxt, "init");
 #endif
 
+
   if (thinRecrypt_initial_level) {
     // experimental code...we should drop down
     // to a reasonably small level before doing the 
     // first linear map.
-    // TODO: we should also check that we have enough
-    // levels to do the first linear map.
-    ctxt.modDownToLevel(thinRecrypt_initial_level);
+    long first = context.ctxtPrimes.first();
+    long last = min(context.ctxtPrimes.last(), first + thinRecrypt_initial_level - 1);
+    ctxt.bringToSet(IndexSet(first, last));
   }
 
 #ifdef PRINT_LEVELS

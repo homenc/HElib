@@ -199,8 +199,8 @@ int main(int argc, char *argv[])
   amap.arg("d", d, "degree of the field extension");
   amap.note("d == 0 => factors[0] defines extension");
 
-  long L=3;
-  amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
+  long L=250;
+  amap.arg("L", L, "# of bits in the modulus chain");
 
   long bnd = 64;
   amap.arg("bnd", bnd, "recursion bound for replication");

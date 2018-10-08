@@ -199,9 +199,12 @@ public:
 
   // Copy constructor from the base class
 
+// FIXME-IndexSet
+#if 0
   explicit
   CtxtPart(const FHEcontext& _context): DoubleCRT(_context)
   { skHandle.setOne(); }
+#endif
 
   CtxtPart(const FHEcontext& _context, const IndexSet& s): 
     DoubleCRT(_context,s) { skHandle.setOne(); }
@@ -265,7 +268,7 @@ class Ctxt {
   IndexSet primeSet; // the primes relative to which the parts are defined
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
   NTL::xdouble noiseVar;  // estimating the noise variance in this ciphertext
-  long highWaterMark;// keep track of number of multiplications
+
   long intFactor;    // an integer factor to multiply by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
 
@@ -495,11 +498,6 @@ public:
   //! @brief Estimate the added noise variance
   NTL::xdouble modSwitchAddedNoiseVar() const;
 
-  //! @brief Find the "natural level" of a cipehrtext.
-  // Find the level such that modDown to that level makes the
-  // additive term due to rounding into the dominant noise term 
-  long findBaseLevel() const;
-
   //! @brief Modulus-switching up (to a larger modulus).
   //! Must have primeSet <= s, and s must contain
   //! either all the special primes or none of them.
@@ -510,11 +508,49 @@ public:
   //! primeSet<=s. s must contain either all special primes or none of them
   void modDownToSet(const IndexSet &s);
 
-  //! @brief Modulus-switching down.
-  void modDownToLevel(long lvl);
+  //! @brief make the primeSet equal to newPrimeSet,
+  //! via modUpToSet and modDownToSet
+  void bringToSet(const IndexSet& s) 
+  {
+    modUpToSet(s);
+    modDownToSet(s);
+  }
 
-  //! Modulus-switching up or down
-  void bringToLevel(long lvl);
+  //! @brief drop all smallPrimes, adding ctxtPrimes as necessary
+  //! to compensate
+  void dropSmallPrimes()
+  {
+    NTL::Error("dropSmallPrimes: not implemented");
+  }
+
+  //! @brief drop all smallPrimes, adding ctxtPrimes as necessary
+  //! to compensate, and also drop all specialPrimes
+  void dropSmallAndSpecialPrimes();
+
+  //! @brief returns the "capacity" of a ciphertext,
+  //! which is the log of the ratio of the modulus to the
+  //! estimated noise
+  double capacity() const
+  {
+    if (getNoiseVar() <= 1.0) 
+      return context.logOfProduct(getPrimeSet());
+    else
+      return context.logOfProduct(getPrimeSet()) - log(getNoiseVar())/2;
+  }
+
+  //! @brief the capacity in bits, returned as an integer
+  long bitCapacity() const
+  {
+    return long(capacity()/log(2.0));
+  }
+
+  //! @brief returns the log of the prime set
+  double logOfPrimeSet() const
+  {
+    return context.logOfProduct(getPrimeSet());
+  }
+
+
 
   //! @brief Special-purpose modulus-switching for bootstrapping.
   //!
@@ -524,12 +560,6 @@ public:
   //! the zzParts std::vector, as a std::vector of ZZX'es.
   //! Returns an extimate for the noise variance after mod-switching.
   double rawModSwitch(std::vector<NTL::ZZX>& zzParts, long toModulus) const;
-
-  //! @brief Find the "natural prime-set" of a cipehrtext.
-  //! Find the highest IndexSet so that mod-switching down to that set results
-  //! in the dominant noise term being the additive term due to rounding
-  void findBaseSet(IndexSet& s) const;
-  void findBaseSetCKKS(IndexSet& s) const;
 
   //! @brief compute the power X,X^2,...,X^n
   //  void computePowers(std::vector<Ctxt>& v, long nPowers) const;
@@ -545,7 +575,6 @@ public:
     primeSet=context.ctxtPrimes;
     parts.clear();
     noiseVar = NTL::to_xdouble(0.0);
-    highWaterMark = findBaseLevel();
   }
 
   //! @brief Is this an empty cipehrtext without any parts
@@ -587,6 +616,7 @@ public:
     return 0; // just to keep the compiler happy
   }
 
+
   //! @brief Returns log(noise-variance)/2 - log(q)
   double log_of_ratio() const
   {return (getNoiseVar()==0.0)? (-context.logOfProduct(getPrimeSet()))
@@ -604,9 +634,6 @@ public:
                       std::pair<long,long> f=std::pair<long,long>(0,0));
 };
 
-inline IndexSet baseSetOf(const Ctxt& c) { 
-  IndexSet s; c.findBaseSet(s); return s; 
-}
 
 // set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products
 // out could point to v[0], but having it pointing to any other v[i]
@@ -696,7 +723,5 @@ inline void Ctxt::extractBits(std::vector<Ctxt>& bits, long nBits2extract)
 void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long e);
 // implemented in extractDigits.cpp
 
-//! mod down to base level
-void bringToBaseLevel(Ctxt& ctxt);
 
 #endif // ifndef _Ctxt_H_

@@ -25,6 +25,9 @@
 #include <NTL/BasicThreadPool.h>
 #include "binaryArith.h"
 
+#define BPL_ESTIMATE (30)
+// FIXME: this should really be dynamic
+
 NTL_CLIENT
 
 #ifdef DEBUG_PRINTOUT
@@ -91,7 +94,8 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
 {
   FHE_TIMER_START;
   const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
-  DoubleCRT one(zeroCtxt.getContext()); one += 1L;
+  const FHEcontext& context = zeroCtxt.getContext();
+  DoubleCRT one(context, context.allPrimes()); one += 1L;
   
   resize(aeqb, lsize(b), zeroCtxt);
   resize(agtb, lsize(a), zeroCtxt);
@@ -166,9 +170,10 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
   }
 
   // Check that we have enough levels, try to bootstrap otherwise
-  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize+1)+2)
+  if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize+1)+2)*mu.getContext().BPL())
     packedRecrypt(a,b,unpackSlotEncoding);
-  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize)+1) // the bear minimum
+  if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize)+1)*mu.getContext().BPL()) 
+    // the bare minimum
     throw std::logic_error("not enough levels for comparison");
 
   // NOTE: this procedure minimizes the number of multiplications,

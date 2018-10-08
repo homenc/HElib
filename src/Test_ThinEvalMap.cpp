@@ -195,7 +195,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
  *  r       lifting  [ default=1 ]
  *  c       number of columns in the key-switching matrices  [ default=2 ]
  *  k       security parameter  [ default=80 ]
- *  L       # of levels in the modulus chain  [ default=6 ]
+ *  L       # of bits in the modulus chain 
  *  s       minimum number of slots  [ default=0 ]
  *  seed    PRG seed  [ default=0 ]
  *  mvec    use specified factorization of m
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
   long k=80;
   amap.arg("k", k, "security parameter");
 
-  long L=6;
+  long L=300;
   amap.arg("L", L, "# of levels in the modulus chain");
 
   long s=0;

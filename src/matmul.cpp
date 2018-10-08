@@ -313,7 +313,7 @@ struct ConstMultiplier_zzX : ConstMultiplier {
   } 
 
   shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override {
-    return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context));
+    return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()));
   }
 
 };

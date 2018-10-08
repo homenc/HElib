@@ -22,8 +22,7 @@ Ctxt& DynamicCtxtPowers::getPower(long e)
     long k = 1L<<(NextPowerOfTwo(e)-1); // largest power of two smaller than e
     v[e-1] = getPower(e-k);             // compute X^e = X^{e-k} * X^k
     v[e-1].multiplyBy(getPower(k));
-
-    v[e-1].modDownToLevel(v[e-1].findBaseLevel()); // mod-switch down to base level
+    // FIXME: could drop down / cleanup further as an optimization?
   }
   return v[e-1];
 }

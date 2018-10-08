@@ -26,6 +26,22 @@ NTL_CLIENT
 #include "replicate.h"
 #include "permutations.h"
 
+// A hack to get this to compile for now
+static long findBaseLevel(const Ctxt& c)
+{
+  return c.getContext().ctxtPrimes.card();
+}
+static void modDownToLevel(Ctxt& c, long lvl)
+{
+  IndexSet target;
+  for (long i: c.getContext().ctxtPrimes) {
+    target.insert(i);
+    if (--lvl <= 0) break; // already inserted enough primes
+  }
+  c.modDownToSet(target);
+}
+
+
 // We measure low-level timing at all levels
 class LowLvlTimingData {
 public:
@@ -185,9 +201,9 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   // perform operations at a lower level
   long level = td.lvl;
   if (level>0) for (long i=0; i<(long)cc.size(); i++)
-    cc[i].modDownToLevel(level);
+                 modDownToLevel(cc[i], level);
   else {
-    level = cc[0].findBaseLevel();
+    level = findBaseLevel(cc[0]);
     td.lvl = level;
   }
 
@@ -195,7 +211,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   cerr << "." << std::flush;
   FHE_NTIMER_START(innerProduct);
   innerProduct(ret,cc,cc);
-  ret.modDownToLevel(ret.findBaseLevel());
+  modDownToLevel(ret,findBaseLevel(ret));
   FHE_NTIMER_STOP(innerProduct);
 
   // Multiplication with 2,3 arguments
@@ -204,7 +220,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     Ctxt c0 = cc[0];
     FHE_NTIMER_START(multiplyBy);
     c0.multiplyBy(cc[1]);
-    c0.modDownToLevel(c0.findBaseLevel());
+    modDownToLevel(c0,findBaseLevel(c0));
     FHE_NTIMER_STOP(multiplyBy);
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -215,7 +231,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
       Ctxt c0 = cc[0];
       FHE_NTIMER_START(multiplyBy2);
       c0.multiplyBy2(cc[1],cc[2]);
-      c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
+      modDownToLevel(c0,findBaseLevel(c0)); // mod-down if needed
       FHE_NTIMER_STOP(multiplyBy2);
       ret += c0; // Just so the compiler doesn't optimize it away
     }
@@ -256,7 +272,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/true);
     FHE_NTIMER_START(nativeAutomorph);
     c0.smartAutomorph(k);
-    c0.modDownToLevel(c0.findBaseLevel());
+    modDownToLevel(c0,findBaseLevel(c0));
     FHE_NTIMER_STOP(nativeAutomorph);    
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -267,7 +283,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/false);
     FHE_NTIMER_START(automorph);
     c0.smartAutomorph(k);
-    c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
+    modDownToLevel(c0,findBaseLevel(c0)); // mod-down if needed
     FHE_NTIMER_STOP(automorph);
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -337,7 +353,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
 		 long nTests, HighLvlTimingData& td)
 {
   Ctxt tmp = c[0];
-  tmp.modDownToLevel(td.lvl);
+  modDownToLevel(tmp, td.lvl);
   cerr << "." << std::flush;
   std::unique_ptr< MatMulFull > ptr(buildRandomFullMatrix(ea));
   if (ea.getTag()==PA_GF2_tag) {
@@ -360,7 +376,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
     long nSlots = ea.size();
     long r = RandomBnd(nSlots);
     tmp = c[i % c.size()];
-    tmp.modDownToLevel(td.lvl);
+    modDownToLevel(tmp, td.lvl);
     // time rotation
     FHE_NTIMER_START(rotate);
     ea.rotate(tmp, r);
@@ -376,7 +392,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   cerr << "." << std::flush;
   for (long i=0; i<nTests && i<ea.size(); i++) {
     tmp = c[i % c.size()];
-    tmp.modDownToLevel(td.lvl);
+    modDownToLevel(tmp, td.lvl);
     FHE_NTIMER_START(replicate);
     replicate(ea, tmp, i);
     FHE_NTIMER_STOP(replicate);    
@@ -386,7 +402,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   cerr << "." << std::flush;
   ReplicateDummy handler;
   tmp = c[1];
-  tmp.modDownToLevel(td.lvl);
+  modDownToLevel(tmp, td.lvl);
   FHE_NTIMER_START(replicateAll);
   replicateAll(ea, tmp, &handler);
   FHE_NTIMER_STOP(replicateAll);
@@ -396,7 +412,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   Permut pi;
   randomPerm(pi, trees.getSize());
   tmp = c[2];
-  tmp.modDownToLevel(td.lvl);
+  modDownToLevel(tmp, td.lvl);
 
   PermNetwork net;
   FHE_NTIMER_START(permutation);
@@ -434,9 +450,8 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   setTimersOn();
   resetAllTimers();
   long phim = phi_N(m);
-  long L = floor((7.2*phim)/(FHE_pSize* /*cc*/1.33* (110+/*k*/80)));
-  if (L<5) L=5; // Make sure we have at least a few primes
-
+  long L = floor((7.2*phim)/(40 * (110+/*k*/80)));
+  if (L<250) L=250; // Make sure we have at least a few primes
 
   // Initialize a context with r=2,d=1
   auto_timer _init_timer(&_init_timer_4);

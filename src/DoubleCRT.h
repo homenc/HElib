@@ -129,21 +129,37 @@ public:
   //! @param _context The context for this DoubleCRT object, use "current active context" if not specified
   //! @param indexSet Which primes to use for this object, if not specified then use all of them
   DoubleCRT(const NTL::ZZX&poly, const FHEcontext& _context, const IndexSet& indexSet);
+
+// FIXME-IndexSet
+#if 0
   DoubleCRT(const NTL::ZZX&poly, const FHEcontext& _context);
+#endif
 
   //! @brief Context is not specified, use the "active context"
   //  (run-time error if active context is NULL)
   //  declared "explicit" to avoid implicit type conversion
+
+// FIXME-IndexSet
+#if 0
   explicit DoubleCRT(const NTL::ZZX&poly); 
+#endif
 
   //! @brief Same as above, but with zzX's
   DoubleCRT(const zzX&poly, const FHEcontext& _context, const IndexSet& indexSet);
+
+
+// FIXME-IndexSet
+#if 0
   DoubleCRT(const zzX&poly, const FHEcontext& _context);
   explicit DoubleCRT(const zzX&poly); 
+#endif
 
  // Without specifying a ZZX, we get the zero polynomial
+// FIXME-IndexSet
+#if 0
   explicit DoubleCRT(const FHEcontext &_context);
   // declare "explicit" to avoid implicit type conversion
+#endif
 
   //! @brief Also specify the IndexSet explicitly
   DoubleCRT(const FHEcontext &_context, const IndexSet& indexSet);
@@ -378,9 +394,12 @@ public:
 
 inline void conv(DoubleCRT &d, const NTL::ZZX &p) { d=p; }
 
+// FIXME-IndexSet
+#if 0
 inline DoubleCRT to_DoubleCRT(const NTL::ZZX& p) {
   return DoubleCRT(p);
 }
+#endif
 
 inline void conv(NTL::ZZX &p, const DoubleCRT &d) { d.toPoly(p); }
 

@@ -35,7 +35,7 @@ void testSimpleConversion(const Vec<long>& mvec)
 void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
 {
   PowerfulDCRT p2d(context, mvec);
-  DoubleCRT dcrt(context);
+  DoubleCRT dcrt(context, context.fullPrimes());
   ZZX poly1, poly2;
   Vec<ZZ> pwrfl1, pwrfl2;
   IndexSet set = dcrt.getIndexSet();

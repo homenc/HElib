@@ -343,7 +343,8 @@ public:
   //! Key generation: This procedure generates a single secret key,
   //! pushes it onto the sKeys list using ImportSecKey from above.
   long GenSecKey(long hwt=0, long ptxtSpace=0, long maxDegKswitch=3)
-  { DoubleCRT newSk(context); // defined relative to all primes, special or not
+  { DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes); 
+
     if (hwt>0) {
       newSk.sampleHWt(hwt);     // samle a Hamming-weight-hwt polynomial
       return ImportSecKey(newSk, hwt, ptxtSpace, maxDegKswitch);

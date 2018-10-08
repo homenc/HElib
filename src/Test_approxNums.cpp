@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 
   long m=16;
   long r=8;
-  long L=5;
+  long L=150;
   double epsilon=0.01; // Accepted accuracy
   bool verbose=false;
 

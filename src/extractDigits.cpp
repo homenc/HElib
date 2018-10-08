@@ -101,7 +101,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
 
 
 #ifdef VIEW_LEVELS
-      fprintf(stderr, "%3ld", digits[j].findBaseLevel());
+      fprintf(stderr, "%5ld", digits[j].bitCapacity());
 #endif
 
       tmp -= digits[j];
@@ -121,7 +121,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
     digits[i] = tmp; // needed in the next round
 
 #ifdef VIEW_LEVELS
-    fprintf(stderr, "%3ld\n", digits[i].findBaseLevel());
+    fprintf(stderr, "%5ld\n", digits[i].bitCapacity());
 #endif
 
 //#ifdef DEBUG_PRINTOUT
@@ -269,7 +269,7 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
   for (long i: range(r)) {
     tmp = c;
     for (long j: range(i)) {
-      if (digits[j].findBaseLevel() >= digits0[j].findBaseLevel()) {
+      if (digits[j].capacity() >= digits0[j].capacity()) {
          // optimization: digits[j] is better than digits0[j],
          // so just use it
 
@@ -278,7 +278,7 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
       checkNoise(tmp, *dbgKey, "sub " + to_string(i) + " " + to_string(j));
 #endif
 #ifdef VIEW_LEVELS
-      fprintf(stderr, "%3ld*", digits[j].findBaseLevel());
+      fprintf(stderr, "%5ld*", digits[j].bitCapacity());
 #endif
       }
       else {
@@ -295,7 +295,7 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
       checkNoise(tmp, *dbgKey, "sub " + to_string(i) + " " + to_string(j));
 #endif
 #ifdef VIEW_LEVELS
-      fprintf(stderr, "%3ld ", digits0[j].findBaseLevel());
+      fprintf(stderr, "%5ld ", digits0[j].bitCapacity());
 #endif
       }
 
@@ -311,7 +311,7 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 #endif
 
 #ifdef VIEW_LEVELS
-    fprintf(stderr, "%3ld  --- %3ld\n", digits0[i].findBaseLevel(), digits[i].findBaseLevel());
+    fprintf(stderr, "%5ld  --- %5ld\n", digits0[i].bitCapacity(), digits[i].bitCapacity());
 #endif
   }
 }
