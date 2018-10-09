@@ -321,6 +321,10 @@ void Ctxt::modDownToSet(const IndexSet &s)
   if (isCKKS()) {
     // Factor after mod-switching is ratFactor/(prod_{i\in setDiff} qi),
     // it must be sufficiently larger than sqrt(addedNoiseVar)
+    // FIXME: Do we really need to make the factor this big? This is very
+    //     different that the constraint in computeIntervalForMul, where we
+    //     only ensure that the ratFactor is larger than sqrt(addedNoiseVar),
+    //     without the extra factors m * context.alMod.getPPowR()
     double extraFactor = (log(addedNoiseVar)/2)
       + log(context.alMod.getPPowR()) + log(context.zMStar.getM())/2
       - ( log(ratFactor) - getContext().logOfProduct(setDiff) );
@@ -404,9 +408,29 @@ void Ctxt::dropSmallAndSpecialPrimes()
     IndexSet dropping= primeSet & (context.smallPrimes|context.specialPrimes);
     double log_dropping = context.logOfProduct(dropping);
 
-    // Try to ensure that scaled noise is no less than mod-switch added term
-    IndexSet compensate;
-    if (log_noise - log_dropping < log_modswitch_noise) {
+    // Below we ensure that the scaled ctxt is not too small
+    IndexSet target = primeSet & context.ctxtPrimes;
+
+    // For CKKS, try to ensure that the scaling factor remains larger
+    // than the mod-switch added noise
+    if (isCKKS()) {
+      double log_rf = log(getRatFactor())  // log(factor) after scaling
+                      + context.logOfProduct(target) - logOfPrimeSet();
+      if (log_rf < log_modswitch_noise) {
+        cerr << "bump up ratFactor in dropSmallAndSpecialPrimes\n";
+        // FIXME: Should we check for log_rf being larger from log_modswitch_noise by some factor?
+        IndexSet candidates = context.ctxtPrimes / target;
+        for (long i: candidates) {
+          target.insert(i);
+          log_rf += context.logOfPrime(i);
+          if (log_rf >= log_modswitch_noise)
+            break;
+        }
+      }
+    }
+    // For BGV, try to ensure that the scaled noise remains larger
+    // than the mod-switch added noise
+    else if (log_noise - log_dropping < log_modswitch_noise) {
       double log_compensation = log_modswitch_noise - (log_noise-log_dropping);
       // add ctxtPrimes whose log adds up to at least log_compensation,
       // if possible
@@ -414,12 +438,12 @@ void Ctxt::dropSmallAndSpecialPrimes()
       IndexSet candidates = context.ctxtPrimes / primeSet;
       for (long i: candidates) {
          if (log_compensation <= 0) break;
-         compensate.insert(i);
+         target.insert(i);
          log_compensation -= log(context.ithPrime(i));
       }
     }
 
-    IndexSet target = (primeSet & context.ctxtPrimes) | compensate;
+    // Finally mod-switch to the reight target set
     bringToSet(target);
   }
 }
@@ -472,8 +496,9 @@ void Ctxt::cleanUp()
 {
   reLinearize();
   // reduce();
-  if (!primeSet.disjointFrom(context.specialPrimes)) {
-    modDownToSet(primeSet / context.specialPrimes);
+  if (!primeSet.disjointFrom(context.specialPrimes)
+      || !primeSet.disjointFrom(context.smallPrimes)) {
+    dropSmallAndSpecialPrimes();
   }
 }
 
