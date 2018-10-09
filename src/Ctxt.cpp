@@ -400,14 +400,14 @@ void Ctxt::dropSmallAndSpecialPrimes()
     double log_modswitch_noise = log(modSwitchAddedNoiseVar())/2 + fudge;
     double log_noise = log(getNoiseVar())/2;
 
-    // Compute the set of remaining primes and its total size
-    IndexSet dropping= primeSet/ (context.smallPrimes | context.specialPrimes);
+    // Compute the set of dropped primes and its total size
+    IndexSet dropping= primeSet & (context.smallPrimes|context.specialPrimes);
     double log_dropping = context.logOfProduct(dropping);
 
     // Try to ensure that scaled noise is no less than mod-switch added term
     IndexSet compensate;
     if (log_noise - log_dropping < log_modswitch_noise) {
-      double log_compensation = log_modswitch_noise - (log_noise - log_dropping);
+      double log_compensation = log_modswitch_noise - (log_noise-log_dropping);
       // add ctxtPrimes whose log adds up to at least log_compensation,
       // if possible
 
