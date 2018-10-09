@@ -29,18 +29,15 @@ NTL_CLIENT
 // A hack to get this to compile for now
 static long findBaseLevel(const Ctxt& c)
 {
-  return c.getContext().ctxtPrimes.card();
+  return long(c.naturalSize() / 30); // FIXME: replace 30 by something else
 }
 static void modDownToLevel(Ctxt& c, long lvl)
 {
-  IndexSet target;
-  for (long i: c.getContext().ctxtPrimes) {
-    target.insert(i);
-    if (--lvl <= 0) break; // already inserted enough primes
-  }
-  c.modDownToSet(target);
+  double lo = lvl*30; // FIXME: replace 30 by something else
+  IndexSet target =
+    c.getContext().modSizes.getSet4Size(lo, lo+5, c.getPrimeSet(), c.isCKKS());
+  c.bringToSet(target);
 }
-
 
 // We measure low-level timing at all levels
 class LowLvlTimingData {
