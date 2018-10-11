@@ -514,7 +514,7 @@ public:
   {
     auto cap = capacity();
     if (cap<1) {
-      cerr << "Ctxt::bringToSet called with capacity="<<cap
+      std::cerr << "Ctxt::bringToSet called with capacity="<<cap
            << ", likely decryption error\n";
     }
     if (empty(s)) { // If emptry, use a singleton with 1st ctxt prime
