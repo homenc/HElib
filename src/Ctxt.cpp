@@ -417,8 +417,8 @@ void Ctxt::dropSmallAndSpecialPrimes()
       double log_rf = log(getRatFactor())  // log(factor) after scaling
                       + context.logOfProduct(target) - logOfPrimeSet();
       if (log_rf < log_modswitch_noise) {
-        cerr << "bump up ratFactor in dropSmallAndSpecialPrimes\n";
-        // FIXME: Should we check for log_rf being larger from log_modswitch_noise by some factor?
+        // FIXME: Should we check for log_rf being larger
+        //        than log_modswitch_noise by some factor?
         IndexSet candidates = context.ctxtPrimes / target;
         for (long i: candidates) {
           target.insert(i);
