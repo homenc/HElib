@@ -404,15 +404,18 @@ void Ctxt::dropSmallAndSpecialPrimes()
     double log_modswitch_noise = log(modSwitchAddedNoiseVar())/2 + fudge;
     double log_noise = log(getNoiseVar())/2;
 
+    // The target set contains only the ctxtPrimes
+    IndexSet target = primeSet & context.ctxtPrimes;
+
     // Compute the set of dropped primes and its total size
-    IndexSet dropping= primeSet & (context.smallPrimes|context.specialPrimes);
+    IndexSet dropping= primeSet / target;
     double log_dropping = context.logOfProduct(dropping);
 
     // Below we ensure that the scaled ctxt is not too small
-    IndexSet target = primeSet & context.ctxtPrimes;
+    double log_compensation = 0;
 
-    // For CKKS, try to ensure that the scaling factor remains larger
-    // than the mod-switch added noise
+    // For CKKS, try to ensure that the scaling factor
+    // remains larger than the mod-switch added noise
     if (isCKKS()) {
       double log_rf = log(getRatFactor())  // log(factor) after scaling
                       + context.logOfProduct(target) - logOfPrimeSet();
@@ -422,28 +425,30 @@ void Ctxt::dropSmallAndSpecialPrimes()
         IndexSet candidates = context.ctxtPrimes / target;
         for (long i: candidates) {
           target.insert(i);
-          log_rf += context.logOfPrime(i);
-          if (log_rf >= log_modswitch_noise)
+          log_compensation += context.logOfPrime(i);
+          if (log_rf + log_compensation >= log_modswitch_noise)
             break;
         }
       }
     }
-    // For BGV, try to ensure that the scaled noise remains larger
-    // than the mod-switch added noise
-    else if (log_noise - log_dropping < log_modswitch_noise) {
-      double log_compensation = log_modswitch_noise - (log_noise-log_dropping);
-      // add ctxtPrimes whose log adds up to at least log_compensation,
-      // if possible
+    // In either BGV or CKKS, try to ensure that the scaled noise
+    // remains larger than the mod-switch added noise
+    if (log_noise -log_dropping +log_compensation < log_modswitch_noise) {
+      // Sanity-check, we're really not supposed to get here for CKKS
+      if (isCKKS())
+        cerr << __func__
+             << ": scaled noise too small even after CKKS compensation\n";
 
-      IndexSet candidates = context.ctxtPrimes / primeSet;
+      IndexSet candidates = context.ctxtPrimes / target;
       for (long i: candidates) {
-         if (log_compensation <= 0) break;
          target.insert(i);
-         log_compensation -= log(context.ithPrime(i));
+         log_compensation += context.logOfPrime(i);
+         if (log_noise -log_dropping +log_compensation >= log_modswitch_noise)
+           break;
       }
     }
 
-    // Finally mod-switch to the reight target set
+    // Finally mod-switch to the right target set
     bringToSet(target);
   }
 }
