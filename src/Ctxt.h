@@ -233,29 +233,26 @@ const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
 
 /**
  * @class Ctxt
- * @brief A Ctxt object holds a single cipehrtext
+ * @brief A Ctxt object holds a single ciphertext
  *
- * The class Ctxt includes a std::vector<CtxtPart>: For a Ctxt c, c[i] is the i'th
- * ciphertext part, which can be used also as a DoubleCRT object (since
- * CtxtPart is derived from DoubleCRT). By convention, c[0], the first
- * CtxtPart object in the std::vector, has skHndl that points to 1 (i.e., it
- * is just added in upon decryption, without being multiplied by anything).
- * We maintain the invariance that all the parts of a ciphertext are defined
+ * The class Ctxt includes a std::vector<CtxtPart>: For a Ctxt c, c[i] is the
+ * i'th ciphertext part, which can be used also as a DoubleCRT object (since
+ * CtxtPart is derived from DoubleCRT). By convention, c[0], the first CtxtPart
+ * object in the std::vector, has skHndl that points to 1 (i.e., it is just
+ * added in upon decryption, without being multiplied by anything).  We
+ * maintain the invariance that all the parts of a ciphertext are defined
  * relative to the same set of primes.
  *
- * A ciphertext contains also pointers to the general parameters of this
- * FHE instance and the public key, and an estimate of the noise variance.
- * The noise variance is determined by the norm of the canonical embedding
- * of the noise polynomials, namely their evaluations in roots of the ring
- * polynomial (which are the complex primitive roots of unity). We consider
- * each such evaluation point as a random variable, and estimate the variances
- * of these variables. This estimate is heuristic, assuming that various
- * quantities "behave like independent random variables".
- * The variance is added on addition, multiplied on multiplications, remains
- * unchanged for automorphism, and is roughly scaled down by mod-switching
- * with some added factor, and similarly scaled up by key-switching with some
- * added factor. The noiseVar data member of the class keeps the esitmated
- * variance.
+ * A ciphertext contains also pointers to the general parameters of this FHE
+ * instance and the public key, and a high-probability bound on the noise
+ * magnitude (kept in the noiseBound data member). The noise bound is a bound
+ * on the l-infinity norm of the canonical embedding of the noise polynomial,
+ * namely its evaluation in roots of the ring polynomial (which are the complex
+ * primitive roots of unity).  The noise bound is added on addition, multiplied
+ * on multiplications, remains unchanged for automorphism, and is roughly
+ * scaled down by mod-switching with some added factor, and similarly scaled up
+ * by key-switching with some added factor.
+ *
  **/
 class Ctxt {
   friend class FHEPubKey;
@@ -267,7 +264,8 @@ class Ctxt {
   std::vector<CtxtPart> parts;    // the ciphertexe parts
   IndexSet primeSet; // the primes relative to which the parts are defined
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
-  NTL::xdouble noiseVar;  // estimating the noise variance in this ciphertext
+
+  NTL::xdouble noiseBound;  // a high-probability bound on the the noise magnitude
 
   long intFactor;    // an integer factor to multiply by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
@@ -278,7 +276,7 @@ class Ctxt {
   void tensorProduct(const Ctxt& c1, const Ctxt& c2);
 
   // Add/subtract a ciphertext part to/from a ciphertext. These are private
-  // methods, they cannot update the noiseVar estimate so they must be called
+  // methods, they cannot update the noiseBound so they must be called
   // from a procedure that will eventually update that estimate.
   Ctxt& operator-=(const CtxtPart& part) { subPart(part); return *this; }
   Ctxt& operator+=(const CtxtPart& part) { addPart(part); return *this; }
@@ -482,7 +480,7 @@ public:
   // unless you know what you are doing.
   void hackPtxtSpace(long newPtxtSpace) { ptxtSpace=newPtxtSpace; }
 
-  void bumpNoiseEstimate(double factor) { noiseVar *= factor; }
+  void bumpNoiseBound(double factor) { noiseBound *= factor; }
 
   void reLinearize(long keyIdx=0);
           // key-switch to (1,s_i), s_i is the base key with index keyIdx
@@ -495,8 +493,8 @@ public:
   //! @brief Add a high-noise encryption of the given constant
   void blindCtxt(const NTL::ZZX& poly);
 
-  //! @brief Estimate the added noise variance
-  NTL::xdouble modSwitchAddedNoiseVar() const;
+  //! @brief Estimate the added noise 
+  NTL::xdouble modSwitchAddedNoiseBound() const;
 
   //! @brief Modulus-switching up (to a larger modulus).
   //! Must have primeSet <= s, and s must contain
@@ -542,13 +540,13 @@ public:
 
   //! @brief returns the "capacity" of a ciphertext,
   //! which is the log of the ratio of the modulus to the
-  //! estimated noise
+  //! noise bound
   double capacity() const
   {
-    if (getNoiseVar() <= 1.0) 
+    if (noiseBound <= 1.0) 
       return context.logOfProduct(getPrimeSet());
     else
-      return context.logOfProduct(getPrimeSet()) - log(getNoiseVar())/2;
+      return context.logOfProduct(getPrimeSet()) - log(noiseBound);
   }
 
   //! @brief the capacity in bits, returned as an integer
@@ -571,7 +569,7 @@ public:
   //! the moduli-chain in the context, and does not even need to be a prime.
   //! The ciphertext *this is not affected, instead the result is returned in
   //! the zzParts std::vector, as a std::vector of ZZX'es.
-  //! Returns an extimate for the noise variance after mod-switching.
+  //! Returns an extimate for the noise bound after mod-switching.
   double rawModSwitch(std::vector<NTL::ZZX>& zzParts, long toModulus) const;
 
   //! @brief compute the power X,X^2,...,X^n
@@ -587,7 +585,7 @@ public:
   void clear() { // set as an empty ciphertext
     primeSet=context.ctxtPrimes;
     parts.clear();
-    noiseVar = NTL::to_xdouble(0.0);
+    noiseBound = NTL::to_xdouble(0.0);
   }
 
   //! @brief Is this an empty cipehrtext without any parts
@@ -604,14 +602,14 @@ public:
   //! @brief Would this ciphertext be decrypted without errors?
   bool isCorrect() const {
     NTL::ZZ q = context.productOfPrimes(primeSet);
-    return (NTL::to_xdouble(q) > sqrt(noiseVar)*2);
+    return NTL::to_xdouble(q) > noiseBound*2;
   }
 
   const FHEcontext& getContext() const { return context; }
   const FHEPubKey& getPubKey() const   { return pubKey; }
   const IndexSet& getPrimeSet() const  { return primeSet; }
   const long getPtxtSpace() const      { return ptxtSpace;}
-  const NTL::xdouble& getNoiseVar() const { return noiseVar; }
+  const NTL::xdouble& getNoiseBound() const { return noiseBound; }
   const NTL::xdouble& getRatFactor() const { return ratFactor; }
   const long getKeyID() const;
 
@@ -630,10 +628,10 @@ public:
   }
 
 
-  //! @brief Returns log(noise-variance)/2 - log(q)
+  //! @brief Returns log(noiseBound) - log(q)
   double log_of_ratio() const
-  {return (getNoiseVar()==0.0)? (-context.logOfProduct(getPrimeSet()))
-      : ((log(getNoiseVar())/2 - context.logOfProduct(getPrimeSet())) );}
+  {return (getNoiseBound()==0.0)? (-context.logOfProduct(getPrimeSet()))
+      : (log(getNoiseVar()) - context.logOfProduct(getPrimeSet()));}
   ///@}
   friend std::istream& operator>>(std::istream& str, Ctxt& ctxt);
   friend std::ostream& operator<<(std::ostream& str, const Ctxt& ctxt);
