@@ -491,45 +491,36 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
 
   context.digits.resize(nDgts); // allocate space
 
-  double maxDigitLog = 0.0;
   if (nDgts>1) { // we break ciphertext into a few digits when key-switching
-    double dlog = context.logOfProduct(context.ctxtPrimes)/nDgts; 
-    // estimate log of each digit
+    // NOTE: The code below assumes that all the ctxtPrimes have roughly the same size
 
-    IndexSet s1;
-    double logSoFar = 0.0;
+    IndexSet remaining = context.ctxtPrimes;
+    for (long dgt=0; dgt<nDgts-1; dgt++) {
+      long digitCard = divc(remaining.card(), nDgts-dgt);
+           // ceiling(#-of-remaining-primes, #-or-remaining-digits)
 
-    double target = dlog;
-    long idx = context.ctxtPrimes.first();
-    for (long i=0; i<nDgts-1; i++) { // set all digits but the last
-      IndexSet s;
-      while (idx <= context.ctxtPrimes.last() && (empty(s)||logSoFar<target)) {
-        s.insert(idx);
-	logSoFar += log(context.ithPrime(idx));
-	idx = context.ctxtPrimes.next(idx);
+      for (long i : remaining) {
+	context.digits[dgt].insert(i);
+        if (context.digits[dgt].card() >= digitCard) break;
       }
-      assert (!empty(s));
-      context.digits[i] = s;
-      s1.insert(s);
-      double thisDigitLog = context.logOfProduct(s);
-      if (maxDigitLog < thisDigitLog) maxDigitLog = thisDigitLog;
-      target += dlog;
+      remaining.remove(context.digits[dgt]); // update the remaining set
     }
-    // The ctxt primes that are left (if any) form the last digit
-    IndexSet s = context.ctxtPrimes / s1;
-    if (!empty(s)) {
-      context.digits[nDgts-1] = s;
-      double thisDigitLog = context.logOfProduct(s);
-      if (maxDigitLog < thisDigitLog) maxDigitLog = thisDigitLog;
-    }
-    else { // If last digit is empty, remove it
+    // The last digit has everything else
+    if (empty(remaining)) { // sanity chack, use one less digit
       nDgts--;
       context.digits.resize(nDgts);
     }
+    else
+      context.digits[nDgts-1] = remaining;
   }
   else { // only one digit
-    maxDigitLog = context.logOfProduct(context.ctxtPrimes);
     context.digits[0] = context.ctxtPrimes;
+  }
+
+  double maxDigitLog = 0.0;
+  for (auto& digit : context.digits) {
+    double size = context.logOfProduct(digit);
+    if (size > maxDigitLog) maxDigitLog = size;
   }
 
   // Add special primes to the chain for the P factor of key-switching
