@@ -359,8 +359,14 @@ void FHEcontext::AddSpecialPrime(long q)
 }
 
 //! @brief Add small primes to get target resolution
-void addSmallPrimes(FHEcontext& context, long resolution)
+void addSmallPrimes(FHEcontext& context, long resolution, long cpSize)
 {
+  // cpSize is the size of the ciphertext primes
+  // Sanity-checks, cpSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
+  assert((cpSize >= 30) &&
+         (cpSize <= NTL_SP_NBITS) &&
+         (cpSize*10 >= NTL_SP_NBITS*9));
+
   long m = context.zMStar.getM();
   if (m<=0 || m>(1<<20))// sanity checks
     Error("addSmallPrimes: m undefined or larger than 2^20");
@@ -370,37 +376,37 @@ void addSmallPrimes(FHEcontext& context, long resolution)
     resolution = 3;
 
   vector<long> sizes;
-  if (NTL_SP_NBITS>=60) { // make the smallest primes 40-bit primes
-    sizes.push_back(40);
-    sizes.push_back(40);
+  long smallest; // size of the smallest of the smallPrimes
+  // We need at least two of this size, maybe three
+
+  if (cpSize>=54)
+    smallest = divc(2*cpSize,3);
+  else if (cpSize >=45)
+    smallest = divc(7*cpSize,10);
+  else { // Make the smallest ones at least 22-bit primes
+    assert(cpSize >=30);
+    smallest = divc(11*cpSize,15);
+    sizes.push_back(smallest); // need three of them
   }
-  else if (NTL_SP_NBITS >=50) { // make the smallest primes 35-bit primes
-    sizes.push_back(35);
-    sizes.push_back(35);
-  }
-  else { // Make the smallest ones 22-bit primes
-    assert(NTL_SP_NBITS >=30);
-    sizes.push_back(22);
-    sizes.push_back(22);
-    sizes.push_back(22);
-  }
+  sizes.push_back(smallest);
+  sizes.push_back(smallest);
 
   // This ensures we can express everything to given resolution.
 
-  // use sizes 60-r, 60-2r, 60-4r,... downto the sizes above
-  for (long delta=resolution; NTL_SP_NBITS-delta>sizes[0]; delta*=2)
-    sizes.push_back(NTL_SP_NBITS-delta);
+  // use sizes cpSize-r, cpSize-2r, cpSize-4r,... downto the sizes above
+  for (long delta=resolution; cpSize-delta>smallest; delta*=2)
+    sizes.push_back(cpSize-delta);
 
   // This helps to minimize the number of small primes needed
   // to express any particular resolution.
   // This could be removed...need to experiment.
 
-  // Special cases: add also NTL_SP_NBITS-3*resolution,
-  // and for resolution=1 also NTL_SP_NBITS-11
-  if (NTL_SP_NBITS - 3*resolution > sizes[0])
-    sizes.push_back(NTL_SP_NBITS- 3*resolution);
-  if (resolution==1 && NTL_SP_NBITS-11 > sizes[0])
-    sizes.push_back(NTL_SP_NBITS- 11);
+  // Special cases: add also cpSize-3*resolution,
+  // and for resolution=1 also cpSize-11
+  if (cpSize - 3*resolution > smallest)
+    sizes.push_back(cpSize- 3*resolution);
+  if (resolution==1 && cpSize-11 > smallest)
+    sizes.push_back(cpSize- 11);
 
   std::sort(sizes.begin(), sizes.end()); // order by size
 
@@ -415,25 +421,52 @@ void addSmallPrimes(FHEcontext& context, long resolution)
   }
 }
 
-void addCtxtPrimes(FHEcontext& context, long nBits)
+// Determine the target size of the ctxtPrimes. The target size is
+// set at 2^n, where n is at most NTL_SP_NBITS and at least least
+// ceil(0.9*NTL_SP_NBITS), so that we don't overshoot nBits by too
+// much.
+// The reason that we do not allow to go below 0.9*NTL_SP_NBITS is
+// that we need some of the smallPrimes to be sufficiently smaller
+// than the ctxtPrimes, and still we need these smallPrimes to have
+// m'th roots of unity.
+long ctxtPrimeSize(long nBits)
 {
-  // we simply add enough primes of size NTL_SP_NBITS
-  // until their product is at least 2^{nBits}
+  // How many primes of size NTL_SP_NBITS it takes to get to nBits
+  long nPrimes = divc(nBits, NTL_SP_NBITS);
+  long targetSize = divc(nBits, nPrimes)+1; // How large should each prime be
+       // The '+1' is because we get primes that are
+       // a little smaller than 2^{targetSize}
 
+  // ensure targetSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
+  if (targetSize < 0.9*NTL_SP_NBITS)
+    targetSize = divc(9*NTL_SP_NBITS, 10);
+  if (targetSize > NTL_SP_NBITS)
+    targetSize = NTL_SP_NBITS;
+  if (targetSize < 30)
+    targetSize = 30;
+
+  return targetSize;
+}
+
+void addCtxtPrimes(FHEcontext& context, long nBits, long targetSize)
+{
+  // We add enough primes of size targetSize until their product is
+  // at least 2^{nBits}
+
+  // Sanity-checks, targetSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
+  assert((targetSize >= 30) &&
+         (targetSize <= NTL_SP_NBITS) &&
+         (targetSize*10 >= NTL_SP_NBITS*9));
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
 
-  double bitlen = 0;
-
-  PrimeGenerator gen(NTL_SP_NBITS, m);
-
+  PrimeGenerator gen(targetSize, m);
+  double bitlen = 0;     // how many bits we already have
   while (bitlen < nBits) {
-    long q = gen.next();
-    context.AddCtxtPrime(q);
+    long q = gen.next();     // generate th enext prime
+    context.AddCtxtPrime(q); // add it to the list
     bitlen += log2(q);
   }
-
-
 }
 
 
@@ -544,10 +577,9 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
 void buildModChain(FHEcontext& context, long nBits, long nDgts,
                       bool willBeBootstrappable, long resolution)
 {
-   addSmallPrimes(context, resolution);
-   addCtxtPrimes(context, nBits);
-   addSpecialPrimes(context, nDgts, willBeBootstrappable);
-   context.setModSizeTable();
+  long pSize = ctxtPrimeSize(nBits);
+  addSmallPrimes(context, resolution, pSize);
+  addCtxtPrimes(context, nBits, pSize);
+  addSpecialPrimes(context, nDgts, willBeBootstrappable);
+  context.setModSizeTable();
 }
-
-
