@@ -82,12 +82,16 @@ void read_ntl_vec_long(istream& str, vec_long& vl)
 
 void write_raw_double(ostream& str, const double d)
 {
+  // FIXME: this is not portable: 
+  //  * we might have sizeof(long) < sizeof(double)
+  //  * we also don't know if the bit layout is really compatible
   const long *pd = reinterpret_cast<const long*>(&d);
   write_raw_int(str, *pd);
 }
 
 double read_raw_double(istream& str)
 {
+  // FIXME: see FIXME for write_raw_double
   long d = read_raw_int(str);
   double* pd = reinterpret_cast<double*>(&d);
   return *pd;

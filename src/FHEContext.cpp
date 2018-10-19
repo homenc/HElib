@@ -185,6 +185,8 @@ bool FHEcontext::operator==(const FHEcontext& other) const
 
   if (stdev != other.stdev) return false;
 
+  if (scale != other.scale) return false;
+
   if (rcData != other.rcData) return false;
   if (trcData != other.trcData) return false;
   return true;
@@ -252,6 +254,9 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 
   // standard-deviation 
   write_raw_xdouble(str, context.stdev);
+
+  // scale
+  write_raw_double(str, context.scale);
    
   // the "small" index 
   write_raw_int(str, context.smallPrimes.card());
@@ -297,6 +302,9 @@ void readContextBinary(istream& str, FHEcontext& context)
 
   // Get the standard deviation
   context.stdev = read_raw_xdouble(str);
+
+  // Get the scale
+  context.scale = read_raw_double(str);
 
 
   IndexSet smallPrimes;
@@ -389,6 +397,9 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   // standard-deviation
   str << context.stdev << "\n";
 
+  // scale
+  str << context.scale << "\n";
+
   // the "small" index 
   str << context.smallPrimes << "\n ";
 
@@ -445,6 +456,9 @@ istream& operator>> (istream &str, FHEcontext& context)
 
   // Get the standard deviation
   str >> context.stdev;
+
+  // Get the scale
+  str >> context.scale;
 
   IndexSet smallPrimes;
   str >> smallPrimes; 
@@ -511,4 +525,5 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   ea(new EncryptedArray(*this, alMod))
 {
   stdev=3.2;  
+  scale=10;
 }

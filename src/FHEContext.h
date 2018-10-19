@@ -65,6 +65,16 @@ public:
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   NTL::xdouble stdev;
 
+  //! erfc(scale/sqrt(2)) * phi(m) should be less than some negligible
+  //! parameter epsilon.
+  //! The default value of 10 should be good enough for most applications.
+  //! NOTE: -log(erfc(10/sqrt(2)))/log(2) = 75.8
+  //!       -log(erfc(11/sqrt(2)))/log(2) = 91.1
+  //!       -log(erfc(12/sqrt(2)))/log(2) =107.8
+
+  double scale;
+  // default = 10
+
   /**
    * The "ciphertext primes" are the "normal" primes that are used to
    * represent the public encryption key and ciphertexts. These are all
