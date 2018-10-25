@@ -204,6 +204,146 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
 }
 
 
+//==================================================================
+// Starting with NTL 11.1.0, the NTL FFT routines do not do any bit reversal.
+// Specificall, FFTFwd leaves its outputs bit reversed, and FFTInv1
+// requires that its inputs are already bit reversed.
+// These low-level routines are only used when m is a power of two.
+// As a work-around, we borrow NTL's old bit reversal code,
+// but only when NTL_PROVIDES_TRUNC_FFT is defined (this macro is defined
+// in the newer versions of NTL that do not do the bit reversal).
+// So this HElib code should be compatible with NTL versions both before
+// and after version 11.1.0.
+
+#ifdef NTL_PROVIDES_TRUNC_FFT
+
+static
+long RevInc(long a, long k)
+{
+   long j, m;
+
+   j = k;
+   m = 1L << (k-1);
+
+   while (j && (m & a)) {
+      a ^= m;
+      m >>= 1;
+      j--;
+   }
+   if (j) a ^= m;
+   return a;
+}
+
+
+
+// FIXME: This could potentially be shared across threads, using
+// a "lazy table".
+static inline
+Vec<long> *get_brc_mem()
+{
+   NTL_TLS_LOCAL_INIT(Vec< Vec<long> >, brc_mem_vec, (INIT_SIZE, NTL_FFTMaxRoot+1));
+   return brc_mem_vec.elts();
+}
+
+
+#define NTL_BRC_THRESH (11)
+#define NTL_BRC_Q (5)
+
+// Must have NTL_BRC_THRESH >= 2*NTL_BRC_Q
+// Should also have (1L << (2*NTL_BRC_Q)) small enough
+// so that we can fit that many long's into the cache
+
+
+static
+long *BRC_init(long k)
+{
+   Vec<long> *brc_mem = get_brc_mem();
+
+   long n = (1L << k);
+   brc_mem[k].SetLength(n);
+   long *rev = brc_mem[k].elts();
+   long i, j;
+   for (i = 0, j = 0; i < n; i++, j = RevInc(j, k))
+      rev[i] = j;
+   return rev;
+}
+
+
+static
+void BasicBitReverseCopy(long * NTL_RESTRICT B, 
+                         const long * NTL_RESTRICT A, long k)
+{
+   Vec<long> *brc_mem = get_brc_mem();
+
+   long n = 1L << k;
+   long* NTL_RESTRICT rev;
+   long i, j;
+
+   rev = brc_mem[k].elts();
+   if (!rev) rev = BRC_init(k);
+
+   for (i = 0; i < n; i++)
+      B[rev[i]] = A[i];
+}
+
+
+
+static
+void COBRA(long * NTL_RESTRICT B, const long * NTL_RESTRICT A, long k)
+{
+   Vec<long> *brc_mem = get_brc_mem();
+
+   NTL_TLS_LOCAL(Vec<long>, BRC_temp);
+
+   long q = NTL_BRC_Q;
+   long k1 = k - 2*q;
+   long * NTL_RESTRICT rev_k1, * NTL_RESTRICT rev_q;
+   long *NTL_RESTRICT T;
+   long a, b, c, a1, b1, c1;
+   long i, j;
+
+   rev_k1 = brc_mem[k1].elts();
+   if (!rev_k1) rev_k1 = BRC_init(k1);
+
+   rev_q = brc_mem[q].elts();
+   if (!rev_q) rev_q = BRC_init(q);
+
+   T = BRC_temp.elts();
+   if (!T) {
+      BRC_temp.SetLength(1L << (2*q));
+      T = BRC_temp.elts();
+   }
+
+   for (b = 0; b < (1L << k1); b++) {
+      b1 = rev_k1[b]; 
+      for (a = 0; a < (1L << q); a++) {
+         a1 = rev_q[a]; 
+         for (c = 0; c < (1L << q); c++) 
+            T[(a1 << q) + c] = A[(a << (k1+q)) + (b << q) + c]; 
+      }
+
+      for (c = 0; c < (1L << q); c++) {
+         c1 = rev_q[c];
+         for (a1 = 0; a1 < (1L << q); a1++) 
+            B[(c1 << (k1+q)) + (b1 << q) + a1] = T[(a1 << q) + c];
+      }
+   }
+}
+
+static
+void BitReverseCopy(long * NTL_RESTRICT B, const long * NTL_RESTRICT A, long k)
+{
+   if (k <= NTL_BRC_THRESH) 
+      BasicBitReverseCopy(B, A, k);
+   else
+      COBRA(B, A, k);
+}
+#endif
+
+//================================================
+
+
+
 void Cmodulus::FFT_aux(vec_long &y, zz_pX& tmp) const
 {
 
@@ -231,7 +371,26 @@ void Cmodulus::FFT_aux(vec_long &y, zz_pX& tmp) const
 #ifdef FHE_OPENCL
     AltFFTFwd(yp, yp, k-1, *altFFTInfo);
 #else
+
+#ifndef NTL_PROVIDES_TRUNC_FFT
     FFTFwd(yp, yp, k-1, *zz_pInfo->p_info);
+#else
+
+    FFTFwd(yp, yp, k-1, *zz_pInfo->p_info);
+    // Now we have to bit reverse the result
+    // The BitReverseCopy routine does not allow aliasing, so
+    // we have to do an extra copy here.
+    // We use the fact tmp1 and y do not alias.
+
+    vec_long& tmp1 = Cmodulus::getScratch_vec_long();
+    tmp1.SetLength(phim);
+    long *tmp1_p = tmp1.elts();
+
+    BitReverseCopy(tmp1_p, yp, k-1);
+    for (long i = 0; i < phim; i++) yp[i] = tmp1_p[i];
+
+#endif
+
 #endif
 
     return;
@@ -251,6 +410,7 @@ void Cmodulus::FFT_aux(vec_long &y, zz_pX& tmp) const
   for (i=j=0; i<m; i++)
     if (zMStar->inZmStar(i)) y[j++] = rep(coeff(tmp,i));
 }
+
 
 void Cmodulus::FFT(vec_long &y, const ZZX& x) const
 {
@@ -307,7 +467,18 @@ void Cmodulus::iFFT(zz_pX &x, const vec_long& y)const
 #ifdef FHE_OPENCL
     AltFFTRev1(tmp_p, yp, k-1, *altFFTInfo);
 #else
+
+#ifndef NTL_PROVIDES_TRUNC_FFT
     FFTRev1(tmp_p, yp, k-1, *zz_pInfo->p_info);
+#else
+    // We have to bit reverse the inputs to FFTRev1
+    // The BitReverseCopy routine does not allow aliasing.
+    // We use the fact that y and tmp do not alias
+
+    BitReverseCopy(tmp_p, yp, k-1);
+    FFTRev1(tmp_p, tmp_p, k-1, *zz_pInfo->p_info);
+#endif
+
 #endif
 
     x.rep.SetLength(phim);
