@@ -39,19 +39,23 @@ void sampleUniform(NTL::ZZX& poly, long n, const NTL::ZZ& B=NTL::ZZ(100L));
 //! Choose a vector of continuous Gaussians
 void sampleGaussian(std::vector<double> &dvec, long n, double stdev);
 
+class FHEcontext;
 class PAlgebra;
 // Same as above, but sample mod X^m-1 and then reduce mod Phi_m(X)
-void sampleHWt(zzX &poly, const PAlgebra& palg, long Hwt=100);
-void sampleSmall(zzX &poly, const PAlgebra& palg);
-// Same as above, but ensure the result is not too much larger than typical
-void sampleSmallBounded(zzX &poly, const PAlgebra& palg);
+double  sampleHWt(zzX &poly, const FHEcontext& context, long Hwt=100);
 
-void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev);
+// Return value is high-probability bound on L-infty norm of canonical embedding
+double sampleSmall(zzX &poly, const FHEcontext& context);
 // Same as above, but ensure the result is not too much larger than typical
-void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev);
+double sampleSmallBounded(zzX &poly, const FHEcontext& context);
 
-void sampleUniform(zzX &poly, const PAlgebra& palg, long B=100);
-void sampleUniform(NTL::ZZX&poly, const PAlgebra& palg,
+// Return value is high-probability bound on L-infty norm of canonical embedding
+double sampleGaussian(zzX &poly, const FHEcontext& context, double stdev);
+// Same as above, but ensure the result is not too much larger than typical
+double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev);
+
+double sampleUniform(zzX &poly, const FHEcontext& context, long B=100);
+NTL::xdouble sampleUniform(NTL::ZZX&poly, const FHEcontext& context,
                    const NTL::ZZ& B=NTL::ZZ(100L));
 
 //! Helper functions, return a bound B such that for random noise

@@ -137,7 +137,7 @@ public:
   friend class IndexSet;
   public:
     long operator *() const { return i_; }
-    iterator& operator ++() { i_ = s_.next(i_); } 
+    iterator& operator ++() { i_ = s_.next(i_); return *this; } 
 
     bool operator ==(const iterator &other) const 
     { return &s_ == &other.s_ && i_ == other.i_; }

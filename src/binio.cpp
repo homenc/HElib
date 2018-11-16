@@ -133,6 +133,11 @@ void read_raw_ZZ(istream& str, ZZ& zz)
   zz = ZZFromBytes(zzBytes, noBytes);
 }
 
+
+// FIXME: there is some repetitive code here.
+// We should think about a better overloading strategy for
+// read/write_raw_vector to avoid this.
+
 template<> void read_raw_vector<long>(istream& str, vector<long>& v)
 {
 
@@ -151,4 +156,25 @@ template<> void write_raw_vector<long>(ostream& str, const vector<long>& v)
 
   for(long n: v)
     write_raw_int(str, n); 
+};
+
+
+template<> void read_raw_vector<double>(istream& str, vector<double>& v)
+{
+
+  long sz = read_raw_int(str);
+  v.resize(sz); // Make space in vector
+
+  for(long i=0; i<sz; i++)
+    v[i] = read_raw_double(str); 
+    
+};
+
+template<> void write_raw_vector<double>(ostream& str, const vector<double>& v)
+{
+  long sz = v.size();  
+  write_raw_int(str, sz); 
+
+  for(long n: v)
+    write_raw_double(str, n); 
 };

@@ -65,6 +65,12 @@ public:
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   NTL::xdouble stdev;
 
+
+  //======================= high probability bounds ================
+
+  double scale;
+  // default = 10
+
   //! erfc(scale/sqrt(2)) * phi(m) should be less than some negligible
   //! parameter epsilon.
   //! The default value of 10 should be good enough for most applications.
@@ -72,8 +78,106 @@ public:
   //!       -log(erfc(11/sqrt(2)))/log(2) = 91.1
   //!       -log(erfc(12/sqrt(2)))/log(2) =107.8
 
-  double scale;
-  // default = 10
+  //! The way this is used is as follows.  If we have a normal random
+  //! variable X with variance sigma^2, then the probability that
+  //! that X lies outside the interval [-scale*sigma, scale*sigma] is at most
+  //! epsilon/phi(m).  We will usually apply the union bound to a vector
+  //! of phi(m) such random varables, so that the probability that
+  //! that the L-infty norm exceeds scale*sigma is at most epsilon.
+  //! Thus, scale*sigma will be used as a high-probabability bound
+  //! on the L-infty norm of such vectors.
+
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  //! so that each f_i is chosen uniformly and independently from the interval
+  //! [-magBound, magBound], and that k = degBound.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: this is a bit heuristic: we assume that if we evaluate
+  // f at a primitive root of unity, then we get something that
+  // well approximates a normal random variable with the same variance,
+  // which is equal to the sum of the variances of the individual f_i's,
+  // which is (2*magBound)^2/12 = magBound^2/3.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  double noiseBoundForUniform(double magBound, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound) / 3.0) * magBound;
+  }
+
+  NTL::xdouble noiseBoundForUniform(NTL::xdouble magBound, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound) / 3.0) * magBound;
+  }
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  //! so that each f_i is chosen uniformly and independently from 
+  //! N(0, sigma^2), and that k = degBound.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: if we evaluate f at a primitive root of unity, 
+  // then we get a normal random variable variance degBound * sigma^2.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  double noiseBoundForGaussian(double sigma, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound)) * sigma;
+  }
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  //! so that each f_i is zero with probability 1-prob, 1 with probability
+  //! prob/2, and -1 with probability prob/2.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: this is a bit heuristic: we assume that if we evaluate
+  // f at a primitive root of unity, then we get something that
+  // well approximates a normal random variable with the same variance,
+  // which is equal to the sum of the individual variances,
+  // which is degBound*prob.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  double noiseBoundForSmall(double prob, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound)) * std::sqrt(prob);
+  }
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  //! hwt coefficients are chosen to \pm 1, and the remainder zero.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: this is a bit heuristic: we assume that if we evaluate
+  // f at a primitive root of unity, then we get something that
+  // well approximates a normal random variable with the same variance,
+  // which is hwt.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  // NOTE: degBound is not used here, but I include it
+  // for consistency with the other noiseBound routines
+
+  double noiseBoundForHWt(long hwt, long degBound) const
+  {
+    return scale * std::sqrt(double(hwt));
+  }
 
   /**
    * The "ciphertext primes" are the "normal" primes that are used to

@@ -1070,59 +1070,67 @@ void DoubleCRT::randomize(const ZZ* seed)
 }
 
 // Coefficients are -1/0/1, Prob[0]=1/2
-void DoubleCRT::sampleSmall()
+double DoubleCRT::sampleSmall()
 {
   zzX poly;
-  ::sampleSmall(poly,context.zMStar); // degree-(phi(m)-1) polynomial
+  double retval = ::sampleSmall(poly,context); // degree-(phi(m)-1) polynomial
   *this = poly; // convert to DoubleCRT
+  return retval;
 }
 
-void DoubleCRT::sampleSmallBounded()
+double DoubleCRT::sampleSmallBounded()
 {
   zzX poly;
-  ::sampleSmallBounded(poly,context.zMStar); // degree-(phi(m)-1) polynomial
+  double retval = ::sampleSmallBounded(poly,context); // degree-(phi(m)-1) polynomial
   *this = poly; // convert to DoubleCRT
+  return retval;
 }
 
 // Coefficients are -1/0/1 with pre-specified number of nonzeros
-void DoubleCRT::sampleHWt(long Hwt)
+double DoubleCRT::sampleHWt(long Hwt)
 {
   zzX poly;
-  ::sampleHWt(poly,context.zMStar,Hwt);
+  double retval = ::sampleHWt(poly,context,Hwt);
   *this = poly; // convert to DoubleCRT
+  return retval;
 }
 
 // Coefficients are Gaussians
-void DoubleCRT::sampleGaussian(double stdev)
+double DoubleCRT::sampleGaussian(double stdev)
 {
   if (stdev==0.0) stdev=to_double(context.stdev); 
   zzX poly;
-  ::sampleGaussian(poly, context.zMStar, stdev);
+  double retval = ::sampleGaussian(poly, context, stdev);
   *this = poly; // convert to DoubleCRT
+  return retval;
 }
 
-void DoubleCRT::sampleGaussianBounded(double stdev)
+double DoubleCRT::sampleGaussianBounded(double stdev)
 {
   if (stdev==0.0) stdev=to_double(context.stdev);
   zzX poly;
-  ::sampleGaussianBounded(poly, context.zMStar, stdev);
+  double retval = ::sampleGaussianBounded(poly, context, stdev);
   *this = poly; // convert to DoubleCRT
+  return retval;
 }
 
 
 // Coefficients are uniform in [-B..B]
-void DoubleCRT::sampleUniform(const ZZ& B)
-{
-  ZZX poly;
-  ::sampleUniform(poly, context.zMStar, B);
-  *this = poly;
-}
 
-void DoubleCRT::sampleUniform(long B)
+double DoubleCRT::sampleUniform(long B)
 {
   zzX poly;
-  ::sampleUniform(poly, context.zMStar, B);
+  double retval = ::sampleUniform(poly, context, B);
   *this = poly;
+  return retval;
+}
+
+xdouble DoubleCRT::sampleUniform(const ZZ& B)
+{
+  ZZX poly;
+  xdouble retval = ::sampleUniform(poly, context, B);
+  *this = poly;
+  return retval;
 }
 
 void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)

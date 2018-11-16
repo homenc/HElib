@@ -72,8 +72,12 @@ template<typename T> void write_raw_vector(std::ostream& str, const std::vector<
     n.write(str);
   }
 };
-// vector<long> has adifferent implementation, since long.write does not work
+
+// vector<long> has a different implementation, since long.write does not work
 template<> void write_raw_vector<long>(std::ostream& str, const std::vector<long>& v);
+
+// vector<double> has a different implementation, since double.write does not work
+template<> void write_raw_vector<double>(std::ostream& str, const std::vector<double>& v);
 
 template<typename T> void read_raw_vector(std::istream& str, std::vector<T>& v, T& init)
 {
@@ -89,8 +93,12 @@ template<typename T> void read_raw_vector(std::istream& str, std::vector<T>& v)
 {
   read_raw_vector<T>(str, v, T());
 }
+
 // vector<long> has adifferent implementation, since long.read does not work
 template<> void read_raw_vector<long>(std::istream& str, std::vector<long>& v);
+
+// vector<double> has a different implementation, since double.read does not work
+template<> void read_raw_vector<double>(std::istream& str, std::vector<double>& v);
 
 // KeySwitch::read(...) (in FHE.cpp) requires the context.
 class FHEcontext;

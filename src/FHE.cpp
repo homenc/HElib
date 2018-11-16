@@ -22,7 +22,8 @@ NTL_CLIENT
 
 // Assumes that c1 is already chosen by the caller
 double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
-// Returns the variance of the noise canonical-embedding entries
+// Returns a high-probabiliy bound on the L-infty norm
+// of the canonical embedding of the decryption of (c0, c1) w/r/to s
 {
   assert (p>0); // Used with p=1 for CKKS, p>=2 for BGV
   const FHEcontext& context = s.getContext();
@@ -32,20 +33,22 @@ double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
   double stdev = to_double(context.stdev);
   if (palg.getPow2() == 0) // not power of two
     stdev *= sqrt(palg.getM());
-  c0.sampleGaussianBounded(stdev);
+  double bound = c0.sampleGaussianBounded(stdev);
 
   // Set c0 =  p*e - c1*s.
   // It is assumed that c0,c1 are defined with respect to the same set of
   // primes, but s may be defined relative to a different set. Either way
   // the primes for of c0,c1 are unchanged.
-  if (p>1)
+  if (p>1) {
     c0 *= p;
+    bound *= p;
+  }
+
   DoubleCRT tmp(c1);
   tmp.Mul(s, /*matchIndexSets=*/false); // multiply but don't mod-up
   c0 -= tmp;
 
-  return stdev*stdev * p*p *
-         ((palg.getPow2()>0)? palg.getM() : palg.getPhiM());
+  return bound;
 }
 
 // Choose random c0,c1 such that c0+s*c1 = p*e for a short e
@@ -193,7 +196,7 @@ ostream& operator<<(ostream& str, const KeySwitch& matrix)
       << " "<<matrix.ptxtSpace<<" "<<matrix.b.size() << endl;
   for (long i=0; i<(long)matrix.b.size(); i++)
     str << matrix.b[i] << endl;
-  str << matrix.prgSeed << " " << matrix.noiseVar << "]";
+  str << matrix.prgSeed << " " << matrix.noiseBound << "]";
   return str;
 }
 
@@ -212,7 +215,7 @@ void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
   for (long i=0; i<nDigits; i++)
     str >> b[i];
   str >> prgSeed;
-  str >> noiseVar;
+  str >> noiseBound;
   seekPastChar(str,']');
   //  cerr << "]";
 }
@@ -237,7 +240,7 @@ void KeySwitch::write(ostream& str) const
   write_raw_vector(str, b);
   
   write_raw_ZZ(str, prgSeed);
-  write_raw_xdouble(str, noiseVar);
+  write_raw_xdouble(str, noiseBound);
 
   writeEyeCatcher(str, BINIO_EYE_SKM_END);
 }
@@ -252,7 +255,7 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
   DoubleCRT blankDCRT(context, IndexSet::emptySet());
   read_raw_vector(str, b, blankDCRT);
   read_raw_ZZ(str, prgSeed);
-  noiseVar = read_raw_xdouble(str); 
+  noiseBound = read_raw_xdouble(str); 
 
   assert(readEyeCatcher(str, BINIO_EYE_SKM_END)==0);
 }
@@ -265,7 +268,7 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
 
 void FHEPubKey::setKeySwitchMap(long keyId)
 {
-  assert(keyId>=0 && keyId<(long)skSizes.size()); // Sanity-check, do we have such a key?
+  assert(keyId>=0 && keyId<(long)skBounds.size()); // Sanity-check, do we have such a key?
   long m = context.zMStar.getM();
 
   // Initialize an aray of "edges" (this is easier than searching through
@@ -359,9 +362,10 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
 // For CKKS, ptxtSpace is a bound on the size of the complex plaintext
 //     elements that are encoded in ptxt (before scaling). It is assumed that
 //     they are scaled in encoding by context.alMod.encodeScalingFactor().
-//     The returned value is the scaling factor in the resulting ciphertexe
+//     The returned value is the scaling factor in the resulting ciphertext
 //     (which can be larger than the input scaling). The same returned factor
 //     is also recorded in ctxt.ratFactor.
+
 long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 			bool highNoise) const
 {
@@ -378,12 +382,31 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
   // generate a random encryption of zero from the public encryption key
   ctxt = pubEncrKey;  // already an encryption of zero, just not a random one
+  ctxt.noiseBound = 0;
 
-  // choose a random small scalar r and a small random error vector e,
-  // then set ctxt = r*pubEncrKey + ptstSpace*e + (ptxt,0)
+  // choose a random small scalar r and a small random error vector (e0,e1),
+  // then set ctxt = r*pk + p*(e0,e1) + (ptxt,0), 
+  // where pk = pubEncrKey, and p = ptxtSpace.
+
+  // The resulting ciphertext decrypts to 
+  //   r*<sk,pk> + p*(e0 + sk1*e1) + ptxt,
+  // where sk = (1, sk1) is the secret key.
+  // This leads to a noise bound of:
+  //   r_bound*pubEncrKey.noiseBound 
+  //     + p*e0_bound + p*e1_bound*getSKeyBound()
+  //     + ptxt_bound
+  //  Here, r_bound, e0_bound, and e1_bound are values
+  //  returned by the corresponding sampling routines.
+  //  ptxt_bound is somewhat heuristically set assuming
+  //  that the coefficients of the ciphertext are uniformly
+  //  and independently chosen from the interval [-p/2, p/2].
+  
+
   DoubleCRT e(context, context.ctxtPrimes);
   DoubleCRT r(context, context.ctxtPrimes);
-  r.sampleSmall();
+  double r_bound = r.sampleSmall();
+
+  ctxt.noiseBound += r_bound * pubEncrKey.noiseBound;
 
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2()==0) // not power of two
@@ -391,6 +414,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
   for (size_t i=0; i<ctxt.parts.size(); i++) {  // add noise to all the parts
     ctxt.parts[i] *= r;
+    xdouble e_bound;
 
     if (highNoise && i == 0) {
       // we sample e so that coefficients are uniform over 
@@ -399,53 +423,47 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
       ZZ B;
       B = context.productOfPrimes(context.ctxtPrimes);
       B /= (ptxtSpace*8);
-      e.sampleUniform(B);
+ 
+      e_bound = e.sampleUniform(B);
     }
     else { 
-      e.sampleGaussian(stdev);
+      e_bound = e.sampleGaussian(stdev);
     }
 
     e *= ptxtSpace;
+    e_bound *= ptxtSpace;
+
+    if (i == 1) {
+      e_bound *= getSKeyBound();
+    }
+
     ctxt.parts[i] += e;
+    ctxt.noiseBound += e_bound;
   }
 
   // add in the plaintext
+  // FIXME: we should really randomize ptxt, so that each coefficient
+  //    has expected value 0
   // FIXME: This relies on the first part, ctxt[0], to have handle to 1
-  if (ptxtSpace==2) ctxt.parts[0] += ptxt;
-
+  
+  if (ptxtSpace==2) {
+    ctxt.parts[0] += ptxt;
+  }
   else { // The general case of ptxtSpace>2: for a ciphertext
          // relative to modulus Q, we add ptxt * Q mod ptxtSpace.
     long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
     ctxt.parts[0] += MulMod(ptxt,QmodP,ptxtSpace); // MulMod from module NumbTh
   }
 
+  // FIXME: this is a heuristic
+  double ptxt_bound = context.noiseBoundForUniform(double(ptxtSpace)/2.0, context.zMStar.getPhiM());
+
+  ctxt.noiseBound += ptxt_bound;
+
   // fill in the other ciphertext data members
   ctxt.ptxtSpace = ptxtSpace;
   ctxt.intFactor = 1; // FIXME: is this necessary?
 
-  if (highNoise) {
-    // hack: we set noiseVar to Q^2/8, which is just below threshold 
-    // that will signal an error
-
-    ctxt.noiseVar = xexp(2*context.logOfProduct(context.ctxtPrimes)-log(8.0));
-  }
-  else {
-    // We have <skey,ctxt>= r*<skey,pkey> +p*(e0+e1*s) +m,
-    // where VAR(<skey,pkey>) is recorded in pubEncrKey.noiseVar,
-    //       VAR(r)=phi(m)/2        or m/2
-    //       VAR(ei)=sigma^2*phi(m) or sigma^2*m^2
-    //                   (both depending on whether m is a power of two),
-    //       and VAR(s) depends by the secret-key Hamming size (skSizes).
-    // Hence the expected size squared is bounded by:
-    // VAR(X)= pubEncrKey.noiseVar*VAR(r) + p^2*(1 + VAR(s)*(VAR(ei)+1))
-
-    double rVar = (context.zMStar.getPow2()==0)?
-      (context.zMStar.getPhiM()/2.0) : (context.zMStar.getM()/2.0);
-    double eVar = stdev*stdev;
-    double sVar = skSizes[0];
-    double p2 = ptxtSpace*double(ptxtSpace);
-    ctxt.noiseVar = pubEncrKey.noiseVar*rVar + p2*(1+sVar*(eVar+1));
-  }
   return ptxtSpace;
 }
 
@@ -454,50 +472,77 @@ long FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSize) const
 {
   assert(this == &ctxt.pubKey);
 
+  if (ptxtSize == 0) ptxtSize = 1;
+  // the default for ptxtSize is zero, but really it should be 1
+
+  
+  long m = context.zMStar.getM();
+  long f = getContext().alMod.getCx().encodeScalingFactor();
+  long prec = getContext().alMod.getPPowR();
+
   // generate a random encryption of zero from the public encryption key
   ctxt = pubEncrKey;  // already an encryption of zero, just not a random one
 
-  // choose a random small scalar r and a small random error vector e,
-  // then set ctxt = r*pubEncrKey + ptstSpace*e + (ptxt,0)
+  // choose a random small scalar r and a small random error vector (e0,e1),
+  // then set ctxt = r*pk + (e0,e1) + (ef*ptxt,0), 
+  // where pk = pubEncrKey, and ef (the "extra factor") is described below
+
+  // The resulting ciphertext decrypts to 
+  //   r*<sk,pk> + e0 + sk1*e1 + ef*ptxt,
+  // where sk = (1, sk1) is the secret key.
+  // This leads to a noise bound of:
+  //   error_bound + ptxt_bound 
+  // where
+  //   error_bound = r_bound*pubEncrKey.noiseBound + e0_bound + e1_bound*getSKeyBound()
+  // Here, r_bound, e0_bound, and e1_bound are values
+  // returned by the corresponding sampling routines.
+
+  // ptxt_bound is computed as ef*f*ptxtSize.
+
+  // The value ef is computed as ceil(error_bound*prec/f), so that
+  // ef*f >= error_bound*prec.  
+
+
+
   DoubleCRT e(context, context.ctxtPrimes);
   DoubleCRT r(context, context.ctxtPrimes);
-  r.sampleSmall();
 
-  long m = context.zMStar.getM();
+  xdouble error_bound {0};
+
+  double r_bound = r.sampleSmall();
+  error_bound += r_bound * pubEncrKey.noiseBound;
+
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2()==0) // not power of two
     stdev *= sqrt(m);
 
   for (size_t i=0; i<ctxt.parts.size(); i++) {  // add noise to all the parts
     ctxt.parts[i] *= r;
-    e.sampleGaussian(stdev);
+    double e_bound = e.sampleGaussian(stdev);
     ctxt.parts[i] += e;
+    if (i == 1) {
+      e_bound *= getSKeyBound();
+    }
+    error_bound += e_bound;
   }
 
-  // Compute the noise magnitude, and ensure that the plaintext is
-  // scaled up by at least this much
-  double rVar = (context.zMStar.getPow2()==0)?
-    (context.zMStar.getPhiM()/2.0) : (m/2.0);
-  double eVar = stdev*stdev;
-  double sVar = skSizes[0];
-  double noiseVar = conv<double>(pubEncrKey.noiseVar)*rVar + sVar*(eVar+1);
+  long ef = conv<long>(ceil(error_bound*prec/f));
 
-  long factor = getContext().alMod.getCx().encodeScalingFactor();
-  long precision = getContext().alMod.getPPowR();
-  long extraFactor = ceil(precision*std::sqrt(noiseVar)*log2(m)/factor);
-  if (extraFactor>1) { // scale up some more
-    factor *= extraFactor;
-    ctxt.parts[0] += ptxt * extraFactor;
+  if (ef > 1) { // scale up some more
+    ctxt.parts[0] += ptxt * ef;
   }
   else { // no need for extra scaling
     ctxt.parts[0] += ptxt;
   }
 
-  ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
-  ctxt.ptxtSpace = 1;
-  ctxt.ratFactor = factor;
+  double ptxt_bound = double(ef)*double(f)*double(ptxtSize);
 
-  return factor;
+  ctxt.noiseBound = error_bound + ptxt_bound;
+  ctxt.ptxtSpace = 1;
+  ctxt.ratFactor = ef*f;
+  // FIXME: still not sure if this computation of ratFactor is correct
+
+  return conv<long>(ctxt.ratFactor);
 }
 
 bool FHEPubKey::operator==(const FHEPubKey& other) const
@@ -508,9 +553,9 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
   if (!pubEncrKey.equalsTo(other.pubEncrKey, /*comparePkeys=*/false))
     return false;
 
-  if (skSizes.size() != other.skSizes.size()) return false;
-  for (size_t i=0; i<skSizes.size(); i++)
-    if (skSizes[i] != other.skSizes[i]) return false;
+  if (skBounds.size() != other.skBounds.size()) return false;
+  for (size_t i=0; i<skBounds.size(); i++)
+    if (skBounds[i] != other.skBounds[i]) return false;
 
   if (keySwitching.size() != other.keySwitching.size()) return true;
   for (size_t i=0; i<keySwitching.size(); i++)
@@ -550,10 +595,10 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
   // output the public encryption key itself
   str << pk.pubEncrKey << endl;
 
-  // output skSizes in the same format as vec_long
+  // output skBounds in the same format as vec_double
   str << "[";
-  for (long i=0; i<(long)pk.skSizes.size(); i++)
-    str << pk.skSizes[i]<<" ";
+  for (long i=0; i<(long)pk.skBounds.size(); i++)
+    str << pk.skBounds[i]<<" ";
   str << "]\n";
 
   // output the key-switching matrices
@@ -597,8 +642,8 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   // Get the vector of secret-key Hamming-weights
   vec_long vl;
   str >> vl;
-  pk.skSizes.resize(vl.length());
-  for (long i=0; i<(long)pk.skSizes.size(); i++) pk.skSizes[i] = vl[i];
+  pk.skBounds.resize(vl.length());
+  for (long i=0; i<(long)pk.skBounds.size(); i++) pk.skBounds[i] = vl[i];
 
   // Get the key-switching matrices
   long nMatrices;
@@ -618,7 +663,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   }
 
   // build the key-switching map for all keys
-  for (long i=pk.skSizes.size()-1; i>=0; i--)
+  for (long i=pk.skBounds.size()-1; i>=0; i--)
     pk.setKeySwitchMap(i);
 
   str >> pk.KS_strategy; 
@@ -639,7 +684,7 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
 // Write out for FHEPubKey
 //  1. Context Base 
 //  2. Ctxt pubEncrKey;
-//  3. vector<long> skSizes;
+//  3. vector<long> skBounds;
 //  4. vector<KeySwitch> keySwitching;
 //  5. vector< vector<long> > keySwitchMap;
 //  6. Vec<long> KS_strategy
@@ -648,7 +693,7 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
 
   writeContextBaseBinary(str, pk.getContext());
   pk.pubEncrKey.write(str);
-  write_raw_vector(str, pk.skSizes);
+  write_raw_vector(str, pk.skBounds);
 
   // Keyswitch Matrices
   write_raw_vector(str, pk.keySwitching);
@@ -680,7 +725,7 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
 
   // Read in the rest
   pk.pubEncrKey.read(str);
-  read_raw_vector(str, pk.skSizes);
+  read_raw_vector(str, pk.skBounds);
 
   // Keyswitch Matrices
   read_raw_vector(str, pk.keySwitching, pk.getContext());
@@ -720,7 +765,7 @@ bool FHESecKey::operator==(const FHESecKey& other) const
 // FHESecKey object, then the procedure below generates a corresponding public
 // encryption key.
 // It is assumed that the context already contains all parameters.
-long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long size,
+long FHESecKey::ImportSecKey(const DoubleCRT& sKey, double bound,
 			     long ptxtSpace, long maxDegKswitch)
 {
   if (sKeys.empty()) { // 1st secret-key, generate corresponding public key
@@ -731,10 +776,12 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long size,
     // allocate space
     pubEncrKey.parts.assign(2,CtxtPart(context,context.ctxtPrimes));
     // Choose a new RLWE instance
-    pubEncrKey.noiseVar
+    pubEncrKey.noiseBound
       = RLWE(pubEncrKey.parts[0], pubEncrKey.parts[1], sKey, ptxtSpace);
     if (isCKKS())
-      pubEncrKey.ratFactor = sqrt(pubEncrKey.noiseVar);
+      pubEncrKey.ratFactor = pubEncrKey.noiseBound;
+    // FIXME: this computation of ratFactor should be more like
+    // in skEncrypt routine
 
     // make parts[0],parts[1] point to (1,s)
     pubEncrKey.parts[0].skHandle.setOne();
@@ -744,7 +791,7 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, long size,
     pubEncrKey.primeSet = context.ctxtPrimes;
     pubEncrKey.ptxtSpace = ptxtSpace;
   }
-  skSizes.push_back(size); // record the size of the new secret-key
+  skBounds.push_back(bound); // record the size of the new secret-key
   sKeys.push_back(sKey); // add to the list of secret keys
   long keyID = sKeys.size()-1; // not thread-safe?
 
@@ -819,7 +866,7 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   // generate the RLWE instances with pseudorandom ai's
 
   for (long i = 0; i < n; i++) {
-    ksMatrix.noiseVar = RLWE1(ksMatrix.b[i], a[i], toKey, p);
+    ksMatrix.noiseBound = RLWE1(ksMatrix.b[i], a[i], toKey, p);
   }
   // Add in the multiples of the fromKey secret key
   fromKey *= context.productOfPrimes(context.specialPrimes);
@@ -926,7 +973,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
   ctxt.parts.assign(2,tmpPart);}      // allocate space
 
   // Set Ctxt bookeeping parameters
-  ctxt.intFactor = 1; // FIXME: is this necessary
+  ctxt.intFactor = 1; // FIXME: is this necessary?
 
   // make parts[0],parts[1] point to (1,s)
   ctxt.parts[0].skHandle.setOne();
@@ -934,28 +981,28 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
   // Sample a new RLWE instance
-  double noiseVar = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
+  double noiseBound = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
 
   if (isCKKS()) {
-    long factor = getContext().alMod.getCx().encodeScalingFactor();
-    long precision = getContext().alMod.getPPowR();
-    long extraFactor = ceil(precision*std::sqrt(noiseVar)*log2(m)/factor);
-    if (extraFactor>1) { // scale up some more
-      factor *= extraFactor;
-      ctxt.parts[0] += extraFactor * ptxt;
+    long f = getContext().alMod.getCx().encodeScalingFactor();
+    long prec = getContext().alMod.getPPowR();
+    long ef = ceil(prec*noiseBound/f);
+    if (ef>1) { // scale up some more
+      ctxt.parts[0] += ptxt * ef;
     }
     else {
       ctxt.parts[0] += ptxt;
     }
-    ctxt.ratFactor = factor;
-    double rVar = (getContext().zMStar.getPow2()==0)?
-      (getContext().zMStar.getPhiM()/4.0) : (m/4.0);
-    ctxt.noiseVar = noiseVar + rVar*factor*ptxtSize*factor*ptxtSize;
-    return factor;
+    ctxt.ratFactor = ef*f;
+    double ptxt_bound = double(ef)*double(f)*double(ptxtSize);
+    ctxt.noiseBound = noiseBound + ptxt_bound;
+    return f;
   }
   else { // BGV
-    ctxt.noiseVar = noiseVar;
     ctxt.addConstant(ptxt);  // add in the plaintext
+    double ptxt_bound = context.noiseBoundForUniform(double(ptxtSpace)/2.0, context.zMStar.getPhiM());
+
+    ctxt.noiseBound = noiseBound + ptxt_bound;
     return ctxt.ptxtSpace;
   }
 }
@@ -974,13 +1021,13 @@ long FHESecKey::genRecryptData()
 
   // Generate a new bootstrapping key
   zzX keyPoly;
-  const long hwt = context.rcData.skHwt;
-  sampleHWt(keyPoly, context.zMStar, hwt);
+  long hwt = context.rcData.skHwt;
+  double bound = sampleHWt(keyPoly, context, hwt);
 
   DoubleCRT newSk(keyPoly, context, context.ctxtPrimes | context.specialPrimes); 
   // defined relative to all primes
 
-  long keyID = ImportSecKey(newSk, hwt, p2r, /*maxDegKswitch=*/1);
+  long keyID = ImportSecKey(newSk, bound, p2r, /*maxDegKswitch=*/1);
 
   // Generate a key-switching matrix from key 0 to this key
   GenKeySWmatrix(/*fromSPower=*/1,/*fromXPower=*/1,

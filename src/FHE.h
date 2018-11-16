@@ -85,7 +85,8 @@ public:
 
   std::vector<DoubleCRT> b;// The top row, consisting of the bi's
   NTL::ZZ prgSeed;         // a seed to generate the random ai's in the bottom row
-  NTL::xdouble noiseVar;   // estimate for the noise variance in each column
+  NTL::xdouble noiseBound;  // high probability bound on noise magnitude
+                            // in each column
 
   explicit
   KeySwitch(long sPow=0, long xPow=0, long fromID=0, long toID=0, long p=0):
@@ -147,7 +148,9 @@ private:
   //! relative to the first secret key
   Ctxt pubEncrKey;
 
-  std::vector<long> skSizes; // The size of the secret keys
+  std::vector<double> skBounds;
+  // High-probability bounds on L-infty norm of secret keys
+           
   std::vector<KeySwitch> keySwitching; // The key-switching matrices
 
   // The keySwitchMap structure contains pointers to key-switching matrices
@@ -173,7 +176,7 @@ public:
     { recryptKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
-    context(other.context), pubEncrKey(*this), skSizes(other.skSizes),
+    context(other.context), pubEncrKey(*this), skBounds(other.skBounds),
     keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
     recryptKeyID(other.recryptKeyID), recryptEkey(*this)
   { // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
@@ -182,7 +185,7 @@ public:
   }
 
   void clear() { // clear all public-key data
-    pubEncrKey.clear(); skSizes.clear();
+    pubEncrKey.clear(); skBounds.clear();
     keySwitching.clear(); keySwitchMap.clear();
     recryptKeyID=-1; recryptEkey.clear();
   }
@@ -193,10 +196,10 @@ public:
   // Access methods
   const FHEcontext& getContext() const {return context;}
   long getPtxtSpace() const { return pubEncrKey.ptxtSpace; }
-  bool keyExists(long keyID) { return (keyID<(long)skSizes.size()); }
+  bool keyExists(long keyID) { return (keyID<(long)skBounds.size()); }
 
   //! @brief The size of the secret key
-  long getSKeySize(long keyID=0) const {return skSizes.at(keyID);}
+  double getSKeyBound(long keyID=0) const {return skBounds.at(keyID);}
 
   ///@{
   //! @name Find key-switching matrices
@@ -265,7 +268,7 @@ public:
    * For CKKS, ptxtSpace is a bound on the size of the complex plaintext
    *   elements that are encoded in ptxt (before scaling). It is assumed that
    *   they are scaled duing encoding by context.alMod.encodeScalingFactor().
-   *   The returned value is the scaling factor in the resulting ciphertexe
+   *   The returned value is the scaling factor in the resulting ciphertext
    *   (which can be larger than the input scaling). The same returned factor
    *   is also recorded in ctxt.ratFactor.
    **/
@@ -337,7 +340,7 @@ public:
   //! this object then the procedure below also generates a corresponding
   //! public encryption key.
   //! It is assumed that the context already contains all parameters.
-  long ImportSecKey(const DoubleCRT& sKey, long hwt,
+  long ImportSecKey(const DoubleCRT& sKey, double bound,
 		    long ptxtSpace=0, long maxDegKswitch=3);
 
   //! Key generation: This procedure generates a single secret key,
@@ -346,13 +349,14 @@ public:
   { DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes); 
 
     if (hwt>0) {
-      newSk.sampleHWt(hwt);     // samle a Hamming-weight-hwt polynomial
-      return ImportSecKey(newSk, hwt, ptxtSpace, maxDegKswitch);
+      // sample a Hamming-weight-hwt polynomial
+      double bound = newSk.sampleHWt(hwt);     
+      return ImportSecKey(newSk, bound, ptxtSpace, maxDegKswitch);
     }
     else {
-      newSk.sampleSmallBounded();// samle a 0/+-1 polynomial
-      return ImportSecKey(newSk, context.zMStar.getPhiM(),
-                          ptxtSpace, maxDegKswitch);
+      // sample a 0/+-1 polynomial
+      double bound = newSk.sampleSmallBounded();
+      return ImportSecKey(newSk, bound, ptxtSpace, maxDegKswitch);
     }
   }
 
@@ -455,7 +459,8 @@ void addTheseMatrices(FHESecKey& sKey,
 		      const std::set<long>& automVals, long keyID=0);
 
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
-//! Returns the variance of the noise canonical-embedding entries
+//! Returns a high-probabiliy bound on the L-infty norm
+//! of the canonical embedding
 double RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
 	  NTL::ZZ* prgSeed=NULL);
 

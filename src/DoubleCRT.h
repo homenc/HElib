@@ -352,20 +352,31 @@ public:
   //! @brief Fills each row i with random ints mod pi, uses NTL's PRG
   void randomize(const NTL::ZZ* seed=NULL);
 
+
+
+
+  //! Sampling routines: 
+  //! Each of these return a high probability bound on L-infty norm 
+  //! of canonical embedding
+
   //! @brief Coefficients are -1/0/1, Prob[0]=1/2
-  void sampleSmall();
-  void sampleSmallBounded();
+  double sampleSmall();
+  double sampleSmallBounded();
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
-  void sampleHWt(long Hwt);
+  double sampleHWt(long Hwt);
 
   //! @brief Coefficients are Gaussians
-  void sampleGaussian(double stdev=0.0);
-  void sampleGaussianBounded(double stdev=0.0);
+  //! Return a high probability bound on L-infty norm of canonical embedding
+  double sampleGaussian(double stdev=0.0);
+  double sampleGaussianBounded(double stdev=0.0);
 
   //! @brief Coefficients are uniform in [-B..B]
-  void sampleUniform(const NTL::ZZ& B);
-  void sampleUniform(long B);
+  double sampleUniform(long B);
+  NTL::xdouble sampleUniform(const NTL::ZZ& B);
+
+
+
 
   // used to implement modulus switching
   void scaleDownToSet(const IndexSet& s, long ptxtSpace);

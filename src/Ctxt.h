@@ -330,6 +330,8 @@ public:
     // plaintext space as ctxt
 
   //! Dummy encryption, just encodes the plaintext in a Ctxt object
+  //! If provided, size should be a high-probability bound
+  //! on the L-infty norm of the canonical embedding
   void DummyEncrypt(const NTL::ZZX& ptxt, double size=-1.0);
 
   Ctxt& operator=(const Ctxt& other) {  // public assignment operator
@@ -371,8 +373,13 @@ public:
   //! @brief applies the automorphsim p^j using smartAutomorphism
   void frobeniusAutomorph(long j);
 
-  //! Add a constant polynomial. If the size is not given, we use
-  //! phi(m)*ptxtSpace^2 as the default value.
+  //! Add a constant polynomial. 
+  //! If provided, size should be a high-probability bound
+  //! on the L-infty norm of the canonical embedding
+  //! Otherwise, a bound based on the assumption that the coefficients
+  //! are uniformly and independently distributed over
+  //! [-ptxtSpace/2, ptxtSpace/2].
+  //! Otherwise, size should be a high-prob	
   void addConstant(const DoubleCRT& dcrt, double size=-1.0);
   void addConstant(const NTL::ZZX& poly, double size=-1.0)
   { addConstant(DoubleCRT(poly,context,primeSet),size); }
@@ -631,7 +638,7 @@ public:
   //! @brief Returns log(noiseBound) - log(q)
   double log_of_ratio() const
   {return (getNoiseBound()==0.0)? (-context.logOfProduct(getPrimeSet()))
-      : (log(getNoiseVar()) - context.logOfProduct(getPrimeSet()));}
+      : (log(getNoiseBound()) - context.logOfProduct(getPrimeSet()));}
   ///@}
   friend std::istream& operator>>(std::istream& str, Ctxt& ctxt);
   friend std::ostream& operator<<(std::ostream& str, const Ctxt& ctxt);

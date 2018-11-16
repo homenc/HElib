@@ -16,7 +16,7 @@
 #include <NTL/ZZ_pX.h>
 #include <NTL/BasicThreadPool.h>
 #include "NumbTh.h"
-#include "PAlgebra.h"
+#include "FHEContext.h"
 #include "sample.h"
 #include "norms.h"
 NTL_CLIENT
@@ -204,37 +204,63 @@ void sampleUniform(ZZX& poly, long n, const ZZ& B)
  * X^m-1 and then reduce mod Phi_m(X). The exception is when m is
  * a power of two, where we still sample directly mod Phi_m(X).
  ********************************************************************/
-void sampleHWt(zzX &poly, const PAlgebra& palg, long Hwt)
+double sampleHWt(zzX &poly, const FHEcontext& context, long Hwt)
 {
+  const PAlgebra& palg = context.zMStar;
+  double retval;
+
   if (palg.getPow2() == 0) { // not power of two
-    sampleHWt(poly, palg.getM(), Hwt);
+    long m = palg.getM();
+    sampleHWt(poly, m, Hwt);
     reduceModPhimX(poly, palg);
+    retval = context.noiseBoundForHWt(Hwt, m);
   }
-  else // power of two
-    sampleHWt(poly, palg.getPhiM(), Hwt);
+  else { // power of two
+    long phim = palg.getPhiM();
+    sampleHWt(poly, phim, Hwt);
+    retval = context.noiseBoundForHWt(Hwt, phim);
+  }
+
+  return retval;
 }
-void sampleSmall(zzX &poly, const PAlgebra& palg)
+
+double sampleSmall(zzX &poly, const FHEcontext& context)
 {
+  const PAlgebra& palg = context.zMStar;
+  double retval;
+
   if (palg.getPow2() == 0) { // not power of two
     long m = palg.getM();
     long phim = palg.getPhiM();
     sampleSmall(poly, m, phim/(2.0*m)); // nonzero with prob phi(m)/2m
+    // FIXME: does this probability make sense?  What is the goal there??
     reduceModPhimX(poly, palg);
+    retval = context.noiseBoundForSmall(phim/(2.0*m), m);
   }
-  else // power of two
-    sampleSmall(poly, palg.getPhiM());
+  else { // power of two
+    long phim = palg.getPhiM();
+    sampleSmall(poly, phim);
+    retval = context.noiseBoundForSmall(0.5, phim);
+  }
+
+  return retval;
 }
+
+
+
 // Same as above, but ensure the result is not too much larger than typical
-void sampleSmallBounded(zzX &poly, const PAlgebra& palg)
+double sampleSmallBounded(zzX &poly, const FHEcontext& context)
 {
 #if FFT_IMPL // is there any implementation of canonicalEmbedding?
+  const PAlgebra& palg = context.zMStar;
+  long m = palg.getM();
   long phim = palg.getPhiM();
   // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
   double bound = (1+sqrt(phim*log(phim)))*0.85;
   double val;
   long count = 0;
   do {
-    sampleSmall(poly, palg);
+    sampleSmall(poly, context);
     val = embeddingLargestCoeff(poly,palg);
   }
   while (++count<1000 && val>bound); // repeat until <= bound
@@ -242,25 +268,39 @@ void sampleSmallBounded(zzX &poly, const PAlgebra& palg)
     cerr << "Warning: sampleSmallBounded, after "
          << count<<" trials, still val="<<val
          << '>'<<"bound="<<bound<<endl;
+    Error("cannot continue");
   }
+  return bound;
 #else
 #warning "No FFT, sampleSmallBounded degenerates to sampleSmall"
-  sampleSmall(poly, palg);
+  return sampleSmall(poly, context);
 #endif
 }
-void sampleGaussian(zzX &poly, const PAlgebra& palg, double stdev)
+
+double sampleGaussian(zzX &poly, const FHEcontext& context, double stdev)
 {
+  const PAlgebra& palg = context.zMStar;
+  double retval;
+
   if (palg.getPow2() == 0) { // not power of two
-    sampleGaussian(poly, palg.getM(), stdev);
+    long m = palg.getM();
+    sampleGaussian(poly, m, stdev);
     reduceModPhimX(poly, palg);
+    retval = context.noiseBoundForGaussian(stdev, m);
   }
-  else // power of two
-    sampleGaussian(poly, palg.getPhiM(), stdev);
+  else { // power of two
+    long phim = palg.getPhiM();
+    sampleGaussian(poly, phim, stdev);
+    retval = context.noiseBoundForGaussian(stdev, phim);
+  }
+
+  return retval;
 }
 // Same as above, but ensure the result is not too much larger than typical
-void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev)
+double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
 {
 #if FFT_IMPL // is there any implementation of canonicalEmbedding?
+  const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
   long phim = palg.getPhiM();  
   // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
@@ -270,7 +310,7 @@ void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev)
   double val;
   long count = 0;
   do {
-    sampleGaussian(poly, palg, stdev);
+    sampleGaussian(poly, context, stdev);
     val = embeddingLargestCoeff(poly,palg);
   }
   while (++count<1000 && val>bound); // repeat until <=bound
@@ -278,29 +318,55 @@ void sampleGaussianBounded(zzX &poly, const PAlgebra& palg, double stdev)
     cerr << "Warning: sampleGaussianBounded, after "
          << count<<" trials, still val="<<val
          << '>'<<"bound="<<bound<<endl;
+    Error("cannot continue");
   }
+  return bound;
 #else
 #warning "No FFT, sampleGaussianBounded degenerates to sampleGaussian"
-  sampleGaussian(poly, palg, stdev);
+  return sampleGaussian(poly, context, stdev);
 #endif
 }
-void sampleUniform(zzX &poly, const PAlgebra& palg, long B)
+
+
+
+double sampleUniform(zzX &poly, const FHEcontext& context, long B)
 {
+  const PAlgebra& palg = context.zMStar;
+  double retval;
+
   if (palg.getPow2() == 0) { // not power of two
-    sampleUniform(poly, palg.getM(), B);
+    long m = palg.getM();
+    sampleUniform(poly, m, B);
     reduceModPhimX(poly, palg);
+    retval = context.noiseBoundForUniform(B, m);
   }
-  else // power of two
-    sampleUniform(poly, palg.getPhiM(), B);
+  else { // power of two
+    long phim = palg.getPhiM();
+    sampleUniform(poly, phim, B);
+    retval = context.noiseBoundForUniform(B, phim);
+  }
+
+  return retval;
 }
-void sampleUniform(ZZX &poly, const PAlgebra& palg, const ZZ& B)
+
+xdouble sampleUniform(ZZX &poly, const FHEcontext& context, const ZZ& B)
 {
+  const PAlgebra& palg = context.zMStar;
+  xdouble retval;
+
   if (palg.getPow2() == 0) { // not power of two
-    sampleUniform(poly, palg.getM(), B);
+    long m = palg.getM();
+    sampleUniform(poly, m, B);
     NTL::rem(poly, poly, palg.getPhimX());
+    retval = context.noiseBoundForUniform(conv<xdouble>(B), m);
   }
-  else // power of two
-    sampleUniform(poly, palg.getPhiM(), B);
+  else {// power of two
+    long phim = palg.getPhiM();
+    sampleUniform(poly, phim, B);
+    retval = context.noiseBoundForUniform(conv<xdouble>(B), phim);
+  }
+
+  return retval;
 }
 
 
