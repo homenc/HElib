@@ -50,7 +50,7 @@ std::set<long>* FHEglobals::automorphVals2 = NULL;
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
   const FHEcontext& context = getContext();
-  const PAlegebra& zMStar = context.zMStar;
+  const PAlgebra& zMStar = context.zMStar;
 
   if (isCKKS()) {
     ptxtSpace=1;
@@ -129,12 +129,10 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, const KeySwitch& ks)
 
     // Added noise due to this digit is keySwMatrixNoise * |Di|, 
     // where |Di| is the magnitude of the digit
-    addedNoise += noise_bound * xexp(digitSize);
+    addedNoise += ks_bound * xexp(digitSize);
 
     sizeLeft -= digitSize;
   }
-
-
 
 #if 0
   // This needs to be re-thought...and/or implemented elsewhere...
@@ -448,7 +446,7 @@ void Ctxt::dropSmallAndSpecialPrimes()
     // remains not much smaller than the mod-switch added noise.
     // This is done so as not to waste too much apacity.
 
-    double log_modswitch_noise += 3*log(2.0); // 3 bits of elbow room
+    log_modswitch_noise += 3*log(2.0); // 3 bits of elbow room
     if (log_noise -log_dropping +log_compensation < log_modswitch_noise) {
       // Sanity-check, we're really not supposed to get here for CKKS
       if (isCKKS())
@@ -551,7 +549,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // added noise from switching this ciphertext part.
   long nDigits;
   NTL::xdouble addedNoise;
-  std::tie(nDigits,addedNoise)= keySwitchNoise(p, pubKey, W.ptxtSpace);
+  std::tie(nDigits,addedNoise)= keySwitchNoise(p, pubKey, W);
 
   // Break the ciphertext part into digits, if needed, and scale up these
   // digits using the special primes. This is the most expensive operation
@@ -689,7 +687,7 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, xdouble factor)
 
   // If the size is not given, use size = phi(m)*factor^2
   if (size < 0.0) {
-    size = context.noiseBoundForUniform(factor, zMStar.getPhiM());
+    size = context.noiseBoundForUniform(factor, getContext().zMStar.getPhiM());
   }
 
   xdouble ratio = floor((ratFactor/factor) +0.5); // round to integer
@@ -784,7 +782,7 @@ void addSomePrimes(Ctxt& c)
     s.insert(idx);
   }
   // else, add a small prime if possible
-  else if (!s.contains(context.smalltPrimes)) {
+  else if (!s.contains(context.smallPrimes)) {
     IndexSet delta = context.smallPrimes / s;  // set minus
     long idx = delta.first(); // We know that |delta| >= 1
 
@@ -1289,7 +1287,8 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   // If the size is not given, we use the default value coreesponding to 
   // uniform dist'n on [-ptxtSpace/2, ptxtSpace/2].
   if (size < 0.0) {
-    size = context.noiseBoundForUniform(double(ptxtSpace)/2.0, zMStar.getPhiM());
+    size = context.noiseBoundForUniform(double(ptxtSpace)/2.0,
+                                        getContext().zMStar.getPhiM());
   }
 
   // multiply all the parts by this constant
@@ -1326,7 +1325,7 @@ void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
   // If the size is not given, use size = phi(m)*factor^2
   xdouble xfactor = to_xdouble(factor);
   if (size < 0.0)
-    size = context.noiseBoundForUniform(xfactor, zMStar.getPhiM());
+    size = context.noiseBoundForUniform(xfactor, context.zMStar.getPhiM());
 
   noiseBound *= size;
   ratFactor *= xfactor;
@@ -1538,11 +1537,12 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
       xdouble h, t;
       h = pubKey.getSKeyBound(keyId);
 
-      addedNoise += power(h, d);
+      addedNoise += NTL::power(h, d);
     }
   }
 
-  double roundingNoise = context.noiseBoundForUniform(double(ptxtSpace)/2.0, zMStar.getPhiM());
+  double roundingNoise = context.noiseBoundForUniform(double(ptxtSpace)/2.0,
+                                                      context.zMStar.getPhiM());
   return addedNoise * roundingNoise;
 }
 

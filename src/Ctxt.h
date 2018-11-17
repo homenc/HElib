@@ -477,7 +477,8 @@ public:
 
   //! The number of digits needed, and added noise effect, of
   //! key-switching one ciphertext part
-  std::pair<long, NTL::xdouble> computeKSNoise(long partIdx, long pSpace=0);
+  std::pair<long, NTL::xdouble>
+    computeKSNoise(long partIdx, const KeySwitch& ks);
 
   //! Reduce plaintext space to a divisor of the original plaintext space
   void reducePtxtSpace(long newPtxtSpace);
