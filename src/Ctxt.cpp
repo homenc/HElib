@@ -340,13 +340,8 @@ void Ctxt::modDownToSet(const IndexSet &s)
   // For approximate nums, make sure that scaling factor is large enough
   if (isCKKS()) {
     // Factor after mod-switching is ratFactor/(prod_{i\in setDiff} qi),
-    // it must be sufficiently larger than addedNoiseBound
-    // FIXME: Do we really need to make the factor this big? This is very
-    //     different that the constraint in computeIntervalForMul, where we
-    //     only ensure that the ratFactor is larger than addedNoiseBound,
-    //     without the extra factors m * context.alMod.getPPowR()
-    double extraFactor = log(addedNoiseBound)
-      + log(context.alMod.getPPowR()) + log(context.zMStar.getM())/2
+    // it must be larger than addedNoiseBound by at leasr getPPowR()
+    double extraFactor = log(addedNoiseBound) + log(context.alMod.getPPowR())
       - ( log(ratFactor) - getContext().logOfProduct(setDiff) );
     // If factor is too small, scale up before mod-down
     if (extraFactor > 0) {
@@ -416,44 +411,45 @@ void Ctxt::dropSmallAndSpecialPrimes()
     modDownToSet(context.ctxtPrimes);
   }
   else {
-    // we will be dropping some smallPrimes, and we need to 
-    // figure out how much we have to compensate with
-    // other ctxtPrimes
+    // we will be dropping some smallPrimes, and we need to figure
+    // out how much we have to compensate with other ctxtPrimes
 
-    double fudge = 3*log(2.0); // give ourselve 3 bits of elbow room
-    double log_modswitch_noise = log(modSwitchAddedNoiseBound()) + fudge;
-    double log_noise = log(getNoiseBound());
-
-    // The target set contains only the ctxtPrimes
+    // The target set contains only the ctxtPrimes and its size
     IndexSet target = primeSet & context.ctxtPrimes;
+    double log_target = context.logOfProduct(target);
 
     // Compute the set of dropped primes and its total size
     IndexSet dropping= primeSet / target;
     double log_dropping = context.logOfProduct(dropping);
 
     // Below we ensure that the scaled ctxt is not too small
+    double log_modswitch_noise = log(modSwitchAddedNoiseBound());
+    double log_noise = log(getNoiseBound());
     double log_compensation = 0;
 
-    // For CKKS, try to ensure that the scaling factor
-    // remains larger than the mod-switch added noise
+    // For CKKS, try to ensure that the scaling factor remains larger
+    // than the mod-switch added noise by a factor of getPPowR()
     if (isCKKS()) {
+      double log_bound = log_modswitch_noise + log(context.alMod.getPPowR());
       double log_rf = log(getRatFactor())  // log(factor) after scaling
                       + context.logOfProduct(target) - logOfPrimeSet();
-      if (log_rf < log_modswitch_noise) {
-        // FIXME: Should we check for log_rf being larger
-        //        than log_modswitch_noise by some factor?
+      if (log_rf < log_bound) {
         IndexSet candidates = context.ctxtPrimes / target;
         for (long i: candidates) {
           target.insert(i);
           log_compensation += context.logOfPrime(i);
-          if (log_rf + log_compensation >= log_modswitch_noise)
+          if (log_rf + log_compensation >= log_bound)
             break;
         }
       }
     }
+
     // In either BGV or CKKS, try to ensure that the scaled noise
-    // remains larger than the mod-switch added noise
-    if (log_noise - log_dropping + log_compensation < log_modswitch_noise) {
+    // remains not much smaller than the mod-switch added noise.
+    // This is done so as not to waste too much apacity.
+
+    double log_modswitch_noise += 3*log(2.0); // 3 bits of elbow room
+    if (log_noise -log_dropping +log_compensation < log_modswitch_noise) {
       // Sanity-check, we're really not supposed to get here for CKKS
       if (isCKKS())
         cerr << __func__
@@ -463,7 +459,7 @@ void Ctxt::dropSmallAndSpecialPrimes()
       for (long i: candidates) {
          target.insert(i);
          log_compensation += context.logOfPrime(i);
-         if (log_noise - log_dropping + log_compensation >= log_modswitch_noise)
+         if (log_noise -log_dropping +log_compensation >= log_modswitch_noise)
            break;
       }
     }
@@ -634,11 +630,10 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 
   // FIXME: the other addConstant variants should do the scaling
   // in the plaintext space, so as to not add noise
-  
 
-  // If the size is not given, we use a bound based on the assumption that the
-  // coefficients are uniformly and independently distributed over
-  // [-ptxtSpace/2, ptxtSpace/2]
+  // If the size is not given, we use a bound based on the assumption
+  // that the coefficients are uniformly and independently distributed
+  // over [-ptxtSpace/2, ptxtSpace/2]
   if (size < 0.0)
       size = context.noiseBoundForUniform(double(ptxtSpace)/2.0, context.zMStar.getPhiM());
 
@@ -773,16 +768,13 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
 }
 
 // Add at least one prime to the primeSet of c
-// FIXME: this currently does not attempt to add anything
-// from smallPrimes...not sure if this matters
 void addSomePrimes(Ctxt& c)
 {
   const FHEcontext& context = c.getContext();
   IndexSet s = c.getPrimeSet();
 
   // Sanity check: there should be something left to add
-  assert(!s.contains(context.ctxtPrimes)
-         || !s.contains(context.specialPrimes));
+  assert(s != context.allPrimes());
 
   // Add a ctxt prime if possible
   if (!s.contains(context.ctxtPrimes)) {
@@ -791,7 +783,14 @@ void addSomePrimes(Ctxt& c)
 
     s.insert(idx);
   }
-  else // otherwise , insert all the special primes
+  // else, add a small prime if possible
+  else if (!s.contains(context.smalltPrimes)) {
+    IndexSet delta = context.smallPrimes / s;  // set minus
+    long idx = delta.first(); // We know that |delta| >= 1
+
+    s.insert(idx);
+  }
+  else // otherwise, insert all the special primes
     s.insert(context.specialPrimes);
 
   c.modUpToSet(s);
@@ -1059,20 +1058,20 @@ void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt
   // FIXME: this is a bit hackish...
 
   // The idea is that for a given ctxt with modulus q and noise
-  // bound n, we want to mod switch to a new modulus q'
-  // such that n/(q/q') \approx AddedNoiseBound.
+  // bound n, we want to mod switch to a new modulus q' such that
+  // n/(q/q') \approx AddedNoiseBound.
   // Taking logs, this is the same as saying that
   // log(q') \approx adn + (log(q) - log(n)) = adn + ctxt.capacity();
 
   // Right now, we just set hi to the minimum for both ciphertexts,
-  // and set lo a few bits lower, so that we have some flexibility in
-  // finding an efficient dropping strategy.
+  // and set lo a few bits lower, so that we have some flexibility
+  // in finding an efficient dropping strategy.
 
   // It may be worthwhile to experiment with other strategies,
   // such as setting hi = max(cap1, cap2) + adn - safety,
   // and lo = min(hi - slack, min(cap1, cap2) + adn - safety.
 
-  if (ctxt1.isCKKS()) {
+  if (ctxt1.isCKKS()) { // ensure large enough scaling factor
     double lvl1 = ctxt1.logOfPrimeSet();
     double rf1 = log(ctxt1.getRatFactor());
     double nrf1 = rf1 - (lvl1-lo); // log of ratFactor after scaling
@@ -1082,11 +1081,12 @@ void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt
     double nrf2 = rf2 - (lvl2-lo); // log of ratFactor after scaling
 
     double nrf = min(nrf1, nrf2);
-    // now, we increase lo as necessary to ensure that nrf is at least adn
-    // FIXME: should we ensure that nrf exceeds adn by a significant amount?
+    // increase lo as necessary to ensure that nrf is larger
+    // than the modswitch added noise by at least getPPowR()
 
-    if (nrf < adn) {
-      lo += adn - nrf;
+    double prec = log(ctxt1.getContext().alMod.getPPowR());
+    if (nrf < adn+prec) {
+      lo += adn +prec -nrf;
       hi = max(hi, lo + 1); // ensure that hi is a little bigger than lo
     }
   }
@@ -1101,7 +1101,7 @@ double Ctxt::naturalSize() const
 {
   double lo, hi;
   computeIntervalForSqr(lo, hi, *this);
-  return lo;
+  return hi;
 }
 
 IndexSet Ctxt::naturalPrimeSet() const
@@ -1358,7 +1358,7 @@ void Ctxt::multByConstantCKKS(double x)
 // If these assumptions are not met then the result will not be a
 // valid ciphertext anymore.
 
-// FIXME: is thsi still needed/used?
+// FIXME: is this still needed/used?
 void Ctxt::divideBy2()
 {
   // Special case: if *this is empty then do nothing
