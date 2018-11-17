@@ -75,10 +75,10 @@ public:
     // added noise from switching this ciphertext.
     long nDigits;
     std::tie(nDigits, noise)
-      = ctxt.computeKSNoise(1, pubKey.keySWlist().at(0).ptxtSpace);
+      = ctxt.computeKSNoise(1, pubKey.keySWlist().at(0));
 
     double logProd = context.logOfProduct(context.specialPrimes);
-    noise += ctxt.getNoiseVar() * xexp(2*logProd);
+    noise += ctxt.getNoiseBound() * xexp(logProd);
 
     // Break the ciphertext part into digits, if needed, and scale up these
     // digits using the special primes.
@@ -103,7 +103,7 @@ public:
     const FHEcontext& context = ctxt.getContext();
     const FHEPubKey& pubKey = ctxt.getPubKey();
     shared_ptr<Ctxt> result = make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
-    result->noiseVar = noise; // noise estimate
+    result->noiseBound = noise; // noise estimate
     result->intFactor = ctxt.intFactor;
 
     if (ctxt.parts.size()==1) { // only constant part, no need to key-switch
