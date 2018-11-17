@@ -292,7 +292,6 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
   double noise = ctxt.rawModSwitch(zzParts, q);
-  noise = sqrt(noise);
 
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   long maxU=0;
@@ -305,9 +304,9 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skSizes[recryptKeyID]+1) > q/2) 
+  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2) 
     cerr << " * noise/q after makeDivisible = "
-	 << ((noise + maxU*p2r*(skSizes[recryptKeyID]+1))/q) << endl;
+	 << ((noise + maxU*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
 
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
@@ -1015,7 +1014,6 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
   double noise = ctxt.rawModSwitch(zzParts, q);
-  noise = sqrt(noise);
 
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   long maxU=0;
@@ -1028,9 +1026,9 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skSizes[recryptKeyID]+1) > q/2) 
+  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2) 
     cerr << " * noise/q after makeDivisible = "
-	 << ((noise + maxU*p2r*(skSizes[recryptKeyID]+1))/q) << endl;
+	 << ((noise + maxU*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
 
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}

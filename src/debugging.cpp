@@ -28,7 +28,7 @@ double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
 {
   ZZX p, pp;
 
-  xdouble noiseEst = sqrt(ctxt.getNoiseVar());
+  xdouble noiseEst = ctxt.getNoiseBound();
   sk.Decrypt(p, ctxt, pp);
   xdouble actualNoise = coeffsL2Norm(pp);
 
@@ -47,7 +47,7 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags)
 {
   const FHEcontext& context = ctxt.getContext();
-  xdouble noiseEst = sqrt(ctxt.getNoiseVar());
+  xdouble noiseEst = ctxt.getNoiseBound();
   xdouble modulus = xexp(context.logOfProduct(ctxt.getPrimeSet()));
   vector<ZZX> ptxt;
   ZZX p, pp;
@@ -66,7 +66,6 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 #endif
   s << endl;
 
-#if 0
   if (flags & FLAG_PRINT_ZZX) {
     s << "   before mod-p reduction=";
     printZZX(s,pp) <<endl;
@@ -105,7 +104,6 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
     eacx.decrypt(ctxt, sk, v);
     printVec(s<<"           ", v,20)<<endl;
   }
-#endif
 }
 
 bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
