@@ -414,6 +414,7 @@ void Ctxt::dropSmallAndSpecialPrimes()
 
     // The target set contains only the ctxtPrimes and its size
     IndexSet target = primeSet & context.ctxtPrimes;
+    assert(!empty(target));
     double log_target = context.logOfProduct(target);
 
     // Compute the set of dropped primes and its total size
@@ -422,7 +423,7 @@ void Ctxt::dropSmallAndSpecialPrimes()
 
     // Below we ensure that the scaled ctxt is not too small
     double log_modswitch_noise = log(modSwitchAddedNoiseBound());
-    double log_noise = log(getNoiseBound());
+    double log_noise = (getNoiseBound()<=0.0)? -DBL_MAX : log(getNoiseBound());
     double log_compensation = 0;
 
     // For CKKS, try to ensure that the scaling factor remains larger

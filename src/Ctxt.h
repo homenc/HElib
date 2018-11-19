@@ -54,6 +54,7 @@
  * ciphertext wrt (1,s(X^2)) to another wrt (1,s(X^2),s^2(X^2)), but not
  * to another ciphertext wrt (1,s).
  **/
+#include <cfloat> // DBL_MAX
 #include "DoubleCRT.h"
 
 class KeySwitch;
@@ -637,9 +638,11 @@ public:
 
 
   //! @brief Returns log(noiseBound) - log(q)
-  double log_of_ratio() const
-  {return (getNoiseBound()==0.0)? (-context.logOfProduct(getPrimeSet()))
-      : (log(getNoiseBound()) - context.logOfProduct(getPrimeSet()));}
+  double log_of_ratio() const {
+    double logNoise = (getNoiseBound()<=0.0)? -DBL_MAX : log(getNoiseBound());
+    double logMod = empty(getPrimeSet())? -DBL_MAX : context.logOfProduct(getPrimeSet());
+    return logNoise - logMod;
+  }
   ///@}
   friend std::istream& operator>>(std::istream& str, Ctxt& ctxt);
   friend std::ostream& operator<<(std::ostream& str, const Ctxt& ctxt);
