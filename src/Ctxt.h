@@ -517,26 +517,7 @@ public:
 
   //! @brief make the primeSet equal to newPrimeSet,
   //! via modUpToSet and modDownToSet
-  void bringToSet(const IndexSet& s) 
-  {
-    auto cap = capacity();
-    if (cap<1) {
-      std::cerr << "Ctxt::bringToSet called with capacity="<<cap
-           << ", likely decryption error\n";
-    }
-    if (empty(s)) { // If emptry, use a singleton with 1st ctxt prime
-      IndexSet tmp(getContext().ctxtPrimes.first());
-      modUpToSet(tmp);
-      modDownToSet(tmp);
-      if (cap>=1)
-        std::cerr << "Ctxt::bringToSet called with empty set and capacity="
-          <<cap<<", this is likely a bug\n";
-    }
-    else {
-      modUpToSet(s);
-      modDownToSet(s);
-    }
-  }
+  void bringToSet(const IndexSet& s); 
 
   // Finding the "natural" state of a cipehrtext
   double naturalSize() const; //! "natural size" is size before suqaring

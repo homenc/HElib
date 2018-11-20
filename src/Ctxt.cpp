@@ -282,7 +282,7 @@ void Ctxt::mulIntFactor(long e)
   intFactor = MulMod(intFactor, e, ptxtSpace);
   long bal_e = balRem(e, ptxtSpace);
   for (auto& part : parts) part *= bal_e;
-  noiseBound *= bal_e; // because every part was scaled by bal_e
+  noiseBound *= abs(bal_e); // because every part was scaled by bal_e
 }
 
 // Ciphertext maintenance
@@ -310,6 +310,28 @@ void Ctxt::modUpToSet(const IndexSet &s)
 
   primeSet.insert(setDiff); // add setDiff to primeSet
   assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+}
+
+
+void Ctxt::bringToSet(const IndexSet& s) 
+{
+  auto cap = capacity();
+  if (cap<1) {
+    std::cerr << "Ctxt::bringToSet called with capacity="<<cap
+	 << ", likely decryption error\n";
+  }
+  if (empty(s)) { // If empty, use a singleton with 1st ctxt prime
+    IndexSet tmp(getContext().ctxtPrimes.first());
+    modUpToSet(tmp);
+    modDownToSet(tmp);
+    if (cap>=1)
+      std::cerr << "Ctxt::bringToSet called with empty set and capacity="
+	<<cap<<", this is likely a bug\n";
+  }
+  else {
+    modUpToSet(s);
+    modDownToSet(s);
+  }
 }
 
 // mod-switch down to primeSet \intersect s, after this call we have
@@ -414,7 +436,6 @@ void Ctxt::dropSmallAndSpecialPrimes()
 
     // The target set contains only the ctxtPrimes and its size
     IndexSet target = primeSet & context.ctxtPrimes;
-    assert(!empty(target));
     double log_target = context.logOfProduct(target);
 
     // Compute the set of dropped primes and its total size
@@ -644,7 +665,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
     f = balRem(f, ptxtSpace);
   }
 
-  noiseBound += size*f;
+  noiseBound += size*abs(f);
 
   IndexSet delta = dcrt.getIndexSet() / primeSet; // set minus
   if (f==1 && empty(delta)) { // just add it
@@ -883,8 +904,9 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   else // BGV
     this->reducePtxtSpace(other.getPtxtSpace());
 
-  Ctxt tmp(pubKey, other.ptxtSpace); // a temporaty empty ciphertext
+  Ctxt tmp(pubKey, other.ptxtSpace); // a temporary empty ciphertext
   const Ctxt* other_pt = &other;
+
 
   // make other ptxtSpace match
   if (ptxtSpace != other_pt->ptxtSpace) {
@@ -959,6 +981,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
     assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
   } 
+
 
   if (e2 != 1) {
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
@@ -1107,7 +1130,9 @@ IndexSet Ctxt::naturalPrimeSet() const
 {
   double lo, hi;
   computeIntervalForSqr(lo, hi, *this);
-  return context.modSizes.getSet4Size(lo, hi, primeSet, isCKKS());
+
+  IndexSet retval = context.modSizes.getSet4Size(lo, hi, primeSet, isCKKS());
+  return retval;
 }
 
 
@@ -1260,12 +1285,12 @@ void Ctxt::multByConstant(const ZZ& c)
   ZZ c_copy = c;
 
   if (isCKKS()) {
-    xdouble size = to_xdouble(c);
+    xdouble size = fabs(to_xdouble(c));
     noiseBound *= size;
   }
   else { // BGV
     long cc = balRem(rem(c, ptxtSpace), ptxtSpace); // reduce modulo plaintext space
-    noiseBound *= cc;
+    noiseBound *= abs(cc);
     c_copy = cc;
   }
 
@@ -1662,6 +1687,8 @@ void CheckCtxt(const Ctxt& c, const char* label)
        << ", log2(modulus/noise)=" << (-c.log_of_ratio()/log(2.0)) 
        << ", p^r=" << c.getPtxtSpace() 
        << ", #smallPrimes=" << (c.getPrimeSet() & c.getContext().smallPrimes).card()
+       << ", #ctxtPrimes=" << (c.getPrimeSet() & c.getContext().ctxtPrimes).card()
+       << ", #specialPrimes=" << (c.getPrimeSet() & c.getContext().specialPrimes).card()
        << endl;
 }
 

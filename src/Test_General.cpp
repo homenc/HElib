@@ -24,6 +24,8 @@
 
 NTL_CLIENT
 
+//#define DEBUG_PRINTOUT
+
 #ifdef DEBUG_PRINTOUT
 #define debugCompare(ea,sk,p,c) {\
   PlaintextArray pp(ea);\
@@ -166,7 +168,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
      PlaintextArray tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
-     sprintf(buffer, "c2>>=%d", (int)shamt);
+     sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
      shift(ea, tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
      ea.shift(tmp, shamt);
      if (!noPrint) CheckCtxt(tmp, buffer);
