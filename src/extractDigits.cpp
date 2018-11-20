@@ -304,8 +304,10 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
       checkNoise(tmp, *dbgKey, "div " + to_string(i) + " " + to_string(j));
 #endif
     }
+
     digits0[i] = tmp; // needed in the next round
     polyEval(digits[i], G[i], tmp);
+
 #ifdef DEBUG_PRINTOUT
     checkNoise(digits[i], *dbgKey, "poly " + to_string(i));
 #endif
