@@ -81,7 +81,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
   Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
   digits.resize(r, tmp);      // allocate space
 
-//#define VIEW_LEVELS
+#define VIEW_LEVELS
 
 #ifdef VIEW_LEVELS
   fprintf(stderr, "***\n");
@@ -312,6 +312,7 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 
 #ifdef VIEW_LEVELS
     fprintf(stderr, "%5ld  --- %5ld\n", digits0[i].bitCapacity(), digits[i].bitCapacity());
+    //CheckCtxt(digits[i], "");
 #endif
   }
 }
