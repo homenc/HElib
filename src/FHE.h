@@ -261,16 +261,15 @@ public:
 
   /**
    * Encrypts plaintext, result returned in the ciphertext argument. When
-   * called with highNoise=true, returns a ciphertext with noise level~q/8.
-   * For BGV, ptxtSpace is the intended plaintext space, which cannot be
-   *   co-prime with pubEncrKey.ptxtSpace. The returned value is the
-   *   plaintext-space for the resulting ciphertext, which is their GCD/
+   * called with highNoise=true, returns a ciphertext with noise level
+   * approximately q/8. For BGV, ptxtSpace is the intended plaintext
+   *     space, which cannot be co-prime with pubEncrKey.ptxtSpace.
+   *     The returned value is the plaintext-space for the resulting
+   *     ciphertext, which is GCD(ptxtSpace, pubEncrKey.ptxtSpace).
    * For CKKS, ptxtSpace is a bound on the size of the complex plaintext
-   *   elements that are encoded in ptxt (before scaling). It is assumed that
-   *   they are scaled duing encoding by context.alMod.encodeScalingFactor().
-   *   The returned value is the scaling factor in the resulting ciphertext
-   *   (which can be larger than the input scaling). The same returned factor
-   *   is also recorded in ctxt.ratFactor.
+   *     elements that are encoded in ptxt (before scaling), it is assumed
+   *     that they are scaled by context.alMod.encodeScalingFactor(). The
+   *     returned value is the same as the argument ptxtSpace.
    **/
   long Encrypt(Ctxt &ciphertxt,
                const NTL::ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
@@ -281,13 +280,18 @@ public:
     return Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
   }
 
-  long CKKSencrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSize) const;
+  void CKKSencrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, double ptxtSize=1.0) const;
+  void CKKSencrypt(Ctxt &ciphertxt, const zzX& plaintxt, double ptxtSize=1.0) const {
+    NTL::ZZX tmp;
+    convert(tmp, plaintxt);
+    CKKSencrypt(ciphertxt, tmp, ptxtSize);
+  }
 
   // These methods are overridden by secret-key Encrypt
   virtual long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const
-  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
+  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false); }
   virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const
-  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, false); }
+  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false); }
 
   bool isCKKS() const
   { return (getContext().alMod.getTag()==PA_cx_tag); }
@@ -385,9 +389,9 @@ public:
   }
   // These methods override the public-key Encrypt methods
   long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const override
-  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, 0); }
+  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, /*skIdx=*/0); }
   long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const override
-  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, 0); }
+  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, /*skIdx=*/0); }
 
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();

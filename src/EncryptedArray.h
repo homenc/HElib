@@ -16,6 +16,7 @@
  * @brief Data-movement operations on encrypted arrays of slots
  */
 #include <exception>
+#include <cmath>
 #include <complex>
 #include <NTL/Lazy.h>
 #include <NTL/pair.h>
@@ -566,7 +567,7 @@ public:
     assert(&getContext() == &ctxt.getContext());
     zzX pp;
     encode(pp, num); // Convert array of slots into a plaintext polynomial
-    key.Encrypt(ctxt, pp); // encrypt the plaintext polynomial
+    key.CKKSencrypt(ctxt, pp, fabs(num)); // encrypt the plaintext polynomial
   }
 
   

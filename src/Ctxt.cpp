@@ -407,9 +407,10 @@ void Ctxt::blindCtxt(const ZZX& poly)
   Ctxt tmp(pubKey);
   pubKey.Encrypt(tmp,poly,ptxtSpace,/*highNoise=*/true);
   *this += tmp;
-  // FIXME: This implementation is not optimized, the levels in the
-  //  modulus chain should be handled much better.
   // FIXME: Need to blind the intFactor too
+  // FIXME: highNoise does not work for CKKS
+  // FIXME: This implementation is not optimized, the levels in the
+  //        modulus chain should be handled much better.
 }
 
 // Reduce plaintext space to a divisor of the original plaintext space

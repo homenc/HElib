@@ -198,14 +198,7 @@ public:
   bool operator==(const CtxtPart& other) const;
   bool operator!=(const CtxtPart& other) const {return !(*this==other);}
 
-  // Copy constructor from the base class
-
-// FIXME-IndexSet
-#if 0
-  explicit
-  CtxtPart(const FHEcontext& _context): DoubleCRT(_context)
-  { skHandle.setOne(); }
-#endif
+  // Constructors
 
   CtxtPart(const FHEcontext& _context, const IndexSet& s): 
     DoubleCRT(_context,s) { skHandle.setOne(); }
@@ -214,6 +207,7 @@ public:
 	   const SKHandle& otherHandle): 
     DoubleCRT(_context,s), skHandle(otherHandle) {}
 
+  // Copy constructors from the base class
   explicit
   CtxtPart(const DoubleCRT& other): DoubleCRT(other) { skHandle.setOne(); }
 

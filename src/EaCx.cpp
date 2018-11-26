@@ -92,10 +92,11 @@ void EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
 
 void EncryptedArrayCx::encode(zzX& ptxt, double num, long precision) const
 {
-  // This factor ensures that encode/decode introduce less than 1/precision
-  // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}.  
+  // This factor ensures that encode/decode introduce less than
+  // 1/precision error. If precision=0 then the scaling factor defaults
+  // to PAlgebraCx::encodeScalingFactor(), corresponding to precision
+  // error bound of 2^{-almod.getR()}
   num *= alMod.encodeScalingFactor(precision);
-         // if precision==0 use the default PAlgebraCx::encodeScalingFactor()
 
   resize(ptxt, 1, long(round(num))); // Constant polynomial
 }
