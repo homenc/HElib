@@ -472,7 +472,7 @@ void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, double ptxtSize) const
 {
   assert(this == &ctxt.pubKey);
 
-  if (ptxtSize < 0.0) ptxtSize = 1.0; // The default size is 1
+  if (ptxtSize <= 0.0) ptxtSize = 1.0; // The default size is 1
 
   long m = context.zMStar.getM();
   long f = getContext().alMod.getCx().encodeScalingFactor();
@@ -502,9 +502,8 @@ void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, double ptxtSize) const
   DoubleCRT e(context, context.ctxtPrimes);
   DoubleCRT r(context, context.ctxtPrimes);
 
-  xdouble error_bound {0};
-  double r_bound = r.sampleSmall();
-  error_bound += r_bound * pubEncrKey.noiseBound;
+  double r_bound = r.sampleSmall(); // r is a {0,+-1} polynomial
+  xdouble error_bound = r_bound * pubEncrKey.noiseBound;
 
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2()==0) // not power of two
@@ -512,7 +511,7 @@ void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt, double ptxtSize) const
 
   for (size_t i=0; i<ctxt.parts.size(); i++) {  // add noise to all the parts
     ctxt.parts[i] *= r;
-    double e_bound = e.sampleGaussian(stdev);
+    double e_bound = e.sampleGaussian(stdev);// zero-mean Gaussian, sigma=stdev
     ctxt.parts[i] += e;
     if (i == 1) {
       e_bound *= getSKeyBound();
@@ -946,7 +945,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
   long m = getContext().zMStar.getM();
   long ptxtSize = 0;
   if (isCKKS()) {
-    ptxtSize = (ptxtSpace < 0)? 1 : ptxtSpace;
+    ptxtSize = (ptxtSpace <= 0)? 1 : ptxtSpace;
     ptxtSpace = 1;
   }
   else { // BGV

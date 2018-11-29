@@ -471,10 +471,12 @@ void Ctxt::dropSmallAndSpecialPrimes()
 
     log_modswitch_noise += 3*log(2.0); // 3 bits of elbow room
     if (log_noise -log_dropping +log_compensation < log_modswitch_noise) {
-      // Sanity-check, we're really not supposed to get here for CKKS
+      // For CKKS, if we arrived here it means that ratFactor > noiseBound
+      //   This is probably a security bug, it can only happen when we
+      //   encrypt zero (and tell the encryption routine to use ptxtSize=0)
       if (isCKKS())
         cerr << __func__
-             << ": scaled noise too small even after CKKS compensation\n";
+             << ": CKKS with ratFactor>noiseBound, encrypting zero?\n";
 
       IndexSet candidates = context.ctxtPrimes / target;
       for (long i: candidates) {
@@ -1018,18 +1020,10 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 
   long ptxtSp = c1.getPtxtSpace();
 
-  //  long f = 1;
-  if (ptxtSp > 2) {
-    // if (fhe_disable_intFactor) {
-    //   // c1,c2 may be scaled, so multiply by the inverse scalar if needed
-    //   f = rem(context.productOfPrimes(c1.getPrimeSet()),ptxtSp);
-    //   if (f!=1) f = InvMod(f, ptxtSp);
-    // }
-    // else {
+  if (ptxtSp > 2) { // BGV, handle the integer factor
       long q = rem(context.productOfPrimes(c1.getPrimeSet()),ptxtSp);
       intFactor = MulMod(c1.intFactor, c2.intFactor, ptxtSp);
       intFactor = MulMod(intFactor, q, ptxtSp);
-      //    }
   }
 
   // The actual tensoring
