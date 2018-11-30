@@ -65,43 +65,40 @@ public:
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   NTL::xdouble stdev;
 
-
   //======================= high probability bounds ================
-
-  double scale;
-  // default = 10
+  double scale;  // default = 10
 
   //! erfc(scale/sqrt(2)) * phi(m) should be less than some negligible
   //! parameter epsilon.
   //! The default value of 10 should be good enough for most applications.
-  //! NOTE: -log(erfc(10/sqrt(2)))/log(2) = 75.8
+  //! NOTE: -log(erfc(8/sqrt(2)))/log(2)  = 49.5
+  //!       -log(erfc(10/sqrt(2)))/log(2) = 75.8
   //!       -log(erfc(11/sqrt(2)))/log(2) = 91.1
   //!       -log(erfc(12/sqrt(2)))/log(2) =107.8
 
-  //! The way this is used is as follows.  If we have a normal random
+  //! The way this is used is as follows. If we have a normal random
   //! variable X with variance sigma^2, then the probability that
-  //! that X lies outside the interval [-scale*sigma, scale*sigma] is at most
-  //! epsilon/phi(m).  We will usually apply the union bound to a vector
-  //! of phi(m) such random varables, so that the probability that
-  //! that the L-infty norm exceeds scale*sigma is at most epsilon.
-  //! Thus, scale*sigma will be used as a high-probabability bound
-  //! on the L-infty norm of such vectors.
-
-
+  //! that X lies outside the interval [-scale*sigma, scale*sigma] is
+  //! delta=erfc(scale/sqrt(2)). We will usually apply the union bound
+  //! to a vector of phi(m) such random varables (one for each primitive
+  //! m-th root of unity), so that the probability that that the L-infty
+  //! norm exceeds scale*sigma is at most epsilon=phim*delta. Thus,
+  //! scale*sigma will be used as a high-probabability bound on the
+  //! L-infty norm of such vectors.
   //=======================================
 
-  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
-  //! so that each f_i is chosen uniformly and independently from the interval
-  //! [-magBound, magBound], and that k = degBound.
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
+  //! that each f_i is chosen uniformly and independently from the
+  //! interval [-magBound, magBound], and that k = degBound.
   //! This returns a bound B such that the L-infty norm
   //! of the canonical embedding exceeds B with probability at most 
   //! epsilon.
 
   // NOTE: this is a bit heuristic: we assume that if we evaluate
-  // f at a primitive root of unity, then we get something that
-  // well approximates a normal random variable with the same variance,
-  // which is equal to the sum of the variances of the individual f_i's,
-  // which is (2*magBound)^2/12 = magBound^2/3.
+  // f at a primitive root of unity, then we get something that well
+  // approximates a normal random variable with the same variance,
+  // which is equal to the sum of the variances of the individual
+  // f_i's, which is (2*magBound)^2/12 = magBound^2/3.
   // We then multiply the sqrt of the variance by scale to get
   // the high probability bound.
 
