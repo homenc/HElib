@@ -20,6 +20,8 @@ NTL_CLIENT
 #include "debugging.h"
 #endif
 
+#define VIEW_LEVELS
+
 
 // Compute a degree-p polynomial poly(x) s.t. for any t<e and integr z of the
 // form z = z0 + p^t*z1 (with 0<=z0<p), we have poly(z) = z0 (mod p^{t+1}).

@@ -38,6 +38,8 @@ extern NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags=0);
 
+NTL::xdouble embeddingLargestCoeff(const Ctxt& ctxt, const FHESecKey& sk);
+
 double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk);
 
 void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, double thresh=10.0);

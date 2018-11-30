@@ -6,10 +6,11 @@
 NTL_CLIENT
 
 static bool noPrint = false;
+static bool dry = false; // a dry-run flag
+static bool debug = 0;   // a debug flag
+static int scale = 0;
 
-#ifdef DEBUG_PRINTOUT
 extern FHESecKey* dbgKey;
-#endif
 
 
 static long mValues[][14] = { 
@@ -65,7 +66,6 @@ static long mValues[][14] = {
 
 #define OUTER_REP (1)
 
-static bool dry = false; // a dry-run flag
 
 void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=false, int build_cache=0)
 {
@@ -105,15 +105,27 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
 
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
+  if (scale) {
+    context.scale = scale;
+  }
+
+
+
   buildModChain(context, L, c,/*extraBits=*/7);
 
   long nPrimes = context.numPrimes();
   IndexSet allPrimes(0,nPrimes-1);
-  double bitsize = context.logOfProduct(allPrimes)/log(2.0);
-  if (!noPrint)
-    cout << "  "<<nPrimes<<" primes in chain, total bitsize="
-	 << ceil(bitsize) << ", secparam="
-	 << (7.2*phim/bitsize -110) << endl;
+  if (!noPrint) {
+    std::cout << "security=" << context.securityLevel()<<endl;
+    std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
+    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+    std::cout << "# bits in ctxt primes = "
+         << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
+    std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
+    std::cout << "# bits in special primes = "
+         << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
+    std::cout << "scale=" << context.scale<<endl;
+  }
 
   // FIXME: The extraBits is an exceedingly ugly patch, used to bypass the
   //   issue that buildModChain must be called BEFORE the context is made
@@ -145,7 +157,6 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
   t = -GetTime();
   if (!noPrint) cout << "Generating keys, " << std::flush;
   FHESecKey secretKey(context);
-  FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
@@ -154,8 +165,12 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
   t += GetTime();
   if (!noPrint) cout << " done in "<<t<<" seconds\n";
 
+  FHEPubKey publicKey = secretKey;
+
 #ifdef DEBUG_PRINTOUT
   dbgKey = &secretKey; 
+#else
+  if (debug) dbgKey = &secretKey;
 #endif
 
   long d = context.zMStar.getOrdP();
@@ -184,12 +199,17 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
     val_const1[i] = 1;
   }
 
+#if 0
   Ctxt c_const1(publicKey);
   ea.encrypt(c_const1, publicKey, val_const1);
 
   Ctxt c1(publicKey);
   ea.encrypt(c1, publicKey, val1);
   c1.multiplyBy(c_const1);
+#else
+  Ctxt c1(publicKey);
+  ea.encrypt(c1, publicKey, val1);
+#endif
 
   Ctxt c2(c1);
   if (!noPrint) CheckCtxt(c2, "before");
@@ -260,6 +280,9 @@ int main(int argc, char *argv[])
 
   //  amap.arg("disable_intFactor", fhe_disable_intFactor);
   amap.arg("chen_han", fhe_force_chen_han);
+
+  amap.arg("debug", debug, "generate debugging output");
+  amap.arg("scale", scale, "scale parameter");
 
 
   amap.parse(argc, argv);

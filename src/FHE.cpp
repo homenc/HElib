@@ -408,6 +408,8 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
   ctxt.noiseBound += r_bound * pubEncrKey.noiseBound;
 
+  //cerr << "*** r_bound*pubEncrKey.noiseBound " << r_bound * pubEncrKey.noiseBound << "\n";
+
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2()==0) // not power of two
     stdev *= sqrt(context.zMStar.getM());
@@ -439,6 +441,8 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
     ctxt.parts[i] += e;
     ctxt.noiseBound += e_bound;
+
+    //cerr << "*** e_bound " << e_bound << "\n";
   }
 
   // add in the plaintext
@@ -460,9 +464,13 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
   ctxt.noiseBound += ptxt_bound;
 
+  //cerr << "*** ptxt_bound " << ptxt_bound << "\n";
+
   // fill in the other ciphertext data members
   ctxt.ptxtSpace = ptxtSpace;
   ctxt.intFactor = 1;
+
+  //cerr << "*** ctxt.noiseBound " << ctxt.noiseBound << "\n";
 
   return ptxtSpace;
 }

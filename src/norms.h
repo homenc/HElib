@@ -74,6 +74,9 @@ NTL::xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg);
 void canonicalEmbedding(std::vector<cx_double>& v,
                         const zzX& f, const PAlgebra& palg);
 
+void canonicalEmbedding(std::vector<cx_double>& v,
+                        const NTL::ZZX& f, const PAlgebra& palg);
+
 //! Roughly the inverse of canonicalEmbedding, except for scaling and rounding issues
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
                   const PAlgebra& palg,

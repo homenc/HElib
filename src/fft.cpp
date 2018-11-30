@@ -44,10 +44,41 @@ void convert(arma::vec& to, const zzX& from)
   NTL_EXEC_RANGE_END
 }
 
+void convert(arma::vec& to, const ZZX& from)
+{
+  to.resize(from.rep.length());
+  NTL_EXEC_RANGE(from.rep.length(), first, last)
+  for (long i=first; i<last; i++) {
+    double x = conv<double>(from[i]);
+    to[i] = x;
+  }
+  NTL_EXEC_RANGE_END
+}
+
 // Computing the canonical embedding. This function returns in v only
 // the first half of the entries, the others are v[phi(m)-i]=conj(v[i])
 void canonicalEmbedding(std::vector<cx_double>& v,
                         const zzX& f, const PAlgebra& palg)
+{
+  FHE_TIMER_START;
+  long m = palg.getM();
+  long phimBy2 = divc(palg.getPhiM(),2);
+  arma::vec av; // convert to vector of doubles
+  convert(av, f);
+  arma::cx_vec avv = arma::fft(av,m); // compute the full FFT
+
+  v.resize(phimBy2); // the first half of Zm*
+
+  if (palg.getNSlots()==phimBy2) // order roots by the palg order
+    for (long i=0; i<phimBy2; i++)
+      v[phimBy2-i-1] = avv[palg.ith_rep(i)];
+  else                           // order roots sequentially
+    for (long i=1, idx=0; i<=m/2; i++)
+      if (palg.inZmStar(i)) v[idx++] = avv[i];
+}
+
+void canonicalEmbedding(std::vector<cx_double>& v,
+                        const ZZX& f, const PAlgebra& palg)
 {
   FHE_TIMER_START;
   long m = palg.getM();

@@ -19,8 +19,8 @@
 
 NTL_CLIENT
 
-FHESecKey* dbgKey;
-EncryptedArray* dbgEa;
+FHESecKey* dbgKey = 0;
+EncryptedArray* dbgEa = 0;
 NTL::ZZX dbg_ptxt;
 NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
@@ -42,6 +42,19 @@ void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, d
       std::cerr << "\n*** too much noise: " << msg << ": " << ratio << "\n";
    }
 }
+
+xdouble embeddingLargestCoeff(const Ctxt& ctxt, const FHESecKey& sk) 
+{
+  const FHEcontext& context = ctxt.getContext();
+  ZZX p, pp;
+  sk.Decrypt(p, ctxt, pp);
+  return embeddingLargestCoeff(pp, context.zMStar);
+  //return conv<xdouble>(largestCoeff(pp));
+}
+
+
+
+
 
 void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags)
