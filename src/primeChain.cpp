@@ -14,6 +14,7 @@
  * @brief handling the chain of moduli
  */
 #include <climits>
+#include <cmath>
 #include <algorithm>
 #include "primeChain.h"
 #include "FHEContext.h"
@@ -96,8 +97,9 @@ void ModuliSizes::init(const std::vector<Cmodulus>& chain,
 // Find a suitable IndexSet of primes whose total size is in the
 // target interval [low,high], trying to minimize the number of
 // primes dropped from fromSet.
-// If no IndexSet exsists that fits in the target interval, returns
-// the IndexSet that gives the largest value smaller than low.
+// If no IndexSet exists that fits in the target interval, returns
+// the IndexSet that gives the largest value smaller than low, or
+// else just the singleton containing the smallest prime.
 IndexSet ModuliSizes::getSet4Size(double low, double high,
                                   const IndexSet& fromSet,
                                   bool reverse) const
@@ -120,11 +122,11 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
     }
   }
 
-  // If nothing was found, use the closest set below 'low'
-  // (or above 'high' if reverse).  We actually one bit of slack,
-  // examining the not just the closest set, but those sets
-  // whose size is within 1 bit of the closest.
-  
+  // If nothing was found, use the closest set below 'low' (or
+  // above 'high' if reverse).  We actually have one bit of slack, 
+  // examining not the just the closest set, but those sets whose
+  // size is within 1 bit of the closest.
+
   if (bestOption == -1) {
     if (reverse) {
       if (ii < n) {
@@ -152,7 +154,12 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
     }
   }
 
-  assert(bestOption != -1); // make sure that soemthing was found
+  // Nothing was found. This almost surely means decryption
+  // error, but we'll just display a warning and carry on.
+  if (bestOption == -1) {
+    Warning(__func__+std::string(": no matching IndexSet found, likely decryption error"));
+    return IndexSet(0);
+  }
 
   return sizes[bestOption].second; // return the best IndexSet
 }
@@ -219,11 +226,14 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
     }
   }
 
-  assert(bestOption != -1); // make sure that soemthing was found
+  // Nothing was found. This almost surely means decryption
+  // error, but we'll just display a warning and carry on.
+  if (bestOption == -1) {
+    Warning(__func__+std::string(": no matching IndexSet found, likely decryption error"));
+    return IndexSet(0);
+  }
 
   return sizes[bestOption].second; // return the best IndexSet
-
-
 }
 
 ostream& operator<<(ostream& s, const ModuliSizes& szs)
@@ -432,10 +442,11 @@ void addSmallPrimes(FHEcontext& context, long resolution, long cpSize)
 long ctxtPrimeSize(long nBits)
 {
   // How many primes of size NTL_SP_NBITS it takes to get to nBits
-  long nPrimes = divc(nBits, NTL_SP_NBITS);
+  double maxPsize = NTL_SP_NBITS - 0.5;
+  long nPrimes = long(ceil(nBits/maxPsize));
   long targetSize = divc(nBits, nPrimes)+1; // How large should each prime be
-       // The '+1' is because we get primes that are
-       // a little smaller than 2^{targetSize}
+       // The '-0.5','+1' are because we get primes
+       // that are little smaller than 2^{targetSize}
 
   // ensure targetSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
   if (targetSize < 0.9*NTL_SP_NBITS)
@@ -462,8 +473,8 @@ void addCtxtPrimes(FHEcontext& context, long nBits, long targetSize)
 
   PrimeGenerator gen(targetSize, m);
   double bitlen = 0;     // how many bits we already have
-  while (bitlen < nBits) {
-    long q = gen.next();     // generate th enext prime
+  while (bitlen < nBits-0.5) {
+    long q = gen.next();     // generate the next prime
     context.AddCtxtPrime(q); // add it to the list
     bitlen += log2(q);
   }
