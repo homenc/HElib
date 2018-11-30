@@ -562,12 +562,18 @@ public:
   void encode(NTL::ZZX& ptxt, double aSingleNumber, long precision=0) const
   { zzX tmp; encode(tmp, aSingleNumber, precision); ::convert(ptxt, tmp); }
 
-  void encryptOneNum(Ctxt& ctxt, const FHEPubKey& key, double num) const
+  void encryptOneNum(Ctxt& ctxt, const FHEPubKey& key, double num,
+                     double useThisSize=0.0) const
   {
     assert(&getContext() == &ctxt.getContext());
     zzX pp;
     encode(pp, num); // Convert array of slots into a plaintext polynomial
-    key.CKKSencrypt(ctxt, pp, fabs(num)); // encrypt the plaintext polynomial
+    if (useThisSize<=0.0) {// provides a size estimate to the encryption routine
+      long rounded = ceil(fabs(num));
+      if (rounded <= 1) useThisSize = 1.0;
+      else              useThisSize = double(1L << NTL::NumBits(rounded-1));
+    }
+    key.CKKSencrypt(ctxt, pp, useThisSize); // encrypt the plaintext polynomial
   }
 
   
