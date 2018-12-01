@@ -1686,8 +1686,8 @@ void CheckCtxt(const Ctxt& c, const char* label)
     Ctxt c1(c);
     //c1.dropSmallAndSpecialPrimes();
     cerr << ", log2(noise/bound)=" << (log(embeddingLargestCoeff(c1, *dbgKey)/c1.getNoiseBound())/log(2.0));
-    cerr << ", log2(noise)=" << (log(embeddingLargestCoeff(c1, *dbgKey))/log(2.0));
-    cerr << ", log2(bound)=" << (log(c1.getNoiseBound())/log(2.0));
+    //cerr << ", log2(noise)=" << (log(embeddingLargestCoeff(c1, *dbgKey))/log(2.0));
+    //cerr << ", log2(bound)=" << (log(c1.getNoiseBound())/log(2.0));
   }
        //<< ", #smallPrimes=" << (c.getPrimeSet() & c.getContext().smallPrimes).card()
        //<< ", #ctxtPrimes=" << (c.getPrimeSet() & c.getContext().ctxtPrimes).card()

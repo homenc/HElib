@@ -16,9 +16,7 @@
 NTL_CLIENT
 #include "EncryptedArray.h"
 #include "polyEval.h"
-#ifdef DEBUG_PRINTOUT
 #include "debugging.h"
-#endif
 
 #define VIEW_LEVELS
 
@@ -102,6 +100,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
 
 #ifdef VIEW_LEVELS
       fprintf(stderr, "%5ld", digits[j].bitCapacity());
+
 #endif
 
       tmp -= digits[j];
@@ -121,7 +120,14 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
     digits[i] = tmp; // needed in the next round
 
 #ifdef VIEW_LEVELS
-    fprintf(stderr, "%5ld\n", digits[i].bitCapacity());
+    if (dbgKey) {
+       double ratio = 
+          log(embeddingLargestCoeff(digits[i], *dbgKey)/digits[i].getNoiseBound())/log(2.0);
+       fprintf(stderr, "%5ld [%f]\n", digits[i].bitCapacity(), ratio);
+    }
+    else {
+       fprintf(stderr, "%5ld\n", digits[i].bitCapacity());
+    }
 #endif
 
 //#ifdef DEBUG_PRINTOUT

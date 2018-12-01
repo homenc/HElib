@@ -147,12 +147,14 @@ xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
 #else
   std::vector<cx_double> emb;
   canonicalEmbedding(emb, f, palg);
-  double mx = 0.0;
+  xdouble mx {0.0};
   for (auto& x : emb) {
-    double n = std::norm(x);
+    double re = std::real(x);
+    double im = std::imag(x);
+    xdouble n = xdouble(re)*xdouble(re) + xdouble(im)*xdouble(im);
     if (mx < n) mx = n;
   }
-  return conv<xdouble>(sqrt(mx));
+  return sqrt(mx);
 #endif
 }
 #endif
