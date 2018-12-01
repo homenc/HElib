@@ -239,7 +239,7 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
   intFactor = 1;
-  ratFactor = 1.0;
+  ratFactor = ptxtMag = 1.0;
 }
 
 // Constructor
@@ -253,7 +253,7 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
   intFactor = 1;
-  ratFactor = 1.0;
+  ratFactor = ptxtMag = 1.0;
 }
 
 
@@ -271,6 +271,7 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   noiseBound  = other.noiseBound;
   intFactor = other.intFactor;
   ratFactor = other.ratFactor;
+  ptxtMag = other.ptxtMag;
   return *this;
 }
 
@@ -1052,6 +1053,7 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 
   noiseBound = c1.noiseBound * c2.noiseBound;
   ratFactor = c1.ratFactor * c2.ratFactor;
+  ptxtMag = c1.ptxtMag * c2.ptxtMag;
 }
 
 
@@ -1587,6 +1589,7 @@ void Ctxt::write(ostream& str) const
   
   write_raw_int(str, ptxtSpace);
   write_raw_int(str, intFactor);
+  write_raw_xdouble(str, ptxtMag);
   write_raw_xdouble(str, ratFactor);
   write_raw_xdouble(str, noiseBound);
   primeSet.write(str);
@@ -1601,6 +1604,7 @@ void Ctxt::read(istream& str)
   
   ptxtSpace = read_raw_int(str);
   intFactor = read_raw_int(str);
+  ptxtMag = read_raw_xdouble(str);
   ratFactor = read_raw_xdouble(str);
   noiseBound = read_raw_xdouble(str);
   primeSet.read(str);
@@ -1652,7 +1656,7 @@ istream& operator>>(istream& str, CtxtPart& p)
 ostream& operator<<(ostream& str, const Ctxt& ctxt)
 {
   str << "["<<ctxt.ptxtSpace<<" "<<ctxt.noiseBound<<" "<<ctxt.primeSet
-      << ctxt.intFactor << " " << ctxt.ratFactor << " "
+      << ctxt.intFactor <<" "<< ctxt.ptxtMag<<" "<<ctxt.ratFactor<<" "
       << ctxt.parts.size() << endl;
   for (long i: range(ctxt.parts.size()))
     str << ctxt.parts[i] << endl;
@@ -1663,7 +1667,7 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseBound >> ctxt.primeSet
-      >> ctxt.intFactor >> ctxt.ratFactor;
+      >> ctxt.intFactor >> ctxt.ptxtMag >> ctxt.ratFactor;
   long nParts;
   str >> nParts;
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));

@@ -264,6 +264,7 @@ class Ctxt {
 
   long intFactor;    // an integer factor to multiply by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
+  NTL::xdouble ptxtMag;   // bound on the plaintext size (for CKKS)
 
   // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
   // are defined relative to the same set of primes and plaintext space,
@@ -595,6 +596,7 @@ public:
   const long getPtxtSpace() const      { return ptxtSpace;}
   const NTL::xdouble& getNoiseBound() const { return noiseBound; }
   const NTL::xdouble& getRatFactor() const { return ratFactor; }
+  const NTL::xdouble& getPtxtMag() const { return ptxtMag; }
   const long getKeyID() const;
 
   bool isCKKS() const
