@@ -56,6 +56,183 @@ void testRotsNShifts(const FHEPubKey& publicKey,
                      const FHESecKey& secretKey, 
                      const EncryptedArrayCx& ea, double epsilon);
 
+#ifdef DEBUG_PRINTOUT
+#define debugCompare(ea,sk,p,c,epsilon) {              \
+  const vector<cx_double> pp;\
+  ea.decrypt(c, sk, pp);\
+  if (!cx_equals(pp, p, epsilon)) { \
+    std::cout << "oops:\n"; std::cout << p << "\n"; \
+    std::cout << pp << "\n"; \
+    exit(0); \
+  }}
+#else
+#define debugCompare(ea,sk,p,c,epsilon)
+#endif
+
+void negateVec(vector<cx_double>& p1)
+{
+  for (auto& x: p1) x = -x;
+}
+void add(vector<cx_double>& to, const vector<cx_double>& from)
+{
+  if (to.size() < from.size())
+    to.resize(from.size(), 0);
+  for (long i=0; i<from.size(); i++) to[i] += from[i];
+}
+void sub(vector<cx_double>& to, const vector<cx_double>& from)
+{
+  if (to.size() < from.size())
+    to.resize(from.size(), 0);
+  for (long i=0; i<from.size(); i++) to[i] -= from[i];
+}
+void mul(vector<cx_double>& to, const vector<cx_double>& from)
+{
+  if (to.size() < from.size())
+    to.resize(from.size(), 0);
+  for (long i=0; i<from.size(); i++) to[i] *= from[i];
+}
+void rotate(vector<cx_double>& p, long amt)
+{
+  long sz = p.size();
+  vector<cx_double> tmp(sz);
+  for (long i=0; i<sz; i++)
+    tmp[((i+amt)%sz +sz)%sz] = p[i];
+  p = tmp;
+}
+
+
+
+bool verbose=false;
+
+/************** Each round consists of the following:
+1. c1.multiplyBy(c0)
+2. c0 += random constant
+3. c2 *= random constant
+4. tmp = c1
+5. ea.rotate(tmp, random amount in [-nSlots/2, nSlots/2])
+6. c2 += tmp
+7. ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
+8. c1.negate()
+9. c3.multiplyBy(c2) 
+10. c0 -= c3
+**************/
+void testGeneralOps(const FHEPubKey& publicKey, const FHESecKey& secretKey,
+                    const EncryptedArrayCx& ea, double epsilon,
+                    long nRounds)
+{
+  long nslots = ea.size();
+  char buffer[32];
+
+  vector<cx_double> p0, p1, p2, p3;
+  ea.random(p0);
+  ea.random(p1);
+  ea.random(p2);
+  ea.random(p3);
+
+  Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
+  ea.encrypt(c0, publicKey, p0);
+  ea.encrypt(c1, publicKey, p1);
+  ea.encrypt(c2, publicKey, p2);
+  ea.encrypt(c3, publicKey, p3);
+
+  resetAllTimers();
+  FHE_NTIMER_START(Circuit);
+
+  for (long i = 0; i < nRounds; i++) {
+
+    if (verbose) std::cout << "*** round " << i << "..."<<endl;
+
+     long shamt = RandomBnd(2*(nslots/2) + 1) - (nslots/2);
+                  // random number in [-nslots/2..nslots/2]
+     long rotamt = RandomBnd(2*nslots - 1) - (nslots - 1);
+                  // random number in [-(nslots-1)..nslots-1]
+
+     // two random constants
+     vector<cx_double> const1, const2;
+     ea.random(const1);
+     ea.random(const2);
+
+     ZZX const1_poly, const2_poly;
+     ea.encode(const1_poly, const1);
+     ea.encode(const2_poly, const2);
+
+     mul(p1, p0);     // c1.multiplyBy(c0)
+     c1.multiplyBy(c0);
+     if (verbose) CheckCtxt(c1, "c1*=c0");
+     debugCompare(ea,secretKey,p1,c1,epsilon);
+
+     add(p0, const1); // c0 += random constant
+     c0.addConstant(const1_poly);
+     if (verbose) CheckCtxt(c0, "c0+=k1");
+     debugCompare(ea,secretKey,p0,c0,epsilon);
+
+     mul(p2, const2); // c2 *= random constant
+     c2.multByConstant(const2_poly);
+     if (verbose) CheckCtxt(c2, "c2*=k2");
+     debugCompare(ea,secretKey,p2,c2,epsilon);
+
+     vector<cx_double> tmp_p(p1); // tmp = c1
+     Ctxt tmp(c1);
+     sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
+     rotate(tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
+     ea.rotate(tmp, shamt);
+     if (verbose) CheckCtxt(tmp, buffer);
+     debugCompare(ea,secretKey,tmp_p,tmp,epsilon);
+
+     add(p2, tmp_p);  // c2 += tmp
+     c2 += tmp;
+     if (verbose) CheckCtxt(c2, "c2+=tmp");
+     debugCompare(ea,secretKey,p2,c2,epsilon);
+
+     sprintf(buffer, "c2>>>=%d", (int)rotamt);
+     rotate(p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
+     ea.rotate(c2, rotamt);
+     if (verbose) CheckCtxt(c2, buffer);
+     debugCompare(ea,secretKey,p2,c2,epsilon);
+
+     negateVec(p1); // c1.negate()
+     c1.negate();
+     if (verbose) CheckCtxt(c1, "c1=-c1");
+     debugCompare(ea,secretKey,p1,c1,epsilon);
+
+     mul(p3, p2); // c3.multiplyBy(c2) 
+     c3.multiplyBy(c2);
+     if (verbose) CheckCtxt(c3, "c3*=c2");
+     debugCompare(ea,secretKey,p3,c3,epsilon);
+
+     sub(p0, p3); // c0 -= c3
+     c0 -= c3;
+     if (verbose) CheckCtxt(c0, "c0=-c3");
+     debugCompare(ea,secretKey,p0,c0,epsilon);
+  }
+
+  c0.cleanUp();
+  c1.cleanUp();
+  c2.cleanUp();
+  c3.cleanUp();
+
+  FHE_NTIMER_STOP(Circuit);
+
+  vector<cx_double> pp0, pp1, pp2, pp3;
+   
+  ea.decrypt(c0, secretKey, pp0);
+  ea.decrypt(c1, secretKey, pp1);
+  ea.decrypt(c2, secretKey, pp2);
+  ea.decrypt(c3, secretKey, pp3);
+
+  std::cout << "Test "<<nRounds<<" rounds of mixed operations, ";
+  if (cx_equals(pp0, p0,epsilon) && cx_equals(pp1, p1,epsilon)
+      && cx_equals(pp2, p2,epsilon) && cx_equals(pp3, p3,epsilon))
+    std::cout << "PASS\n\n";
+  else std::cout << "FAIL\n\n";
+
+  if (verbose) {
+    std::cout << endl;
+    printAllTimers();
+    std::cout << endl;
+  }
+  resetAllTimers();
+   }
 
 int main(int argc, char *argv[]) 
 {
@@ -66,24 +243,36 @@ int main(int argc, char *argv[])
 
   long m=16;
   long r=8;
-  long L=150;
+  long L=0;
   double epsilon=0.01; // Accepted accuracy
-  bool verbose=false;
+  long R=1;
 
   amap.arg("m", m, "Cyclotomic index");
   amap.note("e.g., m=1024, m=2047");
   amap.arg("r", r, "Bits of precision");
-  amap.arg("L", L, "Number of levels");
+  amap.arg("R", R, "number of rounds");
+  amap.arg("L", L, "Number of bits in modulus", "heuristic");
   amap.arg("ep", epsilon, "Accepted accuracy");
   amap.arg("verbose", verbose, "more printouts");
 
   amap.parse(argc, argv);
+  if (R<=0) R=1;
+  if (R<=2)
+    L = 100*R;
+  else
+    L = 220*(R-1);
 
+  if (verbose) {
+    cout << "** m="<<m<<", #rounds="<<R<<", |q|="<<L
+         << ", epsilon="<<epsilon<<endl;
+  }
+  epsilon /= R;
   try{
 
     // FHE setup keys, context, SKMs, etc
 
     FHEcontext context(m, /*p=*/-1, r);
+    context.scale=4;
     buildModChain(context, L, /*c=*/2);
 
     FHESecKey secretKey(context);
@@ -104,7 +293,7 @@ int main(int argc, char *argv[])
     testBasicArith(publicKey, secretKey, ea, epsilon);
     testComplexArith(publicKey, secretKey, ea, epsilon);
     testRotsNShifts(publicKey, secretKey, ea, epsilon);
-
+    testGeneralOps(publicKey, secretKey, ea, epsilon*R, R);
   } 
   catch (exception& e) {
     cerr << e.what() << endl;
