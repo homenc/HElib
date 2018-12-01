@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
   long p=2;
   long c = 2;
   long w = 64;
-  long L = 5;
+  long L = 100;
   long mm=0;
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r,  "lifting");
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
   std::unique_ptr<EncryptedArray> eas[numTests];
   vector<ZZX> ptxts[numTests];
 
-  // first loop: generate stuff and write it to cout
+  // first loop: generate stuff and write it to file
 
   // open file for writing
   {fstream keyFile("iotest.txt", fstream::out|fstream::trunc);
@@ -100,9 +100,9 @@ int main(int argc, char *argv[])
     keyFile << *contexts[i] << endl;
 
     sKeys[i].reset(new FHESecKey(*contexts[i]));
-    const FHEPubKey& publicKey = *sKeys[i];
     sKeys[i]->GenSecKey(0,ptxtSpace); // A +-1/0 secret key
     addSome1DMatrices(*sKeys[i]);// compute key-switching matrices that we need
+    const FHEPubKey publicKey = *sKeys[i];
     eas[i].reset(new EncryptedArray(*contexts[i]));
 
     long nslots = eas[i]->size();

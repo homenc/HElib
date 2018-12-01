@@ -551,7 +551,7 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
 
   if (skBounds.size() != other.skBounds.size()) return false;
   for (size_t i=0; i<skBounds.size(); i++)
-    if (skBounds[i] != other.skBounds[i]) return false;
+    if (fabs(skBounds[i]-other.skBounds[i])>0.1) return false;
 
   if (keySwitching.size() != other.keySwitching.size()) return false;
   for (size_t i=0; i<keySwitching.size(); i++)
@@ -566,9 +566,9 @@ bool FHEPubKey::operator==(const FHEPubKey& other) const
 
   // compare KS_strategy, ignoring trailing FHE_KSS_UNKNOWN
   long n = KS_strategy.length();
-  while (n >= 0 && KS_strategy[n-1] == FHE_KSS_UNKNOWN) n--;
+  while (n > 0 && KS_strategy[n-1] == FHE_KSS_UNKNOWN) n--;
   long n1 = other.KS_strategy.length();
-  while (n1 >= 0 && other.KS_strategy[n1-1] == FHE_KSS_UNKNOWN) n1--;
+  while (n1 > 0 && other.KS_strategy[n1-1] == FHE_KSS_UNKNOWN) n1--;
   if (n != n1) return false;
   for (long i: range(n)) {
     if (KS_strategy[i] != other.KS_strategy[i]) return false;
@@ -636,7 +636,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   str >> pk.pubEncrKey;
 
   // Get the vector of secret-key Hamming-weights
-  vec_long vl;
+  NTL::Vec<double> vl;
   str >> vl;
   pk.skBounds.resize(vl.length());
   for (long i=0; i<(long)pk.skBounds.size(); i++) pk.skBounds[i] = vl[i];
