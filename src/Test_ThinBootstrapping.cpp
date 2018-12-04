@@ -111,10 +111,8 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
 
 
 
-  buildModChain(context, L, c,/*extraBits=*/7);
+  buildModChain(context, L, c, /*willBeBootstrappable=*/true);
 
-  long nPrimes = context.numPrimes();
-  IndexSet allPrimes(0,nPrimes-1);
   if (!noPrint) {
     std::cout << "security=" << context.securityLevel()<<endl;
     std::cout << "# small primes = " << context.smallPrimes.card() << "\n";

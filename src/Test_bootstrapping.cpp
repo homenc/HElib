@@ -27,12 +27,16 @@ NTL_CLIENT
 #include "matmul.h"
 
 static bool noPrint = false;
+static bool dry = false; // a dry-run flag
+static bool debug = 0;   // a debug flag
+static int scale = 0;
+
+
+extern FHESecKey* dbgKey;
 
 // #define DEBUG_PRINTOUT
 #include "debugging.h"
-#ifdef DEBUG_PRINTOUT
 extern long printFlag;
-#endif
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
@@ -88,7 +92,6 @@ static long mValues[][14] = {
 #define OUTER_REP (1)
 #define INNER_REP (1)
 
-static bool dry = false; // a dry-run flag
 
 void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=false, int build_cache=0)
 {
@@ -127,7 +130,23 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
 
   double t = -GetTime();
   FHEcontext context(m, p, r, gens, ords);
+  if (scale) {
+    context.scale = scale;
+  }
+
   buildModChain(context, L, c,/*willBeBootstrappable=*/true);
+
+  if (!noPrint) {
+    std::cout << "security=" << context.securityLevel()<<endl;
+    std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
+    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+    std::cout << "# bits in ctxt primes = "
+         << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
+    std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
+    std::cout << "# bits in special primes = "
+         << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
+    std::cout << "scale=" << context.scale<<endl;
+  }
 
   // FIXME: The willBeBootstrappable flag is a hack, used to bypass the
   //   issue that buildModChain must be called BEFORE the context is made
@@ -147,14 +166,6 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
     context.zMStar.printout();
   }
   setDryRun(dry); // Now we can set the dry-run flag if desired
-
-  long nPrimes = context.numPrimes();
-  IndexSet allPrimes(0,nPrimes-1);
-  double bitsize = context.logOfProduct(allPrimes)/log(2.0);
-  if (!noPrint)
-    cout << "  "<<nPrimes<<" primes in chain, total bitsize="
-	 << ceil(bitsize) << ", secparam="
-	 << (7.2*phim/bitsize -110) << endl;
 
   long p2r = context.alMod.getPPowR();
   context.zMStar.set_cM(mValues[idx][13]/100.0);
@@ -288,6 +299,9 @@ int main(int argc, char *argv[])
 
   //  amap.arg("disable_intFactor", fhe_disable_intFactor);
   amap.arg("chen_han", fhe_force_chen_han);
+
+  amap.arg("debug", debug, "generate debugging output");
+  amap.arg("scale", scale, "scale parameter");
 
   amap.parse(argc, argv);
 
