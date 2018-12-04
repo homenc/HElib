@@ -274,36 +274,32 @@ buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim,
 
 
 
-struct ConstMultiplier {
-// stores a constant in either zzX or DoubleCRT format
+struct ConstMultiplier { // stores a constant in either zzX or DoubleCRT format
 
   virtual ~ConstMultiplier() {}
 
   virtual void mul(Ctxt& ctxt) const = 0;
 
-  virtual shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const = 0;
-  // Upgrade to DCRT. Returns null of no upgrade required
-
+  virtual shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context)const=0;
+  // Upgrade to DCRT. Returns null if no upgrade required
 };
 
 struct ConstMultiplier_DoubleCRT : ConstMultiplier {
-
   DoubleCRT data;
+
   ConstMultiplier_DoubleCRT(const DoubleCRT& _data) : data(_data) { }
 
   void mul(Ctxt& ctxt) const override {
     ctxt.multByConstant(data);
   } 
 
-  shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override {
+  shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
     return nullptr;
   }
-
 };
 
 
 struct ConstMultiplier_zzX : ConstMultiplier {
-
   zzX data;
 
   ConstMultiplier_zzX(const zzX& _data) : data(_data) { }
@@ -312,10 +308,9 @@ struct ConstMultiplier_zzX : ConstMultiplier {
     ctxt.multByConstant(data);
   } 
 
-  shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override {
+  shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
     return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()));
   }
-
 };
 
 template<class RX>
