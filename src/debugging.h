@@ -29,6 +29,7 @@ class Ctxt;
 class FHESecKey;
 class EncryptedArray;
 class PlaintextArray;
+class DoubleCRT;
 
 extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;
@@ -46,6 +47,9 @@ void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, d
 
 bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
 		       const EncryptedArray& ea, const PlaintextArray& pa);
+
+void rawDecrypt(NTL::ZZX& plaintxt, const std::vector<NTL::ZZX>& zzParts,
+                const DoubleCRT& sKey, long q=0);
 
 // Debug printing routines for vectors, ZZX'es, print only a few entries
 
