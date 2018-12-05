@@ -1,3 +1,5 @@
+#ifndef _POWERFUL_H_
+#define _POWERFUL_H_
 /* Copyright (C) 2012-2017 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
@@ -13,7 +15,6 @@
  * @file powerful.h
  * @brief The "powerful basis" of a cyclotomic ring
  **/
-
 #include "NumbTh.h"
 #include "cloned_ptr.h"
 #include "bluestein.h"
@@ -396,3 +397,4 @@ void recursiveInterp(const CubeSlice<zz_p>& s,
 void interp(HyperCube<zz_p>& cube,
 	    const Vec< copied_ptr<FFTHelper> >& multiEvalPoints);
 #endif
+#endif // _POWERFUL_H_

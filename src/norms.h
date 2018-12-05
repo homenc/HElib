@@ -29,6 +29,7 @@ NTL::ZZ sumOfCoeffs(const DoubleCRT& f); // somewhat lame implementation
 //! The L-infinity norm of an element (in coefficient representation)
 long largestCoeff(const zzX& f);         // l_infty norm
 NTL::ZZ largestCoeff(const NTL::ZZX& f); // l_infty norm
+NTL::ZZ largestCoeff(const NTL::Vec<NTL::ZZ>& f);
 NTL::ZZ largestCoeff(const DoubleCRT& f);
 
 //! The L2-norm of an element (in coefficient representation)

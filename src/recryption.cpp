@@ -256,8 +256,9 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   long intFactor = ctxt.intFactor;
 
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
-  long e = getContext().rcData.e;
-  long ePrime = getContext().rcData.ePrime;
+  const RecryptData& rcData = getContext().rcData;
+  long e = rcData.e;
+  long ePrime = rcData.ePrime;
   long p2ePrime = power_long(p,ePrime);
   long q = power_long(p,e)+1;
   assert(e>=r);
@@ -302,16 +303,31 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   for (long i=0; i<(long)zzParts.size(); i++) {
     // make divisible by p^{e'}
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
-				getContext().rcData.alpha);
+				rcData.alpha);
     zzParts[i].normalize();   // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2) 
+  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2)
     cerr << " ******** warning: noise/q after makeDivisible = "
 	 << ((noise + maxU*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
-
+#ifdef DEBUG_PRINTOUT
+   {
+    ZZX ptxt;
+    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+    cerr << "m="<<getContext().zMStar.getM()
+         << ": after makeDivisible, noiseEst="
+         << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
+         << ", maxCanonEmbedding="
+         << embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra())<<endl;
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
+    cerr << "  maxCoeff="<<largestCoeff(ptxt)
+         << ", maxPowerful="<<largestCoeff(powerful)
+         << endl;
+  }
+#endif
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
@@ -1001,10 +1017,25 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2) 
+  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2)
     cerr << " ******** warning: noise/q after makeDivisible = "
 	 << ((noise + maxU*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
-
+#ifdef DEBUG_PRINTOUT
+  { ZZX ptxt;
+    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+    cerr << "m="<<getContext().zMStar.getM()
+         << ": after makeDivisible, noiseEst="
+         << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
+         << ", maxCanonEmbedding="
+         << embeddingLargestCoeff(ptxt,trcData.ea->getPAlgebra())<<endl;
+    const RecryptData& rcData = getContext().rcData;
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
+    cerr << "  maxCoeff="<<largestCoeff(ptxt)
+         << ", maxPowerful="<<largestCoeff(powerful)
+         << endl;
+  }
+#endif
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
