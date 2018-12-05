@@ -1017,7 +1017,7 @@ long FHESecKey::genRecryptData()
   // Generate a new bootstrapping key
   zzX keyPoly;
   long hwt = context.rcData.skHwt;
-  double bound = sampleHWt(keyPoly, context, hwt);
+  double bound = sampleHWtBounded(keyPoly, context, hwt);
 
   DoubleCRT newSk(keyPoly, context, context.ctxtPrimes | context.specialPrimes); 
   // defined relative to all primes

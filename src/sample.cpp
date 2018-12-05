@@ -224,6 +224,83 @@ double sampleHWt(zzX &poly, const FHEcontext& context, long Hwt)
   return retval;
 }
 
+
+double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt)
+{
+#if FFT_IMPL // is there any implementation of canonicalEmbedding?
+  const PAlgebra& palg = context.zMStar;
+
+  long deg_bnd = (palg.getPow2() == 0) ? palg.getM() : palg.getPhiM();
+
+  long log_deg_bnd = long(log(double(deg_bnd))/log(2.0) + 0.5) + 1;
+  //  sqrt(2) * deg_bnd  <= 2^{log_deg_bnd} <= 2*sqrt(2) * deg_bnd
+
+  // we use log_deg_bnd as in index into the erfc_inverse table
+  // so that we get a noise bound that should be satisfied
+  // with probablity at least 1/sqrt(2).
+
+  assert(log_deg_bnd < ERFC_INVERSE_SIZE);
+  double scale = erfc_inverse[log_deg_bnd];
+  double bound = scale * sqrt(double(Hwt));
+    
+  return bound;
+#else
+  const PAlgebra& palg = context.zMStar;
+  double retval;
+
+  if (palg.getPow2() == 0) { // not power of two
+    long m = palg.getM();
+    retval = context.noiseBoundForHWt(Hwt, m);
+  }
+  else { // power of two
+    long phim = palg.getPhiM();
+    retval = context.noiseBoundForHWt(Hwt, phim);
+  }
+  return retval;
+#endif
+}
+
+double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
+{
+#if FFT_IMPL // is there any implementation of canonicalEmbedding?
+  const PAlgebra& palg = context.zMStar;
+
+  long deg_bnd = (palg.getPow2() == 0) ? palg.getM() : palg.getPhiM();
+
+  long log_deg_bnd = long(log(double(deg_bnd))/log(2.0) + 0.5) + 1;
+  //  sqrt(2) * deg_bnd  <= 2^{log_deg_bnd} <= 2*sqrt(2) * deg_bnd
+
+  // we use log_deg_bnd as in index into the erfc_inverse table
+  // so that we get a noise bound that should be satisfied
+  // with probablity at least 1/sqrt(2).
+
+  assert(log_deg_bnd < ERFC_INVERSE_SIZE);
+  double scale = erfc_inverse[log_deg_bnd];
+  double bound = scale * sqrt(double(Hwt));
+    
+  double val;
+  long count = 0;
+  do {
+    sampleHWt(poly, context, Hwt);
+    val = embeddingLargestCoeff(poly,palg);
+    //cerr << "****** " << (val/bound) << "\n";
+  }
+  while (++count<1000 && val>bound); // repeat until <= bound
+
+  if (val>bound) {
+    cerr << "Warning: sampleSmallBounded, after "
+         << count<<" trials, still val="<<val
+         << '>'<<"bound="<<bound<<endl;
+    Error("cannot continue");
+  }
+  return bound;
+#else
+  return sampleHWt(poly, context, Hwt);
+#endif
+   
+}
+
+
 double sampleSmall(zzX &poly, const FHEcontext& context)
 {
   const PAlgebra& palg = context.zMStar;

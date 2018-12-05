@@ -127,3 +127,22 @@ bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
 
   return equals(ea, pa, ppa);
 }
+
+// Compute decryption with.without mod-q on a vector of ZZX'es,
+// useful when debugging bootstrapping (after "raw mod-switch")
+void rawDecrypt(ZZX& plaintxt, const std::vector<ZZX>& zzParts,
+                const DoubleCRT& sKey, long q)
+{
+  const FHEcontext& context = sKey.getContext();
+
+  // Set to zzParts[0] + sKey * zzParts[1] "over the integers"
+  DoubleCRT ptxt = sKey;
+  ptxt *= zzParts[1];
+  ptxt += zzParts[0];
+
+  // convert to coefficient representation
+  ptxt.toPoly(plaintxt);
+
+  if (q>1)
+    PolyRed(plaintxt, q, false/*reduce to [-q/2,1/2]*/);
+}

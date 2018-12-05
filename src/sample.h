@@ -43,6 +43,10 @@ class FHEcontext;
 class PAlgebra;
 // Same as above, but sample mod X^m-1 and then reduce mod Phi_m(X)
 double  sampleHWt(zzX &poly, const FHEcontext& context, long Hwt=100);
+double  sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt=100);
+
+double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt=100);
+// This just returns the effective bound useda by sampleHWt bounded
 
 // Return value is high-probability bound on L-infty norm of canonical embedding
 double sampleSmall(zzX &poly, const FHEcontext& context);

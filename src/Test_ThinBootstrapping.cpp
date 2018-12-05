@@ -1,7 +1,8 @@
+#include <NTL/BasicThreadPool.h>
 #include "FHE.h"
 #include "EncryptedArray.h"
 #include "matmul.h"
-#include <NTL/BasicThreadPool.h>
+#include "debugging.h"
 
 NTL_CLIENT
 
@@ -9,9 +10,6 @@ static bool noPrint = false;
 static bool dry = false; // a dry-run flag
 static bool debug = 0;   // a debug flag
 static int scale = 0;
-
-extern FHESecKey* dbgKey;
-
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
@@ -111,10 +109,8 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
 
 
 
-  buildModChain(context, L, c,/*extraBits=*/7);
+  buildModChain(context, L, c, /*willBeBootstrappable=*/true);
 
-  long nPrimes = context.numPrimes();
-  IndexSet allPrimes(0,nPrimes-1);
   if (!noPrint) {
     std::cout << "security=" << context.securityLevel()<<endl;
     std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
@@ -167,12 +163,6 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
 
   FHEPubKey publicKey = secretKey;
 
-#ifdef DEBUG_PRINTOUT
-  dbgKey = &secretKey; 
-#else
-  if (debug) dbgKey = &secretKey;
-#endif
-
   long d = context.zMStar.getOrdP();
   long phim = context.zMStar.getPhiM();
   long nslots = phim/d;
@@ -181,6 +171,15 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
   ZZX GG;
   GG = context.alMod.getFactorsOverZZ()[0];
   EncryptedArray ea(context, GG);
+
+#ifndef DEBUG_PRINTOUT
+  if (debug) {
+#endif
+    dbgKey = &secretKey;
+    dbgEa = &ea;
+#ifndef DEBUG_PRINTOUT
+  }
+#endif
 
   zz_p::init(p2r);
   Vec<zz_p> val0(INIT_SIZE, nslots);

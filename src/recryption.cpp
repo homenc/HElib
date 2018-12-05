@@ -18,6 +18,7 @@
 #include "CtPtrs.h"
 #include "intraSlot.h"
 #include "norms.h"
+#include "sample.h"
 
 NTL_CLIENT
 
@@ -47,7 +48,7 @@ RecryptData::~RecryptData()
 
 
 /** Computing the recryption parameters
- *
+ * FIXME: this comment needs re-writing
  * To get the smallest possible value of e-e', the params need to satisfy:
  *  (p^e +1)/4 =>
  *       max { (t+1)( 1+ (alpha/2)*(p^e/p^{ceil(log_p(t+2))}) ) + noise      }
@@ -68,29 +69,29 @@ RecryptData::~RecryptData()
  */
 
 // Some convenience functions
-static double lowerBound1(long p, long r, long ePrime, long t,
+static double lowerBound1(long p, long r, long ePrime, double sk_bound,
 			  double alpha, double noise)
 {
-  return (t+1)*(1+ alpha*pow(p,r+ePrime-1)/2)+noise;
+  return (sk_bound+1)*(1+ alpha*pow(p,r+ePrime-1)/2)+noise;
 }
-static double lowerBound2(long p, long r, long ePrime, long t, double alpha)
+static double lowerBound2(long p, long r, long ePrime, double sk_bound, double alpha)
 {
-  return (t+1)*(1+ (1-alpha)*pow(p,r+ePrime-1)/2 + pow(p,r)/2)+1;
+  return (sk_bound+1)*(1+ (1-alpha)*pow(p,r+ePrime-1)/2 + pow(p,r)/2)+1;
 }
 
 static void setAlphaE(double& alpha, long& e, double rho, double gamma,
-		      double noise, double logp, long p2r, long t)
+		      double noise, double logp, long p2r, double sk_bound)
 {
   alpha = (1 +gamma*(2*rho-1))/(2*rho*(1+gamma));
   if (alpha<0) alpha=0;
   else if (alpha>1) alpha=1;
 
   if (alpha<1) {
-    double ratio = 4*(t+noise)/(1-2*alpha*rho);
+    double ratio = 4*(sk_bound+noise)/(1-2*alpha*rho);
     e = floor(1+ log(ratio)/logp);
   }
   else
-    e = floor(1+ log(2*(t+1)*p2r)/logp);
+    e = floor(1+ log(2*(sk_bound+1)*p2r)/logp);
 }
 
 double
@@ -98,21 +99,24 @@ RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
                        const FHEcontext& context, bool conservative, long t)
 {
   if (t <= 0) t = RecryptData::defSkHwt+1; // recryption key Hwt
+
+
   long p = context.zMStar.getP();
   long phim = context.zMStar.getPhiM();
   long r = context.alMod.getR();
   long p2r = context.alMod.getPPowR();
   double logp = log((double)p);
 
-  double noise = p2r * sqrt((t+1)*phim/3.0);
-  double gamma = 2*(t+noise)/((t+1)*p2r); // ratio between numerators
+  double sk_bound = sampleHWtBoundedEffectiveBound(context, t);
+  double noise = (1 + sk_bound)*context.noiseBoundForUniform(p2r/2.0, phim);
+  double gamma = 2*(sk_bound+noise)/((sk_bound+1)*p2r); // ratio between numerators
 
-  long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
-  double rho = (t+1)/pow(p,logT);
+  long logT = ceil(log((double)(sk_bound+2))/logp); // ceil(log_p(sk_bound+2))
+  double rho = (sk_bound+1)/pow(p,logT);
 
 #if 0
   if (!conservative) {   // try alpha, e with this "aggresive" setting
-    ::setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
+    ::setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, sk_bound);
     ePrime = e -r +1 -logT;
 
     // If e is too large, try again with rho/p instead of rho
@@ -128,7 +132,7 @@ RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
 #endif
 
   if (conservative) { // set alpha, e with a "conservative" rho/p
-    ::setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
+    ::setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, sk_bound);
     ePrime = e -r -logT;
   }
   return noise;
@@ -252,8 +256,9 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   long intFactor = ctxt.intFactor;
 
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
-  long e = getContext().rcData.e;
-  long ePrime = getContext().rcData.ePrime;
+  const RecryptData& rcData = getContext().rcData;
+  long e = rcData.e;
+  long ePrime = rcData.ePrime;
   long p2ePrime = power_long(p,ePrime);
   long q = power_long(p,e)+1;
   assert(e>=r);
@@ -298,16 +303,31 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   for (long i=0; i<(long)zzParts.size(); i++) {
     // make divisible by p^{e'}
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
-				getContext().rcData.alpha);
+				rcData.alpha);
     zzParts[i].normalize();   // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2) 
-    cerr << " * noise/q after makeDivisible = "
+  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2)
+    cerr << " ******** warning: noise/q after makeDivisible = "
 	 << ((noise + maxU*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
-
+#ifdef DEBUG_PRINTOUT
+   {
+    ZZX ptxt;
+    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+    cerr << "m="<<getContext().zMStar.getM()
+         << ": after makeDivisible, noiseEst="
+         << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
+         << ", maxCanonEmbedding="
+         << embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra())<<endl;
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
+    cerr << "  maxCoeff="<<largestCoeff(ptxt)
+         << ", maxPowerful="<<largestCoeff(powerful)
+         << endl;
+  }
+#endif
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
@@ -714,39 +734,10 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
   if (t <= 0) t = defSkHwt+1; // recryption key Hwt
   hwt = t;
+
+  double noise = RecryptData::setAlphaE(alpha,e,ePrime,context,conservative,t);
   long p = context.zMStar.getP();
-  long phim = context.zMStar.getPhiM();
   long r = context.alMod.getR();
-  long p2r = context.alMod.getPPowR();
-  double logp = log((double)p);
-
-  double noise = p2r * sqrt((t+1)*phim/3.0);
-  double gamma = 2*(t+noise)/((t+1)*p2r); // ratio between numerators
-
-  long logT = ceil(log((double)(t+2))/logp); // ceil(log_p(t+2))
-  double rho = (t+1)/pow(p,logT);
-
-#if 0
-  if (!conservative) {   // try alpha, e with this "aggresive" setting
-    setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, t);
-    ePrime = e -r +1 -logT;
-
-    // If e is too large, try again with rho/p instead of rho
-    long bound = (1L << (context.bitsPerLevel-1)); // halfSizePrime/2
-    if (pow(p,e) > bound) { // try the conservative setting instead
-      cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
-      conservative = true;
-    }
-  }
-#else
-  // FIXME: I don't know what to do with bitsPerLevel
-  conservative = true;
-#endif
-
-  if (conservative) { // set alpha, e with a "conservative" rho/p
-    setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, t);
-    ePrime = e -r -logT;
-  }
 
   // Compute highest key-Hamming-weight that still works (not more than 256)
   double qOver4 = (pow(p,e)+1)/4;
@@ -1026,10 +1017,25 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2) 
-    cerr << " * noise/q after makeDivisible = "
+  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2)
+    cerr << " ******** warning: noise/q after makeDivisible = "
 	 << ((noise + maxU*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
-
+#ifdef DEBUG_PRINTOUT
+  { ZZX ptxt;
+    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+    cerr << "m="<<getContext().zMStar.getM()
+         << ": after makeDivisible, noiseEst="
+         << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
+         << ", maxCanonEmbedding="
+         << embeddingLargestCoeff(ptxt,trcData.ea->getPAlgebra())<<endl;
+    const RecryptData& rcData = getContext().rcData;
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
+    cerr << "  maxCoeff="<<largestCoeff(ptxt)
+         << ", maxPowerful="<<largestCoeff(powerful)
+         << endl;
+  }
+#endif
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
