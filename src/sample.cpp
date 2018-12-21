@@ -263,20 +263,8 @@ double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt)
 double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
 {
 #if FFT_IMPL // is there any implementation of canonicalEmbedding?
+  double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
   const PAlgebra& palg = context.zMStar;
-
-  long deg_bnd = (palg.getPow2() == 0) ? palg.getM() : palg.getPhiM();
-
-  long log_deg_bnd = long(log(double(deg_bnd))/log(2.0) + 0.5) + 1;
-  //  sqrt(2) * deg_bnd  <= 2^{log_deg_bnd} <= 2*sqrt(2) * deg_bnd
-
-  // we use log_deg_bnd as in index into the erfc_inverse table
-  // so that we get a noise bound that should be satisfied
-  // with probablity at least 1/sqrt(2).
-
-  assert(log_deg_bnd < ERFC_INVERSE_SIZE);
-  double scale = erfc_inverse[log_deg_bnd];
-  double bound = scale * sqrt(double(Hwt));
     
   double val;
   long count = 0;

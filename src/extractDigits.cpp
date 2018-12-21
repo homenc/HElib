@@ -123,7 +123,9 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
     if (dbgKey) {
        double ratio = 
           log(embeddingLargestCoeff(digits[i], *dbgKey)/digits[i].getNoiseBound())/log(2.0);
-       fprintf(stderr, "%5ld [%f]\n", digits[i].bitCapacity(), ratio);
+       fprintf(stderr, "%5ld [%f]", digits[i].bitCapacity(), ratio);
+       if (ratio > 0) fprintf(stderr, " BAD-BOUND");
+       fprintf(stderr, "\n");
     }
     else {
        fprintf(stderr, "%5ld\n", digits[i].bitCapacity());
@@ -319,7 +321,17 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 #endif
 
 #ifdef VIEW_LEVELS
-    fprintf(stderr, "%5ld  --- %5ld\n", digits0[i].bitCapacity(), digits[i].bitCapacity());
+    if (dbgKey) {
+       double ratio = 
+          log(embeddingLargestCoeff(digits[i], *dbgKey)/digits[i].getNoiseBound())/log(2.0);
+       fprintf(stderr, "%5ld  --- %5ld", digits0[i].bitCapacity(), digits[i].bitCapacity());
+       fprintf(stderr, " [%f]", ratio);
+       if (ratio > 0) fprintf(stderr, " BAD-BOUND");
+       fprintf(stderr, "\n");
+    }
+    else {
+       fprintf(stderr, "%5ld  --- %5ld\n", digits0[i].bitCapacity(), digits[i].bitCapacity());
+    }
     //CheckCtxt(digits[i], "");
 #endif
   }

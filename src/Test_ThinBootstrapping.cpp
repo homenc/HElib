@@ -229,7 +229,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
 
   }
 
-  if (!noPrint) printAllTimers();
+  //if (!noPrint) printAllTimers();
   
 }
 

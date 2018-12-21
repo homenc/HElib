@@ -276,13 +276,22 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   CheckCtxt(ctxt, "init");
 #endif
 
+  ctxt.dropSmallAndSpecialPrimes();
+
+#ifdef PRINT_LEVELS
+  CheckCtxt(ctxt, "after mod down");
+#endif
+
+
+
   FHE_NTIMER_START(AAA_preProcess);
 
   // Make sure that this ciphertxt is in canonical form
   if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
 
   // Mod-switch down if needed
-  IndexSet s = ctxt.getPrimeSet() / getContext().specialPrimes; // set minus
+  IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
+  assert(s <= context.ctxtPrimes);
   if (s.card()>2) { // leave only bottom two primes
     long frst = s.first();
     long scnd = s.next(frst);
@@ -717,7 +726,9 @@ bool ThinRecryptData::operator==(const ThinRecryptData& other) const
 }
 
 
-// The main method
+// This code was copied from RecryptData::init, and is mostly
+// the same, except for the linear-map-related stuff.
+// FIXME: There is really too much code (and data!) duplication here.
 void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 		       long t, bool consFlag, bool build_cache_, bool minimal)
 {
@@ -961,6 +972,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   CheckCtxt(ctxt, "init");
 #endif
 
+  ctxt.dropSmallAndSpecialPrimes();
 
   if (thinRecrypt_initial_level) {
     // experimental code...we should drop down
@@ -990,7 +1002,8 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
 
   // Mod-switch down if needed
-  IndexSet s = ctxt.getPrimeSet() / ctxt.getContext().specialPrimes; // set minus
+  IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
+  assert(s <= context.ctxtPrimes);
   if (s.card()>2) { // leave only bottom two primes
     long frst = s.first();
     long scnd = s.next(frst);

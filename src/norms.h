@@ -18,6 +18,7 @@
 #include <complex>
 #include <NTL/ZZX.h>
 #include <NTL/xdouble.h>
+//#include <NTL/RR.h>
 #include "zzX.h"
 
 class DoubleCRT;
@@ -53,6 +54,7 @@ inline NTL::xdouble coeffsL2Norm(const DoubleCRT& f) // l2 norm
 
 typedef std::complex<double> cx_double;
 typedef std::complex<NTL::xdouble> cx_xdouble;
+typedef std::complex<long double> cx_ldouble;
 
 #if FFT_IMPL
 //! Computing the L2 norm of the canonical embedding

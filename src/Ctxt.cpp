@@ -1685,7 +1685,9 @@ void CheckCtxt(const Ctxt& c, const char* label)
   if (dbgKey) {
     Ctxt c1(c);
     //c1.dropSmallAndSpecialPrimes();
-    cerr << ", log2(noise/bound)=" << (log(embeddingLargestCoeff(c1, *dbgKey)/c1.getNoiseBound())/log(2.0));
+    double ratio = log(embeddingLargestCoeff(c1, *dbgKey)/c1.getNoiseBound())/log(2.0);
+    cerr << ", log2(noise/bound)=" << ratio;
+    if (ratio > 0) cerr << " BOUND-ERROR";
     //cerr << ", log2(noise)=" << (log(embeddingLargestCoeff(c1, *dbgKey))/log(2.0));
     //cerr << ", log2(bound)=" << (log(c1.getNoiseBound())/log(2.0));
   }
@@ -1826,8 +1828,8 @@ void innerProduct(Ctxt& result,
 // Mod-switch to an externally-supplied modulus. The modulus need not be in
 // the moduli-chain in the context, and does not even need to be a prime.
 // The ciphertext *this is not affected, instead the result is returned in
-// the zzParts vector, as a vector of ZZX'es. Returns an extimate for the
-// noise variance after mod-switching.
+// the zzParts vector, as a vector of ZZX'es. 
+// Returns an extimate for the noise bound after mod-switching.
 
 #include "powerful.h"
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
