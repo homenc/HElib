@@ -98,8 +98,8 @@ double
 RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
                        const FHEcontext& context, bool conservative, long t)
 {
+  static constexpr long p2eBound = 1L<<30; // FIXME: replace "magic constant"?
   if (t <= 0) t = RecryptData::defSkHwt+1; // recryption key Hwt
-
 
   long p = context.zMStar.getP();
   long phim = context.zMStar.getPhiM();
@@ -114,15 +114,16 @@ RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
   long logT = ceil(log((double)(sk_bound+2))/logp); // ceil(log_p(sk_bound+2))
   double rho = (sk_bound+1)/pow(p,logT);
 
-#if 0
+#if 1
   if (!conservative) {   // try alpha, e with this "aggresive" setting
     ::setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, sk_bound);
     ePrime = e -r +1 -logT;
 
     // If e is too large, try again with rho/p instead of rho
-    long bound = (1L << (context.bitsPerLevel-1)); // halfSizePrime/2
-    if (pow(p,e) > bound) { // try the conservative setting instead
-      cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<bound<<")\n";
+    if (pow(p,e) > p2eBound) { // try the conservative setting instead
+#ifdef PRINT_LEVELS
+      cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<p2eBound<<")\n";
+#endif
       conservative = true;
     }
   }
@@ -135,6 +136,9 @@ RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
     ::setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, sk_bound);
     ePrime = e -r -logT;
   }
+#ifdef PRINT_LEVELS
+  cerr << "e="<<e<<", e'="<<ePrime<<", alpha="<<alpha<<endl;
+#endif
   return noise;
 }
 
