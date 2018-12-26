@@ -574,6 +574,8 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
     context.AddSpecialPrime(q);
     logSoFar += log(q);
   }
+
+  //cerr << "****** special primes: " << logOfSpecialPrimes << " " << context.logOfProduct(context.specialPrimes) << "\n";
 }
 
 void buildModChain(FHEcontext& context, long nBits, long nDgts,

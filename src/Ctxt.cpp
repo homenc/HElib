@@ -19,6 +19,8 @@
 #include "CtPtrs.h"
 
 #include "debugging.h"
+#include "powerful.h"
+#include "norms.h"
 
 NTL_CLIENT
 
@@ -1683,17 +1685,27 @@ void CheckCtxt(const Ctxt& c, const char* label)
        << ", p^r=" << c.getPtxtSpace();
 
   if (dbgKey) {
-    Ctxt c1(c);
-    //c1.dropSmallAndSpecialPrimes();
-    double ratio = log(embeddingLargestCoeff(c1, *dbgKey)/c1.getNoiseBound())/log(2.0);
+    double ratio = log(embeddingLargestCoeff(c, *dbgKey)/c.getNoiseBound())/log(2.0);
     cerr << ", log2(noise/bound)=" << ratio;
-    if (ratio > 0) cerr << " BOUND-ERROR";
-    //cerr << ", log2(noise)=" << (log(embeddingLargestCoeff(c1, *dbgKey))/log(2.0));
-    //cerr << ", log2(bound)=" << (log(c1.getNoiseBound())/log(2.0));
+    if (ratio > 0) cerr << " BAD-BOUND";
   }
-       //<< ", #smallPrimes=" << (c.getPrimeSet() & c.getContext().smallPrimes).card()
-       //<< ", #ctxtPrimes=" << (c.getPrimeSet() & c.getContext().ctxtPrimes).card()
-       //<< ", #specialPrimes=" << (c.getPrimeSet() & c.getContext().specialPrimes).card()
+
+  if (dbgKey && c.getContext().isBootstrappable()) {
+    const FHEcontext& context = c.getContext();
+    const RecryptData& rcData = context.rcData;
+    const PAlgebra& palg = context.zMStar;
+
+    ZZX p, pp;
+    dbgKey->Decrypt(p, c, pp);
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, pp, context.ctxtPrimes);
+    xdouble max_powerful = conv<xdouble>(largestCoeff(powerful));
+    xdouble max_canon = embeddingLargestCoeff(pp, palg);
+    double ratio = log(max_powerful/max_canon)/log(2.0);
+
+    cerr << ", log2(max_pwrfl/max_canon)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
+  }
   cerr << endl;
 }
 

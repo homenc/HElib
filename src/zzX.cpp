@@ -64,7 +64,7 @@ void normalize(zzX& f)
 {
   long deg = f.length()-1;
   if (deg<0) return; // empty vector = zero polynomial
-  while (f[deg]==0) deg--;
+  while (deg >= 0 && f[deg]==0) deg--;
   f.SetLength(deg+1);
 }
 

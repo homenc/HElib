@@ -19,6 +19,7 @@
 #include "intraSlot.h"
 #include "norms.h"
 #include "sample.h"
+#include "debugging.h"
 
 NTL_CLIENT
 
@@ -31,10 +32,7 @@ long thinRecrypt_initial_level=0;
 static void x2iInSlots(ZZX& poly, long i,
 		       vector<ZZX>& xVec, const EncryptedArray& ea);
 
-// Make every entry of vec divisible by p^e by adding/subtracting multiples
-// of p^r and q, while keeping the added multiples small. 
-template<class VecInt>
-long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha);
+
 static inline double pow(long a, long b) {return pow(double(a), double(b));}
 
 RecryptData::~RecryptData()
@@ -232,6 +230,10 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 // Extract digits from unpacked slots
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
+
+static
+long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha, 
+                   double& U_norm, const PAlgebra& palg);
  
 // bootstrap a ciphertext to reduce noise
 void FHEPubKey::reCrypt(Ctxt &ctxt)
@@ -313,34 +315,63 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   long maxU=0;
+  double maxU_norm = 0;
   for (long i=0; i<(long)zzParts.size(); i++) {
     // make divisible by p^{e'}
+    double U_norm;
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
-				rcData.alpha);
+				rcData.alpha, U_norm, context.zMStar);
     zzParts[i].normalize();   // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
+    if (maxU_norm < U_norm)  maxU_norm = U_norm;
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2)
+  if (noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1) > q/2)
     cerr << " ******** warning: noise/q after makeDivisible = "
-	 << ((noise + maxU*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
-#ifdef DEBUG_PRINTOUT
-   {
-    ZZX ptxt;
-    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
-    cerr << "m="<<getContext().zMStar.getM()
-         << ": after makeDivisible, noiseEst="
-         << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
-         << ", maxCanonEmbedding="
-         << embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra())<<endl;
-    Vec<ZZ> powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
-    cerr << "  maxCoeff="<<largestCoeff(ptxt)
-         << ", maxPowerful="<<largestCoeff(powerful)
-         << endl;
+	 << ((noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
+
+#ifdef PRINT_LEVELS
+   if (dbgKey) {
+     const RecryptData& rcData = ctxt.getContext().rcData;
+     ZZX ptxt;
+     rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+     Vec<ZZ> powerful;
+     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
+
+#if 1
+     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+     xdouble max_canon = embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
+     double noise_bnd = noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1);
+
+     cerr << "  after makeDivisible";
+
+     cerr << ", maxU=" << maxU;
+     cerr << ", maxU_norm=" << maxU_norm;
+
+     cerr << ", max_pwrfl/q=" << (max_pwrfl/q);
+
+     double ratio0 = log(max_canon/noise_bnd)/log(2.0);
+     cerr << ", log2(max_canon/bound)=" << ratio0;
+     if (ratio0 > 0) cerr << " bad-BOUND";
+
+     double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
+     cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
+     if (ratio1 > 0) cerr << " BAD-BOUND";
+
+     cerr << "\n";
+#else
+     cerr << "  after makeDivisible, noiseEst="
+	  << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
+	  << ", maxCanon="
+	  << embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
+     cerr << ",  maxCoeff="<<largestCoeff(ptxt)
+	  << ", maxPowfl="<<largestCoeff(powerful)
+	  << endl;
+#endif
   }
 #endif
+
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
@@ -350,15 +381,16 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa, printFlag);
 #endif
 
-  double p0size = to_double(coeffsL2Norm(zzParts[0]));
-  double p1size = to_double(coeffsL2Norm(zzParts[1]));
+  double p0size = to_double(embeddingLargestCoeff(zzParts[0], context.zMStar));
+  double p1size = to_double(embeddingLargestCoeff(zzParts[1], context.zMStar));
+  // FIXME: This might be slow without Armadillo
 
   // NOTE: here we lose the intFactor associated with ctxt.
   // We will restore it below.
   ctxt = recryptEkey;
 
-  ctxt.multByConstant(zzParts[1], p1size*p1size);
-  ctxt.addConstant(zzParts[0], p0size*p0size);
+  ctxt.multByConstant(zzParts[1]);
+  ctxt.addConstant(zzParts[0]);
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans1 ";
@@ -441,11 +473,15 @@ static void x2iInSlots(ZZX& poly, long i,
 //
 // This code is more general than we need, for bootstrapping we will always
 // have e>r.
-template<class VecInt>
-long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha)
+static
+long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha, 
+                   double& U_norm, const PAlgebra& palg)
 {
   assert(((p2e % p2r == 0) && (q % p2e == 1)) ||
 	 ((p2r % p2e == 0) && (q % p2r == 1)));
+
+  zzX U_vec;
+  U_vec.SetLength(vec.length());
 
   long maxU =0;
   ZZ maxZ;
@@ -476,6 +512,8 @@ long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha)
     if (abs(u) > maxU) maxU = abs(u);
     if (abs(z) > maxZ) maxZ = abs(z);
 
+    U_vec[i] = u;
+
     if (rem(z,p2e) != 0) { // sanity check
       cerr << "**error: original z["<<i<<"]=" << vec[i]
 	   << std::dec << ", p^r="<<p2r << ", p^e="<<p2e << endl;
@@ -485,13 +523,12 @@ long makeDivisible(VecInt& vec, long p2e, long p2r, long q, double alpha)
     }
     conv(vec[i], z); // convert back to native format
   }
+
+  normalize(U_vec);
+  U_norm = embeddingLargestCoeff(U_vec, palg);
+
   return maxU;
 }
-// explicit instantiation for vec_ZZ and vec_long
-template long makeDivisible<vec_ZZ>(vec_ZZ& v, long p2e,
-				    long p2r, long q, double alpha);
-// template long makeDivisible<vec_long>(vec_long& v, long p2e,
-// 				      long p2r, long q, double alpha);
 
 #ifdef FHE_BOOT_THREADS
 
@@ -1025,34 +1062,63 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   long maxU=0;
+  double maxU_norm = 0;
   for (long i=0; i<(long)zzParts.size(); i++) {
     // make divisible by p^{e'}
+    double U_norm;
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
-				trcData.alpha);
+				trcData.alpha, U_norm, context.zMStar);
     zzParts[i].normalize();   // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
+    if (maxU_norm < U_norm)  maxU_norm = U_norm;
   }
 
   // Check that the estimated noise is still low
-  if (noise + maxU*p2r*(skBounds[recryptKeyID]+1) > q/2)
+  if (noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1) > q/2)
     cerr << " ******** warning: noise/q after makeDivisible = "
-	 << ((noise + maxU*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
-#ifdef DEBUG_PRINTOUT
-  { ZZX ptxt;
-    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
-    cerr << "m="<<getContext().zMStar.getM()
-         << ": after makeDivisible, noiseEst="
-         << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
-         << ", maxCanonEmbedding="
-         << embeddingLargestCoeff(ptxt,trcData.ea->getPAlgebra())<<endl;
-    const RecryptData& rcData = getContext().rcData;
-    Vec<ZZ> powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
-    cerr << "  maxCoeff="<<largestCoeff(ptxt)
-         << ", maxPowerful="<<largestCoeff(powerful)
-         << endl;
+	 << ((noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
+
+#ifdef PRINT_LEVELS
+   if (dbgKey) {
+     const RecryptData& rcData = ctxt.getContext().rcData;
+     ZZX ptxt;
+     rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+     Vec<ZZ> powerful;
+     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
+
+#if 1
+     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+     xdouble max_canon = embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
+     double noise_bnd = noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1);
+
+     cerr << "  after makeDivisible";
+
+     cerr << ", maxU=" << maxU;
+     cerr << ", maxU_norm=" << maxU_norm;
+
+     cerr << ", max_pwrfl/q=" << (max_pwrfl/q);
+
+     double ratio0 = log(max_canon/noise_bnd)/log(2.0);
+     cerr << ", log2(max_canon/bound)=" << ratio0;
+     if (ratio0 > 0) cerr << " bad-BOUND";
+
+     double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
+     cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
+     if (ratio1 > 0) cerr << " BAD-BOUND";
+
+     cerr << "\n";
+#else
+     cerr << "  after makeDivisible, noiseEst="
+	  << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
+	  << ", maxCanon="
+	  << embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
+     cerr << ",  maxCoeff="<<largestCoeff(ptxt)
+	  << ", maxPowfl="<<largestCoeff(powerful)
+	  << endl;
+#endif
   }
 #endif
+
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
@@ -1062,15 +1128,17 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa, printFlag);
 #endif
 
-  double p0size = to_double(coeffsL2Norm(zzParts[0]));
-  double p1size = to_double(coeffsL2Norm(zzParts[1]));
+  double p0size = to_double(embeddingLargestCoeff(zzParts[0], context.zMStar));
+  double p1size = to_double(embeddingLargestCoeff(zzParts[1], context.zMStar));
+  // FIXME: This might be slow without Armadillo
 
   // NOTE: here we lose the intFactor associated with ctxt.
   // We will restore it below.
   ctxt = recryptEkey;
 
-  ctxt.multByConstant(zzParts[1], p1size*p1size);
-  ctxt.addConstant(zzParts[0], p0size*p0size);
+
+  ctxt.multByConstant(zzParts[1], p1size);
+  ctxt.addConstant(zzParts[0], p0size);
 
 #ifdef DEBUG_PRINTOUT
   cerr << "+ Before linearTrans1 ";
