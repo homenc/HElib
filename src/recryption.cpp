@@ -336,8 +336,11 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
      const RecryptData& rcData = ctxt.getContext().rcData;
      ZZX ptxt;
      rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
-     Vec<ZZ> powerful;
-     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
+
+     ZZX powerful;
+     rcData.p2dConv->ZZXtoPowerful(powerful.rep, ptxt, context.ctxtPrimes);
+     powerful.normalize();
+     PolyRed(powerful, powerful, q, /*abs=*/false);
 
 #if 1
      xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
@@ -1083,8 +1086,11 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
      const RecryptData& rcData = ctxt.getContext().rcData;
      ZZX ptxt;
      rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
-     Vec<ZZ> powerful;
-     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt, context.ctxtPrimes);
+
+     ZZX powerful;
+     rcData.p2dConv->ZZXtoPowerful(powerful.rep, ptxt, context.ctxtPrimes);
+     powerful.normalize();
+     PolyRed(powerful, powerful, q, /*abs=*/false);
 
 #if 1
      xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
