@@ -1900,4 +1900,7 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 
   // Return an estimate for the noise
   return conv<double>(noiseBound*ratio + modSwitchAddedNoiseBound());
+  // NOTE: technically, modSwitchAddedNoise bound assumes rounding is done
+  // in the polynomial basis, rather than the powerful basis, but the same bounds
+  // are still valid
 }
