@@ -480,11 +480,13 @@ static
 long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha, 
                    double& U_norm, const PAlgebra& palg)
 {
+  ZZX vec_orig;
+  conv(vec_orig, vec);
+  PolyRed(vec_orig, vec_orig, q);
+
+
   assert(((p2e % p2r == 0) && (q % p2e == 1)) ||
 	 ((p2r % p2e == 0) && (q % p2r == 1)));
-
-  zzX U_vec;
-  U_vec.SetLength(vec.length());
 
   long maxU =0;
   ZZ maxZ;
@@ -515,8 +517,6 @@ long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha,
     if (abs(u) > maxU) maxU = abs(u);
     if (abs(z) > maxZ) maxZ = abs(z);
 
-    U_vec[i] = u;
-
     if (rem(z,p2e) != 0) { // sanity check
       cerr << "**error: original z["<<i<<"]=" << vec[i]
 	   << std::dec << ", p^r="<<p2r << ", p^e="<<p2e << endl;
@@ -527,8 +527,15 @@ long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha,
     conv(vec[i], z); // convert back to native format
   }
 
-  normalize(U_vec);
-  U_norm = embeddingLargestCoeff(U_vec, palg);
+  ZZX vec_new;
+  conv(vec_new, vec);
+  vec_new = vec_new - vec_orig;
+  PolyRed(vec_new, vec_new, q);
+
+  assert(divide(vec_new, vec_new, p2r));
+
+  U_norm = conv<double>(embeddingLargestCoeff(vec_new, palg));
+
 
   return maxU;
 }
@@ -1062,6 +1069,44 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
   double noise = ctxt.rawModSwitch(zzParts, q);
+
+#ifdef PRINT_LEVELS
+   if (dbgKey) {
+     const RecryptData& rcData = ctxt.getContext().rcData;
+     ZZX ptxt;
+     rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+
+     ZZX powerful;
+     rcData.p2dConv->ZZXtoPowerful(powerful.rep, ptxt, context.ctxtPrimes);
+     powerful.normalize();
+     PolyRed(powerful, powerful, q, /*abs=*/false);
+
+     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+     xdouble max_canon = embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
+     double noise_bnd = noise;
+
+     ZZX skey_poly;
+     dbgKey->sKeys[recryptKeyID].toPoly(skey_poly);
+     double skey_bound = skBounds[recryptKeyID];
+     double skey_canon = conv<double>(embeddingLargestCoeff(skey_poly,rcData.ea->getPAlgebra()));
+
+     cerr << "  before makeDivisible";
+
+     double ratio0 = log(max_canon/noise_bnd)/log(2.0);
+     cerr << ", log2(max_canon/bound)=" << ratio0;
+     if (ratio0 > 0) cerr << " bad-BOUND";
+
+     double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
+     cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
+     if (ratio1 > 0) cerr << " BAD-BOUND";
+
+     double ratio2 = log(skey_canon/skey_bound)/log(2.0);
+     cerr << ", log2(skey_canon/skey_bound)=" << ratio2;
+     if (ratio2 > 0) cerr << " BAD-BOUND";
+
+     cerr << "\n";
+  }
+#endif
 
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   long maxU=0;
