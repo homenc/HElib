@@ -49,7 +49,6 @@ xdouble embeddingLargestCoeff(const Ctxt& ctxt, const FHESecKey& sk)
   ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
   return embeddingLargestCoeff(pp, context.zMStar);
-  //return conv<xdouble>(largestCoeff(pp));
 }
 
 

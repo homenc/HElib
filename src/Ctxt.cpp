@@ -1691,19 +1691,22 @@ void CheckCtxt(const Ctxt& c, const char* label)
   }
 
   if (dbgKey && c.getContext().isBootstrappable()) {
-    const FHEcontext& context = c.getContext();
+    Ctxt c1(c);
+    c1.dropSmallAndSpecialPrimes();
+
+    const FHEcontext& context = c1.getContext();
     const RecryptData& rcData = context.rcData;
     const PAlgebra& palg = context.zMStar;
 
     ZZX p, pp;
-    dbgKey->Decrypt(p, c, pp);
+    dbgKey->Decrypt(p, c1, pp);
     ZZX powerful;
     rcData.p2dConv->ZZXtoPowerful(powerful.rep, pp, context.ctxtPrimes);
     powerful.normalize();
 
     // reduce again mod Q = product of primeSet, just to be safe
     ZZ Q;
-    c.getContext().productOfPrimes(Q, c.getPrimeSet());
+    c1.getContext().productOfPrimes(Q, c1.getPrimeSet());
     PolyRed(powerful, powerful, Q);
 
     xdouble max_powerful = conv<xdouble>(largestCoeff(powerful));
