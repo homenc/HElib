@@ -1709,10 +1709,14 @@ void CheckCtxt(const Ctxt& c, const char* label)
     c1.getContext().productOfPrimes(Q, c1.getPrimeSet());
     PolyRed(powerful, powerful, Q);
 
-    xdouble max_powerful = conv<xdouble>(largestCoeff(powerful));
+    xdouble max_coeff = conv<xdouble>(largestCoeff(pp));
+    xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
     xdouble max_canon = embeddingLargestCoeff(pp, palg);
-    double ratio = log(max_powerful/max_canon)/log(2.0);
+    double ratio = log(max_pwrfl/max_canon)/log(2.0);
 
+    //cerr << ", max_coeff=" << max_coeff;
+    //cerr << ", max_pwrfl=" << max_pwrfl;
+    //cerr << ", max_canon=" << max_canon;
     cerr << ", log2(max_pwrfl/max_canon)=" << ratio;
     if (ratio > 0) cerr << " BAD-BOUND";
   }
