@@ -1144,8 +1144,10 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
      cerr << "  after makeDivisible";
 
-     cerr << ", maxU=" << maxU;
+     cerr << ", noise=" << noise;
      cerr << ", maxU_norm=" << maxU_norm;
+     cerr << ", p2r=" << p2r;
+     cerr << ", sk_bnd=" << skBounds[recryptKeyID];
 
      cerr << ", max_pwrfl/q=" << (max_pwrfl/q);
 

@@ -1697,8 +1697,15 @@ void CheckCtxt(const Ctxt& c, const char* label)
 
     ZZX p, pp;
     dbgKey->Decrypt(p, c, pp);
-    Vec<ZZ> powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful, pp, context.ctxtPrimes);
+    ZZX powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful.rep, pp, context.ctxtPrimes);
+    powerful.normalize();
+
+    // reduce again mod Q = product of primeSet, just to be safe
+    ZZ Q;
+    c.getContext().productOfPrimes(Q, c.getPrimeSet());
+    PolyRed(powerful, powerful, Q);
+
     xdouble max_powerful = conv<xdouble>(largestCoeff(powerful));
     xdouble max_canon = embeddingLargestCoeff(pp, palg);
     double ratio = log(max_powerful/max_canon)/log(2.0);
