@@ -251,8 +251,49 @@ void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra&
   NTL_EXEC_RANGE_END
   FHE_TIMER_STOP;
 }
+
+// evaluate poly(x) using Horner's rule
+// FIXME: this is actually evaluating the reverse polynomial
+cx_double complexEvalPoly(const Vec<double>& poly, const cx_double& x)
+{
+  if (poly.length()<=0) return cx_double(0.0,0.0);
+  cx_double res(poly[0], 0.0);
+  for (long i: range(1, poly.length())) {
+    res *= x;
+    res += cx_double(poly[i]);
+  }
+  return res;
+}
+
+void canonicalEmbedding(std::vector<cx_double>& v, const ZZX& f, const PAlgebra& palg)
+{
+  FHE_TIMER_START;
+  long m = palg.getM();
+  long phimBy2 = divc(palg.getPhiM(),2);
+  vector<long> zmstar(phimBy2); // the first half of Zm*
+
+  Vec<double> ff;
+  conv(ff, f.rep);
+
+  if (palg.getNSlots()==phimBy2) // order roots by the palg order
+    for (long i=0; i<phimBy2; i++)
+      zmstar[phimBy2-i-1] = palg.ith_rep(i);
+  else                           // order roots sequentially
+    for (long i=1, idx=0; i<=m/2; i++)
+      if (palg.inZmStar(i)) zmstar[idx++] = i;
+
+  v.resize(phimBy2);
+  NTL_EXEC_RANGE(phimBy2, first, last)
+  for (long i=first; i < last; ++i) {
+    auto rou = std::polar<double>(1.0, -(2*pi*zmstar[i])/m); // root of unity
+    v[i] = complexEvalPoly(ff,rou);
+  }
+  NTL_EXEC_RANGE_END
+  FHE_TIMER_STOP;
+}
+
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
-                  const PAlgebra& palg, bool strictInverse)
+                  const PAlgebra& palg, double scaling, bool strictInverse)
 {
   NTL::Error("embedInSlots not implemented\n");
 }
