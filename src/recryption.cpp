@@ -358,7 +358,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
      double ratio0 = log(max_canon/noise_bnd)/log(2.0);
      cerr << ", log2(max_canon/bound)=" << ratio0;
-     if (ratio0 > 0) cerr << " bad-BOUND";
+     if (ratio0 > 0) cerr << " BAD-BOUND";
 
      double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
      cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
@@ -1101,7 +1101,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
      double ratio0 = log(max_canon/noise_bnd)/log(2.0);
      cerr << ", log2(max_canon/bound)=" << ratio0;
-     if (ratio0 > 0) cerr << " bad-BOUND";
+     if (ratio0 > 0) cerr << " BAD-BOUND";
 
      double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
      cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
