@@ -227,10 +227,10 @@ public:
              const std::vector<long>& ords = std::vector<long>() );  // constructor
 
   void makeBootstrappable(const NTL::Vec<long>& mvec, long skWht=0,
-			  bool conservative=false, bool build_cache=false)
+			  bool build_cache=false)
   { 
-    rcData.init(*this, mvec, skWht, conservative, build_cache); 
-    trcData.init(*this, mvec, skWht, conservative, build_cache); 
+    rcData.init(*this, mvec, skWht, build_cache); 
+    trcData.init(*this, mvec, skWht, build_cache); 
   }
 
   bool isBootstrappable() const 

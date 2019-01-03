@@ -27,6 +27,7 @@ long thinRecrypt_initial_level=0;
 
 #define PRINT_LEVELS
 
+/*constexpr*/ double RecryptData::magicConst = 1.0;
 
 /************* Some local functions *************/
 static void x2iInSlots(ZZX& poly, long i,
@@ -45,106 +46,112 @@ RecryptData::~RecryptData()
 }
 
 
-/** Computing the recryption parameters
- * FIXME: this comment needs re-writing
- * To get the smallest possible value of e-e', the params need to satisfy:
- *  (p^e +1)/4 =>
- *       max { (t+1)( 1+ (alpha/2)*(p^e/p^{ceil(log_p(t+2))}) ) + noise      }
- *           { (t+1)( 1+ ((1-alpha)/2)*(p^e/p^{ceil(log_p(t+2))}) +p^r/2) +1 },
+
+/** We want to get the smallest value of e-e', subject to a
+ * few constraints: For RecryptData::magicConst, an exponent e,
+ * a norm-t secret key, and plaintext space mod p^r, we need to
+ * find integers a and b so that:
  *
- * where noise is taken to be twice the mod-switching additive term, namely
- * noise = p^r *sqrt((t+1)*phi(m)/3). Denoting rho=(t+1)/p^{ceil(log_p(t+2))}
- * (and ignoring fome +1 terms), this is equivalent to:
+ *    (1) (4a+ 8p^r)(t+1)*magicConst <= q  = p^e +1
+ *    (2) (4b+ 8)(t+1) * magicConst <= q-4= p^e -3
  *
- *   p^e > max { 4(t+noise)/(1-2*alpha*rho), 2(t+1)p^r/(1-2(1-alpha)rho) }.
+ * Then e' is the largest exponent such that p^{e'} <= 2(a+b).
  *
- * We first compute the optimal value for alpha (which must be in [0,1]),
- * that makes the two terms in the max{...} as close as possible, and
- * then compute the smallest value of e satisfying this constraint.
+ * Note that if we let e,e' tend to infinity and set a=b=p^{e'}/4,
+ * then the two constraints above degenerate to
  *
- * If this value is too big then we try again with e-e' one larger,
- * which means that rho is a factor of p smaller.
+ *    2(t+1)*magicConst < p^{e-e'}
+ *
+ * so the smallest value of e-e' that we can hope for is
+ *
+ *    e-e' = ceiling( log_p( 2(t+1)*magicConst ) )
+ *
+ * The setAE procedure tries to find a setting of e,e',a (and
+ * b = p^{e'}/2 -a) that satisfies the constraints (1,2) and
+ * yeilds the smallest e-e', so long as e is "not too big".
+ * Specifically, it minimizes e-e' while ensuring p^e < 2^{30},
+ * if possible (and failing that it will just satisfy the
+ * constraints (1,2)).
+ *
+ * Once e, e', a are set, it copmutes and returns the largest 
+ * Hamming-weight for the key for which constraints (1,2) still hold.
+ * NOTE: it returns the Hamming weight, *not* the size of the key.
+ *       The size can be computed by calling the function
+ *       sampleHWtBoundedEffectiveBound(context, weight)
  */
-
-// Some convenience functions
-static double lowerBound1(long p, long r, long ePrime, double sk_bound,
-			  double alpha, double noise)
+long RecryptData::setAE(long& a, long& e, long& ePrime,
+                    const FHEcontext& context, long t)
 {
-  return (sk_bound+1)*(1+ alpha*pow(p,r+ePrime-1)/2)+noise;
-}
-static double lowerBound2(long p, long r, long ePrime, double sk_bound, double alpha)
-{
-  return (sk_bound+1)*(1+ (1-alpha)*pow(p,r+ePrime-1)/2 + pow(p,r)/2)+1;
-}
-
-static void setAlphaE(double& alpha, long& e, double rho, double gamma,
-		      double noise, double logp, long p2r, double sk_bound)
-{
-  alpha = (1 +gamma*(2*rho-1))/(2*rho*(1+gamma));
-  if (alpha<0) alpha=0;
-  else if (alpha>1) alpha=1;
-
-  if (alpha<1) {
-    double ratio = 4*(sk_bound+noise)/(1-2*alpha*rho);
-    e = floor(1+ log(ratio)/logp);
-  }
-  else
-    e = floor(1+ log(2*(sk_bound+1)*p2r)/logp);
-}
-
-double
-RecryptData::setAlphaE(double& alpha, long& e, long& ePrime,
-                       const FHEcontext& context, bool conservative, long t)
-{
-  static constexpr long p2eBound = 1L<<30; // FIXME: replace "magic constant"?
-  if (t <= 0) t = RecryptData::defSkHwt+1; // recryption key Hwt
-
+  if (t<=0) t = RecryptData::defSkHwt;
+  double bound = (t+1) * RecryptData::magicConst * 4;
   long p = context.zMStar.getP();
-  long phim = context.zMStar.getPhiM();
-  long r = context.alMod.getR();
+  //  long r = context().alMod.getR();
   long p2r = context.alMod.getPPowR();
-  double logp = log((double)p);
 
-  double sk_bound = sampleHWtBoundedEffectiveBound(context, t);
-  double noise = (1 + sk_bound)*context.noiseBoundForUniform(p2r/2.0, phim);
-  double gamma = 2*(sk_bound+noise)/((sk_bound+1)*p2r); // ratio between numerators
+  // We must have p^e > 8 p^r (t+1)*magicCons
+  double eMin = ceil(log(1+ 2*bound*p2r)/log(p));
 
-  long logT = ceil(log((double)(sk_bound+2))/logp); // ceil(log_p(sk_bound+2))
-  double rho = (sk_bound+1)/pow(p,logT);
+  // make sure that p^e for this smallest e is single-precision
+  assert(eMin*log(p) < log(NTL_SP_BOUND));
 
-#if 1
-  if (!conservative) {   // try alpha, e with this "aggresive" setting
-    ::setAlphaE(alpha, e, rho, gamma, noise, logp, p2r, sk_bound);
-    ePrime = e -r +1 -logT;
+  // The loop below tries to find e such that p^e < 2^30
+  a = 0;
+  e = eMin;
+  ePrime = 0;
+  long eMinusEprime = e; // want to minimize e-e'
+  long eTry = e;
+  long b = 0;
+  do {
+    double p2e = pow(p,eTry);
 
-    // If e is too large, try again with rho/p instead of rho
-    if (pow(p,e) > p2eBound) { // try the conservative setting instead
-#ifdef PRINT_LEVELS
-      cerr << "* p^e="<<pow(p,e)<<" is too big (bound="<<p2eBound<<")\n";
-#endif
-      conservative = true;
+    // Solve for the largest a,b satisfying constraints (1,2)
+    long aTry = floor( (p2e+1)/bound ) - 2*p2r;
+    long bTry = floor( (p2e-3)/bound ) - 2;
+    assert(aTry > 0 && bTry > 0);     // sanity check
+    aTry -= (aTry % p2r); // reduce to nearest multiply of p^r
+
+    long ePrimeTry = floor( log(2*(aTry+bTry))/log(p) );
+    if (eTry - ePrimeTry < eMinusEprime) {
+      e = eTry;
+      ePrime = ePrimeTry;
+      eMinusEprime = e - ePrime;
+
+      // Set the value of a, reduced by a bit if possible
+      long pToEprimeOver2 = floor(pow(p,ePrime)/2.0);
+      b = bTry;
+      a = pToEprimeOver2 - bTry;
+      a -= (a % p2r);
+      if (a<0) a=0;
     }
-  }
-#else
-  // FIXME: I don't know what to do with bitsPerLevel
-  conservative = true;
-#endif
+  } while ((++eTry)*log(p) <= log(1L<<30));  
 
-  if (conservative) { // set alpha, e with a "conservative" rho/p
-    ::setAlphaE(alpha, e, rho/p, gamma, noise, logp, p2r, sk_bound);
-    ePrime = e -r -logT;
+  // Try to increase t, while maintaining constraints (1,2)
+  double boundA = (4*a + 8*p2r)*RecryptData::magicConst;
+  double boundB = (4*b + 8)*RecryptData::magicConst;
+  long q = ceil(pow(p,e))+1;
+  while (t++) {
+    if (t>512 || boundA*t > q || boundB*t > q-4)
+      break;
   }
-#ifdef PRINT_LEVELS
-  cerr << "e="<<e<<", e'="<<ePrime<<", alpha="<<alpha<<endl;
+  t--;
+
+  long hwt;  // Find the largest Hamming weight that yeilds size <= t
+  for (hwt=256; hwt>0; hwt--) {
+    if (sampleHWtBoundedEffectiveBound(context, hwt)<=t)
+      break;
+  }  
+#ifdef DEBUG_PRINTOUT
+  cerr << "RecryptData::setAE(): e="<<e<<", e'="<<ePrime
+       << ", a="<<a<<", sk-hwt="<<hwt<<" (size="<<t<<")\n";
 #endif
-  return noise;
+  return hwt;
 }
+
 
 bool RecryptData::operator==(const RecryptData& other) const
 {
   if (mvec != other.mvec) return false;
   if (hwt != other.hwt) return false;
-  if (conservative != other.conservative) return false;
 
   return true;
 }
@@ -155,7 +162,7 @@ long fhe_disable_fat_boot = 0;
 
 // The main method
 void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
-		       long t, bool consFlag, bool build_cache_, bool minimal)
+		       long t, bool build_cache_, bool minimal)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to RecryptData::init\n";
@@ -165,21 +172,11 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
   // Record the arguments to this function
   mvec = mvec_;
-  conservative = consFlag;
   build_cache = build_cache_;
 
-  if (t <= 0) t = defSkHwt+1; // recryption key Hwt
-  hwt = t;
-
-  double noise = setAlphaE(alpha,e,ePrime, context, conservative, t);
+  hwt = setAE(a, e, ePrime, context, t);
   long p = context.zMStar.getP();
   long r = context.alMod.getR();
-
-  // Compute highest key-Hamming-weight that still works (not more than 256)
-  double qOver4 = (pow(p,e)+1)/4;
-  for (t-=10; qOver4>=lowerBound2(p,r,ePrime,t,alpha)
-	 &&  qOver4>=lowerBound1(p,r,ePrime,t,alpha,noise) && t<257; t++);
-  skHwt = t-1;
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
   alMod = new PAlgebraMod(context.zMStar, e-ePrime+r);
@@ -232,7 +229,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
 
 static
-long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha, 
+long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
                    double& U_norm, const PAlgebra& palg);
 
  
@@ -321,7 +318,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
     // make divisible by p^{e'}
     double U_norm;
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
-				rcData.alpha, U_norm, context.zMStar);
+				rcData.a, U_norm, context.zMStar);
     zzParts[i].normalize();   // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
     if (maxU_norm < U_norm)  maxU_norm = U_norm;
@@ -467,67 +464,71 @@ static void x2iInSlots(ZZX& poly, long i,
   ea.encode(poly, xVec);
 }
 
-// Make every entry of vec divisible by p^e by adding/subtracting multiples
-// of p^r and q, while keeping the added multiples small. Specifically, for
-// e>=2, an integer z can be made divisible by p^e via
-//   z' = z + u * p^r + v*p^r * q,
-// with
-//   |u|<=ceil(alpha p^{r(e-1)}/2) and |v|<=0.5+floor(beta p^{r(e-1)}/2),
-// for any alpha+beta=1. We assume that r<e and that q-1 is divisible by p^e.
+// Make every entry of vec divisible by p2e by adding/subtracting
+// multiples of p2r and q, while keeping the added multiples small.
+// Specifically, for q = 1 mod p2e and any a < p2e/(2*p2r), any
+// integer z can be made divisible by p2e via z' = z + u*p2r + v*q,
+// with |u|*p2r <= a and |v| <= p2e/2 -a.
 // Returns the largest absolute values of the u's and the new entries.
-//
-// This code is more general than we need, for bootstrapping we will always
-// have e>r.
-static
-long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha, 
-                   double& U_norm, const PAlgebra& palg)
+static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
+                          double& U_norm, const PAlgebra& palg)
 {
-  ZZX vec_orig;
-  conv(vec_orig, vec);
+  assert(q>0 && p2e>0 && p2r>0 && a>=0
+         && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
+  long aa = a / p2r;
+
+  ZZX vec_orig;  conv(vec_orig, vec);
   PolyRed(vec_orig, vec_orig, q);
 
+#ifdef DEBUG_PRINTOUT
+  ZZX vec_orig; conv(vec_orig, vec); // backup vector
+  zzX uVec(INIT_SIZE, vec.length());
+  zzX vVec(INIT_SIZE, vec.length());
+#endif
 
-  assert(((p2e % p2r == 0) && (q % p2e == 1)) ||
-	 ((p2r % p2e == 0) && (q % p2r == 1)));
-
-  long maxU =0;
-  ZZ maxZ;
+  long maxU = 0;
   for (long i=0; i<vec.length(); i++) {
-    ZZ z, z2; conv(z, vec[i]);
-    long u=0, v=0;
+    ZZ& z = vec[i];
+    long u, v;
 
-    long zMod1=0, zMod2=0;
-    if (p2r < p2e && alpha>0) {
-      zMod1 = rem(z,p2r);
-      if (zMod1 > p2r/2) zMod1 -= p2r; // map to the symmetric interval
-
-      // make z divisible by p^r by adding a multiple of q
-      z2 = z - to_ZZ(zMod1)*q;
-      zMod2 = rem(z2,p2e); // z mod p^e, still divisible by p^r
-      if (zMod2 > p2e/2) zMod2 -= p2e; // map to the symmetric interval
-      zMod2 /= -p2r; // now z+ p^r*zMod2=0 (mod p^e) and |zMod2|<=p^{r(e-1)}/2
-
-      u = ceil(alpha * zMod2);
-      v = zMod2 - u; // = floor((1-alpha) * zMod2)
-      z = z2 + u*p2r + to_ZZ(q)*v*p2r;
+    // What to add to z to make it divisible by p2e?
+    long zMod = rem(z, p2e); // zMod is in [0,p2e-1]
+    if (zMod > p2e/2) { // need to add a positive number
+      zMod = p2e - zMod;
+      u = zMod/p2r;
+      if (u > a) u = a;
     }
-    else { // r >= e or alpha==0, use only mulitples of q
-      zMod1 = rem(z,p2e);
-      if (zMod1 > p2e/2) zMod1 -= p2e; // map to the symmetric interval
-      z -= to_ZZ(zMod1) * q;
+    else {              // need to add a negative number
+      u = -(zMod/p2r);
+      if (u < -a) u = -a;
+      zMod = -zMod;
     }
-    if (abs(u) > maxU) maxU = abs(u);
-    if (abs(z) > maxZ) maxZ = abs(z);
+    v = zMod - u*p2r;
+    z += u*p2r + to_ZZ(q)*v; // make z divisible by p2e
 
     if (rem(z,p2e) != 0) { // sanity check
-      cerr << "**error: original z["<<i<<"]=" << vec[i]
+      cerr << "**error: original z["<<i<<"]=" << (z-(u*p2r+to_ZZ(q)*v))
 	   << std::dec << ", p^r="<<p2r << ", p^e="<<p2e << endl;
-      cerr << "z' = z - "<<zMod1<<"*q = "<< z2<<endl;
-      cerr << "z''=z' +" <<u<<"*p^r +"<<v<<"*p^r*q = "<<z<<endl;
+      cerr << "z' = z + "<<u<<"*p^r +"<<v<<"*q = "<<z<<endl;
       exit(1);
     }
-    conv(vec[i], z); // convert back to native format
+    if (abs(u) > maxU) maxU = abs(u);
+#ifdef DEBUG_PRINTOUT
+    uVec[i] = u;
+    vVec[i] = v;
+#endif
   }
+
+#ifdef DEBUG_PRINTOUT
+  if (dbgEa) {
+    const PAlgebra& palg = dbgEa->getPAlgebra();
+    double U_norm = conv<double>(embeddingLargestCoeff(uVec, palg));
+    double V_norm = conv<double>(embeddingLargestCoeff(vVec, palg));
+    cerr << "  makeDivisible: maxU=" << (maxU*p2r)
+         << ", U_norm=" << (U_norm*p2r)
+         << ", V_norm=" << (V_norm*q)   << endl;
+  }
+#endif
 
   ZZX vec_new;
   conv(vec_new, vec);
@@ -537,7 +538,6 @@ long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha,
   assert(divide(vec_new, vec_new, p2r));
 
   U_norm = conv<double>(embeddingLargestCoeff(vec_new, palg));
-
 
   return maxU;
 }
@@ -773,7 +773,6 @@ bool ThinRecryptData::operator==(const ThinRecryptData& other) const
 {
   if (mvec != other.mvec) return false;
   if (hwt != other.hwt) return false;
-  if (conservative != other.conservative) return false;
 
   return true;
 }
@@ -783,7 +782,7 @@ bool ThinRecryptData::operator==(const ThinRecryptData& other) const
 // the same, except for the linear-map-related stuff.
 // FIXME: There is really too much code (and data!) duplication here.
 void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
-		       long t, bool consFlag, bool build_cache_, bool minimal)
+		       long t, bool build_cache_, bool minimal)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to ThinRecryptData::init\n";
@@ -793,21 +792,11 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
   // Record the arguments to this function
   mvec = mvec_;
-  conservative = consFlag;
   build_cache = build_cache_;
 
-  if (t <= 0) t = defSkHwt+1; // recryption key Hwt
-  hwt = t;
-
-  double noise = RecryptData::setAlphaE(alpha,e,ePrime,context,conservative,t);
+  hwt = RecryptData::setAE(a,e,ePrime,context,t);
   long p = context.zMStar.getP();
   long r = context.alMod.getR();
-
-  // Compute highest key-Hamming-weight that still works (not more than 256)
-  double qOver4 = (pow(p,e)+1)/4;
-  for (t-=10; qOver4>=lowerBound2(p,r,ePrime,t,alpha)
-	 &&  qOver4>=lowerBound1(p,r,ePrime,t,alpha,noise) && t<257; t++);
-  skHwt = t-1;
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
   alMod = new PAlgebraMod(context.zMStar, e-ePrime+r);
@@ -1126,7 +1115,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
     // make divisible by p^{e'}
     double U_norm;
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
-				trcData.alpha, U_norm, context.zMStar);
+				trcData.a, U_norm, context.zMStar);
     zzParts[i].normalize();   // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
     if (maxU_norm < U_norm)  maxU_norm = U_norm;

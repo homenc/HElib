@@ -65,7 +65,7 @@ static long mValues[][14] = {
 #define OUTER_REP (1)
 
 
-void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=false, int build_cache=0)
+void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cache=0)
 {
   Vec<long> mvec;
   vector<long> gens;
@@ -128,7 +128,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
   //   bootstrappable (else the "powerful" basis is not initialized correctly.)
   //   This is a bug, the value 7 is sometimes the right one, but seriously??
 
-  context.makeBootstrappable(mvec, /*t=*/0, cons, build_cache);
+  context.makeBootstrappable(mvec, /*t=*/0, build_cache);
 
   t += GetTime();
 
@@ -137,7 +137,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, bool cons=fals
     cout << " done in "<<t<<" seconds\n";
     cout << "  e="    << context.trcData.e
 	 << ", e'="   << context.trcData.ePrime
-	 << ", alpha="<< context.trcData.alpha
+	 << ", a="<< context.trcData.a
 	 << ", t="    << context.trcData.skHwt
 	 << "\n  ";
     context.zMStar.printout();
@@ -251,7 +251,6 @@ int main(int argc, char *argv[])
   long L=600;
   long N=0;
   long t=0;
-  bool cons=0;
   long nthreads=1;
 
   long seed=0;
@@ -267,7 +266,6 @@ int main(int argc, char *argv[])
   amap.arg("N", N, "lower-bound on phi(m)");
   amap.arg("t", t, "Hamming weight of recryption secret key", "heuristic");
   amap.arg("dry", dry, "dry=1 for a dry-run");
-  amap.arg("cons", cons, "cons=1 for consevative settings (circuit deeper by 1)");
   amap.arg("nthreads", nthreads, "number of threads");
   amap.arg("seed", seed, "random number seed");
   amap.arg("noPrint", noPrint, "suppress printouts");
@@ -296,7 +294,7 @@ int main(int argc, char *argv[])
 
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
-      TestIt(i,p,r,L,c,t,cons,useCache);
+      TestIt(i,p,r,L,c,t,useCache);
       break;
     }
 

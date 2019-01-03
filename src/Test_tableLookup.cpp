@@ -103,8 +103,7 @@ int main(int argc, char *argv[])
   FHEcontext context(m, p, /*r=*/1, gens, ords);
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
-    context.makeBootstrappable(mvec, /*t=*/0,
-                               /*flag=*/false, /*cacheType=DCRT*/2);
+    context.makeBootstrappable(mvec, /*t=*/0);
   }
   buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
   if (verbose) {

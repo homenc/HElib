@@ -19,7 +19,6 @@
 #include "CtPtrs.h"
 
 #include "debugging.h"
-#include "powerful.h"
 #include "norms.h"
 
 NTL_CLIENT
@@ -1677,45 +1676,6 @@ istream& operator>>(istream& str, Ctxt& ctxt)
   return str;
 }
 
-
-void CheckCtxt(const Ctxt& c, const char* label)
-{
-  cerr << "  "<<label 
-       << ", log2(modulus/noise)=" << (-c.log_of_ratio()/log(2.0)) 
-       << ", p^r=" << c.getPtxtSpace();
-
-  if (dbgKey) {
-    double ratio = log(embeddingLargestCoeff(c, *dbgKey)/c.getNoiseBound())/log(2.0);
-    cerr << ", log2(noise/bound)=" << ratio;
-    if (ratio > 0) cerr << " BAD-BOUND";
-  }
-
-  if (dbgKey && c.getContext().isBootstrappable()) {
-    Ctxt c1(c);
-    //c1.dropSmallAndSpecialPrimes();
-
-    const FHEcontext& context = c1.getContext();
-    const RecryptData& rcData = context.rcData;
-    const PAlgebra& palg = context.zMStar;
-
-    ZZX p, pp;
-    dbgKey->Decrypt(p, c1, pp);
-    Vec<ZZ> powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful, pp, c1.getPrimeSet());
-
-    xdouble max_coeff = conv<xdouble>(largestCoeff(pp));
-    xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-    xdouble max_canon = embeddingLargestCoeff(pp, palg);
-    double ratio = log(max_pwrfl/max_canon)/log(2.0);
-
-    //cerr << ", max_coeff=" << max_coeff;
-    //cerr << ", max_pwrfl=" << max_pwrfl;
-    //cerr << ", max_canon=" << max_canon;
-    cerr << ", log2(max_pwrfl/max_canon)=" << ratio;
-    if (ratio > 0) cerr << " BAD-BOUND";
-  }
-  cerr << endl;
-}
 
 // The recursive incremental-product function that does the actual work
 static void recursiveIncrementalProduct(Ctxt array[], long n)

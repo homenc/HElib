@@ -35,10 +35,15 @@ public:
   //! default Hamming weight of recryption key
   static constexpr long defSkHwt=100;
 
+  // NOTE: here's to hoping: for "random enough" x we expect
+  //   |x|_powerful < |x|_canonical * sqrt(someConstant/phi(m))
+  //   we set magicConst = sqrt(phi(m)/3) * sqrt(someConstant/phi(m))
+  //   (sqrt(phi(m)/3) comes from context.noiseBoundForUniform())
+  static /*constexpr*/ double magicConst;
+
   //! Some data members that are only used for I/O
   NTL::Vec<long> mvec;     //! partition of m into co-prime factors
   long hwt;           //! Hamming weight of recryption secret-key
-  bool conservative;  //! flag for choosing more conservatice parameters
 
   //! skey encrypted wrt space p^{e-e'+r}
   long e, ePrime;
@@ -47,7 +52,7 @@ public:
   long skHwt;
 
   //! an optimization parameter
-  double alpha;
+  long a;
 
   //! for plaintext space p^{e-e'+r}
   PAlgebraMod *alMod;
@@ -68,7 +73,7 @@ public:
   std::vector<NTL::ZZX> unpackSlotEncoding;
 
   RecryptData() {
-    hwt=0; conservative=false; e=ePrime=0; alpha=0.0;
+    hwt=0; e=ePrime=0; a=0;
     alMod=NULL; ea=NULL; firstMap=NULL; secondMap=NULL; p2dConv=NULL;
     build_cache = false;
   }
@@ -77,7 +82,6 @@ public:
   //! Initialize the recryption data in the context
   void init(const FHEcontext& context, const NTL::Vec<long>& mvec_,
             long t=0/*min Hwt for sk*/, 
-            bool consFlag=false,
             bool build_cache=false,
             bool minimal=false);
 
@@ -87,27 +91,39 @@ public:
   }
 
   //! Helper function for computing the recryption parameters
-  static double
-    setAlphaE(double& alpha, long& e, long& ePrime,
-              const FHEcontext& context, bool conservative=false, long=0);
-  /** To get the smallest value of e-e', the params need to satisfy:
-   *  (p^e +1)/4 =>
-   *   max { (t+1)( 1+ (alpha/2)*(p^e/p^{ceil(log_p(t+2))}) ) + noise      }
-   *       { (t+1)( 1+ ((1-alpha)/2)*(p^e/p^{ceil(log_p(t+2))}) +p^r/2) +1 },
+  static long setAE(long& a, long& e, long& ePrime,
+                    const FHEcontext& context, long t=0);
+  /** We want to get the smallest value of e-e', subject to a few
+   * constraints: For the magicConst from above, an exponent e,
+   * a norm-t secret key, and plaintext space mod p^r, we need to
+   * find integers a and b so that:
    *
-   * where noise is taken to be twice the mod-switching additive term,
-   * namely noise = p^r *sqrt((t+1)*phi(m)/3).
-   * Denoting rho=(t+1)/p^{ceil(log_p(t+2))} (and ignoring fome +1 terms),
-   * this is equivalent to:
+   *    (1) (4a+ 8p^r)(t+1)*magicConst <= q  = p^e +1
+   *    (2) (4b + 5)(t+1) * magicConst <= q-4= p^e -3
    *
-   *   p^e > max{4(t+noise)/(1-2*alpha*rho), 2(t+1)p^r/(1-2(1-alpha)rho)}.
+   * Then e' is the largest exponent such that p^{e'} <= 2(a+b).
    *
-   * We first compute the optimal value for alpha (which must be in [0,1]),
-   * that makes the two terms in the max{...} as close as possible, and
-   * then compute the smallest value of e satisfying this constraint.
+   * Note that if we let e,e' tend to infinity and set a=b=p^{e'}/4,
+   * then the two constraints above degenerate to
    *
-   * If this value is too big then we try again with e-e' one larger,
-   * which means that rho is a factor of p smaller.
+   *    2(t+1)*magicConst < p^{e-e'}
+   *
+   * so the smallest value of e-e' that we can hope for is
+   *
+   *    e-e' = ceiling( log_p( 2(t+1)*magicConst ) )
+   *
+   * The setAE procedure tries to find a setting of e,e',a (and
+   * b = p^{e'}/2 -a) that satisfies the constraints (1,2) and
+   * yeilds the smallest e-e', so long as e is "not too big".
+   * Specifically, it minimizes e-e' while ensuring p^e < 2^{30},
+   * if possible (and failing that it will just satisfy the
+   * constraints (1,2)).
+   *
+   * Once e, e', a are set, it copmutes and returns the largest 
+   * Hamming-weight for the key for which constraints (1,2) still hold.
+   * NOTE: it returns the Hamming weight, *not* the size of the key.
+   *       The size can be computed by calling the function
+   *       sampleHWtBoundedEffectiveBound(context, weight)
    */
 };
 
@@ -123,7 +139,6 @@ public:
   //! Some data members that are only used for I/O
   NTL::Vec<long> mvec;     //! partition of m into co-prime factors
   long hwt;           //! Hamming weight of recryption secret-key
-  bool conservative;  //! flag for choosing more conservatice parameters
 
   //! skey encrypted wrt space p^{e-e'+r}
   long e, ePrime;
@@ -132,7 +147,7 @@ public:
   long skHwt;
 
   //! an optimization parameter
-  double alpha;
+  long a;
 
   //! for plaintext space p^{e-e'+r}
   PAlgebraMod *alMod;
@@ -147,7 +162,7 @@ public:
   ThinEvalMap *coeffToSlot, *slotToCoeff;
 
   ThinRecryptData() {
-    hwt=0; conservative=false; e=ePrime=0; alpha=0.0;
+    hwt=0; e=ePrime=0; a=0;
     alMod=NULL; ea=NULL; coeffToSlot=NULL; slotToCoeff=NULL; 
     build_cache = false;
   }
@@ -156,7 +171,6 @@ public:
   //! Initialize the recryption data in the context
   void init(const FHEcontext& context, const NTL::Vec<long>& mvec_,
             long t=0/*min Hwt for sk*/, 
-            bool consFlag=false,
             bool build_cache=false,
             bool minimal=false);
 

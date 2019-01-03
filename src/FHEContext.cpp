@@ -290,7 +290,6 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
   write_ntl_vec_long(str, context.rcData.mvec);
 
   write_raw_int(str, context.rcData.hwt);
-  write_raw_int(str, context.rcData.conservative);
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
@@ -358,10 +357,9 @@ void readContextBinary(istream& str, FHEcontext& context)
   read_ntl_vec_long(str, mv);
 
   long t = read_raw_int(str);
-  bool consFlag = read_raw_int(str);  
 
   if (mv.length()>0) {
-    context.makeBootstrappable(mv, t, consFlag);
+    context.makeBootstrappable(mv, t);
   }
 
   context.setModSizeTable();
@@ -421,7 +419,6 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
 
   str << context.rcData.mvec;
   str << " " << context.rcData.hwt;
-  str << " " << context.rcData.conservative;
   str << " " << context.rcData.build_cache;
   // NOTE: the data for trcData will always be the same as for rcData
 
@@ -497,14 +494,12 @@ istream& operator>> (istream &str, FHEcontext& context)
   // Read in the partition of m into co-prime factors (if bootstrappable)
   Vec<long> mv;
   long t;
-  bool consFlag;
   int build_cache;
   str >> mv;
   str >> t;
-  str >> consFlag;
   str >> build_cache;
   if (mv.length()>0) {
-    context.makeBootstrappable(mv, t, consFlag, build_cache);
+    context.makeBootstrappable(mv, t, build_cache);
   }
 
   seekPastChar(str, ']');
