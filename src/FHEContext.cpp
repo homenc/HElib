@@ -289,7 +289,7 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 
   write_ntl_vec_long(str, context.rcData.mvec);
 
-  write_raw_int(str, context.rcData.hwt);
+  write_raw_int(str, context.rcData.skHwt);
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
@@ -418,7 +418,7 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   str <<"\n";
 
   str << context.rcData.mvec;
-  str << " " << context.rcData.hwt;
+  str << " " << context.rcData.skHwt;
   str << " " << context.rcData.build_cache;
   // NOTE: the data for trcData will always be the same as for rcData
 

@@ -25,16 +25,100 @@ NTL_CLIENT
 
 long thinRecrypt_initial_level=0;
 
-#define PRINT_LEVELS
+#define DEBUG_PRINTOUT
 
-/*constexpr*/ double RecryptData::magicConst = 1.0;
+#ifdef DEBUG_PRINTOUT
+#include "debugging.h"
+long printFlag = FLAG_PRINT_VEC;
+#endif
 
-/************* Some local functions *************/
+
+/*constexpr*/ double RecryptData::magicConst = 2.0;
+
+/************************ Some local functions ***********************/
+/*********************************************************************/
+
+// Return in poly a polynomial with X^i encoded in all the slots
 static void x2iInSlots(ZZX& poly, long i,
-		       vector<ZZX>& xVec, const EncryptedArray& ea);
+		       vector<ZZX>& xVec, const EncryptedArray& ea)
+{
+  xVec.resize(ea.size());
+  ZZX x2i = ZZX(i,1);
+  for (long j=0; j<(long)xVec.size(); j++) xVec[j] = x2i;
+  ea.encode(poly, xVec);
+}
 
+// Make every entry of vec divisible by p2e by adding/subtracting
+// multiples of p2r and q, while keeping the added multiples small.
+// Specifically, for q = 1 mod p2e and any a < p2e/(2*p2r), any
+// integer z can be made divisible by p2e via z' = z + u*p2r + v*q,
+// with |u|*p2r <= a and |v| <= p2e/2 -a.
+// Returns the largest absolute values of the u's and the new entries.
+static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
+                          double& U_norm, const PAlgebra& palg)
+{
+  assert(q>0 && p2e>0 && p2r>0 && a>=0
+         && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
+  long aa = a / p2r;
+
+  ZZX vec_orig;  conv(vec_orig, vec);
+  PolyRed(vec_orig, vec_orig, q);
+
+#ifdef DEBUG_PRINTOUT
+  zzX uVec(INIT_SIZE, vec.length());
+  zzX vVec(INIT_SIZE, vec.length());
+#endif
+
+  long maxU = 0;
+  for (long i=0; i<vec.length(); i++) {
+    ZZ& z = vec[i];
+    long u, v;
+
+    // What to add to z to make it divisible by p2e?
+    long zMod = rem(z, p2e); // zMod is in [0,p2e-1]
+    if (zMod > p2e/2) { // need to add a positive number
+      zMod = p2e - zMod;
+      u = zMod/p2r;
+      if (u > aa) u = aa;
+    }
+    else {              // need to add a negative number
+      u = -(zMod/p2r);
+      if (u < -aa) u = -aa;
+      zMod = -zMod;
+    }
+    v = zMod - u*p2r;
+    z += u*p2r + to_ZZ(q)*v; // make z divisible by p2e
+
+    if (rem(z,p2e) != 0) { // sanity check
+      cerr << "**error: original z["<<i<<"]=" << (z-(u*p2r+to_ZZ(q)*v))
+	   << std::dec << ", p^r="<<p2r << ", p^e="<<p2e << endl;
+      cerr << "z' = z + "<<u<<"*p^r +"<<v<<"*q = "<<z<<endl;
+      exit(1);
+    }
+    if (abs(u) > maxU) maxU = abs(u);
+#ifdef DEBUG_PRINTOUT
+    uVec[i] = u;
+    vVec[i] = v;
+#endif
+  }
+
+#ifdef DEBUG_PRINTOUT
+  if (dbgEa) {
+    const PAlgebra& palg = dbgEa->getPAlgebra();
+    U_norm = conv<double>(embeddingLargestCoeff(uVec, palg)) *p2r;
+    double V_norm = conv<double>(embeddingLargestCoeff(vVec, palg)) *q;
+    cerr << "  makeDivisible: maxU=" << (maxU*p2r)
+         << ", U_norm=" << U_norm
+         << ", V_norm=" << V_norm << endl;
+  }
+#endif
+
+  return maxU;
+}
 
 static inline double pow(long a, long b) {return pow(double(a), double(b));}
+/*********************************************************************/
+/*********************************************************************/
 
 RecryptData::~RecryptData()
 {
@@ -49,22 +133,22 @@ RecryptData::~RecryptData()
 
 /** We want to get the smallest value of e-e', subject to a
  * few constraints: For RecryptData::magicConst, an exponent e,
- * a norm-t secret key, and plaintext space mod p^r, we need to
+ * a norm-s secret key, and plaintext space mod p^r, we need to
  * find integers a and b so that:
  *
- *    (1) (4a+ 8p^r)(t+1)*magicConst <= q  = p^e +1
- *    (2) (4b+ 8)(t+1) * magicConst <= q-4= p^e -3
+ *    (1) (4a+ 8p^r)(s+1)*magicConst <= q  = p^e +1
+ *    (2) (4b+ 8)(s+1) * magicConst <= q-4= p^e -3
  *
  * Then e' is the largest exponent such that p^{e'} <= 2(a+b).
  *
  * Note that if we let e,e' tend to infinity and set a=b=p^{e'}/4,
  * then the two constraints above degenerate to
  *
- *    2(t+1)*magicConst < p^{e-e'}
+ *    2(s+1)*magicConst < p^{e-e'}
  *
  * so the smallest value of e-e' that we can hope for is
  *
- *    e-e' = ceiling( log_p( 2(t+1)*magicConst ) )
+ *    e-e' = ceiling( log_p( 2(s+1)*magicConst ) )
  *
  * The setAE procedure tries to find a setting of e,e',a (and
  * b = p^{e'}/2 -a) that satisfies the constraints (1,2) and
@@ -83,12 +167,12 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
                     const FHEcontext& context, long t)
 {
   if (t<=0) t = RecryptData::defSkHwt;
-  double bound = (t+1) * RecryptData::magicConst * 4;
+  double skSize = sampleHWtBoundedEffectiveBound(context, t);
+  double bound = (skSize+1) * RecryptData::magicConst * 4;
   long p = context.zMStar.getP();
-  //  long r = context().alMod.getR();
   long p2r = context.alMod.getPPowR();
 
-  // We must have p^e > 8 p^r (t+1)*magicCons
+  // We must have p^e > 8 p^r (skSize+1)*magicCons
   double eMin = ceil(log(1+ 2*bound*p2r)/log(p));
 
   // make sure that p^e for this smallest e is single-precision
@@ -118,10 +202,16 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
 
       // Set the value of a, reduced by a bit if possible
       long pToEprimeOver2 = floor(pow(p,ePrime)/2.0);
-      b = bTry;
+      long slack = aTry+bTry - pToEprimeOver2;
+      bTry -= slack/2;
+      if (bTry>pToEprimeOver2) bTry = pToEprimeOver2;
       a = pToEprimeOver2 - bTry;
       a -= (a % p2r);
-      if (a<0) a=0;
+      b = pToEprimeOver2 - a;
+      cerr << "  -- trying e="<<e<<", e'="<<ePrime
+           << ", a="<<a<<"(<="<<aTry<<"), b="<<b
+           << ", p^e'/2="<<pToEprimeOver2
+           << endl;
     }
   } while ((++eTry)*log(p) <= log(1L<<30));  
 
@@ -130,28 +220,24 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
   double boundB = (4*b + 8)*RecryptData::magicConst;
   long q = ceil(pow(p,e))+1;
   while (t++) {
-    if (t>512 || boundA*t > q || boundB*t > q-4)
+    skSize = sampleHWtBoundedEffectiveBound(context, t);
+    if (t>256 || boundA*skSize > q || boundB*skSize > q-4)
       break;
   }
   t--;
 
-  long hwt;  // Find the largest Hamming weight that yeilds size <= t
-  for (hwt=256; hwt>0; hwt--) {
-    if (sampleHWtBoundedEffectiveBound(context, hwt)<=t)
-      break;
-  }  
 #ifdef DEBUG_PRINTOUT
   cerr << "RecryptData::setAE(): e="<<e<<", e'="<<ePrime
-       << ", a="<<a<<", sk-hwt="<<hwt<<" (size="<<t<<")\n";
+       << ", a="<<a<<", b="<<b<<", sk-hwt="<<t<<" (size="<<skSize<<")\n";
 #endif
-  return hwt;
+  return t;
 }
 
 
 bool RecryptData::operator==(const RecryptData& other) const
 {
   if (mvec != other.mvec) return false;
-  if (hwt != other.hwt) return false;
+  if (skHwt != other.skHwt) return false;
 
   return true;
 }
@@ -174,7 +260,7 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   mvec = mvec_;
   build_cache = build_cache_;
 
-  hwt = setAE(a, e, ePrime, context, t);
+  skHwt = setAE(a, e, ePrime, context, t);
   long p = context.zMStar.getP();
   long r = context.alMod.getR();
 
@@ -216,11 +302,6 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 /********************************************************************/
 /********************************************************************/
 
-#ifdef DEBUG_PRINTOUT
-#include "debugging.h"
-long printFlag = FLAG_PRINT_VEC;
-#endif
-
 // Extract digits from fully packed slots
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 			 const vector<ZZX>& unpackSlotEncoding);
@@ -228,11 +309,6 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 // Extract digits from unpacked slots
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
 
-static
-long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
-                   double& U_norm, const PAlgebra& palg);
-
- 
 // bootstrap a ciphertext to reduce noise
 void FHEPubKey::reCrypt(Ctxt &ctxt)
 {
@@ -270,22 +346,17 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #ifdef DEBUG_PRINTOUT
   cerr << "reCrypt: p="<<p<<", r="<<r<<", e="<<e<<" ePrime="<<ePrime
        << ", q="<<q<<endl;
+  CheckCtxt(ctxt, "init");
 #endif
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
   assert(p2r % ptxtSpace == 0);
 
-
-#ifdef PRINT_LEVELS
-  CheckCtxt(ctxt, "init");
-#endif
-
   ctxt.dropSmallAndSpecialPrimes();
 
-#ifdef PRINT_LEVELS
+#ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "after mod down");
 #endif
-
 
 
   FHE_NTIMER_START(AAA_preProcess);
@@ -329,7 +400,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
     cerr << " ******** warning: noise/q after makeDivisible = "
 	 << ((noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
 
-#ifdef PRINT_LEVELS
+#ifdef DEBUG_PRINTOUT
    if (dbgKey) {
      const RecryptData& rcData = ctxt.getContext().rcData;
      ZZX ptxt;
@@ -378,10 +449,6 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
   // Multiply the post-processed cipehrtext by the encrypted sKey
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ Before recryption ";
-  decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa, printFlag);
-#endif
 
   double p0size = to_double(embeddingLargestCoeff(zzParts[0], context.zMStar));
   double p1size = to_double(embeddingLargestCoeff(zzParts[1], context.zMStar));
@@ -395,29 +462,17 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   ctxt.addConstant(zzParts[0]);
 
 #ifdef DEBUG_PRINTOUT
-  cerr << "+ Before linearTrans1 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
-#endif
-  FHE_NTIMER_STOP(AAA_preProcess);
-
-#ifdef PRINT_LEVELS
   CheckCtxt(ctxt, "after preProcess");
 #endif
-
+  FHE_NTIMER_STOP(AAA_preProcess);
 
   // Move the powerful-basis coefficients to the plaintext slots
   FHE_NTIMER_START(AAA_LinearTransform1);
   ctxt.getContext().rcData.firstMap->apply(ctxt);
   FHE_NTIMER_STOP(AAA_LinearTransform1);
 
-
-#ifdef PRINT_LEVELS
-  CheckCtxt(ctxt, "after LinearTransform1");
-#endif
-
 #ifdef DEBUG_PRINTOUT
-  cerr << "+ After linearTrans1 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+  CheckCtxt(ctxt, "after LinearTransform1");
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
@@ -427,13 +482,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   FHE_NTIMER_STOP(AAA_extractDigitsPacked);
 
 
-#ifdef PRINT_LEVELS
-  CheckCtxt(ctxt, "after extractDigitsPacked");
-#endif
-
 #ifdef DEBUG_PRINTOUT
-  cerr << "+ Before linearTrans2 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+  CheckCtxt(ctxt, "after extractDigitsPacked");
 #endif
 
   // Move the slots back to powerful-basis coefficients
@@ -442,104 +492,13 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   FHE_NTIMER_STOP(AAA_LinearTransform2);
 
 
-#ifdef PRINT_LEVELS
+#ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "after linearTransform2");
 #endif
 
   // restore intFactor
   if (intFactor != 1)
     ctxt.intFactor = MulMod(ctxt.intFactor, intFactor, ptxtSpace);
-}
-
-/*********************************************************************/
-/*********************************************************************/
-
-// Return in poly a polynomial with X^i encoded in all the slots
-static void x2iInSlots(ZZX& poly, long i,
-		       vector<ZZX>& xVec, const EncryptedArray& ea)
-{
-  xVec.resize(ea.size());
-  ZZX x2i = ZZX(i,1);
-  for (long j=0; j<(long)xVec.size(); j++) xVec[j] = x2i;
-  ea.encode(poly, xVec);
-}
-
-// Make every entry of vec divisible by p2e by adding/subtracting
-// multiples of p2r and q, while keeping the added multiples small.
-// Specifically, for q = 1 mod p2e and any a < p2e/(2*p2r), any
-// integer z can be made divisible by p2e via z' = z + u*p2r + v*q,
-// with |u|*p2r <= a and |v| <= p2e/2 -a.
-// Returns the largest absolute values of the u's and the new entries.
-static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
-                          double& U_norm, const PAlgebra& palg)
-{
-  assert(q>0 && p2e>0 && p2r>0 && a>=0
-         && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
-  long aa = a / p2r;
-
-  ZZX vec_orig;  conv(vec_orig, vec);
-  PolyRed(vec_orig, vec_orig, q);
-
-#ifdef DEBUG_PRINTOUT
-  ZZX vec_orig; conv(vec_orig, vec); // backup vector
-  zzX uVec(INIT_SIZE, vec.length());
-  zzX vVec(INIT_SIZE, vec.length());
-#endif
-
-  long maxU = 0;
-  for (long i=0; i<vec.length(); i++) {
-    ZZ& z = vec[i];
-    long u, v;
-
-    // What to add to z to make it divisible by p2e?
-    long zMod = rem(z, p2e); // zMod is in [0,p2e-1]
-    if (zMod > p2e/2) { // need to add a positive number
-      zMod = p2e - zMod;
-      u = zMod/p2r;
-      if (u > a) u = a;
-    }
-    else {              // need to add a negative number
-      u = -(zMod/p2r);
-      if (u < -a) u = -a;
-      zMod = -zMod;
-    }
-    v = zMod - u*p2r;
-    z += u*p2r + to_ZZ(q)*v; // make z divisible by p2e
-
-    if (rem(z,p2e) != 0) { // sanity check
-      cerr << "**error: original z["<<i<<"]=" << (z-(u*p2r+to_ZZ(q)*v))
-	   << std::dec << ", p^r="<<p2r << ", p^e="<<p2e << endl;
-      cerr << "z' = z + "<<u<<"*p^r +"<<v<<"*q = "<<z<<endl;
-      exit(1);
-    }
-    if (abs(u) > maxU) maxU = abs(u);
-#ifdef DEBUG_PRINTOUT
-    uVec[i] = u;
-    vVec[i] = v;
-#endif
-  }
-
-#ifdef DEBUG_PRINTOUT
-  if (dbgEa) {
-    const PAlgebra& palg = dbgEa->getPAlgebra();
-    double U_norm = conv<double>(embeddingLargestCoeff(uVec, palg));
-    double V_norm = conv<double>(embeddingLargestCoeff(vVec, palg));
-    cerr << "  makeDivisible: maxU=" << (maxU*p2r)
-         << ", U_norm=" << (U_norm*p2r)
-         << ", V_norm=" << (V_norm*q)   << endl;
-  }
-#endif
-
-  ZZX vec_new;
-  conv(vec_new, vec);
-  vec_new = vec_new - vec_orig;
-  PolyRed(vec_new, vec_new, q);
-
-  assert(divide(vec_new, vec_new, p2r));
-
-  U_norm = conv<double>(embeddingLargestCoeff(vec_new, palg));
-
-  return maxU;
 }
 
 #ifdef FHE_BOOT_THREADS
@@ -596,21 +555,19 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   }
   FHE_NTIMER_STOP(unpack);
 
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ After unpack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
-#endif
+  //#ifdef DEBUG_PRINTOUT
+  //  CheckCtxt(unpacked[0], "after unpack");
+  //#endif
 
   NTL_EXEC_RANGE(d, first, last)
-      for (long i = first; i < last; i++) {
-        extractDigitsThin(unpacked[i], botHigh, r, ePrime);
-      }
+  for (long i = first; i < last; i++) {
+    extractDigitsThin(unpacked[i], botHigh, r, ePrime);
+  }
   NTL_EXEC_RANGE_END
 
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ Before repack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
-#endif
+  //#ifdef DEBUG_PRINTOUT
+  //CheckCtxt(unpacked[0], "before repack");
+  //#endif
 
   // Step 3: re-pack the slots
   FHE_NTIMER_START(repack);
@@ -624,10 +581,9 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     ctxt += unpacked[i];
   }
   FHE_NTIMER_STOP(repack);
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ After repack ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
-#endif
+  //#ifdef DEBUG_PRINTOUT
+  //CheckCtxt(ctxt, "after repack");
+  //#endif
 }
 
 
@@ -672,20 +628,17 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   }
   FHE_NTIMER_STOP(unpack);
 
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ After unpack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
-  cerr << "    extracting "<<(topHigh+1)<<" digits\n";
-#endif
+  //#ifdef DEBUG_PRINTOUT
+  //  CheckCtxt(unpacked[0], "after unpack");
+  //#endif
 
   for (long i=0; i<(long)unpacked.size(); i++) {
     extractDigitsThin(unpacked[i], botHigh, r, ePrime); 
   }
 
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ Before repack ";
-  decryptAndPrint(cerr, unpacked[0], *dbgKey, *dbgEa, printFlag);
-#endif
+  //#ifdef DEBUG_PRINTOUT
+  //  CheckCtxt(unpacked[0], "before repack");
+  //#endif
 
   // Step 3: re-pack the slots
   FHE_NTIMER_START(repack);
@@ -719,15 +672,7 @@ void packedRecrypt(const CtPtrs& cPtrs,
   //  cout << "@"<< lsize(cts)<<std::flush;
   for (Ctxt& c: cts) {     // then recrypt them
     c.reducePtxtSpace(2);  // we only have recryption data for binary ctxt
-#ifdef DEBUG_PRINTOUT
-    ZZX ptxt;
-    decryptAndPrint((cout<<"  before recryption "), c, *dbgKey, *dbgEa);
-    dbgKey->Decrypt(ptxt, c);
-    c.DummyEncrypt(ptxt);
-    decryptAndPrint((cout<<"  after recryption "), c, *dbgKey, *dbgEa);
-#else
     pKey.reCrypt(c);
-#endif
   }
   unpack(cPtrs, CtPtrs_vectorCt(cts), ea, unpackConsts);
 }
@@ -772,7 +717,7 @@ ThinRecryptData::~ThinRecryptData()
 bool ThinRecryptData::operator==(const ThinRecryptData& other) const
 {
   if (mvec != other.mvec) return false;
-  if (hwt != other.hwt) return false;
+  if (skHwt != other.skHwt) return false;
 
   return true;
 }
@@ -794,7 +739,7 @@ void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   mvec = mvec_;
   build_cache = build_cache_;
 
-  hwt = RecryptData::setAE(a,e,ePrime,context,t);
+  skHwt = RecryptData::setAE(a,e,ePrime,context,t);
   long p = context.zMStar.getP();
   long r = context.alMod.getR();
 
@@ -964,8 +909,6 @@ struct FHEPubKeyHack { // The public key
 
 };
 
-//#define PRINT_LEVELS
-
 // bootstrap a ciphertext to reduce noise
 void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 {
@@ -1002,15 +945,10 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   long q = power_long(p,e)+1;
   assert(e>=r);
 
-#ifdef DEBUG_PRINTOUT
-  cerr << "reCrypt: p="<<p<<", r="<<r<<", e="<<e<<" ePrime="<<ePrime
-       << ", q="<<q<<endl;
-#endif
-
   // can only bootstrap ciphertext with plaintext-space dividing p^r
   assert(p2r % ptxtSpace == 0);
 
-#ifdef PRINT_LEVELS
+#ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "init");
 #endif
 
@@ -1025,7 +963,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
     ctxt.bringToSet(IndexSet(first, last));
   }
 
-#ifdef PRINT_LEVELS
+#ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "after mod down");
 #endif
 
@@ -1034,7 +972,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   trcData.slotToCoeff->apply(ctxt);
   FHE_NTIMER_STOP(AAA_slotToCoeff);
 
-#ifdef PRINT_LEVELS
+#ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "after slotToCoeff");
 #endif
 
@@ -1061,46 +999,39 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
   double noise = ctxt.rawModSwitch(zzParts, q);
 
-#ifdef PRINT_LEVELS
+#ifdef DEBUG_PRINTOUT
+  if (dbgKey) {
+    cerr << "  before makeDivisible (recryption modulus q="<<q
+         << "), noise_bnd=" << noise<<endl;
+    ZZX ptxt;
+    const RecryptData& rcData = ctxt.getContext().rcData;
+    const PAlgebra& palg = rcData.ea->getPAlgebra();
+    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID]); // no mod q
 
-   if (dbgKey) {
-     const RecryptData& rcData = ctxt.getContext().rcData;
-     ZZX ptxt;
-     rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+    xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+    xdouble max_canon = embeddingLargestCoeff(ptxt, palg);
+    double ratio = log(max_pwrfl/max_canon)/log(2.0);
+    cerr << "                     max_pwrfl/q^2=" << ((max_pwrfl/q)/q)
+         << ", log2(max_pwrfl/max_canon)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
+    cerr << endl;
 
-     Vec<ZZ> powerful;
-     ZZX ptxt_alt;
-     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-     vecRed(powerful, powerful, q, false);
-     rcData.p2dConv->powerfulToZZX(ptxt_alt, powerful);
+    PolyRed(ptxt, q, false/*reduce to [-q/2,1/2]*/);
+    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+    vecRed(powerful, powerful, q, false);
+    max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+    max_canon = embeddingLargestCoeff(ptxt, palg);
+    ratio = log(max_pwrfl/max_canon)/log(2.0);
+    cerr << "        after mod q, max_pwrfl/q=" << (max_pwrfl/q)
+         << ", log2(max_pwrfl/max_canon)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
 
-     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-     xdouble max_canon = embeddingLargestCoeff(ptxt_alt,rcData.ea->getPAlgebra());
-     double noise_bnd = noise;
-
-     ZZX skey_poly;
-     dbgKey->sKeys[recryptKeyID].toPoly(skey_poly);
-     double skey_bound = skBounds[recryptKeyID];
-     double skey_canon = conv<double>(embeddingLargestCoeff(skey_poly,rcData.ea->getPAlgebra()));
-
-     cerr << "  before makeDivisible";
-
-     cerr << ", max_canon=" << max_canon;
-     cerr << ", skey_canon=" << skey_canon;
-
-     double ratio0 = log(max_canon/noise_bnd)/log(2.0);
-     cerr << ", log2(max_canon/bound)=" << ratio0;
-     if (ratio0 > 0) cerr << " BAD-BOUND";
-
-     double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
-     cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
-     if (ratio1 > 0) cerr << " BAD-BOUND";
-
-     double ratio2 = log(skey_canon/skey_bound)/log(2.0);
-     cerr << ", log2(skey_canon/skey_bound)=" << ratio2;
-     if (ratio2 > 0) cerr << " BAD-BOUND";
-
-     cerr << "\n";
+    ratio = log(max_canon/noise)/log(2.0);
+    cerr << "\n        log2(max_canon/noiseEst)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
+    cerr << endl;
   }
 #endif
 
@@ -1123,56 +1054,45 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
 
   // Check that the estimated noise is still low
-  if (noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1) > q/2)
+  double newNoise = noise + maxU_norm*(skBounds[recryptKeyID]+1);
+  if (newNoise > q/4)
     cerr << " ******** warning: noise/q after makeDivisible = "
-	 << ((noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
+	 << (newNoise/q) << endl;
 
-#ifdef PRINT_LEVELS
-   if (dbgKey) {
-     const RecryptData& rcData = ctxt.getContext().rcData;
-     ZZX ptxt;
-     rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
+#ifdef DEBUG_PRINTOUT
+  cerr << "  after makeDivisible, maxU_norm=" << maxU_norm
+       << ", p2r=" << p2r << ", noise_bnd=" << newNoise
+       << ", sk_bnd=" << skBounds[recryptKeyID] << endl;
+  if (dbgKey) {
+    ZZX ptxt;
+    const RecryptData& rcData = ctxt.getContext().rcData;
+    const PAlgebra& palg = rcData.ea->getPAlgebra();
+    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID]); // no mod q
 
-     Vec<ZZ> powerful;
-     ZZX ptxt_alt;
-     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-     vecRed(powerful, powerful, q, false);
-     rcData.p2dConv->powerfulToZZX(ptxt_alt, powerful);
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+    xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+    xdouble max_canon = embeddingLargestCoeff(ptxt, palg);
+    double ratio = log(max_pwrfl/max_canon)/log(2.0);
+    cerr << "                     max_pwrfl/q^2=" << ((max_pwrfl/q)/q)
+         << ", log2(max_pwrfl/max_canon)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
+    cerr << endl;
 
+    PolyRed(ptxt, q, false/*reduce to [-q/2,1/2]*/);
+    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+    vecRed(powerful, powerful, q, false);
+    max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+    max_canon = embeddingLargestCoeff(ptxt, palg);
+    ratio = log(max_pwrfl/max_canon)/log(2.0);
+    cerr << "        after mod q, max_pwrfl/q=" << (max_pwrfl/q)
+         << ", log2(max_pwrfl/max_canon)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
 
-#if 1
-     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-     xdouble max_canon = embeddingLargestCoeff(ptxt_alt,rcData.ea->getPAlgebra());
-     double noise_bnd = noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1);
-
-     cerr << "  after makeDivisible";
-
-     cerr << ", noise=" << noise;
-     cerr << ", maxU_norm=" << maxU_norm;
-     cerr << ", p2r=" << p2r;
-     cerr << ", sk_bnd=" << skBounds[recryptKeyID];
-     cerr << ", max_canon=" << max_canon;
-
-     cerr << ", max_pwrfl/q=" << (max_pwrfl/q);
-
-     double ratio0 = log(max_canon/noise_bnd)/log(2.0);
-     cerr << ", log2(max_canon/bound)=" << ratio0;
-     if (ratio0 > 0) cerr << " BAD-BOUND";
-
-     double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
-     cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
-     if (ratio1 > 0) cerr << " BAD-BOUND";
-
-     cerr << "\n";
-#else
-     cerr << "  after makeDivisible, noiseEst="
-	  << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
-	  << ", maxCanon="
-	  << embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
-     cerr << ",  maxCoeff="<<largestCoeff(ptxt)
-	  << ", maxPowfl="<<largestCoeff(powerful)
-	  << endl;
-#endif
+    ratio = log(max_canon/newNoise)/log(2.0);
+    cerr << "\n        log2(max_canon/noiseEst)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
+    cerr << endl;
   }
 #endif
 
@@ -1180,10 +1100,6 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
 
   // Multiply the post-processed cipehrtext by the encrypted sKey
-#ifdef DEBUG_PRINTOUT
-  cerr << "+ Before recryption ";
-  decryptAndPrint(cerr, recryptEkey, *dbgKey, *dbgEa, printFlag);
-#endif
 
   double p0size = to_double(embeddingLargestCoeff(zzParts[0], context.zMStar));
   double p1size = to_double(embeddingLargestCoeff(zzParts[1], context.zMStar));
@@ -1198,28 +1114,18 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   ctxt.addConstant(zzParts[0], p0size);
 
 #ifdef DEBUG_PRINTOUT
-  cerr << "+ Before linearTrans1 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
-#endif
-  FHE_NTIMER_STOP(AAA_bootKeySwitch);
-
-#ifdef PRINT_LEVELS
    CheckCtxt(ctxt, "after bootKeySwitch");
 #endif
+
+  FHE_NTIMER_STOP(AAA_bootKeySwitch);
 
   // Move the powerful-basis coefficients to the plaintext slots
   FHE_NTIMER_START(AAA_coeffToSlot);
   trcData.coeffToSlot->apply(ctxt);
   FHE_NTIMER_STOP(AAA_coeffToSlot);
 
-
-#ifdef PRINT_LEVELS
-   CheckCtxt(ctxt, "after coeffToSlot");
-#endif
-
 #ifdef DEBUG_PRINTOUT
-  cerr << "+ After linearTrans1 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+   CheckCtxt(ctxt, "after coeffToSlot");
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
@@ -1228,13 +1134,8 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   FHE_NTIMER_STOP(AAA_extractDigitsThin);
 
 
-#ifdef PRINT_LEVELS
-   CheckCtxt(ctxt, "after extractDigitsThin");
-#endif
-
 #ifdef DEBUG_PRINTOUT
-  cerr << "+ Before linearTrans2 ";
-  decryptAndPrint(cerr, ctxt, *dbgKey, *dbgEa, printFlag);
+   CheckCtxt(ctxt, "after extractDigitsThin");
 #endif
 
   // restore intFactor

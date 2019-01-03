@@ -1556,8 +1556,7 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
     else {
       long keyId = parts[i].skHandle.getSecretKeyID();
       long d = parts[i].skHandle.getPowerOfS();
-      xdouble h, t;
-      h = pubKey.getSKeyBound(keyId);
+      xdouble h = conv<xdouble>(pubKey.getSKeyBound(keyId));
 
       addedNoise += NTL::power(h, d);
     }
@@ -1831,10 +1830,6 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 
   mulmod_precon_t precon = PrepMulModPrecon(ratioModP, p2r);
 
-  // cerr << "## converting from mod-"<<context.productOfPrimes(getPrimeSet())
-  //      << " to mod-"<<toModulus<<" (ratio="<<ratio
-  //      << "), ptxtSpace="<<p2r<<endl;
-
   // Scale and round all the integers in all the parts
   zzParts.resize(parts.size());
   const PowerfulDCRT& p2d_conv = *context.rcData.p2dConv;
@@ -1867,8 +1862,18 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
   }
 
   // Return an estimate for the noise
-  return conv<double>(noiseBound*ratio + modSwitchAddedNoiseBound());
-  // NOTE: technically, modSwitchAddedNoise bound assumes rounding is done
-  // in the polynomial basis, rather than the powerful basis, but the same bounds
-  // are still valid
+  double scaledNoise = conv<double>(noiseBound*ratio);
+  double addedNoise = conv<double>(modSwitchAddedNoiseBound());
+#ifdef DEBUG_PRINTOUT
+  cerr << "## Ctxt::rawModSwitch: converting from mod-"
+       << context.productOfPrimes(getPrimeSet())
+       << " to mod-"<<toModulus<<" (ratio="<<ratio
+       << "), ptxtSpace="<<p2r<<endl;
+  cerr << "             scaledNoise="<< scaledNoise
+       << ", addedNoise="<<addedNoise<<endl;
+#endif
+  return scaledNoise + addedNoise;
+  // NOTE: technically, modSwitchAddedNoise bound assumes rounding is
+  // done in the polynomial basis, rather than the powerful basis,
+  // but the same bounds are still valid
 }

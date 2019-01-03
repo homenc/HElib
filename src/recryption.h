@@ -39,11 +39,10 @@ public:
   //   |x|_powerful < |x|_canonical * sqrt(someConstant/phi(m))
   //   we set magicConst = sqrt(phi(m)/3) * sqrt(someConstant/phi(m))
   //   (sqrt(phi(m)/3) comes from context.noiseBoundForUniform())
-  static /*constexpr*/ double magicConst;
+  static /*constexpr*/ double magicConst; // defaults to 2
 
   //! Some data members that are only used for I/O
   NTL::Vec<long> mvec;     //! partition of m into co-prime factors
-  long hwt;           //! Hamming weight of recryption secret-key
 
   //! skey encrypted wrt space p^{e-e'+r}
   long e, ePrime;
@@ -73,7 +72,7 @@ public:
   std::vector<NTL::ZZX> unpackSlotEncoding;
 
   RecryptData() {
-    hwt=0; e=ePrime=0; a=0;
+    skHwt=0; e=ePrime=0; a=0;
     alMod=NULL; ea=NULL; firstMap=NULL; secondMap=NULL; p2dConv=NULL;
     build_cache = false;
   }
@@ -138,7 +137,6 @@ public:
 
   //! Some data members that are only used for I/O
   NTL::Vec<long> mvec;     //! partition of m into co-prime factors
-  long hwt;           //! Hamming weight of recryption secret-key
 
   //! skey encrypted wrt space p^{e-e'+r}
   long e, ePrime;
@@ -162,7 +160,7 @@ public:
   ThinEvalMap *coeffToSlot, *slotToCoeff;
 
   ThinRecryptData() {
-    hwt=0; e=ePrime=0; a=0;
+    skHwt=0; e=ePrime=0; a=0;
     alMod=NULL; ea=NULL; coeffToSlot=NULL; slotToCoeff=NULL; 
     build_cache = false;
   }

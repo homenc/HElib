@@ -25,7 +25,7 @@ ARMA=-larmadillo
 include $(wildcard local-defs)
 
 #
-CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2 
+CFLAGS = -g -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2 
 #CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -DFFT_NATIVE -fmax-errors=2
 
 # NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
