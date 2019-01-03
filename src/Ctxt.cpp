@@ -1692,7 +1692,7 @@ void CheckCtxt(const Ctxt& c, const char* label)
 
   if (dbgKey && c.getContext().isBootstrappable()) {
     Ctxt c1(c);
-    c1.dropSmallAndSpecialPrimes();
+    //c1.dropSmallAndSpecialPrimes();
 
     const FHEcontext& context = c1.getContext();
     const RecryptData& rcData = context.rcData;
@@ -1700,14 +1700,8 @@ void CheckCtxt(const Ctxt& c, const char* label)
 
     ZZX p, pp;
     dbgKey->Decrypt(p, c1, pp);
-    ZZX powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful.rep, pp, context.ctxtPrimes);
-    powerful.normalize();
-
-    // reduce again mod Q = product of primeSet, just to be safe
-    ZZ Q;
-    c1.getContext().productOfPrimes(Q, c1.getPrimeSet());
-    PolyRed(powerful, powerful, Q);
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, pp, c1.getPrimeSet());
 
     xdouble max_coeff = conv<xdouble>(largestCoeff(pp));
     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));

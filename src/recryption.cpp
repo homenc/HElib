@@ -235,70 +235,6 @@ static
 long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha, 
                    double& U_norm, const PAlgebra& palg);
 
-static
-long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, double alpha, 
-                   double& U_norm, const PAlgebra& palg, ZZX& U_vec)
-{
-  ZZX vec_orig;
-  conv(vec_orig, vec);
-  PolyRed(vec_orig, vec_orig, q);
-
-
-  assert(((p2e % p2r == 0) && (q % p2e == 1)) ||
-	 ((p2r % p2e == 0) && (q % p2r == 1)));
-
-  long maxU =0;
-  ZZ maxZ;
-  for (long i=0; i<vec.length(); i++) {
-    ZZ z, z2; conv(z, vec[i]);
-    long u=0, v=0;
-
-    long zMod1=0, zMod2=0;
-    if (p2r < p2e && alpha>0) {
-      zMod1 = rem(z,p2r);
-      if (zMod1 > p2r/2) zMod1 -= p2r; // map to the symmetric interval
-
-      // make z divisible by p^r by adding a multiple of q
-      z2 = z - to_ZZ(zMod1)*q;
-      zMod2 = rem(z2,p2e); // z mod p^e, still divisible by p^r
-      if (zMod2 > p2e/2) zMod2 -= p2e; // map to the symmetric interval
-      zMod2 /= -p2r; // now z+ p^r*zMod2=0 (mod p^e) and |zMod2|<=p^{r(e-1)}/2
-
-      u = ceil(alpha * zMod2);
-      v = zMod2 - u; // = floor((1-alpha) * zMod2)
-      z = z2 + u*p2r + to_ZZ(q)*v*p2r;
-    }
-    else { // r >= e or alpha==0, use only mulitples of q
-      zMod1 = rem(z,p2e);
-      if (zMod1 > p2e/2) zMod1 -= p2e; // map to the symmetric interval
-      z -= to_ZZ(zMod1) * q;
-    }
-    if (abs(u) > maxU) maxU = abs(u);
-    if (abs(z) > maxZ) maxZ = abs(z);
-
-    if (rem(z,p2e) != 0) { // sanity check
-      cerr << "**error: original z["<<i<<"]=" << vec[i]
-	   << std::dec << ", p^r="<<p2r << ", p^e="<<p2e << endl;
-      cerr << "z' = z - "<<zMod1<<"*q = "<< z2<<endl;
-      cerr << "z''=z' +" <<u<<"*p^r +"<<v<<"*p^r*q = "<<z<<endl;
-      exit(1);
-    }
-    conv(vec[i], z); // convert back to native format
-  }
-
-  ZZX vec_new;
-  conv(vec_new, vec);
-  vec_new = vec_new - vec_orig;
-  PolyRed(vec_new, vec_new, q);
-
-  assert(divide(vec_new, vec_new, p2r));
-
-  U_norm = conv<double>(embeddingLargestCoeff(vec_new, palg));
-  U_vec = vec_new;
-
-
-  return maxU;
-}
  
 // bootstrap a ciphertext to reduce noise
 void FHEPubKey::reCrypt(Ctxt &ctxt)
@@ -402,14 +338,15 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
      ZZX ptxt;
      rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
 
-     ZZX powerful;
-     rcData.p2dConv->ZZXtoPowerful(powerful.rep, ptxt, context.ctxtPrimes);
-     powerful.normalize();
-     PolyRed(powerful, powerful, q, /*abs=*/false);
+     Vec<ZZ> powerful;
+     ZZX ptxt_alt;
+     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+     vecRed(powerful, powerful, q, false);
+     rcData.p2dConv->powerfulToZZX(ptxt_alt, powerful);
 
 #if 1
      xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-     xdouble max_canon = embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
+     xdouble max_canon = embeddingLargestCoeff(ptxt_alt,rcData.ea->getPAlgebra());
      double noise_bnd = noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1);
 
      cerr << "  after makeDivisible";
@@ -1136,21 +1073,20 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   double noise = ctxt.rawModSwitch(zzParts, q);
 
 #ifdef PRINT_LEVELS
-   ZZX ptxt0;
 
    if (dbgKey) {
      const RecryptData& rcData = ctxt.getContext().rcData;
      ZZX ptxt;
      rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
-     ptxt0 = ptxt;
 
-     ZZX powerful;
-     rcData.p2dConv->ZZXtoPowerful(powerful.rep, ptxt, context.ctxtPrimes);
-     powerful.normalize();
-     PolyRed(powerful, powerful, q, /*abs=*/false);
+     Vec<ZZ> powerful;
+     ZZX ptxt_alt;
+     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+     vecRed(powerful, powerful, q, false);
+     rcData.p2dConv->powerfulToZZX(ptxt_alt, powerful);
 
      xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-     xdouble max_canon = embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
+     xdouble max_canon = embeddingLargestCoeff(ptxt_alt,rcData.ea->getPAlgebra());
      double noise_bnd = noise;
 
      ZZX skey_poly;
@@ -1182,8 +1118,6 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   assert(zzParts.size() == 2);
 
-  vector<ZZX> zzParts_orig; 
-  zzParts_orig = zzParts;
 
   ZZX U_vec[2];
   long maxU=0;
@@ -1192,12 +1126,10 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
     // make divisible by p^{e'}
     double U_norm;
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
-				trcData.alpha, U_norm, context.zMStar, U_vec[i]);
+				trcData.alpha, U_norm, context.zMStar);
     zzParts[i].normalize();   // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
     if (maxU_norm < U_norm)  maxU_norm = U_norm;
-
-    assert(divide(zzParts[i] - (zzParts_orig[i] + p2r*U_vec[i]), q));
   }
 
 
@@ -1212,38 +1144,16 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
      ZZX ptxt;
      rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
 
-     ZZX powerful;
-     rcData.p2dConv->ZZXtoPowerful(powerful.rep, ptxt, context.ctxtPrimes);
-     powerful.normalize();
-     PolyRed(powerful, powerful, q, /*abs=*/false);
+     Vec<ZZ> powerful;
+     ZZX ptxt_alt;
+     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+     vecRed(powerful, powerful, q, false);
+     rcData.p2dConv->powerfulToZZX(ptxt_alt, powerful);
 
-     ZZX skey_poly;
-     dbgKey->sKeys[recryptKeyID].toPoly(skey_poly);
-
-     ZZX U_stuff = U_vec[0] + U_vec[1]*skey_poly;
-     U_stuff = U_stuff % context.zMStar.getPhimX();
-     PolyRed(U_stuff, U_stuff, q);
-
-     xdouble U_canon = embeddingLargestCoeff(U_stuff, rcData.ea->getPAlgebra());
-
-     ZZX ptxt1;
-     ptxt1 = ptxt0 + p2r*U_stuff;
-     //PolyRed(ptxt1, ptxt1, q);
-
-     if (ptxt1 != ptxt) { cerr << "!!!!!\n"; }
-
-     cerr << "*** ";
-     cerr <<  " ptxt0=" << embeddingLargestCoeff(ptxt0,rcData.ea->getPAlgebra());
-     cerr <<  " U_stuff=" << embeddingLargestCoeff(U_stuff,rcData.ea->getPAlgebra());
-     cerr <<  " p2r=" << p2r;
-     cerr <<  " ptxt1=" << embeddingLargestCoeff(ptxt1,rcData.ea->getPAlgebra());
-     cerr << "\n";
-
-     
 
 #if 1
      xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-     xdouble max_canon = embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
+     xdouble max_canon = embeddingLargestCoeff(ptxt_alt,rcData.ea->getPAlgebra());
      double noise_bnd = noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1);
 
      cerr << "  after makeDivisible";
@@ -1253,13 +1163,12 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
      cerr << ", p2r=" << p2r;
      cerr << ", sk_bnd=" << skBounds[recryptKeyID];
      cerr << ", max_canon=" << max_canon;
-     cerr << ", U_canon=" << U_canon;
 
      cerr << ", max_pwrfl/q=" << (max_pwrfl/q);
 
      double ratio0 = log(max_canon/noise_bnd)/log(2.0);
      cerr << ", log2(max_canon/bound)=" << ratio0;
-     if (ratio0 > 0) cerr << " bad-BOUND";
+     if (ratio0 > 0) cerr << " BAD-BOUND";
 
      double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
      cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
