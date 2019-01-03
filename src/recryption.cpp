@@ -191,7 +191,7 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
     // Solve for the largest a,b satisfying constraints (1,2)
     long aTry = floor( (p2e+1)/bound ) - 2*p2r;
     long bTry = floor( (p2e-3)/bound ) - 2;
-    assert(aTry > 0 && bTry > 0);     // sanity check
+    assert(aTry >= 0 && bTry >= 0);     // sanity check
     aTry -= (aTry % p2r); // reduce to nearest multiply of p^r
 
     long ePrimeTry = floor( log(2*(aTry+bTry))/log(p) );
