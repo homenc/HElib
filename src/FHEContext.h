@@ -217,8 +217,7 @@ public:
   std::vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
 
   //! Bootstrapping-related data in the context
-  RecryptData rcData;
-  ThinRecryptData trcData;
+  ThinRecryptData rcData; // includes both thin and think
 
   /******************************************************************/
   ~FHEcontext(); // destructor
@@ -227,10 +226,9 @@ public:
              const std::vector<long>& ords = std::vector<long>() );  // constructor
 
   void makeBootstrappable(const NTL::Vec<long>& mvec, long skWht=0,
-			  bool build_cache=false)
-  { 
-    rcData.init(*this, mvec, skWht, build_cache); 
-    trcData.init(*this, mvec, skWht, build_cache); 
+			  bool build_cache=false, bool alsoThick=true)
+  {
+    rcData.init(*this, mvec, alsoThick, skWht, build_cache);
   }
 
   bool isBootstrappable() const 

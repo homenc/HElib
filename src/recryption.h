@@ -80,7 +80,8 @@ public:
 
   //! Initialize the recryption data in the context
   void init(const FHEcontext& context, const NTL::Vec<long>& mvec_,
-            long t=0/*min Hwt for sk*/, 
+            bool enableThick,/*init linear transforms for non-thin*/
+            long t=0/*min Hwt for sk*/,            
             bool build_cache=false,
             bool minimal=false);
 
@@ -130,52 +131,20 @@ public:
 //! @class ThinRecryptData
 //! @brief Same as above, but for "thin" bootstrapping, where the slots 
 //! are assumed to contain constants
-class ThinRecryptData {
+class ThinRecryptData : public RecryptData {
 public:
-  //! default Hamming weight of recryption key
-  static const long defSkHwt=100;
-
-  //! Some data members that are only used for I/O
-  NTL::Vec<long> mvec;     //! partition of m into co-prime factors
-
-  //! skey encrypted wrt space p^{e-e'+r}
-  long e, ePrime;
-
-  //! Hamming weight of recryption secret key
-  long skHwt;
-
-  //! an optimization parameter
-  long a;
-
-  //! for plaintext space p^{e-e'+r}
-  PAlgebraMod *alMod;
-
-  //! for plaintext space p^{e-e'+r}
-  EncryptedArray *ea;
-
-  bool build_cache;
-
-
   //! linear maps
   ThinEvalMap *coeffToSlot, *slotToCoeff;
 
-  ThinRecryptData() {
-    skHwt=0; e=ePrime=0; a=0;
-    alMod=NULL; ea=NULL; coeffToSlot=NULL; slotToCoeff=NULL; 
-    build_cache = false;
-  }
+  ThinRecryptData() : RecryptData() {coeffToSlot=NULL; slotToCoeff=NULL;}
   ~ThinRecryptData();
 
   //! Initialize the recryption data in the context
   void init(const FHEcontext& context, const NTL::Vec<long>& mvec_,
+            bool alsoThick,/*init linear transforms also for non-thin*/
             long t=0/*min Hwt for sk*/, 
             bool build_cache=false,
             bool minimal=false);
-
-  bool operator==(const ThinRecryptData& other) const;
-  bool operator!=(const ThinRecryptData& other) const {
-    return !(operator==(other));
-  }
 };
 
 

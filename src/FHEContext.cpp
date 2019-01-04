@@ -188,7 +188,6 @@ bool FHEcontext::operator==(const FHEcontext& other) const
   if (scale != other.scale) return false;
 
   if (rcData != other.rcData) return false;
-  if (trcData != other.trcData) return false;
   return true;
 }
 
@@ -420,7 +419,6 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   str << context.rcData.mvec;
   str << " " << context.rcData.skHwt;
   str << " " << context.rcData.build_cache;
-  // NOTE: the data for trcData will always be the same as for rcData
 
   str << "]\n";
 

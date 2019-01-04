@@ -23,7 +23,7 @@
 
 NTL_CLIENT
 
-long thinRecrypt_initial_level=0;
+//#define DROP_BEFORE_THIN_RECRYPT
 
 #define DEBUG_PRINTOUT
 
@@ -244,11 +244,9 @@ bool RecryptData::operator==(const RecryptData& other) const
 
 
 
-long fhe_disable_fat_boot = 0;
-
 // The main method
 void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
-		       long t, bool build_cache_, bool minimal)
+                  bool enableThick, long t, bool build_cache_, bool minimal)
 {
   if (alMod != NULL) { // were we called for a second time?
     cerr << "@Warning: multiple calls to RecryptData::init\n";
@@ -271,7 +269,7 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
   p2dConv = new PowerfulDCRT(context, mvec);
 
-  if (fhe_disable_fat_boot) return;
+  if (!enableThick) return;
 
   // Initialize the linear polynomial for unpacking the slots
   zz_pBak bak; bak.save(); ea->getAlMod().restoreContext();
@@ -708,18 +706,8 @@ void packedRecrypt(const CtPtrMat& m,
 
 ThinRecryptData::~ThinRecryptData()
 {
-  if (alMod!=NULL)     delete alMod;
-  if (ea!=NULL)        delete ea;
   if (coeffToSlot!=NULL)  delete coeffToSlot;
   if (slotToCoeff!=NULL) delete slotToCoeff;
-}
-
-bool ThinRecryptData::operator==(const ThinRecryptData& other) const
-{
-  if (mvec != other.mvec) return false;
-  if (skHwt != other.skHwt) return false;
-
-  return true;
 }
 
 
@@ -727,27 +715,9 @@ bool ThinRecryptData::operator==(const ThinRecryptData& other) const
 // the same, except for the linear-map-related stuff.
 // FIXME: There is really too much code (and data!) duplication here.
 void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
-		       long t, bool build_cache_, bool minimal)
+                      bool alsoThick, long t, bool build_cache_, bool minimal)
 {
-  if (alMod != NULL) { // were we called for a second time?
-    cerr << "@Warning: multiple calls to ThinRecryptData::init\n";
-    return;
-  }
-  assert(computeProd(mvec_) == (long)context.zMStar.getM()); // sanity check
-
-  // Record the arguments to this function
-  mvec = mvec_;
-  build_cache = build_cache_;
-
-  skHwt = RecryptData::setAE(a,e,ePrime,context,t);
-  long p = context.zMStar.getP();
-  long r = context.alMod.getR();
-
-  // First part of Bootstrapping works wrt plaintext space p^{r'}
-  alMod = new PAlgebraMod(context.zMStar, e-ePrime+r);
-  ea = new EncryptedArray(context, *alMod);
-         // Polynomial defaults to F0, PAlgebraMod explicitly given
-
+  RecryptData::init(context, mvec_, alsoThick, t, build_cache_, minimal);
   coeffToSlot = new ThinEvalMap(*ea, minimal, mvec, true, build_cache);
   slotToCoeff = new ThinEvalMap(*context.ea, minimal, mvec, false, build_cache);
 }
@@ -936,7 +906,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
   long intFactor = ctxt.intFactor;
 
-  const ThinRecryptData& trcData = ctxt.getContext().trcData;
+  const ThinRecryptData& trcData = ctxt.getContext().rcData;
 
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
   long e = trcData.e;
@@ -954,14 +924,14 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
   ctxt.dropSmallAndSpecialPrimes();
 
-  if (thinRecrypt_initial_level) {
-    // experimental code...we should drop down
-    // to a reasonably small level before doing the 
-    // first linear map.
-    long first = context.ctxtPrimes.first();
-    long last = min(context.ctxtPrimes.last(), first + thinRecrypt_initial_level - 1);
-    ctxt.bringToSet(IndexSet(first, last));
-  }
+#ifdef DROP_BEFORE_THIN_RECRYPT
+  // experimental code...we should drop down to a reasonably low level
+  // before doing the first linear map.
+  long first = context.ctxtPrimes.first();
+  long last = min(context.ctxtPrimes.last(),
+                  first + thinRecrypt_initial_level - 1);
+  ctxt.bringToSet(IndexSet(first, last));
+#endif
 
 #ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "after mod down");

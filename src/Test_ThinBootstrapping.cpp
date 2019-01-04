@@ -128,17 +128,18 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   //   bootstrappable (else the "powerful" basis is not initialized correctly.)
   //   This is a bug, the value 7 is sometimes the right one, but seriously??
 
-  context.makeBootstrappable(mvec, /*t=*/0, build_cache);
+  context.makeBootstrappable(mvec,/*t=*/0,build_cache,/*alsoThick=*/false);
+  // save time...disable some fat boot precomputation
 
   t += GetTime();
 
-  if (skHwt>0) context.trcData.skHwt = skHwt;
+  if (skHwt>0) context.rcData.skHwt = skHwt;
   if (!noPrint) {
     cout << " done in "<<t<<" seconds\n";
-    cout << "  e="    << context.trcData.e
-	 << ", e'="   << context.trcData.ePrime
-	 << ", a="<< context.trcData.a
-	 << ", t="    << context.trcData.skHwt
+    cout << "  e="    << context.rcData.e
+	 << ", e'="   << context.rcData.ePrime
+	 << ", a="<< context.rcData.a
+	 << ", t="    << context.rcData.skHwt
 	 << "\n  ";
     context.zMStar.printout();
   }
@@ -223,16 +224,8 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     cerr << "GOOD\n";
   else
     cerr << "BAD\n";
-
-
-  //cerr << convert<Vec<ZZX>>(val1) << "\n";
-
   }
-
-  //if (!noPrint) printAllTimers();
-  
 }
-
 
 
 //extern long fhe_disable_intFactor;
@@ -273,7 +266,6 @@ int main(int argc, char *argv[])
 
   amap.arg("force_bsgs", fhe_test_force_bsgs);
   amap.arg("force_hoist", fhe_test_force_hoist);
-  amap.arg("init_level", thinRecrypt_initial_level);
 
   //  amap.arg("disable_intFactor", fhe_disable_intFactor);
   amap.arg("chen_han", fhe_force_chen_han);
@@ -288,9 +280,6 @@ int main(int argc, char *argv[])
     SetSeed(ZZ(seed));
 
   SetNumThreads(nthreads);
-
-  fhe_disable_fat_boot = 1;
-  // save time...disable some fat boot precomputation
 
   for (long i=0; i<(long)num_mValues; i++)
     if (mValues[i][0]==p && mValues[i][1]>=N) {
