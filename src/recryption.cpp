@@ -23,8 +23,6 @@
 
 NTL_CLIENT
 
-//#define DROP_BEFORE_THIN_RECRYPT
-
 #define DEBUG_PRINTOUT
 
 #ifdef DEBUG_PRINTOUT
@@ -37,6 +35,9 @@ long printFlag = FLAG_PRINT_VEC;
 
 /************************ Some local functions ***********************/
 /*********************************************************************/
+static void
+printSizesPowerful(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
+                   const RecryptData& rcData, long q, double noise);
 
 // Return in poly a polynomial with X^i encoded in all the slots
 static void x2iInSlots(ZZX& poly, long i,
@@ -380,6 +381,15 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
   double noise = ctxt.rawModSwitch(zzParts, q);
 
+#ifdef DEBUG_PRINTOUT
+  if (dbgKey) {
+    cerr << "  before makeDivisible (recryption modulus q="<<q
+         << "), noise_bnd=" << noise<<endl;
+    printSizesPowerful(zzParts, dbgKey->sKeys[recryptKeyID],
+                       ctxt.getContext().rcData, q, noise);
+  }
+#endif
+
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   long maxU=0;
   double maxU_norm = 0;
@@ -392,55 +402,15 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
     if (maxU < newMax)  maxU = newMax;
     if (maxU_norm < U_norm)  maxU_norm = U_norm;
   }
-
-  // Check that the estimated noise is still low
-  if (noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1) > q/2)
-    cerr << " ******** warning: noise/q after makeDivisible = "
-	 << ((noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1))/q) << endl;
-
 #ifdef DEBUG_PRINTOUT
-   if (dbgKey) {
-     const RecryptData& rcData = ctxt.getContext().rcData;
-     ZZX ptxt;
-     rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID], q);
-
-     Vec<ZZ> powerful;
-     ZZX ptxt_alt;
-     rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-     vecRed(powerful, powerful, q, false);
-     rcData.p2dConv->powerfulToZZX(ptxt_alt, powerful);
-
-#if 1
-     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-     xdouble max_canon = embeddingLargestCoeff(ptxt_alt,rcData.ea->getPAlgebra());
-     double noise_bnd = noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1);
-
-     cerr << "  after makeDivisible";
-
-     cerr << ", maxU=" << maxU;
-     cerr << ", maxU_norm=" << maxU_norm;
-
-     cerr << ", max_pwrfl/q=" << (max_pwrfl/q);
-
-     double ratio0 = log(max_canon/noise_bnd)/log(2.0);
-     cerr << ", log2(max_canon/bound)=" << ratio0;
-     if (ratio0 > 0) cerr << " BAD-BOUND";
-
-     double ratio1 = log(max_pwrfl/max_canon)/log(2.0);
-     cerr << ", log2(max_pwrfl/max_canon)=" << ratio1;
-     if (ratio1 > 0) cerr << " BAD-BOUND";
-
-     cerr << "\n";
-#else
-     cerr << "  after makeDivisible, noiseEst="
-	  << (noise + maxU*p2r*(skBounds[recryptKeyID]+1))
-	  << ", maxCanon="
-	  << embeddingLargestCoeff(ptxt,rcData.ea->getPAlgebra());
-     cerr << ",  maxCoeff="<<largestCoeff(ptxt)
-	  << ", maxPowfl="<<largestCoeff(powerful)
-	  << endl;
-#endif
-  }
+  double newNoise = noise + maxU_norm*p2r*(skBounds[recryptKeyID]+1);
+  cerr << "  after makeDivisible, maxU=" << maxU
+       << ", maxU_norm="<<maxU_norm<<", p2r="<<p2r
+       << ", noise_bnd="<<newNoise<<", sk_bnd="<< skBounds[recryptKeyID]
+       << endl;
+   if (dbgKey)
+     printSizesPowerful(zzParts, dbgKey->sKeys[recryptKeyID],
+                        ctxt.getContext().rcData, q, newNoise);
 #endif
 
   for (long i=0; i<(long)zzParts.size(); i++)
@@ -968,102 +938,38 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
   double noise = ctxt.rawModSwitch(zzParts, q);
+  assert(zzParts.size() == 2);
 
 #ifdef DEBUG_PRINTOUT
   if (dbgKey) {
     cerr << "  before makeDivisible (recryption modulus q="<<q
          << "), noise_bnd=" << noise<<endl;
-    ZZX ptxt;
-    const RecryptData& rcData = ctxt.getContext().rcData;
-    const PAlgebra& palg = rcData.ea->getPAlgebra();
-    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID]); // no mod q
-
-    Vec<ZZ> powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-    xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-    xdouble max_canon = embeddingLargestCoeff(ptxt, palg);
-    double ratio = log(max_pwrfl/max_canon)/log(2.0);
-    cerr << "                     max_pwrfl/q^2=" << ((max_pwrfl/q)/q)
-         << ", log2(max_pwrfl/max_canon)=" << ratio;
-    if (ratio > 0) cerr << " BAD-BOUND";
-    cerr << endl;
-
-    PolyRed(ptxt, q, false/*reduce to [-q/2,1/2]*/);
-    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-    vecRed(powerful, powerful, q, false);
-    max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-    max_canon = embeddingLargestCoeff(ptxt, palg);
-    ratio = log(max_pwrfl/max_canon)/log(2.0);
-    cerr << "        after mod q, max_pwrfl/q=" << (max_pwrfl/q)
-         << ", log2(max_pwrfl/max_canon)=" << ratio;
-    if (ratio > 0) cerr << " BAD-BOUND";
-
-    ratio = log(max_canon/noise)/log(2.0);
-    cerr << "\n        log2(max_canon/noiseEst)=" << ratio;
-    if (ratio > 0) cerr << " BAD-BOUND";
-    cerr << endl;
+    printSizesPowerful(zzParts, dbgKey->sKeys[recryptKeyID],
+                       ctxt.getContext().rcData, q, noise);
   }
 #endif
 
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
-  assert(zzParts.size() == 2);
-
-
-  ZZX U_vec[2];
-  long maxU=0;
   double maxU_norm = 0;
+  long maxU=0;
   for (long i=0; i<(long)zzParts.size(); i++) {
     // make divisible by p^{e'}
-    double U_norm;
+    double U_norm; 
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
 				trcData.a, U_norm, context.zMStar);
-    zzParts[i].normalize();   // normalize after working directly on the rep
+    zzParts[i].normalize(); // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
     if (maxU_norm < U_norm)  maxU_norm = U_norm;
   }
-
-
-  // Check that the estimated noise is still low
-  double newNoise = noise + maxU_norm*(skBounds[recryptKeyID]+1);
-  if (newNoise > q/4)
-    cerr << " ******** warning: noise/q after makeDivisible = "
-	 << (newNoise/q) << endl;
-
 #ifdef DEBUG_PRINTOUT
-  cerr << "  after makeDivisible, maxU_norm=" << maxU_norm
-       << ", p2r=" << p2r << ", noise_bnd=" << newNoise
-       << ", sk_bnd=" << skBounds[recryptKeyID] << endl;
-  if (dbgKey) {
-    ZZX ptxt;
-    const RecryptData& rcData = ctxt.getContext().rcData;
-    const PAlgebra& palg = rcData.ea->getPAlgebra();
-    rawDecrypt(ptxt, zzParts, dbgKey->sKeys[recryptKeyID]); // no mod q
-
-    Vec<ZZ> powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-    xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-    xdouble max_canon = embeddingLargestCoeff(ptxt, palg);
-    double ratio = log(max_pwrfl/max_canon)/log(2.0);
-    cerr << "                     max_pwrfl/q^2=" << ((max_pwrfl/q)/q)
-         << ", log2(max_pwrfl/max_canon)=" << ratio;
-    if (ratio > 0) cerr << " BAD-BOUND";
-    cerr << endl;
-
-    PolyRed(ptxt, q, false/*reduce to [-q/2,1/2]*/);
-    rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-    vecRed(powerful, powerful, q, false);
-    max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-    max_canon = embeddingLargestCoeff(ptxt, palg);
-    ratio = log(max_pwrfl/max_canon)/log(2.0);
-    cerr << "        after mod q, max_pwrfl/q=" << (max_pwrfl/q)
-         << ", log2(max_pwrfl/max_canon)=" << ratio;
-    if (ratio > 0) cerr << " BAD-BOUND";
-
-    ratio = log(max_canon/newNoise)/log(2.0);
-    cerr << "\n        log2(max_canon/noiseEst)=" << ratio;
-    if (ratio > 0) cerr << " BAD-BOUND";
-    cerr << endl;
-  }
+  double newNoise = noise + maxU_norm*(skBounds[recryptKeyID]+1);
+  cerr << "  after makeDivisible, maxU=" << maxU
+       << ", maxU_norm="<<maxU_norm<<", p2r="<<p2r
+       << ", noise_bnd="<<newNoise<<", sk_bnd="<< skBounds[recryptKeyID]
+       << endl;
+   if (dbgKey)
+     printSizesPowerful(zzParts, dbgKey->sKeys[recryptKeyID],
+                        ctxt.getContext().rcData, q, newNoise);
 #endif
 
   for (long i=0; i<(long)zzParts.size(); i++)
@@ -1114,4 +1020,38 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 }
 
 
+static void
+printSizesPowerful(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
+                   const RecryptData& rcData, long q, double noise)
+{
+  ZZX ptxt;
+  //  const RecryptData& rcData = ctxt.getContext().rcData;
+  const PAlgebra& palg = rcData.ea->getPAlgebra();
+  rawDecrypt(ptxt, zzParts, sKey); // no mod q
 
+  Vec<ZZ> powerful;
+  rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+  xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+  xdouble max_canon = embeddingLargestCoeff(ptxt, palg);
+  double ratio = log(max_pwrfl/max_canon)/log(2.0);
+  cerr << "                     max_pwrfl/q^2=" << ((max_pwrfl/q)/q)
+       << ", log2(max_pwrfl/max_canon)=" << ratio;
+  if (ratio > 0) cerr << " BAD-BOUND";
+  cerr << endl;
+
+  PolyRed(ptxt, q, false/*reduce to [-q/2,1/2]*/);
+  rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+  vecRed(powerful, powerful, q, false);
+  max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+  rcData.p2dConv->powerfulToZZX(ptxt, powerful);
+  max_canon = embeddingLargestCoeff(ptxt, palg);
+  ratio = log(max_pwrfl/max_canon)/log(2.0);
+  cerr << "        after mod q, max_pwrfl/q=" << (max_pwrfl/q)
+       << ", log2(max_pwrfl/max_canon)=" << ratio;
+  if (ratio > 0) cerr << " BAD-BOUND";
+
+  ratio = log(max_canon/noise)/log(2.0);
+  cerr << "\n        log2(max_canon/noiseEst)=" << ratio;
+  if (ratio > 0) cerr << " BAD-BOUND";
+  cerr << endl;
+}
