@@ -31,7 +31,7 @@ long printFlag = FLAG_PRINT_VEC;
 #endif
 
 
-/*constexpr*/ double RecryptData::magicConst = 2.0;
+double RecryptData::magicConst = 2.0;
 
 /************************ Some local functions ***********************/
 /*********************************************************************/
@@ -132,106 +132,91 @@ RecryptData::~RecryptData()
 
 
 
-/** We want to get the smallest value of e-e', subject to a
- * few constraints: For RecryptData::magicConst, an exponent e,
- * a norm-s secret key, and plaintext space mod p^r, we need to
- * find integers a and b so that:
+/** Fix RecryptData::magicConst, a target norm s for the secret key,
+ * and plaintext space mod p^r. We want to find e,e' that minimize
+ * e-e', subject to the constraint
  *
- *    (1) (4a+ 8p^r)(s+1)*magicConst <= q  = p^e +1
- *    (2) (4b+ 8)(s+1) * magicConst <= q-4= p^e -3
+ *    (1) (p^{e'}/2 + 2*p^r+1)(s+1)*magicConst <= (q-1)/2  = p^e/2
  *
- * Then e' is the largest exponent such that p^{e'} <= 2(a+b).
+ * Note that as we let e,e' tend to infinity the constraint above
+ * degenerates to (s+1)*magicConst < p^{e-e'}, so the smallest value
+ * of e-e' that we can hope for is
  *
- * Note that if we let e,e' tend to infinity and set a=b=p^{e'}/4,
- * then the two constraints above degenerate to
+ *    (2) e-e' = 1 + floor( log_p( (s+1)*magicConst) )
  *
- *    2(s+1)*magicConst < p^{e-e'}
+ * The setAE procedure tries to minimize e-e' subject to (1), and
+ * in addition subject to the constraint that e is "not too big".
+ * Specifically, it tries to ensure p^e<2^{30}, and failing that it
+ * uses the smallest e for which (2*p^r+1)(s+1)*magicConst*2 <= p^e,
+ * and the largest e' for that value of e.
  *
- * so the smallest value of e-e' that we can hope for is
- *
- *    e-e' = ceiling( log_p( 2(s+1)*magicConst ) )
- *
- * The setAE procedure tries to find a setting of e,e',a (and
- * b = p^{e'}/2 -a) that satisfies the constraints (1,2) and
- * yeilds the smallest e-e', so long as e is "not too big".
- * Specifically, it minimizes e-e' while ensuring p^e < 2^{30},
- * if possible (and failing that it will just satisfy the
- * constraints (1,2)).
- *
- * Once e, e', a are set, it copmutes and returns the largest 
- * Hamming-weight for the key for which constraints (1,2) still hold.
- * NOTE: it returns the Hamming weight, *not* the size of the key.
- *       The size can be computed by calling the function
- *       sampleHWtBoundedEffectiveBound(context, weight)
+ * Once e,e' are set, it splits p^{e'}/2=a+b with a,b about equal and
+ * a divisible by p^r. Then it computes and returns the largest Hamming
+ * weight for the key (that implies the norm s') for which constraint
+ * (1) still holds.
+ * NOTE: setAE returns the Hamming weight, *not* the norm s'. The norm
+ * can be computed from the weight using sampleHWtBoundedEffectiveBound.
  */
 long RecryptData::setAE(long& a, long& e, long& ePrime,
-                    const FHEcontext& context, long t)
+                    const FHEcontext& context, long targetWeight)
 {
-  if (t<=0) t = RecryptData::defSkHwt;
-  double skSize = sampleHWtBoundedEffectiveBound(context, t);
-  double bound = (skSize+1) * RecryptData::magicConst * 4;
+  if (targetWeight<=0) targetWeight = RecryptData::defSkHwt;
+  double skSize = sampleHWtBoundedEffectiveBound(context, targetWeight);
+
+  double factor = (skSize+1) * RecryptData::magicConst * 2;
   long p = context.zMStar.getP();
   long p2r = context.alMod.getPPowR();
+  long frstTerm = 2*p2r+1; // 2*p^r +1
+  double logp = log(p);    // log p
 
-  // We must have p^e > 8 p^r (skSize+1)*magicCons
-  double eMin = ceil(log(1+ 2*bound*p2r)/log(p));
-
-  // make sure that p^e for this smallest e is single-precision
-  assert(eMin*log(p) < log(NTL_SP_BOUND));
-
-  // The loop below tries to find e such that p^e < 2^30
-  a = 0;
-  e = eMin;
+  // Start with the smallest e s.t. p^e > (2p^r+1)(skSize+1)*magicCons
   ePrime = 0;
-  long eMinusEprime = e; // want to minimize e-e'
+  e = ceil( log(frstTerm*factor) /logp );
+  assert(e*logp < log(NTL_SP_BOUND));
+         // p^e for this smallest e must be single precision
+
+  // Loop to try and find better solutions, that still satisfy
+  //          (p^{e'}/2 + 2*p^r+1) * (s+1)*magicConst*2 <= p^e
+  //          <=> p^{e'}/2 + 2*p^r +1 <= p^e/factor
+  //          <=> p^{e'} <=  2*(p^e/factor - 2*p^r -1)
+  // stop when you hit p^e > 2^30
   long eTry = e;
-  long b = 0;
+  long eMinusEprime = e; // want to minimize e-e'
   do {
     double p2e = pow(p,eTry);
 
-    // Solve for the largest a,b satisfying constraints (1,2)
-    long aTry = floor( (p2e+1)/bound ) - 2*p2r;
-    long bTry = floor( (p2e-3)/bound ) - 2;
-    assert(aTry >= 0 && bTry >= 0);     // sanity check
-    aTry -= (aTry % p2r); // reduce to nearest multiply of p^r
-
-    long ePrimeTry = floor( log(2*(aTry+bTry))/log(p) );
+    // Solve for the largest e' satisfying constraints (1)
+    // p^{e'} <=  2*(p^e/factor - 2*p^r -1)
+    long ePrimeTry = floor( log(2*(p2e/factor -frstTerm)) / logp);
     if (eTry - ePrimeTry < eMinusEprime) {
       e = eTry;
       ePrime = ePrimeTry;
       eMinusEprime = e - ePrime;
-
-      // Set the value of a, reduced by a bit if possible
-      long pToEprimeOver2 = floor(pow(p,ePrime)/2.0);
-      long slack = aTry+bTry - pToEprimeOver2;
-      bTry -= slack/2;
-      if (bTry>pToEprimeOver2) bTry = pToEprimeOver2;
-      a = pToEprimeOver2 - bTry;
-      a -= (a % p2r);
-      b = pToEprimeOver2 - a;
-      cerr << "  -- trying e="<<e<<", e'="<<ePrime
-           << ", a="<<a<<"(<="<<aTry<<"), b="<<b
-           << ", p^e'/2="<<pToEprimeOver2
-           << endl;
     }
   } while ((++eTry)*log(p) <= log(1L<<30));  
 
-  // Try to increase t, while maintaining constraints (1,2)
-  double boundA = (4*a + 8*p2r)*RecryptData::magicConst;
-  double boundB = (4*b + 8)*RecryptData::magicConst;
-  long q = ceil(pow(p,e))+1;
-  while (t++) {
-    skSize = sampleHWtBoundedEffectiveBound(context, t);
-    if (t>256 || boundA*skSize > q || boundB*skSize > q-4)
+  // Split p^{e'}/2 into a+b with a divisible by p^r
+  long pToEprimeOver2 = floor(pow(p,ePrime)/2.0);
+  a = 2*pToEprimeOver2 /5; // empirically we want a little below a half
+  a -= (a % p2r);
+ 
+  // Try to increase t, while maintaining constraint (1)
+  double bound = (frstTerm + pToEprimeOver2)*RecryptData::magicConst * 2;
+  long p2e = pow(p,e);
+  while (targetWeight++) {
+    skSize = sampleHWtBoundedEffectiveBound(context, targetWeight);
+    if (targetWeight>256 || bound*(skSize+1) >= p2e)
       break;
   }
-  t--;
+  targetWeight--;
 
 #ifdef DEBUG_PRINTOUT
+  long b = pToEprimeOver2 - a;
   cerr << "RecryptData::setAE(): e="<<e<<", e'="<<ePrime
-       << ", a="<<a<<", b="<<b<<", sk-hwt="<<t<<" (size="<<skSize<<")\n";
+       << ", a="<<a<<", b="<<b<<", sk-hwt="<<targetWeight
+       << " (size="<<skSize<<")\n";
 #endif
-  return t;
+  return targetWeight;
 }
 
 

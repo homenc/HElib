@@ -39,7 +39,7 @@ public:
   //   |x|_powerful < |x|_canonical * sqrt(someConstant/phi(m))
   //   we set magicConst = sqrt(phi(m)/3) * sqrt(someConstant/phi(m))
   //   (sqrt(phi(m)/3) comes from context.noiseBoundForUniform())
-  static /*constexpr*/ double magicConst; // defaults to 2
+  static double magicConst; // defaults to 2
 
   //! Some data members that are only used for I/O
   NTL::Vec<long> mvec;     //! partition of m into co-prime factors
@@ -93,38 +93,32 @@ public:
   //! Helper function for computing the recryption parameters
   static long setAE(long& a, long& e, long& ePrime,
                     const FHEcontext& context, long t=0);
-  /** We want to get the smallest value of e-e', subject to a few
-   * constraints: For the magicConst from above, an exponent e,
-   * a norm-t secret key, and plaintext space mod p^r, we need to
-   * find integers a and b so that:
+  /**
+   * Fix RecryptData::magicConst, a target norm s for the secret key,
+   * and plaintext space mod p^r. We want to find e,e' that minimize
+   * e-e', subject to the constraint
    *
-   *    (1) (4a+ 8p^r)(t+1)*magicConst <= q  = p^e +1
-   *    (2) (4b + 5)(t+1) * magicConst <= q-4= p^e -3
+   *    (1) (p^{e'}/2 + 2*p^r+1)(s+1)*magicConst <= (q-1)/2  = p^e/2
    *
-   * Then e' is the largest exponent such that p^{e'} <= 2(a+b).
+   * Note that as we let e,e' tend to infinity the constraint above
+   * degenerates to (s+1)*magicConst < p^{e-e'}, so the smallest value
+   * of e-e' that we can hope for is
    *
-   * Note that if we let e,e' tend to infinity and set a=b=p^{e'}/4,
-   * then the two constraints above degenerate to
+   *    (2) e-e' = 1 + floor( log_p( (s+1)*magicConst) )
    *
-   *    2(t+1)*magicConst < p^{e-e'}
+   * The setAE procedure tries to minimize e-e' subject to (1), and
+   * in addition subject to the constraint that e is "not too big".
+   * Specifically, it tries to ensure p^e<2^{30}, and failing that it
+   * uses the smallest e for which (2*p^r+1)(s+1)*magicConst*2 <= p^e,
+   * and the largest e' for that value of e.
    *
-   * so the smallest value of e-e' that we can hope for is
-   *
-   *    e-e' = ceiling( log_p( 2(t+1)*magicConst ) )
-   *
-   * The setAE procedure tries to find a setting of e,e',a (and
-   * b = p^{e'}/2 -a) that satisfies the constraints (1,2) and
-   * yeilds the smallest e-e', so long as e is "not too big".
-   * Specifically, it minimizes e-e' while ensuring p^e < 2^{30},
-   * if possible (and failing that it will just satisfy the
-   * constraints (1,2)).
-   *
-   * Once e, e', a are set, it copmutes and returns the largest 
-   * Hamming-weight for the key for which constraints (1,2) still hold.
-   * NOTE: it returns the Hamming weight, *not* the size of the key.
-   *       The size can be computed by calling the function
-   *       sampleHWtBoundedEffectiveBound(context, weight)
-   */
+   * Once e,e' are set, it splits p^{e'}/2=a+b with a,b about equal and
+   * a divisible by p^r. Then it computes and returns the largest Hamming
+   * weight for the key (that implies the norm s') for which constraint
+   * (1) still holds.
+   * NOTE: setAE returns the Hamming weight, *not* the norm s'. The norm
+   * can be computed from the weight using sampleHWtBoundedEffectiveBound.
+   **/
 };
 
 
