@@ -134,6 +134,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     context.scale = scale;
   }
 
+  context.zMStar.set_cM(mValues[idx][13]/100.0);
   buildModChain(context, L, c,/*willBeBootstrappable=*/true);
 
   if (!noPrint) {
@@ -168,7 +169,6 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   setDryRun(dry); // Now we can set the dry-run flag if desired
 
   long p2r = context.alMod.getPPowR();
-  context.zMStar.set_cM(mValues[idx][13]/100.0);
 
   for (long numkey=0; numkey<OUTER_REP; numkey++) { // test with 3 keys
 

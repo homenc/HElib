@@ -107,8 +107,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     context.scale = scale;
   }
 
-
-
+  context.zMStar.set_cM(mValues[idx][13]/100.0);
   buildModChain(context, L, c, /*willBeBootstrappable=*/true);
 
   if (!noPrint) {
@@ -123,9 +122,6 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     std::cout << "scale=" << context.scale<<endl;
   }
 
-  double ringConst = mValues[idx][13]/100.0;
-  context.zMStar.set_cM(ringConst); // obsolete
-  RecryptData::magicConst = ringConst;
   context.makeBootstrappable(mvec,/*t=*/0,build_cache,/*alsoThick=*/false);
   // save time...disable some fat boot precomputation
 

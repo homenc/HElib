@@ -30,9 +30,6 @@ NTL_CLIENT
 long printFlag = FLAG_PRINT_VEC;
 #endif
 
-
-double RecryptData::magicConst = 2.0;
-
 /************************ Some local functions ***********************/
 /*********************************************************************/
 static void
@@ -132,23 +129,24 @@ RecryptData::~RecryptData()
 
 
 
-/** Fix RecryptData::magicConst, a target norm s for the secret key,
+/**
+ * Fix the "ring constant" cM, a target norm s for the secret key,
  * and plaintext space mod p^r. We want to find e,e' that minimize
  * e-e', subject to the constraint
  *
- *    (1) (p^{e'}/2 + 2*p^r+1)(s+1)*magicConst <= (q-1)/2  = p^e/2
+ *    (1) (p^{e'}/2 + 2*p^r+1)(s+1)*cM <= (q-1)/2  = p^e/2
  *
  * Note that as we let e,e' tend to infinity the constraint above
- * degenerates to (s+1)*magicConst < p^{e-e'}, so the smallest value
+ * degenerates to (s+1)*cM < p^{e-e'}, so the smallest value
  * of e-e' that we can hope for is
  *
- *    (2) e-e' = 1 + floor( log_p( (s+1)*magicConst) )
+ *    (2) e-e' = 1 + floor( log_p( (s+1)*cM) )
  *
  * The setAE procedure tries to minimize e-e' subject to (1), and
  * in addition subject to the constraint that e is "not too big".
  * Specifically, it tries to ensure p^e<2^{30}, and failing that it
- * uses the smallest e for which (2*p^r+1)(s+1)*magicConst*2 <= p^e,
- * and the largest e' for that value of e.
+ * uses the smallest e for which (2*p^r+1)(s+1)*cM*2 <= p^e, and the
+ * largest e' for that value of e.
  *
  * Once e,e' are set, it splits p^{e'}/2=a+b with a,b about equal and
  * a divisible by p^r. Then it computes and returns the largest Hamming
@@ -156,14 +154,15 @@ RecryptData::~RecryptData()
  * (1) still holds.
  * NOTE: setAE returns the Hamming weight, *not* the norm s'. The norm
  * can be computed from the weight using sampleHWtBoundedEffectiveBound.
- */
+ **/
 long RecryptData::setAE(long& a, long& e, long& ePrime,
                     const FHEcontext& context, long targetWeight)
 {
   if (targetWeight<=0) targetWeight = RecryptData::defSkHwt;
   double skSize = sampleHWtBoundedEffectiveBound(context, targetWeight);
 
-  double factor = (skSize+1) * RecryptData::magicConst * 2;
+  double magicConst = context.zMStar.get_cM();
+  double factor = (skSize+1) * magicConst * 2;
   long p = context.zMStar.getP();
   long p2r = context.alMod.getPPowR();
   long frstTerm = 2*p2r+1; // 2*p^r +1
@@ -201,7 +200,7 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
   a -= (a % p2r);
  
   // Try to increase t, while maintaining constraint (1)
-  double bound = (frstTerm + pToEprimeOver2)*RecryptData::magicConst * 2;
+  double bound = (frstTerm + pToEprimeOver2)*magicConst * 2;
   long p2e = pow(p,e);
   while (targetWeight++) {
     skSize = sampleHWtBoundedEffectiveBound(context, targetWeight);
@@ -214,7 +213,7 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
   long b = pToEprimeOver2 - a;
   cerr << "RecryptData::setAE(): e="<<e<<", e'="<<ePrime
        << ", a="<<a<<", b="<<b<<", sk-hwt="<<targetWeight
-       << " (size="<<skSize<<")\n";
+       << " (size="<<skSize<<"), magicConst="<<magicConst<<endl;
 #endif
   return targetWeight;
 }

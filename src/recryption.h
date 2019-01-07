@@ -35,12 +35,6 @@ public:
   //! default Hamming weight of recryption key
   static constexpr long defSkHwt=100;
 
-  // NOTE: here's to hoping: for "random enough" x we expect
-  //   |x|_powerful < |x|_canonical * sqrt(someConstant/phi(m))
-  //   we set magicConst = sqrt(phi(m)/3) * sqrt(someConstant/phi(m))
-  //   (sqrt(phi(m)/3) comes from context.noiseBoundForUniform())
-  static double magicConst; // defaults to 2
-
   //! Some data members that are only used for I/O
   NTL::Vec<long> mvec;     //! partition of m into co-prime factors
 
@@ -94,23 +88,23 @@ public:
   static long setAE(long& a, long& e, long& ePrime,
                     const FHEcontext& context, long t=0);
   /**
-   * Fix RecryptData::magicConst, a target norm s for the secret key,
+   * Fix the "ring constant" cM, a target norm s for the secret key,
    * and plaintext space mod p^r. We want to find e,e' that minimize
    * e-e', subject to the constraint
    *
-   *    (1) (p^{e'}/2 + 2*p^r+1)(s+1)*magicConst <= (q-1)/2  = p^e/2
+   *    (1) (p^{e'}/2 + 2*p^r+1)(s+1)*cM <= (q-1)/2  = p^e/2
    *
    * Note that as we let e,e' tend to infinity the constraint above
-   * degenerates to (s+1)*magicConst < p^{e-e'}, so the smallest value
+   * degenerates to (s+1)*cM < p^{e-e'}, so the smallest value
    * of e-e' that we can hope for is
    *
-   *    (2) e-e' = 1 + floor( log_p( (s+1)*magicConst) )
+   *    (2) e-e' = 1 + floor( log_p( (s+1)*cM) )
    *
    * The setAE procedure tries to minimize e-e' subject to (1), and
    * in addition subject to the constraint that e is "not too big".
    * Specifically, it tries to ensure p^e<2^{30}, and failing that it
-   * uses the smallest e for which (2*p^r+1)(s+1)*magicConst*2 <= p^e,
-   * and the largest e' for that value of e.
+   * uses the smallest e for which (2*p^r+1)(s+1)*cM*2 <= p^e, and the
+   * largest e' for that value of e.
    *
    * Once e,e' are set, it splits p^{e'}/2=a+b with a,b about equal and
    * a divisible by p^r. Then it computes and returns the largest Hamming

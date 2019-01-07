@@ -70,7 +70,13 @@ class PAlgebra {
   CubeSignature cube; // the hypercube structure of Zm* /(p)
 
   NTL::ZZX PhimX;   // Holds the integer polynomial Phi_m(X)
-  double cM;   // the ring constant c_m for Z[X]/Phi_m(X)
+
+  double cM;   // the "ring constant" c_m for Z[X]/Phi_m(X)
+  // NOTE: here's to hoping: for "random enough" x we hope to get
+  //       |x|_powerful < |x|_canonical * sqrt(someConstant/phi(m))
+  // we cM = sqrt(phi(m)/3) * sqrt(someConstant/phi(m)), where the
+  // sqrt(phi(m)/3) term comes from context.noiseBoundForUniform())
+
 
   std::vector<long> T; // The representatives for the quotient group Zm* /(p)
   std::vector<long> Tidx;  // i=Tidx[t] is the index i s.t. T[i]=t. 
@@ -120,7 +126,7 @@ class PAlgebra {
   //! The cyclotomix polynomial Phi_m(X)
   const NTL::ZZX& getPhimX() const { return PhimX; }
 
-  //! The ring constant cM
+  //! The "ring constant" cM
   void set_cM(double c) { cM=c; }
   const double get_cM() const { return cM; }
 
