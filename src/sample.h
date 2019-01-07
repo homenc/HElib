@@ -14,6 +14,8 @@
 /**
  * @file sample.h - implementing various sampling routines 
  **/
+#include <vector>
+#include <NTL/xdouble.h>
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 #include "zzX.h"
