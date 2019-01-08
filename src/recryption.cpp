@@ -23,8 +23,6 @@
 
 NTL_CLIENT
 
-#define DEBUG_PRINTOUT
-
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 long printFlag = FLAG_PRINT_VEC;

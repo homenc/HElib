@@ -13,13 +13,11 @@
  */
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_p.h>
-NTL_CLIENT
 #include "EncryptedArray.h"
 #include "polyEval.h"
 #include "debugging.h"
 
-#define VIEW_LEVELS
-
+NTL_CLIENT
 
 // Compute a degree-p polynomial poly(x) s.t. for any t<e and integr z of the
 // form z = z0 + p^t*z1 (with 0<=z0<p), we have poly(z) = z0 (mod p^{t+1}).
@@ -81,7 +79,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
   Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
   digits.resize(r, tmp);      // allocate space
 
-#ifdef VIEW_LEVELS
+#ifdef DEBUG_PRINTOUT
   fprintf(stderr, "***\n");
 #endif
   for (long i=0; i<r; i++) {
@@ -94,32 +92,15 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
       // "in spirit" digits[j] = digits[j]^p
 
 #ifdef DEBUG_PRINTOUT
-      checkNoise(digits[j], *dbgKey, "sqr " + to_string(i) + " " + to_string(j));
-#endif
-
-
-#ifdef VIEW_LEVELS
       fprintf(stderr, "%5ld", digits[j].bitCapacity());
-
 #endif
 
       tmp -= digits[j];
-
-#ifdef DEBUG_PRINTOUT
-      checkNoise(tmp, *dbgKey, "sub " + to_string(i) + " " + to_string(j));
-#endif
-
-
       tmp.divideByP();
-
-#ifdef DEBUG_PRINTOUT
-      checkNoise(tmp, *dbgKey, "div " + to_string(i) + " " + to_string(j));
-#endif
-
     }
     digits[i] = tmp; // needed in the next round
 
-#ifdef VIEW_LEVELS
+#ifdef DEBUG_PRINTOUT
     if (dbgKey) {
        double ratio = 
           log(embeddingLargestCoeff(digits[i], *dbgKey)/digits[i].getNoiseBound())/log(2.0);
@@ -131,19 +112,9 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
        fprintf(stderr, "%5ld\n", digits[i].bitCapacity());
     }
 #endif
-
-//#ifdef DEBUG_PRINTOUT
-#if 0
-    for (long j=0; j<=i; j++) {
-      decryptAndPrint((cout << "digits["<<i<<"]["<<j<<"]:"),
-                      digits[j], *dbgKey, *dbgEa);
-      CheckCtxt(digits[j], "       ");
-    }
-#endif
   }
 
-
-#ifdef VIEW_LEVELS
+#ifdef DEBUG_PRINTOUT
   fprintf(stderr, "***\n");
 #endif
 }
@@ -271,7 +242,7 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
   digits.resize(r, tmp);      // allocate space
   digits0.resize(r, tmp);
 
-#ifdef VIEW_LEVELS
+#ifdef DEBUG_PRINTOUT
   fprintf(stderr, "***\n");
 #endif
   for (long i: range(r)) {
@@ -283,9 +254,6 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 
          tmp -= digits[j];
 #ifdef DEBUG_PRINTOUT
-      checkNoise(tmp, *dbgKey, "sub " + to_string(i) + " " + to_string(j));
-#endif
-#ifdef VIEW_LEVELS
       fprintf(stderr, "%5ld*", digits[j].bitCapacity());
 #endif
       }
@@ -294,45 +262,28 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 	else if (p==3) digits0[j].cube();
 	else polyEval(digits0[j], x2p, digits0[j]); // "in spirit" digits0[j] = digits0[j]^p
 
-#ifdef DEBUG_PRINTOUT
-      checkNoise(digits0[j], *dbgKey, "sqr " + to_string(i) + " " + to_string(j));
-#endif
-
 	tmp -= digits0[j];
 #ifdef DEBUG_PRINTOUT
-      checkNoise(tmp, *dbgKey, "sub " + to_string(i) + " " + to_string(j));
-#endif
-#ifdef VIEW_LEVELS
       fprintf(stderr, "%5ld ", digits0[j].bitCapacity());
 #endif
       }
-
       tmp.divideByP();
-#ifdef DEBUG_PRINTOUT
-      checkNoise(tmp, *dbgKey, "div " + to_string(i) + " " + to_string(j));
-#endif
     }
-
     digits0[i] = tmp; // needed in the next round
     polyEval(digits[i], G[i], tmp);
 
 #ifdef DEBUG_PRINTOUT
-    checkNoise(digits[i], *dbgKey, "poly " + to_string(i));
-#endif
-
-#ifdef VIEW_LEVELS
     if (dbgKey) {
-       double ratio = 
-          log(embeddingLargestCoeff(digits[i], *dbgKey)/digits[i].getNoiseBound())/log(2.0);
-       fprintf(stderr, "%5ld  --- %5ld", digits0[i].bitCapacity(), digits[i].bitCapacity());
-       fprintf(stderr, " [%f]", ratio);
-       if (ratio > 0) fprintf(stderr, " BAD-BOUND");
-       fprintf(stderr, "\n");
+      double ratio = 
+        log(embeddingLargestCoeff(digits[i], *dbgKey)/digits[i].getNoiseBound())/log(2.0);
+      fprintf(stderr, "%5ld  --- %5ld", digits0[i].bitCapacity(), digits[i].bitCapacity());
+      fprintf(stderr, " [%f]", ratio);
+      if (ratio > 0) fprintf(stderr, " BAD-BOUND");
+      fprintf(stderr, "\n");
     }
     else {
-       fprintf(stderr, "%5ld  --- %5ld\n", digits0[i].bitCapacity(), digits[i].bitCapacity());
+      fprintf(stderr, "%5ld  --- %5ld\n", digits0[i].bitCapacity(), digits[i].bitCapacity());
     }
-    //CheckCtxt(digits[i], "");
 #endif
   }
 }

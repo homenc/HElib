@@ -1,3 +1,14 @@
+/* Copyright (C) 2012-2018 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
 #include <NTL/BasicThreadPool.h>
 #include "FHE.h"
 #include "EncryptedArray.h"
@@ -31,7 +42,7 @@ static long mValues[][14] = {
   {  2, 27000, 32767, 15, 31,  7, 151, 11628, 28087,25824, 30,  6, -10, 200},
   {  2, 31104, 35113, 36, 37, 949,  0, 16134,  8548,    0, 36, 24,   0, 200}, // m=(13)*37*{73} m/phim(m)=1.12  C=94  D=2 E=2
   {  2, 34848, 45655, 44, 23, 1985, 0, 33746, 27831,    0, 22, 36,   0, 100}, // m=(5)*23*{397} m/phim(m)=1.31  C=100 D=2 E=2
-  {  2, 42336, 42799, 21, 127, 337, 0, 25276, 40133,    0,126, 16,   0, 100}, // m=127*(337) m/phim(m)=1.01     C=161 D=2 E=0
+  {  2, 42336, 42799, 21, 127, 337, 0, 25276, 40133,    0,126, 16,   0, 200}, // m=127*(337) m/phim(m)=1.01     C=161 D=2 E=0
   {  2, 45360, 46063, 45, 73, 631,  0, 35337, 20222,    0, 72, 14,   0, 100}, // m=73*(631) m/phim(m)=1.01      C=129 D=2 E=0
   {  2, 46080, 53261, 24, 17, 13, 241, 43863, 28680,15913, 16, 12, -10, 100}, // m=13*17*(241) m/phim(m)=1.15   C=69  D=4 E=3
   {  2, 49500, 49981, 30, 151, 331, 0,  6952, 28540,    0,150, 11,   0, 100}, // m=151*(331) m/phim(m)=1        C=189 D=2 E=1
@@ -166,16 +177,11 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   GG = context.alMod.getFactorsOverZZ()[0];
   EncryptedArray ea(context, GG);
 
-#ifndef DEBUG_PRINTOUT
   if (debug) {
-#endif
     dbgKey = &secretKey;
     dbgEa = &ea;
-#ifndef DEBUG_PRINTOUT
   }
-#endif
 
-  for (long i=0; i<3; i++) {
   zz_p::init(p2r);
   Vec<zz_p> val0(INIT_SIZE, nslots);
   for (auto& x: val0)
@@ -193,23 +199,14 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     val_const1[i] = 1;
   }
 
-#if 0
-  Ctxt c_const1(publicKey);
-  ea.encrypt(c_const1, publicKey, val_const1);
-
   Ctxt c1(publicKey);
   ea.encrypt(c1, publicKey, val1);
-  c1.multiplyBy(c_const1);
-#else
-  Ctxt c1(publicKey);
-  ea.encrypt(c1, publicKey, val1);
-#endif
 
   Ctxt c2(c1);
-  if (!noPrint) CheckCtxt(c2, "before");
+  if (!noPrint) CheckCtxt(c2, "before recryption");
 
   publicKey.thinReCrypt(c2);
-  if (!noPrint) CheckCtxt(c2, "after");
+  if (!noPrint) CheckCtxt(c2, "after recryption");
 
   vector<ZZX> val2;
   ea.decrypt(c2, secretKey, val2);
@@ -218,7 +215,6 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     cerr << "GOOD\n";
   else
     cerr << "BAD\n";
-  }
   }
 }
 
