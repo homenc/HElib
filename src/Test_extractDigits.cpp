@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
   long pp = p2r;
   for (long i=0; i<(long)digits.size(); i++) {
     if (!digits[i].isCorrect()) {
-      cout << " potential decryption error for "<<i<<"th digit ";
+      cout << " BAD, potential decryption error for "<<i<<"th digit ";
       CheckCtxt(digits[i], "");
       exit(0);
     }
@@ -107,9 +107,11 @@ int main(int argc, char *argv[])
 
       // assert ((pDigits[j]-digit) % p == 0);
       if ((pDigits[j]-digit) % pp != 0) {
-	cout << " error: v["<<j<<"]="<<v[j]
-	     << " but "<<i<<"th digit comes "<< pDigits[j]
-	     << " rather than "<<digit<<endl<<endl;
+        cout << "BAD\n";
+        if (!noPrint)
+          cout << " error: v["<<j<<"]="<<v[j]
+               << " but "<<i<<"th digit comes "<< pDigits[j]
+               << " rather than "<<digit<<endl<<endl;
 	exit(0);
       }
       tmp[j] -= digit;
@@ -117,5 +119,5 @@ int main(int argc, char *argv[])
     }
     pp /= p;
   }
-  cout << "digit extraction successful\n\n";
+  cout << "GOOD\n";
 }

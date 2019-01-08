@@ -28,8 +28,7 @@ void testSimpleConversion(const Vec<long>& mvec)
   HyperCube<zz_p> cube(pConv.getShortSig());
   pConv.polyToPowerful(cube, poly);
   pConv.powerfulToPoly(poly2, cube);
-  if (poly == poly2) cerr << " simple conversion succeeds\n";
-  else               cerr << " simple conversion failed\n";
+  cout << ((poly == poly2)? "GOOD" : "BAD") << endl;
 }
 
 void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
@@ -45,12 +44,11 @@ void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
 
   p2d.dcrtToPowerful(pwrfl1, dcrt);
   p2d.ZZXtoPowerful(pwrfl2, poly1, set);
-  if (pwrfl2 != pwrfl1) cerr << " dcrt->powerful != dcrt->poly->powerful :(\n";
-  else                  cerr << " dcrt->powerful == dcrt->poly->powerful :)\n";
+  cout << ((pwrfl2 != pwrfl1)? "BAD" : "GOOD") << endl;
 
   p2d.powerfulToZZX(poly2,pwrfl2, set);
   if (poly1!=poly2) {
-    cerr << " poly->powerful->poly failed :(\n";
+    cout << "BAD\n";
     long idx;
     for (idx=0; idx <= deg(poly1); idx++) if (poly1[idx]!=poly2[idx]) break;
 
@@ -66,7 +64,7 @@ void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
       cerr << "(poly1-poly2)%product=" << poly1<<endl;
     else cerr << "poly1=poly2 (mod product)\n";
   }
-  else cerr << " poly->powerful->poly succeeded :)\n";
+  else cout << "GOOD\n";
 }
 
 void usage(char *prog) 

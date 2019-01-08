@@ -212,9 +212,9 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   ea.decrypt(c2, secretKey, val2);
 
   if (val1 == val2) 
-    cerr << "GOOD\n";
+    cout << "GOOD\n";
   else
-    cerr << "BAD\n";
+    cout << "BAD\n";
   }
 }
 

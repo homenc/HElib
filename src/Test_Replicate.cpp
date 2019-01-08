@@ -150,8 +150,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
     if (!check_replicate(xc1, xc0, i, secretKey, ea)) error = true;
     FHE_NTIMER_STOP(replicate);
   }
-  cout << "  Replicate test " << (error? "failed :(\n" : "succeeded :)")
-       << endl;
+  cout << (error? "BAD" : "GOOD") << endl;
 
   if (!noPrint) {
     printAllTimers();
@@ -171,11 +170,10 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   }
   catch (StopReplicate) {
   }
-  std::cout << "  replicateAll() "
-	    << (handler->error? "failed :(\n" : "succeeded :)")
-	    << ", total time=" << handler->t_total << " ("
-	    << ((B>0)? B : ea.size())
-	    << " vectors)\n";
+  std::cout << (handler->error? "BAD" : "GOOD") << endl;
+  if (!noPrint)
+    cout << "  total time=" << handler->t_total << " ("
+         << ((B>0)? B : ea.size()) << " vectors)\n";
   delete handler;
 }
 

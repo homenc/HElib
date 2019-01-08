@@ -54,7 +54,7 @@ NTL_CLIENT
 
 **************/
 
-static bool noPrint = false;
+static bool noPrint = true;
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
                long L, long m, const Vec<long>& gens, const Vec<long>& ords)
@@ -234,33 +234,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   FHE_NTIMER_STOP(Check);
    
-  std::cout << endl;
   if (!noPrint) {
     printAllTimers();
     std::cout << endl;
   }
-
-#if 0
-  vector<Ctxt> vc(L,c0);            // A vector of L ciphertexts
-  vector<PlaintextArray> vp(L, p0); // A vector of L plaintexts
-  for (long i=0; i<L; i++) {
-    vp[i].random();                     // choose a random plaintext 
-    ea.encrypt(vc[i], publicKey, vp[i]); // encrypt it
-    if (i>0) vp[i].mul(vp[i-1]); // keep a running product of plaintexts
-  }
-  incrementalProduct(vc); // Compute the same running product homomorphically
-
-  // Check that the products match
-  bool fail = false;
-  for (long i=0; i<L; i++) {
-    ea.decrypt(vc[i], secretKey, p0); // decrypt it
-    if (!p0.equals(vp[i])) {
-      fail = true;
-      std::cout << "incrementalProduct oops "<<i<< endl;
-    }
-  }
-  if (!fail) std::cout << "incrementalProduct works\n";
-#endif
 }
 
 
@@ -355,7 +332,6 @@ int main(int argc, char **argv)
 
   if (mvec.length()>0)
     chosen_m = computeProd(mvec);
-  std::cout << argv[0] << ": ";
   long m = FindM(k, L, c, p, d, s, chosen_m, !noPrint);
 
   setDryRun(dry);

@@ -97,10 +97,9 @@ long compareFiles(string filename1, string filename2)
 
 int main(int argc, char *argv[])
 { 
-  cout << "\n*** TEST BINARY IO " << endl << endl;
-
   ArgMapping amap;
 
+  bool noPrint=true;
   long m=7;
   long r=1;
   long p=2;
@@ -117,6 +116,7 @@ int main(int argc, char *argv[])
   amap.arg("L", L, "number of levels wanted");
   amap.arg("sample", sampleFilePrefix, "sample file prefix e.g. <prefix>_BE.txt");
   amap.arg("cleanup", cleanup, "cleanup files created");
+  amap.arg("noPrint", noPrint, "suppress printouts");
   amap.parse(argc, argv);
 
   const char* asciiFile1 = "misc/iotest_ascii1.txt"; 
@@ -124,10 +124,7 @@ int main(int argc, char *argv[])
   const char* binFile1 = "misc/iotest_bin.bin"; 
   const char* otherEndianFileOut = "misc/iotest_ascii3.txt";  
 
-  { // 1. Write ASCII and bin files.
-
-    cout << "Test to write out ASCII and Binary Files.\n";    
- 
+  { // 1. Write ASCII and bin files. 
     ofstream asciiFile(asciiFile1);
     ofstream binFile(binFile1, ios::binary);
     assert(asciiFile.is_open());  
@@ -135,9 +132,11 @@ int main(int argc, char *argv[])
     std::unique_ptr<FHEcontext> context(new FHEcontext(m, p, r));
     buildModChain(*context, L, c);  // Set the modulus chain
 
-    context->zMStar.printout(); // Printout context params
-    cout << "\tSecurity Level: " << context->securityLevel() << endl;
-
+    if (!noPrint) {
+      cout << "Test to write out ASCII and Binary Files.\n";
+      context->zMStar.printout(); // Printout context params
+      cout << "\tSecurity Level: " << context->securityLevel() << endl;
+    }
     std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
     FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
     secKey->GenSecKey(w);
@@ -145,14 +144,16 @@ int main(int argc, char *argv[])
     addFrbMatrices(*secKey);
 
     // ASCII 
-    cout << "\tWriting ASCII1 file " << asciiFile1 << endl;
+    if (!noPrint)
+      cout << "\tWriting ASCII1 file " << asciiFile1 << endl;
     writeContextBase(asciiFile, *context);
     asciiFile << *context << endl << endl;
     asciiFile << *pubKey << endl << endl;
     asciiFile << *secKey << endl << endl;
 
     // Bin
-    cout << "\tWriting Binary file " << binFile1<< endl;
+    if (!noPrint)
+      cout << "\tWriting Binary file " << binFile1<< endl;
     writeContextBaseBinary(binFile, *context);
     writeContextBinary(binFile, *context);
     writePubKeyBinary(binFile, *pubKey);
@@ -160,11 +161,11 @@ int main(int argc, char *argv[])
 
     asciiFile.close();
     binFile.close();
-
-    cout << "Test successful.\n\n";
+    cout << "GOOD\n";
   }
   { // 2. Read in bin files and write out ASCII.
-    cout << "Test to read binary file and write it out as ASCII" << endl;
+    if (!noPrint)
+      cout << "Test to read binary file and write it out as ASCII" << endl;
   
     ifstream inFile(binFile1, ios::binary);
     ofstream outFile(asciiFile2);
@@ -181,7 +182,8 @@ int main(int argc, char *argv[])
     readSecKeyBinary(inFile, *secKey);
  
     // ASCII 
-    cout << "\tWriting ASCII2 file." << endl;
+    if (!noPrint)
+      cout << "\tWriting ASCII2 file." << endl;
     writeContextBase(outFile, *context);
     outFile << *context << endl << endl;
     outFile << *pubKey << endl << endl;
@@ -190,42 +192,31 @@ int main(int argc, char *argv[])
     inFile.close();
     outFile.close();
 
-    cout << "Test successful.\n\n";
+    cout << "GOOD\n";
   }
   { // 3. Compare byte-wise the two ASCII files
-    cout << "Comparing the two ASCII files\n"; 
+    if (!noPrint)
+      cout << "Comparing the two ASCII files\n"; 
   
     long differ = compareFiles(asciiFile1, asciiFile2); 
 
     if(differ != 0){
-      cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
-      cout << "Test failed.\n";
+      cout << "BAD\n";
+      if (!noPrint)
+        cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
       exit(EXIT_FAILURE);
-    } else {
-      cout << "\tSUCCESS - Files are identical.\n";
     }
-
-    cout << "Test successful.\n\n";
+    cout << "GOOD\n";
   }
   { // 4. Read in binary and perform operation.
-    cout << "Test reading in Binary files and performing an operation between two ctxts\n";  
+    if (!noPrint)
+      cout << "Test reading in Binary files and performing an operation between two ctxts\n";  
 
     ifstream inFile(binFile1, ios::binary);
 
     // Read in context,
     std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
     readContextBinary(inFile, *context);  
-
-#if 0
-    context->zMStar.printout(); 
-    std::cout << "# small primes = " << context->smallPrimes.card() << "\n";
-    std::cout << "# ctxt primes = " << context->ctxtPrimes.card() << "\n";
-    std::cout << "# bits in ctxt primes = "
-         << long(context->logOfProduct(context->ctxtPrimes)/log(2.0) + 0.5) << "\n";
-    std::cout << "# special primes = " << context->specialPrimes.card() << "\n";
-    std::cout << "# bits in special primes = "
-         << long(context->logOfProduct(context->specialPrimes)/log(2.0) + 0.5) << "\n";
-#endif
 
     // Read in PubKey.
     std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
@@ -247,12 +238,6 @@ int main(int argc, char *argv[])
     ea.encrypt(c1, *pubKey, p1);
     ea.encrypt(c2, *pubKey, p2);
 
-    //CheckCtxt(c1, "c1");
-    //CheckCtxt(c2, "c2");
-
-
-
-
     // Operation multiply and add.
     mul(ea, p1, p2);
     c1 *= c2;
@@ -261,22 +246,19 @@ int main(int argc, char *argv[])
     PlaintextArray pp1(ea);
     ea.decrypt(c1, *secKey, pp1);     
 	
-    if(!equals(ea, p1, pp1)){
-      cout << "\tFAIL - polynomials are not equal\n";
-      cout << "Test failed.\n";
+    if(!equals(ea, p1, pp1)) {
+      cout << "BAD\n";
       exit(EXIT_FAILURE);
     }
-    cout << "\tGOOD - polynomials are equal\n";
+    cout << "GOOD\n";
 
     if(cleanup) {
-      cout << "Clean up. Deleting created files." << endl;
+      if (!noPrint)
+        cout << "Clean up. Deleting created files." << endl;
       cleanupFiles(asciiFile1, asciiFile2, binFile1);     
     }
-
-    cout << "Test successful.\n\n";
   }
-  { // 5. Read in binary from opposite little endian and print ASCII and compare.
-
+  { // 5. Read in binary from opposite little endian and print ASCII and compare
     bool littleEndian = isLittleEndian(); 
 
     string otherEndianFileIn
@@ -284,24 +266,26 @@ int main(int argc, char *argv[])
     string otherEndianASCII
       = sampleFilePrefix + (littleEndian? "_BE.txt" : "_LE.txt");
 
-    cout << "Test to read in" << (littleEndian? " BE ":" LE ") 
-         << "binary file and write it out as ASCII" << endl;
+    if (!noPrint)
+      cout << "Test to read in" << (littleEndian? " BE ":" LE ") 
+           << "binary file and write it out as ASCII" << endl;
 
-    if(sampleFilePrefix.empty()){
-      cout << "\tSample prefix not provided, test not done." << endl;
+    if(sampleFilePrefix.empty()) {
+      if (!noPrint)
+        cout << "\tSample prefix not provided, test not done." << endl;
     } else {
-
-      cout << "\tSample file used: " << otherEndianFileIn << endl;
+      if (!noPrint)
+        cout << "\tSample file used: " << otherEndianFileIn << endl;
 
       ifstream inFile(otherEndianFileIn, ios::binary);
 
       if(!inFile.is_open()) {
-        cout << "File " << otherEndianFileIn 
-             << " could not be opened.\n";
-        cout << "Test failed.\n";
+        cout << "BAD boo!\n";
+        if (!noPrint)
+          cout << "  file " << otherEndianFileIn 
+               << " could not be opened.\n";
         exit(EXIT_FAILURE);
       }
-
       ofstream outFile(otherEndianFileOut);
     
       // Read in context,
@@ -316,36 +300,33 @@ int main(int argc, char *argv[])
       readSecKeyBinary(inFile, *secKey);
       inFile.close();
    
-      // ASCII 
-      cout << "\tWriting other endian file." << endl;
+      // ASCII
+      if (!noPrint)
+        cout << "\tWriting other endian file." << endl;
       writeContextBase(outFile, *context);
       outFile << *context << endl << endl;
       outFile << *pubKey << endl << endl;
       outFile << *secKey << endl << endl;
       outFile.close();
 
-      cout << "Test successful.\n\n";
-
       // Compare byte-wise the two ASCII files
-      cout << "Comparing the two ASCII files\n"; 
+      if (!noPrint)
+        cout << "Comparing the two ASCII files\n"; 
     
       long differ = compareFiles(otherEndianASCII, otherEndianFileOut); 
 
-      if(differ != 0){
-        cout << "\tFAIL - Files differ. Return Code: " << differ << endl;
-        cout << "Test failed.\n";
+      if(differ != 0) {
+        cout << "BAD\n";
         exit(EXIT_FAILURE);
-      } else {
-        cout << "\tSUCCESS - Files are identical.\n";
       }
+      cout << "GOOD\n";
 
-      if(cleanup){
-        cout << "Clean up. Deleting created files." << endl;
+      if(cleanup) {
+        if (!noPrint)
+          cout << "Clean up. Deleting created files." << endl;
         cleanupFiles(otherEndianFileOut); 
       }
-      cout << "Test successful.\n\n";
     }
   }
-
   return 0;
 }

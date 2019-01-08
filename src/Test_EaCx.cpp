@@ -9,19 +9,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#if 0
-#include <cstdio>
-#include <cassert>
-#if (defined(__unix__) || defined(__unix) || defined(unix))
-#include <sys/time.h>
-#include <sys/resource.h>
-#endif
-#include <NTL/BasicThreadPool.h>
-#endif
 #include <NTL/ZZ.h>
-NTL_CLIENT
 #include "norms.h"
 #include "EncryptedArray.h"
+
+NTL_CLIENT
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
@@ -30,6 +22,8 @@ NTL_CLIENT
 int main(int argc, char *argv[]) 
 {
   ArgMapping amap;
+  bool noPrint = true;
+  amap.arg("noPrint", noPrint, "suppress printouts");
 
   long m=16;
   amap.arg("m", m, "cyclotomic index");
@@ -39,12 +33,14 @@ int main(int argc, char *argv[])
   amap.arg("r", r, "bit of precision");
   amap.parse(argc, argv);
 
-  vector<long> f;
-  factorize(f,m);
-  cout << "r="<<r<<", factoring "<<m<<" gives [";
-  for (unsigned long i=0; i<f.size(); i++)
-    cout << f[i] << " ";
-  cout << "]\n";
+  if (!noPrint) {
+    vector<long> f;
+    factorize(f,m);
+    cout << "r="<<r<<", factoring "<<m<<" gives [";
+    for (unsigned long i=0; i<f.size(); i++)
+      cout << f[i] << " ";
+    cout << "]\n";
+  }
 
   FHEcontext context(m, /*p=*/-1, r);
   buildModChain(context, 5, 2);
@@ -76,7 +72,8 @@ int main(int argc, char *argv[])
   ea.encode(poly, vl);
   ZZX poly2;
   convert(poly2, poly);
-  cout << "  encoded into a degree-"<<NTL::deg(poly2)<<" polynomial\n";
+  if (!noPrint)
+    cout << "  encoded into a degree-"<<NTL::deg(poly2)<<" polynomial\n";
 
   vector<double> vd2;
   ea.decode(vd2, poly2);
@@ -92,6 +89,8 @@ int main(int argc, char *argv[])
     if (diffAbs > maxDiff)
       maxDiff = diffAbs;
   }
-  cout << "  max |v-vd2|_{infty}="<<maxDiff<<endl;
+  cout << ((maxDiff>0.1)? " BAD?" : " GOOD?")
+       << "  max |v-vd2|_{infty}="<<maxDiff
+       << endl;
   return 0;
 }

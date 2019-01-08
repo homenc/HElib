@@ -40,14 +40,10 @@ int main(int argc, char *argv[])
   amap.arg("ords", ords0, "use specified vector of orders", NULL);
   amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
-  amap.parse(argc, argv);
+  bool noPrint = true;
+  amap.arg("noPrint", noPrint, "suppress printouts");
 
-  vector<long> f;
-  factorize(f,m);
-  cout << "factoring "<<m<<" gives [";
-  for (unsigned long i=0; i<f.size(); i++)
-    cout << f[i] << " ";
-  cout << "]\n";
+  amap.parse(argc, argv);
 
   vector<long> gens1, ords1;
   convert(gens1, gens0);
@@ -55,16 +51,24 @@ int main(int argc, char *argv[])
 
   FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, 5, 2);
-  context.zMStar.printout();
-  cout << endl;
+  if (!noPrint) {
+    vector<long> f;
+    factorize(f,m);
+    cout << "factoring "<<m<<" gives [";
+    for (unsigned long i=0; i<f.size(); i++)
+      cout << f[i] << " ";
+    cout << "]\n";
+    context.zMStar.printout();
+    cout << endl;
+  }
 
   stringstream s1;
   writeContextBase(s1, context);
   s1 << context;
-
   string s2 = s1.str();
 
-  cout << s2 << endl;
+  if (!noPrint)
+    cout << s2 << endl;
 
   stringstream s3(s2);
 
@@ -76,9 +80,9 @@ int main(int argc, char *argv[])
   s3 >> c1;
 
   if (context == c1)
-    cout << "equal\n";
+    cout << "GOOD\n";
   else
-    cout << "not equal\n";
+    cout << "BAD\n";
 
   return 0;
 }

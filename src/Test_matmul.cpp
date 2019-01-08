@@ -165,7 +165,7 @@ void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
         okSoFar = false;
     }
   }
-  cout << (okSoFar? "Nice!!\n\n" : "Grrr@*\n\n");
+  cout << (okSoFar? "GOOD\n" : "BAD\n");
 
   if (verbose) {
     printAllTimers(cout);

@@ -21,7 +21,7 @@ namespace NTL {} using namespace NTL;
 NTL_CLIENT
 
 static bool dry = false; // a dry-run flag
-static bool noPrint = false;
+static bool noPrint = true;
 
 void  TestIt(long p, long r, long c, long _k,
              long L, Vec<long>& mvec, 
@@ -105,8 +105,10 @@ void  TestIt(long p, long r, long c, long _k,
   // Sanity check: convert back and compare
   zz_pX F2;
   pConv.powerfulToPoly(F2, cube);
-  if (F != F2) cout << " @@@ conversion error ):\n";
-
+  if (F != F2) {
+    cout << "BAD\n";
+    if (!noPrint) cout << " @@@ conversion error ):\n";
+  }
   // pack the coefficients from cube in the plaintext slots: the j'th
   // slot contains the polynomial pj(X) = \sum_{t=0}^{d-1} cube[jd+t] X^t
   vector<ZZX> val1;
@@ -145,9 +147,9 @@ void  TestIt(long p, long r, long c, long _k,
   zz_pX F1 = conv<zz_pX>(FF1);
 
   if (F1 == F)
-    cout << "EvalMap: GOOD\n";
+    cout << "GOOD\n";
   else
-    cout << "EvalMap: BAD\n";
+    cout << "BAD\n";
 
   publicKey.Encrypt(ctxt, FF1);
   if (!noPrint) CheckCtxt(ctxt, "init");
@@ -171,9 +173,9 @@ void  TestIt(long p, long r, long c, long _k,
   ea.decrypt(ctxt, secretKey, pa2);
 
   if (equals(ea, pa1, pa2))
-    cout << "EvalMap: GOOD\n";
+    cout << "GOOD\n";
   else
-    cout << "EvalMap: BAD\n";
+    cout << "BAD\n";
   FHE_NTIMER_STOP(ALL);
 
   if (!noPrint) {

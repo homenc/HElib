@@ -52,10 +52,12 @@ int main(int argc, char *argv[])
   long w = 64;
   long L = 100;
   long mm=0;
+  bool noPrint = true;
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r,  "lifting");
   amap.arg("c", c, "number of columns in the key-switching matrices");
   amap.arg("m", mm, "cyclotomic index","{31,127,1023}");
+  amap.arg("noPrint", noPrint, "suppress printouts");
   amap.parse(argc, argv);
 
   bool useTable = (mm==0 && p==2);
@@ -76,7 +78,8 @@ int main(int argc, char *argv[])
   for (long i=0; i<numTests; i++) {
     long m = (mm==0)? ms[i][1] : mm;
 
-    cout << "Testing IO: m="<<m<<", p^r="<<p<<"^"<<r<<endl;
+    if (!noPrint)
+      cout << "Testing IO: m="<<m<<", p^r="<<p<<"^"<<r<<endl;
 
     Vec<long> mvec(INIT_SIZE,2);
     mvec[0] = ms[i][4];  mvec[1] = ms[i][5];
@@ -89,14 +92,16 @@ int main(int argc, char *argv[])
       contexts[i].reset(new FHEcontext(m, p, r, gens, ords));
     else
       contexts[i].reset(new FHEcontext(m, p, r));
-    contexts[i]->zMStar.printout();
+    if (!noPrint)
+      contexts[i]->zMStar.printout();
 
     buildModChain(*contexts[i], L, c);  // Set the modulus chain
     if (mm==0 && m==1023) contexts[i]->makeBootstrappable(mvec);
 
     // Output the FHEcontext to file
     writeContextBase(keyFile, *contexts[i]);
-    writeContextBase(cout, *contexts[i]);
+    if (!noPrint)
+      writeContextBase(cout, *contexts[i]);
     keyFile << *contexts[i] << endl;
 
     sKeys[i].reset(new FHESecKey(*contexts[i]));
@@ -134,10 +139,10 @@ int main(int argc, char *argv[])
     // Output the ciphertext to file
     keyFile << *ctxts[i] << endl;
     keyFile << *ctxts[i] << endl;
-    cerr << "okay " << i << endl<< endl;
+    //    cerr << "okay " << i << endl<< endl;
   }
   keyFile.close();}
-  cerr << "so far, so good\n\n";
+  //  cerr << "so far, so good\n\n";
 
   // second loop: read from input and repeat the computation
 
@@ -152,7 +157,8 @@ int main(int argc, char *argv[])
     FHEcontext tmpContext(m1, p1, r1, gens, ords);
     keyFile >> tmpContext;
     assert (*contexts[i] == tmpContext);
-    cerr << i << ": context matches input\n";
+    //    cerr << i << ": context matches input\n";
+    cout << "GOOD\n";
 
     // We define some things below wrt *contexts[i], not tmpContext.
     // This is because the various operator== methods check equality of
@@ -166,7 +172,8 @@ int main(int argc, char *argv[])
     keyFile >> secretKey;
     keyFile >> secretKey2;
     assert(secretKey == *sKeys[i]);
-    cerr << "   secret key matches input\n";
+    //    cerr << "   secret key matches input\n";
+    cout << "GOOD\n";
 
     EncryptedArray ea(context);
     EncryptedArray ea2(tmpContext);
@@ -183,37 +190,44 @@ int main(int argc, char *argv[])
       assert(a[j] == ptxts[i][j]);
     }
     seekPastChar(keyFile, ']');
-    cerr << "   ptxt matches input\n";
+    cout << "GOOD\n";
+    //    cerr << "   ptxt matches input\n";
 
     // Read the encoded plaintext from file
     ZZX poly1, poly2;
     keyFile >> poly1;
     eas[i]->encode(poly2,a);
     assert(poly1 == poly2);
-    cerr << "   eas[i].encode(a)==poly1 okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   eas[i].encode(a)==poly1 okay\n";
 
     ea.encode(poly2,a);
     assert(poly1 == poly2);
-    cerr << "   ea.encode(a)==poly1 okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   ea.encode(a)==poly1 okay\n";
 
     ea2.encode(poly2,a);
     assert(poly1 == poly2);
-    cerr << "   ea2.encode(a)==poly1 okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   ea2.encode(a)==poly1 okay\n";
 
     eas[i]->decode(a,poly1);
     assert(nslots == (long)a.size());
     for (long j = 0; j < nslots; j++) assert(a[j] == ptxts[i][j]);
-    cerr << "   eas[i].decode(poly1)==ptxts[i] okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   eas[i].decode(poly1)==ptxts[i] okay\n";
 
     ea.decode(a,poly1);
     assert(nslots == (long)a.size());
     for (long j = 0; j < nslots; j++) assert(a[j] == ptxts[i][j]);
-    cerr << "   ea.decode(poly1)==ptxts[i] okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   ea.decode(poly1)==ptxts[i] okay\n";
 
     ea2.decode(a,poly1);
     assert(nslots == (long)a.size());
     for (long j = 0; j < nslots; j++) assert(a[j] == ptxts[i][j]);
-    cerr << "   ea2.decode(poly1)==ptxts[i] okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   ea2.decode(poly1)==ptxts[i] okay\n";
 
     // Read ciperhtext from file
     Ctxt ctxt(publicKey);
@@ -221,40 +235,46 @@ int main(int argc, char *argv[])
     keyFile >> ctxt;
     keyFile >> ctxt2;
     assert(ctxts[i]->equalsTo(ctxt,/*comparePkeys=*/false));
-    cerr << "   ctxt matches input\n";
+    cout << "GOOD\n";
+    //    cerr << "   ctxt matches input\n";
 
     sKeys[i]->Decrypt(poly2,*ctxts[i]);
     assert(poly1 == poly2);
-    cerr << "   sKeys[i]->decrypt(*ctxts[i]) == poly1 okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   sKeys[i]->decrypt(*ctxts[i]) == poly1 okay\n";
 
     secretKey.Decrypt(poly2,*ctxts[i]);
     assert(poly1 == poly2);
-    cerr << "   secretKey.decrypt(*ctxts[i]) == poly1 okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   secretKey.decrypt(*ctxts[i]) == poly1 okay\n";
 
     secretKey.Decrypt(poly2,ctxt);
     assert(poly1 == poly2);
-    cerr << "   secretKey.decrypt(ctxt) == poly1 okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   secretKey.decrypt(ctxt) == poly1 okay\n";
 
     secretKey2.Decrypt(poly2,ctxt2);
     assert(poly1 == poly2);
-    cerr << "   secretKey2.decrypt(ctxt2) == poly1 okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   secretKey2.decrypt(ctxt2) == poly1 okay\n";
 
     eas[i]->decrypt(ctxt, *sKeys[i], a);
     assert(nslots == (long)a.size());
     for (long j = 0; j < nslots; j++) assert(a[j] == ptxts[i][j]);
-    cerr << "   eas[i].decrypt(ctxt, *sKeys[i])==ptxts[i] okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   eas[i].decrypt(ctxt, *sKeys[i])==ptxts[i] okay\n";
 
     ea.decrypt(ctxt, secretKey, a);
     assert(nslots == (long)a.size());
     for (long j = 0; j < nslots; j++) assert(a[j] == ptxts[i][j]);
-    cerr << "   ea.decrypt(ctxt, secretKey)==ptxts[i] okay\n";
+    cout << "GOOD\n";
+    //    cerr << "   ea.decrypt(ctxt, secretKey)==ptxts[i] okay\n";
 
     ea2.decrypt(ctxt2, secretKey2, a);
     assert(nslots == (long)a.size());
     for (long j = 0; j < nslots; j++) assert(a[j] == ptxts[i][j]);
-    cerr << "   ea2.decrypt(ctxt2, secretKey2)==ptxts[i] okay\n";
-
-    cerr << "test "<<i<<" okay\n\n";
+    cout << "GOOD\n";
+    //    cerr << "   ea2.decrypt(ctxt2, secretKey2)==ptxts[i] okay\n";
   }}
   unlink("iotest.txt"); // clean up before exiting
 }

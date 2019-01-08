@@ -70,7 +70,7 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
     if (cube2==cube3) cout << "GOOD\n";
     else {
       cout << "BAD\n";
-      if (cube1.getSize()<100) {
+      if (cube1.getSize()<100 && !noPrint) {
 	cout << "in="<<cube1.getData() << endl;
 	cout << "out1="<<cube2.getData()<<", out2="
 	     << cube3.getData()<<endl<<endl;

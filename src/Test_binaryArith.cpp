@@ -155,17 +155,17 @@ int main(int argc, char *argv[])
   if (!(tests2avoid & 1)) {
     for (long i=0; i<nTests; i++)
       test15for4(secKey);
-    cout << "  *** test15for4 PASS ***\n";
+    cout << "GOOD\n";
   }
   if (!(tests2avoid & 2)) {
     for (long i=0; i<nTests; i++)
       testAdd(secKey, bitSize, bitSize2, outSize, bootstrap);
-    cout << "  *** testAdd PASS ***\n";
+    cout << "GOOD\n";
   }
   if (!(tests2avoid & 4)) {
     for (long i=0; i<nTests; i++)
       testProduct(secKey, bitSize, bitSize2, outSize, bootstrap);
-    cout << "  *** testProduct PASS ***\n";
+    cout << "GOOD\n";
   }
   if (verbose) printAllTimers(cout);
   return 0;
@@ -210,8 +210,11 @@ void test15for4(FHESecKey& secKey)
     sum2 += to_long(ConstTerm(poly)) << i;
   }
   if (sum != sum2) {
-    cout << "15to4 error: inputs="<<inputBits<<", sum="<<sum;
-    cout << " but sum2="<<sum2<<endl;
+    cout << "BAD\n";
+    if (verbose) {
+      cout << "  15to4: inputs="<<inputBits<<", sum="<<sum
+           << " but sum2="<<sum2<<endl;
+    }
     exit(0);
   }
   else if (verbose)
@@ -262,9 +265,11 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
     CheckCtxt(eProduct[lsize(eProduct)-1], "after multiplication");
   long pProd = pa*pb;
   if (slots[0] != ((pa*pb)&mask)) {
-    cout << "Positive product error: pa="<<pa<<", pb="<<pb
-         << ", but product="<<slots[0]
-         << " (should be "<<pProd<<'&'<<mask<<'='<<(pProd&mask)<<")\n";
+    cout << "BAD\n";
+    if (verbose)
+      cout << "Positive product error: pa="<<pa<<", pb="<<pb
+           << ", but product="<<slots[0]
+           << " (should be "<<pProd<<'&'<<mask<<'='<<(pProd&mask)<<")\n";
     exit(0);
   }
   else if (verbose) {
@@ -286,9 +291,11 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
     CheckCtxt(eProduct[lsize(eProduct)-1], "after multiplication");
   pProd = pa*pb;
   if ((slots[0]&mask) != (pProd&mask)) {
-    cout << "Negative product error: pa="<<pa<<", pb="<<pb
-         << ", but product="<<slots[0]
-         << " (should be "<<pProd<<'&'<<mask<<'='<<(pProd&mask)<<")\n";
+    cout << "BAD\n";
+    if (verbose)
+      cout << "Negative product error: pa="<<pa<<", pb="<<pb
+           << ", but product="<<slots[0]
+           << " (should be "<<pProd<<'&'<<mask<<'='<<(pProd&mask)<<")\n";
     exit(0);
   }
   else if (verbose) {
@@ -358,9 +365,11 @@ void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
   if (verbose) CheckCtxt(eSum[lsize(eSum)-1], "after addition");
   long pSum = pa+pb;
   if (slots[0] != ((pa+pb)&mask)) {
-    cout << "addTwoNums error: pa="<<pa<<", pb="<<pb
-         << ", but pSum="<<slots[0]
-         << " (should be ="<<(pSum&mask)<<")\n";
+    cout << "BAD\n";
+    if (verbose)
+      cout << "addTwoNums error: pa="<<pa<<", pb="<<pb
+           << ", but pSum="<<slots[0]
+           << " (should be ="<<(pSum&mask)<<")\n";
     exit(0);
   }
   else if (verbose) {

@@ -163,21 +163,11 @@ void  TestIt(long p, long r, long c, long _k, long w,
 
   vector<ZZX> val2;
   ea.decrypt(ctxt, secretKey, val2);
+  cout << ((val1 == val2)? "GOOD\n" : "BAD\n");
 
-  if (val1 == val2)
-    cout << "ThinEvalMap: GOOD\n";
-  else
-    cout << "ThinEvalMap: BAD\n";
-
-#if 1
   vector<ZZX> dirty_val2;
   ea.decrypt(dirty_ctxt, secretKey, dirty_val2);
-
-  if (val1 == dirty_val2)
-    cout << "ThinEvalMap: GOOD\n";
-  else
-    cout << "ThinEvalMap: BAD\n";
-#endif
+  cout << ((val1 == dirty_val2)? "GOOD\n" : "BAD\n");
 
 
   FHE_NTIMER_STOP(ALL);
