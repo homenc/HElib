@@ -20,7 +20,7 @@ NTL_CLIENT
 #include "permutations.h"
 #include "EncryptedArray.h"
 
-static bool noPrint = false;
+static bool noPrint = true;
 
 void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
   argmap["good3"] = "1";
   argmap["good4"] = "1";
   argmap["dry"] = "0";
-  argmap["noPrint"] = "0";
+  argmap["noPrint"] = "1";
 
   // get parameters from the command line
 
@@ -242,16 +242,19 @@ int main(int argc, char *argv[])
     case 2:  vec[1] = GenDescriptor(ord2, good2, /*genIdx=*/1);
     default: vec[0] = GenDescriptor(ord1, good1, /*genIdx=*/0);
     }
-    cout << "***Testing ";
-    if (isDryRun()) cout << "(dry run) ";
-    for (long i=0; i<vec.length(); i++)
-      cout << "("<<vec[i].order<<","<<vec[i].good<<")";
-    cout << ", depth="<<depth<<"\n";
+    if (!noPrint) {
+      cout << "***Testing ";
+      if (isDryRun()) cout << "(dry run) ";
+      for (long i=0; i<vec.length(); i++)
+	cout << "("<<vec[i].order<<","<<vec[i].good<<")";
+      cout << ", depth="<<depth<<"\n";
+    }
     testCube(vec, depth);
   }
   else {
     setTimersOn();
-    cout << "***Testing m="<<m<<", p="<<p<<", depth="<<depth<< endl;
+    if (!noPrint)
+      cout << "***Testing m="<<m<<", p="<<p<<", depth="<<depth<< endl;
     testCtxt(m,p,depth,L,r);
   }
 }
