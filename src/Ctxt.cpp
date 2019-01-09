@@ -224,10 +224,16 @@ bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
 
   if (primeSet != other.primeSet) return false;
   if (ptxtSpace != other.ptxtSpace) return false;
+  if (intFactor !=  other.intFactor)  return false;
+
+  // compare ratFactor, ignoring small deviations
+  if (ratFactor == 0.0 && other.ratFactor != 0.0) return false;
+  xdouble ratio = other.ratFactor / ratFactor;
+  if (ratio<0.9 && ratio>1.1) return false;
 
   // compare noiseBound, ignoring small deviations
   if (noiseBound == 0.0) return (other.noiseBound == 0.0);
-  xdouble ratio = other.noiseBound / noiseBound;
+  ratio = other.noiseBound / noiseBound;
   return (ratio>0.9 && ratio<1.1);
 }
 
