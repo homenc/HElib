@@ -128,29 +128,30 @@ RecryptData::~RecryptData()
 
 
 /**
- * Fix the "ring constant" cM, a target norm s for the secret key,
+ * Fix the "ring constant" cM, a target norm tau for the secret key,
  * and plaintext space mod p^r. We want to find e,e' that minimize
  * e-e', subject to the constraint
  *
- *    (1) (p^{e'}/2 + 2*p^r+1)(s+1)*cM <= (q-1)/2  = p^e/2
+ *    (1) (p^{e'}/2 + 2(p^r+1))(tau+1)*cM <= (q-1)/2  = p^e/2
  *
  * Note that as we let e,e' tend to infinity the constraint above
- * degenerates to (s+1)*cM < p^{e-e'}, so the smallest value
+ * degenerates to (tau+1)*cM < p^{e-e'}, so the smallest value
  * of e-e' that we can hope for is
  *
- *    (2) e-e' = 1 + floor( log_p( (s+1)*cM) )
+ *    (2) e-e' = 1 + floor( log_p( (tau+1)*cM) )
  *
  * The setAE procedure tries to minimize e-e' subject to (1), and
  * in addition subject to the constraint that e is "not too big".
  * Specifically, it tries to ensure p^e<2^{30}, and failing that it
- * uses the smallest e for which (2*p^r+1)(s+1)*cM*2 <= p^e, and the
+ * uses the smallest e for which 2(p^r+1)(tau+1)*cM*2 <= p^e, and the
  * largest e' for that value of e.
  *
  * Once e,e' are set, it splits p^{e'}/2=a+b with a,b about equal and
  * a divisible by p^r. Then it computes and returns the largest Hamming
- * weight for the key (that implies the norm s') for which constraint
+ * weight for the key (that implies the norm tau') for which constraint
  * (1) still holds.
- * NOTE: setAE returns the Hamming weight, *not* the norm s'. The norm
+ *
+ * NOTE: setAE returns the Hamming weight, *not* the norm tau'. The norm
  * can be computed from the weight using sampleHWtBoundedEffectiveBound.
  **/
 long RecryptData::setAE(long& a, long& e, long& ePrime,
@@ -163,7 +164,7 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
   double factor = (skSize+1) * magicConst * 2;
   long p = context.zMStar.getP();
   long p2r = context.alMod.getPPowR();
-  long frstTerm = 2*p2r+1; // 2*p^r +1
+  long frstTerm = 2*(p2r+1);
   double logp = log(p);    // log p
 
   // Start with the smallest e s.t. p^e > (2p^r+1)(skSize+1)*magicCons
