@@ -55,12 +55,12 @@ In this version we added a `long intFactor` data member to ciphertexts, and we n
 
     [<sk,ct>]_q = intFactor*q*m (mod p),
 
-This is just as convenient as before for modulus switching, but it allows us to just modify the `intFactor` (without changing the noise) after multiplication. When we add two ciphertexts they are both we still need to make sure that they both have the same `intFactor`, but it is easy to see that this can be done while increasing the noise of the result by at most a sqrt(p) factor.
+This is just as convenient as before for modulus switching, but it allows us to just modify the `intFactor` (without changing the noise) after multiplication. When we add two ciphertexts we still need to make sure that they both have the same `intFactor`, but it is easy to see that this can be done while increasing the noise of the result by at most a sqrt(p) factor.
 
-### 4b. Wider noise sampling for non-power-of-two LWE
-Fixed a security bug, related to the ring-LWE assumption in non-power-of-two cyclotomic rings. Before we always sampled the noise with a constant width in the coefficient representation (sigma=3.2 by default). This is an acceptable choice for power-of-two cyclotomics, but not otherwise. In the new version, for the m'th cyclotomic (with m not a power of two), we sample a *degree-m polynomial* in coefficient representation using Gaussian width sigma*sqrt(m), and then reduce the result modulo Phi_m(X).
+### 4b. Wider noise sampling for non-power-of-two ring-LWE
+Fixed a security bug, related to the ring-LWE assumption in non-power-of-two cyclotomic rings. Before we always sampled the noise with a constant width in the coefficient representation (sigma=3.2 by default). This is an acceptable choice for power-of-two cyclotomics, but not otherwise. In the new version, for the m'th cyclotomic (with m not a power of two), we sample a *degree-m polynomial* in coefficient representation using Gaussian width sigma*sqrt(m), and then reduce the result modulo Phi_m(X). This yeilds somewhat larger noise terms.
 
-On the other hand, when sampling noise terms during key-generation, we check the canonical-embedding norm of the result and re-sample if it is too large. (Specifically we set the parameters so that the probability of re-sampling is below 1/2.)
+On the other hand, when sampling noise terms during key-generation, we check the canonical-embedding norm of the result and re-sample if it is too large. (Specifically we set the parameters so that the probability of re-sampling is below 1/2.) This very often yeilds smaller noise terms for the keys.
 
 ### 4c. Implemented the Chen-Han "thin" bootstrapping procedure
 Implemented the faster procedure for bootstrapping lightly packed ciphertexts (where the slots contain only integers), from [[Chen-Han, Eurocrypt 2018]](https://ia.cr/2018/067). Integrated this procedure with the improved linear algebra methods of HElib.
