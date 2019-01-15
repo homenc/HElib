@@ -23,6 +23,8 @@
 
 NTL_CLIENT
 
+#define DEBUG_PRINTOUT
+
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 long printFlag = FLAG_PRINT_VEC;
@@ -50,6 +52,8 @@ static void x2iInSlots(ZZX& poly, long i,
 // integer z can be made divisible by p2e via z' = z + u*p2r + v*q,
 // with |u|*p2r <= a and |v| <= p2e/2 -a.
 // Returns the largest absolute values of the u's and the new entries.
+
+#if 1
 static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
                           double& U_norm, const PAlgebra& palg)
 {
@@ -57,8 +61,6 @@ static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a,
          && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
   long aa = a / p2r;
 
-  ZZX vec_orig;  conv(vec_orig, vec);
-  PolyRed(vec_orig, vec_orig, q);
 
 #ifdef DEBUG_PRINTOUT
   zzX uVec(INIT_SIZE, vec.length());
@@ -102,7 +104,7 @@ static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a,
   if (dbgEa) {
     const PAlgebra& palg = dbgEa->getPAlgebra();
     U_norm = conv<double>(embeddingLargestCoeff(uVec, palg)) *p2r;
-    double V_norm = conv<double>(embeddingLargestCoeff(vVec, palg)) *q;
+    double V_norm = conv<double>(embeddingLargestCoeff(vVec, palg));
     cerr << "  makeDivisible: maxU=" << (maxU*p2r)
          << ", U_norm=" << U_norm
          << ", V_norm=" << V_norm << endl;
@@ -111,6 +113,89 @@ static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a,
 
   return maxU;
 }
+#else
+// experimental, randomized version
+static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
+                          double& U_norm, const PAlgebra& palg)
+{
+  assert(q>0 && p2e>0 && p2r>0 && a>=0
+         && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
+  long aa = a / p2r;
+
+
+  vec_ZZ orig_vec = vec;
+  double sum_norm;
+  long maxU;
+
+  zzX uVec(INIT_SIZE, vec.length());
+  zzX vVec(INIT_SIZE, vec.length());
+
+  for (long trials = 0; trials < 10; trials++) {
+    vec_ZZ try_vec = orig_vec;
+
+    long maxU1 = 0;
+    for (long i=0; i<vec.length(); i++) {
+      ZZ& z = try_vec[i];
+      long u, v;
+
+      // What to add to z to make it divisible by p2e?
+      long zMod = rem(z, p2e); // zMod is in [0,p2e-1]
+      if (zMod > p2e/2) { // need to add a positive number
+	zMod = p2e - zMod;
+	u = zMod/p2r;
+	if (u > aa) u = aa;
+        if (u > 0) {
+          long ran = RandomBnd(u+1); //0..u
+          u -= ran;
+        }
+      }
+      else {              // need to add a negative number
+	u = -(zMod/p2r);
+	if (u < -aa) u = -aa;
+        if (-u > 0) {
+          long ran = RandomBnd(-u+1); //0..|u|
+          u += ran;
+        }
+	zMod = -zMod;
+      }
+      v = zMod - u*p2r;
+      z += u*p2r + to_ZZ(q)*v; // make z divisible by p2e
+
+      if (rem(z,p2e) != 0) { // sanity check
+	cerr << "**error: original z["<<i<<"]=" << (z-(u*p2r+to_ZZ(q)*v))
+	     << std::dec << ", p^r="<<p2r << ", p^e="<<p2e << endl;
+	cerr << "z' = z + "<<u<<"*p^r +"<<v<<"*q = "<<z<<endl;
+	exit(1);
+      }
+      if (abs(u) > maxU1) maxU1 = abs(u);
+
+      uVec[i] = u;
+      vVec[i] = v;
+    }
+
+    double U_norm1 = conv<double>(embeddingLargestCoeff(uVec, palg)) *p2r;
+    double V_norm1 = conv<double>(embeddingLargestCoeff(vVec, palg));
+    double sum_norm1 = U_norm1 + V_norm1;
+#ifdef DEBUG_PRINTOUT
+      cerr << "  makeDivisible: maxU1=" << (maxU1*p2r)
+	   << ", U_norm1=" << U_norm1
+	   << ", V_norm1=" << V_norm1 
+           << ", sum=" << (U_norm1+V_norm1) 
+           << "\n";
+#endif
+
+    if (trials == 0 || sum_norm1 < sum_norm) {
+      sum_norm = sum_norm1;
+      maxU = maxU1;
+      U_norm = U_norm1;
+      vec = try_vec;
+    }
+  }
+
+  return maxU;
+}
+
+#endif
 
 static inline double pow(long a, long b) {return pow(double(a), double(b));}
 /*********************************************************************/
@@ -198,6 +283,7 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
   a = 2*pToEprimeOver2 /5; // empirically we want a little below a half
   a -= (a % p2r);
  
+#if 0
   // Try to increase t, while maintaining constraint (1)
   double bound = (frstTerm + pToEprimeOver2)*magicConst * 2;
   long p2e = pow(p,e);
@@ -207,6 +293,7 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
       break;
   }
   targetWeight--;
+#endif
 
 #ifdef DEBUG_PRINTOUT
   long b = pToEprimeOver2 - a;
@@ -938,8 +1025,11 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   for (long i=0; i<(long)zzParts.size(); i++) {
     // make divisible by p^{e'}
     double U_norm; 
+
+
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
 				trcData.a, U_norm, context.zMStar);
+
     zzParts[i].normalize(); // normalize after working directly on the rep
     if (maxU < newMax)  maxU = newMax;
     if (maxU_norm < U_norm)  maxU_norm = U_norm;
@@ -1022,8 +1112,6 @@ printSizesPowerful(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
   if (ratio > 0) cerr << " BAD-BOUND";
   cerr << endl;
 
-  PolyRed(ptxt, q, false/*reduce to [-q/2,1/2]*/);
-  rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
   vecRed(powerful, powerful, q, false);
   max_pwrfl = conv<xdouble>(largestCoeff(powerful));
   rcData.p2dConv->powerfulToZZX(ptxt, powerful);
@@ -1036,5 +1124,9 @@ printSizesPowerful(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
   ratio = log(max_canon/noise)/log(2.0);
   cerr << "\n        log2(max_canon/noiseEst)=" << ratio;
   if (ratio > 0) cerr << " BAD-BOUND";
+
+  ratio = log(noise/q)/log(2.0);
+  cerr << ", log2(noiseEst/q)=" << ratio;
+
   cerr << endl;
 }

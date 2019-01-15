@@ -17,12 +17,11 @@
 NTL_CLIENT
 #include "EncryptedArray.h"
 #include "polyEval.h"
+#include "debugging.h"
 
 static bool noPrint = false;
+static bool debug = 0;
 
-#ifdef DEBUG_PRINTOUT
-#include "debugging.h"
-#endif
 
 int main(int argc, char *argv[])
 {
@@ -36,6 +35,7 @@ int main(int argc, char *argv[])
   amap.arg("r", r, "lifting");
   amap.arg("m", m, "the cyclotomic ring", "heuristic");
   amap.arg("noPrint", noPrint, "suppress printouts");
+  amap.arg("debug", debug, "extra debugging");
   amap.arg("dry", dry, "dry=1 for a dry-run");
 
   // get parameters from the command line
@@ -64,10 +64,11 @@ int main(int argc, char *argv[])
   const FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-#ifdef DEBUG_PRINTOUT
-  dbgKey = &secretKey; // debugging key and ea
-  dbgEa = (EncryptedArray*)context.ea;
-#endif
+
+  if (debug) {
+    dbgKey = &secretKey; // debugging key and ea
+    dbgEa = (EncryptedArray*)context.ea;
+  }
 
   EncryptedArray ea(context);
   vector<long> v;

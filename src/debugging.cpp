@@ -170,7 +170,7 @@ void CheckCtxt(const Ctxt& c, const char* label)
     ZZX p, pp;
     dbgKey->Decrypt(p, c1, pp);
     Vec<ZZ> powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful, pp, c1.getPrimeSet());
+    rcData.p2dConv->ZZXtoPowerful(powerful, pp);
 
     xdouble max_coeff = conv<xdouble>(largestCoeff(pp));
     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));

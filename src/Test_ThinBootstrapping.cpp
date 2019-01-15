@@ -133,12 +133,12 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     std::cout << "scale=" << context.scale<<endl;
   }
 
-  context.makeBootstrappable(mvec,/*t=*/0,build_cache,/*alsoThick=*/false);
+  context.makeBootstrappable(mvec,/*t=*/skHwt,build_cache,/*alsoThick=*/false);
   // save time...disable some fat boot precomputation
 
   t += GetTime();
 
-  if (skHwt>0) context.rcData.skHwt = skHwt;
+  //if (skHwt>0) context.rcData.skHwt = skHwt;
   if (!noPrint) {
     cout << " done in "<<t<<" seconds\n";
     cout << "  e="    << context.rcData.e
