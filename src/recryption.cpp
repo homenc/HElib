@@ -54,7 +54,7 @@ static void x2iInSlots(ZZX& poly, long i,
 
 #if 1
 static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
-                          double& U_norm, const PAlgebra& palg)
+                          double& U_norm, const PAlgebra& palg, PowerfulDCRT* p2dConv = 0)
 {
   assert(q>0 && p2e>0 && p2r>0 && a>=0
          && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
@@ -102,8 +102,18 @@ static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a,
 #ifdef DEBUG_PRINTOUT
   if (dbgEa) {
     const PAlgebra& palg = dbgEa->getPAlgebra();
-    U_norm = conv<double>(embeddingLargestCoeff(uVec, palg)) *p2r;
-    double V_norm = conv<double>(embeddingLargestCoeff(vVec, palg));
+    double V_norm;
+    if (p2dConv) {
+       ZZX poly;
+       p2dConv->powerfulToZZX(poly, conv<Vec<ZZ>>(uVec));
+       U_norm = conv<double>(embeddingLargestCoeff(poly, palg)) *p2r;
+       p2dConv->powerfulToZZX(poly, conv<Vec<ZZ>>(vVec));
+       V_norm = conv<double>(embeddingLargestCoeff(poly, palg));
+    }
+    else {
+      U_norm = conv<double>(embeddingLargestCoeff(uVec, palg)) *p2r;
+      V_norm = conv<double>(embeddingLargestCoeff(vVec, palg));
+    }
     cerr << "  makeDivisible: maxU=" << (maxU*p2r)
          << ", U_norm=" << U_norm
          << ", V_norm=" << V_norm << endl;
@@ -1023,13 +1033,14 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   }
 #endif
 
+#if 0
+
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   double maxU_norm = 0;
   long maxU=0;
   for (long i=0; i<(long)zzParts.size(); i++) {
     // make divisible by p^{e'}
     double U_norm; 
-
 
     long newMax = makeDivisible(zzParts[i].rep, p2ePrime, p2r, q,
 				trcData.a, U_norm, context.zMStar);
@@ -1051,6 +1062,43 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
   for (long i=0; i<(long)zzParts.size(); i++)
     zzParts[i] /= p2ePrime;   // divide by p^{e'}
+
+#else
+  // Experimental version
+  // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
+  double maxU_norm = 0;
+  long maxU=0;
+  for (long i=0; i<(long)zzParts.size(); i++) {
+    // make divisible by p^{e'}
+    double U_norm; 
+
+    Vec<ZZ> pwrfl;
+    trcData.p2dConv->ZZXtoPowerful(pwrfl, zzParts[i]);
+
+    long newMax = makeDivisible(pwrfl, p2ePrime, p2r, q,
+				trcData.a, U_norm, context.zMStar);
+
+    trcData.p2dConv->powerfulToZZX(zzParts[i], pwrfl);
+
+    zzParts[i].normalize(); // normalize after working directly on the rep
+    if (maxU < newMax)  maxU = newMax;
+    if (maxU_norm < U_norm)  maxU_norm = U_norm;
+  }
+#ifdef DEBUG_PRINTOUT
+  double newNoise = noise + maxU_norm*(skBounds[recryptKeyID]+1);
+  cerr << "  after makeDivisible, maxU=" << maxU
+       << ", maxU_norm="<<maxU_norm<<", p2r="<<p2r
+       << ", noise_bnd="<<newNoise<<", sk_bnd="<< skBounds[recryptKeyID]
+       << endl;
+   if (dbgKey)
+     printSizesPowerful(zzParts, dbgKey->sKeys[recryptKeyID],
+                        ctxt.getContext().rcData, q, newNoise);
+#endif
+
+  for (long i=0; i<(long)zzParts.size(); i++)
+    zzParts[i] /= p2ePrime;   // divide by p^{e'}
+
+#endif
 
   // Multiply the post-processed cipehrtext by the encrypted sKey
 
