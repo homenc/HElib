@@ -153,10 +153,9 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   //   issue that buildModChain must be called BEFORE the context is made
   //   botstrappable (else the "powerful" basis is not initialized correctly.)
 
-  context.makeBootstrappable(mvec, /*t=*/0, build_cache);
+  context.makeBootstrappable(mvec, /*t=*/skHwt, build_cache);
   t += GetTime();
 
-  if (skHwt>0) context.rcData.skHwt = skHwt;
   if (!noPrint) {
     cout << " done in "<<t<<" seconds\n";
     cout << "  e="    << context.rcData.e

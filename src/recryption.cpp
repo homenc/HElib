@@ -23,7 +23,6 @@
 
 NTL_CLIENT
 
-#define DEBUG_PRINTOUT
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
@@ -242,7 +241,12 @@ RecryptData::~RecryptData()
 long RecryptData::setAE(long& a, long& e, long& ePrime,
                     const FHEcontext& context, long targetWeight)
 {
-  if (targetWeight<=0) targetWeight = RecryptData::defSkHwt;
+  bool default_target=false;
+  if (targetWeight<=0) {
+    targetWeight = RecryptData::defSkHwt;
+    default_target=true;
+  }
+
   double skSize = sampleHWtBoundedEffectiveBound(context, targetWeight);
 
   double magicConst = context.zMStar.get_cM();
@@ -283,17 +287,17 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
   a = 2*pToEprimeOver2 /5; // empirically we want a little below a half
   a -= (a % p2r);
  
-#if 0
-  // Try to increase t, while maintaining constraint (1)
-  double bound = (frstTerm + pToEprimeOver2)*magicConst * 2;
-  long p2e = pow(p,e);
-  while (targetWeight++) {
-    skSize = sampleHWtBoundedEffectiveBound(context, targetWeight);
-    if (targetWeight>256 || bound*(skSize+1) >= p2e)
-      break;
+  if (default_target) {
+    // Try to increase t, while maintaining constraint (1)
+    double bound = (frstTerm + pToEprimeOver2)*magicConst * 2;
+    long p2e = pow(p,e);
+    while (targetWeight++) {
+      skSize = sampleHWtBoundedEffectiveBound(context, targetWeight);
+      if (targetWeight>256 || bound*(skSize+1) >= p2e)
+	break;
+    }
+    targetWeight--;
   }
-  targetWeight--;
-#endif
 
 #ifdef DEBUG_PRINTOUT
   long b = pToEprimeOver2 - a;

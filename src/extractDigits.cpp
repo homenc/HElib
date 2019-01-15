@@ -17,8 +17,6 @@
 #include "polyEval.h"
 #include "debugging.h"
 
-#define DEBUG_PRINTOUT
-
 NTL_CLIENT
 
 // Compute a degree-p polynomial poly(x) s.t. for any t<e and integr z of the
