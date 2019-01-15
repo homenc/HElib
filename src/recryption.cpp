@@ -1111,19 +1111,24 @@ printSizesPowerful(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
   xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
   xdouble max_canon = embeddingLargestCoeff(ptxt, palg);
   double ratio = log(max_pwrfl/max_canon)/log(2.0);
+  xdouble critical_value = (max_pwrfl/q)/q;
   cerr << "                     max_pwrfl/q^2=" << ((max_pwrfl/q)/q)
        << ", log2(max_pwrfl/max_canon)=" << ratio;
   if (ratio > 0) cerr << " BAD-BOUND";
   cerr << endl;
+
 
   vecRed(powerful, powerful, q, false);
   max_pwrfl = conv<xdouble>(largestCoeff(powerful));
   rcData.p2dConv->powerfulToZZX(ptxt, powerful);
   max_canon = embeddingLargestCoeff(ptxt, palg);
   ratio = log(max_pwrfl/max_canon)/log(2.0);
-  cerr << "        after mod q, max_pwrfl/q=" << (max_pwrfl/q)
-       << ", log2(max_pwrfl/max_canon)=" << ratio;
+  critical_value += max_pwrfl/q;
+  cerr << "        after mod q, max_pwrfl/q=" << (max_pwrfl/q);
+  if (critical_value > 0.5) cerr << " BAD-BOUND";
+  cerr << ", log2(max_pwrfl/max_canon)=" << ratio;
   if (ratio > 0) cerr << " BAD-BOUND";
+
 
   ratio = log(max_canon/noise)/log(2.0);
   cerr << "\n        log2(max_canon/noiseEst)=" << ratio;
