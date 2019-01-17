@@ -318,7 +318,7 @@ void applyLinPoly(NTL::GF2E& beta, const NTL::vec_GF2E& C, const NTL::GF2E& alph
 
 //! Base-2 logarithm
 inline double log2(const NTL::xdouble& x){ return log(x) * 1.442695040889; }
-inline double log2(const double x){ return log(x) * 1.442695040889; }
+inline double log2(const double x) noexcept{ return log(x) * 1.442695040889; }
 
 //! @brief Factoring by trial division, only works for N<2^{60}, only the
 //! primes are recorded, not their multiplicity.
