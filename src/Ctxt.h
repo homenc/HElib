@@ -381,9 +381,7 @@ public:
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
-  void addConstantCKKS(double x) {
-    addConstantCKKS(rationalApprox(x, /*denomBound=*/1<<getContext().alMod.getR()));
-  }
+  void addConstantCKKS(double x);
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size=NTL::xdouble(-1.0),
                        NTL::xdouble factor=NTL::xdouble(0.0));
@@ -445,12 +443,7 @@ public:
 
   //! Mulitply ciphretext by p^e, for plaintext space p^r. This also has
   //! the side-effect of increasing the plaintext space to p^{r+e}.
-  void multByP(long e=1)
-  {
-    long p2e = NTL::power_long(context.zMStar.getP(), e);
-    ptxtSpace *= p2e;
-    multByConstant(NTL::to_ZZ(p2e));
-  }
+  void multByP(long e=1);
 
   // For backward compatibility
   void divideBy2();
@@ -525,25 +518,13 @@ public:
   //! @brief returns the "capacity" of a ciphertext,
   //! which is the log of the ratio of the modulus to the
   //! noise bound
-  double capacity() const
-  {
-    if (noiseBound <= 1.0) 
-      return context.logOfProduct(getPrimeSet());
-    else
-      return context.logOfProduct(getPrimeSet()) - log(noiseBound);
-  }
+  double capacity() const;
 
   //! @brief the capacity in bits, returned as an integer
-  long bitCapacity() const
-  {
-    return long(capacity()/log(2.0));
-  }
+  long bitCapacity() const;
 
   //! @brief returns the log of the prime set
-  double logOfPrimeSet() const
-  {
-    return context.logOfProduct(getPrimeSet());
-  }
+  double logOfPrimeSet() const;
 
 
 
@@ -566,11 +547,7 @@ public:
   //! @name Utility methods
   ///@{
 
-  void clear() { // set as an empty ciphertext
-    primeSet=context.ctxtPrimes;
-    parts.clear();
-    noiseBound = NTL::to_xdouble(0.0);
-  }
+  void clear(); // set as an empty ciphertext
 
   //! @brief Is this an empty cipehrtext without any parts
   bool isEmpty() const { return (parts.size()==0); }
@@ -584,10 +561,7 @@ public:
   }
 
   //! @brief Would this ciphertext be decrypted without errors?
-  bool isCorrect() const {
-    NTL::ZZ q = context.productOfPrimes(primeSet);
-    return NTL::to_xdouble(q) > noiseBound*2;
-  }
+  bool isCorrect() const;
 
   const FHEcontext& getContext() const { return context; }
   const FHEPubKey& getPubKey() const   { return pubKey; }
@@ -597,27 +571,15 @@ public:
   const NTL::xdouble& getRatFactor() const { return ratFactor; }
   const long getKeyID() const;
 
-  bool isCKKS() const
-  { return (getContext().alMod.getTag()==PA_cx_tag); }
+  bool isCKKS() const;
 
   // Return r such that p^r = ptxtSpace
-  const long effectiveR() const {
-    long p = context.zMStar.getP();
-    for (long r=1, p2r=p; r<NTL_SP_NBITS; r++, p2r *= p) {
-      if (p2r == ptxtSpace) return r;
-      if (p2r > ptxtSpace) NTL::Error("ctxt.ptxtSpace is not of the form p^r");
-    }
-    NTL::Error("ctxt.ptxtSpace is not of the form p^r");
-    return 0; // just to keep the compiler happy
-  }
+  const long effectiveR() const;
 
 
   //! @brief Returns log(noiseBound) - log(q)
-  double log_of_ratio() const {
-    double logNoise = (getNoiseBound()<=0.0)? -DBL_MAX : log(getNoiseBound());
-    double logMod = empty(getPrimeSet())? -DBL_MAX : context.logOfProduct(getPrimeSet());
-    return logNoise - logMod;
-  }
+  double log_of_ratio() const;
+
   ///@}
   friend std::istream& operator>>(std::istream& str, Ctxt& ctxt);
   friend std::ostream& operator<<(std::ostream& str, const Ctxt& ctxt);

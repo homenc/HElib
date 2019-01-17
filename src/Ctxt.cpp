@@ -758,6 +758,10 @@ void Ctxt::addConstantCKKS(const ZZX& poly, xdouble size, xdouble factor)
   addConstantCKKS(DoubleCRT(poly,context,primeSet),size,factor);
 }
 
+void Ctxt::addConstantCKKS(double x) {
+  addConstantCKKS(rationalApprox(x, /*denomBound=*/1<<getContext().alMod.getR()));
+}
+
 void Ctxt::addConstantCKKS(const ZZ& c)
 {
   xdouble xc = to_xdouble(c);
@@ -892,6 +896,14 @@ NoiseNorm(xdouble noise1, xdouble noise2, long e1, long e2, long p)
 {
   return noise1*balRem(e1, p) + noise2*balRem(e2, p);
 }
+
+
+void Ctxt::multByP(long e)
+  {
+    long p2e = NTL::power_long(context.zMStar.getP(), e);
+    ptxtSpace *= p2e;
+    multByConstant(NTL::to_ZZ(p2e));
+  }
 
 // Add/subtract another ciphertxt (depending on the negative flag)
 void Ctxt::addCtxt(const Ctxt& other, bool negative)
@@ -1137,6 +1149,56 @@ IndexSet Ctxt::naturalPrimeSet() const
   return retval;
 }
 
+double Ctxt::capacity() const
+{
+  if (noiseBound <= 1.0)
+    return context.logOfProduct(getPrimeSet());
+  else
+    return context.logOfProduct(getPrimeSet()) - log(noiseBound);
+}
+
+long Ctxt::bitCapacity() const
+{
+  return long(capacity()/log(2.0));
+}
+
+double Ctxt::logOfPrimeSet() const
+{
+  return context.logOfProduct(getPrimeSet());
+}
+
+void Ctxt::clear() { // set as an empty ciphertext
+  primeSet=context.ctxtPrimes;
+  parts.clear();
+  noiseBound = NTL::to_xdouble(0.0);
+}
+
+bool Ctxt::isCorrect() const {
+  NTL::ZZ q = context.productOfPrimes(primeSet);
+  return NTL::to_xdouble(q) > noiseBound*2;
+}
+
+bool Ctxt::isCKKS() const
+{
+  return (getContext().alMod.getTag()==PA_cx_tag);
+}
+
+const long Ctxt::effectiveR() const {
+  long p = context.zMStar.getP();
+  for (long r=1, p2r=p; r<NTL_SP_NBITS; r++, p2r *= p) {
+    if (p2r == ptxtSpace) return r;
+    if (p2r > ptxtSpace) NTL::Error("ctxt.ptxtSpace is not of the form p^r");
+  }
+  NTL::Error("ctxt.ptxtSpace is not of the form p^r");
+  return 0; // just to keep the compiler happy
+}
+
+
+double Ctxt::log_of_ratio() const {
+  double logNoise = (getNoiseBound()<=0.0)? -DBL_MAX : log(getNoiseBound());
+  double logMod = empty(getPrimeSet())? -DBL_MAX : context.logOfProduct(getPrimeSet());
+  return logNoise - logMod;
+}
 
 // This is essentially operator*=, but with an extra parameter
 void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
