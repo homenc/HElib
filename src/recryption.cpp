@@ -1033,7 +1033,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   }
 #endif
 
-#if 0
+#if 1
 
   // Add multiples of p2r and q to make the zzParts divisible by p^{e'}
   double maxU_norm = 0;
