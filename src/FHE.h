@@ -184,6 +184,8 @@ public:
     recryptEkey.privateAssign(other.recryptEkey);
   }
 
+  virtual ~FHEPubKey() {};
+
   void clear() { // clear all public-key data
     pubEncrKey.clear(); skBounds.clear();
     keySwitching.clear(); keySwitchMap.clear();
@@ -331,7 +333,6 @@ public:
   // Constructors just call the ones for the base class
   explicit
   FHESecKey(const FHEcontext& _context): FHEPubKey(_context) {}
-
   bool operator==(const FHESecKey& other) const;
   bool operator!=(const FHESecKey& other) const {return !(*this==other);}
 
