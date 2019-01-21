@@ -3,7 +3,7 @@ file(GLOB TEST_FILES RELATIVE "${CMAKE_SOURCE_DIR}/src" "Test_*.cpp")
 
 ## Remove test files from the source file list.
 foreach(prg ${TEST_FILES})
-	list(FILTER HELIB_SRC_FILES EXCLUDE REGEX ${prg})
+  list(REMOVE_ITEM HELIB_SRC_FILES ${prg})
 endforeach(prg)
 
 if (BUILD_SHARED)
