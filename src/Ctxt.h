@@ -376,8 +376,15 @@ public:
   //! [-ptxtSpace/2, ptxtSpace/2].
   //! Otherwise, size should be a high-prob	
   void addConstant(const DoubleCRT& dcrt, double size=-1.0);
+
+
   void addConstant(const NTL::ZZX& poly, double size=-1.0)
   { addConstant(DoubleCRT(poly,context,primeSet),size); }
+  // FIXME: we should implement this directly, because we
+  // unnecessarily increase the noise when we scale poly to maintain the
+  // productOfPrimes invariant, and we could actually just reduce the scaled
+  // poly mod ptxtSpace.
+
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
