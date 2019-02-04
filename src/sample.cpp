@@ -19,6 +19,10 @@
 #include "FHEContext.h"
 #include "sample.h"
 #include "norms.h"
+
+#include "powerful.h"
+// only used in experimental Hwt sampler
+
 NTL_CLIENT
 
 // Sample a degree-(n-1) poly, with only Hwt nonzero coefficients
@@ -260,6 +264,7 @@ double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt)
 #endif
 }
 
+#if 1
 double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
 {
 #if FFT_IMPL // is there any implementation of canonicalEmbedding?
@@ -287,6 +292,175 @@ double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
 #endif
    
 }
+
+#elif 0
+
+// Experimental version
+
+static ZZ 
+calculate_matrix_norm(const zzX& try_poly, const FHEcontext& context)
+{
+  const RecryptData& rcData = context.rcData;
+  const PowerfulDCRT* p2dConv = rcData.p2dConv;
+  const PAlgebra& palg = context.zMStar;
+  long phim = palg.getPhiM();
+  long m = palg.getM();
+  const ZZX& PhimX = palg.getPhimX();
+
+  ZZX poly;
+  convert(poly, try_poly);
+
+  IndexSet iset = IndexSet( context.ctxtPrimes.first(), 
+                            min( context.ctxtPrimes.first()+3, 
+                                context.ctxtPrimes.last() ) );
+  // use a smaller prime set for powerful conversions
+  // right now, we just use the first 3  ctxt primes
+   
+  ZZ retval {0};
+
+  for (long i: range(phim)) {
+    if (i%300 == 0) cerr << ".";
+    Vec<ZZ> basis_vec;
+    basis_vec.SetLength(phim);
+    basis_vec[i] = 1;
+
+    ZZX basis_poly;
+    p2dConv->powerfulToZZX(basis_poly, basis_vec, iset);
+
+    basis_poly = basis_poly*poly;
+
+    // reduce basis_poly mod X^m-1, which is enough for ZZXtoPowerful
+    long d = basis_poly.rep.length();
+
+    if (d > m) {
+      for (long j: range(m, d)) {
+        basis_poly.rep[j-m] += basis_poly.rep[j];
+      }
+      basis_poly.rep.SetLength(m);
+      basis_poly.normalize();
+    }
+    
+    p2dConv->ZZXtoPowerful(basis_vec, basis_poly, iset);
+
+    for (long j: range(phim)) {
+      retval += basis_vec[j]*basis_vec[j];
+    }
+  }
+
+  return retval;
+}
+
+double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
+{
+#if FFT_IMPL // is there any implementation of canonicalEmbedding?
+  double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
+  const PAlgebra& palg = context.zMStar;
+    
+
+  ZZ best_matrix_norm;
+  zzX best_poly;
+
+  cerr << "*** starting trials\n";
+
+  for (long trials = 0; trials < 20; trials++) {
+
+    zzX try_poly;
+
+    double val;
+    long count = 0;
+    do {
+      sampleHWt(try_poly, context, Hwt);
+      val = embeddingLargestCoeff(try_poly,palg);
+      //cerr << "****** " << (val/bound) << "\n";
+    }
+    while (++count<1000 && val>bound); // repeat until <= bound
+
+    if (val>bound) {
+      cerr << "Warning: sampleSmallBounded, after "
+	   << count<<" trials, still val="<<val
+	   << '>'<<"bound="<<bound<<endl;
+      Error("cannot continue");
+    }
+
+    ZZ try_matrix_norm = calculate_matrix_norm(try_poly, context);
+
+    if (trials == 0 || try_matrix_norm < best_matrix_norm) {
+      best_matrix_norm = try_matrix_norm;
+      best_poly = try_poly; 
+    }
+
+    cerr << try_matrix_norm << "\n";
+  }
+
+  cerr << "*** ending trials\n";
+
+  return bound;
+#else
+  return sampleHWt(poly, context, Hwt);
+#endif
+   
+}
+
+#else
+
+void sampleHWtAlt(zzX& poly, const FHEcontext& context, long Hwt)
+{
+  const RecryptData& rcData = context.rcData;
+  const PowerfulDCRT* p2dConv = rcData.p2dConv;
+  const PAlgebra& palg = context.zMStar;
+  long phim = palg.getPhiM();
+  long m = palg.getM();
+
+  Vec<ZZ> pwrfl;
+  pwrfl.SetLength(phim);
+
+  for (long i=0; i<Hwt; ) {  // continue until exactly Hwt nonzero coefficients
+    long u = RandomBnd(phim);  // The next coefficient to choose
+    if (pwrfl[u]==0) { // if we didn't choose it already
+      long b = RandomBits_long(2)&2; // b random in {0,2}
+      pwrfl[u] = b-1;                      //   random in {-1,1}
+      i++; // count another nonzero coefficient
+    }
+  }
+
+  ZZX poly1;
+  p2dConv->powerfulToZZX(poly1, pwrfl);
+
+  convert(poly, poly1);
+}
+
+// Experimental version
+
+double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
+{
+#if FFT_IMPL // is there any implementation of canonicalEmbedding?
+  double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
+  const PAlgebra& palg = context.zMStar;
+    
+  double val;
+  long count = 0;
+  do {
+    sampleHWtAlt(poly, context, Hwt);
+    val = embeddingLargestCoeff(poly,palg);
+    //cerr << "****** " << (val/bound) << "\n";
+  }
+  while (++count<1000 && val>bound); // repeat until <= bound
+
+  if (val>bound) {
+    cerr << "Warning: sampleSmallBounded, after "
+         << count<<" trials, still val="<<val
+         << '>'<<"bound="<<bound<<endl;
+    Error("cannot continue");
+  }
+  return bound;
+#else
+  return sampleHWt(poly, context, Hwt);
+#endif
+   
+}
+
+
+#endif
 
 
 double sampleSmall(zzX &poly, const FHEcontext& context)

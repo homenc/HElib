@@ -948,6 +948,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 {
   FHE_TIMER_START;
 
+
   assert(((FHEPubKey*)this) == &ctxt.pubKey);
 
   long m = getContext().zMStar.getM();
@@ -976,12 +977,12 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
   // Sample a new RLWE instance
-  double noiseBound = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
+  ctxt.noiseBound = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
 
   if (isCKKS()) {
     long f = getContext().alMod.getCx().encodeScalingFactor();
     long prec = getContext().alMod.getPPowR();
-    long ef = ceil(prec*noiseBound/f);
+    long ef = conv<long>(ceil(prec*ctxt.noiseBound/f));
     if (ef>1) { // scale up some more
       ctxt.parts[0] += ptxt * ef;
       f *= ef;
@@ -990,14 +991,11 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
       ctxt.parts[0] += ptxt;
     }
     ctxt.ratFactor = f;
-    ctxt.noiseBound = noiseBound + (ptxtSize * ctxt.ratFactor);
+    ctxt.noiseBound += ptxtSize * ctxt.ratFactor;
     return f;
   }
   else { // BGV
     ctxt.addConstant(ptxt);  // add in the plaintext
-    double ptxt_bound = context.noiseBoundForUniform(double(ptxtSpace)/2.0, context.zMStar.getPhiM());
-
-    ctxt.noiseBound = noiseBound + ptxt_bound;
     return ctxt.ptxtSpace;
   }
 }

@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
   if (ea.size()<=20 && !noPrint)
     cout << "plaintext="<<pDigits<<endl;
 
+
   if (!noPrint)
     cout << "extracting "<<r<<" digits..." << std::flush;
   vector<Ctxt> digits;
