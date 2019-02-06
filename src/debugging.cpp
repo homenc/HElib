@@ -64,7 +64,8 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
   vector<ZZX> ptxt;
   ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
-  xdouble actualNoise = coeffsL2Norm(pp);
+  //xdouble actualNoise = coeffsL2Norm(pp);
+  xdouble actualNoise = embeddingLargestCoeff(pp, ctxt.getContext().zMStar);
 
   s << "plaintext space mod "<<ctxt.getPtxtSpace()
     << ", bitCapacity="<<ctxt.bitCapacity()

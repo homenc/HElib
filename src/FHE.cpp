@@ -899,6 +899,13 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 
     long keyIdx = part.skHandle.getSecretKeyID();
     DoubleCRT key = sKeys.at(keyIdx); // copy object, not a reference
+
+    // add missing primes: if ctxt contains any "small primes", these will
+    // get added here
+    const IndexSet missingPrimes = ptxtPrimes / key.getIndexSet();
+    key.addPrimes(missingPrimes);
+
+    // remove extra primes
     const IndexSet extraPrimes = key.getIndexSet() / ptxtPrimes;
     key.removePrimes(extraPrimes);    // drop extra primes, for efficiency
 
