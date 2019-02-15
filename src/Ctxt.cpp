@@ -1109,23 +1109,23 @@ void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt
     // than the modswitch added noise by at least getPPowR()
 
     double prec = log(ctxt1.getContext().alMod.getPPowR());
-    cout << "*** computeIntervalForMul:\n";
-    cout << "\t log(modSwAddNoise)="<<adn<<endl;
-    cout << "\t log(q)="<<lvl1<<endl;
-    cout << "\t log(noiseBound)="<<(lvl1-cap1)<<endl;
-    cout << "\t log(factor)="<<rf1<<endl;
-    cout << "\t log(prec)="<<prec<<endl;
+    //cout << "*** computeIntervalForMul:\n";
+    //cout << "\t log(modSwAddNoise)="<<adn<<endl;
+    //cout << "\t log(q)="<<lvl1<<endl;
+    //cout << "\t log(noiseBound)="<<(lvl1-cap1)<<endl;
+    //cout << "\t log(factor)="<<rf1<<endl;
+    //cout << "\t log(prec)="<<prec<<endl;
     if (nrf < adn+prec) { 
-      cout << "\t lo: "<<lo;
+      //cout << "\t lo: "<<lo;
       lo += adn +prec -nrf;
-      cout << " -> "<<lo<<endl;
-      cout << "\t hi: "<<hi;
+      //cout << " -> "<<lo<<endl;
+      //cout << "\t hi: "<<hi;
       hi = max(hi, lo + 1); // ensure that hi is a little bigger than lo
-      cout << " -> "<<hi<<endl;
+      //cout << " -> "<<hi<<endl;
     }
     else {
-      cout << "\t lo: "<<lo<<endl;
-      cout << "\t hi: "<<hi<<endl;
+      //cout << "\t lo: "<<lo<<endl;
+      //cout << "\t hi: "<<hi<<endl;
     }
   }
 }
@@ -1166,11 +1166,11 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     return;
   }
 
-  decryptAndPrint(cout<<"*** multLowLvl, just before modDown ",
-                  *this, *dbgKey, *dbgEa, FLAG_PRINT_ZZX);
-  cout << "\t log(q)="<<logOfPrimeSet()<<endl;
-  cout << "\t log(noiseBound)="<<log(getNoiseBound())<<endl;
-  cout << "\t log(factor)="<<getRatFactor()<<endl;
+//  decryptAndPrint(cout<<"*** multLowLvl, just before modDown ",
+//                  *this, *dbgKey, *dbgEa, FLAG_PRINT_ZZX);
+//  cout << "\t log(q)="<<logOfPrimeSet()<<endl;
+//  cout << "\t log(noiseBound)="<<log(getNoiseBound())<<endl;
+//  cout << "\t log(factor)="<<getRatFactor()<<endl;
 
   assert(isCKKS() == other_orig.isCKKS());
   assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
@@ -1220,11 +1220,11 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
   // Perform the actual tensor product
   Ctxt tmpCtxt(pubKey, ptxtSpace);
 
-  decryptAndPrint(cout<<"*** multLowLvl, just before tensorProduct ",
-                  *this, *dbgKey, *dbgEa, FLAG_PRINT_ZZX);
-  cout << "\t log(q)="<<logOfPrimeSet()<<endl;
-  cout << "\t log(noiseBound)="<<log(getNoiseBound())<<endl;
-  cout << "\t log(factor)="<<getRatFactor()<<endl;
+//  decryptAndPrint(cout<<"*** multLowLvl, just before tensorProduct ",
+//                  *this, *dbgKey, *dbgEa, FLAG_PRINT_ZZX);
+//  cout << "\t log(q)="<<logOfPrimeSet()<<endl;
+//  cout << "\t log(noiseBound)="<<log(getNoiseBound())<<endl;
+//  cout << "\t log(factor)="<<getRatFactor()<<endl;
 
   tmpCtxt.tensorProduct(*this, *other_pt);
   *this = tmpCtxt;
@@ -1246,8 +1246,8 @@ void Ctxt::multiplyBy(const Ctxt& other)
   }
 
   *this *= other;  // perform the multiplication
-  decryptAndPrint(cout<<"*** multiplyBy, after tensorProduct ",
-                  *this, *dbgKey, *dbgEa);
+//  decryptAndPrint(cout<<"*** multiplyBy, after tensorProduct ",
+//                  *this, *dbgKey, *dbgEa);
   reLinearize();   // re-linearize
 #ifdef DEBUG_PRINTOUT
       checkNoise(*this, *dbgKey, "reLinearize " + to_string(size_t(this)));
