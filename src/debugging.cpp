@@ -26,11 +26,8 @@ NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
 double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
 {
-  ZZX p, pp;
-
   xdouble noiseEst = ctxt.getNoiseBound();
-  sk.Decrypt(p, ctxt, pp);
-  xdouble actualNoise = coeffsL2Norm(pp);
+  xdouble actualNoise = embeddingLargestCoeff(ctxt, sk);
 
   return conv<double>(actualNoise/noiseEst);
 }
