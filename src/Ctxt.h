@@ -262,8 +262,11 @@ class Ctxt {
 
   NTL::xdouble noiseBound;  // a high-probability bound on the the noise magnitude
 
-  long intFactor;    // an integer factor to multiply by on decryption (for BGV)
+  long intFactor;    // an integer factor to divide by on decryption (for BGV)
+  // BGV decryption invariant is [<skey,ctxt>]_q = intFactor*q*ptxt (mod p)
+
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
+  // CKKS decryption invariant is [<skey,ctxt>]_q = ratFactor*ptxt + noise
 
   // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
   // are defined relative to the same set of primes and plaintext space,

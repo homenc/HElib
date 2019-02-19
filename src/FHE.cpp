@@ -931,21 +931,19 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 
   if (isCKKS()) return; // CKKS encryption, nothing else to do
 
-  if (ciphertxt.getPtxtSpace()>2) { // if p>2, multiply by Q^{-1} mod p
-    long qModP = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
+  PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
+
+  // if p>2, multiply by (intFactor * Q)^{-1} mod p
+  if (ciphertxt.getPtxtSpace()>2) {
+    long factor = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
                      ciphertxt.ptxtSpace);
-    if (qModP != 1) {
-      qModP = InvMod(qModP, ciphertxt.ptxtSpace);
-      MulMod(plaintxt, plaintxt, qModP, ciphertxt.ptxtSpace);
+    factor = MulMod(factor, ciphertxt.intFactor, ciphertxt.ptxtSpace);
+
+    if (factor != 1) {
+      factor = InvMod(factor, ciphertxt.ptxtSpace);
+      MulMod(plaintxt, plaintxt, factor, ciphertxt.ptxtSpace);
     }
   }
-
-  if (ciphertxt.intFactor != 1) {
-     long intFactorInv = InvMod(ciphertxt.intFactor, ciphertxt.ptxtSpace);
-     MulMod(plaintxt, plaintxt, intFactorInv, ciphertxt.ptxtSpace);
-  }
-
-  PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
 }
 
 // Encryption using the secret key, this is useful, e.g., to put an

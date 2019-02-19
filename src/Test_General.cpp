@@ -27,6 +27,7 @@ NTL_CLIENT
 //#define DEBUG_PRINTOUT
 
 #ifdef DEBUG_PRINTOUT
+#include "debugging.h"
 #define debugCompare(ea,sk,p,c) {\
   PlaintextArray pp(ea);\
   ea.decrypt(c, sk, pp);\
@@ -110,6 +111,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   EncryptedArray ea(context, G);
   long nslots = ea.size();
+#ifdef DEBUG_PRINTOUT
+  dbgKey = &secretKey;
+  dbgEa  = &ea;
+#endif
 
   PlaintextArray p0(ea);
   PlaintextArray p1(ea);
