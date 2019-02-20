@@ -380,11 +380,18 @@ void Ctxt::modDownToSet(const IndexSet &s)
     }
   }
 
-  // FIXME-NOW: does the following test make sense for CKKS?
-  if (noiseBound*ptxtSpace < addedNoiseBound) { // just "drop down"
-    // XXX: we might want to just get rid of this, if it causes
-    // complications
+  // Special case that never happens, but it worth checking anyways:
+  // If the current noise is smaller than the added noise term from
+  // mod-switching, then there is no point is actually doing it. In
+  // this case just drop the extra primes and stay with the same noise
+  // (but a smaller modulus).
+  // The reason this never happens is it doesn't make any sense, it is
+  // only making the noise/modulus ratio worse without gaining anything.
+  // But since Ctxt::modDownToSet is a public method, then maybe some
+  // crazy application will call it under these circumstances, so we
+  // should check for this condition.
 
+  if (noiseBound < addedNoiseBound) { // just "drop down"
     for (size_t i=0; i<parts.size(); i++)
       parts[i].removePrimes(setDiff);       // remove the primes not in s
     long prodInv = 1;
@@ -1183,9 +1190,9 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     IndexSet nat = naturalPrimeSet();
     bringToSet(nat); // drop to the "natural" primeSet
     if (dbgKey) { // HERE
-      cerr << "*** after bringToSet: " 
+      cerr << "*** after bringToSet,    noise/estNoise= "
 	   << realToEstimatedNoise(*this, *dbgKey)
-           << " " << this->bitCapacity()
+           << ", capacity= " << this->bitCapacity()
 	   << "\n";
     }
     other_pt = this;
@@ -1232,9 +1239,9 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
   *this = tmpCtxt;
 
   if (dbgKey) { // HERE
-    cerr << "*** after TensorProduct: " 
+    cerr << "*** after TensorProduct, noise/estNoise= "
          << realToEstimatedNoise(*this, *dbgKey)
-           << " " << this->bitCapacity()
+           << ", capacity= " << this->bitCapacity()
          << "\n";
   }
 }
@@ -1255,9 +1262,9 @@ void Ctxt::multiplyBy(const Ctxt& other)
   }
 
   if (dbgKey) { // HERE
-    cerr << "*** before multiplyBy: " 
+    cerr << "*** before multiplyBy,   noise/estNoise= "
          << realToEstimatedNoise(*this, *dbgKey)
-           << " " << this->bitCapacity()
+           << ", capacity= " << this->bitCapacity()
          << "\n";
   }
 
@@ -1266,10 +1273,9 @@ void Ctxt::multiplyBy(const Ctxt& other)
   reLinearize();   // re-linearize
 
   if (dbgKey) { // HERE
-    cerr << "*** after reLinearize: " 
+    cerr << "*** after reLinearize,   noise/estNoise= "
          << realToEstimatedNoise(*this, *dbgKey)
-           << " " << this->bitCapacity()
-         << "\n";
+         << ", capacity= " << this->bitCapacity() << endl;
   }
 
 #ifdef DEBUG_PRINTOUT
