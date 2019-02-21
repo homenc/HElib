@@ -165,8 +165,13 @@ test: $(TESTPROGS)
 
 obj: $(OBJ)
 
-DoubleCRT.o: DoubleCRT.cpp
-	$(CC) $(CFLAGS) -c DoubleCRT.cpp
+
+#extractDigits.o: extractDigits.cpp
+#	$(CC) $(CFLAGS) -DDEBUG_PRINTOUT -c extractDigits.cpp
+
+#recryption.o: recryption.cpp
+#	$(CC) $(CFLAGS) -DDEBUG_PRINTOUT -c recryption.cpp
+
 
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $<

@@ -366,7 +366,8 @@ void Ctxt::modDownToSet(const IndexSet &s)
   xdouble addedNoiseBound = modSwitchAddedNoiseBound();
 
   // For approximate nums, make sure that scaling factor is large enough
-  if (isCKKS()) {
+  // HERE!!
+  if (1 && isCKKS()) {
     // Factor after mod-switching is ratFactor/(prod_{i\in setDiff} qi),
     // it must be larger than addedNoiseBound by at leasr getPPowR()
     double extraFactor = log(addedNoiseBound) + log(context.alMod.getPPowR())
@@ -375,14 +376,23 @@ void Ctxt::modDownToSet(const IndexSet &s)
     if (extraFactor > 0) {
       xdouble xf = ceil(xexp(extraFactor));
       multByConstant(conv<ZZ>(xf)); // Increases noiseBound
+      //cout << "*** multByConstant=" << conv<ZZ>(xf) << "\n";
       ratFactor *= xf;              // Up the factor accordingly
     }
   }
 
-  if (noiseBound*ptxtSpace < addedNoiseBound) { // just "drop down"
-    // XXX: we might want to just get rid of this, if it causes
-    // complications
+  // Special case that never happens, but it worth checking anyways:
+  // If the current noise is smaller than the added noise term from
+  // mod-switching, then there is no point is actually doing it. In
+  // this case just drop the extra primes and stay with the same noise
+  // (but a smaller modulus).
+  // The reason this never happens is it doesn't make any sense, it is
+  // only making the noise/modulus ratio worse without gaining anything.
+  // But since Ctxt::modDownToSet is a public method, then maybe some
+  // crazy application will call it under these circumstances, so we
+  // should check for this condition.
 
+  if (noiseBound < addedNoiseBound) { // just "drop down"
     for (size_t i=0; i<parts.size(); i++)
       parts[i].removePrimes(setDiff);       // remove the primes not in s
     long prodInv = 1;
@@ -1081,6 +1091,8 @@ void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt
 
   hi = min(cap1, cap2) + adn - safety;
   lo = hi - slack;
+
+
   // FIXME: this is a bit hackish...
 
   // The idea is that for a given ctxt with modulus q and noise
@@ -1097,7 +1109,8 @@ void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt
   // such as setting hi = max(cap1, cap2) + adn - safety,
   // and lo = min(hi - slack, min(cap1, cap2) + adn - safety.
 
-  if (ctxt1.isCKKS()) { // ensure large enough scaling factor
+  // HERE!!
+  if (1 && ctxt1.isCKKS()) { // ensure large enough scaling factor
     double lvl1 = ctxt1.logOfPrimeSet();
     double rf1 = log(ctxt1.getRatFactor());
     double nrf1 = rf1 - (lvl1-lo); // log of ratFactor after scaling
@@ -1111,9 +1124,23 @@ void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt
     // than the modswitch added noise by at least getPPowR()
 
     double prec = log(ctxt1.getContext().alMod.getPPowR());
-    if (nrf < adn+prec) {
+    //cout << "*** computeIntervalForMul:\n";
+    //cout << "\t log(modSwAddNoise)="<<adn<<endl;
+    //cout << "\t log(q)="<<lvl1<<endl;
+    //cout << "\t log(noiseBound)="<<(lvl1-cap1)<<endl;
+    //cout << "\t log(factor)="<<rf1<<endl;
+    //cout << "\t log(prec)="<<prec<<endl;
+    if (nrf < adn+prec) {  
+      //cout << "\t lo: "<<lo;
       lo += adn +prec -nrf;
+      //cout << " -> "<<lo<<endl;
+      //cout << "\t hi: "<<hi;
       hi = max(hi, lo + 1); // ensure that hi is a little bigger than lo
+      //cout << " -> "<<hi<<endl;
+    }
+    else {
+      //cout << "\t lo: "<<lo<<endl;
+      //cout << "\t hi: "<<hi<<endl;
     }
   }
 }
@@ -1154,6 +1181,7 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     return;
   }
 
+
   assert(isCKKS() == other_orig.isCKKS());
   assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
   assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1));
@@ -1161,7 +1189,14 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
   Ctxt* other_pt = nullptr;
   unique_ptr<Ctxt> ct; // scratch space if needed
   if (this == &other_orig) { // squaring
-    bringToSet(naturalPrimeSet()); // drop to the "natural" primeSet
+    IndexSet nat = naturalPrimeSet();
+    bringToSet(nat); // drop to the "natural" primeSet
+    if (dbgKey) { // HERE
+      cerr << "*** after bringToSet,    noise/estNoise= "
+	   << realToEstimatedNoise(*this, *dbgKey)
+           << ", capacity= " << this->bitCapacity()
+	   << "\n";
+    }
     other_pt = this;
   }
   else { // real multiplication
@@ -1201,8 +1236,16 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
 
   // Perform the actual tensor product
   Ctxt tmpCtxt(pubKey, ptxtSpace);
+
   tmpCtxt.tensorProduct(*this, *other_pt);
   *this = tmpCtxt;
+
+  if (dbgKey) { // HERE
+    cerr << "*** after TensorProduct, noise/estNoise= "
+         << realToEstimatedNoise(*this, *dbgKey)
+           << ", capacity= " << this->bitCapacity()
+         << "\n";
+  }
 }
 
 
@@ -1220,8 +1263,23 @@ void Ctxt::multiplyBy(const Ctxt& other)
     return;
   }
 
+  if (dbgKey) { // HERE
+    cerr << "*** before multiplyBy,   noise/estNoise= "
+         << realToEstimatedNoise(*this, *dbgKey)
+           << ", capacity= " << this->bitCapacity()
+         << "\n";
+  }
+
   *this *= other;  // perform the multiplication
+
   reLinearize();   // re-linearize
+
+  if (dbgKey) { // HERE
+    cerr << "*** after reLinearize,   noise/estNoise= "
+         << realToEstimatedNoise(*this, *dbgKey)
+         << ", capacity= " << this->bitCapacity() << endl;
+  }
+
 #ifdef DEBUG_PRINTOUT
       checkNoise(*this, *dbgKey, "reLinearize " + to_string(size_t(this)));
 #endif
@@ -1570,7 +1628,11 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
     }
   }
 
-  double roundingNoise = context.noiseBoundForUniform(double(ptxtSpace)/2.0,
+  // FIXME-NOW: not sure if this is right when isCKKS()
+  double magBound;
+  magBound = double(ptxtSpace)/2.0;
+
+  double roundingNoise = context.noiseBoundForUniform(magBound,
                                                       context.zMStar.getPhiM());
   return addedNoise * roundingNoise;
 }

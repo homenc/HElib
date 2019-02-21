@@ -499,7 +499,7 @@ istream& operator>> (istream &str, FHEcontext& context)
   if (mv.length()>0) {
     context.makeBootstrappable(mv, t, build_cache);
   }
-
+  context.setModSizeTable();
   seekPastChar(str, ']');
   return str;
 }

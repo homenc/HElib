@@ -38,6 +38,8 @@ if (ARMADILLO_FOUND)
   include_directories(${ARMADILLO_INCLUDE_DIRS})
   link_libraries(${ARMADILLO_LIBRARIES})
   add_definitions(-DFFT_ARMA)
+else (ARMADILLO_FOUND)
+  add_definitions(-DFFT_NATIVE)
 endif (ARMADILLO_FOUND)
 
 add_subdirectory(src)

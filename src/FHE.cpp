@@ -899,6 +899,13 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 
     long keyIdx = part.skHandle.getSecretKeyID();
     DoubleCRT key = sKeys.at(keyIdx); // copy object, not a reference
+
+    // add missing primes: if ctxt contains any "small primes", these will
+    // get added here
+    const IndexSet missingPrimes = ptxtPrimes / key.getIndexSet();
+    key.addPrimes(missingPrimes);
+
+    // remove extra primes
     const IndexSet extraPrimes = key.getIndexSet() / ptxtPrimes;
     key.removePrimes(extraPrimes);    // drop extra primes, for efficiency
 
@@ -924,21 +931,19 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 
   if (isCKKS()) return; // CKKS encryption, nothing else to do
 
-  if (ciphertxt.getPtxtSpace()>2) { // if p>2, multiply by Q^{-1} mod p
-    long qModP = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
+  PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
+
+  // if p>2, multiply by (intFactor * Q)^{-1} mod p
+  if (ciphertxt.getPtxtSpace()>2) {
+    long factor = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
                      ciphertxt.ptxtSpace);
-    if (qModP != 1) {
-      qModP = InvMod(qModP, ciphertxt.ptxtSpace);
-      MulMod(plaintxt, plaintxt, qModP, ciphertxt.ptxtSpace);
+    factor = MulMod(factor, ciphertxt.intFactor, ciphertxt.ptxtSpace);
+
+    if (factor != 1) {
+      factor = InvMod(factor, ciphertxt.ptxtSpace);
+      MulMod(plaintxt, plaintxt, factor, ciphertxt.ptxtSpace);
     }
   }
-
-  if (ciphertxt.intFactor != 1) {
-     long intFactorInv = InvMod(ciphertxt.intFactor, ciphertxt.ptxtSpace);
-     MulMod(plaintxt, plaintxt, intFactorInv, ciphertxt.ptxtSpace);
-  }
-
-  PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
 }
 
 // Encryption using the secret key, this is useful, e.g., to put an
@@ -947,6 +952,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
                           long ptxtSpace, long skIdx) const
 {
   FHE_TIMER_START;
+
 
   assert(((FHEPubKey*)this) == &ctxt.pubKey);
 
@@ -976,12 +982,12 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 
   const DoubleCRT& sKey = sKeys.at(skIdx);   // get key
   // Sample a new RLWE instance
-  double noiseBound = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
+  ctxt.noiseBound = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
 
   if (isCKKS()) {
     long f = getContext().alMod.getCx().encodeScalingFactor();
     long prec = getContext().alMod.getPPowR();
-    long ef = ceil(prec*noiseBound/f);
+    long ef = conv<long>(ceil(prec*ctxt.noiseBound/f));
     if (ef>1) { // scale up some more
       ctxt.parts[0] += ptxt * ef;
       f *= ef;
@@ -990,14 +996,11 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
       ctxt.parts[0] += ptxt;
     }
     ctxt.ratFactor = f;
-    ctxt.noiseBound = noiseBound + (ptxtSize * ctxt.ratFactor);
+    ctxt.noiseBound += ptxtSize * ctxt.ratFactor;
     return f;
   }
   else { // BGV
     ctxt.addConstant(ptxt);  // add in the plaintext
-    double ptxt_bound = context.noiseBoundForUniform(double(ptxtSpace)/2.0, context.zMStar.getPhiM());
-
-    ctxt.noiseBound = noiseBound + ptxt_bound;
     return ctxt.ptxtSpace;
   }
 }

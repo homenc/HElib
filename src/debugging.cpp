@@ -26,11 +26,8 @@ NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
 double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
 {
-  ZZX p, pp;
-
   xdouble noiseEst = ctxt.getNoiseBound();
-  sk.Decrypt(p, ctxt, pp);
-  xdouble actualNoise = coeffsL2Norm(pp);
+  xdouble actualNoise = embeddingLargestCoeff(ctxt, sk);
 
   return conv<double>(actualNoise/noiseEst);
 }
@@ -64,7 +61,8 @@ void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
   vector<ZZX> ptxt;
   ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
-  xdouble actualNoise = coeffsL2Norm(pp);
+  //xdouble actualNoise = coeffsL2Norm(pp);
+  xdouble actualNoise = embeddingLargestCoeff(pp, ctxt.getContext().zMStar);
 
   s << "plaintext space mod "<<ctxt.getPtxtSpace()
     << ", bitCapacity="<<ctxt.bitCapacity()
@@ -170,7 +168,7 @@ void CheckCtxt(const Ctxt& c, const char* label)
     ZZX p, pp;
     dbgKey->Decrypt(p, c1, pp);
     Vec<ZZ> powerful;
-    rcData.p2dConv->ZZXtoPowerful(powerful, pp, c1.getPrimeSet());
+    rcData.p2dConv->ZZXtoPowerful(powerful, pp);
 
     xdouble max_coeff = conv<xdouble>(largestCoeff(pp));
     xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
