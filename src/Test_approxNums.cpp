@@ -102,10 +102,6 @@ void rotate(vector<cx_double>& p, long amt)
   p = tmp;
 }
 
-
-
-bool verbose=false;
-
 /************** Each round consists of the following:
 1. c1.multiplyBy(c0)
 2. c0 += random constant
