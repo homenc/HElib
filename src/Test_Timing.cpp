@@ -555,7 +555,6 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
     // Get the generator-tree structures and the corresponding hypercube
     GeneratorTrees trees;
     trees.buildOptimalTrees(vec, /*widthBound=*/7);
-    //  cout << " cost =" << cost << endl;
 
     // build network for a random permutation, for the sole purpose
     // of adding key-switching matrices

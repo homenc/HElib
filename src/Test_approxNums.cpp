@@ -20,6 +20,8 @@
 
 NTL_CLIENT
 
+bool verbose=false;
+
 // Compute the L-infinity distance between two vectors
 double calcMaxDiff(const vector<cx_double>& v1, 
                    const vector<cx_double>& v2){
@@ -308,8 +310,7 @@ void testBasicArith(const FHEPubKey& publicKey,
                     const FHESecKey& secretKey,
                     const EncryptedArrayCx& ea, double epsilon)
 {
-  
-  cout << "Test Arithmetic "; 
+  if (verbose)  cout << "Test Arithmetic ";
   // Test objects
 
   Ctxt c1(publicKey), c2(publicKey), c3(publicKey);
@@ -370,12 +371,12 @@ void testBasicArith(const FHEPubKey& publicKey,
   printVec(cout<<"res=", vd, 10)<<endl;
   printVec(cout<<"vec=", vd1, 10)<<endl;
 #endif
-  cout << "(max |res-vec|_{infty}="<< calcMaxDiff(vd, vd1) << "): ";
+  if (verbose)
+    cout << "(max |res-vec|_{infty}="<< calcMaxDiff(vd, vd1) << "): ";
 
   cx_equals(vd, vd1, epsilon)?
-    cout << "PASS\n":
-    cout << "max diff larger than epsilon.\nFAIL\n";
-
+    cout << "GOOD\n":
+    cout << "BAD\n";
 }
 
 
@@ -395,7 +396,8 @@ void testComplexArith(const FHEPubKey& publicKey,
   ea.encrypt(c1, publicKey, vd1);
   ea.encrypt(c2, publicKey, vd2);
 
-  cout << "Test Conjugate: ";
+  if (verbose)
+    cout << "Test Conjugate: ";
   for_each(vd1.begin(), vd1.end(), [](cx_double& d){d=std::conj(d);});
   c1.complexConj();  
   ea.decrypt(c1, secretKey, vd);
@@ -404,15 +406,16 @@ void testComplexArith(const FHEPubKey& publicKey,
   printVec(cout<<"res=", vd, 10)<<endl;
 #endif
   cx_equals(vd, vd1, epsilon)?
-    cout << "PASS\n":
-    cout << "max diff larger than epsilon.\nFAIL\n";
+    cout << "GOOD\n":
+    cout << "BAD\n";
 
   // Test that real and imaginary parts are actually extracted.
   Ctxt realCtxt(c2), imCtxt(c2);
   vector<cx_double> realParts(vd2), real_dec;
   vector<cx_double> imParts(vd2), im_dec;
 
-  cout << "Test Real and Im parts: ";
+  if (verbose)
+    cout << "Test Real and Im parts: ";
   for_each(realParts.begin(), realParts.end(), [](cx_double& d){d=std::real(d);});
   for_each(imParts.begin(), imParts.end(), [](cx_double& d){d=std::imag(d);});
 
@@ -429,10 +432,9 @@ void testComplexArith(const FHEPubKey& publicKey,
   printVec(cout<<"im=", imParts, 10)<<endl;
   printVec(cout<<"res=", im_dec, 10)<<endl;
 #endif
-  cx_equals(realParts, real_dec, epsilon) && cx_equals(imParts, im_dec, epsilon)?
-    cout << "PASS\n":
-    cout << "max diff larger than epsilon.\nFAIL\n";
-
+  cx_equals(realParts,real_dec,epsilon) && cx_equals(imParts,im_dec,epsilon)?
+    cout << "GOOD\n":
+    cout << "BAD\n";
 }
 
 void testRotsNShifts(const FHEPubKey& publicKey, 
@@ -443,7 +445,8 @@ void testRotsNShifts(const FHEPubKey& publicKey,
   std::srand(std::time(0)); // set seed, current time.
   int nplaces = rand() % static_cast<int>(ea.size()/2.0) + 1;
 
-  cout << "Test Rotation of " << nplaces << ": ";  
+  if (verbose)
+    cout << "Test Rotation of " << nplaces << ": ";  
 
   Ctxt c1(publicKey);
   vector<cx_double> vd1;
@@ -463,6 +466,6 @@ void testRotsNShifts(const FHEPubKey& publicKey,
 #endif
 
   cx_equals(vd1, vd_dec, epsilon)?
-    cout << "PASS\n":
-    cout << "max diff larger than epsilon.\nFAIL\n";
+    cout << "GOOD\n":
+    cout << "BAD\n";
 }

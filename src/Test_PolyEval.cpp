@@ -22,7 +22,7 @@ extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;
 #endif
 
-static bool noPrint = false;
+static bool noPrint = true;
 
 bool testEncrypted(long d, const EncryptedArray& ea,
 		   const FHESecKey& secretKey)
@@ -60,8 +60,7 @@ bool testEncrypted(long d, const EncryptedArray& ea,
   secretKey.Decrypt(ret, cX);
   zz_pX cres = conv<zz_pX>(ret);
   bool success = (cres == pres);
-  if (success) std::cout << " encrypted poly match, ";
-  else         std::cout << " encrypted poly MISMATCH\n";
+  cout << (success? "GOOD" : "BAD") << endl;
   return success;
 }
 
@@ -110,11 +109,12 @@ void testIt(long d, long k, long p, long r, long m, long L,
   for (long i=0; i<ea.size(); i++) {
     long ret = polyEvalMod(poly, x[i], p2r);
     if (ret != y[i]) {
-      std::cout << "plaintext poly MISMATCH\n";
+      std::cout << "BAD\n";
+      if (!noPrint) cout<<"  plaintext poly MISMATCH\n";
       exit(0);
     }
   }
-  std::cout << "plaintext poly match\n" << std::flush;
+  std::cout << "GOOD\n" << std::flush;
 }
 
 void usage(char *prog) 
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
   argmap["d"] = "-1";
   argmap["k"] = "0";
   argmap["dry"] = "0";
-  argmap["noPrint"] = "0";
+  argmap["noPrint"] = "1";
 
   // get parameters from the command line
   if (!parseArgs(argc, argv, argmap)) usage(argv[0]);

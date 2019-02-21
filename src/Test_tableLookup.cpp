@@ -103,8 +103,7 @@ int main(int argc, char *argv[])
   FHEcontext context(m, p, /*r=*/1, gens, ords);
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
-    context.makeBootstrappable(mvec, /*t=*/0,
-                               /*flag=*/false, /*cacheType=DCRT*/2);
+    context.makeBootstrappable(mvec, /*t=*/0);
   }
   buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
   if (verbose) {
@@ -127,10 +126,10 @@ int main(int argc, char *argv[])
 #endif
 
   testLookup(secKey, bitSize, outSize);
-  cout << "  *** testLookup PASS ***\n";
+  cout << "GOOD\n";
 
   testWritein(secKey, bitSize, nTests);
-  cout << "  *** testWritein PASS ***\n";
+  cout << "GOOD\n";
 
   if (verbose) printAllTimers(cout);
   return 0;
@@ -173,7 +172,8 @@ void testLookup(const FHESecKey& sKey, long insize, long outsize)
     ZZX poly;  sKey.Decrypt(poly, c); // decrypt
     zzX poly2; convert(poly2, poly);  // convert to zzX
     if (poly2 != T[i]) {
-      cout << "testLookup error: decrypted T["<<i<<"]\n";
+      cout << "BAD\n";
+      if (verbose) cout << "testLookup error: decrypted T["<<i<<"]\n";
       exit(0);
     }
   }
@@ -212,8 +212,10 @@ void testWritein(const FHESecKey& sKey, long size, long nTests)
     long decrypted = to_long(NTL::ConstTerm(poly));
     long p = T[i].getPtxtSpace();
     if ((pT[i] - decrypted) % p) { // not equal mod p
-      cout << "testWritein error: decrypted T["<<i<<"]="<<decrypted
-           <<" but should be "<<pT[i]<<" (mod "<<p<<")\n";
+      cout << "BAD\n";
+      if (verbose)
+        cout << "  testWritein error: decrypted T["<<i<<"]="<<decrypted
+             <<" but should be "<<pT[i]<<" (mod "<<p<<")\n";
       exit(0);
     }
   }

@@ -127,13 +127,42 @@ double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg)
 
 static xdouble convertAndScale(zzX& ff, const NTL::ZZX& f)
 {
+  const long MAX_BITS = NTL_SP_BOUND-15; // max allowed bits to avoid double overflow 
+                                         // in computations
   xdouble factor(1.0);
   long size = NTL::MaxBits(f);
-  if (size > NTL_SP_BOUND-15) {
-    ZZ zzFactor = ZZ(1) << (size-(NTL_SP_BOUND-15)); // divide f by this factor
-    ZZX scaled = f / zzFactor;
+  if (size > MAX_BITS) {
+    ZZ zzFactor = ZZ(1) << (size-MAX_BITS); // divide f by this factor
+
+    ZZX scaled = f;
+    for (long i: range(f.rep.length())) RightShift(scaled.rep[i], scaled.rep[i], size-MAX_BITS); 
+    scaled.normalize();
+
     convert(factor, zzFactor);      // remember the factor
     convert(ff, scaled);            // convert to zzX
+  }
+  else
+    convert(ff, f);                 // convert to zzX
+  return factor;
+}
+
+
+static xdouble convertAndScale(ZZX& ff, const NTL::ZZX& f)
+{
+  const long MAX_BITS = 250; // max allowed bits to avoid double overflow 
+                             // in computations
+
+  xdouble factor(1.0);
+  long size = NTL::MaxBits(f);
+  if (size > MAX_BITS) {
+    ZZ zzFactor = ZZ(1) << (size-MAX_BITS); // divide f by this factor
+
+    ZZX scaled = f;
+    for (long i: range(f.rep.length())) RightShift(scaled.rep[i], scaled.rep[i], size-MAX_BITS); 
+    scaled.normalize();
+
+    convert(factor, zzFactor);      // remember the factor
+    ff = scaled;
   }
   else
     convert(ff, f);                 // convert to zzX
@@ -149,13 +178,15 @@ xdouble embeddingL2NormSquared(const NTL::ZZX& f, const PAlgebra& palg)
 
 xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
 {
-#if 0
-  zzX ff; // to hold a scaled-down version of ff;
+#if 1
+  ZZX ff; // to hold a scaled-down version of ff;
   xdouble factor = convertAndScale(ff, f);
-  return embeddingLargestCoeff(ff, palg)*factor;
 #else
+  const ZZX& ff = f;
+  xdouble factor { 1.0 };
+#endif
   std::vector<cx_double> emb;
-  canonicalEmbedding(emb, f, palg);
+  canonicalEmbedding(emb, ff, palg);
   xdouble mx {0.0};
   for (auto& x : emb) {
     double re = std::real(x);
@@ -163,7 +194,6 @@ xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
     xdouble n = xdouble(re)*xdouble(re) + xdouble(im)*xdouble(im);
     if (mx < n) mx = n;
   }
-  return sqrt(mx);
-#endif
+  return sqrt(mx)*factor;
 }
 #endif

@@ -19,6 +19,7 @@
 #include "CtPtrs.h"
 
 #include "debugging.h"
+#include "norms.h"
 
 NTL_CLIENT
 
@@ -223,10 +224,16 @@ bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
 
   if (primeSet != other.primeSet) return false;
   if (ptxtSpace != other.ptxtSpace) return false;
+  if (intFactor !=  other.intFactor)  return false;
+
+  // compare ratFactor, ignoring small deviations
+  if (ratFactor == 0.0 && other.ratFactor != 0.0) return false;
+  xdouble ratio = other.ratFactor / ratFactor;
+  if (ratio<0.9 && ratio>1.1) return false;
 
   // compare noiseBound, ignoring small deviations
   if (noiseBound == 0.0) return (other.noiseBound == 0.0);
-  xdouble ratio = other.noiseBound / noiseBound;
+  ratio = other.noiseBound / noiseBound;
   return (ratio>0.9 && ratio<1.1);
 }
 
@@ -1557,8 +1564,7 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
     else {
       long keyId = parts[i].skHandle.getSecretKeyID();
       long d = parts[i].skHandle.getPowerOfS();
-      xdouble h, t;
-      h = pubKey.getSKeyBound(keyId);
+      xdouble h = conv<xdouble>(pubKey.getSKeyBound(keyId));
 
       addedNoise += NTL::power(h, d);
     }
@@ -1679,25 +1685,6 @@ istream& operator>>(istream& str, Ctxt& ctxt)
   return str;
 }
 
-
-void CheckCtxt(const Ctxt& c, const char* label)
-{
-  cerr << "  "<<label 
-       << ", log2(modulus/noise)=" << (-c.log_of_ratio()/log(2.0)) 
-       << ", p^r=" << c.getPtxtSpace();
-
-  if (dbgKey) {
-    Ctxt c1(c);
-    //c1.dropSmallAndSpecialPrimes();
-    cerr << ", log2(noise/bound)=" << (log(embeddingLargestCoeff(c1, *dbgKey)/c1.getNoiseBound())/log(2.0));
-    //cerr << ", log2(noise)=" << (log(embeddingLargestCoeff(c1, *dbgKey))/log(2.0));
-    //cerr << ", log2(bound)=" << (log(c1.getNoiseBound())/log(2.0));
-  }
-       //<< ", #smallPrimes=" << (c.getPrimeSet() & c.getContext().smallPrimes).card()
-       //<< ", #ctxtPrimes=" << (c.getPrimeSet() & c.getContext().ctxtPrimes).card()
-       //<< ", #specialPrimes=" << (c.getPrimeSet() & c.getContext().specialPrimes).card()
-  cerr << endl;
-}
 
 // The recursive incremental-product function that does the actual work
 static void recursiveIncrementalProduct(Ctxt array[], long n)
@@ -1830,8 +1817,8 @@ void innerProduct(Ctxt& result,
 // Mod-switch to an externally-supplied modulus. The modulus need not be in
 // the moduli-chain in the context, and does not even need to be a prime.
 // The ciphertext *this is not affected, instead the result is returned in
-// the zzParts vector, as a vector of ZZX'es. Returns an extimate for the
-// noise variance after mod-switching.
+// the zzParts vector, as a vector of ZZX'es. 
+// Returns an extimate for the noise bound after mod-switching.
 
 #include "powerful.h"
 double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
@@ -1852,10 +1839,6 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 			  InvMod(rem(fromModulus,p2r),p2r), p2r);
 
   mulmod_precon_t precon = PrepMulModPrecon(ratioModP, p2r);
-
-  // cerr << "## converting from mod-"<<context.productOfPrimes(getPrimeSet())
-  //      << " to mod-"<<toModulus<<" (ratio="<<ratio
-  //      << "), ptxtSpace="<<p2r<<endl;
 
   // Scale and round all the integers in all the parts
   zzParts.resize(parts.size());
@@ -1889,5 +1872,18 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
   }
 
   // Return an estimate for the noise
-  return conv<double>(noiseBound*ratio + modSwitchAddedNoiseBound());
+  double scaledNoise = conv<double>(noiseBound*ratio);
+  double addedNoise = conv<double>(modSwitchAddedNoiseBound());
+#ifdef DEBUG_PRINTOUT
+  cerr << "## Ctxt::rawModSwitch: converting from mod-"
+       << context.productOfPrimes(getPrimeSet())
+       << " to mod-"<<toModulus<<" (ratio="<<ratio
+       << "), ptxtSpace="<<p2r<<endl;
+  cerr << "             scaledNoise="<< scaledNoise
+       << ", addedNoise="<<addedNoise<<endl;
+#endif
+  return scaledNoise + addedNoise;
+  // NOTE: technically, modSwitchAddedNoise bound assumes rounding is
+  // done in the polynomial basis, rather than the powerful basis,
+  // but the same bounds are still valid
 }

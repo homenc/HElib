@@ -49,7 +49,6 @@ xdouble embeddingLargestCoeff(const Ctxt& ctxt, const FHESecKey& sk)
   ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
   return embeddingLargestCoeff(pp, context.zMStar);
-  //return conv<xdouble>(largestCoeff(pp));
 }
 
 
@@ -145,4 +144,44 @@ void rawDecrypt(ZZX& plaintxt, const std::vector<ZZX>& zzParts,
 
   if (q>1)
     PolyRed(plaintxt, q, false/*reduce to [-q/2,1/2]*/);
+}
+
+#include "powerful.h"
+void CheckCtxt(const Ctxt& c, const char* label)
+{
+  cerr << "  "<<label 
+       << ", log2(modulus/noise)=" << (-c.log_of_ratio()/log(2.0)) 
+       << ", p^r=" << c.getPtxtSpace();
+
+  if (dbgKey) {
+    double ratio = log(embeddingLargestCoeff(c, *dbgKey)/c.getNoiseBound())/log(2.0);
+    cerr << ", log2(noise/bound)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
+  }
+
+  if (dbgKey && c.getContext().isBootstrappable()) {
+    Ctxt c1(c);
+    //c1.dropSmallAndSpecialPrimes();
+
+    const FHEcontext& context = c1.getContext();
+    const RecryptData& rcData = context.rcData;
+    const PAlgebra& palg = context.zMStar;
+
+    ZZX p, pp;
+    dbgKey->Decrypt(p, c1, pp);
+    Vec<ZZ> powerful;
+    rcData.p2dConv->ZZXtoPowerful(powerful, pp, c1.getPrimeSet());
+
+    xdouble max_coeff = conv<xdouble>(largestCoeff(pp));
+    xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
+    xdouble max_canon = embeddingLargestCoeff(pp, palg);
+    double ratio = log(max_pwrfl/max_canon)/log(2.0);
+
+    //cerr << ", max_coeff=" << max_coeff;
+    //cerr << ", max_pwrfl=" << max_pwrfl;
+    //cerr << ", max_canon=" << max_canon;
+    cerr << ", log2(max_pwrfl/max_canon)=" << ratio;
+    if (ratio > 0) cerr << " BAD-BOUND";
+  }
+  cerr << endl;
 }

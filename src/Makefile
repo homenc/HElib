@@ -16,22 +16,23 @@ AR = ar
 ARFLAGS=rv
 GMP=-lgmp
 NTL=-lntl
+COPT=-g -O2
 ARMA=-larmadillo
+CFFT=-DFFT_ARMA
 
 # INC and LIB changed to when GMP and/or NTL not in default locations
 # Put these definitions in the file local-defs, which will be included
 # if found.  ====> PUT ONLY *ABSOLUTE PATHS* IN local-defs <====
+# You can also overwrite COPT, CFFT, and ARMA in this local file.
 # See local-def.example for an example.
 include $(wildcard local-defs)
 
 #
-CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -pthread -DFFT_ARMA -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=2 
-#CFLAGS = -g -O2 -std=c++11 $(INC_NTL) $(INC_GMP) -DFFT_NATIVE -fmax-errors=2
+CFLAGS = -std=c++11 -pthread $(COPT) $(INC_NTL) $(INC_GMP) $(CFFT) -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=4 
 
 # NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
 #       against them as dynamic libraries.
 LDLIBS = $(LIB_NTL) $(LIB_GMP) $(NTL) $(GMP) $(ARMA) -lm
-#LDLIBS = $(LIB_NTL) $(LIB_GMP) $(NTL) $(GMP) -lm
 
 
 # useful flags:
@@ -113,12 +114,12 @@ check_extractDigits: Test_extractDigits_x
 
 check_bootstrapping: Test_bootstrapping_x 
 	./Test_bootstrapping_x noPrint=1 N=512
-	./Test_bootstrapping_x noPrint=1 N=512 r=4 
+	./Test_bootstrapping_x noPrint=1 N=2300 r=4 
 	./Test_bootstrapping_x p=7 noPrint=1
 
 check_ThinBootstrapping: Test_ThinBootstrapping_x 
 	./Test_ThinBootstrapping_x noPrint=1 N=512
-	./Test_ThinBootstrapping_x noPrint=1 N=512 r=4 
+	./Test_ThinBootstrapping_x noPrint=1 N=2300 r=4 
 	./Test_ThinBootstrapping_x p=7 noPrint=1
 
 check_binaryArith: Test_binaryArith_x 

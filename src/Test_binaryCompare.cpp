@@ -107,8 +107,7 @@ int main(int argc, char *argv[])
   FHEcontext context(m, p, /*r=*/1, gens, ords);
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
-    context.makeBootstrappable(mvec, /*t=*/0,
-                               /*flag=*/false, /*cacheType=DCRT*/2);
+    context.makeBootstrappable(mvec, /*t=*/0);
   }
   buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
   if (verbose) {
@@ -132,7 +131,7 @@ int main(int argc, char *argv[])
 
   for (long i=0; i<nTests; i++)
     testCompare(secKey, bitSize, bootstrap);
-  cout << "  *** testCompare PASS ***\n";
+  cout << "GOOD\n";
 
   if (verbose) printAllTimers(cout);
   return 0;
@@ -183,9 +182,11 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
   
   if (slotsMax[0]!=pMax || slotsMin[0]!=pMin
       || slotsMu[0]!=pMu || slotsNi[0]!=pNi) {
-    cout << "Comparison error: a="<<pa<<", b="<<pb
-         << ", but min="<<slotsMin[0]<<", max="<<slotsMax[0]
-         << ", mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
+    cout << "BAD\n";
+    if (verbose)
+      cout << "Comparison error: a="<<pa<<", b="<<pb
+           << ", but min="<<slotsMin[0]<<", max="<<slotsMax[0]
+           << ", mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
     exit(0);
   }
   else if (verbose) {

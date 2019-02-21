@@ -14,6 +14,8 @@
 
 NTL_CLIENT
 
+bool verbose = false;
+
 int main(int argc, char **argv)
 {
   ArgMapping amap;
@@ -29,12 +31,14 @@ int main(int argc, char **argv)
   amap.arg("m", m, "use specified value as modulus", NULL);
   long seed=0;
   amap.arg("seed", seed, "PRG seed");
+  amap.arg("verbose", verbose, "suppress printouts");
   amap.parse(argc, argv);
 
   SetSeed(ZZ(seed));
 
   FHEcontext context(m, p, r);
-  context.zMStar.printout();
+  if (verbose)
+    context.zMStar.printout();
   buildModChain(context, L, 3);
 
   ZZX G = context.alMod.getFactorsOverZZ()[0];
@@ -47,7 +51,6 @@ int main(int argc, char **argv)
   addFrbMatrices(secretKey);
 
   long d = ea.getDegree(); // size of each slot
-  cout << "packing/unpaking "<<n<<"<-->"<<(n*d -1)<<" ciphertexts\n";
 
   vector<Ctxt> unpacked(d*n -1, Ctxt(publicKey));
 
@@ -57,7 +60,6 @@ int main(int argc, char **argv)
     vector<long> slots;
     ea.random(slots);
     encode(ea, p1[i] ,slots);
-    //    cout << "p1["<<i<<"]="<<p1[i] << endl;
     ea.encrypt(unpacked[i], publicKey, p1[i]);
   }
 
@@ -75,10 +77,11 @@ int main(int argc, char **argv)
     ea.decrypt(unpacked[i], secretKey, p2);
 
     if (!equals(ea, p1[i], p2)) {
-      cout << "BAD, ";
-      cout << "p2["<<i<<"]="<<p2 << endl;
+      cout << "BAD";
+      if (verbose)
+        cout << "p2["<<i<<"]="<<p2 << endl;
       exit(0);
     }
   }
-  cout << "Good\n";
+  cout << "GOOD\n";
 }

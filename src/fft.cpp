@@ -35,6 +35,7 @@ void convert(zzX& to, const arma::vec& from)
     to[i] = std::round(from[i]);
   NTL_EXEC_RANGE_END
 }
+
 void convert(arma::vec& to, const zzX& from)
 {
   to.resize(from.length());
@@ -54,6 +55,55 @@ void convert(arma::vec& to, const ZZX& from)
   }
   NTL_EXEC_RANGE_END
 }
+
+#if 0
+
+//======================
+
+namespace arma {
+
+  template<> 
+  struct is_supported_elem_type<RR> {
+    enum {value = 1};
+  }; 
+
+  template<> 
+  struct is_supported_elem_type<cx_RR> {
+    enum {value = 1};
+  }; 
+
+  template<> 
+  struct is_real<RR> {
+    enum {value = 1};
+  }; 
+
+}
+
+
+void convert(zzX& to, const arma::Col<RR>& from)
+{
+  to.SetLength(from.size());
+  for (long i: range(to.length()))
+    to[i] = conv<long>(RoundToZZ(from[i]));
+}
+
+void convert(arma::Col<RR>& to, const zzX& from)
+{
+  to.resize(from.length());
+  for (long i: range(from.length()))
+    to[i] = from[i];
+}
+
+void convert(arma::Col<RR>& to, const ZZX& from)
+{
+  to.resize(from.rep.length());
+  for (long i: range(from.rep.length())) {
+    RR x = conv<RR>(from[i]);
+    to[i] = x;
+  }
+}
+
+#endif
 
 // Computing the canonical embedding. This function returns in v only
 // the first half of the entries, the others are v[phi(m)-i]=conj(v[i])
@@ -96,6 +146,29 @@ void canonicalEmbedding(std::vector<cx_double>& v,
     for (long i=1, idx=0; i<=m/2; i++)
       if (palg.inZmStar(i)) v[idx++] = avv[i];
 }
+
+
+#if 0
+void canonicalEmbedding(std::vector<cx_RR>& v,
+                        const ZZX& f, const PAlgebra& palg)
+{
+  FHE_TIMER_START;
+  long m = palg.getM();
+  long phimBy2 = divc(palg.getPhiM(),2);
+  arma::Col<RR> av; // convert to vector of doubles
+  convert(av, f);
+  arma::Col<cx_RR> avv = arma::fft(av,m); // compute the full FFT
+
+  v.resize(phimBy2); // the first half of Zm*
+
+  if (palg.getNSlots()==phimBy2) // order roots by the palg order
+    for (long i=0; i<phimBy2; i++)
+      v[phimBy2-i-1] = avv[palg.ith_rep(i)];
+  else                           // order roots sequentially
+    for (long i=1, idx=0; i<=m/2; i++)
+      if (palg.inZmStar(i)) v[idx++] = avv[i];
+}
+#endif
 
 // Roughly the inverse of canonicalEmbedding, except for scaling and
 // rounding issues. Calling embedInSlots(f,v,palg,1.0,strictInverse=true)
@@ -178,8 +251,49 @@ void canonicalEmbedding(std::vector<cx_double>& v, const zzX& f, const PAlgebra&
   NTL_EXEC_RANGE_END
   FHE_TIMER_STOP;
 }
+
+// evaluate poly(x) using Horner's rule
+// FIXME: this is actually evaluating the reverse polynomial
+cx_double complexEvalPoly(const Vec<double>& poly, const cx_double& x)
+{
+  if (poly.length()<=0) return cx_double(0.0,0.0);
+  cx_double res(poly[0], 0.0);
+  for (long i: range(1, poly.length())) {
+    res *= x;
+    res += cx_double(poly[i]);
+  }
+  return res;
+}
+
+void canonicalEmbedding(std::vector<cx_double>& v, const ZZX& f, const PAlgebra& palg)
+{
+  FHE_TIMER_START;
+  long m = palg.getM();
+  long phimBy2 = divc(palg.getPhiM(),2);
+  vector<long> zmstar(phimBy2); // the first half of Zm*
+
+  Vec<double> ff;
+  conv(ff, f.rep);
+
+  if (palg.getNSlots()==phimBy2) // order roots by the palg order
+    for (long i=0; i<phimBy2; i++)
+      zmstar[phimBy2-i-1] = palg.ith_rep(i);
+  else                           // order roots sequentially
+    for (long i=1, idx=0; i<=m/2; i++)
+      if (palg.inZmStar(i)) zmstar[idx++] = i;
+
+  v.resize(phimBy2);
+  NTL_EXEC_RANGE(phimBy2, first, last)
+  for (long i=first; i < last; ++i) {
+    auto rou = std::polar<double>(1.0, -(2*pi*zmstar[i])/m); // root of unity
+    v[i] = complexEvalPoly(ff,rou);
+  }
+  NTL_EXEC_RANGE_END
+  FHE_TIMER_STOP;
+}
+
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
-                  const PAlgebra& palg, bool strictInverse)
+                  const PAlgebra& palg, double scaling, bool strictInverse)
 {
   NTL::Error("embedInSlots not implemented\n");
 }
