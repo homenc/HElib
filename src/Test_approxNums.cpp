@@ -128,10 +128,10 @@ void testGeneralOps(const FHEPubKey& publicKey, const FHESecKey& secretKey,
   ea.random(p3);
 
   Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
-  ea.encrypt(c0, publicKey, p0);
-  ea.encrypt(c1, publicKey, p1);
-  ea.encrypt(c2, publicKey, p2);
-  ea.encrypt(c3, publicKey, p3);
+  ea.encrypt(c0, publicKey, p0, /*size=*/1.0);
+  ea.encrypt(c1, publicKey, p1, /*size=*/1.0);
+  ea.encrypt(c2, publicKey, p2, /*size=*/1.0);
+  ea.encrypt(c3, publicKey, p3, /*size=*/1.0);
 
   resetAllTimers();
   FHE_NTIMER_START(Circuit);
@@ -151,8 +151,8 @@ void testGeneralOps(const FHEPubKey& publicKey, const FHESecKey& secretKey,
      ea.random(const2);
 
      ZZX const1_poly, const2_poly;
-     ea.encode(const1_poly, const1);
-     ea.encode(const2_poly, const2);
+     ea.encode(const1_poly, const1, /*size=*/1.0);
+     ea.encode(const2_poly, const2, /*size=*/1.0);
 
      mul(p1, p0);     // c1.multiplyBy(c0)
      c1.multiplyBy(c0);
@@ -219,10 +219,26 @@ void testGeneralOps(const FHEPubKey& publicKey, const FHESecKey& secretKey,
   ea.decrypt(c3, secretKey, pp3);
 
   std::cout << "Test "<<nRounds<<" rounds of mixed operations, ";
-  if (cx_equals(pp0, p0,epsilon) && cx_equals(pp1, p1,epsilon)
-      && cx_equals(pp2, p2,epsilon) && cx_equals(pp3, p3,epsilon))
+  if (cx_equals(pp0, p0,conv<double>(epsilon*c0.getPtxtMag()))
+      && cx_equals(pp1, p1,conv<double>(epsilon*c1.getPtxtMag()))
+      && cx_equals(pp2, p2,conv<double>(epsilon*c2.getPtxtMag()))
+      && cx_equals(pp3, p3,conv<double>(epsilon*c3.getPtxtMag())))
     std::cout << "PASS\n\n";
-  else std::cout << "FAIL\n\n";
+  else {
+    std::cout << "FAIL:\n";
+    std::cout << "  max(p0)="<<largestCoeff(p0)
+              << ", max(pp0)="<<largestCoeff(pp0)
+              << ", maxDiff="<<calcMaxDiff(p0,pp0) << endl;
+    std::cout << "  max(p1)="<<largestCoeff(p1)
+              << ", max(pp1)="<<largestCoeff(pp1)
+              << ", maxDiff="<<calcMaxDiff(p1,pp1) << endl;
+    std::cout << "  max(p2)="<<largestCoeff(p2)
+              << ", max(pp2)="<<largestCoeff(pp2)
+              << ", maxDiff="<<calcMaxDiff(p2,pp2) << endl;
+    std::cout << "  max(p3)="<<largestCoeff(p3)
+              << ", max(pp3)="<<largestCoeff(pp3)
+              << ", maxDiff="<<calcMaxDiff(p3,pp3) << endl<<endl;
+  }
 
   if (verbose) {
     std::cout << endl;
@@ -318,19 +334,18 @@ void testBasicArith(const FHEPubKey& publicKey,
 
   // test encoding of shorter vectors
   vd1.resize(vd1.size()-2);
-  ea.encrypt(c1, publicKey, vd1);
+  ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
   vd1.resize(vd1.size()+2, 0.0);
 
-  ea.encrypt(c2, publicKey, vd2);
+  ea.encrypt(c2, publicKey, vd2, /*size=*/1.0);
 
-
-  // Test - Multiplication  
+  // Test - Multiplication
   c1 *= c2;
   for (long i=0; i<lsize(vd1); i++) vd1[i] *= vd2[i];
 
   ZZX poly;
   ea.random(vd3);
-  ea.encode(poly,vd3);
+  ea.encode(poly, vd3, /*size=*/1.0);
   c1.addConstant(poly); // vd1*vd2 + vd3
   for (long i=0; i<lsize(vd1); i++) vd1[i] += vd3[i];
 
@@ -347,13 +362,13 @@ void testBasicArith(const FHEPubKey& publicKey,
     mask[i*(i+1)] = -1;
   }
 
-  ea.encode(poly,mask);
+  ea.encode(poly,mask, /*size=*/1.0);
   c1.multByConstant(poly); // mask*(vd1*vd2 + vd3)
   for (long i=0; i<lsize(vd1); i++) vd1[i] *= mask[i];
 
   // Test - Addition
   ea.random(vd3);
-  ea.encrypt(c3, publicKey, vd3);
+  ea.encrypt(c3, publicKey, vd3, /*size=*/1.0);
   c1 += c3;
   for (long i=0; i<lsize(vd1); i++) vd1[i] += vd3[i];
 
@@ -370,9 +385,14 @@ void testBasicArith(const FHEPubKey& publicKey,
   if (verbose)
     cout << "(max |res-vec|_{infty}="<< calcMaxDiff(vd, vd1) << "): ";
 
-  cx_equals(vd, vd1, epsilon)?
-    cout << "GOOD\n":
-    cout << "BAD\n";
+  if (cx_equals(vd, vd1, conv<double>(epsilon*c1.getPtxtMag())))
+    cout << "GOOD\n";
+  else {
+    cout << "BAD:\n";
+    std::cout << "  max(vd)="<<largestCoeff(vd)
+              << ", max(vd1)="<<largestCoeff(vd1)
+              << ", maxDiff="<<calcMaxDiff(vd,vd1) << endl<<endl;
+  }
 }
 
 
@@ -389,8 +409,8 @@ void testComplexArith(const FHEPubKey& publicKey,
   ea.random(vd1);
   ea.random(vd2);
    
-  ea.encrypt(c1, publicKey, vd1);
-  ea.encrypt(c2, publicKey, vd2);
+  ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
+  ea.encrypt(c2, publicKey, vd2, /*size=*/1.0);
 
   if (verbose)
     cout << "Test Conjugate: ";
@@ -401,9 +421,14 @@ void testComplexArith(const FHEPubKey& publicKey,
   printVec(cout<<"vd1=", vd1, 10)<<endl;
   printVec(cout<<"res=", vd, 10)<<endl;
 #endif
-  cx_equals(vd, vd1, epsilon)?
-    cout << "GOOD\n":
-    cout << "BAD\n";
+  if (cx_equals(vd, vd1, conv<double>(epsilon*c1.getPtxtMag())))
+    cout << "GOOD\n";
+  else {
+    cout << "BAD:\n";
+    std::cout << "  max(vd)="<<largestCoeff(vd)
+              << ", max(vd1)="<<largestCoeff(vd1)
+              << ", maxDiff="<<calcMaxDiff(vd,vd1) << endl<<endl;
+  }
 
   // Test that real and imaginary parts are actually extracted.
   Ctxt realCtxt(c2), imCtxt(c2);
@@ -428,9 +453,18 @@ void testComplexArith(const FHEPubKey& publicKey,
   printVec(cout<<"im=", imParts, 10)<<endl;
   printVec(cout<<"res=", im_dec, 10)<<endl;
 #endif
-  cx_equals(realParts,real_dec,epsilon) && cx_equals(imParts,im_dec,epsilon)?
-    cout << "GOOD\n":
-    cout << "BAD\n";
+  if (cx_equals(realParts,real_dec,conv<double>(epsilon*realCtxt.getPtxtMag()))
+      && cx_equals(imParts, im_dec, conv<double>(epsilon*imCtxt.getPtxtMag())))
+    cout << "GOOD\n";
+  else {
+    cout << "BAD:\n";
+    std::cout << "  max(re)="<<largestCoeff(realParts)
+              << ", max(re1)="<<largestCoeff(real_dec)
+              << ", maxDiff="<<calcMaxDiff(realParts,real_dec) << endl;
+    std::cout << "  max(im)="<<largestCoeff(imParts)
+              << ", max(im1)="<<largestCoeff(im_dec)
+              << ", maxDiff="<<calcMaxDiff(imParts,im_dec) << endl<<endl;
+  }
 }
 
 void testRotsNShifts(const FHEPubKey& publicKey, 
@@ -448,7 +482,7 @@ void testRotsNShifts(const FHEPubKey& publicKey,
   vector<cx_double> vd1;
   vector<cx_double> vd_dec;
   ea.random(vd1);
-  ea.encrypt(c1, publicKey, vd1);
+  ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
 
 #ifdef DEBUG_PRINTOUT
   printVec(cout<< "vd1=", vd1, 10)<<endl;
@@ -461,7 +495,12 @@ void testRotsNShifts(const FHEPubKey& publicKey,
   printVec(cout<<"res: ", vd_dec, 10)<<endl;
 #endif
 
-  cx_equals(vd1, vd_dec, epsilon)?
-    cout << "GOOD\n":
-    cout << "BAD\n";
+  if (cx_equals(vd1, vd_dec, conv<double>(epsilon*c1.getPtxtMag())))
+    cout << "GOOD\n";
+  else {
+    cout << "BAD:\n";
+    std::cout << "  max(vd)="<<largestCoeff(vd_dec)
+              << ", max(vd1)="<<largestCoeff(vd1)
+              << ", maxDiff="<<calcMaxDiff(vd_dec,vd1) << endl<<endl;
+  }
 }

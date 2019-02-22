@@ -675,18 +675,6 @@ public:
   { throw std::logic_error("PAlgebraModCx::getFactorsOverZZ undefined"); }
   zzX getMask_zzX(long i, long j) const override
   { throw std::logic_error("PAlgebraModCx::getMask_zzX undefined"); }
-
-  // The scaling factor to use when encoding/decoding plaintext elements
-  long encodeScalingFactor(long precision=0) const {
-    assert(precision>=0 && precision<NTL_SP_BOUND);
-    if (precision==0)
-      precision=(1L<<r);
-    double m = getZMStar().getM();
-    // Experimentally, X * sqrt(m log m) yeilds precision of 1/2X to 1/4X
-    // We round it up to the next power of two
-    long f = ceil(precision * std::sqrt(m*log2(m)));
-    return (1L<<NTL::NextPowerOfTwo(f));
-  }
 };
 
 

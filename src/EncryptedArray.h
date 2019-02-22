@@ -122,27 +122,20 @@ public:
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
 
-  // must be defined for all derived classes
-  virtual void encode(zzX& ptxt, const std::vector< long >& array) const = 0;
-  virtual void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const = 0;
-
   // These methods are only defined for some of the derived calsses
+  virtual void encode(zzX& ptxt, const std::vector< long >& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  virtual void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const
+  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+
   virtual void encode(zzX& ptxt, const std::vector< zzX >& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
   virtual void encode(zzX& ptxt, const PlaintextArray& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
-  virtual void encode(zzX& ptxt, const std::vector<double>& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
-  virtual void encode(zzX& ptxt, const std::vector<cx_double>& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
 
-  virtual void encode(NTL::ZZX& ptxt, const std::vector< NTL::ZZX >& array) const
+  virtual void encode(NTL::ZZX& ptxt, const std::vector<NTL::ZZX>& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
   virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
-  virtual void encode(NTL::ZZX& ptxt, const std::vector<double>& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
-  virtual void encode(NTL::ZZX& ptxt, const std::vector<cx_double>& array) const
   {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
 
   void encode(zzX& ptxt, const std::vector< NTL::ZZX >& array) const
@@ -151,23 +144,15 @@ public:
   // These methods are only defined for some of the derived calsses
   virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
-  virtual void decode(std::vector< NTL::ZZX  >& array, const NTL::ZZX& ptxt) const
+  virtual void decode(std::vector<NTL::ZZX>& array, const NTL::ZZX& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
   virtual void decode(PlaintextArray& array, const NTL::ZZX& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
-  virtual void decode(std::vector<double>& array, const NTL::ZZX& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
-  virtual void decode(std::vector<cx_double>& array, const NTL::ZZX& ptxt) const
   {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
 
   virtual void random(std::vector< long >& array) const = 0; // must be defined
 
   // These methods are only defined for some of the derived calsses
   virtual void random(std::vector< NTL::ZZX >& array) const
-  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
-  virtual void random(std::vector<double>& array) const
-  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
-  virtual void random(std::vector<cx_double>& array) const
   {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
 
   // FIXME: Inefficient implementation, calls usual decode and returns one slot
@@ -255,7 +240,6 @@ public:
   long addCoord(long i, long k, long offset) const {
     return getPAlgebra().addCoord(i, k, offset);
   }
-
 
   //! @brief rotate an array by offset in the i'th dimension
   //! (output should not alias input)
@@ -418,13 +402,13 @@ public:
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const override
   { genericDecrypt(ctxt, sKey, ptxt); 
-    // FIXME: Redudc mod the ciphertext plaintext space as above
+    // FIXME: Reduce mod the ciphertext plaintext space as above
     }
 
   virtual void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, const std::vector<NTL::ZZX>& L) const override;
 
-  /* the following are specialized methods, used to work over extension fields...they assume 
-     the modulus context is already set
+  /* the following are specialized methods, used to work over extension
+     fields... they assume the modulus context is already set
    */
 
   void encode(zzX& ptxt, const std::vector< RX >& array) const;
@@ -511,7 +495,13 @@ class EncryptedArrayCx : public EncryptedArrayBase {
   zzX iEncoded; // an encoded plaintext with i in all the slots
 
 public:
-  void encodei(zzX& ptxt, long precision) const; // encode i in all slots
+  static double roundedSize(double x) {
+    long rounded = ceil(fabs(x));
+    if (rounded < 1) rounded = 1;
+    return double(1L << NTL::NumBits(rounded-1));
+  }
+
+  double encodei(zzX& ptxt, long precision) const; // encode i in all slots
 
   explicit EncryptedArrayCx(const FHEcontext& _context)
     : context(_context), alMod(context.alMod.getCx()) {encodei(iEncoded,0);}
@@ -556,63 +546,108 @@ public:
 
   const long getP2R() const override {return alMod.getPPowR();}
 
-  void encode(zzX& ptxt, const std::vector<cx_double>& array, long precision) const;
+  // These EaCx-specific encoding routines return the
+  // scaling factor that was used in the eocoding routine
+  double encode(zzX& ptxt, const std::vector<cx_double>& array,
+                double useThisSize, long precision=-1) const;
+  double encode(zzX& ptxt, const std::vector<double>& array,
+                double useThisSize, long precision=-1) const
+  {
+    std::vector<cx_double> tmp;
+    convert(tmp, array);
+    return encode(ptxt, tmp, useThisSize, precision);
+  }
+  double encode(zzX& ptxt, const std::vector<long>& array,
+                double useThisSize, long precision=-1) const
+  {
+    std::vector<cx_double> tmp;
+    convert(tmp, array);
+    return encode(ptxt, tmp, useThisSize, precision);
+  }
+  double encode(zzX& ptxt, double aSingleNumber,
+                double useThisSize=-1, long precision=-1) const;
 
-  void encode(zzX& ptxt, double aSingleNumber, long precision=0) const;
-  void encode(NTL::ZZX& ptxt, double aSingleNumber, long precision=0) const
-  { zzX tmp; encode(tmp, aSingleNumber, precision); ::convert(ptxt, tmp); }
+  template<class PTXT>
+  double encode(NTL::ZZX& ptxt, const PTXT& pt,
+                double useThisSize=-1, long precision=-1) const
+  { zzX tmp;
+    double f = encode(tmp, pt, useThisSize, precision);
+    ::convert(ptxt, tmp);
+    return f;
+  }
 
   void encryptOneNum(Ctxt& ctxt, const FHEPubKey& key, double num,
-                     double useThisSize=0.0) const
+                     double useThisSize=-1, long precision=-1) const
+  {
+    assert(&getContext() == &ctxt.getContext());
+    if (useThisSize <= 0.0)
+      useThisSize = roundedSize(num); // rounded to power of two
+    zzX pp;  // Convert num into a plaintext polynomial
+    double f = encode(pp, num, useThisSize, precision);
+
+    key.CKKSencrypt(ctxt, pp, useThisSize, f); // encrypt resulting polynomial
+  }
+
+  template<class PTXT>
+  void encrypt(Ctxt& ctxt, const FHEPubKey& key, const PTXT& ptxt,
+               double useThisSize, long precision=-1) const
   {
     assert(&getContext() == &ctxt.getContext());
     zzX pp;
-    encode(pp, num); // Convert array of slots into a plaintext polynomial
-    if (useThisSize<=0.0) {// provides a size estimate to the encryption routine
-      long rounded = ceil(fabs(num));
-      if (rounded <= 1) useThisSize = 1.0;
-      else              useThisSize = double(1L << NTL::NumBits(rounded-1));
-    }
-    key.CKKSencrypt(ctxt, pp, useThisSize); // encrypt the plaintext polynomial
+    double f = encode(pp, ptxt, useThisSize, precision);
+    // Convert into a polynomial
+    key.CKKSencrypt(ctxt, pp, useThisSize, f); // encrypt the polynomial
   }
-
   
-  // The versions below use precision=0, where the encode/decode
-  // error bound defaults to at most 2^{-alMod.getR()-1}
-  void encode(zzX& ptxt, const std::vector<cx_double>& array) const override
-  { encode(ptxt, array, /*use default precision*/0); }
-  void encode(NTL::ZZX& ptxt, const std::vector<cx_double>& array) const override
-  { zzX tmp; encode(tmp, array); ::convert(ptxt, tmp); }
+  template<class PTXT> void
+  encrypt(Ctxt& ctxt, const FHEPubKey& key, const PTXT& ptxt) const
+  { encrypt(ctxt, key, ptxt, -1.0, -1); }
 
-  void encode(zzX& ptxt, const std::vector<double>& array) const override
-  { std::vector<cx_double> v; convert(v,array); encode(ptxt, v); }
-  void encode(NTL::ZZX& ptxt, const std::vector<double>& array) const override
-  { zzX tmp; encode(tmp, array); ::convert(ptxt, tmp); }
-
-  void encode(zzX& ptxt, const std::vector< long >& array) const override
-  { std::vector<cx_double> v; convert(v,array); encode(ptxt, v); }
-  void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const override
-  { zzX tmp; encode(tmp, array); ::convert(ptxt, tmp); }
-
+  // The methods below override EncryptedArrayBase, they use
+  // the default size=0 and precision=0, which yeild size=1
+  // and precision=2^{-alMod.getR()-1}
   void encodeUnitSelector(zzX& ptxt, long i) const override {
     std::vector<cx_double> v(this->size(), cx_double(0.0));
     v.at(i) = cx_double(1.0, 0.0);
-    encode(ptxt, v);
+    encode(ptxt, v, /*size=*/1.0, /*default precision*/-1);
+  } // The implicit scaling factor is encodeScalingFactor() below
+
+  // A bound on the rounding error for encoding
+  double encodeRoundingError() const {
+    const FHEcontext& context = getContext();
+    long m = context.zMStar.getM();
+    return context.noiseBoundForUniform(0.5, m);
+  }
+  // The scaling factor to use when encoding/decoding plaintext elements
+  long encodeScalingFactor(long precision=-1, double roundErr=-1.0) const {
+    assert(precision<NTL_SP_BOUND);
+    if (precision <= 0) precision=(1L<< alMod.getR());
+    if (roundErr  <  0) roundErr = encodeRoundingError();
+    long f = ceil(precision * roundErr);
+    // We round the factor up to the next power of two
+    return (1L<<NTL::NextPowerOfTwo(f));
   }
 
-  void decode(std::vector<cx_double>& array, const zzX& ptxt) const;
-  void decode(std::vector<cx_double>& array, const NTL::ZZX& ptxt) const override
-  { zzX tmp; ::convert(tmp, ptxt); decode(array, tmp); }
-  void decode(std::vector<double>& array, const zzX& ptxt) const
-  { std::vector<cx_double> v; decode(v, ptxt); convert(array, v); }
-  void decode(std::vector<double>& array, const NTL::ZZX& ptxt) const override
-  { std::vector<cx_double> v; decode(v, ptxt); convert(array, v); }
+  void decode(std::vector<cx_double>& array,
+              const zzX& ptxt, double scaling) const;
 
-  void random(std::vector<cx_double>& array) const override;
-  void random(std::vector<double>& array) const override
-  { std::vector<cx_double> v; random(v); convert(array, v); }
+  void decode(std::vector<cx_double>& array,
+              const NTL::ZZX& ptxt, double scaling) const
+  { zzX tmp; ::convert(tmp, ptxt); decode(array, tmp, scaling); }
+
+  void decode(std::vector<double>& array,
+              const zzX& ptxt, double scaling) const
+  { std::vector<cx_double> v; decode(v, ptxt, scaling); convert(array, v); }
+
+  void decode(std::vector<double>& array,
+              const NTL::ZZX& ptxt, double scaling) const
+  { std::vector<cx_double> v; decode(v, ptxt, scaling); convert(array, v); }
+
+  void random(std::vector<cx_double>& array, double rad=1.0) const;
+  void random(std::vector<double>& array, double rad=1.0) const
+  { std::vector<cx_double> v; random(v,rad); convert(array, v); }
   void random(std::vector<long>& array) const override
-  { std::vector<cx_double> v; random(v); convert(array, v); }
+    { std::vector<cx_double> v; random(v,1.0); convert(array, v); }
 
   void decrypt(const Ctxt& ctxt,
                const FHESecKey& sKey, std::vector<cx_double>& ptxt) const override;
@@ -639,13 +674,15 @@ public:
   //! DoubleCRT object just once, then use them many times.
 
   //! First variant: same linear transformation in all the slots
-  void buildLinPolyCoeffs(std::vector<zzX>& C,
-            const cx_double& oneImage, const cx_double& iImage) const;
+  double buildLinPolyCoeffs(std::vector<zzX>& C,
+                            const cx_double& oneImage, const cx_double& iImage,
+                            long precision=0) const;
 
   //! Second variant: different linear transformation in each slots
-  void buildLinPolyCoeffs(std::vector<zzX>& C,
-                          const std::vector<cx_double>&oneImages,
-                          const std::vector<cx_double>&iImages) const;
+  double buildLinPolyCoeffs(std::vector<zzX>& C,
+                            const std::vector<cx_double>&oneImages,
+                            const std::vector<cx_double>&iImages,
+                            long precision=0) const;
   ///@}
 };
 
@@ -814,12 +851,10 @@ public:
 
 // NewPlaintaxtArray
 
-
 class PlaintextArrayBase { // purely abstract interface
 public:
   virtual ~PlaintextArrayBase() {}
   virtual void print(std::ostream& s) const = 0;
-
 };
 
 
