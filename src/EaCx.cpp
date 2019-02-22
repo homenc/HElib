@@ -83,7 +83,7 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 double EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
                                 double useThisSize, long precision) const
 {
-  if (useThisSize < -1) for (auto& x : array) {
+  if (useThisSize < 0) for (auto& x : array) {
       if (useThisSize < std::fabs(x))
         useThisSize = std::fabs(x);
     }

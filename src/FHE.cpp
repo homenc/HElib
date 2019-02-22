@@ -482,11 +482,10 @@ void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt,
 {
   assert(this == &ctxt.pubKey);
 
-  if (scaling == 0) // assume the default scaling factor
+  if (ptxtSize<=0)
+    ptxtSize = 1.0;
+  if (scaling <= 0) // assume the default scaling factor
     scaling = getContext().ea->getCx().encodeScalingFactor() / ptxtSize;
-
-  // Round size to next power of two so as not to leak too much
-  ptxtSize = EncryptedArrayCx::roundedSize(ptxtSize);
 
   long m = context.zMStar.getM();
   long prec = getContext().alMod.getPPowR();
@@ -532,17 +531,17 @@ void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt,
     error_bound += e_bound;
   }
   // Compute the extra scaling factor, if needed
-  long ef = conv<long>(ceil(error_bound*prec/scaling));
+  long ef = conv<long>(ceil(error_bound*prec/(scaling*ptxtSize)));
   if (ef > 1) { // scale up some more
-    ctxt.parts[0] += ptxt * ef;
+    ctxt.parts[0] += ptxt*ef;
+    scaling *= ef;
   }
   else { // no need for extra scaling
     ctxt.parts[0] += ptxt;
-    ef = 1;
   }
-
-  ctxt.ptxtMag = ptxtSize;
-  ctxt.ratFactor = scaling*double(ef);
+  // Round size to next power of two so as not to leak too much
+  ctxt.ptxtMag = EncryptedArrayCx::roundedSize(ptxtSize);
+  ctxt.ratFactor = scaling;
   ctxt.noiseBound = error_bound;
   ctxt.ptxtSpace = 1;
 }
@@ -932,21 +931,18 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
   if (isCKKS()) return; // CKKS encryption, nothing else to do
   // NOTE: calling application must still divide by ratFactor after decoding
 
-  if (ciphertxt.getPtxtSpace()>2) { // if p>2, multiply by Q^{-1} mod p
-    long qModP = rem(context.productOfPrimes(ciphertxt.getPrimeSet()), 
+  PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
+
+  // if p>2, multiply by (intFactor * Q)^{-1} mod p
+  if (ciphertxt.getPtxtSpace()>2) {
+    long factor = rem(context.productOfPrimes(ciphertxt.getPrimeSet()),
                      ciphertxt.ptxtSpace);
-    if (qModP != 1) {
-      qModP = InvMod(qModP, ciphertxt.ptxtSpace);
-      MulMod(plaintxt, plaintxt, qModP, ciphertxt.ptxtSpace);
+    factor = MulMod(factor, ciphertxt.intFactor, ciphertxt.ptxtSpace);
+    if (factor != 1) {
+        factor = InvMod(factor, ciphertxt.ptxtSpace);
+        MulMod(plaintxt, plaintxt, factor, ciphertxt.ptxtSpace);
     }
   }
-
-  if (ciphertxt.intFactor != 1) {
-     long intFactorInv = InvMod(ciphertxt.intFactor, ciphertxt.ptxtSpace);
-     MulMod(plaintxt, plaintxt, intFactorInv, ciphertxt.ptxtSpace);
-  }
-
-  PolyRed(plaintxt, ciphertxt.ptxtSpace, true/*reduce to [0,p-1]*/);
 }
 
 // Encryption using the secret key, this is useful, e.g., to put an
@@ -990,7 +986,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
   if (isCKKS()) {
     double f = getContext().ea->getCx().encodeScalingFactor() / ptxtSize;
     long prec = getContext().alMod.getPPowR();
-    long ef = ceil(prec*noiseBound/f);
+    long ef = conv<long>(ceil(prec*noiseBound/(f*ptxtSize)));
     if (ef>1) { // scale up some more
       ctxt.parts[0] += ptxt * ef;
       f *= ef;
@@ -998,7 +994,8 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
     else {
       ctxt.parts[0] += ptxt;
     }
-    ctxt.ptxtMag = ptxtSize;
+    // Round size to next power of two so as not to leak too much
+    ctxt.ptxtMag = EncryptedArrayCx::roundedSize(ptxtSize);
     ctxt.ratFactor = f;
     ctxt.noiseBound = noiseBound;
     return long(f);
