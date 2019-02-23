@@ -38,15 +38,38 @@ double calcMaxDiff(const vector<cx_double>& v1,
 
   return maxDiff;
 }
+// Compute the max relative difference between two vectors
+double calcMaxRelDiff(const vector<cx_double>& v1,
+                   const vector<cx_double>& v2)
+{
+    if(lsize(v1)!=lsize(v2))
+        NTL::Error("Vector sizes differ.\nFAILED\n");
+
+    // Compute the largest-magnitude value in the vector
+    double maxAbs = 0.0;
+    for (auto& x : v1) {
+        if (std::abs(x) > maxAbs)
+            maxAbs = std::abs(x);
+    }
+    if (maxAbs<1e-10)
+        maxAbs = 1e-10;
+
+    double maxDiff = 0.0;
+    for (long i=0; i<lsize(v1); i++) {
+        double relDiff = std::abs(v1[i]-v2[i]) / maxAbs;
+        if (relDiff > maxDiff)
+            maxDiff = relDiff;
+    }
+
+    return maxDiff;
+}
 
 inline bool cx_equals(const vector<cx_double>& v1, 
                       const vector<cx_double>& v2, 
                       double epsilon)
 {
-  return (calcMaxDiff(v1,v2) < epsilon);
+  return (calcMaxRelDiff(v1,v2) < epsilon);
 }
-
-
 
 void testBasicArith(const FHEPubKey& publicKey, 
                     const FHESecKey& secretKey, 
@@ -58,18 +81,20 @@ void testRotsNShifts(const FHEPubKey& publicKey,
                      const FHESecKey& secretKey, 
                      const EncryptedArrayCx& ea, double epsilon);
 
-#if 1 // DEBUG_PRINTOUT
-#define debugCompare(ea,sk,p,c,epsilon) {              \
-  vector<cx_double> pp;\
-  ea.decrypt(c, sk, pp);\
-  if (!cx_equals(pp, p, epsilon)) { \
-    std::cout << "oops:\n"; std::cout << p << "\n"; \
-    std::cout << pp << "\n"; \
-    exit(0); \
-  }}
-#else
-#define debugCompare(ea,sk,p,c,epsilon)
-#endif
+void debugCompare(const EncryptedArrayCx& ea, const FHESecKey& sk,
+        vector<cx_double>& p, const Ctxt& c, double epsilon)
+{
+  vector<cx_double> pp;
+  ea.decrypt(c, sk, pp);
+  std::cout << "    relative-error="<<calcMaxRelDiff(p,pp)
+            << ", absolute-error="<<calcMaxRelDiff(p,pp)<<endl;
+//  if (!cx_equals(pp, p, epsilon)) {
+//    std::cout << "oops:\n"; std::cout << p << "\n";
+//    std::cout << pp << "\n";
+//    exit(0);
+//  }
+}
+
 
 void negateVec(vector<cx_double>& p1)
 {
@@ -272,6 +297,7 @@ int main(int argc, char *argv[])
   double epsilon=0.01; // Accepted accuracy
   long R=1;
   long seed=0;
+  bool debug = false;
 
   amap.arg("m", m, "Cyclotomic index");
   amap.note("e.g., m=1024, m=2047");
@@ -281,6 +307,7 @@ int main(int argc, char *argv[])
   amap.arg("ep", epsilon, "Accepted accuracy");
   amap.arg("seed", seed, "PRG seed");
   amap.arg("verbose", verbose, "more printouts");
+  amap.arg("debug", debug, "for debugging");
 
   amap.parse(argc, argv);
 
@@ -318,6 +345,10 @@ int main(int argc, char *argv[])
       cout << "r = " << context.alMod.getR() << endl;
       cout << "ctxtPrimes="<<context.ctxtPrimes
            << ", specialPrimes="<<context.specialPrimes<<endl<<endl;
+    }
+    if (debug) {
+        dbgKey = & secretKey;
+        dbgEa = (EncryptedArray*) context.ea;
     }
 
     // Run the tests.

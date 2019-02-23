@@ -828,55 +828,55 @@ void Ctxt::negate()
 void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
                                    pair<long,long> factors)
 {
+#ifdef DEBUG_PRINTOUT
+    if (dbgKey) {
+      decryptAndPrint(cerr << "** before equalizeRationalFactors, c1=",
+                      c1, *dbgKey, *dbgEa, FLAG_PRINT_XVEC);
+      decryptAndPrint(cerr << "                                   c2=",
+                      c2, *dbgKey, *dbgEa, FLAG_PRINT_XVEC);
+      cerr << "    factor are ["<<c1.getRatFactor()<<","
+           <<c2.getRatFactor()<<"]\n\n";
+  }
+#endif
   long targetPrecision = c1.getContext().alMod.getPPowR()*2;
+  Ctxt &big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
+  Ctxt &small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
 
-  // if factors are given, use them
-  if (factors.first>0 && factors.second>0) {
-    c1.multByConstant(to_ZZ(factors.first)); // small times a
-    c1.ratFactor *= factors.first;
-    c2.multByConstant(to_ZZ(factors.second));  // big times b
-    c2.ratFactor *= factors.second;
-    assert(closeToOne(c1.ratFactor/c2.ratFactor, targetPrecision));
-
-#ifdef DEBUG_PRINTOUT
-    cerr << "equalizeFactors using provided scaling factors ["
-         << factors.first<<','<<factors.second<<"]\n";
-    cerr << "    resulting ratFactors are ["
-         << c1.ratFactor<<','<< c1.ratFactor<<"]\n";
-#endif
-    return;
-  }
   // If factors are not given, compute them
-  Ctxt& big  = (c1.ratFactor>c2.ratFactor)? c1 : c2;
-  Ctxt& small= (c1.ratFactor>c2.ratFactor)? c2 : c1;
-
-  xdouble ratio = big.ratFactor / small.ratFactor;
-  if (ratio > targetPrecision) { // just scale up small
-    small.multByConstant(to_ZZ(floor(ratio+0.5)));
-
-#ifdef DEBUG_PRINTOUT
-    cerr << "equalizeFactors scaling small factor from "<<small.ratFactor
-         << " to "<<small.ratFactor<<'*'<<ratio<<" = "
-         << (small.ratFactor*ratio) << endl;
-    cerr << "    large factor is "<<big.ratFactor<<endl;
-#endif
-    small.ratFactor *= ratio;
-    return;
+  if (factors.first<=0 || factors.second<=0) {
+      Ctxt &big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
+      Ctxt &small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
+      xdouble ratio = big.ratFactor / small.ratFactor;
+      factors = rationalApprox(to_double(ratio), targetPrecision);
+  }
+  else { // use given factors, but ensure that first>=second
+      if (factors.first < factors.second)
+          std::swap(factors.first, factors.second);
   }
 
-  // Otherwise, need to scale both big and small
-
-  // approximate ratio as a fraction a/b
-  factors = rationalApprox(to_double(ratio), targetPrecision);
-  small.multByConstant(to_ZZ(factors.first)); // small times a
-  small.ratFactor *= factors.first;
-  big.multByConstant(to_ZZ(factors.second));  // big times b
-  big.ratFactor *= factors.second;
+  if (factors.first>1) {
+      for (auto& part : small.parts)
+          part *= factors.first;
+      small.ratFactor *= factors.first;
+      small.noiseBound *= factors.first;
+  }
+  if (factors.second>1) {
+      for (auto& part : big.parts)
+          part *= factors.second;
+      big.ratFactor *= factors.second;
+      big.noiseBound *= factors.second;
+  }
 #ifdef DEBUG_PRINTOUT
-  cerr << "equalizeFactors scaling both factor by ["
-       << factors.first<<','<<factors.second<<"]\n";
-  cerr << "    resulting ratFactors are ["
-       << small.ratFactor<<','<< big.ratFactor<<"]\n";
+  if (dbgKey) {
+      cerr << "      equalizeFactors scaling by ["
+           << factors.first << ',' << factors.second << "]\n";
+      decryptAndPrint(cerr << "** after equalizeRationalFactors, c1=",
+                      c1, *dbgKey, *dbgEa, FLAG_PRINT_XVEC);
+      decryptAndPrint(cerr << "                                  c2=",
+                      c2, *dbgKey, *dbgEa, FLAG_PRINT_XVEC);
+      cerr << "    factor are ["<<c1.getRatFactor()<<","
+           <<c2.getRatFactor()<<"]\n\n";
+  }
 #endif
 }
 
@@ -907,11 +907,10 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   else // BGV
     this->reducePtxtSpace(other.getPtxtSpace());
 
-  Ctxt tmp(pubKey, other.ptxtSpace); // a temporary empty ciphertext
   const Ctxt* other_pt = &other;
 
-
   // make other ptxtSpace match
+  Ctxt tmp(pubKey, other.ptxtSpace); // a temporary empty ciphertext
   if (ptxtSpace != other_pt->ptxtSpace) {
     tmp = other;
     tmp.reducePtxtSpace(ptxtSpace);
