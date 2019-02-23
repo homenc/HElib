@@ -58,9 +58,9 @@ void testRotsNShifts(const FHEPubKey& publicKey,
                      const FHESecKey& secretKey, 
                      const EncryptedArrayCx& ea, double epsilon);
 
-#ifdef DEBUG_PRINTOUT
+#if 1 // DEBUG_PRINTOUT
 #define debugCompare(ea,sk,p,c,epsilon) {              \
-  const vector<cx_double> pp;\
+  vector<cx_double> pp;\
   ea.decrypt(c, sk, pp);\
   if (!cx_equals(pp, p, epsilon)) { \
     std::cout << "oops:\n"; std::cout << p << "\n"; \
@@ -156,52 +156,63 @@ void testGeneralOps(const FHEPubKey& publicKey, const FHESecKey& secretKey,
 
      mul(p1, p0);     // c1.multiplyBy(c0)
      c1.multiplyBy(c0);
-     if (verbose) CheckCtxt(c1, "c1*=c0");
-     debugCompare(ea,secretKey,p1,c1,epsilon);
+     if (verbose) {
+       CheckCtxt(c1, "c1*=c0");
+       debugCompare(ea, secretKey, p1, c1, epsilon);
+     }
 
      add(p0, const1); // c0 += random constant
      c0.addConstant(const1_poly);
-     if (verbose) CheckCtxt(c0, "c0+=k1");
-     debugCompare(ea,secretKey,p0,c0,epsilon);
-
+     if (verbose) {
+       CheckCtxt(c0, "c0+=k1");
+       debugCompare(ea, secretKey, p0, c0, epsilon);
+     }
      mul(p2, const2); // c2 *= random constant
      c2.multByConstant(const2_poly);
-     if (verbose) CheckCtxt(c2, "c2*=k2");
-     debugCompare(ea,secretKey,p2,c2,epsilon);
-
+     if (verbose) {
+       CheckCtxt(c2, "c2*=k2");
+       debugCompare(ea, secretKey, p2, c2, epsilon);
+     }
      vector<cx_double> tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
      sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
      rotate(tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
      ea.rotate(tmp, shamt);
-     if (verbose) CheckCtxt(tmp, buffer);
-     debugCompare(ea,secretKey,tmp_p,tmp,epsilon);
-
+     if (verbose) {
+       CheckCtxt(tmp, buffer);
+       debugCompare(ea, secretKey, tmp_p, tmp, epsilon);
+     }
      add(p2, tmp_p);  // c2 += tmp
      c2 += tmp;
-     if (verbose) CheckCtxt(c2, "c2+=tmp");
-     debugCompare(ea,secretKey,p2,c2,epsilon);
-
+     if (verbose) {
+       CheckCtxt(c2, "c2+=tmp");
+       debugCompare(ea, secretKey, p2, c2, epsilon);
+     }
      sprintf(buffer, "c2>>>=%d", (int)rotamt);
      rotate(p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
      ea.rotate(c2, rotamt);
-     if (verbose) CheckCtxt(c2, buffer);
-     debugCompare(ea,secretKey,p2,c2,epsilon);
-
+     if (verbose) {
+       CheckCtxt(c2, buffer);
+       debugCompare(ea, secretKey, p2, c2, epsilon);
+     }
      negateVec(p1); // c1.negate()
      c1.negate();
-     if (verbose) CheckCtxt(c1, "c1=-c1");
-     debugCompare(ea,secretKey,p1,c1,epsilon);
-
+     if (verbose) {
+       CheckCtxt(c1, "c1=-c1");
+       debugCompare(ea, secretKey, p1, c1, epsilon);
+     }
      mul(p3, p2); // c3.multiplyBy(c2) 
      c3.multiplyBy(c2);
-     if (verbose) CheckCtxt(c3, "c3*=c2");
-     debugCompare(ea,secretKey,p3,c3,epsilon);
-
+     if (verbose) {
+       CheckCtxt(c3, "c3*=c2");
+       debugCompare(ea, secretKey, p3, c3, epsilon);
+     }
      sub(p0, p3); // c0 -= c3
      c0 -= c3;
-     if (verbose) CheckCtxt(c0, "c0=-c3");
-     debugCompare(ea,secretKey,p0,c0,epsilon);
+     if (verbose) {
+       CheckCtxt(c0, "c0=-c3");
+       debugCompare(ea, secretKey, p0, c0, epsilon);
+     }
   }
 
   c0.cleanUp();
@@ -260,6 +271,7 @@ int main(int argc, char *argv[])
   long L=0;
   double epsilon=0.01; // Accepted accuracy
   long R=1;
+  long seed=0;
 
   amap.arg("m", m, "Cyclotomic index");
   amap.note("e.g., m=1024, m=2047");
@@ -267,9 +279,14 @@ int main(int argc, char *argv[])
   amap.arg("R", R, "number of rounds");
   amap.arg("L", L, "Number of bits in modulus", "heuristic");
   amap.arg("ep", epsilon, "Accepted accuracy");
+  amap.arg("seed", seed, "PRG seed");
   amap.arg("verbose", verbose, "more printouts");
 
   amap.parse(argc, argv);
+
+  if (seed)
+    NTL::SetSeed(ZZ(seed));
+
   if (R<=0) R=1;
   if (R<=2)
     L = 100*R;

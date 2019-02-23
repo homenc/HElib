@@ -25,6 +25,7 @@
 NTL_CLIENT
 
 extern int fhe_watcher;
+static constexpr double safety = 1*log(2.0); // 1 bits of safety
 
 void SKHandle::read(istream& str)
 {
@@ -58,7 +59,6 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 
     if (size < 0) size = 1.0;
     ptxtMag = size;
-    if (size == 0) size = 1.0;
     ratFactor = context.ea->getCx().encodeScalingFactor() / size;
     noiseBound = context.noiseBoundForUniform(0.5, zMStar.getPhiM());
     // noiseBound is a bound on the error during encoding, we assume
@@ -356,44 +356,49 @@ void Ctxt::modDownToSet(const IndexSet &s)
   // Scale down all the parts: use either a simple "drop down" (just removing
   // primes, i.e., reducing the ctxt modulo the samaller modulus), or a "real
   // modulus switching" with rounding, basically whichever yeilds smaller
-  // noise. Recall that we keep the invariant that a ciphertext mod Q is
-  // decrypted to Q*m (mod p), so if we just "drop down" we still need to
-  // multiply by (Q^{-1} mod p).
+  // noise.
 
   // Get an estimate for the added noise term for modulus switching
   xdouble addedNoiseBound = modSwitchAddedNoiseBound();
 
   // For approximate nums, make sure that scaling factor is large enough
   if (isCKKS()) {
-    // Factor after mod-switching is ratFactor/(prod_{i\in setDiff} qi),
-    // it must be at least addedNoiseBound * getPPowR()/ptxtMag
-    double newFactor = log(ratFactor) - getContext().logOfProduct(setDiff);
-    double target = log(addedNoiseBound)
-                  + log(context.alMod.getPPowR()) - log(ptxtMag);
-    // If factor is too small, scale up before mod-down
-    if (newFactor < target) {
-      xdouble xf = ceil(xexp(target-newFactor)); // the extra factor
-      multByConstant(conv<ZZ>(xf)); // Also increases noiseBound
-      ratFactor *= xf;              // Up the factor accordingly
+    // Sanity check: ensuring that we don't lose too much on precision.
+    // We check that log(addedNoise) <= log(noiseBound/scaleFactor)-safety,
+    // (safety=log 2 defined at top of the file). This ensures that we are
+    // losing less than one extra bit of accuracy.
+    double logScaledNoise= log(noiseBound)-getContext().logOfProduct(setDiff);
+    xdouble xf = ceil(xexp(log(addedNoiseBound) - logScaledNoise + safety));
+    if (xf>1.0) { // need to multiply by an extra factor
+        ZZ factorZZ = conv<ZZ>(xf);
+        for (auto& part : parts)
+          part *= factorZZ;
+        noiseBound *= xf; // Increase noiseBound
+        ratFactor *= xf;  // Increase the factor
+        std::cerr << "** sanity-check trigerred in Ctxt::modDownToSet()\n";
     }
   }
 
   if (noiseBound <= addedNoiseBound) { // a degenerate "drop down"
-    for (size_t i=0; i<parts.size(); i++)
-      parts[i].removePrimes(setDiff);  // remove the primes not in s
+    for (auto &part : parts)
+      part.removePrimes(setDiff);  // remove the primes not in s
+
+    // For BGV we keep the invariant that a ciphertext mod Q is
+    // decrypted to intFactor*Q*m (mod p), so if we just "drop down" by
+    // a factor F we still need to multiply intFactor by (F^{-1} mod p).
     long prodInv = 1;
     if (ptxtSpace>1)
       prodInv = InvMod(rem(context.productOfPrimes(setDiff),ptxtSpace), ptxtSpace);
     if (prodInv > 1) {
-      for (size_t i=0; i<parts.size(); i++)
-        parts[i] *= prodInv;
+      for (auto &part : parts)
+        part *= prodInv;
       noiseBound *= prodInv;
     }
     cerr << "Ctxt::modDownToSet: DEGENERATE DROP\n";
   } 
   else {                               // do real mod switching
-    for (size_t i=0; i<parts.size(); i++) 
-      parts[i].scaleDownToSet(intersection, ptxtSpace);
+    for (auto &part : parts)
+      part.scaleDownToSet(intersection, ptxtSpace);
 
     // update the noise estimate
     xdouble f = xexp(context.logOfProduct(setDiff));
@@ -1071,8 +1076,6 @@ void computeIntervalForMul(double& lo, double& hi,
   double adn = log(ctxt1.modSwitchAddedNoiseBound());
   // should be the same for both ciphertexts
 
-  double safety = 1*log(2.0); // 1 bits of safety
-
   // Compute the interval into which we want to mod-switch.
   // For a given ctxt with modulus q and noise bound n, we want to
   // switch to a new modulus q' s.t. n*q'/q \approx AddedNoiseBound.
@@ -1082,38 +1085,21 @@ void computeIntervalForMul(double& lo, double& hi,
   // When we have two ciphertexts, we can e.g., set hi to the minimum
   // for both ciphertexts, and set lo a few bits lower, so that we
   // have some flexibility in finding an efficient dropping strategy.
-  // It may be worthwhile to experiment with other strategies,
-  // such as setting hi = max(cap1, cap2) + adn - safety,
-  // and lo = min(hi-slack, min(cap1, cap2) + adn.
-#if 1
-  hi = min(cap1, cap2) + adn - safety;
-  lo = hi - slack;
-#else
-  hi = max(cap1, cap2) + adn - safety;
-  lo = min(hi - slack, min(cap1, cap2) + adn);
-#endif
+  // It may be worthwhile to experiment with other strategies for BGV.
+  //
+  // For CKKS we do the opposite, set lo to the maximum of the two
+  // and set hi to a few bits higher. This is done to get good accuracy,
+  // setting n*q'/q >> AddedNoiseBound means losing about one bit of
+  // accuracy, and going down to n*q'/q = AddedNoiseBound would lose two
+  // bits.
 
-  if (ctxt1.isCKKS()) { // ensure large enough scaling factor for accuracy
-    double lvl1 = ctxt1.logOfPrimeSet();
-    double rf1 = log(ctxt1.getRatFactor());
-    double nrf1 = rf1 - (lvl1-lo); // log of ratFactor after scaling
-    // 'nrf' = "new rational factor", i.e., after scaling
-    double total1 = nrf1 + log(ctxt1.getPtxtMag()); // new log(factor*ptxt)
-
-    double lvl2 = ctxt2.logOfPrimeSet();
-    double rf2 = log(ctxt2.getRatFactor());
-    double nrf2 = rf2 - (lvl2-lo); // log of ratFactor after scaling
-    double total2 = nrf2 + log(ctxt2.getPtxtMag()); // new log(factor*ptxt)
-
-    double prec = log(ctxt1.getContext().alMod.getPPowR());
-    // increase lo as necessary to ensure that for *both ciphertxts*,
-    // the modswitch added noise is less than factor*ptxtMag/precision
-
-    double total = min(total1, total2);
-    if (total-prec < adn) {
-      lo += adn +prec -total;
-      hi = max(hi, lo+slack); // ensure that hi is a little bigger than lo
-    }
+  if (ctxt1.isCKKS()) {
+    lo = max(cap1, cap2) + adn + safety;
+    hi = lo + slack;
+  }
+  else { // BGV
+    hi = min(cap1, cap2) + adn - safety;
+    lo = hi - slack;
   }
 }
 
@@ -1126,7 +1112,7 @@ double Ctxt::naturalSize() const
 {
   double lo, hi;
   computeIntervalForSqr(lo, hi, *this);
-  return hi;
+  return isCKKS()? lo : hi;
 }
 
 IndexSet Ctxt::naturalPrimeSet() const
@@ -1299,7 +1285,7 @@ void Ctxt::multByConstant(const ZZ& c)
 
   // multiply all the parts by this constant
   ZZ c_copy(cc);
-  for (long i: range(parts.size())) parts[i] *= c_copy;
+  for (auto& part : parts) part *= c_copy;
 }
 
 // Multiply-by-constant, it is assumed that the size of this
@@ -1362,16 +1348,14 @@ Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
   if (roundingErr < 0)
     roundingErr = getContext().ea->getCx().encodeRoundingError();
 
-  xdouble totalNoise1 = ratFactor*ptxtMag+ noiseBound;
-  xdouble totalNoise2 = factor*size+ roundingErr;
-
-  noiseBound = noiseBound*totalNoise2 + roundingErr*totalNoise1;
   ptxtMag *= size;
   ratFactor *= factor;
+  noiseBound = noiseBound*factor*size + roundingErr*ratFactor*ptxtMag
+          + noiseBound*roundingErr;
 
   // multiply all the parts by this constant
-  for (long i: range(parts.size()))
-    parts[i].Mul(dcrt,/*matchIndexSets=*/false);
+  for (auto& part: parts)
+    part.Mul(dcrt,/*matchIndexSets=*/false);
 }
 
 // Divide a cipehrtext by 2. It is assumed that the ciphertext
@@ -1435,10 +1419,10 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   long m = context.zMStar.getM();
 
   // Apply this automorphism to all the parts
-  for (long i: range(parts.size())) { 
-    parts[i].automorph(k);
-    if (!parts[i].skHandle.isOne()) {
-      parts[i].skHandle.powerOfX = MulMod(parts[i].skHandle.powerOfX,k,m);
+  for (auto& part: parts) {
+    part.automorph(k);
+    if (!part.skHandle.isOne()) {
+      part.skHandle.powerOfX = MulMod(part.skHandle.powerOfX,k,m);
     }
   }
   // no change in noise bound
@@ -1451,11 +1435,11 @@ void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
   if (this->isEmpty()) return;
 
   // Apply this automorphism to all the parts
-  for (long i: range(parts.size())) { 
-    parts[i].complexConj();
-    if (!parts[i].skHandle.isOne()) {
-      parts[i].skHandle.powerOfX
-        = context.zMStar.getM() - parts[i].skHandle.powerOfX;
+  for (auto& part: parts) {
+    part.complexConj();
+    if (!part.skHandle.isOne()) {
+      part.skHandle.powerOfX
+        = context.zMStar.getM() - part.skHandle.powerOfX;
     }
   } // no change in noise bound
 }
@@ -1501,14 +1485,12 @@ void Ctxt::smartAutomorph(long k)
       recordAutomorphVal2(amt);
       return;
     }
-    //cerr << "********* automorph " << amt << "\n";
     automorph(amt);
     reLinearize(keyID);
     k = MulMod(k, InvMod(amt,m), m);
   }
   FHE_TIMER_STOP;
 }
-
 
 
 // applies the Frobenius automorphism p^j
@@ -1532,14 +1514,13 @@ void Ctxt::frobeniusAutomorph(long j)
   }
 }
 
-
 /********************************************************************/
 // Utility methods
 
 const long Ctxt::getKeyID() const
 {
-  for (long i: range(parts.size()))
-    if (!parts[i].skHandle.isOne()) return parts[i].skHandle.getSecretKeyID();
+  for (auto& part : parts)
+    if (!part.skHandle.isOne()) return part.skHandle.getSecretKeyID();
 
   return 0; // no part pointing to anything, return the default key
 }
@@ -1550,13 +1531,13 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
   xdouble addedNoise = to_xdouble(0.0);
 
   // incorporate the secret keys' Hamming-weight
-  for (long i: range(parts.size())) { 
-    if (parts[i].skHandle.isOne()) {
+  for (auto& part : parts) {
+    if (part.skHandle.isOne()) {
       addedNoise += 1.0;
     }
     else {
-      long keyId = parts[i].skHandle.getSecretKeyID();
-      long d = parts[i].skHandle.getPowerOfS();
+      long keyId = part.skHandle.getSecretKeyID();
+      long d = part.skHandle.getPowerOfS();
       xdouble h = conv<xdouble>(pubKey.getSKeyBound(keyId));
 
       addedNoise += NTL::power(h, d);
@@ -1568,12 +1549,6 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
   return addedNoise * roundingNoise;
 }
 
-
-// void Ctxt::reduce() const
-// {
-//   long n = parts.size();
-//   for (long i = 0; i < n; i++) parts[i].reduce();
-// }
 
 void Ctxt::write(ostream& str) const
 {
@@ -1657,8 +1632,8 @@ ostream& operator<<(ostream& str, const Ctxt& ctxt)
   str << "["<<ctxt.ptxtSpace<<" "<<ctxt.noiseBound<<" "<<ctxt.primeSet
       << ctxt.intFactor <<" "<< ctxt.ptxtMag<<" "<<ctxt.ratFactor<<" "
       << ctxt.parts.size() << endl;
-  for (long i: range(ctxt.parts.size()))
-    str << ctxt.parts[i] << endl;
+  for (auto& part : ctxt.parts)
+    str << part << endl;
   return str << "]";
 }
 
@@ -1670,9 +1645,9 @@ istream& operator>>(istream& str, Ctxt& ctxt)
   long nParts;
   str >> nParts;
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));
-  for (long i: range(nParts)) {
-    str >> ctxt.parts[i];
-    assert (ctxt.parts[i].getIndexSet()==ctxt.primeSet); // sanity-check
+  for (auto& part : ctxt.parts) {
+    str >> part;
+    assert (part.getIndexSet()==ctxt.primeSet); // sanity-check
   }
   seekPastChar(str,']');
   return str;
