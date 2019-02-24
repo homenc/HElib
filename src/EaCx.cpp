@@ -12,12 +12,15 @@
 /* EaCx.cpp - Encoding/decoding and data-movement for encrypted complex data
  */
 #include <algorithm>
+#include <type_traits>
+
 #include "zzX.h"
 #include "EncryptedArray.h"
 
 #include "timing.h"
 #include "cloned_ptr.h"
 #include "norms.h"
+#include "debugging.h"
 
 NTL_CLIENT
 
@@ -118,6 +121,13 @@ double EncryptedArrayCx::encodei(zzX& ptxt, long precision) const
   return this->encode(ptxt, v, /*size=*/1.0, precision);
 }
 
+const zzX& EncryptedArrayCx::getiEncoded() const
+{
+  if (lsize(iEncoded)<=0) // encoded-i not yet initialized
+    encodei(const_cast<zzX&>(iEncoded)); // temporarily suspend cont-ness
+  return iEncoded;
+}
+
 void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt, double scaling) const
 {
   assert (scaling>0);
@@ -162,7 +172,8 @@ void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
   }
   if (iDcrtPtr==nullptr) { // Need to encode i in a DoubleCRt object
     tmpDcrt.addPrimes(c.getPrimeSet());
-    tmpDcrt.FFT(getiEncoded(), c.getPrimeSet());
+    const zzX& iEncoded = getiEncoded();
+    tmpDcrt.FFT(iEncoded, c.getPrimeSet());
     // FFT is a low-level DoubleCRT procedure to initialize an
     // existing object with a given PrimeSet and a given polynomial
     iDcrtPtr = &tmpDcrt;

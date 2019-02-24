@@ -501,12 +501,12 @@ public:
     return double(1L << NTL::NumBits(rounded-1));
   }
 
-  double encodei(zzX& ptxt, long precision) const; // encode i in all slots
+  double encodei(zzX& ptxt, long precision=-1) const; // encode i in all slots
 
   explicit EncryptedArrayCx(const FHEcontext& _context)
-    : context(_context), alMod(context.alMod.getCx()) {encodei(iEncoded,0);}
+    : context(_context), alMod(context.alMod.getCx()) {clear(iEncoded);}
   EncryptedArrayCx(const FHEcontext& _context, const PAlgebraModCx& _alMod)
-    : context(_context), alMod(_alMod) {encodei(iEncoded,0);}
+    : context(_context), alMod(_alMod) {clear(iEncoded);}
 
   // convertion between std::vectors of complex, real, and integers
   static void convert(std::vector<cx_double>& out,
@@ -533,7 +533,7 @@ public:
   EncryptedArrayBase* clone() const override
   { return  new EncryptedArrayCx(*this); }
 
-  const zzX& getiEncoded() const {return iEncoded;}
+  const zzX& getiEncoded() const;
   PA_tag getTag() const override { return PA_cx_tag; }
   const FHEcontext& getContext() const override { return context; }
   const PAlgebra& getPAlgebra() const override { return alMod.getZMStar(); }

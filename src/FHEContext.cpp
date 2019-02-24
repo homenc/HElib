@@ -514,9 +514,7 @@ FHEcontext::~FHEcontext()
 // rcEA (if set) points to rcAlmod which points to zMStar
 FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
    const vector<long>& gens, const vector<long>& ords):
-  zMStar(m, p, gens, ords), alMod(zMStar, r),
-  ea(new EncryptedArray(*this, alMod))
+  stdev(3.2), scale(10.0), zMStar(m, p, gens, ords), alMod(zMStar, r)
 {
-  stdev=3.2;  
-  scale=10;
+  ea = new EncryptedArray(*this, alMod);
 }

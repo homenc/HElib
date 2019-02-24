@@ -828,16 +828,6 @@ void Ctxt::negate()
 void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
                                    pair<long,long> factors)
 {
-#ifdef DEBUG_PRINTOUT
-    if (dbgKey) {
-      decryptAndPrint(cerr << "** before equalizeRationalFactors, c1=",
-                      c1, *dbgKey, *dbgEa, FLAG_PRINT_XVEC);
-      decryptAndPrint(cerr << "                                   c2=",
-                      c2, *dbgKey, *dbgEa, FLAG_PRINT_XVEC);
-      cerr << "    factor are ["<<c1.getRatFactor()<<","
-           <<c2.getRatFactor()<<"]\n\n";
-  }
-#endif
   long targetPrecision = c1.getContext().alMod.getPPowR()*2;
   Ctxt &big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
   Ctxt &small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
@@ -866,18 +856,6 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
       big.ratFactor *= factors.second;
       big.noiseBound *= factors.second;
   }
-#ifdef DEBUG_PRINTOUT
-  if (dbgKey) {
-      cerr << "      equalizeFactors scaling by ["
-           << factors.first << ',' << factors.second << "]\n";
-      decryptAndPrint(cerr << "** after equalizeRationalFactors, c1=",
-                      c1, *dbgKey, *dbgEa, FLAG_PRINT_XVEC);
-      decryptAndPrint(cerr << "                                  c2=",
-                      c2, *dbgKey, *dbgEa, FLAG_PRINT_XVEC);
-      cerr << "    factor are ["<<c1.getRatFactor()<<","
-           <<c2.getRatFactor()<<"]\n\n";
-  }
-#endif
 }
 
 static xdouble 
@@ -1833,21 +1811,12 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
       // SetCoeff(zzParts[i],j,rounded);
       conv(powerful[j], rounded);  // store back in the powerful vector
     }
-    //  if (deg(zzParts[i])<20) cerr << "]\n   scaled poly="<<zzParts[i]<<endl;
     p2d_conv.powerfulToZZX(zzParts[i],powerful); // conver to ZZX
   }
 
   // Return an estimate for the noise
   double scaledNoise = conv<double>(noiseBound*ratio);
   double addedNoise = conv<double>(modSwitchAddedNoiseBound());
-#ifdef DEBUG_PRINTOUT
-  cerr << "## Ctxt::rawModSwitch: converting from mod-"
-       << context.productOfPrimes(getPrimeSet())
-       << " to mod-"<<toModulus<<" (ratio="<<ratio
-       << "), ptxtSpace="<<p2r<<endl;
-  cerr << "             scaledNoise="<< scaledNoise
-       << ", addedNoise="<<addedNoise<<endl;
-#endif
   return scaledNoise + addedNoise;
   // NOTE: technically, modSwitchAddedNoise bound assumes rounding is
   // done in the polynomial basis, rather than the powerful basis,
