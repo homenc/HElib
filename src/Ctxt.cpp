@@ -1012,25 +1012,25 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
       tmpPart = c2.parts[j];
       // What secret key will the product point to?
       if (!tmpPart.skHandle.mul(thisPart.skHandle, tmpPart.skHandle))
-	Error("Ctxt::tensorProduct: cannot multiply secret-key handles");
+        Error("Ctxt::tensorProduct: cannot multiply secret-key handles");
 
       tmpPart *= thisPart; // The element of the tensor product
 
       // Check if we already have a part relative to this secret-key handle
       long k = getPartIndexByHandle(tmpPart.skHandle);
       if (k >= 0) // found a matching part
-	parts[k] += tmpPart;
+        parts[k] += tmpPart;
       else
-	parts.push_back(tmpPart);
+        parts.push_back(tmpPart);
     }
   }
 
-  // Compute the noise estimate as c1.noiseBound * c2.noiseBound
-
+  // Compute the noise estimate of the product
   if (isCKKS()) { // we have totalNoiseBound = factor*ptxt + noiseBound
     xdouble totalNoise1 = c1.ptxtMag*c1.ratFactor + c1.noiseBound;
     xdouble totalNoise2 = c2.ptxtMag*c2.ratFactor + c2.noiseBound;
-    noiseBound = c1.noiseBound*totalNoise2 + c2.noiseBound*totalNoise1;
+    noiseBound = c1.noiseBound*totalNoise2 + c2.noiseBound*totalNoise1
+                  - c1.noiseBound*c2.noiseBound;
     ratFactor = c1.ratFactor * c2.ratFactor;
     ptxtMag = c1.ptxtMag * c2.ptxtMag;
   }
