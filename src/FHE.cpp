@@ -245,7 +245,8 @@ void KeySwitch::write(ostream& str) const
 
 void KeySwitch::read(istream& str, const FHEcontext& context)
 {
-  assert(readEyeCatcher(str, BINIO_EYE_SKM_BEGIN)==0);
+  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
+  assert(eyeCatcherFound == 0);
 
   fromKey.read(str);
   toKeyID = read_raw_int(str);
@@ -255,7 +256,8 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
   read_raw_ZZ(str, prgSeed);
   noiseBound = read_raw_xdouble(str); 
 
-  assert(readEyeCatcher(str, BINIO_EYE_SKM_END)==0);
+  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_END);
+  assert(eyeCatcherFound == 0);
 }
 
 
@@ -709,7 +711,8 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
 
 void readPubKeyBinary(istream& str, FHEPubKey& pk)
 {
-  assert(readEyeCatcher(str, BINIO_EYE_PK_BEGIN)==0);
+  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_BEGIN);
+  assert(eyeCatcherFound == 0);
  
   //  // TODO code to check context object is what it should be 
   //  // same as the text IO. May be worth putting it in helper func.
@@ -737,7 +740,8 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   pk.recryptKeyID = read_raw_int(str);
   pk.recryptEkey.read(str);
 
-  assert(readEyeCatcher(str, BINIO_EYE_PK_END)==0);
+  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_END);
+  assert(eyeCatcherFound == 0);
 }
 
 
@@ -1081,7 +1085,8 @@ void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
 
 void readSecKeyBinary(istream& str, FHESecKey& sk)
 {
-  assert(readEyeCatcher(str, BINIO_EYE_SK_BEGIN)==0);
+  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_BEGIN);
+  assert(eyeCatcherFound == 0);
 
   // Read in the public key part first.
   readPubKeyBinary(str, sk);
@@ -1089,6 +1094,7 @@ void readSecKeyBinary(istream& str, FHESecKey& sk)
   DoubleCRT blankDCRT(sk.getContext(), IndexSet::emptySet());
   read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
 
-  assert(readEyeCatcher(str, BINIO_EYE_SK_END)==0);
+  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_END);
+  assert(eyeCatcherFound == 0);
 }
 

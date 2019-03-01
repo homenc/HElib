@@ -1665,7 +1665,8 @@ void Ctxt::write(ostream& str) const
 
 void Ctxt::read(istream& str)
 {
-  assert(readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN)==0);
+  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
+  assert(eyeCatcherFound == 0);
   
   ptxtSpace = read_raw_int(str);
   intFactor = read_raw_int(str);
@@ -1675,7 +1676,8 @@ void Ctxt::read(istream& str)
   CtxtPart blankCtxtPart(context, IndexSet::emptySet());
   read_raw_vector(str, parts, blankCtxtPart);
 
-  assert(readEyeCatcher(str, BINIO_EYE_CTXT_END)==0);
+  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_END);
+  assert(eyeCatcherFound == 0);
 }
 
 void CtxtPart::write(ostream& str)

@@ -356,16 +356,18 @@ public:
   virtual const long getDegree() const override { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
-  const long getP2R() const override {return getTab().getPPowR();}
-
   virtual void rotate(Ctxt& ctxt, long k) const override;
   virtual void shift(Ctxt& ctxt, long k) const override;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
+
+  const long getP2R() const override {return getTab().getPPowR();}
+
 
   template<class U> void // avoid this being "hidden" by other rotate1D's
     rotate1D(std::vector<U>& out, const std::vector<U>& in, long i, long offset) const
     { EncryptedArrayBase::rotate1D(out, in, i, offset); }
   virtual void shift1D(Ctxt& ctxt, long i, long k) const override;
+
 
   virtual void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const override
     { genericEncode(ptxt, array);  }
@@ -396,7 +398,7 @@ public:
   virtual void random(std::vector< long  >& array) const override
     { genericRandom(array); } // choose at random and convert to std::vector<long>
 
-  virtual void random(std::vector< NTL::ZZX  >& array) const override 
+  virtual void random(std::vector< NTL::ZZX  >& array) const override
     { genericRandom(array); } // choose at random and convert to std::vector<ZZX>
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const override

@@ -1,0 +1,2 @@
+# A local cmake cache will affect the docker image build
+CMakeCache.txt

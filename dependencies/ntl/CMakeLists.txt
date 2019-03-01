@@ -1,0 +1,97 @@
+include(ExternalProject)
+
+set(fetched_ntl_install_prefix "${PACKAGE_DIR}")
+
+# Setting right string for enable_threads
+if (ENABLE_THREADS)
+  set(build_threads "on")
+else (ENABLE_THREADS)
+  set(build_threads "off")
+endif(ENABLE_THREADS)
+
+# NOTE: Workaround for the way NTL builds on Linux.
+# Without explicitly pointing the linker at the correct GMP, NTL has a bad habit of picking
+# up the system's libgmp.  This causes erroneous version 'mismatches'.
+if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+  set(ntl_make_libpath_tweak_cmd "export LD_LIBRARY_PATH=${PACKAGE_DIR}/${CMAKE_INSTALL_LIBDIR}:$LD_LIBRARY_PATH")
+else ()
+  set(ntl_make_libpath_tweak_cmd ":")
+endif ()
+
+# Path of the ntl library file that will be installed (libntl.so/dylib)
+set(fetched_ntl_lib "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libntl${CMAKE_SHARED_LIBRARY_SUFFIX}")
+# Path of the ntl include directory that will be installed
+set(fetched_ntl_includedir "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
+
+ExternalProject_Add(ntl_fetched
+  DEPENDS
+    gmp_fetched # must be gmp_fetched because gmp_external is dependent on this (through dependencies_built) due to the rpath delay
+  URL
+    "https://www.shoup.net/ntl/ntl-${NTL_REQUIRED_VERSION}.tar.gz"
+  URL_HASH
+    # NOTE: hash of version 11.3.0
+    SHA256=3ae0d3647e5d52bc0907e1f4cb4a958460ee8e5b3c9862c1a4b8e9f0f75891dd
+  DOWNLOAD_NO_PROGRESS ON
+  UPDATE_COMMAND ""
+  # Turn LOG_CONFIGURE ON will log the configure step to a file in the stamp directory
+  # LOG_CONFIGURE ON
+  # SOURCE_SUBDIR <SOURCE_DIR>/src
+  CONFIGURE_COMMAND
+    cd src &&
+    <SOURCE_DIR>/src/configure
+      "PREFIX=${PACKAGE_DIR}"
+      "SHARED=on"
+      "NTL_GMP_LIP=on"
+      "NTL_THREADS=${build_threads}"
+      "NTL_THREAD_BOOST=${build_threads}"
+      "GMP_PREFIX=${PACKAGE_DIR}"
+      "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
+  BUILD_IN_SOURCE ON
+  BUILD_COMMAND
+    # TODO: add -j to make command. (Not done since not known at compile time)
+    cd src &&
+    # See above note re: workaround
+    eval "${ntl_make_libpath_tweak_cmd}"  &&
+    ${CMAKE_MAKE_PROGRAM}
+  INSTALL_COMMAND
+    cd src && ${CMAKE_MAKE_PROGRAM} install
+  TEST_AFTER_INSTALL OFF
+  TEST_EXCLUDE_FROM_MAIN ON
+  # Turn LOG_BUILD ON will log the build step to a file in the stamp directory
+  # LOG_BUILD ON
+  # Turn LOG_INSTALL ON will log the install step to a file in the stamp directory
+  # LOG_INSTALL ON
+  # Turn LOG_TEST ON will log the test step to a file in the stamp directory
+  # LOG_TEST ON
+)
+
+if (ENABLE_TEST)
+  set(test_path "${DEPENDENCIES_FOLDER}/Source/ntl_fetched/src")
+  add_test(
+    NAME              ntl_check
+    COMMAND           ${CMAKE_MAKE_PROGRAM} check
+    WORKING_DIRECTORY ${test_path}
+  )
+  unset(test_path)
+endif (ENABLE_TEST)
+
+# Removed due to rpath delay
+# add_dependencies(ntl_external ntl_fetched)
+
+# This is because we are postponing the rpath fix to after both the deps are built
+add_dependencies(dependencies_built ntl_fetched)
+
+# Add include dirs and library path as properties of ntl_external imported target to propagate them above
+set_target_properties(ntl_external
+  PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_INCLUDEDIR}"
+    IMPORTED_LOCATION "${fetched_ntl_lib}"
+)
+
+# Unset temporary variables
+unset(build_threads)
+unset(fetched_ntl_install_prefix)
+unset(fetched_ntl_byproducts)
+unset(fetched_ntl_lib)
+unset(fetched_ntl_includedir)
+unset(ntl_make_libpath_tweak_cmd)

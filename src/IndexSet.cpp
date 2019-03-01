@@ -273,6 +273,9 @@ void IndexSet::read(istream& str)
   // Size of Set
   long sizeOfS = read_raw_int(str); 
 
+  // insert all these indexes into the set
+  this->clear();
+
   // The data itself
   for(long i=0, n; i<sizeOfS; i++){     
     n = read_raw_int(str); 

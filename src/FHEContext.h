@@ -394,7 +394,6 @@ void readContextBaseBinary(std::istream& s, unsigned long& m,
 std::unique_ptr<FHEcontext> buildContextFromBinary(std::istream& str);
 void readContextBinary(std::istream& str, FHEcontext& context);
 
-
 // Build modulus chain with nBits worth of ctxt primes, 
 // using nDgts digits in key-switching.
 // willBeBootstrappable flag is a hack, used to get around some

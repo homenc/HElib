@@ -119,6 +119,7 @@ int main(int argc, char *argv[])
   amap.arg("noPrint", noPrint, "suppress printouts");
   amap.parse(argc, argv);
 
+  // FIXME: this is wrong!
   const char* asciiFile1 = "misc/iotest_ascii1.txt"; 
   const char* asciiFile2 = "misc/iotest_ascii2.txt"; 
   const char* binFile1 = "misc/iotest_bin.bin"; 
