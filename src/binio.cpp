@@ -12,6 +12,7 @@
 #include "binio.h"
 #include <cassert>
 #include <cstring>
+#include <endian.h>
 
 NTL_CLIENT
 /* Some utility functions for binary IO */
@@ -33,6 +34,11 @@ void writeEyeCatcher(ostream& str, const char* eyeStr)
 // compile only 64-bit (-m64) therefore long must be at least 64-bit
 long read_raw_int(istream& str)
 {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  long result = 0;
+  str.read((char*)&result, BINIO_64BIT);
+  return result;
+#else
   long result = 0;
   char byte;
 
@@ -42,10 +48,16 @@ long read_raw_int(istream& str)
   }
 
   return result;
+#endif
 }
 
 int read_raw_int32(istream& str)
 {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  int result = 0;
+  str.read((char*)&result, BINIO_32BIT);
+  return result;
+#else
   int result = 0;
   char byte;
 
@@ -55,27 +67,36 @@ int read_raw_int32(istream& str)
   }
 
   return result;
+#endif
 }
 
 // compile only 64-bit (-m64) therefore long must be at least 64-bit
 void write_raw_int(ostream& str, long num)
 {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  str.write((const char*)&num, BINIO_64BIT);
+#else
   char byte;
 
   for(long i=0; i<BINIO_64BIT; i++){
     byte = num >> 8*i; // serializing in little endian
     str.write(&byte, 1);  // write byte out
   }
+#endif
 }
 
 void write_raw_int32(ostream& str, int num)
 {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  str.write((const char*)&num, BINIO_32BIT);
+#else
   char byte;
 
   for(long i=0; i<BINIO_32BIT; i++){
     byte = num >> 8*i; // serializing in little endian
     str.write(&byte, 1);  // write byte out
   }
+#endif
 }
 
 void write_ntl_vec_long(ostream& str, const vec_long& vl, long intSize)
