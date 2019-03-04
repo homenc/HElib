@@ -28,14 +28,32 @@ endif(NTL_DIR)
 
 if (NTL_HEADERS AND NTL_LIB)
   # Find ntl version
-  file(STRINGS "${NTL_HEADERS}/version.h" NTL_VERSION REGEX "NTL_VERSION[ \t]+\"([0-9.]+)\"")
-  if(NTL_VERSION)
-    string(REGEX REPLACE "[^ \t]*[ \t]+NTL_VERSION[ \t]+\"([0-9.]+)\"" "\\1" NTL_VERSION ${NTL_VERSION})
-  else(NTL_VERSION)
+  file(STRINGS "${NTL_HEADERS}/version.h" ntl_version_string REGEX "NTL_VERSION[ \t]+\"([0-9.]+)\"")
+  string(REGEX REPLACE "[^ \t]*[ \t]+NTL_VERSION[ \t]+\"([0-9.]+)\"" "\\1" ntl_version_string "${ntl_version_string}")
+  string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\1" ntl_major "${ntl_version_string}")
+  string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\2" ntl_minor "${ntl_version_string}")
+  string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\3" ntl_patchlevel "${ntl_version_string}")
+  if((ntl_version_string EQUAL "") OR
+     (ntl_major EQUAL "") OR
+     (ntl_minor EQUAL "") OR
+     (ntl_patchlevel EQUAL ""))
     # If the version encoding is wrong then it is set to "WRONG VERSION ENCODING" causing find_package_handle_standard_args to fail
     set(NTL_VERSION "WRONG VERSION ENCODING")
-  endif(NTL_VERSION)
-endif()
+    set(NTL_VERSION_MAJOR "WRONG VERSION ENCODING")
+    set(NTL_VERSION_MINOR "WRONG VERSION ENCODING")
+    set(NTL_VERSION_PATCH "WRONG VERSION ENCODING")
+  else()
+    set(NTL_VERSION "${ntl_major}.${ntl_minor}.${ntl_patchlevel}")
+    set(NTL_VERSION_MAJOR "${ntl_major}")
+    set(NTL_VERSION_MINOR "${ntl_minor}")
+    set(NTL_VERSION_PATCH "${ntl_patchlevel}")
+  endif()
+
+  unset(ntl_version_string)
+  unset(ntl_major)
+  unset(ntl_minor)
+  unset(ntl_patchlevel)
+endif(NTL_HEADERS AND NTL_LIB)
 
 # Raising an error if ntl with required version has not been found
 set(fail_msg "NTL required dynamic shared library has not been found. (Try cmake -DNTL_DIR=<NTL-root-path>).")

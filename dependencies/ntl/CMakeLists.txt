@@ -27,7 +27,7 @@ ExternalProject_Add(ntl_fetched
   DEPENDS
     gmp_fetched # must be gmp_fetched because gmp_external is dependent on this (through dependencies_built) due to the rpath delay
   URL
-    "https://www.shoup.net/ntl/ntl-${NTL_REQUIRED_VERSION}.tar.gz"
+    "https://www.shoup.net/ntl/ntl-${FETCHED_NTL_VERSION}.tar.gz"
   URL_HASH
     # NOTE: hash of version 11.3.0
     SHA256=3ae0d3647e5d52bc0907e1f4cb4a958460ee8e5b3c9862c1a4b8e9f0f75891dd

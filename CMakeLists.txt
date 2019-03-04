@@ -3,11 +3,6 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 project(helib_superbuild
   LANGUAGES C CXX)
 
-# GMP version to be used (and eventually downloaded)
-set(GMP_REQUIRED_VERSION "6.1.2")
-# NTL version to be used (and eventually downloaded)
-set(NTL_REQUIRED_VERSION "11.3.0")
-
 # Define standard installation directories (GNU)
 include(GNUInstallDirs)
 
@@ -81,6 +76,11 @@ endif (ENABLE_ARMADILLO)
 # NOTE: Consider reconfiguring everything when PACKAGE_BUILD changes value.  Options from the previous value will remain otherwise.
 # Set up extra properties depending on the value of PACKAGE_BUILD
 if (PACKAGE_BUILD)
+  # Setting up dependencies versions
+  # GMP version to be used (and eventually downloaded) if PACKAGE_BUILD
+  set(FETCHED_GMP_VERSION "6.1.2")
+  # NTL version to be used (and eventually downloaded) if PACKAGE_BUILD
+  set(FETCHED_NTL_VERSION "11.3.0")
   # Setting up default compilation output directory
   if (NOT PACKAGE_DIR)
     set(PACKAGE_DIR "helib_pack")
@@ -130,17 +130,23 @@ if (PACKAGE_BUILD)
 
   # Track if helib requires pthreads as dependency
   set(HELIB_REQUIRES_PTHREADS ${ENABLE_THREADS})
-
 else (PACKAGE_BUILD)
+  # GMP minimal version to be used if not PACKAGE_BUILD
+  set(GMP_MINIMAL_VERSION "6.0.0")
+  # NTL minimal version to be used if NOT PACKAGE_BUILD
+  set(NTL_MINIMAL_VERSION "10.0.0")
+
   # find GMP library
   # Try to find the GMP package (using cmake/FindGMP.cmake script)
   # REQUIRED arg make cmake to fail if GMP is not found
-  find_package(GMP "${GMP_REQUIRED_VERSION}" EXACT REQUIRED)
+  # Checks that at least version GMP_MINIMAL_VERSION is available
+  find_package(GMP "${GMP_MINIMAL_VERSION}" REQUIRED)
 
   # find NTL library
   # Try to find the NTL package (using cmake/FindNTL.cmake script)
   # REQUIRED arg make cmake to fail if NTL is not found
-  find_package(NTL "${NTL_REQUIRED_VERSION}" EXACT REQUIRED)
+  # Checks that at least version NTL_MINIMAL_VERSION is available
+  find_package(NTL "${NTL_MINIMAL_VERSION}" REQUIRED)
 
   # Setting compiler output directories
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
@@ -240,4 +246,3 @@ else (PACKAGE_BUILD)
   # If not compiling as PACKAGE_BUILD then add helib as subfolder and not as an external project
   add_subdirectory(src)
 endif(PACKAGE_BUILD)
-
