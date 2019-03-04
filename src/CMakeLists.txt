@@ -182,7 +182,10 @@ target_compile_definitions(helib
   PUBLIC
     $<$<BOOL:${ENABLE_THREADS}>:HELIB_THREADS>
     # NOTE: this should be in a generated configure.h rather than being public
-    $<IF:$<BOOL:${ENABLE_ARMADILLO}>,FFT_ARMA,FFT_NATIVE>
+    # NOTE: Generator IF are available form cmake 3.8. Use it in the future.
+    # $<IF:$<BOOL:${ENABLE_ARMADILLO}>,FFT_ARMA,FFT_NATIVE>
+    $<$<BOOL:${ENABLE_ARMADILLO}>:FFT_ARMA>
+    $<$<NOT:$<BOOL:${ENABLE_ARMADILLO}>>:FFT_NATIVE>
 )
 
 if (PACKAGE_BUILD)
