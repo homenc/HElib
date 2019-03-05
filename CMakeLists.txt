@@ -134,7 +134,7 @@ else (PACKAGE_BUILD)
   # GMP minimal version to be used if not PACKAGE_BUILD
   set(GMP_MINIMAL_VERSION "6.0.0")
   # NTL minimal version to be used if NOT PACKAGE_BUILD
-  set(NTL_MINIMAL_VERSION "10.0.0")
+  set(NTL_MINIMAL_VERSION "11.0.0")
 
   # find GMP library
   # Try to find the GMP package (using cmake/FindGMP.cmake script)
