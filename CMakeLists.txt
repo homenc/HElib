@@ -27,7 +27,7 @@ endif (NOT CMAKE_BUILD_TYPE)
 # Path containing FindGMP.cmake and FindNTL.cmake
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-option(BUILD_SHARED "Build as shared library" ON)
+option(BUILD_SHARED "Build as shared library" OFF)
 
 option(PACKAGE_BUILD "Download dependencies and build as a self-contained package" OFF)
 
