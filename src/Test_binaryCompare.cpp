@@ -45,6 +45,7 @@ static long mValues[][15] = {
 
 void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap=false);
 
+
 int main(int argc, char *argv[])
 {
   ArgMapping amap;
@@ -170,7 +171,27 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
 #endif
 
   vector<long> slotsMin, slotsMax, slotsMu, slotsNi;
+
+  //cmp only
+  compareTwoNumbers(mu, ni, CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
+                      &unpackSlotEncoding);
+  ea.decrypt(mu, secKey, slotsMu);
+  ea.decrypt(ni, secKey, slotsNi);
+  if (slotsMu[0]!=pMu || slotsNi[0]!=pNi) {
+    cout << "BAD\n";
+    if (verbose)
+      cout << "Comparison (without min max) error: a="<<pa<<", b="<<pb
+           << ", mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
+    exit(0);
+  }
+  else if (verbose) {
+    cout << "Comparison (without min max) succeeded: ";
+    cout << '('<<pa<<','<<pb<<")=> mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
+  }
+
   {CtPtrs_VecCt wMin(eMin), wMax(eMax); // A wrappers around output vectors
+
+  //cmp with max and min
   compareTwoNumbers(wMax, wMin, mu, ni,
                     CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
                     &unpackSlotEncoding);
@@ -184,13 +205,13 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
       || slotsMu[0]!=pMu || slotsNi[0]!=pNi) {
     cout << "BAD\n";
     if (verbose)
-      cout << "Comparison error: a="<<pa<<", b="<<pb
+      cout << "Comparison (with min max) error: a="<<pa<<", b="<<pb
            << ", but min="<<slotsMin[0]<<", max="<<slotsMax[0]
            << ", mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
     exit(0);
   }
   else if (verbose) {
-    cout << "Comparison succeeded: ";
+    cout << "Comparison (with min max) succeeded: ";
     cout << '('<<pa<<','<<pb<<")=>("<<slotsMin[0]<<','<<slotsMax[0]
          <<"), mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
   }
