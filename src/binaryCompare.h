@@ -24,4 +24,10 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
                        const CtPtrs& a, const CtPtrs& b,
                        std::vector<zzX>* unpackSlotEncoding=nullptr);
 
+//! Compares two integers in binary a,b.
+//! Returns only indicator bits mu=(a>b) and ni=(a<b).
+void compareTwoNumbers(Ctxt& mu, Ctxt& ni,
+                       const CtPtrs& a, const CtPtrs& b,
+                       std::vector<zzX>* unpackSlotEncoding=nullptr);
+
 #endif // ifdef _BINARY_COMPARE_H_
