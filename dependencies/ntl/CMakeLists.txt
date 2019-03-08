@@ -75,6 +75,19 @@ if (ENABLE_TEST)
   unset(test_path)
 endif (ENABLE_TEST)
 
+# Removing static library libntl.a.
+set(ntl_static_lib "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libntl${CMAKE_STATIC_LIBRARY_SUFFIX}")
+add_custom_command(TARGET ntl_fetched
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E remove -f "${ntl_static_lib}")
+# Removing also the autotools generated libntl.la to be consistent (it contains references to libntl.a)
+set(ntl_static_autotools_conf "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libntl.la")
+add_custom_command(TARGET ntl_fetched
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E remove -f "${ntl_static_autotools_conf}")
+unset(ntl_static_lib)
+unset(ntl_static_autotools_conf)
+
 # Removed due to rpath delay
 # add_dependencies(ntl_external ntl_fetched)
 
