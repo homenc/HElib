@@ -13,6 +13,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 ## Require full C++ standard
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# GMP minimal version to be used if not PACKAGE_BUILD
+set(GMP_MINIMAL_VERSION "6.0.0")
+# NTL minimal version to be used if NOT PACKAGE_BUILD
+set(NTL_MINIMAL_VERSION "11.0.0")
+
 # Adding possible gui values to CMAKE_BUILD_TYPE variable
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
     "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
@@ -43,14 +48,22 @@ option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" OFF)
 if (PACKAGE_BUILD)
   # Properties to be enabled when using PACKAGE_BUILD
   set(PACKAGE_DIR "" CACHE STRING "Folder with the compilation output directory (DEFAULT: helib_pack)")
+  option(DONT_FETCH_GMP "Do not fetch and compile the GMP library (DEFAULT: OFF)" OFF)
 else (PACKAGE_BUILD)
   # Properties to be enabled when not using PACKAGE_BUILD
   option(ENABLE_LEGACY_TEST "Build the legacy test files (does not work with PACKAGE_BUILD)" OFF)
   option(BUILD_AES "Build homomorphic AES (does not work with PACKAGE_BUILD)" OFF)
-
-  set(GMP_DIR "" CACHE STRING "Prefix of the GMP library (ignored when PACKAGE_BUILD is ON)")
-  set(NTL_DIR "" CACHE STRING "Prefix of the NTL library (ignored when PACKAGE_BUILD is ON)")
 endif(PACKAGE_BUILD)
+
+# Allow GMP_DIR and search of it if not in PACKAGE_BUILD or in PACKAGE_BUILD and DONT_FETCH_GMP
+if ((NOT PACKAGE_BUILD) OR DONT_FETCH_GMP)
+  set(GMP_DIR "" CACHE STRING "Prefix of the GMP library (ignored when PACKAGE_BUILD is ON)")
+endif((NOT PACKAGE_BUILD) OR DONT_FETCH_GMP)
+
+# Allow NTL_DIR only if not PACKAGE_BUILD
+if (NOT PACKAGE_BUILD)
+  set(NTL_DIR "" CACHE STRING "Prefix of the NTL library (ignored when PACKAGE_BUILD is ON)")
+endif(NOT PACKAGE_BUILD)
 
 # Setting flag lists to avoid polluting CMAKE_CXX_FLAGS
 list(APPEND PRIVATE_HELIB_CXX_FLAGS "-fPIC")
@@ -105,7 +118,12 @@ if (PACKAGE_BUILD)
 
   # Warn existing dependencies are ignored and rebuilt
   if (GMP_DIR)
-    message(WARNING "GMP_DIR is ignored when PACKAGE_BUILD is ON.")
+    if (DONT_FETCH_GMP)
+      # FIXME: check if true
+      message(STATUS "GMP_DIR is not the system one. This may prevert relocatability of the package.")
+    else (DONT_FETCH_GMP)
+      message(WARNING "GMP_DIR is ignored when PACKAGE_BUILD is ON.")
+    endif (DONT_FETCH_GMP)
   endif(GMP_DIR)
 
   if (NTL_DIR)
@@ -119,6 +137,19 @@ if (PACKAGE_BUILD)
   # RPATH will be empty since ntl, gmp, and helib are all in PACKAGE_DIR/lib
   set(PACKAGE_RPATH "")
 
+  if (DONT_FETCH_GMP)
+    # find GMP library
+    # Try to find the GMP package (using cmake/FindGMP.cmake script)
+    # REQUIRED arg make cmake to fail if GMP is not found
+    # Checks that at least version GMP_MINIMAL_VERSION is available
+    find_package(GMP "${GMP_MINIMAL_VERSION}" REQUIRED)
+    set_target_properties(gmp_external
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${GMP_INCLUDE_PATHS}"
+        IMPORTED_LOCATION "${GMP_LIBRARIES}"
+    )
+  endif(DONT_FETCH_GMP)
+
   # Add the external dependencies (done in dependencies/CMakeLists.txt)
   add_subdirectory(dependencies)
 
@@ -131,11 +162,6 @@ if (PACKAGE_BUILD)
   # Track if helib requires pthreads as dependency
   set(HELIB_REQUIRES_PTHREADS ${ENABLE_THREADS})
 else (PACKAGE_BUILD)
-  # GMP minimal version to be used if not PACKAGE_BUILD
-  set(GMP_MINIMAL_VERSION "6.0.0")
-  # NTL minimal version to be used if NOT PACKAGE_BUILD
-  set(NTL_MINIMAL_VERSION "11.0.0")
-
   # find GMP library
   # Try to find the GMP package (using cmake/FindGMP.cmake script)
   # REQUIRED arg make cmake to fail if GMP is not found

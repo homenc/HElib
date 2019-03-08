@@ -23,9 +23,23 @@ set(fetched_ntl_lib "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libnt
 # Path of the ntl include directory that will be installed
 set(fetched_ntl_includedir "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 
+set(ntl_superbuild_dependencies "")
+# If requiring GMP to be built then in compilation NTL depends to gmp_fetched
+# because gmp_external is dependent on this (through dependencies_built) due to the rpath delay
+# Set also GMP [expected] location
+if (NOT DONT_FETCH_GMP)
+  set(ntl_superbuild_dependencies "gmp_fetched")
+  set(gmp_prefix "${PACKAGE_DIR}")
+else (NOT DONT_FETCH_GMP)
+  # get the dirname of libgmp library (in <prefix>/lib)
+  get_filename_component(gmp_prefix "${GMP_LIBRARIES}" DIRECTORY)
+  # remove the lib directory to get the prefix
+  get_filename_component(gmp_prefix "${gmp_prefix}" DIRECTORY)
+endif(NOT DONT_FETCH_GMP)
+
 ExternalProject_Add(ntl_fetched
   DEPENDS
-    gmp_fetched # must be gmp_fetched because gmp_external is dependent on this (through dependencies_built) due to the rpath delay
+    "${ntl_superbuild_dependencies}"
   URL
     "https://www.shoup.net/ntl/ntl-${FETCHED_NTL_VERSION}.tar.gz"
   URL_HASH
@@ -44,7 +58,7 @@ ExternalProject_Add(ntl_fetched
       "NTL_GMP_LIP=on"
       "NTL_THREADS=${build_threads}"
       "NTL_THREAD_BOOST=${build_threads}"
-      "GMP_PREFIX=${PACKAGE_DIR}"
+      "GMP_PREFIX=${gmp_prefix}"
       "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
   BUILD_IN_SOURCE ON
   BUILD_COMMAND
@@ -108,3 +122,5 @@ unset(fetched_ntl_byproducts)
 unset(fetched_ntl_lib)
 unset(fetched_ntl_includedir)
 unset(ntl_make_libpath_tweak_cmd)
+unset(ntl_superbuild_dependencies)
+unset(gmp_prefix)

@@ -27,17 +27,18 @@ function(change_rpath lib_name_noext depend_target_name lib_path package_relativ
                        COMMAND eval ARGS "${add_rpath_command} || true"
                        VERBATIM)
 
-    if (lib_name_noext MATCHES "ntl")
+    # Change ID of GMP in the NTL library only if GMP is not the default one
+    if (lib_name_noext MATCHES "ntl" AND (NOT DONT_FETCH_GMP))
       # NOTE: Here we assume the ID of the gmp library is equal to its absolute path, including version name (i.e. not the symlink).
       # If GMP changes this convention, the following command may break.
-      # Since gmp rpath fix has been delayed after ntl compilation due the configuration step dependencies we have to change ntl rpath to gmp
+      # Since gmp rpath fix has been delayed after ntl compilation due the configuration step dependencies we have to change ntl rpath to gmp.
       set(change_gmp_rpath_cmd "LIBVERNAME=`${READLINK_CMD} ${gmp_library_path}` && LIB_FULL=\"`dirname ${gmp_library_path}`/\${LIBVERNAME}\" && ${CMAKE_INSTALL_NAME_TOOL} -change \${LIB_FULL} @rpath/\${LIBVERNAME} ${lib_path}")
       add_custom_command(TARGET ${depend_target_name}
                          POST_BUILD
                          COMMAND eval ARGS "${change_gmp_rpath_cmd}"
                          VERBATIM)
       unset(change_gmp_rpath_cmd)
-    endif(lib_name_noext MATCHES "ntl")
+    endif(lib_name_noext MATCHES "ntl" AND (NOT DONT_FETCH_GMP))
     unset(change_id_command)
     unset(add_rpath_command)
 
