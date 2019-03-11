@@ -4,6 +4,17 @@ include(rpath_fixer)
 # Adding meta-target dependent on gmp and ntl to delay the rpath fix
 add_custom_target(dependencies_built)
 
+# Adding meta-target upon which ntl and gmp will depend, in order
+# to standardise installation directory (lib/lib64)
+add_custom_target(setup_install_dir)
+
+add_custom_command(TARGET "setup_install_dir"
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E make_directory "${PACKAGE_DIR}/${CMAKE_INSTALL_LIBDIR}")
+add_custom_command(TARGET "setup_install_dir"
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E create_symlink "${PACKAGE_DIR}/${CMAKE_INSTALL_LIBDIR}" "${PACKAGE_DIR}/lib")
+
 if (NOT DONT_FETCH_GMP)
   ###########################################
   #                                         #

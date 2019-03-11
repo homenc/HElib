@@ -23,12 +23,12 @@ set(fetched_ntl_lib "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libnt
 # Path of the ntl include directory that will be installed
 set(fetched_ntl_includedir "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 
-set(ntl_superbuild_dependencies "")
+set(ntl_superbuild_dependencies "setup_install_dir")
 # If requiring GMP to be built then in compilation NTL depends to gmp_fetched
 # because gmp_external is dependent on this (through dependencies_built) due to the rpath delay
 # Set also GMP [expected] location
 if (NOT DONT_FETCH_GMP)
-  set(ntl_superbuild_dependencies "gmp_fetched")
+  list(APPEND ntl_superbuild_dependencies "gmp_fetched")
   set(gmp_prefix "${PACKAGE_DIR}")
 else (NOT DONT_FETCH_GMP)
   # get the dirname of libgmp library (in <prefix>/lib)

@@ -8,6 +8,8 @@ set(fetched_gmp_lib "${fetched_gmp_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libgm
 set(fetched_gmp_includedir "${fetched_gmp_install_prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 
 ExternalProject_Add(gmp_fetched
+  DEPENDS
+    "setup_install_dir"
   URL
     "https://gmplib.org/download/gmp/gmp-${FETCHED_GMP_VERSION}.tar.bz2"
   URL_HASH
