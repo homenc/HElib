@@ -120,7 +120,7 @@ if (PACKAGE_BUILD)
   if (GMP_DIR)
     if (DONT_FETCH_GMP)
       # FIXME: check if true
-      message(STATUS "GMP_DIR is not the system one. This may prevert relocatability of the package.")
+      message(STATUS "GMP_DIR is not the system one. This may prevent relocatability of the package.")
     else (DONT_FETCH_GMP)
       message(WARNING "GMP_DIR is ignored when PACKAGE_BUILD is ON.")
     endif (DONT_FETCH_GMP)
@@ -242,6 +242,7 @@ if (PACKAGE_BUILD)
       -DHELIB_REQUIRES_PTHREADS=${HELIB_REQUIRES_PTHREADS}
       -DBUILD_SHARED=${BUILD_SHARED}
       -DPACKAGE_BUILD=${PACKAGE_BUILD}
+      -DDONT_FETCH_GMP=${DONT_FETCH_GMP}
       -DENABLE_TEST=${ENABLE_TEST}
       -DENABLE_LEGACY_TEST=OFF
       -DBUILD_AES=OFF
