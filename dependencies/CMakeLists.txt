@@ -15,7 +15,8 @@ add_custom_command(TARGET "setup_install_dir"
 if (NOT CMAKE_INSTALL_LIBDIR STREQUAL "lib")
   add_custom_command(TARGET "setup_install_dir"
                      POST_BUILD
-                     COMMAND ${CMAKE_COMMAND} -E create_symlink "${PACKAGE_DIR}/${CMAKE_INSTALL_LIBDIR}" "${PACKAGE_DIR}/lib"
+                     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_INSTALL_LIBDIR}" "lib"
+                     WORKING_DIRECTORY "${PACKAGE_DIR}"
                      VERBATIM)
 endif()
 

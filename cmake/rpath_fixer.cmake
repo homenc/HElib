@@ -1,5 +1,6 @@
 # Function to change external libraries rpath on mac and linux
 function(change_rpath lib_name_noext depend_target_name lib_path package_relative_rpath gmp_library_path)
+  get_filename_component(gmp_library_dir "${gmp_library_path}" DIRECTORY)
   if (APPLE)
     if (NOT CMAKE_INSTALL_NAME_TOOL)
       message(FATAL_ERROR "CMAKE_INSTALL_NAME_TOOL is not set.")
@@ -32,7 +33,7 @@ function(change_rpath lib_name_noext depend_target_name lib_path package_relativ
       # NOTE: Here we assume the ID of the gmp library is equal to its absolute path, including version name (i.e. not the symlink).
       # If GMP changes this convention, the following command may break.
       # Since gmp rpath fix has been delayed after ntl compilation due the configuration step dependencies we have to change ntl rpath to gmp.
-      set(change_gmp_rpath_cmd "LIBVERNAME=`${READLINK_CMD} ${gmp_library_path}` && LIB_FULL=\"`dirname ${gmp_library_path}`/\${LIBVERNAME}\" && ${CMAKE_INSTALL_NAME_TOOL} -change \${LIB_FULL} @rpath/\${LIBVERNAME} ${lib_path}")
+      set(change_gmp_rpath_cmd "LIBVERNAME=`${READLINK_CMD} ${gmp_library_path}` && LIB_FULL=\"${gmp_library_dir}/\${LIBVERNAME}\" && ${CMAKE_INSTALL_NAME_TOOL} -change \${LIB_FULL} @rpath/\${LIBVERNAME} ${lib_path}")
       add_custom_command(TARGET ${depend_target_name}
                          POST_BUILD
                          COMMAND eval ARGS "${change_gmp_rpath_cmd}"
@@ -45,11 +46,15 @@ function(change_rpath lib_name_noext depend_target_name lib_path package_relativ
   elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
     # Find patchelf required to add a local rpath on linux
     find_program(LINUX_RPATH_TOOL NAMES patchelf)
-    set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}" "${lib_path}")
     if (NOT LINUX_RPATH_TOOL)
       message(FATAL_ERROR "Cannot find patchelf, which is required for a package build.")
     endif(NOT LINUX_RPATH_TOOL)
 
+    if (DONT_FETCH_GMP)
+      set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}:${gmp_library_dir}" "${lib_path}")
+    else (DONT_FETCH_GMP)
+      set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}" "${lib_path}")
+    endif(DONT_FETCH_GMP)
     # Adding $ORIGIN/${package_relative_rpath}
     add_custom_command(TARGET ${depend_target_name}
                        POST_BUILD
