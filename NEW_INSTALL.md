@@ -9,6 +9,7 @@ macOS High Sierra 10.13.
 - GNU make
 - g++ >= 5.4.0 or clang >= 3.8
 - pthreads
+- Armadillo >= 6.5 (optional, greatly improves CKKS performance)
 
 ## Option 1: package build (recommended for most users)
 
@@ -22,6 +23,9 @@ in this case:
 
 - patchelf (if building on Linux)
 - m4
+
+Please note that if changing from library build to package build, it is safer 
+to use a clean build directory.
 
 ### Instructions
 
@@ -79,6 +83,9 @@ yourself.  For details on how to do this, please see the section on building
 dependencies later.  We will suppose throughout this that the environment
 variables `$GMPDIR` and `$NTLDIR` are set to point to the installation
 directories of GMP and NTL respectively.
+
+Please note that if changing from package build to library build, it is safer 
+to use a clean build directory.
 
 1. Create a build directory, typically as a sibling of `src`:
 
@@ -174,6 +181,8 @@ to the `./configure` step.
 - `CMAKE_BUILD_TYPE`: Choose the type of build, options are: Debug,
 RelWithDebInfo, Release, MinSizeRel.
 - `CMAKE_INSTALL_PREFIX`: Desired installation directory for HElib.
+- `ENABLE_ARMADILLO`: Use Armadillo to speed up FFTs.  Requires a system-wide 
+installation of Armadillo version >= 6.500.0.  Defaults to `OFF`.
 - `ENABLE_TEST`: Enable building of the tests.  This will include an automatic
 download step for the google test framework.
 - `ENABLE_THREADS`: Enable threading support.  This must be on if and only if
@@ -184,12 +193,16 @@ currently will not build with these flags.
 ### Parameters specific to option 1 (package build)
 - `PACKAGE_DIR`: Location that a package build will be installed to.  Defaults
 to `${CMAKE_INSTALL_PREFIX}/helib_pack`.
+- `FETCH_GMP`: Whether or not to fetch and build GMP.  Defaults to `ON`.  If 
+set to `OFF`, there should either exist a system-installed GMP library, or 
+`GMP_DIR` should point to a valid GMP prefix.
+- `GMP_DIR`: Prefix of the GMP library.  Ignored if `FETCH_GMP=ON`.
 
 ### Parameters specific to option 2 (library build)
-- `ENABLE_LEGACY_TEST`: Build old test system (deprecated)
-- `BUILD_AES`: Build homomorphic AES
-- `GMP_DIR`: Prefix of the GMP library
-- `NTL_DIR`: Prefix of the NTL library
+- `ENABLE_LEGACY_TEST`: Build old test system (deprecated).
+- `BUILD_AES`: Build homomorphic AES.
+- `GMP_DIR`: Prefix of the GMP library.
+- `NTL_DIR`: Prefix of the NTL library.
 
 # Using HElib in a project
 
