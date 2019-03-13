@@ -1,5 +1,6 @@
 # Function to change external libraries rpath on mac and linux
 function(change_rpath lib_name_noext depend_target_name lib_path package_relative_rpath gmp_library_path)
+  # gmp_library_dir is the directory containing the libgmp.(so|dylib) file
   get_filename_component(gmp_library_dir "${gmp_library_path}" DIRECTORY)
   if (APPLE)
     if (NOT CMAKE_INSTALL_NAME_TOOL)
@@ -25,8 +26,19 @@ function(change_rpath lib_name_noext depend_target_name lib_path package_relativ
     set(add_rpath_command "${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/${package_relative_rpath} ${lib_path}")
     add_custom_command(TARGET ${depend_target_name}
                        POST_BUILD
-                       COMMAND eval ARGS "${add_rpath_command} || true"
+                       COMMAND eval ARGS "${add_rpath_command} 2> /dev/null || true"
                        VERBATIM)
+
+    if (NOT FETCH_GMP)
+      # Add GMP location to NTL rpath if GMP is not fetched
+      # NOTE: This can be turned into an external script invoking it with cmake -P to properly handle error
+      set(add_gmp_rpath_command "${CMAKE_INSTALL_NAME_TOOL} -add_rpath ${gmp_library_dir} ${lib_path}")
+      add_custom_command(TARGET ${depend_target_name}
+                         POST_BUILD
+                         COMMAND eval ARGS "${add_gmp_rpath_command} 2> /dev/null || true"
+                         VERBATIM)
+      unset(add_gmp_rpath_command)
+    endif(NOT FETCH_GMP)
 
     # Change ID of GMP in the NTL library only if GMP is not the default one
     if (lib_name_noext MATCHES "ntl" AND FETCH_GMP)

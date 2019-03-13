@@ -12,8 +12,10 @@ endif(HELIB_REQUIRES_PTHREADS)
 # Look for the Armadillo package if requested
 if (ENABLE_ARMADILLO)
   find_package(Armadillo "${ARMADILLO_MINIMAL_VERSION}" REQUIRED)
-endif (ENABLE_ARMADILLO)
-
+else (ENABLE_ARMADILLO)
+  # suppress unused variable warning when not needed
+  unset(ARMADILLO_MINIMAL_VERSION)
+endif(ENABLE_ARMADILLO)
 
 include(GNUInstallDirs)
 
