@@ -28,7 +28,17 @@ endif(NTL_DIR)
 
 if (NTL_HEADERS AND NTL_LIB)
   # Find ntl version
-  file(STRINGS "${NTL_HEADERS}/version.h" ntl_version_string REGEX "NTL_VERSION[ \t]+\"([0-9.]+)\"")
+  try_run(ntl_ver_program_run_code ntl_ver_program_compile_code
+    "${CMAKE_CURRENT_BINARY_DIR}/get_ntl_version"
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_ntl_version.c"
+    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${NTL_HEADERS}"
+    LINK_LIBRARIES "${NTL_LIB}"
+    RUN_OUTPUT_VARIABLE ntl_version_string)
+
+  if(NOT (${ntl_ver_program_compile_code} AND ${ntl_ver_program_run_code} EQUAL 0))
+    message(FATAL_ERROR "Failed to determine ntl version.")
+  endif()
+
   string(REGEX REPLACE "[^ \t]*[ \t]+NTL_VERSION[ \t]+\"([0-9.]+)\"" "\\1" ntl_version_string "${ntl_version_string}")
   string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\1" ntl_major "${ntl_version_string}")
   string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\2" ntl_minor "${ntl_version_string}")
