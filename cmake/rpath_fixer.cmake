@@ -29,7 +29,7 @@ function(change_rpath lib_name_noext depend_target_name lib_path package_relativ
                        VERBATIM)
 
     # Change ID of GMP in the NTL library only if GMP is not the default one
-    if (lib_name_noext MATCHES "ntl" AND (NOT DONT_FETCH_GMP))
+    if (lib_name_noext MATCHES "ntl" AND FETCH_GMP)
       # NOTE: Here we assume the ID of the gmp library is equal to its absolute path, including version name (i.e. not the symlink).
       # If GMP changes this convention, the following command may break.
       # Since gmp rpath fix has been delayed after ntl compilation due the configuration step dependencies we have to change ntl rpath to gmp.
@@ -39,7 +39,7 @@ function(change_rpath lib_name_noext depend_target_name lib_path package_relativ
                          COMMAND eval ARGS "${change_gmp_rpath_cmd}"
                          VERBATIM)
       unset(change_gmp_rpath_cmd)
-    endif(lib_name_noext MATCHES "ntl" AND (NOT DONT_FETCH_GMP))
+    endif(lib_name_noext MATCHES "ntl" AND FETCH_GMP)
     unset(change_id_command)
     unset(add_rpath_command)
 
@@ -50,11 +50,11 @@ function(change_rpath lib_name_noext depend_target_name lib_path package_relativ
       message(FATAL_ERROR "Cannot find patchelf, which is required for a package build.")
     endif(NOT LINUX_RPATH_TOOL)
 
-    if (DONT_FETCH_GMP)
-      set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}:${gmp_library_dir}" "${lib_path}")
-    else (DONT_FETCH_GMP)
+    if (FETCH_GMP)
       set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}" "${lib_path}")
-    endif(DONT_FETCH_GMP)
+    else (FETCH_GMP)
+      set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}:${gmp_library_dir}" "${lib_path}")
+    endif(FETCH_GMP)
     # Adding $ORIGIN/${package_relative_rpath}
     add_custom_command(TARGET ${depend_target_name}
                        POST_BUILD

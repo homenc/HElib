@@ -50,17 +50,17 @@ option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" OFF)
 if (PACKAGE_BUILD)
   # Properties to be enabled when using PACKAGE_BUILD
   set(PACKAGE_DIR "" CACHE STRING "Folder with the compilation output directory (DEFAULT: helib_pack)")
-  option(DONT_FETCH_GMP "Do not fetch and compile the GMP library (DEFAULT: OFF)" OFF)
+  option(FETCH_GMP "Fetch and compile the GMP library (DEFAULT: ON)" ON)
 else (PACKAGE_BUILD)
   # Properties to be enabled when not using PACKAGE_BUILD
   option(ENABLE_LEGACY_TEST "Build the legacy test files (does not work with PACKAGE_BUILD)" OFF)
   option(BUILD_AES "Build homomorphic AES (does not work with PACKAGE_BUILD)" OFF)
 endif(PACKAGE_BUILD)
 
-# Allow GMP_DIR and search of it if not in PACKAGE_BUILD or in PACKAGE_BUILD and DONT_FETCH_GMP
-if ((NOT PACKAGE_BUILD) OR DONT_FETCH_GMP)
+# Allow GMP_DIR and search in it if not using PACKAGE_BUILD or using PACKAGE_BUILD and !FETCH_GMP
+if ((NOT PACKAGE_BUILD) OR NOT FETCH_GMP)
   set(GMP_DIR "" CACHE STRING "Prefix of the GMP library (ignored when PACKAGE_BUILD is ON)")
-endif((NOT PACKAGE_BUILD) OR DONT_FETCH_GMP)
+endif((NOT PACKAGE_BUILD) OR NOT FETCH_GMP)
 
 # Allow NTL_DIR only if not PACKAGE_BUILD
 if (NOT PACKAGE_BUILD)
@@ -120,12 +120,11 @@ if (PACKAGE_BUILD)
 
   # Warn existing dependencies are ignored and rebuilt
   if (GMP_DIR)
-    if (DONT_FETCH_GMP)
-      # FIXME: check if true
-      message(STATUS "GMP_DIR is not the system one. This may prevent relocatability of the package.")
-    else (DONT_FETCH_GMP)
+    if (FETCH_GMP)
       message(WARNING "GMP_DIR is ignored when PACKAGE_BUILD is ON.")
-    endif (DONT_FETCH_GMP)
+    else (FETCH_GMP)
+      message(STATUS "GMP_DIR is not the system one. This may prevent relocatability of the package.")
+    endif(FETCH_GMP)
   endif(GMP_DIR)
 
   if (NTL_DIR)
@@ -139,7 +138,7 @@ if (PACKAGE_BUILD)
   # RPATH will be empty since ntl, gmp, and helib are all in PACKAGE_DIR/lib
   set(PACKAGE_RPATH "")
 
-  if (DONT_FETCH_GMP)
+  if (NOT FETCH_GMP)
     # find GMP library
     # Try to find the GMP package (using cmake/FindGMP.cmake script)
     # REQUIRED arg make cmake to fail if GMP is not found
@@ -150,7 +149,7 @@ if (PACKAGE_BUILD)
         INTERFACE_INCLUDE_DIRECTORIES "${GMP_INCLUDE_PATHS}"
         IMPORTED_LOCATION "${GMP_LIBRARIES}"
     )
-  endif(DONT_FETCH_GMP)
+  endif(NOT FETCH_GMP)
 
   # Add the external dependencies (done in dependencies/CMakeLists.txt)
   add_subdirectory(dependencies)
@@ -245,7 +244,7 @@ if (PACKAGE_BUILD)
       -DHELIB_REQUIRES_PTHREADS=${HELIB_REQUIRES_PTHREADS}
       -DBUILD_SHARED=${BUILD_SHARED}
       -DPACKAGE_BUILD=${PACKAGE_BUILD}
-      -DDONT_FETCH_GMP=${DONT_FETCH_GMP}
+      -DFETCH_GMP=${FETCH_GMP}
       -DENABLE_TEST=${ENABLE_TEST}
       -DENABLE_LEGACY_TEST=OFF
       -DBUILD_AES=OFF

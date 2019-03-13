@@ -39,7 +39,6 @@ if (NTL_HEADERS AND NTL_LIB)
     message(FATAL_ERROR "Failed to determine ntl version.")
   endif()
 
-  string(REGEX REPLACE "[^ \t]*[ \t]+NTL_VERSION[ \t]+\"([0-9.]+)\"" "\\1" ntl_version_string "${ntl_version_string}")
   string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\1" ntl_major "${ntl_version_string}")
   string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\2" ntl_minor "${ntl_version_string}")
   string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\3" ntl_patchlevel "${ntl_version_string}")

@@ -14,9 +14,9 @@ set(ntl_superbuild_dependencies "setup_install_dir")
 
 # If requiring GMP to be built then in compilation NTL depends to gmp_fetched
 # because gmp_external is dependent on this (through dependencies_built) due to the rpath delay
-if (NOT DONT_FETCH_GMP)
+if (FETCH_GMP)
   list(APPEND ntl_superbuild_dependencies "gmp_fetched")
-endif(NOT DONT_FETCH_GMP)
+endif(FETCH_GMP)
 
 # get the file path of libgmp.(so|dylib) (set beforehand)
 get_target_property(gmp_lib_path gmp_external IMPORTED_LOCATION)

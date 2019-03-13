@@ -199,12 +199,12 @@ if (PACKAGE_BUILD)
 
   # Do the same for GMP iff GMP is not the system one.  If the GMP that we use is on the system,
   # we need to use an absolute path instead.
-  if (DONT_FETCH_GMP)
-    set(GMP_LIBRARIES_EXPORTED_PATH "${GMP_LIBRARIES}")
-  else (DONT_FETCH_GMP)
+  if (FETCH_GMP)
     file(RELATIVE_PATH GMP_LIBRARIES_EXPORTED_PATH "${CMAKE_INSTALL_PREFIX}" "${GMP_LIBRARIES}")
     set(GMP_LIBRARIES_EXPORTED_PATH "\${_IMPORT_PREFIX}/${GMP_LIBRARIES_EXPORTED_PATH}")
-  endif(DONT_FETCH_GMP)
+  else (FETCH_GMP)
+    set(GMP_LIBRARIES_EXPORTED_PATH "${GMP_LIBRARIES}")
+  endif(FETCH_GMP)
 else (PACKAGE_BUILD)
   set(NTL_INCLUDE_EXPORTED_PATH "${NTL_INCLUDE_PATHS}")
   set(NTL_LIBRARIES_EXPORTED_PATH "${NTL_LIBRARIES}")
