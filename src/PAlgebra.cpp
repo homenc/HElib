@@ -870,10 +870,7 @@ template<class type>
 void PAlgebraModDerived<type>::genMaskTable() 
 {
   // This is only called by the constructor, which has already
-  // set the zz_p context
-
-  RX tmp1;
-  
+  // set the zz_p context and the crtTable
   resize(maskTable,zMStar.numOfGens());
   for (long i = 0; i < (long)zMStar.numOfGens(); i++) {
     long ord = zMStar.OrderOf(i);
@@ -885,9 +882,7 @@ void PAlgebraModDerived<type>::genMaskTable()
       maskTable[i][j] = maskTable[i][j+1];
       for (long k = 0; k < (long)zMStar.getNSlots(); k++) {
          if (zMStar.coordinate(i, k) == j) {
-           div(tmp1, PhimXMod, factors[k]);
-           mul(tmp1, tmp1, crtCoeffs[k]);
-           add(maskTable[i][j], maskTable[i][j], tmp1);
+           add(maskTable[i][j], maskTable[i][j], crtTable[k]);
          }
       }
     }

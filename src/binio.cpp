@@ -12,6 +12,7 @@
 #include "binio.h"
 #include <cassert>
 #include <cstring>
+#include <endian.h>
 
 NTL_CLIENT
 /* Some utility functions for binary IO */
@@ -31,52 +32,109 @@ void writeEyeCatcher(ostream& str, const char* eyeStr)
 }
 
 // compile only 64-bit (-m64) therefore long must be at least 64-bit
-long read_raw_int(istream& str, long intSize)
+long read_raw_int(istream& str)
 {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  long result = 0;
+  str.read((char*)&result, BINIO_64BIT);
+  return result;
+#else
   long result = 0;
   char byte;
 
-  for(long i=0; i<intSize; i++){
+  for(long i=0; i<BINIO_64BIT; i++){
     str.read(&byte, 1); // read a byte
     result |= (static_cast<long>(byte)&0xff) << i*8; // must be in little endian
   }
 
   return result;
+#endif
+}
+
+int read_raw_int32(istream& str)
+{
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  int result = 0;
+  str.read((char*)&result, BINIO_32BIT);
+  return result;
+#else
+  int result = 0;
+  char byte;
+
+  for(long i=0; i<BINIO_32BIT; i++){
+    str.read(&byte, 1); // read a byte
+    result |= (static_cast<long>(byte)&0xff) << i*8; // must be in little endian
+  }
+
+  return result;
+#endif
 }
 
 // compile only 64-bit (-m64) therefore long must be at least 64-bit
-void write_raw_int(ostream& str, long num, long intSize) 
+void write_raw_int(ostream& str, long num)
 {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  str.write((const char*)&num, BINIO_64BIT);
+#else
   char byte;
 
-  for(long i=0; i<intSize; i++){
+  for(long i=0; i<BINIO_64BIT; i++){
     byte = num >> 8*i; // serializing in little endian
     str.write(&byte, 1);  // write byte out
   }
+#endif
+}
+
+void write_raw_int32(ostream& str, int num)
+{
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  str.write((const char*)&num, BINIO_32BIT);
+#else
+  char byte;
+
+  for(long i=0; i<BINIO_32BIT; i++){
+    byte = num >> 8*i; // serializing in little endian
+    str.write(&byte, 1);  // write byte out
+  }
+#endif
 }
 
 void write_ntl_vec_long(ostream& str, const vec_long& vl, long intSize)
 {
-  write_raw_int(str, vl.length(), BINIO_32BIT); 
-  write_raw_int(str, intSize, BINIO_32BIT); 
+  assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
+  write_raw_int32(str, vl.length());
+  write_raw_int32(str, intSize);
 
-  for(long i=0; i<vl.length(); i++){
-    write_raw_int(str, vl[i], intSize); 
+  if (intSize == BINIO_64BIT) {
+    for(long i=0; i<vl.length(); i++){
+      write_raw_int(str, vl[i]);
+    }
+  } else {
+    for(long i=0; i<vl.length(); i++){
+      write_raw_int32(str, vl[i]);
+    }
   }
 }
 
 void read_ntl_vec_long(istream& str, vec_long& vl)
 {
-  long sizeOfVL = read_raw_int(str, BINIO_32BIT);
-  long intSize  = read_raw_int(str, BINIO_32BIT);
+  int sizeOfVL = read_raw_int32(str);
+  int intSize  = read_raw_int32(str);
+  assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
 
   // Remember to check and increase Vec before trying to fill it.
   if(vl.length() < sizeOfVL){
     vl.SetLength(sizeOfVL);
   }
 
-  for(long i=0; i<sizeOfVL; i++){
-    vl[i] = read_raw_int(str, intSize);
+  if (intSize == BINIO_64BIT) {
+    for(long i=0; i<sizeOfVL; i++){
+      vl[i] = read_raw_int(str);
+    }
+  } else {
+    for(long i=0; i<sizeOfVL; i++){
+      vl[i] = read_raw_int32(str);
+    }
   }
 }
 
