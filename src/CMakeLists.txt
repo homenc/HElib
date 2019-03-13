@@ -11,7 +11,7 @@ endif(HELIB_REQUIRES_PTHREADS)
 
 # Look for the Armadillo package if requested
 if (ENABLE_ARMADILLO)
-  find_package(Armadillo REQUIRED)
+  find_package(Armadillo "${ARMADILLO_MINIMAL_VERSION}" REQUIRED)
 endif (ENABLE_ARMADILLO)
 
 

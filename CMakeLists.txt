@@ -17,6 +17,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(GMP_MINIMAL_VERSION "6.0.0")
 # NTL minimal version to be used if NOT PACKAGE_BUILD
 set(NTL_MINIMAL_VERSION "11.0.0")
+# Armadillo minimal version always used if ENABLE_ARMADILLO
+set(ARMADILLO_MINIMAL_VERSION "6.500.0")
 
 # Adding possible gui values to CMAKE_BUILD_TYPE variable
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
@@ -83,7 +85,7 @@ if (ENABLE_THREADS AND Threads_NOTFOUND)
 endif()
 
 if (ENABLE_ARMADILLO)
-    find_package(Armadillo REQUIRED)
+  find_package(Armadillo "${ARMADILLO_MINIMAL_VERSION}" REQUIRED)
 endif (ENABLE_ARMADILLO)
 
 # NOTE: Consider reconfiguring everything when PACKAGE_BUILD changes value.  Options from the previous value will remain otherwise.
@@ -238,6 +240,7 @@ if (PACKAGE_BUILD)
       -DNTL_INCLUDE_PATHS=${NTL_INCLUDE_PATHS}
       -DNTL_LIBRARIES=${NTL_LIBRARIES}
       -DENABLE_ARMADILLO=${ENABLE_ARMADILLO}
+      -DARMADILLO_MINIMAL_VERSION=${ARMADILLO_MINIMAL_VERSION}
       -DENABLE_THREADS=${ENABLE_THREADS}
       -DHELIB_REQUIRES_PTHREADS=${HELIB_REQUIRES_PTHREADS}
       -DBUILD_SHARED=${BUILD_SHARED}
