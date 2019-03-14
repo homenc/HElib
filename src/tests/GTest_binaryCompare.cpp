@@ -248,7 +248,23 @@ TEST_P(GTest_binaryCompare, comparison)
 #endif
 
   std::vector<long> slotsMin, slotsMax, slotsMu, slotsNi;
+  //cmp only
+  compareTwoNumbers(mu, ni, CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
+                      &unpackSlotEncoding);
+  ea.decrypt(mu, secKey, slotsMu);
+  ea.decrypt(ni, secKey, slotsNi);
+  EXPECT_EQ(std::make_pair(slotsMu[0], slotsNi[0]),
+            std::make_pair((long) pMu, (long) pNi)) 
+      << "Comparison (without min max) error: a=" << pa << ", b=" << pb
+      << ", mu=" << slotsMu[0] << ", ni=" << slotsNi[0] << std::endl; 
+  if (helib_test::verbose) {
+    std::cout << "Comparison (without min max) succeeded: ";
+    std::cout << '(' << pa << ',' << pb <<
+                 ")=> mu=" << slotsMu[0] << ", ni=" << slotsNi[0] <<std::endl;
+  }
+  
   {CtPtrs_VecCt wMin(eMin), wMax(eMax); // A wrappers around output vectors
+  //cmp with max and min
   compareTwoNumbers(wMax, wMin, mu, ni,
                     CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
                     &unpackSlotEncoding);
@@ -262,12 +278,12 @@ TEST_P(GTest_binaryCompare, comparison)
           std::make_tuple(       pMax,        pMin,        pMu,        pNi),
           std::make_tuple(slotsMax[0], slotsMin[0], slotsMu[0], slotsNi[0])
           )
-         << "Comparison error: a="<<pa<<", b="<<pb
-         << ", but min="<<slotsMin[0]<<", max="<<slotsMax[0]
-         << ", mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<std::endl;
+         << "Comparison (with min max) error: a=" << pa << ", b=" << pb
+         << ", but min=" << slotsMin[0] << ", max=" << slotsMax[0]
+         << ", mu=" << slotsMu[0] << ", ni=" << slotsNi[0] << std::endl;
 
   if (helib_test::verbose) {
-    std::cout << "Comparison succeeded: ";
+    std::cout << "Comparison (with min max) succeeded: ";
     std::cout << '('<<pa<<','<<pb<<")=>("<<slotsMin[0]<<','<<slotsMax[0]
          <<"), mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<std::endl;
   }
