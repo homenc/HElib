@@ -12,7 +12,9 @@
 #include "binio.h"
 #include <cassert>
 #include <cstring>
-#include <endian.h>
+#include <sys/types.h>
+// NOTE: including sys/types.h for the purpose of bringing in 
+// the byte order macros in a platform-independent way.
 
 NTL_CLIENT
 /* Some utility functions for binary IO */
