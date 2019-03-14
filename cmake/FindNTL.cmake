@@ -5,7 +5,7 @@ if (NTL_DIR)
   # If user-specified folders: look there
   find_library(NTL_LIB NAMES ntl libntl
                PATHS ${NTL_DIR}
-               PATH_SUFFIXES lib
+               PATH_SUFFIXES lib "${CMAKE_INSTALL_LIBDIR}"
                NO_DEFAULT_PATH
                DOC "NTL library")
 
@@ -18,7 +18,7 @@ if (NTL_DIR)
 else (NTL_DIR)
 # Else: look in default paths
   find_library(NTL_LIB NAMES ntl libntl
-               PATH_SUFFIXES lib
+               PATH_SUFFIXES lib "${CMAKE_INSTALL_LIBDIR}"
                DOC "NTL library")
 
   find_path(NTL_HEADERS NAMES config.h
@@ -35,7 +35,7 @@ if (NTL_HEADERS AND NTL_LIB)
     LINK_LIBRARIES "${NTL_LIB}"
     RUN_OUTPUT_VARIABLE ntl_version_string)
 
-  if(NOT (${ntl_ver_program_compile_code} AND ${ntl_ver_program_run_code} EQUAL 0))
+  if(NOT (ntl_ver_program_compile_code AND (ntl_ver_program_run_code EQUAL 0)))
     message(FATAL_ERROR "Failed to determine ntl version.")
   endif()
 

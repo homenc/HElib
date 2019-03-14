@@ -5,7 +5,7 @@ if (GMP_DIR)
   # If user-specified folders: look there
   find_library(GMP_LIB NAMES gmp libgmp
                PATHS ${GMP_DIR}
-               PATH_SUFFIXES lib
+               PATH_SUFFIXES lib ${CMAKE_INSTALL_LIBDIR}
                NO_DEFAULT_PATH
                DOC "GMP library")
 
@@ -18,7 +18,7 @@ if (GMP_DIR)
 else(GMP_DIR)
 # Else: look in default paths
   find_library(GMP_LIB NAMES gmp libgmp
-               PATH_SUFFIXES lib
+               PATH_SUFFIXES lib ${CMAKE_INSTALL_LIBDIR}
                DOC "GMP library")
 
   find_path(GMP_HEADERS NAMES gmp.h
@@ -35,7 +35,7 @@ if (GMP_HEADERS AND GMP_LIB)
     LINK_LIBRARIES "${GMP_LIB}"
     RUN_OUTPUT_VARIABLE gmp_version_string)
 
-  if(NOT (${gmp_ver_program_compile_code} AND ${gmp_ver_program_run_code} EQUAL 0))
+  if(NOT (gmp_ver_program_compile_code AND (gmp_ver_program_run_code EQUAL 0)))
     message(FATAL_ERROR "Failed to determine gmp version.")
   endif()
 
