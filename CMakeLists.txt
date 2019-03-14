@@ -18,7 +18,7 @@ set(GMP_MINIMAL_VERSION "6.0.0")
 # NTL minimal version to be used if NOT PACKAGE_BUILD
 set(NTL_MINIMAL_VERSION "11.0.0")
 # Armadillo minimal version always used if ENABLE_ARMADILLO
-set(ARMADILLO_MINIMAL_VERSION "6.500.0")
+set(ARMADILLO_MINIMAL_VERSION "7.800.0")
 
 # Adding possible gui values to CMAKE_BUILD_TYPE variable
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
