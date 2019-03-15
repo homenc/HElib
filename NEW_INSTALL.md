@@ -1,7 +1,7 @@
 # Building and installing HElib
 
-HElib's build and install has been tested on Ubuntu 16.04, Ubuntu 18.04 and
-macOS High Sierra 10.13.
+HElib's build and install has been tested on Ubuntu 16.04, Ubuntu 18.04, 
+CentOS 7.6, and macOS High Sierra 10.13.
 
 ## Dependencies
 
@@ -9,7 +9,7 @@ macOS High Sierra 10.13.
 - GNU make
 - g++ >= 5.4.0 or clang >= 3.8
 - pthreads
-- Armadillo >= 6.5 (optional, greatly improves CKKS performance)
+- Armadillo >= 7.800 (optional, greatly improves CKKS performance)
 
 ## Option 1: package build (recommended for most users)
 
@@ -182,7 +182,7 @@ to the `./configure` step.
 RelWithDebInfo, Release, MinSizeRel.
 - `CMAKE_INSTALL_PREFIX`: Desired installation directory for HElib.
 - `ENABLE_ARMADILLO`: Use Armadillo to speed up FFTs.  Requires a system-wide 
-installation of Armadillo version >= 6.500.0.  Defaults to `OFF`.
+installation of Armadillo version >= 7.800.0.  Defaults to `OFF`.
 - `ENABLE_TEST`: Enable building of the tests.  This will include an automatic
 download step for the google test framework.
 - `ENABLE_THREADS`: Enable threading support.  This must be on if and only if
