@@ -28,24 +28,16 @@ endif(NTL_DIR)
 
 if (NTL_HEADERS AND NTL_LIB)
   # Find ntl version
-  try_run(ntl_ver_program_run_code ntl_ver_program_compile_code
-    "${CMAKE_CURRENT_BINARY_DIR}/get_ntl_version"
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/get_ntl_version.c"
-    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES=${NTL_HEADERS}"
-    LINK_LIBRARIES "${NTL_LIB}"
-    RUN_OUTPUT_VARIABLE ntl_version_string)
-
-  if(NOT (ntl_ver_program_compile_code AND (ntl_ver_program_run_code EQUAL 0)))
-    message(FATAL_ERROR "Failed to determine ntl version.")
-  endif()
+  file(STRINGS "${NTL_HEADERS}/version.h" ntl_version_string REGEX "NTL_VERSION[ \t]+\"([0-9.]+)\"")
+  string(REGEX REPLACE "[^ \t]*[ \t]+NTL_VERSION[ \t]+\"([0-9.]+)\"" "\\1" ntl_version_string "${ntl_version_string}")
 
   string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\1" ntl_major "${ntl_version_string}")
   string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\2" ntl_minor "${ntl_version_string}")
   string(REGEX REPLACE "([0-9]+)\.([0-9]+)\.([0-9]+)" "\\3" ntl_patchlevel "${ntl_version_string}")
-  if((ntl_version_string EQUAL "") OR
-     (ntl_major EQUAL "") OR
-     (ntl_minor EQUAL "") OR
-     (ntl_patchlevel EQUAL ""))
+  if((ntl_version_string STREQUAL "") OR
+     (ntl_major STREQUAL "") OR
+     (ntl_minor STREQUAL "") OR
+     (ntl_patchlevel STREQUAL ""))
     # If the version encoding is wrong then it is set to "WRONG VERSION ENCODING" causing find_package_handle_standard_args to fail
     set(NTL_VERSION "WRONG VERSION ENCODING")
     set(NTL_VERSION_MAJOR "WRONG VERSION ENCODING")
