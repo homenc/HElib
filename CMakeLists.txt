@@ -20,16 +20,16 @@ set(NTL_MINIMAL_VERSION "11.0.0")
 # Armadillo minimal version always used if ENABLE_ARMADILLO
 set(ARMADILLO_MINIMAL_VERSION "7.800.0")
 
-# Adding possible gui values to CMAKE_BUILD_TYPE variable
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-    "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
-
 # Setting up Debug as default CMAKE_BUILD_TYPE
 # TODO: set to Release when assertions are removed
 if (NOT CMAKE_BUILD_TYPE)
   # Setting Debug as default since many checks are performed as assert (possibly with side effects)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build, options are: Debug RelWithDebInfo Release MinSizeRel" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
+
+# Adding possible gui values to CMAKE_BUILD_TYPE variable
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
 # Path containing FindGMP.cmake and FindNTL.cmake
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
