@@ -1,5 +1,7 @@
 # Function to change external libraries rpath on mac and linux
 function(change_rpath lib_name_noext depend_target_name lib_path package_relative_rpath gmp_library_path)
+  # gmp_library_dir is the directory containing the libgmp.(so|dylib) file
+  get_filename_component(gmp_library_dir "${gmp_library_path}" DIRECTORY)
   if (APPLE)
     if (NOT CMAKE_INSTALL_NAME_TOOL)
       message(FATAL_ERROR "CMAKE_INSTALL_NAME_TOOL is not set.")
@@ -24,31 +26,47 @@ function(change_rpath lib_name_noext depend_target_name lib_path package_relativ
     set(add_rpath_command "${CMAKE_INSTALL_NAME_TOOL} -add_rpath @loader_path/${package_relative_rpath} ${lib_path}")
     add_custom_command(TARGET ${depend_target_name}
                        POST_BUILD
-                       COMMAND eval ARGS "${add_rpath_command} || true"
+                       COMMAND eval ARGS "${add_rpath_command} 2> /dev/null || true"
                        VERBATIM)
 
-    if (lib_name_noext MATCHES "ntl")
+    if (NOT FETCH_GMP)
+      # Add GMP location to NTL rpath if GMP is not fetched
+      # NOTE: This can be turned into an external script invoking it with cmake -P to properly handle error
+      set(add_gmp_rpath_command "${CMAKE_INSTALL_NAME_TOOL} -add_rpath ${gmp_library_dir} ${lib_path}")
+      add_custom_command(TARGET ${depend_target_name}
+                         POST_BUILD
+                         COMMAND eval ARGS "${add_gmp_rpath_command} 2> /dev/null || true"
+                         VERBATIM)
+      unset(add_gmp_rpath_command)
+    endif(NOT FETCH_GMP)
+
+    # Change ID of GMP in the NTL library only if GMP is not the default one
+    if (lib_name_noext MATCHES "ntl" AND FETCH_GMP)
       # NOTE: Here we assume the ID of the gmp library is equal to its absolute path, including version name (i.e. not the symlink).
       # If GMP changes this convention, the following command may break.
-      # Since gmp rpath fix has been delayed after ntl compilation due the configuration step dependencies we have to change ntl rpath to gmp
-      set(change_gmp_rpath_cmd "LIBVERNAME=`${READLINK_CMD} ${gmp_library_path}` && LIB_FULL=\"`dirname ${gmp_library_path}`/\${LIBVERNAME}\" && ${CMAKE_INSTALL_NAME_TOOL} -change \${LIB_FULL} @rpath/\${LIBVERNAME} ${lib_path}")
+      # Since gmp rpath fix has been delayed after ntl compilation due the configuration step dependencies we have to change ntl rpath to gmp.
+      set(change_gmp_rpath_cmd "LIBVERNAME=`${READLINK_CMD} ${gmp_library_path}` && LIB_FULL=\"${gmp_library_dir}/\${LIBVERNAME}\" && ${CMAKE_INSTALL_NAME_TOOL} -change \${LIB_FULL} @rpath/\${LIBVERNAME} ${lib_path}")
       add_custom_command(TARGET ${depend_target_name}
                          POST_BUILD
                          COMMAND eval ARGS "${change_gmp_rpath_cmd}"
                          VERBATIM)
       unset(change_gmp_rpath_cmd)
-    endif(lib_name_noext MATCHES "ntl")
+    endif(lib_name_noext MATCHES "ntl" AND FETCH_GMP)
     unset(change_id_command)
     unset(add_rpath_command)
 
   elseif ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
     # Find patchelf required to add a local rpath on linux
     find_program(LINUX_RPATH_TOOL NAMES patchelf)
-    set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}" "${lib_path}")
     if (NOT LINUX_RPATH_TOOL)
       message(FATAL_ERROR "Cannot find patchelf, which is required for a package build.")
     endif(NOT LINUX_RPATH_TOOL)
 
+    if (FETCH_GMP)
+      set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}" "${lib_path}")
+    else (FETCH_GMP)
+      set(rpath_patch_args "--set-rpath" "$ORIGIN/${package_relative_rpath}:${gmp_library_dir}" "${lib_path}")
+    endif(FETCH_GMP)
     # Adding $ORIGIN/${package_relative_rpath}
     add_custom_command(TARGET ${depend_target_name}
                        POST_BUILD

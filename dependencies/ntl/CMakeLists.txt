@@ -9,11 +9,27 @@ else (ENABLE_THREADS)
   set(build_threads "off")
 endif(ENABLE_THREADS)
 
+# Wait until the directory structure and links are properly created
+set(ntl_superbuild_dependencies "setup_install_dir")
+
+# If requiring GMP to be built then in compilation NTL depends to gmp_fetched
+# because gmp_external is dependent on this (through dependencies_built) due to the rpath delay
+if (FETCH_GMP)
+  list(APPEND ntl_superbuild_dependencies "gmp_fetched")
+endif(FETCH_GMP)
+
+# get the file path of libgmp.(so|dylib) (set beforehand)
+get_target_property(gmp_lib_path gmp_external IMPORTED_LOCATION)
+# get the dirname of libgmp library (in <prefix>/lib)
+get_filename_component(gmp_lib_dir "${gmp_lib_path}" DIRECTORY)
+# remove the lib directory to get the prefix
+get_filename_component(gmp_prefix "${gmp_lib_dir}" DIRECTORY)
+
 # NOTE: Workaround for the way NTL builds on Linux.
 # Without explicitly pointing the linker at the correct GMP, NTL has a bad habit of picking
 # up the system's libgmp.  This causes erroneous version 'mismatches'.
 if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-  set(ntl_make_libpath_tweak_cmd "export LD_LIBRARY_PATH=${PACKAGE_DIR}/${CMAKE_INSTALL_LIBDIR}:$LD_LIBRARY_PATH")
+  set(ntl_make_libpath_tweak_cmd "export LD_LIBRARY_PATH=${gmp_lib_dir}:$LD_LIBRARY_PATH")
 else ()
   set(ntl_make_libpath_tweak_cmd ":")
 endif ()
@@ -25,9 +41,9 @@ set(fetched_ntl_includedir "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_INCLUD
 
 ExternalProject_Add(ntl_fetched
   DEPENDS
-    gmp_fetched # must be gmp_fetched because gmp_external is dependent on this (through dependencies_built) due to the rpath delay
+    "${ntl_superbuild_dependencies}"
   URL
-    "https://www.shoup.net/ntl/ntl-${NTL_REQUIRED_VERSION}.tar.gz"
+    "https://www.shoup.net/ntl/ntl-${FETCHED_NTL_VERSION}.tar.gz"
   URL_HASH
     # NOTE: hash of version 11.3.0
     SHA256=3ae0d3647e5d52bc0907e1f4cb4a958460ee8e5b3c9862c1a4b8e9f0f75891dd
@@ -44,7 +60,7 @@ ExternalProject_Add(ntl_fetched
       "NTL_GMP_LIP=on"
       "NTL_THREADS=${build_threads}"
       "NTL_THREAD_BOOST=${build_threads}"
-      "GMP_PREFIX=${PACKAGE_DIR}"
+      "GMP_PREFIX=${gmp_prefix}"
       "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
   BUILD_IN_SOURCE ON
   BUILD_COMMAND
@@ -75,6 +91,19 @@ if (ENABLE_TEST)
   unset(test_path)
 endif (ENABLE_TEST)
 
+# Removing static library libntl.a.
+set(ntl_static_lib "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libntl${CMAKE_STATIC_LIBRARY_SUFFIX}")
+add_custom_command(TARGET ntl_fetched
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E remove -f "${ntl_static_lib}")
+# Removing also the autotools generated libntl.la to be consistent (it contains references to libntl.a)
+set(ntl_static_autotools_conf "${fetched_ntl_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libntl.la")
+add_custom_command(TARGET ntl_fetched
+                   POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E remove -f "${ntl_static_autotools_conf}")
+unset(ntl_static_lib)
+unset(ntl_static_autotools_conf)
+
 # Removed due to rpath delay
 # add_dependencies(ntl_external ntl_fetched)
 
@@ -95,3 +124,7 @@ unset(fetched_ntl_byproducts)
 unset(fetched_ntl_lib)
 unset(fetched_ntl_includedir)
 unset(ntl_make_libpath_tweak_cmd)
+unset(ntl_superbuild_dependencies)
+unset(gmp_prefix)
+unset(gmp_lib_dir)
+unset(gmp_lib_path)

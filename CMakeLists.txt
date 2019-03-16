@@ -3,11 +3,6 @@ cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 project(helib_superbuild
   LANGUAGES C CXX)
 
-# GMP version to be used (and eventually downloaded)
-set(GMP_REQUIRED_VERSION "6.1.2")
-# NTL version to be used (and eventually downloaded)
-set(NTL_REQUIRED_VERSION "11.3.0")
-
 # Define standard installation directories (GNU)
 include(GNUInstallDirs)
 
@@ -18,9 +13,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 ## Require full C++ standard
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Adding possible gui values to CMAKE_BUILD_TYPE variable
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
-    "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
+# GMP minimal version to be used if not PACKAGE_BUILD
+set(GMP_MINIMAL_VERSION "6.0.0")
+# NTL minimal version to be used if NOT PACKAGE_BUILD
+set(NTL_MINIMAL_VERSION "11.0.0")
+# Armadillo minimal version always used if ENABLE_ARMADILLO
+set(ARMADILLO_MINIMAL_VERSION "7.800.0")
 
 # Setting up Debug as default CMAKE_BUILD_TYPE
 # TODO: set to Release when assertions are removed
@@ -29,10 +27,14 @@ if (NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build, options are: Debug RelWithDebInfo Release MinSizeRel" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
+# Adding possible gui values to CMAKE_BUILD_TYPE variable
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
+
 # Path containing FindGMP.cmake and FindNTL.cmake
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-option(BUILD_SHARED "Build as shared library" ON)
+option(BUILD_SHARED "Build as shared library" OFF)
 
 option(PACKAGE_BUILD "Download dependencies and build as a self-contained package" OFF)
 
@@ -48,14 +50,22 @@ option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" OFF)
 if (PACKAGE_BUILD)
   # Properties to be enabled when using PACKAGE_BUILD
   set(PACKAGE_DIR "" CACHE STRING "Folder with the compilation output directory (DEFAULT: helib_pack)")
+  option(FETCH_GMP "Fetch and compile the GMP library (DEFAULT: ON)" ON)
 else (PACKAGE_BUILD)
   # Properties to be enabled when not using PACKAGE_BUILD
   option(ENABLE_LEGACY_TEST "Build the legacy test files (does not work with PACKAGE_BUILD)" OFF)
   option(BUILD_AES "Build homomorphic AES (does not work with PACKAGE_BUILD)" OFF)
-
-  set(GMP_DIR "" CACHE STRING "Prefix of the GMP library (ignored when PACKAGE_BUILD is ON)")
-  set(NTL_DIR "" CACHE STRING "Prefix of the NTL library (ignored when PACKAGE_BUILD is ON)")
 endif(PACKAGE_BUILD)
+
+# Allow GMP_DIR and search in it if not using PACKAGE_BUILD or using PACKAGE_BUILD and !FETCH_GMP
+if ((NOT PACKAGE_BUILD) OR NOT FETCH_GMP)
+  set(GMP_DIR "" CACHE STRING "Prefix of the GMP library (ignored when PACKAGE_BUILD is ON)")
+endif((NOT PACKAGE_BUILD) OR NOT FETCH_GMP)
+
+# Allow NTL_DIR only if not PACKAGE_BUILD
+if (NOT PACKAGE_BUILD)
+  set(NTL_DIR "" CACHE STRING "Prefix of the NTL library (ignored when PACKAGE_BUILD is ON)")
+endif(NOT PACKAGE_BUILD)
 
 # Setting flag lists to avoid polluting CMAKE_CXX_FLAGS
 list(APPEND PRIVATE_HELIB_CXX_FLAGS "-fPIC")
@@ -75,12 +85,17 @@ if (ENABLE_THREADS AND Threads_NOTFOUND)
 endif()
 
 if (ENABLE_ARMADILLO)
-    find_package(Armadillo REQUIRED)
+  find_package(Armadillo "${ARMADILLO_MINIMAL_VERSION}" REQUIRED)
 endif (ENABLE_ARMADILLO)
 
 # NOTE: Consider reconfiguring everything when PACKAGE_BUILD changes value.  Options from the previous value will remain otherwise.
 # Set up extra properties depending on the value of PACKAGE_BUILD
 if (PACKAGE_BUILD)
+  # Setting up dependencies versions
+  # GMP version to be used (and eventually downloaded) if PACKAGE_BUILD
+  set(FETCHED_GMP_VERSION "6.1.2")
+  # NTL version to be used (and eventually downloaded) if PACKAGE_BUILD
+  set(FETCHED_NTL_VERSION "11.3.0")
   # Setting up default compilation output directory
   if (NOT PACKAGE_DIR)
     set(PACKAGE_DIR "helib_pack")
@@ -105,7 +120,11 @@ if (PACKAGE_BUILD)
 
   # Warn existing dependencies are ignored and rebuilt
   if (GMP_DIR)
-    message(WARNING "GMP_DIR is ignored when PACKAGE_BUILD is ON.")
+    if (FETCH_GMP)
+      message(WARNING "GMP_DIR is ignored when PACKAGE_BUILD is ON.")
+    else (FETCH_GMP)
+      message(STATUS "GMP_DIR is not the system one. This may prevent relocatability of the package.")
+    endif(FETCH_GMP)
   endif(GMP_DIR)
 
   if (NTL_DIR)
@@ -119,6 +138,19 @@ if (PACKAGE_BUILD)
   # RPATH will be empty since ntl, gmp, and helib are all in PACKAGE_DIR/lib
   set(PACKAGE_RPATH "")
 
+  if (NOT FETCH_GMP)
+    # find GMP library
+    # Try to find the GMP package (using cmake/FindGMP.cmake script)
+    # REQUIRED arg make cmake to fail if GMP is not found
+    # Checks that at least version GMP_MINIMAL_VERSION is available
+    find_package(GMP "${GMP_MINIMAL_VERSION}" REQUIRED)
+    set_target_properties(gmp_external
+      PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${GMP_INCLUDE_PATHS}"
+        IMPORTED_LOCATION "${GMP_LIBRARIES}"
+    )
+  endif(NOT FETCH_GMP)
+
   # Add the external dependencies (done in dependencies/CMakeLists.txt)
   add_subdirectory(dependencies)
 
@@ -130,17 +162,18 @@ if (PACKAGE_BUILD)
 
   # Track if helib requires pthreads as dependency
   set(HELIB_REQUIRES_PTHREADS ${ENABLE_THREADS})
-
 else (PACKAGE_BUILD)
   # find GMP library
   # Try to find the GMP package (using cmake/FindGMP.cmake script)
   # REQUIRED arg make cmake to fail if GMP is not found
-  find_package(GMP "${GMP_REQUIRED_VERSION}" EXACT REQUIRED)
+  # Checks that at least version GMP_MINIMAL_VERSION is available
+  find_package(GMP "${GMP_MINIMAL_VERSION}" REQUIRED)
 
   # find NTL library
   # Try to find the NTL package (using cmake/FindNTL.cmake script)
   # REQUIRED arg make cmake to fail if NTL is not found
-  find_package(NTL "${NTL_REQUIRED_VERSION}" EXACT REQUIRED)
+  # Checks that at least version NTL_MINIMAL_VERSION is available
+  find_package(NTL "${NTL_MINIMAL_VERSION}" REQUIRED)
 
   # Setting compiler output directories
   set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
@@ -206,10 +239,12 @@ if (PACKAGE_BUILD)
       -DNTL_INCLUDE_PATHS=${NTL_INCLUDE_PATHS}
       -DNTL_LIBRARIES=${NTL_LIBRARIES}
       -DENABLE_ARMADILLO=${ENABLE_ARMADILLO}
+      -DARMADILLO_MINIMAL_VERSION=${ARMADILLO_MINIMAL_VERSION}
       -DENABLE_THREADS=${ENABLE_THREADS}
       -DHELIB_REQUIRES_PTHREADS=${HELIB_REQUIRES_PTHREADS}
       -DBUILD_SHARED=${BUILD_SHARED}
       -DPACKAGE_BUILD=${PACKAGE_BUILD}
+      -DFETCH_GMP=${FETCH_GMP}
       -DENABLE_TEST=${ENABLE_TEST}
       -DENABLE_LEGACY_TEST=OFF
       -DBUILD_AES=OFF
@@ -240,4 +275,3 @@ else (PACKAGE_BUILD)
   # If not compiling as PACKAGE_BUILD then add helib as subfolder and not as an external project
   add_subdirectory(src)
 endif(PACKAGE_BUILD)
-

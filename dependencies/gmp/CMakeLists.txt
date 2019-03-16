@@ -8,8 +8,10 @@ set(fetched_gmp_lib "${fetched_gmp_install_prefix}/${CMAKE_INSTALL_LIBDIR}/libgm
 set(fetched_gmp_includedir "${fetched_gmp_install_prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
 
 ExternalProject_Add(gmp_fetched
+  DEPENDS
+    "setup_install_dir"
   URL
-    "https://gmplib.org/download/gmp/gmp-${GMP_REQUIRED_VERSION}.tar.bz2"
+    "https://gmplib.org/download/gmp/gmp-${FETCHED_GMP_VERSION}.tar.bz2"
   URL_HASH
     # NOTE: hash of version 6.1.2
     SHA256=5275bb04f4863a13516b2f39392ac5e272f5e1bb8057b18aec1c9b79d73d8fb2
