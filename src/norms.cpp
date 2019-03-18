@@ -38,16 +38,6 @@ NTL::ZZ sumOfCoeffs(const DoubleCRT& f)
   return sumOfCoeffs(poly);
 }
 
-
-long largestCoeff(const zzX& f) // l_infty norm
-{
-  long mx = 0;
-  for (long i=0; i<lsize(f); i++) {
-    if (mx < abs(f[i]))
-      mx = abs(f[i]);
-  }
-  return mx;
-}
 ZZ largestCoeff(const ZZX& f)
 {
   ZZ mx = ZZ::zero();
@@ -57,22 +47,13 @@ ZZ largestCoeff(const ZZX& f)
   }
   return mx;
 }
-ZZ largestCoeff(const Vec<ZZ>& f)
+
+ZZ largestCoeff(const DoubleCRT& f)
 {
-  ZZ mx = ZZ::zero();
-  for (auto& x : f) {
-    if (mx < abs(x))
-      mx = abs(x);
-  }
-  return mx;
-}
-NTL::ZZ largestCoeff(const DoubleCRT& f)
-{
-  ZZX poly;
+  NTL::ZZX poly;
   f.toPoly(poly);
   return largestCoeff(poly);
 }
-
 
 double coeffsL2NormSquared(const zzX& f) // l_2 norm square
 {

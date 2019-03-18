@@ -280,11 +280,13 @@ public:
     return Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
   }
 
-  void CKKSencrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, double ptxtSize=1.0) const;
-  void CKKSencrypt(Ctxt &ciphertxt, const zzX& plaintxt, double ptxtSize=1.0) const {
+  void CKKSencrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt,
+                   double ptxtSize=1.0, double scaling=0.0) const;
+  void CKKSencrypt(Ctxt &ciphertxt, const zzX& plaintxt,
+                   double ptxtSize=1.0, double scaling=0.0) const {
     NTL::ZZX tmp;
     convert(tmp, plaintxt);
-    CKKSencrypt(ciphertxt, tmp, ptxtSize);
+    CKKSencrypt(ciphertxt, tmp, ptxtSize, scaling);
   }
 
   // These methods are overridden by secret-key Encrypt

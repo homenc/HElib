@@ -262,11 +262,9 @@ class Ctxt {
 
   NTL::xdouble noiseBound;  // a high-probability bound on the the noise magnitude
 
-  long intFactor;    // an integer factor to divide by on decryption (for BGV)
-  // BGV decryption invariant is [<skey,ctxt>]_q = intFactor*q*ptxt (mod p)
-
+  long intFactor;    // an integer factor to multiply by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
-  // CKKS decryption invariant is [<skey,ctxt>]_q = ratFactor*ptxt + noise
+  NTL::xdouble ptxtMag;   // bound on the plaintext size (for CKKS)
 
   // Create a tensor product of c1,c2. It is assumed that *this,c1,c2
   // are defined relative to the same set of primes and plaintext space,
@@ -379,15 +377,8 @@ public:
   //! [-ptxtSpace/2, ptxtSpace/2].
   //! Otherwise, size should be a high-prob	
   void addConstant(const DoubleCRT& dcrt, double size=-1.0);
-
-
   void addConstant(const NTL::ZZX& poly, double size=-1.0)
   { addConstant(DoubleCRT(poly,context,primeSet),size); }
-  // FIXME: we should implement this directly, because we
-  // unnecessarily increase the noise when we scale poly to maintain the
-  // productOfPrimes invariant, and we could actually just reduce the scaled
-  // poly mod ptxtSpace.
-
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
@@ -396,10 +387,10 @@ public:
   }
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size=NTL::xdouble(-1.0),
-                       NTL::xdouble factor=NTL::xdouble(0.0));
+                       NTL::xdouble factor=NTL::xdouble(-1.0));
   void addConstantCKKS(const NTL::ZZX& poly,
                        NTL::xdouble size=NTL::xdouble(-1.0),
-                       NTL::xdouble factor=NTL::xdouble(0.0));
+                       NTL::xdouble factor=NTL::xdouble(-1.0));
   void addConstantCKKS(const NTL::ZZ& c);
 
   //! Multiply-by-constant. If the size is not given, we use
@@ -409,16 +400,23 @@ public:
   void multByConstant(const zzX& poly, double size=-1.0);
   void multByConstant(const NTL::ZZ& c);
 
-  //! multiply by a rational number in the form a/b, a,b are long
-  void multByConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
-  void multByConstantCKKS(double x);
+  //! multiply by a rational number or floating point
+  void multByConstantCKKS(double x) {ratFactor /= x;}
+  void multByConstantCKKS(std::pair<long,long> num) // rational number
+  { multByConstantCKKS(double(num.first)/num.second); }
 
   void multByConstantCKKS(const DoubleCRT& dcrt,
                           NTL::xdouble size=NTL::xdouble(-1.0),
-                          NTL::ZZ factor=NTL::ZZ::zero());
+                          NTL::xdouble factor=NTL::xdouble(-1.0),
+                          double roundingErr=-1.0);
   void multByConstantCKKS(const NTL::ZZX& poly,
                           NTL::xdouble size=NTL::xdouble(-1.0),
-                          NTL::ZZ factor=NTL::ZZ::zero());
+                          NTL::xdouble factor=NTL::xdouble(-1.0),
+                          double roundingErr=-1.0)
+  {
+    DoubleCRT dcrt(poly,context,primeSet);
+    multByConstantCKKS(dcrt,size,factor,roundingErr);
+  }
 
   //! Convenience method: XOR and nXOR with arbitrary plaintext space:
   //! a xor b = a+b-2ab = a + (1-2a)*b,
@@ -605,6 +603,7 @@ public:
   const long getPtxtSpace() const      { return ptxtSpace;}
   const NTL::xdouble& getNoiseBound() const { return noiseBound; }
   const NTL::xdouble& getRatFactor() const { return ratFactor; }
+  const NTL::xdouble& getPtxtMag() const { return ptxtMag; }
   const long getKeyID() const;
 
   bool isCKKS() const

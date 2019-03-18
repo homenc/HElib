@@ -12,12 +12,15 @@
 /* EaCx.cpp - Encoding/decoding and data-movement for encrypted complex data
  */
 #include <algorithm>
+#include <type_traits>
+
 #include "zzX.h"
 #include "EncryptedArray.h"
 
 #include "timing.h"
 #include "cloned_ptr.h"
 #include "norms.h"
+#include "debugging.h"
 
 NTL_CLIENT
 
@@ -80,51 +83,70 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
   shift1D(ctxt, 0, amt);
 }
 
-void EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
-                              long precision) const
+double EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
+                                double useThisSize, long precision) const
 {
+  if (useThisSize < 0) for (auto& x : array) {
+      if (useThisSize < std::fabs(x))
+        useThisSize = std::fabs(x);
+    }
+  if (useThisSize <= 0)
+    useThisSize = 1.0;
+
   // This factor ensures that encode/decode introduce less than 1/precision
-  // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}.  
-  double factor = alMod.encodeScalingFactor(precision);
-         // if precision==0 use the default PAlgebraCx::encodeScalingFactor()
+  // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}
+  double factor = encodeScalingFactor(precision)/useThisSize;
   embedInSlots(ptxt, array, getPAlgebra(), factor);
+  return factor;
 }
 
-void EncryptedArrayCx::encode(zzX& ptxt, double num, long precision) const
+double EncryptedArrayCx::encode(zzX& ptxt, double num,
+                                double useThisSize, long precision) const
 {
   // This factor ensures that encode/decode introduce less than
-  // 1/precision error. If precision=0 then the scaling factor defaults
-  // to PAlgebraCx::encodeScalingFactor(), corresponding to precision
+  // 1/precision error. If precision=0 then the scaling factor
+  // defaults to encodeScalingFactor(), corresponding to precision
   // error bound of 2^{-almod.getR()}
-  num *= alMod.encodeScalingFactor(precision);
+  if (useThisSize <= 0)
+    useThisSize = roundedSize(num);
+  double factor = encodeScalingFactor(precision)/useThisSize;
 
-  resize(ptxt, 1, long(round(num))); // Constant polynomial
+  resize(ptxt, 1, long(round(num*factor))); // Constant polynomial
+  return factor;
 }
 
-void EncryptedArrayCx::encodei(zzX& ptxt, long precision) const
+double EncryptedArrayCx::encodei(zzX& ptxt, long precision) const
 {
   vector<cx_double> v(size(), the_imaginary_i); // i in all the slots
-  this->encode(ptxt, v, precision);
+  return this->encode(ptxt, v, /*size=*/1.0, precision);
 }
 
-void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt) const
+const zzX& EncryptedArrayCx::getiEncoded() const
 {
-  canonicalEmbedding(array, ptxt, getPAlgebra());
-  double factor = alMod.encodeScalingFactor();
-  for (auto& x: array) x /= factor;
+  if (lsize(iEncoded)<=0) // encoded-i not yet initialized
+    encodei(const_cast<zzX&>(iEncoded)); // temporarily suspend cont-ness
+  return iEncoded;
 }
 
-// return an array of random complex numbers in the unit circle
-void EncryptedArrayCx::random(vector<cx_double>& array) const
+void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt, double scaling) const
+{
+  assert (scaling>0);
+  canonicalEmbedding(array, ptxt, getPAlgebra());
+  for (auto& x: array) x /= scaling;
+}
+
+// return an array of random complex numbers in a circle of radius rad
+void EncryptedArrayCx::random(vector<cx_double>& array, double rad) const
 {
   const double twoPi = 8 * std::atan(1);
+  if (rad==0) rad = 1.0; // radius
 
   resize(array, size()); // allocate space
   for (auto& x : array) {
     long bits = NTL::RandomLen_long(32); // 32 random bits
     double r = std::sqrt(bits & 0xffff)/256.0; // sqrt(uniform[0,1])
     double theta = twoPi * ((bits>>16)& 0xffff) / 65536.0; // uniform(0,2pi)
-    x = std::polar(r,theta);
+    x = std::polar(rad*r,theta);
   }
 }
 
@@ -150,7 +172,8 @@ void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
   }
   if (iDcrtPtr==nullptr) { // Need to encode i in a DoubleCRt object
     tmpDcrt.addPrimes(c.getPrimeSet());
-    tmpDcrt.FFT(getiEncoded(), c.getPrimeSet());
+    const zzX& iEncoded = getiEncoded();
+    tmpDcrt.FFT(iEncoded, c.getPrimeSet());
     // FFT is a low-level DoubleCRT procedure to initialize an
     // existing object with a given PrimeSet and a given polynomial
     iDcrtPtr = &tmpDcrt;
@@ -159,36 +182,45 @@ void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
   c.multByConstantCKKS(0.5);       // divide by two
 }
 
-void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
-              const cx_double& oneImage, const cx_double& iImage) const
+double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+                       const cx_double& oneImage, const cx_double& iImage,
+                       long precision) const
 {
   resize(C,2); // allocate space
 
   // Compute the constants x,y such that L(z) = x*z + y*conjugate(z)
   cx_double x = (oneImage - the_imaginary_i*iImage)*0.5;
   cx_double y = (oneImage + the_imaginary_i*iImage)*0.5;
+  double sizex = std::fabs(x);
+  double sizey = std::fabs(y);
+  double msize = roundedSize(std::max(sizex,sizey));
 
   // Encode x,y in zzX objects
   long n = size();
   vector<cx_double> v(n, x); // x in all the slots
-  encode(C[0], v);
+  encode(C[0], v, msize, precision);
   v.assign(n, y);            // y in all the slots
-  encode(C[1], v);
+  return encode(C[1], v, msize, precision);
 }
 
-void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
-     const vector<cx_double>&oneImages, const vector<cx_double>&iImages) const
+double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+          const vector<cx_double>&oneImages, const vector<cx_double>&iImages,
+          long precision) const
 {
   resize(C,2); // allocate space
 
   // Compute the constants x,y such that L(z) = x*z + y*conjugate(z)
   vector<cx_double> x(size());
   vector<cx_double> y(size());
+  double msize = 0.0;
   for (long j=0; j<size(); j++) {
     x[j] = (oneImages[j] - the_imaginary_i*iImages[j])*0.5;
     y[j] = (oneImages[j] + the_imaginary_i*iImages[j])*0.5;
+    if (msize < std::fabs(x[j])) msize = std::fabs(x[j]);
+    if (msize < std::fabs(y[j])) msize = std::fabs(y[j]);
   }
   // Encode x,y in zzX objects
-  encode(C[0], x);
-  encode(C[1], y);
+  msize = roundedSize(msize);
+  encode(C[0], x, msize, precision);
+  encode(C[1], y, msize, precision);
 }

@@ -77,26 +77,6 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   if (amt < 0) amt += ord;  // Make sure amt is in the range [1,ord-1]
   assert(maskTable[i].size() > 0);
 
-  //cerr << "*** rotate1D " << i << " " << amt << "\n";
-
-#if 0
-
-  long j = zMStar.genToPow(i, amt);
-  long j1= zMStar.genToPow(i, amt-ord);
-
-  const RX& mask = maskTable[i][ord-amt];
-  DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
-  Ctxt tmp(ctxt); // a copy of the ciphertext
-
-  tmp.multByConstant(m1);    // only the slots in which m1=1
-  ctxt -= tmp;               // only the slots in which m1=0
-  ctxt.smartAutomorph(j);    // shift left by val
-  tmp.smartAutomorph(j1);    // shift right by ord-val
-  ctxt += tmp;               // combine the two parts
-
-#else
-
-
   ctxt.smartAutomorph(zMStar.genToPow(i, amt));
   // ctxt = \rho_i^{amt}(originalCtxt)
 
@@ -117,8 +97,6 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   ctxt += T;
   T.multByConstant(m1);
   ctxt -= T;
-
-#endif
 }
 
 // Shift k positions along the i'th dimension with zero fill.
