@@ -25,7 +25,7 @@
 NTL_CLIENT
 
 extern int fhe_watcher;
-static constexpr double safety = 1*log(2.0); // 1 bits of safety
+static const double safety = 1*log(2.0); // 1 bits of safety
 
 void SKHandle::read(istream& str)
 {
