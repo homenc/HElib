@@ -87,8 +87,8 @@ double EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
                                 double useThisSize, long precision) const
 {
   if (useThisSize < 0) for (auto& x : array) {
-      if (useThisSize < std::fabs(x))
-        useThisSize = std::fabs(x);
+      if (useThisSize < std::abs(x))
+        useThisSize = std::abs(x);
     }
   if (useThisSize <= 0)
     useThisSize = 1.0;
@@ -191,8 +191,8 @@ double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
   // Compute the constants x,y such that L(z) = x*z + y*conjugate(z)
   cx_double x = (oneImage - the_imaginary_i*iImage)*0.5;
   cx_double y = (oneImage + the_imaginary_i*iImage)*0.5;
-  double sizex = std::fabs(x);
-  double sizey = std::fabs(y);
+  double sizex = std::abs(x);
+  double sizey = std::abs(y);
   double msize = roundedSize(std::max(sizex,sizey));
 
   // Encode x,y in zzX objects
@@ -216,8 +216,8 @@ double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
   for (long j=0; j<size(); j++) {
     x[j] = (oneImages[j] - the_imaginary_i*iImages[j])*0.5;
     y[j] = (oneImages[j] + the_imaginary_i*iImages[j])*0.5;
-    if (msize < std::fabs(x[j])) msize = std::fabs(x[j]);
-    if (msize < std::fabs(y[j])) msize = std::fabs(y[j]);
+    if (msize < std::abs(x[j])) msize = std::abs(x[j]);
+    if (msize < std::abs(y[j])) msize = std::abs(y[j]);
   }
   // Encode x,y in zzX objects
   msize = roundedSize(msize);
