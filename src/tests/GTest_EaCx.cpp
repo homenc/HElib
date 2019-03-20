@@ -53,13 +53,13 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
         const long m;
         const long r;
         FHEcontext context;
-        const EncryptedArray& ea;
+        const EncryptedArrayCx& eacx;
 
         GTest_EaCx() :
             m(GetParam().m),
             r(GetParam().r),
             context(m, /*p=*/-1, r),
-            ea((buildModChain(context, 5, 2), *context.ea))
+            eacx((buildModChain(context, 5, 2), context.ea->getCx()))
         {}
 
         virtual void SetUp() override 
@@ -72,16 +72,16 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
                     std::cout << f[i] << " ";
                 std::cout << "]\n";
 
-                ea.getPAlgebra().printout();
+                eacx.getPAlgebra().printout();
 
 #ifdef DEBUG_PRINTOUT
                 std::vector<cx_double> vc1;
-                ea.random(vc1);
+                eacx.random(vc1);
                 std::cout << "random complex vc1=";
                 printVec(std::cout,vc1,8)<<std::endl;
 
                 std::vector<double> vd;
-                ea.random(vd);
+                eacx.random(vd);
                 std::cout << "random real vd=";
                 printVec(std::cout,vd,8)<<std::endl;
 #endif
@@ -92,7 +92,6 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
 TEST_P(GTest_EaCx, encoding_works_correctly)
 {
     std::vector<double> vl;
-    const EncryptedArrayCx& eacx = ea.getCx();
     eacx.random(vl);
     vl[1] = -1; // ensure that this is not the zero vector
 #ifdef DEBUG_PRINTOUT
