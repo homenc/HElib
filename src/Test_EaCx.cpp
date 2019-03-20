@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
   FHEcontext context(m, /*p=*/-1, r);
   buildModChain(context, 5, 2);
 
-  const EncryptedArray& ea = *context.ea;
+  const EncryptedArrayCx& ea = context.ea->getCx();
   ea.getPAlgebra().printout();
 
 #ifdef DEBUG_PRINTOUT
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
   printVec(cout,vd,8)<<endl;
 #endif
 
-  vector<long> vl;
+  vector<double> vl;
   ea.random(vl);
   vl[1] = -1; // ensure that this is not the zero vector
 #ifdef DEBUG_PRINTOUT
@@ -69,14 +69,15 @@ int main(int argc, char *argv[])
 #endif
 
   zzX poly;
-  ea.encode(poly, vl);
-  ZZX poly2;
-  convert(poly2, poly);
-  if (!noPrint)
+  double factor = ea.encode(poly, vl, 1.0);
+  if (!noPrint) {
+    ZZX poly2;
+    convert(poly2, poly);
     cout << "  encoded into a degree-"<<NTL::deg(poly2)<<" polynomial\n";
+  }
 
   vector<double> vd2;
-  ea.decode(vd2, poly2);
+  ea.decode(vd2, poly, factor);
 #ifdef DEBUG_PRINTOUT
   cout << "  decoded into vd2=";
   printVec(cout,vd2,8)<<endl;

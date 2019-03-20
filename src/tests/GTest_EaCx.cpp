@@ -91,8 +91,9 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
 
 TEST_P(GTest_EaCx, encoding_works_correctly)
 {
-    std::vector<long> vl;
-    ea.random(vl);
+    std::vector<double> vl;
+    const EncryptedArrayCx& eacx = ea.getCx();
+    eacx.random(vl);
     vl[1] = -1; // ensure that this is not the zero vector
 #ifdef DEBUG_PRINTOUT
     std::cout << "random int v=";
@@ -100,14 +101,15 @@ TEST_P(GTest_EaCx, encoding_works_correctly)
 #endif
 
     zzX poly;
-    ea.encode(poly, vl);
-    NTL::ZZX poly2;
-    convert(poly2, poly);
-    if (!helib_test::noPrint)
-        std::cout << "  encoded into a degree-"<<NTL::deg(poly2)<<" polynomial\n";
+    double factor = eacx.encode(poly, vl, 1.0);
+    if (!helib_test::noPrint) {
+      NTL::ZZX poly2;
+      convert(poly2, poly);
+      std::cout << "  encoded into a degree-"<<NTL::deg(poly2)<<" polynomial\n";
+    }
 
     std::vector<double> vd2;
-    ea.decode(vd2, poly2);
+    eacx.decode(vd2, poly, factor);
 #ifdef DEBUG_PRINTOUT
     std::cout << "  decoded into vd2=";
     printVec(std::cout,vd2,8)<<std::endl;
