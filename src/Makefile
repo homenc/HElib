@@ -157,6 +157,7 @@ test: $(TESTPROGS)
 	./Test_tableLookup_x prm=0
 	./Test_IO_x m=91
 	./Test_Bin_IO_x m=91
+	./Test_EaCx_x noPrint=1
 	./Test_approxNums_x m=128
 	./Test_Powerful_x m1=3 m2=5 m3=7
 	./Test_intraSlot_x m=91

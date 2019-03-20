@@ -19,10 +19,11 @@ NTL_CLIENT
 #include "debugging.h"
 #endif
 
+bool noPrint = true;
+
 int main(int argc, char *argv[]) 
 {
   ArgMapping amap;
-  bool noPrint = true;
   amap.arg("noPrint", noPrint, "suppress printouts");
 
   long m=16;
@@ -46,7 +47,8 @@ int main(int argc, char *argv[])
   buildModChain(context, 5, 2);
 
   const EncryptedArrayCx& ea = context.ea->getCx();
-  ea.getPAlgebra().printout();
+  if (!noPrint)
+    ea.getPAlgebra().printout();
 
 #ifdef DEBUG_PRINTOUT
   vector<cx_double> vc1;
@@ -90,7 +92,7 @@ int main(int argc, char *argv[])
     if (diffAbs > maxDiff)
       maxDiff = diffAbs;
   }
-  cout << ((maxDiff>0.1)? " BAD?" : " GOOD?")
+  cout << ((maxDiff>0.1)? "BAD?" : "GOOD?")
        << "  max |v-vd2|_{infty}="<<maxDiff
        << endl;
   return 0;
