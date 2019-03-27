@@ -53,13 +53,13 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
         const long m;
         const long r;
         FHEcontext context;
-        const EncryptedArray& ea;
+        const EncryptedArrayCx& eacx;
 
         GTest_EaCx() :
             m(GetParam().m),
             r(GetParam().r),
             context(m, /*p=*/-1, r),
-            ea((buildModChain(context, 5, 2), *context.ea))
+            eacx((buildModChain(context, 5, 2), context.ea->getCx()))
         {}
 
         virtual void SetUp() override 
@@ -72,16 +72,16 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
                     std::cout << f[i] << " ";
                 std::cout << "]\n";
 
-                ea.getPAlgebra().printout();
+                eacx.getPAlgebra().printout();
 
 #ifdef DEBUG_PRINTOUT
                 std::vector<cx_double> vc1;
-                ea.random(vc1);
+                eacx.random(vc1);
                 std::cout << "random complex vc1=";
                 printVec(std::cout,vc1,8)<<std::endl;
 
                 std::vector<double> vd;
-                ea.random(vd);
+                eacx.random(vd);
                 std::cout << "random real vd=";
                 printVec(std::cout,vd,8)<<std::endl;
 #endif
@@ -91,8 +91,8 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
 
 TEST_P(GTest_EaCx, encoding_works_correctly)
 {
-    std::vector<long> vl;
-    ea.random(vl);
+    std::vector<double> vl;
+    eacx.random(vl);
     vl[1] = -1; // ensure that this is not the zero vector
 #ifdef DEBUG_PRINTOUT
     std::cout << "random int v=";
@@ -100,14 +100,15 @@ TEST_P(GTest_EaCx, encoding_works_correctly)
 #endif
 
     zzX poly;
-    ea.encode(poly, vl);
-    NTL::ZZX poly2;
-    convert(poly2, poly);
-    if (!helib_test::noPrint)
-        std::cout << "  encoded into a degree-"<<NTL::deg(poly2)<<" polynomial\n";
+    double factor = eacx.encode(poly, vl, 1.0);
+    if (!helib_test::noPrint) {
+      NTL::ZZX poly2;
+      convert(poly2, poly);
+      std::cout << "  encoded into a degree-"<<NTL::deg(poly2)<<" polynomial\n";
+    }
 
     std::vector<double> vd2;
-    ea.decode(vd2, poly2);
+    eacx.decode(vd2, poly, factor);
 #ifdef DEBUG_PRINTOUT
     std::cout << "  decoded into vd2=";
     printVec(std::cout,vd2,8)<<std::endl;

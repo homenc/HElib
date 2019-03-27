@@ -572,8 +572,9 @@ inline bool closeToOne(const NTL::xdouble& x, long p)
 }
 
 // Use continued fractions to approximate a float x as x ~ a/b
-std::pair<long,long>
-rationalApprox(double x, long denomBound=(1L<<(NTL_SP_NBITS/2)));
+std::pair<long,long> rationalApprox(double x, long denomBound=0);
+std::pair<NTL::ZZ,NTL::ZZ>
+  rationalApprox(NTL::xdouble x, NTL::xdouble denomBound=NTL::xdouble(0.0));
 
 /**
  * @brief Facility for "restoring" the NTL PRG state.

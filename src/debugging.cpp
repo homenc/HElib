@@ -24,14 +24,18 @@ EncryptedArray* dbgEa = 0;
 NTL::ZZX dbg_ptxt;
 NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
+// return the ratio between the real noise <sk,ct> and the estimated one
 double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
 {
   xdouble noiseEst = ctxt.getNoiseBound();
+  if (ctxt.isCKKS())
+    noiseEst += ctxt.getRatFactor() * ctxt.getPtxtMag();
   xdouble actualNoise = embeddingLargestCoeff(ctxt, sk);
 
   return conv<double>(actualNoise/noiseEst);
 }
 
+// check that real-to-estimated ratio is not too large, print warning otherwise
 void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, double thresh)
 {
    double ratio;
@@ -40,6 +44,7 @@ void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, d
    }
 }
 
+// Decrypt and find the l-infinity norm of the result in canonical embedding
 xdouble embeddingLargestCoeff(const Ctxt& ctxt, const FHESecKey& sk) 
 {
   const FHEcontext& context = ctxt.getContext();
@@ -49,31 +54,29 @@ xdouble embeddingLargestCoeff(const Ctxt& ctxt, const FHESecKey& sk)
 }
 
 
-
-
-
 void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags)
 {
   const FHEcontext& context = ctxt.getContext();
-  xdouble noiseEst = ctxt.getNoiseBound();
-  xdouble modulus = xexp(context.logOfProduct(ctxt.getPrimeSet()));
   vector<ZZX> ptxt;
   ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
-  //xdouble actualNoise = coeffsL2Norm(pp);
+
+  xdouble modulus = xexp(context.logOfProduct(ctxt.getPrimeSet()));
   xdouble actualNoise = embeddingLargestCoeff(pp, ctxt.getContext().zMStar);
+  xdouble noiseEst = ctxt.getNoiseBound();
+  if (ctxt.isCKKS())
+    noiseEst += ctxt.getRatFactor() * ctxt.getPtxtMag();
 
   s << "plaintext space mod "<<ctxt.getPtxtSpace()
     << ", bitCapacity="<<ctxt.bitCapacity()
     << ", \n           |noise|=q*" << (actualNoise/modulus)
-    << ", |noiseEst|=q*" << (noiseEst/modulus);
-//#if FFT_IMPL
-// FIXME
-#if 0
-  xdouble embL2 = embeddingL2Norm(pp, ea.getPAlgebra());
-  s << ", |noise|_canonical=q*"<< (embL2/modulus);
-#endif
+    << ", |noiseBound|=q*" << (noiseEst/modulus);
+  if (ctxt.isCKKS()) {
+    s << ", \n           ratFactor="<<ctxt.getRatFactor()
+      << ", ptxtMag="<<ctxt.getPtxtMag()
+      << ", realMag="<<(actualNoise/ ctxt.getRatFactor());
+  }
   s << endl;
 
   if (flags & FLAG_PRINT_ZZX) {
@@ -152,7 +155,7 @@ void CheckCtxt(const Ctxt& c, const char* label)
        << ", p^r=" << c.getPtxtSpace();
 
   if (dbgKey) {
-    double ratio = log(embeddingLargestCoeff(c, *dbgKey)/c.getNoiseBound())/log(2.0);
+    double ratio = realToEstimatedNoise(c, *dbgKey);
     cerr << ", log2(noise/bound)=" << ratio;
     if (ratio > 0) cerr << " BAD-BOUND";
   }

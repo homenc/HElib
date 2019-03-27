@@ -17,6 +17,7 @@
 #include "Ctxt.h"
 #include "FHE.h"
 #include "CtPtrs.h"
+#include "EncryptedArray.h"
 
 #include "debugging.h"
 #include "norms.h"
@@ -24,6 +25,7 @@
 NTL_CLIENT
 
 extern int fhe_watcher;
+static const double safety = 1*log(2.0); // 1 bits of safety
 
 void SKHandle::read(istream& str)
 {
@@ -43,11 +45,10 @@ void SKHandle::write(ostream& str) const
 std::set<long>* FHEglobals::automorphVals = NULL;
 std::set<long>* FHEglobals::automorphVals2 = NULL;
 
-// Dummy encryption, this procedure just encodes the plaintext in a Ctxt object
+// Dummy encryption, just encodes the plaintext in a Ctxt object.
 // NOTE: for now, it leaves the intFactor field of *this alone.
 // This assumption is relied upon in the reCrypt() and thinReCrypt()
 // routines in recryption.cpp.
-
 void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
 {
   const FHEcontext& context = getContext();
@@ -56,17 +57,14 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
   if (isCKKS()) {
     ptxtSpace=1;
 
-    if (size < 0) {
-      // HEURISTIC: we assume that we can safely model the coefficients
-      // of ptxt as uniformly and independently distributed over
-      // [-magBound, magBound], where magBound = encodeScalingFactor
-      double magBound = context.alMod.getCx().encodeScalingFactor();
-      long degBound = zMStar.getPhiM();
-      noiseBound = context.noiseBoundForUniform(magBound, degBound);
-    }
-    else 
-      noiseBound = size;
-  } else { // BGV
+    if (size < 0) size = 1.0;
+    ptxtMag = size;
+    ratFactor = context.ea->getCx().encodeScalingFactor() / size;
+    noiseBound = context.noiseBoundForUniform(0.5, zMStar.getPhiM());
+    // noiseBound is a bound on the error during encoding, we assume
+    // heuristically that rounding errors are uniform in [-0.5,0.5].
+  }
+  else { // BGV
     if (size < 0) {
       // HEURISTIC: we assume that we can safely model the coefficients
       // of ptxt as uniformly and independently distributed over
@@ -246,7 +244,7 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
   intFactor = 1;
-  ratFactor = 1.0;
+  ratFactor = ptxtMag = 1.0;
 }
 
 // Constructor
@@ -260,7 +258,7 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
   primeSet=context.ctxtPrimes;
   intFactor = 1;
-  ratFactor = 1.0;
+  ratFactor = ptxtMag = 1.0;
 }
 
 
@@ -278,6 +276,7 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
   noiseBound  = other.noiseBound;
   intFactor = other.intFactor;
   ratFactor = other.ratFactor;
+  ptxtMag = other.ptxtMag;
   return *this;
 }
 
@@ -357,66 +356,58 @@ void Ctxt::modDownToSet(const IndexSet &s)
   // Scale down all the parts: use either a simple "drop down" (just removing
   // primes, i.e., reducing the ctxt modulo the samaller modulus), or a "real
   // modulus switching" with rounding, basically whichever yeilds smaller
-  // noise. Recall that we keep the invariant that a ciphertext mod Q is
-  // decrypted to Q*m (mod p), so if we just "drop down" we still need to
-  // multiply by (Q^{-1} mod p).
+  // noise.
 
   // Get an estimate for the added noise term for modulus switching
   xdouble addedNoiseBound = modSwitchAddedNoiseBound();
 
   // For approximate nums, make sure that scaling factor is large enough
-  // HERE!!
-  if (1 && isCKKS()) {
-    // Factor after mod-switching is ratFactor/(prod_{i\in setDiff} qi),
-    // it must be larger than addedNoiseBound by at leasr getPPowR()
-    double extraFactor = log(addedNoiseBound) + log(context.alMod.getPPowR())
-      - ( log(ratFactor) - getContext().logOfProduct(setDiff) );
-    // If factor is too small, scale up before mod-down
-    if (extraFactor > 0) {
-      xdouble xf = ceil(xexp(extraFactor));
-      multByConstant(conv<ZZ>(xf)); // Increases noiseBound
-      //cout << "*** multByConstant=" << conv<ZZ>(xf) << "\n";
-      ratFactor *= xf;              // Up the factor accordingly
+  if (isCKKS()) {
+    // Sanity check: ensuring that we don't lose too much on precision.
+    // We check that log(addedNoise) <= log(noiseBound/scaleFactor)-safety,
+    // (safety=log 2 defined at top of the file). This ensures that we are
+    // losing less than one extra bit of accuracy.
+    double logScaledNoise= log(noiseBound)-getContext().logOfProduct(setDiff);
+    xdouble xf = ceil(xexp(log(addedNoiseBound) - logScaledNoise + safety));
+    if (xf>1.0) { // need to multiply by an extra factor
+        ZZ factorZZ = conv<ZZ>(xf);
+        for (auto& part : parts)
+          part *= factorZZ;
+        noiseBound *= xf; // Increase noiseBound
+        ratFactor *= xf;  // Increase the factor
+        std::cerr << "** sanity-check trigerred in Ctxt::modDownToSet()\n";
     }
   }
 
-  // Special case that never happens, but it worth checking anyways:
-  // If the current noise is smaller than the added noise term from
-  // mod-switching, then there is no point is actually doing it. In
-  // this case just drop the extra primes and stay with the same noise
-  // (but a smaller modulus).
-  // The reason this never happens is it doesn't make any sense, it is
-  // only making the noise/modulus ratio worse without gaining anything.
-  // But since Ctxt::modDownToSet is a public method, then maybe some
-  // crazy application will call it under these circumstances, so we
-  // should check for this condition.
+  if (noiseBound <= addedNoiseBound) { // a degenerate "drop down"
+    for (auto &part : parts)
+      part.removePrimes(setDiff);  // remove the primes not in s
 
-  if (noiseBound < addedNoiseBound) { // just "drop down"
-    for (size_t i=0; i<parts.size(); i++)
-      parts[i].removePrimes(setDiff);       // remove the primes not in s
+    // For BGV we keep the invariant that a ciphertext mod Q is
+    // decrypted to intFactor*Q*m (mod p), so if we just "drop down" by
+    // a factor F we still need to multiply intFactor by (F^{-1} mod p).
     long prodInv = 1;
     if (ptxtSpace>1)
       prodInv = InvMod(rem(context.productOfPrimes(setDiff),ptxtSpace), ptxtSpace);
     if (prodInv > 1) {
-      for (size_t i=0; i<parts.size(); i++)
-        parts[i] *= prodInv;
+      for (auto &part : parts)
+        part *= prodInv;
       noiseBound *= prodInv;
     }
     cerr << "Ctxt::modDownToSet: DEGENERATE DROP\n";
   } 
-  else {                                       // do real mod switching
-    for (size_t i=0; i<parts.size(); i++) 
-      parts[i].scaleDownToSet(intersection, ptxtSpace);
+  else {                               // do real mod switching
+    for (auto &part : parts)
+      part.scaleDownToSet(intersection, ptxtSpace);
 
     // update the noise estimate
-    double f = context.logOfProduct(setDiff);
-    noiseBound /= xexp(f);
+    xdouble f = xexp(context.logOfProduct(setDiff));
+    ratFactor /= f;  // The factor in CKKS encryption
+    noiseBound /= f;
     noiseBound += addedNoiseBound;
-    ratFactor /= xexp(f); // The factor in CKKS encryption
   }
   primeSet.remove(setDiff); // remove the primes not in s
   assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
-  FHE_TIMER_STOP;
 }
 
 void Ctxt::blindCtxt(const ZZX& poly)
@@ -452,7 +443,7 @@ void Ctxt::dropSmallAndSpecialPrimes()
     // we will be dropping some smallPrimes, and we need to figure
     // out how much we have to compensate with other ctxtPrimes
 
-    // The target set contains only the ctxtPrimes and its size
+    // The target set contains only the ctxtPrimes, and its size
     IndexSet target = primeSet & context.ctxtPrimes;
     double log_target = context.logOfProduct(target);
 
@@ -465,10 +456,11 @@ void Ctxt::dropSmallAndSpecialPrimes()
     double log_noise = (getNoiseBound()<=0.0)? -DBL_MAX : log(getNoiseBound());
     double log_compensation = 0;
 
-    // For CKKS, try to ensure that the scaling factor remains larger
-    // than the mod-switch added noise by a factor of getPPowR()
+    // For CKKS, try to ensure that the scaling factor is at least as large
+    // as the mod-switch added noise times a factor of getPPowR()/ptxtMag
     if (isCKKS()) {
-      double log_bound = log_modswitch_noise + log(context.alMod.getPPowR());
+      double log_bound = log_modswitch_noise
+        + log(context.alMod.getPPowR()) - log(ptxtMag);
       double log_rf = log(getRatFactor())  // log(factor) after scaling
                       + context.logOfProduct(target) - logOfPrimeSet();
       if (log_rf < log_bound) {
@@ -488,12 +480,6 @@ void Ctxt::dropSmallAndSpecialPrimes()
 
     log_modswitch_noise += 3*log(2.0); // 3 bits of elbow room
     if (log_noise -log_dropping +log_compensation < log_modswitch_noise) {
-      // For CKKS, if we arrived here it means that ratFactor > noiseBound
-      //   This is probably a security bug, it can only happen when we
-      //   encrypt zero (and tell the encryption routine to use ptxtSize=0)
-      if (isCKKS())
-        cerr << __func__
-             << ": CKKS with ratFactor>noiseBound, encrypting zero?\n";
 
       IndexSet candidates = context.ctxtPrimes / target;
       for (long i: candidates) {
@@ -522,12 +508,13 @@ void Ctxt::reLinearize(long keyID)
   dropSmallAndSpecialPrimes();
 
   long g = ptxtSpace;
+  double logProd = context.logOfProduct(context.specialPrimes);
+
   Ctxt tmp(pubKey, ptxtSpace); // an empty ciphertext, same plaintext space
   tmp.intFactor = intFactor;   // same intFactor, too
-
-  double logProd = context.logOfProduct(context.specialPrimes);
-  tmp.noiseBound = noiseBound * xexp(logProd);  // The noise after mod-UP
-  tmp.ratFactor = ratFactor * xexp(logProd);// CKKS factor after mod-up
+  tmp.ptxtMag = ptxtMag;       // same CKKS plaintext size
+  tmp.noiseBound = noiseBound * xexp(logProd);  // The noise after mod-up
+  tmp.ratFactor = ratFactor * xexp(logProd);  // CKKS factor after mod-up
 
   for (CtxtPart& part : parts) {
     // For a part relative to 1 or base,  only scale and add
@@ -636,7 +623,7 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
         primeSet.insert(setDiff);
       }
       else // this should never happen
-        throw std::logic_error("part has too many primes and matchPrimeSet==false");
+        throw std::logic_error("Ctxt::addPart: part has too many primes and matchPrimeSet==false");
     }
 
     DoubleCRT tmp(context, IndexSet::emptySet());
@@ -663,7 +650,7 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
 // Add a constant polynomial
 void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 {
-  if (getContext().alMod.getTag()==PA_cx_tag) {
+  if (isCKKS()) {
     addConstantCKKS(dcrt, to_xdouble(size));
     return;
   }
@@ -718,19 +705,17 @@ void Ctxt::addConstant(const ZZ& c)
 }
 
 
-// Add a constant polynomial for CKKS encryption. We assume that
-// the constant is scaled by PAlgebraModCx::encodeScalingFactor()
+// Add a constant polynomial for CKKS encryption. The 'size' argument is
+// a bound on the size of the content of the slots. If the factor is not
+// specified, we the default PAlgebraModCx::encodeScalingFactor()/size
 void addSomePrimes(Ctxt& c);
-
 void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, xdouble factor)
 {
-  if (factor<1.0)
-    conv(factor, getContext().alMod.getCx().encodeScalingFactor());
+  if (size <= 0)
+    size = 1.0;
 
-  // If the size is not given, use size = phi(m)*factor^2
-  if (size < 0.0) {
-    size = context.noiseBoundForUniform(factor, getContext().zMStar.getPhiM());
-  }
+  if (factor <= 0)
+    conv(factor, getContext().ea->getCx().encodeScalingFactor()/size);
 
   xdouble ratio = floor((ratFactor/factor) +0.5); // round to integer
   double inaccuracy = abs(conv<double>(ratio*factor/ratFactor) - 1.0);
@@ -741,7 +726,8 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, xdouble factor)
     ratio = floor((ratFactor/factor) +0.5); // re-compute the ratio
   }
 
-  noiseBound += size*ratio;
+  ptxtMag += size;   // perhaps too conservative? size(x+y)<=size(x)+size(y)
+  noiseBound += 0.5; // FIXME: what's the noise of a fresh encoding?
 
   ZZ intRatio = conv<ZZ>(ratio);
   IndexSet delta = dcrt.getIndexSet() / getPrimeSet(); // set minus
@@ -788,23 +774,20 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
 
   xdouble ratio = floor((ratFactor/xb) +0.5); // round to integer
   double inaccuracy = abs(conv<double>(ratio*xb/ratFactor) - 1.0);
-  if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0)
+  if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0) {
     addSomePrimes(*this); // This increases ratFactor
-
+  }
   // scaled up and round the numerator
   xdouble scaled = floor(num.first*ratFactor/xb +0.5);
-
-  DoubleCRT dcrt(getContext(), getPrimeSet());
-  dcrt = to_ZZ(scaled);
-
-  addConstantCKKS(dcrt, /*size=*/scaled, /*factor=*/ratFactor);
+  xdouble& factor = ratFactor;
 #else
   // simpler alternative?
-  DoubleCRT dcrt(getContext(), getPrimeSet());
-  dcrt = to_ZZ(num.first);
-  addConstantCKKS(dcrt, /*size=*/xdouble(num.first), /*factor=*/xdouble(num.second));
-  
+  xdouble scaled = num.first;
+  xdouble factor = num.second;
 #endif
+  DoubleCRT dcrt(getContext(), getPrimeSet());
+  dcrt = to_ZZ(scaled);
+  addConstantCKKS(dcrt, /*size=*/scaled/factor, factor);
 }
 
 // Add at least one prime to the primeSet of c
@@ -842,59 +825,26 @@ void Ctxt::negate()
 }
 
 // scale up c1, c2 so they have the same factor
-void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
-                                   pair<long,long> factors)
+void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2)
 {
   long targetPrecision = c1.getContext().alMod.getPPowR()*2;
-
-  // if factors are given, use them
-  if (factors.first>0 && factors.second>0) {
-    c1.multByConstant(to_ZZ(factors.first)); // small times a
-    c1.ratFactor *= factors.first;
-    c2.multByConstant(to_ZZ(factors.second));  // big times b
-    c2.ratFactor *= factors.second;
-    assert(closeToOne(c1.ratFactor/c2.ratFactor, targetPrecision));
-
-#ifdef DEBUG_PRINTOUT
-    cerr << "equalizeFactors using provided scaling factors ["
-         << factors.first<<','<<factors.second<<"]\n";
-    cerr << "    resulting ratFactors are ["
-         << c1.ratFactor<<','<< c1.ratFactor<<"]\n";
-#endif
-    return;
-  }
-  // If factors are not given, compute them
-  Ctxt& big  = (c1.ratFactor>c2.ratFactor)? c1 : c2;
-  Ctxt& small= (c1.ratFactor>c2.ratFactor)? c2 : c1;
-
+  Ctxt &big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
+  Ctxt &small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
   xdouble ratio = big.ratFactor / small.ratFactor;
-  if (ratio > targetPrecision) { // just scale up small
-    small.multByConstant(to_ZZ(floor(ratio+0.5)));
+  std::pair<ZZ,ZZ> factors = rationalApprox(ratio, xdouble(targetPrecision));
 
-#ifdef DEBUG_PRINTOUT
-    cerr << "equalizeFactors scaling small factor from "<<small.ratFactor
-         << " to "<<small.ratFactor<<'*'<<ratio<<" = "
-         << (small.ratFactor*ratio) << endl;
-    cerr << "    large factor is "<<big.ratFactor<<endl;
-#endif
-    small.ratFactor *= ratio;
-    return;
+  if (factors.first>1) {
+      for (auto& part : small.parts)
+          part *= factors.first;
+      small.ratFactor *= to_xdouble(factors.first);
+      small.noiseBound *= to_xdouble(factors.first);
   }
-
-  // Otherwise, need to scale both big and small
-
-  // approximate ratio as a fraction a/b
-  factors = rationalApprox(to_double(ratio), targetPrecision);
-  small.multByConstant(to_ZZ(factors.first)); // small times a
-  small.ratFactor *= factors.first;
-  big.multByConstant(to_ZZ(factors.second));  // big times b
-  big.ratFactor *= factors.second;
-#ifdef DEBUG_PRINTOUT
-  cerr << "equalizeFactors scaling both factor by ["
-       << factors.first<<','<<factors.second<<"]\n";
-  cerr << "    resulting ratFactors are ["
-       << small.ratFactor<<','<< big.ratFactor<<"]\n";
-#endif
+  if (factors.second>1) {
+      for (auto& part : big.parts)
+          part *= factors.second;
+      big.ratFactor *= to_xdouble(factors.second);
+      big.noiseBound *= to_xdouble(factors.second);
+  }
 }
 
 static xdouble 
@@ -924,11 +874,10 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   else // BGV
     this->reducePtxtSpace(other.getPtxtSpace());
 
-  Ctxt tmp(pubKey, other.ptxtSpace); // a temporary empty ciphertext
   const Ctxt* other_pt = &other;
 
-
   // make other ptxtSpace match
+  Ctxt tmp(pubKey, other.ptxtSpace); // a temporary empty ciphertext
   if (ptxtSpace != other_pt->ptxtSpace) {
     tmp = other;
     tmp.reducePtxtSpace(ptxtSpace);
@@ -951,10 +900,8 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     equalizeRationalFactors(*this, tmp);
   }
-
   long e1 = 1, e2 = 1;
-
-  if (intFactor != other_pt->intFactor) { // harmonize factors
+  if (!isCKKS() && intFactor != other_pt->intFactor) { // harmonize factors
     long f1 = intFactor;
     long f2 = other_pt->intFactor;
     // set e1, e2 so that e1*f1 == e2*f2 (mod ptxtSpace),
@@ -974,35 +921,30 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
 
     long e1_best = r1,   e2_best = t1;
     xdouble noise_best = NoiseNorm(noise1, noise2, e1_best, e2_best, ptxtSpace);
-
     long p = context.zMStar.getP();
 
     while (r1 != 0) {
-       long q = r0/r1;
-       long r2 = r0 % r1;
-       long t2 = t0 - t1*q;
-       r0 = r1; r1 = r2;
-       t0 = t1; t1 = t2;
+      long q = r0/r1;
+      long r2 = r0 % r1;
+      long t2 = t0 - t1*q;
+      r0 = r1; r1 = r2;
+      t0 = t1; t1 = t2;
 
-       long e1_try = mcMod(r1, ptxtSpace), e2_try = mcMod(t1, ptxtSpace);
-       if (e1_try % p != 0) {
-	 xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
-	 if (noise_try < noise_best) {
-	    e1_best = e1_try;
-	    e2_best = e2_try;
-	    noise_best = noise_try;
-	 }
-       }
+      long e1_try = mcMod(r1, ptxtSpace), e2_try = mcMod(t1, ptxtSpace);
+      if (e1_try % p != 0) {
+        xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
+	      if (noise_try < noise_best) {
+	        e1_best = e1_try;
+	        e2_best = e2_try;
+	        noise_best = noise_try;
+	      }
+      }
     }
-
     e1 = e1_best;
     e2 = e2_best;
-
     assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
     assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
-  } 
-
-
+  }
   if (e2 != 1) {
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     tmp.mulIntFactor(e2);
@@ -1022,6 +964,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
       if (negative) parts.back().Negate(); // not thread safe??
     }
   }
+  ptxtMag +=  other_pt->ptxtMag;
   noiseBound += other_pt->noiseBound;
 }
 
@@ -1047,35 +990,43 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
   CtxtPart tmpPart(context, IndexSet::emptySet()); // a scratch CtxtPart
   for (long i: range(c1.parts.size())) { 
     CtxtPart thisPart = c1.parts[i];
-    //    if (f!=1) thisPart *= f;
+
     for (long j: range(c2.parts.size())) { 
       tmpPart = c2.parts[j];
       // What secret key will the product point to?
       if (!tmpPart.skHandle.mul(thisPart.skHandle, tmpPart.skHandle))
-	Error("Ctxt::tensorProduct: cannot multiply secret-key handles");
+        Error("Ctxt::tensorProduct: cannot multiply secret-key handles");
 
       tmpPart *= thisPart; // The element of the tensor product
 
       // Check if we already have a part relative to this secret-key handle
       long k = getPartIndexByHandle(tmpPart.skHandle);
       if (k >= 0) // found a matching part
-	parts[k] += tmpPart;
+        parts[k] += tmpPart;
       else
-	parts.push_back(tmpPart);
+        parts.push_back(tmpPart);
     }
   }
 
-  // Compute the noise estimate as c1.noiseBound * c2.noiseBound
-
-  noiseBound = c1.noiseBound * c2.noiseBound;
-  ratFactor = c1.ratFactor * c2.ratFactor;
+  // Compute the noise estimate of the product
+  if (isCKKS()) { // we have totalNoiseBound = factor*ptxt + noiseBound
+    xdouble totalNoise1 = c1.ptxtMag*c1.ratFactor + c1.noiseBound;
+    xdouble totalNoise2 = c2.ptxtMag*c2.ratFactor + c2.noiseBound;
+    noiseBound = c1.noiseBound*totalNoise2 + c2.noiseBound*totalNoise1
+                  - c1.noiseBound*c2.noiseBound;
+    ratFactor = c1.ratFactor * c2.ratFactor;
+    ptxtMag = c1.ptxtMag * c2.ptxtMag;
+  }
+  else // BGV
+    noiseBound = c1.noiseBound * c2.noiseBound;
 }
 
 
-void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt& ctxt2)
+void computeIntervalForMul(double& lo, double& hi,
+                           const Ctxt& ctxt1, const Ctxt& ctxt2)
 {
-  const double slack = 5*log(2.0);
-  // FIXME: 5 bits of slack...could be something more dynamic
+  const double slack = 4*log(2.0);
+  // FIXME: 4 bits of slack...could be something more dynamic
 
   const FHEcontext& context = ctxt1.getContext();
 
@@ -1085,61 +1036,30 @@ void computeIntervalForMul(double& lo, double& hi, const Ctxt& ctxt1, const Ctxt
   double adn = log(ctxt1.modSwitchAddedNoiseBound());
   // should be the same for both ciphertexts
 
-  double safety = 1*log(2.0); // 1 bits of safety
-
-  hi = min(cap1, cap2) + adn - safety;
-  lo = hi - slack;
-
-
-  // FIXME: this is a bit hackish...
-
-  // The idea is that for a given ctxt with modulus q and noise
-  // bound n, we want to mod switch to a new modulus q' such that
-  // n/(q/q') \approx AddedNoiseBound.
+  // Compute the interval into which we want to mod-switch.
+  // For a given ctxt with modulus q and noise bound n, we want to
+  // switch to a new modulus q' s.t. n*q'/q \approx AddedNoiseBound.
   // Taking logs, this is the same as saying that
-  // log(q') \approx adn + (log(q) - log(n)) = adn + ctxt.capacity();
+  // log(q') \approx adn + (log(q) - log(n)) = adn + ctxt.capacity()
 
-  // Right now, we just set hi to the minimum for both ciphertexts,
-  // and set lo a few bits lower, so that we have some flexibility
-  // in finding an efficient dropping strategy.
+  // When we have two ciphertexts, we can e.g., set hi to the minimum
+  // for both ciphertexts, and set lo a few bits lower, so that we
+  // have some flexibility in finding an efficient dropping strategy.
+  // It may be worthwhile to experiment with other strategies for BGV.
+  //
+  // For CKKS we do the opposite, set lo to the maximum of the two
+  // and set hi to a few bits higher. This is done to get good accuracy,
+  // setting n*q'/q >> AddedNoiseBound means losing about one bit of
+  // accuracy, and going down to n*q'/q = AddedNoiseBound would lose two
+  // bits.
 
-  // It may be worthwhile to experiment with other strategies,
-  // such as setting hi = max(cap1, cap2) + adn - safety,
-  // and lo = min(hi - slack, min(cap1, cap2) + adn - safety.
-
-  // HERE!!
-  if (1 && ctxt1.isCKKS()) { // ensure large enough scaling factor
-    double lvl1 = ctxt1.logOfPrimeSet();
-    double rf1 = log(ctxt1.getRatFactor());
-    double nrf1 = rf1 - (lvl1-lo); // log of ratFactor after scaling
-
-    double lvl2 = ctxt2.logOfPrimeSet();
-    double rf2 = log(ctxt2.getRatFactor());
-    double nrf2 = rf2 - (lvl2-lo); // log of ratFactor after scaling
-
-    double nrf = min(nrf1, nrf2);
-    // increase lo as necessary to ensure that nrf is larger
-    // than the modswitch added noise by at least getPPowR()
-
-    double prec = log(ctxt1.getContext().alMod.getPPowR());
-    //cout << "*** computeIntervalForMul:\n";
-    //cout << "\t log(modSwAddNoise)="<<adn<<endl;
-    //cout << "\t log(q)="<<lvl1<<endl;
-    //cout << "\t log(noiseBound)="<<(lvl1-cap1)<<endl;
-    //cout << "\t log(factor)="<<rf1<<endl;
-    //cout << "\t log(prec)="<<prec<<endl;
-    if (nrf < adn+prec) {  
-      //cout << "\t lo: "<<lo;
-      lo += adn +prec -nrf;
-      //cout << " -> "<<lo<<endl;
-      //cout << "\t hi: "<<hi;
-      hi = max(hi, lo + 1); // ensure that hi is a little bigger than lo
-      //cout << " -> "<<hi<<endl;
-    }
-    else {
-      //cout << "\t lo: "<<lo<<endl;
-      //cout << "\t hi: "<<hi<<endl;
-    }
+  if (ctxt1.isCKKS()) {
+    lo = max(cap1, cap2) + adn + safety;
+    hi = lo + slack;
+  }
+  else { // BGV
+    hi = min(cap1, cap2) + adn - safety;
+    lo = hi - slack;
   }
 }
 
@@ -1152,7 +1072,7 @@ double Ctxt::naturalSize() const
 {
   double lo, hi;
   computeIntervalForSqr(lo, hi, *this);
-  return hi;
+  return isCKKS()? lo : hi;
 }
 
 IndexSet Ctxt::naturalPrimeSet() const
@@ -1179,7 +1099,6 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     return;
   }
 
-
   assert(isCKKS() == other_orig.isCKKS());
   assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
   assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1));
@@ -1187,14 +1106,7 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
   Ctxt* other_pt = nullptr;
   unique_ptr<Ctxt> ct; // scratch space if needed
   if (this == &other_orig) { // squaring
-    IndexSet nat = naturalPrimeSet();
-    bringToSet(nat); // drop to the "natural" primeSet
-    if (dbgKey) { // HERE
-      cerr << "*** after bringToSet,    noise/estNoise= "
-	   << realToEstimatedNoise(*this, *dbgKey)
-           << ", capacity= " << this->bitCapacity()
-	   << "\n";
-    }
+    bringToSet(naturalPrimeSet()); // drop to the "natural" primeSet
     other_pt = this;
   }
   else { // real multiplication
@@ -1234,16 +1146,8 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
 
   // Perform the actual tensor product
   Ctxt tmpCtxt(pubKey, ptxtSpace);
-
   tmpCtxt.tensorProduct(*this, *other_pt);
   *this = tmpCtxt;
-
-  if (dbgKey) { // HERE
-    cerr << "*** after TensorProduct, noise/estNoise= "
-         << realToEstimatedNoise(*this, *dbgKey)
-           << ", capacity= " << this->bitCapacity()
-         << "\n";
-  }
 }
 
 
@@ -1261,23 +1165,8 @@ void Ctxt::multiplyBy(const Ctxt& other)
     return;
   }
 
-  if (dbgKey) { // HERE
-    cerr << "*** before multiplyBy,   noise/estNoise= "
-         << realToEstimatedNoise(*this, *dbgKey)
-           << ", capacity= " << this->bitCapacity()
-         << "\n";
-  }
-
   *this *= other;  // perform the multiplication
-
   reLinearize();   // re-linearize
-
-  if (dbgKey) { // HERE
-    cerr << "*** after reLinearize,   noise/estNoise= "
-         << realToEstimatedNoise(*this, *dbgKey)
-         << ", capacity= " << this->bitCapacity() << endl;
-  }
-
 #ifdef DEBUG_PRINTOUT
       checkNoise(*this, *dbgKey, "reLinearize " + to_string(size_t(this)));
 #endif
@@ -1342,20 +1231,21 @@ void Ctxt::multByConstant(const ZZ& c)
   if (this->isEmpty()) return;
   FHE_TIMER_START;
 
-  ZZ c_copy = c;
-
-  if (isCKKS()) {
+  if (isCKKS()) { // multiply by dividing the scaling factor
     xdouble size = fabs(to_xdouble(c));
-    noiseBound *= size;
+    ptxtMag *= size;
+    ratFactor /= size;
+    if (c<0)
+      this->negate();
+    return;
   }
-  else { // BGV
-    long cc = balRem(rem(c, ptxtSpace), ptxtSpace); // reduce modulo plaintext space
-    noiseBound *= abs(cc);
-    c_copy = cc;
-  }
+  // for BGV, need to do real multiplication
+  long cc = balRem(rem(c, ptxtSpace), ptxtSpace); // reduce modulo ptxt space
+  noiseBound *= abs(cc);
 
   // multiply all the parts by this constant
-  for (long i: range(parts.size())) parts[i] *= c_copy;
+  ZZ c_copy(cc);
+  for (auto& part : parts) part *= c_copy;
 }
 
 // Multiply-by-constant, it is assumed that the size of this
@@ -1363,15 +1253,17 @@ void Ctxt::multByConstant(const ZZ& c)
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
   FHE_TIMER_START;
-  if (isCKKS()) {
-    multByConstantCKKS(dcrt, to_xdouble(size));
-    return;
-  }
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
-  // If the size is not given, we use the default value coreesponding to 
-  // uniform dist'n on [-ptxtSpace/2, ptxtSpace/2].
+  if (isCKKS()) {
+    multByConstantCKKS(dcrt, to_xdouble(size));
+    // Use default size, factor, encoding-rounding-error
+    return;
+  }
+
+  // If the size is not given, we use the default value coreesponding
+  // to uniform distribution on [-ptxtSpace/2, ptxtSpace/2].
   if (size < 0.0) {
     size = context.noiseBoundForUniform(double(ptxtSpace)/2.0,
                                         getContext().zMStar.getPhiM());
@@ -1400,42 +1292,31 @@ void Ctxt::multByConstant(const zzX& poly, double size)
   multByConstant(dcrt,size);
 }
 
-void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt, xdouble size, ZZ factor)
+void
+Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
+                         xdouble size, xdouble factor, double roundingErr)
 {
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
 
-  if (IsZero(factor))
-    conv(factor, getContext().alMod.getCx().encodeScalingFactor());
+  if (size <= 0) // size is a bound on the magnitude of the slot content
+    size = 1.0;
 
-  // If the size is not given, use size = phi(m)*factor^2
-  xdouble xfactor = to_xdouble(factor);
-  if (size < 0.0)
-    size = context.noiseBoundForUniform(xfactor, context.zMStar.getPhiM());
+  if (factor <= 0) // if not specified, assume default value
+    factor = getContext().ea->getCx().encodeScalingFactor()/size;
 
-  noiseBound *= size;
-  ratFactor *= xfactor;
+  if (roundingErr < 0)
+    roundingErr = getContext().ea->getCx().encodeRoundingError();
+
+  ptxtMag *= size;
+  ratFactor *= factor;
+  noiseBound = noiseBound*factor*size + roundingErr*ratFactor*ptxtMag
+          + noiseBound*roundingErr;
 
   // multiply all the parts by this constant
-  for (long i: range(parts.size()))
-    parts[i].Mul(dcrt,/*matchIndexSets=*/false);
+  for (auto& part: parts)
+    part.Mul(dcrt,/*matchIndexSets=*/false);
 }
-
-void Ctxt::multByConstantCKKS(std::pair<long,long> num)
-{
-  multByConstant(to_ZZ(num.first)); // multiply by numerator
-  ratFactor *= num.second;    // increase the scaling factor  
-}
-
-void Ctxt::multByConstantCKKS(double x)
-{
-  xdouble target = ratFactor/x;
-  if (target < getContext().alMod.getCx().encodeScalingFactor())
-    multByConstantCKKS(rationalApprox(x)); // "actual multiplication"
-  else
-    ratFactor = target;             // just adjust the scaling factor
-}
-
 
 // Divide a cipehrtext by 2. It is assumed that the ciphertext
 // encrypts an even polynomial and has plaintext space 2^r for r>1.
@@ -1498,10 +1379,10 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   long m = context.zMStar.getM();
 
   // Apply this automorphism to all the parts
-  for (long i: range(parts.size())) { 
-    parts[i].automorph(k);
-    if (!parts[i].skHandle.isOne()) {
-      parts[i].skHandle.powerOfX = MulMod(parts[i].skHandle.powerOfX,k,m);
+  for (auto& part: parts) {
+    part.automorph(k);
+    if (!part.skHandle.isOne()) {
+      part.skHandle.powerOfX = MulMod(part.skHandle.powerOfX,k,m);
     }
   }
   // no change in noise bound
@@ -1514,11 +1395,11 @@ void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
   if (this->isEmpty()) return;
 
   // Apply this automorphism to all the parts
-  for (long i: range(parts.size())) { 
-    parts[i].complexConj();
-    if (!parts[i].skHandle.isOne()) {
-      parts[i].skHandle.powerOfX
-        = context.zMStar.getM() - parts[i].skHandle.powerOfX;
+  for (auto& part: parts) {
+    part.complexConj();
+    if (!part.skHandle.isOne()) {
+      part.skHandle.powerOfX
+        = context.zMStar.getM() - part.skHandle.powerOfX;
     }
   } // no change in noise bound
 }
@@ -1564,14 +1445,12 @@ void Ctxt::smartAutomorph(long k)
       recordAutomorphVal2(amt);
       return;
     }
-    //cerr << "********* automorph " << amt << "\n";
     automorph(amt);
     reLinearize(keyID);
     k = MulMod(k, InvMod(amt,m), m);
   }
   FHE_TIMER_STOP;
 }
-
 
 
 // applies the Frobenius automorphism p^j
@@ -1595,14 +1474,13 @@ void Ctxt::frobeniusAutomorph(long j)
   }
 }
 
-
 /********************************************************************/
 // Utility methods
 
 const long Ctxt::getKeyID() const
 {
-  for (long i: range(parts.size()))
-    if (!parts[i].skHandle.isOne()) return parts[i].skHandle.getSecretKeyID();
+  for (auto& part : parts)
+    if (!part.skHandle.isOne()) return part.skHandle.getSecretKeyID();
 
   return 0; // no part pointing to anything, return the default key
 }
@@ -1613,34 +1491,24 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
   xdouble addedNoise = to_xdouble(0.0);
 
   // incorporate the secret keys' Hamming-weight
-  for (long i: range(parts.size())) { 
-    if (parts[i].skHandle.isOne()) {
+  for (auto& part : parts) {
+    if (part.skHandle.isOne()) {
       addedNoise += 1.0;
     }
     else {
-      long keyId = parts[i].skHandle.getSecretKeyID();
-      long d = parts[i].skHandle.getPowerOfS();
+      long keyId = part.skHandle.getSecretKeyID();
+      long d = part.skHandle.getPowerOfS();
       xdouble h = conv<xdouble>(pubKey.getSKeyBound(keyId));
 
       addedNoise += NTL::power(h, d);
     }
   }
 
-  // FIXME-NOW: not sure if this is right when isCKKS()
-  double magBound;
-  magBound = double(ptxtSpace)/2.0;
-
-  double roundingNoise = context.noiseBoundForUniform(magBound,
+  double roundingNoise = context.noiseBoundForUniform(double(ptxtSpace)/2.0,
                                                       context.zMStar.getPhiM());
   return addedNoise * roundingNoise;
 }
 
-
-// void Ctxt::reduce() const
-// {
-//   long n = parts.size();
-//   for (long i = 0; i < n; i++) parts[i].reduce();
-// }
 
 void Ctxt::write(ostream& str) const
 {
@@ -1655,6 +1523,7 @@ void Ctxt::write(ostream& str) const
   
   write_raw_int(str, ptxtSpace);
   write_raw_int(str, intFactor);
+  write_raw_xdouble(str, ptxtMag);
   write_raw_xdouble(str, ratFactor);
   write_raw_xdouble(str, noiseBound);
   primeSet.write(str);
@@ -1670,6 +1539,7 @@ void Ctxt::read(istream& str)
   
   ptxtSpace = read_raw_int(str);
   intFactor = read_raw_int(str);
+  ptxtMag = read_raw_xdouble(str);
   ratFactor = read_raw_xdouble(str);
   noiseBound = read_raw_xdouble(str);
   primeSet.read(str);
@@ -1722,10 +1592,10 @@ istream& operator>>(istream& str, CtxtPart& p)
 ostream& operator<<(ostream& str, const Ctxt& ctxt)
 {
   str << "["<<ctxt.ptxtSpace<<" "<<ctxt.noiseBound<<" "<<ctxt.primeSet
-      << ctxt.intFactor << " " << ctxt.ratFactor << " "
+      << ctxt.intFactor <<" "<< ctxt.ptxtMag<<" "<<ctxt.ratFactor<<" "
       << ctxt.parts.size() << endl;
-  for (long i: range(ctxt.parts.size()))
-    str << ctxt.parts[i] << endl;
+  for (auto& part : ctxt.parts)
+    str << part << endl;
   return str << "]";
 }
 
@@ -1733,18 +1603,17 @@ istream& operator>>(istream& str, Ctxt& ctxt)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseBound >> ctxt.primeSet
-      >> ctxt.intFactor >> ctxt.ratFactor;
+      >> ctxt.intFactor >> ctxt.ptxtMag >> ctxt.ratFactor;
   long nParts;
   str >> nParts;
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));
-  for (long i: range(nParts)) {
-    str >> ctxt.parts[i];
-    assert (ctxt.parts[i].getIndexSet()==ctxt.primeSet); // sanity-check
+  for (auto& part : ctxt.parts) {
+    str >> part;
+    assert (part.getIndexSet()==ctxt.primeSet); // sanity-check
   }
   seekPastChar(str,']');
   return str;
 }
-
 
 // The recursive incremental-product function that does the actual work
 static void recursiveIncrementalProduct(Ctxt array[], long n)
@@ -1877,7 +1746,7 @@ void innerProduct(Ctxt& result,
 // Mod-switch to an externally-supplied modulus. The modulus need not be in
 // the moduli-chain in the context, and does not even need to be a prime.
 // The ciphertext *this is not affected, instead the result is returned in
-// the zzParts vector, as a vector of ZZX'es. 
+// the zzParts vector, as a vector of ZZX'es.
 // Returns an extimate for the noise bound after mod-switching.
 
 #include "powerful.h"
@@ -1927,21 +1796,12 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
       // SetCoeff(zzParts[i],j,rounded);
       conv(powerful[j], rounded);  // store back in the powerful vector
     }
-    //  if (deg(zzParts[i])<20) cerr << "]\n   scaled poly="<<zzParts[i]<<endl;
     p2d_conv.powerfulToZZX(zzParts[i],powerful); // conver to ZZX
   }
 
   // Return an estimate for the noise
   double scaledNoise = conv<double>(noiseBound*ratio);
   double addedNoise = conv<double>(modSwitchAddedNoiseBound());
-#ifdef DEBUG_PRINTOUT
-  cerr << "## Ctxt::rawModSwitch: converting from mod-"
-       << context.productOfPrimes(getPrimeSet())
-       << " to mod-"<<toModulus<<" (ratio="<<ratio
-       << "), ptxtSpace="<<p2r<<endl;
-  cerr << "             scaledNoise="<< scaledNoise
-       << ", addedNoise="<<addedNoise<<endl;
-#endif
   return scaledNoise + addedNoise;
   // NOTE: technically, modSwitchAddedNoise bound assumes rounding is
   // done in the polynomial basis, rather than the powerful basis,
