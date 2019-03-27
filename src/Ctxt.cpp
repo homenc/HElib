@@ -774,9 +774,9 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
 
   xdouble ratio = floor((ratFactor/xb) +0.5); // round to integer
   double inaccuracy = abs(conv<double>(ratio*xb/ratFactor) - 1.0);
-  if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0)
+  if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0) {
     addSomePrimes(*this); // This increases ratFactor
-
+  }
   // scaled up and round the numerator
   xdouble scaled = floor(num.first*ratFactor/xb +0.5);
   xdouble& factor = ratFactor;
@@ -787,7 +787,7 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
 #endif
   DoubleCRT dcrt(getContext(), getPrimeSet());
   dcrt = to_ZZ(scaled);
-  addConstantCKKS(dcrt, /*size=*/scaled, factor);
+  addConstantCKKS(dcrt, /*size=*/scaled/factor, factor);
 }
 
 // Add at least one prime to the primeSet of c
@@ -825,36 +825,25 @@ void Ctxt::negate()
 }
 
 // scale up c1, c2 so they have the same factor
-void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
-                                   pair<long,long> factors)
+void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2)
 {
   long targetPrecision = c1.getContext().alMod.getPPowR()*2;
   Ctxt &big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
   Ctxt &small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
-
-  // If factors are not given, compute them
-  if (factors.first<=0 || factors.second<=0) {
-      Ctxt &big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
-      Ctxt &small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
-      xdouble ratio = big.ratFactor / small.ratFactor;
-      factors = rationalApprox(to_double(ratio), targetPrecision);
-  }
-  else { // use given factors, but ensure that first>=second
-      if (factors.first < factors.second)
-          std::swap(factors.first, factors.second);
-  }
+  xdouble ratio = big.ratFactor / small.ratFactor;
+  std::pair<ZZ,ZZ> factors = rationalApprox(ratio, xdouble(targetPrecision));
 
   if (factors.first>1) {
       for (auto& part : small.parts)
           part *= factors.first;
-      small.ratFactor *= factors.first;
-      small.noiseBound *= factors.first;
+      small.ratFactor *= to_xdouble(factors.first);
+      small.noiseBound *= to_xdouble(factors.first);
   }
   if (factors.second>1) {
       for (auto& part : big.parts)
           part *= factors.second;
-      big.ratFactor *= factors.second;
-      big.noiseBound *= factors.second;
+      big.ratFactor *= to_xdouble(factors.second);
+      big.noiseBound *= to_xdouble(factors.second);
   }
 }
 
@@ -911,9 +900,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     equalizeRationalFactors(*this, tmp);
   }
-
   long e1 = 1, e2 = 1;
-
   if (!isCKKS() && intFactor != other_pt->intFactor) { // harmonize factors
     long f1 = intFactor;
     long f2 = other_pt->intFactor;
@@ -934,34 +921,30 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
 
     long e1_best = r1,   e2_best = t1;
     xdouble noise_best = NoiseNorm(noise1, noise2, e1_best, e2_best, ptxtSpace);
-
     long p = context.zMStar.getP();
 
     while (r1 != 0) {
-       long q = r0/r1;
-       long r2 = r0 % r1;
-       long t2 = t0 - t1*q;
-       r0 = r1; r1 = r2;
-       t0 = t1; t1 = t2;
+      long q = r0/r1;
+      long r2 = r0 % r1;
+      long t2 = t0 - t1*q;
+      r0 = r1; r1 = r2;
+      t0 = t1; t1 = t2;
 
-       long e1_try = mcMod(r1, ptxtSpace), e2_try = mcMod(t1, ptxtSpace);
-       if (e1_try % p != 0) {
-	 xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
-	 if (noise_try < noise_best) {
-	    e1_best = e1_try;
-	    e2_best = e2_try;
-	    noise_best = noise_try;
-	 }
-       }
+      long e1_try = mcMod(r1, ptxtSpace), e2_try = mcMod(t1, ptxtSpace);
+      if (e1_try % p != 0) {
+        xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
+	      if (noise_try < noise_best) {
+	        e1_best = e1_try;
+	        e2_best = e2_try;
+	        noise_best = noise_try;
+	      }
+      }
     }
-
     e1 = e1_best;
     e2 = e2_best;
-
     assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
     assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
-  } 
-
+  }
   if (e2 != 1) {
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     tmp.mulIntFactor(e2);

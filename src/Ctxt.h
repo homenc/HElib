@@ -382,7 +382,7 @@ public:
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
-  void addConstantCKKS(double x) {
+  void addConstantCKKS(double x) {    // FIXME: not enough percision when x is large
     addConstantCKKS(rationalApprox(x, /*denomBound=*/1<<getContext().alMod.getR()));
   }
   void addConstantCKKS(const DoubleCRT& dcrt,
@@ -401,7 +401,7 @@ public:
   void multByConstant(const NTL::ZZ& c);
 
   //! multiply by a rational number or floating point
-  void multByConstantCKKS(double x) {ratFactor /= x;}
+  void multByConstantCKKS(double x) {ratFactor /= x; ptxtMag *= x;}
   void multByConstantCKKS(std::pair<long,long> num) // rational number
   { multByConstantCKKS(double(num.first)/num.second); }
 
@@ -604,6 +604,7 @@ public:
   const NTL::xdouble& getNoiseBound() const { return noiseBound; }
   const NTL::xdouble& getRatFactor() const { return ratFactor; }
   const NTL::xdouble& getPtxtMag() const { return ptxtMag; }
+  const void setPtxtMag(const NTL::xdouble& z) { ptxtMag=z; }
   const long getKeyID() const;
 
   bool isCKKS() const
@@ -636,8 +637,7 @@ public:
   void read(std::istream& str);
 
   // scale up c1, c2 so they have the same ratFactor
-  static void equalizeRationalFactors(Ctxt& c1, Ctxt &c2,
-                      std::pair<long,long> f=std::pair<long,long>(0,0));
+  static void equalizeRationalFactors(Ctxt& c1, Ctxt &c2);
 };
 
 
