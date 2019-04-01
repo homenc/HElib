@@ -220,14 +220,46 @@ RecryptData::~RecryptData()
 }
 
 
-
 /**
- * Fix the "ring constant" cM, a target norm tau for the secret key,
- * and plaintext space mod p^r. We want to find e,e' that minimize
- * e-e', subject to the constraint
+ * Summary of Appendix A from https://ia.cr/2014/873 (version from 2019):
+ * Assume that we already chosen a, e, e' and t (which induces the
+ * secret-key size tau).
+ * 
+ * Going into the recryption procedure after "raw mod-switching", we
+ * have a ciphertext (c0,c1) where the ci's are "random modulo q" in
+ * their powerful basis. Denoting x = c0+c1*s (without mod-q reduction),
+ * then |x|< |c0|+|c1*s|< q + B*||c1*s||, where |X| is powerful-basis
+ * norm, ||X|| is canonical embedding norm, and B is some bound on the
+ * ratio between the two.
+ * 
+ * Let tau be our bound on the secret key canonical-mebedding norm,
+ * and we think of c1 as having random coefficients in [+-q/2] (say in
+ * the powerful basis). Then ||c1|| < A*q whp (for some other bound A),
+ * and therefore ||c1*s||< A*q*tau. Hence we get |x| < q*(1+B*A*tau).
+ * The quantity A*B for this ring is recorded as cM in the PAlgebra,
+ * so we have |x|/q < 1 + cM*tau < (1+tau)*cM.
  *
+ * We also assume that the "noise term" after mod-q reduction is bounded
+ * by |[x]_q| < 2*p^r*(1+tau)*cM (this expression is twice the added
+ * noise term from mod-switching).
+ * 
+ * After makeDivisible relative to e' and a (with a divisible by p^r),
+ * and b = p^e'/2 -a, we have a ciphertext (c0',c1') s.t.
+ *     x' = c0'+c1'*s = x+p^r(u0+u1*s)+(v0+v1*s),
+ * where |u0|,|u1|<a and |v0|,|v1|<b. It follows from the above that
+ * 
+ *   |x'|/q  < (2+b)(1+tau)*cM, and
+ *   |[x']_q|< p^r(2+a)(1+tau)*cM
+ * 
+ * To be able to use the Lemma 5.1 from https://ia.cr/2014/873, we
+ * need to have |x'|/q + |[x']_q| <= (q-1)/2 = p^e/2. Using the bounds
+ * from above, a sufficient condition for this is
+ * 
  *    (1) (p^{e'}/2 + 2(p^r+1))(tau+1)*cM <= (q-1)/2  = p^e/2
  *
+ * (This is Equation (9) in Appendix A of https://ia.cr/2014/873,
+ * but note that the a here is a*p^r there.)
+ * 
  * Note that as we let e,e' tend to infinity the constraint above
  * degenerates to (tau+1)*cM < p^{e-e'}, so the smallest value
  * of e-e' that we can hope for is
@@ -242,10 +274,10 @@ RecryptData::~RecryptData()
  *
  * Once e,e' are set, it splits p^{e'}/2=a+b with a,b about equal and
  * a divisible by p^r. Then it computes and returns the largest Hamming
- * weight for the key (that implies the norm tau') for which constraint
+ * weight for the key (that implies the norm tau) for which constraint
  * (1) still holds.
  *
- * NOTE: setAE returns the Hamming weight, *not* the norm tau'. The norm
+ * NOTE: setAE returns the Hamming weight, *not* the norm tau. The norm
  * can be computed from the weight using sampleHWtBoundedEffectiveBound.
  **/
 long RecryptData::setAE(long& a, long& e, long& ePrime,
