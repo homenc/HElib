@@ -161,7 +161,8 @@ class GTest_General : public ::testing::TestWithParam<Parameters> {
 
         virtual void TearDown() override
         {
-        };
+            cleanupGlobals();
+        }
 };
 
 TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertexts)

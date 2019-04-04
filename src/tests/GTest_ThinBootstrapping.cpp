@@ -283,6 +283,12 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
             nslots(context.zMStar.getPhiM()/d)
     {};
 
+        virtual void TearDown() override
+        {
+          cleanupGlobals();
+        }
+
+
         const long p;
         const long r;
         const long c;

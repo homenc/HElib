@@ -87,6 +87,13 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
 #endif
             }
         }
+
+        virtual void TearDown() override
+        {
+#ifdef DEBUG_PRINTOUT
+            cleanupGlobals();
+#endif
+        }
 };
 
 TEST_P(GTest_EaCx, encoding_works_correctly)

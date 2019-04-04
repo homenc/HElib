@@ -21,6 +21,7 @@
 #include "FHE.h"
 #include "replicate.h"
 #include "timing.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -107,6 +108,11 @@ class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
             ea.encode(poly_xp1, xp1);
             xc1 = xc0;
         };
+
+        virtual void TearDown() override
+        {
+          cleanupGlobals();
+        }
 
         const long m;
         const long p;

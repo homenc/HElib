@@ -206,6 +206,13 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
 #endif
         };
 
+        virtual void TearDown() override
+        {
+#ifdef DEBUG_PRINTOUT
+            cleanupGlobals();
+#endif
+        }
+
     public:
         static void TearDownTestCase ()
         {
