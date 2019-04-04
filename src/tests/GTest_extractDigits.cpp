@@ -108,8 +108,8 @@ class GTest_extractDigits : public ::testing::TestWithParam<Parameters> {
 
         virtual void TearDown() override
         {
-            // Put teardown that could throw here instead of the fixture's destructor
-        };
+            cleanupGlobals();
+        }
 };
 
 TEST_P(GTest_extractDigits, correctly_extracts_digits)

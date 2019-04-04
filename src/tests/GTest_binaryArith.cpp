@@ -230,6 +230,13 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
 #endif
         }
 
+        virtual void TearDown() override
+        {
+#ifdef DEBUG_PRINTOUT
+            cleanupGlobals();
+#endif
+        }
+
         // This gets called once all of the tests have run
     public:
         static void TearDownTestCase ()

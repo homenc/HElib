@@ -20,6 +20,7 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -170,6 +171,11 @@ class GTest_Bin_IO : public ::testing::TestWithParam<Parameters> {
         {
             // Nothing clear to do here for now the way the test is written
         };
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
 
     public:
         static void SetUpTestCase() {

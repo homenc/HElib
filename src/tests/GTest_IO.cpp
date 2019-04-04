@@ -19,6 +19,7 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -109,6 +110,11 @@ class GTest_IO : public ::testing::TestWithParam<Parameters> {
         std::vector<std::unique_ptr<Ctxt>> ctxts;
         std::vector<std::unique_ptr<EncryptedArray>> eas;
         std::vector<std::vector<NTL::ZZX>> ptxts;
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
 
     public:
         static void SetUpTestCase() {

@@ -15,6 +15,7 @@
 #include "EvalMap.h"
 #include "hypercube.h"
 #include "powerful.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -180,6 +181,11 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
             addSome1DMatrices(secretKey); // compute key-switching matrices that we need
             addFrbMatrices(secretKey); // compute key-switching matrices that we need
         };
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
 };
 
 

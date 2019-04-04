@@ -15,6 +15,7 @@
 #include <NTL/ZZ.h>
 #include "NumbTh.h"
 #include "FHEContext.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -86,7 +87,10 @@ class GTest_PAlgebra : public ::testing::TestWithParam<Parameters> {
             }
         };
 
-
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
 };
 
 TEST_P(GTest_PAlgebra, reads_and_writes_contexts_as_strings)
