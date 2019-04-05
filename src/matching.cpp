@@ -97,7 +97,8 @@ void BipartitleGraph::partitionToMatchings()
 	  }
 	  ++(range.first); // next edge in range
 	}
-	assert (flow==0); // sanity check, we must have enough edges to color
+	//OLD: assert (flow==0); // sanity check, we must have enough edges to color
+  helib::assertEq(flow, 0l, "Not enough edges to colour");
       }
       // Remove flow edges that are marked for removal
       for (long ii=0; ii<(long)edges2remove.size(); ii++) {
@@ -202,8 +203,10 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
       long prev = path[next]; // path is pointing back from sink to source
 
       // Ensure that fg[prev][next] and fg[next][prev] exist
-      assert(fg[prev].find(next) != fg[prev].end());
-      assert(fg[next].find(prev) != fg[next].end());
+      //OLD: assert(fg[prev].find(next) != fg[prev].end());
+      helib::assertNeq(fg[prev].find(next), fg[prev].end(), "Bad flow graph. fg[prev][next] does not exist");
+      //OLD: assert(fg[next].find(prev) != fg[next].end());
+      helib::assertNeq(fg[next].find(prev), fg[next].end(), "Bad flow graph. fg[next][prev] does not exist");
 
       FlowEdge& back = fg[next][prev];
       FlowEdge& forward = fg[prev][next];
@@ -237,8 +240,10 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
 static long augmenting_path(vector<long>& path, FlowGraph& fg,
 			    long src, long sink)
 {
-  assert(src >=0 && src <(long)fg.size());
-  assert(sink>=0 && sink<(long)fg.size());
+  //OLD: assert(src >=0 && src <(long)fg.size());
+  helib::assertInRange(src,  0l, (long)fg.size(), "Bad source index (Index out of range)");
+  //OLD: assert(sink>=0 && sink<(long)fg.size());
+  helib::assertInRange(sink, 0l, (long)fg.size(), "Bad sink index (Index out of range)");
 
   // initialize the path to an empty one
   path.assign(fg.size(), -1); // path[i]=-1 for all i

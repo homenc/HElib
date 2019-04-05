@@ -281,8 +281,10 @@ struct PrimeGenerator {
 
   PrimeGenerator(long _len, long _m) : len(_len), m(_m)
   {
-    if (len > NTL_SP_NBITS || len < 2 || m >= NTL_SP_BOUND || m <= 0)
-      Error("PrimeGenerator: bad args");
+    //OLD: if (len > NTL_SP_NBITS || len < 2 || m >= NTL_SP_BOUND || m <= 0)
+    //OLD: throw helib::InvalidArgument("PrimeGenerator: bad args");
+    helib::assertInRange<helib::InvalidArgument>(len, 2l, (long)NTL_SP_NBITS, "PrimeGenerator: len is not in [2, NTL_SP_NBITS]", true);
+    helib::assertInRange<helib::InvalidArgument>(m, 1l, (long)NTL_SP_BOUND, "PrimeGenerator: m is not in [1, NTL_SP_BOUND)");
 
     // compute k as smallest nonnegative integer such that
     // 2^{len-2} < 2^k*m
@@ -321,7 +323,8 @@ struct PrimeGenerator {
 	else
 	  klb = 1;
 
-	if (k < klb) Error("PrimeGenerator: ran out of primes");
+  if (k < klb) throw helib::RuntimeError("Prime generator ran out of primes");
+        
 	// we run k down to 0  if m is even, and down to 1
 	// if m is odd.
 
@@ -334,7 +337,8 @@ struct PrimeGenerator {
       long cand = ((t*m) << k) + 1; // = 2^k*t*m + 1
 
       // double check that cand is in the prescribed interval
-      assert(cand >= (1L << (len-2))*3 && cand < (1L << len));
+      //OLD: assert(cand >= (1L << (len-2))*3 && cand < (1L << len));
+      helib::assertInRange(cand, (1L << (len-2))*3, 1L << len, "Candidate cand is not in the prescribed interval");
 
       if (ProbPrime(cand, 60)) return cand;
       // iteration count == 60 implies 2^{-120} error probability
@@ -346,7 +350,8 @@ struct PrimeGenerator {
 
 void FHEcontext::AddSmallPrime(long q)
 {
-  assert(!inChain(q));
+  //OLD: assert(!inChain(q));
+  helib::assertFalse(inChain(q), "Small prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back( Cmodulus(zMStar, q, 0) );
   smallPrimes.insert(i);
@@ -354,7 +359,8 @@ void FHEcontext::AddSmallPrime(long q)
 
 void FHEcontext::AddCtxtPrime(long q)
 {
-  assert(!inChain(q));
+  //OLD: assert(!inChain(q));
+  helib::assertFalse(inChain(q), "Prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back( Cmodulus(zMStar, q, 0) );
   ctxtPrimes.insert(i);
@@ -362,7 +368,8 @@ void FHEcontext::AddCtxtPrime(long q)
 
 void FHEcontext::AddSpecialPrime(long q)
 {
-  assert(!inChain(q));
+  //OLD: assert(!inChain(q));
+  helib::assertFalse(inChain(q), "Special prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back( Cmodulus(zMStar, q, 0) );
   specialPrimes.insert(i);
@@ -373,13 +380,13 @@ void addSmallPrimes(FHEcontext& context, long resolution, long cpSize)
 {
   // cpSize is the size of the ciphertext primes
   // Sanity-checks, cpSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
-  assert((cpSize >= 30) &&
-         (cpSize <= NTL_SP_NBITS) &&
-         (cpSize*10 >= NTL_SP_NBITS*9));
-
+  //OLD: assert((cpSize >= 30) && (cpSize <= NTL_SP_NBITS) && (cpSize*10 >= NTL_SP_NBITS*9));
+  helib::assertTrue(cpSize >= 30, "cpSize is too small (minimum is 30)");
+  helib::assertInRange(cpSize * 10, 9l * NTL_SP_NBITS, 10l * NTL_SP_NBITS, "cpSize not in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]", true);
+  
   long m = context.zMStar.getM();
   if (m<=0 || m>(1<<20))// sanity checks
-    Error("addSmallPrimes: m undefined or larger than 2^20");
+    throw helib::RuntimeError("addSmallPrimes: m undefined or larger than 2^20");
   // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
 
   if (resolution<1 || resolution>10) // set to default of 3-bit resolution
@@ -394,7 +401,8 @@ void addSmallPrimes(FHEcontext& context, long resolution, long cpSize)
   else if (cpSize >=45)
     smallest = divc(7*cpSize,10);
   else { // Make the smallest ones at least 22-bit primes
-    assert(cpSize >=30);
+    //OLD: assert(cpSize >=30);
+    // Repeted assertion
     smallest = divc(11*cpSize,15);
     sizes.push_back(smallest); // need three of them
   }
@@ -465,9 +473,9 @@ void addCtxtPrimes(FHEcontext& context, long nBits, long targetSize)
   // at least 2^{nBits}
 
   // Sanity-checks, targetSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
-  assert((targetSize >= 30) &&
-         (targetSize <= NTL_SP_NBITS) &&
-         (targetSize*10 >= NTL_SP_NBITS*9));
+  //OLD: assert((targetSize >= 30) && (targetSize <= NTL_SP_NBITS) && (targetSize*10 >= NTL_SP_NBITS*9));
+  helib::assertTrue(targetSize >= 30, "Target prime is too small (minimum size is 30)");
+  helib::assertInRange(targetSize * 10, 9l * NTL_SP_NBITS, 10l * NTL_SP_NBITS, "targetSize not in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]", true);
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
 

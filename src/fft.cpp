@@ -295,7 +295,7 @@ void canonicalEmbedding(std::vector<cx_double>& v, const ZZX& f, const PAlgebra&
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
                   const PAlgebra& palg, double scaling, bool strictInverse)
 {
-  NTL::Error("embedInSlots not implemented\n");
+  throw helib::LogicError("embedInSlots not implemented with FFT_NATIVE");
 }
 #endif // ifdef FFT_NATIVE
 #endif // ifdef FFT_ARMA

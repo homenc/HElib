@@ -14,6 +14,8 @@ namespace NTL {} using namespace NTL;
 
 #include <NTL/BasicThreadPool.h>
 
+#include <cassert>
+
 #include "EvalMap.h"
 #include "hypercube.h"
 #include "powerful.h"

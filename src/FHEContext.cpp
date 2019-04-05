@@ -53,8 +53,9 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
   long N = NTL_SP_BOUND;
   if (N > dN) N = dN;
   else {
-    cerr << "Cannot support a bound of " << dN;
-    Error(", aborting.\n");
+    std::stringstream ss;
+    ss << "Cannot support a bound of " << dN;
+    throw helib::RuntimeError(ss.str());
   }
 
   long m = 0;
@@ -226,7 +227,8 @@ void readContextBaseBinary(istream& str, unsigned long& m,
                            vector<long>& gens, vector<long>& ords)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-context-base eye catcher");
     
   p = read_raw_int(str);
   r = read_raw_int(str);
@@ -237,7 +239,8 @@ void readContextBaseBinary(istream& str, unsigned long& m,
   read_raw_vector(str, ords);
   
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-context-base eye catcher");
 }
 
 std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str)
@@ -299,7 +302,8 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 void readContextBinary(istream& str, FHEcontext& context)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-context eye catcher");
 
   // Get the standard deviation
   context.stdev = read_raw_xdouble(str);
@@ -366,7 +370,8 @@ void readContextBinary(istream& str, FHEcontext& context)
 
   context.setModSizeTable();
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-context eye catcher");
 }
 
 void writeContextBase(ostream& str, const FHEcontext& context)

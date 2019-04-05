@@ -149,7 +149,8 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, const KeySwitch& ks)
   double logKeySwitchNoise = log(addedNoise) 
     -2*context.logOfProduct(context.specialPrimes);
 
-  assert(logKeySwitchNoise < logModSwitchNoise);
+  //OLD: assert(logKeySwitchNoise < logModSwitchNoise);
+  helib::assertTrue(logKeySwitchNoise < logModSwitchNoise, "Key switching noise has exceeded mod switching noise");
 #endif
 
   return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
@@ -240,8 +241,12 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   context(newPubKey.getContext()), pubKey(newPubKey), ptxtSpace(newPtxtSpace),
   noiseBound(to_xdouble(0.0))
 {
-  if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
-  else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+  if (ptxtSpace<2) {
+    ptxtSpace = pubKey.getPtxtSpace();
+  } else {
+    //OLD: assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+    helib::assertTrue(GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1, "Ptxt spaces from ciphertext and public key are coprime"); // sanity check
+  }
   primeSet=context.ctxtPrimes;
   intFactor = 1;
   ratFactor = ptxtMag = 1.0;
@@ -254,8 +259,12 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   noiseBound(to_xdouble(0.0))
 {
   // same body as previous constructor
-  if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
-  else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+  if (ptxtSpace<2) {
+    ptxtSpace = pubKey.getPtxtSpace();
+  } else {
+    //OLD: assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+    helib::assertTrue(GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1, "Ptxt spaces from ciphertext and public key are coprime"); // sanity check
+  }
   primeSet=context.ctxtPrimes;
   intFactor = 1;
   ratFactor = ptxtMag = 1.0;
@@ -315,7 +324,8 @@ void Ctxt::modUpToSet(const IndexSet &s)
   ratFactor *= xexp(f);
 
   primeSet.insert(setDiff); // add setDiff to primeSet
-  assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+  //OLD: assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+  helib::assertTrue(verifyPrimeSet(), "primeSet is no longer valid"); // sanity-check: ensure primeSet is still valid
 }
 
 
@@ -347,8 +357,9 @@ void Ctxt::modDownToSet(const IndexSet &s)
   FHE_TIMER_START;
   IndexSet intersection = primeSet & s;
   if (empty(intersection)) {
-    cerr << "modDownToSet called from "<<primeSet<<" to "<<s<<endl;
-    exit(1);
+    std::stringstream ss;
+    ss << "modDownToSet called from "<<primeSet<<" to "<<s;
+    throw helib::RuntimeError(ss.str());
   }
   IndexSet setDiff = primeSet / intersection; // set-minus
   if (empty(setDiff)) return;    // nothing to do, removing no primes
@@ -407,7 +418,8 @@ void Ctxt::modDownToSet(const IndexSet &s)
     noiseBound += addedNoiseBound;
   }
   primeSet.remove(setDiff); // remove the primes not in s
-  assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+  //OLD: assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+  helib::assertTrue(verifyPrimeSet(), "primeSet is no longer valid"); // sanity-check: ensure primeSet is still valid
 }
 
 void Ctxt::blindCtxt(const ZZX& poly)
@@ -425,7 +437,8 @@ void Ctxt::blindCtxt(const ZZX& poly)
 void Ctxt::reducePtxtSpace(long newPtxtSpace)
 {
   long g = GCD(ptxtSpace, newPtxtSpace);
-  assert (g>1); // NOTE: Will trigger if called for CKKS ciphertext
+  //OLD: assert (g>1); // NOTE: Will trigger if called for CKKS ciphertext
+  helib::assertTrue (g>1, "New and old plaintext spaces are coprime"); // NOTE: Will trigger if called for CKKS ciphertext
   ptxtSpace = g;
   intFactor %= g;
 }
@@ -528,11 +541,13 @@ void Ctxt::reLinearize(long keyID)
       pubKey.getKeySWmatrix(part.skHandle,keyID) :
       pubKey.getAnyKeySWmatrix(part.skHandle);
 
-    assert(W.toKeyID>=0);      // verify that a switching matrix exists
+    //OLD: assert(W.toKeyID>=0);      // verify that a switching matrix exists
+    helib::assertTrue(W.toKeyID>=0, "No key-switching matrix exists");
 
     if (g>1) { // g==1 for CKKS, g>1 for BGV
       g = GCD(W.ptxtSpace, g); // verify that the plaintext spaces match
-      assert (g>1);
+      //OLD: assert (g>1);
+      helib::assertTrue (g>1, "Plaintext spaces do not match");
       tmp.ptxtSpace = g;
     }    
     tmp.keySwitchPart(part, W); // switch this part & update noiseBound
@@ -561,7 +576,8 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   FHE_TIMER_START;
 
   // no special primes in the input part
-  assert(context.specialPrimes.disjointFrom(p.getIndexSet()));
+  //OLD: assert(context.specialPrimes.disjointFrom(p.getIndexSet()));
+  helib::assertTrue(context.specialPrimes.disjointFrom(p.getIndexSet()), "Special primes and CtxtPart's index set have non-empty intersection");
 
   // For parts p that point to 1 or s, only scale and add
   if (p.skHandle.isOne() || p.skHandle.isBase(W.toKeyID)) { 
@@ -572,7 +588,8 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   }
 
   // some sanity checks
-  assert(W.fromKey == p.skHandle);  // the handles must match
+  //OLD: assert(W.fromKey == p.skHandle);  // the handles must match
+  helib::assertEq(W.fromKey, p.skHandle, "Secret key handles do not match");
 
   // Compute the number of digits that we need and the esitmated
   // added noise from switching this ciphertext part.
@@ -604,7 +621,8 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
 {
   FHE_TIMER_START;
 
-  assert (&part.getContext() == &context);
+  //OLD: assert (&part.getContext() == &context);
+  helib::assertEq (&part.getContext(), &context, "Context mismatch");
 
   if (parts.size()==0) { // inserting 1st part 
     primeSet = part.getIndexSet();
@@ -623,7 +641,7 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
         primeSet.insert(setDiff);
       }
       else // this should never happen
-        throw std::logic_error("Ctxt::addPart: part has too many primes and matchPrimeSet==false");
+        throw helib::LogicError("Ctxt::addPart: part has too many primes and matchPrimeSet==false");
     }
 
     DoubleCRT tmp(context, IndexSet::emptySet());
@@ -797,7 +815,8 @@ void addSomePrimes(Ctxt& c)
   IndexSet s = c.getPrimeSet();
 
   // Sanity check: there should be something left to add
-  assert(s != context.allPrimes());
+  //OLD: assert(s != context.allPrimes());
+  helib::assertNeq(s, context.allPrimes(), "Nothing left to add");
 
   // Add a ctxt prime if possible
   if (!s.contains(context.ctxtPrimes)) {
@@ -859,7 +878,9 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   FHE_TIMER_START;
 
   // Sanity check: same context and public key
-  assert (&context==&other.context && &pubKey==&other.pubKey);
+  //OLD: assert (&context==&other.context && &pubKey==&other.pubKey);
+  helib::assertEq (&context, &other.context, "Context mismatch");
+  helib::assertEq(&pubKey, &other.pubKey, "Public key mismatch");
 
   // Special case: if *this is empty then just copy other
   if (this->isEmpty()) {
@@ -869,8 +890,11 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   }
 
   // Verify that the plaintext spaces are compatible
-  if (isCKKS())
-    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
+  if (isCKKS()) {
+    //OLD: assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
+    helib::assertEq(getPtxtSpace(), 1l, "Plaintext spaces incompatible");
+    helib::assertEq(other.getPtxtSpace(), 1l, "Plaintext spaces incompatible");
+  }
   else // BGV
     this->reducePtxtSpace(other.getPtxtSpace());
 
@@ -942,9 +966,14 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     }
     e1 = e1_best;
     e2 = e2_best;
-    assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
-    assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
-  }
+
+    //OLD: assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
+    helib::assertEq(MulMod(e1, f1, ptxtSpace), MulMod(e2, f2, ptxtSpace), "e1f1 not equivalent to e2f2 mod p");
+    //OLD: assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
+    helib::assertEq(GCD(e1, ptxtSpace), 1l, "e1 and ptxtSpace not co-prime");
+    helib::assertEq(GCD(e2, ptxtSpace), 1l, "e2 and ptxtSpace not co-prime");
+  } 
+
   if (e2 != 1) {
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     tmp.mulIntFactor(e2);
@@ -995,7 +1024,7 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
       tmpPart = c2.parts[j];
       // What secret key will the product point to?
       if (!tmpPart.skHandle.mul(thisPart.skHandle, tmpPart.skHandle))
-        Error("Ctxt::tensorProduct: cannot multiply secret-key handles");
+        throw helib::LogicError("Ctxt::tensorProduct: cannot multiply secret-key handles");
 
       tmpPart *= thisPart; // The element of the tensor product
 
@@ -1099,9 +1128,16 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     return;
   }
 
-  assert(isCKKS() == other_orig.isCKKS());
-  assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
-  assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1));
+  //OLD: assert(isCKKS() == other_orig.isCKKS());
+  helib::assertEq(isCKKS(), other_orig.isCKKS(), "Scheme mismatch");
+  //OLD: assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
+  helib::assertEq(&context, &other_orig.context, "Context mismatch");
+  helib::assertEq(&pubKey, &other_orig.pubKey, "Public key mismatch");
+  //OLD: assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1));
+  if(isCKKS()) {
+    helib::assertEq(getPtxtSpace(), 1l, "Plaintext spaces incompatible");
+    helib::assertEq(other_orig.getPtxtSpace(), 1l, "Plaintext spaces incompatible");
+  }
 
   Ctxt* other_pt = nullptr;
   unique_ptr<Ctxt> ct; // scratch space if needed
@@ -1122,7 +1158,8 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     // equalize plaintext spaces
     if (!isCKKS()) {
       long g = GCD(ptxtSpace, other_pt->ptxtSpace);
-      assert (g>1);
+      //OLD: assert (g>1);
+      helib::assertTrue(g>1, "Plaintext spaces are co-prime");
       ptxtSpace = other_pt->ptxtSpace = g;
     }
 
@@ -1329,7 +1366,9 @@ void Ctxt::divideBy2()
 {
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
-  assert (ptxtSpace % 2 == 0 && ptxtSpace>2);
+  //OLD: assert (ptxtSpace % 2 == 0 && ptxtSpace>2);
+  helib::assertEq(ptxtSpace % 2, 0l, "Plaintext space is not even");
+  helib::assertTrue(ptxtSpace>2, "Plaintext space must be greater than 2");
 
   // multiply all the parts by (productOfPrimes+1)/2
   ZZ twoInverse; // set to (Q+1)/2
@@ -1354,7 +1393,9 @@ void Ctxt::divideByP()
   if (this->isEmpty()) return;
 
   long p = getContext().zMStar.getP();
-  assert (ptxtSpace % p == 0 && ptxtSpace>p);
+  //OLD: assert (ptxtSpace % p == 0 && ptxtSpace>p);
+  helib::assertEq(ptxtSpace % p, 0l, "p must divide ptxtSpace");
+  helib::assertTrue(ptxtSpace>p, "ptxtSpace must be strictly greater than p");
 
   // multiply all the parts by p^{-1} mod Q (Q=productOfPrimes)
   ZZ pInverse, Q;
@@ -1375,7 +1416,8 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   if (this->isEmpty()) return;
 
   // Sanity check: verify that k \in Zm*
-  assert (context.zMStar.inZmStar(k));
+  //OLD: assert (context.zMStar.inZmStar(k));
+  helib::assertTrue(context.zMStar.inZmStar(k), "k must be in Zm*");
   long m = context.zMStar.getM();
 
   // Apply this automorphism to all the parts
@@ -1423,17 +1465,19 @@ void Ctxt::smartAutomorph(long k)
   // Sanity check: verify that k \in Zm*
   long m = context.zMStar.getM();
   k = mcMod(k, m);
-  assert (context.zMStar.inZmStar(k));
+  //OLD: assert (context.zMStar.inZmStar(k));
+  helib::assertTrue(context.zMStar.inZmStar(k), "k must be in Zm*");
 
   long keyID=getKeyID();
   if (!pubKey.isReachable(k,keyID)) {// must have key-switching matrices for it
-    throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
+    throw helib::LogicError("no key-switching matrices for k="+std::to_string(k)
                            + ", keyID="+std::to_string(keyID));
   }
 
   if (!inCanonicalForm(keyID)) {     // Re-linearize the input, if needed
     reLinearize(keyID);
-    assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
+    //OLD: assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
+    helib::assertTrue(inCanonicalForm(keyID), "Re-linearization failed: not in canonical form");
   }
 
   while (k != 1) {
@@ -1535,7 +1579,8 @@ void Ctxt::write(ostream& str) const
 void Ctxt::read(istream& str)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-ciphertext eye catcher");
   
   ptxtSpace = read_raw_int(str);
   intFactor = read_raw_int(str);
@@ -1547,7 +1592,8 @@ void Ctxt::read(istream& str)
   read_raw_vector(str, parts, blankCtxtPart);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_END);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-ciphertext eye catcher");
 }
 
 void CtxtPart::write(ostream& str)
@@ -1609,7 +1655,8 @@ istream& operator>>(istream& str, Ctxt& ctxt)
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));
   for (auto& part : ctxt.parts) {
     str >> part;
-    assert (part.getIndexSet()==ctxt.primeSet); // sanity-check
+    //OLD: assert (part.getIndexSet()==ctxt.primeSet); // sanity-check
+    helib::assertEq(part.getIndexSet(), ctxt.primeSet, "Ciphertext part's index set does not match prime set"); // sanity-check
   }
   seekPastChar(str,']');
   return str;
@@ -1754,7 +1801,10 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
 {
   // Ensure that new modulus is co-prime with plaintetx space
   const long p2r = getPtxtSpace();
-  assert(toModulus>1 && p2r>1 && GCD(toModulus,p2r)==1);
+  //OLD: assert(toModulus>1 && p2r>1 && GCD(toModulus,p2r)==1);
+  helib::assertTrue<helib::InvalidArgument>(toModulus>1, "toModulus must be greater than 1");
+  helib::assertTrue(p2r>1, "Plaintext space must be greater than 1 for mod switching");
+  helib::assertEq(GCD(toModulus,p2r), 1l, "New modulus and current plaintext space must be co-prime");
 
   // Compute the ratio between the current modulus and the new one.
   // NOTE: toModulus is a long int, so a double for the logarithms and

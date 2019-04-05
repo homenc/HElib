@@ -201,7 +201,8 @@ public:
 
 
   bool operator==(const DoubleCRT& other) const {
-    assert(&context == &other.context);
+    //OLD: assert(&context == &other.context);
+    helib::assertEq(&context, &other.context, "Cannot compare DoubleCRTs with different context");
     return map == other.map;
   }
 

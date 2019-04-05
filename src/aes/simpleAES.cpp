@@ -130,8 +130,7 @@ long AESKeyExpansion(unsigned char RoundKey[240],
   case 256:
     Nr = 14; break;
   default:
-    printf("illigan key-size %d\n", NN);
-    exit(0);
+    throw helib::InvalidArgument("Invalid key size: " + std::to_string(NN));
   }
   int i,j;
   unsigned char temp[4],k;

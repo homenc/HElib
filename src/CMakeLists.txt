@@ -137,6 +137,8 @@ set(HELIB_HEADERS
         "tableLookup.h"
         "timing.h"
         "zzX.h"
+        "assertions.h"
+        "exceptions.h"
         )
 
 set(LEGACY_TEST_SRCS

@@ -299,7 +299,7 @@ public:
   //! @brief Returns the natural logarithm of productOfPrimes(s)
   double logOfProduct(const IndexSet& s) const {
     if (s.last() >= numPrimes())
-      NTL::Error("FHEContext::logOfProduct: IndexSet has too many rows");
+      throw helib::RuntimeError("FHEContext::logOfProduct: IndexSet has too many rows");
 
     double ans = 0.0;
     for (long i: s) 

@@ -46,7 +46,8 @@ zz_pContext BuildContext(long p, long maxroot) {
 // If q == 0, then the current context is used
 Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
 {
-  assert(zms.getM()>1);
+  //OLD: assert(zms.getM()>1);
+  helib::assertTrue<helib::InvalidArgument>(zms.getM()>1, "Bad Z_m^* modulus m (must be greater than 1)");
   bool explicitModulus = true;
 
   if (qq == 0) {
@@ -70,7 +71,9 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
   if (zms.getPow2()) {
     // special case when m is a power of 2
 
-    assert( explicitModulus );
+    //OLD: assert( explicitModulus );
+    helib::assertTrue(explicitModulus, "bad non explicit q value (cannot be non explicit when m is a power of 2)");
+  
     bak.save();
 
     RandomState state;  SetSeed(conv<ZZ>("84547180875373941534287406458029"));
@@ -88,7 +91,8 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
     long k = zms.getPow2();
     long phim = 1L << (k-1); 
 
-    assert(k <= zz_pInfo->MaxRoot); 
+    //OLD: assert(k <= zz_pInfo->MaxRoot);
+    helib::assertTrue(k <= zz_pInfo->MaxRoot, "Roots count exceeds maximum rootTables size (m = 2^k && k > zz_pInfo->Maxroot && rootTables are 0..zz_pInfo->Maxroot)");
     // rootTables get initialized 0..zz_pInfo->Maxroot
 
 #ifdef FHE_OPENCL
@@ -142,7 +146,7 @@ Cmodulus::Cmodulus(const PAlgebra &zms, long qq, long rt)
     
     FindPrimitiveRoot(rtp,e); // NTL routine, relative to current modulus
     if (rtp==0) // sanity check
-      Error("Cmod::compRoots(): no 2m'th roots of unity mod q");
+      throw helib::RuntimeError("Cmod::compRoots(): no 2m'th roots of unity mod q");
     root = rep(rtp);
   }
   rInv = InvMod(root,q); // set rInv = root^{-1} mod q

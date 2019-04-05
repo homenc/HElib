@@ -56,14 +56,19 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
   // could certainly be greatly simplified
 
   nfactors = mvec.length();
-  assert(nfactors > 0);
+  //OLD: assert(nfactors > 0);
+  helib::assertTrue(nfactors > 0, "Invalid argument: mvec must not be empty");
 
-  for (long i = 0; i < nfactors; i++)
-    for (long j = i+1; j < nfactors; j++)
-      assert(GCD(mvec[i], mvec[j]) == 1);
+  for (long i = 0; i < nfactors; i++) {
+    for (long j = i+1; j < nfactors; j++) {
+      //OLD: assert(GCD(mvec[i], mvec[j]) == 1);
+      helib::assertEq(GCD(mvec[i], mvec[j]), 1l, "Invalid argument: mvec elements must be pairwise co-prime");
+    }
+  }
 
   long m = computeProd(mvec);
-  assert(m == long(zMStar.getM()));
+  //OLD: assert(m == long(zMStar.getM()));
+  helib::assertEq(m, (long)zMStar.getM(), "Invalid argument: Product of mvec elements does not match ea.zMStar.getM()");
 
   Vec<long> phivec(INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)  phivec[i] = phi_N(mvec[i]);
@@ -81,8 +86,10 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
     dvec[i] = dprodvec[i] / dprodvec[i+1];
 
   long nslots = phim/d;
-  assert(d == dprodvec[0]);
-  assert(nslots == long(zMStar.getNSlots()));
+  //OLD: assert(d == dprodvec[0]);
+  helib::assertEq(d, dprodvec[0], "dprodvec must start with d");
+  //OLD: assert(nslots == long(zMStar.getNSlots()));
+  helib::assertEq(nslots, (long)zMStar.getNSlots(), "Slot count mismatch between ea and phi(m)/d");
 
   long inertPrefix = 0;
   for (long i = 0; i < nfactors && dvec[i] == 1; i++) {
@@ -90,7 +97,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
   }
 
   if (inertPrefix != nfactors-1)
-    Error("EvalMap: case not handled: bad inertPrefix");
+    throw helib::LogicError("EvalMap: case not handled: bad inertPrefix");
 
   Vec< Vec<long> > local_reps(INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
@@ -165,7 +172,8 @@ static void
 init_representatives(Vec<long>& representatives, long dim, 
                      const Vec<long>& mvec, const PAlgebra& zMStar)
 {
-  assert(dim >= 0 && dim < mvec.length());
+  //OLD: assert(dim >= 0 && dim < mvec.length());
+  helib::assertInRange(dim, 0l, mvec.length(), "Invalid argument: dim must be between 0 and mvec.length()");
 
   // special case
   if (dim >= LONG(zMStar.numOfGens())) {
@@ -203,7 +211,8 @@ public:
     : base_ea(_ea), sig(_sig), dim(_dim)
   {
     long sz = sig->getDim(dim);
-    assert(sz == reps.length());
+    //OLD: assert(sz == reps.length());
+    helib::assertEq(sz, reps.length(), "Invalid argument: sig->getDim(dim) must equal reps.length()");
 
     const EncryptedArrayDerived<type>& ea = _ea.getDerived(type());
     RBak bak; bak.save(); _ea.getAlMod().restoreContext();
@@ -283,9 +292,12 @@ public:
     long d = deg(G);
 
     long sz = sig->getDim(dim);
-    assert(sz == reps.length());
-    assert(dim == sig->getNumDims() - 1);
-    assert(sig->getSize() == ea.size());
+    //OLD: assert(sz == reps.length());
+    helib::assertEq(sz, reps.length(), "Invalid argument: sig->getDim(dim) must equal reps.length()");
+    //OLD: assert(dim == sig->getNumDims() - 1);
+    helib::assertEq(dim, sig->getNumDims() - 1, "Invalid argument: dim must be one less than sig->getNumDims()");
+    //OLD: assert(sig->getSize() == ea.size());
+    helib::assertEq(sig->getSize(), ea.size(), "sig and ea do not have matching size");
 
     // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
 
@@ -385,7 +397,7 @@ void TraceMap(GF2X& w, const GF2X& a, long d, const GF2XModulus& F,
               const GF2X& b)
 
 {
-   if (d < 0) LogicError("TraceMap: bad args");
+  if (d < 0) throw helib::InvalidArgument("TraceMap: d is negative");
 
    GF2X y, z, t;
 
@@ -460,14 +472,18 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
   // could certainly be greatly simplified
 
   nfactors = mvec.length();
-  assert(nfactors > 0);
+  //OLD: assert(nfactors > 0);
+  helib::assertTrue(nfactors > 0, "Invalid argument: mvec must have positive length");
 
-  for (long i = 0; i < nfactors; i++)
-    for (long j = i+1; j < nfactors; j++)
-      assert(GCD(mvec[i], mvec[j]) == 1);
+  for (long i = 0; i < nfactors; i++) {
+    for (long j = i+1; j < nfactors; j++) {
+      helib::assertEq(GCD(mvec[i], mvec[j]), 1l, "Invalid argument: mvec must have pairwise-disjoint entries");
+    }
+  }
 
   long m = computeProd(mvec);
-  assert(m == long(zMStar.getM()));
+  //OLD: assert(m == long(zMStar.getM()));
+  helib::assertEq(m, (long)zMStar.getM(), "Invalid argument: mvec's product does not match ea's m");
 
   Vec<long> phivec(INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)  phivec[i] = phi_N(mvec[i]);
@@ -485,8 +501,10 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
     dvec[i] = dprodvec[i] / dprodvec[i+1];
 
   long nslots = phim/d;
-  assert(d == dprodvec[0]);
-  assert(nslots == long(zMStar.getNSlots()));
+  //OLD: assert(d == dprodvec[0]);
+  helib::assertEq(d, dprodvec[0], "d must match the first entry of dprodvec");
+  //OLD: assert(nslots == long(zMStar.getNSlots()));
+  helib::assertEq(nslots, (long)zMStar.getNSlots(), "Invalid argument: mismatch of number of slots");
 
   long inertPrefix = 0;
   for (long i = 0; i < nfactors && dvec[i] == 1; i++) {
@@ -494,7 +512,7 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
   }
 
   if (inertPrefix != nfactors-1)
-    Error("ThinEvalMap: case not handled: bad inertPrefix");
+    throw helib::LogicError("ThinEvalMap: case not handled: bad inertPrefix");
 
   Vec< Vec<long> > local_reps(INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
@@ -591,7 +609,8 @@ public:
     : base_ea(_ea), sig(_sig), dim(_dim)
   {
     long sz = sig->getDim(dim);
-    assert(sz == reps.length());
+    //OLD: assert(sz == reps.length());
+    helib::assertEq(sz, reps.length(), "Invalid argument: sig and reps have inconsistent dimension");
 
     const EncryptedArrayDerived<type>& ea = _ea.getDerived(type());
     RBak bak; bak.save(); _ea.getAlMod().restoreContext();
@@ -676,9 +695,12 @@ public:
     long r = _ea.getAlMod().getR();
 
     long sz = sig->getDim(dim);
-    assert(sz == reps.length());
-    assert(dim == sig->getNumDims() - 1);
-    assert(sig->getSize() == ea.size());
+    //OLD: assert(sz == reps.length());
+    helib::assertEq(sz, reps.length(), "Invalid argument: sig and reps have inconsistent dimension");
+    //OLD: assert(dim == sig->getNumDims() - 1);
+    helib::assertEq(dim, sig->getNumDims() - 1, "Invalid argument: dim must be one less than sig->getNumDims()");
+    //OLD: assert(sig->getSize() == ea.size());
+    helib::assertEq(sig->getSize(), ea.size(), "sig and ea do not have matching size");
 
     // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
 
@@ -732,7 +754,8 @@ public:
     for (long i = 0; i < 2*d-1; i++) {
       RX trace_val;
       TraceMap(trace_val, (RX(i, 1) % G), d, G, h);
-      assert(deg(trace_val) <= 0);
+      //OLD: assert(deg(trace_val) <= 0);
+      helib::assertTrue(deg(trace_val) <= 0, "trace_val is positive");
       trace_vec[i] = ConstTerm(trace_val);
     }
 

@@ -15,7 +15,6 @@
  */
 #include <limits>
 #include <cmath>
-#include <cassert>
 #include <cstdlib>
 #include <stdexcept>
 #include <NTL/BasicThreadPool.h>
@@ -48,7 +47,8 @@ void computeAllProducts(/*Output*/CtPtrs& products,
       nBits=nBits2;    // ignore extra bits in 'array'
   }
   if (nBits<1) return; // do nothing
-  assert(nBits <= 16); // Output cannot be bigger than 2^16
+  //OLD: assert(nBits <= 16); // Output cannot be bigger than 2^16
+  helib::assertTrue(nBits <= 16, "Output cannot be bigger than 2^16");
 
   if (lsize(products)==0) // try to set the output size
     products.resize(1L << nBits, &array);
@@ -56,18 +56,21 @@ void computeAllProducts(/*Output*/CtPtrs& products,
     products[i]->clear();
 
   // Check that we have enough levels, try to bootstrap otherwise
-  assert(array.ptr2nonNull() != nullptr);
+  //OLD: assert(array.ptr2nonNull() != nullptr);
+  helib::assertNotNull(array.ptr2nonNull(), "Invalid array (could not find non-null Ctxt)");
   long bpl = array.ptr2nonNull()->getContext().BPL();
   if (findMinBitCapacity(array) < (NTL::NumBits(nBits)+1)*bpl) {
     const Ctxt* ct = array.ptr2nonNull(); // find some non-null Ctxt
-    assert(unpackSlotEncoding!=nullptr);
-    assert(ct!=nullptr);
-    assert(ct->getPubKey().isBootstrappable());
+    //OLD: assert(unpackSlotEncoding!=nullptr);
+    helib::assertNotNull(unpackSlotEncoding, "unpackSlotEncoding must not be null when bootstrapping");
+    //OLD: assert(ct!=nullptr); // Looks redundant as already checked above
+    //OLD: assert(ct->getPubKey().isBootstrappable());
+    helib::assertTrue(ct->getPubKey().isBootstrappable(), "Cannot bootstrap with non-bootstrappable public key");
     packedRecrypt(array, *unpackSlotEncoding,
                   *(ct->getContext().ea), /*belowLevel=*/nBits +3);
   }
   if (findMinBitCapacity(array) < (NTL::NumBits(nBits)+1)*bpl)
-    throw std::logic_error("not enough levels for table lookup");
+    throw helib::LogicError("not enough levels for table lookup");
 
   // Call the recursive function that copmutes the products
   recursiveProducts(products, CtPtrs_slice(array,0,nBits));
@@ -138,7 +141,8 @@ void buildLookupTable(std::vector<zzX>& T,// result is encoded and returned in T
                       const EncryptedArray& ea)
 {
   FHE_TIMER_START;
-  assert(nbits_in <= 16); // tables of size > 2^{16} are not supported
+  //OLD: assert(nbits_in <= 16); // tables of size > 2^{16} are not supported
+  helib::assertTrue(nbits_in <= 16, "tables of size > 2^{16} are not supported");
   long sz = 1L << nbits_in;
   T.resize(sz);
 
