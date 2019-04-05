@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _SAMPLE_H_
-#define _SAMPLE_H_
+#ifndef HELIB_SAMPLE_H
+#define HELIB_SAMPLE_H
 /**
  * @file sample.h - implementing various sampling routines 
  **/
@@ -74,4 +74,4 @@ double boundRoundingNoise(long m, long phim, long p2r, double epsilon=9e-13);
 
 void reduceModPhimX(zzX& poly, const PAlgebra& palg);
 const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg);
-#endif // _SAMPLE_H_
+#endif // ifndef HELIB_SAMPLE_H

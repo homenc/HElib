@@ -14,8 +14,8 @@
  * @brief Support for multi-threaded implementations
  **/
 
-#ifndef FHE_multicore_H
-#define FHE_multicore_H
+#ifndef HELIB_MULTICORE_H
+#define HELIB_MULTICORE_H
 
 #ifdef FHE_THREADS
 
@@ -44,4 +44,4 @@
 
 
 
-#endif
+#endif // ifndef HELIB_MULTICORE_H

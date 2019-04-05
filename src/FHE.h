@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#ifndef _FHE_H_
-#define _FHE_H_
+#ifndef HELIB_FHE_H
+#define HELIB_FHE_H
 /**
    @file FHE.h
    @brief Public/secret keys for the BGV cryptosystem
@@ -473,4 +473,4 @@ double RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
 //! Same as RLWE, but assumes that c1 is already chosen by the caller
 double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);
 
-#endif // ifndef _FHE_H_
+#endif // ifndef HELIB_FHE_H

@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _DEBUGGING_H_
-#define _DEBUGGING_H_
+#ifndef HELIB_DEBUGGING_H
+#define HELIB_DEBUGGING_H
 //! @file debugging.h
 //! @brief debugging utilities
 #include <iostream>
@@ -73,4 +73,4 @@ printZZX(std::ostream& s, const NTL::ZZX& poly, long nCoeffs=40)
 }
 
 
-#endif // _DEBUGGING_H_
+#endif // ifndef HELIB_DEBUGGING_H

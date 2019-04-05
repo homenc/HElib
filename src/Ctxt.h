@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _Ctxt_H_
-#define _Ctxt_H_
+#ifndef HELIB_CTXT_H
+#define HELIB_CTXT_H
 /**
  * @file Ctxt.h
  * @brief Declerations of a BGV-type cipehrtext and key-switching matrices
@@ -730,4 +730,4 @@ void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long 
 // implemented in extractDigits.cpp
 
 
-#endif // ifndef _Ctxt_H_
+#endif // ifndef HELIB_CTXT_H

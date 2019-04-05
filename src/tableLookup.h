@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _TABLE_LOOKUP_H
-#define _TABLE_LOOKUP_H
+#ifndef HELIB_TABLELOOKUP_H
+#define HELIB_TABLELOOKUP_H
 /**
  * @file tableLookup.h
  * @brief Code for homomorphic table lookup and fixed-point functions
@@ -86,4 +86,5 @@ void buildLookupTable(std::vector<zzX>& T,// result is encoded and returned in T
                       const long scale_out,
                       const long sign_out,
                       const EncryptedArray& ea);
-#endif // _TABLE_LOOKUP_H
+		      
+#endif // ifndef HELIB_TABLELOOKUP_H

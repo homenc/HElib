@@ -1,5 +1,3 @@
-#ifndef _PrimeChain_H_
-#define _PrimeChain_H_
 /* Copyright (C) 2012-2017 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
@@ -11,6 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+#ifndef HELIB_PRIMECHAIN_H
+#define HELIB_PRIMECHAIN_H
 /**
  * @file primeChain.h
  * @brief handling the chain of moduli
@@ -64,4 +64,4 @@ std::istream& operator>>(std::istream& s, ModuliSizes::Entry& e);
 void write(std::ostream& s, const ModuliSizes::Entry& e);
 void read(std::istream& s, ModuliSizes::Entry& e);
 
-#endif
+#endif // ifndef HELIB_PRIMECHAIN_H

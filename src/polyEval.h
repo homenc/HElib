@@ -9,6 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+#ifndef HELIB_POLYEVAL_H
+#define HELIB_POLYEVAL_H
 /**
  * @file polyEval.h
  * @brief Homomorphic Polynomial Evaluation
@@ -64,3 +66,5 @@ public:
   bool isPowerComputed(long i)
   { return (i>0 && i<=(long)v.size() && !v[i-1].isEmpty()); }
 };
+
+#endif // ifndef HELIB_POLYEVAL_H

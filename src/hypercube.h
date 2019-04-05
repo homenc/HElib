@@ -13,8 +13,8 @@
  * @file hypercube.h
  * @brief Hypercubes and their slices.
  **/
-#ifndef _HYPERCUBE_H_
-#define _HYPERCUBE_H_
+#ifndef HELIB_HYPERCUBE_H
+#define HELIB_HYPERCUBE_H
 
 #include "NumbTh.h"
 
@@ -431,4 +431,4 @@ void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos, const
 template<class T>
 void print3D(const HyperCube<T>& c);
 
-#endif /* ifndef _HYPERCUBE_H_ */
+#endif // ifndef HELIB_HYPERCUBE_H 

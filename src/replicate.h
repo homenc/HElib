@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _replicate_H_
-#define _replicate_H_
+#ifndef HELIB_REPLICATE_H
+#define HELIB_REPLICATE_H
 /**
  * @file replicate.h
  * @brief Procedures for replicating a ciphertext slot across a full ciphertext
@@ -137,4 +137,4 @@ public:
 };
 //! @endcond
 
-#endif
+#endif // ifndef HELIB_REPLICATE_H
