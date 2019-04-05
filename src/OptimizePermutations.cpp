@@ -14,7 +14,6 @@
  */
 
 #include <cstdlib>
-#include <cassert>
 #include <list>
 #include <sstream>
 using namespace std;
@@ -274,8 +273,10 @@ BenesMemoEntry optimalBenesAux(long i, long budget, long nlev,
                                const Vec< Vec<long> >& costTab, 
                                BenesMemoTable& memoTab)
 {
-  assert(i >= 0 && i <= nlev);
-  assert(budget > 0);
+  //OLD: assert(i >= 0 && i <= nlev);
+  helib::assertInRange<helib::InvalidArgument>(i, 0l, nlev, "Level to collapse index out of bound", true);
+  //OLD: assert(budget > 0);
+  helib::assertTrue<helib::InvalidArgument>(budget > 0, "No budget left");
 
   // Did we already solve this problem? If so just return the solution.
   BenesMemoTable::iterator find = memoTab.find(BenesMemoKey(i, budget));
@@ -575,9 +576,12 @@ typedef unordered_map< UpperMemoKey, UpperMemoEntry,
 LowerMemoEntry optimalLower(long order, bool good, long budget, long mid, 
                             LowerMemoTable& lowerMemoTable)
 {
-  assert(order > 1);
-  assert(mid == 0 || mid == 1);
-  assert(budget > 0);
+  //OLD: assert(order > 1);
+  helib::assertTrue<helib::InvalidArgument>(order > 1, "Order must be greater than 1");
+  //OLD: assert(mid == 0 || mid == 1);
+  helib::assertTrue<helib::InvalidArgument>(mid == 0 || mid == 1, "mid value is not 1 or 2");
+  //OLD: assert(budget > 0);
+  helib::assertTrue<helib::InvalidArgument>(budget > 0, "No budget left");
 
   // Did we already solve this problem? If so just return the solution.
   LowerMemoTable::iterator find = 
@@ -689,9 +693,12 @@ UpperMemoEntry
 optimalUpperAux(const Vec<GenDescriptor>& vec, long i, long budget, long mid,
 		UpperMemoTable& upperMemoTable, LowerMemoTable& lowerMemoTable)
 {
-  assert(i >= 0 && i <= vec.length());
-  assert(budget >= 0);
-  assert(mid == 0 || mid == 1);
+  //OLD: assert(i >= 0 && i <= vec.length());
+  helib::assertInRange<helib::InvalidArgument>(i, 0l, (long)vec.length(), "Index i does not point to a tree (index out of range)", true);
+  //OLD: assert(budget >= 0);
+  helib::assertTrue<helib::InvalidArgument>(budget >= 0, "Negative budget");
+  //OLD: assert(mid == 0 || mid == 1);
+  helib::assertTrue<helib::InvalidArgument>(mid == 0 || mid == 1, "mid value is not 1 or 2");
 
   // Did we already solve this problem? If so just return the solution.
   UpperMemoTable::iterator find = upperMemoTable.find(UpperMemoKey(i, budget, mid));
@@ -875,7 +882,9 @@ static long copyToGenTree(OneGeneratorTree& gTree, SplitNodePtr& solution)
 long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens, 
 				       long depthBound)
 {
-  assert(gens.length() >= 0);
+  //OLD: assert(gens.length() >= 0);
+  //TODO: is this check necesary?
+  helib::assertTrue<helib::InvalidArgument>(gens.length() >= 0, "negative gens size");
   trees.SetLength(gens.length());    // allocate space if needed
 
   if (gens.length()==0) {
@@ -883,7 +892,8 @@ long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
     map2array.SetLength(1,0);
     return 0;
   }
-  assert(depthBound > 0);
+  //OLD: assert(depthBound > 0);
+  helib::assertTrue<helib::InvalidArgument>(depthBound > 0, "Zero or negative depthBound");
 
   // reset the trees, starting from only the roots
   for (long i=0; i<trees.length(); i++) {

@@ -44,7 +44,8 @@ static void buildDigitPolynomial(ZZX& result, long p, long e)
     while (y[j] < -(p2e/2))      y[j] += p2e;
   }
   interpolateMod(result, x, y, p, e);
-  assert(deg(result)<p); // interpolating p points, should get deg<=p-1
+  //OLD: assert(deg(result)<p); // interpolating p points, should get deg<=p-1
+  helib::assertTrue(deg(result)<p, "Interpolation error - degree too high");
   SetCoeff(result, p);   // return result = x^p + poly'(x)
   //  cerr << "# digitExt mod "<<p<<"^"<<e<<"="<<result<<endl;
   FHE_TIMER_STOP;
@@ -151,7 +152,7 @@ void compute_a_vals(Vec<ZZ>& a, long p, long e)
       m_fac = MulMod(m_fac, m, p_to_2e);
       ZZ c = rep(coeff(poly, m));
       ZZ d = GCD(m_fac, p_to_2e);
-      if (d == 0 || d > p_to_e || c % d != 0) Error("cannot divide");
+      if (d == 0 || d > p_to_e || c % d != 0) throw helib::RuntimeError("cannot divide");
       ZZ m_fac_deflated = (m_fac / d) % p_to_e;
       ZZ c_deflated = (c / d) % p_to_e;
       a[m] = MulMod(c_deflated, InvMod(m_fac_deflated, p_to_e), p_to_e);

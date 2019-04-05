@@ -45,7 +45,9 @@ private:
 public:
   DynamicCtxtPowers(const Ctxt& c, long nPowers)
   {
-    assert (!c.isEmpty() && nPowers>0); // Sanity-check
+    //OLD: assert (!c.isEmpty() && nPowers>0); // Sanity-check
+    helib::assertFalse<helib::InvalidArgument>(c.isEmpty(), "Ciphertext cannot be empty");
+    helib::assertTrue<helib::InvalidArgument>(nPowers > 0, "Must have positive nPowers");
 
     Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
     v.resize(nPowers, tmp); // Initializes nPowers empty cipehrtexts

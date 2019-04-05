@@ -2,6 +2,10 @@
 
 set(GTEST_SRC
     "test_common.cpp"
+    "Test_errorHandling.cpp"
+    )
+
+set(PORTED_LEGACY_TEST_SRC
     "GTest_Bin_IO.cpp"
     "GTest_EaCx.cpp"
     "GTest_EvalMap.cpp"
@@ -26,7 +30,7 @@ set(GTEST_SRC
     )
 
 # Adding the test binary target
-add_executable(runTests main.cpp ${GTEST_SRC})
+add_executable(runTests main.cpp ${PORTED_LEGACY_TEST_SRC} ${GTEST_SRC})
 
 target_link_libraries(runTests gtest)
 target_link_libraries(runTests helib)
@@ -53,6 +57,7 @@ set(TEST_NAMES
     "GTest_intraSlot"
     "GTest_matmul"
     "GTest_tableLookup"
+    "Test_errorHandling"
     )
 
 foreach(TEST_NAME ${TEST_NAMES})

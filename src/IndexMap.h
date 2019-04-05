@@ -68,11 +68,13 @@ public:
   //! @brief Access functions: will raise an error 
   //! if j does not belong to the current index set 
   T& operator[] (long j) { 
-    assert(indexSet.contains(j)); 
+    //OLD: assert(indexSet.contains(j));
+    helib::assertTrue(indexSet.contains(j), "Key not found");
     return map[j];
   }
   const T& operator[] (long j) const {
-    assert(indexSet.contains(j)); 
+    //OLD: assert(indexSet.contains(j));
+    helib::assertTrue(indexSet.contains(j), "Key not found");
     // unordered_map does not support a const [] operator,
     // so we have to artificially strip away the const-ness here
 #if (__cplusplus>199711L)

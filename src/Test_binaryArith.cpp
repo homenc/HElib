@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <iostream>
+#include <cassert>
 #include <fstream>
 #include <vector>
 #include <cmath>

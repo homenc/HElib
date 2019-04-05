@@ -21,7 +21,8 @@ NTL_CLIENT
 
 long KSGiantStepSize(long D)
 {
-  assert(D > 0);
+  //OLD: assert(D > 0);
+  helib::assertTrue<helib::InvalidArgument>(D > 0l, "Step size must be positive");
   long g = SqrRoot(D);
   if (g*g < D) g++;  // g = ceiling(sqrt(D))
   return g;
@@ -44,7 +45,7 @@ void addAllMatrices(FHESecKey& sKey, long keyID)
 // generate matrices s.t. you can reLinearize each s(X^e) in at most two steps
 void addFewMatrices(FHESecKey& sKey, long keyID)
 {
-  NTL::Error("addFewMatrices Not implemented yet");
+  throw helib::LogicError("addFewMatrices not implemented yet");
 }
 
 // This code block appears at least twice below

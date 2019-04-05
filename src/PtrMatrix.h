@@ -25,7 +25,7 @@ struct PtrMatrix {
   virtual const PtrVector<T>& operator[](long) const =0; // returns a row
   virtual long size() const =0;        // How many rows
   virtual void resize(long newSize)    // reset the number of rows
-  { throw(std::logic_error("Cannot resize generic PtrMatrix")); }
+  { throw helib::LogicError("Cannot resize generic PtrMatrix"); }
   virtual ~PtrMatrix(){}
 
   // Return a pointer to some non-Null T, if it can find one.

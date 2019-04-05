@@ -21,6 +21,8 @@
 #include <vector>
 #include <NTL/vector.h>
 
+#include "assertions.h"
+
 //! @brief Abstract class for an array of objects
 template<typename T>
 struct PtrVector {
@@ -30,7 +32,7 @@ struct PtrVector {
 
   virtual void resize(long newSize, const PtrVector* another=nullptr)
   { if (size()!=newSize)
-      throw(std::logic_error("Cannot resize a generic PtrVector"));
+      throw helib::LogicError("Cannot resize a generic PtrVector");
   }
   virtual ~PtrVector(){}
 
@@ -180,7 +182,8 @@ struct PtrVector_VecT : PtrVector<T> {
       // Try to find a non-null pointer to T that you can give to resize
       if (another==nullptr) another = this;
       const T* pt = another->ptr2nonNull();
-      assert(pt!=nullptr);
+      //OLD: assert(pt!=nullptr);
+      helib::assertNotNull(pt, "another->ptr2nonNull() returned a null ptr");
       v.SetLength(newSize, *pt); // Do the actual resize
     }
   }
@@ -210,7 +213,8 @@ struct PtrVector_vectorT : PtrVector<T> {
       // Try to find a non-null pointer to T that you can give to resize
       if (another==nullptr) another = this;
       const T* pt = another->ptr2nonNull();
-      assert(pt!=nullptr);
+      //OLD: assert(pt!=nullptr);
+      helib::assertNotNull(pt, "another->ptr2nonNull() returned a null ptr");
       v.resize(newSize, *pt); // do the actual resize
     }
   }

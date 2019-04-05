@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/BasicThreadPool.h>
+#include <cassert>
 #include "FHE.h"
 #include "EncryptedArray.h"
 #include "matmul.h"

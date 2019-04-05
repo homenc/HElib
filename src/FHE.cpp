@@ -26,7 +26,8 @@ double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
 // Returns a high-probabiliy bound on the L-infty norm
 // of the canonical embedding of the decryption of (c0, c1) w/r/to s
 {
-  assert (p>0); // Used with p=1 for CKKS, p>=2 for BGV
+  //OLD: assert (p>0); // Used with p=1 for CKKS, p>=2 for BGV
+  helib::assertTrue<helib::InvalidArgument>(p>0, "Cannot generate RLWE instance with nonpositive p"); // Used with p=1 for CKKS, p>=2 for BGV
   const FHEcontext& context = s.getContext();
   const PAlgebra& palg = context.zMStar;
 
@@ -247,7 +248,8 @@ void KeySwitch::write(ostream& str) const
 void KeySwitch::read(istream& str, const FHEcontext& context)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-secret key eyecatcher");
 
   fromKey.read(str);
   toKeyID = read_raw_int(str);
@@ -258,7 +260,8 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
   noiseBound = read_raw_xdouble(str); 
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_END);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
 }
 
 
@@ -269,7 +272,8 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
 
 void FHEPubKey::setKeySwitchMap(long keyId)
 {
-  assert(keyId>=0 && keyId<(long)skBounds.size()); // Sanity-check, do we have such a key?
+  //OLD: assert(keyId>=0 && keyId<(long)skBounds.size()); // Sanity-check, do we have such a key?
+  helib::assertInRange(keyId, 0l, (long)skBounds.size(), "No such key found"); // Sanity-check, do we have such a key?
   long m = context.zMStar.getM();
 
   // Initialize an aray of "edges" (this is easier than searching through
@@ -377,10 +381,11 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     return ptxtSpace;
   }
 
-  assert(this == &ctxt.pubKey);
+  //OLD: assert(this == &ctxt.pubKey);
+  helib::assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
   if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mistamtch
     ptxtSpace = GCD(ptxtSpace, pubEncrKey.ptxtSpace);
-    if (ptxtSpace <= 1) Error("Plaintext-space mismatch on encryption");
+    if (ptxtSpace <= 1) throw helib::RuntimeError("Plaintext-space mismatch on encryption");
   }
 
   // generate a random encryption of zero from the public encryption key
@@ -482,7 +487,8 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt,
                             double ptxtSize, double scaling) const
 {
-  assert(this == &ctxt.pubKey);
+  //OLD: assert(this == &ctxt.pubKey);
+  helib::assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
 
   if (ptxtSize<=0)
     ptxtSize = 1.0;
@@ -637,7 +643,8 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   unsigned long m, p, r;
   vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
-  assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
+  //OLD: assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
+  helib::assertTrue(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords), "PAlgebra mismatch");
 
   // Get the public encryption key itself
   str >> pk.pubEncrKey;
@@ -717,7 +724,8 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
 void readPubKeyBinary(istream& str, FHEPubKey& pk)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_BEGIN);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-public key eyecatcher");
  
   //  // TODO code to check context object is what it should be 
   //  // same as the text IO. May be worth putting it in helper func.
@@ -725,7 +733,8 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   unsigned long m, p, r;
   vector<long> gens, ords;
   readContextBaseBinary(str, m, p, r, gens, ords);
-  assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
+  //OLD: assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
+  helib::assertTrue(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords), "PAlgebra mismatch");
 
   // Read in the rest
   pk.pubEncrKey.read(str);
@@ -746,7 +755,8 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   pk.recryptEkey.read(str);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_END);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-public key eyecatcher");
 }
 
 
@@ -865,7 +875,8 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
     //   plaintext space even if *this is not currently bootstrapppable,
     //   in case the calling application will make it bootstrappable later.
 
-    assert(p>=2);
+    //OLD: assert(p>=2);
+    helib::assertTrue(p>=2, "Invalid p value found generating BGV key-switching matrix");
   }
   ksMatrix.ptxtSpace = p;
 
@@ -896,7 +907,8 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 			ZZX& f) const // plaintext before modular reduction
 {
   FHE_TIMER_START;
-  assert(getContext()==ciphertxt.getContext());
+  //OLD: assert(getContext()==ciphertxt.getContext());
+  helib::assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
   DoubleCRT ptxt(context, ptxtPrimes); // Set to zero
 
@@ -956,7 +968,8 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
 {
   FHE_TIMER_START;
 
-  assert(((FHEPubKey*)this) == &ctxt.pubKey);
+  //OLD: assert(((FHEPubKey*)this) == &ctxt.pubKey);
+  helib::assertEq(((const FHEPubKey*)this), &ctxt.pubKey, "Key does not match context's public key");
 
   long m = getContext().zMStar.getM();
   double ptxtSize = 1.0;
@@ -968,7 +981,8 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
   else { // BGV
     if (ptxtSpace<2) 
       ptxtSpace = pubEncrKey.ptxtSpace; // default plaintext space is p^r
-    assert(ptxtSpace >= 2);
+    //OLD: assert(ptxtSpace >= 2);
+    helib::assertTrue(ptxtSpace >= 2, "Found invalid p value in BGV encryption");
   }
   ctxt.ptxtSpace = ptxtSpace;
 
@@ -1020,7 +1034,8 @@ long FHESecKey::genRecryptData()
   if (recryptKeyID>=0) return recryptKeyID;
 
   // Make sure that the context has the bootstrapping EA and PAlgMod
-  assert(context.isBootstrappable());
+  //OLD: assert(context.isBootstrappable());
+  helib::assertTrue(context.isBootstrappable(), "Cannot generate recrypt data for non-bootstrappable context");
 
   long p2ePr = context.rcData.alMod->getPPowR();// p^{e-e'+r}
   long p2r = context.alMod.getPPowR(); // p^r
@@ -1090,7 +1105,8 @@ void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
 void readSecKeyBinary(istream& str, FHESecKey& sk)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_BEGIN);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-secret key eyecatcher");
 
   // Read in the public key part first.
   readPubKeyBinary(str, sk);
@@ -1099,6 +1115,7 @@ void readSecKeyBinary(istream& str, FHESecKey& sk)
   read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_END);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
 }
 

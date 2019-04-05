@@ -18,7 +18,6 @@
 #include <vector>
 #include <set>
 #include <cmath>
-#include <cassert>
 #include <string>
 #include <climits>
 #include <cmath>
@@ -48,12 +47,13 @@
 
 #include <NTL/FFT.h>
 
-// Test for the "right version" of NTL (currently 10.0.0)
-#if (NTL_MAJOR_VERSION<10)
-#error "This version of HElib requires NTL version 10.0.0 or above"
+// Test for the "right version" of NTL (currently 11.0.0)
+#if (NTL_MAJOR_VERSION<11)
+#error "This version of HElib requires NTL version 11.0.0 or above"
 #endif
 
 #include "range.h"
+#include "assertions.h"
 
 namespace FHEglobals
 {
@@ -181,7 +181,8 @@ public:
     std::shared_ptr<ArgProcessor> ap = 
       std::shared_ptr<ArgProcessor>(new ArgProcessorDerived<T>(&value));
 
-    assert(!map[name]);
+    //OLD: assert(!map[name]);
+    helib::assertTrue(map[name] == nullptr, "Key already in arg map (key: " + std::string(name) + ")");
     map[name] = ap;
   }
 
@@ -630,7 +631,9 @@ void seekPastChar(std::istream& str, int cc);
 template<class T> void reverse(NTL::Vec<T>& v, long lo, long hi)
 {
   long n = v.length();
-  assert(lo >= 0 && lo <= hi && hi < n);
+  //OLD: assert(lo >= 0 && lo <= hi && hi < n);
+  helib::assertInRange(lo, 0l, hi, "Invalid argument: Bad interval", true);
+  helib::assertTrue(hi < n, "Invalid argument: Interval exceeds vector size");
 
   if (lo >= hi) return;
 

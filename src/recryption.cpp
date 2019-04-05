@@ -56,8 +56,17 @@ static void x2iInSlots(ZZX& poly, long i,
 static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
                           double& U_norm, const PAlgebra& palg, PowerfulDCRT* p2dConv = 0)
 {
-  assert(q>0 && p2e>0 && p2r>0 && a>=0
-         && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
+  //OLD: assert(q>0 && p2e>0 && p2r>0 && a>=0 && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
+  helib::assertTrue<helib::InvalidArgument>(q > 0l, "q must be positive");
+  helib::assertTrue<helib::InvalidArgument>(p2e > 0l, "p2e must be positive");
+  helib::assertTrue<helib::InvalidArgument>(p2r > 0l, "p2r must be positive");
+  helib::assertTrue<helib::InvalidArgument>(a >= 0l, "a must be non-negative");
+
+  helib::assertEq<helib::InvalidArgument>(q % p2e, 1l, "q must equal 1 modulo p2e");
+  helib::assertEq<helib::InvalidArgument>(a % p2r, 0l, "p2r must divide a");
+
+  helib::assertTrue<helib::InvalidArgument>(a * 2 < p2e, "a must be less than half of p2e");
+
   long aa = a / p2r;
 
 
@@ -127,8 +136,16 @@ static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a,
 static long makeDivisible(vec_ZZ& vec, long p2e, long p2r, long q, long a, 
                           double& U_norm, const PAlgebra& palg)
 {
-  assert(q>0 && p2e>0 && p2r>0 && a>=0
-         && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
+  //OLD: assert(q>0 && p2e>0 && p2r>0 && a>=0 && q % p2e == 1 && a % p2r == 0 && a*2 < p2e);
+  helib::assertTrue<helib::InvalidArgument>(q > 0l, "q must be positive");
+  helib::assertTrue<helib::InvalidArgument>(p2e > 0l, "p2e must be positive");
+  helib::assertTrue<helib::InvalidArgument>(p2r > 0l, "p2r must be positive");
+  helib::assertTrue<helib::InvalidArgument>(a >= 0l, "a must be non-negative");
+
+  helib::assertEq<helib::InvalidArgument>(q % p2e, 1l, "q must equal 1 modulo p2e");
+  helib::assertEq<helib::InvalidArgument>(a % p2r, 0, "p2r must divide a");
+
+  helib::assertTrue<helib::InvalidArgument>(a * 2 < p2e, "a must be less than half of p2e");
   long aa = a / p2r;
 
 
@@ -269,8 +286,9 @@ long RecryptData::setAE(long& a, long& e, long& ePrime,
   // Start with the smallest e s.t. p^e > (2p^r+1)(skSize+1)*magicCons
   ePrime = 0;
   e = ceil( log(frstTerm*factor) /logp );
-  assert(e*logp < log(NTL_SP_BOUND));
-         // p^e for this smallest e must be single precision
+  //OLD: assert(e*logp < log(NTL_SP_BOUND));
+  helib::assertTrue(e*logp < log(NTL_SP_BOUND), "p^e for this smallest e must be single precision");
+  // p^e for this smallest e must be single precision
 
   // Loop to try and find better solutions, that still satisfy
   //          (p^{e'}/2 + 2*p^r+1) * (s+1)*magicConst*2 <= p^e
@@ -337,7 +355,7 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
     cerr << "@Warning: multiple calls to RecryptData::init\n";
     return;
   }
-  assert(computeProd(mvec_) == (long)context.zMStar.getM()); // sanity check
+  helib::assertEq(computeProd(mvec_), (long)context.zMStar.getM(), "Cyclotomic polynomial mismatch"); // sanity check
 
   // Record the arguments to this function
   mvec = mvec_;
@@ -410,7 +428,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
     return;
   }
 
-  assert(recryptKeyID>=0); // check that we have bootstrapping data
+  //OLD: assert(recryptKeyID>=0); // check that we have bootstrapping data
+  helib::assertTrue(recryptKeyID>=0l, "No bootstrapping data");
 
   long p = getContext().zMStar.getP();
   long r = getContext().alMod.getR();
@@ -424,7 +443,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   long ePrime = rcData.ePrime;
   long p2ePrime = power_long(p,ePrime);
   long q = power_long(p,e)+1;
-  assert(e>=r);
+  //OLD: assert(e>=r);
+  helib::assertTrue(e>=r, "rcData.e must be at least alMod.r");
 
 #ifdef DEBUG_PRINTOUT
   cerr << "reCrypt: p="<<p<<", r="<<r<<", e="<<e<<" ePrime="<<ePrime
@@ -433,7 +453,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  assert(p2r % ptxtSpace == 0);
+  //OLD: assert(p2r % ptxtSpace == 0);
+  helib::assertEq(p2r % ptxtSpace, 0l, "ptxtSpace must divide p^r when bootstrapping");
 
   ctxt.dropSmallAndSpecialPrimes();
 
@@ -449,7 +470,8 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
   // Mod-switch down if needed
   IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
-  assert(s <= context.ctxtPrimes);
+  //OLD: assert(s <= context.ctxtPrimes);
+  helib::assertTrue(s <= context.ctxtPrimes, "Not enough room to mod down when bootstrapping");
   if (s.card()>2) { // leave only bottom two primes
     long frst = s.first();
     long scnd = s.next(frst);
@@ -952,7 +974,8 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
     return;
   }
 
-  assert(recryptKeyID>=0); // check that we have bootstrapping data
+  //OLD: assert(recryptKeyID>=0); // check that we have bootstrapping data
+  helib::assertTrue(recryptKeyID>=0l, "Bootstrapping data not present");
 
   long p = ctxt.getContext().zMStar.getP();
   long r = ctxt.getContext().alMod.getR();
@@ -967,10 +990,12 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   long ePrime = trcData.ePrime;
   long p2ePrime = power_long(p,ePrime);
   long q = power_long(p,e)+1;
-  assert(e>=r);
+  //OLD: assert(e>=r);
+  helib::assertTrue(e>=r, "trcData.e must be at least alMod.r");
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  assert(p2r % ptxtSpace == 0);
+  //OLD: assert(p2r % ptxtSpace == 0);
+  helib::assertEq(p2r % ptxtSpace, 0l, "ptxtSpace must divide p^r when thin bootstrapping");
 
 #ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "init");
@@ -1007,7 +1032,8 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
   // Mod-switch down if needed
   IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
-  assert(s <= context.ctxtPrimes);
+  //OLD: assert(s <= context.ctxtPrimes);
+  helib::assertTrue(s <= context.ctxtPrimes,  "Not enough room to mod down when thin bootstrapping");
   if (s.card()>2) { // leave only bottom two primes
     long frst = s.first();
     long scnd = s.next(frst);
@@ -1022,7 +1048,8 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
   double noise = ctxt.rawModSwitch(zzParts, q);
-  assert(zzParts.size() == 2);
+  //OLD: assert(zzParts.size() == 2);
+  helib::assertEq(zzParts.size(), (std::size_t)2, "Exactly 2 parts required for mod-switching in thin bootstrapping");
 
 #ifdef DEBUG_PRINTOUT
   if (dbgKey) {

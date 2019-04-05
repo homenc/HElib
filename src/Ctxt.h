@@ -331,8 +331,10 @@ public:
   void DummyEncrypt(const NTL::ZZX& ptxt, double size=-1.0);
 
   Ctxt& operator=(const Ctxt& other) {  // public assignment operator
-    assert(&context == &other.context);
-    assert (&pubKey == &other.pubKey);
+    //OLD: assert(&context == &other.context);
+    helib::assertEq(&context, &other.context, "Cannot assign Ctxts with different context");
+    //OLD: assert(&pubKey == &other.pubKey);
+    helib::assertEq(&pubKey, &other.pubKey, "Cannot assign Ctxts with different pubKey");
     return privateAssign(other);
   }
 
@@ -615,9 +617,9 @@ public:
     long p = context.zMStar.getP();
     for (long r=1, p2r=p; r<NTL_SP_NBITS; r++, p2r *= p) {
       if (p2r == ptxtSpace) return r;
-      if (p2r > ptxtSpace) NTL::Error("ctxt.ptxtSpace is not of the form p^r");
+      if (p2r > ptxtSpace) throw helib::RuntimeError("ctxt.ptxtSpace is not of the form p^r");
     }
-    NTL::Error("ctxt.ptxtSpace is not of the form p^r");
+    throw helib::RuntimeError("ctxt.ptxtSpace is not of the form p^r");
     return 0; // just to keep the compiler happy
   }
 

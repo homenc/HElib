@@ -124,36 +124,36 @@ public:
 
   // These methods are only defined for some of the derived calsses
   virtual void encode(zzX& ptxt, const std::vector< long >& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
   virtual void encode(NTL::ZZX& ptxt, const std::vector< long >& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
 
   virtual void encode(zzX& ptxt, const std::vector< zzX >& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
   virtual void encode(zzX& ptxt, const PlaintextArray& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
 
   virtual void encode(NTL::ZZX& ptxt, const std::vector<NTL::ZZX>& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
   virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const
-  {throw std::logic_error("EncryptedArrayBase::encode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
 
   void encode(zzX& ptxt, const std::vector< NTL::ZZX >& array) const
   { NTL::ZZX tmp; encode(tmp, array); convert(ptxt, tmp); }
 
   // These methods are only defined for some of the derived calsses
   virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decode for undefined type");}
   virtual void decode(std::vector<NTL::ZZX>& array, const NTL::ZZX& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decode for undefined type");}
   virtual void decode(PlaintextArray& array, const NTL::ZZX& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decode for undefined type");}
 
   virtual void random(std::vector< long >& array) const = 0; // must be defined
 
   // These methods are only defined for some of the derived calsses
   virtual void random(std::vector< NTL::ZZX >& array) const
-  {throw std::logic_error("EncryptedArrayBase::decode for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decode for undefined type");}
 
   // FIXME: Inefficient implementation, calls usual decode and returns one slot
   long decode1Slot(const NTL::ZZX& ptxt, long i) const
@@ -170,7 +170,8 @@ public:
   template<class PTXT>
   void encrypt(Ctxt& ctxt, const FHEPubKey& key, const PTXT& ptxt) const
   {
-    assert(&getContext() == &ctxt.getContext());
+    //OLD: assert(&getContext() == &ctxt.getContext());
+    helib::assertEq(&getContext(), &ctxt.getContext(), "Cannot encrypt when ciphertext has different context than EncryptedArray");
     zzX pp;
     encode(pp, ptxt); // Convert array of slots into a plaintext polynomial
     key.Encrypt(ctxt, pp, getP2R()); // encrypt the plaintext polynomial
@@ -178,15 +179,15 @@ public:
   }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decrypt for undefined type");}
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< NTL::ZZX >& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decrypt for undefined type");}
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, PlaintextArray& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decrypt for undefined type");}
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector<double>& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decrypt for undefined type");}
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector<cx_double>& ptxt) const
-  {throw std::logic_error("EncryptedArrayBase::decrypt for undefined type");}
+  {throw helib::LogicError("EncryptedArrayBase::decrypt for undefined type");}
 
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const FHESecKey& sKey, long i) const
@@ -245,7 +246,8 @@ public:
   //! (output should not alias input)
   template<class U> void rotate1D(std::vector<U>& out, const std::vector<U>& in,
                                   long i, long offset) const {
-    assert(lsize(in) == size());
+    //OLD: assert(lsize(in) == size());
+    helib::assertEq(lsize(in), size(), "Input vector has wrong size (must equal EncryptedArray::size())");
     out.resize(in.size());
     for (long j = 0; j < size(); j++)
       out[addCoord(i, j, offset)] = in[j]; 
@@ -295,8 +297,10 @@ public:
   EncryptedArrayDerived& operator=(const EncryptedArrayDerived& other) // assignment
   {
     if (this == &other) return *this;
-    assert(&context == &other.context);
-    assert(&tab == &other.tab);
+    //OLD: assert(&context == &other.context);
+    helib::assertEq(&context, &other.context, "Cannot assign a EncryptedArrays with different contexts");
+    //OLD: assert(&tab == &other.tab);
+    helib::assertEq(&tab, &other.tab, "Cannot assign a EncryptedArrays with different tabs");
 
     RBak bak; bak.save(); tab.restoreContext();
     mappingData = other.mappingData;
@@ -483,7 +487,8 @@ private:
   void genericDecrypt(const Ctxt& ctxt, const FHESecKey& sKey, 
                       T& array) const
   {
-    assert(&context == &ctxt.getContext());
+    //OLD: assert(&context == &ctxt.getContext());
+    helib::assertEq(&context, &ctxt.getContext(), "Cannot decrypt when ciphertext has different context than EncryptedArray");
     NTL::ZZX pp;
     sKey.Decrypt(pp, ctxt);
     decode(array, pp);
@@ -581,7 +586,8 @@ public:
   void encryptOneNum(Ctxt& ctxt, const FHEPubKey& key, double num,
                      double useThisSize=-1, long precision=-1) const
   {
-    assert(&getContext() == &ctxt.getContext());
+    //OLD: assert(&getContext() == &ctxt.getContext());
+    helib::assertEq(&getContext(), &ctxt.getContext(), "Cannot decrypt when ciphertext has different context than EncryptedArray");
     if (useThisSize <= 0.0)
       useThisSize = roundedSize(num); // rounded to power of two
     zzX pp;  // Convert num into a plaintext polynomial
@@ -594,7 +600,8 @@ public:
   void encrypt(Ctxt& ctxt, const FHEPubKey& key, const PTXT& ptxt,
                double useThisSize, long precision=-1) const
   {
-    assert(&getContext() == &ctxt.getContext());
+    //OLD: assert(&getContext() == &ctxt.getContext());
+    helib::assertEq(&getContext(), &ctxt.getContext(), "Cannot decrypt when ciphertext has different context than EncryptedArray");
     zzX pp;
     double f = encode(pp, ptxt, useThisSize, precision);
     // Convert into a polynomial
@@ -622,7 +629,8 @@ public:
   }
   // The scaling factor to use when encoding/decoding plaintext elements
   long encodeScalingFactor(long precision=-1, double roundErr=-1.0) const {
-    assert(precision<NTL_SP_BOUND);
+    //OLD: assert(precision<NTL_SP_BOUND);
+    helib::assertTrue<helib::InvalidArgument>(precision < NTL_SP_BOUND, "Precision exceeds max single precision bound");
     if (precision <= 0) precision=(1L<< alMod.getR());
     if (roundErr  <  0) roundErr = encodeRoundingError();
     long f = ceil(precision * roundErr);
@@ -753,7 +761,8 @@ public:
 
   EncryptedArray& operator=(const EncryptedArray& other) {
     if (this == &other) return *this;
-    assert(&alMod== &other.alMod);
+    //OLD: assert(&alMod== &other.alMod);
+    helib::assertEq(&alMod, &other.alMod, "Cannot assign EncryptedArrays with different algebras");
     rep = other.rep;
     return *this;
   }
@@ -788,7 +797,7 @@ public:
         p->dispatch<T>(std::forward<Args>(args)...);
         break;
       }
-      default: NTL::TerminalError("bad tag"); 
+      default: throw helib::RuntimeError("EncryptedArray: bad tag");
     }
   }
 

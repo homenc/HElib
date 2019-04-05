@@ -52,7 +52,8 @@ void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x)
   long d = 1L << logD;
 
   // We have d <= deg(poly) < 3d
-  assert(d <= deg && deg < 3*d);
+  //OLD: assert(d <= deg && deg < 3*d);
+  helib::assertInRange(deg, d, 3l*d, "Poly degree not in [d, 3d)");
 
   Vec<Ctxt> powers(INIT_SIZE, logD+1, x);
   if (logD>0) {
@@ -196,7 +197,8 @@ simplePolyEval(Ctxt& ret, const ZZX& poly, DynamicCtxtPowers& babyStep)
   ret.clear();
   if (deg(poly)<0) return;       // the zero polynomial always returns zero
 
-  assert (deg(poly)<=babyStep.size()); // ensure that we have enough powers
+  //OLD: assert(deg(poly)<=babyStep.size()); // ensure that we have enough powers
+  helib::assertTrue(deg(poly)<=babyStep.size(), "BabyStep has not enough powers (required more than deg(poly))");
 
   ZZ coef;
   ZZ p = to_ZZ(babyStep[0].getPtxtSpace());
@@ -239,8 +241,10 @@ PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long delta,
   DivRem(c,s,r,q); // r' = c*q + s
   // deg(s)<deg(q), and if c!= 0 then deg(c)<k-delta
 
-  assert(deg(s)<deg(q));
-  assert(IsZero(c) || deg(c)<k-delta);
+  //OLD: assert(deg(s)<deg(q));
+  helib::assertTrue(deg(s)<deg(q), "Degree of s is not less than degree of q");
+  //OLD: assert(IsZero(c) || deg(c)<k-delta);
+  helib::assertTrue(IsZero(c) || deg(c)<k - delta, "Nonzero c has not degree smaller than k - delta");
   SetCoeff(s,deg(q)); // s' = s + X^{deg(q)}, deg(s)==deg(q)
 
   // reduce the coefficients modulo p
@@ -375,7 +379,10 @@ private:
 public:
   DynamicPtxtPowers(long _x, long _p, long nPowers, long _d=1) : p(_p)
   {
-    assert (_x>=0 && _p>1 && nPowers>0); // Sanity check
+    //OLD: assert(_x>=0 && _p>1 && nPowers>0); // Sanity check
+    helib::assertTrue<helib::InvalidArgument>(_x >= 0l, "_x must be greater equal than 0"); // Sanity check
+    helib::assertTrue<helib::InvalidArgument>(_p > 1l, "_p must be greater than 1"); // Sanity check
+    helib::assertTrue<helib::InvalidArgument>(nPowers > 0l, "nPowers must be greater than 0"); // Sanity check
     v.SetLength(nPowers);
     dpth.SetLength(nPowers);
     for (long i=1; i<nPowers; i++) // Initializes nPowers empty slots
@@ -433,7 +440,8 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
 
 long simplePolyEval(const ZZX& poly, DynamicPtxtPowers& babyStep, long mod)
 {
-  assert (deg(poly)<=(long)babyStep.size());// ensure that we have enough powers
+  //OLD: assert (deg(poly)<=(long)babyStep.size());// ensure that we have enough powers
+  helib::assertTrue(deg(poly)<=(long)babyStep.size(), "BabyStep has not enough powers (required more than deg(poly))");
 
   long ret = rem(ConstTerm(poly), mod);
   for (long i=0; i<deg(poly); i++) {
@@ -524,8 +532,11 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
 
   if (verbose) cerr << ", c="<<c<< ", s ="<<s<<endl;
 
-  assert(deg(s)<deg(q));
-  assert(IsZero(c) || deg(c)<k-delta);
+  //OLD: assert(deg(s)<deg(q));
+  helib::assertTrue(deg(s)<deg(q), "Degree of s is not less than degree of q");
+  //OLD: assert(IsZero(c) || deg(c)<k-delta);
+  helib::assertTrue(IsZero(c) || deg(c)<k - delta, "Nonzero c has not degree smaller than k - delta");
+  
   SetCoeff(s,deg(q)); // s' = s + X^{deg(q)}, deg(s)==deg(q)
 
   // reduce the coefficients modulo mod
@@ -548,8 +559,9 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
     cerr << "  PatersonStockmeyer("<<q<<") returns "<<ret
 	 << ", depth="<<subDepth2<<endl;
     if (ret != polyEvalMod(q,babyStep[0], mod)) {
-      cerr << "  **1st recursive call failed, q="<<q<<endl;
-      exit(0);
+      std::stringstream ss;
+      ss << "  **1st recursive call failed, q="<<q;
+      throw helib::RuntimeError(ss.get());
     }
   }
   ret = MulMod(ret, tmp, mod);
@@ -562,8 +574,9 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
     cerr << "  PatersonStockmeyer("<<s<<") returns "<<tmp
 	 << ", depth="<<subDepth2<<endl;
     if (tmp != polyEvalMod(s,babyStep[0], mod)) {
-      cerr << "  **2nd recursive call failed, s="<<s<<endl;
-      exit(0);
+      std::stringstream ss;
+      ss << "  **2nd recursive call failed, s="<<s;
+      throw helib::RuntimeError(ss.get());
     }
   }
   ret = AddMod(ret,tmp,mod);
@@ -623,9 +636,10 @@ recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
   if (verbose) {
     cerr << "  PatersonStockmeyer("<<q<<") returns "<<ret<<", depth="<<subDepth1<<endl;
     if (ret != polyEvalMod(q,babyStep[0], mod)) {
-      cerr << "  @@1st recursive call failed, q="<<q
-     	   << ", ret="<<ret<<"!=" << polyEvalMod(q,babyStep[0], mod)<<endl;
-      exit(0);
+      std::stringstream ss;
+      ss << "  @@1st recursive call failed, q="<<q
+     	   << ", ret="<<ret<<"!=" << polyEvalMod(q,babyStep[0], mod);
+      throw helib::RuntimeError(ss.get());
     }
   }
 
@@ -651,9 +665,10 @@ recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
   if (verbose)
     cerr << "  recursivePolyEval("<<r<<") returns "<<tmp<<", depth="<<subDepth2<<endl;
   if (tmp != polyEvalMod(r,babyStep[0], mod)) {
-    cerr << "  @@2nd recursive call failed, r="<<r
-	 << ", ret="<<tmp<<"!=" << polyEvalMod(r,babyStep[0], mod)<<endl;
-    exit(0);
+    std::stringstream ss;
+    ss << "  @@2nd recursive call failed, r="<<r
+      << ", ret="<<tmp<<"!=" << polyEvalMod(r,babyStep[0], mod);
+    throw helib::RuntimeError(ss.get());
   }
   recursiveDepth = max(subDepth1, subDepth2);
   return AddMod(ret, tmp, mod);
@@ -708,9 +723,10 @@ long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
     if (verbose) {
       cerr << "  degPowerOfTwo("<<poly<<") returns "<<ret<<", depth="<<totalDepth<<endl;
       if (ret != polyEvalMod(poly,babyStep[0], p)) {
-	cerr << "  ## recursive call failed, ret="<<ret<<"!=" 
-	     << polyEvalMod(poly,babyStep[0], p)<<endl;
-	exit(0);
+        std::stringstream ss;
+        ss << "  ## recursive call failed, ret="<<ret<<"!=" 
+          << polyEvalMod(poly,babyStep[0], p);
+        throw helib::RuntimeError(ss.get());
       }
       // cerr << "  babyStep depth=[";
       // for (long i=0; i<babyStep.size(); i++) 
@@ -767,9 +783,10 @@ long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
     if (verbose) {
       cerr << "  recursivePolyEval("<<poly<<") returns "<<y<<", depth="<<subDepth1<<endl;
       if (y != polyEvalMod(poly,babyStep[0], p)) {
-	cerr << "## recursive call failed, ret="<<y<<"!=" 
-	     << polyEvalMod(poly,babyStep[0], p)<<endl;
-	exit(0);
+        std::stringstream ss;
+        ss << "## recursive call failed, ret="<<y<<"!=" 
+          << polyEvalMod(poly,babyStep[0], p);
+        throw helib::RuntimeError(ss.get());
       }
     }
     y = MulMod(y, top, p); // multiply by the original top coefficient
@@ -779,9 +796,10 @@ long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
     if (verbose) {
       cerr << "  recursivePolyEval("<<poly<<") returns "<<y<<", depth="<<subDepth1<<endl;
       if (y != polyEvalMod(poly,babyStep[0], p)) {
-	cerr << "## recursive call failed, ret="<<y<<"!=" 
-	     << polyEvalMod(poly,babyStep[0], p)<<endl;
-	exit(0);
+        std::stringstream ss;
+        ss << "## recursive call failed, ret="<<y<<"!=" 
+          << polyEvalMod(poly,babyStep[0], p);
+        throw helib::RuntimeError(ss.get());
       }
     }
   }

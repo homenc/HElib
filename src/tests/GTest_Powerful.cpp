@@ -222,7 +222,7 @@ INSTANTIATE_TEST_SUITE_P(standard_parameters, GTest_Powerful, ::testing::Values(
   long lbase = 1;
   while (lbase < q && multOrd(lbase, q) != m) lbase++;
 
-  assert(lbase < q);
+  ASSERT_TRUE(lbase < q);
 
   zz_p base = conv<zz_p>(lbase);
 

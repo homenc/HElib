@@ -288,7 +288,10 @@ struct GenericModulus<NTL::zz_p> {
 
 template<> 
 struct GenericModulus<NTL::GF2> {
-  static void init(long p) { assert(p == 2); }
+  static void init(long p) {
+    //OLD: assert(p == 2);
+    helib::assertEq<helib::InvalidArgument>(p, 2l, "Cannot init NTL::GF2 with p not 2");
+  }
 };
 
 class PA_GF2 {
@@ -493,7 +496,8 @@ public:
   {
     if (this == &other) return *this;
 
-    assert(&zMStar == &other.zMStar);
+    //OLD: assert(&zMStar == &other.zMStar);
+    helib::assertEq(&zMStar, &other.zMStar, "Cannot assign PAlgebras with different zMStar values");
     r = other.r;
     pPowR = other.pPowR;
     pPowRContext = other.pPowRContext;
@@ -659,7 +663,8 @@ class PAlgebraModCx : public PAlgebraModBase {
 public:
 
  PAlgebraModCx(const PAlgebra& palg, long _r): zMStar(palg), r(_r) {
-    assert(r>0 || r<NTL_SP_NBITS);
+   //OLD: assert(r>0 || r<NTL_SP_NBITS);
+   helib::assertInRange<helib::InvalidArgument>(r, 1l, (long)NTL_SP_NBITS, "Invalid bit precision r");
   }
 
   PAlgebraModBase* clone() const override { return new PAlgebraModCx(*this); }
@@ -672,9 +677,9 @@ public:
 
   // These function make no sense for PAlgebraModCx
   const std::vector<NTL::ZZX>& getFactorsOverZZ() const override
-  { throw std::logic_error("PAlgebraModCx::getFactorsOverZZ undefined"); }
+  { throw helib::LogicError("PAlgebraModCx::getFactorsOverZZ undefined"); }
   zzX getMask_zzX(long i, long j) const override
-  { throw std::logic_error("PAlgebraModCx::getMask_zzX undefined"); }
+  { throw helib::LogicError("PAlgebraModCx::getMask_zzX undefined"); }
 };
 
 
