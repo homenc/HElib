@@ -13,8 +13,8 @@
  * @file permutations.h
  * @brief Permutations over Hypercubes and their slices.
  **/
-#ifndef _PERMUTATIONS_H_
-#define _PERMUTATIONS_H_
+#ifndef HELIB_PERMUTATIONS_H
+#define HELIB_PERMUTATIONS_H
 
 #include "PAlgebra.h"
 #include "matching.h"
@@ -546,4 +546,4 @@ public:
   friend std::ostream& operator<< (std::ostream &s, const PermNetwork &net);
 };
 
-#endif /* ifndef _PERMUTATIONS_H_ */
+#endif // ifndef HELIB_PERMUTATIONS_H

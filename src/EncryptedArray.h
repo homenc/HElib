@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _EncryptedArray_H_
-#define _EncryptedArray_H_
+#ifndef HELIB_ENCRYPTEDARRAY_H
+#define HELIB_ENCRYPTEDARRAY_H
 /**
  * @file EncryptedArray.h
  * @brief Data-movement operations on encrypted arrays of slots
@@ -1031,4 +1031,4 @@ template<class P>  // P can be ZZX or DoubleCRT
 void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d);
 ///@}
 
-#endif /* ifdef _EncryptedArray_H_ */
+#endif // ifndef HELIB_ENCRYPTEDARRAY_H

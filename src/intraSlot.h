@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _INTRASLOT_H_
-#define _INTRASLOT_H_
+#ifndef HELIB_INTRASLOT_H
+#define HELIB_INTRASLOT_H
 //! @file intraSlot.h
 //! @brief Packing/unpacking of mod-p integers in GF(p^d) slots.
 
@@ -62,4 +62,5 @@ void packConstant(zzX& result, unsigned long data, long nbits,
 // where the bits get mapped to coefficients on the normal basis
 void packConstants(zzX& result, const std::vector<unsigned long>& data,
                    long nbits, const EncryptedArray& ea);
-#endif // #ifndef _INTRASLOT_H_
+
+#endif // ifndef HELIB_INTRASLOT_H

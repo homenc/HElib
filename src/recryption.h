@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _RECRYPTION_H_
-#define _RECRYPTION_H_
+#ifndef HELIB_RECRYPTION_H
+#define HELIB_RECRYPTION_H
 /** @file recryption.h
  *  @brief Define some data structures to hold recryption data
  */
@@ -136,4 +136,4 @@ public:
 };
 
 
-#endif /* _RECRYPTION_H_ */
+#endif // HELIB_RECRYPTION_H

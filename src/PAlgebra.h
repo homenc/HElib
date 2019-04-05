@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _PAlgebra_H_
-#define _PAlgebra_H_
+#ifndef HELIB_PALGEBRA_H
+#define HELIB_PALGEBRA_H
 /**
  * @file PAlgebra.h
  * @brief Declatations of the classes PAlgebra
@@ -764,4 +764,5 @@ public:
 bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
                      const std::vector<long>& gens, const std::vector<long>& ords);
-#endif // #ifdef _PAlgebra_H_
+
+#endif // #ifndef HELIB_PALGEBRA_H

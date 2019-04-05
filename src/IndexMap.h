@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _IndexMap
-#define _IndexMap
+#ifndef HELIB_INDEXMAP_H
+#define HELIB_INDEXMAP_H
 /**
  * @file IndexMap.h
  * @brief Implementation of a map indexed by a dynamic set of integers.
@@ -136,4 +136,4 @@ bool operator!=(const IndexMap<T>& map1, const IndexMap<T>& map2) {
 
   
 
-#endif
+#endif // ifndef HELIB_INDEXMAP_H

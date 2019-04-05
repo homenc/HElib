@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _zzX_H_
-#define _zzX_H_
+#ifndef HELIB_ZZX_H
+#define HELIB_ZZX_H
 /**
  * @file zzX.h - manipulating polynomials with single-percision coefficient
  *               It is assumed that the result is also single-percision
@@ -82,4 +82,4 @@ inline zzX MulMod(const zzX& a, const zzX& b, const PAlgebra& palg)
   return tmp;
 }
 
-#endif // _zzX_H_
+#endif // ifndef HELIB_ZZX_H

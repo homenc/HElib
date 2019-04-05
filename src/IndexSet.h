@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _IndexSet
-#define _IndexSet
+#ifndef HELIB_INDEXSET_H
+#define HELIB_INDEXSET_H
 /**
  * @file IndexSet.h
  * @brief A dynamic set of integers
@@ -198,4 +198,4 @@ bool operator>(const IndexSet& s1, const IndexSet& s2);
 inline bool disjoint(const IndexSet& s1, const IndexSet& s2)
 { return s1.disjointFrom(s2); }
 
-#endif
+#endif // ifndef HELIB_INDEXSET_H

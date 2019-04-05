@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _PTRVECTOR_H
-#define _PTRVECTOR_H
+#ifndef HELIB_PTRVECTOR_H
+#define HELIB_PTRVECTOR_H
 /**
  * @file PtrVector.h
  * @brief Convenience class templates providing a unified interface
@@ -279,4 +279,4 @@ template<typename T> void resize(PtrVector<T>& v, long newSize, const T& val)
   v.resize(newSize, &t);
 }
 
-#endif // _PTRVECTOR_H
+#endif // ifndef HELIB_PTRVECTOR_H

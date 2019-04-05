@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _EVAL_MAP_H_
-#define _EVAL_MAP_H_
+#ifndef HELIB_EVALMAP_H
+#define HELIB_EVALMAP_H
 /** @file EvalMap.h
  *  @brief Implementing the recryption linear transformations
  */
@@ -100,4 +100,4 @@ public:
   void apply(Ctxt& ctxt) const;
 };
 
-#endif
+#endif // ifndef HELIB_EVALMAP_H
