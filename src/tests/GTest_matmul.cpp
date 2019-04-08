@@ -267,7 +267,7 @@ using TypesToTest = ::testing::Types<
                             MatrixTypeAndParams<MatMul1D, oneDimensionalBlockMatrixParams>
                         >;
 
-TYPED_TEST_CASE(GTest_matmul, TypesToTest);
+TYPED_TEST_SUITE(GTest_matmul, TypesToTest);
 
 TYPED_TEST(GTest_matmul, multiplies_without_errors) {
     FHE_NTIMER_START(EncodeMartix_MatMul);
