@@ -16,7 +16,7 @@
  * @brief The "powerful basis" of a cyclotomic ring
  **/
 #include "NumbTh.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 #include "bluestein.h"
 #include "hypercube.h"
 #include "DoubleCRT.h"

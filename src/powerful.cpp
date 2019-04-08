@@ -654,7 +654,7 @@ void recursiveEval(const CubeSlice<zz_p>& s,
 #if 0
 // Implementation of FFTHelper
 #include "bluestein.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 FFTHelper::FFTHelper(long _m, zz_p x)
 {
