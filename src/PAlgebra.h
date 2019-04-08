@@ -72,11 +72,23 @@ class PAlgebra {
   NTL::ZZX PhimX;   // Holds the integer polynomial Phi_m(X)
 
   double cM;   // the "ring constant" c_m for Z[X]/Phi_m(X)
-  // NOTE: here's to hoping: for "random enough" x we hope to get
-  //       |x|_powerful < |x|_canonical * sqrt(someConstant/phi(m))
-  // we cM = sqrt(phi(m)/3) * sqrt(someConstant/phi(m)), where the
-  // sqrt(phi(m)/3) term comes from context.noiseBoundForUniform())
-
+  // NOTE: cM is related to the ratio between the l_infinity norm of
+  // a "random" ring element in different bases. For example, think of
+  // choosing the power-basis coefficients of x uniformly at random in
+  // [+-a/2] (for some parameter a), then the powerful basis norm of x
+  // should be bounded whp by cM*a.
+  //
+  // More precisely, for an element x whose coefficients are chosen
+  // uniformly in [+-a/2] (in either the powerful or the power basis)
+  // we have a high-probability bound |x|_canonical < A*a for some
+  // A = O(sqrt(phi(m)). Also for "random enough" x we have some bound
+  //       |x|_powerful < |x|_canonical * B
+  // where we "hope" that B = O(1/sqrt(phi(m)). The cM value is
+  // supposed to be cM=A*B.
+  //
+  // The value cM is only used for bootstrapping, see more comments
+  // for the method RecryptData::setAE in recryption.cpp. Also see
+  // Appendix A of https://ia.cr/2014/873 (updated version from 2019)
 
   std::vector<long> T; // The representatives for the quotient group Zm* /(p)
   std::vector<long> Tidx;  // i=Tidx[t] is the index i s.t. T[i]=t. 
