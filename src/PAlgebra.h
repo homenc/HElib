@@ -46,7 +46,7 @@
 #include <utility>
 #include "NumbTh.h"
 #include "zzX.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 #include "hypercube.h"
 
 //NTL_CLIENT

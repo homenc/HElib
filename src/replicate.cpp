@@ -12,7 +12,7 @@
 
 #include "replicate.h"
 #include "timing.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 
 NTL_CLIENT

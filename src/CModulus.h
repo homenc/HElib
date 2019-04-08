@@ -20,7 +20,7 @@
 #include "NumbTh.h"
 #include "PAlgebra.h"
 #include "bluestein.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 /**
 * @class Cmodulus

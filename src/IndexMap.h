@@ -17,7 +17,7 @@
  **/
 
 #include "IndexSet.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 
 //! @brief Initializing elements in an IndexMap

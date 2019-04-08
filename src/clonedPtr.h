@@ -12,7 +12,7 @@
 #ifndef HELIB_CLONEDPTR_H
 #define HELIB_CLONEDPTR_H
 /**
-* @file cloned_ptr.h
+* @file clonedPtr.h
 * @brief Implemenation of smart pointers with "deep cloning" semantics
 *
 * Based (loosely) on code from
