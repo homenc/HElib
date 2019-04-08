@@ -89,8 +89,10 @@ void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
 // moduli chain an error is raised if they are not consistent
 void DoubleCRT::verify()
 {
-  assert(map.getIndexSet() <= 
-         (context.smallPrimes | context.specialPrimes | context.ctxtPrimes));
+  //OLD: assert(map.getIndexSet() <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes));
+  helib::assertTrue(map.getIndexSet() <=
+         (context.smallPrimes | context.specialPrimes | context.ctxtPrimes),
+         "Index set must be a subset of the union of small primes, special primes, and ctxt primes");
 
   const IndexSet& s = map.getIndexSet();
 
@@ -101,12 +103,12 @@ void DoubleCRT::verify()
     vec_long& row = map[i];
 
     if (row.length() != phim) 
-      Error("DoubleCRT object has bad row length");
+      throw helib::RuntimeError("DoubleCRT object has bad row length");
 
     long pi = context.ithPrime(i); // the i'th modulus
     for (long j: range(phim))
       if (row[j]<0 || row[j]>= pi) 
-	Error("DoubleCRT object has inconsistent data");
+	throw helib::RuntimeError("DoubleCRT object has inconsistent data");
   }
 }
 
@@ -121,7 +123,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
   if (isDryRun()) return *this;
 
   if (&context != &other.context)
-    Error("DoubleCRT::Op: incompatible objects");
+    throw helib::RuntimeError("DoubleCRT::Op: incompatible objects");
 
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
@@ -169,7 +171,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
   if (isDryRun()) return *this;
 
   if (&context != &other.context)
-    Error("DoubleCRT::Op: incompatible objects");
+    throw helib::RuntimeError("DoubleCRT::Op: incompatible objects");
 
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
@@ -251,7 +253,7 @@ DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
   if (isDryRun()) return *this;
 
   if (&context != &other.context) 
-    Error("DoubleCRT Negate: incompatible contexts");
+    throw helib::RuntimeError("DoubleCRT Negate: incompatible contexts");
 
   if (map.getIndexSet() != other.map.getIndexSet()) {
     map = other.map; // copy the data
@@ -294,11 +296,13 @@ void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
   FHE_TIMER_START;
   IndexSet allPrimes = getIndexSet() | context.specialPrimes;
 
-  assert(getIndexSet() <= context.ctxtPrimes);
+  //OLD: assert(getIndexSet() <= context.ctxtPrimes);
+  helib::assertTrue(getIndexSet() <= context.ctxtPrimes, "Index set must be a subset of ctxt primes");
   // the calling routine should ensure that the index set
   // contains only ctxt primes
 
-  assert(n <= (long)context.digits.size());
+  //OLD: assert(n <= (long)context.digits.size());
+  helib::assertTrue(n <= (long)context.digits.size(), "n cannot be larger than the size of context.digits");
 
   digits.resize(n, DoubleCRT(context, IndexSet::emptySet()));
   if (isDryRun()) return;
@@ -330,7 +334,8 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
   FHE_TIMER_START;
 
   if (empty(s1)) return; // nothing to do
-  assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
+  //OLD: assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
+  helib::assertTrue( disjoint(s1,map.getIndexSet()), "addPrimes can only be called on a disjoint set");
 
   if (empty(getIndexSet())) {   // special case for empty DCRT
     map.insert(s1); // just add new rows to the map and return
@@ -355,7 +360,8 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
 double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 {
   if (empty(s1)) return 0.0; // nothing to do
-  assert(empty(s1 & map.getIndexSet())); // s1 is disjoint from *this
+  //OLD: assert(empty(s1 & map.getIndexSet())); // s1 is disjoint from *this
+  helib::assertTrue(empty(s1 & map.getIndexSet()), "addPrimes can only be called on a disjoint set");
 
   if (empty(getIndexSet())) {   // special case for empty DCRT
     map.insert(s1); // just add new rows to the map and return
@@ -405,7 +411,8 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
-  assert(s.last() < context.numPrimes());
+  //OLD: assert(s.last() < context.numPrimes());
+  helib::assertTrue(s.last() < context.numPrimes(), "s must end with a smaller element than context.numPrimes()");
 
   map.insert(s);
   if (isDryRun()) return;
@@ -462,7 +469,8 @@ DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context, const IndexSet
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
-  assert(s.last() < context.numPrimes());
+  //OLD: assert(s.last() < context.numPrimes());
+  helib::assertTrue(s.last() < context.numPrimes(), "s must end with a smaller element than context.numPrimes()");
 
   map.insert(s);
   if (isDryRun()) return;
@@ -516,7 +524,8 @@ DoubleCRT::DoubleCRT(const zzX& poly)
 DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
-  assert(s.last() < context.numPrimes());
+  //OLD: assert(s.last() < context.numPrimes());
+  helib::assertTrue(s.last() < context.numPrimes(), "s must end with a smaller element than context.numPrimes()");
 
   map.insert(s);
   if (isDryRun()) return;
@@ -557,7 +566,7 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
    if (this == &other) return *this;
 
    if (&context != &other.context) 
-      Error("DoubleCRT assignment: incompatible contexts");
+      throw helib::RuntimeError("DoubleCRT assignment: incompatible contexts");
 
    if (map.getIndexSet() != other.map.getIndexSet()) {
       map = other.map; // copy the data
@@ -887,7 +896,7 @@ void DoubleCRT::automorph(long k)
 
   const PAlgebra& zMStar = context.zMStar;
   if (!zMStar.inZmStar(k))
-    Error("DoubleCRT::automorph: k not in Zm*");
+    throw helib::RuntimeError("DoubleCRT::automorph: k not in Zm*");
 
   long m = zMStar.getM();
   long phim = zMStar.getPhiM();
@@ -930,7 +939,7 @@ void DoubleCRT::automorph(long k)
   if (isDryRun()) return;
   const PAlgebra& zMStar = context.zMStar;
   if (!zMStar.inZmStar(k))
-    Error("DoubleCRT::automorph: k not in Zm*");
+    throw helib::RuntimeError("DoubleCRT::automorph: k not in Zm*");
   long m = zMStar.getM();
   long phim = zMStar.getPhiM();
   vector<long> tmp(phim);  // temporary array of size m
@@ -1138,8 +1147,10 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
   IndexSet diff = getIndexSet() / s;
   if (empty(diff)) return;     // nothing to do
 
-  assert(ptxtSpace >= 1);
-  assert(diff!=getIndexSet()); // cannot mod-down to the empty set
+  //OLD: assert(ptxtSpace >= 1);
+  helib::assertTrue(ptxtSpace >= 1, "ptxtSpacee must be at least 1");
+  //OLD: assert(diff!=getIndexSet()); // cannot mod-down to the empty set
+  helib::assertNeq(diff, getIndexSet(), "s and the index set must have some intersection");
   if (isDryRun()) {
     removePrimes(diff);// remove the primes from consideration
     return;
@@ -1207,7 +1218,8 @@ istream& operator>> (istream &str, DoubleCRT &d)
   long phim = context.zMStar.getPhiM();
 
   str >> set; // read in the indexSet
-  assert(set <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes));
+  //OLD: assert(set <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes));
+  helib::assertTrue(set <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes), "Stream does not contain subset of the context's primes");
   d.map.clear();
   d.map.insert(set); // fix the index set for the data
 
@@ -1215,9 +1227,11 @@ istream& operator>> (istream &str, DoubleCRT &d)
     str >> d.map[i]; // read the actual data
 
     // verify that the data is valid
-    assert (d.map[i].length() == phim);
+    //OLD: assert (d.map[i].length() == phim);
+    helib::assertEq(d.map[i].length(), phim, "Data not valid: d.map[i].length() != phim");
     for (long j: range(phim))
-      assert(d.map[i][j]>=0 && d.map[i][j]<context.ithPrime(i));
+      //OLD: assert(d.map[i][j]>=0 && d.map[i][j]<context.ithPrime(i));
+      helib::assertInRange(d.map[i][j], 0l, context.ithPrime(i), "d.map[i][j] invalid: must be between 0 and context.ithPrime(i)");
   }
 
   // Advance str beyond closing ']'

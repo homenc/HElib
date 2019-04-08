@@ -54,8 +54,10 @@ template<class type>
 void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
 {
   FHE_TIMER_START;
-  assert(&context == &ctxt.getContext());
-  assert(i >= 0 && i < dimension());
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  //OLD: assert(i >= 0 && i < dimension());
+  helib::assertInRange(i, 0l, dimension(), "i must be between 0 and dimension()");
 
   RBak bak; bak.save(); tab.restoreContext();
 
@@ -75,7 +77,8 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   // more expensive "non-native" rotation
 
   if (amt < 0) amt += ord;  // Make sure amt is in the range [1,ord-1]
-  assert(maskTable[i].size() > 0);
+  //OLD: assert(maskTable[i].size() > 0);
+  helib::assertTrue(maskTable[i].size() > 0, "Found non-positive sized mask table entry");
 
   ctxt.smartAutomorph(zMStar.genToPow(i, amt));
   // ctxt = \rho_i^{amt}(originalCtxt)
@@ -111,8 +114,10 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  assert(&context == &ctxt.getContext());
-  assert(i >= 0 && i < long(al.numOfGens()));
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  //OLD: assert(i >= 0 && i < long(al.numOfGens()));
+  helib::assertInRange(i, 0l, (long)(al.numOfGens()), "i must be non-negative and less than the PAlgebra's generator count");
 
   long ord = al.OrderOf(i);
 
@@ -157,7 +162,8 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  assert(&context == &ctxt.getContext());
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
 
   // Simple case: just one generator
   if (al.numOfGens()==1) { // VJS: bug fix: <= must be ==
@@ -271,7 +277,8 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  assert(&context == &ctxt.getContext());
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
 
   // Simple case: just one generator
   if (al.numOfGens()==1) {
@@ -373,7 +380,8 @@ void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt)
 template<class type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
 {
-  assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
+  //OLD: assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
+  helib::assertInRange(i, 0l, (long)getPAlgebra().getNSlots(), "i must be non-negative and less than the PAlgebra's slot count");
   RBak bak; bak.save(); tab.restoreContext();
   RX res;
   div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
@@ -587,9 +595,11 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
 // C[0...d-1] is the output of ea.buildLinPolyCoeffs
 void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 {
-  assert(&ea.getContext() == &ctxt.getContext());
+  //OLD: assert(&ea.getContext() == &ctxt.getContext());
+  helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
   long d = ea.getDegree();
-  assert(d == lsize(C));
+  //OLD: assert(d == lsize(C));
+  helib::assertEq(d, lsize(C), "ea's degree does not match the size of C");
 
   long nslots = ea.size();
 
@@ -610,13 +620,17 @@ void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
                       const vector< vector<ZZX> >& Cvec)
 {
-  assert(&ea.getContext() == &ctxt.getContext());
+  //OLD: assert(&ea.getContext() == &ctxt.getContext());
+  helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
   long d = ea.getDegree();
   long nslots = ea.size();
 
-  assert(nslots == lsize(Cvec));
-  for (long i = 0; i < nslots; i++)
-    assert(d == lsize(Cvec[i]));
+  //OLD: assert(nslots == lsize(Cvec));
+  helib::assertEq(nslots, lsize(Cvec), "Number of slots does not match size of Cvec");
+  for (long i = 0; i < nslots; i++) {
+    //OLD: assert(d == lsize(Cvec[i]));
+    helib::assertEq(d, lsize(Cvec[i]), "Found entry of Cvec with size unequal to degree of ea");
+  }
 
   vector<ZZX> encodedC(d);
   for (long j = 0; j < d; j++) { // encodedC[j] encodes j'th column in Cvec
@@ -633,7 +647,8 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
 template<class P>
 void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
 {
-  assert(d == lsize(encodedC));
+  //OLD: assert(d == lsize(encodedC));
+  helib::assertEq(d, lsize(encodedC), "d does not match size of encodedC");
 
   ctxt.cleanUp();  // not sure, but this may be a good idea
 
@@ -717,7 +732,8 @@ public:
   {
     PA_BOILER
 
-    assert(lsize(array) == n);
+    //OLD: assert(lsize(array) == n);
+    helib::assertEq(lsize(array), n, "Size of array does not match n");
     convert(data, array);
   }
 
@@ -726,9 +742,12 @@ public:
   {
     PA_BOILER
 
-    assert(lsize(array) == n);
+    //OLD: assert(lsize(array) == n);
+    helib::assertEq(lsize(array), n, "Size of array does not match n");
     convert(data, array);
-    for (long i = 0; i < n; i++) assert(deg(data[i]) < d);
+    for (long i = 0; i < n; i++) {
+      helib::assertTrue(deg(data[i]) < d, "Found data entry with too-large degree");
+    }
   }
 
 };
@@ -1001,7 +1020,8 @@ public:
   {
     PA_BOILER
 
-    assert(vec.length() == n);
+    //OLD: assert(vec.length() == n);
+    helib::assertEq(vec.length(), n, "vec has incorrect length");
 
     long p = ea.getPAlgebra().getP();
 
@@ -1053,7 +1073,8 @@ public:
   {
     PA_BOILER
 
-    assert(pi.length() == n);
+    //OLD: assert(pi.length() == n);
+    helib::assertEq(pi.length(), n, "pi has incorrect length");
 
     vector<RX> tmp;
     tmp.resize(n);

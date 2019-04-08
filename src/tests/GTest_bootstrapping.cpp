@@ -202,7 +202,7 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
 
     long phim = mValues[idx][1];
     long m = mValues[idx][2];
-    assert(NTL::GCD(p, m) == 1);
+    ASSERT_TRUE(NTL::GCD(p, m) == 1);
 
     append(mvec, mValues[idx][4]);
     if (mValues[idx][5]>1) append(mvec, mValues[idx][5]);

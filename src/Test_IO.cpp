@@ -13,6 +13,7 @@
 /* Test_IO.cpp - Testing the I/O of the important classes of the library
  * (context, keys, ciphertexts).
  */
+#include <cassert>
 #include <fstream>
 #include <unistd.h>
 

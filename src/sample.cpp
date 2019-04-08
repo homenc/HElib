@@ -11,7 +11,6 @@
  */
 /* sample.cpp - implementing various sampling routines */
 #include <vector>
-#include <cassert>
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 #include <NTL/BasicThreadPool.h>
@@ -63,7 +62,9 @@ void sampleHWt(ZZX &poly, long n, long Hwt)
 void sampleSmall(zzX &poly, long n, double prob)
 {
   if (n<=0) n=lsize(poly); if (n<=0) return;
-  assert(prob>3.05e-5 && prob<=1); // prob must be in [2^{-15},1/2]
+  //OLD: assert(prob>3.05e-5 && prob<=1); // prob must be in [2^{-15},1/2]
+  helib::assertTrue<helib::InvalidArgument>(prob > 3.05e-5, "prob must be greater than 2^{-15}");
+  helib::assertTrue<helib::InvalidArgument>(prob <= 1, "prob must be less than or equal to 1");
   poly.SetLength(n);
 
   constexpr long bitSize=16;
@@ -162,7 +163,8 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
     double theta=2*Pi*r1;
     double rr= sqrt(-2.0*log(r2))*stdev;
 
-    assert(rr < 8*stdev); // sanity-check, no more than 8 standard deviations
+    //OLD: assert(rr < 8*stdev); // sanity-check, no more than 8 standard deviations
+    helib::assertTrue(rr < 8*stdev, "no more than 8 standard deviations");
 
     // Generate two Gaussians RV's, rounded to integers
     long x = (long) floor(rr*cos(theta) +0.5);
@@ -179,7 +181,8 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
 // Sample a degree-(n-1) zzX, with coefficients uniform in [-B,B]
 void sampleUniform(zzX& poly, long n, long B)
 {
-  assert (B>0);
+  //OLD: assert (B>0);
+  helib::assertTrue<helib::InvalidArgument>(B>0l, "Invalid coefficient interval");
   if (n<=0) n=lsize(poly); if (n<=0) return;
   poly.SetLength(n); // allocate space for degree-(n-1) polynomial
 
@@ -190,7 +193,8 @@ void sampleUniform(zzX& poly, long n, long B)
 // Sample a degree-(n-1) ZZX, with coefficients uniform in [-B,B]
 void sampleUniform(ZZX& poly, long n, const ZZ& B)
 {
-  assert (B>0);
+  //OLD: assert (B>0);
+  helib::assertTrue<helib::InvalidArgument>(static_cast<bool>(B>0l), "Invalid coefficient interval");
   if (n<=0) n=deg(poly)+1; if (n<=0) return;
   clear(poly);
   poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
@@ -243,7 +247,8 @@ double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt)
   // so that we get a noise bound that should be satisfied
   // with probablity at least 1/sqrt(2).
 
-  assert(log_deg_bnd < ERFC_INVERSE_SIZE);
+  //OLD: assert(log_deg_bnd < ERFC_INVERSE_SIZE);
+  helib::assertTrue(log_deg_bnd < ERFC_INVERSE_SIZE, "log_deg_bnd must be less than ERFC_INVERSE_SIZE");
   double scale = erfc_inverse[log_deg_bnd];
   double bound = scale * sqrt(double(Hwt));
     
@@ -281,10 +286,11 @@ double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
   while (++count<1000 && val>bound); // repeat until <= bound
 
   if (val>bound) {
-    cerr << "Warning: sampleSmallBounded, after "
+    std::stringstream ss;
+    ss << "Error: sampleSmallBounded, after "
          << count<<" trials, still val="<<val
-         << '>'<<"bound="<<bound<<endl;
-    Error("cannot continue");
+         << '>'<<"bound="<<bound;
+    throw helib::RuntimeError(ss.str());
   }
   return bound;
 #else
@@ -376,10 +382,11 @@ double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
     while (++count<1000 && val>bound); // repeat until <= bound
 
     if (val>bound) {
-      cerr << "Warning: sampleSmallBounded, after "
+      std::stringstream ss;
+      ss << "Error: sampleSmallBounded, after "
 	   << count<<" trials, still val="<<val
-	   << '>'<<"bound="<<bound<<endl;
-      Error("cannot continue");
+	   << '>'<<"bound="<<bound;
+      throw helib::RuntimeError(ss.str());
     }
 
     ZZ try_matrix_norm = calculate_matrix_norm(try_poly, context);
@@ -447,10 +454,11 @@ double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
   while (++count<1000 && val>bound); // repeat until <= bound
 
   if (val>bound) {
-    cerr << "Warning: sampleSmallBounded, after "
+    std::stringstream ss;
+    ss << "Error: sampleSmallBounded, after "
          << count<<" trials, still val="<<val
-         << '>'<<"bound="<<bound<<endl;
-    Error("cannot continue");
+         << '>'<<"bound="<<bound;
+    throw helib::RuntimeError(ss.str());
   }
   return bound;
 #else
@@ -504,10 +512,11 @@ double sampleSmallBounded(zzX &poly, const FHEcontext& context)
   }
   while (++count<1000 && val>bound); // repeat until <= bound
   if (val>bound) {
-    cerr << "Warning: sampleSmallBounded, after "
+    std::stringstream ss;
+    ss << "Error: sampleSmallBounded, after "
          << count<<" trials, still val="<<val
-         << '>'<<"bound="<<bound<<endl;
-    Error("cannot continue");
+         << '>'<<"bound="<<bound;
+    throw helib::RuntimeError(ss.str());
   }
   return bound;
 #else
@@ -554,10 +563,11 @@ double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
   }
   while (++count<1000 && val>bound); // repeat until <=bound
   if (val>bound) {
-    cerr << "Warning: sampleGaussianBounded, after "
+    std::stringstream ss;
+    ss << "Error: sampleGaussianBounded, after "
          << count<<" trials, still val="<<val
-         << '>'<<"bound="<<bound<<endl;
-    Error("cannot continue");
+         << '>'<<"bound="<<bound;
+    throw helib::RuntimeError(ss.str());
   }
   return bound;
 #else

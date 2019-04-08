@@ -21,6 +21,7 @@
 #include <NTL/fileio.h>
 #include <NTL/BasicThreadPool.h>
 NTL_CLIENT
+#include <cassert>
 #include "EncryptedArray.h"
 #include "EvalMap.h"
 #include "powerful.h"

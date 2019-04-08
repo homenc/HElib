@@ -100,9 +100,11 @@ long computeProd(const vector<long>& vec) {return computeProd(vec, vec.size());}
 // return a degree-d irreducible polynomial mod p
 ZZX makeIrredPoly(long p, long d)
 {
-	assert(d >= 1);
-  assert(ProbPrime(p));
-
+  //OLD: assert(d >= 1);
+  helib::assertTrue<helib::InvalidArgument>(d >= 1l, "polynomial degree is less than 1");
+  //OLD: assert(ProbPrime(p));
+  helib::assertTrue<helib::InvalidArgument>((bool)ProbPrime(p), "modulus p is not prime");
+  
   if (d == 1) return ZZX(1, 1); // the monomial X
 
   zz_pBak bak; bak.save();
@@ -377,8 +379,9 @@ long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p,
 template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
 {
   zz qm1 = zp::modulus()-1;
-
-  assert(qm1 % e == 0);
+  
+  //OLD: assert(qm1 % e == 0);
+  helib::assertEq(static_cast<long>(qm1 % e), 0l, "e does not divide zp::modulus()-1");
   
   vector<long> facts;
   factorize(facts,e); // factorization of e
@@ -404,7 +407,7 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
     do {
       iter++;
       if (iter > 1000000) 
-        Error("FindPrimitiveRoot: possible infinite loop?");
+        throw helib::RuntimeError("FindPrimitiveRoot: possible infinite loop?");
       q = s.next();
       conv(qq, q);
       power(qq1, qq, qm1/p);
@@ -419,14 +422,14 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
     zp s;
 
     power(s, root, e);
-    if (s != 1) Error("FindPrimitiveRoot: internal error (1)");
+    if (s != 1) throw helib::RuntimeError("FindPrimitiveRoot: internal error (1)");
 
     // check that s^{e/p} != 1 for any prime divisor p of e
     for (unsigned long i=0; i<facts.size(); i++) {
       long e2 = e/facts[i];
       power(s, root, e2);   // s = root^{e/p}
       if (s == 1) 
-        Error("FindPrimitiveRoot: internal error (2)");
+        throw helib::RuntimeError("FindPrimitiveRoot: internal error (2)");
     }
   }
 }
@@ -652,7 +655,8 @@ template bool intVecCRT(vec_ZZ&, const ZZ&, const Vec<zz_p>&, long);
 
 void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f)
 {
-  assert(LeadCoeff(f) == 1);
+  //OLD: assert(LeadCoeff(f) == 1);
+  helib::assertEq<helib::InvalidArgument>(LeadCoeff(f), NTL::ZZ(1l), "polynomial is not monic");
 
   ZZX hh = h % f;
   ZZX r = to_ZZX(0);
@@ -742,9 +746,10 @@ void seekPastChar(istream& str, int cc)
    int c = str.get();
    while (isspace(c)) c = str.get();
    if (c != cc) {
-     std::cerr << "Searching for cc='"<<(char)cc<<"' (ascii "<<cc<<")"
-	       << ", found c='"<<(char)c<<"' (ascii "<<c<<")\n";
-     exit(1);
+     std::stringstream ss;
+     ss << "Searching for cc='"<<(char)cc<<"' (ascii "<<cc<<")"
+	       << ", found c='"<<(char)c<<"' (ascii "<<c<<")";
+     throw helib::RuntimeError(ss.str());
    }
 }
 
@@ -776,7 +781,8 @@ void buildLinPolyMatrix(mat_zz_pE& M, long p)
 
 void buildLinPolyMatrix(mat_GF2E& M, long p)
 {
-   assert(p == 2);
+  //OLD: assert(p == 2);
+  helib::assertEq<helib::InvalidArgument>(p, 2l, "p is not 2 when building a mat_GF2E (Galois field 2)");
 
    long d = GF2E::degree();
 
@@ -907,7 +913,7 @@ void div(vector<ZZX>& x, const vector<ZZX>& a, long b)
 void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b)
 {
    long n = a.size();
-   if (n != (long) b.size()) Error("add: dimension mismatch");
+   if (n != (long) b.size()) throw helib::InvalidArgument("add: a and b dimension differ");
    for (long i = 0; i < n; i++)
       add(x[i], a[i], b[i]);
 }
@@ -924,15 +930,15 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
    if (r == 1) {
       zz_pE det;
       solve(det, x, A, b);
-      if (det == 0) Error("ppsolve: matrix not invertible");
+      if (det == 0) throw helib::InvalidArgument("ppsolve: matrix not invertible");
       return;
    }
 
    long n = A.NumRows();
    if (n != A.NumCols()) 
-      Error("ppsolve: matrix not square");
+     throw helib::InvalidArgument("ppsolve: matrix not square");
    if (n == 0)
-      Error("ppsolve: matrix of dimension 0");
+     throw helib::InvalidArgument("ppsolve: matrix of dimension 0");
 
    zz_pContext pr_context;
    pr_context.save();
@@ -969,7 +975,7 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
 
    inv(det, I1, A1);
    if (det == 0) {
-      Error("ppsolve: matrix not invertible");
+     throw helib::LogicError("ppsolve: matrix not invertible");
    }
 
    vec_zz_pE b1;
@@ -1024,17 +1030,20 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
 
    convert(x, yy);
 
-   assert(x*A == b);
+  //OLD: assert(x*A == b);
+  helib::assertEq(x*A, b, "Failed to found solution x to matrix equation x*A == b");
 }
 
 void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
              long p, long r) 
 {
-   assert(p == 2 && r == 1);
+  //OLD: assert(p == 2 && r == 1);
+  helib::assertEq<helib::InvalidArgument>(p, 2l, "modulus p is not 2 with GF2E (Galois field 2)");
+  helib::assertEq<helib::InvalidArgument>(r, 1l, "Hensel lifting r is not 2 with GF2E (Galois field 2)");
 
    GF2E det;
    solve(det, x, A, b);
-   if (det == 0) Error("ppsolve: matrix not invertible");
+   if (det == 0) throw helib::InvalidArgument("ppsolve: matrix not invertible");
 }
 
 
@@ -1093,7 +1102,8 @@ void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
     prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
   }
   mul(X, prod, XX); // X = A^{-1} mod p^r
-  assert(X*A == I);
+  //OLD: assert(X*A == I);
+  helib::assertEq(X*A, I, "Failed to found solution X to matrix equation X*A == I where I is the identity matrix");
 }
 
 // FIXME: at some point need to make a template for these two functions
@@ -1148,7 +1158,8 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
     prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
   }
   mul(X, prod, XX); // X = A^{-1} mod p^r
-  assert(X*A == I);
+  //OLD: assert(X*A == I);
+  helib::assertEq(X*A, I, "Failed to found solution X to matrix equation X*A == I where I is the identity matrix");
 }
 
 void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
@@ -1167,7 +1178,9 @@ void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
 void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
 {
    FHE_TIMER_START;
-   assert(p == 2 && r == 1);
+  //OLD: assert(p == 2 && r == 1);
+  helib::assertEq<helib::InvalidArgument>(p, 2l, "modulus p is not 2 with GF2E (Galois field 2)");
+  helib::assertEq<helib::InvalidArgument>(r, 1l, "Hensel lifting r is not 2 with GF2E (Galois field 2)");
 
    mat_GF2E M;
    buildLinPolyMatrix(M, p);
@@ -1182,7 +1195,8 @@ void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
 void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p)
 {
    long d = zz_pE::degree();
-   assert(d == C.length());
+   //OLD: assert(d == C.length());
+   helib::assertEq<helib::InvalidArgument>(d, C.length(), "C length is not equal to zz_pE::degree()");
 
    zz_pE gamma, res;
 
@@ -1199,7 +1213,8 @@ void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p)
 void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p)
 {
    long d = GF2E::degree();
-   assert(d == C.length());
+   //OLD: assert(d == C.length());
+   helib::assertEq<helib::InvalidArgument>(d, C.length(), "C length is not equal to GF2E::degree()");
 
    GF2E gamma, res;
 
@@ -1243,7 +1258,8 @@ std::pair<long,long> rationalApprox(double x, long denomBound)
     denom = tmpDenom;
     //    cout << "  ai="<<ai<<", xi="<<xi<<", denominator="<<denom<<endl;
   }
-  assert(denom*x < NTL_SP_BOUND);
+  //OLD: assert(denom*x < NTL_SP_BOUND);
+  helib::assertTrue<helib::RuntimeError>(denom*x < NTL_SP_BOUND, "Single-precision bound exceeded");
   long numer = long(round(denom*x))*sign;
 
   return std::make_pair(numer,denom);
@@ -1351,7 +1367,8 @@ void LocalCyclicReduce(zz_pX& x, const zz_pX& a, long m)
 zz_pXModulus1::zz_pXModulus1(long _m, const zz_pX& _f) 
 : m(_m), f(_f), n(deg(f))
 {
-   assert(m > n);
+   //OLD: assert(m > n);
+   helib::assertTrue<helib::InvalidArgument>(m > n, "_m is less or equal than _f's degree");
 
    specialLogic = (m - n > 10 && m < 2*n);
    build(fm, f);

@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/ZZ.h>
+#include <cassert>
 #include "norms.h"
 #include "EncryptedArray.h"
 

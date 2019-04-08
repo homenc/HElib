@@ -27,7 +27,8 @@ bool replicateVerboseFlag = false;
 void replicate(const EncryptedArray& ea, Ctxt& ctxt, long pos)
 {
   long nSlots = ea.size();
-  assert(pos >= 0 && pos < nSlots); 
+  //OLD: assert(pos >= 0 && pos < nSlots); 
+  helib::assertInRange(pos, 0l, nSlots, "replication failed (pos must be in [0, nSlots))"); 
 
   zzX mask;
   ea.encodeUnitSelector(mask, pos);
@@ -82,7 +83,8 @@ void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos)
 static
 long GreatestPowerOfTwo(long n)
 {
-  assert(n >0);
+  //OLD: assert(n >0);
+  helib::assertTrue<helib::InvalidArgument>(n > 0l, "Cannot take log of negative number");
 
   long k;
 
@@ -98,7 +100,10 @@ void SelectRange(const EncryptedArray& ea, ZZX& mask, long lo, long hi)
 {
   long nSlots = ea.size();
 
-  assert(lo >= 0 && lo <= hi && hi <= nSlots);
+  //OLD: assert(lo >= 0 && lo <= hi && hi <= nSlots);
+  helib::assertInRange<helib::InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
+  helib::assertTrue<helib::InvalidArgument>(hi <= nSlots, "Interval exceeds number of slots");
+  
 
   vector<long> maskArray;
   maskArray.resize(nSlots);
@@ -259,8 +264,11 @@ void SelectRangeDim(const EncryptedArray& ea, ZZX& mask, long lo, long hi,
 {
   long nSlots = ea.size();
 
-  assert(d >= 0 && d < ea.dimension());
-  assert(lo >= 0 && lo <= hi && hi <= ea.sizeOfDimension(d));
+  //OLD: assert(d >= 0 && d < ea.dimension());
+  helib::assertInRange(d, 0l, ea.dimension(), "dimension d must be within [0, ea.dimension())");
+  //OLD: assert(lo >= 0 && lo <= hi && hi <= ea.sizeOfDimension(d));
+  helib::assertInRange<helib::InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
+  helib::assertTrue(hi <= ea.sizeOfDimension(d), "Interval exceeds dimension of d");
 
   vector<long> maskArray;
   maskArray.resize(nSlots);
@@ -447,7 +455,8 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
                          RepAuxDim& repAux, ReplicateHandler *handler)
 
 {
-  assert(d >= 0);
+  //OLD: assert(d >= 0);
+  helib::assertTrue<helib::InvalidArgument>(d >= 0l, "dimension must be non-negative");
 
   // If already fully replicated (or we need to stop early), call the handler
   if (d >= ea.dimension() || handler->earlyStop(d,/*k=*/-1,dimProd)) {
@@ -632,7 +641,8 @@ public:
   {
     PA_BOILER
 
-    assert(i >= 0 && i < n);
+    //OLD: assert(i >= 0 && i < n);
+    helib::assertInRange(i, 0l, n, "Attempted to access out-of-range data");
     for (long j = 0; j < n; j++) {
       if (j != i) data[j] = data[i];
     }

@@ -18,7 +18,6 @@
 #include <map>
 #include <algorithm>
 #include <stdexcept>
-#include <cassert>
 #include <atomic>
 #include <mutex>          // std::mutex, std::unique_lock
 
@@ -185,7 +184,8 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
 
   aSize = lsize(a);
   bSize = lsize(b);
-  assert (aSize>=1);
+  //OLD: assert (aSize>=1);
+  helib::assertTrue<helib::InvalidArgument>(aSize>=1, "a must not be empty");
 
   // Initialize the p[i,i]'s and q[i,i]'s
   p.clear();
@@ -282,7 +282,7 @@ void AddDAG::apply(CtPtrs& sum,
   const CtPtrs& a = (lsize(bb)>=lsize(aa))? aa : bb;
   const CtPtrs& b = (lsize(bb)>=lsize(aa))? bb : aa;
   if (aSize != lsize(a) || bSize != lsize(b))
-    throw std::logic_error("DAG applied to wrong vectors");
+    throw helib::LogicError("DAG applied to wrong vectors");
 
   if (sizeLimit==0)
     sizeLimit = bSize+1;
@@ -352,7 +352,8 @@ const Ctxt& AddDAG::getCtxt(DAGnode* node,
       long i = node->idx.first;
       long j = node->idx.second; // we expect i==j
       const Ctxt* ct_ptr = b.ptr2nonNull();
-      assert(ct_ptr != nullptr);
+      //OLD: assert(ct_ptr != nullptr);
+      helib::assertNotNull(ct_ptr, "ct_ptr must not be null");
       node->ct = allocateCtxtLike(*ct_ptr);
 
       if (node->isQ) { // This is b[i]*a[j]
@@ -419,8 +420,10 @@ void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
   if (ct==nullptr) ct = a.ptr2nonNull();
   if (ct==nullptr) return;    // nothing to do
 
-  assert(unpackSlotEncoding!=nullptr);
-  assert(ct->getPubKey().isBootstrappable());
+  //OLD: assert(unpackSlotEncoding!=nullptr);
+  helib::assertNotNull<helib::InvalidArgument>(unpackSlotEncoding, "unpackSlotEncoding must not be null");
+  //OLD: assert(ct->getPubKey().isBootstrappable());
+  helib::assertTrue(ct->getPubKey().isBootstrappable(), "public key must be bootstrappable for recryption");
 
   struct CtPtrs_pair : CtPtrs {
     const CtPtrs& a;
@@ -456,7 +459,7 @@ void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
     packedRecrypt(a,b,unpackSlotEncoding);
     addPlan.init(a,b); // Re-compute the DAG
     if (addPlan.lowLvl()<BPL_ESTIMATE) { // still not enough levels
-      throw std::logic_error("not enough levels for addition DAG");
+      throw helib::LogicError("not enough levels for addition DAG");
     }
   }
   addPlan.apply(sum, a, b, sizeLimit);    // perform the actual addition
@@ -646,7 +649,10 @@ void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
     // If any number is too low level, then bootstrap everything
     PtrMatrix_PtPtrVector<Ctxt> wrapper(numPtrs);
     if (findMinBitCapacity(wrapper)<3*ct_ptr->getContext().BPL()) {
-      assert(bootstrappable && unpackSlotEncoding!=nullptr);
+      //OLD: assert(bootstrappable && unpackSlotEncoding!=nullptr);
+      helib::assertNotNull<helib::InvalidArgument>(unpackSlotEncoding, "unpackSlotEncoding must not be null");
+      helib::assertTrue(bootstrappable, "public key must be bootstrappable for recryption");
+
       packedRecrypt(wrapper, *unpackSlotEncoding, ea, /*belowLvl=*/10);
     }
     // Prepare a vector for pointers to the output of this iteration

@@ -14,8 +14,6 @@
  * @brief Implementing integer comparison in binary representation.
  */
 #include <algorithm>
-#include <cassert>
-#include <stdexcept>
 // #include <numeric>
 // #include <climits>
 // #include <map>
@@ -174,7 +172,7 @@ void compareTwoNumbersImplementation(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& n
     packedRecrypt(a,b,unpackSlotEncoding);
   if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize)+1)*mu.getContext().BPL())
     // the bare minimum
-    throw std::logic_error("not enough levels for comparison");
+    throw helib::LogicError("not enough levels for comparison");
 
   // NOTE: this procedure minimizes the number of multiplications,
   //       but it may use one level too many. Can we optimize it?

@@ -55,8 +55,10 @@ public:
   bool get(RX& out, long i, long j, long k) const override {
     long D = ea.sizeOfDimension(dim);
 
-    assert(i >= 0 && i < D);
-    assert(j >= 0 && j < D);
+    //OLD: assert(i >= 0 && i < D);
+    helib::assertInRange(i, 0l, D, "Matrix index out of range");
+    //OLD: assert(j >= 0 && j < D);
+    helib::assertInRange(j, 0l, D, "Matrix index out of range");
     if (IsZero(data[i][j])) return true;
     out = data[i][j];
     return false;
@@ -122,9 +124,12 @@ public:
     long n = ea.size();
     long D = ea.sizeOfDimension(dim);
 
-    assert(i >= 0 && i < D);
-    assert(j >= 0 && j < D);
-    assert(k >= 0 && k < n/D);
+    //OLD: assert(i >= 0 && i < D);
+    helib::assertInRange(i, 0l, D, "Matrix index out of range");
+    //OLD: assert(j >= 0 && j < D);
+    helib::assertInRange(j, 0l, D, "Matrix index out of range");
+    //OLD: assert(k >= 0 && k < n/D);
+    helib::assertInRange(k, 0l, n/D, "Matrix index out of range");
     if (IsZero(data[k][i][j])) return true;
     out = data[k][i][j];
     return false;
@@ -189,8 +194,10 @@ public:
   bool get(mat_R& out, long i, long j, long k) const override
   {
     long D = ea.sizeOfDimension(dim);
-    assert(i >= 0 && i < D);
-    assert(j >= 0 && j < D);
+    //OLD: assert(i >= 0 && i < D);
+    helib::assertInRange(i, 0l, D, "Matrix index out of range");
+    //OLD: assert(j >= 0 && j < D);
+    helib::assertInRange(j, 0l, D, "Matrix index out of range");
     if (IsZero(data[i][j])) return true;
     out = data[i][j];
     return false;
@@ -263,9 +270,12 @@ public:
     long n = ea.size();
     long D = ea.sizeOfDimension(dim);
 
-    assert(i >= 0 && i < D);
-    assert(j >= 0 && j < D);
-    assert(k >= 0 && k < n/D);
+    //OLD: assert(i >= 0 && i < D);
+    helib::assertInRange(i, 0l, D, "Matrix index out of range");
+    //OLD: assert(j >= 0 && j < D);
+    helib::assertInRange(j, 0l, D, "Matrix index out of range");
+    //OLD: assert(k >= 0 && k < n/D);
+    helib::assertInRange(k, 0l, n/D, "Matrix index out of range");
     if (IsZero(data[k][i][j])) return true;
     out = data[k][i][j];
     return false;
@@ -321,8 +331,10 @@ public:
   }
 
   bool get(RX& out, long i, long j) const override {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
+    //OLD: assert(i >= 0 && i < ea.size());
+    helib::assertInRange(i, 0l, ea.size(), "Matrix index out of range");
+    //OLD: assert(j >= 0 && j < ea.size());
+    helib::assertInRange(j, 0l, ea.size(), "Matrix index out of range");
     if (IsZero(data[i][j])) return true;
     out = data[i][j];
     return false;
@@ -375,8 +387,10 @@ public:
   }
 
   bool get(mat_R& out, long i, long j) const override {
-    assert(i >= 0 && i < ea.size());
-    assert(j >= 0 && j < ea.size());
+    //OLD: assert(i >= 0 && i < ea.size());
+    helib::assertInRange(i, 0l, ea.size(), "Matrix index out of range");
+    //OLD: assert(j >= 0 && j < ea.size());
+    helib::assertInRange(j, 0l, ea.size(), "Matrix index out of range");
     if (IsZero(data[i][j])) return true;
     out = data[i][j];
     return false;
