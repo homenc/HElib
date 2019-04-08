@@ -288,7 +288,7 @@ TEST_P(GTest_ThinEvalMap, thin_eval_map_is_correct)
 
 };
 
-INSTANTIATE_TEST_CASE_P(various_parameters, GTest_ThinEvalMap, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(various_parameters, GTest_ThinEvalMap, ::testing::Values(
             //SLOW
             Parameters(2, 1, 2, 80, 300, 0, 0, convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{7, 3, 221}), std::vector<long>{3979, 3095, 3760}, std::vector<long>{6, 2, -8}, 1, 0)
             //FAST

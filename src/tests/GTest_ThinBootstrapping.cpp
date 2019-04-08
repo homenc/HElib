@@ -366,7 +366,7 @@ TEST_P(GTest_ThinBootstrapping, correctly_performs_thin_bootstrapping)
 };
 
 
-INSTANTIATE_TEST_CASE_P(typical_parameters, GTest_ThinBootstrapping, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_ThinBootstrapping, ::testing::Values(
             //SLOW
             Parameters(2, 1, 3, 600, 512, 0, 1, 0, 1, 0, 0),
             Parameters(2, 4, 3, 600, 2300, 0, 1, 0, 1, 0, 0),
