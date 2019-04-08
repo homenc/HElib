@@ -184,6 +184,11 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
             fhe_test_force_bsgs = GetParam().force_bsgs;
             fhe_test_force_hoist = GetParam().force_hoist;
         };
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
 };
 
 constexpr long GTest_bootstrapping::mValues[][14];

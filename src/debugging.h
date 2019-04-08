@@ -36,6 +36,15 @@ extern EncryptedArray* dbgEa;
 extern NTL::ZZX dbg_ptxt;
 extern NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
+// Cleanup method for using the above debug variables several times in one process
+inline void cleanupGlobals()
+{
+  dbgKey = nullptr;
+  dbgEa = nullptr;
+  dbg_ptxt = NTL::ZZX{};
+  ptxt_pwr = NTL::Vec<NTL::ZZ>{};
+}
+
 void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
 		     const EncryptedArray& ea, long flags=0);
 

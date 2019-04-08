@@ -12,6 +12,7 @@
 #include "hypercube.h"
 #include "powerful.h"
 #include "FHEContext.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -78,6 +79,11 @@ class GTest_Powerful : public ::testing::TestWithParam<Parameters>
         {
             buildModChain(context, /*L=*/9, /*c=*/3);
         };
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
 };
 
 TEST_P(GTest_Powerful, simple_conversion_works)

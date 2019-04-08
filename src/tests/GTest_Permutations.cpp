@@ -16,6 +16,7 @@
 #include "timing.h"
 #include "permutations.h"
 #include "EncryptedArray.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -113,6 +114,11 @@ class GTest_Permutations : public ::testing::TestWithParam<Parameters> {
         virtual void SetUp() override {
             setDryRun(helib_test::dry);
         };
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
 };
 
 void testCube(NTL::Vec<GenDescriptor>& vec, long widthBound)

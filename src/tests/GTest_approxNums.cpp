@@ -199,6 +199,11 @@ class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
 //          }
         }
 
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
+
 };
 
 TEST_P(GTest_approxNums, basic_arithmetic_works)

@@ -16,6 +16,7 @@
 #include "EncryptedArray.h"
 #include "EvalMap.h"
 #include <NTL/BasicThreadPool.h>
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -184,6 +185,7 @@ class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
                 printAllTimers();
                 std::cout << std::endl;
             }
+            cleanupGlobals();
         }
 
 };
