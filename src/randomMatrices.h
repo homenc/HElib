@@ -9,7 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-
+#ifndef HELIB_RANDOMMATRICES_H
+#define HELIB_RANDOMMATRICES_H
 /**
  * @file randomMatrices.h
  * @brief implementation of random matrices of various forms, used for testing
@@ -407,3 +408,5 @@ static BlockMatMulFull* buildRandomFullBlockMatrix(const EncryptedArray& ea)
     default: return nullptr;
   }
 }
+
+#endif // ifndef HELIB_RANDOMMATRICES_H

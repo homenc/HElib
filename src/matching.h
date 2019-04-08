@@ -13,8 +13,8 @@
  * @file matching.h
  * @brief Classes and functions for max-flow in a generic graph
  **/
-#ifndef _MATCHING_H_
-#define _MATCHING_H_
+#ifndef HELIB_MATCHING_H
+#define HELIB_MATCHING_H
 
 #include "NumbTh.h"
 
@@ -86,4 +86,4 @@ public:
   void printout();
 };
 
-#endif /* ifdef _MATCHING_H_ */
+#endif // ifndef HELIB_MATCHING_H

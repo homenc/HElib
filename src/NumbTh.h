@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _NumbTh
-#define _NumbTh
+#ifndef HELIB_NUMBTH_H
+#define HELIB_NUMBTH_H
 /**
  * @file NumbTh.h
  * @brief Miscellaneous utility functions.
@@ -892,4 +892,4 @@ const double erfc_inverse[] = {
 
 #define ERFC_INVERSE_SIZE  (long(sizeof(erfc_inverse)/sizeof(erfc_inverse[0])))
 
-#endif
+#endif // ifndef HELIB_NUMBTH_H

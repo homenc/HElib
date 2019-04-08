@@ -18,7 +18,7 @@
 #include "EncryptedArray.h"
 
 #include "timing.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 #include "norms.h"
 #include "debugging.h"
 

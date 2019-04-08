@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _DoubleCRT_H_
-#define _DoubleCRT_H_
+#ifndef HELIB_DOUBLECRT_H
+#define HELIB_DOUBLECRT_H
 /**
  * @file DoubleCRT.h
  * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
@@ -420,4 +420,4 @@ inline NTL::ZZX to_ZZX(const DoubleCRT &d)  { NTL::ZZX p; d.toPoly(p); return p;
 typedef std::shared_ptr<DoubleCRT> DCRTptr;
 typedef std::shared_ptr<NTL::ZZX> ZZXptr;
 
-#endif // #ifndef _DoubleCRT_H_
+#endif // #ifndef HELIB_DOUBLECRT_H

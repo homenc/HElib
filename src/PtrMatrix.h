@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _PTRMATRIX_H
-#define _PTRMATRIX_H
+#ifndef HELIB_PTRMATRIX_H
+#define HELIB_PTRMATRIX_H
 /**
  * @file PtrMatrix.h
  * @brief Convenience class templates providing a unified interface
@@ -181,4 +181,4 @@ struct PtrMatrix_ptvector : PtrMatrix<T> {
   { return rows[i]; }
   long size() const override { return lsize(rows); }    // How many rows
 };
-#endif // _PTRMATRIX_H
+#endif // ifndef HELIB_PTRMATRIX_H

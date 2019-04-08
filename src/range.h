@@ -1,6 +1,5 @@
-
-#ifndef _range_H_
-#define _range_H_
+#ifndef HELIB_RANGE_H
+#define HELIB_RANGE_H
 
 template<class T>
 class general_range {
@@ -36,5 +35,4 @@ general_range<long> range(long n) { return general_range<long>(0, n); }
 inline
 general_range<long> range(long m, long n) { return general_range<long>(m, n); }
 
-#endif
-
+#endif // ifndef HELIB_RANGE_H

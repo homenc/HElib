@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _NORMS_H_
-#define _NORMS_H_
+#ifndef HELIB_NORMS_H
+#define HELIB_NORMS_H
 /**
  * @file norms.h - computing various norms of ring elements
  **/
@@ -112,4 +112,4 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
 
 #endif // FFT_IMPL
 
-#endif // _NORMS_H_
+#endif // ifndef HELIB_NORMS_H

@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _CTPTRS_H
-#define _CTPTRS_H
+#ifndef HELIB_CTPTRS_H
+#define HELIB_CTPTRS_H
 /**
  * @file CtPtrs.h
  * @brief Cnified interface for vector of pointers to ciphertexts
@@ -82,4 +82,4 @@ inline Ctxt innerProduct(const CtPtrs& v1, const CtPtrs& v2)
   return ret; 
 }
 
-#endif // _CTPTRS_H
+#endif // ifndef HELIB_CTPTRS_H

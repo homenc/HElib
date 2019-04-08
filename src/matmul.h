@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _matmul_H
-#define _matmul_H
+#ifndef HELIB_MATMUL_H
+#define HELIB_MATMUL_H
 
 #include "EncryptedArray.h"
 
@@ -389,4 +389,4 @@ extern int fhe_test_force_hoist;
 // Controls whether ot not we use hoisting.
 // -1 to force off, 0 for default behaviour.
 
-#endif
+#endif // ifndef HELIB_MATMUL_H
