@@ -103,7 +103,7 @@ set(HELIB_HEADERS
         "binaryCompare.h"
         "binio.h"
         "bluestein.h"
-        "cloned_ptr.h"
+        "clonedPtr.h"
         "CModulus.h"
         "CtPtrs.h"
         "Ctxt.h"
