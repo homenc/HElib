@@ -50,4 +50,4 @@ For more information see the [GitHub Pages][9].
   [6]: http://en.wikipedia.org/wiki/Homomorphic_encryption "Homomorphic encryption"
   [7]: http://eprint.iacr.org/2014/106       "algorithms"
   [8]: http://eprint.iacr.org/2014/873       "bootstrapping"
-  [9]: http://shaih.github.io/HElib          "GitHubPages"
+  [9]: http://homenc.github.io/HElib          "GitHubPages"
