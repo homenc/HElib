@@ -284,7 +284,7 @@ void BasicBitReverseCopy(long * NTL_RESTRICT B,
 
    long n = 1L << k;
    long* NTL_RESTRICT rev;
-   long i, j;
+   long i;
 
    rev = brc_mem[k].elts();
    if (!rev) rev = BRC_init(k);
@@ -307,7 +307,6 @@ void COBRA(long * NTL_RESTRICT B, const long * NTL_RESTRICT A, long k)
    long * NTL_RESTRICT rev_k1, * NTL_RESTRICT rev_q;
    long *NTL_RESTRICT T;
    long a, b, c, a1, b1, c1;
-   long i, j;
 
    rev_k1 = brc_mem[k1].elts();
    if (!rev_k1) rev_k1 = BRC_init(k1);
