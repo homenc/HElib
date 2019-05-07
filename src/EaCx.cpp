@@ -186,7 +186,7 @@ void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
   c.multByConstantCKKS(0.5);       // divide by two
 }
 
-double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
                        const cx_double& oneImage, const cx_double& iImage,
                        long precision) const
 {
@@ -204,10 +204,10 @@ double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
   vector<cx_double> v(n, x); // x in all the slots
   encode(C[0], v, msize, precision);
   v.assign(n, y);            // y in all the slots
-  return encode(C[1], v, msize, precision);
+  encode(C[1], v, msize, precision);
 }
 
-double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
           const vector<cx_double>&oneImages, const vector<cx_double>&iImages,
           long precision) const
 {

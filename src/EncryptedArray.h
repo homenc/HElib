@@ -684,15 +684,15 @@ public:
   //! DoubleCRT object just once, then use them many times.
 
   //! First variant: same linear transformation in all the slots
-  double buildLinPolyCoeffs(std::vector<zzX>& C,
-                            const cx_double& oneImage, const cx_double& iImage,
-                            long precision=0) const;
+  void buildLinPolyCoeffs(std::vector<zzX>& C,
+                          const cx_double& oneImage, const cx_double& iImage,
+                          long precision=0) const;
 
   //! Second variant: different linear transformation in each slots
-  double buildLinPolyCoeffs(std::vector<zzX>& C,
-                            const std::vector<cx_double>&oneImages,
-                            const std::vector<cx_double>&iImages,
-                            long precision=0) const;
+  void buildLinPolyCoeffs(std::vector<zzX>& C,
+                          const std::vector<cx_double>&oneImages,
+                          const std::vector<cx_double>&iImages,
+                          long precision=0) const;
   ///@}
 };
 
