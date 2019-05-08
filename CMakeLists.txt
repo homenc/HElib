@@ -85,8 +85,14 @@ if (ENABLE_THREADS AND Threads_NOTFOUND)
 endif()
 
 if (ENABLE_ARMADILLO)
+  # NOTE: message is displayed every cmake invocation. Use cache to display only once
+  message(STATUS "Using Armadillo for CKKS canonicalEmbedding (faster key-generation)")
   find_package(Armadillo "${ARMADILLO_MINIMAL_VERSION}" REQUIRED)
-endif (ENABLE_ARMADILLO)
+else (ENABLE_ARMADILLO)
+  # NOTE: message is displayed every cmake invocation. Use cache to display only once
+  message(STATUS "Not using Armadillo")
+  message(STATUS "CKKS canonicalEmbedding implemented via slow DFT, expect very slow key-generation")
+endif(ENABLE_ARMADILLO)
 
 # NOTE: Consider reconfiguring everything when PACKAGE_BUILD changes value.  Options from the previous value will remain otherwise.
 # Set up extra properties depending on the value of PACKAGE_BUILD

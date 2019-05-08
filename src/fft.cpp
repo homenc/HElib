@@ -25,7 +25,6 @@ NTL_CLIENT
 const double pi = 4 * std::atan(1);
 
 #ifdef FFT_ARMA
-#warning "canonicalEmbedding implemented via Armadillo"
 #include <armadillo>
 void convert(zzX& to, const arma::vec& from)
 {
@@ -213,7 +212,6 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
 }
 #else
 #ifdef FFT_NATIVE
-#warning "canonicalEmbedding implemented via slow DFT, expect very slow key-generation"
 // An extremely lame implementation of the canonical embedding
 
 // evaluate poly(x) using Horner's rule
