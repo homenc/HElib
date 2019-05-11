@@ -3,6 +3,7 @@
 set(GTEST_SRC
     "test_common.cpp"
     "Test_errorHandling.cpp"
+    "Test_CKKS.cpp"
     )
 
 set(PORTED_LEGACY_TEST_SRC
@@ -58,6 +59,7 @@ set(TEST_NAMES
     "GTest_matmul"
     "GTest_tableLookup"
     "Test_errorHandling"
+    "Test_CKKS"
     )
 
 foreach(TEST_NAME ${TEST_NAMES})

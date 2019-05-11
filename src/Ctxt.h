@@ -403,7 +403,7 @@ public:
   void multByConstant(const NTL::ZZ& c);
 
   //! multiply by a rational number or floating point
-  void multByConstantCKKS(double x) {ratFactor /= x; ptxtMag *= x;}
+  void multByConstantCKKS(double x) {ratFactor /= x; ptxtMag *= std::abs(x);}
   void multByConstantCKKS(std::pair<long,long> num) // rational number
   { multByConstantCKKS(double(num.first)/num.second); }
 
