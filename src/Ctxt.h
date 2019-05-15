@@ -602,18 +602,18 @@ public:
   const FHEcontext& getContext() const { return context; }
   const FHEPubKey& getPubKey() const   { return pubKey; }
   const IndexSet& getPrimeSet() const  { return primeSet; }
-  const long getPtxtSpace() const      { return ptxtSpace;}
+  long getPtxtSpace() const      { return ptxtSpace;}
   const NTL::xdouble& getNoiseBound() const { return noiseBound; }
   const NTL::xdouble& getRatFactor() const { return ratFactor; }
   const NTL::xdouble& getPtxtMag() const { return ptxtMag; }
-  const void setPtxtMag(const NTL::xdouble& z) { ptxtMag=z; }
-  const long getKeyID() const;
+  void setPtxtMag(const NTL::xdouble& z) { ptxtMag=z; }
+  long getKeyID() const;
 
   bool isCKKS() const
   { return (getContext().alMod.getTag()==PA_cx_tag); }
 
   // Return r such that p^r = ptxtSpace
-  const long effectiveR() const {
+  long effectiveR() const {
     long p = context.zMStar.getP();
     for (long r=1, p2r=p; r<NTL_SP_NBITS; r++, p2r *= p) {
       if (p2r == ptxtSpace) return r;

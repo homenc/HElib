@@ -140,7 +140,7 @@ class PAlgebra {
 
   //! The "ring constant" cM
   void set_cM(double c) { cM=c; }
-  const double get_cM() const { return cM; }
+  double get_cM() const { return cM; }
 
   //! The prime-power factorization of m
   //  const std::vector<long> getMfactors() const { return mFactors; }

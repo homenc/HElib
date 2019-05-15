@@ -1521,7 +1521,7 @@ void Ctxt::frobeniusAutomorph(long j)
 /********************************************************************/
 // Utility methods
 
-const long Ctxt::getKeyID() const
+long Ctxt::getKeyID() const
 {
   for (auto& part : parts)
     if (!part.skHandle.isOne()) return part.skHandle.getSecretKeyID();

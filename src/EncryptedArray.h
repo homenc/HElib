@@ -98,8 +98,8 @@ public:
 
   virtual const FHEcontext& getContext() const = 0;
   virtual const PAlgebra& getPAlgebra() const = 0;
-  virtual const long getDegree() const = 0;
-  virtual const long getP2R() const = 0;
+  virtual long getDegree() const = 0;
+  virtual long getP2R() const = 0;
 
   //! @brief Right rotation as a linear array.
   //! E.g., rotating ctxt=Enc(1 2 3 ... n) by k=1 gives Enc(n 1 2 ... n-1)
@@ -341,14 +341,14 @@ public:
 
   virtual const FHEcontext& getContext() const override { return context; }
   virtual const PAlgebra& getPAlgebra() const override { return tab.getZMStar(); }
-  virtual const long getDegree() const override { return mappingData.getDegG(); }
+  virtual long getDegree() const override { return mappingData.getDegG(); }
   const PAlgebraModDerived<type>& getTab() const { return tab; }
 
   virtual void rotate(Ctxt& ctxt, long k) const override;
   virtual void shift(Ctxt& ctxt, long k) const override;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
 
-  const long getP2R() const override {return getTab().getPPowR();}
+  long getP2R() const override {return getTab().getPPowR();}
 
 
   template<class U> void // avoid this being "hidden" by other rotate1D's
@@ -544,14 +544,14 @@ public:
   PA_tag getTag() const override { return PA_cx_tag; }
   const FHEcontext& getContext() const override { return context; }
   const PAlgebra& getPAlgebra() const override { return alMod.getZMStar(); }
-  const long getDegree() const override { return 2L; }
+  long getDegree() const override { return 2L; }
 
   void rotate(Ctxt& ctxt, long k) const override; 
   void shift(Ctxt& ctxt, long k) const override;
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
   void shift1D(Ctxt& ctxt, long i, long k) const override;
 
-  const long getP2R() const override {return alMod.getPPowR();}
+  long getP2R() const override {return alMod.getPPowR();}
 
   // These EaCx-specific encoding routines return the
   // scaling factor that was used in the eocoding routine
@@ -806,7 +806,7 @@ public:
   const FHEcontext& getContext() const { return rep->getContext(); }
   const PAlgebraMod& getAlMod() const { return alMod; }
   const PAlgebra& getPAlgebra() const { return rep->getPAlgebra(); }
-  const long getDegree() const { return rep->getDegree(); }
+  long getDegree() const { return rep->getDegree(); }
   void rotate(Ctxt& ctxt, long k) const { rep->rotate(ctxt, k); }
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
