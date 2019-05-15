@@ -129,19 +129,19 @@ struct Parameters {
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] += from[i];
+    for (std::size_t i=0; i<from.size(); i++) to[i] += from[i];
   }
   void sub(std::vector<cx_double>& to, const std::vector<cx_double>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] -= from[i];
+    for (std::size_t i=0; i<from.size(); i++) to[i] -= from[i];
   }
   void mul(std::vector<cx_double>& to, const std::vector<cx_double>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] *= from[i];
+    for (std::size_t i=0; i<from.size(); i++) to[i] *= from[i];
   }
   void rotate(std::vector<cx_double>& p, long amt)
   {

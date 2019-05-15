@@ -204,7 +204,7 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
   write_raw_int(str, context.zMStar.numOfGens());
   
   // There aren't simple getters to get the gens and ords vectors
-  for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
+  for(long i=0; i<context.zMStar.numOfGens(); i++) {
     write_raw_int(str, context.zMStar.ZmStarGen(i));
   }
 
@@ -212,7 +212,7 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
  
   // Copying the way it is done in ASCII IO. 
   // Bad dimensions are represented as a negated ord 
-  for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
+  for(long i=0; i<context.zMStar.numOfGens(); i++) {
     if(context.zMStar.SameOrd(i))
       write_raw_int(str, context.zMStar.OrderOf(i));
     else 

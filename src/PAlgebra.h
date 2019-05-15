@@ -149,7 +149,7 @@ class PAlgebra {
   long numOfGens() const { return gens.size(); }
 
   //! the i'th generator in (Z/mZ)^* /(p) (if any)
-  long ZmStarGen(long i) const
+  long ZmStarGen(unsigned long i) const
   {  return (i<gens.size())? gens[i] : 0; }
 
   //! the i'th generator to the power j mod m

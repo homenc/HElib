@@ -91,7 +91,7 @@ void PAlgebra::printout() const
   cout << ", phi(m) = " << phiM << endl;
   cout << "  ord(p)=" << ordP << endl;
 
-  long i;
+  std::size_t i;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
       cout << "  generator " << gens[i] << " has order ("
            << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
@@ -140,7 +140,7 @@ PAlgebra::PAlgebra(long mm, long pp,
   }
 
   long k = NextPowerOfTwo(mm);
-  if (mm == (1UL << k)) // m is a power of two
+  if (static_cast<unsigned long>(mm) == (1UL << k)) // m is a power of two
     pow2 = k;
   else // is not power of two, set to zero (even if m is even!)
     pow2 = 0;
@@ -225,10 +225,10 @@ bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
                      const vector<long>& gens, const vector<long>& ords)
 {
-  if (palg.getM() != m ||
-      palg.getP() != p ||
-      palg.numOfGens() != gens.size()||
-      palg.numOfGens() != ords.size() ) return false;
+  if (static_cast<unsigned long>(palg.getM()) != m ||
+      static_cast<unsigned long>(palg.getP()) != p ||
+      static_cast<unsigned long>(palg.numOfGens()) != gens.size()||
+      static_cast<unsigned long>(palg.numOfGens()) != ords.size() ) return false;
 
   for (long i=0; i<(long)gens.size(); i++) {
     if (long(palg.ZmStarGen(i)) != gens[i]) return false;

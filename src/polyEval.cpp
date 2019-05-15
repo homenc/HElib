@@ -352,7 +352,7 @@ void Ctxt::power(long e)
 
   long ell = NTL::NumBits(e); // e < 2^l <= 2e
 
-  if (e == (1UL<<(ell-1)) ) { // e is a power of two, just square enough times
+  if (static_cast<unsigned long>(e) == (1UL<<(ell-1)) ) { // e is a power of two, just square enough times
     while (--ell > 0) square();
     return;
   }
