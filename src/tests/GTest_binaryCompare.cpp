@@ -192,7 +192,7 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
             secKey(prepareContext(context))
     {};
 
-        virtual void SetUp()
+        void SetUp() override
         {
             if (seed) NTL::SetSeed(NTL::ZZ(seed));
             if (nthreads>1) NTL::SetNumThreads(nthreads);

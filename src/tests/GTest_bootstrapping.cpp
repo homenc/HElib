@@ -175,7 +175,7 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
         long useCache;
         std::size_t idx;
 
-        virtual void SetUp()
+        void SetUp() override
         {
             if (seed) 
                 SetSeed(NTL::ZZ(seed));

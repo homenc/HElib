@@ -171,7 +171,7 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
             {
             };
 
-        virtual void SetUp()
+        void SetUp() override
         {
             NTL::SetNumThreads(nthreads);
             NTL::SetSeed(NTL::conv<NTL::ZZ>(seed));

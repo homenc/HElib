@@ -236,7 +236,7 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
         FHEcontext context;
         FHESecKey secretKey;
 
-        virtual void SetUp()
+        void SetUp() override
         {
             activeContext = &context; // make things a little easier sometimes
 #ifdef DEBUG_PRINTOUT

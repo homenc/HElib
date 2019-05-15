@@ -82,7 +82,7 @@ class GTest_intraSlot : public ::testing::TestWithParam<Parameters> {
         FHESecKey secretKey;
         const FHEPubKey& publicKey;
 
-        virtual void SetUp()
+        void SetUp() override
         {
             SetSeed(NTL::ZZ(seed));
             secretKey.GenSecKey(); // A +-1/0 secret key

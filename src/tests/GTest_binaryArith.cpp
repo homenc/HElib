@@ -216,7 +216,7 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
             secKey(prepareContext(context))
     {};
 
-        virtual void SetUp ()
+        void SetUp() override
         {
             if (seed) NTL::SetSeed(NTL::ZZ(seed));
             if (nthreads>1) NTL::SetNumThreads(nthreads);

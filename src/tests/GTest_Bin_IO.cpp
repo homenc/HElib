@@ -167,7 +167,7 @@ class GTest_Bin_IO : public ::testing::TestWithParam<Parameters> {
             cleanup(GetParam().cleanup)
         {};
 
-        virtual void SetUp()
+        void SetUp() override
         {
             // Nothing clear to do here for now the way the test is written
         };
