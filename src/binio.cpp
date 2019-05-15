@@ -179,11 +179,12 @@ void write_raw_ZZ(ostream& str, const ZZ& zz)
   long noBytes = NumBytes(zz);
   //OLD: assert(noBytes > 0);
   helib::assertTrue<helib::InvalidArgument>(noBytes > 0, "Number of bytes to write must be non-negative");
-  unsigned char zzBytes[noBytes];
+  unsigned char* zzBytes = new unsigned char[noBytes];
   BytesFromZZ(zzBytes, zz, noBytes); // From ZZ.h
   write_raw_int(str, noBytes); 
   // TODO - ZZ appears to be endian agnostic
   str.write(reinterpret_cast<char*>(zzBytes), noBytes); 
+  delete[] zzBytes;
 }
 
 void read_raw_ZZ(istream& str, ZZ& zz)
@@ -191,10 +192,11 @@ void read_raw_ZZ(istream& str, ZZ& zz)
   long noBytes = read_raw_int(str);
   //OLD: assert(noBytes > 0);
   helib::assertTrue<helib::InvalidArgument>(noBytes > 0, "Number of bytes to write must be non-negative");
-  unsigned char zzBytes[noBytes];
+  unsigned char* zzBytes = new unsigned char[noBytes];
   // TODO - ZZ appears to be endian agnostic
   str.read(reinterpret_cast<char*>(zzBytes), noBytes); 
   zz = ZZFromBytes(zzBytes, noBytes);
+  delete[] zzBytes;
 }
 
 
