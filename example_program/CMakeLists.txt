@@ -8,11 +8,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(helib_example
-       	LANGUAGES CXX)
+       	LANGUAGES C CXX)
 
 find_package(helib 1.0.0 EXACT REQUIRED)
 
 add_executable(helib_example helib_example.cpp)
 
-target_link_libraries(helib_example helib)
-
+target_link_libraries(helib_example helib gmp ntl)
