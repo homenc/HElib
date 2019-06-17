@@ -153,7 +153,7 @@ void  TestIt(long p, long r, long c, long _k,
   else
     cout << "BAD\n";
 
-  publicKey.Encrypt(ctxt, FF1);
+  publicKey.Encrypt(ctxt, balanced_zzX(F1));
   if (!noPrint) CheckCtxt(ctxt, "init");
 
   // Compute homomorphically the inverse transformation that takes the

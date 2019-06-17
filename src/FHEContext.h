@@ -85,6 +85,7 @@ public:
   //! norm exceeds scale*sigma is at most epsilon=phim*delta. Thus,
   //! scale*sigma will be used as a high-probabability bound on the
   //! L-infty norm of such vectors.
+
   //=======================================
 
   //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
@@ -110,6 +111,44 @@ public:
   NTL::xdouble noiseBoundForUniform(NTL::xdouble magBound, long degBound) const
   {
     return scale * std::sqrt(double(degBound) / 3.0) * magBound;
+  }
+
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
+  //! that each f_i is chosen uniformly and independently from the
+  //! from the set of balanced residues modulo the given modulus.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: for odd modulus, this means each f_i is uniformly distributed
+  // over { -floor(modulus/2), ..., floor(modulus/2) }.
+  // For even modulus, this means each f_i is uniformly distributed
+  // over { modulus/2, ..., modulus/2 }, except that the two endpoints
+  // (which represent the same residue class) occur with half the
+  // probability of the others.
+
+  // NOTE: this is a bit heuristic: we assume that if we evaluate
+  // f at a primitive root of unity, then we get something that well
+  // approximates a normal random variable with the same variance,
+  // which is equal to the sum of the variances of the individual
+  // f_i's, which is (modulus)^2/12 + 1/6 for even modulus,
+  // and is at most (modulus^2)/12 for odd modulus.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  // NOTE: this is slightly more accurate that just calling
+  // noiseBoundForUniform with magBound=modulus/2.
+
+
+  double noiseBoundForMod(long modulus, long degBound) const
+  {
+    double var = fsquare(modulus)/12.0;
+    if (modulus%2 == 0) var += 1.0/6.0;
+ 
+    return scale * std::sqrt(degBound * var);
   }
 
   //=======================================
@@ -171,9 +210,39 @@ public:
   // NOTE: degBound is not used here, but I include it
   // for consistency with the other noiseBound routines
 
+
   double noiseBoundForHWt(long hwt, long degBound) const
   {
     return scale * std::sqrt(double(hwt));
+  }
+
+
+  //=======================================
+
+  //! This computes a high probability bound on the L-infty norm
+  //! of x0+s*x1 in the pwrfl basis, assuming is chosen with coeffs
+  //! in the pwrfl basis uniformly and independently dist'd over [-1/2,1/2],
+  //! x0 has arbitrary coeffs over [-1/2,1/2] in the pwrfl basis,
+  //! and assuming s is chosen with skHwt nonzero coeffs mod X^m-1
+  //! in the power basis (uniformly and independently over {-1,1}).
+  //! The bound should be satisfied with probability epsilon.
+
+  //! NOTE: this is a bit heuristic. See design document for details.
+  //! For a more conservative bound, multiply by 2^{k/2}, where
+  //! k = # of prime factors of m.
+
+  double boundForRecryption(long skHwt = 0) const 
+  {
+    long k = zMStar.getNFactors(); 
+    // number of prime factors of m
+
+    if (!skHwt) skHwt = rcData.skHwt; 
+    // the default reverts to rcData.skHwt, *not* rcData.defSkHwt
+
+    double c_m = zMStar.get_cM();
+    // multiply by this fudge factor
+
+    return c_m * (0.5+ noiseBoundForUniform(0.5, skHwt*(1L << k)));
   }
 
   /**
@@ -396,12 +465,17 @@ void readContextBinary(std::istream& str, FHEcontext& context);
 
 // Build modulus chain with nBits worth of ctxt primes, 
 // using nDgts digits in key-switching.
-// willBeBootstrappable flag is a hack, used to get around some
-// circularity when making the context boostrappable.
+// The willBeBootstrappable and skHwt parameters are needed to get around some
+// some circularity when making the context boostrappable.
+// If you later call context.makeBootstrappable with a given value
+// of skHwt, you should first buildModChain with willBeBootstrappable
+// set to true and the given value of skHwt.
+// FIXME: We should really have a simpler way to do this.
 // resolution ... FIXME
 
 void buildModChain(FHEcontext& context, long nBits, long nDgts=3,
-                      bool willBeBootstrappable=false, long resolution=3);
+                      bool willBeBootstrappable=false, long skHwt=0, 
+                      long resolution=3);
 
 ///@}
 extern FHEcontext* activeContext; // Should point to the "current" context

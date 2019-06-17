@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <NTL/BasicThreadPool.h>
 #include "matmul.h"
+#include "norms.h"
 
 NTL_CLIENT
 
@@ -290,11 +291,13 @@ struct ConstMultiplier { // stores a constant in either zzX or DoubleCRT format
 
 struct ConstMultiplier_DoubleCRT : ConstMultiplier {
   DoubleCRT data;
+  double sz;
 
-  ConstMultiplier_DoubleCRT(const DoubleCRT& _data) : data(_data) { }
+  ConstMultiplier_DoubleCRT(const DoubleCRT& _data, double _sz) : 
+    data(_data), sz(_sz) { }
 
   void mul(Ctxt& ctxt) const override {
-    ctxt.multByConstant(data);
+    ctxt.multByConstant(data, sz);
   } 
 
   shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
@@ -313,7 +316,8 @@ struct ConstMultiplier_zzX : ConstMultiplier {
   } 
 
   shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
-    return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()));
+    double sz = embeddingLargestCoeff(data, context.zMStar);
+    return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()), sz);
   }
 };
 
@@ -324,7 +328,7 @@ build_ConstMultiplier(const RX& poly)
    if (IsZero(poly))
       return nullptr;
    else
-      return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
+      return make_shared<ConstMultiplier_zzX>(balanced_zzX(poly));
 }
 
 template<class RX, class type>
@@ -337,7 +341,7 @@ build_ConstMultiplier(const RX& poly,
    else {
       RX poly1;
       plaintextAutomorph(poly1, poly, dim, amt, ea);
-      return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+      return make_shared<ConstMultiplier_zzX>(balanced_zzX(poly1));
    }
 }
 
@@ -1952,14 +1956,15 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 	    shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, i);
+            double sz = embeddingLargestCoeff(mask, zMStar);
 
 	    DoubleCRT m1(mask, ea.getContext(),
 		 tmp->getPrimeSet() | tmp1->getPrimeSet());
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
-	    tmp->multByConstant(m1);
+	    tmp->multByConstant(m1, sz);
 	    *tmp += *tmp1;
-	    tmp1->multByConstant(m1);
+	    tmp1->multByConstant(m1, sz);
 	    *tmp -= *tmp1;
 
 	    idx = rec_mul(acc, *tmp, dim_idx+1, idx);
@@ -1991,6 +1996,7 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
             sh_ctxt1.smartAutomorph(zMStar.genToPow(dim, 1));
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, offset);
+            double sz = embeddingLargestCoeff(mask, zMStar);
 
             Ctxt tmp = sh_ctxt;
             Ctxt tmp1 = sh_ctxt1;
@@ -1999,9 +2005,9 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 		 tmp.getPrimeSet() | tmp1.getPrimeSet());
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
-	    tmp.multByConstant(m1);
+	    tmp.multByConstant(m1, sz);
 	    tmp += tmp1;
-	    tmp1.multByConstant(m1);
+	    tmp1.multByConstant(m1, sz);
 	    tmp -= tmp1;
 
 	    idx = rec_mul(acc, tmp, dim_idx+1, idx);
@@ -2285,14 +2291,15 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
 	    shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, i);
+            double sz = embeddingLargestCoeff(mask, zMStar);
 
 	    DoubleCRT m1(mask, ea.getContext(),
 		 tmp->getPrimeSet() | tmp1->getPrimeSet());
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
-	    tmp->multByConstant(m1);
+	    tmp->multByConstant(m1, sz);
 	    *tmp += *tmp1;
-	    tmp1->multByConstant(m1);
+	    tmp1->multByConstant(m1, sz);
 	    *tmp -= *tmp1;
 
 	    idx = rec_mul(acc, *tmp, dim_idx+1, idx);
@@ -2324,6 +2331,7 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
             sh_ctxt1.smartAutomorph(zMStar.genToPow(dim, 1));
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, offset);
+            double sz = embeddingLargestCoeff(mask, zMStar);
 
             Ctxt tmp = sh_ctxt;
             Ctxt tmp1 = sh_ctxt1;
@@ -2332,9 +2340,9 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
 		 tmp.getPrimeSet() | tmp1.getPrimeSet());
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
-	    tmp.multByConstant(m1);
+	    tmp.multByConstant(m1, sz);
 	    tmp += tmp1;
-	    tmp1.multByConstant(m1);
+	    tmp1.multByConstant(m1, sz);
 	    tmp -= tmp1;
 
 	    idx = rec_mul(acc, tmp, dim_idx+1, idx);

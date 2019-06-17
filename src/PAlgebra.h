@@ -46,8 +46,9 @@
 #include <utility>
 #include "NumbTh.h"
 #include "zzX.h"
-#include "clonedPtr.h"
 #include "hypercube.h"
+#include "PGFFT.h"
+#include "clonedPtr.h"
 
 //NTL_CLIENT
 
@@ -57,6 +58,7 @@ class PAlgebra {
 
   long phiM; // phi(m)
   long ordP; // the order of p in (Z/mZ)^*
+  long nfactors; // number of distinct prime factors of m
 
   long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
 
@@ -99,6 +101,9 @@ class PAlgebra {
 
   std::vector<long> zmsRep; // inverse of zmsIdx
 
+  std::shared_ptr<PGFFT> fftInfo; // info for computing m-point complex FFT's
+                             // copied_ptr allows delayed initialization
+
  public:
 
   PAlgebra(long mm, long pp = 2,
@@ -129,6 +134,9 @@ class PAlgebra {
   //! The order of p in (Z/mZ)^*
   long getOrdP() const { return ordP; }
 
+  //! The number of distinct prime factors of m
+  long getNFactors() const { return nfactors; }
+
   //! The number of plaintext slots = phi(m)/ord(p)
   long getNSlots() const { return cube.getSize(); }
 
@@ -149,8 +157,8 @@ class PAlgebra {
   long numOfGens() const { return gens.size(); }
 
   //! the i'th generator in (Z/mZ)^* /(p) (if any)
-  long ZmStarGen(unsigned long i) const
-  {  return (i<gens.size())? gens[i] : 0; }
+  long ZmStarGen(long i) const
+  {  return (i<long(gens.size()))? gens[i] : 0; }
 
   //! the i'th generator to the power j mod m
   // VJS: I'm moving away from all of this unsigned stuff...
@@ -237,6 +245,8 @@ class PAlgebra {
 
   //! The largest FFT we need to handle degree-m polynomials
   long fftSizeNeeded() const {return NTL::NextPowerOfTwo(getM()) +1;}
+
+  const PGFFT& getFFTInfo() const { return *fftInfo; }
 };
 
 
@@ -583,7 +593,7 @@ public:
 
   zzX getMask_zzX(long i, long j) const override
   {
-    return convert<zzX>(maskTable.at(i).at(j));
+    return balanced_zzX(maskTable.at(i).at(j));
   }
 
 

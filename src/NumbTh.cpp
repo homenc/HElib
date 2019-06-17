@@ -577,6 +577,22 @@ void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, long q, bool abs)
   }
 }
 
+void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, const ZZ& q, bool abs)
+{
+  out.SetLength(in.length());  // allocate space if needed
+
+  for (long i=0; i<in.length(); i++) {
+    ZZ c = in[i]%q;
+    if (abs)       { if (c<0) c+=q; }
+    else if (q==2) { if (in[i]<0) c = -c; }
+    else { 
+      if (c >= q/2)        c -= q;
+      else if (c < -(q/2)) c += q;
+    }
+    out[i] = c;
+  }
+}
+
 // multiply the polynomial f by the integer a modulo q
 void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs/*default=true*/)
 {

@@ -96,6 +96,8 @@ set(HELIB_SRCS
         "tableLookup.cpp"
         "timing.cpp"
         "zzX.cpp"
+        "PGFFT.cpp"
+        "fhe_stats.cpp"
         )
 
 set(HELIB_HEADERS
@@ -139,6 +141,8 @@ set(HELIB_HEADERS
         "zzX.h"
         "assertions.h"
         "exceptions.h"
+        "PGFFT.h"
+        "fhe_stats.h"
         )
 
 set(LEGACY_TEST_SRCS

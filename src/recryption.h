@@ -44,9 +44,6 @@ public:
   //! Hamming weight of recryption secret key
   long skHwt;
 
-  //! an optimization parameter
-  long a;
-
   //! for plaintext space p^{e-e'+r}
   PAlgebraMod *alMod;
 
@@ -66,7 +63,7 @@ public:
   std::vector<NTL::ZZX> unpackSlotEncoding;
 
   RecryptData() {
-    skHwt=0; e=ePrime=0; a=0;
+    skHwt=0; e=ePrime=0; 
     alMod=NULL; ea=NULL; firstMap=NULL; secondMap=NULL; p2dConv=NULL;
     build_cache = false;
   }
@@ -85,7 +82,7 @@ public:
   }
 
   //! Helper function for computing the recryption parameters
-  static long setAE(long& a, long& e, long& ePrime,
+  static long setAE(long& e, long& ePrime,
                     const FHEcontext& context, long t=0);
   /**
    * Fix the "ring constant" cM, a target norm s for the secret key,
@@ -134,6 +131,9 @@ public:
             bool build_cache=false,
             bool minimal=false);
 };
+
+
+
 
 
 #endif // HELIB_RECRYPTION_H

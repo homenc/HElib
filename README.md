@@ -1,5 +1,7 @@
 HElib
 =====
+***April 2019:*** Moved the HElib reposiroty on github from shaih/HElib to HomEnc/HElib
+
 ***January 2019:*** Multiple changes: CKKS support, new modulus-chain implementation, better noise management, etc. Documented in [changes.md](changes.md)
 
 ***March 2018:*** Re-implementation of homomorphic linear transformations, featuring speedups of 15x to 75x.

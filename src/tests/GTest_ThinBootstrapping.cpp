@@ -230,7 +230,6 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
                 std::cout << " done in "<<t<<" seconds\n";
                 std::cout << "  e="    << context.rcData.e
                     << ", e'="   << context.rcData.ePrime
-                    << ", a="<< context.rcData.a
                     << ", t="    << context.rcData.skHwt
                     << "\n  ";
                 context.zMStar.printout();

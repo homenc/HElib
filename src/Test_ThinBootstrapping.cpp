@@ -120,7 +120,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   }
 
   context.zMStar.set_cM(mValues[idx][13]/100.0);
-  buildModChain(context, L, c, /*willBeBootstrappable=*/true);
+  buildModChain(context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
 
   if (!noPrint) {
     std::cout << "security=" << context.securityLevel()<<endl;
@@ -144,7 +144,6 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     cout << " done in "<<t<<" seconds\n";
     cout << "  e="    << context.rcData.e
 	 << ", e'="   << context.rcData.ePrime
-	 << ", a="<< context.rcData.a
 	 << ", t="    << context.rcData.skHwt
 	 << "\n  ";
     context.zMStar.printout();

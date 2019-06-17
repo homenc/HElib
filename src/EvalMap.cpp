@@ -463,6 +463,7 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
   
   long p = zMStar.getP();
   long d = zMStar.getOrdP();
+  long sz = zMStar.numOfGens();
 
   // FIXME: we should check that ea was initilized with 
   // G == factors[0], but this is a slight pain to check
@@ -549,7 +550,7 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
 		     local_reps[dim], dim, m/mvec[dim]));
      matvec[dim].reset(new MatMul1DExec(*mat1_data, minimal));
   }
-  else {
+  else if (sz == nfactors) {
      long dim = nfactors - 1;
      unique_ptr<MatMul1D> mat1_data;
      mat1_data.reset(buildThinStep2Matrix(ea, sig_sequence[dim],
@@ -571,7 +572,7 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
 void ThinEvalMap::upgrade()
 {
   for (long i = 0; i < matvec.length(); i++)
-    matvec[i]->upgrade();
+    if (matvec[i]) matvec[i]->upgrade();
 }
 
 // Applying the evaluation (or its inverse) map to a ciphertext
@@ -579,7 +580,7 @@ void ThinEvalMap::apply(Ctxt& ctxt) const
 {
   if (!invert) { // forward direction
     for (long i = matvec.length()-1; i >= 0; i--)
-      matvec[i]->mul(ctxt);
+      if (matvec[i]) matvec[i]->mul(ctxt);
   }
   else {         // inverse transformation
     for (long i = 0; i < matvec.length(); i++)

@@ -241,6 +241,6 @@ template<> void write_raw_vector<double>(ostream& str, const vector<double>& v)
   long sz = v.size();  
   write_raw_int(str, sz); 
 
-  for(long n: v)
+  for(double n: v)
     write_raw_double(str, n); 
 };

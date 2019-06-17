@@ -489,8 +489,9 @@ void addCtxtPrimes(FHEcontext& context, long nBits, long targetSize)
 }
 
 
+static
 void addSpecialPrimes(FHEcontext& context, long nDgts, 
-                      bool willBeBootstrappable)
+                      bool willBeBootstrappable, long skHwt)
 {
   const PAlgebra& palg = context.zMStar;
   long p = palg.getP();
@@ -499,8 +500,8 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
 
   long p2e = p2r;
   if (willBeBootstrappable) { // bigger p^e for bootstrapping
-    long e, ePrime, a;
-    RecryptData::setAE(a,e,ePrime, context);
+    long e, ePrime;
+    RecryptData::setAE(e,ePrime, context, skHwt);
     p2e *= NTL::power_long(p, e-ePrime);
   }
 
@@ -587,11 +588,11 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
 }
 
 void buildModChain(FHEcontext& context, long nBits, long nDgts,
-                      bool willBeBootstrappable, long resolution)
+                      bool willBeBootstrappable, long skHwt, long resolution)
 {
   long pSize = ctxtPrimeSize(nBits);
   addSmallPrimes(context, resolution, pSize);
   addCtxtPrimes(context, nBits, pSize);
-  addSpecialPrimes(context, nDgts, willBeBootstrappable);
+  addSpecialPrimes(context, nDgts, willBeBootstrappable, skHwt);
   context.setModSizeTable();
 }

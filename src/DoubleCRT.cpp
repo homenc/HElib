@@ -1104,6 +1104,15 @@ double DoubleCRT::sampleHWt(long Hwt)
   return retval;
 }
 
+// Coefficients are -1/0/1 with pre-specified number of nonzeros
+double DoubleCRT::sampleHWtBounded(long Hwt)
+{
+  zzX poly;
+  double retval = ::sampleHWtBounded(poly,context,Hwt);
+  *this = poly; // convert to DoubleCRT
+  return retval;
+}
+
 // Coefficients are Gaussians
 double DoubleCRT::sampleGaussian(double stdev)
 {
@@ -1142,7 +1151,7 @@ xdouble DoubleCRT::sampleUniform(const ZZ& B)
   return retval;
 }
 
-void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
+void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, ZZX& delta)
 {
   IndexSet diff = getIndexSet() / s;
   if (empty(diff)) return;     // nothing to do
@@ -1156,7 +1165,6 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
     return;
   }
 
-  ZZX delta;
   ZZ diffProd = context.productOfPrimes(diff); // mod-down by this factor
   toPoly(delta, diff); // convert to coeff-representation modulo diffProd
 
@@ -1164,9 +1172,12 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
     long delta_len = delta.rep.length();
     if (ptxtSpace == 2) { // simpler handling for plaintext space mod 2
       for (long i: range(delta_len)) { 
+        // NOTE: this makes sure we get a more truly balanced remainder 
         if (IsOdd(delta.rep[i])) { // add or subtract diffProd to make it even
-          if (sign(delta.rep[i]) < 0) delta.rep[i] += diffProd;
-          else                        delta.rep[i] -= diffProd;
+          if (RandomBnd(2))      
+            delta.rep[i] += diffProd;
+          else
+            delta.rep[i] -= diffProd;
         }
       }
     }
@@ -1177,13 +1188,18 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
     // divisible by ptxtSpace.
     else {
       long p_over_2 = ptxtSpace/2;
+      long p_mod_2 = ptxtSpace%2;
       long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
       mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace); // optimization
       for (long i: range(delta_len)) { 
         long delta_i_modP = rem(delta.rep[i],ptxtSpace);
         if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
           delta_i_modP = MulModPrecon(delta_i_modP, prodInv, ptxtSpace, precon);
-          if (delta_i_modP > p_over_2) delta_i_modP -= ptxtSpace;
+
+          // NOTE: this makes sure we get a more truly balanced remainder 
+          if (delta_i_modP > p_over_2 ||
+              (p_mod_2 == 0 && delta_i_modP == p_over_2 && RandomBnd(2))) 
+            delta_i_modP -= ptxtSpace;
           delta.rep[i] -= diffProd * delta_i_modP;
         }
       }

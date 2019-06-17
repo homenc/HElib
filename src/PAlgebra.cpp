@@ -172,6 +172,10 @@ PAlgebra::PAlgebra(long mm, long pp,
 
   phiM = ordP * getNSlots();
 
+  Vec<Pair<long,long>> factors;
+  factorize(factors, mm);
+  nfactors = factors.length(); 
+
   // Allocate space for the various arrays
   resize(T,getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
@@ -219,6 +223,8 @@ PAlgebra::PAlgebra(long mm, long pp,
 
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
+
+  fftInfo = std::make_shared<PGFFT>(mm); 
 }
 
 bool comparePAlgebra(const PAlgebra& palg,
@@ -249,8 +255,15 @@ long PAlgebra::frobenuisPow(long j) const
 
 long PAlgebra::genToPow(long i, long j) const
 {
-  //OLD: assert(i >= -1 && i < LONG(gens.size()));
-  helib::assertInRange(i, -1l, LONG(gens.size()), "Generator at index i does not exists (Index out of range) and i is not -1 (Frobenius)");
+  long sz = gens.size();
+
+  if (i == sz) {
+    helib::assertTrue(j == 0, "PAlgebra::genToPow: i == sz but j != 0");
+    return 1;
+  }
+
+  helib::assertTrue(i >= -1 && i < LONG(gens.size()),
+           "PAlgebra::genToPow: bad dim");
 
   long res;
   if (i == -1)

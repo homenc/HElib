@@ -242,7 +242,8 @@ int main(int argc, char *argv[])
 
     // Operation multiply and add.
     mul(ea, p1, p2);
-    c1 *= c2;
+    c1.multiplyBy(c2);
+    //c1 *= c2;
 
     // Decrypt and Compare.
     PlaintextArray pp1(ea);

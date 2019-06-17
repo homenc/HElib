@@ -16,6 +16,7 @@
 #include "EncryptedArray.h"
 #include "timing.h"
 #include "clonedPtr.h"
+#include "norms.h"
 
 NTL_CLIENT
 
@@ -91,14 +92,16 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   // for \rho_i^{-ord}
 
   const RX& mask = maskTable[i][amt];
-  DoubleCRT m1(convert<zzX>(mask), context, 
+  zzX mask_poly = balanced_zzX(mask);
+  double sz = embeddingLargestCoeff(mask_poly, zMStar);
+  DoubleCRT m1(mask_poly, context, 
                ctxt.getPrimeSet() | T.getPrimeSet());
   // m1 will be used to multiply both ctxt and T
   
   // Compute ctxt = ctxt*m1 + T - T*m1
-  ctxt.multByConstant(m1);
+  ctxt.multByConstant(m1, sz);
   ctxt += T;
-  T.multByConstant(m1);
+  T.multByConstant(m1, sz);
   ctxt -= T;
 }
 
@@ -140,8 +143,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
     mask = 1 - mask;
     val = al.genToPow(i, amt);
   }
-  DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
-  ctxt.multByConstant(m1);   // zero out slots where mask=0
+  ctxt.multByConstant(balanced_zzX(mask));   // zero out slots where mask=0
   ctxt.smartAutomorph(val);  // shift left by val
   FHE_TIMER_STOP;
 }
@@ -195,42 +197,30 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 
     long ord = al.OrderOf(i);
 
-#if 0
-    long val = PowerMod(al.ZmStarGen(i), v, al.getM());
-    long ival = PowerMod(al.ZmStarGen(i), v-ord, al.getM());
+    ctxt.smartAutomorph(al.genToPow(i, v));
+    // ctxt = \rho_i^{v}(originalCtxt)
 
-    DoubleCRT m1(convert<zzX,RX>(maskTable[i][ord-v]),
-                 context, ctxt.getPrimeSet());
-    tmp = ctxt;  // a copy of the ciphertext
+    tmp = ctxt;
+    tmp.smartAutomorph(al.genToPow(i, -ord));
+    // tmp = \rho_i^{v-ord}(originalCtxt).
+    // This strategy assumes is geared toward the
+    // assumption that we have the key switch matrix 
+    // for \rho_i^{-ord}
 
-    tmp.multByConstant(m1);    // only the slots in which m1=1
-    ctxt -= tmp;               // only the slots in which m1=0
-    ctxt.smartAutomorph(val);  // shift left by val
-    tmp.smartAutomorph(ival);  // shift right by ord-val
-#else
+    zzX mask_poly = balanced_zzX(mask);
+    double sz = embeddingLargestCoeff(mask_poly, al);
 
-  ctxt.smartAutomorph(al.genToPow(i, v));
-  // ctxt = \rho_i^{v}(originalCtxt)
+    DoubleCRT m1(mask_poly, context, 
+		 ctxt.getPrimeSet() | tmp.getPrimeSet());
+    // m1 will be used to multiply both ctxt and tmp
+    
+    // Compute ctxt = ctxt*m1, tmp = tmp*(1-m1)
+    ctxt.multByConstant(m1, sz);
 
-  tmp = ctxt;
-  tmp.smartAutomorph(al.genToPow(i, -ord));
-  // tmp = \rho_i^{v-ord}(originalCtxt).
-  // This strategy assumes is geared toward the
-  // assumption that we have the key switch matrix 
-  // for \rho_i^{-ord}
+    Ctxt tmp1(tmp);
+    tmp1.multByConstant(m1, sz);
+    tmp -= tmp1;
 
-  DoubleCRT m1(convert<zzX>(maskTable[i][v]), context, 
-               ctxt.getPrimeSet() | tmp.getPrimeSet());
-  // m1 will be used to multiply both ctxt and tmp
-  
-  // Compute ctxt = ctxt*m1, tmp = tmp*(1-m1)
-  ctxt.multByConstant(m1);
-
-  Ctxt tmp1(tmp);
-  tmp1.multByConstant(m1);
-  tmp -= tmp1;
-
-#endif
 
     // apply rotation relative to next generator before combining the parts
     --i;
@@ -249,10 +239,11 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   for (i--; i >= 0; i--) {
     v = al.coordinate(i, amt);
 
-    DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
+    zzX mask_poly = balanced_zzX(mask);
+
     tmp = ctxt;
-    tmp.multByConstant(m1); // only the slots in which mask=1
-    ctxt -= tmp;            // only the slots in which mask=0
+    tmp.multByConstant(mask_poly); // only the slots in which mask=1
+    ctxt -= tmp;                   // only the slots in which mask=0
 
     rotate1D(tmp, i, v); 
     rotate1D(ctxt, i, v+1);
@@ -310,10 +301,11 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   for (i--; i >= 0; i--) {
     v = al.coordinate(i, amt);
 
-    DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
+    zzX mask_poly = balanced_zzX(mask);
+
     tmp = ctxt;
-    tmp.multByConstant(m1); // only the slots in which mask=1
-    ctxt -= tmp;            // only the slots in which mask=0
+    tmp.multByConstant(mask_poly); // only the slots in which mask=1
+    ctxt -= tmp;                   // only the slots in which mask=0
     if (i>0) {
       rotate1D(ctxt, i, v+1);
       rotate1D(tmp, i, v); 
@@ -337,7 +329,12 @@ void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) c
 {
   RX pp;
   tab.embedInSlots(pp, array, mappingData); 
-  ptxt = conv<ZZX>(pp); 
+
+  // NOTE: previous version was
+  //   ptxt = conv<ZZX>(pp);
+  // which did not do balanced remainders at all
+  zzX pp1 = balanced_zzX(pp);
+  convert(ptxt, pp1);
 }
 
 template<class type>
@@ -394,7 +391,11 @@ void EncryptedArrayDerived<type>::encode(zzX& ptxt, const vector< RX >& array) c
 {
   RX pp;
   tab.embedInSlots(pp, array, mappingData); 
-  convert(ptxt,pp); 
+
+  // NOTE: previous version was
+  //   convert(ptxt, pp);
+  // which did not do properly balanced remainders in some cases
+  ptxt = balanced_zzX(pp);
 }
 
 template<class type>

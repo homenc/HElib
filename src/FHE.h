@@ -358,7 +358,7 @@ public:
 
     if (hwt>0) {
       // sample a Hamming-weight-hwt polynomial
-      double bound = newSk.sampleHWt(hwt);     
+      double bound = newSk.sampleHWtBounded(hwt);     
       return ImportSecKey(newSk, bound, ptxtSpace, maxDegKswitch);
     }
     else {

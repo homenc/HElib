@@ -387,6 +387,7 @@ inline void PolyRed(NTL::ZZX& F, long q, bool abs=false) { PolyRed(F,F,q,abs); }
 inline void PolyRed(NTL::ZZX& F, const NTL::ZZ& q, bool abs=false)
 { PolyRed(F,F,q,abs); }
 void vecRed(NTL::Vec<NTL::ZZ>& out, const NTL::Vec<NTL::ZZ>& in, long q, bool abs);
+void vecRed(NTL::Vec<NTL::ZZ>& out, const NTL::Vec<NTL::ZZ>& in, const NTL::ZZ& q, bool abs);
 ///@}
 
 //! Multiply the polynomial f by the integer a modulo q
@@ -396,6 +397,7 @@ inline NTL::ZZX MulMod(const NTL::ZZX& f, long a, long q, bool abs=true) {
   MulMod(res, f, a, q, abs);
   return res;
 }
+
 
 ///@{
 //! @name Some enhanced conversion routines
@@ -856,11 +858,11 @@ void make_lazy_with_fun(const NTL::Lazy<T,P>& obj, F f, Args&&... args)
 
 inline void 
 Warning(const char *msg)
-{ std::cerr << msg << "\n"; }
+{ std::cerr << "WARNING: " << msg << "\n"; }
 
 inline void 
 Warning(const std::string& msg)
-{ std::cerr << msg << "\n"; }
+{ std::cerr << "WARNING: " << msg << "\n"; }
 
 
 // An array of inverce erfc values.

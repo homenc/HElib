@@ -537,6 +537,7 @@ void testRotsNShifts(const FHEPubKey& publicKey,
 #endif
   std::rotate(vd1.begin(), vd1.end()-nplaces, vd1.end());
   ea.rotate(c1, nplaces);
+  c1.reLinearize();
   ea.decrypt(c1, secretKey, vd_dec);
 #ifdef DEBUG_PRINTOUT
   printVec(cout<< "vd1(rot)=", vd1, 10)<<endl;

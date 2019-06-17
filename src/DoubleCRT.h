@@ -239,6 +239,13 @@ public:
     map.remove(s1);
   }
 
+  //! @ brief make prime set equal to s1
+  void setPrimes(const IndexSet& s1) {
+    addPrimes(s1 / getIndexSet());
+    removePrimes(getIndexSet() / s1);
+  }
+    
+
 
   /**
    * @name Arithmetic operation
@@ -366,6 +373,7 @@ public:
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
   double sampleHWt(long Hwt);
+  double sampleHWtBounded(long Hwt);
 
   //! @brief Coefficients are Gaussians
   //! Return a high probability bound on L-infty norm of canonical embedding
@@ -380,7 +388,7 @@ public:
 
 
   // used to implement modulus switching
-  void scaleDownToSet(const IndexSet& s, long ptxtSpace);
+  void scaleDownToSet(const IndexSet& s, long ptxtSpace, NTL::ZZX& delta);
 
 
   void FFT(const NTL::ZZX& poly, const IndexSet& s);

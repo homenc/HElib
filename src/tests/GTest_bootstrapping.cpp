@@ -263,7 +263,6 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
         std::cout << " done in "<<t<<" seconds\n";
         std::cout << "  e="    << context.rcData.e
             << ", e'="   << context.rcData.ePrime
-            << ", a="<< context.rcData.a
             << ", t="    << context.rcData.skHwt
             << "\n  ";
         context.zMStar.printout();

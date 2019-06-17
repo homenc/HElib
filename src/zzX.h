@@ -17,6 +17,7 @@
  **/
 #include <NTL/vector.h>
 #include <NTL/lzz_pX.h>
+#include <NTL/GF2X.h>
 
 class PAlgebra;
 typedef NTL::Vec<long> zzX;
@@ -81,5 +82,11 @@ inline zzX MulMod(const zzX& a, const zzX& b, const PAlgebra& palg)
   MulMod(tmp, a, b, palg);
   return tmp;
 }
+
+
+// these produce properly balanced residues, with randomization
+// if necessary
+zzX balanced_zzX(const NTL::zz_pX& f);
+zzX balanced_zzX(const NTL::GF2X& f);
 
 #endif // ifndef HELIB_ZZX_H

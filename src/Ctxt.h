@@ -262,7 +262,7 @@ class Ctxt {
 
   NTL::xdouble noiseBound;  // a high-probability bound on the the noise magnitude
 
-  long intFactor;    // an integer factor to multiply by on decryption (for BGV)
+  long intFactor;    // an integer factor to divide by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
   NTL::xdouble ptxtMag;   // bound on the plaintext size (for CKKS)
 
@@ -374,13 +374,12 @@ public:
   //! Add a constant polynomial. 
   //! If provided, size should be a high-probability bound
   //! on the L-infty norm of the canonical embedding
-  //! Otherwise, a bound based on the assumption that the coefficients
-  //! are uniformly and independently distributed over
+  //! Otherwise, for the DoubleCRT variant, a bound based on the assumption 
+  //! that the coefficients are uniformly and independently distributed over
   //! [-ptxtSpace/2, ptxtSpace/2].
-  //! Otherwise, size should be a high-prob	
+  //! For the other variants, explicit bounds are computed (if not CKKS).
   void addConstant(const DoubleCRT& dcrt, double size=-1.0);
-  void addConstant(const NTL::ZZX& poly, double size=-1.0)
-  { addConstant(DoubleCRT(poly,context,primeSet),size); }
+  void addConstant(const NTL::ZZX& poly, double size=-1.0);
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
@@ -395,8 +394,11 @@ public:
                        NTL::xdouble factor=NTL::xdouble(-1.0));
   void addConstantCKKS(const NTL::ZZ& c);
 
-  //! Multiply-by-constant. If the size is not given, we use
-  //! phi(m)*ptxtSpace^2 as the default value.
+  //! Multiply-by-constant. 
+  //! If the size is not given, for the DCRT variant, we use
+  //! a high probability bound assuming "random" coefficients
+  //! mod ptxtSpace, while for the other variants, we use
+  //! explicitly computed bounds (if not CKKS).
   void multByConstant(const DoubleCRT& dcrt, double size=-1.0);
   void multByConstant(const NTL::ZZX& poly, double size=-1.0);
   void multByConstant(const zzX& poly, double size=-1.0);
@@ -563,7 +565,8 @@ public:
   //! the moduli-chain in the context, and does not even need to be a prime.
   //! The ciphertext *this is not affected, instead the result is returned in
   //! the zzParts std::vector, as a std::vector of ZZX'es.
-  //! Returns an extimate for the noise bound after mod-switching.
+  //! Returns an extimate for the scaled noise (not including the
+  //! additive mod switching noise)
   double rawModSwitch(std::vector<NTL::ZZX>& zzParts, long toModulus) const;
 
   //! @brief compute the power X,X^2,...,X^n

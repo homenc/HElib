@@ -176,6 +176,7 @@ public:
     encode(pp, ptxt); // Convert array of slots into a plaintext polynomial
     key.Encrypt(ctxt, pp, getP2R()); // encrypt the plaintext polynomial
     // NOTE: If secret key, will call the overridden FHESecKey::Encrypt
+    // FIXME: the "false" param forces the PK version
   }
 
   virtual void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, std::vector< long >& ptxt) const
