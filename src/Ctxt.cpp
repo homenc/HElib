@@ -1610,8 +1610,10 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
   // B0 represents the noise contributed by rounding to an integer
   double B0 = context.noiseBoundForUniform(0.5, context.zMStar.getPhiM());
 
-  // B1 represents the noise contributed by the mod-p^r correction
-  double B1 = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+  // B1 represents the noise contributed by the mod-p^r correction, if any
+  double B1 = 0;
+  if (!isCKKS())
+    B1 = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
 
   double roundingNoise = B0 + B1;
 
