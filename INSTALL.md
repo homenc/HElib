@@ -164,7 +164,7 @@ You can install NTL as follows:
 3. NTL is configured, built and installed in the standard Unix way (but
 remember to specify the following flags to `configure`):
 ```
-      ./configure NTL_GMP_LIP=ON SHARED=on
+      ./configure NTL_GMP_LIP=on SHARED=on
       make
       sudo make install
 ```
