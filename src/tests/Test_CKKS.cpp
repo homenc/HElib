@@ -161,14 +161,6 @@ struct Parameters {
     p = tmp;
   }
 
-#ifndef FFT_ARMA
-class Test_CKKS : public ::testing::TestWithParam<Parameters> {};
-TEST_P(Test_CKKS, error)
-{
-    FAIL() << "Cannot run CKKS test when not using armadillo.";
-}
-#else
-
 class Test_CKKS : public ::testing::TestWithParam<Parameters> {
     protected:
         const long m;         // Zm*
@@ -495,8 +487,6 @@ TEST_P(Test_CKKS, multiplying_ciphertext_by_negative_constant_and_then_adding_to
                   << ", max(vd4)=" << largestCoeff(vd4) << std::endl
                   << ", maxDiff=" << calcMaxDiff(vd1,vd4) << std::endl << std::endl;
 }
-
-#endif // FFT_ARMA
 
 INSTANTIATE_TEST_SUITE_P(typical_parameters, Test_CKKS, ::testing::Values(
             //SLOW

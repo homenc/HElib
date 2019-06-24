@@ -9,7 +9,6 @@ CentOS 7.6, and macOS High Sierra 10.13.
 - GNU make
 - g++ >= 5.4.0 or clang >= 3.8
 - pthreads
-- Armadillo >= 7.800 (optional, greatly improves CKKS performance)
 
 ## Option 1: package build (recommended for most users)
 
@@ -186,8 +185,6 @@ to the `./configure` step.
 - `CMAKE_BUILD_TYPE`: Choose the type of build, options are: Debug,
 RelWithDebInfo, Release, MinSizeRel.
 - `CMAKE_INSTALL_PREFIX`: Desired installation directory for HElib.
-- `ENABLE_ARMADILLO`: Use Armadillo to speed up FFTs.  Requires a system-wide 
-installation of Armadillo version >= 7.800.0.  Defaults to `OFF`.
 - `ENABLE_TEST=ON/OFF` (default is OFF): Enable building of tests. This will
   include an automatic download step for the google test framework.
 - `ENABLE_THREADS=ON/OFF` (default is ON): Enable threading support. This must

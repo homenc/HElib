@@ -6,6 +6,3 @@ LIB_GMP=
 # Overwrite COPT, don't use -O2
 COPT=-g
 
-# No Armadillo support, overwrite CFFT and ARMA (this is very slow)
-CFFT=-DFFT_NATIVE
-ARMA=
