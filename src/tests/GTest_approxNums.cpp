@@ -152,14 +152,6 @@ struct Parameters {
     p = tmp;
   }
 
-#ifndef FFT_ARMA
-class GTest_approxNums : public ::testing::TestWithParam<Parameters> {};
-TEST_P(GTest_approxNums, error)
-{
-    FAIL() << "Cannot run approxNums test when not using armadillo.";
-}
-#else
-
 class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
     protected:
         const long R;
@@ -534,8 +526,6 @@ TEST_P(GTest_approxNums, general_ops_works) {
       resetAllTimers();
   }
   
-#endif // FFT_ARMA
-
 INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_approxNums, ::testing::Values(
             //SLOW
             Parameters(1, 1024, 8, 150, 0.01)
