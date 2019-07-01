@@ -185,6 +185,10 @@ class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
                 std::cout << "ctxtPrimes="<<context.ctxtPrimes
                     << ", specialPrimes="<<context.specialPrimes<<std::endl<<std::endl;
             }
+            #ifdef DEBUG_PRINTOUT
+                dbgKey = &secretKey;
+                dbgEa = const_cast<EncryptedArray*>(context.ea);
+            #endif // DEBUG_PRINTOUT
 //          if (helib_test::debug) {
 //            dbgKey = &secretKey;
 //            dbgEa = const_cast<EncryptedArray*>(context.ea);

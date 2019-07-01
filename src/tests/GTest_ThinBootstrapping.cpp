@@ -315,6 +315,13 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
         const long nslots;
 
     public:
+        void SetUp() override {
+#ifdef DEBUG_PRINTOUT
+            dbgKey = &secretKey;
+            dbgEa = const_cast<EncryptedArray*>(context.ea);
+#endif // DEBUG_PRINTOUT
+            }
+
         static void TearDownTestCase()
         {
             if(!helib_test::noPrint) {
