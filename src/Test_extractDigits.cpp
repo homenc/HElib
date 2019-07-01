@@ -66,9 +66,13 @@ int main(int argc, char *argv[])
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 
   if (debug) {
-    dbgKey = &secretKey; // debugging key and ea
-    dbgEa = (EncryptedArray*)context.ea;
+      dbgKey = &secretKey; // debugging key and ea
+      dbgEa = (EncryptedArray*)context.ea;
   }
+#ifdef DEBUG_PRINTOUT
+  dbgKey = &secretKey; // debugging key and ea
+  dbgEa = (EncryptedArray*)context.ea;
+#endif //DEBUG_PRINTOUT
 
   EncryptedArray ea(context);
   vector<long> v;

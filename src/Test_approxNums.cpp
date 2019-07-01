@@ -350,6 +350,10 @@ int main(int argc, char *argv[])
         dbgKey = & secretKey;
         dbgEa = (EncryptedArray*) context.ea;
     }
+#ifdef DEBUG_PRINTOUT
+          dbgKey = & secretKey;
+          dbgEa = (EncryptedArray*) context.ea;
+#endif //DEBUG_PRINTOUT
 
     // Run the tests.
     testBasicArith(publicKey, secretKey, ea, epsilon);
