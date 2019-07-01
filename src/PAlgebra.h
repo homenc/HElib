@@ -593,6 +593,7 @@ public:
 
   zzX getMask_zzX(long i, long j) const override
   {
+    RBak bak; bak.save(); restoreContext();
     return balanced_zzX(maskTable.at(i).at(j));
   }
 
