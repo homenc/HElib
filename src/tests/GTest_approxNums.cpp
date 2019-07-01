@@ -289,8 +289,8 @@ TEST_P(GTest_approxNums, complex_arithmetic_works)
   c1.complexConj();  
   ea.decrypt(c1, secretKey, vd);
 #ifdef DEBUG_PRINTOUT
-  printVec(cout<<"vd1=", vd1, 10) << std::endl;
-  printVec(cout<<"res=", vd, 10) << std::endl;
+  printVec(std::cout<<"vd1=", vd1, 10) << std::endl;
+  printVec(std::cout<<"res=", vd, 10) << std::endl;
 #endif
   EXPECT_TRUE(cx_equals(vd, vd1, NTL::conv<double>(epsilon * c1.getPtxtMag())))
                     << "  max(vd)="  << largestCoeff(vd)
