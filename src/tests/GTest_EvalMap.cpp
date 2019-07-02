@@ -180,6 +180,11 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
             secretKey.GenSecKey(); // A Hamming-weight-w secret key
             addSome1DMatrices(secretKey); // compute key-switching matrices that we need
             addFrbMatrices(secretKey); // compute key-switching matrices that we need
+
+#ifdef DEBUG_PRINTOUT
+            dbgKey = &secretKey;
+            dbgEa = const_cast<EncryptedArray*>(context.ea);
+#endif // DEBUG_PRINTOUT
         };
 
         virtual void TearDown() override

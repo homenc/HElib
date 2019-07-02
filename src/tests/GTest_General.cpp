@@ -157,6 +157,11 @@ class GTest_General : public ::testing::TestWithParam<Parameters> {
             NTL::SetNumThreads(GetParam().nt);
             secretKey.GenSecKey(w); // A Hamming-weight-w secret key
             addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+
+#ifdef DEBUG_PRINTOUT
+            dbgKey = &secretKey;
+            dbgEa = const_cast<EncryptedArray*>(context.ea);
+#endif // DEBUG_PRINTOUT
         };
 
         virtual void TearDown() override

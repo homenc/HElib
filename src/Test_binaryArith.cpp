@@ -309,7 +309,7 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
   const Ctxt* minCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eProduct) {
-    long lvl = c.findBaseLevel();
+    long lvl = c.logOfPrimeSet();
     if (lvl < minLvl) {
       minCtxt = &c;
       minLvl = lvl;
@@ -383,7 +383,7 @@ void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
   const Ctxt* minCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eSum) {
-    long lvl = c.findBaseLevel();
+    long lvl = c.logOfPrimeSet();
     if (lvl < minLvl) {
       minCtxt = &c;
       minLvl = lvl;

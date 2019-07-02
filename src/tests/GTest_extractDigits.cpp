@@ -104,6 +104,11 @@ class GTest_extractDigits : public ::testing::TestWithParam<Parameters> {
               dbgKey = &secretKey; // debugging key and ea
               dbgEa = (EncryptedArray*) context.ea;
             }
+
+#ifdef DEBUG_PRINTOUT
+            dbgKey = &secretKey;
+            dbgEa = const_cast<EncryptedArray*>(context.ea);
+#endif // DEBUG_PRINTOUT
         };
 
         virtual void TearDown() override

@@ -299,7 +299,7 @@ TEST_P(GTest_binaryCompare, comparison)
   const Ctxt* minLvlCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eMax) {
-    long lvl = c.findBaseLevel();
+    long lvl = c.logOfPrimeSet();
     if (lvl < minLvl) {
       minLvlCtxt = &c;
       minLvl = lvl;
