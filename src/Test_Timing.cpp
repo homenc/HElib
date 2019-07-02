@@ -26,6 +26,8 @@ NTL_CLIENT
 #include "replicate.h"
 #include "permutations.h"
 
+#include "debugging.h"
+
 // A hack to get this to compile for now
 static long findBaseLevel(const Ctxt& c)
 {
@@ -126,7 +128,14 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     addSomeFrbMatrices(secretKey);
     FHE_NTIMER_STOP(keyGen);
 
-    ZZX poly;
+
+#ifdef DEBUG_PRINTOUT
+      dbgEa = (EncryptedArray*) context.ea;
+      dbgKey = &secretKey;
+#endif
+
+
+      ZZX poly;
     PlaintextArray pp(ea);
     random(ea, pp);
 
@@ -514,7 +523,12 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   data.other.decode4 = tp->getTime() / tp->getNumCalls();
   resetAllTimers();
 
-  // time low-level operations
+#ifdef DEBUG_PRINTOUT
+    dbgEa = (EncryptedArray*) context.ea;
+    dbgKey = &secretKey;
+#endif
+
+    // time low-level operations
   cerr << "#" << std::flush;
 
   ZZX poly;

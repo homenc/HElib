@@ -37,7 +37,7 @@ extern long printFlag;
 extern FHESecKey* dbgKey;
 
 // extern long fhe_disable_intFactor;
-extern long fhe_force_chen_han;
+//extern long fhe_force_chen_han;
 
 namespace {
 
@@ -152,6 +152,8 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
         };
 
         GTest_bootstrapping () :
+            old_fhe_test_force_bsgs(fhe_test_force_bsgs),
+            old_fhe_test_force_hoist(fhe_test_force_hoist),
             p(GetParam().p),
             r(GetParam().r),
             c(GetParam().c),
@@ -163,7 +165,8 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
             useCache(GetParam().useCache),
             idx(getIdx(p, N))
     {};
-
+        const int old_fhe_test_force_bsgs;
+        const int old_fhe_test_force_hoist;
         long p;
         long r;
         long c;
@@ -185,8 +188,14 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
             fhe_test_force_hoist = GetParam().force_hoist;
         };
 
+        void cleanupBootstrappingGlobals() {
+            fhe_test_force_bsgs = old_fhe_test_force_bsgs;
+            fhe_test_force_hoist = old_fhe_test_force_hoist;
+        }
+
         virtual void TearDown() override
         {
+            cleanupBootstrappingGlobals();
             cleanupGlobals();
         }
 };
@@ -236,7 +245,7 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
     }
 
     context.zMStar.set_cM(mValues[idx][13]/100.0);
-    buildModChain(context, L, c,/*willBeBootstrappable=*/true);
+    buildModChain(context, L, c,/*willBeBootstrappable=*/true, /*t=*/skHwt);
 
     if (!helib_test::noPrint) {
         std::cout << "security=" << context.securityLevel()<<std::endl;

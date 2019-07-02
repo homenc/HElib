@@ -22,6 +22,8 @@
 #include "timing.h"
 #include "EncryptedArray.h"
 
+#include "debugging.h"
+
 NTL_CLIENT
 
 bool isLittleEndian()
@@ -145,6 +147,11 @@ int main(int argc, char *argv[])
     addSome1DMatrices(*secKey);
     addFrbMatrices(*secKey);
 
+#ifdef DEBUG_PRINTOUT
+        dbgEa = (EncryptedArray*) context->ea;
+        dbgKey = secKey.get();
+#endif
+
     // ASCII 
     if (!noPrint)
       cout << "\tWriting ASCII1 file " << asciiFile1 << endl;
@@ -178,6 +185,12 @@ int main(int argc, char *argv[])
 
     // Read in SecKey and PubKey.
     std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
+
+#ifdef DEBUG_PRINTOUT
+        dbgEa = (EncryptedArray*) context->ea;
+        dbgKey = secKey.get();
+#endif
+
     FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
   
     readPubKeyBinary(inFile, *pubKey);
@@ -223,7 +236,13 @@ int main(int argc, char *argv[])
     // Read in PubKey.
     std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
     FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
-    readPubKeyBinary(inFile, *pubKey);
+
+#ifdef DEBUG_PRINTOUT
+        dbgEa = (EncryptedArray*) context->ea;
+        dbgKey = secKey.get();
+#endif
+
+        readPubKeyBinary(inFile, *pubKey);
     readSecKeyBinary(inFile, *secKey);
     inFile.close(); 
 
@@ -298,8 +317,13 @@ int main(int argc, char *argv[])
       // Read in SecKey and PubKey.
       std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
       FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
-    
-      readPubKeyBinary(inFile, *pubKey);
+
+#ifdef DEBUG_PRINTOUT
+        dbgEa = (EncryptedArray*) context->ea;
+        dbgKey = secKey.get();
+#endif
+
+        readPubKeyBinary(inFile, *pubKey);
       readSecKeyBinary(inFile, *secKey);
       inFile.close();
    

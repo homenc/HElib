@@ -214,6 +214,11 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
         addSome1DMatrices(*secKey);
         addFrbMatrices(*secKey);
 
+#ifdef DEBUG_PRINTOUT
+        dbgEa = (EncryptedArray*) context->ea;
+        dbgKey = secKey.get();
+#endif
+
         // ASCII 
         if (!helib_test::noPrint) {
             std::cout << "\tWriting ASCII1 file " << asciiFile1 << std::endl;
@@ -250,6 +255,11 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
         // Read in SecKey and PubKey.
         std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
         FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+
+#ifdef DEBUG_PRINTOUT
+        dbgEa = (EncryptedArray*) context->ea;
+        dbgKey = secKey.get();
+#endif
 
         readPubKeyBinary(inFile, *pubKey);
         readSecKeyBinary(inFile, *secKey);
@@ -289,7 +299,13 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
         FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
         readPubKeyBinary(inFile, *pubKey);
         readSecKeyBinary(inFile, *secKey);
-        inFile.close(); 
+        inFile.close();
+
+#ifdef DEBUG_PRINTOUT
+        dbgEa = (EncryptedArray*) context->ea;
+        dbgKey = secKey.get();
+#endif
+
 
         // Get the ea
         const EncryptedArray& ea = *context->ea;
@@ -306,7 +322,8 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
 
         // Operation multiply and add.
         mul(ea, p1, p2);
-        c1 *= c2;
+        c1.multiplyBy(c2);
+        //c1 *= c2;
 
         // Decrypt and Compare.
         PlaintextArray pp1(ea);

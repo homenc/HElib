@@ -160,6 +160,9 @@ set(LEGACY_TEST_SRCS
         "Test_ThinBootstrapping.cpp"
         "Test_ThinEvalMap.cpp"
         "Test_Timing.cpp"
+        "Test_thinboot.cpp"
+        "Test_fatboot.cpp"
+        "Test_PGFFT.cpp"
         )
 
 # Add helib target as a shared/static library

@@ -261,7 +261,7 @@ TEST_P(GTest_EvalMap, eval_map_behaves_correctly)
 
     EXPECT_EQ(F1, F);
 
-    publicKey.Encrypt(ctxt, FF1);
+    publicKey.Encrypt(ctxt, balanced_zzX(F1));
     if (!helib_test::noPrint) CheckCtxt(ctxt, "init");
 
     // Compute homomorphically the inverse transformation that takes the

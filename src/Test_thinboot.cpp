@@ -121,6 +121,11 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   t += GetTime();
   if (!noPrint) cout << " done in "<<t<<" seconds\n";
 
+#ifdef DEBUG_PRINTOUT
+      dbgEa = (EncryptedArray*) context.ea;
+      dbgKey = &secretKey;
+#endif
+
   FHEPubKey publicKey = secretKey;
 
   long d = context.zMStar.getOrdP();
