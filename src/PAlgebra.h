@@ -59,6 +59,7 @@ class PAlgebra {
   long phiM; // phi(m)
   long ordP; // the order of p in (Z/mZ)^*
   long nfactors; // number of distinct prime factors of m
+  long radm; // rad(m) = prod of distinct primes dividing m
 
   long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
 
@@ -136,6 +137,9 @@ class PAlgebra {
 
   //! The number of distinct prime factors of m
   long getNFactors() const { return nfactors; }
+
+  //! rad(m) = prod of distinct prime factors of m
+  long getRadM() const { return radm; }
 
   //! The number of plaintext slots = phi(m)/ord(p)
   long getNSlots() const { return cube.getSize(); }

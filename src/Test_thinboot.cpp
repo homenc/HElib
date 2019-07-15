@@ -9,12 +9,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+#if defined(__unix__) || defined(__unix) || defined(unix)
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 #include <NTL/BasicThreadPool.h>
 #include "FHE.h"
 #include "EncryptedArray.h"
 #include "matmul.h"
 #include "debugging.h"
 #include "fhe_stats.h"
+
+#include <algorithm>
+#include <cmath>
+#include <string>
 
 NTL_CLIENT
 
@@ -23,12 +33,96 @@ static bool dry = false; // a dry-run flag
 static bool debug = 0;   // a debug flag
 static int scale = 0;
 
+static string v_values_name = "";
+
 
 static long OUTER_REP = 1;
 
 
 static Vec<long> global_mvec, global_gens, global_ords;
 static int c_m = 100;
+
+
+static void 
+dump_v_values()
+{
+  const vector<double> *v_values = fetch_saved_values("v_values");
+  if (v_values && v_values_name != "") {
+    // write v_values to a file
+
+    cerr << "writing v_values to " << v_values_name << "\n";
+
+    ofstream F;
+    F.open(v_values_name.c_str());
+    for (long i: range(v_values->size()))
+      F << (*v_values)[i] << "\n";
+  }
+}
+
+static void
+anderson_darling(const vector<double>& X, double& AD, double& p_val) 
+{
+  long N = X.size();
+
+  if (N < 2) {
+    AD = 0;
+    p_val = 1;
+    return;
+  }
+
+  vector<double> Y(X);
+  sort(Y.begin(), Y.end());
+
+  // compute the sample mean
+  double SM = 0;
+  for (long i: range(N)) SM += Y[i];
+  SM /= N;
+  
+
+  // compute the sample variance
+  double SV = 0;
+  for (long i: range(N)) SV += (Y[i]-SM)*(Y[i]-SM);
+  SV /= (N-1);
+
+  // replace Y[i] by CDF of Y[i]
+  for (long i: range(N)) 
+    Y[i] = 0.5*(1 + erf((Y[i]-SM)/sqrt(2*SV)));
+
+  double S = 0;
+  for (long i: range(N)) {
+    S += (2*i+1)*(log(Y[i]) + log1p(-Y[N-1-i]));
+  } 
+  AD = -N - S/N;
+
+  AD *= (1 + 0.75/N + 2.25/N/N);
+  // This adjustment and the p-values below come from:
+  // R.B. D'Augostino and M.A. Stephens, Eds., 1986, 
+  // Goodness-of-Fit Techniques, Marcel Dekker.
+
+  p_val;
+  if (AD >= 0.6) 
+    p_val = exp(1.2937 - 5.709*(AD)+ 0.0186*fsquare(AD));
+  else if (AD > 0.34)
+    p_val = exp(0.9177 - 4.279*(AD) - 1.38*fsquare(AD));
+  else if (AD > 0.2) 
+    p_val = 1 - exp(-8.318 + 42.796*(AD)- 59.938*fsquare(AD));
+  else
+    p_val = 1 - exp(-13.436 + 101.14*(AD)- 223.73*fsquare(AD));
+}
+
+static void 
+print_anderson_darling()
+{
+  const vector<double> *v_values = fetch_saved_values("v_values");
+  if (v_values) { 
+    double AD, p_val;
+    anderson_darling(*v_values, AD, p_val);
+    cout << "AD=" << AD << ", p_val=" << p_val << "\n";
+  }
+}
+
+
+
 
 void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 {
@@ -105,8 +199,12 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   if (!noPrint) fhe_stats = true;
 
   for (long numkey=0; numkey<OUTER_REP; numkey++) { // test with 3 keys
-  if (fhe_stats && numkey > 0 && numkey%100 == 0) 
+  if (1 && fhe_stats && numkey > 0 && numkey%100 == 0) {
     print_stats(cout);
+    cout << "mvec=" << mvec << ", ";
+    print_anderson_darling();
+    dump_v_values();
+  }
 
   if (!noPrint) cerr << "*********** iter=" << (numkey+1) << "\n";
 
@@ -157,6 +255,12 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   Ctxt c1(publicKey);
   ea.encrypt(c1, publicKey, val1);
 
+  // Make some noise!
+  // This ensures that we do not start the sequence of squarings
+  // from a "fresh" ciphertext (which may not be representive).
+  ea.rotate(c1, 1);
+  ea.rotate(c1, -1);
+
   Ctxt c2(c1);
 
   if (!noPrint) CheckCtxt(c2, "before squarings");
@@ -171,6 +275,16 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   while (next_c2.bitCapacity() >= 100);
 
   if (!noPrint) {
+    // compute minimal capacity before bootstrapping (rawModSwitch)
+    long e = context.rcData.e;
+    long q = power_long(p, e) + 1;
+    double Bnd = context.boundForRecryption();
+    double min_bit_cap = log(  1.5*phim*q / (p2r*Bnd) )/log(2.0);
+
+    cout << "min_bit_cap=" << min_bit_cap << "\n";
+
+    cout << "log2(modSwitchAddedNoiseBound)=" 
+         << log(c1.modSwitchAddedNoiseBound())/log(2.0) << "\n";
     cout << "sqr_count=" << sqr_count << "\n";
     if (sqr_count > 0) {
       cout << "BITS-PER-LEVEL: " 
@@ -210,7 +324,18 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
  
   if (!noPrint) printAllTimers();
 
-  if (fhe_stats) print_stats(cout);
+#if (defined(__unix__) || defined(__unix) || defined(unix))
+    struct rusage rusage;
+    getrusage( RUSAGE_SELF, &rusage );
+    if (!noPrint) cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+#endif
+
+  if (fhe_stats) {
+    print_stats(cout);
+    cout << "mvec=" << mvec << ", ";
+    print_anderson_darling();
+    dump_v_values();
+  }
 
 }
 
@@ -265,6 +390,8 @@ int main(int argc, char *argv[])
   amap.arg("c_m", c_m);
 
   amap.arg("iter", OUTER_REP);
+
+  amap.arg("v_values", v_values_name);
 
   amap.parse(argc, argv);
 

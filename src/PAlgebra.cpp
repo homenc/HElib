@@ -176,6 +176,10 @@ PAlgebra::PAlgebra(long mm, long pp,
   factorize(factors, mm);
   nfactors = factors.length(); 
 
+  radm = 1;
+  for (long i: range(nfactors))
+    radm *= factors[i].a;
+
   // Allocate space for the various arrays
   resize(T,getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1

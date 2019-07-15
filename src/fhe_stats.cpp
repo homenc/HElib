@@ -27,6 +27,13 @@ fhe_stats_record::update(double val)
   if (val > max) max = val;
 }
 
+void
+fhe_stats_record::save(double val)
+{
+  FHE_MUTEX_GUARD(stats_mutex);
+  saved_values.push_back(val);
+}
+
 
 static bool 
 stats_compare(const fhe_stats_record *a, const fhe_stats_record *b)
@@ -49,4 +56,15 @@ print_stats(std::ostream& s)
       s << name << " ave=" << (sum/count) << " max=" << max << "\n";
     }
   }
+}
+
+const std::vector<double> *
+fetch_saved_values(const char * name)
+{
+  for (long i = 0; i < long(stats_map.size()); i++) {
+    if (strcmp(name, stats_map[i]->name) == 0)
+       return &stats_map[i]->saved_values;
+  }
+
+  return 0;
 }

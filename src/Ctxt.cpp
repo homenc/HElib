@@ -1314,7 +1314,50 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   reLinearize(); // re-linearize after all the multiplications
 }
 
+#if 1
 // Multiply-by-constant
+void Ctxt::multByConstant(const ZZ& c)
+{
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+  FHE_TIMER_START;
+
+  if (isCKKS()) { // multiply by dividing the scaling factor
+    xdouble size = fabs(to_xdouble(c));
+    ptxtMag *= size;
+    ratFactor /= size;
+    if (c<0)
+      this->negate();
+    return;
+  }
+
+  // BGV
+
+  long c0 = rem(c, ptxtSpace);
+
+  if (c0 == 1) return;
+  if (c0 == 0) {
+    clear();
+    return;
+  }
+
+  long d = GCD(c0, ptxtSpace);
+  long c1 = c0/d;
+  long c1_inv = InvMod(c1, ptxtSpace);
+  // write c0 = c1 * d, mul ctxt by d, and intFactor by c1_inv
+
+  intFactor = MulMod(intFactor, c1_inv, ptxtSpace);
+
+  if (d == 1) return;
+
+  long cc = balRem(d, ptxtSpace); 
+  noiseBound *= abs(cc);
+
+  // multiply all the parts by this constant
+  ZZ c_copy(cc);
+  for (auto& part : parts) part *= c_copy;
+}
+#else
 void Ctxt::multByConstant(const ZZ& c)
 {
   // Special case: if *this is empty then do nothing
@@ -1337,6 +1380,8 @@ void Ctxt::multByConstant(const ZZ& c)
   ZZ c_copy(cc);
   for (auto& part : parts) part *= c_copy;
 }
+
+#endif
 
 // Multiply-by-constant, it is assumed that the size of this
 // constant fits in a double float
@@ -1606,24 +1651,24 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
     }
   }
 
-#if 1
-  // B0 represents the noise contributed by rounding to an integer
-  double B0 = context.noiseBoundForUniform(0.5, context.zMStar.getPhiM());
+  double roundingNoise;
 
-  // B1 represents the noise contributed by the mod-p^r correction, if any
-  double B1 = 0;
-  if (!isCKKS())
-    B1 = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+  if (ptxtSpace == 2) {
+    roundingNoise = context.noiseBoundForUniform(1.0, context.zMStar.getPhiM());
+  }
+  else {
+    // B0 represents the noise contributed by rounding to an integer
+    double B0 = context.noiseBoundForUniform(0.5, context.zMStar.getPhiM());
 
-  double roundingNoise = B0 + B1;
+    // B1 represents the noise contributed by the mod-p^r correction, if any
+    double B1 = 0;
+    if (!isCKKS())
+      B1 = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
 
-  // FIXME: the design document should be updated to reflect this
+    roundingNoise = B0 + B1;
+  }
 
-#else
-  double roundingNoise = context.noiseBoundForUniform(double(ptxtSpace)/2.0,
-                                                      context.zMStar.getPhiM());
-
-#endif
+  // FIXME: the design document should be updated to reflect this logic
 
   return addedNoise * roundingNoise;
 
@@ -1894,6 +1939,13 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
   ZZ Q_half =  Q/2;
   long Q_inv_mod_p = InvMod(rem(Q, p2r), p2r);
 
+  helib::assertTrue(GCD(rem(Q, q), q) == 1, 
+         "GCD(Q, q) != 1 in Ctxt::rawModSwitch");
+  // This should not trigger, but if it does, we should perhaps
+  // modify the code in primeChain.cpp to avoid adding primes in the
+  // prime that divide q.  With this assumption, the probabilistic
+  // analysis is a bit cleaner 
+
 
   // Scale and round all the integers in all the parts
   zzParts.resize(parts.size());
@@ -1922,15 +1974,42 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
 
       long x = conv<long>(X);
 
-      long delta = MulMod(rem(Y, p2r), Q_inv_mod_p, p2r);
-      // delta = Y*Q^{-1} mod p^r
-      // so we have c*q*Q^{-1} = X + Y*Q^{-1} = x + delta (mod p^r)
-      
-      // NOTE: this makes sure we get a truly balanced remainder
-      if (delta > p2r/2 || (p2r%2 == 0 && delta == p2r/2 && RandomBnd(2)))
-        delta -= p2r;
+      long delta = 0;
+
+      if (p2r == 2) {
+        // special case that keeps the added noise a bit smaller
+
+        // new coeff is c*q/Q - Y/Q + delta, so we want delta
+        // to have the same sign as Y.  This will make the
+        // added noise term essentially uniform over [-1,+1].
+
+        if (IsOdd(Y)) {
+          long s = sign(Y);
+          if (s > 0)
+            delta = 1;
+          else 
+            delta = -1;
+        } 
+      }
+      else {
+        // general case
+
+	delta = MulMod(rem(Y, p2r), Q_inv_mod_p, p2r);
+	// delta = Y*Q^{-1} mod p^r
+	// so we have c*q*Q^{-1} = X + Y*Q^{-1} = x + delta (mod p^r)
+	
+	// NOTE: this makes sure we get a truly balanced remainder
+	if (delta > p2r/2 || (p2r%2 == 0 && delta == p2r/2 && RandomBnd(2)))
+	  delta -= p2r;
+      }
       
       x += delta;
+
+      // reduce symetrically mod q, randomizing if necessary for even q
+      if (x > q/2 || (q%2 == 0 && x == q/2 && RandomBnd(2))) 
+        x -= q;
+      else if (x < -q/2 || (q%2 == 0 && x == -q/2 && RandomBnd(2)))
+        x += q;
 
       pwrfl[j] = x;  // store back in the powerful vector
     }
@@ -1940,11 +2019,7 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
 
   // Return an estimate for the noise
   double scaledNoise = conv<double>(noiseBound*ratio);
-  //double addedNoise = conv<double>(modSwitchAddedNoiseBound());
-  // NOTE: technically, modSwitchAddedNoise bound assumes rounding is
-  // done in the polynomial basis, rather than the powerful basis,
-  // but the same bounds are still valid
 
   return scaledNoise;
-  // this is returned so that caller can check bounds
+  // this is returned so that caller in recryption.cpp can check bounds
 }

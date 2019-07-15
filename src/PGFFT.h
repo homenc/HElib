@@ -4,7 +4,7 @@
 
 PGFFT: Pretty Good FFT
 
-Copyright (C) 2019, victor Shoup
+Copyright (C) 2019, Victor Shoup
 
 All rights reserved.
 
@@ -78,7 +78,11 @@ public:
    // REQUIREMENT: n > 0
    explicit PGFFT(long n);
 
-   // apply n-point FFT to v[0..n-1]
+   // Apply n-point FFT to v[0..n-1].
+   // That is, if v[0..n-1] = (a_0, ..., a_{n-1}) before apply, then 
+   // afterwords, we have v[0..n-1] = (b_0, ..., b_{n-1}), where
+   //   b_i = \sum_{j=0}^{n-1} a_j W^{ij}
+   // and where W is the nth root of unity polar(1, -2*pi/n). 
    void apply(std::complex<double>* v) const;
 
    // Copy/move constructors/assignment ops deleted, as future implementations

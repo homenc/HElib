@@ -192,7 +192,7 @@ double compute_fudge(long p2ePrime, long p2e)
 
          // The variance in this case is bounded by 
          //   (N^2)/3*(1-eps) + (N^2)*eps = (N^2)/3*(1+2*eps),
-         //       where = p^{e'}/2 and eps < 1/p^e
+         //       where N = p^{e'}/2 and eps < 1/p^e
          // So the std dev is bounded by
          //    N/sqrt(3)*sqrt(1+2*eps) <= N/sqrt(3)*(1+eps)   
 
@@ -237,11 +237,13 @@ long RecryptData::setAE(long& e, long& ePrime,
 
   if (e > e_bnd) Error("setAE: cannot find suitable e");
 
-  long ePrimeTry = r+1;
+  //long ePrimeTry = r+1;
+  long ePrimeTry = 1;
 
   while (ePrimeTry <= e_bnd) {
     long p2ePrimeTry = power_long(p, ePrimeTry);
-    long eTry = ePrimeTry+1; 
+    //long eTry = ePrimeTry+1; 
+    long eTry = max(r+1, ePrimeTry+1);
     while (eTry <= e_bnd && eTry-ePrimeTry < e-ePrime) {
       long p2eTry = power_long(p, eTry);
       double fudge = compute_fudge(p2ePrimeTry, p2eTry);
@@ -289,6 +291,18 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   // Record the arguments to this function
   mvec = mvec_;
   build_cache = build_cache_;
+
+  bool mvec_ok = true;
+  for (long i: range(mvec.length())) {
+    Vec<Pair<long,long>> factors;
+    factorize(factors, mvec[i]);
+    if (factors.length() > 1) mvec_ok = false;
+  }
+
+  if (!mvec_ok) {
+    Warning("prime power factorization recommended for bootstrapping");
+  }
+
 
   skHwt = setAE(e, ePrime, context, t);
   long p = context.zMStar.getP();
@@ -400,26 +414,34 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // Mod-switch down if needed
   IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
   //OLD: assert(s <= context.ctxtPrimes);
-  helib::assertTrue(s <= context.ctxtPrimes, "Not enough room to mod down when bootstrapping");
-  if (s.card()>2) { // leave only bottom two primes
-    long frst = s.first();
-    long scnd = s.next(frst);
-    IndexSet s2(frst,scnd);
-    s.retain(s2); // retain only first two primes
+  helib::assertTrue(s <= context.ctxtPrimes,  "prime set is messed up");
+  if (s.card()>3) { // leave only first three ciphertext primes
+    long first = s.first();
+    IndexSet s3(first, first+2);
+    s.retain(s3); 
   }
   ctxt.modDownToSet(s);
 
   // key-switch to the bootstrapping key
   ctxt.reLinearize(recryptKeyID);
 
+#ifdef DEBUG_PRINTOUT
+  CheckCtxt(ctxt, "after key switching");
+#endif
+
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
+
   long phim = ctxt.getContext().zMStar.getPhiM();
-  double noise_est = ctxt.rawModSwitch(zzParts, q) * sqrt(double(phim));
+  long m = ctxt.getContext().zMStar.getM();
+  long radm = ctxt.getContext().zMStar.getRadM();
+  double mfac = sqrt(double(phim)/double(m/radm));
+
+  double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise 
   // in the pwrfl basis...this is a fairly pessimistc bound, so even if
   // it is violated, things are probably still OK
-  double noise_bnd = 0.25*p2r*ctxt.getContext().boundForRecryption();
+  double noise_bnd = 0.66*p2r*ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters 
   double noise_rat = noise_est/noise_bnd;
 
@@ -974,26 +996,34 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // Mod-switch down if needed
   IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
   //OLD: assert(s <= context.ctxtPrimes);
-  helib::assertTrue(s <= context.ctxtPrimes,  "Not enough room to mod down when thin bootstrapping");
-  if (s.card()>2) { // leave only bottom two primes
-    long frst = s.first();
-    long scnd = s.next(frst);
-    IndexSet s2(frst,scnd);
-    s.retain(s2); // retain only first two primes
+  helib::assertTrue(s <= context.ctxtPrimes,  "prime set is messed up");
+  if (s.card()>3) { // leave only first three ciphertext primes
+    long first = s.first();
+    IndexSet s3(first, first+2);
+    s.retain(s3); 
   }
   ctxt.modDownToSet(s);
 
   // key-switch to the bootstrapping key
   ctxt.reLinearize(recryptKeyID);
 
+#ifdef DEBUG_PRINTOUT
+  CheckCtxt(ctxt, "after key switching");
+#endif
+
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
+
   long phim = ctxt.getContext().zMStar.getPhiM();
-  double noise_est = ctxt.rawModSwitch(zzParts, q) * sqrt(double(phim));
+  long m = ctxt.getContext().zMStar.getM();
+  long radm = ctxt.getContext().zMStar.getRadM();
+  double mfac = sqrt(double(phim)/double(m/radm));
+
+  double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise 
   // in the pwrfl basis...this is a fairly pessimistc bound, so even if
   // it is violated, things are probably still OK
-  double noise_bnd = 0.25*p2r*ctxt.getContext().boundForRecryption();
+  double noise_bnd = 0.66*p2r*ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters 
   double noise_rat = noise_est/noise_bnd;
 
@@ -1149,9 +1179,15 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
   long p2e = power_long(p, e);
   long ePrime = rcData.ePrime;
   long p2ePrime = power_long(p, ePrime);
+  long phim = context.zMStar.getPhiM();
+  long k = context.zMStar.getNFactors();
+  long skHwt = rcData.skHwt;
 
-  double coeff_bound = context.boundForRecryption() 
-                       * compute_fudge(p2ePrime, p2e);
+  double fudge = compute_fudge(p2ePrime, p2e);
+
+  double coeff_bound = context.boundForRecryption() * fudge;
+
+  double sigma = context.stdDevForRecryption() * fudge;
 
   ZZX ptxt;
   rawDecrypt(ptxt, v, sKey); // no mod q
@@ -1159,6 +1195,7 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
   Vec<ZZ> powerful;
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
   double max_pwrfl = conv<double>(largestCoeff(powerful));
+
 
   double denom = p2ePrime*coeff_bound;
   double ratio = max_pwrfl/denom;
@@ -1168,6 +1205,33 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
   cerr << "=== |v|/bound=" << ratio;
   if (ratio > 1.0) cerr << " BAD-BOUND";
   cerr << "\n";
+
+  ptxt -= v[0];  // so now ptxt is just sKey * v[1]
+  rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
+
+  helib::assertTrue(powerful.length() == phim, "length should be phim");
+
+  double ran_pwrfl = conv<double>(powerful[RandomBnd(phim)]);
+  // pick a random coefficient in the poweful basis
+
+  double std_devs = fabs(ran_pwrfl)/(p2ePrime*sigma);
+  // number of standard deviations away from mean
+
+  // update various indicator variables
+  FHE_STATS_UPDATE("sigma_0_5", double(std_devs <= 0.5)); // 0.383
+  FHE_STATS_UPDATE("sigma_1_0", double(std_devs <= 1.0)); // 0.683
+  FHE_STATS_UPDATE("sigma_1_5", double(std_devs <= 1.5)); // 0.866
+  FHE_STATS_UPDATE("sigma_2_0", double(std_devs <= 2.0)); // 0.954
+  FHE_STATS_UPDATE("sigma_2_5", double(std_devs <= 2.5)); // 0.988
+  FHE_STATS_UPDATE("sigma_3_0", double(std_devs <= 3.0)); // 0.997, 1 in 370
+  FHE_STATS_UPDATE("sigma_3_5", double(std_devs <= 3.5)); // 0.999535, 1 in 2149
+  FHE_STATS_UPDATE("sigma_4_0", double(std_devs <= 4.0)); // 0.999937, 1 in 15787
+
+  // compute sample variance, and scale by the variance we expect
+  FHE_STATS_UPDATE("sigma_calc", fsquare(ran_pwrfl)/fsquare(p2ePrime*sigma));
+
+  // save the scaled value for application of other tests
+  FHE_STATS_SAVE("v_values", ran_pwrfl/(p2ePrime*sigma));
 }
 
 

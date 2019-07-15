@@ -228,21 +228,31 @@ public:
   //! The bound should be satisfied with probability epsilon.
 
   //! NOTE: this is a bit heuristic. See design document for details.
-  //! For a more conservative bound, multiply by 2^{k/2}, where
-  //! k = # of prime factors of m.
 
-  double boundForRecryption(long skHwt = 0) const 
+  //! NOTE: this is still valid even when m is a power of 2
+
+  double stdDevForRecryption(long skHwt = 0) const
   {
-    long k = zMStar.getNFactors(); 
-    // number of prime factors of m
-
     if (!skHwt) skHwt = rcData.skHwt; 
     // the default reverts to rcData.skHwt, *not* rcData.defSkHwt
 
+    long k = zMStar.getNFactors(); 
+    // number of prime factors of m
+
+    long m = zMStar.getM();
+    long phim = zMStar.getPhiM();
+
+    double mrat = double(phim)/double(m);
+
+    return std::sqrt( mrat * double(skHwt) * double(1L << k)  / 3.0 ) * 0.5;
+  }
+
+  double boundForRecryption(long skHwt = 0) const 
+  {
     double c_m = zMStar.get_cM();
     // multiply by this fudge factor
 
-    return c_m * (0.5+ noiseBoundForUniform(0.5, skHwt*(1L << k)));
+    return 0.5 + c_m*scale*stdDevForRecryption(skHwt);
   }
 
   /**

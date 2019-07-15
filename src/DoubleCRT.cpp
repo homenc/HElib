@@ -1170,13 +1170,17 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, ZZX& delta)
 
   if (ptxtSpace > 1) { // make delta divisible by ptxtSpace
     long delta_len = delta.rep.length();
-    if (ptxtSpace == 2) { // simpler handling for plaintext space mod 2
+    if (ptxtSpace == 2) { 
+      // simpler handling for plaintext space mod 2.
+      // This makes the distrubution of delta/diffProd to be
+      // essentially uniform over [-1,+1].
       for (long i: range(delta_len)) { 
         // NOTE: this makes sure we get a more truly balanced remainder 
         if (IsOdd(delta.rep[i])) { // add or subtract diffProd to make it even
-          if (RandomBnd(2))      
+          long s = sign(delta.rep[i]);
+          if (s < 0)
             delta.rep[i] += diffProd;
-          else
+          else 
             delta.rep[i] -= diffProd;
         }
       }
