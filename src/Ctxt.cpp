@@ -1717,7 +1717,7 @@ void Ctxt::read(istream& str)
   helib::assertEq(eyeCatcherFound, 0, "Could not find post-ciphertext eye catcher");
 }
 
-void CtxtPart::write(ostream& str)
+void CtxtPart::write(ostream& str) const
 { 
   this->DoubleCRT::write(str); // CtxtPart is a child.
   skHandle.write(str);

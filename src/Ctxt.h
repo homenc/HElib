@@ -215,7 +215,7 @@ public:
     DoubleCRT(other), skHandle(otherHandle) {}
 
   void read(std::istream& str); 
-  void write(std::ostream& str);
+  void write(std::ostream& str) const;
 
 };
 std::istream& operator>>(std::istream& s, CtxtPart& p);

@@ -70,7 +70,7 @@ template<typename T> void write_raw_vector(std::ostream& str, const std::vector<
 {
   write_raw_int(str, v.size()); 
 
-  for(auto n: v){
+  for(const T& n: v){
     n.write(str);
   }
 };
