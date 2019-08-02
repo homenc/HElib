@@ -11,6 +11,7 @@
  */
 
 #include <algorithm>   // defines count(...), min(...)
+#include <cmath>
 
 #include "PAlgebra.h"
 #include "hypercube.h"
@@ -120,6 +121,8 @@ void PAlgebra::printAll() const
   }
 }
 
+static double 
+cotan(double x) { return 1/tan(x); }
 
 
 PAlgebra::PAlgebra(long mm, long pp,
@@ -179,6 +182,13 @@ PAlgebra::PAlgebra(long mm, long pp,
   radm = 1;
   for (long i: range(nfactors))
     radm *= factors[i].a;
+
+  double pi = atan(1)*4;
+  normBnd = 1;
+  for (long i: range(nfactors)) {
+    long u = factors[i].a;
+    normBnd *= 2*cotan(pi/(2*u))/u;
+  }
 
   // Allocate space for the various arrays
   resize(T,getNSlots());

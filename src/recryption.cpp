@@ -432,15 +432,10 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
 
-  long phim = ctxt.getContext().zMStar.getPhiM();
-  long m = ctxt.getContext().zMStar.getM();
-  long radm = ctxt.getContext().zMStar.getRadM();
-  double mfac = sqrt(double(phim)/double(m/radm));
-
+  double mfac = ctxt.getContext().zMStar.getNormBnd();
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise 
-  // in the pwrfl basis...this is a fairly pessimistc bound, so even if
-  // it is violated, things are probably still OK
+  // in the pwrfl basis
   double noise_bnd = 0.66*p2r*ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters 
   double noise_rat = noise_est/noise_bnd;
@@ -1014,15 +1009,10 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
   vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
 
-  long phim = ctxt.getContext().zMStar.getPhiM();
-  long m = ctxt.getContext().zMStar.getM();
-  long radm = ctxt.getContext().zMStar.getRadM();
-  double mfac = sqrt(double(phim)/double(m/radm));
-
+  double mfac = ctxt.getContext().zMStar.getNormBnd();
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise 
-  // in the pwrfl basis...this is a fairly pessimistc bound, so even if
-  // it is violated, things are probably still OK
+  // in the pwrfl basis
   double noise_bnd = 0.66*p2r*ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters 
   double noise_rat = noise_est/noise_bnd;

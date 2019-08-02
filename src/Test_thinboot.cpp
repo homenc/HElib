@@ -274,12 +274,14 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   } 
   while (next_c2.bitCapacity() >= 100);
 
+
   if (!noPrint) {
     // compute minimal capacity before bootstrapping (rawModSwitch)
     long e = context.rcData.e;
     long q = power_long(p, e) + 1;
     double Bnd = context.boundForRecryption();
-    double min_bit_cap = log(  1.5*phim*q / (p2r*Bnd) )/log(2.0);
+    double mfac = context.zMStar.getNormBnd();
+    double min_bit_cap = log(  1.5*mfac*q / (p2r*Bnd) )/log(2.0);
 
     cout << "min_bit_cap=" << min_bit_cap << "\n";
 
