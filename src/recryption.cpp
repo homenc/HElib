@@ -533,6 +533,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
 #ifdef FHE_BOOT_THREADS
 
+
 // Extract digits from fully packed slots, multithreaded version
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 			 const vector<ZZX>& unpackSlotEncoding)
@@ -549,12 +550,18 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
     vector< shared_ptr<DoubleCRT> > coeff_vector;
+    vector<double> coeff_vector_sz;
     coeff_vector.resize(d);
+    coeff_vector_sz.resize(d);
 
     FHE_NTIMER_START(unpack1);
-    for (long i = 0; i < d; i++)
+    for (long i = 0; i < d; i++) {
       coeff_vector[i] = shared_ptr<DoubleCRT>(new 
         DoubleCRT(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet()) );
+      coeff_vector_sz[i] = 
+        conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i], 
+                                            ctxt.getContext().zMStar) );
+    }
     FHE_NTIMER_STOP(unpack1);
 
     FHE_NTIMER_START(unpack2);
@@ -577,7 +584,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     for (long i = 0; i < d; i++) {
       for (long j = 0; j < d; j++) {
         tmp1 = frob[j];
-        tmp1.multByConstant(*coeff_vector[mcMod(i+j, d)]);
+        tmp1.multByConstant(*coeff_vector[mcMod(i+j, d)],
+                            coeff_vector_sz[mcMod(i+j, d)]);
         unpacked[i] += tmp1;
       }
     }
@@ -635,10 +643,17 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
     vector< shared_ptr<DoubleCRT> > coeff_vector;
+    vector<double> coeff_vector_sz;
     coeff_vector.resize(d);
-    for (long i = 0; i < d; i++)
+    coeff_vector_sz.resize(d);
+    for (long i = 0; i < d; i++) {
       coeff_vector[i] = shared_ptr<DoubleCRT>(new 
         DoubleCRT(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet()) );
+      coeff_vector_sz[i] = 
+        conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i], 
+                                            ctxt.getContext().zMStar) );
+    }
+
     Ctxt tmp1(ZeroCtxtLike, ctxt);
     Ctxt tmp2(ZeroCtxtLike, ctxt);
 
@@ -651,7 +666,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
       for (long i = 0; i < d; i++) {
         tmp2 = tmp1;
-        tmp2.multByConstant(*coeff_vector[mcMod(i+j, d)]);
+        tmp2.multByConstant(*coeff_vector[mcMod(i+j, d)], 
+                            coeff_vector_sz[mcMod(i+j, d)]);
         unpacked[i] += tmp2;
       }
     }
