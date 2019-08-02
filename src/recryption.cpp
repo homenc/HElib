@@ -99,7 +99,7 @@ static void newMakeDivisible(ZZX& poly, long p2e, long q,
       // randomize so that v has expected value 0
       zMod = p2e - zMod;
     }
-    else {              
+    else {
       // need to add a negative number
       zMod = -zMod;
     }
@@ -1215,7 +1215,7 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
   ptxt -= v[0];  // so now ptxt is just sKey * v[1]
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
 
-  helib::assertTrue(powerful.length() == phim, "length should be phim");
+  helib::assertEq(powerful.length(), phim, "length should be phim");
 
   double ran_pwrfl = conv<double>(powerful[RandomBnd(phim)]);
   // pick a random coefficient in the poweful basis

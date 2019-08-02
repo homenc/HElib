@@ -235,7 +235,7 @@ namespace {
 
     };
 
-    TEST_P(GTest_fatboot, correctly_performs_thinboot) {
+    TEST_P(GTest_fatboot, correctly_performs_fatboot) {
         buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
 
         if (!helib_test::noPrint) {

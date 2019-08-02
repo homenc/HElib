@@ -99,7 +99,6 @@ anderson_darling(const vector<double>& X, double& AD, double& p_val)
   // R.B. D'Augostino and M.A. Stephens, Eds., 1986, 
   // Goodness-of-Fit Techniques, Marcel Dekker.
 
-  p_val;
   if (AD >= 0.6) 
     p_val = exp(1.2937 - 5.709*(AD)+ 0.0186*fsquare(AD));
   else if (AD > 0.34)

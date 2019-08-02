@@ -9,6 +9,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+#if defined(__unix__) || defined(__unix) || defined(unix)
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+
 #include <NTL/BasicThreadPool.h>
 #include "FHE.h"
 #include "EncryptedArray.h"
@@ -19,6 +25,11 @@
 
 #include "gtest/gtest.h"
 #include "test_common.h"
+
+#include <algorithm>
+#include <cmath>
+#include <string>
+#include <NTL/ZZ.h>
 
 extern long fhe_force_chen_han;
 
@@ -48,11 +59,12 @@ namespace {
         NTL::Vec<long> global_mvec;
         const int c_m; // = 100;
         const long iter;
+        const std::string v_values_name;
 
         Parameters(long p, long r, long c, long bits, long skHwt, long nthreads, long seed, long useCache,
                    int c_m, int force_bsgs, int force_hoist, int chen_han, bool debug, int scale,
                    const std::vector<long> &global_gens, const std::vector<long> &global_ords,
-                   const std::vector<long> &global_mvec, long iter) :
+                   const std::vector<long> &global_mvec, long iter, const std::string& v_values_name) :
                 p(p),
                 r(r),
                 c(c),
@@ -70,7 +82,8 @@ namespace {
                 global_ords(convert<NTL::Vec<long>>(global_ords)),
                 global_mvec(convert<NTL::Vec<long>>(global_mvec)),
                 c_m(c_m),
-                iter(iter) {
+                iter(iter),
+                v_values_name(v_values_name) {
             if (global_gens.empty() || global_ords.empty() || global_mvec.empty())
                 throw helib::LogicError("gens, ords, and mvec must be non-empty");
         };
@@ -95,6 +108,7 @@ namespace {
                       << "global_mvec" << params.global_mvec << ","
                       << "c_m" << params.c_m << ","
                       << "iter" << params.iter << ","
+                      << "v_values_name" << params.v_values_name
                       << "}";
         }
 
@@ -190,6 +204,8 @@ namespace {
         double time;
         FHEcontext context;
 
+      std::string v_values_name;
+
         GTest_thinboot() :
                 old_fhe_test_force_bsgs(fhe_test_force_bsgs),
                 old_fhe_test_force_hoist(fhe_test_force_hoist),
@@ -216,7 +232,9 @@ namespace {
                 m(computeProd(mvec)),
                 phim((checkPM(p, m), phi_N(m))),
                 time(0),
-                context((preContextSetup(), m), p, r, gens, ords)
+                context((preContextSetup(), m), p, r, gens, ords),
+                v_values_name(GetParam().v_values_name)
+
         { postContextSetup(); }
 
         void TearDown() override
@@ -224,14 +242,101 @@ namespace {
             if(!helib_test::noPrint) {
                 printAllTimers();
             }
-            if (fhe_stats)
-                print_stats(std::cout);
+
+#if (defined(__unix__) || defined(__unix) || defined(unix))
+          struct rusage rusage;
+    getrusage( RUSAGE_SELF, &rusage );
+    if (!helib_test::noPrint) std::cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << std::endl;
+#endif
+
+          if (fhe_stats) {
+            print_stats(std::cout);
+            std::cout << "mvec=" << mvec << ", ";
+            print_anderson_darling();
+            dump_v_values();
+          }
 
             cleanupBootstrappingGlobals();
             cleanupGlobals();
         }
 
+      void dump_v_values()
+      {
+        const std::vector<double> *v_values = fetch_saved_values("v_values");
+        if (v_values && v_values_name != "") {
+          // write v_values to a file
+
+          std::cerr << "writing v_values to " << v_values_name << std::endl;
+
+          std::ofstream F;
+          F.open(v_values_name.c_str());
+          for (long i: range(v_values->size()))
+            F << (*v_values)[i] << std::endl;
+        }
+      }
+
+      void anderson_darling(const std::vector<double>& X, double& AD, double& p_val)
+      {
+        long N = X.size();
+
+        if (N < 2) {
+          AD = 0;
+          p_val = 1;
+          return;
+        }
+
+        std::vector<double> Y(X);
+        sort(Y.begin(), Y.end());
+
+        // compute the sample mean
+        double SM = 0;
+        for (long i: range(N)) SM += Y[i];
+        SM /= N;
+
+
+        // compute the sample variance
+        double SV = 0;
+        for (long i: range(N)) SV += (Y[i]-SM)*(Y[i]-SM);
+        SV /= (N-1);
+
+        // replace Y[i] by CDF of Y[i]
+        for (long i: range(N))
+          Y[i] = 0.5*(1 + erf((Y[i]-SM)/sqrt(2*SV)));
+
+        double S = 0;
+        for (long i: range(N)) {
+          S += (2*i+1)*(log(Y[i]) + log1p(-Y[N-1-i]));
+        }
+        AD = -N - S/N;
+
+        AD *= (1 + 0.75/N + 2.25/N/N);
+        // This adjustment and the p-values below come from:
+        // R.B. D'Augostino and M.A. Stephens, Eds., 1986,
+        // Goodness-of-Fit Techniques, Marcel Dekker.
+
+        if (AD >= 0.6)
+          p_val = exp(1.2937 - 5.709*(AD)+ 0.0186*fsquare(AD));
+        else if (AD > 0.34)
+          p_val = exp(0.9177 - 4.279*(AD) - 1.38*fsquare(AD));
+        else if (AD > 0.2)
+          p_val = 1 - exp(-8.318 + 42.796*(AD)- 59.938*fsquare(AD));
+        else
+          p_val = 1 - exp(-13.436 + 101.14*(AD)- 223.73*fsquare(AD));
+      }
+
+      void print_anderson_darling()
+      {
+        const std::vector<double> *v_values = fetch_saved_values("v_values");
+        if (v_values) {
+          double AD, p_val;
+          anderson_darling(*v_values, AD, p_val);
+          std::cout << "AD=" << AD << ", p_val=" << p_val << std::endl;
+        }
+      }
+
     };
+
+
 
     TEST_P(GTest_thinboot, correctly_performs_thinboot) {
         buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
@@ -270,8 +375,13 @@ namespace {
         if (!helib_test::noPrint) fhe_stats = true;
 
         for (long numkey = 0; numkey < iter; numkey++) { // test with 3 keys
-            if (fhe_stats && numkey > 0 && numkey % 100 == 0)
-                print_stats(std::cout);
+            if (fhe_stats && numkey > 0 && numkey % 100 == 0) {
+            print_stats(std::cout);
+
+            std::cout << "mvec=" << mvec << ", ";
+            print_anderson_darling();
+            dump_v_values();
+          }
 
             if (!helib_test::noPrint) std::cerr << "*********** iter=" << (numkey + 1) << std::endl;
 
@@ -322,6 +432,12 @@ namespace {
             Ctxt c1(publicKey);
             ea.encrypt(c1, publicKey, val1);
 
+          // Make some noise!
+          // This ensures that we do not start the sequence of squarings
+          // from a "fresh" ciphertext (which may not be representive).
+          ea.rotate(c1, 1);
+          ea.rotate(c1, -1);
+
             Ctxt c2(c1);
 
             if (!helib_test::noPrint) CheckCtxt(c2, "before squarings");
@@ -335,10 +451,22 @@ namespace {
             } while (next_c2.bitCapacity() >= 100);
 
             if (!helib_test::noPrint) {
+              // compute minimal capacity before bootstrapping (rawModSwitch)
+              long e = context.rcData.e;
+              long q = NTL::power_long(p, e) + 1;
+              double Bnd = context.boundForRecryption();
+              double mfac = context.zMStar.getNormBnd();
+              double min_bit_cap = log(  1.5*mfac*q / (p2r*Bnd) )/log(2.0);
+
+              std::cout << "min_bit_cap=" << min_bit_cap << std::endl;
+
+              std::cout << "log2(modSwitchAddedNoiseBound)="
+                   << log(c1.modSwitchAddedNoiseBound())/log(2.0) << std::endl;
+
                 std::cout << "sqr_count=" << sqr_count << std::endl;
                 if (sqr_count > 0) {
                     std::cout << "BITS-PER-LEVEL: "
-                         << ((c1.bitCapacity() - c2.bitCapacity()) / double(sqr_count)) << "\n";
+                         << ((c1.bitCapacity() - c2.bitCapacity()) / double(sqr_count)) << std::endl;
                 }
                 CheckCtxt(c2, "before recryption");
             }
@@ -383,10 +511,10 @@ namespace {
 
     INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_thinboot, ::testing::Values(
             //SLOW
-            Parameters(2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026, 249}, {30, -2}, {31, 41}, 1),
-            Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {556, 1037}, {6, 4}, {7, 5, 37}, 1)
+            Parameters(2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026, 249}, {30, -2}, {31, 41}, 1, ""),
+            Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {556, 1037}, {6, 4}, {7, 5, 37}, 1, "")
             //FAST
-            //Parameters(2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026, 249}, {30, -2}, {31, 41}, 1)
+            //Parameters(2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026, 249}, {30, -2}, {31, 41}, 1, "")
     ));
 } // namespace
 
