@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef  _BINIO_H_
-#define  _BINIO_H_
+#ifndef  HELIB_BINIO_H
+#define  HELIB_BINIO_H
 #include <iostream>
 #include <vector>
 #include <type_traits>
@@ -70,7 +70,7 @@ template<typename T> void write_raw_vector(std::ostream& str, const std::vector<
 {
   write_raw_int(str, v.size()); 
 
-  for(auto n: v){
+  for(const T& n: v){
     n.write(str);
   }
 };
@@ -114,4 +114,4 @@ template<typename T> void read_raw_vector(std::istream& str, std::vector<T>& v, 
   }
 }
 
-#endif // ifndef _BINIO_H_
+#endif // ifndef HELIB_BINIO_H

@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _NumbTh
-#define _NumbTh
+#ifndef HELIB_NUMBTH_H
+#define HELIB_NUMBTH_H
 /**
  * @file NumbTh.h
  * @brief Miscellaneous utility functions.
@@ -18,7 +18,6 @@
 #include <vector>
 #include <set>
 #include <cmath>
-#include <cassert>
 #include <string>
 #include <climits>
 #include <cmath>
@@ -48,12 +47,13 @@
 
 #include <NTL/FFT.h>
 
-// Test for the "right version" of NTL (currently 10.0.0)
-#if (NTL_MAJOR_VERSION<10)
-#error "This version of HElib requires NTL version 10.0.0 or above"
+// Test for the "right version" of NTL (currently 11.0.0)
+#if (NTL_MAJOR_VERSION<11)
+#error "This version of HElib requires NTL version 11.0.0 or above"
 #endif
 
 #include "range.h"
+#include "assertions.h"
 
 namespace FHEglobals
 {
@@ -181,7 +181,8 @@ public:
     std::shared_ptr<ArgProcessor> ap = 
       std::shared_ptr<ArgProcessor>(new ArgProcessorDerived<T>(&value));
 
-    assert(!map[name]);
+    //OLD: assert(!map[name]);
+    helib::assertTrue(map[name] == nullptr, "Key already in arg map (key: " + std::string(name) + ")");
     map[name] = ap;
   }
 
@@ -386,6 +387,7 @@ inline void PolyRed(NTL::ZZX& F, long q, bool abs=false) { PolyRed(F,F,q,abs); }
 inline void PolyRed(NTL::ZZX& F, const NTL::ZZ& q, bool abs=false)
 { PolyRed(F,F,q,abs); }
 void vecRed(NTL::Vec<NTL::ZZ>& out, const NTL::Vec<NTL::ZZ>& in, long q, bool abs);
+void vecRed(NTL::Vec<NTL::ZZ>& out, const NTL::Vec<NTL::ZZ>& in, const NTL::ZZ& q, bool abs);
 ///@}
 
 //! Multiply the polynomial f by the integer a modulo q
@@ -395,6 +397,7 @@ inline NTL::ZZX MulMod(const NTL::ZZX& f, long a, long q, bool abs=true) {
   MulMod(res, f, a, q, abs);
   return res;
 }
+
 
 ///@{
 //! @name Some enhanced conversion routines
@@ -630,7 +633,9 @@ void seekPastChar(std::istream& str, int cc);
 template<class T> void reverse(NTL::Vec<T>& v, long lo, long hi)
 {
   long n = v.length();
-  assert(lo >= 0 && lo <= hi && hi < n);
+  //OLD: assert(lo >= 0 && lo <= hi && hi < n);
+  helib::assertInRange(lo, 0l, hi, "Invalid argument: Bad interval", true);
+  helib::assertTrue(hi < n, "Invalid argument: Interval exceeds vector size");
 
   if (lo >= hi) return;
 
@@ -853,11 +858,11 @@ void make_lazy_with_fun(const NTL::Lazy<T,P>& obj, F f, Args&&... args)
 
 inline void 
 Warning(const char *msg)
-{ std::cerr << msg << "\n"; }
+{ std::cerr << "WARNING: " << msg << "\n"; }
 
 inline void 
 Warning(const std::string& msg)
-{ std::cerr << msg << "\n"; }
+{ std::cerr << "WARNING: " << msg << "\n"; }
 
 
 // An array of inverce erfc values.
@@ -889,4 +894,4 @@ const double erfc_inverse[] = {
 
 #define ERFC_INVERSE_SIZE  (long(sizeof(erfc_inverse)/sizeof(erfc_inverse[0])))
 
-#endif
+#endif // ifndef HELIB_NUMBTH_H

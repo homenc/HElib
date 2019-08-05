@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _BINARY_ARITH_H_
-#define _BINARY_ARITH_H_
+#ifndef HELIB_BINARYARITH_H
+#define HELIB_BINARYARITH_H
 /**
  * @file binaryArith.h
  * @brief Implementing integer addition, multiplication in binary representation
@@ -55,4 +55,4 @@ void decryptBinaryNums(std::vector<long>& pNums, const CtPtrs& eNums,
 void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
                    std::vector<zzX>* unpackSlotEncoding);
 
-#endif // ifndef _BINARY_ARITH_H_
+#endif // ifndef HELIB_BINARYARITH_H

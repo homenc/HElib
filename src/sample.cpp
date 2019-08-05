@@ -11,7 +11,6 @@
  */
 /* sample.cpp - implementing various sampling routines */
 #include <vector>
-#include <cassert>
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 #include <NTL/BasicThreadPool.h>
@@ -63,7 +62,9 @@ void sampleHWt(ZZX &poly, long n, long Hwt)
 void sampleSmall(zzX &poly, long n, double prob)
 {
   if (n<=0) n=lsize(poly); if (n<=0) return;
-  assert(prob>3.05e-5 && prob<=1); // prob must be in [2^{-15},1/2]
+  //OLD: assert(prob>3.05e-5 && prob<=1); // prob must be in [2^{-15},1/2]
+  helib::assertTrue<helib::InvalidArgument>(prob > 3.05e-5, "prob must be greater than 2^{-15}");
+  helib::assertTrue<helib::InvalidArgument>(prob <= 1, "prob must be less than or equal to 1");
   poly.SetLength(n);
 
   constexpr long bitSize=16;
@@ -162,7 +163,8 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
     double theta=2*Pi*r1;
     double rr= sqrt(-2.0*log(r2))*stdev;
 
-    assert(rr < 8*stdev); // sanity-check, no more than 8 standard deviations
+    //OLD: assert(rr < 8*stdev); // sanity-check, no more than 8 standard deviations
+    helib::assertTrue(rr < 8*stdev, "no more than 8 standard deviations");
 
     // Generate two Gaussians RV's, rounded to integers
     long x = (long) floor(rr*cos(theta) +0.5);
@@ -179,7 +181,8 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
 // Sample a degree-(n-1) zzX, with coefficients uniform in [-B,B]
 void sampleUniform(zzX& poly, long n, long B)
 {
-  assert (B>0);
+  //OLD: assert (B>0);
+  helib::assertTrue<helib::InvalidArgument>(B>0l, "Invalid coefficient interval");
   if (n<=0) n=lsize(poly); if (n<=0) return;
   poly.SetLength(n); // allocate space for degree-(n-1) polynomial
 
@@ -190,7 +193,8 @@ void sampleUniform(zzX& poly, long n, long B)
 // Sample a degree-(n-1) ZZX, with coefficients uniform in [-B,B]
 void sampleUniform(ZZX& poly, long n, const ZZ& B)
 {
-  assert (B>0);
+  //OLD: assert (B>0);
+  helib::assertTrue<helib::InvalidArgument>(static_cast<bool>(B>0l), "Invalid coefficient interval");
   if (n<=0) n=deg(poly)+1; if (n<=0) return;
   clear(poly);
   poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
@@ -231,236 +235,66 @@ double sampleHWt(zzX &poly, const FHEcontext& context, long Hwt)
 
 double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt)
 {
-#if FFT_IMPL // is there any implementation of canonicalEmbedding?
   const PAlgebra& palg = context.zMStar;
-
-  long deg_bnd = (palg.getPow2() == 0) ? palg.getM() : palg.getPhiM();
-
-  long log_deg_bnd = long(log(double(deg_bnd))/log(2.0) + 0.5) + 1;
-  //  sqrt(2) * deg_bnd  <= 2^{log_deg_bnd} <= 2*sqrt(2) * deg_bnd
-
-  // we use log_deg_bnd as in index into the erfc_inverse table
-  // so that we get a noise bound that should be satisfied
-  // with probablity at least 1/sqrt(2).
-
-  assert(log_deg_bnd < ERFC_INVERSE_SIZE);
-  double scale = erfc_inverse[log_deg_bnd];
-  double bound = scale * sqrt(double(Hwt));
-    
+  long phim = palg.getPhiM();
+  // should be good with probability at least 1/2
+  double bound = sqrt(Hwt*log(phim));
   return bound;
-#else
-  const PAlgebra& palg = context.zMStar;
-  double retval;
-
-  if (palg.getPow2() == 0) { // not power of two
-    long m = palg.getM();
-    retval = context.noiseBoundForHWt(Hwt, m);
-  }
-  else { // power of two
-    long phim = palg.getPhiM();
-    retval = context.noiseBoundForHWt(Hwt, phim);
-  }
-  return retval;
-#endif
 }
 
-#if 1
 double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
 {
-#if FFT_IMPL // is there any implementation of canonicalEmbedding?
   double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
   const PAlgebra& palg = context.zMStar;
     
+#if 1
   double val;
   long count = 0;
   do {
     sampleHWt(poly, context, Hwt);
     val = embeddingLargestCoeff(poly,palg);
-    //cerr << "****** " << (val/bound) << "\n";
   }
   while (++count<1000 && val>bound); // repeat until <= bound
+#else
+  double val, val1;
+  zzX poly1;
+  long succ = 0;
+
+  long count = 100;
+
+  val = 1e9;
+
+  cout << "sampleHWtBounded:\n";
+
+  for (long i = 0; i < count; i++) {
+    sampleHWt(poly1, context, Hwt);
+    val1 = embeddingLargestCoeff(poly1, palg);
+    if (val1 <= bound) {
+      succ++;
+      val = val1;
+      poly = poly1;
+      cout << "*";
+    }
+    else {
+      cout << ".";
+    }
+  }
+
+  cout << "\nsucc%=" << ((double(succ)/count)*100) << "\n";
+  cout << "bound=" << bound << "\n";
+  cout << "Hwt=" << Hwt  << "\n";
+
+#endif
 
   if (val>bound) {
-    cerr << "Warning: sampleSmallBounded, after "
+    std::stringstream ss;
+    ss << "Error: sampleHWtBounded, after "
          << count<<" trials, still val="<<val
-         << '>'<<"bound="<<bound<<endl;
-    Error("cannot continue");
+         << '>'<<"bound="<<bound;
+    throw helib::RuntimeError(ss.str());
   }
   return bound;
-#else
-  return sampleHWt(poly, context, Hwt);
-#endif
-   
 }
-
-#elif 0
-
-// Experimental version
-
-static ZZ 
-calculate_matrix_norm(const zzX& try_poly, const FHEcontext& context)
-{
-  const RecryptData& rcData = context.rcData;
-  const PowerfulDCRT* p2dConv = rcData.p2dConv;
-  const PAlgebra& palg = context.zMStar;
-  long phim = palg.getPhiM();
-  long m = palg.getM();
-  const ZZX& PhimX = palg.getPhimX();
-
-  ZZX poly;
-  convert(poly, try_poly);
-
-  IndexSet iset = IndexSet( context.ctxtPrimes.first(), 
-                            min( context.ctxtPrimes.first()+3, 
-                                context.ctxtPrimes.last() ) );
-  // use a smaller prime set for powerful conversions
-  // right now, we just use the first 3  ctxt primes
-   
-  ZZ retval {0};
-
-  for (long i: range(phim)) {
-    if (i%300 == 0) cerr << ".";
-    Vec<ZZ> basis_vec;
-    basis_vec.SetLength(phim);
-    basis_vec[i] = 1;
-
-    ZZX basis_poly;
-    p2dConv->powerfulToZZX(basis_poly, basis_vec, iset);
-
-    basis_poly = basis_poly*poly;
-
-    // reduce basis_poly mod X^m-1, which is enough for ZZXtoPowerful
-    long d = basis_poly.rep.length();
-
-    if (d > m) {
-      for (long j: range(m, d)) {
-        basis_poly.rep[j-m] += basis_poly.rep[j];
-      }
-      basis_poly.rep.SetLength(m);
-      basis_poly.normalize();
-    }
-    
-    p2dConv->ZZXtoPowerful(basis_vec, basis_poly, iset);
-
-    for (long j: range(phim)) {
-      retval += basis_vec[j]*basis_vec[j];
-    }
-  }
-
-  return retval;
-}
-
-double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
-{
-#if FFT_IMPL // is there any implementation of canonicalEmbedding?
-  double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
-  const PAlgebra& palg = context.zMStar;
-    
-
-  ZZ best_matrix_norm;
-  zzX best_poly;
-
-  cerr << "*** starting trials\n";
-
-  for (long trials = 0; trials < 20; trials++) {
-
-    zzX try_poly;
-
-    double val;
-    long count = 0;
-    do {
-      sampleHWt(try_poly, context, Hwt);
-      val = embeddingLargestCoeff(try_poly,palg);
-      //cerr << "****** " << (val/bound) << "\n";
-    }
-    while (++count<1000 && val>bound); // repeat until <= bound
-
-    if (val>bound) {
-      cerr << "Warning: sampleSmallBounded, after "
-	   << count<<" trials, still val="<<val
-	   << '>'<<"bound="<<bound<<endl;
-      Error("cannot continue");
-    }
-
-    ZZ try_matrix_norm = calculate_matrix_norm(try_poly, context);
-
-    if (trials == 0 || try_matrix_norm < best_matrix_norm) {
-      best_matrix_norm = try_matrix_norm;
-      best_poly = try_poly; 
-    }
-
-    cerr << try_matrix_norm << "\n";
-  }
-
-  cerr << "*** ending trials\n";
-
-  return bound;
-#else
-  return sampleHWt(poly, context, Hwt);
-#endif
-   
-}
-
-#else
-
-void sampleHWtAlt(zzX& poly, const FHEcontext& context, long Hwt)
-{
-  const RecryptData& rcData = context.rcData;
-  const PowerfulDCRT* p2dConv = rcData.p2dConv;
-  const PAlgebra& palg = context.zMStar;
-  long phim = palg.getPhiM();
-  long m = palg.getM();
-
-  Vec<ZZ> pwrfl;
-  pwrfl.SetLength(phim);
-
-  for (long i=0; i<Hwt; ) {  // continue until exactly Hwt nonzero coefficients
-    long u = RandomBnd(phim);  // The next coefficient to choose
-    if (pwrfl[u]==0) { // if we didn't choose it already
-      long b = RandomBits_long(2)&2; // b random in {0,2}
-      pwrfl[u] = b-1;                      //   random in {-1,1}
-      i++; // count another nonzero coefficient
-    }
-  }
-
-  ZZX poly1;
-  p2dConv->powerfulToZZX(poly1, pwrfl);
-
-  convert(poly, poly1);
-}
-
-// Experimental version
-
-double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
-{
-#if FFT_IMPL // is there any implementation of canonicalEmbedding?
-  double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
-  const PAlgebra& palg = context.zMStar;
-    
-  double val;
-  long count = 0;
-  do {
-    sampleHWtAlt(poly, context, Hwt);
-    val = embeddingLargestCoeff(poly,palg);
-    //cerr << "****** " << (val/bound) << "\n";
-  }
-  while (++count<1000 && val>bound); // repeat until <= bound
-
-  if (val>bound) {
-    cerr << "Warning: sampleSmallBounded, after "
-         << count<<" trials, still val="<<val
-         << '>'<<"bound="<<bound<<endl;
-    Error("cannot continue");
-  }
-  return bound;
-#else
-  return sampleHWt(poly, context, Hwt);
-#endif
-   
-}
-
-
-#endif
 
 
 double sampleSmall(zzX &poly, const FHEcontext& context)
@@ -490,12 +324,14 @@ double sampleSmall(zzX &poly, const FHEcontext& context)
 // Same as above, but ensure the result is not too much larger than typical
 double sampleSmallBounded(zzX &poly, const FHEcontext& context)
 {
-#if FFT_IMPL // is there any implementation of canonicalEmbedding?
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
   long phim = palg.getPhiM();
-  // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
-  double bound = (1+sqrt(phim*log(phim)))*0.85;
+
+  // should be good with probability at least 1/2
+  double bound = sqrt(phim*log(phim)/2.0);
+
+#if 1
   double val;
   long count = 0;
   do {
@@ -503,17 +339,45 @@ double sampleSmallBounded(zzX &poly, const FHEcontext& context)
     val = embeddingLargestCoeff(poly,palg);
   }
   while (++count<1000 && val>bound); // repeat until <= bound
+#else
+  double val, val1;
+  zzX poly1;
+  long succ = 0;
+
+  long count = 100;
+
+  val = 1e9;
+
+  cout << "sampleSmallBounded:\n";
+
+  for (long i = 0; i < count; i++) {
+    sampleSmall(poly1, context);
+    val1 = embeddingLargestCoeff(poly1, palg);
+    if (val1 <= bound) {
+      succ++;
+      val = val1;
+      poly = poly1;
+      cout << "*";
+    }
+    else {
+      cout << ".";
+    }
+  }
+
+  cout << "\nsucc%=" << ((double(succ)/count)*100) << "\n";
+  cout << "bound=" << bound << "\n";
+
+
+#endif
+
   if (val>bound) {
-    cerr << "Warning: sampleSmallBounded, after "
+    std::stringstream ss;
+    ss << "Error: sampleSmallBounded, after "
          << count<<" trials, still val="<<val
-         << '>'<<"bound="<<bound<<endl;
-    Error("cannot continue");
+         << '>'<<"bound="<<bound;
+    throw helib::RuntimeError(ss.str());
   }
   return bound;
-#else
-#warning "No FFT, sampleSmallBounded degenerates to sampleSmall"
-  return sampleSmall(poly, context);
-#endif
 }
 
 double sampleGaussian(zzX &poly, const FHEcontext& context, double stdev)
@@ -538,7 +402,6 @@ double sampleGaussian(zzX &poly, const FHEcontext& context, double stdev)
 // Same as above, but ensure the result is not too much larger than typical
 double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
 {
-#if FFT_IMPL // is there any implementation of canonicalEmbedding?
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
   long phim = palg.getPhiM();  
@@ -554,16 +417,13 @@ double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
   }
   while (++count<1000 && val>bound); // repeat until <=bound
   if (val>bound) {
-    cerr << "Warning: sampleGaussianBounded, after "
+    std::stringstream ss;
+    ss << "Error: sampleGaussianBounded, after "
          << count<<" trials, still val="<<val
-         << '>'<<"bound="<<bound<<endl;
-    Error("cannot continue");
+         << '>'<<"bound="<<bound;
+    throw helib::RuntimeError(ss.str());
   }
   return bound;
-#else
-#warning "No FFT, sampleGaussianBounded degenerates to sampleGaussian"
-  return sampleGaussian(poly, context, stdev);
-#endif
 }
 
 

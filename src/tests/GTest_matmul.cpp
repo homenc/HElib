@@ -43,6 +43,7 @@
  *   BlockMatMulFull* buildRandomFullBlockMatrix(const EncryptedArray& ea);
  */
 
+#include "debugging.h"
 #include "gtest/gtest.h"
 #include "test_common.h"
 
@@ -239,6 +240,7 @@ class GTest_matmul : public ::testing::Test {
                 std::cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << std::endl;
 #endif
             }
+            cleanupGlobals();
         };
 };
 
@@ -265,7 +267,7 @@ using TypesToTest = ::testing::Types<
                             MatrixTypeAndParams<MatMul1D, oneDimensionalBlockMatrixParams>
                         >;
 
-TYPED_TEST_CASE(GTest_matmul, TypesToTest);
+TYPED_TEST_SUITE(GTest_matmul, TypesToTest);
 
 TYPED_TEST(GTest_matmul, multiplies_without_errors) {
     FHE_NTIMER_START(EncodeMartix_MatMul);

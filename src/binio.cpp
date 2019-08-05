@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include "binio.h"
-#include <cassert>
+#include "assertions.h"
 #include <cstring>
 #include <sys/types.h>
 // NOTE: including sys/types.h for the purpose of bringing in 
@@ -103,7 +103,8 @@ void write_raw_int32(ostream& str, int num)
 
 void write_ntl_vec_long(ostream& str, const vec_long& vl, long intSize)
 {
-  assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
+  //OLD: assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
+  helib::assertTrue<helib::InvalidArgument>(intSize == BINIO_64BIT || intSize == BINIO_32BIT, "intSize must be 32 or 64 bit for binary IO");
   write_raw_int32(str, vl.length());
   write_raw_int32(str, intSize);
 
@@ -122,7 +123,8 @@ void read_ntl_vec_long(istream& str, vec_long& vl)
 {
   int sizeOfVL = read_raw_int32(str);
   int intSize  = read_raw_int32(str);
-  assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
+  //OLD: assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
+  helib::assertTrue<helib::InvalidArgument>(intSize == BINIO_64BIT || intSize == BINIO_32BIT, "intSize must be 32 or 64 bit for binary IO");
 
   // Remember to check and increase Vec before trying to fill it.
   if(vl.length() < sizeOfVL){
@@ -175,22 +177,26 @@ xdouble read_raw_xdouble(istream& str)
 void write_raw_ZZ(ostream& str, const ZZ& zz)
 {
   long noBytes = NumBytes(zz);
-  assert(noBytes > 0);
-  unsigned char zzBytes[noBytes];
+  //OLD: assert(noBytes > 0);
+  helib::assertTrue<helib::InvalidArgument>(noBytes > 0, "Number of bytes to write must be non-negative");
+  unsigned char* zzBytes = new unsigned char[noBytes];
   BytesFromZZ(zzBytes, zz, noBytes); // From ZZ.h
   write_raw_int(str, noBytes); 
   // TODO - ZZ appears to be endian agnostic
   str.write(reinterpret_cast<char*>(zzBytes), noBytes); 
+  delete[] zzBytes;
 }
 
 void read_raw_ZZ(istream& str, ZZ& zz)
 {
   long noBytes = read_raw_int(str);
-  assert(noBytes > 0);
-  unsigned char zzBytes[noBytes];
+  //OLD: assert(noBytes > 0);
+  helib::assertTrue<helib::InvalidArgument>(noBytes > 0, "Number of bytes to write must be non-negative");
+  unsigned char* zzBytes = new unsigned char[noBytes];
   // TODO - ZZ appears to be endian agnostic
   str.read(reinterpret_cast<char*>(zzBytes), noBytes); 
   zz = ZZFromBytes(zzBytes, noBytes);
+  delete[] zzBytes;
 }
 
 
@@ -235,6 +241,6 @@ template<> void write_raw_vector<double>(ostream& str, const vector<double>& v)
   long sz = v.size();  
   write_raw_int(str, sz); 
 
-  for(long n: v)
+  for(double n: v)
     write_raw_double(str, n); 
 };

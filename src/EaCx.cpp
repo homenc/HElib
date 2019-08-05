@@ -18,7 +18,7 @@
 #include "EncryptedArray.h"
 
 #include "timing.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 #include "norms.h"
 #include "debugging.h"
 
@@ -29,7 +29,8 @@ static constexpr cx_double the_imaginary_i = cx_double(0.0, 1.0);
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
                                const FHESecKey& sKey, vector<cx_double>& ptxt) const
 {
-  assert(&getContext() == &ctxt.getContext());
+  //OLD: assert(&getContext() == &ctxt.getContext());
+  helib::assertEq(&getContext(), &ctxt.getContext(), "Cannot decrypt with non-matching contextx");
   NTL::ZZX pp;
   sKey.Decrypt(pp, ctxt);
 
@@ -54,8 +55,10 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 // rotate ciphertext in dimension 0 by amt
 void EncryptedArrayCx::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
 {
-  assert(&getContext() == &ctxt.getContext());
-  assert(nativeDimension(i));
+  //OLD: assert(&getContext() == &ctxt.getContext());
+  helib::assertEq(&getContext(), &ctxt.getContext(), "Cannot decrypt with non-matching contextx");
+  //OLD: assert(nativeDimension(i));
+  helib::assertTrue(nativeDimension(i), "Rotation in " + std::to_string(i) + " is not a native operation");
 
   const PAlgebra& palg = getPAlgebra();
   long ord = sizeOfDimension(i);
@@ -69,7 +72,7 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
 // Negative shift amount denotes shift in the opposite direction.
 void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 {
-  throw std::logic_error("EncryptedArrayCx::shift1D not implemented");
+  throw helib::LogicError("EncryptedArrayCx::shift1D not implemented");
 }
 
 // We only support linear arrays for approximate numbers,
@@ -130,7 +133,8 @@ const zzX& EncryptedArrayCx::getiEncoded() const
 
 void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt, double scaling) const
 {
-  assert (scaling>0);
+  //OLD: assert (scaling>0);
+  helib::assertTrue<helib::InvalidArgument>(scaling>0, "Scaling must be positive to decode");
   canonicalEmbedding(array, ptxt, getPAlgebra());
   for (auto& x: array) x /= scaling;
 }
@@ -182,7 +186,7 @@ void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
   c.multByConstantCKKS(0.5);       // divide by two
 }
 
-double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
                        const cx_double& oneImage, const cx_double& iImage,
                        long precision) const
 {
@@ -200,10 +204,10 @@ double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
   vector<cx_double> v(n, x); // x in all the slots
   encode(C[0], v, msize, precision);
   v.assign(n, y);            // y in all the slots
-  return encode(C[1], v, msize, precision);
+  encode(C[1], v, msize, precision);
 }
 
-double EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
           const vector<cx_double>&oneImages, const vector<cx_double>&iImages,
           long precision) const
 {

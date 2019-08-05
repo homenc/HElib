@@ -350,6 +350,10 @@ int main(int argc, char *argv[])
         dbgKey = & secretKey;
         dbgEa = (EncryptedArray*) context.ea;
     }
+#ifdef DEBUG_PRINTOUT
+          dbgKey = & secretKey;
+          dbgEa = (EncryptedArray*) context.ea;
+#endif //DEBUG_PRINTOUT
 
     // Run the tests.
     testBasicArith(publicKey, secretKey, ea, epsilon);
@@ -537,6 +541,7 @@ void testRotsNShifts(const FHEPubKey& publicKey,
 #endif
   std::rotate(vd1.begin(), vd1.end()-nplaces, vd1.end());
   ea.rotate(c1, nplaces);
+  c1.reLinearize();
   ea.decrypt(c1, secretKey, vd_dec);
 #ifdef DEBUG_PRINTOUT
   printVec(cout<< "vd1(rot)=", vd1, 10)<<endl;

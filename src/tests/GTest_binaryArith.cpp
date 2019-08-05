@@ -216,7 +216,7 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
             secKey(prepareContext(context))
     {};
 
-        virtual void SetUp ()
+        void SetUp() override
         {
             if (seed) NTL::SetSeed(NTL::ZZ(seed));
             if (nthreads>1) NTL::SetNumThreads(nthreads);
@@ -227,6 +227,13 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
 #ifdef DEBUG_PRINTOUT
             dbgEa = (EncryptedArray*) context.ea;
             dbgKey = &secKey;
+#endif
+        }
+
+        virtual void TearDown() override
+        {
+#ifdef DEBUG_PRINTOUT
+            cleanupGlobals();
 #endif
         }
 
@@ -362,9 +369,9 @@ TEST_P(GTest_binaryArith, product)
 
 #ifdef DEBUG_PRINTOUT
     const Ctxt* minCtxt = nullptr;
-    long minLvl=1000;
+    long minLvl=10000000;
     for (const Ctxt& c: eProduct) {
-        long lvl = c.findBaseLevel();
+        long lvl = c.logOfPrimeSet();
         if (lvl < minLvl) {
             minCtxt = &c;
             minLvl = lvl;
@@ -431,7 +438,7 @@ TEST_P(GTest_binaryArith, add)
     const Ctxt* minCtxt = nullptr;
     long minLvl=1000;
     for (const Ctxt& c: eSum) {
-        long lvl = c.findBaseLevel();
+        long lvl = c.logOfPrimeSet();
         if (lvl < minLvl) {
             minCtxt = &c;
             minLvl = lvl;

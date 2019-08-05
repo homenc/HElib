@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _CModulus_H_
-#define _CModulus_H_
+#ifndef HELIB_CMODULUS_H
+#define HELIB_CMODULUS_H
 /**
  * @file CModulus.h
  * @brief Supports forward and backward length-m FFT transformations
@@ -20,7 +20,7 @@
 #include "NumbTh.h"
 #include "PAlgebra.h"
 #include "bluestein.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 /**
 * @class Cmodulus
@@ -127,4 +127,4 @@ class Cmodulus {
 };
 
 
-#endif // ifdef _CModulus_H_
+#endif // ifndef HELIB_CMODULUS_H

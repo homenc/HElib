@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _NORMS_H_
-#define _NORMS_H_
+#ifndef HELIB_NORMS_H
+#define HELIB_NORMS_H
 /**
  * @file norms.h - computing various norms of ring elements
  **/
@@ -50,7 +50,13 @@ double largestCoeff(const std::vector<T>& f)
   }
   return mx;
 }
+
+
 NTL::ZZ largestCoeff(const NTL::ZZX& f);
+
+NTL::ZZ largestCoeff(const NTL::Vec<NTL::ZZ>& f);
+// somebody eliminated this...please leave it here!
+
 NTL::ZZ largestCoeff(const DoubleCRT& f);
 
 //! The L2-norm of an element (in coefficient representation)
@@ -65,30 +71,12 @@ inline NTL::xdouble coeffsL2Norm(const NTL::ZZX& f) // l2 norm
 inline NTL::xdouble coeffsL2Norm(const DoubleCRT& f) // l2 norm
 { return sqrt(coeffsL2NormSquared(f)); }
 
-// Choosing between implementations 
-#if defined(FFT_NATIVE) || defined(FFT_ARMA)
-#define FFT_IMPL 1
-#else
-#define FFT_IMPL 0 // no implementation of FFT
-#endif
-
 typedef std::complex<double> cx_double;
-typedef std::complex<NTL::xdouble> cx_xdouble;
-typedef std::complex<long double> cx_ldouble;
 
-#if FFT_IMPL
-//! Computing the L2 norm of the canonical embedding
-double embeddingL2NormSquared(const zzX& f, const PAlgebra& palg);
-inline double embeddingL2Norm(const zzX& f, const PAlgebra& palg)
-{ return sqrt(embeddingL2NormSquared(f,palg)); }
 
 //! Computing the L-infinity norm of the canonical embedding
 double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg);
-
-// Same as above, for ZZX
-NTL::xdouble embeddingL2NormSquared(const NTL::ZZX& f, const PAlgebra& palg);
-inline NTL::xdouble embeddingL2Norm(const NTL::ZZX& f, const PAlgebra& palg)
-{ return sqrt(embeddingL2NormSquared(f,palg)); }
+double embeddingLargestCoeff(const std::vector<double>& f, const PAlgebra& palg);
 NTL::xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg);
 
 //! Computing the canonical embedding (in fft.cpp). This function
@@ -100,6 +88,9 @@ void canonicalEmbedding(std::vector<cx_double>& v,
 void canonicalEmbedding(std::vector<cx_double>& v,
                         const NTL::ZZX& f, const PAlgebra& palg);
 
+void canonicalEmbedding(std::vector<cx_double>& v,
+                        const std::vector<double>& f, const PAlgebra& palg);
+
 //! Roughly the inverse of canonicalEmbedding, except for scaling and rounding issues
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
                   const PAlgebra& palg,
@@ -110,6 +101,5 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
 // but embedInSlots(f,v,palg,1.0,strictInverse=false) may fail to recover
 // the same f.
 
-#endif // FFT_IMPL
 
-#endif // _NORMS_H_
+#endif // ifndef HELIB_NORMS_H

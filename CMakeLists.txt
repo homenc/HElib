@@ -17,8 +17,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(GMP_MINIMAL_VERSION "6.0.0")
 # NTL minimal version to be used if NOT PACKAGE_BUILD
 set(NTL_MINIMAL_VERSION "11.0.0")
-# Armadillo minimal version always used if ENABLE_ARMADILLO
-set(ARMADILLO_MINIMAL_VERSION "7.800.0")
 
 # Setting up Debug as default CMAKE_BUILD_TYPE
 # TODO: set to Release when assertions are removed
@@ -39,9 +37,6 @@ option(BUILD_SHARED "Build as shared library" OFF)
 option(PACKAGE_BUILD "Download dependencies and build as a self-contained package" OFF)
 
 option(ENABLE_THREADS "Enable threads support. Requires NTL built with NTL_THREADS=on" OFF)
-
-# TODO: is this required for CKKS?
-option(ENABLE_ARMADILLO "Use Armadillo for faster FFT. Requires the Armadillo library on the system." OFF)
 
 option(ENABLE_TEST "Enable tests" OFF)
 option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" OFF)
@@ -83,10 +78,6 @@ find_package(Threads)
 if (ENABLE_THREADS AND Threads_NOTFOUND)
   message(FATAL_ERROR "Cannot find pthreads (ENABLE_THREADS is ON).")
 endif()
-
-if (ENABLE_ARMADILLO)
-  find_package(Armadillo "${ARMADILLO_MINIMAL_VERSION}" REQUIRED)
-endif (ENABLE_ARMADILLO)
 
 # NOTE: Consider reconfiguring everything when PACKAGE_BUILD changes value.  Options from the previous value will remain otherwise.
 # Set up extra properties depending on the value of PACKAGE_BUILD
@@ -238,8 +229,6 @@ if (PACKAGE_BUILD)
       -DGMP_LIBRARIES=${GMP_LIBRARIES}
       -DNTL_INCLUDE_PATHS=${NTL_INCLUDE_PATHS}
       -DNTL_LIBRARIES=${NTL_LIBRARIES}
-      -DENABLE_ARMADILLO=${ENABLE_ARMADILLO}
-      -DARMADILLO_MINIMAL_VERSION=${ARMADILLO_MINIMAL_VERSION}
       -DENABLE_THREADS=${ENABLE_THREADS}
       -DHELIB_REQUIRES_PTHREADS=${HELIB_REQUIRES_PTHREADS}
       -DBUILD_SHARED=${BUILD_SHARED}

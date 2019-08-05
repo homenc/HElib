@@ -20,6 +20,57 @@
 
 #define NEW_BLUE (1)
 
+/************************************************************
+
+Victor says: I really need to document the optimizations I made
+to the Bluestein logic in relation to the truncated FFT.
+
+In the mean time, here are two emails I wrote that explain the
+situation (from June 7, 2018):
+
+
+What we are really computing is f*g mod x^m-1, where f and g have degree less
+than m. 
+
+The way it's done now is that we replace f by a larger polynomial F, and then
+compute F*g mod x^N-1, where N is the next power of 2 after 2*m-1. This is done
+implicitly in NTL's FFT routine. 
+
+With the truncated FFT, a better way is as follows. Just compute the polynomial
+h = f*g, which we can do with the same size FFT, but truncated to 2*m-1 terms.
+Then compute h mod x^m-1 separately, which takes negligible time. 
+
+
+..........................................
+
+There are some complications with the idea that I had, because of the way we
+currently implement Bluestein.  For my idea to work, I need convolutions modulo
+m, but that is not what we currently have.
+
+It relates to the fact that we are working with roots of order 2*m, rather than
+m.  In fact, if m is odd (which it almost always is, unless it's a power of 2),
+there is no need to do this.
+
+First, you can look here to refresh your memory on Bluestein:
+
+https://www.dsprelated.com/freebooks/mdft/Bluestein_s_FFT_Algorithm.html
+
+Now, the problem is that in these formulas, we work with W^{1/2}, which is the
+root of order 2*m.  But if W has order m and m is itself odd, then 2 has an
+inverse mod m, and so we can just work with W.  In all of the computations, we
+are just computing W^{(1/2)*i} for various values of i, and so in the exponent
+we're just doing arithmetic mod m.
+
+To get the speedup using the truncated FFT, I really need these two be circular
+convolutions modulo m, not modulo 2*m.
+
+I never really understood why we needed to work with a root of order 2*m, and
+now I see that we don't, at least when m is odd.
+
+
+*************************************************************/
+
+
 NTL_CLIENT
 
 void BluesteinInit(long n, const zz_p& root, zz_pX& powers, 

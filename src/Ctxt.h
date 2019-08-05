@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _Ctxt_H_
-#define _Ctxt_H_
+#ifndef HELIB_CTXT_H
+#define HELIB_CTXT_H
 /**
  * @file Ctxt.h
  * @brief Declerations of a BGV-type cipehrtext and key-switching matrices
@@ -215,7 +215,7 @@ public:
     DoubleCRT(other), skHandle(otherHandle) {}
 
   void read(std::istream& str); 
-  void write(std::ostream& str);
+  void write(std::ostream& str) const;
 
 };
 std::istream& operator>>(std::istream& s, CtxtPart& p);
@@ -262,7 +262,7 @@ class Ctxt {
 
   NTL::xdouble noiseBound;  // a high-probability bound on the the noise magnitude
 
-  long intFactor;    // an integer factor to multiply by on decryption (for BGV)
+  long intFactor;    // an integer factor to divide by on decryption (for BGV)
   NTL::xdouble ratFactor; // rational factor to divide on decryption (for CKKS)
   NTL::xdouble ptxtMag;   // bound on the plaintext size (for CKKS)
 
@@ -331,8 +331,10 @@ public:
   void DummyEncrypt(const NTL::ZZX& ptxt, double size=-1.0);
 
   Ctxt& operator=(const Ctxt& other) {  // public assignment operator
-    assert(&context == &other.context);
-    assert (&pubKey == &other.pubKey);
+    //OLD: assert(&context == &other.context);
+    helib::assertEq(&context, &other.context, "Cannot assign Ctxts with different context");
+    //OLD: assert(&pubKey == &other.pubKey);
+    helib::assertEq(&pubKey, &other.pubKey, "Cannot assign Ctxts with different pubKey");
     return privateAssign(other);
   }
 
@@ -372,13 +374,12 @@ public:
   //! Add a constant polynomial. 
   //! If provided, size should be a high-probability bound
   //! on the L-infty norm of the canonical embedding
-  //! Otherwise, a bound based on the assumption that the coefficients
-  //! are uniformly and independently distributed over
+  //! Otherwise, for the DoubleCRT variant, a bound based on the assumption 
+  //! that the coefficients are uniformly and independently distributed over
   //! [-ptxtSpace/2, ptxtSpace/2].
-  //! Otherwise, size should be a high-prob	
+  //! For the other variants, explicit bounds are computed (if not CKKS).
   void addConstant(const DoubleCRT& dcrt, double size=-1.0);
-  void addConstant(const NTL::ZZX& poly, double size=-1.0)
-  { addConstant(DoubleCRT(poly,context,primeSet),size); }
+  void addConstant(const NTL::ZZX& poly, double size=-1.0);
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
@@ -393,15 +394,18 @@ public:
                        NTL::xdouble factor=NTL::xdouble(-1.0));
   void addConstantCKKS(const NTL::ZZ& c);
 
-  //! Multiply-by-constant. If the size is not given, we use
-  //! phi(m)*ptxtSpace^2 as the default value.
+  //! Multiply-by-constant. 
+  //! If the size is not given, for the DCRT variant, we use
+  //! a high probability bound assuming "random" coefficients
+  //! mod ptxtSpace, while for the other variants, we use
+  //! explicitly computed bounds (if not CKKS).
   void multByConstant(const DoubleCRT& dcrt, double size=-1.0);
   void multByConstant(const NTL::ZZX& poly, double size=-1.0);
   void multByConstant(const zzX& poly, double size=-1.0);
   void multByConstant(const NTL::ZZ& c);
 
   //! multiply by a rational number or floating point
-  void multByConstantCKKS(double x) {ratFactor /= x; ptxtMag *= x;}
+  void multByConstantCKKS(double x) {ratFactor /= x; ptxtMag *= std::abs(x);}
   void multByConstantCKKS(std::pair<long,long> num) // rational number
   { multByConstantCKKS(double(num.first)/num.second); }
 
@@ -561,7 +565,8 @@ public:
   //! the moduli-chain in the context, and does not even need to be a prime.
   //! The ciphertext *this is not affected, instead the result is returned in
   //! the zzParts std::vector, as a std::vector of ZZX'es.
-  //! Returns an extimate for the noise bound after mod-switching.
+  //! Returns an extimate for the scaled noise (not including the
+  //! additive mod switching noise)
   double rawModSwitch(std::vector<NTL::ZZX>& zzParts, long toModulus) const;
 
   //! @brief compute the power X,X^2,...,X^n
@@ -600,24 +605,24 @@ public:
   const FHEcontext& getContext() const { return context; }
   const FHEPubKey& getPubKey() const   { return pubKey; }
   const IndexSet& getPrimeSet() const  { return primeSet; }
-  const long getPtxtSpace() const      { return ptxtSpace;}
+  long getPtxtSpace() const      { return ptxtSpace;}
   const NTL::xdouble& getNoiseBound() const { return noiseBound; }
   const NTL::xdouble& getRatFactor() const { return ratFactor; }
   const NTL::xdouble& getPtxtMag() const { return ptxtMag; }
-  const void setPtxtMag(const NTL::xdouble& z) { ptxtMag=z; }
-  const long getKeyID() const;
+  void setPtxtMag(const NTL::xdouble& z) { ptxtMag=z; }
+  long getKeyID() const;
 
   bool isCKKS() const
   { return (getContext().alMod.getTag()==PA_cx_tag); }
 
   // Return r such that p^r = ptxtSpace
-  const long effectiveR() const {
+  long effectiveR() const {
     long p = context.zMStar.getP();
     for (long r=1, p2r=p; r<NTL_SP_NBITS; r++, p2r *= p) {
       if (p2r == ptxtSpace) return r;
-      if (p2r > ptxtSpace) NTL::Error("ctxt.ptxtSpace is not of the form p^r");
+      if (p2r > ptxtSpace) throw helib::RuntimeError("ctxt.ptxtSpace is not of the form p^r");
     }
-    NTL::Error("ctxt.ptxtSpace is not of the form p^r");
+    throw helib::RuntimeError("ctxt.ptxtSpace is not of the form p^r");
     return 0; // just to keep the compiler happy
   }
 
@@ -730,4 +735,4 @@ void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long 
 // implemented in extractDigits.cpp
 
 
-#endif // ifndef _Ctxt_H_
+#endif // ifndef HELIB_CTXT_H

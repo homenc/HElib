@@ -21,6 +21,7 @@
 
 #include "debugging.h"
 #include "norms.h"
+#include "fhe_stats.h"
 
 NTL_CLIENT
 
@@ -69,9 +70,7 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
       // HEURISTIC: we assume that we can safely model the coefficients
       // of ptxt as uniformly and independently distributed over
       // [-magBound, magBound], where magBound = ptxtSpace/2
-      double magBound = double(ptxtSpace)/2;
-      long degBound = zMStar.getPhiM();
-      noiseBound = context.noiseBoundForUniform(magBound, degBound);
+      noiseBound = context.noiseBoundForMod(ptxtSpace, zMStar.getPhiM());
     }
     else
       noiseBound = size;
@@ -149,7 +148,8 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, const KeySwitch& ks)
   double logKeySwitchNoise = log(addedNoise) 
     -2*context.logOfProduct(context.specialPrimes);
 
-  assert(logKeySwitchNoise < logModSwitchNoise);
+  //OLD: assert(logKeySwitchNoise < logModSwitchNoise);
+  helib::assertTrue(logKeySwitchNoise < logModSwitchNoise, "Key switching noise has exceeded mod switching noise");
 #endif
 
   return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
@@ -240,8 +240,12 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   context(newPubKey.getContext()), pubKey(newPubKey), ptxtSpace(newPtxtSpace),
   noiseBound(to_xdouble(0.0))
 {
-  if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
-  else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+  if (ptxtSpace<2) {
+    ptxtSpace = pubKey.getPtxtSpace();
+  } else {
+    //OLD: assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+    helib::assertTrue(GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1, "Ptxt spaces from ciphertext and public key are coprime"); // sanity check
+  }
   primeSet=context.ctxtPrimes;
   intFactor = 1;
   ratFactor = ptxtMag = 1.0;
@@ -254,8 +258,12 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   noiseBound(to_xdouble(0.0))
 {
   // same body as previous constructor
-  if (ptxtSpace<2) ptxtSpace = pubKey.getPtxtSpace();
-  else assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+  if (ptxtSpace<2) {
+    ptxtSpace = pubKey.getPtxtSpace();
+  } else {
+    //OLD: assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
+    helib::assertTrue(GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1, "Ptxt spaces from ciphertext and public key are coprime"); // sanity check
+  }
   primeSet=context.ctxtPrimes;
   intFactor = 1;
   ratFactor = ptxtMag = 1.0;
@@ -315,7 +323,8 @@ void Ctxt::modUpToSet(const IndexSet &s)
   ratFactor *= xexp(f);
 
   primeSet.insert(setDiff); // add setDiff to primeSet
-  assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+  //OLD: assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+  helib::assertTrue(verifyPrimeSet(), "primeSet is no longer valid"); // sanity-check: ensure primeSet is still valid
 }
 
 
@@ -347,8 +356,9 @@ void Ctxt::modDownToSet(const IndexSet &s)
   FHE_TIMER_START;
   IndexSet intersection = primeSet & s;
   if (empty(intersection)) {
-    cerr << "modDownToSet called from "<<primeSet<<" to "<<s<<endl;
-    exit(1);
+    std::stringstream ss;
+    ss << "modDownToSet called from "<<primeSet<<" to "<<s;
+    throw helib::RuntimeError(ss.str());
   }
   IndexSet setDiff = primeSet / intersection; // set-minus
   if (empty(setDiff)) return;    // nothing to do, removing no primes
@@ -379,35 +389,80 @@ void Ctxt::modDownToSet(const IndexSet &s)
     }
   }
 
-  if (noiseBound <= addedNoiseBound) { // a degenerate "drop down"
+  if (0 && noiseBound <= addedNoiseBound) { // a degenerate "drop down"
+    // FIXME: I'm disabling this for now.  It is essentially never
+    // invoked and I don't think we have any unit tests that test it.
+
     for (auto &part : parts)
       part.removePrimes(setDiff);  // remove the primes not in s
 
     // For BGV we keep the invariant that a ciphertext mod Q is
     // decrypted to intFactor*Q*m (mod p), so if we just "drop down" by
-    // a factor F we still need to multiply intFactor by (F^{-1} mod p).
-    long prodInv = 1;
-    if (ptxtSpace>1)
-      prodInv = InvMod(rem(context.productOfPrimes(setDiff),ptxtSpace), ptxtSpace);
-    if (prodInv > 1) {
-      for (auto &part : parts)
-        part *= prodInv;
-      noiseBound *= prodInv;
-    }
-    cerr << "Ctxt::modDownToSet: DEGENERATE DROP\n";
+    // a factor F we still need to multiply intFactor by (F mod p).
+    long F = 1;
+    if (ptxtSpace>1) F = rem(context.productOfPrimes(setDiff),ptxtSpace);
+    if (F > 1) intFactor = MulMod(intFactor, F, ptxtSpace);
+    Warning("Ctxt::modDownToSet: DEGENERATE DROP");
   } 
   else {                               // do real mod switching
-    for (auto &part : parts)
-      part.scaleDownToSet(intersection, ptxtSpace);
+#if 1
+    ZZX delta;
+    ZZ diff = context.productOfPrimes(setDiff);
+    xdouble xdiff = conv<xdouble>(diff);
+    vector<double> fdelta;
+    xdouble addedNoise(0.0);
+
+    for (auto &part : parts) {
+      part.scaleDownToSet(intersection, ptxtSpace, delta);
+      fdelta.resize(delta.rep.length());
+      for (long j: range(delta.rep.length()))
+        fdelta[j] = conv<double>( conv<xdouble>(delta.rep[j])/xdiff );
+
+      double norm = embeddingLargestCoeff(fdelta, context.zMStar);
+
+      if (part.skHandle.isOne())
+        addedNoise += norm;
+      else {
+	long keyId = part.skHandle.getSecretKeyID();
+	long d = part.skHandle.getPowerOfS();
+	xdouble h = conv<xdouble>(pubKey.getSKeyBound(keyId));
+
+	addedNoise += norm*NTL::power(h, d);
+      }
+    }
+
+    // update the noise estimate
+    xdouble f = xexp(context.logOfProduct(setDiff));
+    ratFactor /= f;  // The factor in CKKS encryption
+    noiseBound /= f;
+    noiseBound += addedNoise;
+
+    double ratio = conv<double>(addedNoise/addedNoiseBound);
+
+    FHE_STATS_UPDATE("mod-switch-added-noise", ratio);
+
+    if (addedNoise > addedNoiseBound) {
+      Warning("addedNoiseBound too big");
+    }
+
+#else
+    ZZX delta;
+
+    for (auto &part : parts) {
+      part.scaleDownToSet(intersection, ptxtSpace, delta);
+    }
 
     // update the noise estimate
     xdouble f = xexp(context.logOfProduct(setDiff));
     ratFactor /= f;  // The factor in CKKS encryption
     noiseBound /= f;
     noiseBound += addedNoiseBound;
+
+#endif
   }
   primeSet.remove(setDiff); // remove the primes not in s
-  assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+  //OLD: assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
+  helib::assertTrue(verifyPrimeSet(), "primeSet is no longer valid"); // sanity-check: ensure primeSet is still valid
 }
 
 void Ctxt::blindCtxt(const ZZX& poly)
@@ -425,7 +480,8 @@ void Ctxt::blindCtxt(const ZZX& poly)
 void Ctxt::reducePtxtSpace(long newPtxtSpace)
 {
   long g = GCD(ptxtSpace, newPtxtSpace);
-  assert (g>1); // NOTE: Will trigger if called for CKKS ciphertext
+  //OLD: assert (g>1); // NOTE: Will trigger if called for CKKS ciphertext
+  helib::assertTrue (g>1, "New and old plaintext spaces are coprime"); // NOTE: Will trigger if called for CKKS ciphertext
   ptxtSpace = g;
   intFactor %= g;
 }
@@ -528,11 +584,13 @@ void Ctxt::reLinearize(long keyID)
       pubKey.getKeySWmatrix(part.skHandle,keyID) :
       pubKey.getAnyKeySWmatrix(part.skHandle);
 
-    assert(W.toKeyID>=0);      // verify that a switching matrix exists
+    //OLD: assert(W.toKeyID>=0);      // verify that a switching matrix exists
+    helib::assertTrue(W.toKeyID>=0, "No key-switching matrix exists");
 
     if (g>1) { // g==1 for CKKS, g>1 for BGV
       g = GCD(W.ptxtSpace, g); // verify that the plaintext spaces match
-      assert (g>1);
+      //OLD: assert (g>1);
+      helib::assertTrue (g>1, "Plaintext spaces do not match");
       tmp.ptxtSpace = g;
     }    
     tmp.keySwitchPart(part, W); // switch this part & update noiseBound
@@ -561,7 +619,8 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   FHE_TIMER_START;
 
   // no special primes in the input part
-  assert(context.specialPrimes.disjointFrom(p.getIndexSet()));
+  //OLD: assert(context.specialPrimes.disjointFrom(p.getIndexSet()));
+  helib::assertTrue(context.specialPrimes.disjointFrom(p.getIndexSet()), "Special primes and CtxtPart's index set have non-empty intersection");
 
   // For parts p that point to 1 or s, only scale and add
   if (p.skHandle.isOne() || p.skHandle.isBase(W.toKeyID)) { 
@@ -572,7 +631,8 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   }
 
   // some sanity checks
-  assert(W.fromKey == p.skHandle);  // the handles must match
+  //OLD: assert(W.fromKey == p.skHandle);  // the handles must match
+  helib::assertEq(W.fromKey, p.skHandle, "Secret key handles do not match");
 
   // Compute the number of digits that we need and the esitmated
   // added noise from switching this ciphertext part.
@@ -604,7 +664,8 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
 {
   FHE_TIMER_START;
 
-  assert (&part.getContext() == &context);
+  //OLD: assert (&part.getContext() == &context);
+  helib::assertEq (&part.getContext(), &context, "Context mismatch");
 
   if (parts.size()==0) { // inserting 1st part 
     primeSet = part.getIndexSet();
@@ -623,7 +684,7 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
         primeSet.insert(setDiff);
       }
       else // this should never happen
-        throw std::logic_error("Ctxt::addPart: part has too many primes and matchPrimeSet==false");
+        throw helib::LogicError("Ctxt::addPart: part has too many primes and matchPrimeSet==false");
     }
 
     DoubleCRT tmp(context, IndexSet::emptySet());
@@ -662,7 +723,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   // that the coefficients are uniformly and independently distributed
   // over [-ptxtSpace/2, ptxtSpace/2]
   if (size < 0.0)
-      size = context.noiseBoundForUniform(double(ptxtSpace)/2.0, context.zMStar.getPhiM());
+      size = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
 
   // Scale the constant, then add it to the part that points to one
   long f = 1;
@@ -685,6 +746,16 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   if (!empty(delta)) tmp.removePrimes(delta);
   if (f!=1)          tmp *= f;
   addPart(tmp, SKHandle(0,1,0));
+}
+
+void Ctxt::addConstant(const NTL::ZZX& poly, double size)
+{
+  if (size < 0 && !isCKKS()) {
+    size = conv<double>(embeddingLargestCoeff(poly, getContext().zMStar));
+  }
+  
+  addConstant(DoubleCRT(poly,context,primeSet), size);
+  
 }
 
 // Add a constant polynomial
@@ -797,7 +868,8 @@ void addSomePrimes(Ctxt& c)
   IndexSet s = c.getPrimeSet();
 
   // Sanity check: there should be something left to add
-  assert(s != context.allPrimes());
+  //OLD: assert(s != context.allPrimes());
+  helib::assertNeq(s, context.allPrimes(), "Nothing left to add");
 
   // Add a ctxt prime if possible
   if (!s.contains(context.ctxtPrimes)) {
@@ -833,13 +905,13 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2)
   xdouble ratio = big.ratFactor / small.ratFactor;
   std::pair<ZZ,ZZ> factors = rationalApprox(ratio, xdouble(targetPrecision));
 
-  if (factors.first>1) {
+  if (factors.first != 1) {
       for (auto& part : small.parts)
           part *= factors.first;
       small.ratFactor *= to_xdouble(factors.first);
       small.noiseBound *= to_xdouble(factors.first);
   }
-  if (factors.second>1) {
+  if (factors.second != 1) {
       for (auto& part : big.parts)
           part *= factors.second;
       big.ratFactor *= to_xdouble(factors.second);
@@ -850,7 +922,7 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2)
 static xdouble 
 NoiseNorm(xdouble noise1, xdouble noise2, long e1, long e2, long p)
 {
-  return noise1*balRem(e1, p) + noise2*balRem(e2, p);
+  return noise1*abs(balRem(e1, p)) + noise2*abs(balRem(e2, p));
 }
 
 // Add/subtract another ciphertxt (depending on the negative flag)
@@ -859,7 +931,9 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   FHE_TIMER_START;
 
   // Sanity check: same context and public key
-  assert (&context==&other.context && &pubKey==&other.pubKey);
+  //OLD: assert (&context==&other.context && &pubKey==&other.pubKey);
+  helib::assertEq (&context, &other.context, "Context mismatch");
+  helib::assertEq(&pubKey, &other.pubKey, "Public key mismatch");
 
   // Special case: if *this is empty then just copy other
   if (this->isEmpty()) {
@@ -869,8 +943,11 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   }
 
   // Verify that the plaintext spaces are compatible
-  if (isCKKS())
-    assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
+  if (isCKKS()) {
+    //OLD: assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
+    helib::assertEq(getPtxtSpace(), 1l, "Plaintext spaces incompatible");
+    helib::assertEq(other.getPtxtSpace(), 1l, "Plaintext spaces incompatible");
+  }
   else // BGV
     this->reducePtxtSpace(other.getPtxtSpace());
 
@@ -933,18 +1010,23 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
       long e1_try = mcMod(r1, ptxtSpace), e2_try = mcMod(t1, ptxtSpace);
       if (e1_try % p != 0) {
         xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
-	      if (noise_try < noise_best) {
-	        e1_best = e1_try;
-	        e2_best = e2_try;
-	        noise_best = noise_try;
-	      }
+	  if (noise_try < noise_best) {
+	    e1_best = e1_try;
+	    e2_best = e2_try;
+	    noise_best = noise_try;
+	  }
       }
     }
     e1 = e1_best;
     e2 = e2_best;
-    assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
-    assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
-  }
+
+    //OLD: assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
+    helib::assertEq(MulMod(e1, f1, ptxtSpace), MulMod(e2, f2, ptxtSpace), "e1f1 not equivalent to e2f2 mod p");
+    //OLD: assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
+    helib::assertEq(GCD(e1, ptxtSpace), 1l, "e1 and ptxtSpace not co-prime");
+    helib::assertEq(GCD(e2, ptxtSpace), 1l, "e2 and ptxtSpace not co-prime");
+  } 
+
   if (e2 != 1) {
     if (other_pt != &tmp) { tmp = other; other_pt = &tmp; }
     tmp.mulIntFactor(e2);
@@ -995,7 +1077,7 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
       tmpPart = c2.parts[j];
       // What secret key will the product point to?
       if (!tmpPart.skHandle.mul(thisPart.skHandle, tmpPart.skHandle))
-        Error("Ctxt::tensorProduct: cannot multiply secret-key handles");
+        throw helib::LogicError("Ctxt::tensorProduct: cannot multiply secret-key handles");
 
       tmpPart *= thisPart; // The element of the tensor product
 
@@ -1099,9 +1181,16 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     return;
   }
 
-  assert(isCKKS() == other_orig.isCKKS());
-  assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
-  assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1));
+  //OLD: assert(isCKKS() == other_orig.isCKKS());
+  helib::assertEq(isCKKS(), other_orig.isCKKS(), "Scheme mismatch");
+  //OLD: assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
+  helib::assertEq(&context, &other_orig.context, "Context mismatch");
+  helib::assertEq(&pubKey, &other_orig.pubKey, "Public key mismatch");
+  //OLD: assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace() == 1));
+  if(isCKKS()) {
+    helib::assertEq(getPtxtSpace(), 1l, "Plaintext spaces incompatible");
+    helib::assertEq(other_orig.getPtxtSpace(), 1l, "Plaintext spaces incompatible");
+  }
 
   Ctxt* other_pt = nullptr;
   unique_ptr<Ctxt> ct; // scratch space if needed
@@ -1122,7 +1211,8 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     // equalize plaintext spaces
     if (!isCKKS()) {
       long g = GCD(ptxtSpace, other_pt->ptxtSpace);
-      assert (g>1);
+      //OLD: assert (g>1);
+      helib::assertTrue(g>1, "Plaintext spaces are co-prime");
       ptxtSpace = other_pt->ptxtSpace = g;
     }
 
@@ -1224,7 +1314,50 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   reLinearize(); // re-linearize after all the multiplications
 }
 
+#if 1
 // Multiply-by-constant
+void Ctxt::multByConstant(const ZZ& c)
+{
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty()) return;
+  FHE_TIMER_START;
+
+  if (isCKKS()) { // multiply by dividing the scaling factor
+    xdouble size = fabs(to_xdouble(c));
+    ptxtMag *= size;
+    ratFactor /= size;
+    if (c<0)
+      this->negate();
+    return;
+  }
+
+  // BGV
+
+  long c0 = rem(c, ptxtSpace);
+
+  if (c0 == 1) return;
+  if (c0 == 0) {
+    clear();
+    return;
+  }
+
+  long d = GCD(c0, ptxtSpace);
+  long c1 = c0/d;
+  long c1_inv = InvMod(c1, ptxtSpace);
+  // write c0 = c1 * d, mul ctxt by d, and intFactor by c1_inv
+
+  intFactor = MulMod(intFactor, c1_inv, ptxtSpace);
+
+  if (d == 1) return;
+
+  long cc = balRem(d, ptxtSpace); 
+  noiseBound *= abs(cc);
+
+  // multiply all the parts by this constant
+  ZZ c_copy(cc);
+  for (auto& part : parts) part *= c_copy;
+}
+#else
 void Ctxt::multByConstant(const ZZ& c)
 {
   // Special case: if *this is empty then do nothing
@@ -1248,6 +1381,8 @@ void Ctxt::multByConstant(const ZZ& c)
   for (auto& part : parts) part *= c_copy;
 }
 
+#endif
+
 // Multiply-by-constant, it is assumed that the size of this
 // constant fits in a double float
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
@@ -1265,8 +1400,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   // If the size is not given, we use the default value coreesponding
   // to uniform distribution on [-ptxtSpace/2, ptxtSpace/2].
   if (size < 0.0) {
-    size = context.noiseBoundForUniform(double(ptxtSpace)/2.0,
-                                        getContext().zMStar.getPhiM());
+    size = context.noiseBoundForMod(ptxtSpace, getContext().zMStar.getPhiM());
   }
 
   // multiply all the parts by this constant
@@ -1280,6 +1414,9 @@ void Ctxt::multByConstant(const ZZX& poly, double size)
 {
   FHE_TIMER_START;
   if (this->isEmpty()) return;
+  if (size < 0 && !isCKKS()) {
+    size = conv<double>(embeddingLargestCoeff(poly, getContext().zMStar));
+  }
   DoubleCRT dcrt(poly,context,primeSet);
   multByConstant(dcrt,size);
 }
@@ -1288,6 +1425,9 @@ void Ctxt::multByConstant(const zzX& poly, double size)
 {
   FHE_TIMER_START;
   if (this->isEmpty()) return;
+  if (size < 0 && !isCKKS()) {
+    size = embeddingLargestCoeff(poly, getContext().zMStar);
+  }
   DoubleCRT dcrt(poly,context,primeSet);
   multByConstant(dcrt,size);
 }
@@ -1329,7 +1469,9 @@ void Ctxt::divideBy2()
 {
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
-  assert (ptxtSpace % 2 == 0 && ptxtSpace>2);
+  //OLD: assert (ptxtSpace % 2 == 0 && ptxtSpace>2);
+  helib::assertEq(ptxtSpace % 2, 0l, "Plaintext space is not even");
+  helib::assertTrue(ptxtSpace>2, "Plaintext space must be greater than 2");
 
   // multiply all the parts by (productOfPrimes+1)/2
   ZZ twoInverse; // set to (Q+1)/2
@@ -1354,7 +1496,9 @@ void Ctxt::divideByP()
   if (this->isEmpty()) return;
 
   long p = getContext().zMStar.getP();
-  assert (ptxtSpace % p == 0 && ptxtSpace>p);
+  //OLD: assert (ptxtSpace % p == 0 && ptxtSpace>p);
+  helib::assertEq(ptxtSpace % p, 0l, "p must divide ptxtSpace");
+  helib::assertTrue(ptxtSpace>p, "ptxtSpace must be strictly greater than p");
 
   // multiply all the parts by p^{-1} mod Q (Q=productOfPrimes)
   ZZ pInverse, Q;
@@ -1375,7 +1519,8 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   if (this->isEmpty()) return;
 
   // Sanity check: verify that k \in Zm*
-  assert (context.zMStar.inZmStar(k));
+  //OLD: assert (context.zMStar.inZmStar(k));
+  helib::assertTrue(context.zMStar.inZmStar(k), "k must be in Zm*");
   long m = context.zMStar.getM();
 
   // Apply this automorphism to all the parts
@@ -1423,17 +1568,19 @@ void Ctxt::smartAutomorph(long k)
   // Sanity check: verify that k \in Zm*
   long m = context.zMStar.getM();
   k = mcMod(k, m);
-  assert (context.zMStar.inZmStar(k));
+  //OLD: assert (context.zMStar.inZmStar(k));
+  helib::assertTrue(context.zMStar.inZmStar(k), "k must be in Zm*");
 
   long keyID=getKeyID();
   if (!pubKey.isReachable(k,keyID)) {// must have key-switching matrices for it
-    throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
+    throw helib::LogicError("no key-switching matrices for k="+std::to_string(k)
                            + ", keyID="+std::to_string(keyID));
   }
 
   if (!inCanonicalForm(keyID)) {     // Re-linearize the input, if needed
     reLinearize(keyID);
-    assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
+    //OLD: assert (inCanonicalForm(keyID)); // ensure that re-linearization succeeded
+    helib::assertTrue(inCanonicalForm(keyID), "Re-linearization failed: not in canonical form");
   }
 
   while (k != 1) {
@@ -1477,7 +1624,7 @@ void Ctxt::frobeniusAutomorph(long j)
 /********************************************************************/
 // Utility methods
 
-const long Ctxt::getKeyID() const
+long Ctxt::getKeyID() const
 {
   for (auto& part : parts)
     if (!part.skHandle.isOne()) return part.skHandle.getSecretKeyID();
@@ -1504,9 +1651,27 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
     }
   }
 
-  double roundingNoise = context.noiseBoundForUniform(double(ptxtSpace)/2.0,
-                                                      context.zMStar.getPhiM());
+  double roundingNoise;
+
+  if (ptxtSpace == 2) {
+    roundingNoise = context.noiseBoundForUniform(1.0, context.zMStar.getPhiM());
+  }
+  else {
+    // B0 represents the noise contributed by rounding to an integer
+    double B0 = context.noiseBoundForUniform(0.5, context.zMStar.getPhiM());
+
+    // B1 represents the noise contributed by the mod-p^r correction, if any
+    double B1 = 0;
+    if (!isCKKS())
+      B1 = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+
+    roundingNoise = B0 + B1;
+  }
+
+  // FIXME: the design document should be updated to reflect this logic
+
   return addedNoise * roundingNoise;
+
 }
 
 
@@ -1535,7 +1700,8 @@ void Ctxt::write(ostream& str) const
 void Ctxt::read(istream& str)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-ciphertext eye catcher");
   
   ptxtSpace = read_raw_int(str);
   intFactor = read_raw_int(str);
@@ -1547,10 +1713,11 @@ void Ctxt::read(istream& str)
   read_raw_vector(str, parts, blankCtxtPart);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_END);
-  assert(eyeCatcherFound == 0);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-ciphertext eye catcher");
 }
 
-void CtxtPart::write(ostream& str)
+void CtxtPart::write(ostream& str) const
 { 
   this->DoubleCRT::write(str); // CtxtPart is a child.
   skHandle.write(str);
@@ -1609,7 +1776,8 @@ istream& operator>>(istream& str, Ctxt& ctxt)
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context,IndexSet::emptySet()));
   for (auto& part : ctxt.parts) {
     str >> part;
-    assert (part.getIndexSet()==ctxt.primeSet); // sanity-check
+    //OLD: assert (part.getIndexSet()==ctxt.primeSet); // sanity-check
+    helib::assertEq(part.getIndexSet(), ctxt.primeSet, "Ciphertext part's index set does not match prime set"); // sanity-check
   }
   seekPastChar(str,']');
   return str;
@@ -1747,63 +1915,111 @@ void innerProduct(Ctxt& result,
 // the moduli-chain in the context, and does not even need to be a prime.
 // The ciphertext *this is not affected, instead the result is returned in
 // the zzParts vector, as a vector of ZZX'es.
-// Returns an extimate for the noise bound after mod-switching.
+// Returns an extimate for the scaled noise (not including the 
+// additive mod switching noise)
 
 #include "powerful.h"
-double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long toModulus) const
+double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
 {
   // Ensure that new modulus is co-prime with plaintetx space
   const long p2r = getPtxtSpace();
-  assert(toModulus>1 && p2r>1 && GCD(toModulus,p2r)==1);
+  //OLD: assert(q>1 && p2r>1 && GCD(q,p2r)==1);
+  helib::assertTrue<helib::InvalidArgument>(q>1, "q must be greater than 1");
+  helib::assertTrue(p2r>1, "Plaintext space must be greater than 1 for mod switching");
+  helib::assertEq(GCD(q,p2r), 1l, "New modulus and current plaintext space must be co-prime");
 
   // Compute the ratio between the current modulus and the new one.
-  // NOTE: toModulus is a long int, so a double for the logarithms and
+  // NOTE: q is a long int, so a double for the logarithms and
   //       xdouble for the ratio itself is sufficient
-  xdouble ratio = xexp(log((double)toModulus)
+  xdouble ratio = xexp(log((double)q)
 		       - context.logOfProduct(getPrimeSet()));
 
   // Compute also the ratio modulo ptxtSpace
-  const ZZ fromModulus = context.productOfPrimes(getPrimeSet());
-  long ratioModP = MulMod(toModulus % p2r, 
-			  InvMod(rem(fromModulus,p2r),p2r), p2r);
+  ZZ Q = context.productOfPrimes(getPrimeSet());
+  ZZ Q_half =  Q/2;
+  long Q_inv_mod_p = InvMod(rem(Q, p2r), p2r);
 
-  mulmod_precon_t precon = PrepMulModPrecon(ratioModP, p2r);
+  helib::assertTrue(GCD(rem(Q, q), q) == 1, 
+         "GCD(Q, q) != 1 in Ctxt::rawModSwitch");
+  // This should not trigger, but if it does, we should perhaps
+  // modify the code in primeChain.cpp to avoid adding primes in the
+  // prime that divide q.  With this assumption, the probabilistic
+  // analysis is a bit cleaner 
+
 
   // Scale and round all the integers in all the parts
   zzParts.resize(parts.size());
   const PowerfulDCRT& p2d_conv = *context.rcData.p2dConv;
-  for (size_t i=0; i<parts.size(); i++) {
+  for (long i: range(parts.size())) {
 
-    Vec<ZZ> powerful;
-    p2d_conv.dcrtToPowerful(powerful, parts[i]); // conver to powerful rep
+    Vec<ZZ> pwrfl;
+    p2d_conv.dcrtToPowerful(pwrfl, parts[i]); // convert to powerful rep
 
-    for (long j=0; j<powerful.length(); j++) {
-      const ZZ& coef = powerful[j];
-      long c_mod_p = MulModPrecon(rem(coef,p2r), ratioModP, p2r, precon);
-      xdouble xcoef = ratio*conv<xdouble>(coef); // the scaled coefficient
+    vecRed(pwrfl, pwrfl, Q, false);
+    // reduce to interval [-Q/2,+Q/2]
 
-      // round xcoef to an integer which is equal to c_mod_p modulo ptxtSpace
-      long rounded = conv<long>(floor(xcoef));
-      long r_mod_p = rounded % p2r;
-      if (r_mod_p < 0) r_mod_p += p2r; // r_mod_p in [0,p-1]
+    ZZ c, X, Y, cq;
 
-      if (r_mod_p != c_mod_p) {
-        long delta = SubMod(c_mod_p, r_mod_p, p2r);
-	// either add delta or subtract toModulus-delta
-	rounded += delta;
-	if (delta > toModulus-delta) rounded -= p2r;
+
+    for (long j: range(pwrfl.length())) {
+      c = pwrfl[j];
+      mul(cq, c, q); 
+      DivRem(X, Y, cq, Q); 
+      if (Y > Q_half) {
+        sub(Y, Y, Q);
+        add(X, X, 1);
       }
-      // SetCoeff(zzParts[i],j,rounded);
-      conv(powerful[j], rounded);  // store back in the powerful vector
+
+      // c*q = Q*X + Y, where X = round(c*q/Q);
+
+      long x = conv<long>(X);
+
+      long delta = 0;
+
+      if (p2r == 2) {
+        // special case that keeps the added noise a bit smaller
+
+        // new coeff is c*q/Q - Y/Q + delta, so we want delta
+        // to have the same sign as Y.  This will make the
+        // added noise term essentially uniform over [-1,+1].
+
+        if (IsOdd(Y)) {
+          long s = sign(Y);
+          if (s > 0)
+            delta = 1;
+          else 
+            delta = -1;
+        } 
+      }
+      else {
+        // general case
+
+	delta = MulMod(rem(Y, p2r), Q_inv_mod_p, p2r);
+	// delta = Y*Q^{-1} mod p^r
+	// so we have c*q*Q^{-1} = X + Y*Q^{-1} = x + delta (mod p^r)
+	
+	// NOTE: this makes sure we get a truly balanced remainder
+	if (delta > p2r/2 || (p2r%2 == 0 && delta == p2r/2 && RandomBnd(2)))
+	  delta -= p2r;
+      }
+      
+      x += delta;
+
+      // reduce symetrically mod q, randomizing if necessary for even q
+      if (x > q/2 || (q%2 == 0 && x == q/2 && RandomBnd(2))) 
+        x -= q;
+      else if (x < -q/2 || (q%2 == 0 && x == -q/2 && RandomBnd(2)))
+        x += q;
+
+      pwrfl[j] = x;  // store back in the powerful vector
     }
-    p2d_conv.powerfulToZZX(zzParts[i],powerful); // conver to ZZX
+
+    p2d_conv.powerfulToZZX(zzParts[i],pwrfl); // conver to ZZX
   }
 
   // Return an estimate for the noise
   double scaledNoise = conv<double>(noiseBound*ratio);
-  double addedNoise = conv<double>(modSwitchAddedNoiseBound());
-  return scaledNoise + addedNoise;
-  // NOTE: technically, modSwitchAddedNoise bound assumes rounding is
-  // done in the polynomial basis, rather than the powerful basis,
-  // but the same bounds are still valid
+
+  return scaledNoise;
+  // this is returned so that caller in recryption.cpp can check bounds
 }

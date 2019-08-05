@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <iostream>
+#include <cassert>
 #include <fstream>
 #include <vector>
 #include <cmath>
@@ -220,7 +221,7 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
   const Ctxt* minLvlCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eMax) {
-    long lvl = c.findBaseLevel();
+    long lvl = c.logOfPrimeSet();
     if (lvl < minLvl) {
       minLvlCtxt = &c;
       minLvl = lvl;

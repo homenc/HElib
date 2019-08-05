@@ -11,6 +11,7 @@
  */
 // testPacking.cxx - testing uppack/repack functionality
 #include "intraSlot.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -81,13 +82,23 @@ class GTest_intraSlot : public ::testing::TestWithParam<Parameters> {
         FHESecKey secretKey;
         const FHEPubKey& publicKey;
 
-        virtual void SetUp()
+        void SetUp() override
         {
             SetSeed(NTL::ZZ(seed));
             secretKey.GenSecKey(); // A +-1/0 secret key
             addSome1DMatrices(secretKey); // compute key-switching matrices that we need
             addFrbMatrices(secretKey);
+
+#ifdef DEBUG_PRINTOUT
+            dbgKey = &secretKey;
+            dbgEa = const_cast<EncryptedArray*>(context.ea);
+#endif // DEBUG_PRINTOUT
         };
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
 };
 
 TEST_P(GTest_intraSlot, packing_and_unpacking_works)

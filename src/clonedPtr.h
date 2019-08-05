@@ -9,10 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef CLONED_PTR_H
-#define CLONED_PTR_H
+#ifndef HELIB_CLONEDPTR_H
+#define HELIB_CLONEDPTR_H
 /**
-* @file cloned_ptr.h
+* @file clonedPtr.h
 * @brief Implemenation of smart pointers with "deep cloning" semantics
 *
 * Based (loosely) on code from
@@ -167,5 +167,5 @@ void swap(copied_ptr<X,Cloner>& x, copied_ptr<X,Cloner>& y) { x.swap(y); }
 
 
 
-#endif // CLONED_PTR_H
+#endif // ifndef HELIB_CLONEDPTR_H
 

@@ -13,8 +13,8 @@
  * @file hypercube.h
  * @brief Hypercubes and their slices.
  **/
-#ifndef _HYPERCUBE_H_
-#define _HYPERCUBE_H_
+#ifndef HELIB_HYPERCUBE_H
+#define HELIB_HYPERCUBE_H
 
 #include "NumbTh.h"
 
@@ -32,14 +32,17 @@ public:
 
    void initSignature(const long _dims[], long _ndims)
    {
-     assert(dims.length() == 0); // can only initialize a NULL signature
-     assert(_ndims >= 0);
-
+     //OLD: assert(dims.length() == 0); // can only initialize a NULL signature
+     helib::assertEq(dims.length(), 0l, "Can only initialize an un-initialized signature"); // can only initialize a NULL signature
+     //OLD: assert(_ndims >= 0);
+     helib::assertTrue<helib::InvalidArgument>(_ndims >= 0l, "Dimension count is negative");
+     
      dims.SetLength(_ndims);
      prods.SetLength(_ndims+1);
      prods[_ndims] = 1;
      for (long i = _ndims-1; i >= 0; i--) {
-       assert(_dims[i] > 0);
+       //OLD: assert(_dims[i] > 0);
+       helib::assertTrue<helib::InvalidArgument>(_dims[i] > 0, "Bad (non-positive) cube signature dimension");
        dims[i] = _dims[i];
        prods[i] = prods[i+1] * _dims[i];
      }
@@ -85,14 +88,16 @@ public:
 
    //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
-     assert(i >= 0 && i < getSize());
-   
-      return (i % prods.at(d)) / prods.at(d+1); 
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
+     
+     return (i % prods.at(d)) / prods.at(d+1);
    }
 
    //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
-      assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
       
       offset = offset % dims.at(d);
       if (offset < 0) offset += dims.at(d);
@@ -126,7 +131,9 @@ public:
    //! get the coordinates of index i in all dimensions.
    //! VecType is either std::vector<intType> or NTL:Vec<intType>
    template <typename VecType> void getAllCoords(VecType& v, long i) const {
-     assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
+     
      resize(v, getNumDims()); // resize(*), lsize(*) defined in NumbTh.h
      for (long j=getNumDims()-1; j>=0; --j) {
        v[j] = i % getDim(j);
@@ -137,7 +144,9 @@ public:
    //! reconstruct index from its coordinates
    //! VecType is either std::vector<intType> or NTL:Vec<intType>
    template <typename VecType> long assembleCoords(VecType& v) const {
-     assert(lsize(v)==getNumDims());
+     //OLD: assert(lsize(v)==getNumDims());
+     helib::assertEq(lsize(v), getNumDims(), "Vector size is different to the number of dimentions");
+     
      long idx=0;
      for (long i=0; i<getNumDims(); i++) {
        idx += v[i]*prods[i+1];
@@ -193,7 +202,8 @@ public:
    //! assignment: signatures must be the same
    HyperCube& operator=(const HyperCube<T>& other)
    {
-      assert(&this->sig == &other.sig);
+     //OLD: assert(&this->sig == &other.sig);
+     helib::assertEq(&this->sig, &other.sig, "Cannot assign HyperCubes with different signatures");
       data = other.data;
       return *this;
    }
@@ -202,7 +212,8 @@ public:
    //! equality testing: signaturees must be the same
    bool operator==(const HyperCube<T>& other) const
    {
-      assert(&this->sig == &other.sig);
+     //OLD: assert(&this->sig == &other.sig);
+     helib::assertEq(&this->sig, &other.sig, "Cannot compare HyperCubes with different signatures");
       return data == other.data;
    }
 
@@ -305,7 +316,8 @@ public:
    }
 
    ConstCubeSlice(const NTL::Vec<T>& _data, const CubeSignature& _sig) { 
-     assert(_data.length() == _sig.getSize());
+     //OLD: assert(_data.length() == _sig.getSize());
+     helib::assertEq<helib::InvalidArgument>(_data.length(), _sig.getSize(), "Data and signature sizes are different");
      data = &_data;
      sig = &_sig;
      dimOffset = 0; 
@@ -344,13 +356,15 @@ public:
 
    //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
-     assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
      return sig->getCoord(i + sizeOffset, d + dimOffset);
    }
 
    //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
-     assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
      return sig->addCoord(i + sizeOffset, d + dimOffset, offset);
    }
 
@@ -365,7 +379,8 @@ public:
 
    //! read-only reference to element at position i, with bounds check 
    const T& at(long i) const {
-     assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
      return (*data)[i + sizeOffset];
    }
 
@@ -431,4 +446,4 @@ void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos, const
 template<class T>
 void print3D(const HyperCube<T>& c);
 
-#endif /* ifndef _HYPERCUBE_H_ */
+#endif // ifndef HELIB_HYPERCUBE_H 

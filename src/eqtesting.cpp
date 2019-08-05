@@ -19,7 +19,6 @@ NTL_CLIENT
 #include "timing.h"
 #include "EncryptedArray.h"
 
-#include <cassert>
 #include <cstdio>
 
 // Map all non-zero slots to 1, leaving zero slots as zero.
@@ -36,7 +35,7 @@ void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
 {
   long p = ctxt.getPtxtSpace();
   if (p != ea.getPAlgebra().getP()) // ptxt space is p^r for r>1
-    std::logic_error("mapTo01 not implemented for r>1");
+    throw helib::LogicError("mapTo01 not implemented for r>1");
 
   if (p>2)
     ctxt.power(p-1); // set y = x^{p-1}
@@ -55,7 +54,8 @@ void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
 // O(log d) automorphisms and multiplications
 void fastPower(Ctxt& ctxt, long d) 
 {
-  assert(ctxt.getPtxtSpace()==2);
+  //OLD: assert(ctxt.getPtxtSpace()==2);
+  helib::assertEq(ctxt.getPtxtSpace(), 2l, "ptxtSpace must be 2");
   if (d <= 1) return;
 
   Ctxt orig = ctxt;

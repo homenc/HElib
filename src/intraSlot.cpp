@@ -127,7 +127,8 @@ long unpack(const CtPtrs& unpacked, const CtPtrs& packed,
 {
   long d = ea.getDegree(); // size of each slot
   long num2unpack = unpacked.size();
-  assert(packed.size()*d >= num2unpack); // we must have enough ciphertexts
+  //OLD: assert(packed.size()*d >= num2unpack); // we must have enough ciphertexts
+  helib::assertTrue(packed.size()*d >= num2unpack, "Not enough ciphertexts. (Packed size * d < unpacked size)");
   long offset = 0;
   long idx = 0;
   while (num2unpack > 0) {
@@ -185,7 +186,8 @@ long repack(const CtPtrs& packed, const CtPtrs& unpacked, const EncryptedArray& 
 {
   long d = ea.getDegree(); // size of each slot
   long num2pack = unpacked.size();
-  assert(packed.size()*d >= num2pack); // we must have enough ciphertexts
+  //OLD: assert(packed.size()*d >= num2pack); // we must have enough ciphertexts
+  helib::assertTrue(packed.size()*d >= num2pack, "Not enough ciphertexts. (Packed size * d < unpacked size)");
   long offset = 0;
   long idx = 0;
   while (num2pack > 0) {
@@ -213,7 +215,8 @@ public:
   {
     long d = ea.getDegree(); // size of each slot
 
-    assert(nbits >= 0 && nbits <= d);
+    //OLD: assert(nbits >= 0 && nbits <= d);
+    helib::assertInRange(nbits, 0l, d, "Not enough capacity in slots or nbits less than 0 (nbits must be positive and less equal than size of blocks)", true);
 
     const Mat<R>& CB=ea.getNormalBasisMatrix();
     // CB contains a description of the normal-basis transformation
@@ -249,7 +252,8 @@ public:
                     zzX& result)
   {
     long nslots = ea.size(); // how many slots
-    assert(lsize(data)==nslots);
+    //OLD: assert(lsize(data)==nslots);
+    helib::assertEq(lsize(data), nslots, "Cannot encode when data size is different to number of slots");
     RBak bak; bak.save(); ea.restoreContext(); // the NTL context for mod p^r
     std::vector<RX> vec(nslots, RX::zero());
     RX acc_poly;

@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _DoubleCRT_H_
-#define _DoubleCRT_H_
+#ifndef HELIB_DOUBLECRT_H
+#define HELIB_DOUBLECRT_H
 /**
  * @file DoubleCRT.h
  * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
@@ -201,7 +201,8 @@ public:
 
 
   bool operator==(const DoubleCRT& other) const {
-    assert(&context == &other.context);
+    //OLD: assert(&context == &other.context);
+    helib::assertEq(&context, &other.context, "Cannot compare DoubleCRTs with different context");
     return map == other.map;
   }
 
@@ -237,6 +238,13 @@ public:
   void removePrimes(const IndexSet& s1) {
     map.remove(s1);
   }
+
+  //! @ brief make prime set equal to s1
+  void setPrimes(const IndexSet& s1) {
+    addPrimes(s1 / getIndexSet());
+    removePrimes(getIndexSet() / s1);
+  }
+    
 
 
   /**
@@ -365,6 +373,7 @@ public:
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
   double sampleHWt(long Hwt);
+  double sampleHWtBounded(long Hwt);
 
   //! @brief Coefficients are Gaussians
   //! Return a high probability bound on L-infty norm of canonical embedding
@@ -379,7 +388,7 @@ public:
 
 
   // used to implement modulus switching
-  void scaleDownToSet(const IndexSet& s, long ptxtSpace);
+  void scaleDownToSet(const IndexSet& s, long ptxtSpace, NTL::ZZX& delta);
 
 
   void FFT(const NTL::ZZX& poly, const IndexSet& s);
@@ -419,4 +428,4 @@ inline NTL::ZZX to_ZZX(const DoubleCRT &d)  { NTL::ZZX p; d.toPoly(p); return p;
 typedef std::shared_ptr<DoubleCRT> DCRTptr;
 typedef std::shared_ptr<NTL::ZZX> ZZXptr;
 
-#endif // #ifndef _DoubleCRT_H_
+#endif // #ifndef HELIB_DOUBLECRT_H

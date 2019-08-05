@@ -236,7 +236,7 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
         FHEcontext context;
         FHESecKey secretKey;
 
-        virtual void SetUp()
+        void SetUp() override
         {
             activeContext = &context; // make things a little easier sometimes
 #ifdef DEBUG_PRINTOUT
@@ -244,6 +244,13 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
             dbgKey = &secretKey;
 #endif
         };
+
+        virtual void TearDown() override
+        {
+#ifdef DEBUG_PRINTOUT
+            cleanupGlobals();
+#endif
+        }
 
     public:
         static void TearDownTestCase()

@@ -14,8 +14,8 @@
  * @brief Support for multi-threaded implementations
  **/
 
-#ifndef FHE_multicore_H
-#define FHE_multicore_H
+#ifndef HELIB_MULTICORE_H
+#define HELIB_MULTICORE_H
 
 #ifdef FHE_THREADS
 
@@ -29,8 +29,8 @@
 #define FHE_atomic_long std::atomic_long
 #define FHE_atomic_ulong std::atomic_ulong
 
-#define FHE_MUTEX_TYPE mutex
-#define FHE_MUTEX_GUARD(mx) lock_guard<mutex> _lock ## __LINE__ (mx)
+#define FHE_MUTEX_TYPE std::mutex
+#define FHE_MUTEX_GUARD(mx) std::lock_guard<std::mutex> _lock ## __LINE__ (mx)
 
 #else
 
@@ -44,4 +44,4 @@
 
 
 
-#endif
+#endif // ifndef HELIB_MULTICORE_H

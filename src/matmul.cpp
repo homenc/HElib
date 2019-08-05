@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <NTL/BasicThreadPool.h>
 #include "matmul.h"
+#include "norms.h"
 
 NTL_CLIENT
 
@@ -60,7 +61,8 @@ public:
   BasicAutomorphPrecon(const Ctxt& _ctxt) : ctxt(_ctxt), noise(1.0)
   {
     FHE_TIMER_START;
-    if (ctxt.parts.size() >= 1) assert(ctxt.parts[0].skHandle.isOne());
+    //OLD: if (ctxt.parts.size() >= 1) assert(ctxt.parts[0].skHandle.isOne());
+    if (ctxt.parts.size() >= 1) helib::assertTrue(ctxt.parts[0].skHandle.isOne(), "Invalid ciphertext (secret key handle for part 0 is not one)");
     if (ctxt.parts.size() <= 1) return; // nothing to do
 
     ctxt.cleanUp();
@@ -69,7 +71,8 @@ public:
     long keyID = ctxt.getKeyID();
 
     // The call to cleanUp() should ensure that this assertions passes.
-    assert(ctxt.inCanonicalForm(keyID));
+    //OLD: assert(ctxt.inCanonicalForm(keyID));
+    helib::assertTrue(ctxt.inCanonicalForm(keyID), "Ciphertext is not in canonical form");
 
     // Compute the number of digits that we need and the esitmated
     // added noise from switching this ciphertext.
@@ -117,7 +120,7 @@ public:
     // Ensure that we have a key-switching matrices for this automorphism
     long keyID = ctxt.getKeyID();
     if (!pubKey.isReachable(k,keyID)) {
-      throw std::logic_error("no key-switching matrices for k="+std::to_string(k)
+      throw helib::LogicError("no key-switching matrices for k="+std::to_string(k)
                              + ", keyID="+std::to_string(keyID));
     }
 
@@ -233,7 +236,8 @@ public:
 
   shared_ptr<Ctxt> automorph(long i) const override
   {
-    assert(i >= 0 && i < D);
+    //OLD: assert(i >= 0 && i < D);
+    helib::assertInRange(i, 0l, D, "Automorphism index i is not in [0, D)");
     long j = i % g;
     long k = i / g;
     // i == j + g*k
@@ -248,7 +252,8 @@ buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim,
 {
   // allow dim == -1 (Frobenius)
   // allow dim == #gens (the dummy generator of order 1)
-  assert(dim >= -1 && dim <= ea.dimension());
+  //OLD: assert(dim >= -1 && dim <= ea.dimension());
+  helib::assertInRange(dim, -1l, ea.dimension(), "Dimension dim is not in [-1, ea.dimension()] (-1 Frobenius)", true);
 
   if (fhe_test_force_hoist >= 0) {
     switch (ctxt.getPubKey().getKSStrategy(dim)) {
@@ -286,11 +291,13 @@ struct ConstMultiplier { // stores a constant in either zzX or DoubleCRT format
 
 struct ConstMultiplier_DoubleCRT : ConstMultiplier {
   DoubleCRT data;
+  double sz;
 
-  ConstMultiplier_DoubleCRT(const DoubleCRT& _data) : data(_data) { }
+  ConstMultiplier_DoubleCRT(const DoubleCRT& _data, double _sz) : 
+    data(_data), sz(_sz) { }
 
   void mul(Ctxt& ctxt) const override {
-    ctxt.multByConstant(data);
+    ctxt.multByConstant(data, sz);
   } 
 
   shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
@@ -309,7 +316,8 @@ struct ConstMultiplier_zzX : ConstMultiplier {
   } 
 
   shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
-    return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()));
+    double sz = embeddingLargestCoeff(data, context.zMStar);
+    return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()), sz);
   }
 };
 
@@ -320,7 +328,7 @@ build_ConstMultiplier(const RX& poly)
    if (IsZero(poly))
       return nullptr;
    else
-      return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly));
+      return make_shared<ConstMultiplier_zzX>(balanced_zzX(poly));
 }
 
 template<class RX, class type>
@@ -333,7 +341,7 @@ build_ConstMultiplier(const RX& poly,
    else {
       RX poly1;
       plaintextAutomorph(poly1, poly, dim, amt, ea);
-      return make_shared<ConstMultiplier_zzX>(convert<zzX>(poly1));
+      return make_shared<ConstMultiplier_zzX>(balanced_zzX(poly1));
    }
 }
 
@@ -417,7 +425,8 @@ struct MatMul1D_derived_impl {
       bool zEntry = mat.get(entry, mcMod(j-i, D), j, 0); 
         // entry [j-i mod D, j]
 
-      assert(zEntry || deg(entry) < ea.getDegree());
+      //OLD: assert(zEntry || deg(entry) < ea.getDegree());
+      helib::assertTrue(zEntry || deg(entry) < ea.getDegree(), "Entry is non zero and degree of entry greater or equal than ea.getDegree()");
       // get(...) returns true if the entry is empty, false otherwise
 
       if (!zEntry && IsZero(entry)) zEntry = true;// zero is an empty entry too
@@ -487,7 +496,8 @@ struct MatMul1D_derived_impl {
       // get(...) returns true if the entry is empty, false otherwise
 
       // If non-zero, make sure the degree is not too large
-      assert(zEntry || deg(entry) < ea.getDegree());
+      //OLD: assert(zEntry || deg(entry) < ea.getDegree());
+      helib::assertTrue(zEntry || deg(entry) < ea.getDegree(), "Entry is non zero and degree of entry greater or equal than ea.getDegree()");
 
       if (!zEntry && IsZero(entry)) zEntry = true; // zero is an empty entry too
 
@@ -656,7 +666,9 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal)
     FHE_NTIMER_START(MatMul1DExec);
 
     dim = mat.getDim();
-    assert(dim >= 0 && dim <= ea.dimension());
+    //OLD: assert(dim >= 0 && dim <= ea.dimension());
+    helib::assertInRange(dim, 0l, ea.dimension(), "Matrix dimension not in [0, ea.dimension()]", true);
+  
     D = dimSz(ea, dim);
     native = dimNative(ea, dim);
 
@@ -720,7 +732,8 @@ void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim,
                   bool clean)
 {
   long n = v.size();
-  assert(n > 0);
+  //OLD: assert(n > 0);
+  helib::assertTrue<helib::InvalidArgument>(n > 0, "Empty vector v");
 
   if (n == 1) {
     v[0] = make_shared<Ctxt>(ctxt);
@@ -761,7 +774,8 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 {
    FHE_NTIMER_START(mul_MatMul1DExec);
 
-   assert(&ea.getContext() == &ctxt.getContext());
+   //OLD: assert(&ea.getContext() == &ctxt.getContext());
+   helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Cannot multiply ciphertexts with context different to encrypted array one");
    const PAlgebra& zMStar = ea.getPAlgebra();
 
    ctxt.cleanUp();
@@ -1132,7 +1146,8 @@ struct BlockMatMul1D_derived_impl {
       // get(...) returns true if the entry is empty, false otherwise
 
       if (!zEntry && IsZero(entry)) zEntry = true;// zero is an empty entry too
-      assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+      //OLD: assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+      helib::assertTrue(zEntry || (entry.NumRows() == d && entry.NumCols() == d), "Non zero entry and number of entry rows and columns are not equal to d");
 
       if (!zEntry) {   // not a zero entry
         zDiag = false; // mark diagonal as non-empty
@@ -1213,8 +1228,8 @@ struct BlockMatMul1D_derived_impl {
       // get(...) returns true if the entry is empty, false otherwise
 
       if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
-      assert(zEntry ||
-             (entry.NumRows() == d && entry.NumCols() == d));
+      //OLD: assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+      helib::assertTrue(zEntry || (entry.NumRows() == d && entry.NumCols() == d), "Non zero entry and number of entry rows and columns are not equal to d");
 
       if (!zEntry) {    // non-empty entry
 	zDiag = false;  // mark diagonal as non-empty
@@ -1418,7 +1433,7 @@ struct BlockMatMul1DExec_construct {
       break;
 
     default:
-      Error("unknown strategy");
+        throw helib::InvalidArgument("Unknown strategy");
     }
       
   }
@@ -1433,7 +1448,8 @@ BlockMatMul1DExec::BlockMatMul1DExec(
     FHE_TIMER_START;
 
     dim = mat.getDim();
-    assert(dim >= 0 && dim <= ea.dimension());
+    //OLD: assert(dim >= 0 && dim <= ea.dimension());
+    helib::assertInRange(dim, 0l, ea.dimension(), "Matrix dimension not in [0, ea.dimension()]", true);
     D = dimSz(ea, dim);
     d = ea.getDegree();
     native = dimNative(ea, dim);
@@ -1454,7 +1470,8 @@ void
 BlockMatMul1DExec::mul(Ctxt& ctxt) const
 {
    FHE_NTIMER_START(mul_BlockMatMul1DExec);
-   assert(&ea.getContext() == &ctxt.getContext());
+   //OLD: assert(&ea.getContext() == &ctxt.getContext());
+   helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Cannot multiply ciphertexts with context different to encrypted array one");
    const PAlgebra& zMStar = ea.getPAlgebra();
 
    ctxt.cleanUp();
@@ -1939,14 +1956,15 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 	    shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, i);
+            double sz = embeddingLargestCoeff(mask, zMStar);
 
 	    DoubleCRT m1(mask, ea.getContext(),
 		 tmp->getPrimeSet() | tmp1->getPrimeSet());
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
-	    tmp->multByConstant(m1);
+	    tmp->multByConstant(m1, sz);
 	    *tmp += *tmp1;
-	    tmp1->multByConstant(m1);
+	    tmp1->multByConstant(m1, sz);
 	    *tmp -= *tmp1;
 
 	    idx = rec_mul(acc, *tmp, dim_idx+1, idx);
@@ -1978,6 +1996,7 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
             sh_ctxt1.smartAutomorph(zMStar.genToPow(dim, 1));
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, offset);
+            double sz = embeddingLargestCoeff(mask, zMStar);
 
             Ctxt tmp = sh_ctxt;
             Ctxt tmp1 = sh_ctxt1;
@@ -1986,9 +2005,9 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
 		 tmp.getPrimeSet() | tmp1.getPrimeSet());
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
-	    tmp.multByConstant(m1);
+	    tmp.multByConstant(m1, sz);
 	    tmp += tmp1;
-	    tmp1.multByConstant(m1);
+	    tmp1.multByConstant(m1, sz);
 	    tmp -= tmp1;
 
 	    idx = rec_mul(acc, tmp, dim_idx+1, idx);
@@ -2006,9 +2025,11 @@ void
 MatMulFullExec::mul(Ctxt& ctxt) const
 {
   FHE_NTIMER_START(mul_MatMulFullExec);
-  assert(&ea.getContext() == &ctxt.getContext());
+  //OLD: assert(&ea.getContext() == &ctxt.getContext());
+  helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Cannot multiply ciphertexts with context different to encrypted array one");
 
-  assert(ea.size() > 1);
+  //OLD: assert(ea.size() > 1);
+  helib::assertTrue(ea.size() > 1l, "Number of slots is less than 2");
   // FIXME: right now, the code does not work if ea.size() == 1
   // (which means that # dimensions == 0).  This is a corner case
   // that is hardly worth dealing with (although we could).
@@ -2075,8 +2096,8 @@ public:
       // for BlockMatMul1D....FIXME: code duplication
 
       if (!zEntry && IsZero(entry)) zEntry=true; // zero is an empty entry too
-      assert(zEntry ||
-             (entry.NumRows() == d && entry.NumCols() == d));
+      //OLD: assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
+      helib::assertTrue(zEntry || (entry.NumRows() == d && entry.NumCols() == d), "Non zero entry and number of entry rows and columns are not equal to d");
 
       if (!zEntry) {    // non-empty entry
 	zDiag = false;  // mark diagonal as non-empty
@@ -2270,14 +2291,15 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
 	    shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, i);
+            double sz = embeddingLargestCoeff(mask, zMStar);
 
 	    DoubleCRT m1(mask, ea.getContext(),
 		 tmp->getPrimeSet() | tmp1->getPrimeSet());
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
-	    tmp->multByConstant(m1);
+	    tmp->multByConstant(m1, sz);
 	    *tmp += *tmp1;
-	    tmp1->multByConstant(m1);
+	    tmp1->multByConstant(m1, sz);
 	    *tmp -= *tmp1;
 
 	    idx = rec_mul(acc, *tmp, dim_idx+1, idx);
@@ -2309,6 +2331,7 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
             sh_ctxt1.smartAutomorph(zMStar.genToPow(dim, 1));
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, offset);
+            double sz = embeddingLargestCoeff(mask, zMStar);
 
             Ctxt tmp = sh_ctxt;
             Ctxt tmp1 = sh_ctxt1;
@@ -2317,9 +2340,9 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
 		 tmp.getPrimeSet() | tmp1.getPrimeSet());
 
 	    // Compute tmp = tmp*m1 + tmp1 - tmp1*m1
-	    tmp.multByConstant(m1);
+	    tmp.multByConstant(m1, sz);
 	    tmp += tmp1;
-	    tmp1.multByConstant(m1);
+	    tmp1.multByConstant(m1, sz);
 	    tmp -= tmp1;
 
 	    idx = rec_mul(acc, tmp, dim_idx+1, idx);
@@ -2337,9 +2360,11 @@ void
 BlockMatMulFullExec::mul(Ctxt& ctxt) const
 {
   FHE_NTIMER_START(mul_BlockMatMulFullExec);
-  assert(&ea.getContext() == &ctxt.getContext());
+  //OLD: assert(&ea.getContext() == &ctxt.getContext());
+  helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Cannot multiply ciphertexts with context different to encrypted array one");
 
-  assert(ea.size() > 1);
+  //OLD: assert(ea.size() > 1);
+  helib::assertTrue(ea.size() > 1l, "Number of slots is less than 2");
   // FIXME: right now, the code does not work if ea.size() == 1
   // (which means that # dimensions == 0).  This is a corner case
   // that is hardly worth dealing with (although we could).

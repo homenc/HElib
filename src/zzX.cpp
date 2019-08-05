@@ -115,3 +115,38 @@ void reduceModPhimX(zzX& poly, const PAlgebra& palg)
   convert(poly, pp);
 }
 
+
+zzX balanced_zzX(const zz_pX& f)
+{
+  long p = zz_p::modulus();
+  long len = deg(f)+1;
+  zzX out;
+  out.SetLength(len);
+  for (long i: range(len)) {
+    long coef = conv<long>(f[i]);
+    if (coef > p/2 || (p%2 == 0 && coef == p/2 && RandomBnd(2)))
+      coef -= p;
+
+    out[i] = coef;
+  }
+
+  return out;
+}
+
+zzX balanced_zzX(const GF2X& f)
+{
+  long len = deg(f)+1;
+  zzX out;
+  out.SetLength(len);
+  for (long i: range(len)) {
+    if (f[i] == 0) 
+      out[i] = 0;
+    else if (RandomBnd(2))
+      out[i] = -1;
+    else
+      out[i] = 1;
+  }
+
+  return out;
+}
+

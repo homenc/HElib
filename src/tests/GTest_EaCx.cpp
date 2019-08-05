@@ -39,14 +39,6 @@ struct Parameters {
     };
 };
 
-#ifndef FFT_ARMA
-class GTest_EaCx : public ::testing::TestWithParam<Parameters> {};
-TEST_P(GTest_EaCx, error)
-{
-    FAIL() << "Cannot run EaCx test when not using armadillo.";
-}
-#else
-
 class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
     protected:
 
@@ -87,6 +79,13 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
 #endif
             }
         }
+
+        virtual void TearDown() override
+        {
+#ifdef DEBUG_PRINTOUT
+            cleanupGlobals();
+#endif
+        }
 };
 
 TEST_P(GTest_EaCx, encoding_works_correctly)
@@ -125,8 +124,6 @@ TEST_P(GTest_EaCx, encoding_works_correctly)
         "max |v-vd2|_{infty}=" << maxDiff;
 
 }
-
-#endif // FFT_ARMA
 
 INSTANTIATE_TEST_SUITE_P(small_parameters, GTest_EaCx, ::testing::Values(
             Parameters(16, 8)

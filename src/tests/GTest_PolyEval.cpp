@@ -13,6 +13,7 @@
 #include <NTL/ZZ.h>
 #include "polyEval.h"
 #include "EncryptedArray.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -101,6 +102,11 @@ class GTest_PolyEval : public ::testing::TestWithParam<Parameters>
         if (!helib_test::noPrint) std::cout << (isDryRun()? "* dry run, " : "* ")
         << "degree-"<<d<<", m="<<m<<", L="<<L<<", p^r="<<p2r<<std::endl;
     };
+
+    virtual void TearDown() override
+    {
+      cleanupGlobals();
+    }
 };
 
 

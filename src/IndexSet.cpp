@@ -21,7 +21,8 @@ const IndexSet& IndexSet::emptySet()
 
 // constructs an interval, low to high
 void IndexSet::intervalConstructor(long low, long high) {
-  assert(low >= 0);
+  //OLD: assert(low >= 0);
+  helib::assertTrue<helib::InvalidArgument>(low >= 0, "Cannot construct interval with negative lower bound");
 
   if (high < low) {
     _first = 0; _last = -1; _card = 0;
@@ -95,7 +96,8 @@ void IndexSet::clear() {
 }
 
 void IndexSet::insert(long j) {
-  assert(j >= 0);
+  //OLD: assert(j >= 0);
+  helib::assertTrue<helib::InvalidArgument>(j >= 0, "Cannot insert in negative index");
 
   long oldSize = rep.size();
   if (j >= oldSize) {
@@ -117,7 +119,8 @@ void IndexSet::insert(long j) {
 }
 
 void IndexSet::remove(long j) {
-  assert(j >= 0);
+  //OLD: assert(j >= 0);
+  helib::assertTrue<helib::InvalidArgument>(j >= 0, "Cannot remove from negative index");
 
   if (j >= (long) rep.size()) return;
   if (rep[j] == false) return;

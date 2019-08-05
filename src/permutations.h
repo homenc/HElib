@@ -13,8 +13,8 @@
  * @file permutations.h
  * @brief Permutations over Hypercubes and their slices.
  **/
-#ifndef _PERMUTATIONS_H_
-#define _PERMUTATIONS_H_
+#ifndef HELIB_PERMUTATIONS_H
+#define HELIB_PERMUTATIONS_H
 
 #include "PAlgebra.h"
 #include "matching.h"
@@ -92,7 +92,8 @@ public:
 
   long getPermDim() const {return dim;}
   void setPermDim(long _dim) { 
-    assert(_dim >= 0 && _dim < getNumDims()); 
+    //OLD: assert(_dim >= 0 && _dim < getNumDims());
+    helib::assertInRange(_dim, 0l, getNumDims(), "Algerbra does not have a dimension of index _dim: " + std::to_string(_dim));
     dim = _dim; 
   }
 
@@ -156,7 +157,8 @@ public:
   //! maps a level number i = 0..2*k-2 to a recursion depth d = 0..k-1
   //! using the formula d = (k-1)-|(k-1)-i|
   static long levelToDepthMap(long n, long k, long i) {
-    assert(i >= 0 && i < 2*k-1);
+    //OLD: assert(i >= 0 && i < 2*k-1);
+    helib::assertInRange<helib::InvalidArgument>(i, 0l, 2*k-1, "Level number i not in [0, 2 * k - 1)");
     return (k-1) - labs((k-1)-i);
   }
 
@@ -173,7 +175,8 @@ public:
 
   const NTL::Vec<short>& getLevel(long i) const 
   { 
-    assert(i >= 0 && i < 2*k-1);
+    //OLD: assert(i >= 0 && i < 2*k-1);
+    helib::assertInRange<helib::InvalidArgument>(i, 0l, 2*k-1, "Level number i not in [0, 2 * k - 1)");
     return level[i];
   }
 
@@ -290,7 +293,7 @@ public:
   }
   //  friend std::istream& operator>> (std::istream &s, DoubleCRT &d);
 
-  //! If the parent is a leaf, add to it tho children with the given data,
+  //! If the parent is a leaf, add to it to children with the given data,
   //! else just update the data of the two children of this parent.
   //! Returns the index of the left child, the right-child index is one
   //! more than the left-child index.
@@ -310,7 +313,8 @@ template <class T>
 long FullBinaryTree<T>::addChildren(long prntIdx, 
 				    const T& leftData, const T& rightData)
 {
-  assert (prntIdx >= 0 && prntIdx < (long)(nodes.size()));
+  //OLD: assert(prntIdx >= 0 && prntIdx < (long)(nodes.size()));
+  helib::assertInRange(prntIdx, 0l, (long)nodes.size(), "Parent node does not exist");
 
   // If parent is a leaf, add to it two children
   if (nodes[prntIdx].leftChild==-1 && nodes[prntIdx].rightChild==-1) {
@@ -351,8 +355,11 @@ long FullBinaryTree<T>::addChildren(long prntIdx,
   }
   else { // parent is not a leaf, update the two children
     TreeNode<T>& parent = nodes[prntIdx];
-    assert(parent.leftChild>=0 && parent.rightChild>=0);
-
+    //OLD: assert(parent.leftChild>=0 && parent.rightChild>=0);
+    helib::assertTrue(parent.leftChild>=0, "Left child does not exist");
+    helib::assertTrue(parent.rightChild>=0, "Right child does not exist");
+    
+    
     TreeNode<T>& left = nodes[parent.leftChild];
     TreeNode<T>& right = nodes[parent.rightChild];
     left.data = leftData;
@@ -539,4 +546,4 @@ public:
   friend std::ostream& operator<< (std::ostream &s, const PermNetwork &net);
 };
 
-#endif /* ifndef _PERMUTATIONS_H_ */
+#endif // ifndef HELIB_PERMUTATIONS_H

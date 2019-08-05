@@ -9,6 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+#ifndef HELIB_POLYEVAL_H
+#define HELIB_POLYEVAL_H
 /**
  * @file polyEval.h
  * @brief Homomorphic Polynomial Evaluation
@@ -45,7 +47,9 @@ private:
 public:
   DynamicCtxtPowers(const Ctxt& c, long nPowers)
   {
-    assert (!c.isEmpty() && nPowers>0); // Sanity-check
+    //OLD: assert (!c.isEmpty() && nPowers>0); // Sanity-check
+    helib::assertFalse<helib::InvalidArgument>(c.isEmpty(), "Ciphertext cannot be empty");
+    helib::assertTrue<helib::InvalidArgument>(nPowers > 0, "Must have positive nPowers");
 
     Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
     v.resize(nPowers, tmp); // Initializes nPowers empty cipehrtexts
@@ -64,3 +68,5 @@ public:
   bool isPowerComputed(long i)
   { return (i>0 && i<=(long)v.size() && !v[i-1].isEmpty()); }
 };
+
+#endif // ifndef HELIB_POLYEVAL_H

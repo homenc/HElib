@@ -127,6 +127,11 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
             fhe_test_force_hoist = force_hoist;
         };
 
+        void cleanupBootstrappingGlobals() {
+            fhe_test_force_bsgs = old_fhe_test_force_bsgs;
+            fhe_test_force_hoist = old_fhe_test_force_hoist;
+        }
+
 
         static void setSeedIfNeeded(const long seed)
         {
@@ -203,7 +208,7 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
                 context.scale = scale;
             }
             context.zMStar.set_cM(mValues[idx][13]/100.0);
-            buildModChain(context, L, c, /*willBeBootstrappable=*/true);
+            buildModChain(context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
 
             if (!helib_test::noPrint) {
                 std::cout << "security=" << context.securityLevel()<<std::endl;
@@ -230,7 +235,6 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
                 std::cout << " done in "<<t<<" seconds\n";
                 std::cout << "  e="    << context.rcData.e
                     << ", e'="   << context.rcData.ePrime
-                    << ", a="<< context.rcData.a
                     << ", t="    << context.rcData.skHwt
                     << "\n  ";
                 context.zMStar.printout();
@@ -251,7 +255,9 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
             return secKey;
         }
 
-        GTest_ThinBootstrapping() : 
+        GTest_ThinBootstrapping() :
+            old_fhe_test_force_bsgs(fhe_test_force_bsgs),
+            old_fhe_test_force_hoist(fhe_test_force_hoist),
             // Squeeze global-setting in as the first operation
             p((setGlobals(GetParam().force_bsgs, GetParam().force_hoist),
                         GetParam().p)),
@@ -283,6 +289,15 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
             nslots(context.zMStar.getPhiM()/d)
     {};
 
+        virtual void TearDown() override
+        {
+          cleanupBootstrappingGlobals();
+          cleanupGlobals();
+        }
+
+
+        const int old_fhe_test_force_bsgs;
+        const int old_fhe_test_force_hoist;
         const long p;
         const long r;
         const long c;
@@ -310,6 +325,13 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
         const long nslots;
 
     public:
+        void SetUp() override {
+#ifdef DEBUG_PRINTOUT
+            dbgKey = &secretKey;
+            dbgEa = const_cast<EncryptedArray*>(context.ea);
+#endif // DEBUG_PRINTOUT
+            }
+
         static void TearDownTestCase()
         {
             if(!helib_test::noPrint) {
@@ -366,7 +388,7 @@ TEST_P(GTest_ThinBootstrapping, correctly_performs_thin_bootstrapping)
 };
 
 
-INSTANTIATE_TEST_CASE_P(typical_parameters, GTest_ThinBootstrapping, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_ThinBootstrapping, ::testing::Values(
             //SLOW
             Parameters(2, 1, 3, 600, 512, 0, 1, 0, 1, 0, 0),
             Parameters(2, 4, 3, 600, 2300, 0, 1, 0, 1, 0, 0),

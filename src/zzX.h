@@ -9,14 +9,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _zzX_H_
-#define _zzX_H_
+#ifndef HELIB_ZZX_H
+#define HELIB_ZZX_H
 /**
  * @file zzX.h - manipulating polynomials with single-percision coefficient
  *               It is assumed that the result is also single-percision
  **/
 #include <NTL/vector.h>
 #include <NTL/lzz_pX.h>
+#include <NTL/GF2X.h>
 
 class PAlgebra;
 typedef NTL::Vec<long> zzX;
@@ -82,4 +83,10 @@ inline zzX MulMod(const zzX& a, const zzX& b, const PAlgebra& palg)
   return tmp;
 }
 
-#endif // _zzX_H_
+
+// these produce properly balanced residues, with randomization
+// if necessary
+zzX balanced_zzX(const NTL::zz_pX& f);
+zzX balanced_zzX(const NTL::GF2X& f);
+
+#endif // ifndef HELIB_ZZX_H

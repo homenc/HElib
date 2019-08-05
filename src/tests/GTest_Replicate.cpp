@@ -21,6 +21,7 @@
 #include "FHE.h"
 #include "replicate.h"
 #include "timing.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -106,7 +107,17 @@ class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
             ea.encrypt(xc0, publicKey, xp0);
             ea.encode(poly_xp1, xp1);
             xc1 = xc0;
+
+#ifdef DEBUG_PRINTOUT
+            dbgKey = &secretKey;
+            dbgEa = const_cast<EncryptedArray*>(context.ea);
+#endif // DEBUG_PRINTOUT
         };
+
+        virtual void TearDown() override
+        {
+          cleanupGlobals();
+        }
 
         const long m;
         const long p;

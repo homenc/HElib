@@ -15,6 +15,7 @@
 #include "NumbTh.h"
 #include "PtrVector.h"
 #include "PtrMatrix.h"
+#include "debugging.h"
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -37,6 +38,12 @@ class GTest_PtrVector : public ::testing::Test {
             vLength(6),
             zero(0)
     {};
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
+        }
+
         const int vLength;
         MyClass zero;
 };

@@ -11,6 +11,7 @@
  */
 
 #include <algorithm>   // defines count(...), min(...)
+#include <cmath>
 
 #include "PAlgebra.h"
 #include "hypercube.h"
@@ -91,7 +92,7 @@ void PAlgebra::printout() const
   cout << ", phi(m) = " << phiM << endl;
   cout << "  ord(p)=" << ordP << endl;
 
-  long i;
+  std::size_t i;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
       cout << "  generator " << gens[i] << " has order ("
            << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
@@ -120,24 +121,29 @@ void PAlgebra::printAll() const
   }
 }
 
+static double 
+cotan(double x) { return 1/tan(x); }
 
 
 PAlgebra::PAlgebra(long mm, long pp,
                    const vector<long>& _gens, const vector<long>& _ords )
 {
-  assert( mm < NTL_SP_BOUND && mm > 1 );
+  //OLD: assert( mm < NTL_SP_BOUND && mm > 1 );
+  helib::assertInRange<helib::InvalidArgument>(mm, 2l, NTL_SP_BOUND, "mm is not in [2, NTL_SP_BOUND)");
   cM  = 1.0; // default value for the ring constant
   m = mm;
   p = pp;
   if (pp==-1) // pp==-1 signals using the complex field for plaintext
     pp = m-1;
   else {
-    assert( ProbPrime(pp) );
-    assert( (mm % pp) != 0 );
+    //OLD: assert( ProbPrime(pp) );
+    helib::assertTrue<helib::InvalidArgument>((bool)ProbPrime(pp), "Modulus pp is not prime (nor -1)");
+    //OLD: assert( (mm % pp) != 0 );
+    helib::assertNeq<helib::InvalidArgument>(mm % pp, 0l, "Modulus pp divides mm");
   }
 
   long k = NextPowerOfTwo(mm);
-  if (mm == (1UL << k)) // m is a power of two
+  if (static_cast<unsigned long>(mm) == (1UL << k)) // m is a power of two
     pow2 = k;
   else // is not power of two, set to zero (even if m is even!)
     pow2 = 0;
@@ -168,6 +174,21 @@ PAlgebra::PAlgebra(long mm, long pp,
   cube.initSignature(tmpOrds); // set hypercume with these dimensions
 
   phiM = ordP * getNSlots();
+
+  Vec<Pair<long,long>> factors;
+  factorize(factors, mm);
+  nfactors = factors.length(); 
+
+  radm = 1;
+  for (long i: range(nfactors))
+    radm *= factors[i].a;
+
+  double pi = atan(1)*4;
+  normBnd = 1;
+  for (long i: range(nfactors)) {
+    long u = factors[i].a;
+    normBnd *= 2*cotan(pi/(2*u))/u;
+  }
 
   // Allocate space for the various arrays
   resize(T,getNSlots());
@@ -200,8 +221,10 @@ PAlgebra::PAlgebra(long mm, long pp,
     ctr++;
     long t = exponentiate(buffer);
 
-    assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
-    assert(Tidx[t] == -1);
+    //OLD: assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
+    helib::assertEq(GCD(t, mm), 1l, "Bad user-supplied generator");
+    //OLD: assert(Tidx[t] == -1);
+    helib::assertEq(Tidx[t], -1l, "Slot at index t has already been assigned");
 
     T[i] = t;       // The i'th element in T it t
     Tidx[t] = i++;  // the index of t in T is i
@@ -209,20 +232,23 @@ PAlgebra::PAlgebra(long mm, long pp,
     // increment buffer by one (in lexigoraphic order)
   } while (nextExpVector(buffer)); // until we cover all the group
 
-  assert(ctr == getNSlots()); // sanity check for user-supplied gens
+  //OLD: assert(ctr == getNSlots()); // sanity check for user-supplied gens
+  helib::assertEq(ctr, getNSlots(), "Bad user-supplied generator set");
 
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
+
+  fftInfo = std::make_shared<PGFFT>(mm); 
 }
 
 bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
                      const vector<long>& gens, const vector<long>& ords)
 {
-  if (palg.getM() != m ||
-      palg.getP() != p ||
-      palg.numOfGens() != gens.size()||
-      palg.numOfGens() != ords.size() ) return false;
+  if (static_cast<unsigned long>(palg.getM()) != m ||
+      static_cast<unsigned long>(palg.getP()) != p ||
+      static_cast<unsigned long>(palg.numOfGens()) != gens.size()||
+      static_cast<unsigned long>(palg.numOfGens()) != ords.size() ) return false;
 
   for (long i=0; i<(long)gens.size(); i++) {
     if (long(palg.ZmStarGen(i)) != gens[i]) return false;
@@ -243,7 +269,15 @@ long PAlgebra::frobenuisPow(long j) const
 
 long PAlgebra::genToPow(long i, long j) const
 {
-  assert(i >= -1 && i < LONG(gens.size()));
+  long sz = gens.size();
+
+  if (i == sz) {
+    helib::assertTrue(j == 0, "PAlgebra::genToPow: i == sz but j != 0");
+    return 1;
+  }
+
+  helib::assertTrue(i >= -1 && i < LONG(gens.size()),
+           "PAlgebra::genToPow: bad dim");
 
   long res;
   if (i == -1)
@@ -267,7 +301,9 @@ PAlgebraModBase *buildPAlgebraMod(const PAlgebra& zMStar, long r)
   if (p==-1) // complex plaintext space
     return new PAlgebraModCx(zMStar,r);
 
-  assert(p>=2 && r > 0);
+  //OLD: assert(p>=2 && r > 0);
+  helib::assertTrue<helib::InvalidArgument>(p >= 2, "Modulus p is less than 2 (nor -1 for CKKS)");
+  helib::assertTrue<helib::InvalidArgument>(r > 0, "Hensel lifting r is less than 1");
   if (p == 2 && r == 1) 
     return new PAlgebraModDerived<PA_GF2>(zMStar, r);
   else
@@ -304,10 +340,12 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   // For dry-run, use a tiny m value for the PAlgebra tables
   if (isDryRun()) m = (p==3)? 4 : 3;
 
-  assert(r > 0);
+  //OLD: assert(r > 0);
+  helib::assertTrue<helib::InvalidArgument>(r > 0l, "Hensel lifting r is less than 1");
 
   ZZ BigPPowR = power_ZZ(p, r);
-  assert(BigPPowR.SinglePrecision());
+  //OLD: assert(BigPPowR.SinglePrecision());
+  helib::assertTrue((bool)BigPPowR.SinglePrecision(), "BigPPowR is not SinglePrecision");
   pPowR = to_long(BigPPowR);
 
   long nSlots = zMStar.getNSlots();
@@ -400,7 +438,8 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
   g = to_zz_pX(gg);
   s = InvMod(f, g);
   t = (1-s*f)/g;
-  assert(s*f + t*g == 1);
+  //OLD: assert(s*f + t*g == 1);
+  helib::assertTrue(static_cast<bool>(s*f + t*g == 1l), "Arithmetic error during Hensel lifting");
   ss = to_ZZX(s);
   tt = to_ZZX(t);
 
@@ -410,7 +449,8 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
     // lift from p^k to p^{k+1}
     pk = pk * p;
 
-    assert(divide(ss*ff + tt*gg - 1, pk));
+    //OLD: assert(divide(ss*ff + tt*gg - 1, pk));
+    helib::assertTrue((bool)divide(ss*ff + tt*gg - 1, pk), "Arithmetic error during Hensel lifting");
 
     zz_pX d = to_zz_pX( (1 - (ss*ff + tt*gg))/pk );
     zz_pX s1, t1;
@@ -424,13 +464,14 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
 
   S = to_zz_pX(ss);
 
-  assert((S*F) % G == 1);
+  //OLD: assert((S*F) % G == 1);
+  helib::assertTrue(static_cast<bool>((S*F) % G == 1), "Hensel lifting failed to find solutions");
 }
 
 template<class T> 
 void PAlgebraLift(const ZZX& phimx, const T& lfactors, T& factors, T& crtc, long r)
 {
-   Error("uninstatiated version of PAlgebraLift");
+  throw helib::LogicError("uninstatiated version of PAlgebraLift");
 }
 
 // This specialized version of PAlgebraLift does the hensel
@@ -537,10 +578,12 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
   FHE_TIMER_START;
 
   long nSlots = zMStar.getNSlots();
-  assert(lsize(alphas) == nSlots);
+  //assert(lsize(alphas) == nSlots);
+  helib::assertEq(lsize(alphas), nSlots, "Cannot embed in slots: alphas size is different than number of slots");
 
   long d = mappingData.degG;
-  for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d); 
+  //OLD: for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d);
+  for (long i = 0; i < nSlots; i++) helib::assertTrue(deg(alphas[i]) < d, "Bad alpha element at index i: its degree is greater or equal than mappingData.degG");
  
   vector<RX> crt(nSlots); // alloate space for CRT components
 
@@ -652,7 +695,8 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
     }
 
     // the general case: currently only works when r == 1
-    assert(r == 1);  
+    //OLD: assert(r == 1);
+    helib::assertEq(r, 1l, "Bad Hensel lifting value in general case: r is not 1");
 
     REBak bak; bak.save();
     RE::init(factors[i]);        // work with the extension field GF_p[X]/Ft(X)
@@ -690,8 +734,11 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
 template<class type> 
 void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const RX& G) const 
 {
-  assert(deg(G) > 0 && zMStar.getOrdP() % deg(G) == 0);
-  assert(LeadCoeff(G) == 1);
+  //OLD: assert(deg(G) > 0 && zMStar.getOrdP() % deg(G) == 0);
+  helib::assertTrue<helib::InvalidArgument>(deg(G) > 0, "Polynomial G is constant (has degree less than one)");
+  helib::assertEq(zMStar.getOrdP() % deg(G), 0l, "Degree of polynomial G does not divide zMStar.getOrdP()");
+  //OLD: assert(LeadCoeff(G) == 1);
+  helib::assertTrue<helib::InvalidArgument>(static_cast<bool>(LeadCoeff(G) == 1l), "Polynomial G is not monic");
   mappingData.G = G;
   mappingData.degG = deg(mappingData.G);
   long d = deg(G);
@@ -753,7 +800,8 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   {
     // the general case: currently only works when r == 1
 
-    assert(r == 1);
+    //OLD: assert(r == 1);
+    helib::assertEq(r, 1l , "Bad Hensel lifting value in general case: r is not 1");
 
     vec_REX FRts;
     for (long i=0; i<nSlots; i++) {
@@ -798,7 +846,8 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
         } // If this does not happen then move to the next factor of Fi
       }
 
-      assert(j < lsize(FRts));
+      //OLD: assert(j < lsize(FRts));
+      helib::assertTrue(j < lsize(FRts), "Cannot find the right factor Qi. Loop did not terminate before visiting all elements");
       mappingData.rmaps[i] = Qi;
     }
   }
@@ -847,7 +896,8 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
   long d = RE::degree();
   long p = zMStar.getP();
 
-  assert(lsize(L) == d);
+  //OLD: assert(lsize(L) == d);
+  helib::assertEq(lsize(L), d, "Vector L size is different than RE::degree()");
 
   vec_RE LL;
   resize(LL,d);

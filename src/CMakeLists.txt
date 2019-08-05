@@ -9,14 +9,6 @@ if (HELIB_REQUIRES_PTHREADS)
   find_package(Threads REQUIRED)
 endif(HELIB_REQUIRES_PTHREADS)
 
-# Look for the Armadillo package if requested
-if (ENABLE_ARMADILLO)
-  find_package(Armadillo "${ARMADILLO_MINIMAL_VERSION}" REQUIRED)
-else (ENABLE_ARMADILLO)
-  # suppress unused variable warning when not needed
-  unset(ARMADILLO_MINIMAL_VERSION)
-endif(ENABLE_ARMADILLO)
-
 include(GNUInstallDirs)
 
 # Setting up cmake install directories
@@ -96,6 +88,8 @@ set(HELIB_SRCS
         "tableLookup.cpp"
         "timing.cpp"
         "zzX.cpp"
+        "PGFFT.cpp"
+        "fhe_stats.cpp"
         )
 
 set(HELIB_HEADERS
@@ -103,7 +97,7 @@ set(HELIB_HEADERS
         "binaryCompare.h"
         "binio.h"
         "bluestein.h"
-        "cloned_ptr.h"
+        "clonedPtr.h"
         "CModulus.h"
         "CtPtrs.h"
         "Ctxt.h"
@@ -137,6 +131,10 @@ set(HELIB_HEADERS
         "tableLookup.h"
         "timing.h"
         "zzX.h"
+        "assertions.h"
+        "exceptions.h"
+        "PGFFT.h"
+        "fhe_stats.h"
         )
 
 set(LEGACY_TEST_SRCS
@@ -162,6 +160,9 @@ set(LEGACY_TEST_SRCS
         "Test_ThinBootstrapping.cpp"
         "Test_ThinEvalMap.cpp"
         "Test_Timing.cpp"
+        "Test_thinboot.cpp"
+        "Test_fatboot.cpp"
+        "Test_PGFFT.cpp"
         )
 
 # Add helib target as a shared/static library
@@ -184,10 +185,6 @@ target_compile_definitions(helib
   PUBLIC
     $<$<BOOL:${ENABLE_THREADS}>:HELIB_THREADS>
     # NOTE: this should be in a generated configure.h rather than being public
-    # NOTE: Generator IF are available form cmake 3.8. Use it in the future.
-    # $<IF:$<BOOL:${ENABLE_ARMADILLO}>,FFT_ARMA,FFT_NATIVE>
-    $<$<BOOL:${ENABLE_ARMADILLO}>:FFT_ARMA>
-    $<$<NOT:$<BOOL:${ENABLE_ARMADILLO}>>:FFT_NATIVE>
 )
 
 if (PACKAGE_BUILD)
@@ -215,7 +212,6 @@ endif(PACKAGE_BUILD)
 
 target_include_directories(helib
   PRIVATE
-    "$<$<BOOL:${ENABLE_ARMADILLO}>:${ARMADILLO_INCLUDE_DIRS}>"
   PUBLIC
     "$<BUILD_INTERFACE:${NTL_INCLUDE_PATHS}>"
     "$<INSTALL_INTERFACE:${NTL_INCLUDE_EXPORTED_PATH}>"
@@ -244,8 +240,6 @@ target_link_libraries(helib
 
     # Add pthread if required
     $<$<BOOL:${HELIB_REQUIRES_PTHREADS}>:Threads::Threads>
-    # Add Armadillo if enabled
-    $<$<BOOL:${ENABLE_ARMADILLO}>:${ARMADILLO_LIBRARIES}>
   )
 
 

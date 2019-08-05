@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _PAlgebra_H_
-#define _PAlgebra_H_
+#ifndef HELIB_PALGEBRA_H
+#define HELIB_PALGEBRA_H
 /**
  * @file PAlgebra.h
  * @brief Declatations of the classes PAlgebra
@@ -46,8 +46,9 @@
 #include <utility>
 #include "NumbTh.h"
 #include "zzX.h"
-#include "cloned_ptr.h"
 #include "hypercube.h"
+#include "PGFFT.h"
+#include "clonedPtr.h"
 
 //NTL_CLIENT
 
@@ -57,6 +58,9 @@ class PAlgebra {
 
   long phiM; // phi(m)
   long ordP; // the order of p in (Z/mZ)^*
+  long nfactors; // number of distinct prime factors of m
+  long radm; // rad(m) = prod of distinct primes dividing m
+  double normBnd; // max-norm-on-pwfl-basis <= normBnd * max-norm-canon-embed
 
   long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
 
@@ -99,6 +103,9 @@ class PAlgebra {
 
   std::vector<long> zmsRep; // inverse of zmsIdx
 
+  std::shared_ptr<PGFFT> fftInfo; // info for computing m-point complex FFT's
+                             // copied_ptr allows delayed initialization
+
  public:
 
   PAlgebra(long mm, long pp = 2,
@@ -129,6 +136,15 @@ class PAlgebra {
   //! The order of p in (Z/mZ)^*
   long getOrdP() const { return ordP; }
 
+  //! The number of distinct prime factors of m
+  long getNFactors() const { return nfactors; }
+
+  //! getRadM() = prod of distinct prime factors of m
+  long getRadM() const { return radm; }
+
+  //! max-norm-on-pwfl-basis <= normBnd * max-norm-canon-embed
+  double getNormBnd() const { return normBnd; }
+
   //! The number of plaintext slots = phi(m)/ord(p)
   long getNSlots() const { return cube.getSize(); }
 
@@ -140,7 +156,7 @@ class PAlgebra {
 
   //! The "ring constant" cM
   void set_cM(double c) { cM=c; }
-  const double get_cM() const { return cM; }
+  double get_cM() const { return cM; }
 
   //! The prime-power factorization of m
   //  const std::vector<long> getMfactors() const { return mFactors; }
@@ -150,7 +166,7 @@ class PAlgebra {
 
   //! the i'th generator in (Z/mZ)^* /(p) (if any)
   long ZmStarGen(long i) const
-  {  return (i<gens.size())? gens[i] : 0; }
+  {  return (i<long(gens.size()))? gens[i] : 0; }
 
   //! the i'th generator to the power j mod m
   // VJS: I'm moving away from all of this unsigned stuff...
@@ -237,6 +253,8 @@ class PAlgebra {
 
   //! The largest FFT we need to handle degree-m polynomials
   long fftSizeNeeded() const {return NTL::NextPowerOfTwo(getM()) +1;}
+
+  const PGFFT& getFFTInfo() const { return *fftInfo; }
 };
 
 
@@ -300,7 +318,10 @@ struct GenericModulus<NTL::zz_p> {
 
 template<> 
 struct GenericModulus<NTL::GF2> {
-  static void init(long p) { assert(p == 2); }
+  static void init(long p) {
+    //OLD: assert(p == 2);
+    helib::assertEq<helib::InvalidArgument>(p, 2l, "Cannot init NTL::GF2 with p not 2");
+  }
 };
 
 class PA_GF2 {
@@ -505,7 +526,8 @@ public:
   {
     if (this == &other) return *this;
 
-    assert(&zMStar == &other.zMStar);
+    //OLD: assert(&zMStar == &other.zMStar);
+    helib::assertEq(&zMStar, &other.zMStar, "Cannot assign PAlgebras with different zMStar values");
     r = other.r;
     pPowR = other.pPowR;
     pPowRContext = other.pPowRContext;
@@ -579,7 +601,8 @@ public:
 
   zzX getMask_zzX(long i, long j) const override
   {
-    return convert<zzX>(maskTable.at(i).at(j));
+    RBak bak; bak.save(); restoreContext();
+    return balanced_zzX(maskTable.at(i).at(j));
   }
 
 
@@ -671,7 +694,8 @@ class PAlgebraModCx : public PAlgebraModBase {
 public:
 
  PAlgebraModCx(const PAlgebra& palg, long _r): zMStar(palg), r(_r) {
-    assert(r>0 || r<NTL_SP_NBITS);
+   //OLD: assert(r>0 || r<NTL_SP_NBITS);
+   helib::assertInRange<helib::InvalidArgument>(r, 1l, (long)NTL_SP_NBITS, "Invalid bit precision r");
   }
 
   PAlgebraModBase* clone() const override { return new PAlgebraModCx(*this); }
@@ -684,9 +708,9 @@ public:
 
   // These function make no sense for PAlgebraModCx
   const std::vector<NTL::ZZX>& getFactorsOverZZ() const override
-  { throw std::logic_error("PAlgebraModCx::getFactorsOverZZ undefined"); }
+  { throw helib::LogicError("PAlgebraModCx::getFactorsOverZZ undefined"); }
   zzX getMask_zzX(long i, long j) const override
-  { throw std::logic_error("PAlgebraModCx::getMask_zzX undefined"); }
+  { throw helib::LogicError("PAlgebraModCx::getMask_zzX undefined"); }
 };
 
 
@@ -759,4 +783,5 @@ public:
 bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
                      const std::vector<long>& gens, const std::vector<long>& ords);
-#endif // #ifdef _PAlgebra_H_
+
+#endif // #ifndef HELIB_PALGEBRA_H

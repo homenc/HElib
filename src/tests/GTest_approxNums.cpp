@@ -129,19 +129,19 @@ struct Parameters {
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] += from[i];
+    for (std::size_t i=0; i<from.size(); i++) to[i] += from[i];
   }
   void sub(std::vector<cx_double>& to, const std::vector<cx_double>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] -= from[i];
+    for (std::size_t i=0; i<from.size(); i++) to[i] -= from[i];
   }
   void mul(std::vector<cx_double>& to, const std::vector<cx_double>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] *= from[i];
+    for (std::size_t i=0; i<from.size(); i++) to[i] *= from[i];
   }
   void rotate(std::vector<cx_double>& p, long amt)
   {
@@ -151,14 +151,6 @@ struct Parameters {
       tmp[((i+amt)%sz +sz)%sz] = p[i];
     p = tmp;
   }
-
-#ifndef FFT_ARMA
-class GTest_approxNums : public ::testing::TestWithParam<Parameters> {};
-TEST_P(GTest_approxNums, error)
-{
-    FAIL() << "Cannot run approxNums test when not using armadillo.";
-}
-#else
 
 class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
     protected:
@@ -193,10 +185,19 @@ class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
                 std::cout << "ctxtPrimes="<<context.ctxtPrimes
                     << ", specialPrimes="<<context.specialPrimes<<std::endl<<std::endl;
             }
+            #ifdef DEBUG_PRINTOUT
+                dbgKey = &secretKey;
+                dbgEa = const_cast<EncryptedArray*>(context.ea);
+            #endif // DEBUG_PRINTOUT
 //          if (helib_test::debug) {
 //            dbgKey = &secretKey;
 //            dbgEa = const_cast<EncryptedArray*>(context.ea);
 //          }
+        }
+
+        virtual void TearDown() override
+        {
+            cleanupGlobals();
         }
 
 };
@@ -292,8 +293,8 @@ TEST_P(GTest_approxNums, complex_arithmetic_works)
   c1.complexConj();  
   ea.decrypt(c1, secretKey, vd);
 #ifdef DEBUG_PRINTOUT
-  printVec(cout<<"vd1=", vd1, 10) << std::endl;
-  printVec(cout<<"res=", vd, 10) << std::endl;
+  printVec(std::cout<<"vd1=", vd1, 10) << std::endl;
+  printVec(std::cout<<"res=", vd, 10) << std::endl;
 #endif
   EXPECT_TRUE(cx_equals(vd, vd1, NTL::conv<double>(epsilon * c1.getPtxtMag())))
                     << "  max(vd)="  << largestCoeff(vd)
@@ -352,6 +353,7 @@ TEST_P(GTest_approxNums, rotates_and_shifts_work)
 #endif
   std::rotate(vd1.begin(), vd1.end() - nplaces, vd1.end());
   ea.rotate(c1, nplaces);
+  c1.reLinearize();
   ea.decrypt(c1, secretKey, vd_dec);
 #ifdef DEBUG_PRINTOUT
   printVec(std::cout << "vd1(rot)=", vd1, 10) << std::endl;
@@ -529,8 +531,6 @@ TEST_P(GTest_approxNums, general_ops_works) {
       resetAllTimers();
   }
   
-#endif // FFT_ARMA
-
 INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_approxNums, ::testing::Values(
             //SLOW
             Parameters(1, 1024, 8, 150, 0.01)

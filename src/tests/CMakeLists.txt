@@ -2,6 +2,11 @@
 
 set(GTEST_SRC
     "test_common.cpp"
+    "Test_errorHandling.cpp"
+    "Test_CKKS.cpp"
+    )
+
+set(PORTED_LEGACY_TEST_SRC
     "GTest_Bin_IO.cpp"
     "GTest_EaCx.cpp"
     "GTest_EvalMap.cpp"
@@ -14,6 +19,9 @@ set(GTEST_SRC
     "GTest_PtrVector.cpp"
     "GTest_Replicate.cpp"
     "GTest_ThinBootstrapping.cpp"
+    "GTest_thinboot.cpp"
+    "GTest_fatboot.cpp"
+    "GTest_PGFFT.cpp"
     "GTest_ThinEvalMap.cpp"
     "GTest_approxNums.cpp"
     "GTest_binaryArith.cpp"
@@ -26,7 +34,7 @@ set(GTEST_SRC
     )
 
 # Adding the test binary target
-add_executable(runTests main.cpp ${GTEST_SRC})
+add_executable(runTests main.cpp ${PORTED_LEGACY_TEST_SRC} ${GTEST_SRC})
 
 target_link_libraries(runTests gtest)
 target_link_libraries(runTests helib)
@@ -44,6 +52,9 @@ set(TEST_NAMES
     "GTest_PtrVector"
     "GTest_Replicate"
     "GTest_ThinBootstrapping"
+    "GTest_thinboot"
+    "GTest_fatboot"
+    "GTest_PGFFT.cpp"
     "GTest_ThinEvalMap"
     "GTest_approxNums"
     "GTest_binaryArith"
@@ -53,6 +64,8 @@ set(TEST_NAMES
     "GTest_intraSlot"
     "GTest_matmul"
     "GTest_tableLookup"
+    "Test_errorHandling"
+    "Test_CKKS"
     )
 
 foreach(TEST_NAME ${TEST_NAMES})

@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#ifndef _FHE_H_
-#define _FHE_H_
+#ifndef HELIB_FHE_H
+#define HELIB_FHE_H
 /**
    @file FHE.h
    @brief Public/secret keys for the BGV cryptosystem
@@ -244,7 +244,8 @@ public:
   //! dim == -1 is Frobenius
   long getKSStrategy(long dim) const {
     long index = dim+1;
-    assert(index >= 0);
+    //OLD: assert(index >= 0);
+    helib::assertTrue<helib::InvalidArgument>(index >= 0l, "Invalid dimension (dim must be at least -1)");
     if (index >= KS_strategy.length()) return FHE_KSS_UNKNOWN;
     return KS_strategy[index];
   }
@@ -253,7 +254,8 @@ public:
   //! dim == -1 is Frobenius
   void setKSStrategy(long dim, int val) {
     long index = dim+1;
-    assert(index >= 0);
+    //OLD: assert(index >= 0);
+    helib::assertTrue<helib::InvalidArgument>(index >= 0l, "Invalid dimension (dim must be at least -1)");
     if (index >= KS_strategy.length()) 
       KS_strategy.SetLength(index+1, FHE_KSS_UNKNOWN);
     KS_strategy[index] = val;
@@ -356,7 +358,7 @@ public:
 
     if (hwt>0) {
       // sample a Hamming-weight-hwt polynomial
-      double bound = newSk.sampleHWt(hwt);     
+      double bound = newSk.sampleHWtBounded(hwt);     
       return ImportSecKey(newSk, bound, ptxtSpace, maxDegKswitch);
     }
     else {
@@ -473,4 +475,4 @@ double RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
 //! Same as RLWE, but assumes that c1 is already chosen by the caller
 double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);
 
-#endif // ifndef _FHE_H_
+#endif // ifndef HELIB_FHE_H

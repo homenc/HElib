@@ -119,8 +119,9 @@ static void recursiveReduce(const CubeSlice<zz_p>& s,
                      zz_pX& tmp2)
 {
    long numDims = s.getNumDims();
-   assert(numDims > 0);
-
+   //OLD: assert(numDims > 0);
+  helib::assertTrue(numDims > 0l, "CubeSlice s has negative number of dimensions");
+  
    long deg0 = deg(cycVec[d]);
 
    long posBnd = s.getProd(1);
@@ -201,7 +202,8 @@ long PowerfulConversion::polyToPowerful(HyperCube<zz_p>& powerful,
   HyperCube<zz_p> tmpCube(getLongSig());
 
   long n = deg(poly);
-  assert(n < indexes->m);
+  //OLD: assert(n < indexes->m);
+  helib::assertTrue(n < indexes->m, "Degree of polynomial poly is greater or equal than indexes->m");
 
   for (long i = 0; i <= n; i++)
     tmpCube[indexes->polyToCubeMap[i]] = poly[i];
@@ -281,7 +283,7 @@ void PowerfulDCRT::dcrtToPowerful(Vec<ZZ>& out, const DoubleCRT& dcrt) const
 
 void PowerfulDCRT::powerfulToDCRT(DoubleCRT& dcrt, const Vec<ZZ>& in) const
 {
-  NTL::Error("powerfulToDCRT not implemented yet");
+  throw helib::LogicError("powerfulToDCRT not implemented yet");
 }
 
 // If the IndexSet is omitted, default to all the primes in the chain
@@ -352,7 +354,8 @@ static void convertPolyToPowerful(HyperCube<zz_p>& cube,
    long phim = cube.getSize();
    long n = deg(poly);
  
-   assert(n < m);
+   //OLD: assert(n < m);
+   helib::assertTrue(n < m, "Degree of polynomial poly must be less than size of the hypercube tmpCube");
 
    for (long i = 0; i <= n; i++)
       tmpCube[polyToCubeMap[i]] = poly[i];
@@ -425,7 +428,8 @@ void mapIndexToPowerful(Vec<long>& pow, long j, const Vec<long>& phiVec)
 {
   long k = phiVec.length();
   long phim = computeProd(phiVec);
-  assert(j >= 0 && j < phim);
+  //OLD: assert(j >= 0 && j < phim);
+  helib::assertInRange(j, 0l, phim, "Index j is not in [0, computeProd(phiVec))");
 
   pow.SetLength(k);
 
@@ -443,7 +447,8 @@ void mapPowerfulToPoly(ZZX& poly,
                        const ZZX& phimX)
 {
   long k = pow.length();
-  assert(divVec.length() == k);
+  //OLD: assert(divVec.length() == k);
+  helib::assertEq(divVec.length(), k, "pow and divVec have different sizes");
 
   long j = 0;
   for (long i = 0; i < k; i++)
@@ -626,7 +631,8 @@ void recursiveEval(const CubeSlice<zz_p>& s,
                    Vec<zz_p>& tmp2)
 {
    long numDims = s.getNumDims();
-   assert(numDims > 0);
+   //OLD: assert(numDims > 0);
+   helib::assertTrue(numDims > 0, "CubeSlice s has negative dimension number");
 
    if (numDims > 1) {
       long dim0 = s.getDim(0);
@@ -648,7 +654,7 @@ void recursiveEval(const CubeSlice<zz_p>& s,
 #if 0
 // Implementation of FFTHelper
 #include "bluestein.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 FFTHelper::FFTHelper(long _m, zz_p x)
 {
@@ -722,7 +728,8 @@ void recursiveEval(const CubeSlice<zz_p>& s,
                    Vec<zz_p>& tmp2)
 {
    long numDims = s.getNumDims();
-   assert(numDims > 0);
+   //OLD: assert(numDims > 0);
+   helib::assertTrue(numDims > 0, "CubeSlice s has negative dimension number");
 
    if (numDims > 1) {
       long dim0 = s.getDim(0);
@@ -747,7 +754,8 @@ void recursiveInterp(const CubeSlice<zz_p>& s,
                      Vec<zz_p>& tmp2)
 {
   long numDims = s.getNumDims();
-  assert(numDims > 0);
+  //OLD: assert(numDims > 0);
+  helib::assertTrue(numDims > 0, "CubeSlice s has negative dimension number");
 
   long posBnd = s.getProd(1);
   for (long pos = 0; pos < posBnd; pos++) {
