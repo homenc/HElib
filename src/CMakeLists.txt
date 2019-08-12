@@ -232,11 +232,12 @@ set_target_properties(helib
 # Adding gmp and ntl link file as relative/absolute depending on the build/install interfaces
 target_link_libraries(helib
   PUBLIC
-    "$<BUILD_INTERFACE:${GMP_LIBRARIES}>"
-    "$<INSTALL_INTERFACE:${GMP_LIBRARIES_EXPORTED_PATH}>"
-
+    # NTL should be loaded before GMP when NTL is static
     "$<BUILD_INTERFACE:${NTL_LIBRARIES}>"
     "$<INSTALL_INTERFACE:${NTL_LIBRARIES_EXPORTED_PATH}>"
+
+    "$<BUILD_INTERFACE:${GMP_LIBRARIES}>"
+    "$<INSTALL_INTERFACE:${GMP_LIBRARIES_EXPORTED_PATH}>"
 
     # Add pthread if required
     $<$<BOOL:${HELIB_REQUIRES_PTHREADS}>:Threads::Threads>
