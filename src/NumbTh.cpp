@@ -21,30 +21,6 @@ NTL_CLIENT
 
 bool FHEglobals::dryRun = false;
 
-// Code for parsing command line
-
-bool parseArgs(int argc,  char *argv[], argmap_t& argmap)
-{
-  for (long i = 1; i < argc; i++) {
-    char *x = argv[i];
-    long j = 0;
-    while (x[j] != '=' && x[j] != '\0') j++; 
-    if (x[j] == '\0') return false;
-    string arg(x, j);
-    if (argmap[arg] == NULL) return false;
-    argmap[arg] = x+j+1;
-  }
-
-  return true;
-}
-
-bool doArgProcessing(string *value, const char *s)
-{
-  *value = string(s);
-  return true;
-}
-
-
 // Mathematically correct mod and div, avoids overflow
 long mcMod(long a, long b) 
 {

@@ -26,6 +26,7 @@ NTL_CLIENT
 #include "EvalMap.h"
 #include "powerful.h"
 #include "matmul.h"
+#include "ArgMap.h"
 
 static bool noPrint = false;
 static bool dry = false; // a dry-run flag
@@ -256,7 +257,7 @@ extern long fhe_force_chen_han;
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long p=2;
   long r=1;

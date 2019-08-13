@@ -22,6 +22,7 @@ NTL_CLIENT
 #include "FHE.h"
 #include "replicate.h"
 #include "timing.h"
+#include "ArgMap.h"
 
 static bool noPrint = false;
 
@@ -179,7 +180,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   bool dry=false;
   amap.arg("dry", dry, "dry=1 for a dry-run");

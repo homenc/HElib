@@ -25,6 +25,7 @@ NTL_CLIENT
 #include "matmul.h"
 #include "replicate.h"
 #include "permutations.h"
+#include "ArgMap.h"
 
 #include "debugging.h"
 
@@ -610,41 +611,42 @@ void printTimeData(TimingData& td)
     cout << endl;
   }
 }
-
-void usage(char *prog) 
-{
-  cerr << "A program that tests the timing of various operations,\n";
-  cerr << "  outputs the results in a comma-separate-value (csv) format.\n";
-  cerr << "Usage: "<<prog<<" [ optional parameters ]... 2> logfile > results-file\n";
-  cerr << "results on stdout in comma-separated-value format, ";
-  cerr << "progress printed on stderr\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'm=11441 p=2 high=1'\n\n";
-  cerr << "  m determines the cyclotomic ring, defaults to all the set\n";
-  cerr << "    m in { 4051, 4369, 4859, 10261,11023,11441,\n";
-  cerr << "          18631,20485,21845, 49981,53261       }\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  high=1 will time also high-level procedures [default==0]\n";
-  cerr << "  nthreads defines the NTL Thread Pool size for multi-threaded computations [default==1]\n";
-  cerr << "           do not exceed the number of available cores or SMT threads on your system.\n";
-  exit(0);
-}
+// OLD CODE
+//void usage(char *prog) 
+//{
+//  cerr << "A program that tests the timing of various operations,\n";
+//  cerr << "  outputs the results in a comma-separate-value (csv) format.\n";
+//  cerr << "Usage: "<<prog<<" [ optional parameters ]... 2> logfile > results-file\n";
+//  cerr << "results on stdout in comma-separated-value format, ";
+//  cerr << "progress printed on stderr\n";
+//  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+//  cerr << "  e.g, 'm=11441 p=2 high=1'\n\n";
+//  cerr << "  m determines the cyclotomic ring, defaults to all the set\n";
+//  cerr << "    m in { 4051, 4369, 4859, 10261,11023,11441,\n";
+//  cerr << "          18631,20485,21845, 49981,53261       }\n";
+//  cerr << "  p is the plaintext base [default=2]" << endl;
+//  cerr << "  high=1 will time also high-level procedures [default==0]\n";
+//  cerr << "  nthreads defines the NTL Thread Pool size for multi-threaded computations [default==1]\n";
+//  cerr << "           do not exceed the number of available cores or SMT threads on your system.\n";
+//  exit(0);
+//}
 
 int main(int argc, char *argv[]) 
 {
-  argmap_t argmap;
-  argmap["p"] = "2";
-  argmap["m"] = "0";
-  argmap["high"] = "0";
-  argmap["nthreads"] = "1";
+  long p = 2;
+  long m = 0;
+  long high = 0;
+  long nthreads = 1;
+
+  ArgMap amap;
+  amap.arg("p", p);
+  amap.arg("m", m);
+  amap.arg("high", high);
+  amap.arg("nthreads", nthreads);
+  amap.parse(argc, argv);
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
-
-  long p = atoi(argmap["p"]);
-  long m = atoi(argmap["m"]);
-  long high = atoi(argmap["high"]);
-  long nthreads = atoi(argmap["nthreads"]);
+  //if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
 #define numTests 11
   long ms[numTests] = { 4051, 4369, 4859, 10261,11023,11441,

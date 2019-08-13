@@ -11,6 +11,7 @@
  */
 // testPacking.cxx - testing uppack/repack functionality
 #include "intraSlot.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -18,7 +19,7 @@ bool verbose = false;
 
 int main(int argc, char **argv)
 {
-  ArgMapping amap;
+  ArgMap amap;
   long p=2;
   amap.arg("p", p, "plaintext base");
   long n=2;

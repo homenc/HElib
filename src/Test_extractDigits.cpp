@@ -18,6 +18,7 @@ NTL_CLIENT
 #include "EncryptedArray.h"
 #include "polyEval.h"
 #include "debugging.h"
+#include "ArgMap.h"
 
 static bool noPrint = false;
 static bool debug = 0;
@@ -25,7 +26,7 @@ static bool debug = 0;
 
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
   long p = 5;
   long r=0;
   long m = 0;

@@ -19,6 +19,7 @@ namespace NTL {} using namespace NTL;
 #include "EvalMap.h"
 #include "hypercube.h"
 #include "powerful.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -205,7 +206,7 @@ void  TestIt(long p, long r, long c, long _k,
  */
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long p=2;
   amap.arg("p", p, "plaintext base");

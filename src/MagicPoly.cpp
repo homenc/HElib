@@ -1,6 +1,7 @@
 
 #include <NTL/lzz_pX.h>
 #include "NumbTh.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -43,7 +44,7 @@ void compute_a_vals(Vec<long>& a, long p, long e)
 
 int main(int argc, char **argv)
 {
-   ArgMapping amap;
+   ArgMap amap;
 
    long p = 2;
    amap.arg("p", p);

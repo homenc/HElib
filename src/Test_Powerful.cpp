@@ -12,6 +12,7 @@
 #include "hypercube.h"
 #include "powerful.h"
 #include "FHEContext.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -67,37 +68,38 @@ void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
   else cout << "GOOD\n";
 }
 
-void usage(char *prog) 
-{
-  cerr << "Test utilities for conversion between representations of polynomials\n";
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'm1=3 m2=5 m3=7 p=2 r=1'\n\n";
-  cerr << "  m1,m2,m3 are the factors of m=m1*m2*m3 [default: m1=7,m2=13, m3=17]\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  r is the lifting [default=1]" << endl;
-  exit(0);
-}
+// OLD CODE
+//void usage(char *prog) 
+//{
+//  cerr << "Test utilities for conversion between representations of polynomials\n";
+//  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
+//  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+//  cerr << "  e.g, 'm1=3 m2=5 m3=7 p=2 r=1'\n\n";
+//  cerr << "  m1,m2,m3 are the factors of m=m1*m2*m3 [default: m1=7,m2=13, m3=17]\n";
+//  cerr << "  p is the plaintext base [default=2]" << endl;
+//  cerr << "  r is the lifting [default=1]" << endl;
+//  exit(0);
+//}
 
 int main(int argc, char *argv[])
 {
 
-  argmap_t argmap;
-
-  argmap["m1"] = "7";
-  argmap["m2"] = "13";
-  argmap["m3"] = "17";
-  argmap["p"] = "2";
-  argmap["r"] = "1";
+  long m1 = 7;
+  long m2 = 13;
+  long m3 = 17;
+  long p = 2;
+  long r = 1;
+  
+  ArgMap amap;
+  amap.arg("m1", m1, "Factor of m"); 
+  amap.arg("m2", m2, "Factor of m");
+  amap.arg("m3", m3, "Factor of m");
+  amap.arg("p",  p,  "Plaintext base");
+  amap.arg("r",  r,  "Lifting");
+  amap.parse(argc, argv);
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
-
-  long m1 = atoi(argmap["m1"]);
-  long m2 = atoi(argmap["m2"]);
-  long m3 = atoi(argmap["m3"]);
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
+//  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
   if (m1<2 || m2<2) {
     cerr << "m1,m2 are mandatory\n";

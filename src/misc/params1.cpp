@@ -16,7 +16,6 @@
 // factors is allowed.  This comports with the new analysis of
 // bootstrapping.
 
-
 namespace std {}
 namespace NTL {}
 
@@ -27,6 +26,7 @@ using namespace NTL;
 #include "PAlgebra.h"
 #include <iomanip>
 #include <cassert>
+#include "ArgMap.h"
 
 // A heuristic measure for how good a certain (depth,cost) is
 long weighted_cost(long cost, long depth)
@@ -77,7 +77,7 @@ bool comparePhi(const Pair<long,long>& x, const Pair<long,long>& y)
  */
 int main(int argc, char *argv[])
 {
-   ArgMapping amap;
+   ArgMap amap;
 
    long gens_flag = 0;
    amap.arg("gens", gens_flag, "flag to output mvec, gens, and ords");

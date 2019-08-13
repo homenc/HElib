@@ -13,6 +13,7 @@
 #include <cassert>
 #include "norms.h"
 #include "EncryptedArray.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -24,7 +25,7 @@ bool noPrint = true;
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
   amap.arg("noPrint", noPrint, "suppress printouts");
 
   long m=16;

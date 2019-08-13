@@ -17,6 +17,7 @@
 #include "EncryptedArray.h"
 #include "FHE.h"
 #include "debugging.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -289,7 +290,7 @@ int main(int argc, char *argv[])
 
   // Commandline setup
 
-  ArgMapping amap;
+  ArgMap amap;
 
   long m=16;
   long r=8;

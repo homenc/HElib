@@ -28,6 +28,7 @@ NTL_CLIENT
 #include "matmul.h"
 #include "debugging.h"
 #include "fhe_stats.h"
+#include "ArgMap.h"
 
 static bool noPrint = false;
 static bool dry = false; // a dry-run flag
@@ -183,7 +184,7 @@ extern long fhe_force_chen_han;
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long p=2;
   long r=1;

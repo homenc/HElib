@@ -23,6 +23,7 @@ NTL_CLIENT
 
 #include "intraSlot.h"
 #include "binaryArith.h"
+#include "ArgMap.h"
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
@@ -54,7 +55,7 @@ void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
 
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
   long prm=1;
   amap.arg("prm", prm, "parameter size (0-tiny,...,7-huge)");
   long bitSize = 5;
