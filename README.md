@@ -1,10 +1,32 @@
 HElib
 =====
-***April 2019:*** Moved the HElib reposiroty on github from shaih/HElib to HomEnc/HElib
+***August 2019:*** Improved noise managemebt in HElib. Better and more 
+robust bootstrapping algorith.
 
-***January 2019:*** Multiple changes: CKKS support, new modulus-chain implementation, better noise management, etc. Documented in [changes.md](changes.md)
+***July 2019:*** Added new bootstrapping and PGFFT tests.
 
-***March 2018:*** Re-implementation of homomorphic linear transformations, featuring speedups of 15x to 75x.
+***June 2019:*** Added implementation of PGFFT to replace Armadillo for FFTs in
+the CKKS scheme. See comments in `PGFFT.h` for more information.
+
+***May 2019:*** CKKS bug fixes and fixed compiler warnings.
+
+***April 2019:*** Moved the HElib repository on github from shaih/HElib to
+HomEnc/HElib. Introduced HElib-specific exceptions, replaced C `assert`, NTL
+Error and `std::exception` to use HElib-specific assertions that throw the new
+exceptions. See comments in `assertions.h` and `exceptions.h` for usage
+information.
+
+***March 2019:*** Introduced new test framework (google test), documented in
+[TESTS.md](TESTS.md). Previous framework will be deprecated. Added a cmake
+build script for building HElib and dependencies, documented in
+[INSTALL.md](INSTALL.md). Added an example program, see `example program`.
+
+***January 2019:*** Multiple changes: CKKS support, new modulus-chain
+implementation, better noise management, etc. Documented in
+[changes.md](changes.md)
+
+***March 2018:*** Re-implementation of homomorphic linear transformations,
+featuring speedups of 15x to 75x.
 
 ***Dec 2017-Jan 2018:*** Added some routines for addition/multiplication and
 comparisons of integers in binary representation, and for homomorphic table
@@ -12,12 +34,12 @@ lookup. See the supported interfaces in `binaryArith.h`, `binaryCompare.h`,
 and `tableLookup.h`. Some examples are in `Test_binaryArith.cpp`,
 `Test_binaryCompare.cpp`, and `Test_tableLookup.cpp`.
 
-The inputs and putputs to the new routines are logically vectors of Ctxt objects
+The inputs and outputs to the new routines are logically vectors of Ctxt objects
 (one Ctxt per bit in the binary representation). These vectors are wrapped by
 the new `CtPtrs` wrapper (see `CtPtrs.h` and the underlying `PtrsVector.h` and
 `PtrsMatrix.h`).  Hence the same logic will work for any type of input that can
 be mapped logically to arrays of `Ctxt`s, as long as one can wrap them with the
-same wrapper class. In particular, we implementated wrappers for
+same wrapper class. In particular, we implemented wrappers for
 `std::vector<Ctxt>`, `std::vector<Ctxt*>`, `NTL::Vec<Ctxt>` and
 `NTL::Vec<Ctxt*>`.
 
@@ -50,4 +72,4 @@ For more information see the [GitHub Pages][9].
   [6]: http://en.wikipedia.org/wiki/Homomorphic_encryption "Homomorphic encryption"
   [7]: http://eprint.iacr.org/2014/106       "algorithms"
   [8]: http://eprint.iacr.org/2014/873       "bootstrapping"
-  [9]: http://shaih.github.io/HElib          "GitHubPages"
+  [9]: https://github.com/homenc/HElib       "GitHubPages"
