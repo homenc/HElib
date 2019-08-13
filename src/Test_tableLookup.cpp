@@ -15,6 +15,7 @@
 #include <NTL/BasicThreadPool.h>
 #include "intraSlot.h"
 #include "tableLookup.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -41,7 +42,7 @@ void testWritein(const FHESecKey& sKey, long insize, long nTests);
 
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
   long prm=1;
   amap.arg("prm", prm, "parameter size (0-tiny,...,4-huge)");
   long bitSize = 5;

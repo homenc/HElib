@@ -17,6 +17,7 @@
 #include "EncryptedArray.h"
 #include "EvalMap.h"
 #include <NTL/BasicThreadPool.h>
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -198,7 +199,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
  */
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long p=2;
   amap.arg("p", p, "plaintext base");

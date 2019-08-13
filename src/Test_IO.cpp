@@ -23,6 +23,7 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -45,7 +46,7 @@ void checkCiphertext(const Ctxt& ctxt, const ZZX& ptxt, const FHESecKey& sk);
 // (context, keys, ciphertexts).
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long r=1;
   long p=2;

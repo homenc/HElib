@@ -21,6 +21,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -270,7 +271,7 @@ int main(int argc, char **argv)
 {
   setTimersOn();
 
-  ArgMapping amap;
+  ArgMap amap;
 
   bool dry=false;
   amap.arg("dry", dry, "dry=1 for a dry-run");

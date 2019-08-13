@@ -23,6 +23,7 @@
 
 // Implementation of the various random matrices is found here
 #include "randomMatrices.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -180,7 +181,7 @@ void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long m=2047;
   amap.arg("m", m, "defines the cyclotomic polynomial Phi_m(X)");

@@ -21,6 +21,7 @@
 #include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include "ArgMap.h"
 
 #include "debugging.h"
 
@@ -100,7 +101,7 @@ long compareFiles(string filename1, string filename2)
 
 int main(int argc, char *argv[])
 { 
-  ArgMapping amap;
+  ArgMap amap;
 
   bool noPrint=true;
   long m=7;

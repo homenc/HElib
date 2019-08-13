@@ -15,6 +15,7 @@
 #include "EncryptedArray.h"
 #include "matmul.h"
 #include "debugging.h"
+#include "ArgMap.h"
 
 NTL_CLIENT
 
@@ -227,7 +228,7 @@ extern long fhe_force_chen_han;
  ********************************************************************/
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long p=2;
   long r=1;

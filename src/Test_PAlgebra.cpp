@@ -16,10 +16,11 @@
 NTL_CLIENT
 #include "NumbTh.h"
 #include "FHEContext.h"
+#include "ArgMap.h"
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long m=17;
   amap.arg("m", m, "cyclotomic index");
