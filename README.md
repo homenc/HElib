@@ -1,7 +1,7 @@
 HElib
 =====
-***August 2019:*** Improved noise managemebt in HElib. Better and more 
-robust bootstrapping algorith.
+***August 2019:*** Improved noise management in HElib. Better and more 
+robust bootstrapping algorithm.
 
 ***July 2019:*** Added new bootstrapping and PGFFT tests.
 

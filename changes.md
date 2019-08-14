@@ -1,3 +1,9 @@
+HElib 1.0.0 beta1, August 2019
+===============================
+(tagged as 1.0.0-beta1-Aug2019)
+
+This version includes a new test framework (google test) and CMake build environment. It also includes much more rigorous noise management and noise estimates, making it safe to use HElib's noise estimates to avoid decryption errors. Also a beefed up GPV bootstrapping, with much more rigorous selection of parameters. Finally, Armadillo was removed and replaced with a faster and simpler complex FFT representation.
+
 HElib 1.0.0 beta, January 2019
 ===============================
 (tagged as 1.0.0-beta0-Jan2019)
