@@ -1,23 +1,21 @@
-FROM alpine:3.8
+FROM ubuntu:18.04
 
-# Location of the src in the contrainer
-ARG helibDir=/helib
-# Location of the build in the contrainer
-ARG buildDir=/build
+COPY ./ /root/HElib/
 
-COPY . ${helibDir}
-
-# Currently fails when cmake is invoked
-RUN apk add --update \
-    g++              \
-    make             \
-    cmake            \
-    libtool          \
-  && rm -rf /var/cache/apk/* \
-  && mkdir ${buildDir}       \
-  && cd ${buildDir}          \
-  && cmake ${helibDir}       \
-  && make          
-
-CMD [ "" ]
+RUN apt update && \
+    apt install -y build-essential wget cmake m4 libgmp-dev file && \
+    cd ~ && \
+    wget https://www.shoup.net/ntl/ntl-11.3.2.tar.gz && \
+    tar xf ntl-11.3.2.tar.gz && \
+    cd ntl-11.3.2/src && \
+    ./configure SHARED=on NTL_GMP_LIP=on NTL_THREADS=on NTL_THREAD_BOOST=on && \
+    make -j4 && \
+    make install && \
+    cd ~ && \
+    mkdir HElib/build && \
+    cd HElib/build && \
+    cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_SHARED=ON -DENABLE_THREADS=ON .. && \
+    make -j4 && \
+    make install && \
+    ldconfig
 
