@@ -3,7 +3,7 @@ HElib
 ***August 2019:*** Improved noise managemebt in HElib.
 Better and more robust bootstrapping algorith.
 Ubuntu 18.04 Docker image with HElib and its dependencies. 
-See install instructions in [DOCKER_USAGE.md] DOCKER_USAGE.md
+See install instructions in [DOCKER_USAGE.md](DOCKER_USAGE.md)
 
 ***July 2019:*** Added new bootstrapping and PGFFT tests.
 
