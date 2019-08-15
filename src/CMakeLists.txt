@@ -74,6 +74,7 @@ set(HELIB_SRCS
         "keySwitching.cpp"
         "matching.cpp"
         "matmul.cpp"
+        "randomMatrices.cpp"
         "norms.cpp"
         "NumbTh.cpp"
         "OptimizePermutations.cpp"

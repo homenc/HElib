@@ -351,6 +351,7 @@ static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 
 #endif
 
+#if 0
 static std::pair<long,long> computeSteps(long ord, long bound, bool native)
 {
   long baby,giant;
@@ -373,7 +374,6 @@ static std::pair<long,long> computeSteps(long ord, long bound, bool native)
   return std::pair<long,long>(baby,giant);
 }
 
-#if 0
 static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
 {
   const FHEcontext &context = sKey.getContext();

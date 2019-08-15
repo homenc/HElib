@@ -83,24 +83,25 @@ struct Parameters {
     int force_hoist; // -1 to force off
 
     // tell google test how to print Parameters
-    friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
-    {
-        return os << "{" <<
-            "m=" << params.m << "," <<
-            "p=" << params.p << "," <<
-            "r=" << params.r << "," <<
-            "L=" << params.L << "," <<
-            "dim=" << params.dim << "," <<
-            "nt=" << params.nt << "," <<
-            "full=" << params.full <<  "," <<
-            "block=" << params.block <<  "," <<
-            "gens=" << params.gens << "," <<
-            "ords=" << params.ords << "," <<
-            "ks_strategy=" << params.ks_strategy << "," <<
-            "force_bsgs=" << params.force_bsgs << "," <<
-            "force_hoist=" << params.force_hoist <<
-            "}";
-    };
+    // Removed as not used by templated tests
+    //friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
+    //{
+    //    return os << "{" <<
+    //        "m=" << params.m << "," <<
+    //        "p=" << params.p << "," <<
+    //        "r=" << params.r << "," <<
+    //        "L=" << params.L << "," <<
+    //        "dim=" << params.dim << "," <<
+    //        "nt=" << params.nt << "," <<
+    //        "full=" << params.full <<  "," <<
+    //        "block=" << params.block <<  "," <<
+    //        "gens=" << params.gens << "," <<
+    //        "ords=" << params.ords << "," <<
+    //        "ks_strategy=" << params.ks_strategy << "," <<
+    //        "force_bsgs=" << params.force_bsgs << "," <<
+    //        "force_hoist=" << params.force_hoist <<
+    //        "}";
+    //};
 };
 
 template <class Mat>
@@ -110,18 +111,18 @@ template<> std::unique_ptr<MatMul1D> buildMat(const EncryptedArray &ea, long dim
 {
     return std::unique_ptr<MatMul1D>{buildRandomMatrix(ea, dim)};
 };
-template<> std::unique_ptr<BlockMatMul1D> buildMat(const EncryptedArray &ea, long dim)
-{
-    return std::unique_ptr<BlockMatMul1D>{buildRandomBlockMatrix(ea, dim)};
-};
-template<> std::unique_ptr<MatMulFull> buildMat(const EncryptedArray &ea, long dim)
-{
-    return std::unique_ptr<MatMulFull>{buildRandomFullMatrix(ea)};
-};
-template<> std::unique_ptr<BlockMatMulFull> buildMat(const EncryptedArray &ea, long dim)
-{
-    return std::unique_ptr<BlockMatMulFull>{buildRandomFullBlockMatrix(ea)};
-};
+//template<> std::unique_ptr<BlockMatMul1D> buildMat(const EncryptedArray &ea, long dim)
+//{
+//    return std::unique_ptr<BlockMatMul1D>{buildRandomBlockMatrix(ea, dim)};
+//};
+//template<> std::unique_ptr<MatMulFull> buildMat(const EncryptedArray &ea, long dim)
+//{
+//    return std::unique_ptr<MatMulFull>{buildRandomFullMatrix(ea)};
+//};
+//template<> std::unique_ptr<BlockMatMulFull> buildMat(const EncryptedArray &ea, long dim)
+//{
+//    return std::unique_ptr<BlockMatMulFull>{buildRandomFullBlockMatrix(ea)};
+//};
 
 template <typename T>
 class GTest_matmul : public ::testing::Test {
