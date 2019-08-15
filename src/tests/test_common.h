@@ -8,15 +8,7 @@ namespace helib_test {
     extern bool verbose;
     extern bool dry;
 
-    static void parse_common_args(int argc, char *argv[])
-    {
-        ArgMap amap;
-        path_of_executable = argv[0];
-        amap.arg("dry", dry, "dry=1 for a dry-run");
-        amap.arg("noPrint", noPrint, "suppress printouts");
-        amap.arg("verbose", verbose, "print more information");
-        amap.parse(argc, argv);
-    };
+    void parse_common_args(int argc, char *argv[]);
 
 };
 

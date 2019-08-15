@@ -117,11 +117,12 @@ double embeddingLargestCoeff(const std::vector<double>& f, const PAlgebra& palg)
   return sqrt(mx);
 }
 
-
-static xdouble convertAndScale(zzX& ff, const NTL::ZZX& f)
+template <typename T>
+static xdouble convertAndScale(T& ff, const NTL::ZZX& f)
 {
-  const long MAX_BITS = NTL_SP_BOUND-15; // max allowed bits to avoid double overflow 
-                                         // in computations
+  // max allowed bits to avoid double overflow in computations
+  const long MAX_BITS = std::is_same<T, zzX>::value ? NTL_SP_BOUND-15 : 250; 
+
   xdouble factor(1.0);
   long size = NTL::MaxBits(f);
   if (size > MAX_BITS) {
@@ -138,30 +139,6 @@ static xdouble convertAndScale(zzX& ff, const NTL::ZZX& f)
     convert(ff, f);                 // convert to zzX
   return factor;
 }
-
-
-static xdouble convertAndScale(ZZX& ff, const NTL::ZZX& f)
-{
-  const long MAX_BITS = 250; // max allowed bits to avoid double overflow 
-                             // in computations
-
-  xdouble factor(1.0);
-  long size = NTL::MaxBits(f);
-  if (size > MAX_BITS) {
-    ZZ zzFactor = ZZ(1) << (size-MAX_BITS); // divide f by this factor
-
-    ZZX scaled = f;
-    for (long i: range(f.rep.length())) RightShift(scaled.rep[i], scaled.rep[i], size-MAX_BITS); 
-    scaled.normalize();
-
-    convert(factor, zzFactor);      // remember the factor
-    ff = scaled;
-  }
-  else
-    convert(ff, f);                 // convert to zzX
-  return factor;
-}
-
 
 xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
 {

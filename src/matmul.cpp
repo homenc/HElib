@@ -28,12 +28,14 @@ static bool comp_bsgs(bool bsgs)
    return bsgs;
 }
 
+#if 0
 static bool comp_hoist(bool hoist)
 {
    if (fhe_test_force_hoist > 0) return true;
    if (fhe_test_force_hoist < 0) return false;
    return hoist;
 }
+#endif
 
 
 /********************************************************************/

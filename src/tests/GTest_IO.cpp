@@ -127,8 +127,6 @@ class GTest_IO : public ::testing::TestWithParam<Parameters> {
 constexpr long GTest_IO::ms[N_TESTS][10];
 std::string GTest_IO::keyFilePath;
 
-void checkCiphertext(const Ctxt& ctxt, const NTL::ZZX& ptxt, const FHESecKey& sk);
-
 // Testing the I/O of the important classes of the library
 // (context, keys, ciphertexts).
 TEST_P(GTest_IO, important_classes_remain_consistent_under_io)

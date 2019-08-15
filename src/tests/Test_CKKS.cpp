@@ -97,26 +97,6 @@ struct Parameters {
     return (calcMaxDiff(v1,v2) < epsilon);
   }
   
-  ::testing::AssertionResult ciphertextMatches(const EncryptedArrayCx &ea, const FHESecKey &sk,
-                                               const std::vector<cx_double> &p, const Ctxt &c, double epsilon)
-  {
-    std::vector<cx_double> pp;
-    ea.decrypt(c, sk, pp);
-    if (helib_test::verbose) {
-      std::cout << "    relative-error=" << calcMaxRelDiff(p, pp)
-                << ", absolute-error=" << calcMaxRelDiff(p, pp) << std::endl;
-    }
-    
-    if(cx_equals(pp, p, epsilon)) {
-      return ::testing::AssertionSuccess();
-    } else {
-      return ::testing::AssertionFailure()
-          << "Ciphertext does not match plaintext:" << std::endl
-          << "p = " << p << std::endl
-          << "pp = " << pp << std::endl;
-    }
-  }
-  
   void negateVec(std::vector<cx_double>& p1)
   {
     for (auto& x: p1) x = -x;
@@ -382,6 +362,30 @@ TEST_P(Test_CKKS, getting_the_complex_conjugate_works)
                   << ", max(vd2)=" << largestCoeff(vd2)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
+  EXPECT_EQ(pm, c1.getPtxtMag());
+}
+
+TEST_P(Test_CKKS, rotating_ciphertext_works)
+{
+  Ctxt c1(publicKey);
+  std::vector<cx_double> vd1, vd2;
+  NTL::xdouble rf, pm;
+  NTL::ZZX poly;
+
+  ea.random(vd1);
+  ea.encrypt(c1, publicKey, vd1);
+  pm = c1.getPtxtMag();
+  ea.encode(poly, vd1, /*size=*/ 1.0);
+  ea.rotate(c1, 3);
+  ea.decrypt(c1, secretKey, vd2);
+  // TODO: understand how this affects ratfactor and add appropriate expectation
+  rotate(vd1, 3);
+  // vd1 is now the expected result
+
+  EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
+                  << "  max(vd1)=" << largestCoeff(vd1)
+                  << ", max(vd2)=" << largestCoeff(vd2)
+                  << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 

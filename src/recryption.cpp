@@ -26,10 +26,9 @@ NTL_CLIENT
 
 
 #ifdef DEBUG_PRINTOUT
+
 #include "debugging.h"
 long printFlag = FLAG_PRINT_VEC;
-#endif
-
 /************************ Some local functions ***********************/
 /*********************************************************************/
 
@@ -44,6 +43,9 @@ checkRecryptBounds(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
 static void
 checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
                      const FHEcontext& context, long q);
+
+#endif // DEBUG_PRINTOUT
+
 
 // Return in poly a polynomial with X^i encoded in all the slots
 static void x2iInSlots(ZZX& poly, long i,
@@ -1113,7 +1115,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
     ctxt.intFactor = MulMod(ctxt.intFactor, intFactor, ptxtSpace);
 }
 
-
+#ifdef DEBUG_PRINTOUT
 
 static void
 checkCriticalValue(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
@@ -1240,6 +1242,7 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
   FHE_STATS_SAVE("v_values", ran_pwrfl/(p2ePrime*sigma));
 }
 
+#endif
 
 #if 0
 void fhe_stats_print(long iter, const FHEcontext& context)
