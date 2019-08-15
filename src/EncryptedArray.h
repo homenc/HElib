@@ -21,7 +21,11 @@
 #include <NTL/Lazy.h>
 #include <NTL/pair.h>
 #include <NTL/SmartPtr.h>
-#include "FHE.h"
+
+#include "DoubleCRT.h"
+#include "FHEContext.h"
+#include "Ctxt.h"
+#include "keys.h"
 
 typedef std::complex<double> cx_double;
 

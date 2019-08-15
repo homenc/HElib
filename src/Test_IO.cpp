@@ -20,9 +20,7 @@
 #include <NTL/ZZX.h>
 #include <NTL/vector.h>
 
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include "ArgMap.h"
 
 NTL_CLIENT

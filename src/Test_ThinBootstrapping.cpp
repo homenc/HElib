@@ -11,8 +11,7 @@
  */
 #include <NTL/BasicThreadPool.h>
 #include <cassert>
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include "matmul.h"
 #include "debugging.h"
 #include "ArgMap.h"

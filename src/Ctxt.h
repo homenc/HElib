@@ -13,7 +13,7 @@
 #define HELIB_CTXT_H
 /**
  * @file Ctxt.h
- * @brief Declerations of a BGV-type cipehrtext and key-switching matrices
+ * @brief Declarations of a BGV-type cipehrtext and key-switching matrices
  *
  * A ciphertext is a std::vector of "ciphertext parts", each part consists of
  * a polynomial (element of polynomial ring R_Q) and a "handle" describing
@@ -135,7 +135,7 @@ public:
    * To detremine if the resulting handle canbe re-liearized using
    * some key-switchingmatrices from the public key, use the method
    * pubKey.haveKeySWmatrix(handle,handle.secretKeyID), from the class
-   * FHEPubKey in FHE.h
+   * FHEPubKey in keys.h
   */
   bool mul(const SKHandle& a, const SKHandle& b) 
   {

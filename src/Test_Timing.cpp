@@ -19,9 +19,7 @@
 #include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include "matmul.h"
 #include "replicate.h"
 #include "permutations.h"

@@ -12,10 +12,8 @@
 
 #include <NTL/ZZ.h>
 
-#include "NumbTh.h"
-#include "timing.h"
+#include <helib.h>
 #include "permutations.h"
-#include "EncryptedArray.h"
 #include "debugging.h"
 
 #include "gtest/gtest.h"

@@ -13,8 +13,7 @@
 /* Test_ThinEvalMap.cpp - Testing the evalution map for thin bootstrapping
  */
 #include <cassert>
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include "EvalMap.h"
 #include <NTL/BasicThreadPool.h>
 #include "ArgMap.h"

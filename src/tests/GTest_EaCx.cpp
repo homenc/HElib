@@ -11,7 +11,7 @@
  */
 #include <NTL/ZZ.h>
 #include "norms.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"

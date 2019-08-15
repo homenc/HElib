@@ -15,7 +15,7 @@
 #include "timing.h"
 #include "FHEContext.h"
 #include "Ctxt.h"
-#include "FHE.h"
+#include "keySwitching.h"
 #include "CtPtrs.h"
 #include "EncryptedArray.h"
 

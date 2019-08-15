@@ -10,13 +10,18 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#ifndef HELIB_FHE_H
-#define HELIB_FHE_H
+#ifndef HELIB_HELIB_H
+#define HELIB_HELIB_H
 /**
-   @file FHE.h
-   @brief Deprecated entry point header for HElib (legacy alias of helib.h)
+   @file helib.h
+   @brief Entry point header for HElib
 */
 
-#include "helib.h"
+#include "DoubleCRT.h"
+#include "FHEContext.h"
+#include "Ctxt.h"
+#include "keySwitching.h"
+#include "keys.h"
+#include "EncryptedArray.h"
 
-#endif // ifndef HELIB_FHE_H
+#endif //HELIB_HELIB_H
