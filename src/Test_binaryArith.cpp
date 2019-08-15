@@ -18,8 +18,7 @@
 #include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 
-#include "EncryptedArray.h"
-#include "FHE.h"
+#include "helib.h"
 
 #include "intraSlot.h"
 #include "binaryArith.h"

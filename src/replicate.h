@@ -31,7 +31,6 @@
  * the SIMD operations on these ciphertexts.
  **/
 
-#include "FHE.h"
 #include "EncryptedArray.h"
 
 

@@ -14,9 +14,7 @@
  */
 #include <NTL/ZZ.h>
 #include <NTL/BasicThreadPool.h>
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cassert>

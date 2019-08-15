@@ -17,8 +17,7 @@
 #include <tuple>
 #include <NTL/BasicThreadPool.h>
 
-#include <EncryptedArray.h>
-#include <FHE.h>
+#include <helib.h>
 
 #include <intraSlot.h>
 #include <binaryArith.h>

@@ -18,9 +18,8 @@
 #include <cassert>
 #include <NTL/lzz_pXFactoring.h>
 
-#include "FHE.h"
+#include <helib.h>
 #include "replicate.h"
-#include "timing.h"
 #include "debugging.h"
 
 #include "gtest/gtest.h"

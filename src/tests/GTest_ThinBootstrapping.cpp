@@ -1,6 +1,5 @@
 #include <NTL/BasicThreadPool.h>
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include <helib.h>
 #include "matmul.h"
 #include "debugging.h"
 

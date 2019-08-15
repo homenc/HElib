@@ -1,7 +1,6 @@
 #include <iostream>
 
-#include <helib/FHE.h>
-#include <helib/EncryptedArray.h>
+#include <helib/helib.h>
 
 int main(int argc, char *argv[]) {
   /*  Example of BGV scheme  */

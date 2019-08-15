@@ -14,8 +14,7 @@
 #include <complex>
 
 #include "norms.h"
-#include "EncryptedArray.h"
-#include "FHE.h"
+#include "helib.h"
 #include "debugging.h"
 #include "ArgMap.h"
 

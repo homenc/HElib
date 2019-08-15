@@ -9,15 +9,234 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-/* KeySwitchign.cpp - A few strategies for generating key-switching matrices
+/**
+ * @file keySwitching.cpp
+ * @brief A few strategies for generating key-switching matrices
  *
  * Copyright IBM Corporation 2012 All rights reserved.
  */
 #include <unordered_set>
 #include "NTL/ZZ.h"
 #include "permutations.h"
+
+#include "binio.h"
+#include "keySwitching.h"
+#include "keys.h"
+
 NTL_CLIENT
-#include "FHE.h"
+
+/******************** KeySwitch implementation **********************/
+/********************************************************************/
+
+KeySwitch::KeySwitch(long sPow, long xPow, long fromID, long toID, long p):
+    fromKey(sPow,xPow,fromID),toKeyID(toID),ptxtSpace(p) {}
+
+KeySwitch::KeySwitch(const SKHandle& _fromKey, long fromID, long toID, long p):
+    fromKey(_fromKey),toKeyID(toID),ptxtSpace(p) {}
+
+bool KeySwitch::operator==(const KeySwitch& other) const
+{
+  if (this == &other) return true;
+
+  if (fromKey != other.fromKey) return false;
+  if (toKeyID != other.toKeyID) return false;
+  if (ptxtSpace != other.ptxtSpace) return false;
+
+  if (prgSeed != other.prgSeed) return false;
+
+  if (b.size() != other.b.size()) return false;
+  for (size_t i=0; i<b.size(); i++) if (b[i] != other.b[i]) return false;
+
+  return true;
+}
+bool KeySwitch::operator!=(const KeySwitch& other) const {return !(*this==other);}
+
+unsigned long KeySwitch::NumCols() const { return b.size(); }
+
+bool KeySwitch::isDummy() const { return (toKeyID==-1); }
+
+void KeySwitch::verify(FHESecKey& sk)
+{
+  long fromSPower = fromKey.getPowerOfS();
+  long fromXPower = fromKey.getPowerOfX();
+  long fromIdx = fromKey.getSecretKeyID();
+  long toIdx = toKeyID;
+  long p = ptxtSpace;
+  long n = b.size();
+
+  cout << "KeySwitch::verify\n";
+  cout << "fromS = " << fromSPower
+       << " fromX = " << fromXPower
+       << " fromIdx = " << fromIdx
+       << " toIdx = " << toIdx
+       << " p = " << p
+       << " n = " << n
+       << "\n";
+
+
+  if (fromSPower != 1 || fromXPower != 1 || (fromIdx == toIdx) || n == 0) {
+    cout << "KeySwitch::verify: these parameters not checkable\n";
+    return;
+  }
+
+  const FHEcontext& context = b[0].getContext();
+
+  // we don't store the context in the ks matrix, so let's
+  // check that they are consistent
+
+  for (long i = 0; i < n; i++) {
+    if (&context != &(b[i].getContext()))
+      cout << "KeySwitch::verify: bad context " << i << "\n";
+  }
+
+  cout << "context.ctxtPrimes = " << context.ctxtPrimes << "\n";
+  cout << "context.specialPrimes = " << context.specialPrimes << "\n";
+  IndexSet fullPrimes = context.fullPrimes(); // ctxtPrimes | specialPrimes;
+
+  cout << "digits: ";
+  for (long i = 0; i < n; i++)
+    cout << context.digits[i] << " ";
+  cout << "\n";
+
+  cout << "IndexSets of b: ";
+  for (long i = 0; i < n; i++)
+    cout << b[i].getMap().getIndexSet() << " ";
+  cout << "\n";
+
+  // VJS: suspicious shadowing of fromKey, toKey
+  const DoubleCRT& _fromKey = sk.sKeys.at(fromIdx);
+  const DoubleCRT& _toKey = sk.sKeys.at(toIdx);
+
+  cout << "IndexSet of fromKey: " << _fromKey.getMap().getIndexSet() << "\n";
+  cout << "IndexSet of toKey: " << _toKey.getMap().getIndexSet() << "\n";
+
+  vector<DoubleCRT> a;
+  a.resize(n, DoubleCRT(context, fullPrimes)); // defined modulo all primes
+
+  { RandomState state;
+
+    SetSeed(prgSeed);
+    for (long i = 0; i < n; i++)
+      a[i].randomize();
+
+  } // the RandomState destructor "restores the state" (see NumbTh.h)
+
+  vector<ZZX> A, B;
+
+  A.resize(n);
+  B.resize(n);
+
+  for (long i = 0; i < n; i++) {
+    a[i].toPoly(A[i]);
+    b[i].toPoly(B[i]);
+  }
+
+  ZZX FromKey, ToKey;
+  _fromKey.toPoly(FromKey, fullPrimes);
+  _toKey.toPoly(ToKey, fullPrimes);
+
+  ZZ Q = context.productOfPrimes(fullPrimes);
+  ZZ prod = context.productOfPrimes(context.specialPrimes);
+  ZZX C, D;
+  ZZX PhimX = context.zMStar.getPhimX();
+
+  long nb = 0;
+  for (long i = 0; i < n; i++) {
+    C = (B[i] - FromKey*prod + ToKey*A[i]) % PhimX;
+    PolyRed(C, Q);
+    if (!divide(D, C, p)) {
+      cout << "*** not divisible by p at " << i << "\n";
+    }
+    else {
+      for (long j = 0; j <= deg(D); j++)
+        if (NumBits(coeff(D, j)) > nb) nb = NumBits(coeff(D, j));
+    }
+    prod *= context.productOfPrimes(context.digits[i]);
+  }
+
+  cout << "error ratio: " << ((double) nb)/((double) NumBits(Q)) << "\n";
+}
+
+const KeySwitch& KeySwitch::dummy()
+{
+  static const KeySwitch dummy(-1,-1,-1,-1);
+  return dummy;
+}
+
+ostream& operator<<(ostream& str, const KeySwitch& matrix)
+{
+  str << "["<<matrix.fromKey  <<" "<<matrix.toKeyID
+      << " "<<matrix.ptxtSpace<<" "<<matrix.b.size() << endl;
+  for (long i=0; i<(long)matrix.b.size(); i++)
+    str << matrix.b[i] << endl;
+  str << matrix.prgSeed << " " << matrix.noiseBound << "]";
+  return str;
+}
+
+// Used in lieu of istream& operator>>(istream& str, KeySwitch& matrix)
+void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
+{
+  seekPastChar(str,'['); // defined in NumbTh.cpp
+  str >> fromKey;
+  str >> toKeyID;
+  str >> ptxtSpace;
+
+  long nDigits;
+  str >> nDigits;
+  b.resize(nDigits, DoubleCRT(context, IndexSet::emptySet()));
+  for (long i=0; i<nDigits; i++)
+    str >> b[i];
+  str >> prgSeed;
+  str >> noiseBound;
+  seekPastChar(str,']');
+}
+
+
+void KeySwitch::write(ostream& str) const
+{
+  writeEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
+/*
+    Write out raw
+    1. SKHandle fromKey;
+    2. long     toKeyID;
+    3. long     ptxtSpace;
+    4. vector<DoubleCRT> b;
+    5. ZZ prgSeed;
+    6. xdouble noiseBound;
+*/
+
+  fromKey.write(str);
+  write_raw_int(str, toKeyID);
+  write_raw_int(str, ptxtSpace);
+
+  write_raw_vector(str, b);
+
+  write_raw_ZZ(str, prgSeed);
+  write_raw_xdouble(str, noiseBound);
+
+  writeEyeCatcher(str, BINIO_EYE_SKM_END);
+}
+
+void KeySwitch::read(istream& str, const FHEcontext& context)
+{
+  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-secret key eyecatcher");
+
+  fromKey.read(str);
+  toKeyID = read_raw_int(str);
+  ptxtSpace = read_raw_int(str);
+  DoubleCRT blankDCRT(context, IndexSet::emptySet());
+  read_raw_vector(str, b, blankDCRT);
+  read_raw_ZZ(str, prgSeed);
+  noiseBound = read_raw_xdouble(str);
+
+  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_END);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
+}
+
+
 
 long KSGiantStepSize(long D)
 {
@@ -314,6 +533,12 @@ void addSome1DMatrices(FHESecKey& sKey, long bound, long keyID)
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
+void add1DMatrices(FHESecKey& sKey, long keyID)
+{ addSome1DMatrices(sKey, LONG_MAX, keyID); }
+
+void addBSGS1DMatrices(FHESecKey& sKey, long keyID)
+{ addSome1DMatrices(sKey, 0, keyID); }
+
 // Generate all Frobenius matrices of the form s(X^{p^i})->s(X)
 void addSomeFrbMatrices(FHESecKey& sKey, long bound, long keyID)
 {
@@ -325,6 +550,12 @@ void addSomeFrbMatrices(FHESecKey& sKey, long bound, long keyID)
 
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
+
+void addFrbMatrices(FHESecKey& sKey, long keyID)
+{ addSomeFrbMatrices(sKey, LONG_MAX, keyID); }
+
+void addBSGSFrbMatrices(FHESecKey& sKey, long keyID)
+{ addSomeFrbMatrices(sKey, 0, keyID); }
 
 static void addMinimal1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 {

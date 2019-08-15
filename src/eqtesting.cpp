@@ -9,13 +9,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-/*
+/**
  * @file eqtesting.cpp
  * @brief Useful fucntions for equality testing...
  */
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
-#include "FHE.h"
 #include "timing.h"
 #include "EncryptedArray.h"
 

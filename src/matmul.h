@@ -222,9 +222,9 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the 
-  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // addMinimal{1D,Frb}Matrices routines decalred in helib.h.
   // If the minimal flag is false, it is best to use the
-  // addSome{1D,Frb}Matrices routines declared in FHE.h.
+  // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit
   MatMul1DExec(const MatMul1D& mat, bool minimal=false);
 
@@ -265,9 +265,9 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the 
-  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // addMinimal{1D,Frb}Matrices routines decalred in helib.h.
   // If the minimal flag is false, it is best to use the
-  // addSome{1D,Frb}Matrices routines declared in FHE.h.
+  // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit
   BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal=false);
 
@@ -301,9 +301,9 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the 
-  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // addMinimal{1D,Frb}Matrices routines decalred in helib.h.
   // If the minimal flag is false, it is best to use the
-  // addSome{1D,Frb}Matrices routines declared in FHE.h.
+  // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit
   MatMulFullExec(const MatMulFull& mat, bool minimal=false);
 
@@ -340,9 +340,9 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the 
-  // addMinimal{1D,Frb}Matrices routines decalred in FHE.h.
+  // addMinimal{1D,Frb}Matrices routines decalred in helib.h.
   // If the minimal flag is false, it is best to use the
-  // addSome{1D,Frb}Matrices routines declared in FHE.h.
+  // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit
   BlockMatMulFullExec(const BlockMatMulFull& mat, bool minimal=false);
 

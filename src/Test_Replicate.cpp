@@ -19,9 +19,8 @@
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
 
-#include "FHE.h"
+#include "helib.h"
 #include "replicate.h"
-#include "timing.h"
 #include "ArgMap.h"
 
 static bool noPrint = false;

@@ -11,7 +11,6 @@
  */
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
-#include "FHE.h"
 #include "EncryptedArray.h"
 
 #include <cstdlib>
