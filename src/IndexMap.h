@@ -9,15 +9,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _IndexMap
-#define _IndexMap
+#ifndef HELIB_INDEXMAP_H
+#define HELIB_INDEXMAP_H
 /**
  * @file IndexMap.h
  * @brief Implementation of a map indexed by a dynamic set of integers.
  **/
 
 #include "IndexSet.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 
 //! @brief Initializing elements in an IndexMap
@@ -68,11 +68,13 @@ public:
   //! @brief Access functions: will raise an error 
   //! if j does not belong to the current index set 
   T& operator[] (long j) { 
-    assert(indexSet.contains(j)); 
+    //OLD: assert(indexSet.contains(j));
+    helib::assertTrue(indexSet.contains(j), "Key not found");
     return map[j];
   }
   const T& operator[] (long j) const {
-    assert(indexSet.contains(j)); 
+    //OLD: assert(indexSet.contains(j));
+    helib::assertTrue(indexSet.contains(j), "Key not found");
     // unordered_map does not support a const [] operator,
     // so we have to artificially strip away the const-ness here
 #if (__cplusplus>199711L)
@@ -134,4 +136,4 @@ bool operator!=(const IndexMap<T>& map1, const IndexMap<T>& map2) {
 
   
 
-#endif
+#endif // ifndef HELIB_INDEXMAP_H

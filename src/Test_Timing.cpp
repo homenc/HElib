@@ -25,6 +25,22 @@ NTL_CLIENT
 #include "matmul.h"
 #include "replicate.h"
 #include "permutations.h"
+#include "ArgMap.h"
+
+#include "debugging.h"
+
+// A hack to get this to compile for now
+static long findBaseLevel(const Ctxt& c)
+{
+  return long(c.naturalSize() / 30); // FIXME: replace 30 by something else
+}
+static void modDownToLevel(Ctxt& c, long lvl)
+{
+  double lo = lvl*30; // FIXME: replace 30 by something else
+  IndexSet target =
+    c.getContext().modSizes.getSet4Size(lo, lo+5, c.getPrimeSet(), c.isCKKS());
+  c.bringToSet(target);
+}
 
 // We measure low-level timing at all levels
 class LowLvlTimingData {
@@ -108,13 +124,20 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     FHE_NTIMER_START(keyGen);
     FHESecKey secretKey(context);
     const FHEPubKey& publicKey = secretKey;
-    secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
+    secretKey.GenSecKey(); // A +-1/0 secret key
     addSome1DMatrices(secretKey); // compute key-switching matrices
     addSomeFrbMatrices(secretKey);
     FHE_NTIMER_STOP(keyGen);
 
-    ZZX poly;
-    NewPlaintextArray pp(ea);
+
+#ifdef DEBUG_PRINTOUT
+      dbgEa = (EncryptedArray*) context.ea;
+      dbgKey = &secretKey;
+#endif
+
+
+      ZZX poly;
+    PlaintextArray pp(ea);
     random(ea, pp);
 
     Ctxt cc(publicKey);
@@ -185,9 +208,9 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   // perform operations at a lower level
   long level = td.lvl;
   if (level>0) for (long i=0; i<(long)cc.size(); i++)
-    cc[i].modDownToLevel(level);
+                 modDownToLevel(cc[i], level);
   else {
-    level = cc[0].findBaseLevel();
+    level = findBaseLevel(cc[0]);
     td.lvl = level;
   }
 
@@ -195,7 +218,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
   cerr << "." << std::flush;
   FHE_NTIMER_START(innerProduct);
   innerProduct(ret,cc,cc);
-  ret.modDownToLevel(ret.findBaseLevel());
+  modDownToLevel(ret,findBaseLevel(ret));
   FHE_NTIMER_STOP(innerProduct);
 
   // Multiplication with 2,3 arguments
@@ -204,7 +227,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     Ctxt c0 = cc[0];
     FHE_NTIMER_START(multiplyBy);
     c0.multiplyBy(cc[1]);
-    c0.modDownToLevel(c0.findBaseLevel());
+    modDownToLevel(c0,findBaseLevel(c0));
     FHE_NTIMER_STOP(multiplyBy);
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -215,7 +238,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
       Ctxt c0 = cc[0];
       FHE_NTIMER_START(multiplyBy2);
       c0.multiplyBy2(cc[1],cc[2]);
-      c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
+      modDownToLevel(c0,findBaseLevel(c0)); // mod-down if needed
       FHE_NTIMER_STOP(multiplyBy2);
       ret += c0; // Just so the compiler doesn't optimize it away
     }
@@ -256,7 +279,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/true);
     FHE_NTIMER_START(nativeAutomorph);
     c0.smartAutomorph(k);
-    c0.modDownToLevel(c0.findBaseLevel());
+    modDownToLevel(c0,findBaseLevel(c0));
     FHE_NTIMER_STOP(nativeAutomorph);    
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -267,7 +290,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/false);
     FHE_NTIMER_START(automorph);
     c0.smartAutomorph(k);
-    c0.modDownToLevel(c0.findBaseLevel()); // mod-down if needed
+    modDownToLevel(c0,findBaseLevel(c0)); // mod-down if needed
     FHE_NTIMER_STOP(automorph);
     ret += c0; // Just so the compiler doesn't optimize it away
   }
@@ -337,7 +360,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
 		 long nTests, HighLvlTimingData& td)
 {
   Ctxt tmp = c[0];
-  tmp.modDownToLevel(td.lvl);
+  modDownToLevel(tmp, td.lvl);
   cerr << "." << std::flush;
   std::unique_ptr< MatMulFull > ptr(buildRandomFullMatrix(ea));
   if (ea.getTag()==PA_GF2_tag) {
@@ -360,7 +383,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
     long nSlots = ea.size();
     long r = RandomBnd(nSlots);
     tmp = c[i % c.size()];
-    tmp.modDownToLevel(td.lvl);
+    modDownToLevel(tmp, td.lvl);
     // time rotation
     FHE_NTIMER_START(rotate);
     ea.rotate(tmp, r);
@@ -376,7 +399,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   cerr << "." << std::flush;
   for (long i=0; i<nTests && i<ea.size(); i++) {
     tmp = c[i % c.size()];
-    tmp.modDownToLevel(td.lvl);
+    modDownToLevel(tmp, td.lvl);
     FHE_NTIMER_START(replicate);
     replicate(ea, tmp, i);
     FHE_NTIMER_STOP(replicate);    
@@ -386,7 +409,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   cerr << "." << std::flush;
   ReplicateDummy handler;
   tmp = c[1];
-  tmp.modDownToLevel(td.lvl);
+  modDownToLevel(tmp, td.lvl);
   FHE_NTIMER_START(replicateAll);
   replicateAll(ea, tmp, &handler);
   FHE_NTIMER_STOP(replicateAll);
@@ -396,7 +419,7 @@ void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
   Permut pi;
   randomPerm(pi, trees.getSize());
   tmp = c[2];
-  tmp.modDownToLevel(td.lvl);
+  modDownToLevel(tmp, td.lvl);
 
   PermNetwork net;
   FHE_NTIMER_START(permutation);
@@ -434,9 +457,8 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   setTimersOn();
   resetAllTimers();
   long phim = phi_N(m);
-  long L = floor((7.2*phim)/(FHE_pSize* /*cc*/1.33* (110+/*k*/80)));
-  if (L<5) L=5; // Make sure we have at least a few primes
-
+  long L = floor((7.2*phim)/(40 * (110+/*k*/80)));
+  if (L<250) L=250; // Make sure we have at least a few primes
 
   // Initialize a context with r=2,d=1
   auto_timer _init_timer(&_init_timer_4);
@@ -450,7 +472,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   FHE_NTIMER_START(keyGen);
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices
   FHE_NTIMER_STOP(keyGen);
 
@@ -502,11 +524,16 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   data.other.decode4 = tp->getTime() / tp->getNumCalls();
   resetAllTimers();
 
-  // time low-level operations
+#ifdef DEBUG_PRINTOUT
+    dbgEa = (EncryptedArray*) context.ea;
+    dbgKey = &secretKey;
+#endif
+
+    // time low-level operations
   cerr << "#" << std::flush;
 
   ZZX poly;
-  NewPlaintextArray pp(ea);
+  PlaintextArray pp(ea);
   random(ea, pp);
   ea.encode(poly, pp);
 
@@ -543,7 +570,6 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
     // Get the generator-tree structures and the corresponding hypercube
     GeneratorTrees trees;
     trees.buildOptimalTrees(vec, /*widthBound=*/7);
-    //  cout << " cost =" << cost << endl;
 
     // build network for a random permutation, for the sole purpose
     // of adding key-switching matrices
@@ -585,41 +611,42 @@ void printTimeData(TimingData& td)
     cout << endl;
   }
 }
-
-void usage(char *prog) 
-{
-  cerr << "A program that tests the timing of various operations,\n";
-  cerr << "  outputs the results in a comma-separate-value (csv) format.\n";
-  cerr << "Usage: "<<prog<<" [ optional parameters ]... 2> logfile > results-file\n";
-  cerr << "results on stdout in comma-separated-value format, ";
-  cerr << "progress printed on stderr\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'm=11441 p=2 high=1'\n\n";
-  cerr << "  m determines the cyclotomic ring, defaults to all the set\n";
-  cerr << "    m in { 4051, 4369, 4859, 10261,11023,11441,\n";
-  cerr << "          18631,20485,21845, 49981,53261       }\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  high=1 will time also high-level procedures [default==0]\n";
-  cerr << "  nthreads defines the NTL Thread Pool size for multi-threaded computations [default==1]\n";
-  cerr << "           do not exceed the number of available cores or SMT threads on your system.\n";
-  exit(0);
-}
+// OLD CODE
+//void usage(char *prog) 
+//{
+//  cerr << "A program that tests the timing of various operations,\n";
+//  cerr << "  outputs the results in a comma-separate-value (csv) format.\n";
+//  cerr << "Usage: "<<prog<<" [ optional parameters ]... 2> logfile > results-file\n";
+//  cerr << "results on stdout in comma-separated-value format, ";
+//  cerr << "progress printed on stderr\n";
+//  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+//  cerr << "  e.g, 'm=11441 p=2 high=1'\n\n";
+//  cerr << "  m determines the cyclotomic ring, defaults to all the set\n";
+//  cerr << "    m in { 4051, 4369, 4859, 10261,11023,11441,\n";
+//  cerr << "          18631,20485,21845, 49981,53261       }\n";
+//  cerr << "  p is the plaintext base [default=2]" << endl;
+//  cerr << "  high=1 will time also high-level procedures [default==0]\n";
+//  cerr << "  nthreads defines the NTL Thread Pool size for multi-threaded computations [default==1]\n";
+//  cerr << "           do not exceed the number of available cores or SMT threads on your system.\n";
+//  exit(0);
+//}
 
 int main(int argc, char *argv[]) 
 {
-  argmap_t argmap;
-  argmap["p"] = "2";
-  argmap["m"] = "0";
-  argmap["high"] = "0";
-  argmap["nthreads"] = "1";
+  long p = 2;
+  long m = 0;
+  long high = 0;
+  long nthreads = 1;
+
+  ArgMap amap;
+  amap.arg("p", p);
+  amap.arg("m", m);
+  amap.arg("high", high);
+  amap.arg("nthreads", nthreads);
+  amap.parse(argc, argv);
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
-
-  long p = atoi(argmap["p"]);
-  long m = atoi(argmap["m"]);
-  long high = atoi(argmap["high"]);
-  long nthreads = atoi(argmap["nthreads"]);
+  //if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
 #define numTests 11
   long ms[numTests] = { 4051, 4369, 4859, 10261,11023,11441,

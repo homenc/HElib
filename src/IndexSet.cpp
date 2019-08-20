@@ -21,7 +21,8 @@ const IndexSet& IndexSet::emptySet()
 
 // constructs an interval, low to high
 void IndexSet::intervalConstructor(long low, long high) {
-  assert(low >= 0);
+  //OLD: assert(low >= 0);
+  helib::assertTrue<helib::InvalidArgument>(low >= 0, "Cannot construct interval with negative lower bound");
 
   if (high < low) {
     _first = 0; _last = -1; _card = 0;
@@ -95,7 +96,8 @@ void IndexSet::clear() {
 }
 
 void IndexSet::insert(long j) {
-  assert(j >= 0);
+  //OLD: assert(j >= 0);
+  helib::assertTrue<helib::InvalidArgument>(j >= 0, "Cannot insert in negative index");
 
   long oldSize = rep.size();
   if (j >= oldSize) {
@@ -117,7 +119,8 @@ void IndexSet::insert(long j) {
 }
 
 void IndexSet::remove(long j) {
-  assert(j >= 0);
+  //OLD: assert(j >= 0);
+  helib::assertTrue<helib::InvalidArgument>(j >= 0, "Cannot remove from negative index");
 
   if (j >= (long) rep.size()) return;
   if (rep[j] == false) return;
@@ -223,7 +226,7 @@ bool operator>(const IndexSet& s1, const IndexSet& s2) {
 }
 
 
-ostream& operator << (ostream& str, const IndexSet& set)
+std::ostream& operator << (std::ostream& str, const IndexSet& set)
 {
   if (set.card() == 0) {
     str << "[]";
@@ -254,7 +257,7 @@ istream& operator >> (istream& str, IndexSet& set)
   return str;
 }
 
-void IndexSet::write(ostream& str) const 
+void IndexSet::write(std::ostream& str) const 
 {
   // Size of Set
   write_raw_int(str, this->card());
@@ -272,6 +275,9 @@ void IndexSet::read(istream& str)
 {
   // Size of Set
   long sizeOfS = read_raw_int(str); 
+
+  // insert all these indexes into the set
+  this->clear();
 
   // The data itself
   for(long i=0, n; i<sizeOfS; i++){     

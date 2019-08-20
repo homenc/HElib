@@ -11,28 +11,32 @@
  */
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
-
-#include "EncryptedArray.h"
-
 #include <algorithm>
+#include "zzX.h"
+#include "EncryptedArray.h"
 #include "timing.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
+#include "norms.h"
 
+NTL_CLIENT
 
-
-EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context, const ZZX& G,
-					const PAlgebraMod& alMod)
+EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
+                                        const PAlgebraMod& alMod, const ZZX& G)
 {
+  if (alMod.getTag()==PA_cx_tag)
+    return new EncryptedArrayCx(context, alMod.getCx());
+
+  // By defualt use the 1st factor F0
+  const ZZX& GG = NTL::IsZero(G)? alMod.getFactorsOverZZ()[0]: G;
+
   switch (alMod.getTag()) {
     case PA_GF2_tag: {
-      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(G), alMod);
+      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(GG), alMod);
     }
-
     case PA_zz_p_tag: {
       zz_pBak bak; bak.save(); alMod.restoreContext();
-      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(G), alMod);
+      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(GG), alMod);
     }
-
     default: return NULL;
   }
 }
@@ -51,8 +55,10 @@ template<class type>
 void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
 {
   FHE_TIMER_START;
-  assert(&context == &ctxt.getContext());
-  assert(i >= 0 && i < dimension());
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  //OLD: assert(i >= 0 && i < dimension());
+  helib::assertInRange(i, 0l, dimension(), "i must be between 0 and dimension()");
 
   RBak bak; bak.save(); tab.restoreContext();
 
@@ -72,27 +78,8 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   // more expensive "non-native" rotation
 
   if (amt < 0) amt += ord;  // Make sure amt is in the range [1,ord-1]
-  assert(maskTable[i].size() > 0);
-
-  //cerr << "*** rotate1D " << i << " " << amt << "\n";
-
-#if 0
-
-  long j = zMStar.genToPow(i, amt);
-  long j1= zMStar.genToPow(i, amt-ord);
-
-  const RX& mask = maskTable[i][ord-amt];
-  DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
-  Ctxt tmp(ctxt); // a copy of the ciphertext
-
-  tmp.multByConstant(m1);    // only the slots in which m1=1
-  ctxt -= tmp;               // only the slots in which m1=0
-  ctxt.smartAutomorph(j);    // shift left by val
-  tmp.smartAutomorph(j1);    // shift right by ord-val
-  ctxt += tmp;               // combine the two parts
-
-#else
-
+  //OLD: assert(maskTable[i].size() > 0);
+  helib::assertTrue(maskTable[i].size() > 0, "Found non-positive sized mask table entry");
 
   ctxt.smartAutomorph(zMStar.genToPow(i, amt));
   // ctxt = \rho_i^{amt}(originalCtxt)
@@ -105,17 +92,17 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   // for \rho_i^{-ord}
 
   const RX& mask = maskTable[i][amt];
-  DoubleCRT m1(convert<zzX>(mask), context, 
+  zzX mask_poly = balanced_zzX(mask);
+  double sz = embeddingLargestCoeff(mask_poly, zMStar);
+  DoubleCRT m1(mask_poly, context, 
                ctxt.getPrimeSet() | T.getPrimeSet());
   // m1 will be used to multiply both ctxt and T
   
   // Compute ctxt = ctxt*m1 + T - T*m1
-  ctxt.multByConstant(m1);
+  ctxt.multByConstant(m1, sz);
   ctxt += T;
-  T.multByConstant(m1);
+  T.multByConstant(m1, sz);
   ctxt -= T;
-
-#endif
 }
 
 // Shift k positions along the i'th dimension with zero fill.
@@ -130,8 +117,10 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  assert(&context == &ctxt.getContext());
-  assert(i >= 0 && i < long(al.numOfGens()));
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  //OLD: assert(i >= 0 && i < long(al.numOfGens()));
+  helib::assertInRange(i, 0l, (long)(al.numOfGens()), "i must be non-negative and less than the PAlgebra's generator count");
 
   long ord = al.OrderOf(i);
 
@@ -154,8 +143,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
     mask = 1 - mask;
     val = al.genToPow(i, amt);
   }
-  DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
-  ctxt.multByConstant(m1);   // zero out slots where mask=0
+  ctxt.multByConstant(balanced_zzX(mask));   // zero out slots where mask=0
   ctxt.smartAutomorph(val);  // shift left by val
   FHE_TIMER_STOP;
 }
@@ -176,7 +164,8 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  assert(&context == &ctxt.getContext());
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
 
   // Simple case: just one generator
   if (al.numOfGens()==1) { // VJS: bug fix: <= must be ==
@@ -208,42 +197,30 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 
     long ord = al.OrderOf(i);
 
-#if 0
-    long val = PowerMod(al.ZmStarGen(i), v, al.getM());
-    long ival = PowerMod(al.ZmStarGen(i), v-ord, al.getM());
+    ctxt.smartAutomorph(al.genToPow(i, v));
+    // ctxt = \rho_i^{v}(originalCtxt)
 
-    DoubleCRT m1(convert<zzX,RX>(maskTable[i][ord-v]),
-                 context, ctxt.getPrimeSet());
-    tmp = ctxt;  // a copy of the ciphertext
+    tmp = ctxt;
+    tmp.smartAutomorph(al.genToPow(i, -ord));
+    // tmp = \rho_i^{v-ord}(originalCtxt).
+    // This strategy assumes is geared toward the
+    // assumption that we have the key switch matrix 
+    // for \rho_i^{-ord}
 
-    tmp.multByConstant(m1);    // only the slots in which m1=1
-    ctxt -= tmp;               // only the slots in which m1=0
-    ctxt.smartAutomorph(val);  // shift left by val
-    tmp.smartAutomorph(ival);  // shift right by ord-val
-#else
+    zzX mask_poly = balanced_zzX(mask);
+    double sz = embeddingLargestCoeff(mask_poly, al);
 
-  ctxt.smartAutomorph(al.genToPow(i, v));
-  // ctxt = \rho_i^{v}(originalCtxt)
+    DoubleCRT m1(mask_poly, context, 
+		 ctxt.getPrimeSet() | tmp.getPrimeSet());
+    // m1 will be used to multiply both ctxt and tmp
+    
+    // Compute ctxt = ctxt*m1, tmp = tmp*(1-m1)
+    ctxt.multByConstant(m1, sz);
 
-  tmp = ctxt;
-  tmp.smartAutomorph(al.genToPow(i, -ord));
-  // tmp = \rho_i^{v-ord}(originalCtxt).
-  // This strategy assumes is geared toward the
-  // assumption that we have the key switch matrix 
-  // for \rho_i^{-ord}
+    Ctxt tmp1(tmp);
+    tmp1.multByConstant(m1, sz);
+    tmp -= tmp1;
 
-  DoubleCRT m1(convert<zzX>(maskTable[i][v]), context, 
-               ctxt.getPrimeSet() | tmp.getPrimeSet());
-  // m1 will be used to multiply both ctxt and tmp
-  
-  // Compute ctxt = ctxt*m1, tmp = tmp*(1-m1)
-  ctxt.multByConstant(m1);
-
-  Ctxt tmp1(tmp);
-  tmp1.multByConstant(m1);
-  tmp -= tmp1;
-
-#endif
 
     // apply rotation relative to next generator before combining the parts
     --i;
@@ -262,10 +239,11 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   for (i--; i >= 0; i--) {
     v = al.coordinate(i, amt);
 
-    DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
+    zzX mask_poly = balanced_zzX(mask);
+
     tmp = ctxt;
-    tmp.multByConstant(m1); // only the slots in which mask=1
-    ctxt -= tmp;            // only the slots in which mask=0
+    tmp.multByConstant(mask_poly); // only the slots in which mask=1
+    ctxt -= tmp;                   // only the slots in which mask=0
 
     rotate1D(tmp, i, v); 
     rotate1D(ctxt, i, v+1);
@@ -290,7 +268,8 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  assert(&context == &ctxt.getContext());
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
 
   // Simple case: just one generator
   if (al.numOfGens()==1) {
@@ -322,10 +301,11 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   for (i--; i >= 0; i--) {
     v = al.coordinate(i, amt);
 
-    DoubleCRT m1(convert<zzX,RX>(mask), context, ctxt.getPrimeSet());
+    zzX mask_poly = balanced_zzX(mask);
+
     tmp = ctxt;
-    tmp.multByConstant(m1); // only the slots in which mask=1
-    ctxt -= tmp;            // only the slots in which mask=0
+    tmp.multByConstant(mask_poly); // only the slots in which mask=1
+    ctxt -= tmp;                   // only the slots in which mask=0
     if (i>0) {
       rotate1D(ctxt, i, v+1);
       rotate1D(tmp, i, v); 
@@ -344,25 +324,17 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   FHE_TIMER_STOP;
 }
 
-//FIXME: For now replicating the code for ZZX and zzX,
-// but really we need to move to zzX everywhere
-template<class type>
-void EncryptedArrayDerived<type>::encodeUnitSelector(ZZX& ptxt, long i) const
-{
-  assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
-  RBak bak; bak.save(); tab.restoreContext();
-  RX res;
-  div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
-  mul(res, res, tab.getCrtCoeffs()[i]);
-  conv(ptxt, res);
-}
-
 template<class type>
 void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) const
 {
   RX pp;
   tab.embedInSlots(pp, array, mappingData); 
-  ptxt = conv<ZZX>(pp); 
+
+  // NOTE: previous version was
+  //   ptxt = conv<ZZX>(pp);
+  // which did not do balanced remainders at all
+  zzX pp1 = balanced_zzX(pp);
+  convert(ptxt, pp1);
 }
 
 template<class type>
@@ -388,26 +360,25 @@ void EncryptedArrayDerived<type>::decode(vector< RX >& array, const RX& ptxt) co
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const NewPlaintextArray& array) const
+void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const PlaintextArray& array) const
 {
   RBak bak; bak.save(); tab.restoreContext();
   encode(ptxt, array.getData<type>());
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const ZZX& ptxt) const
+void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt) const
 {
   RBak bak; bak.save(); tab.restoreContext();
   decode(array.getData<type>(), ptxt);
 }
 
 
-//FIXME: For now replicating the code for ZZX and zzX,
-// but really we need to move to zzX everywhere
 template<class type>
-void EncryptedArrayDerived<type>::encodeUnitSelector(NTL::Vec<long>& ptxt, long i) const
+void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
 {
-  assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
+  //OLD: assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
+  helib::assertInRange(i, 0l, (long)getPAlgebra().getNSlots(), "i must be non-negative and less than the PAlgebra's slot count");
   RBak bak; bak.save(); tab.restoreContext();
   RX res;
   div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
@@ -420,11 +391,15 @@ void EncryptedArrayDerived<type>::encode(zzX& ptxt, const vector< RX >& array) c
 {
   RX pp;
   tab.embedInSlots(pp, array, mappingData); 
-  convert(ptxt,pp); 
+
+  // NOTE: previous version was
+  //   convert(ptxt, pp);
+  // which did not do properly balanced remainders in some cases
+  ptxt = balanced_zzX(pp);
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::encode(zzX& ptxt, const NewPlaintextArray& array) const
+void EncryptedArrayDerived<type>::encode(zzX& ptxt, const PlaintextArray& array) const
 {
   RBak bak; bak.save(); tab.restoreContext();
   encode(ptxt, array.getData<type>());
@@ -441,7 +416,7 @@ void EncryptedArrayDerived<type>::decode(vector< RX >& array, const NTL::Vec<lon
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::decode(NewPlaintextArray& array, const NTL::Vec<long>& ptxt) const
+void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const NTL::Vec<long>& ptxt) const
 {
   RBak bak; bak.save(); tab.restoreContext();
   decode(array.getData<type>(), ptxt);
@@ -621,9 +596,11 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
 // C[0...d-1] is the output of ea.buildLinPolyCoeffs
 void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 {
-  assert(&ea.getContext() == &ctxt.getContext());
+  //OLD: assert(&ea.getContext() == &ctxt.getContext());
+  helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
   long d = ea.getDegree();
-  assert(d == lsize(C));
+  //OLD: assert(d == lsize(C));
+  helib::assertEq(d, lsize(C), "ea's degree does not match the size of C");
 
   long nslots = ea.size();
 
@@ -644,13 +621,17 @@ void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
                       const vector< vector<ZZX> >& Cvec)
 {
-  assert(&ea.getContext() == &ctxt.getContext());
+  //OLD: assert(&ea.getContext() == &ctxt.getContext());
+  helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
   long d = ea.getDegree();
   long nslots = ea.size();
 
-  assert(nslots == lsize(Cvec));
-  for (long i = 0; i < nslots; i++)
-    assert(d == lsize(Cvec[i]));
+  //OLD: assert(nslots == lsize(Cvec));
+  helib::assertEq(nslots, lsize(Cvec), "Number of slots does not match size of Cvec");
+  for (long i = 0; i < nslots; i++) {
+    //OLD: assert(d == lsize(Cvec[i]));
+    helib::assertEq(d, lsize(Cvec[i]), "Found entry of Cvec with size unequal to degree of ea");
+  }
 
   vector<ZZX> encodedC(d);
   for (long j = 0; j < d; j++) { // encodedC[j] encodes j'th column in Cvec
@@ -667,7 +648,8 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
 template<class P>
 void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
 {
-  assert(d == lsize(encodedC));
+  //OLD: assert(d == lsize(encodedC));
+  helib::assertEq(d, lsize(encodedC), "d does not match size of encodedC");
 
   ctxt.cleanUp();  // not sure, but this may be a good idea
 
@@ -689,7 +671,7 @@ template void applyLinPolyLL(Ctxt& ctxt, const vector<DoubleCRT>& encodedC, long
 /********************************************************************/
 
 
-// NewPlaintextArray
+// PlaintextArray
 
 
 template<class type>
@@ -697,7 +679,7 @@ class rotate_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long k)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long k)
   {
     PA_BOILER
 
@@ -710,7 +692,7 @@ public:
   }
 };
 
-void rotate(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
+void rotate(const EncryptedArray& ea, PlaintextArray& pa, long k)
 {
   ea.dispatch<rotate_pa_impl>(pa, k); 
 }
@@ -722,7 +704,7 @@ class shift_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long k)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long k)
   {
     PA_BOILER
 
@@ -734,7 +716,7 @@ public:
   }
 };
 
-void shift(const EncryptedArray& ea, NewPlaintextArray& pa, long k)
+void shift(const EncryptedArray& ea, PlaintextArray& pa, long k)
 {
   ea.dispatch<shift_pa_impl>(pa, k); 
 }
@@ -747,39 +729,43 @@ public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    NewPlaintextArray& pa, const vector<long>& array)
+                    PlaintextArray& pa, const vector<long>& array)
   {
     PA_BOILER
 
-    assert(lsize(array) == n);
+    //OLD: assert(lsize(array) == n);
+    helib::assertEq(lsize(array), n, "Size of array does not match n");
     convert(data, array);
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    NewPlaintextArray& pa, const vector<ZZX>& array)
+                    PlaintextArray& pa, const vector<ZZX>& array)
   {
     PA_BOILER
 
-    assert(lsize(array) == n);
+    //OLD: assert(lsize(array) == n);
+    helib::assertEq(lsize(array), n, "Size of array does not match n");
     convert(data, array);
-    for (long i = 0; i < n; i++) assert(deg(data[i]) < d);
+    for (long i = 0; i < n; i++) {
+      helib::assertTrue(deg(data[i]) < d, "Found data entry with too-large degree");
+    }
   }
 
 };
 
 
 
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<long>& array)
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const vector<long>& array)
 {
   ea.dispatch<encode_pa_impl>(pa, array); 
 }
 
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const vector<ZZX>& array)
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const vector<ZZX>& array)
 {
   ea.dispatch<encode_pa_impl>(pa, array); 
 }
 
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, long val)
+void encode(const EncryptedArray& ea, PlaintextArray& pa, long val)
 {
    long n = ea.size();
    vector<long> array;
@@ -788,7 +774,7 @@ void encode(const EncryptedArray& ea, NewPlaintextArray& pa, long val)
    encode(ea, pa, array);
 }
 
-void encode(const EncryptedArray& ea, NewPlaintextArray& pa, const ZZX& val)
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const ZZX& val)
 {
    long n = ea.size();
    vector<ZZX> array;
@@ -804,7 +790,7 @@ class random_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa)
   {
     PA_BOILER
 
@@ -814,7 +800,7 @@ public:
 }; 
 
 
-void random(const EncryptedArray& ea, NewPlaintextArray& pa)
+void random(const EncryptedArray& ea, PlaintextArray& pa)
 {
   ea.dispatch<random_pa_impl>(pa); 
 }
@@ -828,7 +814,7 @@ public:
 
   template<class T>
   static void apply(const EncryptedArrayDerived<type>& ea, 
-    vector<T>& array, const NewPlaintextArray& pa)
+    vector<T>& array, const PlaintextArray& pa)
   {
     CPA_BOILER
 
@@ -838,13 +824,13 @@ public:
 }; 
 
 
-void decode(const EncryptedArray& ea, vector<long>& array, const NewPlaintextArray& pa)
+void decode(const EncryptedArray& ea, vector<long>& array, const PlaintextArray& pa)
 {
   ea.dispatch<decode_pa_impl>(array, pa); 
 }
 
 
-void decode(const EncryptedArray& ea, vector<ZZX>& array, const NewPlaintextArray& pa)
+void decode(const EncryptedArray& ea, vector<ZZX>& array, const PlaintextArray& pa)
 {
   ea.dispatch<decode_pa_impl>(array, pa); 
 }
@@ -857,7 +843,7 @@ public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea, bool& res, 
-    const NewPlaintextArray& pa, const  NewPlaintextArray& other)
+    const PlaintextArray& pa, const  PlaintextArray& other)
   {
     CPA_BOILER
 
@@ -867,7 +853,7 @@ public:
 
 
   static void apply(const EncryptedArrayDerived<type>& ea, bool& res, 
-    const NewPlaintextArray& pa, const vector<long>& other)
+    const PlaintextArray& pa, const vector<long>& other)
   {
     CPA_BOILER
 
@@ -878,7 +864,7 @@ public:
 
 
   static void apply(const EncryptedArrayDerived<type>& ea, bool& res,
-    const NewPlaintextArray& pa, const vector<ZZX>& other)
+    const PlaintextArray& pa, const vector<ZZX>& other)
   {
     CPA_BOILER
 
@@ -891,14 +877,14 @@ public:
 
 
 
-bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const NewPlaintextArray& other)
+bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const PlaintextArray& other)
 {
   bool res;
   ea.dispatch<equals_pa_impl>(res, pa, other); 
   return res;
 }
 
-bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<long>& other)
+bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const vector<long>& other)
 {
   bool res;
   ea.dispatch<equals_pa_impl>(res, pa, other); 
@@ -906,7 +892,7 @@ bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<
 }
 
 
-bool equals(const EncryptedArray& ea, const NewPlaintextArray& pa, const vector<ZZX>& other)
+bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const vector<ZZX>& other)
 {
   bool res;
   ea.dispatch<equals_pa_impl>(res, pa, other); 
@@ -920,8 +906,8 @@ class add_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const NewPlaintextArray& other)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, 
+    const PlaintextArray& other)
   {
     PA_BOILER
 
@@ -933,7 +919,7 @@ public:
 }; 
 
 
-void add(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
+void add(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other)
 {
   ea.dispatch<add_pa_impl>(pa, other); 
 }
@@ -945,8 +931,8 @@ class sub_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const NewPlaintextArray& other)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, 
+    const PlaintextArray& other)
   {
     PA_BOILER
 
@@ -958,7 +944,7 @@ public:
 }; 
 
 
-void sub(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
+void sub(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other)
 {
   ea.dispatch<sub_pa_impl>(pa, other); 
 }
@@ -970,8 +956,8 @@ class mul_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, 
-    const NewPlaintextArray& other)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, 
+    const PlaintextArray& other)
   {
     PA_BOILER
 
@@ -983,7 +969,7 @@ public:
 }; 
 
 
-void mul(const EncryptedArray& ea, NewPlaintextArray& pa, const NewPlaintextArray& other)
+void mul(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other)
 {
   ea.dispatch<mul_pa_impl>(pa, other); 
 }
@@ -995,7 +981,7 @@ class negate_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa) 
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa) 
   {
     PA_BOILER
 
@@ -1005,7 +991,7 @@ public:
 }; 
 
 
-void negate(const EncryptedArray& ea, NewPlaintextArray& pa)
+void negate(const EncryptedArray& ea, PlaintextArray& pa)
 {
   ea.dispatch<negate_pa_impl>(pa); 
 }
@@ -1017,7 +1003,7 @@ class frobeniusAutomorph_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long j)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long j)
   {
     PA_BOILER
 
@@ -1030,12 +1016,13 @@ public:
       data[i] = CompMod(data[i], H, G);
   }
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa,
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa,
     const Vec<long>& vec) 
   {
     PA_BOILER
 
-    assert(vec.length() == n);
+    //OLD: assert(vec.length() == n);
+    helib::assertEq(vec.length(), n, "vec has incorrect length");
 
     long p = ea.getPAlgebra().getP();
 
@@ -1050,22 +1037,22 @@ public:
 
 
 
-void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, long j)
+void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, long j)
 {
   ea.dispatch<frobeniusAutomorph_pa_impl>(pa, j); 
 }
 
 
-void frobeniusAutomorph(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& vec)
+void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, const Vec<long>& vec)
 {
   ea.dispatch<frobeniusAutomorph_pa_impl>(pa, vec); 
 }
 
-void power(const EncryptedArray& ea, NewPlaintextArray& pa, long e)
+void power(const EncryptedArray& ea, PlaintextArray& pa, long e)
 {
   if (e<=1) return;
 
-  NewPlaintextArray pwr = pa; // holds x^{2^i} in i+1'st iteration
+  PlaintextArray pwr = pa; // holds x^{2^i} in i+1'st iteration
   encode(ea, pa, 1L); // set pa =1 in every slot
   while(e > 0) {
     if (e & 1)
@@ -1082,12 +1069,13 @@ class applyPerm_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa,
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa,
     const Vec<long>& pi) 
   {
     PA_BOILER
 
-    assert(pi.length() == n);
+    //OLD: assert(pi.length() == n);
+    helib::assertEq(pi.length(), n, "pi has incorrect length");
 
     vector<RX> tmp;
     tmp.resize(n);
@@ -1101,7 +1089,7 @@ public:
 
 
 
-void applyPerm(const EncryptedArray& ea, NewPlaintextArray& pa, const Vec<long>& pi)
+void applyPerm(const EncryptedArray& ea, PlaintextArray& pa, const Vec<long>& pi)
 {
   ea.dispatch<applyPerm_pa_impl>(pa, pi); 
 }
@@ -1114,7 +1102,7 @@ public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea, 
-    ostream& s, const NewPlaintextArray& pa)
+    ostream& s, const PlaintextArray& pa)
   {
     CPA_BOILER
 
@@ -1134,7 +1122,7 @@ public:
 }; 
 
 
-void print(const EncryptedArray& ea, ostream& s, const NewPlaintextArray& pa)
+void print(const EncryptedArray& ea, ostream& s, const PlaintextArray& pa)
 {
   ea.dispatch<print_pa_impl>(s, pa); 
 }
@@ -1146,6 +1134,6 @@ template class EncryptedArrayDerived<PA_GF2>;
 template class EncryptedArrayDerived<PA_zz_p>;
 
 
-template class NewPlaintextArrayDerived<PA_GF2>;
-template class NewPlaintextArrayDerived<PA_zz_p>;
+template class PlaintextArrayDerived<PA_GF2>;
+template class PlaintextArrayDerived<PA_zz_p>;
 

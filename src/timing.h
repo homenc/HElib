@@ -28,8 +28,8 @@
  * startFHEtimer(name), stopFHEtimer(name), and resetFHEtimer(name) to add
  * timers with arbitrary names (not necessarily associated with functions).
  **/
-#ifndef _TIMING_H_
-#define _TIMING_H_
+#ifndef HELIB_TIMING_H
+#define HELIB_TIMING_H
 
 
 #include "NumbTh.h"
@@ -74,7 +74,7 @@ void resetAllTimers();
 void printAllTimers(std::ostream& str=std::cerr);
 
 // return true if timer was found, false otherwise
-bool printNamedTimer(ostream& str, const char* name);
+bool printNamedTimer(std::ostream& str, const char* name);
 
 
 //! \cond FALSE (make doxygen ignore these classes)
@@ -124,4 +124,4 @@ public:
 
 
 
-#endif // _TIMING_H_
+#endif // ifndef HELIB_TIMING_H

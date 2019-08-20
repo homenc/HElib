@@ -12,6 +12,8 @@
 
 #include "permutations.h"
 
+NTL_CLIENT
+
 const Vec<long> SubDimension::dummyBenes; // global variable
 
 // Apply a permutation to a vector, out[i]=in[p1[i]]
@@ -19,7 +21,8 @@ const Vec<long> SubDimension::dummyBenes; // global variable
 template<class T>
 void applyPermToVec(Vec<T>& out, const Vec<T>& in, const Permut& p1)
 {
-  assert(&out != &in); // NOT an in-place procedure
+  //OLD: assert(&out != &in); // NOT an in-place procedure
+  helib::assertNeq<helib::InvalidArgument>(static_cast<const Vec<T>*>(&out), &in, "Cannot have equal in and out addresses (Not an in-place procedure)");
   out.SetLength(p1.length());
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p1[i]);
@@ -37,8 +40,10 @@ template<class T>
 void applyPermsToVec(Vec<T>& out, const Vec<T>& in,
 		      const Permut& p2, const Permut& p1)
 {
-  assert(&out != &in); // NOT an in-place procedure
-  assert(p1.length() == p2.length());
+  //OLD: assert(&out != &in); // NOT an in-place procedure
+  helib::assertNeq<helib::InvalidArgument>(static_cast<const Vec<T>*>(&out), &in, "Cannot have equal in and out addresses (Not an in-place procedure)");
+  //OLD: assert(p1.length() == p2.length());
+  helib::assertEq(p1.length(), p2.length(), "Permutation p1 and p2 sizes differ");
   out.SetLength(p1.length());
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p2.at(p1[i]));
@@ -47,7 +52,8 @@ template<class T>
 void applyPermsToVec(vector<T>& out, const vector<T>& in,
 		      const Permut& p2, const Permut& p1)
 {
-  assert(p1.length() == p2.length());
+  //OLD: assert(p1.length() == p2.length());
+  helib::assertEq(p1.length(), p2.length(), "Permutation p1 and p2 sizes differ");
   out.resize(p1.length());
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p2.at(p1[i]));
@@ -175,10 +181,12 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
 
       // Sanity checks: width of network == n,
       //                and sum of benesLvls entries == # of levels
-      assert(net.getSize()==n);
+      //OLD: assert(net.getSize()==n);
+      helib::assertEq(net.getSize(), n, "Network width is different to n");
       {long sum=0;
        for (long k=0; k<benesLvls.length(); k++) sum+=benesLvls[k];
-       assert(net.getNumLevels()==sum);
+        //OLD: assert(net.getNumLevels()==sum);
+        helib::assertEq(net.getNumLevels(), sum, "Sum of benesLvls entries is different to number of levels");
       }
 
       // Compute the layers of the collapased network for this column
@@ -207,9 +215,12 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
 void breakPermTo3(const HyperCube<long>& pi, long dim, 
                   ColPerm& rho1, HyperCube<long>& rho2, ColPerm& rho3)
 {
-  assert(&rho1.getSig()==&pi.getSig());
-  assert(&rho2.getSig()==&pi.getSig());
-  assert(&rho3.getSig()==&pi.getSig());
+  //OLD: assert(&rho1.getSig()==&pi.getSig());
+  helib::assertEq(&rho1.getSig(), &pi.getSig(), "rho1 and pi signatures differ");
+  //OLD: assert(&rho2.getSig()==&pi.getSig());
+  helib::assertEq(&rho2.getSig(), &pi.getSig(), "rho2 and pi signatures differ");
+  //OLD: assert(&rho3.getSig()==&pi.getSig());
+  helib::assertEq(&rho3.getSig(), &pi.getSig(), "rho3 and pi signatures differ");
 
   // pi consists of separate permutations over [0,n-1], and each
   // of these is viewed as a permutation over an n1 x n2 cube
@@ -305,7 +316,8 @@ void breakPermTo3(const HyperCube<long>& pi, long dim,
 void breakPermByDim(vector<ColPerm>& out, 
 		    const Permut &pi, const CubeSignature& sig)
 {
-  assert(sig.getSize()==pi.length());
+  //OLD: assert(sig.getSize()==pi.length());
+  helib::assertEq(sig.getSize(), pi.length(), "Signature sig size is different to pi.length");
 
   HyperCube<long> tmp1(sig);  
   tmp1.getData() = pi;
@@ -423,7 +435,8 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
 // corresponding to all the trees.
 void GeneratorTrees::ComputeCubeMapping()
 {
-  assert(trees.length()>=1);
+  //OLD: assert(trees.length()>=1);
+  helib::assertTrue(trees.length()>=1, "Trees length is less than 1");
 
   if (trees.length()==1) {  // A single tree
     ComputeOneGenMapping(map2array, trees[0]);

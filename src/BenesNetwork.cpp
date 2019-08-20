@@ -15,7 +15,6 @@ NTL_CLIENT
 #include "EncryptedArray.h"
 
 #include <cstdlib>
-#include <cassert>
 #include <list>
 #include <sstream>
 
@@ -72,7 +71,9 @@ recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
   long sz0 = GeneralBenesNetwork::shamt(n, k, d); // size of upper internal network
   long sz1 = sz - sz0;
 
-  assert(labs(sz0-sz1) <= 1);
+  //OLD: assert(labs(sz0-sz1) <= 1);
+  // TODO: why not just labs(sz)?
+  helib::assertTrue(labs(sz0-sz1) <= 1l, "sz1 must be within 1 of sz0");
 
   // id_perm: the identity permutation on {0,...,sz-1}
   Permut id_perm;
@@ -256,7 +257,8 @@ GeneralBenesNetwork::GeneralBenesNetwork(const Permut& perm)
   n = perm.length();
 
   // check that n > 1
-  assert(n > 1);
+  //OLD: assert(n > 1);
+  helib::assertTrue<helib::InvalidArgument>(n > 1l, "permutation length must be greater than one");
 
   // compute recursion depth k = least integer k s/t 2^k >= n
   k = GeneralBenesNetwork::depth(n);
@@ -272,13 +274,16 @@ GeneralBenesNetwork::GeneralBenesNetwork(const Permut& perm)
 
   for (long j = 0; j < n; j++) {
     long j1 = perm[j];
-    assert(j1 >= 0 && j1 < n);
+    //OLD: assert(j1 >= 0 && j1 < n);
+    helib::assertInRange(j1, 0l, n, "permutation element out of range");
     iperm[j1] = j;
   }
 
 
-  for (long j = 0; j < n; j++)
-    assert(iperm[j] != -1);
+  for (long j = 0; j < n; j++) {
+    //OLD: assert(iperm[j] != -1);
+    helib::assertTrue(iperm[j] == -1l, "permutation element not processed");
+  }
 
   // allocate space for the levels graph
 

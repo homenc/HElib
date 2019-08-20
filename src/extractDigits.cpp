@@ -12,49 +12,12 @@
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
 #include <NTL/ZZ.h>
-NTL_CLIENT
+#include <NTL/ZZ_p.h>
 #include "EncryptedArray.h"
 #include "polyEval.h"
+#include "debugging.h"
 
-static void buildDigitPolynomial(ZZX& result, long p, long e);
-
-// extractDigits assumes that the slots of *this contains integers mod p^r
-// i.e., that only the free terms are nonzero. (If that assumptions does
-// not hold then the result will not be a valid ciphertext anymore.)
-// 
-// It returns in the slots of digits[j] the j'th-lowest gigits from the
-// integers in the slots of the input. Namely, the i'th slot of digits[j]
-// contains the j'th digit in the p-base expansion of the integer in the
-// i'th slot of the *this. The plaintext space of digits[j] is mod p^{r-j},
-// and all the digits are at the same level.
-void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
-{
-  FHEcontext& context = (FHEcontext&) c.getContext();
-  long rr = c.effectiveR();
-  if (r<=0 || r>rr) r = rr; // how many digits to extract
-
-  long p = context.zMStar.getP();
-  ZZX x2p;
-  if (p>3) { 
-    buildDigitPolynomial(x2p, p, r);
-  }
-
-  Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
-  digits.resize(r, tmp);      // allocate space
-  for (long i=0; i<r; i++) {
-    tmp = c;
-    for (long j=0; j<i; j++) {
-      if (p==2) digits[j].square();
-      else if (p==3) digits[j].cube();
-      else polyEval(digits[j], x2p, digits[j]); // "in spirit" digits[j] = digits[j]^p
-      tmp -= digits[j];
-      tmp.divideByP();
-    }
-    digits[i] = tmp; // needed in the next round
-  }
-}
-
-
+NTL_CLIENT
 
 // Compute a degree-p polynomial poly(x) s.t. for any t<e and integr z of the
 // form z = z0 + p^t*z1 (with 0<=z0<p), we have poly(z) = z0 (mod p^{t+1}).
@@ -81,8 +44,248 @@ static void buildDigitPolynomial(ZZX& result, long p, long e)
     while (y[j] < -(p2e/2))      y[j] += p2e;
   }
   interpolateMod(result, x, y, p, e);
-  assert(deg(result)<p); // interpolating p points, should get deg<=p-1
+  //OLD: assert(deg(result)<p); // interpolating p points, should get deg<=p-1
+  helib::assertTrue(deg(result)<p, "Interpolation error - degree too high");
   SetCoeff(result, p);   // return result = x^p + poly'(x)
   //  cerr << "# digitExt mod "<<p<<"^"<<e<<"="<<result<<endl;
   FHE_TIMER_STOP;
 }
+
+
+// extractDigits assumes that the slots of *this contains integers mod p^r
+// i.e., that only the free terms are nonzero. (If that assumptions does
+// not hold then the result will not be a valid ciphertext anymore.)
+// 
+// It returns in the slots of digits[j] the j'th-lowest gigits from the
+// integers in the slots of the input. Namely, the i'th slot of digits[j]
+// contains the j'th digit in the p-base expansion of the integer in the
+// i'th slot of the *this. The plaintext space of digits[j] is mod p^{r-j},
+// and all the digits are at the same level.
+
+int fhe_watcher = 0;
+
+void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
+{
+  const FHEcontext& context = c.getContext();
+  long rr = c.effectiveR();
+  if (r<=0 || r>rr) r = rr; // how many digits to extract
+
+  long p = context.zMStar.getP();
+
+  ZZX x2p;
+  if (p>3) { 
+    buildDigitPolynomial(x2p, p, r);
+  }
+
+  Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
+  digits.resize(r, tmp);      // allocate space
+
+#ifdef DEBUG_PRINTOUT
+  fprintf(stderr, "***\n");
+#endif
+  for (long i=0; i<r; i++) {
+    tmp = c;
+    for (long j=0; j<i; j++) {
+
+      if (p==2) digits[j].square();
+      else if (p==3) digits[j].cube();
+      else polyEval(digits[j], x2p, digits[j]); 
+      // "in spirit" digits[j] = digits[j]^p
+
+#ifdef DEBUG_PRINTOUT
+      fprintf(stderr, "%5ld", digits[j].bitCapacity());
+#endif
+
+      tmp -= digits[j];
+      tmp.divideByP();
+    }
+    digits[i] = tmp; // needed in the next round
+
+#ifdef DEBUG_PRINTOUT
+    if (dbgKey) {
+       double ratio = 
+          log(embeddingLargestCoeff(digits[i], *dbgKey)/digits[i].getNoiseBound())/log(2.0);
+       fprintf(stderr, "%5ld [%f]", digits[i].bitCapacity(), ratio);
+       if (ratio > 0) fprintf(stderr, " BAD-BOUND");
+       fprintf(stderr, "\n");
+    }
+    else {
+       fprintf(stderr, "%5ld\n", digits[i].bitCapacity());
+    }
+#endif
+  }
+
+#ifdef DEBUG_PRINTOUT
+  fprintf(stderr, "***\n");
+#endif
+}
+
+
+
+static
+void compute_a_vals(Vec<ZZ>& a, long p, long e)
+// computes a[m] = a(m)/m! for m = p..(e-1)(p-1)+1,
+// as defined by Chen and Han.
+// a.length() is set to (e-1)(p-1)+2
+
+{
+   ZZ p_to_e = power_ZZ(p, e);
+   ZZ p_to_2e = power_ZZ(p, 2*e);
+
+   long len = (e-1)*(p-1)+2;
+
+   ZZ_pPush push(p_to_2e);
+
+   ZZ_pX x_plus_1_to_p = power(ZZ_pX(INIT_MONO, 1) + 1, p);
+   ZZ_pX denom = InvTrunc(x_plus_1_to_p - ZZ_pX(INIT_MONO, p), len);
+   ZZ_pX poly = MulTrunc(x_plus_1_to_p, denom, len);
+   poly *= p;
+
+   a.SetLength(len);
+
+   ZZ m_fac(1);
+   for (long m = 2; m < p; m++) {
+      m_fac = MulMod(m_fac, m, p_to_2e);
+   }
+
+   for (long m = p; m < len; m++) {
+      m_fac = MulMod(m_fac, m, p_to_2e);
+      ZZ c = rep(coeff(poly, m));
+      ZZ d = GCD(m_fac, p_to_2e);
+      if (d == 0 || d > p_to_e || c % d != 0) throw helib::RuntimeError("cannot divide");
+      ZZ m_fac_deflated = (m_fac / d) % p_to_e;
+      ZZ c_deflated = (c / d) % p_to_e;
+      a[m] = MulMod(c_deflated, InvMod(m_fac_deflated, p_to_e), p_to_e);
+   }
+
+}
+
+// This computes Chen and Han's magic polynomial G, which 
+// has the property that G(x) = (x mod p) (mod p^e).
+// Here, (x mod p) is in the interval [0,1] if p == 2,
+// and otherwise, is in the interval (-p/2, p/2).
+static
+void compute_magic_poly(ZZX& poly1, long p, long e)
+{
+   FHE_TIMER_START;
+
+   Vec<ZZ> a;
+
+   compute_a_vals(a, p, e);
+
+   ZZ p_to_e = power_ZZ(p, e);
+   long len = (e-1)*(p-1)+2;
+
+   ZZ_pPush push(p_to_e);
+
+   ZZ_pX poly(0);
+   ZZ_pX term(1);
+   ZZ_pX X(INIT_MONO, 1);
+
+   poly = 0;
+   term = 1;
+   
+   for (long m = 0; m < p; m++) {
+      term *= (X-m);
+   }
+
+   for (long m = p; m < len; m++) {
+      poly += term * conv<ZZ_p>(a[m]);
+      term *= (X-m);
+   }
+
+   // replace poly by poly(X+(p-1)/2) for odd p
+   if (p % 2 == 1) {
+      ZZ_pX poly2(0);
+
+      for (long i = deg(poly); i >= 0; i--) 
+         poly2 = poly2*(X+(p-1)/2) + poly[i];
+
+      poly = poly2;
+   }
+
+   poly = X - poly;
+   poly1 = conv<ZZX>(poly);
+}
+
+
+// extendExtractDigits assumes that the slots of *this contains integers mod
+// p^{r+e} i.e., that only the free terms are nonzero. (If that assumptions
+// does not hold then the result will not be a valid ciphertext anymore.)
+// 
+// It returns in the slots of digits[j] the j'th-lowest digits from the
+// integers in the slots of the input. Namely, the i'th slot of digits[j]
+// contains the j'th digit in the p-base expansion of the integer in the i'th
+// slot of the *this.  The plaintext space of digits[j] is mod p^{e+r-j}.
+
+void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
+{
+  const FHEcontext& context = c.getContext();
+
+  long p = context.zMStar.getP();
+  ZZX x2p;
+  if (p>3) { 
+    buildDigitPolynomial(x2p, p, r);
+  }
+
+  // we should pre-compute this table
+  // for i = 0..r-1, entry i is G_{e+r-i} in Chen and Han
+  Vec<ZZX> G;
+  G.SetLength(r);
+  for (long i: range(r)) {
+    compute_magic_poly(G[i], p, e+r-i);
+  }
+
+  vector<Ctxt> digits0;
+
+  Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
+
+  digits.resize(r, tmp);      // allocate space
+  digits0.resize(r, tmp);
+
+#ifdef DEBUG_PRINTOUT
+  fprintf(stderr, "***\n");
+#endif
+  for (long i: range(r)) {
+    tmp = c;
+    for (long j: range(i)) {
+      if (digits[j].capacity() >= digits0[j].capacity()) {
+         // optimization: digits[j] is better than digits0[j],
+         // so just use it
+
+         tmp -= digits[j];
+#ifdef DEBUG_PRINTOUT
+      fprintf(stderr, "%5ld*", digits[j].bitCapacity());
+#endif
+      }
+      else {
+	if (p==2) digits0[j].square();
+	else if (p==3) digits0[j].cube();
+	else polyEval(digits0[j], x2p, digits0[j]); // "in spirit" digits0[j] = digits0[j]^p
+
+	tmp -= digits0[j];
+#ifdef DEBUG_PRINTOUT
+      fprintf(stderr, "%5ld ", digits0[j].bitCapacity());
+#endif
+      }
+      tmp.divideByP();
+    }
+    digits0[i] = tmp; // needed in the next round
+    polyEval(digits[i], G[i], tmp);
+
+#ifdef DEBUG_PRINTOUT
+    if (dbgKey) {
+      double ratio = 
+        log(embeddingLargestCoeff(digits[i], *dbgKey)/digits[i].getNoiseBound())/log(2.0);
+      fprintf(stderr, "%5ld  --- %5ld", digits0[i].bitCapacity(), digits[i].bitCapacity());
+      fprintf(stderr, " [%f]", ratio);
+      if (ratio > 0) fprintf(stderr, " BAD-BOUND");
+      fprintf(stderr, "\n");
+    }
+    else {
+      fprintf(stderr, "%5ld  --- %5ld\n", digits0[i].bitCapacity(), digits[i].bitCapacity());
+    }
+#endif
+  }
+}
+

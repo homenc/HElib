@@ -1,3 +1,7 @@
+===> NOTE: This guide refers to the old Makefile installation, <===
+===> which is now DEPRECATED. Refer to INSTALL.md for the      <===
+===> supported cmake-based installation.                       <===
+
 HElib Installation Notes, October 2015
 ---------------------------------------
 To build HElib, you will need to have GMP and NTL libraries installed.

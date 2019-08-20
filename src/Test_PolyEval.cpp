@@ -16,13 +16,14 @@
 NTL_CLIENT
 #include "polyEval.h"
 #include "EncryptedArray.h"
+#include "ArgMap.h"
 
 #ifdef DEBUG_PRINTOUT
 extern FHESecKey* dbgKey;
 extern EncryptedArray* dbgEa;
 #endif
 
-static bool noPrint = false;
+static bool noPrint = true;
 
 bool testEncrypted(long d, const EncryptedArray& ea,
 		   const FHESecKey& secretKey)
@@ -60,8 +61,7 @@ bool testEncrypted(long d, const EncryptedArray& ea,
   secretKey.Decrypt(ret, cX);
   zz_pX cres = conv<zz_pX>(ret);
   bool success = (cres == pres);
-  if (success) std::cout << " encrypted poly match, ";
-  else         std::cout << " encrypted poly MISMATCH\n";
+  cout << (success? "GOOD" : "BAD") << endl;
   return success;
 }
 
@@ -75,7 +75,7 @@ void testIt(long d, long k, long p, long r, long m, long L,
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64);// A Hamming-weight-64 secret key
+  secretKey.GenSecKey();// A +-1/0 secret key
   //  addSome1DMatrices(secretKey); // compute key-switching matrices
 
 #ifdef DEBUG_PRINTOUT
@@ -110,53 +110,56 @@ void testIt(long d, long k, long p, long r, long m, long L,
   for (long i=0; i<ea.size(); i++) {
     long ret = polyEvalMod(poly, x[i], p2r);
     if (ret != y[i]) {
-      std::cout << "plaintext poly MISMATCH\n";
+      std::cout << "BAD\n";
+      if (!noPrint) cout<<"  plaintext poly MISMATCH\n";
       exit(0);
     }
   }
-  std::cout << "plaintext poly match\n" << std::flush;
+  std::cout << "GOOD\n" << std::flush;
 }
 
-void usage(char *prog) 
-{
-  std::cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  std::cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  std::cout << "  dry=1 for dry run [default=0]\n";
-  std::cout << "  p is the plaintext base [default=3]" << endl;
-  std::cout << "  r is the lifting [default=2]" << endl;
-  std::cout << "  m is a specific cyclotomic ring\n";
-  std::cout << "  d is the polynomial degree [default=undefined]" << endl;
-  std::cout << "    d=undefined means trying a few powers d=1,...,4,25,...,34"<<endl;
-  std::cout << "  k is the baby-step parameter [default=undefined]" << endl;
-  std::cout << "    if k is undefined it is computed from d" << endl;
-  std::cout << "  noPrint suppresses printouts [default=0]" << endl;
-  exit(0);
-}
+// OLD CODE
+//void usage(char *prog) 
+//{
+//  std::cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
+//  std::cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+//  std::cout << "  dry=1 for dry run [default=0]\n";
+//  std::cout << "  p is the plaintext base [default=3]" << endl;
+//  std::cout << "  r is the lifting [default=2]" << endl;
+//  std::cout << "  m is a specific cyclotomic ring\n";
+//  std::cout << "  d is the polynomial degree [default=undefined]" << endl;
+//  std::cout << "    d=undefined means trying a few powers d=1,...,4,25,...,34"<<endl;
+//  std::cout << "  k is the baby-step parameter [default=undefined]" << endl;
+//  std::cout << "    if k is undefined it is computed from d" << endl;
+//  std::cout << "  noPrint suppresses printouts [default=0]" << endl;
+//  exit(0);
+//}
 
 int main(int argc, char *argv[])
 {
-  argmap_t argmap;
-  argmap["p"] = "3";
-  argmap["r"] = "2";
-  argmap["m"] = "0";
-  argmap["d"] = "-1";
-  argmap["k"] = "0";
-  argmap["dry"] = "0";
-  argmap["noPrint"] = "0";
+  long p = 3;
+  long r = 2;
+  long m = 0;
+  long d = -1;
+  long k = 0;
+  bool dry = 0;
+  noPrint = 1;
+
+  ArgMap amap;
+  amap.arg("p", p, "plaintext base");
+  amap.arg("r", r, "lifting");
+  amap.arg("m", m, "specific cyclotomic ring");
+  amap.arg("d", d, "polynomial degree", nullptr);
+  amap.arg("k", k, "baby-step parameter, nullptr");
+  amap.arg("dry", dry, "dry run");
+  amap.arg("noPrint", noPrint, "suppresses printouts");
+  amap.parse(argc, argv);
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
-
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long m = atoi(argmap["m"]);
-  long d = atoi(argmap["d"]);
-  long k = atoi(argmap["k"]);
-  bool dry = atoi(argmap["dry"]);
-  noPrint = atoi(argmap["noPrint"]);
+//  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
   long max_d = (d<=0)? 35 : d;
-  long L = 5+NextPowerOfTwo(max_d);
+  long L = (7+NextPowerOfTwo(max_d))*30;
   if (m<2)
     m = FindM(/*secprm=*/80, L, /*c=*/3, p, 1, 0, m, !noPrint);
   setDryRun(dry);

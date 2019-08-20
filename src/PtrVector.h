@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _PTRVECTOR_H
-#define _PTRVECTOR_H
+#ifndef HELIB_PTRVECTOR_H
+#define HELIB_PTRVECTOR_H
 /**
  * @file PtrVector.h
  * @brief Convenience class templates providing a unified interface
@@ -21,6 +21,8 @@
 #include <vector>
 #include <NTL/vector.h>
 
+#include "assertions.h"
+
 //! @brief Abstract class for an array of objects
 template<typename T>
 struct PtrVector {
@@ -30,7 +32,7 @@ struct PtrVector {
 
   virtual void resize(long newSize, const PtrVector* another=nullptr)
   { if (size()!=newSize)
-      throw(std::logic_error("Cannot resize a generic PtrVector"));
+      throw helib::LogicError("Cannot resize a generic PtrVector");
   }
   virtual ~PtrVector(){}
 
@@ -180,7 +182,8 @@ struct PtrVector_VecT : PtrVector<T> {
       // Try to find a non-null pointer to T that you can give to resize
       if (another==nullptr) another = this;
       const T* pt = another->ptr2nonNull();
-      assert(pt!=nullptr);
+      //OLD: assert(pt!=nullptr);
+      helib::assertNotNull(pt, "another->ptr2nonNull() returned a null ptr");
       v.SetLength(newSize, *pt); // Do the actual resize
     }
   }
@@ -210,7 +213,8 @@ struct PtrVector_vectorT : PtrVector<T> {
       // Try to find a non-null pointer to T that you can give to resize
       if (another==nullptr) another = this;
       const T* pt = another->ptr2nonNull();
-      assert(pt!=nullptr);
+      //OLD: assert(pt!=nullptr);
+      helib::assertNotNull(pt, "another->ptr2nonNull() returned a null ptr");
       v.resize(newSize, *pt); // do the actual resize
     }
   }
@@ -275,4 +279,4 @@ template<typename T> void resize(PtrVector<T>& v, long newSize, const T& val)
   v.resize(newSize, &t);
 }
 
-#endif // _PTRVECTOR_H
+#endif // ifndef HELIB_PTRVECTOR_H

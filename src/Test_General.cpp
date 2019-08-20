@@ -21,10 +21,16 @@
 
 #include <cassert>
 #include <cstdio>
+#include "ArgMap.h"
+
+NTL_CLIENT
+
+//#define DEBUG_PRINTOUT
 
 #ifdef DEBUG_PRINTOUT
+#include "debugging.h"
 #define debugCompare(ea,sk,p,c) {\
-  NewPlaintextArray pp(ea);\
+  PlaintextArray pp(ea);\
   ea.decrypt(c, sk, pp);\
   if (!equals(ea, pp, p)) { \
     std::cout << "oops:\n"; std::cout << p << "\n"; \
@@ -50,7 +56,7 @@
 
 **************/
 
-static bool noPrint = false;
+static bool noPrint = true;
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
                long L, long m, const Vec<long>& gens, const Vec<long>& ords)
@@ -89,6 +95,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     std::cout << endl;
 
     std::cout << "security=" << context.securityLevel()<<endl;
+    std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
     std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
     std::cout << "# bits in ctxt primes = " 
 	 << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
@@ -100,16 +107,20 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 
   EncryptedArray ea(context, G);
   long nslots = ea.size();
+#ifdef DEBUG_PRINTOUT
+  dbgKey = &secretKey;
+  dbgEa  = &ea;
+#endif
 
-  NewPlaintextArray p0(ea);
-  NewPlaintextArray p1(ea);
-  NewPlaintextArray p2(ea);
-  NewPlaintextArray p3(ea);
+  PlaintextArray p0(ea);
+  PlaintextArray p1(ea);
+  PlaintextArray p2(ea);
+  PlaintextArray p3(ea);
 
   random(ea, p0);
   random(ea, p1);
@@ -137,8 +148,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
                   // random number in [-(nslots-1)..nslots-1]
 
      // two random constants
-     NewPlaintextArray const1(ea);
-     NewPlaintextArray const2(ea);
+     PlaintextArray const1(ea);
+     PlaintextArray const2(ea);
      random(ea, const1);
      random(ea, const2);
 
@@ -161,9 +172,9 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      if (!noPrint) CheckCtxt(c2, "c2*=k2");
      debugCompare(ea,secretKey,p2,c2);
 
-     NewPlaintextArray tmp_p(p1); // tmp = c1
+     PlaintextArray tmp_p(p1); // tmp = c1
      Ctxt tmp(c1);
-     sprintf(buffer, "c2>>=%d", (int)shamt);
+     sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
      shift(ea, tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
      ea.shift(tmp, shamt);
      if (!noPrint) CheckCtxt(tmp, buffer);
@@ -212,10 +223,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   resetAllTimers();
   FHE_NTIMER_START(Check);
    
-  NewPlaintextArray pp0(ea);
-  NewPlaintextArray pp1(ea);
-  NewPlaintextArray pp2(ea);
-  NewPlaintextArray pp3(ea);
+  PlaintextArray pp0(ea);
+  PlaintextArray pp1(ea);
+  PlaintextArray pp2(ea);
+  PlaintextArray pp3(ea);
    
   ea.decrypt(c0, secretKey, pp0);
   ea.decrypt(c1, secretKey, pp1);
@@ -229,33 +240,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   FHE_NTIMER_STOP(Check);
    
-  std::cout << endl;
   if (!noPrint) {
     printAllTimers();
     std::cout << endl;
   }
-
-#if 0
-  vector<Ctxt> vc(L,c0);            // A vector of L ciphertexts
-  vector<NewPlaintextArray> vp(L, p0); // A vector of L plaintexts
-  for (long i=0; i<L; i++) {
-    vp[i].random();                     // choose a random plaintext 
-    ea.encrypt(vc[i], publicKey, vp[i]); // encrypt it
-    if (i>0) vp[i].mul(vp[i-1]); // keep a running product of plaintexts
-  }
-  incrementalProduct(vc); // Compute the same running product homomorphically
-
-  // Check that the products match
-  bool fail = false;
-  for (long i=0; i<L; i++) {
-    ea.decrypt(vc[i], secretKey, p0); // decrypt it
-    if (!p0.equals(vp[i])) {
-      fail = true;
-      std::cout << "incrementalProduct oops "<<i<< endl;
-    }
-  }
-  if (!fail) std::cout << "incrementalProduct works\n";
-#endif
 }
 
 
@@ -268,7 +256,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
  *              d == 0 => factors[0] defines extension
  *   c       number of columns in the key-switching matrices  [ default=2 ]
  *   k       security parameter  [ default=80 ]
- *   L       # of levels in the modulus chain  [ default=heuristic ]
+ *   L       # of bits in the modulus chain  [ default=heuristic ]
  *   s       minimum number of slots  [ default=0 ]
  *   repeat  number of times to repeat the test  [ default=1 ]
  *   m       use specified value as modulus
@@ -283,7 +271,7 @@ int main(int argc, char **argv)
 {
   setTimersOn();
 
-  ArgMapping amap;
+  ArgMap amap;
 
   bool dry=false;
   amap.arg("dry", dry, "dry=1 for a dry-run");
@@ -308,8 +296,8 @@ int main(int argc, char **argv)
   long k=80;
   amap.arg("k", k, "security parameter");
 
-  long L=0;
-  amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
+  long L=500;
+  amap.arg("L", L, "# of bits in the modulus chain");
 
   long s=0;
   amap.arg("s", s, "minimum number of slots");
@@ -345,20 +333,11 @@ int main(int argc, char **argv)
   SetSeed(ZZ(seed));
   SetNumThreads(nt);
   
-  if (L==0) { // determine L based on R,r
-    L = 3*R+3;
-    if (p>2 || r>1) { // add some more primes for each round
-      long addPerRound = 2*ceil(log((double)p)*r*3)/(log(2.0)*FHE_p2Size) +1;
-      L += R * addPerRound;
-    }
-  }
 
   long w = 64; // Hamming weight of secret key
-  //  long L = z*R; // number of levels
 
   if (mvec.length()>0)
     chosen_m = computeProd(mvec);
-  std::cout << argv[0] << ": ";
   long m = FindM(k, L, c, p, d, s, chosen_m, !noPrint);
 
   setDryRun(dry);
@@ -367,9 +346,3 @@ int main(int argc, char **argv)
   }
 }
 
-// call to get our running test case:
-// Test_General_x p=23 m=20485 L=10 R=5
-//
-// another call to get an example where phi(m) is very
-// close to m:
-// Test_General_x m=18631 L=10 R=5

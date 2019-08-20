@@ -18,6 +18,8 @@
 #include "replicate.h"
 #include "intraSlot.h"
 
+NTL_CLIENT
+
 // Implementation classes for unpacking:
 // buildUnpackSlotEncoding_pa_impl prepares the constants for the linear
 // transformation, and unpack_pa_impl uses them to do the actual uppacking.
@@ -125,7 +127,8 @@ long unpack(const CtPtrs& unpacked, const CtPtrs& packed,
 {
   long d = ea.getDegree(); // size of each slot
   long num2unpack = unpacked.size();
-  assert(packed.size()*d >= num2unpack); // we must have enough ciphertexts
+  //OLD: assert(packed.size()*d >= num2unpack); // we must have enough ciphertexts
+  helib::assertTrue(packed.size()*d >= num2unpack, "Not enough ciphertexts. (Packed size * d < unpacked size)");
   long offset = 0;
   long idx = 0;
   while (num2unpack > 0) {
@@ -183,7 +186,8 @@ long repack(const CtPtrs& packed, const CtPtrs& unpacked, const EncryptedArray& 
 {
   long d = ea.getDegree(); // size of each slot
   long num2pack = unpacked.size();
-  assert(packed.size()*d >= num2pack); // we must have enough ciphertexts
+  //OLD: assert(packed.size()*d >= num2pack); // we must have enough ciphertexts
+  helib::assertTrue(packed.size()*d >= num2pack, "Not enough ciphertexts. (Packed size * d < unpacked size)");
   long offset = 0;
   long idx = 0;
   while (num2pack > 0) {
@@ -211,7 +215,8 @@ public:
   {
     long d = ea.getDegree(); // size of each slot
 
-    assert(nbits >= 0 && nbits <= d);
+    //OLD: assert(nbits >= 0 && nbits <= d);
+    helib::assertInRange(nbits, 0l, d, "Not enough capacity in slots or nbits less than 0 (nbits must be positive and less equal than size of blocks)", true);
 
     const Mat<R>& CB=ea.getNormalBasisMatrix();
     // CB contains a description of the normal-basis transformation
@@ -237,7 +242,7 @@ public:
     RX acc_poly;
     int2Poly(acc_poly, ea, data, nbits);     // endoce data as a polynomial RX
     long nslots = ea.size(); // how many slots
-    vector<RX> acc_poly_vec(nslots, acc_poly);
+    std::vector<RX> acc_poly_vec(nslots, acc_poly);
     ea.encode(result, acc_poly_vec);
   }
 
@@ -247,9 +252,10 @@ public:
                     zzX& result)
   {
     long nslots = ea.size(); // how many slots
-    assert(lsize(data)==nslots);
+    //OLD: assert(lsize(data)==nslots);
+    helib::assertEq(lsize(data), nslots, "Cannot encode when data size is different to number of slots");
     RBak bak; bak.save(); ea.restoreContext(); // the NTL context for mod p^r
-    vector<RX> vec(nslots, RX::zero());
+    std::vector<RX> vec(nslots, RX::zero());
     RX acc_poly;
     for (long i=0; i<nslots; i++)
       int2Poly(vec[i], ea, data[i], nbits); // endoce data as a polynomial RX
@@ -283,7 +289,7 @@ public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea, 
-                    NewPlaintextArray& pa, std::vector<unsigned long>& value)
+                    PlaintextArray& pa, std::vector<unsigned long>& value)
   {
     PA_BOILER
     const Mat<R>& CBi=ea.getNormalBasisMatrixInverse();
@@ -308,7 +314,7 @@ public:
 // The bits of value[i] are equal to the coeffs of pa[i],
 // as represented on the normal basis
 void unpackSlots(std::vector<unsigned long>& value,
-                 NewPlaintextArray& pa, const EncryptedArray& ea)
+                 PlaintextArray& pa, const EncryptedArray& ea)
 {
    ea.dispatch<unpackSlots_pa_impl>(pa, value);
 }

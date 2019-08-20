@@ -13,8 +13,8 @@
  * @file matching.h
  * @brief Classes and functions for max-flow in a generic graph
  **/
-#ifndef _MATCHING_H_
-#define _MATCHING_H_
+#ifndef HELIB_MATCHING_H
+#define HELIB_MATCHING_H
 
 #include "NumbTh.h"
 
@@ -26,10 +26,10 @@ public:
   explicit FlowEdge(long c=0, long f=0){capacity=c; flow=f;}
 };
 
-typedef unordered_map<long,FlowEdge> FNeighborList;
+typedef std::unordered_map<long,FlowEdge> FNeighborList;
      // FNeighborList[i]=edge-to-node-i
 
-typedef vector<FNeighborList> FlowGraph;
+typedef std::vector<FNeighborList> FlowGraph;
      // FlowGraph[i][j] is the edge i->j
 
 long maximum_flow(FlowGraph& fg, long src, long sink);
@@ -46,7 +46,7 @@ public:
   {from=f; to=t; label=l; color=c;}
 };
 
-typedef unordered_multimap<long,LabeledEdge> LNeighborList;
+typedef std::unordered_multimap<long,LabeledEdge> LNeighborList;
 
 //! @class LabeledVertex
 //! @brief A generic node in a graph with some labels
@@ -58,11 +58,11 @@ public:
   explicit LabeledVertex(long n, long l=0) {name=n, label=l;}
 
   void addEdge(long nn, long l=0, long c=0) { // allow parallel edges
-    neighbors.insert(pair<long,LabeledEdge>(nn,LabeledEdge(name,nn,l,c)));
+    neighbors.insert(std::pair<long,LabeledEdge>(nn,LabeledEdge(name,nn,l,c)));
   }
   void addNeighbor(long nn, long l=0, long c=0){ // dont insert a parallel edge
     if (neighbors.count(nn)==0)
-      neighbors.insert(pair<long,LabeledEdge>(nn,LabeledEdge(name,nn,l,c)));
+      neighbors.insert(std::pair<long,LabeledEdge>(nn,LabeledEdge(name,nn,l,c)));
   }
 };
 
@@ -72,7 +72,7 @@ class BipartitleGraph {
   void buildFlowGraph(FlowGraph& fg);
 
 public:
-  vector<LabeledVertex> left; //  the right side is implicit
+  std::vector<LabeledVertex> left; //  the right side is implicit
 
   void addEdge(long from, long to, long label, long color=0) {
     for (long sz = left.size(); sz <= from; sz++) // insert nodes if needed
@@ -86,4 +86,4 @@ public:
   void printout();
 };
 
-#endif /* ifdef _MATCHING_H_ */
+#endif // ifndef HELIB_MATCHING_H

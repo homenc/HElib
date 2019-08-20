@@ -9,12 +9,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+#ifndef HELIB_POLYEVAL_H
+#define HELIB_POLYEVAL_H
 /**
  * @file polyEval.h
  * @brief Homomorphic Polynomial Evaluation
  */
 
-
+#include "FHEContext.h"
 #include "Ctxt.h"
 
 //! @brief Evaluate a cleartext polynomial on an encrypted input
@@ -22,30 +24,32 @@
 //! @param[in]  poly the degree-d polynomial to evaluate
 //! @param[in]  x    the point on which to evaluate
 //! @param[in]  k    optional optimization parameter, defaults to sqrt(d/2) rounded up or down to a power of two
-void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k=0);
+void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k=0);
      // Note: poly is passed by value, so caller keeps the original
 
 //! @brief Evaluate an encrypted polynomial on an encrypted input
 //! @param[out] res  to hold the return value
 //! @param[in]  poly the degree-d polynomial to evaluate
 //! @param[in]  x    the point on which to evaluate
-void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x);
+void polyEval(Ctxt& ret, const NTL::Vec<Ctxt>& poly, const Ctxt& x);
 
 
 // A useful helper class
 
 //! @brief Store powers of X, compute them dynamically as needed.
 // This implementation assumes that the size (# of powers) is determined
-// at initialization time, it is not hard to grow the vector as needed,
+// at initialization time, it is not hard to grow the std::vector as needed,
 // but not clear if there is any application that needs it.
 class DynamicCtxtPowers {
 private:
-  vector<Ctxt> v;   // A vector storing the powers themselves
+  std::vector<Ctxt> v;   // A std::vector storing the powers themselves
 
 public:
   DynamicCtxtPowers(const Ctxt& c, long nPowers)
   {
-    assert (!c.isEmpty() && nPowers>0); // Sanity-check
+    //OLD: assert (!c.isEmpty() && nPowers>0); // Sanity-check
+    helib::assertFalse<helib::InvalidArgument>(c.isEmpty(), "Ciphertext cannot be empty");
+    helib::assertTrue<helib::InvalidArgument>(nPowers > 0, "Must have positive nPowers");
 
     Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
     v.resize(nPowers, tmp); // Initializes nPowers empty ciphertexts
@@ -59,8 +63,10 @@ public:
   Ctxt& at(long i) { return getPower(i+1); }
   Ctxt& operator[](long i) { return getPower(i+1); }
 
-  const vector<Ctxt>& getVector() const { return v; }
+  const std::vector<Ctxt>& getVector() const { return v; }
   long size() const { return v.size(); }
   bool isPowerComputed(long i)
   { return (i>0 && i<=(long)v.size() && !v[i-1].isEmpty()); }
 };
+
+#endif // ifndef HELIB_POLYEVAL_H

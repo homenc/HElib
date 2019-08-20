@@ -11,6 +11,7 @@
  */
 
 #include <algorithm>   // defines count(...), min(...)
+#include <cmath>
 
 #include "PAlgebra.h"
 #include "hypercube.h"
@@ -21,6 +22,8 @@
 #include <NTL/lzz_pEXFactoring.h>
 
 #include <NTL/BasicThreadPool.h>
+
+NTL_CLIENT
 
 // polynomials are sorted lexicographically, with the
 // constant term being the "most significant"
@@ -68,15 +71,15 @@ bool PAlgebra::operator==(const PAlgebra& other) const
 }
 
 
-unsigned long PAlgebra::exponentiate(const vector<unsigned long>& exps,
+long PAlgebra::exponentiate(const vector<long>& exps,
 				bool onlySameOrd) const
 {
   if (isDryRun()) return 1;
-  unsigned long t = 1;
-  unsigned long n = min(exps.size(),gens.size());
-  for (unsigned long i=0; i<n; i++) {
+  long t = 1;
+  long n = min(exps.size(),gens.size());
+  for (long i=0; i<n; i++) {
     if (onlySameOrd && !SameOrd(i)) continue;
-    unsigned long g = PowerMod(gens[i] ,exps[i], m); 
+    long g = PowerMod(gens[i] ,exps[i], m); 
     t = MulMod(t, g, m);
   }
   return t;
@@ -89,40 +92,64 @@ void PAlgebra::printout() const
   cout << ", phi(m) = " << phiM << endl;
   cout << "  ord(p)=" << ordP << endl;
 
-  unsigned long i;
+  std::size_t i;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
       cout << "  generator " << gens[i] << " has order ("
            << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
 	   << OrderOf(i) << endl;
   }
-  if (cube.getSize()<100) {
+  if (cube.getSize()<40) {
     cout << "  T = [";
     for (i=0; i<T.size(); i++) cout << T[i] << " ";
     cout << "]\n";
   }
 }
 
+void PAlgebra::printAll() const
+{
+  printout();
+  if (cube.getSize()<40) {
+    cout << "  Tidx = [";
+    for (auto& x: Tidx) cout << x << " ";
+    cout << "]\n";
+    cout << "  zmsIdx = [";
+    for (auto& x: zmsIdx) cout << x << " ";
+    cout << "]\n";
+    cout << "  zmsRep = [";
+    for (auto& x: zmsRep) cout << x << " ";
+    cout << "]\n";
+  }
+}
 
-PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,  
+static double 
+cotan(double x) { return 1/tan(x); }
+
+
+PAlgebra::PAlgebra(long mm, long pp,
                    const vector<long>& _gens, const vector<long>& _ords )
 {
-  assert( ProbPrime(pp) );
-  assert( (mm % pp) != 0 );
-  assert( mm < NTL_SP_BOUND );
-  assert( mm > 1 );
-
+  //OLD: assert( mm < NTL_SP_BOUND && mm > 1 );
+  helib::assertInRange<helib::InvalidArgument>(mm, 2l, NTL_SP_BOUND, "mm is not in [2, NTL_SP_BOUND)");
   cM  = 1.0; // default value for the ring constant
   m = mm;
   p = pp;
+  if (pp==-1) // pp==-1 signals using the complex field for plaintext
+    pp = m-1;
+  else {
+    //OLD: assert( ProbPrime(pp) );
+    helib::assertTrue<helib::InvalidArgument>((bool)ProbPrime(pp), "Modulus pp is not prime (nor -1)");
+    //OLD: assert( (mm % pp) != 0 );
+    helib::assertNeq<helib::InvalidArgument>(mm % pp, 0l, "Modulus pp divides mm");
+  }
 
-  long k = NextPowerOfTwo(m);
-  if (mm == (1UL << k))
+  long k = NextPowerOfTwo(mm);
+  if (static_cast<unsigned long>(mm) == (1UL << k)) // m is a power of two
     pow2 = k;
-  else
+  else // is not power of two, set to zero (even if m is even!)
     pow2 = 0;
 
   // For dry-run, use a tiny m value for the PAlgebra tables
-  if (isDryRun()) mm = (p==3)? 4 : 3;
+  if (isDryRun()) m = (p==3)? 4 : 3;
 
   // Compute the generators for (Z/mZ)^* (defined in NumbTh.cpp)
 
@@ -148,13 +175,28 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
 
   phiM = ordP * getNSlots();
 
+  Vec<Pair<long,long>> factors;
+  factorize(factors, mm);
+  nfactors = factors.length(); 
+
+  radm = 1;
+  for (long i: range(nfactors))
+    radm *= factors[i].a;
+
+  double pi = atan(1)*4;
+  normBnd = 1;
+  for (long i: range(nfactors)) {
+    long u = factors[i].a;
+    normBnd *= 2*cotan(pi/(2*u))/u;
+  }
+
   // Allocate space for the various arrays
-  T.resize(getNSlots());
+  resize(T,getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
   zmsIdx.assign(mm,-1);  // allocate m slots, initialize them to -1
-  zmsRep.resize(phiM);
+  resize(zmsRep,phiM);
   long i, idx;
-  for (i=idx=0; i<(long)mm; i++) {
+  for (i=idx=0; i<mm; i++) {
     if (GCD(i,mm)==1) {
       zmsIdx[i] = idx++;
       zmsRep[zmsIdx[i]] = i;
@@ -172,15 +214,17 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
   // The comment about reverse order is correct, SH.
 
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
-  vector<unsigned long> buffer(gens.size()); // temporaty holds exponents
+  vector<long> buffer(gens.size()); // temporaty holds exponents
   i = idx = 0;
   long ctr = 0;
   do {
     ctr++;
-    unsigned long t = exponentiate(buffer);
+    long t = exponentiate(buffer);
 
-    assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
-    assert(Tidx[t] == -1);
+    //OLD: assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
+    helib::assertEq(GCD(t, mm), 1l, "Bad user-supplied generator");
+    //OLD: assert(Tidx[t] == -1);
+    helib::assertEq(Tidx[t], -1l, "Slot at index t has already been assigned");
 
     T[i] = t;       // The i'th element in T it t
     Tidx[t] = i++;  // the index of t in T is i
@@ -188,20 +232,23 @@ PAlgebra::PAlgebra(unsigned long mm, unsigned long pp,
     // increment buffer by one (in lexigoraphic order)
   } while (nextExpVector(buffer)); // until we cover all the group
 
-  assert(ctr == getNSlots()); // sanity check for user-supplied gens
+  //OLD: assert(ctr == getNSlots()); // sanity check for user-supplied gens
+  helib::assertEq(ctr, getNSlots(), "Bad user-supplied generator set");
 
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
+
+  fftInfo = std::make_shared<PGFFT>(mm); 
 }
 
 bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
                      const vector<long>& gens, const vector<long>& ords)
 {
-  if (palg.getM() != m ||
-      palg.getP() != p ||
-      palg.numOfGens() != gens.size()||
-      palg.numOfGens() != ords.size() ) return false;
+  if (static_cast<unsigned long>(palg.getM()) != m ||
+      static_cast<unsigned long>(palg.getP()) != p ||
+      static_cast<unsigned long>(palg.numOfGens()) != gens.size()||
+      static_cast<unsigned long>(palg.numOfGens()) != ords.size() ) return false;
 
   for (long i=0; i<(long)gens.size(); i++) {
     if (long(palg.ZmStarGen(i)) != gens[i]) return false;
@@ -222,7 +269,15 @@ long PAlgebra::frobenuisPow(long j) const
 
 long PAlgebra::genToPow(long i, long j) const
 {
-  assert(i >= -1 && i < LONG(gens.size()));
+  long sz = gens.size();
+
+  if (i == sz) {
+    helib::assertTrue(j == 0, "PAlgebra::genToPow: i == sz but j != 0");
+    return 1;
+  }
+
+  helib::assertTrue(i >= -1 && i < LONG(gens.size()),
+           "PAlgebra::genToPow: bad dim");
 
   long res;
   if (i == -1)
@@ -241,9 +296,14 @@ long PAlgebra::genToPow(long i, long j) const
 
 PAlgebraModBase *buildPAlgebraMod(const PAlgebra& zMStar, long r)
 {
-  unsigned long p = zMStar.getP();
-  assert(r > 0);
+  long p = zMStar.getP();
 
+  if (p==-1) // complex plaintext space
+    return new PAlgebraModCx(zMStar,r);
+
+  //OLD: assert(p>=2 && r > 0);
+  helib::assertTrue<helib::InvalidArgument>(p >= 2, "Modulus p is less than 2 (nor -1 for CKKS)");
+  helib::assertTrue<helib::InvalidArgument>(r > 0, "Hensel lifting r is less than 1");
   if (p == 2 && r == 1) 
     return new PAlgebraModDerived<PA_GF2>(zMStar, r);
   else
@@ -280,10 +340,12 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   // For dry-run, use a tiny m value for the PAlgebra tables
   if (isDryRun()) m = (p==3)? 4 : 3;
 
-  assert(r > 0);
+  //OLD: assert(r > 0);
+  helib::assertTrue<helib::InvalidArgument>(r > 0l, "Hensel lifting r is less than 1");
 
   ZZ BigPPowR = power_ZZ(p, r);
-  assert(BigPPowR.SinglePrecision());
+  //OLD: assert(BigPPowR.SinglePrecision());
+  helib::assertTrue((bool)BigPPowR.SinglePrecision(), "BigPPowR is not SinglePrecision");
   pPowR = to_long(BigPPowR);
 
   long nSlots = zMStar.getNSlots();
@@ -302,7 +364,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   EDF(localFactors, phimxmod, zMStar.getOrdP()); // equal-degree factorization
 
   RX* first = &localFactors[0];
-  RX* last = first + localFactors.length();
+  RX* last = first + lsize(localFactors);
   RX* smallest = min_element(first, last);
   swap(*first, *smallest);
 
@@ -311,15 +373,15 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
   RXModulus F1(localFactors[0]); 
   for (long i=1; i<nSlots; i++) {
-    unsigned long t =zMStar.ith_rep(i); // Ft is minimal poly of x^{1/t} mod F1
-    unsigned long tInv = InvMod(t, m);  // tInv = t^{-1} mod m
+    long t =zMStar.ith_rep(i); // Ft is minimal poly of x^{1/t} mod F1
+    long tInv = InvMod(t, m);  // tInv = t^{-1} mod m
     RX X2tInv = PowerXMod(tInv,F1);     // X2tInv = X^{1/t} mod F1
     NTL::IrredPolyMod(localFactors[i], X2tInv, F1);
           // IrredPolyMod(X,P,Q) returns in X the minimal polynomial of P mod Q
   }
   /* Debugging sanity-check #1: we should have Ft= GCD(F1(X^t),Phi_m(X))
   for (i=1; i<nSlots; i++) {
-    unsigned long t = T[i];
+    long t = T[i];
     RX X2t = PowerXMod(t,phimxmod);  // X2t = X^t mod Phi_m(X)
     RX Ft = GCD(CompMod(F1,X2t,phimxmod),phimxmod);
     if (Ft != localFactors[i]) {
@@ -334,7 +396,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
     pPowRContext.save();
 
     // Compute the CRT coefficients for the Ft's
-    crtCoeffs.SetLength(nSlots);
+    resize(crtCoeffs,nSlots);
     for (long i=0; i<nSlots; i++) {
       RX te = phimxmod / factors[i]; // \prod_{j\ne i} Fj
       te %= factors[i];              // \prod_{j\ne i} Fj mod Fi
@@ -350,7 +412,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   }
 
   // set factorsOverZZ
-  factorsOverZZ.resize(nSlots);
+  resize(factorsOverZZ,nSlots);
   for (long i = 0; i < nSlots; i++)
     conv(factorsOverZZ[i], factors[i]);
 
@@ -376,7 +438,8 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
   g = to_zz_pX(gg);
   s = InvMod(f, g);
   t = (1-s*f)/g;
-  assert(s*f + t*g == 1);
+  //OLD: assert(s*f + t*g == 1);
+  helib::assertTrue(static_cast<bool>(s*f + t*g == 1l), "Arithmetic error during Hensel lifting");
   ss = to_ZZX(s);
   tt = to_ZZX(t);
 
@@ -386,7 +449,8 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
     // lift from p^k to p^{k+1}
     pk = pk * p;
 
-    assert(divide(ss*ff + tt*gg - 1, pk));
+    //OLD: assert(divide(ss*ff + tt*gg - 1, pk));
+    helib::assertTrue((bool)divide(ss*ff + tt*gg - 1, pk), "Arithmetic error during Hensel lifting");
 
     zz_pX d = to_zz_pX( (1 - (ss*ff + tt*gg))/pk );
     zz_pX s1, t1;
@@ -400,13 +464,14 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
 
   S = to_zz_pX(ss);
 
-  assert((S*F) % G == 1);
+  //OLD: assert((S*F) % G == 1);
+  helib::assertTrue(static_cast<bool>((S*F) % G == 1), "Hensel lifting failed to find solutions");
 }
 
 template<class T> 
 void PAlgebraLift(const ZZX& phimx, const T& lfactors, T& factors, T& crtc, long r)
 {
-   Error("uninstatiated version of PAlgebraLift");
+  throw helib::LogicError("uninstatiated version of PAlgebraLift");
 }
 
 // This specialized version of PAlgebraLift does the hensel
@@ -418,15 +483,15 @@ template<>
 void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factors, vec_zz_pX& crtc, long r)
 {
   long p = zz_p::modulus(); 
-  long nSlots = lfactors.length();
+  long nSlots = lsize(lfactors);
 
   vec_ZZX vzz;             // need to go via ZZX
 
   // lift the factors of Phi_m(X) from mod-2 to mod-2^r
-  if (lfactors.length() > 1)
+  if (lsize(lfactors) > 1)
     MultiLift(vzz, lfactors, phimx, r); // defined in NTL::ZZXFactoring
   else {
-    vzz.SetLength(1);
+    resize(vzz,1);
     vzz[0] = phimx;
   }
 
@@ -434,12 +499,12 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
   zz_p::init(power_long(p, r));
 
   zz_pX phimxmod = to_zz_pX(phimx);
-  factors.SetLength(nSlots);
+  resize(factors,nSlots);
   for (long i=0; i<nSlots; i++)             // Convert from ZZX to zz_pX
     conv(factors[i], vzz[i]);
 
   // Finally compute the CRT coefficients for the factors
-  crtc.SetLength(nSlots);
+  resize(crtc, nSlots);
   for (long i=0; i<nSlots; i++) {
     zz_pX& fct = factors[i];
     zz_pX te = phimxmod / fct; // \prod_{j\ne i} Fj
@@ -453,14 +518,14 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
 template<class type> 
 void PAlgebraModDerived<type>::CRT_decompose(vector<RX>& crt, const RX& H) const
 {
-  unsigned long nSlots = zMStar.getNSlots();
+  long nSlots = zMStar.getNSlots();
 
   if (isDryRun()) {
     crt.clear();
     return;
   }
-  crt.resize(nSlots);
-  for (unsigned long i=0; i<nSlots; i++)
+  resize(crt,nSlots);
+  for (long i=0; i<nSlots; i++)
     rem(crt[i], H, factors[i]); // crt[i] = H % factors[i]
 }
 
@@ -513,10 +578,12 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
   FHE_TIMER_START;
 
   long nSlots = zMStar.getNSlots();
-  assert(lsize(alphas) == nSlots);
+  //assert(lsize(alphas) == nSlots);
+  helib::assertEq(lsize(alphas), nSlots, "Cannot embed in slots: alphas size is different than number of slots");
 
   long d = mappingData.degG;
-  for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d); 
+  //OLD: for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d);
+  for (long i = 0; i < nSlots; i++) helib::assertTrue(deg(alphas[i]) < d, "Bad alpha element at index i: its degree is greater or equal than mappingData.degG");
  
   vector<RX> crt(nSlots); // alloate space for CRT components
 
@@ -593,7 +660,7 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
   }
   else {
     vector<RX> crt1;
-    crt1.resize(nslots);
+    resize(crt1,nslots);
     for (long i = 0; i < nslots; i++)
        MulMod(crt1[i], crt[i], crtCoeffs[i], factors[i]);
 
@@ -604,7 +671,7 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
 
 template<class type>
 void PAlgebraModDerived<type>::mapToFt(RX& w,
-			     const RX& G,unsigned long t,const RX* rF1) const
+			     const RX& G,long t,const RX* rF1) const
 {
   if (isDryRun()) {
     w = RX::zero();
@@ -628,7 +695,8 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
     }
 
     // the general case: currently only works when r == 1
-    assert(r == 1);  
+    //OLD: assert(r == 1);
+    helib::assertEq(r, 1l, "Bad Hensel lifting value in general case: r is not 1");
 
     REBak bak; bak.save();
     RE::init(factors[i]);        // work with the extension field GF_p[X]/Ft(X)
@@ -638,7 +706,7 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
     vec_RE roots;
     FindRoots(roots, Ga);        // Find roots of G in this field
     RE* first = &roots[0];
-    RE* last = first + roots.length();
+    RE* last = first + lsize(roots);
     RE* smallest = min_element(first, last);
                                 // make a canonical choice
     w=rep(*smallest);         
@@ -666,8 +734,11 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
 template<class type> 
 void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const RX& G) const 
 {
-  assert(deg(G) > 0 && zMStar.getOrdP() % deg(G) == 0);
-  assert(LeadCoeff(G) == 1);
+  //OLD: assert(deg(G) > 0 && zMStar.getOrdP() % deg(G) == 0);
+  helib::assertTrue<helib::InvalidArgument>(deg(G) > 0, "Polynomial G is constant (has degree less than one)");
+  helib::assertEq(zMStar.getOrdP() % deg(G), 0l, "Degree of polynomial G does not divide zMStar.getOrdP()");
+  //OLD: assert(LeadCoeff(G) == 1);
+  helib::assertTrue<helib::InvalidArgument>(static_cast<bool>(LeadCoeff(G) == 1l), "Polynomial G is not monic");
   mappingData.G = G;
   mappingData.degG = deg(mappingData.G);
   long d = deg(G);
@@ -676,7 +747,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   long nSlots = zMStar.getNSlots();
   long m = zMStar.getM();
 
-  mappingData.maps.resize(nSlots);
+  resize(mappingData.maps,nSlots);
 
   mapToF1(mappingData.maps[0],mappingData.G); // mapping from base-G to base-F1
   for (long i=1; i<nSlots; i++)
@@ -684,7 +755,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 
 
   // create matrices to streamline CompMod operations
-  mappingData.matrix_maps.resize(nSlots);
+  resize(mappingData.matrix_maps,nSlots);
   for (long i: range(nSlots)) {
     mat_R& mat = mappingData.matrix_maps[i];
     mat.SetDims(d, ordp);
@@ -703,7 +774,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 
   if (deg(mappingData.G)==1) return;
 
-  mappingData.rmaps.resize(nSlots);
+  resize(mappingData.rmaps,nSlots);
 
   if (G == factors[0]) {
     // an important special case
@@ -729,7 +800,8 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
   {
     // the general case: currently only works when r == 1
 
-    assert(r == 1);
+    //OLD: assert(r == 1);
+    helib::assertEq(r, 1l , "Bad Hensel lifting value in general case: r is not 1");
 
     vec_REX FRts;
     for (long i=0; i<nSlots; i++) {
@@ -749,7 +821,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 
       // need to choose the right factor, the one that gives us back X
       long j;
-      for (j=0; j<FRts.length(); j++) { 
+      for (j=0; j<lsize(FRts); j++) { 
         // lift maps[i] to (R[X]/G(X))[Y] and reduce mod j'th factor of Fi
 
         REX FRtsj;
@@ -774,7 +846,8 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
         } // If this does not happen then move to the next factor of Fi
       }
 
-      assert(j < FRts.length());
+      //OLD: assert(j < lsize(FRts));
+      helib::assertTrue(j < lsize(FRts), "Cannot find the right factor Qi. Loop did not terminate before visiting all elements");
       mappingData.rmaps[i] = Qi;
     }
   }
@@ -799,7 +872,7 @@ void PAlgebraModDerived<type>::decodePlaintext(
     return;
   }
 
-  alphas.resize(nSlots);
+  resize(alphas,nSlots);
 
   REBak bak; bak.save(); mappingData.contextForG.restore();
 
@@ -823,10 +896,11 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
   long d = RE::degree();
   long p = zMStar.getP();
 
-  assert(lsize(L) == d);
+  //OLD: assert(lsize(L) == d);
+  helib::assertEq(lsize(L), d, "Vector L size is different than RE::degree()");
 
   vec_RE LL;
-  LL.SetLength(d);
+  resize(LL,d);
 
   for (long i = 0; i < d; i++)
     conv(LL[i], L[i]);
@@ -834,7 +908,7 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
   vec_RE CC;
   ::buildLinPolyCoeffs(CC, LL, p, r);
 
-  C.resize(d);
+  resize(C,d);
   for (long i = 0; i < d; i++)
     C[i] = rep(CC[i]);
 }
@@ -846,14 +920,11 @@ template<class type>
 void PAlgebraModDerived<type>::genMaskTable() 
 {
   // This is only called by the constructor, which has already
-  // set the zz_p context
-
-  RX tmp1;
-  
-  maskTable.resize(zMStar.numOfGens());
+  // set the zz_p context and the crtTable
+  resize(maskTable,zMStar.numOfGens());
   for (long i = 0; i < (long)zMStar.numOfGens(); i++) {
     long ord = zMStar.OrderOf(i);
-    maskTable[i].resize(ord+1);
+    resize(maskTable[i],ord+1);
     maskTable[i][ord] = 0;
     for (long j = ord-1; j >= 1; j--) {
       // initialize mask that is 1 whenever the ith coordinate is at least j
@@ -861,9 +932,7 @@ void PAlgebraModDerived<type>::genMaskTable()
       maskTable[i][j] = maskTable[i][j+1];
       for (long k = 0; k < (long)zMStar.getNSlots(); k++) {
          if (zMStar.coordinate(i, k) == j) {
-           div(tmp1, PhimXMod, factors[k]);
-           mul(tmp1, tmp1, crtCoeffs[k]);
-           add(maskTable[i][j], maskTable[i][j], tmp1);
+           add(maskTable[i][j], maskTable[i][j], crtTable[k]);
          }
       }
     }
@@ -881,7 +950,7 @@ void PAlgebraModDerived<type>::genCrtTable()
   // set the zz_p context
 
   long nslots = zMStar.getNSlots();
-  crtTable.resize(nslots);
+  resize(crtTable,nslots);
   for (long i = 0; i < nslots; i++) {
     RX allBut_i = PhimXMod / factors[i]; // = \prod_{j \ne i }Fj
     allBut_i *= crtCoeffs[i]; // = 1 mod Fi and = 0 mod Fj for j \ne i

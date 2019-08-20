@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#ifndef _FHE_H_
-#define _FHE_H_
+#ifndef HELIB_FHE_H
+#define HELIB_FHE_H
 /**
    @file FHE.h
    @brief Public/secret keys for the BGV cryptosystem
@@ -48,31 +48,31 @@
  * secret-key polynomial s' into a canonical cipehrtext (i.e. a two-part
  * ciphertext with respect to (1,s)). The matrix W is a 2-by-t matrix of
  * DoubleCRT objects. The bottom row are just (psudo)random elements. Then
- * for column i, if the bottom element is ai then the top element is set as
- *     bi = P*Bi*s' + p*ei - s * ai mod P*q0,
- * where p is the plaintext space (i.e. 2 or 2^r) and Bi is the product of the
- * digits-sizes corresponding to columns 0...i-1. (For example if we have
- * digit sizes 3,5,7 then B0=1, B1=3, B2=15 and B3=105.) Also, q0 is the
- * product of all the "ciphertext primes" and P is roughly the product of all
- * the special primes. (Actually, if Q is the product of all the special
- * primes then P=Q*(Q^{-1} mod p).)
+ * for column j, if the bottom element is aj then the top element is set as
+ *     bj = P*Bj*s' + p*ej - s * aj mod P*q0,
+ * where p is the plaintext space (i.e. 2 or 2^r, or 1 for CKKS) and Bj
+ * is the product of the digits-sizes corresponding to columns 0...i-1.
+ * (For example if we have digit sizes 3,5,7 then B0=1, B1=3, B2=15 and
+ * B3=105.) Also, q0 is the product of all the "ciphertext primes" and
+ * P is roughly the product of all the special primes. (Actually, for BGV,
+ * if Q is the product of all the special primes then P=Q*(Q^{-1} mod p).)
  * 
  * In this implementation we save some space, by keeping only a PRG seed for
  * generating the pseudo-random elements, rather than the elements themselves.
  *
- * To convert a cipehrtext part R, we break R into digits R = sum_i Bi Ri,
- * then set (q0,q1)^T = sum_i Ri * column-i. Note that we have
- * <(1,s),(q0,q1)> = sum_i Ri*(s*ai - s*ai + p*ei +P*Bi*s')
- *       = P * sum_i Bi*Ri * s' + p sum_i Ri*ei
+ * To convert a cipehrtext part R, we break R into digits R = sum_j Bj Rj,
+ * then set (q0,q1)^T = sum_j Rj * column-j. Note that we have
+ * <(1,s),(q0,q1)> = sum_j Rj*(s*aj - s*aj + p*ej +P*Bj*s')
+ *       = P * sum_j Bj*Rj * s' + p sum_j Rj*ej
  *       = P * R * s' + p*a-small-element (mod P*q0)
- * where the last element is small since the ei's are small and |Ri|<B.
+ * where the last element is small since the ej's are small and |Rj|<B.
  * Note that if the ciphertext is encrypted relative to plaintext space p'
- * and then key-switched with matrices W relative to plaintext space p, then
- * we get a mew ciphertxt with noise p'*small+p*small, so it is valid relative
- * to plaintext space GCD(p',p).
+ * and then key-switched with matrices W relative to plaintext space p,
+ * then we get a mew ciphertxt with noise p'*small+p*small, so it is valid
+ * relative to plaintext space GCD(p',p).
  *
  * The matrix W is defined modulo Q>t*B*sigma*q0 (with sigma a bound on the
- * size of the ei's), and Q is the product of all the small primes in our
+ * size of the ej's), and Q is the product of all the small primes in our
  * moduli chain. However, if p is much smaller than B then is is enough to
  * use W mod Qi with Qi a smaller modulus, Q>p*sigma*q0. Also note that if
  * p<Br then we will be using only first r columns of the matrix W.
@@ -81,10 +81,12 @@ class KeySwitch {
 public:
   SKHandle fromKey;  // A handle for the key s'
   long     toKeyID;  // Index of the key s that we are switching into
-  long     ptxtSpace;  // either p or p^r
+  long     ptxtSpace;// either p or p^r
 
-  vector<DoubleCRT> b;  // The top row, consisting of the bi's
-  ZZ prgSeed;        // a seed to generate the random ai's in the bottom row
+  std::vector<DoubleCRT> b;// The top row, consisting of the bi's
+  NTL::ZZ prgSeed;         // a seed to generate the random ai's in the bottom row
+  NTL::xdouble noiseBound;  // high probability bound on noise magnitude
+                            // in each column
 
   explicit
   KeySwitch(long sPow=0, long xPow=0, long fromID=0, long toID=0, long p=0):
@@ -106,15 +108,15 @@ public:
   void verify(FHESecKey& sk);
 
   //! @brief Read a key-switching matrix from input
-  void readMatrix(istream& str, const FHEcontext& context);
+  void readMatrix(std::istream& str, const FHEcontext& context);
 
-  // Raw IO
-  void read(istream& str, const FHEcontext& context);
-  void write(ostream& str) const;
+  //! Raw IO
+  void read(std::istream& str, const FHEcontext& context);
+  void write(std::ostream& str) const;
 
 };
-ostream& operator<<(ostream& str, const KeySwitch& matrix);
-// We DO NOT have istream& operator>>(istream& str, KeySwitch& matrix);
+std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix);
+// We DO NOT have std::istream& operator>>(std::istream& str, KeySwitch& matrix);
 // instead must use the readMatrix method above, where you can specify context
 
 
@@ -146,7 +148,9 @@ private:
   //! relative to the first secret key
   Ctxt pubEncrKey;
 
-  std::vector<long> skHwts; // The Hamming weight of the secret keys
+  std::vector<double> skBounds;
+  // High-probability bounds on L-infty norm of secret keys
+           
   std::vector<KeySwitch> keySwitching; // The key-switching matrices
 
   // The keySwitchMap structure contains pointers to key-switching matrices
@@ -155,8 +159,7 @@ private:
   // use when re-linearizing s_i(X^n). 
   std::vector< std::vector<long> > keySwitchMap;
 
-  NTL::Vec<long> KS_strategy; // NTL Vec's support I/O, which is
-                             // more convenient
+  NTL::Vec<long> KS_strategy; // NTL Vec's support I/O, which is more convenient
 
   // bootstrapping data
 
@@ -173,7 +176,7 @@ public:
     { recryptKeyID=-1; }
 
   FHEPubKey(const FHEPubKey& other): // copy constructor
-    context(other.context), pubEncrKey(*this), skHwts(other.skHwts),
+    context(other.context), pubEncrKey(*this), skBounds(other.skBounds),
     keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
     recryptKeyID(other.recryptKeyID), recryptEkey(*this)
   { // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
@@ -182,7 +185,7 @@ public:
   }
 
   void clear() { // clear all public-key data
-    pubEncrKey.clear(); skHwts.clear(); 
+    pubEncrKey.clear(); skBounds.clear();
     keySwitching.clear(); keySwitchMap.clear();
     recryptKeyID=-1; recryptEkey.clear();
   }
@@ -193,10 +196,10 @@ public:
   // Access methods
   const FHEcontext& getContext() const {return context;}
   long getPtxtSpace() const { return pubEncrKey.ptxtSpace; }
-  bool keyExists(long keyID) { return (keyID<(long)skHwts.size()); }
+  bool keyExists(long keyID) { return (keyID<(long)skBounds.size()); }
 
-  //! @brief The Hamming weight of the secret key
-  long getSKeyWeight(long keyID=0) const {return skHwts.at(keyID);}
+  //! @brief The size of the secret key
+  double getSKeyBound(long keyID=0) const {return skBounds.at(keyID);}
 
   ///@{
   //! @name Find key-switching matrices
@@ -241,7 +244,8 @@ public:
   //! dim == -1 is Frobenius
   long getKSStrategy(long dim) const {
     long index = dim+1;
-    assert(index >= 0);
+    //OLD: assert(index >= 0);
+    helib::assertTrue<helib::InvalidArgument>(index >= 0l, "Invalid dimension (dim must be at least -1)");
     if (index >= KS_strategy.length()) return FHE_KSS_UNKNOWN;
     return KS_strategy[index];
   }
@@ -250,17 +254,52 @@ public:
   //! dim == -1 is Frobenius
   void setKSStrategy(long dim, int val) {
     long index = dim+1;
-    assert(index >= 0);
+    //OLD: assert(index >= 0);
+    helib::assertTrue<helib::InvalidArgument>(index >= 0l, "Invalid dimension (dim must be at least -1)");
     if (index >= KS_strategy.length()) 
       KS_strategy.SetLength(index+1, FHE_KSS_UNKNOWN);
     KS_strategy[index] = val;
   }
 
-  //! @brief Encrypts plaintext, result returned in the ciphertext argument.
-  //! The returned value is the plaintext-space for that ciphertext. When
-  //! called with highNoise=true, returns a ciphertext with noise level~q/8.
-  long Encrypt(Ctxt &ciphertxt, const ZZX& plaintxt, long ptxtSpace=0,
-	       bool highNoise=false) const;
+  /**
+   * Encrypts plaintext, result returned in the ciphertext argument. When
+   * called with highNoise=true, returns a ciphertext with noise level
+   * approximately q/8. For BGV, ptxtSpace is the intended plaintext
+   *     space, which cannot be co-prime with pubEncrKey.ptxtSpace.
+   *     The returned value is the plaintext-space for the resulting
+   *     ciphertext, which is GCD(ptxtSpace, pubEncrKey.ptxtSpace).
+   * For CKKS, ptxtSpace is a bound on the size of the complex plaintext
+   *     elements that are encoded in ptxt (before scaling), it is assumed
+   *     that they are scaled by context.alMod.encodeScalingFactor(). The
+   *     returned value is the same as the argument ptxtSpace.
+   **/
+  long Encrypt(Ctxt &ciphertxt,
+               const NTL::ZZX& plaintxt, long ptxtSpace, bool highNoise) const;
+  long Encrypt(Ctxt &ciphertxt,
+               const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
+    NTL::ZZX tmp;
+    convert(tmp, plaintxt);
+    return Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
+  }
+
+  void CKKSencrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt,
+                   double ptxtSize=1.0, double scaling=0.0) const;
+  void CKKSencrypt(Ctxt &ciphertxt, const zzX& plaintxt,
+                   double ptxtSize=1.0, double scaling=0.0) const {
+    NTL::ZZX tmp;
+    convert(tmp, plaintxt);
+    CKKSencrypt(ciphertxt, tmp, ptxtSize, scaling);
+  }
+
+  // These methods are overridden by secret-key Encrypt
+  virtual long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const
+  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false); }
+  virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const
+  { return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false); }
+
+  bool isCKKS() const
+  { return (getContext().alMod.getTag()==PA_cx_tag); }
+  // NOTE: Is taking the alMod from the context the right thing to do?
 
   bool isBootstrappable() const { return (recryptKeyID>=0); }
   void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
@@ -268,15 +307,16 @@ public:
                                  // slots are assumed to contain constants
 
   friend class FHESecKey;
-  friend ostream& operator << (ostream& str, const FHEPubKey& pk);
-  friend istream& operator >> (istream& str, FHEPubKey& pk);
-  friend void writePubKeyBinary(ostream& str, const FHEPubKey& pk);
-  friend void readPubKeyBinary(istream& str, FHEPubKey& pk);
+  friend std::ostream& operator << (std::ostream& str, const FHEPubKey& pk);
+  friend std::istream& operator >> (std::istream& str, FHEPubKey& pk);
+  friend void writePubKeyBinary(std::ostream& str, const FHEPubKey& pk);
+  friend void readPubKeyBinary(std::istream& str, FHEPubKey& pk);
 
   // defines plaintext space for the bootstrapping encrypted secret key
   static long ePlusR(long p);
 
-  // A hack to increase the plaintext space
+  // A hack to increase the plaintext space, you'd better
+  // know what you are doing when using it.
   void hackPtxtSpace(long p2r) { pubEncrKey.ptxtSpace = p2r; }
 };
   
@@ -288,7 +328,7 @@ public:
 class FHESecKey: public FHEPubKey { // The secret key
   FHESecKey(){} // disable default constructor
 public:
-  vector<DoubleCRT> sKeys; // The secret key(s) themselves
+  std::vector<DoubleCRT> sKeys; // The secret key(s) themselves
 
 public:
 
@@ -308,15 +348,24 @@ public:
   //! this object then the procedure below also generates a corresponding
   //! public encryption key.
   //! It is assumed that the context already contains all parameters.
-  long ImportSecKey(const DoubleCRT& sKey, long hwt,
+  long ImportSecKey(const DoubleCRT& sKey, double bound,
 		    long ptxtSpace=0, long maxDegKswitch=3);
 
   //! Key generation: This procedure generates a single secret key,
   //! pushes it onto the sKeys list using ImportSecKey from above.
-  long GenSecKey(long hwt, long ptxtSpace=0, long maxDegKswitch=3)
-  { DoubleCRT newSk(context); // defined relative to all primes, special or not
-    newSk.sampleHWt(hwt);     // samle a Hamming-weight-hwt polynomial
-    return ImportSecKey(newSk, hwt, ptxtSpace, maxDegKswitch);
+  long GenSecKey(long hwt=0, long ptxtSpace=0, long maxDegKswitch=3)
+  { DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes); 
+
+    if (hwt>0) {
+      // sample a Hamming-weight-hwt polynomial
+      double bound = newSk.sampleHWtBounded(hwt);     
+      return ImportSecKey(newSk, bound, ptxtSpace, maxDegKswitch);
+    }
+    else {
+      // sample a 0/+-1 polynomial
+      double bound = newSk.sampleSmallBounded();
+      return ImportSecKey(newSk, bound, ptxtSpace, maxDegKswitch);
+    }
   }
 
   //! Generate a key-switching matrix and store it in the public key. The i'th
@@ -329,23 +378,32 @@ public:
 		      long toKeyIdx=0, long ptxtSpace=0);
 
   // Decryption
-  void Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt) const;
+  void Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt) const;
 
   //! @brief Debugging version, returns in f the polynomial
   //! before reduction modulo the ptxtSpace
-  void Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt, ZZX& f) const;
+  void Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt, NTL::ZZX& f) const;
 
   //! @brief Symmetric encryption using the secret key.
-  long Encrypt(Ctxt &ctxt, const ZZX& ptxt,
-	       long ptxtSpace=0, long skIdx=0) const;
+  long skEncrypt(Ctxt &ctxt, const NTL::ZZX& ptxt, long ptxtSpace, long skIdx) const;
+  long skEncrypt(Ctxt &ctxt, const zzX& ptxt, long ptxtSpace, long skIdx) const {
+    NTL::ZZX tmp;
+    convert(tmp,ptxt);
+    return skEncrypt(ctxt, tmp, ptxtSpace, skIdx);
+  }
+  // These methods override the public-key Encrypt methods
+  long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const override
+  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, /*skIdx=*/0); }
+  long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const override
+  { return skEncrypt(ciphertxt, plaintxt, ptxtSpace, /*skIdx=*/0); }
 
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();
 
-  friend ostream& operator << (ostream& str, const FHESecKey& sk);
-  friend istream& operator >> (istream& str, FHESecKey& sk);
-  friend void writeSecKeyBinary(ostream& str, const FHESecKey& sk);
-  friend void readSecKeyBinary(istream& str, FHESecKey& sk);
+  friend std::ostream& operator << (std::ostream& str, const FHESecKey& sk);
+  friend std::istream& operator >> (std::istream& str, FHESecKey& sk);
+  friend void writeSecKeyBinary(std::ostream& str, const FHESecKey& sk);
+  friend void readSecKeyBinary(std::istream& str, FHESecKey& sk);
 };
 
 //! @name Strategies for generating key-switching matrices
@@ -409,10 +467,12 @@ void addTheseMatrices(FHESecKey& sKey,
 		      const std::set<long>& automVals, long keyID=0);
 
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
-void RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
-	  ZZ* prgSeed=NULL);
+//! Returns a high-probabiliy bound on the L-infty norm
+//! of the canonical embedding
+double RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
+	  NTL::ZZ* prgSeed=NULL);
 
 //! Same as RLWE, but assumes that c1 is already chosen by the caller
-void RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);
+double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);
 
-#endif // ifndef _FHE_H_
+#endif // ifndef HELIB_FHE_H

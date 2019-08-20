@@ -14,14 +14,19 @@ namespace NTL {} using namespace NTL;
 
 #include <NTL/BasicThreadPool.h>
 
+#include <cassert>
+
 #include "EvalMap.h"
 #include "hypercube.h"
 #include "powerful.h"
+#include "ArgMap.h"
+
+NTL_CLIENT
 
 static bool dry = false; // a dry-run flag
-static bool noPrint = false;
+static bool noPrint = true;
 
-void  TestIt(long p, long r, long c, long _k, long w,
+void  TestIt(long p, long r, long c, long _k,
              long L, Vec<long>& mvec, 
              Vec<long>& gens, Vec<long>& ords, long useCache)
 {
@@ -38,7 +43,6 @@ void  TestIt(long p, long r, long c, long _k, long w,
        << ", r=" << r
        << ", c=" << c
        << ", k=" << _k
-       << ", w=" << w
        << ", L=" << L
        << ", mvec=" << mvec << ", "
        << ", useCache = " << useCache
@@ -76,7 +80,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A Hamming-weight-w secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need
 
@@ -104,8 +108,10 @@ void  TestIt(long p, long r, long c, long _k, long w,
   // Sanity check: convert back and compare
   zz_pX F2;
   pConv.powerfulToPoly(F2, cube);
-  if (F != F2) cout << " @@@ conversion error ):\n";
-
+  if (F != F2) {
+    cout << "BAD\n";
+    if (!noPrint) cout << " @@@ conversion error ):\n";
+  }
   // pack the coefficients from cube in the plaintext slots: the j'th
   // slot contains the polynomial pj(X) = \sum_{t=0}^{d-1} cube[jd+t] X^t
   vector<ZZX> val1;
@@ -113,7 +119,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   for (long i = 0; i < phim; i++) {
     val1[i/d] += conv<ZZX>(conv<ZZ>(cube[i])) << (i % d);
   }
-  NewPlaintextArray pa1(ea);
+  PlaintextArray pa1(ea);
   encode(ea, pa1, val1);
 
   Ctxt ctxt(publicKey);
@@ -144,11 +150,11 @@ void  TestIt(long p, long r, long c, long _k, long w,
   zz_pX F1 = conv<zz_pX>(FF1);
 
   if (F1 == F)
-    cout << "EvalMap: GOOD\n";
+    cout << "GOOD\n";
   else
-    cout << "EvalMap: BAD\n";
+    cout << "BAD\n";
 
-  publicKey.Encrypt(ctxt, FF1);
+  publicKey.Encrypt(ctxt, balanced_zzX(F1));
   if (!noPrint) CheckCtxt(ctxt, "init");
 
   // Compute homomorphically the inverse transformation that takes the
@@ -166,13 +172,13 @@ void  TestIt(long p, long r, long c, long _k, long w,
     CheckCtxt(ctxt, "EvalMap");
     cout << "check results\n";
   }
-  NewPlaintextArray pa2(ea);
+  PlaintextArray pa2(ea);
   ea.decrypt(ctxt, secretKey, pa2);
 
   if (equals(ea, pa1, pa2))
-    cout << "EvalMap: GOOD\n";
+    cout << "GOOD\n";
   else
-    cout << "EvalMap: BAD\n";
+    cout << "BAD\n";
   FHE_NTIMER_STOP(ALL);
 
   if (!noPrint) {
@@ -188,7 +194,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
  *  r       lifting  [ default=1 ]
  *  c       number of columns in the key-switching matrices  [ default=2 ]
  *  k       security parameter  [ default=80 ]
- *  L       # of levels in the modulus chain  [ default=6 ]
+ *  L       # of bits in the modulus chain 
  *  s       minimum number of slots  [ default=0 ]
  *  seed    PRG seed  [ default=0 ]
  *  mvec    use specified factorization of m
@@ -200,7 +206,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
  */
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long p=2;
   amap.arg("p", p, "plaintext base");
@@ -214,8 +220,8 @@ int main(int argc, char *argv[])
   long k=80;
   amap.arg("k", k, "security parameter");
 
-  long L=6;
-  amap.arg("L", L, "# of levels in the modulus chain");
+  long L=300;
+  amap.arg("L", L, "# of bits in the modulus chain");
 
   long s=0;
   amap.arg("s", s, "minimum number of slots");
@@ -250,7 +256,7 @@ int main(int argc, char *argv[])
   SetNumThreads(nthreads);
 
   SetSeed(conv<ZZ>(seed));
-  TestIt(p, r, c, k, /*Key Hamming weight=*/64, L, mvec, gens, ords, useCache);
+  TestIt(p, r, c, k, L, mvec, gens, ords, useCache);
 }
 
 // ./Test_EvalMap_x mvec="[73 433]" gens="[18620 12995]" ords="[72 -6]"

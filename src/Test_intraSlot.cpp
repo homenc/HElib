@@ -11,10 +11,15 @@
  */
 // testPacking.cxx - testing uppack/repack functionality
 #include "intraSlot.h"
+#include "ArgMap.h"
+
+NTL_CLIENT
+
+bool verbose = false;
 
 int main(int argc, char **argv)
 {
-  ArgMapping amap;
+  ArgMap amap;
   long p=2;
   amap.arg("p", p, "plaintext base");
   long n=2;
@@ -27,12 +32,14 @@ int main(int argc, char **argv)
   amap.arg("m", m, "use specified value as modulus", NULL);
   long seed=0;
   amap.arg("seed", seed, "PRG seed");
+  amap.arg("verbose", verbose, "suppress printouts");
   amap.parse(argc, argv);
 
   SetSeed(ZZ(seed));
 
   FHEcontext context(m, p, r);
-  context.zMStar.printout();
+  if (verbose)
+    context.zMStar.printout();
   buildModChain(context, L, 3);
 
   ZZX G = context.alMod.getFactorsOverZZ()[0];
@@ -40,22 +47,20 @@ int main(int argc, char **argv)
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(100); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
 
   long d = ea.getDegree(); // size of each slot
-  cout << "packing/unpaking "<<n<<"<-->"<<(n*d -1)<<" ciphertexts\n";
 
   vector<Ctxt> unpacked(d*n -1, Ctxt(publicKey));
 
   // generate (almost) d*n ciphertexts, with only integrs in the slots
-  std::vector<NewPlaintextArray> p1(lsize(unpacked), NewPlaintextArray(ea));
+  std::vector<PlaintextArray> p1(lsize(unpacked), PlaintextArray(ea));
   for (long i=0; i<lsize(unpacked); i++) {
     vector<long> slots;
     ea.random(slots);
     encode(ea, p1[i] ,slots);
-    //    cout << "p1["<<i<<"]="<<p1[i] << endl;
     ea.encrypt(unpacked[i], publicKey, p1[i]);
   }
 
@@ -68,15 +73,16 @@ int main(int argc, char **argv)
   buildUnpackSlotEncoding(unpackSlotEncoding, ea);
   unpack(CtPtrs_vectorCt(unpacked), CtPtrs_vectorCt(ct), ea, unpackSlotEncoding);
 
-  NewPlaintextArray p2(ea);
+  PlaintextArray p2(ea);
   for (long i=0; i<lsize(unpacked); i++) {
     ea.decrypt(unpacked[i], secretKey, p2);
 
     if (!equals(ea, p1[i], p2)) {
-      cout << "BAD, ";
-      cout << "p2["<<i<<"]="<<p2 << endl;
+      cout << "BAD";
+      if (verbose)
+        cout << "p2["<<i<<"]="<<p2 << endl;
       exit(0);
     }
   }
-  cout << "Good\n";
+  cout << "GOOD\n";
 }

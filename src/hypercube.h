@@ -13,8 +13,8 @@
  * @file hypercube.h
  * @brief Hypercubes and their slices.
  **/
-#ifndef _HYPERCUBE_H_
-#define _HYPERCUBE_H_
+#ifndef HELIB_HYPERCUBE_H
+#define HELIB_HYPERCUBE_H
 
 #include "NumbTh.h"
 
@@ -24,22 +24,25 @@ class PAlgebra; // forward decleration
 //! @brief Holds a vector of dimensions for a hypercube and some additional data
 class CubeSignature {
 private:
-   Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
-   Vec<long> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
+   NTL::Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
+   NTL::Vec<long> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
 
 public:
    CubeSignature() {} // a NULL signature
 
    void initSignature(const long _dims[], long _ndims)
    {
-     assert(dims.length() == 0); // can only initialize a NULL signature
-     assert(_ndims >= 0);
-
+     //OLD: assert(dims.length() == 0); // can only initialize a NULL signature
+     helib::assertEq(dims.length(), 0l, "Can only initialize an un-initialized signature"); // can only initialize a NULL signature
+     //OLD: assert(_ndims >= 0);
+     helib::assertTrue<helib::InvalidArgument>(_ndims >= 0l, "Dimension count is negative");
+     
      dims.SetLength(_ndims);
      prods.SetLength(_ndims+1);
      prods[_ndims] = 1;
      for (long i = _ndims-1; i >= 0; i--) {
-       assert(_dims[i] > 0);
+       //OLD: assert(_dims[i] > 0);
+       helib::assertTrue<helib::InvalidArgument>(_dims[i] > 0, "Bad (non-positive) cube signature dimension");
        dims[i] = _dims[i];
        prods[i] = prods[i+1] * _dims[i];
      }
@@ -85,14 +88,16 @@ public:
 
    //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
-     assert(i >= 0 && i < getSize());
-   
-      return (i % prods.at(d)) / prods.at(d+1); 
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
+     
+     return (i % prods.at(d)) / prods.at(d+1);
    }
 
    //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
-      assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
       
       offset = offset % dims.at(d);
       if (offset < 0) offset += dims.at(d);
@@ -126,7 +131,9 @@ public:
    //! get the coordinates of index i in all dimensions.
    //! VecType is either std::vector<intType> or NTL:Vec<intType>
    template <typename VecType> void getAllCoords(VecType& v, long i) const {
-     assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
+     
      resize(v, getNumDims()); // resize(*), lsize(*) defined in NumbTh.h
      for (long j=getNumDims()-1; j>=0; --j) {
        v[j] = i % getDim(j);
@@ -137,7 +144,9 @@ public:
    //! reconstruct index from its coordinates
    //! VecType is either std::vector<intType> or NTL:Vec<intType>
    template <typename VecType> long assembleCoords(VecType& v) const {
-     assert(lsize(v)==getNumDims());
+     //OLD: assert(lsize(v)==getNumDims());
+     helib::assertEq(lsize(v), getNumDims(), "Vector size is different to the number of dimentions");
+     
      long idx=0;
      for (long i=0; i<getNumDims(); i++) {
        idx += v[i]*prods[i+1];
@@ -161,10 +170,10 @@ public:
    //! The inverse of breakIndexByDim
    long assembleIndexByDim(std::pair<long,long> idx, long dim) const;
    
-   friend ostream& operator<<(ostream &s, const CubeSignature& sig);
+   friend std::ostream& operator<<(std::ostream &s, const CubeSignature& sig);
 };
 
-inline ostream& operator<<(ostream &s, const CubeSignature& sig)
+inline std::ostream& operator<<(std::ostream &s, const CubeSignature& sig)
 { return s << sig.dims; }
 
 
@@ -178,7 +187,7 @@ template<class T>
 class HyperCube {
 private:
    const CubeSignature& sig;
-   Vec<T> data;
+   NTL::Vec<T> data;
 
    HyperCube(); // disable default constructor
 
@@ -193,7 +202,8 @@ public:
    //! assignment: signatures must be the same
    HyperCube& operator=(const HyperCube<T>& other)
    {
-      assert(&this->sig == &other.sig);
+     //OLD: assert(&this->sig == &other.sig);
+     helib::assertEq(&this->sig, &other.sig, "Cannot assign HyperCubes with different signatures");
       data = other.data;
       return *this;
    }
@@ -202,7 +212,8 @@ public:
    //! equality testing: signaturees must be the same
    bool operator==(const HyperCube<T>& other) const
    {
-      assert(&this->sig == &other.sig);
+     //OLD: assert(&this->sig == &other.sig);
+     helib::assertEq(&this->sig, &other.sig, "Cannot compare HyperCubes with different signatures");
       return data == other.data;
    }
 
@@ -218,10 +229,10 @@ public:
    //! read/write ref to the data vector.
    //! Note that the length of data is fixed upon construction,
    //! so it cannot be changed through this ref.
-   Vec<T>& getData() { return data; }
+   NTL::Vec<T>& getData() { return data; }
 
    //! read-only ref to data vector
-   const Vec<T>& getData() const { return data; } 
+   const NTL::Vec<T>& getData() const { return data; } 
 
    //! total size of cube
    long getSize() const { return sig.getSize(); }
@@ -287,7 +298,7 @@ public:
 template<class T>
 class ConstCubeSlice {
 private:
-   const Vec<T>* data;
+   const NTL::Vec<T>* data;
    const CubeSignature* sig;
    long dimOffset; // # of "missing dimensions" is this slice vs. the full cube
    long sizeOffset; // index in the cube of the first element in this slice
@@ -304,8 +315,9 @@ public:
      sizeOffset = 0; 
    }
 
-   ConstCubeSlice(const Vec<T>& _data, const CubeSignature& _sig) { 
-     assert(_data.length() == _sig.getSize());
+   ConstCubeSlice(const NTL::Vec<T>& _data, const CubeSignature& _sig) { 
+     //OLD: assert(_data.length() == _sig.getSize());
+     helib::assertEq<helib::InvalidArgument>(_data.length(), _sig.getSize(), "Data and signature sizes are different");
      data = &_data;
      sig = &_sig;
      dimOffset = 0; 
@@ -344,13 +356,15 @@ public:
 
    //! get coordinate in dimension d of index i
    long getCoord(long i, long d) const {
-     assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
      return sig->getCoord(i + sizeOffset, d + dimOffset);
    }
 
    //! add offset to coordinate in dimension d of index i
    long addCoord(long i, long d, long offset) const {
-     assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
      return sig->addCoord(i + sizeOffset, d + dimOffset, offset);
    }
 
@@ -365,7 +379,8 @@ public:
 
    //! read-only reference to element at position i, with bounds check 
    const T& at(long i) const {
-     assert(i >= 0 && i < getSize());
+     //OLD: assert(i >= 0 && i < getSize());
+     helib::assertInRange(i, 0l, getSize(), "Coordinate does not exist (index i out of range)");
      return (*data)[i + sizeOffset];
    }
 
@@ -385,7 +400,7 @@ public:
    // initialize the slice to the full cube
    explicit CubeSlice(HyperCube<T>& _cube) : ConstCubeSlice<T>(_cube) {}
 
-   CubeSlice(Vec<T>& _data, const CubeSignature& _sig) : ConstCubeSlice<T>(_data, _sig) {}
+   CubeSlice(NTL::Vec<T>& _data, const CubeSignature& _sig) : ConstCubeSlice<T>(_data, _sig) {}
 
    // initialize the slice to point to the i-th subcube
    // of the cube pointed to by bigger
@@ -416,19 +431,19 @@ public:
 //! coordinate in the lower dimensional subcube is equal to pos. The length
 //! of v will be set to s.getDim(0).
 template<class T>
-void getHyperColumn(Vec<T>& v, const ConstCubeSlice<T>& s, long pos);
+void getHyperColumn(NTL::Vec<T>& v, const ConstCubeSlice<T>& s, long pos);
 
 //! setHyperColumn does the reverse of getHyperColumn, setting the column
 //! to the given vector
 template<class T>
-void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos);
+void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos);
 
 //! this version of setHyperColumn implicitly pads v with a default value,
 //! if v is too short
 template<class T>
-void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos, const T& val);
+void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos, const T& val);
 
 template<class T>
 void print3D(const HyperCube<T>& c);
 
-#endif /* ifndef _HYPERCUBE_H_ */
+#endif // ifndef HELIB_HYPERCUBE_H 

@@ -9,15 +9,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _matmul_H
-#define _matmul_H
+#ifndef HELIB_MATMUL_H
+#define HELIB_MATMUL_H
 
 #include "EncryptedArray.h"
 
 
 class MatMulFullExec;
 
-// Abstract base class for representing a linear transformation on a full vector.
+// Abstract base class for representing a linear transformation on a full std::vector.
 class MatMulFull {
 public:
   virtual ~MatMulFull() {}
@@ -41,7 +41,7 @@ public:
 
 class BlockMatMulFullExec;
 
-// Abstract base class for representing a block linear transformation on a full vector.
+// Abstract base class for representing a block linear transformation on a full std::vector.
 class BlockMatMulFull {
 public:
   virtual ~BlockMatMulFull() {}
@@ -129,12 +129,12 @@ class BlockMatMul1D_partial : public BlockMatMul1D {
 public:
   PA_INJECT(type)
 
-  // Get the i'th diagonal, encoded as a vector of d constants,
+  // Get the i'th diagonal, encoded as a std::vector of d constants,
   // where d is the order of p.
   // BlockMatMul1D_derived (below) supplies a default implementation,
   // which can be overriden in special circumstances.
   virtual bool
-  processDiagonal(vector<RX>& poly, long i,
+  processDiagonal(std::vector<RX>& poly, long i,
                   const EncryptedArrayDerived<type>& ea) const = 0;
 
 };
@@ -155,7 +155,7 @@ public:
   virtual bool get(mat_R& out, long i, long j, long k) const = 0;
 
   bool
-  processDiagonal(vector<RX>& poly, long i,
+  processDiagonal(std::vector<RX>& poly, long i,
                   const EncryptedArrayDerived<type>& ea) const override;
 };
 
@@ -179,7 +179,7 @@ struct ConstMultiplierCache {
 //====================================
 
 
-// Abstract base case for multiplying an encrypted vector by a plaintext matrix.
+// Abstract base case for multiplying an encrypted std::vector by a plaintext matrix.
 class MatMulExecBase {
 public:
   virtual ~MatMulExecBase() { }
@@ -189,8 +189,8 @@ public:
   // Upgrade zzX constants to DoubleCRT constants.
   virtual void upgrade() = 0;
 
-  // If ctxt enctrypts a row vector v, then this replaces ctxt
-  // by an encryption of the row vector v*mat, where mat is 
+  // If ctxt enctrypts a row std::vector v, then this replaces ctxt
+  // by an encryption of the row std::vector v*mat, where mat is 
   // a matrix provided to the constructor of one of the
   // concrete subclasses MatMul1DExec, BlockMatMul1DExec,
   // MatMulFullExec, BlockMatMulFullExec, defined below.
@@ -199,7 +199,7 @@ public:
 
 //====================================
 
-// Class used to multiply an encrypted row vector by a 1D linear transformation.
+// Class used to multiply an encrypted row std::vector by a 1D linear transformation.
 class MatMul1DExec : public MatMulExecBase {
 public:
 
@@ -228,7 +228,7 @@ public:
   explicit
   MatMul1DExec(const MatMul1D& mat, bool minimal=false);
 
-  // Replaces an encryption of row vector v by encryption of v*mat
+  // Replaces an encryption of row std::vector v by encryption of v*mat
   void mul(Ctxt& ctxt) const override;
 
   // Upgrades encoded constants from zzX to DoubleCRT.
@@ -242,7 +242,7 @@ public:
 
 //====================================
 
-// Class used to multiply an encrypted row vector by a block 1D linear transformation.
+// Class used to multiply an encrypted row std::vector by a block 1D linear transformation.
 class BlockMatMul1DExec : public MatMulExecBase {
 public:
 
@@ -271,7 +271,7 @@ public:
   explicit
   BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal=false);
 
-  // Replaces an encryption of row vector v by encryption of v*mat
+  // Replaces an encryption of row std::vector v by encryption of v*mat
   void mul(Ctxt& ctxt) const override;
 
   // Upgrades encoded constants from zzX to DoubleCRT.
@@ -285,7 +285,7 @@ public:
 
 //====================================
 
-// Class used to multiply an encrypted row vector by a full linear transformation.
+// Class used to multiply an encrypted row std::vector by a full linear transformation.
 class MatMulFullExec : public MatMulExecBase {
 public:
 
@@ -307,7 +307,7 @@ public:
   explicit
   MatMulFullExec(const MatMulFull& mat, bool minimal=false);
 
-  // Replaces an encryption of row vector v by encryption of v*mat
+  // Replaces an encryption of row std::vector v by encryption of v*mat
   void mul(Ctxt& ctxt) const override;
 
   // Upgrades encoded constants from zzX to DoubleCRT.
@@ -324,7 +324,7 @@ public:
 
 //====================================
 
-// Class used to multiply an encrypted row vector by a full block linear transformation.
+// Class used to multiply an encrypted row std::vector by a full block linear transformation.
 class BlockMatMulFullExec : public MatMulExecBase {
 public:
 
@@ -346,7 +346,7 @@ public:
   explicit
   BlockMatMulFullExec(const BlockMatMulFull& mat, bool minimal=false);
 
-  // Replaces an encryption of row vector v by encryption of v*mat
+  // Replaces an encryption of row std::vector v by encryption of v*mat
   void mul(Ctxt& ctxt) const override;
 
   // Upgrades encoded constants from zzX to DoubleCRT.
@@ -372,10 +372,10 @@ void traceMap(Ctxt& ctxt);
 
 // These routines apply linear transformation to plaintext arrays.
 // Mainly for testing purposes.
-void mul(NewPlaintextArray& pa, const MatMul1D& mat);
-void mul(NewPlaintextArray& pa, const BlockMatMul1D& mat);
-void mul(NewPlaintextArray& pa, const MatMulFull& mat);
-void mul(NewPlaintextArray& pa, const BlockMatMulFull& mat);
+void mul(PlaintextArray& pa, const MatMul1D& mat);
+void mul(PlaintextArray& pa, const BlockMatMul1D& mat);
+void mul(PlaintextArray& pa, const MatMulFull& mat);
+void mul(PlaintextArray& pa, const BlockMatMulFull& mat);
 
 
 // These are used mainly for performance evaluation.
@@ -389,4 +389,4 @@ extern int fhe_test_force_hoist;
 // Controls whether ot not we use hoisting.
 // -1 to force off, 0 for default behaviour.
 
-#endif
+#endif // ifndef HELIB_MATMUL_H

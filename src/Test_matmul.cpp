@@ -23,6 +23,10 @@
 
 // Implementation of the various random matrices is found here
 #include "randomMatrices.h"
+#include "ArgMap.h"
+
+NTL_CLIENT
+
 /*
  * Defined in this file are the following class templates:
  *
@@ -53,7 +57,7 @@ bool DoTest(const Matrix& mat, const EncryptedArray& ea,
   FHE_NTIMER_STOP(EncodeMartix_MatMul);
 
   // choose a random plaintext vector and encrypt it
-  NewPlaintextArray v(ea);
+  PlaintextArray v(ea);
   random(ea, v);
 
   // encrypt the random vector
@@ -65,7 +69,7 @@ bool DoTest(const Matrix& mat, const EncryptedArray& ea,
 
   mul(v, mat);     // multiply the plaintext vector
 
-  NewPlaintextArray v1(ea);
+  PlaintextArray v1(ea);
   ea.decrypt(ctxt, secretKey, v1); // decrypt the ciphertext vector
 
   return equals(ea, v, v1);        // check that we've got the right answer
@@ -81,12 +85,20 @@ int ks_strategy = 0;
 void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
 {
   resetAllTimers();
-  if (verbose)
+  if (verbose) {
     context.zMStar.printout();
+    std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
+    std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
+    std::cout << "# bits in ctxt primes = " 
+	 << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
+    std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
+    std::cout << "# bits in special primes = " 
+	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
+  }
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A Hamming-weight-w secret key
 
   bool minimal = ks_strategy == 3;
 
@@ -154,7 +166,7 @@ void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
         okSoFar = false;
     }
   }
-  cout << (okSoFar? "Nice!!\n\n" : "Grrr@*\n\n");
+  cout << (okSoFar? "GOOD\n" : "BAD\n");
 
   if (verbose) {
     printAllTimers(cout);
@@ -169,7 +181,7 @@ void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long m=2047;
   amap.arg("m", m, "defines the cyclotomic polynomial Phi_m(X)");
@@ -177,8 +189,8 @@ int main(int argc, char *argv[])
   amap.arg("p", p, "plaintext base");
   long r=1;
   amap.arg("r", r,  "lifting");
-  long L=3;
-  amap.arg("L", L, "# of levels in the modulus chain");
+  long L=200;
+  amap.arg("L", L, "# of bits in the modulus chain");
   long dim=0;
   amap.arg("dim", dim, "dimension along which to multiply");
   long verbose=0;

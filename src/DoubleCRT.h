@@ -9,17 +9,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _DoubleCRT_H_
-#define _DoubleCRT_H_
+#ifndef HELIB_DOUBLECRT_H
+#define HELIB_DOUBLECRT_H
 /**
  * @file DoubleCRT.h
  * @brief Integer polynomials (elements in the ring R_Q) in double-CRT form
  **/
-
+#include "zzX.h"
 #include "NumbTh.h"
 #include "IndexMap.h"
-#include "FHEContext.h"
 #include "timing.h"
+
+class FHEcontext;
 
 /**
 * @class DoubleCRTHelper
@@ -27,22 +28,20 @@
 *
 * See Section 2.6.2 of the design document (IndexMap)
 */
-class DoubleCRTHelper : public IndexMapInit<vec_long> {
+class DoubleCRTHelper : public IndexMapInit<NTL::vec_long> {
 private: 
   long val;
 
 public:
-  DoubleCRTHelper(const FHEcontext& context) { 
-    val = context.zMStar.getPhiM(); 
-  }
+  DoubleCRTHelper(const FHEcontext& context);
 
   /** @brief the init method ensures that all rows have the same size */
-  virtual void init(vec_long& v) { 
+  virtual void init(NTL::vec_long& v) { 
     v.FixLength(val); 
   }
 
   /** @brief clone allocates a new object and copies the content */
-  virtual IndexMapInit<vec_long> * clone() const { 
+  virtual IndexMapInit<NTL::vec_long> * clone() const { 
     return new DoubleCRTHelper(*this); 
   }
 private:
@@ -72,8 +71,8 @@ private:
  **/
 class DoubleCRT {
   const FHEcontext& context; // the context
-  IndexMap<vec_long> map; // the data itself: if the i'th prime is in use then
-                          // map[i] is the vector of evaluations wrt this prime
+  IndexMap<NTL::vec_long> map; // the data itself: if the i'th prime is in use then
+                          // map[i] is the std::vector of evaluations wrt this prime
 
   //! a "sanity check" method, verifies consistency of the map with
   //! current moduli chain, an error is raised if they are not consistent
@@ -87,17 +86,17 @@ class DoubleCRT {
 
   class AddFun {
   public:
-    long apply(long a, long b, long n) { return AddMod(a, b, n); }
+    long apply(long a, long b, long n) { return NTL::AddMod(a, b, n); }
   };
 
   class SubFun {
   public:
-    long apply(long a, long b, long n) { return SubMod(a, b, n); }
+    long apply(long a, long b, long n) { return NTL::SubMod(a, b, n); }
   };
 
   class MulFun {
   public:
-    long apply(long a, long b, long n) { return MulMod(a, b, n); }
+    long apply(long a, long b, long n) { return NTL::MulMod(a, b, n); }
   };
 
 
@@ -109,10 +108,10 @@ class DoubleCRT {
 		bool matchIndexSets=true);
 
   template<class Fun>
-  DoubleCRT& Op(const ZZ &num, Fun fun);
+  DoubleCRT& Op(const NTL::ZZ &num, Fun fun);
 
   template<class Fun>
-  DoubleCRT& Op(const ZZX &poly, Fun fun);
+  DoubleCRT& Op(const NTL::ZZX &poly, Fun fun);
 
 public:
 
@@ -129,22 +128,38 @@ public:
   //! @param poly The ring element itself, zero if not specified
   //! @param _context The context for this DoubleCRT object, use "current active context" if not specified
   //! @param indexSet Which primes to use for this object, if not specified then use all of them
-  DoubleCRT(const ZZX&poly, const FHEcontext& _context, const IndexSet& indexSet);
-  DoubleCRT(const ZZX&poly, const FHEcontext& _context);
+  DoubleCRT(const NTL::ZZX&poly, const FHEcontext& _context, const IndexSet& indexSet);
+
+// FIXME-IndexSet
+#if 0
+  DoubleCRT(const NTL::ZZX&poly, const FHEcontext& _context);
+#endif
 
   //! @brief Context is not specified, use the "active context"
   //  (run-time error if active context is NULL)
   //  declared "explicit" to avoid implicit type conversion
-  explicit DoubleCRT(const ZZX&poly); 
+
+// FIXME-IndexSet
+#if 0
+  explicit DoubleCRT(const NTL::ZZX&poly); 
+#endif
 
   //! @brief Same as above, but with zzX's
   DoubleCRT(const zzX&poly, const FHEcontext& _context, const IndexSet& indexSet);
+
+
+// FIXME-IndexSet
+#if 0
   DoubleCRT(const zzX&poly, const FHEcontext& _context);
   explicit DoubleCRT(const zzX&poly); 
+#endif
 
  // Without specifying a ZZX, we get the zero polynomial
+// FIXME-IndexSet
+#if 0
   explicit DoubleCRT(const FHEcontext &_context);
   // declare "explicit" to avoid implicit type conversion
+#endif
 
   //! @brief Also specify the IndexSet explicitly
   DoubleCRT(const FHEcontext &_context, const IndexSet& indexSet);
@@ -159,13 +174,14 @@ public:
   // Copy only the primes in s \intersect other.getIndexSet()
   //  void partialCopy(const DoubleCRT& other, const IndexSet& s);
 
-  DoubleCRT& operator=(const ZZX& poly);
-  DoubleCRT& operator=(const ZZ& num);
-  DoubleCRT& operator=(const long num) { *this = to_ZZ(num); return *this; }
+  DoubleCRT& operator=(const zzX& poly);
+  DoubleCRT& operator=(const NTL::ZZX& poly);
+  DoubleCRT& operator=(const NTL::ZZ& num);
+  DoubleCRT& operator=(const long num) { *this = NTL::to_ZZ(num); return *this; }
 
   //! Get one row of a polynomial
-  long getOneRow(Vec<long>& row, long idx, bool positive=false) const;
-  long getOneRow(zz_pX& row, long idx) const; // This affects NTL's modulus
+  long getOneRow(NTL::Vec<long>& row, long idx, bool positive=false) const;
+  long getOneRow(NTL::zz_pX& row, long idx) const; // This affects NTL's modulus
 
   //! @brief Recovering the polynomial in coefficient representation.
   //! This yields an integer polynomial with coefficients in [-P/2,P/2],
@@ -173,8 +189,8 @@ public:
   //! coefficients in [0,P-1] (P is the product of all moduli used).
   //! Using the optional IndexSet param we compute the polynomial
   //! reduced modulo the product of only the ptimes in that set.
-  void toPoly(ZZX& p, const IndexSet& s, bool positive=false) const;
-  void toPoly(ZZX& p, bool positive=false) const;
+  void toPoly(NTL::ZZX& p, const IndexSet& s, bool positive=false) const;
+  void toPoly(NTL::ZZX& p, bool positive=false) const;
 
   // The variant toPolyMod has another argument, which is a modulus Q, and it
   // computes toPoly() mod Q. This is offerred as a separate function in the
@@ -185,7 +201,8 @@ public:
 
 
   bool operator==(const DoubleCRT& other) const {
-    assert(&context == &other.context);
+    //OLD: assert(&context == &other.context);
+    helib::assertEq(&context, &other.context, "Cannot compare DoubleCRTs with different context");
     return map == other.map;
   }
 
@@ -195,7 +212,7 @@ public:
 
   // @brief Set to zero
   DoubleCRT& SetZero() { 
-    *this = ZZ::zero(); 
+    *this = NTL::ZZ::zero(); 
     return *this; 
   }
 
@@ -207,7 +224,7 @@ public:
 
   //! @brief Break into n digits,according to the primeSets in context.digits.
   //! See Section 3.1.6 of the design document (re-linearization)
-  void breakIntoDigits(vector<DoubleCRT>& dgts, long n) const;
+  void breakIntoDigits(std::vector<DoubleCRT>& dgts, long n) const;
 
   //! @brief Expand the index set by s1.
   //! It is assumed that s1 is disjoint from the current index set.
@@ -221,6 +238,13 @@ public:
   void removePrimes(const IndexSet& s1) {
     map.remove(s1);
   }
+
+  //! @ brief make prime set equal to s1
+  void setPrimes(const IndexSet& s1) {
+    addPrimes(s1 / getIndexSet());
+    removePrimes(getIndexSet() / s1);
+  }
+    
 
 
   /**
@@ -238,32 +262,32 @@ public:
     return Op(other, AddFun());
   }
 
-  DoubleCRT& operator+=(const ZZX &poly) {
+  DoubleCRT& operator+=(const NTL::ZZX &poly) {
     return Op(poly, AddFun());
   }
 
-  DoubleCRT& operator+=(const ZZ &num) { 
+  DoubleCRT& operator+=(const NTL::ZZ &num) { 
     return Op(num, AddFun());
   }
 
   DoubleCRT& operator+=(long num) { 
-    return Op(to_ZZ(num), AddFun());
+    return Op(NTL::to_ZZ(num), AddFun());
   }
 
   DoubleCRT& operator-=(const DoubleCRT &other) {
     return Op(other,SubFun());
   }
 
-  DoubleCRT& operator-=(const ZZX &poly) {
+  DoubleCRT& operator-=(const NTL::ZZX &poly) {
     return Op(poly,SubFun());
   }
   
-  DoubleCRT& operator-=(const ZZ &num) { 
+  DoubleCRT& operator-=(const NTL::ZZ &num) { 
     return Op(num, SubFun());
   }
 
   DoubleCRT& operator-=(long num) { 
-    return Op(to_ZZ(num), SubFun());
+    return Op(NTL::to_ZZ(num), SubFun());
   }
 
   // These are the prefix versions, ++dcrt and --dcrt. 
@@ -282,16 +306,16 @@ public:
     return do_mul(other);
   }
 
-  DoubleCRT& operator*=(const ZZX &poly) {
+  DoubleCRT& operator*=(const NTL::ZZX &poly) {
     return Op(poly,MulFun());
   }
 
-  DoubleCRT& operator*=(const ZZ &num) { 
+  DoubleCRT& operator*=(const NTL::ZZ &num) { 
     return Op(num,MulFun());
   }
 
   DoubleCRT& operator*=(long num) { 
-    return Op(to_ZZ(num),MulFun());
+    return Op(NTL::to_ZZ(num),MulFun());
   }
 
 
@@ -310,64 +334,64 @@ public:
   }
 
   // Division by constant
-  DoubleCRT& operator/=(const ZZ &num);
-  DoubleCRT& operator/=(long num) { return (*this /= to_ZZ(num)); }
+  DoubleCRT& operator/=(const NTL::ZZ &num);
+  DoubleCRT& operator/=(long num) { return (*this /= NTL::to_ZZ(num)); }
 
   //! @brief Small-exponent polynomial exponentiation
   void Exp(long k);
 
-  // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
+  //! Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
   void automorph(long k);
   DoubleCRT& operator>>=(long k) { automorph(k); return *this; }
+
+  //! Compute the complex conjugate, the same as automorph(m-1)
+  void complexConj();
   ///@}
 
   // Utilities
 
   const FHEcontext& getContext() const { return context; }
-  const IndexMap<vec_long>& getMap() const { return map; }
+  const IndexMap<NTL::vec_long>& getMap() const { return map; }
   const IndexSet& getIndexSet() const { return map.getIndexSet(); }
 
   // Choose random DoubleCRT's, either at random or with small/Gaussian
   // coefficients. 
 
   //! @brief Fills each row i with random ints mod pi, uses NTL's PRG
-  void randomize(const ZZ* seed=NULL);
+  void randomize(const NTL::ZZ* seed=NULL);
+
+
+
+
+  //! Sampling routines: 
+  //! Each of these return a high probability bound on L-infty norm 
+  //! of canonical embedding
 
   //! @brief Coefficients are -1/0/1, Prob[0]=1/2
-  void sampleSmall() {
-    ZZX poly; 
-    ::sampleSmall(poly,context.zMStar.getPhiM()); // degree-(phi(m)-1) polynomial
-    *this = poly; // convert to DoubleCRT
-  }
+  double sampleSmall();
+  double sampleSmallBounded();
 
   //! @brief Coefficients are -1/0/1 with pre-specified number of nonzeros
-  void sampleHWt(long Hwt) {
-    ZZX poly; 
-    ::sampleHWt(poly,Hwt,context.zMStar.getPhiM());
-    *this = poly; // convert to DoubleCRT
-  }
+  double sampleHWt(long Hwt);
+  double sampleHWtBounded(long Hwt);
 
   //! @brief Coefficients are Gaussians
-  void sampleGaussian(double stdev=0.0) {
-    if (stdev==0.0) stdev=to_double(context.stdev); 
-    ZZX poly; 
-    ::sampleGaussian(poly, context.zMStar.getPhiM(), stdev);
-    *this = poly; // convert to DoubleCRT
-  }
+  //! Return a high probability bound on L-infty norm of canonical embedding
+  double sampleGaussian(double stdev=0.0);
+  double sampleGaussianBounded(double stdev=0.0);
 
   //! @brief Coefficients are uniform in [-B..B]
-  void sampleUniform(const ZZ& B) {
-    ZZX poly;
-    ::sampleUniform(poly, B, context.zMStar.getPhiM());
-    *this = poly;
-  }
+  double sampleUniform(long B);
+  NTL::xdouble sampleUniform(const NTL::ZZ& B);
+
+
 
 
   // used to implement modulus switching
-  void scaleDownToSet(const IndexSet& s, long ptxtSpace);
+  void scaleDownToSet(const IndexSet& s, long ptxtSpace, NTL::ZZX& delta);
 
 
-  void FFT(const ZZX& poly, const IndexSet& s);
+  void FFT(const NTL::ZZX& poly, const IndexSet& s);
   void FFT(const zzX& poly, const IndexSet& s);
   // for internal use
 
@@ -375,30 +399,33 @@ public:
   void reduce() const {} // place-holder for consistenct with AltCRT
 
   // Raw I/O
-  void read(istream& str);
-  void write(ostream& str) const;
+  void read(std::istream& str);
+  void write(std::ostream& str) const;
 
   // I/O: ONLY the matrix is outputted/recovered, not the moduli chain!! An
   // error is raised on input if this is not consistent with the current chain
 
-  friend ostream& operator<< (ostream &s, const DoubleCRT &d);
-  friend istream& operator>> (istream &s, DoubleCRT &d);
+  friend std::ostream& operator<< (std::ostream &s, const DoubleCRT &d);
+  friend std::istream& operator>> (std::istream &s, DoubleCRT &d);
 };
 
 
 
 
-inline void conv(DoubleCRT &d, const ZZX &p) { d=p; }
+inline void conv(DoubleCRT &d, const NTL::ZZX &p) { d=p; }
 
-inline DoubleCRT to_DoubleCRT(const ZZX& p) {
+// FIXME-IndexSet
+#if 0
+inline DoubleCRT to_DoubleCRT(const NTL::ZZX& p) {
   return DoubleCRT(p);
 }
+#endif
 
-inline void conv(ZZX &p, const DoubleCRT &d) { d.toPoly(p); }
+inline void conv(NTL::ZZX &p, const DoubleCRT &d) { d.toPoly(p); }
 
-inline ZZX to_ZZX(const DoubleCRT &d)  { ZZX p; d.toPoly(p); return p; }
+inline NTL::ZZX to_ZZX(const DoubleCRT &d)  { NTL::ZZX p; d.toPoly(p); return p; }
 
-typedef shared_ptr<DoubleCRT> DCRTptr;
-typedef shared_ptr<ZZX> ZZXptr;
+typedef std::shared_ptr<DoubleCRT> DCRTptr;
+typedef std::shared_ptr<NTL::ZZX> ZZXptr;
 
-#endif // #ifndef _DoubleCRT_H_
+#endif // #ifndef HELIB_DOUBLECRT_H

@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _CTPTRS_H
-#define _CTPTRS_H
+#ifndef HELIB_CTPTRS_H
+#define HELIB_CTPTRS_H
 /**
  * @file CtPtrs.h
  * @brief Cnified interface for vector of pointers to ciphertexts
@@ -47,29 +47,39 @@ void packedRecrypt(const CtPtrMat& m,   // matrix of Ctxts
                    const EncryptedArray& ea, long belowLvl=LONG_MAX);
 
 // Find the lowest level among many ciphertexts
-inline long findMinLevel(const CtPtrs& v)
+// FIXME: using bitCapacity isn't really the right thing...
+// this could break some code
+inline long findMinBitCapacity(const CtPtrs& v)
 {
   long lvl = LONG_MAX;
   for (long i=0; i<v.size(); i++)
     if (v.isSet(i) && !v[i]->isEmpty())
-      lvl = std::min(lvl, v[i]->findBaseLevel());
+      lvl = std::min(lvl, v[i]->bitCapacity());
   return lvl;
 }
-inline long findMinLevel(const CtPtrMat& m)
+inline long findMinBitCapacity(const CtPtrMat& m)
 {
   long lvl = LONG_MAX;
   for (long i=0; i<m.size(); i++)
-    lvl = std::min(lvl, findMinLevel(m[i]));
+    lvl = std::min(lvl, findMinBitCapacity(m[i]));
   return lvl;
 }
 
 #include <initializer_list>
-inline long findMinLevel(std::initializer_list<const CtPtrs*> list)
+inline long findMinBitCapacity(std::initializer_list<const CtPtrs*> list)
 {
   long lvl = LONG_MAX;
   for (auto elem : list)
-    lvl = std::min(lvl, findMinLevel(*elem));
+    lvl = std::min(lvl, findMinBitCapacity(*elem));
   return lvl;
 }
 
-#endif // _CTPTRS_H
+void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2);
+inline Ctxt innerProduct(const CtPtrs& v1, const CtPtrs& v2)
+{ 
+  Ctxt ret(ZeroCtxtLike, *v1[0]);
+  innerProduct(ret, v1, v2);
+  return ret; 
+}
+
+#endif // ifndef HELIB_CTPTRS_H

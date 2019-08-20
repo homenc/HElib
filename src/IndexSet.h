@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _IndexSet
-#define _IndexSet
+#ifndef HELIB_INDEXSET_H
+#define HELIB_INDEXSET_H
 /**
  * @file IndexSet.h
  * @brief A dynamic set of integers
@@ -27,17 +27,17 @@
 //! \endcode
 class IndexSet {
 
-  vector<bool> rep;
+  std::vector<bool> rep;
   // NOTE: modern versions of C++ are supposed
   // to implement this efficiently as a "specialized template class".
-  // Older versions of C++ define the equivalent class bit_vector.
+  // Older versions of C++ define the equivalent class bit_std::vector.
 
   long _first, _last, _card;
 
   // Invariant: if _card == 0, then _first = 0, _last = -1;
   // otherwise, _first (resp. _last) is the lowest (resp. highest)
   // index in the set.
-  // In any case, the vector rep always defines the characterstic
+  // In any case, the std::vector rep always defines the characterstic
   // function of the set.
 
   // private helper function
@@ -128,8 +128,33 @@ public:
   bool isInterval() const {return (_card==(1+_last-_first));}
 
   /*** raw IO ***/ 
-  void read(istream& str);  
-  void write(ostream& str) const;
+  void read(std::istream& str);  
+  void write(std::ostream& str) const;
+
+  /*** code to allow one to write "for (long i: set)" ***/
+
+  class iterator  {
+  friend class IndexSet;
+  public:
+    long operator *() const { return i_; }
+    iterator& operator ++() { i_ = s_.next(i_); return *this; } 
+
+    bool operator ==(const iterator &other) const 
+    { return &s_ == &other.s_ && i_ == other.i_; }
+
+    bool operator !=(const iterator &other) const { return !(*this == other); }
+
+  protected:
+    iterator(const IndexSet& s, long i) : s_(s),  i_(i) { }
+
+  private:
+
+    const IndexSet& s_;
+    long i_;
+  };
+
+  iterator begin() const { return iterator(*this, this->first()); }
+  iterator end() const { return iterator(*this, this->last()+1); }
 
 };
 
@@ -149,8 +174,8 @@ IndexSet operator^(const IndexSet& s, const IndexSet& t);
 IndexSet operator/(const IndexSet& s, const IndexSet& t);
 
 // I/O operator
-ostream& operator << (ostream& str, const IndexSet& set);
-istream& operator >> (istream& str, IndexSet& set);
+std::ostream& operator << (std::ostream& str, const IndexSet& set);
+std::istream& operator >> (std::istream& str, IndexSet& set);
 
 //! @brief Functional cardinality
 long card(const IndexSet& s);
@@ -173,4 +198,4 @@ bool operator>(const IndexSet& s1, const IndexSet& s2);
 inline bool disjoint(const IndexSet& s1, const IndexSet& s2)
 { return s1.disjointFrom(s2); }
 
-#endif
+#endif // ifndef HELIB_INDEXSET_H

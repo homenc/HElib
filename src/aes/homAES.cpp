@@ -103,7 +103,8 @@ HomAES::HomAES(const FHEcontext& context): ea2(context,aesPoly,context.alMod)
 #endif
 {
   // Sanity-check: we need the first dimension to be divisible by 16.
-  assert( context.zMStar.OrderOf(0) % 16 == 0 );
+  //OLD: assert( context.zMStar.OrderOf(0) % 16 == 0 );
+  helib::assertEq(context.zMStar.OrderOf(0) % 16, 0l);
 
   // Compute the GF2-affine transformation constants
   buildAffineEnc(encAffMat, affVec, ea2);
@@ -121,7 +122,10 @@ HomAES::HomAES(const FHEcontext& context): ea2(context,aesPoly,context.alMod)
 void HomAES::encryptAESkey(vector<Ctxt>& eKey, Vec<uint8_t>& aesKey,
 			   const FHEPubKey& hePK) const
 {
-  assert(aesKey.length()==16 || aesKey.length()==24 || aesKey.length()==32);
+  //OLD: assert(aesKey.length()==16 || aesKey.length()==24 || aesKey.length()==32);
+  helib::assertTrue<helib::InvalidArgument>(aesKey.length()==16 || aesKey.length()==24 || aesKey.length()==32,
+                                            "Key length must be 16, 24, or 32");
+
 
   // We rely on some implementation of this function
   extern long AESKeyExpansion(unsigned char roundKeySchedule[],
@@ -166,7 +170,9 @@ void HomAES::setPackingConstants()
   // Compute the unpacking constants
 
   long e = ea.getDegree() / 8; // the extension degree
-  assert(ea.getDegree()==e*8 && e<=(long) sizeof(long));
+  //OLD: assert(ea.getDegree()==e*8 && e<=(long) sizeof(long));
+  helib::assertEq(ea.getDegree()==e*8, "ea must have degree divisible by 8");
+  helib::assertTrue(e<=(long) sizeof(long), "extension degree must be at most 8 times sizeof(long)");
 
   GF2EBak bak; bak.save(); // save current modulus (if any)
   GF2XModulus F0(ea.getTab().getFactors()[0]);

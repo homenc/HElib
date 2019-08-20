@@ -16,26 +16,19 @@
 NTL_CLIENT
 #include "NumbTh.h"
 #include "FHEContext.h"
-
-void usage() 
-{
-  cout << "Usage: Test_PAlgebra_x m=<int> [ p=<int> ] [ r=<int> ]" << endl;
-  cout << "  m is an integer that determines Z_m^*" << endl;
-  cout << "  p is an integer that determines the plaintext base [default=2]" << endl;
-  cout << "  r is an integer that determines the lifting [default=1]" << endl;
-  exit(0);
-}
+#include "ArgMap.h"
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long m=17;
   amap.arg("m", m, "cyclotomic index");
-  amap.note("e.g., m=2047");
+  amap.note("e.g., m=1024, m=2047");
 
   long p=2;
   amap.arg("p", p, "plaintext base");
+  amap.note("use p=-1 for the complex field");
 
   long r=1;
   amap.arg("r", r,  "lifting");
@@ -48,37 +41,35 @@ int main(int argc, char *argv[])
   amap.arg("ords", ords0, "use specified vector of orders", NULL);
   amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
+  bool noPrint = true;
+  amap.arg("noPrint", noPrint, "suppress printouts");
+
   amap.parse(argc, argv);
-
-  cout << "m = " << m << ", p = " << p <<  ", r = " << r << endl;
-
-  vector<long> f;
-  factorize(f,m);
-  cout << "factoring "<<m<<" gives [";
-  for (unsigned long i=0; i<f.size(); i++)
-    cout << f[i] << " ";
-  cout << "]\n";
 
   vector<long> gens1, ords1;
   convert(gens1, gens0);
   convert(ords1, ords0);
 
-  PAlgebra al(m, p, gens1, ords1);
-  al.printout();
-  cout << "\n";
-
-  PAlgebraMod almod(al, r);
-
-  FHEcontext context(m, p, r);
+  FHEcontext context(m, p, r, gens1, ords1);
   buildModChain(context, 5, 2);
+  if (!noPrint) {
+    vector<long> f;
+    factorize(f,m);
+    cout << "factoring "<<m<<" gives [";
+    for (unsigned long i=0; i<f.size(); i++)
+      cout << f[i] << " ";
+    cout << "]\n";
+    context.zMStar.printout();
+    cout << endl;
+  }
 
   stringstream s1;
   writeContextBase(s1, context);
   s1 << context;
-
   string s2 = s1.str();
 
-  cout << s2 << endl;
+  if (!noPrint)
+    cout << s2 << endl;
 
   stringstream s3(s2);
 
@@ -90,9 +81,9 @@ int main(int argc, char *argv[])
   s3 >> c1;
 
   if (context == c1)
-    cout << "equal\n";
+    cout << "GOOD\n";
   else
-    cout << "not equal\n";
+    cout << "BAD\n";
 
   return 0;
 }

@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _CModulus_H_
-#define _CModulus_H_
+#ifndef HELIB_CMODULUS_H
+#define HELIB_CMODULUS_H
 /**
  * @file CModulus.h
  * @brief Supports forward and backward length-m FFT transformations
@@ -20,7 +20,7 @@
 #include "NumbTh.h"
 #include "PAlgebra.h"
 #include "bluestein.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 /**
 * @class Cmodulus
@@ -39,9 +39,9 @@
 **/
 class Cmodulus {
   long          q;       // the modulus
-  mulmod_t      qinv;    // PrepMulMod(q);
+  NTL::mulmod_t      qinv;    // PrepMulMod(q);
 
-  zz_pContext   context; // NTL's tables for this modulus
+  NTL::zz_pContext   context; // NTL's tables for this modulus
 
   const PAlgebra* zMStar;  // points to the Zm* structure, m is FFT size
 
@@ -50,13 +50,13 @@ class Cmodulus {
   long        root;    // 2m-th root of unity modulo q
   long        rInv;    // root^{-1} mod q
 
-  copied_ptr<zz_pX>    powers;  // tables for forward FFT
-  Vec<mulmod_precon_t> powers_aux;
-  copied_ptr<fftRep>   Rb;
+  copied_ptr<NTL::zz_pX>    powers;  // tables for forward FFT
+  NTL::Vec<NTL::mulmod_precon_t> powers_aux;
+  copied_ptr<NTL::fftRep>   Rb;
 
-  copied_ptr<zz_pX>    ipowers; // tables for backward FFT
-  Vec<mulmod_precon_t> ipowers_aux;
-  copied_ptr<fftRep>   iRb;
+  copied_ptr<NTL::zz_pX>    ipowers; // tables for backward FFT
+  NTL::Vec<NTL::mulmod_precon_t> ipowers_aux;
+  copied_ptr<NTL::fftRep>   iRb;
 
   copied_ptr<zz_pXModulus1> phimx; // PhimX modulo q, for faster division w/ remainder
 
@@ -92,7 +92,7 @@ class Cmodulus {
   unsigned long getM() const    { return zMStar->getM(); }
   unsigned long getPhiM() const { return zMStar->getPhiM(); }
   long getQ() const          { return q; }
-  mulmod_t getQInv() const          { return qinv; }
+  NTL::mulmod_t getQInv() const          { return qinv; }
   long getRoot() const       { return root; }
   const zz_pXModulus1& getPhimX() const  { return *phimx; }
 
@@ -102,29 +102,29 @@ class Cmodulus {
   // FFT routines
 
   // sets zp context internally
-  void FFT(vec_long &y, const ZZX& x) const;  // y = FFT(x)
-  void FFT(vec_long &y, const zzX& x) const;  // y = FFT(x)
+  void FFT(NTL::vec_long &y, const NTL::ZZX& x) const;  // y = FFT(x)
+  void FFT(NTL::vec_long &y, const zzX& x) const;  // y = FFT(x)
 
   // auxilliary routine used by above two routines
-  void FFT_aux(vec_long &y, zz_pX& tmp) const;  
+  void FFT_aux(NTL::vec_long &y, NTL::zz_pX& tmp) const;  
 
 
 
   // expects zp context to be set externally
-  void iFFT(zz_pX &x, const vec_long& y) const; // x = FFT^{-1}(y)
+  void iFFT(NTL::zz_pX &x, const NTL::vec_long& y) const; // x = FFT^{-1}(y)
 
   // returns thread-local scratch space
   // DIRT: this zz_pX is used for several zz_p moduli,
   // which is not officially sanctioned by NTL, but should be OK.
-  static zz_pX& getScratch_zz_pX();
+  static NTL::zz_pX& getScratch_zz_pX();
 
-  static Vec<long>& getScratch_vec_long();
+  static NTL::Vec<long>& getScratch_vec_long();
 
   // returns thread-local scratch space
   // DIRT: this use a couple of internal, undocumented
   // NTL interfaces
-  static fftRep& getScratch_fftRep(long k);
+  static NTL::fftRep& getScratch_fftRep(long k);
 };
 
 
-#endif // ifdef _CModulus_H_
+#endif // ifndef HELIB_CMODULUS_H

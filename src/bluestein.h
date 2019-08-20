@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _Bluestein
-#define _Bluestein
+#ifndef HELIB_BLUESTEIN_H
+#define HELIB_BLUESTEIN_H
 
 /**
 * @file bluestein.h
@@ -38,13 +38,13 @@
 
 
 //! @brief initialize bluestein
-void BluesteinInit(long n, const zz_p& root, zz_pX& powers, 
-                   Vec<mulmod_precon_t>& powers_aux, fftRep& Rb);
+void BluesteinInit(long n, const NTL::zz_p& root, NTL::zz_pX& powers, 
+                   NTL::Vec<NTL::mulmod_precon_t>& powers_aux, NTL::fftRep& Rb);
 
 
 //! @brief apply bluestein
-void BluesteinFFT(zz_pX& x, long n, const zz_p& root, 
-                  const zz_pX& powers, const Vec<mulmod_precon_t>& powers_aux, 
-                  const fftRep& Rb);
+void BluesteinFFT(NTL::zz_pX& x, long n, const NTL::zz_p& root, 
+                  const NTL::zz_pX& powers, const NTL::Vec<NTL::mulmod_precon_t>& powers_aux, 
+                  const NTL::fftRep& Rb);
 
-#endif
+#endif // ifndef HELIB_BLUESTEIN_H

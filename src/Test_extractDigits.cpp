@@ -17,12 +17,16 @@
 NTL_CLIENT
 #include "EncryptedArray.h"
 #include "polyEval.h"
+#include "debugging.h"
+#include "ArgMap.h"
 
 static bool noPrint = false;
+static bool debug = 0;
+
 
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
   long p = 5;
   long r=0;
   long m = 0;
@@ -32,21 +36,22 @@ int main(int argc, char *argv[])
   amap.arg("r", r, "lifting");
   amap.arg("m", m, "the cyclotomic ring", "heuristic");
   amap.arg("noPrint", noPrint, "suppress printouts");
+  amap.arg("debug", debug, "extra debugging");
   amap.arg("dry", dry, "dry=1 for a dry-run");
 
   // get parameters from the command line
   amap.parse(argc, argv);
 
   if (p<2) exit(0);
-  double lBound = (double)FHE_p2Bound;
-  if (lBound>40.0) lBound=20.0;
+  double lBound = 30.0;
   long bound = floor(lBound/log2((double)p));
   if (r<2 || r>bound) r = bound;
   long p2r = power_long(p,r); // p^r
 
   long ll = NextPowerOfTwo(p);
-  long L = r*ll*3 +2; // how many levels do we need
-  m = p+1; // FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
+  long L = (r*ll*3 +2)*30; // how many levels do we need
+  if (m==0)
+    m = p+1; // FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
   setDryRun(dry);
 
   if (!noPrint) {
@@ -58,8 +63,17 @@ int main(int argc, char *argv[])
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+
+  if (debug) {
+      dbgKey = &secretKey; // debugging key and ea
+      dbgEa = (EncryptedArray*)context.ea;
+  }
+#ifdef DEBUG_PRINTOUT
+  dbgKey = &secretKey; // debugging key and ea
+  dbgEa = (EncryptedArray*)context.ea;
+#endif //DEBUG_PRINTOUT
 
   EncryptedArray ea(context);
   vector<long> v;
@@ -72,6 +86,7 @@ int main(int argc, char *argv[])
   if (ea.size()<=20 && !noPrint)
     cout << "plaintext="<<pDigits<<endl;
 
+
   if (!noPrint)
     cout << "extracting "<<r<<" digits..." << std::flush;
   vector<Ctxt> digits;
@@ -83,7 +98,7 @@ int main(int argc, char *argv[])
   long pp = p2r;
   for (long i=0; i<(long)digits.size(); i++) {
     if (!digits[i].isCorrect()) {
-      cout << " potential decryption error for "<<i<<"th digit ";
+      cout << " BAD, potential decryption error for "<<i<<"th digit ";
       CheckCtxt(digits[i], "");
       exit(0);
     }
@@ -99,9 +114,11 @@ int main(int argc, char *argv[])
 
       // assert ((pDigits[j]-digit) % p == 0);
       if ((pDigits[j]-digit) % pp != 0) {
-	cout << " error: v["<<j<<"]="<<v[j]
-	     << " but "<<i<<"th digit comes "<< pDigits[j]
-	     << " rather than "<<digit<<endl<<endl;
+        cout << "BAD\n";
+        if (!noPrint)
+          cout << " error: v["<<j<<"]="<<v[j]
+               << " but "<<i<<"th digit comes "<< pDigits[j]
+               << " rather than "<<digit<<endl<<endl;
 	exit(0);
       }
       tmp[j] -= digit;
@@ -109,5 +126,5 @@ int main(int argc, char *argv[])
     }
     pp /= p;
   }
-  cout << "digit extraction successful\n\n";
+  cout << "GOOD\n";
 }

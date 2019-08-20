@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _BINARY_COMPARE_H_
-#define _BINARY_COMPARE_H_
+#ifndef HELIB_BINARYCOMPARE_H
+#define HELIB_BINARYCOMPARE_H
 /**
  * @file binaryCompare.h
  * @brief Implementing integer comparison in binary representation.
@@ -24,4 +24,10 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
                        const CtPtrs& a, const CtPtrs& b,
                        std::vector<zzX>* unpackSlotEncoding=nullptr);
 
-#endif // ifdef _BINARY_COMPARE_H_
+//! Compares two integers in binary a,b.
+//! Returns only indicator bits mu=(a>b) and ni=(a<b).
+void compareTwoNumbers(Ctxt& mu, Ctxt& ni,
+                       const CtPtrs& a, const CtPtrs& b,
+                       std::vector<zzX>* unpackSlotEncoding=nullptr);
+
+#endif // ifndef HELIB_BINARYCOMPARE_H

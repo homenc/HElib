@@ -10,22 +10,28 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <cstring>
+#include <algorithm>
 #include "FHEContext.h"
 #include "EvalMap.h"
 #include "powerful.h"
 #include "binio.h"
+#include "sample.h"
 
-long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose)
+NTL_CLIENT
+
+
+long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
   // get a lower-bound on the parameter N=phi(m):
   // 1. Each level in the modulus chain corresponds to pSize=p2Size/2
   //    bits (where we have one prime of this size, and all the others are of
   //    size p2Size).
   //    When using DoubleCRT, we need 2m to divide q-1 for every prime q.
-  // 2. With L levels, the largest modulus for "fresh ciphertexts" has size
-  //          Q0 ~ p^{L+1} ~ 2^{(L+1)*pSize}
+  // 2. With nBits of ctxt primes, 
+  //    the largest modulus for "fresh ciphertexts" has size
+  //          Q0 ~ 2^{nBits}
   // 3. We break each ciphertext into upto c digits, do each digit is as large
-  //    as    D=2^{(L+1)*pSize/c}
+  //    as    D=2^{nBits/c}
   // 4. The added noise variance term from the key-switching operation is
   //    c*N*sigma^2*D^2, and this must be mod-switched down to w*N (so it is
   //    on par with the added noise from modulus-switching). Hence the ratio
@@ -33,18 +39,23 @@ long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool v
   //    or    P > sqrt(c/w) * sigma * 2^{(L+1)*pSize/c}
   // 5. With this extra P factor, the key-switching matrices are defined
   //    relative to a modulus of size
-  //          Q0 = q0*P ~ sqrt{c/w} sigma 2^{(L+1)*pSize*(1+1/c)}
+  //          Q0 = q0*P ~ sqrt{c/w} sigma 2^{nBits*(1+1/c)}
   // 6. To get k-bit security we need N>log(Q0/sigma)(k+110)/7.2, i.e. roughly
-  //          N > (L+1)*pSize*(1+1/c)(k+110) / 7.2
+  //          N > nBits*(1+1/c)(k+110) / 7.2
 
   // Compute a bound on m, and make sure that it is not too large
   double cc = 1.0+(1.0/(double)c);
-  double dN = ceil((L+1)*FHE_pSize*cc*(k+110)/7.2);
+
+  double dN = ceil(nBits*cc*(k+110)/7.2);
+  // FIXME: the bound for dN is not conservative enough...
+  // this should be re-worked.
+
   long N = NTL_SP_BOUND;
   if (N > dN) N = dN;
   else {
-    cerr << "Cannot support a bound of " << dN;
-    Error(", aborting.\n");
+    std::stringstream ss;
+    ss << "Cannot support a bound of " << dN;
+    throw helib::RuntimeError(ss.str());
   }
 
   long m = 0;
@@ -149,190 +160,8 @@ FHEcontext* activeContext = NULL;
 void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
 {
   p = 1;
-  for (long i = s.first(); i <= s.last(); i = s.next(i))
+  for (long i: s)
     p *= ithPrime(i);
-}
-
-// Find the next prime and add it to the chain
-long FHEcontext::AddPrime(long initialP, long delta, bool special)
-{
-  long p = initialP;
-  do { p += delta; } // delta could be positive or negative
-  while (p>initialP/16 && p<NTL_SP_BOUND && !(ProbPrime(p) && !inChain(p)));
-
-  if (p<=initialP/16 || p>=NTL_SP_BOUND) return 0; // no prime found
-
-  long i = moduli.size(); // The index of the new prime in the list
-  moduli.push_back( Cmodulus(zMStar, p, 0) );
-
-  if (special)
-    specialPrimes.insert(i);
-  else
-    ctxtPrimes.insert(i);
-
-  return p;
-}
-
-long FHEcontext::AddFFTPrime(bool special)
-{
-  zz_pBak bak; bak.save(); // Backup the NTL context
-
-  do {
-    zz_p::FFTInit(fftPrimeCount);
-    fftPrimeCount++;
-  } while (inChain(zz_p::modulus()));
-
-  long i = moduli.size(); // The index of the new prime in the list
-  long p = zz_p::modulus();
-
-  moduli.push_back( Cmodulus(zMStar, 0, 1) ); // a dummy Cmodulus object
-
-  if (special)
-    specialPrimes.insert(i);
-  else
-    ctxtPrimes.insert(i);
-
-  return p;
-}
-
-// Adds several primes to the chain. If byNumber=true then totalSize specifies
-// the number of primes to add. If byNumber=false then totalSize specifies the
-// target natural log all the added primes.
-// Returns natural log of the product of all added primes.
-double AddManyPrimes(FHEcontext& context, double totalSize, 
-		     bool byNumber, bool special)
-{
-  if (!context.zMStar.getM() || context.zMStar.getM()>(1<<20))// sanity checks
-    Error("AddManyPrimes: m undefined or larger than 2^20");
-  // NOTE: Below we are ensured that 16m*log(m) << NTL_SP_BOUND
-
-  double sizeLogSoFar = 0.0; // log of added primes so far
-  double addedSoFar = 0.0;   // Either size or number, depending on 'byNumber'
-
-#ifdef NO_HALF_SIZE_PRIME
-  long sizeBits = context.bitsPerLevel;
-#else
-  long sizeBits = 2*context.bitsPerLevel;
-#endif
-  if (special) { // try to use similar size for all the special primes
-    double totalBits = totalSize/log(2.0);
-    long numPrimes = ceil(totalBits/NTL_SP_NBITS);// how many special primes
-    sizeBits = 1+ceil(totalBits/numPrimes);       // what's the size of each
-    // Added one so we don't undershoot our target
-  }
-  if (sizeBits>NTL_SP_NBITS) sizeBits = NTL_SP_NBITS;
-  long sizeBound = 1L << sizeBits;
-
-  // Make sure that you have enough primes such that p-1 is divisible by 2m
-  long twoM = 2 * context.zMStar.getM();
-  if (sizeBound < twoM*log2(twoM)*8) { // bound too small to have such primes
-    sizeBits = ceil(log2(twoM*log2(twoM)))+3; // increase prime size-bound
-    sizeBound = 1L << sizeBits;
-  }
-
-  // make p-1 divisible by m*2^k for as large k as possible
-  // (not needed when m itself a power of two)
-
-  if (context.zMStar.getM() & 1) // m is odd, so not power of two
-    while (twoM < sizeBound/(sizeBits*2)) twoM *= 2;
-
-  long bigP = sizeBound - (sizeBound%twoM) +1; // 1 mod 2m
-  long p = bigP+twoM; // twoM is subtracted in the AddPrime function
-
-  // FIXME: The last prime could sometimes be slightly smaller
-  while (addedSoFar < totalSize) {
-    if ((p = context.AddPrime(p,-twoM,special))) { // found a prime
-      sizeLogSoFar += log((double)p);
-      addedSoFar = byNumber? (addedSoFar+1.0) : sizeLogSoFar;
-    }
-    else { // we ran out of primes, try a lower power of two
-      twoM /= 2;
-      assert(twoM > (long)context.zMStar.getM()); // can we go lower?
-      p = bigP;
-    }
-  }
-  return sizeLogSoFar;
-}
-
-void buildModChain(FHEcontext &context, long nLevels, long nDgts,long extraBits)
-{
-#ifdef NO_HALF_SIZE_PRIME
-  long nPrimes = nLevels;
-#else
-  long nPrimes = (nLevels+1)/2;
-  // The first prime should be of half the size. The code below tries to find
-  // a prime q0 of this size where q0-1 is divisible by 2^k * m for some k>1.
-
-  long twoM = 2 * context.zMStar.getM();
-  long bound = (1L << (context.bitsPerLevel-1));
-  while (twoM < bound/(2*context.bitsPerLevel))
-    twoM *= 2; // divisible by 2^k * m  for a larger k
-
-  bound = bound - (bound % twoM) +1; // = 1 mod 2m
-  long q0 = context.AddPrime(bound, twoM, false); 
-  // add next prime to chain
-  
-  assert(q0 != 0);
-  nPrimes--;
-#endif
-
-  // Choose the next primes as large as possible
-  if (nPrimes>0) AddPrimesByNumber(context, nPrimes);
-
-  // calculate the size of the digits
-
-  if (nDgts > nPrimes) nDgts = nPrimes; // sanity checks
-  if (nDgts <= 0) nDgts = 1;
-  context.digits.resize(nDgts); // allocate space
-
-  IndexSet s1;
-  double sizeSoFar = 0.0;
-  double maxDigitSize = 0.0;
-  if (nDgts>1) { // we break ciphetext into a few digits when key-switching
-    double dsize = context.logOfProduct(context.ctxtPrimes)/nDgts; // estimate
-
-    // A hack: we break the current digit after the total size of all digits
-    // so far "almost reaches" the next multiple of dsize, upto 1/3 of a level
-    double target = dsize-(context.bitsPerLevel/3.0);
-    long idx = context.ctxtPrimes.first();
-    for (long i=0; i<nDgts-1; i++) { // set all digits but the last
-      IndexSet s;
-      while (idx <= context.ctxtPrimes.last() && (empty(s)||sizeSoFar<target)) {
-        s.insert(idx);
-	sizeSoFar += log((double)context.ithPrime(idx));
-	idx = context.ctxtPrimes.next(idx);
-      }
-      assert (!empty(s));
-      context.digits[i] = s;
-      s1.insert(s);
-      double thisDigitSize = context.logOfProduct(s);
-      if (maxDigitSize < thisDigitSize) maxDigitSize = thisDigitSize;
-      target += dsize;
-    }
-    // The ctxt primes that are left (if any) form the last digit
-    IndexSet s = context.ctxtPrimes / s1;
-    if (!empty(s)) {
-      context.digits[nDgts-1] = s;
-      double thisDigitSize = context.logOfProduct(s);
-      if (maxDigitSize < thisDigitSize) maxDigitSize = thisDigitSize;
-    }
-    else { // If last digit is empty, remove it
-      nDgts--;
-      context.digits.resize(nDgts);
-    }
-  }
-  else { // only one digit
-    maxDigitSize = context.logOfProduct(context.ctxtPrimes);
-    context.digits[0] = context.ctxtPrimes;
-  }
-
-  // Add special primes to the chain for the P factor of key-switching
-  long p2r = context.alMod.getPPowR();
-  double sizeOfSpecialPrimes
-    = maxDigitSize + log(nDgts) + log(context.stdev *2)
-      + log((double)p2r) + (extraBits*log(2.0));
-
-  AddPrimesBySize(context, sizeOfSpecialPrimes, true);
 }
 
 bool FHEcontext::operator==(const FHEcontext& other) const
@@ -347,6 +176,7 @@ bool FHEcontext::operator==(const FHEcontext& other) const
     if (m1.getQ() != m2.getQ()) return false;
   }
 
+  if (smallPrimes != other.smallPrimes) return false;
   if (ctxtPrimes != other.ctxtPrimes) return false;
   if (specialPrimes != other.specialPrimes) return false;
 
@@ -356,8 +186,9 @@ bool FHEcontext::operator==(const FHEcontext& other) const
 
   if (stdev != other.stdev) return false;
 
+  if (scale != other.scale) return false;
+
   if (rcData != other.rcData) return false;
-  if (trcData != other.trcData) return false;
   return true;
 }
 
@@ -373,7 +204,7 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
   write_raw_int(str, context.zMStar.numOfGens());
   
   // There aren't simple getters to get the gens and ords vectors
-  for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
+  for(long i=0; i<context.zMStar.numOfGens(); i++) {
     write_raw_int(str, context.zMStar.ZmStarGen(i));
   }
 
@@ -381,7 +212,7 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
  
   // Copying the way it is done in ASCII IO. 
   // Bad dimensions are represented as a negated ord 
-  for(unsigned long i=0; i<context.zMStar.numOfGens(); i++) {
+  for(long i=0; i<context.zMStar.numOfGens(); i++) {
     if(context.zMStar.SameOrd(i))
       write_raw_int(str, context.zMStar.OrderOf(i));
     else 
@@ -395,7 +226,9 @@ void readContextBaseBinary(istream& str, unsigned long& m,
                            unsigned long& p, unsigned long& r,
                            vector<long>& gens, vector<long>& ords)
 {
-  assert(readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN)==0);
+  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-context-base eye catcher");
     
   p = read_raw_int(str);
   r = read_raw_int(str);
@@ -405,7 +238,9 @@ void readContextBaseBinary(istream& str, unsigned long& m,
   read_raw_vector(str, gens);  
   read_raw_vector(str, ords);
   
-  assert(readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END)==0);
+  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-context-base eye catcher");
 }
 
 std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str)
@@ -423,13 +258,19 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 
   // standard-deviation 
   write_raw_xdouble(str, context.stdev);
-   
-  write_raw_int(str, context.specialPrimes.card());
 
+  // scale
+  write_raw_double(str, context.scale);
+   
+  // the "small" index 
+  write_raw_int(str, context.smallPrimes.card());
+  for(long tmp: context.smallPrimes) {;
+    write_raw_int(str, tmp);
+  }
+   
   // the "special" index 
-  for(long tmp = context.specialPrimes.first();
-      tmp <= context.specialPrimes.last(); 
-      tmp = context.specialPrimes.next(tmp)){
+  write_raw_int(str, context.specialPrimes.card());
+  for(long tmp: context.specialPrimes) {
     write_raw_int(str, tmp);
   }
 
@@ -445,17 +286,14 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 
   for(long i=0; i<(long)context.digits.size(); i++){
     write_raw_int(str, context.digits[i].card());
-    for(long tmp = context.digits[i].first();
-         tmp <= context.digits[i].last(); 
-         tmp = context.digits[i].next(tmp)){
+    for(long tmp: context.digits[i]) {
       write_raw_int(str, tmp);
     }
   }
 
   write_ntl_vec_long(str, context.rcData.mvec);
 
-  write_raw_int(str, context.rcData.hwt);
-  write_raw_int(str, context.rcData.conservative);
+  write_raw_int(str, context.rcData.skHwt);
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
@@ -463,20 +301,33 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 
 void readContextBinary(istream& str, FHEcontext& context)
 {
-  assert(readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN)==0);
+  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-context eye catcher");
 
   // Get the standard deviation
   context.stdev = read_raw_xdouble(str);
 
-  long sizeOfS = read_raw_int(str);
+  // Get the scale
+  context.scale = read_raw_double(str);
 
-  IndexSet s;
-  for(long tmp, i=0; i<sizeOfS; i++){
+
+  IndexSet smallPrimes;
+  long smallPrimes_sz = read_raw_int(str);
+  for(long tmp, i=0; i<smallPrimes_sz; i++){
     tmp = read_raw_int(str);
-    s.insert(tmp);
+    smallPrimes.insert(tmp);
+  }
+
+  IndexSet specialPrimes;
+  long specialPrimes_sz = read_raw_int(str);
+  for(long tmp, i=0; i<specialPrimes_sz; i++){
+    tmp = read_raw_int(str);
+    specialPrimes.insert(tmp);
   }
 
   context.moduli.clear();
+  context.smallPrimes.clear();
   context.specialPrimes.clear();
   context.ctxtPrimes.clear();
 
@@ -487,7 +338,9 @@ void readContextBinary(istream& str, FHEcontext& context)
 
     context.moduli.push_back(Cmodulus(context.zMStar,p,0));
 
-    if (s.contains(i))
+    if (smallPrimes.contains(i))
+      context.smallPrimes.insert(i);   // small prime
+    else if (specialPrimes.contains(i))
       context.specialPrimes.insert(i); // special prime
     else
       context.ctxtPrimes.insert(i);    // ciphertext prime
@@ -497,7 +350,7 @@ void readContextBinary(istream& str, FHEcontext& context)
 
   context.digits.resize(nDigits);
   for(long i=0; i<(long)context.digits.size(); i++){
-    sizeOfS = read_raw_int(str);
+    long sizeOfS = read_raw_int(str);
 
     for(long tmp, n=0; n<sizeOfS; n++){
       tmp = read_raw_int(str);
@@ -510,13 +363,15 @@ void readContextBinary(istream& str, FHEcontext& context)
   read_ntl_vec_long(str, mv);
 
   long t = read_raw_int(str);
-  bool consFlag = read_raw_int(str);  
 
   if (mv.length()>0) {
-    context.makeBootstrappable(mv, t, consFlag);
+    context.makeBootstrappable(mv, t);
   }
 
-  assert(readEyeCatcher(str, BINIO_EYE_CONTEXT_END)==0);
+  context.setModSizeTable();
+  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
+  //OLD: assert(eyeCatcherFound == 0);
+  helib::assertEq(eyeCatcherFound, 0, "Could not find post-context eye catcher");
 }
 
 void writeContextBase(ostream& str, const FHEcontext& context)
@@ -546,6 +401,12 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   // standard-deviation
   str << context.stdev << "\n";
 
+  // scale
+  str << context.scale << "\n";
+
+  // the "small" index 
+  str << context.smallPrimes << "\n ";
+
   // the "special" index 
   str << context.specialPrimes << "\n ";
 
@@ -563,10 +424,8 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   str <<"\n";
 
   str << context.rcData.mvec;
-  str << " " << context.rcData.hwt;
-  str << " " << context.rcData.conservative;
+  str << " " << context.rcData.skHwt;
   str << " " << context.rcData.build_cache;
-  // NOTE: the data for trcData will always be the same as for rcData
 
   str << "]\n";
 
@@ -600,10 +459,17 @@ istream& operator>> (istream &str, FHEcontext& context)
   // Get the standard deviation
   str >> context.stdev;
 
-  IndexSet s;
-  str >> s; // read the special set
+  // Get the scale
+  str >> context.scale;
+
+  IndexSet smallPrimes;
+  str >> smallPrimes; 
+
+  IndexSet specialPrimes;
+  str >> specialPrimes; 
 
   context.moduli.clear();
+  context.smallPrimes.clear();
   context.specialPrimes.clear();
   context.ctxtPrimes.clear();
 
@@ -615,7 +481,9 @@ istream& operator>> (istream &str, FHEcontext& context)
 
     context.moduli.push_back(Cmodulus(context.zMStar,p,0));
 
-    if (s.contains(i))
+    if (smallPrimes.contains(i))
+      context.smallPrimes.insert(i);   // small prime
+    else if (specialPrimes.contains(i))
       context.specialPrimes.insert(i); // special prime
     else
       context.ctxtPrimes.insert(i);    // ciphertext prime
@@ -631,16 +499,14 @@ istream& operator>> (istream &str, FHEcontext& context)
   // Read in the partition of m into co-prime factors (if bootstrappable)
   Vec<long> mv;
   long t;
-  bool consFlag;
   int build_cache;
   str >> mv;
   str >> t;
-  str >> consFlag;
   str >> build_cache;
   if (mv.length()>0) {
-    context.makeBootstrappable(mv, t, consFlag, build_cache);
+    context.makeBootstrappable(mv, t, build_cache);
   }
-
+  context.setModSizeTable();
   seekPastChar(str, ']');
   return str;
 }
@@ -655,10 +521,7 @@ FHEcontext::~FHEcontext()
 // rcEA (if set) points to rcAlmod which points to zMStar
 FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
    const vector<long>& gens, const vector<long>& ords):
-  zMStar(m, p, gens, ords), alMod(zMStar, r),
-  ea(new EncryptedArray(*this, alMod))
+  stdev(3.2), scale(10.0), zMStar(m, p, gens, ords), alMod(zMStar, r)
 {
-  stdev=3.2;  
-  bitsPerLevel = FHE_pSize;
-  fftPrimeCount = 0; 
+  ea = new EncryptedArray(*this, alMod);
 }

@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <iostream>
+#include <cassert>
 #include <fstream>
 #include <vector>
 #include <cmath>
@@ -23,6 +24,7 @@ NTL_CLIENT
 #include "intraSlot.h"
 #include "binaryArith.h"
 #include "binaryCompare.h"
+#include "ArgMap.h"
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
@@ -45,9 +47,10 @@ static long mValues[][15] = {
 
 void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap=false);
 
+
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
   long prm=1;
   amap.arg("prm", prm, "parameter size (0-tiny,...,4-huge)");
   long bitSize = 5;
@@ -95,8 +98,8 @@ int main(int argc, char *argv[])
 
   // Compute the number of levels
   long L;
-  if (bootstrap) L = 30; // that should be enough
-  else           L = 3+ NTL::NumBits(bitSize+2);
+  if (bootstrap) L = 900; // that should be enough
+  else           L = 30*(7+ NTL::NumBits(bitSize+2));
 
   if (verbose) {
     cout <<"input bitSize="<<bitSize
@@ -105,11 +108,9 @@ int main(int argc, char *argv[])
     cout << "computing key-independent tables..." << std::flush;
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);
-  context.bitsPerLevel = B;
-  buildModChain(context, L, c,/*extraBits=*/8);
+  buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
-    context.makeBootstrappable(mvec, /*t=*/0,
-                               /*flag=*/false, /*cacheType=DCRT*/2);
+    context.makeBootstrappable(mvec, /*t=*/0);
   }
   buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
   if (verbose) {
@@ -119,7 +120,7 @@ int main(int argc, char *argv[])
     cout << "\ncomputing key-dependent tables..." << std::flush;
   }
   FHESecKey secKey(context);
-  secKey.GenSecKey(/*Hweight=*/128);
+  secKey.GenSecKey();
   addSome1DMatrices(secKey); // compute key-switching matrices
   addFrbMatrices(secKey);
   if (bootstrap) secKey.genRecryptData();
@@ -133,7 +134,7 @@ int main(int argc, char *argv[])
 
   for (long i=0; i<nTests; i++)
     testCompare(secKey, bitSize, bootstrap);
-  cout << "  *** testCompare PASS ***\n";
+  cout << "GOOD\n";
 
   if (verbose) printAllTimers(cout);
   return 0;
@@ -142,7 +143,8 @@ int main(int argc, char *argv[])
 
 void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
 {
-  const EncryptedArray& ea = *(secKey.getContext().ea);
+  const FHEcontext& context = secKey.getContext();
+  const EncryptedArray& ea = *(context.ea);
 
   // Choose two random n-bit integers
   long pa = RandomBits_long(bitSize);
@@ -162,8 +164,8 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
     if (i<bitSize) secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
     secKey.Encrypt(encb[i], ZZX((pb>>i)&1));
     if (bootstrap) { // put them at a lower level
-      if (i<bitSize) enca[i].modDownToLevel(5);
-      encb[i].modDownToLevel(5);
+      if (i<bitSize) enca[i].bringToSet(context.getCtxtPrimes(5));
+      encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
 #ifdef DEBUG_PRINTOUT
@@ -171,7 +173,27 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
 #endif
 
   vector<long> slotsMin, slotsMax, slotsMu, slotsNi;
+
+  //cmp only
+  compareTwoNumbers(mu, ni, CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
+                      &unpackSlotEncoding);
+  ea.decrypt(mu, secKey, slotsMu);
+  ea.decrypt(ni, secKey, slotsNi);
+  if (slotsMu[0]!=pMu || slotsNi[0]!=pNi) {
+    cout << "BAD\n";
+    if (verbose)
+      cout << "Comparison (without min max) error: a="<<pa<<", b="<<pb
+           << ", mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
+    exit(0);
+  }
+  else if (verbose) {
+    cout << "Comparison (without min max) succeeded: ";
+    cout << '('<<pa<<','<<pb<<")=> mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
+  }
+
   {CtPtrs_VecCt wMin(eMin), wMax(eMax); // A wrappers around output vectors
+
+  //cmp with max and min
   compareTwoNumbers(wMax, wMin, mu, ni,
                     CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
                     &unpackSlotEncoding);
@@ -183,13 +205,15 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
   
   if (slotsMax[0]!=pMax || slotsMin[0]!=pMin
       || slotsMu[0]!=pMu || slotsNi[0]!=pNi) {
-    cout << "Comparison error: a="<<pa<<", b="<<pb
-         << ", but min="<<slotsMin[0]<<", max="<<slotsMax[0]
-         << ", mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
+    cout << "BAD\n";
+    if (verbose)
+      cout << "Comparison (with min max) error: a="<<pa<<", b="<<pb
+           << ", but min="<<slotsMin[0]<<", max="<<slotsMax[0]
+           << ", mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
     exit(0);
   }
   else if (verbose) {
-    cout << "Comparison succeeded: ";
+    cout << "Comparison (with min max) succeeded: ";
     cout << '('<<pa<<','<<pb<<")=>("<<slotsMin[0]<<','<<slotsMax[0]
          <<"), mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
   }
@@ -198,7 +222,7 @@ void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
   const Ctxt* minLvlCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eMax) {
-    long lvl = c.findBaseLevel();
+    long lvl = c.logOfPrimeSet();
     if (lvl < minLvl) {
       minLvlCtxt = &c;
       minLvl = lvl;

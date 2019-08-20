@@ -17,31 +17,9 @@
 #include <cctype>
 #include <algorithm>   // defines count(...), min(...)
 
+NTL_CLIENT
+
 bool FHEglobals::dryRun = false;
-
-// Code for parsing command line
-
-bool parseArgs(int argc,  char *argv[], argmap_t& argmap)
-{
-  for (long i = 1; i < argc; i++) {
-    char *x = argv[i];
-    long j = 0;
-    while (x[j] != '=' && x[j] != '\0') j++; 
-    if (x[j] == '\0') return false;
-    string arg(x, j);
-    if (argmap[arg] == NULL) return false;
-    argmap[arg] = x+j+1;
-  }
-
-  return true;
-}
-
-bool doArgProcessing(string *value, const char *s)
-{
-  *value = string(s);
-  return true;
-}
-
 
 // Mathematically correct mod and div, avoids overflow
 long mcMod(long a, long b) 
@@ -98,9 +76,11 @@ long computeProd(const vector<long>& vec) {return computeProd(vec, vec.size());}
 // return a degree-d irreducible polynomial mod p
 ZZX makeIrredPoly(long p, long d)
 {
-	assert(d >= 1);
-  assert(ProbPrime(p));
-
+  //OLD: assert(d >= 1);
+  helib::assertTrue<helib::InvalidArgument>(d >= 1l, "polynomial degree is less than 1");
+  //OLD: assert(ProbPrime(p));
+  helib::assertTrue<helib::InvalidArgument>((bool)ProbPrime(p), "modulus p is not prime");
+  
   if (d == 1) return ZZX(1, 1); // the monomial X
 
   zz_pBak bak; bak.save();
@@ -375,8 +355,9 @@ long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p,
 template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
 {
   zz qm1 = zp::modulus()-1;
-
-  assert(qm1 % e == 0);
+  
+  //OLD: assert(qm1 % e == 0);
+  helib::assertEq(static_cast<long>(qm1 % e), 0l, "e does not divide zp::modulus()-1");
   
   vector<long> facts;
   factorize(facts,e); // factorization of e
@@ -402,7 +383,7 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
     do {
       iter++;
       if (iter > 1000000) 
-        Error("FindPrimitiveRoot: possible infinite loop?");
+        throw helib::RuntimeError("FindPrimitiveRoot: possible infinite loop?");
       q = s.next();
       conv(qq, q);
       power(qq1, qq, qm1/p);
@@ -417,14 +398,14 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
     zp s;
 
     power(s, root, e);
-    if (s != 1) Error("FindPrimitiveRoot: internal error (1)");
+    if (s != 1) throw helib::RuntimeError("FindPrimitiveRoot: internal error (1)");
 
     // check that s^{e/p} != 1 for any prime divisor p of e
     for (unsigned long i=0; i<facts.size(); i++) {
       long e2 = e/facts[i];
       power(s, root, e2);   // s = root^{e/p}
       if (s == 1) 
-        Error("FindPrimitiveRoot: internal error (2)");
+        throw helib::RuntimeError("FindPrimitiveRoot: internal error (2)");
     }
   }
 }
@@ -572,6 +553,22 @@ void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, long q, bool abs)
   }
 }
 
+void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, const ZZ& q, bool abs)
+{
+  out.SetLength(in.length());  // allocate space if needed
+
+  for (long i=0; i<in.length(); i++) {
+    ZZ c = in[i]%q;
+    if (abs)       { if (c<0) c+=q; }
+    else if (q==2) { if (in[i]<0) c = -c; }
+    else { 
+      if (c >= q/2)        c -= q;
+      else if (c < -(q/2)) c += q;
+    }
+    out[i] = c;
+  }
+}
+
 // multiply the polynomial f by the integer a modulo q
 void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs/*default=true*/)
 {
@@ -646,110 +643,12 @@ template bool intVecCRT(vec_ZZ&, const ZZ&, const vec_ZZ&, long);
 template bool intVecCRT(vec_ZZ&, const ZZ&, const vec_long&, long);
 template bool intVecCRT(vec_ZZ&, const ZZ&, const Vec<zz_p>&, long);
 
-// MinGW hack
-#ifndef lrand48
-#if defined(__MINGW32__) || defined(WIN32)
-#define drand48() (((double)rand()) / RAND_MAX)
-#define lrand48() rand()
-#endif
-#endif
-
-void sampleHWt(ZZX &poly, long Hwt, long n)
-{
-  if (n<=0) n=deg(poly)+1; if (n<=0) return;
-  clear(poly);          // initialize to zero
-  poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
-
-  long b,u,i=0;
-  if (Hwt>n) Hwt=n;
-  while (i<Hwt) {  // continue until exactly Hwt nonzero coefficients
-    u=lrand48()%n; // The next coefficient to choose
-    if (IsZero(coeff(poly,u))) { // if we didn't choose it already
-      b = lrand48()&2; // b random in {0,2}
-      b--;             //   random in {-1,1}
-      SetCoeff(poly,u,b);
-
-      i++; // count another nonzero coefficient
-    }
-  }
-  poly.normalize(); // need to call this after we work on the coeffs
-}
-
-void sampleSmall(ZZX &poly, long n)
-{
-  if (n<=0) n=deg(poly)+1; if (n<=0) return;
-  poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
-
-  for (long i=0; i<n; i++) {    // Chosse coefficients, one by one
-    long u = lrand48();
-    if (u&1) {                 // with prob. 1/2 choose between -1 and +1
-      u = (u & 2) -1;
-      SetCoeff(poly, i, u);
-    }
-    else SetCoeff(poly, i, 0); // with ptob. 1/2 set to 0
-  }
-  poly.normalize(); // need to call this after we work on the coeffs
-}
-
-void sampleGaussian(ZZX &poly, long n, double stdev)
-{
-  static double const Pi=4.0*atan(1.0); // Pi=3.1415..
-  static long const bignum = 0xfffffff;
-  // THREADS: C++11 guarantees these are initialized only once
-
-  if (n<=0) n=deg(poly)+1; if (n<=0) return;
-  poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
-  for (long i=0; i<n; i++) SetCoeff(poly, i, ZZ::zero());
-
-  // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
-  for (long i=0; i<n; i+=2) {
-    double r1 = (1+RandomBnd(bignum))/((double)bignum+1);
-    double r2 = (1+RandomBnd(bignum))/((double)bignum+1);
-    double theta=2*Pi*r1;
-    double rr= sqrt(-2.0*log(r2))*stdev;
-
-    assert(rr < 8*stdev); // sanity-check, no more than 8 standard deviations
-
-    // Generate two Gaussians RV's, rounded to integers
-    long x = (long) floor(rr*cos(theta) +0.5);
-    SetCoeff(poly, i, x);
-    if (i+1 < n) {
-      x = (long) floor(rr*sin(theta) +0.5);
-      SetCoeff(poly, i+1, x);
-    }
-  }
-  poly.normalize(); // need to call this after we work on the coeffs
-}
-
-void sampleUniform(ZZX& poly, const ZZ& B, long n)
-{
-  if (n<=0) n=deg(poly)+1; if (n<=0) return;
-  if (B <= 0) {
-    clear(poly);
-    return;
-  }
-
-  poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
-
-  ZZ UB, tmp;
-
-  UB =  2*B + 1;
-  for (long i = 0; i < n; i++) {
-    RandomBnd(tmp, UB);
-    tmp -= B; 
-    poly.rep[i] = tmp;
-  }
-
-  poly.normalize();
-}
-
-
-
 // ModComp: a pretty lame implementation
 
 void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f)
 {
-  assert(LeadCoeff(f) == 1);
+  //OLD: assert(LeadCoeff(f) == 1);
+  helib::assertEq<helib::InvalidArgument>(LeadCoeff(f), NTL::ZZ(1l), "polynomial is not monic");
 
   ZZX hh = h % f;
   ZZX r = to_ZZX(0);
@@ -833,42 +732,16 @@ void interpolateMod(ZZX& poly, const vec_long& x, const vec_long& y,
   recursiveInterpolateMod(poly, x, ytmp, xmod, ymod, p, p2e);
 }
 
-ZZ largestCoeff(const ZZX& f)
-{
-  ZZ mx = ZZ::zero();
-  for (long i=0; i<=deg(f); i++) {
-    if (mx < abs(coeff(f,i)))
-      mx = abs(coeff(f,i));
-  }
-  return mx;
-}
-
-ZZ sumOfCoeffs(const ZZX& f) // = f(1)
-{
-  ZZ sum = ZZ::zero();
-  for (long i=0; i<=deg(f); i++) sum += coeff(f,i);
-  return sum;
-}
-
-xdouble coeffsL2Norm(const ZZX& f) // l_2 norm
-{
-  xdouble s = to_xdouble(0.0);
-  for (long i=0; i<=deg(f); i++) {
-    xdouble coef = to_xdouble(coeff(f,i));
-    s += coef * coef;
-  }
-  return sqrt(s);
-}
-
 // advance the input stream beyond white spaces and a single instance of cc
 void seekPastChar(istream& str, int cc)
 {
    int c = str.get();
    while (isspace(c)) c = str.get();
    if (c != cc) {
-     std::cerr << "Searching for cc='"<<(char)cc<<"' (ascii "<<cc<<")"
-	       << ", found c='"<<(char)c<<"' (ascii "<<c<<")\n";
-     exit(1);
+     std::stringstream ss;
+     ss << "Searching for cc='"<<(char)cc<<"' (ascii "<<cc<<")"
+	       << ", found c='"<<(char)c<<"' (ascii "<<c<<")";
+     throw helib::RuntimeError(ss.str());
    }
 }
 
@@ -900,7 +773,8 @@ void buildLinPolyMatrix(mat_zz_pE& M, long p)
 
 void buildLinPolyMatrix(mat_GF2E& M, long p)
 {
-   assert(p == 2);
+  //OLD: assert(p == 2);
+  helib::assertEq<helib::InvalidArgument>(p, 2l, "p is not 2 when building a mat_GF2E (Galois field 2)");
 
    long d = GF2E::degree();
 
@@ -972,11 +846,18 @@ void convert(NTL::Vec<long>& out, const NTL::ZZX& in)
 }
 
 
-void convert(NTL::Vec<long>& out, const NTL::zz_pX& in)
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric)
 {
   out.SetLength(in.rep.length());
   for (long i=0; i<out.length(); i++)
     out[i] = conv<long>(in[i]);
+
+  if (symmetric) { // convert to representation symmetric around 0
+    long p = zz_p::modulus();
+    for (long i=0; i<out.length(); i++)
+      if (out[i] > p/2)
+        out[i] -= p;
+  }
 }
 
 
@@ -1024,7 +905,7 @@ void div(vector<ZZX>& x, const vector<ZZX>& a, long b)
 void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b)
 {
    long n = a.size();
-   if (n != (long) b.size()) Error("add: dimension mismatch");
+   if (n != (long) b.size()) throw helib::InvalidArgument("add: a and b dimension differ");
    for (long i = 0; i < n; i++)
       add(x[i], a[i], b[i]);
 }
@@ -1041,15 +922,15 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
    if (r == 1) {
       zz_pE det;
       solve(det, x, A, b);
-      if (det == 0) Error("ppsolve: matrix not invertible");
+      if (det == 0) throw helib::InvalidArgument("ppsolve: matrix not invertible");
       return;
    }
 
    long n = A.NumRows();
    if (n != A.NumCols()) 
-      Error("ppsolve: matrix not square");
+     throw helib::InvalidArgument("ppsolve: matrix not square");
    if (n == 0)
-      Error("ppsolve: matrix of dimension 0");
+     throw helib::InvalidArgument("ppsolve: matrix of dimension 0");
 
    zz_pContext pr_context;
    pr_context.save();
@@ -1086,7 +967,7 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
 
    inv(det, I1, A1);
    if (det == 0) {
-      Error("ppsolve: matrix not invertible");
+     throw helib::LogicError("ppsolve: matrix not invertible");
    }
 
    vec_zz_pE b1;
@@ -1141,17 +1022,20 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
 
    convert(x, yy);
 
-   assert(x*A == b);
+  //OLD: assert(x*A == b);
+  helib::assertEq(x*A, b, "Failed to found solution x to matrix equation x*A == b");
 }
 
 void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
              long p, long r) 
 {
-   assert(p == 2 && r == 1);
+  //OLD: assert(p == 2 && r == 1);
+  helib::assertEq<helib::InvalidArgument>(p, 2l, "modulus p is not 2 with GF2E (Galois field 2)");
+  helib::assertEq<helib::InvalidArgument>(r, 1l, "Hensel lifting r is not 2 with GF2E (Galois field 2)");
 
    GF2E det;
    solve(det, x, A, b);
-   if (det == 0) Error("ppsolve: matrix not invertible");
+   if (det == 0) throw helib::InvalidArgument("ppsolve: matrix not invertible");
 }
 
 
@@ -1210,7 +1094,8 @@ void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
     prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
   }
   mul(X, prod, XX); // X = A^{-1} mod p^r
-  assert(X*A == I);
+  //OLD: assert(X*A == I);
+  helib::assertEq(X*A, I, "Failed to found solution X to matrix equation X*A == I where I is the identity matrix");
 }
 
 // FIXME: at some point need to make a template for these two functions
@@ -1265,7 +1150,8 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
     prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
   }
   mul(X, prod, XX); // X = A^{-1} mod p^r
-  assert(X*A == I);
+  //OLD: assert(X*A == I);
+  helib::assertEq(X*A, I, "Failed to found solution X to matrix equation X*A == I where I is the identity matrix");
 }
 
 void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
@@ -1284,7 +1170,9 @@ void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
 void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
 {
    FHE_TIMER_START;
-   assert(p == 2 && r == 1);
+  //OLD: assert(p == 2 && r == 1);
+  helib::assertEq<helib::InvalidArgument>(p, 2l, "modulus p is not 2 with GF2E (Galois field 2)");
+  helib::assertEq<helib::InvalidArgument>(r, 1l, "Hensel lifting r is not 2 with GF2E (Galois field 2)");
 
    mat_GF2E M;
    buildLinPolyMatrix(M, p);
@@ -1299,7 +1187,8 @@ void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
 void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p)
 {
    long d = zz_pE::degree();
-   assert(d == C.length());
+   //OLD: assert(d == C.length());
+   helib::assertEq<helib::InvalidArgument>(d, C.length(), "C length is not equal to zz_pE::degree()");
 
    zz_pE gamma, res;
 
@@ -1316,7 +1205,8 @@ void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p)
 void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p)
 {
    long d = GF2E::degree();
-   assert(d == C.length());
+   //OLD: assert(d == C.length());
+   helib::assertEq<helib::InvalidArgument>(d, C.length(), "C length is not equal to GF2E::degree()");
 
    GF2E gamma, res;
 
@@ -1330,7 +1220,80 @@ void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p)
    beta = res;
 }
 
-// Auxilliary classes to facillitiate faster reduction mod Phi_m(X)
+// use continued fractios to get "best" rational approximation
+std::pair<long,long> rationalApprox(double x, long denomBound)
+{
+  int sign = 1;
+  if (x<0) {
+    sign = -1;
+    x = -x;
+  }
+  if (denomBound<=0)
+    denomBound = 1L << (NTL_SP_NBITS/2);
+  double epsilon = 1.0/(denomBound*8.0); // "smudge factor"
+  double a = floor(x+epsilon);
+  double xi = x - a;
+  long prevDenom = 0;
+  long denom = 1;
+
+  // Continued fractions: a_{i+1}=floor(1/xi), x_{i+1} = 1/xi - a_{i+1}
+  while (xi>0) {
+    xi = 1/xi;
+    double ai = floor(xi+epsilon); // NOTE: epsilon is meant to counter rounding errors
+    xi = xi - ai;
+
+    double tmpDenom = denom*ai + prevDenom;
+    if (tmpDenom > denomBound) // bound exceeded: return previous denominator
+      break;
+    // update denominator
+    prevDenom = denom;
+    denom = tmpDenom;
+    //    cout << "  ai="<<ai<<", xi="<<xi<<", denominator="<<denom<<endl;
+  }
+  //OLD: assert(denom*x < NTL_SP_BOUND);
+  helib::assertTrue<helib::RuntimeError>(denom*x < NTL_SP_BOUND, "Single-precision bound exceeded");
+  long numer = long(round(denom*x))*sign;
+
+  return std::make_pair(numer,denom);
+}
+
+// use continued fractios to get "best" rational approximation
+std::pair<ZZ,ZZ> rationalApprox(xdouble x, xdouble denomBound)
+{
+  int sign = 1;
+  if (x<0) {
+    sign = -1;
+    x = -x;
+  }
+  if (denomBound<=0)
+    denomBound = conv<xdouble>(1L << (NTL_SP_NBITS/2));
+
+  xdouble epsilon = 0.125/denomBound; // "smudge factor"
+  xdouble a = floor(x+epsilon);
+  xdouble xi = x - a;
+  xdouble prevDenom(0.0);
+  xdouble xdenom(1.0);
+
+  // Continued fractions: a_{i+1}=floor(1/xi), x_{i+1} = 1/xi - a_{i+1}
+  while (xi>0) {
+    xi = 1/xi;
+    xdouble ai = floor(xi+epsilon); // NOTE: epsilon is meant to counter rounding errors
+    xi = xi - ai;
+
+    xdouble tmpDenom = xdenom*ai + prevDenom;
+    if (tmpDenom > denomBound) // bound exceeded: return previous denominator
+      break;
+    // update denominator
+    prevDenom = xdenom;
+    xdenom = tmpDenom;
+  }
+  ZZ numer = conv<ZZ>(floor(xdenom*x))*sign;
+  ZZ denom = conv<ZZ>(xdenom);
+
+  return std::make_pair(numer,denom);
+}
+
+// Auxilliary classes to facilitate faster reduction mod Phi_m(X)
 // when the input has degree less than m
 
 
@@ -1396,7 +1359,8 @@ void LocalCyclicReduce(zz_pX& x, const zz_pX& a, long m)
 zz_pXModulus1::zz_pXModulus1(long _m, const zz_pX& _f) 
 : m(_m), f(_f), n(deg(f))
 {
-   assert(m > n);
+   //OLD: assert(m > n);
+   helib::assertTrue<helib::InvalidArgument>(m > n, "_m is less or equal than _f's degree");
 
    specialLogic = (m - n > 10 && m < 2*n);
    build(fm, f);
@@ -1455,28 +1419,4 @@ void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
    sub(P2, P2, P3);
    r = P2;
 }
-
-// Debug printing routines for vectors, ZZX'es, print only a few entries
-
-template<class T> ostream& printVec(ostream& s, const Vec<T>& v,
-				    long nCoeffs)
-{
-  long d = v.length();
-  if (d<nCoeffs) return s << v; // just print the whole thing
-
-  // otherwise print only 1st nCoeffs coefficiants
-  s << '[';
-  for (long i=0; i<nCoeffs-2; i++) s << v[i] << ' ';
-  s << "... " << v[d-2] << ' ' << v[d-1] << ']';
-  return s;
-}
-template ostream& printVec(ostream& s, const Vec<zz_p>& v, long nCoeffs);
-template ostream& printVec(ostream& s, const Vec<long>& v, long nCoeffs);
-template ostream& printVec(ostream& s, const Vec<ZZX>& v, long nCoeffs);
-
-ostream& printZZX(ostream& s, const ZZX& poly, long nCoeffs)
-{
-  return printVec(s, poly.rep, nCoeffs);
-}
-
 

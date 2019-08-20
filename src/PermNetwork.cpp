@@ -11,6 +11,7 @@
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT
+#include "FHEContext.h"
 #include "Ctxt.h"
 #include "permutations.h"
 #include "EncryptedArray.h"
@@ -153,7 +154,8 @@ void PermNetwork::applyToCube(HyperCube<long>& cube) const
     const PermNetLayer& lyr = layers[i];
     if (lyr.isID) continue; // this layer is the identity permutation
 
-    assert(lyr.shifts.length()==n);
+    //OLD: assert(lyr.shifts.length()==n);
+    helib::assertEq(lyr.shifts.length(), n, "layer has incorrect size");
 
     // This layer shift elements along the dimension lyr.genIdx
     long dim = lyr.genIdx;
@@ -176,7 +178,7 @@ void PermNetwork::applyToCube(HyperCube<long>& cube) const
 
 void PermNetwork::applyToPtxt(ZZX& p, const EncryptedArray& ea) const
 {
-  NTL::Error("PermNetwork::applyToPtxt is not implemented");
+  throw helib::LogicError("PermNetwork::applyToPtxt is not implemented");
 }
 
 // Upon return, mask[i]=1 if haystack[i]=needle, 0 otherwise.

@@ -1,17 +1,23 @@
 gh-pages/
+build/
+
 src/fhe.a
 src/*.o
 src/*_x
 src/*_x.exe
 
-Makefile.dev
-**.DS_Store
+Makefile-*
+src/makedep.d
 src/*_x.dSYM
 src/*.sh
 src/*.bin
 src/*.txt
 src/misc/*.bin
 src/misc/*.txt
+
+**.bak
+**.swp
+**.DS_Store
 
 # Exception for sample files
 !src/misc/iotest_asciiBE.txt

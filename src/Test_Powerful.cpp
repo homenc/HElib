@@ -12,6 +12,9 @@
 #include "hypercube.h"
 #include "powerful.h"
 #include "FHEContext.h"
+#include "ArgMap.h"
+
+NTL_CLIENT
 
 void testSimpleConversion(const Vec<long>& mvec)
 {
@@ -26,14 +29,13 @@ void testSimpleConversion(const Vec<long>& mvec)
   HyperCube<zz_p> cube(pConv.getShortSig());
   pConv.polyToPowerful(cube, poly);
   pConv.powerfulToPoly(poly2, cube);
-  if (poly == poly2) cerr << " simple conversion succeeds\n";
-  else               cerr << " simple conversion failed\n";
+  cout << ((poly == poly2)? "GOOD" : "BAD") << endl;
 }
 
 void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
 {
   PowerfulDCRT p2d(context, mvec);
-  DoubleCRT dcrt(context);
+  DoubleCRT dcrt(context, context.fullPrimes());
   ZZX poly1, poly2;
   Vec<ZZ> pwrfl1, pwrfl2;
   IndexSet set = dcrt.getIndexSet();
@@ -43,12 +45,11 @@ void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
 
   p2d.dcrtToPowerful(pwrfl1, dcrt);
   p2d.ZZXtoPowerful(pwrfl2, poly1, set);
-  if (pwrfl2 != pwrfl1) cerr << " dcrt->powerful != dcrt->poly->powerful :(\n";
-  else                  cerr << " dcrt->powerful == dcrt->poly->powerful :)\n";
+  cout << ((pwrfl2 != pwrfl1)? "BAD" : "GOOD") << endl;
 
   p2d.powerfulToZZX(poly2,pwrfl2, set);
   if (poly1!=poly2) {
-    cerr << " poly->powerful->poly failed :(\n";
+    cout << "BAD\n";
     long idx;
     for (idx=0; idx <= deg(poly1); idx++) if (poly1[idx]!=poly2[idx]) break;
 
@@ -64,40 +65,41 @@ void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
       cerr << "(poly1-poly2)%product=" << poly1<<endl;
     else cerr << "poly1=poly2 (mod product)\n";
   }
-  else cerr << " poly->powerful->poly succeeded :)\n";
+  else cout << "GOOD\n";
 }
 
-void usage(char *prog) 
-{
-  cerr << "Test utilities for conversion between representations of polynomials\n";
-  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cerr << "  e.g, 'm1=3 m2=5 m3=7 p=2 r=1'\n\n";
-  cerr << "  m1,m2,m3 are the factors of m=m1*m2*m3 [default: m1=7,m2=13, m3=17]\n";
-  cerr << "  p is the plaintext base [default=2]" << endl;
-  cerr << "  r is the lifting [default=1]" << endl;
-  exit(0);
-}
+// OLD CODE
+//void usage(char *prog) 
+//{
+//  cerr << "Test utilities for conversion between representations of polynomials\n";
+//  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
+//  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+//  cerr << "  e.g, 'm1=3 m2=5 m3=7 p=2 r=1'\n\n";
+//  cerr << "  m1,m2,m3 are the factors of m=m1*m2*m3 [default: m1=7,m2=13, m3=17]\n";
+//  cerr << "  p is the plaintext base [default=2]" << endl;
+//  cerr << "  r is the lifting [default=1]" << endl;
+//  exit(0);
+//}
 
 int main(int argc, char *argv[])
 {
 
-  argmap_t argmap;
-
-  argmap["m1"] = "7";
-  argmap["m2"] = "13";
-  argmap["m3"] = "17";
-  argmap["p"] = "2";
-  argmap["r"] = "1";
+  long m1 = 7;
+  long m2 = 13;
+  long m3 = 17;
+  long p = 2;
+  long r = 1;
+  
+  ArgMap amap;
+  amap.arg("m1", m1, "Factor of m"); 
+  amap.arg("m2", m2, "Factor of m");
+  amap.arg("m3", m3, "Factor of m");
+  amap.arg("p",  p,  "Plaintext base");
+  amap.arg("r",  r,  "Lifting");
+  amap.parse(argc, argv);
 
   // get parameters from the command line
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
-
-  long m1 = atoi(argmap["m1"]);
-  long m2 = atoi(argmap["m2"]);
-  long m3 = atoi(argmap["m3"]);
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
+//  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
   if (m1<2 || m2<2) {
     cerr << "m1,m2 are mandatory\n";

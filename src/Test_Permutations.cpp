@@ -19,29 +19,31 @@ NTL_CLIENT
 #include "timing.h"
 #include "permutations.h"
 #include "EncryptedArray.h"
+#include "ArgMap.h"
 
-static bool noPrint = false;
+static bool noPrint = true;
 
 void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 
-void usage(char *prog) 
-{
-  cout << "Usage: "<<prog<<" [test=? [optional parameters...]]\n";
-  cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-  cout << "  e.g, 'test=1 m=108 p=2 r=1\n";
-  cout << "  test is either 0 (plaintext) or 1 (ciphertext)[default=1]\n\n";
-  cout << "test=0, permuting plaintext hypercubes (dimension upto 4):\n";
-  cout << "  ord1,ord2,ord3,ord4 size of dimensions 1..4 [default ord1=30, ord2,3,4=0]\n";
-  cout << "  good1,good2,good3,good4 native rotation flags (0/1) [default=1]\n";
-  cout << "  depth bounds the depth of permutation network [default=5]\n";
-  cout << "\ntest=1, permuting ciphertext slots:\n";
-  cout << "  m is the cyclotomic field [default=4369]\n";
-  cout << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
-  cout << "  depth bounds the depth of permutation network [default=5]\n";
-  cout << "  L is number of levels in chain [default=depth]\n\n";
-  cout << "dry=1 for dry run [default=0]\n";
-  exit(0);
-}
+// OLD CODE
+//void usage(char *prog) 
+//{
+//  cout << "Usage: "<<prog<<" [test=? [optional parameters...]]\n";
+//  cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
+//  cout << "  e.g, 'test=1 m=108 p=2 r=1\n";
+//  cout << "  test is either 0 (plaintext) or 1 (ciphertext)[default=1]\n\n";
+//  cout << "test=0, permuting plaintext hypercubes (dimension upto 4):\n";
+//  cout << "  ord1,ord2,ord3,ord4 size of dimensions 1..4 [default ord1=30, ord2,3,4=0]\n";
+//  cout << "  good1,good2,good3,good4 native rotation flags (0/1) [default=1]\n";
+//  cout << "  depth bounds the depth of permutation network [default=5]\n";
+//  cout << "\ntest=1, permuting ciphertext slots:\n";
+//  cout << "  m is the cyclotomic field [default=4369]\n";
+//  cout << "  p,r define the plaintext space p^r [default p=2,r=1]\n";
+//  cout << "  depth bounds the depth of permutation network [default=5]\n";
+//  cout << "  L is number of bits in chain [default=30*depth]\n\n";
+//  cout << "dry=1 for dry run [default=0]\n";
+//  exit(0);
+//}
 
 void testCube(Vec<GenDescriptor>& vec, long widthBound)
 {
@@ -70,7 +72,7 @@ void testCube(Vec<GenDescriptor>& vec, long widthBound)
     if (cube2==cube3) cout << "GOOD\n";
     else {
       cout << "BAD\n";
-      if (cube1.getSize()<100) {
+      if (cube1.getSize()<100 && !noPrint) {
 	cout << "in="<<cube1.getData() << endl;
 	cout << "out1="<<cube2.getData()<<", out2="
 	     << cube3.getData()<<endl<<endl;
@@ -104,6 +106,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   GeneratorTrees trees;
   long cost = trees.buildOptimalTrees(vec, widthBound);
   if (!noPrint) {
+    context.zMStar.printout();
     cout << ": trees=" << trees << endl;
     cout << " cost =" << cost << endl;
   }
@@ -112,15 +115,15 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   //  CubeSignature sig(dims);
 
   // 1/2 prime per level should be more or less enough, here we use 1 per layer
-  if (L<=0) L = 1+trees.numLayers();
+  if (L<=0) L = (1+trees.numLayers())*context.BPL();
   buildModChain(context, /*nLevels=*/L, /*nDigits=*/3);
-  if (!noPrint) cout << "**Using "<<L<<" primes (of which "
-		     << context.ctxtPrimes.card() << " are Ctxt-primes)\n";
+  if (!noPrint) cout << "**Using "<<L<<" and "
+		     << context.ctxtPrimes.card() << " Ctxt-primes\n";
 
   // Generate a sk/pk pair
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(64); // A Hamming-weight-64 secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   Ctxt ctxt(publicKey);
 
   for (long cnt=0; cnt<3; cnt++) {
@@ -184,49 +187,49 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
 
 int main(int argc, char *argv[])
 {
-  argmap_t argmap;
-  argmap["test"] = "1";
-  argmap["m"] = "4369";
-  argmap["p"] = "2";
-  argmap["r"] = "1";
-  argmap["depth"] = "5";
-  argmap["L"] = "0";
-  argmap["ord1"] = "30";
-  argmap["ord2"] = "0";
-  argmap["ord3"] = "0";
-  argmap["ord4"] = "0";
-  argmap["good1"] = "1";
-  argmap["good2"] = "1";
-  argmap["good3"] = "1";
-  argmap["good4"] = "1";
-  argmap["dry"] = "1";
-  argmap["noPrint"] = "0";
+  long test = 1;
+  long p = 2;
+  long r = 1;
+  long m = 4369;
+  long depth = 5;
+  long L = 0;
+
+  long ord1 = 30;
+  long ord2 = 0;
+  long ord3 = 0;
+  long ord4 = 0;
+  long good1 = 1;
+  long good2 = 1;
+  long good3 = 1;
+  long good4 = 1;
+
+  bool dry = 0;
+  noPrint = 1;
+
+  ArgMap amap;
+  amap.arg("test", test);
+  amap.arg("p", p);
+  amap.arg("r", r);
+  amap.arg("m", m);
+  amap.arg("depth", depth);
+  amap.arg("L", L);
+  amap.arg("ord1", ord1);
+  amap.arg("ord2", ord2);
+  amap.arg("ord3", ord3);
+  amap.arg("ord4", ord4);
+  amap.arg("good1", good1);
+  amap.arg("good2", good2);
+  amap.arg("good3", good3);
+  amap.arg("good4", good4);
+  amap.arg("dry", dry);
+  amap.arg("noPrint", noPrint);
+  amap.parse(argc, argv);
 
   // get parameters from the command line
-
-  if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
-
-  long test = atoi(argmap["test"]);
-  long p = atoi(argmap["p"]);
-  long r = atoi(argmap["r"]);
-  long m = atoi(argmap["m"]);
-  long depth = atoi(argmap["depth"]);
-  long L = atoi(argmap["L"]);
-
-  long ord1 = atoi(argmap["ord1"]);
-  long ord2 = atoi(argmap["ord2"]);
-  long ord3 = atoi(argmap["ord3"]);
-  long ord4 = atoi(argmap["ord4"]);
-  long good1 = atoi(argmap["good1"]);
-  long good2 = atoi(argmap["good2"]);
-  long good3 = atoi(argmap["good3"]);
-  long good4 = atoi(argmap["good4"]);
-
-  bool dry = atoi(argmap["dry"]);
-  noPrint = atoi(argmap["noPrint"]);
+  //if (!parseArgs(argc, argv, argmap)) usage(argv[0]);
 
   setDryRun(dry);
-  if (test==0) {
+  if (test==0 || dry!=0) {
     Vec<GenDescriptor> vec;
     long nGens;
     if (ord2<=1) nGens=1;
@@ -241,16 +244,19 @@ int main(int argc, char *argv[])
     case 2:  vec[1] = GenDescriptor(ord2, good2, /*genIdx=*/1);
     default: vec[0] = GenDescriptor(ord1, good1, /*genIdx=*/0);
     }
-    cout << "***Testing ";
-    if (isDryRun()) cout << "(dry run) ";
-    for (long i=0; i<vec.length(); i++)
-      cout << "("<<vec[i].order<<","<<vec[i].good<<")";
-    cout << ", depth="<<depth<<"\n";
+    if (!noPrint) {
+      cout << "***Testing ";
+      if (isDryRun()) cout << "(dry run) ";
+      for (long i=0; i<vec.length(); i++)
+	cout << "("<<vec[i].order<<","<<vec[i].good<<")";
+      cout << ", depth="<<depth<<"\n";
+    }
     testCube(vec, depth);
   }
   else {
     setTimersOn();
-    cout << "***Testing m="<<m<<", p="<<p<<", depth="<<depth<< endl;
+    if (!noPrint)
+      cout << "***Testing m="<<m<<", p="<<p<<", depth="<<depth<< endl;
     testCtxt(m,p,depth,L,r);
   }
 }

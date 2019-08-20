@@ -20,10 +20,14 @@
  */
 #include <NTL/ZZVec.h>
 #include <NTL/BasicThreadPool.h>
-#include "binio.h"
 
-#include "DoubleCRT.h"
 #include "timing.h"
+#include "binio.h"
+#include "sample.h"
+#include "DoubleCRT.h"
+#include "FHEContext.h"
+
+NTL_CLIENT
 
 // A threaded implementation of DoubleCRT operations
 
@@ -85,22 +89,26 @@ void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
 // moduli chain an error is raised if they are not consistent
 void DoubleCRT::verify()
 {
-  assert(map.getIndexSet() <= (context.specialPrimes | context.ctxtPrimes));
+  //OLD: assert(map.getIndexSet() <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes));
+  helib::assertTrue(map.getIndexSet() <=
+         (context.smallPrimes | context.specialPrimes | context.ctxtPrimes),
+         "Index set must be a subset of the union of small primes, special primes, and ctxt primes");
+
   const IndexSet& s = map.getIndexSet();
 
   long phim = context.zMStar.getPhiM();
 
   // check that the content of i'th row is in [0,pi) for all i
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) {
     vec_long& row = map[i];
 
     if (row.length() != phim) 
-      Error("DoubleCRT object has bad row length");
+      throw helib::RuntimeError("DoubleCRT object has bad row length");
 
     long pi = context.ithPrime(i); // the i'th modulus
-    for (long j=0; j<phim; j++)
+    for (long j: range(phim))
       if (row[j]<0 || row[j]>= pi) 
-	Error("DoubleCRT object has inconsistent data");
+	throw helib::RuntimeError("DoubleCRT object has inconsistent data");
   }
 }
 
@@ -115,11 +123,12 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
   if (isDryRun()) return *this;
 
   if (&context != &other.context)
-    Error("DoubleCRT::Op: incompatible objects");
+    throw helib::RuntimeError("DoubleCRT::Op: incompatible objects");
 
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
     FHE_NTIMER_START(addPrimes_1); 
+    Warning("addPrimes called (1) in DoubleCRT::op");
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
   }
 
@@ -129,6 +138,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
   if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
     FHE_NTIMER_START(addPrimes_2); 
     tmp = other;
+    Warning("addPrimes called (2) in DoubleCRT::op");
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
     other_map = &tmp.map;
   }
@@ -137,12 +147,12 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
   long phim = context.zMStar.getPhiM();
 
   // add/sub/mul the data, element by element, modulo the respective primes
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) {
     long pi = context.ithPrime(i);
     vec_long& row = map[i];
     const vec_long& other_row = (*other_map)[i];
 
-    for (long j = 0; j < phim; j++)
+    for (long j: range(phim))
       row[j] = fun.apply(row[j], other_row[j], pi);
   }
   return *this;
@@ -161,11 +171,12 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
   if (isDryRun()) return *this;
 
   if (&context != &other.context)
-    Error("DoubleCRT::Op: incompatible objects");
+    throw helib::RuntimeError("DoubleCRT::Op: incompatible objects");
 
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
     FHE_NTIMER_START(addPrimes_3);
+    Warning("addPrimes called (1) in DoubleCRT::mul");
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
   }
 
@@ -175,6 +186,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
   if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
     FHE_NTIMER_START(addPrimes_4);
     tmp = other;
+    Warning("addPrimes called (2) in DoubleCRT::mul");
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
     other_map = &tmp.map;
   }
@@ -183,14 +195,13 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
   long phim = context.zMStar.getPhiM();
 
   // add/sub/mul the data, element by element, modulo the respective primes
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) {
     long pi = context.ithPrime(i);
     mulmod_t pi_inv = context.ithModulus(i).getQInv(); 
     vec_long& row = map[i];
     const vec_long& other_row = (*other_map)[i];
 
-
-    for (long j = 0; j < phim; j++)
+    for (long j: range(phim))
       row[j] = MulMod(row[j], other_row[j], pi, pi_inv);
   }
   return *this;
@@ -218,11 +229,11 @@ DoubleCRT& DoubleCRT::Op(const ZZ &num, Fun fun)
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
   
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) {
     long pi = context.ithPrime(i);
     long n = rem(num, pi);  // n = num % pi
     vec_long& row = map[i];
-    for (long j = 0; j < phim; j++)
+    for (long j: range(phim))
       row[j] = fun.apply(row[j], n, pi);
   }
   return *this;
@@ -242,18 +253,18 @@ DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
   if (isDryRun()) return *this;
 
   if (&context != &other.context) 
-    Error("DoubleCRT Negate: incompatible contexts");
+    throw helib::RuntimeError("DoubleCRT Negate: incompatible contexts");
 
   if (map.getIndexSet() != other.map.getIndexSet()) {
     map = other.map; // copy the data
   }
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) { 
     long pi = context.ithPrime(i);
     vec_long& row = map[i];
     const vec_long& other_row = other.map[i];
-    for (long j = 0; j < phim; j++)
+    for (long j: range(phim))
       row[j] = NegateMod(other_row[j], pi);
   }
   return *this;
@@ -284,24 +295,31 @@ void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
 {
   FHE_TIMER_START;
   IndexSet allPrimes = getIndexSet() | context.specialPrimes;
-  assert(n <= (long)context.digits.size());
+
+  //OLD: assert(getIndexSet() <= context.ctxtPrimes);
+  helib::assertTrue(getIndexSet() <= context.ctxtPrimes, "Index set must be a subset of ctxt primes");
+  // the calling routine should ensure that the index set
+  // contains only ctxt primes
+
+  //OLD: assert(n <= (long)context.digits.size());
+  helib::assertTrue(n <= (long)context.digits.size(), "n cannot be larger than the size of context.digits");
 
   digits.resize(n, DoubleCRT(context, IndexSet::emptySet()));
   if (isDryRun()) return;
 
-  for (long i=0; i<(long)digits.size(); i++) {
+  for (long i: range(digits.size())) { 
     digits[i]=*this;
     IndexSet notInDigit = digits[i].getIndexSet()/context.digits[i];
     digits[i].removePrimes(notInDigit); // reduce modulo the digit primes
   }
   
-  for (long i=0; i<(long)digits.size(); i++) {
+  for (long i: range(digits.size())) { 
     FHE_NTIMER_START(addPrimes_5);
     IndexSet notInDigit = allPrimes / digits[i].getIndexSet();
     digits[i].addPrimes(notInDigit); // add back all the primes
 
     ZZ pi = context.productOfPrimes(context.digits[i]);
-    for (long j=i+1; j<(long)digits.size(); j++) {
+    for (long j: range(i+1, digits.size())) {
       digits[j].Sub(digits[i], /*matchIndexSets=*/false);
       digits[j] /= pi;
     }
@@ -316,8 +334,14 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
   FHE_TIMER_START;
 
   if (empty(s1)) return; // nothing to do
-  assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
+  //OLD: assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
+  helib::assertTrue( disjoint(s1,map.getIndexSet()), "addPrimes can only be called on a disjoint set");
 
+  if (empty(getIndexSet())) {   // special case for empty DCRT
+    map.insert(s1); // just add new rows to the map and return
+    SetZero();
+    return;
+  }
   ZZX poly;
   toPoly(poly); // recover in coefficient representation
 
@@ -325,7 +349,10 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
   if (isDryRun()) return;
 
   // fill in new rows
-  FFT(poly, s1);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s1);
 }
 
 // Expand index set by s1, and multiply by \prod{q \in s1}. s1 is assumed to
@@ -333,12 +360,18 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
 double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 {
   if (empty(s1)) return 0.0; // nothing to do
-  assert(empty(s1 & map.getIndexSet())); // s1 is disjoint from *this
+  //OLD: assert(empty(s1 & map.getIndexSet())); // s1 is disjoint from *this
+  helib::assertTrue(empty(s1 & map.getIndexSet()), "addPrimes can only be called on a disjoint set");
 
+  if (empty(getIndexSet())) {   // special case for empty DCRT
+    map.insert(s1); // just add new rows to the map and return
+    SetZero();
+    return 0.0;
+  }
   // compute factor to scale existing rows
   ZZ factor = to_ZZ(1);
   double logFactor = 0.0;
-  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
+  for (long i: s1) { 
     long qi = context.ithPrime(i);
     factor *= qi;
     logFactor += log((double)qi);
@@ -347,21 +380,21 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
   // scale existing rows
   long phim = context.zMStar.getPhiM();
   const IndexSet& iSet = map.getIndexSet();
-  for (long i = iSet.first(); i <= iSet.last(); i = iSet.next(i)) {
+  for (long i: iSet) { 
     long qi = context.ithPrime(i);
     long f = rem(factor, qi);     // f = factor % qi
     vec_long& row = map[i];
     // scale row by a factor of f modulo qi
     mulmod_precon_t bninv = PrepMulModPrecon(f, qi);
-    for (long j=0; j<phim; j++) 
+    for (long j: range(phim))
       row[j] = MulModPrecon(row[j], f, qi, bninv);
   }
 
   // insert new rows and fill them with zeros
   map.insert(s1);  // add new rows to the map
-  for (long i = s1.first(); i <= s1.last(); i = s1.next(i)) {
+  for (long i: s1) { 
     vec_long& row = map[i];
-    for (long j=0; j<phim; j++) row[j] = 0;
+    for (long j: range(phim)) row[j] = 0;
   }
 
   return logFactor;
@@ -369,20 +402,30 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 
 
 // *****************************************************
+DoubleCRTHelper::DoubleCRTHelper(const FHEcontext& context)
+{ 
+  val = context.zMStar.getPhiM(); 
+}
 
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
-  assert(s.last() < context.numPrimes());
+  //OLD: assert(s.last() < context.numPrimes());
+  helib::assertTrue(s.last() < context.numPrimes(), "s must end with a smaller element than context.numPrimes()");
 
   map.insert(s);
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s);
 }
-
+ 
+// FIXME-IndexSet
+#if 0
 DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
@@ -394,7 +437,10 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const ZZX& poly)
@@ -408,8 +454,12 @@ DoubleCRT::DoubleCRT(const ZZX& poly)
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s);
 }
+#endif
 
 
 // *****************************************************
@@ -419,15 +469,21 @@ DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context, const IndexSet
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
-  assert(s.last() < context.numPrimes());
+  //OLD: assert(s.last() < context.numPrimes());
+  helib::assertTrue(s.last() < context.numPrimes(), "s must end with a smaller element than context.numPrimes()");
 
   map.insert(s);
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  if (lsize(poly)<=1) // special case for a constant polynomial
+    *this = (lsize(poly)==1)? poly[0] : 0;  // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
+// FIXME-IndexSet
+#if 0
 DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
@@ -439,7 +495,11 @@ DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context)
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  // convert the integer polynomial to FFT representation modulo the primes
+  if (lsize(poly)<=1) // special case for a constant polynomial
+    *this = (lsize(poly)==1)? poly[0] : 0;  // no FFT is needed
+  else
+    FFT(poly, s);
 }
 
 DoubleCRT::DoubleCRT(const zzX& poly)
@@ -453,27 +513,35 @@ DoubleCRT::DoubleCRT(const zzX& poly)
   if (isDryRun()) return;
 
   // convert the integer polynomial to FFT representation modulo the primes
-  FFT(poly, s);
+  // convert the integer polynomial to FFT representation modulo the primes
+  if (lsize(poly)<=1) // special case for a constant polynomial
+    *this = (lsize(poly)==1)? poly[0] : 0;  // no FFT is needed
+  else
+    FFT(poly, s);
 }
+#endif
 
 DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
-  assert(s.last() < context.numPrimes());
+  //OLD: assert(s.last() < context.numPrimes());
+  helib::assertTrue(s.last() < context.numPrimes(), "s must end with a smaller element than context.numPrimes()");
 
   map.insert(s);
   if (isDryRun()) return;
 
   long phim = context.zMStar.getPhiM();
 
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) { 
     vec_long& row = map[i];
-    for (long j = 0; j < phim; j++) row[j] = 0;
+    for (long j: range(phim)) row[j] = 0;
   }
 }
 
 // *****************************************************
 
+// FIXME-IndexSet
+#if 0
 DoubleCRT::DoubleCRT(const FHEcontext &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
@@ -490,6 +558,7 @@ DoubleCRT::DoubleCRT(const FHEcontext &_context)
     for (long j = 0; j < phim; j++) row[j] = 0;
   }
 }
+#endif
 
 DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
 // optimized for the case of matching index sets
@@ -497,7 +566,7 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
    if (this == &other) return *this;
 
    if (&context != &other.context) 
-      Error("DoubleCRT assignment: incompatible contexts");
+      throw helib::RuntimeError("DoubleCRT assignment: incompatible contexts");
 
    if (map.getIndexSet() != other.map.getIndexSet()) {
       map = other.map; // copy the data
@@ -505,10 +574,10 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
    else {
       const IndexSet& s = map.getIndexSet();
       long phim = context.zMStar.getPhiM();
-      for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+      for (long i: s) {
          vec_long& row = map[i];
          const vec_long& other_row = other.map[i];
-         for (long j = 0; j < phim; j++)
+         for (long j: range(phim))
             row[j] = other_row[j];
       }
    }
@@ -516,14 +585,28 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
 }
 
 
-DoubleCRT& DoubleCRT::operator=(const ZZX&poly)
+DoubleCRT& DoubleCRT::operator=(const ZZX& poly)
 {
   if (isDryRun()) return *this;
 
   const IndexSet& s = map.getIndexSet();
+  if (deg(poly)<=0) // special case for a constant polynomial
+    *this = coeff(poly,0); // no FFT is needed
+  else
+    FFT(poly, s);
+  return *this;
+}
 
-  FFT(poly, s);
+DoubleCRT& DoubleCRT::operator=(const zzX& poly)
+{
+  if (isDryRun()) return *this;
 
+  const IndexSet& s = map.getIndexSet();
+  // convert the integer polynomial to FFT representation modulo the primes
+  if (lsize(poly)<=1) // special case for a constant polynomial
+    *this = (lsize(poly)==1)? poly[0] : 0;  // no FFT is needed
+  else
+    FFT(poly, s);
   return *this;
 }
 
@@ -534,12 +617,12 @@ DoubleCRT& DoubleCRT::operator=(const ZZ& num)
 
   long phim = context.zMStar.getPhiM();
 
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) {
     vec_long& row = map[i];
     long pi = context.ithPrime(i);
     long n = rem(num, pi);
 
-    for (long j = 0; j < phim; j++) row[j] = n;
+    for (long j: range(phim)) row[j] = n;
   }
 
   return *this;
@@ -574,12 +657,12 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
   // If we need the symmetric interval then make it so.
   if (!positive) {
     long phim = context.zMStar.getPhiM();
-    for (long j = 0; j < phim; j++) if (row[j] > q/2) row[j] -= q;
+    for (long j: range(phim)) if (row[j] > q/2) row[j] -= q;
   }
   return q;
 }
 
-
+// A parallelizable implementation of toPoly
 void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
@@ -587,60 +670,68 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   if (isDryRun()) return;
 
   IndexSet s1 = map.getIndexSet() & s;
-
-  if (empty(s1)) {
+  if (empty(s1)) { // nothing to do
     clear(poly);
     return;
   }
 
-
+  // To avoid allocating these with every call, they are defined static
+  // but thread_local, so concurrent calls to toPoly by multiple threads
+  // will have different copies. (tls_ = "Thread-Local Storage")
   static thread_local Vec<long> tls_ivec;
   static thread_local Vec<long> tls_pvec;
   static thread_local Vec< Vec<long> > tls_remtab;
   static thread_local Vec<zz_pX> tls_tmpvec;
 
-  Vec<long>& ivec = tls_ivec;
+  // For readability, call them by names without the tls_
+  Vec<long>& ivec = tls_ivec;      // the indexes of the active primes
   Vec<long>& pvec = tls_pvec;
-  Vec< Vec<long> >& remtab = tls_remtab;
-  Vec<zz_pX>& tmpvec = tls_tmpvec;
+  Vec< Vec<long> >& remtab = tls_remtab;// remtab[*][i] = coeffs of tmpvec[i]
+  Vec<zz_pX>& tmpvec = tls_tmpvec; // tmpvec[i] = current poly in i'th thread
 
+  // initialize the ivec vector, ivec[j] = index of j'th active prime
   long phim = context.zMStar.getPhiM();
-  long icard = MakeIndexVector(s1, ivec);
+  long icard = MakeIndexVector(s1, ivec); // icard = how many active primes
 
-  PartitionInfo pinfo(icard);
-  long cnt = pinfo.NumIntervals();
+  // Which primes are handled by what thread
+  PartitionInfo pinfo(icard);      // allocate threads to handle icard primes
+  long cnt = pinfo.NumIntervals(); // how many threads are allocated
 
+  // allocate space for all the coefficients modulo all the primes
   remtab.SetLength(phim);
-  for (long h = 0; h < phim; h++) remtab[h].SetLength(icard);
+  for (long h: range(phim)) remtab[h].SetLength(icard);
 
+  // allocate space for the polynomials modulo all the primes
   tmpvec.SetLength(cnt);
-  for (long i = 0; i < cnt; i++) tmpvec[i].SetMaxLength(phim);
+  for (long i: range(cnt)) tmpvec[i].SetMaxLength(phim);
 
-  { FHE_NTIMER_START(toPoly_FFT);
-  
+  // Run the inverse FFT modulo the different primes in parallel
+  {
+  FHE_NTIMER_START(toPoly_FFT);  
   NTL_EXEC_INDEX(cnt, index)
       long first, last;
       pinfo.interval(first, last, index);
 
       zz_pX& tmp = tmpvec[index];
   
-      for (long j = first; j < last; j++) {
+      for (long j: range(first, last)) {
         long i = ivec[j];
-        context.ithModulus(i).iFFT(tmp, map[i]); 
+        context.ithModulus(i).iFFT(tmp, map[i]); // inverse FFT
   
-        long d = deg(tmp);
+        long d = deg(tmp); // copy the coefficents, pad by zeros if needed
         for (long h = 0; h <= d; h++) remtab[h][j] = rep(tmp.rep[h]);
         for (long h = d+1; h < phim; h++) remtab[h][j] = 0;
       }
   NTL_EXEC_INDEX_END
+  } // release space of local variables
 
-  }
-
-  {FHE_NTIMER_START(toPoly_CRT);
-
+  // Run the integer CRT in parallel for the different coefficients
+  {
+  FHE_NTIMER_START(toPoly_CRT);
   PartitionInfo pinfo1(phim);
   long cnt1 = pinfo1.NumIntervals();
 
+  // static thread-local variables to avoid re-allocation
   static thread_local ZZ tls_prod;
   static thread_local ZZ tls_prod_half;
   static thread_local Vec<long> tls_qvec;
@@ -651,13 +742,13 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   static thread_local ZZVec tls_prod1vec;
   static thread_local ZZVec tls_resvec;
 
-  ZZ& prod = tls_prod;
-  ZZ& prod_half = tls_prod_half;
-  ZZVec& prod1vec = tls_prod1vec;
-  Vec<long>& qvec = tls_qvec;
-  Vec<double>& qrecipvec = tls_qrecipvec;
-  Vec<long>& tvec = tls_tvec;
-  Vec<mulmod_precon_t>& tqinvvec = tls_tqinvvec;
+  ZZ& prod = tls_prod;                   // product of all the primes
+  ZZ& prod_half = tls_prod_half;         // = (prod+1)/2
+  ZZVec& prod1vec = tls_prod1vec;        // prod1vec[i] = prod / qi
+  Vec<long>& qvec = tls_qvec;            // vector of the primes themselves
+  Vec<double>& qrecipvec = tls_qrecipvec;// keeps 1/qi for each prime qi
+  Vec<long>& tvec = tls_tvec;            // tvec[i] = (prod / qi)^{-1} mod qi
+  Vec<mulmod_precon_t>& tqinvvec = tls_tqinvvec; // tvec with extra tables
   ZZVec& resvec = tls_resvec;
 
   qvec.SetLength(icard);
@@ -665,23 +756,25 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   tvec.SetLength(icard);
   tqinvvec.SetLength(icard);
 
+  // store the primes and reciprocals, and compute their product
   prod = 1;
-  for (long j = 0; j < icard; j++) {
+  for (long j: range(icard)) {
     long i = ivec[j];
-    long q = context.ithModulus(i).getQ();
+    long q = context.ithModulus(i).getQ(); // the prime
     qvec[j] = q;
     qrecipvec[j] = 1/double(q);
     mul(prod, prod, q);
   }
+  long sz = prod.size(); // size of the product
 
-  long sz = prod.size();
-
+  // reallocate space only if needed
   if (prod1vec.length() != icard || prod1vec.BaseSize() != sz+1) {
     prod1vec.kill();
-    prod1vec.SetSize(icard, sz+1);
+    prod1vec.SetSize(icard, sz+1); // icard integers of size<=sz+1 each
   }
 
-  for (long j = 0; j < icard; j++) {
+  // compute (prod / qi)^{-1} mod qi
+  for (long j: range(icard)) { 
     long q = qvec[j];
     div(prod1vec[j], prod, q);
     long t = rem(prod1vec[j], q);
@@ -695,12 +788,12 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
     resvec.SetSize(phim, sz+1);
   }
 
-  if (!positive) {
-    // prod_half = (prod+1)/2
+  if (!positive) { // prod_half = (prod+1)/2
     add(prod_half, prod, 1);
     div(prod_half, prod_half, 2);
   }
   
+  // Compute the actual CRT reconstruction
   NTL_EXEC_INDEX(cnt1, index)
   NTL_IMPORT(icard)
       long first, last;
@@ -714,13 +807,13 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 
       ZZ tmp;
       tmp.SetSize(sz+4);
-  
-      for (long h = first; h < last; h++) {
+
+      for (long h: range(first, last)) { // CRT the h'th coefficient
         clear(tmp);
         double quotient = 0;
         long *remvec = remtab[h].elts();
         
-        for (long j = 0; j < icard; j++) {
+        for (long j: range(icard)) { // Add one prime at a time
           long q = qvecp[j];
           long t = tvecp[j];
           mulmod_precon_t tqinv = tqinvvecp[j];
@@ -730,10 +823,11 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
           MulAddTo(tmp, prod1vecp[j], r);
           quotient += r*qrecip;
         }
-        
+        // reduce modulo prod
         MulSubFrom(tmp, prod, long(quotient));
         while (tmp < 0) add(tmp, tmp, prod);
         while (tmp >= prod) sub(tmp, tmp, prod);
+        // if !positive, reduce to the interval [-prod/2, prod/2]
         if (!positive && tmp >= prod_half) 
           tmp -= prod;
         resvec[h] = tmp;
@@ -741,7 +835,7 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   NTL_EXEC_INDEX_END
 
   poly.SetLength(phim);
-  for (long j = 0; j < phim; j++) poly[j] = resvec[j];
+  for (long j: range(phim)) poly[j] = resvec[j];
   poly.normalize();
 
   // NOTE: assigning to poly[j] within the parallel loop
@@ -767,12 +861,12 @@ DoubleCRT& DoubleCRT::operator/=(const ZZ &num)
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
   
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) { 
     long pi = context.ithPrime(i);
     long n = InvMod(rem(num, pi),pi);  // n = num^{-1} mod pi
     vec_long& row = map[i];
     mulmod_precon_t precon = PrepMulModPrecon(n, pi);
-    for (long j = 0; j < phim; j++)
+    for (long j: range(phim))
       row[j] = MulModPrecon(row[j], n, pi, precon);
   }
   return *this;
@@ -786,24 +880,23 @@ void DoubleCRT::Exp(long e)
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
   
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) { 
     long pi = context.ithPrime(i);
     vec_long& row = map[i];
-    for (long j = 0; j < phim; j++)
+    for (long j: range(phim))
       row[j] = PowerMod(row[j], e, pi);
   }
 }
 
-#if 1
-
 // Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
+#if 1
 void DoubleCRT::automorph(long k)
 {
   if (isDryRun()) return;
 
   const PAlgebra& zMStar = context.zMStar;
   if (!zMStar.inZmStar(k))
-    Error("DoubleCRT::automorph: k not in Zm*");
+    throw helib::RuntimeError("DoubleCRT::automorph: k not in Zm*");
 
   long m = zMStar.getM();
   long phim = zMStar.getPhiM();
@@ -813,55 +906,46 @@ void DoubleCRT::automorph(long k)
   const IndexSet& s = map.getIndexSet();
 
   // go over the rows, permute them one at a time
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) { 
     vec_long& row = map[i];
 
-#if 0
-    for (long j=1; j<m; j++) { // 1st pass: copy to temporary array
-      long idx = zMStar.indexInZmstar_unchecked(j); // returns -1 if j \notin (Z/mZ)*
-      if (idx>=0) tmp[j] = row[idx];
-    }
+    // Compute new[j] = old[j*k mod m]
 
-    for (long j=1; j<m; j++) { // 2nd pass: copy back from temporary array
-      long idx = zMStar.indexInZmstar_unchecked(j); // returns -1 if j \notin (Z/mZ)*
-      if (idx>=0) row[idx] = tmp[MulModPrecon(j,k,m,precon)];
-                                           // new[j] = old[j*k mod m]
-    }    
-#else
+    // for (long j=1; j<m; j++) { // 1st pass: copy to temporary array
+    //   long idx = zMStar.indexInZmstar_unchecked(j);
+    //   if (idx>=0) tmp[j] = row[idx];
+    // }
+    // for (long j=1; j<m; j++) { // 2nd pass: copy back from temporary array
+    //   long idx = zMStar.indexInZmstar_unchecked(j);
+    //   if (idx>=0) row[idx] = tmp[MulModPrecon(j,k,m,precon)];
+    //                                        // new[j] = old[j*k mod m]
+    // }
+
     // slightly faster...
 
-    for (long j = 0; j < phim; j++) {
+    for (long j: range(phim)) {// 1st pass: copy to temporary array
        tmp[zMStar.repInZmstar_unchecked(j)] = row[j];
     }
-
-    for (long j = 0; j < phim; j++) {
-       row[j] = tmp[ MulModPrecon( zMStar.repInZmstar_unchecked(j), k, m, precon) ];
+    for (long j: range(phim)) {// 2nd pass: copy back from temp array
+       row[j] = tmp[MulModPrecon(zMStar.repInZmstar_unchecked(j),k,m,precon)];
     }
-
-#endif
   }
 }
 
 #else
-
 // VJS: I tried this as an alternative...it is slower :-(
-
-// Apply the automorphism F(X) --> F(X^k)  (with gcd(k,m)=1)
 void DoubleCRT::automorph(long k)
 {
   if (isDryRun()) return;
-
   const PAlgebra& zMStar = context.zMStar;
   if (!zMStar.inZmStar(k))
-    Error("DoubleCRT::automorph: k not in Zm*");
-
+    throw helib::RuntimeError("DoubleCRT::automorph: k not in Zm*");
   long m = zMStar.getM();
   long phim = zMStar.getPhiM();
   vector<long> tmp(phim);  // temporary array of size m
 
   k = InvMod(k, m);
   mulmod_precon_t precon = PrepMulModPrecon(k, m);
-
   const IndexSet& s = map.getIndexSet();
 
   // go over the rows, permute them one at a time
@@ -878,10 +962,28 @@ void DoubleCRT::automorph(long k)
        row[idx] = tmp[j];
     }
   }
+}
+#endif
 
+// Compute the complex conjugate, this is the same as automorph(m-1)
+void DoubleCRT::complexConj()
+{
+  if (isDryRun()) return;
+
+  const PAlgebra& zMStar = context.zMStar;
+  long phim = zMStar.getPhiM();
+
+  const IndexSet& s = map.getIndexSet();
+
+  // go over the rows, permute them one at a time
+  for (long i: s) { 
+    vec_long& row = map[i];
+    for (long j: range(phim/2)) {// swap i <-> phi(m)-i-1
+      std::swap(row[j], row[phim-j-1]);
+    }
+  }
 }
 
-#endif
 
 // fills each row i with random integers mod pi
 void DoubleCRT::randomize(const ZZ* seed) 
@@ -903,7 +1005,7 @@ void DoubleCRT::randomize(const ZZ* seed)
 
   unsigned char *buf = buf_storage.elts();
 
-  for (long i = s.first(); i <= s.last(); i = s.next(i)) {
+  for (long i: s) { 
     long pi = context.ithPrime(i);
     long k = NumBits(pi-1);
     long nb = (k+7)/8;
@@ -976,53 +1078,138 @@ void DoubleCRT::randomize(const ZZ* seed)
   }
 }
 
-
-void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace)
+// Coefficients are -1/0/1, Prob[0]=1/2
+double DoubleCRT::sampleSmall()
 {
-  assert(ptxtSpace >= 2);
+  zzX poly;
+  double retval = ::sampleSmall(poly,context); // degree-(phi(m)-1) polynomial
+  *this = poly; // convert to DoubleCRT
+  return retval;
+}
 
+double DoubleCRT::sampleSmallBounded()
+{
+  zzX poly;
+  double retval = ::sampleSmallBounded(poly,context); // degree-(phi(m)-1) polynomial
+  *this = poly; // convert to DoubleCRT
+  return retval;
+}
+
+// Coefficients are -1/0/1 with pre-specified number of nonzeros
+double DoubleCRT::sampleHWt(long Hwt)
+{
+  zzX poly;
+  double retval = ::sampleHWt(poly,context,Hwt);
+  *this = poly; // convert to DoubleCRT
+  return retval;
+}
+
+// Coefficients are -1/0/1 with pre-specified number of nonzeros
+double DoubleCRT::sampleHWtBounded(long Hwt)
+{
+  zzX poly;
+  double retval = ::sampleHWtBounded(poly,context,Hwt);
+  *this = poly; // convert to DoubleCRT
+  return retval;
+}
+
+// Coefficients are Gaussians
+double DoubleCRT::sampleGaussian(double stdev)
+{
+  if (stdev==0.0) stdev=to_double(context.stdev); 
+  zzX poly;
+  double retval = ::sampleGaussian(poly, context, stdev);
+  *this = poly; // convert to DoubleCRT
+  return retval;
+}
+
+double DoubleCRT::sampleGaussianBounded(double stdev)
+{
+  if (stdev==0.0) stdev=to_double(context.stdev);
+  zzX poly;
+  double retval = ::sampleGaussianBounded(poly, context, stdev);
+  *this = poly; // convert to DoubleCRT
+  return retval;
+}
+
+
+// Coefficients are uniform in [-B..B]
+
+double DoubleCRT::sampleUniform(long B)
+{
+  zzX poly;
+  double retval = ::sampleUniform(poly, context, B);
+  *this = poly;
+  return retval;
+}
+
+xdouble DoubleCRT::sampleUniform(const ZZ& B)
+{
+  ZZX poly;
+  xdouble retval = ::sampleUniform(poly, context, B);
+  *this = poly;
+  return retval;
+}
+
+void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, ZZX& delta)
+{
   IndexSet diff = getIndexSet() / s;
-  assert(diff!=s);          // cannot mod-down to the empty set
-  if (empty(diff)) return;  // nothing to do
+  if (empty(diff)) return;     // nothing to do
 
+  //OLD: assert(ptxtSpace >= 1);
+  helib::assertTrue(ptxtSpace >= 1, "ptxtSpacee must be at least 1");
+  //OLD: assert(diff!=getIndexSet()); // cannot mod-down to the empty set
+  helib::assertNeq(diff, getIndexSet(), "s and the index set must have some intersection");
   if (isDryRun()) {
     removePrimes(diff);// remove the primes from consideration
     return;
   }
 
-  ZZX delta;
   ZZ diffProd = context.productOfPrimes(diff); // mod-down by this factor
   toPoly(delta, diff); // convert to coeff-representation modulo diffProd
 
-  long delta_len = delta.rep.length();
-  if (ptxtSpace == 2) { // simpler handling for plaintext space mod 2
-    for (long i = 0; i < delta_len; i++) {
-      if (IsOdd(delta.rep[i])) { // add or subtract diffProd to make it even
-	if (sign(delta.rep[i]) < 0) delta.rep[i] += diffProd;
-	else                        delta.rep[i] -= diffProd;
+  if (ptxtSpace > 1) { // make delta divisible by ptxtSpace
+    long delta_len = delta.rep.length();
+    if (ptxtSpace == 2) { 
+      // simpler handling for plaintext space mod 2.
+      // This makes the distrubution of delta/diffProd to be
+      // essentially uniform over [-1,+1].
+      for (long i: range(delta_len)) { 
+        // NOTE: this makes sure we get a more truly balanced remainder 
+        if (IsOdd(delta.rep[i])) { // add or subtract diffProd to make it even
+          long s = sign(delta.rep[i]);
+          if (s < 0)
+            delta.rep[i] += diffProd;
+          else 
+            delta.rep[i] -= diffProd;
+        }
       }
     }
-  }
-  // The general case of plaintext space modulo some p > 2, we need to
-  // subtract from each coefficient delta[i] the ineteger
-  //               diffProd * (delta[i] * diffProd^{-1} mod ptxtSpace).
-  // This does not change delta modulo diffProd, but makes it divisible
-  // by ptxtSpace.
-  else {
-    long p_over_2 = ptxtSpace/2;
-    long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
-    mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace); // optimization
-    for (long i = 0; i < delta_len; i++) {
-      long delta_i_modP = rem(delta.rep[i],ptxtSpace);
-      if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
-	delta_i_modP = MulModPrecon(delta_i_modP, prodInv, ptxtSpace, precon);
-	if (delta_i_modP > p_over_2) delta_i_modP -= ptxtSpace;
-	delta.rep[i] -= diffProd * delta_i_modP;
-      }
-    }
-  }
-  delta.normalize(); // need to normalize after working directly on then coeffs
+    // The general case of plaintext space modulo some p > 2, we
+    // need to subtract from each coefficient delta[i] the integer
+    //          diffProd * (delta[i] * diffProd^{-1} mod ptxtSpace).
+    // This does not change delta modulo diffProd, but makes it
+    // divisible by ptxtSpace.
+    else {
+      long p_over_2 = ptxtSpace/2;
+      long p_mod_2 = ptxtSpace%2;
+      long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
+      mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace); // optimization
+      for (long i: range(delta_len)) { 
+        long delta_i_modP = rem(delta.rep[i],ptxtSpace);
+        if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
+          delta_i_modP = MulModPrecon(delta_i_modP, prodInv, ptxtSpace, precon);
 
+          // NOTE: this makes sure we get a more truly balanced remainder 
+          if (delta_i_modP > p_over_2 ||
+              (p_mod_2 == 0 && delta_i_modP == p_over_2 && RandomBnd(2))) 
+            delta_i_modP -= ptxtSpace;
+          delta.rep[i] -= diffProd * delta_i_modP;
+        }
+      }
+    }
+    delta.normalize(); // normalize after working directly on the coeffs
+  }
   removePrimes(diff);// remove the primes from consideration
   *this -= delta;    // convert delta to DoubleCRT, then subtract
   *this /= diffProd; // *this is divisible by diffProd, so this operation actually scales it down
@@ -1034,7 +1221,7 @@ ostream& operator<< (ostream &str, const DoubleCRT &d)
 
   // check that the content of i'th row is in [0,pi) for all i
   str << "[" << set << endl;
-  for (long i = set.first(); i <= set.last(); i = set.next(i))
+  for (long i: set) 
     str << " " << d.map[i] << "\n";
   str << "]";
   return str;
@@ -1051,17 +1238,20 @@ istream& operator>> (istream &str, DoubleCRT &d)
   long phim = context.zMStar.getPhiM();
 
   str >> set; // read in the indexSet
-  assert(set <= (context.specialPrimes | context.ctxtPrimes));
+  //OLD: assert(set <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes));
+  helib::assertTrue(set <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes), "Stream does not contain subset of the context's primes");
   d.map.clear();
   d.map.insert(set); // fix the index set for the data
 
-  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+  for (long i: set) { 
     str >> d.map[i]; // read the actual data
 
     // verify that the data is valid
-    assert (d.map[i].length() == phim);
-    for (long j=0; j<phim; j++)
-      assert(d.map[i][j]>=0 && d.map[i][j]<context.ithPrime(i));
+    //OLD: assert (d.map[i].length() == phim);
+    helib::assertEq(d.map[i].length(), phim, "Data not valid: d.map[i].length() != phim");
+    for (long j: range(phim))
+      //OLD: assert(d.map[i][j]>=0 && d.map[i][j]<context.ithPrime(i));
+      helib::assertInRange(d.map[i][j], 0l, context.ithPrime(i), "d.map[i][j] invalid: must be between 0 and context.ithPrime(i)");
   }
 
   // Advance str beyond closing ']'
@@ -1076,7 +1266,7 @@ void DoubleCRT::write(ostream& str) const
 //  cerr << "[DCRT::write] set: " << set << endl;
   set.write(str);
   
-  for(long i = set.first(); i <= set.last(); i = set.next(i)) {
+  for(long i: set) { 
     write_ntl_vec_long(str, map[i]);
  //   cerr << "[DCRT::write] map[i]: " << map[i] << endl;
   }
@@ -1090,7 +1280,7 @@ void DoubleCRT::read(istream& str)
   map.insert(set); // fix the index set for the data
 //  cerr << "[DCRT::read] set: " << set << endl;
  
-  for(long i = set.first(); i <= set.last(); i = set.next(i)) {
+  for(long i: set) { 
     read_ntl_vec_long(str, map[i]);    
  //   cerr << "[DCRT::read] map[i]: " << map[i] << endl;
   }

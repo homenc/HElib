@@ -18,12 +18,16 @@
 #include <map>
 #include <algorithm>
 #include <stdexcept>
-#include <cassert>
 #include <atomic>
 #include <mutex>          // std::mutex, std::unique_lock
 
 #include <NTL/BasicThreadPool.h>
 #include "binaryArith.h"
+
+#define BPL_ESTIMATE (30)
+// FIXME: this should really be dynamic
+
+NTL_CLIENT
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
@@ -180,7 +184,8 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
 
   aSize = lsize(a);
   bSize = lsize(b);
-  assert (aSize>=1);
+  //OLD: assert (aSize>=1);
+  helib::assertTrue<helib::InvalidArgument>(aSize>=1, "a must not be empty");
 
   // Initialize the p[i,i]'s and q[i,i]'s
   p.clear();
@@ -188,10 +193,10 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
   for (long i=0; i<bSize; i++) {
     NodeIdx idx(i,i);
     long lvl = (b.isSet(i) && !(b[i]->isEmpty()))? // The level of b[i]
-      b[i]->findBaseLevel() : LONG_MAX;
+      b[i]->bitCapacity() : LONG_MAX;
     if (i<aSize) {
       long aLvl = (a.isSet(i) && !(a[i]->isEmpty()))? // The level of a[i]
-        a[i]->findBaseLevel() : LONG_MAX;
+        a[i]->bitCapacity() : LONG_MAX;
       lvl = std::min(lvl, aLvl);
       if (lvl==LONG_MAX || aLvl==LONG_MAX) // is either a[i] or b[i] is empty
            q.emplace(idx,DAGnode(idx, true, LONG_MAX, 1));
@@ -206,7 +211,7 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
       long mid= i-defaultPmiddle(delta); // initialize to a "good default"
       DAGnode* prnt2 = findP(i,mid+1);
       DAGnode* prnt1 = findP(mid,j);
-      long maxLvl = std::min(prnt1->level, prnt2->level) -1;
+      long maxLvl = std::min(prnt1->level, prnt2->level) - BPL_ESTIMATE;
       if (prnt1->level==LONG_MAX || prnt2->level==LONG_MAX) // parent is empty
         maxLvl = LONG_MAX;
       long maxN =std::min(long(prnt1->childrenLeft), long(prnt2->childrenLeft));
@@ -214,7 +219,7 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
         if (m==mid) continue;
         DAGnode* p2 = findP(i,m+1);
         DAGnode* p1 = findP(m,j);
-        long lvl = std::min(p1->level, p2->level) -1;
+        long lvl = std::min(p1->level, p2->level) - BPL_ESTIMATE;
         if (p1->level==LONG_MAX || p2->level==LONG_MAX) // parent is empty
           lvl = LONG_MAX;
         long n = std::min(long(p1->childrenLeft), long(p2->childrenLeft));
@@ -240,7 +245,7 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
       DAGnode* prnt2 = findP(i,mid+1);
       DAGnode* prnt1 = findQ(mid,j);
       if (prnt1!=nullptr) {
-        maxLvl = std::min(prnt1->level, prnt2->level) -1;
+        maxLvl = std::min(prnt1->level, prnt2->level) - BPL_ESTIMATE;
         if (prnt1->level==LONG_MAX || prnt2->level==LONG_MAX)// parent is empty
           maxLvl = LONG_MAX;
         maxN = long(prnt2->childrenLeft);
@@ -250,7 +255,7 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
         DAGnode* p2 = findP(i,m+1);
         DAGnode* p1 = findQ(m,j);
         if (p1==nullptr) continue;
-        long lvl = std::min(p1->level, p2->level) -1;
+        long lvl = std::min(p1->level, p2->level) - BPL_ESTIMATE;
         if (p1->level==LONG_MAX || p2->level==LONG_MAX) // parent is empty
           lvl = LONG_MAX;
         long n = long(p2->childrenLeft);
@@ -277,7 +282,7 @@ void AddDAG::apply(CtPtrs& sum,
   const CtPtrs& a = (lsize(bb)>=lsize(aa))? aa : bb;
   const CtPtrs& b = (lsize(bb)>=lsize(aa))? bb : aa;
   if (aSize != lsize(a) || bSize != lsize(b))
-    throw std::logic_error("DAG applied to wrong vectors");
+    throw helib::LogicError("DAG applied to wrong vectors");
 
   if (sizeLimit==0)
     sizeLimit = bSize+1;
@@ -347,7 +352,8 @@ const Ctxt& AddDAG::getCtxt(DAGnode* node,
       long i = node->idx.first;
       long j = node->idx.second; // we expect i==j
       const Ctxt* ct_ptr = b.ptr2nonNull();
-      assert(ct_ptr != nullptr);
+      //OLD: assert(ct_ptr != nullptr);
+      helib::assertNotNull(ct_ptr, "ct_ptr must not be null");
       node->ct = allocateCtxtLike(*ct_ptr);
 
       if (node->isQ) { // This is b[i]*a[j]
@@ -414,7 +420,10 @@ void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
   if (ct==nullptr) ct = a.ptr2nonNull();
   if (ct==nullptr) return;    // nothing to do
 
-  assert(unpackSlotEncoding!=nullptr && ct->getPubKey().isBootstrappable());
+  //OLD: assert(unpackSlotEncoding!=nullptr);
+  helib::assertNotNull<helib::InvalidArgument>(unpackSlotEncoding, "unpackSlotEncoding must not be null");
+  //OLD: assert(ct->getPubKey().isBootstrappable());
+  helib::assertTrue(ct->getPubKey().isBootstrappable(), "public key must be bootstrappable for recryption");
 
   struct CtPtrs_pair : CtPtrs {
     const CtPtrs& a;
@@ -446,11 +455,11 @@ void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
 
   // Ensure that we have enough levels to compute everything,
   // bootstrap otherwise
-  if (addPlan.lowLvl()<1) {
+  if (addPlan.lowLvl()< BPL_ESTIMATE) {
     packedRecrypt(a,b,unpackSlotEncoding);
     addPlan.init(a,b); // Re-compute the DAG
-    if (addPlan.lowLvl()<1) { // still not enough levels
-      throw std::logic_error("not enough levels for addition DAG");
+    if (addPlan.lowLvl()<BPL_ESTIMATE) { // still not enough levels
+      throw helib::LogicError("not enough levels for addition DAG");
     }
   }
   addPlan.apply(sum, a, b, sizeLimit);    // perform the actual addition
@@ -639,8 +648,11 @@ void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
   while (leftInQ>2) {
     // If any number is too low level, then bootstrap everything
     PtrMatrix_PtPtrVector<Ctxt> wrapper(numPtrs);
-    if (findMinLevel(wrapper)<3) {
-      assert(bootstrappable && unpackSlotEncoding!=nullptr);
+    if (findMinBitCapacity(wrapper)<3*ct_ptr->getContext().BPL()) {
+      //OLD: assert(bootstrappable && unpackSlotEncoding!=nullptr);
+      helib::assertNotNull<helib::InvalidArgument>(unpackSlotEncoding, "unpackSlotEncoding must not be null");
+      helib::assertTrue(bootstrappable, "public key must be bootstrappable for recryption");
+
       packedRecrypt(wrapper, *unpackSlotEncoding, ea, /*belowLvl=*/10);
     }
     // Prepare a vector for pointers to the output of this iteration
@@ -736,7 +748,7 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   }
 
 #ifdef DEBUG_PRINTOUT
-  cout << " before multiplication, level="<<findMinLevel({&a, &b})
+  cout << " before multiplication, capacity="<<findMinBitCapacity({&a, &b})
        << endl;
 #endif
   // Edge case, if a or b is 1 bit

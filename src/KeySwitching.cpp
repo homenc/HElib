@@ -15,13 +15,14 @@
  */
 #include <unordered_set>
 #include "NTL/ZZ.h"
+#include "permutations.h"
 NTL_CLIENT
 #include "FHE.h"
-#include "permutations.h"
 
 long KSGiantStepSize(long D)
 {
-  assert(D > 0);
+  //OLD: assert(D > 0);
+  helib::assertTrue<helib::InvalidArgument>(D > 0l, "Step size must be positive");
   long g = SqrRoot(D);
   if (g*g < D) g++;  // g = ceiling(sqrt(D))
   return g;
@@ -44,7 +45,7 @@ void addAllMatrices(FHESecKey& sKey, long keyID)
 // generate matrices s.t. you can reLinearize each s(X^e) in at most two steps
 void addFewMatrices(FHESecKey& sKey, long keyID)
 {
-  NTL::Error("addFewMatrices Not implemented yet");
+  throw helib::LogicError("addFewMatrices not implemented yet");
 }
 
 // This code block appears at least twice below
@@ -369,7 +370,6 @@ void addMinimal1DMatrices(FHESecKey& sKey, long keyID)
 // Generate all Frobenius matrices of the form s(X^{p^i})->s(X)
 void addMinimalFrbMatrices(FHESecKey& sKey, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
   addMinimal1Dmats4dim(sKey, -1, keyID);
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }

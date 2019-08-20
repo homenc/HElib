@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <iostream>
+#include <cassert>
 #include <fstream>
 #include <vector>
 #include <cmath>
@@ -22,6 +23,7 @@ NTL_CLIENT
 
 #include "intraSlot.h"
 #include "binaryArith.h"
+#include "ArgMap.h"
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
@@ -53,7 +55,7 @@ void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
 
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
   long prm=1;
   amap.arg("prm", prm, "parameter size (0-tiny,...,7-huge)");
   long bitSize = 5;
@@ -111,13 +113,13 @@ int main(int argc, char *argv[])
 
   // Compute the number of levels
   long L;
-  if (bootstrap) L=30; // that should be enough
+  if (bootstrap) L=900; // that should be enough
   else {
     double nBits =
       (outSize>0 && outSize<2*bitSize)? outSize : (2*bitSize);
     double three4twoLvls = log(nBits/2) / log(1.5);
     double add2NumsLvls = log(nBits) / log(2.0);
-    L = 3 + ceil(three4twoLvls + add2NumsLvls);
+    L = (5 + ceil(three4twoLvls + add2NumsLvls))*30;
   }
   
   if (verbose) {
@@ -128,11 +130,9 @@ int main(int argc, char *argv[])
     cout << "computing key-independent tables..." << std::flush;
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);
-  context.bitsPerLevel = B;
-  buildModChain(context, L, c,/*extraBits=*/8);
+  buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
-    context.makeBootstrappable(mvec, /*t=*/0,
-                               /*flag=*/false, /*cacheType=DCRT*/2);
+    context.makeBootstrappable(mvec, /*t=*/0);
   }
   buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
   if (verbose) {
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
     cout << "\ncomputing key-dependent tables..." << std::flush;
   }
   FHESecKey secKey(context);
-  secKey.GenSecKey(/*Hweight=*/128);
+  secKey.GenSecKey();
   addSome1DMatrices(secKey); // compute key-switching matrices
   addFrbMatrices(secKey);
   if (bootstrap) secKey.genRecryptData();
@@ -157,17 +157,17 @@ int main(int argc, char *argv[])
   if (!(tests2avoid & 1)) {
     for (long i=0; i<nTests; i++)
       test15for4(secKey);
-    cout << "  *** test15for4 PASS ***\n";
+    cout << "GOOD\n";
   }
   if (!(tests2avoid & 2)) {
     for (long i=0; i<nTests; i++)
       testAdd(secKey, bitSize, bitSize2, outSize, bootstrap);
-    cout << "  *** testAdd PASS ***\n";
+    cout << "GOOD\n";
   }
   if (!(tests2avoid & 4)) {
     for (long i=0; i<nTests; i++)
       testProduct(secKey, bitSize, bitSize2, outSize, bootstrap);
-    cout << "  *** testProduct PASS ***\n";
+    cout << "GOOD\n";
   }
   if (verbose) printAllTimers(cout);
   return 0;
@@ -212,8 +212,11 @@ void test15for4(FHESecKey& secKey)
     sum2 += to_long(ConstTerm(poly)) << i;
   }
   if (sum != sum2) {
-    cout << "15to4 error: inputs="<<inputBits<<", sum="<<sum;
-    cout << " but sum2="<<sum2<<endl;
+    cout << "BAD\n";
+    if (verbose) {
+      cout << "  15to4: inputs="<<inputBits<<", sum="<<sum
+           << " but sum2="<<sum2<<endl;
+    }
     exit(0);
   }
   else if (verbose)
@@ -223,7 +226,8 @@ void test15for4(FHESecKey& secKey)
 void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
                  long outSize, bool bootstrap)
 {
-  const EncryptedArray& ea = *(secKey.getContext().ea);
+  const FHEcontext& context = secKey.getContext();
+  const EncryptedArray& ea = *(context.ea);
   long mask = (outSize? ((1L<<outSize)-1) : -1);
 
   // Choose two random n-bit integers
@@ -237,14 +241,14 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
   for (long i=0; i<bitSize; i++) {
     secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
     if (bootstrap) { // put them at a lower level
-      enca[i].modDownToLevel(5);
+      enca[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
   resize(encb, bitSize2, Ctxt(secKey));
   for (long i=0; i<bitSize2; i++) {
     secKey.Encrypt(encb[i], ZZX((pb>>i)&1));
     if (bootstrap) { // put them at a lower level
-      encb[i].modDownToLevel(5);
+      encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
   if (verbose) {
@@ -263,9 +267,11 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
     CheckCtxt(eProduct[lsize(eProduct)-1], "after multiplication");
   long pProd = pa*pb;
   if (slots[0] != ((pa*pb)&mask)) {
-    cout << "Positive product error: pa="<<pa<<", pb="<<pb
-         << ", but product="<<slots[0]
-         << " (should be "<<pProd<<'&'<<mask<<'='<<(pProd&mask)<<")\n";
+    cout << "BAD\n";
+    if (verbose)
+      cout << "Positive product error: pa="<<pa<<", pb="<<pb
+           << ", but product="<<slots[0]
+           << " (should be "<<pProd<<'&'<<mask<<'='<<(pProd&mask)<<")\n";
     exit(0);
   }
   else if (verbose) {
@@ -287,9 +293,11 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
     CheckCtxt(eProduct[lsize(eProduct)-1], "after multiplication");
   pProd = pa*pb;
   if ((slots[0]&mask) != (pProd&mask)) {
-    cout << "Negative product error: pa="<<pa<<", pb="<<pb
-         << ", but product="<<slots[0]
-         << " (should be "<<pProd<<'&'<<mask<<'='<<(pProd&mask)<<")\n";
+    cout << "BAD\n";
+    if (verbose)
+      cout << "Negative product error: pa="<<pa<<", pb="<<pb
+           << ", but product="<<slots[0]
+           << " (should be "<<pProd<<'&'<<mask<<'='<<(pProd&mask)<<")\n";
     exit(0);
   }
   else if (verbose) {
@@ -302,7 +310,7 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
   const Ctxt* minCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eProduct) {
-    long lvl = c.findBaseLevel();
+    long lvl = c.logOfPrimeSet();
     if (lvl < minLvl) {
       minCtxt = &c;
       minLvl = lvl;
@@ -317,7 +325,8 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
 void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
              long outSize, bool bootstrap)
 {
-  const EncryptedArray& ea = *(secKey.getContext().ea);
+  const FHEcontext& context = secKey.getContext();
+  const EncryptedArray& ea = *(context.ea);
   long mask = (outSize? ((1L<<outSize)-1) : -1);
 
   // Choose two random n-bit integers
@@ -331,14 +340,14 @@ void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
   for (long i=0; i<bitSize1; i++) {
     secKey.Encrypt(enca[i], ZZX((pa>>i)&1));
     if (bootstrap) { // put them at a lower level
-      enca[i].modDownToLevel(5);
+      enca[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
   resize(encb, bitSize2, Ctxt(secKey));
   for (long i=0; i<bitSize2; i++) {
     secKey.Encrypt(encb[i], ZZX((pb>>i)&1));
     if (bootstrap) { // put them at a lower level
-      encb[i].modDownToLevel(5);
+      encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
   if (verbose) {
@@ -358,9 +367,11 @@ void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
   if (verbose) CheckCtxt(eSum[lsize(eSum)-1], "after addition");
   long pSum = pa+pb;
   if (slots[0] != ((pa+pb)&mask)) {
-    cout << "addTwoNums error: pa="<<pa<<", pb="<<pb
-         << ", but pSum="<<slots[0]
-         << " (should be ="<<(pSum&mask)<<")\n";
+    cout << "BAD\n";
+    if (verbose)
+      cout << "addTwoNums error: pa="<<pa<<", pb="<<pb
+           << ", but pSum="<<slots[0]
+           << " (should be ="<<(pSum&mask)<<")\n";
     exit(0);
   }
   else if (verbose) {
@@ -373,7 +384,7 @@ void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
   const Ctxt* minCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eSum) {
-    long lvl = c.findBaseLevel();
+    long lvl = c.logOfPrimeSet();
     if (lvl < minLvl) {
       minCtxt = &c;
       minLvl = lvl;

@@ -14,8 +14,6 @@
  * @brief Implementing integer comparison in binary representation.
  */
 #include <algorithm>
-#include <cassert>
-#include <stdexcept>
 // #include <numeric>
 // #include <climits>
 // #include <map>
@@ -24,6 +22,11 @@
 
 #include <NTL/BasicThreadPool.h>
 #include "binaryArith.h"
+
+#define BPL_ESTIMATE (30)
+// FIXME: this should really be dynamic
+
+NTL_CLIENT
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
@@ -89,8 +92,9 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
 {
   FHE_TIMER_START;
   const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
-  DoubleCRT one(zeroCtxt.getContext()); one += 1L;
-  
+  const FHEcontext& context = zeroCtxt.getContext();
+  DoubleCRT one(context, context.allPrimes()); one += 1L;
+
   resize(aeqb, lsize(b), zeroCtxt);
   resize(agtb, lsize(a), zeroCtxt);
 
@@ -144,9 +148,9 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
 
 // Compares two integers in binary a,b.
 // Returns max(a,b), min(a,b) and indicator bits mu=(a>b) and ni=(a<b)
-void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
+void compareTwoNumbersImplementation(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
                        const CtPtrs& aa, const CtPtrs& bb,
-                       std::vector<zzX>* unpackSlotEncoding)
+                       std::vector<zzX>* unpackSlotEncoding, bool cmp_only)
 {
   FHE_TIMER_START;
   // make sure that lsize(b) >= lsize(a)
@@ -164,10 +168,11 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
   }
 
   // Check that we have enough levels, try to bootstrap otherwise
-  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize+1)+2)
+  if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize+1)+2)*mu.getContext().BPL())
     packedRecrypt(a,b,unpackSlotEncoding);
-  if (findMinLevel({&a,&b}) < NTL::NumBits(bSize)+1) // the bear minimum
-    throw std::logic_error("not enough levels for comparison");
+  if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize)+1)*mu.getContext().BPL())
+    // the bare minimum
+    throw helib::LogicError("not enough levels for comparison");
 
   // NOTE: this procedure minimizes the number of multiplications,
   //       but it may use one level too many. Can we optimize it?
@@ -190,6 +195,10 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
   ni.addConstant(ZZ(1L));  // a <= b
   ni += *e[0];             // a < b
 
+  if(cmp_only) {
+    return;
+  }
+
   NTL_EXEC_RANGE(aSize, first, last)
   for (long i=first; i<last; i++) {
     *max[i] = *a[i];
@@ -204,4 +213,20 @@ void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
   for (long i=aSize; i<bSize; i++)
     *max[i] = *b[i];
   FHE_NTIMER_STOP(compResults);
+}
+
+void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
+                       const CtPtrs& aa, const CtPtrs& bb,
+                       std::vector<zzX>* unpackSlotEncoding) {
+  compareTwoNumbersImplementation(max, min, mu, ni, aa, bb, unpackSlotEncoding, false);
+}
+
+
+void compareTwoNumbers(Ctxt& mu, Ctxt& ni, const CtPtrs& aa, const CtPtrs& bb,
+                       std::vector<zzX>* unpackSlotEncoding) {
+  NTL::Vec<Ctxt> aeqb;
+  NTL::Vec<Ctxt> agtb;
+  CtPtrs_VecCt eq(aeqb);
+  CtPtrs_VecCt gr(agtb);
+  compareTwoNumbersImplementation(eq, gr, mu, ni, aa, bb, unpackSlotEncoding, true);
 }

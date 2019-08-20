@@ -22,13 +22,14 @@ NTL_CLIENT
 #include "FHE.h"
 #include "replicate.h"
 #include "timing.h"
+#include "ArgMap.h"
 
 static bool noPrint = false;
 
 static bool check_replicate(const Ctxt& c1, const Ctxt& c0, long i,
 			    const FHESecKey& sKey, const EncryptedArray& ea)
 {
-  NewPlaintextArray pa0(ea), pa1(ea);
+  PlaintextArray pa0(ea), pa1(ea);
   ea.decrypt(c0, sKey, pa0);
   ea.decrypt(c1, sKey, pa1);
   replicate(ea, pa0, i);
@@ -44,7 +45,7 @@ class ReplicateTester : public ReplicateHandler {
 public:
   const FHESecKey& sKey;
   const EncryptedArray& ea;
-  const NewPlaintextArray& pa;
+  const PlaintextArray& pa;
   long B;
 
   double t_last, t_total;
@@ -52,7 +53,7 @@ public:
   bool error;
 
   ReplicateTester(const FHESecKey& _sKey, const EncryptedArray& _ea, 
-                  const NewPlaintextArray& _pa, long _B)
+                  const PlaintextArray& _pa, long _B)
   : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
   {
     t_last = GetTime();
@@ -72,9 +73,9 @@ public:
     t_total += t_elapsed;
 
     // Decrypt and check
-    NewPlaintextArray pa1 = pa;
+    PlaintextArray pa1 = pa;
     replicate(ea, pa1, pos);
-    NewPlaintextArray pa2(ea);
+    PlaintextArray pa2(ea);
 
     if (pos==0 && !noPrint) CheckCtxt(ctxt, "replicateAll");
 
@@ -120,11 +121,11 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
 
   FHESecKey secretKey(context);
   const FHEPubKey& publicKey = secretKey;
-  secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
+  secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 
   EncryptedArray ea(context, G);
-  NewPlaintextArray xp0(ea), xp1(ea);
+  PlaintextArray xp0(ea), xp1(ea);
   random(ea, xp0);
   random(ea, xp1);
 
@@ -150,8 +151,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
     if (!check_replicate(xc1, xc0, i, secretKey, ea)) error = true;
     FHE_NTIMER_STOP(replicate);
   }
-  cout << "  Replicate test " << (error? "failed :(\n" : "succeeded :)")
-       << endl;
+  cout << (error? "BAD" : "GOOD") << endl;
 
   if (!noPrint) {
     printAllTimers();
@@ -171,17 +171,16 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   }
   catch (StopReplicate) {
   }
-  std::cout << "  replicateAll() "
-	    << (handler->error? "failed :(\n" : "succeeded :)")
-	    << ", total time=" << handler->t_total << " ("
-	    << ((B>0)? B : ea.size())
-	    << " vectors)\n";
+  std::cout << (handler->error? "BAD" : "GOOD") << endl;
+  if (!noPrint)
+    cout << "  total time=" << handler->t_total << " ("
+         << ((B>0)? B : ea.size()) << " vectors)\n";
   delete handler;
 }
 
 int main(int argc, char *argv[]) 
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   bool dry=false;
   amap.arg("dry", dry, "dry=1 for a dry-run");
@@ -199,8 +198,8 @@ int main(int argc, char *argv[])
   amap.arg("d", d, "degree of the field extension");
   amap.note("d == 0 => factors[0] defines extension");
 
-  long L=3;
-  amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
+  long L=250;
+  amap.arg("L", L, "# of bits in the modulus chain");
 
   long bnd = 64;
   amap.arg("bnd", bnd, "recursion bound for replication");

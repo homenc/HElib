@@ -12,10 +12,10 @@
 
 #include "replicate.h"
 #include "timing.h"
-#include "cloned_ptr.h"
+#include "clonedPtr.h"
 
 
-
+NTL_CLIENT
 
 NTL_THREAD_LOCAL 
 bool replicateVerboseFlag = false;
@@ -27,9 +27,10 @@ bool replicateVerboseFlag = false;
 void replicate(const EncryptedArray& ea, Ctxt& ctxt, long pos)
 {
   long nSlots = ea.size();
-  assert(pos >= 0 && pos < nSlots); 
+  //OLD: assert(pos >= 0 && pos < nSlots); 
+  helib::assertInRange(pos, 0l, nSlots, "replication failed (pos must be in [0, nSlots))"); 
 
-  ZZX mask;
+  zzX mask;
   ea.encodeUnitSelector(mask, pos);
   ctxt.multByConstant(mask);
   replicate0(ea, ctxt, pos);
@@ -82,7 +83,8 @@ void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos)
 static
 long GreatestPowerOfTwo(long n)
 {
-  assert(n >0);
+  //OLD: assert(n >0);
+  helib::assertTrue<helib::InvalidArgument>(n > 0l, "Cannot take log of negative number");
 
   long k;
 
@@ -98,7 +100,10 @@ void SelectRange(const EncryptedArray& ea, ZZX& mask, long lo, long hi)
 {
   long nSlots = ea.size();
 
-  assert(lo >= 0 && lo <= hi && hi <= nSlots);
+  //OLD: assert(lo >= 0 && lo <= hi && hi <= nSlots);
+  helib::assertInRange<helib::InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
+  helib::assertTrue<helib::InvalidArgument>(hi <= nSlots, "Interval exceeds number of slots");
+  
 
   vector<long> maskArray;
   maskArray.resize(nSlots);
@@ -150,7 +155,7 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
       // need to generate mask
       ZZX mask;
       SelectRange(ea, mask, 0, nSlots - (1L << n));
-      repAux.tab(0).set_ptr(new DoubleCRT(mask, ea.getContext()));
+      repAux.tab(0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
 
 
@@ -188,7 +193,7 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
 
         ZZX mask;
         ea.encode(mask, maskArray);
-        repAux.tab(k+1).set_ptr(new DoubleCRT(mask, ea.getContext()));
+        repAux.tab(k+1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       }
 
       ctxt_masked.multByConstant(*repAux.tab(k+1));
@@ -215,9 +220,15 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
   recursiveReplicate(ea, ctxt_right, n, k, pos, limit, repAux, handler);
 }
 
-void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt,
+void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt_orig,
                       ReplicateHandler *handler, RepAux* repAuxPtr)
 {
+  Ctxt ctxt = ctxt_orig;
+  ctxt.cleanUp();
+  // clean up the ciphertext -- this gets rid of all small primes,
+  // so that DoubleCRT constant can leave them out
+
+
   long nSlots = ea.size();
   long n = GreatestPowerOfTwo(nSlots); // 2^n <= nSlots
 
@@ -253,8 +264,11 @@ void SelectRangeDim(const EncryptedArray& ea, ZZX& mask, long lo, long hi,
 {
   long nSlots = ea.size();
 
-  assert(d >= 0 && d < ea.dimension());
-  assert(lo >= 0 && lo <= hi && hi <= ea.sizeOfDimension(d));
+  //OLD: assert(d >= 0 && d < ea.dimension());
+  helib::assertInRange(d, 0l, ea.dimension(), "dimension d must be within [0, ea.dimension())");
+  //OLD: assert(lo >= 0 && lo <= hi && hi <= ea.sizeOfDimension(d));
+  helib::assertInRange<helib::InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
+  helib::assertTrue(hi <= ea.sizeOfDimension(d), "Interval exceeds dimension of d");
 
   vector<long> maskArray;
   maskArray.resize(nSlots);
@@ -371,7 +385,7 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
     if (repAux.tab(d,0).null()) { // generate mask if not there already
       ZZX mask;
       SelectRangeDim(ea, mask, 0, dSize - extent, d);
-      repAux.tab(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext()));
+      repAux.tab(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
 
     Ctxt ctxt_tmp = ctxt;
@@ -407,7 +421,7 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
 	// store this mask in the repAux table
         ZZX mask;
         ea.encode(mask, maskArray);
-        repAux.tab(d, k+1).set_ptr(new DoubleCRT(mask, ea.getContext()));
+        repAux.tab(d, k+1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       }
 
       // Apply mask to zero out slots in ctxt
@@ -441,7 +455,8 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
                          RepAuxDim& repAux, ReplicateHandler *handler)
 
 {
-  assert(d >= 0);
+  //OLD: assert(d >= 0);
+  helib::assertTrue<helib::InvalidArgument>(d >= 0l, "dimension must be non-negative");
 
   // If already fully replicated (or we need to stop early), call the handler
   if (d >= ea.dimension() || handler->earlyStop(d,/*k=*/-1,dimProd)) {
@@ -517,7 +532,7 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     if (repAux.tab1(d, 0).null()) { // generate mask if not already there
       ZZX mask;
       SelectRangeDim(ea, mask, 0, extent, d);
-      repAux.tab1(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext()));
+      repAux.tab1(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       // store mask in 2nd table (tab1)
     }
     ctxt1.multByConstant(*repAux.tab1(d, 0)); // mult by mask to zero out slots
@@ -551,7 +566,7 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     if (repAux.tab1(d, 1).null()) { // generate mask if not already there
       ZZX mask;
       SelectRangeDim(ea, mask, extent, dSize, d);
-      repAux.tab1(d, 1).set_ptr(new DoubleCRT(mask, ea.getContext()));
+      repAux.tab1(d, 1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
     ctxt1.multByConstant(*repAux.tab1(d,1)); // mult by mask to zero out slots
 
@@ -573,10 +588,16 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
 // otherwise, a recursion depth is chosen heuristically,
 //   but is capped at recBound
 void
-replicateAll(const EncryptedArray& ea, const Ctxt& ctxt, 
+replicateAll(const EncryptedArray& ea, const Ctxt& ctxt_orig, 
 	     ReplicateHandler *handler, long recBound, RepAuxDim* repAuxPtr)
 {
   FHE_TIMER_START;
+
+  Ctxt ctxt = ctxt_orig;
+  ctxt.cleanUp();
+  // clean up the ciphertext -- this gets rid of all small primes,
+  // so that DoubleCRT constant can leave them out
+
   RepAuxDim repAux;
   if (repAuxPtr==NULL) repAuxPtr = &repAux;
   replicateAllNextDim(ea, ctxt, 0, 1, recBound, *repAuxPtr, handler);
@@ -616,11 +637,12 @@ class replicate_pa_impl {
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, NewPlaintextArray& pa, long i)
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long i)
   {
     PA_BOILER
 
-    assert(i >= 0 && i < n);
+    //OLD: assert(i >= 0 && i < n);
+    helib::assertInRange(i, 0l, n, "Attempted to access out-of-range data");
     for (long j = 0; j < n; j++) {
       if (j != i) data[j] = data[i];
     }
@@ -628,7 +650,7 @@ public:
 };
 
 
-void replicate(const EncryptedArray& ea, NewPlaintextArray& pa, long i)
+void replicate(const EncryptedArray& ea, PlaintextArray& pa, long i)
 {
   ea.dispatch<replicate_pa_impl>(pa, i); 
 }

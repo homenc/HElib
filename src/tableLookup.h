@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _TABLE_LOOKUP_H
-#define _TABLE_LOOKUP_H
+#ifndef HELIB_TABLELOOKUP_H
+#define HELIB_TABLELOOKUP_H
 /**
  * @file tableLookup.h
  * @brief Code for homomorphic table lookup and fixed-point functions
@@ -30,7 +30,7 @@ void computeAllProducts(CtPtrs& products, const CtPtrs& array,
 //! The input is a plaintext table T[] and an array of encrypted bits
 //! I[], holding the binary representation of an index i into T.
 //! The output is the encrypted value T[i].
-void tableLookup(Ctxt& out, const vector<zzX>& table, const CtPtrs& idx,
+void tableLookup(Ctxt& out, const std::vector<zzX>& table, const CtPtrs& idx,
                  std::vector<zzX>* unpackSlotEncoding=nullptr);
 
 //! The input is an encrypted table T[] and an array of encrypted bits
@@ -86,4 +86,5 @@ void buildLookupTable(std::vector<zzX>& T,// result is encoded and returned in T
                       const long scale_out,
                       const long sign_out,
                       const EncryptedArray& ea);
-#endif // _TABLE_LOOKUP_H
+		      
+#endif // ifndef HELIB_TABLELOOKUP_H

@@ -9,17 +9,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#ifndef _FHEcontext_H_
-#define _FHEcontext_H_
+#ifndef HELIB_FHECONTEXT_H
+#define HELIB_FHECONTEXT_H
 /**
  * @file FHEContext.h
  * @brief Keeps the parameters of an instance of the cryptosystem
  **/
-
 #include "PAlgebra.h"
 #include "CModulus.h"
 #include "IndexSet.h"
 #include "recryption.h"
+#include "primeChain.h"
+
+#include <NTL/Lazy.h>
 
 /**
  * @brief Returns smallest parameter m satisfying various constraints:
@@ -33,16 +35,8 @@
  * Fails with an error message if no suitable m is found
  * prints an informative message if verbose == true
  **/
-long FindM(long k, long L, long c, long p, long d, long s, long chosen_m, bool verbose=false);
+long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose=false);
 
-// FIXME: The size of primes in the chain should be computed at run-time
-#if (NTL_SP_NBITS<44)
-#define FHE_p2Size NTL_SP_NBITS
-#else
-#define FHE_p2Size 44
-#endif
-#define FHE_p2Bound (1L<<FHE_p2Size)
-#define FHE_pSize (FHE_p2Size/2) /* The size of levels in the chain */
 
 class EncryptedArray;
 /**
@@ -50,7 +44,7 @@ class EncryptedArray;
  * @brief Maintaining the parameters
  **/
 class FHEcontext {
-  vector<Cmodulus> moduli;    // Cmodulus objects for the different primes
+  std::vector<Cmodulus> moduli;    // Cmodulus objects for the different primes
   // This is private since the implementation assumes that the list of
   // primes only grows and no prime is ever modified or removed.
 
@@ -66,30 +60,222 @@ public:
 
   //! @breif A default EncryptedArray
   const EncryptedArray* ea;
+  // FIXME: should this be a unique_ptr??
 
   //! @brief sqrt(variance) of the LWE error (default=3.2)
-  xdouble stdev;
+  NTL::xdouble stdev;
 
-  //! @brief number of bits per level
-  long bitsPerLevel;
+  //======================= high probability bounds ================
+  double scale;  // default = 10
+
+  //! erfc(scale/sqrt(2)) * phi(m) should be less than some negligible
+  //! parameter epsilon.
+  //! The default value of 10 should be good enough for most applications.
+  //! NOTE: -log(erfc(8/sqrt(2)))/log(2)  = 49.5
+  //!       -log(erfc(10/sqrt(2)))/log(2) = 75.8
+  //!       -log(erfc(11/sqrt(2)))/log(2) = 91.1
+  //!       -log(erfc(12/sqrt(2)))/log(2) =107.8
+
+  //! The way this is used is as follows. If we have a normal random
+  //! variable X with variance sigma^2, then the probability that
+  //! that X lies outside the interval [-scale*sigma, scale*sigma] is
+  //! delta=erfc(scale/sqrt(2)). We will usually apply the union bound
+  //! to a vector of phi(m) such random varables (one for each primitive
+  //! m-th root of unity), so that the probability that that the L-infty
+  //! norm exceeds scale*sigma is at most epsilon=phim*delta. Thus,
+  //! scale*sigma will be used as a high-probabability bound on the
+  //! L-infty norm of such vectors.
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
+  //! that each f_i is chosen uniformly and independently from the
+  //! interval [-magBound, magBound], and that k = degBound.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: this is a bit heuristic: we assume that if we evaluate
+  // f at a primitive root of unity, then we get something that well
+  // approximates a normal random variable with the same variance,
+  // which is equal to the sum of the variances of the individual
+  // f_i's, which is (2*magBound)^2/12 = magBound^2/3.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  double noiseBoundForUniform(double magBound, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound) / 3.0) * magBound;
+  }
+
+  NTL::xdouble noiseBoundForUniform(NTL::xdouble magBound, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound) / 3.0) * magBound;
+  }
+
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
+  //! that each f_i is chosen uniformly and independently from the
+  //! from the set of balanced residues modulo the given modulus.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: for odd modulus, this means each f_i is uniformly distributed
+  // over { -floor(modulus/2), ..., floor(modulus/2) }.
+  // For even modulus, this means each f_i is uniformly distributed
+  // over { modulus/2, ..., modulus/2 }, except that the two endpoints
+  // (which represent the same residue class) occur with half the
+  // probability of the others.
+
+  // NOTE: this is a bit heuristic: we assume that if we evaluate
+  // f at a primitive root of unity, then we get something that well
+  // approximates a normal random variable with the same variance,
+  // which is equal to the sum of the variances of the individual
+  // f_i's, which is (modulus)^2/12 + 1/6 for even modulus,
+  // and is at most (modulus^2)/12 for odd modulus.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  // NOTE: this is slightly more accurate that just calling
+  // noiseBoundForUniform with magBound=modulus/2.
+
+
+  double noiseBoundForMod(long modulus, long degBound) const
+  {
+    double var = fsquare(modulus)/12.0;
+    if (modulus%2 == 0) var += 1.0/6.0;
+ 
+    return scale * std::sqrt(degBound * var);
+  }
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  //! so that each f_i is chosen uniformly and independently from 
+  //! N(0, sigma^2), and that k = degBound.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: if we evaluate f at a primitive root of unity, 
+  // then we get a normal random variable variance degBound * sigma^2.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  double noiseBoundForGaussian(double sigma, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound)) * sigma;
+  }
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  //! so that each f_i is zero with probability 1-prob, 1 with probability
+  //! prob/2, and -1 with probability prob/2.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: this is a bit heuristic: we assume that if we evaluate
+  // f at a primitive root of unity, then we get something that
+  // well approximates a normal random variable with the same variance,
+  // which is equal to the sum of the individual variances,
+  // which is degBound*prob.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  double noiseBoundForSmall(double prob, long degBound) const
+  {
+    return scale * std::sqrt(double(degBound)) * std::sqrt(prob);
+  }
+
+  //=======================================
+
+  //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
+  //! hwt coefficients are chosen to \pm 1, and the remainder zero.
+  //! This returns a bound B such that the L-infty norm
+  //! of the canonical embedding exceeds B with probability at most 
+  //! epsilon.
+
+  // NOTE: this is a bit heuristic: we assume that if we evaluate
+  // f at a primitive root of unity, then we get something that
+  // well approximates a normal random variable with the same variance,
+  // which is hwt.
+  // We then multiply the sqrt of the variance by scale to get
+  // the high probability bound.
+
+  // NOTE: degBound is not used here, but I include it
+  // for consistency with the other noiseBound routines
+
+
+  double noiseBoundForHWt(long hwt, long degBound) const
+  {
+    return scale * std::sqrt(double(hwt));
+  }
+
+
+  //=======================================
+
+  //! This computes a high probability bound on the L-infty norm
+  //! of x0+s*x1 in the pwrfl basis, assuming is chosen with coeffs
+  //! in the pwrfl basis uniformly and independently dist'd over [-1/2,1/2],
+  //! x0 has arbitrary coeffs over [-1/2,1/2] in the pwrfl basis,
+  //! and assuming s is chosen with skHwt nonzero coeffs mod X^m-1
+  //! in the power basis (uniformly and independently over {-1,1}).
+  //! The bound should be satisfied with probability epsilon.
+
+  //! NOTE: this is a bit heuristic. See design document for details.
+
+  //! NOTE: this is still valid even when m is a power of 2
+
+  double stdDevForRecryption(long skHwt = 0) const
+  {
+    if (!skHwt) skHwt = rcData.skHwt; 
+    // the default reverts to rcData.skHwt, *not* rcData.defSkHwt
+
+    long k = zMStar.getNFactors(); 
+    // number of prime factors of m
+
+    long m = zMStar.getM();
+    long phim = zMStar.getPhiM();
+
+    double mrat = double(phim)/double(m);
+
+    return std::sqrt( mrat * double(skHwt) * double(1L << k)  / 3.0 ) * 0.5;
+  }
+
+  double boundForRecryption(long skHwt = 0) const 
+  {
+    double c_m = zMStar.get_cM();
+    // multiply by this fudge factor
+
+    return 0.5 + c_m*scale*stdDevForRecryption(skHwt);
+  }
+
   /**
-   * @brief The "ciphertext primes", used for fresh ciphertexts.
-   *
-   * The public encryption key and "fresh" ciphertexts are encrypted relative
-   * to only a subset of the primes, to allow for mod-UP during key-switching.
-   * See section 3.1.6 in the design document (key-switching). 
-   * In ctxtPrimes we keep the indexes of this subset. Namely, for a ciphertext
-   * part p in a fresh ciphertext we have p.getMap().getIndexSet()==ctxtPrimes.
-   * It is assumed that all the "ciphertext primes" are roughly the same size,
-   * except perhaps the first one (with index 0), which could be smaller.
+   * The "ciphertext primes" are the "normal" primes that are used to
+   * represent the public encryption key and ciphertexts. These are all
+   * "large" single=precision primes, or bit-size roughly NTL_SP_SIZE bits.
    **/
   IndexSet ctxtPrimes;
 
-  //! @brief All the other primes in the chain.
-  //!
-  //! For convenience, we also keep in specialPrimes the complemeting subset,
-  //! i.e., specialPrimes = [0,numPrimes()-1] setminus ctxtPrimes.
+  //! A disjoint set of primes, used for key switching. See section 3.1.6
+  //! in the design document (key-switching). These too are "large"
+  //! single=precision primes, or bit-size close to NTL_SP_SIZE bits.
   IndexSet specialPrimes;
+
+  //! Yet a third set of primes, aimed at allowing modulus-switching with
+  //! higher resolution. These are somewhat smaller single-precision
+  //! primes, of size from NTL_SP_SIZE-20 to NTL_SP_SIZE-1.
+  IndexSet smallPrimes;
+
+  //! A helper table to map required modulo-sizes to primeSets
+  ModuliSizes modSizes;
+  void setModSizeTable()
+       { modSizes.init(moduli, ctxtPrimes, smallPrimes); }
 
   /**
    * @brief The set of primes for the digits.
@@ -102,33 +288,51 @@ public:
    *
    * The number of Bi's is one less than the number of columns in the key
    * switching matrices (since the 1st column encrypts sk, without any Bi's),
-   * but we keep in the digits vector also an entry for the primes that do
+   * but we keep in the digits std::vector also an entry for the primes that do
    * not participate in any Bi (so digits.size() is the same as the number
    * of columns in the key switching matrices).
    * See section 3.1.6 in the design document (key-switching).
   **/
-  vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
-
-  long fftPrimeCount;
+  std::vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
 
   //! Bootstrapping-related data in the context
-  RecryptData rcData;
-  ThinRecryptData trcData;
+  ThinRecryptData rcData; // includes both thin and think
 
   /******************************************************************/
   ~FHEcontext(); // destructor
   FHEcontext(unsigned long m, unsigned long p, unsigned long r,
-             const vector<long>& gens = vector<long>(), 
-             const vector<long>& ords = vector<long>() );  // constructor
+             const std::vector<long>& gens = std::vector<long>(), 
+             const std::vector<long>& ords = std::vector<long>() );  // constructor
 
-  void makeBootstrappable(const Vec<long>& mvec, long skWht=0,
-			  bool conservative=false, bool build_cache=false)
-  { 
-    rcData.init(*this, mvec, skWht, conservative, build_cache); 
-    trcData.init(*this, mvec, skWht, conservative, build_cache); 
+  void makeBootstrappable(const NTL::Vec<long>& mvec, long skWht=0,
+			  bool build_cache=false, bool alsoThick=true)
+  {
+    rcData.init(*this, mvec, alsoThick, skWht, build_cache);
   }
 
-  bool isBootstrappable() const { return (rcData.alMod != NULL); }
+  bool isBootstrappable() const 
+    { return rcData.alMod != NULL; }
+
+  IndexSet fullPrimes() const 
+  {
+    return ctxtPrimes | specialPrimes;
+  }
+
+  IndexSet allPrimes() const
+  {
+    return smallPrimes | ctxtPrimes | specialPrimes;
+  }
+
+  // retuens first nprimes ctxtPrimes
+  IndexSet getCtxtPrimes(long nprimes) const
+  {
+    long first = ctxtPrimes.first();
+    long last = std::min(ctxtPrimes.last(), first + nprimes - 1);
+    return IndexSet(first, last);
+  }
+
+  // FIXME: replacement for bitsPerLevel...placeholder for now
+  long BPL() const { return 30; }
 
   bool operator==(const FHEcontext& other) const;
   bool operator!=(const FHEcontext& other) const { return !(*this==other); }
@@ -144,24 +348,24 @@ public:
   long numPrimes() const { return moduli.size(); }
 
   //! @brief Is num divisible by any of the primes in the chain?
-  bool isZeroDivisor(const ZZ& num) const {
-    for (unsigned long i=0; i<moduli.size(); i++) 
+  bool isZeroDivisor(const NTL::ZZ& num) const {
+    for (long i: range(moduli.size())) 
       if (divide(num,moduli[i].getQ())) return true;
     return false;
   }
 
   //! @brief Is p already in the chain?
   bool inChain(long p) const {
-    for (unsigned long i=0; i<moduli.size(); i++) 
+    for (long i: range(moduli.size())) 
       if (p==moduli[i].getQ()) return true;
     return false;
   }
 
   ///@{
   //! @brief The product of all the primes in the given set
-  void productOfPrimes(ZZ& p, const IndexSet& s) const;
-  ZZ productOfPrimes(const IndexSet& s) const {
-    ZZ p;
+  void productOfPrimes(NTL::ZZ& p, const IndexSet& s) const;
+  NTL::ZZ productOfPrimes(const IndexSet& s) const {
+    NTL::ZZ p;
     productOfPrimes(p,s);
     return p;
   }
@@ -174,10 +378,10 @@ public:
   //! @brief Returns the natural logarithm of productOfPrimes(s)
   double logOfProduct(const IndexSet& s) const {
     if (s.last() >= numPrimes())
-      Error("FHEContext::logOfProduct: IndexSet has too many rows");
+      throw helib::RuntimeError("FHEContext::logOfProduct: IndexSet has too many rows");
 
     double ans = 0.0;
-    for (long i = s.first(); i <= s.last(); i = s.next(i))
+    for (long i: s) 
       ans += logOfPrime(i);
     return ans;
   }
@@ -185,27 +389,15 @@ public:
   //! @brief An estimate for the security-level
   double securityLevel() const {
     long phim = zMStar.getPhiM();
-    IndexSet allPrimes(0,numPrimes()-1);
-    double bitsize = logOfProduct(allPrimes)/log(2.0);
+    double bitsize = logOfProduct(ctxtPrimes | specialPrimes)/log(2.0);
     return (7.2*phim/bitsize -110);
   }
 
-  //! @brief Find the next prime and add it to the chain
-  long AddPrime(long startFrom, long delta, bool special);
+  //! @brief Just add the given prime to the chain
+  void AddSmallPrime(long q);
+  void AddCtxtPrime(long q);
+  void AddSpecialPrime(long q);
 
-  //! @brief Add an FFT prime to the chain, if it's not already there
-  //! returns the value of the prime
-  long AddFFTPrime(bool special); 
-
-  //! @brief Test if the chain contains a "half-size" ciphertext prime
-  // If it exists, the half-size prime must be the first ciphertext prime.
-  // All other primes are assumed to have roughly the same size.
-  bool containsSmallPrime() const {
-    if (card(ctxtPrimes)<2) return false;
-    long fst = ctxtPrimes.first();
-    long scnd= ctxtPrimes.next(fst);
-    return (logOfPrime(fst) < (0.75 * logOfPrime(scnd)));
-  }
   
   ///@{
   /**
@@ -229,7 +421,7 @@ public:
 
   \code
     unsigned long m, p, r;
-    vector<long> gens, ords;
+    std::vector<long> gens, ords;
     
     readContextBase(str, m, p, r, gens, ords);
 
@@ -244,78 +436,58 @@ public:
   **/
 
   //! @brief write [m p r] data
-  friend void writeContextBase(ostream& str, const FHEcontext& context);
+  friend void writeContextBase(std::ostream& str, const FHEcontext& context);
 
   //! @brief Write all other data
-  friend ostream& operator<< (ostream &str, const FHEcontext& context);
+  friend std::ostream& operator<< (std::ostream &str, const FHEcontext& context);
 
   //! @brief read [m p r] data, needed to construct context
-  friend void readContextBase(istream& str, unsigned long& m, unsigned long& p, unsigned long& r,
-			      vector<long>& gens, vector<long>& ords);
+  friend void readContextBase(std::istream& str, unsigned long& m, unsigned long& p, unsigned long& r,
+			      std::vector<long>& gens, std::vector<long>& ords);
 
   //! @brief read all other data associated with context
-  friend istream& operator>> (istream &str, FHEcontext& context);
+  friend std::istream& operator>> (std::istream &str, FHEcontext& context);
   ///@}
 
-  friend void writeContextBinary(ostream& str, const FHEcontext& context);
-  friend void readContextBinary(istream& str, FHEcontext& context);
+  friend void writeContextBinary(std::ostream& str, const FHEcontext& context);
+  friend void readContextBinary(std::istream& str, FHEcontext& context);
 
 };
 
 //! @brief write [m p r gens ords] data
-void writeContextBase(ostream& s, const FHEcontext& context);
+void writeContextBase(std::ostream& s, const FHEcontext& context);
 //! @brief read [m p r gens ords] data, needed to construct context
-void readContextBase(istream& s, unsigned long& m,
+void readContextBase(std::istream& s, unsigned long& m,
                      unsigned long& p, unsigned long& r,
-		     vector<long>& gens, vector<long>& ords);
-std::unique_ptr<FHEcontext> buildContextFromAscii(istream& str);
+		     std::vector<long>& gens, std::vector<long>& ords);
+std::unique_ptr<FHEcontext> buildContextFromAscii(std::istream& str);
 
 //! @brief write [m p r gens ords] data
-void writeContextBaseBinary(ostream& str, const FHEcontext& context);
-void writeContextBinary(ostream& str, const FHEcontext& context);
+void writeContextBaseBinary(std::ostream& str, const FHEcontext& context);
+void writeContextBinary(std::ostream& str, const FHEcontext& context);
 
 //! @brief read [m p r gens ords] data, needed to construct context
-void readContextBaseBinary(istream& s, unsigned long& m,
+void readContextBaseBinary(std::istream& s, unsigned long& m,
                            unsigned long& p, unsigned long& r,
-                           vector<long>& gens, vector<long>& ords);
-std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str);
-void readContextBinary(istream& str, FHEcontext& context);
+                           std::vector<long>& gens, std::vector<long>& ords);
+std::unique_ptr<FHEcontext> buildContextFromBinary(std::istream& str);
+void readContextBinary(std::istream& str, FHEcontext& context);
 
+// Build modulus chain with nBits worth of ctxt primes, 
+// using nDgts digits in key-switching.
+// The willBeBootstrappable and skHwt parameters are needed to get around some
+// some circularity when making the context boostrappable.
+// If you later call context.makeBootstrappable with a given value
+// of skHwt, you should first buildModChain with willBeBootstrappable
+// set to true and the given value of skHwt.
+// FIXME: We should really have a simpler way to do this.
+// resolution ... FIXME
 
-// VJS: compiler seems to need these declarations out here...wtf...
-
-//@{
-//! @name Convenience routines for generating the modulus chain
-
-//! @brief Adds several primes to the chain. If byNumber=true then totalSize
-//! specifies the number of primes to add. If byNumber=false then totalSize
-//! specifies the target naturals log all the added primes.
-//! Returns natural log of the product of all added primes.
-double AddManyPrimes(FHEcontext& context, double totalSize, 
-		     bool byNumber, bool special=false);
-
-//! @brief Adds to the chain primes whose product is at least e^totalSize, 
-//! Returns natural log of the product of all added primes.
-inline double AddPrimesBySize(FHEcontext& context, double totalSize,
-			      bool special=false)
-{
-  return AddManyPrimes(context, totalSize, false, special);
-}
-
-//! @brief Adds n primes to the chain
-//! Returns natural log of the product of all added primes.
-inline double AddPrimesByNumber(FHEcontext& context, long nPrimes, 
-				bool special=false) 
-{
-  return AddManyPrimes(context, (double)nPrimes, true, special);
-}
-
-//! @brief Build modulus chain with nLevels levels, using c digits in key-switching
-void buildModChain(FHEcontext &context, long nLevels, long c=3,
-                   long extraBits=0);
-//FIXME: The extraBits params is a hack, used to get around some
-//       circularity when making the context boostrappable
+void buildModChain(FHEcontext& context, long nBits, long nDgts=3,
+                      bool willBeBootstrappable=false, long skHwt=0, 
+                      long resolution=3);
 
 ///@}
 extern FHEcontext* activeContext; // Should point to the "current" context
-#endif // ifndef _FHEcontext_H_
+
+#endif // ifndef HELIB_FHECONTEXT_H

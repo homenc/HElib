@@ -11,9 +11,13 @@
  */
 // Test_tableLookup.cpp - test the table-lookup module
 #include <iostream>
+#include <cassert>
 #include <NTL/BasicThreadPool.h>
 #include "intraSlot.h"
 #include "tableLookup.h"
+#include "ArgMap.h"
+
+NTL_CLIENT
 
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
@@ -38,7 +42,7 @@ void testWritein(const FHESecKey& sKey, long insize, long nTests);
 
 int main(int argc, char *argv[])
 {
-  ArgMapping amap;
+  ArgMap amap;
   long prm=1;
   amap.arg("prm", prm, "parameter size (0-tiny,...,4-huge)");
   long bitSize = 5;
@@ -89,8 +93,8 @@ int main(int argc, char *argv[])
 
   // Compute the number of levels
   long L;
-  if (bootstrap) L=30; // that should be enough
-  else           L = 3 +bitSize;
+  if (bootstrap) L=900; // that should be enough
+  else           L = 30*(5 +bitSize);
   
   if (verbose) {
     cout <<"input bitSize="<<bitSize<<", output size bound="<<outSize
@@ -99,11 +103,9 @@ int main(int argc, char *argv[])
     cout << "computing key-independent tables..." << std::flush;
   }
   FHEcontext context(m, p, /*r=*/1, gens, ords);
-  context.bitsPerLevel = B;
-  buildModChain(context, L, c,/*extraBits=*/8);
+  buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
-    context.makeBootstrappable(mvec, /*t=*/0,
-                               /*flag=*/false, /*cacheType=DCRT*/2);
+    context.makeBootstrappable(mvec, /*t=*/0);
   }
   buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
   if (verbose) {
@@ -113,7 +115,7 @@ int main(int argc, char *argv[])
     cout << "\ncomputing key-dependent tables..." << std::flush;
   }
   FHESecKey secKey(context);
-  secKey.GenSecKey(/*Hweight=*/128);
+  secKey.GenSecKey();
   addSome1DMatrices(secKey); // compute key-switching matrices
   addFrbMatrices(secKey);
   if (bootstrap) secKey.genRecryptData();
@@ -126,10 +128,10 @@ int main(int argc, char *argv[])
 #endif
 
   testLookup(secKey, bitSize, outSize);
-  cout << "  *** testLookup PASS ***\n";
+  cout << "GOOD\n";
 
   testWritein(secKey, bitSize, nTests);
-  cout << "  *** testWritein PASS ***\n";
+  cout << "GOOD\n";
 
   if (verbose) printAllTimers(cout);
   return 0;
@@ -172,7 +174,8 @@ void testLookup(const FHESecKey& sKey, long insize, long outsize)
     ZZX poly;  sKey.Decrypt(poly, c); // decrypt
     zzX poly2; convert(poly2, poly);  // convert to zzX
     if (poly2 != T[i]) {
-      cout << "testLookup error: decrypted T["<<i<<"]\n";
+      cout << "BAD\n";
+      if (verbose) cout << "testLookup error: decrypted T["<<i<<"]\n";
       exit(0);
     }
   }
@@ -211,8 +214,10 @@ void testWritein(const FHESecKey& sKey, long size, long nTests)
     long decrypted = to_long(NTL::ConstTerm(poly));
     long p = T[i].getPtxtSpace();
     if ((pT[i] - decrypted) % p) { // not equal mod p
-      cout << "testWritein error: decrypted T["<<i<<"]="<<decrypted
-           <<" but should be "<<pT[i]<<" (mod "<<p<<")\n";
+      cout << "BAD\n";
+      if (verbose)
+        cout << "  testWritein error: decrypted T["<<i<<"]="<<decrypted
+             <<" but should be "<<pT[i]<<" (mod "<<p<<")\n";
       exit(0);
     }
   }
