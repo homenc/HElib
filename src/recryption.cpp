@@ -438,7 +438,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise 
   // in the pwrfl basis
-  double noise_bnd = 0.66*p2r*ctxt.getContext().boundForRecryption();
+  double noise_bnd = FHE_MIN_CAP_FRAC*p2r*ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters 
   double noise_rat = noise_est/noise_bnd;
 
@@ -800,7 +800,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   if (r > 1) {
     double chen_han_cost = log(p-1) + log(r);
     double basic_cost;
-    if (p == 2 && botHigh + r > 2)
+    if (p == 2 && r > 2 && botHigh + r > 2)
        basic_cost = (r-1)*log(p);
     else
        basic_cost = r*log(p);
@@ -863,7 +863,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   }
   else {
 
-    if (p==2 && r>1 && topHigh+1 > 2)
+    if (p==2 && r>2 && topHigh+1 > 2)
       topHigh--; // For p==2 we sometime get a bit for free
 
     extractDigits(scratch, unpacked, topHigh+1);
@@ -1031,7 +1031,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise 
   // in the pwrfl basis
-  double noise_bnd = 0.66*p2r*ctxt.getContext().boundForRecryption();
+  double noise_bnd = FHE_MIN_CAP_FRAC*p2r*ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters 
   double noise_rat = noise_est/noise_bnd;
 

@@ -1169,45 +1169,29 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, ZZX& delta)
   toPoly(delta, diff); // convert to coeff-representation modulo diffProd
 
   if (ptxtSpace > 1) { // make delta divisible by ptxtSpace
-    long delta_len = delta.rep.length();
-    if (ptxtSpace == 2) { 
-      // simpler handling for plaintext space mod 2.
-      // This makes the distrubution of delta/diffProd to be
-      // essentially uniform over [-1,+1].
-      for (long i: range(delta_len)) { 
-        // NOTE: this makes sure we get a more truly balanced remainder 
-        if (IsOdd(delta.rep[i])) { // add or subtract diffProd to make it even
-          long s = sign(delta.rep[i]);
-          if (s < 0)
-            delta.rep[i] += diffProd;
-          else 
-            delta.rep[i] -= diffProd;
-        }
-      }
-    }
-    // The general case of plaintext space modulo some p > 2, we
-    // need to subtract from each coefficient delta[i] the integer
+
+    // Need to subtract from each coefficient delta[i] the integer
     //          diffProd * (delta[i] * diffProd^{-1} mod ptxtSpace).
     // This does not change delta modulo diffProd, but makes it
     // divisible by ptxtSpace.
-    else {
-      long p_over_2 = ptxtSpace/2;
-      long p_mod_2 = ptxtSpace%2;
-      long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
-      mulmod_precon_t precon = PrepMulModPrecon(prodInv, ptxtSpace); // optimization
-      for (long i: range(delta_len)) { 
-        long delta_i_modP = rem(delta.rep[i],ptxtSpace);
-        if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
-          delta_i_modP = MulModPrecon(delta_i_modP, prodInv, ptxtSpace, precon);
+    long p_over_2 = ptxtSpace/2;
+    long p_mod_2 = ptxtSpace%2;
+    long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
 
-          // NOTE: this makes sure we get a more truly balanced remainder 
-          if (delta_i_modP > p_over_2 ||
-              (p_mod_2 == 0 && delta_i_modP == p_over_2 && RandomBnd(2))) 
-            delta_i_modP -= ptxtSpace;
-          delta.rep[i] -= diffProd * delta_i_modP;
-        }
+    for (long i: range(delta.rep.length())) { 
+      long delta_i_modP = rem(delta.rep[i],ptxtSpace);
+      if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
+	delta_i_modP = MulMod(delta_i_modP, prodInv, ptxtSpace);
+
+	// NOTE: this makes sure we get a more truly balanced remainder 
+	if (delta_i_modP > p_over_2 ||
+	    (p_mod_2 == 0 && delta_i_modP == p_over_2 && 
+             (sign(delta.rep[i]) < 0 || (sign(delta.rep[i]) == 0 && RandomBnd(2) )))) 
+	  delta_i_modP -= ptxtSpace;
+	delta.rep[i] -= diffProd * delta_i_modP;
       }
     }
+
     delta.normalize(); // normalize after working directly on the coeffs
   }
   removePrimes(diff);// remove the primes from consideration
