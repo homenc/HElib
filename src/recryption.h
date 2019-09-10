@@ -133,6 +133,11 @@ public:
 };
 
 
+#define FHE_MIN_CAP_FRAC (2.0/3.0)
+// Used in calculation of "min capacity".
+// This could be set to 1.0, but just to be on the safe side,
+// it is set to 2/3.  If we did set it to 1, the min capacity
+// would increase by less than 6/10 of a bit.
 
 
 

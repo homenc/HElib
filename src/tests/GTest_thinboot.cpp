@@ -455,7 +455,7 @@ namespace {
               long q = NTL::power_long(p, e) + 1;
               double Bnd = context.boundForRecryption();
               double mfac = context.zMStar.getNormBnd();
-              double min_bit_cap = log(  1.5*mfac*q / (p2r*Bnd) )/log(2.0);
+              double min_bit_cap = log(  mfac*q / (p2r*Bnd*FHE_MIN_CAP_FRAC) )/log(2.0);
 
               std::cout << "min_bit_cap=" << min_bit_cap << std::endl;
 

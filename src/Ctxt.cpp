@@ -415,8 +415,18 @@ void Ctxt::modDownToSet(const IndexSet &s)
     for (auto &part : parts) {
       part.scaleDownToSet(intersection, ptxtSpace, delta);
       fdelta.resize(delta.rep.length());
-      for (long j: range(delta.rep.length()))
+      for (long j: range(delta.rep.length())) {
         fdelta[j] = conv<double>( conv<xdouble>(delta.rep[j])/xdiff );
+
+        // sanity check: |fdelta[j]| <= ptxtSpace/2
+        if (fabs(fdelta[j]) > double(ptxtSpace)/2.0 + 0.0001) {
+          std::stringstream ss;
+          ss << "\n***Bad modSwitch: diff =" << fabs(fdelta[j])
+               << ", ptxtSpace=" << ptxtSpace;
+          throw helib::RuntimeError(ss.str());
+        }
+
+      }
 
       double norm = embeddingLargestCoeff(fdelta, context.zMStar);
 
@@ -1651,24 +1661,9 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
     }
   }
 
-  double roundingNoise;
-
-  if (ptxtSpace == 2) {
-    roundingNoise = context.noiseBoundForUniform(1.0, context.zMStar.getPhiM());
-  }
-  else {
-    // B0 represents the noise contributed by rounding to an integer
-    double B0 = context.noiseBoundForUniform(0.5, context.zMStar.getPhiM());
-
-    // B1 represents the noise contributed by the mod-p^r correction, if any
-    double B1 = 0;
-    if (!isCKKS())
-      B1 = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
-
-    roundingNoise = B0 + B1;
-  }
-
-  // FIXME: the design document should be updated to reflect this logic
+  double roundingNoise =
+    context.noiseBoundForUniform(double(ptxtSpace)/2.0, 
+                                 context.zMStar.getPhiM());
 
   return addedNoise * roundingNoise;
 
@@ -1970,40 +1965,34 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
         add(X, X, 1);
       }
 
-      // c*q = Q*X + Y, where X = round(c*q/Q);
+      // c*q = Q*X + Y, where X = round(c*q/Q)
+      // in other words: c*q/Q = X + Y/Q
 
       long x = conv<long>(X);
 
-      long delta = 0;
+      long delta = MulMod(rem(Y, p2r), Q_inv_mod_p, p2r);
+      // delta = Y*Q^{-1} mod p^r
+      // so we have c*q*Q^{-1} = X + Y*Q^{-1} = x + delta (mod p^r)
 
-      if (p2r == 2) {
-        // special case that keeps the added noise a bit smaller
+      // c' = c*q/Q - Y/Q + delta
+      // this logic makes sure that -Y/Q + delta is essentially
+      // uniformly distributed over [-p2r/2,p2r/2].
 
-        // new coeff is c*q/Q - Y/Q + delta, so we want delta
-        // to have the same sign as Y.  This will make the
-        // added noise term essentially uniform over [-1,+1].
+      if (delta > p2r/2 || (p2r%2 == 0 && delta == p2r/2 && 
+                            (sign(Y) < 0) || (sign(Y) == 0 && RandomBnd(2)) ))
+        delta -= p2r;
 
-        if (IsOdd(Y)) {
-          long s = sign(Y);
-          if (s > 0)
-            delta = 1;
-          else 
-            delta = -1;
-        } 
-      }
-      else {
-        // general case
-
-	delta = MulMod(rem(Y, p2r), Q_inv_mod_p, p2r);
-	// delta = Y*Q^{-1} mod p^r
-	// so we have c*q*Q^{-1} = X + Y*Q^{-1} = x + delta (mod p^r)
-	
-	// NOTE: this makes sure we get a truly balanced remainder
-	if (delta > p2r/2 || (p2r%2 == 0 && delta == p2r/2 && RandomBnd(2)))
-	  delta -= p2r;
-      }
-      
       x += delta;
+
+      // sanity check: |c*q/Q - x| <= p^r/2
+      xdouble diff = fabs( conv<xdouble>(c)*conv<xdouble>(q)/conv<xdouble>(Q) 
+                             - conv<xdouble>(x) );
+      if (diff > conv<xdouble>(p2r)/2.0 + 0.0001) {
+        std::stringstream ss;
+        ss << "\n***BAD rawModSwitch: diff=" << diff 
+             << ", p2r=" << p2r;
+        throw helib::RuntimeError(ss.str());
+      }
 
       // reduce symetrically mod q, randomizing if necessary for even q
       if (x > q/2 || (q%2 == 0 && x == q/2 && RandomBnd(2))) 
