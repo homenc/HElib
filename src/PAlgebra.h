@@ -49,8 +49,26 @@
 #include "hypercube.h"
 #include "PGFFT.h"
 #include "clonedPtr.h"
+#include <vector>
+#include <complex>
+
+
 
 //NTL_CLIENT
+
+struct half_FFT {
+  PGFFT fft;
+  std::vector<std::complex<double>> pow;
+
+  half_FFT(long m);
+};
+
+struct quarter_FFT {
+  PGFFT fft;
+  std::vector<std::complex<double>> pow1, pow2;
+
+  quarter_FFT(long m);
+};
 
 class PAlgebra {
   long m;   // the integer m defines (Z/mZ)^*, Phi_m(X), etc.
@@ -104,7 +122,14 @@ class PAlgebra {
   std::vector<long> zmsRep; // inverse of zmsIdx
 
   std::shared_ptr<PGFFT> fftInfo; // info for computing m-point complex FFT's
-                             // copied_ptr allows delayed initialization
+                             // shard_ptr allows delayed initialization
+                             // and lightweight copying
+
+  std::shared_ptr<half_FFT> half_fftInfo;
+                             // an optimization for FFT's with even m
+
+  std::shared_ptr<quarter_FFT> quarter_fftInfo;
+                             // an optimization for FFT's with m = 0 (mod 4)
 
  public:
 
@@ -255,6 +280,8 @@ class PAlgebra {
   long fftSizeNeeded() const {return NTL::NextPowerOfTwo(getM()) +1;}
 
   const PGFFT& getFFTInfo() const { return *fftInfo; }
+  const half_FFT& getHalfFFTInfo() const { return *half_fftInfo; }
+  const quarter_FFT& getQuarterFFTInfo() const { return *quarter_fftInfo; }
 };
 
 

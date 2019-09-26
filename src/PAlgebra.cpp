@@ -125,6 +125,40 @@ static double
 cotan(double x) { return 1/tan(x); }
 
 
+half_FFT::half_FFT(long m) : fft(m/2)
+{
+  typedef std::complex<double> cmplx_t;
+  typedef long double ldbl;
+  const ldbl pi = atan(ldbl(1)) * 4.0;
+
+  pow.resize(m/2);
+  for (long i: range(m/2)) {
+    // pow[i] = 2^{2*pi*I*(i/m)}
+    ldbl angle = -((2 * pi) * (ldbl(i)/ldbl(m)));
+    pow[i] = cmplx_t(std::cos(angle), std::sin(angle));
+  }
+}
+
+
+quarter_FFT::quarter_FFT(long m) : fft(m/4)
+{
+  typedef std::complex<double> cmplx_t;
+  typedef long double ldbl;
+  const ldbl pi = atan(ldbl(1)) * 4.0;
+
+  pow1.resize(m/4);
+  pow2.resize(m/4);
+  for (long i: range(m/2)) {
+    // pow[i] = 2^{2*pi*I*(i/m)}
+    ldbl angle = -((2 * pi) * (ldbl(i)/ldbl(m)));
+    if (i%2)
+      pow1[i >> 1] = cmplx_t(std::cos(angle), std::sin(angle));
+    else
+      pow2[i >> 1] = cmplx_t(std::cos(angle), std::sin(angle));
+  }
+}
+
+
 PAlgebra::PAlgebra(long mm, long pp,
                    const vector<long>& _gens, const vector<long>& _ords )
 {
@@ -238,7 +272,15 @@ PAlgebra::PAlgebra(long mm, long pp,
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
 
-  fftInfo = std::make_shared<PGFFT>(mm); 
+  if (mm%2 == 0) 
+    half_fftInfo = std::make_shared<half_FFT>(mm);
+  else
+    fftInfo = std::make_shared<PGFFT>(mm); 
+
+  //fftInfo = std::make_shared<PGFFT>(mm); // Need this for some debugging/timing
+
+  if (mm%4 == 0)
+    quarter_fftInfo = std::make_shared<quarter_FFT>(mm);
 }
 
 bool comparePAlgebra(const PAlgebra& palg,

@@ -1,8 +1,141 @@
 
-/************************************************************************************
+/**************************************************************************
 
 
-PGFFT: Pretty Good FFT
+PGFFT: Pretty Good FFT (v1.6)
+
+Copyright (C) 2019, Victor Shoup
+
+See below for more details.
+
+**************************************************************************/
+
+#if __cplusplus <  201103L
+#error "C++11 required to compile PGFFT"
+#endif
+
+
+
+#ifndef PGFFT_H
+#define PGFFT_H
+
+#include <vector>
+#include <complex>
+
+
+
+class PGFFT {
+public:
+
+   // initialize data strctures for n-point FFT
+   // REQUIREMENT: n > 0
+   explicit PGFFT(long n);
+
+   void apply(const std::complex<double>* src, std::complex<double>* dst) const;
+   // Apply n-point FFT to src[0..n-1], storing result in dst[0..n-1].
+   // That is,
+   //   dst[i] = \sum_{j=0}^{n-1} src[j] W^{ij}
+   // and where W is the nth root of unity polar(1, -2*pi/n). 
+   // src and dst may be equal, but should not otherwise overlap
+
+   void apply(std::complex<double>* v) const { apply(v, v); }
+   // same as apply(v, v)
+
+   // Copy/move constructors/assignment ops deleted, as future implementations
+   // may not support them.  
+   PGFFT(const PGFFT&) = delete;
+   PGFFT(PGFFT&&) = delete;
+   PGFFT& operator=(const PGFFT&) = delete;
+   PGFFT& operator=(PGFFT&&) = delete;
+
+   static bool
+   simd_enabled();
+
+   // Define aligned vectors.
+   // This stuff should probably be private, but I'm not sure
+   // of the rules for accessing these in the implementation file.
+
+   static void *
+   aligned_allocate(std::size_t n, std::size_t nelts);
+
+   static void
+   aligned_deallocate(void *p);
+
+   template <class T>
+   class aligned_allocator
+   {
+   public:
+       using value_type    = T;
+
+       aligned_allocator() noexcept {} 
+       template <class U> aligned_allocator(aligned_allocator<U> const&) noexcept {}
+
+       value_type*  
+       allocate(std::size_t n)
+       {
+           void *p = aligned_allocate(n, sizeof(T));
+           if (p) {
+	      return static_cast<value_type*>(p);
+           }
+
+           throw std::bad_alloc();
+       }
+
+       void
+       deallocate(value_type* p, std::size_t) noexcept  
+       {
+	   aligned_deallocate(p);
+       }
+
+       template <class U>
+       bool
+       operator==(aligned_allocator<U> const&) noexcept
+       {
+	   return true;
+       }
+
+       template <class U>
+       bool
+       operator!=(aligned_allocator<U> const& y) noexcept
+       {
+	   return false;
+       }
+   };
+
+   template<class T>
+   using aligned_vector= std::vector<T,aligned_allocator<T>>;
+
+
+
+private:
+
+   long n;
+   long k;
+
+   long strategy;
+
+   // holds all of the twiddle factors
+   std::vector<aligned_vector<std::complex<double>>> tab;
+
+   // additional data structures needed for Bluestein
+   aligned_vector<std::complex<double>> powers;
+   aligned_vector<std::complex<double>> Rb;
+
+   // additonal data structures needed for 2^k-point FFT
+   std::vector<long> rev, rev1;
+
+
+
+
+
+};
+
+
+#endif
+
+/**************************************************************************
+
+PGFFT: Pretty Good FFT (v1.6)
 
 Copyright (C) 2019, Victor Shoup
 
@@ -28,7 +161,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-************************************************************************************
+****************************************************************************
 
 The logic of this code is derived from code originally developed by David Harvey,
 even though the code itself has been essentially rewritten from scratch.
@@ -60,56 +193,4 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-************************************************************************************/
-
-
-#ifndef PGFFT_H
-#define PGFFT_H
-
-#include <vector>
-#include <complex>
-
-
-
-class PGFFT {
-public:
-
-   // initialize data strctures for n-point FFT
-   // REQUIREMENT: n > 0
-   explicit PGFFT(long n);
-
-   // Apply n-point FFT to v[0..n-1].
-   // That is, if v[0..n-1] = (a_0, ..., a_{n-1}) before apply, then 
-   // afterwords, we have v[0..n-1] = (b_0, ..., b_{n-1}), where
-   //   b_i = \sum_{j=0}^{n-1} a_j W^{ij}
-   // and where W is the nth root of unity polar(1, -2*pi/n). 
-   void apply(std::complex<double>* v) const;
-
-   // Copy/move constructors/assignment ops deleted, as future implementations
-   // may not support them.  
-   PGFFT(const PGFFT&) = delete;
-   PGFFT(PGFFT&&) = delete;
-   PGFFT& operator=(const PGFFT&) = delete;
-   PGFFT& operator=(PGFFT&&) = delete;
-
-private:
-   long n;
-   long k;
-
-   long strategy;
-
-   // holds all of the twiddle factors
-   std::vector<std::vector<std::complex<double>>> tab;
-
-   // additional data structures needed for Bluestein
-   std::vector<std::complex<double>> powers;
-   std::vector<std::complex<double>> Rb;
-
-   // additonal data structures needed for 2^k-point FFT
-   std::vector<long> rev, rev1;
-
-
-};
-
-
-#endif
+****************************************************************************/

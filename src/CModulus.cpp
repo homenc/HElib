@@ -353,6 +353,7 @@ void BitReverseCopy(long * NTL_RESTRICT B, const long * NTL_RESTRICT A, long k)
 
 void Cmodulus::FFT_aux(vec_long &y, zz_pX& tmp) const
 {
+  FHE_TIMER_START;
 
   if (zMStar->getPow2()) {
     // special case when m is a power of 2

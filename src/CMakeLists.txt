@@ -65,7 +65,6 @@ set(HELIB_SRCS
         "eqtesting.cpp"
         "EvalMap.cpp"
         "extractDigits.cpp"
-        "fft.cpp"
         "FHEContext.cpp"
         "keys.cpp"
         "hypercube.cpp"

@@ -21,6 +21,7 @@
 //#include <NTL/RR.h>
 #include "zzX.h"
 
+
 class DoubleCRT;
 
 long sumOfCoeffs(const zzX& f);         // = f(1)
@@ -75,31 +76,41 @@ typedef std::complex<double> cx_double;
 
 
 //! Computing the L-infinity norm of the canonical embedding
+//! Assumed: deg(f) < phi(m).
 double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg);
+
 double embeddingLargestCoeff(const std::vector<double>& f, const PAlgebra& palg);
+
+// computes two for the price of one
+void embeddingLargestCoeff_x2(double& norm1, double& norm2, 
+			      const std::vector<double>& f1, 
+			      const std::vector<double>& f2, 
+			      const PAlgebra& palg);
+
 NTL::xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg);
 
-//! Computing the canonical embedding (in fft.cpp). This function
-//! returns in v only the first half of the entries, the others are
-//! v[phi(m)-i] = conj(v[i])
-void canonicalEmbedding(std::vector<cx_double>& v,
+//! Computes canonical embedding.
+//! Requires p==-1 and m==2^k where k >=2 and f.length() < m/2.
+//! Sets v[m/4-1-i] = DFT[palg.ith_rep(i)] for i in range(m/4),
+//! where DFT[j] = f(W^j) for j in range(m), and W = exp(-2*pi*I/m).
+// FIXME: need to to understand and document why te v array
+// gets initialized in the order that it does...what else
+// in the library depends on this particular order.
+void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
                         const zzX& f, const PAlgebra& palg);
 
-void canonicalEmbedding(std::vector<cx_double>& v,
+void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
                         const NTL::ZZX& f, const PAlgebra& palg);
 
-void canonicalEmbedding(std::vector<cx_double>& v,
+void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
                         const std::vector<double>& f, const PAlgebra& palg);
 
-//! Roughly the inverse of canonicalEmbedding, except for scaling and rounding issues
-void embedInSlots(zzX& f, const std::vector<cx_double>& v,
-                  const PAlgebra& palg,
-                  double scaling=1.0, bool strictInverse=false);
-// When m is a power of two, the strictInverse flag has no effect.
-// Otherwise, calling embedInSlots(f,v,palg,1.0,strictInverse=true) after
-// setting canonicalEmbedding(v, f, palg), is sure to recover the same f,
-// but embedInSlots(f,v,palg,1.0,strictInverse=false) may fail to recover
-// the same f.
+
+//! Requires p==-1 and m==2^k where k >=2.
+//! Computes the inverse of canonical embdding, scaled by scaling
+//! and then rounded to nearest integer.
+void CKKS_embedInSlots(zzX& f, const std::vector<cx_double>& v,
+                  const PAlgebra& palg, double scaling);
 
 
 #endif // ifndef HELIB_NORMS_H
