@@ -16,7 +16,7 @@ AR = ar
 ARFLAGS=rv
 GMP=-lgmp
 NTL=-lntl
-COPT=-g -O2
+COPT=-g -O2 
 
 # INC and LIB changed to when GMP and/or NTL not in default locations
 # Put these definitions in the file local-defs, which will be included
@@ -26,7 +26,7 @@ COPT=-g -O2
 include $(wildcard local-defs)
 
 #
-CFLAGS = -std=c++11 -pthread $(COPT) $(INC_NTL) $(INC_GMP) -DFHE_THREADS -fmax-errors=4  
+CFLAGS = -pthread $(COPT) $(INC_NTL) $(INC_GMP) -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=1  -Werror=return-type
 
 # NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
 #       against them as dynamic libraries.
@@ -46,11 +46,11 @@ LDLIBS = $(LIB_NTL) $(LIB_GMP) $(NTL) $(GMP) -lm
 $(info HElib requires NTL version 10.0.0 or higher, see http://shoup.net/ntl)
 $(info )
 
-HEADER = helib.h FHE.h EncryptedArray.h keys.h keySwitching.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h EvalMap.h matmul.h PtrVector.h PtrMatrix.h intraSlot.h recryption.h debugging.h binaryArith.h binaryCompare.h tableLookup.h binio.h sample.h norms.h zzX.h primeChain.h PGFFT.h fhe_stats.h ArgMap.h
+HEADER = helib.h FHE.h EncryptedArray.h keys.h keySwitching.h Ctxt.h CModulus.h FHEContext.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h EvalMap.h matmul.h PtrVector.h PtrMatrix.h intraSlot.h recryption.h debugging.h binaryArith.h binaryCompare.h tableLookup.h binio.h sample.h norms.h zzX.h primeChain.h PGFFT.h fhe_stats.h ArgMap.h randomMatrices.h
 
-SRC = keys.cpp keySwitching.cpp EncryptedArray.cpp EaCx.cpp Ctxt.cpp CModulus.cpp FHEContext.cpp PAlgebra.cpp DoubleCRT.cpp NumbTh.cpp bluestein.cpp IndexSet.cpp timing.cpp replicate.cpp hypercube.cpp matching.cpp powerful.cpp BenesNetwork.cpp permutations.cpp PermNetwork.cpp OptimizePermutations.cpp eqtesting.cpp polyEval.cpp extractDigits.cpp EvalMap.cpp recryption.cpp debugging.cpp matmul.cpp intraSlot.cpp binaryArith.cpp binaryCompare.cpp tableLookup.cpp binio.cpp sample.cpp norms.cpp zzX.cpp fft.cpp primeChain.cpp PGFFT.cpp fhe_stats.cpp ArgMap.cpp
+SRC = keys.cpp keySwitching.cpp EncryptedArray.cpp EaCx.cpp Ctxt.cpp CModulus.cpp FHEContext.cpp PAlgebra.cpp DoubleCRT.cpp NumbTh.cpp bluestein.cpp IndexSet.cpp timing.cpp replicate.cpp hypercube.cpp matching.cpp powerful.cpp BenesNetwork.cpp permutations.cpp PermNetwork.cpp OptimizePermutations.cpp eqtesting.cpp polyEval.cpp extractDigits.cpp EvalMap.cpp recryption.cpp debugging.cpp matmul.cpp intraSlot.cpp binaryArith.cpp binaryCompare.cpp tableLookup.cpp binio.cpp sample.cpp norms.cpp zzX.cpp primeChain.cpp PGFFT.cpp fhe_stats.cpp ArgMap.cpp randomMatrices.cpp
 
-OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o keys.o keySwitching.o Ctxt.o EncryptedArray.o EaCx.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o recryption.o debugging.o matmul.o intraSlot.o tableLookup.o binio.o sample.o norms.o zzX.o fft.o primeChain.o binaryArith.o binaryCompare.o PGFFT.o fhe_stats.o ArgMap.o
+OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o FHEContext.o IndexSet.o DoubleCRT.o keys.o keySwitching.o Ctxt.o EncryptedArray.o EaCx.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o recryption.o debugging.o matmul.o intraSlot.o tableLookup.o binio.o sample.o norms.o zzX.o primeChain.o binaryArith.o binaryCompare.o PGFFT.o fhe_stats.o ArgMap.o randomMatrices.o 
 
 TESTPROGS = Test_General_x Test_PAlgebra_x Test_IO_x Test_Bin_IO_x Test_Replicate_x Test_matmul_x Test_Powerful_x Test_Permutations_x Test_Timing_x Test_PolyEval_x Test_extractDigits_x Test_EvalMap_x Test_ThinEvalMap_x Test_bootstrapping_x Test_ThinBootstrapping_x Test_PtrVector_x Test_intraSlot_x Test_binaryArith_x Test_binaryCompare_x Test_tableLookup_x Test_approxNums_x Test_fatboot_x Test_thinboot_x
 

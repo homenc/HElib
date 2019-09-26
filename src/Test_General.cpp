@@ -20,6 +20,7 @@
 #include <cassert>
 #include <cstdio>
 #include "ArgMap.h"
+#include "fhe_stats.h"
 
 NTL_CLIENT
 
@@ -101,6 +102,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     std::cout << "# bits in special primes = " 
 	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
     std::cout << "G = " << G << "\n";
+
+    fhe_stats=true;
   }
 
   FHESecKey secretKey(context);
@@ -240,6 +243,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
    
   if (!noPrint) {
     printAllTimers();
+    print_stats(cout);
     std::cout << endl;
   }
 }

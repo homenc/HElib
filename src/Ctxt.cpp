@@ -409,10 +409,13 @@ void Ctxt::modDownToSet(const IndexSet &s)
     ZZX delta;
     ZZ diff = context.productOfPrimes(setDiff);
     xdouble xdiff = conv<xdouble>(diff);
-    vector<double> fdelta;
-    xdouble addedNoise(0.0);
 
-    for (auto &part : parts) {
+    long nparts = parts.size();
+
+    vector<vector<double>> fdeltas(nparts);
+    for (long i: range(nparts)) {
+      CtxtPart& part = parts[i]; 
+      vector<double>& fdelta = fdeltas[i];
       part.scaleDownToSet(intersection, ptxtSpace, delta);
       fdelta.resize(delta.rep.length());
       for (long j: range(delta.rep.length())) {
@@ -425,10 +428,33 @@ void Ctxt::modDownToSet(const IndexSet &s)
                << ", ptxtSpace=" << ptxtSpace;
           throw helib::RuntimeError(ss.str());
         }
-
       }
+    }
 
-      double norm = embeddingLargestCoeff(fdelta, context.zMStar);
+    vector<double> norms(nparts);
+    FHE_NTIMER_START(AAA_modDownEnbeddings);
+#if 1
+    for (long i: range(nparts/2)) {
+      // compute two for the price of one!
+      embeddingLargestCoeff_x2(norms[2*i], norms[2*i+1], 
+                               fdeltas[2*i], fdeltas[2*i+1], 
+                               context.zMStar);
+    }
+    if (nparts%2) {
+      norms[nparts-1] = 
+        embeddingLargestCoeff(fdeltas[nparts-1], context.zMStar);
+    }
+#else
+    for (long i: range(nparts))
+      norms[i] = embeddingLargestCoeff(fdeltas[i], context.zMStar);
+#endif
+    FHE_NTIMER_STOP(AAA_modDownEnbeddings);
+      
+    xdouble addedNoise(0.0);
+
+    for (long i: range(nparts)) {
+      const CtxtPart& part = parts[i]; 
+      double norm = norms[i];
 
       if (part.skHandle.isOne())
         addedNoise += norm;
@@ -1979,7 +2005,7 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
       // uniformly distributed over [-p2r/2,p2r/2].
 
       if (delta > p2r/2 || (p2r%2 == 0 && delta == p2r/2 && 
-                            (sign(Y) < 0) || (sign(Y) == 0 && RandomBnd(2)) ))
+                            ((sign(Y) < 0) || (sign(Y) == 0 && RandomBnd(2))) ))
         delta -= p2r;
 
       x += delta;

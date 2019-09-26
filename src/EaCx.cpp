@@ -34,6 +34,8 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   NTL::ZZX pp;
   sKey.Decrypt(pp, ctxt);
 
+#if 0
+
   // convert to zzX, if the pp is too big, scale it down
   long nBits = NTL::MaxBits(pp) - NTL_SP_NBITS;
   zzX zpp(INIT_SIZE, deg(pp)+1);
@@ -47,9 +49,40 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
       conv(zpp[i], pp[i]>>nBits);
     factor = to_double(ctxt.getRatFactor()/power2_xdouble(nBits));
   }
-  canonicalEmbedding(ptxt, zpp, getPAlgebra()); // decode without scaling
+  CKKS_canonicalEmbedding(ptxt, zpp, getPAlgebra()); // decode without scaling
   for (cx_double& cx : ptxt)  // divide by the factor
     cx /= factor;
+
+#else
+
+  // NOTE: I changed the code so that we convert to a 
+  // vector<double> instead of a zzX. This is more
+  // efficient and more precise.  It shoud not affect overflow,
+  // as far as I can tell. The old code is above.
+  //   --Victor
+
+  const long MAX_BITS = 400;
+  long nBits = NTL::MaxBits(pp) - MAX_BITS;
+  double factor;
+  if (nBits<=0) { // convert to zzX, double
+    CKKS_canonicalEmbedding(ptxt, pp, getPAlgebra()); 
+    factor = to_double(ctxt.getRatFactor());
+  } else { 
+    long dpp = deg(pp);
+    vector<double> pp_scaled(dpp+1);
+    ZZ tmp;
+    for (long i: range(dpp+1)) {
+      RightShift(tmp, pp.rep[i], nBits); 
+      pp_scaled[i] = to_double(tmp);
+    }
+    CKKS_canonicalEmbedding(ptxt, pp_scaled, getPAlgebra()); 
+    factor = to_double(ctxt.getRatFactor()/power2_xdouble(nBits));
+  }
+  for (cx_double& cx : ptxt)  // divide by the factor
+    cx /= factor;
+
+#endif
+
 }
 
 // rotate ciphertext in dimension 0 by amt
@@ -99,7 +132,7 @@ double EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
   // This factor ensures that encode/decode introduce less than 1/precision
   // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}
   double factor = encodeScalingFactor(precision)/useThisSize;
-  embedInSlots(ptxt, array, getPAlgebra(), factor);
+  CKKS_embedInSlots(ptxt, array, getPAlgebra(), factor);
   return factor;
 }
 
@@ -135,7 +168,7 @@ void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt, double 
 {
   //OLD: assert (scaling>0);
   helib::assertTrue<helib::InvalidArgument>(scaling>0, "Scaling must be positive to decode");
-  canonicalEmbedding(array, ptxt, getPAlgebra());
+  CKKS_canonicalEmbedding(array, ptxt, getPAlgebra());
   for (auto& x: array) x /= scaling;
 }
 
