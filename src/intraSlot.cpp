@@ -18,8 +18,6 @@
 #include "replicate.h"
 #include "intraSlot.h"
 
-NTL_CLIENT
-
 // Implementation classes for unpacking:
 // buildUnpackSlotEncoding_pa_impl prepares the constants for the linear
 // transformation, and unpack_pa_impl uses them to do the actual uppacking.
@@ -39,7 +37,7 @@ public:
     long nslots = ea.size(); // how many slots
     long d = ea.getDegree(); // size of each slot
 
-    const Mat<R>& CBi=ea.getNormalBasisMatrixInverse();
+    const NTL::Mat<R>& CBi=ea.getNormalBasisMatrixInverse();
     // CBi contains a description of the normal-basis inverse transformation
 
     std::vector<RX> LM(d);
@@ -156,7 +154,7 @@ public:
     RBak bak; bak.save(); ea.restoreContext();  // the NTL context for mod p^r
     long nslots = ea.size(); // how many slots
 
-    const Mat<R>& CB=ea.getNormalBasisMatrix();
+    const NTL::Mat<R>& CB=ea.getNormalBasisMatrix();
     // CB contains a description of the normal-basis transformation
 
     RX pow;
@@ -218,10 +216,10 @@ public:
     //OLD: assert(nbits >= 0 && nbits <= d);
     helib::assertInRange(nbits, 0l, d, "Not enough capacity in slots or nbits less than 0 (nbits must be positive and less equal than size of blocks)", true);
 
-    const Mat<R>& CB=ea.getNormalBasisMatrix();
+    const NTL::Mat<R>& CB=ea.getNormalBasisMatrix();
     // CB contains a description of the normal-basis transformation
 
-    Vec<R> acc;
+    NTL::Vec<R> acc;
     acc.SetLength(d);
     clear(acc); // clear all d bits in acc, length stays =d
 
@@ -292,11 +290,11 @@ public:
                     PlaintextArray& pa, std::vector<unsigned long>& value)
   {
     PA_BOILER
-    const Mat<R>& CBi=ea.getNormalBasisMatrixInverse();
+    const NTL::Mat<R>& CBi=ea.getNormalBasisMatrixInverse();
 
     value.resize(n);
     for (long i = 0; i < n; i++) {
-       Vec<R> v, w;
+       NTL::Vec<R> v, w;
        VectorCopy(v, data[i], d);
        mul(w, v, CBi);
        unsigned long res = 0;

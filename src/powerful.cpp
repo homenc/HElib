@@ -15,12 +15,10 @@
 
 #include "powerful.h"
 
-NTL_CLIENT
-
 // powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}
 // computes divVec[d] = m/p_d^{e_d}
-inline void computeDivVec(Vec<long>& divVec, long m,
-			  const Vec<long>& powVec)
+inline void computeDivVec(NTL::Vec<long>& divVec, long m,
+			  const NTL::Vec<long>& powVec)
 {
   long k = powVec.length();
   divVec.SetLength(k);
@@ -32,15 +30,15 @@ inline void computeDivVec(Vec<long>& divVec, long m,
 
 // divVec[d] = m/p_d^{e_d}, powVec[d] = p^{e_d}
 // computes invVec[d] = divVec[d]^{-1} mod powVec[d]
-inline void computeInvVec(Vec<long>& invVec,
-			  const Vec<long>& divVec, const Vec<long>& powVec)
+inline void computeInvVec(NTL::Vec<long>& invVec,
+			  const NTL::Vec<long>& divVec, const NTL::Vec<long>& powVec)
 {
   long k = divVec.length();
   invVec.SetLength(k);
 
   for (long d = 0; d < k; d++) {
     long t1 = divVec[d] % powVec[d];
-    long t2 = InvMod(t1, powVec[d]);
+    long t2 = NTL::InvMod(t1, powVec[d]);
     invVec[d] = t2;
   }
 }
@@ -55,11 +53,11 @@ inline void computeInvVec(Vec<long>& invVec,
 //   i = i_1 (m/m_1) + ... + i_k (m/m_k) mod m
 // and
 //   cubeToPolyMap is the inverse map.
-static void computePowerToCubeMap(Vec<long>& polyToCubeMap,
-                           Vec<long>& cubeToPolyMap,
+static void computePowerToCubeMap(NTL::Vec<long>& polyToCubeMap,
+                           NTL::Vec<long>& cubeToPolyMap,
                            long m,
-                           const Vec<long>& powVec,
-                           const Vec<long>& invVec,
+                           const NTL::Vec<long>& powVec,
+                           const NTL::Vec<long>& invVec,
                            const CubeSignature& longSig)
 {
    long k = powVec.length();
@@ -70,7 +68,7 @@ static void computePowerToCubeMap(Vec<long>& polyToCubeMap,
    for (long i = 0; i < m; i++) {
       long j = 0;
       for (long d = 0; d < k; d++) {
-         long i_d = MulMod((i % powVec[d]), invVec[d], powVec[d]);
+         long i_d = NTL::MulMod((i % powVec[d]), invVec[d], powVec[d]);
          j += i_d * longSig.getProd(d+1);
       }
       polyToCubeMap[i] = j;
@@ -84,7 +82,7 @@ static void computePowerToCubeMap(Vec<long>& polyToCubeMap,
 // computes shortToLongMap[i] that maps an index i 
 // with respect to shortSig to the corresponding index
 // with respect to longSig.
-static void computeShortToLongMap(Vec<long>& shortToLongMap, 
+static void computeShortToLongMap(NTL::Vec<long>& shortToLongMap, 
                            const CubeSignature& shortSig, 
                            const CubeSignature& longSig) 
 {
@@ -112,11 +110,11 @@ static void computeShortToLongMap(Vec<long>& shortToLongMap,
 // phi(m_1, ..., m_k). Viewed as an element of the ring
 // F_p[X_1,...,X_k]/(Phi_{m_1}(X_1), ..., Phi_{m_k}(X_k)),
 // the cube remains unchanged.
-static void recursiveReduce(const CubeSlice<zz_p>& s, 
-                     const Vec<zz_pXModulus>& cycVec, 
+static void recursiveReduce(const CubeSlice<NTL::zz_p>& s, 
+                     const NTL::Vec<NTL::zz_pXModulus>& cycVec, 
                      long d,
-                     zz_pX& tmp1,
-                     zz_pX& tmp2)
+                     NTL::zz_pX& tmp1,
+                     NTL::zz_pX& tmp2)
 {
    long numDims = s.getNumDims();
    //OLD: assert(numDims > 0);
@@ -146,12 +144,12 @@ static void recursiveReduce(const CubeSlice<zz_p>& s,
    if (numDims == 1) return;
 
    for (long i = 0; i < deg0; i++) 
-      recursiveReduce(CubeSlice<zz_p>(s, i), cycVec, d+1, tmp1, tmp2);
+      recursiveReduce(CubeSlice<NTL::zz_p>(s, i), cycVec, d+1, tmp1, tmp2);
 
 }
 
 
-PowerfulTranslationIndexes::PowerfulTranslationIndexes(const Vec<long>& mv):
+PowerfulTranslationIndexes::PowerfulTranslationIndexes(const NTL::Vec<long>& mv):
   mvec(mv) // copy the vector of factors
 {
   // mvec contains the prime-power factorization of m = \prod_{i=1}^k mi
@@ -196,10 +194,10 @@ PowerfulTranslationIndexes::PowerfulTranslationIndexes(const Vec<long>& mv):
 //
 // It is assumed that the current modulus is already set.
 // For convenience, this method returns the value of the modulus q.
-long PowerfulConversion::polyToPowerful(HyperCube<zz_p>& powerful,
-					const zz_pX& poly) const
+long PowerfulConversion::polyToPowerful(HyperCube<NTL::zz_p>& powerful,
+					const NTL::zz_pX& poly) const
 {
-  HyperCube<zz_p> tmpCube(getLongSig());
+  HyperCube<NTL::zz_p> tmpCube(getLongSig());
 
   long n = deg(poly);
   //OLD: assert(n < indexes->m);
@@ -211,21 +209,21 @@ long PowerfulConversion::polyToPowerful(HyperCube<zz_p>& powerful,
   for (long i = n+1; i < indexes->m; i++)
     tmpCube[indexes->polyToCubeMap[i]] = 0;
 
-  zz_pX tmp1, tmp2;
-  recursiveReduce(CubeSlice<zz_p>(tmpCube), cycVec_p, 0, tmp1, tmp2);
+  NTL::zz_pX tmp1, tmp2;
+  recursiveReduce(CubeSlice<NTL::zz_p>(tmpCube), cycVec_p, 0, tmp1, tmp2);
 
   for (long i = 0; i < indexes->phim; i++)
     powerful[i] = tmpCube[indexes->shortToLongMap[i]];
 
-  return zz_p::modulus();
+  return NTL::zz_p::modulus();
 }
 
-long PowerfulConversion::powerfulToPoly(zz_pX& poly,
-					const HyperCube<zz_p>& powerful) const
+long PowerfulConversion::powerfulToPoly(NTL::zz_pX& poly,
+					const HyperCube<NTL::zz_p>& powerful) const
 {
   //  convertPowerfulToPoly(poly, powerful, indexes->m, indexes.shortToLongMap,
   //			indexes->cubeToPolyMap, phimX_p);
-  zz_pX tmp; // a temporary degree-(m-1) polynomial, initialized to all-zero
+  NTL::zz_pX tmp; // a temporary degree-(m-1) polynomial, initialized to all-zero
   tmp.SetLength(indexes->m);
   for (long i = 0; i < indexes->m; i++)
     tmp[i] = 0;
@@ -238,13 +236,13 @@ long PowerfulConversion::powerfulToPoly(zz_pX& poly,
   tmp.normalize();
   rem(poly, tmp, phimX_p); // reduce modulo Phi_m(X)
 
-  return zz_p::modulus();
+  return NTL::zz_p::modulus();
 }
 
-PowerfulDCRT::PowerfulDCRT(const FHEcontext& _context, const Vec<long>& mvec):
+PowerfulDCRT::PowerfulDCRT(const FHEcontext& _context, const NTL::Vec<long>& mvec):
   context(_context), indexes(mvec)
 {
-  zz_pBak bak; bak.save(); // backup NTL's current modulus
+  NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
 
   // initialize the modulus-dependent tables for all the moduli in the chain
   long n = context.numPrimes();
@@ -256,56 +254,56 @@ PowerfulDCRT::PowerfulDCRT(const FHEcontext& _context, const Vec<long>& mvec):
 } // NTL's modulus restored upon exit
 
 
-void PowerfulDCRT::dcrtToPowerful(Vec<ZZ>& out, const DoubleCRT& dcrt) const
+void PowerfulDCRT::dcrtToPowerful(NTL::Vec<NTL::ZZ>& out, const DoubleCRT& dcrt) const
 {
   const IndexSet& set = dcrt.getIndexSet();
   if (empty(set)) { // sanity check
     clear(out);
     return;
   }
-  zz_pBak bak; bak.save(); // backup NTL's current modulus
+  NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
 
-  ZZ product = conv<ZZ>(1L);
+  NTL::ZZ product = NTL::conv<NTL::ZZ>(1L);
   for (long i = set.first(); i <= set.last(); i = set.next(i)) {
     pConvVec[i].restoreModulus();
-    zz_pX oneRowPoly;
+    NTL::zz_pX oneRowPoly;
     long newPrime = dcrt.getOneRow(oneRowPoly,i);
 
-    HyperCube<zz_p> oneRowPwrfl(indexes.shortSig);
+    HyperCube<NTL::zz_p> oneRowPwrfl(indexes.shortSig);
     pConvVec[i].polyToPowerful(oneRowPwrfl, oneRowPoly);
     if (i == set.first()) // just copy
-      conv(out, oneRowPwrfl.getData());
+      NTL::conv(out, oneRowPwrfl.getData());
     else                  // CRT
       intVecCRT(out, product, oneRowPwrfl.getData(), newPrime); // in NumbTh
     product *= newPrime;
   }
 }
 
-void PowerfulDCRT::powerfulToDCRT(DoubleCRT& dcrt, const Vec<ZZ>& in) const
+void PowerfulDCRT::powerfulToDCRT(DoubleCRT& dcrt, const NTL::Vec<NTL::ZZ>& in) const
 {
   throw helib::LogicError("powerfulToDCRT not implemented yet");
 }
 
 // If the IndexSet is omitted, default to all the primes in the chain
-void PowerfulDCRT::ZZXtoPowerful(Vec<ZZ>& out, const ZZX& poly,
+void PowerfulDCRT::ZZXtoPowerful(NTL::Vec<NTL::ZZ>& out, const NTL::ZZX& poly,
 				 IndexSet set) const
 {
   if (empty(set))
     set = IndexSet(0, pConvVec.length()-1);
 
-  zz_pBak bak; bak.save(); // backup NTL's current modulus
+  NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
 
-  ZZ product = conv<ZZ>(1L);
+  NTL::ZZ product = NTL::conv<NTL::ZZ>(1L);
   for (long i = set.first(); i <= set.last(); i = set.next(i)) {
     pConvVec[i].restoreModulus();
-    long newPrime = zz_p::modulus();
-    zz_pX oneRowPoly;
-    conv(oneRowPoly, poly);  // reduce mod p and convert to zz_pX
+    long newPrime = NTL::zz_p::modulus();
+    NTL::zz_pX oneRowPoly;
+    NTL::conv(oneRowPoly, poly);  // reduce mod p and convert to NTL::zz_pX
 
-    HyperCube<zz_p> oneRowPwrfl(indexes.shortSig);
+    HyperCube<NTL::zz_p> oneRowPwrfl(indexes.shortSig);
     pConvVec[i].polyToPowerful(oneRowPwrfl, oneRowPoly);
     if (i == set.first()) // just copy
-      conv(out, oneRowPwrfl.getData());
+      NTL::conv(out, oneRowPwrfl.getData());
     else                  // CRT
       intVecCRT(out, product, oneRowPwrfl.getData(), newPrime); // in NumbTh
     product *= newPrime;
@@ -314,24 +312,24 @@ void PowerfulDCRT::ZZXtoPowerful(Vec<ZZ>& out, const ZZX& poly,
 
 //FIXME: both the reduction from powerful to the individual primes and
 //  the CRT back to poly can be made more efficient
-void PowerfulDCRT::powerfulToZZX(ZZX& poly, const Vec<ZZ>& powerful,
+void PowerfulDCRT::powerfulToZZX(NTL::ZZX& poly, const NTL::Vec<NTL::ZZ>& powerful,
 				 IndexSet set) const
 {
-  zz_pBak bak; bak.save(); // backup NTL's current modulus
+  NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
 
   if (empty(set)) set = IndexSet(0, pConvVec.length()-1);
 
   clear(poly);
   //  poly.SetLength(powerful.length());
-  ZZ product = conv<ZZ>(1L);
+  NTL::ZZ product = NTL::conv<NTL::ZZ>(1L);
   for (long i = set.first(); i <= set.last(); i = set.next(i)) {
     pConvVec[i].restoreModulus();
-    //    long newPrime = zz_p::modulus();
+    //    long newPrime = NTL::zz_p::modulus();
 
-    HyperCube<zz_p> oneRowPwrfl(indexes.shortSig);
-    conv(oneRowPwrfl.getData(), powerful); // reduce and convert to Vec<zz_p>
+    HyperCube<NTL::zz_p> oneRowPwrfl(indexes.shortSig);
+    NTL::conv(oneRowPwrfl.getData(), powerful); // reduce and convert to NTL::Vec<NTL::zz_p>
 
-    zz_pX oneRowPoly;
+    NTL::zz_pX oneRowPoly;
     pConvVec[i].powerfulToPoly(oneRowPoly, oneRowPwrfl);
     CRT(poly, product, oneRowPoly);                   // NTL :-)
   }
@@ -343,12 +341,12 @@ void PowerfulDCRT::powerfulToZZX(ZZX& poly, const Vec<ZZ>& powerful,
 /********************************************************************/
 #if 0
 
-static void convertPolyToPowerful(HyperCube<zz_p>& cube, 
-                           HyperCube<zz_p>& tmpCube, 
-                           const zz_pX& poly,
-                           const Vec<zz_pXModulus>& cycVec,
-                           const Vec<long>& polyToCubeMap,
-                           const Vec<long>& shortToLongMap)
+static void convertPolyToPowerful(HyperCube<NTL::zz_p>& cube, 
+                           HyperCube<NTL::zz_p>& tmpCube, 
+                           const NTL::zz_pX& poly,
+                           const NTL::Vec<NTL::zz_pXModulus>& cycVec,
+                           const NTL::Vec<long>& polyToCubeMap,
+                           const NTL::Vec<long>& shortToLongMap)
 {
    long m = tmpCube.getSize();
    long phim = cube.getSize();
@@ -363,24 +361,24 @@ static void convertPolyToPowerful(HyperCube<zz_p>& cube,
    for (long i = n+1; i < m; i++)
       tmpCube[polyToCubeMap[i]] = 0;
 
-   zz_pX tmp1, tmp2;
-   recursiveReduce(CubeSlice<zz_p>(tmpCube), cycVec, 0, tmp1, tmp2);
+   NTL::zz_pX tmp1, tmp2;
+   recursiveReduce(CubeSlice<NTL::zz_p>(tmpCube), cycVec, 0, tmp1, tmp2);
 
    for (long i = 0; i < phim; i++)
       cube[i] = tmpCube[shortToLongMap[i]];
 }
 
 // This implements the inverse of the above isomorphism.
-static void convertPowerfulToPoly(zz_pX& poly,
-                           const HyperCube<zz_p>& cube,
+static void convertPowerfulToPoly(NTL::zz_pX& poly,
+                           const HyperCube<NTL::zz_p>& cube,
                            long m,
-                           const Vec<long>& shortToLongMap,
-                           const Vec<long>& cubeToPolyMap,
-                           const zz_pXModulus& phimX)
+                           const NTL::Vec<long>& shortToLongMap,
+                           const NTL::Vec<long>& cubeToPolyMap,
+                           const NTL::zz_pXModulus& phimX)
 {
    long phim = cube.getSize();
 
-   zz_pX tmp;
+   NTL::zz_pX tmp;
 
    tmp.SetLength(m);
   
@@ -398,21 +396,21 @@ static void convertPowerfulToPoly(zz_pX& poly,
 
 // powVec[d] = p_d^{e_d}
 // cycVec[d] = Phi_{p_d^{e_d}}(X) mod p
-void computeCycVec(Vec<zz_pXModulus>& cycVec, const Vec<long>& powVec)
+void computeCycVec(NTL::Vec<NTL::zz_pXModulus>& cycVec, const NTL::Vec<long>& powVec)
 {
   long k = powVec.length();
   cycVec.SetLength(k);
 
   for (long d = 0; d < k; d++) {
-    ZZX PhimX = Cyclotomic(powVec[d]);
-    cycVec[d] = conv<zz_pX>(PhimX);
+    NTL::ZZX PhimX = Cyclotomic(powVec[d]);
+    cycVec[d] = NTL::conv<NTL::zz_pX>(PhimX);
   }
 }
         
 // factors[d] = (p_d, e_d)
 // computes phiVec[d] = phi(p_d^{e_d}) = (p_d-1) p_i{e_d-1}
-static void computePhiVec(Vec<long>& phiVec, 
-			  const Vec< Pair<long, long> >& factors)
+static void computePhiVec(NTL::Vec<long>& phiVec, 
+			  const NTL::Vec< Pair<long, long> >& factors)
 {
   long k = factors.length();
   phiVec.SetLength(k);
@@ -421,7 +419,7 @@ static void computePhiVec(Vec<long>& phiVec,
     phiVec[d] = computePhi(factors[d]);
 }
 
-void mapIndexToPowerful(Vec<long>& pow, long j, const Vec<long>& phiVec)
+void mapIndexToPowerful(NTL::Vec<long>& pow, long j, const NTL::Vec<long>& phiVec)
 // this maps an index j in [phi(m)] to a vector
 // representing the powerful basis coordinates
 
@@ -440,11 +438,11 @@ void mapIndexToPowerful(Vec<long>& pow, long j, const Vec<long>& phiVec)
 }
 
 
-void mapPowerfulToPoly(ZZX& poly, 
-                       const Vec<long>& pow, 
-                       const Vec<long>& divVec,
+void mapPowerfulToPoly(NTL::ZZX& poly, 
+                       const NTL::Vec<long>& pow, 
+                       const NTL::Vec<long>& divVec,
                        long m,
-                       const ZZX& phimX)
+                       const NTL::ZZX& phimX)
 {
   long k = pow.length();
   //OLD: assert(divVec.length() == k);
@@ -456,27 +454,27 @@ void mapPowerfulToPoly(ZZX& poly,
 
   j %= m;
 
-  ZZX f = ZZX(j, 1);
+  NTL::ZZX f = NTL::ZZX(j, 1);
 
   poly = f % phimX;
 }
 
 // powVec[d] = p_d^{e_d}
 // cycVec[d] = Phi_{p_d^{e_d}}(X) mod p
-void computeCycVec(Vec<zz_pXModulus>& cycVec, const Vec<long>& powVec)
+void computeCycVec(NTL::Vec<NTL::zz_pXModulus>& cycVec, const NTL::Vec<long>& powVec)
 {
   long k = powVec.length();
   cycVec.SetLength(k);
 
   for (long d = 0; d < k; d++) {
-    ZZX PhimX = Cyclotomic(powVec[d]);
-    cycVec[d] = conv<zz_pX>(PhimX);
+    NTL::ZZX PhimX = Cyclotomic(powVec[d]);
+    cycVec[d] = NTL::conv<NTL::zz_pX>(PhimX);
   }
 }
 
 // vec[d] = (a_d , b_d)
 // returns \prod_d a_d^{b_d}
-long computeProd(const Vec< Pair<long, long> >& vec)
+long computeProd(const NTL::Vec< Pair<long, long> >& vec)
 {
   long prod = 1;
   long k = vec.length();
@@ -489,8 +487,8 @@ long computeProd(const Vec< Pair<long, long> >& vec)
 
 // factors[d] = (p_d, e_d)
 // computes powVec[d] = p_d^{e_d}
-void computePowVec(Vec<long>& powVec, 
-                   const Vec< Pair<long, long> >& factors)
+void computePowVec(NTL::Vec<long>& powVec, 
+                   const NTL::Vec< Pair<long, long> >& factors)
 {
   long k = factors.length();
   powVec.SetLength(k);
@@ -500,9 +498,9 @@ void computePowVec(Vec<long>& powVec,
 
 // Computes the inverse of the shortToLongMap, computed above.
 // "undefined" entries are initialzed to -1.
-void computeLongToShortMap(Vec<long>& longToShortMap,
+void computeLongToShortMap(NTL::Vec<long>& longToShortMap,
                            long m,
-                           const Vec<long>& shortToLongMap)
+                           const NTL::Vec<long>& shortToLongMap)
 {
    long n = shortToLongMap.length();
 
@@ -520,11 +518,11 @@ void computeLongToShortMap(Vec<long>& longToShortMap,
 // powVec[d] = m_d = p_d^{e_d}
 // computes multiEvalPoints[d] as a vector of length phi(m_d)
 //   containing base^{(m/m_d) j} for j in Z_{m_d}^*
-void computeMultiEvalPoints(Vec< Vec<zz_p> >& multiEvalPoints,
-                            const zz_p& base,
+void computeMultiEvalPoints(NTL::Vec< NTL::Vec<NTL::zz_p> >& multiEvalPoints,
+                            const NTL::zz_p& base,
                             long m,
-                            const Vec<long>& powVec,
-                            const Vec<long>& phiVec)
+                            const NTL::Vec<long>& powVec,
+                            const NTL::Vec<long>& phiVec)
 {
    long k = powVec.length();
 
@@ -535,8 +533,8 @@ void computeMultiEvalPoints(Vec< Vec<zz_p> >& multiEvalPoints,
       long phi_d = phiVec[d];
       long count = 0;
 
-      zz_p pow = conv<zz_p>(1);
-      zz_p mult = power(base, m/m_d);
+      NTL::zz_p pow = NTL::conv<NTL::zz_p>(1);
+      NTL::zz_p mult = power(base, m/m_d);
 
       multiEvalPoints[d].SetLength(phi_d);
 
@@ -551,12 +549,12 @@ void computeMultiEvalPoints(Vec< Vec<zz_p> >& multiEvalPoints,
 }
 
 // computes linearEvalPoints[i] = base^i, i in Z_m^*
-void computeLinearEvalPoints(Vec<zz_p>& linearEvalPoints,
-                             const zz_p& base,
+void computeLinearEvalPoints(NTL::Vec<NTL::zz_p>& linearEvalPoints,
+                             const NTL::zz_p& base,
                              long m, long phim)
 {
    linearEvalPoints.SetLength(phim);
-   zz_p pow = conv<zz_p>(1);
+   NTL::zz_p pow = NTL::conv<NTL::zz_p>(1);
 
    for (long i = 0, j = 0; i < m; i++) {
       if (GCD(i, m) == 1) linearEvalPoints[j++] = pow;
@@ -569,8 +567,8 @@ void computeLinearEvalPoints(Vec<zz_p>& linearEvalPoints,
 //   where compressedIndex[d][j] = -1 if GCD(j, m_d) != 1,
 //   and otherwise is set to the relative numerical position
 //   of j among Z_{m_d}^*
-void computeCompressedIndex(Vec< Vec<long> >& compressedIndex,
-                            const Vec<long>& powVec)
+void computeCompressedIndex(NTL::Vec< NTL::Vec<long> >& compressedIndex,
+                            const NTL::Vec<long>& powVec)
 {
    long k = powVec.length();
 
@@ -599,10 +597,10 @@ void computeCompressedIndex(Vec< Vec<long> >& compressedIndex,
 //   relative to a a cube of dimension (phi(m_1), ..., phi(m_k)),
 //   where each j_d is the compressed index of i_d = i mod m_d.
 
-void computePowToCompressedIndexMap(Vec<long>& powToCompressedIndexMap,
+void computePowToCompressedIndexMap(NTL::Vec<long>& powToCompressedIndexMap,
                                     long m,
-                                    const Vec<long>& powVec,
-                                    const Vec< Vec<long> >& compressedIndex,
+                                    const NTL::Vec<long>& powVec,
+                                    const NTL::Vec< NTL::Vec<long> >& compressedIndex,
                                     const CubeSignature& shortSig
                                    )
 {
@@ -624,11 +622,11 @@ void computePowToCompressedIndexMap(Vec<long>& powToCompressedIndexMap,
    }
 }
 
-void recursiveEval(const CubeSlice<zz_p>& s,
-                   const Vec< Vec<zz_p> >& multiEvalPoints,
+void recursiveEval(const CubeSlice<NTL::zz_p>& s,
+                   const NTL::Vec< NTL::Vec<NTL::zz_p> >& multiEvalPoints,
                    long d,
-                   zz_pX& tmp1,
-                   Vec<zz_p>& tmp2)
+                   NTL::zz_pX& tmp1,
+                   NTL::Vec<NTL::zz_p>& tmp2)
 {
    long numDims = s.getNumDims();
    //OLD: assert(numDims > 0);
@@ -637,7 +635,7 @@ void recursiveEval(const CubeSlice<zz_p>& s,
    if (numDims > 1) {
       long dim0 = s.getDim(0);
       for (long i = 0; i < dim0; i++)
-         recursiveEval(CubeSlice<zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
+         recursiveEval(CubeSlice<NTL::zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
    }
 
    long posBnd = s.getProd(1);
@@ -656,11 +654,11 @@ void recursiveEval(const CubeSlice<zz_p>& s,
 #include "bluestein.h"
 #include "clonedPtr.h"
 
-FFTHelper::FFTHelper(long _m, zz_p x)
+FFTHelper::FFTHelper(long _m, NTL::zz_p x)
 {
   m = _m;
-  m_inv = 1/conv<zz_p>(m);
-  root = conv<zz_p>( SqrRootMod( conv<ZZ>(x), conv<ZZ>(zz_p::modulus())) );
+  m_inv = 1/NTL::conv<NTL::zz_p>(m);
+  root = NTL::conv<NTL::zz_p>( SqrRootMod( NTL::conv<NTL::ZZ>(x), NTL::conv<NTL::ZZ>(NTL::zz_p::modulus())) );
     // NOTE: the previous line is a pain because NTL does not have
     // a single-precision variant of SqrRootMod...
   iroot = 1/root;
@@ -672,11 +670,11 @@ FFTHelper::FFTHelper(long _m, zz_p x)
     if (coprime[i]) phim++;
   }
 
-  build(phimx, conv<zz_pX>( Cyclotomic(m) ));
+  build(phimx, NTL::conv<NTL::zz_pX>( Cyclotomic(m) ));
 }
 
 
-void FFTHelper::FFT(const zz_pX& f, Vec<zz_p>& v) const
+void FFTHelper::FFT(const NTL::zz_pX& f, NTL::Vec<NTL::zz_p>& v) const
 {
   tmp = f;
   BluesteinFFT(tmp, m, root, powers, powers_aux, Rb, Rb_aux, Ra);
@@ -686,7 +684,7 @@ void FFTHelper::FFT(const zz_pX& f, Vec<zz_p>& v) const
     if (coprime[i]) v[j++] = coeff(tmp, i);
 }
 
-void FFTHelper::iFFT(zz_pX& f, const Vec<zz_p>& v, bool normalize) const
+void FFTHelper::iFFT(NTL::zz_pX& f, const NTL::Vec<NTL::zz_p>& v, bool normalize) const
 {
   tmp.rep.SetLength(m);
   for (long i = 0, j = 0; i < m; i++) {
@@ -703,11 +701,11 @@ void FFTHelper::iFFT(zz_pX& f, const Vec<zz_p>& v, bool normalize) const
 
 // powVec[d] = m_d = p_d^{e_d}
 // computes multiEvalPoints[d] as an FFTHelper for base^{m/m_d}
-void computeMultiEvalPoints(Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
-                            const zz_p& base,
+void computeMultiEvalPoints(NTL::Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+                            const NTL::zz_p& base,
                             long m,
-                            const Vec<long>& powVec,
-                            const Vec<long>& phiVec)
+                            const NTL::Vec<long>& powVec,
+                            const NTL::Vec<long>& phiVec)
 {
    long k = powVec.length();
 
@@ -721,11 +719,11 @@ void computeMultiEvalPoints(Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
 }
 
 
-void recursiveEval(const CubeSlice<zz_p>& s,
-                   const Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+void recursiveEval(const CubeSlice<NTL::zz_p>& s,
+                   const NTL::Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
                    long d,
-                   zz_pX& tmp1,
-                   Vec<zz_p>& tmp2)
+                   NTL::zz_pX& tmp1,
+                   NTL::Vec<NTL::zz_p>& tmp2)
 {
    long numDims = s.getNumDims();
    //OLD: assert(numDims > 0);
@@ -734,7 +732,7 @@ void recursiveEval(const CubeSlice<zz_p>& s,
    if (numDims > 1) {
       long dim0 = s.getDim(0);
       for (long i = 0; i < dim0; i++)
-         recursiveEval(CubeSlice<zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
+         recursiveEval(CubeSlice<NTL::zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
    }
 
    long posBnd = s.getProd(1);
@@ -747,11 +745,11 @@ void recursiveEval(const CubeSlice<zz_p>& s,
 
 }
 
-void recursiveInterp(const CubeSlice<zz_p>& s,
-                     const Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
+void recursiveInterp(const CubeSlice<NTL::zz_p>& s,
+                     const NTL::Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
                      long d,
-                     zz_pX& tmp1,
-                     Vec<zz_p>& tmp2)
+                     NTL::zz_pX& tmp1,
+                     NTL::Vec<NTL::zz_p>& tmp2)
 {
   long numDims = s.getNumDims();
   //OLD: assert(numDims > 0);
@@ -761,29 +759,29 @@ void recursiveInterp(const CubeSlice<zz_p>& s,
   for (long pos = 0; pos < posBnd; pos++) {
     getHyperColumn(tmp2, s, pos);
     multiEvalPoints[d]->iFFT(tmp1, tmp2, false); // do not normalize
-    setHyperColumn(tmp1.rep, s, pos, zz_p::zero());
+    setHyperColumn(tmp1.rep, s, pos, NTL::zz_p::zero());
   }
 
   if (numDims > 1) {
     long dim0 = s.getDim(0);
     for (long i = 0; i < dim0; i++)
-      recursiveInterp(CubeSlice<zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
+      recursiveInterp(CubeSlice<NTL::zz_p>(s, i), multiEvalPoints, d+1, tmp1, tmp2);
   }
 }
 
-void interp(HyperCube<zz_p>& cube,
-          const Vec< copied_ptr<FFTHelper> >& multiEvalPoints)
+void interp(HyperCube<NTL::zz_p>& cube,
+          const NTL::Vec< copied_ptr<FFTHelper> >& multiEvalPoints)
 {
-   zz_pX tmp1;
-   Vec<zz_p> tmp2;
+   NTL::zz_pX tmp1;
+   NTL::Vec<NTL::zz_p> tmp2;
 
-   recursiveInterp(CubeSlice<zz_p>(cube), multiEvalPoints, 0, tmp1, tmp2);
+   recursiveInterp(CubeSlice<NTL::zz_p>(cube), multiEvalPoints, 0, tmp1, tmp2);
 
    // result is not normalized, so we fix that now...
 
    long k = multiEvalPoints.length();
 
-   zz_p m_inv = conv<zz_p>(1);
+   NTL::zz_p m_inv = NTL::conv<NTL::zz_p>(1);
    for (long d = 0; d < k; d++) m_inv *= multiEvalPoints[d]->get_m_inv();
 
    cube.getData() *= m_inv;

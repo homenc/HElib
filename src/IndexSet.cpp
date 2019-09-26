@@ -244,10 +244,9 @@ std::ostream& operator << (std::ostream& str, const IndexSet& set)
   return str;
 }
 
-NTL_CLIENT
-istream& operator >> (istream& str, IndexSet& set)
+std::istream& operator >> (std::istream& str, IndexSet& set)
 {
-  vec_long v;
+  NTL::vec_long v;
   str >> v; // read in the set as a vector
 
   // insert all these indexes into the set
@@ -271,7 +270,7 @@ void IndexSet::write(std::ostream& str) const
 
 }
 
-void IndexSet::read(istream& str)
+void IndexSet::read(std::istream& str)
 {
   // Size of Set
   long sizeOfS = read_raw_int(str); 

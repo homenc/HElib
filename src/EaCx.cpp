@@ -22,12 +22,10 @@
 #include "norms.h"
 #include "debugging.h"
 
-NTL_CLIENT
-
 static constexpr cx_double the_imaginary_i = cx_double(0.0, 1.0);
 
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
-                               const FHESecKey& sKey, vector<cx_double>& ptxt) const
+                               const FHESecKey& sKey, std::vector<cx_double>& ptxt) const
 {
   //OLD: assert(&getContext() == &ctxt.getContext());
   helib::assertEq(&getContext(), &ctxt.getContext(), "Cannot decrypt with non-matching contextx");
@@ -38,16 +36,16 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 
   // convert to zzX, if the pp is too big, scale it down
   long nBits = NTL::MaxBits(pp) - NTL_SP_NBITS;
-  zzX zpp(INIT_SIZE, deg(pp)+1);
+  zzX zpp(NTL::INIT_SIZE, deg(pp)+1);
   double factor;
   if (nBits<=0) { // convert to zzX, double
     for (long i=0; i<lsize(zpp); i++)
       conv(zpp[i], pp[i]);
-    factor = to_double(ctxt.getRatFactor());
+    factor = NTL::to_double(ctxt.getRatFactor());
   } else { // scale and then convert to zzX, double
     for (long i=0; i<lsize(zpp); i++)
       conv(zpp[i], pp[i]>>nBits);
-    factor = to_double(ctxt.getRatFactor()/power2_xdouble(nBits));
+    factor = NTL::to_double(ctxt.getRatFactor()/NTL::power2_xdouble(nBits));
   }
   CKKS_canonicalEmbedding(ptxt, zpp, getPAlgebra()); // decode without scaling
   for (cx_double& cx : ptxt)  // divide by the factor
@@ -66,17 +64,17 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   double factor;
   if (nBits<=0) { // convert to zzX, double
     CKKS_canonicalEmbedding(ptxt, pp, getPAlgebra()); 
-    factor = to_double(ctxt.getRatFactor());
+    factor = NTL::to_double(ctxt.getRatFactor());
   } else { 
     long dpp = deg(pp);
-    vector<double> pp_scaled(dpp+1);
-    ZZ tmp;
+    std::vector<double> pp_scaled(dpp+1);
+    NTL::ZZ tmp;
     for (long i: range(dpp+1)) {
       RightShift(tmp, pp.rep[i], nBits); 
-      pp_scaled[i] = to_double(tmp);
+      pp_scaled[i] = NTL::to_double(tmp);
     }
     CKKS_canonicalEmbedding(ptxt, pp_scaled, getPAlgebra()); 
-    factor = to_double(ctxt.getRatFactor()/power2_xdouble(nBits));
+    factor = NTL::to_double(ctxt.getRatFactor()/NTL::power2_xdouble(nBits));
   }
   for (cx_double& cx : ptxt)  // divide by the factor
     cx /= factor;
@@ -119,7 +117,7 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
   shift1D(ctxt, 0, amt);
 }
 
-double EncryptedArrayCx::encode(zzX& ptxt, const vector<cx_double>& array,
+double EncryptedArrayCx::encode(zzX& ptxt, const std::vector<cx_double>& array,
                                 double useThisSize, long precision) const
 {
   if (useThisSize < 0) for (auto& x : array) {
@@ -153,7 +151,7 @@ double EncryptedArrayCx::encode(zzX& ptxt, double num,
 
 double EncryptedArrayCx::encodei(zzX& ptxt, long precision) const
 {
-  vector<cx_double> v(size(), the_imaginary_i); // i in all the slots
+  std::vector<cx_double> v(size(), the_imaginary_i); // i in all the slots
   return this->encode(ptxt, v, /*size=*/1.0, precision);
 }
 
@@ -164,7 +162,7 @@ const zzX& EncryptedArrayCx::getiEncoded() const
   return iEncoded;
 }
 
-void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt, double scaling) const
+void EncryptedArrayCx::decode(std::vector<cx_double>& array, const zzX& ptxt, double scaling) const
 {
   //OLD: assert (scaling>0);
   helib::assertTrue<helib::InvalidArgument>(scaling>0, "Scaling must be positive to decode");
@@ -173,7 +171,7 @@ void EncryptedArrayCx::decode(vector<cx_double>& array, const zzX& ptxt, double 
 }
 
 // return an array of random complex numbers in a circle of radius rad
-void EncryptedArrayCx::random(vector<cx_double>& array, double rad) const
+void EncryptedArrayCx::random(std::vector<cx_double>& array, double rad) const
 {
   const double twoPi = 8 * std::atan(1);
   if (rad==0) rad = 1.0; // radius
@@ -219,7 +217,7 @@ void EncryptedArrayCx::extractImPart(Ctxt& c, DoubleCRT* iDcrtPtr) const
   c.multByConstantCKKS(0.5);       // divide by two
 }
 
-void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
+void EncryptedArrayCx::buildLinPolyCoeffs(std::vector<zzX>& C,
                        const cx_double& oneImage, const cx_double& iImage,
                        long precision) const
 {
@@ -234,21 +232,21 @@ void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
 
   // Encode x,y in zzX objects
   long n = size();
-  vector<cx_double> v(n, x); // x in all the slots
+  std::vector<cx_double> v(n, x); // x in all the slots
   encode(C[0], v, msize, precision);
   v.assign(n, y);            // y in all the slots
   encode(C[1], v, msize, precision);
 }
 
-void EncryptedArrayCx::buildLinPolyCoeffs(vector<zzX>& C,
-          const vector<cx_double>&oneImages, const vector<cx_double>&iImages,
+void EncryptedArrayCx::buildLinPolyCoeffs(std::vector<zzX>& C,
+          const std::vector<cx_double>&oneImages, const std::vector<cx_double>&iImages,
           long precision) const
 {
   resize(C,2); // allocate space
 
   // Compute the constants x,y such that L(z) = x*z + y*conjugate(z)
-  vector<cx_double> x(size());
-  vector<cx_double> y(size());
+  std::vector<cx_double> x(size());
+  std::vector<cx_double> y(size());
   double msize = 0.0;
   for (long j=0; j<size(); j++) {
     x[j] = (oneImages[j] - the_imaginary_i*iImages[j])*0.5;

@@ -27,12 +27,10 @@
 #include "DoubleCRT.h"
 #include "FHEContext.h"
 
-NTL_CLIENT
-
 // A threaded implementation of DoubleCRT operations
 
 static
-long MakeIndexVector(const IndexSet& s, Vec<long>& v)
+long MakeIndexVector(const IndexSet& s, NTL::Vec<long>& v)
 {
   long sz = s.card();
   v.SetLength(sz);
@@ -47,14 +45,14 @@ long MakeIndexVector(const IndexSet& s, Vec<long>& v)
 // the used moduli, they are effectively reduced modulo that product
 
 
-void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
+void DoubleCRT::FFT(const NTL::ZZX& poly, const IndexSet& s)
 {
   FHE_TIMER_START;
 
   if (empty(s)) return;
 
-  static thread_local Vec<long> tls_ivec;
-  Vec<long>& ivec = tls_ivec;
+  static thread_local NTL::Vec<long> tls_ivec;
+  NTL::Vec<long>& ivec = tls_ivec;
 
   long icard = MakeIndexVector(s, ivec);
   NTL_EXEC_RANGE(icard, first, last)
@@ -65,15 +63,15 @@ void DoubleCRT::FFT(const ZZX& poly, const IndexSet& s)
   NTL_EXEC_RANGE_END
 }
 
-// FIXME: "code bloat": this just replicates the above with ZZX -> zzX
+// FIXME: "code bloat": this just replicates the above with NTL::ZZX -> zzX
 void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
 {
   FHE_TIMER_START;
 
   if (empty(s)) return;
 
-  static thread_local Vec<long> tls_ivec;
-  Vec<long>& ivec = tls_ivec;
+  static thread_local NTL::Vec<long> tls_ivec;
+  NTL::Vec<long>& ivec = tls_ivec;
 
   long icard = MakeIndexVector(s, ivec);
   NTL_EXEC_RANGE(icard, first, last)
@@ -100,7 +98,7 @@ void DoubleCRT::verify()
 
   // check that the content of i'th row is in [0,pi) for all i
   for (long i: s) {
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
 
     if (row.length() != phim) 
       throw helib::RuntimeError("DoubleCRT object has bad row length");
@@ -134,7 +132,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
 
   // If you need to mod-up the other, do it on a temporary scratch copy
   DoubleCRT tmp(context, IndexSet()); 
-  const IndexMap<vec_long>* other_map = &other.map;
+  const IndexMap<NTL::vec_long>* other_map = &other.map;
   if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
     FHE_NTIMER_START(addPrimes_2); 
     tmp = other;
@@ -149,8 +147,8 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT &other, Fun fun,
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i: s) {
     long pi = context.ithPrime(i);
-    vec_long& row = map[i];
-    const vec_long& other_row = (*other_map)[i];
+    NTL::vec_long& row = map[i];
+    const NTL::vec_long& other_row = (*other_map)[i];
 
     for (long j: range(phim))
       row[j] = fun.apply(row[j], other_row[j], pi);
@@ -182,7 +180,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
 
   // If you need to mod-up the other, do it on a temporary scratch copy
   DoubleCRT tmp(context, IndexSet()); 
-  const IndexMap<vec_long>* other_map = &other.map;
+  const IndexMap<NTL::vec_long>* other_map = &other.map;
   if (!(map.getIndexSet() <= other.map.getIndexSet())){ // Even more expensive
     FHE_NTIMER_START(addPrimes_4);
     tmp = other;
@@ -197,9 +195,9 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT &other,
   // add/sub/mul the data, element by element, modulo the respective primes
   for (long i: s) {
     long pi = context.ithPrime(i);
-    mulmod_t pi_inv = context.ithModulus(i).getQInv(); 
-    vec_long& row = map[i];
-    const vec_long& other_row = (*other_map)[i];
+    NTL::mulmod_t pi_inv = context.ithModulus(i).getQInv(); 
+    NTL::vec_long& row = map[i];
+    const NTL::vec_long& other_row = (*other_map)[i];
 
     for (long j: range(phim))
       row[j] = MulMod(row[j], other_row[j], pi, pi_inv);
@@ -222,7 +220,7 @@ DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const DoubleCRT &other, SubFun fun,
 			 bool matchIndexSets);
 
 template<class Fun>
-DoubleCRT& DoubleCRT::Op(const ZZ &num, Fun fun)
+DoubleCRT& DoubleCRT::Op(const NTL::ZZ &num, Fun fun)
 {
   if (isDryRun()) return *this;
 
@@ -232,7 +230,7 @@ DoubleCRT& DoubleCRT::Op(const ZZ &num, Fun fun)
   for (long i: s) {
     long pi = context.ithPrime(i);
     long n = rem(num, pi);  // n = num % pi
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     for (long j: range(phim))
       row[j] = fun.apply(row[j], n, pi);
   }
@@ -240,13 +238,13 @@ DoubleCRT& DoubleCRT::Op(const ZZ &num, Fun fun)
 }
 
 template
-DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const ZZ &num, MulFun fun);
+DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const NTL::ZZ &num, MulFun fun);
 
 template
-DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const ZZ &num, AddFun fun);
+DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const NTL::ZZ &num, AddFun fun);
 
 template
-DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const ZZ &num, SubFun fun);
+DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const NTL::ZZ &num, SubFun fun);
 
 DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
 {
@@ -262,16 +260,16 @@ DoubleCRT& DoubleCRT::Negate(const DoubleCRT& other)
   long phim = context.zMStar.getPhiM();
   for (long i: s) { 
     long pi = context.ithPrime(i);
-    vec_long& row = map[i];
-    const vec_long& other_row = other.map[i];
+    NTL::vec_long& row = map[i];
+    const NTL::vec_long& other_row = other.map[i];
     for (long j: range(phim))
-      row[j] = NegateMod(other_row[j], pi);
+      row[j] = NTL::NegateMod(other_row[j], pi);
   }
   return *this;
 }
 
 template<class Fun>
-DoubleCRT& DoubleCRT::Op(const ZZX &poly, Fun fun)
+DoubleCRT& DoubleCRT::Op(const NTL::ZZX &poly, Fun fun)
 {
   if (isDryRun()) return *this;
 
@@ -282,16 +280,16 @@ DoubleCRT& DoubleCRT::Op(const ZZX &poly, Fun fun)
 }
 
 template
-DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const ZZX &poly, MulFun fun);
+DoubleCRT& DoubleCRT::Op<DoubleCRT::MulFun>(const NTL::ZZX &poly, MulFun fun);
 
 template
-DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const ZZX &poly, AddFun fun);
+DoubleCRT& DoubleCRT::Op<DoubleCRT::AddFun>(const NTL::ZZX &poly, AddFun fun);
 
 template
-DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const ZZX &poly, SubFun fun);
+DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const NTL::ZZX &poly, SubFun fun);
 
 // break *this into n digits,according to the primeSets in context.digits
-void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
+void DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits, long n) const
 {
   FHE_TIMER_START;
   IndexSet allPrimes = getIndexSet() | context.specialPrimes;
@@ -318,7 +316,7 @@ void DoubleCRT::breakIntoDigits(vector<DoubleCRT>& digits, long n) const
     IndexSet notInDigit = allPrimes / digits[i].getIndexSet();
     digits[i].addPrimes(notInDigit); // add back all the primes
 
-    ZZ pi = context.productOfPrimes(context.digits[i]);
+    NTL::ZZ pi = context.productOfPrimes(context.digits[i]);
     for (long j: range(i+1, digits.size())) {
       digits[j].Sub(digits[i], /*matchIndexSets=*/false);
       digits[j] /= pi;
@@ -342,7 +340,7 @@ void DoubleCRT::addPrimes(const IndexSet& s1)
     SetZero();
     return;
   }
-  ZZX poly;
+  NTL::ZZX poly;
   toPoly(poly); // recover in coefficient representation
 
   map.insert(s1);  // add new rows to the map
@@ -369,7 +367,7 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
     return 0.0;
   }
   // compute factor to scale existing rows
-  ZZ factor = to_ZZ(1);
+  NTL::ZZ factor = NTL::to_ZZ(1);
   double logFactor = 0.0;
   for (long i: s1) { 
     long qi = context.ithPrime(i);
@@ -383,17 +381,17 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
   for (long i: iSet) { 
     long qi = context.ithPrime(i);
     long f = rem(factor, qi);     // f = factor % qi
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     // scale row by a factor of f modulo qi
-    mulmod_precon_t bninv = PrepMulModPrecon(f, qi);
+    NTL::mulmod_precon_t bninv = NTL::PrepMulModPrecon(f, qi);
     for (long j: range(phim))
-      row[j] = MulModPrecon(row[j], f, qi, bninv);
+      row[j] = NTL::MulModPrecon(row[j], f, qi, bninv);
   }
 
   // insert new rows and fill them with zeros
   map.insert(s1);  // add new rows to the map
   for (long i: s1) { 
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     for (long j: range(phim)) row[j] = 0;
   }
 
@@ -407,7 +405,7 @@ DoubleCRTHelper::DoubleCRTHelper(const FHEcontext& context)
   val = context.zMStar.getPhiM(); 
 }
 
-DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet& s)
+DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
@@ -426,7 +424,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context, const IndexSet
  
 // FIXME-IndexSet
 #if 0
-DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
+DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const FHEcontext &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
@@ -443,7 +441,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly, const FHEcontext &_context)
     FFT(poly, s);
 }
 
-DoubleCRT::DoubleCRT(const ZZX& poly)
+DoubleCRT::DoubleCRT(const NTL::ZZX& poly)
 : context(*activeContext), map(new DoubleCRTHelper(*activeContext))
 {
   FHE_TIMER_START;
@@ -463,7 +461,7 @@ DoubleCRT::DoubleCRT(const ZZX& poly)
 
 
 // *****************************************************
-// FIXME: "code bloat": this just replicates the above with ZZX -> zzX
+// FIXME: "code bloat": this just replicates the above with NTL::ZZX -> zzX
 
 DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
@@ -533,7 +531,7 @@ DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
   long phim = context.zMStar.getPhiM();
 
   for (long i: s) { 
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     for (long j: range(phim)) row[j] = 0;
   }
 }
@@ -554,7 +552,7 @@ DoubleCRT::DoubleCRT(const FHEcontext &_context)
   long phim = context.zMStar.getPhiM();
 
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     for (long j = 0; j < phim; j++) row[j] = 0;
   }
 }
@@ -575,8 +573,8 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
       const IndexSet& s = map.getIndexSet();
       long phim = context.zMStar.getPhiM();
       for (long i: s) {
-         vec_long& row = map[i];
-         const vec_long& other_row = other.map[i];
+         NTL::vec_long& row = map[i];
+         const NTL::vec_long& other_row = other.map[i];
          for (long j: range(phim))
             row[j] = other_row[j];
       }
@@ -585,7 +583,7 @@ DoubleCRT& DoubleCRT::operator=(const DoubleCRT& other)
 }
 
 
-DoubleCRT& DoubleCRT::operator=(const ZZX& poly)
+DoubleCRT& DoubleCRT::operator=(const NTL::ZZX& poly)
 {
   if (isDryRun()) return *this;
 
@@ -610,7 +608,7 @@ DoubleCRT& DoubleCRT::operator=(const zzX& poly)
   return *this;
 }
 
-DoubleCRT& DoubleCRT::operator=(const ZZ& num)
+DoubleCRT& DoubleCRT::operator=(const NTL::ZZ& num)
 {
   const IndexSet& s = map.getIndexSet();
   if (isDryRun()) return *this;
@@ -618,7 +616,7 @@ DoubleCRT& DoubleCRT::operator=(const ZZ& num)
   long phim = context.zMStar.getPhiM();
 
   for (long i: s) {
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     long pi = context.ithPrime(i);
     long n = rem(num, pi);
 
@@ -629,7 +627,7 @@ DoubleCRT& DoubleCRT::operator=(const ZZ& num)
 }
 
 // DIRT: this method affect the NTL zz_p::modulus
-long DoubleCRT::getOneRow(zz_pX& row, long idx) const
+long DoubleCRT::getOneRow(NTL::zz_pX& row, long idx) const
 {
   if (!map.getIndexSet().contains(idx)) // idx not in the primeset
     return 0;
@@ -640,18 +638,18 @@ long DoubleCRT::getOneRow(zz_pX& row, long idx) const
   return context.ithPrime(idx);
 }
 
-// Get the row corresponding to the i'th moduli, in Vec<long> format.
+// Get the row corresponding to the i'th moduli, in NTL::Vec<long> format.
 // For conveience, returns the modulus that was used for this row.
 // If idx is not in the current primesSet then do nothing and return 0;
-long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
+long DoubleCRT::getOneRow(NTL::Vec<long>& row, long idx, bool positive) const
 {
-  zz_pBak bak; bak.save();   // backup NTL's current modulus
+  NTL::zz_pBak bak; bak.save();   // backup NTL's current modulus
 
-  zz_pX& tmp = Cmodulus::getScratch_zz_pX();
+  NTL::zz_pX& tmp = Cmodulus::getScratch_zz_pX();
   long q = getOneRow(tmp,idx);
   if (q==0) return 0;        // no such index
 
-  conv(row, tmp.rep);        // copy the row to Vec<long> format
+  conv(row, tmp.rep);        // copy the row to NTL::Vec<long> format
 
   // By default, integers are in [0,q).
   // If we need the symmetric interval then make it so.
@@ -663,7 +661,7 @@ long DoubleCRT::getOneRow(Vec<long>& row, long idx, bool positive) const
 }
 
 // A parallelizable implementation of toPoly
-void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
+void DoubleCRT::toPoly(NTL::ZZX& poly, const IndexSet& s,
 		       bool positive) const
 {
   FHE_TIMER_START;
@@ -678,23 +676,23 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   // To avoid allocating these with every call, they are defined static
   // but thread_local, so concurrent calls to toPoly by multiple threads
   // will have different copies. (tls_ = "Thread-Local Storage")
-  static thread_local Vec<long> tls_ivec;
-  static thread_local Vec<long> tls_pvec;
-  static thread_local Vec< Vec<long> > tls_remtab;
-  static thread_local Vec<zz_pX> tls_tmpvec;
+  static thread_local NTL::Vec<long> tls_ivec;
+  static thread_local NTL::Vec<long> tls_pvec;
+  static thread_local NTL::Vec< NTL::Vec<long> > tls_remtab;
+  static thread_local NTL::Vec<NTL::zz_pX> tls_tmpvec;
 
   // For readability, call them by names without the tls_
-  Vec<long>& ivec = tls_ivec;      // the indexes of the active primes
-  Vec<long>& pvec = tls_pvec;
-  Vec< Vec<long> >& remtab = tls_remtab;// remtab[*][i] = coeffs of tmpvec[i]
-  Vec<zz_pX>& tmpvec = tls_tmpvec; // tmpvec[i] = current poly in i'th thread
+  NTL::Vec<long>& ivec = tls_ivec;      // the indexes of the active primes
+  NTL::Vec<long>& pvec = tls_pvec;
+  NTL::Vec< NTL::Vec<long> >& remtab = tls_remtab;// remtab[*][i] = coeffs of tmpvec[i]
+  NTL::Vec<NTL::zz_pX>& tmpvec = tls_tmpvec; // tmpvec[i] = current poly in i'th thread
 
   // initialize the ivec vector, ivec[j] = index of j'th active prime
   long phim = context.zMStar.getPhiM();
   long icard = MakeIndexVector(s1, ivec); // icard = how many active primes
 
   // Which primes are handled by what thread
-  PartitionInfo pinfo(icard);      // allocate threads to handle icard primes
+  NTL::PartitionInfo pinfo(icard);      // allocate threads to handle icard primes
   long cnt = pinfo.NumIntervals(); // how many threads are allocated
 
   // allocate space for all the coefficients modulo all the primes
@@ -712,7 +710,7 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
       long first, last;
       pinfo.interval(first, last, index);
 
-      zz_pX& tmp = tmpvec[index];
+      NTL::zz_pX& tmp = tmpvec[index];
   
       for (long j: range(first, last)) {
         long i = ivec[j];
@@ -728,28 +726,28 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
   // Run the integer CRT in parallel for the different coefficients
   {
   FHE_NTIMER_START(toPoly_CRT);
-  PartitionInfo pinfo1(phim);
+  NTL::PartitionInfo pinfo1(phim);
   long cnt1 = pinfo1.NumIntervals();
 
   // static thread-local variables to avoid re-allocation
-  static thread_local ZZ tls_prod;
-  static thread_local ZZ tls_prod_half;
-  static thread_local Vec<long> tls_qvec;
-  static thread_local Vec<double> tls_qrecipvec;
-  static thread_local Vec<long> tls_tvec;
-  static thread_local Vec<mulmod_precon_t> tls_tqinvvec;
+  static thread_local NTL::ZZ tls_prod;
+  static thread_local NTL::ZZ tls_prod_half;
+  static thread_local NTL::Vec<long> tls_qvec;
+  static thread_local NTL::Vec<double> tls_qrecipvec;
+  static thread_local NTL::Vec<long> tls_tvec;
+  static thread_local NTL::Vec<NTL::mulmod_precon_t> tls_tqinvvec;
 
-  static thread_local ZZVec tls_prod1vec;
-  static thread_local ZZVec tls_resvec;
+  static thread_local NTL::ZZVec tls_prod1vec;
+  static thread_local NTL::ZZVec tls_resvec;
 
-  ZZ& prod = tls_prod;                   // product of all the primes
-  ZZ& prod_half = tls_prod_half;         // = (prod+1)/2
-  ZZVec& prod1vec = tls_prod1vec;        // prod1vec[i] = prod / qi
-  Vec<long>& qvec = tls_qvec;            // vector of the primes themselves
-  Vec<double>& qrecipvec = tls_qrecipvec;// keeps 1/qi for each prime qi
-  Vec<long>& tvec = tls_tvec;            // tvec[i] = (prod / qi)^{-1} mod qi
-  Vec<mulmod_precon_t>& tqinvvec = tls_tqinvvec; // tvec with extra tables
-  ZZVec& resvec = tls_resvec;
+  NTL::ZZ& prod = tls_prod;                   // product of all the primes
+  NTL::ZZ& prod_half = tls_prod_half;         // = (prod+1)/2
+  NTL::ZZVec& prod1vec = tls_prod1vec;        // prod1vec[i] = prod / qi
+  NTL::Vec<long>& qvec = tls_qvec;            // vector of the primes themselves
+  NTL::Vec<double>& qrecipvec = tls_qrecipvec;// keeps 1/qi for each prime qi
+  NTL::Vec<long>& tvec = tls_tvec;            // tvec[i] = (prod / qi)^{-1} mod qi
+  NTL::Vec<NTL::mulmod_precon_t>& tqinvvec = tls_tqinvvec; // tvec with extra tables
+  NTL::ZZVec& resvec = tls_resvec;
 
   qvec.SetLength(icard);
   qrecipvec.SetLength(icard);
@@ -778,9 +776,9 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
     long q = qvec[j];
     div(prod1vec[j], prod, q);
     long t = rem(prod1vec[j], q);
-    t = InvMod(t, q);
+    t = NTL::InvMod(t, q);
     tvec[j] = t;
-    tqinvvec[j] = PrepMulModPrecon(t, q);
+    tqinvvec[j] = NTL::PrepMulModPrecon(t, q);
   }
 
   if (resvec.length() != phim || resvec.BaseSize() != sz+1) {
@@ -802,10 +800,10 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
       long *qvecp = qvec.elts();
       double *qrecipvecp = qrecipvec.elts();
       long *tvecp = tvec.elts();
-      mulmod_precon_t *tqinvvecp = tqinvvec.elts();
-      ZZ *prod1vecp = prod1vec.elts();
+      NTL::mulmod_precon_t *tqinvvecp = tqinvvec.elts();
+      NTL::ZZ *prod1vecp = prod1vec.elts();
 
-      ZZ tmp;
+      NTL::ZZ tmp;
       tmp.SetSize(sz+4);
 
       for (long h: range(first, last)) { // CRT the h'th coefficient
@@ -816,10 +814,10 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
         for (long j: range(icard)) { // Add one prime at a time
           long q = qvecp[j];
           long t = tvecp[j];
-          mulmod_precon_t tqinv = tqinvvecp[j];
+          NTL::mulmod_precon_t tqinv = tqinvvecp[j];
           long r = remvec[j];
           double qrecip = qrecipvecp[j];
-          r = MulModPrecon(r, t, q, tqinv);
+          r = NTL::MulModPrecon(r, t, q, tqinv);
           MulAddTo(tmp, prod1vecp[j], r);
           quotient += r*qrecip;
         }
@@ -847,14 +845,14 @@ void DoubleCRT::toPoly(ZZX& poly, const IndexSet& s,
 
 
 
-void DoubleCRT::toPoly(ZZX& p, bool positive) const
+void DoubleCRT::toPoly(NTL::ZZX& p, bool positive) const
 {
   const IndexSet& s = map.getIndexSet();
   toPoly(p, s, positive);
 }
 
 // Division by constant
-DoubleCRT& DoubleCRT::operator/=(const ZZ &num)
+DoubleCRT& DoubleCRT::operator/=(const NTL::ZZ &num)
 {
   if (isDryRun()) return *this;
 
@@ -863,11 +861,11 @@ DoubleCRT& DoubleCRT::operator/=(const ZZ &num)
   
   for (long i: s) { 
     long pi = context.ithPrime(i);
-    long n = InvMod(rem(num, pi),pi);  // n = num^{-1} mod pi
-    vec_long& row = map[i];
-    mulmod_precon_t precon = PrepMulModPrecon(n, pi);
+    long n = NTL::InvMod(rem(num, pi),pi);  // n = num^{-1} mod pi
+    NTL::vec_long& row = map[i];
+    NTL::mulmod_precon_t precon = NTL::PrepMulModPrecon(n, pi);
     for (long j: range(phim))
-      row[j] = MulModPrecon(row[j], n, pi, precon);
+      row[j] = NTL::MulModPrecon(row[j], n, pi, precon);
   }
   return *this;
 }
@@ -882,9 +880,9 @@ void DoubleCRT::Exp(long e)
   
   for (long i: s) { 
     long pi = context.ithPrime(i);
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     for (long j: range(phim))
-      row[j] = PowerMod(row[j], e, pi);
+      row[j] = NTL::PowerMod(row[j], e, pi);
   }
 }
 
@@ -900,14 +898,14 @@ void DoubleCRT::automorph(long k)
 
   long m = zMStar.getM();
   long phim = zMStar.getPhiM();
-  vector<long> tmp(m);  // temporary array of size m
-  mulmod_precon_t precon = PrepMulModPrecon(k, m);
+  std::vector<long> tmp(m);  // temporary array of size m
+  NTL::mulmod_precon_t precon = NTL::PrepMulModPrecon(k, m);
 
   const IndexSet& s = map.getIndexSet();
 
   // go over the rows, permute them one at a time
   for (long i: s) { 
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
 
     // Compute new[j] = old[j*k mod m]
 
@@ -917,7 +915,7 @@ void DoubleCRT::automorph(long k)
     // }
     // for (long j=1; j<m; j++) { // 2nd pass: copy back from temporary array
     //   long idx = zMStar.indexInZmstar_unchecked(j);
-    //   if (idx>=0) row[idx] = tmp[MulModPrecon(j,k,m,precon)];
+    //   if (idx>=0) row[idx] = tmp[NTL::MulModPrecon(j,k,m,precon)];
     //                                        // new[j] = old[j*k mod m]
     // }
 
@@ -927,7 +925,7 @@ void DoubleCRT::automorph(long k)
        tmp[zMStar.repInZmstar_unchecked(j)] = row[j];
     }
     for (long j: range(phim)) {// 2nd pass: copy back from temp array
-       row[j] = tmp[MulModPrecon(zMStar.repInZmstar_unchecked(j),k,m,precon)];
+       row[j] = tmp[NTL::MulModPrecon(zMStar.repInZmstar_unchecked(j),k,m,precon)];
     }
   }
 }
@@ -942,22 +940,22 @@ void DoubleCRT::automorph(long k)
     throw helib::RuntimeError("DoubleCRT::automorph: k not in Zm*");
   long m = zMStar.getM();
   long phim = zMStar.getPhiM();
-  vector<long> tmp(phim);  // temporary array of size m
+  std::vector<long> tmp(phim);  // temporary array of size m
 
-  k = InvMod(k, m);
-  mulmod_precon_t precon = PrepMulModPrecon(k, m);
+  k = NTL::InvMod(k, m);
+  NTL::mulmod_precon_t precon = NTL::PrepMulModPrecon(k, m);
   const IndexSet& s = map.getIndexSet();
 
   // go over the rows, permute them one at a time
   // new[j*k mod m] = old[j]
   for (long i = s.first(); i <= s.last(); i = s.next(i)) {
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
 
     for (long j = 0; j < phim; j++) tmp[j] = row[j];
 
     for (long j = 0; j < phim; j++) {
        long rep = zMStar.repInZmstar_unchecked(j);
-       rep = MulModPrecon(rep, k, m, precon);
+       rep = NTL::MulModPrecon(rep, k, m, precon);
        long idx = zMStar.indexInZmstar_unchecked(rep);
        row[idx] = tmp[j];
     }
@@ -977,7 +975,7 @@ void DoubleCRT::complexConj()
 
   // go over the rows, permute them one at a time
   for (long i: s) { 
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     for (long j: range(phim/2)) {// swap i <-> phi(m)-i-1
       std::swap(row[j], row[phim-j-1]);
     }
@@ -986,7 +984,7 @@ void DoubleCRT::complexConj()
 
 
 // fills each row i with random integers mod pi
-void DoubleCRT::randomize(const ZZ* seed) 
+void DoubleCRT::randomize(const NTL::ZZ* seed) 
 {
   FHE_TIMER_START;
 
@@ -997,21 +995,21 @@ void DoubleCRT::randomize(const ZZ* seed)
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();
 
-  RandomStream& stream = GetCurrentRandomStream();
+  NTL::RandomStream& stream = NTL::GetCurrentRandomStream();
   const long bufsz = 2048;
 
-  Vec<unsigned char> buf_storage;
+  NTL::Vec<unsigned char> buf_storage;
   buf_storage.SetLength(bufsz);
 
   unsigned char *buf = buf_storage.elts();
 
   for (long i: s) { 
     long pi = context.ithPrime(i);
-    long k = NumBits(pi-1);
+    long k = NTL::NumBits(pi-1);
     long nb = (k+7)/8;
     unsigned long mask = (1UL << k) - 1UL;
 
-    vec_long& row = map[i];
+    NTL::vec_long& row = map[i];
     long j = 0;
     
     for (;;) {
@@ -1143,15 +1141,15 @@ double DoubleCRT::sampleUniform(long B)
   return retval;
 }
 
-xdouble DoubleCRT::sampleUniform(const ZZ& B)
+NTL::xdouble DoubleCRT::sampleUniform(const NTL::ZZ& B)
 {
-  ZZX poly;
-  xdouble retval = ::sampleUniform(poly, context, B);
+  NTL::ZZX poly;
+  NTL::xdouble retval = ::sampleUniform(poly, context, B);
   *this = poly;
   return retval;
 }
 
-void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, ZZX& delta)
+void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, NTL::ZZX& delta)
 {
   IndexSet diff = getIndexSet() / s;
   if (empty(diff)) return;     // nothing to do
@@ -1165,7 +1163,7 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, ZZX& delta)
     return;
   }
 
-  ZZ diffProd = context.productOfPrimes(diff); // mod-down by this factor
+  NTL::ZZ diffProd = context.productOfPrimes(diff); // mod-down by this factor
   toPoly(delta, diff); // convert to coeff-representation modulo diffProd
 
   if (ptxtSpace > 1) { // make delta divisible by ptxtSpace
@@ -1176,17 +1174,17 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, ZZX& delta)
     // divisible by ptxtSpace.
     long p_over_2 = ptxtSpace/2;
     long p_mod_2 = ptxtSpace%2;
-    long prodInv = InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
+    long prodInv = NTL::InvMod(rem(diffProd,ptxtSpace), ptxtSpace);
 
     for (long i: range(delta.rep.length())) { 
       long delta_i_modP = rem(delta.rep[i],ptxtSpace);
       if (delta_i_modP != 0) { // if not already 0 mod ptxtSpace
-	delta_i_modP = MulMod(delta_i_modP, prodInv, ptxtSpace);
+	delta_i_modP = NTL::MulMod(delta_i_modP, prodInv, ptxtSpace);
 
 	// NOTE: this makes sure we get a more truly balanced remainder 
 	if (delta_i_modP > p_over_2 ||
 	    (p_mod_2 == 0 && delta_i_modP == p_over_2 && 
-             (sign(delta.rep[i]) < 0 || (sign(delta.rep[i]) == 0 && RandomBnd(2) )))) 
+             (sign(delta.rep[i]) < 0 || (sign(delta.rep[i]) == 0 && NTL::RandomBnd(2) )))) 
 	  delta_i_modP -= ptxtSpace;
 	delta.rep[i] -= diffProd * delta_i_modP;
       }
@@ -1199,21 +1197,21 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s, long ptxtSpace, ZZX& delta)
   *this /= diffProd; // *this is divisible by diffProd, so this operation actually scales it down
 }
 
-ostream& operator<< (ostream &str, const DoubleCRT &d)
+std::ostream& operator<< (std::ostream &str, const DoubleCRT &d)
 {
   const IndexSet& set = d.map.getIndexSet();
 
   // check that the content of i'th row is in [0,pi) for all i
-  str << "[" << set << endl;
+  str << "[" << set << std::endl;
   for (long i: set) 
     str << " " << d.map[i] << "\n";
   str << "]";
   return str;
 }
 
-istream& operator>> (istream &str, DoubleCRT &d)
+std::istream& operator>> (std::istream &str, DoubleCRT &d)
 {
-  //  cerr << "DoubleCRT[";
+  //  std::cerr << "DoubleCRT[";
   // Advance str beyond first '[' 
   seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
 
@@ -1240,33 +1238,33 @@ istream& operator>> (istream &str, DoubleCRT &d)
 
   // Advance str beyond closing ']'
   seekPastChar(str, ']');
-  //  cerr << "]";
+  //  std::cerr << "]";
   return str;
 }
 
-void DoubleCRT::write(ostream& str) const
+void DoubleCRT::write(std::ostream& str) const
 {
   const IndexSet& set = map.getIndexSet(); 
-//  cerr << "[DCRT::write] set: " << set << endl;
+//  std::cerr << "[DCRT::write] set: " << set << std::endl;
   set.write(str);
   
   for(long i: set) { 
     write_ntl_vec_long(str, map[i]);
- //   cerr << "[DCRT::write] map[i]: " << map[i] << endl;
+ //   std::cerr << "[DCRT::write] map[i]: " << map[i] << std::endl;
   }
 }
 
-void DoubleCRT::read(istream& str)
+void DoubleCRT::read(std::istream& str)
 {
   IndexSet set;
   set.read(str); // read in the indexSet
   map.clear();
   map.insert(set); // fix the index set for the data
-//  cerr << "[DCRT::read] set: " << set << endl;
+//  std::cerr << "[DCRT::read] set: " << set << std::endl;
  
   for(long i: set) { 
     read_ntl_vec_long(str, map[i]);    
- //   cerr << "[DCRT::read] map[i]: " << map[i] << endl;
+ //   std::cerr << "[DCRT::read] map[i]: " << map[i] << std::endl;
   }
 }
 

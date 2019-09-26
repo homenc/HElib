@@ -26,7 +26,6 @@ using namespace tr1;
 #endif
 
 #include <NTL/vector.h>
-NTL_CLIENT
 #include "NumbTh.h"
 #include "EncryptedArray.h"
 #include "permutations.h"
@@ -122,13 +121,13 @@ long reducedCount(const list<long>& x, long n, bool *aux)
 // For j in [0..nlev-i) tab[i][j] is the cost of collapsing levels i..i+j.
 // I.e., how many different shift amounts would we need to implement for
 // a permutation-network-layer constructed by collapsing these levels.
-void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
+void buildBenesCostTable(long n, long k, bool good, NTL::Vec< NTL::Vec<long> >& tab)
 {
   long nlev = 2*k-1;
   tab.SetLength(nlev);
   for (long i = 0; i < nlev; i++) tab[i].SetLength(nlev-i);
 
-  Vec<bool> aux_vec;
+  NTL::Vec<bool> aux_vec;
   aux_vec.SetLength(2*n-1);
   bool *aux = &aux_vec[n-1];
   for (long i = 0; i < 2*n-1; i++) aux_vec[i] = false;
@@ -185,8 +184,8 @@ static long length(LongNodePtr ptr)
   return res;
 }
 
-// Converts list<long> to Vec<long>
-static long listToVec(Vec<long>& vec, LongNodePtr ptr)
+// Converts list<long> to NTL::Vec<long>
+static long listToVec(NTL::Vec<long>& vec, LongNodePtr ptr)
 {
   long len = length(ptr);
 
@@ -270,7 +269,7 @@ typedef unordered_map< BenesMemoKey, BenesMemoEntry,
 // collapse anything.)
 
 BenesMemoEntry optimalBenesAux(long i, long budget, long nlev, 
-                               const Vec< Vec<long> >& costTab, 
+                               const NTL::Vec< NTL::Vec<long> >& costTab,
                                BenesMemoTable& memoTab)
 {
   //OLD: assert(i >= 0 && i <= nlev);
@@ -345,7 +344,7 @@ void optimalBenes(long n, long budget, bool good,
   long k = GeneralBenesNetwork::depth(n); // k = ceiling(log_2 n)
   long nlev = 2*k - 1;  // before collapsing, we have 2k-1 levels
 
-  Vec< Vec<long> > costTab;
+  NTL::Vec< NTL::Vec<long> > costTab;
   // costTab[i][j] to holds the cost of collapsing levels i..i+j
 
   buildBenesCostTable(n, k, good, costTab);
@@ -647,7 +646,7 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
       bool good1 = good;
       bool good2 = good;
 
-      if (good && GCD(order1, order/order1) != 1)
+      if (good && NTL::GCD(order1, order/order1) != 1)
         good2 = false;
 
       // The logic is that if the problem is "good"
@@ -690,7 +689,7 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
 // and mid token between the trees. This procedure splits the "current
 // remaining budget" between trees i through vec.length()-1.
 UpperMemoEntry 
-optimalUpperAux(const Vec<GenDescriptor>& vec, long i, long budget, long mid,
+optimalUpperAux(const NTL::Vec<GenDescriptor>& vec, long i, long budget, long mid,
 		UpperMemoTable& upperMemoTable, LowerMemoTable& lowerMemoTable)
 {
   //OLD: assert(i >= 0 && i <= vec.length());
@@ -859,8 +858,8 @@ static void computeEvalues(const OneGeneratorTree &T, long idx, long genOrd)
   else {
     long f1 = CRTcoeff(sz1, sz2); // f1 = 0 mod sz1, 1 mod sz2
     long f2 = sz1*sz2 +1 - f1;    // f2 = 1 mod sz1, 0 mod sz2
-    lData.e = MulMod(ee, f2, genOrd);
-    rData.e = MulMod(ee, f1, genOrd);
+    lData.e = NTL::MulMod(ee, f2, genOrd);
+    rData.e = NTL::MulMod(ee, f1, genOrd);
   }
   // Recurse on the two subtrees
   computeEvalues(T, left, genOrd);
@@ -879,7 +878,7 @@ static long copyToGenTree(OneGeneratorTree& gTree, SplitNodePtr& solution)
 
 // Compute the trees corresponding to the "optimal" way of breaking
 // a permutation into dimensions, subject to some constraints
-long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens, 
+long GeneratorTrees::buildOptimalTrees(const NTL::Vec<GenDescriptor>& gens,
 				       long depthBound)
 {
   //OLD: assert(gens.length() >= 0);
@@ -941,7 +940,7 @@ long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
   ComputeCubeMapping();
 
 #ifdef DEBUG_PRINTOUT
-  Vec<long> dims;  // The "crude" cube dimensions, one dimension per tree
+  NTL::Vec<long> dims;  // The "crude" cube dimensions, one dimension per tree
   getCubeDims(dims);
   std::cerr << " dims="<<dims<<endl;
   std::cerr << " trees=" << *this << endl;

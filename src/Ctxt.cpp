@@ -23,19 +23,18 @@
 #include "norms.h"
 #include "fhe_stats.h"
 
-NTL_CLIENT
 
 extern int fhe_watcher;
 static const double safety = 1*log(2.0); // 1 bits of safety
 
-void SKHandle::read(istream& str)
+void SKHandle::read(std::istream& str)
 {
   powerOfS = read_raw_int(str);
   powerOfX = read_raw_int(str);
   secretKeyID = read_raw_int(str);
 }
  
-void SKHandle::write(ostream& str) const
+void SKHandle::write(std::ostream& str) const
 {
   write_raw_int(str, powerOfS);
   write_raw_int(str, powerOfX);
@@ -50,7 +49,7 @@ std::set<long>* FHEglobals::automorphVals2 = NULL;
 // NOTE: for now, it leaves the intFactor field of *this alone.
 // This assumption is relied upon in the reCrypt() and thinReCrypt()
 // routines in recryption.cpp.
-void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
+void Ctxt::DummyEncrypt(const NTL::ZZX& ptxt, double size)
 {
   const FHEcontext& context = getContext();
   const PAlgebra& zMStar = context.zMStar;
@@ -86,7 +85,7 @@ void Ctxt::DummyEncrypt(const ZZX& ptxt, double size)
     DoubleCRT dcrt(ptxt, context, primeSet);
     parts.assign(1, CtxtPart(dcrt));
   } else {
-    ZZX tmp;
+    NTL::ZZX tmp;
     MulMod(tmp, ptxt, f, ptxtSpace, /*positive=*/false);
     DoubleCRT dcrt(tmp, context, primeSet);
     parts.assign(1, CtxtPart(dcrt));
@@ -114,10 +113,10 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, const KeySwitch& ks)
   const FHEcontext& context = p.getContext();
   const PAlgebra& palg = context.zMStar;
 
-  xdouble ks_bound = ks.noiseBound;
+  NTL::xdouble ks_bound = ks.noiseBound;
 
   long nDigits = 0;
-  xdouble addedNoise = to_xdouble(0.0);
+  NTL::xdouble addedNoise = NTL::to_xdouble(0.0);
   double sizeLeft = context.logOfProduct(p.getIndexSet());
   for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
     nDigits++;
@@ -127,7 +126,7 @@ keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, const KeySwitch& ks)
 
     // Added noise due to this digit is keySwMatrixNoise * |Di|, 
     // where |Di| is the magnitude of the digit
-    addedNoise += ks_bound * xexp(digitSize);
+    addedNoise += ks_bound * NTL::xexp(digitSize);
 
     sizeLeft -= digitSize;
   }
@@ -163,7 +162,7 @@ std::pair<long, NTL::xdouble> Ctxt::computeKSNoise(long partIdx, const KeySwitch
 // Multiply vector of digits by key-switching matrix and add to *this.
 // It is assumed that W has at least as many b[i]'s as there are digits.
 // The vector of digits is modified in place.
-void Ctxt::keySwitchDigits(const KeySwitch& W, vector<DoubleCRT>& digits)
+void Ctxt::keySwitchDigits(const KeySwitch& W, std::vector<DoubleCRT>& digits)
 {  // An object to hold the pseudorandom ai's, note that it must be defined
   // with the maximum number of levels, else the PRG will go out of synch.
   // FIXME: This is a bug waiting to happen.
@@ -226,7 +225,7 @@ bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
 
   // compare ratFactor, ignoring small deviations
   if (ratFactor == 0.0 && other.ratFactor != 0.0) return false;
-  xdouble ratio = other.ratFactor / ratFactor;
+  NTL::xdouble ratio = other.ratFactor / ratFactor;
   if (ratio<0.9 && ratio>1.1) return false;
 
   // compare noiseBound, ignoring small deviations
@@ -238,13 +237,13 @@ bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
 // Constructor
 Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
   context(newPubKey.getContext()), pubKey(newPubKey), ptxtSpace(newPtxtSpace),
-  noiseBound(to_xdouble(0.0))
+  noiseBound(NTL::to_xdouble(0.0))
 {
   if (ptxtSpace<2) {
     ptxtSpace = pubKey.getPtxtSpace();
   } else {
     //OLD: assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
-    helib::assertTrue(GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1, "Ptxt spaces from ciphertext and public key are coprime"); // sanity check
+    helib::assertTrue(NTL::GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1, "Ptxt spaces from ciphertext and public key are coprime"); // sanity check
   }
   primeSet=context.ctxtPrimes;
   intFactor = 1;
@@ -255,14 +254,14 @@ Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
 Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt):
   context(ctxt.getPubKey().getContext()), pubKey(ctxt.getPubKey()), 
   ptxtSpace(ctxt.getPtxtSpace()),
-  noiseBound(to_xdouble(0.0))
+  noiseBound(NTL::to_xdouble(0.0))
 {
   // same body as previous constructor
   if (ptxtSpace<2) {
     ptxtSpace = pubKey.getPtxtSpace();
   } else {
     //OLD: assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
-    helib::assertTrue(GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1, "Ptxt spaces from ciphertext and public key are coprime"); // sanity check
+    helib::assertTrue(NTL::GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1, "Ptxt spaces from ciphertext and public key are coprime"); // sanity check
   }
   primeSet=context.ctxtPrimes;
   intFactor = 1;
@@ -293,7 +292,7 @@ Ctxt& Ctxt::privateAssign(const Ctxt& other)
 void Ctxt::mulIntFactor(long e)
 {
   if (e==1) return; // nothing to do
-  intFactor = MulMod(intFactor, e, ptxtSpace);
+  intFactor = NTL::MulMod(intFactor, e, ptxtSpace);
   long bal_e = balRem(e, ptxtSpace);
   for (auto& part : parts) part *= bal_e;
   noiseBound *= abs(bal_e); // because every part was scaled by bal_e
@@ -317,10 +316,10 @@ void Ctxt::modUpToSet(const IndexSet &s)
   }
 
   // The noise bound grows by a factor of exp(f)
-  noiseBound *= xexp(f);
+  noiseBound *= NTL::xexp(f);
 
   // If CKKS, the rational factor grows by a factor of exp(f)
-  ratFactor *= xexp(f);
+  ratFactor *= NTL::xexp(f);
 
   primeSet.insert(setDiff); // add setDiff to primeSet
   //OLD: assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still valid
@@ -369,7 +368,7 @@ void Ctxt::modDownToSet(const IndexSet &s)
   // noise.
 
   // Get an estimate for the added noise term for modulus switching
-  xdouble addedNoiseBound = modSwitchAddedNoiseBound();
+  NTL::xdouble addedNoiseBound = modSwitchAddedNoiseBound();
 
   // For approximate nums, make sure that scaling factor is large enough
   if (isCKKS()) {
@@ -378,9 +377,9 @@ void Ctxt::modDownToSet(const IndexSet &s)
     // (safety=log 2 defined at top of the file). This ensures that we are
     // losing less than one extra bit of accuracy.
     double logScaledNoise= log(noiseBound)-getContext().logOfProduct(setDiff);
-    xdouble xf = ceil(xexp(log(addedNoiseBound) - logScaledNoise + safety));
+    NTL::xdouble xf = ceil(NTL::xexp(log(addedNoiseBound) - logScaledNoise + safety));
     if (xf>1.0) { // need to multiply by an extra factor
-        ZZ factorZZ = conv<ZZ>(xf);
+        NTL::ZZ factorZZ = NTL::conv<NTL::ZZ>(xf);
         for (auto& part : parts)
           part *= factorZZ;
         noiseBound *= xf; // Increase noiseBound
@@ -401,25 +400,25 @@ void Ctxt::modDownToSet(const IndexSet &s)
     // a factor F we still need to multiply intFactor by (F mod p).
     long F = 1;
     if (ptxtSpace>1) F = rem(context.productOfPrimes(setDiff),ptxtSpace);
-    if (F > 1) intFactor = MulMod(intFactor, F, ptxtSpace);
+    if (F > 1) intFactor = NTL::MulMod(intFactor, F, ptxtSpace);
     Warning("Ctxt::modDownToSet: DEGENERATE DROP");
   } 
   else {                               // do real mod switching
 #if 1
-    ZZX delta;
-    ZZ diff = context.productOfPrimes(setDiff);
-    xdouble xdiff = conv<xdouble>(diff);
+    NTL::ZZX delta;
+    NTL::ZZ diff = context.productOfPrimes(setDiff);
+    NTL::xdouble xdiff = NTL::conv<NTL::xdouble>(diff);
 
     long nparts = parts.size();
 
-    vector<vector<double>> fdeltas(nparts);
+    std::vector<std::vector<double>> fdeltas(nparts);
     for (long i: range(nparts)) {
-      CtxtPart& part = parts[i]; 
-      vector<double>& fdelta = fdeltas[i];
+      CtxtPart& part = parts[i];
+      std::vector<double>& fdelta = fdeltas[i];
       part.scaleDownToSet(intersection, ptxtSpace, delta);
       fdelta.resize(delta.rep.length());
       for (long j: range(delta.rep.length())) {
-        fdelta[j] = conv<double>( conv<xdouble>(delta.rep[j])/xdiff );
+        fdelta[j] = NTL::conv<double>( NTL::conv<NTL::xdouble>(delta.rep[j])/xdiff );
 
         // sanity check: |fdelta[j]| <= ptxtSpace/2
         if (fabs(fdelta[j]) > double(ptxtSpace)/2.0 + 0.0001) {
@@ -431,17 +430,17 @@ void Ctxt::modDownToSet(const IndexSet &s)
       }
     }
 
-    vector<double> norms(nparts);
+    std::vector<double> norms(nparts);
     FHE_NTIMER_START(AAA_modDownEnbeddings);
 #if 1
     for (long i: range(nparts/2)) {
       // compute two for the price of one!
-      embeddingLargestCoeff_x2(norms[2*i], norms[2*i+1], 
-                               fdeltas[2*i], fdeltas[2*i+1], 
+      embeddingLargestCoeff_x2(norms[2*i], norms[2*i+1],
+                               fdeltas[2*i], fdeltas[2*i+1],
                                context.zMStar);
     }
     if (nparts%2) {
-      norms[nparts-1] = 
+      norms[nparts-1] =
         embeddingLargestCoeff(fdeltas[nparts-1], context.zMStar);
     }
 #else
@@ -449,11 +448,11 @@ void Ctxt::modDownToSet(const IndexSet &s)
       norms[i] = embeddingLargestCoeff(fdeltas[i], context.zMStar);
 #endif
     FHE_NTIMER_STOP(AAA_modDownEnbeddings);
-      
-    xdouble addedNoise(0.0);
+
+    NTL::xdouble addedNoise(0.0);
 
     for (long i: range(nparts)) {
-      const CtxtPart& part = parts[i]; 
+      const CtxtPart& part = parts[i];
       double norm = norms[i];
 
       if (part.skHandle.isOne())
@@ -461,19 +460,19 @@ void Ctxt::modDownToSet(const IndexSet &s)
       else {
 	long keyId = part.skHandle.getSecretKeyID();
 	long d = part.skHandle.getPowerOfS();
-	xdouble h = conv<xdouble>(pubKey.getSKeyBound(keyId));
+	NTL::xdouble h = NTL::conv<NTL::xdouble>(pubKey.getSKeyBound(keyId));
 
 	addedNoise += norm*NTL::power(h, d);
       }
     }
 
     // update the noise estimate
-    xdouble f = xexp(context.logOfProduct(setDiff));
+    NTL::xdouble f = NTL::xexp(context.logOfProduct(setDiff));
     ratFactor /= f;  // The factor in CKKS encryption
     noiseBound /= f;
     noiseBound += addedNoise;
 
-    double ratio = conv<double>(addedNoise/addedNoiseBound);
+    double ratio = NTL::conv<double>(addedNoise/addedNoiseBound);
 
     FHE_STATS_UPDATE("mod-switch-added-noise", ratio);
 
@@ -482,14 +481,14 @@ void Ctxt::modDownToSet(const IndexSet &s)
     }
 
 #else
-    ZZX delta;
+    NTL::ZZX delta;
 
     for (auto &part : parts) {
       part.scaleDownToSet(intersection, ptxtSpace, delta);
     }
 
     // update the noise estimate
-    xdouble f = xexp(context.logOfProduct(setDiff));
+    NTL::xdouble f = NTL::xexp(context.logOfProduct(setDiff));
     ratFactor /= f;  // The factor in CKKS encryption
     noiseBound /= f;
     noiseBound += addedNoiseBound;
@@ -501,7 +500,7 @@ void Ctxt::modDownToSet(const IndexSet &s)
   helib::assertTrue(verifyPrimeSet(), "primeSet is no longer valid"); // sanity-check: ensure primeSet is still valid
 }
 
-void Ctxt::blindCtxt(const ZZX& poly)
+void Ctxt::blindCtxt(const NTL::ZZX& poly)
 {
   Ctxt tmp(pubKey);
   pubKey.Encrypt(tmp,poly,ptxtSpace,/*highNoise=*/true);
@@ -515,7 +514,7 @@ void Ctxt::blindCtxt(const ZZX& poly)
 // Reduce plaintext space to a divisor of the original plaintext space
 void Ctxt::reducePtxtSpace(long newPtxtSpace)
 {
-  long g = GCD(ptxtSpace, newPtxtSpace);
+  long g = NTL::GCD(ptxtSpace, newPtxtSpace);
   //OLD: assert (g>1); // NOTE: Will trigger if called for CKKS ciphertext
   helib::assertTrue (g>1, "New and old plaintext spaces are coprime"); // NOTE: Will trigger if called for CKKS ciphertext
   ptxtSpace = g;
@@ -605,8 +604,8 @@ void Ctxt::reLinearize(long keyID)
   Ctxt tmp(pubKey, ptxtSpace); // an empty ciphertext, same plaintext space
   tmp.intFactor = intFactor;   // same intFactor, too
   tmp.ptxtMag = ptxtMag;       // same CKKS plaintext size
-  tmp.noiseBound = noiseBound * xexp(logProd);  // The noise after mod-up
-  tmp.ratFactor = ratFactor * xexp(logProd);  // CKKS factor after mod-up
+  tmp.noiseBound = noiseBound * NTL::xexp(logProd);  // The noise after mod-up
+  tmp.ratFactor = ratFactor * NTL::xexp(logProd);  // CKKS factor after mod-up
 
   for (CtxtPart& part : parts) {
     // For a part relative to 1 or base,  only scale and add
@@ -624,7 +623,7 @@ void Ctxt::reLinearize(long keyID)
     helib::assertTrue(W.toKeyID>=0, "No key-switching matrix exists");
 
     if (g>1) { // g==1 for CKKS, g>1 for BGV
-      g = GCD(W.ptxtSpace, g); // verify that the plaintext spaces match
+      g = NTL::GCD(W.ptxtSpace, g); // verify that the plaintext spaces match
       //OLD: assert (g>1);
       helib::assertTrue (g>1, "Plaintext spaces do not match");
       tmp.ptxtSpace = g;
@@ -680,7 +679,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // digits using the special primes. This is the most expensive operation
   // during homormophic evaluation, so it should be thoroughly optimized.
 
-  vector<DoubleCRT> polyDigits;
+  std::vector<DoubleCRT> polyDigits;
   p.breakIntoDigits(polyDigits, nDigits);
 
   // Finally we multiply the vector of digits by the key-switching matrix
@@ -748,7 +747,7 @@ void Ctxt::addPart(const DoubleCRT& part, const SKHandle& handle,
 void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 {
   if (isCKKS()) {
-    addConstantCKKS(dcrt, to_xdouble(size));
+    addConstantCKKS(dcrt, NTL::to_xdouble(size));
     return;
   }
 
@@ -765,7 +764,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   long f = 1;
   if (ptxtSpace > 2) {
     f = rem(context.productOfPrimes(primeSet),ptxtSpace);
-    f = MulMod(intFactor, f, ptxtSpace);
+    f = NTL::MulMod(intFactor, f, ptxtSpace);
     f = balRem(f, ptxtSpace);
   }
 
@@ -787,7 +786,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
 void Ctxt::addConstant(const NTL::ZZX& poly, double size)
 {
   if (size < 0 && !isCKKS()) {
-    size = conv<double>(embeddingLargestCoeff(poly, getContext().zMStar));
+    size = NTL::conv<double>(embeddingLargestCoeff(poly, getContext().zMStar));
   }
   
   addConstant(DoubleCRT(poly,context,primeSet), size);
@@ -795,7 +794,7 @@ void Ctxt::addConstant(const NTL::ZZX& poly, double size)
 }
 
 // Add a constant polynomial
-void Ctxt::addConstant(const ZZ& c)
+void Ctxt::addConstant(const NTL::ZZ& c)
 {
   if (isCKKS()) {
     addConstantCKKS(c);
@@ -806,7 +805,7 @@ void Ctxt::addConstant(const ZZ& c)
   if (cc > ptxtSpace/2) cc -= ptxtSpace;
   dcrt = cc;
 
-  double size = to_double(cc);
+  double size = NTL::to_double(cc);
 
   addConstant(dcrt, size);
 }
@@ -816,7 +815,7 @@ void Ctxt::addConstant(const ZZ& c)
 // a bound on the size of the content of the slots. If the factor is not
 // specified, we the default PAlgebraModCx::encodeScalingFactor()/size
 void addSomePrimes(Ctxt& c);
-void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, xdouble factor)
+void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, NTL::xdouble size, NTL::xdouble factor)
 {
   if (size <= 0)
     size = 1.0;
@@ -824,8 +823,8 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, xdouble factor)
   if (factor <= 0)
     conv(factor, getContext().ea->getCx().encodeScalingFactor()/size);
 
-  xdouble ratio = floor((ratFactor/factor) +0.5); // round to integer
-  double inaccuracy = abs(conv<double>(ratio*factor/ratFactor) - 1.0);
+  NTL::xdouble ratio = floor((ratFactor/factor) +0.5); // round to integer
+  double inaccuracy = abs(NTL::conv<double>(ratio*factor/ratFactor) - 1.0);
 
   // Check if you need to scale up to get target accuracy of 2^{-r}
   if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0) {
@@ -836,7 +835,7 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, xdouble factor)
   ptxtMag += size;   // perhaps too conservative? size(x+y)<=size(x)+size(y)
   noiseBound += 0.5; // FIXME: what's the noise of a fresh encoding?
 
-  ZZ intRatio = conv<ZZ>(ratio);
+  NTL::ZZ intRatio = NTL::conv<NTL::ZZ>(ratio);
   IndexSet delta = dcrt.getIndexSet() / getPrimeSet(); // set minus
 
   if (NTL::IsOne(intRatio) && empty(delta)) { // just add it
@@ -855,16 +854,16 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt, xdouble size, xdouble factor)
   addPart(tmp, SKHandle(0,1,0));
 }
 
-void Ctxt::addConstantCKKS(const ZZX& poly, xdouble size, xdouble factor)
+void Ctxt::addConstantCKKS(const NTL::ZZX& poly, NTL::xdouble size, NTL::xdouble factor)
 {
   // just call the DoubleCRT version
   addConstantCKKS(DoubleCRT(poly,context,primeSet),size,factor);
 }
 
-void Ctxt::addConstantCKKS(const ZZ& c)
+void Ctxt::addConstantCKKS(const NTL::ZZ& c)
 {
-  xdouble xc = to_xdouble(c);
-  xdouble scaled = floor(ratFactor*xc +0.5); // scaled up and rounded
+  NTL::xdouble xc = NTL::to_xdouble(c);
+  NTL::xdouble scaled = floor(ratFactor*xc +0.5); // scaled up and rounded
 
   DoubleCRT dcrt(getContext(), getPrimeSet());
   dcrt = to_ZZ(scaled);
@@ -877,20 +876,20 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
 {
 #if 1
   // Check if you need to scale up to get target accuracy of 2^{-r}
-  xdouble xb = to_xdouble(num.second);        // denominator
+  NTL::xdouble xb = NTL::to_xdouble(num.second);        // denominator
 
-  xdouble ratio = floor((ratFactor/xb) +0.5); // round to integer
-  double inaccuracy = abs(conv<double>(ratio*xb/ratFactor) - 1.0);
+  NTL::xdouble ratio = floor((ratFactor/xb) +0.5); // round to integer
+  double inaccuracy = abs(NTL::conv<double>(ratio*xb/ratFactor) - 1.0);
   if ((inaccuracy*getContext().alMod.getPPowR()) > 1.0) {
     addSomePrimes(*this); // This increases ratFactor
   }
   // scaled up and round the numerator
-  xdouble scaled = floor(num.first*ratFactor/xb +0.5);
-  xdouble& factor = ratFactor;
+  NTL::xdouble scaled = floor(num.first*ratFactor/xb +0.5);
+  NTL::xdouble& factor = ratFactor;
 #else
   // simpler alternative?
-  xdouble scaled = num.first;
-  xdouble factor = num.second;
+  NTL::xdouble scaled = num.first;
+  NTL::xdouble factor = num.second;
 #endif
   DoubleCRT dcrt(getContext(), getPrimeSet());
   dcrt = to_ZZ(scaled);
@@ -938,25 +937,25 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt &c2)
   long targetPrecision = c1.getContext().alMod.getPPowR()*2;
   Ctxt &big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
   Ctxt &small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
-  xdouble ratio = big.ratFactor / small.ratFactor;
-  std::pair<ZZ,ZZ> factors = rationalApprox(ratio, xdouble(targetPrecision));
+  NTL::xdouble ratio = big.ratFactor / small.ratFactor;
+  std::pair<NTL::ZZ,NTL::ZZ> factors = rationalApprox(ratio, NTL::xdouble(targetPrecision));
 
   if (factors.first != 1) {
       for (auto& part : small.parts)
           part *= factors.first;
-      small.ratFactor *= to_xdouble(factors.first);
-      small.noiseBound *= to_xdouble(factors.first);
+      small.ratFactor *= NTL::to_xdouble(factors.first);
+      small.noiseBound *= NTL::to_xdouble(factors.first);
   }
   if (factors.second != 1) {
       for (auto& part : big.parts)
           part *= factors.second;
-      big.ratFactor *= to_xdouble(factors.second);
-      big.noiseBound *= to_xdouble(factors.second);
+      big.ratFactor *= NTL::to_xdouble(factors.second);
+      big.noiseBound *= NTL::to_xdouble(factors.second);
   }
 }
 
-static xdouble 
-NoiseNorm(xdouble noise1, xdouble noise2, long e1, long e2, long p)
+static NTL::xdouble
+NoiseNorm(NTL::xdouble noise1, NTL::xdouble noise2, long e1, long e2, long p)
 {
   return noise1*abs(balRem(e1, p)) + noise2*abs(balRem(e2, p));
 }
@@ -1020,11 +1019,11 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     // set e1, e2 so that e1*f1 == e2*f2 (mod ptxtSpace),
     // minimizing the increase in noise.
 
-    long ratio = MulMod(f2, InvMod(f1, ptxtSpace), ptxtSpace); // f2/f1
+    long ratio = NTL::MulMod(f2, NTL::InvMod(f1, ptxtSpace), ptxtSpace); // f2/f1
     // so equivalently, we want e1 = e2*ratio (mod ptxtSpace)
 
-    xdouble noise1 = noiseBound;
-    xdouble noise2 = other_pt->noiseBound;
+    NTL::xdouble noise1 = noiseBound;
+    NTL::xdouble noise2 = other_pt->noiseBound;
 
     // now we run the extended Euclidean on (ptxtSpace, ratio)
     // to generate pairs (r_i, t_i) such that r_i = t_i*ratio (mod ptxtSpace).
@@ -1033,7 +1032,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     long r1 = ratio,     t1 = 1;
 
     long e1_best = r1,   e2_best = t1;
-    xdouble noise_best = NoiseNorm(noise1, noise2, e1_best, e2_best, ptxtSpace);
+    NTL::xdouble noise_best = NoiseNorm(noise1, noise2, e1_best, e2_best, ptxtSpace);
     long p = context.zMStar.getP();
 
     while (r1 != 0) {
@@ -1045,7 +1044,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
 
       long e1_try = mcMod(r1, ptxtSpace), e2_try = mcMod(t1, ptxtSpace);
       if (e1_try % p != 0) {
-        xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
+        NTL::xdouble noise_try = NoiseNorm(noise1, noise2, e1_try, e2_try, ptxtSpace);
 	  if (noise_try < noise_best) {
 	    e1_best = e1_try;
 	    e2_best = e2_try;
@@ -1057,10 +1056,10 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     e2 = e2_best;
 
     //OLD: assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
-    helib::assertEq(MulMod(e1, f1, ptxtSpace), MulMod(e2, f2, ptxtSpace), "e1f1 not equivalent to e2f2 mod p");
+    helib::assertEq(NTL::MulMod(e1, f1, ptxtSpace), NTL::MulMod(e2, f2, ptxtSpace), "e1f1 not equivalent to e2f2 mod p");
     //OLD: assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
-    helib::assertEq(GCD(e1, ptxtSpace), 1l, "e1 and ptxtSpace not co-prime");
-    helib::assertEq(GCD(e2, ptxtSpace), 1l, "e2 and ptxtSpace not co-prime");
+    helib::assertEq(NTL::GCD(e1, ptxtSpace), 1l, "e1 and ptxtSpace not co-prime");
+    helib::assertEq(NTL::GCD(e2, ptxtSpace), 1l, "e2 and ptxtSpace not co-prime");
   } 
 
   if (e2 != 1) {
@@ -1100,8 +1099,8 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 
   if (ptxtSp > 2) { // BGV, handle the integer factor
       long q = rem(context.productOfPrimes(c1.getPrimeSet()),ptxtSp);
-      intFactor = MulMod(c1.intFactor, c2.intFactor, ptxtSp);
-      intFactor = MulMod(intFactor, q, ptxtSp);
+      intFactor = NTL::MulMod(c1.intFactor, c2.intFactor, ptxtSp);
+      intFactor = NTL::MulMod(intFactor, q, ptxtSp);
   }
 
   // The actual tensoring
@@ -1128,8 +1127,8 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 
   // Compute the noise estimate of the product
   if (isCKKS()) { // we have totalNoiseBound = factor*ptxt + noiseBound
-    xdouble totalNoise1 = c1.ptxtMag*c1.ratFactor + c1.noiseBound;
-    xdouble totalNoise2 = c2.ptxtMag*c2.ratFactor + c2.noiseBound;
+    NTL::xdouble totalNoise1 = c1.ptxtMag*c1.ratFactor + c1.noiseBound;
+    NTL::xdouble totalNoise2 = c2.ptxtMag*c2.ratFactor + c2.noiseBound;
     noiseBound = c1.noiseBound*totalNoise2 + c2.noiseBound*totalNoise1
                   - c1.noiseBound*c2.noiseBound;
     ratFactor = c1.ratFactor * c2.ratFactor;
@@ -1172,11 +1171,11 @@ void computeIntervalForMul(double& lo, double& hi,
   // bits.
 
   if (ctxt1.isCKKS()) {
-    lo = max(cap1, cap2) + adn + safety;
+    lo = std::max(cap1, cap2) + adn + safety;
     hi = lo + slack;
   }
   else { // BGV
-    hi = min(cap1, cap2) + adn - safety;
+    hi = std::min(cap1, cap2) + adn - safety;
     lo = hi - slack;
   }
 }
@@ -1229,7 +1228,7 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
   }
 
   Ctxt* other_pt = nullptr;
-  unique_ptr<Ctxt> ct; // scratch space if needed
+  std::unique_ptr<Ctxt> ct; // scratch space if needed
   if (this == &other_orig) { // squaring
     bringToSet(naturalPrimeSet()); // drop to the "natural" primeSet
     other_pt = this;
@@ -1246,7 +1245,7 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
 
     // equalize plaintext spaces
     if (!isCKKS()) {
-      long g = GCD(ptxtSpace, other_pt->ptxtSpace);
+      long g = NTL::GCD(ptxtSpace, other_pt->ptxtSpace);
       //OLD: assert (g>1);
       helib::assertTrue(g>1, "Plaintext spaces are co-prime");
       ptxtSpace = other_pt->ptxtSpace = g;
@@ -1294,7 +1293,7 @@ void Ctxt::multiplyBy(const Ctxt& other)
   *this *= other;  // perform the multiplication
   reLinearize();   // re-linearize
 #ifdef DEBUG_PRINTOUT
-      checkNoise(*this, *dbgKey, "reLinearize " + to_string(size_t(this)));
+      checkNoise(*this, *dbgKey, "reLinearize " + std::to_string(size_t(this)));
 #endif
 }
 
@@ -1352,14 +1351,14 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 
 #if 1
 // Multiply-by-constant
-void Ctxt::multByConstant(const ZZ& c)
+void Ctxt::multByConstant(const NTL::ZZ& c)
 {
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
   FHE_TIMER_START;
 
   if (isCKKS()) { // multiply by dividing the scaling factor
-    xdouble size = fabs(to_xdouble(c));
+    NTL::xdouble size = fabs(NTL::to_xdouble(c));
     ptxtMag *= size;
     ratFactor /= size;
     if (c<0)
@@ -1377,12 +1376,12 @@ void Ctxt::multByConstant(const ZZ& c)
     return;
   }
 
-  long d = GCD(c0, ptxtSpace);
+  long d = NTL::GCD(c0, ptxtSpace);
   long c1 = c0/d;
-  long c1_inv = InvMod(c1, ptxtSpace);
+  long c1_inv = NTL::InvMod(c1, ptxtSpace);
   // write c0 = c1 * d, mul ctxt by d, and intFactor by c1_inv
 
-  intFactor = MulMod(intFactor, c1_inv, ptxtSpace);
+  intFactor = NTL::MulMod(intFactor, c1_inv, ptxtSpace);
 
   if (d == 1) return;
 
@@ -1390,18 +1389,18 @@ void Ctxt::multByConstant(const ZZ& c)
   noiseBound *= abs(cc);
 
   // multiply all the parts by this constant
-  ZZ c_copy(cc);
+  NTL::ZZ c_copy(cc);
   for (auto& part : parts) part *= c_copy;
 }
 #else
-void Ctxt::multByConstant(const ZZ& c)
+void Ctxt::multByConstant(const NTL::ZZ& c)
 {
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
   FHE_TIMER_START;
 
   if (isCKKS()) { // multiply by dividing the scaling factor
-    xdouble size = fabs(to_xdouble(c));
+    NTL::xdouble size = fabs(NTL::to_xdouble(c));
     ptxtMag *= size;
     ratFactor /= size;
     if (c<0)
@@ -1413,7 +1412,7 @@ void Ctxt::multByConstant(const ZZ& c)
   noiseBound *= abs(cc);
 
   // multiply all the parts by this constant
-  ZZ c_copy(cc);
+  NTL::ZZ c_copy(cc);
   for (auto& part : parts) part *= c_copy;
 }
 
@@ -1428,7 +1427,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   if (this->isEmpty()) return;
 
   if (isCKKS()) {
-    multByConstantCKKS(dcrt, to_xdouble(size));
+    multByConstantCKKS(dcrt, NTL::to_xdouble(size));
     // Use default size, factor, encoding-rounding-error
     return;
   }
@@ -1446,12 +1445,12 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
   noiseBound *= size;
 }
 
-void Ctxt::multByConstant(const ZZX& poly, double size)
+void Ctxt::multByConstant(const NTL::ZZX& poly, double size)
 {
   FHE_TIMER_START;
   if (this->isEmpty()) return;
   if (size < 0 && !isCKKS()) {
-    size = conv<double>(embeddingLargestCoeff(poly, getContext().zMStar));
+    size = NTL::conv<double>(embeddingLargestCoeff(poly, getContext().zMStar));
   }
   DoubleCRT dcrt(poly,context,primeSet);
   multByConstant(dcrt,size);
@@ -1470,7 +1469,7 @@ void Ctxt::multByConstant(const zzX& poly, double size)
 
 void
 Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
-                         xdouble size, xdouble factor, double roundingErr)
+                         NTL::xdouble size, NTL::xdouble factor, double roundingErr)
 {
   // Special case: if *this is empty then do nothing
   if (this->isEmpty()) return;
@@ -1510,7 +1509,7 @@ void Ctxt::divideBy2()
   helib::assertTrue(ptxtSpace>2, "Plaintext space must be greater than 2");
 
   // multiply all the parts by (productOfPrimes+1)/2
-  ZZ twoInverse; // set to (Q+1)/2
+  NTL::ZZ twoInverse; // set to (Q+1)/2
   getContext().productOfPrimes(twoInverse, getPrimeSet());
   twoInverse += 1;
   twoInverse /= 2;
@@ -1537,9 +1536,9 @@ void Ctxt::divideByP()
   helib::assertTrue(ptxtSpace>p, "ptxtSpace must be strictly greater than p");
 
   // multiply all the parts by p^{-1} mod Q (Q=productOfPrimes)
-  ZZ pInverse, Q;
+  NTL::ZZ pInverse, Q;
   getContext().productOfPrimes(Q, getPrimeSet());
-  InvMod(pInverse, conv<ZZ>(p), Q);
+  NTL::InvMod(pInverse, NTL::conv<NTL::ZZ>(p), Q);
   for (long i: range(parts.size()))
     parts[i] *= pInverse;
 
@@ -1563,7 +1562,7 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
   for (auto& part: parts) {
     part.automorph(k);
     if (!part.skHandle.isOne()) {
-      part.skHandle.powerOfX = MulMod(part.skHandle.powerOfX,k,m);
+      part.skHandle.powerOfX = NTL::MulMod(part.skHandle.powerOfX,k,m);
     }
   }
   // no change in noise bound
@@ -1630,7 +1629,7 @@ void Ctxt::smartAutomorph(long k)
     }
     automorph(amt);
     reLinearize(keyID);
-    k = MulMod(k, InvMod(amt,m), m);
+    k = NTL::MulMod(k, NTL::InvMod(amt,m), m);
   }
   FHE_TIMER_STOP;
 }
@@ -1652,7 +1651,7 @@ void Ctxt::frobeniusAutomorph(long j)
     long d = context.zMStar.getOrdP();
 
     j = mcMod(j, d);
-    long val = PowerMod(p, j, m);
+    long val = NTL::PowerMod(p, j, m);
     smartAutomorph(val);
   }
 }
@@ -1669,9 +1668,9 @@ long Ctxt::getKeyID() const
 }
 
 // Estimates the added noise bound from mod-switching down
-xdouble Ctxt::modSwitchAddedNoiseBound() const
+NTL::xdouble Ctxt::modSwitchAddedNoiseBound() const
 {
-  xdouble addedNoise = to_xdouble(0.0);
+  NTL::xdouble addedNoise = NTL::to_xdouble(0.0);
 
   // incorporate the secret keys' Hamming-weight
   for (auto& part : parts) {
@@ -1681,7 +1680,7 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
     else {
       long keyId = part.skHandle.getSecretKeyID();
       long d = part.skHandle.getPowerOfS();
-      xdouble h = conv<xdouble>(pubKey.getSKeyBound(keyId));
+      NTL::xdouble h = NTL::conv<NTL::xdouble>(pubKey.getSKeyBound(keyId));
 
       addedNoise += NTL::power(h, d);
     }
@@ -1696,15 +1695,15 @@ xdouble Ctxt::modSwitchAddedNoiseBound() const
 }
 
 
-void Ctxt::write(ostream& str) const
+void Ctxt::write(std::ostream& str) const
 {
   writeEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
   
   /*  Writing out in binary:
     1.  long ptxtSpace
-    2.  xdouble noiseBound
+    2.  NTL::xdouble noiseBound
     3.  IndexSet primeSet;
-    4.  vector<CtxtPart> parts;
+    4.  std::vector<CtxtPart> parts;
   */  
   
   write_raw_int(str, ptxtSpace);
@@ -1718,7 +1717,7 @@ void Ctxt::write(ostream& str) const
   writeEyeCatcher(str, BINIO_EYE_CTXT_END);
 }
 
-void Ctxt::read(istream& str)
+void Ctxt::read(std::istream& str)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
   //OLD: assert(eyeCatcherFound == 0);
@@ -1738,21 +1737,21 @@ void Ctxt::read(istream& str)
   helib::assertEq(eyeCatcherFound, 0, "Could not find post-ciphertext eye catcher");
 }
 
-void CtxtPart::write(ostream& str) const
+void CtxtPart::write(std::ostream& str) const
 { 
   this->DoubleCRT::write(str); // CtxtPart is a child.
   skHandle.write(str);
 }
 
 
-void CtxtPart::read(istream& str)
+void CtxtPart::read(std::istream& str)
 {
   this->DoubleCRT::read(str); // CtxtPart is a child.
   skHandle.read(str);
 }
 
 
-istream& operator>>(istream& str, SKHandle& handle)
+std::istream& operator>>(std::istream& str, SKHandle& handle)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> handle.powerOfS;
@@ -1762,13 +1761,13 @@ istream& operator>>(istream& str, SKHandle& handle)
   return str;
 }
 
-ostream& operator<<(ostream& str, const CtxtPart& p)
+std::ostream& operator<<(std::ostream& str, const CtxtPart& p)
 {
-  return str << "[" << ((const DoubleCRT&)p) << endl 
+  return str << "[" << ((const DoubleCRT&)p) << std::endl
 	     << p.skHandle << "]";
 }
 
-istream& operator>>(istream& str, CtxtPart& p)
+std::istream& operator>>(std::istream& str, CtxtPart& p)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> (DoubleCRT&) p;
@@ -1777,17 +1776,17 @@ istream& operator>>(istream& str, CtxtPart& p)
   return str;
 }
 
-ostream& operator<<(ostream& str, const Ctxt& ctxt)
+std::ostream& operator<<(std::ostream& str, const Ctxt& ctxt)
 {
   str << "["<<ctxt.ptxtSpace<<" "<<ctxt.noiseBound<<" "<<ctxt.primeSet
       << ctxt.intFactor <<" "<< ctxt.ptxtMag<<" "<<ctxt.ratFactor<<" "
-      << ctxt.parts.size() << endl;
+      << ctxt.parts.size() << std::endl;
   for (auto& part : ctxt.parts)
-    str << part << endl;
+    str << part << std::endl;
   return str << "]";
 }
 
-istream& operator>>(istream& str, Ctxt& ctxt)
+std::istream& operator>>(std::istream& str, Ctxt& ctxt)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> ctxt.ptxtSpace >> ctxt.noiseBound >> ctxt.primeSet
@@ -1832,7 +1831,7 @@ static void recursiveIncrementalProduct(Ctxt array[], long n)
 
 // For i=n-1...0, set v[i]=prod_{j<=i} v[j]
 // This implementation uses depth log n and (nlog n)/2 products
-void incrementalProduct(vector<Ctxt>& v)
+void incrementalProduct(std::vector<Ctxt>& v)
 {
   long n = v.size();  // how many ciphertexts do we have
   if (n > 0) recursiveIncrementalProduct(&v[0], n); // do the actual work
@@ -1865,7 +1864,7 @@ static void recursiveTotalProduct(Ctxt& out, const Ctxt array[], long n)
 // set out=prod_{i=0}^{n-1} v[j], takes depth log n and n-1 products
 // out could point to v[0], but having it pointing to any other v[i]
 // will make the result unpredictable.
-void totalProduct(Ctxt& out, const vector<Ctxt>& v)
+void totalProduct(Ctxt& out, const std::vector<Ctxt>& v)
 {
   long n = v.size();  // how many ciphertexts do we have
   if (n > 0) recursiveTotalProduct(out, &v[0], n); // do the actual work
@@ -1876,7 +1875,7 @@ void totalProduct(Ctxt& out, const vector<Ctxt>& v)
 // the lower-level *= operator and does only one re-linearization at the end.
 void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2)
 {
-  long n = min(v1.size(), v2.size());
+  long n = std::min(v1.size(), v2.size());
   if (n<=0) {
     result.clear();
     return;
@@ -1889,18 +1888,18 @@ void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2)
   }
   result.reLinearize();
 }
-void innerProduct(Ctxt& result, const vector<Ctxt>& v1,
-                  const vector<Ctxt>& v2)
+void innerProduct(Ctxt& result, const std::vector<Ctxt>& v1,
+                  const std::vector<Ctxt>& v2)
 {
-  innerProduct(result, CtPtrs_vectorCt((vector<Ctxt>&)v1),
-               CtPtrs_vectorCt((vector<Ctxt>&)v2));
+  innerProduct(result, CtPtrs_vectorCt((std::vector<Ctxt>&)v1),
+               CtPtrs_vectorCt((std::vector<Ctxt>&)v2));
 }
 
 // Compute the inner product of a ciphertext vector and a constant vector
 void innerProduct(Ctxt& result,
-		  const vector<Ctxt>& v1, const vector<DoubleCRT>& v2)
+		  const std::vector<Ctxt>& v1, const std::vector<DoubleCRT>& v2)
 {
-  long n = min(v1.size(), v2.size());
+  long n = std::min(v1.size(), v2.size());
   if (n<=0) {
     result.clear();
     return;
@@ -1914,9 +1913,9 @@ void innerProduct(Ctxt& result,
 }
 
 void innerProduct(Ctxt& result,
-		  const vector<Ctxt>& v1, const vector<ZZX>& v2)
+		  const std::vector<Ctxt>& v1, const std::vector<NTL::ZZX>& v2)
 {
-  long n = min(v1.size(), v2.size());
+  long n = std::min(v1.size(), v2.size());
   if (n<=0) {
     result.clear();
     return;
@@ -1935,32 +1934,32 @@ void innerProduct(Ctxt& result,
 // Mod-switch to an externally-supplied modulus. The modulus need not be in
 // the moduli-chain in the context, and does not even need to be a prime.
 // The ciphertext *this is not affected, instead the result is returned in
-// the zzParts vector, as a vector of ZZX'es.
+// the zzParts std::vector, as a vector of ZZX'es.
 // Returns an extimate for the scaled noise (not including the 
 // additive mod switching noise)
 
 #include "powerful.h"
-double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
+double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
 {
   // Ensure that new modulus is co-prime with plaintetx space
   const long p2r = getPtxtSpace();
   //OLD: assert(q>1 && p2r>1 && GCD(q,p2r)==1);
   helib::assertTrue<helib::InvalidArgument>(q>1, "q must be greater than 1");
   helib::assertTrue(p2r>1, "Plaintext space must be greater than 1 for mod switching");
-  helib::assertEq(GCD(q,p2r), 1l, "New modulus and current plaintext space must be co-prime");
+  helib::assertEq(NTL::GCD(q,p2r), 1l, "New modulus and current plaintext space must be co-prime");
 
   // Compute the ratio between the current modulus and the new one.
   // NOTE: q is a long int, so a double for the logarithms and
-  //       xdouble for the ratio itself is sufficient
-  xdouble ratio = xexp(log((double)q)
+  //       NTL::xdouble for the ratio itself is sufficient
+  NTL::xdouble ratio = NTL::xexp(log((double)q)
 		       - context.logOfProduct(getPrimeSet()));
 
   // Compute also the ratio modulo ptxtSpace
-  ZZ Q = context.productOfPrimes(getPrimeSet());
-  ZZ Q_half =  Q/2;
-  long Q_inv_mod_p = InvMod(rem(Q, p2r), p2r);
+  NTL::ZZ Q = context.productOfPrimes(getPrimeSet());
+  NTL::ZZ Q_half =  Q/2;
+  long Q_inv_mod_p = NTL::InvMod(rem(Q, p2r), p2r);
 
-  helib::assertTrue(GCD(rem(Q, q), q) == 1, 
+  helib::assertTrue(NTL::GCD(rem(Q, q), q) == 1,
          "GCD(Q, q) != 1 in Ctxt::rawModSwitch");
   // This should not trigger, but if it does, we should perhaps
   // modify the code in primeChain.cpp to avoid adding primes in the
@@ -1973,13 +1972,13 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
   const PowerfulDCRT& p2d_conv = *context.rcData.p2dConv;
   for (long i: range(parts.size())) {
 
-    Vec<ZZ> pwrfl;
+    NTL::Vec<NTL::ZZ> pwrfl;
     p2d_conv.dcrtToPowerful(pwrfl, parts[i]); // convert to powerful rep
 
     vecRed(pwrfl, pwrfl, Q, false);
     // reduce to interval [-Q/2,+Q/2]
 
-    ZZ c, X, Y, cq;
+    NTL::ZZ c, X, Y, cq;
 
 
     for (long j: range(pwrfl.length())) {
@@ -1994,9 +1993,9 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
       // c*q = Q*X + Y, where X = round(c*q/Q)
       // in other words: c*q/Q = X + Y/Q
 
-      long x = conv<long>(X);
+      long x = NTL::conv<long>(X);
 
-      long delta = MulMod(rem(Y, p2r), Q_inv_mod_p, p2r);
+      long delta = NTL::MulMod(rem(Y, p2r), Q_inv_mod_p, p2r);
       // delta = Y*Q^{-1} mod p^r
       // so we have c*q*Q^{-1} = X + Y*Q^{-1} = x + delta (mod p^r)
 
@@ -2005,15 +2004,17 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
       // uniformly distributed over [-p2r/2,p2r/2].
 
       if (delta > p2r/2 || (p2r%2 == 0 && delta == p2r/2 && 
-                            ((sign(Y) < 0) || (sign(Y) == 0 && RandomBnd(2))) ))
+                            ((sign(Y) < 0) || (sign(Y) == 0 && NTL::RandomBnd(2))) ))
         delta -= p2r;
 
       x += delta;
 
       // sanity check: |c*q/Q - x| <= p^r/2
-      xdouble diff = fabs( conv<xdouble>(c)*conv<xdouble>(q)/conv<xdouble>(Q) 
-                             - conv<xdouble>(x) );
-      if (diff > conv<xdouble>(p2r)/2.0 + 0.0001) {
+      NTL::xdouble diff = fabs( NTL::conv<NTL::xdouble>(c) *
+                                    NTL::conv<NTL::xdouble>(q) /
+                                    NTL::conv<NTL::xdouble>(Q) -
+                                        NTL::conv<NTL::xdouble>(x) );
+      if (diff > NTL::conv<NTL::xdouble>(p2r)/2.0 + 0.0001) {
         std::stringstream ss;
         ss << "\n***BAD rawModSwitch: diff=" << diff 
              << ", p2r=" << p2r;
@@ -2021,9 +2022,9 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
       }
 
       // reduce symetrically mod q, randomizing if necessary for even q
-      if (x > q/2 || (q%2 == 0 && x == q/2 && RandomBnd(2))) 
+      if (x > q/2 || (q%2 == 0 && x == q/2 && NTL::RandomBnd(2)))
         x -= q;
-      else if (x < -q/2 || (q%2 == 0 && x == -q/2 && RandomBnd(2)))
+      else if (x < -q/2 || (q%2 == 0 && x == -q/2 && NTL::RandomBnd(2)))
         x += q;
 
       pwrfl[j] = x;  // store back in the powerful vector
@@ -2033,7 +2034,7 @@ double Ctxt::rawModSwitch(vector<ZZX>& zzParts, long q) const
   }
 
   // Return an estimate for the noise
-  double scaledNoise = conv<double>(noiseBound*ratio);
+  double scaledNoise = NTL::conv<double>(noiseBound*ratio);
 
   return scaledNoise;
   // this is returned so that caller in recryption.cpp can check bounds

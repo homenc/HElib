@@ -26,8 +26,6 @@
 #define BPL_ESTIMATE (30)
 // FIXME: this should really be dynamic
 
-NTL_CLIENT
-
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 #endif
@@ -50,8 +48,8 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
   long n = lsize(e);
   if (n <= 1) return; // nothing to do
 #ifdef DEBUG_PRINTOUT
-  cout << "compProducts(g["<<g.start<<".."<<(g.start+g.sz-1)<<"],e["
-       << e.start<<".."<<(e.start+e.sz-1)<<"])\n";
+  std::cout << "compProducts(g["<<g.start<<".."<<(g.start+g.sz-1)<<"],e["
+       << e.start<<".."<<(e.start+e.sz-1)<<"])" << std::endl;
 #endif
 
   // split the array in two, second part has size the largest 2^l < n,
@@ -72,16 +70,16 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
   }
   NTL_EXEC_RANGE_END
 #ifdef DEBUG_PRINTOUT
-  cout << " g["<<g.start<<".."<<(g.start+g.sz-1)<<"], "
-       << " e["<<e.start<<".."<<(e.start+e.sz-1)<<"]:\n";
+  std::cout << " g["<<g.start<<".."<<(g.start+g.sz-1)<<"], "
+       << " e["<<e.start<<".."<<(e.start+e.sz-1)<<"]:" << std::endl;
   for (long i=0; i<g.size(); i++)
-    decryptAndPrint((cout<<"   g["<<(i+g.start)<<"] ("<<((void*)g[i])<<"): "),
+    decryptAndPrint((std::cout<<"   g["<<(i+g.start)<<"] ("<<((void*)g[i])<<"): "),
                     *g[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
   for (long i=0; i<e.size(); i++)
-    decryptAndPrint((cout<<"   e["<<(i+e.start)<<"] ("<<((void*)e[i])<<"): "),
+    decryptAndPrint((std::cout<<"   e["<<(i+e.start)<<"] ("<<((void*)e[i])<<"): "),
                     *e[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
 
-  cout << endl;
+  std::cout << std::endl;
 #endif
 }
 
@@ -131,10 +129,10 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
 
 #ifdef DEBUG_PRINTOUT
   for (long i=0; i<lsize(b); i++)
-    decryptAndPrint((cout<<" e["<<i<<"]: "), *aeqb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
+    decryptAndPrint((std::cout<<" e["<<i<<"]: "), *aeqb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
   for (long i=0; i<lsize(a); i++)
-    decryptAndPrint((cout<<" ag["<<i<<"]: "), *agtb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
-  cout << endl;
+    decryptAndPrint((std::cout<<" ag["<<i<<"]: "), *agtb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
+  std::cout << std::endl;
 #endif
 
   // Call a recursive function to compute:
@@ -161,7 +159,7 @@ void compareTwoNumbersImplementation(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& n
   if (aSize<1) { // a is empty
     mu.clear();
     ni.clear();
-    ni.addConstant(ZZ(1L));
+    ni.addConstant(NTL::ZZ(1L));
     vecCopy(max, b);
     setLengthZero(min);
     return;
@@ -192,7 +190,7 @@ void compareTwoNumbersImplementation(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& n
   FHE_NTIMER_START(compResults);
   mu = *ag[0];             // a > b
   ni = *ag[0];
-  ni.addConstant(ZZ(1L));  // a <= b
+  ni.addConstant(NTL::ZZ(1L));  // a <= b
   ni += *e[0];             // a < b
 
   if(cmp_only) {
