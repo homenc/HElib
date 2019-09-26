@@ -53,9 +53,6 @@
 #include <complex>
 
 
-
-//NTL_CLIENT
-
 struct half_FFT {
   PGFFT fft;
   std::vector<std::complex<double>> pow;

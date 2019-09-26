@@ -16,17 +16,16 @@
 // NOTE: including sys/types.h for the purpose of bringing in 
 // the byte order macros in a platform-independent way.
 
-NTL_CLIENT
 /* Some utility functions for binary IO */
 
-int readEyeCatcher(istream& str, const char * expect)
+int readEyeCatcher(std::istream& str, const char * expect)
 {
   char eye[BINIO_EYE_SIZE];
   str.read(eye, BINIO_EYE_SIZE); 
   return memcmp(eye, expect, BINIO_EYE_SIZE);
 }
 
-void writeEyeCatcher(ostream& str, const char* eyeStr)
+void writeEyeCatcher(std::ostream& str, const char* eyeStr)
 {
   char eye[BINIO_EYE_SIZE];
   memcpy(eye, eyeStr, BINIO_EYE_SIZE);
@@ -34,7 +33,7 @@ void writeEyeCatcher(ostream& str, const char* eyeStr)
 }
 
 // compile only 64-bit (-m64) therefore long must be at least 64-bit
-long read_raw_int(istream& str)
+long read_raw_int(std::istream& str)
 {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   long result = 0;
@@ -53,7 +52,7 @@ long read_raw_int(istream& str)
 #endif
 }
 
-int read_raw_int32(istream& str)
+int read_raw_int32(std::istream& str)
 {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   int result = 0;
@@ -73,7 +72,7 @@ int read_raw_int32(istream& str)
 }
 
 // compile only 64-bit (-m64) therefore long must be at least 64-bit
-void write_raw_int(ostream& str, long num)
+void write_raw_int(std::ostream& str, long num)
 {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   str.write((const char*)&num, BINIO_64BIT);
@@ -87,7 +86,7 @@ void write_raw_int(ostream& str, long num)
 #endif
 }
 
-void write_raw_int32(ostream& str, int num)
+void write_raw_int32(std::ostream& str, int num)
 {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
   str.write((const char*)&num, BINIO_32BIT);
@@ -101,7 +100,7 @@ void write_raw_int32(ostream& str, int num)
 #endif
 }
 
-void write_ntl_vec_long(ostream& str, const vec_long& vl, long intSize)
+void write_ntl_vec_long(std::ostream& str, const NTL::vec_long& vl, long intSize)
 {
   //OLD: assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
   helib::assertTrue<helib::InvalidArgument>(intSize == BINIO_64BIT || intSize == BINIO_32BIT, "intSize must be 32 or 64 bit for binary IO");
@@ -119,7 +118,7 @@ void write_ntl_vec_long(ostream& str, const vec_long& vl, long intSize)
   }
 }
 
-void read_ntl_vec_long(istream& str, vec_long& vl)
+void read_ntl_vec_long(std::istream& str, NTL::vec_long& vl)
 {
   int sizeOfVL = read_raw_int32(str);
   int intSize  = read_raw_int32(str);
@@ -142,7 +141,7 @@ void read_ntl_vec_long(istream& str, vec_long& vl)
   }
 }
 
-void write_raw_double(ostream& str, const double d)
+void write_raw_double(std::ostream& str, const double d)
 {
   // FIXME: this is not portable: 
   //  * we might have sizeof(long) < sizeof(double)
@@ -151,7 +150,7 @@ void write_raw_double(ostream& str, const double d)
   write_raw_int(str, *pd);
 }
 
-double read_raw_double(istream& str)
+double read_raw_double(std::istream& str)
 {
   // FIXME: see FIXME for write_raw_double
   long d = read_raw_int(str);
@@ -159,7 +158,7 @@ double read_raw_double(istream& str)
   return *pd;
 }
 
-void write_raw_xdouble(ostream& str, const xdouble xd)
+void write_raw_xdouble(std::ostream& str, const NTL::xdouble xd)
 {
   double m = xd.mantissa();
   long e = xd.exponent();
@@ -167,14 +166,14 @@ void write_raw_xdouble(ostream& str, const xdouble xd)
   write_raw_int(str, e);
 }
 
-xdouble read_raw_xdouble(istream& str)
+NTL::xdouble read_raw_xdouble(std::istream& str)
 {
   double m = read_raw_double(str);
   long e = read_raw_int(str);
-  return xdouble(m,e);
+  return NTL::xdouble(m,e);
 }
 
-void write_raw_ZZ(ostream& str, const ZZ& zz)
+void write_raw_ZZ(std::ostream& str, const NTL::ZZ& zz)
 {
   long noBytes = NumBytes(zz);
   //OLD: assert(noBytes > 0);
@@ -187,7 +186,7 @@ void write_raw_ZZ(ostream& str, const ZZ& zz)
   delete[] zzBytes;
 }
 
-void read_raw_ZZ(istream& str, ZZ& zz)
+void read_raw_ZZ(std::istream& str, NTL::ZZ& zz)
 {
   long noBytes = read_raw_int(str);
   //OLD: assert(noBytes > 0);
@@ -195,7 +194,7 @@ void read_raw_ZZ(istream& str, ZZ& zz)
   unsigned char* zzBytes = new unsigned char[noBytes];
   // TODO - ZZ appears to be endian agnostic
   str.read(reinterpret_cast<char*>(zzBytes), noBytes); 
-  zz = ZZFromBytes(zzBytes, noBytes);
+  zz = NTL::ZZFromBytes(zzBytes, noBytes);
   delete[] zzBytes;
 }
 
@@ -204,7 +203,7 @@ void read_raw_ZZ(istream& str, ZZ& zz)
 // We should think about a better overloading strategy for
 // read/write_raw_vector to avoid this.
 
-template<> void read_raw_vector<long>(istream& str, vector<long>& v)
+template<> void read_raw_vector<long>(std::istream& str, std::vector<long>& v)
 {
 
   long sz = read_raw_int(str);
@@ -215,7 +214,7 @@ template<> void read_raw_vector<long>(istream& str, vector<long>& v)
     
 };
 
-template<> void write_raw_vector<long>(ostream& str, const vector<long>& v)
+template<> void write_raw_vector<long>(std::ostream& str, const std::vector<long>& v)
 {
   long sz = v.size();  
   write_raw_int(str, sz); 
@@ -225,7 +224,7 @@ template<> void write_raw_vector<long>(ostream& str, const vector<long>& v)
 };
 
 
-template<> void read_raw_vector<double>(istream& str, vector<double>& v)
+template<> void read_raw_vector<double>(std::istream& str, std::vector<double>& v)
 {
 
   long sz = read_raw_int(str);
@@ -236,7 +235,7 @@ template<> void read_raw_vector<double>(istream& str, vector<double>& v)
     
 };
 
-template<> void write_raw_vector<double>(ostream& str, const vector<double>& v)
+template<> void write_raw_vector<double>(std::ostream& str, const std::vector<double>& v)
 {
   long sz = v.size();  
   write_raw_int(str, sz); 

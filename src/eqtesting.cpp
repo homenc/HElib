@@ -14,7 +14,6 @@
  * @brief Useful fucntions for equality testing...
  */
 #include <NTL/lzz_pXFactoring.h>
-NTL_CLIENT
 #include "timing.h"
 #include "EncryptedArray.h"
 
@@ -59,7 +58,7 @@ void fastPower(Ctxt& ctxt, long d)
 
   Ctxt orig = ctxt;
 
-  long k = NumBits(d);
+  long k = NTL::NumBits(d);
   long e = 1;
 
   for (long i = k-2; i >= 0; i--) {
@@ -68,7 +67,7 @@ void fastPower(Ctxt& ctxt, long d)
     ctxt.multiplyBy(tmp1);
     e = 2*e;
 
-    if (bit(d, i)) {
+    if (NTL::bit(d, i)) {
       ctxt.smartAutomorph(2);
       ctxt.multiplyBy(orig);
       e += 1;
@@ -91,20 +90,20 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 
   // compute linearized polynomial coefficients
 
-  vector< vector<ZZX> > Coeff;
+  std::vector< std::vector<NTL::ZZX> > Coeff;
   Coeff.resize(n);
 
   for (long i = 0; i < n; i++) {
     // coeffients for mask on bits 0..i
     // L[j] = X^j for j = 0..i, L[j] = 0 for j = i+1..d-1
 
-    vector<ZZX> L;
+    std::vector<NTL::ZZX> L;
     L.resize(d);
 
     for (long j = 0; j <= i; j++) 
       SetCoeff(L[j], j);
 
-    vector<ZZX> C;
+    std::vector<NTL::ZZX> C;
 
     ea.buildLinPolyCoeffs(C, L);
 
@@ -113,14 +112,14 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
       // Coeff[i][j] = to the encoding that has C[j] in all slots
       // FIXME: maybe encrtpted array should have this functionality
       //        built in
-      vector<ZZX> T;
+      std::vector<NTL::ZZX> T;
       T.resize(nslots);
       for (long s = 0; s < nslots; s++) T[s] = C[j];
       ea.encode(Coeff[i][j], T);
     }
   }
 
-  vector<Ctxt> Conj(d, ctxt);
+  std::vector<Ctxt> Conj(d, ctxt);
   // initialize Cong[j] to ctxt^{2^j}
   for (long j = 0; j < d; j++) {
     Conj[j].smartAutomorph(1L << j);

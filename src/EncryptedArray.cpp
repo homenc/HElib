@@ -18,24 +18,22 @@
 #include "clonedPtr.h"
 #include "norms.h"
 
-NTL_CLIENT
-
 EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
-                                        const PAlgebraMod& alMod, const ZZX& G)
+                                        const PAlgebraMod& alMod, const NTL::ZZX& G)
 {
   if (alMod.getTag()==PA_cx_tag)
     return new EncryptedArrayCx(context, alMod.getCx());
 
   // By defualt use the 1st factor F0
-  const ZZX& GG = NTL::IsZero(G)? alMod.getFactorsOverZZ()[0]: G;
+  const NTL::ZZX& GG = NTL::IsZero(G)? alMod.getFactorsOverZZ()[0]: G;
 
   switch (alMod.getTag()) {
     case PA_GF2_tag: {
-      return new EncryptedArrayDerived<PA_GF2>(context, conv<GF2X>(GG), alMod);
+      return new EncryptedArrayDerived<PA_GF2>(context, NTL::conv<NTL::GF2X>(GG), alMod);
     }
     case PA_zz_p_tag: {
-      zz_pBak bak; bak.save(); alMod.restoreContext();
-      return new EncryptedArrayDerived<PA_zz_p>(context, conv<zz_pX>(GG), alMod);
+      NTL::zz_pBak bak; bak.save(); alMod.restoreContext();
+      return new EncryptedArrayDerived<PA_zz_p>(context, NTL::conv<NTL::zz_pX>(GG), alMod);
     }
     default: return NULL;
   }
@@ -62,7 +60,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
 
   RBak bak; bak.save(); tab.restoreContext();
 
-  const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
   const PAlgebra& zMStar = getPAlgebra();
   long m = zMStar.getM();
   long ord = sizeOfDimension(i);
@@ -113,7 +111,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   FHE_TIMER_START;
   const PAlgebra& al = getPAlgebra();
 
-  const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
 
   RBak bak; bak.save(); tab.restoreContext();
 
@@ -125,7 +123,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   long ord = al.OrderOf(i);
 
   if (k <= -ord || k >= ord) {
-    ctxt.multByConstant(to_ZZ(0));
+    ctxt.multByConstant(NTL::to_ZZ(0));
     return;
   }
 
@@ -160,7 +158,7 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 
   const PAlgebra& al = getPAlgebra();
 
-  const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
 
   RBak bak; bak.save(); tab.restoreContext();
 
@@ -264,7 +262,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   const PAlgebra& al = getPAlgebra();
 
-  const vector< vector< RX > >& maskTable = tab.getMaskTable();
+  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
 
   RBak bak; bak.save(); tab.restoreContext();
 
@@ -281,7 +279,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   // Shifting by more than the number of slots gives an all-zero cipehrtext
   if (k <= -nSlots || k >= nSlots) {
-    ctxt.multByConstant(to_ZZ(0));
+    ctxt.multByConstant(NTL::to_ZZ(0));
     return;
   }
 
@@ -325,20 +323,20 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const vector< RX >& array) const
+void EncryptedArrayDerived<type>::encode(NTL::ZZX& ptxt, const std::vector< RX >& array) const
 {
   RX pp;
   tab.embedInSlots(pp, array, mappingData); 
 
   // NOTE: previous version was
-  //   ptxt = conv<ZZX>(pp);
+  //   ptxt = conv<NTL::ZZX>(pp);
   // which did not do balanced remainders at all
   zzX pp1 = balanced_zzX(pp);
   convert(ptxt, pp1);
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) const
+void EncryptedArrayDerived<type>::decode(std::vector< RX >& array, const NTL::ZZX& ptxt) const
 {
   FHE_TIMER_START;
   RX pp;
@@ -348,26 +346,26 @@ void EncryptedArrayDerived<type>::decode(vector< RX >& array, const ZZX& ptxt) c
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::encode(RX& ptxt, const vector< RX >& array) const
+void EncryptedArrayDerived<type>::encode(RX& ptxt, const std::vector< RX >& array) const
 {
   tab.embedInSlots(ptxt, array, mappingData); 
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::decode(vector< RX >& array, const RX& ptxt) const
+void EncryptedArrayDerived<type>::decode(std::vector< RX >& array, const RX& ptxt) const
 {
   tab.decodePlaintext(array, ptxt, mappingData); 
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::encode(ZZX& ptxt, const PlaintextArray& array) const
+void EncryptedArrayDerived<type>::encode(NTL::ZZX& ptxt, const PlaintextArray& array) const
 {
   RBak bak; bak.save(); tab.restoreContext();
   encode(ptxt, array.getData<type>());
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const ZZX& ptxt) const
+void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const NTL::ZZX& ptxt) const
 {
   RBak bak; bak.save(); tab.restoreContext();
   decode(array.getData<type>(), ptxt);
@@ -387,7 +385,7 @@ void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::encode(zzX& ptxt, const vector< RX >& array) const
+void EncryptedArrayDerived<type>::encode(zzX& ptxt, const std::vector< RX >& array) const
 {
   RX pp;
   tab.embedInSlots(pp, array, mappingData); 
@@ -406,7 +404,7 @@ void EncryptedArrayDerived<type>::encode(zzX& ptxt, const PlaintextArray& array)
 }
 
 template<class type>
-void EncryptedArrayDerived<type>::decode(vector< RX >& array, const NTL::Vec<long>& ptxt) const
+void EncryptedArrayDerived<type>::decode(std::vector< RX >& array, const NTL::Vec<long>& ptxt) const
 {
   FHE_TIMER_START;
   RX pp;
@@ -433,9 +431,9 @@ template<class type>
 void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
 {
   RandomState state;
-  SetSeed(to_ZZ(1));
+  SetSeed(NTL::to_ZZ(1));
   do {
-    typename Lazy< Pair< Mat<R>, Mat<R> > >::Builder 
+    typename NTL::Lazy< NTL::Pair< NTL::Mat<R>, NTL::Mat<R> > >::Builder 
       builder(normalBasisMatrices); 
 
     if (!builder()) break;
@@ -454,7 +452,7 @@ void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
     RE H;
     bool got_it = false;
 
-    H = power(conv<RE>(RX(1, 1)), p);
+    H = power(NTL::conv<RE>(RX(1, 1)), p);
     
 
     do {
@@ -468,21 +466,21 @@ void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
         VectorCopy(CB[i], rep(pow), d);
       }
 
-      Mat<ZZ> CB1;
+      NTL::Mat<NTL::ZZ> CB1;
       conv(CB1, CB);
 
       {
-         zz_pBak bak1; bak1.save(); zz_p::init(p);
-         Mat<zz_p> CB2;
+        NTL::zz_pBak bak1; bak1.save(); NTL::zz_p::init(p);
+         NTL::Mat<NTL::zz_p> CB2;
          conv(CB2, CB1);
          got_it = determinant(CB2) != 0;
       }
     } while (!got_it);
 
-    Mat<R> CBi;
+    NTL::Mat<R> CBi;
     ppInvert(CBi, CB, p, r);
 
-    UniquePtr< Pair< Mat<R>, Mat<R> > > ptr;
+    NTL::UniquePtr< NTL::Pair< NTL::Mat<R>, NTL::Mat<R> > > ptr;
     ptr.make(CB, CBi);
     builder.move(ptr);
   } while(0);
@@ -513,7 +511,7 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 
   Ctxt orig = ctxt;
 
-  long k = NumBits(n);
+  long k = NTL::NumBits(n);
   long e = 1;
 
   for (long i = k-2; i >= 0; i--) {
@@ -522,7 +520,7 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
     ctxt += tmp1; // ctxt = ctxt + (ctxt >>> e)
     e = 2*e;
 
-    if (bit(n, i)) {
+    if (NTL::bit(n, i)) {
       Ctxt tmp2 = orig;
       ea.rotate(tmp2, e);
       ctxt += tmp2; // ctxt = ctxt + (orig >>> e)
@@ -545,19 +543,19 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 //
 //    M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
 template<class type> void
-EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<ZZX>& C, 
-						const vector<ZZX>& L) const
+EncryptedArrayDerived<type>::buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, 
+						const std::vector<NTL::ZZX>& L) const
 {
   RBak bak; bak.save(); restoreContext();
-  vector<RX> CC, LL;
+  std::vector<RX> CC, LL;
   convert(LL, L);
   buildLinPolyCoeffs(CC, LL);
   convert(C, CC);
 }
 
 template<class type> void
-EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C, 
-						const vector<RX>& L) const
+EncryptedArrayDerived<type>::buildLinPolyCoeffs(std::vector<RX>& C, 
+						const std::vector<RX>& L) const
 {
   FHE_TIMER_START;
 
@@ -565,7 +563,7 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
   REBak ebak; ebak.save(); restoreContextForG(); // The NTL context for mod G
 
   do {
-    typename Lazy< Mat<RE> >::Builder builder(linPolyMatrix);
+    typename NTL::Lazy< NTL::Mat<RE> >::Builder builder(linPolyMatrix);
     if (!builder()) break;
 
     FHE_NTIMER_START(buildLinPolyCoeffs_invert);
@@ -574,18 +572,18 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
     long p = getPAlgebra().getP();
     long r = tab.getR();
 
-    Mat<RE> M1;
+    NTL::Mat<RE> M1;
     // build d x d matrix, d is taken from the current NTL context for G
     buildLinPolyMatrix(M1, p);
-    Mat<RE> M2;
+    NTL::Mat<RE> M2;
     ppInvert(M2, M1, p, r); // invert modulo prime-power p^r
 
-    UniquePtr< Mat<RE> > ptr;
+    NTL::UniquePtr< NTL::Mat<RE> > ptr;
     ptr.make(M2);
     builder.move(ptr);
   } while (0);
 
-  Vec<RE> CC, LL;
+  NTL::Vec<RE> CC, LL;
   convert(LL, L);
   mul(CC, LL, *linPolyMatrix);
   convert(C, CC);
@@ -594,7 +592,7 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(vector<RX>& C,
 
 // Apply the same linear transformation to all the slots.
 // C[0...d-1] is the output of ea.buildLinPolyCoeffs
-void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
+void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const std::vector<NTL::ZZX>& C)
 {
   //OLD: assert(&ea.getContext() == &ctxt.getContext());
   helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
@@ -604,9 +602,9 @@ void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 
   long nslots = ea.size();
 
-  vector<ZZX> encodedC(d);
+  std::vector<NTL::ZZX> encodedC(d);
   for (long j = 0; j < d; j++) {
-    vector<ZZX> v(nslots); // all the slots of v equal C[j]
+    std::vector<NTL::ZZX> v(nslots); // all the slots of v equal C[j]
     for (long i = 0; i < nslots; i++) v[i] = C[j];
     ea.encode(encodedC[j], v);
   }
@@ -619,7 +617,7 @@ void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const vector<ZZX>& C)
 // the matrix Cvec[0...nslots-1][0...d-1] is a length-d vector which
 // is the output of ea.buildLinPolyCoeffs
 void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
-                      const vector< vector<ZZX> >& Cvec)
+                      const std::vector< std::vector<NTL::ZZX> >& Cvec)
 {
   //OLD: assert(&ea.getContext() == &ctxt.getContext());
   helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
@@ -633,9 +631,9 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
     helib::assertEq(d, lsize(Cvec[i]), "Found entry of Cvec with size unequal to degree of ea");
   }
 
-  vector<ZZX> encodedC(d);
+  std::vector<NTL::ZZX> encodedC(d);
   for (long j = 0; j < d; j++) { // encodedC[j] encodes j'th column in Cvec
-    vector<ZZX> v(nslots);       // copy j'th column to v
+    std::vector<NTL::ZZX> v(nslots);       // copy j'th column to v
     for (long i = 0; i < nslots; i++) v[i] = Cvec[i][j];
     ea.encode(encodedC[j], v);   // then encode it
   }
@@ -646,7 +644,7 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
 // A low-level variant: encodedCoeffs has all the linPoly coeffs encoded
 // in slots; different transformations can be encoded in different slots
 template<class P>
-void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
+void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d)
 {
   //OLD: assert(d == lsize(encodedC));
   helib::assertEq(d, lsize(encodedC), "d does not match size of encodedC");
@@ -663,9 +661,9 @@ void applyLinPolyLL(Ctxt& ctxt, const vector<P>& encodedC, long d)
     ctxt += tmp1;
   }
 }
-template void applyLinPolyLL(Ctxt& ctxt, const vector<zzX>& encodedC, long d);
-template void applyLinPolyLL(Ctxt& ctxt, const vector<ZZX>& encodedC, long d);
-template void applyLinPolyLL(Ctxt& ctxt, const vector<DoubleCRT>& encodedC, long d);
+template void applyLinPolyLL(Ctxt& ctxt, const std::vector<zzX>& encodedC, long d);
+template void applyLinPolyLL(Ctxt& ctxt, const std::vector<NTL::ZZX>& encodedC, long d);
+template void applyLinPolyLL(Ctxt& ctxt, const std::vector<DoubleCRT>& encodedC, long d);
 
 /****************** End linear transformation code ******************/
 /********************************************************************/
@@ -683,7 +681,7 @@ public:
   {
     PA_BOILER
 
-    vector<RX> tmp(n); 
+    std::vector<RX> tmp(n); 
 
     for (long i = 0; i < n; i++)
       tmp[((i+k)%n + n)%n] = data[i];
@@ -729,7 +727,7 @@ public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    PlaintextArray& pa, const vector<long>& array)
+                    PlaintextArray& pa, const std::vector<long>& array)
   {
     PA_BOILER
 
@@ -739,7 +737,7 @@ public:
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    PlaintextArray& pa, const vector<ZZX>& array)
+                    PlaintextArray& pa, const std::vector<NTL::ZZX>& array)
   {
     PA_BOILER
 
@@ -755,12 +753,12 @@ public:
 
 
 
-void encode(const EncryptedArray& ea, PlaintextArray& pa, const vector<long>& array)
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const std::vector<long>& array)
 {
   ea.dispatch<encode_pa_impl>(pa, array); 
 }
 
-void encode(const EncryptedArray& ea, PlaintextArray& pa, const vector<ZZX>& array)
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const std::vector<NTL::ZZX>& array)
 {
   ea.dispatch<encode_pa_impl>(pa, array); 
 }
@@ -768,16 +766,16 @@ void encode(const EncryptedArray& ea, PlaintextArray& pa, const vector<ZZX>& arr
 void encode(const EncryptedArray& ea, PlaintextArray& pa, long val)
 {
    long n = ea.size();
-   vector<long> array;
+   std::vector<long> array;
    array.resize(n);
    for (long i = 0; i < n; i++) array[i] = val;
    encode(ea, pa, array);
 }
 
-void encode(const EncryptedArray& ea, PlaintextArray& pa, const ZZX& val)
+void encode(const EncryptedArray& ea, PlaintextArray& pa, const NTL::ZZX& val)
 {
    long n = ea.size();
-   vector<ZZX> array;
+   std::vector<NTL::ZZX> array;
    array.resize(n);
    for (long i = 0; i < n; i++) array[i] = val;
    encode(ea, pa, array);
@@ -814,7 +812,7 @@ public:
 
   template<class T>
   static void apply(const EncryptedArrayDerived<type>& ea, 
-    vector<T>& array, const PlaintextArray& pa)
+    std::vector<T>& array, const PlaintextArray& pa)
   {
     CPA_BOILER
 
@@ -824,13 +822,13 @@ public:
 }; 
 
 
-void decode(const EncryptedArray& ea, vector<long>& array, const PlaintextArray& pa)
+void decode(const EncryptedArray& ea, std::vector<long>& array, const PlaintextArray& pa)
 {
   ea.dispatch<decode_pa_impl>(array, pa); 
 }
 
 
-void decode(const EncryptedArray& ea, vector<ZZX>& array, const PlaintextArray& pa)
+void decode(const EncryptedArray& ea, std::vector<NTL::ZZX>& array, const PlaintextArray& pa)
 {
   ea.dispatch<decode_pa_impl>(array, pa); 
 }
@@ -847,28 +845,28 @@ public:
   {
     CPA_BOILER
 
-    const vector<RX>& odata = other.getData<type>(); 
+    const std::vector<RX>& odata = other.getData<type>(); 
     res = (data == odata);
   }
 
 
   static void apply(const EncryptedArrayDerived<type>& ea, bool& res, 
-    const PlaintextArray& pa, const vector<long>& other)
+    const PlaintextArray& pa, const std::vector<long>& other)
   {
     CPA_BOILER
 
-    vector<RX> odata;
+    std::vector<RX> odata;
     convert(odata, other);
     res = (data == odata);
   }
 
 
   static void apply(const EncryptedArrayDerived<type>& ea, bool& res,
-    const PlaintextArray& pa, const vector<ZZX>& other)
+    const PlaintextArray& pa, const std::vector<NTL::ZZX>& other)
   {
     CPA_BOILER
 
-    vector<RX> odata;
+    std::vector<RX> odata;
     convert(odata, other);
     res = (data == odata);
   }
@@ -884,7 +882,7 @@ bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const PlaintextA
   return res;
 }
 
-bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const vector<long>& other)
+bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const std::vector<long>& other)
 {
   bool res;
   ea.dispatch<equals_pa_impl>(res, pa, other); 
@@ -892,7 +890,7 @@ bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const vector<lon
 }
 
 
-bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const vector<ZZX>& other)
+bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const std::vector<NTL::ZZX>& other)
 {
   bool res;
   ea.dispatch<equals_pa_impl>(res, pa, other); 
@@ -911,7 +909,7 @@ public:
   {
     PA_BOILER
 
-    const vector<RX>& odata = other.getData<type>(); 
+    const std::vector<RX>& odata = other.getData<type>(); 
 
     for (long i = 0; i < n; i++)
       data[i] += odata[i];
@@ -936,7 +934,7 @@ public:
   {
     PA_BOILER
 
-    const vector<RX>& odata = other.getData<type>(); 
+    const std::vector<RX>& odata = other.getData<type>(); 
 
     for (long i = 0; i < n; i++)
       data[i] -= odata[i];
@@ -961,7 +959,7 @@ public:
   {
     PA_BOILER
 
-    const vector<RX>& odata = other.getData<type>(); 
+    const std::vector<RX>& odata = other.getData<type>(); 
 
     for (long i = 0; i < n; i++)
       data[i] = (data[i] * odata[i]) % G;
@@ -1010,14 +1008,14 @@ public:
     long p = ea.getPAlgebra().getP();
 
     j = mcMod(j, d);
-    RX H = PowerMod(RX(1, 1), power_ZZ(p, j), G);
+    RX H = NTL::PowerMod(RX(1, 1), NTL::power_ZZ(p, j), G);
 
     for (long i = 0; i < n; i++)
-      data[i] = CompMod(data[i], H, G);
+      data[i] = NTL::CompMod(data[i], H, G);
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa,
-    const Vec<long>& vec) 
+    const NTL::Vec<long>& vec) 
   {
     PA_BOILER
 
@@ -1028,8 +1026,8 @@ public:
 
     for (long i = 0; i < n; i++) {
       long j = mcMod(vec[i], d);
-      RX H = PowerMod(RX(1, 1), power_ZZ(p, j), G);
-      data[i] = CompMod(data[i], H, G);
+      RX H = NTL::PowerMod(RX(1, 1), NTL::power_ZZ(p, j), G);
+      data[i] = NTL::CompMod(data[i], H, G);
     }
   }
 };
@@ -1043,7 +1041,7 @@ void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, long j)
 }
 
 
-void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, const Vec<long>& vec)
+void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, const NTL::Vec<long>& vec)
 {
   ea.dispatch<frobeniusAutomorph_pa_impl>(pa, vec); 
 }
@@ -1070,14 +1068,14 @@ public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa,
-    const Vec<long>& pi) 
+    const NTL::Vec<long>& pi) 
   {
     PA_BOILER
 
     //OLD: assert(pi.length() == n);
     helib::assertEq(pi.length(), n, "pi has incorrect length");
 
-    vector<RX> tmp;
+    std::vector<RX> tmp;
     tmp.resize(n);
     for (long i = 0; i < n; i++)
       tmp[i] = data[pi[i]];
@@ -1089,7 +1087,7 @@ public:
 
 
 
-void applyPerm(const EncryptedArray& ea, PlaintextArray& pa, const Vec<long>& pi)
+void applyPerm(const EncryptedArray& ea, PlaintextArray& pa, const NTL::Vec<long>& pi)
 {
   ea.dispatch<applyPerm_pa_impl>(pa, pi); 
 }
@@ -1102,7 +1100,7 @@ public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea, 
-    ostream& s, const PlaintextArray& pa)
+    std::ostream& s, const PlaintextArray& pa)
   {
     CPA_BOILER
 
@@ -1122,7 +1120,7 @@ public:
 }; 
 
 
-void print(const EncryptedArray& ea, ostream& s, const PlaintextArray& pa)
+void print(const EncryptedArray& ea, std::ostream& s, const PlaintextArray& pa)
 {
   ea.dispatch<print_pa_impl>(s, pa); 
 }

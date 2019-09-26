@@ -12,23 +12,21 @@
 
 #include "permutations.h"
 
-NTL_CLIENT
-
-const Vec<long> SubDimension::dummyBenes; // global variable
+const NTL::Vec<long> SubDimension::dummyBenes; // global variable
 
 // Apply a permutation to a vector, out[i]=in[p1[i]]
-// Unfortunately we need to implement for both Vec<long> and vector<long>
+// Unfortunately we need to implement for both NTL::Vec<long> and std::vector<long>
 template<class T>
-void applyPermToVec(Vec<T>& out, const Vec<T>& in, const Permut& p1)
+void applyPermToVec(NTL::Vec<T>& out, const NTL::Vec<T>& in, const Permut& p1)
 {
   //OLD: assert(&out != &in); // NOT an in-place procedure
-  helib::assertNeq<helib::InvalidArgument>(static_cast<const Vec<T>*>(&out), &in, "Cannot have equal in and out addresses (Not an in-place procedure)");
+  helib::assertNeq<helib::InvalidArgument>(static_cast<const NTL::Vec<T>*>(&out), &in, "Cannot have equal in and out addresses (Not an in-place procedure)");
   out.SetLength(p1.length());
   for (long i=0; i<p1.length(); i++)
     out[i] = in.at(p1[i]);
 }
 template<class T>
-void applyPermToVec(vector<T>& out, const vector<T>& in, const Permut& p1)
+void applyPermToVec(std::vector<T>& out, const std::vector<T>& in, const Permut& p1)
 {
   out.resize(p1.length());
   for (long i=0; i<p1.length(); i++)
@@ -37,11 +35,11 @@ void applyPermToVec(vector<T>& out, const vector<T>& in, const Permut& p1)
 
 // Apply two permutations to a vector out[i]=in[p2[p1[i]]]
 template<class T>
-void applyPermsToVec(Vec<T>& out, const Vec<T>& in,
+void applyPermsToVec(NTL::Vec<T>& out, const NTL::Vec<T>& in,
 		      const Permut& p2, const Permut& p1)
 {
   //OLD: assert(&out != &in); // NOT an in-place procedure
-  helib::assertNeq<helib::InvalidArgument>(static_cast<const Vec<T>*>(&out), &in, "Cannot have equal in and out addresses (Not an in-place procedure)");
+  helib::assertNeq<helib::InvalidArgument>(static_cast<const NTL::Vec<T>*>(&out), &in, "Cannot have equal in and out addresses (Not an in-place procedure)");
   //OLD: assert(p1.length() == p2.length());
   helib::assertEq(p1.length(), p2.length(), "Permutation p1 and p2 sizes differ");
   out.SetLength(p1.length());
@@ -49,7 +47,7 @@ void applyPermsToVec(Vec<T>& out, const Vec<T>& in,
     out[i] = in.at(p2.at(p1[i]));
 }
 template<class T>
-void applyPermsToVec(vector<T>& out, const vector<T>& in,
+void applyPermsToVec(std::vector<T>& out, const std::vector<T>& in,
 		      const Permut& p2, const Permut& p1)
 {
   //OLD: assert(p1.length() == p2.length());
@@ -59,16 +57,16 @@ void applyPermsToVec(vector<T>& out, const vector<T>& in,
     out[i] = in.at(p2.at(p1[i]));
 }
 // explicit instantiations
-template void applyPermToVec<long>(Vec<long>& out, const Vec<long>& in,
+template void applyPermToVec<long>(NTL::Vec<long>& out, const NTL::Vec<long>& in,
 			       const Permut& p1);
-template void applyPermToVec<long>(vector<long>& out, const vector<long>& in,
+template void applyPermToVec<long>(std::vector<long>& out, const std::vector<long>& in,
 			       const Permut& p1);
-template void applyPermToVec<ZZX>(vector<ZZX>& out, const vector<ZZX>& in,
+template void applyPermToVec<NTL::ZZX>(std::vector<NTL::ZZX>& out, const std::vector<NTL::ZZX>& in,
 			       const Permut& p1);
 
-template void applyPermsToVec<long>(Vec<long>& out, const Vec<long>& in,
+template void applyPermsToVec<long>(NTL::Vec<long>& out, const NTL::Vec<long>& in,
 				const Permut& p2, const Permut& p1);
-template void applyPermsToVec<long>(vector<long>& out, const vector<long>& in,
+template void applyPermsToVec<long>(std::vector<long>& out, const std::vector<long>& in,
 				const Permut& p2, const Permut& p1);
 
 
@@ -81,7 +79,7 @@ void randomPerm(Permut& perm, long n)
    
   // random shuffle
   for (long m = n; m > 0; m--) {
-     long p = RandomBnd(m);
+     long p = NTL::RandomBnd(m);
      // swap positions p and m-1 of perm
      long tmp = perm[p];
      perm[p] = perm[m-1];
@@ -109,7 +107,7 @@ void ColPerm::makeExplicit(Permut& out) const
 // For each position in the data vector, compute how many slots it should be
 // shifted inside its small permutation.
 // Return value is zero if all the shift amounts are zero, nonzero otherwise.
-long ColPerm::getShiftAmounts(Vec<long>& out) const
+long ColPerm::getShiftAmounts(NTL::Vec<long>& out) const
 {
   long sz = getSize();
   out.SetLength(sz);
@@ -152,8 +150,8 @@ collapseBenesLevels(Permut& out, const GeneralBenesNetwork &net,
 // Get multiple layers of a Benes permutation network. Returns in out[i][j]
 // the shift amount to move item j in the i'th layer. Also isID[i]=true if
 // the i'th layer is the identity (i.e., contains only 0 shift amounts).
-void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
-				   const Vec<long>& benesLvls) const
+void ColPerm::getBenesShiftAmounts(NTL::Vec<Permut>& out, NTL::Vec<bool>& isID,
+				   const NTL::Vec<long>& benesLvls) const
 {
   // Go over the columns one by one. For each column extract the columns
   // permutation, prepare a Benes network for it, and then for every layer
@@ -169,7 +167,7 @@ void ColPerm::getBenesShiftAmounts(Vec<Permut>& out, Vec<bool>& isID,
     isID[k] = true;
   }
 
-  Vec<long> col;
+  NTL::Vec<long> col;
   col.SetLength(n);
 
   for (long slice_index = 0; slice_index < numSlices(dim); slice_index++) {
@@ -230,7 +228,7 @@ void breakPermTo3(const HyperCube<long>& pi, long dim,
   long n = pi.getProd(dim); // = n1*n2;
 
   // representing I_n as I_n1 x I_n2: i == n2*rep[i].first + rep[i].second
-  vector< pair<long,long> > rep(n);
+  std::vector< std::pair<long,long> > rep(n);
   for (long ind=0,i=0; i<n1; i++) for (long j=0; j<n2; j++,ind++) {
       rep[ind].first = i;
       rep[ind].second = j;
@@ -313,7 +311,7 @@ void breakPermTo3(const HyperCube<long>& pi, long dim,
  * each rho_i is a column permutation along one dimension. Specifically for
  * i<m, the permutations rho_i and rho_{2(m-1)-i} permute the i'th dimension
  ************************************************************************/
-void breakPermByDim(vector<ColPerm>& out, 
+void breakPermByDim(std::vector<ColPerm>& out, 
 		    const Permut &pi, const CubeSignature& sig)
 {
   //OLD: assert(sig.getSize()==pi.length());
@@ -355,7 +353,7 @@ void breakPermByDim(vector<ColPerm>& out,
 
 // Get the "crude" cube dimensions corresponding to a vector of trees,
 // the ordered vector with one dimension per tree
-void GeneratorTrees::getCubeDims(Vec<long>& dims) const
+void GeneratorTrees::getCubeDims(NTL::Vec<long>& dims) const
 {
   dims.SetLength(trees.length());
 
@@ -369,7 +367,7 @@ void GeneratorTrees::getCubeDims(Vec<long>& dims) const
 
 // Get the "fine" cube dimensions corresponding to a vector of trees,
 // the ordered vector with one dimension per leaf in any of the trees.
-void GeneratorTrees::getCubeSubDims(Vec<long>& dims) const
+void GeneratorTrees::getCubeSubDims(NTL::Vec<long>& dims) const
 {
   // how many dimensions do we need
   long nDims = 0;
@@ -388,7 +386,7 @@ void GeneratorTrees::getCubeSubDims(Vec<long>& dims) const
 
 // Adds one to the little-endian representation of an integer in base digits,
 // returns true if there was an overflow
-static bool addOne(Vec<long>& rep, const Vec<long> digits)
+static bool addOne(NTL::Vec<long>& rep, const NTL::Vec<long> digits)
 {
   for (long i=rep.length()-1; i>=0; --i) {
     rep[i]++;
@@ -404,8 +402,8 @@ static bool addOne(Vec<long>& rep, const Vec<long> digits)
 /// to a single generator tree
 void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
 {
-  Vec<long> dims(INIT_SIZE, T.getNleaves());
-  Vec<long> coefs(INIT_SIZE,T.getNleaves());
+  NTL::Vec<long> dims(NTL::INIT_SIZE, T.getNleaves());
+  NTL::Vec<long> coefs(NTL::INIT_SIZE,T.getNleaves());
   for (long i=T.getNleaves()-1, leaf=T.lastLeaf(); i>=0;
                                 i--, leaf=T.prevLeaf(leaf)) {
     dims[i] = T[leaf].getData().size;
@@ -413,7 +411,7 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
   }
 
   // A representation of an integer with digits from dims
-  Vec<long> rep(INIT_SIZE, T.getNleaves());
+  NTL::Vec<long> rep(NTL::INIT_SIZE, T.getNleaves());
   for (long i=0; i<rep.length(); i++) rep[i]=0; // initialize to zero
 
   // initialize to all zero
@@ -425,8 +423,8 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
   for (long i=1; i<sz; i++) {
     addOne(rep, dims); // representation of i in base dims
     for (long j=0; j<coefs.length(); j++) {
-      long tmp = MulMod(rep[j], coefs[j], sz);
-      genMap[i] = AddMod(genMap[i], tmp, sz);
+      long tmp = NTL::MulMod(rep[j], coefs[j], sz);
+      genMap[i] = NTL::AddMod(genMap[i], tmp, sz);
     }
   }
 }
@@ -447,8 +445,8 @@ void GeneratorTrees::ComputeCubeMapping()
     // the generators: one for the generators ordered by their index 0,1,2...
     // and the other odred the generators by the order of their trees
 
-    Vec<long> dims1(INIT_SIZE,trees.length()), dims2(INIT_SIZE,trees.length());
-    Vec<Permut> genMappings(INIT_SIZE, trees.length());
+    NTL::Vec<long> dims1(NTL::INIT_SIZE,trees.length()), dims2(NTL::INIT_SIZE,trees.length());
+    NTL::Vec<Permut> genMappings(NTL::INIT_SIZE, trees.length());
     for (long i=0; i<trees.length(); i++) {
       dims1[i] = trees[i][0].getData().size;
       ComputeOneGenMapping(genMappings[i], trees[i]);
@@ -480,7 +478,7 @@ void GeneratorTrees::ComputeCubeMapping()
 }
 
 // Prints out a column permutation
-ostream& operator<< (ostream &s, const ColPerm& p)
+std::ostream& operator<< (std::ostream &s, const ColPerm& p)
 {
   Permut pp;
   p.makeExplicit(pp);
@@ -488,7 +486,7 @@ ostream& operator<< (ostream &s, const ColPerm& p)
 }
 
 // Prints out a sub-dimension
-ostream& operator<< (ostream &s, const SubDimension& sd)
+std::ostream& operator<< (std::ostream &s, const SubDimension& sd)
 {
   s << (sd.good? "(g ": "(b ") << sd.size << " " << sd.e << ")";
   if (sd.frstBenes.length()>0 || sd.scndBenes.length()>0)
@@ -497,7 +495,7 @@ ostream& operator<< (ostream &s, const SubDimension& sd)
 }
 
 // Prints out the vector of trees
-ostream& operator<< (ostream &s, const GeneratorTrees &trees)
+std::ostream& operator<< (std::ostream &s, const GeneratorTrees &trees)
 {
   s << "[" << trees.depth << "\n";
   for (long g=0; g<trees.numTrees(); g++) {

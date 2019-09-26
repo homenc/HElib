@@ -37,30 +37,30 @@
 // Experimentally, one half FFT seems a bit better, so setting to 0 is best.
 
 
-NTL_CLIENT
-
 long sumOfCoeffs(const zzX& f) // = f(1)
 {
   long sum = 0;
   for (long i=0; i<lsize(f); i++) sum += f[i];
   return sum;
 }
-ZZ sumOfCoeffs(const ZZX& f) // = f(1)
+
+NTL::ZZ sumOfCoeffs(const NTL::ZZX& f) // = f(1)
 {
-  ZZ sum = ZZ::zero();
+  NTL::ZZ sum = NTL::ZZ::zero();
   for (long i=0; i<=deg(f); i++) sum += coeff(f,i);
   return sum;
 }
+
 NTL::ZZ sumOfCoeffs(const DoubleCRT& f)
 {
-  ZZX poly;
+  NTL::ZZX poly;
   f.toPoly(poly);
   return sumOfCoeffs(poly);
 }
 
-ZZ largestCoeff(const ZZX& f)
+NTL::ZZ largestCoeff(const NTL::ZZX& f)
 {
-  ZZ mx = ZZ::zero();
+  NTL::ZZ mx = NTL::ZZ::zero();
   for (long i=0; i<=deg(f); i++) {
     if (mx < abs(coeff(f,i)))
       mx = abs(coeff(f,i));
@@ -68,9 +68,9 @@ ZZ largestCoeff(const ZZX& f)
   return mx;
 }
 
-ZZ largestCoeff(const Vec<ZZ>& f)
+NTL::ZZ largestCoeff(const NTL::Vec<NTL::ZZ>& f)
 {
-  ZZ mx = ZZ::zero();
+  NTL::ZZ mx = NTL::ZZ::zero();
   for (auto& x : f) {
     if (mx < abs(x))
       mx = abs(x);
@@ -78,7 +78,7 @@ ZZ largestCoeff(const Vec<ZZ>& f)
   return mx;
 }
 
-ZZ largestCoeff(const DoubleCRT& f)
+NTL::ZZ largestCoeff(const DoubleCRT& f)
 {
   NTL::ZZX poly;
   f.toPoly(poly);
@@ -94,18 +94,20 @@ double coeffsL2NormSquared(const zzX& f) // l_2 norm square
   }
   return s;
 }
-xdouble coeffsL2NormSquared(const ZZX& f) // l_2 norm square
+
+NTL::xdouble coeffsL2NormSquared(const NTL::ZZX& f) // l_2 norm square
 {
-  xdouble s(0.0);
+  NTL::xdouble s(0.0);
   for (long i=0; i<=deg(f); i++) {
-    xdouble coef(conv<xdouble>(coeff(f,i)));
+    NTL::xdouble coef(NTL::conv<NTL::xdouble>(coeff(f,i)));
     s += coef * coef;
   }
   return s;
 }
-xdouble coeffsL2NormSquared(const DoubleCRT& f) // l2 norm^2
+
+NTL::xdouble coeffsL2NormSquared(const DoubleCRT& f) // l2 norm^2
 {
-  ZZX poly;
+  NTL::ZZX poly;
   f.toPoly(poly);
   return coeffsL2NormSquared(poly);
 }
@@ -127,7 +129,7 @@ MUL(cx_double a, cx_double b)
 }
 
 
-static double 
+static double
 basic_embeddingLargestCoeff(const std::vector<double>& f,
                       const PAlgebra& palg)
 {
@@ -135,10 +137,10 @@ basic_embeddingLargestCoeff(const std::vector<double>& f,
   long m = palg.getM();
   long sz = f.size();
 
-  if (sz > m) 
+  if (sz > m)
     helib::LogicError("vector too big f canonicalEmbedding");
 
-  vector<cx_double> buf(m);
+  std::vector<cx_double> buf(m);
   for (long i: range(0, sz)) buf[i] = f[i];
   for (long i: range(sz, m)) buf[i] = 0;
   palg.getFFTInfo().apply(&buf[0]);
@@ -162,8 +164,8 @@ basic_embeddingLargestCoeff(const std::vector<double>& f,
 // Odd-Power Trick.  Suppose m is even and deg(f) < m/2,
 // and we want to compute f(W^(2j+1)) =  \sum_{i < m/2} f_i W^{i(2j+1)})
 // for j in range(m/2), where W is a primitive m-th root of unity.
-// Observe that W^{i(2j+1)} = W^i V^{ij}, where V = W^2 is a primitive 
-// (m/2)-th root of unity.  So if we define g_i = f_i W^i, 
+// Observe that W^{i(2j+1)} = W^i V^{ij}, where V = W^2 is a primitive
+// (m/2)-th root of unity.  So if we define g_i = f_i W^i,
 // then f(W^(2j+1)) = \sum_{i < m/2} g_i V^{ij}.  So this
 // reduces the original problem to a single (m/2)-point DFT.
 
@@ -175,13 +177,13 @@ half_embeddingLargestCoeff(const std::vector<double>& f,
   long m = palg.getM();
   long sz = f.size();
 
-  if (sz > m/2) 
+  if (sz > m/2)
     helib::LogicError("vector too big f canonicalEmbedding");
 
   const half_FFT& hfft = palg.getHalfFFTInfo();
   const cx_double* pow = &hfft.pow[0];
 
-  vector<cx_double> buf(m/2);
+  std::vector<cx_double> buf(m/2);
   for (long i: range(0, sz)) buf[i] = f[i] * pow[i];
   for (long i: range(sz, m/2)) buf[i] = 0;
   hfft.fft.apply(&buf[0]);
@@ -220,7 +222,7 @@ quarter_embeddingLargestCoeff(const std::vector<double>& f, const PAlgebra& palg
   const cx_double* pow1 = &qfft.pow1[0];
   const cx_double* pow2 = &qfft.pow2[0];
 
-  vector<cx_double> buf(m/4);
+  std::vector<cx_double> buf(m/4);
   for (long i: range(0, sz/2))
     buf[i] = MUL(cx_double(f[2*i], f[2*i+1]), pow2[i]);
   for (long i: range(sz/2, m/4)) buf[i] = 0;
@@ -256,7 +258,7 @@ embeddingLargestCoeff(const std::vector<double>& f,
 
   long m = palg.getM();
   if (USE_HALF_FFT && m%2 == 0) {
-    if (USE_QUARTER_FFT && m%4 == 0) 
+    if (USE_QUARTER_FFT && m%4 == 0)
       return quarter_embeddingLargestCoeff(f, palg);
     else
       return half_embeddingLargestCoeff(f, palg);
@@ -271,12 +273,12 @@ embeddingLargestCoeff(const std::vector<double>& f,
 
 // Computes two for the price of one!
 // This is a standard technique for computing the two real DFT's
-// using one complex DFT.  
+// using one complex DFT.
 
-static void 
+static void
 basic_embeddingLargestCoeff_x2(double& norm1, double& norm2,
-			 const std::vector<double>& f1, 
-			 const std::vector<double>& f2, 
+			 const std::vector<double>& f1,
+			 const std::vector<double>& f2,
 			 const PAlgebra& palg)
 {
 
@@ -287,10 +289,10 @@ basic_embeddingLargestCoeff_x2(double& norm1, double& norm2,
   if (sz1 > m || sz2 > m)
     helib::LogicError("vector too big in canonicalEmbedding");
 
-  long sz_max = max(sz1, sz2);
-  long sz_min = min(sz1, sz2);
+  long sz_max = std::max(sz1, sz2);
+  long sz_min = std::min(sz1, sz2);
 
-  vector<cx_double> buf(m);
+  std::vector<cx_double> buf(m);
   for (long i: range(0, sz_min))    buf[i] = cx_double(f1[i], f2[i]);
   for (long i: range(sz_min, sz1))  buf[i] = cx_double(f1[i], 0);
   for (long i: range(sz_min, sz2))  buf[i] = cx_double(0, f2[i]);
@@ -341,10 +343,10 @@ basic_embeddingLargestCoeff_x2(double& norm1, double& norm2,
 }
 
 
-static void 
+static void
 half_embeddingLargestCoeff_x2(double& norm1, double& norm2,
-			 const std::vector<double>& f1, 
-			 const std::vector<double>& f2, 
+			 const std::vector<double>& f1,
+			 const std::vector<double>& f2,
 			 const PAlgebra& palg)
 {
 
@@ -355,15 +357,15 @@ half_embeddingLargestCoeff_x2(double& norm1, double& norm2,
   if (sz1 > m/2 || sz2 > m/2)
     helib::LogicError("vector too big in canonicalEmbedding");
 
-  long sz_max = max(sz1, sz2);
-  long sz_min = min(sz1, sz2);
+  long sz_max = std::max(sz1, sz2);
+  long sz_min = std::min(sz1, sz2);
 
   const half_FFT& hfft = palg.getHalfFFTInfo();
   const cx_double* pow = &hfft.pow[0];
 
   // Odd-Power Trick.  See above.
 
-  vector<cx_double> buf(m/2);
+  std::vector<cx_double> buf(m/2);
   for (long i: range(0, sz_min))    buf[i] = MUL(cx_double(f1[i], f2[i]), pow[i]);
   for (long i: range(sz_min, sz1))  buf[i] = MUL(cx_double(f1[i], 0), pow[i]);
   for (long i: range(sz_min, sz2))  buf[i] = MUL(cx_double(0, f2[i]), pow[i]);
@@ -416,10 +418,10 @@ half_embeddingLargestCoeff_x2(double& norm1, double& norm2,
 
 
 
-void 
+void
 embeddingLargestCoeff_x2(double& norm1, double& norm2,
-			 const std::vector<double>& f1, 
-			 const std::vector<double>& f2, 
+			 const std::vector<double>& f1,
+			 const std::vector<double>& f2,
 			 const PAlgebra& palg)
 {
   FHE_NTIMER_START(AAA_embeddingLargest_x2);
@@ -448,14 +450,14 @@ double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg)
 }
 
 
-static xdouble 
-scale(vector<double>& ff, const NTL::ZZX& f)
+static NTL::xdouble
+scale(std::vector<double>& ff, const NTL::ZZX& f)
 {
   // max allowed bits to avoid double overflow in computations.
   // Note that the implementation of the L-infty norms naiveley
   // computes the complex norm and then takes a sqrt of that.
   // Given that an IEEE double can handle numbers only less than 1024
-  // bits in length, this limits the bit lengths that are input 
+  // bits in length, this limits the bit lengths that are input
   // to the FFT to 512 - log_2(m), where m = size of the transform
   // (in the worst case, the FFT will add log_2(m) bits).
   // Using the extremely pessimistic bound of log_2(m) <= 64,
@@ -463,21 +465,21 @@ scale(vector<double>& ff, const NTL::ZZX& f)
   // more on the safe side.
 
   const long MAX_BITS = 400;
-  xdouble retval;
+  NTL::xdouble retval;
   long size = NTL::MaxBits(f);
 
   if (size > MAX_BITS) {
     long m = f.rep.length();
     ff.resize(m);
 
-    ZZ scaled;
+    NTL::ZZ scaled;
     for (long i: range(m)) {
       // NOTE: too bad NTL does not provide a scale and convert routine
       RightShift(scaled, f.rep[i], size-MAX_BITS);
-      ff[i] = conv<double>(scaled);
+      ff[i] = NTL::conv<double>(scaled);
     }
 
-    retval = power2_xdouble(size-MAX_BITS);
+    retval = NTL::power2_xdouble(size-MAX_BITS);
   }
   else {
     convert(ff, f.rep);
@@ -487,10 +489,10 @@ scale(vector<double>& ff, const NTL::ZZX& f)
   return retval;
 }
 
-xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
+NTL::xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
 {
-  vector<double> ff; // to hold a scaled-down version of ff;
-  xdouble factor = scale(ff, f);
+  std::vector<double> ff; // to hold a scaled-down version of ff;
+  NTL::xdouble factor = scale(ff, f);
   return embeddingLargestCoeff(ff, palg) * factor;
 }
 
@@ -527,14 +529,14 @@ CKKS_canonicalEmbedding(std::vector<cx_double>& v,
   const half_FFT& hfft = palg.getHalfFFTInfo();
   const cx_double* pow = &hfft.pow[0];
 
-  vector<cx_double> buf(m/2);
+  std::vector<cx_double> buf(m/2);
   for (long i: range(0, sz)) buf[i] = in[i] * pow[i];
   for (long i: range(sz, m/2)) buf[i] = 0;
   hfft.fft.apply(&buf[0]);
 
   v.resize(m/4);
   for (long i: range(m/4))
-    v[m/4-i-1] = buf[palg.ith_rep(i) >> 1]; 
+    v[m/4-i-1] = buf[palg.ith_rep(i) >> 1];
 }
 
 void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
@@ -542,18 +544,18 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
 {
   FHE_TIMER_START;
 
-  vector<double> x;
+  std::vector<double> x;
   convert(x, f);
 
   CKKS_canonicalEmbedding(v, x, palg);
 }
 
 void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
-                        const ZZX& f, const PAlgebra& palg)
+                        const NTL::ZZX& f, const PAlgebra& palg)
 {
   FHE_TIMER_START;
 
-  vector<double> x;
+  std::vector<double> x;
   convert(x, f.rep);
 
   CKKS_canonicalEmbedding(v, x, palg);
@@ -561,7 +563,7 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
 
 
 
-// The forward transorm (as computed by CKKS_canonicalEmbedding) 
+// The forward transorm (as computed by CKKS_canonicalEmbedding)
 // is computing the linear transformation:
 //    DFT * D
 // where D is a diagonal matrix with W^i on the diagonal in the i-th row,
@@ -572,18 +574,18 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
 //   D^{-1} * DFT^{-1}
 // Now, DFT^{-1} = 1/(m/2) times a DFT matrix for conj(V).
 // So this computation effectively maps a polynomial g of degree < m/2
-// to a vector whose j-th component is 
+// to a vector whose j-th component is
 //   g(conj(V)^j) * conj(V)^j = conj(conj(g)(V^j)) * conj(V^j)
 //                            = conj(conj(g)(V^j) * V^j)
 // Moreover, this value is a real number, so we can drop the
 // outer conj, and just compute conj(g)(V^j) * V^j.
-// 
+//
 // Note also that the forward transform takes a real (m/2)-vector
 // and expands it to a complex (m/2)-vector, then applies DFT*D,
 // and then contracts this to a complex (m/4)-vector by keeping
 // only one out of each conjugate pair.  The inverse transform
 // reverses the contracting step by reinserting the missing conjugate,
-// then applies D^{-1} * DFT^{-1}, and then reverses the expanding 
+// then applies D^{-1} * DFT^{-1}, and then reverses the expanding
 // step by dropping the complex part.
 
 void CKKS_embedInSlots(zzX& f, const std::vector<cx_double>& v,
@@ -598,7 +600,7 @@ void CKKS_embedInSlots(zzX& f, const std::vector<cx_double>& v,
   if (!(palg.getP() == -1 && palg.getPow2() >= 2))
     helib::LogicError("bad args to CKKS_canonicalEmbedding");
 
-  vector<cx_double> buf(m/2, cx_double(0));
+  std::vector<cx_double> buf(m/2, cx_double(0));
   for (long i: range(m/4)) {
     long j = palg.ith_rep(i);
     long ii = m/4-i-1;
@@ -614,7 +616,7 @@ void CKKS_embedInSlots(zzX& f, const std::vector<cx_double>& v,
   scaling /= (m/2);
   hfft.fft.apply(&buf[0]);
   f.SetLength(m/2);
-  for (long i: range(m/2)) 
+  for (long i: range(m/2))
     f[i] = std::round(MUL(buf[i], pow[i]).real() * scaling);
 
   normalize(f);
@@ -631,7 +633,7 @@ void CKKS_embedInSlots(zzX& f, const std::vector<cx_double>& v,
 #if 0
 
 static void
-dft_to_canonical(std::vector<cx_double>& v, 
+dft_to_canonical(std::vector<cx_double>& v,
                  const std::vector<cx_double>& buf,
                  const PAlgebra& palg)
 {
@@ -650,15 +652,15 @@ dft_to_canonical(std::vector<cx_double>& v,
 
 
 void
-canonicalEmbedding(std::vector<cx_double>& v, 
-		   const std::vector<double>& in, 
+canonicalEmbedding(std::vector<cx_double>& v,
+		   const std::vector<double>& in,
 		   const PAlgebra& palg)
 {
   FHE_TIMER_START;
   long m = palg.getM();
 
-  if (long(in.size()) > m) 
-    helib::LogicError("vector too big in canonicalEmbedding");
+  if (long(in.size()) > m)
+    helib::LogicError("std::vector too big in canonicalEmbedding");
 
   vector<cx_double> buf(m);
   for (long i: range(in.size())) buf[i] = in[i];
@@ -682,7 +684,7 @@ void canonicalEmbedding(std::vector<cx_double>& v,
 
   canonicalEmbedding(v, x, palg);
 }
-   
+
 
 
 void canonicalEmbedding(std::vector<cx_double>& v,
@@ -768,7 +770,7 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
     }
   }
 #endif
-  
+
 
   reduceModPhimX(f, palg);
 

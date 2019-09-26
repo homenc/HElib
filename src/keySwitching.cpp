@@ -23,8 +23,6 @@
 #include "keySwitching.h"
 #include "keys.h"
 
-NTL_CLIENT
-
 /******************** KeySwitch implementation **********************/
 /********************************************************************/
 
@@ -64,8 +62,8 @@ void KeySwitch::verify(FHESecKey& sk)
   long p = ptxtSpace;
   long n = b.size();
 
-  cout << "KeySwitch::verify\n";
-  cout << "fromS = " << fromSPower
+  std::cout << "KeySwitch::verify\n";
+  std::cout << "fromS = " << fromSPower
        << " fromX = " << fromXPower
        << " fromIdx = " << fromIdx
        << " toIdx = " << toIdx
@@ -75,7 +73,7 @@ void KeySwitch::verify(FHESecKey& sk)
 
 
   if (fromSPower != 1 || fromXPower != 1 || (fromIdx == toIdx) || n == 0) {
-    cout << "KeySwitch::verify: these parameters not checkable\n";
+    std::cout << "KeySwitch::verify: these parameters not checkable\n";
     return;
   }
 
@@ -86,31 +84,31 @@ void KeySwitch::verify(FHESecKey& sk)
 
   for (long i = 0; i < n; i++) {
     if (&context != &(b[i].getContext()))
-      cout << "KeySwitch::verify: bad context " << i << "\n";
+      std::cout << "KeySwitch::verify: bad context " << i << "\n";
   }
 
-  cout << "context.ctxtPrimes = " << context.ctxtPrimes << "\n";
-  cout << "context.specialPrimes = " << context.specialPrimes << "\n";
+  std::cout << "context.ctxtPrimes = " << context.ctxtPrimes << "\n";
+  std::cout << "context.specialPrimes = " << context.specialPrimes << "\n";
   IndexSet fullPrimes = context.fullPrimes(); // ctxtPrimes | specialPrimes;
 
-  cout << "digits: ";
+  std::cout << "digits: ";
   for (long i = 0; i < n; i++)
-    cout << context.digits[i] << " ";
-  cout << "\n";
+    std::cout << context.digits[i] << " ";
+  std::cout << "\n";
 
-  cout << "IndexSets of b: ";
+  std::cout << "IndexSets of b: ";
   for (long i = 0; i < n; i++)
-    cout << b[i].getMap().getIndexSet() << " ";
-  cout << "\n";
+    std::cout << b[i].getMap().getIndexSet() << " ";
+  std::cout << "\n";
 
   // VJS: suspicious shadowing of fromKey, toKey
   const DoubleCRT& _fromKey = sk.sKeys.at(fromIdx);
   const DoubleCRT& _toKey = sk.sKeys.at(toIdx);
 
-  cout << "IndexSet of fromKey: " << _fromKey.getMap().getIndexSet() << "\n";
-  cout << "IndexSet of toKey: " << _toKey.getMap().getIndexSet() << "\n";
+  std::cout << "IndexSet of fromKey: " << _fromKey.getMap().getIndexSet() << "\n";
+  std::cout << "IndexSet of toKey: " << _toKey.getMap().getIndexSet() << "\n";
 
-  vector<DoubleCRT> a;
+  std::vector<DoubleCRT> a;
   a.resize(n, DoubleCRT(context, fullPrimes)); // defined modulo all primes
 
   { RandomState state;
@@ -121,7 +119,7 @@ void KeySwitch::verify(FHESecKey& sk)
 
   } // the RandomState destructor "restores the state" (see NumbTh.h)
 
-  vector<ZZX> A, B;
+  std::vector<NTL::ZZX> A, B;
 
   A.resize(n);
   B.resize(n);
@@ -131,21 +129,21 @@ void KeySwitch::verify(FHESecKey& sk)
     b[i].toPoly(B[i]);
   }
 
-  ZZX FromKey, ToKey;
+  NTL::ZZX FromKey, ToKey;
   _fromKey.toPoly(FromKey, fullPrimes);
   _toKey.toPoly(ToKey, fullPrimes);
 
-  ZZ Q = context.productOfPrimes(fullPrimes);
-  ZZ prod = context.productOfPrimes(context.specialPrimes);
-  ZZX C, D;
-  ZZX PhimX = context.zMStar.getPhimX();
+  NTL::ZZ Q = context.productOfPrimes(fullPrimes);
+  NTL::ZZ prod = context.productOfPrimes(context.specialPrimes);
+  NTL::ZZX C, D;
+  NTL::ZZX PhimX = context.zMStar.getPhimX();
 
   long nb = 0;
   for (long i = 0; i < n; i++) {
     C = (B[i] - FromKey*prod + ToKey*A[i]) % PhimX;
     PolyRed(C, Q);
     if (!divide(D, C, p)) {
-      cout << "*** not divisible by p at " << i << "\n";
+      std::cout << "*** not divisible by p at " << i << "\n";
     }
     else {
       for (long j = 0; j <= deg(D); j++)
@@ -154,7 +152,7 @@ void KeySwitch::verify(FHESecKey& sk)
     prod *= context.productOfPrimes(context.digits[i]);
   }
 
-  cout << "error ratio: " << ((double) nb)/((double) NumBits(Q)) << "\n";
+  std::cout << "error ratio: " << ((double) nb)/((double) NumBits(Q)) << "\n";
 }
 
 const KeySwitch& KeySwitch::dummy()
@@ -163,18 +161,18 @@ const KeySwitch& KeySwitch::dummy()
   return dummy;
 }
 
-ostream& operator<<(ostream& str, const KeySwitch& matrix)
+std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix)
 {
   str << "["<<matrix.fromKey  <<" "<<matrix.toKeyID
-      << " "<<matrix.ptxtSpace<<" "<<matrix.b.size() << endl;
+      << " "<<matrix.ptxtSpace<<" "<<matrix.b.size() << std::endl;
   for (long i=0; i<(long)matrix.b.size(); i++)
-    str << matrix.b[i] << endl;
+    str << matrix.b[i] << std::endl;
   str << matrix.prgSeed << " " << matrix.noiseBound << "]";
   return str;
 }
 
-// Used in lieu of istream& operator>>(istream& str, KeySwitch& matrix)
-void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
+// Used in lieu of std::istream& operator>>(std::istream& str, KeySwitch& matrix)
+void KeySwitch::readMatrix(std::istream& str, const FHEcontext& context)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> fromKey;
@@ -192,7 +190,7 @@ void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
 }
 
 
-void KeySwitch::write(ostream& str) const
+void KeySwitch::write(std::ostream& str) const
 {
   writeEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
 /*
@@ -217,7 +215,7 @@ void KeySwitch::write(ostream& str) const
   writeEyeCatcher(str, BINIO_EYE_SKM_END);
 }
 
-void KeySwitch::read(istream& str, const FHEcontext& context)
+void KeySwitch::read(std::istream& str, const FHEcontext& context)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
   //OLD: assert(eyeCatcherFound == 0);
@@ -242,7 +240,7 @@ long KSGiantStepSize(long D)
 {
   //OLD: assert(D > 0);
   helib::assertTrue<helib::InvalidArgument>(D > 0l, "Step size must be positive");
-  long g = SqrRoot(D);
+  long g = NTL::SqrRoot(D);
   if (g*g < D) g++;  // g = ceiling(sqrt(D))
   return g;
 }
@@ -296,7 +294,7 @@ static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
   long m = context.zMStar.getM();
   computeParams(context,m,i); // defines vars: native, ord, gi, g2md, giminv, g2mdminv
 
-  /* MAUTO vector<long> vals; */
+  /* MAUTO std::vector<long> vals; */
   for (long j=1,val=gi; j < ord; j++) {
     // From s(X^val) to s(X)
     sKey.GenKeySWmatrix(1, val, keyID, keyID);
@@ -370,7 +368,7 @@ static std::pair<long,long> computeSteps(long ord, long bound, bool native)
   baby = ord/giant;
   if (baby*giant<ord) baby++;
 
-  //cerr << "*** giant steps = " << giant << "\n";
+  //std::cerr << "*** giant steps = " << giant << "\n";
   return std::pair<long,long>(baby,giant);
 }
 
@@ -448,7 +446,7 @@ MAUTO
   // Insert internal nodes and their children to tree
   for (long j=0,fromVal=1; j<giant; j++) {
     NTL::mulmod_precon_t fromminv = PrepMulModPrecon(fromVal, m);      
-    vector<long> children;
+    std::vector<long> children;
     for (long k: autos) {
       long toVal = MulModPrecon(k, fromVal, m, fromminv);
       if (covered.count(toVal)==0) { // toVal not covered yet
@@ -465,8 +463,8 @@ MAUTO
   // Sanity-check, did we cover everything?
   long toCover = native? ord: (2*ord-1);
   if (covered.size()<toCover)
-    cerr << "**Warning: order-"<<ord<<" dimension, covered "<<covered.size()
-         << " of "<<toCover<<endl;
+    std::cerr << "**Warning: order-"<<ord<<" dimension, covered "<<covered.size()
+         << " of "<<toCover<<std::endl;
 #endif
 }
 
@@ -615,11 +613,11 @@ void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID)
     long e = net.getLayer(i).getE();
     long gIdx = net.getLayer(i).getGenIdx();
     long g = context.zMStar.ZmStarGen(gIdx);
-    long g2e = PowerMod(g, e, m); // g^e mod m
-    const Vec<long>&shamts = net.getLayer(i).getShifts();
+    long g2e = NTL::PowerMod(g, e, m); // g^e mod m
+    const NTL::Vec<long>&shamts = net.getLayer(i).getShifts();
     for (long j=0; j<shamts.length(); j++) {
       if (shamts[j]==0) continue;
-      long val = PowerMod(g2e, shamts[j], m);
+      long val = NTL::PowerMod(g2e, shamts[j], m);
       sKey.GenKeySWmatrix(1, val, keyID, keyID);
     }
   }
