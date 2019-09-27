@@ -7,6 +7,7 @@ namespace helib_test {
     extern bool noPrint;
     extern bool verbose;
     extern bool dry;
+    extern unsigned int random_seed;
 
     void parse_common_args(int argc, char *argv[]);
 
