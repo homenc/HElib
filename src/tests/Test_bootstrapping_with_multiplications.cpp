@@ -14,6 +14,7 @@
 
 #include "gtest/gtest.h"
 #include "test_common.h"
+#include <random>
 
 namespace {
 struct Parameters {
@@ -129,12 +130,19 @@ class Test_bootstrapping_with_multiplications : public ::testing::TestWithParam<
     }
 };
 
+std::vector<long> generateRandomBinaryVector(long nslots)
+{
+  std::vector<long> ptxt(nslots);
+  std::mt19937 gen(helib_test::random_seed);
+  std::uniform_int_distribution<int> coinFlipDist(0,1);
+  for(auto& num : ptxt)
+    num = coinFlipDist(gen);
+  return ptxt;
+}
+
 TEST_P(Test_bootstrapping_with_multiplications, correctly_performs_bootstrapping_with_no_multiplications) {
   const long nslots = ea.size();
-  std::vector<long> ptxt(nslots);
-  for (int i = 0; i < nslots; ++i) {
-    ptxt[i] = std::rand() % 2; // Random 0s and 1s
-  }
+  std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
 
   std::vector<long> tmp_ptxt(ptxt);
   Ctxt ctxt(publicKey);
@@ -159,10 +167,7 @@ TEST_P(Test_bootstrapping_with_multiplications, correctly_performs_bootstrapping
 TEST_P(Test_bootstrapping_with_multiplications, correctly_performs_bootstrapping_with_multiplications) {
   const long nslots = ea.size();
   long p2r = context.alMod.getPPowR();
-  std::vector<long> ptxt(nslots);
-  for (int i = 0; i < nslots; ++i) {
-    ptxt[i] = std::rand() % 2; // Random 0s and 1s
-  }
+  std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
 
   std::vector<long> tmp_ptxt(ptxt);
   Ctxt ctxt(publicKey);
