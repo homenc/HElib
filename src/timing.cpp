@@ -15,8 +15,6 @@
 #include <ctime>
 #include "timing.h"
 
-using namespace std;
-
 #ifdef CLOCK_MONOTONIC
 unsigned long GetTimerClock()
 {
@@ -56,7 +54,7 @@ bool timer_compare(const FHEtimer *a, const FHEtimer *b)
 
 
 
-static vector<FHEtimer *> timerMap;
+static std::vector<FHEtimer *> timerMap;
 static FHE_MUTEX_TYPE timerMapMx;
 
 void registerTimer(FHEtimer *timer)
@@ -93,7 +91,7 @@ void resetAllTimers()
 }
 
 // Print the value of all timers to stream
-void printAllTimers(ostream& str)
+void printAllTimers(std::ostream& str)
 {
 
   sort(timerMap.begin(), timerMap.end(), timer_compare);
@@ -125,7 +123,7 @@ const FHEtimer *getTimerByName(const char *name)
   return 0;
 }
 
-bool printNamedTimer(ostream& str, const char* name)
+bool printNamedTimer(std::ostream& str, const char* name)
 {
   for (long i = 0; i < long(timerMap.size()); i++) {
     if (strcmp(name, timerMap[i]->name) == 0) {

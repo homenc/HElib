@@ -16,7 +16,6 @@
 #include <cstdlib>
 #include <list>
 #include <sstream>
-using namespace std;
 #if (__cplusplus>199711L)
 #include <memory>
 #else
@@ -45,9 +44,9 @@ public:
 //   invariants: 
 //     * all elements in x lie in a range a..b
 //     * aux[a..b] is false before and after removeDups is called
-void removeDups(list<long>& x, bool *aux)
+void removeDups(std::list<long>& x, bool *aux)
 {
-  for (list<long>::iterator i = x.begin(); i != x.end(); ) { 
+  for (std::list<long>::iterator i = x.begin(); i != x.end(); ) {
     if (aux[*i])
       i = x.erase(i);
     else {
@@ -56,16 +55,16 @@ void removeDups(list<long>& x, bool *aux)
     }
   }
 
-  for (list<long>::iterator i = x.begin(); i != x.end(); i++)
+  for (std::list<long>::iterator i = x.begin(); i != x.end(); i++)
     aux[*i] = false;
 }
 
 // Creates a new list with the old values and old values +/- offset.
 // results outside the range -n+1 .. n-1 are discarded
 //   and all resulting duplicates are removed
-void addOffset(list<long>& x, long offset, long n, bool *aux, bool good=false)
+void addOffset(std::list<long>& x, long offset, long n, bool *aux, bool good=false)
 {
-  for (list<long>::iterator i = x.begin(); i != x.end(); i++) {
+  for (std::list<long>::iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;
     long val1 = val + offset;
     long val2 = val - offset;
@@ -93,11 +92,11 @@ void addOffset(list<long>& x, long offset, long n, bool *aux, bool good=false)
 }
 
 // Counts the number of unique elements mod n in x 
-long reducedCount(const list<long>& x, long n, bool *aux)
+long reducedCount(const std::list<long>& x, long n, bool *aux)
 {
   long res = 0;
 
-  for (list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
+  for (std::list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;
     if (val < 0) val += n;
 
@@ -107,7 +106,7 @@ long reducedCount(const list<long>& x, long n, bool *aux)
     }
   }
 
-  for (list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
+  for (std::list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;
     if (val < 0) val += n;
     aux[val] = false;
@@ -133,7 +132,7 @@ void buildBenesCostTable(long n, long k, bool good, NTL::Vec< NTL::Vec<long> >& 
   for (long i = 0; i < 2*n-1; i++) aux_vec[i] = false;
 
   for (long i = 0; i < nlev; i++) {
-    list<long> x;
+    std::list<long> x;
 
     x.push_front(0L);
     for (long j = 0; j < nlev-i; j++) {
@@ -157,11 +156,11 @@ void buildBenesCostTable(long n, long k, bool good, NTL::Vec< NTL::Vec<long> >& 
 
 //! \cond FALSE (make doxygen ignore these classes)
 class LongNode;
-typedef shared_ptr<LongNode> LongNodePtr;
+typedef std::shared_ptr<LongNode> LongNodePtr;
 // A "shared_ptr" is a pointer with (some) garbage collection
 
 
-// A LongNode is an implementation of list<long>, i.e. a linked list of
+// A LongNode is an implementation of std::list<long>, i.e. a linked list of
 // counters, representing a particular way of "collapsing levels" in a Benes
 // network. Each LongNode holds a count of collapsed levels, and the sum of all
 // counter in the list must equal the number of levels in the Benes network.
@@ -184,7 +183,7 @@ static long length(LongNodePtr ptr)
   return res;
 }
 
-// Converts list<long> to NTL::Vec<long>
+// Converts std::list<long> to NTL::Vec<long>
 static long listToVec(NTL::Vec<long>& vec, LongNodePtr ptr)
 {
   long len = length(ptr);
@@ -199,7 +198,7 @@ static long listToVec(NTL::Vec<long>& vec, LongNodePtr ptr)
 }
 
 // Prints out a list of integers
-ostream& operator<<(ostream& s, LongNodePtr p)
+std::ostream& operator<<(std::ostream& s, LongNodePtr p)
 {
   if (p == NULL) return s << "[]";
 
@@ -227,12 +226,12 @@ public:
   }
 
   size_t hash() const {
-    stringstream s;
+    std::stringstream s;
     s << i << " " << budget;
 #if (__cplusplus>199711L)
-    return std::hash< string >()(s.str());
+    return std::hash< std::string >()(s.str());
 #else
-    return tr1::hash< string >()(s.str());
+    return tr1::hash< std::string >()(s.str());
 #endif
   }
 
@@ -253,7 +252,7 @@ public:
   BenesMemoEntry() { }
 };
 
-typedef unordered_map< BenesMemoKey, BenesMemoEntry, 
+typedef std::unordered_map< BenesMemoKey, BenesMemoEntry,
                             ClassHash<BenesMemoKey> > BenesMemoTable;
 //! \endcond
 
@@ -367,8 +366,8 @@ void optimalBenes(long n, long budget, bool good,
 
 // A binary tree data structure for spliting generators
 class SplitNode;
-typedef shared_ptr<SplitNode> SplitNodePtr;
-// A "shared_ptr" is a pointer with (some) garbage collection
+typedef std::shared_ptr<SplitNode> SplitNodePtr;
+// A "std::shared_ptr" is a pointer with (some) garbage collection
 
 class SplitNode {
 public:
@@ -402,7 +401,7 @@ public:
 //! \endcond
 
 // Routines for printing the leaves of a generator-tree
-void print(ostream& s, SplitNodePtr p, bool first)
+void print(std::ostream& s, SplitNodePtr p, bool first)
 {
   if (p->isLeaf()) {
     if (!first) s << " ";
@@ -417,7 +416,7 @@ void print(ostream& s, SplitNodePtr p, bool first)
     print(s, p->right, false);
   }
 }
-ostream& operator<<(ostream& s, SplitNodePtr p)
+std::ostream& operator<<(std::ostream& s, SplitNodePtr p)
 {
   s << "[";
   print(s, p, true);
@@ -444,12 +443,12 @@ public:
   }
 
   size_t hash() const {
-    stringstream s;
+    std::stringstream s;
     s << order << " " << good << " " << budget << " " << mid;
 #if (__cplusplus>199711L)
-    return std::hash< string >()(s.str());
+    return std::hash< std::string >()(s.str());
 #else
-    return tr1::hash< string >()(s.str());
+    return tr1::hash< std::string >()(s.str());
 #endif
   }
 
@@ -471,14 +470,14 @@ public:
   LowerMemoEntry() { }
 };
 
-typedef unordered_map< LowerMemoKey, LowerMemoEntry, 
+typedef std::unordered_map< LowerMemoKey, LowerMemoEntry,
                             ClassHash<LowerMemoKey> > LowerMemoTable;
 
 
 // list structure for managing generators
 
 class GenNode;
-typedef shared_ptr<GenNode> GenNodePtr;
+typedef std::shared_ptr<GenNode> GenNodePtr;
 // A "shared_ptr" is a pointer with (some) garbage collection
 
 class GenNode {
@@ -501,7 +500,7 @@ long length(GenNodePtr ptr)
 }
 
 
-ostream& operator<<(ostream& s, GenNodePtr p)
+std::ostream& operator<<(std::ostream& s, GenNodePtr p)
 {
   if (p == NULL) {
     s << "[]";
@@ -514,7 +513,7 @@ ostream& operator<<(ostream& s, GenNodePtr p)
     s << " " << p->solution;
     p = p->next;
   }
-  cout << "]";
+  s << "]";
 
   return s;
 }
@@ -539,12 +538,12 @@ public:
   }
 
   size_t hash() const {
-    stringstream s;
+    std::stringstream s;
     s << i << " " << budget << " " << mid;
 #if (__cplusplus>199711L)
-    return std::hash< string >()(s.str());
+    return std::hash< std::string >()(s.str());
 #else
-    return tr1::hash< string >()(s.str());
+    return tr1::hash< std::string >()(s.str());
 #endif
   }
 
@@ -565,7 +564,7 @@ public:
   UpperMemoEntry() { }
 };
 
-typedef unordered_map< UpperMemoKey, UpperMemoEntry, 
+typedef std::unordered_map< UpperMemoKey, UpperMemoEntry,
                             ClassHash<UpperMemoKey> > UpperMemoTable;
 //! \endcond
 
@@ -942,13 +941,13 @@ long GeneratorTrees::buildOptimalTrees(const NTL::Vec<GenDescriptor>& gens,
 #ifdef DEBUG_PRINTOUT
   NTL::Vec<long> dims;  // The "crude" cube dimensions, one dimension per tree
   getCubeDims(dims);
-  std::cerr << " dims="<<dims<<endl;
-  std::cerr << " trees=" << *this << endl;
+  std::cerr << " dims="<<dims<<std::endl;
+  std::cerr << " trees=" << *this << std::endl;
   if (map2cube.length()<100) {
-    std::cerr << " map2cube="<<map2cube<<endl;
-    std::cerr << " map2array="<<map2array<<endl;
+    std::cerr << " map2cube="<<map2cube<<std::endl;
+    std::cerr << " map2array="<<map2array<<std::endl;
   }
-  std::cerr << endl;
+  std::cerr << std::endl;
 #endif
 
   return t.cost;
