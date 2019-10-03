@@ -12,34 +12,32 @@
 #include "matching.h"
 #include <queue>
 
-using namespace std;
-
-static long augmenting_path(vector<long>& p, FlowGraph& g, long src, long sink);
+static long augmenting_path(std::vector<long>& p, FlowGraph& g, long src, long sink);
 // Run BFS to find a shortest augmenting path
 
 void printFlow(FlowGraph& fg)
 {
-  cout << "Flow graph in format from->to: flow(capacity):\n";
+  std::cout << "Flow graph in format from->to: flow(capacity):\n";
   for (long i=0; i<(long)fg.size(); i++)
     for (FNeighborList::iterator it=fg[i].begin(); it!=fg[i].end(); ++it) {
       long j = it->first; // found an edge i->j
       if (it->second.capacity <= 0) continue; // ignore dummy edges
-      cout <<"  "<< i <<"->"<< j <<": "<< it->second.flow 
+      std::cout <<"  "<< i <<"->"<< j <<": "<< it->second.flow
 	   << "("<< it->second.capacity<<")\n";
     }
-  cout << endl;
+  std::cout << std::endl;
 }
 
 void BipartitleGraph::printout()
 {
-  cout << "Bipartite graph in format left->right: label, color\n";
+  std::cout << "Bipartite graph in format left->right: label, color\n";
   for (long i=0; i<(long)left.size(); i++) {
     for (LNeighborList::iterator it=left[i].neighbors.begin(); 
 	 it!=left[i].neighbors.end(); ++it) {
-      cout <<"  "<< i+1 <<"->"<< it->first+1 <<": "
-	   << it->second.label <<", "<< it->second.color << endl;
+      std::cout <<"  "<< i+1 <<"->"<< it->first+1 <<": "
+	   << it->second.label <<", "<< it->second.color << std::endl;
     }
-    cout << endl;
+    std::cout << std::endl;
   }
 }
 
@@ -68,7 +66,7 @@ void BipartitleGraph::partitionToMatchings()
     // Remove the flow and reduce the capacity of the flow edges accordingly
     // and also color the bipartite edges corresponding to flow-carrying edges.
     for (long i=0; i<leftSize; i++) {
-      vector<long> edges2remove;
+      std::vector<long> edges2remove;
       // left node i has index i+1 in the flow graph
       FNeighborList& v = fg[i+1];
       // Go over the edges of v, look for flow-carrying edges
@@ -87,7 +85,7 @@ void BipartitleGraph::partitionToMatchings()
 
         // Get all the edges i->j in the bipartite graph, and color
         // the first #flow of them that are still uncolored
-        pair<LNeighborList::iterator,LNeighborList::iterator> range
+        std::pair<LNeighborList::iterator,LNeighborList::iterator> range
 	  = left[i].neighbors.equal_range(j);
 	while (range.first!=range.second && flow>0) {
 	  LabeledEdge& e = range.first->second; // the joys of C++ STL
@@ -132,7 +130,7 @@ void BipartitleGraph::buildFlowGraph(FlowGraph& fg)
 
   // Put a neighbor-list for the sink
   for (long i=0; i<leftSize; i++) // left-nodes have indexes 1,2,...,leftSize
-    fg[0].insert(pair<long,FlowEdge>(i+1,FlowEdge(1))); // 1-capacity edges
+    fg[0].insert(std::pair<long,FlowEdge>(i+1,FlowEdge(1))); // 1-capacity edges
 
   // Put the neighbor lists of the left-side nodes
   for (long i=0; i<leftSize; i++) {
@@ -148,7 +146,7 @@ void BipartitleGraph::buildFlowGraph(FlowGraph& fg)
       long j = leftSize + it->second.to +1;
       FNeighborList::iterator fEdge = fg[i+1].find(j);
       if (fEdge == fg[i+1].end()) { // no such edge in the flow graph, add it
-	fg[i+1].insert(pair<long,FlowEdge>(j,FlowEdge(1))); // 1-capacity edge
+	fg[i+1].insert(std::pair<long,FlowEdge>(j,FlowEdge(1))); // 1-capacity edge
       }
       else // an edge exists already, increase its capacity
 	fEdge->second.capacity++;
@@ -160,7 +158,7 @@ void BipartitleGraph::buildFlowGraph(FlowGraph& fg)
   fg.resize(sink+1);
   for (long i=0; i<rightSize; i++) {
     // The index of this node in the flow graph is leftSize +i +1
-    fg[leftSize+i+1].insert(pair<long,FlowEdge>(sink,FlowEdge(1)));
+    fg[leftSize+i+1].insert(std::pair<long,FlowEdge>(sink,FlowEdge(1)));
   }
 }
 
@@ -172,7 +170,7 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
   // Make sure that if fg[i][j] is defined then so is fg[j][i]
   FlowEdge dummyEdge; // 0-capacity, 0-flow edge
   for (long i=0; i<(long)fg.size(); i++) {
-    vector<long> missing;
+    std::vector<long> missing;
     for (FNeighborList::iterator it=fg[i].begin(); it!=fg[i].end(); ++it) {
       long j = it->first; // found an endge i->j, look for edge j->i
 
@@ -185,7 +183,7 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
     // Insert all the missing edges that point to node i
     for (long j=0; j<(long)missing.size(); j++) {
       long k=missing[j];
-      fg[k].insert(pair<long,FlowEdge>(i,dummyEdge)); // insert dummy edge
+      fg[k].insert(std::pair<long,FlowEdge>(i,dummyEdge)); // insert dummy edge
       // Hopefully dummyEdge is copied, not referenced (else it's a bug)
     }
   }
@@ -193,7 +191,7 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
   // The Ford-Fulkerson/Edmonds-Karp/Dinic algorithm itself
   while (true) {
     // Find an augmenting path in the network
-    vector<long> path;
+    std::vector<long> path;
     long more = augmenting_path(path, fg, src, sink);
     if (more==0) break; // no more flow can be added
 
@@ -237,7 +235,7 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
 /* The function augmenting_path performs a BFS on the netwrok 
  * to find a shortest sugmenting path                        
  */
-static long augmenting_path(vector<long>& path, FlowGraph& fg,
+static long augmenting_path(std::vector<long>& path, FlowGraph& fg,
 			    long src, long sink)
 {
   //OLD: assert(src >=0 && src <(long)fg.size());
@@ -249,7 +247,7 @@ static long augmenting_path(vector<long>& path, FlowGraph& fg,
   path.assign(fg.size(), -1); // path[i]=-1 for all i
 
   // Initialize a queue with the source in it
-  queue<long> que;
+  std::queue<long> que;
   que.push(src);
   path[src] = src;        // mark the source as visited
 
