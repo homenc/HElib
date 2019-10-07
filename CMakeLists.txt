@@ -18,11 +18,10 @@ set(GMP_MINIMAL_VERSION "6.0.0")
 # NTL minimal version to be used if NOT PACKAGE_BUILD
 set(NTL_MINIMAL_VERSION "11.0.0")
 
-# Setting up Debug as default CMAKE_BUILD_TYPE
-# TODO: set to Release when assertions are removed
+# Setting up RelWithDebInfo as default CMAKE_BUILD_TYPE
 if (NOT CMAKE_BUILD_TYPE)
-  # Setting Debug as default since many checks are performed as assert (possibly with side effects)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build, options are: Debug RelWithDebInfo Release MinSizeRel" FORCE)
+  # Setting RelWithDebInfo as it will compile with -O2 -g
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build, options are: Debug RelWithDebInfo Release MinSizeRel" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
 # Adding possible gui values to CMAKE_BUILD_TYPE variable
