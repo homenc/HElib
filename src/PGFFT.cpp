@@ -1,6 +1,6 @@
 /****************************************************************************
 
-PGFFT: Pretty Good FFT (v1.6)
+PGFFT: Pretty Good FFT (v1.8)
 
 Copyright (C) 2019, victor Shoup
 
@@ -1155,7 +1155,7 @@ compute_table(vector<aligned_vector<cmplx_t>>& tab, long k)
 {
   if (k < 2) return;
 
-  const ldbl pi = atan(ldbl(1)) * 4.0;
+  const ldbl pi = std::atan(ldbl(1)) * 4.0;
 
   tab.resize(k+1);
   for (long s = 2; s <= k; s++) {
@@ -1311,7 +1311,7 @@ bluestein_precomp(long n, aligned_vector<cmplx_t>& powers,
 
    compute_table(tab, k);
 
-   const ldbl pi = atan(ldbl(1)) * 4.0;
+   const ldbl pi = std::atan(ldbl(1)) * 4.0;
 
    powers.resize(n);
    powers[0] = 1;
@@ -1391,7 +1391,7 @@ bluestein_precomp1(long n, aligned_vector<cmplx_t>& powers,
 
    compute_table(tab, k);
 
-   const ldbl pi = atan(ldbl(1)) * 4.0;
+   const ldbl pi = std::atan(ldbl(1)) * 4.0;
 
    powers.resize(n);
    powers[0] = 1;
@@ -1569,7 +1569,7 @@ void PGFFT::apply(const cmplx_t* src, cmplx_t* dst) const
 
 /****************************************************************************
 
-PGFFT: Pretty Good FFT (v1.6)
+PGFFT: Pretty Good FFT (v1.8)
 
 Copyright (C) 2019, victor Shoup
 

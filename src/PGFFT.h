@@ -2,7 +2,7 @@
 /**************************************************************************
 
 
-PGFFT: Pretty Good FFT (v1.6)
+PGFFT: Pretty Good FFT (v1.8)
 
 Copyright (C) 2019, Victor Shoup
 
@@ -135,7 +135,7 @@ private:
 
 /**************************************************************************
 
-PGFFT: Pretty Good FFT (v1.6)
+PGFFT: Pretty Good FFT (v1.8)
 
 Copyright (C) 2019, Victor Shoup
 
