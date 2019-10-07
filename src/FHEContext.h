@@ -389,7 +389,14 @@ public:
   //! @brief An estimate for the security-level
   double securityLevel() const {
     long phim = zMStar.getPhiM();
-    double bitsize = logOfProduct(ctxtPrimes | specialPrimes)/log(2.0);
+    IndexSet primes = ctxtPrimes | specialPrimes;
+
+    if(primes.card() == 0){
+      throw helib::LogicError(
+        "Security level cannot be determined as modulus chain is empty.");
+    }
+
+    double bitsize = logOfProduct(primes)/log(2.0);
     return (7.2*phim/bitsize -110);
   }
 
@@ -398,7 +405,7 @@ public:
   void AddCtxtPrime(long q);
   void AddSpecialPrime(long q);
 
-  
+
   ///@{
   /**
      @name I/O routines
