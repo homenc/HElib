@@ -122,7 +122,7 @@ half_FFT::half_FFT(long m) : fft(m/2)
 {
   typedef std::complex<double> cmplx_t;
   typedef long double ldbl;
-  const ldbl pi = atan(ldbl(1)) * 4.0;
+  const ldbl pi = std::atan(ldbl(1)) * 4.0;
 
   pow.resize(m/2);
   for (long i: range(m/2)) {
@@ -137,7 +137,7 @@ quarter_FFT::quarter_FFT(long m) : fft(m/4)
 {
   typedef std::complex<double> cmplx_t;
   typedef long double ldbl;
-  const ldbl pi = atan(ldbl(1)) * 4.0;
+  const ldbl pi = std::atan(ldbl(1)) * 4.0;
 
   pow1.resize(m/4);
   pow2.resize(m/4);
