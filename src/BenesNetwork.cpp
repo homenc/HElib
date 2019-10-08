@@ -15,12 +15,7 @@
 #include <cstdlib>
 #include <list>
 #include <sstream>
-
-#if (__cplusplus>199711L)
 #include <memory>
-#else
-#include <tr1/memory>
-#endif
 
 #include <NTL/vector.h>
 #include "NumbTh.h"
@@ -29,7 +24,8 @@
 static void 
 recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
                           const Permut& perm, const Permut& iperm,
-                          NTL::Vec< NTL::Vec<short> >& level, NTL::Vec< NTL::Vec<short> >& ilevel)
+                          NTL::Vec< NTL::Vec<short> >& level, 
+                          NTL::Vec< NTL::Vec<short> >& ilevel)
 {
   long sz = perm.length();
 

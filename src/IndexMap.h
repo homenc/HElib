@@ -38,11 +38,7 @@ public:
 //! flexible manner.
 template < class T > class IndexMap {
 
-#if (__cplusplus>199711L)
   std::unordered_map<long, T> map;
-#else
-  tr1::unordered_map<long, T> map;
-#endif
 
   IndexSet indexSet;
   cloned_ptr< IndexMapInit<T> > init;
@@ -77,13 +73,8 @@ public:
     helib::assertTrue(indexSet.contains(j), "Key not found");
     // unordered_map does not support a const [] operator,
     // so we have to artificially strip away the const-ness here
-#if (__cplusplus>199711L)
     std::unordered_map<long, T> & map1 = 
       const_cast< std::unordered_map<long, T> & > (map);
-#else
-    tr1::unordered_map<long, T> & map1 = 
-      const_cast< tr1::unordered_map<long, T> & > (map);
-#endif
     return map1[j];
   }
 

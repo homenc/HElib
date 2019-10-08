@@ -85,14 +85,8 @@ inline void setAutomorphVals2(std::set<long>* aVals)
 inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=NULL; }
 inline void recordAutomorphVal2(long k) { FHEglobals::automorphVals2->insert(k); }
 
-#if (__cplusplus>199711L)
 #include <memory>
 #include <unordered_map>
-#else
-#include <tr1/memory>
-#include <tr1/unordered_map>
-using namespace tr1;
-#endif
 
 typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future

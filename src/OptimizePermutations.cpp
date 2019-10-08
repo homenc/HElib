@@ -16,13 +16,7 @@
 #include <cstdlib>
 #include <list>
 #include <sstream>
-#if (__cplusplus>199711L)
 #include <memory>
-#else
-#include <tr1/memory>
-using namespace tr1;
-#warning "using TR1"
-#endif
 
 #include <NTL/vector.h>
 #include "NumbTh.h"
@@ -228,11 +222,7 @@ public:
   size_t hash() const {
     std::stringstream s;
     s << i << " " << budget;
-#if (__cplusplus>199711L)
     return std::hash< std::string >()(s.str());
-#else
-    return tr1::hash< std::string >()(s.str());
-#endif
   }
 
   bool operator==(const BenesMemoKey& other) const {
@@ -445,11 +435,7 @@ public:
   size_t hash() const {
     std::stringstream s;
     s << order << " " << good << " " << budget << " " << mid;
-#if (__cplusplus>199711L)
     return std::hash< std::string >()(s.str());
-#else
-    return tr1::hash< std::string >()(s.str());
-#endif
   }
 
   bool operator==(const LowerMemoKey& other) const {
@@ -540,11 +526,7 @@ public:
   size_t hash() const {
     std::stringstream s;
     s << i << " " << budget << " " << mid;
-#if (__cplusplus>199711L)
     return std::hash< std::string >()(s.str());
-#else
-    return tr1::hash< std::string >()(s.str());
-#endif
   }
 
   bool operator==(const UpperMemoKey& other) const {
