@@ -35,7 +35,7 @@ option(BUILD_SHARED "Build as shared library" OFF)
 
 option(PACKAGE_BUILD "Download dependencies and build as a self-contained package" OFF)
 
-option(ENABLE_THREADS "Enable threads support. Requires NTL built with NTL_THREADS=on" OFF)
+option(ENABLE_THREADS "Enable threads support. Requires NTL built with NTL_THREADS=on" ON)
 
 option(ENABLE_TEST "Enable tests" OFF)
 option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" OFF)
