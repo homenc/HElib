@@ -157,9 +157,9 @@ step 3.
 
 You can install NTL as follows:
 
-1. Download NTL >=11.0.0 (current version is 11.3.0) from
+1. Download NTL >=11.0.0 (current version is 11.4.1) from
    http://www.shoup.net/ntl/download.html
-2. Decompress and cd into the directory, e.g., `ntl-11.3.0/src`
+2. Decompress and cd into the directory, e.g., `ntl-11.4.1/src`
 3. NTL is configured, built and installed in the standard Unix way (but
 remember to specify the following flags to `configure`):
 ```
