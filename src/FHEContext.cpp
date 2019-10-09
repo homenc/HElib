@@ -16,6 +16,7 @@
 #include "powerful.h"
 #include "binio.h"
 #include "sample.h"
+#include "EncryptedArray.h"
 
 long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
@@ -508,7 +509,6 @@ std::istream& operator>> (std::istream &str, FHEcontext& context)
   return str;
 }
 
-#include "EncryptedArray.h"
 FHEcontext::~FHEcontext()
 {
   delete ea;

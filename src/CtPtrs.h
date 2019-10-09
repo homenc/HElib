@@ -15,6 +15,7 @@
  * @file CtPtrs.h
  * @brief Cnified interface for vector of pointers to ciphertexts
  **/
+#include <initializer_list>
 #include "Ctxt.h"
 #include "PtrVector.h"
 #include "PtrMatrix.h"
@@ -65,7 +66,6 @@ inline long findMinBitCapacity(const CtPtrMat& m)
   return lvl;
 }
 
-#include <initializer_list>
 inline long findMinBitCapacity(std::initializer_list<const CtPtrs*> list)
 {
   long lvl = LONG_MAX;

@@ -26,6 +26,8 @@
 #include <istream>
 #include <sstream>
 #include <ctime>
+#include <memory>
+#include <unordered_map>
 
 #include <NTL/version.h>
 #include <NTL/ZZ.h>
@@ -84,9 +86,6 @@ inline void setAutomorphVals2(std::set<long>* aVals)
 { FHEglobals::automorphVals2=aVals; }
 inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=NULL; }
 inline void recordAutomorphVal2(long k) { FHEglobals::automorphVals2->insert(k); }
-
-#include <memory>
-#include <unordered_map>
 
 typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future

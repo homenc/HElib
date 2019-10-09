@@ -28,6 +28,7 @@
 // FIXME: this should really be dynamic
 
 #ifdef DEBUG_PRINTOUT
+#include <cstdio>
 #include "debugging.h"
 
 void decryptAndSum(std::ostream& s, const CtPtrMat& numbers, bool negative=false);
@@ -1018,7 +1019,6 @@ void decryptBinaryNums(std::vector<long>& pNums, const CtPtrs& eNums,
 
 /********************************************************************/
 #ifdef DEBUG_PRINTOUT
-#include <cstdio>
 
 void AddDAG::printAddDAG(bool printCT)
 {

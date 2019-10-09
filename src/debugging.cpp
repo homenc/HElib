@@ -16,6 +16,7 @@
 #include "FHEContext.h"
 #include "Ctxt.h"
 #include "EncryptedArray.h"
+#include "powerful.h"
 
 FHESecKey* dbgKey = 0;
 EncryptedArray* dbgEa = 0;
@@ -155,7 +156,6 @@ void rawDecrypt(NTL::ZZX& plaintxt, const std::vector<NTL::ZZX>& zzParts,
     PolyRed(plaintxt, q, false/*reduce to [-q/2,1/2]*/);
 }
 
-#include "powerful.h"
 void CheckCtxt(const Ctxt& c, const char* label)
 {
   std::cerr << "  "<<label
