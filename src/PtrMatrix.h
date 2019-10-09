@@ -16,6 +16,7 @@
  * @brief Convenience class templates providing a unified interface
  *    for a matrix of objects, returning pointers to these objects.
  **/
+#include <initializer_list>
 #include "PtrVector.h"
 
 //! @brief An abstract class for an array of PtrVectors
@@ -54,7 +55,6 @@ template<typename T> void setLengthZero(PtrMatrix<T>& v){v.resize(0);}
 //struct PtrMatrix_ptVec;    // NTL::Vec<NTL::Vec<T>*>
 //struct PtrMatrix_ptvector; // std::vector<std::vector<T>*>
 
-#include <initializer_list>
 template<typename T>
 const T* ptr2nonNull(std::initializer_list<const PtrVector<T>*> list)
 {

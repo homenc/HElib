@@ -11,6 +11,7 @@
  */
 #include "hypercube.h"
 #include <iomanip>
+#include <NTL/lzz_p.h>
 
   //! Break an index into the hypercube to index of the
   //! dimension-dim subcube and index inside that subcube.
@@ -235,9 +236,6 @@ template void getHyperColumn(NTL::Vec<long>& v, const ConstCubeSlice<long>& s, l
 template void setHyperColumn(const NTL::Vec<long>& v, const CubeSlice<long>& s, long pos);
 template void setHyperColumn(const NTL::Vec<long>& v, const CubeSlice<long>& s, long pos, const long& val);
 template void print3D(const HyperCube<long>& c);
-
-
-#include <NTL/lzz_p.h>
 
 template class HyperCube<NTL::zz_p>;
 template class ConstCubeSlice<NTL::zz_p>;

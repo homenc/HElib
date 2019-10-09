@@ -22,6 +22,7 @@
 #include "debugging.h"
 #include "norms.h"
 #include "fhe_stats.h"
+#include "powerful.h"
 
 
 extern int fhe_watcher;
@@ -1938,7 +1939,6 @@ void innerProduct(Ctxt& result,
 // Returns an extimate for the scaled noise (not including the 
 // additive mod switching noise)
 
-#include "powerful.h"
 double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
 {
   // Ensure that new modulus is co-prime with plaintetx space
