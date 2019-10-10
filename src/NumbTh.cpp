@@ -427,24 +427,65 @@ long mobius(long n)
   return -1;
 }
 
-/* Compute cyclotomic polynomial */
-NTL::ZZX Cyclotomic(long N)
+// Based on Algorithm 4 (the Sparse Power Series Algorithm) from
+// ANDREW ARNOLD AND MICHAEL MONAGAN, CALCULATING CYCLOTOMIC POLYNOMIALS,
+// MATHEMATICS OF COMPUTATION, Volume 80, Number 276, October 2011, 
+// Pages 2359-2379
+
+NTL::ZZX Cyclotomic(long n)
 {
-  NTL::ZZX Num,Den,G,F;
-  NTL::set(Num); NTL::set(Den);
-  long m,d;
-  for (d=1; d<=N; d++)
-    { if ((N%d)==0)
-         { clear(G);
-           SetCoeff(G,N/d,1); SetCoeff(G,0,-1);
-           m=mobius(d);
-           if (m==1)       { Num*=G; }
-           else if (m==-1) { Den*=G; }
+   helib::assertEq(n > 1, true, "n > 1");
+
+   std::vector<long> facs;
+   factorize(facs, n);
+
+   long k = facs.size();
+
+   long radn = 1;
+   long phi_radn = 1;
+   for (long i: range(k)) {
+      radn *= facs[i];
+      phi_radn *= (facs[i]-1);
+   }
+
+   long D = phi_radn/2;
+   NTL::Vec<NTL::ZZ> A;
+   A.SetLength(D+1);
+   A[0] = 1;
+   for (long i = 1; i <= D; i++) A[i] = 0;
+
+   for (long bits: range(1L << k)) {
+      long d = 1;
+      long parity = k & 1;
+      for (long pos: range(k)) {
+         if ((1L << pos) & bits) {
+            d *= facs[pos];
+            parity = 1 - parity;
          }
-    } 
-  F=Num/Den;
-  return F;
+      }
+
+      if (parity == 0) {
+         for (long i = D; i >= d; i--) 
+            A[i] -= A[i-d];
+      }
+      else {
+         for (long i = d; i <= D; i++) 
+            A[i] += A[i-d];
+      }
+   }
+
+   long q = n/radn;
+   long phi_n = phi_radn * q;
+   NTL::ZZX res;
+   res.rep.SetLength(phi_n+1);
+   for (long i = 0; i <= D; i++)
+      res.rep[i*q] = A[i];
+   for (long i = D+1; i <= phi_radn; i++)
+      res.rep[i*q] = A[phi_radn-i];
+
+   return res;
 }
+
 
 /* Find a primitive root modulo N */
 long primroot(long N,long phiN)
