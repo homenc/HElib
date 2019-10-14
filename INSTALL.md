@@ -1,7 +1,7 @@
 # Building and installing HElib
 
 HElib's build and install has been tested on Ubuntu 16.04, Ubuntu 18.04, 
-CentOS 7.6, and macOS High Sierra 10.13.
+CentOS 7.6, Fedora 30, and macOS High Sierra 10.13.
 
 ## Dependencies
 
