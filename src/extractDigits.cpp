@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,6 +16,8 @@
 #include "EncryptedArray.h"
 #include "polyEval.h"
 #include "debugging.h"
+
+namespace helib {
 
 // Compute a degree-p polynomial poly(x) s.t. for any t<e and integr z of the
 // form z = z0 + p^t*z1 (with 0<=z0<p), we have poly(z) = z0 (mod p^{t+1}).
@@ -287,3 +289,4 @@ void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long 
   }
 }
 
+}

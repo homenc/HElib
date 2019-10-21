@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -62,7 +62,7 @@ struct Parameters {
 
 class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
     protected:
-        static void printContextAndG(const FHEcontext& context, const NTL::ZZX& G)
+        static void printContextAndG(const helib::FHEcontext& context, const NTL::ZZX& G)
         {
             if (!helib_test::noPrint) {
                 context.zMStar.printout();
@@ -71,9 +71,9 @@ class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
             }
         };
 
-        static NTL::ZZX createG(const FHEcontext& context, long p, long d)
+        static NTL::ZZX createG(const helib::FHEcontext& context, long p, long d)
         {
-            return (d == 0) ? context.alMod.getFactorsOverZZ()[0] : makeIrredPoly(p, d);
+            return (d == 0) ? context.alMod.getFactorsOverZZ()[0] : helib::makeIrredPoly(p, d);
         };
 
         GTest_Replicate() :
@@ -84,7 +84,7 @@ class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
             L(GetParam().L),
             bnd(GetParam().bnd),
             B(GetParam().B),
-            context((setDryRun(helib_test::dry), setTimersOn(), m), p, r),
+            context((helib::setDryRun(helib_test::dry), helib::setTimersOn(), m), p, r),
             secretKey((buildModChain(context, L, /*c=*/2), context)),
             G(createG(context, p, d)),
             publicKey((printContextAndG(context, G),
@@ -108,14 +108,14 @@ class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
             xc1 = xc0;
 
 #ifdef DEBUG_PRINTOUT
-            dbgKey = &secretKey;
-            dbgEa = const_cast<EncryptedArray*>(context.ea);
+            helib::dbgKey = &secretKey;
+            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
 #endif // DEBUG_PRINTOUT
         };
 
         virtual void TearDown() override
         {
-          cleanupGlobals();
+          helib::cleanupGlobals();
         }
 
         const long m;
@@ -125,22 +125,22 @@ class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
         const long L;
         const long bnd;
         const long B;
-        FHEcontext context;
-        FHESecKey secretKey;
+        helib::FHEcontext context;
+        helib::FHESecKey secretKey;
         NTL::ZZX G;
-        const FHEPubKey& publicKey;
-        EncryptedArray ea;
-        PlaintextArray xp0;
-        PlaintextArray xp1;
-        Ctxt xc0;
-        Ctxt xc1;
+        const helib::FHEPubKey& publicKey;
+        helib::EncryptedArray ea;
+        helib::PlaintextArray xp0;
+        helib::PlaintextArray xp1;
+        helib::Ctxt xc0;
+        helib::Ctxt xc1;
         NTL::ZZX poly_xp1; // To be default constructed
 };
 
-::testing::AssertionResult replicationSucceeds(const Ctxt& c1, const Ctxt& c0, long i,
-			    const FHESecKey& sKey, const EncryptedArray& ea)
+::testing::AssertionResult replicationSucceeds(const helib::Ctxt& c1, const helib::Ctxt& c0, long i,
+			    const helib::FHESecKey& sKey, const helib::EncryptedArray& ea)
 {
-  PlaintextArray pa0(ea), pa1(ea);
+  helib::PlaintextArray pa0(ea), pa1(ea);
   ea.decrypt(c0, sKey, pa0);
   ea.decrypt(c1, sKey, pa1);
   replicate(ea, pa0, i);
@@ -154,19 +154,19 @@ class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
 class StopReplicate { };
 
 // A class that handles the replicated ciphertexts one at a time
-class ReplicateTester : public ReplicateHandler {
+class ReplicateTester : public helib::ReplicateHandler {
 public:
-  const FHESecKey& sKey;
-  const EncryptedArray& ea;
-  const PlaintextArray& pa;
+  const helib::FHESecKey& sKey;
+  const helib::EncryptedArray& ea;
+  const helib::PlaintextArray& pa;
   long B;
 
   double t_last, t_total;
   long pos;
   bool error;
 
-  ReplicateTester(const FHESecKey& _sKey, const EncryptedArray& _ea, 
-                  const PlaintextArray& _pa, long _B)
+  ReplicateTester(const helib::FHESecKey& _sKey, const helib::EncryptedArray& _ea, 
+                  const helib::PlaintextArray& _pa, long _B)
   : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
   {
     t_last = NTL::GetTime();
@@ -179,16 +179,16 @@ public:
   // that it is called, the cipehrtext will have in all the slots the content
   // of the i'th input slot. In this test program we only decrypt and check
   // the result, in a real program it will do something with the cipehrtext.
-  virtual void handle(const Ctxt& ctxt) {
+  virtual void handle(const helib::Ctxt& ctxt) {
 
     double t_new = NTL::GetTime();
     double t_elapsed = t_new - t_last;
     t_total += t_elapsed;
 
     // Decrypt and check
-    PlaintextArray pa1 = pa;
-    replicate(ea, pa1, pos);
-    PlaintextArray pa2(ea);
+    helib::PlaintextArray pa1 = pa;
+    helib::replicate(ea, pa1, pos);
+    helib::PlaintextArray pa2(ea);
 
     if (pos==0 && !helib_test::noPrint) CheckCtxt(ctxt, "replicateAll");
 
@@ -209,7 +209,7 @@ TEST_P(GTest_Replicate, replicate_works)
       std::cout << "** Testing replicate():\n";
       CheckCtxt(xc1, "before replicate");
   }
-  replicate(ea, xc1, ea.size()/2);
+  helib::replicate(ea, xc1, ea.size()/2);
   EXPECT_TRUE(replicationSucceeds(xc1, xc0, ea.size()/2, secretKey, ea));
   if (!helib_test::noPrint) CheckCtxt(xc1, "after replicate");
 };
@@ -220,12 +220,12 @@ TEST_P(GTest_Replicate, repeated_replication_works)
   for (long i=0; i<20 && i<ea.size(); i++) {
     xc1 = xc0;
     FHE_NTIMER_START(replicate);
-    replicate(ea, xc1, i);
+    helib::replicate(ea, xc1, i);
     EXPECT_TRUE(replicationSucceeds(xc1, xc0, i, secretKey, ea));
     FHE_NTIMER_STOP(replicate);
   }
   if(!helib_test::noPrint) {
-      printAllTimers();
+      helib::printAllTimers();
   }
 };
 
@@ -235,14 +235,14 @@ TEST_P(GTest_Replicate, replicateAll_replicates_accurately)
         std::cout << "\n** Testing replicateAll()... " << std::flush;
     }
 #ifdef DEBUG_PRINTOUT
-  replicateVerboseFlag = true;
+    helib::replicateVerboseFlag = true;
 #else
-  replicateVerboseFlag = false;
+    helib::replicateVerboseFlag = false;
 #endif
   ReplicateTester handler(secretKey, ea, xp0, B);
   try {
     FHE_NTIMER_START(replicateAll);
-    replicateAll(ea, xc0, &handler, bnd);
+    helib::replicateAll(ea, xc0, &handler, bnd);
   }
   catch (StopReplicate) {
   }

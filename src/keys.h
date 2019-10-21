@@ -22,6 +22,7 @@
 
 #include "keySwitching.h"
 
+namespace helib {
 
 #define FHE_KSS_UNKNOWN (0)
 // unknown KS strategy
@@ -35,6 +36,8 @@
 #define FHE_KSS_MIN     (3)
 // minimal strategy (for g_i, and for g_i^{-ord_i} for bad dims)
 
+void writePubKeyBinary(std::ostream& str, const FHEPubKey& pk);
+void readPubKeyBinary(std::istream& str, FHEPubKey& pk);
 
 /**
  * @class FHEPubKey
@@ -167,8 +170,8 @@ public:
     friend class FHESecKey;
     friend std::ostream& operator << (std::ostream& str, const FHEPubKey& pk);
     friend std::istream& operator >> (std::istream& str, FHEPubKey& pk);
-    friend void writePubKeyBinary(std::ostream& str, const FHEPubKey& pk);
-    friend void readPubKeyBinary(std::istream& str, FHEPubKey& pk);
+    friend void ::helib::writePubKeyBinary(std::ostream& str, const FHEPubKey& pk);
+    friend void ::helib::readPubKeyBinary(std::istream& str, FHEPubKey& pk);
 
     // defines plaintext space for the bootstrapping encrypted secret key
     static long ePlusR(long p);
@@ -179,6 +182,8 @@ public:
 };
 
 
+void writeSecKeyBinary(std::ostream& str, const FHESecKey& sk);
+void readSecKeyBinary(std::istream& str, FHESecKey& sk);
 /**
  * @class FHESecKey
  * @brief The secret key
@@ -243,8 +248,8 @@ public:
 
     friend std::ostream& operator << (std::ostream& str, const FHESecKey& sk);
     friend std::istream& operator >> (std::istream& str, FHESecKey& sk);
-    friend void writeSecKeyBinary(std::ostream& str, const FHESecKey& sk);
-    friend void readSecKeyBinary(std::istream& str, FHESecKey& sk);
+    friend void ::helib::writeSecKeyBinary(std::ostream& str, const FHESecKey& sk);
+    friend void ::helib::readSecKeyBinary(std::istream& str, FHESecKey& sk);
 };
 
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
@@ -255,5 +260,7 @@ double RLWE(DoubleCRT& c0, DoubleCRT& c1, const DoubleCRT &s, long p,
 
 //! Same as RLWE, but assumes that c1 is already chosen by the caller
 double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p);
+
+}
 
 #endif //HELIB_KEYS_H

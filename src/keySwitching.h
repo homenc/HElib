@@ -25,6 +25,8 @@
 #include "FHEContext.h"
 #include "Ctxt.h"
 
+namespace helib {
+
 /**
  * @class KeySwitch
  * @brief Key-switching matrices
@@ -176,5 +178,7 @@ void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID=0);
 //! Generate specific key-swicthing matrices, described by the given set
 void addTheseMatrices(FHESecKey& sKey,
                       const std::set<long>& automVals, long keyID=0);
+
+}
 
 #endif //HELIB_KEY_SWITCHING_H

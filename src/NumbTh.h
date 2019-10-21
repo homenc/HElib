@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -56,6 +56,8 @@
 
 #include "range.h"
 #include "assertions.h"
+
+namespace helib {
 
 namespace FHEglobals
 {
@@ -614,6 +616,7 @@ public:
    const NTL::ZZ_pXModulus& upcast() const { return *this; }
 };
 
+
 template<class T>
 std::ostream& operator<<(std::ostream& s, std::vector<T> v)
 {
@@ -634,6 +637,13 @@ std::istream& operator>>(std::istream& s, std::vector<T>& v)
   return s;
 }
 
+template <typename T>
+std::string vecToStr(const std::vector<T>& v)
+{
+  std::stringstream ss;
+  ss << v;
+  return ss.str();
+}
 
 template<class T>
 NTL::Vec<T> atoVec(const char *a) 
@@ -740,5 +750,7 @@ const double erfc_inverse[] = {
 };
 
 #define ERFC_INVERSE_SIZE  (long(sizeof(erfc_inverse)/sizeof(erfc_inverse[0])))
+
+}
 
 #endif // ifndef HELIB_NUMBTH_H

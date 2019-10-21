@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -18,6 +18,8 @@
 #include "EncryptedArray.h"
 
 #include <cstdio>
+
+namespace helib {
 
 // Map all non-zero slots to 1, leaving zero slots as zero.
 // Assumes that r=1, and that all the slot contain elements from GF(p^d).
@@ -139,4 +141,6 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
     fastPower(*res[i], d);
   }
   FHE_TIMER_STOP;
+}
+
 }

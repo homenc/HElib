@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -44,21 +44,21 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
 
         const long m;
         const long r;
-        FHEcontext context;
-        const EncryptedArrayCx& eacx;
+        helib::FHEcontext context;
+        const helib::EncryptedArrayCx& eacx;
 
         GTest_EaCx() :
             m(GetParam().m),
             r(GetParam().r),
             context(m, /*p=*/-1, r),
-            eacx((buildModChain(context, 5, 2), context.ea->getCx()))
+            eacx((helib::buildModChain(context, 5, 2), context.ea->getCx()))
         {}
 
         virtual void SetUp() override 
         {
             if (!helib_test::noPrint) {
                 std::vector<long> f;
-                factorize(f,m);
+                helib::factorize(f,m);
                 std::cout << "r="<<r<<", factoring "<<m<<" gives [";
                 for (unsigned long i=0; i<f.size(); i++)
                     std::cout << f[i] << " ";
@@ -67,15 +67,15 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
                 eacx.getPAlgebra().printout();
 
 #ifdef DEBUG_PRINTOUT
-                std::vector<cx_double> vc1;
+                std::vector<std::complex<double>> vc1;
                 eacx.random(vc1);
                 std::cout << "random complex vc1=";
-                printVec(std::cout,vc1,8)<<std::endl;
+                helib::printVec(std::cout,vc1,8)<<std::endl;
 
                 std::vector<double> vd;
                 eacx.random(vd);
                 std::cout << "random real vd=";
-                printVec(std::cout,vd,8)<<std::endl;
+                helib::printVec(std::cout,vd,8)<<std::endl;
 #endif
             }
         }
@@ -83,7 +83,7 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
         virtual void TearDown() override
         {
 #ifdef DEBUG_PRINTOUT
-            cleanupGlobals();
+          helib::cleanupGlobals();
 #endif
         }
 };
@@ -95,14 +95,14 @@ TEST_P(GTest_EaCx, encoding_works_correctly)
     vl[1] = -1; // ensure that this is not the zero vector
 #ifdef DEBUG_PRINTOUT
     std::cout << "random int v=";
-    printVec(std::cout,vl,8)<<std::endl;
+    helib::printVec(std::cout,vl,8)<<std::endl;
 #endif
 
-    zzX poly;
+    helib::zzX poly;
     double factor = eacx.encode(poly, vl, 1.0);
     if (!helib_test::noPrint) {
       NTL::ZZX poly2;
-      convert(poly2, poly);
+      helib::convert(poly2, poly);
       std::cout << "  encoded into a degree-"<<NTL::deg(poly2)<<" polynomial\n";
     }
 
@@ -110,12 +110,12 @@ TEST_P(GTest_EaCx, encoding_works_correctly)
     eacx.decode(vd2, poly, factor);
 #ifdef DEBUG_PRINTOUT
     std::cout << "  decoded into vd2=";
-    printVec(std::cout,vd2,8)<<std::endl;
+    helib::printVec(std::cout,vd2,8)<<std::endl;
 #endif
-    EXPECT_EQ(lsize(vl), lsize(vd2));
+    EXPECT_EQ(helib::lsize(vl), helib::lsize(vd2));
 
     double maxDiff = 0.0;
-    for (long i=0; i<lsize(vl); i++) {
+    for (long i=0; i<helib::lsize(vl); i++) {
         double diffAbs = std::abs(vl[i]-vd2[i]);
         if (diffAbs > maxDiff)
             maxDiff = diffAbs;

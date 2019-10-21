@@ -22,7 +22,7 @@ See below for more details.
 #include <vector>
 #include <complex>
 
-
+namespace helib {
 
 class PGFFT {
 public:
@@ -130,6 +130,7 @@ private:
 
 };
 
+}
 
 #endif
 

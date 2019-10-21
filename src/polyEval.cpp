@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -11,6 +11,8 @@
  */
 #include "FHEContext.h"
 #include "polyEval.h"
+
+namespace helib {
 
 // Returns the e'th power of X, computing it as needed
 Ctxt& DynamicCtxtPowers::getPower(long e)
@@ -816,3 +818,5 @@ long evalPolyTopLevel(NTL::ZZX poly, long x, long p, long k=0)
   return y;
 }
 #endif
+
+}

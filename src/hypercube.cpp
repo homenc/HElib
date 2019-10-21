@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -12,6 +12,8 @@
 #include "hypercube.h"
 #include <iomanip>
 #include <NTL/lzz_p.h>
+
+namespace helib {
 
   //! Break an index into the hypercube to index of the
   //! dimension-dim subcube and index inside that subcube.
@@ -244,3 +246,5 @@ template void getHyperColumn(NTL::Vec<NTL::zz_p>& v, const ConstCubeSlice<NTL::z
 template void setHyperColumn(const NTL::Vec<NTL::zz_p>& v, const CubeSlice<NTL::zz_p>& s, long pos);
 template void setHyperColumn(const NTL::Vec<NTL::zz_p>& v, const CubeSlice<NTL::zz_p>& s, long pos, const NTL::zz_p& val);
 template void print3D(const HyperCube<NTL::zz_p>& c);
+
+}

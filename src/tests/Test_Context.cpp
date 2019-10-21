@@ -43,14 +43,14 @@ protected:
       m(GetParam().m),
       p(GetParam().p),
       r(GetParam().r),
-      context(std::make_shared<FHEcontext>(m, p, r))
+      context(std::make_shared<helib::FHEcontext>(m, p, r))
   {}
 
   const unsigned long m;
   const unsigned long p;
   const unsigned long r;
 
-  const std::shared_ptr<FHEcontext> context;
+  const std::shared_ptr<helib::FHEcontext> context;
 };
 
 TEST_P(Test_with_BGV,

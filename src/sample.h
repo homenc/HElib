@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -19,6 +19,8 @@
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 #include "zzX.h"
+
+namespace helib {
 
 //! Sample a degree-(n-1) poly, with -1/0/+1 coefficients.
 //! Each coefficients is +-1 with probability prob/2 each,
@@ -74,4 +76,7 @@ double boundRoundingNoise(long m, long phim, long p2r, double epsilon=9e-13);
 
 void reduceModPhimX(zzX& poly, const PAlgebra& palg);
 const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg);
+
+}
+
 #endif // ifndef HELIB_SAMPLE_H

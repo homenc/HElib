@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -24,7 +24,9 @@
 #define FLAG_PRINT_DVEC 8 /* decode to double float */
 #define FLAG_PRINT_XVEC 16 /* decode to complex numbers */
 
-// forward declerations
+namespace helib {
+
+// forward declarations
 class Ctxt;
 class FHESecKey;
 class EncryptedArray;
@@ -81,5 +83,6 @@ printZZX(std::ostream& s, const NTL::ZZX& poly, long nCoeffs=40)
   return printVec(s, poly.rep, nCoeffs);
 }
 
+}
 
 #endif // ifndef HELIB_DEBUGGING_H

@@ -1,3 +1,15 @@
+/* Copyright (C) 2012-2019 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
+
 #include <NTL/BasicThreadPool.h>
 #include <helib.h>
 #include "matmul.h"
@@ -122,13 +134,13 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
 
         static void setGlobals(const int force_bsgs, const int force_hoist)
         {
-            fhe_test_force_bsgs = force_bsgs;
-            fhe_test_force_hoist = force_hoist;
+          helib::fhe_test_force_bsgs = force_bsgs;
+          helib::fhe_test_force_hoist = force_hoist;
         };
 
         void cleanupBootstrappingGlobals() {
-            fhe_test_force_bsgs = old_fhe_test_force_bsgs;
-            fhe_test_force_hoist = old_fhe_test_force_hoist;
+          helib::fhe_test_force_bsgs = old_fhe_test_force_bsgs;
+          helib::fhe_test_force_hoist = old_fhe_test_force_hoist;
         }
 
 
@@ -185,19 +197,19 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
         {
             if (!helib_test::noPrint) {
                 std::cout << "*** TestIt";
-                if (isDryRun()) std::cout << " (dry run)";
+                if (helib::isDryRun()) std::cout << " (dry run)";
                 std::cout << ": p=" << p
                     << ", r=" << r
                     << ", L=" << L
                     << ", t=" << skHwt
                     << ", c=" << c
                     << ", m=" << m
-                    << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
+                    << " (=" << mvec << "), gens="<< helib::vecToStr(gens) <<", ords="<<helib::vecToStr(ords)
                     << std::endl;
                 std::cout << "Computing key-independent tables..." << std::flush;
             }
-            setTimersOn();
-            setDryRun(false); // Need to get a "real context" to test bootstrapping
+            helib::setTimersOn();
+            helib::setDryRun(false); // Need to get a "real context" to test bootstrapping
             t = -NTL::GetTime();
         };
 
@@ -207,7 +219,7 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
                 context.scale = scale;
             }
             context.zMStar.set_cM(mValues[idx][13]/100.0);
-            buildModChain(context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+            helib::buildModChain(context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
 
             if (!helib_test::noPrint) {
                 std::cout << "security=" << context.securityLevel()<<std::endl;
@@ -240,13 +252,13 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
             }
         }
 
-        static FHESecKey setUpSecretKey(FHESecKey& secKey)
+        static helib::FHESecKey setUpSecretKey(helib::FHESecKey& secKey)
         {
             double t = -NTL::GetTime();
             if (!helib_test::noPrint) std::cout << "Generating keys, " << std::flush;
             secKey.GenSecKey(64);      // A Hamming-weight-64 secret key
-            addSome1DMatrices(secKey); // compute key-switching matrices that we need
-            addFrbMatrices(secKey);
+            helib::addSome1DMatrices(secKey); // compute key-switching matrices that we need
+            helib::addFrbMatrices(secKey);
             if (!helib_test::noPrint) std::cout << "computing key-dependent tables..." << std::flush;
             secKey.genRecryptData();
             t += NTL::GetTime();
@@ -255,8 +267,8 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
         }
 
         GTest_ThinBootstrapping() :
-            old_fhe_test_force_bsgs(fhe_test_force_bsgs),
-            old_fhe_test_force_hoist(fhe_test_force_hoist),
+            old_fhe_test_force_bsgs(helib::fhe_test_force_bsgs),
+            old_fhe_test_force_hoist(helib::fhe_test_force_hoist),
             // Squeeze global-setting in as the first operation
             p((setGlobals(GetParam().force_bsgs, GetParam().force_hoist),
                         GetParam().p)),
@@ -279,7 +291,7 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
             nPrimes((postContextSetup(), context.numPrimes())),
             allPrimes(0, nPrimes-1),
             bitSize(context.logOfProduct(allPrimes)/log(2.0)),
-            p2r((setDryRun(helib_test::dry), // Now we can set the dry-run flag if desired
+            p2r((helib::setDryRun(helib_test::dry), // Now we can set the dry-run flag if desired
                         postContextPrintout(),
                         context.alMod.getPPowR())),
             secretKey(context),
@@ -291,7 +303,7 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
         virtual void TearDown() override
         {
           cleanupBootstrappingGlobals();
-          cleanupGlobals();
+          helib::cleanupGlobals();
         }
 
 
@@ -313,28 +325,28 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
         const std::vector<long> gens;
         const std::vector<long> ords;
         double t;
-        FHEcontext context;
+        helib::FHEcontext context;
         const long nPrimes;
-        const IndexSet allPrimes;
+        const helib::IndexSet allPrimes;
         const long bitSize;
         const long p2r;
-        FHESecKey secretKey;
-        FHEPubKey publicKey;
+        helib::FHESecKey secretKey;
+        helib::FHEPubKey publicKey;
         const long d;
         const long nslots;
 
     public:
         void SetUp() override {
 #ifdef DEBUG_PRINTOUT
-            dbgKey = &secretKey;
-            dbgEa = const_cast<EncryptedArray*>(context.ea);
+            helib::dbgKey = &secretKey;
+            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
 #endif // DEBUG_PRINTOUT
             }
 
         static void TearDownTestCase()
         {
             if(!helib_test::noPrint) {
-                printAllTimers();
+              helib::printAllTimers();
             }
         };
 };
@@ -347,11 +359,11 @@ TEST_P(GTest_ThinBootstrapping, correctly_performs_thin_bootstrapping)
   // GG defines the plaintext space Z_p[X]/GG(X)
   NTL::ZZX GG;
   GG = context.alMod.getFactorsOverZZ()[0];
-  EncryptedArray ea(context, GG);
+  helib::EncryptedArray ea(context, GG);
 
   if(debug) {
-      dbgKey = &secretKey;
-      dbgEa = &ea;
+      helib::dbgKey = &secretKey;
+      helib::dbgEa = &ea;
   }
 
   NTL::zz_p::init(p2r);
@@ -371,14 +383,14 @@ TEST_P(GTest_ThinBootstrapping, correctly_performs_thin_bootstrapping)
       val_const1[i] = 1;
   }
 
-  Ctxt c1(publicKey);
+  helib::Ctxt c1(publicKey);
   ea.encrypt(c1, publicKey, val1);
 
-  Ctxt c2(c1);
-  if (!helib_test::noPrint) CheckCtxt(c2, "before recryption");
+  helib::Ctxt c2(c1);
+  if (!helib_test::noPrint) helib::CheckCtxt(c2, "before recryption");
 
   publicKey.thinReCrypt(c2);
-  if (!helib_test::noPrint) CheckCtxt(c2, "after recryption");
+  if (!helib_test::noPrint) helib::CheckCtxt(c2, "after recryption");
 
   std::vector<NTL::ZZX> val2;
   ea.decrypt(c2, secretKey, val2);

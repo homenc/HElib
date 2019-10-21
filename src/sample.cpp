@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,6 +21,8 @@
 
 #include "powerful.h"
 // only used in experimental Hwt sampler
+
+namespace helib {
 
 // Sample a degree-(n-1) poly, with only Hwt nonzero coefficients
 void sampleHWt(zzX &poly, long n, long Hwt)
@@ -550,4 +552,6 @@ double boundRoundingNoise(long m, long phim, long p2r, double epsilon)
     num++;
 
   return stdev * num;
+}
+
 }

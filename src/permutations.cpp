@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -11,6 +11,8 @@
  */
 
 #include "permutations.h"
+
+namespace helib {
 
 const NTL::Vec<long> SubDimension::dummyBenes; // global variable
 
@@ -503,4 +505,6 @@ std::ostream& operator<< (std::ostream &s, const GeneratorTrees &trees)
     s << " ["; T.printout(s); s<<"]\n";
   }
   return s << "]";
+}
+
 }

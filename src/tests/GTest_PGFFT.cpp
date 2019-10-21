@@ -270,7 +270,7 @@ namespace {
 
     static void
     TestIt(long n) {
-        PGFFT pgfft(n);
+        helib::PGFFT pgfft(n);
 
         for (long j = 0; j < 10; j++) {
 

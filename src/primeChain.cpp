@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -20,6 +20,8 @@
 #include "FHEContext.h"
 #include "sample.h"
 #include "binio.h"
+
+namespace helib {
 
 inline bool
 operator>(const ModuliSizes::Entry& a, const ModuliSizes::Entry& b)
@@ -254,7 +256,7 @@ void ModuliSizes::write(std::ostream& str) const
 {
   write_raw_int(str, lsize(sizes));
   for (long i=0; i<lsize(sizes); i++)
-    ::write(str, sizes[i]);
+    ::helib::write(str, sizes[i]);
 }
 
 void ModuliSizes::read(std::istream& str)
@@ -262,7 +264,7 @@ void ModuliSizes::read(std::istream& str)
   long n = read_raw_int(str);
   sizes.resize(n); // allocate space
   for (long i=0; i<n; i++)
-    ::read(str, sizes[i]);
+    ::helib::read(str, sizes[i]);
 }
 
 
@@ -482,7 +484,7 @@ void addCtxtPrimes(FHEcontext& context, long nBits, long targetSize)
   while (bitlen < nBits-0.5) {
     long q = gen.next();     // generate the next prime
     context.AddCtxtPrime(q); // add it to the list
-    bitlen += log2(q);
+    bitlen += std::log2(q);
   }
 }
 
@@ -593,4 +595,6 @@ void buildModChain(FHEcontext& context, long nBits, long nDgts,
   addCtxtPrimes(context, nBits, pSize);
   addSpecialPrimes(context, nDgts, willBeBootstrappable, skHwt);
   context.setModSizeTable();
+}
+
 }

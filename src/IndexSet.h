@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,6 +17,8 @@
  **/
 
 #include "NumbTh.h"
+
+namespace helib {
 
 //! @brief A dynamic set of non-negative integers.
 //!
@@ -197,5 +199,7 @@ bool operator>(const IndexSet& s1, const IndexSet& s2);
 //! @brief Functional disjoint
 inline bool disjoint(const IndexSet& s1, const IndexSet& s2)
 { return s1.disjointFrom(s2); }
+
+}
 
 #endif // ifndef HELIB_INDEXSET_H

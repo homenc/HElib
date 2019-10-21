@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -50,6 +50,8 @@
 
 /* For ANSI-challenged compilers, you may want to
  * #define NO_MEMBER_TEMPLATES or explicit */
+
+namespace helib {
 
 /**
 * @class deep_clone
@@ -165,7 +167,7 @@ void swap(cloned_ptr<X,Cloner>& x, cloned_ptr<X,Cloner>& y) { x.swap(y); }
 template<class X, class Cloner> 
 void swap(copied_ptr<X,Cloner>& x, copied_ptr<X,Cloner>& y) { x.swap(y); }
 
-
+}
 
 #endif // ifndef HELIB_CLONEDPTR_H
 

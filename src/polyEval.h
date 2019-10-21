@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -18,6 +18,8 @@
 
 #include "FHEContext.h"
 #include "Ctxt.h"
+
+namespace helib {
 
 //! @brief Evaluate a cleartext polynomial on an encrypted input
 //! @param[out] res  to hold the return value
@@ -68,5 +70,7 @@ public:
   bool isPowerComputed(long i)
   { return (i>0 && i<=(long)v.size() && !v[i-1].isEmpty()); }
 };
+
+}
 
 #endif // ifndef HELIB_POLYEVAL_H

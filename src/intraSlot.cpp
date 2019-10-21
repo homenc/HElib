@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,6 +17,8 @@
 #include <memory>
 #include "replicate.h"
 #include "intraSlot.h"
+
+namespace helib {
 
 // Implementation classes for unpacking:
 // buildUnpackSlotEncoding_pa_impl prepares the constants for the linear
@@ -315,4 +317,6 @@ void unpackSlots(std::vector<unsigned long>& value,
                  PlaintextArray& pa, const EncryptedArray& ea)
 {
    ea.dispatch<unpackSlots_pa_impl>(pa, value);
+}
+
 }

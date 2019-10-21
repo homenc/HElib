@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -68,7 +68,7 @@ struct Parameters {
 
 class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters, int>> {
     protected:
-        static std::vector<zzX> unpackSlotEncoding;
+        static std::vector<helib::zzX> unpackSlotEncoding;
         constexpr static long mValues[8][15] = {
             // { p, phi(m),   m,   d, m1, m2, m3,    g1,   g2,   g3, ord1,ord2,ord3, B,c}
             {  2,    48,   105, 12,   3, 35,  0,    71,    76,    0,   2,  2,   0, 25, 2},
@@ -141,7 +141,7 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
 
         // Returns a reference to the passed-in context once it has been modified to get it ready for test.
         // This is not static because it uses quite a lot of state of the object.
-        FHEcontext& prepareContext(FHEcontext &context)
+        helib::FHEcontext& prepareContext(helib::FHEcontext &context)
         {
             if (helib_test::verbose) {
                 std::cout <<"input bitSizes="<<bitSize<<','<<bitSize2
@@ -161,7 +161,7 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
             return context;
         };
 
-        void prepareSecKey(FHESecKey &secKey)
+        void prepareSecKey(helib::FHESecKey &secKey)
         {
             if(helib_test::verbose) {
                 std::cout << " L="<<L<<", B="<<B<<std::endl;
@@ -191,8 +191,8 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
         const long B;
         const long c;
         const long L;
-        FHEcontext context;
-        FHESecKey secKey;
+        helib::FHEcontext context;
+        helib::FHESecKey secKey;
 
         GTest_binaryArith () :
             prm(validatePrm(std::get<0>(GetParam()).prm)),
@@ -222,17 +222,17 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
 
             prepareSecKey(secKey);
 
-            activeContext = &context; // make things a little easier sometimes
+            helib::activeContext = &context; // make things a little easier sometimes
 #ifdef DEBUG_PRINTOUT
-            dbgEa = (EncryptedArray*) context.ea;
-            dbgKey = &secKey;
+            helib::dbgEa = (helib::EncryptedArray*) context.ea;
+            helib::dbgKey = &secKey;
 #endif
         }
 
         virtual void TearDown() override
         {
 #ifdef DEBUG_PRINTOUT
-            cleanupGlobals();
+            helib::cleanupGlobals();
 #endif
         }
 
@@ -241,19 +241,19 @@ class GTest_binaryArith : public ::testing::TestWithParam<std::tuple<Parameters,
         static void TearDownTestCase ()
         {
             if (helib_test::verbose)
-                printAllTimers(std::cout);
+                helib::printAllTimers(std::cout);
         };
 
 };
 constexpr long GTest_binaryArith::mValues[8][15];
-std::vector<zzX> GTest_binaryArith::unpackSlotEncoding;
+std::vector<helib::zzX> GTest_binaryArith::unpackSlotEncoding;
 
 TEST_P(GTest_binaryArith, fifteenForFour)
 {
-    std::vector<Ctxt> inBuf(15, Ctxt(secKey));
-    std::vector<Ctxt*> inPtrs(15, nullptr);
+    std::vector<helib::Ctxt> inBuf(15, helib::Ctxt(secKey));
+    std::vector<helib::Ctxt*> inPtrs(15, nullptr);
 
-    std::vector<Ctxt> outBuf(5, Ctxt(secKey));
+    std::vector<helib::Ctxt> outBuf(5, helib::Ctxt(secKey));
 
     long sum=0;
     std::string inputBits = "(";
@@ -272,12 +272,12 @@ TEST_P(GTest_binaryArith, fifteenForFour)
     // Add these bits
     if (helib_test::verbose) {
         std::cout << std::endl;
-        CheckCtxt(inBuf[lsize(inBuf)-1], "b4 15for4");
+        helib::CheckCtxt(inBuf[helib::lsize(inBuf)-1], "b4 15for4");
     }
     long numOutputs
-        = fifteenOrLess4Four(CtPtrs_vectorCt(outBuf), CtPtrs_vectorPt(inPtrs));
+        = fifteenOrLess4Four(helib::CtPtrs_vectorCt(outBuf), helib::CtPtrs_vectorPt(inPtrs));
     if (helib_test::verbose)
-        CheckCtxt(outBuf[lsize(outBuf)-1], "after 15for4");
+        helib::CheckCtxt(outBuf[helib::lsize(outBuf)-1], "after 15for4");
 
     // Check the result
     long sum2=0;
@@ -294,7 +294,7 @@ TEST_P(GTest_binaryArith, fifteenForFour)
 
 TEST_P(GTest_binaryArith, product)
 {
-    const EncryptedArray& ea = *context.ea;
+    const helib::EncryptedArray& ea = *context.ea;
     long mask = (outSize? ((1L<<outSize)-1) : -1);
 
     // Choose two random n-bit integers
@@ -302,16 +302,16 @@ TEST_P(GTest_binaryArith, product)
     long pb = NTL::RandomBits_long(bitSize2);
 
     // Encrypt the individual bits
-    NTL::Vec<Ctxt> eProduct, enca, encb;
+    NTL::Vec<helib::Ctxt> eProduct, enca, encb;
 
-    resize(enca, bitSize, Ctxt(secKey));
+    helib::resize(enca, bitSize, helib::Ctxt(secKey));
     for (long i=0; i<bitSize; i++) {
         secKey.Encrypt(enca[i], NTL::ZZX((pa>>i)&1));
         if (bootstrap) { // put them at a lower level
             enca[i].bringToSet(context.getCtxtPrimes(5));
         }
     }
-    resize(encb, bitSize2, Ctxt(secKey));
+    helib::resize(encb, bitSize2, helib::Ctxt(secKey));
     for (long i=0; i<bitSize2; i++) {
         secKey.Encrypt(encb[i], NTL::ZZX((pb>>i)&1));
         if (bootstrap) { // put them at a lower level
@@ -321,17 +321,17 @@ TEST_P(GTest_binaryArith, product)
     if (helib_test::verbose) {
         std::cout << "\n  bits-size "<<bitSize<<'+'<<bitSize2;
         if (outSize>0) std::cout << "->"<<outSize;
-        CheckCtxt(encb[0], "b4 multiplication");
+        helib::CheckCtxt(encb[0], "b4 multiplication");
     }
     // Test positive multiplication
     std::vector<long> slots;
-    {CtPtrs_VecCt eep(eProduct);  // A wrappers around the output vector
-        multTwoNumbers(eep,CtPtrs_VecCt(enca),CtPtrs_VecCt(encb),/*negative=*/false,
+    {helib::CtPtrs_VecCt eep(eProduct);  // A wrappers around the output vector
+      helib::multTwoNumbers(eep,helib::CtPtrs_VecCt(enca),helib::CtPtrs_VecCt(encb),/*negative=*/false,
                 outSize, &unpackSlotEncoding);
-        decryptBinaryNums(slots, eep, secKey, ea);
+      helib::decryptBinaryNums(slots, eep, secKey, ea);
     } // get rid of the wrapper
     if (helib_test::verbose)
-        CheckCtxt(eProduct[lsize(eProduct)-1], "after multiplication");
+        helib::CheckCtxt(eProduct[helib::lsize(eProduct)-1], "after multiplication");
     long pProd = pa*pb;
     EXPECT_EQ(slots[0], ((pa*pb)&mask)) <<
         "Positive product error: pa="<<pa<<", pb="<<pb
@@ -345,16 +345,16 @@ TEST_P(GTest_binaryArith, product)
     }
     // Test negative multiplication
     secKey.Encrypt(encb[bitSize2-1], NTL::ZZX(1));
-    decryptBinaryNums(slots, CtPtrs_VecCt(encb), secKey, ea, /*negative=*/true);
+    decryptBinaryNums(slots, helib::CtPtrs_VecCt(encb), secKey, ea, /*negative=*/true);
     pb = slots[0];
     eProduct.kill();
-    {CtPtrs_VecCt eep(eProduct);  // A wrappers around the output vector
-        multTwoNumbers(eep,CtPtrs_VecCt(enca),CtPtrs_VecCt(encb),/*negative=*/true,
+    {helib::CtPtrs_VecCt eep(eProduct);  // A wrappers around the output vector
+        multTwoNumbers(eep,helib::CtPtrs_VecCt(enca),helib::CtPtrs_VecCt(encb),/*negative=*/true,
                 outSize, &unpackSlotEncoding);
         decryptBinaryNums(slots, eep, secKey, ea, /*negative=*/true);
     } // get rid of the wrapper
     if (helib_test::verbose)
-        CheckCtxt(eProduct[lsize(eProduct)-1], "after multiplication");
+        helib::CheckCtxt(eProduct[helib::lsize(eProduct)-1], "after multiplication");
     pProd = pa*pb;
     EXPECT_EQ((slots[0]&mask), (pProd&mask)) <<
         "Negative product error: pa="<<pa<<", pb="<<pb
@@ -367,9 +367,9 @@ TEST_P(GTest_binaryArith, product)
     }
 
 #ifdef DEBUG_PRINTOUT
-    const Ctxt* minCtxt = nullptr;
+    const helib::Ctxt* minCtxt = nullptr;
     long minLvl=10000000;
-    for (const Ctxt& c: eProduct) {
+    for (const helib::Ctxt& c: eProduct) {
         long lvl = c.logOfPrimeSet();
         if (lvl < minLvl) {
             minCtxt = &c;
@@ -383,7 +383,7 @@ TEST_P(GTest_binaryArith, product)
 
 TEST_P(GTest_binaryArith, add)
 {
-    const EncryptedArray& ea = *context.ea;
+    const helib::EncryptedArray& ea = *context.ea;
     long mask = (outSize? ((1L<<outSize)-1) : -1);
 
     // Choose two random n-bit integers
@@ -391,16 +391,16 @@ TEST_P(GTest_binaryArith, add)
     long pb = NTL::RandomBits_long(bitSize2);
 
     // Encrypt the individual bits
-    NTL::Vec<Ctxt> eSum, enca, encb;
+    NTL::Vec<helib::Ctxt> eSum, enca, encb;
 
-    resize(enca, bitSize, Ctxt(secKey));
+    helib::resize(enca, bitSize, helib::Ctxt(secKey));
     for (long i=0; i<bitSize; i++) {
         secKey.Encrypt(enca[i], NTL::ZZX((pa>>i)&1));
         if (bootstrap) { // put them at a lower level
             enca[i].bringToSet(context.getCtxtPrimes(5));
         }
     }
-    resize(encb, bitSize2, Ctxt(secKey));
+    helib::resize(encb, bitSize2, helib::Ctxt(secKey));
     for (long i=0; i<bitSize2; i++) {
         secKey.Encrypt(encb[i], NTL::ZZX((pb>>i)&1));
         if (bootstrap) { // put them at a lower level
@@ -411,17 +411,17 @@ TEST_P(GTest_binaryArith, add)
         std::cout << "\n  bits-size "<<bitSize<<'+'<<bitSize2;
         if (outSize>0) std::cout << "->"<<outSize;
         std::cout <<std::endl;
-        CheckCtxt(encb[0], "b4 addition");
+        helib::CheckCtxt(encb[0], "b4 addition");
     }
 
     // Test addition
     std::vector<long> slots;
-    {CtPtrs_VecCt eep(eSum);  // A wrapper around the output vector
-        addTwoNumbers(eep, CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
+    {helib::CtPtrs_VecCt eep(eSum);  // A wrapper around the output vector
+      helib::addTwoNumbers(eep, helib::CtPtrs_VecCt(enca), helib::CtPtrs_VecCt(encb),
                 outSize, &unpackSlotEncoding);
-        decryptBinaryNums(slots, eep, secKey, ea);
+      helib::decryptBinaryNums(slots, eep, secKey, ea);
     } // get rid of the wrapper
-    if (helib_test::verbose) CheckCtxt(eSum[lsize(eSum)-1], "after addition");
+    if (helib_test::verbose) helib::CheckCtxt(eSum[helib::lsize(eSum)-1], "after addition");
     long pSum = pa+pb;
     EXPECT_EQ(slots[0], ((pa+pb)&mask)) <<
         "addTwoNums error: pa="<<pa<<", pb="<<pb
@@ -434,9 +434,9 @@ TEST_P(GTest_binaryArith, add)
     }
 
 #ifdef DEBUG_PRINTOUT
-    const Ctxt* minCtxt = nullptr;
+    const helib::Ctxt* minCtxt = nullptr;
     long minLvl=1000;
-    for (const Ctxt& c: eSum) {
+    for (const helib::Ctxt& c: eSum) {
         long lvl = c.logOfPrimeSet();
         if (lvl < minLvl) {
             minCtxt = &c;

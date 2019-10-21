@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -44,8 +44,8 @@ struct Parameters {
             << "m=" << params.m << ","
             << "p=" << params.p << ","
             << "r=" << params.r << ","
-            << "gens=" << params.gens << ","
-            << "ords=" << params.ords
+            << "gens=" << helib::vecToStr(params.gens) << ","
+            << "ords=" << helib::vecToStr(params.ords)
             << "}";
     };
 };
@@ -66,12 +66,12 @@ class GTest_PAlgebra : public ::testing::TestWithParam<Parameters> {
         const long r;
         const std::vector<long> gens;
         const std::vector<long> ords;
-        FHEcontext context;
+        helib::FHEcontext context;
 
-        static void printPrimeFactors(long m, const FHEcontext& context)
+        static void printPrimeFactors(long m, const helib::FHEcontext& context)
         {
             std::vector<long> f;
-            factorize(f,m);
+            helib::factorize(f,m);
             std::cout << "factoring "<<m<<" gives [";
             for (const auto& factor : f)
                 std::cout << factor << " ";
@@ -81,7 +81,7 @@ class GTest_PAlgebra : public ::testing::TestWithParam<Parameters> {
         }
 
         virtual void SetUp() override {
-            buildModChain(context, 5, 2);
+            helib::buildModChain(context, 5, 2);
             if(!helib_test::noPrint) {
                 printPrimeFactors(m, context);
             }
@@ -89,14 +89,14 @@ class GTest_PAlgebra : public ::testing::TestWithParam<Parameters> {
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+          helib::cleanupGlobals();
         }
 };
 
 TEST_P(GTest_PAlgebra, reads_and_writes_contexts_as_strings)
 {
   std::stringstream s1;
-  writeContextBase(s1, context);
+  helib::writeContextBase(s1, context);
   s1 << context;
 
   std::string s2 = s1.str();
@@ -109,9 +109,9 @@ TEST_P(GTest_PAlgebra, reads_and_writes_contexts_as_strings)
 
   unsigned long m1, p1, r1;
   std::vector<long> gens, ords;
-  readContextBase(s3, m1, p1, r1, gens, ords);
+  helib::readContextBase(s3, m1, p1, r1, gens, ords);
 
-  FHEcontext c1(m1, p1, r1, gens, ords);
+  helib::FHEcontext c1(m1, p1, r1, gens, ords);
   s3 >> c1;
 
   EXPECT_EQ(context, c1);

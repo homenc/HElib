@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -23,6 +23,7 @@
 #include "fhe_stats.h"
 
 NTL_CLIENT
+using namespace helib;
 
 //#define DEBUG_PRINTOUT
 
@@ -192,7 +193,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      if (!noPrint) CheckCtxt(c2, buffer);
      debugCompare(ea,secretKey,p2,c2);
 
-     ::negate(ea, p1); // c1.negate()
+     helib::negate(ea, p1); // c1.negate()
      c1.negate();
      if (!noPrint) CheckCtxt(c1, "c1=-c1");
      debugCompare(ea,secretKey,p1,c1);

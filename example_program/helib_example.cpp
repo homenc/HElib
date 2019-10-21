@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
   
   std::cout << "Initialising context object..." << std::endl;
   // Intialise context
-  FHEcontext context(m, p, r);
+  helib::FHEcontext context(m, p, r);
   // Modify the context, adding primes to the modulus chain
   std::cout  << "Building modulus chain..." << std::endl;
   buildModChain(context, bits, c);
@@ -33,19 +33,19 @@ int main(int argc, char *argv[]) {
   // Secret key management
   std::cout << "Creating secret key..." << std::endl;
   // Create a secret key associated with the context
-  FHESecKey secret_key(context);
+  helib::FHESecKey secret_key(context);
   // Generate the secret key
   secret_key.GenSecKey();
   std::cout << "Generating key-switching matrices..." << std::endl;
   // Compute key-switching matrices that we need
-  addSome1DMatrices(secret_key);
+  helib::addSome1DMatrices(secret_key);
   
   // Public key management
   // Set the secret key (upcast: FHESecKey is a subclass of FHEPubKey)
-  const FHEPubKey& public_key = secret_key;
+  const helib::FHEPubKey& public_key = secret_key;
   
   // Get the EncryptedArray of the context
-  const EncryptedArray& ea = *(context.ea);
+  const helib::EncryptedArray& ea = *(context.ea);
   
   // Get the number of slot (phi(m))
   long nslots = ea.size();
@@ -58,10 +58,10 @@ int main(int argc, char *argv[]) {
     ptxt[i] = i;
   }
   // Print the plaintext
-  std::cout << "Initial Ptxt: " << ptxt << std::endl;
+  std::cout << "Initial Ptxt: " << helib::vecToStr(ptxt) << std::endl;
   
   // Create a ciphertext
-  Ctxt ctxt(public_key);
+  helib::Ctxt ctxt(public_key);
   // Encrypt the plaintext using the public_key
   ea.encrypt(ctxt, public_key, ptxt);
   
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
   ea.decrypt(ctxt, secret_key, decrypted);
   
   // Print the decrypted plaintext
-  std::cout << "Decrypted Ptxt: " << decrypted << std::endl;
+  std::cout << "Decrypted Ptxt: " << helib::vecToStr(decrypted) << std::endl;
   
   return 0;
 }

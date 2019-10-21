@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -29,6 +29,8 @@
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 #endif
+
+namespace helib {
 
 // returns new v[i] = \sum_{j>=i} old v[i]
 void runningSums(CtPtrs& v)
@@ -227,4 +229,6 @@ void compareTwoNumbers(Ctxt& mu, Ctxt& ni, const CtPtrs& aa, const CtPtrs& bb,
   CtPtrs_VecCt eq(aeqb);
   CtPtrs_VecCt gr(agtb);
   compareTwoNumbersImplementation(eq, gr, mu, ni, aa, bb, unpackSlotEncoding, true);
+}
+
 }

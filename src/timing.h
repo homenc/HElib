@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -35,6 +35,7 @@
 #include "NumbTh.h"
 #include "multicore.h"
 
+namespace helib {
 
 class FHEtimer;
 void registerTimer(FHEtimer *timer);
@@ -110,18 +111,18 @@ public:
 #define FHE_stringify(s) FHE_stringify_aux(s)
 
 #define FHE_TIMER_START \
-  static FHEtimer _local_timer(__func__, FHE_AT); \
-  auto_timer _local_auto_timer(&_local_timer)
+  static helib::FHEtimer _local_timer(__func__, FHE_AT); \
+  helib::auto_timer _local_auto_timer(&_local_timer)
   
 #define FHE_TIMER_STOP  _local_auto_timer.stop()
 
 
 #define FHE_NTIMER_START(n) \
-  static FHEtimer _named_local_timer ## n(# n, FHE_AT ); \
-  auto_timer _named_local_auto_timer ## n(&_named_local_timer ## n)
+  static helib::FHEtimer _named_local_timer ## n(# n, FHE_AT ); \
+  helib::auto_timer _named_local_auto_timer ## n(&_named_local_timer ## n)
 
 #define FHE_NTIMER_STOP(n)    _named_local_auto_timer ## n.stop();
 
-
+}
 
 #endif // ifndef HELIB_TIMING_H

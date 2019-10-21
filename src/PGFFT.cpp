@@ -57,6 +57,7 @@ See below for more details.
 #include <immintrin.h>
 #endif
 
+namespace helib {
 
 using std::vector;
 using std::complex;
@@ -1564,7 +1565,7 @@ void PGFFT::apply(const cmplx_t* src, cmplx_t* dst) const
    }
 }
 
-
+}
 
 
 /****************************************************************************

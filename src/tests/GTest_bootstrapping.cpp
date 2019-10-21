@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -26,7 +26,6 @@
 
 // #define DEBUG_PRINTOUT
 #include "debugging.h"
-extern long printFlag;
 
 #define OUTER_REP (1)
 #define INNER_REP (1)
@@ -34,7 +33,7 @@ extern long printFlag;
 #include "gtest/gtest.h"
 #include "test_common.h"
 
-extern FHESecKey* dbgKey;
+extern helib::FHESecKey* dbgKey;
 
 // extern long fhe_disable_intFactor;
 //extern long fhe_force_chen_han;
@@ -152,8 +151,8 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
         };
 
         GTest_bootstrapping () :
-            old_fhe_test_force_bsgs(fhe_test_force_bsgs),
-            old_fhe_test_force_hoist(fhe_test_force_hoist),
+            old_fhe_test_force_bsgs(helib::fhe_test_force_bsgs),
+            old_fhe_test_force_hoist(helib::fhe_test_force_hoist),
             p(GetParam().p),
             r(GetParam().r),
             c(GetParam().c),
@@ -184,19 +183,19 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
                 SetSeed(NTL::ZZ(seed));
             NTL::SetNumThreads(nthreads);
 
-            fhe_test_force_bsgs = GetParam().force_bsgs;
-            fhe_test_force_hoist = GetParam().force_hoist;
+            helib::fhe_test_force_bsgs = GetParam().force_bsgs;
+            helib::fhe_test_force_hoist = GetParam().force_hoist;
         };
 
         void cleanupBootstrappingGlobals() {
-            fhe_test_force_bsgs = old_fhe_test_force_bsgs;
-            fhe_test_force_hoist = old_fhe_test_force_hoist;
+          helib::fhe_test_force_bsgs = old_fhe_test_force_bsgs;
+          helib::fhe_test_force_hoist = old_fhe_test_force_hoist;
         }
 
         virtual void TearDown() override
         {
             cleanupBootstrappingGlobals();
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 };
 
@@ -225,27 +224,27 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
 
     if (!helib_test::noPrint) {
         std::cout << "*** GTest_bootstrapping";
-        if (isDryRun()) std::cout << " (dry run)";
+        if (helib::isDryRun()) std::cout << " (dry run)";
         std::cout << ": p=" << p
             << ", r=" << r
             << ", L=" << L
             << ", c=" << c
             << ", m=" << m
-            << " (=" << mvec << "), gens="<<gens<<", ords="<<ords
+            << " (=" << mvec << "), gens="<<helib::vecToStr(gens)<<", ords="<<helib::vecToStr(ords)
             << std::endl;
         std::cout << "Computing key-independent tables..." << std::flush;
     }
-    setTimersOn();
-    setDryRun(false); // Need to get a "real context" to test bootstrapping
+    helib::setTimersOn();
+    helib::setDryRun(false); // Need to get a "real context" to test bootstrapping
 
     double t = -NTL::GetTime();
-    FHEcontext context(m, p, r, gens, ords);
+    helib::FHEcontext context(m, p, r, gens, ords);
     if (scale) {
         context.scale = scale;
     }
 
     context.zMStar.set_cM(mValues[idx][13]/100.0);
-    buildModChain(context, L, c,/*willBeBootstrappable=*/true, /*t=*/skHwt);
+    helib::buildModChain(context, L, c,/*willBeBootstrappable=*/true, /*t=*/skHwt);
 
     if (!helib_test::noPrint) {
         std::cout << "security=" << context.securityLevel()<<std::endl;
@@ -276,7 +275,7 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
             << "\n  ";
         context.zMStar.printout();
     }
-    setDryRun(helib_test::dry); // Now we can set the dry-run flag if desired
+    helib::setDryRun(helib_test::dry); // Now we can set the dry-run flag if desired
 
     long p2r = context.alMod.getPPowR();
 
@@ -284,11 +283,11 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
 
         t = -NTL::GetTime();
         if (!helib_test::noPrint) std::cout << "Generating keys, " << std::flush;
-        FHESecKey secretKey(context);
-        FHEPubKey& publicKey = secretKey;
+        helib::FHESecKey secretKey(context);
+        helib::FHEPubKey& publicKey = secretKey;
         secretKey.GenSecKey();      // A +-1/0 secret key
-        addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-        addFrbMatrices(secretKey);
+        helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+        helib::addFrbMatrices(secretKey);
         if (!helib_test::noPrint) std::cout << "computing key-dependent tables..." << std::flush;
         secretKey.genRecryptData();
         t += NTL::GetTime();
@@ -296,27 +295,27 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
 
         NTL::zz_p::init(p2r);
         NTL::zz_pX poly_p = NTL::random_zz_pX(context.zMStar.getPhiM());
-        PowerfulConversion pConv(context.rcData.p2dConv->getIndexTranslation());
-        HyperCube<NTL::zz_p> powerful(pConv.getShortSig());
+        helib::PowerfulConversion pConv(context.rcData.p2dConv->getIndexTranslation());
+        helib::HyperCube<NTL::zz_p> powerful(pConv.getShortSig());
         pConv.polyToPowerful(powerful, poly_p);
         NTL::ZZX ptxt_poly = NTL::conv<NTL::ZZX>(poly_p);
-        PolyRed(ptxt_poly, p2r, true); // reduce to the symmetric interval
+        helib::PolyRed(ptxt_poly, p2r, true); // reduce to the symmetric interval
 
 #ifdef DEBUG_PRINTOUT
-        dbgKey = &secretKey; // debugging key and ea
-        dbgEa = context.rcData.ea; // EA for plaintext space p^{e+r-e'}
-    dbg_ptxt = ptxt_poly;
-    context.rcData.p2dConv->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
-    vecRed(ptxt_pwr, ptxt_pwr, p2r, true);
-    if (dbgEa->size()>100) printFlag = 0; // don't print too many slots
+        helib::dbgKey = &secretKey; // debugging key and ea
+        helib::dbgEa = context.rcData.ea; // EA for plaintext space p^{e+r-e'}
+    helib::dbg_ptxt = ptxt_poly;
+    context.rcData.p2dConv->ZZXtoPowerful(helib::ptxt_pwr, helib::dbg_ptxt);
+    helib::vecRed(helib::ptxt_pwr, helib::ptxt_pwr, p2r, true);
+    if (helib::dbgEa->size()>100) helib::printFlag = 0; // don't print too many slots
 #endif
 
     NTL::ZZX poly2;
-    Ctxt c1(publicKey);
+    helib::Ctxt c1(publicKey);
 
     secretKey.Encrypt(c1,ptxt_poly,p2r);
 
-    Ctxt c_const1(publicKey);
+    helib::Ctxt c_const1(publicKey);
     secretKey.Encrypt(c_const1, NTL::ZZX(1), p2r);
 
     c1.multiplyBy(c_const1);
@@ -326,16 +325,16 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
         secretKey.Decrypt(poly2,c1);
 
         EXPECT_EQ(ptxt_poly, poly2);
-        if(HasFailure() && !isDryRun()) {
+        if(HasFailure() && !helib::isDryRun()) {
 #ifdef DEBUG_PRINTOUT
             conv(poly_p,poly2);
-            HyperCube<NTL::zz_p> powerful2(pConv.getShortSig());
+            helib::HyperCube<NTL::zz_p> powerful2(pConv.getShortSig());
             std::cout << "decryption error, encrypted ";
-            printVec(std::cout, powerful.getData())<<std::endl;
+            helib::printVec(std::cout, powerful.getData())<<std::endl;
 
             pConv.polyToPowerful(powerful2, poly_p);
             std::cout << "                after reCrypt ";
-            printVec(std::cout, powerful2.getData())<<std::endl;
+            helib::printVec(std::cout, powerful2.getData())<<std::endl;
             long numDiff = 0;
             for (long i=0; i<powerful.getSize(); i++) 
                 if (powerful[i] != powerful2[i]) {
@@ -345,15 +344,15 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
                 }
             if (!helib_test::noPrint) {
                 std::cout << std::endl<< std::endl;
-                printAllTimers();
+                helib::printAllTimers();
             }
 #endif
             FAIL();
         }
     }
     }
-    if (!helib_test::noPrint) printAllTimers();
-    resetAllTimers();
+    if (!helib_test::noPrint) helib::printAllTimers();
+    helib::resetAllTimers();
 #if (defined(__unix__) || defined(__unix) || defined(unix))
     struct rusage rusage;
     getrusage( RUSAGE_SELF, &rusage );

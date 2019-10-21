@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -19,8 +19,8 @@
 #include "test_common.h"
 
 #ifdef DEBUG_PRINTOUT
-extern FHESecKey* dbgKey;
-extern EncryptedArray* dbgEa;
+extern helib::FHESecKey* dbgKey;
+extern helib::EncryptedArray* dbgEa;
 #endif
 
 namespace {
@@ -71,11 +71,11 @@ class GTest_PolyEval : public ::testing::TestWithParam<Parameters>
         bool isMonic;
         long m;
         long k;
-        FHEcontext context;
+        helib::FHEcontext context;
         long p2r;
-        EncryptedArray ea;
-        FHESecKey secretKey;
-        const FHEPubKey &publicKey;
+        helib::EncryptedArray ea;
+        helib::FHESecKey secretKey;
+        const helib::FHEPubKey &publicKey;
 
         GTest_PolyEval() :
             p(GetParam().p),
@@ -86,9 +86,9 @@ class GTest_PolyEval : public ::testing::TestWithParam<Parameters>
             isMonic(GetParam().isMonic),
             m(GetParam().m),
             k(GetParam().k),
-            context((setDryRun(helib_test::dry), m), p, r),
+            context((helib::setDryRun(helib_test::dry), m), p, r),
             p2r(context.alMod.getPPowR()),
-            ea((buildModChain(context, L, /*c=*/3), context)),
+            ea((helib::buildModChain(context, L, /*c=*/3), context)),
             secretKey(context),
             publicKey((secretKey.GenSecKey(), secretKey))
             //  addSome1DMatrices(secretKey); // compute key-switching matrices
@@ -96,16 +96,16 @@ class GTest_PolyEval : public ::testing::TestWithParam<Parameters>
 
     virtual void SetUp() override {
 #ifdef DEBUG_PRINTOUT
-        dbgEa = &ea;        // for debugging purposes
-        dbgKey = &secretKey;
+        helib::dbgEa = &ea;        // for debugging purposes
+        helib::dbgKey = &secretKey;
 #endif
-        if (!helib_test::noPrint) std::cout << (isDryRun()? "* dry run, " : "* ")
+        if (!helib_test::noPrint) std::cout << (helib::isDryRun()? "* dry run, " : "* ")
         << "degree-"<<d<<", m="<<m<<", L="<<L<<", p^r="<<p2r<<std::endl;
     };
 
     virtual void TearDown() override
     {
-      cleanupGlobals();
+      helib::cleanupGlobals();
     }
 };
 
@@ -128,8 +128,8 @@ TEST_P(GTest_PolyEval, encrypted_polynomials_evaluate_at_encrypted_point_correct
   }
 
   // Encrypt the random polynomials
-  Ctxt cX(publicKey);
-  NTL::Vec<Ctxt> cpoly(NTL::INIT_SIZE, d, cX);
+  helib::Ctxt cX(publicKey);
+  NTL::Vec<helib::Ctxt> cpoly(NTL::INIT_SIZE, d, cX);
 
   secretKey.Encrypt(cX, NTL::conv<NTL::ZZX>(pX));
 
@@ -137,7 +137,7 @@ TEST_P(GTest_PolyEval, encrypted_polynomials_evaluate_at_encrypted_point_correct
     secretKey.Encrypt(cpoly[i], NTL::conv<NTL::ZZX>(ppoly[i]));
 
   // Evaluate the encrypted polynomial
-  polyEval(cX, cpoly, cX);
+  helib::polyEval(cX, cpoly, cX);
 
   // Compare the results
   NTL::ZZX ret;
@@ -152,7 +152,7 @@ TEST_P(GTest_PolyEval, evaluate_polynomial_on_ciphertext)
     std::vector<long> x;
   ea.random(x);
   while (NTL::GCD(x[0],p)!=1) { x[0] = NTL::RandomBnd(p2r); }
-  Ctxt inCtxt(publicKey), outCtxt(publicKey);
+  helib::Ctxt inCtxt(publicKey), outCtxt(publicKey);
   ea.encrypt(inCtxt, publicKey, x);
 
   NTL::ZZX poly;
@@ -161,13 +161,13 @@ TEST_P(GTest_PolyEval, evaluate_polynomial_on_ciphertext)
   if (isMonic) SetCoeff(poly, d);    // set top coefficient to 1
 
   // Evaluate poly on the ciphertext
-  polyEval(outCtxt, poly, inCtxt, k);
+  helib::polyEval(outCtxt, poly, inCtxt, k);
 
   // Check the result
   std::vector<long> y;
   ea.decrypt(outCtxt, secretKey, y);
   for (long i=0; i<ea.size(); i++) {
-    EXPECT_EQ(polyEvalMod(poly, x[i], p2r), y[i])
+    EXPECT_EQ(helib::polyEvalMod(poly, x[i], p2r), y[i])
         << "plaintext poly MISMATCH\n";
   }
 };
@@ -194,7 +194,7 @@ std::vector<Parameters> getParameters()
     const long L = (7+NTL::NextPowerOfTwo(max_d))*30;
 
     if(m < 2) {
-        m = FindM(/*secprm=*/80, L, /*c=*/3, p, 1, 0, m, !helib_test::noPrint);
+        m = helib::FindM(/*secprm=*/80, L, /*c=*/3, p, 1, 0, m, !helib_test::noPrint);
     }
 
     // Test both monic and non-monic polynomials of this degree

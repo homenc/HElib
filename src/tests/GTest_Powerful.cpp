@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -53,7 +53,7 @@ class GTest_Powerful : public ::testing::TestWithParam<Parameters>
         const long m;
         const long p;
         const long r;
-        FHEcontext context;
+        helib::FHEcontext context;
 
         static NTL::Vec<long> computeMvec(long m1, long m2, long m3)
         {
@@ -69,7 +69,7 @@ class GTest_Powerful : public ::testing::TestWithParam<Parameters>
 
         GTest_Powerful () : 
             mvec(computeMvec(GetParam().m1, GetParam().m2, GetParam().m3)),
-            m(computeProd(mvec)),
+            m(helib::computeProd(mvec)),
             p(GetParam().p),
             r(GetParam().r),
             context(m,p,r)
@@ -77,26 +77,26 @@ class GTest_Powerful : public ::testing::TestWithParam<Parameters>
 
         virtual void SetUp () override
         {
-            buildModChain(context, /*L=*/9, /*c=*/3);
+            helib::buildModChain(context, /*L=*/9, /*c=*/3);
         };
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 };
 
 TEST_P(GTest_Powerful, simple_conversion_works)
 {
-  PowerfulTranslationIndexes ind(mvec);
-  PowerfulConversion pConv;
+  helib::PowerfulTranslationIndexes ind(mvec);
+  helib::PowerfulConversion pConv;
   long q = NTL::NextPrime(ind.m);
   NTL::zz_p::init(q);
   pConv.initPConv(ind); // uses ind and also the current modulus q
   NTL::zz_pX poly, poly2;
   random(poly,ind.phim);
 
-  HyperCube<NTL::zz_p> cube(pConv.getShortSig());
+  helib::HyperCube<NTL::zz_p> cube(pConv.getShortSig());
   pConv.polyToPowerful(cube, poly);
   pConv.powerfulToPoly(poly2, cube);
   EXPECT_EQ(poly, poly2);
@@ -104,11 +104,11 @@ TEST_P(GTest_Powerful, simple_conversion_works)
 
 TEST_P(GTest_Powerful, high_level_conversion_works)
 {
-  PowerfulDCRT p2d(context, mvec);
-  DoubleCRT dcrt(context, context.fullPrimes());
+  helib::PowerfulDCRT p2d(context, mvec);
+  helib::DoubleCRT dcrt(context, context.fullPrimes());
   NTL::ZZX poly1, poly2;
   NTL::Vec<NTL::ZZ> pwrfl1, pwrfl2;
-  IndexSet set = dcrt.getIndexSet();
+  helib::IndexSet set = dcrt.getIndexSet();
 
   dcrt.randomize(); // a random polynomial
   dcrt.toPoly(poly1); //, /*positive=*/true);
@@ -131,7 +131,7 @@ TEST_P(GTest_Powerful, high_level_conversion_works)
          << rem(poly2[idx], context.ithPrime(i))<< std::endl;
       }
       poly1 -= poly2;
-      PolyRed(poly1, context.productOfPrimes(set));
+      helib::PolyRed(poly1, context.productOfPrimes(set));
       if (!IsZero(poly1)) 
         ss << "(poly1-poly2)%product=" << poly1<<std::endl;
       else ss << "poly1=poly2 (mod product)\n";
@@ -156,19 +156,19 @@ INSTANTIATE_TEST_SUITE_P(standard_parameters, GTest_Powerful, ::testing::Values(
 
   Vec< Pair<long, long> > factors;
 
-  factorize(factors, m);
+  helib::factorize(factors, m);
 
   cout << factors << "\n";
 
   Vec<long> phiVec;
-  computePhiVec(phiVec, factors);
+  helib::computePhiVec(phiVec, factors);
   cout << phiVec << "\n";
 
-  long phim = computeProd(phiVec);
+  long phim = helib::computeProd(phiVec);
   cout << phim << "\n";
 
   Vec<long> powVec;
-  computePowVec(powVec, factors);
+  helib::computePowVec(powVec, factors);
   cout << powVec << "\n";
 
   Vec<long> divVec;
@@ -183,7 +183,7 @@ INSTANTIATE_TEST_SUITE_P(standard_parameters, GTest_Powerful, ::testing::Values(
 
   Vec<long> polyToCubeMap;
   Vec<long> cubeToPolyMap;
-  computePowerToCubeMap(polyToCubeMap, cubeToPolyMap, m, powVec, invVec, longSig);
+  helib::computePowerToCubeMap(polyToCubeMap, cubeToPolyMap, m, powVec, invVec, longSig);
 
   Vec<long> shortToLongMap;
   computeShortToLongMap(shortToLongMap, shortSig, longSig);
@@ -244,7 +244,7 @@ INSTANTIATE_TEST_SUITE_P(standard_parameters, GTest_Powerful, ::testing::Values(
   computeCompressedIndex(compressedIndex, powVec);
 
   Vec<long> powToCompressedIndexMap;
-  computePowToCompressedIndexMap(powToCompressedIndexMap, m, powVec, 
+  helib::computePowToCompressedIndexMap(powToCompressedIndexMap, m, powVec, 
                                  compressedIndex, shortSig);
 
 

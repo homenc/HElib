@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -15,7 +15,9 @@
 #include <NTL/lzz_pXFactoring.h>
 #include <NTL/GF2XFactoring.h>
 
-// Forward declerations
+namespace helib {
+
+// Forward declarations
 static BlockMatMul1D*
 buildStep1Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
                  const NTL::Vec<long>& reps, long dim, long cofactor, bool invert,
@@ -803,5 +805,4 @@ buildThinStep1Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> si
 }
 //! \endcond
 
-
-
+}

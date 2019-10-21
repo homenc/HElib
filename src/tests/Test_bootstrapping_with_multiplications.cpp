@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -29,7 +29,7 @@ struct Parameters {
     t(t),
     c_m(c_m),
     n(n),
-    mvec(convert<NTL::Vec<long>>(mvec)),
+    mvec(helib::convert<NTL::Vec<long>>(mvec)),
     gens(gens),
     ords(ords) {
   if (mvec.empty(), gens.empty() || ords.empty())
@@ -56,8 +56,8 @@ struct Parameters {
               << "c=" << params.c << ","
               << "bits=" << params.bits << ","
               << "skHwt=" << params.t << ","
-              << "gens=" << params.gens << ","
-              << "ords=" << params.ords << ","
+              << "gens=" << helib::vecToStr(params.gens) << ","
+              << "ords=" << helib::vecToStr(params.ords) << ","
               << "mvec=" << params.mvec << ","
               << "c_m=" << params.c_m << ","
               << "computation depth=" << params.n
@@ -70,10 +70,10 @@ class Test_fat_bootstrapping_with_multiplications : public ::testing::TestWithPa
   protected:
     const long n; // Number of multiplications to perform
 
-    FHEcontext context;
-    FHESecKey secretKey;
-    FHEPubKey publicKey;
-    const EncryptedArray& ea;
+    helib::FHEcontext context;
+    helib::FHESecKey secretKey;
+    helib::FHEPubKey publicKey;
+    const helib::EncryptedArray& ea;
 
     Test_fat_bootstrapping_with_multiplications () :
       n(GetParam().n),
@@ -85,17 +85,17 @@ class Test_fat_bootstrapping_with_multiplications : public ::testing::TestWithPa
       ea(*(context.ea))
     {}
 
-    static FHEcontext& postContextSetup(FHEcontext& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
+    static helib::FHEcontext& postContextSetup(helib::FHEcontext& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
       context.zMStar.set_cM(c_m / 100);
-      buildModChain(context, bits, c, true, t);
+      helib::buildModChain(context, bits, c, true, t);
       context.makeBootstrappable(mvec, t, 0);
       return context;
     }
 
-    static FHESecKey& keySetup(FHESecKey& secretKey) {
+    static helib::FHESecKey& keySetup(helib::FHESecKey& secretKey) {
       secretKey.GenSecKey();
-      addSome1DMatrices(secretKey);
-      addFrbMatrices(secretKey);
+      helib::addSome1DMatrices(secretKey);
+      helib::addFrbMatrices(secretKey);
       secretKey.genRecryptData();
       return secretKey;
     }
@@ -112,21 +112,25 @@ class Test_fat_bootstrapping_with_multiplications : public ::testing::TestWithPa
                   << ", c_m=" << GetParam().c_m 
                   << ", depth to compute=" << GetParam().n
                   << ", mvec=" << GetParam().mvec
-                  << ", gens=" << GetParam().gens
-                  << ", ords=" << GetParam().ords
+                  << ", gens=" << helib::vecToStr(GetParam().gens)
+                  << ", ords=" << helib::vecToStr(GetParam().ords)
                   << std::endl;
         ea.getPAlgebra().printout();
         std::cout << "ctxtPrimes="<<context.ctxtPrimes
                   << ", specialPrimes="<<context.specialPrimes<<std::endl<<std::endl;
       }
+#ifdef DEBUG_PRINTOUT
+      helib::dbgEa = (helib::EncryptedArray*) context.ea;
+      helib::dbgKey = &secretKey;
+#endif
     }
 
     virtual void TearDown() override
     {
       if(helib_test::verbose) {
-        printAllTimers();
+        helib::printAllTimers();
       }
-      cleanupGlobals();
+      helib::cleanupGlobals();
     }
 };
 
@@ -140,9 +144,9 @@ std::vector<long> generateRandomBinaryVector(long nslots)
   return ptxt;
 }
 
-long multiplyWithRecryption(Ctxt& ctxt,
-                            Ctxt& tmp_ctxt,
-                            FHEPubKey& publicKey,
+long multiplyWithRecryption(helib::Ctxt& ctxt,
+                            helib::Ctxt& tmp_ctxt,
+                            helib::FHEPubKey& publicKey,
                             long depth,
                             long n,
                             bool thin)
@@ -158,7 +162,7 @@ long multiplyWithRecryption(Ctxt& ctxt,
   }
   FHE_NTIMER_STOP(Multiplications);
   if(!helib_test::noPrint) {
-    CheckCtxt(ctxt, "Before recryption");
+    helib::CheckCtxt(ctxt, "Before recryption");
   }
   if (depth + count < n) {
     // Time the recryption step
@@ -172,7 +176,7 @@ long multiplyWithRecryption(Ctxt& ctxt,
     FHE_NTIMER_STOP(Bootstrap);
   }
   if(!helib_test::noPrint) {
-    CheckCtxt(ctxt, "After recryption");
+    helib::CheckCtxt(ctxt, "After recryption");
   }
   return count;
 }
@@ -194,10 +198,10 @@ void multiplyPtxt(std::vector<long> ptxt,
 TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_bootstrapping_with_no_multiplications) {
   const long nslots = ea.size();
   std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
-  Ctxt ctxt(publicKey);
+  helib::Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, ptxt);
   if(!helib_test::noPrint) {
-    CheckCtxt(ctxt, "Before recryption");
+    helib::CheckCtxt(ctxt, "Before recryption");
   }
   // Time the recryption step
   FHE_NTIMER_START(Bootstrap);
@@ -205,7 +209,7 @@ TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_boots
   publicKey.reCrypt(ctxt);
   FHE_NTIMER_STOP(Bootstrap);
   if(!helib_test::noPrint) {
-    CheckCtxt(ctxt, "After recryption");
+    helib::CheckCtxt(ctxt, "After recryption");
   }
   std::vector<long> decrypted(nslots);
   ea.decrypt(ctxt, secretKey, decrypted);
@@ -217,9 +221,9 @@ TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_boots
   const long nslots = ea.size();
   const long p2r = context.alMod.getPPowR();
   std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
-  Ctxt ctxt(publicKey);
+  helib::Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, ptxt);
-  Ctxt tmp_ctxt(ctxt);
+  helib::Ctxt tmp_ctxt(ctxt);
 
   long depth = 0; // count to keep track of number of multiplications
   long round = 0; // count for number of bootstraps
@@ -228,7 +232,7 @@ TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_boots
       std::cout << "Round " << round << std::endl;
     }
     if(!helib_test::noPrint) {
-      CheckCtxt(ctxt, "Before multiplication");
+      helib::CheckCtxt(ctxt, "Before multiplication");
     }
     long count = 0; // count for number of multiplications this round
     // Multiply the ciphertext with itself n times
@@ -249,7 +253,7 @@ TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_boots
 
   if(!helib_test::noPrint) {
     for(const auto& timerName : {"Setup", "Multiplications", "Bootstrap", "RoundTotal"}) {
-      printNamedTimer(std::cout << std::endl, timerName);
+      helib::printNamedTimer(std::cout << std::endl, timerName);
     }
   }
 }
@@ -268,10 +272,10 @@ class Test_thin_bootstrapping_with_multiplications : public ::testing::TestWithP
   protected:
     const long n; // Number of multiplications to perform
 
-    FHEcontext context;
-    FHESecKey secretKey;
-    FHEPubKey publicKey;
-    const EncryptedArray& ea;
+    helib::FHEcontext context;
+    helib::FHESecKey secretKey;
+    helib::FHEPubKey publicKey;
+    const helib::EncryptedArray& ea;
 
     Test_thin_bootstrapping_with_multiplications () :
       n(GetParam().n),
@@ -283,17 +287,17 @@ class Test_thin_bootstrapping_with_multiplications : public ::testing::TestWithP
       ea(*(context.ea))
     {}
 
-    static FHEcontext& postContextSetup(FHEcontext& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
+    static helib::FHEcontext& postContextSetup(helib::FHEcontext& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
       context.zMStar.set_cM(c_m / 100);
-      buildModChain(context, bits, c, true, t);
+      helib::buildModChain(context, bits, c, true, t);
       context.makeBootstrappable(mvec, t, 0, false);
       return context;
     }
 
-    static FHESecKey& keySetup(FHESecKey& secretKey) {
+    static helib::FHESecKey& keySetup(helib::FHESecKey& secretKey) {
       secretKey.GenSecKey();
-      addSome1DMatrices(secretKey);
-      addFrbMatrices(secretKey);
+      helib::addSome1DMatrices(secretKey);
+      helib::addFrbMatrices(secretKey);
       secretKey.genRecryptData();
       return secretKey;
     }
@@ -310,31 +314,35 @@ class Test_thin_bootstrapping_with_multiplications : public ::testing::TestWithP
                   << ", c_m=" << GetParam().c_m 
                   << ", depth to compute=" << GetParam().n
                   << ", mvec=" << GetParam().mvec
-                  << ", gens=" << GetParam().gens
-                  << ", ords=" << GetParam().ords
+                  << ", gens=" << helib::vecToStr(GetParam().gens)
+                  << ", ords=" << helib::vecToStr(GetParam().ords)
                   << std::endl;
         ea.getPAlgebra().printout();
         std::cout << "ctxtPrimes="<<context.ctxtPrimes
                   << ", specialPrimes="<<context.specialPrimes<<std::endl<<std::endl;
       }
+#ifdef DEBUG_PRINTOUT
+      helib::dbgEa = (helib::EncryptedArray*) context.ea;
+      helib::dbgKey = &secretKey;
+#endif
     }
 
     virtual void TearDown() override
     {
       if(helib_test::verbose) {
-        printAllTimers();
+        helib::printAllTimers();
       }
-      cleanupGlobals();
+      helib::cleanupGlobals();
     }
 };
 
 TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_bootstrapping_with_no_multiplications) {
   const long nslots = ea.size();
   std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
-  Ctxt ctxt(publicKey);
+  helib::Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, ptxt);
   if(!helib_test::noPrint) {
-    CheckCtxt(ctxt, "Before recryption");
+    helib::CheckCtxt(ctxt, "Before recryption");
   }
   // Time the recryption step
   FHE_NTIMER_START(Bootstrap);
@@ -342,7 +350,7 @@ TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_boo
   publicKey.thinReCrypt(ctxt);
   FHE_NTIMER_STOP(Bootstrap);
   if(!helib_test::noPrint) {
-    CheckCtxt(ctxt, "After recryption");
+    helib::CheckCtxt(ctxt, "After recryption");
   }
   std::vector<long> decrypted(nslots);
   ea.decrypt(ctxt, secretKey, decrypted);
@@ -354,9 +362,9 @@ TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_boo
   const long nslots = ea.size();
   const long p2r = context.alMod.getPPowR();
   std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
-  Ctxt ctxt(publicKey);
+  helib::Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, ptxt);
-  Ctxt tmp_ctxt(ctxt);
+  helib::Ctxt tmp_ctxt(ctxt);
 
   long depth = 0; // count to keep track of number of multiplications
   long round = 0; // count for number of bootstraps
@@ -365,7 +373,7 @@ TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_boo
       std::cout << "Round " << round << std::endl;
     }
     if(!helib_test::noPrint) {
-      CheckCtxt(ctxt, "Before multiplication");
+      helib::CheckCtxt(ctxt, "Before multiplication");
     }
     long count = 0; // count for number of multiplications this round
     // Multiply the ciphertext with itself n times
@@ -386,7 +394,7 @@ TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_boo
 
   if(!helib_test::noPrint) {
     for(const auto& timerName : {"Setup", "Multiplications", "Bootstrap", "RoundTotal"}) {
-      printNamedTimer(std::cout << std::endl, timerName);
+      helib::printNamedTimer(std::cout << std::endl, timerName);
     }
   }
 }

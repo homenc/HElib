@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -110,18 +110,18 @@ class GTest_Permutations : public ::testing::TestWithParam<Parameters> {
         long good4;
 
         virtual void SetUp() override {
-            setDryRun(helib_test::dry);
+            helib::setDryRun(helib_test::dry);
         };
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 };
 
-void testCube(NTL::Vec<GenDescriptor>& vec, long widthBound)
+void testCube(NTL::Vec<helib::GenDescriptor>& vec, long widthBound)
 {
-  GeneratorTrees trees;
+  helib::GeneratorTrees trees;
   long cost = trees.buildOptimalTrees(vec, widthBound);
   if (!helib_test::noPrint) {
     std::cout << "@TestCube: trees=" << trees << std::endl;
@@ -129,19 +129,19 @@ void testCube(NTL::Vec<GenDescriptor>& vec, long widthBound)
   }
   NTL::Vec<long> dims;
   trees.getCubeDims(dims);
-  CubeSignature sig(dims);
+  helib::CubeSignature sig(dims);
 
   for (long cnt=0; cnt<3; cnt++) {
-    Permut pi;
-    randomPerm(pi, trees.getSize());
+    helib::Permut pi;
+    helib::randomPerm(pi, trees.getSize());
 
-    PermNetwork net;
+    helib::PermNetwork net;
     net.buildNetwork(pi, trees);
 
-    HyperCube<long> cube1(sig), cube2(sig);
+    helib::HyperCube<long> cube1(sig), cube2(sig);
     for (long i=0; i<cube1.getSize(); i++) cube1[i] = i;
-    HyperCube<long> cube3 = cube1;
-    applyPermToVec(cube2.getData(), cube1.getData(), pi); // direct application
+    helib::HyperCube<long> cube3 = cube1;
+    helib::applyPermToVec(cube2.getData(), cube1.getData(), pi); // direct application
     net.applyToCube(cube3); // applying permutation netwrok
 
     const auto getErrorMessage = [&cube1, &cube2, &cube3] () {
@@ -165,24 +165,24 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   if (!helib_test::noPrint)
     std::cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ",r="<<r<<")";
 
-  FHEcontext context(m,p,r);
-  EncryptedArray ea(context); // Use G(X)=X for this ea object
+  helib::FHEcontext context(m,p,r);
+  helib::EncryptedArray ea(context); // Use G(X)=X for this ea object
 
   // Some arbitrary initial plaintext array
   std::vector<long> in(ea.size());
   for (long i=0; i<ea.size(); i++) in[i] = i % p;
 
   // Setup generator-descriptors for the PAlgebra generators
-  NTL::Vec<GenDescriptor> vec(NTL::INIT_SIZE, ea.dimension());
+  NTL::Vec<helib::GenDescriptor> vec(NTL::INIT_SIZE, ea.dimension());
   for (long i=0; i<ea.dimension(); i++)
-    vec[i] = GenDescriptor(/*order=*/ea.sizeOfDimension(i),
+    vec[i] = helib::GenDescriptor(/*order=*/ea.sizeOfDimension(i),
 			   /*good=*/ ea.nativeDimension(i), /*genIdx=*/i);
 
   // Some default for the width-bound, if not provided
   if (widthBound<=0) widthBound = 1+log2((double)ea.size());
 
   // Get the generator-tree structures and the corresponding hypercube
-  GeneratorTrees trees;
+  helib::GeneratorTrees trees;
   long cost = trees.buildOptimalTrees(vec, widthBound);
   if (!helib_test::noPrint) {
     context.zMStar.printout();
@@ -191,37 +191,37 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   }
   //  NTL::Vec<long> dims;
   //  trees.getCubeDims(dims);
-  //  CubeSignature sig(dims);
+  //  helib::CubeSignature sig(dims);
 
   // 1/2 prime per level should be more or less enough, here we use 1 per layer
   if (L<=0) L = (1+trees.numLayers())*context.BPL();
-  buildModChain(context, /*nLevels=*/L, /*nDigits=*/3);
+  helib::buildModChain(context, /*nLevels=*/L, /*nDigits=*/3);
   if (!helib_test::noPrint) std::cout << "**Using "<<L<<" and "
 		     << context.ctxtPrimes.card() << " Ctxt-primes)\n";
 
   // Generate a sk/pk pair
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  helib::FHESecKey secretKey(context);
+  const helib::FHEPubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
-  Ctxt ctxt(publicKey);
+  helib::Ctxt ctxt(publicKey);
 
   for (long cnt=0; cnt<3; cnt++) {
-    resetAllTimers();
+    helib::resetAllTimers();
     // Choose a random permutation
-    Permut pi;
-    randomPerm(pi, trees.getSize());
+    helib::Permut pi;
+    helib::randomPerm(pi, trees.getSize());
 
     // Build a permutation network for pi
-    PermNetwork net;
+    helib::PermNetwork net;
     net.buildNetwork(pi, trees);
 
     // make sure we have the key-switching matrices needed for this network
-    addMatrices4Network(secretKey, net);
+    helib::addMatrices4Network(secretKey, net);
 
     // Apply the permutation pi to the plaintext
     std::vector<long> out1(ea.size());
     std::vector<long> out2(ea.size());
-    applyPermToVec(out1, in, pi); // direct application
+    helib::applyPermToVec(out1, in, pi); // direct application
 
     // Encrypt plaintext array, then apply permutation network to ciphertext
     ea.encrypt(ctxt, publicKey, in);
@@ -264,7 +264,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
 TEST_P(GTest_Permutations, ciphertext_permutations)
 {
   if (test==0 || helib_test::dry!=0) {
-    NTL::Vec<GenDescriptor> vec;
+    NTL::Vec<helib::GenDescriptor> vec;
     long nGens;
     if (ord2<=1) nGens=1;
     else if (ord3<=1) nGens=2;
@@ -273,14 +273,14 @@ TEST_P(GTest_Permutations, ciphertext_permutations)
     vec.SetLength(nGens);
 
     switch (nGens) {
-    case 4:  vec[3] = GenDescriptor(ord4, good4, /*genIdx=*/3);
-    case 3:  vec[2] = GenDescriptor(ord3, good3, /*genIdx=*/2);
-    case 2:  vec[1] = GenDescriptor(ord2, good2, /*genIdx=*/1);
-    default: vec[0] = GenDescriptor(ord1, good1, /*genIdx=*/0);
+      case 4:  vec[3] = helib::GenDescriptor(ord4, good4, /*genIdx=*/3);
+      case 3:  vec[2] = helib::GenDescriptor(ord3, good3, /*genIdx=*/2);
+      case 2:  vec[1] = helib::GenDescriptor(ord2, good2, /*genIdx=*/1);
+      default: vec[0] = helib::GenDescriptor(ord1, good1, /*genIdx=*/0);
     }
     if(!helib_test::noPrint) {
       std::cout << "***Testing ";
-      if (isDryRun()) std::cout << "(dry run) ";
+      if (helib::isDryRun()) std::cout << "(dry run) ";
       for (long i=0; i<vec.length(); i++)
         std::cout << "("<<vec[i].order<<","<<vec[i].good<<")";
       std::cout << ", depth="<<depth<<"\n";
@@ -288,7 +288,7 @@ TEST_P(GTest_Permutations, ciphertext_permutations)
     ASSERT_NO_FATAL_FAILURE(testCube(vec, depth));
   }
   else {
-    setTimersOn();
+    helib::setTimersOn();
     if(!helib_test::noPrint) {
         std::cout << "***Testing m="<<m<<", p="<<p<<", depth="<<depth<< std::endl;
     }
@@ -320,60 +320,60 @@ INSTANTIATE_TEST_SUITE_P(default_parameters, GTest_Permutations, ::testing::Valu
 
   // Test 1: a single good small prime-order generator (3)
   {
-  NTL::Vec<GenDescriptor> vec(INIT_SIZE, 1);
-  vec[0] = GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
+  NTL::Vec<helib::GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = helib::GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
   std::cout << "***Testing (3,good), width=1\n";
   testCube(vec, /*width=*/1);
   }
 
   // Test 2: a single bad larger prime-order generator (31)
   {
-  NTL::Vec<GenDescriptor> vec(INIT_SIZE, 1);
-  vec[0] = GenDescriptor(/*order=*/31, /*good=*/false, /*genIdx=*/0);
+  NTL::Vec<helib::GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = helib::GenDescriptor(/*order=*/31, /*good=*/false, /*genIdx=*/0);
   std::cout << "\n***Testing (31,bad), width=5\n";
   testCube(vec, /*width=*/5);
   }
 
   // Test 3: two generators with small prime orders (2,3), both bad
   {
-  NTL::Vec<GenDescriptor> vec(INIT_SIZE, 2);
-  vec[0] = GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/0);
-  vec[1] = GenDescriptor(/*order=*/3, /*good=*/false, /*genIdx=*/1);
+  NTL::Vec<helib::GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = helib::GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/0);
+  vec[1] = helib::GenDescriptor(/*order=*/3, /*good=*/false, /*genIdx=*/1);
   std::cout << "\n***Testing [(2,bad),(3,bad)], width=3\n";
   testCube(vec, /*width=*/3);
   }
 
   // Test 4: two generators with small prime orders (2,3), one good
   {
-  NTL::Vec<GenDescriptor> vec(INIT_SIZE, 2);
-  vec[0] = GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
-  vec[1] = GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/1);
+  NTL::Vec<helib::GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = helib::GenDescriptor(/*order=*/3, /*good=*/true, /*genIdx=*/0);
+  vec[1] = helib::GenDescriptor(/*order=*/2, /*good=*/false, /*genIdx=*/1);
   std::cout << "\n***Testing [(3,good),(2,bad)], width=3\n";
   testCube(vec, /*width=*/3);
   }
 
   // Test 5: a single good composite-order generator (6)
   {
-  NTL::Vec<GenDescriptor> vec(INIT_SIZE, 1);
-  vec[0] = GenDescriptor(/*order=*/6, /*good=*/true, /*genIdx=*/0);
+  NTL::Vec<helib::GenDescriptor> vec(INIT_SIZE, 1);
+  vec[0] = helib::GenDescriptor(/*order=*/6, /*good=*/true, /*genIdx=*/0);
   std::cout << "\n***Testing (6,good), width=3\n";
   testCube(vec, /*width=*/3);
   }
 
   // Test 6: (6,good),(2,bad)
   {
-  NTL::Vec<GenDescriptor> vec(INIT_SIZE, 2);
-  vec[0] = GenDescriptor(/*order=*/6,/*good=*/true, /*genIdx=*/0);
-  vec[1] = GenDescriptor(/*order=*/ 2, /*good=*/false,/*genIdx=*/1);
+  NTL::Vec<helib::GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = helib::GenDescriptor(/*order=*/6,/*good=*/true, /*genIdx=*/0);
+  vec[1] = helib::GenDescriptor(/*order=*/ 2, /*good=*/false,/*genIdx=*/1);
   std::cout << "\n**Testing [(6,good),(2,bad)], width=5\n";
   testCube(vec, /*width=*/5);
   }
 
   // Test 7: the "general case", (682,good),(2,bad)
   {
-  NTL::Vec<GenDescriptor> vec(INIT_SIZE, 2);
-  vec[0] = GenDescriptor(/*order=*/682,/*good=*/true, /*genIdx=*/0);
-  vec[1] = GenDescriptor(/*order=*/ 2, /*good=*/false,/*genIdx=*/1);
+  NTL::Vec<helib::GenDescriptor> vec(INIT_SIZE, 2);
+  vec[0] = helib::GenDescriptor(/*order=*/682,/*good=*/true, /*genIdx=*/0);
+  vec[1] = helib::GenDescriptor(/*order=*/ 2, /*good=*/false,/*genIdx=*/1);
   std::cout << "\n**Testing [(682,good),(2,bad)], width=11\n";
   testCube(vec, /*width=*/11);
   }

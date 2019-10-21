@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -18,6 +18,8 @@
 #include "PAlgebra.h"
 #include "timing.h"
 #include "zzX.h"
+
+namespace helib {
 
 void MulMod(zzX& res, const zzX& a, const zzX& b, const PAlgebra& palg)
 {
@@ -148,3 +150,4 @@ zzX balanced_zzX(const NTL::GF2X& f)
   return out;
 }
 
+}

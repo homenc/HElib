@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -18,6 +18,8 @@
 #include <NTL/vector.h>
 #include <NTL/lzz_pX.h>
 #include <NTL/GF2X.h>
+
+namespace helib {
 
 class PAlgebra;
 typedef NTL::Vec<long> zzX;
@@ -88,5 +90,7 @@ inline zzX MulMod(const zzX& a, const zzX& b, const PAlgebra& palg)
 // if necessary
 zzX balanced_zzX(const NTL::zz_pX& f);
 zzX balanced_zzX(const NTL::GF2X& f);
+
+}
 
 #endif // ifndef HELIB_ZZX_H

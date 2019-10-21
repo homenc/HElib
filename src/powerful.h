@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,6 +21,8 @@
 #include "hypercube.h"
 #include "DoubleCRT.h"
 #include "FHEContext.h"
+
+namespace helib {
 
 //! @class PowerfulTranslationIndexes
 //! @brief Holds index tables for translation between powerful and zz_pX
@@ -397,5 +399,7 @@ void recursiveInterp(const CubeSlice<zz_p>& s,
 void interp(HyperCube<zz_p>& cube,
 	    const Vec< copied_ptr<FFTHelper> >& multiEvalPoints);
 #endif
+
+}
 
 #endif // ifndef HELIB_POWERFUL_H

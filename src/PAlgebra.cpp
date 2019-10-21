@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,6 +22,8 @@
 #include <NTL/lzz_pEXFactoring.h>
 
 #include <NTL/BasicThreadPool.h>
+
+namespace helib {
 
 // polynomials are sorted lexicographically, with the
 // constant term being the "most significant"
@@ -941,7 +943,7 @@ buildLinPolyCoeffs(std::vector<RX>& C, const std::vector<RX>& L,
     conv(LL[i], L[i]);
 
   vec_RE CC;
-  ::buildLinPolyCoeffs(CC, LL, p, r);
+  ::helib::buildLinPolyCoeffs(CC, LL, p, r);
 
   resize(C,d);
   for (long i = 0; i < d; i++)
@@ -1037,3 +1039,5 @@ void PAlgebraModDerived<type>::evalTree(RX& res,
 
 template class PAlgebraModDerived<PA_GF2>;
 template class PAlgebraModDerived<PA_zz_p>;
+
+}

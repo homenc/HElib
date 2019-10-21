@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -14,6 +14,8 @@
  */
 
 #include "powerful.h"
+
+namespace helib {
 
 // powVec[d] = p_d^{e_d}, m = \prod_d p_d^{e_d}
 // computes divVec[d] = m/p_d^{e_d}
@@ -787,3 +789,5 @@ void interp(HyperCube<NTL::zz_p>& cube,
    cube.getData() *= m_inv;
 } 
 #endif
+
+}

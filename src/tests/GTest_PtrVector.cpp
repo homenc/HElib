@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -41,37 +41,37 @@ class GTest_PtrVector : public ::testing::Test {
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 
         const int vLength;
         MyClass zero;
 };
 
-typedef PtrVector<MyClass> MyPtrVec;
-typedef PtrVector_VecT<MyClass> MyPtrVec_Vec;
-typedef PtrVector_VecPt<MyClass> MyPtrVec_VecPt;
-typedef PtrVector_vectorT<MyClass> MyPtrVec_vector;
-typedef PtrVector_vectorPt<MyClass> MyPtrVec_vectorPt;
+typedef helib::PtrVector<MyClass> MyPtrVec;
+typedef helib::PtrVector_VecT<MyClass> MyPtrVec_Vec;
+typedef helib::PtrVector_VecPt<MyClass> MyPtrVec_VecPt;
+typedef helib::PtrVector_vectorT<MyClass> MyPtrVec_vector;
+typedef helib::PtrVector_vectorPt<MyClass> MyPtrVec_vectorPt;
 
-typedef PtrVector_slice<MyClass> MyPtrVec_slice; // A slice of MyPtrVec
+typedef helib::PtrVector_slice<MyClass> MyPtrVec_slice; // A slice of MyPtrVec
 
-typedef PtrMatrix<MyClass> MyPtrMat;
-typedef PtrMatrix_Vec<MyClass> MyPtrMat_Vec;
-typedef PtrMatrix_ptVec<MyClass> MyPtrMat_ptVec;
-typedef PtrMatrix_vector<MyClass> MyPtrMat_vector;
-typedef PtrMatrix_ptvector<MyClass> MyPtrMat_ptvector;
+typedef helib::PtrMatrix<MyClass> MyPtrMat;
+typedef helib::PtrMatrix_Vec<MyClass> MyPtrMat_Vec;
+typedef helib::PtrMatrix_ptVec<MyClass> MyPtrMat_ptVec;
+typedef helib::PtrMatrix_vector<MyClass> MyPtrMat_vector;
+typedef helib::PtrMatrix_ptvector<MyClass> MyPtrMat_ptvector;
 
 // compare a "generic" vectors to pointers to vector to objects
 template<typename T2>
 ::testing::AssertionResult pointersEqual(const MyPtrVec& a, T2& b)
 {
-  if (lsize(a)!=lsize(b)) {
+  if (helib::lsize(a)!=helib::lsize(b)) {
       return ::testing::AssertionFailure()
-          << "sizes do not match (" << lsize(a)
-          << " vs " << lsize(b) << ")";
+          << "sizes do not match (" << helib::lsize(a)
+          << " vs " << helib::lsize(b) << ")";
   }
-  for (long i=0; i<lsize(b); i++) {
+  for (long i=0; i<helib::lsize(b); i++) {
     if (a[i]!=&b[i]) {
         return ::testing::AssertionFailure()
             << "difference found in the "
@@ -144,8 +144,8 @@ void test4(const MyPtrMat& mat, const T& array)
   if(helib_test::verbose) {
     std::cout <<"test4 "<<std::flush;
   }
-  ASSERT_EQ(mat.size(), lsize(array));
-  for (int i=0; i<lsize(array); i++)
+  ASSERT_EQ(mat.size(), helib::lsize(array));
+  for (int i=0; i<helib::lsize(array); i++)
     ASSERT_TRUE(pointersEqual(mat[i], array[i]));
 }
 
@@ -155,8 +155,8 @@ void test5(const MyPtrMat& mat, const T& array)
   if(helib_test::verbose) {
     std::cout <<"test5 "<<std::flush;
   }
-  ASSERT_EQ(mat.size(), lsize(array));
-  for (int i=0; i<lsize(array); i++)
+  ASSERT_EQ(mat.size(), helib::lsize(array));
+  for (int i=0; i<helib::lsize(array); i++)
     ASSERT_TRUE(pointersEqual(mat[i], *array[i]));
 }
 
