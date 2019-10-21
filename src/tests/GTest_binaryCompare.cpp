@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -64,7 +64,7 @@ struct Parameters {
 
 class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameters, int>> {
     protected:
-        static std::vector<zzX> unpackSlotEncoding;
+        static std::vector<helib::zzX> unpackSlotEncoding;
         constexpr static long mValues[][15] = {
             // { p, phi(m),   m,   d, m1, m2, m3,    g1,   g2,   g3, ord1,ord2,ord3, B,c}
             {  2,    48,   105, 12,  3, 35,  0,    71,    76,    0,   2,  2,   0, 25, 2},
@@ -124,7 +124,7 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
             return bootstrap ? 900 : 30*(7 + NTL::NumBits(bitSize + 2)); // that should be enough
         };
 
-        FHEcontext& prepareContext(FHEcontext &context)
+        helib::FHEcontext& prepareContext(helib::FHEcontext &context)
         {
             if (helib_test::verbose) {
                 std::cout <<"input bitSize="<<bitSize << std::endl;
@@ -145,7 +145,7 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
             return context;
         }
 
-        void prepareSecKey(FHESecKey& secKey)
+        void prepareSecKey(helib::FHESecKey& secKey)
         {
             if (helib_test::verbose) {
                 std::cout << "\ncomputing key-dependent tables..." << std::flush;
@@ -170,8 +170,8 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
         const std::vector<long> ords;
         const long c;
         const long L;
-        FHEcontext context;
-        FHESecKey secKey;
+        helib::FHEcontext context;
+        helib::FHESecKey secKey;
 
         GTest_binaryCompare() :
             prm(validatePrm(std::get<0>(GetParam()).prm)),
@@ -198,17 +198,17 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
 
             prepareSecKey(secKey);
 
-            activeContext = &context; // make things a little easier sometimes
+            helib::activeContext = &context; // make things a little easier sometimes
 #ifdef DEBUG_PRINTOUT
-            dbgEa = (EncryptedArray*) context.ea;
-            dbgKey = &secKey;
+            helib::dbgEa = (helib::EncryptedArray*) context.ea;
+            helib::dbgKey = &secKey;
 #endif
         };
 
         virtual void TearDown() override
         {
 #ifdef DEBUG_PRINTOUT
-            cleanupGlobals();
+            helib::cleanupGlobals();
 #endif
         }
 
@@ -216,16 +216,16 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
         static void TearDownTestCase ()
         {
             if (helib_test::verbose)
-                printAllTimers(std::cout);
+                helib::printAllTimers(std::cout);
         };
 };
 
-std::vector<zzX> GTest_binaryCompare::unpackSlotEncoding;
+std::vector<helib::zzX> GTest_binaryCompare::unpackSlotEncoding;
 constexpr long GTest_binaryCompare::mValues[5][15];
 
 TEST_P(GTest_binaryCompare, comparison)
 {
-  const EncryptedArray& ea = *context.ea;
+  const helib::EncryptedArray& ea = *context.ea;
 
   // Choose two random n-bit integers
   long pa = NTL::RandomBits_long(bitSize);
@@ -236,9 +236,9 @@ TEST_P(GTest_binaryCompare, comparison)
   bool pNi = pa<pb;
 
   // Encrypt the individual bits
-  NTL::Vec<Ctxt> eMax, eMin, enca, encb;
+  NTL::Vec<helib::Ctxt> eMax, eMin, enca, encb;
 
-  Ctxt mu(secKey), ni(secKey);
+  helib::Ctxt mu(secKey), ni(secKey);
   resize(enca, bitSize, mu);
   resize(encb, bitSize+1, ni);
   for (long i=0; i<=bitSize; i++) {
@@ -255,7 +255,7 @@ TEST_P(GTest_binaryCompare, comparison)
 
   std::vector<long> slotsMin, slotsMax, slotsMu, slotsNi;
   //cmp only
-  compareTwoNumbers(mu, ni, CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
+  compareTwoNumbers(mu, ni, helib::CtPtrs_VecCt(enca), helib::CtPtrs_VecCt(encb),
                       &unpackSlotEncoding);
   ea.decrypt(mu, secKey, slotsMu);
   ea.decrypt(ni, secKey, slotsNi);
@@ -269,10 +269,10 @@ TEST_P(GTest_binaryCompare, comparison)
                  ")=> mu=" << slotsMu[0] << ", ni=" << slotsNi[0] <<std::endl;
   }
   
-  {CtPtrs_VecCt wMin(eMin), wMax(eMax); // A wrappers around output vectors
+  {helib::CtPtrs_VecCt wMin(eMin), wMax(eMax); // A wrappers around output vectors
   //cmp with max and min
   compareTwoNumbers(wMax, wMin, mu, ni,
-                    CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
+                    helib::CtPtrs_VecCt(enca), helib::CtPtrs_VecCt(encb),
                     &unpackSlotEncoding);
   decryptBinaryNums(slotsMax, wMax, secKey, ea);
   decryptBinaryNums(slotsMin, wMin, secKey, ea);
@@ -295,9 +295,9 @@ TEST_P(GTest_binaryCompare, comparison)
   }
 
 #ifdef DEBUG_PRINTOUT
-  const Ctxt* minLvlCtxt = nullptr;
+  const helib::Ctxt* minLvlCtxt = nullptr;
   long minLvl=1000;
-  for (const Ctxt& c: eMax) {
+  for (const helib::Ctxt& c: eMax) {
     long lvl = c.logOfPrimeSet();
     if (lvl < minLvl) {
       minLvlCtxt = &c;

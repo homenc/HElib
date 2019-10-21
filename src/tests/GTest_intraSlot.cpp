@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -50,7 +50,7 @@ struct Parameters {
 
 class GTest_intraSlot : public ::testing::TestWithParam<Parameters> {
 
-    static FHEcontext& setupContext(FHEcontext& context, long L)
+    static helib::FHEcontext& setupContext(helib::FHEcontext& context, long L)
     {
         if(helib_test::verbose) {
             context.zMStar.printout();
@@ -78,41 +78,41 @@ class GTest_intraSlot : public ::testing::TestWithParam<Parameters> {
         long L;
         long m;
         long seed;
-        FHEcontext context;
-        FHESecKey secretKey;
-        const FHEPubKey& publicKey;
+        helib::FHEcontext context;
+        helib::FHESecKey secretKey;
+        const helib::FHEPubKey& publicKey;
 
         void SetUp() override
         {
             SetSeed(NTL::ZZ(seed));
             secretKey.GenSecKey(); // A +-1/0 secret key
-            addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-            addFrbMatrices(secretKey);
+            helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+            helib::addFrbMatrices(secretKey);
 
 #ifdef DEBUG_PRINTOUT
-            dbgKey = &secretKey;
-            dbgEa = const_cast<EncryptedArray*>(context.ea);
+            helib::dbgKey = &secretKey;
+            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
 #endif // DEBUG_PRINTOUT
         };
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+          helib::cleanupGlobals();
         }
 };
 
 TEST_P(GTest_intraSlot, packing_and_unpacking_works)
 {
     NTL::ZZX G = context.alMod.getFactorsOverZZ()[0];
-    EncryptedArray ea(context, G);
+    helib::EncryptedArray ea(context, G);
 
     long d = ea.getDegree(); // size of each slot
 
-    std::vector<Ctxt> unpacked(d*n -1, Ctxt(publicKey));
+    std::vector<helib::Ctxt> unpacked(d*n -1, helib::Ctxt(publicKey));
 
     // generate (almost) d*n ciphertexts, with only integrs in the slots
-    std::vector<PlaintextArray> p1(lsize(unpacked), PlaintextArray(ea));
-    for (long i=0; i<lsize(unpacked); i++) {
+    std::vector<helib::PlaintextArray> p1(helib::lsize(unpacked), helib::PlaintextArray(ea));
+    for (long i=0; i<helib::lsize(unpacked); i++) {
         std::vector<long> slots;
         ea.random(slots);
         encode(ea, p1[i] ,slots);
@@ -120,16 +120,16 @@ TEST_P(GTest_intraSlot, packing_and_unpacking_works)
     }
 
     // Pack (almost) d*n ciphetexts into only n of them
-    std::vector<Ctxt> ct(n, Ctxt(publicKey));
-    repack(CtPtrs_vectorCt(ct), CtPtrs_vectorCt(unpacked), ea);
+    std::vector<helib::Ctxt> ct(n, helib::Ctxt(publicKey));
+    repack(helib::CtPtrs_vectorCt(ct), helib::CtPtrs_vectorCt(unpacked), ea);
 
     // Unpack them back
-    std::vector<zzX> unpackSlotEncoding;
-    buildUnpackSlotEncoding(unpackSlotEncoding, ea);
-    unpack(CtPtrs_vectorCt(unpacked), CtPtrs_vectorCt(ct), ea, unpackSlotEncoding);
+    std::vector<helib::zzX> unpackSlotEncoding;
+    helib::buildUnpackSlotEncoding(unpackSlotEncoding, ea);
+    unpack(helib::CtPtrs_vectorCt(unpacked), helib::CtPtrs_vectorCt(ct), ea, unpackSlotEncoding);
 
-    PlaintextArray p2(ea);
-    for (long i=0; i<lsize(unpacked); i++) {
+    helib::PlaintextArray p2(ea);
+    for (long i=0; i<helib::lsize(unpacked); i++) {
         ea.decrypt(unpacked[i], secretKey, p2);
         ASSERT_TRUE(equals(ea, p1[i], p2)) <<
             "p2["<<i<<"]="<<p2;

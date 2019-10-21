@@ -19,6 +19,8 @@
 #include "sample.h"
 #include "norms.h"
 
+namespace helib {
+
 /******** Utility function to generate RLWE instances *********/
 
 // Assumes that c1 is already chosen by the caller
@@ -1073,3 +1075,4 @@ void readSecKeyBinary(std::istream& str, FHESecKey& sk)
   helib::assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
 }
 
+}

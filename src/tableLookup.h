@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -18,6 +18,8 @@
 #include <functional>
 #include "EncryptedArray.h"
 #include "CtPtrs.h"
+
+namespace helib {
 
 //inline void convert(Ctxt& a, const Ctxt& b) { a=b; }
 
@@ -86,5 +88,7 @@ void buildLookupTable(std::vector<zzX>& T,// result is encoded and returned in T
                       const long scale_out,
                       const long sign_out,
                       const EncryptedArray& ea);
+
+}
 		      
 #endif // ifndef HELIB_TABLELOOKUP_H

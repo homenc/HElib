@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -19,6 +19,7 @@
 #include "IndexSet.h"
 #include "clonedPtr.h"
 
+namespace helib {
 
 //! @brief Initializing elements in an IndexMap
 template < class T > class IndexMapInit {
@@ -125,6 +126,6 @@ bool operator!=(const IndexMap<T>& map1, const IndexMap<T>& map2) {
   return !(map1 == map2);
 }
 
-  
+} 
 
 #endif // ifndef HELIB_INDEXMAP_H

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -64,8 +64,8 @@ struct Parameters {
             "s=" << params.s << "," <<
             "seed=" << params.seed << "," <<
             "mvec=" << params.mvec << "," <<
-            "gens=" << params.gens << "," <<
-            "ords=" << params.ords << "," <<
+            "gens=" << helib::vecToStr(params.gens) << "," <<
+            "ords=" << helib::vecToStr(params.ords) << "," <<
             "nthreads=" << params.nthreads << "," <<
             "useCache=" << params.useCache <<
             "}";
@@ -87,12 +87,12 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
         std::vector<long> ords;
         long nthreads;
         long useCache;
-        FHEcontext context;
+        helib::FHEcontext context;
         long d;
         long phim;
         long nslots;
-        FHESecKey secretKey;
-        const FHEPubKey &publicKey;
+        helib::FHESecKey secretKey;
+        const helib::FHEPubKey &publicKey;
 
         static NTL::Vec<long> getDefaultMvec()
         {
@@ -130,15 +130,15 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
         static long calculateM(const NTL::Vec<long> &mvec, long p)
         {
             // multiply all the prime powers to get m itself
-            long m = computeProd(mvec);
+            long m = helib::computeProd(mvec);
             if(NTL::GCD(p, m) != 1)
                 throw std::invalid_argument("mvec invalid: computeProd(mvec) and p are not coprime");
             return m;
         };
 
-        static void prepareContext(FHEcontext &context, long L, long c)
+        static void prepareContext(helib::FHEcontext &context, long L, long c)
         {
-            buildModChain(context, L, c);
+          helib::buildModChain(context, L, c);
 
             if (!helib_test::noPrint) {
                 context.zMStar.printout(); // print structure of Zm* /(p) to std::cout
@@ -155,18 +155,18 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
             s(GetParam().s),
             seed(GetParam().seed),
             mvec(checkMvec(
-                        lsize(GetParam().mvec) < 1 ? getDefaultMvec() : GetParam().mvec)
+                        helib::lsize(GetParam().mvec) < 1 ? getDefaultMvec() : GetParam().mvec)
                 ),
             m(calculateM(mvec, p)),
-            gens(lsize(GetParam().mvec) < 1 ? getDefaultGens() : GetParam().gens),
-            ords(lsize(GetParam().mvec) < 1 ? getDefaultOrds() : GetParam().ords),
+            gens(helib::lsize(GetParam().mvec) < 1 ? getDefaultGens() : GetParam().gens),
+            ords(helib::lsize(GetParam().mvec) < 1 ? getDefaultOrds() : GetParam().ords),
             nthreads(GetParam().nthreads),
             useCache(GetParam().useCache),
-            context((setDryRun(false), m), p, r, gens, ords), // We need to get a 'real' context to test EvalMap.
+            context((helib::setDryRun(false), m), p, r, gens, ords), // We need to get a 'real' context to test EvalMap.
             d((prepareContext(context, L, c), context.zMStar.getOrdP())),
             phim(context.zMStar.getPhiM()),
             nslots(phim/d),
-            secretKey((setDryRun(helib_test::dry),context)),  // We can now switch to dry run if desired.
+            secretKey((helib::setDryRun(helib_test::dry),context)),  // We can now switch to dry run if desired.
             publicKey(secretKey)
             {
             };
@@ -175,21 +175,21 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
         {
             NTL::SetNumThreads(nthreads);
             NTL::SetSeed(NTL::conv<NTL::ZZ>(seed));
-            setTimersOn();
+            helib::setTimersOn();
 
             secretKey.GenSecKey(); // A Hamming-weight-w secret key
-            addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-            addFrbMatrices(secretKey); // compute key-switching matrices that we need
+            helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+            helib::addFrbMatrices(secretKey); // compute key-switching matrices that we need
 
 #ifdef DEBUG_PRINTOUT
-            dbgKey = &secretKey;
-            dbgEa = const_cast<EncryptedArray*>(context.ea);
+            helib::dbgKey = &secretKey;
+            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
 #endif // DEBUG_PRINTOUT
         };
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 };
 
@@ -199,7 +199,7 @@ TEST_P(GTest_EvalMap, eval_map_behaves_correctly)
     // GG defines the plaintext space Z_p[X]/GG(X)
     NTL::ZZX GG;
     GG = context.alMod.getFactorsOverZZ()[0];
-    EncryptedArray ea(context, GG);
+    helib::EncryptedArray ea(context, GG);
 
     NTL::zz_p::init(context.alMod.getPPowR());
     NTL::zz_pX F;
@@ -211,10 +211,10 @@ TEST_P(GTest_EvalMap, eval_map_behaves_correctly)
     // in lexicographic order.
 
     // compute tables for converting between powerful and zz_pX
-    PowerfulTranslationIndexes ind(mvec); // indpendent of p
-    PowerfulConversion pConv(ind);        // depends on p
+    helib::PowerfulTranslationIndexes ind(mvec); // indpendent of p
+    helib::PowerfulConversion pConv(ind);        // depends on p
 
-    HyperCube<NTL::zz_p> cube(pConv.getShortSig());
+    helib::HyperCube<NTL::zz_p> cube(pConv.getShortSig());
     pConv.polyToPowerful(cube, F);
 
     // Sanity check: convert back and compare
@@ -229,30 +229,30 @@ TEST_P(GTest_EvalMap, eval_map_behaves_correctly)
     for (long i = 0; i < phim; i++) {
         val1[i/d] += NTL::conv<NTL::ZZX>(NTL::conv<NTL::ZZ>(cube[i])) << (i % d);
     }
-    PlaintextArray pa1(ea);
+    helib::PlaintextArray pa1(ea);
     encode(ea, pa1, val1);
 
-    Ctxt ctxt(publicKey);
+    helib::Ctxt ctxt(publicKey);
     ea.encrypt(ctxt, publicKey, pa1);
 
-    resetAllTimers();
+    helib::resetAllTimers();
     FHE_NTIMER_START(ALL);
 
     // Compute homomorphically the transformation that takes the
     // coefficients packed in the slots and produces the polynomial
     // corresponding to cube
 
-    if (!helib_test::noPrint) CheckCtxt(ctxt, "init");
+    if (!helib_test::noPrint) helib::CheckCtxt(ctxt, "init");
 
     if (!helib_test::noPrint) std::cout << "build EvalMap\n";
-    EvalMap map(ea, /*minimal=*/false, mvec, 
+    helib::EvalMap map(ea, /*minimal=*/false, mvec, 
             /*invert=*/false, /*build_cache=*/false, /*normal_basis=*/false); 
     // compute the transformation to apply
 
     if (!helib_test::noPrint) std::cout << "apply EvalMap\n";
     if (useCache) map.upgrade();
     map.apply(ctxt); // apply the transformation to ctxt
-    if (!helib_test::noPrint) CheckCtxt(ctxt, "EvalMap");
+    if (!helib_test::noPrint) helib::CheckCtxt(ctxt, "EvalMap");
     if (!helib_test::noPrint) std::cout << "check results\n";
 
     NTL::ZZX FF1;
@@ -261,25 +261,25 @@ TEST_P(GTest_EvalMap, eval_map_behaves_correctly)
 
     EXPECT_EQ(F1, F);
 
-    publicKey.Encrypt(ctxt, balanced_zzX(F1));
-    if (!helib_test::noPrint) CheckCtxt(ctxt, "init");
+    publicKey.Encrypt(ctxt, helib::balanced_zzX(F1));
+    if (!helib_test::noPrint) helib::CheckCtxt(ctxt, "init");
 
     // Compute homomorphically the inverse transformation that takes the
     // polynomial corresponding to cube and produces the coefficients
     // packed in the slots
 
     if (!helib_test::noPrint) std::cout << "build EvalMap\n";
-    EvalMap imap(ea, /*minimal=*/false, mvec, 
+    helib::EvalMap imap(ea, /*minimal=*/false, mvec, 
             /*invert=*/true, /*build_cache=*/false, /*normal_basis=*/false); 
     // compute the transformation to apply
     if (!helib_test::noPrint) std::cout << "apply EvalMap\n";
     if (useCache) imap.upgrade();
     imap.apply(ctxt); // apply the transformation to ctxt
     if (!helib_test::noPrint) {
-        CheckCtxt(ctxt, "EvalMap");
+      helib::CheckCtxt(ctxt, "EvalMap");
         std::cout << "check results\n";
     }
-    PlaintextArray pa2(ea);
+    helib::PlaintextArray pa2(ea);
     ea.decrypt(ctxt, secretKey, pa2);
 
     EXPECT_TRUE(equals(ea, pa1, pa2));
@@ -288,16 +288,16 @@ TEST_P(GTest_EvalMap, eval_map_behaves_correctly)
 
     if (!helib_test::noPrint) {
         std::cout << "\n*********\n";
-        printAllTimers();
+        helib::printAllTimers();
         std::cout << std::endl;
     }
 };
 
 INSTANTIATE_TEST_SUITE_P(some_parameters, GTest_EvalMap, ::testing::Values(
             //SLOW
-            Parameters(2, 1, 2, 80, 300, 0, 0, convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{7, 3, 221}), std::vector<long>{3979, 3095, 3760}, std::vector<long>{6, 2, -8}, 1, 0)
+            Parameters(2, 1, 2, 80, 300, 0, 0, helib::convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{7, 3, 221}), std::vector<long>{3979, 3095, 3760}, std::vector<long>{6, 2, -8}, 1, 0)
             //FAST
-            //Parameters(2, 1, 2, 80, 300, 0, 0, convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{3, 35}), std::vector<long>{71, 76}, std::vector<long>{2, 2}, 1, 0)
+            //Parameters(2, 1, 2, 80, 300, 0, 0, helib::convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{3, 35}), std::vector<long>{71, 76}, std::vector<long>{2, 2}, 1, 0)
             ));
 
 } // namespace

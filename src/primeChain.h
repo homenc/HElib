@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,6 +17,9 @@
  */
 #include <vector>
 #include "IndexSet.h"
+
+namespace helib {
+
 class Cmodulus;
 
 //! A helper class to map required modulo-sizes to primeSets
@@ -63,5 +66,7 @@ std::ostream& operator<<(std::ostream& s, const ModuliSizes::Entry& e);
 std::istream& operator>>(std::istream& s, ModuliSizes::Entry& e);
 void write(std::ostream& s, const ModuliSizes::Entry& e);
 void read(std::istream& s, ModuliSizes::Entry& e);
+
+}
 
 #endif // ifndef HELIB_PRIMECHAIN_H

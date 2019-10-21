@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -36,6 +36,7 @@
 #include "NumbTh.h"
 
 
+namespace helib {
 
 //! @brief initialize bluestein
 void BluesteinInit(long n, const NTL::zz_p& root, NTL::zz_pX& powers, 
@@ -46,5 +47,7 @@ void BluesteinInit(long n, const NTL::zz_p& root, NTL::zz_pX& powers,
 void BluesteinFFT(NTL::zz_pX& x, long n, const NTL::zz_p& root, 
                   const NTL::zz_pX& powers, const NTL::Vec<NTL::mulmod_precon_t>& powers_aux, 
                   const NTL::fftRep& Rb);
+
+}
 
 #endif // ifndef HELIB_BLUESTEIN_H

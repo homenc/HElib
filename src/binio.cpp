@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -15,6 +15,8 @@
 #include <sys/types.h>
 // NOTE: including sys/types.h for the purpose of bringing in 
 // the byte order macros in a platform-independent way.
+
+namespace helib {
 
 /* Some utility functions for binary IO */
 
@@ -243,3 +245,5 @@ template<> void write_raw_vector<double>(std::ostream& str, const std::vector<do
   for(double n: v)
     write_raw_double(str, n); 
 };
+
+}

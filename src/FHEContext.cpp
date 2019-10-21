@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,6 +17,8 @@
 #include "binio.h"
 #include "sample.h"
 #include "EncryptedArray.h"
+
+namespace helib {
 
 long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
@@ -521,4 +523,6 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   stdev(3.2), scale(10.0), zMStar(m, p, gens, ords), alMod(zMStar, r)
 {
   ea = new EncryptedArray(*this, alMod);
+}
+
 }

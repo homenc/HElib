@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -26,6 +26,8 @@ NTL_CLIENT
 #include "ArgMap.h"
 
 #include "debugging.h"
+
+using namespace helib;
 
 // A hack to get this to compile for now
 static long findBaseLevel(const Ctxt& c)

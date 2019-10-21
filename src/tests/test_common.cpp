@@ -11,7 +11,7 @@ namespace helib_test {
     
     void parse_common_args(int argc, char *argv[])
     {
-        ArgMap amap;
+        helib::ArgMap amap;
         path_of_executable = argv[0];
         amap.arg("dry", dry, "dry=1 for a dry-run");
         amap.arg("noPrint", noPrint, "suppress printouts");

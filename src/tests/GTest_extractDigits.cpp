@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -54,9 +54,9 @@ class GTest_extractDigits : public ::testing::TestWithParam<Parameters> {
         long p2r;
         long L;
 
-        FHEcontext context;
-        FHESecKey secretKey;
-        const FHEPubKey& publicKey;
+        helib::FHEcontext context;
+        helib::FHESecKey secretKey;
+        const helib::FHEPubKey& publicKey;
 
         // lifting value rOld requires some manipulation before being used.
         // Utility function for calculating this.
@@ -83,59 +83,58 @@ class GTest_extractDigits : public ::testing::TestWithParam<Parameters> {
             p2r(NTL::power_long(p,r)),
             L(calculateLevels(r, p)),
             context(m, p, r),
-            secretKey((buildModChain(context, L, /*c=*/4), context)),
+            secretKey((helib::buildModChain(context, L, /*c=*/4), context)),
             publicKey(secretKey)
         {
         }
 
         virtual void SetUp() override
         {
-            // You can put setup operations here or in the constructor
-            setDryRun(helib_test::dry);
+          helib::setDryRun(helib_test::dry);
             if (!helib_test::noPrint) {
                 if (helib_test::dry) std::cout << "dry run: ";
                 std::cout << "m=" << m << ", p=" << p << ", r=" << r << ", L=" << L <<  std::endl;
             }
 
             secretKey.GenSecKey(); // A +-1/0 secret key
-            addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+            helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
             // On legacy test is debug, but used verbose for consistency with other tests 
             if (helib_test::verbose) {
-              dbgKey = &secretKey; // debugging key and ea
-              dbgEa = (EncryptedArray*) context.ea;
+                helib::dbgKey = &secretKey; // debugging key and ea
+                helib::dbgEa = (helib::EncryptedArray*) context.ea;
             }
 
 #ifdef DEBUG_PRINTOUT
-            dbgKey = &secretKey;
-            dbgEa = const_cast<EncryptedArray*>(context.ea);
+            helib::dbgKey = &secretKey;
+            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
 #endif // DEBUG_PRINTOUT
         };
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+          helib::cleanupGlobals();
         }
 };
 
 TEST_P(GTest_extractDigits, correctly_extracts_digits)
 {
-    EncryptedArray ea(context);
+    helib::EncryptedArray ea(context);
     std::vector<long> v;
     std::vector<long> pDigits;
     ea.random(v); // random values in the slots
 
-    const FHEPubKey& publicKey = secretKey;
+    const helib::FHEPubKey& publicKey = secretKey;
 
-    Ctxt c(publicKey);
+    helib::Ctxt c(publicKey);
     ea.encrypt(c, publicKey, v);
     ea.decrypt(c, secretKey, pDigits);
     if (ea.size()<=20 && !helib_test::noPrint)
-        std::cout << "plaintext=" << pDigits << std::endl;
+        std::cout << "plaintext=" << helib::vecToStr(pDigits) << std::endl;
 
     if (!helib_test::noPrint)
         std::cout << "extracting " << r << " digits..." << std::flush;
-    std::vector<Ctxt> digits;
-    extractDigits(digits, c);
+    std::vector<helib::Ctxt> digits;
+    helib::extractDigits(digits, c);
     if (!helib_test::noPrint)
         std::cout << " done\n" << std::flush;
 
@@ -143,12 +142,12 @@ TEST_P(GTest_extractDigits, correctly_extracts_digits)
     long pp = p2r;
     for (long i=0; i<(long)digits.size(); i++) {
         if (!digits[i].isCorrect()) {
-            CheckCtxt(digits[i], "");
+            helib::CheckCtxt(digits[i], "");
             FAIL() << " potential decryption error for " << i <<"th digit ";
         }
         ea.decrypt(digits[i], secretKey, pDigits);
         if (ea.size()<=20 && !helib_test::noPrint)
-            std::cout << i << "th digit=" << pDigits << std::endl;
+            std::cout << i << "th digit=" << helib::vecToStr(pDigits) << std::endl;
 
         // extract the next digit from the plaintext, compare to pDigits
         for (long j=0; j<(long)v.size(); j++) {

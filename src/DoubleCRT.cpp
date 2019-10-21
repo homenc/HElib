@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -26,6 +26,8 @@
 #include "sample.h"
 #include "DoubleCRT.h"
 #include "FHEContext.h"
+
+namespace helib {
 
 // A threaded implementation of DoubleCRT operations
 
@@ -1080,7 +1082,7 @@ void DoubleCRT::randomize(const NTL::ZZ* seed)
 double DoubleCRT::sampleSmall()
 {
   zzX poly;
-  double retval = ::sampleSmall(poly,context); // degree-(phi(m)-1) polynomial
+  double retval = ::helib::sampleSmall(poly,context); // degree-(phi(m)-1) polynomial
   *this = poly; // convert to DoubleCRT
   return retval;
 }
@@ -1088,7 +1090,7 @@ double DoubleCRT::sampleSmall()
 double DoubleCRT::sampleSmallBounded()
 {
   zzX poly;
-  double retval = ::sampleSmallBounded(poly,context); // degree-(phi(m)-1) polynomial
+  double retval = ::helib::sampleSmallBounded(poly,context); // degree-(phi(m)-1) polynomial
   *this = poly; // convert to DoubleCRT
   return retval;
 }
@@ -1097,7 +1099,7 @@ double DoubleCRT::sampleSmallBounded()
 double DoubleCRT::sampleHWt(long Hwt)
 {
   zzX poly;
-  double retval = ::sampleHWt(poly,context,Hwt);
+  double retval = ::helib::sampleHWt(poly,context,Hwt);
   *this = poly; // convert to DoubleCRT
   return retval;
 }
@@ -1106,7 +1108,7 @@ double DoubleCRT::sampleHWt(long Hwt)
 double DoubleCRT::sampleHWtBounded(long Hwt)
 {
   zzX poly;
-  double retval = ::sampleHWtBounded(poly,context,Hwt);
+  double retval = ::helib::sampleHWtBounded(poly,context,Hwt);
   *this = poly; // convert to DoubleCRT
   return retval;
 }
@@ -1116,7 +1118,7 @@ double DoubleCRT::sampleGaussian(double stdev)
 {
   if (stdev==0.0) stdev=to_double(context.stdev); 
   zzX poly;
-  double retval = ::sampleGaussian(poly, context, stdev);
+  double retval = ::helib::sampleGaussian(poly, context, stdev);
   *this = poly; // convert to DoubleCRT
   return retval;
 }
@@ -1125,7 +1127,7 @@ double DoubleCRT::sampleGaussianBounded(double stdev)
 {
   if (stdev==0.0) stdev=to_double(context.stdev);
   zzX poly;
-  double retval = ::sampleGaussianBounded(poly, context, stdev);
+  double retval = ::helib::sampleGaussianBounded(poly, context, stdev);
   *this = poly; // convert to DoubleCRT
   return retval;
 }
@@ -1136,7 +1138,7 @@ double DoubleCRT::sampleGaussianBounded(double stdev)
 double DoubleCRT::sampleUniform(long B)
 {
   zzX poly;
-  double retval = ::sampleUniform(poly, context, B);
+  double retval = ::helib::sampleUniform(poly, context, B);
   *this = poly;
   return retval;
 }
@@ -1144,7 +1146,7 @@ double DoubleCRT::sampleUniform(long B)
 NTL::xdouble DoubleCRT::sampleUniform(const NTL::ZZ& B)
 {
   NTL::ZZX poly;
-  NTL::xdouble retval = ::sampleUniform(poly, context, B);
+  NTL::xdouble retval = ::helib::sampleUniform(poly, context, B);
   *this = poly;
   return retval;
 }
@@ -1268,3 +1270,4 @@ void DoubleCRT::read(std::istream& str)
   }
 }
 
+}

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -24,6 +24,7 @@
 #include "fhe_stats.h"
 #include "powerful.h"
 
+namespace helib {
 
 extern int fhe_watcher;
 static const double safety = 1*log(2.0); // 1 bits of safety
@@ -2038,4 +2039,6 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
 
   return scaledNoise;
   // this is returned so that caller in recryption.cpp can check bounds
+}
+
 }

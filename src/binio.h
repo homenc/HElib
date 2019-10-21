@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -35,6 +35,8 @@
 #define BINIO_EYE_SK_END            "]SK|"
 #define BINIO_EYE_SKM_BEGIN         "|KM["
 #define BINIO_EYE_SKM_END           "]KM|"
+
+namespace helib {
 
 /* This struct (or similar) is a nice to have not used at the moment. */
 //struct BinaryHeader {
@@ -114,4 +116,5 @@ template<typename T> void read_raw_vector(std::istream& str, std::vector<T>& v, 
   }
 }
 
+}
 #endif // ifndef HELIB_BINIO_H

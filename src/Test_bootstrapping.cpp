@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -28,17 +28,16 @@ NTL_CLIENT
 #include "matmul.h"
 #include "ArgMap.h"
 
+using namespace helib;
+
 static bool noPrint = false;
 static bool dry = false; // a dry-run flag
 static bool debug = 0;   // a debug flag
 static int scale = 0;
 
 
-extern FHESecKey* dbgKey;
-
 // #define DEBUG_PRINTOUT
 #include "debugging.h"
-extern long printFlag;
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
@@ -253,7 +252,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
  ********************************************************************/
 
 //extern long fhe_disable_intFactor;
-extern long fhe_force_chen_han;
+// extern long fhe_force_chen_han;
 
 int main(int argc, char *argv[]) 
 {

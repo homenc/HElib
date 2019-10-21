@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -103,15 +103,15 @@ class GTest_IO : public ::testing::TestWithParam<Parameters> {
         const long ptxtSpace;
         const long numTests;
 
-        std::vector<std::unique_ptr<FHEcontext>> contexts;
-        std::vector<std::unique_ptr<FHESecKey>> sKeys;
-        std::vector<std::unique_ptr<Ctxt>> ctxts;
-        std::vector<std::unique_ptr<EncryptedArray>> eas;
+        std::vector<std::unique_ptr<helib::FHEcontext>> contexts;
+        std::vector<std::unique_ptr<helib::FHESecKey>> sKeys;
+        std::vector<std::unique_ptr<helib::Ctxt>> ctxts;
+        std::vector<std::unique_ptr<helib::EncryptedArray>> eas;
         std::vector<std::vector<NTL::ZZX>> ptxts;
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 
     public:
@@ -151,29 +151,29 @@ TEST_P(GTest_IO, important_classes_remain_consistent_under_io)
     ords[0] = ms[i][8];  ords[1] = ms[i][9];
 
     if (useTable && gens[0]>0)
-      contexts[i].reset(new FHEcontext(m, p, r, gens, ords));
+      contexts[i].reset(new helib::FHEcontext(m, p, r, gens, ords));
     else
-      contexts[i].reset(new FHEcontext(m, p, r));
+      contexts[i].reset(new helib::FHEcontext(m, p, r));
     if(!helib_test::noPrint) {
         contexts[i]->zMStar.printout();
     }
 
-    buildModChain(*contexts[i], L, c);  // Set the modulus chain
+    helib::buildModChain(*contexts[i], L, c);  // Set the modulus chain
     if (mm==0 && m==1023) contexts[i]->makeBootstrappable(mvec);
 
     // Output the FHEcontext to file
-    writeContextBase(keyFile, *contexts[i]);
+    helib::writeContextBase(keyFile, *contexts[i]);
     if(!helib_test::noPrint) {
-        writeContextBase(std::cout, *contexts[i]);
+        helib::writeContextBase(std::cout, *contexts[i]);
         std::cout << std::endl;
     }
     keyFile << *contexts[i] << std::endl;
 
-    sKeys[i].reset(new FHESecKey(*contexts[i]));
+    sKeys[i].reset(new helib::FHESecKey(*contexts[i]));
     sKeys[i]->GenSecKey(0,ptxtSpace); // A +-1/0 secret key
     addSome1DMatrices(*sKeys[i]);// compute key-switching matrices that we need
-    const FHEPubKey publicKey = *sKeys[i];
-    eas[i].reset(new EncryptedArray(*contexts[i]));
+    const helib::FHEPubKey publicKey = *sKeys[i];
+    eas[i].reset(new helib::EncryptedArray(*contexts[i]));
 
     long nslots = eas[i]->size();
 
@@ -184,10 +184,10 @@ TEST_P(GTest_IO, important_classes_remain_consistent_under_io)
 
     std::vector<NTL::ZZX> b;
     long p2r = eas[i]->getContext().alMod.getPPowR();
-    NTL::ZZX poly = RandPoly(0,NTL::to_ZZ(p2r)); // choose a random constant polynomial
+    NTL::ZZX poly = helib::RandPoly(0,NTL::to_ZZ(p2r)); // choose a random constant polynomial
     eas[i]->decode(ptxts[i], poly);
 
-    ctxts[i].reset(new Ctxt(publicKey));
+    ctxts[i].reset(new helib::Ctxt(publicKey));
     eas[i]->encrypt(*ctxts[i], publicKey, ptxts[i]);
     eas[i]->decrypt(*ctxts[i], *sKeys[i], b);
     ASSERT_EQ(ptxts[i].size(), b.size());
@@ -220,8 +220,8 @@ TEST_P(GTest_IO, important_classes_remain_consistent_under_io)
     // Read context from file
     unsigned long m1, p1, r1;
     std::vector<long> gens, ords;
-    readContextBase(keyFile, m1, p1, r1, gens, ords);
-    FHEcontext tmpContext(m1, p1, r1, gens, ords);
+    helib::readContextBase(keyFile, m1, p1, r1, gens, ords);
+    helib::FHEcontext tmpContext(m1, p1, r1, gens, ords);
     keyFile >> tmpContext;
     ASSERT_EQ (*contexts[i], tmpContext);
     // std::cerr << i << ": context matches input\n";
@@ -229,19 +229,19 @@ TEST_P(GTest_IO, important_classes_remain_consistent_under_io)
     // We define some things below wrt *contexts[i], not tmpContext.
     // This is because the various operator== methods check equality of
     // references, not equality of the referenced FHEcontext objects.
-    FHEcontext& context = *contexts[i];
-    FHESecKey secretKey(context);
-    FHESecKey secretKey2(tmpContext);
-    const FHEPubKey& publicKey = secretKey;
-    const FHEPubKey& publicKey2 = secretKey2;
+    helib::FHEcontext& context = *contexts[i];
+    helib::FHESecKey secretKey(context);
+    helib::FHESecKey secretKey2(tmpContext);
+    const helib::FHEPubKey& publicKey = secretKey;
+    const helib::FHEPubKey& publicKey2 = secretKey2;
 
     keyFile >> secretKey;
     keyFile >> secretKey2;
     ASSERT_EQ(secretKey, *sKeys[i]);
     // std::cerr << "   secret key matches input\n";
 
-    EncryptedArray ea(context);
-    EncryptedArray ea2(tmpContext);
+    helib::EncryptedArray ea(context);
+    helib::EncryptedArray ea2(tmpContext);
 
     long nslots = ea.size();
 
@@ -249,12 +249,12 @@ TEST_P(GTest_IO, important_classes_remain_consistent_under_io)
     std::vector<NTL::ZZX> a;
     a.resize(nslots);
     ASSERT_EQ(nslots, (long)ptxts[i].size());
-    seekPastChar(keyFile, '['); // defined in NumbTh.cpp
+    helib::seekPastChar(keyFile, '['); // defined in NumbTh.cpp
     for (long j = 0; j < nslots; j++) {
       keyFile >> a[j];
       ASSERT_EQ(a[j], ptxts[i][j]);
     }
-    seekPastChar(keyFile, ']');
+    helib::seekPastChar(keyFile, ']');
     // std::cerr << "   ptxt matches input\n";
 
     // Read the encoded plaintext from file
@@ -294,8 +294,8 @@ TEST_P(GTest_IO, important_classes_remain_consistent_under_io)
     // std::cerr << "   ea2.decode(poly1)==ptxts[i] okay\n";
 
     // Read ciperhtext from file
-    Ctxt ctxt(publicKey);
-    Ctxt ctxt2(publicKey2);
+    helib::Ctxt ctxt(publicKey);
+    helib::Ctxt ctxt2(publicKey2);
     keyFile >> ctxt;
     keyFile >> ctxt2;
     ASSERT_TRUE(ctxts[i]->equalsTo(ctxt,/*comparePkeys=*/false));

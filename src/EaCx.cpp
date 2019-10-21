@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,6 +21,8 @@
 #include "clonedPtr.h"
 #include "norms.h"
 #include "debugging.h"
+
+namespace helib {
 
 static constexpr cx_double the_imaginary_i = cx_double(0.0, 1.0);
 
@@ -258,4 +260,6 @@ void EncryptedArrayCx::buildLinPolyCoeffs(std::vector<zzX>& C,
   msize = roundedSize(msize);
   encode(C[0], x, msize, precision);
   encode(C[1], y, msize, precision);
+}
+
 }
