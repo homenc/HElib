@@ -36,10 +36,10 @@ struct BGVParameters
   }
 };
 
-class Test_with_BGV : public ::testing::TestWithParam<BGVParameters>
+class TestContext : public ::testing::TestWithParam<BGVParameters>
 {
 protected:
-  Test_with_BGV() :
+  TestContext() :
       m(GetParam().m),
       p(GetParam().p),
       r(GetParam().r),
@@ -53,13 +53,13 @@ protected:
   const std::shared_ptr<helib::FHEcontext> context;
 };
 
-TEST_P(Test_with_BGV,
+TEST_P(TestContext,
        Context_throw_exception_when_calculating_security_before_modchain_built)
 {
   EXPECT_THROW(context->securityLevel(), helib::LogicError);
 }
 
-TEST_P(Test_with_BGV, Context_calculating_security_after_modchain_built)
+TEST_P(TestContext, Context_calculating_security_after_modchain_built)
 {
   buildModChain(*context, /*bits=*/100, /*c=*/2);
   double result = context->securityLevel();
@@ -67,7 +67,7 @@ TEST_P(Test_with_BGV, Context_calculating_security_after_modchain_built)
 }
 
 INSTANTIATE_TEST_SUITE_P(various_parameters,
-                         Test_with_BGV,
+                         TestContext,
                          ::testing::Values(BGVParameters(17, 2, 1)));
 
 } // namespace

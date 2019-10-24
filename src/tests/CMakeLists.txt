@@ -57,7 +57,7 @@ set(TEST_NAMES
     "GTest_ThinBootstrapping"
     "GTest_thinboot"
     "GTest_fatboot"
-    "GTest_PGFFT.cpp"
+    "GTestPGFFT"
     "GTest_ThinEvalMap"
     "GTest_approxNums"
     "GTest_binaryArith"
@@ -71,7 +71,7 @@ set(TEST_NAMES
     "Test_CKKS"
     "Test_ArgMap"
     "Test_bootstrapping_with_multiplications"
-    "Test_Context.cpp"
+    "TestContext"
     )
 
 foreach(TEST_NAME ${TEST_NAMES})
