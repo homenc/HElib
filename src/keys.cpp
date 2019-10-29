@@ -842,6 +842,18 @@ void FHESecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt,
 
   //OLD: assert(getContext()==ciphertxt.getContext());
   helib::assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
+
+
+  // this will trigger a warning if any operations that were
+  // previously performed on the polynomial basis were invalid
+  // because of excess noise.  I'm not 100% sure that this is
+  // the right test for CKKS ciphertexts...need to double check.
+  NTL::xdouble xQ = NTL::xexp(getContext().logOfProduct(ciphertxt.getPrimeSet()));
+  double polyNormBnd = getContext().zMStar.getPolyNormBnd();
+  if (ciphertxt.getNoiseBound()*polyNormBnd > 0.48*xQ)
+    Warning("decrypting with too much noise");
+
+
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
 
   DoubleCRT ptxt(context, ptxtPrimes); // Set to zero

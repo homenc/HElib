@@ -16,7 +16,7 @@ AR = ar
 ARFLAGS=rv
 GMP=-lgmp
 NTL=-lntl
-COPT=-g -O2 
+COPT=-g -O2 -march=native
 
 # INC and LIB changed to when GMP and/or NTL not in default locations
 # Put these definitions in the file local-defs, which will be included
@@ -161,7 +161,7 @@ obj: $(OBJ)
 #	$(CC) $(CFLAGS) -DDEBUG_PRINTOUT -c recryption.cpp
 
 PGFFT.o: PGFFT.cpp
-	$(CC) $(CFLAGS) -march=native -c PGFFT.cpp
+	$(CC) $(CFLAGS) -c PGFFT.cpp
 
 
 %.o: %.cpp
