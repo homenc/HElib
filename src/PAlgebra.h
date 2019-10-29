@@ -77,6 +77,7 @@ class PAlgebra {
   long nfactors; // number of distinct prime factors of m
   long radm; // rad(m) = prod of distinct primes dividing m
   double normBnd; // max-norm-on-pwfl-basis <= normBnd * max-norm-canon-embed
+  double polyNormBnd; // max-norm-on-poly-basis <= polyNormBnd * max-norm-canon-embed
 
   long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
 
@@ -167,6 +168,9 @@ class PAlgebra {
 
   //! max-norm-on-pwfl-basis <= normBnd * max-norm-canon-embed
   double getNormBnd() const { return normBnd; }
+
+  //! max-norm-on-pwfl-basis <= polyNormBnd * max-norm-canon-embed
+  double getPolyNormBnd() const { return polyNormBnd; }
 
   //! The number of plaintext slots = phi(m)/ord(p)
   long getNSlots() const { return cube.getSize(); }

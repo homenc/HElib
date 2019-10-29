@@ -91,30 +91,40 @@ NTL::ZZX makeIrredPoly(long p, long d)
 
 // Factoring by trial division, only works for N<2^{60}.
 // Only the primes are recorded, not their multiplicity
-template<class zz> static void factorT(std::vector<zz> &factors, const zz &N)
+template<class zz> static void 
+factorT(std::vector<zz> &factors, const zz &N)
 {
+  FHE_TIMER_START;
+
   factors.resize(0); // reset the factors
 
   if (N<2) return;   // sanity check
 
   NTL::PrimeSeq s;
   zz n = N;
-  while (true) {
+  while (n > 1) {
+
     if (NTL::ProbPrime(n)) { // we are left with just a single prime
       factors.push_back(n);
       return;
     }
-    // if n is a composite, check if the next prime divides it
+
+    // n is a composite, so find the next prime that divides it
     long p = s.next();
-    if ((n%p)==0) {
-      zz pp;
-      NTL::conv(pp,p);
-      factors.push_back(pp);
-      do { n /= p; } while ((n%p)==0);
-    }
-    if (n==1) return;
+    while (p && n%p != 0) p = s.next();
+
+    if (!p) throw helib::RuntimeError("ran out out small primes");
+
+    zz pp;
+    NTL::conv(pp,p);
+    factors.push_back(pp);
+    do { n /= p; } while (n%p == 0);
   }
 }
+
+
+
+
 void factorize(std::vector<long> &factors, long N) { factorT<long>(factors, N);}
 void factorize(std::vector<NTL::ZZ> &factors, const NTL::ZZ& N) {factorT<NTL::ZZ>(factors, N);}
 
@@ -129,23 +139,31 @@ void factorize(NTL::Vec< NTL::Pair<long, long> > &factors, long N)
   NTL::PrimeSeq s;
   long n = N;
   while (n > 1) {
+
     if (NTL::ProbPrime(n)) { // n itself is a prime, add (n,1) to the list
       append(factors, NTL::cons(n, 1L));
       return;
     }
 
+    // n is composite, so find next prime that divides it
+
     long p = s.next();
-    if ((n % p) == 0) { // p divides n, find its multiplicity
-      long e = 1;
+    while (p && n%p != 0) p = s.next();
+
+    if (!p) throw helib::RuntimeError("ran out out small primes");
+
+    long e = 1;
+    n = n/p;
+    while ((n % p) == 0) {
       n = n/p;
-      while ((n % p) == 0) {
-        n = n/p;
-        e++;
-      }
-      append(factors, NTL::cons(p, e)); // add (p,e) to the list
+      e++;
     }
+    append(factors, NTL::cons(p, e)); // add (p,e) to the list
   }
 }
+
+
+
 
 // Prime-power factorization
 void pp_factorize(std::vector<long>& factors, long N)
@@ -434,9 +452,34 @@ long mobius(long n)
 // MATHEMATICS OF COMPUTATION, Volume 80, Number 276, October 2011, 
 // Pages 2359-2379
 
+
 NTL::ZZX Cyclotomic(long n)
 {
-   helib::assertEq(n > 1, true, "n > 1");
+   helib::assertEq(n >= 1, true, "n >= 1");
+
+   // remove 2's
+
+   long num_twos = 0;
+   while (n%2 == 0) {
+      n /= 2;
+      num_twos++;
+   }
+
+   if (n == 1) {
+      if (num_twos == 0) {
+         NTL::ZZX res; // X-1
+         SetCoeff(res, 1);
+         SetCoeff(res, 0, -1);
+         return res;
+      }
+      else {
+         NTL::ZZX res; // X^{2^{num_twos-1}}+1
+         SetCoeff(res, 1L << (num_twos-1));
+         SetCoeff(res, 0);
+         return res;
+      }
+   }
+      
 
    std::vector<long> facs;
    factorize(facs, n);
@@ -451,42 +494,111 @@ NTL::ZZX Cyclotomic(long n)
    }
 
    long D = phi_radn/2;
-   NTL::Vec<NTL::ZZ> A;
-   A.SetLength(D+1);
-   A[0] = 1;
-   for (long i = 1; i <= D; i++) A[i] = 0;
 
-   for (long bits: range(1L << k)) {
-      long d = 1;
-      long parity = k & 1;
-      for (long pos: range(k)) {
-         if ((1L << pos) & bits) {
-            d *= facs[pos];
-            parity = 1 - parity;
-         }
+   if (radn <= 10000000L) {
+      // for n <= 10^6, results in Arnold and Monogan
+      // imply that all coefficients of Phi_n(X) are 
+      // less than 2^27 in absolute value.
+      // So we compute the cofficients using 32-bit arithemtic.
+
+      // NOTE: _ntl_uint32 is either int or long.
+
+      NTL::Vec<_ntl_uint32> A;
+      A.SetLength(D+1);
+      A[0] = 1;
+      for (long i = 1; i <= D; i++) A[i] = 0;
+
+      for (long bits: range(1L << k)) {
+	 long d = 1;
+	 long parity = k & 1;
+	 for (long pos: range(k)) {
+	    if ((1L << pos) & bits) {
+	       d *= facs[pos];
+	       parity = 1 - parity;
+	    }
+	 }
+
+	 if (parity == 0) {
+	    for (long i = D; i >= d; i--) 
+	       A[i] -= A[i-d];
+	 }
+	 else {
+	    for (long i = d; i <= D; i++) 
+	       A[i] += A[i-d];
+	 }
       }
 
-      if (parity == 0) {
-         for (long i = D; i >= d; i--) 
-            A[i] -= A[i-d];
+      if (num_twos > 0) {
+	 for (long i = 1; i <= D; i+=2)
+	    A[i] = -A[i];
       }
-      else {
-         for (long i = d; i <= D; i++) 
-            A[i] += A[i-d];
+
+      long q = n/radn;
+      if (num_twos > 0) q = q << (num_twos-1);
+      long phi_n = phi_radn * q;
+
+      NTL::ZZX res;
+      res.rep.SetLength(phi_n+1);
+      for (long i = 0; i <= D; i++)
+	 conv(res.rep[i*q], NTL::cast_signed(A[i]));
+      for (long i = D+1; i <= phi_radn; i++)
+	 conv(res.rep[i*q], NTL::cast_signed(A[phi_radn-i]));
+
+      return res;
+   }
+   else {
+      // Exactly the same logic, but with bigint arthmetic.
+      // This is pretty academic...
+
+      NTL::Vec<NTL::ZZ> A;
+      A.SetLength(D+1);
+      A[0] = 1;
+      for (long i = 1; i <= D; i++) A[i] = 0;
+
+      for (long bits: range(1L << k)) {
+	 long d = 1;
+	 long parity = k & 1;
+	 for (long pos: range(k)) {
+	    if ((1L << pos) & bits) {
+	       d *= facs[pos];
+	       parity = 1 - parity;
+	    }
+	 }
+
+	 if (parity == 0) {
+	    for (long i = D; i >= d; i--) 
+	       A[i] -= A[i-d];
+	 }
+	 else {
+	    for (long i = d; i <= D; i++) 
+	       A[i] += A[i-d];
+	 }
       }
+
+      if (num_twos > 0) {
+	 for (long i = 1; i <= D; i+=2)
+	    A[i] = -A[i];
+      }
+
+      long q = n/radn;
+      if (num_twos > 0) q = q << (num_twos-1);
+      long phi_n = phi_radn * q;
+
+      NTL::ZZX res;
+      res.rep.SetLength(phi_n+1);
+      for (long i = 0; i <= D; i++)
+	 res.rep[i*q] = A[i];
+      for (long i = D+1; i <= phi_radn; i++)
+	 res.rep[i*q] = A[phi_radn-i];
+
+      return res;
    }
 
-   long q = n/radn;
-   long phi_n = phi_radn * q;
-   NTL::ZZX res;
-   res.rep.SetLength(phi_n+1);
-   for (long i = 0; i <= D; i++)
-      res.rep[i*q] = A[i];
-   for (long i = D+1; i <= phi_radn; i++)
-      res.rep[i*q] = A[phi_radn-i];
 
-   return res;
+
+
 }
+
 
 
 /* Find a primitive root modulo N */

@@ -22,6 +22,7 @@
 #include <NTL/lzz_pEXFactoring.h>
 
 #include <NTL/BasicThreadPool.h>
+#include <mutex>   // std::mutex, std::unique_lock
 
 namespace helib {
 
@@ -86,6 +87,12 @@ void PAlgebra::printout() const
   if (isDryRun()) { std::cout << " (dry run)" << std::endl; return; }
   std::cout << ", phi(m) = " << phiM << std::endl;
   std::cout << "  ord(p)=" << ordP << std::endl;
+  std::cout << "  normBnd=" << normBnd << std::endl;
+  std::cout << "  polyNormBnd=" << polyNormBnd << std::endl;
+
+  std::vector<long> facs;
+  factorize(facs, m);
+  std::cout << "  factors=" << facs << std::endl;
 
   std::size_t i;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
@@ -153,6 +160,239 @@ quarter_FFT::quarter_FFT(long m) : fft(m/4)
   }
 }
 
+static inline std::complex<double>
+MUL(std::complex<double> a, std::complex<double> b)
+{
+   double x = a.real(), y = a.imag(), u = b.real(), v = b.imag();
+   return std::complex<double>(x*u-y*v, x*v+y*u);
+}
+
+static inline double
+ABS(std::complex<double> a)
+{
+   double x = a.real(), y = a.imag();
+   return std::sqrt(x*x+y*y);
+}
+
+static double
+calcPolyNormBnd(long m)
+{
+   helib::assertTrue(m >= 1, "m >= 1");
+
+   typedef std::complex<double> cmplx_t;
+   typedef long double ldbl;
+
+   ldbl pi = std::atan(ldbl(1))*4;
+
+
+   // first, remove 2's
+   while (m%2 == 0) m /= 2;
+
+   if (m == 1) {
+      return 1;
+   }
+
+   std::vector<long> fac;
+   factorize(fac, m);
+
+   long radm = 1;
+   for (long p: fac) radm *= p;
+
+   if (fac.size() == 1) {
+      long u = fac[0];
+      return 2*cotan(pi/(2*u))/u;
+   }
+
+   m = radm;
+
+   long n = phi_N(m);
+
+   NTL::ZZX PhiPoly = Cyclotomic(m);
+
+   std::vector<double> a(n);
+   for (long i: range(n)) conv(a[i], PhiPoly[i]);
+   // a does not include the leading coefficient 1
+   // NOTE: according to the Arnold and Monogan paper
+   // (Table 6) the least m such that the coefficients of Phi_m
+   // do not fit in 53-bits is m=43,730,115.
+
+
+   std::vector<cmplx_t> roots(m);
+   std::vector<cmplx_t> x(n);
+
+   for (long i: range(m)) {
+      ldbl re = std::cos(2.0*pi*(ldbl(i)/ldbl(m)));
+      ldbl im = std::sin(2.0*pi*(ldbl(i)/ldbl(m)));
+      roots[i] = cmplx_t(re, im);
+   }
+
+   std::vector<long> res_tab(n);
+
+
+   long row_num = 0;
+   for (long i: range(1,m)) {
+      if (NTL::GCD(i, m) != 1) continue;
+      x[row_num] = roots[i];
+      res_tab[row_num] = i;
+      row_num++;
+   }
+
+   std::vector<double> dist_tab_vec(2*m-1);
+   std::vector<int> dist_exp_tab_vec(2*m);
+
+   double *dist_tab = &dist_tab_vec[m-1];
+   int *dist_exp_tab = &dist_exp_tab_vec[m-1];
+
+   const double sqrt2_inv = 1.0/std::sqrt(ldbl(2)); 
+   constexpr long FREXP_ITER = 1600;
+
+   for (long i: range(1, m)) {
+      dist_tab[i] = std::frexp(double(2*std::sin(pi*(ldbl(i)/ldbl(m)))),
+	       &dist_exp_tab[i]);
+
+      if (dist_tab[i] < sqrt2_inv) {
+         dist_tab[i] *= 2.0;
+         dist_exp_tab[i]--;
+      } 
+
+      dist_tab[-i] = dist_tab[i];
+      dist_exp_tab[-i] = dist_exp_tab[i];
+   }
+
+   dist_tab[0] = 1;
+   dist_exp_tab[0] = 0;
+
+
+   std::vector<double> global_norm_col(n);
+   for (long i: range(n)) global_norm_col[i] = 0;
+   std::mutex global_norm_col_mutex;
+
+   NTL_EXEC_RANGE(n, first, last)
+
+   std::vector<double> norm_col(n);
+   for (long i: range(n)) norm_col[i] = 0;
+
+   long j = first;
+
+   for (; j <= last-2; j += 2) {
+      // process columns j and j+1 of inverse matrix
+      // NOTE: processing colums two at a time gives an almost 2x speedup
+
+      long res_j = res_tab[j];
+      long res_j_1 = res_tab[j+1];
+
+      double prod = 1;
+      double prod_1 = 1;
+      long e_total = 0;
+      long e_total_1 = 0;
+      int e;
+      int e_1;
+
+      {
+	 long i = 0;
+	 while (i <= n-FREXP_ITER) {
+	    for (long k = 0; k < FREXP_ITER; k++) {
+	       long res_i = res_tab[i+k];
+	       prod *= dist_tab[res_i-res_j];
+	       prod_1 *= dist_tab[res_i-res_j_1];
+	       e_total += dist_exp_tab[res_i-res_j];
+	       e_total_1 += dist_exp_tab[res_i-res_j_1];
+	    }
+	    prod = std::frexp(prod, &e);
+	    prod_1 = std::frexp(prod_1, &e_1);
+	    e_total += e;
+	    e_total_1 += e_1;
+
+	    i += FREXP_ITER;
+	 }
+	 while (i < n) {
+	    long res_i = res_tab[i];
+	    prod *= dist_tab[res_i-res_j];
+	    prod_1 *= dist_tab[res_i-res_j_1];
+	    e_total += dist_exp_tab[res_i-res_j];
+	    e_total_1 += dist_exp_tab[res_i-res_j_1];
+	    i++;
+	 }
+      }
+
+      prod = std::ldexp(prod, e_total);
+      prod_1 = std::ldexp(prod_1, e_total_1);
+
+      double inv_prod = 1.0/prod;
+      double inv_prod_1 = 1.0/prod_1;
+
+      cmplx_t xj = x[j];
+      cmplx_t xj_1 = x[j+1];
+      cmplx_t q = 1;
+      cmplx_t q_1 = 1;
+
+      norm_col[0] += (inv_prod + inv_prod_1);
+
+
+      for (long i: range(1, n)) {
+	 q = MUL(q,xj) + a[n-i];
+	 q_1 = MUL(q_1,xj_1) + a[n-i];
+	 norm_col[i] += (ABS(q)*inv_prod + ABS(q_1)*inv_prod_1);
+      }
+   }
+
+   if (j == last-1) {
+      // process column j of inverse matrix
+
+      long res_j = res_tab[j];
+
+      double prod = 1;
+      long e_total = 0;
+      int e;
+
+      {
+	 long i = 0;
+	 while (i <= n-FREXP_ITER) {
+	    for (long k = 0; k < FREXP_ITER; k++) {
+	       long res_i = res_tab[i+k];
+	       prod *= dist_tab[res_i-res_j];
+	       e_total += dist_exp_tab[res_i-res_j];
+	    }
+	    prod = std::frexp(prod, &e);
+	    e_total += e;
+	    i += FREXP_ITER;
+	 }
+	 while (i < n) {
+	    long res_i = res_tab[i];
+	    prod *= dist_tab[res_i-res_j];
+	    e_total += dist_exp_tab[res_i-res_j];
+	    i++;
+	 }
+      }
+
+      prod = std::ldexp(prod, e_total);
+   
+      double inv_prod = 1.0/prod;
+
+      cmplx_t xj = x[j];
+      cmplx_t q = 1;
+      norm_col[0] += inv_prod;
+      for (long i: range(1, n)) {
+	 q = MUL(q,xj) + a[n-i];
+	 norm_col[i] += ABS(q)*inv_prod;
+      }
+   }
+
+   std::lock_guard<std::mutex> guard(global_norm_col_mutex);
+
+   for (long i: range(n)) global_norm_col[i] += norm_col[i];
+
+   NTL_EXEC_INDEX_END
+
+   
+   double max_norm = 0;
+   for (long i: range(n)) {
+      if (max_norm < global_norm_col[i]) max_norm = global_norm_col[i];
+   }
+
+   return max_norm;
+}
+
 
 PAlgebra::PAlgebra(long mm, long pp,
                    const std::vector<long>& _gens, const std::vector<long>& _ords )
@@ -218,6 +458,8 @@ PAlgebra::PAlgebra(long mm, long pp,
     long u = factors[i].a;
     normBnd *= 2*cotan(pi/(2*u))/u;
   }
+
+  polyNormBnd = calcPolyNormBnd(mm);
 
   // Allocate space for the various arrays
   resize(T,getNSlots());
