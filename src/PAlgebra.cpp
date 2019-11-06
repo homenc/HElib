@@ -96,10 +96,22 @@ void PAlgebra::printout() const
 
   std::size_t i;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
-      std::cout << "  generator " << gens[i] << " has order ("
-           << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
-	   << OrderOf(i) << std::endl;
+      // FIXME: is it really possible that gens[i] can be 0?
+      // There is very likely some code here and there that 
+      // would break if that happens.
+
+      std::cout << "  generator " << gens[i] << " has order (";
+      if (FrobPerturb(i) == 0)
+        std::cout << "=";
+      else if (FrobPerturb(i) > 0)
+        std::cout << "!";
+      else
+        std::cout << "!!";
+      std::cout << "= Z_m^*) of ";
+      std::cout << OrderOf(i) << std::endl;
   }
+
+
   if (cube.getSize()<40) {
     std::cout << "  T = [";
     for (i=0; i<T.size(); i++) std::cout << T[i] << " ";
@@ -435,11 +447,27 @@ PAlgebra::PAlgebra(long mm, long pp,
 
   // Record for each generator gi whether it has the same order in
   // ZM* as in Zm* /(p,g1,...,g_{i-1})
+
   resize(native, lsize(tmpOrds));
-  for (long j=0; j<lsize(tmpOrds); j++) {
-    native[j] = (tmpOrds[j]>0);
+  resize(frob_perturb, lsize(tmpOrds));
+  std::vector<long> p_subgp(mm);
+  for (long i: range(mm)) p_subgp[i] = -1;
+  long pmodm = pp % mm;
+  p_subgp[1] = 0;
+  for (long i = 1, p2i = pmodm; p2i != 1; 
+       i++, p2i = NTL::MulMod(p2i, pmodm, m)) p_subgp[p2i] = i;
+  for (long j: range(tmpOrds.size())) {
     tmpOrds[j] = abs(tmpOrds[j]);
+    // for backward compatibility, a user supplied
+    // ords value could be negative, but we ignore that here.
+    // For testing and debugging, we may want to not ignore this...
+
+    long i = NTL::PowerMod(this->gens[j], tmpOrds[j], m);
+
+    native[j] = (i == 1);
+    frob_perturb[j] = p_subgp[i];
   }
+
   cube.initSignature(tmpOrds); // set hypercume with these dimensions
 
   phiM = ordP * getNSlots();

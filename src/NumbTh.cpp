@@ -207,6 +207,9 @@ long phi_N(long N)
   return phiN;
 }
 
+
+
+
 /* While generating the representation of (Z/mZ)^*, we keep the elements in
  * equivalence classes, and each class has a representative element (called
  * a pivot), which is the smallest element in the class. Initialy each element
@@ -221,7 +224,10 @@ long phi_N(long N)
  * group and so on, until the remaining quotient group is the trivial
  * one, containing just a a single element. A twist is that when choosing
  * the highest-order generator, we try to find one whose order in the
- * current quotient group is the same as in the original group (Z/mZ)^*.
+ * current quotient group is the same as in the original group (Z/mZ)^*,
+ * and failing that, we find one whose order in the current quotient group
+ * is the same as in (Z/mZ)^* /<p>.  This last type of generator is
+ * always guaranteed.
  **/
 
 // The function conjClasses(classes,g,m) unifies equivalence classes that
@@ -229,6 +235,8 @@ long phi_N(long N)
 // class is the smallest element in that class. 
 static void conjClasses(std::vector<long>& classes, long g, long m)
 {
+  NTL::mulmod_t minv = NTL::PrepMulMod(m);
+
   for (long i=0; i<m; i++) {
     if (classes[i]==0) continue; // i \notin (Z/mZ)^*
 
@@ -238,14 +246,15 @@ static void conjClasses(std::vector<long>& classes, long g, long m)
     }
 
     // If i is a pivot, update other pivots to point to it
-    unsigned long j = NTL::MulMod(i, g, m);
+    NTL::mulmod_precon_t gminv = NTL::PrepMulModPrecon(g, m, minv);
+    long j = NTL::MulModPrecon(i, g, m, gminv);
     while (classes[j] != i) {
       classes[classes[j]]= i; // Merge the equivalence classes of j and i
 
       // Note: if classes[j]!=j then classes[j] will be updated later,
       //       when we get to i=j and use the code for "i not pivot".
 
-      j = NTL::MulMod(j, g, m);
+      j = NTL::MulModPrecon(j, g, m, gminv);
     }
   }
 }
@@ -256,8 +265,10 @@ static void conjClasses(std::vector<long>& classes, long g, long m)
 // then also check if the order is the same as in (Z/mZ)^* and store the order
 // with negative sign if not.
 static void 
-compOrder(std::vector<long>& orders, std::vector<long>& classes, bool flag, long m)
+compOrder(std::vector<long>& orders, std::vector<long>& classes, long m)
 {
+  NTL::mulmod_t minv = NTL::PrepMulMod(m);
+  
   orders[0] = 0;
   orders[1] = 1;
   for (long i=2; i<m; i++) {
@@ -266,49 +277,26 @@ compOrder(std::vector<long>& orders, std::vector<long>& classes, bool flag, long
       continue;
     }
 
-    // If not comparing order with (Z/mZ)^*, only compute the order of pivots
 
-    if (!flag && classes[i]<i){          // not a pivot
+    if (classes[i]<i){          // not a pivot
       orders[i] = orders[classes[i]];
       continue;
     }
 
+    NTL::mulmod_precon_t iminv = NTL::PrepMulModPrecon(i, m, minv);
+
     // For an element i>1, the order is at least 2
-    long j = NTL::MulMod(i, i, m);
+    long j = NTL::MulModPrecon(i, i, m, iminv);
     long ord = 2;
     while (classes[j] != 1) {
-      j = NTL::MulMod(j, i, m); // next element in <i>
+      j = NTL::MulModPrecon(j, i, m, iminv); // next element in <i>
       ord++;    // count how many steps until we reach 1
     }
 
-    // When we get here we have classes[j]==1, so if j!=1 it means that the
-    // order of i in the quotient group is smaller than its order in the
-    // entire group Z_m^*. If the flag is set then we store orders[i] = -ord.
-    
-    if (flag && j != 1) ord = -ord; // order in Z_m^* is larger than ord
     orders[i] = ord;
   }
 }
 
-// Compare numbers based on their absolute value
-#if 1
-
-// This version prefers positive numbers over negative
-static bool gtAbsVal(long a, long b)
-{
-  return (abs(a)>abs(b) || (abs(a)==abs(b) && a>b));
-}
-
-
-#else
-
-// This version does not have a preference...
-// useful in generating test cases with "bad" dimensions
-static bool gtAbsVal(long a, long b)
-{
-  return (abs(a)>abs(b));
-}
-#endif
 
 // Returns in gens a generating set for Zm* /<p>, and in ords the
 // order of these generators. Return value is the order of p in Zm*.
@@ -329,42 +317,70 @@ long findGenerators(std::vector<long>& gens, std::vector<long>& ords, long m, lo
   // Start building a representation of (Z/mZ)^*, first use the generator p
   conjClasses(classes,p % m,m);  // merge classes that have a factor of p
 
-  // The order of p is the size of the equivalence class of 1
-#if 0
-  long ordP = std::count(classes.begin(), classes.end(), 1);
-    // count(from,to,val) returns # of elements in (from,to) with value=val
-#else
-  long ordP = 0;
-  for (long i = 0; i < lsize(classes); i++)
-    if (classes[i] == 1) ordP++;
-#endif
+  std::vector<int> p_subgp(m);
+  for (long i: range(m)) p_subgp[i] = 0;
 
-  // Compute orders in (Z/mZ)^* /<p> while comparing to (Z/mZ)^*
+  // The order of p is the size of the equivalence class of 1
+  long ordP = 0;
+  for (long i: range(m)) {
+    if (classes[i] == 1) {
+      ordP++;
+      p_subgp[i] = 1;
+    }
+  }
+
   long candIdx=0;
   while (true) {
-    compOrder(orders,classes,true,m);
-    // if the orders of i in Zm* /<p> and Zm* are not the same, then
-    // order[i] contains the order in Zm* /<p> with negative sign
+    compOrder(orders,classes,m);
 
     long idx=0;
     if (candIdx<lsize(candidates)) { // try next candidate
       idx = candidates[candIdx++];
-      if (abs(orders[idx])<=1)
-        idx=0;
+      if (orders[idx]<=1) idx=0;
     }
-    if (idx==0) // no viable candidates supplied externally
-      idx = argmax(orders, &gtAbsVal);// find the element with largest order
-    long largest = orders[idx];
+    if (idx==0) { // no viable candidates supplied externally
+      long largest_ord = 1;
 
-    if (abs(largest) == 1) break;   // Trivial group, we are done
+      for (long i: range(m)) {
+         if (largest_ord < orders[i]) largest_ord = orders[i];
+      }
+
+      if (largest_ord > 1) {
+         long best_quality = 0;
+         long best_idx = -1;
+
+         for (long i=0; i < m && best_quality < 2; i++) {
+           if (orders[i] == largest_ord) {
+             long j = NTL::PowerMod(i, largest_ord, m);
+             if (j == 1) {
+               best_idx = i;
+               best_quality = 2;
+             }
+             else if (best_quality < 1 && p_subgp[j]) {
+               best_idx = i;
+               best_quality = 1;
+             }
+           }
+         }
+
+         if (!best_quality) Warning("low quality generator");
+         idx = best_idx;
+      }
+
+    }
+
+    if (!idx) break;   // we are done
 
     // store generator with same order as in (Z/mZ)^*
     gens.push_back(idx);
-    ords.push_back(largest);
+    ords.push_back(orders[idx]);
     conjClasses(classes,idx,m); // merge classes that have a factor of idx
   }
   return ordP;
 }
+
+
+
 
 // finding e-th root of unity modulo the current modulus
 // VJS: rewritten to be both faster and deterministic,
