@@ -84,9 +84,12 @@ class PAlgebra {
   std::vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
 
   //  native[i] is true iff gens[i] has the same order in the quotient
-  //  group as its order in Zm*. 
-  //  VJS: I changed this from a Vec<GF2> to Vec<bool>.
+  //  group as its order in Zm*.
   NTL::Vec<bool> native;
+
+  // frob_perturb[i] = j if gens[i] raised to its order equals p^j,
+  // otherwise -1
+  NTL::Vec<long> frob_perturb;
 
   CubeSignature cube; // the hypercube structure of Zm* /(p)
 
@@ -215,6 +218,11 @@ class PAlgebra {
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
   bool SameOrd(long i) const
   {  return native[i]; }
+
+  // FrobPerturb[i] = j if gens[i] raised to its order equals p^j,
+  // where j in [0..ordP), otherwise -1
+  long FrobPerturb(long i) const
+  {  return frob_perturb[i]; }
 
   //! @name Translation between index, represnetatives, and exponents
 
