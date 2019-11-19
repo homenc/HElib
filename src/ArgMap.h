@@ -21,10 +21,11 @@
 #include <set>
 #include "assertions.h"
 
-//! @brief Easier arg parsing
 /**
+ * @file ArgMap.h
+ * @brief Easier arg parsing
  * Example use:
- *
+ * @code
  *   // Variables to be set by command line.
  *   long p = 2;                               // default values.
  *   float f = 5.5;
@@ -38,7 +39,7 @@
  *     .arg("k", k, "doc for k", "")           // no default info
  *     .note("an extra note")                  // add extra doc/note
  *     .parse(argc, argv);       // parses and overrides initial values
- *
+ * @endcode
  **/
 
 namespace helib {
