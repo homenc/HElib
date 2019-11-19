@@ -229,4 +229,4 @@ find_package(helib)
 ## Example
 
 A full working example of a cmake-based project which uses HElib can be found 
-in the `example_program` directory.
+in the `examples/example_program` directory.
