@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-/* GTest_extractDigits.cpp - extracting digits.
+/* GTestextractDigits.cpp - extracting digits.
  *   For a plaintext space modulo a prime-power $p^e$, extracting
  *   the base-$p$ representation of an encrypted values.
  */
@@ -46,7 +46,7 @@ struct Parameters {
     };
 };
 
-class GTest_extractDigits : public ::testing::TestWithParam<Parameters> {
+class GTestExtractDigits : public ::testing::TestWithParam<Parameters> {
     protected:
         long p;
         long r;
@@ -76,7 +76,7 @@ class GTest_extractDigits : public ::testing::TestWithParam<Parameters> {
             return 30*(r*ll*3 + 2);
         };
 
-        GTest_extractDigits() :
+        GTestExtractDigits() :
             p(GetParam().p),
             r(correctLifting(GetParam().r, p)),
             m(GetParam().m ? GetParam().m : p + 1), // FindM(/*secparam=*/80, L, /*c=*/4, p, /*d=*/1, 0, m);
@@ -116,7 +116,7 @@ class GTest_extractDigits : public ::testing::TestWithParam<Parameters> {
         }
 };
 
-TEST_P(GTest_extractDigits, correctly_extracts_digits)
+TEST_P(GTestExtractDigits, correctlyExtractsDigits)
 {
     helib::EncryptedArray ea(context);
     std::vector<long> v;
@@ -166,7 +166,7 @@ TEST_P(GTest_extractDigits, correctly_extracts_digits)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(various_plaintext_bases, GTest_extractDigits, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(variousPlaintextBases, GTestExtractDigits, ::testing::Values(
             //SLOW
             Parameters(5, 0, 2047)
             //FAST

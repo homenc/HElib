@@ -72,7 +72,7 @@ struct Parameters {
     };
 };
 
-class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
+class GTestEvalMap : public ::testing::TestWithParam<Parameters> {
     protected:
         long p;
         long r;
@@ -146,7 +146,7 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
             }
         };
 
-        GTest_EvalMap() : 
+        GTestEvalMap() : 
             p(GetParam().p),
             r(GetParam().r),
             c(GetParam().c),
@@ -194,7 +194,7 @@ class GTest_EvalMap : public ::testing::TestWithParam<Parameters> {
 };
 
 
-TEST_P(GTest_EvalMap, eval_map_behaves_correctly)
+TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
 {
     // GG defines the plaintext space Z_p[X]/GG(X)
     NTL::ZZX GG;
@@ -293,7 +293,7 @@ TEST_P(GTest_EvalMap, eval_map_behaves_correctly)
     }
 };
 
-INSTANTIATE_TEST_SUITE_P(some_parameters, GTest_EvalMap, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(someParameters, GTestEvalMap, ::testing::Values(
             //SLOW
             Parameters(2, 1, 2, 80, 300, 0, 0, helib::convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{7, 3, 221}), std::vector<long>{3979, 3095, 3760}, std::vector<long>{6, 2, -8}, 1, 0)
             //FAST

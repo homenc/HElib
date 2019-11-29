@@ -54,19 +54,19 @@ protected:
 };
 
 TEST_P(TestContext,
-       Context_throw_exception_when_calculating_security_before_modchain_built)
+       ContextThrowExceptionWhenCalculatingSecurityBeforeModchainBuilt)
 {
   EXPECT_THROW(context->securityLevel(), helib::LogicError);
 }
 
-TEST_P(TestContext, Context_calculating_security_after_modchain_built)
+TEST_P(TestContext, ContextCalculatingSecurityAfterModchainBuilt)
 {
   buildModChain(*context, /*bits=*/100, /*c=*/2);
   double result = context->securityLevel();
   EXPECT_FALSE(std::isinf(result));
 }
 
-INSTANTIATE_TEST_SUITE_P(various_parameters,
+INSTANTIATE_TEST_SUITE_P(variousParameters,
                          TestContext,
                          ::testing::Values(BGVParameters(17, 2, 1)));
 

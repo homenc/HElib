@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-/* GTest_Replicate.cpp - Testing the functionality of replicating one
+/* GTestReplicate.cpp - Testing the functionality of replicating one
  * slot from a vector acress the whole vector (or replicating each slot
  * to a full cipehrtext)
  */
@@ -60,7 +60,7 @@ struct Parameters {
   };
 };
 
-class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
+class GTestReplicate : public ::testing::TestWithParam<Parameters> {
     protected:
         static void printContextAndG(const helib::FHEcontext& context, const NTL::ZZX& G)
         {
@@ -76,7 +76,7 @@ class GTest_Replicate : public ::testing::TestWithParam<Parameters> {
             return (d == 0) ? context.alMod.getFactorsOverZZ()[0] : helib::makeIrredPoly(p, d);
         };
 
-        GTest_Replicate() :
+        GTestReplicate() :
             m(GetParam().m),
             p(GetParam().p),
             r(GetParam().r),
@@ -203,7 +203,7 @@ public:
 
 
 
-TEST_P(GTest_Replicate, replicate_works)
+TEST_P(GTestReplicate, replicateWorks)
 {
   if (!helib_test::noPrint) {
       std::cout << "** Testing replicate():\n";
@@ -214,7 +214,7 @@ TEST_P(GTest_Replicate, replicate_works)
   if (!helib_test::noPrint) CheckCtxt(xc1, "after replicate");
 };
 
-TEST_P(GTest_Replicate, repeated_replication_works)
+TEST_P(GTestReplicate, repeatedReplicationWorks)
 {
   // Get some timing results
   for (long i=0; i<20 && i<ea.size(); i++) {
@@ -229,7 +229,7 @@ TEST_P(GTest_Replicate, repeated_replication_works)
   }
 };
 
-TEST_P(GTest_Replicate, replicateAll_replicates_accurately)
+TEST_P(GTestReplicate, replicateAllReplicatesAccurately)
 {
     if(!helib_test::noPrint) {
         std::cout << "\n** Testing replicateAll()... " << std::flush;
@@ -254,7 +254,7 @@ TEST_P(GTest_Replicate, replicateAll_replicates_accurately)
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_Replicate, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typicalParameters, GTestReplicate, ::testing::Values(
             //SLOW
             Parameters(1247, 2, 1, 1, 250, 64, 0)
             //FAST

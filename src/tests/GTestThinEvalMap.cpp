@@ -70,7 +70,7 @@ struct Parameters {
     };
 };
 
-class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
+class GTestThinEvalMap : public ::testing::TestWithParam<Parameters> {
     protected:
 
 
@@ -130,7 +130,7 @@ class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
             return secretKey;
         }
 
-        GTest_ThinEvalMap() :
+        GTestThinEvalMap() :
             p(GetParam().p),
             r(GetParam().r),
             c(GetParam().c),
@@ -189,7 +189,7 @@ class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
 
 };
 
-TEST_P(GTest_ThinEvalMap, thin_eval_map_is_correct)
+TEST_P(GTestThinEvalMap, thinEvalMapIsCorrect)
 {
     // GG defines the plaintext space Z_p[X]/GG(X)
     NTL::ZZX GG;
@@ -289,7 +289,7 @@ TEST_P(GTest_ThinEvalMap, thin_eval_map_is_correct)
 
 };
 
-INSTANTIATE_TEST_SUITE_P(various_parameters, GTest_ThinEvalMap, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(variousParameters, GTestThinEvalMap, ::testing::Values(
             //SLOW
             Parameters(2, 1, 2, 80, 300, 0, 0, helib::convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{7, 3, 221}), std::vector<long>{3979, 3095, 3760}, std::vector<long>{6, 2, -8}, 1, 0)
             //FAST

@@ -50,9 +50,9 @@ struct Parameters {
     };
 };
 
-class GTest_PAlgebra : public ::testing::TestWithParam<Parameters> {
+class GTestPAlgebra : public ::testing::TestWithParam<Parameters> {
     protected:
-        GTest_PAlgebra() :
+        GTestPAlgebra() :
             m(GetParam().m),
             p(GetParam().p),
             r(GetParam().r),
@@ -93,7 +93,7 @@ class GTest_PAlgebra : public ::testing::TestWithParam<Parameters> {
         }
 };
 
-TEST_P(GTest_PAlgebra, reads_and_writes_contexts_as_strings)
+TEST_P(GTestPAlgebra, readsAndWritesContextsAsStrings)
 {
   std::stringstream s1;
   helib::writeContextBase(s1, context);
@@ -117,7 +117,7 @@ TEST_P(GTest_PAlgebra, reads_and_writes_contexts_as_strings)
   EXPECT_EQ(context, c1);
 };
 
-INSTANTIATE_TEST_SUITE_P(small_parameters, GTest_PAlgebra, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(smallParameters, GTestPAlgebra, ::testing::Values(
             //FAST
             Parameters(91, 2, 1, std::vector<long>{}, std::vector<long>{})
             ));

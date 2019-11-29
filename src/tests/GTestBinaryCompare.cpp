@@ -62,7 +62,7 @@ struct Parameters {
     };
 };
 
-class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameters, int>> {
+class GTestBinaryCompare : public ::testing::TestWithParam<std::tuple<Parameters, int>> {
     protected:
         static std::vector<helib::zzX> unpackSlotEncoding;
         constexpr static long mValues[][15] = {
@@ -173,7 +173,7 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
         helib::FHEcontext context;
         helib::FHESecKey secKey;
 
-        GTest_binaryCompare() :
+        GTestBinaryCompare() :
             prm(validatePrm(std::get<0>(GetParam()).prm)),
             bitSize(correctBitSize(5, std::get<0>(GetParam()).bitSize)),
             bootstrap(std::get<0>(GetParam()).bootstrap),
@@ -220,10 +220,10 @@ class GTest_binaryCompare : public ::testing::TestWithParam<std::tuple<Parameter
         };
 };
 
-std::vector<helib::zzX> GTest_binaryCompare::unpackSlotEncoding;
-constexpr long GTest_binaryCompare::mValues[5][15];
+std::vector<helib::zzX> GTestBinaryCompare::unpackSlotEncoding;
+constexpr long GTestBinaryCompare::mValues[5][15];
 
-TEST_P(GTest_binaryCompare, comparison)
+TEST_P(GTestBinaryCompare, comparison)
 {
   const helib::EncryptedArray& ea = *context.ea;
 
@@ -309,7 +309,7 @@ TEST_P(GTest_binaryCompare, comparison)
 #endif
 }
 
-INSTANTIATE_TEST_SUITE_P(small_paramater_sizes_repeated, GTest_binaryCompare, ::testing::Combine(
+INSTANTIATE_TEST_SUITE_P(smallParamaterSizesRepeated, GTestBinaryCompare, ::testing::Combine(
             ::testing::Values(
                 //SLOW
                 Parameters(1, 5, false, 0, 1)

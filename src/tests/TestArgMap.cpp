@@ -32,7 +32,7 @@ std::vector<T> lineToVector(const std::string& line) {
   return std::vector<T>(isiter, {});
 }
 
-class Test_ArgMap_CmdLine : public ::testing::Test {
+class TestArgMapCmdLine : public ::testing::Test {
 
 protected:
   int argc = 0;
@@ -55,7 +55,7 @@ public:
   };
 
   // Need to delete argv nicely.
-  ~Test_ArgMap_CmdLine() override {
+  ~TestArgMapCmdLine() override {
     for (int i = 0; i < this->argc; i++) {
       delete[] argv[i];
     }
@@ -63,7 +63,7 @@ public:
   };
 };
 
-class Test_ArgMap_SampleFile : public ::testing::Test {
+class TestArgMapSampleFile : public ::testing::Test {
 
 private:
   bool del_file_flag = false;
@@ -88,7 +88,7 @@ public:
     return true;
   }
 
-  ~Test_ArgMap_SampleFile() override {
+  ~TestArgMapSampleFile() override {
     if (!this->filepath.empty() && del_file_flag) {
       // Delete the tmp test file
       if (remove(filepath.c_str()) != 0) {
@@ -100,10 +100,10 @@ public:
 };
 
 // For death tests naming convention
-using DeathTest_ArgMap_CmdLine = Test_ArgMap_CmdLine;
+using DeathTestArgMapCmdLine = TestArgMapCmdLine;
 
-TEST_F(DeathTest_ArgMap_CmdLine,
-       documentation_shown_are_shown_if_help_selected) {
+TEST_F(DeathTestArgMapCmdLine,
+       documentationShownAreShownIfHelpSelected) {
   mockCmdLineArgs("./prog -h");
 
   struct Opts {
@@ -123,8 +123,8 @@ TEST_F(DeathTest_ArgMap_CmdLine,
               "Usage.*");
 }
 
-TEST_F(Test_ArgMap_SampleFile,
-       documentation_shown_are_shown_if_help_selected_from_file) {
+TEST_F(TestArgMapSampleFile,
+       documentationShownAreShownIfHelpSelectedFromFile) {
   std::ostringstream oss;
   oss << "-h\n";
 
@@ -146,7 +146,7 @@ TEST_F(Test_ArgMap_SampleFile,
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(DeathTest_ArgMap_CmdLine, ill_formed_cmdline) {
+TEST_F(DeathTestArgMapCmdLine, illFormedCmdline) {
   mockCmdLineArgs("./prog alic");
 
   struct Opts {
@@ -163,7 +163,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, ill_formed_cmdline) {
               "Unrecognised argument alic\nUsage.*");
 }
 
-TEST_F(Test_ArgMap_SampleFile, ill_formed_sample_file) {
+TEST_F(TestArgMapSampleFile, illFormedSampleFile) {
   std::ostringstream oss;
   oss << "alice=5\n"
       << "bo\n";
@@ -183,7 +183,7 @@ TEST_F(Test_ArgMap_SampleFile, ill_formed_sample_file) {
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(DeathTest_ArgMap_CmdLine, nullptr_and_empty_strings_for_no_defaults) {
+TEST_F(DeathTestArgMapCmdLine, nullptrAndEmptyStringsForNoDefaults) {
   mockCmdLineArgs("./prog -h");
 
   struct Opts {
@@ -200,7 +200,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, nullptr_and_empty_strings_for_no_defaults) {
               "Usage.*\n.*string\n.*bob.*string\n$");
 }
 
-TEST_F(Test_ArgMap_CmdLine, perfect_cmdline_args_are_read_in) {
+TEST_F(TestArgMapCmdLine, perfectCmdlineArgsAreReadIn) {
   mockCmdLineArgs("./prog alice=1 bob=2.2 chris=NotIn");
 
   struct Opts {
@@ -220,7 +220,7 @@ TEST_F(Test_ArgMap_CmdLine, perfect_cmdline_args_are_read_in) {
   EXPECT_EQ(opts.arg3, "NotIn");
 }
 
-TEST_F(DeathTest_ArgMap_CmdLine, setting_same_name_twice) {
+TEST_F(DeathTestArgMapCmdLine, settingSameNameTwice) {
   mockCmdLineArgs("./prog bob=2 bob=1");
 
   struct Opts {
@@ -234,7 +234,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, setting_same_name_twice) {
   EXPECT_EQ(opts.arg1, 1);
 }
 
-TEST_F(Test_ArgMap_SampleFile, setting_same_name_twice_from_file) {
+TEST_F(TestArgMapSampleFile, settingSameNameTwiceFromFile) {
   std::ostringstream oss;
   oss << "bob=2\n"
       << "bob=1\n";
@@ -252,7 +252,7 @@ TEST_F(Test_ArgMap_SampleFile, setting_same_name_twice_from_file) {
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(Test_ArgMap_CmdLine, setting_same_variable_twice) {
+TEST_F(TestArgMapCmdLine, settingSameVariableTwice) {
   mockCmdLineArgs("./prog alice=1 bob=2");
 
   struct Opts {
@@ -266,7 +266,7 @@ TEST_F(Test_ArgMap_CmdLine, setting_same_variable_twice) {
                helib::RuntimeError);
 }
 
-TEST_F(Test_ArgMap_SampleFile, setting_same_variable_twice) {
+TEST_F(TestArgMapSampleFile, settingSameVariableTwice) {
   std::ostringstream oss;
   oss << "alice=1\n"
       << "bob=2\n";
@@ -285,7 +285,7 @@ TEST_F(Test_ArgMap_SampleFile, setting_same_variable_twice) {
                helib::RuntimeError);
 }
 
-TEST_F(Test_ArgMap_CmdLine, spaced_cmdline_args_are_read_in) {
+TEST_F(TestArgMapCmdLine, spacedCmdlineArgsAreReadIn) {
   mockCmdLineArgs("./prog alice= 1 bob = 2.2 chris =NotIn");
 
   struct Opts {
@@ -305,7 +305,7 @@ TEST_F(Test_ArgMap_CmdLine, spaced_cmdline_args_are_read_in) {
   EXPECT_EQ(opts.arg3, "NotIn");
 }
 
-TEST_F(Test_ArgMap_SampleFile, spaced_cmdline_args_are_read_in) {
+TEST_F(TestArgMapSampleFile, spacedCmdlineArgsAreReadIn) {
   std::ostringstream oss;
   oss << "alice= 1\n"
       << "bob = 2.2\n"
@@ -331,7 +331,7 @@ TEST_F(Test_ArgMap_SampleFile, spaced_cmdline_args_are_read_in) {
   EXPECT_EQ(opts.arg3, "NotIn");
 }
 
-TEST_F(DeathTest_ArgMap_CmdLine, unrecognised_cmdline_args_are_read_in) {
+TEST_F(DeathTestArgMapCmdLine, unrecognisedCmdlineArgsAreReadIn) {
   mockCmdLineArgs("./prog lice=1 bob=2.2 chris=NotIn");
 
   struct Opts {
@@ -350,7 +350,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, unrecognised_cmdline_args_are_read_in) {
               "Unrecognised argument lice\nUsage.*");
 }
 
-TEST_F(Test_ArgMap_SampleFile, unrecognised_cmdline_args_are_read_in) {
+TEST_F(TestArgMapSampleFile, unrecognisedCmdlineArgsAreReadIn) {
   std::ostringstream oss;
   oss << "lice=1\n"
       << "bob=2.2\n"
@@ -373,7 +373,7 @@ TEST_F(Test_ArgMap_SampleFile, unrecognised_cmdline_args_are_read_in) {
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(Test_ArgMap_CmdLine, changing_kv_separator) {
+TEST_F(TestArgMapCmdLine, changingKvSeparator) {
   mockCmdLineArgs("./prog alice:1 bob:7.5 chris:Hi");
 
   struct Opts {
@@ -394,7 +394,7 @@ TEST_F(Test_ArgMap_CmdLine, changing_kv_separator) {
   EXPECT_EQ(opts.arg3, "Hi");
 }
 
-TEST_F(Test_ArgMap_SampleFile, changing_kv_separator) {
+TEST_F(TestArgMapSampleFile, changingKvSeparator) {
   std::ostringstream oss;
   oss << "alice:1\n"
       << "bob:7.5\n"
@@ -421,7 +421,7 @@ TEST_F(Test_ArgMap_SampleFile, changing_kv_separator) {
   EXPECT_EQ(opts.arg3, "Hi");
 }
 
-TEST_F(Test_ArgMap_CmdLine, compulsory_argument_given) {
+TEST_F(TestArgMapCmdLine, compulsoryArgumentGiven) {
   mockCmdLineArgs("./prog alice=1 bob=7.5");
 
   struct Opts {
@@ -443,7 +443,7 @@ TEST_F(Test_ArgMap_CmdLine, compulsory_argument_given) {
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(Test_ArgMap_SampleFile, compulsory_argument_given) {
+TEST_F(TestArgMapSampleFile, compulsoryArgumentGiven) {
   std::ostringstream oss;
   oss << "alice=1\n"
       << "bob=7.5\n";
@@ -470,7 +470,7 @@ TEST_F(Test_ArgMap_SampleFile, compulsory_argument_given) {
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(DeathTest_ArgMap_CmdLine, compulsory_argument_not_given) {
+TEST_F(DeathTestArgMapCmdLine, compulsoryArgumentNotGiven) {
   mockCmdLineArgs("./prog alice=1");
 
   struct Opts {
@@ -491,7 +491,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, compulsory_argument_not_given) {
               R"(Required argument\(s\) not given:.*)");
 }
 
-TEST_F(Test_ArgMap_SampleFile, compulsory_argument_not_given) {
+TEST_F(TestArgMapSampleFile, compulsoryArgumentNotGiven) {
   std::ostringstream oss;
   oss << "alice=1\n";
 
@@ -514,7 +514,7 @@ TEST_F(Test_ArgMap_SampleFile, compulsory_argument_not_given) {
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(Test_ArgMap_CmdLine, read_in_a_vector) {
+TEST_F(TestArgMapCmdLine, readInAVector) {
   mockCmdLineArgs("./prog alice=[1 2]");
 
   struct Opts {
@@ -533,7 +533,7 @@ TEST_F(Test_ArgMap_CmdLine, read_in_a_vector) {
   EXPECT_EQ(opts.arg1, test_v);
 }
 
-TEST_F(Test_ArgMap_SampleFile, read_in_a_vector) {
+TEST_F(TestArgMapSampleFile, readInAVector) {
   std::ostringstream oss;
   oss << "alice=[1 2]\n";
 
@@ -556,7 +556,7 @@ TEST_F(Test_ArgMap_SampleFile, read_in_a_vector) {
   EXPECT_EQ(opts.arg1, test_v);
 }
 
-TEST_F(Test_ArgMap_SampleFile, arguments_from_simple_file) {
+TEST_F(TestArgMapSampleFile, argumentsFromSimpleFile) {
   std::ostringstream oss;
   oss << "alice = 1\n"
       << "bob=7.5\n";
@@ -581,7 +581,7 @@ TEST_F(Test_ArgMap_SampleFile, arguments_from_simple_file) {
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(Test_ArgMap_SampleFile, handling_comments_from_simple_file) {
+TEST_F(TestArgMapSampleFile, handlingCommentsFromSimpleFile) {
   std::ostringstream oss;
   oss << "# An initial comment line.\n"
       << "alice = 1\n"
@@ -609,7 +609,7 @@ TEST_F(Test_ArgMap_SampleFile, handling_comments_from_simple_file) {
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(Test_ArgMap_SampleFile, file_does_not_exist) {
+TEST_F(TestArgMapSampleFile, fileDoesNotExist) {
   struct Opts {
     int arg1;
   } opts;

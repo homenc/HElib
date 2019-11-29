@@ -18,12 +18,12 @@ namespace {
   
 //  LOGIC_ERROR
 
-TEST(Test_error_handling, helib_LogicError_can_be_caught_as_helib_exception)
+TEST(TestErrorHandling, helibLogicErrorCanBeCaughtAsHelibException)
 {
   EXPECT_THROW(throw helib::LogicError("Some logic error message"), helib::Exception);
 }
 
-TEST(Test_error_handling, helib_LogicError_returns_what_string_through_helib_exception)
+TEST(TestErrorHandling, helibLogicErrorReturnsWhatStringThroughHelibException)
 {
   const std::string what("Some logic error message");
   try {
@@ -33,7 +33,7 @@ TEST(Test_error_handling, helib_LogicError_returns_what_string_through_helib_exc
   }
 }
 
-TEST(Test_error_handling, helib_LogicError_returns_c_style_what_string_through_helib_exception)
+TEST(TestErrorHandling, helibLogicErrorReturnsCStyleWhatStringThroughHelibException)
 {
   const char* what = "Some logic error message";
   try {
@@ -43,12 +43,12 @@ TEST(Test_error_handling, helib_LogicError_returns_c_style_what_string_through_h
   }
 }
 
-TEST(Test_error_handling, helib_LogicError_can_be_caught_as_std_exception)
+TEST(TestErrorHandling, helibLogicErrorCanBeCaughtAsStdException)
 {
   EXPECT_THROW(throw helib::LogicError("Some logic error message"), std::exception);
 }
 
-TEST(Test_error_handling, helib_LogicError_returns_what_string_through_std_exception)
+TEST(TestErrorHandling, helibLogicErrorReturnsWhatStringThroughStdException)
 {
   const std::string what("Some logic error message");
   try {
@@ -58,7 +58,7 @@ TEST(Test_error_handling, helib_LogicError_returns_what_string_through_std_excep
   }
 }
 
-TEST(Test_error_handling, helib_LogicError_returns_c_style_what_string_through_std_exception)
+TEST(TestErrorHandling, helibLogicErrorReturnsCStyleWhatStringThroughStdException)
 {
   const char* what = "Some logic error message";
   try {
@@ -68,12 +68,12 @@ TEST(Test_error_handling, helib_LogicError_returns_c_style_what_string_through_s
   }
 }
 
-TEST(Test_error_handling, helib_LogicError_can_be_caught_as_std_logic_error)
+TEST(TestErrorHandling, helibLogicErrorCanBeCaughtAsStdLogicError)
 {
   EXPECT_THROW(throw helib::LogicError("Some logic error message"), std::logic_error);
 }
 
-TEST(Test_error_handling, helib_LogicError_returns_what_string_through_std_logic_error)
+TEST(TestErrorHandling, helibLogicErrorReturnsWhatStringThroughStdLogicError)
 {
   const std::string what("Some logic error message");
   try {
@@ -83,7 +83,7 @@ TEST(Test_error_handling, helib_LogicError_returns_what_string_through_std_logic
   }
 }
 
-TEST(Test_error_handling, helib_LogicError_returns_c_style_what_string_through_std_logic_error)
+TEST(TestErrorHandling, helibLogicErrorReturnsCStyleWhatStringThroughStdLogicError)
 {
   const char* what = "Some logic error message";
   try {
@@ -95,12 +95,12 @@ TEST(Test_error_handling, helib_LogicError_returns_c_style_what_string_through_s
 
   
 //RUNTIME_ERROR
-TEST(Test_error_handling, helib_RuntimeError_can_be_caught_as_helib_exception)
+TEST(TestErrorHandling, helibRuntimeErrorCanBeCaughtAsHelibException)
 {
   EXPECT_THROW(throw helib::RuntimeError("Some runtime error message"), helib::Exception);
 }
 
-TEST(Test_error_handling, helib_RuntimeError_returns_what_string_through_helib_exception)
+TEST(TestErrorHandling, helibRuntimeErrorReturnsWhatStringThroughHelibException)
 {
   const std::string what("Some runtime error message");
   try {
@@ -110,7 +110,7 @@ TEST(Test_error_handling, helib_RuntimeError_returns_what_string_through_helib_e
   }
 }
 
-TEST(Test_error_handling, helib_RuntimeError_returns_c_style_what_string_through_helib_exception)
+TEST(TestErrorHandling, helibRuntimeErrorReturnsCStyleWhatStringThroughHelibException)
 {
   const char* what = "Some runtime error message";
   try {
@@ -120,12 +120,12 @@ TEST(Test_error_handling, helib_RuntimeError_returns_c_style_what_string_through
   }
 }
   
-TEST(Test_error_handling, helib_RuntimeError_can_be_caught_as_std_exception)
+TEST(TestErrorHandling, helibRuntimeErrorCanBeCaughtAsStdException)
 {
   EXPECT_THROW(throw helib::RuntimeError("Some runtime error message"), std::exception);
 }
 
-TEST(Test_error_handling, helib_RuntimeError_returns_what_string_through_std_exception)
+TEST(TestErrorHandling, helibRuntimeErrorReturnsWhatStringThroughStdException)
 {
   const std::string what("Some runtime error message");
   try {
@@ -135,7 +135,7 @@ TEST(Test_error_handling, helib_RuntimeError_returns_what_string_through_std_exc
   }
 }
 
-TEST(Test_error_handling, helib_RuntimeError_returns_c_style_what_string_through_std_exception)
+TEST(TestErrorHandling, helibRuntimeErrorReturnsCStyleWhatStringThroughStdException)
 {
   const char* what = "Some runtime error message";
   try {
@@ -145,12 +145,12 @@ TEST(Test_error_handling, helib_RuntimeError_returns_c_style_what_string_through
   }
 }
 
-TEST(Test_error_handling, helib_RuntimeError_can_be_caught_as_std_runtime_error)
+TEST(TestErrorHandling, helibRuntimeErrorCanBeCaughtAsStdRuntimeError)
 {
   EXPECT_THROW(throw helib::RuntimeError("Some runtime error message"), std::runtime_error);
 }
 
-TEST(Test_error_handling, helib_RuntimeError_returns_what_string_through_std_runtime_error)
+TEST(TestErrorHandling, helibRuntimeErrorReturnsWhatStringThroughStdRuntimeError)
 {
   const std::string what("Some runtime error message");
   try {
@@ -160,7 +160,7 @@ TEST(Test_error_handling, helib_RuntimeError_returns_what_string_through_std_run
   }
 }
 
-TEST(Test_error_handling, helib_RuntimeError_returns_c_style_what_string_through_std_runtime_error)
+TEST(TestErrorHandling, helibRuntimeErrorReturnsCStyleWhatStringThroughStdRuntimeError)
 {
   const char* what = "Some runtime error message";
   try {
@@ -173,12 +173,12 @@ TEST(Test_error_handling, helib_RuntimeError_returns_c_style_what_string_through
 
 //OutOfRangeError tests
   
-TEST(Test_error_handling, helib_OutOfRangeError_can_be_caught_as_helib_OutOfRangeError)
+TEST(TestErrorHandling, helibOutOfRangeErrorCanBeCaughtAsHelibOutOfRangeError)
 {
   EXPECT_THROW(throw helib::OutOfRangeError("Some out of range error message"), helib::OutOfRangeError);
 }
 
-TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_helib_OutOfRangeError)
+TEST(TestErrorHandling, helibOutOfRangeErrorReturnsWhatStringThroughHelibOutOfRangeError)
 {
   const std::string what("Some out of range error message");
   try {
@@ -188,7 +188,7 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_heli
   }
 }
 
-TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_through_helib_OutOfRangeError)
+TEST(TestErrorHandling, helibOutOfRangeErrorReturnsCStyleWhatStringThroughHelibOutOfRangeError)
 {
   const char* what = "Some out of range error message";
   try {
@@ -198,12 +198,12 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_thro
   }
 }
   
-TEST(Test_error_handling, helib_OutOfRangeError_can_be_caught_as_helib_exception)
+TEST(TestErrorHandling, helibOutOfRangeErrorCanBeCaughtAsHelibException)
 {
   EXPECT_THROW(throw helib::OutOfRangeError("Some out of range error message"), helib::Exception);
 }
 
-TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_helib_exception)
+TEST(TestErrorHandling, helibOutOfRangeErrorReturnsWhatStringThroughHelibException)
 {
   const std::string what("Some out of range error message");
   try {
@@ -213,7 +213,7 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_heli
   }
 }
 
-TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_through_helib_exception)
+TEST(TestErrorHandling, helibOutOfRangeErrorReturnsCStyleWhatStringThroughHelibException)
 {
   const char* what = "Some out of range error message";
   try {
@@ -223,12 +223,12 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_thro
   }
 }
 
-TEST(Test_error_handling, helib_OutOfRangeError_can_be_caught_as_std_exception)
+TEST(TestErrorHandling, helibOutOfRangeErrorCanBeCaughtAsStdException)
 {
   EXPECT_THROW(throw helib::OutOfRangeError("Some out of range error message"), std::exception);
 }
 
-TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_std_exception)
+TEST(TestErrorHandling, helibOutOfRangeErrorReturnsWhatStringThroughStdException)
 {
   const std::string what("Some out of range error message");
   try {
@@ -238,7 +238,7 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_std_
   }
 }
 
-TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_through_std_exception)
+TEST(TestErrorHandling, helibOutOfRangeErrorReturnsCStyleWhatStringThroughStdException)
 {
   const char* what = "Some out of range error message";
   try {
@@ -248,12 +248,12 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_thro
   }
 }
   
-TEST(Test_error_handling, helib_OutOfRangeError_can_be_caught_as_std_logic_error)
+TEST(TestErrorHandling, helibOutOfRangeErrorCanBeCaughtAsStdLogicError)
 {
   EXPECT_THROW(throw helib::OutOfRangeError("Some out of range error message"), std::logic_error);
 }
   
-TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_std_logic_error)
+TEST(TestErrorHandling, helibOutOfRangeErrorReturnsWhatStringThroughStdLogicError)
 {
   const std::string what("Some out of range error message");
   try {
@@ -263,7 +263,7 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_std_
   }
 }
 
-TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_through_std_logic_error)
+TEST(TestErrorHandling, helibOutOfRangeErrorReturnsCStyleWhatStringThroughStdLogicError)
 {
   const char* what = "Some out of range error message";
   try {
@@ -273,12 +273,12 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_thro
   }
 }
   
-  TEST(Test_error_handling, helib_OutOfRangeError_can_be_caught_as_std_out_of_range)
+  TEST(TestErrorHandling, helibOutOfRangeErrorCanBeCaughtAsStdOutOfRange)
 {
   EXPECT_THROW(throw helib::OutOfRangeError("Some out of range error message"), std::out_of_range);
 }
 
-  TEST(Test_error_handling, helib_OutOfRangeError_returns_what_string_through_std_out_of_range)
+  TEST(TestErrorHandling, helibOutOfRangeErrorReturnsWhatStringThroughStdOutOfRange)
 {
   const std::string what("Some out of range error message");
   try {
@@ -288,7 +288,7 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_thro
   }
 }
 
-  TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_through_std_out_of_range)
+  TEST(TestErrorHandling, helibOutOfRangeErrorReturnsCStyleWhatStringThroughStdOutOfRange)
 {
   const char* what = "Some out of range error message";
   try {
@@ -300,12 +300,12 @@ TEST(Test_error_handling, helib_OutOfRangeError_returns_c_style_what_string_thro
 
 //InvalidArgument tests
 
-TEST(Test_error_handling, helib_InvalidArgument_can_be_caught_as_helib_InvalidArgument)
+TEST(TestErrorHandling, helibInvalidArgumentCanBeCaughtAsHelibInvalidArgument)
 {
   EXPECT_THROW(throw helib::InvalidArgument("Some invalid argument error message"), helib::InvalidArgument);
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_helib_InvalidArgument)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsWhatStringThroughHelibInvalidArgument)
 {
   const std::string what("Some invalid argument error message");
   try {
@@ -315,7 +315,7 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_heli
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_through_helib_InvalidArgument)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsCStyleWhatStringThroughHelibInvalidArgument)
 {
   const char* what = "Some invalid argument error message";
   try {
@@ -325,12 +325,12 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_thro
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_can_be_caught_as_helib_exception)
+TEST(TestErrorHandling, helibInvalidArgumentCanBeCaughtAsHelibException)
 {
   EXPECT_THROW(throw helib::InvalidArgument("Some invalid argument error message"), helib::Exception);
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_helib_exception)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsWhatStringThroughHelibException)
 {
   const std::string what("Some invalid argument error message");
   try {
@@ -340,7 +340,7 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_heli
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_through_helib_exception)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsCStyleWhatStringThroughHelibException)
 {
   const char* what = "Some invalid argument error message";
   try {
@@ -350,12 +350,12 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_thro
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_can_be_caught_as_std_exception)
+TEST(TestErrorHandling, helibInvalidArgumentCanBeCaughtAsStdException)
 {
   EXPECT_THROW(throw helib::InvalidArgument("Some invalid argument error message"), std::exception);
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_std_exception)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsWhatStringThroughStdException)
 {
   const std::string what("Some invalid argument error message");
   try {
@@ -365,7 +365,7 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_std_
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_through_std_exception)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsCStyleWhatStringThroughStdException)
 {
   const char* what = "Some invalid argument error message";
   try {
@@ -375,12 +375,12 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_thro
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_can_be_caught_as_std_logic_error)
+TEST(TestErrorHandling, helibInvalidArgumentCanBeCaughtAsStdLogicError)
 {
   EXPECT_THROW(throw helib::InvalidArgument("Some invalid argument message"), std::logic_error);
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_std_logic_error)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsWhatStringThroughStdLogicError)
 {
   const std::string what("Some invalid argument message");
   try {
@@ -390,7 +390,7 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_std_
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_through_std_logic_error)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsCStyleWhatStringThroughStdLogicError)
 {
   const char* what = "Some invalid argument message";
   try {
@@ -400,12 +400,12 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_thro
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_can_be_caught_as_std_invalid_argument)
+TEST(TestErrorHandling, helibInvalidArgumentCanBeCaughtAsStdInvalidArgument)
 {
   EXPECT_THROW(throw helib::InvalidArgument("Some invalid argument message"), std::invalid_argument);
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_std_invalid_argument)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsWhatStringThroughStdInvalidArgument)
 {
   const std::string what("Some invalid argument message");
   try {
@@ -415,7 +415,7 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_what_string_through_std_
   }
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_through_std_invalid_argument)
+TEST(TestErrorHandling, helibInvalidArgumentReturnsCStyleWhatStringThroughStdInvalidArgument)
 {
   const char* what = "Some invalid argument message";
   try {
@@ -426,35 +426,35 @@ TEST(Test_error_handling, helib_InvalidArgument_returns_c_style_what_string_thro
 }
 
 //Cross exception catch disabled
-TEST(Test_error_handling, helib_LogicError_cannot_be_caught_as_RuntimeError)
+TEST(TestErrorHandling, helibLogicErrorCannotBeCaughtAsRuntimeError)
 {
   EXPECT_THROW(try { throw helib::LogicError("Some logic error message"); }
                catch (const helib::RuntimeError& err) { },
                helib::LogicError);
 }
 
-TEST(Test_error_handling, helib_LogicError_cannot_be_caught_as_std_runtime_error)
+TEST(TestErrorHandling, helibLogicErrorCannotBeCaughtAsStdRuntimeError)
 {
   EXPECT_THROW(try { throw helib::LogicError("Some logic error message"); }
                catch (const std::runtime_error& err) { },
                helib::LogicError);
 }
 
-TEST(Test_error_handling, helib_RuntimeError_cannot_be_caught_as_LogicError)
+TEST(TestErrorHandling, helibRuntimeErrorCannotBeCaughtAsLogicError)
 {
   EXPECT_THROW(try { throw helib::RuntimeError("Some runtime error message"); }
                catch (const helib::LogicError& err) { },
                helib::RuntimeError);
 }
 
-TEST(Test_error_handling, helib_RuntimeError_cannot_be_caught_as_std_logic_error)
+TEST(TestErrorHandling, helibRuntimeErrorCannotBeCaughtAsStdLogicError)
 {
   EXPECT_THROW(try { throw helib::RuntimeError("Some runtime error message"); }
                catch (const std::logic_error& err) { },
                helib::RuntimeError);
 }
 
-TEST(Test_error_handling, helib_InvalidArgument_cannot_be_caught_as_std_runtime_error)
+TEST(TestErrorHandling, helibInvalidArgumentCannotBeCaughtAsStdRuntimeError)
 {
   EXPECT_THROW(try { throw helib::InvalidArgument("Some invalid argument message"); }
                catch (const std::runtime_error& err) {},
@@ -463,127 +463,127 @@ TEST(Test_error_handling, helib_InvalidArgument_cannot_be_caught_as_std_runtime_
 
 //Testing assertions
 //Testing assertTrue
-TEST(Test_error_handling, helib_assert_true_no_throws_on_true)
+TEST(TestErrorHandling, helibAssertTrueNoThrowsOnTrue)
 {
   EXPECT_NO_THROW(helib::assertTrue(true, "Value is false"));
 }
   
-TEST(Test_error_handling, helib_assert_true_throws_LogicError_on_false)
+TEST(TestErrorHandling, helibAssertTrueThrowsLogicErrorOnFalse)
 {
   EXPECT_THROW(helib::assertTrue(false, "Value is false"), helib::LogicError);
 }
   
-TEST(Test_error_handling, helib_assert_true_throws_non_default_exceptions) {
+TEST(TestErrorHandling, helibAssertTrueThrowsNonDefaultExceptions) {
   EXPECT_THROW(helib::assertTrue<helib::RuntimeError>(false, "Value is false"), helib::RuntimeError);
 }
   
 // assertFalse
-TEST(Test_error_handling, helib_assertFalse_throws_LogicError_on_true)
+TEST(TestErrorHandling, helibAssertFalseThrowsLogicErrorOnTrue)
 {
   EXPECT_THROW(helib::assertFalse(true, "Value is false"), helib::LogicError);
 }
   
-TEST(Test_error_handling, helib_assertFalse_no_throws_on_false)
+TEST(TestErrorHandling, helibAssertFalseNoThrowsOnFalse)
 {
   EXPECT_NO_THROW(helib::assertFalse(false, "Value is false"));
 }
 
-TEST(Test_error_handling, helib_assertFalse_throws_non_default_exceptions) {
+TEST(TestErrorHandling, helibAssertFalseThrowsNonDefaultExceptions) {
   EXPECT_THROW(helib::assertFalse<helib::RuntimeError>(true, "Value is false"), helib::RuntimeError);
 }
 
 //Testing assertEq
-TEST(Test_error_handling, helib_assertEq_no_throws_if_args_are_equals)
+TEST(TestErrorHandling, helibAssertEqNoThrowsIfArgsAreEquals)
 {
   int a(10), b(10);
   EXPECT_NO_THROW(helib::assertEq(a, b, "Expected a == b"));
 }
 
-TEST(Test_error_handling, helib_assertEq_throws_default_LogicError)
+TEST(TestErrorHandling, helibAssertEqThrowsDefaultLogicError)
 {
   int a(10), b(40);
   EXPECT_THROW(helib::assertEq(a, b, "Expected a == b"), helib::LogicError);
 }
   
-TEST(Test_error_handling, helib_assertEq_no_throws_with_custom_eq_elems_identical) {
+TEST(TestErrorHandling, helibAssertEqNoThrowsWithCustomEqElemsIdentical) {
   std::vector<int> a{1, 2};
   std::vector<int> b{1, 2};
   EXPECT_NO_THROW(helib::assertEq(a, b, "Expected a == b"));
 }
 
-TEST(Test_error_handling, helib_assertEq_throws_with_custom_eq_elems_differ) {
+TEST(TestErrorHandling, helibAssertEqThrowsWithCustomEqElemsDiffer) {
   std::vector<int> a{1, 2};
   std::vector<int> b{5, 6};
   EXPECT_THROW(helib::assertEq(a, b, "Expected a == b"), helib::LogicError);
 }
 
-TEST(Test_error_handling, helib_assertEq_throws_templated_exception)
+TEST(TestErrorHandling, helibAssertEqThrowsTemplatedException)
 {
   int a(10), b(40);
   EXPECT_THROW(helib::assertEq<helib::RuntimeError>(a, b, "Expected a == b"), helib::RuntimeError);
 }
   
 //Testing assertNEq
-TEST(Test_error_handling, helib_assertNeq_throws_default_LogicError_if_args_are_equals)
+TEST(TestErrorHandling, helibAssertNeqThrowsDefaultLogicErrorIfArgsAreEquals)
 {
   int a(10), b(10);
   EXPECT_THROW(helib::assertNeq(a, b, "Expected a != b"), helib::LogicError);
 }
 
-TEST(Test_error_handling, helib_assertNeq_no_throws_default_LogicError_if_args_differ)
+TEST(TestErrorHandling, helibAssertNeqNoThrowsDefaultLogicErrorIfArgsDiffer)
 {
   int a(10), b(40);
   EXPECT_NO_THROW(helib::assertNeq(a, b, "Expected a != b"));
 }
 
-TEST(Test_error_handling, helib_assertNeq_throws_with_custom_eq_elems_identical) {
+TEST(TestErrorHandling, helibAssertNeqThrowsWithCustomEqElemsIdentical) {
   std::vector<int> a{1, 2};
   std::vector<int> b{1, 2};
   EXPECT_THROW(helib::assertNeq(a, b, "Expected a != b"), helib::LogicError);
 }
 
-TEST(Test_error_handling, helib_assertNeq_no_throws_with_custom_eq_elems_differ) {
+TEST(TestErrorHandling, helibAssertNeqNoThrowsWithCustomEqElemsDiffer) {
   std::vector<int> a{1, 2};
   std::vector<int> b{5, 6};
   EXPECT_NO_THROW(helib::assertNeq(a, b, "Expected a != b"));
 }
   
 //assertNotNull
-TEST(Test_error_handling, helib_assertNotNull_throws_default_LogicError_if_arg_is_null)
+TEST(TestErrorHandling, helibAssertNotNullThrowsDefaultLogicErrorIfArgIsNull)
 {
   void *p = nullptr;
   EXPECT_THROW(helib::assertNotNull(p, "Expected not null p"), helib::LogicError);
 }
 
-TEST(Test_error_handling, helib_assertNotNull_no_throws_default_LogicError_if_args_differ)
+TEST(TestErrorHandling, helibAssertNotNullNoThrowsDefaultLogicErrorIfArgsDiffer)
 {
   int x;
   int *p = &x;
   EXPECT_NO_THROW(helib::assertNotNull(p, "Expected not null p"));
 }
 
-TEST(Test_error_handling, helib_assertNotNull_throws_with_default_constructed_shared_ptr) {
+TEST(TestErrorHandling, helibAssertNotNullThrowsWithDefaultConstructedSharedPtr) {
   std::shared_ptr<int> p;
   EXPECT_THROW(helib::assertNotNull(p, "Expected not null p"), helib::LogicError);
 }
   
-TEST(Test_error_handling, helib_assertNotNull_no_throws_with_valid_shared_ptr) {
+TEST(TestErrorHandling, helibAssertNotNullNoThrowsWithValidSharedPtr) {
   std::shared_ptr<int> p = std::make_shared<int>(10);
   EXPECT_NO_THROW(helib::assertNotNull(p, "Expected not null p"));
 }
   
-TEST(Test_error_handling, helib_assertNotNull_throws_with_c_NULL) {
+TEST(TestErrorHandling, helibAssertNotNullThrowsWithCNULL) {
   void* p = NULL;
   EXPECT_THROW(helib::assertNotNull(p, "Expected not null p"), helib::LogicError);
 }
 
-TEST(Test_error_handling, helib_assertNotNull_throws_non_standard_helib_exception) {
+TEST(TestErrorHandling, helibAssertNotNullThrowsNonStandardHelibException) {
   int *p = nullptr;
   EXPECT_THROW(helib::assertNotNull<helib::RuntimeError>(p, "Expected not null p"), helib::RuntimeError);
 }
   
 // assertInRange
-TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_in_range_int)
+TEST(TestErrorHandling, helibAssertInRangeNoThrowsOutOfBoundErrorWhenInRangeInt)
 {
   int element = 15;
   int min = 10;
@@ -591,7 +591,7 @@ TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_in_
   EXPECT_NO_THROW(helib::assertInRange(element, min, max, "elem not in [min, max)"));
 }
   
-TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_in_left_range)
+TEST(TestErrorHandling, helibAssertInRangeNoThrowsOutOfBoundErrorWhenInLeftRange)
 {
   int element = 10;
   int min = 10;
@@ -599,7 +599,7 @@ TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_in_
   EXPECT_NO_THROW(helib::assertInRange(element, min, max, "elem not in [min, max)"));
 }
   
-TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_less_than_min)
+TEST(TestErrorHandling, helibAssertInRangeThrowsOutOfBoundErrorWhenLessThanMin)
 {
   int element = 5;
   int min = 10;
@@ -607,7 +607,7 @@ TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_less_t
   EXPECT_THROW(helib::assertInRange(element, min, max, "elem not in [min, max)"), helib::OutOfRangeError);
 }
   
-TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_greater_than_max)
+TEST(TestErrorHandling, helibAssertInRangeThrowsOutOfBoundErrorWhenGreaterThanMax)
 {
   int element = 100;
   int min = 10;
@@ -615,7 +615,7 @@ TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_greate
   EXPECT_THROW(helib::assertInRange(element, min, max, "elem not in [min, max)"), helib::OutOfRangeError);
 }
 
-TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_equals_max)
+TEST(TestErrorHandling, helibAssertInRangeThrowsOutOfBoundErrorWhenEqualsMax)
 {
   int element = 50;
   int min = 10;
@@ -623,7 +623,7 @@ TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_equals
   EXPECT_THROW(helib::assertInRange(element, min, max, "elem not in [min, max)"), helib::OutOfRangeError);
 }
   
-TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_in_range_int_and_right_inclusive)
+TEST(TestErrorHandling, helibAssertInRangeNoThrowsOutOfBoundErrorWhenInRangeIntAndRightInclusive)
 {
   int element = 15;
   int min = 10;
@@ -631,7 +631,7 @@ TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_in_
   EXPECT_NO_THROW(helib::assertInRange(element, min, max, "elem not in [min, max)", true));
 }
 
-TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_in_left_range_and_right_inclusive)
+TEST(TestErrorHandling, helibAssertInRangeNoThrowsOutOfBoundErrorWhenInLeftRangeAndRightInclusive)
 {
   int element = 10;
   int min = 10;
@@ -639,7 +639,7 @@ TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_in_
   EXPECT_NO_THROW(helib::assertInRange(element, min, max, "elem not in [min, max]", true));
 }
 
-TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_less_than_min_and_right_inclusive)
+TEST(TestErrorHandling, helibAssertInRangeThrowsOutOfBoundErrorWhenLessThanMinAndRightInclusive)
 {
   int element = 5;
   int min = 10;
@@ -647,7 +647,7 @@ TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_less_t
   EXPECT_THROW(helib::assertInRange(element, min, max, "elem not in [min, max]", true), helib::OutOfRangeError);
 }
 
-TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_greater_than_max_and_right_inclusive)
+TEST(TestErrorHandling, helibAssertInRangeThrowsOutOfBoundErrorWhenGreaterThanMaxAndRightInclusive)
 {
   int element = 100;
   int min = 10;
@@ -655,7 +655,7 @@ TEST(Test_error_handling, helib_assertInRange_throws_OutOfBoundError_when_greate
   EXPECT_THROW(helib::assertInRange(element, min, max, "elem not in [min, max]", true), helib::OutOfRangeError);
 }
   
-TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_equals_max_and_right_inclusive)
+TEST(TestErrorHandling, helibAssertInRangeNoThrowsOutOfBoundErrorWhenEqualsMaxAndRightInclusive)
 {
   int element = 50;
   int min = 10;
@@ -663,7 +663,7 @@ TEST(Test_error_handling, helib_assertInRange_no_throws_OutOfBoundError_when_equ
   EXPECT_NO_THROW(helib::assertInRange(element, min, max, "elem not in [min, max]", true));
 }
   
-TEST(Test_error_handling, helib_assertInRange_throws_non_default_helib_RuntimeError)
+TEST(TestErrorHandling, helibAssertInRangeThrowsNonDefaultHelibRuntimeError)
 {
   int element = 100;
   int min = 10;

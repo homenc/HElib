@@ -57,7 +57,7 @@ struct Parameters {
     };
 };
 
-class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
+class GTestTableLookup : public ::testing::TestWithParam<Parameters> {
     protected:
         static constexpr long mValues[][15] = { 
             // { p, phi(m),   m,   d, m1, m2, m3,    g1,   g2,   g3, ord1,ord2,ord3, B,c}
@@ -194,7 +194,7 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
             if (nthreads>1) NTL::SetNumThreads(nthreads);
         };
 
-        GTest_tableLookup () :
+        GTestTableLookup () :
             prm(validatePrm(GetParam().prm)),
             bitSize(validateBitSize(GetParam().bitSize)),
             outSize(GetParam().outSize),
@@ -261,9 +261,9 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
         };
 };
 
-constexpr long GTest_tableLookup::mValues[][15];
+constexpr long GTestTableLookup::mValues[][15];
 
-TEST_P(GTest_tableLookup, lookup_functions_correctly)
+TEST_P(GTestTableLookup, lookupFunctionsCorrectly)
 {
     // Build a table s.t. T[i] = 2^{outSize -1}/(i+1), i=0,...,2^bitSize -1
     std::vector<helib::zzX> T;
@@ -286,7 +286,7 @@ TEST_P(GTest_tableLookup, lookup_functions_correctly)
     }
 };
 
-TEST_P(GTest_tableLookup, writein_functions_correctly)
+TEST_P(GTestTableLookup, writeinFunctionsCorrectly)
 {
     const helib::EncryptedArray& ea = *(secretKey.getContext().ea);
     long tSize = 1L << bitSize; // table size
@@ -324,7 +324,7 @@ TEST_P(GTest_tableLookup, writein_functions_correctly)
     }
 };
 
-INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_tableLookup, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typicalParameters, GTestTableLookup, ::testing::Values(
             //SLOW     
             Parameters(1, 5, 0, 3, false, 0, 1)
             //FAST

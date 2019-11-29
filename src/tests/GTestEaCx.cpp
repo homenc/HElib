@@ -39,7 +39,7 @@ struct Parameters {
     };
 };
 
-class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
+class GTestEaCx : public ::testing::TestWithParam<Parameters> {
     protected:
 
         const long m;
@@ -47,7 +47,7 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
         helib::FHEcontext context;
         const helib::EncryptedArrayCx& eacx;
 
-        GTest_EaCx() :
+        GTestEaCx() :
             m(GetParam().m),
             r(GetParam().r),
             context(m, /*p=*/-1, r),
@@ -88,7 +88,7 @@ class GTest_EaCx : public ::testing::TestWithParam<Parameters> {
         }
 };
 
-TEST_P(GTest_EaCx, encoding_works_correctly)
+TEST_P(GTestEaCx, encodingWorksCorrectly)
 {
     std::vector<double> vl;
     eacx.random(vl);
@@ -125,7 +125,7 @@ TEST_P(GTest_EaCx, encoding_works_correctly)
 
 }
 
-INSTANTIATE_TEST_SUITE_P(small_parameters, GTest_EaCx, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(smallParameters, GTestEaCx, ::testing::Values(
             Parameters(16, 8)
             ));
 

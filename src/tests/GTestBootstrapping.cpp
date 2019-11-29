@@ -89,7 +89,7 @@ struct Parameters {
     };
 };
 
-class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
+class GTestBootstrapping : public ::testing::TestWithParam<Parameters> {
     protected:
         static constexpr long mValues[][14] = {
             //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
@@ -150,7 +150,7 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
             throw std::invalid_argument("could not find row in mValues corresponding to p=" + std::to_string(p) + ", N=" + std::to_string(N)); 
         };
 
-        GTest_bootstrapping () :
+        GTestBootstrapping () :
             old_fhe_test_force_bsgs(helib::fhe_test_force_bsgs),
             old_fhe_test_force_hoist(helib::fhe_test_force_hoist),
             p(GetParam().p),
@@ -199,10 +199,10 @@ class GTest_bootstrapping : public ::testing::TestWithParam<Parameters> {
         }
 };
 
-constexpr long GTest_bootstrapping::mValues[][14];
-constexpr std::size_t GTest_bootstrapping::num_mValues;
+constexpr long GTestBootstrapping::mValues[][14];
+constexpr std::size_t GTestBootstrapping::num_mValues;
 
-TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
+TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
 {
     NTL::Vec<long> mvec;
     std::vector<long> gens;
@@ -223,7 +223,7 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
     if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
     if (!helib_test::noPrint) {
-        std::cout << "*** GTest_bootstrapping";
+        std::cout << "*** GTestBootstrapping";
         if (helib::isDryRun()) std::cout << " (dry run)";
         std::cout << ": p=" << p
             << ", r=" << r
@@ -360,7 +360,7 @@ TEST_P(GTest_bootstrapping, bootstrapping_works_correctly)
 #endif
 };
 
-INSTANTIATE_TEST_SUITE_P(non_conservative_representative_parameters, GTest_bootstrapping, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(nonConservativeRepresentativeParameters, GTestBootstrapping, ::testing::Values(
             //SLOW
             Parameters(2, 1, 3, 600, 512, 0, 1, 0, 1, 0, 0),
             Parameters(2, 4, 3, 600, 2300, 0, 1, 0, 1, 0, 0),

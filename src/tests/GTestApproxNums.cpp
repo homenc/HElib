@@ -151,7 +151,7 @@ struct Parameters {
     p = tmp;
   }
 
-class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
+class GTestApproxNums : public ::testing::TestWithParam<Parameters> {
     protected:
         const long R;
         const long m;
@@ -164,7 +164,7 @@ class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
         const helib::FHEPubKey publicKey;
         const helib::EncryptedArrayCx& ea;
 
-        GTest_approxNums () :
+        GTestApproxNums () :
             R(GetParam().R),
             m(GetParam().m),
             r(GetParam().r),
@@ -201,7 +201,7 @@ class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
 
 };
 
-TEST_P(GTest_approxNums, basic_arithmetic_works)
+TEST_P(GTestApproxNums, basicArithmeticWorks)
 {
   if (helib_test::verbose)  std::cout << "Test Arithmetic ";
   // Test objects
@@ -273,7 +273,7 @@ TEST_P(GTest_approxNums, basic_arithmetic_works)
                   << ", maxDiff=" << calcMaxDiff(vd,vd1) << std::endl << std::endl;
 }
 
-TEST_P(GTest_approxNums, complex_arithmetic_works)
+TEST_P(GTestApproxNums, complexArithmeticWorks)
 {
   // Test complex conjugate
   helib::Ctxt c1(publicKey), c2(publicKey);
@@ -333,7 +333,7 @@ TEST_P(GTest_approxNums, complex_arithmetic_works)
                     << ", maxDiff="  << calcMaxDiff(imParts,im_dec) << std::endl << std::endl;
 }
 
-TEST_P(GTest_approxNums, rotates_and_shifts_work)
+TEST_P(GTestApproxNums, rotatesAndShiftsWork)
 {
   std::srand(std::time(0)); // set seed, current time.
   int nplaces = rand() % static_cast<int>(ea.size()/2.0) + 1;
@@ -365,7 +365,7 @@ TEST_P(GTest_approxNums, rotates_and_shifts_work)
                   << ", maxDiff=" << calcMaxDiff(vd_dec,vd1) << std::endl << std::endl;
 }
   
-TEST_P(GTest_approxNums, general_ops_works) {
+TEST_P(GTestApproxNums, generalOpsWorks) {
   /************** Each round consists of the following:
    1. c1.multiplyBy(c0)
    2. c0 += random constant
@@ -530,7 +530,7 @@ TEST_P(GTest_approxNums, general_ops_works) {
       helib::resetAllTimers();
   }
   
-INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_approxNums, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typicalParameters, GTestApproxNums, ::testing::Values(
             //SLOW
             Parameters(1, 1024, 8, 150, 0.01)
             //FAST

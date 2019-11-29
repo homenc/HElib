@@ -66,7 +66,7 @@ struct Parameters {
 
 };
 
-class Test_fat_bootstrapping_with_multiplications : public ::testing::TestWithParam<Parameters> {
+class TestFatBootstrappingWithMultiplications : public ::testing::TestWithParam<Parameters> {
   protected:
     const long n; // Number of multiplications to perform
 
@@ -75,7 +75,7 @@ class Test_fat_bootstrapping_with_multiplications : public ::testing::TestWithPa
     helib::FHEPubKey publicKey;
     const helib::EncryptedArray& ea;
 
-    Test_fat_bootstrapping_with_multiplications () :
+    TestFatBootstrappingWithMultiplications () :
       n(GetParam().n),
       context(GetParam().m, GetParam().p, GetParam().r,
               GetParam().gens, GetParam().ords),
@@ -195,7 +195,7 @@ void multiplyPtxt(std::vector<long> ptxt,
   }
 }
 
-TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_bootstrapping_with_no_multiplications) {
+TEST_P(TestFatBootstrappingWithMultiplications, correctlyPerformsFatBootstrappingWithNoMultiplications) {
   const long nslots = ea.size();
   std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
   helib::Ctxt ctxt(publicKey);
@@ -217,7 +217,7 @@ TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_boots
   EXPECT_EQ(decrypted, ptxt);
 }
 
-TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_bootstrapping_with_multiplications) {
+TEST_P(TestFatBootstrappingWithMultiplications, correctlyPerformsFatBootstrappingWithMultiplications) {
   const long nslots = ea.size();
   const long p2r = context.alMod.getPPowR();
   std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
@@ -258,7 +258,7 @@ TEST_P(Test_fat_bootstrapping_with_multiplications, correctly_performs_fat_boots
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(typical_parameters, Test_fat_bootstrapping_with_multiplications, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typicalParameters, TestFatBootstrappingWithMultiplications, ::testing::Values(
   //FAST
   Parameters(31*41, 2, 1, 2, 380, 64, 100, 30, {31, 41}, {1026, 249}, {30, -2}),
   Parameters(7*5*37, 17, 1, 3, 600, 64, 100, 40, {7, 5, 37}, {556, 1037}, {6, 4})
@@ -268,7 +268,7 @@ INSTANTIATE_TEST_SUITE_P(typical_parameters, Test_fat_bootstrapping_with_multipl
 ));
 
 
-class Test_thin_bootstrapping_with_multiplications : public ::testing::TestWithParam<Parameters> {
+class TestThinBootstrappingWithMultiplications : public ::testing::TestWithParam<Parameters> {
   protected:
     const long n; // Number of multiplications to perform
 
@@ -277,7 +277,7 @@ class Test_thin_bootstrapping_with_multiplications : public ::testing::TestWithP
     helib::FHEPubKey publicKey;
     const helib::EncryptedArray& ea;
 
-    Test_thin_bootstrapping_with_multiplications () :
+    TestThinBootstrappingWithMultiplications () :
       n(GetParam().n),
       context(GetParam().m, GetParam().p, GetParam().r,
               GetParam().gens, GetParam().ords),
@@ -336,7 +336,7 @@ class Test_thin_bootstrapping_with_multiplications : public ::testing::TestWithP
     }
 };
 
-TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_bootstrapping_with_no_multiplications) {
+TEST_P(TestThinBootstrappingWithMultiplications, correctlyPerformsThinBootstrappingWithNoMultiplications) {
   const long nslots = ea.size();
   std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
   helib::Ctxt ctxt(publicKey);
@@ -358,7 +358,7 @@ TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_boo
   EXPECT_EQ(decrypted, ptxt);
 }
 
-TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_bootstrapping_with_multiplications) {
+TEST_P(TestThinBootstrappingWithMultiplications, correctlyPerformsThinBootstrappingWithMultiplications) {
   const long nslots = ea.size();
   const long p2r = context.alMod.getPPowR();
   std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
@@ -399,7 +399,7 @@ TEST_P(Test_thin_bootstrapping_with_multiplications, correctly_performs_thin_boo
   }
 }
 
-INSTANTIATE_TEST_SUITE_P(typical_parameters, Test_thin_bootstrapping_with_multiplications, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typicalParameters, TestThinBootstrappingWithMultiplications, ::testing::Values(
   //FAST
   Parameters(31*41, 2, 1, 2, 320, 64, 100, 25, {31, 41}, {1026, 249}, {30, -2}),
   Parameters(7*5*37, 17, 1, 3, 500, 64, 100, 30, {7, 5, 37}, {556, 1037}, {6, 4})
