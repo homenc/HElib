@@ -79,7 +79,7 @@ struct Parameters {
 
 };
 
-class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
+class GTestThinBootstrapping : public ::testing::TestWithParam<Parameters> {
     protected:
         constexpr static long mValues[][14] = {
             //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
@@ -266,7 +266,7 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
             return secKey;
         }
 
-        GTest_ThinBootstrapping() :
+        GTestThinBootstrapping() :
             old_fhe_test_force_bsgs(helib::fhe_test_force_bsgs),
             old_fhe_test_force_hoist(helib::fhe_test_force_hoist),
             // Squeeze global-setting in as the first operation
@@ -351,10 +351,10 @@ class GTest_ThinBootstrapping : public ::testing::TestWithParam<Parameters> {
         };
 };
 
-constexpr long GTest_ThinBootstrapping::mValues[][14];
-constexpr long GTest_ThinBootstrapping::num_mValues;
+constexpr long GTestThinBootstrapping::mValues[][14];
+constexpr long GTestThinBootstrapping::num_mValues;
 
-TEST_P(GTest_ThinBootstrapping, correctly_performs_thin_bootstrapping)
+TEST_P(GTestThinBootstrapping, correctlyPerformsThinBootstrapping)
 {
   // GG defines the plaintext space Z_p[X]/GG(X)
   NTL::ZZX GG;
@@ -399,7 +399,7 @@ TEST_P(GTest_ThinBootstrapping, correctly_performs_thin_bootstrapping)
 };
 
 
-INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_ThinBootstrapping, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typicalParameters, GTestThinBootstrapping, ::testing::Values(
             //SLOW
             Parameters(2, 1, 3, 600, 512, 0, 1, 0, 1, 0, 0),
             Parameters(2, 4, 3, 600, 2300, 0, 1, 0, 1, 0, 0),

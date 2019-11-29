@@ -123,7 +123,7 @@ struct Parameters {
 
 };
 
-class GTest_Bin_IO : public ::testing::TestWithParam<Parameters> {
+class GTestBinIO : public ::testing::TestWithParam<Parameters> {
     protected:
         const long m;
         const long r;
@@ -154,7 +154,7 @@ class GTest_Bin_IO : public ::testing::TestWithParam<Parameters> {
             return testResourcePath;
         };
 
-        GTest_Bin_IO () :
+        GTestBinIO () :
             m(GetParam().m),
             r(GetParam().r),
             p(GetParam().p),
@@ -185,13 +185,13 @@ class GTest_Bin_IO : public ::testing::TestWithParam<Parameters> {
         };
 };
 
-std::string GTest_Bin_IO::testResourcePath;
-std::string GTest_Bin_IO::asciiFile1;
-std::string GTest_Bin_IO::asciiFile2;
-std::string GTest_Bin_IO::binFile1;
-std::string GTest_Bin_IO::otherEndianFileOut;
+std::string GTestBinIO::testResourcePath;
+std::string GTestBinIO::asciiFile1;
+std::string GTestBinIO::asciiFile2;
+std::string GTestBinIO::binFile1;
+std::string GTestBinIO::otherEndianFileOut;
 
-TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
+TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
 {
     { // 1. Write ASCII and bin files
         std::ofstream asciiFile(asciiFile1);
@@ -401,7 +401,7 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(representative_parameters, GTest_Bin_IO, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(representativeParameters, GTestBinIO, ::testing::Values(
             //SLOW
             Parameters(127, 2, 2, 2, 300, std::string{}, true),
             Parameters(127, 1, 257, 2, 300, std::string{}, true)

@@ -46,7 +46,7 @@ struct Parameters {
     };
 };
 
-class GTest_IO : public ::testing::TestWithParam<Parameters> {
+class GTestIO : public ::testing::TestWithParam<Parameters> {
     protected:
 #define N_TESTS 3
         static constexpr long ms[N_TESTS][10] = {
@@ -76,7 +76,7 @@ class GTest_IO : public ::testing::TestWithParam<Parameters> {
             return testResourcePath;
         };
 
-        GTest_IO () :
+        GTestIO () :
             r(GetParam().r),
             p(GetParam().p),
             c(GetParam().c),
@@ -124,12 +124,12 @@ class GTest_IO : public ::testing::TestWithParam<Parameters> {
         };
 };
 
-constexpr long GTest_IO::ms[N_TESTS][10];
-std::string GTest_IO::keyFilePath;
+constexpr long GTestIO::ms[N_TESTS][10];
+std::string GTestIO::keyFilePath;
 
 // Testing the I/O of the important classes of the library
 // (context, keys, ciphertexts).
-TEST_P(GTest_IO, important_classes_remain_consistent_under_io)
+TEST_P(GTestIO, importantClassesRemainConsistentUnderIo)
 {
   // first loop: generate stuff and write it to file
 
@@ -341,7 +341,7 @@ TEST_P(GTest_IO, important_classes_remain_consistent_under_io)
   }}
 }
 
-INSTANTIATE_TEST_SUITE_P(some_small_parameters, GTest_IO, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(someSmallParameters, GTestIO, ::testing::Values(
             //FAST
             Parameters(1, 2, 2, 91)
             ));

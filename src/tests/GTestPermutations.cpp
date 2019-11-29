@@ -75,9 +75,9 @@ struct Parameters {
     };
 };
 
-class GTest_Permutations : public ::testing::TestWithParam<Parameters> {
+class GTestPermutations : public ::testing::TestWithParam<Parameters> {
     protected:
-        GTest_Permutations() :
+        GTestPermutations() :
             test(GetParam().test),
             p(GetParam().p),
             r(GetParam().r),
@@ -261,7 +261,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   generator 13661 has order (== Z_m^*) of 2
 */
 
-TEST_P(GTest_Permutations, ciphertext_permutations)
+TEST_P(GTestPermutations, ciphertextPermutations)
 {
   if (test==0 || helib_test::dry!=0) {
     NTL::Vec<helib::GenDescriptor> vec;
@@ -296,7 +296,7 @@ TEST_P(GTest_Permutations, ciphertext_permutations)
   }
 };
 
-INSTANTIATE_TEST_SUITE_P(default_parameters, GTest_Permutations, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(defaultParameters, GTestPermutations, ::testing::Values(
             //FAST
             //Parameters(1, 91, 2, 1, 5, 0, 30, 0, 0, 0, 1, 1, 1, 1)
             //SLOW

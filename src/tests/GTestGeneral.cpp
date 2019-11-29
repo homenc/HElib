@@ -110,7 +110,7 @@ struct Parameters {
     };
 };
 
-class GTest_General : public ::testing::TestWithParam<Parameters> {
+class GTestGeneral : public ::testing::TestWithParam<Parameters> {
     protected:
         long R;
         long p;
@@ -131,7 +131,7 @@ class GTest_General : public ::testing::TestWithParam<Parameters> {
 
         const helib::FHEPubKey &publicKey;
 
-        GTest_General () :
+        GTestGeneral () :
             R(GetParam().R),
             p(GetParam().p),
             r(GetParam().r),
@@ -168,7 +168,7 @@ class GTest_General : public ::testing::TestWithParam<Parameters> {
         }
 };
 
-TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertexts)
+TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
 {
     char buffer[32];
     if (!helib_test::noPrint) {
@@ -335,7 +335,7 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
     }
 };
 
-INSTANTIATE_TEST_SUITE_P(various_parameters, GTest_General, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(variousParameters, GTestGeneral, ::testing::Values(
             //         R, p, r, d, c,  k,   L, s,  m,             mvec,             gens,             ords, seed, nt
             //FAST
             //Parameters(1, 2, 1, 1, 2, 80, 500, 0, 91, NTL::Vec<long>{}, NTL::Vec<long>{}, NTL::Vec<long>{},    0,  1)

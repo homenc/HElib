@@ -48,7 +48,7 @@ struct Parameters {
     };
 };
 
-class GTest_intraSlot : public ::testing::TestWithParam<Parameters> {
+class GTestIntraSlot : public ::testing::TestWithParam<Parameters> {
 
     static helib::FHEcontext& setupContext(helib::FHEcontext& context, long L)
     {
@@ -60,7 +60,7 @@ class GTest_intraSlot : public ::testing::TestWithParam<Parameters> {
     };
 
     protected:
-        GTest_intraSlot () :
+        GTestIntraSlot () :
             p(GetParam().p),
             n(GetParam().n),
             r(GetParam().r),
@@ -101,7 +101,7 @@ class GTest_intraSlot : public ::testing::TestWithParam<Parameters> {
         }
 };
 
-TEST_P(GTest_intraSlot, packing_and_unpacking_works)
+TEST_P(GTestIntraSlot, packingAndUnpackingWorks)
 {
     NTL::ZZX G = context.alMod.getFactorsOverZZ()[0];
     helib::EncryptedArray ea(context, G);
@@ -135,7 +135,7 @@ TEST_P(GTest_intraSlot, packing_and_unpacking_works)
             "p2["<<i<<"]="<<p2;
     }
 }
-INSTANTIATE_TEST_SUITE_P(some_parameters, GTest_intraSlot, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(someParameters, GTestIntraSlot, ::testing::Values(
             //FAST
             Parameters(2, 2, 1, 10, 91, 0)
             ));

@@ -60,7 +60,7 @@ struct Parameters {
     };
 };
 
-class GTest_PolyEval : public ::testing::TestWithParam<Parameters>
+class GTestPolyEval : public ::testing::TestWithParam<Parameters>
 {
     protected:
         long p;
@@ -77,7 +77,7 @@ class GTest_PolyEval : public ::testing::TestWithParam<Parameters>
         helib::FHESecKey secretKey;
         const helib::FHEPubKey &publicKey;
 
-        GTest_PolyEval() :
+        GTestPolyEval() :
             p(GetParam().p),
             r(GetParam().r),
             d(GetParam().d),
@@ -110,7 +110,7 @@ class GTest_PolyEval : public ::testing::TestWithParam<Parameters>
 };
 
 
-TEST_P(GTest_PolyEval, encrypted_polynomials_evaluate_at_encrypted_point_correctly)
+TEST_P(GTestPolyEval, encryptedPolynomialsEvaluateAtEncryptedPointCorrectly)
 {
   NTL::zz_pBak bak; bak.save(); NTL::zz_p::init(p);
   NTL::zz_pXModulus phimX = NTL::conv<NTL::zz_pX>(ea.getPAlgebra().getPhimX());
@@ -146,7 +146,7 @@ TEST_P(GTest_PolyEval, encrypted_polynomials_evaluate_at_encrypted_point_correct
   EXPECT_EQ(cres, pres) << "encrypted poly MISMATCH";
 };
 
-TEST_P(GTest_PolyEval, evaluate_polynomial_on_ciphertext)
+TEST_P(GTestPolyEval, evaluatePolynomialOnCiphertext)
 {
   // evaluate at random points (at least one co-prime with p)
     std::vector<long> x;
@@ -211,6 +211,6 @@ std::vector<Parameters> getParameters()
     return allParams;
 };
 
-INSTANTIATE_TEST_SUITE_P(many_degrees, GTest_PolyEval, ::testing::ValuesIn(getParameters()));
+INSTANTIATE_TEST_SUITE_P(manyDegrees, GTestPolyEval, ::testing::ValuesIn(getParameters()));
 
 } // namespace

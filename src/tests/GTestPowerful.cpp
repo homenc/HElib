@@ -46,7 +46,7 @@ struct Parameters {
   };
 };
 
-class GTest_Powerful : public ::testing::TestWithParam<Parameters>
+class GTestPowerful : public ::testing::TestWithParam<Parameters>
 {
     protected:
         NTL::Vec<long> mvec;
@@ -67,7 +67,7 @@ class GTest_Powerful : public ::testing::TestWithParam<Parameters>
             return mvec;
         };
 
-        GTest_Powerful () : 
+        GTestPowerful () : 
             mvec(computeMvec(GetParam().m1, GetParam().m2, GetParam().m3)),
             m(helib::computeProd(mvec)),
             p(GetParam().p),
@@ -86,7 +86,7 @@ class GTest_Powerful : public ::testing::TestWithParam<Parameters>
         }
 };
 
-TEST_P(GTest_Powerful, simple_conversion_works)
+TEST_P(GTestPowerful, simpleConversionWorks)
 {
   helib::PowerfulTranslationIndexes ind(mvec);
   helib::PowerfulConversion pConv;
@@ -102,7 +102,7 @@ TEST_P(GTest_Powerful, simple_conversion_works)
   EXPECT_EQ(poly, poly2);
 }
 
-TEST_P(GTest_Powerful, high_level_conversion_works)
+TEST_P(GTestPowerful, highLevelConversionWorks)
 {
   helib::PowerfulDCRT p2d(context, mvec);
   helib::DoubleCRT dcrt(context, context.fullPrimes());
@@ -140,7 +140,7 @@ TEST_P(GTest_Powerful, high_level_conversion_works)
   EXPECT_EQ(poly1, poly2) << getErrorOutput();
 }
 
-INSTANTIATE_TEST_SUITE_P(standard_parameters, GTest_Powerful, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(standardParameters, GTestPowerful, ::testing::Values(
             //FAST
             Parameters(3, 5, 7, 2, 1)
             ));

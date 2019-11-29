@@ -315,21 +315,21 @@ namespace {
         }
     }
 
-    TEST(GTestPGFFT, PGFFT_works_in_range_1_100_points) {
+    TEST(GTestPGFFT, PGFFTWorksInRange1to100Points) {
         SetSeed();
 
         for (long n = 1; n <= 100; n++)
             TestIt(n);
     }
 
-    TEST(GTestPGFFT, PGFFT_works_in_range_256_32768_power_of_two_points) {
+    TEST(GTestPGFFT, PGFFTWorksInRange256to32768PowerOfTwoPoints) {
         SetSeed();
 
         for (long n = 256; n <= 32 * 1024; n *= 2)
             TestIt(n);
     }
 
-    TEST(GTestPGFFT, PGFFT_works_in_range_10000_20000_points) {
+    TEST(GTestPGFFT, PGFFTWorksInRange10000to20000Points) {
         SetSeed();
 
         for (long i = 0; i < 100; i++) {

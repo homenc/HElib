@@ -104,14 +104,14 @@ namespace {
 
     };
 
-    class GTest_fatboot : public ::testing::TestWithParam<Parameters> {
+    class GTestFatboot : public ::testing::TestWithParam<Parameters> {
     private:
         void preContextSetup() {
 
             if (!helib_test::noPrint) helib::fhe_stats = true;
 
             if (!helib_test::noPrint) {
-                std::cout << "*** GTest_fatboot";
+                std::cout << "*** GTestFatboot";
                 if (helib::isDryRun())
                     std::cout << " (dry run)";
                 std::cout << ": p=" << p
@@ -186,7 +186,7 @@ namespace {
         double time;
         helib::FHEcontext context;
 
-        GTest_fatboot() :
+        GTestFatboot() :
                 old_fhe_test_force_bsgs(helib::fhe_test_force_bsgs),
                 old_fhe_test_force_hoist(helib::fhe_test_force_hoist),
                 old_fhe_force_chen_han(helib::fhe_force_chen_han),
@@ -230,7 +230,7 @@ namespace {
 
     };
 
-    TEST_P(GTest_fatboot, correctly_performs_fatboot) {
+    TEST_P(GTestFatboot, correctlyPerformsFatboot) {
         helib::buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
 
         if (!helib_test::noPrint) {
@@ -331,7 +331,7 @@ namespace {
 //long useCache=1;
 //int c_m = 100;
 
-    INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_fatboot, ::testing::Values(
+    INSTANTIATE_TEST_SUITE_P(typicalParameters, GTestFatboot, ::testing::Values(
             //SLOW
             Parameters(2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026, 249}, {30, -2}, {31, 41}, 1, 1),
             Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {556, 1037}, {6, 4}, {7, 5, 37}, 1, 1)

@@ -140,7 +140,7 @@ struct Parameters {
     p = tmp;
   }
 
-class Test_CKKS : public ::testing::TestWithParam<Parameters> {
+class TestCKKS : public ::testing::TestWithParam<Parameters> {
     protected:
         const long m;         // Zm*
         const long r;         // bit precision
@@ -152,7 +152,7 @@ class Test_CKKS : public ::testing::TestWithParam<Parameters> {
         const helib::FHEPubKey publicKey;
         const helib::EncryptedArrayCx& ea;
 
-        Test_CKKS () :
+        TestCKKS () :
             m(GetParam().m),
             r(GetParam().r),
             L(GetParam().L),
@@ -185,7 +185,7 @@ class Test_CKKS : public ::testing::TestWithParam<Parameters> {
 
 };
  
-TEST_P(Test_CKKS, negating_ciphertext_works)
+TEST_P(TestCKKS, negatingCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2;
@@ -210,7 +210,7 @@ TEST_P(Test_CKKS, negating_ciphertext_works)
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 
-TEST_P(Test_CKKS, adding_poly_constant_to_ciphertext_works)
+TEST_P(TestCKKS, addingPolyConstantToCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
@@ -234,7 +234,7 @@ TEST_P(Test_CKKS, adding_poly_constant_to_ciphertext_works)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
 }
 
-TEST_P(Test_CKKS, adding_negated_poly_constant_to_ciphertext_works)
+TEST_P(TestCKKS, addingNegatedPolyConstantToCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
@@ -260,7 +260,7 @@ TEST_P(Test_CKKS, adding_negated_poly_constant_to_ciphertext_works)
                   << ", maxRelDiff=" << calcMaxRelDiff(vd1,vd3) << std::endl << std::endl;
 }
 
-TEST_P(Test_CKKS, multiplying_poly_constant_to_ciphertext_works)
+TEST_P(TestCKKS, multiplyingPolyConstantToCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
@@ -287,7 +287,7 @@ TEST_P(Test_CKKS, multiplying_poly_constant_to_ciphertext_works)
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 
-TEST_P(Test_CKKS, adding_double_to_ciphertext_works)
+TEST_P(TestCKKS, addingDoubleToCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2;
@@ -310,7 +310,7 @@ TEST_P(Test_CKKS, adding_double_to_ciphertext_works)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
 }
 
-TEST_P(Test_CKKS, multiplying_double_to_ciphertext_works)
+TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd0;
@@ -340,7 +340,7 @@ TEST_P(Test_CKKS, multiplying_double_to_ciphertext_works)
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 
-TEST_P(Test_CKKS, getting_the_complex_conjugate_works)
+TEST_P(TestCKKS, gettingTheComplexConjugateWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2;
@@ -365,7 +365,7 @@ TEST_P(Test_CKKS, getting_the_complex_conjugate_works)
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 
-TEST_P(Test_CKKS, rotating_ciphertext_works)
+TEST_P(TestCKKS, rotatingCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
   std::vector<std::complex<double>> vd1, vd2;
@@ -389,7 +389,7 @@ TEST_P(Test_CKKS, rotating_ciphertext_works)
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 
-TEST_P(Test_CKKS, adding_ciphertexts_works)
+TEST_P(TestCKKS, addingCiphertextsWorks)
 {
   helib::Ctxt c1(publicKey), c2(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
@@ -409,7 +409,7 @@ TEST_P(Test_CKKS, adding_ciphertexts_works)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
 }
 
-TEST_P(Test_CKKS, subtracting_ciphertexts_works)
+TEST_P(TestCKKS, subtractingCiphertextsWorks)
 {
   helib::Ctxt c1(publicKey), c2(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
@@ -429,7 +429,7 @@ TEST_P(Test_CKKS, subtracting_ciphertexts_works)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
 }
 
-TEST_P(Test_CKKS, raw_multiplication_of_ciphertexts_works)
+TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
 {
   helib::Ctxt c1(publicKey), c2(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
@@ -451,7 +451,7 @@ TEST_P(Test_CKKS, raw_multiplication_of_ciphertexts_works)
   EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
 }
 
-TEST_P(Test_CKKS, high_level_multiplication_of_ciphertexts_works)
+TEST_P(TestCKKS, highLevelMultiplicationOfCiphertextsWorks)
 {
   helib::Ctxt c1(publicKey), c2(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3;
@@ -473,7 +473,7 @@ TEST_P(Test_CKKS, high_level_multiplication_of_ciphertexts_works)
   EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
 }
 
-TEST_P(Test_CKKS, multiplying_ciphertext_by_negative_constant_and_then_adding_to_other_ciphertext_works)
+TEST_P(TestCKKS, multiplyingCiphertextByNegativeConstantAndThenAddingToOtherCiphertextWorks)
 {
   helib::Ctxt c1(publicKey), c2(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3, vd4;
@@ -496,7 +496,7 @@ TEST_P(Test_CKKS, multiplying_ciphertext_by_negative_constant_and_then_adding_to
                   << ", maxDiff=" << calcMaxDiff(vd1,vd4) << std::endl << std::endl;
 }
 
-INSTANTIATE_TEST_SUITE_P(typical_parameters, Test_CKKS, ::testing::Values(
+INSTANTIATE_TEST_SUITE_P(typicalParameters, TestCKKS, ::testing::Values(
             //SLOW
             Parameters(1024, 20, 150, 0.01)
             //FAST

@@ -73,7 +73,7 @@ struct Parameters
   };
 };
 
-class GTest_binaryArith :
+class GTestBinaryArith :
     public ::testing::TestWithParam<std::tuple<Parameters, int>>
 {
 protected:
@@ -231,7 +231,7 @@ protected:
   helib::FHEcontext context;
   helib::FHESecKey secKey;
 
-  GTest_binaryArith() :
+  GTestBinaryArith() :
       prm(validatePrm(std::get<0>(GetParam()).prm)),
       bitSize(correctBitSize(5, std::get<0>(GetParam()).bitSize)),
       bitSize2(correctBitSize(bitSize, std::get<0>(GetParam()).bitSize2)),
@@ -282,10 +282,10 @@ public:
       helib::printAllTimers(std::cout);
   };
 };
-constexpr long GTest_binaryArith::mValues[8][15];
-std::vector<helib::zzX> GTest_binaryArith::unpackSlotEncoding;
+constexpr long GTestBinaryArith::mValues[8][15];
+std::vector<helib::zzX> GTestBinaryArith::unpackSlotEncoding;
 
-TEST_P(GTest_binaryArith, fifteenForFour)
+TEST_P(GTestBinaryArith, fifteenForFour)
 {
   // Randomly generate up to 15 integers from {0,1} with some entries
   // randomly set to null.  We then encrypt and use the fifteenOrLess4Four
@@ -342,7 +342,7 @@ TEST_P(GTest_binaryArith, fifteenForFour)
   }
 };
 
-TEST_P(GTest_binaryArith, product)
+TEST_P(GTestBinaryArith, product)
 {
   // Randomly generate a pair of numbers of a specified bit size and then
   // encrypt them in binary representation. Then use multTwoNumbers to
@@ -486,7 +486,7 @@ TEST_P(GTest_binaryArith, product)
 #endif
 };
 
-TEST_P(GTest_binaryArith, add)
+TEST_P(GTestBinaryArith, add)
 {
   // Randomly generate a pair of numbers of a specified bit size and then
   // encrypt them in binary representation. Then use addTwoNumbers to add the
@@ -582,7 +582,7 @@ TEST_P(GTest_binaryArith, add)
 #endif
 };
 
-TEST_P(GTest_binaryArith, addManyNumbers)
+TEST_P(GTestBinaryArith, addManyNumbers)
 {
   // Randomly generate a vector of numbers of a specified bit size and then
   // encrypt them in binary representation. Then use addManyNumbers to add
@@ -664,8 +664,8 @@ TEST_P(GTest_binaryArith, addManyNumbers)
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    small_parameter_sizes_repeated,
-    GTest_binaryArith,
+    smallParameterSizesRepeated,
+    GTestBinaryArith,
     ::testing::Combine(
         ::testing::Values(
             // SLOW

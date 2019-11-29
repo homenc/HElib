@@ -32,9 +32,9 @@ public:
   void set(int i) { myInt=i; }
 };
 
-class GTest_PtrVector : public ::testing::Test {
+class GTestPtrVector : public ::testing::Test {
     protected:
-        GTest_PtrVector () :
+        GTestPtrVector () :
             vLength(6),
             zero(0)
     {};
@@ -160,7 +160,7 @@ void test5(const MyPtrMat& mat, const T& array)
     ASSERT_TRUE(pointersEqual(mat[i], *array[i]));
 }
 
-TEST_F(GTest_PtrVector, pointer_vectors_remain_consistent)
+TEST_F(GTestPtrVector, pointerVectorsRemainConsistent)
 {
   MyClass zero(0);
   std::vector<MyClass> v1(vLength, zero);

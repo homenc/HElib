@@ -125,7 +125,7 @@ template<> std::unique_ptr<helib::MatMul1D> buildMat(const helib::EncryptedArray
 //};
 
 template <typename T>
-class GTest_matmul : public ::testing::Test {
+class GTestMatmul : public ::testing::Test {
     protected:
         static void setGlobals(long force_bsgs, long force_hoist)
         {
@@ -170,7 +170,7 @@ class GTest_matmul : public ::testing::Test {
             return context;
         }
 
-        GTest_matmul () :
+        GTestMatmul () :
             minimal((setGlobals(T::parameters.force_bsgs, T::parameters.force_hoist),
                     T::parameters.ks_strategy == 3)),
             m(T::parameters.m),
@@ -268,9 +268,9 @@ using TypesToTest = ::testing::Types<
                             MatrixTypeAndParams<helib::MatMul1D, oneDimensionalBlockMatrixParams>
                         >;
 
-TYPED_TEST_SUITE(GTest_matmul, TypesToTest);
+TYPED_TEST_SUITE(GTestMatmul, TypesToTest);
 
-TYPED_TEST(GTest_matmul, multiplies_without_errors) {
+TYPED_TEST(GTestMatmul, multipliesWithoutErrors) {
     FHE_NTIMER_START(EncodeMartix_MatMul);
     // Templated class so explicit 'this' necessary
     const typename TypeParam::MatrixType& mat = *(this->matrixPtr);
