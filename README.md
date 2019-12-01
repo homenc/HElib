@@ -1,5 +1,13 @@
 HElib
 =====
+***September-November 2019:*** Significant refactoring and cleanup of codebase.
+New `helib` namespace. New `examples` and `benchmarks` directory trees.
+Improvements to bootstrapping.
+Better tests for bootsrapping and binary arithmetic in BGV. 
+Docs and example code for binary arithmetic.
+Overall code and performance improvements in `NumbTh.cpp`. 
+HElib now avoids *very bad* generators. 
+Bug fixes.
 
 ***August 2019:*** Improved noise managemebt in HElib.
 Better and more robust bootstrapping algorithm.
