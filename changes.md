@@ -1,10 +1,70 @@
-HElib 1.0.0 beta1, August 2019
+HElib 1.0.0, December 2019
+===============================
+(tagged as 1.0.0-Dec2019)
+
+December 2019
+-------------
+* C++14 Standard (minimum level)
+* New `Ptxt` Plaintext class that implements the same functionality of the `Ctxt` ciphertext class.  
+* Improved version of the `ArgMap` API for command line arguments.  
+* Restructuring of the project directory tree.  
+* Removed AES example - improved version on its way.  
+* Doxygen documentation.  
+* Bug fixes.
+
+HElib 1.0.0 beta 2, November 2019
+===============================
+(tagged as 1.0.0-beta2-Nov2019)
+
+September-November 2019
+-----------------------
+* Significant refactoring and cleanup of codebase.  
+* New `helib` namespace.  
+* New `examples` and `benchmarks` directory trees.  
+* Improvements to bootstrapping.  
+* Better tests for bootsrapping and binary arithmetic in BGV.   
+* Docs and example code for binary arithmetic.  
+* Overall code and performance improvements in `NumbTh.cpp`.   
+* HElib now avoids *very bad* generators.   
+* Bug fixes.
+
+HElib 1.0.0 beta 1, August 2019
 ===============================
 (tagged as 1.0.0-beta1-Aug2019)
 
-This version includes a new test framework (google test) and CMake build environment. It also includes much more rigorous noise management and noise estimates, making it safe to use HElib's noise estimates to avoid decryption errors. Also a beefed up GPV bootstrapping, with much more rigorous selection of parameters. Finally, Armadillo was removed and replaced with a faster and simpler complex FFT representation.
+August 2019
+-----------
+* Improved noise management in HElib.  
+* Better and more robust bootstrapping algorithm.
 
-HElib 1.0.0 beta, January 2019
+July 2019
+---------
+* Added new bootstrapping and PGFFT tests.
+
+June 2019
+---------
+* Added implementation of PGFFT to replace Armadillo for FFTs in
+the CKKS scheme. See comments in `PGFFT.h` for more information.
+
+May 2019
+--------
+* CKKS bug fixes and fixed compiler warnings.
+
+April 2019
+----------
+* Moved the HElib repository on github from shaih/HElib to HomEnc/HElib.  
+* Introduced HElib-specific exceptions, replaced C `assert`, NTL
+* Error and `std::exception` to use HElib-specific assertions that throw the new exceptions.  
+* See comments in `assertions.h` and `exceptions.h` for usage information.
+
+March 2019
+----------
+* Introduced new test framework (google test), documented in [TESTS.md](TESTS.md).  
+* Previous framework will be deprecated. Added a cmake build script for building HElib and dependencies, documented in [INSTALL.md](INSTALL.md).  
+* Added an example program, see `example program`.
+
+
+HElib 1.0.0 beta 0, January 2019
 ===============================
 (tagged as 1.0.0-beta0-Jan2019)
  
@@ -85,3 +145,4 @@ Corrected some mistakes and tightened the analysis in [[Halevi-Shoup, Eurocrypt 
 * Small changes in how the digits are set-up in `FHEcontext` to make their size more uniform;
 * Eliminated some code duplication between "thin" and "think" bootstrapping in recryption.cpp;
 * Added some more functions/options in the debugging module.
+
