@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,7 +21,13 @@
 #include <NTL/Lazy.h>
 #include <NTL/pair.h>
 #include <NTL/SmartPtr.h>
-#include "FHE.h"
+
+#include "DoubleCRT.h"
+#include "FHEContext.h"
+#include "Ctxt.h"
+#include "keys.h"
+
+namespace helib {
 
 typedef std::complex<double> cx_double;
 
@@ -580,7 +586,7 @@ public:
                 double useThisSize=-1, long precision=-1) const
   { zzX tmp;
     double f = encode(tmp, pt, useThisSize, precision);
-    ::convert(ptxt, tmp);
+    ::helib::convert(ptxt, tmp);
     return f;
   }
 
@@ -644,7 +650,7 @@ public:
 
   void decode(std::vector<cx_double>& array,
               const NTL::ZZX& ptxt, double scaling) const
-  { zzX tmp; ::convert(tmp, ptxt); decode(array, tmp, scaling); }
+  { zzX tmp; ::helib::convert(tmp, ptxt); decode(array, tmp, scaling); }
 
   void decode(std::vector<double>& array,
               const zzX& ptxt, double scaling) const
@@ -1031,5 +1037,7 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
 template<class P>  // P can be ZZX or DoubleCRT
 void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d);
 ///@}
+
+}
 
 #endif // ifndef HELIB_ENCRYPTEDARRAY_H

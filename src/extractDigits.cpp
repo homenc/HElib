@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,7 +17,7 @@
 #include "polyEval.h"
 #include "debugging.h"
 
-NTL_CLIENT
+namespace helib {
 
 // Compute a degree-p polynomial poly(x) s.t. for any t<e and integr z of the
 // form z = z0 + p^t*z1 (with 0<=z0<p), we have poly(z) = z0 (mod p^{t+1}).
@@ -25,20 +25,20 @@ NTL_CLIENT
 // We get poly(x) by interpolating a degree-(p-1) polynomial poly'(x)
 // s.t. poly'(z0)=z0 - z0^p (mod p^e) for all 0<=z0<p, and then setting
 // poly(x) = x^p + poly'(x).
-static void buildDigitPolynomial(ZZX& result, long p, long e)
+static void buildDigitPolynomial(NTL::ZZX& result, long p, long e)
 {
   if (p<2 || e<=1) return; // nothing to do
   FHE_TIMER_START;
-  long p2e = power_long(p,e); // the integer p^e
+  long p2e = NTL::power_long(p,e); // the integer p^e
 
   // Compute x - x^p (mod p^e), for x=0,1,...,p-1
-  vec_long x(INIT_SIZE, p);
-  vec_long y(INIT_SIZE, p);
+  NTL::vec_long x(NTL::INIT_SIZE, p);
+  NTL::vec_long y(NTL::INIT_SIZE, p);
   long bottom = -(p/2);
   for (long j=0; j<p; j++) {
     long z = bottom+j;
     x[j] = z;
-    y[j] = z-PowerMod((z < 0 ? z + p2e : z), p, p2e);  // x - x^p (mod p^e)
+    y[j] = z-NTL::PowerMod((z < 0 ? z + p2e : z), p, p2e);  // x - x^p (mod p^e)
 
     while (y[j] > p2e/2)         y[j] -= p2e;
     while (y[j] < -(p2e/2))      y[j] += p2e;
@@ -64,7 +64,7 @@ static void buildDigitPolynomial(ZZX& result, long p, long e)
 
 int fhe_watcher = 0;
 
-void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
+void extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r)
 {
   const FHEcontext& context = c.getContext();
   long rr = c.effectiveR();
@@ -72,7 +72,7 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
 
   long p = context.zMStar.getP();
 
-  ZZX x2p;
+  NTL::ZZX x2p;
   if (p>3) { 
     buildDigitPolynomial(x2p, p, r);
   }
@@ -123,38 +123,38 @@ void extractDigits(vector<Ctxt>& digits, const Ctxt& c, long r)
 
 
 static
-void compute_a_vals(Vec<ZZ>& a, long p, long e)
+void compute_a_vals(NTL::Vec<NTL::ZZ>& a, long p, long e)
 // computes a[m] = a(m)/m! for m = p..(e-1)(p-1)+1,
 // as defined by Chen and Han.
 // a.length() is set to (e-1)(p-1)+2
 
 {
-   ZZ p_to_e = power_ZZ(p, e);
-   ZZ p_to_2e = power_ZZ(p, 2*e);
+   NTL::ZZ p_to_e = NTL::power_ZZ(p, e);
+   NTL::ZZ p_to_2e = NTL::power_ZZ(p, 2*e);
 
    long len = (e-1)*(p-1)+2;
 
-   ZZ_pPush push(p_to_2e);
+   NTL::ZZ_pPush push(p_to_2e);
 
-   ZZ_pX x_plus_1_to_p = power(ZZ_pX(INIT_MONO, 1) + 1, p);
-   ZZ_pX denom = InvTrunc(x_plus_1_to_p - ZZ_pX(INIT_MONO, p), len);
-   ZZ_pX poly = MulTrunc(x_plus_1_to_p, denom, len);
+   NTL::ZZ_pX x_plus_1_to_p = power(NTL::ZZ_pX(NTL::INIT_MONO, 1) + 1, p);
+   NTL::ZZ_pX denom = InvTrunc(x_plus_1_to_p - NTL::ZZ_pX(NTL::INIT_MONO, p), len);
+   NTL::ZZ_pX poly = MulTrunc(x_plus_1_to_p, denom, len);
    poly *= p;
 
    a.SetLength(len);
 
-   ZZ m_fac(1);
+   NTL::ZZ m_fac(1);
    for (long m = 2; m < p; m++) {
       m_fac = MulMod(m_fac, m, p_to_2e);
    }
 
    for (long m = p; m < len; m++) {
       m_fac = MulMod(m_fac, m, p_to_2e);
-      ZZ c = rep(coeff(poly, m));
-      ZZ d = GCD(m_fac, p_to_2e);
+      NTL::ZZ c = rep(coeff(poly, m));
+      NTL::ZZ d = GCD(m_fac, p_to_2e);
       if (d == 0 || d > p_to_e || c % d != 0) throw helib::RuntimeError("cannot divide");
-      ZZ m_fac_deflated = (m_fac / d) % p_to_e;
-      ZZ c_deflated = (c / d) % p_to_e;
+      NTL::ZZ m_fac_deflated = (m_fac / d) % p_to_e;
+      NTL::ZZ c_deflated = (c / d) % p_to_e;
       a[m] = MulMod(c_deflated, InvMod(m_fac_deflated, p_to_e), p_to_e);
    }
 
@@ -165,22 +165,22 @@ void compute_a_vals(Vec<ZZ>& a, long p, long e)
 // Here, (x mod p) is in the interval [0,1] if p == 2,
 // and otherwise, is in the interval (-p/2, p/2).
 static
-void compute_magic_poly(ZZX& poly1, long p, long e)
+void compute_magic_poly(NTL::ZZX& poly1, long p, long e)
 {
    FHE_TIMER_START;
 
-   Vec<ZZ> a;
+   NTL::Vec<NTL::ZZ> a;
 
    compute_a_vals(a, p, e);
 
-   ZZ p_to_e = power_ZZ(p, e);
+   NTL::ZZ p_to_e = NTL::power_ZZ(p, e);
    long len = (e-1)*(p-1)+2;
 
-   ZZ_pPush push(p_to_e);
+   NTL::ZZ_pPush push(p_to_e);
 
-   ZZ_pX poly(0);
-   ZZ_pX term(1);
-   ZZ_pX X(INIT_MONO, 1);
+   NTL::ZZ_pX poly(0);
+   NTL::ZZ_pX term(1);
+   NTL::ZZ_pX X(NTL::INIT_MONO, 1);
 
    poly = 0;
    term = 1;
@@ -190,13 +190,13 @@ void compute_magic_poly(ZZX& poly1, long p, long e)
    }
 
    for (long m = p; m < len; m++) {
-      poly += term * conv<ZZ_p>(a[m]);
+      poly += term * NTL::conv<NTL::ZZ_p>(a[m]);
       term *= (X-m);
    }
 
    // replace poly by poly(X+(p-1)/2) for odd p
    if (p % 2 == 1) {
-      ZZ_pX poly2(0);
+      NTL::ZZ_pX poly2(0);
 
       for (long i = deg(poly); i >= 0; i--) 
          poly2 = poly2*(X+(p-1)/2) + poly[i];
@@ -205,7 +205,7 @@ void compute_magic_poly(ZZX& poly1, long p, long e)
    }
 
    poly = X - poly;
-   poly1 = conv<ZZX>(poly);
+   poly1 = NTL::conv<NTL::ZZX>(poly);
 }
 
 
@@ -218,25 +218,25 @@ void compute_magic_poly(ZZX& poly1, long p, long e)
 // contains the j'th digit in the p-base expansion of the integer in the i'th
 // slot of the *this.  The plaintext space of digits[j] is mod p^{e+r-j}.
 
-void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
+void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 {
   const FHEcontext& context = c.getContext();
 
   long p = context.zMStar.getP();
-  ZZX x2p;
+  NTL::ZZX x2p;
   if (p>3) { 
     buildDigitPolynomial(x2p, p, r);
   }
 
   // we should pre-compute this table
   // for i = 0..r-1, entry i is G_{e+r-i} in Chen and Han
-  Vec<ZZX> G;
+  NTL::Vec<NTL::ZZX> G;
   G.SetLength(r);
   for (long i: range(r)) {
     compute_magic_poly(G[i], p, e+r-i);
   }
 
-  vector<Ctxt> digits0;
+  std::vector<Ctxt> digits0;
 
   Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
 
@@ -289,3 +289,4 @@ void extendExtractDigits(vector<Ctxt>& digits, const Ctxt& c, long r, long e)
   }
 }
 
+}

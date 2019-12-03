@@ -1,3 +1,15 @@
+/* Copyright (C) 2019 IBM Corp.
+ * This program is Licensed under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. See accompanying LICENSE file.
+ */
+
 #include <cstring> // strcpy
 #include <string>
 #include <sstream>
@@ -100,7 +112,7 @@ TEST_F(DeathTest_ArgMap_CmdLine,
     std::string arg3 = "Hello World";
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string")
       .arg("bob", opts.arg2, "message string")
       // This now should not show default
@@ -125,7 +137,7 @@ TEST_F(Test_ArgMap_SampleFile,
     std::string arg3 = "Hello World";
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string")
       .arg("bob", opts.arg2, "message string")
       // This now should not show default
@@ -142,7 +154,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, ill_formed_cmdline) {
     float arg2;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string", "")
       .arg("bob", opts.arg2, "message string", "");
 
@@ -164,7 +176,7 @@ TEST_F(Test_ArgMap_SampleFile, ill_formed_sample_file) {
     float arg2;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string", "")
       .arg("bob", opts.arg2, "message string", "");
 
@@ -179,7 +191,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, nullptr_and_empty_strings_for_no_defaults) {
     float arg2;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string", "")
       .arg("bob", opts.arg2, "message string", nullptr);
 
@@ -197,7 +209,7 @@ TEST_F(Test_ArgMap_CmdLine, perfect_cmdline_args_are_read_in) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .arg("alice", opts.arg1, "message string", "")
       .arg("bob", opts.arg2, "message string", "")
       .arg("chris", opts.arg3, "message string", "")
@@ -215,7 +227,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, setting_same_name_twice) {
     int arg1;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("bob", opts.arg1, "message string");
   amap.parse(argc, argv);
 
@@ -234,7 +246,7 @@ TEST_F(Test_ArgMap_SampleFile, setting_same_name_twice_from_file) {
     int arg1;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("bob", opts.arg1, "message string");
 
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
@@ -247,7 +259,7 @@ TEST_F(Test_ArgMap_CmdLine, setting_same_variable_twice) {
     int arg1;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string");
 
   EXPECT_THROW(amap.arg("bob", opts.arg1, "message string"),
@@ -266,7 +278,7 @@ TEST_F(Test_ArgMap_SampleFile, setting_same_variable_twice) {
     int arg1;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string");
 
   EXPECT_THROW(amap.arg("bob", opts.arg1, "message string"),
@@ -282,7 +294,7 @@ TEST_F(Test_ArgMap_CmdLine, spaced_cmdline_args_are_read_in) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .arg("alice", opts.arg1, "message string", "")
       .arg("bob", opts.arg2, "message string", "")
       .arg("chris", opts.arg3, "message string", "")
@@ -308,7 +320,7 @@ TEST_F(Test_ArgMap_SampleFile, spaced_cmdline_args_are_read_in) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .arg("alice", opts.arg1, "message string", "")
       .arg("bob", opts.arg2, "message string", "")
       .arg("chris", opts.arg3, "message string", "")
@@ -328,7 +340,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, unrecognised_cmdline_args_are_read_in) {
     std::string arg3;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string", "")
       .arg("bob", opts.arg2, "message string", "")
       .arg("chris", opts.arg3, "message string", "");
@@ -353,7 +365,7 @@ TEST_F(Test_ArgMap_SampleFile, unrecognised_cmdline_args_are_read_in) {
     std::string arg3;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string", "")
       .arg("bob", opts.arg2, "message string", "")
       .arg("chris", opts.arg3, "message string", "");
@@ -370,7 +382,7 @@ TEST_F(Test_ArgMap_CmdLine, changing_kv_separator) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .kvSep(':')
       .arg("alice", opts.arg1, "message string")
       .arg("bob", opts.arg2, "message string")
@@ -397,7 +409,7 @@ TEST_F(Test_ArgMap_SampleFile, changing_kv_separator) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .kvSep(':')
       .arg("alice", opts.arg1, "message string")
       .arg("bob", opts.arg2, "message string")
@@ -418,7 +430,7 @@ TEST_F(Test_ArgMap_CmdLine, compulsory_argument_given) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .arg("alice", opts.arg1, "message string")
       .required()
       .arg("bob", opts.arg2, "message string")
@@ -445,7 +457,7 @@ TEST_F(Test_ArgMap_SampleFile, compulsory_argument_given) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .arg("alice", opts.arg1, "message string")
       .required()
       .arg("bob", opts.arg2, "message string")
@@ -467,7 +479,7 @@ TEST_F(DeathTest_ArgMap_CmdLine, compulsory_argument_not_given) {
     std::string arg3;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string")
       .required()
       .arg("bob", opts.arg2, "message string")
@@ -492,7 +504,7 @@ TEST_F(Test_ArgMap_SampleFile, compulsory_argument_not_given) {
     std::string arg3;
   } opts;
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string")
       .required()
       .arg("bob", opts.arg2, "message string")
@@ -509,7 +521,7 @@ TEST_F(Test_ArgMap_CmdLine, read_in_a_vector) {
     NTL::Vec<long> arg1;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .required()
       .arg("alice", opts.arg1, "message string", "")
       .parse(argc, argv);
@@ -532,7 +544,7 @@ TEST_F(Test_ArgMap_SampleFile, read_in_a_vector) {
     NTL::Vec<long> arg1;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .required()
       .arg("alice", opts.arg1, "message string", "")
       .parse(filepath);
@@ -558,7 +570,7 @@ TEST_F(Test_ArgMap_SampleFile, arguments_from_simple_file) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .arg("alice", opts.arg1, "message string")
       .arg("bob", opts.arg2, "message string")
       .arg("chris", opts.arg3, "message string")
@@ -586,7 +598,7 @@ TEST_F(Test_ArgMap_SampleFile, handling_comments_from_simple_file) {
     std::string arg3;
   } opts;
 
-  ArgMap()
+  helib::ArgMap()
       .arg("alice", opts.arg1, "message string")
       .arg("bob", opts.arg2, "message string")
       .arg("chris", opts.arg3, "message string")
@@ -604,7 +616,7 @@ TEST_F(Test_ArgMap_SampleFile, file_does_not_exist) {
 
   // File not required to be made.
 
-  ArgMap amap;
+  helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string");
 
   EXPECT_THROW(amap.parse("aaaa.bbb"), helib::RuntimeError);

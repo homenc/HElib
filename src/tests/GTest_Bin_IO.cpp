@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,9 +17,7 @@
 #include <NTL/ZZX.h>
 #include <NTL/vector.h>
 
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include "debugging.h"
 
 #include "gtest/gtest.h"
@@ -174,7 +172,7 @@ class GTest_Bin_IO : public ::testing::TestWithParam<Parameters> {
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 
     public:
@@ -200,30 +198,30 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
         std::ofstream binFile(binFile1, std::ios::binary);
         ASSERT_TRUE(asciiFile.is_open());  
 
-        std::unique_ptr<FHEcontext> context(new FHEcontext(m, p, r));
-        buildModChain(*context, L, c);  // Set the modulus chain
+        std::unique_ptr<helib::FHEcontext> context(new helib::FHEcontext(m, p, r));
+        helib::buildModChain(*context, L, c);  // Set the modulus chain
 
         if (!helib_test::noPrint) {
             std::cout << "Test to write out ASCII and Binary Files.\n";
             context->zMStar.printout(); // Printout context params
             std::cout << "\tSecurity Level: " << context->securityLevel() << std::endl;
         }
-        std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
-        FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+        std::unique_ptr<helib::FHESecKey> secKey(new helib::FHESecKey(*context));
+        helib::FHEPubKey* pubKey = (helib::FHEPubKey*) secKey.get();
         secKey->GenSecKey(w);
-        addSome1DMatrices(*secKey);
-        addFrbMatrices(*secKey);
+        helib::addSome1DMatrices(*secKey);
+        helib::addFrbMatrices(*secKey);
 
 #ifdef DEBUG_PRINTOUT
-        dbgEa = (EncryptedArray*) context->ea;
-        dbgKey = secKey.get();
+        helib::dbgEa = (helib::EncryptedArray*) context->ea;
+        helib::dbgKey = secKey.get();
 #endif
 
         // ASCII 
         if (!helib_test::noPrint) {
             std::cout << "\tWriting ASCII1 file " << asciiFile1 << std::endl;
         }
-        writeContextBase(asciiFile, *context);
+        helib::writeContextBase(asciiFile, *context);
         asciiFile << *context << std::endl << std::endl;
         asciiFile << *pubKey << std::endl << std::endl;
         asciiFile << *secKey << std::endl << std::endl;
@@ -232,10 +230,10 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
         if (!helib_test::noPrint) {
             std::cout << "\tWriting Binary file " << binFile1<< std::endl;
         }
-        writeContextBaseBinary(binFile, *context);
-        writeContextBinary(binFile, *context);
-        writePubKeyBinary(binFile, *pubKey);
-        writeSecKeyBinary(binFile, *secKey);
+        helib::writeContextBaseBinary(binFile, *context);
+        helib::writeContextBinary(binFile, *context);
+        helib::writePubKeyBinary(binFile, *pubKey);
+        helib::writeSecKeyBinary(binFile, *secKey);
 
         asciiFile.close();
         binFile.close();
@@ -249,26 +247,26 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
         std::ofstream outFile(asciiFile2);
 
         // Read in context,
-        std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);  
-        readContextBinary(inFile, *context);  
+        std::unique_ptr<helib::FHEcontext> context = helib::buildContextFromBinary(inFile);  
+        helib::readContextBinary(inFile, *context);  
 
         // Read in SecKey and PubKey.
-        std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
-        FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+        std::unique_ptr<helib::FHESecKey> secKey(new helib::FHESecKey(*context));
+        helib::FHEPubKey* pubKey = (helib::FHEPubKey*) secKey.get();
 
 #ifdef DEBUG_PRINTOUT
-        dbgEa = (EncryptedArray*) context->ea;
-        dbgKey = secKey.get();
+        helib::dbgEa = (helib::EncryptedArray*) context->ea;
+        helib::dbgKey = secKey.get();
 #endif
 
-        readPubKeyBinary(inFile, *pubKey);
-        readSecKeyBinary(inFile, *secKey);
+        helib::readPubKeyBinary(inFile, *pubKey);
+        helib::readSecKeyBinary(inFile, *secKey);
 
         // ASCII 
         if (!helib_test::noPrint) {
             std::cout << "\tWriting ASCII2 file." << std::endl;
         }
-        writeContextBase(outFile, *context);
+        helib::writeContextBase(outFile, *context);
         outFile << *context << std::endl << std::endl;
         outFile << *pubKey << std::endl << std::endl;
         outFile << *secKey << std::endl << std::endl;
@@ -291,28 +289,28 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
         std::ifstream inFile(binFile1, std::ios::binary);
 
         // Read in context,
-        std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
-        readContextBinary(inFile, *context);  
+        std::unique_ptr<helib::FHEcontext> context = helib::buildContextFromBinary(inFile);
+        helib::readContextBinary(inFile, *context);  
 
         // Read in PubKey.
-        std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
-        FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
-        readPubKeyBinary(inFile, *pubKey);
-        readSecKeyBinary(inFile, *secKey);
+        std::unique_ptr<helib::FHESecKey> secKey(new helib::FHESecKey(*context));
+        helib::FHEPubKey* pubKey = (helib::FHEPubKey*) secKey.get();
+        helib::readPubKeyBinary(inFile, *pubKey);
+        helib::readSecKeyBinary(inFile, *secKey);
         inFile.close();
 
 #ifdef DEBUG_PRINTOUT
-        dbgEa = (EncryptedArray*) context->ea;
-        dbgKey = secKey.get();
+        helib::dbgEa = (helib::EncryptedArray*) context->ea;
+        helib::dbgKey = secKey.get();
 #endif
 
 
         // Get the ea
-        const EncryptedArray& ea = *context->ea;
+        const helib::EncryptedArray& ea = *context->ea;
 
         // Setup some ptxts and ctxts.
-        Ctxt c1(*pubKey), c2(*pubKey);
-        PlaintextArray p1(ea),  p2(ea);
+        helib::Ctxt c1(*pubKey), c2(*pubKey);
+        helib::PlaintextArray p1(ea),  p2(ea);
 
         random(ea, p1);
         random(ea, p2);
@@ -326,7 +324,7 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
         //c1 *= c2;
 
         // Decrypt and Compare.
-        PlaintextArray pp1(ea);
+        helib::PlaintextArray pp1(ea);
         ea.decrypt(c1, *secKey, pp1);     
 
         ASSERT_TRUE(equals(ea, p1, pp1)) << "BAD";
@@ -365,22 +363,22 @@ TEST_P(GTest_Bin_IO, implements_binary_file_io_correctly)
             std::ofstream outFile(otherEndianFileOut);
 
             // Read in context,
-            std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
-            readContextBinary(inFile, *context);  
+            std::unique_ptr<helib::FHEcontext> context = helib::buildContextFromBinary(inFile);
+            helib::readContextBinary(inFile, *context);  
 
             // Read in SecKey and PubKey.
-            std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
-            FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+            std::unique_ptr<helib::FHESecKey> secKey(new helib::FHESecKey(*context));
+            helib::FHEPubKey* pubKey = (helib::FHEPubKey*) secKey.get();
 
-            readPubKeyBinary(inFile, *pubKey);
-            readSecKeyBinary(inFile, *secKey);
+            helib::readPubKeyBinary(inFile, *pubKey);
+            helib::readSecKeyBinary(inFile, *secKey);
             inFile.close();
 
             // ASCII
             if (!helib_test::noPrint) {
                 std::cout << "\tWriting other endian file." << std::endl;
             }
-            writeContextBase(outFile, *context);
+            helib::writeContextBase(outFile, *context);
             outFile << *context << std::endl << std::endl;
             outFile << *pubKey << std::endl << std::endl;
             outFile << *secKey << std::endl << std::endl;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,6 +17,8 @@
  */
 #include "matmul.h"
 #include <NTL/BasicThreadPool.h>
+
+namespace helib {
 
 template<class type> class RandomMatrix : public  MatMul1D_derived<type> {
 public:
@@ -67,19 +69,8 @@ public:
 };
 
 
-static MatMul1D*
-buildRandomMatrix(const EncryptedArray& ea, long dim)
-{
-  switch (ea.getTag()) {
-    case PA_GF2_tag: {
-      return new RandomMatrix<PA_GF2>(ea, dim);
-    }
-    case PA_zz_p_tag: {
-      return new RandomMatrix<PA_zz_p>(ea, dim);
-    }
-    default: return 0;
-  }
-}
+MatMul1D*
+buildRandomMatrix(const EncryptedArray& ea, long dim);
 
 
 
@@ -138,20 +129,8 @@ public:
 };
 
 
-static MatMul1D*
-buildRandomMultiMatrix(const EncryptedArray& ea, long dim)
-{
-  switch (ea.getTag()) {
-    case PA_GF2_tag: {
-      return new RandomMultiMatrix<PA_GF2>(ea, dim);
-    }
-    case PA_zz_p_tag: {
-      return new RandomMultiMatrix<PA_zz_p>(ea, dim);
-    }
-    default: return 0;
-  }
-}
-
+MatMul1D*
+buildRandomMultiMatrix(const EncryptedArray& ea, long dim);
 
 
 //********************************
@@ -209,19 +188,8 @@ public:
   bool multipleTransforms() const override { return false; }
 };
 
-static BlockMatMul1D*
-buildRandomBlockMatrix(const EncryptedArray& ea, long dim)
-{
-  switch (ea.getTag()) {
-    case PA_GF2_tag: {
-      return new RandomBlockMatrix<PA_GF2>(ea,dim);
-    }
-    case PA_zz_p_tag: {
-      return new RandomBlockMatrix<PA_zz_p>(ea, dim);
-    }
-    default: return 0;
-  }
-}
+BlockMatMul1D*
+buildRandomBlockMatrix(const EncryptedArray& ea, long dim);
 
 
 //********************************
@@ -287,21 +255,8 @@ public:
   bool multipleTransforms() const override { return true; }
 };
 
-static BlockMatMul1D*
-buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim)
-{
-  switch (ea.getTag()) {
-    case PA_GF2_tag: {
-      return new RandomMultiBlockMatrix<PA_GF2>(ea, dim);
-    }
-    case PA_zz_p_tag: {
-      return new RandomMultiBlockMatrix<PA_zz_p>(ea, dim);
-    }
-    default: return 0;
-  }
-}
-
-
+BlockMatMul1D*
+buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim);
 
 
 template<class type> 
@@ -344,14 +299,7 @@ public:
   const EncryptedArray& getEA() const override { return ea; }
 };
 
-static MatMulFull* buildRandomFullMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getTag()) {
-    case PA_GF2_tag: { return new RandomFullMatrix<PA_GF2>(ea); }
-    case PA_zz_p_tag:{ return new RandomFullMatrix<PA_zz_p>(ea); }
-    default: return nullptr;
-  }
-}
+MatMulFull* buildRandomFullMatrix(const EncryptedArray& ea);
 
 
 
@@ -400,13 +348,8 @@ public:
   const EncryptedArray& getEA() const override { return ea; }
 };
 
-static BlockMatMulFull* buildRandomFullBlockMatrix(const EncryptedArray& ea)
-{
-  switch (ea.getTag()) {
-    case PA_GF2_tag: { return new RandomFullBlockMatrix<PA_GF2>(ea); }
-    case PA_zz_p_tag:{ return new RandomFullBlockMatrix<PA_zz_p>(ea); }
-    default: return nullptr;
-  }
+BlockMatMulFull* buildRandomFullBlockMatrix(const EncryptedArray& ea);
+
 }
 
 #endif // ifndef HELIB_RANDOMMATRICES_H

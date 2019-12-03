@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,13 +22,29 @@
 #include <NTL/lzz_pEXFactoring.h>
 
 #include <NTL/BasicThreadPool.h>
+#include <mutex>   // std::mutex, std::unique_lock
 
-NTL_CLIENT
+namespace helib {
 
 // polynomials are sorted lexicographically, with the
 // constant term being the "most significant"
 
-template<class RX> bool poly_comp(const RX& a, const RX& b) 
+template<class RX> bool poly_comp(const RX& a, const RX& b);
+
+bool less_than(NTL::GF2 a, NTL::GF2 b) { return rep(a) < rep(b); }
+bool less_than(NTL::zz_p a, NTL::zz_p b) { return rep(a) < rep(b); }
+
+bool less_than(const NTL::GF2X& a, const NTL::GF2X& b) { return poly_comp(a, b); }
+bool less_than(const NTL::zz_pX& a, const NTL::zz_pX& b) { return poly_comp(a, b); }
+
+bool less_than(const NTL::GF2E& a, const NTL::GF2E& b) { return less_than(rep(a), rep(b)); }
+bool less_than(const NTL::zz_pE& a, const NTL::zz_pE& b) { return less_than(rep(a), rep(b)); }
+
+bool less_than(const NTL::GF2EX& a, const NTL::GF2EX& b) { return poly_comp(a, b); }
+bool less_than(const NTL::zz_pEX& a, const NTL::zz_pEX& b) { return poly_comp(a, b); }
+
+
+template<class RX> bool poly_comp(const RX& a, const RX& b)
 {
   long na = deg(a) + 1;
   long nb = deg(b) + 1;
@@ -37,30 +53,10 @@ template<class RX> bool poly_comp(const RX& a, const RX& b)
   while (i < na && i < nb && coeff(a, i) == coeff(b, i)) i++;
 
   if (i < na && i < nb)
-    return coeff(a, i) < coeff(b, i);
-  else 
+    return less_than(coeff(a, i), coeff(b, i));
+  else
     return na < nb;
 }
-
-namespace NTL {
-
-// for some weird reason, these need to be in either the std or NTL 
-// namespace; otherwise, the compiler won't find them...
-
-bool operator<(GF2 a, GF2 b) { return rep(a) < rep(b); }
-bool operator<(zz_p a, zz_p b) { return rep(a) < rep(b); }
-
-bool operator<(const GF2X& a, const GF2X& b) { return poly_comp(a, b); }
-bool operator<(const zz_pX& a, const zz_pX& b) { return poly_comp(a, b); }
-
-bool operator<(const GF2E& a, const GF2E& b) { return rep(a) < rep(b); }
-bool operator<(const zz_pE& a, const zz_pE& b) { return rep(a) < rep(b); }
-
-bool operator<(const GF2EX& a, const GF2EX& b) { return poly_comp(a, b); }
-bool operator<(const zz_pEX& a, const zz_pEX& b) { return poly_comp(a, b); }
-
-}
-
 
 bool PAlgebra::operator==(const PAlgebra& other) const
 {
@@ -71,37 +67,55 @@ bool PAlgebra::operator==(const PAlgebra& other) const
 }
 
 
-long PAlgebra::exponentiate(const vector<long>& exps,
+long PAlgebra::exponentiate(const std::vector<long>& exps,
 				bool onlySameOrd) const
 {
   if (isDryRun()) return 1;
   long t = 1;
-  long n = min(exps.size(),gens.size());
+  long n = std::min(exps.size(),gens.size());
   for (long i=0; i<n; i++) {
     if (onlySameOrd && !SameOrd(i)) continue;
-    long g = PowerMod(gens[i] ,exps[i], m); 
-    t = MulMod(t, g, m);
+    long g = NTL::PowerMod(gens[i] ,exps[i], m);
+    t = NTL::MulMod(t, g, m);
   }
   return t;
 }
 
 void PAlgebra::printout() const
 {
-  cout << "m = " << m << ", p = " << p;
-  if (isDryRun()) { cout << " (dry run)\n"; return; }
-  cout << ", phi(m) = " << phiM << endl;
-  cout << "  ord(p)=" << ordP << endl;
+  std::cout << "m = " << m << ", p = " << p;
+  if (isDryRun()) { std::cout << " (dry run)" << std::endl; return; }
+  std::cout << ", phi(m) = " << phiM << std::endl;
+  std::cout << "  ord(p)=" << ordP << std::endl;
+  std::cout << "  normBnd=" << normBnd << std::endl;
+  std::cout << "  polyNormBnd=" << polyNormBnd << std::endl;
+
+  std::vector<long> facs;
+  factorize(facs, m);
+  std::cout << "  factors=" << facs << std::endl;
 
   std::size_t i;
   for (i=0; i<gens.size(); i++) if (gens[i]) {
-      cout << "  generator " << gens[i] << " has order ("
-           << (SameOrd(i)? "=":"!") << "= Z_m^*) of " 
-	   << OrderOf(i) << endl;
+      // FIXME: is it really possible that gens[i] can be 0?
+      // There is very likely some code here and there that 
+      // would break if that happens.
+
+      std::cout << "  generator " << gens[i] << " has order (";
+      if (FrobPerturb(i) == 0)
+        std::cout << "=";
+      else if (FrobPerturb(i) > 0)
+        std::cout << "!";
+      else
+        std::cout << "!!";
+      std::cout << "= Z_m^*) of ";
+      std::cout << OrderOf(i) << std::endl;
   }
+
+
   if (cube.getSize()<40) {
-    cout << "  T = [";
-    for (i=0; i<T.size(); i++) cout << T[i] << " ";
-    cout << "]\n";
+    std::cout << "  T = [";
+    for (i=0; i<T.size(); i++) std::cout << T[i] << " ";
+    std::cout << "]" << std::endl;
   }
 }
 
@@ -109,15 +123,15 @@ void PAlgebra::printAll() const
 {
   printout();
   if (cube.getSize()<40) {
-    cout << "  Tidx = [";
-    for (auto& x: Tidx) cout << x << " ";
-    cout << "]\n";
-    cout << "  zmsIdx = [";
-    for (auto& x: zmsIdx) cout << x << " ";
-    cout << "]\n";
-    cout << "  zmsRep = [";
-    for (auto& x: zmsRep) cout << x << " ";
-    cout << "]\n";
+    std::cout << "  Tidx = [";
+    for (auto& x: Tidx) std::cout << x << " ";
+    std::cout << "]\n";
+    std::cout << "  zmsIdx = [";
+    for (auto& x: zmsIdx) std::cout << x << " ";
+    std::cout << "]\n";
+    std::cout << "  zmsRep = [";
+    for (auto& x: zmsRep) std::cout << x << " ";
+    std::cout << "]\n";
   }
 }
 
@@ -125,8 +139,275 @@ static double
 cotan(double x) { return 1/tan(x); }
 
 
+half_FFT::half_FFT(long m) : fft(m/2)
+{
+  typedef std::complex<double> cmplx_t;
+  typedef long double ldbl;
+  const ldbl pi = std::atan(ldbl(1)) * 4.0;
+
+  pow.resize(m/2);
+  for (long i: range(m/2)) {
+    // pow[i] = 2^{2*pi*I*(i/m)}
+    ldbl angle = -((2 * pi) * (ldbl(i)/ldbl(m)));
+    pow[i] = cmplx_t(std::cos(angle), std::sin(angle));
+  }
+}
+
+
+quarter_FFT::quarter_FFT(long m) : fft(m/4)
+{
+  typedef std::complex<double> cmplx_t;
+  typedef long double ldbl;
+  const ldbl pi = std::atan(ldbl(1)) * 4.0;
+
+  pow1.resize(m/4);
+  pow2.resize(m/4);
+  for (long i: range(m/2)) {
+    // pow[i] = 2^{2*pi*I*(i/m)}
+    ldbl angle = -((2 * pi) * (ldbl(i)/ldbl(m)));
+    if (i%2)
+      pow1[i >> 1] = cmplx_t(std::cos(angle), std::sin(angle));
+    else
+      pow2[i >> 1] = cmplx_t(std::cos(angle), std::sin(angle));
+  }
+}
+
+static inline std::complex<double>
+MUL(std::complex<double> a, std::complex<double> b)
+{
+   double x = a.real(), y = a.imag(), u = b.real(), v = b.imag();
+   return std::complex<double>(x*u-y*v, x*v+y*u);
+}
+
+static inline double
+ABS(std::complex<double> a)
+{
+   double x = a.real(), y = a.imag();
+   return std::sqrt(x*x+y*y);
+}
+
+static double
+calcPolyNormBnd(long m)
+{
+   helib::assertTrue(m >= 1, "m >= 1");
+
+   typedef std::complex<double> cmplx_t;
+   typedef long double ldbl;
+
+   ldbl pi = std::atan(ldbl(1))*4;
+
+
+   // first, remove 2's
+   while (m%2 == 0) m /= 2;
+
+   if (m == 1) {
+      return 1;
+   }
+
+   std::vector<long> fac;
+   factorize(fac, m);
+
+   long radm = 1;
+   for (long p: fac) radm *= p;
+
+   if (fac.size() == 1) {
+      long u = fac[0];
+      return 2*cotan(pi/(2*u))/u;
+   }
+
+   m = radm;
+
+   long n = phi_N(m);
+
+   NTL::ZZX PhiPoly = Cyclotomic(m);
+
+   std::vector<double> a(n);
+   for (long i: range(n)) conv(a[i], PhiPoly[i]);
+   // a does not include the leading coefficient 1
+   // NOTE: according to the Arnold and Monogan paper
+   // (Table 6) the least m such that the coefficients of Phi_m
+   // do not fit in 53-bits is m=43,730,115.
+
+
+   std::vector<cmplx_t> roots(m);
+   std::vector<cmplx_t> x(n);
+
+   for (long i: range(m)) {
+      ldbl re = std::cos(2.0*pi*(ldbl(i)/ldbl(m)));
+      ldbl im = std::sin(2.0*pi*(ldbl(i)/ldbl(m)));
+      roots[i] = cmplx_t(re, im);
+   }
+
+   std::vector<long> res_tab(n);
+
+
+   long row_num = 0;
+   for (long i: range(1,m)) {
+      if (NTL::GCD(i, m) != 1) continue;
+      x[row_num] = roots[i];
+      res_tab[row_num] = i;
+      row_num++;
+   }
+
+   std::vector<double> dist_tab_vec(2*m-1);
+   std::vector<int> dist_exp_tab_vec(2*m);
+
+   double *dist_tab = &dist_tab_vec[m-1];
+   int *dist_exp_tab = &dist_exp_tab_vec[m-1];
+
+   const double sqrt2_inv = 1.0/std::sqrt(ldbl(2)); 
+   constexpr long FREXP_ITER = 1600;
+
+   for (long i: range(1, m)) {
+      dist_tab[i] = std::frexp(double(2*std::sin(pi*(ldbl(i)/ldbl(m)))),
+	       &dist_exp_tab[i]);
+
+      if (dist_tab[i] < sqrt2_inv) {
+         dist_tab[i] *= 2.0;
+         dist_exp_tab[i]--;
+      } 
+
+      dist_tab[-i] = dist_tab[i];
+      dist_exp_tab[-i] = dist_exp_tab[i];
+   }
+
+   dist_tab[0] = 1;
+   dist_exp_tab[0] = 0;
+
+
+   std::vector<double> global_norm_col(n);
+   for (long i: range(n)) global_norm_col[i] = 0;
+   std::mutex global_norm_col_mutex;
+
+   NTL_EXEC_RANGE(n, first, last)
+
+   std::vector<double> norm_col(n);
+   for (long i: range(n)) norm_col[i] = 0;
+
+   long j = first;
+
+   for (; j <= last-2; j += 2) {
+      // process columns j and j+1 of inverse matrix
+      // NOTE: processing colums two at a time gives an almost 2x speedup
+
+      long res_j = res_tab[j];
+      long res_j_1 = res_tab[j+1];
+
+      double prod = 1;
+      double prod_1 = 1;
+      long e_total = 0;
+      long e_total_1 = 0;
+      int e;
+      int e_1;
+
+      {
+	 long i = 0;
+	 while (i <= n-FREXP_ITER) {
+	    for (long k = 0; k < FREXP_ITER; k++) {
+	       long res_i = res_tab[i+k];
+	       prod *= dist_tab[res_i-res_j];
+	       prod_1 *= dist_tab[res_i-res_j_1];
+	       e_total += dist_exp_tab[res_i-res_j];
+	       e_total_1 += dist_exp_tab[res_i-res_j_1];
+	    }
+	    prod = std::frexp(prod, &e);
+	    prod_1 = std::frexp(prod_1, &e_1);
+	    e_total += e;
+	    e_total_1 += e_1;
+
+	    i += FREXP_ITER;
+	 }
+	 while (i < n) {
+	    long res_i = res_tab[i];
+	    prod *= dist_tab[res_i-res_j];
+	    prod_1 *= dist_tab[res_i-res_j_1];
+	    e_total += dist_exp_tab[res_i-res_j];
+	    e_total_1 += dist_exp_tab[res_i-res_j_1];
+	    i++;
+	 }
+      }
+
+      prod = std::ldexp(prod, e_total);
+      prod_1 = std::ldexp(prod_1, e_total_1);
+
+      double inv_prod = 1.0/prod;
+      double inv_prod_1 = 1.0/prod_1;
+
+      cmplx_t xj = x[j];
+      cmplx_t xj_1 = x[j+1];
+      cmplx_t q = 1;
+      cmplx_t q_1 = 1;
+
+      norm_col[0] += (inv_prod + inv_prod_1);
+
+
+      for (long i: range(1, n)) {
+	 q = MUL(q,xj) + a[n-i];
+	 q_1 = MUL(q_1,xj_1) + a[n-i];
+	 norm_col[i] += (ABS(q)*inv_prod + ABS(q_1)*inv_prod_1);
+      }
+   }
+
+   if (j == last-1) {
+      // process column j of inverse matrix
+
+      long res_j = res_tab[j];
+
+      double prod = 1;
+      long e_total = 0;
+      int e;
+
+      {
+	 long i = 0;
+	 while (i <= n-FREXP_ITER) {
+	    for (long k = 0; k < FREXP_ITER; k++) {
+	       long res_i = res_tab[i+k];
+	       prod *= dist_tab[res_i-res_j];
+	       e_total += dist_exp_tab[res_i-res_j];
+	    }
+	    prod = std::frexp(prod, &e);
+	    e_total += e;
+	    i += FREXP_ITER;
+	 }
+	 while (i < n) {
+	    long res_i = res_tab[i];
+	    prod *= dist_tab[res_i-res_j];
+	    e_total += dist_exp_tab[res_i-res_j];
+	    i++;
+	 }
+      }
+
+      prod = std::ldexp(prod, e_total);
+   
+      double inv_prod = 1.0/prod;
+
+      cmplx_t xj = x[j];
+      cmplx_t q = 1;
+      norm_col[0] += inv_prod;
+      for (long i: range(1, n)) {
+	 q = MUL(q,xj) + a[n-i];
+	 norm_col[i] += ABS(q)*inv_prod;
+      }
+   }
+
+   std::lock_guard<std::mutex> guard(global_norm_col_mutex);
+
+   for (long i: range(n)) global_norm_col[i] += norm_col[i];
+
+   NTL_EXEC_INDEX_END
+
+   
+   double max_norm = 0;
+   for (long i: range(n)) {
+      if (max_norm < global_norm_col[i]) max_norm = global_norm_col[i];
+   }
+
+   return max_norm;
+}
+
+
 PAlgebra::PAlgebra(long mm, long pp,
-                   const vector<long>& _gens, const vector<long>& _ords )
+                   const std::vector<long>& _gens, const std::vector<long>& _ords )
 {
   //OLD: assert( mm < NTL_SP_BOUND && mm > 1 );
   helib::assertInRange<helib::InvalidArgument>(mm, 2l, NTL_SP_BOUND, "mm is not in [2, NTL_SP_BOUND)");
@@ -137,12 +418,12 @@ PAlgebra::PAlgebra(long mm, long pp,
     pp = m-1;
   else {
     //OLD: assert( ProbPrime(pp) );
-    helib::assertTrue<helib::InvalidArgument>((bool)ProbPrime(pp), "Modulus pp is not prime (nor -1)");
+    helib::assertTrue<helib::InvalidArgument>((bool)NTL::ProbPrime(pp), "Modulus pp is not prime (nor -1)");
     //OLD: assert( (mm % pp) != 0 );
     helib::assertNeq<helib::InvalidArgument>(mm % pp, 0l, "Modulus pp divides mm");
   }
 
-  long k = NextPowerOfTwo(mm);
+  long k = NTL::NextPowerOfTwo(mm);
   if (static_cast<unsigned long>(mm) == (1UL << k)) // m is a power of two
     pow2 = k;
   else // is not power of two, set to zero (even if m is even!)
@@ -166,16 +447,32 @@ PAlgebra::PAlgebra(long mm, long pp,
 
   // Record for each generator gi whether it has the same order in
   // ZM* as in Zm* /(p,g1,...,g_{i-1})
+
   resize(native, lsize(tmpOrds));
-  for (long j=0; j<lsize(tmpOrds); j++) {
-    native[j] = (tmpOrds[j]>0);
+  resize(frob_perturb, lsize(tmpOrds));
+  std::vector<long> p_subgp(mm);
+  for (long i: range(mm)) p_subgp[i] = -1;
+  long pmodm = pp % mm;
+  p_subgp[1] = 0;
+  for (long i = 1, p2i = pmodm; p2i != 1; 
+       i++, p2i = NTL::MulMod(p2i, pmodm, m)) p_subgp[p2i] = i;
+  for (long j: range(tmpOrds.size())) {
     tmpOrds[j] = abs(tmpOrds[j]);
+    // for backward compatibility, a user supplied
+    // ords value could be negative, but we ignore that here.
+    // For testing and debugging, we may want to not ignore this...
+
+    long i = NTL::PowerMod(this->gens[j], tmpOrds[j], m);
+
+    native[j] = (i == 1);
+    frob_perturb[j] = p_subgp[i];
   }
+
   cube.initSignature(tmpOrds); // set hypercume with these dimensions
 
   phiM = ordP * getNSlots();
 
-  Vec<Pair<long,long>> factors;
+  NTL::Vec<NTL::Pair<long,long>> factors;
   factorize(factors, mm);
   nfactors = factors.length(); 
 
@@ -190,6 +487,8 @@ PAlgebra::PAlgebra(long mm, long pp,
     normBnd *= 2*cotan(pi/(2*u))/u;
   }
 
+  polyNormBnd = calcPolyNormBnd(mm);
+
   // Allocate space for the various arrays
   resize(T,getNSlots());
   Tidx.assign(mm,-1);    // allocate m slots, initialize them to -1
@@ -197,7 +496,7 @@ PAlgebra::PAlgebra(long mm, long pp,
   resize(zmsRep,phiM);
   long i, idx;
   for (i=idx=0; i<mm; i++) {
-    if (GCD(i,mm)==1) {
+    if (NTL::GCD(i,mm)==1) {
       zmsIdx[i] = idx++;
       zmsRep[zmsIdx[i]] = i;
     }
@@ -214,7 +513,7 @@ PAlgebra::PAlgebra(long mm, long pp,
   // The comment about reverse order is correct, SH.
 
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
-  vector<long> buffer(gens.size()); // temporaty holds exponents
+  std::vector<long> buffer(gens.size()); // temporaty holds exponents
   i = idx = 0;
   long ctr = 0;
   do {
@@ -222,7 +521,7 @@ PAlgebra::PAlgebra(long mm, long pp,
     long t = exponentiate(buffer);
 
     //OLD: assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
-    helib::assertEq(GCD(t, mm), 1l, "Bad user-supplied generator");
+    helib::assertEq(NTL::GCD(t, mm), 1l, "Bad user-supplied generator");
     //OLD: assert(Tidx[t] == -1);
     helib::assertEq(Tidx[t], -1l, "Slot at index t has already been assigned");
 
@@ -238,12 +537,20 @@ PAlgebra::PAlgebra(long mm, long pp,
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
   //  pp_factorize(mFactors,mm); // prime-power factorization from NumbTh.cpp
 
-  fftInfo = std::make_shared<PGFFT>(mm); 
+  if (mm%2 == 0) 
+    half_fftInfo = std::make_shared<half_FFT>(mm);
+  else
+    fftInfo = std::make_shared<PGFFT>(mm); 
+
+  //fftInfo = std::make_shared<PGFFT>(mm); // Need this for some debugging/timing
+
+  if (mm%4 == 0)
+    quarter_fftInfo = std::make_shared<quarter_FFT>(mm);
 }
 
 bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
-                     const vector<long>& gens, const vector<long>& ords)
+                     const std::vector<long>& gens, const std::vector<long>& ords)
 {
   if (static_cast<unsigned long>(palg.getM()) != m ||
       static_cast<unsigned long>(palg.getP()) != p ||
@@ -263,7 +570,7 @@ bool comparePAlgebra(const PAlgebra& palg,
 
 long PAlgebra::frobenuisPow(long j) const
 {
-  return PowerMod(mcMod(p, m), j, m);
+  return NTL::PowerMod(mcMod(p, m), j, m);
   // Don't forget to reduce p mod m!!
 }
 
@@ -283,7 +590,7 @@ long PAlgebra::genToPow(long i, long j) const
   if (i == -1)
     res = frobenuisPow(j);
   else
-    res = PowerMod(gens[i], j, m);
+    res = NTL::PowerMod(gens[i], j, m);
 
   return res;
 }
@@ -312,20 +619,20 @@ PAlgebraModBase *buildPAlgebraMod(const PAlgebra& zMStar, long r)
 
 
 template<class T> 
-void PAlgebraLift(const ZZX& phimx, const T& lfactors, T& factors, T& crtc, long r);
+void PAlgebraLift(const NTL::ZZX& phimx, const T& lfactors, T& factors, T& crtc, long r);
 
 
 
 // Missing NTL functionality
 
-void EDF(vec_zz_pX& v, const zz_pX& f, long d)
+void EDF(NTL::vec_zz_pX& v, const NTL::zz_pX& f, long d)
 {
-   EDF(v, f, PowerXMod(zz_p::modulus(), f), d);
+   EDF(v, f, PowerXMod(NTL::zz_p::modulus(), f), d);
 }
 
-zz_pEX FrobeniusMap(const zz_pEXModulus& F)
+NTL::zz_pEX FrobeniusMap(const NTL::zz_pEXModulus& F)
 {
-  return PowerXMod(zz_pE::cardinality(), F);
+  return PowerXMod(NTL::zz_pE::cardinality(), F);
 }
 
 
@@ -343,7 +650,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   //OLD: assert(r > 0);
   helib::assertTrue<helib::InvalidArgument>(r > 0l, "Hensel lifting r is less than 1");
 
-  ZZ BigPPowR = power_ZZ(p, r);
+  NTL::ZZ BigPPowR = NTL::power_ZZ(p, r);
   //OLD: assert(BigPPowR.SinglePrecision());
   helib::assertTrue((bool)BigPPowR.SinglePrecision(), "BigPPowR is not SinglePrecision");
   pPowR = to_long(BigPPowR);
@@ -365,7 +672,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
   RX* first = &localFactors[0];
   RX* last = first + lsize(localFactors);
-  RX* smallest = min_element(first, last);
+  RX* smallest = std::min_element(first, last, static_cast<bool(*)(const RX&, const RX&)>(less_than));
   swap(*first, *smallest);
 
   // We make the lexicographically smallest factor have index 0.
@@ -374,7 +681,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
   RXModulus F1(localFactors[0]); 
   for (long i=1; i<nSlots; i++) {
     long t =zMStar.ith_rep(i); // Ft is minimal poly of x^{1/t} mod F1
-    long tInv = InvMod(t, m);  // tInv = t^{-1} mod m
+    long tInv = NTL::InvMod(t, m);  // tInv = t^{-1} mod m
     RX X2tInv = PowerXMod(tInv,F1);     // X2tInv = X^{1/t} mod F1
     NTL::IrredPolyMod(localFactors[i], X2tInv, F1);
           // IrredPolyMod(X,P,Q) returns in X the minimal polynomial of P mod Q
@@ -422,18 +729,18 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r)
 
 // Assumes current zz_p modulus is p^r
 // computes S = F^{-1} mod G via Hensel lifting
-void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
+void InvModpr(NTL::zz_pX& S, const NTL::zz_pX& F, const NTL::zz_pX& G, long p, long r)
 {
-  ZZX ff, gg, ss, tt;
+  NTL::ZZX ff, gg, ss, tt;
 
   ff = to_ZZX(F); 
   gg = to_ZZX(G);
 
-  zz_pBak bak;
+  NTL::zz_pBak bak;
   bak.save();
-  zz_p::init(p);
+  NTL::zz_p::init(p);
 
-  zz_pX f, g, s, t;
+  NTL::zz_pX f, g, s, t;
   f = to_zz_pX(ff);
   g = to_zz_pX(gg);
   s = InvMod(f, g);
@@ -443,7 +750,7 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
   ss = to_ZZX(s);
   tt = to_ZZX(t);
 
-  ZZ pk = to_ZZ(1);
+  NTL::ZZ pk = NTL::to_ZZ(1);
 
   for (long k = 1; k < r; k++) {
     // lift from p^k to p^{k+1}
@@ -452,8 +759,8 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
     //OLD: assert(divide(ss*ff + tt*gg - 1, pk));
     helib::assertTrue((bool)divide(ss*ff + tt*gg - 1, pk), "Arithmetic error during Hensel lifting");
 
-    zz_pX d = to_zz_pX( (1 - (ss*ff + tt*gg))/pk );
-    zz_pX s1, t1;
+    NTL::zz_pX d = to_zz_pX( (1 - (ss*ff + tt*gg))/pk );
+    NTL::zz_pX s1, t1;
     s1 = (s * d) % g;
     t1 = (d-s1*f)/g;
     ss = ss + pk*to_ZZX(s1);
@@ -469,7 +776,7 @@ void InvModpr(zz_pX& S, const zz_pX& F, const zz_pX& G, long p, long r)
 }
 
 template<class T> 
-void PAlgebraLift(const ZZX& phimx, const T& lfactors, T& factors, T& crtc, long r)
+void PAlgebraLift(const NTL::ZZX& phimx, const T& lfactors, T& factors, T& crtc, long r)
 {
   throw helib::LogicError("uninstatiated version of PAlgebraLift");
 }
@@ -480,12 +787,12 @@ void PAlgebraLift(const ZZX& phimx, const T& lfactors, T& factors, T& crtc, long
 // when called, and leaves it set to p^r
 
 template<> 
-void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factors, vec_zz_pX& crtc, long r)
+void PAlgebraLift(const NTL::ZZX& phimx, const NTL::vec_zz_pX& lfactors, NTL::vec_zz_pX& factors, NTL::vec_zz_pX& crtc, long r)
 {
-  long p = zz_p::modulus(); 
+  long p = NTL::zz_p::modulus();
   long nSlots = lsize(lfactors);
 
-  vec_ZZX vzz;             // need to go via ZZX
+  NTL::vec_ZZX vzz;             // need to go via ZZX
 
   // lift the factors of Phi_m(X) from mod-2 to mod-2^r
   if (lsize(lfactors) > 1)
@@ -496,9 +803,9 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
   }
 
   // Compute the zz_pContext object for mod p^r arithmetic
-  zz_p::init(power_long(p, r));
+  NTL::zz_p::init(NTL::power_long(p, r));
 
-  zz_pX phimxmod = to_zz_pX(phimx);
+  NTL::zz_pX phimxmod = to_zz_pX(phimx);
   resize(factors,nSlots);
   for (long i=0; i<nSlots; i++)             // Convert from ZZX to zz_pX
     conv(factors[i], vzz[i]);
@@ -506,8 +813,8 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
   // Finally compute the CRT coefficients for the factors
   resize(crtc, nSlots);
   for (long i=0; i<nSlots; i++) {
-    zz_pX& fct = factors[i];
-    zz_pX te = phimxmod / fct; // \prod_{j\ne i} Fj
+    NTL::zz_pX& fct = factors[i];
+    NTL::zz_pX te = phimxmod / fct; // \prod_{j\ne i} Fj
     te %= fct;                // \prod_{j\ne i} Fj mod Fi
     InvModpr(crtc[i], te, fct, p, r);// \prod_{j\ne i} Fj^{-1} mod Fi
   }
@@ -516,7 +823,7 @@ void PAlgebraLift(const ZZX& phimx, const vec_zz_pX& lfactors, vec_zz_pX& factor
 
 // Returns a vector crt[] such that crt[i] = p mod Ft (with t = T[i])
 template<class type> 
-void PAlgebraModDerived<type>::CRT_decompose(vector<RX>& crt, const RX& H) const
+void PAlgebraModDerived<type>::CRT_decompose(std::vector<RX>& crt, const RX& H) const
 {
   long nSlots = zMStar.getNSlots();
 
@@ -540,7 +847,7 @@ void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha,
   FHE_TIMER_START;
   long nSlots = zMStar.getNSlots();
 
-  vector<RX> crt(nSlots); // alloate space for CRT components
+  std::vector<RX> crt(nSlots); // alloate space for CRT components
 
   // The i'th CRT component is (H mod F_t) = alpha(maps[i]) mod F_t,
   // where with t=T[i].
@@ -568,7 +875,7 @@ void PAlgebraModDerived<type>::embedInAllSlots(RX& H, const RX& alpha,
 }
 
 template<class type>
-void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas, 
+void PAlgebraModDerived<type>::embedInSlots(RX& H, const std::vector<RX>& alphas,
                                          const MappingData<type>& mappingData) const
 {
   if (isDryRun()) {
@@ -585,7 +892,7 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
   //OLD: for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d);
   for (long i = 0; i < nSlots; i++) helib::assertTrue(deg(alphas[i]) < d, "Bad alpha element at index i: its degree is greater or equal than mappingData.degG");
  
-  vector<RX> crt(nSlots); // alloate space for CRT components
+  std::vector<RX> crt(nSlots); // alloate space for CRT components
 
   // The i'th CRT component is (H mod F_t) = alphas[i](maps[i]) mod F_t,
   // where with t=T[i].
@@ -631,7 +938,7 @@ void PAlgebraModDerived<type>::embedInSlots(RX& H, const vector<RX>& alphas,
 }
 
 template<class type>
-void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
+void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, std::vector<RX>& crt) const
 {
   if (isDryRun()) {
     H = RX::zero();
@@ -641,7 +948,7 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
   long nslots = zMStar.getNSlots();
 
 
-  const vector<RX>& ctab = crtTable;
+  const std::vector<RX>& ctab = crtTable;
 
   clear(H);
   RX tmp1, tmp2;
@@ -659,7 +966,7 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H, vector<RX>& crt) const
         H += ctab[i];
   }
   else {
-    vector<RX> crt1;
+    std::vector<RX> crt1;
     resize(crt1,nslots);
     for (long i = 0; i < nslots; i++)
        MulMod(crt1[i], crt[i], crtCoeffs[i], factors[i]);
@@ -707,7 +1014,7 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
     FindRoots(roots, Ga);        // Find roots of G in this field
     RE* first = &roots[0];
     RE* last = first + lsize(roots);
-    RE* smallest = min_element(first, last);
+    RE* smallest = std::min_element(first, last, static_cast<bool(*)(const RE&, const RE&)>(less_than));
                                 // make a canonical choice
     w=rep(*smallest);         
     return;
@@ -781,7 +1088,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 
     for (long i = 0; i < nSlots; i++) {
         long t = zMStar.ith_rep(i);
-        long tInv = InvMod(t, m);
+        long tInv = NTL::InvMod(t, m);
 
         RX ct_rep;
         PowerXMod(ct_rep, tInv, G);
@@ -816,7 +1123,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
       }
       else {
         t = zMStar.ith_rep(i);
-        tInv = InvMod(t, m);
+        tInv = NTL::InvMod(t, m);
       }
 
       // need to choose the right factor, the one that gives us back X
@@ -855,7 +1162,7 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData, const 
 
 template<class type> 
 void PAlgebraModDerived<type>::decodePlaintext(
-   vector<RX>& alphas, const RX& ptxt, const MappingData<type>& mappingData) const
+   std::vector<RX>& alphas, const RX& ptxt, const MappingData<type>& mappingData) const
 {
   long nSlots = zMStar.getNSlots();
   if (isDryRun()) {
@@ -864,7 +1171,7 @@ void PAlgebraModDerived<type>::decodePlaintext(
   }
 
   // First decompose p into CRT components
-  vector<RX> CRTcomps(nSlots); // allocate space for CRT component
+  std::vector<RX> CRTcomps(nSlots); // allocate space for CRT component
   CRT_decompose(CRTcomps, ptxt);  // CRTcomps[i] = p mod facors[i]
 
   if (mappingData.degG==1) {
@@ -888,7 +1195,7 @@ void PAlgebraModDerived<type>::decodePlaintext(
 
 template<class type> 
 void PAlgebraModDerived<type>::
-buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
+buildLinPolyCoeffs(std::vector<RX>& C, const std::vector<RX>& L,
                    const MappingData<type>& mappingData) const
 {
   REBak bak; bak.save(); mappingData.contextForG.restore();
@@ -906,7 +1213,7 @@ buildLinPolyCoeffs(vector<RX>& C, const vector<RX>& L,
     conv(LL[i], L[i]);
 
   vec_RE CC;
-  ::buildLinPolyCoeffs(CC, LL, p, r);
+  ::helib::buildLinPolyCoeffs(CC, LL, p, r);
 
   resize(C,d);
   for (long i = 0; i < d; i++)
@@ -962,14 +1269,14 @@ void PAlgebraModDerived<type>::genCrtTable()
 
 template<class type> 
 void PAlgebraModDerived<type>::
-  buildTree(shared_ptr< TNode<RX> >& res, long offset, long extent) const
+  buildTree(std::shared_ptr< TNode<RX> >& res, long offset, long extent) const
 {
   if (extent == 1)
     res = buildTNode<RX>(nullTNode<RX>(), nullTNode<RX>(), 
                             factors[offset]);
   else {
     long half = extent/2;
-    shared_ptr< TNode<RX> > left, right;
+    std::shared_ptr< TNode<RX> > left, right;
     buildTree(left, offset, half);
     buildTree(right, offset+half, extent-half);
     RX data = left->data * right->data;
@@ -979,8 +1286,8 @@ void PAlgebraModDerived<type>::
 
 template<class type> 
 void PAlgebraModDerived<type>::evalTree(RX& res,
-              shared_ptr< TNode<RX> > tree,
-              const vector<RX>& crt1,
+              std::shared_ptr< TNode<RX> > tree,
+              const std::vector<RX>& crt1,
               long offset, long extent) const
 {
   if (extent == 1) 
@@ -1002,3 +1309,5 @@ void PAlgebraModDerived<type>::evalTree(RX& res,
 
 template class PAlgebraModDerived<PA_GF2>;
 template class PAlgebraModDerived<PA_zz_p>;
+
+}

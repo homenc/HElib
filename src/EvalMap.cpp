@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -15,27 +15,27 @@
 #include <NTL/lzz_pXFactoring.h>
 #include <NTL/GF2XFactoring.h>
 
-NTL_CLIENT
+namespace helib {
 
-// Forward declerations
+// Forward declarations
 static BlockMatMul1D*
-buildStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps, long dim, long cofactor, bool invert,
+buildStep1Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
+                 const NTL::Vec<long>& reps, long dim, long cofactor, bool invert,
                  bool normal_basis);
 static MatMul1D*
-buildStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps, long dim, long cofactor,
+buildStep2Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
+                 const NTL::Vec<long>& reps, long dim, long cofactor,
                  bool invert);
 static void
-init_representatives(Vec<long>& representatives, long dim, 
-                     const Vec<long>& mvec, const PAlgebra& zMStar);
+init_representatives(NTL::Vec<long>& representatives, long dim, 
+                     const NTL::Vec<long>& mvec, const PAlgebra& zMStar);
 
 
 // Constructor: initializing tables for the evaluation-map transformations
 
 EvalMap::EvalMap(const EncryptedArray& _ea, 
                  bool minimal,
-                 const Vec<long>& mvec, 
+                 const NTL::Vec<long>& mvec, 
                  bool _invert,
                  bool build_cache,
                  bool normal_basis)
@@ -61,8 +61,8 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
 
   for (long i = 0; i < nfactors; i++) {
     for (long j = i+1; j < nfactors; j++) {
-      //OLD: assert(GCD(mvec[i], mvec[j]) == 1);
-      helib::assertEq(GCD(mvec[i], mvec[j]), 1l, "Invalid argument: mvec elements must be pairwise co-prime");
+      //OLD: assert(NTL::GCD(mvec[i], mvec[j]) == 1);
+      helib::assertEq(NTL::GCD(mvec[i], mvec[j]), 1l, "Invalid argument: mvec elements must be pairwise co-prime");
     }
   }
 
@@ -70,18 +70,18 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
   //OLD: assert(m == long(zMStar.getM()));
   helib::assertEq(m, (long)zMStar.getM(), "Invalid argument: Product of mvec elements does not match ea.zMStar.getM()");
 
-  Vec<long> phivec(INIT_SIZE, nfactors);
+  NTL::Vec<long> phivec(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)  phivec[i] = phi_N(mvec[i]);
   long phim = computeProd(phivec);
 
-  Vec<long> dprodvec(INIT_SIZE, nfactors+1);
+  NTL::Vec<long> dprodvec(NTL::INIT_SIZE, nfactors+1);
   dprodvec[nfactors] = 1;
   
   for (long i = nfactors-1; i >= 0; i--)
     dprodvec[i] = dprodvec[i+1] *
-      multOrd(PowerMod(p % mvec[i], dprodvec[i+1], mvec[i]), mvec[i]);
+      multOrd(NTL::PowerMod(p % mvec[i], dprodvec[i+1], mvec[i]), mvec[i]);
 
-  Vec<long> dvec(INIT_SIZE, nfactors);
+  NTL::Vec<long> dvec(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
     dvec[i] = dprodvec[i] / dprodvec[i+1];
 
@@ -99,41 +99,41 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
   if (inertPrefix != nfactors-1)
     throw helib::LogicError("EvalMap: case not handled: bad inertPrefix");
 
-  Vec< Vec<long> > local_reps(INIT_SIZE, nfactors);
+  NTL::Vec< NTL::Vec<long> > local_reps(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
     init_representatives(local_reps[i], i, mvec, zMStar);
 
-  Vec<long> crtvec(INIT_SIZE, nfactors);
+  NTL::Vec<long> crtvec(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++) 
-    crtvec[i] = (m/mvec[i]) * InvMod((m/mvec[i]) % mvec[i], mvec[i]);
+    crtvec[i] = (m/mvec[i]) * NTL::InvMod((m/mvec[i]) % mvec[i], mvec[i]);
 
-  Vec<long> redphivec(INIT_SIZE, nfactors);
+  NTL::Vec<long> redphivec(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
     redphivec[i] = phivec[i]/dvec[i];
 
   CubeSignature redphisig(redphivec);
 
-  Vec< shared_ptr<CubeSignature> > sig_sequence;
+  NTL::Vec< std::shared_ptr<CubeSignature> > sig_sequence;
   sig_sequence.SetLength(nfactors+1);
-  sig_sequence[nfactors] = shared_ptr<CubeSignature>(new CubeSignature(phivec));
+  sig_sequence[nfactors] = std::shared_ptr<CubeSignature>(new CubeSignature(phivec));
 
-  Vec<long> reduced_phivec = phivec;
+  NTL::Vec<long> reduced_phivec = phivec;
 
   for (long dim = nfactors-1; dim >= 0; dim--) {
     reduced_phivec[dim] /= dvec[dim];
     sig_sequence[dim] = 
-      shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
+      std::shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
   }
 
   long dim = nfactors - 1;
-  unique_ptr<BlockMatMul1D> mat1_data;
+  std::unique_ptr<BlockMatMul1D> mat1_data;
   mat1_data.reset(buildStep1Matrix(ea, sig_sequence[dim],
        	          local_reps[dim], dim, m/mvec[dim], invert, normal_basis));
   mat1.reset(new BlockMatMul1DExec(*mat1_data, minimal));
 
   matvec.SetLength(nfactors-1);
   for (dim=nfactors-2; dim>=0; --dim) {
-    unique_ptr<MatMul1D> mat_data;
+    std::unique_ptr<MatMul1D> mat_data;
 
     mat_data.reset(buildStep2Matrix(ea, sig_sequence[dim], local_reps[dim],
 				       dim, m/mvec[dim], invert));
@@ -169,8 +169,8 @@ void EvalMap::apply(Ctxt& ctxt) const
 
 
 static void
-init_representatives(Vec<long>& representatives, long dim, 
-                     const Vec<long>& mvec, const PAlgebra& zMStar)
+init_representatives(NTL::Vec<long>& representatives, long dim, 
+                     const NTL::Vec<long>& mvec, const PAlgebra& zMStar)
 {
   //OLD: assert(dim >= 0 && dim < mvec.length());
   helib::assertInRange(dim, 0l, mvec.length(), "Invalid argument: dim must be between 0 and mvec.length()");
@@ -184,11 +184,11 @@ init_representatives(Vec<long>& representatives, long dim,
   
   long m = mvec[dim];
   long D = zMStar.OrderOf(dim);
-  long g = InvMod(zMStar.ZmStarGen(dim) % m, m);
+  long g = NTL::InvMod(zMStar.ZmStarGen(dim) % m, m);
 
   representatives.SetLength(D);
   for (long i = 0; i < D; i++)
-    representatives[i] = PowerMod(g, i, m);
+    representatives[i] = NTL::PowerMod(g, i, m);
 }
 
 // The callback interface for the matrix-multiplication routines.
@@ -199,14 +199,14 @@ template<class type> class Step2Matrix : public MatMul1D_derived<type>
   PA_INJECT(type)
 
   const EncryptedArray& base_ea;
-  shared_ptr<CubeSignature> sig;
+  std::shared_ptr<CubeSignature> sig;
   long dim;
-  Mat<RX> A;
+  NTL::Mat<RX> A;
 
 public:
   // constructor
   Step2Matrix(const EncryptedArray& _ea,
-              shared_ptr<CubeSignature> _sig, const Vec<long>& reps,
+              std::shared_ptr<CubeSignature> _sig, const NTL::Vec<long>& reps,
               long _dim, long cofactor, bool invert=false)
     : base_ea(_ea), sig(_sig), dim(_dim)
   {
@@ -218,7 +218,7 @@ public:
     RBak bak; bak.save(); _ea.getAlMod().restoreContext();
     const RX& G = ea.getG();
 
-    Vec<RX> points(INIT_SIZE, sz);
+    NTL::Vec<RX> points(NTL::INIT_SIZE, sz);
     for (long j = 0; j < sz; j++) 
       points[j] = RX(reps[j]*cofactor, 1) % G;
 
@@ -255,8 +255,8 @@ public:
 };
 
 static MatMul1D*
-buildStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps, long dim, long cofactor,
+buildStep2Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
+                 const NTL::Vec<long>& reps, long dim, long cofactor,
                  bool invert)
 {
   switch (ea.getTag()) {
@@ -275,14 +275,14 @@ template<class type> class Step1Matrix : public BlockMatMul1D_derived<type>
   PA_INJECT(type)
 
   const EncryptedArray& base_ea;
-  shared_ptr<CubeSignature> sig;
+  std::shared_ptr<CubeSignature> sig;
   long dim;
-  Mat< mat_R > A;
+  NTL::Mat< mat_R > A;
 
 public:
   // constructor
-  Step1Matrix(const EncryptedArray& _ea, shared_ptr<CubeSignature> _sig,
-              const Vec<long>& reps, long _dim, long cofactor, bool invert,
+  Step1Matrix(const EncryptedArray& _ea, std::shared_ptr<CubeSignature> _sig,
+              const NTL::Vec<long>& reps, long _dim, long cofactor, bool invert,
               bool normal_basis)
     : base_ea(_ea), sig(_sig), dim(_dim)
   {
@@ -301,11 +301,11 @@ public:
 
     // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
 
-    Vec<RX> points(INIT_SIZE, sz);
+    NTL::Vec<RX> points(NTL::INIT_SIZE, sz);
     for (long j = 0; j < sz; j++) 
       points[j] = RX(reps[j]*cofactor, 1) % G;
 
-    Mat<RX> AA(INIT_SIZE, sz*d, sz);
+    NTL::Mat<RX> AA(NTL::INIT_SIZE, sz*d, sz);
     for (long j = 0; j < sz; j++)
       AA[0][j] = 1;
 
@@ -338,7 +338,7 @@ public:
 	  A[i/d][j/d][i%d][j%d] = A2[i][j];
     
       if (normal_basis) {
-	const Mat<R>& CB = ea.getNormalBasisMatrix();
+	const NTL::Mat<R>& CB = ea.getNormalBasisMatrix();
 
 	// multiply each entry of A on the right by CB
 	for (long i = 0; i < sz; i++)
@@ -359,8 +359,8 @@ public:
 };
 
 static BlockMatMul1D*
-buildStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps, long dim, long cofactor, bool invert,
+buildStep1Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
+                 const NTL::Vec<long>& reps, long dim, long cofactor, bool invert,
                  bool normal_basis)
 {
   switch (ea.getTag()) {
@@ -381,25 +381,25 @@ buildStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
 // needed to make generic programming work
 
 void
-RelaxedInv(Mat<zz_p>& x, const Mat<zz_p>& a)
+RelaxedInv(NTL::Mat<NTL::zz_p>& x, const NTL::Mat<NTL::zz_p>& a)
 {
    relaxed_inv(x, a);
 }
 
 void
-RelaxedInv(Mat<GF2>& x, const Mat<GF2>& a)
+RelaxedInv(NTL::Mat<NTL::GF2>& x, const NTL::Mat<NTL::GF2>& a)
 {
    inv(x, a);
 }
 
 
-void TraceMap(GF2X& w, const GF2X& a, long d, const GF2XModulus& F, 
-              const GF2X& b)
+void TraceMap(NTL::GF2X& w, const NTL::GF2X& a, long d, const NTL::GF2XModulus& F, 
+              const NTL::GF2X& b)
 
 {
   if (d < 0) throw helib::InvalidArgument("TraceMap: d is negative");
 
-   GF2X y, z, t;
+  NTL::GF2X y, z, t;
 
    z = b;
    y = a;
@@ -437,22 +437,22 @@ void TraceMap(GF2X& w, const GF2X& a, long d, const GF2XModulus& F,
 
 // Forward declerations
 static MatMul1D*
-buildThinStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps, long dim, long cofactor);
+buildThinStep1Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
+                 const NTL::Vec<long>& reps, long dim, long cofactor);
 static MatMul1D*
-buildThinStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps, long dim, long cofactor,
+buildThinStep2Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
+                 const NTL::Vec<long>& reps, long dim, long cofactor,
                  bool invert, bool inflate=false);
 static void
-init_representatives(Vec<long>& representatives, long dim, 
-                     const Vec<long>& mvec, const PAlgebra& zMStar);
+init_representatives(NTL::Vec<long>& representatives, long dim, 
+                     const NTL::Vec<long>& mvec, const PAlgebra& zMStar);
 
 
 // Constructor: initializing tables for the evaluation-map transformations
 
 ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea, 
                  bool minimal,
-                 const Vec<long>& mvec, 
+                 const NTL::Vec<long>& mvec, 
                  bool _invert,
                  bool build_cache)
 
@@ -478,7 +478,7 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
 
   for (long i = 0; i < nfactors; i++) {
     for (long j = i+1; j < nfactors; j++) {
-      helib::assertEq(GCD(mvec[i], mvec[j]), 1l, "Invalid argument: mvec must have pairwise-disjoint entries");
+      helib::assertEq(NTL::GCD(mvec[i], mvec[j]), 1l, "Invalid argument: mvec must have pairwise-disjoint entries");
     }
   }
 
@@ -486,18 +486,18 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
   //OLD: assert(m == long(zMStar.getM()));
   helib::assertEq(m, (long)zMStar.getM(), "Invalid argument: mvec's product does not match ea's m");
 
-  Vec<long> phivec(INIT_SIZE, nfactors);
+  NTL::Vec<long> phivec(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)  phivec[i] = phi_N(mvec[i]);
   long phim = computeProd(phivec);
 
-  Vec<long> dprodvec(INIT_SIZE, nfactors+1);
+  NTL::Vec<long> dprodvec(NTL::INIT_SIZE, nfactors+1);
   dprodvec[nfactors] = 1;
   
   for (long i = nfactors-1; i >= 0; i--)
     dprodvec[i] = dprodvec[i+1] *
-      multOrd(PowerMod(p % mvec[i], dprodvec[i+1], mvec[i]), mvec[i]);
+      multOrd(NTL::PowerMod(p % mvec[i], dprodvec[i+1], mvec[i]), mvec[i]);
 
-  Vec<long> dvec(INIT_SIZE, nfactors);
+  NTL::Vec<long> dvec(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
     dvec[i] = dprodvec[i] / dprodvec[i+1];
 
@@ -515,51 +515,51 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
   if (inertPrefix != nfactors-1)
     throw helib::LogicError("ThinEvalMap: case not handled: bad inertPrefix");
 
-  Vec< Vec<long> > local_reps(INIT_SIZE, nfactors);
+  NTL::Vec< NTL::Vec<long> > local_reps(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
     init_representatives(local_reps[i], i, mvec, zMStar);
 
-  Vec<long> crtvec(INIT_SIZE, nfactors);
+  NTL::Vec<long> crtvec(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++) 
-    crtvec[i] = (m/mvec[i]) * InvMod((m/mvec[i]) % mvec[i], mvec[i]);
+    crtvec[i] = (m/mvec[i]) * NTL::InvMod((m/mvec[i]) % mvec[i], mvec[i]);
 
-  Vec<long> redphivec(INIT_SIZE, nfactors);
+  NTL::Vec<long> redphivec(NTL::INIT_SIZE, nfactors);
   for (long i = 0; i < nfactors; i++)
     redphivec[i] = phivec[i]/dvec[i];
 
   CubeSignature redphisig(redphivec);
 
-  Vec< shared_ptr<CubeSignature> > sig_sequence;
+  NTL::Vec< std::shared_ptr<CubeSignature> > sig_sequence;
   sig_sequence.SetLength(nfactors+1);
-  sig_sequence[nfactors] = shared_ptr<CubeSignature>(new CubeSignature(phivec));
+  sig_sequence[nfactors] = std::shared_ptr<CubeSignature>(new CubeSignature(phivec));
 
-  Vec<long> reduced_phivec = phivec;
+  NTL::Vec<long> reduced_phivec = phivec;
 
   for (long dim = nfactors-1; dim >= 0; dim--) {
     reduced_phivec[dim] /= dvec[dim];
     sig_sequence[dim] = 
-      shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
+      std::shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
   }
 
   matvec.SetLength(nfactors);
 
   if (invert) {
      long dim = nfactors - 1;
-     unique_ptr<MatMul1D> mat1_data;
+     std::unique_ptr<MatMul1D> mat1_data;
      mat1_data.reset(buildThinStep1Matrix(ea, sig_sequence[dim],
 		     local_reps[dim], dim, m/mvec[dim]));
      matvec[dim].reset(new MatMul1DExec(*mat1_data, minimal));
   }
   else if (sz == nfactors) {
      long dim = nfactors - 1;
-     unique_ptr<MatMul1D> mat1_data;
+     std::unique_ptr<MatMul1D> mat1_data;
      mat1_data.reset(buildThinStep2Matrix(ea, sig_sequence[dim],
 		     local_reps[dim], dim, m/mvec[dim], invert, /*inflate=*/true));
      matvec[dim].reset(new MatMul1DExec(*mat1_data, minimal));
   }
 
   for (long dim=nfactors-2; dim>=0; --dim) {
-    unique_ptr<MatMul1D> mat_data;
+    std::unique_ptr<MatMul1D> mat_data;
 
     mat_data.reset(buildThinStep2Matrix(ea, sig_sequence[dim], local_reps[dim],
 				       dim, m/mvec[dim], invert));
@@ -598,14 +598,14 @@ template<class type> class ThinStep2Matrix : public MatMul1D_derived<type>
   PA_INJECT(type)
 
   const EncryptedArray& base_ea;
-  shared_ptr<CubeSignature> sig;
+  std::shared_ptr<CubeSignature> sig;
   long dim;
-  Mat<RX> A;
+  NTL::Mat<RX> A;
 
 public:
   // constructor
   ThinStep2Matrix(const EncryptedArray& _ea,
-              shared_ptr<CubeSignature> _sig, const Vec<long>& reps,
+              std::shared_ptr<CubeSignature> _sig, const NTL::Vec<long>& reps,
               long _dim, long cofactor, bool invert, bool inflate)
     : base_ea(_ea), sig(_sig), dim(_dim)
   {
@@ -618,10 +618,10 @@ public:
     const RX& G = ea.getG();
     long d = deg(G);
 
-    Vec<RX> points(INIT_SIZE, sz);
+    NTL::Vec<RX> points(NTL::INIT_SIZE, sz);
     for (long j = 0; j < sz; j++) {
       points[j] = RX(reps[j]*cofactor, 1) % G;
-      if (inflate) points[j] = PowerMod(points[j], d, G);
+      if (inflate) points[j] = NTL::PowerMod(points[j], d, G);
     }
 
     A.SetDims(sz, sz);
@@ -657,8 +657,8 @@ public:
 };
 
 static MatMul1D*
-buildThinStep2Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps, long dim, long cofactor,
+buildThinStep2Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
+                 const NTL::Vec<long>& reps, long dim, long cofactor,
                  bool invert, bool inflate)
 {
   switch (ea.getTag()) {
@@ -677,14 +677,14 @@ template<class type> class ThinStep1Matrix : public MatMul1D_derived<type>
   PA_INJECT(type)
 
   const EncryptedArray& base_ea;
-  shared_ptr<CubeSignature> sig;
+  std::shared_ptr<CubeSignature> sig;
   long dim;
-  Mat<RX> A_deflated;
+  NTL::Mat<RX> A_deflated;
 
 public:
   // constructor
-  ThinStep1Matrix(const EncryptedArray& _ea, shared_ptr<CubeSignature> _sig,
-              const Vec<long>& reps, long _dim, long cofactor)
+  ThinStep1Matrix(const EncryptedArray& _ea, std::shared_ptr<CubeSignature> _sig,
+              const NTL::Vec<long>& reps, long _dim, long cofactor)
     : base_ea(_ea), sig(_sig), dim(_dim)
   {
     const EncryptedArrayDerived<type>& ea = _ea.getDerived(type());
@@ -705,11 +705,11 @@ public:
 
     // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
 
-    Vec<RX> points(INIT_SIZE, sz);
+    NTL::Vec<RX> points(NTL::INIT_SIZE, sz);
     for (long j = 0; j < sz; j++) 
       points[j] = RX(reps[j]*cofactor, 1) % G;
 
-    Mat<RX> AA(INIT_SIZE, sz*d, sz);
+    NTL::Mat<RX> AA(NTL::INIT_SIZE, sz*d, sz);
     for (long j = 0; j < sz; j++)
       AA[0][j] = 1;
 
@@ -717,7 +717,7 @@ public:
       for (long j = 0; j < sz; j++)
 	AA[i][j] = (AA[i-1][j] * points[j]) % G;
 
-    Mat<mat_R> A;
+    NTL::Mat<mat_R> A;
     A.SetDims(sz, sz);
     for (long i = 0; i < sz; i++)
       for (long j = 0; j < sz; j++) {
@@ -749,7 +749,7 @@ public:
     RX h;  // set h = X^p mod G
     PowerXMod(h, p, G);
 
-    Vec<R> trace_vec;
+    NTL::Vec<R> trace_vec;
     trace_vec.SetLength(2*d-1);
     // set trace_vec[i] = trace(X^i mod G) 
     for (long i = 0; i < 2*d-1; i++) {
@@ -760,14 +760,14 @@ public:
       trace_vec[i] = ConstTerm(trace_val);
     }
 
-    Mat<R> trace_mat; 
+    NTL::Mat<R> trace_mat; 
     trace_mat.SetDims(d, d);
     // set trace_mat[i][j] = trace(X^{i+j} mod G)
     for (long i = 0; i < d; i++)
       for (long j = 0; j < d; j++)
          trace_mat[i][j] = trace_vec[i+j];
 
-    Mat<R> trace_mat_inv;
+    NTL::Mat<R> trace_mat_inv;
     RelaxedInv(trace_mat_inv, trace_mat);
 
     for (long i = 0 ; i < sz; i++)
@@ -790,8 +790,8 @@ public:
 };
 
 static MatMul1D*
-buildThinStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
-                 const Vec<long>& reps, long dim, long cofactor)
+buildThinStep1Matrix(const EncryptedArray& ea, std::shared_ptr<CubeSignature> sig,
+                 const NTL::Vec<long>& reps, long dim, long cofactor)
 {
   switch (ea.getTag()) {
   case PA_GF2_tag: 
@@ -805,5 +805,4 @@ buildThinStep1Matrix(const EncryptedArray& ea, shared_ptr<CubeSignature> sig,
 }
 //! \endcond
 
-
-
+}

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -10,13 +10,14 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/ZZ.h>
-NTL_CLIENT
 #include "FHEContext.h"
 #include "Ctxt.h"
 #include "permutations.h"
 #include "EncryptedArray.h"
 
-ostream& operator<< (ostream &s, const PermNetwork &net)
+namespace helib {
+
+std::ostream& operator<< (std::ostream &s, const PermNetwork &net)
 {
   s << "[";
   for (long i=0; i< net.layers.length(); i++) {
@@ -29,16 +30,16 @@ ostream& operator<< (ostream &s, const PermNetwork &net)
 
 // Compute one or more layers corresponding to one network of one leaf
 void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
-				 const Vec<long>& benesLvls, long gIdx,
+				 const NTL::Vec<long>& benesLvls, long gIdx,
 				 const SubDimension& leafData, 
 				 const Permut& map2cube)
 {
 #ifdef DEBUG_PRINTOUT
-  std::cerr << "Layer "<<lyrIdx<<", column-permutation="<< p << endl;
+  std::cerr << "Layer "<<lyrIdx<<", column-permutation="<< p << std::endl;
 #endif
   // Compute the shift amounts for all the layers in this network
-  Vec<bool> isID;
-  Vec<Permut> shifts;
+  NTL::Vec<bool> isID;
+  NTL::Vec<Permut> shifts;
   if (benesLvls.length()==1) {// Special case for a "trivial" 1-layer network
     shifts.SetLength(1);
     isID.SetLength(1);
@@ -56,14 +57,14 @@ void PermNetwork::setLayers4Leaf(long lyrIdx, const ColPerm& p,
     lyr.e = leafData.e;
     if (!lyr.isID) {
 #ifdef DEBUG_PRINTOUT
-      std::cerr << "layer "<<lyrIdx+i<<": "<<shifts[i]<<endl;
+      std::cerr << "layer "<<lyrIdx+i<<": "<<shifts[i]<<std::endl;
 #endif
       if (leafData.good) // For good leaves, shift by -x is the same as size-x
 	for (long k=0; k<shifts[i].length(); k++)
 	  if (shifts[i][k]<0) shifts[i][k] += leafData.size;
       applyPermToVec(lyr.shifts, shifts[i], map2cube); // do the renaming
 #ifdef DEBUG_PRINTOUT
-      std::cerr << "       : "<<lyr.shifts<<endl;
+      std::cerr << "       : "<<lyr.shifts<<std::endl;
 #endif
     }
     //    else std::cerr << "layer "<<lyrIdx+i<<"= identity\n";
@@ -78,29 +79,29 @@ void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
     return;
   }
 
-  Vec<long> dims;
+  NTL::Vec<long> dims;
   trees.getCubeSubDims(dims);
 
-  //  std::cerr << "pi =      "<<pi<<endl;
-  //  std::cerr << "map2cube ="<<trees.mapToCube()<<endl;
-  //  std::cerr << "map2array="<<trees.mapToArray()<<endl;
+  //  std::cerr << "pi =      "<<pi<<std::endl;
+  //  std::cerr << "map2cube ="<<trees.mapToCube()<<std::endl;
+  //  std::cerr << "map2array="<<trees.mapToArray()<<std::endl;
 
   // Compute the permutation on the cube, rho = map2cube o pi o map2array
 
   Permut rho;
   applyPermsToVec(rho, trees.mapToCube(), pi, trees.mapToArray());
-  //  std::cerr << "rho =     "<<rho<<endl;
+  //  std::cerr << "rho =     "<<rho<<std::endl;
 
 
   // Break rho along the different dimensions
   CubeSignature sig(dims); // make a cube-signature object
-  vector<ColPerm> perms;
+  std::vector<ColPerm> perms;
   breakPermByDim(perms, rho, sig);
 
   //  for (long i=0; i<(long)perms.size(); i++) { // debugging printouts
   //    Permut tmp;
   //    perms[i].makeExplicit(tmp);
-  //    std::cerr << " prems["<<i<<"]="<<tmp<<endl;
+  //    std::cerr << " prems["<<i<<"]="<<tmp<<std::endl;
   //  }
 
   layers.SetLength(trees.numLayers()); // allocate space
@@ -147,7 +148,7 @@ void PermNetwork::applyToCube(HyperCube<long>& cube) const
 {
   if (layers.length()==0) return;
   long n = cube.getSize();
-  Vec<long> tmp(INIT_SIZE, n); // temporary vector
+  NTL::Vec<long> tmp(NTL::INIT_SIZE, n); // temporary vector
 
   // Apply the layers, one at a time
   for (long i=0; i<layers.length(); i++) {
@@ -171,12 +172,12 @@ void PermNetwork::applyToCube(HyperCube<long>& cube) const
     for (long j=0; j<n; j++)
       cube[j] = tmp[j];
 #ifdef DEBUG_PRINTOUT
-    std::cerr << " after layer "<< i << ", cube=" << cube.getData()<<endl;
+    std::cerr << " after layer "<< i << ", cube=" << cube.getData()<<std::endl;
 #endif
   }
 }
 
-void PermNetwork::applyToPtxt(ZZX& p, const EncryptedArray& ea) const
+void PermNetwork::applyToPtxt(NTL::ZZX& p, const EncryptedArray& ea) const
 {
   throw helib::LogicError("PermNetwork::applyToPtxt is not implemented");
 }
@@ -186,8 +187,8 @@ void PermNetwork::applyToPtxt(ZZX& p, const EncryptedArray& ea) const
 // Return the index of the first nonzero entry in haystack at the end
 // of the pass (-1 if they are all zero). Also return a flag saying if
 // any entries of the mask are nonzero.
-static pair<long,bool>
-makeMask(vector<long>& mask, Vec<long>& haystack, long needle)
+static std::pair<long,bool>
+makeMask(std::vector<long>& mask, NTL::Vec<long>& haystack, long needle)
 {
   long found = false;
   long fstNonZeroIdx = -1;
@@ -216,23 +217,23 @@ void PermNetwork::applyToCtxt(Ctxt& c, const EncryptedArray& ea) const
     if (lyr.isID) continue; // this layer is the identity permutation
 
     // This layer is shifted via powers of g^e mod m
-    long g2e = PowerMod(al.ZmStarGen(lyr.genIdx), lyr.e, al.getM());
+    long g2e = NTL::PowerMod(al.ZmStarGen(lyr.genIdx), lyr.e, al.getM());
 
-    Vec<long> unused = lyr.shifts; // copy to a new vector
-    vector<long> mask(lyr.shifts.length());  // buffer to hold masks
+    NTL::Vec<long> unused = lyr.shifts; // copy to a new vector
+    std::vector<long> mask(lyr.shifts.length());  // buffer to hold masks
     Ctxt sum(c.getPubKey(), c.getPtxtSpace()); // an empty ciphertext
 
     long shamt = 0;
     bool frst = true;
     while (true) {
-      pair<long,bool> ret=makeMask(mask, unused, shamt); // compute mask
+      std::pair<long,bool> ret=makeMask(mask, unused, shamt); // compute mask
       if (ret.second) { // non-empty mask
 	Ctxt tmp = c;
-	ZZX maskPoly;
+	NTL::ZZX maskPoly;
 	ea.encode(maskPoly, mask);    // encode mask as polynomial
 	tmp.multByConstant(maskPoly); // multiply by mask
 	if (shamt!=0) // rotate if the shift amount is nonzero
-	  tmp.smartAutomorph(PowerMod(g2e, shamt, al.getM()));
+	  tmp.smartAutomorph(NTL::PowerMod(g2e, shamt, al.getM()));
 	if (frst) {
 	  sum = tmp;
 	  frst = false;
@@ -247,4 +248,6 @@ void PermNetwork::applyToCtxt(Ctxt& c, const EncryptedArray& ea) const
     }
     c = sum; // update the cipehrtext c before the next layer
   }
+}
+
 }

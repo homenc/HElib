@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -15,7 +15,7 @@
 #include <ctime>
 #include "timing.h"
 
-using namespace std;
+namespace helib {
 
 #ifdef CLOCK_MONOTONIC
 unsigned long GetTimerClock()
@@ -56,7 +56,7 @@ bool timer_compare(const FHEtimer *a, const FHEtimer *b)
 
 
 
-static vector<FHEtimer *> timerMap;
+static std::vector<FHEtimer *> timerMap;
 static FHE_MUTEX_TYPE timerMapMx;
 
 void registerTimer(FHEtimer *timer)
@@ -93,7 +93,7 @@ void resetAllTimers()
 }
 
 // Print the value of all timers to stream
-void printAllTimers(ostream& str)
+void printAllTimers(std::ostream& str)
 {
 
   sort(timerMap.begin(), timerMap.end(), timer_compare);
@@ -125,7 +125,7 @@ const FHEtimer *getTimerByName(const char *name)
   return 0;
 }
 
-bool printNamedTimer(ostream& str, const char* name)
+bool printNamedTimer(std::ostream& str, const char* name)
 {
   for (long i = 0; i < long(timerMap.size()); i++) {
     if (strcmp(name, timerMap[i]->name) == 0) {
@@ -145,4 +145,6 @@ bool printNamedTimer(ostream& str, const char* name)
     }
   }
   return false;
+}
+
 }

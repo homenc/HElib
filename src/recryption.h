@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,7 +17,11 @@
 
 #include "NumbTh.h"
 
+namespace helib {
+
 extern long thinRecrypt_initial_level;
+extern long fhe_force_chen_han;
+extern long printFlag;
 
 class  PAlgebraMod;
 class  EncryptedArray;
@@ -133,7 +137,12 @@ public:
 };
 
 
+#define FHE_MIN_CAP_FRAC (2.0/3.0)
+// Used in calculation of "min capacity".
+// This could be set to 1.0, but just to be on the safe side,
+// it is set to 2/3.  If we did set it to 1, the min capacity
+// would increase by less than 6/10 of a bit.
 
-
+}
 
 #endif // HELIB_RECRYPTION_H

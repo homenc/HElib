@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -29,6 +29,8 @@ NTL_CLIENT
 #include "debugging.h"
 #include "fhe_stats.h"
 #include "ArgMap.h"
+
+using namespace helib;
 
 static bool noPrint = false;
 static bool dry = false; // a dry-run flag
@@ -180,7 +182,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
  ********************************************************************/
 
 //extern long fhe_disable_intFactor;
-extern long fhe_force_chen_han;
+// extern long fhe_force_chen_han;
 
 int main(int argc, char *argv[]) 
 {

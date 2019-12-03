@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,6 +17,8 @@ NTL_CLIENT
 #include "NumbTh.h"
 #include "FHEContext.h"
 #include "ArgMap.h"
+
+using namespace helib;
 
 int main(int argc, char *argv[]) 
 {

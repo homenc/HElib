@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -12,14 +12,14 @@
 #include "FHEContext.h"
 #include "polyEval.h"
 
-NTL_CLIENT
+namespace helib {
 
 // Returns the e'th power of X, computing it as needed
 Ctxt& DynamicCtxtPowers::getPower(long e)
 {
   if (v.at(e-1).isEmpty()) { // Not computed yet, compute it now
     
-    long k = 1L<<(NextPowerOfTwo(e)-1); // largest power of two smaller than e
+    long k = 1L<<(NTL::NextPowerOfTwo(e)-1); // largest power of two smaller than e
     v[e-1] = getPower(e-k);             // compute X^e = X^{e-k} * X^k
     v[e-1].multiplyBy(getPower(k));
     // FIXME: could drop down / cleanup further as an optimization?
@@ -28,18 +28,18 @@ Ctxt& DynamicCtxtPowers::getPower(long e)
 }
 
 // Local functions for polynomial evaluation in some special cases
-static void simplePolyEval(Ctxt& ret, const ZZX& poly, DynamicCtxtPowers& babyStep);
-static void PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long delta, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
-static void degPowerOfTwo(Ctxt& ret, const ZZX& poly, long k, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
-static void recursivePolyEval(Ctxt& ret, const ZZX& poly, long k, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
+static void simplePolyEval(Ctxt& ret, const NTL::ZZX& poly, DynamicCtxtPowers& babyStep);
+static void PatersonStockmeyer(Ctxt& ret, const NTL::ZZX& poly, long k, long t, long delta, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
+static void degPowerOfTwo(Ctxt& ret, const NTL::ZZX& poly, long k, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
+static void recursivePolyEval(Ctxt& ret, const NTL::ZZX& poly, long k, DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep);
 
 static void recursivePolyEval(Ctxt& ret, const Ctxt poly[], long nCoeffs,
-			      const Vec<Ctxt>& powers);
+			      const NTL::Vec<Ctxt>& powers);
 
 
 // Main entry point: Evaluate an encrypted polynomial on an encrypted input
 // return in ret = sum_i poly[i] * x^i
-void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x)
+void polyEval(Ctxt& ret, const NTL::Vec<Ctxt>& poly, const Ctxt& x)
 {
   if (poly.length()<=1) { // Some special cases
     if (poly.length()==0) ret.clear();   // empty polynomial
@@ -48,14 +48,14 @@ void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x)
   }
   long deg = poly.length()-1;
 
-  long logD = NextPowerOfTwo(divc(poly.length(),3));
+  long logD = NTL::NextPowerOfTwo(divc(poly.length(),3));
   long d = 1L << logD;
 
   // We have d <= deg(poly) < 3d
   //OLD: assert(d <= deg && deg < 3*d);
   helib::assertInRange(deg, d, 3l*d, "Poly degree not in [d, 3d)");
 
-  Vec<Ctxt> powers(INIT_SIZE, logD+1, x);
+  NTL::Vec<Ctxt> powers(NTL::INIT_SIZE, logD+1, x);
   if (logD>0) {
     powers[1].square();
     for (long i=2; i<=logD; i++) { // powers[i] = x^{2^i}
@@ -66,7 +66,7 @@ void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x)
 
   // Compute in three parts p0(X) + ( p1(X) + p2(X)*X^d )*X^d
   Ctxt tmp(ZeroCtxtLike, ret);
-  recursivePolyEval(ret, &poly[d], min(d,poly.length()-d), powers); // p1(X)
+  recursivePolyEval(ret, &poly[d], std::min(d,poly.length()-d), powers); // p1(X)
 
   if (poly.length() > 2*d) {    // p2 is not empty
     recursivePolyEval(tmp, &poly[2*d], poly.length()-2*d, powers);  // p2(X)
@@ -80,14 +80,14 @@ void polyEval(Ctxt& ret, const Vec<Ctxt>& poly, const Ctxt& x)
 }
 
 static void recursivePolyEval(Ctxt& ret, const Ctxt poly[], long nCoeffs,
-			      const Vec<Ctxt>& powers)
+			      const NTL::Vec<Ctxt>& powers)
 {
   if (nCoeffs <= 1) { // edge condition
     if (nCoeffs == 0) ret.clear();   // empty polynomial
     else              ret = poly[0]; // constant polynomial
     return;
   }
-  long logD = NextPowerOfTwo(nCoeffs)-1;
+  long logD = NTL::NextPowerOfTwo(nCoeffs)-1;
   long d = 1L << logD;
   Ctxt tmp(ZeroCtxtLike, ret);
   recursivePolyEval(tmp, &(poly[d]), nCoeffs-d, powers);
@@ -98,7 +98,7 @@ static void recursivePolyEval(Ctxt& ret, const Ctxt poly[], long nCoeffs,
 
 
 // Main entry point: Evaluate a cleartext polynomial on an encrypted input
-void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
+void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k)
      // Note: poly is passed by value, so caller keeps the original
 {
   if (deg(poly)<=2) {  // nothing to optimize here
@@ -122,14 +122,14 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
 
   if (k<=0) {
     long kk = (long) sqrt(deg(poly)/2.0);
-    k = 1L << NextPowerOfTwo(kk);
+    k = 1L << NTL::NextPowerOfTwo(kk);
 
     // heuristic: if k>>kk then use a smaler power of two
     if ((k==16 && deg(poly)>167) || (k>16 && k>(1.44*kk)))
       k /= 2;
   }
 #ifdef DEBUG_PRINTOUT
-  cerr << "  k="<<k;
+  std::cerr << "  k="<<k;
 #endif
 
   long n = divc(deg(poly),k);      // n = ceil(deg(p)/k), deg(p) >= k*n
@@ -137,7 +137,7 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
   const Ctxt& x2k = babyStep.getPower(k);
 
   // Special case when deg(p)>k*(2^e -1)
-  if (n==(1L << NextPowerOfTwo(n))) { // n is a power of two
+  if (n==(1L << NTL::NextPowerOfTwo(n))) { // n is a power of two
     DynamicCtxtPowers giantStep(x2k, n/2);
     degPowerOfTwo(ret, poly, k, babyStep, giantStep);
     return;
@@ -146,9 +146,9 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
   // If n is not a power of two, ensure that poly is monic and that
   // its degree is divisible by k, then call the recursive procedure
 
-  const ZZ p = to_ZZ(x.getPtxtSpace());
-  ZZ top = LeadCoeff(poly);
-  ZZ topInv; // the inverse mod p of the top coefficient of poly (if any)
+  const NTL::ZZ p = NTL::to_ZZ(x.getPtxtSpace());
+  NTL::ZZ top = LeadCoeff(poly);
+  NTL::ZZ topInv; // the inverse mod p of the top coefficient of poly (if any)
   bool divisible = (n*k == deg(poly)); // is the degree divisible by k?
   long nonInvertibe = InvModStatus(topInv, top, p);
        // 0 if invertible, 1 if not
@@ -159,9 +159,9 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
   // multiplications since giantStep[n'] may be easier to compute than
   // giantStep[n] when n' has fewer 1's than n in its binary expansion.
 
-  ZZ extra = ZZ::zero();    // extra!=0 denotes an added term extra*X^{n*k}
+  NTL::ZZ extra = NTL::ZZ::zero();    // extra!=0 denotes an added term extra*X^{n*k}
   if (!divisible || nonInvertibe) {  // need to add a term
-    top = to_ZZ(1);  // new top coefficient is one
+    top = NTL::to_ZZ(1);  // new top coefficient is one
     topInv = top;    // also the new inverse is one
     // set extra = 1 - current-coeff-of-X^{n*k}
     extra = SubMod(top, coeff(poly,n*k), p);
@@ -192,7 +192,7 @@ void polyEval(Ctxt& ret, ZZX poly, const Ctxt& x, long k)
 
 // Simple evaluation sum f_i * X^i, assuming that babyStep has enough powers
 static void 
-simplePolyEval(Ctxt& ret, const ZZX& poly, DynamicCtxtPowers& babyStep)
+simplePolyEval(Ctxt& ret, const NTL::ZZX& poly, DynamicCtxtPowers& babyStep)
 {
   ret.clear();
   if (deg(poly)<0) return;       // the zero polynomial always returns zero
@@ -200,8 +200,8 @@ simplePolyEval(Ctxt& ret, const ZZX& poly, DynamicCtxtPowers& babyStep)
   //OLD: assert(deg(poly)<=babyStep.size()); // ensure that we have enough powers
   helib::assertTrue(deg(poly)<=babyStep.size(), "BabyStep has not enough powers (required more than deg(poly))");
 
-  ZZ coef;
-  ZZ p = to_ZZ(babyStep[0].getPtxtSpace());
+  NTL::ZZ coef;
+  NTL::ZZ p = NTL::to_ZZ(babyStep[0].getPtxtSpace());
   for (long i=1; i<=deg(poly); i++) {
     rem(coef, coeff(poly,i),p);
     if (coef > p/2) coef -= p;
@@ -223,21 +223,21 @@ simplePolyEval(Ctxt& ret, const ZZX& poly, DynamicCtxtPowers& babyStep)
 // This procedure assumes that poly is monic, deg(poly)=k*(2t-1)+delta
 // with t=2^e, and that babyStep contains >= k+delta powers
 static void
-PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long delta,
+PatersonStockmeyer(Ctxt& ret, const NTL::ZZX& poly, long k, long t, long delta,
 		   DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep)
 {
   if (deg(poly)<=babyStep.size()) { // Edge condition, use simple eval
     simplePolyEval(ret, poly, babyStep);
     return;
   }
-  ZZX r = trunc(poly, k*t);      // degree <= k*2^e-1
-  ZZX q = RightShift(poly, k*t); // degree == k(2^e-1) +delta
+  NTL::ZZX r = trunc(poly, k*t);      // degree <= k*2^e-1
+  NTL::ZZX q = RightShift(poly, k*t); // degree == k(2^e-1) +delta
 
-  const ZZ p = to_ZZ(babyStep[0].getPtxtSpace());
-  const ZZ& coef = coeff(r,deg(q));
+  const NTL::ZZ p = NTL::to_ZZ(babyStep[0].getPtxtSpace());
+  const NTL::ZZ& coef = coeff(r,deg(q));
   SetCoeff(r, deg(q), coef-1);  // r' = r - X^{deg(q)}
 
-  ZZX c,s;
+  NTL::ZZX c,s;
   DivRem(c,s,r,q); // r' = c*q + s
   // deg(s)<deg(q), and if c!= 0 then deg(c)<k-delta
 
@@ -268,7 +268,7 @@ PatersonStockmeyer(Ctxt& ret, const ZZX& poly, long k, long t, long delta,
 // This procedure assumes that k*(2^e +1) > deg(poly) > k*(2^e -1),
 // and that babyStep contains >= k + (deg(poly) mod k) powers
 static void
-degPowerOfTwo(Ctxt& ret, const ZZX& poly, long k,
+degPowerOfTwo(Ctxt& ret, const NTL::ZZX& poly, long k,
 	      DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep)
 {
   if (deg(poly)<=babyStep.size()) { // Edge condition, use simple eval
@@ -276,9 +276,9 @@ degPowerOfTwo(Ctxt& ret, const ZZX& poly, long k,
     return;
   }
   long n = deg(poly)/k;        // We assume n=2^e or n=2^e -1
-  n = 1L << NextPowerOfTwo(n); // round up to n=2^e
-  ZZX r = trunc(poly, (n-1)*k);      // degree <= k(2^e-1)-1
-  ZZX q = RightShift(poly, (n-1)*k); // 0 < degree < 2k
+  n = 1L << NTL::NextPowerOfTwo(n); // round up to n=2^e
+  NTL::ZZX r = trunc(poly, (n-1)*k);      // degree <= k(2^e-1)-1
+  NTL::ZZX q = RightShift(poly, (n-1)*k); // 0 < degree < 2k
   SetCoeff(r, (n-1)*k);              // monic, degree == k(2^e-1)
   q -= 1;
 
@@ -295,7 +295,7 @@ degPowerOfTwo(Ctxt& ret, const ZZX& poly, long k,
 }
 
 static void 
-recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
+recursivePolyEval(Ctxt& ret, const NTL::ZZX& poly, long k,
 		  DynamicCtxtPowers& babyStep, DynamicCtxtPowers& giantStep)
 {
   if (deg(poly)<=babyStep.size()) { // Edge condition, use simple eval
@@ -305,7 +305,7 @@ recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
 
   long delta = deg(poly) % k; // deg(poly) mod k
   long n = divc(deg(poly),k); // ceil( deg(poly)/k )
-  long t = 1L<<(NextPowerOfTwo(n)); // t >= n, so t*k >= deg(poly)
+  long t = 1L<<(NTL::NextPowerOfTwo(n)); // t >= n, so t*k >= deg(poly)
 
   // Special case for deg(poly) = k * 2^e +delta
   if (n==t) {
@@ -326,8 +326,8 @@ recursivePolyEval(Ctxt& ret, const ZZX& poly, long k,
   // and recurse on poly = (q-1)*X^u + (X^u+r)
 
   long u = deg(poly) - k*(t-1);
-  ZZX r = trunc(poly, u);      // degree <= u-1
-  ZZX q = RightShift(poly, u); // degree == k*(t-1)
+  NTL::ZZX r = trunc(poly, u);      // degree <= u-1
+  NTL::ZZX q = RightShift(poly, u); // degree == k*(t-1)
   q -= 1;
   SetCoeff(r, u);              // degree == u
 
@@ -393,7 +393,7 @@ public:
 
     v[0] = _x % p;         // store X itself in v[0]
     dpth[0] = _d;
-    //    cerr << " initial power="<<v[0]<<", initial depth="<<dpth[0];
+    //    std::cerr << " initial power="<<v[0]<<", initial depth="<<dpth[0];
   }
 
   // Returns the e'th power, computing it as needed
@@ -417,7 +417,7 @@ long DynamicPtxtPowers::getPower(long e)
 
   if (v.at(e-1)<0) { // Not computed yet, compute it now
     
-    long k = 1L<<(NextPowerOfTwo(e)-1); // largest power of two smaller than e
+    long k = 1L<<(NTL::NextPowerOfTwo(e)-1); // largest power of two smaller than e
 
     v[e-1] = getPower(e-k);             // compute X^e = X^{e-k} * X^k
     v[e-1] = MulMod(v[e-1], getPower(k), p);
@@ -427,21 +427,21 @@ long DynamicPtxtPowers::getPower(long e)
   return v[e-1];
 }
 
-ostream& operator<< (ostream &s, const DynamicPtxtPowers &d)
+std::ostream& operator<< (std::ostream &s, const DynamicPtxtPowers &d)
 {
   return s << d.getVector();
 }
 
 static long
-recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
+recursivePolyEval(const NTL::ZZX& poly, long k, DynamicPtxtPowers& babyStep,
 		  DynamicPtxtPowers& giantStep, long mod,
 		  long& recursiveDepth);
 static long 
-PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
+PatersonStockmeyer(const NTL::ZZX& poly, long k, long t, long delta,
 		   DynamicPtxtPowers& babyStep, DynamicPtxtPowers& giantStep,
 		   long mod, long& recursiveDepth);
 
-long simplePolyEval(const ZZX& poly, DynamicPtxtPowers& babyStep, long mod)
+long simplePolyEval(const NTL::ZZX& poly, DynamicPtxtPowers& babyStep, long mod)
 {
   //OLD: assert (deg(poly)<=(long)babyStep.size());// ensure that we have enough powers
   helib::assertTrue(deg(poly)<=(long)babyStep.size(), "BabyStep has not enough powers (required more than deg(poly))");
@@ -458,7 +458,7 @@ long simplePolyEval(const ZZX& poly, DynamicPtxtPowers& babyStep, long mod)
 
 // This procedure assumes that k*(2^e +1) > deg(poly) > k*(2^e -1),
 // and that babyStep contains k+ (deg(poly) mod k) powers
-static long degPowerOfTwo(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
+static long degPowerOfTwo(const NTL::ZZX& poly, long k, DynamicPtxtPowers& babyStep,
 			  DynamicPtxtPowers& giantStep, long mod,
 			  long& recursiveDepth)
 {
@@ -469,24 +469,24 @@ static long degPowerOfTwo(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
   }
   long subDepth1 =0, subDepth2=0;
   long n = deg(poly)/k;        // We assume n=2^e or n=2^e -1
-  n = 1L << NextPowerOfTwo(n); // round up to n=2^e
-  ZZX r = trunc(poly, (n-1)*k);      // degree <= k(2^e-1)-1
-  ZZX q = RightShift(poly, (n-1)*k); // 0 < degree < 2k
+  n = 1L << NTL::NextPowerOfTwo(n); // round up to n=2^e
+  NTL::ZZX r = trunc(poly, (n-1)*k);      // degree <= k(2^e-1)-1
+  NTL::ZZX q = RightShift(poly, (n-1)*k); // 0 < degree < 2k
   SetCoeff(r, (n-1)*k);              // monic, degree == k(2^e-1)
   q -= 1;
-  if (verbose) cerr << ", recursing on "<<r<<" + X^"<<(n-1)*k<<"*"<<q<<endl;
+  if (verbose) std::cerr << ", recursing on "<<r<<" + X^"<<(n-1)*k<<"*"<<q<<std::endl;
 
   long ret = PatersonStockmeyer(r, k, n/2, 0,
 				babyStep, giantStep, mod, subDepth2);
   if (verbose)
-    cerr << "  PatersonStockmeyer("<<r<<") returns "<<ret
-	 << ", depth="<<subDepth2<<endl;
+    std::cerr << "  PatersonStockmeyer("<<r<<") returns "<<ret
+	 << ", depth="<<subDepth2<<std::endl;
 
   long tmp = simplePolyEval(q, babyStep, mod); // evaluate q
   subDepth1 = babyStep.getDepth(deg(q));
   if (verbose)
-    cerr << "  simplePolyEval("<<q<<") returns "<<tmp
-	 << ", depth="<<subDepth1<<endl;
+    std::cerr << "  simplePolyEval("<<q<<") returns "<<tmp
+	 << ", depth="<<subDepth1<<std::endl;
 
   // multiply by X^{k(n-1)} with minimum depth
   for (long i=1; i<n; i*=2) {  
@@ -494,9 +494,9 @@ static long degPowerOfTwo(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
     nMults++;
     subDepth1 = max(subDepth1, giantStep.getDepth(i)) +1;
     if (verbose)
-      cerr << "    after mult by giantStep.getPower("<<i<< ")="
+      std::cerr << "    after mult by giantStep.getPower("<<i<< ")="
 	   << giantStep.getPower(i)<<" of depth="<< giantStep.getDepth(i)
-	   << ",  ret="<<tmp<<" and depth is "<<subDepth1<<endl;
+	   << ",  ret="<<tmp<<" and depth is "<<subDepth1<<std::endl;
   }
   totalDepth = max(subDepth1, subDepth2);
   return AddMod(ret, tmp, mod); // return q * X^{k(n-1)} + r
@@ -505,11 +505,11 @@ static long degPowerOfTwo(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
 // This procedure assumes that poly is monic, deg(poly)=k*(2t-1)+delta
 // with t=2^e, and that babyStep contains k+delta powers
 static long 
-PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
+PatersonStockmeyer(const NTL::ZZX& poly, long k, long t, long delta,
 		   DynamicPtxtPowers& babyStep, DynamicPtxtPowers& giantStep,
 		   long mod, long& recursiveDepth)
 {
-  if (verbose) cerr << "PatersonStockmeyer("<<poly<<"), k="<<k<<", t="<<t<<endl;
+  if (verbose) std::cerr << "PatersonStockmeyer("<<poly<<"), k="<<k<<", t="<<t<<std::endl;
 
   if (deg(poly)<=babyStep.size()) { // Edge condition, use simple eval
     long ret = simplePolyEval(poly, babyStep, mod);
@@ -519,21 +519,21 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
   long subDepth1=0, subDepth2=0;
   long ret, tmp;
 
-  ZZX r = trunc(poly, k*t);      // degree <= k*2^e-1
-  ZZX q = RightShift(poly, k*t); // degree == k(2^e-1) +delta
+  NTL::ZZX r = trunc(poly, k*t);      // degree <= k*2^e-1
+  NTL::ZZX q = RightShift(poly, k*t); // degree == k(2^e-1) +delta
 
-  if (verbose) cerr << "  r ="<<r<< ", q="<<q;
+  if (verbose) std::cerr << "  r ="<<r<< ", q="<<q;
 
-  const ZZ& coef = coeff(r,deg(q));
+  const NTL::ZZ& coef = coeff(r,deg(q));
   SetCoeff(r, deg(q), coef-1);  // r' = r - X^{deg(q)}
 
-  if (verbose) cerr << ", r'="<<r;
+  if (verbose) std::cerr << ", r'="<<r;
 
-  ZZX c,s;
+  NTL::ZZX c,s;
   DivRem(c,s,r,q); // r' = c*q + s
   // deg(s)<deg(q), and if c!= 0 then deg(c)<k-delta
 
-  if (verbose) cerr << ", c="<<c<< ", s ="<<s<<endl;
+  if (verbose) std::cerr << ", c="<<c<< ", s ="<<s<<std::endl;
 
   //OLD: assert(deg(s)<deg(q));
   helib::assertTrue(deg(s)<deg(q), "Degree of s is not less than degree of q");
@@ -543,12 +543,12 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
   SetCoeff(s,deg(q)); // s' = s + X^{deg(q)}, deg(s)==deg(q)
 
   // reduce the coefficients modulo mod
-  for (long i=0; i<=deg(c); i++) rem(c[i],c[i], to_ZZ(mod));
+  for (long i=0; i<=deg(c); i++) rem(c[i],c[i], NTL::to_ZZ(mod));
   c.normalize();
-  for (long i=0; i<=deg(s); i++) rem(s[i],s[i], to_ZZ(mod));
+  for (long i=0; i<=deg(s); i++) rem(s[i],s[i], NTL::to_ZZ(mod));
   s.normalize();
 
-  if (verbose) cerr << " {t==n+1} recursing on "<<s<<" + (X^"<<t*k<<"+"<<c<<")*"<<q<<endl;
+  if (verbose) std::cerr << " {t==n+1} recursing on "<<s<<" + (X^"<<t*k<<"+"<<c<<")*"<<q<<std::endl;
 
   // Evaluate recursively poly = (c+X^{kt})*q + s'
   tmp = simplePolyEval(c, babyStep, mod);
@@ -559,8 +559,8 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
 			   babyStep, giantStep, mod, subDepth2);
 
   if (verbose) {
-    cerr << "  PatersonStockmeyer("<<q<<") returns "<<ret
-	 << ", depth="<<subDepth2<<endl;
+    std::cerr << "  PatersonStockmeyer("<<q<<") returns "<<ret
+	 << ", depth="<<subDepth2<<std::endl;
     if (ret != polyEvalMod(q,babyStep[0], mod)) {
       std::stringstream ss;
       ss << "  **1st recursive call failed, q="<<q;
@@ -574,8 +574,8 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
   tmp = PatersonStockmeyer(s, k, t/2, delta,
 			   babyStep, giantStep, mod, subDepth2);
   if (verbose) {
-    cerr << "  PatersonStockmeyer("<<s<<") returns "<<tmp
-	 << ", depth="<<subDepth2<<endl;
+    std::cerr << "  PatersonStockmeyer("<<s<<") returns "<<tmp
+	 << ", depth="<<subDepth2<<std::endl;
     if (tmp != polyEvalMod(s,babyStep[0], mod)) {
       std::stringstream ss;
       ss << "  **2nd recursive call failed, s="<<s;
@@ -591,7 +591,7 @@ PatersonStockmeyer(const ZZX& poly, long k, long t, long delta,
 // This procedure assumes that poly is monic and that babyStep contains
 // at least k+delta powers, where delta = deg(poly) mod k
 static long 
-recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
+recursivePolyEval(const NTL::ZZX& poly, long k, DynamicPtxtPowers& babyStep,
 		  DynamicPtxtPowers& giantStep, long mod,
 		  long& recursiveDepth)
 {
@@ -601,11 +601,11 @@ recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
     return ret;
   }
 
-  if (verbose) cerr << "recursivePolyEval("<<poly<<")\n";
+  if (verbose) std::cerr << "recursivePolyEval("<<poly<<")\n";
 
   long delta = deg(poly) % k; // deg(poly) mod k
   long n = divc(deg(poly),k); // ceil( deg(poly)/k )
-  long t = 1L<<(NextPowerOfTwo(n)); // t >= n, so t*k >= deg(poly)
+  long t = 1L<<(NTL::NextPowerOfTwo(n)); // t >= n, so t*k >= deg(poly)
 
   // Special case for deg(poly) = k * 2^e +delta
   if (n==t)
@@ -623,21 +623,21 @@ recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
   // and recurse on poly = (q-1)*X^u + (X^u+r)
 
   long u = deg(poly) - k*(t-1);
-  ZZX r = trunc(poly, u);      // degree <= u-1
-  ZZX q = RightShift(poly, u); // degree == k*(t-1)
+  NTL::ZZX r = trunc(poly, u);      // degree <= u-1
+  NTL::ZZX q = RightShift(poly, u); // degree == k*(t-1)
   q -= 1;
   SetCoeff(r, u);              // degree == u
 
   long ret, tmp;
   long subDepth1=0, subDepth2=0;
   if (verbose) 
-    cerr << " {deg(poly)="<<deg(poly)<<"<k*(2t-1)="<<k*(2*t-1)
-	 << "} recursing on "<<r<<" + X^"<<u<<"*"<<q<<endl;
+    std::cerr << " {deg(poly)="<<deg(poly)<<"<k*(2t-1)="<<k*(2*t-1)
+	 << "} recursing on "<<r<<" + X^"<<u<<"*"<<q<<std::endl;
   ret = PatersonStockmeyer(q, k, t/2, 0, 
 			   babyStep, giantStep, mod, subDepth1);
 
   if (verbose) {
-    cerr << "  PatersonStockmeyer("<<q<<") returns "<<ret<<", depth="<<subDepth1<<endl;
+    std::cerr << "  PatersonStockmeyer("<<q<<") returns "<<ret<<", depth="<<subDepth1<<std::endl;
     if (ret != polyEvalMod(q,babyStep[0], mod)) {
       std::stringstream ss;
       ss << "  @@1st recursive call failed, q="<<q
@@ -650,10 +650,10 @@ recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
   subDepth2 = giantStep.getDepth(u/k);
   if (delta!=0) { // if u is not divisible by k then compute it
     if (verbose) 
-      cerr <<"  multiplying by X^"<<u
+      std::cerr <<"  multiplying by X^"<<u
 	   <<"=giantStep.getPower("<<(u/k)<<")*babyStep.getPower("<<delta<<")="
 	   << giantStep.getPower(u/k)<<"*"<<babyStep.getPower(delta)
-	   << "="<<tmp<<endl;
+	   << "="<<tmp<<std::endl;
     tmp = MulMod(tmp, babyStep.getPower(delta), mod);
     nMults++;
     subDepth2++;
@@ -662,11 +662,11 @@ recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
   nMults ++;
   subDepth1 = max(subDepth1, subDepth2)+1;
 
-  if (verbose) cerr << "  after mult by X^{k*"<<u<<"+"<<delta<<"}, depth="<< subDepth1<<endl;
+  if (verbose) std::cerr << "  after mult by X^{k*"<<u<<"+"<<delta<<"}, depth="<< subDepth1<<std::endl;
 
   tmp = recursivePolyEval(r, k, babyStep, giantStep, mod, subDepth2);
   if (verbose)
-    cerr << "  recursivePolyEval("<<r<<") returns "<<tmp<<", depth="<<subDepth2<<endl;
+    std::cerr << "  recursivePolyEval("<<r<<") returns "<<tmp<<", depth="<<subDepth2<<std::endl;
   if (tmp != polyEvalMod(r,babyStep[0], mod)) {
     std::stringstream ss;
     ss << "  @@2nd recursive call failed, r="<<r
@@ -679,10 +679,10 @@ recursivePolyEval(const ZZX& poly, long k, DynamicPtxtPowers& babyStep,
 
 // Note: poly is passed by value, not by reference, so the calling routine
 // keeps its original polynomial
-long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
+long evalPolyTopLevel(NTL::ZZX poly, long x, long p, long k=0)
 {
   if (verbose)
-  cerr << "\n* evalPolyTopLevel: p="<<p<<", x="<<x<<", poly="<<poly;
+  std::cerr << "\n* evalPolyTopLevel: p="<<p<<", x="<<x<<", poly="<<poly;
 
   if (deg(poly)<=2) { // nothing to optimize here
     if (deg(poly)<1) return to_long(coeff(poly, 0));
@@ -702,43 +702,43 @@ long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
 
   if (k<=0) {
     long kk = (long) sqrt(deg(poly)/2.0);
-    k = 1L << NextPowerOfTwo(kk);
+    k = 1L << NTL::NextPowerOfTwo(kk);
 
     // heuristic: if k>>kk then use a smaler power of two
     if ((k==16 && deg(poly)>167) || (k>16 && k>(1.44*kk)))
       k /= 2;
   }
-  cerr << ", k="<<k;
+  std::cerr << ", k="<<k;
 
   long n = divc(deg(poly),k);          // deg(p) = k*n +delta
-  if (verbose) cerr << ", n="<<n<<endl;
+  if (verbose) std::cerr << ", n="<<n<<std::endl;
 
   DynamicPtxtPowers babyStep(x, p, k);
   long x2k = babyStep.getPower(k);
 
   // Special case when deg(p)>k*(2^e -1)
-  if (n==(1L << NextPowerOfTwo(n))) { // n is a power of two
+  if (n==(1L << NTL::NextPowerOfTwo(n))) { // n is a power of two
     DynamicPtxtPowers giantStep(x2k, p, n/2, babyStep.getDepth(k));
     if (verbose)
-      cerr << "babyStep="<<babyStep<<", giantStep="<<giantStep<<endl;
+      std::cerr << "babyStep="<<babyStep<<", giantStep="<<giantStep<<std::endl;
     long ret = degPowerOfTwo(poly, k, babyStep, giantStep, p, totalDepth);
 
     if (verbose) {
-      cerr << "  degPowerOfTwo("<<poly<<") returns "<<ret<<", depth="<<totalDepth<<endl;
+      std::cerr << "  degPowerOfTwo("<<poly<<") returns "<<ret<<", depth="<<totalDepth<<std::endl;
       if (ret != polyEvalMod(poly,babyStep[0], p)) {
         std::stringstream ss;
         ss << "  ## recursive call failed, ret="<<ret<<"!=" 
           << polyEvalMod(poly,babyStep[0], p);
         throw helib::RuntimeError(ss.get());
       }
-      // cerr << "  babyStep depth=[";
+      // std::cerr << "  babyStep depth=[";
       // for (long i=0; i<babyStep.size(); i++) 
-      // 	cerr << babyStep.getDepth(i+1)<<" ";
-      // cerr << "]\n";
-      // cerr << "  giantStep depth=[";
+      // 	std::cerr << babyStep.getDepth(i+1)<<" ";
+      // std::cerr << "]\n";
+      // std::cerr << "  giantStep depth=[";
       // for (long i=0; i<giantStep.size(); i++)
-      // 	cerr<<giantStep.getDepth(i+1)<<" ";
-      // cerr << "]\n";
+      // 	std::cerr<<giantStep.getDepth(i+1)<<" ";
+      // std::cerr << "]\n";
     }
     return ret;
   }
@@ -746,9 +746,9 @@ long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
   // If n is not a power of two, ensure that poly is monic and that
   // its degree is divisible by k, then call the recursive procedure
 
-  ZZ topInv; // the inverse mod p of the top coefficient of poly (if any)
+  NTL::ZZ topInv; // the inverse mod p of the top coefficient of poly (if any)
   bool divisible = (n*k == deg(poly)); // is the degree divisible by k?
-  long nonInvertibe = InvModStatus(topInv, LeadCoeff(poly), to_ZZ(p));
+  long nonInvertibe = InvModStatus(topInv, LeadCoeff(poly), NTL::to_ZZ(p));
        // 0 if invertible, 1 if not
 
   // FIXME: There may be some room for optimization below: instead of
@@ -762,29 +762,29 @@ long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
     // set extra = 1 - current-coeff-of-X^{n*k}
     extra = SubMod(1, to_long(coeff(poly,n*k)), p);
     SetCoeff(poly, n*k); // set the top coefficient of X^{n*k} to one
-    topInv = to_ZZ(1);   // inverse of new top coefficient is one
+    topInv = NTL::to_ZZ(1);   // inverse of new top coefficient is one
   }
 
   long t = (extra==0)? divc(n,2) : n;
   DynamicPtxtPowers giantStep(x2k, p, t, babyStep.getDepth(k));
 
   if (verbose)
-    cerr << "babyStep="<<babyStep<<", giantStep="<<giantStep<<endl;
+    std::cerr << "babyStep="<<babyStep<<", giantStep="<<giantStep<<std::endl;
 
   long y; // the value to return
   long subDepth1 =0;
   if (!IsOne(topInv)) {
     long top = to_long(poly[n*k]); // record the current top coefficient
-    //    cerr << ", top-coeff="<<top;
+    //    std::cerr << ", top-coeff="<<top;
 
     // Multiply by topInv modulo p to make into a monic polynomial
     poly *= topInv;
-    for (long i=0; i<=n*k; i++) rem(poly[i], poly[i], to_ZZ(p));
+    for (long i=0; i<=n*k; i++) rem(poly[i], poly[i], NTL::to_ZZ(p));
     poly.normalize();
 
     y = recursivePolyEval(poly, k, babyStep, giantStep, p, subDepth1);
     if (verbose) {
-      cerr << "  recursivePolyEval("<<poly<<") returns "<<y<<", depth="<<subDepth1<<endl;
+      std::cerr << "  recursivePolyEval("<<poly<<") returns "<<y<<", depth="<<subDepth1<<std::endl;
       if (y != polyEvalMod(poly,babyStep[0], p)) {
         std::stringstream ss;
         ss << "## recursive call failed, ret="<<y<<"!=" 
@@ -797,7 +797,7 @@ long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
   else {
     y = recursivePolyEval(poly, k, babyStep, giantStep, p, subDepth1);
     if (verbose) {
-      cerr << "  recursivePolyEval("<<poly<<") returns "<<y<<", depth="<<subDepth1<<endl;
+      std::cerr << "  recursivePolyEval("<<poly<<") returns "<<y<<", depth="<<subDepth1<<std::endl;
       if (y != polyEvalMod(poly,babyStep[0], p)) {
         std::stringstream ss;
         ss << "## recursive call failed, ret="<<y<<"!=" 
@@ -808,13 +808,15 @@ long evalPolyTopLevel(ZZX poly, long x, long p, long k=0)
   }
 
   if (extra != 0) { // if we added a term, now is the time to subtract back
-    if (verbose) cerr << ", subtracting "<<extra<<"*X^"<<k*n;
+    if (verbose) std::cerr << ", subtracting "<<extra<<"*X^"<<k*n;
     extra = MulMod(extra, giantStep.getPower(n), p);
     totalDepth = max(subDepth1, giantStep.getDepth(n));
     y = SubMod(y, extra, p);
   }
   else totalDepth = subDepth1;
-  if (verbose) cerr << endl;
+  if (verbose) std::cerr << std::endl;
   return y;
 }
 #endif
+
+}

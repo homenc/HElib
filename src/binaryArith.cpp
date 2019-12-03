@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -24,17 +24,19 @@
 #include <NTL/BasicThreadPool.h>
 #include "binaryArith.h"
 
+#ifdef DEBUG_PRINTOUT
+#include <cstdio>
+#include "debugging.h"
+#endif
+
 #define BPL_ESTIMATE (30)
 // FIXME: this should really be dynamic
 
-NTL_CLIENT
+namespace helib {
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
-
-void decryptAndSum(ostream& s, const CtPtrMat& numbers, bool negative=false);
+void decryptAndSum(std::ostream& s, const CtPtrMat& numbers, bool twosComplement=false);
 #endif
-
 
 typedef std::pair<long,long> NodeIdx; // nodes are indexed by a pair (i,j)
 
@@ -138,7 +140,7 @@ public:
   DAGnode* findP(long i, long j) const { // returns NULL if not exists
     auto it = p.find(NodeIdx(i,j));
     if (it == p.end()) {
-      cerr << "  findP("<<i<<','<<j<<") not found\n";
+      std::cerr << "  findP("<<i<<','<<j<<") not found" << std::endl;
       return nullptr;  // not found
     }
     return (DAGnode*)&(it->second);
@@ -147,7 +149,7 @@ public:
   DAGnode* findQ(long i, long j) const { // returns NULL if not exists
     auto it = q.find(NodeIdx(i,j));
     if (it == q.end()) {
-      cerr << "  findQ("<<i<<','<<j<<") not found\n";
+      std::cerr << "  findQ("<<i<<','<<j<<") not found" << std::endl;
       return nullptr;  // not found
     }
     return (DAGnode*)&(it->second);
@@ -439,15 +441,15 @@ void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
 }
 
 //! Add two integers in binary representation
-void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
+void addTwoNumbers(CtPtrs& sum, const CtPtrs& lhs, const CtPtrs& rhs,
                    long sizeLimit, std::vector<zzX>* unpackSlotEncoding)
 {
   FHE_TIMER_START;
-  if (lsize(a)<1)      { vecCopy(sum,b,sizeLimit); return; }
-  else if (lsize(b)<1) { vecCopy(sum,a,sizeLimit); return; }
+  if (lsize(lhs)<1)      { vecCopy(sum,rhs,sizeLimit); return; }
+  else if (lsize(rhs)<1) { vecCopy(sum,lhs,sizeLimit); return; }
 
   // Work out the order of multiplications to compute all the carry bits
-  AddDAG addPlan(a,b);
+  AddDAG addPlan(lhs,rhs);
 
 #ifdef DEBUG_PRINTOUT // print plan
   addPlan.printAddDAG();
@@ -456,13 +458,13 @@ void addTwoNumbers(CtPtrs& sum, const CtPtrs& a, const CtPtrs& b,
   // Ensure that we have enough levels to compute everything,
   // bootstrap otherwise
   if (addPlan.lowLvl()< BPL_ESTIMATE) {
-    packedRecrypt(a,b,unpackSlotEncoding);
-    addPlan.init(a,b); // Re-compute the DAG
+    packedRecrypt(lhs,rhs,unpackSlotEncoding);
+    addPlan.init(lhs,rhs); // Re-compute the DAG
     if (addPlan.lowLvl()<BPL_ESTIMATE) { // still not enough levels
       throw helib::LogicError("not enough levels for addition DAG");
     }
   }
-  addPlan.apply(sum, a, b, sizeLimit);    // perform the actual addition
+  addPlan.apply(sum, lhs, rhs, sizeLimit);    // perform the actual addition
 }
 
 // Return pointers to the three inputs, ordered by size
@@ -626,8 +628,8 @@ void addManyNumbers(CtPtrs& sum, CtPtrMat& numbers, long sizeLimit,
                     std::vector<zzX>* unpackSlotEncoding)
 {
 #ifdef DEBUG_PRINTOUT
-  cout << " addManyNumbers: "<<numbers.size()
-       << " numbers with size-limit="<<sizeLimit<<endl;
+  std::cout << " addManyNumbers: "<<numbers.size()
+       << " numbers with size-limit="<<sizeLimit<<std::endl;
 #endif
   FHE_TIMER_START;
   const Ctxt* ct_ptr = numbers.ptr2nonNull();
@@ -691,7 +693,7 @@ static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   long resSize = lsize(a)+lsize(b);
   if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
 
-  NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(a),resSize));
+  NTL::Vec< NTL::Vec<Ctxt> > numbers(NTL::INIT_SIZE, std::min(lsize(a),resSize));
   long nNums = lsize(numbers);
   for (long i=0; i<nNums; i++)
     numbers[i].SetLength(resSize, Ctxt(ZeroCtxtLike,*(a[0])));
@@ -720,97 +722,97 @@ static void multByNegative(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
   CtPtrMat_VecCt nums(numbers); // Wrapper around numbers
 #ifdef DEBUG_PRINTOUT
   long pa, pb;
-  vector<long> slots;
+  std::vector<long> slots;
   decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false); pa=slots[0];
   decryptBinaryNums(slots, b, *dbgKey, *dbgEa, true);  pb=slots[0];
-  decryptAndSum((cout<<" multByNegative: "<<pa<<'*'<<pb<<" = "),
+  decryptAndSum((std::cout<<" multByNegative: "<<pa<<'*'<<pb<<" = "),
                 nums, true);
 #endif
   addManyNumbers(product, nums, resSize, unpackSlotEncoding);
 }
 
-// Multiply two integers (i.e. an array of bits) a, b.
-// Computes the pairwise products x_{i,j} = a_i * b_j
+// Multiply two integers (i.e. an array of bits) lhs, rhs.
+// Computes the pairwise products x_{i,j} = lhs_i * rhs_j
 // then sums the prodcuts using the 3-for-2 method.
-void multTwoNumbers(CtPtrs& product, const CtPtrs& a, const CtPtrs& b,
-                    bool bNegative, long sizeLimit,
+void multTwoNumbers(CtPtrs& product, const CtPtrs& lhs, const CtPtrs& rhs,
+                    bool rhsTwosComplement, long sizeLimit,
                     std::vector<zzX>* unpackSlotEncoding)
 {
   FHE_TIMER_START;
-  long aSize = lsize(a);
-  long bSize = lsize(b);
-  long resSize = aSize+bSize;
+  long lhsSize = lsize(lhs);
+  long rhsSize = lsize(rhs);
+  long resSize = lhsSize+rhsSize;
   if (sizeLimit>0 && sizeLimit<resSize) resSize=sizeLimit;
 
-  if (a.numNonNull()<1 || b.numNonNull()<1) {
+  if (lhs.numNonNull()<1 || rhs.numNonNull()<1) {
     setLengthZero(product);
     return; // return 0
   }
 
 #ifdef DEBUG_PRINTOUT
-  cout << " before multiplication, capacity="<<findMinBitCapacity({&a, &b})
-       << endl;
+  std::cout << " before multiplication, capacity="<<findMinBitCapacity({&lhs, &rhs})
+       << std::endl;
 #endif
-  // Edge case, if a or b is 1 bit
-  if (aSize==1) {
-    if (a[0]->isEmpty()) {
+  // Edge case, if lhs or rhs is 1 bit
+  if (lhsSize==1) {
+    if (lhs[0]->isEmpty()) {
       setLengthZero(product);
       return;
     }
-    vecCopy(product,b,resSize);
+    vecCopy(product,rhs,resSize);
     for (long i=0; i<resSize; i++)
-      product[i]->multiplyBy(*(a[0]));
+      product[i]->multiplyBy(*(lhs[0]));
     return;
   }
-  if (bNegative) { // somewhat different implementation for 2s complement
-    multByNegative(product, a, b, sizeLimit, unpackSlotEncoding);
+  if (rhsTwosComplement) { // somewhat different implementation for 2s complement
+    multByNegative(product, lhs, rhs, sizeLimit, unpackSlotEncoding);
     return;
   }
-  if (bSize==1) {
-    if (b[0]->isEmpty()) {
+  if (rhsSize==1) {
+    if (rhs[0]->isEmpty()) {
       setLengthZero(product);
       return;
     }
-    vecCopy(product,a,resSize);
+    vecCopy(product,lhs,resSize);
     for (long i=0; i<resSize; i++)
-      a[i]->multiplyBy(*(b[0]));
+      lhs[i]->multiplyBy(*(rhs[0]));
     return;
   }
 
-  // We make sure aa is the larger of the two integers
+  // We make sure temp_lhs is the larger of the two integers
   // to keep the number of additions to a minimum
-  const CtPtrs& aa = (aSize>=bSize)? a : b;
-  const CtPtrs& bb = (aSize>=bSize)? b : a;
-  aSize = lsize(aa);
-  bSize = lsize(bb);
+  const CtPtrs& temp_lhs = (lhsSize>=rhsSize)? lhs : rhs;
+  const CtPtrs& temp_rhs = (lhsSize>=rhsSize)? rhs : lhs;
+  lhsSize = lsize(temp_lhs);
+  rhsSize = lsize(temp_rhs);
 
-  NTL::Vec< NTL::Vec<Ctxt> > numbers(INIT_SIZE, std::min(lsize(b),resSize));
-  const Ctxt* ct_ptr = a.ptr2nonNull();
+  NTL::Vec< NTL::Vec<Ctxt> > numbers(NTL::INIT_SIZE, std::min(lsize(rhs),resSize));
+  const Ctxt* ct_ptr = lhs.ptr2nonNull();
   long nNums = lsize(numbers);
   for (long i=0; i<nNums; i++)
-    numbers[i].SetLength(std::min((i+aSize),resSize),
+    numbers[i].SetLength(std::min((i+lhsSize),resSize),
                          Ctxt( ZeroCtxtLike,*ct_ptr ) );
   std::vector<std::pair<long,long> > pairs;
   for (long i=0; i<nNums; i++) for (long j=i; j<lsize(numbers[i]); j++) {
-    if (a.isSet(j-i)&& !(a[j-i]->isEmpty())&& b.isSet(i)&& !(b[i]->isEmpty()))
+    if (lhs.isSet(j-i)&& !(lhs[j-i]->isEmpty())&& rhs.isSet(i)&& !(rhs[i]->isEmpty()))
       pairs.push_back(std::pair<long,long>(i,j));
   }
   long nPairs = lsize(pairs);
   NTL_EXEC_RANGE(nPairs, first, last)
   for (long idx=first; idx<last; idx++) {
     long i,j; std::tie(i,j) = pairs[idx];
-    numbers[i][j] = *(a[j-i]);
-    numbers[i][j].multiplyBy(*(b[i])); // multiply by the bit of b
+    numbers[i][j] = *(lhs[j-i]);
+    numbers[i][j].multiplyBy(*(rhs[i])); // multiply by the bit of rhs
   }
   NTL_EXEC_RANGE_END
 
   CtPtrMat_VecCt nums(numbers); // A wrapper aroune numbers
 #ifdef DEBUG_PRINTOUT
-  long pa, pb;
-  vector<long> slots;
-  decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false); pa=slots[0];
-  decryptBinaryNums(slots, b, *dbgKey, *dbgEa, false);  pb=slots[0];
-  decryptAndSum((cout<<" multTwoNumbers: "<<pa<<'*'<<pb<<" = "),
+  long plaintext_lhs, plaintext_rhs;
+  std::vector<long> slots;
+  decryptBinaryNums(slots, lhs, *dbgKey, *dbgEa, false); plaintext_lhs=slots[0];
+  decryptBinaryNums(slots, rhs, *dbgKey, *dbgEa, false);  plaintext_rhs=slots[0];
+  decryptAndSum((std::cout<<" multTwoNumbers: "<<plaintext_lhs<<'*'<<plaintext_rhs<<" = "),
                 nums, false);
 #endif
   addManyNumbers(product, nums, resSize, unpackSlotEncoding);
@@ -996,9 +998,9 @@ long fifteenOrLess4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
 // If allSlots==false then we only return the subcube with index i=0
 // in the last dimension within each ciphertext. Namely, the bit for
 // the j'th counter is found in slot of index j*sizeOf(lastDim).
-void decryptBinaryNums(vector<long>& pNums, const CtPtrs& eNums,
+void decryptBinaryNums(std::vector<long>& pNums, const CtPtrs& eNums,
                        const FHESecKey& sKey, const EncryptedArray& ea,
-                       bool negative, bool allSlots)
+                       bool twosComplement, bool allSlots)
 {
   int offset=1, size=ea.size();
   if (!allSlots) { // only slots of index i=0 in the last dimension
@@ -1008,10 +1010,10 @@ void decryptBinaryNums(vector<long>& pNums, const CtPtrs& eNums,
   pNums.assign(size, 0); // initialize to zero
 
   for (int i=0; i<lsize(eNums); i++) if (eNums.isSet(i)) {
-    vector<long> slots;
+    std::vector<long> slots;
     ea.decrypt(*eNums[i], sKey, slots);
     for (int j=0; j<lsize(pNums); j++)
-      if (negative && i==lsize(eNums)-1)
+      if (twosComplement && i==lsize(eNums)-1)
         pNums[j] -= (slots[j*offset] << i);
       else
         pNums[j] += (slots[j*offset] << i);
@@ -1020,68 +1022,69 @@ void decryptBinaryNums(vector<long>& pNums, const CtPtrs& eNums,
 
 /********************************************************************/
 #ifdef DEBUG_PRINTOUT
-#include <cstdio>
 
 void AddDAG::printAddDAG(bool printCT)
 {
-  cout << "aSize="<<aSize<<", bSize="<<bSize<<endl;
-  cout << "The p[i,j]'s\n============\n";  
+  std::cout << "aSize="<<aSize<<", bSize="<<bSize<<std::endl;
+  std::cout << "The p[i,j]'s\n============\n";
   for (long delta=0; delta<bSize; delta++) {
-    cout << "delta="<<delta<<endl;
+    std::cout << "delta="<<delta<<std::endl;
     for (long j=0; j<bSize-delta; j++) {
       long i = j+delta;
       DAGnode* node = findP(i,j);
       if (node==nullptr) continue;
-      cout << node->nodeName()<<":{ lvl=";
-      if (node->level==LONG_MAX) cout << "XX";
-      else                       cout << node->level;
-      cout <<", chLeft="<<int(node->childrenLeft)
+      std::cout << node->nodeName()<<":{ lvl=";
+      if (node->level==LONG_MAX) std::cout << "XX";
+      else                       std::cout << node->level;
+      std::cout <<", chLeft="<<int(node->childrenLeft)
            <<", ct="<<node->ct;
       if (node->parent2)
-        cout << ", prnt2="<< node->parent2->nodeName();
+        std::cout << ", prnt2="<< node->parent2->nodeName();
       if (node->parent1)
-        cout << ", prnt1="<< node->parent1->nodeName();
-      cout << " }\n";
+        std::cout << ", prnt1="<< node->parent1->nodeName();
+      std::cout << " }\n";
       if (printCT && node->ct!=nullptr)
-        decryptAndPrint(cout, *(node->ct), *dbgKey, *dbgEa, FLAG_PRINT_VEC);
+        decryptAndPrint(std::cout, *(node->ct), *dbgKey, *dbgEa, FLAG_PRINT_VEC);
     }
   }
-  cout << "\nThe q[i,j]'s\n============\n";  
+  std::cout << "\nThe q[i,j]'s\n============\n";
   for (long delta=0; delta<bSize; delta++) {
-    cout << "delta="<<delta<<endl;
+    std::cout << "delta="<<delta<<std::endl;
     for (long j=0; j<std::min(aSize, bSize-delta); j++) {
       long i = j+delta;
       DAGnode* node = findQ(i,j);
       if (node==nullptr) continue;
-      cout << node->nodeName() <<":{ lvl=";
-      if (node->level==LONG_MAX) cout << "XX";
-      else                       cout << node->level;
-      cout <<", chLeft="<<long(node->childrenLeft)
+      std::cout << node->nodeName() <<":{ lvl=";
+      if (node->level==LONG_MAX) std::cout << "XX";
+      else                       std::cout << node->level;
+      std::cout <<", chLeft="<<long(node->childrenLeft)
            <<", ct="<<node->ct;
       if (node->parent2)
-        cout << ", prnt2="<< node->parent2->nodeName();
+        std::cout << ", prnt2="<< node->parent2->nodeName();
       if (node->parent1)
-        cout << ", prnt1="<< node->parent1->nodeName();
-      cout << " }\n";
+        std::cout << ", prnt1="<< node->parent1->nodeName();
+      std::cout << " }\n";
       if (printCT && node->ct!=nullptr)
-        decryptAndPrint(cout, *(node->ct), *dbgKey, *dbgEa, FLAG_PRINT_VEC);
+        decryptAndPrint(std::cout, *(node->ct), *dbgKey, *dbgEa, FLAG_PRINT_VEC);
     }
   }
-  cout << endl;
+  std::cout << std::endl;
 }
 
-void decryptAndSum(ostream& s, const CtPtrMat& numbers, bool negative)
+void decryptAndSum(std::ostream& s, const CtPtrMat& numbers, bool twosComplement)
 {
   s << "sum(";
   long sum=0;
   for (long i=0; i<numbers.size(); i++) {
-    vector<long> slots;
+    std::vector<long> slots;
     const CtPtrs& num = numbers[i];
-    decryptBinaryNums(slots, num, *dbgKey, *dbgEa, negative);
+    decryptBinaryNums(slots, num, *dbgKey, *dbgEa, twosComplement);
     s << slots[0] << ' ';
     sum += slots[0];
   }
-  s << ")="<<sum<<endl;
+  s << ")="<<sum<<std::endl;
 }
 
 #endif // ifdef DEBUG_PRINTOUT
+
+}

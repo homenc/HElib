@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -11,8 +11,9 @@
  */
 #include "hypercube.h"
 #include <iomanip>
+#include <NTL/lzz_p.h>
 
-NTL_CLIENT
+namespace helib {
 
   //! Break an index into the hypercube to index of the
   //! dimension-dim subcube and index inside that subcube.
@@ -48,7 +49,7 @@ void HyperCube<T>::rotate1D(long d, long k)
   if (k < 0) k += getDim(d);
 
   // A simple implementation with a temporary vector
-  Vec<T> tmp(INIT_SIZE, getSize());
+  NTL::Vec<T> tmp(NTL::INIT_SIZE, getSize());
   for (long i=0; i<getSize(); i++) 
     tmp[addCoord(i, d, k)] = data[i];
   for (long i=0; i<getSize(); i++)
@@ -142,7 +143,7 @@ void CubeSlice<T>::copy(const ConstCubeSlice<T>& other) const
 // set to s.getDim(0).
 
 template<class T>
-void getHyperColumn(Vec<T>& v, const ConstCubeSlice<T>& s, long pos)
+void getHyperColumn(NTL::Vec<T>& v, const ConstCubeSlice<T>& s, long pos)
 {
    long m = s.getProd(1);
    long n = s.getDim(0);
@@ -162,7 +163,7 @@ void getHyperColumn(Vec<T>& v, const ConstCubeSlice<T>& s, long pos)
 // to the given vector
 
 template<class T>
-void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos)
+void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos)
 {
    long m = s.getProd(1);
    long n = s.getDim(0);
@@ -183,7 +184,7 @@ void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos)
 // if v is too short
 
 template<class T>
-void setHyperColumn(const Vec<T>& v, const CubeSlice<T>& s, long pos, const T& val)
+void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos, const T& val)
 {
    long m = s.getProd(1);
    long n = s.getDim(0);
@@ -220,12 +221,12 @@ void print3D(const HyperCube<T>& c)
 
          ConstCubeSlice<T> s2(s1, j);
          for (long k = 0; k < s2.getDim(0); k++)
-            cout << setw(3) << s2.at(k);
+            std::cout << std::setw(3) << s2.at(k);
 
-         cout << "\n";
+         std::cout << "\n";
       }
 
-      cout << "\n";
+      std::cout << "\n";
    }
 }
 
@@ -233,18 +234,17 @@ void print3D(const HyperCube<T>& c)
 template class HyperCube<long>;
 template class ConstCubeSlice<long>;
 template class CubeSlice<long>;
-template void getHyperColumn(Vec<long>& v, const ConstCubeSlice<long>& s, long pos);
-template void setHyperColumn(const Vec<long>& v, const CubeSlice<long>& s, long pos);
-template void setHyperColumn(const Vec<long>& v, const CubeSlice<long>& s, long pos, const long& val);
+template void getHyperColumn(NTL::Vec<long>& v, const ConstCubeSlice<long>& s, long pos);
+template void setHyperColumn(const NTL::Vec<long>& v, const CubeSlice<long>& s, long pos);
+template void setHyperColumn(const NTL::Vec<long>& v, const CubeSlice<long>& s, long pos, const long& val);
 template void print3D(const HyperCube<long>& c);
-
-
-#include <NTL/lzz_p.h>
 
 template class HyperCube<NTL::zz_p>;
 template class ConstCubeSlice<NTL::zz_p>;
 template class CubeSlice<NTL::zz_p>;
-template void getHyperColumn(Vec<NTL::zz_p>& v, const ConstCubeSlice<NTL::zz_p>& s, long pos);
-template void setHyperColumn(const Vec<NTL::zz_p>& v, const CubeSlice<NTL::zz_p>& s, long pos);
-template void setHyperColumn(const Vec<NTL::zz_p>& v, const CubeSlice<NTL::zz_p>& s, long pos, const NTL::zz_p& val);
+template void getHyperColumn(NTL::Vec<NTL::zz_p>& v, const ConstCubeSlice<NTL::zz_p>& s, long pos);
+template void setHyperColumn(const NTL::Vec<NTL::zz_p>& v, const CubeSlice<NTL::zz_p>& s, long pos);
+template void setHyperColumn(const NTL::Vec<NTL::zz_p>& v, const CubeSlice<NTL::zz_p>& s, long pos, const NTL::zz_p& val);
 template void print3D(const HyperCube<NTL::zz_p>& c);
+
+}

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -19,6 +19,8 @@
 #include "CModulus.h"
 
 #define NEW_BLUE (1)
+
+namespace helib {
 
 /************************************************************
 
@@ -71,14 +73,12 @@ now I see that we don't, at least when m is odd.
 *************************************************************/
 
 
-NTL_CLIENT
-
-void BluesteinInit(long n, const zz_p& root, zz_pX& powers, 
-                   Vec<mulmod_precon_t>& powers_aux, fftRep& Rb)
+void BluesteinInit(long n, const NTL::zz_p& root, NTL::zz_pX& powers,
+                   NTL::Vec<NTL::mulmod_precon_t>& powers_aux, NTL::fftRep& Rb)
 {
-  long p = zz_p::modulus();
+  long p = NTL::zz_p::modulus();
 
-  zz_p one; one=1;
+  NTL::zz_p one; one=1;
   powers.SetMaxLength(n);
 
   long e;
@@ -89,37 +89,37 @@ void BluesteinInit(long n, const zz_p& root, zz_pX& powers,
 
   SetCoeff(powers,0,one);
   for (long i=1; i<n; i++) {
-    long iSqr = MulMod(i, i, e); // i^2 mod 2n
+    long iSqr = NTL::MulMod(i, i, e); // i^2 mod 2n
     SetCoeff(powers,i, power(root,iSqr)); // powers[i] = root^{i^2}
   }
 
   // powers_aux tracks powers
   powers_aux.SetLength(n);
   for (long i = 0; i < n; i++)
-    powers_aux[i] = PrepMulModPrecon(rep(powers[i]), p);
+    powers_aux[i] = NTL::PrepMulModPrecon(rep(powers[i]), p);
 
 
-  long k = NextPowerOfTwo(2*n-1);
+  long k = NTL::NextPowerOfTwo(2*n-1);
   long k2 = 1L << k; // k2 = 2^k
 
   Rb.SetSize(k);
 
-  zz_pX b(INIT_SIZE, k2);
+  NTL::zz_pX b(NTL::INIT_SIZE, k2);
 
   if (NEW_BLUE && n == e) {
-    zz_p rInv = inv(root);
+    NTL::zz_p rInv = inv(root);
     for (long i=0; i<n; i++) {
-      long iSqr = MulMod(i, i, e); // i^2 mod 2n
-      zz_p bi = power(rInv,iSqr);
+      long iSqr = NTL::MulMod(i, i, e); // i^2 mod 2n
+      NTL::zz_p bi = power(rInv,iSqr);
       SetCoeff(b,i,bi);              
     }
   }
   else {
-    zz_p rInv = inv(root);
+    NTL::zz_p rInv = inv(root);
     SetCoeff(b,n-1,one); // b[n-1] = 1
     for (long i=1; i<n; i++) {
-      long iSqr = MulMod(i, i, e); // i^2 mod 2n
-      zz_p bi = power(rInv,iSqr);
+      long iSqr = NTL::MulMod(i, i, e); // i^2 mod 2n
+      NTL::zz_p bi = power(rInv,iSqr);
       // b[n-1+i] = b[n-1-i] = root^{-i^2}
       SetCoeff(b,n-1+i, bi); 
       SetCoeff(b,n-1-i,bi);              
@@ -129,9 +129,9 @@ void BluesteinInit(long n, const zz_p& root, zz_pX& powers,
   TofftRep(Rb, b, k);
 }
 
-void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
-		  const zz_pX& powers, const Vec<mulmod_precon_t>& powers_aux, 
-                  const fftRep& Rb)
+void BluesteinFFT(NTL::zz_pX& x, long n, const NTL::zz_p& root,
+		  const NTL::zz_pX& powers, const NTL::Vec<NTL::mulmod_precon_t>& powers_aux,
+                  const NTL::fftRep& Rb)
 {
   FHE_TIMER_START;
 
@@ -141,16 +141,16 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
     return;
   }
 
-  long p = zz_p::modulus();
+  long p = NTL::zz_p::modulus();
 
   long dx = deg(x);
   for (long i=0; i<=dx; i++) {
-    x[i].LoopHole() = MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
+    x[i].LoopHole() = NTL::MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
   }
   x.normalize();
 
-  long k = NextPowerOfTwo(2*n-1);
-  fftRep& Ra = Cmodulus::getScratch_fftRep(k);
+  long k = NTL::NextPowerOfTwo(2*n-1);
+  NTL::fftRep& Ra = Cmodulus::getScratch_fftRep(k);
 
   // Careful! we are multiplying polys of degrees 2*(n-1)
   // and (n-1) modulo x^k-1.  This gives us some
@@ -166,7 +166,7 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
     if (dx >= n) {
       // reduce mod x^n-1
       for (long i = n; i <= dx; i++) {
-        x[i-n].LoopHole() = AddMod(rep(x[i-n]), rep(x[i]), p);
+        x[i-n].LoopHole() = NTL::AddMod(rep(x[i-n]), rep(x[i]), p);
       }
       x.SetLength(n);
       x.normalize();
@@ -174,7 +174,7 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
     }
 
     for (long i=0; i<=dx; i++) {
-      x[i].LoopHole() = MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
+      x[i].LoopHole() = NTL::MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
     }
     x.normalize();
   }
@@ -186,12 +186,10 @@ void BluesteinFFT(zz_pX& x, long n, const zz_p& root,
     FromfftRep(x, Ra, n-1, 2*(n-1)); // then convert back
     dx = deg(x); 
     for (long i=0; i<=dx; i++) {
-      x[i].LoopHole() = MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
+      x[i].LoopHole() = NTL::MulModPrecon(rep(x[i]), rep(powers[i]), p, powers_aux[i]);
     }
     x.normalize();
   }
 }
 
-
-
-
+}

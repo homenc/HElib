@@ -5,6 +5,8 @@ set(GTEST_SRC
     "Test_errorHandling.cpp"
     "Test_CKKS.cpp"
     "Test_ArgMap.cpp"
+    "Test_bootstrapping_with_multiplications.cpp"
+    "Test_Context.cpp"
     )
 
 set(PORTED_LEGACY_TEST_SRC
@@ -55,7 +57,7 @@ set(TEST_NAMES
     "GTest_ThinBootstrapping"
     "GTest_thinboot"
     "GTest_fatboot"
-    "GTest_PGFFT.cpp"
+    "GTestPGFFT"
     "GTest_ThinEvalMap"
     "GTest_approxNums"
     "GTest_binaryArith"
@@ -68,6 +70,8 @@ set(TEST_NAMES
     "Test_errorHandling"
     "Test_CKKS"
     "Test_ArgMap"
+    "Test_bootstrapping_with_multiplications"
+    "TestContext"
     )
 
 foreach(TEST_NAME ${TEST_NAMES})

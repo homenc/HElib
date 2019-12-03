@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,6 +17,8 @@
 #define HELIB_HYPERCUBE_H
 
 #include "NumbTh.h"
+
+namespace helib {
 
 class PAlgebra; // forward decleration
 
@@ -445,5 +447,7 @@ void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos, const
 
 template<class T>
 void print3D(const HyperCube<T>& c);
+
+}
 
 #endif // ifndef HELIB_HYPERCUBE_H 

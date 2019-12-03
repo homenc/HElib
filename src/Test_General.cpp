@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -14,16 +14,16 @@
  */
 #include <NTL/ZZ.h>
 #include <NTL/BasicThreadPool.h>
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cassert>
 #include <cstdio>
 #include "ArgMap.h"
+#include "fhe_stats.h"
 
 NTL_CLIENT
+using namespace helib;
 
 //#define DEBUG_PRINTOUT
 
@@ -103,6 +103,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     std::cout << "# bits in special primes = " 
 	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
     std::cout << "G = " << G << "\n";
+
+    fhe_stats=true;
   }
 
   FHESecKey secretKey(context);
@@ -191,7 +193,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      if (!noPrint) CheckCtxt(c2, buffer);
      debugCompare(ea,secretKey,p2,c2);
 
-     ::negate(ea, p1); // c1.negate()
+     helib::negate(ea, p1); // c1.negate()
      c1.negate();
      if (!noPrint) CheckCtxt(c1, "c1=-c1");
      debugCompare(ea,secretKey,p1,c1);
@@ -242,6 +244,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
    
   if (!noPrint) {
     printAllTimers();
+    print_stats(cout);
     std::cout << endl;
   }
 }

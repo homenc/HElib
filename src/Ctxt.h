@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -13,7 +13,7 @@
 #define HELIB_CTXT_H
 /**
  * @file Ctxt.h
- * @brief Declerations of a BGV-type cipehrtext and key-switching matrices
+ * @brief Declarations of a BGV-type cipehrtext and key-switching matrices
  *
  * A ciphertext is a std::vector of "ciphertext parts", each part consists of
  * a polynomial (element of polynomial ring R_Q) and a "handle" describing
@@ -56,6 +56,8 @@
  **/
 #include <cfloat> // DBL_MAX
 #include "DoubleCRT.h"
+
+namespace helib {
 
 class KeySwitch;
 class FHEPubKey;
@@ -135,7 +137,7 @@ public:
    * To detremine if the resulting handle canbe re-liearized using
    * some key-switchingmatrices from the public key, use the method
    * pubKey.haveKeySWmatrix(handle,handle.secretKeyID), from the class
-   * FHEPubKey in FHE.h
+   * FHEPubKey in keys.h
   */
   bool mul(const SKHandle& a, const SKHandle& b) 
   {
@@ -734,5 +736,6 @@ inline void Ctxt::extractBits(std::vector<Ctxt>& bits, long nBits2extract)
 void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long e);
 // implemented in extractDigits.cpp
 
+}
 
 #endif // ifndef HELIB_CTXT_H

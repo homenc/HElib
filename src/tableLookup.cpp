@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,11 +21,11 @@
 #include "intraSlot.h"
 #include "tableLookup.h"
 
-NTL_CLIENT
-
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 #endif
+
+namespace helib {
 
 static void
 recursiveProducts(const CtPtrs& products, const CtPtrs_slice& array);
@@ -79,12 +79,12 @@ void computeAllProducts(/*Output*/CtPtrs& products,
 // The input is a plaintext table T[] and an array of encrypted bits
 // I[], holding the binary representation of an index i into T.
 // The output is the encrypted value T[i].
-void tableLookup(Ctxt& out, const vector<zzX>& table, const CtPtrs& idx,
+void tableLookup(Ctxt& out, const std::vector<zzX>& table, const CtPtrs& idx,
                  std::vector<zzX>* unpackSlotEncoding)
 {
   FHE_TIMER_START;
   out.clear();
-  vector<Ctxt> products(lsize(table), out); // to hold subset products of idx
+  std::vector<Ctxt> products(lsize(table), out); // to hold subset products of idx
   CtPtrs_vectorCt pWrap(products); // A wrapper
 
   // Compute all products of ecnrypted bits =: b_i
@@ -207,7 +207,7 @@ recursiveProducts(const CtPtrs& products, const CtPtrs_slice& array)
   if (N<=2) { // edge condition
     *products[0] = *array[0];
     products[0]->negate();
-    products[0]->addConstant(ZZ(1)); // out[0] = 1-in
+    products[0]->addConstant(NTL::ZZ(1)); // out[0] = 1-in
     if (N>1)
       *products[1] = *array[0];    // out[1] = in
   }
@@ -225,7 +225,7 @@ recursiveProducts(const CtPtrs& products, const CtPtrs_slice& array)
     if (N>3)
       *products[3] = *products[0];     // x1 x0
 
-    products[0]->addConstant(ZZ(1));  // 1 +x1 x0
+    products[0]->addConstant(NTL::ZZ(1));  // 1 +x1 x0
     *products[0] -= *array[1];         // 1 +x1 x0 -x1
     *products[0] -= *array[0]   ;      // 1 +x1 x0 -x1 -x0 = (1-x1)(1-x0)
   }
@@ -268,4 +268,6 @@ static double pow2_double(long n) // compute 2^n as double
    for (long i = 0; i < abs_n; i++) res *= 2;
    if (n < 0) res = 1/res;
    return res;
+}
+
 }

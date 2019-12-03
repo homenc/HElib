@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -12,9 +12,7 @@
 
 #include <NTL/ZZ.h>
 #include <NTL/BasicThreadPool.h>
-#include <FHE.h>
-#include <timing.h>
-#include <EncryptedArray.h>
+#include <helib.h>
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cstdio>
@@ -41,9 +39,9 @@
 
 namespace {
 
-::testing::AssertionResult ciphertextMatches(const EncryptedArray &ea, const FHESecKey &sk, const PlaintextArray &p, const Ctxt &c)
+::testing::AssertionResult ciphertextMatches(const helib::EncryptedArray &ea, const helib::FHESecKey &sk, const helib::PlaintextArray &p, const helib::Ctxt &c)
 {
-    PlaintextArray pp(ea);
+    helib::PlaintextArray pp(ea);
     ea.decrypt(c, sk, pp);
     if(equals(ea, pp, p)) {
         return ::testing::AssertionSuccess();
@@ -127,11 +125,11 @@ class GTest_General : public ::testing::TestWithParam<Parameters> {
         std::vector<long> gens;
         std::vector<long> ords;
 
-        FHEcontext context;
+        helib::FHEcontext context;
 
-        FHESecKey secretKey;
+        helib::FHESecKey secretKey;
 
-        const FHEPubKey &publicKey;
+        const helib::FHEPubKey &publicKey;
 
         GTest_General () :
             R(GetParam().R),
@@ -142,9 +140,9 @@ class GTest_General : public ::testing::TestWithParam<Parameters> {
             k(GetParam().k),
             w(64),
             L(GetParam().L),
-            m(FindM(k, L, c, p, d, GetParam().s, GetParam().mvec.length() > 0 ? computeProd(GetParam().mvec) : GetParam().m, true)),
-            gens(convert<std::vector<long>, NTL::Vec<long>>(GetParam().gens)),
-            ords(convert<std::vector<long>, NTL::Vec<long>>(GetParam().ords)),
+            m(helib::FindM(k, L, c, p, d, GetParam().s, GetParam().mvec.length() > 0 ? helib::computeProd(GetParam().mvec) : GetParam().m, true)),
+            gens(helib::convert<std::vector<long>, NTL::Vec<long>>(GetParam().gens)),
+            ords(helib::convert<std::vector<long>, NTL::Vec<long>>(GetParam().ords)),
             context(m, p, r, gens, ords),
             secretKey((buildModChain(context, L, c), context)),
             publicKey(secretKey)
@@ -156,17 +154,17 @@ class GTest_General : public ::testing::TestWithParam<Parameters> {
             NTL::SetSeed(NTL::ZZ(GetParam().seed));
             NTL::SetNumThreads(GetParam().nt);
             secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-            addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+            helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 
 #ifdef DEBUG_PRINTOUT
-            dbgKey = &secretKey;
-            dbgEa = const_cast<EncryptedArray*>(context.ea);
+            helib::dbgKey = &secretKey;
+            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
 #endif // DEBUG_PRINTOUT
         };
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 };
 
@@ -184,8 +182,8 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
             << ", w=" << w
             << ", L=" << L
             << ", m=" << m
-            << ", gens=" << gens
-            << ", ords=" << ords
+            << ", gens=" << helib::vecToStr(gens)
+            << ", ords=" << helib::vecToStr(ords)
             << std::endl;
     }
 
@@ -194,7 +192,7 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
     if (d == 0)
         G = context.alMod.getFactorsOverZZ()[0];
     else
-        G = makeIrredPoly(p, d);
+        G = helib::makeIrredPoly(p, d);
 
     if (!helib_test::noPrint) {
         context.zMStar.printout();
@@ -210,32 +208,32 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
             << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
         std::cout << "G = " << G << "\n";
     }
-    EncryptedArray ea(context, G);
+    helib::EncryptedArray ea(context, G);
     long nslots = ea.size();
 
     // Debugging additions
-    dbgKey = &secretKey;
-    dbgEa = &ea;
+    helib::dbgKey = &secretKey;
+    helib::dbgEa = &ea;
 
 
-    PlaintextArray p0(ea);
-    PlaintextArray p1(ea);
-    PlaintextArray p2(ea);
-    PlaintextArray p3(ea);
+    helib::PlaintextArray p0(ea);
+    helib::PlaintextArray p1(ea);
+    helib::PlaintextArray p2(ea);
+    helib::PlaintextArray p3(ea);
 
-    random(ea, p0);
-    random(ea, p1);
-    random(ea, p2);
-    random(ea, p3);
+    helib::random(ea, p0);
+    helib::random(ea, p1);
+    helib::random(ea, p2);
+    helib::random(ea, p3);
 
-    Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
+    helib::Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
     ea.encrypt(c0, publicKey, p0);
     // {ZZX ppp0; ea.encode(ppp0, p0); c0.DummyEncrypt(ppp0);} // dummy encryption
     ea.encrypt(c1, publicKey, p1); // real encryption
     ea.encrypt(c2, publicKey, p2); // real encryption
     ea.encrypt(c3, publicKey, p3); // real encryption
 
-    resetAllTimers();
+    helib::resetAllTimers();
 
     FHE_NTIMER_START(Circuit);
 
@@ -249,10 +247,10 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
         // random number in [-(nslots-1)..nslots-1]
 
         // two random constants
-        PlaintextArray const1(ea);
-        PlaintextArray const2(ea);
-        random(ea, const1);
-        random(ea, const2);
+        helib::PlaintextArray const1(ea);
+        helib::PlaintextArray const2(ea);
+        helib::random(ea, const1);
+        helib::random(ea, const2);
 
         NTL::ZZX const1_poly, const2_poly;
         ea.encode(const1_poly, const1);
@@ -273,8 +271,8 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
         if (!helib_test::noPrint) CheckCtxt(c2, "c2*=k2");
         EXPECT_TRUE(ciphertextMatches(ea,secretKey,p2,c2));
 
-        PlaintextArray tmp_p(p1); // tmp = c1
-        Ctxt tmp(c1);
+        helib::PlaintextArray tmp_p(p1); // tmp = c1
+        helib::Ctxt tmp(c1);
         sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
         shift(ea, tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
         ea.shift(tmp, shamt);
@@ -292,7 +290,7 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
         if (!helib_test::noPrint) CheckCtxt(c2, buffer);
         EXPECT_TRUE(ciphertextMatches(ea,secretKey,p2,c2));
 
-        ::negate(ea, p1); // c1.negate()
+        ::helib::negate(ea, p1); // c1.negate()
         c1.negate();
         if (!helib_test::noPrint) CheckCtxt(c1, "c1=-c1");
         EXPECT_TRUE(ciphertextMatches(ea,secretKey,p1,c1));
@@ -317,10 +315,10 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
 
     if (!helib_test::noPrint) {
         std::cout << std::endl;
-        printAllTimers();
+        helib::printAllTimers();
         std::cout << std::endl;
     }
-    resetAllTimers();
+    helib::resetAllTimers();
     FHE_NTIMER_START(Check);
 
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p0, c0));
@@ -332,7 +330,7 @@ TEST_P(GTest_General, correctly_implements_mix_of_operations_over_four_ciphertex
 
     std::cout << std::endl;
     if (!helib_test::noPrint) {
-        printAllTimers();
+        helib::printAllTimers();
         std::cout << std::endl;
     }
 };

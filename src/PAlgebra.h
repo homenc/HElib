@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -49,8 +49,24 @@
 #include "hypercube.h"
 #include "PGFFT.h"
 #include "clonedPtr.h"
+#include <vector>
+#include <complex>
 
-//NTL_CLIENT
+namespace helib {
+
+struct half_FFT {
+  PGFFT fft;
+  std::vector<std::complex<double>> pow;
+
+  half_FFT(long m);
+};
+
+struct quarter_FFT {
+  PGFFT fft;
+  std::vector<std::complex<double>> pow1, pow2;
+
+  quarter_FFT(long m);
+};
 
 class PAlgebra {
   long m;   // the integer m defines (Z/mZ)^*, Phi_m(X), etc.
@@ -61,15 +77,19 @@ class PAlgebra {
   long nfactors; // number of distinct prime factors of m
   long radm; // rad(m) = prod of distinct primes dividing m
   double normBnd; // max-norm-on-pwfl-basis <= normBnd * max-norm-canon-embed
+  double polyNormBnd; // max-norm-on-poly-basis <= polyNormBnd * max-norm-canon-embed
 
   long pow2; // if m = 2^k, then pow2 == k; otherwise, pow2 == 0 
 
   std::vector<long> gens; // Our generators for (Z/mZ)^* (other than p)
 
   //  native[i] is true iff gens[i] has the same order in the quotient
-  //  group as its order in Zm*. 
-  //  VJS: I changed this from a Vec<GF2> to Vec<bool>.
+  //  group as its order in Zm*.
   NTL::Vec<bool> native;
+
+  // frob_perturb[i] = j if gens[i] raised to its order equals p^j,
+  // otherwise -1
+  NTL::Vec<long> frob_perturb;
 
   CubeSignature cube; // the hypercube structure of Zm* /(p)
 
@@ -104,7 +124,14 @@ class PAlgebra {
   std::vector<long> zmsRep; // inverse of zmsIdx
 
   std::shared_ptr<PGFFT> fftInfo; // info for computing m-point complex FFT's
-                             // copied_ptr allows delayed initialization
+                             // shard_ptr allows delayed initialization
+                             // and lightweight copying
+
+  std::shared_ptr<half_FFT> half_fftInfo;
+                             // an optimization for FFT's with even m
+
+  std::shared_ptr<quarter_FFT> quarter_fftInfo;
+                             // an optimization for FFT's with m = 0 (mod 4)
 
  public:
 
@@ -144,6 +171,9 @@ class PAlgebra {
 
   //! max-norm-on-pwfl-basis <= normBnd * max-norm-canon-embed
   double getNormBnd() const { return normBnd; }
+
+  //! max-norm-on-pwfl-basis <= polyNormBnd * max-norm-canon-embed
+  double getPolyNormBnd() const { return polyNormBnd; }
 
   //! The number of plaintext slots = phi(m)/ord(p)
   long getNSlots() const { return cube.getSize(); }
@@ -188,6 +218,11 @@ class PAlgebra {
   //! Is ord(i'th generator) the same as its order in (Z/mZ)^*? 
   bool SameOrd(long i) const
   {  return native[i]; }
+
+  // FrobPerturb[i] = j if gens[i] raised to its order equals p^j,
+  // where j in [0..ordP), otherwise -1
+  long FrobPerturb(long i) const
+  {  return frob_perturb[i]; }
 
   //! @name Translation between index, represnetatives, and exponents
 
@@ -255,6 +290,8 @@ class PAlgebra {
   long fftSizeNeeded() const {return NTL::NextPowerOfTwo(getM()) +1;}
 
   const PGFFT& getFFTInfo() const { return *fftInfo; }
+  const half_FFT& getHalfFFTInfo() const { return *half_fftInfo; }
+  const quarter_FFT& getQuarterFFTInfo() const { return *quarter_fftInfo; }
 };
 
 
@@ -783,5 +820,7 @@ public:
 bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
                      const std::vector<long>& gens, const std::vector<long>& ords);
+
+}
 
 #endif // #ifndef HELIB_PALGEBRA_H

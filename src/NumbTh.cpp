@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,7 +17,7 @@
 #include <cctype>
 #include <algorithm>   // defines count(...), min(...)
 
-NTL_CLIENT
+namespace helib {
 
 bool FHEglobals::dryRun = false;
 
@@ -48,14 +48,14 @@ long mcDiv(long a, long b) {
 // return multiplicative order of p modulo m, or 0 if GCD(p, m) != 1
 long multOrd(long p, long m)
 {
-  if (GCD(p, m) != 1) return 0;
+  if (NTL::GCD(p, m) != 1) return 0;
 
   p = p % m;
   long ord = 1;
   long val = p; 
   while (val != 1) {
     ord++;
-    val = MulMod(val, p, m);
+    val = NTL::MulMod(val, p, m);
   }
   return ord;
 }
@@ -69,101 +69,119 @@ template<class T> static inline long computeProd(const T& vec, long k)
     prod = prod * vec[d];
   return prod;
 }
-long computeProd(const Vec<long>& vec) { return computeProd(vec, vec.length());}
-long computeProd(const vector<long>& vec) {return computeProd(vec, vec.size());}
+long computeProd(const NTL::Vec<long>& vec) { return computeProd(vec, vec.length());}
+long computeProd(const std::vector<long>& vec) {return computeProd(vec, vec.size());}
 
 
 // return a degree-d irreducible polynomial mod p
-ZZX makeIrredPoly(long p, long d)
+NTL::ZZX makeIrredPoly(long p, long d)
 {
   //OLD: assert(d >= 1);
   helib::assertTrue<helib::InvalidArgument>(d >= 1l, "polynomial degree is less than 1");
-  //OLD: assert(ProbPrime(p));
-  helib::assertTrue<helib::InvalidArgument>((bool)ProbPrime(p), "modulus p is not prime");
+  //OLD: assert(NTL::ProbPrime(p));
+  helib::assertTrue<helib::InvalidArgument>((bool)NTL::ProbPrime(p), "modulus p is not prime");
   
-  if (d == 1) return ZZX(1, 1); // the monomial X
+  if (d == 1) return NTL::ZZX(1, 1); // the monomial X
 
-  zz_pBak bak; bak.save();
-  zz_p::init(p);
-  return to_ZZX(BuildIrred_zz_pX(d));
+  NTL::zz_pBak bak; bak.save();
+  NTL::zz_p::init(p);
+  return NTL::to_ZZX(NTL::BuildIrred_zz_pX(d));
 }
 
 
 // Factoring by trial division, only works for N<2^{60}.
 // Only the primes are recorded, not their multiplicity
-template<class zz> static void factorT(vector<zz> &factors, const zz &N)
+template<class zz> static void 
+factorT(std::vector<zz> &factors, const zz &N)
 {
+  FHE_TIMER_START;
+
   factors.resize(0); // reset the factors
 
   if (N<2) return;   // sanity check
 
-  PrimeSeq s;
+  NTL::PrimeSeq s;
   zz n = N;
-  while (true) {
-    if (ProbPrime(n)) { // we are left with just a single prime
+  while (n > 1) {
+
+    if (NTL::ProbPrime(n)) { // we are left with just a single prime
       factors.push_back(n);
       return;
     }
-    // if n is a composite, check if the next prime divides it
+
+    // n is a composite, so find the next prime that divides it
     long p = s.next();
-    if ((n%p)==0) {
-      zz pp;
-      conv(pp,p);
-      factors.push_back(pp);
-      do { n /= p; } while ((n%p)==0);
-    }
-    if (n==1) return;
+    while (p && n%p != 0) p = s.next();
+
+    if (!p) throw helib::RuntimeError("ran out out small primes");
+
+    zz pp;
+    NTL::conv(pp,p);
+    factors.push_back(pp);
+    do { n /= p; } while (n%p == 0);
   }
 }
-void factorize(vector<long> &factors, long N) { factorT<long>(factors, N);}
-void factorize(vector<ZZ> &factors, const ZZ& N) {factorT<ZZ>(factors, N);}
+
+
+
+
+void factorize(std::vector<long> &factors, long N) { factorT<long>(factors, N);}
+void factorize(std::vector<NTL::ZZ> &factors, const NTL::ZZ& N) {factorT<NTL::ZZ>(factors, N);}
 
 // Returns a list of prime factors and their multiplicity, 
 // N = \prod_i factors[i].first^{factors[i].second}
-void factorize(Vec< Pair<long, long> > &factors, long N)
+void factorize(NTL::Vec< NTL::Pair<long, long> > &factors, long N)
 {
   factors.SetLength(0);
 
   if (N < 2) return;
 
-  PrimeSeq s;
+  NTL::PrimeSeq s;
   long n = N;
   while (n > 1) {
-    if (ProbPrime(n)) { // n itself is a prime, add (n,1) to the list
-      append(factors, cons(n, 1L));
+
+    if (NTL::ProbPrime(n)) { // n itself is a prime, add (n,1) to the list
+      append(factors, NTL::cons(n, 1L));
       return;
     }
 
+    // n is composite, so find next prime that divides it
+
     long p = s.next();
-    if ((n % p) == 0) { // p divides n, find its multiplicity
-      long e = 1;
+    while (p && n%p != 0) p = s.next();
+
+    if (!p) throw helib::RuntimeError("ran out out small primes");
+
+    long e = 1;
+    n = n/p;
+    while ((n % p) == 0) {
       n = n/p;
-      while ((n % p) == 0) {
-        n = n/p;
-        e++;
-      }
-      append(factors, cons(p, e)); // add (p,e) to the list
+      e++;
     }
+    append(factors, NTL::cons(p, e)); // add (p,e) to the list
   }
 }
 
+
+
+
 // Prime-power factorization
-void pp_factorize(vector<long>& factors, long N)
+void pp_factorize(std::vector<long>& factors, long N)
 {
-  Vec< Pair<long, long> > pf;
+  NTL::Vec< NTL::Pair<long, long> > pf;
   factorize(pf,N); // prime factors, N = \prod_i pf[i].first^{pf[i].second}
   factors.resize(pf.length());
   for (long i=0; i<pf.length(); i++)
-    factors[i] = power_long(pf[i].a, pf[i].b); // p_i^e_i
+    factors[i] = NTL::power_long(pf[i].a, pf[i].b); // p_i^e_i
 }
 
 
-template<class zz> static void phiNT(zz &phin, vector<zz> &facts, const zz &N)
+template<class zz> static void phiNT(zz &phin, std::vector<zz> &facts, const zz &N)
 {
   if (facts.size()==0) factorize(facts,N);
 
   zz n = N;
-  conv(phin,1); // initialize phiN=1
+  NTL::conv(phin,1); // initialize phiN=1
   for (unsigned long i=0; i<facts.size(); i++) {
     zz p = facts[i];
     phin *= (p-1); // first factor of p
@@ -171,23 +189,26 @@ template<class zz> static void phiNT(zz &phin, vector<zz> &facts, const zz &N)
   } 
 }
 // Specific template instantiations for long and ZZ
-void phiN(long &pN, vector<long> &fs, long N)  { phiNT<long>(pN,fs,N); }
-void phiN(ZZ &pN, vector<ZZ> &fs, const ZZ &N) { phiNT<ZZ>(pN,fs,N);   }
+void phiN(long &pN, std::vector<long> &fs, long N)  { phiNT<long>(pN,fs,N); }
+void phiN(NTL::ZZ &pN, std::vector<NTL::ZZ> &fs, const NTL::ZZ &N) { phiNT<NTL::ZZ>(pN,fs,N);   }
 
 /* Compute Phi(N) */
 long phi_N(long N)
 {
   long phiN=1,p,e;
-  PrimeSeq s;
+  NTL::PrimeSeq s;
   while (N!=1)
     { p=s.next();
       e=0;
       while ((N%p)==0) { N=N/p; e++; }
       if (e!=0)
-        { phiN=phiN*(p-1)*power_long(p,e-1); }
+        { phiN=phiN*(p-1)*NTL::power_long(p,e-1); }
     }
   return phiN;
 }
+
+
+
 
 /* While generating the representation of (Z/mZ)^*, we keep the elements in
  * equivalence classes, and each class has a representative element (called
@@ -203,14 +224,19 @@ long phi_N(long N)
  * group and so on, until the remaining quotient group is the trivial
  * one, containing just a a single element. A twist is that when choosing
  * the highest-order generator, we try to find one whose order in the
- * current quotient group is the same as in the original group (Z/mZ)^*.
+ * current quotient group is the same as in the original group (Z/mZ)^*,
+ * and failing that, we find one whose order in the current quotient group
+ * is the same as in (Z/mZ)^* /<p>.  This last type of generator is
+ * always guaranteed.
  **/
 
 // The function conjClasses(classes,g,m) unifies equivalence classes that
 // have elements which are a factor of g apart, the pivot of the unified
 // class is the smallest element in that class. 
-static void conjClasses(vector<long>& classes, long g, long m)
+static void conjClasses(std::vector<long>& classes, long g, long m)
 {
+  NTL::mulmod_t minv = NTL::PrepMulMod(m);
+
   for (long i=0; i<m; i++) {
     if (classes[i]==0) continue; // i \notin (Z/mZ)^*
 
@@ -220,14 +246,15 @@ static void conjClasses(vector<long>& classes, long g, long m)
     }
 
     // If i is a pivot, update other pivots to point to it
-    unsigned long j = MulMod(i, g, m);
+    NTL::mulmod_precon_t gminv = NTL::PrepMulModPrecon(g, m, minv);
+    long j = NTL::MulModPrecon(i, g, m, gminv);
     while (classes[j] != i) {
       classes[classes[j]]= i; // Merge the equivalence classes of j and i
 
       // Note: if classes[j]!=j then classes[j] will be updated later,
       //       when we get to i=j and use the code for "i not pivot".
 
-      j = MulMod(j, g, m);
+      j = NTL::MulModPrecon(j, g, m, gminv);
     }
   }
 }
@@ -238,8 +265,10 @@ static void conjClasses(vector<long>& classes, long g, long m)
 // then also check if the order is the same as in (Z/mZ)^* and store the order
 // with negative sign if not.
 static void 
-compOrder(vector<long>& orders, vector<long>& classes, bool flag, long m)
+compOrder(std::vector<long>& orders, std::vector<long>& classes, long m)
 {
+  NTL::mulmod_t minv = NTL::PrepMulMod(m);
+  
   orders[0] = 0;
   orders[1] = 1;
   for (long i=2; i<m; i++) {
@@ -248,105 +277,110 @@ compOrder(vector<long>& orders, vector<long>& classes, bool flag, long m)
       continue;
     }
 
-    // If not comparing order with (Z/mZ)^*, only compute the order of pivots
 
-    if (!flag && classes[i]<i){          // not a pivot
+    if (classes[i]<i){          // not a pivot
       orders[i] = orders[classes[i]];
       continue;
     }
 
+    NTL::mulmod_precon_t iminv = NTL::PrepMulModPrecon(i, m, minv);
+
     // For an element i>1, the order is at least 2
-    long j = MulMod(i, i, m);
+    long j = NTL::MulModPrecon(i, i, m, iminv);
     long ord = 2;
     while (classes[j] != 1) {
-      j = MulMod(j, i, m); // next element in <i>
+      j = NTL::MulModPrecon(j, i, m, iminv); // next element in <i>
       ord++;    // count how many steps until we reach 1
     }
 
-    // When we get here we have classes[j]==1, so if j!=1 it means that the
-    // order of i in the quotient group is smaller than its order in the
-    // entire group Z_m^*. If the flag is set then we store orders[i] = -ord.
-    
-    if (flag && j != 1) ord = -ord; // order in Z_m^* is larger than ord
     orders[i] = ord;
   }
 }
 
-// Compare numbers based on their absolute value
-#if 1
-
-// This version prefers positive numbers over negative
-static bool gtAbsVal(long a, long b)
-{
-  return (abs(a)>abs(b) || (abs(a)==abs(b) && a>b));
-}
-
-
-#else
-
-// This version does not have a preference...
-// useful in generating test cases with "bad" dimensions
-static bool gtAbsVal(long a, long b)
-{
-  return (abs(a)>abs(b));
-}
-#endif
 
 // Returns in gens a generating set for Zm* /<p>, and in ords the
 // order of these generators. Return value is the order of p in Zm*.
-long findGenerators(vector<long>& gens, vector<long>& ords, long m, long p,
-                    const vector<long>& candidates)
+long findGenerators(std::vector<long>& gens, std::vector<long>& ords, long m, long p,
+                    const std::vector<long>& candidates)
 {
   gens.clear();
   ords.clear();
   // Compute the generators for (Z/mZ)^*
-  vector<long> classes(m);
-  vector<long> orders(m);
+  std::vector<long> classes(m);
+  std::vector<long> orders(m);
 
   for (long i=0; i<m; i++) { // initially each element in its own class
-    if (GCD(i,m)!=1) classes[i] = 0; // i is not in (Z/mZ)^*
+    if (NTL::GCD(i,m)!=1) classes[i] = 0; // i is not in (Z/mZ)^*
     else             classes[i] = i;
   }
 
   // Start building a representation of (Z/mZ)^*, first use the generator p
   conjClasses(classes,p % m,m);  // merge classes that have a factor of p
 
-  // The order of p is the size of the equivalence class of 1
-#if 0
-  long ordP = std::count(classes.begin(), classes.end(), 1);
-    // count(from,to,val) returns # of elements in (from,to) with value=val
-#else
-  long ordP = 0;
-  for (long i = 0; i < lsize(classes); i++)
-    if (classes[i] == 1) ordP++;
-#endif
+  std::vector<int> p_subgp(m);
+  for (long i: range(m)) p_subgp[i] = 0;
 
-  // Compute orders in (Z/mZ)^* /<p> while comparing to (Z/mZ)^*
+  // The order of p is the size of the equivalence class of 1
+  long ordP = 0;
+  for (long i: range(m)) {
+    if (classes[i] == 1) {
+      ordP++;
+      p_subgp[i] = 1;
+    }
+  }
+
   long candIdx=0;
   while (true) {
-    compOrder(orders,classes,true,m);
-    // if the orders of i in Zm* /<p> and Zm* are not the same, then
-    // order[i] contains the order in Zm* /<p> with negative sign
+    compOrder(orders,classes,m);
 
     long idx=0;
     if (candIdx<lsize(candidates)) { // try next candidate
       idx = candidates[candIdx++];
-      if (abs(orders[idx])<=1)
-        idx=0;
+      if (orders[idx]<=1) idx=0;
     }
-    if (idx==0) // no viable candidates supplied externally
-      idx = argmax(orders, &gtAbsVal);// find the element with largest order
-    long largest = orders[idx];
+    if (idx==0) { // no viable candidates supplied externally
+      long largest_ord = 1;
 
-    if (abs(largest) == 1) break;   // Trivial group, we are done
+      for (long i: range(m)) {
+         if (largest_ord < orders[i]) largest_ord = orders[i];
+      }
+
+      if (largest_ord > 1) {
+         long best_quality = 0;
+         long best_idx = -1;
+
+         for (long i=0; i < m && best_quality < 2; i++) {
+           if (orders[i] == largest_ord) {
+             long j = NTL::PowerMod(i, largest_ord, m);
+             if (j == 1) {
+               best_idx = i;
+               best_quality = 2;
+             }
+             else if (best_quality < 1 && p_subgp[j]) {
+               best_idx = i;
+               best_quality = 1;
+             }
+           }
+         }
+
+         if (!best_quality) Warning("low quality generator");
+         idx = best_idx;
+      }
+
+    }
+
+    if (!idx) break;   // we are done
 
     // store generator with same order as in (Z/mZ)^*
     gens.push_back(idx);
-    ords.push_back(largest);
+    ords.push_back(orders[idx]);
     conjClasses(classes,idx,m); // merge classes that have a factor of idx
   }
   return ordP;
 }
+
+
+
 
 // finding e-th root of unity modulo the current modulus
 // VJS: rewritten to be both faster and deterministic,
@@ -359,7 +393,7 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
   //OLD: assert(qm1 % e == 0);
   helib::assertEq(static_cast<long>(qm1 % e), 0l, "e does not divide zp::modulus()-1");
   
-  vector<long> facts;
+  std::vector<long> facts;
   factorize(facts,e); // factorization of e
 
   root = 1;
@@ -376,7 +410,7 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
     // the power of p that divides e.
     // Our goal is to find an element of order pp
 
-    PrimeSeq s;
+    NTL::PrimeSeq s;
     long q;
     zp qq, qq1;
     long iter = 0;
@@ -385,7 +419,7 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
       if (iter > 1000000) 
         throw helib::RuntimeError("FindPrimitiveRoot: possible infinite loop?");
       q = s.next();
-      conv(qq, q);
+      NTL::conv(qq, q);
       power(qq1, qq, qm1/p);
     } while (qq1 == 1);
     power(qq1, qq, qm1/pp); // qq1 has order pp
@@ -410,14 +444,14 @@ template<class zp,class zz> void FindPrimRootT(zp &root, unsigned long e)
   }
 }
 // instantiations of the template
-void FindPrimitiveRoot(zz_p &r, unsigned long e){FindPrimRootT<zz_p,long>(r,e);}
-void FindPrimitiveRoot(ZZ_p &r, unsigned long e){FindPrimRootT<ZZ_p,ZZ>(r,e);}
+void FindPrimitiveRoot(NTL::zz_p &r, unsigned long e){FindPrimRootT<NTL::zz_p,long>(r,e);}
+void FindPrimitiveRoot(NTL::ZZ_p &r, unsigned long e){FindPrimRootT<NTL::ZZ_p,NTL::ZZ>(r,e);}
 
 /* Compute mobius function (naive method as n is small) */
 long mobius(long n)
 {
   long p,e,arity=0;
-  PrimeSeq s;
+  NTL::PrimeSeq s;
   while (n!=1)
     { p=s.next();
       e=0;
@@ -429,30 +463,165 @@ long mobius(long n)
   return -1;
 }
 
-/* Compute cyclotomic polynomial */
-ZZX Cyclotomic(long N)
+// Based on Algorithm 4 (the Sparse Power Series Algorithm) from
+// ANDREW ARNOLD AND MICHAEL MONAGAN, CALCULATING CYCLOTOMIC POLYNOMIALS,
+// MATHEMATICS OF COMPUTATION, Volume 80, Number 276, October 2011, 
+// Pages 2359-2379
+
+
+NTL::ZZX Cyclotomic(long n)
 {
-  ZZX Num,Den,G,F;
-  NTL::set(Num); NTL::set(Den);
-  long m,d;
-  for (d=1; d<=N; d++)
-    { if ((N%d)==0)
-         { clear(G);
-           SetCoeff(G,N/d,1); SetCoeff(G,0,-1);
-           m=mobius(d);
-           if (m==1)       { Num*=G; }
-           else if (m==-1) { Den*=G; }
-         }
-    } 
-  F=Num/Den;
-  return F;
+   helib::assertEq(n >= 1, true, "n >= 1");
+
+   // remove 2's
+
+   long num_twos = 0;
+   while (n%2 == 0) {
+      n /= 2;
+      num_twos++;
+   }
+
+   if (n == 1) {
+      if (num_twos == 0) {
+         NTL::ZZX res; // X-1
+         SetCoeff(res, 1);
+         SetCoeff(res, 0, -1);
+         return res;
+      }
+      else {
+         NTL::ZZX res; // X^{2^{num_twos-1}}+1
+         SetCoeff(res, 1L << (num_twos-1));
+         SetCoeff(res, 0);
+         return res;
+      }
+   }
+      
+
+   std::vector<long> facs;
+   factorize(facs, n);
+
+   long k = facs.size();
+
+   long radn = 1;
+   long phi_radn = 1;
+   for (long i: range(k)) {
+      radn *= facs[i];
+      phi_radn *= (facs[i]-1);
+   }
+
+   long D = phi_radn/2;
+
+   if (radn <= 10000000L) {
+      // for n <= 10^6, results in Arnold and Monogan
+      // imply that all coefficients of Phi_n(X) are 
+      // less than 2^27 in absolute value.
+      // So we compute the cofficients using 32-bit arithemtic.
+
+      // NOTE: _ntl_uint32 is either int or long.
+
+      NTL::Vec<_ntl_uint32> A;
+      A.SetLength(D+1);
+      A[0] = 1;
+      for (long i = 1; i <= D; i++) A[i] = 0;
+
+      for (long bits: range(1L << k)) {
+	 long d = 1;
+	 long parity = k & 1;
+	 for (long pos: range(k)) {
+	    if ((1L << pos) & bits) {
+	       d *= facs[pos];
+	       parity = 1 - parity;
+	    }
+	 }
+
+	 if (parity == 0) {
+	    for (long i = D; i >= d; i--) 
+	       A[i] -= A[i-d];
+	 }
+	 else {
+	    for (long i = d; i <= D; i++) 
+	       A[i] += A[i-d];
+	 }
+      }
+
+      if (num_twos > 0) {
+	 for (long i = 1; i <= D; i+=2)
+	    A[i] = -A[i];
+      }
+
+      long q = n/radn;
+      if (num_twos > 0) q = q << (num_twos-1);
+      long phi_n = phi_radn * q;
+
+      NTL::ZZX res;
+      res.rep.SetLength(phi_n+1);
+      for (long i = 0; i <= D; i++)
+	 conv(res.rep[i*q], NTL::cast_signed(A[i]));
+      for (long i = D+1; i <= phi_radn; i++)
+	 conv(res.rep[i*q], NTL::cast_signed(A[phi_radn-i]));
+
+      return res;
+   }
+   else {
+      // Exactly the same logic, but with bigint arthmetic.
+      // This is pretty academic...
+
+      NTL::Vec<NTL::ZZ> A;
+      A.SetLength(D+1);
+      A[0] = 1;
+      for (long i = 1; i <= D; i++) A[i] = 0;
+
+      for (long bits: range(1L << k)) {
+	 long d = 1;
+	 long parity = k & 1;
+	 for (long pos: range(k)) {
+	    if ((1L << pos) & bits) {
+	       d *= facs[pos];
+	       parity = 1 - parity;
+	    }
+	 }
+
+	 if (parity == 0) {
+	    for (long i = D; i >= d; i--) 
+	       A[i] -= A[i-d];
+	 }
+	 else {
+	    for (long i = d; i <= D; i++) 
+	       A[i] += A[i-d];
+	 }
+      }
+
+      if (num_twos > 0) {
+	 for (long i = 1; i <= D; i+=2)
+	    A[i] = -A[i];
+      }
+
+      long q = n/radn;
+      if (num_twos > 0) q = q << (num_twos-1);
+      long phi_n = phi_radn * q;
+
+      NTL::ZZX res;
+      res.rep.SetLength(phi_n+1);
+      for (long i = 0; i <= D; i++)
+	 res.rep[i*q] = A[i];
+      for (long i = D+1; i <= phi_radn; i++)
+	 res.rep[i*q] = A[phi_radn-i];
+
+      return res;
+   }
+
+
+
+
 }
+
+
 
 /* Find a primitive root modulo N */
 long primroot(long N,long phiN)
 {
   long g=2,p;
-  PrimeSeq s;
+  NTL::PrimeSeq s;
   bool flag=false;
 
   while (flag==false)
@@ -461,7 +630,7 @@ long primroot(long N,long phiN)
       do
         { p=s.next();
           if ((phiN%p)==0)
-            { if (PowerMod(g,phiN/p,N)==1)
+            { if (NTL::PowerMod(g,phiN/p,N)==1)
                 { flag=false; }
             }
         }
@@ -481,25 +650,25 @@ long ord(long N,long p)
   return o;
 }
 
-ZZX RandPoly(long n,const ZZ& p)
+NTL::ZZX RandPoly(long n,const NTL::ZZ& p)
 { 
-  ZZX F; F.SetMaxLength(n);
-  ZZ p2;  p2=p>>1;
+  NTL::ZZX F; F.SetMaxLength(n);
+  NTL::ZZ p2;  p2=p>>1;
   for (long i=0; i<n; i++)
     { SetCoeff(F,i,RandomBnd(p)-p2); }
   return F;
 }
 
 /* When q=2 maintains the same sign as the input */
-void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs)
+void PolyRed(NTL::ZZX& out, const NTL::ZZX& in, const NTL::ZZ& q, bool abs)
 {
   // ensure that out has the same degree as in
   out.SetMaxLength(deg(in)+1);               // allocate space if needed
   if (deg(out)>deg(in)) trunc(out,out,deg(in)+1); // remove high degrees
 
-  ZZ q2; q2=q>>1;
+  NTL::ZZ q2; q2=q>>1;
   for (long i=0; i<=deg(in); i++)
-    { ZZ c=coeff(in,i);
+    { NTL::ZZ c=coeff(in,i);
       c %= q;
       if (abs) {
         if (c<0) c += q;
@@ -516,7 +685,7 @@ void PolyRed(ZZX& out, const ZZX& in, const ZZ& q, bool abs)
     }
 }
 
-void PolyRed(ZZX& out, const ZZX& in, long q, bool abs)
+void PolyRed(NTL::ZZX& out, const NTL::ZZX& in, long q, bool abs)
 {
   // ensure that out has the same degree as in
   out.SetMaxLength(deg(in)+1);               // allocate space if needed
@@ -537,7 +706,7 @@ void PolyRed(ZZX& out, const ZZX& in, long q, bool abs)
     }
 }
 
-void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, long q, bool abs)
+void vecRed(NTL::Vec<NTL::ZZ>& out, const NTL::Vec<NTL::ZZ>& in, long q, bool abs)
 {
   out.SetLength(in.length());  // allocate space if needed
 
@@ -553,12 +722,12 @@ void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, long q, bool abs)
   }
 }
 
-void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, const ZZ& q, bool abs)
+void vecRed(NTL::Vec<NTL::ZZ>& out, const NTL::Vec<NTL::ZZ>& in, const NTL::ZZ& q, bool abs)
 {
   out.SetLength(in.length());  // allocate space if needed
 
   for (long i=0; i<in.length(); i++) {
-    ZZ c = in[i]%q;
+    NTL::ZZ c = in[i]%q;
     if (abs)       { if (c<0) c+=q; }
     else if (q==2) { if (in[i]<0) c = -c; }
     else { 
@@ -570,16 +739,16 @@ void vecRed(Vec<ZZ>& out, const Vec<ZZ>& in, const ZZ& q, bool abs)
 }
 
 // multiply the polynomial f by the integer a modulo q
-void MulMod(ZZX& out, const ZZX& f, long a, long q, bool abs/*default=true*/)
+void MulMod(NTL::ZZX& out, const NTL::ZZX& f, long a, long q, bool abs/*default=true*/)
 {
   // ensure that out has the same degree as f
   out.SetMaxLength(deg(f)+1);               // allocate space if needed
   if (deg(out)>deg(f)) trunc(out,out,deg(f)+1); // remove high degrees
 
-  mulmod_precon_t aqinv = PrepMulModPrecon(a, q);
+  NTL::mulmod_precon_t aqinv = NTL::PrepMulModPrecon(a, q);
   for (long i=0; i<=deg(f); i++) { 
     long c = rem(coeff(f,i), q);
-    c = MulModPrecon(c, a, q, aqinv); // returns c \in [0,q-1]
+    c = NTL::MulModPrecon(c, a, q, aqinv); // returns c \in [0,q-1]
     if (!abs && c >= q/2)
       c -= q;
     SetCoeff(out,i,c);
@@ -608,19 +777,19 @@ long is_in(long x,int* X,long sz)
  * Returns true if both vectors are of the same length, false otherwise
  */
 template <class zzvec>
-bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q)
+bool intVecCRT(NTL::vec_ZZ& vp, const NTL::ZZ& p, const zzvec& vq, long q)
 {
-  long pInv = InvMod(rem(p,q), q); // p^{-1} mod q
-  long n = min(vp.length(),vq.length());
+  long pInv = NTL::InvMod(rem(p,q), q); // p^{-1} mod q
+  long n = std::min(vp.length(),vq.length());
   long q_over_2 = q/2;
-  ZZ tmp;
+  NTL::ZZ tmp;
   long vqi;
-  mulmod_precon_t pqInv = PrepMulModPrecon(pInv, q);
+  NTL::mulmod_precon_t pqInv = NTL::PrepMulModPrecon(pInv, q);
   for (long i=0; i<n; i++) {
-    conv(vqi, vq[i]); // convert to single precision
-    long vq_minus_vp_mod_q = SubMod(vqi, rem(vp[i],q), q);
+    NTL::conv(vqi, vq[i]); // convert to single precision
+    long vq_minus_vp_mod_q = NTL::SubMod(vqi, rem(vp[i],q), q);
 
-    long delta_times_pInv = MulModPrecon(vq_minus_vp_mod_q, pInv, q, pqInv);
+    long delta_times_pInv = NTL::MulModPrecon(vq_minus_vp_mod_q, pInv, q, pqInv);
     if (delta_times_pInv > q_over_2) delta_times_pInv -= q;
 
     mul(tmp, delta_times_pInv, p); // tmp = [(vq_i-vp_i)*p^{-1}]_q * p
@@ -628,9 +797,9 @@ bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q)
   }
   // other entries (if any) are 0 mod q
   for (long i=vq.length(); i<vp.length(); i++) {
-    long minus_vp_mod_q = NegateMod(rem(vp[i],q), q);
+    long minus_vp_mod_q = NTL::NegateMod(rem(vp[i],q), q);
 
-    long delta_times_pInv = MulModPrecon(minus_vp_mod_q, pInv, q, pqInv);
+    long delta_times_pInv = NTL::MulModPrecon(minus_vp_mod_q, pInv, q, pqInv);
     if (delta_times_pInv > q_over_2) delta_times_pInv -= q;
 
     mul(tmp, delta_times_pInv, p); // tmp = [(vq_i-vp_i)*p^{-1}]_q * p
@@ -639,19 +808,19 @@ bool intVecCRT(vec_ZZ& vp, const ZZ& p, const zzvec& vq, long q)
   return (vp.length()==vq.length());
 }
 // specific instantiations: vq can be vec_long, vec_ZZ, or Vec<zz_p>
-template bool intVecCRT(vec_ZZ&, const ZZ&, const vec_ZZ&, long);
-template bool intVecCRT(vec_ZZ&, const ZZ&, const vec_long&, long);
-template bool intVecCRT(vec_ZZ&, const ZZ&, const Vec<zz_p>&, long);
+template bool intVecCRT(NTL::vec_ZZ&, const NTL::ZZ&, const NTL::vec_ZZ&, long);
+template bool intVecCRT(NTL::vec_ZZ&, const NTL::ZZ&, const NTL::vec_long&, long);
+template bool intVecCRT(NTL::vec_ZZ&, const NTL::ZZ&, const NTL::Vec<NTL::zz_p>&, long);
 
 // ModComp: a pretty lame implementation
 
-void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f)
+void ModComp(NTL::ZZX& res, const NTL::ZZX& g, const NTL::ZZX& h, const NTL::ZZX& f)
 {
   //OLD: assert(LeadCoeff(f) == 1);
   helib::assertEq<helib::InvalidArgument>(LeadCoeff(f), NTL::ZZ(1l), "polynomial is not monic");
 
-  ZZX hh = h % f;
-  ZZX r = to_ZZX(0);
+  NTL::ZZX hh = h % f;
+  NTL::ZZX r = NTL::to_ZZX(0);
 
   for (long i = deg(g); i >= 0; i--) 
     r = (r*hh + coeff(g, i)) % f; 
@@ -659,21 +828,21 @@ void ModComp(ZZX& res, const ZZX& g, const ZZX& h, const ZZX& f)
   res = r;
 }
 
-long polyEvalMod(const ZZX& poly, long x, long p)
+long polyEvalMod(const NTL::ZZX& poly, long x, long p)
 {
   long ret = 0;
   x %= p; if (x<0) x += p;
-  mulmod_precon_t xpinv = PrepMulModPrecon(x, p);
+  NTL::mulmod_precon_t xpinv = NTL::PrepMulModPrecon(x, p);
   for (long i=deg(poly); i>=0; i--) {
     long coeff = rem(poly[i], p);
-    ret = AddMod(ret, coeff, p);      // Add the coefficient of x^i
-    if (i>0) ret = MulModPrecon(ret, x, p, xpinv); // then mult by x
+    ret = NTL::AddMod(ret, coeff, p);      // Add the coefficient of x^i
+    if (i>0) ret = NTL::MulModPrecon(ret, x, p, xpinv); // then mult by x
   }
   return ret;
 }
 
-static void recursiveInterpolateMod(ZZX& poly, const vec_long& x, vec_long& y,
-				    const vec_zz_p& xmod, vec_zz_p& ymod,
+static void recursiveInterpolateMod(NTL::ZZX& poly, const NTL::vec_long& x, NTL::vec_long& y,
+				    const NTL::vec_zz_p& xmod, NTL::vec_zz_p& ymod,
 				    long p, long p2e)
 {
   if (p2e<=1) { // recursion edge condition, mod-1 poly = 0
@@ -682,12 +851,12 @@ static void recursiveInterpolateMod(ZZX& poly, const vec_long& x, vec_long& y,
   }
 
   // convert y input to zz_p
-  for (long j=0; j<y.length(); j++) ymod[j] = to_zz_p(y[j] % p);
+  for (long j=0; j<y.length(); j++) ymod[j] = NTL::to_zz_p(y[j] % p);
 
   // a polynomial p_i s.t. p_i(x[j]) = i'th p-base digit of poly(x[j])
-  zz_pX polyMod;
+  NTL::zz_pX polyMod;
   interpolate(polyMod, xmod, ymod);    // interpolation modulo p
-  ZZX polyTmp; conv(polyTmp, polyMod); // convert to ZZX
+  NTL::ZZX polyTmp; NTL::conv(polyTmp, polyMod); // convert to ZZX
 
   // update ytmp by subtracting the new digit, then dividing by p
   for (long j=0; j<y.length(); j++) {
@@ -710,30 +879,30 @@ static void recursiveInterpolateMod(ZZX& poly, const vec_long& x, vec_long& y,
 
 // Interpolate the integer polynomial such that poly(x[i] mod p)=y[i] (mod p^e)
 // It is assumed that the points x[i] are all distinct modulo p
-void interpolateMod(ZZX& poly, const vec_long& x, const vec_long& y,
+void interpolateMod(NTL::ZZX& poly, const NTL::vec_long& x, const NTL::vec_long& y,
 		    long p, long e)
 {
-  poly = ZZX::zero();       // initialize to zero
-  long p2e = power_long(p,e); // p^e
+  poly = NTL::ZZX::zero();       // initialize to zero
+  long p2e = NTL::power_long(p,e); // p^e
 
-  vec_long ytmp(INIT_SIZE, y.length()); // A temporary writable copy
+  NTL::vec_long ytmp(NTL::INIT_SIZE, y.length()); // A temporary writable copy
   for (long j=0; j<y.length(); j++) {
     ytmp[j] = y[j] % p2e;
     if (ytmp[j] < 0) ytmp[j] += p2e;
   }
 
-  zz_pBak bak; bak.save();    // Set the current modulus to p
-  zz_p::init(p);
+  NTL::zz_pBak bak; bak.save();    // Set the current modulus to p
+  NTL::zz_p::init(p);
 
-  vec_zz_p xmod(INIT_SIZE, x.length()); // convert to zz_p
-  for (long j=0; j<x.length(); j++) xmod[j] = to_zz_p(x[j] % p);
+  NTL::vec_zz_p xmod(NTL::INIT_SIZE, x.length()); // convert to zz_p
+  for (long j=0; j<x.length(); j++) xmod[j] = NTL::to_zz_p(x[j] % p);
 
-  vec_zz_p ymod(INIT_SIZE, y.length()); // scratch space
+  NTL::vec_zz_p ymod(NTL::INIT_SIZE, y.length()); // scratch space
   recursiveInterpolateMod(poly, x, ytmp, xmod, ymod, p, p2e);
 }
 
 // advance the input stream beyond white spaces and a single instance of cc
-void seekPastChar(istream& str, int cc)
+void seekPastChar(std::istream& str, int cc)
 {
    int c = str.get();
    while (isspace(c)) c = str.get();
@@ -757,31 +926,31 @@ void seekPastChar(istream& str, int cc)
 // map defined by its action on the standard basis for zz_pE over zz_p:
 // for i = 0..zz_pE::degree()-1: x^i -> L[i], where x = (X mod zz_pE::modulus())
 
-void buildLinPolyMatrix(mat_zz_pE& M, long p)
+void buildLinPolyMatrix(NTL::mat_zz_pE& M, long p)
 {
-   long d = zz_pE::degree();
+   long d = NTL::zz_pE::degree();
 
    M.SetDims(d, d);
 
    for (long j = 0; j < d; j++) 
-      conv(M[0][j], zz_pX(j, 1));
+      NTL::conv(M[0][j], NTL::zz_pX(j, 1));
 
    for (long i = 1; i < d; i++)
       for (long j = 0; j < d; j++)
          M[i][j] = power(M[i-1][j], p);
 }
 
-void buildLinPolyMatrix(mat_GF2E& M, long p)
+void buildLinPolyMatrix(NTL::mat_GF2E& M, long p)
 {
   //OLD: assert(p == 2);
   helib::assertEq<helib::InvalidArgument>(p, 2l, "p is not 2 when building a mat_GF2E (Galois field 2)");
 
-   long d = GF2E::degree();
+   long d = NTL::GF2E::degree();
 
    M.SetDims(d, d);
 
    for (long j = 0; j < d; j++) 
-      conv(M[0][j], GF2X(j, 1));
+      NTL::conv(M[0][j], NTL::GF2X(j, 1));
 
    for (long i = 1; i < d; i++)
       for (long j = 0; j < d; j++)
@@ -794,18 +963,18 @@ void buildLinPolyMatrix(mat_GF2E& M, long p)
 
 // some auxilliary conversion routines
 
-void convert(vec_zz_pE& X, const vector<ZZX>& A)
+void convert(NTL::vec_zz_pE& X, const std::vector<NTL::ZZX>& A)
 {
    long n = A.size();
-   zz_pX tmp;
+   NTL::zz_pX tmp;
    X.SetLength(n);
    for (long i = 0; i < n; i++) {
-      conv(tmp, A[i]);
-      conv(X[i], tmp); 
+      NTL::conv(tmp, A[i]);
+      NTL::conv(X[i], tmp); 
    }
 } 
 
-void convert(mat_zz_pE& X, const vector< vector<ZZX> >& A)
+void convert(NTL::mat_zz_pE& X, const std::vector< std::vector<NTL::ZZX> >& A)
 {
    long n = A.size();
 
@@ -822,15 +991,15 @@ void convert(mat_zz_pE& X, const vector< vector<ZZX> >& A)
       convert(X[i], A[i]);
 }
 
-void convert(vector<ZZX>& X, const vec_zz_pE& A)
+void convert(std::vector<NTL::ZZX>& X, const NTL::vec_zz_pE& A)
 {
    long n = A.length();
    X.resize(n);
    for (long i = 0; i < n; i++)
-      conv(X[i], rep(A[i]));
+      NTL::conv(X[i], rep(A[i]));
 }
 
-void convert(vector< vector<ZZX> >& X, const mat_zz_pE& A)
+void convert(std::vector< std::vector<NTL::ZZX> >& X, const NTL::mat_zz_pE& A)
 {
    long n = A.NumRows();
    X.resize(n);
@@ -842,7 +1011,7 @@ void convert(NTL::Vec<long>& out, const NTL::ZZX& in)
 {
   out.SetLength(in.rep.length());
   for (long i=0; i<out.length(); i++)
-    out[i] = conv<long>(in[i]);
+    out[i] = NTL::conv<long>(in[i]);
 }
 
 
@@ -850,10 +1019,10 @@ void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric)
 {
   out.SetLength(in.rep.length());
   for (long i=0; i<out.length(); i++)
-    out[i] = conv<long>(in[i]);
+    out[i] = NTL::conv<long>(in[i]);
 
   if (symmetric) { // convert to representation symmetric around 0
-    long p = zz_p::modulus();
+    long p = NTL::zz_p::modulus();
     for (long i=0; i<out.length(); i++)
       if (out[i] > p/2)
         out[i] -= p;
@@ -865,7 +1034,7 @@ void convert(NTL::Vec<long>& out, const NTL::GF2X& in)
 {
   out.SetLength(1+deg(in));
   for (long i=0; i<out.length(); i++)
-    out[i] = conv<long>(in[i]);
+    out[i] = NTL::conv<long>(in[i]);
 }
 
 
@@ -873,7 +1042,7 @@ void convert(NTL::ZZX& out, const NTL::Vec<long>& in)
 {
   out.SetLength(in.length());
   for (long i=0; i<in.length(); i++)
-    out[i] = conv<ZZ>(in[i]);
+    out[i] = NTL::conv<NTL::ZZ>(in[i]);
   out.normalize();
 }
 
@@ -881,12 +1050,12 @@ void convert(NTL::GF2X& out, const NTL::Vec<long>& in)
 {
   out.SetLength(in.length());
   for (long i=0; i<in.length(); i++)
-    out[i] = conv<GF2>(in[i]);
+    out[i] = NTL::conv<NTL::GF2>(in[i]);
   out.normalize();
 }
 
 
-void mul(vector<ZZX>& x, const vector<ZZX>& a, long b)
+void mul(std::vector<NTL::ZZX>& x, const std::vector<NTL::ZZX>& a, long b)
 {
    long n = a.size();
    x.resize(n);
@@ -894,7 +1063,7 @@ void mul(vector<ZZX>& x, const vector<ZZX>& a, long b)
       mul(x[i], a[i], b);
 }
 
-void div(vector<ZZX>& x, const vector<ZZX>& a, long b)
+void div(std::vector<NTL::ZZX>& x, const std::vector<NTL::ZZX>& a, long b)
 {
    long n = a.size();
    x.resize(n);
@@ -902,7 +1071,7 @@ void div(vector<ZZX>& x, const vector<ZZX>& a, long b)
       div(x[i], a[i], b);
 }
 
-void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b)
+void add(std::vector<NTL::ZZX>& x, const std::vector<NTL::ZZX>& a, const std::vector<NTL::ZZX>& b)
 {
    long n = a.size();
    if (n != (long) b.size()) throw helib::InvalidArgument("add: a and b dimension differ");
@@ -915,12 +1084,12 @@ void add(vector<ZZX>& x, const vector<ZZX>& a, const vector<ZZX>& b)
 // A is an n x n matrix, b is a length n (row) vector,
 // and a solution for the matrix-vector equation x A = b is found.
 // If A is not inverible mod p, then error is raised.
-void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
+void ppsolve(NTL::vec_zz_pE& x, const NTL::mat_zz_pE& A, const NTL::vec_zz_pE& b,
              long p, long r) 
 {
 
    if (r == 1) {
-      zz_pE det;
+      NTL::zz_pE det;
       solve(det, x, A, b);
       if (det == 0) throw helib::InvalidArgument("ppsolve: matrix not invertible");
       return;
@@ -932,51 +1101,51 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
    if (n == 0)
      throw helib::InvalidArgument("ppsolve: matrix of dimension 0");
 
-   zz_pContext pr_context;
+   NTL::zz_pContext pr_context;
    pr_context.save();
 
-   zz_pEContext prE_context;
+   NTL::zz_pEContext prE_context;
    prE_context.save();
 
-   zz_pX G = zz_pE::modulus();
+   NTL::zz_pX G = NTL::zz_pE::modulus();
 
-   ZZX GG = to_ZZX(G);
+   NTL::ZZX GG = to_ZZX(G);
 
-   vector< vector<ZZX> > AA;
+   std::vector< std::vector<NTL::ZZX> > AA;
    convert(AA, A);
 
-   vector<ZZX> bb;
+   std::vector<NTL::ZZX> bb;
    convert(bb, b);
 
-   zz_pContext p_context(p);
+   NTL::zz_pContext p_context(p);
    p_context.restore();
 
-   zz_pX G1 = to_zz_pX(GG);
-   zz_pEContext pE_context(G1);
+   NTL::zz_pX G1 = NTL::to_zz_pX(GG);
+   NTL::zz_pEContext pE_context(G1);
    pE_context.restore();
 
    // we are now working mod p...
 
    // invert A mod p
 
-   mat_zz_pE A1;
+   NTL::mat_zz_pE A1;
    convert(A1, AA);
 
-   mat_zz_pE I1;
-   zz_pE det;
+   NTL::mat_zz_pE I1;
+   NTL::zz_pE det;
 
    inv(det, I1, A1);
    if (det == 0) {
      throw helib::LogicError("ppsolve: matrix not invertible");
    }
 
-   vec_zz_pE b1;
+   NTL::vec_zz_pE b1;
    convert(b1, bb);
 
-   vec_zz_pE y1;
+   NTL::vec_zz_pE y1;
    y1 = b1 * I1;
 
-   vector<ZZX> yy;
+   std::vector<NTL::ZZX> yy;
    convert(yy, y1);
 
    // yy is a solution mod p
@@ -988,16 +1157,16 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
       prE_context.restore();
       // we are now working mod p^r
 
-      vec_zz_pE d, y;
+      NTL::vec_zz_pE d, y;
       convert(y, yy);
 
       d = b - y * A;
 
-      vector<ZZX> dd;
+      std::vector<NTL::ZZX> dd;
       convert(dd, d);
 
-      long pk = power_long(p, k);
-      vector<ZZX> ee;
+      long pk = NTL::power_long(p, k);
+      std::vector<NTL::ZZX> ee;
       div(ee, dd, pk);
 
       p_context.restore();
@@ -1005,12 +1174,12 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
 
       // we are now working mod p
 
-      vec_zz_pE e1;
+      NTL::vec_zz_pE e1;
       convert(e1, ee);
-      vec_zz_pE z1;
+      NTL::vec_zz_pE z1;
       z1 = e1 * I1;
 
-      vector<ZZX> zz, ww;
+      std::vector<NTL::ZZX> zz, ww;
       convert(zz, z1);
 
       mul(ww, zz, pk);
@@ -1026,14 +1195,14 @@ void ppsolve(vec_zz_pE& x, const mat_zz_pE& A, const vec_zz_pE& b,
   helib::assertEq(x*A, b, "Failed to found solution x to matrix equation x*A == b");
 }
 
-void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
+void ppsolve(NTL::vec_GF2E& x, const NTL::mat_GF2E& A, const NTL::vec_GF2E& b,
              long p, long r) 
 {
   //OLD: assert(p == 2 && r == 1);
   helib::assertEq<helib::InvalidArgument>(p, 2l, "modulus p is not 2 with GF2E (Galois field 2)");
   helib::assertEq<helib::InvalidArgument>(r, 1l, "Hensel lifting r is not 2 with GF2E (Galois field 2)");
 
-   GF2E det;
+   NTL::GF2E det;
    solve(det, x, A, b);
    if (det == 0) throw helib::InvalidArgument("ppsolve: matrix not invertible");
 }
@@ -1043,7 +1212,7 @@ void ppsolve(vec_GF2E& x, const mat_GF2E& A, const vec_GF2E& b,
 // A is an n x n matrix, we compute its inverse mod p^r. An error is raised
 // if A is not inverible mod p. zz_p::modulus() is assumed to be p^r, for
 // p prime, r >= 1. Also zz_pE::modulus() is assumed to be initialized.
-void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
+void ppInvert(NTL::mat_zz_pE& X, const NTL::mat_zz_pE& A, long p, long r)
 {
   if (r == 1) { // use native inversion from NTL
     inv(X, A);    // X = A^{-1}
@@ -1053,30 +1222,30 @@ void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
   // begin by inverting A modulo p
 
   // convert to ZZX for a safe transaltion to mod-p objects
-  vector< vector<ZZX> > tmp;
+  std::vector< std::vector<NTL::ZZX> > tmp;
   convert(tmp, A);
   { // open a new block for mod-p computation
-  ZZX G;
-  convert(G, zz_pE::modulus());
-  zz_pBak bak_pr; bak_pr.save(); // backup the mod-p^r moduli
-  zz_pEBak bak_prE; bak_prE.save();
-  zz_p::init(p);   // Set the mod-p moduli
-  zz_pE::init(conv<zz_pX>(G));
+  NTL::ZZX G;
+  convert(G, NTL::zz_pE::modulus());
+  NTL::zz_pBak bak_pr; bak_pr.save(); // backup the mod-p^r moduli
+  NTL::zz_pEBak bak_prE; bak_prE.save();
+  NTL::zz_p::init(p);   // Set the mod-p moduli
+  NTL::zz_pE::init(NTL::conv<NTL::zz_pX>(G));
 
-  mat_zz_pE A1, Inv1;
+  NTL::mat_zz_pE A1, Inv1;
   convert(A1, tmp);   // Recover A as a mat_zz_pE object modulo p
   inv(Inv1, A1);      // Inv1 = A^{-1} (mod p)
   convert(tmp, Inv1); // convert to ZZX for transaltion to a mod-p^r object
   } // mod-p^r moduli restored on desctuction of bak_pr and bak_prE
-  mat_zz_pE XX;
+  NTL::mat_zz_pE XX;
   convert(XX, tmp); // XX = A^{-1} (mod p)
 
   // Now lift the solution modulo p^r
 
   // Compute the "correction factor" Z, s.t. XX*A = I - p*Z (mod p^r)
   long n = A.NumRows();
-  const mat_zz_pE I = ident_mat_zz_pE(n); // identity matrix
-  mat_zz_pE Z = I - XX*A;
+  const NTL::mat_zz_pE I = NTL::ident_mat_zz_pE(n); // identity matrix
+  NTL::mat_zz_pE Z = I - XX*A;
 
   convert(tmp, Z);  // Conver to ZZX to divide by p
   for (long i=0; i<n; i++) for (long j=0; j<n; j++) tmp[i][j] /= p;
@@ -1085,10 +1254,10 @@ void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
   // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*XX (mod p^r). We use
   // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* XX
 
-  long e = NextPowerOfTwo(r); // 2^e is smallest power of two >= r
+  long e = NTL::NextPowerOfTwo(r); // 2^e is smallest power of two >= r
 
   Z *= p;                 // = pZ
-  mat_zz_pE prod = I + Z; // = I + pZ
+  NTL::mat_zz_pE prod = I + Z; // = I + pZ
   for (long i=1; i<e; i++) {
     sqr(Z, Z);     // = (pZ)^{2^i}
     prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
@@ -1103,7 +1272,7 @@ void ppInvert(mat_zz_pE& X, const mat_zz_pE& A, long p, long r)
 // A is an n x n matrix, we compute its inverse mod p^r. An error is raised
 // if A is not inverible mod p. zz_p::modulus() is assumed to be p^r, for
 // p prime, r >= 1.
-void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
+void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r)
 {
   if (r == 1) { // use native inversion from NTL
     inv(X, A);    // X = A^{-1}
@@ -1113,26 +1282,26 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
   // begin by inverting A modulo p
 
   // convert to long for a safe transaltion to mod-p objects
-  Mat<long> tmp;
+  NTL::Mat<long> tmp;
   conv(tmp, A);
   { // open a new block for mod-p computation
-  zz_pBak bak_pr; bak_pr.save(); // backup the mod-p^r moduli
-  zz_p::init(p);   // Set the mod-p moduli
+  NTL::zz_pBak bak_pr; bak_pr.save(); // backup the mod-p^r moduli
+  NTL::zz_p::init(p);   // Set the mod-p moduli
 
-  mat_zz_p A1, Inv1;
+  NTL::mat_zz_p A1, Inv1;
   conv(A1, tmp);   // Recover A as a mat_zz_pE object modulo p
   inv(Inv1, A1);      // Inv1 = A^{-1} (mod p)
   conv(tmp, Inv1); // convert to long for transaltion to a mod-p^r object
   } // mod-p^r moduli restored on desctuction of bak_pr and bak_prE
-  mat_zz_p XX;
+  NTL::mat_zz_p XX;
   conv(XX, tmp); // XX = A^{-1} (mod p)
 
   // Now lift the solution modulo p^r
 
   // Compute the "correction factor" Z, s.t. XX*A = I - p*Z (mod p^r)
   long n = A.NumRows();
-  const mat_zz_p I = ident_mat_zz_p(n); // identity matrix
-  mat_zz_p Z = I - XX*A;
+  const NTL::mat_zz_p I = NTL::ident_mat_zz_p(n); // identity matrix
+  NTL::mat_zz_p Z = I - XX*A;
 
   conv(tmp, Z);  // Conver to long to divide by p
   for (long i=0; i<n; i++) for (long j=0; j<n; j++) tmp[i][j] /= p;
@@ -1141,10 +1310,10 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
   // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*XX (mod p^r). We use
   // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* XX
 
-  long e = NextPowerOfTwo(r); // 2^e is smallest power of two >= r
+  long e = NTL::NextPowerOfTwo(r); // 2^e is smallest power of two >= r
 
   Z *= p;                 // = pZ
-  mat_zz_p prod = I + Z; // = I + pZ
+  NTL::mat_zz_p prod = I + Z; // = I + pZ
   for (long i=1; i<e; i++) {
     sqr(Z, Z);     // = (pZ)^{2^i}
     prod *= (I+Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
@@ -1154,67 +1323,67 @@ void ppInvert(mat_zz_p& X, const mat_zz_p& A, long p, long r)
   helib::assertEq(X*A, I, "Failed to found solution X to matrix equation X*A == I where I is the identity matrix");
 }
 
-void buildLinPolyCoeffs(vec_zz_pE& C_out, const vec_zz_pE& L, long p, long r)
+void buildLinPolyCoeffs(NTL::vec_zz_pE& C_out, const NTL::vec_zz_pE& L, long p, long r)
 {
    FHE_TIMER_START;
-   mat_zz_pE M;
+   NTL::mat_zz_pE M;
    buildLinPolyMatrix(M, p);
 
-   vec_zz_pE C;
+   NTL::vec_zz_pE C;
    ppsolve(C, M, L, p, r);
 
    C_out = C;
    FHE_TIMER_STOP;
 }
 
-void buildLinPolyCoeffs(vec_GF2E& C_out, const vec_GF2E& L, long p, long r)
+void buildLinPolyCoeffs(NTL::vec_GF2E& C_out, const NTL::vec_GF2E& L, long p, long r)
 {
    FHE_TIMER_START;
   //OLD: assert(p == 2 && r == 1);
   helib::assertEq<helib::InvalidArgument>(p, 2l, "modulus p is not 2 with GF2E (Galois field 2)");
   helib::assertEq<helib::InvalidArgument>(r, 1l, "Hensel lifting r is not 2 with GF2E (Galois field 2)");
 
-   mat_GF2E M;
+   NTL::mat_GF2E M;
    buildLinPolyMatrix(M, p);
 
-   vec_GF2E C;
+   NTL::vec_GF2E C;
    ppsolve(C, M, L, p, r);
 
    C_out = C;
    FHE_TIMER_STOP;
 }
 
-void applyLinPoly(zz_pE& beta, const vec_zz_pE& C, const zz_pE& alpha, long p)
+void applyLinPoly(NTL::zz_pE& beta, const NTL::vec_zz_pE& C, const NTL::zz_pE& alpha, long p)
 {
-   long d = zz_pE::degree();
+   long d = NTL::zz_pE::degree();
    //OLD: assert(d == C.length());
-   helib::assertEq<helib::InvalidArgument>(d, C.length(), "C length is not equal to zz_pE::degree()");
+   helib::assertEq<helib::InvalidArgument>(d, C.length(), "C length is not equal to NTL::zz_pE::degree()");
 
-   zz_pE gamma, res;
+   NTL::zz_pE gamma, res;
 
-   gamma = to_zz_pE(zz_pX(1, 1));
+   gamma = NTL::to_zz_pE(NTL::zz_pX(1, 1));
    res = C[0]*alpha;
    for (long i = 1; i < d; i++) {
       gamma = power(gamma, p);
-      res += C[i]*to_zz_pE(CompMod(rep(alpha), rep(gamma), zz_pE::modulus()));
+      res += C[i]*NTL::to_zz_pE(CompMod(rep(alpha), rep(gamma), NTL::zz_pE::modulus()));
    }
 
    beta = res;
 }
 
-void applyLinPoly(GF2E& beta, const vec_GF2E& C, const GF2E& alpha, long p)
+void applyLinPoly(NTL::GF2E& beta, const NTL::vec_GF2E& C, const NTL::GF2E& alpha, long p)
 {
-   long d = GF2E::degree();
+   long d = NTL::GF2E::degree();
    //OLD: assert(d == C.length());
    helib::assertEq<helib::InvalidArgument>(d, C.length(), "C length is not equal to GF2E::degree()");
 
-   GF2E gamma, res;
+   NTL::GF2E gamma, res;
 
-   gamma = to_GF2E(GF2X(1, 1));
+   gamma = NTL::to_GF2E(NTL::GF2X(1, 1));
    res = C[0]*alpha;
    for (long i = 1; i < d; i++) {
       gamma = power(gamma, p);
-      res += C[i]*to_GF2E(CompMod(rep(alpha), rep(gamma), GF2E::modulus()));
+      res += C[i]*to_GF2E(CompMod(rep(alpha), rep(gamma), NTL::GF2E::modulus()));
    }
 
    beta = res;
@@ -1258,7 +1427,7 @@ std::pair<long,long> rationalApprox(double x, long denomBound)
 }
 
 // use continued fractios to get "best" rational approximation
-std::pair<ZZ,ZZ> rationalApprox(xdouble x, xdouble denomBound)
+std::pair<NTL::ZZ,NTL::ZZ> rationalApprox(NTL::xdouble x, NTL::xdouble denomBound)
 {
   int sign = 1;
   if (x<0) {
@@ -1266,29 +1435,29 @@ std::pair<ZZ,ZZ> rationalApprox(xdouble x, xdouble denomBound)
     x = -x;
   }
   if (denomBound<=0)
-    denomBound = conv<xdouble>(1L << (NTL_SP_NBITS/2));
+    denomBound = NTL::conv<NTL::xdouble>(1L << (NTL_SP_NBITS/2));
 
-  xdouble epsilon = 0.125/denomBound; // "smudge factor"
-  xdouble a = floor(x+epsilon);
-  xdouble xi = x - a;
-  xdouble prevDenom(0.0);
-  xdouble xdenom(1.0);
+  NTL::xdouble epsilon = 0.125/denomBound; // "smudge factor"
+  NTL::xdouble a = floor(x+epsilon);
+  NTL::xdouble xi = x - a;
+  NTL::xdouble prevDenom(0.0);
+  NTL::xdouble xdenom(1.0);
 
   // Continued fractions: a_{i+1}=floor(1/xi), x_{i+1} = 1/xi - a_{i+1}
   while (xi>0) {
     xi = 1/xi;
-    xdouble ai = floor(xi+epsilon); // NOTE: epsilon is meant to counter rounding errors
+    NTL::xdouble ai = floor(xi+epsilon); // NOTE: epsilon is meant to counter rounding errors
     xi = xi - ai;
 
-    xdouble tmpDenom = xdenom*ai + prevDenom;
+    NTL::xdouble tmpDenom = xdenom*ai + prevDenom;
     if (tmpDenom > denomBound) // bound exceeded: return previous denominator
       break;
     // update denominator
     prevDenom = xdenom;
     xdenom = tmpDenom;
   }
-  ZZ numer = conv<ZZ>(floor(xdenom*x))*sign;
-  ZZ denom = conv<ZZ>(xdenom);
+  NTL::ZZ numer = NTL::conv<NTL::ZZ>(floor(xdenom*x))*sign;
+  NTL::ZZ denom = NTL::conv<NTL::ZZ>(xdenom);
 
   return std::make_pair(numer,denom);
 }
@@ -1298,7 +1467,7 @@ std::pair<ZZ,ZZ> rationalApprox(xdouble x, xdouble denomBound)
 
 
 static
-void LocalCopyReverse(zz_pX& x, const zz_pX& a, long lo, long hi)
+void LocalCopyReverse(NTL::zz_pX& x, const NTL::zz_pX& a, long lo, long hi)
 
    // x[0..hi-lo] = reverse(a[lo..hi]), with zero fill
    // input may not alias output
@@ -1311,8 +1480,8 @@ void LocalCopyReverse(zz_pX& x, const zz_pX& a, long lo, long hi)
 
    x.rep.SetLength(n);
 
-   const zz_p* ap = a.rep.elts();
-   zz_p* xp = x.rep.elts();
+   const NTL::zz_p* ap = a.rep.elts();
+   NTL::zz_p* xp = x.rep.elts();
 
    for (i = 0; i < n; i++) {
       j = hi-i;
@@ -1326,14 +1495,14 @@ void LocalCopyReverse(zz_pX& x, const zz_pX& a, long lo, long hi)
 } 
 
 static
-void LocalCyclicReduce(zz_pX& x, const zz_pX& a, long m)
+void LocalCyclicReduce(NTL::zz_pX& x, const NTL::zz_pX& a, long m)
 
 // computes x = a mod X^m-1
 
 {
    long n = deg(a);
    long i, j;
-   zz_p accum;
+   NTL::zz_p accum;
 
    if (n < m) {
       x = a;
@@ -1356,7 +1525,7 @@ void LocalCyclicReduce(zz_pX& x, const zz_pX& a, long m)
    x.normalize();
 }
 
-zz_pXModulus1::zz_pXModulus1(long _m, const zz_pX& _f) 
+zz_pXModulus1::zz_pXModulus1(long _m, const NTL::zz_pX& _f) 
 : m(_m), f(_f), n(deg(f))
 {
    //OLD: assert(m > n);
@@ -1366,14 +1535,14 @@ zz_pXModulus1::zz_pXModulus1(long _m, const zz_pX& _f)
    build(fm, f);
    
    if (specialLogic) {
-      zz_pX P1, P2, P3;
+      NTL::zz_pX P1, P2, P3;
 
       LocalCopyReverse(P3, f, 0, n);
       InvTrunc(P2, P3, m-n);
       LocalCopyReverse(P1, P2, 0, m-n-1);
 
-      k = NextPowerOfTwo(2*(m-1-n)+1);
-      k1 = NextPowerOfTwo(n);
+      k = NTL::NextPowerOfTwo(2*(m-1-n)+1);
+      k1 = NTL::NextPowerOfTwo(n);
 
       TofftRep(R0, P1, k); 
       TofftRep(R1, f, k1);
@@ -1381,7 +1550,7 @@ zz_pXModulus1::zz_pXModulus1(long _m, const zz_pX& _f)
 }
 
 
-void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
+void rem(NTL::zz_pX& r, const NTL::zz_pX& a, const zz_pXModulus1& ff)
 {
    if (!ff.specialLogic) {
       rem(r, a, ff.fm);
@@ -1392,17 +1561,17 @@ void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
    long n = ff.n;
    long k = ff.k;
    long k1 = ff.k1;
-   const fftRep& R0 = ff.R0;
-   const fftRep& R1 = ff.R1;
+   const NTL::fftRep& R0 = ff.R0;
+   const NTL::fftRep& R1 = ff.R1;
 
    if (deg(a) < n) {
       r = a;
       return;
    }
 
-   zz_pX P2, P3;
+   NTL::zz_pX P2, P3;
 
-   fftRep R2, R3;
+   NTL::fftRep R2, R3;
 
    //TofftRep(R2, a, k, n, m-1);
    TofftRep_trunc(R2, a, k, 2*(m-1-n)+1, n, m-1);
@@ -1420,3 +1589,4 @@ void rem(zz_pX& r, const zz_pX& a, const zz_pXModulus1& ff)
    r = P2;
 }
 
+}

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,6 +22,8 @@
 #include <NTL/vector.h>
 
 #include "assertions.h"
+
+namespace helib {
 
 //! @brief Abstract class for an array of objects
 template<typename T>
@@ -277,6 +279,8 @@ template<typename T> void resize(PtrVector<T>& v, long newSize, const T& val)
 {
   PtrVector_Singleton<T> t(&val);
   v.resize(newSize, &t);
+}
+
 }
 
 #endif // ifndef HELIB_PTRVECTOR_H

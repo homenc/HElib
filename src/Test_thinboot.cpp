@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2018 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,8 +16,7 @@
 #endif
 
 #include <NTL/BasicThreadPool.h>
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include "matmul.h"
 #include "debugging.h"
 #include "fhe_stats.h"
@@ -28,6 +27,7 @@
 #include <string>
 
 NTL_CLIENT
+using namespace helib;
 
 static bool noPrint = false;
 static bool dry = false; // a dry-run flag
@@ -119,6 +119,8 @@ print_anderson_darling()
     anderson_darling(*v_values, AD, p_val);
     cout << "AD=" << AD << ", p_val=" << p_val << "\n";
   }
+  else
+    cout << "\n";
 }
 
 
@@ -281,7 +283,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
     long q = power_long(p, e) + 1;
     double Bnd = context.boundForRecryption();
     double mfac = context.zMStar.getNormBnd();
-    double min_bit_cap = log(  1.5*mfac*q / (p2r*Bnd) )/log(2.0);
+    double min_bit_cap = log(  mfac*q / (p2r*Bnd*FHE_MIN_CAP_FRAC) )/log(2.0);
 
     cout << "min_bit_cap=" << min_bit_cap << "\n";
 
@@ -343,8 +345,8 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
 
 //extern long fhe_disable_intFactor;
-extern long fhe_disable_fat_boot;
-extern long fhe_force_chen_han;
+// extern long fhe_disable_fat_boot;
+// extern long fhe_force_chen_han;
 
 /********************************************************************
  ********************************************************************/

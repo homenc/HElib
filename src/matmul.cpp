@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,7 +16,7 @@
 #include "matmul.h"
 #include "norms.h"
 
-NTL_CLIENT
+namespace helib {
 
 int fhe_test_force_bsgs=0;
 int fhe_test_force_hoist=0;
@@ -28,12 +28,14 @@ static bool comp_bsgs(bool bsgs)
    return bsgs;
 }
 
+#if 0
 static bool comp_hoist(bool hoist)
 {
    if (fhe_test_force_hoist > 0) return true;
    if (fhe_test_force_hoist < 0) return false;
    return hoist;
 }
+#endif
 
 
 /********************************************************************/
@@ -81,7 +83,7 @@ public:
       = ctxt.computeKSNoise(1, pubKey.keySWlist().at(0));
 
     double logProd = context.logOfProduct(context.specialPrimes);
-    noise += ctxt.getNoiseBound() * xexp(logProd);
+    noise += ctxt.getNoiseBound() * NTL::xexp(logProd);
 
     // Break the ciphertext part into digits, if needed, and scale up these
     // digits using the special primes.
@@ -90,7 +92,7 @@ public:
   }
 
   
-  shared_ptr<Ctxt>
+  std::shared_ptr<Ctxt>
   automorph(long k) const
   {
     FHE_TIMER_START;
@@ -98,14 +100,14 @@ public:
     // A hack: record this automorphism rather than actually performing it
     if (isSetAutomorphVals()) { // defined in NumbTh.h
       recordAutomorphVal(k);
-      return make_shared<Ctxt>(ctxt);
+      return std::make_shared<Ctxt>(ctxt);
     }
 
-    if (k==1 || ctxt.isEmpty()) return make_shared<Ctxt>(ctxt);// nothing to do
+    if (k==1 || ctxt.isEmpty()) return std::make_shared<Ctxt>(ctxt);// nothing to do
 
     const FHEcontext& context = ctxt.getContext();
     const FHEPubKey& pubKey = ctxt.getPubKey();
-    shared_ptr<Ctxt> result = make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
+    std::shared_ptr<Ctxt> result = std::make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
     result->noiseBound = noise; // noise estimate
     result->intFactor = ctxt.intFactor;
 
@@ -135,7 +137,7 @@ public:
     result->addPart(tmpPart, /*matchPrimeSet=*/true);
 
     // Then rotate the digits and key-switch them
-    vector<DoubleCRT> tmpDigits = polyDigits;
+    std::vector<DoubleCRT> tmpDigits = polyDigits;
     for (auto&& tmp: tmpDigits) // rotate each of the digits
       tmp.automorph(amt);
 
@@ -143,7 +145,7 @@ public:
 
     long m = context.zMStar.getM();
     if ((amt-k)%m != 0) { // amt != k (mod m), more automorphisms to do
-      k = MulMod(k, InvMod(amt,m), m); // k *= amt^{-1} mod m
+      k = NTL::MulMod(k, NTL::InvMod(amt,m), m); // k *= amt^{-1} mod m
       result->smartAutomorph(k);       // call usual smartAutomorph
     }
     return result;
@@ -155,7 +157,7 @@ class GeneralAutomorphPrecon {
 public:
   virtual ~GeneralAutomorphPrecon() {}
 
-  virtual shared_ptr<Ctxt> automorph(long i) const = 0;
+  virtual std::shared_ptr<Ctxt> automorph(long i) const = 0;
 
 };
 
@@ -173,9 +175,9 @@ public:
     ctxt.cleanUp();
   }
 
-  shared_ptr<Ctxt> automorph(long i) const override
+  std::shared_ptr<Ctxt> automorph(long i) const override
   {
-    shared_ptr<Ctxt> result = make_shared<Ctxt>(ctxt);
+    std::shared_ptr<Ctxt> result = std::make_shared<Ctxt>(ctxt);
 
     // guard against i == 0, as dim may be #gens
     if (i != 0) result->smartAutomorph(zMStar.genToPow(dim, i));
@@ -196,7 +198,7 @@ public:
     precon(_ctxt), dim(_dim), zMStar(ea.getPAlgebra())
   { }
 
-  shared_ptr<Ctxt> automorph(long i) const override
+  std::shared_ptr<Ctxt> automorph(long i) const override
   {
     return precon.automorph(zMStar.genToPow(dim, i));
   }
@@ -211,7 +213,7 @@ private:
   long D;
   long g;
   long h;
-  vector<shared_ptr<BasicAutomorphPrecon>> precon;
+  std::vector<std::shared_ptr<BasicAutomorphPrecon>> precon;
 
 public:
   GeneralAutomorphPrecon_BSGS(const Ctxt& _ctxt, long _dim,
@@ -228,13 +230,13 @@ public:
     // parallel for k in [0..h)
     NTL_EXEC_RANGE(h, first, last)
       for (long k = first; k < last; k++) {
-	shared_ptr<Ctxt> p = precon0.automorph(zMStar.genToPow(dim, g*k));
-	precon[k] = make_shared<BasicAutomorphPrecon>(*p);
+	std::shared_ptr<Ctxt> p = precon0.automorph(zMStar.genToPow(dim, g*k));
+	precon[k] = std::make_shared<BasicAutomorphPrecon>(*p);
       }
     NTL_EXEC_RANGE_END
   }
 
-  shared_ptr<Ctxt> automorph(long i) const override
+  std::shared_ptr<Ctxt> automorph(long i) const override
   {
     //OLD: assert(i >= 0 && i < D);
     helib::assertInRange(i, 0l, D, "Automorphism index i is not in [0, D)");
@@ -246,7 +248,7 @@ public:
 
 };
 
-shared_ptr<GeneralAutomorphPrecon>
+std::shared_ptr<GeneralAutomorphPrecon>
 buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim,
                             const EncryptedArray& ea)
 {
@@ -258,17 +260,17 @@ buildGeneralAutomorphPrecon(const Ctxt& ctxt, long dim,
   if (fhe_test_force_hoist >= 0) {
     switch (ctxt.getPubKey().getKSStrategy(dim)) {
       case FHE_KSS_BSGS:
-	return make_shared<GeneralAutomorphPrecon_BSGS>(ctxt, dim, ea);
+	return std::make_shared<GeneralAutomorphPrecon_BSGS>(ctxt, dim, ea);
 
       case FHE_KSS_FULL:
-	return make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim, ea);
+	return std::make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim, ea);
 	
       default:
-	return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim, ea);
+	return std::make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim, ea);
     }
   }
   else {
-    return make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim, ea);
+    return std::make_shared<GeneralAutomorphPrecon_UNKNOWN>(ctxt, dim, ea);
   }
 }
 
@@ -285,7 +287,7 @@ struct ConstMultiplier { // stores a constant in either zzX or DoubleCRT format
 
   virtual void mul(Ctxt& ctxt) const = 0;
 
-  virtual shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context)const=0;
+  virtual std::shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context)const=0;
   // Upgrade to DCRT. Returns null if no upgrade required
 };
 
@@ -300,7 +302,7 @@ struct ConstMultiplier_DoubleCRT : ConstMultiplier {
     ctxt.multByConstant(data, sz);
   } 
 
-  shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
+  std::shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
     return nullptr;
   }
 };
@@ -315,24 +317,24 @@ struct ConstMultiplier_zzX : ConstMultiplier {
     ctxt.multByConstant(data);
   } 
 
-  shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
+  std::shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
     double sz = embeddingLargestCoeff(data, context.zMStar);
-    return make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()), sz);
+    return std::make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()), sz);
   }
 };
 
 template<class RX>
-shared_ptr<ConstMultiplier> 
+std::shared_ptr<ConstMultiplier>
 build_ConstMultiplier(const RX& poly)
 {
    if (IsZero(poly))
       return nullptr;
    else
-      return make_shared<ConstMultiplier_zzX>(balanced_zzX(poly));
+      return std::make_shared<ConstMultiplier_zzX>(balanced_zzX(poly));
 }
 
 template<class RX, class type>
-shared_ptr<ConstMultiplier> 
+std::shared_ptr<ConstMultiplier>
 build_ConstMultiplier(const RX& poly, 
                       long dim, long amt, const EncryptedArrayDerived<type>& ea)
 {
@@ -341,12 +343,12 @@ build_ConstMultiplier(const RX& poly,
    else {
       RX poly1;
       plaintextAutomorph(poly1, poly, dim, amt, ea);
-      return make_shared<ConstMultiplier_zzX>(balanced_zzX(poly1));
+      return std::make_shared<ConstMultiplier_zzX>(balanced_zzX(poly1));
    }
 }
 
 
-void MulAdd(Ctxt& x, const shared_ptr<ConstMultiplier>& a, const Ctxt& b)
+void MulAdd(Ctxt& x, const std::shared_ptr<ConstMultiplier>& a, const Ctxt& b)
 // x += a*b
 {
    if (a) {
@@ -356,7 +358,7 @@ void MulAdd(Ctxt& x, const shared_ptr<ConstMultiplier>& a, const Ctxt& b)
    }
 }
 
-void DestMulAdd(Ctxt& x, const shared_ptr<ConstMultiplier>& a, Ctxt& b)
+void DestMulAdd(Ctxt& x, const std::shared_ptr<ConstMultiplier>& a, Ctxt& b)
 // x += a*b, b may be modified
 {
    if (a) {
@@ -375,7 +377,7 @@ void ConstMultiplierCache::upgrade(const FHEcontext& context)
   for (long i: range(first, last)) {
     if (multiplier[i]) 
       if (auto newptr = multiplier[i]->upgrade(context)) 
-	multiplier[i] = shared_ptr<ConstMultiplier>(newptr); 
+	multiplier[i] = std::shared_ptr<ConstMultiplier>(newptr);
   }
   NTL_EXEC_RANGE_END
 }
@@ -415,7 +417,7 @@ struct MatMul1D_derived_impl {
     long dim = mat.getDim();
     long D = dimSz(ea, dim);
 
-    vector<RX> tmpDiag(D);
+    std::vector<RX> tmpDiag(D);
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
     RX entry;
@@ -448,7 +450,7 @@ struct MatMul1D_derived_impl {
       // clear trailing zero entries
       for (long jj = nzLast+1; jj < D; jj++) clear(tmpDiag[jj]);
       
-      vector<RX> diag(ea.size());
+      std::vector<RX> diag(ea.size());
       if (D==1) 
 	diag.assign(ea.size(), tmpDiag[0]); // dimension of size one
       else {
@@ -478,7 +480,7 @@ struct MatMul1D_derived_impl {
 
     // Process the entries in this diagonal one at a time
     long blockIdx, innerIdx;
-    vector<RX> diag(n);
+    std::vector<RX> diag(n);
     for (long j=0; j < n; j++) {
       if (D==1) {
 	blockIdx=j; 
@@ -563,8 +565,8 @@ struct MatMul1DExec_construct {
   static
   void apply(const EncryptedArrayDerived<type>& ea,
              const MatMul1D& mat_basetype,
-             vector<shared_ptr<ConstMultiplier>>& vec,
-             vector<shared_ptr<ConstMultiplier>>& vec1,
+             std::vector<std::shared_ptr<ConstMultiplier>>& vec,
+             std::vector<std::shared_ptr<ConstMultiplier>>& vec1,
              long g)
   {
     const MatMul1D_partial<type>& mat =
@@ -728,7 +730,7 @@ So putting it all together
 
 ***************************************************************************/
 
-void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim, 
+void GenBabySteps(std::vector<std::shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim,
                   bool clean)
 {
   long n = v.size();
@@ -736,7 +738,7 @@ void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim,
   helib::assertTrue<helib::InvalidArgument>(n > 0, "Empty vector v");
 
   if (n == 1) {
-    v[0] = make_shared<Ctxt>(ctxt);
+    v[0] = std::make_shared<Ctxt>(ctxt);
     if (clean) v[0]->cleanUp();
     return;
   }
@@ -760,7 +762,7 @@ void GenBabySteps(vector<shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long dim,
  
     NTL_EXEC_RANGE(n, first, last)
       for (long j: range(first, last)) {
-	 v[j] = make_shared<Ctxt>(ctxt0);
+	 v[j] = std::make_shared<Ctxt>(ctxt0);
 	 v[j]->smartAutomorph(zMStar.genToPow(dim, j));
 	 if (clean) v[j]->cleanUp();
       }
@@ -791,7 +793,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 
          if (iterative) {
 
-	    vector<Ctxt> baby_steps(g, Ctxt(ZeroCtxtLike, ctxt));
+	    std::vector<Ctxt> baby_steps(g, Ctxt(ZeroCtxtLike, ctxt));
             baby_steps[0] = ctxt;
             for (long j: range(1, g)) {
                baby_steps[j] = baby_steps[j-1];
@@ -820,13 +822,13 @@ MatMul1DExec::mul(Ctxt& ctxt) const
          else {
 
 	    long h = divc(D, g);
-	    vector<shared_ptr<Ctxt>> baby_steps(g);
+	    std::vector<std::shared_ptr<Ctxt>> baby_steps(g);
 	    GenBabySteps(baby_steps, ctxt, dim, true);
 
-	    PartitionInfo pinfo(h);
+	    NTL::PartitionInfo pinfo(h);
 	    long cnt = pinfo.NumIntervals();
 
-	    vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	    std::vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
 	    // parallel for loop: k in [0..h)
 	    NTL_EXEC_INDEX(cnt, index)
@@ -856,7 +858,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 #if (ALT_MATMUL)
          if (iterative) {
 
-	    vector<Ctxt> baby_steps(g, Ctxt(ZeroCtxtLike, ctxt));
+	    std::vector<Ctxt> baby_steps(g, Ctxt(ZeroCtxtLike, ctxt));
             baby_steps[0] = ctxt;
             for (long j: range(1, g)) {
                baby_steps[j] = baby_steps[j-1];
@@ -864,7 +866,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
                baby_steps[j].cleanUp();
             }
 
-	    vector<Ctxt> baby_steps1(g, Ctxt(ZeroCtxtLike, ctxt));
+	    std::vector<Ctxt> baby_steps1(g, Ctxt(ZeroCtxtLike, ctxt));
             baby_steps1[0] = ctxt;
             baby_steps1[0].smartAutomorph(zMStar.genToPow(dim, -D));
             
@@ -893,8 +895,8 @@ MatMul1DExec::mul(Ctxt& ctxt) const
          }
          else {
 	    long h = divc(D, g);
-	    vector<shared_ptr<Ctxt>> baby_steps(g);
-	    vector<shared_ptr<Ctxt>> baby_steps1(g);
+	    std::vector<std::shared_ptr<Ctxt>> baby_steps(g);
+	    std::vector<std::shared_ptr<Ctxt>> baby_steps1(g);
 
 	    GenBabySteps(baby_steps, ctxt, dim, false);
 
@@ -902,10 +904,10 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 	    ctxt1.smartAutomorph(zMStar.genToPow(dim, -D));
 	    GenBabySteps(baby_steps1, ctxt1, dim, false);
 
-	    PartitionInfo pinfo(h);
+	    NTL::PartitionInfo pinfo(h);
 	    long cnt = pinfo.NumIntervals();
 
-	    vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	    std::vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
 	    // parallel for loop: k in [0..h)
 	    NTL_EXEC_INDEX(cnt, index)
@@ -938,7 +940,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 #else
          if (iterative) {
 
-	    vector<Ctxt> baby_steps(g, Ctxt(ZeroCtxtLike, ctxt));
+	    std::vector<Ctxt> baby_steps(g, Ctxt(ZeroCtxtLike, ctxt));
             baby_steps[0] = ctxt;
             for (long j: range(1, g)) {
                baby_steps[j] = baby_steps[j-1];
@@ -970,14 +972,14 @@ MatMul1DExec::mul(Ctxt& ctxt) const
          }
          else {
 	    long h = divc(D, g);
-	    vector<shared_ptr<Ctxt>> baby_steps(g);
+	    std::vector<std::shared_ptr<Ctxt>> baby_steps(g);
 	    GenBabySteps(baby_steps, ctxt, dim, true);
 
-	    PartitionInfo pinfo(h);
+	    NTL::PartitionInfo pinfo(h);
 	    long cnt = pinfo.NumIntervals();
 
-	    vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
-	    vector<Ctxt> acc1(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	    std::vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	    std::vector<Ctxt> acc1(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
 	    // parallel for loop: k in [0..h)
 	    NTL_EXEC_INDEX(cnt, index)
@@ -1018,13 +1020,13 @@ MatMul1DExec::mul(Ctxt& ctxt) const
    }
    else if (!iterative) {
       if (native) {
-         shared_ptr<GeneralAutomorphPrecon> precon =
+         std::shared_ptr<GeneralAutomorphPrecon> precon =
            buildGeneralAutomorphPrecon(ctxt, dim, ea);
 
-	 PartitionInfo pinfo(D);
+	 NTL::PartitionInfo pinfo(D);
 	 long cnt = pinfo.NumIntervals();
 
-	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 std::vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
 	 // parallel for loop: i in [0..D)
 	 NTL_EXEC_INDEX(cnt, index)
@@ -1033,7 +1035,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 
 	    for (long i: range(first, last)) {
 	       if (cache.multiplier[i]) {
-		  shared_ptr<Ctxt> tmp = precon->automorph(i);
+		  std::shared_ptr<Ctxt> tmp = precon->automorph(i);
                   DestMulAdd(acc[index], cache.multiplier[i], *tmp);
 	       }
 	    }
@@ -1044,14 +1046,14 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 	    ctxt += acc[i];
       }
       else {
-         shared_ptr<GeneralAutomorphPrecon> precon =
+         std::shared_ptr<GeneralAutomorphPrecon> precon =
            buildGeneralAutomorphPrecon(ctxt, dim, ea);
 
-	 PartitionInfo pinfo(D);
+	 NTL::PartitionInfo pinfo(D);
 	 long cnt = pinfo.NumIntervals();
 
-	 vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
-	 vector<Ctxt> acc1(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 std::vector<Ctxt> acc(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 std::vector<Ctxt> acc1(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
 	 // parallel for loop: i in [0..D)
 	 NTL_EXEC_INDEX(cnt, index)
@@ -1060,7 +1062,7 @@ MatMul1DExec::mul(Ctxt& ctxt) const
 
 	    for (long i: range(first, last)) {
 	       if (cache.multiplier[i] || cache1.multiplier[i]) {
-		  shared_ptr<Ctxt> tmp = precon->automorph(i);
+		  std::shared_ptr<Ctxt> tmp = precon->automorph(i);
                   MulAdd(acc[index], cache.multiplier[i], *tmp);
                   DestMulAdd(acc1[index], cache1.multiplier[i], *tmp);
 	       }
@@ -1122,7 +1124,7 @@ struct BlockMatMul1D_derived_impl {
 
   // return true if zero
   static
-  bool processDiagonal1(vector<RX>& poly, long i, 
+  bool processDiagonal1(std::vector<RX>& poly, long i,
                         const EncryptedArrayDerived<type>& ea,
                         const BlockMatMul1D_derived<type>& mat)
   {
@@ -1134,11 +1136,11 @@ struct BlockMatMul1D_derived_impl {
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
 
-    mat_R entry(INIT_SIZE, d, d);
+    mat_R entry(NTL::INIT_SIZE, d, d);
     std::vector<RX> entry1(d);
     std::vector< std::vector<RX> > tmpDiag(D);
 
-    vector<vector<RX>> diag(nslots);
+    std::vector<std::vector<RX>> diag(nslots);
 
     // Process the entries in this diagonal one at a time
     for (long j: range(D)) { // process entry j
@@ -1181,7 +1183,7 @@ struct BlockMatMul1D_derived_impl {
 
     // transpose and encode diag to form polys
 
-    vector<RX> slots(nslots);
+    std::vector<RX> slots(nslots);
     poly.resize(d);
     for (long i: range(d)) {
       for (long j: range(nslots)) slots[j] = diag[j][i];
@@ -1195,7 +1197,7 @@ struct BlockMatMul1D_derived_impl {
 
   // return true if zero
   static
-  bool processDiagonal2(vector<RX>& poly, long idx,
+  bool processDiagonal2(std::vector<RX>& poly, long idx,
                         const EncryptedArrayDerived<type>& ea,
                         const BlockMatMul1D_derived<type>& mat)
   {
@@ -1207,10 +1209,10 @@ struct BlockMatMul1D_derived_impl {
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
 
-    mat_R entry(INIT_SIZE, d, d);
+    mat_R entry(NTL::INIT_SIZE, d, d);
     std::vector<RX> entry1(d);
 
-    vector<vector<RX>> diag(nslots);
+    std::vector<std::vector<RX>> diag(nslots);
 
     // Get the slots in this diagonal one at a time
     long blockIdx, rowIdx, colIdx;
@@ -1254,7 +1256,7 @@ struct BlockMatMul1D_derived_impl {
 
     // transpose and encode diag to form polys
 
-    vector<RX> slots(nslots);
+    std::vector<RX> slots(nslots);
     poly.resize(d);
     for (long i: range(d)) {
       for (long j: range(nslots)) slots[j] = diag[j][i];
@@ -1266,7 +1268,7 @@ struct BlockMatMul1D_derived_impl {
 
   // return true if zero
   static
-  bool processDiagonal(vector<RX>& poly, long i,
+  bool processDiagonal(std::vector<RX>& poly, long i,
                         const EncryptedArrayDerived<type>& ea,
                         const BlockMatMul1D_derived<type>& mat)
   {
@@ -1280,7 +1282,7 @@ struct BlockMatMul1D_derived_impl {
 
 
 template<class type>
-bool BlockMatMul1D_derived<type>::processDiagonal(vector<RX>& poly, long i,
+bool BlockMatMul1D_derived<type>::processDiagonal(std::vector<RX>& poly, long i,
         const EncryptedArrayDerived<type>& ea) const
 {
   return BlockMatMul1D_derived_impl<type>::processDiagonal(poly, i, ea, *this);
@@ -1288,11 +1290,11 @@ bool BlockMatMul1D_derived<type>::processDiagonal(vector<RX>& poly, long i,
 
 // explicit instantiations
 template
-bool BlockMatMul1D_derived<PA_GF2>::processDiagonal(vector<RX>& poly, long i,
+bool BlockMatMul1D_derived<PA_GF2>::processDiagonal(std::vector<RX>& poly, long i,
         const EncryptedArrayDerived<PA_GF2>& ea) const;
 
 template
-bool BlockMatMul1D_derived<PA_zz_p>::processDiagonal(vector<RX>& poly, long i,
+bool BlockMatMul1D_derived<PA_zz_p>::processDiagonal(std::vector<RX>& poly, long i,
         const EncryptedArrayDerived<PA_zz_p>& ea) const;
 
 
@@ -1324,8 +1326,8 @@ struct BlockMatMul1DExec_construct {
   static
   void apply(const EncryptedArrayDerived<type>& ea,
              const BlockMatMul1D& mat_basetype,
-             vector<shared_ptr<ConstMultiplier>>& vec,
-             vector<shared_ptr<ConstMultiplier>>& vec1,
+             std::vector<std::shared_ptr<ConstMultiplier>>& vec,
+             std::vector<std::shared_ptr<ConstMultiplier>>& vec1,
              long strategy)
   {
     const BlockMatMul1D_partial<type>& mat =
@@ -1338,7 +1340,7 @@ struct BlockMatMul1DExec_construct {
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
-    vector<RX> poly;
+    std::vector<RX> poly;
 
     switch (strategy) {
     case +1: // factor \sigma
@@ -1545,12 +1547,12 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
    if (ctxt.getPubKey().getKSStrategy(dim1) == FHE_KSS_MIN)
       iterative1 = true;
    if (ctxt.getPubKey().getKSStrategy(dim1) != FHE_KSS_FULL && 
-       AvailableThreads() == 1)
+       NTL::AvailableThreads() == 1)
       iterative1 = true;
 
    if (native) {
 
-      vector<Ctxt> acc(d1, Ctxt(ZeroCtxtLike, ctxt));
+      std::vector<Ctxt> acc(d1, Ctxt(ZeroCtxtLike, ctxt));
 
       if (iterative0) {
          Ctxt sh_ctxt(ctxt);
@@ -1567,17 +1569,17 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
       }
       else {
 
-	 shared_ptr<GeneralAutomorphPrecon> precon =
+	 std::shared_ptr<GeneralAutomorphPrecon> precon =
 		  buildGeneralAutomorphPrecon(ctxt, dim0, ea);
 
 	 long par_buf_sz = 1;
-	 if (AvailableThreads() > 1) 
-	    par_buf_sz = min(d0, par_buf_max);
+	 if (NTL::AvailableThreads() > 1)
+	    par_buf_sz = std::min(d0, par_buf_max);
 
-	 vector<shared_ptr<Ctxt>> par_buf(par_buf_sz);
+	 std::vector<std::shared_ptr<Ctxt>> par_buf(par_buf_sz);
 
 	 for (long first_i = 0; first_i < d0; first_i += par_buf_sz) {
-	    long last_i = min(first_i + par_buf_sz, d0);
+	    long last_i = std::min(first_i + par_buf_sz, d0);
 
 	    // for i in [first_i..last_i), generate automorphosm i and store
 	    // in par_buf[i-first_i]
@@ -1618,10 +1620,10 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
       }
       else {
 
-	 PartitionInfo pinfo(d1);
+	 NTL::PartitionInfo pinfo(d1);
 	 long cnt = pinfo.NumIntervals();
 
-	 vector<Ctxt> sum(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 std::vector<Ctxt> sum(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
 	 // for j in [0..d1)
 	 NTL_EXEC_INDEX(cnt, index)
@@ -1639,8 +1641,8 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
    }
    else {
 
-      vector<Ctxt> acc(d1, Ctxt(ZeroCtxtLike, ctxt));
-      vector<Ctxt> acc1(d1, Ctxt(ZeroCtxtLike, ctxt));
+      std::vector<Ctxt> acc(d1, Ctxt(ZeroCtxtLike, ctxt));
+      std::vector<Ctxt> acc1(d1, Ctxt(ZeroCtxtLike, ctxt));
 
       if (iterative0) {
          Ctxt sh_ctxt(ctxt);
@@ -1658,17 +1660,17 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
       }
       else {
 
-	 shared_ptr<GeneralAutomorphPrecon> precon =
+	 std::shared_ptr<GeneralAutomorphPrecon> precon =
 		  buildGeneralAutomorphPrecon(ctxt, dim0, ea);
 
 	 long par_buf_sz = 1;
-	 if (AvailableThreads() > 1) 
-	    par_buf_sz = min(d0, par_buf_max);
+	 if (NTL::AvailableThreads() > 1)
+	    par_buf_sz = std::min(d0, par_buf_max);
 
-	 vector<shared_ptr<Ctxt>> par_buf(par_buf_sz);
+	 std::vector<std::shared_ptr<Ctxt>> par_buf(par_buf_sz);
 
 	 for (long first_i = 0; first_i < d0; first_i += par_buf_sz) {
-	    long last_i = min(first_i + par_buf_sz, d0);
+	    long last_i = std::min(first_i + par_buf_sz, d0);
 
 	    // for i in [first_i..last_i), generate automorphosm i and store
 	    // in par_buf[i-first_i]
@@ -1715,11 +1717,11 @@ BlockMatMul1DExec::mul(Ctxt& ctxt) const
       }
       else {
 
-	 PartitionInfo pinfo(d1);
+	 NTL::PartitionInfo pinfo(d1);
 	 long cnt = pinfo.NumIntervals();
 
-	 vector<Ctxt> sum(cnt, Ctxt(ZeroCtxtLike, ctxt));
-	 vector<Ctxt> sum1(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 std::vector<Ctxt> sum(cnt, Ctxt(ZeroCtxtLike, ctxt));
+	 std::vector<Ctxt> sum1(cnt, Ctxt(ZeroCtxtLike, ctxt));
 
 	 // for j in [0..d1)
 	 NTL_EXEC_INDEX(cnt, index)
@@ -1753,12 +1755,12 @@ public:
 
   const EncryptedArray& ea_basetype;
   const MatMulFull_derived<type>& mat;
-  vector<long> init_idxes;
+  std::vector<long> init_idxes;
   long dim;
 
   MatMulFullHelper(const EncryptedArray& _ea_basetype, 
                    const MatMulFull_derived<type>& _mat,
-                   const vector<long>& _init_idxes,
+                   const std::vector<long>& _init_idxes,
                    long _dim)
 
     : ea_basetype(_ea_basetype),
@@ -1773,10 +1775,10 @@ public:
   processDiagonal(RX& epmat, long offset,
                   const EncryptedArrayDerived<type>& ea) const override
   {
-    vector<long> idxes;
+    std::vector<long> idxes;
     ea.EncryptedArrayBase::rotate1D(idxes, init_idxes, dim, offset);
 
-    vector<RX> pmat;  // the plaintext diagonal
+    std::vector<RX> pmat;  // the plaintext diagonal
     pmat.resize(ea.size());
     bool zDiag = true; // is this a zero diagonal
     for (long j: range(ea.size())) {
@@ -1811,10 +1813,10 @@ struct MatMulFullExec_construct {
 
 
   static 
-  long rec_mul(long dim, long idx, const vector<long>& idxes,
-               vector<MatMul1DExec>& transforms, 
+  long rec_mul(long dim, long idx, const std::vector<long>& idxes,
+               std::vector<MatMul1DExec>& transforms,
                bool minimal,
-               const vector<long>& dims,
+               const std::vector<long>& dims,
                const EncryptedArray& ea_basetype,
                const EncryptedArrayDerived<type>& ea,
                const MatMulFull_derived<type>& mat)
@@ -1835,7 +1837,7 @@ struct MatMulFullExec_construct {
     // adjust the indexes so that we only need to rotate the ciphertext
     // along the different dimensions separately
     for (long offset: range(sdim)) {
-      vector<long> idxes1;
+      std::vector<long> idxes1;
       ea.EncryptedArrayBase::rotate1D(idxes1, idxes, dims[dim], offset);
       idx = rec_mul(dim+1, idx, idxes1, transforms, minimal, 
                     dims, ea_basetype, ea, mat);
@@ -1870,9 +1872,9 @@ struct MatMulFullExec_construct {
   void apply(const EncryptedArrayDerived<type>& ea,
              const EncryptedArray& ea_basetype,
              const MatMulFull& mat_basetype,
-             vector<MatMul1DExec>& transforms,
+             std::vector<MatMul1DExec>& transforms,
              bool minimal,
-             vector<long>& dims)
+             std::vector<long>& dims)
   {
     const MatMulFull_derived<type>& mat =
       dynamic_cast< const MatMulFull_derived<type>& >(mat_basetype);
@@ -1886,7 +1888,7 @@ struct MatMulFullExec_construct {
     for (long i: range(ndims)) dims[i] = i;
     sort(dims.begin(), dims.end(), MatMulDimComp(&ea));
 
-    vector<long> idxes(nslots);
+    std::vector<long> idxes(nslots);
     for (long i: range(nslots)) idxes[i] = i;
 
     rec_mul(0, 0, idxes, transforms, minimal, dims, ea_basetype, ea, mat);
@@ -1932,28 +1934,28 @@ MatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx) con
     if (!iterative)  {
 
       if (native) {
-	shared_ptr<GeneralAutomorphPrecon> precon =
+	std::shared_ptr<GeneralAutomorphPrecon> precon =
 	  buildGeneralAutomorphPrecon(ctxt, dim, ea);
 
 	for (long i: range(sdim)) {
-	  shared_ptr<Ctxt> tmp = precon->automorph(i);
+	  std::shared_ptr<Ctxt> tmp = precon->automorph(i);
 	  idx = rec_mul(acc, *tmp, dim_idx+1, idx);
 	}
       }
       else {
 	Ctxt ctxt1 = ctxt;
 	ctxt1.smartAutomorph(zMStar.genToPow(dim, -sdim));
-	shared_ptr<GeneralAutomorphPrecon> precon =
+	std::shared_ptr<GeneralAutomorphPrecon> precon =
 	  buildGeneralAutomorphPrecon(ctxt, dim, ea);
-	shared_ptr<GeneralAutomorphPrecon> precon1 =
+	std::shared_ptr<GeneralAutomorphPrecon> precon1 =
 	  buildGeneralAutomorphPrecon(ctxt1, dim, ea);
 
 	for (long i: range(sdim)) {
 	  if (i == 0) 
 	     idx = rec_mul(acc, ctxt, dim_idx+1, idx);
 	  else {
-	    shared_ptr<Ctxt> tmp = precon->automorph(i);
-	    shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
+	    std::shared_ptr<Ctxt> tmp = precon->automorph(i);
+	    std::shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, i);
             double sz = embeddingLargestCoeff(mask, zMStar);
@@ -2055,12 +2057,12 @@ public:
 
   const EncryptedArray& ea_basetype;
   const BlockMatMulFull_derived<type>& mat;
-  vector<long> init_idxes;
+  std::vector<long> init_idxes;
   long dim;
 
   BlockMatMulFullHelper(const EncryptedArray& _ea_basetype, 
                    const BlockMatMulFull_derived<type>& _mat,
-                   const vector<long>& _init_idxes,
+                   const std::vector<long>& _init_idxes,
                    long _dim)
 
     : ea_basetype(_ea_basetype),
@@ -2072,10 +2074,10 @@ public:
 
 
   bool
-  processDiagonal(vector<RX>& poly, long offset,
+  processDiagonal(std::vector<RX>& poly, long offset,
                   const EncryptedArrayDerived<type>& ea) const override
   {
-    vector<long> idxes;
+    std::vector<long> idxes;
     ea.EncryptedArrayBase::rotate1D(idxes, init_idxes, dim, offset);
 
     long d = ea.getDegree();
@@ -2083,10 +2085,10 @@ public:
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
 
-    mat_R entry(INIT_SIZE, d, d);
+    mat_R entry(NTL::INIT_SIZE, d, d);
     std::vector<RX> entry1(d);
 
-    vector<vector<RX>> diag(nslots);
+    std::vector<std::vector<RX>> diag(nslots);
 
     for (long j: range(nslots)) {
       long i = idxes[j];
@@ -2122,7 +2124,7 @@ public:
 
     // transpose and encode diag to form polys
 
-    vector<RX> slots(nslots);
+    std::vector<RX> slots(nslots);
     poly.resize(d);
     for (long i: range(d)) {
       for (long j: range(nslots)) slots[j] = diag[j][i];
@@ -2145,10 +2147,10 @@ struct BlockMatMulFullExec_construct {
 
 
   static 
-  long rec_mul(long dim, long idx, const vector<long>& idxes,
-               vector<BlockMatMul1DExec>& transforms, 
+  long rec_mul(long dim, long idx, const std::vector<long>& idxes,
+               std::vector<BlockMatMul1DExec>& transforms,
                bool minimal,
-               const vector<long>& dims,
+               const std::vector<long>& dims,
                const EncryptedArray& ea_basetype,
                const EncryptedArrayDerived<type>& ea,
                const BlockMatMulFull_derived<type>& mat)
@@ -2169,7 +2171,7 @@ struct BlockMatMulFullExec_construct {
     // adjust the indexes so that we only need to rotate the ciphertext
     // along the different dimensions separately
     for (long offset: range(sdim)) {
-      vector<long> idxes1;
+      std::vector<long> idxes1;
       ea.EncryptedArrayBase::rotate1D(idxes1, idxes, dims[dim], offset);
       idx = rec_mul(dim+1, idx, idxes1, transforms, minimal, 
                     dims, ea_basetype, ea, mat);
@@ -2204,9 +2206,9 @@ struct BlockMatMulFullExec_construct {
   void apply(const EncryptedArrayDerived<type>& ea,
              const EncryptedArray& ea_basetype,
              const BlockMatMulFull& mat_basetype,
-             vector<BlockMatMul1DExec>& transforms,
+             std::vector<BlockMatMul1DExec>& transforms,
              bool minimal,
-             vector<long>& dims)
+             std::vector<long>& dims)
   {
     const BlockMatMulFull_derived<type>& mat =
       dynamic_cast< const BlockMatMulFull_derived<type>& >(mat_basetype);
@@ -2220,7 +2222,7 @@ struct BlockMatMulFullExec_construct {
     for (long i: range(ndims)) dims[i] = i;
     sort(dims.begin(), dims.end(), BlockMatMulDimComp(&ea));
 
-    vector<long> idxes(nslots);
+    std::vector<long> idxes(nslots);
     for (long i: range(nslots)) idxes[i] = i;
 
     rec_mul(0, 0, idxes, transforms, minimal, dims, ea_basetype, ea, mat);
@@ -2267,28 +2269,28 @@ BlockMatMulFullExec::rec_mul(Ctxt& acc, const Ctxt& ctxt, long dim_idx, long idx
     if (!iterative) {
 
       if (native) {
-	shared_ptr<GeneralAutomorphPrecon> precon =
+	std::shared_ptr<GeneralAutomorphPrecon> precon =
 	  buildGeneralAutomorphPrecon(ctxt, dim, ea);
 
 	for (long i: range(sdim)) {
-	  shared_ptr<Ctxt> tmp = precon->automorph(i);
+	  std::shared_ptr<Ctxt> tmp = precon->automorph(i);
 	  idx = rec_mul(acc, *tmp, dim_idx+1, idx);
 	}
       }
       else {
 	Ctxt ctxt1 = ctxt;
 	ctxt1.smartAutomorph(zMStar.genToPow(dim, -sdim));
-	shared_ptr<GeneralAutomorphPrecon> precon =
+	std::shared_ptr<GeneralAutomorphPrecon> precon =
 	  buildGeneralAutomorphPrecon(ctxt, dim, ea);
-	shared_ptr<GeneralAutomorphPrecon> precon1 =
+	std::shared_ptr<GeneralAutomorphPrecon> precon1 =
 	  buildGeneralAutomorphPrecon(ctxt1, dim, ea);
 
 	for (long i: range(sdim)) {
 	  if (i == 0) 
 	     idx = rec_mul(acc, ctxt, dim_idx+1, idx);
 	  else {
-	    shared_ptr<Ctxt> tmp = precon->automorph(i);
-	    shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
+	    std::shared_ptr<Ctxt> tmp = precon->automorph(i);
+	    std::shared_ptr<Ctxt> tmp1 = precon1->automorph(i);
 
 	    zzX mask = ea.getAlMod().getMask_zzX(dim, i);
             double sz = embeddingLargestCoeff(mask, zMStar);
@@ -2402,12 +2404,12 @@ struct mul_MatMul1D_impl {
     long n = ea.size();
     long D = ea.sizeOfDimension(dim);
 
-    vector< vector<RX> > data1(n/D);
+    std::vector< std::vector<RX> > data1(n/D);
     for (long k: range(n/D))
       data1[k].resize(D);
 
     // copy the data into a vector of 1D vectors
-    vector<RX>& data = pa.getData<type>();
+    std::vector<RX>& data = pa.getData<type>();
     for (long i: range(n)) {
       long k, j;
       std::tie(k, j) = ea.getContext().zMStar.breakIndexByDim(i, dim);
@@ -2467,12 +2469,12 @@ struct mul_BlockMatMul1D_impl {
     long D = ea.sizeOfDimension(dim);
     long d = ea.getDegree();
 
-    vector< vector<RX> > data1(n/D);
+    std::vector< std::vector<RX> > data1(n/D);
     for (long k: range(n/D))
       data1[k].resize(D);
 
     // copy the data into a vector of 1D vectors
-    vector<RX>& data = pa.getData<type>();
+    std::vector<RX>& data = pa.getData<type>();
     for (long i: range(n)) {
       long k, j;
       std::tie(k,j) = zMStar.breakIndexByDim(i, dim);
@@ -2492,7 +2494,7 @@ struct mul_BlockMatMul1D_impl {
             add(acc, acc, tmp);
 	  }
 	}
-	long idx = zMStar.assembleIndexByDim(make_pair(k, j), dim);
+	long idx = zMStar.assembleIndexByDim(std::make_pair(k, j), dim);
         conv(data[idx], acc);
       }
     }
@@ -2523,11 +2525,11 @@ struct mul_MatMulFull_impl {
     const PAlgebra& zMStar = ea.getPAlgebra();
     long n = ea.size();
     const RX& G = ea.getG();
-    vector<RX>& data = pa.getData<type>();
+    std::vector<RX>& data = pa.getData<type>();
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
-    vector<RX> res;
+    std::vector<RX> res;
     res.resize(n);
     for (long j: range(n)) {
       RX acc, val, tmp; 
@@ -2570,11 +2572,11 @@ struct mul_BlockMatMulFull_impl {
     const PAlgebra& zMStar = ea.getPAlgebra();
     long n = ea.size();
     long d = ea.getDegree();
-    vector<RX>& data = pa.getData<type>();
+    std::vector<RX>& data = pa.getData<type>();
 
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
-    vector<RX> res;
+    std::vector<RX> res;
     res.resize(n);
     for (long j: range(n)) {
       vec_R acc, tmp, tmp1; 
@@ -2626,7 +2628,7 @@ void traceMap(Ctxt& ctxt)
     Ctxt acc(ctxt);
 
     for (long i: range(1, d)) {
-       shared_ptr<Ctxt> tmp = precon.automorph(zMStar.genToPow(-1, i));
+       std::shared_ptr<Ctxt> tmp = precon.automorph(zMStar.genToPow(-1, i));
        acc += *tmp;
     }
 
@@ -2691,7 +2693,7 @@ void traceMap(Ctxt& ctxt)
   }
   else {
 
-    long k = NumBits(d);
+    long k = NTL::NumBits(d);
     long e = 1;
 
     for (long i = k-2; i >= 0; i--) {
@@ -2700,7 +2702,7 @@ void traceMap(Ctxt& ctxt)
       ctxt += tmp1;
       e = 2*e;
 
-      if (bit(d, i)) {
+      if (NTL::bit(d, i)) {
 	ctxt.frobeniusAutomorph(1);
 	ctxt += orig;
 	e += 1;
@@ -2710,5 +2712,4 @@ void traceMap(Ctxt& ctxt)
   }
 }
 
-
-
+}

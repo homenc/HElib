@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2018 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,8 +16,7 @@
 #endif
 
 #include <NTL/BasicThreadPool.h>
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include <helib.h>
 #include "matmul.h"
 #include "debugging.h"
 #include "fhe_stats.h"
@@ -31,10 +30,7 @@
 #include <string>
 #include <NTL/ZZ.h>
 
-extern long fhe_force_chen_han;
-
 namespace {
-//NTL_CLIENT
 
 /********************************************************************
  ********************************************************************/
@@ -78,9 +74,9 @@ namespace {
                 chen_han(chen_han),
                 debug(debug),
                 scale(scale),
-                global_gens(convert<NTL::Vec<long>>(global_gens)),
-                global_ords(convert<NTL::Vec<long>>(global_ords)),
-                global_mvec(convert<NTL::Vec<long>>(global_mvec)),
+                global_gens(helib::convert<NTL::Vec<long>>(global_gens)),
+                global_ords(helib::convert<NTL::Vec<long>>(global_ords)),
+                global_mvec(helib::convert<NTL::Vec<long>>(global_mvec)),
                 c_m(c_m),
                 iter(iter),
                 v_values_name(v_values_name) {
@@ -131,7 +127,7 @@ namespace {
 
             if (!helib_test::noPrint) {
                 std::cout << "*** GTest_thinboot";
-                if (isDryRun())
+                if (helib::isDryRun())
                     std::cout << " (dry run)";
                 std::cout << ": p=" << p
                           << ", r=" << r
@@ -139,12 +135,12 @@ namespace {
                           << ", t=" << skHwt
                           << ", c=" << c
                           << ", m=" << m
-                          << " mvec=" << mvec << ", gens=" << gens << ", ords=" << ords
+                          << " mvec=" << mvec << ", gens=" << helib::vecToStr(gens) << ", ords=" << helib::vecToStr(ords)
                           << std::endl;
                 std::cout << "Computing key-independent tables..." << std::flush;
             }
-            setTimersOn();
-            setDryRun(false); // Need to get a "real context" to test bootstrapping
+            helib::setTimersOn();
+            helib::setDryRun(false); // Need to get a "real context" to test bootstrapping
             time = -NTL::GetTime();
         }
 
@@ -157,15 +153,15 @@ namespace {
         }
 
         static void setGlobals(int force_bsgs, int force_hoist, int chen_han) {
-            fhe_test_force_bsgs = force_bsgs;
-            fhe_test_force_hoist = force_hoist;
-            fhe_force_chen_han = chen_han;
+            helib::fhe_test_force_bsgs = force_bsgs;
+            helib::fhe_test_force_hoist = force_hoist;
+            helib::fhe_force_chen_han = chen_han;
         };
 
         void cleanupBootstrappingGlobals() {
-            fhe_test_force_bsgs = old_fhe_test_force_bsgs;
-            fhe_test_force_hoist = old_fhe_test_force_hoist;
-            fhe_force_chen_han = old_fhe_force_chen_han;
+            helib::fhe_test_force_bsgs = old_fhe_test_force_bsgs;
+            helib::fhe_test_force_hoist = old_fhe_test_force_hoist;
+            helib::fhe_force_chen_han = old_fhe_force_chen_han;
         }
 
         static void setSeedIfNeeded(const long seed) {
@@ -202,14 +198,14 @@ namespace {
 
         const long m, phim;
         double time;
-        FHEcontext context;
+        helib::FHEcontext context;
 
       std::string v_values_name;
 
         GTest_thinboot() :
-                old_fhe_test_force_bsgs(fhe_test_force_bsgs),
-                old_fhe_test_force_hoist(fhe_test_force_hoist),
-                old_fhe_force_chen_han(fhe_force_chen_han),
+                old_fhe_test_force_bsgs(helib::fhe_test_force_bsgs),
+                old_fhe_test_force_hoist(helib::fhe_test_force_hoist),
+                old_fhe_force_chen_han(helib::fhe_force_chen_han),
                 p((setGlobals(GetParam().force_bsgs, GetParam().force_hoist, GetParam().chen_han),
                    GetParam().p)),
                 r(GetParam().r),
@@ -224,13 +220,13 @@ namespace {
                 chen_han(GetParam().chen_han),
                 debug(GetParam().debug),
                 scale(GetParam().scale),
-                gens(convert<std::vector<long>>(GetParam().global_gens)),
-                ords(convert<std::vector<long>>(GetParam().global_ords)),
+                gens(helib::convert<std::vector<long>>(GetParam().global_gens)),
+                ords(helib::convert<std::vector<long>>(GetParam().global_ords)),
                 mvec(GetParam().global_mvec),
                 c_m(GetParam().c_m),
                 iter(GetParam().iter),
-                m(computeProd(mvec)),
-                phim((checkPM(p, m), phi_N(m))),
+                m(helib::computeProd(mvec)),
+                phim((checkPM(p, m), helib::phi_N(m))),
                 time(0),
                 context((preContextSetup(), m), p, r, gens, ords),
                 v_values_name(GetParam().v_values_name)
@@ -240,7 +236,7 @@ namespace {
         void TearDown() override
         {
             if(!helib_test::noPrint) {
-                printAllTimers();
+                helib::printAllTimers();
             }
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
@@ -249,20 +245,20 @@ namespace {
     if (!helib_test::noPrint) std::cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << std::endl;
 #endif
 
-          if (fhe_stats) {
-            print_stats(std::cout);
+          if (helib::fhe_stats) {
+            helib::print_stats(std::cout);
             std::cout << "mvec=" << mvec << ", ";
             print_anderson_darling();
             dump_v_values();
           }
 
             cleanupBootstrappingGlobals();
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 
       void dump_v_values()
       {
-        const std::vector<double> *v_values = fetch_saved_values("v_values");
+        const std::vector<double> *v_values = helib::fetch_saved_values("v_values");
         if (v_values && v_values_name != "") {
           // write v_values to a file
 
@@ -270,7 +266,7 @@ namespace {
 
           std::ofstream F;
           F.open(v_values_name.c_str());
-          for (long i: range(v_values->size()))
+          for (long i: helib::range(v_values->size()))
             F << (*v_values)[i] << std::endl;
         }
       }
@@ -290,21 +286,21 @@ namespace {
 
         // compute the sample mean
         double SM = 0;
-        for (long i: range(N)) SM += Y[i];
+        for (long i: helib::range(N)) SM += Y[i];
         SM /= N;
 
 
         // compute the sample variance
         double SV = 0;
-        for (long i: range(N)) SV += (Y[i]-SM)*(Y[i]-SM);
+        for (long i: helib::range(N)) SV += (Y[i]-SM)*(Y[i]-SM);
         SV /= (N-1);
 
         // replace Y[i] by CDF of Y[i]
-        for (long i: range(N))
+        for (long i: helib::range(N))
           Y[i] = 0.5*(1 + erf((Y[i]-SM)/sqrt(2*SV)));
 
         double S = 0;
-        for (long i: range(N)) {
+        for (long i: helib::range(N)) {
           S += (2*i+1)*(log(Y[i]) + log1p(-Y[N-1-i]));
         }
         AD = -N - S/N;
@@ -315,18 +311,18 @@ namespace {
         // Goodness-of-Fit Techniques, Marcel Dekker.
 
         if (AD >= 0.6)
-          p_val = exp(1.2937 - 5.709*(AD)+ 0.0186*fsquare(AD));
+          p_val = exp(1.2937 - 5.709*(AD)+ 0.0186*helib::fsquare(AD));
         else if (AD > 0.34)
-          p_val = exp(0.9177 - 4.279*(AD) - 1.38*fsquare(AD));
+          p_val = exp(0.9177 - 4.279*(AD) - 1.38*helib::fsquare(AD));
         else if (AD > 0.2)
-          p_val = 1 - exp(-8.318 + 42.796*(AD)- 59.938*fsquare(AD));
+          p_val = 1 - exp(-8.318 + 42.796*(AD)- 59.938*helib::fsquare(AD));
         else
-          p_val = 1 - exp(-13.436 + 101.14*(AD)- 223.73*fsquare(AD));
+          p_val = 1 - exp(-13.436 + 101.14*(AD)- 223.73*helib::fsquare(AD));
       }
 
       void print_anderson_darling()
       {
-        const std::vector<double> *v_values = fetch_saved_values("v_values");
+        const std::vector<double> *v_values = helib::fetch_saved_values("v_values");
         if (v_values) {
           double AD, p_val;
           anderson_darling(*v_values, AD, p_val);
@@ -339,7 +335,7 @@ namespace {
 
 
     TEST_P(GTest_thinboot, correctly_performs_thinboot) {
-        buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+        helib::buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
 
         if (!helib_test::noPrint) {
             std::cout << "security=" << context.securityLevel() << std::endl;
@@ -367,16 +363,16 @@ namespace {
                  << std::endl << "  ";
             context.zMStar.printout();
         }
-        setDryRun(helib_test::dry); // Now we can set the dry-run flag if desired
+        helib::setDryRun(helib_test::dry); // Now we can set the dry-run flag if desired
 
 
         long p2r = context.alMod.getPPowR();
 
-        if (!helib_test::noPrint) fhe_stats = true;
+        if (!helib_test::noPrint) helib::fhe_stats = true;
 
         for (long numkey = 0; numkey < iter; numkey++) { // test with 3 keys
-            if (fhe_stats && numkey > 0 && numkey % 100 == 0) {
-            print_stats(std::cout);
+            if (helib::fhe_stats && numkey > 0 && numkey % 100 == 0) {
+              helib::print_stats(std::cout);
 
             std::cout << "mvec=" << mvec << ", ";
             print_anderson_darling();
@@ -387,21 +383,21 @@ namespace {
 
             time = -NTL::GetTime();
             if (!helib_test::noPrint) std::cout << "Generating keys, " << std::flush;
-            FHESecKey secretKey(context);
+            helib::FHESecKey secretKey(context);
             secretKey.GenSecKey(skHwt);      // A Hamming-weight-64 secret key
-            addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-            addFrbMatrices(secretKey);
+            helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+            helib::addFrbMatrices(secretKey);
             if (!helib_test::noPrint) std::cout << "computing key-dependent tables..." << std::flush;
             secretKey.genRecryptData();
             time += NTL::GetTime();
             if (!helib_test::noPrint) std::cout << " done in " << time << " seconds\n";
 
 #ifdef DEBUG_PRINTOUT
-            dbgEa = (EncryptedArray*) context.ea;
-            dbgKey = &secretKey;
+            helib::dbgEa = (helib::EncryptedArray*) context.ea;
+            helib::dbgKey = &secretKey;
 #endif
 
-            FHEPubKey publicKey = secretKey;
+            helib::FHEPubKey publicKey = secretKey;
 
             long d = context.zMStar.getOrdP();
             long phim = context.zMStar.getPhiM();
@@ -410,11 +406,11 @@ namespace {
             // GG defines the plaintext space Z_p[X]/GG(X)
             NTL::ZZX GG;
             GG = context.alMod.getFactorsOverZZ()[0];
-            EncryptedArray ea(context, GG);
+            helib::EncryptedArray ea(context, GG);
 
             if (debug) {
-                dbgKey = &secretKey;
-                dbgEa = &ea;
+                helib::dbgKey = &secretKey;
+                helib::dbgEa = &ea;
             }
 
             NTL::zz_p::init(p2r);
@@ -429,7 +425,7 @@ namespace {
             }
 
 
-            Ctxt c1(publicKey);
+            helib::Ctxt c1(publicKey);
             ea.encrypt(c1, publicKey, val1);
 
           // Make some noise!
@@ -438,12 +434,12 @@ namespace {
           ea.rotate(c1, 1);
           ea.rotate(c1, -1);
 
-            Ctxt c2(c1);
+          helib::Ctxt c2(c1);
 
-            if (!helib_test::noPrint) CheckCtxt(c2, "before squarings");
+            if (!helib_test::noPrint) helib::CheckCtxt(c2, "before squarings");
 
             long sqr_count = -1;
-            Ctxt next_c2(c2);
+            helib::Ctxt next_c2(c2);
             do {
                 c2 = next_c2;
                 next_c2.multiplyBy(next_c2);
@@ -456,7 +452,7 @@ namespace {
               long q = NTL::power_long(p, e) + 1;
               double Bnd = context.boundForRecryption();
               double mfac = context.zMStar.getNormBnd();
-              double min_bit_cap = log(  1.5*mfac*q / (p2r*Bnd) )/log(2.0);
+              double min_bit_cap = log(  mfac*q / (p2r*Bnd*FHE_MIN_CAP_FRAC) )/log(2.0);
 
               std::cout << "min_bit_cap=" << min_bit_cap << std::endl;
 
@@ -468,10 +464,10 @@ namespace {
                     std::cout << "BITS-PER-LEVEL: "
                          << ((c1.bitCapacity() - c2.bitCapacity()) / double(sqr_count)) << std::endl;
                 }
-                CheckCtxt(c2, "before recryption");
+                helib::CheckCtxt(c2, "before recryption");
             }
 
-            resetAllTimers();
+            helib::resetAllTimers();
 
             {
                 FHE_NTIMER_START(AAA_thinRecrypt);
@@ -481,10 +477,10 @@ namespace {
             }
 
 
-            if (!helib_test::noPrint) CheckCtxt(c2, "after recryption");
+            if (!helib_test::noPrint) helib::CheckCtxt(c2, "after recryption");
 
             for (auto &x: val0) {
-                for (long i: range(sqr_count)) x = x * x;
+                for (long i: helib::range(sqr_count)) x = x * x;
             }
 
             for (long i = 0; i < nslots; i++) {

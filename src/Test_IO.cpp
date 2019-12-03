@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -20,12 +20,11 @@
 #include <NTL/ZZX.h>
 #include <NTL/vector.h>
 
-#include "FHE.h"
-#include "timing.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include "ArgMap.h"
 
 NTL_CLIENT
+using namespace helib;
 
 #define N_TESTS 3
 static long ms[N_TESTS][10] = {

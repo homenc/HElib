@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -9,16 +9,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include <queue> // used in the breadth-first search in setKeySwitchMap
-#include "FHE.h"
+#include <queue>
 
+#include "keys.h"
 #include "timing.h"
+#include "EncryptedArray.h"
+
 #include "binio.h"
 #include "sample.h"
-#include "EncryptedArray.h"
 #include "norms.h"
 
-NTL_CLIENT
+namespace helib {
 
 /******** Utility function to generate RLWE instances *********/
 
@@ -57,212 +58,11 @@ double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
 // Choose random c0,c1 such that c0+s*c1 = p*e for a short e
 // Returns the variance of the noise canonical-embedding entries
 double RLWE(DoubleCRT& c0,DoubleCRT& c1, const DoubleCRT &s, long p,
-            ZZ* prgSeed)
+            NTL::ZZ* prgSeed)
 {
   // choose c1 at random (using prgSeed if not NULL)
   c1.randomize(prgSeed);
   return RLWE1(c0, c1, s, p);
-}
-
-/******************** KeySwitch implementation **********************/
-/********************************************************************/
-
-bool KeySwitch::operator==(const KeySwitch& other) const
-{
-  if (this == &other) return true;
-
-  if (fromKey != other.fromKey) return false;
-  if (toKeyID != other.toKeyID) return false;
-  if (ptxtSpace != other.ptxtSpace) return false;
-
-  if (prgSeed != other.prgSeed) return false;
-
-  if (b.size() != other.b.size()) return false;
-  for (size_t i=0; i<b.size(); i++) if (b[i] != other.b[i]) return false;
-
-  return true;
-}
-
-
-void KeySwitch::verify(FHESecKey& sk) 
-{
-  long fromSPower = fromKey.getPowerOfS();
-  long fromXPower = fromKey.getPowerOfX();
-  long fromIdx = fromKey.getSecretKeyID(); 
-  long toIdx = toKeyID;
-  long p = ptxtSpace;
-  long n = b.size();
-
-  cout << "KeySwitch::verify\n";
-  cout << "fromS = " << fromSPower 
-       << " fromX = " << fromXPower 
-       << " fromIdx = " << fromIdx 
-       << " toIdx = " << toIdx 
-       << " p = " << p 
-       << " n = " << n 
-       << "\n";
-
-
-  if (fromSPower != 1 || fromXPower != 1 || (fromIdx == toIdx) || n == 0) {
-    cout << "KeySwitch::verify: these parameters not checkable\n";
-    return;
-  }
-
-  const FHEcontext& context = b[0].getContext();
-
-  // we don't store the context in the ks matrix, so let's
-  // check that they are consistent
-
-  for (long i = 0; i < n; i++) {
-    if (&context != &(b[i].getContext()))
-      cout << "KeySwitch::verify: bad context " << i << "\n";
-  }
-
-  cout << "context.ctxtPrimes = " << context.ctxtPrimes << "\n";
-  cout << "context.specialPrimes = " << context.specialPrimes << "\n";
-  IndexSet fullPrimes = context.fullPrimes(); // ctxtPrimes | specialPrimes;
-
-  cout << "digits: ";
-  for (long i = 0; i < n; i++) 
-    cout << context.digits[i] << " ";
-  cout << "\n";
-
-  cout << "IndexSets of b: ";
-  for (long i = 0; i < n; i++) 
-    cout << b[i].getMap().getIndexSet() << " ";
-  cout << "\n";
-
-  // VJS: suspicious shadowing of fromKey, toKey
-  const DoubleCRT& _fromKey = sk.sKeys.at(fromIdx);
-  const DoubleCRT& _toKey = sk.sKeys.at(toIdx);
-
-  cout << "IndexSet of fromKey: " << _fromKey.getMap().getIndexSet() << "\n";
-  cout << "IndexSet of toKey: " << _toKey.getMap().getIndexSet() << "\n";
-
-  vector<DoubleCRT> a;
-  a.resize(n, DoubleCRT(context, fullPrimes)); // defined modulo all primes
-
-  { RandomState state;
-
-    SetSeed(prgSeed);
-    for (long i = 0; i < n; i++)
-      a[i].randomize();
-
-  } // the RandomState destructor "restores the state" (see NumbTh.h)
-
-  vector<ZZX> A, B;
-
-  A.resize(n);
-  B.resize(n);
-
-  for (long i = 0; i < n; i++) {
-    a[i].toPoly(A[i]);
-    b[i].toPoly(B[i]);
-  }
-
-  ZZX FromKey, ToKey;
-  _fromKey.toPoly(FromKey, fullPrimes);
-  _toKey.toPoly(ToKey, fullPrimes);
-
-  ZZ Q = context.productOfPrimes(fullPrimes);
-  ZZ prod = context.productOfPrimes(context.specialPrimes);
-  ZZX C, D;
-  ZZX PhimX = context.zMStar.getPhimX();
-
-  long nb = 0;
-  for (long i = 0; i < n; i++) {
-    C = (B[i] - FromKey*prod + ToKey*A[i]) % PhimX;
-    PolyRed(C, Q);
-    if (!divide(D, C, p)) {
-      cout << "*** not divisible by p at " << i << "\n";
-    }
-    else {
-      for (long j = 0; j <= deg(D); j++)
-         if (NumBits(coeff(D, j)) > nb) nb = NumBits(coeff(D, j));
-    }
-    prod *= context.productOfPrimes(context.digits[i]);
-  }
-
-  cout << "error ratio: " << ((double) nb)/((double) NumBits(Q)) << "\n";
-}
-
-const KeySwitch& KeySwitch::dummy()
-{
-  static const KeySwitch dummy(-1,-1,-1,-1);
-  return dummy;
-}
-
-ostream& operator<<(ostream& str, const KeySwitch& matrix)
-{
-  str << "["<<matrix.fromKey  <<" "<<matrix.toKeyID
-      << " "<<matrix.ptxtSpace<<" "<<matrix.b.size() << endl;
-  for (long i=0; i<(long)matrix.b.size(); i++)
-    str << matrix.b[i] << endl;
-  str << matrix.prgSeed << " " << matrix.noiseBound << "]";
-  return str;
-}
-
-// Used in lieu of istream& operator>>(istream& str, KeySwitch& matrix)
-void KeySwitch::readMatrix(istream& str, const FHEcontext& context)
-{
-  seekPastChar(str,'['); // defined in NumbTh.cpp
-  str >> fromKey;
-  str >> toKeyID;
-  str >> ptxtSpace;
-
-  long nDigits;
-  str >> nDigits;
-  b.resize(nDigits, DoubleCRT(context, IndexSet::emptySet()));
-  for (long i=0; i<nDigits; i++)
-    str >> b[i];
-  str >> prgSeed;
-  str >> noiseBound;
-  seekPastChar(str,']');
-}
-
-
-void KeySwitch::write(ostream& str) const
-{
-  writeEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
-/*  
-    Write out raw
-    1. SKHandle fromKey; 
-    2. long     toKeyID;
-    3. long     ptxtSpace;
-    4. vector<DoubleCRT> b;
-    5. ZZ prgSeed;
-    6. xdouble noiseBound;
-*/
-
-  fromKey.write(str);
-  write_raw_int(str, toKeyID);
-  write_raw_int(str, ptxtSpace);
-
-  write_raw_vector(str, b);
-  
-  write_raw_ZZ(str, prgSeed);
-  write_raw_xdouble(str, noiseBound);
-
-  writeEyeCatcher(str, BINIO_EYE_SKM_END);
-}
-
-void KeySwitch::read(istream& str, const FHEcontext& context)
-{
-  int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
-  //OLD: assert(eyeCatcherFound == 0);
-  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-secret key eyecatcher");
-
-  fromKey.read(str);
-  toKeyID = read_raw_int(str);
-  ptxtSpace = read_raw_int(str);
-  DoubleCRT blankDCRT(context, IndexSet::emptySet());
-  read_raw_vector(str, b, blankDCRT);
-  read_raw_ZZ(str, prgSeed);
-  noiseBound = read_raw_xdouble(str); 
-
-  eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_END);
-  //OLD: assert(eyeCatcherFound == 0);
-  helib::assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
 }
 
 
@@ -270,6 +70,29 @@ void KeySwitch::read(istream& str, const FHEcontext& context)
 /******************** FHEPubKey implementation **********************/
 /********************************************************************/
 // Computes the keySwitchMap pointers, using breadth-first search (BFS)
+
+FHEPubKey::FHEPubKey():
+    context(*activeContext), pubEncrKey(*this),
+    recryptEkey(*this) { recryptKeyID=-1; }
+
+FHEPubKey::FHEPubKey(const FHEcontext& _context):
+    context(_context), pubEncrKey(*this), recryptEkey(*this)
+{ recryptKeyID=-1; }
+
+FHEPubKey::FHEPubKey(const FHEPubKey& other): // copy constructor
+    context(other.context), pubEncrKey(*this), skBounds(other.skBounds),
+    keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
+    recryptKeyID(other.recryptKeyID), recryptEkey(*this)
+{ // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
+  pubEncrKey.privateAssign(other.pubEncrKey);
+  recryptEkey.privateAssign(other.recryptEkey);
+}
+
+void FHEPubKey::clear() {
+  pubEncrKey.clear(); skBounds.clear();
+  keySwitching.clear(); keySwitchMap.clear();
+  recryptKeyID=-1; recryptEkey.clear();
+}
 
 void FHEPubKey::setKeySwitchMap(long keyId)
 {
@@ -281,8 +104,8 @@ void FHEPubKey::setKeySwitchMap(long keyId)
   // all the matrices for every step). This is a list of all the powers n
   // for which we have a matrix W[s_i(X^n) => s_i(X)], as well as the index
   // of that matrix in the keySwitching array.
-  typedef pair<long,long> keySwitchingEdge;
-  vector<keySwitchingEdge> edges;
+  typedef std::pair<long,long> keySwitchingEdge;
+  std::vector<keySwitchingEdge> edges;
   for (long i=0; i<(long)keySwitching.size(); i++) {
     const KeySwitch& mat = keySwitching.at(i);
     if (mat.toKeyID == keyId && mat.fromKey.getPowerOfS()==1
@@ -307,7 +130,7 @@ void FHEPubKey::setKeySwitchMap(long keyId)
       long n = edges[j].first;
       long matrixIndex = edges[j].second;
 
-      long nextNode = MulMod(currentNode, n, m);
+      long nextNode = NTL::MulMod(currentNode, n, m);
       if (keySwitchMap.at(keyId).at(nextNode) == -1) {// A new node: mark it now
 	// Record the index of the matrix that we use for the first step
 	keySwitchMap[keyId][nextNode] = matrixIndex;
@@ -359,6 +182,101 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
   return KeySwitch::dummy(); // return this if nothing is found
 }
 
+bool FHEPubKey::operator==(const FHEPubKey& other) const
+{
+  if (this == &other) return true;
+
+  if (&context != &other.context) return false;
+  if (!pubEncrKey.equalsTo(other.pubEncrKey, /*comparePkeys=*/false))
+    return false;
+
+  if (skBounds.size() != other.skBounds.size()) return false;
+  for (size_t i=0; i<skBounds.size(); i++)
+    if (fabs(skBounds[i]-other.skBounds[i])>0.1) return false;
+
+  if (keySwitching.size() != other.keySwitching.size()) return false;
+  for (size_t i=0; i<keySwitching.size(); i++)
+    if (keySwitching[i] != other.keySwitching[i]) return false;
+
+  if (keySwitchMap.size() != other.keySwitchMap.size()) return false;
+  for (size_t i=0; i<keySwitchMap.size(); i++) {
+    if (keySwitchMap[i].size() != other.keySwitchMap[i].size()) return false;
+    for (size_t j=0; j<keySwitchMap[i].size(); j++)
+      if (keySwitchMap[i][j] != other.keySwitchMap[i][j]) return false;
+  }
+
+  // compare KS_strategy, ignoring trailing FHE_KSS_UNKNOWN
+  long n = KS_strategy.length();
+  while (n > 0 && KS_strategy[n-1] == FHE_KSS_UNKNOWN) n--;
+  long n1 = other.KS_strategy.length();
+  while (n1 > 0 && other.KS_strategy[n1-1] == FHE_KSS_UNKNOWN) n1--;
+  if (n != n1) return false;
+  for (long i: range(n)) {
+    if (KS_strategy[i] != other.KS_strategy[i]) return false;
+  }
+
+  if (recryptKeyID!=other.recryptKeyID) return false;
+  if (recryptKeyID>=0 &&
+      !recryptEkey.equalsTo(other.recryptEkey, /*comparePkeys=*/false))
+    return false;
+
+  return true;
+}
+
+bool FHEPubKey::operator!=(const FHEPubKey& other) const {
+  return !(*this == other);
+}
+
+const FHEcontext& FHEPubKey::getContext() const { return context; }
+long FHEPubKey::getPtxtSpace() const { return pubEncrKey.ptxtSpace; }
+bool FHEPubKey::keyExists(long keyID) const {
+  return (keyID < (long)skBounds.size());
+}
+
+double FHEPubKey::getSKeyBound(long keyID) const {
+  return skBounds.at(keyID);
+}
+
+const std::vector<KeySwitch>& FHEPubKey::keySWlist() const {
+  return keySwitching;
+}
+
+const KeySwitch& FHEPubKey::getKeySWmatrix(long fromSPower, long fromXPower, long fromID, long toID) const
+{ return getKeySWmatrix(SKHandle(fromSPower,fromXPower,fromID), toID); }
+
+bool FHEPubKey::haveKeySWmatrix(const SKHandle& from, long toID) const
+{ return getKeySWmatrix(from,toID).toKeyID >= 0; }
+
+bool FHEPubKey::haveKeySWmatrix(long fromSPower, long fromXPower, long fromID, long toID) const
+{ return haveKeySWmatrix(SKHandle(fromSPower,fromXPower,fromID), toID); }
+
+bool FHEPubKey::haveAnyKeySWmatrix(const SKHandle& from) const
+{ return getAnyKeySWmatrix(from).toKeyID >= 0; }
+
+const KeySwitch& FHEPubKey::getNextKSWmatrix(long fromXPower, long fromID) const
+{ long matIdx = keySwitchMap.at(fromID).at(fromXPower);
+  return (matIdx>=0? keySwitching.at(matIdx) : KeySwitch::dummy());
+}
+
+bool FHEPubKey::isReachable(long k, long keyID) const
+{ return keyID < long(keySwitchMap.size()) && keySwitchMap.at(keyID).at(k)>=0; }
+
+long FHEPubKey::getKSStrategy(long dim) const {
+  long index = dim+1;
+  //OLD: assert(index >= 0);
+  helib::assertTrue<helib::InvalidArgument>(index >= 0l, "Invalid dimension (dim must be at least -1)");
+  if (index >= KS_strategy.length()) return FHE_KSS_UNKNOWN;
+  return KS_strategy[index];
+}
+
+void FHEPubKey::setKSStrategy(long dim, int val) {
+  long index = dim+1;
+  //OLD: assert(index >= 0);
+  helib::assertTrue<helib::InvalidArgument>(index >= 0l, "Invalid dimension (dim must be at least -1)");
+  if (index >= KS_strategy.length())
+    KS_strategy.SetLength(index+1, FHE_KSS_UNKNOWN);
+  KS_strategy[index] = val;
+}
 
 // Encrypts plaintext, result returned in the ciphertext argument. When
 // called with highNoise=true, returns a ciphertext with noise level
@@ -370,7 +288,7 @@ const KeySwitch& FHEPubKey::getAnyKeySWmatrix(const SKHandle& from) const
 //     elements that are encoded in ptxt (before scaling), it is assumed
 //     that they are scaled by eacx.encodeScalingFactor(). The
 //     returned value is the same as the argument ptxtSpace.
-long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
+long FHEPubKey::Encrypt(Ctxt &ctxt, const NTL::ZZX& ptxt, long ptxtSpace,
 			bool highNoise) const
 {
   FHE_TIMER_START;
@@ -385,7 +303,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
   //OLD: assert(this == &ctxt.pubKey);
   helib::assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
   if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mistamtch
-    ptxtSpace = GCD(ptxtSpace, pubEncrKey.ptxtSpace);
+    ptxtSpace = NTL::GCD(ptxtSpace, pubEncrKey.ptxtSpace);
     if (ptxtSpace <= 1) throw helib::RuntimeError("Plaintext-space mismatch on encryption");
   }
 
@@ -418,7 +336,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
   ctxt.noiseBound += r_bound * pubEncrKey.noiseBound;
 
-  //cerr << "*** r_bound*pubEncrKey.noiseBound " << r_bound * pubEncrKey.noiseBound << "\n";
+  //std::cerr << "*** r_bound*pubEncrKey.noiseBound " << r_bound * pubEncrKey.noiseBound << "\n";
 
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2()==0) // not power of two
@@ -426,13 +344,13 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
   for (size_t i=0; i<ctxt.parts.size(); i++) {  // add noise to all the parts
     ctxt.parts[i] *= r;
-    xdouble e_bound;
+    NTL::xdouble e_bound;
 
     if (highNoise && i == 0) {
       // we sample e so that coefficients are uniform over 
       // [-Q/(8*ptxtSpace)..Q/(8*ptxtSpace)]
 
-      ZZ B;
+      NTL::ZZ B;
       B = context.productOfPrimes(context.ctxtPrimes);
       B /= (ptxtSpace*8);
  
@@ -453,7 +371,7 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
     ctxt.parts[i] += e;
     ctxt.noiseBound += e_bound;
 
-    //cerr << "*** e_bound " << e_bound << "\n";
+    //std::cerr << "*** e_bound " << e_bound << "\n";
   }
 
   // add in the plaintext
@@ -472,28 +390,35 @@ long FHEPubKey::Encrypt(Ctxt &ctxt, const ZZX& ptxt, long ptxtSpace,
 
   // NOTE: this is a heuristic
   double ptxt_bound = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
-  double ptxt_sz = conv<double>(embeddingLargestCoeff(ptxt, context.zMStar));
+  double ptxt_sz = NTL::conv<double>(embeddingLargestCoeff(ptxt, context.zMStar));
   if (ptxt_sz > ptxt_bound) {
      Warning("noise bound exceeded in encryption");
   }
 
   ctxt.noiseBound += ptxt_bound;
 
-  //cerr << "*** ptxt_bound " << ptxt_bound << "\n";
+  //std::cerr << "*** ptxt_bound " << ptxt_bound << "\n";
 
   // fill in the other ciphertext data members
   ctxt.ptxtSpace = ptxtSpace;
   ctxt.intFactor = 1;
 
-  //cerr << "*** ctxt.noiseBound " << ctxt.noiseBound << "\n";
+  //std::cerr << "*** ctxt.noiseBound " << ctxt.noiseBound << "\n";
 
   // CheckCtxt(ctxt, "after encryption");
 
   return ptxtSpace;
 }
 
+long FHEPubKey::Encrypt(Ctxt &ciphertxt,
+             const zzX& plaintxt, long ptxtSpace, bool highNoise) const {
+  NTL::ZZX tmp;
+  convert(tmp, plaintxt);
+  return Encrypt(ciphertxt, tmp, ptxtSpace, highNoise);
+}
+
 // FIXME: Some code duplication between here and Encrypt above
-void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt,
+void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const NTL::ZZX& ptxt,
                             double ptxtSize, double scaling) const
 {
   //OLD: assert(this == &ctxt.pubKey);
@@ -532,7 +457,7 @@ void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt,
   DoubleCRT r(context, context.ctxtPrimes);
 
   double r_bound = r.sampleSmall(); // r is a {0,+-1} polynomial
-  xdouble error_bound = r_bound * pubEncrKey.noiseBound;
+  NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
 
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2()==0) // not power of two
@@ -548,7 +473,7 @@ void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt,
     error_bound += e_bound;
   }
   // Compute the extra scaling factor, if needed
-  long ef = conv<long>(ceil(error_bound*prec/(scaling*ptxtSize)));
+  long ef = NTL::conv<long>(ceil(error_bound*prec/(scaling*ptxtSize)));
   if (ef > 1) { // scale up some more
     ctxt.parts[0] += ptxt*ef;
     scaling *= ef;
@@ -563,55 +488,32 @@ void FHEPubKey::CKKSencrypt(Ctxt &ctxt, const ZZX& ptxt,
   ctxt.ptxtSpace = 1;
 }
 
-bool FHEPubKey::operator==(const FHEPubKey& other) const
-{
-  if (this == &other) return true;
-
-  if (&context != &other.context) return false;
-  if (!pubEncrKey.equalsTo(other.pubEncrKey, /*comparePkeys=*/false))
-    return false;
-
-  if (skBounds.size() != other.skBounds.size()) return false;
-  for (size_t i=0; i<skBounds.size(); i++)
-    if (fabs(skBounds[i]-other.skBounds[i])>0.1) return false;
-
-  if (keySwitching.size() != other.keySwitching.size()) return false;
-  for (size_t i=0; i<keySwitching.size(); i++)
-    if (keySwitching[i] != other.keySwitching[i]) return false;
-
-  if (keySwitchMap.size() != other.keySwitchMap.size()) return false;
-  for (size_t i=0; i<keySwitchMap.size(); i++) {
-    if (keySwitchMap[i].size() != other.keySwitchMap[i].size()) return false;
-    for (size_t j=0; j<keySwitchMap[i].size(); j++)
-      if (keySwitchMap[i][j] != other.keySwitchMap[i][j]) return false;
-  }
-
-  // compare KS_strategy, ignoring trailing FHE_KSS_UNKNOWN
-  long n = KS_strategy.length();
-  while (n > 0 && KS_strategy[n-1] == FHE_KSS_UNKNOWN) n--;
-  long n1 = other.KS_strategy.length();
-  while (n1 > 0 && other.KS_strategy[n1-1] == FHE_KSS_UNKNOWN) n1--;
-  if (n != n1) return false;
-  for (long i: range(n)) {
-    if (KS_strategy[i] != other.KS_strategy[i]) return false;
-  }
-
-  if (recryptKeyID!=other.recryptKeyID) return false;
-  if (recryptKeyID>=0 && 
-      !recryptEkey.equalsTo(other.recryptEkey, /*comparePkeys=*/false))
-    return false;
-
-  return true;
+void FHEPubKey::CKKSencrypt(Ctxt &ciphertxt, const zzX& plaintxt,
+                 double ptxtSize, double scaling) const {
+  NTL::ZZX tmp;
+  convert(tmp, plaintxt);
+  CKKSencrypt(ciphertxt, tmp, ptxtSize, scaling);
 }
 
+// These methods are overridden by secret-key Encrypt
+long FHEPubKey::Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace) const
+{ return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false); }
+long FHEPubKey::Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace) const
+{ return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false); }
 
-ostream& operator<<(ostream& str, const FHEPubKey& pk)
+bool FHEPubKey::isCKKS() const
+{ return (getContext().alMod.getTag()==PA_cx_tag); }
+// NOTE: Is taking the alMod from the context the right thing to do?
+
+bool FHEPubKey::isBootstrappable() const { return (recryptKeyID>=0); }
+
+std::ostream& operator<<(std::ostream& str, const FHEPubKey& pk)
 {
   str << "[";
   writeContextBase(str, pk.getContext());
  
   // output the public encryption key itself
-  str << pk.pubEncrKey << endl;
+  str << pk.pubEncrKey << std::endl;
 
   // output skBounds in the same format as vec_double
   str << "[";
@@ -620,9 +522,9 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
   str << "]\n";
 
   // output the key-switching matrices
-  str << pk.keySwitching.size() << endl;
+  str << pk.keySwitching.size() << std::endl;
   for (long i=0; i<(long)pk.keySwitching.size(); i++)
-    str << pk.keySwitching[i] << endl;
+    str << pk.keySwitching[i] << std::endl;
 
   // output keySwitchMap in the same format as vec_vec_long
   str << "[";
@@ -638,19 +540,19 @@ ostream& operator<<(ostream& str, const FHEPubKey& pk)
 
   // output the bootstrapping key, if any
   str << pk.recryptKeyID << " ";
-  if (pk.recryptKeyID>=0) str << pk.recryptEkey << endl;
+  if (pk.recryptKeyID>=0) str << pk.recryptEkey << std::endl;
   return str << "]";
 }
 
-istream& operator>>(istream& str, FHEPubKey& pk)
+std::istream& operator>>(std::istream& str, FHEPubKey& pk)
 {
   pk.clear();
-  //  cerr << "FHEPubKey[";
+  //  std::cerr << "FHEPubKey[";
   seekPastChar(str, '['); // defined in NumbTh.cpp
 
   // sanity check, verify that basic context parameters are correct
   unsigned long m, p, r;
-  vector<long> gens, ords;
+  std::vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
   //OLD: assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
   helib::assertTrue(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords), "PAlgebra mismatch");
@@ -672,7 +574,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
     pk.keySwitching[i].readMatrix(str, pk.getContext());
 
   // Get the key-switching map
-  Vec< Vec<long> > vvl;
+  NTL::Vec< NTL::Vec<long> > vvl;
   str >> vvl;
   pk.keySwitchMap.resize(vvl.length());
   for (long i=0; i<(long)pk.keySwitchMap.size(); i++) {
@@ -695,7 +597,7 @@ istream& operator>>(istream& str, FHEPubKey& pk)
   return str;
 }
       
-void writePubKeyBinary(ostream& str, const FHEPubKey& pk) 
+void writePubKeyBinary(std::ostream& str, const FHEPubKey& pk)
 {
 
   writeEyeCatcher(str, BINIO_EYE_PK_BEGIN);  
@@ -730,7 +632,7 @@ void writePubKeyBinary(ostream& str, const FHEPubKey& pk)
   writeEyeCatcher(str, BINIO_EYE_PK_END);
 }
 
-void readPubKeyBinary(istream& str, FHEPubKey& pk)
+void readPubKeyBinary(std::istream& str, FHEPubKey& pk)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_BEGIN);
   //OLD: assert(eyeCatcherFound == 0);
@@ -740,7 +642,7 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
   //  // same as the text IO. May be worth putting it in helper func.
   //  std::unique_ptr<FHEcontext> dummy = buildContextFromBinary(str);
   unsigned long m, p, r;
-  vector<long> gens, ords;
+  std::vector<long> gens, ords;
   readContextBaseBinary(str, m, p, r, gens, ords);
   //OLD: assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
   helib::assertTrue(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords), "PAlgebra mismatch");
@@ -772,6 +674,8 @@ void readPubKeyBinary(istream& str, FHEPubKey& pk)
 /******************** FHESecKey implementation **********************/
 /********************************************************************/
 
+FHESecKey::FHESecKey(const FHEcontext& _context): FHEPubKey(_context) {}
+
 bool FHESecKey::operator==(const FHESecKey& other) const
 {
   if (this == &other) return true;
@@ -782,6 +686,11 @@ bool FHESecKey::operator==(const FHESecKey& other) const
     if (sKeys[i] != other.sKeys[i]) return false;
   return true;
 }
+
+bool FHESecKey::operator!=(const FHESecKey& other) const {return !(*this==other);}
+
+void FHESecKey::clear()
+{ FHEPubKey::clear(); sKeys.clear(); }
 
 // We allow the calling application to choose a secret-key polynomial by
 // itself, then insert it into the FHESecKey object, getting the index of
@@ -826,6 +735,20 @@ long FHESecKey::ImportSecKey(const DoubleCRT& sKey, double bound,
   return keyID; // return the index where this key is stored
 }
 
+long FHESecKey::GenSecKey(long hwt, long ptxtSpace, long maxDegKswitch) {
+  DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes);
+
+  if (hwt > 0) {
+    // sample a Hamming-weight-hwt polynomial
+    double bound = newSk.sampleHWtBounded(hwt);
+    return ImportSecKey(newSk, bound, ptxtSpace, maxDegKswitch);
+  } else {
+    // sample a 0/+-1 polynomial
+    double bound = newSk.sampleSmallBounded();
+    return ImportSecKey(newSk, bound, ptxtSpace, maxDegKswitch);
+  }
+}
+
 // Generate a key-switching matrix and store it in the public key.
 // The argument p denotes the plaintext space
 void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
@@ -858,7 +781,7 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
   // size-n vector
   ksMatrix.b.resize(n, DoubleCRT(context, context.ctxtPrimes | context.specialPrimes)); 
 
-  vector<DoubleCRT> a; 
+  std::vector<DoubleCRT> a;
   a.resize(n, DoubleCRT(context, context.ctxtPrimes | context.specialPrimes));
 
   { RandomState state;
@@ -906,19 +829,31 @@ void FHESecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
 }
 
 // Decryption
-void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt) const
+void FHESecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt) const
 {
-  ZZX f;
+  NTL::ZZX f;
   Decrypt(plaintxt, ciphertxt, f);
 }
 
-void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
-			ZZX& f) const // plaintext before modular reduction
+void FHESecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt,
+			NTL::ZZX& f) const // plaintext before modular reduction
 {
   FHE_TIMER_START;
 
   //OLD: assert(getContext()==ciphertxt.getContext());
   helib::assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
+
+
+  // this will trigger a warning if any operations that were
+  // previously performed on the polynomial basis were invalid
+  // because of excess noise.  I'm not 100% sure that this is
+  // the right test for CKKS ciphertexts...need to double check.
+  NTL::xdouble xQ = NTL::xexp(getContext().logOfProduct(ciphertxt.getPrimeSet()));
+  double polyNormBnd = getContext().zMStar.getPolyNormBnd();
+  if (ciphertxt.getNoiseBound()*polyNormBnd > 0.48*xQ)
+    Warning("decrypting with too much noise");
+
+
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;
 
   DoubleCRT ptxt(context, ptxtPrimes); // Set to zero
@@ -962,9 +897,9 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
   if (ciphertxt.getPtxtSpace()>2) {
     long factor = rem(context.productOfPrimes(ciphertxt.getPrimeSet()),
                      ciphertxt.ptxtSpace);
-    factor = MulMod(factor, ciphertxt.intFactor, ciphertxt.ptxtSpace);
+    factor = NTL::MulMod(factor, ciphertxt.intFactor, ciphertxt.ptxtSpace);
     if (factor != 1) {
-        factor = InvMod(factor, ciphertxt.ptxtSpace);
+        factor = NTL::InvMod(factor, ciphertxt.ptxtSpace);
         MulMod(plaintxt, plaintxt, factor, ciphertxt.ptxtSpace);
     }
   }
@@ -972,7 +907,7 @@ void FHESecKey::Decrypt(ZZX& plaintxt, const Ctxt &ciphertxt,
 
 // Encryption using the secret key, this is useful, e.g., to put an
 // encryption of the secret key into the public key.
-long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
+long FHESecKey::skEncrypt(Ctxt &ctxt, const NTL::ZZX& ptxt,
                           long ptxtSpace, long skIdx) const
 {
   FHE_TIMER_START;
@@ -1018,7 +953,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
   if (isCKKS()) {
     double f = getContext().ea->getCx().encodeScalingFactor() / ptxtSize;
     long prec = getContext().alMod.getPPowR();
-    long ef = conv<long>(ceil(prec*ctxt.noiseBound/(f*ptxtSize)));
+    long ef = NTL::conv<long>(ceil(prec*ctxt.noiseBound/(f*ptxtSize)));
     if (ef>1) { // scale up some more
       ctxt.parts[0] += ptxt * ef;
       f *= ef;
@@ -1040,7 +975,7 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
     // computes the size, which could lead to information leakage.
     // We check that the size estimate is correct here, and give a warning if it's not
 
-    double sz = conv<double>(embeddingLargestCoeff(ptxt, context.zMStar));
+    double sz = NTL::conv<double>(embeddingLargestCoeff(ptxt, context.zMStar));
     if (sz > sz_est) {
        Warning("noise bound exceeded in encryption");
     }
@@ -1048,6 +983,17 @@ long FHESecKey::skEncrypt(Ctxt &ctxt, const ZZX& ptxt,
     return ctxt.ptxtSpace;
   }
 }
+
+long FHESecKey::skEncrypt(Ctxt &ctxt, const zzX& ptxt, long ptxtSpace, long skIdx) const {
+  NTL::ZZX tmp;
+  convert(tmp,ptxt);
+  return skEncrypt(ctxt, tmp, ptxtSpace, skIdx);
+}
+// These methods override the public-key Encrypt methods
+long FHESecKey::Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace) const
+{ return skEncrypt(ciphertxt, plaintxt, ptxtSpace, /*skIdx=*/0); }
+long FHESecKey::Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace) const
+{ return skEncrypt(ciphertxt, plaintxt, ptxtSpace, /*skIdx=*/0); }
 
 
 // Generate bootstrapping data if needed, returns index of key
@@ -1083,19 +1029,19 @@ long FHESecKey::genRecryptData()
 }
 
 
-ostream& operator<<(ostream& str, const FHESecKey& sk)
+std::ostream& operator<<(std::ostream& str, const FHESecKey& sk)
 {
-  str << "[" << ((const FHEPubKey&)sk) << endl
-      << sk.sKeys.size() << endl;
+  str << "[" << ((const FHEPubKey&)sk) << std::endl
+      << sk.sKeys.size() << std::endl;
   for (long i=0; i<(long)sk.sKeys.size(); i++)
-    str << sk.sKeys[i] << endl;
+    str << sk.sKeys[i] << std::endl;
   return str << "]";
 }
 
-istream& operator>>(istream& str, FHESecKey& sk)
+std::istream& operator>>(std::istream& str, FHESecKey& sk)
 {
   sk.clear();
-  //  cerr << "FHESecKey[";
+  //  std::cerr << "FHESecKey[";
   seekPastChar(str, '['); // defined in NumbTh.cpp
   str >> (FHEPubKey&) sk;
 
@@ -1104,12 +1050,12 @@ istream& operator>>(istream& str, FHESecKey& sk)
   sk.sKeys.resize(nKeys, DoubleCRT(sk.getContext(),IndexSet::emptySet()));
   for (long i=0; i<nKeys; i++) str >> sk.sKeys[i];
   seekPastChar(str, ']');
-  //  cerr << "]\n";
+  //  std::cerr << "]\n";
   return str;
 }
 
 
-void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
+void writeSecKeyBinary(std::ostream& str, const FHESecKey& sk)
 {
   writeEyeCatcher(str, BINIO_EYE_SK_BEGIN);
 
@@ -1124,7 +1070,7 @@ void writeSecKeyBinary(ostream& str, const FHESecKey& sk)
   writeEyeCatcher(str, BINIO_EYE_SK_END);
 }
 
-void readSecKeyBinary(istream& str, FHESecKey& sk)
+void readSecKeyBinary(std::istream& str, FHESecKey& sk)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_BEGIN);
   //OLD: assert(eyeCatcherFound == 0);
@@ -1141,3 +1087,4 @@ void readSecKeyBinary(istream& str, FHESecKey& sk)
   helib::assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
 }
 
+}

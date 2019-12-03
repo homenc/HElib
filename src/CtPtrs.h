@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -15,9 +15,12 @@
  * @file CtPtrs.h
  * @brief Cnified interface for vector of pointers to ciphertexts
  **/
+#include <initializer_list>
 #include "Ctxt.h"
 #include "PtrVector.h"
 #include "PtrMatrix.h"
+
+namespace helib {
 
 typedef PtrVector<Ctxt> CtPtrs;
 typedef PtrVector_VecT<Ctxt> CtPtrs_VecCt;      // CtPtrs_VecCt(NTL::Vec<Ctxt>)
@@ -65,7 +68,6 @@ inline long findMinBitCapacity(const CtPtrMat& m)
   return lvl;
 }
 
-#include <initializer_list>
 inline long findMinBitCapacity(std::initializer_list<const CtPtrs*> list)
 {
   long lvl = LONG_MAX;
@@ -80,6 +82,8 @@ inline Ctxt innerProduct(const CtPtrs& v1, const CtPtrs& v2)
   Ctxt ret(ZeroCtxtLike, *v1[0]);
   innerProduct(ret, v1, v2);
   return ret; 
+}
+
 }
 
 #endif // ifndef HELIB_CTPTRS_H

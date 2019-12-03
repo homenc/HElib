@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,7 +16,10 @@
  * @brief Convenience class templates providing a unified interface
  *    for a matrix of objects, returning pointers to these objects.
  **/
+#include <initializer_list>
 #include "PtrVector.h"
+
+namespace helib {
 
 //! @brief An abstract class for an array of PtrVectors
 template<typename T>
@@ -54,7 +57,6 @@ template<typename T> void setLengthZero(PtrMatrix<T>& v){v.resize(0);}
 //struct PtrMatrix_ptVec;    // NTL::Vec<NTL::Vec<T>*>
 //struct PtrMatrix_ptvector; // std::vector<std::vector<T>*>
 
-#include <initializer_list>
 template<typename T>
 const T* ptr2nonNull(std::initializer_list<const PtrVector<T>*> list)
 {
@@ -181,4 +183,7 @@ struct PtrMatrix_ptvector : PtrMatrix<T> {
   { return rows[i]; }
   long size() const override { return lsize(rows); }    // How many rows
 };
+
+}
+
 #endif // ifndef HELIB_PTRMATRIX_H

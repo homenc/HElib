@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -18,8 +18,7 @@
 #include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 
-#include "EncryptedArray.h"
-#include "FHE.h"
+#include "helib.h"
 
 #include "intraSlot.h"
 #include "binaryArith.h"
@@ -28,6 +27,9 @@ NTL_CLIENT
 #ifdef DEBUG_PRINTOUT
 #include "debugging.h"
 #endif
+
+using namespace helib;
+
 // define flags FLAG_PRINT_ZZX, FLAG_PRINT_POLY, FLAG_PRINT_VEC, functions
 //        decryptAndPrint(ostream, ctxt, sk, ea, flags)
 //        decryptAndCompare(ctxt, sk, ea, pa);

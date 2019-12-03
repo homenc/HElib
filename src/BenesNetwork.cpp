@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -10,28 +10,24 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/lzz_pXFactoring.h>
-NTL_CLIENT
-#include "FHE.h"
 #include "EncryptedArray.h"
 
 #include <cstdlib>
 #include <list>
 #include <sstream>
-
-#if (__cplusplus>199711L)
 #include <memory>
-#else
-#include <tr1/memory>
-#endif
 
 #include <NTL/vector.h>
 #include "NumbTh.h"
 #include "permutations.h"
 
+namespace helib {
+
 static void 
 recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
                           const Permut& perm, const Permut& iperm,
-                          Vec< Vec<short> >& level, Vec< Vec<short> >& ilevel)
+                          NTL::Vec< NTL::Vec<short> >& level, 
+                          NTL::Vec< NTL::Vec<short> >& ilevel)
 {
   long sz = perm.length();
 
@@ -91,15 +87,15 @@ recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
   // *first_level[1] is the first level when traversing right to left
   // *ifirst_level[0] is the reversed first level when traversing left to right
   // *ifirst_level[1] is the reversed first level when traversing right to left
-  Vec<short> *first_level[] = { &level[d], &ilevel[nlev-1-d] };
-  Vec<short> *ifirst_level[] = { &ilevel[d], &level[nlev-1-d] };
+  NTL::Vec<short> *first_level[] = { &level[d], &ilevel[nlev-1-d] };
+  NTL::Vec<short> *ifirst_level[] = { &ilevel[d], &level[nlev-1-d] };
 
   // *last_level[0] is the last level when traversing left to right
   // *last_level[1] is the last level when traversing right to left
   // *ilast_level[0] is the reversed last level when traversing left to right
   // *ilast_level[1] is the reversed last level when traversing right to left
-  Vec<short> *last_level[] = { &level[nlev-1-d], &ilevel[d] };
-  Vec<short> *ilast_level[] = { &ilevel[nlev-1-d], &level[d] };
+  NTL::Vec<short> *last_level[] = { &level[nlev-1-d], &ilevel[d] };
+  NTL::Vec<short> *ilast_level[] = { &ilevel[nlev-1-d], &level[d] };
 
   // inner_perm[0][0] upper internal perm
   // inner_perm[0][1] upper internal inv perm
@@ -114,7 +110,7 @@ recursiveGeneralBenesInit(long n, long k, long d, long delta_j,
 
   // marked[0] indicates which nodes on left have been marked
   // marked[1] indicates which nodes on right have been marked
-  Vec<bool> marked[2];
+  NTL::Vec<bool> marked[2];
   marked[0].SetLength(sz);
   for (long j = 0; j < sz; j++) marked[0][j] = false;
   marked[1].SetLength(sz);
@@ -294,7 +290,7 @@ GeneralBenesNetwork::GeneralBenesNetwork(const Permut& perm)
   // allocate space for the reverse levels graph...
   // makes the recursive construction more convenient
 
-  Vec< Vec<short> > ilevel;
+  NTL::Vec< NTL::Vec<short> > ilevel;
   ilevel.SetLength(2*k-1);
   for (long i = 0; i < 2*k-1; i++)
     ilevel[i].SetLength(n);
@@ -315,10 +311,12 @@ bool GeneralBenesNetwork::testNetwork(const Permut& perm) const
 
     long j1 = j;
     for (long i = 0; i < nlev; i++) {
-      const Vec<short>& lev = getLevel(i);
+      const NTL::Vec<short>& lev = getLevel(i);
       j1 += shamt(i)*lev[j1];
     }
     if (perm[j1] != j) return false;
   }
   return true;
+}
+
 }

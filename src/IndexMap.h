@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -19,6 +19,7 @@
 #include "IndexSet.h"
 #include "clonedPtr.h"
 
+namespace helib {
 
 //! @brief Initializing elements in an IndexMap
 template < class T > class IndexMapInit {
@@ -38,11 +39,7 @@ public:
 //! flexible manner.
 template < class T > class IndexMap {
 
-#if (__cplusplus>199711L)
   std::unordered_map<long, T> map;
-#else
-  tr1::unordered_map<long, T> map;
-#endif
 
   IndexSet indexSet;
   cloned_ptr< IndexMapInit<T> > init;
@@ -77,13 +74,8 @@ public:
     helib::assertTrue(indexSet.contains(j), "Key not found");
     // unordered_map does not support a const [] operator,
     // so we have to artificially strip away the const-ness here
-#if (__cplusplus>199711L)
     std::unordered_map<long, T> & map1 = 
       const_cast< std::unordered_map<long, T> & > (map);
-#else
-    tr1::unordered_map<long, T> & map1 = 
-      const_cast< tr1::unordered_map<long, T> & > (map);
-#endif
     return map1[j];
   }
 
@@ -134,6 +126,6 @@ bool operator!=(const IndexMap<T>& map1, const IndexMap<T>& map2) {
   return !(map1 == map2);
 }
 
-  
+} 
 
 #endif // ifndef HELIB_INDEXMAP_H

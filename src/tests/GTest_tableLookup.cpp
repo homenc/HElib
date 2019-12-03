@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -69,17 +69,17 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
         };
 
         // Utility encryption/decryption methods
-        static void encryptIndex(std::vector<Ctxt>& ei, long index,
-                const FHESecKey& sKey)
+        static void encryptIndex(std::vector<helib::Ctxt>& ei, long index,
+                const helib::FHESecKey& sKey)
         {
-            for (long i=0; i<lsize(ei); i++)
+            for (long i=0; i<helib::lsize(ei); i++)
                 sKey.Encrypt(ei[i], NTL::to_ZZX((index>>i) &1)); // i'th bit of index
         }
 
-        static long decryptIndex(std::vector<Ctxt>& ei, const FHESecKey& sKey)
+        static long decryptIndex(std::vector<helib::Ctxt>& ei, const helib::FHESecKey& sKey)
         {
             long num=0;
-            for (long i=0; i<lsize(ei); i++) {
+            for (long i=0; i<helib::lsize(ei); i++) {
                 NTL::ZZX poly;
                 sKey.Decrypt(poly, ei[i]);
                 num += to_long(NTL::ConstTerm(poly)) << i;
@@ -152,7 +152,7 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
             }
         };
 
-        static void printPostContextPrepDiagnostics(const FHEcontext& context, const long L)
+        static void printPostContextPrepDiagnostics(const helib::FHEcontext& context, const long L)
         {
             if (helib_test::verbose) {
                 std::cout << " done.\n";
@@ -162,24 +162,24 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
         }
 
         // Not static as many instance variables are required.
-        FHEcontext& prepareContext(FHEcontext& context)
+        helib::FHEcontext& prepareContext(helib::FHEcontext& context)
         {
             printPreContextPrepDiagnostics(bitSize, outSize, nTests, nthreads);
-            buildModChain(context, L, c,/*willBeBootstrappable*/bootstrap);
+            helib::buildModChain(context, L, c,/*willBeBootstrappable*/bootstrap);
             if (bootstrap) {
                 context.makeBootstrappable(mvec, /*t=*/0);
             }
-            buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
+            helib::buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
             printPostContextPrepDiagnostics(context, L);
             return context;
         };
 
-        static void prepareSecKey(FHESecKey& secretKey, const bool bootstrap)
+        static void prepareSecKey(helib::FHESecKey& secretKey, const bool bootstrap)
         {
             if(helib_test::verbose) std::cout << "\ncomputing key-dependent tables..." << std::flush;
             secretKey.GenSecKey();
-            addSome1DMatrices(secretKey); // compute key-switching matrices
-            addFrbMatrices(secretKey);
+            helib::addSome1DMatrices(secretKey); // compute key-switching matrices
+            helib::addFrbMatrices(secretKey);
             if (bootstrap) secretKey.genRecryptData();
             if (helib_test::verbose) std::cout << " done\n";
         };
@@ -217,7 +217,7 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
     };
 
 
-        std::vector<zzX> unpackSlotEncoding;
+        std::vector<helib::zzX> unpackSlotEncoding;
         const long prm;
         const long bitSize;
         const long outSize;
@@ -233,22 +233,22 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
         const std::vector<long> ords;
         const long c;
         const long L;
-        FHEcontext context;
-        FHESecKey secretKey;
+        helib::FHEcontext context;
+        helib::FHESecKey secretKey;
 
         void SetUp() override
         {
-            activeContext = &context; // make things a little easier sometimes
+            helib::activeContext = &context; // make things a little easier sometimes
 #ifdef DEBUG_PRINTOUT
-            dbgEa = (EncryptedArray*) context.ea;
-            dbgKey = &secretKey;
+            helib::dbgEa = (helib::EncryptedArray*) context.ea;
+            helib::dbgKey = &secretKey;
 #endif
         };
 
         virtual void TearDown() override
         {
 #ifdef DEBUG_PRINTOUT
-            cleanupGlobals();
+            helib::cleanupGlobals();
 #endif
         }
 
@@ -256,7 +256,7 @@ class GTest_tableLookup : public ::testing::TestWithParam<Parameters> {
         static void TearDownTestCase()
         {
             if(helib_test::verbose) {
-                printAllTimers(std::cout);
+              helib::printAllTimers(std::cout);
             }
         };
 };
@@ -266,21 +266,21 @@ constexpr long GTest_tableLookup::mValues[][15];
 TEST_P(GTest_tableLookup, lookup_functions_correctly)
 {
     // Build a table s.t. T[i] = 2^{outSize -1}/(i+1), i=0,...,2^bitSize -1
-    std::vector<zzX> T;
-    buildLookupTable(T, [](double x){ return 1/(x+1.0);},
+    std::vector<helib::zzX> T;
+    helib::buildLookupTable(T, [](double x){ return 1/(x+1.0);},
             bitSize,  /*scale_in=*/0, /*sign_in=*/0,
             outSize, /*scale_out=*/1-outSize, /*sign_out=*/0,
             *(secretKey.getContext().ea));
 
-    ASSERT_EQ(lsize(T), 1L<<bitSize);
-    for (long i=0; i<lsize(T); i++) {
-        Ctxt c(secretKey);
-        std::vector<Ctxt> ei(bitSize, c);
+    ASSERT_EQ(helib::lsize(T), 1L<<bitSize);
+    for (long i=0; i<helib::lsize(T); i++) {
+        helib::Ctxt c(secretKey);
+        std::vector<helib::Ctxt> ei(bitSize, c);
         encryptIndex(ei, i, secretKey);              // encrypt the index
-        tableLookup(c, T, CtPtrs_vectorCt(ei)); // get the encrypted entry
+        helib::tableLookup(c, T, helib::CtPtrs_vectorCt(ei)); // get the encrypted entry
         // decrypt and compare
         NTL::ZZX poly;  secretKey.Decrypt(poly, c); // decrypt
-        zzX poly2; convert(poly2, poly);  // convert to zzX
+        helib::zzX poly2; helib::convert(poly2, poly);  // convert to zzX
         EXPECT_EQ(poly2, T[i])
             << "testLookup error: decrypted T["<<i<<"]\n";
     }
@@ -288,12 +288,12 @@ TEST_P(GTest_tableLookup, lookup_functions_correctly)
 
 TEST_P(GTest_tableLookup, writein_functions_correctly)
 {
-    const EncryptedArray& ea = *(secretKey.getContext().ea);
+    const helib::EncryptedArray& ea = *(secretKey.getContext().ea);
     long tSize = 1L << bitSize; // table size
 
     // encrypt a random table
     std::vector<long> pT(tSize, 0);         // plaintext table
-    std::vector<Ctxt> T(tSize, Ctxt(secretKey)); // encrypted table
+    std::vector<helib::Ctxt> T(tSize, helib::Ctxt(secretKey)); // encrypted table
     for (long i=0; i<bitSize; i++) {
         long bit = NTL::RandomBits_long(1);   // a random bit
         secretKey.Encrypt(T[i], NTL::to_ZZX(bit));
@@ -304,11 +304,11 @@ TEST_P(GTest_tableLookup, writein_functions_correctly)
     for (long count=0; count<nTests; count++) {
         // encrypt a random index into the table
         long index = NTL::RandomBnd(tSize); // 0 <= index < tSize
-        std::vector<Ctxt> I(bitSize, Ctxt(secretKey));
+        std::vector<helib::Ctxt> I(bitSize, helib::Ctxt(secretKey));
         encryptIndex(I, index, secretKey);
 
         // do the table write-in
-        tableWriteIn(CtPtrs_vectorCt(T), CtPtrs_vectorCt(I), &unpackSlotEncoding);
+        tableWriteIn(helib::CtPtrs_vectorCt(T), helib::CtPtrs_vectorCt(I), &unpackSlotEncoding);
         pT[index]++; // add 1 to entry 'index' in the plaintext table
     }
 

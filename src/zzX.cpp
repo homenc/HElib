@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -19,7 +19,7 @@
 #include "timing.h"
 #include "zzX.h"
 
-NTL_CLIENT
+namespace helib {
 
 void MulMod(zzX& res, const zzX& a, const zzX& b, const PAlgebra& palg)
 {
@@ -73,12 +73,12 @@ void normalize(zzX& f)
 // and a single 60-bit prime. Can be used to get fatser operation
 // modulo Phi_m(X), where we know apriori that the numbers do not wrap.
 // This function changes the NTL current zz_p modulus.
-const zz_pXModulus& getPhimXMod(const PAlgebra& palg)
+const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg)
 {
-  static std::map<long,zz_pXModulus*> moduli; // pointer per value of m
+  static std::map<long,NTL::zz_pXModulus*> moduli; // pointer per value of m
   static std::mutex pt_mtx;      // control access to modifying the map
 
-  zz_p::FFTInit(0); // set "the best FFT prime" as NTL's current modulus
+  NTL::zz_p::FFTInit(0); // set "the best FFT prime" as NTL's current modulus
 
   long m = palg.getM();
   auto it = moduli.find(m); // check if we already have zz_pXModulus for m
@@ -87,11 +87,11 @@ const zz_pXModulus& getPhimXMod(const PAlgebra& palg)
     std::unique_lock<std::mutex> lck(pt_mtx); // try to get a lock
 
     // Got the lock, insert a new entry for this malue of m into the map
-    zz_pX phimX = conv<zz_pX>(palg.getPhimX());
-    zz_pXModulus* ptr = new zz_pXModulus(phimX); // will "never" be deleted
+    NTL::zz_pX phimX = NTL::conv<NTL::zz_pX>(palg.getPhimX());
+    NTL::zz_pXModulus* ptr = new NTL::zz_pXModulus(phimX); // will "never" be deleted
 
     // insert returns a pair (iterator, bool)
-    auto ret = moduli.insert(std::pair<long,zz_pXModulus*>(m,ptr));
+    auto ret = moduli.insert(std::pair<long,NTL::zz_pXModulus*>(m,ptr));
     if (ret.second==false) // Another thread interted it, delete your copy
       delete ptr;
     // FIXME: Could leak memory if insert throws an exception
@@ -106,25 +106,25 @@ const zz_pXModulus& getPhimXMod(const PAlgebra& palg)
 //       substitute for computing on rational numbers
 void reduceModPhimX(zzX& poly, const PAlgebra& palg)
 {
-  zz_pPush push; // backup the NTL current modulus
-  const zz_pXModulus& phimX = getPhimXMod(palg);
+  NTL::zz_pPush push; // backup the NTL current modulus
+  const NTL::zz_pXModulus& phimX = getPhimXMod(palg);
 
-  zz_pX pp;
+  NTL::zz_pX pp;
   convert(pp, poly);   // convert to zz_pX
   rem(pp, pp, phimX);
   convert(poly, pp);
 }
 
 
-zzX balanced_zzX(const zz_pX& f)
+zzX balanced_zzX(const NTL::zz_pX& f)
 {
-  long p = zz_p::modulus();
+  long p = NTL::zz_p::modulus();
   long len = deg(f)+1;
   zzX out;
   out.SetLength(len);
   for (long i: range(len)) {
-    long coef = conv<long>(f[i]);
-    if (coef > p/2 || (p%2 == 0 && coef == p/2 && RandomBnd(2)))
+    long coef = NTL::conv<long>(f[i]);
+    if (coef > p/2 || (p%2 == 0 && coef == p/2 && NTL::RandomBnd(2)))
       coef -= p;
 
     out[i] = coef;
@@ -133,7 +133,7 @@ zzX balanced_zzX(const zz_pX& f)
   return out;
 }
 
-zzX balanced_zzX(const GF2X& f)
+zzX balanced_zzX(const NTL::GF2X& f)
 {
   long len = deg(f)+1;
   zzX out;
@@ -141,7 +141,7 @@ zzX balanced_zzX(const GF2X& f)
   for (long i: range(len)) {
     if (f[i] == 0) 
       out[i] = 0;
-    else if (RandomBnd(2))
+    else if (NTL::RandomBnd(2))
       out[i] = -1;
     else
       out[i] = 1;
@@ -150,3 +150,4 @@ zzX balanced_zzX(const GF2X& f)
   return out;
 }
 
+}

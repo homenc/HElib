@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <limits>
 
-
+using namespace helib;
 
 // RandomBnd(n) returns a random number in [0..n).
 // Assumes n > 0.

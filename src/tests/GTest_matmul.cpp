@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -83,53 +83,54 @@ struct Parameters {
     int force_hoist; // -1 to force off
 
     // tell google test how to print Parameters
-    friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
-    {
-        return os << "{" <<
-            "m=" << params.m << "," <<
-            "p=" << params.p << "," <<
-            "r=" << params.r << "," <<
-            "L=" << params.L << "," <<
-            "dim=" << params.dim << "," <<
-            "nt=" << params.nt << "," <<
-            "full=" << params.full <<  "," <<
-            "block=" << params.block <<  "," <<
-            "gens=" << params.gens << "," <<
-            "ords=" << params.ords << "," <<
-            "ks_strategy=" << params.ks_strategy << "," <<
-            "force_bsgs=" << params.force_bsgs << "," <<
-            "force_hoist=" << params.force_hoist <<
-            "}";
-    };
+    // Removed as not used by templated tests
+    //friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
+    //{
+    //    return os << "{" <<
+    //        "m=" << params.m << "," <<
+    //        "p=" << params.p << "," <<
+    //        "r=" << params.r << "," <<
+    //        "L=" << params.L << "," <<
+    //        "dim=" << params.dim << "," <<
+    //        "nt=" << params.nt << "," <<
+    //        "full=" << params.full <<  "," <<
+    //        "block=" << params.block <<  "," <<
+    //        "gens=" << helib::vecToStr(params.gens) << "," <<
+    //        "ords=" << helib::vecToStr(params.ords) << "," <<
+    //        "ks_strategy=" << params.ks_strategy << "," <<
+    //        "force_bsgs=" << params.force_bsgs << "," <<
+    //        "force_hoist=" << params.force_hoist <<
+    //        "}";
+    //};
 };
 
 template <class Mat>
-std::unique_ptr<Mat> buildMat(const EncryptedArray &ea, long dim);
+std::unique_ptr<Mat> buildMat(const helib::EncryptedArray &ea, long dim);
 
-template<> std::unique_ptr<MatMul1D> buildMat(const EncryptedArray &ea, long dim)
+template<> std::unique_ptr<helib::MatMul1D> buildMat(const helib::EncryptedArray &ea, long dim)
 {
-    return std::unique_ptr<MatMul1D>{buildRandomMatrix(ea, dim)};
+    return std::unique_ptr<helib::MatMul1D>{buildRandomMatrix(ea, dim)};
 };
-template<> std::unique_ptr<BlockMatMul1D> buildMat(const EncryptedArray &ea, long dim)
-{
-    return std::unique_ptr<BlockMatMul1D>{buildRandomBlockMatrix(ea, dim)};
-};
-template<> std::unique_ptr<MatMulFull> buildMat(const EncryptedArray &ea, long dim)
-{
-    return std::unique_ptr<MatMulFull>{buildRandomFullMatrix(ea)};
-};
-template<> std::unique_ptr<BlockMatMulFull> buildMat(const EncryptedArray &ea, long dim)
-{
-    return std::unique_ptr<BlockMatMulFull>{buildRandomFullBlockMatrix(ea)};
-};
+//template<> std::unique_ptr<helib::BlockMatMul1D> buildMat(const helib::EncryptedArray &ea, long dim)
+//{
+//    return std::unique_ptr<helib::BlockMatMul1D>{buildRandomBlockMatrix(ea, dim)};
+//};
+//template<> std::unique_ptr<helib::MatMulFull> buildMat(const helib::EncryptedArray &ea, long dim)
+//{
+//    return std::unique_ptr<helib::MatMulFull>{buildRandomFullMatrix(ea)};
+//};
+//template<> std::unique_ptr<helib::BlockMatMulFull> buildMat(const helib::EncryptedArray &ea, long dim)
+//{
+//    return std::unique_ptr<helib::BlockMatMulFull>{buildRandomFullBlockMatrix(ea)};
+//};
 
 template <typename T>
 class GTest_matmul : public ::testing::Test {
     protected:
         static void setGlobals(long force_bsgs, long force_hoist)
         {
-            fhe_test_force_bsgs = T::parameters.force_bsgs;
-            fhe_test_force_hoist = T::parameters.force_hoist;
+            helib::fhe_test_force_bsgs = T::parameters.force_bsgs;
+            helib::fhe_test_force_hoist = T::parameters.force_hoist;
         };
 
         bool minimal;
@@ -147,13 +148,13 @@ class GTest_matmul : public ::testing::Test {
 
         long ks_strategy;
 
-        FHEcontext context;
-        FHESecKey secretKey;
-        const FHEPubKey& publicKey;
-        EncryptedArray ea;
+        helib::FHEcontext context;
+        helib::FHESecKey secretKey;
+        const helib::FHEPubKey& publicKey;
+        helib::EncryptedArray ea;
         std::unique_ptr<typename T::MatrixType> matrixPtr;
 
-        static FHEcontext& setupContext(FHEcontext& context, long L)
+        static helib::FHEcontext& setupContext(helib::FHEcontext& context, long L)
         {
             buildModChain(context, L, /*c=*/3);
             if(helib_test::verbose) {
@@ -183,7 +184,7 @@ class GTest_matmul : public ::testing::Test {
             gens(T::parameters.gens),
             ords(T::parameters.ords),
             ks_strategy(T::parameters.ks_strategy),
-            context((setTimersOn(), m), p, r, gens, ords),
+            context((helib::setTimersOn(), m), p, r, gens, ords),
             secretKey(setupContext(context, L)),
             publicKey((secretKey.GenSecKey(), secretKey)),
             ea(context, context.alMod), // encrypted array with "full slots"
@@ -233,14 +234,14 @@ class GTest_matmul : public ::testing::Test {
         virtual void TearDown()
         {
             if (helib_test::verbose) {
-                printAllTimers(std::cout);
+                helib::printAllTimers(std::cout);
 #if (defined(__unix__) || defined(__unix) || defined(unix))
                 struct rusage rusage;
                 getrusage( RUSAGE_SELF, &rusage );
                 std::cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << std::endl;
 #endif
             }
-            cleanupGlobals();
+            helib::cleanupGlobals();
         };
 };
 
@@ -263,8 +264,8 @@ Parameters oneDimensionalBlockMatrixParams(24295, 2, 1, 300, 0, 1, 0, 1, std::ve
 // Parameters oneDimensionalMatrixParams(91, 2, 1, 300, 0, 1, 0, 0, std::vector<long>{9, 3}, std::vector<long>{3, -2}, 0, 0, 0);
 
 using TypesToTest = ::testing::Types<
-                            MatrixTypeAndParams<MatMul1D, oneDimensionalMatrixParams>,
-                            MatrixTypeAndParams<MatMul1D, oneDimensionalBlockMatrixParams>
+                            MatrixTypeAndParams<helib::MatMul1D, oneDimensionalMatrixParams>,
+                            MatrixTypeAndParams<helib::MatMul1D, oneDimensionalBlockMatrixParams>
                         >;
 
 TYPED_TEST_SUITE(GTest_matmul, TypesToTest);
@@ -278,19 +279,19 @@ TYPED_TEST(GTest_matmul, multiplies_without_errors) {
     FHE_NTIMER_STOP(EncodeMartix_MatMul);
 
     // choose a random plaintext vector and encrypt it
-    PlaintextArray v(this->ea);
+    helib::PlaintextArray v(this->ea);
     random(this->ea, v);
 
     // encrypt the random vector
-    Ctxt ctxt(this->secretKey);
+    helib::Ctxt ctxt(this->secretKey);
     this->ea.encrypt(ctxt, this->secretKey, v);
-    Ctxt ctxt2 = ctxt;
+    helib::Ctxt ctxt2 = ctxt;
 
     mat_exec.mul(ctxt);
 
     mul(v, mat);     // multiply the plaintext vector
 
-    PlaintextArray v1(this->ea);
+    helib::PlaintextArray v1(this->ea);
     this->ea.decrypt(ctxt, this->secretKey, v1); // decrypt the ciphertext vector
 
     EXPECT_TRUE(equals(this->ea, v, v1));        // check that we've got the right answer

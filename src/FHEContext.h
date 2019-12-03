@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,6 +22,8 @@
 #include "primeChain.h"
 
 #include <NTL/Lazy.h>
+
+namespace helib {
 
 /**
  * @brief Returns smallest parameter m satisfying various constraints:
@@ -389,7 +391,14 @@ public:
   //! @brief An estimate for the security-level
   double securityLevel() const {
     long phim = zMStar.getPhiM();
-    double bitsize = logOfProduct(ctxtPrimes | specialPrimes)/log(2.0);
+    IndexSet primes = ctxtPrimes | specialPrimes;
+
+    if(primes.card() == 0){
+      throw helib::LogicError(
+        "Security level cannot be determined as modulus chain is empty.");
+    }
+
+    double bitsize = logOfProduct(primes)/log(2.0);
     return (7.2*phim/bitsize -110);
   }
 
@@ -398,7 +407,7 @@ public:
   void AddCtxtPrime(long q);
   void AddSpecialPrime(long q);
 
-  
+
   ///@{
   /**
      @name I/O routines
@@ -489,5 +498,7 @@ void buildModChain(FHEcontext& context, long nBits, long nDgts=3,
 
 ///@}
 extern FHEcontext* activeContext; // Should point to the "current" context
+
+}
 
 #endif // ifndef HELIB_FHECONTEXT_H

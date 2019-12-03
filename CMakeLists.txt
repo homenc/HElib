@@ -18,11 +18,10 @@ set(GMP_MINIMAL_VERSION "6.0.0")
 # NTL minimal version to be used if NOT PACKAGE_BUILD
 set(NTL_MINIMAL_VERSION "11.0.0")
 
-# Setting up Debug as default CMAKE_BUILD_TYPE
-# TODO: set to Release when assertions are removed
+# Setting up RelWithDebInfo as default CMAKE_BUILD_TYPE
 if (NOT CMAKE_BUILD_TYPE)
-  # Setting Debug as default since many checks are performed as assert (possibly with side effects)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Choose the type of build, options are: Debug RelWithDebInfo Release MinSizeRel" FORCE)
+  # Setting RelWithDebInfo as it will compile with -O2 -g
+  set(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose the type of build, options are: Debug RelWithDebInfo Release MinSizeRel" FORCE)
 endif (NOT CMAKE_BUILD_TYPE)
 
 # Adding possible gui values to CMAKE_BUILD_TYPE variable
@@ -36,7 +35,7 @@ option(BUILD_SHARED "Build as shared library" OFF)
 
 option(PACKAGE_BUILD "Download dependencies and build as a self-contained package" OFF)
 
-option(ENABLE_THREADS "Enable threads support. Requires NTL built with NTL_THREADS=on" OFF)
+option(ENABLE_THREADS "Enable threads support. Requires NTL built with NTL_THREADS=on" ON)
 
 option(ENABLE_TEST "Enable tests" OFF)
 option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" OFF)
@@ -86,7 +85,7 @@ if (PACKAGE_BUILD)
   # GMP version to be used (and eventually downloaded) if PACKAGE_BUILD
   set(FETCHED_GMP_VERSION "6.1.2")
   # NTL version to be used (and eventually downloaded) if PACKAGE_BUILD
-  set(FETCHED_NTL_VERSION "11.3.0")
+  set(FETCHED_NTL_VERSION "11.4.1")
   # Setting up default compilation output directory
   if (NOT PACKAGE_DIR)
     set(PACKAGE_DIR "helib_pack")

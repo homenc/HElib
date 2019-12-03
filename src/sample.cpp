@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,7 +22,7 @@
 #include "powerful.h"
 // only used in experimental Hwt sampler
 
-NTL_CLIENT
+namespace helib {
 
 // Sample a degree-(n-1) poly, with only Hwt nonzero coefficients
 void sampleHWt(zzX &poly, long n, long Hwt)
@@ -48,8 +48,8 @@ void sampleHWt(zzX &poly, long n, long Hwt)
     }
   }
 }
-// Sample a degree-(n-1) ZZX, with only Hwt nonzero coefficients
-void sampleHWt(ZZX &poly, long n, long Hwt)
+// Sample a degree-(n-1) NTL::ZZX, with only Hwt nonzero coefficients
+void sampleHWt(NTL::ZZX &poly, long n, long Hwt)
 {
   zzX pp;
   sampleHWt(pp, n, Hwt);
@@ -89,7 +89,7 @@ void sampleSmall(zzX &poly, long n, double prob)
   }
   NTL_EXEC_RANGE_END
 }
-void sampleSmall(ZZX &poly, long n, double prob)
+void sampleSmall(NTL::ZZX &poly, long n, double prob)
 {  
   zzX pp;
   sampleSmall(pp, n, prob);
@@ -124,7 +124,7 @@ void sampleGaussian(std::vector<double> &dvec, long n, double stdev)
   }
 }
 
-// Sample a degree-(n-1) ZZX, with rounded Gaussian coefficients
+// Sample a degree-(n-1) NTL::ZZX, with rounded Gaussian coefficients
 void sampleGaussian(zzX &poly, long n, double stdev)
 {
   if (n<=0) n=lsize(poly); if (n<=0) return;
@@ -137,8 +137,8 @@ void sampleGaussian(zzX &poly, long n, double stdev)
   for (long i=0; i<n; i++)
     poly[i] = long(round(dvec[i])); // round to nearest integer
 }
-// Sample a degree-(n-1) ZZX, with rounded Gaussian coefficients
-void sampleGaussian(ZZX &poly, long n, double stdev)
+// Sample a degree-(n-1) NTL::ZZX, with rounded Gaussian coefficients
+void sampleGaussian(NTL::ZZX &poly, long n, double stdev)
 {
   zzX pp;
   sampleGaussian(pp, n, stdev);
@@ -146,7 +146,7 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
   poly.normalize();
 }
 #if 0
-void sampleGaussian(ZZX &poly, long n, double stdev)
+void sampleGaussian(NTL::ZZX &poly, long n, double stdev)
 {
   static double const Pi=4.0*atan(1.0); // Pi=3.1415..
   static long const bignum = 0xfffffff;
@@ -154,7 +154,7 @@ void sampleGaussian(ZZX &poly, long n, double stdev)
 
   if (n<=0) n=deg(poly)+1; if (n<=0) return;
   poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
-  for (long i=0; i<n; i++) SetCoeff(poly, i, ZZ::zero());
+  for (long i=0; i<n; i++) SetCoeff(poly, i, NTL::ZZ::zero());
 
   // Uses the Box-Muller method to get two Normal(0,stdev^2) variables
   for (long i=0; i<n; i+=2) {
@@ -190,8 +190,8 @@ void sampleUniform(zzX& poly, long n, long B)
     poly[i] = NTL::RandomBnd(2*B +1) - B;
 }
 
-// Sample a degree-(n-1) ZZX, with coefficients uniform in [-B,B]
-void sampleUniform(ZZX& poly, long n, const ZZ& B)
+// Sample a degree-(n-1) NTL::ZZX, with coefficients uniform in [-B,B]
+void sampleUniform(NTL::ZZX& poly, long n, const NTL::ZZ& B)
 {
   //OLD: assert (B>0);
   helib::assertTrue<helib::InvalidArgument>(static_cast<bool>(B>0l), "Invalid coefficient interval");
@@ -199,9 +199,9 @@ void sampleUniform(ZZX& poly, long n, const ZZ& B)
   clear(poly);
   poly.SetMaxLength(n); // allocate space for degree-(n-1) polynomial
 
-  ZZ UB = 2*B +1;
+  NTL::ZZ UB = 2*B +1;
   for (long i = n-1; i >= 0; i--) {
-    ZZ tmp = RandomBnd(UB) - B;
+    NTL::ZZ tmp = RandomBnd(UB) - B;
     SetCoeff(poly, i, tmp);
   }
 }
@@ -448,21 +448,21 @@ double sampleUniform(zzX &poly, const FHEcontext& context, long B)
   return retval;
 }
 
-xdouble sampleUniform(ZZX &poly, const FHEcontext& context, const ZZ& B)
+NTL::xdouble sampleUniform(NTL::ZZX &poly, const FHEcontext& context, const NTL::ZZ& B)
 {
   const PAlgebra& palg = context.zMStar;
-  xdouble retval;
+  NTL::xdouble retval;
 
   if (palg.getPow2() == 0) { // not power of two
     long m = palg.getM();
     sampleUniform(poly, m, B);
     NTL::rem(poly, poly, palg.getPhimX());
-    retval = context.noiseBoundForUniform(conv<xdouble>(B), m);
+    retval = context.noiseBoundForUniform(NTL::conv<NTL::xdouble>(B), m);
   }
   else {// power of two
     long phim = palg.getPhiM();
     sampleUniform(poly, phim, B);
-    retval = context.noiseBoundForUniform(conv<xdouble>(B), phim);
+    retval = context.noiseBoundForUniform(NTL::conv<NTL::xdouble>(B), phim);
   }
 
   return retval;
@@ -552,4 +552,6 @@ double boundRoundingNoise(long m, long phim, long p2r, double epsilon)
     num++;
 
   return stdev * num;
+}
+
 }

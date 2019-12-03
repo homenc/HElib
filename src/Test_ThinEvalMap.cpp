@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -13,13 +13,13 @@
 /* Test_ThinEvalMap.cpp - Testing the evalution map for thin bootstrapping
  */
 #include <cassert>
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include "helib.h"
 #include "EvalMap.h"
 #include <NTL/BasicThreadPool.h>
 #include "ArgMap.h"
 
 NTL_CLIENT
+using namespace helib;
 
 static bool dry = false; // a dry-run flag
 static bool noPrint = true;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -14,8 +14,7 @@
 #include <complex>
 
 #include "norms.h"
-#include "EncryptedArray.h"
-#include "FHE.h"
+#include <helib.h>
 #include "debugging.h"
 
 #include "gtest/gtest.h"
@@ -52,14 +51,14 @@ struct Parameters {
 // Utility functions for the tests
 
   // Compute the L-infinity distance between two vectors
-  double calcMaxDiff(const std::vector<cx_double>& v1,
-                     const std::vector<cx_double>& v2){
-    if(lsize(v1) != lsize(v2)) {
+  double calcMaxDiff(const std::vector<std::complex<double>>& v1,
+                     const std::vector<std::complex<double>>& v2){
+    if(helib::lsize(v1) != helib::lsize(v2)) {
       throw std::runtime_error("Vector sizes differ.");
     }
     
     double maxDiff = 0.0;
-    for (long i=0; i<lsize(v1); i++) {
+    for (long i=0; i<helib::lsize(v1); i++) {
       double diffAbs = std::abs(v1[i]-v2[i]);
       if (diffAbs > maxDiff)
         maxDiff = diffAbs;
@@ -67,10 +66,10 @@ struct Parameters {
     return maxDiff;
   }
   // Compute the max relative difference between two vectors
-  double calcMaxRelDiff(const std::vector<cx_double>& v1,
-                        const std::vector<cx_double>& v2)
+  double calcMaxRelDiff(const std::vector<std::complex<double>>& v1,
+                        const std::vector<std::complex<double>>& v2)
   {
-    if(lsize(v1)!=lsize(v2)) {
+    if(helib::lsize(v1)!=helib::lsize(v2)) {
       throw std::runtime_error("Vector sizes differ.");
       
     }
@@ -85,7 +84,7 @@ struct Parameters {
       maxAbs = 1e-10;
     
     double maxDiff = 0.0;
-    for (long i=0; i<lsize(v1); i++) {
+    for (long i=0; i<helib::lsize(v1); i++) {
       double relDiff = std::abs(v1[i]-v2[i]) / maxAbs;
       if (relDiff > maxDiff)
         maxDiff = relDiff;
@@ -94,17 +93,17 @@ struct Parameters {
     return maxDiff;
   }
   
-  inline bool cx_equals(const std::vector<cx_double>& v1,
-                        const std::vector<cx_double>& v2,
+  inline bool cx_equals(const std::vector<std::complex<double>>& v1,
+                        const std::vector<std::complex<double>>& v2,
                         double epsilon)
   {
     return (calcMaxRelDiff(v1,v2) < epsilon);
   }
   
-  ::testing::AssertionResult ciphertextMatches(const EncryptedArrayCx &ea, const FHESecKey &sk,
-                                               const std::vector<cx_double> &p, const Ctxt &c, double epsilon)
+  ::testing::AssertionResult ciphertextMatches(const helib::EncryptedArrayCx &ea, const helib::FHESecKey &sk,
+                                               const std::vector<std::complex<double>> &p, const helib::Ctxt &c, double epsilon)
   {
-    std::vector<cx_double> pp;
+    std::vector<std::complex<double>> pp;
     ea.decrypt(c, sk, pp);
     if (helib_test::verbose) {
       std::cout << "    relative-error=" << calcMaxRelDiff(p, pp)
@@ -116,37 +115,37 @@ struct Parameters {
     } else {
       return ::testing::AssertionFailure()
           << "Ciphertext does not match plaintext:" << std::endl
-          << "p = " << p << std::endl
-          << "pp = " << pp << std::endl;
+          << "p = " << helib::vecToStr(p) << std::endl
+          << "pp = " << helib::vecToStr(pp) << std::endl;
     }
   }
   
-  void negateVec(std::vector<cx_double>& p1)
+  void negateVec(std::vector<std::complex<double>>& p1)
   {
     for (auto& x: p1) x = -x;
   }
-  void add(std::vector<cx_double>& to, const std::vector<cx_double>& from)
+  void add(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
     for (std::size_t i=0; i<from.size(); i++) to[i] += from[i];
   }
-  void sub(std::vector<cx_double>& to, const std::vector<cx_double>& from)
+  void sub(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
     for (std::size_t i=0; i<from.size(); i++) to[i] -= from[i];
   }
-  void mul(std::vector<cx_double>& to, const std::vector<cx_double>& from)
+  void mul(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
     for (std::size_t i=0; i<from.size(); i++) to[i] *= from[i];
   }
-  void rotate(std::vector<cx_double>& p, long amt)
+  void rotate(std::vector<std::complex<double>>& p, long amt)
   {
     long sz = p.size();
-    std::vector<cx_double> tmp(sz);
+    std::vector<std::complex<double>> tmp(sz);
     for (long i=0; i<sz; i++)
       tmp[((i+amt)%sz +sz)%sz] = p[i];
     p = tmp;
@@ -160,10 +159,10 @@ class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
         const long L;
         const double epsilon;
 
-        FHEcontext context;
-        FHESecKey secretKey;
-        const FHEPubKey publicKey;
-        const EncryptedArrayCx& ea;
+        helib::FHEcontext context;
+        helib::FHESecKey secretKey;
+        const helib::FHEPubKey publicKey;
+        const helib::EncryptedArrayCx& ea;
 
         GTest_approxNums () :
             R(GetParam().R),
@@ -186,18 +185,18 @@ class GTest_approxNums : public ::testing::TestWithParam<Parameters> {
                     << ", specialPrimes="<<context.specialPrimes<<std::endl<<std::endl;
             }
             #ifdef DEBUG_PRINTOUT
-                dbgKey = &secretKey;
-                dbgEa = const_cast<EncryptedArray*>(context.ea);
+            helib::dbgKey = &secretKey;
+            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
             #endif // DEBUG_PRINTOUT
 //          if (helib_test::debug) {
 //            dbgKey = &secretKey;
-//            dbgEa = const_cast<EncryptedArray*>(context.ea);
+//            dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
 //          }
         }
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 
 };
@@ -207,10 +206,10 @@ TEST_P(GTest_approxNums, basic_arithmetic_works)
   if (helib_test::verbose)  std::cout << "Test Arithmetic ";
   // Test objects
 
-  Ctxt c1(publicKey), c2(publicKey), c3(publicKey);
+  helib::Ctxt c1(publicKey), c2(publicKey), c3(publicKey);
   
-  std::vector<cx_double> vd;
-  std::vector<cx_double> vd1, vd2, vd3;
+  std::vector<std::complex<double>> vd;
+  std::vector<std::complex<double>> vd1, vd2, vd3;
   ea.random(vd1);
   ea.random(vd2);
 
@@ -224,13 +223,13 @@ TEST_P(GTest_approxNums, basic_arithmetic_works)
 
   // Test - Multiplication  
   c1 *= c2;
-  for (long i=0; i<lsize(vd1); i++) vd1[i] *= vd2[i];
+  for (long i=0; i<helib::lsize(vd1); i++) vd1[i] *= vd2[i];
 
   NTL::ZZX poly;
   ea.random(vd3);
   ea.encode(poly, vd3, /*size=*/1.0);
   c1.addConstant(poly); // vd1*vd2 + vd3
-  for (long i=0; i<lsize(vd1); i++) vd1[i] += vd3[i];
+  for (long i=0; i<helib::lsize(vd1); i++) vd1[i] += vd3[i];
 
   // Test encoding, encryption of a single number
   double xx = NTL::RandomLen_long(16)/double(1L<<16); // random in [0,1]
@@ -239,48 +238,48 @@ TEST_P(GTest_approxNums, basic_arithmetic_works)
   for (auto& x : vd1) x += xx;
 
   // Test - Multiply by a mask
-  std::vector<long> mask(lsize(vd1), 1);
-  for (long i=0; i*(i+1)<lsize(mask); i++) {
+  std::vector<long> mask(helib::lsize(vd1), 1);
+  for (long i=0; i*(i+1)<helib::lsize(mask); i++) {
     mask[i*i] = 0;
     mask[i*(i+1)] = -1;
   }
 
   ea.encode(poly,mask, /*size=*/1.0);
   c1.multByConstant(poly); // mask*(vd1*vd2 + vd3)
-  for (long i=0; i<lsize(vd1); i++) vd1[i] *= mask[i];
+  for (long i=0; i<helib::lsize(vd1); i++) vd1[i] *= mask[i];
 
   // Test - Addition
   ea.random(vd3);
   ea.encrypt(c3, publicKey, vd3, /*size=*/1.0);
   c1 += c3;
-  for (long i=0; i<lsize(vd1); i++) vd1[i] += vd3[i];
+  for (long i=0; i<helib::lsize(vd1); i++) vd1[i] += vd3[i];
 
   c1.negate();
   c1.addConstant(NTL::to_ZZ(1));
-  for (long i=0; i<lsize(vd1); i++) vd1[i] = 1.0 - vd1[i];
+  for (long i=0; i<helib::lsize(vd1); i++) vd1[i] = 1.0 - vd1[i];
 
   // Diff between approxNums HE scheme and plaintext floating  
   ea.decrypt(c1, secretKey, vd);
 #ifdef DEBUG_PRINTOUT
-  printVec(std::cout<<"res=", vd, 10)<<std::endl;
-  printVec(std::cout<<"vec=", vd1, 10)<<std::endl;
+  helib::printVec(std::cout<<"res=", vd, 10)<<std::endl;
+  helib::printVec(std::cout<<"vec=", vd1, 10)<<std::endl;
 #endif
   if (helib_test::verbose)
     std::cout << "(max |res-vec|_{infty}="<< calcMaxDiff(vd, vd1) << "): ";
 
   EXPECT_TRUE(cx_equals(vd, vd1, NTL::conv<double>(epsilon * c1.getPtxtMag())))
-                  << "  max(vd)=" << largestCoeff(vd)
-                  << ", max(vd1)=" << largestCoeff(vd1)
+                  << "  max(vd)=" << helib::largestCoeff(vd)
+                  << ", max(vd1)=" << helib::largestCoeff(vd1)
                   << ", maxDiff=" << calcMaxDiff(vd,vd1) << std::endl << std::endl;
 }
 
 TEST_P(GTest_approxNums, complex_arithmetic_works)
 {
   // Test complex conjugate
-  Ctxt c1(publicKey), c2(publicKey);
+  helib::Ctxt c1(publicKey), c2(publicKey);
 
-  std::vector<cx_double> vd;
-  std::vector<cx_double> vd1, vd2;
+  std::vector<std::complex<double>> vd;
+  std::vector<std::complex<double>> vd1, vd2;
   ea.random(vd1);
   ea.random(vd2);
    
@@ -289,27 +288,27 @@ TEST_P(GTest_approxNums, complex_arithmetic_works)
 
   if (helib_test::verbose)
     std::cout << "Test Conjugate: ";
-  for_each(vd1.begin(), vd1.end(), [](cx_double& d){d=std::conj(d);});
+  for_each(vd1.begin(), vd1.end(), [](std::complex<double>& d){d=std::conj(d);});
   c1.complexConj();  
   ea.decrypt(c1, secretKey, vd);
 #ifdef DEBUG_PRINTOUT
-  printVec(std::cout<<"vd1=", vd1, 10) << std::endl;
-  printVec(std::cout<<"res=", vd, 10) << std::endl;
+  helib::printVec(std::cout<<"vd1=", vd1, 10) << std::endl;
+  helib::printVec(std::cout<<"res=", vd, 10) << std::endl;
 #endif
   EXPECT_TRUE(cx_equals(vd, vd1, NTL::conv<double>(epsilon * c1.getPtxtMag())))
-                    << "  max(vd)="  << largestCoeff(vd)
-                    << ", max(vd1)=" << largestCoeff(vd1)
+                    << "  max(vd)="  << helib::largestCoeff(vd)
+                    << ", max(vd1)=" << helib::largestCoeff(vd1)
                     << ", maxDiff="  << calcMaxDiff(vd,vd1) << std::endl << std::endl;;
 
   // Test that real and imaginary parts are actually extracted.
-  Ctxt realCtxt(c2), imCtxt(c2);
-  std::vector<cx_double> realParts(vd2), real_dec;
-  std::vector<cx_double> imParts(vd2), im_dec;
+  helib::Ctxt realCtxt(c2), imCtxt(c2);
+  std::vector<std::complex<double>> realParts(vd2), real_dec;
+  std::vector<std::complex<double>> imParts(vd2), im_dec;
 
   if (helib_test::verbose)
     std::cout << "Test Real and Im parts: ";
-  for_each(realParts.begin(), realParts.end(), [](cx_double& d){d=std::real(d);});
-  for_each(imParts.begin(), imParts.end(), [](cx_double& d){d=std::imag(d);});
+  for_each(realParts.begin(), realParts.end(), [](std::complex<double>& d){d=std::real(d);});
+  for_each(imParts.begin(), imParts.end(), [](std::complex<double>& d){d=std::imag(d);});
 
   ea.extractRealPart(realCtxt);
   ea.decrypt(realCtxt, secretKey, real_dec);
@@ -318,19 +317,19 @@ TEST_P(GTest_approxNums, complex_arithmetic_works)
   ea.decrypt(imCtxt, secretKey, im_dec);
 
 #ifdef DEBUG_PRINTOUT
-  printVec(std::cout << "vd2=", vd2, 10) << std::endl;
-  printVec(std::cout << "real=", realParts, 10) << std::endl;
-  printVec(std::cout << "res=", real_dec, 10) << std::endl;
-  printVec(std::cout << "im=", imParts, 10) << std::endl;
-  printVec(std::cout << "res=", im_dec, 10) << std::endl;
+  helib::printVec(std::cout << "vd2=", vd2, 10) << std::endl;
+  helib::printVec(std::cout << "real=", realParts, 10) << std::endl;
+  helib::printVec(std::cout << "res=", real_dec, 10) << std::endl;
+  helib::printVec(std::cout << "im=", imParts, 10) << std::endl;
+  helib::printVec(std::cout << "res=", im_dec, 10) << std::endl;
 #endif
   EXPECT_TRUE(cx_equals(realParts, real_dec, NTL::conv<double>(epsilon * realCtxt.getPtxtMag())))
-                    << "  max(re)="  << largestCoeff(realParts)
-                    << ", max(re1)=" << largestCoeff(real_dec)
+                    << "  max(re)="  << helib::largestCoeff(realParts)
+                    << ", max(re1)=" << helib::largestCoeff(real_dec)
                     << ", maxDiff="  << calcMaxDiff(realParts,real_dec) << std::endl;
   EXPECT_TRUE(cx_equals(imParts, im_dec, NTL::conv<double>(epsilon * imCtxt.getPtxtMag())))
-                    << "  max(im)="  << largestCoeff(imParts)
-                    << ", max(im1)=" << largestCoeff(im_dec)
+                    << "  max(im)="  << helib::largestCoeff(imParts)
+                    << ", max(im1)=" << helib::largestCoeff(im_dec)
                     << ", maxDiff="  << calcMaxDiff(imParts,im_dec) << std::endl << std::endl;
 }
 
@@ -342,27 +341,27 @@ TEST_P(GTest_approxNums, rotates_and_shifts_work)
   if (helib_test::verbose)
     std::cout << "Test Rotation of " << nplaces << ": ";  
 
-  Ctxt c1(publicKey);
-  std::vector<cx_double> vd1;
-  std::vector<cx_double> vd_dec;
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1;
+  std::vector<std::complex<double>> vd_dec;
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
 
 #ifdef DEBUG_PRINTOUT
-  printVec(std::cout << "vd1=", vd1, 10) << std::endl;
+  helib::printVec(std::cout << "vd1=", vd1, 10) << std::endl;
 #endif
   std::rotate(vd1.begin(), vd1.end() - nplaces, vd1.end());
   ea.rotate(c1, nplaces);
   c1.reLinearize();
   ea.decrypt(c1, secretKey, vd_dec);
 #ifdef DEBUG_PRINTOUT
-  printVec(std::cout << "vd1(rot)=", vd1, 10) << std::endl;
-  printVec(std::cout << "res: ", vd_dec, 10) << std::endl;
+  helib::printVec(std::cout << "vd1(rot)=", vd1, 10) << std::endl;
+  helib::printVec(std::cout << "res: ", vd_dec, 10) << std::endl;
 #endif
 
   EXPECT_TRUE(cx_equals(vd1, vd_dec, NTL::conv<double>(epsilon * c1.getPtxtMag())))
-                  << "  max(vd)=" << largestCoeff(vd_dec)
-                  << ", max(vd1)=" << largestCoeff(vd1)
+                  << "  max(vd)=" << helib::largestCoeff(vd_dec)
+                  << ", max(vd1)=" << helib::largestCoeff(vd1)
                   << ", maxDiff=" << calcMaxDiff(vd_dec,vd1) << std::endl << std::endl;
 }
   
@@ -382,19 +381,19 @@ TEST_P(GTest_approxNums, general_ops_works) {
   long nslots = ea.size();
   char buffer[32];
     
-  std::vector<cx_double> p0, p1, p2, p3;
+  std::vector<std::complex<double>> p0, p1, p2, p3;
   ea.random(p0);
   ea.random(p1);
   ea.random(p2);
   ea.random(p3);
     
-  Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
+  helib::Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
   ea.encrypt(c0, publicKey, p0, /*size=*/1.0);
   ea.encrypt(c1, publicKey, p1, /*size=*/1.0);
   ea.encrypt(c2, publicKey, p2, /*size=*/1.0);
   ea.encrypt(c3, publicKey, p3, /*size=*/1.0);
     
-  resetAllTimers();
+  helib::resetAllTimers();
   FHE_NTIMER_START(Circuit);
     
     for (long i = 0; i < R; i++) {
@@ -408,7 +407,7 @@ TEST_P(GTest_approxNums, general_ops_works) {
       // random number in [-(nslots-1)..nslots-1]
       
       // two random constants
-      std::vector<cx_double> const1, const2;
+      std::vector<std::complex<double>> const1, const2;
       ea.random(const1);
       ea.random(const2);
       
@@ -437,8 +436,8 @@ TEST_P(GTest_approxNums, general_ops_works) {
       }
       EXPECT_TRUE(ciphertextMatches(ea, secretKey, p2, c2, epsilon));
       
-      std::vector<cx_double> tmp_p(p1); // tmp = c1
-      Ctxt tmp(c1);
+      std::vector<std::complex<double>> tmp_p(p1); // tmp = c1
+      helib::Ctxt tmp(c1);
       sprintf(buffer, "tmp=c1>>=%d", (int)shamt);
       rotate(tmp_p, shamt); // ea.shift(tmp, random amount in [-nSlots/2,nSlots/2])
       ea.rotate(tmp, shamt);
@@ -492,7 +491,7 @@ TEST_P(GTest_approxNums, general_ops_works) {
     
     FHE_NTIMER_STOP(Circuit);
     
-    std::vector<cx_double> pp0, pp1, pp2, pp3;
+    std::vector<std::complex<double>> pp0, pp1, pp2, pp3;
     
     ea.decrypt(c0, secretKey, pp0);
     ea.decrypt(c1, secretKey, pp1);
@@ -506,29 +505,29 @@ TEST_P(GTest_approxNums, general_ops_works) {
                 && cx_equals(pp1, p1, NTL::conv<double>(epsilon * c1.getPtxtMag()))
                 && cx_equals(pp2, p2, NTL::conv<double>(epsilon * c2.getPtxtMag()))
                 && cx_equals(pp3, p3, NTL::conv<double>(epsilon * c3.getPtxtMag())))
-                               << "  max(p0)="  << largestCoeff(p0)
-                               << ", max(pp0)=" << largestCoeff(pp0)
+                               << "  max(p0)="  << helib::largestCoeff(p0)
+                               << ", max(pp0)=" << helib::largestCoeff(pp0)
                                << ", maxDiff="  << calcMaxDiff(p0,pp0)
                                << std::endl
-                               << "  max(p1)="  << largestCoeff(p1)
-                               << ", max(pp1)=" << largestCoeff(pp1)
+                               << "  max(p1)="  << helib::largestCoeff(p1)
+                               << ", max(pp1)=" << helib::largestCoeff(pp1)
                                << ", maxDiff="  << calcMaxDiff(p1,pp1)
                                << std::endl
-                               << "  max(p2)="  << largestCoeff(p2)
-                               << ", max(pp2)=" << largestCoeff(pp2)
+                               << "  max(p2)="  << helib::largestCoeff(p2)
+                               << ", max(pp2)=" << helib::largestCoeff(pp2)
                                << ", maxDiff="  << calcMaxDiff(p2,pp2)
                                << std::endl
-                               << "  max(p3)="  << largestCoeff(p3)
-                               << ", max(pp3)=" << largestCoeff(pp3)
+                               << "  max(p3)="  << helib::largestCoeff(p3)
+                               << ", max(pp3)=" << helib::largestCoeff(pp3)
                                << ", maxDiff="  << calcMaxDiff(p3,pp3)
                                << std::endl << std::endl;
   
     if (helib_test::verbose) {
         std::cout << std::endl;
-        printAllTimers();
+        helib::printAllTimers();
         std::cout << std::endl;
       }
-      resetAllTimers();
+      helib::resetAllTimers();
   }
   
 INSTANTIATE_TEST_SUITE_P(typical_parameters, GTest_approxNums, ::testing::Values(

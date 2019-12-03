@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,21 +16,14 @@
 #include <cstdlib>
 #include <list>
 #include <sstream>
-using namespace std;
-#if (__cplusplus>199711L)
 #include <memory>
-#else
-#include <tr1/memory>
-using namespace tr1;
-#warning "using TR1"
-#endif
 
 #include <NTL/vector.h>
-NTL_CLIENT
 #include "NumbTh.h"
 #include "EncryptedArray.h"
 #include "permutations.h"
 
+namespace helib {
 
 //! \cond FALSE (make doxygen ignore these classes)
 template<class T> 
@@ -46,9 +39,9 @@ public:
 //   invariants: 
 //     * all elements in x lie in a range a..b
 //     * aux[a..b] is false before and after removeDups is called
-void removeDups(list<long>& x, bool *aux)
+void removeDups(std::list<long>& x, bool *aux)
 {
-  for (list<long>::iterator i = x.begin(); i != x.end(); ) { 
+  for (std::list<long>::iterator i = x.begin(); i != x.end(); ) {
     if (aux[*i])
       i = x.erase(i);
     else {
@@ -57,16 +50,16 @@ void removeDups(list<long>& x, bool *aux)
     }
   }
 
-  for (list<long>::iterator i = x.begin(); i != x.end(); i++)
+  for (std::list<long>::iterator i = x.begin(); i != x.end(); i++)
     aux[*i] = false;
 }
 
 // Creates a new list with the old values and old values +/- offset.
 // results outside the range -n+1 .. n-1 are discarded
 //   and all resulting duplicates are removed
-void addOffset(list<long>& x, long offset, long n, bool *aux, bool good=false)
+void addOffset(std::list<long>& x, long offset, long n, bool *aux, bool good=false)
 {
-  for (list<long>::iterator i = x.begin(); i != x.end(); i++) {
+  for (std::list<long>::iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;
     long val1 = val + offset;
     long val2 = val - offset;
@@ -94,11 +87,11 @@ void addOffset(list<long>& x, long offset, long n, bool *aux, bool good=false)
 }
 
 // Counts the number of unique elements mod n in x 
-long reducedCount(const list<long>& x, long n, bool *aux)
+long reducedCount(const std::list<long>& x, long n, bool *aux)
 {
   long res = 0;
 
-  for (list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
+  for (std::list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;
     if (val < 0) val += n;
 
@@ -108,7 +101,7 @@ long reducedCount(const list<long>& x, long n, bool *aux)
     }
   }
 
-  for (list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
+  for (std::list<long>::const_iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;
     if (val < 0) val += n;
     aux[val] = false;
@@ -122,19 +115,19 @@ long reducedCount(const list<long>& x, long n, bool *aux)
 // For j in [0..nlev-i) tab[i][j] is the cost of collapsing levels i..i+j.
 // I.e., how many different shift amounts would we need to implement for
 // a permutation-network-layer constructed by collapsing these levels.
-void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
+void buildBenesCostTable(long n, long k, bool good, NTL::Vec< NTL::Vec<long> >& tab)
 {
   long nlev = 2*k-1;
   tab.SetLength(nlev);
   for (long i = 0; i < nlev; i++) tab[i].SetLength(nlev-i);
 
-  Vec<bool> aux_vec;
+  NTL::Vec<bool> aux_vec;
   aux_vec.SetLength(2*n-1);
   bool *aux = &aux_vec[n-1];
   for (long i = 0; i < 2*n-1; i++) aux_vec[i] = false;
 
   for (long i = 0; i < nlev; i++) {
-    list<long> x;
+    std::list<long> x;
 
     x.push_front(0L);
     for (long j = 0; j < nlev-i; j++) {
@@ -158,11 +151,11 @@ void buildBenesCostTable(long n, long k, bool good, Vec< Vec<long> >& tab)
 
 //! \cond FALSE (make doxygen ignore these classes)
 class LongNode;
-typedef shared_ptr<LongNode> LongNodePtr;
+typedef std::shared_ptr<LongNode> LongNodePtr;
 // A "shared_ptr" is a pointer with (some) garbage collection
 
 
-// A LongNode is an implementation of list<long>, i.e. a linked list of
+// A LongNode is an implementation of std::list<long>, i.e. a linked list of
 // counters, representing a particular way of "collapsing levels" in a Benes
 // network. Each LongNode holds a count of collapsed levels, and the sum of all
 // counter in the list must equal the number of levels in the Benes network.
@@ -185,8 +178,8 @@ static long length(LongNodePtr ptr)
   return res;
 }
 
-// Converts list<long> to Vec<long>
-static long listToVec(Vec<long>& vec, LongNodePtr ptr)
+// Converts std::list<long> to NTL::Vec<long>
+static long listToVec(NTL::Vec<long>& vec, LongNodePtr ptr)
 {
   long len = length(ptr);
 
@@ -200,7 +193,7 @@ static long listToVec(Vec<long>& vec, LongNodePtr ptr)
 }
 
 // Prints out a list of integers
-ostream& operator<<(ostream& s, LongNodePtr p)
+std::ostream& operator<<(std::ostream& s, LongNodePtr p)
 {
   if (p == NULL) return s << "[]";
 
@@ -228,13 +221,9 @@ public:
   }
 
   size_t hash() const {
-    stringstream s;
+    std::stringstream s;
     s << i << " " << budget;
-#if (__cplusplus>199711L)
-    return std::hash< string >()(s.str());
-#else
-    return tr1::hash< string >()(s.str());
-#endif
+    return std::hash< std::string >()(s.str());
   }
 
   bool operator==(const BenesMemoKey& other) const {
@@ -254,7 +243,7 @@ public:
   BenesMemoEntry() { }
 };
 
-typedef unordered_map< BenesMemoKey, BenesMemoEntry, 
+typedef std::unordered_map< BenesMemoKey, BenesMemoEntry,
                             ClassHash<BenesMemoKey> > BenesMemoTable;
 //! \endcond
 
@@ -270,7 +259,7 @@ typedef unordered_map< BenesMemoKey, BenesMemoEntry,
 // collapse anything.)
 
 BenesMemoEntry optimalBenesAux(long i, long budget, long nlev, 
-                               const Vec< Vec<long> >& costTab, 
+                               const NTL::Vec< NTL::Vec<long> >& costTab,
                                BenesMemoTable& memoTab)
 {
   //OLD: assert(i >= 0 && i <= nlev);
@@ -345,7 +334,7 @@ void optimalBenes(long n, long budget, bool good,
   long k = GeneralBenesNetwork::depth(n); // k = ceiling(log_2 n)
   long nlev = 2*k - 1;  // before collapsing, we have 2k-1 levels
 
-  Vec< Vec<long> > costTab;
+  NTL::Vec< NTL::Vec<long> > costTab;
   // costTab[i][j] to holds the cost of collapsing levels i..i+j
 
   buildBenesCostTable(n, k, good, costTab);
@@ -368,8 +357,8 @@ void optimalBenes(long n, long budget, bool good,
 
 // A binary tree data structure for spliting generators
 class SplitNode;
-typedef shared_ptr<SplitNode> SplitNodePtr;
-// A "shared_ptr" is a pointer with (some) garbage collection
+typedef std::shared_ptr<SplitNode> SplitNodePtr;
+// A "std::shared_ptr" is a pointer with (some) garbage collection
 
 class SplitNode {
 public:
@@ -403,7 +392,7 @@ public:
 //! \endcond
 
 // Routines for printing the leaves of a generator-tree
-void print(ostream& s, SplitNodePtr p, bool first)
+void print(std::ostream& s, SplitNodePtr p, bool first)
 {
   if (p->isLeaf()) {
     if (!first) s << " ";
@@ -418,7 +407,7 @@ void print(ostream& s, SplitNodePtr p, bool first)
     print(s, p->right, false);
   }
 }
-ostream& operator<<(ostream& s, SplitNodePtr p)
+std::ostream& operator<<(std::ostream& s, SplitNodePtr p)
 {
   s << "[";
   print(s, p, true);
@@ -445,13 +434,9 @@ public:
   }
 
   size_t hash() const {
-    stringstream s;
+    std::stringstream s;
     s << order << " " << good << " " << budget << " " << mid;
-#if (__cplusplus>199711L)
-    return std::hash< string >()(s.str());
-#else
-    return tr1::hash< string >()(s.str());
-#endif
+    return std::hash< std::string >()(s.str());
   }
 
   bool operator==(const LowerMemoKey& other) const {
@@ -472,14 +457,14 @@ public:
   LowerMemoEntry() { }
 };
 
-typedef unordered_map< LowerMemoKey, LowerMemoEntry, 
+typedef std::unordered_map< LowerMemoKey, LowerMemoEntry,
                             ClassHash<LowerMemoKey> > LowerMemoTable;
 
 
 // list structure for managing generators
 
 class GenNode;
-typedef shared_ptr<GenNode> GenNodePtr;
+typedef std::shared_ptr<GenNode> GenNodePtr;
 // A "shared_ptr" is a pointer with (some) garbage collection
 
 class GenNode {
@@ -502,7 +487,7 @@ long length(GenNodePtr ptr)
 }
 
 
-ostream& operator<<(ostream& s, GenNodePtr p)
+std::ostream& operator<<(std::ostream& s, GenNodePtr p)
 {
   if (p == NULL) {
     s << "[]";
@@ -515,7 +500,7 @@ ostream& operator<<(ostream& s, GenNodePtr p)
     s << " " << p->solution;
     p = p->next;
   }
-  cout << "]";
+  s << "]";
 
   return s;
 }
@@ -540,13 +525,9 @@ public:
   }
 
   size_t hash() const {
-    stringstream s;
+    std::stringstream s;
     s << i << " " << budget << " " << mid;
-#if (__cplusplus>199711L)
-    return std::hash< string >()(s.str());
-#else
-    return tr1::hash< string >()(s.str());
-#endif
+    return std::hash< std::string >()(s.str());
   }
 
   bool operator==(const UpperMemoKey& other) const {
@@ -566,7 +547,7 @@ public:
   UpperMemoEntry() { }
 };
 
-typedef unordered_map< UpperMemoKey, UpperMemoEntry, 
+typedef std::unordered_map< UpperMemoKey, UpperMemoEntry,
                             ClassHash<UpperMemoKey> > UpperMemoTable;
 //! \endcond
 
@@ -647,7 +628,7 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
       bool good1 = good;
       bool good2 = good;
 
-      if (good && GCD(order1, order/order1) != 1)
+      if (good && NTL::GCD(order1, order/order1) != 1)
         good2 = false;
 
       // The logic is that if the problem is "good"
@@ -690,7 +671,7 @@ LowerMemoEntry optimalLower(long order, bool good, long budget, long mid,
 // and mid token between the trees. This procedure splits the "current
 // remaining budget" between trees i through vec.length()-1.
 UpperMemoEntry 
-optimalUpperAux(const Vec<GenDescriptor>& vec, long i, long budget, long mid,
+optimalUpperAux(const NTL::Vec<GenDescriptor>& vec, long i, long budget, long mid,
 		UpperMemoTable& upperMemoTable, LowerMemoTable& lowerMemoTable)
 {
   //OLD: assert(i >= 0 && i <= vec.length());
@@ -859,8 +840,8 @@ static void computeEvalues(const OneGeneratorTree &T, long idx, long genOrd)
   else {
     long f1 = CRTcoeff(sz1, sz2); // f1 = 0 mod sz1, 1 mod sz2
     long f2 = sz1*sz2 +1 - f1;    // f2 = 1 mod sz1, 0 mod sz2
-    lData.e = MulMod(ee, f2, genOrd);
-    rData.e = MulMod(ee, f1, genOrd);
+    lData.e = NTL::MulMod(ee, f2, genOrd);
+    rData.e = NTL::MulMod(ee, f1, genOrd);
   }
   // Recurse on the two subtrees
   computeEvalues(T, left, genOrd);
@@ -879,7 +860,7 @@ static long copyToGenTree(OneGeneratorTree& gTree, SplitNodePtr& solution)
 
 // Compute the trees corresponding to the "optimal" way of breaking
 // a permutation into dimensions, subject to some constraints
-long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens, 
+long GeneratorTrees::buildOptimalTrees(const NTL::Vec<GenDescriptor>& gens,
 				       long depthBound)
 {
   //OLD: assert(gens.length() >= 0);
@@ -941,16 +922,18 @@ long GeneratorTrees::buildOptimalTrees(const Vec<GenDescriptor>& gens,
   ComputeCubeMapping();
 
 #ifdef DEBUG_PRINTOUT
-  Vec<long> dims;  // The "crude" cube dimensions, one dimension per tree
+  NTL::Vec<long> dims;  // The "crude" cube dimensions, one dimension per tree
   getCubeDims(dims);
-  std::cerr << " dims="<<dims<<endl;
-  std::cerr << " trees=" << *this << endl;
+  std::cerr << " dims="<<dims<<std::endl;
+  std::cerr << " trees=" << *this << std::endl;
   if (map2cube.length()<100) {
-    std::cerr << " map2cube="<<map2cube<<endl;
-    std::cerr << " map2array="<<map2array<<endl;
+    std::cerr << " map2cube="<<map2cube<<std::endl;
+    std::cerr << " map2array="<<map2array<<std::endl;
   }
-  std::cerr << endl;
+  std::cerr << std::endl;
 #endif
 
   return t.cost;
+}
+
 }

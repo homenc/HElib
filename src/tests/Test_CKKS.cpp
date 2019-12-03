@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -14,8 +14,7 @@
 #include <complex>
 
 #include "norms.h"
-#include "EncryptedArray.h"
-#include "FHE.h"
+#include <helib.h>
 #include "debugging.h"
 
 #include "gtest/gtest.h"
@@ -49,14 +48,14 @@ struct Parameters {
 // Utility functions for the tests
 
   // Compute the L-infinity distance between two vectors
-  double calcMaxDiff(const std::vector<cx_double>& v1,
-                     const std::vector<cx_double>& v2){
-    if(lsize(v1) != lsize(v2)) {
+  double calcMaxDiff(const std::vector<std::complex<double>>& v1,
+                     const std::vector<std::complex<double>>& v2){
+    if(helib::lsize(v1) != helib::lsize(v2)) {
       throw std::runtime_error("Vector sizes differ.");
     }
     
     double maxDiff = 0.0;
-    for (long i=0; i<lsize(v1); i++) {
+    for (long i=0; i<helib::lsize(v1); i++) {
       double diffAbs = std::abs(v1[i]-v2[i]);
       if (diffAbs > maxDiff)
         maxDiff = diffAbs;
@@ -64,10 +63,10 @@ struct Parameters {
     return maxDiff;
   }
   // Compute the max relative difference between two vectors
-  double calcMaxRelDiff(const std::vector<cx_double>& v1,
-                        const std::vector<cx_double>& v2)
+  double calcMaxRelDiff(const std::vector<std::complex<double>>& v1,
+                        const std::vector<std::complex<double>>& v2)
   {
-    if(lsize(v1)!=lsize(v2)) {
+    if(helib::lsize(v1)!=helib::lsize(v2)) {
       throw std::runtime_error("Vector sizes differ.");
       
     }
@@ -82,7 +81,7 @@ struct Parameters {
       maxAbs = 1e-10;
     
     double maxDiff = 0.0;
-    for (long i=0; i<lsize(v1); i++) {
+    for (long i=0; i<helib::lsize(v1); i++) {
       double relDiff = std::abs(v1[i]-v2[i]) / maxAbs;
       if (relDiff > maxDiff)
         maxDiff = relDiff;
@@ -91,71 +90,51 @@ struct Parameters {
     return maxDiff;
   }
   
-  inline bool cx_equals(const std::vector<cx_double>& v1,
-                        const std::vector<cx_double>& v2,
+  inline bool cx_equals(const std::vector<std::complex<double>>& v1,
+                        const std::vector<std::complex<double>>& v2,
                         double epsilon)
   {
     return (calcMaxDiff(v1,v2) < epsilon);
   }
   
-  ::testing::AssertionResult ciphertextMatches(const EncryptedArrayCx &ea, const FHESecKey &sk,
-                                               const std::vector<cx_double> &p, const Ctxt &c, double epsilon)
-  {
-    std::vector<cx_double> pp;
-    ea.decrypt(c, sk, pp);
-    if (helib_test::verbose) {
-      std::cout << "    relative-error=" << calcMaxRelDiff(p, pp)
-                << ", absolute-error=" << calcMaxRelDiff(p, pp) << std::endl;
-    }
-    
-    if(cx_equals(pp, p, epsilon)) {
-      return ::testing::AssertionSuccess();
-    } else {
-      return ::testing::AssertionFailure()
-          << "Ciphertext does not match plaintext:" << std::endl
-          << "p = " << p << std::endl
-          << "pp = " << pp << std::endl;
-    }
-  }
-  
-  void negateVec(std::vector<cx_double>& p1)
+  void negateVec(std::vector<std::complex<double>>& p1)
   {
     for (auto& x: p1) x = -x;
   }
-  void conjVec(std::vector<cx_double>& p1)
+  void conjVec(std::vector<std::complex<double>>& p1)
   {
     for (auto& x: p1) x = conj(x);
   }
-  void add(std::vector<cx_double>& to, const std::vector<cx_double>& from)
+  void add(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
     for (long i=0; i<from.size(); i++) to[i] += from[i];
   }
-  void add(std::vector<cx_double>& to, double from)
+  void add(std::vector<std::complex<double>>& to, double from)
   {
     for (long i=0; i<to.size(); i++) to[i] += from;
   }
-  void sub(std::vector<cx_double>& to, const std::vector<cx_double>& from)
+  void sub(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
     for (long i=0; i<from.size(); i++) to[i] -= from[i];
   }
-  void mul(std::vector<cx_double>& to, const std::vector<cx_double>& from)
+  void mul(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
   {
     if (to.size() < from.size())
       to.resize(from.size(), 0);
     for (long i=0; i<from.size(); i++) to[i] *= from[i];
   }
-  void mul(std::vector<cx_double>& to, double from)
+  void mul(std::vector<std::complex<double>>& to, double from)
   {
     for (long i=0; i<to.size(); i++) to[i] *= from;
   }
-  void rotate(std::vector<cx_double>& p, long amt)
+  void rotate(std::vector<std::complex<double>>& p, long amt)
   {
     long sz = p.size();
-    std::vector<cx_double> tmp(sz);
+    std::vector<std::complex<double>> tmp(sz);
     for (long i=0; i<sz; i++)
       tmp[((i+amt)%sz +sz)%sz] = p[i];
     p = tmp;
@@ -168,10 +147,10 @@ class Test_CKKS : public ::testing::TestWithParam<Parameters> {
         const long L;         // Number of bits
         const double epsilon; // error threshold
 
-        FHEcontext context;
-        FHESecKey secretKey;
-        const FHEPubKey publicKey;
-        const EncryptedArrayCx& ea;
+        helib::FHEcontext context;
+        helib::FHESecKey secretKey;
+        const helib::FHEPubKey publicKey;
+        const helib::EncryptedArrayCx& ea;
 
         Test_CKKS () :
             m(GetParam().m),
@@ -179,8 +158,8 @@ class Test_CKKS : public ::testing::TestWithParam<Parameters> {
             L(GetParam().L),
             epsilon(GetParam().epsilon),
             context(m, /*p=*/-1, r),
-            secretKey((context.scale=4, buildModChain(context, L, /*c=*/2), context)),
-            publicKey((secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
+            secretKey((context.scale=4, helib::buildModChain(context, L, /*c=*/2), context)),
+            publicKey((secretKey.GenSecKey(), helib::addSome1DMatrices(secretKey), secretKey)),
             ea(context.ea->getCx())
         {}
 
@@ -194,22 +173,22 @@ class Test_CKKS : public ::testing::TestWithParam<Parameters> {
             }
 
 #ifdef DEBUG_PRINTOUT
-            dbgKey = &secretKey;
-            dbgEa = const_cast<EncryptedArray*>(context.ea);
+            helib::dbgKey = &secretKey;
+            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
 #endif // DEBUG_PRINTOUT
         }
 
         virtual void TearDown() override
         {
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 
 };
  
 TEST_P(Test_CKKS, negating_ciphertext_works)
 {
-  Ctxt c1(publicKey);
-  std::vector<cx_double> vd1, vd2;
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1, vd2;
   NTL::ZZX poly;
   NTL::xdouble rf, pm;
 
@@ -224,8 +203,8 @@ TEST_P(Test_CKKS, negating_ciphertext_works)
   negateVec(vd1);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd2)=" << largestCoeff(vd2)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd2)=" << helib::largestCoeff(vd2)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
@@ -233,8 +212,8 @@ TEST_P(Test_CKKS, negating_ciphertext_works)
 
 TEST_P(Test_CKKS, adding_poly_constant_to_ciphertext_works)
 {
-  Ctxt c1(publicKey);
-  std::vector<cx_double> vd1, vd2, vd3;
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
   NTL::ZZX poly;
   NTL::xdouble rf, pm;
 
@@ -250,15 +229,15 @@ TEST_P(Test_CKKS, adding_poly_constant_to_ciphertext_works)
   add(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd3)=" << largestCoeff(vd3)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd3)=" << helib::largestCoeff(vd3)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
 }
 
 TEST_P(Test_CKKS, adding_negated_poly_constant_to_ciphertext_works)
 {
-  Ctxt c1(publicKey);
-  std::vector<cx_double> vd1, vd2, vd3;
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
   NTL::ZZX poly;
   NTL::xdouble rf, pm;
 
@@ -275,16 +254,16 @@ TEST_P(Test_CKKS, adding_negated_poly_constant_to_ciphertext_works)
   add(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd3)=" << largestCoeff(vd3) << std::endl
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd3)=" << helib::largestCoeff(vd3) << std::endl
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) 
                   << ", maxRelDiff=" << calcMaxRelDiff(vd1,vd3) << std::endl << std::endl;
 }
 
 TEST_P(Test_CKKS, multiplying_poly_constant_to_ciphertext_works)
 {
-  Ctxt c1(publicKey);
-  std::vector<cx_double> vd1, vd2, vd3;
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
   NTL::ZZX poly;
   NTL::xdouble rf, pm;
 
@@ -301,8 +280,8 @@ TEST_P(Test_CKKS, multiplying_poly_constant_to_ciphertext_works)
   rf *= ea.encodeScalingFactor();
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd3)=" << largestCoeff(vd3)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd3)=" << helib::largestCoeff(vd3)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
@@ -310,8 +289,8 @@ TEST_P(Test_CKKS, multiplying_poly_constant_to_ciphertext_works)
 
 TEST_P(Test_CKKS, adding_double_to_ciphertext_works)
 {
-  Ctxt c1(publicKey);
-  std::vector<cx_double> vd1, vd2;
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1, vd2;
   NTL::xdouble rf, pm;
   std::vector<double> vd(1);
   ea.random(vd);
@@ -326,15 +305,15 @@ TEST_P(Test_CKKS, adding_double_to_ciphertext_works)
   add(vd1, vd[0]);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd2)=" << largestCoeff(vd2)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd2)=" << helib::largestCoeff(vd2)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
 }
 
 TEST_P(Test_CKKS, multiplying_double_to_ciphertext_works)
 {
-  Ctxt c1(publicKey);
-  std::vector<cx_double> vd1, vd2, vd0;
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd0;
   NTL::xdouble rf, pm;
   std::vector<double> vd(1);
   ea.random(vd);
@@ -352,8 +331,8 @@ TEST_P(Test_CKKS, multiplying_double_to_ciphertext_works)
   pm *= std::abs(vd[0]);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd2)=" << largestCoeff(vd2)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd2)=" << helib::largestCoeff(vd2)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl
 		  << ", ptxtMag=" << c1.getPtxtMag() << std::endl
 		  << ", vd[0]=" << vd[0] << std::endl;
@@ -363,8 +342,8 @@ TEST_P(Test_CKKS, multiplying_double_to_ciphertext_works)
 
 TEST_P(Test_CKKS, getting_the_complex_conjugate_works)
 {
-  Ctxt c1(publicKey);
-  std::vector<cx_double> vd1, vd2;
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1, vd2;
   NTL::xdouble rf, pm;
   NTL::ZZX poly;
 
@@ -379,17 +358,41 @@ TEST_P(Test_CKKS, getting_the_complex_conjugate_works)
   conjVec(vd1);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd2)=" << largestCoeff(vd2)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd2)=" << helib::largestCoeff(vd2)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 
+TEST_P(Test_CKKS, rotating_ciphertext_works)
+{
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1, vd2;
+  NTL::xdouble rf, pm;
+  NTL::ZZX poly;
+
+  ea.random(vd1);
+  ea.encrypt(c1, publicKey, vd1);
+  pm = c1.getPtxtMag();
+  ea.encode(poly, vd1, /*size=*/ 1.0);
+  ea.rotate(c1, 3);
+  ea.decrypt(c1, secretKey, vd2);
+  // TODO: understand how this affects ratfactor and add appropriate expectation
+  rotate(vd1, 3);
+  // vd1 is now the expected result
+
+  EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd2)=" << helib::largestCoeff(vd2)
+                  << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
+  EXPECT_EQ(pm, c1.getPtxtMag());
+}
+
 TEST_P(Test_CKKS, adding_ciphertexts_works)
 {
-  Ctxt c1(publicKey), c2(publicKey);
-  std::vector<cx_double> vd1, vd2, vd3;
+  helib::Ctxt c1(publicKey), c2(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
 
   ea.random(vd1);
   ea.random(vd2);
@@ -401,15 +404,15 @@ TEST_P(Test_CKKS, adding_ciphertexts_works)
   add(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd3)=" << largestCoeff(vd3)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd3)=" << helib::largestCoeff(vd3)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
 }
 
 TEST_P(Test_CKKS, subtracting_ciphertexts_works)
 {
-  Ctxt c1(publicKey), c2(publicKey);
-  std::vector<cx_double> vd1, vd2, vd3;
+  helib::Ctxt c1(publicKey), c2(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
 
   ea.random(vd1);
   ea.random(vd2);
@@ -421,15 +424,15 @@ TEST_P(Test_CKKS, subtracting_ciphertexts_works)
   sub(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd3)=" << largestCoeff(vd3)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd3)=" << helib::largestCoeff(vd3)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
 }
 
 TEST_P(Test_CKKS, raw_multiplication_of_ciphertexts_works)
 {
-  Ctxt c1(publicKey), c2(publicKey);
-  std::vector<cx_double> vd1, vd2, vd3;
+  helib::Ctxt c1(publicKey), c2(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
 
   ea.random(vd1);
   ea.random(vd2);
@@ -442,16 +445,16 @@ TEST_P(Test_CKKS, raw_multiplication_of_ciphertexts_works)
   mul(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd3)=" << largestCoeff(vd3)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd3)=" << helib::largestCoeff(vd3)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
   EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
 }
 
 TEST_P(Test_CKKS, high_level_multiplication_of_ciphertexts_works)
 {
-  Ctxt c1(publicKey), c2(publicKey);
-  std::vector<cx_double> vd1, vd2, vd3;
+  helib::Ctxt c1(publicKey), c2(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
 
   ea.random(vd1);
   ea.random(vd2);
@@ -464,16 +467,16 @@ TEST_P(Test_CKKS, high_level_multiplication_of_ciphertexts_works)
   mul(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd3)=" << largestCoeff(vd3)
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd3)=" << helib::largestCoeff(vd3)
                   << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
   EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
 }
 
 TEST_P(Test_CKKS, multiplying_ciphertext_by_negative_constant_and_then_adding_to_other_ciphertext_works)
 {
-  Ctxt c1(publicKey), c2(publicKey);
-  std::vector<cx_double> vd1, vd2, vd3, vd4;
+  helib::Ctxt c1(publicKey), c2(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3, vd4;
   NTL::ZZX poly;
 
   ea.random(vd1);
@@ -484,12 +487,12 @@ TEST_P(Test_CKKS, multiplying_ciphertext_by_negative_constant_and_then_adding_to
   c1 += c2;
   ea.decrypt(c1, secretKey, vd4);
 
-  mul(vd1,std::vector<cx_double>(ea.size(),-5/2.0));
+  mul(vd1,std::vector<std::complex<double>>(ea.size(),-5/2.0));
   add(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd4, vd1, epsilon))
-                  << "  max(vd1)=" << largestCoeff(vd1)
-                  << ", max(vd4)=" << largestCoeff(vd4) << std::endl
+                  << "  max(vd1)=" << helib::largestCoeff(vd1)
+                  << ", max(vd4)=" << helib::largestCoeff(vd4) << std::endl
                   << ", maxDiff=" << calcMaxDiff(vd1,vd4) << std::endl << std::endl;
 }
 

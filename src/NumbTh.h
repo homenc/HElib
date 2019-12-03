@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -26,6 +26,8 @@
 #include <istream>
 #include <sstream>
 #include <ctime>
+#include <memory>
+#include <unordered_map>
 
 #include <NTL/version.h>
 #include <NTL/ZZ.h>
@@ -54,6 +56,8 @@
 
 #include "range.h"
 #include "assertions.h"
+
+namespace helib {
 
 namespace FHEglobals
 {
@@ -84,15 +88,6 @@ inline void setAutomorphVals2(std::set<long>* aVals)
 { FHEglobals::automorphVals2=aVals; }
 inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=NULL; }
 inline void recordAutomorphVal2(long k) { FHEglobals::automorphVals2->insert(k); }
-
-#if (__cplusplus>199711L)
-#include <memory>
-#include <unordered_map>
-#else
-#include <tr1/memory>
-#include <tr1/unordered_map>
-using namespace tr1;
-#endif
 
 typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future
@@ -621,6 +616,7 @@ public:
    const NTL::ZZ_pXModulus& upcast() const { return *this; }
 };
 
+
 template<class T>
 std::ostream& operator<<(std::ostream& s, std::vector<T> v)
 {
@@ -641,6 +637,13 @@ std::istream& operator>>(std::istream& s, std::vector<T>& v)
   return s;
 }
 
+template <typename T>
+std::string vecToStr(const std::vector<T>& v)
+{
+  std::stringstream ss;
+  ss << v;
+  return ss.str();
+}
 
 template<class T>
 NTL::Vec<T> atoVec(const char *a) 
@@ -747,5 +750,7 @@ const double erfc_inverse[] = {
 };
 
 #define ERFC_INVERSE_SIZE  (long(sizeof(erfc_inverse)/sizeof(erfc_inverse[0])))
+
+}
 
 #endif // ifndef HELIB_NUMBTH_H

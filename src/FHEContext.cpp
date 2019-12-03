@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,9 +16,9 @@
 #include "powerful.h"
 #include "binio.h"
 #include "sample.h"
+#include "EncryptedArray.h"
 
-NTL_CLIENT
-
+namespace helib {
 
 long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose)
 {
@@ -64,7 +64,7 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
   // find the first m satisfying phi(m)>=N and d | ord(p) in Z_m^*
   // and phi(m)/ord(p) >= s
   if (chosen_m) {
-    if (GCD(p, chosen_m) == 1) {
+    if (NTL::GCD(p, chosen_m) == 1) {
       long ordP = multOrd(p, chosen_m);
       if (d == 0 || ordP % d == 0) {
         // chosen_m is OK
@@ -115,7 +115,7 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
       {84672, 92837, 56, 38520}  // gens=18(126),1886(6),3(!2)
     };
     for (i=0; i<sizeof(ms)/sizeof(long[4]); i++) { 
-      if (ms[i][0] < N || GCD(p, ms[i][1]) != 1) continue;
+      if (ms[i][0] < N || NTL::GCD(p, ms[i][1]) != 1) continue;
       long ordP = multOrd(p, ms[i][1]);
       long nSlots = ms[i][0]/ordP;
       if (d != 0 && ordP % d != 0) continue;
@@ -132,7 +132,7 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
   if (m==0) {
     // search only for odd values of m, to make phi(m) a little closer to m
     for (long candidate=N|1; candidate<10*N; candidate+=2) {
-      if (GCD(p,candidate)!=1) continue;
+      if (NTL::GCD(p,candidate)!=1) continue;
 
       long ordP = multOrd(p,candidate); // the multiplicative order of p mod m
       if (d>1 && ordP%d!=0 ) continue;
@@ -147,17 +147,17 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
   }
 
   if (verbose) {
-    cerr << "*** Bound N="<<N<<", choosing m="<<m <<", phi(m)="<< phi_N(m)
-         << endl;
+    std::cerr << "*** Bound N="<<N<<", choosing m="<<m <<", phi(m)="<< phi_N(m)
+         << std::endl;
   }
 
   return m;
 }
 
 // A global variable, pointing to the "current" context
-FHEcontext* activeContext = NULL;
+FHEcontext* activeContext = nullptr;
 
-void FHEcontext::productOfPrimes(ZZ& p, const IndexSet& s) const
+void FHEcontext::productOfPrimes(NTL::ZZ& p, const IndexSet& s) const
 {
   p = 1;
   for (long i: s)
@@ -193,7 +193,7 @@ bool FHEcontext::operator==(const FHEcontext& other) const
 }
 
 
-void writeContextBaseBinary(ostream& str, const FHEcontext& context)
+void writeContextBaseBinary(std::ostream& str, const FHEcontext& context)
 {
   writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
 
@@ -222,9 +222,9 @@ void writeContextBaseBinary(ostream& str, const FHEcontext& context)
   writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
 }
 
-void readContextBaseBinary(istream& str, unsigned long& m,
+void readContextBaseBinary(std::istream& str, unsigned long& m,
                            unsigned long& p, unsigned long& r,
-                           vector<long>& gens, vector<long>& ords)
+                           std::vector<long>& gens, std::vector<long>& ords)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
   //OLD: assert(eyeCatcherFound == 0);
@@ -235,7 +235,7 @@ void readContextBaseBinary(istream& str, unsigned long& m,
   m = read_raw_int(str);
 
   // Number of gens and ords saved in front of vectors
-  read_raw_vector(str, gens);  
+  read_raw_vector(str, gens);
   read_raw_vector(str, ords);
   
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
@@ -243,15 +243,15 @@ void readContextBaseBinary(istream& str, unsigned long& m,
   helib::assertEq(eyeCatcherFound, 0, "Could not find post-context-base eye catcher");
 }
 
-std::unique_ptr<FHEcontext> buildContextFromBinary(istream& str)
+std::unique_ptr<FHEcontext> buildContextFromBinary(std::istream& str)
 {
   unsigned long m, p, r;
-  vector<long> gens, ords;
+  std::vector<long> gens, ords;
   readContextBaseBinary(str, m, p, r, gens, ords);
   return std::unique_ptr<FHEcontext>(new FHEcontext(m,p,r,gens,ords));
 }
 
-void writeContextBinary(ostream& str, const FHEcontext& context)
+void writeContextBinary(std::ostream& str, const FHEcontext& context)
 {
   
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
@@ -299,7 +299,7 @@ void writeContextBinary(ostream& str, const FHEcontext& context)
 }
 
 
-void readContextBinary(istream& str, FHEcontext& context)
+void readContextBinary(std::istream& str, FHEcontext& context)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
   //OLD: assert(eyeCatcherFound == 0);
@@ -359,7 +359,7 @@ void readContextBinary(istream& str, FHEcontext& context)
   }
 
   // Read in the partition of m into co-prime factors (if bootstrappable)
-  Vec<long> mv;
+  NTL::Vec<long> mv;
   read_ntl_vec_long(str, mv);
 
   long t = read_raw_int(str);
@@ -374,7 +374,7 @@ void readContextBinary(istream& str, FHEcontext& context)
   helib::assertEq(eyeCatcherFound, 0, "Could not find post-context eye catcher");
 }
 
-void writeContextBase(ostream& str, const FHEcontext& context)
+void writeContextBase(std::ostream& str, const FHEcontext& context)
 {
   str << "[" << context.zMStar.getM()
       << " " << context.zMStar.getP()
@@ -394,7 +394,7 @@ void writeContextBase(ostream& str, const FHEcontext& context)
   str << "]]";
 }
 
-ostream& operator<< (ostream &str, const FHEcontext& context)
+std::ostream& operator<< (std::ostream &str, const FHEcontext& context)
 {
   str << "[\n";
 
@@ -432,8 +432,8 @@ ostream& operator<< (ostream &str, const FHEcontext& context)
   return str;
 }
 
-void readContextBase(istream& str, unsigned long& m, unsigned long& p,
-		     unsigned long& r, vector<long>& gens, vector<long>& ords)
+void readContextBase(std::istream& str, unsigned long& m, unsigned long& p,
+		     unsigned long& r, std::vector<long>& gens, std::vector<long>& ords)
 {
   // Advance str beyond first '[' 
   seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
@@ -444,15 +444,15 @@ void readContextBase(istream& str, unsigned long& m, unsigned long& p,
 
   seekPastChar(str, ']');
 }
-std::unique_ptr<FHEcontext> buildContextFromAscii(istream& str)
+std::unique_ptr<FHEcontext> buildContextFromAscii(std::istream& str)
 {
   unsigned long m, p, r;
-  vector<long> gens, ords;
+  std::vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
   return std::unique_ptr<FHEcontext>(new FHEcontext(m,p,r,gens,ords));
 }
 
-istream& operator>> (istream &str, FHEcontext& context)
+std::istream& operator>> (std::istream &str, FHEcontext& context)
 {
   seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
 
@@ -497,7 +497,7 @@ istream& operator>> (istream &str, FHEcontext& context)
     str >> context.digits[i];
 
   // Read in the partition of m into co-prime factors (if bootstrappable)
-  Vec<long> mv;
+  NTL::Vec<long> mv;
   long t;
   int build_cache;
   str >> mv;
@@ -511,7 +511,6 @@ istream& operator>> (istream &str, FHEcontext& context)
   return str;
 }
 
-#include "EncryptedArray.h"
 FHEcontext::~FHEcontext()
 {
   delete ea;
@@ -520,8 +519,10 @@ FHEcontext::~FHEcontext()
 // Constructors must ensure that alMod points to zMStar, and
 // rcEA (if set) points to rcAlmod which points to zMStar
 FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
-   const vector<long>& gens, const vector<long>& ords):
+   const std::vector<long>& gens, const std::vector<long>& ords):
   stdev(3.2), scale(10.0), zMStar(m, p, gens, ords), alMod(zMStar, r)
 {
   ea = new EncryptedArray(*this, alMod);
+}
+
 }

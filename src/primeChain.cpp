@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,17 +21,17 @@
 #include "sample.h"
 #include "binio.h"
 
-NTL_CLIENT
+namespace helib {
 
 inline bool
 operator>(const ModuliSizes::Entry& a, const ModuliSizes::Entry& b)
 { return a.first>b.first; }
 
-ostream& operator<<(ostream& s, const ModuliSizes::Entry& e)
+std::ostream& operator<<(std::ostream& s, const ModuliSizes::Entry& e)
 {
   return s << '['<< e.first << ' ' << e.second << "]\n";
 }
-istream& operator>>(istream& s, ModuliSizes::Entry& e)
+std::istream& operator>>(std::istream& s, ModuliSizes::Entry& e)
 {
   seekPastChar(s,'['); // defined in NumbTh.cpp
   s >> e.first;
@@ -39,13 +39,13 @@ istream& operator>>(istream& s, ModuliSizes::Entry& e)
   seekPastChar(s,']');
   return s;
 }
-void write(ostream& s, const ModuliSizes::Entry& e)
+void write(std::ostream& s, const ModuliSizes::Entry& e)
 {
   write_raw_double(s, e.first);
   e.second.write(s);
 }
 
-void read(istream& s, ModuliSizes::Entry& e)
+void read(std::istream& s, ModuliSizes::Entry& e)
 {
   e.first = read_raw_double(s);
   e.second.read(s);
@@ -61,7 +61,7 @@ void ModuliSizes::init(const std::vector<Cmodulus>& chain,
 
   // Get all subsets of smallPrimes
 
-  sizes.push_back(make_pair(0.0,IndexSet::emptySet())); // the empty set
+  sizes.push_back(std::make_pair(0.0,IndexSet::emptySet())); // the empty set
   long idx = 1;                      // first index that's still not set
 
   for (long i: smallPrimes) {   // add i to all sets upto idx-1
@@ -236,11 +236,11 @@ IndexSet ModuliSizes::getSet4Size(double low, double high,
   return sizes[bestOption].second; // return the best IndexSet
 }
 
-ostream& operator<<(ostream& s, const ModuliSizes& szs)
+std::ostream& operator<<(std::ostream& s, const ModuliSizes& szs)
 {
   return s <<'['<< szs.sizes.size()<<' '<<szs.sizes<<']';
 }
-istream& operator>>(istream& s, ModuliSizes& szs)
+std::istream& operator>>(std::istream& s, ModuliSizes& szs)
 {
   long n;
   seekPastChar(s,'['); // defined in NumbTh.cpp
@@ -252,19 +252,19 @@ istream& operator>>(istream& s, ModuliSizes& szs)
   return s;
 }
 
-void ModuliSizes::write(ostream& str) const
+void ModuliSizes::write(std::ostream& str) const
 {
   write_raw_int(str, lsize(sizes));
   for (long i=0; i<lsize(sizes); i++)
-    ::write(str, sizes[i]);
+    ::helib::write(str, sizes[i]);
 }
 
-void ModuliSizes::read(istream& str)
+void ModuliSizes::read(std::istream& str)
 {
   long n = read_raw_int(str);
   sizes.resize(n); // allocate space
   for (long i=0; i<n; i++)
-    ::read(str, sizes[i]);
+    ::helib::read(str, sizes[i]);
 }
 
 
@@ -340,7 +340,7 @@ struct PrimeGenerator {
       //OLD: assert(cand >= (1L << (len-2))*3 && cand < (1L << len));
       helib::assertInRange(cand, (1L << (len-2))*3, 1L << len, "Candidate cand is not in the prescribed interval");
 
-      if (ProbPrime(cand, 60)) return cand;
+      if (NTL::ProbPrime(cand, 60)) return cand;
       // iteration count == 60 implies 2^{-120} error probability
     }
 
@@ -392,7 +392,7 @@ void addSmallPrimes(FHEcontext& context, long resolution, long cpSize)
   if (resolution<1 || resolution>10) // set to default of 3-bit resolution
     resolution = 3;
 
-  vector<long> sizes;
+  std::vector<long> sizes;
   long smallest; // size of the smallest of the smallPrimes
   // We need at least two of this size, maybe three
 
@@ -484,7 +484,7 @@ void addCtxtPrimes(FHEcontext& context, long nBits, long targetSize)
   while (bitlen < nBits-0.5) {
     long q = gen.next();     // generate the next prime
     context.AddCtxtPrime(q); // add it to the list
-    bitlen += log2(q);
+    bitlen += std::log2(q);
   }
 }
 
@@ -595,4 +595,6 @@ void buildModChain(FHEcontext& context, long nBits, long nDgts,
   addCtxtPrimes(context, nBits, pSize);
   addSpecialPrimes(context, nDgts, willBeBootstrappable, skHwt);
   context.setModSizeTable();
+}
+
 }

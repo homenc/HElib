@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,35 +22,39 @@
 #include "debugging.h"
 #include "fhe_stats.h"
 
-NTL_CLIENT
-
-
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
-long printFlag = FLAG_PRINT_VEC;
-#endif
 
+#include "debugging.h"
+
+namespace helib {
+
+long printFlag = FLAG_PRINT_VEC;
 /************************ Some local functions ***********************/
 /*********************************************************************/
 
 static void
-checkCriticalValue(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
+checkCriticalValue(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
                    const RecryptData& rcData, long q);
 
 static void
-checkRecryptBounds(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
+checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
                    const FHEcontext& context, long q);
 
 static void
-checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
+checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
                      const FHEcontext& context, long q);
+}
+
+#endif // DEBUG_PRINTOUT
+
+namespace helib {
 
 // Return in poly a polynomial with X^i encoded in all the slots
-static void x2iInSlots(ZZX& poly, long i,
-		       vector<ZZX>& xVec, const EncryptedArray& ea)
+static void x2iInSlots(NTL::ZZX& poly, long i,
+		       std::vector<NTL::ZZX>& xVec, const EncryptedArray& ea)
 {
   xVec.resize(ea.size());
-  ZZX x2i = ZZX(i,1);
+  NTL::ZZX x2i = NTL::ZZX(i,1);
   for (long j=0; j<(long)xVec.size(); j++) xVec[j] = x2i;
   ea.encode(poly, xVec);
 }
@@ -59,8 +63,8 @@ static void x2iInSlots(ZZX& poly, long i,
 // keeping the added multiples small.  Specifically, for q = 1 mod p2e and any
 // integer z can be made divisible by p2e via z' = z + v*q, with |v| <= p2e/2.
 
-static void newMakeDivisible(ZZX& poly, long p2e, long q, 
-                          const FHEcontext& context, ZZX& vpoly)
+static void newMakeDivisible(NTL::ZZX& poly, long p2e, long q,
+                          const FHEcontext& context, NTL::ZZX& vpoly)
 {
   if (p2e == 1) {
     vpoly = 0;
@@ -80,22 +84,22 @@ static void newMakeDivisible(ZZX& poly, long p2e, long q,
   const PowerfulDCRT& p2d_conv = *rcData.p2dConv;
 
 
-  Vec<ZZ> pwrfl;
+  NTL::Vec<NTL::ZZ> pwrfl;
   p2d_conv.ZZXtoPowerful(pwrfl, poly);
 
 
 #ifdef DEBUG_PRINTOUT
-  Vec<ZZ> vvec(INIT_SIZE, pwrfl.length());
+  NTL::Vec<NTL::ZZ> vvec(NTL::INIT_SIZE, pwrfl.length());
 #endif
   
   for (long i: range(pwrfl.length())) {
-    ZZ& z = pwrfl[i];
+    NTL::ZZ& z = pwrfl[i];
     long u, v;
 
     // What to add to z to make it divisible by p2e?
     long zMod = rem(z, p2e); // zMod is in [0,p2e-1]
     // NOTE: this makes sure we get a truly balanced remainder
-    if (zMod > p2e/2 || (p==2 && zMod == p2e/2 && RandomBnd(2))) { 
+    if (zMod > p2e/2 || (p==2 && zMod == p2e/2 && NTL::RandomBnd(2))) {
       // randomize so that v has expected value 0
       zMod = p2e - zMod;
     }
@@ -104,12 +108,12 @@ static void newMakeDivisible(ZZX& poly, long p2e, long q,
       zMod = -zMod;
     }
     v = zMod;
-    z += to_ZZ(q)*v; // make z divisible by p2e
+    z += NTL::to_ZZ(q)*v; // make z divisible by p2e
 
     if (rem(z,p2e) != 0) { // sanity check
-      cerr << "**error: original z["<<i<<"]=" << (z-(to_ZZ(q)*v))
-	   << std::dec << ", p^e="<<p2e << endl;
-      cerr << "z' = z + "<<v<<"*q = "<<z<<endl;
+      std::cerr << "**error: original z["<<i<<"]=" << (z-(NTL::to_ZZ(q)*v))
+	   << std::dec << ", p^e="<<p2e << std::endl;
+      std::cerr << "z' = z + "<<v<<"*q = "<<z<<std::endl;
       exit(1);
     }
 
@@ -232,20 +236,21 @@ long RecryptData::setAE(long& e, long& ePrime,
   // Start with the smallest e s.t. p^e/2 >= frstTerm*coeff_bound
   ePrime = 0;
   e = r+1;
-  while (e <= e_bnd && power_long(p, e) < frstTerm*coeff_bound*2) 
+  while (e <= e_bnd && NTL::power_long(p, e) < frstTerm*coeff_bound*2)
     e++;
 
-  if (e > e_bnd) Error("setAE: cannot find suitable e");
+//  if (e > e_bnd) Error("setAE: cannot find suitable e");
+  helib::assertFalse<helib::RuntimeError>(e > e_bnd, "setAE: cannot find suitable e");
 
   //long ePrimeTry = r+1;
   long ePrimeTry = 1;
 
   while (ePrimeTry <= e_bnd) {
-    long p2ePrimeTry = power_long(p, ePrimeTry);
+    long p2ePrimeTry = NTL::power_long(p, ePrimeTry);
     //long eTry = ePrimeTry+1; 
-    long eTry = max(r+1, ePrimeTry+1);
+    long eTry = std::max(r+1, ePrimeTry+1);
     while (eTry <= e_bnd && eTry-ePrimeTry < e-ePrime) {
-      long p2eTry = power_long(p, eTry);
+      long p2eTry = NTL::power_long(p, eTry);
       double fudge = compute_fudge(p2ePrimeTry, p2eTry);
       if (p2eTry >= (p2ePrimeTry*fudge+frstTerm)*coeff_bound*2) break;
 
@@ -261,8 +266,8 @@ long RecryptData::setAE(long& e, long& ePrime,
   } 
 
 #ifdef DEBUG_PRINTOUT
-  cerr << "RecryptData::setAE(): e="<<e<<", e'="<<ePrime
-       << endl;
+  std::cerr << "RecryptData::setAE(): e="<<e<<", e'="<<ePrime
+       << std::endl;
 #endif
   return targetWeight;
 }
@@ -279,11 +284,11 @@ bool RecryptData::operator==(const RecryptData& other) const
 
 
 // The main method
-void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
+void RecryptData::init(const FHEcontext& context, const NTL::Vec<long>& mvec_,
                   bool enableThick, long t, bool build_cache_, bool minimal)
 {
   if (alMod != NULL) { // were we called for a second time?
-    cerr << "@Warning: multiple calls to RecryptData::init\n";
+    std::cerr << "@Warning: multiple calls to RecryptData::init\n";
     return;
   }
   helib::assertEq(computeProd(mvec_), (long)context.zMStar.getM(), "Cyclotomic polynomial mismatch"); // sanity check
@@ -294,7 +299,7 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
   bool mvec_ok = true;
   for (long i: range(mvec.length())) {
-    Vec<Pair<long,long>> factors;
+    NTL::Vec<NTL::Pair<long,long>> factors;
     factorize(factors, mvec[i]);
     if (factors.length() > 1) mvec_ok = false;
   }
@@ -318,24 +323,24 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
   if (!enableThick) return;
 
   // Initialize the linear polynomial for unpacking the slots
-  zz_pBak bak; bak.save(); ea->getAlMod().restoreContext();
+  NTL::zz_pBak bak; bak.save(); ea->getAlMod().restoreContext();
   long nslots = ea->size();
   long d = ea->getDegree();
 
-  const Mat<zz_p>& CBi=ea->getDerived(PA_zz_p()).getNormalBasisMatrixInverse();
+  const NTL::Mat<NTL::zz_p>& CBi=ea->getDerived(PA_zz_p()).getNormalBasisMatrixInverse();
 
-  vector<ZZX> LM;
+  std::vector<NTL::ZZX> LM;
   LM.resize(d);
   for (long i = 0; i < d; i++) // prepare the linear polynomial
     LM[i] = rep(CBi[i][0]);
 
-  vector<ZZX> C; 
+  std::vector<NTL::ZZX> C;
   ea->buildLinPolyCoeffs(C, LM); // "build" the linear polynomial
 
   unpackSlotEncoding.resize(d);  // encode the coefficients
 
   for (long j = 0; j < d; j++) {
-    vector<ZZX> v(nslots);
+    std::vector<NTL::ZZX> v(nslots);
     for (long k = 0; k < nslots; k++) v[k] = C[j];
     ea->encode(unpackSlotEncoding[j], v);
   }
@@ -348,7 +353,7 @@ void RecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
 
 // Extract digits from fully packed slots
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
-			 const vector<ZZX>& unpackSlotEncoding);
+			 const std::vector<NTL::ZZX>& unpackSlotEncoding);
 
 // Extract digits from unpacked slots
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
@@ -363,9 +368,9 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   if (ctxt.isEmpty()) return;
   if (ctxt.parts.size()==1 && ctxt.parts[0].skHandle.isOne()) {
     // Dummy encryption, just ensure that it is reduced mod p
-    ZZX poly = to_ZZX(ctxt.parts[0]);
+    NTL::ZZX poly = to_ZZX(ctxt.parts[0]);
     for (long i=0; i<poly.rep.length(); i++)
-      poly[i] = to_ZZ( rem(poly[i],ptxtSpace) );
+      poly[i] = NTL::to_ZZ( rem(poly[i],ptxtSpace) );
     poly.normalize();
     ctxt.DummyEncrypt(poly);
     return;
@@ -384,14 +389,14 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   const RecryptData& rcData = getContext().rcData;
   long e = rcData.e;
   long ePrime = rcData.ePrime;
-  long p2ePrime = power_long(p,ePrime);
-  long q = power_long(p,e)+1;
+  long p2ePrime = NTL::power_long(p,ePrime);
+  long q = NTL::power_long(p,e)+1;
   //OLD: assert(e>=r);
   helib::assertTrue(e>=r, "rcData.e must be at least alMod.r");
 
 #ifdef DEBUG_PRINTOUT
-  cerr << "reCrypt: p="<<p<<", r="<<r<<", e="<<e<<" ePrime="<<ePrime
-       << ", q="<<q<<endl;
+  std::cerr << "reCrypt: p="<<p<<", r="<<r<<", e="<<e<<" ePrime="<<ePrime
+       << ", q="<<q<<std::endl;
   CheckCtxt(ctxt, "init");
 #endif
 
@@ -430,13 +435,13 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 #endif
 
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
-  vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
+  std::vector<NTL::ZZX> zzParts; // the mod-switched parts, in ZZX format
 
   double mfac = ctxt.getContext().zMStar.getNormBnd();
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise 
   // in the pwrfl basis
-  double noise_bnd = 0.66*p2r*ctxt.getContext().boundForRecryption();
+  double noise_bnd = FHE_MIN_CAP_FRAC*p2r*ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters 
   double noise_rat = noise_est/noise_bnd;
 
@@ -458,7 +463,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
   }
 #endif
 
-  vector<ZZX> v;
+  std::vector<NTL::ZZX> v;
   v.resize(2);
 
 
@@ -528,7 +533,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
   // restore intFactor
   if (intFactor != 1)
-    ctxt.intFactor = MulMod(ctxt.intFactor, intFactor, ptxtSpace);
+    ctxt.intFactor = NTL::MulMod(ctxt.intFactor, intFactor, ptxtSpace);
 }
 
 #ifdef FHE_BOOT_THREADS
@@ -536,7 +541,7 @@ void FHEPubKey::reCrypt(Ctxt &ctxt)
 
 // Extract digits from fully packed slots, multithreaded version
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
-			 const vector<ZZX>& unpackSlotEncoding)
+			 const std::vector<NTL::ZZX>& unpackSlotEncoding)
 {
   FHE_TIMER_START;
 
@@ -547,25 +552,25 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   // Apply the d automorphisms and store them in scratch area
   long d = ctxt.getContext().zMStar.getOrdP();
 
-  vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
+  std::vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
-    vector< shared_ptr<DoubleCRT> > coeff_vector;
-    vector<double> coeff_vector_sz;
+    std::vector< std::shared_ptr<DoubleCRT> > coeff_vector;
+    std::vector<double> coeff_vector_sz;
     coeff_vector.resize(d);
     coeff_vector_sz.resize(d);
 
     FHE_NTIMER_START(unpack1);
     for (long i = 0; i < d; i++) {
-      coeff_vector[i] = shared_ptr<DoubleCRT>(new 
+      coeff_vector[i] = std::shared_ptr<DoubleCRT>(new
         DoubleCRT(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet()) );
       coeff_vector_sz[i] = 
-        conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i], 
+        NTL::conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i],
                                             ctxt.getContext().zMStar) );
     }
     FHE_NTIMER_STOP(unpack1);
 
     FHE_NTIMER_START(unpack2);
-    vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
+    std::vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
 
     NTL_EXEC_RANGE(d, first, last)
     // FIXME: implement using hoisting!
@@ -610,8 +615,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   // Step 3: re-pack the slots
   FHE_NTIMER_START(repack);
   const EncryptedArray& ea2 = *ctxt.getContext().ea;
-  ZZX xInSlots;
-  vector<ZZX> xVec(ea2.size());
+  NTL::ZZX xInSlots;
+  std::vector<NTL::ZZX> xVec(ea2.size());
   ctxt = unpacked[0];
   for (long i=1; i<d; i++) {
     x2iInSlots(xInSlots, i, xVec, ea2);
@@ -629,7 +634,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
 // Extract digits from fully packed slots
 void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
-			 const vector<ZZX>& unpackSlotEncoding)
+			 const std::vector<NTL::ZZX>& unpackSlotEncoding)
 {
   FHE_TIMER_START;
 
@@ -640,17 +645,17 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   // Apply the d automorphisms and store them in scratch area
   long d = ctxt.getContext().zMStar.getOrdP();
 
-  vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
+  std::vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
-    vector< shared_ptr<DoubleCRT> > coeff_vector;
-    vector<double> coeff_vector_sz;
+    std::vector< std::shared_ptr<DoubleCRT> > coeff_vector;
+    std::vector<double> coeff_vector_sz;
     coeff_vector.resize(d);
     coeff_vector_sz.resize(d);
     for (long i = 0; i < d; i++) {
-      coeff_vector[i] = shared_ptr<DoubleCRT>(new 
+      coeff_vector[i] = std::shared_ptr<DoubleCRT>(new
         DoubleCRT(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet()) );
       coeff_vector_sz[i] = 
-        conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i], 
+        NTL::conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i],
                                             ctxt.getContext().zMStar) );
     }
 
@@ -689,8 +694,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   // Step 3: re-pack the slots
   FHE_NTIMER_START(repack);
   const EncryptedArray& ea2 = *ctxt.getContext().ea;
-  ZZX xInSlots;
-  vector<ZZX> xVec(ea2.size());
+  NTL::ZZX xInSlots;
+  std::vector<NTL::ZZX> xVec(ea2.size());
   ctxt = unpacked[0];
   for (long i=1; i<d; i++) {
     x2iInSlots(xInSlots, i, xVec, ea2);
@@ -762,7 +767,7 @@ ThinRecryptData::~ThinRecryptData()
 // This code was copied from RecryptData::init, and is mostly
 // the same, except for the linear-map-related stuff.
 // FIXME: There is really too much code (and data!) duplication here.
-void ThinRecryptData::init(const FHEcontext& context, const Vec<long>& mvec_,
+void ThinRecryptData::init(const FHEcontext& context, const NTL::Vec<long>& mvec_,
                       bool alsoThick, long t, bool build_cache_, bool minimal)
 {
   RecryptData::init(context, mvec_, alsoThick, t, build_cache_, minimal);
@@ -783,10 +788,10 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   Ctxt unpacked(ctxt);
   unpacked.cleanUp();
  
-  vector<Ctxt> scratch;
+  std::vector<Ctxt> scratch;
 
   long p = ctxt.getContext().zMStar.getP();
-  long p2r = power_long(p,r);
+  long p2r = NTL::power_long(p,r);
   long topHigh = botHigh + r-1;
 
 
@@ -798,13 +803,13 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   if (r > 1) {
     double chen_han_cost = log(p-1) + log(r);
     double basic_cost;
-    if (p == 2 && botHigh + r > 2)
+    if (p == 2 && r > 2 && botHigh + r > 2)
        basic_cost = (r-1)*log(p);
     else
        basic_cost = r*log(p);
 
-    //cerr << "*** basic: " << basic_cost << "\n";
-    //cerr << "*** chen/han: " << chen_han_cost << "\n";
+    //std::cerr << "*** basic: " << basic_cost << "\n";
+    //std::cerr << "*** chen/han: " << chen_han_cost << "\n";
 
 
     double thresh = 1.5;
@@ -861,7 +866,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
   }
   else {
 
-    if (p==2 && r>1 && topHigh+1 > 2)
+    if (p==2 && r>2 && topHigh+1 > 2)
       topHigh--; // For p==2 we sometime get a bit for free
 
     extractDigits(scratch, unpacked, topHigh+1);
@@ -869,7 +874,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
     // set upacked = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
     if (topHigh >= LONG(scratch.size())) {
       topHigh = scratch.size() -1;
-      cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
+      std::cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
     }
 
     unpacked = scratch[topHigh];
@@ -938,9 +943,9 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
   if (ctxt.parts.size()==1 && ctxt.parts[0].skHandle.isOne()) {
     // Dummy encryption, just ensure that it is reduced mod p
-    ZZX poly = to_ZZX(ctxt.parts[0]);
+    NTL::ZZX poly = to_ZZX(ctxt.parts[0]);
     for (long i=0; i<poly.rep.length(); i++)
-      poly[i] = to_ZZ( rem(poly[i],ptxtSpace) );
+      poly[i] = NTL::to_ZZ( rem(poly[i],ptxtSpace) );
     poly.normalize();
     ctxt.DummyEncrypt(poly);
     return;
@@ -960,8 +965,8 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
   long e = trcData.e;
   long ePrime = trcData.ePrime;
-  long p2ePrime = power_long(p,ePrime);
-  long q = power_long(p,e)+1;
+  long p2ePrime = NTL::power_long(p,ePrime);
+  long q = NTL::power_long(p,e)+1;
   //OLD: assert(e>=r);
   helib::assertTrue(e>=r, "trcData.e must be at least alMod.r");
 
@@ -981,7 +986,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   // experimental code...we should drop down to a reasonably low level
   // before doing the first linear map.
   long first = context.ctxtPrimes.first();
-  long last = min(context.ctxtPrimes.last(),
+  long last = std::min(context.ctxtPrimes.last(),
                   first + THIN_RECRYPT_NLEVELS - 1);
   ctxt.bringToSet(IndexSet(first, last));
 #endif
@@ -1023,13 +1028,13 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 #endif
 
   // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
-  vector<ZZX> zzParts; // the mod-switched parts, in ZZX format
+  std::vector<NTL::ZZX> zzParts; // the mod-switched parts, in ZZX format
 
   double mfac = ctxt.getContext().zMStar.getNormBnd();
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
   // noise_est is an upper bound on the L-infty norm of the scaled noise 
   // in the pwrfl basis
-  double noise_bnd = 0.66*p2r*ctxt.getContext().boundForRecryption();
+  double noise_bnd = FHE_MIN_CAP_FRAC*p2r*ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters 
   double noise_rat = noise_est/noise_bnd;
 
@@ -1051,7 +1056,7 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
   }
 #endif
 
-  vector<ZZX> v;
+  std::vector<NTL::ZZX> v;
   v.resize(2);
 
 
@@ -1110,71 +1115,71 @@ void FHEPubKey::thinReCrypt(Ctxt &ctxt)
 
   // restore intFactor
   if (intFactor != 1)
-    ctxt.intFactor = MulMod(ctxt.intFactor, intFactor, ptxtSpace);
+    ctxt.intFactor = NTL::MulMod(ctxt.intFactor, intFactor, ptxtSpace);
 }
 
-
+#ifdef DEBUG_PRINTOUT
 
 static void
-checkCriticalValue(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
+checkCriticalValue(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
                    const RecryptData& rcData, long q)
 {
-  ZZX ptxt;
+  NTL::ZZX ptxt;
   rawDecrypt(ptxt, zzParts, sKey); // no mod q
 
-  Vec<ZZ> powerful;
+  NTL::Vec<NTL::ZZ> powerful;
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-  xdouble max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-  double critical_value = conv<double>((max_pwrfl/q)/q);
+  NTL::xdouble max_pwrfl = NTL::conv<NTL::xdouble>(largestCoeff(powerful));
+  double critical_value = NTL::conv<double>((max_pwrfl/q)/q);
 
   vecRed(powerful, powerful, q, false);
-  max_pwrfl = conv<xdouble>(largestCoeff(powerful));
-  critical_value += conv<double>(max_pwrfl/q);
+  max_pwrfl = NTL::conv<NTL::xdouble>(largestCoeff(powerful));
+  critical_value += NTL::conv<double>(max_pwrfl/q);
 
   FHE_STATS_UPDATE("critical-value", critical_value);
 
-  cerr << "=== critical_value=" << critical_value;
-  if (critical_value > 0.5) cerr << " BAD-BOUND";
+  std::cerr << "=== critical_value=" << critical_value;
+  if (critical_value > 0.5) std::cerr << " BAD-BOUND";
 
-  cerr << "\n";
+  std::cerr << "\n";
 }
 
 static void
-checkRecryptBounds(const vector<ZZX>& zzParts, const DoubleCRT& sKey,
+checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
                    const FHEcontext& context, long q)
 {
   const RecryptData& rcData = context.rcData;
   double coeff_bound = context.boundForRecryption();
   long p2r = context.alMod.getPPowR();
 
-  ZZX ptxt;
+  NTL::ZZX ptxt;
   rawDecrypt(ptxt, zzParts, sKey); // no mod q
 
-  Vec<ZZ> powerful;
+  NTL::Vec<NTL::ZZ> powerful;
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-  double max_pwrfl = conv<double>(largestCoeff(powerful));
+  double max_pwrfl = NTL::conv<double>(largestCoeff(powerful));
   double ratio = max_pwrfl/(2*q*coeff_bound);
 
   FHE_STATS_UPDATE("|x|/bound", ratio);
 
-  cerr << "=== |x|/bound=" << ratio;
-  if (ratio > 1.0) cerr << " BAD-BOUND";
+  std::cerr << "=== |x|/bound=" << ratio;
+  if (ratio > 1.0) std::cerr << " BAD-BOUND";
 
   vecRed(powerful, powerful, q, false);
-  max_pwrfl = conv<double>(largestCoeff(powerful));
+  max_pwrfl = NTL::conv<double>(largestCoeff(powerful));
   ratio = max_pwrfl/(2*p2r*coeff_bound);
 
   FHE_STATS_UPDATE("|x%q|/bound", ratio);
 
-  cerr << ", (|x%q|)/bound=" << ratio;
-  if (ratio > 1.0) cerr << " BAD-BOUND";
+  std::cerr << ", (|x%q|)/bound=" << ratio;
+  if (ratio > 1.0) std::cerr << " BAD-BOUND";
 
-  cerr << "\n";
+  std::cerr << "\n";
 }
 
 
 static void
-checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
+checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
                      const FHEcontext& context, long q)
 {
   const RecryptData& rcData = context.rcData;
@@ -1182,9 +1187,9 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
 
   long p = context.zMStar.getP();
   long e = rcData.e;
-  long p2e = power_long(p, e);
+  long p2e = NTL::power_long(p, e);
   long ePrime = rcData.ePrime;
-  long p2ePrime = power_long(p, ePrime);
+  long p2ePrime = NTL::power_long(p, ePrime);
   long phim = context.zMStar.getPhiM();
   long k = context.zMStar.getNFactors();
   long skHwt = rcData.skHwt;
@@ -1195,12 +1200,12 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
 
   double sigma = context.stdDevForRecryption() * fudge;
 
-  ZZX ptxt;
+  NTL::ZZX ptxt;
   rawDecrypt(ptxt, v, sKey); // no mod q
 
-  Vec<ZZ> powerful;
+  NTL::Vec<NTL::ZZ> powerful;
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
-  double max_pwrfl = conv<double>(largestCoeff(powerful));
+  double max_pwrfl = NTL::conv<double>(largestCoeff(powerful));
 
 
   double denom = p2ePrime*coeff_bound;
@@ -1208,16 +1213,16 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
 
   FHE_STATS_UPDATE("|v|/bound", ratio);
 
-  cerr << "=== |v|/bound=" << ratio;
-  if (ratio > 1.0) cerr << " BAD-BOUND";
-  cerr << "\n";
+  std::cerr << "=== |v|/bound=" << ratio;
+  if (ratio > 1.0) std::cerr << " BAD-BOUND";
+  std::cerr << "\n";
 
   ptxt -= v[0];  // so now ptxt is just sKey * v[1]
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
 
   helib::assertEq(powerful.length(), phim, "length should be phim");
 
-  double ran_pwrfl = conv<double>(powerful[RandomBnd(phim)]);
+  double ran_pwrfl = NTL::conv<double>(powerful[NTL::RandomBnd(phim)]);
   // pick a random coefficient in the poweful basis
 
   double std_devs = fabs(ran_pwrfl)/(p2ePrime*sigma);
@@ -1240,29 +1245,32 @@ checkRecryptBounds_v(const vector<ZZX>& v, const DoubleCRT& sKey,
   FHE_STATS_SAVE("v_values", ran_pwrfl/(p2ePrime*sigma));
 }
 
+#endif
 
 #if 0
 void fhe_stats_print(long iter, const FHEcontext& context)
 {
    long phim = context.zMStar.getPhiM();
 
-   cerr << "||||| recryption stats ||||\n";
-   cerr << "**** averages ****\n";
-   cerr << "=== critical_value=" << (fhe_stats_cv_sum/iter) << "\n";
-   cerr << "=== |x|/bound=" << (fhe_stats_x_sum/iter) << "\n";
-   cerr << "=== |x%q|/bound=" << (fhe_stats_xmod_sum/iter) << "\n";
-   cerr << "=== |u|/bound=" << (fhe_stats_u_sum/iter) << "\n";
-   cerr << "=== |v|/bound=" << (fhe_stats_v_sum/iter) << "\n";
-   cerr << "**** maxima ****\n";
-   cerr << "=== critical_value=" << (fhe_stats_cv_max) << "\n";
-   cerr << "=== |x|/bound=" << (fhe_stats_x_max) << "\n";
-   cerr << "=== |x%q|/bound=" << (fhe_stats_xmod_max) << "\n";
-   cerr << "=== |u|/bound=" << (fhe_stats_u_max) << "\n";
-   cerr << "=== |v|/bound=" << (fhe_stats_v_max) << "\n";
-   cerr << "**** theoretical bounds ***\n";
-   cerr << "=== single-max=" << (sqrt(2.0*log(phim))/context.scale) << "\n";
-   cerr << "=== global-max=" << (sqrt(2.0*(log(iter)+log(phim)))/context.scale) << "\n";
+   std::cerr << "||||| recryption stats ||||\n";
+   std::cerr << "**** averages ****\n";
+   std::cerr << "=== critical_value=" << (fhe_stats_cv_sum/iter) << "\n";
+   std::cerr << "=== |x|/bound=" << (fhe_stats_x_sum/iter) << "\n";
+   std::cerr << "=== |x%q|/bound=" << (fhe_stats_xmod_sum/iter) << "\n";
+   std::cerr << "=== |u|/bound=" << (fhe_stats_u_sum/iter) << "\n";
+   std::cerr << "=== |v|/bound=" << (fhe_stats_v_sum/iter) << "\n";
+   std::cerr << "**** maxima ****\n";
+   std::cerr << "=== critical_value=" << (fhe_stats_cv_max) << "\n";
+   std::cerr << "=== |x|/bound=" << (fhe_stats_x_max) << "\n";
+   std::cerr << "=== |x%q|/bound=" << (fhe_stats_xmod_max) << "\n";
+   std::cerr << "=== |u|/bound=" << (fhe_stats_u_max) << "\n";
+   std::cerr << "=== |v|/bound=" << (fhe_stats_v_max) << "\n";
+   std::cerr << "**** theoretical bounds ***\n";
+   std::cerr << "=== single-max=" << (sqrt(2.0*log(phim))/context.scale) << "\n";
+   std::cerr << "=== global-max=" << (sqrt(2.0*(log(iter)+log(phim)))/context.scale) << "\n";
 
 
 }
 #endif
+
+}

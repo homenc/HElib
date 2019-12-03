@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2017 IBM Corp.
+/* Copyright (C) 2012-2019 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -12,8 +12,7 @@
 
 /* Test_ThinEvalMap.cpp - Testing the evalution map for thin bootstrapping
  */
-#include "FHE.h"
-#include "EncryptedArray.h"
+#include <helib.h>
 #include "EvalMap.h"
 #include <NTL/BasicThreadPool.h>
 #include "debugging.h"
@@ -63,8 +62,8 @@ struct Parameters {
             << "s=" << params.s << ","
             << "seed=" << params.seed << ","
             << "mvec=" << params.mvec << ","
-            << "gens=" << params.gens << ","
-            << "ords=" << params.ords << ","
+            << "gens=" << helib::vecToStr(params.gens) << ","
+            << "ords=" << helib::vecToStr(params.ords) << ","
             << "nthreads=" << params.nthreads << ","
             << "useCache=" << params.useCache
             << "}";
@@ -105,7 +104,7 @@ class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
         static NTL::Vec<long> calculateMvec(const NTL::Vec<long>& userMvec)
         {
             NTL::Vec<long> mvec;
-            if(lsize(userMvec) >= 1)
+            if(helib::lsize(userMvec) >= 1)
                 mvec = userMvec;
             else
                 mvec = getDefaultMvec();
@@ -113,9 +112,9 @@ class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
             return mvec;
         };
 
-        static FHEcontext& prepareContext(FHEcontext& context, const long L, const long c)
+        static helib::FHEcontext& prepareContext(helib::FHEcontext& context, const long L, const long c)
         {
-            buildModChain(context, L, c);
+            helib::buildModChain(context, L, c);
             if(!helib_test::noPrint) {
                 context.zMStar.printout(); // print structure of Zm* /(p) to std::cout
                 std::cout << std::endl;
@@ -123,11 +122,11 @@ class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
             return context;
         };
 
-        static FHESecKey& prepareSecretKey(FHESecKey& secretKey, const long w)
+          static helib::FHESecKey& prepareSecretKey(helib::FHESecKey& secretKey, const long w)
         {
             secretKey.GenSecKey(w); // A Hamming-weight-w secret key
-            addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-            addFrbMatrices(secretKey); // compute key-switching matrices that we need
+            helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
+            helib::addFrbMatrices(secretKey); // compute key-switching matrices that we need
             return secretKey;
         }
 
@@ -141,18 +140,18 @@ class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
             s(GetParam().s),
             seed((NTL::SetSeed(NTL::conv<NTL::ZZ>(GetParam().seed)), GetParam().seed)),
             mvec(calculateMvec(GetParam().mvec)),
-            gens(lsize(GetParam().mvec) >= 1 ? GetParam().gens : getDefaultGens()),
-            ords(lsize(GetParam().mvec) >= 1 ? GetParam().ords : getDefaultOrds()),
-            m(computeProd(mvec)),
+            gens(helib::lsize(GetParam().mvec) >= 1 ? GetParam().gens : getDefaultGens()),
+            ords(helib::lsize(GetParam().mvec) >= 1 ? GetParam().ords : getDefaultOrds()),
+            m(helib::computeProd(mvec)),
             nthreads((NTL::SetNumThreads(GetParam().nthreads), GetParam().nthreads)),
             useCache(GetParam().useCache),
-            context((setTimersOn(),
-                        setDryRun(false), // Need to get a "real context" to test ThinEvalMap
+            context((helib::setTimersOn(),
+                        helib::setDryRun(false), // Need to get a "real context" to test ThinEvalMap
                         m), p, r, gens, ords),
             d(prepareContext(context, L, c).zMStar.getOrdP()),
             phim(context.zMStar.getPhiM()),
             nslots(phim/d),
-            secretKey((setDryRun(helib_test::dry), // Now we can set the dry-run flag if desired
+            secretKey((helib::setDryRun(helib_test::dry), // Now we can set the dry-run flag if desired
                         context)),
             publicKey(prepareSecretKey(secretKey, w))
             { };
@@ -171,21 +170,21 @@ class GTest_ThinEvalMap : public ::testing::TestWithParam<Parameters> {
         const long m;
         const long nthreads;
         const long useCache;
-        FHEcontext context;
+        helib::FHEcontext context;
         const long d;
         const long phim;
         const long nslots;
-        FHESecKey secretKey;
-        const FHEPubKey& publicKey;
+        helib::FHESecKey secretKey;
+        const helib::FHEPubKey& publicKey;
 
         virtual void TearDown() override
         {
             if (!helib_test::noPrint) {
                 std::cout << "\n*********\n";
-                printAllTimers();
+                helib::printAllTimers();
                 std::cout << std::endl;
             }
-            cleanupGlobals();
+            helib::cleanupGlobals();
         }
 
 };
@@ -195,7 +194,7 @@ TEST_P(GTest_ThinEvalMap, thin_eval_map_is_correct)
     // GG defines the plaintext space Z_p[X]/GG(X)
     NTL::ZZX GG;
     GG = context.alMod.getFactorsOverZZ()[0];
-    EncryptedArray ea(context, GG);
+    helib::EncryptedArray ea(context, GG);
 
     NTL::zz_p::init(context.alMod.getPPowR());
 
@@ -209,40 +208,40 @@ TEST_P(GTest_ThinEvalMap, thin_eval_map_is_correct)
         val1[i] = NTL::conv<NTL::ZZX>(NTL::conv<NTL::ZZ>(rep(val0[i])));
     }
 
-    Ctxt ctxt(publicKey);
+    helib::Ctxt ctxt(publicKey);
     ea.encrypt(ctxt, publicKey, val1);
 
 
-    resetAllTimers();
+    helib::resetAllTimers();
     FHE_NTIMER_START(ALL);
 
     // Compute homomorphically the transformation that takes the
     // coefficients packed in the slots and produces the polynomial
     // corresponding to cube
 
-    if (!helib_test::noPrint) CheckCtxt(ctxt, "init");
+    if (!helib_test::noPrint) helib::CheckCtxt(ctxt, "init");
 
     if (!helib_test::noPrint) std::cout << "build ThinEvalMap\n";
 
-    ThinEvalMap map(ea, /*minimal=*/false, mvec, 
+    helib::ThinEvalMap map(ea, /*minimal=*/false, mvec, 
             /*invert=*/false, /*build_cache=*/false); 
     // compute the transformation to apply
 
     if (!helib_test::noPrint) std::cout << "apply ThinEvalMap\n";
     if (useCache) map.upgrade();
     map.apply(ctxt); // apply the transformation to ctxt
-    if (!helib_test::noPrint) CheckCtxt(ctxt, "ThinEvalMap");
+    if (!helib_test::noPrint) helib::CheckCtxt(ctxt, "ThinEvalMap");
     if (!helib_test::noPrint) std::cout << "check results\n";
 
     if (!helib_test::noPrint) std::cout << "build ThinEvalMap\n";
-    ThinEvalMap imap(ea, /*minimal=*/false, mvec, 
+    helib::ThinEvalMap imap(ea, /*minimal=*/false, mvec, 
             /*invert=*/true, /*build_cache=*/false); 
     // compute the transformation to apply
     if (!helib_test::noPrint) std::cout << "apply ThinEvalMap\n";
     if (useCache) imap.upgrade();
     imap.apply(ctxt); // apply the transformation to ctxt
     if (!helib_test::noPrint) {
-        CheckCtxt(ctxt, "ThinEvalMap");
+        helib::CheckCtxt(ctxt, "ThinEvalMap");
         std::cout << "check results\n";
     }
 
@@ -262,11 +261,11 @@ TEST_P(GTest_ThinEvalMap, thin_eval_map_is_correct)
         dirty_val1[i] = NTL::conv<NTL::ZZX>(dirty_val0[i]);
     }
 
-    Ctxt dirty_ctxt(publicKey);
+    helib::Ctxt dirty_ctxt(publicKey);
     ea.encrypt(dirty_ctxt, publicKey, dirty_val1);
 
 
-    EvalMap dirty_map(ea, /*minimal=*/false, mvec, 
+    helib::EvalMap dirty_map(ea, /*minimal=*/false, mvec, 
             /*invert=*/false, /*build_cache=*/false); 
 
     dirty_map.apply(dirty_ctxt);
@@ -292,9 +291,9 @@ TEST_P(GTest_ThinEvalMap, thin_eval_map_is_correct)
 
 INSTANTIATE_TEST_SUITE_P(various_parameters, GTest_ThinEvalMap, ::testing::Values(
             //SLOW
-            Parameters(2, 1, 2, 80, 300, 0, 0, convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{7, 3, 221}), std::vector<long>{3979, 3095, 3760}, std::vector<long>{6, 2, -8}, 1, 0)
+            Parameters(2, 1, 2, 80, 300, 0, 0, helib::convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{7, 3, 221}), std::vector<long>{3979, 3095, 3760}, std::vector<long>{6, 2, -8}, 1, 0)
             //FAST
-            //Parameters(2, 1, 2, 80, 300, 0, 0, convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{3, 35}), std::vector<long>{71, 76}, std::vector<long>{2, 2}, 1, 0)
+            //Parameters(2, 1, 2, 80, 300, 0, 0, helib::convert<NTL::Vec<long>, std::vector<long>>(std::vector<long>{3, 35}), std::vector<long>{71, 76}, std::vector<long>{2, 2}, 1, 0)
             ));
 
 } // namespace

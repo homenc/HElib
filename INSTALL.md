@@ -9,6 +9,7 @@ CentOS 7.6, and macOS High Sierra 10.13.
 - GNU make
 - g++ >= 5.4.0 or clang >= 3.8
 - pthreads
+- git (if you want to build the tests)
 
 ## Option 1: package build (recommended for most users)
 
@@ -137,8 +138,8 @@ or some other system-wide path, step 5 needs to be run as root.
 Many distributions come with GMP pre-installed.
 If not, you can install GMP as follows.
 
-1. Download GMP from http://www.gmplib.org -- make sure that you get GMP
-   >=6.0.0 (current version is 6.1.2).
+1. Download GMP from http://www.gmplib.org -- make sure that you get GMP >=6.0.0
+   (current version is 6.1.2).
 2. Decompress and cd into the gmp directory (e.g., `gmp-6.1.2`).
 3. GMP is compiled in the standard unix way:
 ```
@@ -157,9 +158,9 @@ step 3.
 
 You can install NTL as follows:
 
-1. Download NTL >=11.0.0 (current version is 11.3.0) from
+1. Download NTL >=11.0.0 (current version is 11.4.1) from
    http://www.shoup.net/ntl/download.html
-2. Decompress and cd into the directory, e.g., `ntl-11.3.0/src`
+2. Decompress and cd into the directory, e.g., `ntl-11.4.1/src`
 3. NTL is configured, built and installed in the standard Unix way (but
 remember to specify the following flags to `configure`):
 ```
@@ -178,8 +179,8 @@ to the `./configure` step.
 ## HElib build options
 
 ### Generic options
-- `BUILD_SHARED=ON/OFF` (default is ON): Build as shared library.
-  Note that buildinh HElib (regardless of BUILD_SHARED) will fail if NTL
+- `BUILD_SHARED=ON/OFF` (default is OFF): Build as shared library.
+  Note that building HElib (regardless of BUILD_SHARED) will fail if NTL
   is not built as a shared library. The default for NTL is static library,
   to build NTL as a shared library use `./configure SHARED=on` in step 1. 
 - `CMAKE_BUILD_TYPE`: Choose the type of build, options are: Debug,
@@ -228,4 +229,4 @@ find_package(helib)
 ## Example
 
 A full working example of a cmake-based project which uses HElib can be found 
-in the `example_program` directory.
+in the `examples/example_program` directory.
