@@ -22,13 +22,13 @@
 #include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 #include <cassert>
-#include "EncryptedArray.h"
-#include "EvalMap.h"
-#include "powerful.h"
-#include "matmul.h"
-#include "debugging.h"
-#include "fhe_stats.h"
-#include "ArgMap.h"
+#include <helib/EncryptedArray.h>
+#include <helib/EvalMap.h>
+#include <helib/powerful.h>
+#include <helib/matmul.h>
+#include <helib/debugging.h>
+#include <helib/fhe_stats.h>
+#include <helib/ArgMap.h>
 
 using namespace helib;
 
@@ -83,7 +83,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   setDryRun(false); // Need to get a "real context" to test bootstrapping
 
   double t = -GetTime();
-  FHEcontext context(m, p, r, gens, ords);
+  Context context(m, p, r, gens, ords);
   if (scale) {
     context.scale = scale;
   }
@@ -125,8 +125,8 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
   t = -GetTime();
   if (!noPrint) cout << "Generating keys, " << std::flush;
-  FHESecKey secretKey(context);
-  FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  PubKey& publicKey = secretKey;
   secretKey.GenSecKey(skHwt);      // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);

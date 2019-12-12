@@ -11,15 +11,15 @@
  */
 #include <NTL/ZZ.h>
 #include <cassert>
-#include "norms.h"
-#include "EncryptedArray.h"
-#include "ArgMap.h"
+#include <helib/norms.h>
+#include <helib/EncryptedArray.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 bool noPrint = true;
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     cout << "]\n";
   }
 
-  FHEcontext context(m, /*p=*/-1, r);
+  Context context(m, /*p=*/-1, r);
   buildModChain(context, 5, 2);
 
   const EncryptedArrayCx& ea = context.ea->getCx();

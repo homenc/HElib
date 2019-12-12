@@ -12,11 +12,11 @@
 
 #include <iostream>
 #include <NTL/BasicThreadPool.h>
-#include "intraSlot.h"
-#include "tableLookup.h"
+#include <helib/intraSlot.h>
+#include <helib/tableLookup.h>
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 #include "gtest/gtest.h"
@@ -70,13 +70,13 @@ class GTestTableLookup : public ::testing::TestWithParam<Parameters> {
 
         // Utility encryption/decryption methods
         static void encryptIndex(std::vector<helib::Ctxt>& ei, long index,
-                const helib::FHESecKey& sKey)
+                const helib::SecKey& sKey)
         {
             for (long i=0; i<helib::lsize(ei); i++)
                 sKey.Encrypt(ei[i], NTL::to_ZZX((index>>i) &1)); // i'th bit of index
         }
 
-        static long decryptIndex(std::vector<helib::Ctxt>& ei, const helib::FHESecKey& sKey)
+        static long decryptIndex(std::vector<helib::Ctxt>& ei, const helib::SecKey& sKey)
         {
             long num=0;
             for (long i=0; i<helib::lsize(ei); i++) {
@@ -152,7 +152,7 @@ class GTestTableLookup : public ::testing::TestWithParam<Parameters> {
             }
         };
 
-        static void printPostContextPrepDiagnostics(const helib::FHEcontext& context, const long L)
+        static void printPostContextPrepDiagnostics(const helib::Context& context, const long L)
         {
             if (helib_test::verbose) {
                 std::cout << " done.\n";
@@ -162,7 +162,7 @@ class GTestTableLookup : public ::testing::TestWithParam<Parameters> {
         }
 
         // Not static as many instance variables are required.
-        helib::FHEcontext& prepareContext(helib::FHEcontext& context)
+        helib::Context& prepareContext(helib::Context& context)
         {
             printPreContextPrepDiagnostics(bitSize, outSize, nTests, nthreads);
             helib::buildModChain(context, L, c,/*willBeBootstrappable*/bootstrap);
@@ -174,7 +174,7 @@ class GTestTableLookup : public ::testing::TestWithParam<Parameters> {
             return context;
         };
 
-        static void prepareSecKey(helib::FHESecKey& secretKey, const bool bootstrap)
+        static void prepareSecKey(helib::SecKey& secretKey, const bool bootstrap)
         {
             if(helib_test::verbose) std::cout << "\ncomputing key-dependent tables..." << std::flush;
             secretKey.GenSecKey();
@@ -233,8 +233,8 @@ class GTestTableLookup : public ::testing::TestWithParam<Parameters> {
         const std::vector<long> ords;
         const long c;
         const long L;
-        helib::FHEcontext context;
-        helib::FHESecKey secretKey;
+        helib::Context context;
+        helib::SecKey secretKey;
 
         void SetUp() override
         {

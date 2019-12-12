@@ -48,7 +48,7 @@ See below for more details.
 
 
 
-#include "PGFFT.h"
+#include <helib/PGFFT.h>
 #include <cassert>
 #include <cstdlib>
 #include <limits>

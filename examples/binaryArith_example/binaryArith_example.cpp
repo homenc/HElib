@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
 
   std::cout << "Initialising context object..." << std::endl;
   // Intialise the context.
-  helib::FHEcontext context(m, p, r, gens, ords);
+  helib::Context context(m, p, r, gens, ords);
 
   // Modify the context, adding primes to the modulus chain.
   std::cout << "Building modulus chain..." << std::endl;
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
   // Secret key management.
   std::cout << "Creating secret key..." << std::endl;
   // Create a secret key associated with the context.
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   // Generate the secret key.
   secret_key.GenSecKey();
 
@@ -74,8 +74,8 @@ int main(int argc, char* argv[])
   secret_key.genRecryptData();
 
   // Public key management.
-  // Set the secret key (upcast: FHESecKey is a subclass of FHEPubKey).
-  const helib::FHEPubKey& public_key = secret_key;
+  // Set the secret key (upcast: SecKey is a subclass of PubKey).
+  const helib::PubKey& public_key = secret_key;
 
   // Get the EncryptedArray of the context.
   const helib::EncryptedArray& ea = *(context.ea);

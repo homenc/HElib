@@ -16,10 +16,10 @@ namespace NTL {} using namespace NTL;
 
 #include <cassert>
 
-#include "EvalMap.h"
-#include "hypercube.h"
-#include "powerful.h"
-#include "ArgMap.h"
+#include <helib/EvalMap.h>
+#include <helib/hypercube.h>
+#include <helib/powerful.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -66,7 +66,7 @@ void  TestIt(long p, long r, long c, long _k,
   vector<long> gens1, ords1;
   convert(gens1, gens);
   convert(ords1, ords);
-  FHEcontext context(m, p, r, gens1, ords1);
+  Context context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
   if (!noPrint) {
@@ -79,8 +79,8 @@ void  TestIt(long p, long r, long c, long _k,
 
   setDryRun(dry); // Now we can set the dry-run flag if desired
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A Hamming-weight-w secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need

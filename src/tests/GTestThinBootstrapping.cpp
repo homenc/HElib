@@ -11,9 +11,9 @@
  */
 
 #include <NTL/BasicThreadPool.h>
-#include <helib.h>
-#include "matmul.h"
-#include "debugging.h"
+#include <helib/helib.h>
+#include <helib/matmul.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -252,7 +252,7 @@ class GTestThinBootstrapping : public ::testing::TestWithParam<Parameters> {
             }
         }
 
-        static helib::FHESecKey setUpSecretKey(helib::FHESecKey& secKey)
+        static helib::SecKey setUpSecretKey(helib::SecKey& secKey)
         {
             double t = -NTL::GetTime();
             if (!helib_test::noPrint) std::cout << "Generating keys, " << std::flush;
@@ -325,13 +325,13 @@ class GTestThinBootstrapping : public ::testing::TestWithParam<Parameters> {
         const std::vector<long> gens;
         const std::vector<long> ords;
         double t;
-        helib::FHEcontext context;
+        helib::Context context;
         const long nPrimes;
         const helib::IndexSet allPrimes;
         const long bitSize;
         const long p2r;
-        helib::FHESecKey secretKey;
-        helib::FHEPubKey publicKey;
+        helib::SecKey secretKey;
+        helib::PubKey publicKey;
         const long d;
         const long nslots;
 

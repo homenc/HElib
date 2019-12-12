@@ -16,11 +16,11 @@
 #endif
 
 #include <NTL/BasicThreadPool.h>
-#include "FHE.h"
-#include "EncryptedArray.h"
-#include "matmul.h"
-#include "debugging.h"
-#include "fhe_stats.h"
+#include <helib/FHE.h>
+#include <helib/EncryptedArray.h>
+#include <helib/matmul.h>
+#include <helib/debugging.h>
+#include <helib/fhe_stats.h>
 
 
 #include "gtest/gtest.h"
@@ -184,7 +184,7 @@ namespace {
 
         const long m, phim;
         double time;
-        helib::FHEcontext context;
+        helib::Context context;
 
         GTestFatboot() :
                 old_fhe_test_force_bsgs(helib::fhe_test_force_bsgs),
@@ -267,8 +267,8 @@ namespace {
             time = -NTL::GetTime();
             if (!helib_test::noPrint)
                 std::cout << "Generating keys, " << std::flush;
-            helib::FHESecKey secretKey(context);
-            helib::FHEPubKey& publicKey = secretKey;
+            helib::SecKey secretKey(context);
+            helib::PubKey& publicKey = secretKey;
             secretKey.GenSecKey(skHwt);      // A +-1/0 secret key
             helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
             helib::addFrbMatrices(secretKey);

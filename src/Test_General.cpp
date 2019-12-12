@@ -14,13 +14,13 @@
  */
 #include <NTL/ZZ.h>
 #include <NTL/BasicThreadPool.h>
-#include "helib.h"
+#include <helib/helib.h>
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cassert>
 #include <cstdio>
-#include "ArgMap.h"
-#include "fhe_stats.h"
+#include <helib/ArgMap.h>
+#include <helib/fhe_stats.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -28,7 +28,7 @@ using namespace helib;
 //#define DEBUG_PRINTOUT
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #define debugCompare(ea,sk,p,c) {\
   PlaintextArray pp(ea);\
   ea.decrypt(c, sk, pp);\
@@ -81,7 +81,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   convert(gens1, gens);
   convert(ords1, ords);
 
-  FHEcontext context(m, p, r, gens1, ords1);
+  Context context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
   ZZX G;
@@ -107,8 +107,8 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     fhe_stats=true;
   }
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 

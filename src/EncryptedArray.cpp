@@ -12,15 +12,15 @@
 /* EncryptedArray.cpp - Data-movement operations on arrays of slots
  */
 #include <algorithm>
-#include "zzX.h"
-#include "EncryptedArray.h"
-#include "timing.h"
-#include "clonedPtr.h"
-#include "norms.h"
+#include <helib/zzX.h>
+#include <helib/EncryptedArray.h>
+#include <helib/timing.h>
+#include <helib/clonedPtr.h>
+#include <helib/norms.h>
 
 namespace helib {
 
-EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
+EncryptedArrayBase* buildEncryptedArray(const Context& context,
                                         const PAlgebraMod& alMod, const NTL::ZZX& G)
 {
   if (alMod.getTag()==PA_cx_tag)
@@ -44,7 +44,7 @@ EncryptedArrayBase* buildEncryptedArray(const FHEcontext& context,
 
 template<class type>
 EncryptedArrayDerived<type>::EncryptedArrayDerived(
-   const FHEcontext& _context, const RX& _G, const PAlgebraMod& alMod)
+   const Context& _context, const RX& _G, const PAlgebraMod& alMod)
   : context(_context), tab(alMod.getDerived(type()))
 {
   tab.mapToSlots(mappingData, _G); // Compute the base-G representation maps

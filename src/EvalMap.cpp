@@ -9,7 +9,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include "EvalMap.h"
+#include <helib/EvalMap.h>
 
 // needed to get NTL's TraceMap functions...needed for ThinEvalMap
 #include <NTL/lzz_pXFactoring.h>
@@ -42,7 +42,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
 
   : ea(_ea), invert(_invert)
 {
-  const FHEcontext& context = ea.getContext();
+  const Context& context = ea.getContext();
   const PAlgebra& zMStar = ea.getPAlgebra();
   
   long p = zMStar.getP();
@@ -458,7 +458,7 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
 
   : ea(_ea), invert(_invert)
 {
-  const FHEcontext& context = ea.getContext();
+  const Context& context = ea.getContext();
   const PAlgebra& zMStar = ea.getPAlgebra();
   
   long p = zMStar.getP();

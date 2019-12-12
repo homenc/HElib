@@ -14,8 +14,8 @@
  * @brief Useful fucntions for equality testing...
  */
 #include <NTL/lzz_pXFactoring.h>
-#include "timing.h"
-#include "EncryptedArray.h"
+#include <helib/timing.h>
+#include <helib/EncryptedArray.h>
 
 #include <cstdio>
 

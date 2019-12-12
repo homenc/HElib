@@ -14,20 +14,20 @@
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "polyEval.h"
-#include "EncryptedArray.h"
-#include "ArgMap.h"
-#include "debugging.h"
+#include <helib/polyEval.h>
+#include <helib/EncryptedArray.h>
+#include <helib/ArgMap.h>
+#include <helib/debugging.h>
 
 using namespace helib;
 
 static bool noPrint = true;
 
 bool testEncrypted(long d, const EncryptedArray& ea,
-		   const FHESecKey& secretKey)
+		   const SecKey& secretKey)
 {
-  const FHEcontext& context = ea.getContext();
-  const FHEPubKey& publicKey = secretKey;
+  const Context& context = ea.getContext();
+  const PubKey& publicKey = secretKey;
   long p = publicKey.getPtxtSpace();
   zz_pBak bak; bak.save(); zz_p::init(p);
   zz_pXModulus phimX = conv<zz_pX>(ea.getPAlgebra().getPhimX());
@@ -66,13 +66,13 @@ bool testEncrypted(long d, const EncryptedArray& ea,
 void testIt(long d, long k, long p, long r, long m, long L,
 	    bool isMonic=false)
 {
-  FHEcontext context(m, p, r);
+  Context context(m, p, r);
   long p2r = context.alMod.getPPowR();
   buildModChain(context, L, /*c=*/3);
   EncryptedArray ea(context);
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey();// A +-1/0 secret key
   //  addSome1DMatrices(secretKey); // compute key-switching matrices
 

@@ -12,9 +12,9 @@
 #include <cassert>
 #include <iostream>
 #include <NTL/tools.h>
-#include "NumbTh.h"
-#include "PtrVector.h"
-#include "PtrMatrix.h"
+#include <helib/NumbTh.h>
+#include <helib/PtrVector.h>
+#include <helib/PtrMatrix.h>
 
 using namespace helib;
 

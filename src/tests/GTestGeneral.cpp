@@ -12,7 +12,7 @@
 
 #include <NTL/ZZ.h>
 #include <NTL/BasicThreadPool.h>
-#include <helib.h>
+#include <helib/helib.h>
 #include <NTL/lzz_pXFactoring.h>
 
 #include <cstdio>
@@ -20,7 +20,7 @@
 #include "gtest/gtest.h"
 #include "test_common.h"
 
-#include "debugging.h"
+#include <helib/debugging.h>
 
 /**************
 
@@ -39,7 +39,7 @@
 
 namespace {
 
-::testing::AssertionResult ciphertextMatches(const helib::EncryptedArray &ea, const helib::FHESecKey &sk, const helib::PlaintextArray &p, const helib::Ctxt &c)
+::testing::AssertionResult ciphertextMatches(const helib::EncryptedArray &ea, const helib::SecKey &sk, const helib::PlaintextArray &p, const helib::Ctxt &c)
 {
     helib::PlaintextArray pp(ea);
     ea.decrypt(c, sk, pp);
@@ -125,11 +125,11 @@ class GTestGeneral : public ::testing::TestWithParam<Parameters> {
         std::vector<long> gens;
         std::vector<long> ords;
 
-        helib::FHEcontext context;
+        helib::Context context;
 
-        helib::FHESecKey secretKey;
+        helib::SecKey secretKey;
 
-        const helib::FHEPubKey &publicKey;
+        const helib::PubKey &publicKey;
 
         GTestGeneral () :
             R(GetParam().R),

@@ -13,7 +13,7 @@
  * EXPERIMENTAL CODE, not usable yet
  */
 
-#include "powerful.h"
+#include <helib/powerful.h>
 
 namespace helib {
 
@@ -241,7 +241,7 @@ long PowerfulConversion::powerfulToPoly(NTL::zz_pX& poly,
   return NTL::zz_p::modulus();
 }
 
-PowerfulDCRT::PowerfulDCRT(const FHEcontext& _context, const NTL::Vec<long>& mvec):
+PowerfulDCRT::PowerfulDCRT(const Context& _context, const NTL::Vec<long>& mvec):
   context(_context), indexes(mvec)
 {
   NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
@@ -653,8 +653,8 @@ void recursiveEval(const CubeSlice<NTL::zz_p>& s,
 /********************************************************************/
 #if 0
 // Implementation of FFTHelper
-#include "bluestein.h"
-#include "clonedPtr.h"
+#include <helib/bluestein.h>
+#include <helib/clonedPtr.h>
 
 FFTHelper::FFTHelper(long _m, NTL::zz_p x)
 {

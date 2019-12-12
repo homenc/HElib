@@ -16,12 +16,12 @@
  * Copyright IBM Corporation 2012 All rights reserved.
  */
 #include <unordered_set>
-#include "NTL/ZZ.h"
-#include "permutations.h"
+#include <NTL/ZZ.h>
+#include <helib/permutations.h>
 
-#include "binio.h"
-#include "keySwitching.h"
-#include "keys.h"
+#include <helib/binio.h>
+#include <helib/keySwitching.h>
+#include <helib/keys.h>
 
 namespace helib {
 
@@ -55,7 +55,7 @@ unsigned long KeySwitch::NumCols() const { return b.size(); }
 
 bool KeySwitch::isDummy() const { return (toKeyID==-1); }
 
-void KeySwitch::verify(FHESecKey& sk)
+void KeySwitch::verify(SecKey& sk)
 {
   long fromSPower = fromKey.getPowerOfS();
   long fromXPower = fromKey.getPowerOfX();
@@ -79,7 +79,7 @@ void KeySwitch::verify(FHESecKey& sk)
     return;
   }
 
-  const FHEcontext& context = b[0].getContext();
+  const Context& context = b[0].getContext();
 
   // we don't store the context in the ks matrix, so let's
   // check that they are consistent
@@ -174,7 +174,7 @@ std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix)
 }
 
 // Used in lieu of std::istream& operator>>(std::istream& str, KeySwitch& matrix)
-void KeySwitch::readMatrix(std::istream& str, const FHEcontext& context)
+void KeySwitch::readMatrix(std::istream& str, const Context& context)
 {
   seekPastChar(str,'['); // defined in NumbTh.cpp
   str >> fromKey;
@@ -217,7 +217,7 @@ void KeySwitch::write(std::ostream& str) const
   writeEyeCatcher(str, BINIO_EYE_SKM_END);
 }
 
-void KeySwitch::read(std::istream& str, const FHEcontext& context)
+void KeySwitch::read(std::istream& str, const Context& context)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
   //OLD: assert(eyeCatcherFound == 0);
@@ -248,9 +248,9 @@ long KSGiantStepSize(long D)
 }
 
 // A maximalistic approach: generate matrices s(X^e)->s(X) for all e \in Zm*
-void addAllMatrices(FHESecKey& sKey, long keyID)
+void addAllMatrices(SecKey& sKey, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
+  const Context &context = sKey.getContext();
   long m = context.zMStar.getM();
 
   // key-switching matrices for the automorphisms
@@ -262,7 +262,7 @@ void addAllMatrices(FHESecKey& sKey, long keyID)
 }
 
 // generate matrices s.t. you can reLinearize each s(X^e) in at most two steps
-void addFewMatrices(FHESecKey& sKey, long keyID)
+void addFewMatrices(SecKey& sKey, long keyID)
 {
   throw helib::LogicError("addFewMatrices not implemented yet");
 }
@@ -290,9 +290,9 @@ void addFewMatrices(FHESecKey& sKey, long keyID)
 
 
 #if 0
-static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
+static void add1Dmats4dim(SecKey& sKey, long i, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
+  const Context &context = sKey.getContext();
   long m = context.zMStar.getM();
   computeParams(context,m,i); // defines vars: native, ord, gi, g2md, giminv, g2mdminv
 
@@ -323,7 +323,7 @@ static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 // adds all matrices for dim i.
 // i == -1 => Frobenius (NOTE: in matmul1D, i ==#gens means something else,
 //   so it is best to avoid that).
-static void add1Dmats4dim(FHESecKey& sKey, long i, long keyID)
+static void add1Dmats4dim(SecKey& sKey, long i, long keyID)
 {
   const PAlgebra& zMStar = sKey.getContext().zMStar;
   long ord;
@@ -374,9 +374,9 @@ static std::pair<long,long> computeSteps(long ord, long bound, bool native)
   return std::pair<long,long>(baby,giant);
 }
 
-static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
+static void addSome1Dmats4dim(SecKey& sKey, long i, long bound, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
+  const Context &context = sKey.getContext();
   long m = context.zMStar.getM();
   computeParams(context,m,i); // defines vars: native, ord, gi, g2md, giminv, g2mdminv
 
@@ -473,7 +473,7 @@ MAUTO
 
 #else
 // same as above, but uses BS/GS strategy
-static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
+static void addSome1Dmats4dim(SecKey& sKey, long i, long bound, long keyID)
 {
   const PAlgebra& zMStar = sKey.getContext().zMStar;
   long ord;
@@ -518,9 +518,9 @@ static void addSome1Dmats4dim(FHESecKey& sKey, long i, long bound, long keyID)
 // generate only matrices of the form s(X^{g^i})->s(X), but not all of them.
 // For a generator g whose order is larger than bound, generate only enough
 // matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
-void addSome1DMatrices(FHESecKey& sKey, long bound, long keyID)
+void addSome1DMatrices(SecKey& sKey, long bound, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
+  const Context &context = sKey.getContext();
 
   // key-switching matrices for the automorphisms
   for (long i: range(context.zMStar.numOfGens())) {
@@ -533,16 +533,16 @@ void addSome1DMatrices(FHESecKey& sKey, long bound, long keyID)
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
-void add1DMatrices(FHESecKey& sKey, long keyID)
+void add1DMatrices(SecKey& sKey, long keyID)
 { addSome1DMatrices(sKey, LONG_MAX, keyID); }
 
-void addBSGS1DMatrices(FHESecKey& sKey, long keyID)
+void addBSGS1DMatrices(SecKey& sKey, long keyID)
 { addSome1DMatrices(sKey, 0, keyID); }
 
 // Generate all Frobenius matrices of the form s(X^{p^i})->s(X)
-void addSomeFrbMatrices(FHESecKey& sKey, long bound, long keyID)
+void addSomeFrbMatrices(SecKey& sKey, long bound, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
+  const Context &context = sKey.getContext();
   if (bound >= LONG(context.zMStar.getOrdP()))
     add1Dmats4dim(sKey, -1, keyID);
   else  // For generators of large order, add only some of the powers
@@ -551,13 +551,13 @@ void addSomeFrbMatrices(FHESecKey& sKey, long bound, long keyID)
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
-void addFrbMatrices(FHESecKey& sKey, long keyID)
+void addFrbMatrices(SecKey& sKey, long keyID)
 { addSomeFrbMatrices(sKey, LONG_MAX, keyID); }
 
-void addBSGSFrbMatrices(FHESecKey& sKey, long keyID)
+void addBSGSFrbMatrices(SecKey& sKey, long keyID)
 { addSomeFrbMatrices(sKey, 0, keyID); }
 
-static void addMinimal1Dmats4dim(FHESecKey& sKey, long i, long keyID)
+static void addMinimal1Dmats4dim(SecKey& sKey, long i, long keyID)
 {
   const PAlgebra& zMStar = sKey.getContext().zMStar;
   long ord;
@@ -587,9 +587,9 @@ static void addMinimal1Dmats4dim(FHESecKey& sKey, long i, long keyID)
 
 }
 
-void addMinimal1DMatrices(FHESecKey& sKey, long keyID)
+void addMinimal1DMatrices(SecKey& sKey, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
+  const Context &context = sKey.getContext();
 
   // key-switching matrices for the automorphisms
   for (long i: range(context.zMStar.numOfGens())) {
@@ -599,16 +599,16 @@ void addMinimal1DMatrices(FHESecKey& sKey, long keyID)
 }
 
 // Generate all Frobenius matrices of the form s(X^{p^i})->s(X)
-void addMinimalFrbMatrices(FHESecKey& sKey, long keyID)
+void addMinimalFrbMatrices(SecKey& sKey, long keyID)
 {
   addMinimal1Dmats4dim(sKey, -1, keyID);
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
 // Generate all key-switching matrices for a given permutation network
-void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID)
+void addMatrices4Network(SecKey& sKey, const PermNetwork& net, long keyID)
 {
-  const FHEcontext &context = sKey.getContext();
+  const Context &context = sKey.getContext();
   long m = context.zMStar.getM();
 
   for (long i=0; i<net.depth(); i++) {
@@ -626,7 +626,7 @@ void addMatrices4Network(FHESecKey& sKey, const PermNetwork& net, long keyID)
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
-void addTheseMatrices(FHESecKey& sKey,
+void addTheseMatrices(SecKey& sKey,
 		      const std::set<long>& automVals, long keyID)
 {
   std::set<long>::iterator it;

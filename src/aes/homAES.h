@@ -34,14 +34,14 @@ public:
 
   //! Constructor. If context is bootstrappable then also
   //! the packing/unpacking constants are computed.
-  explicit HomAES(const FHEcontext& context);
+  explicit HomAES(const Context& context);
 
   //! Method for copmuting packing/unpacking constants after initialization
   void setPackingConstants();
 
   //! run the AES key-expansion and then encrypt the expanded key
   void encryptAESkey(vector<Ctxt>& eKey, Vec<uint8_t>& aesKey,
-		     const FHEPubKey& hePK) const;
+		     const PubKey& hePK) const;
 
   //! Perform AES encryption/decryption on "raw bytes" (ECB mode)
   //! The input bytes are either plaintext or AES-encrypted ciphertext

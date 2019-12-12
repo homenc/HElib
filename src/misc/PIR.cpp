@@ -168,7 +168,7 @@ buildRandomDB(const EncryptedArray& ea)
 }
 
 bool DoTest(const EncryptedArray& ea, 
-            const FHESecKey& secretKey, bool minimal, bool verbose)
+            const SecKey& secretKey, bool minimal, bool verbose)
 {
   // choose a random database that fits in one ciphertext
   std::unique_ptr<vector< vector<uint8_t> > > db(buildRandomDB(ea));
@@ -237,7 +237,7 @@ int ks_strategy = 0;
 // 3 == minimal
 
 
-void  TestIt(FHEcontext& context, bool verbose)
+void  TestIt(Context& context, bool verbose)
 {
   if (verbose) {
     context.zMStar.printout();
@@ -245,8 +245,8 @@ void  TestIt(FHEcontext& context, bool verbose)
               <<", security=" << context.securityLevel()<<endl<< endl;
   }
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
   bool minimal = (ks_strategy == 3);
@@ -348,7 +348,7 @@ int main(int argc, char *argv[])
 
   setTimersOn();
 
-  FHEcontext context(m, 2, 1, gens1, ords1);
+  Context context(m, 2, 1, gens1, ords1);
   buildModChain(context, L, /*c=*/3);
 
   TestIt(context, verbose);

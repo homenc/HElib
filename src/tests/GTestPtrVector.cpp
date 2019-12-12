@@ -12,10 +12,10 @@
 #include <cassert>
 #include <iostream>
 #include <NTL/tools.h>
-#include "NumbTh.h"
-#include "PtrVector.h"
-#include "PtrMatrix.h"
-#include "debugging.h"
+#include <helib/NumbTh.h>
+#include <helib/PtrVector.h>
+#include <helib/PtrMatrix.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"

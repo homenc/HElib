@@ -16,10 +16,10 @@
 #endif
 
 #include <NTL/BasicThreadPool.h>
-#include <helib.h>
-#include "matmul.h"
-#include "debugging.h"
-#include "fhe_stats.h"
+#include <helib/helib.h>
+#include <helib/matmul.h>
+#include <helib/debugging.h>
+#include <helib/fhe_stats.h>
 
 
 #include "gtest/gtest.h"
@@ -198,7 +198,7 @@ namespace {
 
         const long m, phim;
         double time;
-        helib::FHEcontext context;
+        helib::Context context;
 
       std::string v_values_name;
 
@@ -383,7 +383,7 @@ namespace {
 
             time = -NTL::GetTime();
             if (!helib_test::noPrint) std::cout << "Generating keys, " << std::flush;
-            helib::FHESecKey secretKey(context);
+            helib::SecKey secretKey(context);
             secretKey.GenSecKey(skHwt);      // A Hamming-weight-64 secret key
             helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
             helib::addFrbMatrices(secretKey);
@@ -397,7 +397,7 @@ namespace {
             helib::dbgKey = &secretKey;
 #endif
 
-            helib::FHEPubKey publicKey = secretKey;
+            helib::PubKey publicKey = secretKey;
 
             long d = context.zMStar.getOrdP();
             long phim = context.zMStar.getPhiM();

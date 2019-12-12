@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include <helib.h>
-#include "debugging.h"
+#include <helib/helib.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -70,9 +70,9 @@ class TestFatBootstrappingWithMultiplications : public ::testing::TestWithParam<
   protected:
     const long n; // Number of multiplications to perform
 
-    helib::FHEcontext context;
-    helib::FHESecKey secretKey;
-    helib::FHEPubKey publicKey;
+    helib::Context context;
+    helib::SecKey secretKey;
+    helib::PubKey publicKey;
     const helib::EncryptedArray& ea;
 
     TestFatBootstrappingWithMultiplications () :
@@ -85,14 +85,14 @@ class TestFatBootstrappingWithMultiplications : public ::testing::TestWithParam<
       ea(*(context.ea))
     {}
 
-    static helib::FHEcontext& postContextSetup(helib::FHEcontext& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
+    static helib::Context& postContextSetup(helib::Context& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
       context.zMStar.set_cM(c_m / 100);
       helib::buildModChain(context, bits, c, true, t);
       context.makeBootstrappable(mvec, t, 0);
       return context;
     }
 
-    static helib::FHESecKey& keySetup(helib::FHESecKey& secretKey) {
+    static helib::SecKey& keySetup(helib::SecKey& secretKey) {
       secretKey.GenSecKey();
       helib::addSome1DMatrices(secretKey);
       helib::addFrbMatrices(secretKey);
@@ -146,7 +146,7 @@ std::vector<long> generateRandomBinaryVector(long nslots)
 
 long multiplyWithRecryption(helib::Ctxt& ctxt,
                             helib::Ctxt& tmp_ctxt,
-                            helib::FHEPubKey& publicKey,
+                            helib::PubKey& publicKey,
                             long depth,
                             long n,
                             bool thin)
@@ -272,9 +272,9 @@ class TestThinBootstrappingWithMultiplications : public ::testing::TestWithParam
   protected:
     const long n; // Number of multiplications to perform
 
-    helib::FHEcontext context;
-    helib::FHESecKey secretKey;
-    helib::FHEPubKey publicKey;
+    helib::Context context;
+    helib::SecKey secretKey;
+    helib::PubKey publicKey;
     const helib::EncryptedArray& ea;
 
     TestThinBootstrappingWithMultiplications () :
@@ -287,14 +287,14 @@ class TestThinBootstrappingWithMultiplications : public ::testing::TestWithParam
       ea(*(context.ea))
     {}
 
-    static helib::FHEcontext& postContextSetup(helib::FHEcontext& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
+    static helib::Context& postContextSetup(helib::Context& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
       context.zMStar.set_cM(c_m / 100);
       helib::buildModChain(context, bits, c, true, t);
       context.makeBootstrappable(mvec, t, 0, false);
       return context;
     }
 
-    static helib::FHESecKey& keySetup(helib::FHESecKey& secretKey) {
+    static helib::SecKey& keySetup(helib::SecKey& secretKey) {
       secretKey.GenSecKey();
       helib::addSome1DMatrices(secretKey);
       helib::addFrbMatrices(secretKey);

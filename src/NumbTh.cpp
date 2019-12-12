@@ -9,9 +9,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include "NumbTh.h"
+#include <helib/NumbTh.h>
 
-#include "timing.h"
+#include <helib/timing.h>
 
 #include <fstream>
 #include <cctype>

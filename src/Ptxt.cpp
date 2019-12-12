@@ -11,12 +11,12 @@
  */
 
 #include <random>
-#include "Ptxt.h"
+#include <helib/Ptxt.h>
 
 namespace helib {
 
 template <>
-helib::PolyMod Ptxt<helib::BGV>::convertToSlot(const FHEcontext& context,
+helib::PolyMod Ptxt<helib::BGV>::convertToSlot(const Context& context,
                                                long slot)
 {
   helib::PolyMod data(NTL::ZZX(slot), context.slotRing);
@@ -24,7 +24,7 @@ helib::PolyMod Ptxt<helib::BGV>::convertToSlot(const FHEcontext& context,
 }
 
 template <>
-std::complex<double> Ptxt<helib::CKKS>::convertToSlot(const FHEcontext&,
+std::complex<double> Ptxt<helib::CKKS>::convertToSlot(const Context&,
                                                       long slot)
 {
   return {static_cast<double>(slot), 0};
@@ -35,14 +35,14 @@ Ptxt<Scheme>::Ptxt() : context(nullptr)
 {}
 
 template <typename Scheme>
-Ptxt<Scheme>::Ptxt(const FHEcontext& context) :
+Ptxt<Scheme>::Ptxt(const Context& context) :
     context(&context),
     slots(context.ea->size(),
           SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)})
 {}
 
 template <typename Scheme>
-Ptxt<Scheme>::Ptxt(const FHEcontext& context, const SlotType& value) :
+Ptxt<Scheme>::Ptxt(const Context& context, const SlotType& value) :
     context(std::addressof(context)),
     slots(context.ea->size(),
           SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)})
@@ -63,7 +63,7 @@ void Ptxt<helib::BGV>::setData(const NTL::ZZX& value)
 
 template <>
 template <>
-Ptxt<BGV>::Ptxt(const FHEcontext& context, const NTL::ZZX& value) :
+Ptxt<BGV>::Ptxt(const Context& context, const NTL::ZZX& value) :
     context(&context),
     slots(context.ea->size(),
           SlotType{Ptxt<BGV>::convertToSlot(*(this->context), 0L)})
@@ -72,7 +72,7 @@ Ptxt<BGV>::Ptxt(const FHEcontext& context, const NTL::ZZX& value) :
 }
 
 template <typename Scheme>
-Ptxt<Scheme>::Ptxt(const FHEcontext& context,
+Ptxt<Scheme>::Ptxt(const Context& context,
                    const std::vector<SlotType>& data) :
     context(std::addressof(context)),
     slots(context.ea->size(),
@@ -155,10 +155,10 @@ void Ptxt<Scheme>::clear()
 }
 
 template <typename Scheme>
-typename Scheme::SlotType randomSlot(const FHEcontext& context);
+typename Scheme::SlotType randomSlot(const Context& context);
 
 template <>
-BGV::SlotType randomSlot<BGV>(const FHEcontext& context)
+BGV::SlotType randomSlot<BGV>(const Context& context)
 {
   std::vector<long> coeffs(context.zMStar.getOrdP());
   NTL::VectorRandomBnd(coeffs.size(), coeffs.data(), context.slotRing->p2r);
@@ -166,7 +166,7 @@ BGV::SlotType randomSlot<BGV>(const FHEcontext& context)
 }
 
 template <>
-CKKS::SlotType randomSlot<CKKS>(const FHEcontext& context)
+CKKS::SlotType randomSlot<CKKS>(const Context& context)
 {
   std::mt19937 gen{std::random_device{}()};
   std::uniform_real_distribution<> dist{-1e10, 1e10};

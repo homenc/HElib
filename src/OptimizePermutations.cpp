@@ -19,9 +19,9 @@
 #include <memory>
 
 #include <NTL/vector.h>
-#include "NumbTh.h"
-#include "EncryptedArray.h"
-#include "permutations.h"
+#include <helib/NumbTh.h>
+#include <helib/EncryptedArray.h>
+#include <helib/permutations.h>
 
 namespace helib {
 

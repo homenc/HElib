@@ -15,14 +15,13 @@
  *   the base-$p$ representation of an encrypted values.
  */
 #include <NTL/ZZ.h>
-#include <EncryptedArray.h>
-#include <polyEval.h>
+#include <helib/EncryptedArray.h>
+#include <helib/polyEval.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
 
-#include "test_common.h"
-#include "debugging.h"
+#include <helib/debugging.h>
 
 namespace {
 
@@ -54,9 +53,9 @@ class GTestExtractDigits : public ::testing::TestWithParam<Parameters> {
         long p2r;
         long L;
 
-        helib::FHEcontext context;
-        helib::FHESecKey secretKey;
-        const helib::FHEPubKey& publicKey;
+        helib::Context context;
+        helib::SecKey secretKey;
+        const helib::PubKey& publicKey;
 
         // lifting value rOld requires some manipulation before being used.
         // Utility function for calculating this.
@@ -123,7 +122,7 @@ TEST_P(GTestExtractDigits, correctlyExtractsDigits)
     std::vector<long> pDigits;
     ea.random(v); // random values in the slots
 
-    const helib::FHEPubKey& publicKey = secretKey;
+    const helib::PubKey& publicKey = secretKey;
 
     helib::Ctxt c(publicKey);
     ea.encrypt(c, publicKey, v);

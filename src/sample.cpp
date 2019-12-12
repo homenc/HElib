@@ -14,12 +14,12 @@
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 #include <NTL/BasicThreadPool.h>
-#include "NumbTh.h"
-#include "FHEContext.h"
-#include "sample.h"
-#include "norms.h"
+#include <helib/NumbTh.h>
+#include <helib/Context.h>
+#include <helib/sample.h>
+#include <helib/norms.h>
 
-#include "powerful.h"
+#include <helib/powerful.h>
 // only used in experimental Hwt sampler
 
 namespace helib {
@@ -212,7 +212,7 @@ void sampleUniform(NTL::ZZX& poly, long n, const NTL::ZZ& B)
  * X^m-1 and then reduce mod Phi_m(X). The exception is when m is
  * a power of two, where we still sample directly mod Phi_m(X).
  ********************************************************************/
-double sampleHWt(zzX &poly, const FHEcontext& context, long Hwt)
+double sampleHWt(zzX &poly, const Context& context, long Hwt)
 {
   const PAlgebra& palg = context.zMStar;
   double retval;
@@ -233,7 +233,7 @@ double sampleHWt(zzX &poly, const FHEcontext& context, long Hwt)
 }
 
 
-double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt)
+double sampleHWtBoundedEffectiveBound(const Context& context, long Hwt)
 {
   const PAlgebra& palg = context.zMStar;
   long phim = palg.getPhiM();
@@ -242,7 +242,7 @@ double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt)
   return bound;
 }
 
-double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
+double sampleHWtBounded(zzX &poly, const Context& context, long Hwt)
 {
   double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
   const PAlgebra& palg = context.zMStar;
@@ -297,7 +297,7 @@ double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
 }
 
 
-double sampleSmall(zzX &poly, const FHEcontext& context)
+double sampleSmall(zzX &poly, const Context& context)
 {
   const PAlgebra& palg = context.zMStar;
   double retval;
@@ -322,7 +322,7 @@ double sampleSmall(zzX &poly, const FHEcontext& context)
 
 
 // Same as above, but ensure the result is not too much larger than typical
-double sampleSmallBounded(zzX &poly, const FHEcontext& context)
+double sampleSmallBounded(zzX &poly, const Context& context)
 {
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
@@ -380,7 +380,7 @@ double sampleSmallBounded(zzX &poly, const FHEcontext& context)
   return bound;
 }
 
-double sampleGaussian(zzX &poly, const FHEcontext& context, double stdev)
+double sampleGaussian(zzX &poly, const Context& context, double stdev)
 {
   const PAlgebra& palg = context.zMStar;
   double retval;
@@ -400,7 +400,7 @@ double sampleGaussian(zzX &poly, const FHEcontext& context, double stdev)
   return retval;
 }
 // Same as above, but ensure the result is not too much larger than typical
-double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
+double sampleGaussianBounded(zzX &poly, const Context& context, double stdev)
 {
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
@@ -428,7 +428,7 @@ double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
 
 
 
-double sampleUniform(zzX &poly, const FHEcontext& context, long B)
+double sampleUniform(zzX &poly, const Context& context, long B)
 {
   const PAlgebra& palg = context.zMStar;
   double retval;
@@ -448,7 +448,7 @@ double sampleUniform(zzX &poly, const FHEcontext& context, long B)
   return retval;
 }
 
-NTL::xdouble sampleUniform(NTL::ZZX &poly, const FHEcontext& context, const NTL::ZZ& B)
+NTL::xdouble sampleUniform(NTL::ZZX &poly, const Context& context, const NTL::ZZ& B)
 {
   const PAlgebra& palg = context.zMStar;
   NTL::xdouble retval;

@@ -19,13 +19,13 @@
 #include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 
-#include "helib.h"
-#include "matmul.h"
-#include "replicate.h"
-#include "permutations.h"
-#include "ArgMap.h"
+#include <helib/helib.h>
+#include <helib/matmul.h>
+#include <helib/replicate.h>
+#include <helib/permutations.h>
+#include <helib/ArgMap.h>
 
-#include "debugging.h"
+#include <helib/debugging.h>
 
 using namespace helib;
 
@@ -111,7 +111,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     // Complicated mumbo-jumbo to get one of two timers, depending on r
     auto_timer _init_timer((r>1)? &_init_timer_4 : &_init_timer_2);
 
-    FHEcontext context(m, p, r);
+    Context context(m, p, r);
 
     ZZX G;
     if (d==1) SetX(G); // set G(X)=X
@@ -122,8 +122,8 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     _init_timer.stop();
 
     FHE_NTIMER_START(keyGen);
-    FHESecKey secretKey(context);
-    const FHEPubKey& publicKey = secretKey;
+    SecKey secretKey(context);
+    const PubKey& publicKey = secretKey;
     secretKey.GenSecKey(); // A +-1/0 secret key
     addSome1DMatrices(secretKey); // compute key-switching matrices
     addSomeFrbMatrices(secretKey);
@@ -186,7 +186,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
 
 // Returns either a random automorphism amount or an amount
 // for which we have a key-switching matrix s^k -> s.
-long rotationAmount(const EncryptedArray& ea, const FHEPubKey& publicKey,
+long rotationAmount(const EncryptedArray& ea, const PubKey& publicKey,
 	       bool onlyWithMatrix)
 {
   const PAlgebra& pa = ea.getPAlgebra();
@@ -200,7 +200,7 @@ long rotationAmount(const EncryptedArray& ea, const FHEPubKey& publicKey,
   return k;
 }
 
-void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
+void timeOps(const EncryptedArray& ea, const PubKey& publicKey, Ctxt& ret,
 	     const vector<Ctxt>& c, ZZX& p, long nTests, LowLvlTimingData& td)
 {
   assert(c.size()>=3);
@@ -327,7 +327,7 @@ void timeOps(const EncryptedArray& ea, const FHEPubKey& publicKey, Ctxt& ret,
 }
 
 // Implementation of the various random matrices is found here
-#include "randomMatrices.h"
+#include <helib/randomMatrices.h>
 /*
  * Defined in this file are the following class templates:
  *
@@ -355,7 +355,7 @@ public:
   virtual void handle(const Ctxt& ctxt) {}
 };
 
-void timeHighLvl(const EncryptedArray& ea, const FHEPubKey& publicKey,
+void timeHighLvl(const EncryptedArray& ea, const PubKey& publicKey,
 		 Ctxt& ret, const vector<Ctxt>& c, GeneratorTrees& trees,
 		 long nTests, HighLvlTimingData& td)
 {
@@ -462,7 +462,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
 
   // Initialize a context with r=2,d=1
   auto_timer _init_timer(&_init_timer_4);
-  FHEcontext context(m, 2, 2);
+  Context context(m, 2, 2);
   buildModChain(context, L, /*c=*/3);
 
   ZZX G; SetX(G); // G(X) = X
@@ -470,8 +470,8 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   _init_timer.stop();
 
   FHE_NTIMER_START(keyGen);
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices
   FHE_NTIMER_STOP(keyGen);

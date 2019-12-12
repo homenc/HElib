@@ -22,12 +22,12 @@ static long mValues[][14] = {
 };
 
 #ifdef DEBUG_PRINTOUT
-extern FHESecKey* dbgKey;
+extern SecKey* dbgKey;
 extern EncryptedArray* dbgEa;
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
-extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
+extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const SecKey& sk,
 			    const EncryptedArray& ea, long flags=0);
 #endif
 
@@ -105,7 +105,7 @@ int main(int argc, char **argv)
   setTimersOn();
   double tm = -GetTime();
   cout << "computing key-independent tables..." << std::flush;
-  FHEcontext context(m, p, /*r=*/1, gens, ords);
+  Context context(m, p, /*r=*/1, gens, ords);
 #if (NTL_SP_NBITS>=50) // 64-bit machines
   context.bitsPerLevel = B;
 #endif
@@ -133,8 +133,8 @@ int main(int argc, char **argv)
 
   cout << "computing key-dependent tables..." << std::flush;
   tm = -GetTime();
-  FHESecKey secretKey(context);
-  FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  PubKey& publicKey = secretKey;
   secretKey.GenSecKey(64);      // A Hamming-weight-64 secret key
 
   // Add key-switching matrices for the automorphisms that we need

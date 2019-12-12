@@ -13,10 +13,10 @@
 #include <algorithm>
 #include <complex>
 
-#include "norms.h"
-#include "helib.h"
-#include "debugging.h"
-#include "ArgMap.h"
+#include <helib/norms.h>
+#include <helib/helib.h>
+#include <helib/debugging.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -72,17 +72,17 @@ inline bool cx_equals(const vector<cx_double>& v1,
   return (calcMaxRelDiff(v1,v2) < epsilon);
 }
 
-void testBasicArith(const FHEPubKey& publicKey, 
-                    const FHESecKey& secretKey, 
+void testBasicArith(const PubKey& publicKey, 
+                    const SecKey& secretKey, 
                     const EncryptedArrayCx& ea, double epsilon);
-void testComplexArith(const FHEPubKey& publicKey, 
-                      const FHESecKey& secretKey, 
+void testComplexArith(const PubKey& publicKey, 
+                      const SecKey& secretKey, 
                       const EncryptedArrayCx& ea, double epsilon);
-void testRotsNShifts(const FHEPubKey& publicKey, 
-                     const FHESecKey& secretKey, 
+void testRotsNShifts(const PubKey& publicKey, 
+                     const SecKey& secretKey, 
                      const EncryptedArrayCx& ea, double epsilon);
 
-void debugCompare(const EncryptedArrayCx& ea, const FHESecKey& sk,
+void debugCompare(const EncryptedArrayCx& ea, const SecKey& sk,
         vector<cx_double>& p, const Ctxt& c, double epsilon)
 {
   vector<cx_double> pp;
@@ -140,7 +140,7 @@ void rotate(vector<cx_double>& p, long amt)
 9. c3.multiplyBy(c2) 
 10. c0 -= c3
 **************/
-void testGeneralOps(const FHEPubKey& publicKey, const FHESecKey& secretKey,
+void testGeneralOps(const PubKey& publicKey, const SecKey& secretKey,
                     const EncryptedArrayCx& ea, double epsilon,
                     long nRounds)
 {
@@ -330,15 +330,15 @@ int main(int argc, char *argv[])
 
     // FHE setup keys, context, SKMs, etc
 
-    FHEcontext context(m, /*p=*/-1, r);
+    Context context(m, /*p=*/-1, r);
     context.scale=4;
     buildModChain(context, L, /*c=*/2);
 
-    FHESecKey secretKey(context);
+    SecKey secretKey(context);
     secretKey.GenSecKey(); // A +-1/0 secret key
     addSome1DMatrices(secretKey); // compute key-switching matrices
 
-    const FHEPubKey publicKey = secretKey;
+    const PubKey publicKey = secretKey;
     const EncryptedArrayCx& ea = context.ea->getCx();
 
     if (verbose) {
@@ -371,8 +371,8 @@ int main(int argc, char *argv[])
 }
 
 
-void testBasicArith(const FHEPubKey& publicKey,
-                    const FHESecKey& secretKey,
+void testBasicArith(const PubKey& publicKey,
+                    const SecKey& secretKey,
                     const EncryptedArrayCx& ea, double epsilon)
 {
   if (verbose)  cout << "Test Arithmetic ";
@@ -449,8 +449,8 @@ void testBasicArith(const FHEPubKey& publicKey,
 }
 
 
-void testComplexArith(const FHEPubKey& publicKey,
-                      const FHESecKey& secretKey,
+void testComplexArith(const PubKey& publicKey,
+                      const SecKey& secretKey,
                       const EncryptedArrayCx& ea, double epsilon)
 {
 
@@ -520,8 +520,8 @@ void testComplexArith(const FHEPubKey& publicKey,
   }
 }
 
-void testRotsNShifts(const FHEPubKey& publicKey, 
-                     const FHESecKey& secretKey,
+void testRotsNShifts(const PubKey& publicKey, 
+                     const SecKey& secretKey,
                      const EncryptedArrayCx& ea, double epsilon)
 {
 

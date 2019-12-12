@@ -13,9 +13,9 @@
 #include <algorithm>
 #include <complex>
 
-#include "norms.h"
-#include <helib.h>
-#include "debugging.h"
+#include <helib/norms.h>
+#include <helib/helib.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -100,7 +100,7 @@ struct Parameters {
     return (calcMaxRelDiff(v1,v2) < epsilon);
   }
   
-  ::testing::AssertionResult ciphertextMatches(const helib::EncryptedArrayCx &ea, const helib::FHESecKey &sk,
+  ::testing::AssertionResult ciphertextMatches(const helib::EncryptedArrayCx &ea, const helib::SecKey &sk,
                                                const std::vector<std::complex<double>> &p, const helib::Ctxt &c, double epsilon)
   {
     std::vector<std::complex<double>> pp;
@@ -159,9 +159,9 @@ class GTestApproxNums : public ::testing::TestWithParam<Parameters> {
         const long L;
         const double epsilon;
 
-        helib::FHEcontext context;
-        helib::FHESecKey secretKey;
-        const helib::FHEPubKey publicKey;
+        helib::Context context;
+        helib::SecKey secretKey;
+        const helib::PubKey publicKey;
         const helib::EncryptedArrayCx& ea;
 
         GTestApproxNums () :

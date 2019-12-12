@@ -21,11 +21,11 @@
 #include "EncryptedArray.h"
 
 // defined in debugging.cpp
-void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
+void decryptAndPrint(ostream& s, const Ctxt& ctxt, const SecKey& sk,
 		     const EncryptedArray& ea, long flags);
 
 static void checkAuto(const Ctxt& cOrig, const Ctxt& cAuto, long amt,
-                      EncryptedArray& ea, const FHESecKey& sk)
+                      EncryptedArray& ea, const SecKey& sk)
 {
   NewPlaintextArray v1(ea), v2(ea);
   Ctxt cTmp = cOrig;
@@ -43,10 +43,10 @@ static void checkAuto(const Ctxt& cOrig, const Ctxt& cAuto, long amt,
 class AutoTester: public AutomorphHandler {
 public:
   const Ctxt& cOrig;
-  FHESecKey& sk;
+  SecKey& sk;
   EncryptedArray& ea;
 
-    AutoTester(const Ctxt& c, FHESecKey& k, EncryptedArray& e, bool v=false):
+    AutoTester(const Ctxt& c, SecKey& k, EncryptedArray& e, bool v=false):
     cOrig(c), sk(k), ea(e) {}
 
   // cPtr points to the original ciphertext, ctxtx is after automorphism
@@ -58,10 +58,10 @@ public:
   }
 };
 
-void  TestIt1(FHESecKey& secretKey, EncryptedArray& ea, bool verbose=false)
+void  TestIt1(SecKey& secretKey, EncryptedArray& ea, bool verbose=false)
 {
-  const FHEcontext& context = ea.getContext();
-  const FHEPubKey& publicKey = secretKey;
+  const Context& context = ea.getContext();
+  const PubKey& publicKey = secretKey;
 
   // choose a random plaintext vector
   NewPlaintextArray v(ea);
@@ -81,10 +81,10 @@ void  TestIt1(FHESecKey& secretKey, EncryptedArray& ea, bool verbose=false)
   cout << "  All tests using handler passed successfully\n";
 }
 
-void  TestIt2(FHESecKey& secretKey, EncryptedArray& ea, bool verbose=false)
+void  TestIt2(SecKey& secretKey, EncryptedArray& ea, bool verbose=false)
 {
-  const FHEcontext& context = ea.getContext();
-  const FHEPubKey& publicKey = secretKey;
+  const Context& context = ea.getContext();
+  const PubKey& publicKey = secretKey;
 
   // choose a random plaintext vector
   NewPlaintextArray v(ea);
@@ -139,10 +139,10 @@ int main(int argc, char *argv[])
        << ", L=" << L
        << endl;
 
-  FHEcontext context(m, p, 1);
+  Context context(m, p, 1);
   buildModChain(context, L, /*c=*/3);
     
-  FHESecKey secretKey(context);
+  SecKey secretKey(context);
   secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need

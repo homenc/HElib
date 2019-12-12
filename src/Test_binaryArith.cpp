@@ -18,14 +18,14 @@
 #include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 
-#include "helib.h"
+#include <helib/helib.h>
 
-#include "intraSlot.h"
-#include "binaryArith.h"
-#include "ArgMap.h"
+#include <helib/intraSlot.h>
+#include <helib/binaryArith.h>
+#include <helib/ArgMap.h>
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 using namespace helib;
@@ -49,10 +49,10 @@ static long mValues[][15] = {
   {  2, 27000, 32767, 15,  31,  7,151, 11628, 28087,25824,  30,  6, -10, 28, 4}
 };
 
-void test15for4(FHESecKey& secKey);
-void testProduct(FHESecKey& secKey, long bitSize1, long bitSize2,
+void test15for4(SecKey& secKey);
+void testProduct(SecKey& secKey, long bitSize1, long bitSize2,
                  long outSize, bool bootstrap = false);
-void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
+void testAdd(SecKey& secKey, long bitSize1, long bitSize2,
              long outSize, bool bootstrap = false);
 
 int main(int argc, char *argv[])
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
     if (nthreads>1) cout << "  using "<<NTL::AvailableThreads()<<" threads\n";
     cout << "computing key-independent tables..." << std::flush;
   }
-  FHEcontext context(m, p, /*r=*/1, gens, ords);
+  Context context(m, p, /*r=*/1, gens, ords);
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
     context.makeBootstrappable(mvec, /*t=*/0);
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     cout << " L="<<L<<", B="<<B<<endl;
     cout << "\ncomputing key-dependent tables..." << std::flush;
   }
-  FHESecKey secKey(context);
+  SecKey secKey(context);
   secKey.GenSecKey();
   addSome1DMatrices(secKey); // compute key-switching matrices
   addFrbMatrices(secKey);
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
   return 0;
 }
 
-void test15for4(FHESecKey& secKey)
+void test15for4(SecKey& secKey)
 {
   std::vector<Ctxt> inBuf(15, Ctxt(secKey));
   std::vector<Ctxt*> inPtrs(15, nullptr);
@@ -225,10 +225,10 @@ void test15for4(FHESecKey& secKey)
     cout << "15to4 succeeded, sum"<<inputBits<<"="<<sum2<<endl;
 }
 
-void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
+void testProduct(SecKey& secKey, long bitSize, long bitSize2,
                  long outSize, bool bootstrap)
 {
-  const FHEcontext& context = secKey.getContext();
+  const Context& context = secKey.getContext();
   const EncryptedArray& ea = *(context.ea);
   long mask = (outSize? ((1L<<outSize)-1) : -1);
 
@@ -324,10 +324,10 @@ void testProduct(FHESecKey& secKey, long bitSize, long bitSize2,
 }
 
 
-void testAdd(FHESecKey& secKey, long bitSize1, long bitSize2,
+void testAdd(SecKey& secKey, long bitSize1, long bitSize2,
              long outSize, bool bootstrap)
 {
-  const FHEcontext& context = secKey.getContext();
+  const Context& context = secKey.getContext();
   const EncryptedArray& ea = *(context.ea);
   long mask = (outSize? ((1L<<outSize)-1) : -1);
 

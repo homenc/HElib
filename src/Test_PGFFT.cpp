@@ -1,4 +1,4 @@
-#include "PGFFT.h"
+#include <helib/PGFFT.h>
 
 #include <iostream>
 #include <cstdlib>

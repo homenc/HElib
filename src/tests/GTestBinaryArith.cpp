@@ -18,16 +18,16 @@
 #include <tuple>
 #include <NTL/BasicThreadPool.h>
 
-#include <helib.h>
+#include <helib/helib.h>
 
-#include <intraSlot.h>
-#include <binaryArith.h>
+#include <helib/intraSlot.h>
+#include <helib/binaryArith.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
 
 #ifdef DEBUG_PRINTOUT
-#include <debugging.h>
+#include <helib/debugging.h>
 #endif
 // define flags FLAG_PRINT_ZZX, FLAG_PRINT_POLY, FLAG_PRINT_VEC, functions
 //        decryptAndPrint(ostream, ctxt, sk, ea, flags)
@@ -175,7 +175,7 @@ protected:
   // Returns a reference to the passed-in context once it has been modified to
   // get it ready for test. This is not static because it uses quite a lot of
   // state of the object.
-  helib::FHEcontext& prepareContext(helib::FHEcontext& context)
+  helib::Context& prepareContext(helib::Context& context)
   {
     if (helib_test::verbose) {
       std::cout << "input bitSizes=" << bitSize << ',' << bitSize2
@@ -196,7 +196,7 @@ protected:
     return context;
   };
 
-  void prepareSecKey(helib::FHESecKey& secKey)
+  void prepareSecKey(helib::SecKey& secKey)
   {
     if (helib_test::verbose) {
       std::cout << " L=" << L << ", B=" << B << std::endl;
@@ -228,8 +228,8 @@ protected:
   const long B;
   const long c;
   const long L;
-  helib::FHEcontext context;
-  helib::FHESecKey secKey;
+  helib::Context context;
+  helib::SecKey secKey;
 
   GTestBinaryArith() :
       prm(validatePrm(std::get<0>(GetParam()).prm)),

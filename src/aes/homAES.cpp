@@ -9,9 +9,9 @@ namespace NTL {} using namespace NTL;
 #define FLAG_PRINT_ZZX  1
 #define FLAG_PRINT_POLY 2
 #define FLAG_PRINT_VEC  4
-extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
+extern void decryptAndPrint(ostream& s, const Ctxt& ctxt, const SecKey& sk,
 			    const EncryptedArray& ea, long flags=0);
-extern FHESecKey* dbgKey;
+extern SecKey* dbgKey;
 extern EncryptedArray* dbgEa;
 #endif
 
@@ -97,7 +97,7 @@ static void unackCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
 static const uint8_t aesPolyBytes[] = { 0x1B, 0x1 }; // X^8+X^4+X^3+X+1
 const GF2X HomAES::aesPoly = GF2XFromBytes(aesPolyBytes, 2);
 
-HomAES::HomAES(const FHEcontext& context): ea2(context,aesPoly,context.alMod)
+HomAES::HomAES(const Context& context): ea2(context,aesPoly,context.alMod)
 #ifndef USE_ZZX_POLY // initialize DoubleCRT using the context
 , affVec(context)
 #endif
@@ -120,7 +120,7 @@ HomAES::HomAES(const FHEcontext& context): ea2(context,aesPoly,context.alMod)
 
 // run the AES key-expansion and then encrypt the expanded key.
 void HomAES::encryptAESkey(vector<Ctxt>& eKey, Vec<uint8_t>& aesKey,
-			   const FHEPubKey& hePK) const
+			   const PubKey& hePK) const
 {
   //OLD: assert(aesKey.length()==16 || aesKey.length()==24 || aesKey.length()==32);
   helib::assertTrue<helib::InvalidArgument>(aesKey.length()==16 || aesKey.length()==24 || aesKey.length()==32,
@@ -159,7 +159,7 @@ void HomAES::encryptAESkey(vector<Ctxt>& eKey, Vec<uint8_t>& aesKey,
 void HomAES::setPackingConstants()
 {
   // Get the context and the ea for "fully packed" polynomials
-  const FHEcontext& context = ea2.getContext();
+  const Context& context = ea2.getContext();
   const EncryptedArrayDerived<PA_GF2>& ea = context.ea->getDerived(PA_GF2());
 
   // Compute the packing constants, with X in all the slots
@@ -359,7 +359,7 @@ void HomAES::homAESdec(vector<Ctxt>& eData, const vector<Ctxt>& aesKey,
 void HomAES::batchRecrypt(vector<Ctxt>& data) const
 {
   FHE_TIMER_START;
-  FHEPubKey& pk = (FHEPubKey&) data[0].getPubKey();
+  PubKey& pk = (PubKey&) data[0].getPubKey();
   if (!pk.isBootstrappable()) return;
 
   if (data.size()>1 && unpacking.NumRows()==0) // lazy initialization
@@ -799,7 +799,7 @@ static void packCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
   }
 
   // Get the context and the ea for "fully packed" polynomials
-  const FHEcontext& context = from[0].getContext();
+  const Context& context = from[0].getContext();
   const EncryptedArrayDerived<PA_GF2>& ea = context.ea->getDerived(PA_GF2());
   const GF2XModulus& PhimX = ea.getTab().getPhimXMod();
   long e = ea.getDegree() / 8; // the extension degree
@@ -836,7 +836,7 @@ static void unackCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
 {
   FHE_TIMER_START;
   // Get the context and the ea for "fully packed" polynomials
-  const FHEcontext& context = from[0].getContext();
+  const Context& context = from[0].getContext();
   const EncryptedArrayDerived<PA_GF2>& ea = context.ea->getDerived(PA_GF2());
   long e = ea.getDegree() / 8; // the extension degree
   long nUnpacked = from.size()*e; // How many lightly-packed ciphertexts

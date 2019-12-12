@@ -9,10 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include "hypercube.h"
-#include "powerful.h"
-#include "FHEContext.h"
-#include "debugging.h"
+#include <helib/hypercube.h>
+#include <helib/powerful.h>
+#include <helib/Context.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -53,7 +53,7 @@ class GTestPowerful : public ::testing::TestWithParam<Parameters>
         const long m;
         const long p;
         const long r;
-        helib::FHEcontext context;
+        helib::Context context;
 
         static NTL::Vec<long> computeMvec(long m1, long m2, long m3)
         {

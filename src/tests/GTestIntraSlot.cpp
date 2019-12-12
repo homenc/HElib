@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 // testPacking.cxx - testing uppack/repack functionality
-#include "intraSlot.h"
-#include "debugging.h"
+#include <helib/intraSlot.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -50,7 +50,7 @@ struct Parameters {
 
 class GTestIntraSlot : public ::testing::TestWithParam<Parameters> {
 
-    static helib::FHEcontext& setupContext(helib::FHEcontext& context, long L)
+    static helib::Context& setupContext(helib::Context& context, long L)
     {
         if(helib_test::verbose) {
             context.zMStar.printout();
@@ -78,9 +78,9 @@ class GTestIntraSlot : public ::testing::TestWithParam<Parameters> {
         long L;
         long m;
         long seed;
-        helib::FHEcontext context;
-        helib::FHESecKey secretKey;
-        const helib::FHEPubKey& publicKey;
+        helib::Context context;
+        helib::SecKey secretKey;
+        const helib::PubKey& publicKey;
 
         void SetUp() override
         {

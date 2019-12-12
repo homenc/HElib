@@ -12,10 +12,10 @@
 
 #include <gtest/gtest.h>
 #include <NTL/ZZX.h>
-#include <FHEContext.h>
-#include "PolyModRing.h"
-#include "EncryptedArray.h"
-#include "exceptions.h"
+#include <helib/Context.h>
+#include <helib/PolyModRing.h>
+#include <helib/EncryptedArray.h>
+#include <helib/exceptions.h>
 
 namespace {
 

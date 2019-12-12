@@ -18,14 +18,14 @@
 #include <NTL/ZZ.h>
 #include <NTL/fileio.h>
 #include <NTL/BasicThreadPool.h>
-#include "EncryptedArray.h"
-#include "EvalMap.h"
-#include "powerful.h"
-#include "matmul.h"
+#include <helib/EncryptedArray.h>
+#include <helib/EvalMap.h>
+#include <helib/powerful.h>
+#include <helib/matmul.h>
 
 
 // #define DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 
 #define OUTER_REP (1)
 #define INNER_REP (1)
@@ -33,7 +33,7 @@
 #include "gtest/gtest.h"
 #include "test_common.h"
 
-extern helib::FHESecKey* dbgKey;
+extern helib::SecKey* dbgKey;
 
 // extern long fhe_disable_intFactor;
 //extern long fhe_force_chen_han;
@@ -238,7 +238,7 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
     helib::setDryRun(false); // Need to get a "real context" to test bootstrapping
 
     double t = -NTL::GetTime();
-    helib::FHEcontext context(m, p, r, gens, ords);
+    helib::Context context(m, p, r, gens, ords);
     if (scale) {
         context.scale = scale;
     }
@@ -283,8 +283,8 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
 
         t = -NTL::GetTime();
         if (!helib_test::noPrint) std::cout << "Generating keys, " << std::flush;
-        helib::FHESecKey secretKey(context);
-        helib::FHEPubKey& publicKey = secretKey;
+        helib::SecKey secretKey(context);
+        helib::PubKey& publicKey = secretKey;
         secretKey.GenSecKey();      // A +-1/0 secret key
         helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
         helib::addFrbMatrices(secretKey);

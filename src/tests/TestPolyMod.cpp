@@ -13,8 +13,8 @@
 #include <gtest/gtest.h>
 #include <NTL/ZZX.h>
 #include <sstream>
-#include "PolyMod.h"
-#include "exceptions.h"
+#include <helib/PolyMod.h>
+#include <helib/exceptions.h>
 
 namespace {
 TEST(TestPolyMod, canBeDefaultConstructed) { helib::PolyMod poly; }

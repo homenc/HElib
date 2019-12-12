@@ -11,19 +11,19 @@
  */
 #include <NTL/BasicThreadPool.h>
 
-#include "binio.h"
-#include "timing.h"
-#include "FHEContext.h"
-#include "Ctxt.h"
-#include "keySwitching.h"
-#include "CtPtrs.h"
-#include "EncryptedArray.h"
-#include "Ptxt.h"
+#include <helib/binio.h>
+#include <helib/timing.h>
+#include <helib/Context.h>
+#include <helib/Ctxt.h>
+#include <helib/keySwitching.h>
+#include <helib/CtPtrs.h>
+#include <helib/EncryptedArray.h>
+#include <helib/Ptxt.h>
 
-#include "debugging.h"
-#include "norms.h"
-#include "fhe_stats.h"
-#include "powerful.h"
+#include <helib/debugging.h>
+#include <helib/norms.h>
+#include <helib/fhe_stats.h>
+#include <helib/powerful.h>
 
 namespace helib {
 
@@ -54,7 +54,7 @@ std::set<long>* FHEglobals::automorphVals2 = NULL;
 // routines in recryption.cpp.
 void Ctxt::DummyEncrypt(const NTL::ZZX& ptxt, double size)
 {
-  const FHEcontext& context = getContext();
+  const Context& context = getContext();
   const PAlgebra& zMStar = context.zMStar;
 
   if (isCKKS()) {
@@ -111,9 +111,9 @@ bool Ctxt::verifyPrimeSet() const
 // Compute the number of digits that we need and the esitmated
 // added noise from switching this ciphertext part.
 static std::pair<long, NTL::xdouble>
-keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, const KeySwitch& ks)
+keySwitchNoise(const CtxtPart& p, const PubKey& pubKey, const KeySwitch& ks)
 {
-  const FHEcontext& context = p.getContext();
+  const Context& context = p.getContext();
   const PAlgebra& palg = context.zMStar;
 
   NTL::xdouble ks_bound = ks.noiseBound;
@@ -238,7 +238,7 @@ bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
 }
 
 // Constructor
-Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
+Ctxt::Ctxt(const PubKey& newPubKey, long newPtxtSpace):
   context(newPubKey.getContext()), pubKey(newPubKey), ptxtSpace(newPtxtSpace),
   noiseBound(NTL::to_xdouble(0.0))
 {
@@ -960,7 +960,7 @@ void Ctxt::addConstantCKKS(const helib::Ptxt<helib::CKKS>& ptxt)
 // Add at least one prime to the primeSet of c
 void addSomePrimes(Ctxt& c)
 {
-  const FHEcontext& context = c.getContext();
+  const Context& context = c.getContext();
   IndexSet s = c.getPrimeSet();
 
   // Sanity check: there should be something left to add
@@ -1206,7 +1206,7 @@ void computeIntervalForMul(double& lo, double& hi,
   const double slack = 4*log(2.0);
   // FIXME: 4 bits of slack...could be something more dynamic
 
-  const FHEcontext& context = ctxt1.getContext();
+  const Context& context = ctxt1.getContext();
 
   double cap1 = ctxt1.capacity();
   double cap2 = ctxt2.capacity();

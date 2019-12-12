@@ -19,8 +19,8 @@
 #include <cstdio>
 #include "test_common.h"
 #include "gtest/gtest.h"
-#include "assertions.h"
-#include "NTL/vector.h"
+#include <helib/assertions.h>
+#include <NTL/vector.h>
 
 namespace {
 

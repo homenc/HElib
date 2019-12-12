@@ -14,9 +14,9 @@
 #include <sstream>
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "NumbTh.h"
-#include "FHEContext.h"
-#include "ArgMap.h"
+#include <helib/NumbTh.h>
+#include <helib/Context.h>
+#include <helib/ArgMap.h>
 
 using namespace helib;
 
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
   convert(gens1, gens0);
   convert(ords1, ords0);
 
-  FHEcontext context(m, p, r, gens1, ords1);
+  Context context(m, p, r, gens1, ords1);
   buildModChain(context, 5, 2);
   if (!noPrint) {
     vector<long> f;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
   vector<long> gens, ords;
   readContextBase(s3, m1, p1, r1, gens, ords);
 
-  FHEcontext c1(m1, p1, r1, gens, ords);
+  Context c1(m1, p1, r1, gens, ords);
   s3 >> c1;
 
   if (context == c1)

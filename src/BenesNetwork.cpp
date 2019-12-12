@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/lzz_pXFactoring.h>
-#include "EncryptedArray.h"
+#include <helib/EncryptedArray.h>
 
 #include <cstdlib>
 #include <list>
@@ -18,8 +18,8 @@
 #include <memory>
 
 #include <NTL/vector.h>
-#include "NumbTh.h"
-#include "permutations.h"
+#include <helib/NumbTh.h>
+#include <helib/permutations.h>
 
 namespace helib {
 
