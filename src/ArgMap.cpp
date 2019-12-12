@@ -11,130 +11,267 @@
  */
 
 #include <iostream>
+#include <algorithm>
 #include <regex>
 #include <fstream>
+#include <cctype>
 #include "ArgMap.h"
 
 namespace helib {
 
-ArgMap& ArgMap::note(const std::string& s) {
+// Three functions strip whitespaces before and after strings.
+static void lstrip(std::string& s)
+{
+  auto it =
+      std::find_if(s.begin(), s.end(), [](int c) { return !std::isspace(c); });
+
+  s.erase(s.begin(), it);
+}
+
+static void rstrip(std::string& s)
+{
+  auto it = std::find_if(
+      s.rbegin(), s.rend(), [](int c) { return !std::isspace(c); });
+
+  s.erase(it.base(), s.end());
+}
+
+static void strip(std::string& s)
+{
+  lstrip(s);
+  rstrip(s);
+}
+
+ArgMap& ArgMap::note(const std::string& s)
+{
   docStream << "\t\t   " << s << "\n";
   return *this;
 }
 
-void ArgMap::usage(const std::string& msg) const {
+void ArgMap::usage(const std::string& msg) const
+{
   if (!msg.empty())
     std::cerr << msg << std::endl;
-  std::cerr << "Usage: " << this->progname << " [ name=value ]...\n";
+  std::cerr << "Usage: " << this->progname << " [ name" << this->kv_separator
+            << "value ]...\n";
   std::cerr << doc();
   exit(EXIT_FAILURE);
 }
 
 std::string ArgMap::doc() const { return docStream.str(); }
 
-ArgMap& ArgMap::kvSep(char c) {
-  this->kv_separator = c;
+ArgMap& ArgMap::helpArgs(const std::initializer_list<std::string> s)
+{
+  this->help_tokens = s;
   return *this;
 }
 
-ArgMap& ArgMap::optional() {
-  this->required_flag = false;
+ArgMap& ArgMap::helpArgs(const std::string s)
+{
+  this->help_tokens = {s};
   return *this;
 }
 
-ArgMap& ArgMap::required() {
-  this->required_flag = true;
+ArgMap& ArgMap::separator(Separator s)
+{
+
+  switch (s) {
+  case Separator::EQUALS:
+    this->kv_separator = '=';
+    break;
+  case Separator::COLON:
+    this->kv_separator = ':';
+    break;
+  case Separator::WHITESPACE:
+    this->kv_separator = ' ';
+    break;
+  default:
+    // Use of class enums means it should never reach here.
+    throw helib::LogicError("Unrecognised option for kv seperator.");
+  }
+
   return *this;
 }
 
-// static void printMatchResults(
-//  int size,
-//  std::string token,
-//  std::string key,
-//  std::string value)
-//{
-//    std::cerr << "Match size: " << size << '\n'
-//              << "Token (Full Match): " << token << '\n'
-//              << "Key: "   << key << '\n'
-//              << "Value: " << value << std::endl;
-//}
+ArgMap& ArgMap::optional()
+{
+  this->required_mode = false;
+  return *this;
+}
 
-void ArgMap::simpleRegexParse(const std::string& line,
-                              bool duplicates,
-                              std::function<void(const std::string&)> stop) {
+ArgMap& ArgMap::required()
+{
+  this->required_mode = true;
+  return *this;
+}
+
+ArgMap& ArgMap::toggle(bool t)
+{
+  this->named_args_only = false;
+  this->arg_type = t ? ArgType::TOGGLE_TRUE : ArgType::TOGGLE_FALSE;
+  return *this;
+}
+
+ArgMap& ArgMap::named()
+{
+  this->arg_type = ArgType::NAMED;
+  return *this;
+}
+
+ArgMap& ArgMap::positional()
+{
+  this->named_args_only = false;
+  this->arg_type = ArgType::POSITIONAL;
+  return *this;
+}
+
+ArgMap& ArgMap::diagnostics(std::ostream& ostrm)
+{
+  this->diagnostics_strm = &ostrm;
+  return *this;
+}
+
+static void
+printDiagnostics(std::ostream* ostrm_ptr,
+                 const std::forward_list<std::string>& args,
+                 const std::unordered_set<std::string>& required_set)
+{
+  if (ostrm_ptr != nullptr) {
+    // argv as seen by ArgMap
+    *ostrm_ptr << "Args pre-parse:\n";
+    for (const auto& e : args) {
+      *ostrm_ptr << e << std::endl;
+    }
+    // required set
+    *ostrm_ptr << "Required args set:\n";
+    for (const auto& e : required_set) {
+      *ostrm_ptr << e << std::endl;
+    }
+  }
+}
+
+// Correct the list from argv by splitting on the seperator.
+static void splitOnSeparator(std::forward_list<std::string>& args_lst, char sep)
+{
+  if (sep == ' ')
+    return;
+
+  for (auto it = args_lst.begin(); it != args_lst.end(); ++it) {
+    if (it->size() != 1) {
+      std::size_t pos = it->find(sep);
+      if (pos != std::string::npos) {
+        if (pos == 0) {
+          std::string sub = it->substr(1, std::string::npos);
+          *it = sep;
+          args_lst.insert_after(it, sub);
+        } else {
+          std::string sub = it->substr(pos);
+          *it = it->substr(0, pos);
+          args_lst.insert_after(it, sub);
+        }
+      }
+    }
+  }
+}
+
+void ArgMap::simpleParse(const std::forward_list<std::string>& args,
+                         bool duplicates,
+                         std::function<void(const std::string&)> stop)
+{
   if (stop == nullptr) {
     stop = std::bind(&ArgMap::usage, this, std::placeholders::_1);
   }
 
-  // Accepts blanks between the word and the kv separator.
-  // TODO Values can be grouped by '[]'. May require a different approach.
-  const std::string pattern =
-      R"((\S+)\s*)" + std::string(1, kv_separator) + R"(\s*(\[.*?\]|\S+)|\S+)";
-  std::regex re(pattern);
+  auto pos_args_it = this->positional_args_list.begin();
+  for (auto it = args.begin(); it != args.end(); ++it) {
 
-  // regex iterator
-  auto words = std::sregex_iterator(line.begin(), line.end(), re);
-  auto words_end = std::sregex_iterator();
+    const std::string token = *it;
 
-  // iterate through matches
-  for (; words != words_end; ++words) {
-
-    const std::string token(words->str(0));
-    const std::string key(words->str(1));
-    const std::string value(words->str(2));
-
-    // Useful for debug this under some print debug
-    //    printMatchResults(words->size(), token, key, value);
+    if (this->help_tokens.count(token))
+      stop("");
 
     // Check if not called before
-    if (!duplicates && this->previous_call_set.count(key)) {
-      stop("Attempting to set same variable '" + key + "' twice.");
-    }
-
-    // Special case built-in '-h' flag for help
-    if (token == "-h") {
-      stop("");
-    }
+    if (!duplicates && this->previous_call_set.count(token))
+      stop("Attempting to set same variable '" + token + "' twice.");
 
     // Select ArgProcessor
-    std::shared_ptr<ArgProcessor> ap = map[key];
+    auto map_it = this->map.find(token);
+    std::shared_ptr<ArgProcessor> ap =
+        (map_it == this->map.end()) ? nullptr : map_it->second;
 
-    // Is it a registered variable?
-    if (!ap) {
-      stop("Unrecognised argument " + ((key.empty()) ? token : key));
+    if (ap && ap->getArgType() != ArgType::POSITIONAL) {
+
+      switch (ap->getArgType()) {
+      case ArgType::NAMED:
+        // Process value (parse and set)
+        if ((++it) == args.end())
+          stop("Dangling value for named argument '" + token + "'.");
+
+        if (this->kv_separator == ' ') {
+          if (!ap->process(*it))
+            stop("Whitespace separator issue. Value:'" + *it + "'");
+        } else {
+          if ((++it) == args.end())
+            stop("Dangling value for named argument '" + token +
+                 "' after separator.");
+          if (!ap->process(*it))
+            stop("Not a valid value '" + *it + "'.");
+        }
+        break;
+      case ArgType::TOGGLE_TRUE:
+        if (!ap->process("1"))
+          stop("");
+        break;
+      case ArgType::TOGGLE_FALSE:
+        if (!ap->process("0"))
+          stop("");
+        break;
+      default:
+        // Should never get here.
+        throw helib::LogicError("Unrecognised ArgType.");
+        break;
+      }
+
+      // Remove from required_set (if it is there)
+      this->required_set.erase(token);
+
+      // Previously called.
+      this->previous_call_set.insert(token);
+    } else if (pos_args_it != this->positional_args_list.end()) {
+      // POSITIONAL args are treated differently as it is technically
+      // never a recognised token.
+      std::shared_ptr<ArgProcessor> pos_ap = map[*pos_args_it];
+      if (!pos_ap->process(*it))
+        throw helib::RuntimeError(
+            "Positional name does not match a ArgMap name.");
+      ++pos_args_it;
+    } else {
+      stop("Unrecognised argument \'" + token + "\'");
     }
-
-    // Process value (parse and set)
-    if (!ap->process(value))
-      stop("");
-
-    // Remove from required_set (if it is there)
-    this->required_set.erase(key);
-
-    // Previously called.
-    this->previous_call_set.insert(key);
   }
 }
 
-ArgMap& ArgMap::parse(int argc, char** argv) {
+ArgMap& ArgMap::parse(int argc, char** argv)
+{
+
   this->progname = std::string(argv[0]);
 
-  if (argc > 1) {
-    // put cmdline back together (without progname)
-    std::string line;
-    for (long i = 1; i < argc; i++) {
-      line += argv[i];
-      line += " ";
-    }
+  std::forward_list<std::string> args(argv + 1, argv + argc);
 
-    simpleRegexParse(line);
-  }
+  splitOnSeparator(args, this->kv_separator);
 
-  // Have the required args been provided.
+  // Take any leading and trailing whitespace away.
+  std::for_each(args.begin(), args.end(), strip);
+
+  printDiagnostics(this->diagnostics_strm, args, this->required_set);
+
+  simpleParse(args);
+
+  // Have the required args been provided - if not exit
   if (!this->required_set.empty()) {
     std::ostringstream oss;
     oss << "Required argument(s) not given:\n";
-    for (auto& e : required_set)
+    for (const auto& e : this->required_set)
       oss << "\t" << e << '\n';
     usage(oss.str()); // exits
   }
@@ -142,7 +279,18 @@ ArgMap& ArgMap::parse(int argc, char** argv) {
   return *this;
 }
 
-ArgMap& ArgMap::parse(const std::string& filepath) {
+ArgMap& ArgMap::parse(const std::string& filepath)
+{
+
+  if (this->kv_separator == ' ') { // Not from files.
+    throw helib::LogicError("Whitespace separator not possible from files.");
+  }
+
+  if (!this->named_args_only) {
+    throw helib::LogicError("Toggle and Positional arguments not possible from "
+                            "files. Only named arguments.");
+  }
+
   std::ifstream file(filepath);
   this->progname = filepath;
 
@@ -150,29 +298,34 @@ ArgMap& ArgMap::parse(const std::string& filepath) {
     throw helib::RuntimeError("Could not open file " + filepath);
   }
 
-  std::string single_line;
-  std::string line;
+  std::forward_list<std::string> args;
+  auto it = args.before_begin();
   std::regex re_comment_lines(R"((^\s*\#)|(^\s+$))");
+  std::string line;
   while (getline(file, line)) {
     if (std::regex_search(line, re_comment_lines)) {
       continue; // ignore comment lines and empties.
     }
-    // create single line
-    single_line += line;
-    single_line += " ";
+    it = args.insert_after(it, line);
   }
 
-  file.close();
+  splitOnSeparator(args, this->kv_separator);
 
-  simpleRegexParse(single_line, false, [&filepath](const std::string& msg) {
-    throw helib::RuntimeError("Could not parse params file: " + filepath);
+  // Take any leading and trailing whitespace away.
+  std::for_each(args.begin(), args.end(), strip);
+
+  printDiagnostics(this->diagnostics_strm, args, this->required_set);
+
+  simpleParse(args, false, [&filepath](const std::string& msg) {
+    throw helib::RuntimeError("Could not parse params file: " + filepath +
+                              ". " + msg);
   });
 
-  // Have the required args been provided.
+  // Have the required args been provided - if not throw
   if (!this->required_set.empty()) {
     std::ostringstream oss;
     oss << "Required argument(s) not given:\n";
-    for (auto& e : required_set)
+    for (const auto& e : this->required_set)
       oss << "\t" << e << '\n';
     throw helib::RuntimeError(oss.str());
   }
@@ -180,4 +333,4 @@ ArgMap& ArgMap::parse(const std::string& filepath) {
   return *this;
 }
 
-}
+} // namespace helib
