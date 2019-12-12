@@ -11,10 +11,10 @@
  */
 
 #include <cstring> // strcpy
+#include <algorithm>
 #include <string>
 #include <sstream>
 #include <vector>
-#include <tuple>
 #include <fstream>
 #include <cstdio>
 #include "test_common.h"
@@ -26,13 +26,15 @@ namespace {
 
 // Util func to convert a string to vector of type T.
 template <typename T = std::string>
-std::vector<T> lineToVector(const std::string& line) {
+std::vector<T> lineToVector(const std::string& line)
+{
   std::istringstream iss(line);
   std::istream_iterator<T> isiter(iss);
   return std::vector<T>(isiter, {});
 }
 
-class TestArgMapCmdLine : public ::testing::Test {
+class TestArgMapCmdLine : public ::testing::Test
+{
 
 protected:
   int argc = 0;
@@ -40,8 +42,27 @@ protected:
 
 public:
   // Helper func to generate argc and argv
-  virtual void mockCmdLineArgs(const std::string& s) {
-    std::vector<std::string> words = lineToVector<std::string>(s);
+  virtual void mockCmdLineArgs(const std::string& s)
+  {
+
+    std::vector<std::string> words;
+    // pre-process the single quotes.
+    if (std::count(s.begin(), s.end(), '\'')) {
+      std::istringstream iss(s);
+      std::string line;
+      for (bool append_only = false; std::getline(iss, line, '\'');
+           append_only = !append_only) {
+        if (append_only) {
+          words.push_back(line);
+        } else {
+          std::vector<std::string> tmp_hold = lineToVector<std::string>(line);
+          words.insert(words.end(), tmp_hold.begin(), tmp_hold.end());
+        }
+      }
+    } else {
+      words = lineToVector<std::string>(s);
+    }
+
     this->argc = words.size();
     this->argv = new char*[argc + 1];
 
@@ -55,7 +76,8 @@ public:
   };
 
   // Need to delete argv nicely.
-  ~TestArgMapCmdLine() override {
+  ~TestArgMapCmdLine() override
+  {
     for (int i = 0; i < this->argc; i++) {
       delete[] argv[i];
     }
@@ -63,7 +85,8 @@ public:
   };
 };
 
-class TestArgMapSampleFile : public ::testing::Test {
+class TestArgMapSampleFile : public ::testing::Test
+{
 
 private:
   bool del_file_flag = false;
@@ -73,7 +96,8 @@ protected:
 
 public:
   bool createSampleTestFile(const std::string& s,
-                            const std::string& sample_file = "") {
+                            const std::string& sample_file = "")
+  {
 
     this->del_file_flag = true;
     if (!sample_file.empty())
@@ -88,7 +112,10 @@ public:
     return true;
   }
 
-  ~TestArgMapSampleFile() override {
+  void doNotDeleteFile() { del_file_flag = false; }
+
+  ~TestArgMapSampleFile() override
+  {
     if (!this->filepath.empty() && del_file_flag) {
       // Delete the tmp test file
       if (remove(filepath.c_str()) != 0) {
@@ -102,11 +129,12 @@ public:
 // For death tests naming convention
 using DeathTestArgMapCmdLine = TestArgMapCmdLine;
 
-TEST_F(DeathTestArgMapCmdLine,
-       documentationShownAreShownIfHelpSelected) {
+TEST_F(DeathTestArgMapCmdLine, documentationShownIfHelpSelectedCmdLine)
+{
   mockCmdLineArgs("./prog -h");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1 = 5;
     float arg2 = 34.5;
     std::string arg3 = "Hello World";
@@ -123,15 +151,63 @@ TEST_F(DeathTestArgMapCmdLine,
               "Usage.*");
 }
 
-TEST_F(TestArgMapSampleFile,
-       documentationShownAreShownIfHelpSelectedFromFile) {
+TEST_F(DeathTestArgMapCmdLine, documentationShownIfCustomHelpSelectedCmdLine)
+{
+  mockCmdLineArgs("./prog --foo");
+
+  struct Opts
+  {
+    int arg1 = 5;
+    float arg2 = 34.5;
+    std::string arg3 = "Hello World";
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("alice", opts.arg1, "message string")
+      .arg("bob", opts.arg2, "message string")
+      // This now should not show default
+      .arg("chris", opts.arg3, "message string", "")
+      .helpArgs({"--bar", "--foo"});
+
+  EXPECT_EXIT(amap.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              "Usage.*");
+}
+
+TEST_F(DeathTestArgMapCmdLine,
+       documentationShownIfSingleCustomHelpSelectedCmdLine)
+{
+  mockCmdLineArgs("./prog --bar");
+
+  struct Opts
+  {
+    int arg1 = 5;
+    float arg2 = 34.5;
+    std::string arg3 = "Hello World";
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("alice", opts.arg1, "message string")
+      .arg("bob", opts.arg2, "message string")
+      // This now should not show default
+      .arg("chris", opts.arg3, "message string", "")
+      .helpArgs("--bar");
+
+  EXPECT_EXIT(amap.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              "Usage.*");
+}
+
+TEST_F(TestArgMapSampleFile, documentationShownIfHelpSelectedFromFile)
+{
   std::ostringstream oss;
   oss << "-h\n";
 
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1 = 5;
     float arg2 = 34.5;
     std::string arg3 = "Hello World";
@@ -146,10 +222,63 @@ TEST_F(TestArgMapSampleFile,
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(DeathTestArgMapCmdLine, illFormedCmdline) {
+TEST_F(TestArgMapSampleFile, documentationShownIfCustomHelpSelectedFromFile)
+{
+  std::ostringstream oss;
+  oss << "--foo";
+
+  // Cannot perform test without file.
+  ASSERT_TRUE(createSampleTestFile(oss.str()));
+
+  struct Opts
+  {
+    int arg1 = 5;
+    float arg2 = 34.5;
+    std::string arg3 = "Hello World";
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("alice", opts.arg1, "message string")
+      .arg("bob", opts.arg2, "message string")
+      // This now should not show default
+      .arg("chris", opts.arg3, "message string", "")
+      .helpArgs({"--bar", "--foo"});
+
+  EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
+}
+
+TEST_F(TestArgMapSampleFile,
+       documentationShownIfSingleCustomHelpSelectedFromFile)
+{
+  std::ostringstream oss;
+  oss << "--bar";
+
+  // Cannot perform test without file.
+  ASSERT_TRUE(createSampleTestFile(oss.str()));
+
+  struct Opts
+  {
+    int arg1 = 5;
+    float arg2 = 34.5;
+    std::string arg3 = "Hello World";
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("alice", opts.arg1, "message string")
+      .arg("bob", opts.arg2, "message string")
+      // This now should not show default
+      .arg("chris", opts.arg3, "message string", "")
+      .helpArgs("--bar");
+
+  EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
+}
+
+TEST_F(DeathTestArgMapCmdLine, illFormedCmdLine)
+{
   mockCmdLineArgs("./prog alic");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
   } opts;
@@ -160,18 +289,39 @@ TEST_F(DeathTestArgMapCmdLine, illFormedCmdline) {
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument alic\nUsage.*");
+              "Unrecognised argument 'alic'\nUsage.*");
 }
 
-TEST_F(TestArgMapSampleFile, illFormedSampleFile) {
+TEST_F(DeathTestArgMapCmdLine, danglingSeparatorCmdLine)
+{
+  mockCmdLineArgs("./prog alice=");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("alice", opts.arg1, "message string", "")
+      .arg("bob", opts.arg2, "message string", "");
+
+  EXPECT_EXIT(
+      amap.parse(argc, argv),
+      ::testing::ExitedWithCode(EXIT_FAILURE),
+      "Dangling value for named argument 'alice' after separator.\nUsage.*");
+}
+
+TEST_F(TestArgMapSampleFile, danglingSeparatorFromFile)
+{
   std::ostringstream oss;
-  oss << "alice=5\n"
-      << "bo\n";
+  oss << "./prog alice=";
 
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
   } opts;
@@ -183,10 +333,34 @@ TEST_F(TestArgMapSampleFile, illFormedSampleFile) {
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(DeathTestArgMapCmdLine, nullptrAndEmptyStringsForNoDefaults) {
+TEST_F(TestArgMapSampleFile, illFormedSampleFile)
+{
+  std::ostringstream oss;
+  oss << "alice=5\n"
+      << "bo\n";
+
+  // Cannot perform test without file.
+  ASSERT_TRUE(createSampleTestFile(oss.str()));
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("alice", opts.arg1, "message string", "")
+      .arg("bob", opts.arg2, "message string", "");
+
+  EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
+}
+
+TEST_F(DeathTestArgMapCmdLine, nullptrAndEmptyStringsForNoDefaultsCmdLine)
+{
   mockCmdLineArgs("./prog -h");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
   } opts;
@@ -200,10 +374,12 @@ TEST_F(DeathTestArgMapCmdLine, nullptrAndEmptyStringsForNoDefaults) {
               "Usage.*\n.*string\n.*bob.*string\n$");
 }
 
-TEST_F(TestArgMapCmdLine, perfectCmdlineArgsAreReadIn) {
+TEST_F(TestArgMapCmdLine, namedArgsCmdLine)
+{
   mockCmdLineArgs("./prog alice=1 bob=2.2 chris=NotIn");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -220,10 +396,96 @@ TEST_F(TestArgMapCmdLine, perfectCmdlineArgsAreReadIn) {
   EXPECT_EQ(opts.arg3, "NotIn");
 }
 
-TEST_F(DeathTestArgMapCmdLine, settingSameNameTwice) {
+TEST_F(TestArgMapCmdLine, argumentValuesWithSpacesCmdLine)
+{
+  mockCmdLineArgs(
+      "./prog --alice=1 --chris='Not in here' --bob=2.2  'file name.txt'");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    std::string arg4;
+  } opts;
+
+  helib::ArgMap()
+      .arg("--alice", opts.arg1, "message string", "")
+      .arg("--bob", opts.arg2, "message string", "")
+      .arg("--chris", opts.arg3, "message string", "")
+      .positional()
+      .arg("dave", opts.arg4, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(opts.arg1, 1);
+  EXPECT_FLOAT_EQ(opts.arg2, 2.2);
+  EXPECT_EQ(opts.arg3, "Not in here");
+  EXPECT_EQ(opts.arg4, "file name.txt");
+}
+
+TEST_F(TestArgMapSampleFile, argumentValuesWithSpacesFromFile)
+{
+  std::ostringstream oss;
+  oss << "--alice=1\n"
+      << "--chris=Not in here\n"
+      << "--bob=2.2\n";
+
+  // Cannot perform test without file.
+  ASSERT_TRUE(createSampleTestFile(oss.str()));
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    std::string arg4;
+  } opts;
+
+  helib::ArgMap()
+      .arg("--alice", opts.arg1, "message string", "")
+      .arg("--bob", opts.arg2, "message string", "")
+      .arg("--chris", opts.arg3, "message string", "")
+      .parse(filepath);
+
+  EXPECT_EQ(opts.arg1, 1);
+  EXPECT_FLOAT_EQ(opts.arg2, 2.2);
+  EXPECT_EQ(opts.arg3, "Not in here");
+}
+
+TEST_F(TestArgMapCmdLine, argumentValuesWithSpacesAndWhitespaceSeparatorCmdLine)
+{
+  mockCmdLineArgs(
+      "./prog --alice   1 --chris 'Not in here' --bob  2.2  'file name.txt'");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    std::string arg4;
+  } opts;
+
+  helib::ArgMap()
+      .separator(helib::ArgMap::Separator::WHITESPACE)
+      .arg("--alice", opts.arg1, "message string", "")
+      .arg("--bob", opts.arg2, "message string", "")
+      .arg("--chris", opts.arg3, "message string", "")
+      .positional()
+      .arg("dave", opts.arg4, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(opts.arg1, 1);
+  EXPECT_FLOAT_EQ(opts.arg2, 2.2);
+  EXPECT_EQ(opts.arg3, "Not in here");
+  EXPECT_EQ(opts.arg4, "file name.txt");
+}
+
+TEST_F(DeathTestArgMapCmdLine, settingSameNameTwiceCmdLine)
+{
   mockCmdLineArgs("./prog bob=2 bob=1");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
   } opts;
 
@@ -234,7 +496,8 @@ TEST_F(DeathTestArgMapCmdLine, settingSameNameTwice) {
   EXPECT_EQ(opts.arg1, 1);
 }
 
-TEST_F(TestArgMapSampleFile, settingSameNameTwiceFromFile) {
+TEST_F(TestArgMapSampleFile, settingSameNameTwiceFromFile)
+{
   std::ostringstream oss;
   oss << "bob=2\n"
       << "bob=1\n";
@@ -242,7 +505,8 @@ TEST_F(TestArgMapSampleFile, settingSameNameTwiceFromFile) {
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
   } opts;
 
@@ -252,10 +516,10 @@ TEST_F(TestArgMapSampleFile, settingSameNameTwiceFromFile) {
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(TestArgMapCmdLine, settingSameVariableTwice) {
-  mockCmdLineArgs("./prog alice=1 bob=2");
-
-  struct Opts {
+TEST(TestArgMap, settingSameVariableTwice)
+{
+  struct Opts
+  {
     int arg1;
   } opts;
 
@@ -266,29 +530,12 @@ TEST_F(TestArgMapCmdLine, settingSameVariableTwice) {
                helib::RuntimeError);
 }
 
-TEST_F(TestArgMapSampleFile, settingSameVariableTwice) {
-  std::ostringstream oss;
-  oss << "alice=1\n"
-      << "bob=2\n";
-
-  // Cannot perform test without file.
-  ASSERT_TRUE(createSampleTestFile(oss.str()));
-
-  struct Opts {
-    int arg1;
-  } opts;
-
-  helib::ArgMap amap;
-  amap.arg("alice", opts.arg1, "message string");
-
-  EXPECT_THROW(amap.arg("bob", opts.arg1, "message string"),
-               helib::RuntimeError);
-}
-
-TEST_F(TestArgMapCmdLine, spacedCmdlineArgsAreReadIn) {
+TEST_F(TestArgMapCmdLine, spacedArgsCmdLine)
+{
   mockCmdLineArgs("./prog alice= 1 bob = 2.2 chris =NotIn");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -305,7 +552,8 @@ TEST_F(TestArgMapCmdLine, spacedCmdlineArgsAreReadIn) {
   EXPECT_EQ(opts.arg3, "NotIn");
 }
 
-TEST_F(TestArgMapSampleFile, spacedCmdlineArgsAreReadIn) {
+TEST_F(TestArgMapSampleFile, spacedArgsFromFile)
+{
   std::ostringstream oss;
   oss << "alice= 1\n"
       << "bob = 2.2\n"
@@ -314,7 +562,8 @@ TEST_F(TestArgMapSampleFile, spacedCmdlineArgsAreReadIn) {
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -331,10 +580,12 @@ TEST_F(TestArgMapSampleFile, spacedCmdlineArgsAreReadIn) {
   EXPECT_EQ(opts.arg3, "NotIn");
 }
 
-TEST_F(DeathTestArgMapCmdLine, unrecognisedCmdlineArgsAreReadIn) {
+TEST_F(DeathTestArgMapCmdLine, unrecognisedArgsCmdLine)
+{
   mockCmdLineArgs("./prog lice=1 bob=2.2 chris=NotIn");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -347,10 +598,11 @@ TEST_F(DeathTestArgMapCmdLine, unrecognisedCmdlineArgsAreReadIn) {
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument lice\nUsage.*");
+              "Unrecognised argument 'lice'\nUsage.*");
 }
 
-TEST_F(TestArgMapSampleFile, unrecognisedCmdlineArgsAreReadIn) {
+TEST_F(TestArgMapSampleFile, unrecognisedArgsFromFile)
+{
   std::ostringstream oss;
   oss << "lice=1\n"
       << "bob=2.2\n"
@@ -359,7 +611,8 @@ TEST_F(TestArgMapSampleFile, unrecognisedCmdlineArgsAreReadIn) {
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -373,17 +626,19 @@ TEST_F(TestArgMapSampleFile, unrecognisedCmdlineArgsAreReadIn) {
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(TestArgMapCmdLine, changingKvSeparator) {
+TEST_F(TestArgMapCmdLine, changingSeparatorCmdLine)
+{
   mockCmdLineArgs("./prog alice:1 bob:7.5 chris:Hi");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
   } opts;
 
   helib::ArgMap()
-      .kvSep(':')
+      .separator(helib::ArgMap::Separator::COLON)
       .arg("alice", opts.arg1, "message string")
       .arg("bob", opts.arg2, "message string")
       .arg("chris", opts.arg3, "message string")
@@ -394,7 +649,75 @@ TEST_F(TestArgMapCmdLine, changingKvSeparator) {
   EXPECT_EQ(opts.arg3, "Hi");
 }
 
-TEST_F(TestArgMapSampleFile, changingKvSeparator) {
+TEST_F(TestArgMapCmdLine, changingToWhitespaceSeparatorCmdLine)
+{
+  mockCmdLineArgs("./prog -alice  1 -bob   7.5 -chris Hi");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+  } opts;
+
+  helib::ArgMap()
+      .separator(helib::ArgMap::Separator::WHITESPACE)
+      .arg("-alice", opts.arg1, "message string")
+      .arg("-bob", opts.arg2, "message string")
+      .arg("-chris", opts.arg3, "message string")
+      .parse(argc, argv);
+
+  EXPECT_EQ(opts.arg1, 1);
+  EXPECT_FLOAT_EQ(opts.arg2, 7.5);
+  EXPECT_EQ(opts.arg3, "Hi");
+}
+
+TEST_F(DeathTestArgMapCmdLine, wrongSeparatorNonWhitespaceCaseCmdLine)
+{
+  mockCmdLineArgs("./prog alice:1 bob:7.5 chris:Hi");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.separator(helib::ArgMap::Separator::EQUALS)
+      .arg("alice", opts.arg1, "message string")
+      .arg("bob", opts.arg2, "message string")
+      .arg("chris", opts.arg3, "message string");
+
+  EXPECT_EXIT(amap.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              "Unrecognised argument 'alice:1'\nUsage.*");
+}
+
+TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseiCmdLine)
+{
+  mockCmdLineArgs("./prog alice=1 bob=7.5 chris=Hi");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.separator(helib::ArgMap::Separator::WHITESPACE)
+      .arg("alice", opts.arg1, "message string")
+      .arg("bob", opts.arg2, "message string")
+      .arg("chris", opts.arg3, "message string");
+
+  EXPECT_EXIT(amap.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              "Unrecognised argument 'alice=1'\nUsage.*");
+}
+
+TEST_F(TestArgMapSampleFile, changingSeparatorFromFile)
+{
   std::ostringstream oss;
   oss << "alice:1\n"
       << "bob:7.5\n"
@@ -403,14 +726,15 @@ TEST_F(TestArgMapSampleFile, changingKvSeparator) {
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
   } opts;
 
   helib::ArgMap()
-      .kvSep(':')
+      .separator(helib::ArgMap::Separator::COLON)
       .arg("alice", opts.arg1, "message string")
       .arg("bob", opts.arg2, "message string")
       .arg("chris", opts.arg3, "message string")
@@ -421,10 +745,12 @@ TEST_F(TestArgMapSampleFile, changingKvSeparator) {
   EXPECT_EQ(opts.arg3, "Hi");
 }
 
-TEST_F(TestArgMapCmdLine, compulsoryArgumentGiven) {
+TEST_F(TestArgMapCmdLine, compulsoryArgumentGivenCmdLine)
+{
   mockCmdLineArgs("./prog alice=1 bob=7.5");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -443,7 +769,8 @@ TEST_F(TestArgMapCmdLine, compulsoryArgumentGiven) {
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(TestArgMapSampleFile, compulsoryArgumentGiven) {
+TEST_F(TestArgMapSampleFile, compulsoryArgumentGivenFromFile)
+{
   std::ostringstream oss;
   oss << "alice=1\n"
       << "bob=7.5\n";
@@ -451,7 +778,8 @@ TEST_F(TestArgMapSampleFile, compulsoryArgumentGiven) {
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -470,10 +798,12 @@ TEST_F(TestArgMapSampleFile, compulsoryArgumentGiven) {
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(DeathTestArgMapCmdLine, compulsoryArgumentNotGiven) {
+TEST_F(DeathTestArgMapCmdLine, compulsoryArgumentNotGivenCmdLine)
+{
   mockCmdLineArgs("./prog alice=1");
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -491,14 +821,16 @@ TEST_F(DeathTestArgMapCmdLine, compulsoryArgumentNotGiven) {
               R"(Required argument\(s\) not given:.*)");
 }
 
-TEST_F(TestArgMapSampleFile, compulsoryArgumentNotGiven) {
+TEST_F(TestArgMapSampleFile, compulsoryArgumentNotGivenFromFile)
+{
   std::ostringstream oss;
   oss << "alice=1\n";
 
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -514,10 +846,12 @@ TEST_F(TestArgMapSampleFile, compulsoryArgumentNotGiven) {
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
-TEST_F(TestArgMapCmdLine, readInAVector) {
-  mockCmdLineArgs("./prog alice=[1 2]");
+TEST_F(TestArgMapCmdLine, readInAVectorCmdLine)
+{
+  mockCmdLineArgs("./prog alice='[1 2]'");
 
-  struct Opts {
+  struct Opts
+  {
     NTL::Vec<long> arg1;
   } opts;
 
@@ -533,14 +867,16 @@ TEST_F(TestArgMapCmdLine, readInAVector) {
   EXPECT_EQ(opts.arg1, test_v);
 }
 
-TEST_F(TestArgMapSampleFile, readInAVector) {
+TEST_F(TestArgMapSampleFile, readInAVectorFromFile)
+{
   std::ostringstream oss;
   oss << "alice=[1 2]\n";
 
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     NTL::Vec<long> arg1;
   } opts;
 
@@ -556,7 +892,8 @@ TEST_F(TestArgMapSampleFile, readInAVector) {
   EXPECT_EQ(opts.arg1, test_v);
 }
 
-TEST_F(TestArgMapSampleFile, argumentsFromSimpleFile) {
+TEST_F(TestArgMapSampleFile, namedArgsFromFile)
+{
   std::ostringstream oss;
   oss << "alice = 1\n"
       << "bob=7.5\n";
@@ -564,7 +901,8 @@ TEST_F(TestArgMapSampleFile, argumentsFromSimpleFile) {
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -581,7 +919,8 @@ TEST_F(TestArgMapSampleFile, argumentsFromSimpleFile) {
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(TestArgMapSampleFile, handlingCommentsFromSimpleFile) {
+TEST_F(TestArgMapSampleFile, handlingCommentsFromFile)
+{
   std::ostringstream oss;
   oss << "# An initial comment line.\n"
       << "alice = 1\n"
@@ -592,7 +931,8 @@ TEST_F(TestArgMapSampleFile, handlingCommentsFromSimpleFile) {
   // Cannot perform test without file.
   ASSERT_TRUE(createSampleTestFile(oss.str()));
 
-  struct Opts {
+  struct Opts
+  {
     int arg1;
     float arg2;
     std::string arg3;
@@ -609,17 +949,229 @@ TEST_F(TestArgMapSampleFile, handlingCommentsFromSimpleFile) {
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(TestArgMapSampleFile, fileDoesNotExist) {
-  struct Opts {
+TEST_F(TestArgMapSampleFile, fileDoesNotExist)
+{
+  struct Opts
+  {
     int arg1;
   } opts;
 
-  // File not required to be made.
+  // File must not be made.
 
   helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string");
 
   EXPECT_THROW(amap.parse("aaaa.bbb"), helib::RuntimeError);
+}
+
+TEST_F(TestArgMapSampleFile, toggleArgsFromFile)
+{
+  std::ostringstream oss;
+  oss << "-f\n"
+      << "-alice=1\n"
+      << "-bob=2.2\n"
+      << "-t\n"
+      << "-chris=NotIn\n";
+
+  // Cannot perform test without file.
+  ASSERT_TRUE(createSampleTestFile(oss.str()));
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    bool toggle_t = true;
+    bool toggle_f = false;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("-alice", opts.arg1, "message string", "")
+      .arg("-bob", opts.arg2, "message string", "")
+      .toggle()
+      .arg("-t", opts.toggle_t, "message string", "")
+      .toggle(false)
+      .arg("-f", opts.toggle_f, "message string", "")
+      .named()
+      .required()
+      .arg("-chris", opts.arg3, "message string", "");
+
+  EXPECT_THROW(amap.parse(filepath), helib::LogicError);
+}
+
+TEST_F(TestArgMapCmdLine, toggleArgsCmdLine)
+{
+  mockCmdLineArgs("./prog -f -alice=1 -bob=2.2 -t -chris=NotIn");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    bool toggle_t = true;
+    bool toggle_f = false;
+  } opts;
+
+  helib::ArgMap()
+      .arg("-alice", opts.arg1, "message string", "")
+      .arg("-bob", opts.arg2, "message string", "")
+      .toggle()
+      .arg("-t", opts.toggle_t, "message string", "")
+      .toggle(false)
+      .arg("-f", opts.toggle_f, "message string", "")
+      .named()
+      .required()
+      .arg("-chris", opts.arg3, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(opts.arg1, 1);
+  EXPECT_FLOAT_EQ(opts.arg2, 2.2);
+  EXPECT_EQ(opts.arg3, "NotIn");
+  EXPECT_TRUE(opts.toggle_t);
+  EXPECT_FALSE(opts.toggle_f);
+}
+
+TEST_F(TestArgMapCmdLine, positionalArgsCmdLine)
+{
+  mockCmdLineArgs("./prog -alice=1 -bob=2.2 -t dave1 -chris=NotIn eve2");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    bool toggle_t = true;
+    std::string dave;
+    std::string eve;
+  } opts;
+
+  helib::ArgMap()
+      .arg("-alice", opts.arg1, "message string", "")
+      .arg("-bob", opts.arg2, "message string", "")
+      .toggle()
+      .arg("-t", opts.toggle_t, "message string", "")
+      .named()
+      .required()
+      .arg("-chris", opts.arg3, "message string", "")
+      .positional()
+      .arg("dave", opts.dave, "message string", "")
+      .optional()
+      .arg("eve", opts.eve, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(opts.arg1, 1);
+  EXPECT_FLOAT_EQ(opts.arg2, 2.2);
+  EXPECT_EQ(opts.arg3, "NotIn");
+  EXPECT_TRUE(opts.toggle_t);
+  EXPECT_EQ(opts.dave, "dave1");
+  EXPECT_EQ(opts.eve, "eve2");
+}
+
+TEST_F(TestArgMapSampleFile, positionalArgsFromFile)
+{
+  std::ostringstream oss;
+  oss << "-alice=1\n"
+      << "-bob=2.2\n"
+      << "-t\n"
+      << "dave1\n"
+      << "-chris=NotIn\n"
+      << "eve2\n";
+
+  // Cannot perform test without file.
+  ASSERT_TRUE(createSampleTestFile(oss.str()));
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    bool toggle_t = true;
+    std::string dave;
+    std::string eve;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("-alice", opts.arg1, "message string", "")
+      .arg("-bob", opts.arg2, "message string", "")
+      .toggle()
+      .arg("-t", opts.toggle_t, "message string", "")
+      .named()
+      .required()
+      .arg("-chris", opts.arg3, "message string", "")
+      .positional()
+      .arg("dave", opts.dave, "message string", "")
+      .optional()
+      .arg("eve", opts.eve, "message string", "");
+
+  EXPECT_THROW(amap.parse(filepath), helib::LogicError);
+}
+
+TEST_F(TestArgMapCmdLine, requiredThenOptionalPositionalArgsCmdLine)
+{
+  mockCmdLineArgs("./prog -alice=1 -bob=2.2 -t dave1 -chris=NotIn ");
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    bool toggle_t = true;
+    std::string dave;
+    std::string eve;
+  } opts;
+
+  helib::ArgMap()
+      .arg("-alice", opts.arg1, "message string", "")
+      .arg("-bob", opts.arg2, "message string", "")
+      .toggle()
+      .arg("-t", opts.toggle_t, "message string", "")
+      .named()
+      .required()
+      .arg("-chris", opts.arg3, "message string", "")
+      .positional()
+      .arg("dave", opts.dave, "message string", "")
+      .optional()
+      .arg("eve", opts.eve, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(opts.arg1, 1);
+  EXPECT_FLOAT_EQ(opts.arg2, 2.2);
+  EXPECT_EQ(opts.arg3, "NotIn");
+  EXPECT_TRUE(opts.toggle_t);
+  EXPECT_EQ(opts.dave, "dave1");
+  EXPECT_EQ(opts.eve, "");
+}
+
+TEST(TestArgMap, secondTimeOptionalPositionalArgs)
+{
+
+  struct Opts
+  {
+    int arg1;
+    float arg2;
+    std::string arg3;
+    bool toggle_t = true;
+    std::string dave;
+    std::string eve;
+    std::string freya;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.arg("-alice", opts.arg1, "message string", "")
+      .arg("-bob", opts.arg2, "message string", "")
+      .toggle()
+      .arg("-t", opts.toggle_t, "message string", "")
+      .required()
+      .named()
+      .arg("-chris", opts.arg3, "message string", "")
+      .positional()
+      .arg("dave", opts.dave, "message string", "")
+      .optional()
+      .arg("eve", opts.eve, "message string", "")
+      .required();
+
+  EXPECT_THROW(amap.arg("freya", opts.freya, "message string", ""),
+               helib::LogicError);
 }
 
 } // namespace
