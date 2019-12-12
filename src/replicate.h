@@ -32,6 +32,7 @@
  **/
 
 #include "EncryptedArray.h"
+#include "Ptxt.h"
 
 namespace helib {
 
@@ -91,6 +92,23 @@ void replicateAll(std::vector<Ctxt>& v, const EncryptedArray& ea,
        	          const Ctxt& ctxt, long recBound = 64,
 		  RepAuxDim* repAuxPtr=NULL);
 
+/**
+ * @brief Generate a vector of plaintexts with each slot replicated in each
+ * plaintext.
+ * @tparam Scheme Encryption scheme used (must be `BGV` or `CKKS`).
+ * @param v Vector of replicated plaintext slots.
+ * @param ptxt Plaintext whose slots will be replicated.
+ *
+ * The order of the return vector agrees with the order of the slots. i.e.
+ * the `i`th plaintext in the return value is a replication of `*this[i]`.
+ **/
+template <typename Scheme>
+void replicateAll(std::vector<Ptxt<Scheme>>& v, const EncryptedArray&,
+    const Ptxt<Scheme>& ptxt)
+{
+  v = ptxt.replicateAll();
+}
+
 //! This function is obsolete, and is kept for historical purposes only. It
 //! was a first attempt at implementing the O(1)-amortized algorithm, but is
 //! less efficient than the function above.
@@ -98,6 +116,19 @@ void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt,
                       ReplicateHandler *handler, RepAux* repAuxPtr=NULL);
 
 void replicate(const EncryptedArray& ea, PlaintextArray& pa, long i);
+
+/**
+ * @brief Replicate single slot of a `Ptxt` object across all of its slots.
+ * @tparam Scheme Encryption scheme used (must be `BGV` or `CKKS`).
+ * @param ptxt Plaintext on which to do the replication.
+ * @param i Position of the slot to replicate.
+ * @return Reference to `*this` post replication.
+ **/
+template <typename Scheme>
+void replicate(const EncryptedArray&, Ptxt<Scheme>& ptxt, long i)
+{
+  ptxt.replicate(i);
+}
 
 // Structures to keep tables of maskign constants that are used in
 // replication. A calling application can either supply this structure

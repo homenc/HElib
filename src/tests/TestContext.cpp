@@ -17,6 +17,11 @@
 
 // TODO - Currently does not cover well the Context object.
 
+// Needed for testing
+namespace helib {
+  extern NTL::ZZX getG(const EncryptedArray& ea);
+}
+
 namespace {
 
 struct BGVParameters
@@ -64,6 +69,14 @@ TEST_P(TestContext, ContextCalculatingSecurityAfterModchainBuilt)
   buildModChain(*context, /*bits=*/100, /*c=*/2);
   double result = context->securityLevel();
   EXPECT_FALSE(std::isinf(result));
+}
+
+TEST_P(TestContext, hasCorrectSlotRingWhenConstructed)
+{
+  EXPECT_EQ(context->slotRing->p, p);
+  EXPECT_EQ(context->slotRing->r, r);
+  EXPECT_EQ(context->slotRing->p2r, pow(p,r));
+  EXPECT_EQ(context->slotRing->G, helib::getG(*(context->ea)));
 }
 
 INSTANTIATE_TEST_SUITE_P(variousParameters,

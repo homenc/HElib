@@ -18,6 +18,7 @@
 #include "keySwitching.h"
 #include "CtPtrs.h"
 #include "EncryptedArray.h"
+#include "Ptxt.h"
 
 #include "debugging.h"
 #include "norms.h"
@@ -862,6 +863,59 @@ void Ctxt::addConstantCKKS(const NTL::ZZX& poly, NTL::xdouble size, NTL::xdouble
   addConstantCKKS(DoubleCRT(poly,context,primeSet),size,factor);
 }
 
+Ctxt& Ctxt::operator+=(const helib::Ptxt<helib::BGV>& other)
+{
+  addConstant(other.getPolyRepr());
+  return *this;
+}
+
+Ctxt& Ctxt::operator+=(const helib::Ptxt<helib::CKKS>& other)
+{
+  addConstantCKKS(other);
+  return *this;
+}
+
+Ctxt& Ctxt::operator-=(const helib::Ptxt<helib::BGV>& other)
+{
+  helib::Ptxt<helib::BGV> subtrahend(other);
+  subtrahend.negate();
+  addConstant(subtrahend.getPolyRepr());
+  return *this; 
+}
+
+Ctxt& Ctxt::operator-=(const helib::Ptxt<helib::CKKS>& other)
+{
+  helib::Ptxt<helib::CKKS> subtrahend(other);
+  subtrahend.negate();
+  addConstantCKKS(subtrahend);
+  return *this; 
+}
+
+Ctxt& Ctxt::operator*=(const helib::Ptxt<helib::BGV>& other)
+{
+  multByConstant(other.getPolyRepr());
+  return *this;
+}
+
+Ctxt& Ctxt::operator*=(const helib::Ptxt<helib::CKKS>& other)
+{
+  multByConstantCKKS(other);
+  return *this;
+}
+
+void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
+{
+  NTL::ZZX poly;
+  double factor = getContext().ea->getCx().encode(poly, other);
+  double size = 0;
+  for(const auto& x : other)
+    if(std::norm(x) > size)
+      size = std::norm(x);
+  if(size == 0.0)
+    size = 1.0;
+  addConstantCKKS(poly, NTL::xdouble{size}, NTL::xdouble{factor});
+}
+
 void Ctxt::addConstantCKKS(const NTL::ZZ& c)
 {
   NTL::xdouble xc = NTL::to_xdouble(c);
@@ -896,6 +950,11 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
   DoubleCRT dcrt(getContext(), getPrimeSet());
   dcrt = to_ZZ(scaled);
   addConstantCKKS(dcrt, /*size=*/scaled/factor, factor);
+}
+
+void Ctxt::addConstantCKKS(const helib::Ptxt<helib::CKKS>& ptxt)
+{
+  addConstantCKKS(ptxt.getSlotRepr());
 }
 
 // Add at least one prime to the primeSet of c
@@ -1469,6 +1528,20 @@ void Ctxt::multByConstant(const zzX& poly, double size)
   multByConstant(dcrt,size);
 }
 
+void Ctxt::multByConstantCKKS(const std::vector<std::complex<double>>& other)
+{
+  // NOTE: some replicated logic here and in addConstantCKKS...
+  NTL::ZZX poly;
+  double factor = getContext().ea->getCx().encode(poly, other);
+  double size = 0;
+  for(const auto& x : other)
+    if(std::norm(x) > size)
+      size = std::norm(x);
+  if(size == 0.0)
+    size = 1.0;
+  multByConstantCKKS(poly, NTL::xdouble{size}, NTL::xdouble{factor});
+}
+
 void
 Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
                          NTL::xdouble size, NTL::xdouble factor, double roundingErr)
@@ -1493,6 +1566,11 @@ Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
   // multiply all the parts by this constant
   for (auto& part: parts)
     part.Mul(dcrt,/*matchIndexSets=*/false);
+}
+
+void Ctxt::multByConstantCKKS(const helib::Ptxt<helib::CKKS>& ptxt)
+{
+  multByConstantCKKS(ptxt.getSlotRepr());
 }
 
 // Divide a cipehrtext by 2. It is assumed that the ciphertext

@@ -578,6 +578,23 @@ public:
     convert(tmp, array);
     return encode(ptxt, tmp, useThisSize, precision);
   }
+
+  /**
+   * @brief Encode a `Ptxt` object into a `zzX`.
+   * @tparam Scheme Encryption scheme to be used (either `BGV` or `CKKS`).
+   * @param out Polynomial to encode into.
+   * @param ptxt Plaintext `Ptxt` obejct to encode.
+   * @param useThisSize Size to use.
+   * @param precision Precision to use.
+   * @return The scaling factor used in the encoding routine.
+   **/
+  template <typename Scheme>
+  double encode(zzX& out, const Ptxt<Scheme>& ptxt, double useThisSize,
+      long precision=-1) const
+  {
+    return encode(out, ptxt.getSlotRepr(), useThisSize, precision);
+  }
+
   double encode(zzX& ptxt, double aSingleNumber,
                 double useThisSize=-1, long precision=-1) const;
 
@@ -671,8 +688,47 @@ public:
   void decrypt(const Ctxt& ctxt,
                const FHESecKey& sKey, std::vector<double>& ptxt) const override
   { std::vector<cx_double> v; decrypt(ctxt,sKey,v); convert(ptxt,v); }
+  
+  /**
+   * @brief Decrypt ciphertext to a plaintext relative to a specific scheme.
+   * @tparam Scheme Encryption scheme to be used (either `BGV` or `CKKS`).
+   * @param ctxt Ciphertext to decrypt.
+   * @param sKey Secret key to be used for decryption.
+   * @param ptxt Plaintext into which to decrypt.
+   * Decrypt a `Ctxt` ciphertext object to a `Ptxt` plaintext one relative to
+   * a specific scheme.
+   **/
+  template <typename Scheme>
+  void decrypt(const Ctxt& ctxt, const FHESecKey& sKey, helib::Ptxt<Scheme>& ptxt) const
+  {
+    std::vector<cx_double> ptxtArray;
+    decrypt(ctxt, sKey, ptxtArray);
+    ptxt.setData(std::move(ptxtArray));
+  }
 
   void extractRealPart(Ctxt& c) const;
+
+  /**
+   * @brief Extract the real part of a `CKKS` plaintext.
+   * @tparam Scheme Encryption scheme to be used (must be `CKKS`).
+   * @param p Plaintext on which to operate.
+   **/
+  template <typename Scheme>
+  void extractRealPart(Ptxt<Scheme>& p) const
+  {
+    p = p.real();
+  }
+
+  /**
+   * @brief Extract the imaginary part of a `CKKS` plaintext.
+   * @tparam Scheme Encryption scheme to be used (must be `CKKS`).
+   * @param p Plaintext on which to operate.
+   **/
+  template <typename Scheme>
+  void extractImPart(Ptxt<Scheme>& p) const
+  {
+    p = p.imag();
+  }
 
   //! Note: If called with dcrt==nullptr, extractImPart will perform FFT's
   //! when encoding i as a DoubleCRT object. If called with dcrt!=nullptr,

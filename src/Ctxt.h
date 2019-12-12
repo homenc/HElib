@@ -58,6 +58,11 @@
 #include "DoubleCRT.h"
 
 namespace helib {
+struct CKKS;
+struct BGV;
+
+template <typename Scheme>
+class Ptxt;
 
 class KeySwitch;
 class FHEPubKey;
@@ -373,6 +378,52 @@ public:
   //! @brief applies the automorphsim p^j using smartAutomorphism
   void frobeniusAutomorph(long j);
 
+  // Operators acting between ciphertexts and plaintext objects
+
+  // BGV case
+  /**
+   * @brief Plus equals operator with a `BGV` `Ptxt`.
+   * @param other Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   **/
+  Ctxt& operator+=(const helib::Ptxt<helib::BGV>& other);
+
+  /**
+   * @brief Minus equals operator with a `BGV` `Ptxt`.
+   * @param other Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   **/
+  Ctxt& operator-=(const helib::Ptxt<helib::BGV>& other);
+
+  /**
+   * @brief Times equals operator with a `BGV` `Ptxt`.
+   * @param other Right hand side of multiplication.
+   * @return reference to `*this` post multiplication.
+   **/
+  Ctxt& operator*=(const helib::Ptxt<helib::BGV>& other);
+  
+  // CKKS case
+  /**
+   * @brief Plus equals operator with a `CKKS` `Ptxt`.
+   * @param other Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   **/
+  Ctxt& operator+=(const helib::Ptxt<helib::CKKS>& other);
+
+  /**
+   * @brief Minus equals operator with a `CKKS` `Ptxt`.
+   * @param other Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   **/
+  Ctxt& operator-=(const helib::Ptxt<helib::CKKS>& other);
+
+  /**
+   * @brief Times equals operator with a `CKKS` `Ptxt`.
+   * @param other Right hand side of multiplication.
+   * @return Reference to `*this` post multiplication.
+   **/
+  Ctxt& operator*=(const helib::Ptxt<helib::CKKS>& other);
+
   //! Add a constant polynomial. 
   //! If provided, size should be a high-probability bound
   //! on the L-infty norm of the canonical embedding
@@ -382,6 +433,13 @@ public:
   //! For the other variants, explicit bounds are computed (if not CKKS).
   void addConstant(const DoubleCRT& dcrt, double size=-1.0);
   void addConstant(const NTL::ZZX& poly, double size=-1.0);
+
+  /**
+   * @brief Add a `BGV` plaintext to this `Ctxt`.
+   * @param ptxt Plaintext `Ptxt` object with which to add.
+   **/
+  template <typename Scheme>
+  void addConstant(const Ptxt<Scheme>& ptxt) { addConstant(ptxt.getPolyRepr()); }
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long,/*denominator=*/long>);
@@ -394,6 +452,13 @@ public:
   void addConstantCKKS(const NTL::ZZX& poly,
                        NTL::xdouble size=NTL::xdouble(-1.0),
                        NTL::xdouble factor=NTL::xdouble(-1.0));
+  void addConstantCKKS(const std::vector<std::complex<double>>& ptxt);
+
+  /**
+   * @brief Add a `CKKS` plaintext to this `Ctxt`.
+   * @param ptxt Plaintext `Ptxt` object with which to add.
+   **/
+  void addConstantCKKS(const helib::Ptxt<helib::CKKS>& ptxt);
   void addConstantCKKS(const NTL::ZZ& c);
 
   //! Multiply-by-constant. 
@@ -405,6 +470,13 @@ public:
   void multByConstant(const NTL::ZZX& poly, double size=-1.0);
   void multByConstant(const zzX& poly, double size=-1.0);
   void multByConstant(const NTL::ZZ& c);
+
+  /**
+   * @brief Multiply a `BGV` plaintext to this `Ctxt`.
+   * @param ptxt Plaintext `Ptxt` object with which to multiply.
+   **/
+  template <typename Scheme>
+  void multByConstant(const Ptxt<Scheme>& ptxt){multByConstant(ptxt.getPolyRepr());}
 
   //! multiply by a rational number or floating point
   void multByConstantCKKS(double x) {ratFactor /= x; ptxtMag *= std::abs(x);}
@@ -423,6 +495,14 @@ public:
     DoubleCRT dcrt(poly,context,primeSet);
     multByConstantCKKS(dcrt,size,factor,roundingErr);
   }
+
+  // TODO: Ptxt: refactor into single function for getting the std::vector<cx_double> repr of slots
+  /**
+   * @brief Multiply a `CKKS` plaintext to this `Ctxt`.
+   * @param ptxt Plaintext `Ptxt` object polynomial with which to multiply.
+   **/
+  void multByConstantCKKS(const helib::Ptxt<helib::CKKS>& ptxt);
+  void multByConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
   //! Convenience method: XOR and nXOR with arbitrary plaintext space:
   //! a xor b = a+b-2ab = a + (1-2a)*b,
