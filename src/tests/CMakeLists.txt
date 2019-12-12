@@ -7,7 +7,9 @@ set(GTEST_SRC
     "TestArgMap.cpp"
     "TestBootstrappingWithMultiplications.cpp"
     "TestContext.cpp"
-    )
+    "TestPolyMod.cpp"
+    "TestPtxt.cpp"
+    "TestPolyModRing.cpp")
 
 set(PORTED_LEGACY_TEST_SRC
     "GTestApproxNums.cpp"
@@ -73,6 +75,9 @@ set(TEST_NAMES
     "TestErrorHandling"
     "TestFatBootstrappingWithMultiplications"
     "TestThinBootstrappingWithMultiplications"
+    "TestPolyMod"
+    "TestPolyModRing"
+    "TestPtxt"
     )
 
 foreach(TEST_NAME ${TEST_NAMES})

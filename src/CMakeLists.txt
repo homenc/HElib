@@ -66,35 +66,38 @@ set(HELIB_SRCS
         "EvalMap.cpp"
         "extractDigits.cpp"
         "FHEContext.cpp"
-        "keys.cpp"
+        "fhe_stats.cpp"
         "hypercube.cpp"
         "IndexSet.cpp"
         "intraSlot.cpp"
+        "keys.cpp"
         "keySwitching.cpp"
         "matching.cpp"
         "matmul.cpp"
-        "randomMatrices.cpp"
         "norms.cpp"
         "NumbTh.cpp"
         "OptimizePermutations.cpp"
         "PAlgebra.cpp"
         "PermNetwork.cpp"
         "permutations.cpp"
+        "PGFFT.cpp"
         "polyEval.cpp"
+        "PolyMod.cpp"
+        "PolyModRing.cpp"
         "powerful.cpp"
         "primeChain.cpp"
+        "Ptxt.cpp"
+        "randomMatrices.cpp"
         "recryption.cpp"
         "replicate.cpp"
         "sample.cpp"
         "tableLookup.cpp"
         "timing.cpp"
-        "zzX.cpp"
-        "PGFFT.cpp"
-        "fhe_stats.cpp")
+        "zzX.cpp")
 
 set(HELIB_HEADERS
-        "helib.h"
         "ArgMap.h"
+        "assertions.h"
         "binaryArith.h"
         "binaryCompare.h"
         "binio.h"
@@ -107,14 +110,17 @@ set(HELIB_HEADERS
         "DoubleCRT.h"
         "EncryptedArray.h"
         "EvalMap.h"
-        "FHEContext.h"
+        "exceptions.h"
         "FHE.h"
-        "keys.h"
-        "keySwitching.h"
+        "FHEContext.h"
+        "fhe_stats.h"
+        "helib.h"
         "hypercube.h"
         "IndexMap.h"
         "IndexSet.h"
         "intraSlot.h"
+        "keys.h"
+        "keySwitching.h"
         "matching.h"
         "matmul.h"
         "multicore.h"
@@ -122,11 +128,15 @@ set(HELIB_HEADERS
         "NumbTh.h"
         "PAlgebra.h"
         "permutations.h"
+        "PGFFT.h"
         "polyEval.h"
+        "PolyMod.h"
+        "PolyModRing.h"
         "powerful.h"
         "primeChain.h"
         "PtrMatrix.h"
         "PtrVector.h"
+        "Ptxt.h"
         "randomMatrices.h"
         "range.h"
         "recryption.h"
@@ -134,12 +144,7 @@ set(HELIB_HEADERS
         "sample.h"
         "tableLookup.h"
         "timing.h"
-        "zzX.h"
-        "assertions.h"
-        "exceptions.h"
-        "PGFFT.h"
-        "fhe_stats.h"
-        )
+        "zzX.h")
 
 set(LEGACY_TEST_SRCS
         "Test_approxNums.cpp"
@@ -171,9 +176,9 @@ set(LEGACY_TEST_SRCS
 
 # Add helib target as a shared/static library
 if (BUILD_SHARED)
-  add_library(helib SHARED ${HELIB_SRCS})
+  add_library(helib SHARED ${HELIB_SRCS} ${HELIB_HEADERS})
 else (BUILD_SHARED)
-  add_library(helib STATIC ${HELIB_SRCS})
+  add_library(helib STATIC ${HELIB_SRCS} ${HELIB_HEADERS})
 endif (BUILD_SHARED)
 
 # Add private/public flags to helib

@@ -159,6 +159,16 @@ public:
     virtual long Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpace=0) const;
     virtual long Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace=0) const;
 
+    /**
+     * @brief Encrypts a plaintext into a ciphertext.
+     * @tparam Scheme Encryption scheme used (must be `BGV` or `CKKS`).
+     * @param ciphertxt Ciphertext into which to encrypt.
+     * @param plaintxt Plaintext to encrypt.
+     * @return Plaintext space.
+     **/
+    template <typename Scheme>
+    long Encrypt(Ctxt &ciphertxt, const Ptxt<Scheme>& plaintxt, long ptxtSpace=0) const;
+
     bool isCKKS() const;
     // NOTE: Is taking the alMod from the context the right thing to do?
 
@@ -181,9 +191,9 @@ public:
     void hackPtxtSpace(long p2r) { pubEncrKey.ptxtSpace = p2r; }
 };
 
-
 void writeSecKeyBinary(std::ostream& str, const FHESecKey& sk);
 void readSecKeyBinary(std::istream& str, FHESecKey& sk);
+
 /**
  * @class FHESecKey
  * @brief The secret key
@@ -230,6 +240,15 @@ public:
 
     // Decryption
     void Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt) const;
+
+    /**
+     * @brief Decrypt a ciphertext into a plaintext.
+     * @tparam Scheme Encryption scheme used (must be `BGV` or `CKKS`).
+     * @param plaintxt Plaintext into which to decrypt.
+     * @param ciphertxt Ciphertext to decrypt.
+     **/
+    template <typename Scheme>
+    void Decrypt(Ptxt<Scheme>& plaintxt, const Ctxt &ciphertxt) const;
 
     //! @brief Debugging version, returns in f the polynomial
     //! before reduction modulo the ptxtSpace

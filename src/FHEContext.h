@@ -41,6 +41,7 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
 
 
 class EncryptedArray;
+class PolyModRing;
 /**
  * @class FHEcontext
  * @brief Maintaining the parameters
@@ -60,9 +61,15 @@ public:
   //! @brief The structure of Z[X]/(Phi_m(X),p^r)
   PAlgebraMod alMod;
 
-  //! @breif A default EncryptedArray
+  //! @brief A default EncryptedArray
   const EncryptedArray* ea;
   // FIXME: should this be a unique_ptr??
+
+  /** @brief The structure of a single slot of the plaintext space.
+   *
+   * This will be Z[X]/(G(x),p^r) for some irreducible factor G of Phi_m(X).
+   **/
+  std::shared_ptr<PolyModRing> slotRing;
 
   //! @brief sqrt(variance) of the LWE error (default=3.2)
   NTL::xdouble stdev;

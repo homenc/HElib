@@ -17,6 +17,7 @@
 #include "binio.h"
 #include "sample.h"
 #include "EncryptedArray.h"
+#include "PolyModRing.h"
 
 namespace helib {
 
@@ -516,6 +517,25 @@ FHEcontext::~FHEcontext()
   delete ea;
 }
 
+NTL::ZZX getG(const EncryptedArray& ea)
+{
+  NTL::ZZX G;
+  switch (ea.getTag()) {
+  case PA_GF2_tag:
+    G = NTL::conv<NTL::ZZX>(ea.getDerived(PA_GF2()).getG());
+    break;
+  case PA_zz_p_tag:
+    convert(G, ea.getDerived(PA_zz_p()).getG());
+    break;
+  case PA_cx_tag:
+    throw helib::LogicError("Cannot get polynomial modulus G when scheme is CKKS");
+    break;
+  default:
+    throw helib::LogicError("No valid tag found in EncryptedArray");
+  }
+  return G;
+}
+
 // Constructors must ensure that alMod points to zMStar, and
 // rcEA (if set) points to rcAlmod which points to zMStar
 FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
@@ -523,6 +543,10 @@ FHEcontext::FHEcontext(unsigned long m, unsigned long p, unsigned long r,
   stdev(3.2), scale(10.0), zMStar(m, p, gens, ords), alMod(zMStar, r)
 {
   ea = new EncryptedArray(*this, alMod);
+  if (this->alMod.getTag() != PA_cx_tag) {
+    slotRing = std::shared_ptr<PolyModRing>(
+        new PolyModRing(zMStar.getP(), alMod.getR(), getG(*ea)));
+  }
 }
 
 }

@@ -18,6 +18,7 @@
 #include <vector>
 #include <set>
 #include <cmath>
+#include <complex>
 #include <string>
 #include <climits>
 #include <cmath>
@@ -99,6 +100,7 @@ typedef long LONG; // using this to identify casts that we should
 
 long mcMod(long a, long b);
 long mcDiv(long a, long b);
+
 
 //! Return balanced remainder. Assumes a in [0, q) and returns 
 //! balanced remainder in (-q/2, q/2]
@@ -272,6 +274,7 @@ void convert(NTL::GF2X& out, const NTL::Vec<long>& in);
 
 ///@}
 
+
 //! A generic template that resolves to NTL's conv routine
 template<class T1, class T2>
 void convert(T1& x1, const T2& x2) 
@@ -305,6 +308,13 @@ void convert(NTL::Vec<T1>& v1, const std::vector<T2>& v2)
    v1.SetLength(n);
    for (long i = 0; i < n; i++)
       convert(v1[i], v2[i]);
+}
+
+//! Trivial type conversion, useful for generic code
+template<typename T>
+void convert(std::vector<T>& v1, const std::vector<T>& v2)
+{
+  v1 = v2;
 }
 
 template<class T1, class T2>

@@ -14,6 +14,7 @@
 #include "keys.h"
 #include "timing.h"
 #include "EncryptedArray.h"
+#include "Ptxt.h"
 
 #include "binio.h"
 #include "sample.h"
@@ -64,7 +65,6 @@ double RLWE(DoubleCRT& c0,DoubleCRT& c1, const DoubleCRT &s, long p,
   c1.randomize(prgSeed);
   return RLWE1(c0, c1, s, p);
 }
-
 
 
 /******************** FHEPubKey implementation **********************/
@@ -501,6 +501,22 @@ long FHEPubKey::Encrypt(Ctxt &ciphertxt, const NTL::ZZX& plaintxt, long ptxtSpac
 long FHEPubKey::Encrypt(Ctxt &ciphertxt, const zzX& plaintxt, long ptxtSpace) const
 { return Encrypt(ciphertxt, plaintxt, ptxtSpace, /*highNoise=*/false); }
 
+// These two specialisations are here to avoid a circular dependency on EncryptedArray
+template<>
+long FHEPubKey::Encrypt(Ctxt &ciphertxt, const Ptxt<BGV>& plaintxt, long ptxtSpace) const
+{
+  return Encrypt(ciphertxt, plaintxt.getPolyRepr(), ptxtSpace, /*highNoise=*/false);
+}
+
+template<>
+long FHEPubKey::Encrypt(Ctxt &ciphertxt, const Ptxt<CKKS>& plaintxt, long ptxtSpace) const
+{
+  NTL::ZZX poly = plaintxt.getPolyRepr();
+  double f = ciphertxt.getContext().ea->getCx().encode(poly, plaintxt, /*useThisSize*/-1.0, /*precision*/-1);
+  CKKSencrypt(ciphertxt, poly, /*useThisSize*/-1.0, /*scaling*/f);
+  return 0; // DIRT: For some reason the BGV encrypt returns the ptxtSpace but CKKS does not have one
+}
+
 bool FHEPubKey::isCKKS() const
 { return (getContext().alMod.getTag()==PA_cx_tag); }
 // NOTE: Is taking the alMod from the context the right thing to do?
@@ -833,6 +849,44 @@ void FHESecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt) const
 {
   NTL::ZZX f;
   Decrypt(plaintxt, ciphertxt, f);
+}
+
+// These two specialisations are here to avoid a circular dependency on EncryptedArray
+template <>
+void FHESecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt &ciphertxt) const
+{
+  NTL::ZZX pp;
+  Decrypt(pp, ciphertxt);
+  plaintxt.decodeSetData(pp);
+}
+
+template <>
+void FHESecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt &ciphertxt) const
+{
+  std::vector<std::complex<double>> ptxt;
+  NTL::ZZX pp;
+  Decrypt(pp, ciphertxt);
+  const long MAX_BITS = 400;
+  long nBits = NTL::MaxBits(pp) - MAX_BITS;
+  double factor;
+  if (nBits<=0) { // convert to zzX, double
+    CKKS_canonicalEmbedding(ptxt, pp, ciphertxt.getContext().ea->getCx().getPAlgebra());
+    factor = NTL::to_double(ciphertxt.getRatFactor());
+  } else { 
+    long dpp = deg(pp);
+    std::vector<double> pp_scaled(dpp+1);
+    NTL::ZZ tmp;
+    for (long i: range(dpp+1)) {
+      RightShift(tmp, pp.rep[i], nBits); 
+      pp_scaled[i] = NTL::to_double(tmp);
+    }
+    CKKS_canonicalEmbedding(ptxt, pp_scaled, ciphertxt.getContext().ea->getCx().getPAlgebra()); 
+    factor = NTL::to_double(ciphertxt.getRatFactor()/NTL::power2_xdouble(nBits));
+  }
+  for (auto& cx : ptxt)  // divide by the factor
+    cx /= factor;
+
+  plaintxt.setData(ptxt);
 }
 
 void FHESecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt,

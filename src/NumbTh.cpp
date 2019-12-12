@@ -44,7 +44,6 @@ long mcDiv(long a, long b) {
       return q;
 }
 
-
 // return multiplicative order of p modulo m, or 0 if GCD(p, m) != 1
 long multOrd(long p, long m)
 {
