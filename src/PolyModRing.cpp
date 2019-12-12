@@ -11,7 +11,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include "PolyModRing.h"
+#include <helib/PolyModRing.h>
 
 namespace helib {
 

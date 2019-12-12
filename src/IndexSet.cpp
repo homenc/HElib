@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include "IndexSet.h"
-#include "binio.h"
+#include <helib/IndexSet.h>
+#include <helib/binio.h>
 
 namespace helib {
 

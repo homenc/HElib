@@ -12,9 +12,9 @@
 
 #include <NTL/ZZ.h>
 
-#include <helib.h>
-#include "permutations.h"
-#include "debugging.h"
+#include <helib/helib.h>
+#include <helib/permutations.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -165,7 +165,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   if (!helib_test::noPrint)
     std::cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ",r="<<r<<")";
 
-  helib::FHEcontext context(m,p,r);
+  helib::Context context(m,p,r);
   helib::EncryptedArray ea(context); // Use G(X)=X for this ea object
 
   // Some arbitrary initial plaintext array
@@ -200,8 +200,8 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
 		     << context.ctxtPrimes.card() << " Ctxt-primes)\n";
 
   // Generate a sk/pk pair
-  helib::FHESecKey secretKey(context);
-  const helib::FHEPubKey& publicKey = secretKey;
+  helib::SecKey secretKey(context);
+  const helib::PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   helib::Ctxt ctxt(publicKey);
 

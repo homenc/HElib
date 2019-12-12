@@ -11,15 +11,15 @@
  */
 
 #include <NTL/ZZ.h>
-#include "polyEval.h"
-#include "EncryptedArray.h"
-#include "debugging.h"
+#include <helib/polyEval.h>
+#include <helib/EncryptedArray.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
 
 #ifdef DEBUG_PRINTOUT
-extern helib::FHESecKey* dbgKey;
+extern helib::SecKey* dbgKey;
 extern helib::EncryptedArray* dbgEa;
 #endif
 
@@ -71,11 +71,11 @@ class GTestPolyEval : public ::testing::TestWithParam<Parameters>
         bool isMonic;
         long m;
         long k;
-        helib::FHEcontext context;
+        helib::Context context;
         long p2r;
         helib::EncryptedArray ea;
-        helib::FHESecKey secretKey;
-        const helib::FHEPubKey &publicKey;
+        helib::SecKey secretKey;
+        const helib::PubKey &publicKey;
 
         GTestPolyEval() :
             p(GetParam().p),

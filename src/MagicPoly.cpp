@@ -1,7 +1,7 @@
 
 #include <NTL/lzz_pX.h>
-#include "NumbTh.h"
-#include "ArgMap.h"
+#include <helib/NumbTh.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 

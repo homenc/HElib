@@ -35,11 +35,11 @@ void  TestIt(long m, long p, long r, long d, long L, bool verbose)
        << ", L=" << L
        << endl;
 
-  FHEcontext context(m, p, r);
+  Context context(m, p, r);
   buildModChain(context, L, /*c=*/3);
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
   ZZX G;

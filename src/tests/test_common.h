@@ -1,6 +1,6 @@
 #ifndef TEST_COMMON_H
 #define TEST_COMMON_H
-#include "ArgMap.h" 
+#include <helib/ArgMap.h>
 
 namespace helib_test {
     extern char *path_of_executable;

@@ -21,11 +21,11 @@
 #include <NTL/ZZVec.h>
 #include <NTL/BasicThreadPool.h>
 
-#include "timing.h"
-#include "binio.h"
-#include "sample.h"
-#include "DoubleCRT.h"
-#include "FHEContext.h"
+#include <helib/timing.h>
+#include <helib/binio.h>
+#include <helib/sample.h>
+#include <helib/DoubleCRT.h>
+#include <helib/Context.h>
 
 namespace helib {
 
@@ -402,12 +402,12 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 
 
 // *****************************************************
-DoubleCRTHelper::DoubleCRTHelper(const FHEcontext& context)
+DoubleCRTHelper::DoubleCRTHelper(const Context& context)
 { 
   val = context.zMStar.getPhiM(); 
 }
 
-DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const FHEcontext &_context, const IndexSet& s)
+DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const Context &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
@@ -426,7 +426,7 @@ DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const FHEcontext &_context, const Ind
  
 // FIXME-IndexSet
 #if 0
-DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const FHEcontext &_context)
+DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const Context &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
@@ -465,7 +465,7 @@ DoubleCRT::DoubleCRT(const NTL::ZZX& poly)
 // *****************************************************
 // FIXME: "code bloat": this just replicates the above with NTL::ZZX -> zzX
 
-DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context, const IndexSet& s)
+DoubleCRT::DoubleCRT(const zzX& poly, const Context &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
@@ -484,7 +484,7 @@ DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context, const IndexSet
 
 // FIXME-IndexSet
 #if 0
-DoubleCRT::DoubleCRT(const zzX& poly, const FHEcontext &_context)
+DoubleCRT::DoubleCRT(const zzX& poly, const Context &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
@@ -521,7 +521,7 @@ DoubleCRT::DoubleCRT(const zzX& poly)
 }
 #endif
 
-DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
+DoubleCRT::DoubleCRT(const Context &_context, const IndexSet& s)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   //OLD: assert(s.last() < context.numPrimes());
@@ -542,7 +542,7 @@ DoubleCRT::DoubleCRT(const FHEcontext &_context, const IndexSet& s)
 
 // FIXME-IndexSet
 #if 0
-DoubleCRT::DoubleCRT(const FHEcontext &_context)
+DoubleCRT::DoubleCRT(const Context &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
   IndexSet s = IndexSet(0, context.numPrimes()-1);
@@ -1218,7 +1218,7 @@ std::istream& operator>> (std::istream &str, DoubleCRT &d)
   seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
 
   IndexSet set;
-  const FHEcontext& context = d.context;
+  const Context& context = d.context;
   long phim = context.zMStar.getPhiM();
 
   str >> set; // read in the indexSet

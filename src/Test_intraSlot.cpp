@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 // testPacking.cxx - testing uppack/repack functionality
-#include "intraSlot.h"
-#include "ArgMap.h"
+#include <helib/intraSlot.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 
   SetSeed(ZZ(seed));
 
-  FHEcontext context(m, p, r);
+  Context context(m, p, r);
   if (verbose)
     context.zMStar.printout();
   buildModChain(context, L, 3);
@@ -46,8 +46,8 @@ int main(int argc, char **argv)
   ZZX G = context.alMod.getFactorsOverZZ()[0];
   EncryptedArray ea(context, G);
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);

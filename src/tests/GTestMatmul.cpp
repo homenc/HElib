@@ -13,7 +13,7 @@
  * @file matmul.h
  * @brief some matrix / linear algenra stuff
  */
-#include "matmul.h"
+#include <helib/matmul.h>
 #include <NTL/BasicThreadPool.h>
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
@@ -22,7 +22,7 @@
 #endif
 
 // Implementation of the various random matrices is found here
-#include "randomMatrices.h"
+#include <helib/randomMatrices.h>
 /*
  * Defined in this file are the following class templates:
  *
@@ -43,7 +43,7 @@
  *   BlockMatMulFull* buildRandomFullBlockMatrix(const EncryptedArray& ea);
  */
 
-#include "debugging.h"
+#include <helib/debugging.h>
 #include "gtest/gtest.h"
 #include "test_common.h"
 
@@ -148,13 +148,13 @@ class GTestMatmul : public ::testing::Test {
 
         long ks_strategy;
 
-        helib::FHEcontext context;
-        helib::FHESecKey secretKey;
-        const helib::FHEPubKey& publicKey;
+        helib::Context context;
+        helib::SecKey secretKey;
+        const helib::PubKey& publicKey;
         helib::EncryptedArray ea;
         std::unique_ptr<typename T::MatrixType> matrixPtr;
 
-        static helib::FHEcontext& setupContext(helib::FHEcontext& context, long L)
+        static helib::Context& setupContext(helib::Context& context, long L)
         {
             buildModChain(context, L, /*c=*/3);
             if(helib_test::verbose) {

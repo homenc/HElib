@@ -9,7 +9,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include "matching.h"
+#include <helib/matching.h>
 #include <queue>
 
 namespace helib {

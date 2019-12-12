@@ -20,8 +20,8 @@
 #include <NTL/ZZX.h>
 #include <NTL/vector.h>
 
-#include "helib.h"
-#include "ArgMap.h"
+#include <helib/helib.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -39,7 +39,7 @@ static long ms[N_TESTS][10] = {
   //  {  682, 15709, 15004, 22} // gens=5(682)
 };
 
-void checkCiphertext(const Ctxt& ctxt, const ZZX& ptxt, const FHESecKey& sk);
+void checkCiphertext(const Ctxt& ctxt, const ZZX& ptxt, const SecKey& sk);
 
 // Testing the I/O of the important classes of the library
 // (context, keys, ciphertexts).
@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
   long ptxtSpace = power_long(p,r);
   long numTests = useTable? N_TESTS : 1;
 
-  std::unique_ptr<FHEcontext> contexts[numTests];
-  std::unique_ptr<FHESecKey> sKeys[numTests];
+  std::unique_ptr<Context> contexts[numTests];
+  std::unique_ptr<SecKey> sKeys[numTests];
   std::unique_ptr<Ctxt> ctxts[numTests];
   std::unique_ptr<EncryptedArray> eas[numTests];
   vector<ZZX> ptxts[numTests];
@@ -90,25 +90,25 @@ int main(int argc, char *argv[])
     ords[0] = ms[i][8];  ords[1] = ms[i][9];
 
     if (useTable && gens[0]>0)
-      contexts[i].reset(new FHEcontext(m, p, r, gens, ords));
+      contexts[i].reset(new Context(m, p, r, gens, ords));
     else
-      contexts[i].reset(new FHEcontext(m, p, r));
+      contexts[i].reset(new Context(m, p, r));
     if (!noPrint)
       contexts[i]->zMStar.printout();
 
     buildModChain(*contexts[i], L, c);  // Set the modulus chain
     if (mm==0 && m==1023) contexts[i]->makeBootstrappable(mvec);
 
-    // Output the FHEcontext to file
+    // Output the Context to file
     writeContextBase(keyFile, *contexts[i]);
     if (!noPrint)
       writeContextBase(cout, *contexts[i]);
     keyFile << *contexts[i] << endl;
 
-    sKeys[i].reset(new FHESecKey(*contexts[i]));
+    sKeys[i].reset(new SecKey(*contexts[i]));
     sKeys[i]->GenSecKey(0,ptxtSpace); // A +-1/0 secret key
     addSome1DMatrices(*sKeys[i]);// compute key-switching matrices that we need
-    const FHEPubKey publicKey = *sKeys[i];
+    const PubKey publicKey = *sKeys[i];
     eas[i].reset(new EncryptedArray(*contexts[i]));
 
     long nslots = eas[i]->size();
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
     unsigned long m1, p1, r1;
     vector<long> gens, ords;
     readContextBase(keyFile, m1, p1, r1, gens, ords);
-    FHEcontext tmpContext(m1, p1, r1, gens, ords);
+    Context tmpContext(m1, p1, r1, gens, ords);
     keyFile >> tmpContext;
     assert (*contexts[i] == tmpContext);
     //    cerr << i << ": context matches input\n";
@@ -163,12 +163,12 @@ int main(int argc, char *argv[])
 
     // We define some things below wrt *contexts[i], not tmpContext.
     // This is because the various operator== methods check equality of
-    // references, not equality of the referenced FHEcontext objects.
-    FHEcontext& context = *contexts[i];
-    FHESecKey secretKey(context);
-    FHESecKey secretKey2(tmpContext);
-    const FHEPubKey& publicKey = secretKey;
-    const FHEPubKey& publicKey2 = secretKey2;
+    // references, not equality of the referenced Context objects.
+    Context& context = *contexts[i];
+    SecKey secretKey(context);
+    SecKey secretKey2(tmpContext);
+    const PubKey& publicKey = secretKey;
+    const PubKey& publicKey2 = secretKey2;
 
     keyFile >> secretKey;
     keyFile >> secretKey2;

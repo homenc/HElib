@@ -21,13 +21,13 @@
 // #include <mutex>          // std::mutex, std::unique_lock
 
 #include <NTL/BasicThreadPool.h>
-#include "binaryArith.h"
+#include <helib/binaryArith.h>
 
 #define BPL_ESTIMATE (30)
 // FIXME: this should really be dynamic
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 namespace helib {
@@ -92,7 +92,7 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
 {
   FHE_TIMER_START;
   const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
-  const FHEcontext& context = zeroCtxt.getContext();
+  const Context& context = zeroCtxt.getContext();
   DoubleCRT one(context, context.allPrimes()); one += 1L;
 
   resize(aeqb, lsize(b), zeroCtxt);

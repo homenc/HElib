@@ -19,16 +19,16 @@
 #include <NTL/lzz_pXFactoring.h>
 NTL_CLIENT
 
-#include "helib.h"
-#include "replicate.h"
-#include "ArgMap.h"
+#include <helib/helib.h>
+#include <helib/replicate.h>
+#include <helib/ArgMap.h>
 
 using namespace helib;
 
 static bool noPrint = false;
 
 static bool check_replicate(const Ctxt& c1, const Ctxt& c0, long i,
-			    const FHESecKey& sKey, const EncryptedArray& ea)
+			    const SecKey& sKey, const EncryptedArray& ea)
 {
   PlaintextArray pa0(ea), pa1(ea);
   ea.decrypt(c0, sKey, pa0);
@@ -44,7 +44,7 @@ class StopReplicate { };
 // A class that handles the replicated ciphertexts one at a time
 class ReplicateTester : public ReplicateHandler {
 public:
-  const FHESecKey& sKey;
+  const SecKey& sKey;
   const EncryptedArray& ea;
   const PlaintextArray& pa;
   long B;
@@ -53,7 +53,7 @@ public:
   long pos;
   bool error;
 
-  ReplicateTester(const FHESecKey& _sKey, const EncryptedArray& _ea, 
+  ReplicateTester(const SecKey& _sKey, const EncryptedArray& _ea, 
                   const PlaintextArray& _pa, long _B)
   : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
   {
@@ -105,7 +105,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
 	 << endl;
 
   setTimersOn();
-  FHEcontext context(m, p, r);
+  Context context(m, p, r);
   buildModChain(context, L, /*c=*/2);
 
   ZZX G;
@@ -120,8 +120,8 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
     cout << "G = " << G << "\n";
   }
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 

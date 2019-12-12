@@ -21,7 +21,7 @@
 #include "NumbTh.h"
 #include "PAlgebra.h"
 #include "DoubleCRT.h"
-#include "FHEContext.h"
+#include "Context.h"
 #include "sample.h"
 #include "timing.h"
 #include "norms.h"
@@ -63,7 +63,7 @@ void printHistogram(const vector<double>& data,
        << "      ratio ="<<ratio<<endl<<endl;
 }
 
-void freshCtxtNoise(zzX& f, const FHEcontext& context,
+void freshCtxtNoise(zzX& f, const Context& context,
                     double sigma, bool modPhimX)
 {
   zzX s, r, e1, e2, e3;
@@ -83,7 +83,7 @@ void freshCtxtNoise(zzX& f, const FHEcontext& context,
   f = MulMod(s, e1, palg) + MulMod(r, e2, palg) + e3;  
 }
 
-void roundingNoise(zzX& f, const FHEcontext& context,
+void roundingNoise(zzX& f, const Context& context,
                    long p2r, bool modPhimX)
 {
   zzX s, e1, e2;
@@ -134,7 +134,7 @@ int main(int argc, char **argv)
       sigma=3.2;
   }
 
-  FHEcontext context(m, p, r);
+  Context context(m, p, r);
   const PAlgebra& palg = context.zMStar;
   buildModChain(context, /*L=*/5, /*c=*/3);
   long phim = palg.getPhiM();

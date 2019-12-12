@@ -12,10 +12,10 @@
 
 #include <NTL/BasicThreadPool.h>
 
-#include "EvalMap.h"
-#include "hypercube.h"
-#include "powerful.h"
-#include "debugging.h"
+#include <helib/EvalMap.h>
+#include <helib/hypercube.h>
+#include <helib/powerful.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -87,12 +87,12 @@ class GTestEvalMap : public ::testing::TestWithParam<Parameters> {
         std::vector<long> ords;
         long nthreads;
         long useCache;
-        helib::FHEcontext context;
+        helib::Context context;
         long d;
         long phim;
         long nslots;
-        helib::FHESecKey secretKey;
-        const helib::FHEPubKey &publicKey;
+        helib::SecKey secretKey;
+        const helib::PubKey &publicKey;
 
         static NTL::Vec<long> getDefaultMvec()
         {
@@ -136,7 +136,7 @@ class GTestEvalMap : public ::testing::TestWithParam<Parameters> {
             return m;
         };
 
-        static void prepareContext(helib::FHEcontext &context, long L, long c)
+        static void prepareContext(helib::Context &context, long L, long c)
         {
           helib::buildModChain(context, L, c);
 

@@ -12,9 +12,9 @@
 
 #include <numeric>
 
-#include "Ptxt.h"
-#include "helib.h"
-#include "replicate.h"
+#include <helib/Ptxt.h>
+#include <helib/helib.h>
+#include <helib/replicate.h>
 
 #include "test_common.h"
 #include "gtest/gtest.h"
@@ -49,7 +49,7 @@ protected:
 
   const unsigned long m;
 
-  helib::FHEcontext context;
+  helib::Context context;
 };
 
 TEST_P(TestPtxtCKKS, canBeConstructedWithCKKSContext)
@@ -785,7 +785,7 @@ TEST_P(TestPtxtCKKS, shift1DShiftsLeftCorrectly)
 // These can be useful if tweaking the logic of this area.
 // TEST(TestPtxtBGV, coord_To_Index_Works)
 // {
-//   helib::FHEcontext context(32109, 4999, 1);
+//   helib::Context context(32109, 4999, 1);
 //   helib::Ptxt<helib::BGV> ptxt(context);
 //   std::vector<long> indices;
 //   for(long i=0; i<6; ++i)
@@ -799,7 +799,7 @@ TEST_P(TestPtxtCKKS, shift1DShiftsLeftCorrectly)
 //
 // TEST(TestPtxtBGV, index_To_Coord_Works)
 // {
-//   helib::FHEcontext context(32109, 4999, 1);
+//   helib::Context context(32109, 4999, 1);
 //   helib::Ptxt<helib::BGV> ptxt(context);
 //   std::vector<std::vector<long>> coords;
 //   for(std::size_t i=0; i<ptxt.size(); ++i)
@@ -1026,9 +1026,9 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithKeys)
 {
   helib::buildModChain(context, 100, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   std::vector<std::complex<double>> data(context.ea->size());
   for (long i = 0; i < data.size(); ++i) {
@@ -1051,9 +1051,9 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithKeys)
 {
   helib::buildModChain(context, 100, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   std::vector<double> data(context.ea->size());
   for (long i = 0; i < data.size(); ++i) {
@@ -1077,9 +1077,9 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithEa)
 {
   helib::buildModChain(context, 100, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   std::vector<std::complex<double>> data(context.ea->size());
   for (long i = 0; i < data.size(); ++i) {
@@ -1102,9 +1102,9 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithEa)
 {
   helib::buildModChain(context, 100, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   std::vector<double> data(context.ea->size());
   for (long i = 0; i < data.size(); ++i) {
@@ -1128,9 +1128,9 @@ TEST_P(TestPtxtCKKS, plusEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the augend, addend is plaintext
   std::vector<std::complex<double>> augend_data(context.ea->size());
@@ -1160,9 +1160,9 @@ TEST_P(TestPtxtCKKS, addConstantCKKSWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the augend, addend is plaintext
   std::vector<std::complex<double>> augend_data(context.ea->size());
@@ -1192,9 +1192,9 @@ TEST_P(TestPtxtCKKS, minusEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the minuend, subtrahend is plaintext
   std::vector<std::complex<double>> minuend_data(context.ea->size());
@@ -1224,9 +1224,9 @@ TEST_P(TestPtxtCKKS, multByConstantCKKSFromCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the multiplier, multiplicand is plaintext
   std::vector<std::complex<double>> multiplier_data(context.ea->size());
@@ -1257,9 +1257,9 @@ TEST_P(TestPtxtCKKS, timesEqualsFromCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
   const helib::EncryptedArrayCx& ea = context.ea->getCx();
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the multiplier, multiplicand is plaintext
   std::vector<std::complex<double>> multiplier_data(context.ea->size());
@@ -1376,7 +1376,7 @@ protected:
   const unsigned long r;
   const unsigned long ppowr;
 
-  helib::FHEcontext context;
+  helib::Context context;
 };
 
 TEST_P(TestPtxtBGV, canBeConstructedWithBGVContext)
@@ -1700,7 +1700,7 @@ TEST(TestPtxtBGV, automorphWorksCorrectly)
 {
   std::vector<long> gens = {11, 2};
   std::vector<long> ords = {6, 2};
-  const helib::FHEcontext context(45, 19, 1, gens, ords);
+  const helib::Context context(45, 19, 1, gens, ords);
   std::vector<NTL::ZZX> data(context.ea->size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     NTL::SetX(data[i]);
@@ -1746,7 +1746,7 @@ TEST_P(TestPtxtBGV, frobeniusAutomorphWithConstantsWorksCorrectly)
 
 TEST(TestPtxtBGV, frobeniusAutomorphWithPolynomialsWorksCorrectly)
 {
-  const helib::FHEcontext context(45, 19, 1);
+  const helib::Context context(45, 19, 1);
   std::vector<NTL::ZZX> data(context.ea->size());
   for (std::size_t i = 0; i < data.size(); ++i) {
     NTL::SetX(data[i]);
@@ -2086,7 +2086,7 @@ TEST_P(TestPtxtBGV, shiftShiftsLeftCorrectly)
 TEST(TestPtxtBGV, shift1DShiftsRightCorrectly)
 {
   long amount = 1;
-  const helib::FHEcontext context(45, 19, 1);
+  const helib::Context context(45, 19, 1);
   std::vector<long> data(context.ea->size());
   std::vector<long> right_shifted_data(context.ea->size());
   const auto shift_first_dim = [](long amount, std::vector<long>& data) {
@@ -2147,7 +2147,7 @@ TEST(TestPtxtBGV, shift1DShiftsRightCorrectly)
 TEST(TestPtxtBGV, shift1DShiftsLeftCorrectly)
 {
   long amount = -1;
-  const helib::FHEcontext context(45, 19, 1);
+  const helib::Context context(45, 19, 1);
   std::vector<long> data(context.ea->size());
   std::vector<long> right_shifted_data(context.ea->size());
   const auto shift_first_dim = [](long amount, std::vector<long>& data) {
@@ -2208,7 +2208,7 @@ TEST(TestPtxtBGV, shift1DShiftsLeftCorrectly)
 TEST(TestPtxtBGV, rotate1DRotatesCorrectly)
 {
   long amount = 1;
-  const helib::FHEcontext context(45, 19, 1);
+  const helib::Context context(45, 19, 1);
   std::vector<long> data(context.ea->size());
   std::vector<long> left_rotated_data(context.ea->size());
   const auto non_neg_mod = [](int x, int mod) {
@@ -2370,7 +2370,7 @@ TEST_P(TestPtxtBGV, defaultConstructedContextCannotBeRightOperand)
 
 TEST_P(TestPtxtBGV, cannotOperateBetweenPtxtsWithDifferentContexts)
 {
-  helib::FHEcontext different_context = helib::FHEcontext(m, p, 2 * r);
+  helib::Context different_context = helib::Context(m, p, 2 * r);
   std::vector<long> data(context.ea->size(), 1);
   helib::Ptxt<helib::BGV> ptxt1(context, data);
   helib::Ptxt<helib::BGV> ptxt2(different_context, data);
@@ -2476,9 +2476,9 @@ TEST_P(TestPtxtBGV, decodeSetDataWorksWithZZXSameOrderAsPhiMX)
 TEST_P(TestPtxtBGV, canEncryptAndDecryptPtxts)
 {
   helib::buildModChain(context, 30, 2);
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   std::vector<long> data(context.ea->size());
   std::iota(data.begin(), data.end(), 0);
@@ -2495,9 +2495,9 @@ TEST_P(TestPtxtBGV, canEncryptAndDecryptPtxts)
 TEST_P(TestPtxtBGV, plusEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 30, 2);
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the augend, addend is plaintext
   std::vector<long> augend_data(context.ea->size());
@@ -2523,9 +2523,9 @@ TEST_P(TestPtxtBGV, plusEqualsWithCiphertextWorks)
 TEST_P(TestPtxtBGV, addConstantFromCiphertextWorks)
 {
   helib::buildModChain(context, 30, 2);
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the augend, addend is plaintext
   std::vector<long> augend_data(context.ea->size());
@@ -2551,9 +2551,9 @@ TEST_P(TestPtxtBGV, addConstantFromCiphertextWorks)
 TEST_P(TestPtxtBGV, minusEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 30, 2);
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the minuend, subtrahend is plaintext
   std::vector<long> minuend_data(context.ea->size());
@@ -2579,9 +2579,9 @@ TEST_P(TestPtxtBGV, minusEqualsWithCiphertextWorks)
 TEST_P(TestPtxtBGV, timesEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 30, 2);
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the multiplier, multiplicand is plaintext
   std::vector<long> multiplier_data(context.ea->size());
@@ -2607,9 +2607,9 @@ TEST_P(TestPtxtBGV, timesEqualsWithCiphertextWorks)
 TEST_P(TestPtxtBGV, multByConstantFromCiphertextWorks)
 {
   helib::buildModChain(context, 30, 2);
-  helib::FHESecKey secret_key(context);
+  helib::SecKey secret_key(context);
   secret_key.GenSecKey();
-  const helib::FHEPubKey& public_key(secret_key);
+  const helib::PubKey& public_key(secret_key);
 
   // Encrypt the multiplier, multiplicand is plaintext
   std::vector<long> multiplier_data(context.ea->size());

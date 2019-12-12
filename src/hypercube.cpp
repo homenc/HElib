@@ -9,7 +9,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include "hypercube.h"
+#include <helib/hypercube.h>
 #include <iomanip>
 #include <NTL/lzz_p.h>
 

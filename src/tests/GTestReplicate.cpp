@@ -18,9 +18,9 @@
 #include <cassert>
 #include <NTL/lzz_pXFactoring.h>
 
-#include <helib.h>
-#include "replicate.h"
-#include "debugging.h"
+#include <helib/helib.h>
+#include <helib/replicate.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -62,7 +62,7 @@ struct Parameters {
 
 class GTestReplicate : public ::testing::TestWithParam<Parameters> {
     protected:
-        static void printContextAndG(const helib::FHEcontext& context, const NTL::ZZX& G)
+        static void printContextAndG(const helib::Context& context, const NTL::ZZX& G)
         {
             if (!helib_test::noPrint) {
                 context.zMStar.printout();
@@ -71,7 +71,7 @@ class GTestReplicate : public ::testing::TestWithParam<Parameters> {
             }
         };
 
-        static NTL::ZZX createG(const helib::FHEcontext& context, long p, long d)
+        static NTL::ZZX createG(const helib::Context& context, long p, long d)
         {
             return (d == 0) ? context.alMod.getFactorsOverZZ()[0] : helib::makeIrredPoly(p, d);
         };
@@ -125,10 +125,10 @@ class GTestReplicate : public ::testing::TestWithParam<Parameters> {
         const long L;
         const long bnd;
         const long B;
-        helib::FHEcontext context;
-        helib::FHESecKey secretKey;
+        helib::Context context;
+        helib::SecKey secretKey;
         NTL::ZZX G;
-        const helib::FHEPubKey& publicKey;
+        const helib::PubKey& publicKey;
         helib::EncryptedArray ea;
         helib::PlaintextArray xp0;
         helib::PlaintextArray xp1;
@@ -138,7 +138,7 @@ class GTestReplicate : public ::testing::TestWithParam<Parameters> {
 };
 
 ::testing::AssertionResult replicationSucceeds(const helib::Ctxt& c1, const helib::Ctxt& c0, long i,
-			    const helib::FHESecKey& sKey, const helib::EncryptedArray& ea)
+			    const helib::SecKey& sKey, const helib::EncryptedArray& ea)
 {
   helib::PlaintextArray pa0(ea), pa1(ea);
   ea.decrypt(c0, sKey, pa0);
@@ -156,7 +156,7 @@ class StopReplicate { };
 // A class that handles the replicated ciphertexts one at a time
 class ReplicateTester : public helib::ReplicateHandler {
 public:
-  const helib::FHESecKey& sKey;
+  const helib::SecKey& sKey;
   const helib::EncryptedArray& ea;
   const helib::PlaintextArray& pa;
   long B;
@@ -165,7 +165,7 @@ public:
   long pos;
   bool error;
 
-  ReplicateTester(const helib::FHESecKey& _sKey, const helib::EncryptedArray& _ea, 
+  ReplicateTester(const helib::SecKey& _sKey, const helib::EncryptedArray& _ea, 
                   const helib::PlaintextArray& _pa, long _B)
   : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
   {

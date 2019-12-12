@@ -15,7 +15,7 @@
 #include <regex>
 #include <fstream>
 #include <cctype>
-#include "ArgMap.h"
+#include <helib/ArgMap.h>
 
 namespace helib {
 

@@ -14,20 +14,20 @@
 #include <algorithm>
 #include <type_traits>
 
-#include "zzX.h"
-#include "EncryptedArray.h"
+#include <helib/zzX.h>
+#include <helib/EncryptedArray.h>
 
-#include "timing.h"
-#include "clonedPtr.h"
-#include "norms.h"
-#include "debugging.h"
+#include <helib/timing.h>
+#include <helib/clonedPtr.h>
+#include <helib/norms.h>
+#include <helib/debugging.h>
 
 namespace helib {
 
 static constexpr cx_double the_imaginary_i = cx_double(0.0, 1.0);
 
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
-                               const FHESecKey& sKey, std::vector<cx_double>& ptxt) const
+                               const SecKey& sKey, std::vector<cx_double>& ptxt) const
 {
   //OLD: assert(&getContext() == &ctxt.getContext());
   helib::assertEq(&getContext(), &ctxt.getContext(), "Cannot decrypt with non-matching contextx");

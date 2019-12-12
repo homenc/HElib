@@ -17,8 +17,8 @@
 #include <NTL/ZZX.h>
 #include <NTL/vector.h>
 
-#include "helib.h"
-#include "debugging.h"
+#include <helib/helib.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -198,7 +198,7 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
         std::ofstream binFile(binFile1, std::ios::binary);
         ASSERT_TRUE(asciiFile.is_open());  
 
-        std::unique_ptr<helib::FHEcontext> context(new helib::FHEcontext(m, p, r));
+        std::unique_ptr<helib::Context> context(new helib::Context(m, p, r));
         helib::buildModChain(*context, L, c);  // Set the modulus chain
 
         if (!helib_test::noPrint) {
@@ -206,8 +206,8 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
             context->zMStar.printout(); // Printout context params
             std::cout << "\tSecurity Level: " << context->securityLevel() << std::endl;
         }
-        std::unique_ptr<helib::FHESecKey> secKey(new helib::FHESecKey(*context));
-        helib::FHEPubKey* pubKey = (helib::FHEPubKey*) secKey.get();
+        std::unique_ptr<helib::SecKey> secKey(new helib::SecKey(*context));
+        helib::PubKey* pubKey = (helib::PubKey*) secKey.get();
         secKey->GenSecKey(w);
         helib::addSome1DMatrices(*secKey);
         helib::addFrbMatrices(*secKey);
@@ -247,12 +247,12 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
         std::ofstream outFile(asciiFile2);
 
         // Read in context,
-        std::unique_ptr<helib::FHEcontext> context = helib::buildContextFromBinary(inFile);  
+        std::unique_ptr<helib::Context> context = helib::buildContextFromBinary(inFile);  
         helib::readContextBinary(inFile, *context);  
 
         // Read in SecKey and PubKey.
-        std::unique_ptr<helib::FHESecKey> secKey(new helib::FHESecKey(*context));
-        helib::FHEPubKey* pubKey = (helib::FHEPubKey*) secKey.get();
+        std::unique_ptr<helib::SecKey> secKey(new helib::SecKey(*context));
+        helib::PubKey* pubKey = (helib::PubKey*) secKey.get();
 
 #ifdef DEBUG_PRINTOUT
         helib::dbgEa = (helib::EncryptedArray*) context->ea;
@@ -289,12 +289,12 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
         std::ifstream inFile(binFile1, std::ios::binary);
 
         // Read in context,
-        std::unique_ptr<helib::FHEcontext> context = helib::buildContextFromBinary(inFile);
+        std::unique_ptr<helib::Context> context = helib::buildContextFromBinary(inFile);
         helib::readContextBinary(inFile, *context);  
 
         // Read in PubKey.
-        std::unique_ptr<helib::FHESecKey> secKey(new helib::FHESecKey(*context));
-        helib::FHEPubKey* pubKey = (helib::FHEPubKey*) secKey.get();
+        std::unique_ptr<helib::SecKey> secKey(new helib::SecKey(*context));
+        helib::PubKey* pubKey = (helib::PubKey*) secKey.get();
         helib::readPubKeyBinary(inFile, *pubKey);
         helib::readSecKeyBinary(inFile, *secKey);
         inFile.close();
@@ -363,12 +363,12 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
             std::ofstream outFile(otherEndianFileOut);
 
             // Read in context,
-            std::unique_ptr<helib::FHEcontext> context = helib::buildContextFromBinary(inFile);
+            std::unique_ptr<helib::Context> context = helib::buildContextFromBinary(inFile);
             helib::readContextBinary(inFile, *context);  
 
             // Read in SecKey and PubKey.
-            std::unique_ptr<helib::FHESecKey> secKey(new helib::FHESecKey(*context));
-            helib::FHEPubKey* pubKey = (helib::FHEPubKey*) secKey.get();
+            std::unique_ptr<helib::SecKey> secKey(new helib::SecKey(*context));
+            helib::PubKey* pubKey = (helib::PubKey*) secKey.get();
 
             helib::readPubKeyBinary(inFile, *pubKey);
             helib::readSecKeyBinary(inFile, *secKey);

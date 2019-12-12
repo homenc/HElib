@@ -13,7 +13,7 @@
 #include <utility>
 #include <cstring>
 #include <ctime>
-#include "timing.h"
+#include <helib/timing.h>
 
 namespace helib {
 

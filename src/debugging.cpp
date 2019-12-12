@@ -11,22 +11,22 @@
  */
 // debugging.cpp - debugging utilities
 #include <NTL/xdouble.h>
-#include "debugging.h"
-#include "norms.h"
-#include "FHEContext.h"
-#include "Ctxt.h"
-#include "EncryptedArray.h"
-#include "powerful.h"
+#include <helib/debugging.h>
+#include <helib/norms.h>
+#include <helib/Context.h>
+#include <helib/Ctxt.h>
+#include <helib/EncryptedArray.h>
+#include <helib/powerful.h>
 
 namespace helib {
 
-FHESecKey* dbgKey = 0;
+SecKey* dbgKey = 0;
 EncryptedArray* dbgEa = 0;
 NTL::ZZX dbg_ptxt;
 NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
 // return the ratio between the real noise <sk,ct> and the estimated one
-double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
+double realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
 {
   NTL::xdouble noiseEst = ctxt.getNoiseBound();
   if (ctxt.isCKKS())
@@ -36,7 +36,7 @@ double realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
   return NTL::conv<double>(actualNoise/noiseEst);
 }
 
-double log2_realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
+double log2_realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
 {
   NTL::xdouble noiseEst = ctxt.getNoiseBound();
   if (ctxt.isCKKS())
@@ -47,7 +47,7 @@ double log2_realToEstimatedNoise(const Ctxt& ctxt, const FHESecKey& sk)
 }
 
 // check that real-to-estimated ratio is not too large, print warning otherwise
-void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, double thresh)
+void checkNoise(const Ctxt& ctxt, const SecKey& sk, const std::string& msg, double thresh)
 {
    double ratio;
    if ((ratio=realToEstimatedNoise(ctxt, sk)) > thresh) {
@@ -56,19 +56,19 @@ void checkNoise(const Ctxt& ctxt, const FHESecKey& sk, const std::string& msg, d
 }
 
 // Decrypt and find the l-infinity norm of the result in canonical embedding
-NTL::xdouble embeddingLargestCoeff(const Ctxt& ctxt, const FHESecKey& sk)
+NTL::xdouble embeddingLargestCoeff(const Ctxt& ctxt, const SecKey& sk)
 {
-  const FHEcontext& context = ctxt.getContext();
+  const Context& context = ctxt.getContext();
   NTL::ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
   return embeddingLargestCoeff(pp, context.zMStar);
 }
 
 
-void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
+void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const SecKey& sk,
 		     const EncryptedArray& ea, long flags)
 {
-  const FHEcontext& context = ctxt.getContext();
+  const Context& context = ctxt.getContext();
   std::vector<NTL::ZZX> ptxt;
   NTL::ZZX p, pp;
   sk.Decrypt(p, ctxt, pp);
@@ -130,7 +130,7 @@ void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const FHESecKey& sk,
   }
 }
 
-bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
+bool decryptAndCompare(const Ctxt& ctxt, const SecKey& sk,
 		       const EncryptedArray& ea, const PlaintextArray& pa)
 {
   PlaintextArray ppa(ea);
@@ -144,7 +144,7 @@ bool decryptAndCompare(const Ctxt& ctxt, const FHESecKey& sk,
 void rawDecrypt(NTL::ZZX& plaintxt, const std::vector<NTL::ZZX>& zzParts,
                 const DoubleCRT& sKey, long q)
 {
-  const FHEcontext& context = sKey.getContext();
+  const Context& context = sKey.getContext();
 
   // Set to zzParts[0] + sKey * zzParts[1] "over the integers"
   DoubleCRT ptxt = sKey;
@@ -174,7 +174,7 @@ void CheckCtxt(const Ctxt& c, const char* label)
     Ctxt c1(c);
     //c1.dropSmallAndSpecialPrimes();
 
-    const FHEcontext& context = c1.getContext();
+    const Context& context = c1.getContext();
     const RecryptData& rcData = context.rcData;
     const PAlgebra& palg = context.zMStar;
 

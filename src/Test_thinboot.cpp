@@ -16,11 +16,11 @@
 #endif
 
 #include <NTL/BasicThreadPool.h>
-#include "helib.h"
-#include "matmul.h"
-#include "debugging.h"
-#include "fhe_stats.h"
-#include "ArgMap.h"
+#include <helib/helib.h>
+#include <helib/matmul.h>
+#include <helib/debugging.h>
+#include <helib/fhe_stats.h>
+#include <helib/ArgMap.h>
 
 #include <algorithm>
 #include <cmath>
@@ -159,7 +159,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   setDryRun(false); // Need to get a "real context" to test bootstrapping
 
   double t = -GetTime();
-  FHEcontext context(m, p, r, gens, ords);
+  Context context(m, p, r, gens, ords);
   if (scale) {
     context.scale = scale;
   }
@@ -212,7 +212,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
   t = -GetTime();
   if (!noPrint) cout << "Generating keys, " << std::flush;
-  FHESecKey secretKey(context);
+  SecKey secretKey(context);
   secretKey.GenSecKey(skHwt);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
@@ -226,7 +226,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
       dbgKey = &secretKey;
 #endif
 
-  FHEPubKey publicKey = secretKey;
+  PubKey publicKey = secretKey;
 
   long d = context.zMStar.getOrdP();
   long phim = context.zMStar.getPhiM();

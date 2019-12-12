@@ -13,9 +13,9 @@
 #include <string>
 #include <sstream>
 #include <NTL/ZZ.h>
-#include "NumbTh.h"
-#include "FHEContext.h"
-#include "debugging.h"
+#include <helib/NumbTh.h>
+#include <helib/Context.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -66,9 +66,9 @@ class GTestPAlgebra : public ::testing::TestWithParam<Parameters> {
         const long r;
         const std::vector<long> gens;
         const std::vector<long> ords;
-        helib::FHEcontext context;
+        helib::Context context;
 
-        static void printPrimeFactors(long m, const helib::FHEcontext& context)
+        static void printPrimeFactors(long m, const helib::Context& context)
         {
             std::vector<long> f;
             helib::factorize(f,m);
@@ -111,7 +111,7 @@ TEST_P(GTestPAlgebra, readsAndWritesContextsAsStrings)
   std::vector<long> gens, ords;
   helib::readContextBase(s3, m1, p1, r1, gens, ords);
 
-  helib::FHEcontext c1(m1, p1, r1, gens, ords);
+  helib::Context c1(m1, p1, r1, gens, ords);
   s3 >> c1;
 
   EXPECT_EQ(context, c1);

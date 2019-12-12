@@ -24,8 +24,8 @@
  * (vec_long), that store only the evaluation in primitive m-th
  * roots of unity.
  */
-#include "CModulus.h"
-#include "timing.h"
+#include <helib/CModulus.h>
+#include <helib/timing.h>
 
 namespace helib {
 
@@ -185,8 +185,8 @@ Cmodulus& Cmodulus::operator=(const Cmodulus &other)
   // are not intended to allow copies out of one context into another,
   // so we still need to use copied_ptr's (but not context restoration).
   // All of this is fairly academic, as I don't think we really
-  // copy FHEcontexts around anywhere. Also, it would be cleaner
-  // to make the vector in FHEcontext be a vector of copied_ptr<Cmodulus>
+  // copy Contexts around anywhere. Also, it would be cleaner
+  // to make the vector in Context be a vector of copied_ptr<Cmodulus>
 
   root = other.root;
   rInv = other.rInv;

@@ -9,10 +9,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include "hypercube.h"
-#include "powerful.h"
-#include "FHEContext.h"
-#include "ArgMap.h"
+#include <helib/hypercube.h>
+#include <helib/powerful.h>
+#include <helib/Context.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -33,7 +33,7 @@ void testSimpleConversion(const Vec<long>& mvec)
   cout << ((poly == poly2)? "GOOD" : "BAD") << endl;
 }
 
-void testHighLvlConversion(const FHEcontext& context, const Vec<long>& mvec)
+void testHighLvlConversion(const Context& context, const Vec<long>& mvec)
 {
   PowerfulDCRT p2d(context, mvec);
   DoubleCRT dcrt(context, context.fullPrimes());
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
   // Test conversion between zz_pX abd HyperCube<zz_p>
   testSimpleConversion(mvec);
 
-  FHEcontext context(m,p,r);
+  Context context(m,p,r);
   buildModChain(context, /*L=*/9, /*c=*/3);
 
   testHighLvlConversion(context, mvec);

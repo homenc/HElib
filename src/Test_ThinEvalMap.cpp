@@ -13,10 +13,10 @@
 /* Test_ThinEvalMap.cpp - Testing the evalution map for thin bootstrapping
  */
 #include <cassert>
-#include "helib.h"
-#include "EvalMap.h"
+#include <helib/helib.h>
+#include <helib/EvalMap.h>
 #include <NTL/BasicThreadPool.h>
-#include "ArgMap.h"
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -64,7 +64,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   vector<long> gens1, ords1;
   convert(gens1, gens);
   convert(ords1, ords);
-  FHEcontext context(m, p, r, gens1, ords1);
+  Context context(m, p, r, gens1, ords1);
   buildModChain(context, L, c);
 
   if (!noPrint) {
@@ -77,8 +77,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
 
   setDryRun(dry); // Now we can set the dry-run flag if desired
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(w); // A Hamming-weight-w secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey); // compute key-switching matrices that we need

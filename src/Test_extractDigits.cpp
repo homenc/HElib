@@ -15,10 +15,10 @@
  */
 #include <NTL/ZZ.h>
 NTL_CLIENT
-#include "EncryptedArray.h"
-#include "polyEval.h"
-#include "debugging.h"
-#include "ArgMap.h"
+#include <helib/EncryptedArray.h>
+#include <helib/polyEval.h>
+#include <helib/debugging.h>
+#include <helib/ArgMap.h>
 
 using namespace helib;
 
@@ -60,11 +60,11 @@ int main(int argc, char *argv[])
     if (dry) cout << "dry run: ";
     cout << "m="<<m<<", p="<<p<<", r="<<r<<", L="<<L<<endl;
   }
-  FHEcontext context(m, p, r);
+  Context context(m, p, r);
   buildModChain(context, L, /*c=*/4);
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 

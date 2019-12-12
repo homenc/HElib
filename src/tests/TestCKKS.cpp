@@ -13,9 +13,9 @@
 #include <algorithm>
 #include <complex>
 
-#include "norms.h"
-#include <helib.h>
-#include "debugging.h"
+#include <helib/norms.h>
+#include <helib/helib.h>
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -147,9 +147,9 @@ class TestCKKS : public ::testing::TestWithParam<Parameters> {
         const long L;         // Number of bits
         const double epsilon; // error threshold
 
-        helib::FHEcontext context;
-        helib::FHESecKey secretKey;
-        const helib::FHEPubKey publicKey;
+        helib::Context context;
+        helib::SecKey secretKey;
+        const helib::PubKey publicKey;
         const helib::EncryptedArrayCx& ea;
 
         TestCKKS () :

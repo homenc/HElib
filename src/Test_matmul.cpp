@@ -13,7 +13,7 @@
  * @file matmul.h
  * @brief some matrix / linear algenra stuff
  */
-#include "matmul.h"
+#include <helib/matmul.h>
 #include <NTL/BasicThreadPool.h>
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
@@ -22,8 +22,8 @@
 #endif
 
 // Implementation of the various random matrices is found here
-#include "randomMatrices.h"
-#include "ArgMap.h"
+#include <helib/randomMatrices.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -50,7 +50,7 @@ using namespace helib;
 
 template<class Matrix>
 bool DoTest(const Matrix& mat, const EncryptedArray& ea, 
-            const FHESecKey& secretKey, bool minimal, bool verbose)
+            const SecKey& secretKey, bool minimal, bool verbose)
 {
   FHE_NTIMER_START(EncodeMartix_MatMul);
   typename Matrix::ExecType mat_exec(mat, minimal);
@@ -83,7 +83,7 @@ int ks_strategy = 0;
 // 3 == minimal
 
 
-void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
+void TestIt(Context& context, long dim, bool verbose, long full, long block)
 {
   resetAllTimers();
   if (verbose) {
@@ -97,8 +97,8 @@ void TestIt(FHEcontext& context, long dim, bool verbose, long full, long block)
 	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
   }
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A Hamming-weight-w secret key
 
   bool minimal = ks_strategy == 3;
@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
 
   setTimersOn();
 
-  FHEcontext context(m, p, r, gens1, ords1);
+  Context context(m, p, r, gens1, ords1);
   buildModChain(context, L, /*c=*/3);
 
   TestIt(context, dim, verbose, full, block);

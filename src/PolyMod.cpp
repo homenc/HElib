@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include "PolyMod.h"
-#include "exceptions.h"
+#include <helib/PolyMod.h>
+#include <helib/exceptions.h>
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_p.h>
 #include <vector>

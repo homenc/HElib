@@ -17,17 +17,17 @@
 #include <tuple>
 #include <NTL/BasicThreadPool.h>
 
-#include <helib.h>
+#include <helib/helib.h>
 
-#include <intraSlot.h>
-#include <binaryArith.h>
-#include <binaryCompare.h>
+#include <helib/intraSlot.h>
+#include <helib/binaryArith.h>
+#include <helib/binaryCompare.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
 
 #ifdef DEBUG_PRINTOUT
-#include <debugging.h>
+#include <helib/debugging.h>
 #endif
 // define flags FLAG_PRINT_ZZX, FLAG_PRINT_POLY, FLAG_PRINT_VEC, functions
 //        decryptAndPrint(ostream, ctxt, sk, ea, flags)
@@ -124,7 +124,7 @@ class GTestBinaryCompare : public ::testing::TestWithParam<std::tuple<Parameters
             return bootstrap ? 900 : 30*(7 + NTL::NumBits(bitSize + 2)); // that should be enough
         };
 
-        helib::FHEcontext& prepareContext(helib::FHEcontext &context)
+        helib::Context& prepareContext(helib::Context &context)
         {
             if (helib_test::verbose) {
                 std::cout <<"input bitSize="<<bitSize << std::endl;
@@ -145,7 +145,7 @@ class GTestBinaryCompare : public ::testing::TestWithParam<std::tuple<Parameters
             return context;
         }
 
-        void prepareSecKey(helib::FHESecKey& secKey)
+        void prepareSecKey(helib::SecKey& secKey)
         {
             if (helib_test::verbose) {
                 std::cout << "\ncomputing key-dependent tables..." << std::flush;
@@ -170,8 +170,8 @@ class GTestBinaryCompare : public ::testing::TestWithParam<std::tuple<Parameters
         const std::vector<long> ords;
         const long c;
         const long L;
-        helib::FHEcontext context;
-        helib::FHESecKey secKey;
+        helib::Context context;
+        helib::SecKey secKey;
 
         GTestBinaryCompare() :
             prm(validatePrm(std::get<0>(GetParam()).prm)),

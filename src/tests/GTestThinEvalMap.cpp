@@ -12,10 +12,10 @@
 
 /* Test_ThinEvalMap.cpp - Testing the evalution map for thin bootstrapping
  */
-#include <helib.h>
-#include "EvalMap.h"
+#include <helib/helib.h>
+#include <helib/EvalMap.h>
 #include <NTL/BasicThreadPool.h>
-#include "debugging.h"
+#include <helib/debugging.h>
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -112,7 +112,7 @@ class GTestThinEvalMap : public ::testing::TestWithParam<Parameters> {
             return mvec;
         };
 
-        static helib::FHEcontext& prepareContext(helib::FHEcontext& context, const long L, const long c)
+        static helib::Context& prepareContext(helib::Context& context, const long L, const long c)
         {
             helib::buildModChain(context, L, c);
             if(!helib_test::noPrint) {
@@ -122,7 +122,7 @@ class GTestThinEvalMap : public ::testing::TestWithParam<Parameters> {
             return context;
         };
 
-          static helib::FHESecKey& prepareSecretKey(helib::FHESecKey& secretKey, const long w)
+          static helib::SecKey& prepareSecretKey(helib::SecKey& secretKey, const long w)
         {
             secretKey.GenSecKey(w); // A Hamming-weight-w secret key
             helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
@@ -170,12 +170,12 @@ class GTestThinEvalMap : public ::testing::TestWithParam<Parameters> {
         const long m;
         const long nthreads;
         const long useCache;
-        helib::FHEcontext context;
+        helib::Context context;
         const long d;
         const long phim;
         const long nslots;
-        helib::FHESecKey secretKey;
-        const helib::FHEPubKey& publicKey;
+        helib::SecKey secretKey;
+        const helib::PubKey& publicKey;
 
         virtual void TearDown() override
         {

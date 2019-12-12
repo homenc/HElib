@@ -10,11 +10,11 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/ZZ.h>
-#include "norms.h"
-#include "helib.h"
+#include <helib/norms.h>
+#include <helib/helib.h>
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 #include "gtest/gtest.h"
@@ -44,7 +44,7 @@ class GTestEaCx : public ::testing::TestWithParam<Parameters> {
 
         const long m;
         const long r;
-        helib::FHEcontext context;
+        helib::Context context;
         const helib::EncryptedArrayCx& eacx;
 
         GTestEaCx() :

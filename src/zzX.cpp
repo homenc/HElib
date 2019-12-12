@@ -15,9 +15,9 @@
  **/
 #include <mutex>
 #include <map>
-#include "PAlgebra.h"
-#include "timing.h"
-#include "zzX.h"
+#include <helib/PAlgebra.h>
+#include <helib/timing.h>
+#include <helib/zzX.h>
 
 namespace helib {
 

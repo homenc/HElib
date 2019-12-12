@@ -28,7 +28,7 @@ void printBits(const vector<ZZX>& v, long n)
 
 void  TestIt(long c, long k, long w, long L, long m, long n)
 {
-  FHEcontext context(m, 2, 1); // p = 2, r = 1
+  Context context(m, 2, 1); // p = 2, r = 1
   long d = context.zMStar.getOrdP(); 
 
   buildModChain(context, L, c);
@@ -39,8 +39,8 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
   cerr << context << endl;
 #endif
 
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(w); // A Hamming-weight-w secret key
 
 

@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <cmath> // isinf
-#include "helib.h"
+#include <helib/helib.h>
 
 #include "test_common.h"
 #include "gtest/gtest.h"
@@ -48,14 +48,14 @@ protected:
       m(GetParam().m),
       p(GetParam().p),
       r(GetParam().r),
-      context(std::make_shared<helib::FHEcontext>(m, p, r))
+      context(std::make_shared<helib::Context>(m, p, r))
   {}
 
   const unsigned long m;
   const unsigned long p;
   const unsigned long r;
 
-  const std::shared_ptr<helib::FHEcontext> context;
+  const std::shared_ptr<helib::Context> context;
 };
 
 TEST_P(TestContext,

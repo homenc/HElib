@@ -18,15 +18,15 @@
 #include <NTL/BasicThreadPool.h>
 NTL_CLIENT
 
-#include "helib.h"
+#include <helib/helib.h>
 
-#include "intraSlot.h"
-#include "binaryArith.h"
-#include "binaryCompare.h"
-#include "ArgMap.h"
+#include <helib/intraSlot.h>
+#include <helib/binaryArith.h>
+#include <helib/binaryCompare.h>
+#include <helib/ArgMap.h>
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 using namespace helib;
@@ -47,7 +47,7 @@ static long mValues[][15] = {
   {  2, 27000, 32767, 15, 31,  7, 151, 11628, 28087,25824, 30,  6, -10, 28, 4}
 };
 
-void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap=false);
+void testCompare(SecKey& secKey, long bitSize, bool bootstrap=false);
 
 
 int main(int argc, char *argv[])
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
     if (nthreads>1) cout << "  using "<<NTL::AvailableThreads()<<" threads\n";
     cout << "computing key-independent tables..." << std::flush;
   }
-  FHEcontext context(m, p, /*r=*/1, gens, ords);
+  Context context(m, p, /*r=*/1, gens, ords);
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
     context.makeBootstrappable(mvec, /*t=*/0);
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     cout << " L="<<L<<", B="<<B<<endl;
     cout << "\ncomputing key-dependent tables..." << std::flush;
   }
-  FHESecKey secKey(context);
+  SecKey secKey(context);
   secKey.GenSecKey();
   addSome1DMatrices(secKey); // compute key-switching matrices
   addFrbMatrices(secKey);
@@ -143,9 +143,9 @@ int main(int argc, char *argv[])
 }
 
 
-void testCompare(FHESecKey& secKey, long bitSize, bool bootstrap)
+void testCompare(SecKey& secKey, long bitSize, bool bootstrap)
 {
-  const FHEcontext& context = secKey.getContext();
+  const Context& context = secKey.getContext();
   const EncryptedArray& ea = *(context.ea);
 
   // Choose two random n-bit integers

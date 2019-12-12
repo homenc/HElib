@@ -14,9 +14,9 @@
  *
  */
 
-#include "bluestein.h"
-#include "timing.h"
-#include "CModulus.h"
+#include <helib/bluestein.h>
+#include <helib/timing.h>
+#include <helib/CModulus.h>
 
 #define NEW_BLUE (1)
 

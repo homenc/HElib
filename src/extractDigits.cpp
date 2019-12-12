@@ -13,9 +13,9 @@
  */
 #include <NTL/ZZ.h>
 #include <NTL/ZZ_p.h>
-#include "EncryptedArray.h"
-#include "polyEval.h"
-#include "debugging.h"
+#include <helib/EncryptedArray.h>
+#include <helib/polyEval.h>
+#include <helib/debugging.h>
 
 namespace helib {
 
@@ -66,7 +66,7 @@ int fhe_watcher = 0;
 
 void extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r)
 {
-  const FHEcontext& context = c.getContext();
+  const Context& context = c.getContext();
   long rr = c.effectiveR();
   if (r<=0 || r>rr) r = rr; // how many digits to extract
 
@@ -220,7 +220,7 @@ void compute_magic_poly(NTL::ZZX& poly1, long p, long e)
 
 void extendExtractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r, long e)
 {
-  const FHEcontext& context = c.getContext();
+  const Context& context = c.getContext();
 
   long p = context.zMStar.getP();
   NTL::ZZX x2p;

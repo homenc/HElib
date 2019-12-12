@@ -22,11 +22,11 @@
 #include <mutex>          // std::mutex, std::unique_lock
 
 #include <NTL/BasicThreadPool.h>
-#include "binaryArith.h"
+#include <helib/binaryArith.h>
 
 #ifdef DEBUG_PRINTOUT
 #include <cstdio>
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 #define BPL_ESTIMATE (30)
@@ -999,7 +999,7 @@ long fifteenOrLess4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
 // in the last dimension within each ciphertext. Namely, the bit for
 // the j'th counter is found in slot of index j*sizeOf(lastDim).
 void decryptBinaryNums(std::vector<long>& pNums, const CtPtrs& eNums,
-                       const FHESecKey& sKey, const EncryptedArray& ea,
+                       const SecKey& sKey, const EncryptedArray& ea,
                        bool twosComplement, bool allSlots)
 {
   int offset=1, size=ea.size();

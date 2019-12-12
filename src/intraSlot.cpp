@@ -15,8 +15,8 @@
  * to either ea.getNormalBasisMatrixInverse() or ea.getNormalBasisMatrix().
  */
 #include <memory>
-#include "replicate.h"
-#include "intraSlot.h"
+#include <helib/replicate.h>
+#include <helib/intraSlot.h>
 
 namespace helib {
 
