@@ -6,6 +6,8 @@ project(helib
 
 # Location of the header files
 set(PROJECT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../include")
+# Location of the google tests
+set(PROJECT_TESTS_DIR "${PROJECT_SOURCE_DIR}/../tests")
 
 # We assume enable threads is passed correctly (already checked)
 if (HELIB_REQUIRES_PTHREADS)
@@ -300,7 +302,8 @@ if (ENABLE_LEGACY_TEST)
 endif(ENABLE_LEGACY_TEST)
 
 if (ENABLE_TEST)
-  add_subdirectory(tests)
+  add_subdirectory("${PROJECT_TESTS_DIR}" 
+                   tests)
 endif(ENABLE_TEST)
 
 # Installing helib
