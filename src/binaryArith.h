@@ -72,6 +72,16 @@ void multTwoNumbers(CtPtrs& product, const CtPtrs& lhs, const CtPtrs& rhs,
                     std::vector<zzX>* unpackSlotEncoding=nullptr);
 
 /**
+ * @brief Square one number in binary representation where each ciphertext of the input vector contains a bit.
+ * @param product result of the squaring operation.
+ * @param a number to be squared
+ * @param sizeLimit number of bits to compute on, taken from the least significant end.
+ * @param unpackSlotEncoding vector of constants for unpacking, as used in bootstrapping.
+ **/
+void square(CtPtrs &product, const CtPtrs &a,long sizeLimit=0,
+            std::vector<zzX>* unpackSlotEncoding =nullptr);
+			
+/**
  * @brief Decrypt the binary numbers that are encrypted in eNums.
  * @param pNums vector to decrypt the binary numbers into.
  * @param eNums encrypted binary numbers of which to be decrypted.
