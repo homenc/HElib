@@ -713,6 +713,7 @@ void packedRecrypt(const CtPtrs& cPtrs,
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea)
 {
+  if(cPtrs.size() == 0) return; // if there is no entry the next line will throw a exception.
   FHEPubKey& pKey = (FHEPubKey&)cPtrs[0]->getPubKey();
 
   // Allocate temporary ciphertexts for the recryption
@@ -733,6 +734,9 @@ void packedRecrypt(const CtPtrs& array,
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea, long belowLvl)
 {
+  if(belowLvl == LONG_MAX)    //default Value
+    belowLvl /= ea.getContext().BPL();
+  assertTrue(belowLvl <= (LONG_MAX / ea.getContext().BPL()),"Level to high overflow of Type LONG");
   std::vector<Ctxt*> v;
   for (long i=0; i<array.size(); i++)
     if ( array.isSet(i) && !array[i]->isEmpty()
@@ -744,6 +748,9 @@ void packedRecrypt(const CtPtrMat& m,
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea, long belowLvl)
 {
+  if(belowLvl == LONG_MAX)    //default Value
+    belowLvl /= ea.getContext().BPL();
+  assertTrue(belowLvl <= (LONG_MAX / ea.getContext().BPL()),"Level to high overflow of Type LONG");
   std::vector<Ctxt*> v;
   for (long i=0; i<m.size(); i++)
     for (long j=0; j<m[i].size(); j++)
