@@ -48,7 +48,6 @@ if (PACKAGE_BUILD)
 else (PACKAGE_BUILD)
   # Properties to be enabled when not using PACKAGE_BUILD
   option(ENABLE_LEGACY_TEST "Build the legacy test files (does not work with PACKAGE_BUILD)" OFF)
-  option(BUILD_AES "Build homomorphic AES (does not work with PACKAGE_BUILD)" OFF)
 endif(PACKAGE_BUILD)
 
 # Allow GMP_DIR and search in it if not using PACKAGE_BUILD or using PACKAGE_BUILD and !FETCH_GMP
@@ -235,7 +234,6 @@ if (PACKAGE_BUILD)
       -DFETCH_GMP=${FETCH_GMP}
       -DENABLE_TEST=${ENABLE_TEST}
       -DENABLE_LEGACY_TEST=OFF
-      -DBUILD_AES=OFF
     BUILD_ALWAYS ON
   )
 

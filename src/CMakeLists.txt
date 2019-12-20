@@ -284,11 +284,6 @@ if (BUILD_SHARED)
   )
 endif(BUILD_SHARED)
 
-
-if (BUILD_AES)
-  add_subdirectory(aes)
-endif(BUILD_AES)
-
 if (ENABLE_LEGACY_TEST)
     foreach(TEST_FILE ${LEGACY_TEST_SRCS})
       string(REPLACE "\.cpp" "" TEST_NAME "${TEST_FILE}")
