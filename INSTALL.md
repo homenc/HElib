@@ -203,7 +203,6 @@ set to `OFF`, there should either exist a system-installed GMP library, or
 
 ### Parameters specific to option 2 (library build)
 - `ENABLE_LEGACY_TEST=ON/OFF` (default is OFF): Build old test system (deprecated).
-- `BUILD_AES=ON/OFF` (default is OFF): Build homomorphic AES.
 - `GMP_DIR`: Prefix of the GMP library.
 - `NTL_DIR`: Prefix of the NTL library.
 
