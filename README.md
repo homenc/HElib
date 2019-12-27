@@ -38,4 +38,3 @@ For more information see the [GitHub Pages][10].
   [8]: http://eprint.iacr.org/2014/873       "bootstrapping"
   [9]: http://eprint.iacr.org/2016/421       "CKKS16"
   [10]: https://github.com/homenc/HElib      "GitHubPages"
-

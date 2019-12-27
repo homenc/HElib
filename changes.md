@@ -145,4 +145,3 @@ Corrected some mistakes and tightened the analysis in [[Halevi-Shoup, Eurocrypt 
 * Small changes in how the digits are set-up in `FHEcontext` to make their size more uniform;
 * Eliminated some code duplication between "thin" and "think" bootstrapping in recryption.cpp;
 * Added some more functions/options in the debugging module.
-
