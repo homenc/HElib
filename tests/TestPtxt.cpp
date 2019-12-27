@@ -341,7 +341,10 @@ TEST_P(TestPtxtCKKS, mapTo01MapsSlotsCorrectly)
   }
 
   helib::Ptxt<helib::CKKS> ptxt(context, data);
+  helib::Ptxt<helib::CKKS> ptxt2(context, data);
+  // Should exist as a free function and a member function
   ptxt.mapTo01();
+  mapTo01(*(context.ea), ptxt2);
 
   std::vector<std::complex<double>> expected_result(context.ea->size());
   for (std::size_t i = 1; i < data.size(); ++i) {
@@ -349,6 +352,7 @@ TEST_P(TestPtxtCKKS, mapTo01MapsSlotsCorrectly)
   }
 
   EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  EXPECT_EQ(ptxt2.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, timesEqualsOtherPlaintextWorks)
@@ -1688,11 +1692,15 @@ TEST_P(TestPtxtBGV, mapTo01MapsSlotsCorrectly)
     if (i % p == 0)
       expected_result[i] = 0;
 
+  // Should exist as a free function and a member function
   helib::Ptxt<helib::BGV> ptxt(context, data);
+  helib::Ptxt<helib::BGV> ptxt2(context, data);
   ptxt.mapTo01();
+  mapTo01(*(context.ea), ptxt2);
 
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     EXPECT_EQ(ptxt[i], expected_result[i]);
+    EXPECT_EQ(ptxt2[i], expected_result[i]);
   }
 }
 
