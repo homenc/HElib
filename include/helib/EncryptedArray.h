@@ -1047,6 +1047,10 @@ void mapTo01(const EncryptedArray& ea, Ctxt& ctxt);
 // by setting y=x^{p-1} and then outputting y * y^p * ... * y^{p^{d-1}},
 // with exponentiation to powers of p done via Frobenius.
 
+//! @brief Map all non-zero slots to 1, leaving zero slots as zero.
+template <typename Scheme>
+void mapTo01(const EncryptedArray&, Ptxt<Scheme>& ptxt);
+
 
 //! @brief (only for p=2, r=1), test if prefixes of bits in slots are all zero.
 //! Set slot j of res[i] to 0 if bits 0..i of j'th slot in ctxt are all zero,
