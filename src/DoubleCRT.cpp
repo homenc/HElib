@@ -26,6 +26,8 @@
 #include <helib/sample.h>
 #include <helib/DoubleCRT.h>
 #include <helib/Context.h>
+#include <helib/norms.h>
+#include <helib/fhe_stats.h>
 
 namespace helib {
 
@@ -291,9 +293,25 @@ template
 DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const NTL::ZZX &poly, SubFun fun);
 
 // break *this into n digits,according to the primeSets in context.digits
-void DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits, long n) const
+// returns the sum of the canonical embedding norms of the digits
+NTL::xdouble 
+DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
 {
   FHE_TIMER_START;
+
+  const PAlgebra& palg = context.zMStar;
+  long phim = palg.getPhiM();
+
+  IndexSet remainingPrimes = getIndexSet();
+  long n = 0;
+
+  for (; !empty(remainingPrimes); n++) {
+    IndexSet digitPrimes = context.digits.at(n);
+    digitPrimes.retain(remainingPrimes);
+
+    remainingPrimes.remove(context.digits.at(n));
+  }
+
   IndexSet allPrimes = getIndexSet() | context.specialPrimes;
 
   //OLD: assert(getIndexSet() <= context.ctxtPrimes);
@@ -305,18 +323,53 @@ void DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits, long n) const
   helib::assertTrue(n <= (long)context.digits.size(), "n cannot be larger than the size of context.digits");
 
   digits.resize(n, DoubleCRT(context, IndexSet::emptySet()));
-  if (isDryRun()) return;
+  if (isDryRun()) return NTL::conv<NTL::xdouble>(0.0);
 
-  for (long i: range(digits.size())) { 
+  for (long i: range(n)) { 
     digits[i]=*this;
     IndexSet notInDigit = digits[i].getIndexSet()/context.digits[i];
     digits[i].removePrimes(notInDigit); // reduce modulo the digit primes
   }
+
+  NTL::xdouble noise(0.0);
   
   for (long i: range(digits.size())) { 
     FHE_NTIMER_START(addPrimes_5);
     IndexSet notInDigit = allPrimes / digits[i].getIndexSet();
+
+
+
+#if 0
+// This version coumputes a high-probability bound
+
+    double digitSize = context.logOfProduct(digits[i].getIndexSet());
+    NTL::xdouble norm_bnd =
+      context.noiseBoundForUniform( NTL::xexp(digitSize)/2.0, phim );
+    noise += norm_bnd;
+
     digits[i].addPrimes(notInDigit); // add back all the primes
+
+#else
+// This version computes an "exact" value
+
+    double digitSize = context.logOfProduct(digits[i].getIndexSet());
+    NTL::xdouble norm_bnd =
+      context.noiseBoundForUniform( NTL::xexp(digitSize)/2.0, phim );
+
+    NTL::ZZX poly;
+    digits[i].addPrimes(notInDigit, &poly); // add back all the primes
+
+    FHE_NTIMER_START(NORM_VAL); 
+    NTL::xdouble norm_val = embeddingLargestCoeff(poly, palg);
+    FHE_NTIMER_STOP(NORM_VAL); 
+
+    noise += norm_val;
+
+    double ratio = NTL::conv<double>(norm_val/norm_bnd);
+    FHE_STATS_UPDATE("break-into-digits-ratio", ratio);
+
+#endif
+
 
     NTL::ZZ pi = context.productOfPrimes(context.digits[i]);
     for (long j: range(i+1, digits.size())) {
@@ -325,25 +378,33 @@ void DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits, long n) const
     }
   }
   FHE_TIMER_STOP;
+
+  return noise;
 }
 
 // expand index set by s1.
 // it is assumed that s1 is disjoint from the current index set.
-void DoubleCRT::addPrimes(const IndexSet& s1)
+void DoubleCRT::addPrimes(const IndexSet& s1, NTL::ZZX *poly_p)
 {
   FHE_TIMER_START;
 
-  if (empty(s1)) return; // nothing to do
+  if (empty(s1)) {
+    helib::assertTrue(poly_p == 0, "poly_p must be null here");
+    return; // nothing to do
+  }
   //OLD: assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
   helib::assertTrue( disjoint(s1,map.getIndexSet()), "addPrimes can only be called on a disjoint set");
 
   if (empty(getIndexSet())) {   // special case for empty DCRT
     map.insert(s1); // just add new rows to the map and return
     SetZero();
+    if (poly_p) clear(*poly_p);
     return;
   }
   NTL::ZZX poly;
   toPoly(poly); // recover in coefficient representation
+
+  if (poly_p) *poly_p = poly;
 
   map.insert(s1);  // add new rows to the map
   if (isDryRun()) return;

@@ -81,6 +81,7 @@ PubKey::PubKey(const Context& _context):
 PubKey::PubKey(const PubKey& other): // copy constructor
     context(other.context), pubEncrKey(*this), skBounds(other.skBounds),
     keySwitching(other.keySwitching), keySwitchMap(other.keySwitchMap),
+    KS_strategy(other.KS_strategy),
     recryptKeyID(other.recryptKeyID), recryptEkey(*this)
 { // copy pubEncrKey,recryptEkey w/o checking the ref to the public key
   pubEncrKey.privateAssign(other.pubEncrKey);
@@ -264,7 +265,11 @@ long PubKey::getKSStrategy(long dim) const {
   long index = dim+1;
   //OLD: assert(index >= 0);
   helib::assertTrue<helib::InvalidArgument>(index >= 0l, "Invalid dimension (dim must be at least -1)");
-  if (index >= KS_strategy.length()) return FHE_KSS_UNKNOWN;
+  if (index >= KS_strategy.length()) {
+    return FHE_KSS_UNKNOWN;
+  }
+  // HERE 
+  //std::cout << "*** getKSSStrategy for dim " << dim << " = " << KS_strategy[index] << "\n";
   return KS_strategy[index];
 }
 
@@ -275,6 +280,8 @@ void PubKey::setKSStrategy(long dim, int val) {
   if (index >= KS_strategy.length())
     KS_strategy.SetLength(index+1, FHE_KSS_UNKNOWN);
   KS_strategy[index] = val;
+  // HERE 
+  //std::cout << "*** setKSSStrategy for dim " << dim << " = " << val << "\n";
 }
 
 // Encrypts plaintext, result returned in the ciphertext argument. When
@@ -841,6 +848,15 @@ void SecKey::GenKeySWmatrix(long fromSPower, long fromXPower,
 
   // Push the new matrix onto our list
   keySwitching.push_back(ksMatrix);
+
+#if 0
+  // HERE
+  std::cout 
+    << "*** ksMatrix: "
+    << fromSPower << " " << fromXPower << " " << fromIdx << " " 
+    << toIdx << " " << p << " "
+    << (log(ksMatrix.noiseBound)/log(2.0)) << "\n";
+#endif
 }
 
 // Decryption

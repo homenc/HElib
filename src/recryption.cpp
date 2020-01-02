@@ -359,7 +359,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
 
 // bootstrap a ciphertext to reduce noise
-void PubKey::reCrypt(Ctxt &ctxt)
+void PubKey::reCrypt(Ctxt &ctxt) const
 {
   FHE_TIMER_START;
 
@@ -933,7 +933,7 @@ struct PubKeyHack { // The public key
 };
 
 // bootstrap a ciphertext to reduce noise
-void PubKey::thinReCrypt(Ctxt &ctxt)
+void PubKey::thinReCrypt(Ctxt &ctxt) const
 {
   FHE_TIMER_START;
 

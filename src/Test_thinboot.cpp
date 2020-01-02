@@ -33,6 +33,7 @@ static bool noPrint = false;
 static bool dry = false; // a dry-run flag
 static bool debug = 0;   // a debug flag
 static int scale = 0;
+static long special_bits;
 
 static string v_values_name = "";
 
@@ -165,7 +166,11 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   }
 
   context.zMStar.set_cM(c_m/100.0);
-  buildModChain(context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+  buildModChain(context, L, c, 
+    /*willBeBootstrappable=*/true, 
+    /*t=*/skHwt,
+    /*resolution=*/3,
+    /*bitsInSpecialPrimes=*/special_bits);
 
   if (!noPrint) {
     std::cout << "security=" << context.securityLevel()<<endl;
@@ -226,7 +231,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
       dbgKey = &secretKey;
 #endif
 
-  PubKey publicKey = secretKey;
+  const PubKey publicKey = secretKey;
 
   long d = context.zMStar.getOrdP();
   long phim = context.zMStar.getPhiM();
@@ -387,6 +392,7 @@ int main(int argc, char *argv[])
 
   amap.arg("debug", debug, "generate debugging output");
   amap.arg("scale", scale, "scale parameter");
+  amap.arg("special_bits", special_bits, "# of bits in special primes");
 
   amap.arg("gens", global_gens);
   amap.arg("ords", global_ords);
