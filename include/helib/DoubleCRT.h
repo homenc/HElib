@@ -226,11 +226,14 @@ public:
 
   //! @brief Break into n digits,according to the primeSets in context.digits.
   //! See Section 3.1.6 of the design document (re-linearization)
-  void breakIntoDigits(std::vector<DoubleCRT>& dgts, long n) const;
+  //! Returns the sum of the canonical embedding of the digits
+  NTL::xdouble breakIntoDigits(std::vector<DoubleCRT>& dgts) const;
 
   //! @brief Expand the index set by s1.
   //! It is assumed that s1 is disjoint from the current index set.
-  void addPrimes(const IndexSet& s1);
+  //! If poly_p != 0, then *poly_p will first be set to the result of applying 
+  //! toPoly.
+  void addPrimes(const IndexSet& s1, NTL::ZZX *poly_p = 0);
 
   //! @brief Expand index set by s1, and multiply by Prod_{q in s1}.
   //! s1 is disjoint from the current index set, returns log(product).

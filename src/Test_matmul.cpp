@@ -15,6 +15,7 @@
  */
 #include <helib/matmul.h>
 #include <NTL/BasicThreadPool.h>
+#include <helib/fhe_stats.h>
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
 #include <sys/time.h>
@@ -95,6 +96,8 @@ void TestIt(Context& context, long dim, bool verbose, long full, long block)
     std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
     std::cout << "# bits in special primes = " 
 	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
+
+    fhe_stats = true;
   }
 
   SecKey secretKey(context);
@@ -176,6 +179,7 @@ void TestIt(Context& context, long dim, bool verbose, long full, long block)
       getrusage( RUSAGE_SELF, &rusage );
       cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
 #endif
+    print_stats(cout);
   }
 }
 
@@ -234,6 +238,7 @@ int main(int argc, char *argv[])
 	 << ", force_hoist=" << fhe_test_force_hoist
 	 << ", ks_strategy=" << ks_strategy
 	 << endl;
+
    }
 
   vector<long> gens1, ords1;

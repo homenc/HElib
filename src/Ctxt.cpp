@@ -108,59 +108,6 @@ bool Ctxt::verifyPrimeSet() const
 }
 
 
-// Compute the number of digits that we need and the esitmated
-// added noise from switching this ciphertext part.
-static std::pair<long, NTL::xdouble>
-keySwitchNoise(const CtxtPart& p, const PubKey& pubKey, const KeySwitch& ks)
-{
-  const Context& context = p.getContext();
-  const PAlgebra& palg = context.zMStar;
-
-  NTL::xdouble ks_bound = ks.noiseBound;
-
-  long nDigits = 0;
-  NTL::xdouble addedNoise = NTL::to_xdouble(0.0);
-  double sizeLeft = context.logOfProduct(p.getIndexSet());
-  for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
-    nDigits++;
-
-    double digitSize = context.logOfProduct(context.digits[i]);
-    if (sizeLeft<digitSize) digitSize=sizeLeft;// need only part of this digit
-
-    // Added noise due to this digit is keySwMatrixNoise * |Di|, 
-    // where |Di| is the magnitude of the digit
-    addedNoise += ks_bound * NTL::xexp(digitSize);
-
-    sizeLeft -= digitSize;
-  }
-
-#if 0
-  // This needs to be re-thought...and/or implemented elsewhere...
-
-  // Sanity-check: make sure that the added noise is not more than the
-  // special primes can handle: After dividing the added noise by the
-  // product of all the special primes, it should be smaller than the
-  // added noise term due to modulus switching, i.e.,
-  // keySize * phi(m) * pSpace^2 / 4
-
-  double phim = palg.getPhiM();
-  double keySize = pubKey.getSKeySize(p.skHandle.getSecretKeyID());
-  double logModSwitchNoise = log(keySize) 
-    +2*log((double)pSpace) +log(phim) -log(4.0);
-  double logKeySwitchNoise = log(addedNoise) 
-    -2*context.logOfProduct(context.specialPrimes);
-
-  //OLD: assert(logKeySwitchNoise < logModSwitchNoise);
-  helib::assertTrue(logKeySwitchNoise < logModSwitchNoise, "Key switching noise has exceeded mod switching noise");
-#endif
-
-  return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
-}
-
-std::pair<long, NTL::xdouble> Ctxt::computeKSNoise(long partIdx, const KeySwitch& ks)
-{
-  return keySwitchNoise(parts.at(partIdx), pubKey, ks);
-}
 
 // Multiply vector of digits by key-switching matrix and add to *this.
 // It is assumed that W has at least as many b[i]'s as there are digits.
@@ -599,7 +546,23 @@ void Ctxt::reLinearize(long keyID)
   if (this->isEmpty() || this->inCanonicalForm(keyID)) return;
   // this->reduce();
 
+#if 0
+  // HERE
+  std::cout << "*** reLinearlize: " << primeSet;
+#endif
+
   dropSmallAndSpecialPrimes();
+
+#if 0
+  // HERE
+  std:: cout 
+       << " " << primeSet 
+       << " " <<  (context.logOfProduct(primeSet)/log(2.0))
+       << " " <<  (log(noiseBound)/log(2.0)) 
+       << " " <<  (log(modSwitchAddedNoiseBound())/log(2.0)) 
+       << "\n";
+
+#endif
 
   long g = ptxtSpace;
   double logProd = context.logOfProduct(context.specialPrimes);
@@ -672,22 +635,19 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   //OLD: assert(W.fromKey == p.skHandle);  // the handles must match
   helib::assertEq(W.fromKey, p.skHandle, "Secret key handles do not match");
 
-  // Compute the number of digits that we need and the esitmated
-  // added noise from switching this ciphertext part.
-  long nDigits;
-  NTL::xdouble addedNoise;
-  std::tie(nDigits,addedNoise)= keySwitchNoise(p, pubKey, W);
-
-  // Break the ciphertext part into digits, if needed, and scale up these
-  // digits using the special primes. This is the most expensive operation
-  // during homormophic evaluation, so it should be thoroughly optimized.
-
   std::vector<DoubleCRT> polyDigits;
-  p.breakIntoDigits(polyDigits, nDigits);
+  NTL::xdouble addedNoise = p.breakIntoDigits(polyDigits);
+  addedNoise *= W.noiseBound;
 
   // Finally we multiply the vector of digits by the key-switching matrix
   keySwitchDigits(W, polyDigits);
+
+  FHE_STATS_UPDATE("KS-noise-ratio", NTL::conv<double>(addedNoise/noiseBound));
+  // HERE
+  // fprintf(stderr, "   KS-log-noise-ratio: %f\n", log(addedNoise/noiseBound)/log(2.0));
+
   noiseBound += addedNoise; // update the noise estimate
+
 }
 
 

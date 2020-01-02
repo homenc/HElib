@@ -501,7 +501,8 @@ void readContextBinary(std::istream& str, Context& context);
 
 void buildModChain(Context& context, long nBits, long nDgts=3,
                       bool willBeBootstrappable=false, long skHwt=0, 
-                      long resolution=3);
+                      long resolution=3,
+                      long bitsInSpecialPrimes=0);
 
 ///@}
 extern Context* activeContext; // Should point to the "current" context

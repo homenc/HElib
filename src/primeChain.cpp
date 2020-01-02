@@ -491,7 +491,8 @@ void addCtxtPrimes(Context& context, long nBits, long targetSize)
 
 static
 void addSpecialPrimes(Context& context, long nDgts, 
-                      bool willBeBootstrappable, long skHwt)
+                      bool willBeBootstrappable, long skHwt, 
+                      long bitsInSpecialPrimes)
 {
   const PAlgebra& palg = context.zMStar;
   long p = palg.getP();
@@ -544,8 +545,13 @@ void addSpecialPrimes(Context& context, long nDgts,
   }
 
   // Add special primes to the chain for the P factor of key-switching
-  double logOfSpecialPrimes
-    = maxDigitLog + log(nDgts) + log(context.stdev *2) + log(p2e);
+  double logOfSpecialPrimes;
+
+  if (bitsInSpecialPrimes)
+    logOfSpecialPrimes = bitsInSpecialPrimes*log(2.0);
+  else
+    logOfSpecialPrimes = 
+      maxDigitLog + log(nDgts) + log(context.stdev *2) + log(p2e);
 
   // we now add enough special primes so that the sum of their
   // logs is at least logOfSpecial primes
@@ -584,16 +590,21 @@ void addSpecialPrimes(Context& context, long nDgts,
     logSoFar += log(q);
   }
 
-  //cerr << "****** special primes: " << logOfSpecialPrimes << " " << context.logOfProduct(context.specialPrimes) << "\n";
+#if 0
+  std::cerr << "****** special primes: " 
+            << (logOfSpecialPrimes/log(2.0)) << " " 
+            << (context.logOfProduct(context.specialPrimes)/log(2.0)) << "\n";
+#endif
 }
 
 void buildModChain(Context& context, long nBits, long nDgts,
-                      bool willBeBootstrappable, long skHwt, long resolution)
+                      bool willBeBootstrappable, long skHwt, long resolution,
+                      long bitsInSpecialPrimes)
 {
   long pSize = ctxtPrimeSize(nBits);
   addSmallPrimes(context, resolution, pSize);
   addCtxtPrimes(context, nBits, pSize);
-  addSpecialPrimes(context, nDgts, willBeBootstrappable, skHwt);
+  addSpecialPrimes(context, nDgts, willBeBootstrappable, skHwt, bitsInSpecialPrimes);
   context.setModSizeTable();
 }
 

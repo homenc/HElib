@@ -15,6 +15,7 @@
 #include <NTL/BasicThreadPool.h>
 #include <helib/matmul.h>
 #include <helib/norms.h>
+#include <helib/fhe_stats.h>
 
 namespace helib {
 
@@ -78,17 +79,23 @@ public:
 
     // Compute the number of digits that we need and the esitmated
     // added noise from switching this ciphertext.
-    long nDigits;
-    std::tie(nDigits, noise)
-      = ctxt.computeKSNoise(1, pubKey.keySWlist().at(0));
+
+    NTL::xdouble addedNoise = ctxt.parts[1].breakIntoDigits(polyDigits);
+    NTL::xdouble max_ks_noise(0.0);
+    for (const KeySwitch& ks: pubKey.keySWlist()) {
+      if (max_ks_noise < ks.noiseBound) max_ks_noise = ks.noiseBound;
+    }
+    addedNoise *= max_ks_noise;
 
     double logProd = context.logOfProduct(context.specialPrimes);
-    noise += ctxt.getNoiseBound() * NTL::xexp(logProd);
+    noise = ctxt.getNoiseBound() * NTL::xexp(logProd);
 
-    // Break the ciphertext part into digits, if needed, and scale up these
-    // digits using the special primes.
+    FHE_STATS_UPDATE("KS-noise-ratio-hoist", NTL::conv<double>(addedNoise/noise));
+    // HERE
+    //std::cout << "*** HOIST INIT\n";
+    // fprintf(stderr, "   KS-log-noise-ratio-hoist: %f\n", log(addedNoise/noise)/log(2.0));
 
-    ctxt.parts[1].breakIntoDigits(polyDigits, nDigits);
+    noise += addedNoise;
   }
 
   
@@ -744,6 +751,9 @@ void GenBabySteps(std::vector<std::shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long 
   }
 
   const PAlgebra& zMStar = ctxt.getContext().zMStar;
+
+  // HERE
+  //std::cout << "*** STRATEGY FOR dim " << dim << " = " << ctxt.getPubKey().getKSStrategy(dim) << "\n";
 
   if (fhe_test_force_hoist >= 0 &&
       ctxt.getPubKey().getKSStrategy(dim) != FHE_KSS_UNKNOWN) {

@@ -173,8 +173,8 @@ public:
     // NOTE: Is taking the alMod from the context the right thing to do?
 
     bool isBootstrappable() const;
-    void reCrypt(Ctxt &ctxt); // bootstrap a ciphertext to reduce noise
-    void thinReCrypt(Ctxt &ctxt);  // bootstrap a "thin" ciphertext, where
+    void reCrypt(Ctxt &ctxt) const; // bootstrap a ciphertext to reduce noise
+    void thinReCrypt(Ctxt &ctxt) const;  // bootstrap a "thin" ciphertext, where
     // slots are assumed to contain constants
 
     friend class SecKey;

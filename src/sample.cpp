@@ -237,8 +237,13 @@ double sampleHWtBoundedEffectiveBound(const Context& context, long Hwt)
 {
   const PAlgebra& palg = context.zMStar;
   long phim = palg.getPhiM();
-  // should be good with probability at least 1/2
+
   double bound = sqrt(Hwt*log(phim));
+  // should be good with probability at least 1/2
+  // NOTE: the general formula is sigma*sqrt(log(phim)),
+  // assuming we are sampling from a zero mean complex Gaussian
+  // with std deviation sigma
+
   return bound;
 }
 
@@ -328,8 +333,11 @@ double sampleSmallBounded(zzX &poly, const Context& context)
   long m = palg.getM();
   long phim = palg.getPhiM();
 
-  // should be good with probability at least 1/2
   double bound = sqrt(phim*log(phim)/2.0);
+  // should be good with probability at least 1/2
+  // NOTE: the general formula is sigma*sqrt(log(phim)),
+  // assuming we are sampling from a zero mean complex Gaussian
+  // with std deviation sigma
 
 #if 1
   double val;
@@ -405,10 +413,16 @@ double sampleGaussianBounded(zzX &poly, const Context& context, double stdev)
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
   long phim = palg.getPhiM();  
-  // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
+
   double bound
-    = stdev*1.15*(2+((palg.getPow2()==0)?
+    = stdev*(((palg.getPow2()==0)?
                      sqrt(m*log(phim)) : sqrt(phim*log(phim))));
+  // should be good with probability at least 1/2
+  // NOTE: the general formula is sigma*sqrt(log(phim)),
+  // assuming we are sampling from a zero mean complex Gaussian
+  // with std deviation sigma
+
+#if 1
   double val;
   long count = 0;
   do {
@@ -416,6 +430,39 @@ double sampleGaussianBounded(zzX &poly, const Context& context, double stdev)
     val = embeddingLargestCoeff(poly,palg);
   }
   while (++count<1000 && val>bound); // repeat until <=bound
+#else
+  double val, val1;
+  zzX poly1;
+  long succ = 0;
+
+  long count = 100;
+
+  val = 1e9;
+
+  std::cout << "sampleGaussianBounded:\n";
+
+  for (long i = 0; i < count; i++) {
+    sampleGaussian(poly1, context, stdev);
+    val1 = embeddingLargestCoeff(poly1, palg);
+    if (val1 <= bound) {
+      succ++;
+      val = val1;
+      poly = poly1;
+      std::cout << "*";
+    }
+    else {
+      std::cout << ".";
+    }
+  }
+
+  std::cout << "\nsucc%=" << ((double(succ)/count)*100) << "\n";
+  std::cout << "bound=" << bound << "\n";
+  std::cout << "val=" << val << "\n";
+
+
+
+#endif
+
   if (val>bound) {
     std::stringstream ss;
     ss << "Error: sampleGaussianBounded, after "
