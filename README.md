@@ -16,17 +16,17 @@ Since mid-2018 HElib has been under extensive refactoring for *Reliability*,
 for researchers and developers working on HE and its uses.
 
 HElib supports an *"assembly language for HE"*, providing low-level routines
-(set, add, multiply, shift, etc.), sofisticated automatic noise management,
-improved BGV boostrapping, multi-threading, and as of December 2019 it also
-supports Ptxt (plaintext) objects which mimics the functionality of Ctxt
-(ciphertext) objects. See [changes.md](changes.md) for more details.
+(set, add, multiply, shift, etc.), sophisticated automatic noise management,
+improved BGV bootstrapping, multi-threading, and also support for Ptxt (plaintext) 
+objects which mimics the functionality of Ctxt (ciphertext) objects. 
+See [changes.md](changes.md) for more details.
 
 Full installation instructions can be found in [INSTALL.md](INSTALL.md).
 
 HElib is written in C++14 and uses the [NTL mathematical library][4]
 (version 11.0.0 or higher).  
 HElib is distributed under the terms of the [Apache License v2.0][5].  
-For more information see the [GitHub Pages][10].
+
 
   [1]: http://eprint.iacr.org/2011/277       "BGV12"
   [2]: http://eprint.iacr.org/2011/133       "SV11"
