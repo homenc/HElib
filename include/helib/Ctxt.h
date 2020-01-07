@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -357,7 +357,7 @@ public:
   ///@{
   void negate();
 
- // Add/subtract aonther ciphertext
+ // Add/subtract another ciphertext
   Ctxt& operator+=(const Ctxt& other) { addCtxt(other); return *this; }
   Ctxt& operator-=(const Ctxt& other) { addCtxt(other,true); return *this; }
   void addCtxt(const Ctxt& other, bool negative=false);
@@ -423,6 +423,20 @@ public:
    * @return Reference to `*this` post multiplication.
    **/
   Ctxt& operator*=(const helib::Ptxt<helib::CKKS>& other);
+
+  /**
+   * @brief Times equals operator with a `ZZX`.
+   * @param poly Element by which to multiply.
+   * @return Reference to `*this` post multiplication.
+   **/
+  Ctxt& operator*=(const NTL::ZZX& poly);
+
+  /**
+   * @brief Times equals oeprator with a `long`.
+   * @param scalar Constant by which to multiply.
+   * @return Reference to `*this` post multiplication.
+   **/
+  Ctxt& operator*=(const long scalar);
 
   //! Add a constant polynomial. 
   //! If provided, size should be a high-probability bound
