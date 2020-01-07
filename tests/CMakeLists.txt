@@ -7,6 +7,7 @@ set(GTEST_SRC
     "TestArgMap.cpp"
     "TestBootstrappingWithMultiplications.cpp"
     "TestContext.cpp"
+    "TestCtxt.cpp"
     "TestPolyMod.cpp"
     "TestPtxt.cpp"
     "TestPolyModRing.cpp")
@@ -72,6 +73,7 @@ set(TEST_NAMES
     "TestArgMap"
     "TestCKKS"
     "TestContext"
+    "TestCtxt"
     "TestErrorHandling"
     "TestFatBootstrappingWithMultiplications"
     "TestThinBootstrappingWithMultiplications"
