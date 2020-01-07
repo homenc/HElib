@@ -577,6 +577,22 @@ TEST_P(TestPtxtCKKS, negateNegatesCorrectly)
   EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
 }
 
+TEST_P(TestPtxtCKKS, addConstantWorksCorrectly)
+{
+  std::vector<std::complex<double>> data(context.ea->size());
+  for (long i = 0; i < data.size(); ++i)
+    data[i] = {i * 4.5, i / 2.0};
+
+  std::vector<std::complex<double>> expected_result(data);
+  for (auto& num : expected_result)
+    (num += 5) += std::complex<double>{0, 0.5};
+
+  helib::Ptxt<helib::CKKS> ptxt(context, data);
+  ptxt.addConstantCKKS(5).addConstantCKKS(std::complex<double>{0, 0.5});
+
+  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+}
+
 TEST_P(TestPtxtCKKS, multiplyByMultipliesCorrectly)
 {
   std::vector<std::complex<double>> product_data(context.ea->size());
@@ -1935,6 +1951,29 @@ TEST_P(TestPtxtBGV, negateNegatesCorrectly)
 
   helib::Ptxt<helib::BGV> ptxt(context, data);
   ptxt.negate();
+
+  for (std::size_t i = 0; i < ptxt.size(); ++i) {
+    EXPECT_EQ(ptxt[i], expected_result[i]);
+  }
+}
+
+TEST_P(TestPtxtBGV, addConstantWorksCorrectly)
+{
+  NTL::ZZX input;
+  NTL::SetCoeff(input, 0, 2);
+  NTL::SetCoeff(input, 1, 1);
+
+  helib::PolyMod poly(input, context.slotRing);
+  std::vector<helib::PolyMod> data(context.ea->size());
+  for (std::size_t i = 0; i < data.size(); ++i)
+    data[i] = poly + i;
+
+  std::vector<helib::PolyMod> expected_result(data);
+  for (auto& num : expected_result)
+    (num += input) += 3L;
+
+  helib::Ptxt<helib::BGV> ptxt(context, data);
+  ptxt.addConstant(input).addConstant(3l);
 
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     EXPECT_EQ(ptxt[i], expected_result[i]);

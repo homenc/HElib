@@ -67,8 +67,7 @@ struct BGV
  **/
 template <typename From, typename Scheme>
 inline std::vector<typename Scheme::SlotType>
-convertDataToSlotVector(const std::vector<From>& data,
-                        const Context& context)
+convertDataToSlotVector(const std::vector<From>& data, const Context& context)
 {
   static_assert(std::is_same<Scheme, CKKS>::value ||
                     std::is_same<Scheme, BGV>::value,
@@ -487,6 +486,32 @@ public:
    * @return Reference to `*this` post negation.
    **/
   Ptxt<Scheme>& negate();
+
+  /**
+   * @brief Add a constant to a BGV `Ptxt`.
+   * @param scalar Element to be added across all slots.
+   * @return Reference to `*this` post scalar addition.
+   **/
+  template <typename T = Scheme,
+            typename Scalar,
+            typename std::enable_if_t<std::is_same<T, BGV>::value>* = nullptr>
+  Ptxt<Scheme>& addConstant(const Scalar& scalar)
+  {
+    return *this += scalar;
+  }
+
+  /**
+   * @brief Add a constant to a CKKS `Ptxt`.
+   * @param scalar Element to be added across all slots.
+   * @return Reference to `*this` post scalar addition.
+   **/
+  template <typename T = Scheme,
+            typename Scalar,
+            typename std::enable_if_t<std::is_same<T, CKKS>::value>* = nullptr>
+  Ptxt<Scheme>& addConstantCKKS(const Scalar& scalar)
+  {
+    return *this += scalar;
+  }
 
   /**
    * @brief Multiplication function between two `Ptxt` objects.
