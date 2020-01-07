@@ -50,6 +50,7 @@ namespace {
         int chen_han;
         bool debug; // generate debugging output
         int scale; // scale parameter
+        long special_bits;
         NTL::Vec<long> global_gens;
         NTL::Vec<long> global_ords;
         NTL::Vec<long> global_mvec;
@@ -59,7 +60,7 @@ namespace {
 
         Parameters(long p, long r, long c, long bits, long skHwt, long nthreads, long seed, long useCache,
                    int c_m, int force_bsgs, int force_hoist, int chen_han, bool debug, int scale,
-                   const std::vector<long> &global_gens, const std::vector<long> &global_ords,
+                   long special_bits, const std::vector<long> &global_gens, const std::vector<long> &global_ords,
                    const std::vector<long> &global_mvec, long iter, const std::string& v_values_name) :
                 p(p),
                 r(r),
@@ -74,6 +75,7 @@ namespace {
                 chen_han(chen_han),
                 debug(debug),
                 scale(scale),
+                special_bits(special_bits),
                 global_gens(helib::convert<NTL::Vec<long>>(global_gens)),
                 global_ords(helib::convert<NTL::Vec<long>>(global_ords)),
                 global_mvec(helib::convert<NTL::Vec<long>>(global_mvec)),
@@ -99,6 +101,7 @@ namespace {
                       << "chen_han" << params.chen_han << ","
                       << "debug" << params.debug << ","
                       << "scale" << params.scale << ","
+                      << "special_bits" << params.special_bits << ","
                       << "global_gens" << params.global_gens << ","
                       << "global_ords" << params.global_ords << ","
                       << "global_mvec" << params.global_mvec << ","
@@ -190,6 +193,7 @@ namespace {
         const int chen_han;
         const bool debug;
         const int scale;
+        const long special_bits;
         const NTL::Vec<long> mvec;
         const std::vector<long> gens;
         const std::vector<long> ords;
@@ -220,6 +224,7 @@ namespace {
                 chen_han(GetParam().chen_han),
                 debug(GetParam().debug),
                 scale(GetParam().scale),
+                special_bits(GetParam().special_bits),
                 gens(helib::convert<std::vector<long>>(GetParam().global_gens)),
                 ords(helib::convert<std::vector<long>>(GetParam().global_ords)),
                 mvec(GetParam().global_mvec),
@@ -235,21 +240,24 @@ namespace {
 
         void TearDown() override
         {
-            if(!helib_test::noPrint) {
-                helib::printAllTimers();
-            }
+          if(helib_test::verbose) {
+            helib::printAllTimers();
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
-          struct rusage rusage;
-    getrusage( RUSAGE_SELF, &rusage );
-    if (!helib_test::noPrint) std::cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << std::endl;
+            struct rusage rusage;
+            getrusage(RUSAGE_SELF, &rusage);
+            if (!helib_test::noPrint)
+              std::cout << "  rusage.ru_maxrss=" << rusage.ru_maxrss
+                        << std::endl;
 #endif
 
-          if (helib::fhe_stats) {
-            helib::print_stats(std::cout);
-            std::cout << "mvec=" << mvec << ", ";
-            print_anderson_darling();
-            dump_v_values();
+            if (helib::fhe_stats) {
+              helib::print_stats(std::cout);
+              std::cout << "mvec=" << mvec << ", ";
+              print_anderson_darling();
+              dump_v_values();
+              std::cout << std::endl;
+            }
           }
 
             cleanupBootstrappingGlobals();
@@ -335,7 +343,12 @@ namespace {
 
 
     TEST_P(GTestThinboot, correctlyPerformsThinboot) {
-        helib::buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+        helib::buildModChain(context, bits, c,
+                             /*willBeBootstrappable=*/true,
+                             /*skHwt=*/skHwt,
+                             /*resolution=*/3,
+                             /*bitsInSpecialPrimes=*/special_bits);
+
 
         if (!helib_test::noPrint) {
             std::cout << "security=" << context.securityLevel() << std::endl;
@@ -397,7 +410,7 @@ namespace {
             helib::dbgKey = &secretKey;
 #endif
 
-            helib::PubKey publicKey = secretKey;
+            const helib::PubKey publicKey = secretKey;
 
             long d = context.zMStar.getOrdP();
             long phim = context.zMStar.getPhiM();
@@ -507,8 +520,8 @@ namespace {
 
     INSTANTIATE_TEST_SUITE_P(typicalParameters, GTestThinboot, ::testing::Values(
             //SLOW
-            Parameters(2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026, 249}, {30, -2}, {31, 41}, 1, ""),
-            Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {556, 1037}, {6, 4}, {7, 5, 37}, 1, "")
+            Parameters(2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, 0l, {1026, 249}, {30, -2}, {31, 41}, 1, ""),
+            Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, 0l, {556, 1037}, {6, 4}, {7, 5, 37}, 1, "")
             //FAST
             //Parameters(2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026, 249}, {30, -2}, {31, 41}, 1, "")
     ));

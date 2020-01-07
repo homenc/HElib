@@ -14,6 +14,7 @@
  * @brief some matrix / linear algenra stuff
  */
 #include <helib/matmul.h>
+#include <helib/fhe_stats.h>
 #include <NTL/BasicThreadPool.h>
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
@@ -166,6 +167,7 @@ class GTestMatmul : public ::testing::Test {
                 std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
                 std::cout << "# bits in special primes = " 
                     << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
+              helib::fhe_stats = true;
             }
             return context;
         }
@@ -240,6 +242,7 @@ class GTestMatmul : public ::testing::Test {
                 getrusage( RUSAGE_SELF, &rusage );
                 std::cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << std::endl;
 #endif
+              helib::print_stats(std::cout);
             }
             helib::cleanupGlobals();
         };
