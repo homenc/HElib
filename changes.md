@@ -1,8 +1,8 @@
-HElib 1.0.0, December 2019
+HElib 1.0.0, January 2020
 ===============================
-(tagged as 1.0.0-Dec2019)
+(tagged as v1.0.0)
 
-December 2019
+December 2019 - January 2020
 -------------
 * C++14 Standard (minimum level)
 * New `Ptxt` Plaintext class that implements the same functionality of the `Ctxt` ciphertext class.  
