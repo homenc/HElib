@@ -14,8 +14,9 @@
  * @brief Useful fucntions for equality testing...
  */
 #include <NTL/lzz_pXFactoring.h>
-#include "timing.h"
-#include "EncryptedArray.h"
+#include <helib/timing.h>
+#include <helib/EncryptedArray.h>
+#include <helib/Ptxt.h>
 
 #include <cstdio>
 
@@ -49,6 +50,14 @@ void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
   }
 }
 
+template<typename Scheme>
+void mapTo01(const EncryptedArray&, Ptxt<Scheme>& ptxt)
+{
+  ptxt.mapTo01();
+}
+
+template void mapTo01(const EncryptedArray&, Ptxt<BGV>& ptxt);
+template void mapTo01(const EncryptedArray&, Ptxt<CKKS>& ptxt);
 
 // computes ctxt^{2^d-1} using a method that takes
 // O(log d) automorphisms and multiplications

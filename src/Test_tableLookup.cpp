@@ -13,15 +13,15 @@
 #include <iostream>
 #include <cassert>
 #include <NTL/BasicThreadPool.h>
-#include "intraSlot.h"
-#include "tableLookup.h"
-#include "ArgMap.h"
+#include <helib/intraSlot.h>
+#include <helib/tableLookup.h>
+#include <helib/ArgMap.h>
 
 NTL_CLIENT
 using namespace helib;
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 static std::vector<zzX> unpackSlotEncoding; // a global variable
@@ -37,8 +37,8 @@ static long mValues[][15] = {
 };
 
 // test function declerations
-void testLookup(const FHESecKey& sKey, long insize, long outsize);
-void testWritein(const FHESecKey& sKey, long insize, long nTests);
+void testLookup(const SecKey& sKey, long insize, long outsize);
+void testWritein(const SecKey& sKey, long insize, long nTests);
 
 
 int main(int argc, char *argv[])
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     if (nthreads>1) cout << "  using "<<NTL::AvailableThreads()<<" threads\n";
     cout << "computing key-independent tables..." << std::flush;
   }
-  FHEcontext context(m, p, /*r=*/1, gens, ords);
+  Context context(m, p, /*r=*/1, gens, ords);
   buildModChain(context, L, c,/*willBeBootstrappable=*/bootstrap);
   if (bootstrap) {
     context.makeBootstrappable(mvec, /*t=*/0);
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
     cout << " L="<<L<<", B="<<B<<endl;
     cout << "\ncomputing key-dependent tables..." << std::flush;
   }
-  FHESecKey secKey(context);
+  SecKey secKey(context);
   secKey.GenSecKey();
   addSome1DMatrices(secKey); // compute key-switching matrices
   addFrbMatrices(secKey);
@@ -139,13 +139,13 @@ int main(int argc, char *argv[])
 }
 
 static void encryptIndex(std::vector<Ctxt>& ei, long index,
-                         const FHESecKey& sKey)
+                         const SecKey& sKey)
 {
   for (long i=0; i<lsize(ei); i++)
     sKey.Encrypt(ei[i], to_ZZX((index>>i) &1)); // i'th bit of index
 }
 
-static long decryptIndex(std::vector<Ctxt>& ei, const FHESecKey& sKey)
+static long decryptIndex(std::vector<Ctxt>& ei, const SecKey& sKey)
 {
   long num=0;
   for (long i=0; i<lsize(ei); i++) {
@@ -156,7 +156,7 @@ static long decryptIndex(std::vector<Ctxt>& ei, const FHESecKey& sKey)
   return num;
 }
 
-void testLookup(const FHESecKey& sKey, long insize, long outsize)
+void testLookup(const SecKey& sKey, long insize, long outsize)
 {
   // Build a table s.t. T[i] = 2^{outsize -1}/(i+1), i=0,...,2^insize -1
   std::vector<zzX> T;
@@ -182,7 +182,7 @@ void testLookup(const FHESecKey& sKey, long insize, long outsize)
   }
 }
 
-void testWritein(const FHESecKey& sKey, long size, long nTests)
+void testWritein(const SecKey& sKey, long size, long nTests)
 {
   const EncryptedArray& ea = *(sKey.getContext().ea);
   long tSize = 1L << size; // table size

@@ -16,11 +16,11 @@
 #endif
 
 #include <NTL/BasicThreadPool.h>
-#include "helib.h"
-#include "matmul.h"
-#include "debugging.h"
-#include "fhe_stats.h"
-#include "ArgMap.h"
+#include <helib/helib.h>
+#include <helib/matmul.h>
+#include <helib/debugging.h>
+#include <helib/fhe_stats.h>
+#include <helib/ArgMap.h>
 
 #include <algorithm>
 #include <cmath>
@@ -33,6 +33,7 @@ static bool noPrint = false;
 static bool dry = false; // a dry-run flag
 static bool debug = 0;   // a debug flag
 static int scale = 0;
+static long special_bits;
 
 static string v_values_name = "";
 
@@ -159,13 +160,17 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   setDryRun(false); // Need to get a "real context" to test bootstrapping
 
   double t = -GetTime();
-  FHEcontext context(m, p, r, gens, ords);
+  Context context(m, p, r, gens, ords);
   if (scale) {
     context.scale = scale;
   }
 
   context.zMStar.set_cM(c_m/100.0);
-  buildModChain(context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+  buildModChain(context, L, c, 
+    /*willBeBootstrappable=*/true, 
+    /*t=*/skHwt,
+    /*resolution=*/3,
+    /*bitsInSpecialPrimes=*/special_bits);
 
   if (!noPrint) {
     std::cout << "security=" << context.securityLevel()<<endl;
@@ -212,7 +217,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
   t = -GetTime();
   if (!noPrint) cout << "Generating keys, " << std::flush;
-  FHESecKey secretKey(context);
+  SecKey secretKey(context);
   secretKey.GenSecKey(skHwt);      // A Hamming-weight-64 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
   addFrbMatrices(secretKey);
@@ -226,7 +231,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
       dbgKey = &secretKey;
 #endif
 
-  FHEPubKey publicKey = secretKey;
+  const PubKey publicKey = secretKey;
 
   long d = context.zMStar.getOrdP();
   long phim = context.zMStar.getPhiM();
@@ -387,6 +392,7 @@ int main(int argc, char *argv[])
 
   amap.arg("debug", debug, "generate debugging output");
   amap.arg("scale", scale, "scale parameter");
+  amap.arg("special_bits", special_bits, "# of bits in special primes");
 
   amap.arg("gens", global_gens);
   amap.arg("ords", global_ords);

@@ -11,20 +11,20 @@
  */
 #include <NTL/BasicThreadPool.h>
 
-#include "recryption.h"
-#include "EncryptedArray.h"
-#include "EvalMap.h"
-#include "powerful.h"
-#include "CtPtrs.h"
-#include "intraSlot.h"
-#include "norms.h"
-#include "sample.h"
-#include "debugging.h"
-#include "fhe_stats.h"
+#include <helib/recryption.h>
+#include <helib/EncryptedArray.h>
+#include <helib/EvalMap.h>
+#include <helib/powerful.h>
+#include <helib/CtPtrs.h>
+#include <helib/intraSlot.h>
+#include <helib/norms.h>
+#include <helib/sample.h>
+#include <helib/debugging.h>
+#include <helib/fhe_stats.h>
 
 #ifdef DEBUG_PRINTOUT
 
-#include "debugging.h"
+#include <helib/debugging.h>
 
 namespace helib {
 
@@ -38,11 +38,11 @@ checkCriticalValue(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
 
 static void
 checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
-                   const FHEcontext& context, long q);
+                   const Context& context, long q);
 
 static void
 checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
-                     const FHEcontext& context, long q);
+                     const Context& context, long q);
 }
 
 #endif // DEBUG_PRINTOUT
@@ -64,7 +64,7 @@ static void x2iInSlots(NTL::ZZX& poly, long i,
 // integer z can be made divisible by p2e via z' = z + v*q, with |v| <= p2e/2.
 
 static void newMakeDivisible(NTL::ZZX& poly, long p2e, long q,
-                          const FHEcontext& context, NTL::ZZX& vpoly)
+                          const Context& context, NTL::ZZX& vpoly)
 {
   if (p2e == 1) {
     vpoly = 0;
@@ -208,7 +208,7 @@ double compute_fudge(long p2ePrime, long p2e)
 }
 
 long RecryptData::setAE(long& e, long& ePrime,
-                    const FHEcontext& context, long targetWeight)
+                    const Context& context, long targetWeight)
 {
   bool default_target=false;
   if (targetWeight<=0) {
@@ -284,7 +284,7 @@ bool RecryptData::operator==(const RecryptData& other) const
 
 
 // The main method
-void RecryptData::init(const FHEcontext& context, const NTL::Vec<long>& mvec_,
+void RecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
                   bool enableThick, long t, bool build_cache_, bool minimal)
 {
   if (alMod != NULL) { // were we called for a second time?
@@ -359,7 +359,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
 
 // bootstrap a ciphertext to reduce noise
-void FHEPubKey::reCrypt(Ctxt &ctxt)
+void PubKey::reCrypt(Ctxt &ctxt) const
 {
   FHE_TIMER_START;
 
@@ -713,7 +713,7 @@ void packedRecrypt(const CtPtrs& cPtrs,
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea)
 {
-  FHEPubKey& pKey = (FHEPubKey&)cPtrs[0]->getPubKey();
+  PubKey& pKey = (PubKey&)cPtrs[0]->getPubKey();
 
   // Allocate temporary ciphertexts for the recryption
   int nPacked = divc(cPtrs.size(), ea.getDegree()); // ceil(totoalNum/d)
@@ -767,7 +767,7 @@ ThinRecryptData::~ThinRecryptData()
 // This code was copied from RecryptData::init, and is mostly
 // the same, except for the linear-map-related stuff.
 // FIXME: There is really too much code (and data!) duplication here.
-void ThinRecryptData::init(const FHEcontext& context, const NTL::Vec<long>& mvec_,
+void ThinRecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
                       bool alsoThick, long t, bool build_cache_, bool minimal)
 {
   RecryptData::init(context, mvec_, alsoThick, t, build_cache_, minimal);
@@ -905,8 +905,8 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 
 
 // Hack to get at private fields of public key
-struct FHEPubKeyHack { // The public key
-  const FHEcontext& context; // The context
+struct PubKeyHack { // The public key
+  const Context& context; // The context
 
   //! @var Ctxt pubEncrKey
   //! The public encryption key is an encryption of 0,
@@ -933,7 +933,7 @@ struct FHEPubKeyHack { // The public key
 };
 
 // bootstrap a ciphertext to reduce noise
-void FHEPubKey::thinReCrypt(Ctxt &ctxt)
+void PubKey::thinReCrypt(Ctxt &ctxt) const
 {
   FHE_TIMER_START;
 
@@ -1146,7 +1146,7 @@ checkCriticalValue(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
 
 static void
 checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
-                   const FHEcontext& context, long q)
+                   const Context& context, long q)
 {
   const RecryptData& rcData = context.rcData;
   double coeff_bound = context.boundForRecryption();
@@ -1180,7 +1180,7 @@ checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
 
 static void
 checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
-                     const FHEcontext& context, long q)
+                     const Context& context, long q)
 {
   const RecryptData& rcData = context.rcData;
 
@@ -1248,7 +1248,7 @@ checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
 #endif
 
 #if 0
-void fhe_stats_print(long iter, const FHEcontext& context)
+void fhe_stats_print(long iter, const Context& context)
 {
    long phim = context.zMStar.getPhiM();
 

@@ -16,10 +16,10 @@
 #include <climits>
 #include <cmath>
 #include <algorithm>
-#include "primeChain.h"
-#include "FHEContext.h"
-#include "sample.h"
-#include "binio.h"
+#include <helib/primeChain.h>
+#include <helib/Context.h>
+#include <helib/sample.h>
+#include <helib/binio.h>
 
 namespace helib {
 
@@ -348,7 +348,7 @@ struct PrimeGenerator {
 
 };
 
-void FHEcontext::AddSmallPrime(long q)
+void Context::AddSmallPrime(long q)
 {
   //OLD: assert(!inChain(q));
   helib::assertFalse(inChain(q), "Small prime q is already in the prime chain");
@@ -357,7 +357,7 @@ void FHEcontext::AddSmallPrime(long q)
   smallPrimes.insert(i);
 }
 
-void FHEcontext::AddCtxtPrime(long q)
+void Context::AddCtxtPrime(long q)
 {
   //OLD: assert(!inChain(q));
   helib::assertFalse(inChain(q), "Prime q is already in the prime chain");
@@ -366,7 +366,7 @@ void FHEcontext::AddCtxtPrime(long q)
   ctxtPrimes.insert(i);
 }
 
-void FHEcontext::AddSpecialPrime(long q)
+void Context::AddSpecialPrime(long q)
 {
   //OLD: assert(!inChain(q));
   helib::assertFalse(inChain(q), "Special prime q is already in the prime chain");
@@ -376,7 +376,7 @@ void FHEcontext::AddSpecialPrime(long q)
 }
 
 //! @brief Add small primes to get target resolution
-void addSmallPrimes(FHEcontext& context, long resolution, long cpSize)
+void addSmallPrimes(Context& context, long resolution, long cpSize)
 {
   // cpSize is the size of the ciphertext primes
   // Sanity-checks, cpSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
@@ -467,7 +467,7 @@ long ctxtPrimeSize(long nBits)
   return targetSize;
 }
 
-void addCtxtPrimes(FHEcontext& context, long nBits, long targetSize)
+void addCtxtPrimes(Context& context, long nBits, long targetSize)
 {
   // We add enough primes of size targetSize until their product is
   // at least 2^{nBits}
@@ -490,8 +490,9 @@ void addCtxtPrimes(FHEcontext& context, long nBits, long targetSize)
 
 
 static
-void addSpecialPrimes(FHEcontext& context, long nDgts, 
-                      bool willBeBootstrappable, long skHwt)
+void addSpecialPrimes(Context& context, long nDgts, 
+                      bool willBeBootstrappable, long skHwt, 
+                      long bitsInSpecialPrimes)
 {
   const PAlgebra& palg = context.zMStar;
   long p = palg.getP();
@@ -544,8 +545,13 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
   }
 
   // Add special primes to the chain for the P factor of key-switching
-  double logOfSpecialPrimes
-    = maxDigitLog + log(nDgts) + log(context.stdev *2) + log(p2e);
+  double logOfSpecialPrimes;
+
+  if (bitsInSpecialPrimes)
+    logOfSpecialPrimes = bitsInSpecialPrimes*log(2.0);
+  else
+    logOfSpecialPrimes = 
+      maxDigitLog + log(nDgts) + log(context.stdev *2) + log(p2e);
 
   // we now add enough special primes so that the sum of their
   // logs is at least logOfSpecial primes
@@ -584,16 +590,21 @@ void addSpecialPrimes(FHEcontext& context, long nDgts,
     logSoFar += log(q);
   }
 
-  //cerr << "****** special primes: " << logOfSpecialPrimes << " " << context.logOfProduct(context.specialPrimes) << "\n";
+#if 0
+  std::cerr << "****** special primes: " 
+            << (logOfSpecialPrimes/log(2.0)) << " " 
+            << (context.logOfProduct(context.specialPrimes)/log(2.0)) << "\n";
+#endif
 }
 
-void buildModChain(FHEcontext& context, long nBits, long nDgts,
-                      bool willBeBootstrappable, long skHwt, long resolution)
+void buildModChain(Context& context, long nBits, long nDgts,
+                      bool willBeBootstrappable, long skHwt, long resolution,
+                      long bitsInSpecialPrimes)
 {
   long pSize = ctxtPrimeSize(nBits);
   addSmallPrimes(context, resolution, pSize);
   addCtxtPrimes(context, nBits, pSize);
-  addSpecialPrimes(context, nDgts, willBeBootstrappable, skHwt);
+  addSpecialPrimes(context, nDgts, willBeBootstrappable, skHwt, bitsInSpecialPrimes);
   context.setModSizeTable();
 }
 

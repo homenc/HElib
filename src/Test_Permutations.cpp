@@ -15,11 +15,11 @@
 #include <NTL/ZZ.h>
 NTL_CLIENT
 
-#include "NumbTh.h"
-#include "timing.h"
-#include "permutations.h"
-#include "EncryptedArray.h"
-#include "ArgMap.h"
+#include <helib/NumbTh.h>
+#include <helib/timing.h>
+#include <helib/permutations.h>
+#include <helib/EncryptedArray.h>
+#include <helib/ArgMap.h>
 
 using namespace helib;
 
@@ -88,7 +88,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
   if (!noPrint)
     cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<widthBound<< ",r="<<r<<")";
 
-  FHEcontext context(m,p,r);
+  Context context(m,p,r);
   EncryptedArray ea(context); // Use G(X)=X for this ea object
 
   // Some arbitrary initial plaintext array
@@ -123,8 +123,8 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
 		     << context.ctxtPrimes.card() << " Ctxt-primes\n";
 
   // Generate a sk/pk pair
-  FHESecKey secretKey(context);
-  const FHEPubKey& publicKey = secretKey;
+  SecKey secretKey(context);
+  const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   Ctxt ctxt(publicKey);
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -11,18 +11,19 @@
  */
 #include <NTL/BasicThreadPool.h>
 
-#include "binio.h"
-#include "timing.h"
-#include "FHEContext.h"
-#include "Ctxt.h"
-#include "keySwitching.h"
-#include "CtPtrs.h"
-#include "EncryptedArray.h"
+#include <helib/binio.h>
+#include <helib/timing.h>
+#include <helib/Context.h>
+#include <helib/Ctxt.h>
+#include <helib/keySwitching.h>
+#include <helib/CtPtrs.h>
+#include <helib/EncryptedArray.h>
+#include <helib/Ptxt.h>
 
-#include "debugging.h"
-#include "norms.h"
-#include "fhe_stats.h"
-#include "powerful.h"
+#include <helib/debugging.h>
+#include <helib/norms.h>
+#include <helib/fhe_stats.h>
+#include <helib/powerful.h>
 
 namespace helib {
 
@@ -53,7 +54,7 @@ std::set<long>* FHEglobals::automorphVals2 = NULL;
 // routines in recryption.cpp.
 void Ctxt::DummyEncrypt(const NTL::ZZX& ptxt, double size)
 {
-  const FHEcontext& context = getContext();
+  const Context& context = getContext();
   const PAlgebra& zMStar = context.zMStar;
 
   if (isCKKS()) {
@@ -107,59 +108,6 @@ bool Ctxt::verifyPrimeSet() const
 }
 
 
-// Compute the number of digits that we need and the esitmated
-// added noise from switching this ciphertext part.
-static std::pair<long, NTL::xdouble>
-keySwitchNoise(const CtxtPart& p, const FHEPubKey& pubKey, const KeySwitch& ks)
-{
-  const FHEcontext& context = p.getContext();
-  const PAlgebra& palg = context.zMStar;
-
-  NTL::xdouble ks_bound = ks.noiseBound;
-
-  long nDigits = 0;
-  NTL::xdouble addedNoise = NTL::to_xdouble(0.0);
-  double sizeLeft = context.logOfProduct(p.getIndexSet());
-  for (size_t i=0; i<context.digits.size() && sizeLeft>0.0; i++) {    
-    nDigits++;
-
-    double digitSize = context.logOfProduct(context.digits[i]);
-    if (sizeLeft<digitSize) digitSize=sizeLeft;// need only part of this digit
-
-    // Added noise due to this digit is keySwMatrixNoise * |Di|, 
-    // where |Di| is the magnitude of the digit
-    addedNoise += ks_bound * NTL::xexp(digitSize);
-
-    sizeLeft -= digitSize;
-  }
-
-#if 0
-  // This needs to be re-thought...and/or implemented elsewhere...
-
-  // Sanity-check: make sure that the added noise is not more than the
-  // special primes can handle: After dividing the added noise by the
-  // product of all the special primes, it should be smaller than the
-  // added noise term due to modulus switching, i.e.,
-  // keySize * phi(m) * pSpace^2 / 4
-
-  double phim = palg.getPhiM();
-  double keySize = pubKey.getSKeySize(p.skHandle.getSecretKeyID());
-  double logModSwitchNoise = log(keySize) 
-    +2*log((double)pSpace) +log(phim) -log(4.0);
-  double logKeySwitchNoise = log(addedNoise) 
-    -2*context.logOfProduct(context.specialPrimes);
-
-  //OLD: assert(logKeySwitchNoise < logModSwitchNoise);
-  helib::assertTrue(logKeySwitchNoise < logModSwitchNoise, "Key switching noise has exceeded mod switching noise");
-#endif
-
-  return std::pair<long, NTL::xdouble>(nDigits,addedNoise);
-}
-
-std::pair<long, NTL::xdouble> Ctxt::computeKSNoise(long partIdx, const KeySwitch& ks)
-{
-  return keySwitchNoise(parts.at(partIdx), pubKey, ks);
-}
 
 // Multiply vector of digits by key-switching matrix and add to *this.
 // It is assumed that W has at least as many b[i]'s as there are digits.
@@ -237,7 +185,7 @@ bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
 }
 
 // Constructor
-Ctxt::Ctxt(const FHEPubKey& newPubKey, long newPtxtSpace):
+Ctxt::Ctxt(const PubKey& newPubKey, long newPtxtSpace):
   context(newPubKey.getContext()), pubKey(newPubKey), ptxtSpace(newPtxtSpace),
   noiseBound(NTL::to_xdouble(0.0))
 {
@@ -598,7 +546,23 @@ void Ctxt::reLinearize(long keyID)
   if (this->isEmpty() || this->inCanonicalForm(keyID)) return;
   // this->reduce();
 
+#if 0
+  // HERE
+  std::cout << "*** reLinearlize: " << primeSet;
+#endif
+
   dropSmallAndSpecialPrimes();
+
+#if 0
+  // HERE
+  std:: cout 
+       << " " << primeSet 
+       << " " <<  (context.logOfProduct(primeSet)/log(2.0))
+       << " " <<  (log(noiseBound)/log(2.0)) 
+       << " " <<  (log(modSwitchAddedNoiseBound())/log(2.0)) 
+       << "\n";
+
+#endif
 
   long g = ptxtSpace;
   double logProd = context.logOfProduct(context.specialPrimes);
@@ -671,22 +635,19 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   //OLD: assert(W.fromKey == p.skHandle);  // the handles must match
   helib::assertEq(W.fromKey, p.skHandle, "Secret key handles do not match");
 
-  // Compute the number of digits that we need and the esitmated
-  // added noise from switching this ciphertext part.
-  long nDigits;
-  NTL::xdouble addedNoise;
-  std::tie(nDigits,addedNoise)= keySwitchNoise(p, pubKey, W);
-
-  // Break the ciphertext part into digits, if needed, and scale up these
-  // digits using the special primes. This is the most expensive operation
-  // during homormophic evaluation, so it should be thoroughly optimized.
-
   std::vector<DoubleCRT> polyDigits;
-  p.breakIntoDigits(polyDigits, nDigits);
+  NTL::xdouble addedNoise = p.breakIntoDigits(polyDigits);
+  addedNoise *= W.noiseBound;
 
   // Finally we multiply the vector of digits by the key-switching matrix
   keySwitchDigits(W, polyDigits);
+
+  FHE_STATS_UPDATE("KS-noise-ratio", NTL::conv<double>(addedNoise/noiseBound));
+  // HERE
+  // fprintf(stderr, "   KS-log-noise-ratio: %f\n", log(addedNoise/noiseBound)/log(2.0));
+
   noiseBound += addedNoise; // update the noise estimate
+
 }
 
 
@@ -862,6 +823,73 @@ void Ctxt::addConstantCKKS(const NTL::ZZX& poly, NTL::xdouble size, NTL::xdouble
   addConstantCKKS(DoubleCRT(poly,context,primeSet),size,factor);
 }
 
+Ctxt& Ctxt::operator+=(const helib::Ptxt<helib::BGV>& other)
+{
+  addConstant(other.getPolyRepr());
+  return *this;
+}
+
+Ctxt& Ctxt::operator+=(const helib::Ptxt<helib::CKKS>& other)
+{
+  addConstantCKKS(other);
+  return *this;
+}
+
+Ctxt& Ctxt::operator-=(const helib::Ptxt<helib::BGV>& other)
+{
+  helib::Ptxt<helib::BGV> subtrahend(other);
+  subtrahend.negate();
+  addConstant(subtrahend.getPolyRepr());
+  return *this; 
+}
+
+Ctxt& Ctxt::operator-=(const helib::Ptxt<helib::CKKS>& other)
+{
+  helib::Ptxt<helib::CKKS> subtrahend(other);
+  subtrahend.negate();
+  addConstantCKKS(subtrahend);
+  return *this; 
+}
+
+Ctxt& Ctxt::operator*=(const helib::Ptxt<helib::BGV>& other)
+{
+  multByConstant(other.getPolyRepr());
+  return *this;
+}
+
+Ctxt& Ctxt::operator*=(const helib::Ptxt<helib::CKKS>& other)
+{
+  multByConstantCKKS(other);
+  return *this;
+}
+
+Ctxt& Ctxt::operator*=(const NTL::ZZX& poly)
+{
+  if(isCKKS())
+    multByConstantCKKS(poly);
+  else
+    multByConstant(poly);
+  return *this;
+}
+
+Ctxt& Ctxt::operator*=(const long scalar)
+{
+  return *this *= NTL::ZZX(scalar);
+}
+
+void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
+{
+  NTL::ZZX poly;
+  double factor = getContext().ea->getCx().encode(poly, other);
+  double size = 0;
+  for(const auto& x : other)
+    if(std::norm(x) > size)
+      size = std::norm(x);
+  if(size == 0.0)
+    size = 1.0;
+  addConstantCKKS(poly, NTL::xdouble{size}, NTL::xdouble{factor});
+}
+
 void Ctxt::addConstantCKKS(const NTL::ZZ& c)
 {
   NTL::xdouble xc = NTL::to_xdouble(c);
@@ -898,10 +926,15 @@ void Ctxt::addConstantCKKS(std::pair<long,long> num)
   addConstantCKKS(dcrt, /*size=*/scaled/factor, factor);
 }
 
+void Ctxt::addConstantCKKS(const helib::Ptxt<helib::CKKS>& ptxt)
+{
+  addConstantCKKS(ptxt.getSlotRepr());
+}
+
 // Add at least one prime to the primeSet of c
 void addSomePrimes(Ctxt& c)
 {
-  const FHEcontext& context = c.getContext();
+  const Context& context = c.getContext();
   IndexSet s = c.getPrimeSet();
 
   // Sanity check: there should be something left to add
@@ -1147,7 +1180,7 @@ void computeIntervalForMul(double& lo, double& hi,
   const double slack = 4*log(2.0);
   // FIXME: 4 bits of slack...could be something more dynamic
 
-  const FHEcontext& context = ctxt1.getContext();
+  const Context& context = ctxt1.getContext();
 
   double cap1 = ctxt1.capacity();
   double cap2 = ctxt2.capacity();
@@ -1469,6 +1502,20 @@ void Ctxt::multByConstant(const zzX& poly, double size)
   multByConstant(dcrt,size);
 }
 
+void Ctxt::multByConstantCKKS(const std::vector<std::complex<double>>& other)
+{
+  // NOTE: some replicated logic here and in addConstantCKKS...
+  NTL::ZZX poly;
+  double factor = getContext().ea->getCx().encode(poly, other);
+  double size = 0;
+  for(const auto& x : other)
+    if(std::norm(x) > size)
+      size = std::norm(x);
+  if(size == 0.0)
+    size = 1.0;
+  multByConstantCKKS(poly, NTL::xdouble{size}, NTL::xdouble{factor});
+}
+
 void
 Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
                          NTL::xdouble size, NTL::xdouble factor, double roundingErr)
@@ -1493,6 +1540,11 @@ Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
   // multiply all the parts by this constant
   for (auto& part: parts)
     part.Mul(dcrt,/*matchIndexSets=*/false);
+}
+
+void Ctxt::multByConstantCKKS(const helib::Ptxt<helib::CKKS>& ptxt)
+{
+  multByConstantCKKS(ptxt.getSlotRepr());
 }
 
 // Divide a cipehrtext by 2. It is assumed that the ciphertext

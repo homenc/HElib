@@ -9,9 +9,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-#include "NumbTh.h"
+#include <helib/NumbTh.h>
 
-#include "timing.h"
+#include <helib/timing.h>
 
 #include <fstream>
 #include <cctype>
@@ -43,7 +43,6 @@ long mcDiv(long a, long b) {
    else
       return q;
 }
-
 
 // return multiplicative order of p modulo m, or 0 if GCD(p, m) != 1
 long multOrd(long p, long m)

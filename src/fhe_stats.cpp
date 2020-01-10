@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include "fhe_stats.h"
-#include "multicore.h"
+#include <helib/fhe_stats.h>
+#include <helib/multicore.h>
 #include <algorithm>
 #include <utility>
 #include <cstring>

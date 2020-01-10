@@ -14,7 +14,7 @@
  * @file randomMatrices.cpp
  * @brief implementation of random matrices of various forms build functions, used for testing
  */
-#include "randomMatrices.h"
+#include <helib/randomMatrices.h>
 
 namespace helib {
 

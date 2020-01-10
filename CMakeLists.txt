@@ -6,8 +6,8 @@ project(helib_superbuild
 # Define standard installation directories (GNU)
 include(GNUInstallDirs)
 
-## Use -std=c++11 as default.
-set(CMAKE_CXX_STANDARD 11)
+## Use -std=c++14 as default.
+set(CMAKE_CXX_STANDARD 14)
 ## Disable C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 ## Require full C++ standard
@@ -48,7 +48,6 @@ if (PACKAGE_BUILD)
 else (PACKAGE_BUILD)
   # Properties to be enabled when not using PACKAGE_BUILD
   option(ENABLE_LEGACY_TEST "Build the legacy test files (does not work with PACKAGE_BUILD)" OFF)
-  option(BUILD_AES "Build homomorphic AES (does not work with PACKAGE_BUILD)" OFF)
 endif(PACKAGE_BUILD)
 
 # Allow GMP_DIR and search in it if not using PACKAGE_BUILD or using PACKAGE_BUILD and !FETCH_GMP
@@ -235,7 +234,6 @@ if (PACKAGE_BUILD)
       -DFETCH_GMP=${FETCH_GMP}
       -DENABLE_TEST=${ENABLE_TEST}
       -DENABLE_LEGACY_TEST=OFF
-      -DBUILD_AES=OFF
     BUILD_ALWAYS ON
   )
 

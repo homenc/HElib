@@ -10,9 +10,9 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include "replicate.h"
-#include "timing.h"
-#include "clonedPtr.h"
+#include <helib/replicate.h>
+#include <helib/timing.h>
+#include <helib/clonedPtr.h>
 
 namespace helib {
 

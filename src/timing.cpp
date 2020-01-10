@@ -13,7 +13,7 @@
 #include <utility>
 #include <cstring>
 #include <ctime>
-#include "timing.h"
+#include <helib/timing.h>
 
 namespace helib {
 
@@ -22,11 +22,10 @@ unsigned long GetTimerClock()
 {
   timespec ts;
 
-  clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
 
-  // Here are some other clocks, but they are not very useful
-  // clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
-  // clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+  clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+  //clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+  //clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
 
   return ((unsigned long)ts.tv_sec)*1000000UL + ((unsigned long)ts.tv_nsec/1000); 
 }

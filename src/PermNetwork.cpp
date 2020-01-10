@@ -10,10 +10,10 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <NTL/ZZ.h>
-#include "FHEContext.h"
-#include "Ctxt.h"
-#include "permutations.h"
-#include "EncryptedArray.h"
+#include <helib/Context.h>
+#include <helib/Ctxt.h>
+#include <helib/permutations.h>
+#include <helib/EncryptedArray.h>
 
 namespace helib {
 

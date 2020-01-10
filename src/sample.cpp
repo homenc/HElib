@@ -14,12 +14,12 @@
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_pX.h>
 #include <NTL/BasicThreadPool.h>
-#include "NumbTh.h"
-#include "FHEContext.h"
-#include "sample.h"
-#include "norms.h"
+#include <helib/NumbTh.h>
+#include <helib/Context.h>
+#include <helib/sample.h>
+#include <helib/norms.h>
 
-#include "powerful.h"
+#include <helib/powerful.h>
 // only used in experimental Hwt sampler
 
 namespace helib {
@@ -212,7 +212,7 @@ void sampleUniform(NTL::ZZX& poly, long n, const NTL::ZZ& B)
  * X^m-1 and then reduce mod Phi_m(X). The exception is when m is
  * a power of two, where we still sample directly mod Phi_m(X).
  ********************************************************************/
-double sampleHWt(zzX &poly, const FHEcontext& context, long Hwt)
+double sampleHWt(zzX &poly, const Context& context, long Hwt)
 {
   const PAlgebra& palg = context.zMStar;
   double retval;
@@ -233,16 +233,21 @@ double sampleHWt(zzX &poly, const FHEcontext& context, long Hwt)
 }
 
 
-double sampleHWtBoundedEffectiveBound(const FHEcontext& context, long Hwt)
+double sampleHWtBoundedEffectiveBound(const Context& context, long Hwt)
 {
   const PAlgebra& palg = context.zMStar;
   long phim = palg.getPhiM();
-  // should be good with probability at least 1/2
+
   double bound = sqrt(Hwt*log(phim));
+  // should be good with probability at least 1/2
+  // NOTE: the general formula is sigma*sqrt(log(phim)),
+  // assuming we are sampling from a zero mean complex Gaussian
+  // with std deviation sigma
+
   return bound;
 }
 
-double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
+double sampleHWtBounded(zzX &poly, const Context& context, long Hwt)
 {
   double bound = sampleHWtBoundedEffectiveBound(context, Hwt);
   const PAlgebra& palg = context.zMStar;
@@ -297,7 +302,7 @@ double sampleHWtBounded(zzX &poly, const FHEcontext& context, long Hwt)
 }
 
 
-double sampleSmall(zzX &poly, const FHEcontext& context)
+double sampleSmall(zzX &poly, const Context& context)
 {
   const PAlgebra& palg = context.zMStar;
   double retval;
@@ -322,14 +327,17 @@ double sampleSmall(zzX &poly, const FHEcontext& context)
 
 
 // Same as above, but ensure the result is not too much larger than typical
-double sampleSmallBounded(zzX &poly, const FHEcontext& context)
+double sampleSmallBounded(zzX &poly, const Context& context)
 {
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
   long phim = palg.getPhiM();
 
-  // should be good with probability at least 1/2
   double bound = sqrt(phim*log(phim)/2.0);
+  // should be good with probability at least 1/2
+  // NOTE: the general formula is sigma*sqrt(log(phim)),
+  // assuming we are sampling from a zero mean complex Gaussian
+  // with std deviation sigma
 
 #if 1
   double val;
@@ -380,7 +388,7 @@ double sampleSmallBounded(zzX &poly, const FHEcontext& context)
   return bound;
 }
 
-double sampleGaussian(zzX &poly, const FHEcontext& context, double stdev)
+double sampleGaussian(zzX &poly, const Context& context, double stdev)
 {
   const PAlgebra& palg = context.zMStar;
   double retval;
@@ -400,15 +408,21 @@ double sampleGaussian(zzX &poly, const FHEcontext& context, double stdev)
   return retval;
 }
 // Same as above, but ensure the result is not too much larger than typical
-double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
+double sampleGaussianBounded(zzX &poly, const Context& context, double stdev)
 {
   const PAlgebra& palg = context.zMStar;
   long m = palg.getM();
   long phim = palg.getPhiM();  
-  // experimental bound, Pr[l-infty(canonical-embedding)>bound]<5%
+
   double bound
-    = stdev*1.15*(2+((palg.getPow2()==0)?
+    = stdev*(((palg.getPow2()==0)?
                      sqrt(m*log(phim)) : sqrt(phim*log(phim))));
+  // should be good with probability at least 1/2
+  // NOTE: the general formula is sigma*sqrt(log(phim)),
+  // assuming we are sampling from a zero mean complex Gaussian
+  // with std deviation sigma
+
+#if 1
   double val;
   long count = 0;
   do {
@@ -416,6 +430,39 @@ double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
     val = embeddingLargestCoeff(poly,palg);
   }
   while (++count<1000 && val>bound); // repeat until <=bound
+#else
+  double val, val1;
+  zzX poly1;
+  long succ = 0;
+
+  long count = 100;
+
+  val = 1e9;
+
+  std::cout << "sampleGaussianBounded:\n";
+
+  for (long i = 0; i < count; i++) {
+    sampleGaussian(poly1, context, stdev);
+    val1 = embeddingLargestCoeff(poly1, palg);
+    if (val1 <= bound) {
+      succ++;
+      val = val1;
+      poly = poly1;
+      std::cout << "*";
+    }
+    else {
+      std::cout << ".";
+    }
+  }
+
+  std::cout << "\nsucc%=" << ((double(succ)/count)*100) << "\n";
+  std::cout << "bound=" << bound << "\n";
+  std::cout << "val=" << val << "\n";
+
+
+
+#endif
+
   if (val>bound) {
     std::stringstream ss;
     ss << "Error: sampleGaussianBounded, after "
@@ -428,7 +475,7 @@ double sampleGaussianBounded(zzX &poly, const FHEcontext& context, double stdev)
 
 
 
-double sampleUniform(zzX &poly, const FHEcontext& context, long B)
+double sampleUniform(zzX &poly, const Context& context, long B)
 {
   const PAlgebra& palg = context.zMStar;
   double retval;
@@ -448,7 +495,7 @@ double sampleUniform(zzX &poly, const FHEcontext& context, long B)
   return retval;
 }
 
-NTL::xdouble sampleUniform(NTL::ZZX &poly, const FHEcontext& context, const NTL::ZZ& B)
+NTL::xdouble sampleUniform(NTL::ZZX &poly, const Context& context, const NTL::ZZ& B)
 {
   const PAlgebra& palg = context.zMStar;
   NTL::xdouble retval;

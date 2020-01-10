@@ -13,8 +13,9 @@
 #include <tuple>
 #include <algorithm>
 #include <NTL/BasicThreadPool.h>
-#include "matmul.h"
-#include "norms.h"
+#include <helib/matmul.h>
+#include <helib/norms.h>
+#include <helib/fhe_stats.h>
 
 namespace helib {
 
@@ -68,8 +69,8 @@ public:
     if (ctxt.parts.size() <= 1) return; // nothing to do
 
     ctxt.cleanUp();
-    const FHEcontext& context = ctxt.getContext();
-    const FHEPubKey& pubKey = ctxt.getPubKey();
+    const Context& context = ctxt.getContext();
+    const PubKey& pubKey = ctxt.getPubKey();
     long keyID = ctxt.getKeyID();
 
     // The call to cleanUp() should ensure that this assertions passes.
@@ -78,17 +79,23 @@ public:
 
     // Compute the number of digits that we need and the esitmated
     // added noise from switching this ciphertext.
-    long nDigits;
-    std::tie(nDigits, noise)
-      = ctxt.computeKSNoise(1, pubKey.keySWlist().at(0));
+
+    NTL::xdouble addedNoise = ctxt.parts[1].breakIntoDigits(polyDigits);
+    NTL::xdouble max_ks_noise(0.0);
+    for (const KeySwitch& ks: pubKey.keySWlist()) {
+      if (max_ks_noise < ks.noiseBound) max_ks_noise = ks.noiseBound;
+    }
+    addedNoise *= max_ks_noise;
 
     double logProd = context.logOfProduct(context.specialPrimes);
-    noise += ctxt.getNoiseBound() * NTL::xexp(logProd);
+    noise = ctxt.getNoiseBound() * NTL::xexp(logProd);
 
-    // Break the ciphertext part into digits, if needed, and scale up these
-    // digits using the special primes.
+    FHE_STATS_UPDATE("KS-noise-ratio-hoist", NTL::conv<double>(addedNoise/noise));
+    // HERE
+    //std::cout << "*** HOIST INIT\n";
+    // fprintf(stderr, "   KS-log-noise-ratio-hoist: %f\n", log(addedNoise/noise)/log(2.0));
 
-    ctxt.parts[1].breakIntoDigits(polyDigits, nDigits);
+    noise += addedNoise;
   }
 
   
@@ -105,8 +112,8 @@ public:
 
     if (k==1 || ctxt.isEmpty()) return std::make_shared<Ctxt>(ctxt);// nothing to do
 
-    const FHEcontext& context = ctxt.getContext();
-    const FHEPubKey& pubKey = ctxt.getPubKey();
+    const Context& context = ctxt.getContext();
+    const PubKey& pubKey = ctxt.getPubKey();
     std::shared_ptr<Ctxt> result = std::make_shared<Ctxt>(ZeroCtxtLike, ctxt); // empty ctxt
     result->noiseBound = noise; // noise estimate
     result->intFactor = ctxt.intFactor;
@@ -287,7 +294,7 @@ struct ConstMultiplier { // stores a constant in either zzX or DoubleCRT format
 
   virtual void mul(Ctxt& ctxt) const = 0;
 
-  virtual std::shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context)const=0;
+  virtual std::shared_ptr<ConstMultiplier> upgrade(const Context& context)const=0;
   // Upgrade to DCRT. Returns null if no upgrade required
 };
 
@@ -302,7 +309,7 @@ struct ConstMultiplier_DoubleCRT : ConstMultiplier {
     ctxt.multByConstant(data, sz);
   } 
 
-  std::shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
+  std::shared_ptr<ConstMultiplier> upgrade(const Context& context) const override{
     return nullptr;
   }
 };
@@ -317,7 +324,7 @@ struct ConstMultiplier_zzX : ConstMultiplier {
     ctxt.multByConstant(data);
   } 
 
-  std::shared_ptr<ConstMultiplier> upgrade(const FHEcontext& context) const override{
+  std::shared_ptr<ConstMultiplier> upgrade(const Context& context) const override{
     double sz = embeddingLargestCoeff(data, context.zMStar);
     return std::make_shared<ConstMultiplier_DoubleCRT>(DoubleCRT(data, context, context.fullPrimes()), sz);
   }
@@ -368,7 +375,7 @@ void DestMulAdd(Ctxt& x, const std::shared_ptr<ConstMultiplier>& a, Ctxt& b)
 }
 
 
-void ConstMultiplierCache::upgrade(const FHEcontext& context) 
+void ConstMultiplierCache::upgrade(const Context& context) 
 {
   FHE_TIMER_START;
 
@@ -744,6 +751,9 @@ void GenBabySteps(std::vector<std::shared_ptr<Ctxt>>& v, const Ctxt& ctxt, long 
   }
 
   const PAlgebra& zMStar = ctxt.getContext().zMStar;
+
+  // HERE
+  //std::cout << "*** STRATEGY FOR dim " << dim << " = " << ctxt.getPubKey().getKSStrategy(dim) << "\n";
 
   if (fhe_test_force_hoist >= 0 &&
       ctxt.getPubKey().getKSStrategy(dim) != FHE_KSS_UNKNOWN) {
@@ -2613,7 +2623,7 @@ void mul(PlaintextArray& pa, const BlockMatMulFull& mat)
 
 void traceMap(Ctxt& ctxt) 
 {
-  const FHEcontext& context = ctxt.getContext();
+  const Context& context = ctxt.getContext();
   const PAlgebra& zMStar = context.zMStar;
   long d = context.zMStar.getOrdP();
 

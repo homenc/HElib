@@ -18,10 +18,10 @@
 #include <NTL/ZZX.h>
 #include <NTL/vector.h>
 
-#include "helib.h"
-#include "ArgMap.h"
+#include <helib/helib.h>
+#include <helib/ArgMap.h>
 
-#include "debugging.h"
+#include <helib/debugging.h>
 
 NTL_CLIENT
 using namespace helib;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     ofstream binFile(binFile1, ios::binary);
     assert(asciiFile.is_open());  
 
-    std::unique_ptr<FHEcontext> context(new FHEcontext(m, p, r));
+    std::unique_ptr<Context> context(new Context(m, p, r));
     buildModChain(*context, L, c);  // Set the modulus chain
 
     if (!noPrint) {
@@ -141,8 +141,8 @@ int main(int argc, char *argv[])
       context->zMStar.printout(); // Printout context params
       cout << "\tSecurity Level: " << context->securityLevel() << endl;
     }
-    std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
-    FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+    std::unique_ptr<SecKey> secKey(new SecKey(*context));
+    PubKey* pubKey = (PubKey*) secKey.get();
     secKey->GenSecKey(w);
     addSome1DMatrices(*secKey);
     addFrbMatrices(*secKey);
@@ -180,18 +180,18 @@ int main(int argc, char *argv[])
     ofstream outFile(asciiFile2);
   
     // Read in context,
-    std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);  
+    std::unique_ptr<Context> context = buildContextFromBinary(inFile);  
     readContextBinary(inFile, *context);  
 
     // Read in SecKey and PubKey.
-    std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
+    std::unique_ptr<SecKey> secKey(new SecKey(*context));
 
 #ifdef DEBUG_PRINTOUT
         dbgEa = (EncryptedArray*) context->ea;
         dbgKey = secKey.get();
 #endif
 
-    FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+    PubKey* pubKey = (PubKey*) secKey.get();
   
     readPubKeyBinary(inFile, *pubKey);
     readSecKeyBinary(inFile, *secKey);
@@ -230,12 +230,12 @@ int main(int argc, char *argv[])
     ifstream inFile(binFile1, ios::binary);
 
     // Read in context,
-    std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
+    std::unique_ptr<Context> context = buildContextFromBinary(inFile);
     readContextBinary(inFile, *context);  
 
     // Read in PubKey.
-    std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
-    FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+    std::unique_ptr<SecKey> secKey(new SecKey(*context));
+    PubKey* pubKey = (PubKey*) secKey.get();
 
 #ifdef DEBUG_PRINTOUT
         dbgEa = (EncryptedArray*) context->ea;
@@ -311,12 +311,12 @@ int main(int argc, char *argv[])
       ofstream outFile(otherEndianFileOut);
     
       // Read in context,
-      std::unique_ptr<FHEcontext> context = buildContextFromBinary(inFile);
+      std::unique_ptr<Context> context = buildContextFromBinary(inFile);
       readContextBinary(inFile, *context);  
 
       // Read in SecKey and PubKey.
-      std::unique_ptr<FHESecKey> secKey(new FHESecKey(*context));
-      FHEPubKey* pubKey = (FHEPubKey*) secKey.get();
+      std::unique_ptr<SecKey> secKey(new SecKey(*context));
+      PubKey* pubKey = (PubKey*) secKey.get();
 
 #ifdef DEBUG_PRINTOUT
         dbgEa = (EncryptedArray*) context->ea;

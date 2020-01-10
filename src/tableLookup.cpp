@@ -18,11 +18,11 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <NTL/BasicThreadPool.h>
-#include "intraSlot.h"
-#include "tableLookup.h"
+#include <helib/intraSlot.h>
+#include <helib/tableLookup.h>
 
 #ifdef DEBUG_PRINTOUT
-#include "debugging.h"
+#include <helib/debugging.h>
 #endif
 
 namespace helib {

@@ -4,6 +4,11 @@ project(helib
   VERSION 1.0.0
   LANGUAGES CXX)
 
+# Location of the header files
+set(PROJECT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../include")
+# Location of the google tests
+set(PROJECT_TESTS_DIR "${PROJECT_SOURCE_DIR}/../tests")
+
 # We assume enable threads is passed correctly (already checked)
 if (HELIB_REQUIRES_PTHREADS)
   find_package(Threads REQUIRED)
@@ -57,6 +62,7 @@ set(HELIB_SRCS
         "binio.cpp"
         "bluestein.cpp"
         "CModulus.cpp"
+        "Context.cpp"
         "Ctxt.cpp"
         "debugging.cpp"
         "DoubleCRT.cpp"
@@ -65,80 +71,86 @@ set(HELIB_SRCS
         "eqtesting.cpp"
         "EvalMap.cpp"
         "extractDigits.cpp"
-        "FHEContext.cpp"
-        "keys.cpp"
+        "fhe_stats.cpp"
         "hypercube.cpp"
         "IndexSet.cpp"
         "intraSlot.cpp"
+        "keys.cpp"
         "keySwitching.cpp"
         "matching.cpp"
         "matmul.cpp"
-        "randomMatrices.cpp"
         "norms.cpp"
         "NumbTh.cpp"
         "OptimizePermutations.cpp"
         "PAlgebra.cpp"
         "PermNetwork.cpp"
         "permutations.cpp"
+        "PGFFT.cpp"
         "polyEval.cpp"
+        "PolyMod.cpp"
+        "PolyModRing.cpp"
         "powerful.cpp"
         "primeChain.cpp"
+        "Ptxt.cpp"
+        "randomMatrices.cpp"
         "recryption.cpp"
         "replicate.cpp"
         "sample.cpp"
         "tableLookup.cpp"
         "timing.cpp"
-        "zzX.cpp"
-        "PGFFT.cpp"
-        "fhe_stats.cpp")
+        "zzX.cpp")
 
+set(HELIB_HEADER_DIR "${PROJECT_INCLUDE_DIR}/helib")
 set(HELIB_HEADERS
-        "helib.h"
-        "ArgMap.h"
-        "binaryArith.h"
-        "binaryCompare.h"
-        "binio.h"
-        "bluestein.h"
-        "clonedPtr.h"
-        "CModulus.h"
-        "CtPtrs.h"
-        "Ctxt.h"
-        "debugging.h"
-        "DoubleCRT.h"
-        "EncryptedArray.h"
-        "EvalMap.h"
-        "FHEContext.h"
-        "FHE.h"
-        "keys.h"
-        "keySwitching.h"
-        "hypercube.h"
-        "IndexMap.h"
-        "IndexSet.h"
-        "intraSlot.h"
-        "matching.h"
-        "matmul.h"
-        "multicore.h"
-        "norms.h"
-        "NumbTh.h"
-        "PAlgebra.h"
-        "permutations.h"
-        "polyEval.h"
-        "powerful.h"
-        "primeChain.h"
-        "PtrMatrix.h"
-        "PtrVector.h"
-        "randomMatrices.h"
-        "range.h"
-        "recryption.h"
-        "replicate.h"
-        "sample.h"
-        "tableLookup.h"
-        "timing.h"
-        "zzX.h"
-        "assertions.h"
-        "exceptions.h"
-        "PGFFT.h"
-        "fhe_stats.h"
+        "${HELIB_HEADER_DIR}/helib.h"
+        "${HELIB_HEADER_DIR}/ArgMap.h"
+        "${HELIB_HEADER_DIR}/binaryArith.h"
+        "${HELIB_HEADER_DIR}/binaryCompare.h"
+        "${HELIB_HEADER_DIR}/binio.h"
+        "${HELIB_HEADER_DIR}/bluestein.h"
+        "${HELIB_HEADER_DIR}/clonedPtr.h"
+        "${HELIB_HEADER_DIR}/CModulus.h"
+        "${HELIB_HEADER_DIR}/CtPtrs.h"
+        "${HELIB_HEADER_DIR}/Ctxt.h"
+        "${HELIB_HEADER_DIR}/debugging.h"
+        "${HELIB_HEADER_DIR}/DoubleCRT.h"
+        "${HELIB_HEADER_DIR}/EncryptedArray.h"
+        "${HELIB_HEADER_DIR}/EvalMap.h"
+        "${HELIB_HEADER_DIR}/Context.h"
+        "${HELIB_HEADER_DIR}/FHE.h"
+        "${HELIB_HEADER_DIR}/keys.h"
+        "${HELIB_HEADER_DIR}/keySwitching.h"
+        "${HELIB_HEADER_DIR}/hypercube.h"
+        "${HELIB_HEADER_DIR}/IndexMap.h"
+        "${HELIB_HEADER_DIR}/IndexSet.h"
+        "${HELIB_HEADER_DIR}/intraSlot.h"
+        "${HELIB_HEADER_DIR}/matching.h"
+        "${HELIB_HEADER_DIR}/matmul.h"
+        "${HELIB_HEADER_DIR}/multicore.h"
+        "${HELIB_HEADER_DIR}/norms.h"
+        "${HELIB_HEADER_DIR}/NumbTh.h"
+        "${HELIB_HEADER_DIR}/PAlgebra.h"
+        "${HELIB_HEADER_DIR}/permutations.h"
+        "${HELIB_HEADER_DIR}/polyEval.h"
+        "${HELIB_HEADER_DIR}/PolyMod.h"
+        "${HELIB_HEADER_DIR}/PolyModRing.h"
+        "${HELIB_HEADER_DIR}/powerful.h"
+        "${HELIB_HEADER_DIR}/primeChain.h"
+        "${HELIB_HEADER_DIR}/PtrMatrix.h"
+        "${HELIB_HEADER_DIR}/PtrVector.h"
+        "${HELIB_HEADER_DIR}/Ptxt.h"
+        "${HELIB_HEADER_DIR}/randomMatrices.h"
+        "${HELIB_HEADER_DIR}/range.h"
+        "${HELIB_HEADER_DIR}/recryption.h"
+        "${HELIB_HEADER_DIR}/replicate.h"
+        "${HELIB_HEADER_DIR}/sample.h"
+        "${HELIB_HEADER_DIR}/tableLookup.h"
+        "${HELIB_HEADER_DIR}/timing.h"
+        "${HELIB_HEADER_DIR}/zzX.h"
+        "${HELIB_HEADER_DIR}/assertions.h"
+        "${HELIB_HEADER_DIR}/exceptions.h"
+        "${HELIB_HEADER_DIR}/PGFFT.h"
+        "${HELIB_HEADER_DIR}/fhe_stats.h"
         )
 
 set(LEGACY_TEST_SRCS
@@ -171,9 +183,9 @@ set(LEGACY_TEST_SRCS
 
 # Add helib target as a shared/static library
 if (BUILD_SHARED)
-  add_library(helib SHARED ${HELIB_SRCS})
+  add_library(helib SHARED ${HELIB_SRCS} ${HELIB_HEADERS})
 else (BUILD_SHARED)
-  add_library(helib STATIC ${HELIB_SRCS})
+  add_library(helib STATIC ${HELIB_SRCS} ${HELIB_HEADERS})
 endif (BUILD_SHARED)
 
 # Add private/public flags to helib
@@ -217,13 +229,16 @@ endif(PACKAGE_BUILD)
 target_include_directories(helib
   PRIVATE
   PUBLIC
-    "$<BUILD_INTERFACE:${NTL_INCLUDE_PATHS}>"
-    "$<INSTALL_INTERFACE:${NTL_INCLUDE_EXPORTED_PATH}>"
-
+    # NOTE: The includes must be kept in this order to avoid cmake
+    # looking for HElib in /usr/local/include
     # Headers used from source/build location:
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+    "$<BUILD_INTERFACE:${PROJECT_INCLUDE_DIR}>"
     # Headers used from the installed location:
-    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+
+    "$<BUILD_INTERFACE:${NTL_INCLUDE_PATHS}>"
+    "$<INSTALL_INTERFACE:${NTL_INCLUDE_EXPORTED_PATH}>")
+
 
 # Setting the helib properties
 set_target_properties(helib
@@ -269,11 +284,6 @@ if (BUILD_SHARED)
   )
 endif(BUILD_SHARED)
 
-
-if (BUILD_AES)
-  add_subdirectory(aes)
-endif(BUILD_AES)
-
 if (ENABLE_LEGACY_TEST)
     foreach(TEST_FILE ${LEGACY_TEST_SRCS})
       string(REPLACE "\.cpp" "" TEST_NAME "${TEST_FILE}")
@@ -287,7 +297,8 @@ if (ENABLE_LEGACY_TEST)
 endif(ENABLE_LEGACY_TEST)
 
 if (ENABLE_TEST)
-  add_subdirectory(tests)
+  add_subdirectory("${PROJECT_TESTS_DIR}" 
+                   tests)
 endif(ENABLE_TEST)
 
 # Installing helib
