@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -689,7 +689,7 @@ TEST_P(TestPtxtCKKS, powerCorrectlyRaisesToPowers)
     data[j] = std::complex<double>{j / (double)data.size()} *
               std::exp(std::complex<double>{0, 2.0 * pi * j / data.size()});
   }
-  std::vector<long> exponents{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  std::vector<long> exponents{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1500};
 
   const auto naive_power = [](std::complex<double> base,
                               unsigned long exponent) {
@@ -1759,10 +1759,13 @@ TEST_P(TestPtxtBGV, frobeniusAutomorphWithConstantsWorksCorrectly)
   std::iota(data.begin(), data.end(), 0);
   std::vector<long> expected_result(data);
   helib::Ptxt<helib::BGV> ptxt(context, data);
-  ptxt.frobeniusAutomorph(2);
-
-  for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_EQ(ptxt[i], expected_result[i]);
+  for (std::size_t i = 0; i <= context.zMStar.getOrdP(); ++i) {
+    auto ptxtUnderTest = ptxt;
+    ptxtUnderTest.frobeniusAutomorph(i);
+    for (std::size_t j = 0; j < ptxtUnderTest.size(); ++j) {
+      ASSERT_EQ(ptxtUnderTest[j], expected_result[j])
+          << "i = " << i << " j = " << j << std::endl;
+    }
   }
 }
 
@@ -2677,6 +2680,7 @@ TEST_P(TestPtxtBGV, multByConstantFromCiphertextWorks)
   }
 }
 
+// Useful for testing non-power of 2 for CKKS
 // INSTANTIATE_TEST_SUITE_P(various_parameters, TestPtxtCKKS,
 //        ::testing::Values( 17, 168, 126, 78, 33, 50, 64)
 // );
@@ -2686,14 +2690,17 @@ INSTANTIATE_TEST_SUITE_P(
     TestPtxtCKKS,
     ::testing::Values(2 << 1, 2 << 2, 2 << 3, 2 << 4, 2 << 5, 2 << 6, 2 << 7));
 
-INSTANTIATE_TEST_SUITE_P(various_Parameters,
-                         TestPtxtBGV,
-                         ::testing::Values(BGVParameters(17, 2, 1),
-                                           BGVParameters(17, 2, 3),
-                                           BGVParameters(168, 13, 1),
-                                           BGVParameters(126, 127, 1),
-                                           BGVParameters(78, 79, 1),
-                                           BGVParameters(33, 19, 2),
-                                           BGVParameters(50, 53, 1)));
+INSTANTIATE_TEST_SUITE_P(
+    various_Parameters,
+    TestPtxtBGV,
+    ::testing::Values(BGVParameters(17, 2, 1),
+                      BGVParameters(17, 2, 3),
+                      BGVParameters(168, 13, 1),
+                      BGVParameters(126, 127, 1),
+                      BGVParameters(78, 79, 1),
+                      BGVParameters(33, 19, 2),
+                      // NOTE: This was used because it has 3 good dimensions
+                      // BGVParameters(10005, 37, 1),
+                      BGVParameters(50, 53, 1)));
 
 } // namespace

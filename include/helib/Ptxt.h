@@ -547,7 +547,7 @@ public:
    * @param e Exponent to raise the `Ptxt` by.
    * @return Reference to `*this` post raising to the power e.
    **/
-  Ptxt<Scheme>& power(unsigned long e);
+  Ptxt<Scheme>& power(long e);
 
   /**
    * @brief Rotate slots right by specified amount (slot `i` goes to slot

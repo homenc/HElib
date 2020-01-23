@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -123,6 +123,13 @@ public:
 
   //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
+
+  /** @brief Correct an automorphism in a bad dimension.
+    * @param ctxt `Ctxt` to perform the correction on.
+    * @param i Dimension of which to correct.
+    * @param amt Exponent of the automorphism.
+  **/
+  virtual void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long amt) const = 0;
 
   ///@{
   //! @name Encoding/decoding methods
@@ -354,6 +361,8 @@ public:
   virtual void rotate(Ctxt& ctxt, long k) const override;
   virtual void shift(Ctxt& ctxt, long k) const override;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
+
+  virtual void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long k) const override;
 
   long getP2R() const override {return getTab().getPPowR();}
 
@@ -757,6 +766,8 @@ public:
                           const std::vector<cx_double>&iImages,
                           long precision=0) const;
   ///@}
+
+  void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long k) const override;
 };
 
 
@@ -874,6 +885,9 @@ public:
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
+
+  void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long amt) const
+    { rep->badDimensionAutomorphCorrection(ctxt, i, amt); }
 
   template<class PTXT, class ARRAY>
   void encode(PTXT& ptxt, const ARRAY& array) const 
