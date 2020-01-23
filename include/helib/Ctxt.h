@@ -374,7 +374,6 @@ public:
   // possibly evaluated via a sequence of steps, to ensure that we can
   // re-linearize the result of every step.
 
-
   //! @brief applies the automorphsim p^j using smartAutomorphism
   void frobeniusAutomorph(long j);
 

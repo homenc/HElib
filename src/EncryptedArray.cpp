@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -50,39 +50,16 @@ EncryptedArrayDerived<type>::EncryptedArrayDerived(
   tab.mapToSlots(mappingData, _G); // Compute the base-G representation maps
 }
 
-// rotate ciphertext in dimension i by amt
-template<class type>
-void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
+// Correction function for automorph in bad dimensions
+template<typename type>
+void EncryptedArrayDerived<type>::badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long amt) const
 {
-  FHE_TIMER_START;
-  //OLD: assert(&context == &ctxt.getContext());
-  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
-  //OLD: assert(i >= 0 && i < dimension());
-  helib::assertInRange(i, 0l, dimension(), "i must be between 0 and dimension()");
-
-  RBak bak; bak.save(); tab.restoreContext();
-
   const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
   const PAlgebra& zMStar = getPAlgebra();
-  long m = zMStar.getM();
   long ord = sizeOfDimension(i);
-  amt %= ord;// DIRT: assumes division w/ remainder follows C++11 and C99 rules
-  if (amt == 0) return;
-
-  if (dc || nativeDimension(i)) { // native dimension or don't-care
-    // For don't-care, we assume that any shifts "off the end" are zero
-    ctxt.smartAutomorph(zMStar.genToPow(i, amt));
-    return;
-  }
-
-  // more expensive "non-native" rotation
-
   if (amt < 0) amt += ord;  // Make sure amt is in the range [1,ord-1]
   //OLD: assert(maskTable[i].size() > 0);
   helib::assertTrue(maskTable[i].size() > 0, "Found non-positive sized mask table entry");
-
-  ctxt.smartAutomorph(zMStar.genToPow(i, amt));
-  // ctxt = \rho_i^{amt}(originalCtxt)
 
   Ctxt T(ctxt);
   T.smartAutomorph(zMStar.genToPow(i, -ord));
@@ -103,6 +80,33 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc
   ctxt += T;
   T.multByConstant(m1, sz);
   ctxt -= T;
+}
+
+// rotate ciphertext in dimension i by amt
+template<class type>
+void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
+{
+  FHE_TIMER_START;
+  //OLD: assert(&context == &ctxt.getContext());
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  //OLD: assert(i >= 0 && i < dimension());
+  helib::assertInRange(i, 0l, dimension(), "i must be between 0 and dimension()");
+
+  RBak bak; bak.save(); tab.restoreContext();
+
+  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
+  const PAlgebra& zMStar = getPAlgebra();
+  long ord = sizeOfDimension(i);
+  amt %= ord;// DIRT: assumes division w/ remainder follows C++11
+  if (amt == 0) return;
+
+  // ctxt = \rho_i^{amt}(originalCtxt)
+  ctxt.smartAutomorph(zMStar.genToPow(i, amt));
+
+  // For don't-care, we assume that any shifts "off the end" are zero
+  // More expensive "non-native" rotation
+  if (!dc && !nativeDimension(i))
+    badDimensionAutomorphCorrection(ctxt, i, amt);
 }
 
 // Shift k positions along the i'th dimension with zero fill.

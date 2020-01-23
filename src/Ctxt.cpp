@@ -1651,12 +1651,14 @@ void Ctxt::smartAutomorph(long k)
     recordAutomorphVal(k);
     return;
   }
-  // Special case: if *this is empty then do nothing
-  if (this->isEmpty()) return;
 
   // Sanity check: verify that k \in Zm*
   long m = context.zMStar.getM();
   k = mcMod(k, m);
+
+  // Special cases
+  if (this->isEmpty() || k==1) return;
+
   //OLD: assert (context.zMStar.inZmStar(k));
   helib::assertTrue(context.zMStar.inZmStar(k), "k must be in Zm*");
 
@@ -1688,7 +1690,6 @@ void Ctxt::smartAutomorph(long k)
   FHE_TIMER_STOP;
 }
 
-
 // applies the Frobenius automorphism p^j
 void Ctxt::frobeniusAutomorph(long j) 
 {
@@ -1705,7 +1706,7 @@ void Ctxt::frobeniusAutomorph(long j)
     long d = context.zMStar.getOrdP();
 
     j = mcMod(j, d);
-    long val = NTL::PowerMod(p, j, m);
+    long val = NTL::PowerMod(p % m, j, m);
     smartAutomorph(val);
   }
 }

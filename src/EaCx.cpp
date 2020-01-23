@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -260,6 +260,11 @@ void EncryptedArrayCx::buildLinPolyCoeffs(std::vector<zzX>& C,
   msize = roundedSize(msize);
   encode(C[0], x, msize, precision);
   encode(C[1], y, msize, precision);
+}
+
+void EncryptedArrayCx::badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long k) const
+{
+  throw helib::LogicError("badDimensionAutomorphCorrection for CKKS not implemented");
 }
 
 }

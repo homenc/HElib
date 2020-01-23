@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -24,8 +24,7 @@ helib::PolyMod Ptxt<helib::BGV>::convertToSlot(const Context& context,
 }
 
 template <>
-std::complex<double> Ptxt<helib::CKKS>::convertToSlot(const Context&,
-                                                      long slot)
+std::complex<double> Ptxt<helib::CKKS>::convertToSlot(const Context&, long slot)
 {
   return {static_cast<double>(slot), 0};
 }
@@ -72,8 +71,7 @@ Ptxt<BGV>::Ptxt(const Context& context, const NTL::ZZX& value) :
 }
 
 template <typename Scheme>
-Ptxt<Scheme>::Ptxt(const Context& context,
-                   const std::vector<SlotType>& data) :
+Ptxt<Scheme>::Ptxt(const Context& context, const std::vector<SlotType>& data) :
     context(std::addressof(context)),
     slots(context.ea->size(),
           SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)})
@@ -476,7 +474,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::cube()
 }
 
 template <typename Scheme>
-Ptxt<Scheme>& Ptxt<Scheme>::power(unsigned long e)
+Ptxt<Scheme>& Ptxt<Scheme>::power(long e)
 {
   helib::assertTrue<helib::RuntimeError>(
       isValid(), "Cannot call power on default-constructed Ptxt");
@@ -670,7 +668,9 @@ Ptxt<BGV>& Ptxt<BGV>::frobeniusAutomorph(long j)
   long d = context->zMStar.getOrdP();
   if (d == 1)
     return *this; // Nothing to do.
-  return power(std::pow(context->slotRing->p, j % d));
+  long exponent =
+      NTL::PowerMod(context->slotRing->p, mcMod(j, d), context->zMStar.getM());
+  return automorph(exponent);
 }
 
 template <typename Scheme>
@@ -807,6 +807,8 @@ long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)
   return index;
 }
 
+// TODO: Refactor this out into a free function, also see the Ctxt version for
+// refactoring.
 template <typename Scheme>
 std::vector<long> Ptxt<Scheme>::indexToCoord(long index)
 {
@@ -838,7 +840,9 @@ template <>
 PA_GF2::RX Ptxt<BGV>::slotsToRX<PA_GF2>() const
 {
   helib::assertEq<helib::LogicError>(
-      context->zMStar.getP(), 2l, "Plaintext modulus p must be equal to 2");
+      context->alMod.getPPowR(),
+      2l,
+      "Plaintext modulus p^r must be equal to 2^1");
   return NTL::conv<NTL::GF2X>(getPolyRepr());
 }
 
@@ -847,7 +851,9 @@ template <>
 PA_zz_p::RX Ptxt<BGV>::slotsToRX<PA_zz_p>() const
 {
   helib::assertNeq<helib::LogicError>(
-      context->zMStar.getP(), 2l, "Plaintext modulus p most not be equal to 2");
+      context->alMod.getPPowR(),
+      2l,
+      "Plaintext modulus p^r must not be equal to 2^1");
   return NTL::conv<NTL::zz_pX>(getPolyRepr());
 }
 
