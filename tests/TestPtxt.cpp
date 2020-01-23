@@ -1746,8 +1746,6 @@ TEST(TestPtxtBGV, automorphWorksCorrectly)
   expected_result[10] = {8, 12};
   expected_result[11] = {10, 10};
 
-  std::cout << expected_result << std::endl;
-
   ptxt.automorph(2);
 
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
