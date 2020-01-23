@@ -231,15 +231,15 @@ int main(int argc, char *argv[])
   amap.arg("seed", seed, "PRG seed");
 
   Vec<long> mvec;
-  amap.arg("mvec", mvec, "use specified factorization of m", NULL);
+  amap.arg("mvec", mvec, "use specified factorization of m", nullptr);
   amap.note("e.g., mvec='[7 3 221]'");
 
   Vec<long> gens;
-  amap.arg("gens", gens, "use specified vector of generators", NULL);
+  amap.arg("gens", gens, "use specified vector of generators", nullptr);
   amap.note("e.g., gens='[3979 3095 3760]'");
 
   Vec<long> ords;
-  amap.arg("ords", ords, "use specified vector of orders", NULL);
+  amap.arg("ords", ords, "use specified vector of orders", nullptr);
   amap.note("e.g., ords='[6 2 -8]', negative means 'bad'");
 
   amap.arg("dry", dry, "a dry-run flag to check the noise");

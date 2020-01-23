@@ -45,8 +45,8 @@ void SKHandle::write(std::ostream& str) const
 }
 
 // A hack for recording required automorphisms (see NumbTh.h)
-std::set<long>* FHEglobals::automorphVals = NULL;
-std::set<long>* FHEglobals::automorphVals2 = NULL;
+std::set<long>* FHEglobals::automorphVals = nullptr;
+std::set<long>* FHEglobals::automorphVals2 = nullptr;
 
 // Dummy encryption, just encodes the plaintext in a Ctxt object.
 // NOTE: for now, it leaves the intFactor field of *this alone.

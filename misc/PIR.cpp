@@ -321,10 +321,10 @@ int main(int argc, char *argv[])
            "0: default, 1:full, 2:bsgs, 3:minimal"); 
 
   NTL::Vec<long> gens;
-  amap.arg("gens", gens, "use specified vector of generators", NULL);
+  amap.arg("gens", gens, "use specified vector of generators", nullptr);
   amap.note("e.g., gens='[562 1871 751]'");
   NTL::Vec<long> ords;
-  amap.arg("ords", ords, "use specified vector of orders", NULL);
+  amap.arg("ords", ords, "use specified vector of orders", nullptr);
   amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
   amap.parse(argc, argv);

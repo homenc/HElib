@@ -237,7 +237,7 @@ void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt_orig,
     SelectRange(ea, ctxt1, 0, 1L << n);
 
   RepAux repAux;
-  if (repAuxPtr==NULL) repAuxPtr = &repAux;
+  if (repAuxPtr==nullptr) repAuxPtr = &repAux;
 
   recursiveReplicate(ea, ctxt1, n, n, 0, 1L << n, 
                      *repAuxPtr, handler);
@@ -598,7 +598,7 @@ replicateAll(const EncryptedArray& ea, const Ctxt& ctxt_orig,
   // so that DoubleCRT constant can leave them out
 
   RepAuxDim repAux;
-  if (repAuxPtr==NULL) repAuxPtr = &repAux;
+  if (repAuxPtr==nullptr) repAuxPtr = &repAux;
   replicateAllNextDim(ea, ctxt, 0, 1, recBound, *repAuxPtr, handler);
 }
 

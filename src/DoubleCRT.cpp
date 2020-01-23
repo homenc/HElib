@@ -1053,7 +1053,7 @@ void DoubleCRT::randomize(const NTL::ZZ* seed)
 
   if (isDryRun()) return;
 
-  if (seed != NULL) SetSeed(*seed);
+  if (seed != nullptr) SetSeed(*seed);
 
   const IndexSet& s = map.getIndexSet();
   long phim = context.zMStar.getPhiM();

@@ -320,7 +320,7 @@ public:
   }
 
   bool isBootstrappable() const 
-    { return rcData.alMod != NULL; }
+    { return rcData.alMod != nullptr; }
 
   IndexSet fullPrimes() const 
   {

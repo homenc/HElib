@@ -711,7 +711,7 @@ private:
 
   //! Same as above, but embeds relative to Ft rather than F1. The
   //! optional rF1 contains the output of mapToF1, to speed this operation.
-  void mapToFt(RX& w, const RX& G, long t, const RX* rF1=NULL) const;
+  void mapToFt(RX& w, const RX& G, long t, const RX* rF1=nullptr) const;
 
   void buildTree(std::shared_ptr< TNode<RX> >& res, long offset, long extent) const;
 

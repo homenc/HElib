@@ -37,7 +37,7 @@ EncryptedArrayBase* buildEncryptedArray(const Context& context,
       NTL::zz_pBak bak; bak.save(); alMod.restoreContext();
       return new EncryptedArrayDerived<PA_zz_p>(context, NTL::conv<NTL::zz_pX>(GG), alMod);
     }
-    default: return NULL;
+    default: return nullptr;
   }
 }
 

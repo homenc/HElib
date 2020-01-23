@@ -55,7 +55,7 @@ public:
   DAGnode *parent1, *parent2;
 
   std::mutex ct_mtx; // controls access to ctxt pointer (and the ctxt itself)
-  Ctxt* ct;          // points to the actual ciphertext (or NULL)
+  Ctxt* ct;          // points to the actual ciphertext (or nullptr)
 
   DAGnode(NodeIdx ii, bool qq, long lvl, long chl=0,
            DAGnode* pt1=nullptr, DAGnode* pt2=nullptr):
@@ -137,7 +137,7 @@ public:
     return findQ(bSize-1,0)->level;
   }
   //! Returns a pointer to the a 'p' node of index (i,j)
-  DAGnode* findP(long i, long j) const { // returns NULL if not exists
+  DAGnode* findP(long i, long j) const { // returns nullptr if not exists
     auto it = p.find(NodeIdx(i,j));
     if (it == p.end()) {
       std::cerr << "  findP("<<i<<','<<j<<") not found" << std::endl;
@@ -146,7 +146,7 @@ public:
     return (DAGnode*)&(it->second);
   }
   //! Returns a pointer to the a 'q' node of index (i,j)
-  DAGnode* findQ(long i, long j) const { // returns NULL if not exists
+  DAGnode* findQ(long i, long j) const { // returns nullptr if not exists
     auto it = q.find(NodeIdx(i,j));
     if (it == q.end()) {
       std::cerr << "  findQ("<<i<<','<<j<<") not found" << std::endl;

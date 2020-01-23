@@ -87,14 +87,14 @@ class PowerfulConversion {
 
 public:
 
-  PowerfulConversion(): indexes(NULL) {}
+  PowerfulConversion(): indexes(nullptr) {}
 
   explicit PowerfulConversion(const PowerfulTranslationIndexes& ind):
-  indexes(NULL) { initPConv(ind); }
+  indexes(nullptr) { initPConv(ind); }
 
   void initPConv(const PowerfulTranslationIndexes& ind)
   {
-    if (indexes!=NULL) return; // cannot re-initialize a non-NULL object
+    if (indexes!=nullptr) return; // cannot re-initialize a non-nullptr object
     indexes = &ind;
 
     cycVec_p.SetLength(ind.cycVec.length());

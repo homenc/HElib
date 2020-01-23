@@ -84,13 +84,13 @@ public:
  **/
 void replicateAll(const EncryptedArray& ea, const Ctxt& ctxt, 
 		  ReplicateHandler *handler, long recBound = 64,
-		  RepAuxDim* repAuxPtr=NULL);
+		  RepAuxDim* repAuxPtr=nullptr);
 
 //! return the result as a std::vector of ciphertexts, mostly useful for
 //! debugging purposes (for real parameters would take a lot of memory)
 void replicateAll(std::vector<Ctxt>& v, const EncryptedArray& ea,
        	          const Ctxt& ctxt, long recBound = 64,
-		  RepAuxDim* repAuxPtr=NULL);
+		  RepAuxDim* repAuxPtr=nullptr);
 
 /**
  * @brief Generate a vector of plaintexts with each slot replicated in each
@@ -113,7 +113,7 @@ void replicateAll(std::vector<Ptxt<Scheme>>& v, const EncryptedArray&,
 //! was a first attempt at implementing the O(1)-amortized algorithm, but is
 //! less efficient than the function above.
 void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt,
-                      ReplicateHandler *handler, RepAux* repAuxPtr=NULL);
+                      ReplicateHandler *handler, RepAux* repAuxPtr=nullptr);
 
 void replicate(const EncryptedArray& ea, PlaintextArray& pa, long i);
 

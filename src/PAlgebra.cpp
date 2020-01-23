@@ -988,7 +988,7 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
   if (i < 0) { clear(w); return; }
 
 
-  if (rF1==NULL) {               // Compute the representation "from scratch"
+  if (rF1==nullptr) {               // Compute the representation "from scratch"
     // special case
     if (G == factors[i]) {
       SetX(w);

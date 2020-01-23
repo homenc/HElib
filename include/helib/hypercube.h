@@ -30,12 +30,12 @@ private:
    NTL::Vec<long> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
 
 public:
-   CubeSignature() {} // a NULL signature
+   CubeSignature() {} // a nullptr signature
 
    void initSignature(const long _dims[], long _ndims)
    {
-     //OLD: assert(dims.length() == 0); // can only initialize a NULL signature
-     helib::assertEq(dims.length(), 0l, "Can only initialize an un-initialized signature"); // can only initialize a NULL signature
+     //OLD: assert(dims.length() == 0); // can only initialize a nullptr signature
+     helib::assertEq(dims.length(), 0l, "Can only initialize an un-initialized signature"); // can only initialize a nullptr signature
      //OLD: assert(_ndims >= 0);
      helib::assertTrue<helib::InvalidArgument>(_ndims >= 0l, "Dimension count is negative");
      
