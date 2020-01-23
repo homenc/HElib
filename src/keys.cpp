@@ -60,7 +60,7 @@ double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT &s, long p)
 double RLWE(DoubleCRT& c0,DoubleCRT& c1, const DoubleCRT &s, long p,
             NTL::ZZ* prgSeed)
 {
-  // choose c1 at random (using prgSeed if not NULL)
+  // choose c1 at random (using prgSeed if not nullptr)
   c1.randomize(prgSeed);
   return RLWE1(c0, c1, s, p);
 }

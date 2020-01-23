@@ -309,18 +309,18 @@ int main(int argc, char **argv)
   amap.arg("repeat", repeat,  "number of times to repeat the test");
 
   long chosen_m=0;
-  amap.arg("m", chosen_m, "use specified value as modulus", NULL);
+  amap.arg("m", chosen_m, "use specified value as modulus", nullptr);
 
   Vec<long> mvec;
-  amap.arg("mvec", mvec, "use product of the integers as  modulus", NULL);
+  amap.arg("mvec", mvec, "use product of the integers as  modulus", nullptr);
   amap.note("e.g., mvec='[5 3 187]' (this overwrite the m argument)");
 
   Vec<long> gens;
-  amap.arg("gens", gens, "use specified vector of generators", NULL);
+  amap.arg("gens", gens, "use specified vector of generators", nullptr);
   amap.note("e.g., gens='[562 1871 751]'");
 
   Vec<long> ords;
-  amap.arg("ords", ords, "use specified vector of orders", NULL);
+  amap.arg("ords", ords, "use specified vector of orders", nullptr);
   amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
   long seed=0;

@@ -951,7 +951,7 @@ other parameters that the initialization function needs. We
 then provide a constructor 
 \begin{quote}
 {\IndexMap}\texttt{(IndexMapInit<T>*
-initObject=NULL)} 
+initObject=nullptr)} 
 \end{quote}
 that associates the given initialization object
 with the new {\IndexMap} object.
@@ -1198,10 +1198,10 @@ We also provide methods for choosing at random polynomials in
 %instead.}
 
 \begin{description}
-\item[\texttt{void randomize(const ZZ* seed=NULL);}]\ \\
+\item[\texttt{void randomize(const ZZ* seed=nullptr);}]\ \\
 Fills each row~$i\in\mathtt{getIndexSet()}$ with random integers 
 modulo~$p_i$. This procedure uses the NTL PRG, setting the seed
-to the \texttt{seed} argument if it is non-NULL, and using the
+to the \texttt{seed} argument if it is non-nullptr, and using the
 current PRG state of NTL otherwise.
 
 \item[\texttt{void sampleSmall();}]\ \\

@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
    amap.arg("hi", hi, "high value for m range");
 
    long m_arg = 0;
-   amap.arg("m", m_arg, "use only the specified m value", NULL);
+   amap.arg("m", m_arg, "use only the specified m value", nullptr);
 
 
    amap.parse(argc, argv);

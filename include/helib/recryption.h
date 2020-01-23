@@ -68,7 +68,7 @@ public:
 
   RecryptData() {
     skHwt=0; e=ePrime=0; 
-    alMod=NULL; ea=NULL; firstMap=NULL; secondMap=NULL; p2dConv=NULL;
+    alMod=nullptr; ea=nullptr; firstMap=nullptr; secondMap=nullptr; p2dConv=nullptr;
     build_cache = false;
   }
   ~RecryptData();
@@ -125,7 +125,7 @@ public:
   //! linear maps
   ThinEvalMap *coeffToSlot, *slotToCoeff;
 
-  ThinRecryptData() : RecryptData() {coeffToSlot=NULL; slotToCoeff=NULL;}
+  ThinRecryptData() : RecryptData() {coeffToSlot=nullptr; slotToCoeff=nullptr;}
   ~ThinRecryptData();
 
   //! Initialize the recryption data in the context

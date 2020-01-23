@@ -72,7 +72,7 @@ private:
     Ctxt recryptEkey;  // the key itself, encrypted under key #0
 
 public:
-    //! This constructor thorws run-time error if activeContext=NULL
+    //! This constructor thorws run-time error if activeContext=nullptr
     PubKey();
 
     explicit PubKey(const Context& _context);

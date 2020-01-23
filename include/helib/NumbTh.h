@@ -69,7 +69,7 @@ namespace FHEglobals
   extern bool dryRun;
 
   //! @brief A list of required automorphisms
-  //! When non-NULL, causes Ctxt::smartAutomorphism to just record the
+  //! When non-nullptr, causes Ctxt::smartAutomorphism to just record the
   //! requested automorphism rather than actualy performing it. This can
   //! be used to get a list of needed automorphisms for certain operations
   //! and then generate all these key-switching matrices. Should only be
@@ -82,12 +82,12 @@ inline bool isDryRun() { return FHEglobals::dryRun; }
 
 inline void setAutomorphVals(std::set<long>* aVals)
 { FHEglobals::automorphVals=aVals; }
-inline bool isSetAutomorphVals() { return FHEglobals::automorphVals!=NULL; }
+inline bool isSetAutomorphVals() { return FHEglobals::automorphVals!=nullptr; }
 inline void recordAutomorphVal(long k) { FHEglobals::automorphVals->insert(k); }
 
 inline void setAutomorphVals2(std::set<long>* aVals)
 { FHEglobals::automorphVals2=aVals; }
-inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=NULL; }
+inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=nullptr; }
 inline void recordAutomorphVal2(long k) { FHEglobals::automorphVals2->insert(k); }
 
 typedef long LONG; // using this to identify casts that we should

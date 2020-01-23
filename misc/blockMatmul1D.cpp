@@ -212,8 +212,8 @@ public:
       // with y_f += \sigma^{-f}(\lambda_{e,f}) * \rho^e(x)
 
       std::vector<zzX> zpoly(d, zzX());
-      std::vector<zzX*> zzxPtr(d,NULL);
-      std::vector<DoubleCRT*> dcrtPtr(d,NULL);
+      std::vector<zzX*> zzxPtr(d,nullptr);
+      std::vector<DoubleCRT*> dcrtPtr(d,nullptr);
 
       if (dcp!=nullptr) for (long f=0; f<d; f++) { // DoubleCRT cache exists
           dcrtPtr[f] = (*dcp)[d*e +f].get();
@@ -253,9 +253,9 @@ public:
 	// We should implement that optimization at some point.
 
 	// Depending on zzxPtr, dcrtPtr, update the accumulated sums
-	for (long f=0; f<d; f++) if (dcrtPtr[f]!=NULL || zzxPtr[f]!=NULL) {
+	for (long f=0; f<d; f++) if (dcrtPtr[f]!=nullptr || zzxPtr[f]!=nullptr) {
             Ctxt tmp1(*shCtxt);
-            if (dcrtPtr[f] != NULL) tmp1.multByConstant(*(dcrtPtr[f]));
+            if (dcrtPtr[f] != nullptr) tmp1.multByConstant(*(dcrtPtr[f]));
             else                    tmp1.multByConstant(*(zzxPtr[f]));
             acc[f] += tmp1;
           }

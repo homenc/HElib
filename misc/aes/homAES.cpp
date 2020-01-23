@@ -56,7 +56,7 @@ inline void buildAffineDec(vector<PolyType>& binMat,
    * the columns, which is 74,148,41,82,164,73,146,37
    */
   static unsigned char cc[] = { 74, 148, 41, 82, 164, 73, 146, 37, 0};
-  buildAffine(binMat, NULL, cc, ea2);
+  buildAffine(binMat, nullptr, cc, ea2);
 }
 
 // FIXME: The implementation below relies on the first generator in thw
@@ -444,7 +444,7 @@ static void buildAffine(vector<PolyType>& binMat, PolyType* binVec,
   for (long j=0; j<8; j++) binMat[j] = zzxMat[j]; // convert to DoubleCRT
 #endif
 
-  if (binVec != NULL) {
+  if (binVec != nullptr) {
     GF2X cc8;
     GF2XFromBytes(cc8, &cc[8], 1);
     for (long i = 0; i < ea2.size(); i++)  // set all slots to cc8

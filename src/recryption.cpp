@@ -135,11 +135,11 @@ static void newMakeDivisible(NTL::ZZX& poly, long p2e, long q,
 
 RecryptData::~RecryptData()
 {
-  if (alMod!=NULL)     delete alMod;
-  if (ea!=NULL)        delete ea;
-  if (firstMap!=NULL)  delete firstMap;
-  if (secondMap!=NULL) delete secondMap;
-  if (p2dConv!=NULL)   delete p2dConv;
+  if (alMod!=nullptr)     delete alMod;
+  if (ea!=nullptr)        delete ea;
+  if (firstMap!=nullptr)  delete firstMap;
+  if (secondMap!=nullptr) delete secondMap;
+  if (p2dConv!=nullptr)   delete p2dConv;
 }
 
 
@@ -287,7 +287,7 @@ bool RecryptData::operator==(const RecryptData& other) const
 void RecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
                   bool enableThick, long t, bool build_cache_, bool minimal)
 {
-  if (alMod != NULL) { // were we called for a second time?
+  if (alMod != nullptr) { // were we called for a second time?
     std::cerr << "@Warning: multiple calls to RecryptData::init\n";
     return;
   }
@@ -759,8 +759,8 @@ void packedRecrypt(const CtPtrMat& m,
 
 ThinRecryptData::~ThinRecryptData()
 {
-  if (coeffToSlot!=NULL)  delete coeffToSlot;
-  if (slotToCoeff!=NULL) delete slotToCoeff;
+  if (coeffToSlot!=nullptr)  delete coeffToSlot;
+  if (slotToCoeff!=nullptr) delete slotToCoeff;
 }
 
 
