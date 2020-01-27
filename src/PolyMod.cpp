@@ -83,7 +83,7 @@ PolyMod::operator long() const
 PolyMod::operator std::vector<long>() const
 {
   assertValidity(*this);
-  std::vector<long> ret(NTL::deg(data) + 1);
+  std::vector<long> ret(NTL::deg(ringDescriptor->G));
   for (std::size_t i = 0; i < ret.size(); ++i)
     NTL::conv(ret[i], NTL::coeff(data, i));
   return ret;
