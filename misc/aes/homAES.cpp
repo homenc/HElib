@@ -2,6 +2,7 @@
  */
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
+namespace helib {} using namespace helib;
 #include <cstring>
 #include "homAES.h"
 
@@ -92,6 +93,8 @@ static void packCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
 static void unackCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
 		      const Mat<GF2X>& unpackConsts);
 
+static long findBaseLevel(const Ctxt& c);
+
 // Implementation of the class HomAES
 
 static const uint8_t aesPolyBytes[] = { 0x1B, 0x1 }; // X^8+X^4+X^3+X+1
@@ -99,12 +102,12 @@ const GF2X HomAES::aesPoly = GF2XFromBytes(aesPolyBytes, 2);
 
 HomAES::HomAES(const Context& context): ea2(context,aesPoly,context.alMod)
 #ifndef USE_ZZX_POLY // initialize DoubleCRT using the context
-, affVec(context)
+, affVec(context,context.allPrimes())
 #endif
 {
   // Sanity-check: we need the first dimension to be divisible by 16.
   //OLD: assert( context.zMStar.OrderOf(0) % 16 == 0 );
-  helib::assertEq(context.zMStar.OrderOf(0) % 16, 0l);
+  helib::assertEq(context.zMStar.OrderOf(0) % 16, 0l, "The first dimension need to be divisible by 16");
 
   // Compute the GF2-affine transformation constants
   buildAffineEnc(encAffMat, affVec, ea2);
@@ -171,7 +174,7 @@ void HomAES::setPackingConstants()
 
   long e = ea.getDegree() / 8; // the extension degree
   //OLD: assert(ea.getDegree()==e*8 && e<=(long) sizeof(long));
-  helib::assertEq(ea.getDegree()==e*8, "ea must have degree divisible by 8");
+  helib::assertEq(ea.getDegree(), e*8, "ea must have degree divisible by 8");
   helib::assertTrue(e<=(long) sizeof(long), "extension degree must be at most 8 times sizeof(long)");
 
   GF2EBak bak; bak.save(); // save current modulus (if any)
@@ -218,14 +221,14 @@ void HomAES::homAESenc(vector<Ctxt>& eData, const vector<Ctxt>& aesKey) const
   for (long i=1; i<(long)aesKey.size(); i++) { // apply the AES rounds
 
     // ByteSub
-    if (eData[0].findBaseLevel() < 4) batchRecrypt(eData);
+    if (findBaseLevel(eData[0]) < 4) batchRecrypt(eData);
     invert(eData);     // apply Z -> Z^{-1} to all elements of eData
 #ifdef DEBUG_PRINTOUT
     CheckCtxt(eData[0], "+ After invert");
     //    cerr << " + After invert ";
     //    decryptAndPrint(cerr, eData[0], *dbgKey, *dbgEa);
 #endif
-    if (eData[0].findBaseLevel() < 2) batchRecrypt(eData);
+    if (findBaseLevel(eData[0]) < 2) batchRecrypt(eData);
     for (long j=0; j<(long)eData.size(); j++) { // GF2 affine transformation
       applyLinPolyLL(eData[j], encAffMat, ea2.getDegree());
       eData[j].addConstant(affVec);
@@ -237,7 +240,7 @@ void HomAES::homAESenc(vector<Ctxt>& eData, const vector<Ctxt>& aesKey) const
 #endif
 
     // Apply RowShift/ColMix to each ciphertext
-    if (eData[0].findBaseLevel() < 2) batchRecrypt(eData);
+    if (findBaseLevel(eData[0]) < 2) batchRecrypt(eData);
     if (i<(long)aesKey.size()-1) {
       for (long j=0; j<(long)eData.size(); j++)
 	encRowColTran(eData[j], encLinTran, ea2);
@@ -295,7 +298,7 @@ void HomAES::homAESdec(vector<Ctxt>& eData, const vector<Ctxt>& aesKey) const
     for (long j=0; j<(long)eData.size(); j++) eData[j] -= aesKey[i];
 
     // Apply RowShift/ColMix to each ciphertext
-    if (eData[0].findBaseLevel() < 2) batchRecrypt(eData);
+    if (findBaseLevel(eData[0]) < 2) batchRecrypt(eData);
     //    if (eData[0].log_of_ratio() > (-lvlBits)) batchRecrypt(eData);
     if (i<(long)aesKey.size()-1)
       for (long j=0; j<(long)eData.size(); j++)
@@ -311,7 +314,7 @@ void HomAES::homAESdec(vector<Ctxt>& eData, const vector<Ctxt>& aesKey) const
 #endif
 
     // ByteSub
-    if (eData[0].findBaseLevel() < 2) batchRecrypt(eData);
+    if (findBaseLevel(eData[0]) < 2) batchRecrypt(eData);
     for (long j=0; j<(long)eData.size(); j++) { // GF2 affine transformation
       eData[j].addConstant(affVec);
       applyLinPolyLL(eData[j], decAffMat, ea2.getDegree());
@@ -321,7 +324,7 @@ void HomAES::homAESdec(vector<Ctxt>& eData, const vector<Ctxt>& aesKey) const
     //    cerr << " + After affine ";
     //    decryptAndPrint(cerr, eData[0], *dbgKey, *dbgEa);
 #endif
-    if (eData[0].findBaseLevel() < 4) batchRecrypt(eData);
+    if (findBaseLevel(eData[0]) < 4) batchRecrypt(eData);
      invert(eData); // apply Z -> Z^{-1} to all elements of eData
 #ifdef DEBUG_PRINTOUT
     CheckCtxt(eData[0], "+ After invert");
@@ -440,7 +443,7 @@ static void buildAffine(vector<PolyType>& binMat, PolyType* binVec,
     ea2.encode(zzxMat[j], scratch);       // encode these slots
   }
 #ifndef USE_ZZX_POLY
-  binMat.resize(8,DoubleCRT(ea2.getContext()));
+  binMat.resize(8,DoubleCRT(ea2.getContext(),ea2.getContext().allPrimes()));
   for (long j=0; j<8; j++) binMat[j] = zzxMat[j]; // convert to DoubleCRT
 #endif
 
@@ -478,7 +481,7 @@ static void buildLinEnc(vector<PolyType>& encLinTran,
 #ifdef USE_ZZX_POLY
   encLinTran.resize(6);
 #else
-  encLinTran.resize(6,DoubleCRT(ea2.getContext()));
+  encLinTran.resize(6,DoubleCRT(ea2.getContext(),ea2.getContext().allPrimes()));
 #endif
   for (long i=0; i<3; i++) { // constants for the RowShift/ColMix trans
     for (long j=0; j<blocksPerCtxt; j++) {
@@ -603,7 +606,7 @@ static void buildLinDec(vector<PolyType>& decLinTran,
 #ifdef USE_ZZX_POLY
   decLinTran.resize(8);
 #else
-  decLinTran.resize(8,DoubleCRT(ea2.getContext()));
+  decLinTran.resize(8,DoubleCRT(ea2.getContext(),ea2.getContext().allPrimes()));
 #endif
   for (long i=0; i<4; i++) { // constants for the RowShift/ColMix trans
     for (long j=0; j<blocksPerCtxt; j++) {
@@ -862,4 +865,10 @@ static void unackCtxt(vector<Ctxt>& to, const vector<Ctxt>& from,
       }
     }
   }
+}
+
+// A hack to get this to compile for now
+static long findBaseLevel(const Ctxt& c)
+{
+  return long(c.naturalSize() / 23); // FIXME: replace 23 by something else
 }
