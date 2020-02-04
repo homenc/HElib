@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -129,26 +129,24 @@ public:
 // For death tests naming convention
 using DeathTestArgMapCmdLine = TestArgMapCmdLine;
 
-TEST_F(DeathTestArgMapCmdLine, documentationShownIfHelpSelectedCmdLine)
+TEST_F(DeathTestArgMapCmdLine, documentationShownIfDefaultHelpSelectedCmdLine)
 {
+  mockCmdLineArgs("./prog --help");
+
+  helib::ArgMap amap1;
+
+  EXPECT_EXIT(amap1.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              "^Usage");
+
+  // And again got '-h'
   mockCmdLineArgs("./prog -h");
 
-  struct Opts
-  {
-    int arg1 = 5;
-    float arg2 = 34.5;
-    std::string arg3 = "Hello World";
-  } opts;
+  helib::ArgMap amap2;
 
-  helib::ArgMap amap;
-  amap.arg("alice", opts.arg1, "message string")
-      .arg("bob", opts.arg2, "message string")
-      // This now should not show default
-      .arg("chris", opts.arg3, "message string", "");
-
-  EXPECT_EXIT(amap.parse(argc, argv),
+  EXPECT_EXIT(amap2.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Usage.*");
+              "^Usage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine, documentationShownIfCustomHelpSelectedCmdLine)
@@ -171,7 +169,7 @@ TEST_F(DeathTestArgMapCmdLine, documentationShownIfCustomHelpSelectedCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Usage.*");
+              "^Usage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine,
@@ -195,7 +193,7 @@ TEST_F(DeathTestArgMapCmdLine,
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Usage.*");
+              "^Usage.*");
 }
 
 TEST_F(TestArgMapSampleFile, documentationShownIfHelpSelectedFromFile)
@@ -289,7 +287,7 @@ TEST_F(DeathTestArgMapCmdLine, illFormedCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument 'alic'\nUsage.*");
+              "^Unrecognised argument 'alic'\nUsage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine, danglingSeparatorCmdLine)
@@ -309,7 +307,7 @@ TEST_F(DeathTestArgMapCmdLine, danglingSeparatorCmdLine)
   EXPECT_EXIT(
       amap.parse(argc, argv),
       ::testing::ExitedWithCode(EXIT_FAILURE),
-      "Dangling value for named argument 'alice' after separator.\nUsage.*");
+      "^Dangling value for named argument 'alice' after separator.\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, danglingSeparatorFromFile)
@@ -371,7 +369,7 @@ TEST_F(DeathTestArgMapCmdLine, nullptrAndEmptyStringsForNoDefaultsCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Usage.*\n.*string\n.*bob.*string\n$");
+              "^Usage.*\n.*string\n.*bob.*string\n$");
 }
 
 TEST_F(TestArgMapCmdLine, namedArgsCmdLine)
@@ -598,7 +596,7 @@ TEST_F(DeathTestArgMapCmdLine, unrecognisedArgsCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument 'lice'\nUsage.*");
+              "^Unrecognised argument 'lice'\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, unrecognisedArgsFromFile)
@@ -691,10 +689,10 @@ TEST_F(DeathTestArgMapCmdLine, wrongSeparatorNonWhitespaceCaseCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument 'alice:1'\nUsage.*");
+              "^Unrecognised argument 'alice:1'\nUsage.*");
 }
 
-TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseiCmdLine)
+TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseCmdLine)
 {
   mockCmdLineArgs("./prog alice=1 bob=7.5 chris=Hi");
 
@@ -713,7 +711,7 @@ TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseiCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument 'alice=1'\nUsage.*");
+              "^Unrecognised argument 'alice=1'\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, changingSeparatorFromFile)
@@ -745,7 +743,7 @@ TEST_F(TestArgMapSampleFile, changingSeparatorFromFile)
   EXPECT_EQ(opts.arg3, "Hi");
 }
 
-TEST_F(TestArgMapCmdLine, compulsoryArgumentGivenCmdLine)
+TEST_F(TestArgMapCmdLine, requiredNamedArgumentGivenCmdLine)
 {
   mockCmdLineArgs("./prog alice=1 bob=7.5");
 
@@ -769,7 +767,7 @@ TEST_F(TestArgMapCmdLine, compulsoryArgumentGivenCmdLine)
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(TestArgMapSampleFile, compulsoryArgumentGivenFromFile)
+TEST_F(TestArgMapSampleFile, requiredNamedArgumentGivenFromFile)
 {
   std::ostringstream oss;
   oss << "alice=1\n"
@@ -798,7 +796,47 @@ TEST_F(TestArgMapSampleFile, compulsoryArgumentGivenFromFile)
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(DeathTestArgMapCmdLine, compulsoryArgumentNotGivenCmdLine)
+TEST_F(DeathTestArgMapCmdLine, requiredPositionalNotGivenArgsCmdLine)
+{
+  mockCmdLineArgs("./prog");
+
+  struct Opts
+  {
+    std::string dave;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.required().positional().arg("dave", opts.dave, "message string", "");
+
+  EXPECT_EXIT(amap.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              R"(^Required argument\(s\) not given:.*)");
+}
+
+TEST_F(DeathTestArgMapCmdLine, tooManyPositionalArgsCmdLine)
+{
+  mockCmdLineArgs("./prog dave1 notEve bob5");
+
+  struct Opts
+  {
+    std::string dave;
+    std::string eve;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.required()
+      .positional()
+      .arg("dave", opts.dave, "message string", "")
+      .arg("eve", opts.eve, "message string", "");
+
+  EXPECT_EXIT(amap.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              ("^Unrecognised argument 'bob5'\n"
+               "There could be too many positional arguments\n"
+               "Usage.*"));
+}
+
+TEST_F(DeathTestArgMapCmdLine, requiredNamedArgumentNotGivenCmdLine)
 {
   mockCmdLineArgs("./prog alice=1");
 
@@ -818,10 +856,10 @@ TEST_F(DeathTestArgMapCmdLine, compulsoryArgumentNotGivenCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              R"(Required argument\(s\) not given:.*)");
+              R"(^Required argument\(s\) not given:.*)");
 }
 
-TEST_F(TestArgMapSampleFile, compulsoryArgumentNotGivenFromFile)
+TEST_F(TestArgMapSampleFile, requiredArgumentNotGivenFromFile)
 {
   std::ostringstream oss;
   oss << "alice=1\n";
@@ -1142,9 +1180,29 @@ TEST_F(TestArgMapCmdLine, requiredThenOptionalPositionalArgsCmdLine)
   EXPECT_EQ(opts.eve, "");
 }
 
+TEST_F(TestArgMapCmdLine, positionalArgsPassedWithNameOfArgCmdLine)
+{
+  mockCmdLineArgs("./prog dave notEve");
+
+  struct Opts
+  {
+    std::string dave;
+    std::string eve;
+  } opts;
+
+  helib::ArgMap()
+      .required()
+      .positional()
+      .arg("dave", opts.dave, "message string", "")
+      .arg("eve", opts.eve, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(opts.dave, "dave");
+  EXPECT_EQ(opts.eve, "notEve");
+}
+
 TEST(TestArgMap, secondTimeOptionalPositionalArgs)
 {
-
   struct Opts
   {
     int arg1;
