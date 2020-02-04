@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -131,21 +131,18 @@ ArgMap& ArgMap::diagnostics(std::ostream& ostrm)
   return *this;
 }
 
-static void
-printDiagnostics(std::ostream* ostrm_ptr,
-                 const std::forward_list<std::string>& args,
-                 const std::unordered_set<std::string>& required_set)
+void ArgMap::printDiagnostics(const std::forward_list<std::string>& args) const
 {
-  if (ostrm_ptr != nullptr) {
+  if (this->diagnostics_strm != nullptr) {
     // argv as seen by ArgMap
-    *ostrm_ptr << "Args pre-parse:\n";
+    *this->diagnostics_strm << "Args pre-parse:\n";
     for (const auto& e : args) {
-      *ostrm_ptr << e << std::endl;
+      *this->diagnostics_strm << e << std::endl;
     }
     // required set
-    *ostrm_ptr << "Required args set:\n";
+    *this->diagnostics_strm << "Required args set:\n";
     for (const auto& e : required_set) {
-      *ostrm_ptr << e << std::endl;
+      *this->diagnostics_strm << e << std::endl;
     }
   }
 }
@@ -242,11 +239,16 @@ void ArgMap::simpleParse(const std::forward_list<std::string>& args,
       // never a recognised token.
       std::shared_ptr<ArgProcessor> pos_ap = map[*pos_args_it];
       if (!pos_ap->process(*it))
-        throw helib::RuntimeError(
+        throw helib::LogicError(
             "Positional name does not match a ArgMap name.");
+      // Remove from required_set (if it is there)
+      this->required_set.erase(*pos_args_it);
       ++pos_args_it;
     } else {
-      stop("Unrecognised argument \'" + token + "\'");
+      std::string msg = "Unrecognised argument \'" + token + "\'";
+      if (!this->positional_args_list.empty())
+        msg += "\nThere could be too many positional arguments";
+      stop(msg);
     }
   }
 }
@@ -263,7 +265,7 @@ ArgMap& ArgMap::parse(int argc, char** argv)
   // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
 
-  printDiagnostics(this->diagnostics_strm, args, this->required_set);
+  printDiagnostics(args);
 
   simpleParse(args);
 
@@ -314,7 +316,7 @@ ArgMap& ArgMap::parse(const std::string& filepath)
   // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
 
-  printDiagnostics(this->diagnostics_strm, args, this->required_set);
+  printDiagnostics(args);
 
   simpleParse(args, false, [&filepath](const std::string& msg) {
     throw helib::RuntimeError("Could not parse params file: " + filepath +

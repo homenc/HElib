@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -33,7 +33,7 @@
 
 namespace helib {
 
- /**
+/**
  * @brief Basic class for arg parsing.
  * Example use:
  * @code
@@ -106,7 +106,9 @@ private:
     {
       return this->positional_args.end();
     }
-  };
+
+    bool empty() { return this->positional_args.empty(); }
+  }; // end of PositionalArgsList
 
   /* ArgProcessor: A virtual base class that acts as the interface to hold
    * args in a map of different types.
@@ -137,7 +139,7 @@ private:
       return true;
     }
 
-    // For non string types. At the mercy of stringstream.
+    // For non-string types, at the mercy of stringstream.
     template <
         typename U = T,
         typename S,
@@ -173,7 +175,7 @@ private:
 
   PositionalArgsList positional_args_list;
 
-  std::unordered_set<std::string> help_tokens = {"-h, --help"};
+  std::unordered_set<std::string> help_tokens = {"-h", "--help"};
 
   // Modes and other flags.
   bool required_mode = false;
@@ -184,6 +186,9 @@ private:
 
   // Set for tracking required.
   std::unordered_set<std::string> required_set;
+
+  // Private for diagnostics
+  void printDiagnostics(const std::forward_list<std::string>& args) const;
 
   //! @brief Arg parsing function
   /**
@@ -236,7 +241,9 @@ public:
 
     if (this->arg_type == ArgType::POSITIONAL) {
       this->positional_args_list.insert(name, !this->required_mode);
-    } else if (this->required_mode) {
+    }
+
+    if (this->required_mode) {
       this->required_set.insert(name);
     }
 
@@ -304,7 +311,8 @@ public:
   ArgMap& parse(int argc, char** argv);
 
   /**
-   * @brief Parse the config file
+   * @brief Parse the configuration/parameters file
+   * Parsing a configuration file only functions with named arguments
    * Parse the config file
    * Throws RuntimeError on failure
    * @param filepath the config file path
