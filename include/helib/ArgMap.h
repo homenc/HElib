@@ -16,8 +16,9 @@
 #include <iostream>
 #include <forward_list>
 #include <initializer_list>
-#include <unordered_set>
+#include <set>
 #include <unordered_map>
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <sstream>
@@ -71,7 +72,8 @@ private:
     NAMED,
     TOGGLE_TRUE,
     TOGGLE_FALSE,
-    POSITIONAL
+    POSITIONAL,
+    DOTS
   };
 
   // requires latching logic.
@@ -120,9 +122,9 @@ private:
     virtual bool process(const std::string& s) = 0;
   }; // end of ArgProcessor
 
-  /* ArgProcessorDerived: templated subclasses */
-  template <class T>
-  class ArgProcessorDerived : public ArgProcessor
+  /* ArgProcessorValue: templated subclasses */
+  template <typename T>
+  class ArgProcessorValue : public ArgProcessor
   {
 
   private:
@@ -132,7 +134,7 @@ private:
     // For strings. Avoids a stream breaking on whitespace.
     template <typename U = T,
               typename S,
-              typename std::enable_if<std::is_same<U, S>::value, int>::type = 0>
+              typename std::enable_if_t<std::is_same<U, S>::value, int> = 0>
     bool do_process(const S& s)
     {
       *value = s;
@@ -143,11 +145,11 @@ private:
     template <
         typename U = T,
         typename S,
-        typename std::enable_if<!std::is_same<U, S>::value, int>::type = 0>
+        typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
     bool do_process(const S& s)
     {
-      std::stringstream ss(s);
-      return bool(ss >> *value);
+      std::istringstream iss(s);
+      return bool(iss >> *value);
     }
 
   public:
@@ -155,17 +157,61 @@ private:
 
     bool process(const std::string& s) override { return this->do_process(s); }
 
-    explicit ArgProcessorDerived(T* v, ArgType at) : value(v), arg_type(at) {}
-  }; // end of ArgProcessorDerived
+    explicit ArgProcessorValue(T* v, ArgType at) : value(v), arg_type(at) {}
+  }; // end of ArgProcessorValue
+
+  template <typename C>
+  class ArgProcessorContainer : public ArgProcessor
+  {
+
+  private:
+    C* container;
+    ArgType arg_type = ArgType::DOTS;
+
+    using T = typename C::value_type;
+
+    // For strings. Avoids a stream breaking on whitespace.
+    template <typename U = T,
+              typename S,
+              typename std::enable_if_t<std::is_same<U, S>::value, int> = 0>
+    bool do_process(const S& s)
+    {
+      container->push_back(s);
+      return true;
+    }
+
+    // For non-string types, at the mercy of stringstream.
+    template <
+        typename U = T,
+        typename S,
+        typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
+    bool do_process(const S& s)
+    {
+      std::istringstream iss(s);
+      U tmp_value;
+      bool rt = (iss >> tmp_value);
+      container->push_back(tmp_value);
+      return rt;
+    }
+
+  public:
+    ArgType getArgType() override { return arg_type; }
+
+    bool process(const std::string& s) override { return this->do_process(s); }
+
+    explicit ArgProcessorContainer(C* c) : container(c) {}
+
+  }; // end of ArgProcessorContainer
 
   char kv_separator = '=';
   std::string progname;
+  std::string dots_name;
 
   // Track addresses to stop assigning same variable to more than one .arg(...)
-  std::unordered_set<void*> addresses_used;
+  std::set<void*> addresses_used;
 
   // Track what has been called previously whilst parsing.
-  std::unordered_set<std::string> previous_call_set;
+  std::set<std::string> previous_call_set;
 
   // Store the args.
   std::unordered_map<std::string, std::shared_ptr<ArgProcessor>> map;
@@ -175,17 +221,23 @@ private:
 
   PositionalArgsList positional_args_list;
 
-  std::unordered_set<std::string> help_tokens = {"-h", "--help"};
+  std::set<std::string> help_tokens = {"-h", "--help"};
 
   // Modes and other flags.
   bool required_mode = false;
+  bool dots_enabled = false;
   bool named_args_only = true;
   ArgType arg_type = ArgType::NAMED;
+
+  std::unique_ptr<ArgProcessor> dots_ap;
 
   std::ostream* diagnostics_strm = nullptr;
 
   // Set for tracking required.
-  std::unordered_set<std::string> required_set;
+  std::set<std::string> required_set;
+
+  // Set for tracking optional.
+  std::set<std::string> optional_set;
 
   // Private for diagnostics
   void printDiagnostics(const std::forward_list<std::string>& args) const;
@@ -220,31 +272,47 @@ public:
    * default value
    * @return A reference to the modified ArgMap object
    */
-  template <class T>
+  template <typename T>
   ArgMap& arg(const char* name, T& value)
   {
+    const std::string name_str(name);
+
+    // trying to add empty or whitespace name?
+    helib::assertTrue<helib::LogicError>(
+        !name_str.empty() && std::none_of(name_str.begin(),
+                                          name_str.end(),
+                                          [](unsigned char c) {
+                                            return std::isspace(c);
+                                          }),
+        "Attempting to register an empty string or string with whitespace");
+
     // has this name already been added?
-    helib::assertTrue<helib::RuntimeError>(
-        map[name] == nullptr,
-        "Key already in arg map (key: " + std::string(name) + ")");
+    helib::assertTrue<helib::LogicError>(
+        map[name] == nullptr, "Key already in arg map (key: " + name_str + ")");
 
     // have we seen this addr before?
-    helib::assertEq<helib::RuntimeError>(
-        addresses_used.count(&value),
-        0ul,
-        "Attempting to register variable twice");
+    helib::assertEq<helib::LogicError>(addresses_used.count(&value),
+                                       0ul,
+                                       "Attempting to register variable twice");
 
     addresses_used.insert(&value);
 
     map[name] = std::shared_ptr<ArgProcessor>(
-        new ArgProcessorDerived<T>(&value, this->arg_type));
+        new ArgProcessorValue<T>(&value, this->arg_type));
 
     if (this->arg_type == ArgType::POSITIONAL) {
       this->positional_args_list.insert(name, !this->required_mode);
     }
 
     if (this->required_mode) {
+      // The user should make toggles correct in the code with optional
+      if (this->arg_type == ArgType::TOGGLE_TRUE ||
+          this->arg_type == ArgType::TOGGLE_FALSE)
+        throw helib::LogicError("Toggle argument types cannot be required.");
       this->required_set.insert(name);
+    } else {
+      // It is optional
+      this->optional_set.insert(name);
     }
 
     return *this;
@@ -262,13 +330,18 @@ public:
    * @param doc1 Description of the argument used when displaying usage
    * @return A reference to the modified ArgMap object
    */
-  template <class T>
-  ArgMap& arg(const char* name, T& value, const char* doc1)
+  template <typename T>
+  ArgMap& arg(const char* name, T& value, const char* doc)
   {
     arg(name, value);
-    docStream << "\t" << name << " \t" << doc1 << "  [ default=" << value
-              << " ]"
-              << "\n";
+
+    std::string named_ext;
+    if (this->arg_type == ArgType::NAMED) {
+      named_ext.append(1, this->kv_separator).append("<v>");
+    }
+
+    docStream << "\t" << name << named_ext << "\t" << doc
+              << "\t[ default=" << value << " ]\n";
 
     return *this;
   }
@@ -286,16 +359,38 @@ public:
    * @param info The default value description (ignored if nullptr or "")
    * @return A reference to the modified ArgMap object
    */
-  template <class T>
-  ArgMap& arg(const char* name, T& value, const char* doc1, const char* info)
+  template <typename T>
+  ArgMap& arg(const char* name, T& value, const char* doc, const char* info)
   {
     arg(name, value);
-    docStream << "\t" << name << " \t" << doc1;
+    docStream << "\t" << name << " \t" << doc;
     if (info != nullptr && info[0] != '\0')
-      docStream << "  [ default=" << info << " ]"
-                << "\n";
+      docStream << "  [ default=" << info << " ]\n";
     else
       docStream << "\n";
+
+    return *this;
+  }
+
+  /**
+   * @brief Adds variable number of positional arg types after defined arg types
+   * are exhausted. These are treated as optional.
+   * @param container holds the varaible positional args. It must have a
+   * push_back method for insertion
+   * @return A reference to the ArgMap object
+   */
+  template <typename C>
+  ArgMap& dots(C& container, const char* name)
+  {
+    if (this->dots_enabled)
+      throw helib::LogicError(".dots() can only be called once.");
+
+    this->dots_enabled = true;
+    this->dots_name = name;
+
+    // Have it out of the map as it may be called many times and has no
+    // name/token.
+    this->dots_ap = std::make_unique<ArgProcessorContainer<C>>(&container);
 
     return *this;
   }

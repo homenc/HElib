@@ -22,8 +22,8 @@ namespace helib {
 // Three functions strip whitespaces before and after strings.
 static void lstrip(std::string& s)
 {
-  auto it =
-      std::find_if(s.begin(), s.end(), [](int c) { return !std::isspace(c); });
+  auto it = std::find_if(
+      s.begin(), s.end(), [](unsigned char c) { return !std::isspace(c); });
 
   s.erase(s.begin(), it);
 }
@@ -31,7 +31,7 @@ static void lstrip(std::string& s)
 static void rstrip(std::string& s)
 {
   auto it = std::find_if(
-      s.rbegin(), s.rend(), [](int c) { return !std::isspace(c); });
+      s.rbegin(), s.rend(), [](unsigned char c) { return !std::isspace(c); });
 
   s.erase(it.base(), s.end());
 }
@@ -44,17 +44,44 @@ static void strip(std::string& s)
 
 ArgMap& ArgMap::note(const std::string& s)
 {
-  docStream << "\t\t   " << s << "\n";
+  docStream << "\t\t" << s << "\n";
   return *this;
+}
+
+static const std::string str_if_cond(bool cond, const char sep, const char* txt)
+{
+  std::string ext;
+  if (cond)
+    ext.append(1, sep).append(txt);
+
+  return ext;
 }
 
 void ArgMap::usage(const std::string& msg) const
 {
   if (!msg.empty())
     std::cerr << msg << std::endl;
-  std::cerr << "Usage: " << this->progname << " [ name" << this->kv_separator
-            << "value ]...\n";
-  std::cerr << doc();
+
+  std::cerr << "Usage: " << this->progname;
+  for (const auto& n : this->optional_set) {
+    bool named = (this->map.at(n)->getArgType() == ArgType::NAMED);
+    std::cerr << " [" << n << str_if_cond(named, this->kv_separator, "<v>")
+              << "]";
+  }
+
+  for (const auto& n : this->required_set) {
+    bool named = (this->map.at(n)->getArgType() == ArgType::NAMED);
+    std::cerr << " " << n << str_if_cond(named, this->kv_separator, "<v>");
+  }
+
+  if (this->dots_enabled)
+    std::cerr << " [" << this->dots_name << " ...]"
+              << "\n";
+  else
+    std::cerr << "\n";
+
+  std::cerr << doc() << std::endl;
+
   exit(EXIT_FAILURE);
 }
 
@@ -142,6 +169,11 @@ void ArgMap::printDiagnostics(const std::forward_list<std::string>& args) const
     // required set
     *this->diagnostics_strm << "Required args set:\n";
     for (const auto& e : required_set) {
+      *this->diagnostics_strm << e << std::endl;
+    }
+    // optional set
+    *this->diagnostics_strm << "Optional args set:\n";
+    for (const auto& e : optional_set) {
       *this->diagnostics_strm << e << std::endl;
     }
   }
@@ -244,6 +276,8 @@ void ArgMap::simpleParse(const std::forward_list<std::string>& args,
       // Remove from required_set (if it is there)
       this->required_set.erase(*pos_args_it);
       ++pos_args_it;
+    } else if (this->dots_enabled) {
+      this->dots_ap->process(token);
     } else {
       std::string msg = "Unrecognised argument \'" + token + "\'";
       if (!this->positional_args_list.empty())
