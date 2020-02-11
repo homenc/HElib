@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,6 +21,14 @@
 namespace helib {
 
 /**
+ * @brief Returns a number as a vector of bits with LSB on the left.
+ * @param num Number to be converted.
+ * @param bitSize Number of bits of the input and output.
+ * @return Bit vector representation of num.
+ **/
+std::vector<long> longToBitVector(long num, long bitSize);
+
+/**
  * @brief Adds two numbers in binary representation where each ciphertext of the input vector contains a bit.
  * @param sum result of the addition operation.
  * @param lhs left hand side of the addition.
@@ -32,6 +40,26 @@ void
 addTwoNumbers(CtPtrs& sum, const CtPtrs& lhs, const CtPtrs& rhs,
               long sizeLimit=0, std::vector<zzX>* unpackSlotEncoding=nullptr);
 
+/**
+ * @brief Negates a number in binary 2's compelement representation.
+ * @param negation Reference to the negated number that will be populated.
+ * @param input Number to be negated.
+ * @note `input` will be treated as a number in 2's complement.
+ * @note `input` must not alias negation.
+ **/
+void negateBinary(CtPtrs& negation, const CtPtrs& input);
+
+/**
+ * @brief Subtracts `rhs` from `lhs` where `lhs`, `rhs` are in 2's complement.
+ * @param difference Reference to the difference post subtraction.
+ * @param lhs Left hand side of subtraction.
+ * @param rhs Right hand side of subtraction.
+ * @param unpackSlotEncoding vector of constants for unpacking, as used in bootstrapping.
+ * @note `lhs` and `rhs` must have the same size.
+ **/
+void
+subtractBinary(CtPtrs& difference, const CtPtrs& lhs, const CtPtrs& rhs,
+              std::vector<zzX>* unpackSlotEncoding=nullptr);
 /**
  * @brief Add together up to fifteen {0,1} integers, producing a 4-bit counter.
  * @param out 4-bit counter to be outputed.

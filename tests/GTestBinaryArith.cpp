@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -486,6 +486,21 @@ TEST_P(GTestBinaryArith, product)
 #endif
 };
 
+// Considering bits as a vector of bits, return the value it represents when
+// interpreted as a bitSize-bit 2's complement number.
+// For example, bitSetToLong(0b10111, 5) = -9.
+long bitSetToLong(long bits, long bitSize)
+{
+  helib::assertTrue<helib::InvalidArgument>(bitSize >= 0, "bitSize must be non-negative.");
+  long result = 0;
+  for(long multiplier = 1; bitSize > 0; bits >>= 1, multiplier <<= 1)
+    if(--bitSize != 0)
+      result += (bits & 1) * multiplier;
+    else
+      result -= (bits & 1) * multiplier;
+  return result;
+}
+
 TEST_P(GTestBinaryArith, add)
 {
   // Randomly generate a pair of numbers of a specified bit size and then
@@ -660,6 +675,85 @@ TEST_P(GTestBinaryArith, addManyNumbers)
     for (long i = 1; i < num_summands; ++i)
       std::cout << "+" << summands_data[i];
     std::cout << "=" << decrypted_result[0] << std::endl;
+  }
+}
+
+TEST_P(GTestBinaryArith, negateNegatesCorrectly)
+{
+  // Randomly generate a number in 2's complement and negate it.
+
+  const helib::EncryptedArray& ea = *context.ea;
+  unsigned long input_data = NTL::RandomBits_long(bitSize);
+
+  long mask = ((1L << bitSize) - 1);
+  long expected_result = ( (~input_data) + 1 ) & mask;
+  expected_result = bitSetToLong(expected_result, bitSize);
+
+  std::vector<helib::Ctxt> encrypted_data(bitSize, helib::Ctxt(secKey));
+
+  for (long i = 0; i < bitSize; i++) {
+    secKey.Encrypt(encrypted_data[i], NTL::ZZX((input_data >> i) & 1));
+    if (bootstrap) { // If bootstrapping then modulo down to a lower level.
+      encrypted_data[i].bringToSet(context.getCtxtPrimes(5));
+    }
+  }
+
+  std::vector<long> decrypted_result;
+  std::vector<helib::Ctxt> result_vector(bitSize, helib::Ctxt(secKey));
+  {
+    helib::CtPtrs_vectorCt output_wrapper(result_vector);
+    helib::negateBinary(output_wrapper,
+                        helib::CtPtrs_vectorCt(encrypted_data));
+    helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea, true);
+  }
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long num : decrypted_result) {
+    EXPECT_EQ(num, expected_result);
+  }
+}
+
+TEST_P(GTestBinaryArith, subtractSubtractsCorrectly)
+{
+  // Randomly generate two numbers in 2's complement and subtract one from the other.
+  const helib::EncryptedArray& ea = *context.ea;
+  unsigned long minuend_data = NTL::RandomBits_long(bitSize);
+  unsigned long subtrahend_data = NTL::RandomBits_long(bitSize);
+
+  long mask = ((1L << bitSize) - 1);
+
+  // Do the bitSize-bit subtraction manually by negating the subtrahend, adding, and masking.
+  long expected_result = ( minuend_data + (( (~subtrahend_data) + 1 ) & mask)) & mask;
+  expected_result = bitSetToLong(expected_result, bitSize);
+
+  std::vector<helib::Ctxt> encrypted_minuend(bitSize, helib::Ctxt(secKey));
+  std::vector<helib::Ctxt> encrypted_subtrahend(bitSize, helib::Ctxt(secKey));
+
+  for (long i = 0; i < bitSize; i++) {
+    secKey.Encrypt(encrypted_minuend[i], NTL::ZZX((minuend_data >> i) & 1));
+    if (bootstrap) { // If bootstrapping then modulo down to a lower level.
+      encrypted_minuend[i].bringToSet(context.getCtxtPrimes(5));
+    }
+  }
+  for (long i = 0; i < bitSize; i++) {
+    secKey.Encrypt(encrypted_subtrahend[i], NTL::ZZX((subtrahend_data >> i) & 1));
+    if (bootstrap) { // If bootstrapping then modulo down to a lower level.
+      encrypted_subtrahend[i].bringToSet(context.getCtxtPrimes(5));
+    }
+  }
+  std::vector<long> decrypted_result;
+  std::vector<helib::Ctxt> result_vector(bitSize, helib::Ctxt(secKey));
+  {
+    helib::CtPtrs_vectorCt output_wrapper(result_vector);
+    helib::subtractBinary(output_wrapper,
+                          helib::CtPtrs_vectorCt(encrypted_minuend),
+                          helib::CtPtrs_vectorCt(encrypted_subtrahend));
+    helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea, true);
+  }
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long num : decrypted_result) {
+    EXPECT_EQ(num, expected_result);
   }
 }
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -440,6 +440,16 @@ void packedRecrypt(const CtPtrs& a, const CtPtrs& b,
   packedRecrypt(ab, *unpackSlotEncoding, *(ct->getContext().ea));
 }
 
+// Return a number as a vector of bits with little endian-ness
+std::vector<long> longToBitVector(long num, long bitSize)
+{
+  helib::assertTrue<helib::InvalidArgument>(bitSize >= 0, "bitSize must be non-negative.");
+  std::vector<long> result;
+  for(long i = 0; i < bitSize; num >>=1, ++i)
+    result.push_back(num & 1);
+  return result;
+}
+
 //! Add two integers in binary representation
 void addTwoNumbers(CtPtrs& sum, const CtPtrs& lhs, const CtPtrs& rhs,
                    long sizeLimit, std::vector<zzX>* unpackSlotEncoding)
@@ -465,6 +475,37 @@ void addTwoNumbers(CtPtrs& sum, const CtPtrs& lhs, const CtPtrs& rhs,
     }
   }
   addPlan.apply(sum, lhs, rhs, sizeLimit);    // perform the actual addition
+}
+
+// Negate a binary number that is already in 2's complement. Note: input must
+// not alias negation.
+void negateBinary(CtPtrs& negation, const CtPtrs& input)
+{
+  std::vector<Ctxt> bitFlippedInput;
+  vecCopy(bitFlippedInput, input);
+  // First flip all bits of the input.
+  for (auto& bit : bitFlippedInput)
+    bit.addConstant(NTL::ZZX(1L));
+  // Deep copy of input into negation.
+  vecCopy(negation, bitFlippedInput);
+  // Now add one.
+  negation[0]->addConstant(NTL::ZZX(1L));
+  // Calculate the resultant carry bits.
+  std::vector<Ctxt>& carryBits = bitFlippedInput;
+  incrementalProduct(carryBits);
+  for (long i = 1; i < bitFlippedInput.size(); ++i)
+    *(negation[i]) += carryBits[i-1];
+}
+
+// Subtract rhs from lhs and put the result in difference.
+void subtractBinary(CtPtrs& difference, const CtPtrs& lhs, const CtPtrs& rhs, std::vector<zzX>* unpackSlotEncoding)
+{
+  assertEq<RuntimeError>(lhs.size(), rhs.size(), "Size of lhs and rhs must be the same.");
+  // Negate the rhs and then use the existing add function.
+  std::vector<Ctxt> negated_rhs(rhs.size(), *rhs[0]);
+  CtPtrs_vectorCt negated_wrapper(negated_rhs);
+  negateBinary(negated_wrapper, rhs);
+  addTwoNumbers(difference, lhs, negated_wrapper, lhs.size(), unpackSlotEncoding);
 }
 
 // Return pointers to the three inputs, ordered by size
