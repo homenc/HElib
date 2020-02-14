@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -14,11 +14,6 @@
  * @brief Implementing integer comparison in binary representation.
  */
 #include <algorithm>
-// #include <numeric>
-// #include <climits>
-// #include <map>
-// #include <atomic>
-// #include <mutex>          // std::mutex, std::unique_lock
 
 #include <NTL/BasicThreadPool.h>
 #include <helib/binaryArith.h>
@@ -36,9 +31,9 @@ namespace helib {
 void runningSums(CtPtrs& v)
 {
   FHE_TIMER_START;
-  for (long i=lsize(v)-1; i>0; i--) *v[i-1] += *v[i];
+  for (long i = lsize(v) - 1; i > 0; i--)
+    *v[i - 1] += *v[i];
 }
-
 
 // a recursive function that computes
 //      e*[i] = prod_{j>=i} e[i]  and  g*[i] = e*[i+1] \cdot g[i]
@@ -48,38 +43,52 @@ void runningSums(CtPtrs& v)
 static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
 {
   long n = lsize(e);
-  if (n <= 1) return; // nothing to do
+  if (n <= 1)
+    return; // nothing to do
 #ifdef DEBUG_PRINTOUT
-  std::cout << "compProducts(g["<<g.start<<".."<<(g.start+g.sz-1)<<"],e["
-       << e.start<<".."<<(e.start+e.sz-1)<<"])" << std::endl;
+  std::cout << "compProducts(g[" << g.start << ".." << (g.start + g.sz - 1)
+            << "],e[" << e.start << ".." << (e.start + e.sz - 1) << "])"
+            << std::endl;
 #endif
 
   // split the array in two, second part has size the largest 2^l < n,
   // and first part is the rest
 
-  long ell = NTL::NumBits(n-1) -1; // n/2 <= 2^l < n
-  long n1 = n - (1UL<<ell);        // n1 \in [1, n/2]
+  long ell = NTL::NumBits(n - 1) - 1; // n/2 <= 2^l < n
+  long n1 = n - (1UL << ell);         // n1 \in [1, n/2]
 
   // Call the recursive procedure separately on the first and second parts
-  compProducts(CtPtrs_slice(e,0,n1), CtPtrs_slice(g,0,n1));      // first half
-  compProducts(CtPtrs_slice(e,n1,n-n1), CtPtrs_slice(g,n1,n-n1));// second half
+  compProducts(CtPtrs_slice(e, 0, n1), CtPtrs_slice(g, 0, n1)); // first half
+  compProducts(CtPtrs_slice(e, n1, n - n1),
+               CtPtrs_slice(g, n1, n - n1)); // second half
 
   // Multiply the first product in the 2nd part into every product in the 1st
-  NTL_EXEC_RANGE(1+n1, first, last)
-  for (long i=first; i<last; i++) {
-    if (i==0)               e[0]->multiplyBy(*e[n1]);
-    else if (i-1<g.size()) g[i-1]->multiplyBy(*e[n1]);
+  NTL_EXEC_RANGE(1 + n1, first, last)
+  for (long i = first; i < last; i++) {
+    if (i == 0)
+      e[0]->multiplyBy(*e[n1]);
+    else if (i - 1 < g.size())
+      g[i - 1]->multiplyBy(*e[n1]);
   }
   NTL_EXEC_RANGE_END
 #ifdef DEBUG_PRINTOUT
-  std::cout << " g["<<g.start<<".."<<(g.start+g.sz-1)<<"], "
-       << " e["<<e.start<<".."<<(e.start+e.sz-1)<<"]:" << std::endl;
-  for (long i=0; i<g.size(); i++)
-    decryptAndPrint((std::cout<<"   g["<<(i+g.start)<<"] ("<<((void*)g[i])<<"): "),
-                    *g[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
-  for (long i=0; i<e.size(); i++)
-    decryptAndPrint((std::cout<<"   e["<<(i+e.start)<<"] ("<<((void*)e[i])<<"): "),
-                    *e[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
+  std::cout << " g[" << g.start << ".." << (g.start + g.sz - 1) << "], "
+            << " e[" << e.start << ".." << (e.start + e.sz - 1)
+            << "]:" << std::endl;
+  for (long i = 0; i < g.size(); i++)
+    decryptAndPrint((std::cout << "   g[" << (i + g.start) << "] ("
+                               << ((void*)g[i]) << "): "),
+                    *g[i],
+                    *dbgKey,
+                    *dbgEa,
+                    FLAG_PRINT_POLY);
+  for (long i = 0; i < e.size(); i++)
+    decryptAndPrint((std::cout << "   e[" << (i + e.start) << "] ("
+                               << ((void*)e[i]) << "): "),
+                    *e[i],
+                    *dbgKey,
+                    *dbgEa,
+                    FLAG_PRINT_POLY);
 
   std::cout << std::endl;
 #endif
@@ -93,7 +102,8 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
   FHE_TIMER_START;
   const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
   const Context& context = zeroCtxt.getContext();
-  DoubleCRT one(context, context.allPrimes()); one += 1L;
+  DoubleCRT one(context, context.allPrimes());
+  one += 1L;
 
   resize(aeqb, lsize(b), zeroCtxt);
   resize(agtb, lsize(a), zeroCtxt);
@@ -102,7 +112,7 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
   FHE_NTIMER_START(compEqGt1);
   long aSize = lsize(a);
   NTL_EXEC_RANGE(aSize, first, last)
-  for (long i=first; i<last; i++) {
+  for (long i = first; i < last; i++) {
     *aeqb[i] = *b[i];               // b
     aeqb[i]->addConstant(one, 1.0); // b+1
     *agtb[i] = *aeqb[i];            // b+1
@@ -115,50 +125,62 @@ compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
   // NOTE: Usually there isn't much gain in multi-threading the loop below,
   //    but computing b[i] can be expensive in some implementations of CtPtrs
   FHE_NTIMER_START(compEqGt2);
-  if (lsize(b)-aSize >1) {
-    NTL_EXEC_RANGE(lsize(b)-aSize, first, last)
-    for (long i=first; i<last; i++) {
-      *aeqb[i+aSize] = *b[i+aSize];         // b
-      aeqb[i+aSize]->addConstant(one, 1.0); // b+1
+  if (lsize(b) - aSize > 1) {
+    NTL_EXEC_RANGE(lsize(b) - aSize, first, last)
+    for (long i = first; i < last; i++) {
+      *aeqb[i + aSize] = *b[i + aSize];       // b
+      aeqb[i + aSize]->addConstant(one, 1.0); // b+1
     }
     NTL_EXEC_RANGE_END
-  }
-  else if (lsize(b)-aSize == 1) {
-    *aeqb[aSize] = *b[aSize];         // b
+  } else if (lsize(b) - aSize == 1) {
+    *aeqb[aSize] = *b[aSize];           // b
     aeqb[aSize]->addConstant(one, 1.0); // b+1
   }
   FHE_NTIMER_STOP(compEqGt2);
 
 #ifdef DEBUG_PRINTOUT
-  for (long i=0; i<lsize(b); i++)
-    decryptAndPrint((std::cout<<" e["<<i<<"]: "), *aeqb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
-  for (long i=0; i<lsize(a); i++)
-    decryptAndPrint((std::cout<<" ag["<<i<<"]: "), *agtb[i], *dbgKey, *dbgEa, FLAG_PRINT_POLY);
+  for (long i = 0; i < lsize(b); i++)
+    decryptAndPrint((std::cout << " e[" << i << "]: "),
+                    *aeqb[i],
+                    *dbgKey,
+                    *dbgEa,
+                    FLAG_PRINT_POLY);
+  for (long i = 0; i < lsize(a); i++)
+    decryptAndPrint((std::cout << " ag[" << i << "]: "),
+                    *agtb[i],
+                    *dbgKey,
+                    *dbgEa,
+                    FLAG_PRINT_POLY);
   std::cout << std::endl;
 #endif
 
   // Call a recursive function to compute:
   // e*_i = \prod_{j>=i} aeqb_i, g*_i = aeqb*_{i+1} \cdot agtb_i
   FHE_NTIMER_START(compEqGt3);
-  compProducts(CtPtrs_slice(aeqb,0), CtPtrs_slice(agtb,0));
+  compProducts(CtPtrs_slice(aeqb, 0), CtPtrs_slice(agtb, 0));
   runningSums(agtb); // now ag[i] = (a>b upto bit i)
   FHE_NTIMER_STOP(compEqGt3);
 }
 
-
 // Compares two integers in binary a,b.
 // Returns max(a,b), min(a,b) and indicator bits mu=(a>b) and ni=(a<b)
-void compareTwoNumbersImplementation(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
-                       const CtPtrs& aa, const CtPtrs& bb,
-                       std::vector<zzX>* unpackSlotEncoding, bool cmp_only)
+void compareTwoNumbersImplementation(CtPtrs& max,
+                                     CtPtrs& min,
+                                     Ctxt& mu,
+                                     Ctxt& ni,
+                                     const CtPtrs& aa,
+                                     const CtPtrs& bb,
+                                     bool twosComplement,
+                                     std::vector<zzX>* unpackSlotEncoding,
+                                     bool cmp_only)
 {
   FHE_TIMER_START;
   // make sure that lsize(b) >= lsize(a)
-  const CtPtrs& a = (lsize(bb)>=lsize(aa))? aa : bb;
-  const CtPtrs& b = (lsize(bb)>=lsize(aa))? bb : aa;
+  const CtPtrs& a = (lsize(bb) >= lsize(aa)) ? aa : bb;
+  const CtPtrs& b = (lsize(bb) >= lsize(aa)) ? bb : aa;
   long aSize = lsize(a);
   long bSize = lsize(b);
-  if (aSize<1) { // a is empty
+  if (aSize < 1) { // a is empty
     mu.clear();
     ni.clear();
     ni.addConstant(NTL::ZZ(1L));
@@ -168,9 +190,11 @@ void compareTwoNumbersImplementation(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& n
   }
 
   // Check that we have enough levels, try to bootstrap otherwise
-  if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize+1)+2)*mu.getContext().BPL())
-    packedRecrypt(a,b,unpackSlotEncoding);
-  if (findMinBitCapacity({&a,&b}) < (NTL::NumBits(bSize)+1)*mu.getContext().BPL())
+  if (findMinBitCapacity({&a, &b}) <
+      (NTL::NumBits(bSize + 1) + 2) * mu.getContext().BPL())
+    packedRecrypt(a, b, unpackSlotEncoding);
+  if (findMinBitCapacity({&a, &b}) <
+      (NTL::NumBits(bSize) + 1) * mu.getContext().BPL())
     // the bare minimum
     throw helib::LogicError("not enough levels for comparison");
 
@@ -190,17 +214,28 @@ void compareTwoNumbersImplementation(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& n
   // We are now ready to compute the bits of the result.
 
   FHE_NTIMER_START(compResults);
-  mu = *ag[0];             // a > b
+  mu = *ag[0]; // a > b
   ni = *ag[0];
-  ni.addConstant(NTL::ZZ(1L));  // a <= b
-  ni += *e[0];             // a < b
+  ni.addConstant(NTL::ZZ(1L)); // a <= b
+  ni += *e[0];                 // a < b
 
-  if(cmp_only) {
+  if (twosComplement) {
+    // mu, ni and ag need to be inverted iff the sign bits of a and b differ.
+    // Perform this by adding both sign bits.
+    const auto flipIfDifferentSign = [&](Ctxt& ctxt) {
+      (ctxt += *aa[aa.size() - 1]) += *bb[bb.size() - 1];
+    };
+    flipIfDifferentSign(mu);
+    flipIfDifferentSign(ni);
+    for (long i = 0; i < ag.size(); ++i)
+      flipIfDifferentSign(*ag[i]);
+  }
+  if (cmp_only) {
     return;
   }
 
   NTL_EXEC_RANGE(aSize, first, last)
-  for (long i=first; i<last; i++) {
+  for (long i = first; i < last; i++) {
     *max[i] = *a[i];
     *max[i] -= *b[i];
     max[i]->multiplyBy(*ag[i]);
@@ -210,25 +245,37 @@ void compareTwoNumbersImplementation(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& n
     *min[i] -= *a[i];
   }
   NTL_EXEC_RANGE_END
-  for (long i=aSize; i<bSize; i++)
+  for (long i = aSize; i < bSize; i++)
     *max[i] = *b[i];
   FHE_NTIMER_STOP(compResults);
 }
 
-void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
-                       const CtPtrs& aa, const CtPtrs& bb,
-                       std::vector<zzX>* unpackSlotEncoding) {
-  compareTwoNumbersImplementation(max, min, mu, ni, aa, bb, unpackSlotEncoding, false);
+void compareTwoNumbers(CtPtrs& max,
+                       CtPtrs& min,
+                       Ctxt& mu,
+                       Ctxt& ni,
+                       const CtPtrs& aa,
+                       const CtPtrs& bb,
+                       bool twosComplement,
+                       std::vector<zzX>* unpackSlotEncoding)
+{
+  compareTwoNumbersImplementation(
+      max, min, mu, ni, aa, bb, twosComplement, unpackSlotEncoding, false);
 }
 
-
-void compareTwoNumbers(Ctxt& mu, Ctxt& ni, const CtPtrs& aa, const CtPtrs& bb,
-                       std::vector<zzX>* unpackSlotEncoding) {
+void compareTwoNumbers(Ctxt& mu,
+                       Ctxt& ni,
+                       const CtPtrs& aa,
+                       const CtPtrs& bb,
+                       bool twosComplement,
+                       std::vector<zzX>* unpackSlotEncoding)
+{
   NTL::Vec<Ctxt> aeqb;
   NTL::Vec<Ctxt> agtb;
   CtPtrs_VecCt eq(aeqb);
   CtPtrs_VecCt gr(agtb);
-  compareTwoNumbersImplementation(eq, gr, mu, ni, aa, bb, unpackSlotEncoding, true);
+  compareTwoNumbersImplementation(
+      eq, gr, mu, ni, aa, bb, twosComplement, unpackSlotEncoding, true);
 }
 
-}
+} // namespace helib
