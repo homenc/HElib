@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -93,6 +93,17 @@ inline void recordAutomorphVal2(long k) { FHEglobals::automorphVals2->insert(k);
 typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future
 
+/**
+ * @brief Considers `bits` as a vector of bits and returns the value it
+ * represents when interpreted as a n-bit 2's complement number, where n is
+ * given by `bitSize`. 
+ * @param bits The value containing the bits to be reinterpreted.
+ * @param bitSize The number of bits to use, taken from the least significant
+ * end of `bits`.
+ * @return The value of the reinterpreted number as a long.
+ **/
+long bitSetToLong(long bits, long bitSize);
+
 //! @brief Routines for computing mathematically correct mod and div.
 //! 
 //! mcDiv(a, b) = floor(a / b), mcMod(a, b) = a - b*mcDiv(a, b);
@@ -118,7 +129,7 @@ long multOrd(long p, long m);
 //!
 //! A is an n x n matrix, b is a length n (row) vector, this function finds a
 //! solution for the matrix-vector equation x A = b. An error is raised if A
-//! is not inverible mod p.
+//! is not invertible mod p.
 //!
 //! NTL's current smallint modulus, zz_p::modulus(), is assumed to be p^r,
 //! for p prime, r >= 1 integer.

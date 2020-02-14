@@ -21,6 +21,21 @@ namespace helib {
 
 bool FHEglobals::dryRun = false;
 
+// Considering bits as a vector of bits, return the value it represents when
+// interpreted as a bitSize-bit 2's complement number.
+// For example, bitSetToLong(0b10111, 5) = -9.
+long bitSetToLong(long bits, long bitSize)
+{
+  helib::assertTrue<helib::InvalidArgument>(bitSize >= 0, "bitSize must be non-negative.");
+  long result = 0;
+  for(long multiplier = 1; bitSize > 0; bits >>= 1, multiplier <<= 1)
+    if(--bitSize != 0) // NB: The decrement for the loop is done here.
+      result += (bits & 1) * multiplier;
+    else
+      result -= (bits & 1) * multiplier;
+  return result;
+}
+
 // Mathematically correct mod and div, avoids overflow
 long mcMod(long a, long b) 
 {
