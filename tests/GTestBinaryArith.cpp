@@ -674,17 +674,24 @@ TEST_P(GTestBinaryArith, negateNegatesCorrectly)
 
   std::vector<long> decrypted_result;
   std::vector<helib::Ctxt> result_vector(bitSize, helib::Ctxt(secKey));
-  {
-    helib::CtPtrs_vectorCt output_wrapper(result_vector);
-    helib::negateBinary(output_wrapper, helib::CtPtrs_vectorCt(encrypted_data));
-    helib::decryptBinaryNums(
-        decrypted_result, output_wrapper, secKey, ea, true);
-  }
+  helib::CtPtrs_vectorCt output_wrapper(result_vector);
+  helib::negateBinary(output_wrapper, helib::CtPtrs_vectorCt(encrypted_data));
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea, true);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long num : decrypted_result) {
-    EXPECT_EQ(num, expected_result);
+  for (long i = 0; i < decrypted_result.size(); ++i) {
+    EXPECT_EQ(decrypted_result[i], expected_result) << "i = " << i << std::endl;
   }
+
+  // Make sure it throws for incorrect-length args
+  const auto do_negate = [&]() {
+    helib::negateBinary(output_wrapper, helib::CtPtrs_vectorCt(encrypted_data));
+  };
+  encrypted_data.emplace_back(secKey);
+  EXPECT_THROW(do_negate(), helib::LogicError);
+  encrypted_data.pop_back();
+  encrypted_data.pop_back();
+  EXPECT_THROW(do_negate(), helib::LogicError);
 }
 
 TEST_P(GTestBinaryArith, subtractSubtractsCorrectly)
@@ -721,19 +728,487 @@ TEST_P(GTestBinaryArith, subtractSubtractsCorrectly)
   }
   std::vector<long> decrypted_result;
   std::vector<helib::Ctxt> result_vector(bitSize, helib::Ctxt(secKey));
-  {
-    helib::CtPtrs_vectorCt output_wrapper(result_vector);
+  helib::CtPtrs_vectorCt output_wrapper(result_vector);
+  helib::subtractBinary(output_wrapper,
+                        helib::CtPtrs_vectorCt(encrypted_minuend),
+                        helib::CtPtrs_vectorCt(encrypted_subtrahend));
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea, true);
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long i = 0; i < decrypted_result.size(); ++i) {
+    EXPECT_EQ(decrypted_result[i], expected_result) << "i = " << i << std::endl;
+  }
+
+  // Make sure it throws for incorrect-length args
+  result_vector.emplace_back(secKey);
+  const auto do_subtract = [&]() {
     helib::subtractBinary(output_wrapper,
                           helib::CtPtrs_vectorCt(encrypted_minuend),
                           helib::CtPtrs_vectorCt(encrypted_subtrahend));
-    helib::decryptBinaryNums(
-        decrypted_result, output_wrapper, secKey, ea, true);
-  }
+  };
+  EXPECT_THROW(do_subtract(), helib::LogicError);
+  encrypted_subtrahend.emplace_back(secKey);
+  EXPECT_THROW(do_subtract(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, binaryMaskMasksCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  const helib::PubKey& pubKey = secKey;
+  helib::Ctxt mask(secKey);
+  helib::Ptxt<helib::BGV> mask_data(context);
+  for (long i = 0; i < mask_data.size(); ++i)
+    mask_data[i] = i % 2;
+
+  pubKey.Encrypt(mask, mask_data);
+  std::vector<helib::Ctxt> eNums(bitSize, helib::Ctxt(secKey));
+  long input_number = NTL::RandomBits_long(bitSize);
+
+  for (long i = 0; i < bitSize; ++i)
+    secKey.Encrypt(eNums[i], NTL::ZZX((input_number >> i) & 1));
+
+  std::vector<helib::Ctxt> output(eNums);
+  helib::CtPtrs_vectorCt output_wrapper(output);
+  helib::binaryMask(output_wrapper, mask);
+
+  std::vector<long> decrypted_result;
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long num : decrypted_result) {
-    EXPECT_EQ(num, expected_result);
+  for (long i = 0; i < bitSize; ++i)
+    if (i % 2 == 1) {
+      EXPECT_EQ(decrypted_result[i], input_number) << "i = " << i << std::endl;
+    } else {
+      EXPECT_EQ(decrypted_result[i], 0L) << "i = " << i << std::endl;
+    }
+  // No error cases to test, all sized inputs are valid
+}
+
+TEST_P(GTestBinaryArith, binaryCondWorksCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  const helib::PubKey& pubKey = secKey;
+  helib::Ctxt cond(secKey);
+  helib::Ptxt<helib::BGV> cond_data(context);
+  for (long i = 0; i < cond_data.size(); ++i)
+    cond_data[i] = i % 2;
+
+  pubKey.Encrypt(cond, cond_data);
+  std::vector<helib::Ctxt> lhsNums(bitSize, helib::Ctxt(secKey));
+  std::vector<helib::Ctxt> rhsNums(bitSize, helib::Ctxt(secKey));
+  long lhs_number = NTL::RandomBits_long(bitSize);
+  long rhs_number = NTL::RandomBits_long(bitSize);
+
+  for (long i = 0; i < bitSize; ++i) {
+    secKey.Encrypt(lhsNums[i], NTL::ZZX((lhs_number >> i) & 1));
+    secKey.Encrypt(rhsNums[i], NTL::ZZX((rhs_number >> i) & 1));
   }
+
+  std::vector<helib::Ctxt> output(lhsNums);
+  helib::CtPtrs_vectorCt output_wrapper(output);
+  helib::binaryCond(output_wrapper,
+                    cond,
+                    helib::CtPtrs_vectorCt(lhsNums),
+                    helib::CtPtrs_vectorCt(rhsNums));
+
+  std::vector<long> decrypted_result;
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long i = 0; i < bitSize; ++i) {
+    EXPECT_EQ(decrypted_result[i], (i % 2) ? lhs_number : rhs_number)
+        << "i = " << i << std::endl;
+  }
+
+  // All three CtPtrs args must have same size.  Check that it throws if not.
+  const auto do_cond = [&]() {
+    helib::binaryCond(output_wrapper,
+                      cond,
+                      helib::CtPtrs_vectorCt(lhsNums),
+                      helib::CtPtrs_vectorCt(rhsNums));
+  };
+  lhsNums.emplace_back(secKey);
+  EXPECT_THROW(do_cond(), /*1*/ helib::LogicError);
+  rhsNums.emplace_back(secKey);
+  EXPECT_THROW(do_cond(), /*2*/ helib::LogicError);
+  output.emplace_back(secKey);
+  output.emplace_back(secKey);
+  EXPECT_THROW(do_cond(), /*3*/ helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, concatBinaryNumsConcatsCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long lhs_number = NTL::RandomBits_long(bitSize);
+  long rhs_number = NTL::RandomBits_long(bitSize);
+
+  std::vector<helib::Ctxt> lhs(bitSize, helib::Ctxt(secKey));
+  std::vector<helib::Ctxt> rhs(bitSize, helib::Ctxt(secKey));
+  for (long i = 0; i < bitSize; ++i) {
+    secKey.Encrypt(lhs[i], NTL::ZZX((lhs_number >> i) & 1));
+    secKey.Encrypt(rhs[i], NTL::ZZX((rhs_number >> i) & 1));
+  }
+
+  std::vector<helib::Ctxt> output(bitSize * 2, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt output_wrapper(output);
+  helib::concatBinaryNums(
+      output_wrapper, helib::CtPtrs_vectorCt(lhs), helib::CtPtrs_vectorCt(rhs));
+
+  std::vector<long> decrypted_result;
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long i = 0; i < decrypted_result.size(); ++i) {
+    EXPECT_EQ(decrypted_result[i], (rhs_number << bitSize) + lhs_number)
+        << "i = " << i << std::endl;
+  }
+
+  // Make sure that incorrect sizing issues throw
+  const auto do_concat = [&]() {
+    helib::concatBinaryNums(output_wrapper,
+                            helib::CtPtrs_vectorCt(lhs),
+                            helib::CtPtrs_vectorCt(rhs));
+  };
+  output.emplace_back(secKey);
+  EXPECT_THROW(do_concat(), helib::LogicError);
+  output.pop_back();
+  output.pop_back();
+  EXPECT_THROW(do_concat(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, splitBinaryNumsSplitsCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long lhs_number = NTL::RandomBits_long(bitSize + 1);
+  long rhs_number = NTL::RandomBits_long(bitSize);
+
+  std::vector<helib::Ctxt> lhs(bitSize + 1, helib::Ctxt(secKey));
+  std::vector<helib::Ctxt> rhs(bitSize, helib::Ctxt(secKey));
+  for (long i = 0; i < bitSize; ++i) {
+    secKey.Encrypt(lhs[i], NTL::ZZX((lhs_number >> i) & 1));
+    secKey.Encrypt(rhs[i], NTL::ZZX((rhs_number >> i) & 1));
+  }
+  secKey.Encrypt(lhs[bitSize], NTL::ZZX((lhs_number >> bitSize) & 1));
+
+  std::vector<helib::Ctxt> concatenation((bitSize * 2) + 1,
+                                         helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt concatenation_wrapper(concatenation);
+  helib::concatBinaryNums(concatenation_wrapper,
+                          helib::CtPtrs_vectorCt(lhs),
+                          helib::CtPtrs_vectorCt(rhs));
+
+  std::vector<helib::Ctxt> lhs_output(bitSize + 1, helib::Ctxt(secKey));
+  std::vector<helib::Ctxt> rhs_output(bitSize, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt lhs_output_wrapper(lhs_output);
+  helib::CtPtrs_vectorCt rhs_output_wrapper(rhs_output);
+  helib::splitBinaryNums(
+      lhs_output_wrapper, rhs_output_wrapper, concatenation_wrapper);
+
+  std::vector<long> decrypted_lhs;
+  std::vector<long> decrypted_rhs;
+  helib::decryptBinaryNums(decrypted_lhs, lhs_output_wrapper, secKey, ea);
+  helib::decryptBinaryNums(decrypted_rhs, rhs_output_wrapper, secKey, ea);
+
+  EXPECT_EQ(decrypted_lhs.size(), ea.size());
+  EXPECT_EQ(decrypted_rhs.size(), ea.size());
+  for (long i = 0; i < decrypted_lhs.size(); ++i) {
+    EXPECT_EQ(decrypted_lhs[i], lhs_number) << "i = " << i << std::endl;
+    EXPECT_EQ(decrypted_rhs[i], rhs_number) << "i = " << i << std::endl;
+  }
+
+  // Make sure it throws if the sizes don't line up
+  const auto do_split = [&]() {
+    helib::splitBinaryNums(
+        lhs_output_wrapper, rhs_output_wrapper, concatenation_wrapper);
+  };
+  lhs_output.emplace_back(secKey);
+  EXPECT_THROW(do_split(), helib::LogicError);
+  lhs_output.pop_back();
+  lhs_output.pop_back();
+  EXPECT_THROW(do_split(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, bitwiseShiftShiftsCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long number = NTL::RandomBits_long(bitSize);
+
+  std::vector<helib::Ctxt> eNums(bitSize, helib::Ctxt(secKey));
+  for (long i = 0; i < bitSize; ++i)
+    secKey.Encrypt(eNums[i], NTL::ZZX((number >> i) & 1));
+
+  unsigned long mask = (1Lu << bitSize) - 1;
+  for (long shamt = 0; shamt <= bitSize; ++shamt) {
+    std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
+    helib::CtPtrs_vectorCt output_wrapper(output);
+
+    helib::leftBitwiseShift(
+        output_wrapper, helib::CtPtrs_vectorCt(eNums), shamt);
+
+    std::vector<long> decrypted_result;
+    helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+
+    EXPECT_EQ(decrypted_result.size(), ea.size());
+    for (long i = 0; i < decrypted_result.size(); ++i)
+      EXPECT_EQ(decrypted_result[i], (number << shamt) & mask)
+          << "i = " << i << std::endl;
+  }
+
+  // Make sure it throws if output and input aren't the same size
+  std::vector<helib::Ctxt> output(bitSize + 1, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt output_wrapper(output);
+
+  const auto do_shift = [&]() {
+    helib::leftBitwiseShift(output_wrapper, helib::CtPtrs_vectorCt(eNums), 0);
+  };
+  EXPECT_THROW(do_shift(), helib::LogicError);
+  output.pop_back();
+  output.pop_back();
+  EXPECT_THROW(do_shift(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, bitwiseRotateRotatesCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long input = NTL::RandomBits_long(bitSize);
+
+  std::vector<helib::Ctxt> eNums(bitSize, helib::Ctxt(secKey));
+  for (long i = 0; i < bitSize; ++i)
+    secKey.Encrypt(eNums[i], NTL::ZZX((input >> i) & 1));
+
+  const auto plaintext_rotate = [& bitSize = bitSize](long num, long amt) {
+    // Make sure that amt is in the right range
+    amt = ((amt % bitSize) + bitSize) % bitSize;
+    long mask = (1LU << bitSize) - 1;
+    // Get the left hand part
+    long result = (num << amt) & mask;
+    // Get the right-hand part
+    result |= (num >> (bitSize - amt)) & mask;
+    return result;
+  };
+
+  // Test all rotation amounts from negative values which wrap around mod
+  // bitSize, up to positive values which wrap around mod bitSize.
+  for (long rotamt = -bitSize - 1; rotamt <= bitSize + 1; ++rotamt) {
+    std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
+    helib::CtPtrs_vectorCt output_wrapper(output);
+    helib::bitwiseRotate(output_wrapper, helib::CtPtrs_vectorCt(eNums), rotamt);
+    std::vector<long> decrypted_result;
+    helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+    EXPECT_EQ(decrypted_result.size(), ea.size());
+    for (long i = 0; i < decrypted_result.size(); ++i) {
+      EXPECT_EQ(decrypted_result[i], plaintext_rotate(input, rotamt))
+          << "i = " << i << std::endl;
+    }
+  }
+
+  // Check that non-matching input and output sizes throw
+  std::vector<helib::Ctxt> output(bitSize + 1, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt output_wrapper(output);
+  const auto do_rotate = [&]() {
+    helib::bitwiseRotate(output_wrapper, helib::CtPtrs_vectorCt(eNums), 0);
+  };
+  EXPECT_THROW(do_rotate(), helib::LogicError);
+  output.pop_back();
+  output.pop_back();
+  EXPECT_THROW(do_rotate(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, binaryAndWithLongAndsCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long number = NTL::RandomBits_long(bitSize);
+
+  unsigned long long_mask = 0;
+  std::vector<long> mask;
+  std::vector<helib::Ctxt> eNums(bitSize, helib::Ctxt(secKey));
+  for (long i = 0; i < bitSize; ++i) {
+    secKey.Encrypt(eNums[i], NTL::ZZX((number >> i) & 1));
+    mask.push_back(i % 2);
+    long_mask |= (i % 2) << i;
+  }
+
+  std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt output_wrapper(output);
+
+  helib::bitwiseAnd(output_wrapper, helib::CtPtrs_vectorCt(eNums), mask);
+
+  std::vector<long> decrypted_result;
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long i = 0; i < decrypted_result.size(); ++i) {
+    EXPECT_EQ(decrypted_result[i], (number & long_mask))
+        << "i = " << i << std::endl;
+  }
+
+  // Check that non-matching input and output sizes throw
+  const auto do_and = [&]() {
+    helib::bitwiseAnd(output_wrapper, helib::CtPtrs_vectorCt(eNums), mask);
+  };
+  output.emplace_back(secKey);
+  EXPECT_THROW(do_and(), helib::LogicError);
+  output.pop_back();
+  output.pop_back();
+  EXPECT_THROW(do_and(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, binaryXORXORsCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long lhs = NTL::RandomBits_long(bitSize);
+  long rhs = NTL::RandomBits_long(bitSize);
+
+  std::vector<helib::Ctxt> encrypted_lhs(bitSize, helib::Ctxt(secKey));
+  std::vector<helib::Ctxt> encrypted_rhs(bitSize, helib::Ctxt(secKey));
+
+  for (long i = 0; i < bitSize; ++i) {
+    secKey.Encrypt(encrypted_lhs[i], NTL::ZZX((lhs >> i) & 1));
+    secKey.Encrypt(encrypted_rhs[i], NTL::ZZX((rhs >> i) & 1));
+  }
+
+  std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt output_wrapper(output);
+
+  helib::bitwiseXOR(output_wrapper,
+                    helib::CtPtrs_vectorCt(encrypted_lhs),
+                    helib::CtPtrs_vectorCt(encrypted_rhs));
+
+  std::vector<long> decrypted_result;
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long i = 0; i < decrypted_result.size(); ++i) {
+    EXPECT_EQ(decrypted_result[i], lhs ^ rhs) << "i = " << i << std::endl;
+  }
+
+  // Check that non-matching sizes throw
+  const auto do_xor = [&]() {
+    helib::bitwiseXOR(output_wrapper,
+                      helib::CtPtrs_vectorCt(encrypted_lhs),
+                      helib::CtPtrs_vectorCt(encrypted_rhs));
+  };
+  output.emplace_back(secKey);
+  EXPECT_THROW(do_xor(), helib::LogicError);
+  encrypted_lhs.emplace_back(secKey);
+  EXPECT_THROW(do_xor(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, binaryAndAndsCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long lhs = NTL::RandomBits_long(bitSize);
+  long rhs = NTL::RandomBits_long(bitSize);
+
+  std::vector<helib::Ctxt> encrypted_lhs(bitSize, helib::Ctxt(secKey));
+  std::vector<helib::Ctxt> encrypted_rhs(bitSize, helib::Ctxt(secKey));
+
+  for (long i = 0; i < bitSize; ++i) {
+    secKey.Encrypt(encrypted_lhs[i], NTL::ZZX((lhs >> i) & 1));
+    secKey.Encrypt(encrypted_rhs[i], NTL::ZZX((rhs >> i) & 1));
+  }
+
+  std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt output_wrapper(output);
+
+  helib::bitwiseAnd(output_wrapper,
+                    helib::CtPtrs_vectorCt(encrypted_lhs),
+                    helib::CtPtrs_vectorCt(encrypted_rhs));
+
+  std::vector<long> decrypted_result;
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long i = 0; i < decrypted_result.size(); ++i) {
+    EXPECT_EQ(decrypted_result[i], lhs & rhs) << "i = " << i << std::endl;
+  }
+
+  // Make sure it throws if arguments' sizes don't match
+  const auto do_and = [&]() {
+    helib::bitwiseAnd(output_wrapper,
+                      helib::CtPtrs_vectorCt(encrypted_lhs),
+                      helib::CtPtrs_vectorCt(encrypted_rhs));
+  };
+  output.emplace_back(secKey);
+  EXPECT_THROW(do_and(), helib::LogicError);
+  encrypted_lhs.emplace_back(secKey);
+  EXPECT_THROW(do_and(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, binaryOrOrsCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long lhs = NTL::RandomBits_long(bitSize);
+  long rhs = NTL::RandomBits_long(bitSize);
+
+  std::vector<helib::Ctxt> encrypted_lhs(bitSize, helib::Ctxt(secKey));
+  std::vector<helib::Ctxt> encrypted_rhs(bitSize, helib::Ctxt(secKey));
+
+  for (long i = 0; i < bitSize; ++i) {
+    secKey.Encrypt(encrypted_lhs[i], NTL::ZZX((lhs >> i) & 1));
+    secKey.Encrypt(encrypted_rhs[i], NTL::ZZX((rhs >> i) & 1));
+  }
+
+  std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt output_wrapper(output);
+
+  helib::bitwiseOr(output_wrapper,
+                   helib::CtPtrs_vectorCt(encrypted_lhs),
+                   helib::CtPtrs_vectorCt(encrypted_rhs));
+
+  std::vector<long> decrypted_result;
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long i = 0; i < decrypted_result.size(); ++i) {
+    EXPECT_EQ(decrypted_result[i], lhs | rhs) << "i = " << i << std::endl;
+  }
+
+  // Make sure it throws if arguments' sizes don't match
+  const auto do_or = [&]() {
+    helib::bitwiseOr(output_wrapper,
+                     helib::CtPtrs_vectorCt(encrypted_lhs),
+                     helib::CtPtrs_vectorCt(encrypted_rhs));
+  };
+  output.emplace_back(secKey);
+  EXPECT_THROW(do_or(), helib::LogicError);
+  encrypted_lhs.emplace_back(secKey);
+  EXPECT_THROW(do_or(), helib::LogicError);
+}
+
+TEST_P(GTestBinaryArith, bitwiseNotNotsCorrectly)
+{
+  const helib::EncryptedArray& ea = *context.ea;
+  long input = NTL::RandomBits_long(bitSize);
+
+  std::vector<helib::Ctxt> eNums(bitSize, helib::Ctxt(secKey));
+  long mask = (1LU << bitSize) - 1;
+
+  for (long i = 0; i < bitSize; ++i)
+    secKey.Encrypt(eNums[i], NTL::ZZX((input >> i) & 1));
+
+  std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
+  helib::CtPtrs_vectorCt output_wrapper(output);
+
+  helib::bitwiseNot(output_wrapper, helib::CtPtrs_vectorCt(eNums));
+
+  std::vector<long> decrypted_result;
+  helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
+
+  EXPECT_EQ(decrypted_result.size(), ea.size());
+  for (long i = 0; i < decrypted_result.size(); ++i) {
+    EXPECT_EQ(decrypted_result[i], (~input) & mask) << "i = " << i << std::endl;
+  }
+
+  // Make sure it throws if input and output are different sizes
+  const auto do_not = [&]() {
+    helib::bitwiseNot(output_wrapper, helib::CtPtrs_vectorCt(eNums));
+  };
+  output.emplace_back(secKey);
+  EXPECT_THROW(do_not(), helib::LogicError);
+  output.pop_back();
+  output.pop_back();
+  EXPECT_THROW(do_not(), helib::LogicError);
 }
 
 INSTANTIATE_TEST_SUITE_P(
