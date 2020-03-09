@@ -976,7 +976,7 @@ TEST_P(GTestBinaryArith, bitwiseRotateRotatesCorrectly)
   for (long i = 0; i < bitSize; ++i)
     secKey.Encrypt(eNums[i], NTL::ZZX((input >> i) & 1));
 
-  const auto plaintext_rotate = [& bitSize = bitSize](long num, long amt) {
+  const auto plaintext_rotate = [](long num, long amt, long bitSize) {
     // Make sure that amt is in the right range
     amt = ((amt % bitSize) + bitSize) % bitSize;
     long mask = (1LU << bitSize) - 1;
@@ -997,7 +997,7 @@ TEST_P(GTestBinaryArith, bitwiseRotateRotatesCorrectly)
     helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
     EXPECT_EQ(decrypted_result.size(), ea.size());
     for (long i = 0; i < decrypted_result.size(); ++i) {
-      EXPECT_EQ(decrypted_result[i], plaintext_rotate(input, rotamt))
+      EXPECT_EQ(decrypted_result[i], plaintext_rotate(input, rotamt, bitSize))
           << "i = " << i << std::endl;
     }
   }
