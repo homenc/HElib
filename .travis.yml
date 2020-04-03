@@ -1,0 +1,16 @@
+language: cpp
+
+os: 
+  - osx
+compiler: 
+  - clang
+
+# Install the necessary dependencies.
+addon:
+  homebrew:
+    packages: 
+      - ntl
+    update: true
+
+# Run the build script
+script: ./ci/travis.sh
