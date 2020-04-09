@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -124,8 +124,17 @@ class PowerfulDCRT {
 
   PowerfulTranslationIndexes indexes; // modulus-independent tables
 
-  // a vector of PowerfulConversion tables, one for each modulus in the chain
+  // a vector of PowerfulConversion tables, one for each modulus
   NTL::Vec<PowerfulConversion> pConvVec;
+
+  // product_bits[i] is the number of bits in the product of primes [0..i)
+  NTL::Vec<long> product_bits;
+
+  // number of excess bits needed to ensure correct conversion
+  long to_pwfl_excess_bits;
+  long to_poly_excess_bits;
+
+  bool triv;
 
 public:
   PowerfulDCRT(const Context& _context, const NTL::Vec<long>& mvec);
@@ -135,21 +144,13 @@ public:
   const PowerfulConversion& getPConv(long i) const
   { return pConvVec.at(i); }
 
+  // coefficients are reduced to the interval [-Q/2,Q/2], where
+  // Q = product of primes in dcrt.getIndexSet();
   void dcrtToPowerful(NTL::Vec<NTL::ZZ>& powerful, const DoubleCRT& dcrt) const;
-  void powerfulToDCRT(DoubleCRT& dcrt, const NTL::Vec<NTL::ZZ>& powerful) const;
 
-  // If the IndexSet is omitted, default to all the primes in the chain
-  void ZZXtoPowerful(NTL::Vec<NTL::ZZ>& powerful, const NTL::ZZX& poly,
-		     IndexSet s=IndexSet::emptySet()) const;
-  void powerfulToZZX(NTL::ZZX& poly, const NTL::Vec<NTL::ZZ>& powerful,
-		     IndexSet s=IndexSet::emptySet()) const;
+  void ZZXtoPowerful(NTL::Vec<NTL::ZZ>& powerful, const NTL::ZZX& poly) const;
+  void powerfulToZZX(NTL::ZZX& poly, const NTL::Vec<NTL::ZZ>& powerful) const;
 };
-
-
-
-
-
-
 
 /********************************************************************/
 /****************    UNUSED CODE - COMMENTED OUT   ******************/

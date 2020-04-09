@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -349,11 +349,11 @@ int main(int argc, char *argv[])
     }
     if (debug) {
         dbgKey = & secretKey;
-        dbgEa = (EncryptedArray*) context.ea;
+        dbgEa = context.ea;
     }
 #ifdef DEBUG_PRINTOUT
           dbgKey = & secretKey;
-          dbgEa = (EncryptedArray*) context.ea;
+          dbgEa = context.ea;
 #endif //DEBUG_PRINTOUT
 
     // Run the tests.

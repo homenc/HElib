@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -131,7 +131,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
 
 
 #ifdef DEBUG_PRINTOUT
-      dbgEa = (EncryptedArray*) context.ea;
+      dbgEa = context.ea;
       dbgKey = &secretKey;
 #endif
 
@@ -525,7 +525,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   resetAllTimers();
 
 #ifdef DEBUG_PRINTOUT
-    dbgEa = (EncryptedArray*) context.ea;
+    dbgEa = context.ea;
     dbgKey = &secretKey;
 #endif
 

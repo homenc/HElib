@@ -2002,14 +2002,6 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
   helib::assertTrue(p2r>1, "Plaintext space must be greater than 1 for mod switching");
   helib::assertEq(NTL::GCD(q,p2r), 1l, "New modulus and current plaintext space must be co-prime");
 
-  // this will trigger a warning if any operations that were
-  // previously performed on the polynomial basis were invalid
-  // because of excess noise
-  NTL::xdouble xQ = NTL::xexp(context.logOfProduct(getPrimeSet()));
-  double polyNormBnd = context.zMStar.getPolyNormBnd();
-  if (noiseBound*polyNormBnd > 0.48*xQ)
-    Warning("bootstrapping with too much noise");
-
   // Compute the ratio between the current modulus and the new one.
   // NOTE: q is a long int, so a double for the logarithms and
   //       NTL::xdouble for the ratio itself is sufficient
@@ -2037,8 +2029,9 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
     NTL::Vec<NTL::ZZ> pwrfl;
     p2d_conv.dcrtToPowerful(pwrfl, parts[i]); // convert to powerful rep
 
-    vecRed(pwrfl, pwrfl, Q, false);
+    // vecRed(pwrfl, pwrfl, Q, false);
     // reduce to interval [-Q/2,+Q/2]
+    // FIXME: it looks like the coefficients should already be reduced
 
     NTL::ZZ c, X, Y, cq;
 

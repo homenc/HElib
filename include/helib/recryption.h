@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -49,29 +49,27 @@ public:
   long skHwt;
 
   //! for plaintext space p^{e-e'+r}
-  PAlgebraMod *alMod;
+  std::shared_ptr<const PAlgebraMod> alMod;
 
   //! for plaintext space p^{e-e'+r}
-  EncryptedArray *ea;
+  std::shared_ptr<const EncryptedArray> ea;
 
   bool build_cache;
 
 
   //! linear maps
-  EvalMap *firstMap, *secondMap;
+  std::shared_ptr<const EvalMap> firstMap, secondMap;
 
   //! conversion between ZZX and Powerful
-  PowerfulDCRT *p2dConv;
+  std::shared_ptr<const PowerfulDCRT> p2dConv;
 
   //! linPolys for uppacking the slots
   std::vector<NTL::ZZX> unpackSlotEncoding;
 
   RecryptData() {
     skHwt=0; e=ePrime=0; 
-    alMod=nullptr; ea=nullptr; firstMap=nullptr; secondMap=nullptr; p2dConv=nullptr;
     build_cache = false;
   }
-  ~RecryptData();
 
   //! Initialize the recryption data in the context
   void init(const Context& context, const NTL::Vec<long>& mvec_,
@@ -123,10 +121,7 @@ public:
 class ThinRecryptData : public RecryptData {
 public:
   //! linear maps
-  ThinEvalMap *coeffToSlot, *slotToCoeff;
-
-  ThinRecryptData() : RecryptData() {coeffToSlot=nullptr; slotToCoeff=nullptr;}
-  ~ThinRecryptData();
+  std::shared_ptr<const ThinEvalMap> coeffToSlot, slotToCoeff;
 
   //! Initialize the recryption data in the context
   void init(const Context& context, const NTL::Vec<long>& mvec_,

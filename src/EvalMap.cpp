@@ -115,14 +115,13 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
 
   NTL::Vec< std::shared_ptr<CubeSignature> > sig_sequence;
   sig_sequence.SetLength(nfactors+1);
-  sig_sequence[nfactors] = std::shared_ptr<CubeSignature>(new CubeSignature(phivec));
+  sig_sequence[nfactors] = std::make_shared<CubeSignature>(phivec);
 
   NTL::Vec<long> reduced_phivec = phivec;
 
   for (long dim = nfactors-1; dim >= 0; dim--) {
     reduced_phivec[dim] /= dvec[dim];
-    sig_sequence[dim] = 
-      std::shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
+    sig_sequence[dim] = std::make_shared<CubeSignature>(reduced_phivec);
   }
 
   long dim = nfactors - 1;
@@ -531,14 +530,13 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
 
   NTL::Vec< std::shared_ptr<CubeSignature> > sig_sequence;
   sig_sequence.SetLength(nfactors+1);
-  sig_sequence[nfactors] = std::shared_ptr<CubeSignature>(new CubeSignature(phivec));
+  sig_sequence[nfactors] = std::make_shared<CubeSignature>(phivec);
 
   NTL::Vec<long> reduced_phivec = phivec;
 
   for (long dim = nfactors-1; dim >= 0; dim--) {
     reduced_phivec[dim] /= dvec[dim];
-    sig_sequence[dim] = 
-      std::shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
+    sig_sequence[dim] = std::make_shared<CubeSignature>(reduced_phivec);
   }
 
   matvec.SetLength(nfactors);

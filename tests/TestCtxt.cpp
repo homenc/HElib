@@ -16,6 +16,7 @@
 // with names matching "GTest*".
 
 #include <helib/helib.h>
+#include <helib/debugging.h>
 
 #include "test_common.h"
 #include "gtest/gtest.h"
@@ -30,12 +31,7 @@ struct BGVParameters
                 unsigned bits,
                 const std::vector<long>& gens = {},
                 const std::vector<long>& ords = {}) :
-      m(m),
-      p(p),
-      r(r),
-      bits(bits),
-      gens(gens),
-      ords(ords){};
+      m(m), p(p), r(r), bits(bits), gens(gens), ords(ords){};
 
   const unsigned m;
   const unsigned p;
@@ -81,6 +77,16 @@ protected:
                  secretKey)),
       ea(*(context.ea))
   {}
+
+  virtual void SetUp() override
+  {
+#ifdef DEBUG_PRINTOUT
+    helib::dbgKey = &secretKey;
+    helib::dbgEa = context.ea;
+#endif // DEBUG_PRINTOUT
+  };
+
+  virtual void TearDown() override { helib::cleanupGlobals(); }
 
   virtual ~TestCtxt() = default;
 };

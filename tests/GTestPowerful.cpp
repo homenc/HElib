@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -19,7 +19,8 @@
 
 namespace {
 
-struct Parameters {
+struct Parameters
+{
   const long m1;
   const long m2;
   const long m3;
@@ -27,63 +28,55 @@ struct Parameters {
   const long r;
 
   Parameters(long m1, long m2, long m3, long p, long r) :
-      m1(m1),
-      m2(m2),
-      m3(m3),
-      p(p),
-      r(r)
-    {}
+      m1(m1), m2(m2), m3(m3), p(p), r(r)
+  {}
 
-
-  friend std::ostream& operator<<(std::ostream& os, const Parameters& params) {
-      return os << "{"
-          << "m1=" << params.m1 << ","
-          << "m2=" << params.m2 << ","
-          << "m3=" << params.m3 << ","
-          << "p" << params.p << ","
-          << "r" << params.r
-          << "}";
+  friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
+  {
+    return os << "{"
+              << "m1=" << params.m1 << ","
+              << "m2=" << params.m2 << ","
+              << "m3=" << params.m3 << ","
+              << "p" << params.p << ","
+              << "r" << params.r << "}";
   };
 };
 
 class GTestPowerful : public ::testing::TestWithParam<Parameters>
 {
-    protected:
-        NTL::Vec<long> mvec;
-        const long m;
-        const long p;
-        const long r;
-        helib::Context context;
+protected:
+  NTL::Vec<long> mvec;
+  const long m;
+  const long p;
+  const long r;
+  helib::Context context;
 
-        static NTL::Vec<long> computeMvec(long m1, long m2, long m3)
-        {
-            NTL::Vec<long> mvec(NTL::INIT_SIZE, 2);
-            if (m1<2 || m2<2) {
-                throw std::runtime_error("m1,m2 are mandatory\n");
-            }
-            mvec[0] = m1;
-            mvec[1] = m2;
-            if (m3>1) append(mvec,m3);
-            return mvec;
-        };
+  static NTL::Vec<long> computeMvec(long m1, long m2, long m3)
+  {
+    NTL::Vec<long> mvec(NTL::INIT_SIZE, 2);
+    if (m1 < 2 || m2 < 2) {
+      throw std::runtime_error("m1,m2 are mandatory\n");
+    }
+    mvec[0] = m1;
+    mvec[1] = m2;
+    if (m3 > 1)
+      append(mvec, m3);
+    return mvec;
+  };
 
-        GTestPowerful () : 
-            mvec(computeMvec(GetParam().m1, GetParam().m2, GetParam().m3)),
-            m(helib::computeProd(mvec)),
-            p(GetParam().p),
-            r(GetParam().r),
-            context(m,p,r)
-        {};
+  GTestPowerful() :
+      mvec(computeMvec(GetParam().m1, GetParam().m2, GetParam().m3)),
+      m(helib::computeProd(mvec)),
+      p(GetParam().p),
+      r(GetParam().r),
+      context(m, p, r){};
 
-        virtual void SetUp () override
-        {
-            helib::buildModChain(context, /*L=*/9, /*c=*/3);
-        };
+  virtual void SetUp() override
+  {
+    helib::buildModChain(context, /*L=*/100, /*c=*/3);
+  };
 
-        virtual void TearDown() override
-        {
-            helib::cleanupGlobals();
-        }
+  virtual void TearDown() override { helib::cleanupGlobals(); }
 };
 
 TEST_P(GTestPowerful, simpleConversionWorks)
@@ -94,7 +87,7 @@ TEST_P(GTestPowerful, simpleConversionWorks)
   NTL::zz_p::init(q);
   pConv.initPConv(ind); // uses ind and also the current modulus q
   NTL::zz_pX poly, poly2;
-  random(poly,ind.phim);
+  random(poly, ind.phim);
 
   helib::HyperCube<NTL::zz_p> cube(pConv.getShortSig());
   pConv.polyToPowerful(cube, poly);
@@ -107,46 +100,25 @@ TEST_P(GTestPowerful, highLevelConversionWorks)
   helib::PowerfulDCRT p2d(context, mvec);
   helib::DoubleCRT dcrt(context, context.fullPrimes());
   NTL::ZZX poly1, poly2;
-  NTL::Vec<NTL::ZZ> pwrfl1, pwrfl2;
-  helib::IndexSet set = dcrt.getIndexSet();
+  NTL::Vec<NTL::ZZ> pwfl;
 
-  dcrt.randomize(); // a random polynomial
-  dcrt.toPoly(poly1); //, /*positive=*/true);
+  dcrt.randomize();
+  dcrt.toPoly(poly1);
 
-  p2d.dcrtToPowerful(pwrfl1, dcrt);
-  p2d.ZZXtoPowerful(pwrfl2, poly1, set);
-  EXPECT_EQ(pwrfl2, pwrfl1);
+  p2d.ZZXtoPowerful(pwfl, poly1);
+  p2d.powerfulToZZX(poly2, pwfl);
 
-  p2d.powerfulToZZX(poly2,pwrfl2, set);
-
-  const auto getErrorOutput = [&](){
-      std::stringstream ss;
-      long idx;
-      for (idx=0; idx <= deg(poly1); idx++) if (poly1[idx]!=poly2[idx]) break;
-
-      ss << "poly1["<<idx<<"]="<<poly1[idx]<< ",poly2[*]="<<poly2[idx]<<std::endl;
-      for (long i = set.first(); i <= set.last(); i = set.next(i)) {
-        ss << "mod " << context.ithPrime(i) << ": poly1[*]="
-         << rem(poly1[idx], context.ithPrime(i))<< ", poly2[*]="
-         << rem(poly2[idx], context.ithPrime(i))<< std::endl;
-      }
-      poly1 -= poly2;
-      helib::PolyRed(poly1, context.productOfPrimes(set));
-      if (!IsZero(poly1)) 
-        ss << "(poly1-poly2)%product=" << poly1<<std::endl;
-      else ss << "poly1=poly2 (mod product)\n";
-      return ss.str();
-  };
-  EXPECT_EQ(poly1, poly2) << getErrorOutput();
+  EXPECT_EQ(poly1, poly2);
 }
 
-INSTANTIATE_TEST_SUITE_P(standardParameters, GTestPowerful, ::testing::Values(
-            //FAST
-            Parameters(3, 5, 7, 2, 1)
-            ));
+INSTANTIATE_TEST_SUITE_P(standardParameters,
+                         GTestPowerful,
+                         ::testing::Values(
+                             // FAST
+                             Parameters(3, 5, 7, 2, 1)));
 
 } // namespace
-  /****************** UNUSED OLD CODE, COMMENTED OUT *****************/
+/****************** UNUSED OLD CODE, COMMENTED OUT *****************/
 #if 0
   long q; // find least prime q s/t q = 2*k*m + 1 for some k
 
@@ -328,4 +300,4 @@ INSTANTIATE_TEST_SUITE_P(standardParameters, GTestPowerful, ::testing::Values(
   t = GetTime()-t;
   cout << t << "\n";
 }
-#endif  
+#endif

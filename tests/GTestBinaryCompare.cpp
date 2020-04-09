@@ -219,7 +219,7 @@ protected:
 
     helib::activeContext = &context; // make things a little easier sometimes
 #ifdef DEBUG_PRINTOUT
-    helib::dbgEa = (helib::EncryptedArray*)context.ea;
+    helib::dbgEa = context.ea;
     helib::dbgKey = &secKey;
 #endif
   };

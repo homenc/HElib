@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -195,8 +195,6 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   dbgKey = &secretKey; // debugging key and ea
   dbgEa = context.rcData.ea; // EA for plaintext space p^{e+r-e'}
   dbg_ptxt = ptxt_poly;
-  context.rcData.p2dConv->ZZXtoPowerful(ptxt_pwr, dbg_ptxt);
-  vecRed(ptxt_pwr, ptxt_pwr, p2r, true);
   if (dbgEa->size()>100) printFlag = 0; // don't print too many slots
 #endif
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -69,7 +69,8 @@ void testIt(long d, long k, long p, long r, long m, long L,
   Context context(m, p, r);
   long p2r = context.alMod.getPPowR();
   buildModChain(context, L, /*c=*/3);
-  EncryptedArray ea(context);
+  std::shared_ptr<EncryptedArray> ea_ptr(std::make_shared<EncryptedArray>(context));
+  EncryptedArray& ea = *ea_ptr;
 
   SecKey secretKey(context);
   const PubKey& publicKey = secretKey;
@@ -77,7 +78,7 @@ void testIt(long d, long k, long p, long r, long m, long L,
   //  addSome1DMatrices(secretKey); // compute key-switching matrices
 
 #ifdef DEBUG_PRINTOUT
-  dbgEa = &ea;        // for debugging purposes
+  dbgEa = ea_ptr;        // for debugging purposes
   dbgKey = &secretKey;
 #endif
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -112,11 +112,13 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices that we need
 
-  EncryptedArray ea(context, G);
+  std::shared_ptr<EncryptedArray> ea_ptr(std::make_shared<EncryptedArray>(context, G));
+  // Alias to avoid issues with previous code
+  EncryptedArray& ea = *ea_ptr;
   long nslots = ea.size();
 #ifdef DEBUG_PRINTOUT
   dbgKey = &secretKey;
-  dbgEa  = &ea;
+  dbgEa  = ea_ptr;
 #endif
 
   PlaintextArray p0(ea);

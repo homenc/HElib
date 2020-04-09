@@ -1268,16 +1268,16 @@ struct VariablePositionalArgs
   static const int upto = 10;
   unsigned seed;
   int random = 0;
-  std::array<std::string, upto> default_word_list {{"apple.txt",
-                                                    "banana.txt",
-                                                    "cat.dat",
-                                                    "dog.dat",
-                                                    "eagle.md",
-                                                    "fox.sh",
-                                                    "gorilla.dat",
-                                                    "herring",
-                                                    "imp.cpp",
-                                                    "jaguar.car"}};
+  std::array<std::string, upto> default_word_list{{"apple.txt",
+                                                   "banana.txt",
+                                                   "cat.dat",
+                                                   "dog.dat",
+                                                   "eagle.md",
+                                                   "fox.sh",
+                                                   "gorilla.dat",
+                                                   "herring",
+                                                   "imp.cpp",
+                                                   "jaguar.car"}};
 
   std::vector<std::string> word_list;
 
@@ -1393,12 +1393,11 @@ TEST_F(TestArgMapCmdLine,
       .parse(argc, argv);
 
   std::vector<std::string> word_list;
-  std::remove_copy_if(begin(var_pos.getWordList()),
-                      end(var_pos.getWordList()),
-                      std::back_inserter(word_list),
-                      [&otherArgs](const std::string& s) {
-                        return otherArgs.count(s) > 0; 
-                      });
+  std::remove_copy_if(
+      begin(var_pos.getWordList()),
+      end(var_pos.getWordList()),
+      std::back_inserter(word_list),
+      [&otherArgs](const std::string& s) { return otherArgs.count(s) > 0; });
 
   ASSERT_TRUE(word_list.size() > 0);
   ASSERT_EQ(opts.dots.size(), word_list.size() - 1);
