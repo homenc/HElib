@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -904,6 +904,8 @@ void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt &ciphertxt) const
   plaintxt.setData(ptxt);
 }
 
+#define DECRYPT_ON_PWFL_BASIS
+
 void SecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt,
 			NTL::ZZX& f) const // plaintext before modular reduction
 {
@@ -915,11 +917,17 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt,
 
   // this will trigger a warning if any operations that were
   // previously performed on the polynomial basis were invalid
-  // because of excess noise.  I'm not 100% sure that this is
-  // the right test for CKKS ciphertexts...need to double check.
+  // because of excess noise.  
+
   NTL::xdouble xQ = NTL::xexp(getContext().logOfProduct(ciphertxt.getPrimeSet()));
-  double polyNormBnd = getContext().zMStar.getPolyNormBnd();
-  if (ciphertxt.getNoiseBound()*polyNormBnd > 0.48*xQ)
+
+#ifdef DECRYPT_ON_PWFL_BASIS
+  double bnd = getContext().zMStar.getNormBnd();
+#else
+  double bnd = getContext().zMStar.getPolyNormBnd();
+#endif
+
+  if (ciphertxt.getNoiseBound()*bnd > 0.48*xQ)
     Warning("decrypting with too much noise");
 
 
@@ -954,7 +962,24 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt, const Ctxt &ciphertxt,
     ptxt += key;
   }
   // convert to coefficient representation & reduce modulo the plaintext space
+
+#ifdef DECRYPT_ON_PWFL_BASIS 
+  const PowerfulDCRT& pwfl_converter = *getContext().pwfl_converter;
+  NTL::Vec<NTL::ZZ> pwfl;
+
+  pwfl_converter.dcrtToPowerful(pwfl, ptxt);
+  // convert to powerful basis, reduced mod product of primes in prime chain.
+  // the reduction mod Q is done on the poweful basis, as the 
+  // coefficients tend to be smaller there
+
+  pwfl_converter.powerfulToZZX(plaintxt, pwfl);
+  // now convert to polynomial basis, with no modular reduction
+#else
   ptxt.toPoly(plaintxt);
+#endif
+
+
+
   f = plaintxt; // f used only for debugging
 
   if (isCKKS()) return; // CKKS encryption, nothing else to do

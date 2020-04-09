@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -38,49 +38,17 @@ void testHighLvlConversion(const Context& context, const Vec<long>& mvec)
   PowerfulDCRT p2d(context, mvec);
   DoubleCRT dcrt(context, context.fullPrimes());
   ZZX poly1, poly2;
-  Vec<ZZ> pwrfl1, pwrfl2;
-  IndexSet set = dcrt.getIndexSet();
+  Vec<ZZ> pwfl;
 
-  dcrt.randomize(); // a random polynomial
-  dcrt.toPoly(poly1); //, /*positive=*/true);
+  dcrt.randomize(); 
+  dcrt.toPoly(poly1); 
 
-  p2d.dcrtToPowerful(pwrfl1, dcrt);
-  p2d.ZZXtoPowerful(pwrfl2, poly1, set);
-  cout << ((pwrfl2 != pwrfl1)? "BAD" : "GOOD") << endl;
+  p2d.ZZXtoPowerful(pwfl, poly1);
+  p2d.powerfulToZZX(poly2, pwfl);
 
-  p2d.powerfulToZZX(poly2,pwrfl2, set);
-  if (poly1!=poly2) {
-    cout << "BAD\n";
-    long idx;
-    for (idx=0; idx <= deg(poly1); idx++) if (poly1[idx]!=poly2[idx]) break;
-
-    cerr << "poly1["<<idx<<"]="<<poly1[idx]<< ",poly2[*]="<<poly2[idx]<<endl;
-    for (long i = set.first(); i <= set.last(); i = set.next(i)) {
-      cerr << "mod " << context.ithPrime(i) << ": poly1[*]="
-	   << rem(poly1[idx], context.ithPrime(i))<< ", poly2[*]="
-	   << rem(poly2[idx], context.ithPrime(i))<< endl;
-    }
-    poly1 -= poly2;
-    PolyRed(poly1, context.productOfPrimes(set));
-    if (!IsZero(poly1)) 
-      cerr << "(poly1-poly2)%product=" << poly1<<endl;
-    else cerr << "poly1=poly2 (mod product)\n";
-  }
-  else cout << "GOOD\n";
+  cout << ((poly1 != poly2)? "BAD" : "GOOD") << endl;
 }
 
-// OLD CODE
-//void usage(char *prog) 
-//{
-//  cerr << "Test utilities for conversion between representations of polynomials\n";
-//  cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
-//  cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
-//  cerr << "  e.g, 'm1=3 m2=5 m3=7 p=2 r=1'\n\n";
-//  cerr << "  m1,m2,m3 are the factors of m=m1*m2*m3 [default: m1=7,m2=13, m3=17]\n";
-//  cerr << "  p is the plaintext base [default=2]" << endl;
-//  cerr << "  r is the lifting [default=1]" << endl;
-//  exit(0);
-//}
 
 int main(int argc, char *argv[])
 {
@@ -118,7 +86,7 @@ int main(int argc, char *argv[])
   testSimpleConversion(mvec);
 
   Context context(m,p,r);
-  buildModChain(context, /*L=*/9, /*c=*/3);
+  buildModChain(context, /*L=*/100, /*c=*/3);
 
   testHighLvlConversion(context, mvec);
   return 0;

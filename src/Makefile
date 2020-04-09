@@ -27,7 +27,7 @@ INC_HELIB=-I../include/
 include $(wildcard local-defs)
 
 #
-CFLAGS = -pthread $(COPT) $(INC_NTL) $(INC_GMP) $(INC_HELIB) -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=1  -Werror=return-type -std=c++14
+CFLAGS = -pthread $(COPT) $(INC_NTL) $(INC_GMP) $(INC_HELIB) -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=1 -Werror=return-type -std=c++14
 
 # NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
 #       against them as dynamic libraries.
@@ -156,8 +156,8 @@ obj: $(OBJ)
 #extractDigits.o: extractDigits.cpp
 #	$(CC) $(CFLAGS) -DDEBUG_PRINTOUT -c extractDigits.cpp
 #
-#recryption.o: recryption.cpp
-#	$(CC) $(CFLAGS) -DDEBUG_PRINTOUT -c recryption.cpp
+recryption.o: recryption.cpp
+	$(CC) $(CFLAGS) -DDEBUG_PRINTOUT -c recryption.cpp
 
 PGFFT.o: PGFFT.cpp
 	$(CC) $(CFLAGS) -c PGFFT.cpp

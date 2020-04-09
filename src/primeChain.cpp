@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -323,10 +323,11 @@ struct PrimeGenerator {
 	else
 	  klb = 1;
 
-  if (k < klb) throw helib::RuntimeError("Prime generator ran out of primes");
-        
 	// we run k down to 0  if m is even, and down to 1
 	// if m is odd.
+
+        if (k < klb) throw helib::RuntimeError("Prime generator ran out of primes");
+        
 
 	t = divc(3*(1L << (len-2))-1, m << k);
 	tub = divc((1L << len)-1, m << k);
@@ -429,7 +430,6 @@ void addSmallPrimes(Context& context, long resolution, long cpSize)
   std::sort(sizes.begin(), sizes.end()); // order by size
 
   long last_sz = 0;
-  long sz_cnt = 0;
   std::unique_ptr<PrimeGenerator> gen;
   for (long sz : sizes) {
     if (sz != last_sz) gen.reset(new PrimeGenerator(sz, m));
@@ -566,8 +566,14 @@ void addSpecialPrimes(Context& context, long nDgts,
   long nbits = ceil(totalBits/numPrimes);         
   // estimated size of each special prime
 
-  nbits++;
+  // nbits++;
   // add 1 so we don't undershoot 
+  // VJS: this is no longer necessary
+
+  // FIXME: we should increase nbits if necessary to
+  // make sure nbits is a bit larger than NumBits(m).
+  // If it's not big enough, the PrimeGenerator may
+  // run out of primes and raise an error.
 
   if (nbits > NTL_SP_NBITS) nbits = NTL_SP_NBITS;
   // make sure nbits not too large
@@ -576,8 +582,8 @@ void addSpecialPrimes(Context& context, long nDgts,
 
   PrimeGenerator gen(nbits, m);
 
-  double logSoFar = 0.0;
-  while (logSoFar < logOfSpecialPrimes) {
+  double bitsSoFar = 0.0;
+  while (bitsSoFar < totalBits-0.5) {
     long q = gen.next();
 
     if (context.inChain(q)) continue;
@@ -587,7 +593,7 @@ void addSpecialPrimes(Context& context, long nDgts,
     // but it doesn't make sense to optimize this any further
 
     context.AddSpecialPrime(q);
-    logSoFar += log(q);
+    bitsSoFar += std::log2(q);
   }
 
 #if 0
@@ -595,6 +601,18 @@ void addSpecialPrimes(Context& context, long nDgts,
             << (logOfSpecialPrimes/log(2.0)) << " " 
             << (context.logOfProduct(context.specialPrimes)/log(2.0)) << "\n";
 #endif
+}
+
+void endBuildModChain(Context& context)
+{
+  context.setModSizeTable();
+
+  long m = context.zMStar.getM();
+  std::vector<long> mvec;
+  pp_factorize(mvec, m);
+  NTL::Vec<long> mmvec;
+  convert(mmvec, mvec);
+  context.pwfl_converter = std::make_shared<PowerfulDCRT>(context, mmvec);
 }
 
 void buildModChain(Context& context, long nBits, long nDgts,
@@ -605,7 +623,7 @@ void buildModChain(Context& context, long nBits, long nDgts,
   addSmallPrimes(context, resolution, pSize);
   addCtxtPrimes(context, nBits, pSize);
   addSpecialPrimes(context, nDgts, willBeBootstrappable, skHwt, bitsInSpecialPrimes);
-  context.setModSizeTable();
+  endBuildModChain(context);
 }
 
 }

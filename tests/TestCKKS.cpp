@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,170 +21,178 @@
 #include "test_common.h"
 
 namespace {
-struct Parameters {
-    Parameters(long m, long r, long L, double epsilon) :
-        m(m),
-        r(r),
-        L(L),
-        epsilon(epsilon)
-    {};
+struct Parameters
+{
+  Parameters(long m, long r, long L, double epsilon) :
+      m(m), r(r), L(L), epsilon(epsilon){};
 
-    const long m;
-    const long r;
-    const long L;
-    const double epsilon;
+  const long m;
+  const long r;
+  const long L;
+  const double epsilon;
 
-    friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
-    {
-        return os << "{" <<
-            "m=" << params.m << "," <<
-            "r=" << params.r << "," <<
-            "L=" << params.L << "," <<
-            "epsilon=" << params.epsilon <<
-            "}";
-    }
+  friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
+  {
+    return os << "{"
+              << "m=" << params.m << ","
+              << "r=" << params.r << ","
+              << "L=" << params.L << ","
+              << "epsilon=" << params.epsilon << "}";
+  }
 };
 
 // Utility functions for the tests
 
-  // Compute the L-infinity distance between two vectors
-  double calcMaxDiff(const std::vector<std::complex<double>>& v1,
-                     const std::vector<std::complex<double>>& v2){
-    if(helib::lsize(v1) != helib::lsize(v2)) {
-      throw std::runtime_error("Vector sizes differ.");
-    }
-    
-    double maxDiff = 0.0;
-    for (long i=0; i<helib::lsize(v1); i++) {
-      double diffAbs = std::abs(v1[i]-v2[i]);
-      if (diffAbs > maxDiff)
-        maxDiff = diffAbs;
-    }
-    return maxDiff;
-  }
-  // Compute the max relative difference between two vectors
-  double calcMaxRelDiff(const std::vector<std::complex<double>>& v1,
-                        const std::vector<std::complex<double>>& v2)
-  {
-    if(helib::lsize(v1)!=helib::lsize(v2)) {
-      throw std::runtime_error("Vector sizes differ.");
-      
-    }
-    
-    // Compute the largest-magnitude value in the vector
-    double maxAbs = 0.0;
-    for (auto& x : v1) {
-      if (std::abs(x) > maxAbs)
-        maxAbs = std::abs(x);
-    }
-    if (maxAbs<1e-10)
-      maxAbs = 1e-10;
-    
-    double maxDiff = 0.0;
-    for (long i=0; i<helib::lsize(v1); i++) {
-      double relDiff = std::abs(v1[i]-v2[i]) / maxAbs;
-      if (relDiff > maxDiff)
-        maxDiff = relDiff;
-    }
-    
-    return maxDiff;
-  }
-  
-  inline bool cx_equals(const std::vector<std::complex<double>>& v1,
-                        const std::vector<std::complex<double>>& v2,
-                        double epsilon)
-  {
-    return (calcMaxDiff(v1,v2) < epsilon);
-  }
-  
-  void negateVec(std::vector<std::complex<double>>& p1)
-  {
-    for (auto& x: p1) x = -x;
-  }
-  void conjVec(std::vector<std::complex<double>>& p1)
-  {
-    for (auto& x: p1) x = conj(x);
-  }
-  void add(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
-  {
-    if (to.size() < from.size())
-      to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] += from[i];
-  }
-  void add(std::vector<std::complex<double>>& to, double from)
-  {
-    for (long i=0; i<to.size(); i++) to[i] += from;
-  }
-  void sub(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
-  {
-    if (to.size() < from.size())
-      to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] -= from[i];
-  }
-  void mul(std::vector<std::complex<double>>& to, const std::vector<std::complex<double>>& from)
-  {
-    if (to.size() < from.size())
-      to.resize(from.size(), 0);
-    for (long i=0; i<from.size(); i++) to[i] *= from[i];
-  }
-  void mul(std::vector<std::complex<double>>& to, double from)
-  {
-    for (long i=0; i<to.size(); i++) to[i] *= from;
-  }
-  void rotate(std::vector<std::complex<double>>& p, long amt)
-  {
-    long sz = p.size();
-    std::vector<std::complex<double>> tmp(sz);
-    for (long i=0; i<sz; i++)
-      tmp[((i+amt)%sz +sz)%sz] = p[i];
-    p = tmp;
+// Compute the L-infinity distance between two vectors
+double calcMaxDiff(const std::vector<std::complex<double>>& v1,
+                   const std::vector<std::complex<double>>& v2)
+{
+  if (helib::lsize(v1) != helib::lsize(v2)) {
+    throw std::runtime_error("Vector sizes differ.");
   }
 
-class TestCKKS : public ::testing::TestWithParam<Parameters> {
-    protected:
-        const long m;         // Zm*
-        const long r;         // bit precision
-        const long L;         // Number of bits
-        const double epsilon; // error threshold
+  double maxDiff = 0.0;
+  for (long i = 0; i < helib::lsize(v1); i++) {
+    double diffAbs = std::abs(v1[i] - v2[i]);
+    if (diffAbs > maxDiff)
+      maxDiff = diffAbs;
+  }
+  return maxDiff;
+}
+// Compute the max relative difference between two vectors
+double calcMaxRelDiff(const std::vector<std::complex<double>>& v1,
+                      const std::vector<std::complex<double>>& v2)
+{
+  if (helib::lsize(v1) != helib::lsize(v2)) {
+    throw std::runtime_error("Vector sizes differ.");
+  }
 
-        helib::Context context;
-        helib::SecKey secretKey;
-        const helib::PubKey publicKey;
-        const helib::EncryptedArrayCx& ea;
+  // Compute the largest-magnitude value in the vector
+  double maxAbs = 0.0;
+  for (auto& x : v1) {
+    if (std::abs(x) > maxAbs)
+      maxAbs = std::abs(x);
+  }
+  if (maxAbs < 1e-10)
+    maxAbs = 1e-10;
 
-        TestCKKS () :
-            m(GetParam().m),
-            r(GetParam().r),
-            L(GetParam().L),
-            epsilon(GetParam().epsilon),
-            context(m, /*p=*/-1, r),
-            secretKey((context.scale=4, helib::buildModChain(context, L, /*c=*/2), context)),
-            publicKey((secretKey.GenSecKey(), helib::addSome1DMatrices(secretKey), secretKey)),
-            ea(context.ea->getCx())
-        {}
+  double maxDiff = 0.0;
+  for (long i = 0; i < helib::lsize(v1); i++) {
+    double relDiff = std::abs(v1[i] - v2[i]) / maxAbs;
+    if (relDiff > maxDiff)
+      maxDiff = relDiff;
+  }
 
-        virtual void SetUp() override
-        {
-            if (helib_test::verbose) {
-                ea.getPAlgebra().printout();
-                std::cout << "r = " << context.alMod.getR() << std::endl;
-                std::cout << "ctxtPrimes="<<context.ctxtPrimes
-                    << ", specialPrimes="<<context.specialPrimes<<std::endl<<std::endl;
-            }
+  return maxDiff;
+}
+
+inline bool cx_equals(const std::vector<std::complex<double>>& v1,
+                      const std::vector<std::complex<double>>& v2,
+                      double epsilon)
+{
+  return (calcMaxDiff(v1, v2) < epsilon);
+}
+
+void negateVec(std::vector<std::complex<double>>& p1)
+{
+  for (auto& x : p1)
+    x = -x;
+}
+void conjVec(std::vector<std::complex<double>>& p1)
+{
+  for (auto& x : p1)
+    x = conj(x);
+}
+void add(std::vector<std::complex<double>>& to,
+         const std::vector<std::complex<double>>& from)
+{
+  if (to.size() < from.size())
+    to.resize(from.size(), 0);
+  for (long i = 0; i < from.size(); i++)
+    to[i] += from[i];
+}
+void add(std::vector<std::complex<double>>& to, double from)
+{
+  for (long i = 0; i < to.size(); i++)
+    to[i] += from;
+}
+void sub(std::vector<std::complex<double>>& to,
+         const std::vector<std::complex<double>>& from)
+{
+  if (to.size() < from.size())
+    to.resize(from.size(), 0);
+  for (long i = 0; i < from.size(); i++)
+    to[i] -= from[i];
+}
+void mul(std::vector<std::complex<double>>& to,
+         const std::vector<std::complex<double>>& from)
+{
+  if (to.size() < from.size())
+    to.resize(from.size(), 0);
+  for (long i = 0; i < from.size(); i++)
+    to[i] *= from[i];
+}
+void mul(std::vector<std::complex<double>>& to, double from)
+{
+  for (long i = 0; i < to.size(); i++)
+    to[i] *= from;
+}
+void rotate(std::vector<std::complex<double>>& p, long amt)
+{
+  long sz = p.size();
+  std::vector<std::complex<double>> tmp(sz);
+  for (long i = 0; i < sz; i++)
+    tmp[((i + amt) % sz + sz) % sz] = p[i];
+  p = tmp;
+}
+
+class TestCKKS : public ::testing::TestWithParam<Parameters>
+{
+protected:
+  const long m;         // Zm*
+  const long r;         // bit precision
+  const long L;         // Number of bits
+  const double epsilon; // error threshold
+
+  helib::Context context;
+  helib::SecKey secretKey;
+  const helib::PubKey publicKey;
+  const helib::EncryptedArrayCx& ea;
+
+  TestCKKS() :
+      m(GetParam().m),
+      r(GetParam().r),
+      L(GetParam().L),
+      epsilon(GetParam().epsilon),
+      context(m, /*p=*/-1, r),
+      secretKey((context.scale = 4,
+                 helib::buildModChain(context, L, /*c=*/2),
+                 context)),
+      publicKey((secretKey.GenSecKey(),
+                 helib::addSome1DMatrices(secretKey),
+                 secretKey)),
+      ea(context.ea->getCx())
+  {}
+
+  virtual void SetUp() override
+  {
+    if (helib_test::verbose) {
+      ea.getPAlgebra().printout();
+      std::cout << "r = " << context.alMod.getR() << std::endl;
+      std::cout << "ctxtPrimes=" << context.ctxtPrimes
+                << ", specialPrimes=" << context.specialPrimes << std::endl
+                << std::endl;
+    }
 
 #ifdef DEBUG_PRINTOUT
-            helib::dbgKey = &secretKey;
-            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
+    helib::dbgKey = &secretKey;
+    helib::dbgEa = context.ea;
 #endif // DEBUG_PRINTOUT
-        }
+  }
 
-        virtual void TearDown() override
-        {
-            helib::cleanupGlobals();
-        }
-
+  virtual void TearDown() override { helib::cleanupGlobals(); }
 };
- 
+
 TEST_P(TestCKKS, negatingCiphertextWorks)
 {
   helib::Ctxt c1(publicKey);
@@ -196,16 +204,17 @@ TEST_P(TestCKKS, negatingCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd1, /*size=*/ 1.0);
+  ea.encode(poly, vd1, /*size=*/1.0);
   c1.negate();
   ea.decrypt(c1, secretKey, vd2);
 
   negateVec(vd1);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd2)=" << helib::largestCoeff(vd2)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd2)=" << helib::largestCoeff(vd2)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
+      << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
@@ -222,16 +231,17 @@ TEST_P(TestCKKS, addingPolyConstantToCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd2, /*size=*/ 1.0);
+  ea.encode(poly, vd2, /*size=*/1.0);
   c1.addConstantCKKS(poly);
   ea.decrypt(c1, secretKey, vd3);
 
   add(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd3)=" << helib::largestCoeff(vd3)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
+      << std::endl;
 }
 
 TEST_P(TestCKKS, addingNegatedPolyConstantToCiphertextWorks)
@@ -247,17 +257,18 @@ TEST_P(TestCKKS, addingNegatedPolyConstantToCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd2, /*size=*/ 1.0);
+  ea.encode(poly, vd2, /*size=*/1.0);
   c1.addConstantCKKS(poly);
   ea.decrypt(c1, secretKey, vd3);
 
   add(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd3)=" << helib::largestCoeff(vd3) << std::endl
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd3) 
-                  << ", maxRelDiff=" << calcMaxRelDiff(vd1,vd3) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3) << std::endl
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3)
+      << ", maxRelDiff=" << calcMaxRelDiff(vd1, vd3) << std::endl
+      << std::endl;
 }
 
 TEST_P(TestCKKS, multiplyingPolyConstantToCiphertextWorks)
@@ -272,7 +283,7 @@ TEST_P(TestCKKS, multiplyingPolyConstantToCiphertextWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd2, /*size=*/ 1.0);
+  ea.encode(poly, vd2, /*size=*/1.0);
   c1.multByConstantCKKS(poly);
   ea.decrypt(c1, secretKey, vd3);
 
@@ -280,9 +291,10 @@ TEST_P(TestCKKS, multiplyingPolyConstantToCiphertextWorks)
   rf *= ea.encodeScalingFactor();
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd3)=" << helib::largestCoeff(vd3)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
+      << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
@@ -305,9 +317,10 @@ TEST_P(TestCKKS, addingDoubleToCiphertextWorks)
   add(vd1, vd[0]);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd2)=" << helib::largestCoeff(vd2)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd2)=" << helib::largestCoeff(vd2)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
+      << std::endl;
 }
 
 TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
@@ -331,11 +344,11 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
   pm *= std::abs(vd[0]);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd2)=" << helib::largestCoeff(vd2)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl
-		  << ", ptxtMag=" << c1.getPtxtMag() << std::endl
-		  << ", vd[0]=" << vd[0] << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd2)=" << helib::largestCoeff(vd2)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
+      << ", ptxtMag=" << c1.getPtxtMag() << std::endl
+      << ", vd[0]=" << vd[0] << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
@@ -351,16 +364,17 @@ TEST_P(TestCKKS, gettingTheComplexConjugateWorks)
   ea.encrypt(c1, publicKey, vd1);
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd1, /*size=*/ 1.0);
+  ea.encode(poly, vd1, /*size=*/1.0);
   c1.complexConj();
   ea.decrypt(c1, secretKey, vd2);
 
   conjVec(vd1);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd2)=" << helib::largestCoeff(vd2)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd2)=" << helib::largestCoeff(vd2)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
+      << std::endl;
   EXPECT_EQ(rf, c1.getRatFactor());
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
@@ -375,7 +389,7 @@ TEST_P(TestCKKS, rotatingCiphertextWorks)
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1);
   pm = c1.getPtxtMag();
-  ea.encode(poly, vd1, /*size=*/ 1.0);
+  ea.encode(poly, vd1, /*size=*/1.0);
   ea.rotate(c1, 3);
   ea.decrypt(c1, secretKey, vd2);
   // TODO: understand how this affects ratfactor and add appropriate expectation
@@ -383,9 +397,10 @@ TEST_P(TestCKKS, rotatingCiphertextWorks)
   // vd1 is now the expected result
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd2)=" << helib::largestCoeff(vd2)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd2) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd2)=" << helib::largestCoeff(vd2)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
+      << std::endl;
   EXPECT_EQ(pm, c1.getPtxtMag());
 }
 
@@ -404,9 +419,10 @@ TEST_P(TestCKKS, addingCiphertextsWorks)
   add(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd3)=" << helib::largestCoeff(vd3)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
+      << std::endl;
 }
 
 TEST_P(TestCKKS, subtractingCiphertextsWorks)
@@ -424,9 +440,10 @@ TEST_P(TestCKKS, subtractingCiphertextsWorks)
   sub(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd3)=" << helib::largestCoeff(vd3)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
+      << std::endl;
 }
 
 TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
@@ -445,9 +462,10 @@ TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
   mul(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd3)=" << helib::largestCoeff(vd3)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
+      << std::endl;
   EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
 }
 
@@ -467,13 +485,16 @@ TEST_P(TestCKKS, highLevelMultiplicationOfCiphertextsWorks)
   mul(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd3)=" << helib::largestCoeff(vd3)
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd3) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3)
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
+      << std::endl;
   EXPECT_EQ(expectedPtxtMag, c1.getPtxtMag());
 }
 
-TEST_P(TestCKKS, multiplyingCiphertextByNegativeConstantAndThenAddingToOtherCiphertextWorks)
+TEST_P(
+    TestCKKS,
+    multiplyingCiphertextByNegativeConstantAndThenAddingToOtherCiphertextWorks)
 {
   helib::Ctxt c1(publicKey), c2(publicKey);
   std::vector<std::complex<double>> vd1, vd2, vd3, vd4;
@@ -487,20 +508,23 @@ TEST_P(TestCKKS, multiplyingCiphertextByNegativeConstantAndThenAddingToOtherCiph
   c1 += c2;
   ea.decrypt(c1, secretKey, vd4);
 
-  mul(vd1,std::vector<std::complex<double>>(ea.size(),-5/2.0));
+  mul(vd1, std::vector<std::complex<double>>(ea.size(), -5 / 2.0));
   add(vd1, vd2);
 
   EXPECT_TRUE(cx_equals(vd4, vd1, epsilon))
-                  << "  max(vd1)=" << helib::largestCoeff(vd1)
-                  << ", max(vd4)=" << helib::largestCoeff(vd4) << std::endl
-                  << ", maxDiff=" << calcMaxDiff(vd1,vd4) << std::endl << std::endl;
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd4)=" << helib::largestCoeff(vd4) << std::endl
+      << ", maxDiff=" << calcMaxDiff(vd1, vd4) << std::endl
+      << std::endl;
 }
 
-INSTANTIATE_TEST_SUITE_P(typicalParameters, TestCKKS, ::testing::Values(
-            //SLOW
-            Parameters(1024, 20, 150, 0.01)
-            //FAST
-            //Parameters(128, 20, 150, 0.01)
-            ));
+INSTANTIATE_TEST_SUITE_P(typicalParameters,
+                         TestCKKS,
+                         ::testing::Values(
+                             // SLOW
+                             Parameters(1024, 20, 150, 0.01)
+                             // FAST
+                             // Parameters(128, 20, 150, 0.01)
+                             ));
 
 } // namespace
