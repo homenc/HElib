@@ -678,7 +678,7 @@ TEST_P(GTestBinaryArith, negateNegatesCorrectly)
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea, true);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long i = 0; i < decrypted_result.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
     EXPECT_EQ(decrypted_result[i], expected_result) << "i = " << i << std::endl;
   }
 
@@ -734,7 +734,7 @@ TEST_P(GTestBinaryArith, subtractSubtractsCorrectly)
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea, true);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long i = 0; i < decrypted_result.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
     EXPECT_EQ(decrypted_result[i], expected_result) << "i = " << i << std::endl;
   }
 
@@ -756,7 +756,7 @@ TEST_P(GTestBinaryArith, binaryMaskMasksCorrectly)
   const helib::PubKey& pubKey = secKey;
   helib::Ctxt mask(secKey);
   helib::Ptxt<helib::BGV> mask_data(context);
-  for (long i = 0; i < mask_data.size(); ++i)
+  for (std::size_t i = 0; i < mask_data.size(); ++i)
     mask_data[i] = i % 2;
 
   pubKey.Encrypt(mask, mask_data);
@@ -789,7 +789,7 @@ TEST_P(GTestBinaryArith, binaryCondWorksCorrectly)
   const helib::PubKey& pubKey = secKey;
   helib::Ctxt cond(secKey);
   helib::Ptxt<helib::BGV> cond_data(context);
-  for (long i = 0; i < cond_data.size(); ++i)
+  for (std::size_t i = 0; i < cond_data.size(); ++i)
     cond_data[i] = i % 2;
 
   pubKey.Encrypt(cond, cond_data);
@@ -857,7 +857,7 @@ TEST_P(GTestBinaryArith, concatBinaryNumsConcatsCorrectly)
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long i = 0; i < decrypted_result.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
     EXPECT_EQ(decrypted_result[i], (rhs_number << bitSize) + lhs_number)
         << "i = " << i << std::endl;
   }
@@ -910,7 +910,7 @@ TEST_P(GTestBinaryArith, splitBinaryNumsSplitsCorrectly)
 
   EXPECT_EQ(decrypted_lhs.size(), ea.size());
   EXPECT_EQ(decrypted_rhs.size(), ea.size());
-  for (long i = 0; i < decrypted_lhs.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_lhs.size(); ++i) {
     EXPECT_EQ(decrypted_lhs[i], lhs_number) << "i = " << i << std::endl;
     EXPECT_EQ(decrypted_rhs[i], rhs_number) << "i = " << i << std::endl;
   }
@@ -948,7 +948,7 @@ TEST_P(GTestBinaryArith, bitwiseShiftShiftsCorrectly)
     helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
 
     EXPECT_EQ(decrypted_result.size(), ea.size());
-    for (long i = 0; i < decrypted_result.size(); ++i)
+    for (std::size_t i = 0; i < decrypted_result.size(); ++i)
       EXPECT_EQ(decrypted_result[i], (number << shamt) & mask)
           << "i = " << i << std::endl;
   }
@@ -995,7 +995,7 @@ TEST_P(GTestBinaryArith, bitwiseRotateRotatesCorrectly)
     std::vector<long> decrypted_result;
     helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
     EXPECT_EQ(decrypted_result.size(), ea.size());
-    for (long i = 0; i < decrypted_result.size(); ++i) {
+    for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
       EXPECT_EQ(decrypted_result[i], plaintext_rotate(input, rotamt, bitSize))
           << "i = " << i << std::endl;
     }
@@ -1036,7 +1036,7 @@ TEST_P(GTestBinaryArith, binaryAndWithLongAndsCorrectly)
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long i = 0; i < decrypted_result.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
     EXPECT_EQ(decrypted_result[i], (number & long_mask))
         << "i = " << i << std::endl;
   }
@@ -1077,7 +1077,7 @@ TEST_P(GTestBinaryArith, binaryXORXORsCorrectly)
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long i = 0; i < decrypted_result.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
     EXPECT_EQ(decrypted_result[i], lhs ^ rhs) << "i = " << i << std::endl;
   }
 
@@ -1118,7 +1118,7 @@ TEST_P(GTestBinaryArith, binaryAndAndsCorrectly)
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long i = 0; i < decrypted_result.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
     EXPECT_EQ(decrypted_result[i], lhs & rhs) << "i = " << i << std::endl;
   }
 
@@ -1159,7 +1159,7 @@ TEST_P(GTestBinaryArith, binaryOrOrsCorrectly)
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long i = 0; i < decrypted_result.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
     EXPECT_EQ(decrypted_result[i], lhs | rhs) << "i = " << i << std::endl;
   }
 
@@ -1195,7 +1195,7 @@ TEST_P(GTestBinaryArith, bitwiseNotNotsCorrectly)
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
 
   EXPECT_EQ(decrypted_result.size(), ea.size());
-  for (long i = 0; i < decrypted_result.size(); ++i) {
+  for (std::size_t i = 0; i < decrypted_result.size(); ++i) {
     EXPECT_EQ(decrypted_result[i], (~input) & mask) << "i = " << i << std::endl;
   }
 

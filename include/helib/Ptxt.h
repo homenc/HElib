@@ -119,7 +119,7 @@ void innerProduct(helib::Ptxt<Scheme>& result,
   }
   result = first_vec[0];
   result *= second_vec[0];
-  for (std::size_t i = 1; i < n; ++i)
+  for (long i = 1; i < n; ++i)
     result += (first_vec[i] * second_vec[i]);
 }
 

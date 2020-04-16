@@ -123,10 +123,10 @@ int main(int argc, char *argv[])
   amap.parse(argc, argv);
 
   // FIXME: this is wrong!
-  const char* asciiFile1 = "misc/iotest_ascii1.txt"; 
-  const char* asciiFile2 = "misc/iotest_ascii2.txt"; 
-  const char* binFile1 = "misc/iotest_bin.bin"; 
-  const char* otherEndianFileOut = "misc/iotest_ascii3.txt";  
+  const char* asciiFile1 = "../misc/iotest_ascii1.txt"; 
+  const char* asciiFile2 = "../misc/iotest_ascii2.txt"; 
+  const char* binFile1 = "../misc/iotest_bin.bin"; 
+  const char* otherEndianFileOut = "../misc/iotest_ascii3.txt";  
 
   { // 1. Write ASCII and bin files. 
     ofstream asciiFile(asciiFile1);
