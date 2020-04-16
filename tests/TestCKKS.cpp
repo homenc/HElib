@@ -24,7 +24,10 @@ namespace {
 struct Parameters
 {
   Parameters(long m, long r, long L, double epsilon) :
-      m(m), r(r), L(L), epsilon(epsilon){};
+      m(m),
+      r(r),
+      L(L),
+      epsilon(epsilon){};
 
   const long m;
   const long r;
@@ -108,12 +111,12 @@ void add(std::vector<std::complex<double>>& to,
 {
   if (to.size() < from.size())
     to.resize(from.size(), 0);
-  for (long i = 0; i < from.size(); i++)
+  for (std::size_t i = 0; i < from.size(); i++)
     to[i] += from[i];
 }
 void add(std::vector<std::complex<double>>& to, double from)
 {
-  for (long i = 0; i < to.size(); i++)
+  for (std::size_t i = 0; i < to.size(); i++)
     to[i] += from;
 }
 void sub(std::vector<std::complex<double>>& to,
@@ -121,7 +124,7 @@ void sub(std::vector<std::complex<double>>& to,
 {
   if (to.size() < from.size())
     to.resize(from.size(), 0);
-  for (long i = 0; i < from.size(); i++)
+  for (std::size_t i = 0; i < from.size(); i++)
     to[i] -= from[i];
 }
 void mul(std::vector<std::complex<double>>& to,
@@ -129,12 +132,12 @@ void mul(std::vector<std::complex<double>>& to,
 {
   if (to.size() < from.size())
     to.resize(from.size(), 0);
-  for (long i = 0; i < from.size(); i++)
+  for (std::size_t i = 0; i < from.size(); i++)
     to[i] *= from[i];
 }
 void mul(std::vector<std::complex<double>>& to, double from)
 {
-  for (long i = 0; i < to.size(); i++)
+  for (std::size_t i = 0; i < to.size(); i++)
     to[i] *= from;
 }
 void rotate(std::vector<std::complex<double>>& p, long amt)

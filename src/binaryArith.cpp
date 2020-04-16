@@ -541,9 +541,9 @@ void concatBinaryNums(CtPtrs& output, const CtPtrs& a, const CtPtrs& b)
   assertEq(output.size(),
            a.size() + b.size(),
            "output must be of size a.size() + b.size()");
-  for (std::size_t i = 0; i < a.size(); ++i)
+  for (long i = 0; i < a.size(); ++i)
     *output[i] = *a[i];
-  for (std::size_t i = 0; i < b.size(); ++i)
+  for (long i = 0; i < b.size(); ++i)
     *output[i + a.size()] = *b[i];
 }
 
@@ -692,7 +692,7 @@ void negateBinary(CtPtrs& negation, const CtPtrs& input)
   // Calculate the resultant carry bits.
   std::vector<Ctxt>& carryBits = bitFlippedInput;
   incrementalProduct(carryBits);
-  for (long i = 1; i < bitFlippedInput.size(); ++i)
+  for (std::size_t i = 1; i < bitFlippedInput.size(); ++i)
     *(negation[i]) += carryBits[i - 1];
 }
 

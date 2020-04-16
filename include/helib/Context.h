@@ -42,7 +42,7 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
 
 
 class EncryptedArray;
-class PolyModRing;
+struct PolyModRing;
 /**
  * @class Context
  * @brief Maintaining the parameters

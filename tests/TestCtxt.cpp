@@ -31,7 +31,12 @@ struct BGVParameters
                 unsigned bits,
                 const std::vector<long>& gens = {},
                 const std::vector<long>& ords = {}) :
-      m(m), p(p), r(r), bits(bits), gens(gens), ords(ords){};
+      m(m),
+      p(p),
+      r(r),
+      bits(bits),
+      gens(gens),
+      ords(ords){};
 
   const unsigned m;
   const unsigned p;
@@ -96,7 +101,7 @@ class TestCtxtWithBadDimensions : public TestCtxt
 protected:
   TestCtxtWithBadDimensions() : TestCtxt()
   {
-    for (std::size_t i = 0; i < context.zMStar.numOfGens(); ++i) {
+    for (long i = 0; i < context.zMStar.numOfGens(); ++i) {
       if (!ea.nativeDimension(i)) {
         return;
       }
@@ -191,9 +196,9 @@ TEST_P(TestCtxtWithBadDimensions,
   helib::Ctxt ctxt(publicKey);
   publicKey.Encrypt(ctxt, ptxt);
   helib::Ptxt<helib::BGV> expected_result(ptxt);
-  for (int i = 0; i <= ea.getDegree(); ++i) {
+  for (long i = 0; i <= ea.getDegree(); ++i) {
     ctxt.frobeniusAutomorph(i);
-    for (std::size_t j = 0; j < i; ++j) {
+    for (long j = 0; j < i; ++j) {
       expected_result.power(p);
     }
 
@@ -213,9 +218,9 @@ TEST_P(TestCtxt, frobeniusAutomorphWorksCorrectly)
   helib::Ctxt ctxt(publicKey);
   publicKey.Encrypt(ctxt, ptxt);
   helib::Ptxt<helib::BGV> expected_result(ptxt);
-  for (int i = 0; i <= ea.getDegree(); ++i) {
+  for (long i = 0; i <= ea.getDegree(); ++i) {
     ctxt.frobeniusAutomorph(i);
-    for (std::size_t j = 0; j < i; ++j) {
+    for (long j = 0; j < i; ++j) {
       expected_result.power(p);
     }
 
@@ -235,7 +240,7 @@ TEST_P(TestCtxtWithBadDimensions, rotate1DRotatesCorrectlyWithBadDimensions)
   helib::Ctxt ctxt(publicKey);
   publicKey.Encrypt(ctxt, ptxt);
 
-  for (std::size_t i = 0; i < context.zMStar.numOfGens(); ++i) {
+  for (long i = 0; i < context.zMStar.numOfGens(); ++i) {
     helib::Ctxt tmp(ctxt);
     ea.rotate1D(tmp, i, 3);
     helib::Ptxt<helib::BGV> expected_result(ptxt);

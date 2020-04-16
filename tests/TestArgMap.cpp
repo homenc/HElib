@@ -72,7 +72,7 @@ public:
     this->argv = new char*[argc + 1];
 
     // Copy strings to argv
-    for (size_t i = 0; i < this->argc; i++) {
+    for (int i = 0; i < this->argc; i++) {
       this->argv[i] = new char[words[i].length() + 1];
       strcpy(this->argv[i], words[i].c_str());
     }
@@ -1302,7 +1302,7 @@ struct VariablePositionalArgs
     std::ostringstream string_list;
     string_list << first;
 
-    int max_size = random + priority_mixin.size();
+    std::size_t max_size = random + priority_mixin.size();
     word_list.resize(max_size);
 
     // In case this isn't our first call.
