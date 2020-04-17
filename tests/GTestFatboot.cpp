@@ -226,15 +226,15 @@ protected:
       chen_han(GetParam().chen_han),
       debug(GetParam().debug),
       scale(GetParam().scale),
+      mvec(GetParam().global_mvec),
       gens(helib::convert<std::vector<long>>(GetParam().global_gens)),
       ords(helib::convert<std::vector<long>>(GetParam().global_ords)),
-      mvec(GetParam().global_mvec),
       c_m(GetParam().c_m),
+      outer_rep(GetParam().outer_rep),
+      inner_rep(GetParam().inner_rep),
       m(helib::computeProd(mvec)),
       phim((checkPM(p, m), helib::phi_N(m))),
       time(0),
-      outer_rep(GetParam().outer_rep),
-      inner_rep(GetParam().inner_rep),
       context((preContextSetup(), m), p, r, gens, ords)
   {
     postContextSetup();

@@ -538,7 +538,7 @@ NTL::ZZX getG(const EncryptedArray& ea)
 // rcEA (if set) points to rcAlmod which points to zMStar
 Context::Context(unsigned long m, unsigned long p, unsigned long r,
    const std::vector<long>& gens, const std::vector<long>& ords):
-  stdev(3.2), scale(10.0), zMStar(m, p, gens, ords), alMod(zMStar, r)
+  zMStar(m, p, gens, ords), alMod(zMStar, r), stdev(3.2), scale(10.0) 
 {
   ea = std::make_shared<EncryptedArray>(*this, alMod);
 

@@ -301,7 +301,13 @@ using TypesToTest = ::testing::Types<
     MatrixTypeAndParams<helib::MatMul1D, oneDimensionalMatrixParams>,
     MatrixTypeAndParams<helib::MatMul1D, oneDimensionalBlockMatrixParams>>;
 
+// Currently gtest does not intend on supporting the -Wall and -Wextra flags so
+// this does not conform to the C++ standard. Until gtest changes, we need a
+// pragma to ignore this warning.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 TYPED_TEST_SUITE(GTestMatmul, TypesToTest);
+#pragma GCC diagnostic pop
 
 TYPED_TEST(GTestMatmul, multipliesWithoutErrors)
 {

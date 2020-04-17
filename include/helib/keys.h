@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -80,8 +80,11 @@ public:
     //! Copy constructor
     PubKey(const PubKey& other);
 
+    //! Default destructor
+    virtual ~PubKey() = default;
+
     //! Clear all public-key data
-    void clear();
+    virtual void clear();
 
     bool operator==(const PubKey& other) const;
     bool operator!=(const PubKey& other) const;
@@ -206,6 +209,9 @@ public:
   // Disable default constructor
   SecKey() = delete;
 
+    // Default destructor
+    ~SecKey() override = default;
+
     // Constructors just call the ones for the base class
     explicit
     SecKey(const Context& _context);
@@ -214,7 +220,7 @@ public:
     bool operator!=(const SecKey& other) const;
 
     //! Clear all secret-key data
-    void clear();
+    void clear() override;
 
     //! We allow the calling application to choose a secret-key polynomial by
     //! itself, then insert it into the SecKey object, getting the index of
