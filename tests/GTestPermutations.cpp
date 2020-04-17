@@ -94,9 +94,9 @@ class GTestPermutations : public ::testing::TestWithParam<Parameters>
 protected:
   GTestPermutations() :
       test(GetParam().test),
+      m(GetParam().m),
       p(GetParam().p),
       r(GetParam().r),
-      m(GetParam().m),
       depth(GetParam().depth),
       L(GetParam().L),
       ord1(GetParam().ord1),

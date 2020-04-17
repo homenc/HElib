@@ -63,7 +63,7 @@ protected:
   // Utility function for calculating this.
   static long correctLifting(long rOld, long p)
   {
-    long r;
+    long r = rOld;
     double lBound = 30.0;
     long bound = floor(lBound / log2((double)p));
     if (r < 2 || r > bound)

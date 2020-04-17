@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -1107,12 +1107,14 @@ void DoubleCRT::randomize(const NTL::ZZ* seed)
         {
 
         // This is gcc non-standard. Works also on clang and icc.
-        
+        // The pragma below disables the gcc warning temporarily.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-label-as-value"
         static void *dispatch_table[] =
            { &&L0, &&L1, &&L2, &&L3, &&L4, &&L5, &&L6, &&L7, &&L8 };
 
         goto *dispatch_table[nb];
-   
+#pragma GCC diagnostic pop
 
         L8: utmp = (utmp << 8) | buf[pos+6];
         L7: utmp = (utmp << 8) | buf[pos+5];

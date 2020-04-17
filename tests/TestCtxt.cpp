@@ -253,29 +253,29 @@ TEST_P(TestCtxtWithBadDimensions, rotate1DRotatesCorrectlyWithBadDimensions)
 }
 
 // Use this when thoroughly exploring an (m, p) grid of parameters.
-std::vector<BGVParameters> getParameters(bool good)
-{
-  std::vector<BGVParameters> parameterSets;
-
-  const long r = 1;
-  const long bits = 500;
-  const long min_p = 257;
-  const long max_p = 2003;
-  const long min_m = 100;
-  const long max_m = 3000;
-
-  std::vector<BGVParameters> params;
-  auto getParamFunc = good ? helib_test::getGoodDimensionParams
-                           : helib_test::getBadDimensionParams;
-  auto m_p_pairs = getParamFunc(min_m, max_m, min_p, max_p, 10, 10);
-  std::transform(m_p_pairs.begin(),
-                 m_p_pairs.end(),
-                 std::back_inserter(params),
-                 [](const auto& pair) {
-                   return BGVParameters(pair.first, pair.second, r, bits);
-                 });
-  return params;
-}
+// std::vector<BGVParameters> getParameters(bool good)
+// {
+//   std::vector<BGVParameters> parameterSets;
+//
+//   const long r = 1;
+//   const long bits = 500;
+//   const long min_p = 257;
+//   const long max_p = 2003;
+//   const long min_m = 100;
+//   const long max_m = 3000;
+//
+//   std::vector<BGVParameters> params;
+//   auto getParamFunc = good ? helib_test::getGoodDimensionParams
+//                            : helib_test::getBadDimensionParams;
+//   auto m_p_pairs = getParamFunc(min_m, max_m, min_p, max_p, 10, 10);
+//   std::transform(m_p_pairs.begin(),
+//                  m_p_pairs.end(),
+//                  std::back_inserter(params),
+//                  [](const auto& pair) {
+//                    return BGVParameters(pair.first, pair.second, r, bits);
+//                  });
+//   return params;
+// }
 
 // INSTANTIATE_TEST_SUITE_P(variousParameters, TestCtxt,
 // ::testing::ValuesIn(getParameters(true)));

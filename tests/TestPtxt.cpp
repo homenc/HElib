@@ -889,7 +889,7 @@ TEST_P(TestPtxtCKKS, automorphWorksCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   helib::Ptxt<helib::CKKS> expected_result(context, data);
 
-  long k = context.zMStar.ith_rep(1) ?: 1;
+  long k = context.zMStar.ith_rep(1) ? context.zMStar.ith_rep(1) : 1;
   ptxt.automorph(k);
   expected_result.rotate(1);
   EXPECT_EQ(ptxt, expected_result);
