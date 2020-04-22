@@ -1,6 +1,22 @@
-HElib 1.0.0, December 2019
+HElib 1.0.1, April 2020
 ===============================
-(tagged as 1.0.0-Dec2019)
+(tagged as v1.0.1)
+
+January-April 2020
+------------------
+* Improved powerful basis
+* Enhancements and extensions to Binary operations
+* Enhancements to Ptxt functions
+* Enhancements to Ctxt Functions
+* Enhancements and fixes to `ArgMap` functionality
+* Compilation warning messages clean-up
+* Updates to Docker build
+* Using stable Google test framework to HElib testing suite.
+* Bug fixes
+
+HElib 1.0.0, January 2020
+===============================
+(tagged as v1.0.0)
 
 December 2019
 -------------
