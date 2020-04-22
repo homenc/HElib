@@ -1,15 +1,21 @@
 # Building and installing HElib
 
-HElib's build and install has been tested on Ubuntu 16.04, Ubuntu 18.04, 
-CentOS 7.6, and macOS High Sierra 10.13.
+HElib's build, install and regression tests suit have been built and tested on Ubuntu 16.04, Ubuntu 18.04, 
+CentOS 7.6, and macOS Mojave 10.14.
 
-## Dependencies
+There are two different ways to build and install HElib. The first one will automatically download and build the GMP and NTL dependencies and pack the libraries in a relocatable folder. The second way, instead, requires the dependencies to be installed by you and available in the system.
+
+**Please read these instructions in full to better choose the type of build that is better for you.**
+
+## General prerequisites
 
 - cmake >= 3.5.1
-- GNU make
-- g++ >= 5.4.0 or clang >= 3.8
+- GNU make >= 3.82
+- g++ >= 5.4.0 (for Linux environments)
+- mac OS Apple clang >= 11.0.0  (macOS environments)
 - pthreads
-- git (if you want to build the tests)
+- git >= 1.8.3       (required to build and run the HElib test suite)
+
 
 ## Option 1: package build (recommended for most users)
 
@@ -18,11 +24,11 @@ which can then be moved around freely on the system.  NTL and GMP will be
 automatically fetched and compiled.  It can be installed globally (i.e. under
 `/usr/local`), which is the default option if no `CMAKE_INSTALL_PREFIX` is
 specified, but this should only be done with caution as existing versions of
-NTL, GMP, or HElib will be overwritten.  Two more dependencies will be required
-in this case:
+NTL, GMP, or HElib will be overwritten.  These additional two prerequisites
+are required in this case:
 
-- patchelf (if building on Linux)
-- m4
+- patchelf >= 0.9 (if building on Linux)
+- m4 >= 1.4.16
 
 Please note that if changing from library build to package build, it is safer 
 to use a clean build directory.
@@ -139,8 +145,8 @@ Many distributions come with GMP pre-installed.
 If not, you can install GMP as follows.
 
 1. Download GMP from http://www.gmplib.org -- make sure that you get GMP >=6.0.0
-   (current version is 6.1.2).
-2. Decompress and cd into the gmp directory (e.g., `gmp-6.1.2`).
+   (current version is 6.2.0).
+2. Decompress and cd into the gmp directory (e.g., `gmp-6.2.0`).
 3. GMP is compiled in the standard unix way:
 ```
       ./configure
@@ -158,9 +164,9 @@ step 3.
 
 You can install NTL as follows:
 
-1. Download NTL >=11.0.0 (current version is 11.4.1) from
+1. Download NTL >=11.0.0 (current version is 11.4.3) from
    http://www.shoup.net/ntl/download.html
-2. Decompress and cd into the directory, e.g., `ntl-11.4.1/src`
+2. Decompress and cd into the directory, e.g., `ntl-11.4.3/src`
 3. NTL is configured, built and installed in the standard Unix way (but
 remember to specify the following flags to `configure`):
 ```
@@ -187,7 +193,8 @@ to the `./configure` step.
 RelWithDebInfo, Release, MinSizeRel.
 - `CMAKE_INSTALL_PREFIX`: Desired installation directory for HElib.
 - `ENABLE_TEST=ON/OFF` (default is OFF): Enable building of tests. This will
-  include an automatic download step for the google test framework.
+  include an automatic download step for the google test framework stable 
+  release (googletest v1.10.0)
 - `ENABLE_THREADS=ON/OFF` (default is ON): Enable threading support. This must
   be on if and only if NTL was built with `NTL_THREADS=ON`.
 - `PEDANTIC_BUILD=ON/OFF` (default is OFF): Use `-Wall -Wpedantic -Wextra -Werror`

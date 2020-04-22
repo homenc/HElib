@@ -45,8 +45,8 @@ ExternalProject_Add(ntl_fetched
   URL
     "https://www.shoup.net/ntl/ntl-${FETCHED_NTL_VERSION}.tar.gz"
   URL_HASH
-    # NOTE: hash of version 11.4.1
-    SHA256=a30687c4fbb8f114200426d2b1ece840bd024f64e2c5c6920b2d11ebcd82620e
+    # NOTE: hash of version 11.4.3
+    SHA256=b7c1ccdc64840e6a24351eb4a1e68887d29974f03073a1941c906562c0b83ad2
   DOWNLOAD_NO_PROGRESS ON
   UPDATE_COMMAND ""
   # Turn LOG_CONFIGURE ON will log the configure step to a file in the stamp directory
