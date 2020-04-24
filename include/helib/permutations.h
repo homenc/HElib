@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -19,6 +19,7 @@
 #include <helib/PAlgebra.h>
 #include <helib/matching.h>
 #include <helib/hypercube.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -157,7 +158,7 @@ public:
 
   //! maps a level number i = 0..2*k-2 to a recursion depth d = 0..k-1
   //! using the formula d = (k-1)-|(k-1)-i|
-  static long levelToDepthMap(long n, long k, long i) {
+  static long levelToDepthMap(UNUSED long n, long k, long i) {
     //OLD: assert(i >= 0 && i < 2*k-1);
     helib::assertInRange<helib::InvalidArgument>(i, 0l, 2*k-1, "Level number i not in [0, 2 * k - 1)");
     return (k-1) - labs((k-1)-i);

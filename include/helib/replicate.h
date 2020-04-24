@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -51,15 +51,20 @@ void replicate(const EncryptedArray& ea, Ctxt& ctx, long pos);
 //! all slots are zero except slot #pos.
 void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos);
 
-//! A virtual class to handle call-backs to get the output of replicate.
+ //! An abstract class to handle call-backs to get the output of replicate.
 class ReplicateHandler {
 public:
-  virtual void handle(const Ctxt& ctxt) {}
+  virtual void handle(const Ctxt& ctxt) = 0;
   virtual ~ReplicateHandler() {}
 
   // The earlyStop call can be used to quit the replication mid-way, leaving
   // a ciphertext with (e.g.) two different entries, each replicated n/2 times
+  // FIXME: Why does this function have arguments? Maybe remove them and then
+  // remove the pragma.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   virtual bool earlyStop(long d, long k, long prodDim) { return false; }
+#pragma GCC diagnostic pop
 };
 // Applications will derive from this class a handler that actually
 // does something with the replicated cipehrtexts. But it can be used

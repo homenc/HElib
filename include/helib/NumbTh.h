@@ -57,6 +57,7 @@
 
 #include <helib/range.h>
 #include <helib/assertions.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -149,9 +150,9 @@ void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r);
 void ppInvert(NTL::mat_zz_pE& X, const NTL::mat_zz_pE& A, long p, long r);
 
 // variants for GF2/GF2E to help with template code
-inline void ppInvert(NTL::mat_GF2& X, const NTL::mat_GF2& A, long p, long r)
+inline void ppInvert(NTL::mat_GF2& X, const NTL::mat_GF2& A, UNUSED long p, UNUSED long r)
 { NTL::inv(X, A); }
-inline void ppInvert(NTL::mat_GF2E& X, const NTL::mat_GF2E& A, long p, long r)
+inline void ppInvert(NTL::mat_GF2E& X, const NTL::mat_GF2E& A, UNUSED long p, UNUSED long r)
 { NTL::inv(X, A); }
 
 void buildLinPolyMatrix(NTL::mat_zz_pE& M, long p);
@@ -633,7 +634,7 @@ void rem(NTL::zz_pX& r, const NTL::zz_pX& a, const zz_pXModulus1& ff);
 //! placeholder for pXModulus ...no optimizations
 class ZZ_pXModulus1 : public NTL::ZZ_pXModulus {
 public:
-   ZZ_pXModulus1(long _m, const NTL::ZZ_pX& _f) : NTL::ZZ_pXModulus(_f) { }
+   ZZ_pXModulus1(UNUSED long _m, const NTL::ZZ_pX& _f) : NTL::ZZ_pXModulus(_f) { }
    const NTL::ZZ_pXModulus& upcast() const { return *this; }
 };
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <helib/EvalMap.h>
+#include <helib/apiAttributes.h>
 
 // needed to get NTL's TraceMap functions...needed for ThinEvalMap
 #include <NTL/lzz_pXFactoring.h>
@@ -243,7 +244,7 @@ public:
     }
   }
 
-  bool get(RX& out, long i, long j, long k) const override {
+  bool get(RX& out, long i, long j, UNUSED long k) const override {
     out = A[i][j];
     return false;
   }
@@ -347,7 +348,7 @@ public:
     } // if (invert)
   } // constructor
 
-  bool get(mat_R& out, long i, long j, long k) const override {
+  bool get(mat_R& out, long i, long j, UNUSED long k) const override {
     out = A[i][j];
     return false;
   }
@@ -644,7 +645,7 @@ public:
     }
   }
 
-  bool get(RX& out, long i, long j, long k) const override {
+  bool get(RX& out, long i, long j, UNUSED long k) const override {
     out = A[i][j];
     return false;
   }
@@ -777,7 +778,7 @@ public:
       }
   } // constructor
 
-  bool get(RX& out, long i, long j, long k) const override {
+  bool get(RX& out, long i, long j, UNUSED long k) const override {
     out = A_deflated[i][j];
     return false;
   }

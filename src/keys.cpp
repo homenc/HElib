@@ -18,6 +18,7 @@
 #include <helib/binio.h>
 #include <helib/sample.h>
 #include <helib/norms.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -515,7 +516,7 @@ long PubKey::Encrypt(Ctxt &ciphertxt, const Ptxt<BGV>& plaintxt, long ptxtSpace)
 }
 
 template<>
-long PubKey::Encrypt(Ctxt &ciphertxt, const Ptxt<CKKS>& plaintxt, long ptxtSpace) const
+long PubKey::Encrypt(Ctxt &ciphertxt, const Ptxt<CKKS>& plaintxt, UNUSED long ptxtSpace) const
 {
   NTL::ZZX poly = plaintxt.getPolyRepr();
   double f = ciphertxt.getContext().ea->getCx().encode(poly, plaintxt, /*useThisSize*/-1.0, /*precision*/-1);

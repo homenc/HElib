@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include <helib/binio.h>
 #include <helib/keySwitching.h>
 #include <helib/keys.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -31,7 +32,7 @@ namespace helib {
 KeySwitch::KeySwitch(long sPow, long xPow, long fromID, long toID, long p):
     fromKey(sPow,xPow,fromID),toKeyID(toID),ptxtSpace(p) {}
 
-KeySwitch::KeySwitch(const SKHandle& _fromKey, long fromID, long toID, long p):
+KeySwitch::KeySwitch(const SKHandle& _fromKey, UNUSED long fromID, long toID, long p):
     fromKey(_fromKey),toKeyID(toID),ptxtSpace(p) {}
 
 bool KeySwitch::operator==(const KeySwitch& other) const
@@ -261,11 +262,11 @@ void addAllMatrices(SecKey& sKey, long keyID)
   sKey.setKeySwitchMap(); // re-compute the key-switching map
 }
 
-// generate matrices s.t. you can reLinearize each s(X^e) in at most two steps
-void addFewMatrices(SecKey& sKey, long keyID)
-{
-  throw helib::LogicError("addFewMatrices not implemented yet");
-}
+// TODO: generate matrices s.t. you can reLinearize each s(X^e) in at most two steps
+// void addFewMatrices(SecKey& sKey, long keyID)
+// {
+//   throw helib::LogicError("addFewMatrices not implemented yet");
+// }
 
 // This code block appears at least twice below
 #define computeParams(context,m,i)\
@@ -473,7 +474,7 @@ MAUTO
 
 #else
 // same as above, but uses BS/GS strategy
-static void addSome1Dmats4dim(SecKey& sKey, long i, long bound, long keyID)
+static void addSome1Dmats4dim(SecKey& sKey, long i, UNUSED long bound, long keyID)
 {
   const PAlgebra& zMStar = sKey.getContext().zMStar;
   long ord;
