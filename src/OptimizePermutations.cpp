@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include <helib/NumbTh.h>
 #include <helib/EncryptedArray.h>
 #include <helib/permutations.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -57,7 +58,7 @@ void removeDups(std::list<long>& x, bool *aux)
 // Creates a new list with the old values and old values +/- offset.
 // results outside the range -n+1 .. n-1 are discarded
 //   and all resulting duplicates are removed
-void addOffset(std::list<long>& x, long offset, long n, bool *aux, bool good=false)
+void addOffset(std::list<long>& x, long offset, long n, bool *aux, UNUSED bool good=false)
 {
   for (std::list<long>::iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;

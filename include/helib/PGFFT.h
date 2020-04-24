@@ -22,6 +22,9 @@ See below for more details.
 #include <vector>
 #include <complex>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+
 namespace helib {
 
 class PGFFT {
@@ -195,3 +198,5 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ****************************************************************************/
+
+#pragma GCC diagnostic pop

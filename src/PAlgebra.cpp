@@ -549,7 +549,7 @@ PAlgebra::PAlgebra(long mm, long pp,
 }
 
 bool comparePAlgebra(const PAlgebra& palg,
-                     unsigned long m, unsigned long p, unsigned long r,
+                     unsigned long m, unsigned long p, UNUSED unsigned long r,
                      const std::vector<long>& gens, const std::vector<long>& ords)
 {
   if (static_cast<unsigned long>(palg.getM()) != m ||
@@ -775,11 +775,15 @@ void InvModpr(NTL::zz_pX& S, const NTL::zz_pX& F, const NTL::zz_pX& G, long p, l
   helib::assertTrue(static_cast<bool>((S*F) % G == 1), "Hensel lifting failed to find solutions");
 }
 
+// FIXME: Consider changing this function to something non-templated.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 template<class T> 
 void PAlgebraLift(const NTL::ZZX& phimx, const T& lfactors, T& factors, T& crtc, long r)
 {
   throw helib::LogicError("uninstatiated version of PAlgebraLift");
 }
+#pragma GCC diagnostic pop
 
 // This specialized version of PAlgebraLift does the hensel
 // lifting needed to finish off the initialization.

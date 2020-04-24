@@ -44,13 +44,15 @@
  */
 #include <exception>
 #include <utility>
+#include <vector>
+#include <complex>
+
 #include <helib/NumbTh.h>
 #include <helib/zzX.h>
 #include <helib/hypercube.h>
 #include <helib/PGFFT.h>
 #include <helib/clonedPtr.h>
-#include <vector>
-#include <complex>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -746,7 +748,7 @@ public:
   // These function make no sense for PAlgebraModCx
   const std::vector<NTL::ZZX>& getFactorsOverZZ() const override
   { throw helib::LogicError("PAlgebraModCx::getFactorsOverZZ undefined"); }
-  zzX getMask_zzX(long i, long j) const override
+  zzX getMask_zzX(UNUSED long i, UNUSED long j) const override
   { throw helib::LogicError("PAlgebraModCx::getMask_zzX undefined"); }
 };
 

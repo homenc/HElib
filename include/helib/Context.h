@@ -21,6 +21,7 @@
 #include <helib/recryption.h>
 #include <helib/primeChain.h>
 #include <helib/powerful.h>
+#include <helib/apiAttributes.h>
 
 #include <NTL/Lazy.h>
 
@@ -222,7 +223,7 @@ public:
   // for consistency with the other noiseBound routines
 
 
-  double noiseBoundForHWt(long hwt, long degBound) const
+  double noiseBoundForHWt(long hwt, UNUSED long degBound) const
   {
     return scale * std::sqrt(double(hwt));
   }

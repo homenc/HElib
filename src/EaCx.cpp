@@ -21,6 +21,7 @@
 #include <helib/clonedPtr.h>
 #include <helib/norms.h>
 #include <helib/debugging.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -86,7 +87,7 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 }
 
 // rotate ciphertext in dimension 0 by amt
-void EncryptedArrayCx::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
+void EncryptedArrayCx::rotate1D(Ctxt& ctxt, long i, long amt, UNUSED bool dc) const
 {
   //OLD: assert(&getContext() == &ctxt.getContext());
   helib::assertEq(&getContext(), &ctxt.getContext(), "Cannot decrypt with non-matching contextx");
@@ -101,12 +102,15 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
   ctxt.smartAutomorph(palg.genToPow(i, amt));
 }
 
-// Shift k positions along the i'th dimension with zero fill.
+// TODO: Shift k positions along the i'th dimension with zero fill.
 // Negative shift amount denotes shift in the opposite direction.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 {
   throw helib::LogicError("EncryptedArrayCx::shift1D not implemented");
 }
+#pragma GCC diagnostic pop
 
 // We only support linear arrays for approximate numbers,
 // so rotate,shift are the same as rotate1D, shift1D
@@ -262,9 +266,13 @@ void EncryptedArrayCx::buildLinPolyCoeffs(std::vector<zzX>& C,
   encode(C[1], y, msize, precision);
 }
 
+// TODO: Implement the CKKS version
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 void EncryptedArrayCx::badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long k) const
 {
   throw helib::LogicError("badDimensionAutomorphCorrection for CKKS not implemented");
 }
+#pragma GCC diagnostic pop
 
 }

@@ -12,6 +12,7 @@
 
 #include <random>
 #include <helib/Ptxt.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -164,7 +165,7 @@ BGV::SlotType randomSlot<BGV>(const Context& context)
 }
 
 template <>
-CKKS::SlotType randomSlot<CKKS>(const Context& context)
+CKKS::SlotType randomSlot<CKKS>(UNUSED const Context& context)
 {
   std::mt19937 gen{std::random_device{}()};
   std::uniform_real_distribution<> dist{-1e10, 1e10};

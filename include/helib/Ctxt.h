@@ -56,6 +56,7 @@
  **/
 #include <cfloat> // DBL_MAX
 #include <helib/DoubleCRT.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 struct CKKS;
@@ -520,7 +521,7 @@ public:
   //! Convenience method: XOR and nXOR with arbitrary plaintext space:
   //! a xor b = a+b-2ab = a + (1-2a)*b,
   //! a nxor b = 1-a-b+2ab = (b-1)(2a-1)+a
-  void xorConstant(const DoubleCRT& poly, double size=-1.0)
+  void xorConstant(const DoubleCRT& poly, UNUSED double size=-1.0)
   {
     DoubleCRT tmp = poly;
     tmp *= -2;
@@ -531,7 +532,7 @@ public:
   void xorConstant(const NTL::ZZX& poly, double size=-1.0)
   { xorConstant(DoubleCRT(poly,context,primeSet),size); }
 
-  void nxorConstant(const DoubleCRT& poly, double size=-1.0)
+  void nxorConstant(const DoubleCRT& poly, UNUSED double size=-1.0)
   {
     DoubleCRT tmp = poly;
     tmp *= 2;

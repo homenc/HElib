@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -27,8 +27,12 @@ struct PtrMatrix {
   virtual PtrVector<T>& operator[](long) =0;             // returns a row
   virtual const PtrVector<T>& operator[](long) const =0; // returns a row
   virtual long size() const =0;        // How many rows
+  // FIXME: Make this pure virtual
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   virtual void resize(long newSize)    // reset the number of rows
   { throw helib::LogicError("Cannot resize generic PtrMatrix"); }
+#pragma GCC diagnostic pop
   virtual ~PtrMatrix(){}
 
   // Return a pointer to some non-Null T, if it can find one.

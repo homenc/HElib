@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #include <helib/matmul.h>
 #include <helib/norms.h>
 #include <helib/fhe_stats.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -309,7 +310,7 @@ struct ConstMultiplier_DoubleCRT : ConstMultiplier {
     ctxt.multByConstant(data, sz);
   } 
 
-  std::shared_ptr<ConstMultiplier> upgrade(const Context& context) const override{
+  std::shared_ptr<ConstMultiplier> upgrade(UNUSED const Context& context) const override{
     return nullptr;
   }
 };
@@ -1454,7 +1455,7 @@ struct BlockMatMul1DExec_construct {
 
 
 BlockMatMul1DExec::BlockMatMul1DExec(
-  const BlockMatMul1D& mat, bool minimal)
+  const BlockMatMul1D& mat, UNUSED bool minimal)
   : ea(mat.getEA())
 {
     FHE_TIMER_START;

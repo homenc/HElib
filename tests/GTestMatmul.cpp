@@ -152,8 +152,8 @@ class GTestMatmul : public ::testing::Test
 protected:
   static void setGlobals(long force_bsgs, long force_hoist)
   {
-    helib::fhe_test_force_bsgs = T::parameters.force_bsgs;
-    helib::fhe_test_force_hoist = T::parameters.force_hoist;
+    helib::fhe_test_force_bsgs = force_bsgs;
+    helib::fhe_test_force_hoist = force_hoist;
   };
 
   bool minimal;
