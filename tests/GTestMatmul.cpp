@@ -119,7 +119,7 @@ struct Parameters
   //};
 };
 
-template <class Mat>
+template <typename Mat>
 std::unique_ptr<Mat> buildMat(const helib::EncryptedArray& ea, long dim);
 
 template <>
@@ -278,7 +278,7 @@ protected:
 
 // This is how we pack a matrix type and a reference to a Parameters object into
 // a single type for gtest
-template <class T, const Parameters& params>
+template <typename T, const Parameters& params>
 struct MatrixTypeAndParams
 {
   typedef T MatrixType;

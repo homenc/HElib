@@ -308,8 +308,9 @@ TEST_P(GTestTableLookup, lookupFunctionsCorrectly)
     helib::Ctxt c(secretKey);
     std::vector<helib::Ctxt> ei(bitSize, c);
     encryptIndex(ei, i, secretKey); // encrypt the index
-    helib::tableLookup(
-        c, T, helib::CtPtrs_vectorCt(ei)); // get the encrypted entry
+    helib::tableLookup(c,
+                       T,
+                       helib::CtPtrs_vectorCt(ei)); // get the encrypted entry
     // decrypt and compare
     NTL::ZZX poly;
     secretKey.Decrypt(poly, c); // decrypt

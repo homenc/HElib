@@ -235,8 +235,11 @@ protected:
       context.scale = scale;
     }
     context.zMStar.set_cM(mValues[idx][13] / 100.0);
-    helib::buildModChain(
-        context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+    helib::buildModChain(context,
+                         L,
+                         c,
+                         /*willBeBootstrappable=*/true,
+                         /*t=*/skHwt);
 
     if (!helib_test::noPrint) {
       std::cout << "security=" << context.securityLevel() << std::endl;
@@ -255,8 +258,10 @@ protected:
       std::cout << "scale=" << context.scale << std::endl;
     }
 
-    context.makeBootstrappable(
-        mvec, /*t=*/skHwt, useCache, /*alsoThick=*/false);
+    context.makeBootstrappable(mvec,
+                               /*t=*/skHwt,
+                               useCache,
+                               /*alsoThick=*/false);
     // save time...disable some fat boot precomputation
 
     // if (skHwt>0) context.rcData.skHwt = skHwt;

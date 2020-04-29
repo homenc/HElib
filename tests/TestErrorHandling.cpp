@@ -762,9 +762,13 @@ TEST(TestErrorHandling, helibAssertInRangeThrowsNonDefaultHelibRuntimeError)
   int element = 100;
   int min = 10;
   int max = 50;
-  EXPECT_THROW(helib::assertInRange<helib::RuntimeError>(
-                   element, min, max, "elem not in [min, max]", true),
-               helib::RuntimeError);
+  EXPECT_THROW(
+      helib::assertInRange<helib::RuntimeError>(element,
+                                                min,
+                                                max,
+                                                "elem not in [min, max]",
+                                                true),
+      helib::RuntimeError);
 }
 
 } // namespace

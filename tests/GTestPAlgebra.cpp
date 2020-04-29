@@ -29,8 +29,11 @@ struct Parameters
   const std::vector<long> gens;
   const std::vector<long> ords;
 
-  Parameters(
-      long m, long p, long r, std::vector<long> gens, std::vector<long> ords) :
+  Parameters(long m,
+             long p,
+             long r,
+             std::vector<long> gens,
+             std::vector<long> ords) :
       m(m),       // Cyclotomic index
                   // e.g., m=1024, m=2047
       p(p),       // plaintext base

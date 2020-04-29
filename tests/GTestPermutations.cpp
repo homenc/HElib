@@ -151,9 +151,10 @@ void testCube(NTL::Vec<helib::GenDescriptor>& vec, long widthBound)
     for (long i = 0; i < cube1.getSize(); i++)
       cube1[i] = i;
     helib::HyperCube<long> cube3 = cube1;
-    helib::applyPermToVec(
-        cube2.getData(), cube1.getData(), pi); // direct application
-    net.applyToCube(cube3);                    // applying permutation netwrok
+    helib::applyPermToVec(cube2.getData(),
+                          cube1.getData(),
+                          pi); // direct application
+    net.applyToCube(cube3);    // applying permutation netwrok
 
     const auto getErrorMessage = [&cube1, &cube2, &cube3]() {
       std::ostringstream os;

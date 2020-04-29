@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -36,21 +36,21 @@ void mapTo01(const EncryptedArray& ea, Ctxt& ctxt)
 {
   long p = ctxt.getPtxtSpace();
   if (p != ea.getPAlgebra().getP()) // ptxt space is p^r for r>1
-    throw helib::LogicError("mapTo01 not implemented for r>1");
+    throw LogicError("mapTo01 not implemented for r>1");
 
-  if (p>2)
-    ctxt.power(p-1); // set y = x^{p-1}
+  if (p > 2)
+    ctxt.power(p - 1); // set y = x^{p-1}
 
   long d = ea.getDegree();
-  if (d>1) { // compute the product of the d automorphisms
+  if (d > 1) { // compute the product of the d automorphisms
     std::vector<Ctxt> v(d, ctxt);
-    for (long i=1; i<d; i++)
+    for (long i = 1; i < d; i++)
       v[i].frobeniusAutomorph(i);
     totalProduct(ctxt, v);
   }
 }
 
-template<typename Scheme>
+template <typename Scheme>
 void mapTo01(const EncryptedArray&, Ptxt<Scheme>& ptxt)
 {
   ptxt.mapTo01();
@@ -61,22 +61,23 @@ template void mapTo01(const EncryptedArray&, Ptxt<CKKS>& ptxt);
 
 // computes ctxt^{2^d-1} using a method that takes
 // O(log d) automorphisms and multiplications
-void fastPower(Ctxt& ctxt, long d) 
+void fastPower(Ctxt& ctxt, long d)
 {
-  //OLD: assert(ctxt.getPtxtSpace()==2);
-  helib::assertEq(ctxt.getPtxtSpace(), 2l, "ptxtSpace must be 2");
-  if (d <= 1) return;
+  // OLD: assert(ctxt.getPtxtSpace()==2);
+  assertEq(ctxt.getPtxtSpace(), 2l, "ptxtSpace must be 2");
+  if (d <= 1)
+    return;
 
   Ctxt orig = ctxt;
 
   long k = NTL::NumBits(d);
   long e = 1;
 
-  for (long i = k-2; i >= 0; i--) {
+  for (long i = k - 2; i >= 0; i--) {
     Ctxt tmp1 = ctxt;
     tmp1.smartAutomorph(1L << e);
     ctxt.multiplyBy(tmp1);
-    e = 2*e;
+    e = 2 * e;
 
     if (NTL::bit(d, i)) {
       ctxt.smartAutomorph(2);
@@ -91,9 +92,11 @@ void fastPower(Ctxt& ctxt, long d)
 // if bits 0..i of j'th slot in ctxt are all zero, else it is set to 1
 // It is assumed that res and the res[i]'s are initialized by the caller.
 // Complexity: O(d + n log d) smart automorphisms
-//             O(n d) 
-void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
-			 const Ctxt& ctxt, long n)
+//             O(n d)
+void incrementalZeroTest(Ctxt* res[],
+                         const EncryptedArray& ea,
+                         const Ctxt& ctxt,
+                         long n)
 {
   FHE_TIMER_START;
   long nslots = ea.size();
@@ -101,7 +104,7 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
 
   // compute linearized polynomial coefficients
 
-  std::vector< std::vector<NTL::ZZX> > Coeff;
+  std::vector<std::vector<NTL::ZZX>> Coeff;
   Coeff.resize(n);
 
   for (long i = 0; i < n; i++) {
@@ -111,7 +114,7 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
     std::vector<NTL::ZZX> L;
     L.resize(d);
 
-    for (long j = 0; j <= i; j++) 
+    for (long j = 0; j <= i; j++)
       SetCoeff(L[j], j);
 
     std::vector<NTL::ZZX> C;
@@ -125,7 +128,8 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
       //        built in
       std::vector<NTL::ZZX> T;
       T.resize(nslots);
-      for (long s = 0; s < nslots; s++) T[s] = C[j];
+      for (long s = 0; s < nslots; s++)
+        T[s] = C[j];
       ea.encode(Coeff[i][j], T);
     }
   }
@@ -152,4 +156,4 @@ void incrementalZeroTest(Ctxt* res[], const EncryptedArray& ea,
   FHE_TIMER_STOP;
 }
 
-}
+} // namespace helib

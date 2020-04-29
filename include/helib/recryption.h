@@ -23,24 +23,24 @@ extern long thinRecrypt_initial_level;
 extern long fhe_force_chen_han;
 extern long printFlag;
 
-class  PAlgebraMod;
-class  EncryptedArray;
-class  EvalMap;
-class  ThinEvalMap;
-class  PowerfulDCRT;
-class  Context;
-class  PubKey;
-
+class PAlgebraMod;
+class EncryptedArray;
+class EvalMap;
+class ThinEvalMap;
+class PowerfulDCRT;
+class Context;
+class PubKey;
 
 //! @class RecryptData
 //! @brief A structure to hold recryption-related data inside the Context
-class RecryptData {
+class RecryptData
+{
 public:
   //! default Hamming weight of recryption key
-  static constexpr long defSkHwt=100;
+  static constexpr long defSkHwt = 100;
 
   //! Some data members that are only used for I/O
-  NTL::Vec<long> mvec;     //! partition of m into co-prime factors
+  NTL::Vec<long> mvec; //! partition of m into co-prime factors
 
   //! skey encrypted wrt space p^{e-e'+r}
   long e, ePrime;
@@ -56,7 +56,6 @@ public:
 
   bool build_cache;
 
-
   //! linear maps
   std::shared_ptr<const EvalMap> firstMap, secondMap;
 
@@ -66,26 +65,29 @@ public:
   //! linPolys for uppacking the slots
   std::vector<NTL::ZZX> unpackSlotEncoding;
 
-  RecryptData() {
-    skHwt=0; e=ePrime=0; 
+  RecryptData()
+  {
+    skHwt = 0;
+    e = ePrime = 0;
     build_cache = false;
   }
 
   //! Initialize the recryption data in the context
-  void init(const Context& context, const NTL::Vec<long>& mvec_,
-            bool enableThick,/*init linear transforms for non-thin*/
-            long t=0/*min Hwt for sk*/,            
-            bool build_cache=false,
-            bool minimal=false);
+  void init(const Context& context,
+            const NTL::Vec<long>& mvec_,
+            bool enableThick, /*init linear transforms for non-thin*/
+            long t = 0 /*min Hwt for sk*/,
+            bool build_cache = false,
+            bool minimal = false);
 
   bool operator==(const RecryptData& other) const;
-  bool operator!=(const RecryptData& other) const {
+  bool operator!=(const RecryptData& other) const
+  {
     return !(operator==(other));
   }
 
   //! Helper function for computing the recryption parameters
-  static long setAE(long& e, long& ePrime,
-                    const Context& context, long t=0);
+  static long setAE(long& e, long& ePrime, const Context& context, long t = 0);
   /**
    * Fix the "ring constant" cM, a target norm s for the secret key,
    * and plaintext space mod p^r. We want to find e,e' that minimize
@@ -114,30 +116,30 @@ public:
    **/
 };
 
-
 //! @class ThinRecryptData
-//! @brief Same as above, but for "thin" bootstrapping, where the slots 
+//! @brief Same as above, but for "thin" bootstrapping, where the slots
 //! are assumed to contain constants
-class ThinRecryptData : public RecryptData {
+class ThinRecryptData : public RecryptData
+{
 public:
   //! linear maps
   std::shared_ptr<const ThinEvalMap> coeffToSlot, slotToCoeff;
 
   //! Initialize the recryption data in the context
-  void init(const Context& context, const NTL::Vec<long>& mvec_,
-            bool alsoThick,/*init linear transforms also for non-thin*/
-            long t=0/*min Hwt for sk*/, 
-            bool build_cache=false,
-            bool minimal=false);
+  void init(const Context& context,
+            const NTL::Vec<long>& mvec_,
+            bool alsoThick, /*init linear transforms also for non-thin*/
+            long t = 0 /*min Hwt for sk*/,
+            bool build_cache = false,
+            bool minimal = false);
 };
 
-
-#define FHE_MIN_CAP_FRAC (2.0/3.0)
+#define FHE_MIN_CAP_FRAC (2.0 / 3.0)
 // Used in calculation of "min capacity".
 // This could be set to 1.0, but just to be on the safe side,
 // it is set to 2/3.  If we did set it to 1, the min capacity
 // would increase by less than 6/10 of a bit.
 
-}
+} // namespace helib
 
 #endif // HELIB_RECRYPTION_H

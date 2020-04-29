@@ -189,7 +189,8 @@ TEST_P(GTestIO, importantClassesRemainConsistentUnderIo)
       std::vector<NTL::ZZX> b;
       long p2r = eas[i]->getContext().alMod.getPPowR();
       NTL::ZZX poly = helib::RandPoly(
-          0, NTL::to_ZZ(p2r)); // choose a random constant polynomial
+          0,
+          NTL::to_ZZ(p2r)); // choose a random constant polynomial
       eas[i]->decode(ptxts[i], poly);
 
       ctxts[i].reset(new helib::Ctxt(publicKey));

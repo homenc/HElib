@@ -93,9 +93,8 @@ private:
       } else if (!optional && !optional_flag) {
         positional_args.push_back(name);
       } else {
-        throw helib::LogicError(
-            "Attempting to have argument '" + name +
-            "' required after optional positional args given.");
+        throw LogicError("Attempting to have argument '" + name +
+                         "' required after optional positional args given.");
       }
     }
 
@@ -142,10 +141,9 @@ private:
     }
 
     // For non-string types, at the mercy of stringstream.
-    template <
-        typename U = T,
-        typename S,
-        typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
+    template <typename U = T,
+              typename S,
+              typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
     bool do_process(const S& s)
     {
       std::istringstream iss(s);
@@ -181,10 +179,9 @@ private:
     }
 
     // For non-string types, at the mercy of stringstream.
-    template <
-        typename U = T,
-        typename S,
-        typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
+    template <typename U = T,
+              typename S,
+              typename std::enable_if_t<!std::is_same<U, S>::value, int> = 0>
     bool do_process(const S& s)
     {
       std::istringstream iss(s);
@@ -278,22 +275,21 @@ public:
     const std::string name_str(name);
 
     // trying to add empty or whitespace name?
-    helib::assertTrue<helib::LogicError>(
-        !name_str.empty() && std::none_of(name_str.begin(),
-                                          name_str.end(),
-                                          [](unsigned char c) {
-                                            return std::isspace(c);
-                                          }),
+    assertTrue<LogicError>(
+        !name_str.empty() &&
+            std::none_of(name_str.begin(),
+                         name_str.end(),
+                         [](unsigned char c) { return std::isspace(c); }),
         "Attempting to register an empty string or string with whitespace");
 
     // has this name already been added?
-    helib::assertTrue<helib::LogicError>(
-        map[name] == nullptr, "Key already in arg map (key: " + name_str + ")");
+    assertTrue<LogicError>(map[name] == nullptr,
+                           "Key already in arg map (key: " + name_str + ")");
 
     // have we seen this addr before?
-    helib::assertEq<helib::LogicError>(addresses_used.count(&value),
-                                       0ul,
-                                       "Attempting to register variable twice");
+    assertEq<LogicError>(addresses_used.count(&value),
+                         0ul,
+                         "Attempting to register variable twice");
 
     addresses_used.insert(&value);
 
@@ -308,7 +304,7 @@ public:
       // The user should make toggles correct in the code with optional
       if (this->arg_type == ArgType::TOGGLE_TRUE ||
           this->arg_type == ArgType::TOGGLE_FALSE)
-        throw helib::LogicError("Toggle argument types cannot be required.");
+        throw LogicError("Toggle argument types cannot be required.");
       this->required_set.insert(name);
     } else {
       // It is optional
@@ -383,7 +379,7 @@ public:
   ArgMap& dots(C& container, const char* name)
   {
     if (this->dots_enabled)
-      throw helib::LogicError(".dots() can only be called once.");
+      throw LogicError(".dots() can only be called once.");
 
     this->dots_enabled = true;
     this->dots_name = name;

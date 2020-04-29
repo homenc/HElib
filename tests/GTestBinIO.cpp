@@ -38,7 +38,7 @@ void cleanupFiles(const char* file)
   }
 }
 
-template <class... Files>
+template <typename... Files>
 void cleanupFiles(const char* file, Files... files)
 {
   cleanupFiles(file);

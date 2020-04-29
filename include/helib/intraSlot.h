@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -28,43 +28,53 @@ void buildUnpackSlotEncoding(std::vector<zzX>& unpackSlotEncoding,
                              const EncryptedArray& ea);
 
 // Low-level unpack of one ciphertext using pre-copmuted constants
-void unpack(const CtPtrs& unpacked, const Ctxt& packed, 
+void unpack(const CtPtrs& unpacked,
+            const Ctxt& packed,
             const EncryptedArray& ea,
             const std::vector<zzX>& unpackSlotEncoding);
 
 // unpack many ciphertexts, returns the number of unpacked ciphertexts
-long unpack(const CtPtrs& unpacked, const CtPtrs& packed,
-            const EncryptedArray& ea, 
+long unpack(const CtPtrs& unpacked,
+            const CtPtrs& packed,
+            const EncryptedArray& ea,
             const std::vector<zzX>& unpackSlotEncoding);
 
 // Low-level (re)pack in slots of one ciphertext
 void repack(Ctxt& packed, const CtPtrs& unpacked, const EncryptedArray& ea);
 
 // pack many ciphertexts, returns the number of packed ciphertexts
-long repack(const CtPtrs& packed, const CtPtrs& unpacked, const EncryptedArray& ea);
+long repack(const CtPtrs& packed,
+            const CtPtrs& unpacked,
+            const EncryptedArray& ea);
 
 // Returns in 'value' a vector of slot values. The bits of value[i] are
 // the content of the i'th slot pa[i], as represented on the normal basis
 void unpackSlots(std::vector<unsigned long>& value,
-                 PlaintextArray& pa, const EncryptedArray& ea);
+                 PlaintextArray& pa,
+                 const EncryptedArray& ea);
 inline void unpackSlots(std::vector<unsigned long>& value,
-                        NTL::ZZX& pa, const EncryptedArray& ea)
+                        NTL::ZZX& pa,
+                        const EncryptedArray& ea)
 {
-  PlaintextArray ar(ea); ea.decode(ar, pa); // convert ZZX to PtxtArray
+  PlaintextArray ar(ea);
+  ea.decode(ar, pa); // convert ZZX to PtxtArray
   unpackSlots(value, ar, ea);
 }
 
-
 // Packs the low-order nbits of the integer 'data' into each slot,
 // where the bits get mapped to coefficients on the normal basis
-void packConstant(zzX& result, unsigned long data, long nbits,
+void packConstant(zzX& result,
+                  unsigned long data,
+                  long nbits,
                   const EncryptedArray& ea);
 
 // Packs the low-order nbits of the entries of 'data' into each slot,
 // where the bits get mapped to coefficients on the normal basis
-void packConstants(zzX& result, const std::vector<unsigned long>& data,
-                   long nbits, const EncryptedArray& ea);
+void packConstants(zzX& result,
+                   const std::vector<unsigned long>& data,
+                   long nbits,
+                   const EncryptedArray& ea);
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_INTRASLOT_H

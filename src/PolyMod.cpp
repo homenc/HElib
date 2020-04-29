@@ -34,8 +34,7 @@ PolyMod::PolyMod(const std::vector<long>& input,
 }
 PolyMod::PolyMod(const NTL::ZZX& input,
                  const std::shared_ptr<PolyModRing>& ringDescriptor) :
-    ringDescriptor(ringDescriptor),
-    data(input)
+    ringDescriptor(ringDescriptor), data(input)
 {
   this->modularReduce();
 }
@@ -315,8 +314,7 @@ void PolyMod::modularReduce()
 void PolyMod::assertValidity(const PolyMod& poly)
 {
   if (!poly.isValid()) {
-    throw helib::LogicError(
-        "Cannot operate on invalid (default constructed) PolyMod");
+    throw LogicError("Cannot operate on invalid (default constructed) PolyMod");
   }
 }
 
@@ -325,8 +323,7 @@ void PolyMod::assertInterop(const PolyMod& lhs, const PolyMod& rhs)
   assertValidity(lhs);
   assertValidity(rhs);
   if (*(lhs.ringDescriptor) != *(rhs.ringDescriptor))
-    throw helib::LogicError(
-        "Ring descriptors are not equal between PolyMod objects");
+    throw LogicError("Ring descriptors are not equal between PolyMod objects");
 }
 
 } // namespace helib

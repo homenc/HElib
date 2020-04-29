@@ -20,21 +20,24 @@
 
 namespace helib {
 
-template<class type> class RandomMatrix : public  MatMul1D_derived<type> {
+template <typename type>
+class RandomMatrix : public MatMul1D_derived<type>
+{
 public:
-  PA_INJECT(type) 
+  PA_INJECT(type)
 
 private:
-  std::vector< std::vector< RX > > data;
+  std::vector<std::vector<RX>> data;
   const EncryptedArray& ea;
   long dim;
 
 public:
   virtual ~RandomMatrix() {}
-  RandomMatrix(const EncryptedArray& _ea, long _dim): 
-    ea(_ea), dim(_dim)
+  RandomMatrix(const EncryptedArray& _ea, long _dim) : ea(_ea), dim(_dim)
   {
-    RBak bak; bak.save(); ea.getAlMod().restoreContext();
+    RBak bak;
+    bak.save();
+    ea.getAlMod().restoreContext();
     long n = ea.size();
     long d = ea.getDegree();
     long D = ea.sizeOfDimension(dim);
@@ -55,40 +58,41 @@ public:
   bool multipleTransforms() const override { return false; }
   long getDim() const override { return dim; }
 
-  bool get(RX& out, long i, long j, UNUSED long k) const override {
+  bool get(RX& out, long i, long j, UNUSED long k) const override
+  {
     long D = ea.sizeOfDimension(dim);
 
-    //OLD: assert(i >= 0 && i < D);
-    helib::assertInRange(i, 0l, D, "Matrix index out of range");
-    //OLD: assert(j >= 0 && j < D);
-    helib::assertInRange(j, 0l, D, "Matrix index out of range");
-    if (IsZero(data[i][j])) return true;
+    // OLD: assert(i >= 0 && i < D);
+    assertInRange(i, 0l, D, "Matrix index out of range");
+    // OLD: assert(j >= 0 && j < D);
+    assertInRange(j, 0l, D, "Matrix index out of range");
+    if (IsZero(data[i][j]))
+      return true;
     out = data[i][j];
     return false;
   }
 };
 
+MatMul1D* buildRandomMatrix(const EncryptedArray& ea, long dim);
 
-MatMul1D*
-buildRandomMatrix(const EncryptedArray& ea, long dim);
-
-
-
-template<class type> class RandomMultiMatrix : public  MatMul1D_derived<type> {
+template <typename type>
+class RandomMultiMatrix : public MatMul1D_derived<type>
+{
 public:
-  PA_INJECT(type) 
+  PA_INJECT(type)
 
 private:
-  std::vector< std::vector< std::vector< RX > > > data;
+  std::vector<std::vector<std::vector<RX>>> data;
   const EncryptedArray& ea;
   long dim;
 
 public:
   virtual ~RandomMultiMatrix() {}
-  RandomMultiMatrix(const EncryptedArray& _ea, long _dim): 
-    ea(_ea), dim(_dim)
+  RandomMultiMatrix(const EncryptedArray& _ea, long _dim) : ea(_ea), dim(_dim)
   {
-    RBak bak; bak.save(); ea.getAlMod().restoreContext();
+    RBak bak;
+    bak.save();
+    ea.getAlMod().restoreContext();
     long n = ea.size();
     long d = ea.getDegree();
     long D = ea.sizeOfDimension(dim);
@@ -96,14 +100,14 @@ public:
     NTL::RandomStreamPush push;
     SetSeed(NTL::ZZ(123));
 
-    data.resize(n/D);
-    for (long k = 0; k < n/D; k++) {
+    data.resize(n / D);
+    for (long k = 0; k < n / D; k++) {
       data[k].resize(D);
       for (long i = 0; i < D; i++) {
-	data[k][i].resize(D);
-	for (long j = 0; j < D; j++) {
-	  random(data[k][i][j], d);
-	}
+        data[k][i].resize(D);
+        for (long j = 0; j < D; j++) {
+          random(data[k][i][j], d);
+        }
       }
     }
   }
@@ -112,49 +116,47 @@ public:
   bool multipleTransforms() const override { return true; }
   long getDim() const override { return dim; }
 
-  bool get(RX& out, long i, long j, long k) const override {
+  bool get(RX& out, long i, long j, long k) const override
+  {
     long n = ea.size();
     long D = ea.sizeOfDimension(dim);
 
-    //OLD: assert(i >= 0 && i < D);
-    helib::assertInRange(i, 0l, D, "Matrix index out of range");
-    //OLD: assert(j >= 0 && j < D);
-    helib::assertInRange(j, 0l, D, "Matrix index out of range");
-    //OLD: assert(k >= 0 && k < n/D);
-    helib::assertInRange(k, 0l, n/D, "Matrix index out of range");
-    if (IsZero(data[k][i][j])) return true;
+    // OLD: assert(i >= 0 && i < D);
+    assertInRange(i, 0l, D, "Matrix index out of range");
+    // OLD: assert(j >= 0 && j < D);
+    assertInRange(j, 0l, D, "Matrix index out of range");
+    // OLD: assert(k >= 0 && k < n/D);
+    assertInRange(k, 0l, n / D, "Matrix index out of range");
+    if (IsZero(data[k][i][j]))
+      return true;
     out = data[k][i][j];
     return false;
   }
 };
 
-
-MatMul1D*
-buildRandomMultiMatrix(const EncryptedArray& ea, long dim);
-
+MatMul1D* buildRandomMultiMatrix(const EncryptedArray& ea, long dim);
 
 //********************************
 
-
-template<class type> 
-class RandomBlockMatrix : public BlockMatMul1D_derived<type> {
-  PA_INJECT(type) 
+template <typename type>
+class RandomBlockMatrix : public BlockMatMul1D_derived<type>
+{
+  PA_INJECT(type)
 
   const EncryptedArray& ea;
   long dim;
 
-  std::vector< std::vector< mat_R > > data;
+  std::vector<std::vector<mat_R>> data;
 
 public:
-
-  RandomBlockMatrix(const EncryptedArray& _ea, long _dim):
-    ea(_ea), dim(_dim)
+  RandomBlockMatrix(const EncryptedArray& _ea, long _dim) : ea(_ea), dim(_dim)
   {
-    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    RBak bak;
+    bak.save();
+    _ea.getAlMod().restoreContext();
     long n = _ea.size();
     long d = _ea.getDegree();
     long D = _ea.sizeOfDimension(dim);
-
 
     NTL::RandomStreamPush push;
     SetSeed(NTL::ZZ(123));
@@ -165,7 +167,7 @@ public:
       for (long j = 0; j < D; j++) {
         data[i][j].SetDims(d, d);
         for (long u = 0; u < d; u++)
-          for (long v = 0; v < d; v++) 
+          for (long v = 0; v < d; v++)
             random(data[i][j][u][v]);
       }
     }
@@ -174,11 +176,12 @@ public:
   bool get(mat_R& out, long i, long j, UNUSED long k) const override
   {
     long D = ea.sizeOfDimension(dim);
-    //OLD: assert(i >= 0 && i < D);
-    helib::assertInRange(i, 0l, D, "Matrix index out of range");
-    //OLD: assert(j >= 0 && j < D);
-    helib::assertInRange(j, 0l, D, "Matrix index out of range");
-    if (IsZero(data[i][j])) return true;
+    // OLD: assert(i >= 0 && i < D);
+    assertInRange(i, 0l, D, "Matrix index out of range");
+    // OLD: assert(j >= 0 && j < D);
+    assertInRange(j, 0l, D, "Matrix index out of range");
+    if (IsZero(data[i][j]))
+      return true;
     out = data[i][j];
     return false;
   }
@@ -188,29 +191,27 @@ public:
   bool multipleTransforms() const override { return false; }
 };
 
-BlockMatMul1D*
-buildRandomBlockMatrix(const EncryptedArray& ea, long dim);
-
+BlockMatMul1D* buildRandomBlockMatrix(const EncryptedArray& ea, long dim);
 
 //********************************
 
-
-
-template<class type> 
-class RandomMultiBlockMatrix : public BlockMatMul1D_derived<type> {
-  PA_INJECT(type) 
+template <typename type>
+class RandomMultiBlockMatrix : public BlockMatMul1D_derived<type>
+{
+  PA_INJECT(type)
 
   const EncryptedArray& ea;
   long dim;
 
-  std::vector< std::vector< std::vector< mat_R > > > data;
+  std::vector<std::vector<std::vector<mat_R>>> data;
 
 public:
-
-  RandomMultiBlockMatrix(const EncryptedArray& _ea, long _dim):
-    ea(_ea), dim(_dim)
+  RandomMultiBlockMatrix(const EncryptedArray& _ea, long _dim) :
+      ea(_ea), dim(_dim)
   {
-    RBak bak; bak.save(); _ea.getAlMod().restoreContext();
+    RBak bak;
+    bak.save();
+    _ea.getAlMod().restoreContext();
     long n = _ea.size();
     long d = _ea.getDegree();
     long D = _ea.sizeOfDimension(dim);
@@ -218,34 +219,34 @@ public:
     NTL::RandomStreamPush push;
     SetSeed(NTL::ZZ(123));
 
-    data.resize(n/D);
-    for (long k = 0; k < n/D; k++) {
+    data.resize(n / D);
+    for (long k = 0; k < n / D; k++) {
       data[k].resize(D);
       for (long i = 0; i < D; i++) {
-	data[k][i].resize(D);
-	for (long j = 0; j < D; j++) {
+        data[k][i].resize(D);
+        for (long j = 0; j < D; j++) {
           data[k][i][j].SetDims(d, d);
-	  for (long u = 0; u < d; u++)
-	    for (long v = 0; v < d; v++) 
-	      random(data[k][i][j][u][v]);
-	}
+          for (long u = 0; u < d; u++)
+            for (long v = 0; v < d; v++)
+              random(data[k][i][j][u][v]);
+        }
       }
     }
   }
-
 
   bool get(mat_R& out, long i, long j, long k) const override
   {
     long n = ea.size();
     long D = ea.sizeOfDimension(dim);
 
-    //OLD: assert(i >= 0 && i < D);
-    helib::assertInRange(i, 0l, D, "Matrix index out of range");
-    //OLD: assert(j >= 0 && j < D);
-    helib::assertInRange(j, 0l, D, "Matrix index out of range");
-    //OLD: assert(k >= 0 && k < n/D);
-    helib::assertInRange(k, 0l, n/D, "Matrix index out of range");
-    if (IsZero(data[k][i][j])) return true;
+    // OLD: assert(i >= 0 && i < D);
+    assertInRange(i, 0l, D, "Matrix index out of range");
+    // OLD: assert(j >= 0 && j < D);
+    assertInRange(j, 0l, D, "Matrix index out of range");
+    // OLD: assert(k >= 0 && k < n/D);
+    assertInRange(k, 0l, n / D, "Matrix index out of range");
+    if (IsZero(data[k][i][j]))
+      return true;
     out = data[k][i][j];
     return false;
   }
@@ -255,30 +256,32 @@ public:
   bool multipleTransforms() const override { return true; }
 };
 
-BlockMatMul1D*
-buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim);
+BlockMatMul1D* buildRandomMultiBlockMatrix(const EncryptedArray& ea, long dim);
 
-
-template<class type> 
-class RandomFullMatrix : public MatMulFull_derived<type> {
-  PA_INJECT(type) 
+template <typename type>
+class RandomFullMatrix : public MatMulFull_derived<type>
+{
+  PA_INJECT(type)
   const EncryptedArray& ea;
   std::vector<std::vector<RX>> data;
 
 public:
-  RandomFullMatrix(const EncryptedArray& _ea): ea(_ea) {
+  RandomFullMatrix(const EncryptedArray& _ea) : ea(_ea)
+  {
     long n = ea.size();
     long d = ea.getDegree();
-    long bnd = 2*n; // non-zero with probability 1/bnd
+    long bnd = 2 * n; // non-zero with probability 1/bnd
 
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+    RBak bak;
+    bak.save();
+    ea.getContext().alMod.restoreContext();
     data.resize(n);
-    for (long i: range(n)) {
+    for (long i : range(n)) {
       data[i].resize(n);
-      for (long j: range(n)) {
-        //bool zEntry = (RandomBnd(bnd) > 0);
+      for (long j : range(n)) {
+        // bool zEntry = (RandomBnd(bnd) > 0);
         bool zEntry = false;
-        if (zEntry) 
+        if (zEntry)
           clear(data[i][j]);
         else
           random(data[i][j], d);
@@ -286,12 +289,14 @@ public:
     }
   }
 
-  bool get(RX& out, long i, long j) const override {
-    //OLD: assert(i >= 0 && i < ea.size());
-    helib::assertInRange(i, 0l, ea.size(), "Matrix index out of range");
-    //OLD: assert(j >= 0 && j < ea.size());
-    helib::assertInRange(j, 0l, ea.size(), "Matrix index out of range");
-    if (IsZero(data[i][j])) return true;
+  bool get(RX& out, long i, long j) const override
+  {
+    // OLD: assert(i >= 0 && i < ea.size());
+    assertInRange(i, 0l, ea.size(), "Matrix index out of range");
+    // OLD: assert(j >= 0 && j < ea.size());
+    assertInRange(j, 0l, ea.size(), "Matrix index out of range");
+    if (IsZero(data[i][j]))
+      return true;
     out = data[i][j];
     return false;
   }
@@ -301,46 +306,50 @@ public:
 
 MatMulFull* buildRandomFullMatrix(const EncryptedArray& ea);
 
-
-
-template<class type> 
-class RandomFullBlockMatrix : public BlockMatMulFull_derived<type> {
-  PA_INJECT(type) 
+template <typename type>
+class RandomFullBlockMatrix : public BlockMatMulFull_derived<type>
+{
+  PA_INJECT(type)
   const EncryptedArray& ea;
   std::vector<std::vector<mat_R>> data;
 
 public:
-  RandomFullBlockMatrix(const EncryptedArray& _ea): ea(_ea) {
+  RandomFullBlockMatrix(const EncryptedArray& _ea) : ea(_ea)
+  {
     long n = ea.size();
     long d = ea.getDegree();
-    long bnd = 2*n; // non-zero with probability 1/bnd
+    long bnd = 2 * n; // non-zero with probability 1/bnd
 
-    RBak bak; bak.save(); ea.getContext().alMod.restoreContext();
+    RBak bak;
+    bak.save();
+    ea.getContext().alMod.restoreContext();
     data.resize(n);
-    for (long i: range(n)) {
+    for (long i : range(n)) {
       data[i].resize(n);
-      for (long j: range(n)) {
-        //bool zEntry = (RandomBnd(bnd) > 0);
+      for (long j : range(n)) {
+        // bool zEntry = (RandomBnd(bnd) > 0);
         bool zEntry = false;
 
         data[i][j].SetDims(d, d);
-        if (zEntry) 
+        if (zEntry)
           clear(data[i][j]);
         else {
-	  for (long u = 0; u < d; u++)
-	    for (long v = 0; v < d; v++) 
-	      random(data[i][j][u][v]);
+          for (long u = 0; u < d; u++)
+            for (long v = 0; v < d; v++)
+              random(data[i][j][u][v]);
         }
       }
     }
   }
 
-  bool get(mat_R& out, long i, long j) const override {
-    //OLD: assert(i >= 0 && i < ea.size());
-    helib::assertInRange(i, 0l, ea.size(), "Matrix index out of range");
-    //OLD: assert(j >= 0 && j < ea.size());
-    helib::assertInRange(j, 0l, ea.size(), "Matrix index out of range");
-    if (IsZero(data[i][j])) return true;
+  bool get(mat_R& out, long i, long j) const override
+  {
+    // OLD: assert(i >= 0 && i < ea.size());
+    assertInRange(i, 0l, ea.size(), "Matrix index out of range");
+    // OLD: assert(j >= 0 && j < ea.size());
+    assertInRange(j, 0l, ea.size(), "Matrix index out of range");
+    if (IsZero(data[i][j]))
+      return true;
     out = data[i][j];
     return false;
   }
@@ -350,6 +359,6 @@ public:
 
 BlockMatMulFull* buildRandomFullBlockMatrix(const EncryptedArray& ea);
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_RANDOMMATRICES_H

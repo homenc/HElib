@@ -141,8 +141,8 @@ int main(int argc, char* argv[])
     mask_entry.power(p - 1);                       // FLT
     mask_entry.negate();                           // Negate the ciphertext
     mask_entry.addConstant(NTL::ZZX(1));           // 1 - mask = 0 or 1
-    std::vector<helib::Ctxt> rotated_masks(
-        ea.size(), mask_entry); // Create a vector of copies of the mask
+    // Create a vector of copies of the mask
+    std::vector<helib::Ctxt> rotated_masks(ea.size(), mask_entry);
     for (int i = 1; i < rotated_masks.size(); i++)
       ea.rotate(rotated_masks[i], i);             // Rotate each of the masks
     totalProduct(mask_entry, rotated_masks);      // Multiply each of the masks

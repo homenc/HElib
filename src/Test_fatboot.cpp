@@ -62,7 +62,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
     m = computeProd(mvec);
     phim = phi_N(m);
-    helib::assertTrue(GCD(p, m) == 1, "GCD(p, m) == 1");
+    assertTrue(GCD(p, m) == 1, "GCD(p, m) == 1");
 
   if (!noPrint) fhe_stats = true;
 

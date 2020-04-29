@@ -73,7 +73,7 @@ void rawDecrypt(NTL::ZZX& plaintxt,
 
 // Debug printing routines for vectors, ZZX'es, print only a few entries
 
-template <class VEC>
+template <typename VEC>
 std::ostream& printVec(std::ostream& s, const VEC& v, long nCoeffs = 40)
 {
   long d = lsize(v);
@@ -88,8 +88,9 @@ std::ostream& printVec(std::ostream& s, const VEC& v, long nCoeffs = 40)
   return s;
 }
 
-inline std::ostream&
-printZZX(std::ostream& s, const NTL::ZZX& poly, long nCoeffs = 40)
+inline std::ostream& printZZX(std::ostream& s,
+                              const NTL::ZZX& poly,
+                              long nCoeffs = 40)
 {
   return printVec(s, poly.rep, nCoeffs);
 }

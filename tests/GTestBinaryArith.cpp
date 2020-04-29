@@ -468,8 +468,11 @@ TEST_P(GTestBinaryArith, product)
       minLvl = lvl;
     }
   }
-  decryptAndPrint(
-      (std::cout << " after multiplication: "), *minCtxt, secKey, ea, 0);
+  decryptAndPrint((std::cout << " after multiplication: "),
+                  *minCtxt,
+                  secKey,
+                  ea,
+                  0);
   std::cout << std::endl;
 #endif
 };
@@ -627,8 +630,10 @@ TEST_P(GTestBinaryArith, addManyNumbers)
         encrypted_sum); // A wrapper around the output vector.
     helib::CtPtrMat_vectorCt summands_wrapper(
         encrypted_summands); // A wrapper around the output vector.
-    helib::addManyNumbers(
-        output_wrapper, summands_wrapper, outSize, &unpackSlotEncoding);
+    helib::addManyNumbers(output_wrapper,
+                          summands_wrapper,
+                          outSize,
+                          &unpackSlotEncoding);
     helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
   } // output_wrapper is deleted once out of scope.
 
@@ -637,8 +642,10 @@ TEST_P(GTestBinaryArith, addManyNumbers)
                      "after addition");
 
   // Calculate the summation in the plain.
-  long plaintext_sum = std::accumulate(
-      summands_data.begin(), summands_data.end(), 0l, std::plus<long>());
+  long plaintext_sum = std::accumulate(summands_data.begin(),
+                                       summands_data.end(),
+                                       0l,
+                                       std::plus<long>());
   EXPECT_EQ(decrypted_result[0], plaintext_sum & mask);
   if (helib_test::verbose) {
     std::cout << "addManyNums succeeded: ";
@@ -850,8 +857,9 @@ TEST_P(GTestBinaryArith, concatBinaryNumsConcatsCorrectly)
 
   std::vector<helib::Ctxt> output(bitSize * 2, helib::Ctxt(secKey));
   helib::CtPtrs_vectorCt output_wrapper(output);
-  helib::concatBinaryNums(
-      output_wrapper, helib::CtPtrs_vectorCt(lhs), helib::CtPtrs_vectorCt(rhs));
+  helib::concatBinaryNums(output_wrapper,
+                          helib::CtPtrs_vectorCt(lhs),
+                          helib::CtPtrs_vectorCt(rhs));
 
   std::vector<long> decrypted_result;
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
@@ -900,8 +908,9 @@ TEST_P(GTestBinaryArith, splitBinaryNumsSplitsCorrectly)
   std::vector<helib::Ctxt> rhs_output(bitSize, helib::Ctxt(secKey));
   helib::CtPtrs_vectorCt lhs_output_wrapper(lhs_output);
   helib::CtPtrs_vectorCt rhs_output_wrapper(rhs_output);
-  helib::splitBinaryNums(
-      lhs_output_wrapper, rhs_output_wrapper, concatenation_wrapper);
+  helib::splitBinaryNums(lhs_output_wrapper,
+                         rhs_output_wrapper,
+                         concatenation_wrapper);
 
   std::vector<long> decrypted_lhs;
   std::vector<long> decrypted_rhs;
@@ -917,8 +926,9 @@ TEST_P(GTestBinaryArith, splitBinaryNumsSplitsCorrectly)
 
   // Make sure it throws if the sizes don't line up
   const auto do_split = [&]() {
-    helib::splitBinaryNums(
-        lhs_output_wrapper, rhs_output_wrapper, concatenation_wrapper);
+    helib::splitBinaryNums(lhs_output_wrapper,
+                           rhs_output_wrapper,
+                           concatenation_wrapper);
   };
   lhs_output.emplace_back(secKey);
   EXPECT_THROW(do_split(), helib::LogicError);
@@ -941,8 +951,9 @@ TEST_P(GTestBinaryArith, bitwiseShiftShiftsCorrectly)
     std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
     helib::CtPtrs_vectorCt output_wrapper(output);
 
-    helib::leftBitwiseShift(
-        output_wrapper, helib::CtPtrs_vectorCt(eNums), shamt);
+    helib::leftBitwiseShift(output_wrapper,
+                            helib::CtPtrs_vectorCt(eNums),
+                            shamt);
 
     std::vector<long> decrypted_result;
     helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);

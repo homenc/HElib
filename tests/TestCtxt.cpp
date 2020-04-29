@@ -31,12 +31,7 @@ struct BGVParameters
                 unsigned bits,
                 const std::vector<long>& gens = {},
                 const std::vector<long>& ords = {}) :
-      m(m),
-      p(p),
-      r(r),
-      bits(bits),
-      gens(gens),
-      ords(ords){};
+      m(m), p(p), r(r), bits(bits), gens(gens), ords(ords){};
 
   const unsigned m;
   const unsigned p;

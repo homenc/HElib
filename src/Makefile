@@ -1,4 +1,4 @@
-# Copyright (C) 2012-2017 IBM Corp.
+# Copyright (C) 2012-2020 IBM Corp.
 #
 # This program is Licensed under the Apache License, Version 2.0
 # (the "License"); you may not use this file except in compliance

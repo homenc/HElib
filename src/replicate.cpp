@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,18 +16,21 @@
 
 namespace helib {
 
-NTL_THREAD_LOCAL 
+NTL_THREAD_LOCAL
 bool replicateVerboseFlag = false;
 
 // The value in slot #pos is replicated in all
 // other slots.  If there are n slots, this algorithm performs
-// O(log n) 1D rotations.  
+// O(log n) 1D rotations.
 
 void replicate(const EncryptedArray& ea, Ctxt& ctxt, long pos)
 {
   long nSlots = ea.size();
-  //OLD: assert(pos >= 0 && pos < nSlots); 
-  helib::assertInRange(pos, 0l, nSlots, "replication failed (pos must be in [0, nSlots))"); 
+  // OLD: assert(pos >= 0 && pos < nSlots);
+  assertInRange(pos,
+                0l,
+                nSlots,
+                "replication failed (pos must be in [0, nSlots))");
 
   zzX mask;
   ea.encodeUnitSelector(mask, pos);
@@ -48,20 +51,20 @@ void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos)
       ea.rotate1D(ctxt, d, shamt, true); // "don't care"
     }
 
-    Ctxt ctxt_orig = ctxt; 
+    Ctxt ctxt_orig = ctxt;
 
     long sz = ea.sizeOfDimension(d);
     long k = NTL::NumBits(sz);
     long e = 1;
 
     // now process bits k-2 down to 0
-    for (long j = k-2; j >= 0; j--) {
+    for (long j = k - 2; j >= 0; j--) {
       // e -> 2*e
       Ctxt tmp = ctxt;
       ea.rotate1D(tmp, d, e, true); // "don't care"
       ctxt += tmp;
-      e = 2*e;
-      
+      e = 2 * e;
+
       long b = NTL::bit(sz, j); // bit j of sz
       // e -> e+b
       if (b) {
@@ -73,48 +76,48 @@ void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos)
   }
 }
 
-
 // The following code implements a recursive, O(1)-amortized
 // algorithm for replications
 
-
 // returns greatest integer k such that 2^k <= n
-static
-long GreatestPowerOfTwo(long n)
+static long GreatestPowerOfTwo(long n)
 {
-  //OLD: assert(n >0);
-  helib::assertTrue<helib::InvalidArgument>(n > 0l, "Cannot take log of negative number");
+  // OLD: assert(n >0);
+  assertTrue<InvalidArgument>(n > 0l, "Cannot take log of negative number");
 
   long k;
 
   k = 0;
-  while ((1L << k) <= n/2) k++;
+  while ((1L << k) <= n / 2)
+    k++;
 
   return k;
 }
 
 // selects range of slots [lo..hi)
-static
-void SelectRange(const EncryptedArray& ea, NTL::ZZX& mask, long lo, long hi)
+static void SelectRange(const EncryptedArray& ea,
+                        NTL::ZZX& mask,
+                        long lo,
+                        long hi)
 {
   long nSlots = ea.size();
 
-  //OLD: assert(lo >= 0 && lo <= hi && hi <= nSlots);
-  helib::assertInRange<helib::InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
-  helib::assertTrue<helib::InvalidArgument>(hi <= nSlots, "Interval exceeds number of slots");
-  
+  // OLD: assert(lo >= 0 && lo <= hi && hi <= nSlots);
+  assertInRange<InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
+  assertTrue<InvalidArgument>(hi <= nSlots, "Interval exceeds number of slots");
 
   std::vector<long> maskArray;
   maskArray.resize(nSlots);
-  for (long i = 0; i < nSlots; i++) maskArray[i] = 0;
-  for (long i = lo; i < hi; i++) maskArray[i] = 1;
-  
+  for (long i = 0; i < nSlots; i++)
+    maskArray[i] = 0;
+  for (long i = lo; i < hi; i++)
+    maskArray[i] = 1;
+
   ea.encode(mask, maskArray);
 }
 
 // selects range of slots [lo..hi)
-static
-void SelectRange(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi)
+static void SelectRange(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi)
 {
   NTL::ZZX mask;
   SelectRange(ea, mask, lo, hi);
@@ -127,24 +130,29 @@ void SelectRange(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi)
 //   0 <= pos < ea.size(): relative position of first vector
 //   0 <= limit < ea.size(): max # of positions to process
 
-static
-void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt, 
-                        long n, long k, long pos, long limit,  
-                        RepAux& repAux,
-                        ReplicateHandler *handler)
+static void recursiveReplicate(const EncryptedArray& ea,
+                               const Ctxt& ctxt,
+                               long n,
+                               long k,
+                               long pos,
+                               long limit,
+                               RepAux& repAux,
+                               ReplicateHandler* handler)
 {
-  if (pos >= limit) return;
+  if (pos >= limit)
+    return;
 
   if (replicateVerboseFlag) {
     // DEBUG code
-    std::cerr << "check: " << k; CheckCtxt(ctxt, "");
+    std::cerr << "check: " << k;
+    CheckCtxt(ctxt, "");
   }
 
   long nSlots = ea.size();
 
   if (k == 0) {
 
-    if ( (1L << n) >= nSlots) {
+    if ((1L << n) >= nSlots) {
       handler->handle(ctxt);
       return;
     }
@@ -154,9 +162,9 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
       // need to generate mask
       NTL::ZZX mask;
       SelectRange(ea, mask, 0, nSlots - (1L << n));
-      repAux.tab(0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+      repAux.tab(0).set_ptr(
+          new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
-
 
     Ctxt ctxt_tmp = ctxt;
     ctxt_tmp.multByConstant(*repAux.tab(0));
@@ -167,7 +175,6 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
     return;
   }
 
-
   k--;
 
   Ctxt ctxt_masked = ctxt;
@@ -175,27 +182,27 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
   { // artificial scope to miminize storage in
     // the recursion
 
-
     { // another artificial scope
 
       // mask should be at index k+1
 
-      if (repAux.tab(k+1).null()) {
+      if (repAux.tab(k + 1).null()) {
         // need to generate mask
 
-        std::vector< long > maskArray;
+        std::vector<long> maskArray;
         maskArray.resize(nSlots);
         for (long i = 0; i < (1L << n); i++)
-          maskArray[i] = 1- NTL::bit(i, k); // the reverse of bit k of i
+          maskArray[i] = 1 - NTL::bit(i, k); // the reverse of bit k of i
         for (long i = (1L << n); i < nSlots; i++)
           maskArray[i] = 0;
 
         NTL::ZZX mask;
         ea.encode(mask, maskArray);
-        repAux.tab(k+1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+        repAux.tab(k + 1).set_ptr(
+            new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       }
 
-      ctxt_masked.multByConstant(*repAux.tab(k+1));
+      ctxt_masked.multByConstant(*repAux.tab(k + 1));
     }
 
     Ctxt ctxt_left = ctxt_masked;
@@ -203,15 +210,14 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
     ctxt_left += ctxt_masked;
 
     recursiveReplicate(ea, ctxt_left, n, k, pos, limit, repAux, handler);
-  
   }
- 
+
   pos += (1L << k);
   if (pos >= limit)
     return;
 
   Ctxt ctxt_right = ctxt;
-  ctxt_right -= ctxt_masked; 
+  ctxt_right -= ctxt_masked;
   ctxt_masked = ctxt_right; // reuse ctxt_masked as a temp
   ea.rotate(ctxt_masked, -(1L << k));
   ctxt_right += ctxt_masked;
@@ -219,14 +225,15 @@ void recursiveReplicate(const EncryptedArray& ea, const Ctxt& ctxt,
   recursiveReplicate(ea, ctxt_right, n, k, pos, limit, repAux, handler);
 }
 
-void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt_orig,
-                      ReplicateHandler *handler, RepAux* repAuxPtr)
+void replicateAllOrig(const EncryptedArray& ea,
+                      const Ctxt& ctxt_orig,
+                      ReplicateHandler* handler,
+                      RepAux* repAuxPtr)
 {
   Ctxt ctxt = ctxt_orig;
   ctxt.cleanUp();
   // clean up the ciphertext -- this gets rid of all small primes,
   // so that DoubleCRT constant can leave them out
-
 
   long nSlots = ea.size();
   long n = GreatestPowerOfTwo(nSlots); // 2^n <= nSlots
@@ -237,10 +244,10 @@ void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt_orig,
     SelectRange(ea, ctxt1, 0, 1L << n);
 
   RepAux repAux;
-  if (repAuxPtr==nullptr) repAuxPtr = &repAux;
+  if (repAuxPtr == nullptr)
+    repAuxPtr = &repAux;
 
-  recursiveReplicate(ea, ctxt1, n, n, 0, 1L << n, 
-                     *repAuxPtr, handler);
+  recursiveReplicate(ea, ctxt1, n, n, 0, 1L << n, *repAuxPtr, handler);
 
   if ((1L << n) < nSlots) {
     ctxt1 = ctxt;
@@ -248,7 +255,6 @@ void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt_orig,
     ea.rotate(ctxt1, -(1L << n));
     recursiveReplicate(ea, ctxt1, n, n, 1L << n, nSlots, *repAuxPtr, handler);
   }
-    
 }
 
 // The following code is based on the same logic as the
@@ -257,35 +263,42 @@ void replicateAllOrig(const EncryptedArray& ea, const Ctxt& ctxt_orig,
 // rotations
 
 // selects range of slots [lo..hi) in dimension d
-static
-void SelectRangeDim(const EncryptedArray& ea, NTL::ZZX& mask, long lo, long hi,
-                    long d)
+static void SelectRangeDim(const EncryptedArray& ea,
+                           NTL::ZZX& mask,
+                           long lo,
+                           long hi,
+                           long d)
 {
   long nSlots = ea.size();
 
-  //OLD: assert(d >= 0 && d < ea.dimension());
-  helib::assertInRange(d, 0l, ea.dimension(), "dimension d must be within [0, ea.dimension())");
-  //OLD: assert(lo >= 0 && lo <= hi && hi <= ea.sizeOfDimension(d));
-  helib::assertInRange<helib::InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
-  helib::assertTrue(hi <= ea.sizeOfDimension(d), "Interval exceeds dimension of d");
+  // OLD: assert(d >= 0 && d < ea.dimension());
+  assertInRange(d,
+                0l,
+                ea.dimension(),
+                "dimension d must be within [0, ea.dimension())");
+  // OLD: assert(lo >= 0 && lo <= hi && hi <= ea.sizeOfDimension(d));
+  assertInRange<InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
+  assertTrue(hi <= ea.sizeOfDimension(d), "Interval exceeds dimension of d");
 
   std::vector<long> maskArray;
   maskArray.resize(nSlots);
   for (long i = 0; i < nSlots; i++) {
     long c = ea.coordinate(d, i);
-    if (c >= lo && c < hi) 
+    if (c >= lo && c < hi)
       maskArray[i] = 1;
     else
       maskArray[i] = 0;
   }
-  
+
   ea.encode(mask, maskArray);
 }
 
 // selects range of slots [lo..hi)
-static
-void SelectRangeDim(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi,
-                    long d)
+static void SelectRangeDim(const EncryptedArray& ea,
+                           Ctxt& ctxt,
+                           long lo,
+                           long hi,
+                           long d)
 {
   NTL::ZZX mask;
   SelectRangeDim(ea, mask, lo, hi, d);
@@ -295,23 +308,27 @@ void SelectRangeDim(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi,
 // replicateOneBlock: assumes that all slots are zero, except for one
 // "block" whose coordinates in dimension d lie in the interval
 //            [ pos*blockSize .. pos*(blockSize+1) -1 ]
-// This block is then replicated throught the range 
+// This block is then replicated throught the range
 //            [ 0.. floor(dSize/blockSize)*blockSize -1 ]
 
-static void replicateOneBlock(const EncryptedArray& ea, Ctxt& ctxt, 
-			      long pos, long blockSize, long d)
+static void replicateOneBlock(const EncryptedArray& ea,
+                              Ctxt& ctxt,
+                              long pos,
+                              long blockSize,
+                              long d)
 {
   long dSize = ea.sizeOfDimension(d);
 
   // Move this block to position 0. We can skip this step in
   // "good dimensions" of size divisible by the block size
-  if (pos != 0 &&  (!ea.nativeDimension(d) || dSize % blockSize != 0) ) {
-    ea.rotate1D(ctxt, d, -pos*blockSize, true);
+  if (pos != 0 && (!ea.nativeDimension(d) || dSize % blockSize != 0)) {
+    ea.rotate1D(ctxt, d, -pos * blockSize, true);
   }
 
-  long sz = dSize/blockSize; // how many blocks fit in this dimension
+  long sz = dSize / blockSize; // how many blocks fit in this dimension
 
-  if (sz == 1) return; // nothing to do, only one block in this dimension
+  if (sz == 1)
+    return; // nothing to do, only one block in this dimension
 
   // do the actual replication using "shift and add"
 
@@ -320,17 +337,17 @@ static void replicateOneBlock(const EncryptedArray& ea, Ctxt& ctxt,
   Ctxt ctxt_orig = ctxt;
 
   // now process bits k-2 down to 0
-  for (long j = k-2; j >= 0; j--) {
+  for (long j = k - 2; j >= 0; j--) {
     // e -> 2*e
     Ctxt tmp = ctxt;
-    ea.rotate1D(tmp, d, e*blockSize, /*don't-care-flag=*/true);
+    ea.rotate1D(tmp, d, e * blockSize, /*don't-care-flag=*/true);
     ctxt += tmp;
-    e = 2*e;
-    
+    e = 2 * e;
+
     long b = NTL::bit(sz, j); // bit j of sz
     // e -> e+b
     if (b) {
-      ea.rotate1D(ctxt, d, 1*blockSize, /*don't-care-flag=*/true);
+      ea.rotate1D(ctxt, d, 1 * blockSize, /*don't-care-flag=*/true);
       ctxt += ctxt_orig;
       e++;
     }
@@ -338,12 +355,13 @@ static void replicateOneBlock(const EncryptedArray& ea, Ctxt& ctxt,
 }
 
 // forward declaration...mutual recursion
-static
-void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
-                         long d, long dimProd, long recBound,
-                         RepAuxDim& repAux, ReplicateHandler *handler);
-
-
+static void replicateAllNextDim(const EncryptedArray& ea,
+                                const Ctxt& ctxt,
+                                long d,
+                                long dimProd,
+                                long recBound,
+                                RepAuxDim& repAux,
+                                ReplicateHandler* handler);
 
 // recursiveReplicateDim:
 //   d = dimension
@@ -353,38 +371,46 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
 //   0 <= pos < ea.sizeOfDimension(d): relative position of first vector
 //   0 <= limit < ea.sizeOfDimension(): max # of positions to process
 //   dimProd: product of dimensions 0..d
-//   recBound: recursion bound (controls noise) 
+//   recBound: recursion bound (controls noise)
 //
 // SHAI: limit and extent are always the same, it seems
-static
-void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt, 
-                           long d, long extent, long k, long pos, long limit,  
-                           long dimProd, long recBound,
-                           RepAuxDim& repAux,
-                           ReplicateHandler *handler)
+static void recursiveReplicateDim(const EncryptedArray& ea,
+                                  const Ctxt& ctxt,
+                                  long d,
+                                  long extent,
+                                  long k,
+                                  long pos,
+                                  long limit,
+                                  long dimProd,
+                                  long recBound,
+                                  RepAuxDim& repAux,
+                                  ReplicateHandler* handler)
 {
-  if (pos >= limit) return;
+  if (pos >= limit)
+    return;
 
   if (replicateVerboseFlag) { // DEBUG code
-    std::cerr << "check: " << k; CheckCtxt(ctxt, "");
+    std::cerr << "check: " << k;
+    CheckCtxt(ctxt, "");
   }
-  
+
   long dSize = ea.sizeOfDimension(d);
   long nSlots = ea.size();
 
   if (k == 0) { // last level in this dimension: blocks of size 2^k=1
 
-    if ( extent >= dSize) { // nothing to do in this dimension
-      replicateAllNextDim(ea, ctxt, d+1, dimProd, recBound, repAux, handler);
+    if (extent >= dSize) { // nothing to do in this dimension
+      replicateAllNextDim(ea, ctxt, d + 1, dimProd, recBound, repAux, handler);
       return;
     } // SHAI: Will we ever have extent > dSize??
 
     // need to replicate to fill positions [ (1L << n) .. dSize-1 ]
 
-    if (repAux.tab(d,0).null()) { // generate mask if not there already
+    if (repAux.tab(d, 0).null()) { // generate mask if not there already
       NTL::ZZX mask;
       SelectRangeDim(ea, mask, 0, dSize - extent, d);
-      repAux.tab(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+      repAux.tab(d, 0).set_ptr(
+          new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
 
     Ctxt ctxt_tmp = ctxt;
@@ -392,7 +418,13 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
 
     ea.rotate1D(ctxt_tmp, d, extent, /*don't-care-flag=*/true);
     ctxt_tmp += ctxt;
-    replicateAllNextDim(ea, ctxt_tmp, d+1, dimProd, recBound, repAux, handler);
+    replicateAllNextDim(ea,
+                        ctxt_tmp,
+                        d + 1,
+                        dimProd,
+                        recBound,
+                        repAux,
+                        handler);
     return;
   }
 
@@ -410,29 +442,39 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
 
       // generate mask at index k+1, if not there yet
 
-      if (repAux.tab(d, k+1).null()) { // need to generate
-        std::vector< long > maskArray(nSlots,0);
+      if (repAux.tab(d, k + 1).null()) { // need to generate
+        std::vector<long> maskArray(nSlots, 0);
         for (long i = 0; i < nSlots; i++) {
           long c = ea.coordinate(d, i);
           if (c < extent && NTL::bit(c, k) == 0)
             maskArray[i] = 1;
         }
-	// store this mask in the repAux table
+        // store this mask in the repAux table
         NTL::ZZX mask;
         ea.encode(mask, maskArray);
-        repAux.tab(d, k+1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+        repAux.tab(d, k + 1).set_ptr(
+            new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       }
 
       // Apply mask to zero out slots in ctxt
-      ctxt_masked.multByConstant(*repAux.tab(d, k+1));
+      ctxt_masked.multByConstant(*repAux.tab(d, k + 1));
     }
 
     Ctxt ctxt_left = ctxt_masked;
     ea.rotate1D(ctxt_left, d, 1L << k, /*don't-care-flag=*/true);
     ctxt_left += ctxt_masked;
 
-    recursiveReplicateDim(ea, ctxt_left, d, extent, k, pos, limit, 
-                          dimProd, recBound, repAux, handler);
+    recursiveReplicateDim(ea,
+                          ctxt_left,
+                          d,
+                          extent,
+                          k,
+                          pos,
+                          limit,
+                          dimProd,
+                          recBound,
+                          repAux,
+                          handler);
   }
 
   pos += (1L << k);
@@ -440,29 +482,42 @@ void recursiveReplicateDim(const EncryptedArray& ea, const Ctxt& ctxt,
     return;
 
   Ctxt ctxt_right = ctxt;
-  ctxt_right -= ctxt_masked; 
+  ctxt_right -= ctxt_masked;
   ctxt_masked = ctxt_right; // reuse ctxt_masked as a temp
   ea.rotate1D(ctxt_masked, d, -(1L << k), /*don't-care-flag=*/true);
   ctxt_right += ctxt_masked;
 
-  recursiveReplicateDim(ea, ctxt_right, d, extent, k, pos, limit, 
-                        dimProd, recBound, repAux, handler);
+  recursiveReplicateDim(ea,
+                        ctxt_right,
+                        d,
+                        extent,
+                        k,
+                        pos,
+                        limit,
+                        dimProd,
+                        recBound,
+                        repAux,
+                        handler);
 }
 
-void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
-                         long d, long dimProd, long recBound,
-                         RepAuxDim& repAux, ReplicateHandler *handler)
+void replicateAllNextDim(const EncryptedArray& ea,
+                         const Ctxt& ctxt,
+                         long d,
+                         long dimProd,
+                         long recBound,
+                         RepAuxDim& repAux,
+                         ReplicateHandler* handler)
 
 {
-  //OLD: assert(d >= 0);
-  helib::assertTrue<helib::InvalidArgument>(d >= 0l, "dimension must be non-negative");
+  // OLD: assert(d >= 0);
+  assertTrue<InvalidArgument>(d >= 0l, "dimension must be non-negative");
 
   // If already fully replicated (or we need to stop early), call the handler
-  if (d >= ea.dimension() || handler->earlyStop(d,/*k=*/-1,dimProd)) {
+  if (d >= ea.dimension() || handler->earlyStop(d, /*k=*/-1, dimProd)) {
     handler->handle(ctxt);
     return;
   }
-  
+
   long dSize = ea.sizeOfDimension(d);
   dimProd *= dSize; // product of all dimensions including this one
 
@@ -486,15 +541,13 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
   // s0/s1 and s4/s5 to the zero column at the end, then make a recursive
   // call with k=1 that will complete the replication along the current
   // dimension, resulting in the 4 ciphertexts
-  // 
+  //
   //  (s0 s0 s0 s0 s0) (s2 s2 s2 s2 s2) (s4 s4 s4 s4 s4) (s6 s6 s6 s6 s6)
   //  (s1 s1 s1 s1 s1) (s3 s3 s3 s3 s3) (s5 s5 s5 s5 s5) (s7 s7 s7 s7 s7)
   //
   // Then a recursive call for the next dimension will complete the
   // replication of these entries, and a final step will deal with the
   // "leftover" positions s8 s9
-  
-
 
   // The logic below cut the recursion depth by starting from smaller
   // blocks (by default size approx n rather than 2^n).
@@ -506,19 +559,21 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
 
   if (recBound >= 0) { // use heuristic recursion bound
     k = 0;
-    if (dSize > 2 && dimProd*NTL::NumBits(dSize) > ea.size() / 8) {
-      k = NTL::NumBits(NTL::NumBits(dSize))-1;
-      if (k > n) k = n;
-      if (k > recBound) k = recBound;
+    if (dSize > 2 && dimProd * NTL::NumBits(dSize) > ea.size() / 8) {
+      k = NTL::NumBits(NTL::NumBits(dSize)) - 1;
+      if (k > n)
+        k = n;
+      if (k > recBound)
+        k = recBound;
     }
-  }
-  else { // SHAI: I don't understand this else case
+  } else { // SHAI: I don't understand this else case
     k = -recBound;
-    if (k > n) k = n;
+    if (k > n)
+      k = n;
   }
 
-  long blockSize = 1L << k;        // blocks of size 2^k
-  long numBlocks = dSize/blockSize;
+  long blockSize = 1L << k; // blocks of size 2^k
+  long numBlocks = dSize / blockSize;
   long extent = numBlocks * blockSize;
 
   // extent is an integral multiple of the block size, the recursive
@@ -531,29 +586,47 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     if (repAux.tab1(d, 0).null()) { // generate mask if not already there
       NTL::ZZX mask;
       SelectRangeDim(ea, mask, 0, extent, d);
-      repAux.tab1(d, 0).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+      repAux.tab1(d, 0).set_ptr(
+          new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
       // store mask in 2nd table (tab1)
     }
     ctxt1.multByConstant(*repAux.tab1(d, 0)); // mult by mask to zero out slots
   }
 
   if (numBlocks == 1) { // just one block, call the recursive replication
-    recursiveReplicateDim(ea, ctxt1, d, extent, k, 0, extent, 
-                          dimProd, recBound, repAux, handler);
-  }
-  else { // replicate the slots in each block separately
+    recursiveReplicateDim(ea,
+                          ctxt1,
+                          d,
+                          extent,
+                          k,
+                          0,
+                          extent,
+                          dimProd,
+                          recBound,
+                          repAux,
+                          handler);
+  } else { // replicate the slots in each block separately
     for (long pos = 0; pos < numBlocks; pos++) {
       Ctxt ctxt2 = ctxt1;
       // zero-out all the slots outside the current block
-      SelectRangeDim(ea, ctxt2, pos*blockSize, (pos+1)*blockSize, d);
+      SelectRangeDim(ea, ctxt2, pos * blockSize, (pos + 1) * blockSize, d);
 
       // replicate the current block across this dimenssion using a
       // simple shift-and-add procedure.
       replicateOneBlock(ea, ctxt2, pos, blockSize, d);
 
       // now call the recursive replication to do the rest of the work
-      recursiveReplicateDim(ea, ctxt2, d, extent, k, 0, extent, 
-                            dimProd, recBound, repAux, handler);
+      recursiveReplicateDim(ea,
+                            ctxt2,
+                            d,
+                            extent,
+                            k,
+                            0,
+                            extent,
+                            dimProd,
+                            recBound,
+                            repAux,
+                            handler);
     }
   }
 
@@ -565,9 +638,10 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     if (repAux.tab1(d, 1).null()) { // generate mask if not already there
       NTL::ZZX mask;
       SelectRangeDim(ea, mask, extent, dSize, d);
-      repAux.tab1(d, 1).set_ptr(new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+      repAux.tab1(d, 1).set_ptr(
+          new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
     }
-    ctxt1.multByConstant(*repAux.tab1(d,1)); // mult by mask to zero out slots
+    ctxt1.multByConstant(*repAux.tab1(d, 1)); // mult by mask to zero out slots
 
     // move relevant slots to the beginning
     ea.rotate1D(ctxt1, d, -extent, /*don't-care-flag=*/true);
@@ -577,8 +651,17 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
     replicateOneBlock(ea, ctxt1, 0, blockSize, d);
 
     // now call the recursive replication to do the rest of the work
-    recursiveReplicateDim(ea, ctxt1, d, extent, k, extent, dSize, 
-                          dimProd, recBound, repAux, handler);
+    recursiveReplicateDim(ea,
+                          ctxt1,
+                          d,
+                          extent,
+                          k,
+                          extent,
+                          dSize,
+                          dimProd,
+                          recBound,
+                          repAux,
+                          handler);
   }
 }
 
@@ -586,9 +669,11 @@ void replicateAllNextDim(const EncryptedArray& ea, const Ctxt& ctxt,
 // recBound == 0 => no recursion
 // otherwise, a recursion depth is chosen heuristically,
 //   but is capped at recBound
-void
-replicateAll(const EncryptedArray& ea, const Ctxt& ctxt_orig, 
-	     ReplicateHandler *handler, long recBound, RepAuxDim* repAuxPtr)
+void replicateAll(const EncryptedArray& ea,
+                  const Ctxt& ctxt_orig,
+                  ReplicateHandler* handler,
+                  long recBound,
+                  RepAuxDim* repAuxPtr)
 {
   FHE_TIMER_START;
 
@@ -598,60 +683,67 @@ replicateAll(const EncryptedArray& ea, const Ctxt& ctxt_orig,
   // so that DoubleCRT constant can leave them out
 
   RepAuxDim repAux;
-  if (repAuxPtr==nullptr) repAuxPtr = &repAux;
+  if (repAuxPtr == nullptr)
+    repAuxPtr = &repAux;
   replicateAllNextDim(ea, ctxt, 0, 1, recBound, *repAuxPtr, handler);
 }
-
 
 //! @brief An implementation of ReplicateHandler that explicitly returns
 //!   all the replicated cipehrtexts in one big vector.
 //!
 //! This is useful mostly for debugging purposes, for real parameters
 //! it would take a lot of memory.
-class ExplicitReplicator : public ReplicateHandler {
+class ExplicitReplicator : public ReplicateHandler
+{
   std::vector<Ctxt>& v; // space to store all cipehrtexts
   long slot;
+
 public:
   // _v must already be of the right size (=number-of-slots)
-  ExplicitReplicator(std::vector<Ctxt>& _v): v(_v),slot(0) {}
+  ExplicitReplicator(std::vector<Ctxt>& _v) : v(_v), slot(0) {}
   virtual void handle(const Ctxt& ctxt) { v[slot++] = ctxt; }
 };
 
 // Returns the result as a vector of ciphertexts
-void replicateAll(std::vector<Ctxt>& v, const EncryptedArray& ea,
-       	          const Ctxt& ctxt, long recBound, RepAuxDim* repAuxPtr)
+void replicateAll(std::vector<Ctxt>& v,
+                  const EncryptedArray& ea,
+                  const Ctxt& ctxt,
+                  long recBound,
+                  RepAuxDim* repAuxPtr)
 {
   v.resize(ea.size(), ctxt);
   ExplicitReplicator handler(v);
   replicateAll(ea, ctxt, &handler, recBound, repAuxPtr);
 }
 
-
 //=======================================================================================
 
 // procedures for replicating plaintext-arrays, useful for debugging
 
-template<class type>
-class replicate_pa_impl {
+template <typename type>
+class replicate_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long i)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    long i)
   {
     PA_BOILER
 
-    //OLD: assert(i >= 0 && i < n);
-    helib::assertInRange(i, 0l, n, "Attempted to access out-of-range data");
+    // OLD: assert(i >= 0 && i < n);
+    assertInRange(i, 0l, n, "Attempted to access out-of-range data");
     for (long j = 0; j < n; j++) {
-      if (j != i) data[j] = data[i];
+      if (j != i)
+        data[j] = data[i];
     }
   }
 };
 
-
 void replicate(const EncryptedArray& ea, PlaintextArray& pa, long i)
 {
-  ea.dispatch<replicate_pa_impl>(pa, i); 
+  ea.dispatch<replicate_pa_impl>(pa, i);
 }
 
-}
+} // namespace helib

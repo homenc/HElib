@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -83,46 +83,51 @@ namespace helib {
  * use W mod Qi with Qi a smaller modulus, Q>p*sigma*q0. Also note that if
  * p<Br then we will be using only first r columns of the matrix W.
  ********************************************************************/
-class KeySwitch {
+class KeySwitch
+{
 public:
-    SKHandle fromKey;  // A handle for the key s'
-    long     toKeyID;  // Index of the key s that we are switching into
-    long     ptxtSpace;// either p or p^r
+  SKHandle fromKey; // A handle for the key s'
+  long toKeyID;     // Index of the key s that we are switching into
+  long ptxtSpace;   // either p or p^r
 
-    std::vector<DoubleCRT> b;// The top row, consisting of the bi's
-    NTL::ZZ prgSeed;         // a seed to generate the random ai's in the bottom row
-    NTL::xdouble noiseBound;  // high probability bound on noise magnitude
-    // in each column
+  std::vector<DoubleCRT> b; // The top row, consisting of the bi's
+  NTL::ZZ prgSeed; // a seed to generate the random ai's in the bottom row
+  NTL::xdouble noiseBound; // high probability bound on noise magnitude
+  // in each column
 
-    explicit
-    KeySwitch(long sPow=0, long xPow=0, long fromID=0, long toID=0, long p=0);
-    explicit
-    KeySwitch(const SKHandle& _fromKey, long fromID=0, long toID=0, long p=0);
+  explicit KeySwitch(long sPow = 0,
+                     long xPow = 0,
+                     long fromID = 0,
+                     long toID = 0,
+                     long p = 0);
+  explicit KeySwitch(const SKHandle& _fromKey,
+                     long fromID = 0,
+                     long toID = 0,
+                     long p = 0);
 
-    bool operator==(const KeySwitch& other) const;
-    bool operator!=(const KeySwitch& other) const;
+  bool operator==(const KeySwitch& other) const;
+  bool operator!=(const KeySwitch& other) const;
 
-    unsigned long NumCols() const;
+  unsigned long NumCols() const;
 
-    //! @brief returns a dummy static matrix with toKeyId == -1
-    static const KeySwitch& dummy();
-    bool isDummy() const;
+  //! @brief returns a dummy static matrix with toKeyId == -1
+  static const KeySwitch& dummy();
+  bool isDummy() const;
 
-    //! A debugging method
-    void verify(SecKey& sk);
+  //! A debugging method
+  void verify(SecKey& sk);
 
-    //! @brief Read a key-switching matrix from input
-    void readMatrix(std::istream& str, const Context& context);
+  //! @brief Read a key-switching matrix from input
+  void readMatrix(std::istream& str, const Context& context);
 
-    //! Raw IO
-    void read(std::istream& str, const Context& context);
-    void write(std::ostream& str) const;
-
+  //! Raw IO
+  void read(std::istream& str, const Context& context);
+  void write(std::ostream& str) const;
 };
 std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix);
-// We DO NOT have std::istream& operator>>(std::istream& str, KeySwitch& matrix);
-// instead must use the readMatrix method above, where you can specify context
-
+// We DO NOT have std::istream& operator>>(std::istream& str, KeySwitch&
+// matrix); instead must use the readMatrix method above, where you can specify
+// context
 
 //! @name Strategies for generating key-switching matrices
 //! These functions are implemented in KeySwitching.cpp
@@ -142,43 +147,48 @@ long KSGiantStepSize(long D);
 
 //! @brief Maximalistic approach:
 //! generate matrices s(X^e)->s(X) for all e in Zm*
-void addAllMatrices(SecKey& sKey, long keyID=0);
+void addAllMatrices(SecKey& sKey, long keyID = 0);
 
 //! @brief Generate matrices so every s(X^e) can be reLinearized
 //! in at most two steps
-void addFewMatrices(SecKey& sKey, long keyID=0);
+void addFewMatrices(SecKey& sKey, long keyID = 0);
 
 //! @brief Generate some matrices of the form s(X^{g^i})->s(X), but not all.
 //! For a generator g whose order is larger than bound, generate only enough
 //! matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
-void addSome1DMatrices(SecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
+void addSome1DMatrices(SecKey& sKey,
+                       long bound = FHE_KEYSWITCH_THRESH,
+                       long keyID = 0);
 
 //! @brief Generate all matrices s(X^{g^i})->s(X) for generators g of
 //! Zm* /(p) and i<ord(g). If g has different orders in Zm* and Zm* /(p)
 //! then generate also matrices of the form s(X^{g^{-i}})->s(X)
-void add1DMatrices(SecKey& sKey, long keyID=0);
+void add1DMatrices(SecKey& sKey, long keyID = 0);
 
-void addBSGS1DMatrices(SecKey& sKey, long keyID=0);
+void addBSGS1DMatrices(SecKey& sKey, long keyID = 0);
 
 //! Generate all/some Frobenius matrices of the form s(X^{p^i})->s(X)
-void addSomeFrbMatrices(SecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
+void addSomeFrbMatrices(SecKey& sKey,
+                        long bound = FHE_KEYSWITCH_THRESH,
+                        long keyID = 0);
 
-void addFrbMatrices(SecKey& sKey, long keyID=0);
+void addFrbMatrices(SecKey& sKey, long keyID = 0);
 
-void addBSGSFrbMatrices(SecKey& sKey, long keyID=0);
+void addBSGSFrbMatrices(SecKey& sKey, long keyID = 0);
 
 //! These routines just add a single matrix (or two, for bad dimensions)
-void addMinimal1DMatrices(SecKey& sKey, long keyID=0);
-void addMinimalFrbMatrices(SecKey& sKey, long keyID=0);
+void addMinimal1DMatrices(SecKey& sKey, long keyID = 0);
+void addMinimalFrbMatrices(SecKey& sKey, long keyID = 0);
 
 //! Generate all key-switching matrices for a given permutation network
 class PermNetwork;
-void addMatrices4Network(SecKey& sKey, const PermNetwork& net, long keyID=0);
+void addMatrices4Network(SecKey& sKey, const PermNetwork& net, long keyID = 0);
 
 //! Generate specific key-swicthing matrices, described by the given set
 void addTheseMatrices(SecKey& sKey,
-                      const std::set<long>& automVals, long keyID=0);
+                      const std::set<long>& automVals,
+                      long keyID = 0);
 
-}
+} // namespace helib
 
-#endif //HELIB_KEY_SWITCHING_H
+#endif // HELIB_KEY_SWITCHING_H

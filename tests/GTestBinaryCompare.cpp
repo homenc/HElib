@@ -271,8 +271,11 @@ TEST_P(GTestBinaryCompare, comparison)
     }
   }
 #ifdef DEBUG_PRINTOUT
-  decryptAndPrint(
-      (std::cout << " before comparison: "), encb[0], secKey, ea, 0);
+  decryptAndPrint((std::cout << " before comparison: "),
+                  encb[0],
+                  secKey,
+                  ea,
+                  0);
 #endif
 
   std::vector<long> slotsMin, slotsMax, slotsMu, slotsNi;
@@ -336,8 +339,11 @@ TEST_P(GTestBinaryCompare, comparison)
       minLvl = lvl;
     }
   }
-  decryptAndPrint(
-      (std::cout << " after comparison: "), *minLvlCtxt, secKey, ea, 0);
+  decryptAndPrint((std::cout << " after comparison: "),
+                  *minLvlCtxt,
+                  secKey,
+                  ea,
+                  0);
   std::cout << std::endl;
 #endif
 }

@@ -96,8 +96,10 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
 
 // Compute aeqb[i] = (a==b upto bit i), agtb[i] = (aeqb[i+1] and ai>bi)
 // We assume that b.size()>a.size()
-static void
-compEqGt(CtPtrs& aeqb, CtPtrs& agtb, const CtPtrs& a, const CtPtrs& b)
+static void compEqGt(CtPtrs& aeqb,
+                     CtPtrs& agtb,
+                     const CtPtrs& a,
+                     const CtPtrs& b)
 {
   FHE_TIMER_START;
   const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
@@ -196,7 +198,7 @@ void compareTwoNumbersImplementation(CtPtrs& max,
   if (findMinBitCapacity({&a, &b}) <
       (NTL::NumBits(bSize) + 1) * mu.getContext().BPL())
     // the bare minimum
-    throw helib::LogicError("not enough levels for comparison");
+    throw LogicError("not enough levels for comparison");
 
   // NOTE: this procedure minimizes the number of multiplications,
   //       but it may use one level too many. Can we optimize it?
@@ -259,8 +261,15 @@ void compareTwoNumbers(CtPtrs& max,
                        bool twosComplement,
                        std::vector<zzX>* unpackSlotEncoding)
 {
-  compareTwoNumbersImplementation(
-      max, min, mu, ni, aa, bb, twosComplement, unpackSlotEncoding, false);
+  compareTwoNumbersImplementation(max,
+                                  min,
+                                  mu,
+                                  ni,
+                                  aa,
+                                  bb,
+                                  twosComplement,
+                                  unpackSlotEncoding,
+                                  false);
 }
 
 void compareTwoNumbers(Ctxt& mu,
@@ -274,8 +283,15 @@ void compareTwoNumbers(Ctxt& mu,
   NTL::Vec<Ctxt> agtb;
   CtPtrs_VecCt eq(aeqb);
   CtPtrs_VecCt gr(agtb);
-  compareTwoNumbersImplementation(
-      eq, gr, mu, ni, aa, bb, twosComplement, unpackSlotEncoding, true);
+  compareTwoNumbersImplementation(eq,
+                                  gr,
+                                  mu,
+                                  ni,
+                                  aa,
+                                  bb,
+                                  twosComplement,
+                                  unpackSlotEncoding,
+                                  true);
 }
 
 } // namespace helib

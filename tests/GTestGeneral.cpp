@@ -311,8 +311,9 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p2, c2));
 
     sprintf(buffer, "c2>>>=%d", (int)rotamt);
-    rotate(
-        ea, p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
+    rotate(ea,
+           p2,
+           rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
     ea.rotate(c2, rotamt);
     if (!helib_test::noPrint)
       CheckCtxt(c2, buffer);

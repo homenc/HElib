@@ -2059,8 +2059,9 @@ TEST_P(TestPtxtBGV, cubeCubesCorrectly)
 TEST_P(TestPtxtBGV, powerCorrectlyRaisesToPowers)
 {
   std::vector<long> data(context.ea->size());
-  std::iota(
-      data.begin(), data.end(), -(static_cast<long>(context.ea->size()) / 2));
+  std::iota(data.begin(),
+            data.end(),
+            -(static_cast<long>(context.ea->size()) / 2));
   std::vector<long> exponents{1, 3, 4, 5, 300};
 
   const auto naive_powermod =

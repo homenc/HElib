@@ -80,8 +80,9 @@ protected:
       L(GetParam().L),
       bnd(GetParam().bnd),
       B(GetParam().B),
-      context(
-          (helib::setDryRun(helib_test::dry), helib::setTimersOn(), m), p, r),
+      context((helib::setDryRun(helib_test::dry), helib::setTimersOn(), m),
+              p,
+              r),
       secretKey((buildModChain(context, L, /*c=*/2), context)),
       G(createG(context, p, d)),
       publicKey((printContextAndG(context, G),

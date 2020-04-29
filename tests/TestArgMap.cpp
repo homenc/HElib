@@ -1320,8 +1320,9 @@ struct VariablePositionalArgs
                 priority_mixin.end(),
                 word_list.begin() + random);
       // Need to mix them.
-      std::shuffle(
-          word_list.begin(), word_list.end(), std::default_random_engine(seed));
+      std::shuffle(word_list.begin(),
+                   word_list.end(),
+                   std::default_random_engine(seed));
     }
 
     for (const auto& word : word_list)

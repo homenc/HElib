@@ -263,8 +263,11 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
   }
 
   context.zMStar.set_cM(mValues[idx][13] / 100.0);
-  helib::buildModChain(
-      context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+  helib::buildModChain(context,
+                       L,
+                       c,
+                       /*willBeBootstrappable=*/true,
+                       /*t=*/skHwt);
 
   if (!helib_test::noPrint) {
     std::cout << "security=" << context.securityLevel() << std::endl;

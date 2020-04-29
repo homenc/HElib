@@ -146,8 +146,9 @@ protected:
     return mvec;
   };
 
-  static helib::Context&
-  prepareContext(helib::Context& context, const long L, const long c)
+  static helib::Context& prepareContext(helib::Context& context,
+                                        const long L,
+                                        const long c)
   {
     helib::buildModChain(context, L, c);
     if (!helib_test::noPrint) {

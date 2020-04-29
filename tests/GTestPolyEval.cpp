@@ -195,7 +195,14 @@ std::vector<Parameters> getParameters()
 
   if (m < 2) {
     m = helib::FindM(
-        /*secprm=*/80, L, /*c=*/3, p, 1, 0, m, !helib_test::noPrint);
+        /*secprm=*/80,
+        L,
+        /*c=*/3,
+        p,
+        1,
+        0,
+        m,
+        !helib_test::noPrint);
   }
 
   // Test both monic and non-monic polynomials of this degree

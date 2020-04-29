@@ -95,12 +95,12 @@ inline bool cx_equals(const std::vector<std::complex<double>>& v1,
   return (calcMaxRelDiff(v1, v2) < epsilon);
 }
 
-::testing::AssertionResult
-ciphertextMatches(const helib::EncryptedArrayCx& ea,
-                  const helib::SecKey& sk,
-                  const std::vector<std::complex<double>>& p,
-                  const helib::Ctxt& c,
-                  double epsilon)
+::testing::AssertionResult ciphertextMatches(
+    const helib::EncryptedArrayCx& ea,
+    const helib::SecKey& sk,
+    const std::vector<std::complex<double>>& p,
+    const helib::Ctxt& c,
+    double epsilon)
 {
   std::vector<std::complex<double>> pp;
   ea.decrypt(c, sk, pp);
@@ -344,13 +344,15 @@ TEST_P(GTestApproxNums, complexArithmeticWorks)
   helib::printVec(std::cout << "im=", imParts, 10) << std::endl;
   helib::printVec(std::cout << "res=", im_dec, 10) << std::endl;
 #endif
-  EXPECT_TRUE(cx_equals(
-      realParts, real_dec, NTL::conv<double>(epsilon * realCtxt.getPtxtMag())))
+  EXPECT_TRUE(cx_equals(realParts,
+                        real_dec,
+                        NTL::conv<double>(epsilon * realCtxt.getPtxtMag())))
       << "  max(re)=" << helib::largestCoeff(realParts)
       << ", max(re1)=" << helib::largestCoeff(real_dec)
       << ", maxDiff=" << calcMaxDiff(realParts, real_dec) << std::endl;
-  EXPECT_TRUE(cx_equals(
-      imParts, im_dec, NTL::conv<double>(epsilon * imCtxt.getPtxtMag())))
+  EXPECT_TRUE(cx_equals(imParts,
+                        im_dec,
+                        NTL::conv<double>(epsilon * imCtxt.getPtxtMag())))
       << "  max(im)=" << helib::largestCoeff(imParts)
       << ", max(im1)=" << helib::largestCoeff(im_dec)
       << ", maxDiff=" << calcMaxDiff(imParts, im_dec) << std::endl

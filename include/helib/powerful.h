@@ -26,10 +26,11 @@ namespace helib {
 
 //! @class PowerfulTranslationIndexes
 //! @brief Holds index tables for translation between powerful and zz_pX
-class PowerfulTranslationIndexes {
- public:
-  long m;     // product of mi's
-  long phim;  // phi(m) = product of phi(mi)'s
+class PowerfulTranslationIndexes
+{
+public:
+  long m;                // product of mi's
+  long phim;             // phi(m) = product of phi(mi)'s
   NTL::Vec<long> mvec;   // mvec[i] = mi
   NTL::Vec<long> phivec; // phivec[i] = phi(mi)
   NTL::Vec<long> divvec; // divvec[i] = m/mi
@@ -79,28 +80,33 @@ class PowerfulTranslationIndexes {
  *    pConv.restoreModulus(); // restore  zz_p::modulus
  *    pConv.polyToPowerful(powerful, poly);
  **/
-class PowerfulConversion {
+class PowerfulConversion
+{
   const PowerfulTranslationIndexes* indexes;
   NTL::zz_pContext zzpContext;
   NTL::Vec<NTL::zz_pXModulus> cycVec_p; // cycvec[i] = Phi_mi(X)
   NTL::zz_pXModulus phimX_p;
 
 public:
+  PowerfulConversion() : indexes(nullptr) {}
 
-  PowerfulConversion(): indexes(nullptr) {}
-
-  explicit PowerfulConversion(const PowerfulTranslationIndexes& ind):
-  indexes(nullptr) { initPConv(ind); }
+  explicit PowerfulConversion(const PowerfulTranslationIndexes& ind) :
+      indexes(nullptr)
+  {
+    initPConv(ind);
+  }
 
   void initPConv(const PowerfulTranslationIndexes& ind)
   {
-    if (indexes!=nullptr) return; // cannot re-initialize a non-nullptr object
+    if (indexes != nullptr)
+      return; // cannot re-initialize a non-nullptr object
     indexes = &ind;
 
     cycVec_p.SetLength(ind.cycVec.length());
     zzpContext.save(); // store the current modulus
-    for (long i=0; i<ind.cycVec.length(); i++) {
-      cycVec_p[i] = NTL::conv<NTL::zz_pX>(ind.cycVec[i]); // convert to zz_pXModulus
+    for (long i = 0; i < ind.cycVec.length(); i++) {
+      cycVec_p[i] =
+          NTL::conv<NTL::zz_pX>(ind.cycVec[i]); // convert to zz_pXModulus
     }
     phimX_p = NTL::conv<NTL::zz_pX>(ind.phimX); // convert to zz_pXModulus
   }
@@ -111,15 +117,18 @@ public:
 
   //! The conversion routines return the value of the modulus q.
   //! It is assumed that the modulus is already set before calling them
-  long powerfulToPoly(NTL::zz_pX& poly, const HyperCube<NTL::zz_p>& powerful) const;
-  long polyToPowerful(HyperCube<NTL::zz_p>& powerful, const NTL::zz_pX& poly) const;
+  long powerfulToPoly(NTL::zz_pX& poly,
+                      const HyperCube<NTL::zz_p>& powerful) const;
+  long polyToPowerful(HyperCube<NTL::zz_p>& powerful,
+                      const NTL::zz_pX& poly) const;
 };
 
 /**
  * @class PowerfulDCRT
  * @brief Conversion between powerful representation, DoubleCRT, and ZZX
  **/
-class PowerfulDCRT {
+class PowerfulDCRT
+{
   const Context& context; // points to the context for the DoubleCRT's
 
   PowerfulTranslationIndexes indexes; // modulus-independent tables
@@ -140,9 +149,10 @@ public:
   PowerfulDCRT(const Context& _context, const NTL::Vec<long>& mvec);
 
   const PowerfulTranslationIndexes& getIndexTranslation() const
-  { return indexes; }
-  const PowerfulConversion& getPConv(long i) const
-  { return pConvVec.at(i); }
+  {
+    return indexes;
+  }
+  const PowerfulConversion& getPConv(long i) const { return pConvVec.at(i); }
 
   // coefficients are reduced to the interval [-Q/2,Q/2], where
   // Q = product of primes in dcrt.getIndexSet();
@@ -401,6 +411,6 @@ void interp(HyperCube<zz_p>& cube,
 	    const Vec< copied_ptr<FFTHelper> >& multiEvalPoints);
 #endif
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_POWERFUL_H

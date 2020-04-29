@@ -32,30 +32,36 @@ long printFlag = FLAG_PRINT_VEC;
 /************************ Some local functions ***********************/
 /*********************************************************************/
 
-static void
-checkCriticalValue(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
-                   const RecryptData& rcData, long q);
+static void checkCriticalValue(const std::vector<NTL::ZZX>& zzParts,
+                               const DoubleCRT& sKey,
+                               const RecryptData& rcData,
+                               long q);
 
-static void
-checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
-                   const Context& context, long q);
+static void checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts,
+                               const DoubleCRT& sKey,
+                               const Context& context,
+                               long q);
 
-static void
-checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
-                     const Context& context, long q);
-}
+static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
+                                 const DoubleCRT& sKey,
+                                 const Context& context,
+                                 long q);
+} // namespace helib
 
 #endif // DEBUG_PRINTOUT
 
 namespace helib {
 
 // Return in poly a polynomial with X^i encoded in all the slots
-static void x2iInSlots(NTL::ZZX& poly, long i,
-		       std::vector<NTL::ZZX>& xVec, const EncryptedArray& ea)
+static void x2iInSlots(NTL::ZZX& poly,
+                       long i,
+                       std::vector<NTL::ZZX>& xVec,
+                       const EncryptedArray& ea)
 {
   xVec.resize(ea.size());
-  NTL::ZZX x2i = NTL::ZZX(i,1);
-  for (long j=0; j<(long)xVec.size(); j++) xVec[j] = x2i;
+  NTL::ZZX x2i = NTL::ZZX(i, 1);
+  for (long j = 0; j < (long)xVec.size(); j++)
+    xVec[j] = x2i;
   ea.encode(poly, xVec);
 }
 
@@ -63,57 +69,56 @@ static void x2iInSlots(NTL::ZZX& poly, long i,
 // keeping the added multiples small.  Specifically, for q = 1 mod p2e and any
 // integer z can be made divisible by p2e via z' = z + v*q, with |v| <= p2e/2.
 
-static void newMakeDivisible(NTL::ZZX& poly, long p2e, long q,
-                          const Context& context, NTL::ZZX& vpoly)
+static void newMakeDivisible(NTL::ZZX& poly,
+                             long p2e,
+                             long q,
+                             const Context& context,
+                             NTL::ZZX& vpoly)
 {
   if (p2e == 1) {
     vpoly = 0;
     return;
   }
 
-  helib::assertTrue<helib::InvalidArgument>(q > 0l, "q must be positive");
-  helib::assertTrue<helib::InvalidArgument>(p2e > 0l, "p2e must be positive");
+  assertTrue<InvalidArgument>(q > 0l, "q must be positive");
+  assertTrue<InvalidArgument>(p2e > 0l, "p2e must be positive");
 
-  helib::assertEq<helib::InvalidArgument>(q % p2e, 1l, "q must equal 1 modulo p2e");
-
-
+  assertEq<InvalidArgument>(q % p2e, 1l, "q must equal 1 modulo p2e");
 
   long p = context.zMStar.getP();
 
   const RecryptData& rcData = context.rcData;
   const PowerfulDCRT& p2d_conv = *rcData.p2dConv;
 
-
   NTL::Vec<NTL::ZZ> pwrfl;
   p2d_conv.ZZXtoPowerful(pwrfl, poly);
-
 
 #ifdef DEBUG_PRINTOUT
   NTL::Vec<NTL::ZZ> vvec(NTL::INIT_SIZE, pwrfl.length());
 #endif
-  
-  for (long i: range(pwrfl.length())) {
+
+  for (long i : range(pwrfl.length())) {
     NTL::ZZ& z = pwrfl[i];
     long u, v;
 
     // What to add to z to make it divisible by p2e?
     long zMod = rem(z, p2e); // zMod is in [0,p2e-1]
     // NOTE: this makes sure we get a truly balanced remainder
-    if (zMod > p2e/2 || (p==2 && zMod == p2e/2 && NTL::RandomBnd(2))) {
+    if (zMod > p2e / 2 || (p == 2 && zMod == p2e / 2 && NTL::RandomBnd(2))) {
       // randomize so that v has expected value 0
       zMod = p2e - zMod;
-    }
-    else {
+    } else {
       // need to add a negative number
       zMod = -zMod;
     }
     v = zMod;
-    z += NTL::to_ZZ(q)*v; // make z divisible by p2e
+    z += NTL::to_ZZ(q) * v; // make z divisible by p2e
 
-    if (rem(z,p2e) != 0) { // sanity check
-      std::cerr << "**error: original z["<<i<<"]=" << (z-(NTL::to_ZZ(q)*v))
-	   << std::dec << ", p^e="<<p2e << std::endl;
-      std::cerr << "z' = z + "<<v<<"*q = "<<z<<std::endl;
+    if (rem(z, p2e) != 0) { // sanity check
+      std::cerr << "**error: original z[" << i
+                << "]=" << (z - (NTL::to_ZZ(q) * v)) << std::dec
+                << ", p^e=" << p2e << std::endl;
+      std::cerr << "z' = z + " << v << "*q = " << z << std::endl;
       exit(1);
     }
 
@@ -127,17 +132,15 @@ static void newMakeDivisible(NTL::ZZX& poly, long p2e, long q,
 #ifdef DEBUG_PRINTOUT
   p2d_conv.powerfulToZZX(vpoly, vvec);
 #endif
-  
 }
 
 /*********************************************************************/
 /*********************************************************************/
 
-
 /**
  * Summary of Appendix A from https://ia.cr/2014/873 (version from 2019):
  * Assume that we already chosen e, e' and t.
- * 
+ *
  * Based in this analysis, we need
  *    (1) (f*p^{e'} + 2*p^r+2))*B <= p^e/2
  * where B is a certain high-probability bound and f is a certain
@@ -148,63 +151,60 @@ static void newMakeDivisible(NTL::ZZX& poly, long p2e, long q,
 // the routine compute_fudge is used to correct for the fact that
 // the v-coeffs are not quite uniform
 
-static 
-double compute_fudge(long p2ePrime, long p2e)
+static double compute_fudge(long p2ePrime, long p2e)
 {
   double eps = 0;
 
   if (p2ePrime > 1) {
 
+    if (p2ePrime % 2 == 0) {
+      eps = 1 / fsquare(p2ePrime);
 
-      if (p2ePrime%2 == 0) {
-         eps = 1/fsquare(p2ePrime);
+      // The exact variance in this case is at most the variance
+      // of a random variable that is distributed over
+      //    -N..+N
+      // where N = 2^{e'}/2.
+      // Each endpoint occurs with probability 1/(4*N),
+      // and the remaining values each occur with the same probability
+      // 1/(2*N)
 
-	 // The exact variance in this case is at most the variance
-         // of a random variable that is distributed over
-         //    -N..+N
-         // where N = 2^{e'}/2. 
-         // Each endpoint occurs with probability 1/(4*N),
-         // and the remaining values each occur with the same probability 
-         // 1/(2*N)
+      // This variance is exactly computed as
+      //    (N^2)/3 + 1/6 = ((N^2)/3)*(1 + 1/(2*N^2)), where N = 2^{e'}/2
+      // So the std dev is at most
+      //    N/sqrt(3)*(1 + 1/(4*N^2))
 
-         // This variance is exactly computed as
-	 //    (N^2)/3 + 1/6 = ((N^2)/3)*(1 + 1/(2*N^2)), where N = 2^{e'}/2
-	 // So the std dev is at most
-	 //    N/sqrt(3)*(1 + 1/(4*N^2))
+    } else {
+      eps = 1 / double(p2e);
 
-      }
-      else{
-         eps = 1/double(p2e);
+      // We are computing X + Y mod p^{e'}, where
+      // X and Y are independent.
+      // Y is uniformly distributed over
+      //    -floor(p^{r}/2)..floor(p^{r}/2)
+      // X is distributed over
+      //    -floor(p^e/2)-1..floor(p^e/2)+1,
+      // where each endpoint occurs with probability 1 / (2*(p^e+1)),
+      // and the remaining p^e values are equally likely
 
-         // We are computing X + Y mod p^{e'}, where
-         // X and Y are independent.
-         // Y is uniformly distributed over 
-         //    -floor(p^{r}/2)..floor(p^{r}/2)
-         // X is distributed over 
-         //    -floor(p^e/2)-1..floor(p^e/2)+1,
-         // where each endpoint occurs with probability 1 / (2*(p^e+1)),
-         // and the remaining p^e values are equally likely
-
-         // The variance in this case is bounded by 
-         //   (N^2)/3*(1-eps) + (N^2)*eps = (N^2)/3*(1+2*eps),
-         //       where N = p^{e'}/2 and eps < 1/p^e
-         // So the std dev is bounded by
-         //    N/sqrt(3)*sqrt(1+2*eps) <= N/sqrt(3)*(1+eps)   
-
-      }
-
+      // The variance in this case is bounded by
+      //   (N^2)/3*(1-eps) + (N^2)*eps = (N^2)/3*(1+2*eps),
+      //       where N = p^{e'}/2 and eps < 1/p^e
+      // So the std dev is bounded by
+      //    N/sqrt(3)*sqrt(1+2*eps) <= N/sqrt(3)*(1+eps)
+    }
   }
 
   return 1 + eps;
 }
 
-long RecryptData::setAE(long& e, long& ePrime,
-                    const Context& context, long targetWeight)
+long RecryptData::setAE(long& e,
+                        long& ePrime,
+                        const Context& context,
+                        long targetWeight)
 {
-  bool default_target=false;
-  if (targetWeight<=0) {
+  bool default_target = false;
+  if (targetWeight <= 0) {
     targetWeight = RecryptData::defSkHwt;
-    default_target=true;
+    default_target = true;
   }
 
   double coeff_bound = context.boundForRecryption(targetWeight);
@@ -214,11 +214,11 @@ long RecryptData::setAE(long& e, long& ePrime,
   long p = context.zMStar.getP();
   long p2r = context.alMod.getPPowR();
   long r = context.alMod.getR();
-  long frstTerm = 2*p2r+2; 
+  long frstTerm = 2 * p2r + 2;
 
   long e_bnd = 0;
   long p2e_bnd = 1;
-  while (p2e_bnd <= ((1L << 30)-2)/p) { // NOTE: this avoids overflow
+  while (p2e_bnd <= ((1L << 30) - 2) / p) { // NOTE: this avoids overflow
     e_bnd++;
     p2e_bnd *= p;
   }
@@ -226,99 +226,109 @@ long RecryptData::setAE(long& e, long& ePrime,
 
   // Start with the smallest e s.t. p^e/2 >= frstTerm*coeff_bound
   ePrime = 0;
-  e = r+1;
-  while (e <= e_bnd && NTL::power_long(p, e) < frstTerm*coeff_bound*2)
+  e = r + 1;
+  while (e <= e_bnd && NTL::power_long(p, e) < frstTerm * coeff_bound * 2)
     e++;
 
-//  if (e > e_bnd) Error("setAE: cannot find suitable e");
-  helib::assertFalse<helib::RuntimeError>(e > e_bnd, "setAE: cannot find suitable e");
+  //  if (e > e_bnd) Error("setAE: cannot find suitable e");
+  assertFalse<RuntimeError>(e > e_bnd, "setAE: cannot find suitable e");
 
-  //long ePrimeTry = r+1;
+  // long ePrimeTry = r+1;
   long ePrimeTry = 1;
 
   while (ePrimeTry <= e_bnd) {
     long p2ePrimeTry = NTL::power_long(p, ePrimeTry);
-    //long eTry = ePrimeTry+1; 
-    long eTry = std::max(r+1, ePrimeTry+1);
-    while (eTry <= e_bnd && eTry-ePrimeTry < e-ePrime) {
+    // long eTry = ePrimeTry+1;
+    long eTry = std::max(r + 1, ePrimeTry + 1);
+    while (eTry <= e_bnd && eTry - ePrimeTry < e - ePrime) {
       long p2eTry = NTL::power_long(p, eTry);
       double fudge = compute_fudge(p2ePrimeTry, p2eTry);
-      if (p2eTry >= (p2ePrimeTry*fudge+frstTerm)*coeff_bound*2) break;
+      if (p2eTry >= (p2ePrimeTry * fudge + frstTerm) * coeff_bound * 2)
+        break;
 
       eTry++;
     }
 
-    if (eTry <= e_bnd && eTry-ePrimeTry < e-ePrime) {
+    if (eTry <= e_bnd && eTry - ePrimeTry < e - ePrime) {
       e = eTry;
       ePrime = ePrimeTry;
     }
 
     ePrimeTry++;
-  } 
+  }
 
 #ifdef DEBUG_PRINTOUT
-  std::cerr << "RecryptData::setAE(): e="<<e<<", e'="<<ePrime
-       << std::endl;
+  std::cerr << "RecryptData::setAE(): e=" << e << ", e'=" << ePrime
+            << std::endl;
 #endif
   return targetWeight;
 }
 
-
 bool RecryptData::operator==(const RecryptData& other) const
 {
-  if (mvec != other.mvec) return false;
-  if (skHwt != other.skHwt) return false;
+  if (mvec != other.mvec)
+    return false;
+  if (skHwt != other.skHwt)
+    return false;
 
   return true;
 }
 
-
-
 // The main method
-void RecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
-                  bool enableThick, long t, bool build_cache_, bool minimal)
+void RecryptData::init(const Context& context,
+                       const NTL::Vec<long>& mvec_,
+                       bool enableThick,
+                       long t,
+                       bool build_cache_,
+                       bool minimal)
 {
   if (alMod != nullptr) { // were we called for a second time?
     std::cerr << "@Warning: multiple calls to RecryptData::init\n";
     return;
   }
-  helib::assertEq(computeProd(mvec_), (long)context.zMStar.getM(), "Cyclotomic polynomial mismatch"); // sanity check
+  assertEq(computeProd(mvec_),
+           (long)context.zMStar.getM(),
+           "Cyclotomic polynomial mismatch"); // sanity check
 
   // Record the arguments to this function
   mvec = mvec_;
   build_cache = build_cache_;
 
   bool mvec_ok = true;
-  for (long i: range(mvec.length())) {
-    NTL::Vec<NTL::Pair<long,long>> factors;
+  for (long i : range(mvec.length())) {
+    NTL::Vec<NTL::Pair<long, long>> factors;
     factorize(factors, mvec[i]);
-    if (factors.length() > 1) mvec_ok = false;
+    if (factors.length() > 1)
+      mvec_ok = false;
   }
 
   if (!mvec_ok) {
     Warning("prime power factorization recommended for bootstrapping");
   }
 
-
   skHwt = setAE(e, ePrime, context, t);
   long p = context.zMStar.getP();
   long r = context.alMod.getR();
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
-  alMod = std::make_shared<PAlgebraMod>(context.zMStar, e-ePrime+r);
+  alMod = std::make_shared<PAlgebraMod>(context.zMStar, e - ePrime + r);
   ea = std::make_shared<EncryptedArray>(context, *alMod);
-         // Polynomial defaults to F0, PAlgebraMod explicitly given
+  // Polynomial defaults to F0, PAlgebraMod explicitly given
 
   p2dConv = std::make_shared<PowerfulDCRT>(context, mvec);
 
-  if (!enableThick) return;
+  if (!enableThick)
+    return;
 
   // Initialize the linear polynomial for unpacking the slots
-  NTL::zz_pBak bak; bak.save(); ea->getAlMod().restoreContext();
+  NTL::zz_pBak bak;
+  bak.save();
+  ea->getAlMod().restoreContext();
   long nslots = ea->size();
   long d = ea->getDegree();
 
-  const NTL::Mat<NTL::zz_p>& CBi=ea->getDerived(PA_zz_p()).getNormalBasisMatrixInverse();
+  const NTL::Mat<NTL::zz_p>& CBi =
+      ea->getDerived(PA_zz_p()).getNormalBasisMatrixInverse();
 
   std::vector<NTL::ZZX> LM;
   LM.resize(d);
@@ -328,47 +338,53 @@ void RecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
   std::vector<NTL::ZZX> C;
   ea->buildLinPolyCoeffs(C, LM); // "build" the linear polynomial
 
-  unpackSlotEncoding.resize(d);  // encode the coefficients
+  unpackSlotEncoding.resize(d); // encode the coefficients
 
   for (long j = 0; j < d; j++) {
     std::vector<NTL::ZZX> v(nslots);
-    for (long k = 0; k < nslots; k++) v[k] = C[j];
+    for (long k = 0; k < nslots; k++)
+      v[k] = C[j];
     ea->encode(unpackSlotEncoding[j], v);
   }
   firstMap = std::make_shared<EvalMap>(*ea, minimal, mvec, true, build_cache);
-  secondMap = std::make_shared<EvalMap>(*context.ea, minimal, mvec, false, build_cache);
+  secondMap =
+      std::make_shared<EvalMap>(*context.ea, minimal, mvec, false, build_cache);
 }
 
 /********************************************************************/
 /********************************************************************/
 
 // Extract digits from fully packed slots
-void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
-			 const std::vector<NTL::ZZX>& unpackSlotEncoding);
+void extractDigitsPacked(Ctxt& ctxt,
+                         long botHigh,
+                         long r,
+                         long ePrime,
+                         const std::vector<NTL::ZZX>& unpackSlotEncoding);
 
 // Extract digits from unpacked slots
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
 
 // bootstrap a ciphertext to reduce noise
-void PubKey::reCrypt(Ctxt &ctxt) const
+void PubKey::reCrypt(Ctxt& ctxt) const
 {
   FHE_TIMER_START;
 
   // Some sanity checks for dummy ciphertext
   long ptxtSpace = ctxt.getPtxtSpace();
-  if (ctxt.isEmpty()) return;
-  if (ctxt.parts.size()==1 && ctxt.parts[0].skHandle.isOne()) {
+  if (ctxt.isEmpty())
+    return;
+  if (ctxt.parts.size() == 1 && ctxt.parts[0].skHandle.isOne()) {
     // Dummy encryption, just ensure that it is reduced mod p
     NTL::ZZX poly = to_ZZX(ctxt.parts[0]);
-    for (long i=0; i<poly.rep.length(); i++)
-      poly[i] = NTL::to_ZZ( rem(poly[i],ptxtSpace) );
+    for (long i = 0; i < poly.rep.length(); i++)
+      poly[i] = NTL::to_ZZ(rem(poly[i], ptxtSpace));
     poly.normalize();
     ctxt.DummyEncrypt(poly);
     return;
   }
 
-  //OLD: assert(recryptKeyID>=0); // check that we have bootstrapping data
-  helib::assertTrue(recryptKeyID>=0l, "No bootstrapping data");
+  // OLD: assert(recryptKeyID>=0); // check that we have bootstrapping data
+  assertTrue(recryptKeyID >= 0l, "No bootstrapping data");
 
   long p = getContext().zMStar.getP();
   long r = getContext().alMod.getR();
@@ -380,20 +396,20 @@ void PubKey::reCrypt(Ctxt &ctxt) const
   const RecryptData& rcData = getContext().rcData;
   long e = rcData.e;
   long ePrime = rcData.ePrime;
-  long p2ePrime = NTL::power_long(p,ePrime);
-  long q = NTL::power_long(p,e)+1;
-  //OLD: assert(e>=r);
-  helib::assertTrue(e>=r, "rcData.e must be at least alMod.r");
+  long p2ePrime = NTL::power_long(p, ePrime);
+  long q = NTL::power_long(p, e) + 1;
+  // OLD: assert(e>=r);
+  assertTrue(e >= r, "rcData.e must be at least alMod.r");
 
 #ifdef DEBUG_PRINTOUT
-  std::cerr << "reCrypt: p="<<p<<", r="<<r<<", e="<<e<<" ePrime="<<ePrime
-       << ", q="<<q<<std::endl;
+  std::cerr << "reCrypt: p=" << p << ", r=" << r << ", e=" << e
+            << " ePrime=" << ePrime << ", q=" << q << std::endl;
   CheckCtxt(ctxt, "init");
 #endif
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  //OLD: assert(p2r % ptxtSpace == 0);
-  helib::assertEq(p2r % ptxtSpace, 0l, "ptxtSpace must divide p^r when bootstrapping");
+  // OLD: assert(p2r % ptxtSpace == 0);
+  assertEq(p2r % ptxtSpace, 0l, "ptxtSpace must divide p^r when bootstrapping");
 
   ctxt.dropSmallAndSpecialPrimes();
 
@@ -401,20 +417,20 @@ void PubKey::reCrypt(Ctxt &ctxt) const
   CheckCtxt(ctxt, "after mod down");
 #endif
 
-
   FHE_NTIMER_START(AAA_preProcess);
 
   // Make sure that this ciphertxt is in canonical form
-  if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
+  if (!ctxt.inCanonicalForm())
+    ctxt.reLinearize();
 
   // Mod-switch down if needed
   IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
-  //OLD: assert(s <= context.ctxtPrimes);
-  helib::assertTrue(s <= context.ctxtPrimes,  "prime set is messed up");
-  if (s.card()>3) { // leave only first three ciphertext primes
+  // OLD: assert(s <= context.ctxtPrimes);
+  assertTrue(s <= context.ctxtPrimes, "prime set is messed up");
+  if (s.card() > 3) { // leave only first three ciphertext primes
     long first = s.first();
-    IndexSet s3(first, first+2);
-    s.retain(s3); 
+    IndexSet s3(first, first + 2);
+    s.retain(s3);
   }
   ctxt.modDownToSet(s);
 
@@ -430,54 +446,56 @@ void PubKey::reCrypt(Ctxt &ctxt) const
 
   double mfac = ctxt.getContext().zMStar.getNormBnd();
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
-  // noise_est is an upper bound on the L-infty norm of the scaled noise 
+  // noise_est is an upper bound on the L-infty norm of the scaled noise
   // in the pwrfl basis
-  double noise_bnd = FHE_MIN_CAP_FRAC*p2r*ctxt.getContext().boundForRecryption();
-  // noise_bnd is the bound assumed in selecting the parameters 
-  double noise_rat = noise_est/noise_bnd;
+  double noise_bnd =
+      FHE_MIN_CAP_FRAC * p2r * ctxt.getContext().boundForRecryption();
+  // noise_bnd is the bound assumed in selecting the parameters
+  double noise_rat = noise_est / noise_bnd;
 
   FHE_STATS_UPDATE("raw-mod-switch-noise", noise_rat);
 
   if (noise_rat > 1) {
-    Warning("rawModSwitch scaled noise exceeds bound: " + std::to_string(noise_rat));
+    Warning("rawModSwitch scaled noise exceeds bound: " +
+            std::to_string(noise_rat));
   }
 
-
-  //OLD: assert(zzParts.size() == 2);
-  helib::assertEq(zzParts.size(), (std::size_t)2, "Exactly 2 parts required for mod-switching in thin bootstrapping");
-
+  // OLD: assert(zzParts.size() == 2);
+  assertEq(zzParts.size(),
+           (std::size_t)2,
+           "Exactly 2 parts required for mod-switching in thin bootstrapping");
 
 #ifdef DEBUG_PRINTOUT
   if (dbgKey) {
-    checkRecryptBounds(zzParts, dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext(), q);
+    checkRecryptBounds(zzParts,
+                       dbgKey->sKeys[recryptKeyID],
+                       ctxt.getContext(),
+                       q);
   }
 #endif
 
   std::vector<NTL::ZZX> v;
   v.resize(2);
 
-
   // Add multiples of q to make the zzParts divisible by p^{e'}
-  for (long i: range(2)) {
+  for (long i : range(2)) {
     // make divisible by p^{e'}
 
     newMakeDivisible(zzParts[i], p2ePrime, q, ctxt.getContext(), v[i]);
-
   }
 
 #ifdef DEBUG_PRINTOUT
   if (dbgKey) {
-    checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID],
-		       ctxt.getContext(), q);
-    checkCriticalValue(zzParts, dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext().rcData, q);
+    checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID], ctxt.getContext(), q);
+    checkCriticalValue(zzParts,
+                       dbgKey->sKeys[recryptKeyID],
+                       ctxt.getContext().rcData,
+                       q);
   }
 #endif
 
-
-  for (long i: range(zzParts.size())) {
-    zzParts[i] /= p2ePrime;   // divide by p^{e'}
+  for (long i : range(zzParts.size())) {
+    zzParts[i] /= p2ePrime; // divide by p^{e'}
   }
 
   // NOTE: here we lose the intFactor associated with ctxt.
@@ -503,10 +521,12 @@ void PubKey::reCrypt(Ctxt &ctxt) const
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
   FHE_NTIMER_START(AAA_extractDigitsPacked);
-  extractDigitsPacked(ctxt, e-ePrime, r, ePrime,
-		      context.rcData.unpackSlotEncoding);
+  extractDigitsPacked(ctxt,
+                      e - ePrime,
+                      r,
+                      ePrime,
+                      context.rcData.unpackSlotEncoding);
   FHE_NTIMER_STOP(AAA_extractDigitsPacked);
-
 
 #ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "after extractDigitsPacked");
@@ -516,7 +536,6 @@ void PubKey::reCrypt(Ctxt &ctxt) const
   FHE_NTIMER_START(AAA_LinearTransform2);
   ctxt.getContext().rcData.secondMap->apply(ctxt);
   FHE_NTIMER_STOP(AAA_LinearTransform2);
-
 
 #ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "after linearTransform2");
@@ -529,10 +548,12 @@ void PubKey::reCrypt(Ctxt &ctxt) const
 
 #ifdef FHE_BOOT_THREADS
 
-
 // Extract digits from fully packed slots, multithreaded version
-void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
-			 const std::vector<NTL::ZZX>& unpackSlotEncoding)
+void extractDigitsPacked(Ctxt& ctxt,
+                         long botHigh,
+                         long r,
+                         long ePrime,
+                         const std::vector<NTL::ZZX>& unpackSlotEncoding)
 {
   FHE_TIMER_START;
 
@@ -545,18 +566,19 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
   std::vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
-    std::vector< std::shared_ptr<DoubleCRT> > coeff_vector;
+    std::vector<std::shared_ptr<DoubleCRT>> coeff_vector;
     std::vector<double> coeff_vector_sz;
     coeff_vector.resize(d);
     coeff_vector_sz.resize(d);
 
     FHE_NTIMER_START(unpack1);
     for (long i = 0; i < d; i++) {
-      coeff_vector[i] =
-          std::make_shared<DoubleCRT>(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet());
-      coeff_vector_sz[i] = 
-        NTL::conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i],
-                                            ctxt.getContext().zMStar) );
+      coeff_vector[i] = std::make_shared<DoubleCRT>(unpackSlotEncoding[i],
+                                                    ctxt.getContext(),
+                                                    ctxt.getPrimeSet());
+      coeff_vector_sz[i] =
+          NTL::conv<double>(embeddingLargestCoeff(unpackSlotEncoding[i],
+                                                  ctxt.getContext().zMStar));
     }
     FHE_NTIMER_STOP(unpack1);
 
@@ -565,12 +587,12 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
     NTL_EXEC_RANGE(d, first, last)
     // FIXME: implement using hoisting!
-        for (long j = first; j < last; j++) { // process jth Frobenius 
-          frob[j] = ctxt;
-          frob[j].frobeniusAutomorph(j);
-          frob[j].cleanUp();
-          // FIXME: not clear if we should call cleanUp here
-        }
+    for (long j = first; j < last; j++) { // process jth Frobenius
+      frob[j] = ctxt;
+      frob[j].frobeniusAutomorph(j);
+      frob[j].cleanUp();
+      // FIXME: not clear if we should call cleanUp here
+    }
     NTL_EXEC_RANGE_END
 
     FHE_NTIMER_STOP(unpack2);
@@ -580,8 +602,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     for (long i = 0; i < d; i++) {
       for (long j = 0; j < d; j++) {
         tmp1 = frob[j];
-        tmp1.multByConstant(*coeff_vector[mcMod(i+j, d)],
-                            coeff_vector_sz[mcMod(i+j, d)]);
+        tmp1.multByConstant(*coeff_vector[mcMod(i + j, d)],
+                            coeff_vector_sz[mcMod(i + j, d)]);
         unpacked[i] += tmp1;
       }
     }
@@ -600,7 +622,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   NTL_EXEC_RANGE_END
 
   //#ifdef DEBUG_PRINTOUT
-  //CheckCtxt(unpacked[0], "before repack");
+  // CheckCtxt(unpacked[0], "before repack");
   //#endif
 
   // Step 3: re-pack the slots
@@ -609,23 +631,25 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   NTL::ZZX xInSlots;
   std::vector<NTL::ZZX> xVec(ea2.size());
   ctxt = unpacked[0];
-  for (long i=1; i<d; i++) {
+  for (long i = 1; i < d; i++) {
     x2iInSlots(xInSlots, i, xVec, ea2);
     unpacked[i].multByConstant(xInSlots);
     ctxt += unpacked[i];
   }
   FHE_NTIMER_STOP(repack);
   //#ifdef DEBUG_PRINTOUT
-  //CheckCtxt(ctxt, "after repack");
+  // CheckCtxt(ctxt, "after repack");
   //#endif
 }
-
 
 #else
 
 // Extract digits from fully packed slots
-void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
-			 const std::vector<NTL::ZZX>& unpackSlotEncoding)
+void extractDigitsPacked(Ctxt& ctxt,
+                         long botHigh,
+                         long r,
+                         long ePrime,
+                         const std::vector<NTL::ZZX>& unpackSlotEncoding)
 {
   FHE_TIMER_START;
 
@@ -638,23 +662,24 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
   std::vector<Ctxt> unpacked(d, Ctxt(ZeroCtxtLike, ctxt));
   { // explicit scope to force all temporaries to be released
-    std::vector< std::shared_ptr<DoubleCRT> > coeff_vector;
+    std::vector<std::shared_ptr<DoubleCRT>> coeff_vector;
     std::vector<double> coeff_vector_sz;
     coeff_vector.resize(d);
     coeff_vector_sz.resize(d);
     for (long i = 0; i < d; i++) {
-      coeff_vector[i] =
-          std::make_shared<DoubleCRT>(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet());
-      coeff_vector_sz[i] = 
-        NTL::conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i],
-                                            ctxt.getContext().zMStar) );
+      coeff_vector[i] = std::make_shared<DoubleCRT>(unpackSlotEncoding[i],
+                                                    ctxt.getContext(),
+                                                    ctxt.getPrimeSet());
+      coeff_vector_sz[i] =
+          NTL::conv<double>(embeddingLargestCoeff(unpackSlotEncoding[i],
+                                                  ctxt.getContext().zMStar));
     }
 
     Ctxt tmp1(ZeroCtxtLike, ctxt);
     Ctxt tmp2(ZeroCtxtLike, ctxt);
 
     // FIXME: implement using hoisting!
-    for (long j = 0; j < d; j++) { // process jth Frobenius 
+    for (long j = 0; j < d; j++) { // process jth Frobenius
       tmp1 = ctxt;
       tmp1.frobeniusAutomorph(j);
       tmp1.cleanUp();
@@ -662,8 +687,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
       for (long i = 0; i < d; i++) {
         tmp2 = tmp1;
-        tmp2.multByConstant(*coeff_vector[mcMod(i+j, d)], 
-                            coeff_vector_sz[mcMod(i+j, d)]);
+        tmp2.multByConstant(*coeff_vector[mcMod(i + j, d)],
+                            coeff_vector_sz[mcMod(i + j, d)]);
         unpacked[i] += tmp2;
       }
     }
@@ -674,8 +699,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   //  CheckCtxt(unpacked[0], "after unpack");
   //#endif
 
-  for (long i=0; i<(long)unpacked.size(); i++) {
-    extractDigitsThin(unpacked[i], botHigh, r, ePrime); 
+  for (long i = 0; i < (long)unpacked.size(); i++) {
+    extractDigitsThin(unpacked[i], botHigh, r, ePrime);
   }
 
   //#ifdef DEBUG_PRINTOUT
@@ -688,7 +713,7 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
   NTL::ZZX xInSlots;
   std::vector<NTL::ZZX> xVec(ea2.size());
   ctxt = unpacked[0];
-  for (long i=1; i<d; i++) {
+  for (long i = 1; i < d; i++) {
     x2iInSlots(xInSlots, i, xVec, ea2);
     unpacked[i].multByConstant(xInSlots);
     ctxt += unpacked[i];
@@ -697,7 +722,6 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 }
 
 #endif
-
 
 // Use packed bootstrapping, so we can bootstrap all in just one go.
 void packedRecrypt(const CtPtrs& cPtrs,
@@ -710,10 +734,10 @@ void packedRecrypt(const CtPtrs& cPtrs,
   int nPacked = divc(cPtrs.size(), ea.getDegree()); // ceil(totoalNum/d)
   std::vector<Ctxt> cts(nPacked, Ctxt(pKey));
 
-  repack(CtPtrs_vectorCt(cts), cPtrs, ea);  // pack ciphertexts
+  repack(CtPtrs_vectorCt(cts), cPtrs, ea); // pack ciphertexts
   //  cout << "@"<< lsize(cts)<<std::flush;
-  for (Ctxt& c: cts) {     // then recrypt them
-    c.reducePtxtSpace(2);  // we only have recryption data for binary ctxt
+  for (Ctxt& c : cts) {   // then recrypt them
+    c.reducePtxtSpace(2); // we only have recryption data for binary ctxt
     pKey.reCrypt(c);
   }
   unpack(cPtrs, CtPtrs_vectorCt(cts), ea, unpackConsts);
@@ -722,47 +746,53 @@ void packedRecrypt(const CtPtrs& cPtrs,
 // recrypt all ctxt at level < belowLvl
 void packedRecrypt(const CtPtrs& array,
                    const std::vector<zzX>& unpackConsts,
-                   const EncryptedArray& ea, long belowLvl)
+                   const EncryptedArray& ea,
+                   long belowLvl)
 {
   std::vector<Ctxt*> v;
-  for (long i=0; i<array.size(); i++)
-    if ( array.isSet(i) && !array[i]->isEmpty()
-         && array[i]->bitCapacity()<belowLvl*(array[i]->getContext().BPL()) )
+  for (long i = 0; i < array.size(); i++)
+    if (array.isSet(i) && !array[i]->isEmpty() &&
+        array[i]->bitCapacity() < belowLvl * (array[i]->getContext().BPL()))
       v.push_back(array[i]);
   packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
 }
 void packedRecrypt(const CtPtrMat& m,
                    const std::vector<zzX>& unpackConsts,
-                   const EncryptedArray& ea, long belowLvl)
+                   const EncryptedArray& ea,
+                   long belowLvl)
 {
   std::vector<Ctxt*> v;
-  for (long i=0; i<m.size(); i++)
-    for (long j=0; j<m[i].size(); j++)
-      if ( m[i].isSet(j) && !m[i][j]->isEmpty()
-           && m[i][j]->bitCapacity()<belowLvl*(m[i][j]->getContext().BPL()) )
+  for (long i = 0; i < m.size(); i++)
+    for (long j = 0; j < m[i].size(); j++)
+      if (m[i].isSet(j) && !m[i][j]->isEmpty() &&
+          m[i][j]->bitCapacity() < belowLvl * (m[i][j]->getContext().BPL()))
         v.push_back(m[i][j]);
   packedRecrypt(CtPtrs_vectorPt(v), unpackConsts, ea);
 }
 
-
-
 //===================== Thin Bootstrapping stuff ==================
-
 
 // This code was copied from RecryptData::init, and is mostly
 // the same, except for the linear-map-related stuff.
 // FIXME: There is really too much code (and data!) duplication here.
-void ThinRecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
-                      bool alsoThick, long t, bool build_cache_, bool minimal)
+void ThinRecryptData::init(const Context& context,
+                           const NTL::Vec<long>& mvec_,
+                           bool alsoThick,
+                           long t,
+                           bool build_cache_,
+                           bool minimal)
 {
   RecryptData::init(context, mvec_, alsoThick, t, build_cache_, minimal);
-  coeffToSlot = std::make_shared<ThinEvalMap>(*ea, minimal, mvec, true, build_cache);
-  slotToCoeff = std::make_shared<ThinEvalMap>(*context.ea, minimal, mvec, false, build_cache);
+  coeffToSlot =
+      std::make_shared<ThinEvalMap>(*ea, minimal, mvec, true, build_cache);
+  slotToCoeff = std::make_shared<ThinEvalMap>(*context.ea,
+                                              minimal,
+                                              mvec,
+                                              false,
+                                              build_cache);
 }
 
-
 // Extract digits from thinly packed slots
-
 
 long fhe_force_chen_han = 0;
 
@@ -772,39 +802,38 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 
   Ctxt unpacked(ctxt);
   unpacked.cleanUp();
- 
+
   std::vector<Ctxt> scratch;
 
   long p = ctxt.getContext().zMStar.getP();
-  long p2r = NTL::power_long(p,r);
-  long topHigh = botHigh + r-1;
-
+  long p2r = NTL::power_long(p, r);
+  long topHigh = botHigh + r - 1;
 
   // degree Chen/Han technique is p^{bot-1}(p-1)r
-  // degree of basic technique is p^{bot-1}p^r, 
+  // degree of basic technique is p^{bot-1}p^r,
   //     or p^{bot-1}p^{r-1} if p==2, r > 1, and bot+r > 2
 
   bool use_chen_han = false;
   if (r > 1) {
-    double chen_han_cost = log(p-1) + log(r);
+    double chen_han_cost = log(p - 1) + log(r);
     double basic_cost;
     if (p == 2 && r > 2 && botHigh + r > 2)
-       basic_cost = (r-1)*log(p);
+      basic_cost = (r - 1) * log(p);
     else
-       basic_cost = r*log(p);
+      basic_cost = r * log(p);
 
-    //std::cerr << "*** basic: " << basic_cost << "\n";
-    //std::cerr << "*** chen/han: " << chen_han_cost << "\n";
-
+    // std::cerr << "*** basic: " << basic_cost << "\n";
+    // std::cerr << "*** chen/han: " << chen_han_cost << "\n";
 
     double thresh = 1.5;
-    if (p == 2) thresh = 1.75;
+    if (p == 2)
+      thresh = 1.75;
     // increasing thresh makes chen_han less likely to be chosen.
-    // For p == 2, the basic algorithm is just squaring, 
+    // For p == 2, the basic algorithm is just squaring,
     // and so is a bit cheaper, so we raise thresh a bit.
     // This is all a bit heuristic.
 
-    if (basic_cost > thresh*chen_han_cost)
+    if (basic_cost > thresh * chen_han_cost)
       use_chen_han = true;
   }
 
@@ -812,7 +841,6 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
     use_chen_han = true;
   else if (fhe_force_chen_han < 0)
     use_chen_han = false;
-
 
   if (use_chen_han) {
     // use Chen and Han technique
@@ -830,67 +858,65 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
       unpacked.divideByP();
     }
 
-    if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
-      unpacked += scratch[botHigh-1];
+    if (p == 2 && botHigh > 0) // For p==2, subtract also the previous bit
+      unpacked += scratch[botHigh - 1];
     unpacked.negate();
 
-    if (r>ePrime) {          // Add in digits from the bottom part, if any
-      long topLow = r-1 - ePrime;
+    if (r > ePrime) { // Add in digits from the bottom part, if any
+      long topLow = r - 1 - ePrime;
       Ctxt tmp = scratch[topLow];
-      for (long j=topLow-1; j>=0; --j) {
-	tmp.multByP();
-	tmp += scratch[j];
+      for (long j = topLow - 1; j >= 0; --j) {
+        tmp.multByP();
+        tmp += scratch[j];
       }
-      if (ePrime>0)
-	tmp.multByP(ePrime); // multiply by p^e'
+      if (ePrime > 0)
+        tmp.multByP(ePrime); // multiply by p^e'
       unpacked += tmp;
     }
     unpacked.reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
 
     ctxt = unpacked;
-  }
-  else {
+  } else {
 
-    if (p==2 && r>2 && topHigh+1 > 2)
+    if (p == 2 && r > 2 && topHigh + 1 > 2)
       topHigh--; // For p==2 we sometime get a bit for free
 
-    extractDigits(scratch, unpacked, topHigh+1);
+    extractDigits(scratch, unpacked, topHigh + 1);
 
     // set upacked = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
     if (topHigh >= LONG(scratch.size())) {
-      topHigh = scratch.size() -1;
+      topHigh = scratch.size() - 1;
       std::cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
     }
 
     unpacked = scratch[topHigh];
-    for (long j=topHigh-1; j>=botHigh; --j) {
+    for (long j = topHigh - 1; j >= botHigh; --j) {
       unpacked.multByP();
       unpacked += scratch[j];
     }
-    if (p==2 && botHigh>0)   // For p==2, subtract also the previous bit
-      unpacked += scratch[botHigh-1];
+    if (p == 2 && botHigh > 0) // For p==2, subtract also the previous bit
+      unpacked += scratch[botHigh - 1];
     unpacked.negate();
 
-    if (r>ePrime) {          // Add in digits from the bottom part, if any
-      long topLow = r-1 - ePrime;
+    if (r > ePrime) { // Add in digits from the bottom part, if any
+      long topLow = r - 1 - ePrime;
       Ctxt tmp = scratch[topLow];
-      for (long j=topLow-1; j>=0; --j) {
-	tmp.multByP();
-	tmp += scratch[j];
+      for (long j = topLow - 1; j >= 0; --j) {
+        tmp.multByP();
+        tmp += scratch[j];
       }
-      if (ePrime>0)
-	tmp.multByP(ePrime); // multiply by p^e'
+      if (ePrime > 0)
+        tmp.multByP(ePrime); // multiply by p^e'
       unpacked += tmp;
     }
     unpacked.reducePtxtSpace(p2r); // Our plaintext space is now mod p^r
     ctxt = unpacked;
   }
-
 }
 
-
 // Hack to get at private fields of public key
-struct PubKeyHack { // The public key
+struct PubKeyHack
+{                         // The public key
   const Context& context; // The context
 
   //! @var Ctxt pubEncrKey
@@ -898,14 +924,14 @@ struct PubKeyHack { // The public key
   //! relative to the first secret key
   Ctxt pubEncrKey;
 
-  std::vector<long> skHwts; // The Hamming weight of the secret keys
+  std::vector<long> skHwts;            // The Hamming weight of the secret keys
   std::vector<KeySwitch> keySwitching; // The key-switching matrices
 
   // The keySwitchMap structure contains pointers to key-switching matrices
   // for re-linearizing automorphisms. The entry keySwitchMap[i][n] contains
   // the index j such that keySwitching[j] is the first matrix one needs to
-  // use when re-linearizing s_i(X^n). 
-  std::vector< std::vector<long> > keySwitchMap;
+  // use when re-linearizing s_i(X^n).
+  std::vector<std::vector<long>> keySwitchMap;
 
   NTL::Vec<int> KS_strategy; // NTL Vec's support I/O, which is
                              // more convenient
@@ -914,30 +940,30 @@ struct PubKeyHack { // The public key
 
   long recryptKeyID; // index of the bootstrapping key
   Ctxt recryptEkey;  // the key itself, encrypted under key #0
-
 };
 
 // bootstrap a ciphertext to reduce noise
-void PubKey::thinReCrypt(Ctxt &ctxt) const
+void PubKey::thinReCrypt(Ctxt& ctxt) const
 {
   FHE_TIMER_START;
 
   // Some sanity checks for dummy ciphertext
   long ptxtSpace = ctxt.getPtxtSpace();
-  if (ctxt.isEmpty()) return;
+  if (ctxt.isEmpty())
+    return;
 
-  if (ctxt.parts.size()==1 && ctxt.parts[0].skHandle.isOne()) {
+  if (ctxt.parts.size() == 1 && ctxt.parts[0].skHandle.isOne()) {
     // Dummy encryption, just ensure that it is reduced mod p
     NTL::ZZX poly = to_ZZX(ctxt.parts[0]);
-    for (long i=0; i<poly.rep.length(); i++)
-      poly[i] = NTL::to_ZZ( rem(poly[i],ptxtSpace) );
+    for (long i = 0; i < poly.rep.length(); i++)
+      poly[i] = NTL::to_ZZ(rem(poly[i], ptxtSpace));
     poly.normalize();
     ctxt.DummyEncrypt(poly);
     return;
   }
 
-  //OLD: assert(recryptKeyID>=0); // check that we have bootstrapping data
-  helib::assertTrue(recryptKeyID>=0l, "Bootstrapping data not present");
+  // OLD: assert(recryptKeyID>=0); // check that we have bootstrapping data
+  assertTrue(recryptKeyID >= 0l, "Bootstrapping data not present");
 
   long p = ctxt.getContext().zMStar.getP();
   long r = ctxt.getContext().alMod.getR();
@@ -950,14 +976,16 @@ void PubKey::thinReCrypt(Ctxt &ctxt) const
   // the bootstrapping key is encrypted relative to plaintext space p^{e-e'+r}.
   long e = trcData.e;
   long ePrime = trcData.ePrime;
-  long p2ePrime = NTL::power_long(p,ePrime);
-  long q = NTL::power_long(p,e)+1;
-  //OLD: assert(e>=r);
-  helib::assertTrue(e>=r, "trcData.e must be at least alMod.r");
+  long p2ePrime = NTL::power_long(p, ePrime);
+  long q = NTL::power_long(p, e) + 1;
+  // OLD: assert(e>=r);
+  assertTrue(e >= r, "trcData.e must be at least alMod.r");
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  //OLD: assert(p2r % ptxtSpace == 0);
-  helib::assertEq(p2r % ptxtSpace, 0l, "ptxtSpace must divide p^r when thin bootstrapping");
+  // OLD: assert(p2r % ptxtSpace == 0);
+  assertEq(p2r % ptxtSpace,
+           0l,
+           "ptxtSpace must divide p^r when thin bootstrapping");
 
 #ifdef DEBUG_PRINTOUT
   CheckCtxt(ctxt, "init");
@@ -971,8 +999,8 @@ void PubKey::thinReCrypt(Ctxt &ctxt) const
   // experimental code...we should drop down to a reasonably low level
   // before doing the first linear map.
   long first = context.ctxtPrimes.first();
-  long last = std::min(context.ctxtPrimes.last(),
-                  first + THIN_RECRYPT_NLEVELS - 1);
+  long last =
+      std::min(context.ctxtPrimes.last(), first + THIN_RECRYPT_NLEVELS - 1);
   ctxt.bringToSet(IndexSet(first, last));
 #endif
 
@@ -992,16 +1020,17 @@ void PubKey::thinReCrypt(Ctxt &ctxt) const
   FHE_NTIMER_START(AAA_bootKeySwitch);
 
   // Make sure that this ciphertxt is in canonical form
-  if (!ctxt.inCanonicalForm()) ctxt.reLinearize();
+  if (!ctxt.inCanonicalForm())
+    ctxt.reLinearize();
 
   // Mod-switch down if needed
   IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
-  //OLD: assert(s <= context.ctxtPrimes);
-  helib::assertTrue(s <= context.ctxtPrimes,  "prime set is messed up");
-  if (s.card()>3) { // leave only first three ciphertext primes
+  // OLD: assert(s <= context.ctxtPrimes);
+  assertTrue(s <= context.ctxtPrimes, "prime set is messed up");
+  if (s.card() > 3) { // leave only first three ciphertext primes
     long first = s.first();
-    IndexSet s3(first, first+2);
-    s.retain(s3); 
+    IndexSet s3(first, first + 2);
+    s.retain(s3);
   }
   ctxt.modDownToSet(s);
 
@@ -1017,53 +1046,56 @@ void PubKey::thinReCrypt(Ctxt &ctxt) const
 
   double mfac = ctxt.getContext().zMStar.getNormBnd();
   double noise_est = ctxt.rawModSwitch(zzParts, q) * mfac;
-  // noise_est is an upper bound on the L-infty norm of the scaled noise 
+  // noise_est is an upper bound on the L-infty norm of the scaled noise
   // in the pwrfl basis
-  double noise_bnd = FHE_MIN_CAP_FRAC*p2r*ctxt.getContext().boundForRecryption();
-  // noise_bnd is the bound assumed in selecting the parameters 
-  double noise_rat = noise_est/noise_bnd;
+  double noise_bnd =
+      FHE_MIN_CAP_FRAC * p2r * ctxt.getContext().boundForRecryption();
+  // noise_bnd is the bound assumed in selecting the parameters
+  double noise_rat = noise_est / noise_bnd;
 
   FHE_STATS_UPDATE("raw-mod-switch-noise", noise_rat);
 
   if (noise_rat > 1) {
-    Warning("rawModSwitch scaled noise exceeds bound: " + std::to_string(noise_rat));
+    Warning("rawModSwitch scaled noise exceeds bound: " +
+            std::to_string(noise_rat));
   }
-  
 
-  //OLD: assert(zzParts.size() == 2);
-  helib::assertEq(zzParts.size(), (std::size_t)2, "Exactly 2 parts required for mod-switching in thin bootstrapping");
-
+  // OLD: assert(zzParts.size() == 2);
+  assertEq(zzParts.size(),
+           (std::size_t)2,
+           "Exactly 2 parts required for mod-switching in thin bootstrapping");
 
 #ifdef DEBUG_PRINTOUT
   if (dbgKey) {
-    checkRecryptBounds(zzParts, dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext(), q);
+    checkRecryptBounds(zzParts,
+                       dbgKey->sKeys[recryptKeyID],
+                       ctxt.getContext(),
+                       q);
   }
 #endif
 
   std::vector<NTL::ZZX> v;
   v.resize(2);
 
-
   // Add multiples of q to make the zzParts divisible by p^{e'}
-  for (long i: range(2)) {
+  for (long i : range(2)) {
     // make divisible by p^{e'}
 
     newMakeDivisible(zzParts[i], p2ePrime, q, ctxt.getContext(), v[i]);
-
   }
 
 #ifdef DEBUG_PRINTOUT
   if (dbgKey) {
-    checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID],
-		       ctxt.getContext(), q);
-    checkCriticalValue(zzParts, dbgKey->sKeys[recryptKeyID],
-                       ctxt.getContext().rcData, q);
+    checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID], ctxt.getContext(), q);
+    checkCriticalValue(zzParts,
+                       dbgKey->sKeys[recryptKeyID],
+                       ctxt.getContext().rcData,
+                       q);
   }
 #endif
 
-  for (long i: range(zzParts.size())) {
-    zzParts[i] /= p2ePrime;   // divide by p^{e'}
+  for (long i : range(zzParts.size())) {
+    zzParts[i] /= p2ePrime; // divide by p^{e'}
   }
 
   // NOTE: here we lose the intFactor associated with ctxt.
@@ -1074,7 +1106,7 @@ void PubKey::thinReCrypt(Ctxt &ctxt) const
   ctxt.addConstant(zzParts[0]);
 
 #ifdef DEBUG_PRINTOUT
-   CheckCtxt(ctxt, "after bootKeySwitch");
+  CheckCtxt(ctxt, "after bootKeySwitch");
 #endif
 
   FHE_NTIMER_STOP(AAA_bootKeySwitch);
@@ -1085,17 +1117,16 @@ void PubKey::thinReCrypt(Ctxt &ctxt) const
   FHE_NTIMER_STOP(AAA_coeffToSlot);
 
 #ifdef DEBUG_PRINTOUT
-   CheckCtxt(ctxt, "after coeffToSlot");
+  CheckCtxt(ctxt, "after coeffToSlot");
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
   FHE_NTIMER_START(AAA_extractDigitsThin);
-  extractDigitsThin(ctxt, e-ePrime, r, ePrime);
+  extractDigitsThin(ctxt, e - ePrime, r, ePrime);
   FHE_NTIMER_STOP(AAA_extractDigitsThin);
 
-
 #ifdef DEBUG_PRINTOUT
-   CheckCtxt(ctxt, "after extractDigitsThin");
+  CheckCtxt(ctxt, "after extractDigitsThin");
 #endif
 
   // restore intFactor
@@ -1105,9 +1136,10 @@ void PubKey::thinReCrypt(Ctxt &ctxt) const
 
 #ifdef DEBUG_PRINTOUT
 
-static void
-checkCriticalValue(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
-                   const RecryptData& rcData, long q)
+static void checkCriticalValue(const std::vector<NTL::ZZX>& zzParts,
+                               const DoubleCRT& sKey,
+                               const RecryptData& rcData,
+                               long q)
 {
   NTL::ZZX ptxt;
   rawDecrypt(ptxt, zzParts, sKey); // no mod q
@@ -1115,23 +1147,25 @@ checkCriticalValue(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
   NTL::Vec<NTL::ZZ> powerful;
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
   NTL::xdouble max_pwrfl = NTL::conv<NTL::xdouble>(largestCoeff(powerful));
-  double critical_value = NTL::conv<double>((max_pwrfl/q)/q);
+  double critical_value = NTL::conv<double>((max_pwrfl / q) / q);
 
   vecRed(powerful, powerful, q, false);
   max_pwrfl = NTL::conv<NTL::xdouble>(largestCoeff(powerful));
-  critical_value += NTL::conv<double>(max_pwrfl/q);
+  critical_value += NTL::conv<double>(max_pwrfl / q);
 
   FHE_STATS_UPDATE("critical-value", critical_value);
 
   std::cerr << "=== critical_value=" << critical_value;
-  if (critical_value > 0.5) std::cerr << " BAD-BOUND";
+  if (critical_value > 0.5)
+    std::cerr << " BAD-BOUND";
 
   std::cerr << "\n";
 }
 
-static void
-checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
-                   const Context& context, long q)
+static void checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts,
+                               const DoubleCRT& sKey,
+                               const Context& context,
+                               long q)
 {
   const RecryptData& rcData = context.rcData;
   double coeff_bound = context.boundForRecryption();
@@ -1143,32 +1177,33 @@ checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts, const DoubleCRT& sKey,
   NTL::Vec<NTL::ZZ> powerful;
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
   double max_pwrfl = NTL::conv<double>(largestCoeff(powerful));
-  double ratio = max_pwrfl/(2*q*coeff_bound);
+  double ratio = max_pwrfl / (2 * q * coeff_bound);
 
   FHE_STATS_UPDATE("|x|/bound", ratio);
 
   std::cerr << "=== |x|/bound=" << ratio;
-  if (ratio > 1.0) std::cerr << " BAD-BOUND";
+  if (ratio > 1.0)
+    std::cerr << " BAD-BOUND";
 
   vecRed(powerful, powerful, q, false);
   max_pwrfl = NTL::conv<double>(largestCoeff(powerful));
-  ratio = max_pwrfl/(2*p2r*coeff_bound);
+  ratio = max_pwrfl / (2 * p2r * coeff_bound);
 
   FHE_STATS_UPDATE("|x%q|/bound", ratio);
 
   std::cerr << ", (|x%q|)/bound=" << ratio;
-  if (ratio > 1.0) std::cerr << " BAD-BOUND";
+  if (ratio > 1.0)
+    std::cerr << " BAD-BOUND";
 
   std::cerr << "\n";
 }
 
-
-static void
-checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
-                     const Context& context, long q)
+static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
+                                 const DoubleCRT& sKey,
+                                 const Context& context,
+                                 UNUSED long q)
 {
   const RecryptData& rcData = context.rcData;
-
 
   long p = context.zMStar.getP();
   long e = rcData.e;
@@ -1192,25 +1227,25 @@ checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
   double max_pwrfl = NTL::conv<double>(largestCoeff(powerful));
 
-
-  double denom = p2ePrime*coeff_bound;
-  double ratio = max_pwrfl/denom;
+  double denom = p2ePrime * coeff_bound;
+  double ratio = max_pwrfl / denom;
 
   FHE_STATS_UPDATE("|v|/bound", ratio);
 
   std::cerr << "=== |v|/bound=" << ratio;
-  if (ratio > 1.0) std::cerr << " BAD-BOUND";
+  if (ratio > 1.0)
+    std::cerr << " BAD-BOUND";
   std::cerr << "\n";
 
-  ptxt -= v[0];  // so now ptxt is just sKey * v[1]
+  ptxt -= v[0]; // so now ptxt is just sKey * v[1]
   rcData.p2dConv->ZZXtoPowerful(powerful, ptxt);
 
-  helib::assertEq(powerful.length(), phim, "length should be phim");
+  assertEq(powerful.length(), phim, "length should be phim");
 
   double ran_pwrfl = NTL::conv<double>(powerful[NTL::RandomBnd(phim)]);
   // pick a random coefficient in the poweful basis
 
-  double std_devs = fabs(ran_pwrfl)/(p2ePrime*sigma);
+  double std_devs = fabs(ran_pwrfl) / (p2ePrime * sigma);
   // number of standard deviations away from mean
 
   // update various indicator variables
@@ -1221,13 +1256,15 @@ checkRecryptBounds_v(const std::vector<NTL::ZZX>& v, const DoubleCRT& sKey,
   FHE_STATS_UPDATE("sigma_2_5", double(std_devs <= 2.5)); // 0.988
   FHE_STATS_UPDATE("sigma_3_0", double(std_devs <= 3.0)); // 0.997, 1 in 370
   FHE_STATS_UPDATE("sigma_3_5", double(std_devs <= 3.5)); // 0.999535, 1 in 2149
-  FHE_STATS_UPDATE("sigma_4_0", double(std_devs <= 4.0)); // 0.999937, 1 in 15787
+  FHE_STATS_UPDATE("sigma_4_0",
+                   double(std_devs <= 4.0)); // 0.999937, 1 in 15787
 
   // compute sample variance, and scale by the variance we expect
-  FHE_STATS_UPDATE("sigma_calc", fsquare(ran_pwrfl)/fsquare(p2ePrime*sigma));
+  FHE_STATS_UPDATE("sigma_calc",
+                   fsquare(ran_pwrfl) / fsquare(p2ePrime * sigma));
 
   // save the scaled value for application of other tests
-  FHE_STATS_SAVE("v_values", ran_pwrfl/(p2ePrime*sigma));
+  FHE_STATS_SAVE("v_values", ran_pwrfl / (p2ePrime * sigma));
 }
 
 #endif
@@ -1258,4 +1295,4 @@ void fhe_stats_print(long iter, const Context& context)
 }
 #endif
 
-}
+} // namespace helib

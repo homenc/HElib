@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -28,7 +28,7 @@ namespace helib {
 #define FHE_atomic_ulong std::atomic_ulong
 
 #define FHE_MUTEX_TYPE std::mutex
-#define FHE_MUTEX_GUARD(mx) std::lock_guard<std::mutex> _lock ## __LINE__ (mx)
+#define FHE_MUTEX_GUARD(mx) std::lock_guard<std::mutex> _lock##__LINE__(mx)
 
 #else
 
@@ -38,10 +38,9 @@ namespace helib {
 #define FHE_atomic_ulong unsigned long
 
 #define FHE_MUTEX_TYPE int
-#define FHE_MUTEX_GUARD(mx) ((void) mx)
+#define FHE_MUTEX_GUARD(mx) ((void)mx)
 
 #endif
-
 }
 
 #endif // ifndef HELIB_MULTICORE_H

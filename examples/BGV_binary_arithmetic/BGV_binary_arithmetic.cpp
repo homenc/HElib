@@ -177,8 +177,9 @@ int main(int argc, char* argv[])
   // Now calculate the sum of a, b and c using the addManyNumbers function.
   encrypted_result.clear();
   decrypted_result.clear();
-  std::vector<std::vector<helib::Ctxt>> summands = {
-      encrypted_a, encrypted_b, encrypted_c};
+  std::vector<std::vector<helib::Ctxt>> summands = {encrypted_a,
+                                                    encrypted_b,
+                                                    encrypted_c};
   helib::CtPtrMat_vectorCt summands_wrapper(summands);
   helib::addManyNumbers(
       result_wrapper,

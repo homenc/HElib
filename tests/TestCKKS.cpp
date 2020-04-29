@@ -24,10 +24,7 @@ namespace {
 struct Parameters
 {
   Parameters(long m, long r, long L, double epsilon) :
-      m(m),
-      r(r),
-      L(L),
-      epsilon(epsilon){};
+      m(m), r(r), L(L), epsilon(epsilon){};
 
   const long m;
   const long r;

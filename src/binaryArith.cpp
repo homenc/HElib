@@ -563,8 +563,9 @@ void splitBinaryNums(CtPtrs& leftSplit, CtPtrs& rightSplit, const CtPtrs& input)
 void leftBitwiseShift(CtPtrs& output, const CtPtrs& input, const long shamt)
 {
   assertTrue(shamt >= 0, "Shift amount must be positive.");
-  assertEq(
-      output.size(), input.size(), "output and input must have the same size.");
+  assertEq(output.size(),
+           input.size(),
+           "output and input must have the same size.");
   for (long i = 0; i < output.size() - shamt; ++i)
     *output[i + shamt] = *input[i];
   for (long i = 0; i < shamt; ++i)
@@ -574,8 +575,9 @@ void leftBitwiseShift(CtPtrs& output, const CtPtrs& input, const long shamt)
 //! Rotate binary numbers by `rotamt`.
 void bitwiseRotate(CtPtrs& output, const CtPtrs& input, long rotamt)
 {
-  assertEq(
-      output.size(), input.size(), "output and input must be the same size.");
+  assertEq(output.size(),
+           input.size(),
+           "output and input must be the same size.");
   long bitSize = input.size();
   rotamt = mcMod(rotamt, bitSize);
   for (long i = 0; i < output.size(); ++i)
@@ -622,8 +624,9 @@ void bitwiseAnd(CtPtrs& output,
                 const CtPtrs& input,
                 const std::vector<long> mask)
 {
-  assertEq(
-      output.size(), input.size(), "output and input must be the same size.");
+  assertEq(output.size(),
+           input.size(),
+           "output and input must be the same size.");
   vecCopy(output, input);
   for (long i = 0; i < output.size(); ++i)
     if (!mask[i])
@@ -633,8 +636,9 @@ void bitwiseAnd(CtPtrs& output,
 //! Compute a bitwise NOT of `input`.
 void bitwiseNot(CtPtrs& output, const CtPtrs& input)
 {
-  assertEq(
-      output.size(), input.size(), "input and output must have the same size");
+  assertEq(output.size(),
+           input.size(),
+           "input and output must have the same size");
   vecCopy(output, input);
   for (long i = 0; i < output.size(); ++i)
     output[i]->addConstant(NTL::ZZ(1L));
@@ -710,13 +714,18 @@ void subtractBinary(CtPtrs& difference,
   std::vector<Ctxt> negated_rhs(rhs.size(), *rhs[0]);
   CtPtrs_vectorCt negated_wrapper(negated_rhs);
   negateBinary(negated_wrapper, rhs);
-  addTwoNumbers(
-      difference, lhs, negated_wrapper, lhs.size(), unpackSlotEncoding);
+  addTwoNumbers(difference,
+                lhs,
+                negated_wrapper,
+                lhs.size(),
+                unpackSlotEncoding);
 }
 
 // Return pointers to the three inputs, ordered by size
-static std::tuple<const CtPtrs*, const CtPtrs*, const CtPtrs*>
-orderBySize(const CtPtrs& a, const CtPtrs& b, const CtPtrs& c)
+static std::tuple<const CtPtrs*, const CtPtrs*, const CtPtrs*> orderBySize(
+    const CtPtrs& a,
+    const CtPtrs& b,
+    const CtPtrs& c)
 {
   if (lsize(a) <= lsize(b)) {
     if (lsize(b) <= lsize(c))
@@ -737,8 +746,11 @@ orderBySize(const CtPtrs& a, const CtPtrs& b, const CtPtrs& c)
 
 // Implementing the basic 3-for-2 trick: u,v,w encrypt bits, return two bits
 // x,y such that x+2y = u+v+w over the integers. Outputs can alias the inputs.
-static void
-three4Two(Ctxt& lsb, Ctxt& msb, const Ctxt& u, const Ctxt& v, const Ctxt& w)
+static void three4Two(Ctxt& lsb,
+                      Ctxt& msb,
+                      const Ctxt& u,
+                      const Ctxt& v,
+                      const Ctxt& w)
 {
   Ctxt tmp_v = v;
   Ctxt tmp_w = w;
@@ -1390,8 +1402,11 @@ void AddDAG::printAddDAG(bool printCT)
         std::cout << ", prnt1=" << node->parent1->nodeName();
       std::cout << " }\n";
       if (printCT && node->ct != nullptr)
-        decryptAndPrint(
-            std::cout, *(node->ct), *dbgKey, *dbgEa, FLAG_PRINT_VEC);
+        decryptAndPrint(std::cout,
+                        *(node->ct),
+                        *dbgKey,
+                        *dbgEa,
+                        FLAG_PRINT_VEC);
     }
   }
   std::cout << "\nThe q[i,j]'s\n============\n";
@@ -1415,8 +1430,11 @@ void AddDAG::printAddDAG(bool printCT)
         std::cout << ", prnt1=" << node->parent1->nodeName();
       std::cout << " }\n";
       if (printCT && node->ct != nullptr)
-        decryptAndPrint(
-            std::cout, *(node->ct), *dbgKey, *dbgEa, FLAG_PRINT_VEC);
+        decryptAndPrint(std::cout,
+                        *(node->ct),
+                        *dbgKey,
+                        *dbgEa,
+                        FLAG_PRINT_VEC);
     }
   }
   std::cout << std::endl;

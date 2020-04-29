@@ -22,16 +22,18 @@ namespace helib {
 // Three functions strip whitespaces before and after strings.
 static void lstrip(std::string& s)
 {
-  auto it = std::find_if(
-      s.begin(), s.end(), [](unsigned char c) { return !std::isspace(c); });
+  auto it = std::find_if(s.begin(), s.end(), [](unsigned char c) {
+    return !std::isspace(c);
+  });
 
   s.erase(s.begin(), it);
 }
 
 static void rstrip(std::string& s)
 {
-  auto it = std::find_if(
-      s.rbegin(), s.rend(), [](unsigned char c) { return !std::isspace(c); });
+  auto it = std::find_if(s.rbegin(), s.rend(), [](unsigned char c) {
+    return !std::isspace(c);
+  });
 
   s.erase(it.base(), s.end());
 }
@@ -114,7 +116,7 @@ ArgMap& ArgMap::separator(Separator s)
     break;
   default:
     // Use of class enums means it should never reach here.
-    throw helib::LogicError("Unrecognised option for kv seperator.");
+    throw LogicError("Unrecognised option for kv seperator.");
   }
 
   return *this;
@@ -257,7 +259,7 @@ void ArgMap::simpleParse(const std::forward_list<std::string>& args,
         break;
       default:
         // Should never get here.
-        throw helib::LogicError("Unrecognised ArgType.");
+        throw LogicError("Unrecognised ArgType.");
         break;
       }
 
@@ -271,8 +273,7 @@ void ArgMap::simpleParse(const std::forward_list<std::string>& args,
       // never a recognised token.
       std::shared_ptr<ArgProcessor> pos_ap = map[*pos_args_it];
       if (!pos_ap->process(*it))
-        throw helib::LogicError(
-            "Positional name does not match a ArgMap name.");
+        throw LogicError("Positional name does not match a ArgMap name.");
       // Remove from required_set (if it is there)
       this->required_set.erase(*pos_args_it);
       ++pos_args_it;
@@ -319,19 +320,19 @@ ArgMap& ArgMap::parse(const std::string& filepath)
 {
 
   if (this->kv_separator == ' ') { // Not from files.
-    throw helib::LogicError("Whitespace separator not possible from files.");
+    throw LogicError("Whitespace separator not possible from files.");
   }
 
   if (!this->named_args_only) {
-    throw helib::LogicError("Toggle and Positional arguments not possible from "
-                            "files. Only named arguments.");
+    throw LogicError("Toggle and Positional arguments not possible from "
+                     "files. Only named arguments.");
   }
 
   std::ifstream file(filepath);
   this->progname = filepath;
 
   if (!file.is_open()) {
-    throw helib::RuntimeError("Could not open file " + filepath);
+    throw RuntimeError("Could not open file " + filepath);
   }
 
   std::forward_list<std::string> args;
@@ -353,8 +354,7 @@ ArgMap& ArgMap::parse(const std::string& filepath)
   printDiagnostics(args);
 
   simpleParse(args, false, [&filepath](const std::string& msg) {
-    throw helib::RuntimeError("Could not parse params file: " + filepath +
-                              ". " + msg);
+    throw RuntimeError("Could not parse params file: " + filepath + ". " + msg);
   });
 
   // Have the required args been provided - if not throw
@@ -363,7 +363,7 @@ ArgMap& ArgMap::parse(const std::string& filepath)
     oss << "Required argument(s) not given:\n";
     for (const auto& e : this->required_set)
       oss << "\t" << e << '\n';
-    throw helib::RuntimeError(oss.str());
+    throw RuntimeError(oss.str());
   }
 
   return *this;

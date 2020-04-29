@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -23,14 +23,16 @@ namespace helib {
 class Cmodulus;
 
 //! A helper class to map required modulo-sizes to primeSets
-class ModuliSizes {
+class ModuliSizes
+{
 public:
   typedef std::pair<double, IndexSet> Entry;
   // each table entry is a pair<double,IndexSet>=(size, set-of-primes)
 
   //! initialize helper table for a given chain
   void init(const std::vector<Cmodulus>& chain,
-            const IndexSet& ctxtPrimes, const IndexSet& smallPrimes);
+            const IndexSet& ctxtPrimes,
+            const IndexSet& smallPrimes);
 
   //! Find a suitable IndexSet of primes whose total size is in the
   //! target interval [low,high], trying to minimize the number of
@@ -38,8 +40,10 @@ public:
   //! If no IndexSet exsists that fits in the target interval, returns
   //! the IndexSet that gives the largest value smaller than low
   //! (or the smalest value greater than low if reverse flag is set).
-  IndexSet getSet4Size(double low, double high,
-                       const IndexSet& fromSet, bool reverse) const;
+  IndexSet getSet4Size(double low,
+                       double high,
+                       const IndexSet& fromSet,
+                       bool reverse) const;
 
   //! Find a suitable IndexSet of primes whose total size is in the
   //! target interval [low,high], trying to minimize the total number
@@ -47,8 +51,10 @@ public:
   //! If no IndexSet exists that fits in the target interval, returns
   //! the IndexSet that gives the largest value smaller than low.
   //! (or the smalest value greater than low if reverse flag is set).
-  IndexSet getSet4Size(double low, double high,
-                       const IndexSet& from1, const IndexSet& from2,
+  IndexSet getSet4Size(double low,
+                       double high,
+                       const IndexSet& from1,
+                       const IndexSet& from2,
                        bool reverse) const;
 
   // ASCII I/O
@@ -59,7 +65,7 @@ public:
   void write(std::ostream& str) const;
 
 private:
-  std::vector< Entry > sizes;
+  std::vector<Entry> sizes;
 };
 
 std::ostream& operator<<(std::ostream& s, const ModuliSizes::Entry& e);
@@ -67,6 +73,6 @@ std::istream& operator>>(std::istream& s, ModuliSizes::Entry& e);
 void write(std::ostream& s, const ModuliSizes::Entry& e);
 void read(std::istream& s, ModuliSizes::Entry& e);
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_PRIMECHAIN_H

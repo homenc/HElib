@@ -100,8 +100,13 @@ std::vector<std::pair<long, long>> getBadDimensionParams(long min_m,
                                                          long m_sparseness,
                                                          long p_sparseness)
 {
-  return getParams(
-      false, min_m, max_m, min_p, max_p, m_sparseness, p_sparseness);
+  return getParams(false,
+                   min_m,
+                   max_m,
+                   min_p,
+                   max_p,
+                   m_sparseness,
+                   p_sparseness);
 };
 
 std::vector<std::pair<long, long>> getGoodDimensionParams(long min_m,
@@ -111,7 +116,12 @@ std::vector<std::pair<long, long>> getGoodDimensionParams(long min_m,
                                                           long m_sparseness,
                                                           long p_sparseness)
 {
-  return getParams(
-      true, min_m, max_m, min_p, max_p, m_sparseness, p_sparseness);
+  return getParams(true,
+                   min_m,
+                   max_m,
+                   min_p,
+                   max_p,
+                   m_sparseness,
+                   p_sparseness);
 };
 }; // namespace helib_test

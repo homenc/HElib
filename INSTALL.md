@@ -1,7 +1,7 @@
 # Building and installing HElib
 
 HElib's build, install and regression tests suit have been built and tested on Ubuntu 16.04, Ubuntu 18.04, 
-CentOS 7.6, and macOS Mojave 10.14.
+Fedora 31, CentOS 7.6, and macOS Mojave 10.14.
 
 There are two different ways to build and install HElib. The first one will automatically download and build the GMP and NTL dependencies and pack the libraries in a relocatable folder. The second way, instead, requires the dependencies to be installed by you and available in the system.
 
