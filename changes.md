@@ -4,6 +4,7 @@ HElib 1.0.1, April 2020
 
 January-April 2020
 ------------------
+* Additional BGV examples BGV_(packed and binary)_arithmetic and simple BGV_database_lookup
 * Improved powerful basis
 * Enhancements and extensions to Binary operations
 * Enhancements to Ptxt functions
@@ -11,7 +12,8 @@ January-April 2020
 * Enhancements and fixes to `ArgMap` functionality
 * Compilation warning messages clean-up
 * Updates to Docker build
-* Using stable Google test framework to HElib testing suite.
+* Using stable Google Test framework to HElib testing suite.
+* Additional tests ported to using Google Test framework
 * Bug fixes
 
 HElib 1.0.0, January 2020

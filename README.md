@@ -24,8 +24,7 @@ See [changes.md](changes.md) for more details.
 Full installation instructions and a list of the required dependencies can be found 
 in [INSTALL.md](INSTALL.md).
 
-HElib is written in C++14 and uses the [NTL mathematical library][4]
-(version 11.0.0 or higher).  
+HElib is written in C++14 and uses the [NTL mathematical library][4].  
 HElib is distributed under the terms of the [Apache License v2.0][5].  
 
 

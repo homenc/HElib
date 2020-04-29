@@ -49,7 +49,7 @@ be. To install in `/home/alice/helib_install`, for example:
 cmake -DPACKAGE_BUILD=ON -DCMAKE_INSTALL_PREFIX=/home/alice/helib_install ..
 ```
 
-Extra options can be specified here, such as enabling tests with 
+Extra options can be specified here, such as enabling HElib tests with 
 `-DENABLE_TEST=ON`.  See later section entitled "HElib build
 options" for details.
 
@@ -59,14 +59,12 @@ The output of this will be in the relocatable folder `helib_pack`:
 make -j16
 ```
 
-4. (optional) If step 2 was performed with `-DENABLE_TEST=ON`, tests can be run
-as follows:
+4. (optional) If step 2 was performed with `-DENABLE_TEST=ON`, HElib tests can 
+be run as follows:
 ```
-make test
+ctest -R helib_check
 ```
-This will run the tests for GMP, NTL, and HElib.  More detailed logging can be
-found in `Testing/Temporary/LastTest.log`.
-An even more detailed HElib-specific test logs can be found in 
+Detailed HElib-specific test logs can be found in 
 `dependencies/Build/helib_external/Testing/Temporary/LastTest.log`.
 
 5. (optional) Run the install step, to copy the folder `helib_pack` to
@@ -76,7 +74,7 @@ make install
 ```
 
 of course, if the `CMAKE_INSTALL_PREFIX` was kept as the default `/usr/local`
-or some other system-wide path, step 5 needs to be run as root.
+or some other system-wide path, step 5 may require `sudo` privileges.
 
 
 ## Option 2: library build (advanced)
@@ -84,10 +82,10 @@ or some other system-wide path, step 5 needs to be run as root.
 This option involves building HElib on its own, linking against pre-existing
 dependencies (NTL and GMP) on the system.  In this way, the HElib library can
 be moved around, but its dependencies (NTL and GMP) cannot, as they are
-absolute paths.  For this option, you must build GMP >=6.0.0 and NTL >=11.0.0
+absolute paths.  For this option, you must build GMP >=6.0.0 and NTL >=11.4.3
 yourself.  For details on how to do this, please see the section on building
-dependencies later.  We will suppose throughout this that the environment
-variables `$GMPDIR` and `$NTLDIR` are set to point to the installation
+dependencies later.  It is assumed throughout this installation option that the 
+environment variables `$GMPDIR` and `$NTLDIR` are set to point to the installation
 directories of GMP and NTL respectively.
 
 Please note that if changing from package build to library build, it is safer 
@@ -110,7 +108,7 @@ not specified, system-wide locations such as `/usr/local/lib` will be searched.
 cmake -DGMP_DIR="${GMPDIR}" -DNTL_DIR="${NTLDIR}" -DCMAKE_INSTALL_PREFIX=/home/alice/helib_install ..
 ```
 
-Extra options can be specified here, such as enabling tests with 
+Extra options can be specified here, such as enabling HElib tests with 
 `-DENABLE_TEST=ON`.  See later section entitled "HElib build options" for
 details.
 
@@ -123,9 +121,9 @@ make -j16
 4. (optional) If step 2 was performed with `-DENABLE_TEST=ON`, tests can be run
 as follows:
 ```
-make test
+ctest
 ```
-The complete test output can be found in
+Detailed HElib test logs can be found in 
 `Testing/Temporary/LastTest.log`.
 
 5. Run the install step, to copy the files to `${CMAKE_INSTALL_PREFIX}` (in
@@ -135,7 +133,7 @@ make install
 ```
 
 of course, if the `CMAKE_INSTALL_PREFIX` was kept as the default `/usr/local`
-or some other system-wide path, step 5 needs to be run as root.
+or some other system-wide path, step 5 may require `sudo` privileges.
 
 ## Building dependencies (for option 2)
 
@@ -164,7 +162,7 @@ step 3.
 
 You can install NTL as follows:
 
-1. Download NTL >=11.0.0 (current version is 11.4.3) from
+1. Download NTL >=11.4.3 (current version is 11.4.3) from
    http://www.shoup.net/ntl/download.html
 2. Decompress and cd into the directory, e.g., `ntl-11.4.3/src`
 3. NTL is configured, built and installed in the standard Unix way (but
