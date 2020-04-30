@@ -34,7 +34,7 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   // OLD: assert(&getContext() == &ctxt.getContext());
   assertEq(&getContext(),
            &ctxt.getContext(),
-           "Cannot decrypt with non-matching contextx");
+           "Cannot decrypt with non-matching context");
   NTL::ZZX pp;
   sKey.Decrypt(pp, ctxt);
 
@@ -61,7 +61,7 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 
   // NOTE: I changed the code so that we convert to a
   // vector<double> instead of a zzX. This is more
-  // efficient and more precise.  It shoud not affect overflow,
+  // efficient and more precise.  It should not affect overflow,
   // as far as I can tell. The old code is above.
   //   --Victor
 
@@ -97,7 +97,7 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
   // OLD: assert(&getContext() == &ctxt.getContext());
   assertEq(&getContext(),
            &ctxt.getContext(),
-           "Cannot decrypt with non-matching contextx");
+           "Cannot decrypt with non-matching context");
   // OLD: assert(nativeDimension(i));
   assertTrue(nativeDimension(i),
              "Rotation in " + std::to_string(i) + " is not a native operation");

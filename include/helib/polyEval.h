@@ -55,7 +55,7 @@ public:
     assertTrue<InvalidArgument>(nPowers > 0, "Must have positive nPowers");
 
     Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
-    v.resize(nPowers, tmp); // Initializes nPowers empty cipehrtexts
+    v.resize(nPowers, tmp); // Initializes nPowers empty ciphertexts
     v[0] = c;               // store X itself in v[0]
   }
 

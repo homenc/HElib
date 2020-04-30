@@ -69,8 +69,8 @@ void tableWriteIn(const CtPtrs& table,
  * SATURATED ARITHMETIC:
  * Applications of f that return a result that is too large to represent
  * in the output format will be converted to the maximum representable
- * value. Similary, Applications of f that return a result that is too
- * small will be converted to the minimul representable value. (This
+ * value. Similarly, Applications of f that return a result that is too
+ * small will be converted to the minimal representable value. (This
  * applies also to applications of f that return infinites, NaNs will
  * just be mapped to zero.) For this to work correctly, you should be
  * working with standard IEEE arithmetic...which will be the case on

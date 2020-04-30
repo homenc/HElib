@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 /**
- * @file zzX.cpp - manipulating polynomials with single-percision coefficient
- *               It is assumed that the result is also single-percision
+ * @file zzX.cpp - manipulating polynomials with single-precision coefficient
+ *               It is assumed that the result is also single-precision
  **/
 #include <mutex>
 #include <map>
@@ -87,7 +87,7 @@ const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg)
   if (it == moduli.end()) { // init a new zz_pXModulus for this value of m
     std::unique_lock<std::mutex> lck(pt_mtx); // try to get a lock
 
-    // Got the lock, insert a new entry for this malue of m into the map
+    // Got the lock, insert a new entry for this value of m into the map
     NTL::zz_pX phimX = NTL::conv<NTL::zz_pX>(palg.getPhimX());
     NTL::zz_pXModulus* ptr =
         new NTL::zz_pXModulus(phimX); // will "never" be deleted

@@ -11,8 +11,8 @@
  */
 
 /* GTestReplicate.cpp - Testing the functionality of replicating one
- * slot from a vector acress the whole vector (or replicating each slot
- * to a full cipehrtext)
+ * slot from a vector access the whole vector (or replicating each slot
+ * to a full ciphertext)
  */
 
 #include <cassert>
@@ -177,9 +177,9 @@ public:
   }
 
   // This method is called for every replicated ciphertext: in the i'th time
-  // that it is called, the cipehrtext will have in all the slots the content
+  // that it is called, the ciphertext will have in all the slots the content
   // of the i'th input slot. In this test program we only decrypt and check
-  // the result, in a real program it will do something with the cipehrtext.
+  // the result, in a real program it will do something with the ciphertext.
   virtual void handle(const helib::Ctxt& ctxt)
   {
 

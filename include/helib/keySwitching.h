@@ -51,9 +51,9 @@ namespace helib {
  * t columns.
  *
  * A key-switch matrix W[s'->s] converts a ciphertext-part with respect to
- * secret-key polynomial s' into a canonical cipehrtext (i.e. a two-part
+ * secret-key polynomial s' into a canonical ciphertext (i.e. a two-part
  * ciphertext with respect to (1,s)). The matrix W is a 2-by-t matrix of
- * DoubleCRT objects. The bottom row are just (psudo)random elements. Then
+ * DoubleCRT objects. The bottom row are just (pseudo)random elements. Then
  * for column j, if the bottom element is aj then the top element is set as
  *     bj = P*Bj*s' + p*ej - s * aj mod P*q0,
  * where p is the plaintext space (i.e. 2 or 2^r, or 1 for CKKS) and Bj
@@ -66,7 +66,7 @@ namespace helib {
  * In this implementation we save some space, by keeping only a PRG seed for
  * generating the pseudo-random elements, rather than the elements themselves.
  *
- * To convert a cipehrtext part R, we break R into digits R = sum_j Bj Rj,
+ * To convert a ciphertext part R, we break R into digits R = sum_j Bj Rj,
  * then set (q0,q1)^T = sum_j Rj * column-j. Note that we have
  * <(1,s),(q0,q1)> = sum_j Rj*(s*aj - s*aj + p*ej +P*Bj*s')
  *       = P * sum_j Bj*Rj * s' + p sum_j Rj*ej
@@ -74,7 +74,7 @@ namespace helib {
  * where the last element is small since the ej's are small and |Rj|<B.
  * Note that if the ciphertext is encrypted relative to plaintext space p'
  * and then key-switched with matrices W relative to plaintext space p,
- * then we get a mew ciphertxt with noise p'*small+p*small, so it is valid
+ * then we get a mew ciphertext with noise p'*small+p*small, so it is valid
  * relative to plaintext space GCD(p',p).
  *
  * The matrix W is defined modulo Q>t*B*sigma*q0 (with sigma a bound on the
@@ -184,7 +184,7 @@ void addMinimalFrbMatrices(SecKey& sKey, long keyID = 0);
 class PermNetwork;
 void addMatrices4Network(SecKey& sKey, const PermNetwork& net, long keyID = 0);
 
-//! Generate specific key-swicthing matrices, described by the given set
+//! Generate specific key-switching matrices, described by the given set
 void addTheseMatrices(SecKey& sKey,
                       const std::set<long>& automVals,
                       long keyID = 0);

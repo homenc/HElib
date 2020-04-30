@@ -310,7 +310,7 @@ public:
 };
 
 //! Choose random c0,c1 such that c0+s*c1 = p*e for a short e
-//! Returns a high-probabiliy bound on the L-infty norm
+//! Returns a high-probability bound on the L-infty norm
 //! of the canonical embedding
 double RLWE(DoubleCRT& c0,
             DoubleCRT& c1,

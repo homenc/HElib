@@ -70,7 +70,7 @@ class EncryptedArray; // forward reference
  * that supports encoding/decoding and encryption/decryption
  * of std::vectors of plaintext slots over the ring (Z/(p^r)[X])/(G).
  *
- * The polynomial G should be irreducble over Z/(p^r) (this is not checked).
+ * The polynomial G should be irreducible over Z/(p^r) (this is not checked).
  * The degree of G should divide the multiplicative order of p modulo m
  * (this is checked). Currently, the following restriction is imposed:
  *
@@ -78,10 +78,10 @@ class EncryptedArray; // forward reference
  *
  * ea stores objects in the polynomial ring Z/(p^r)[X].
  *
- * Just as for the class PAlegebraMod, if p == 2 and r == 1, then these
+ * Just as for the class PAlgebraMod, if p == 2 and r == 1, then these
  * polynomials are represented as GF2X's, and otherwise as zz_pX's.
  * Thus, the types of these objects are not determined until run time.
- * As such, we need to use a class heirarchy, which mirrors that of
+ * As such, we need to use a class hierarchy, which mirrors that of
  * PAlgebraMod, as follows.
  *
  * EncryptedArrayBase is a virtual class
@@ -142,7 +142,7 @@ public:
   // FIXME: This needs to be refactored and made pure virtual.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-  // These methods are only defined for some of the derived calsses
+  // These methods are only defined for some of the derived classes
   virtual void encode(zzX& ptxt, const std::vector<long>& array) const
   {
     throw LogicError("EncryptedArrayBase::encode for undefined type");
@@ -180,7 +180,7 @@ public:
   // FIXME: This needs to be refactored and made pure virtual.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-  // These methods are only defined for some of the derived calsses
+  // These methods are only defined for some of the derived classes
   virtual void decode(std::vector<long>& array, const NTL::ZZX& ptxt) const
   {
     throw LogicError("EncryptedArrayBase::decode for undefined type");
@@ -200,7 +200,7 @@ public:
   // FIXME: This needs to be refactored and made pure virtual.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
-  // These methods are only defined for some of the derived calsses
+  // These methods are only defined for some of the derived classes
   virtual void random(std::vector<NTL::ZZX>& array) const
   {
     throw LogicError("EncryptedArrayBase::decode for undefined type");
@@ -299,7 +299,7 @@ public:
   //! L describes a linear map M by describing its action on the standard
   //! power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.
   //! The result is a coefficient std::vector C for the linearized polynomial
-  //! representing M: a polynoamial h in Z/(p^r)[X] of degree < d is sent to
+  //! representing M: a polynomial h in Z/(p^r)[X] of degree < d is sent to
   //! \f[
   //!  M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
   //! \f]
@@ -795,7 +795,7 @@ public:
    * @brief Encode a `Ptxt` object into a `zzX`.
    * @tparam Scheme Encryption scheme to be used (either `BGV` or `CKKS`).
    * @param out Polynomial to encode into.
-   * @param ptxt Plaintext `Ptxt` obejct to encode.
+   * @param ptxt Plaintext `Ptxt` object to encode.
    * @param useThisSize Size to use.
    * @param precision Precision to use.
    * @return The scaling factor used in the encoding routine.
@@ -870,7 +870,7 @@ public:
   }
 
   // The methods below override EncryptedArrayBase, they use
-  // the default size=0 and precision=0, which yeild size=1
+  // the default size=0 and precision=0, which yield size=1
   // and precision=2^{-alMod.getR()-1}
   void encodeUnitSelector(zzX& ptxt, long i) const override
   {
@@ -1007,7 +1007,7 @@ public:
   //! buildLinPolyCoeffs returns in C two encoded constants such that the
   //! linear transformation(s) defined as L(1) = oneImage and L(i)=iImage
   //! can be computed as:      L(x) = C[0]*x + C[1]*conjugate(x).
-  //! Once C is computed, we can apply this L to a cipehrtext by calling
+  //! Once C is computed, we can apply this L to a ciphertext by calling
   //! applyLinPolyLL(ctxt, C, 2).
   //! Alternatively, we can convert C to a vector of two DoubleCRT objects,
   //! then call applyLinPolyLL(ctxt, dcrtVec, 2). This lets us compute the
@@ -1235,7 +1235,7 @@ public:
   ///@}
 };
 
-// NewPlaintaxtArray
+// NewPlaintextArray
 
 class PlaintextArrayBase
 { // purely abstract interface

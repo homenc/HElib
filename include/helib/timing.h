@@ -11,7 +11,7 @@
  */
 /**
  * @file timing.h
- * @brief Utility functions for measuering time
+ * @brief Utility functions for measuring time
  *
  * This module contains some utility functions for measuring the time that
  * various methods take to execute. To use it, we insert the macro

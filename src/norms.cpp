@@ -545,7 +545,7 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
 // is computing the linear transformation:
 //    DFT * D
 // where D is a diagonal matrix with W^i on the diagonal in the i-th row,
-// and DFT is an (m/2)-point DFT matrix for a evalaution at powers of V=W^2.
+// and DFT is an (m/2)-point DFT matrix for an evaluation at powers of V=W^2.
 // D is applied first, and DFT is applied second.
 //
 // Here, we want to compute the inverse transformation:

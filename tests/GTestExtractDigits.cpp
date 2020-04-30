@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-/* GTestextractDigits.cpp - extracting digits.
+/* GTestExtractDigits.cpp - extracting digits.
  *   For a plaintext space modulo a prime-power $p^e$, extracting
  *   the base-$p$ representation of an encrypted values.
  */

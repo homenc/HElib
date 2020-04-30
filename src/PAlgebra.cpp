@@ -314,7 +314,7 @@ double calcPolyNormBnd(long m)
 
   for (; j <= last - 2; j += 2) {
     // process columns j and j+1 of inverse matrix
-    // NOTE: processing colums two at a time gives an almost 2x speedup
+    // NOTE: processing columns two at a time gives an almost 2x speedup
 
     long res_j = res_tab[j];
     long res_j_1 = res_tab[j + 1];
@@ -500,7 +500,7 @@ PAlgebra::PAlgebra(long mm,
     frob_perturb[j] = p_subgp[i];
   }
 
-  cube.initSignature(tmpOrds); // set hypercume with these dimensions
+  cube.initSignature(tmpOrds); // set hypercube with these dimensions
 
   phiM = ordP * getNSlots();
 
@@ -545,7 +545,7 @@ PAlgebra::PAlgebra(long mm,
   // The comment about reverse order is correct, SH.
 
   // buffer is initialized to all-zero, which represents 1=\prod_i gi^0
-  std::vector<long> buffer(gens.size()); // temporaty holds exponents
+  std::vector<long> buffer(gens.size()); // temporary holds exponents
   i = idx = 0;
   long ctr = 0;
   do {
@@ -560,7 +560,7 @@ PAlgebra::PAlgebra(long mm,
     T[i] = t;      // The i'th element in T it t
     Tidx[t] = i++; // the index of t in T is i
 
-    // increment buffer by one (in lexigoraphic order)
+    // increment buffer by one (in lexicographic order)
   } while (nextExpVector(buffer)); // until we cover all the group
 
   // OLD: assert(ctr == getNSlots()); // sanity check for user-supplied gens
@@ -605,7 +605,7 @@ bool comparePAlgebra(const PAlgebra& palg,
   return true;
 }
 
-long PAlgebra::frobenuisPow(long j) const
+long PAlgebra::frobeniusPow(long j) const
 {
   return NTL::PowerMod(mcMod(p, m), j, m);
   // Don't forget to reduce p mod m!!
@@ -624,7 +624,7 @@ long PAlgebra::genToPow(long i, long j) const
 
   long res;
   if (i == -1)
-    res = frobenuisPow(j);
+    res = frobeniusPow(j);
   else
     res = NTL::PowerMod(gens[i], j, m);
 
@@ -719,7 +719,7 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r) :
   swap(*first, *smallest);
 
   // We make the lexicographically smallest factor have index 0.
-  // The remaining factors are ordered according to their representives.
+  // The remaining factors are ordered according to their representatives.
 
   RXModulus F1(localFactors[0]);
   for (long i = 1; i < nSlots; i++) {
@@ -834,7 +834,7 @@ void PAlgebraLift(const NTL::ZZX& phimx,
                   T& crtc,
                   long r)
 {
-  throw LogicError("uninstatiated version of PAlgebraLift");
+  throw LogicError("Uninstantiated version of PAlgebraLift");
 }
 #pragma GCC diagnostic pop
 
@@ -910,7 +910,7 @@ void PAlgebraModDerived<type>::embedInAllSlots(
   FHE_TIMER_START;
   long nSlots = zMStar.getNSlots();
 
-  std::vector<RX> crt(nSlots); // alloate space for CRT components
+  std::vector<RX> crt(nSlots); // allocate space for CRT components
 
   // The i'th CRT component is (H mod F_t) = alpha(maps[i]) mod F_t,
   // where with t=T[i].
@@ -961,7 +961,7 @@ void PAlgebraModDerived<type>::embedInSlots(
                "Bad alpha element at index i: its degree is greater or "
                "equal than mappingData.degG");
 
-  std::vector<RX> crt(nSlots); // alloate space for CRT components
+  std::vector<RX> crt(nSlots); // allocate space for CRT components
 
   // The i'th CRT component is (H mod F_t) = alphas[i](maps[i]) mod F_t,
   // where with t=T[i].
@@ -1273,7 +1273,7 @@ void PAlgebraModDerived<type>::decodePlaintext(
 
   for (long i = 0; i < nSlots; i++) {
     REX te;
-    conv(te, CRTcomps[i]); // lift i'th CRT componnet to mod G(X)
+    conv(te, CRTcomps[i]); // lift i'th CRT component to mod G(X)
     te %= mappingData
               .rmaps[i]; // reduce CRTcomps[i](Y) mod Qi(Y), over (Z_2[X]/G(X))
 

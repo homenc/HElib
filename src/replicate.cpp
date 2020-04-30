@@ -179,7 +179,7 @@ static void recursiveReplicate(const EncryptedArray& ea,
 
   Ctxt ctxt_masked = ctxt;
 
-  { // artificial scope to miminize storage in
+  { // artificial scope to minimize storage in
     // the recursion
 
     { // another artificial scope
@@ -308,7 +308,7 @@ static void SelectRangeDim(const EncryptedArray& ea,
 // replicateOneBlock: assumes that all slots are zero, except for one
 // "block" whose coordinates in dimension d lie in the interval
 //            [ pos*blockSize .. pos*(blockSize+1) -1 ]
-// This block is then replicated throught the range
+// This block is then replicated throughout the range
 //            [ 0.. floor(dSize/blockSize)*blockSize -1 ]
 
 static void replicateOneBlock(const EncryptedArray& ea,
@@ -437,7 +437,7 @@ static void recursiveReplicateDim(const EncryptedArray& ea,
   k--;
   Ctxt ctxt_masked = ctxt;
 
-  {   // artificial scope to miminize storage in the recursion
+  {   // artificial scope to minimize storage in the recursion
     { // another artificial scope (SHAI: this seems redundant)
 
       // generate mask at index k+1, if not there yet
@@ -551,7 +551,7 @@ void replicateAllNextDim(const EncryptedArray& ea,
 
   // The logic below cut the recursion depth by starting from smaller
   // blocks (by default size approx n rather than 2^n).
-  // The inital block size is controlled by the recBound parameter:
+  // The initial block size is controlled by the recBound parameter:
   //   + recBound>0: blocks of size min(~n, 2^recBound). this ensures
   //     recursion depth <= recBound, and typically much smaller (~log n)
   //   + recBound=0: blocks of size 1 (no recursion)
@@ -611,8 +611,8 @@ void replicateAllNextDim(const EncryptedArray& ea,
       // zero-out all the slots outside the current block
       SelectRangeDim(ea, ctxt2, pos * blockSize, (pos + 1) * blockSize, d);
 
-      // replicate the current block across this dimenssion using a
-      // simple shift-and-add procedure.
+      // replicate the current block across this dimension using a simple
+      // shift-and-add procedure.
       replicateOneBlock(ea, ctxt2, pos, blockSize, d);
 
       // now call the recursive replication to do the rest of the work
@@ -646,8 +646,8 @@ void replicateAllNextDim(const EncryptedArray& ea,
     // move relevant slots to the beginning
     ea.rotate1D(ctxt1, d, -extent, /*don't-care-flag=*/true);
 
-    // replicate the leftover block across this dimenssion using a
-    // simple shift-and-add procedure.
+    // replicate the leftover block across this dimension using a simple
+    // shift-and-add procedure.
     replicateOneBlock(ea, ctxt1, 0, blockSize, d);
 
     // now call the recursive replication to do the rest of the work
@@ -689,13 +689,13 @@ void replicateAll(const EncryptedArray& ea,
 }
 
 //! @brief An implementation of ReplicateHandler that explicitly returns
-//!   all the replicated cipehrtexts in one big vector.
+//!   all the replicated ciphertexts in one big vector.
 //!
 //! This is useful mostly for debugging purposes, for real parameters
 //! it would take a lot of memory.
 class ExplicitReplicator : public ReplicateHandler
 {
-  std::vector<Ctxt>& v; // space to store all cipehrtexts
+  std::vector<Ctxt>& v; // space to store all ciphertexts
   long slot;
 
 public:

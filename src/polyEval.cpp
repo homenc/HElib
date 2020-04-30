@@ -153,7 +153,7 @@ void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k)
     long kk = (long)sqrt(deg(poly) / 2.0);
     k = 1L << NTL::NextPowerOfTwo(kk);
 
-    // heuristic: if k>>kk then use a smaler power of two
+    // heuristic: if k>>kk then use a smaller power of two
     if ((k == 16 && deg(poly) > 167) || (k > 16 && k > (1.44 * kk)))
       k /= 2;
   }
@@ -179,7 +179,7 @@ void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k)
   NTL::ZZ top = LeadCoeff(poly);
   NTL::ZZ topInv; // the inverse mod p of the top coefficient of poly (if any)
   bool divisible = (n * k == deg(poly)); // is the degree divisible by k?
-  long nonInvertibe = InvModStatus(topInv, top, p);
+  long nonInvertible = InvModStatus(topInv, top, p);
   // 0 if invertible, 1 if not
 
   // FIXME: There may be some room for optimization below: instead of
@@ -190,9 +190,9 @@ void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k)
 
   // extra!=0 denotes an added term extra*X^{n*k}
   NTL::ZZ extra = NTL::ZZ::zero();
-  if (!divisible || nonInvertibe) { // need to add a term
-    top = NTL::to_ZZ(1);            // new top coefficient is one
-    topInv = top;                   // also the new inverse is one
+  if (!divisible || nonInvertible) { // need to add a term
+    top = NTL::to_ZZ(1);             // new top coefficient is one
+    topInv = top;                    // also the new inverse is one
     // set extra = 1 - current-coeff-of-X^{n*k}
     extra = SubMod(top, coeff(poly, n * k), p);
     SetCoeff(poly, n * k); // set the top coefficient of X^{n*k} to one

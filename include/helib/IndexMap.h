@@ -85,7 +85,7 @@ public:
 
   //! @brief Insert indexes to the IndexSet.
   //! Insertion will cause new T objects to be created, using the default
-  //! constructor, and possibly initilized via the IndexMapInit<T> pointer.
+  //! constructor, and possibly initialized via the IndexMapInit<T> pointer.
   void insert(long j)
   {
     if (!indexSet.contains(j)) {

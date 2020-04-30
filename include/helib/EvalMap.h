@@ -55,7 +55,7 @@ class EvalMap
 {
 private:
   const EncryptedArray& ea;
-  bool invert;   // apply transformation in inverser order?
+  bool invert;   // apply transformation in inverse order?
   long nfactors; // how many factors of m
   std::unique_ptr<BlockMatMul1DExec> mat1;        // one block matrix
   NTL::Vec<std::unique_ptr<MatMul1DExec>> matvec; // regular matrices
@@ -88,7 +88,7 @@ class ThinEvalMap
 {
 private:
   const EncryptedArray& ea;
-  bool invert;   // apply transformation in inverser order?
+  bool invert;   // apply transformation in inverse order?
   long nfactors; // how many factors of m
   NTL::Vec<std::unique_ptr<MatMulExecBase>> matvec; // regular matrices
 

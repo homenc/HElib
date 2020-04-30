@@ -167,7 +167,7 @@ void addTwoNumbers(CtPtrs& sum,
                    std::vector<zzX>* unpackSlotEncoding = nullptr);
 
 /**
- * @brief Negates a number in binary 2's compelement representation.
+ * @brief Negates a number in binary 2's complement representation.
  * @param negation Reference to the negated number that will be populated.
  * @param input Number to be negated.
  * @note `input` will be treated as a number in 2's complement.
@@ -190,7 +190,7 @@ void subtractBinary(CtPtrs& difference,
                     std::vector<zzX>* unpackSlotEncoding = nullptr);
 /**
  * @brief Add together up to fifteen {0,1} integers, producing a 4-bit counter.
- * @param out 4-bit counter to be outputed.
+ * @param out 4-bit counter to be outputted.
  * @param in bits to be counted.
  * @param sizeLimit number of bits to compute on, taken from the least
  * significant end.
@@ -246,7 +246,7 @@ void multTwoNumbers(CtPtrs& product,
  * @param pNums vector to decrypt the binary numbers into.
  * @param eNums encrypted binary numbers of which to be decrypted.
  * @param sKey secret key used for decryption.
- * @param ea encrypted array that holds neccessary information for decryption.
+ * @param ea encrypted array that holds necessary information for decryption.
  * @param twosComplement when set to true, the number to decrypt is a signed
  * integer in 2's complement.
  * @param allSlots when set to false, return only the sub-cube with index=0 in

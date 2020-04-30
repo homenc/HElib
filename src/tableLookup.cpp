@@ -77,7 +77,7 @@ void computeAllProducts(/*Output*/ CtPtrs& products,
   if (findMinBitCapacity(array) < (NTL::NumBits(nBits) + 1) * bpl)
     throw LogicError("not enough levels for table lookup");
 
-  // Call the recursive function that copmutes the products
+  // Call the recursive function that computes the products
   recursiveProducts(products, CtPtrs_slice(array, 0, nBits));
 }
 
@@ -95,7 +95,7 @@ void tableLookup(Ctxt& out,
                              out); // to hold subset products of idx
   CtPtrs_vectorCt pWrap(products); // A wrapper
 
-  // Compute all products of ecnrypted bits =: b_i
+  // Compute all products of encrypted bits =: b_i
   computeAllProducts(pWrap, idx, unpackSlotEncoding);
 
   // Compute the sum b_i * T[i]
@@ -122,10 +122,10 @@ void tableWriteIn(const CtPtrs& table,
   std::vector<Ctxt> products(size, Ctxt(ZeroCtxtLike, *ct));
   CtPtrs_vectorCt pWrap(products); // A wrapper
 
-  // Compute all products of ecnrypted bits =: b_i
+  // Compute all products of encrypted bits =: b_i
   computeAllProducts(pWrap, idx, unpackSlotEncoding);
 
-  // incrememnt each entry of T[i] by products[i]
+  // increment each entry of T[i] by products[i]
   NTL_EXEC_RANGE(lsize(table), first, last)
   for (long i = first; i < last; i++)
     *table[i] += products[i];

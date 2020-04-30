@@ -1409,7 +1409,7 @@ TEST_F(TestArgMapCmdLine,
   EXPECT_EQ(opts.bob, word_list.front());
   // and the dots.
 
-  // Start form 1 as zeroth is the normal positonal arg.
+  // Start form 1 as zeroth is the normal positional arg.
   for (size_t i = 1; i < opts.dots.size(); ++i)
     EXPECT_EQ(opts.dots[i], word_list[i + 1]) << "i = " << i << std::endl;
 }

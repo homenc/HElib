@@ -33,7 +33,7 @@ class ClassHash
 public:
   size_t operator()(const T& t) const { return t.hash(); }
 };
-//! encond
+//! \endcond
 
 // routines for finding optimal level-collapsing strategies for Benes networks
 
@@ -222,10 +222,10 @@ std::ostream& operator<<(std::ostream& s, LongNodePtr p)
 
 // Data structures to hold the memoization table for the dynamic-programming
 // computation of the level collapsing in a Benes network. An entry in the
-// table is specified by the first-level index i and the alotted budget (depth).
-// Once the computation is over, this entry will contain the optimal way of
-// breaking this network (encoded as a LongNode list) and the cost of this
-// network.
+// table is specified by the first-level index i and the allotted budget
+// (depth). Once the computation is over, this entry will contain the optimal
+// way of breaking this network (encoded as a LongNode list) and the cost of
+// this network.
 //! \cond FALSE (make doxygen ignore these classes)
 class BenesMemoKey
 {
@@ -386,7 +386,7 @@ void optimalBenes(long n,
 
 //! \cond FALSE (make doxygen ignore these classes)
 
-// A binary tree data structure for spliting generators
+// A binary tree data structure for splitting generators
 class SplitNode;
 typedef std::shared_ptr<SplitNode> SplitNodePtr;
 // A "std::shared_ptr" is a pointer with (some) garbage collection
@@ -466,7 +466,7 @@ std::ostream& operator<<(std::ostream& s, SplitNodePtr p)
 
 // Data structures to hold the memory table for the dynamic-programming
 // computation optimizing a generator tree. An entry in the table is specified
-// by (order,good-flag,budget,middle-flag). When the copmutation is over, this
+// by (order,good-flag,budget,middle-flag). When the computation is over, this
 // entry will contain the optimal tree for a single generator (encoded as a
 // SplitNode tree) and the cost of this solution.
 //! \cond FALSE (make doxygen ignore these classes)
@@ -569,9 +569,9 @@ std::ostream& operator<<(std::ostream& s, GenNodePtr p)
 // upper level memo table
 
 // Data structures to hold the memory table for optimizing the partition to
-// separate generator tree. An entry in the table is specified by the idnex
-// of a generaor, the budget allocated to this tree, and the middle flag.
-// When the copmutation is over, this entry will contain the optimal list
+// separate generator tree. An entry in the table is specified by the index
+// of a generator, the budget allocated to this tree, and the middle flag.
+// When the computation is over, this entry will contain the optimal list
 // of trees (encoded as a GenNode list) and the cost of this solution.
 //! \cond FALSE (make doxygen ignore these classes)
 class UpperMemoKey
@@ -671,14 +671,14 @@ LowerMemoEntry optimalLower(long order,
       if (budget % 2 == 0) { // both networks have the same budget
         cost2 = cost1;
         benesSolution2 = benesSolution1;
-      } else { // one network has bugdet larger by one than the other
+      } else { // one network has budget larger by one than the other
         optimalBenes(order, budget - budget / 2, good, cost2, benesSolution2);
       }
 
       cost = cost1 + cost2;
     }
 
-    // The initial solution coresponds to this being a leaf node
+    // The initial solution corresponds to this being a leaf node
     solution = SplitNodePtr(
         new SplitNode(order, mid, good, benesSolution1, benesSolution2));
 
@@ -688,7 +688,7 @@ LowerMemoEntry optimalLower(long order,
       // try all factors of order
       // there is some redundancy here, since we consider
       // both the splits (d, n/d) and (n/d, d); however,
-      // we ustilize this redundancy (see below) to streamline
+      // we utilize this redundancy (see below) to streamline
       // allocation of the "good" token (if we have it)
 
       // continue;  // temporary hack to force benes for testing
@@ -740,7 +740,7 @@ LowerMemoEntry optimalLower(long order,
              LowerMemoEntry(cost, solution);
 }
 
-// Optimizing a list of trees, trying all the ways of allocating the bugdet
+// Optimizing a list of trees, trying all the ways of allocating the budget
 // and mid token between the trees. This procedure splits the "current
 // remaining budget" between trees i through vec.length()-1.
 UpperMemoEntry optimalUpperAux(const NTL::Vec<GenDescriptor>& vec,
@@ -791,7 +791,7 @@ UpperMemoEntry optimalUpperAux(const NTL::Vec<GenDescriptor>& vec,
 
     for (long budget1 = 1; budget1 <= budget; budget1++) {
       for (long mid1 = 0; mid1 <= mid; mid1++) {
-        // Optimize the first tree (index i) with the alloted budget1, mid1
+        // Optimize the first tree (index i) with the allotted budget1, mid1
         LowerMemoEntry s = optimalLower(vec[i].order,
                                         vec[i].good,
                                         budget1,
@@ -952,7 +952,7 @@ long GeneratorTrees::buildOptimalTrees(const NTL::Vec<GenDescriptor>& gens,
                                        long depthBound)
 {
   // OLD: assert(gens.length() >= 0);
-  // TODO: is this check necesary?
+  // TODO: is this check necessary?
   assertTrue<InvalidArgument>(gens.length() >= 0, "negative gens size");
   trees.SetLength(gens.length()); // allocate space if needed
 

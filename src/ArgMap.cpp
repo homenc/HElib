@@ -116,7 +116,7 @@ ArgMap& ArgMap::separator(Separator s)
     break;
   default:
     // Use of class enums means it should never reach here.
-    throw LogicError("Unrecognised option for kv seperator.");
+    throw LogicError("Unrecognised option for kv separator.");
   }
 
   return *this;
@@ -181,7 +181,7 @@ void ArgMap::printDiagnostics(const std::forward_list<std::string>& args) const
   }
 }
 
-// Correct the list from argv by splitting on the seperator.
+// Correct the list from argv by splitting on the separator.
 static void splitOnSeparator(std::forward_list<std::string>& args_lst, char sep)
 {
   if (sep == ' ')

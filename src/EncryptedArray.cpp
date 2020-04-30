@@ -27,7 +27,8 @@ EncryptedArrayBase* buildEncryptedArray(const Context& context,
   if (alMod.getTag() == PA_cx_tag)
     return new EncryptedArrayCx(context, alMod.getCx());
 
-  // By defualt use the 1st factor F0
+  // By default
+  // use the 1st factor F0
   const NTL::ZZX& GG = NTL::IsZero(G) ? alMod.getFactorsOverZZ()[0] : G;
 
   switch (alMod.getTag()) {
@@ -315,7 +316,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   long nSlots = al.getNSlots();
 
-  // Shifting by more than the number of slots gives an all-zero cipehrtext
+  // Shifting by more than the number of slots gives an all-zero ciphertext
   if (k <= -nSlots || k >= nSlots) {
     ctxt.multByConstant(NTL::to_ZZ(0));
     return;
@@ -603,7 +604,7 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 // L describes a linear map M by describing its action on the standard
 // power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.
 // The result is a coefficient vector C for the linearized polynomial
-// representing M: a polynoamial h in Z/(p^r)[X] of degree < d is sent to
+// representing M: a polynomial h in Z/(p^r)[X] of degree < d is sent to
 //
 //    M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
 template <typename type>

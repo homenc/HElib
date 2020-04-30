@@ -161,7 +161,7 @@ void BluesteinFFT(NTL::zz_pX& x,
 
   // Careful! we are multiplying polys of degrees 2*(n-1)
   // and (n-1) modulo x^k-1.  This gives us some
-  // truncation in ceratin cases.
+  // truncation in certain cases.
 
   if (NEW_BLUE && n % 2 != 0) {
     TofftRep_trunc(Ra, x, k, 2 * n - 1);

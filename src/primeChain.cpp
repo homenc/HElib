@@ -171,7 +171,7 @@ IndexSet ModuliSizes::getSet4Size(double low,
 //! Find a suitable IndexSet of primes whose total size is in the
 //! target interval [low,high], trying to minimize the total number
 //! of primes dropped from both from1, from2.
-//! If no IndexSet exsists that fits in the target interval, returns
+//! If no IndexSet exists that fits in the target interval, returns
 //! the IndexSet that gives the largest value smaller than low.
 IndexSet ModuliSizes::getSet4Size(double low,
                                   double high,
@@ -317,7 +317,7 @@ struct PrimeGenerator
   {
     // we consider all odd t in the interval
     // [ ((3/4)*2^len-1)/(2^k*m), (2^len-1)/(2^k*m) ).
-    // For k satisfyng 2^{len-2} >= 2^k*m, this interval is
+    // For k satisfying 2^{len-2} >= 2^k*m, this interval is
     // non-empty.
     // It is equivalent to consider the interval
     // of integers [tlb, tub), where tlb = ceil(((3/4)*2^len-1)/(2^k*m))
@@ -437,7 +437,7 @@ void addSmallPrimes(Context& context, long resolution, long cpSize)
 
   // This ensures we can express everything to given resolution.
 
-  // use sizes cpSize-r, cpSize-2r, cpSize-4r,... downto the sizes above
+  // use sizes cpSize-r, cpSize-2r, cpSize-4r,... down to the sizes above
   for (long delta = resolution; cpSize - delta > smallest; delta *= 2)
     sizes.push_back(cpSize - delta);
 
@@ -564,7 +564,7 @@ static void addSpecialPrimes(Context& context,
       remaining.remove(context.digits[dgt]); // update the remaining set
     }
     // The last digit has everything else
-    if (empty(remaining)) { // sanity chack, use one less digit
+    if (empty(remaining)) { // sanity check, use one less digit
       nDgts--;
       context.digits.resize(nDgts);
     } else

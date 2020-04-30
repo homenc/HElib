@@ -52,7 +52,7 @@ option(ENABLE_THREADS "Enable threads support. Requires NTL built with NTL_THREA
 option(ENABLE_TEST "Enable tests" OFF)
 option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" OFF)
 
-# Add proerties dependent to PACKAGE_BUILD
+# Add properties dependent to PACKAGE_BUILD
 if (PACKAGE_BUILD)
   # Properties to be enabled when using PACKAGE_BUILD
   set(PACKAGE_DIR "" CACHE STRING "Folder with the compilation output directory (DEFAULT: helib_pack)")

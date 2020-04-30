@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-/* Test_ThinEvalMap.cpp - Testing the evalution map for thin bootstrapping
+/* Test_ThinEvalMap.cpp - Testing the evaluation map for thin bootstrapping
  */
 #include <helib/helib.h>
 #include <helib/EvalMap.h>

@@ -13,7 +13,7 @@
 #define HELIB_CTPTRS_H
 /**
  * @file CtPtrs.h
- * @brief Cnified interface for vector of pointers to ciphertexts
+ * @brief Unified interface for vector of pointers to ciphertexts
  **/
 #include <initializer_list>
 #include <helib/Ctxt.h>

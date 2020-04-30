@@ -13,7 +13,7 @@
  *
  * This is a wrapper around the bluesteinFFT routines, for one modulus q.
  *
- * On initialization, it initizlies NTL's zz_pContext for this q
+ * On initialization, it initializes NTL's zz_pContext for this q
  * and computes a 2m-th root of unity r mod q and also r^{-1} mod q.
  * Thereafter this class provides FFT and iFFT routines that converts between
  * time & frequency domains. Some tables are computed the first time that
@@ -213,7 +213,7 @@ Cmodulus& Cmodulus::operator=(const Cmodulus& other)
 
 //==================================================================
 // Starting with NTL 11.1.0, the NTL FFT routines do not do any bit reversal.
-// Specificall, FFTFwd leaves its outputs bit reversed, and FFTInv1
+// Specifically, FFTFwd leaves its outputs bit reversed, and FFTInv1
 // requires that its inputs are already bit reversed.
 // These low-level routines are only used when m is a power of two.
 // As a work-around, we borrow NTL's old bit reversal code,

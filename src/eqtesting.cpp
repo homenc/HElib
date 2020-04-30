@@ -11,7 +11,7 @@
  */
 /**
  * @file eqtesting.cpp
- * @brief Useful fucntions for equality testing...
+ * @brief Useful functions for equality testing...
  */
 #include <NTL/lzz_pXFactoring.h>
 #include <helib/timing.h>
@@ -108,7 +108,7 @@ void incrementalZeroTest(Ctxt* res[],
   Coeff.resize(n);
 
   for (long i = 0; i < n; i++) {
-    // coeffients for mask on bits 0..i
+    // coefficients for mask on bits 0..i
     // L[j] = X^j for j = 0..i, L[j] = 0 for j = i+1..d-1
 
     std::vector<NTL::ZZX> L;
@@ -124,7 +124,7 @@ void incrementalZeroTest(Ctxt* res[],
     Coeff[i].resize(d);
     for (long j = 0; j < d; j++) {
       // Coeff[i][j] = to the encoding that has C[j] in all slots
-      // FIXME: maybe encrtpted array should have this functionality
+      // FIXME: maybe encrypted array should have this functionality
       //        built in
       std::vector<NTL::ZZX> T;
       T.resize(nslots);

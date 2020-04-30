@@ -562,7 +562,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::rotate1D(long dim, long amount)
   // incremented by amount.  This new set of coordinates is then converted back
   // to the new index of the slot.
   for (long index = 0; index < lsize(); ++index) {
-    // Vector to hold the coordinate representaiton of the current index.
+    // Vector to hold the coordinate representation of the current index.
     std::vector<long> coord(indexToCoord(index));
     // Increments the coordinate of the specific dimension (dim) by amount
     // and reduces it modulo the order of the dimension.
@@ -626,7 +626,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift1D(long dim, long amount)
   // An extra check is then performed to see if the shift operation caused an
   // element to wrap around in which case it is replaced with 0.
   for (long new_index = 0; new_index < lsize(); ++new_index) {
-    // Vector to hold the coordinate representaiton of the current index.
+    // Vector to hold the coordinate representation of the current index.
     std::vector<long> coord(indexToCoord(new_index));
     // Perform the shift backwards to obtain the locations of the 0 values
     // first.

@@ -13,7 +13,7 @@
 #define HELIB_PALGEBRA_H
 /**
  * @file PAlgebra.h
- * @brief Declatations of the classes PAlgebra
+ * @brief Declarations of the classes PAlgebra
  *
  * @class PAlgebra
  * @brief The structure of (Z/mZ)* /(p)
@@ -210,7 +210,7 @@ public:
   long genToPow(long i, long j) const;
 
   // p to the power j mod m
-  long frobenuisPow(long j) const;
+  long frobeniusPow(long j) const;
 
   //! The order of i'th generator (if any)
   long OrderOf(long i) const { return cube.getDim(i); }
@@ -225,7 +225,7 @@ public:
   // where j in [0..ordP), otherwise -1
   long FrobPerturb(long i) const { return frob_perturb[i]; }
 
-  //! @name Translation between index, represnetatives, and exponents
+  //! @name Translation between index, representatives, and exponents
 
   //! Returns the i'th element in T
   long ith_rep(long i) const { return (i < getNSlots()) ? T[i] : 0; }
@@ -276,7 +276,7 @@ public:
   /* Miscellaneous */
 
   //! exps is an array of exponents (the dLog of some t in T), this function
-  //! increment exps lexicographic order, reutrn false if it cannot be
+  //! increment exps lexicographic order, return false if it cannot be
   //! incremented (because it is at its maximum value)
   bool nextExpVector(std::vector<long>& exps) const
   {
@@ -310,12 +310,12 @@ the PAlgebra object zMStar defines (Z/mZ)^* /(0), and the PAlgebraMod object
 stores various tables related to the polynomial ring Z/(p^r)[X].  To do this
 most efficiently, if p == 2 and r == 1, then these polynomials are represented
 as GF2X's, and otherwise as zz_pX's. Thus, the types of these objects are not
-determined until run time. As such, we need to use a class heirarchy, as
+determined until run time. As such, we need to use a class hierarchy, as
 follows.
 
 \li PAlgebraModBase is a virtual class
 
-\li PAlegbraModDerived<type> is a derived template class, where
+\li PAlgebraModDerived<type> is a derived template class, where
   type is either PA_GF2 or PA_zz_p.
 
 \li The class PAlgebraMod is a simple wrapper around a smart pointer to a
@@ -369,7 +369,7 @@ struct GenericModulus<NTL::GF2>
 
 class PA_GF2
 {
-  // typedefs for algebraic structires built up from GF2
+  // typedefs for algebraic structures built up from GF2
 
 public:
   static const PA_tag tag = PA_GF2_tag;
@@ -392,7 +392,7 @@ public:
 
 class PA_zz_p
 {
-  // typedefs for algebraic structires built up from zz_p
+  // typedefs for algebraic structures built up from zz_p
 
 public:
   static const PA_tag tag = PA_zz_p_tag;
@@ -468,7 +468,7 @@ template <typename type>
 class PAlgebraModDerived;
 // forward declaration
 
-//! Auxilliary structure to support encoding/decoding slots.
+//! Auxiliary structure to support encoding/decoding slots.
 template <typename type>
 class MappingData
 {
@@ -753,7 +753,7 @@ private:
 
 //! A different derived class to be used for the approximate-numbers scheme
 //! This is mostly a dummy class, but needed since the context always has a
-//! PAlgeberaMod data member.
+//! PAlgebraMod data member.
 class PAlgebraModCx : public PAlgebraModBase
 {
   const PAlgebra& zMStar;

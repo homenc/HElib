@@ -37,9 +37,9 @@ public:
   //! Find a suitable IndexSet of primes whose total size is in the
   //! target interval [low,high], trying to minimize the number of
   //! primes dropped from fromSet.
-  //! If no IndexSet exsists that fits in the target interval, returns
+  //! If no IndexSet exists that fits in the target interval, returns
   //! the IndexSet that gives the largest value smaller than low
-  //! (or the smalest value greater than low if reverse flag is set).
+  //! (or the smallest value greater than low if reverse flag is set).
   IndexSet getSet4Size(double low,
                        double high,
                        const IndexSet& fromSet,
@@ -50,7 +50,7 @@ public:
   //! of primes dropped from both from1, from2.
   //! If no IndexSet exists that fits in the target interval, returns
   //! the IndexSet that gives the largest value smaller than low.
-  //! (or the smalest value greater than low if reverse flag is set).
+  //! (or the smallest value greater than low if reverse flag is set).
   IndexSet getSet4Size(double low,
                        double high,
                        const IndexSet& from1,

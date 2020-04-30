@@ -248,7 +248,7 @@ long phi_N(long N)
 
 /* While generating the representation of (Z/mZ)^*, we keep the elements in
  * equivalence classes, and each class has a representative element (called
- * a pivot), which is the smallest element in the class. Initialy each element
+ * a pivot), which is the smallest element in the class. Initially each element
  * is in its own class. When we add a new generator g we unify classes if
  * their members are a factor of g from each other, repeating this process
  * until no further unification is possible.
@@ -569,7 +569,7 @@ NTL::ZZX Cyclotomic(long n)
     // for n <= 10^6, results in Arnold and Monogan
     // imply that all coefficients of Phi_n(X) are
     // less than 2^27 in absolute value.
-    // So we compute the cofficients using 32-bit arithemtic.
+    // So we compute the coefficients using 32-bit arithmetic.
 
     // NOTE: _ntl_uint32 is either int or long.
 
@@ -1048,7 +1048,7 @@ void seekPastChar(std::istream& str, int cc)
 // for p prime, r >= 1 integer.
 //
 // After calling this function, one can call ppsolve(C, L, M, p, r) to get
-// the coeffecients C for the linearized polynomial represented the linear
+// the coefficients C for the linearized polynomial represented the linear
 // map defined by its action on the standard basis for zz_pE over zz_p:
 // for i = 0..zz_pE::degree()-1: x^i -> L[i], where x = (X mod zz_pE::modulus())
 
@@ -1086,7 +1086,7 @@ void buildLinPolyMatrix(NTL::mat_GF2E& M, long p)
       M[i][j] = power(M[i - 1][j], p);
 }
 
-// some auxilliary conversion routines
+// some auxiliary conversion routines
 
 void convert(NTL::vec_zz_pE& X, const std::vector<NTL::ZZX>& A)
 {
@@ -1392,7 +1392,7 @@ void ppInvert(NTL::mat_zz_pE& X, const NTL::mat_zz_pE& A, long p, long r)
   convert(Z, tmp); // convert back to a mod-p^r object
 
   // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*XX (mod p^r). We use
-  // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* XX
+  // O(log r) products to compute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* XX
 
   long e = NTL::NextPowerOfTwo(r); // 2^e is smallest power of two >= r
 
@@ -1413,7 +1413,7 @@ void ppInvert(NTL::mat_zz_pE& X, const NTL::mat_zz_pE& A, long p, long r)
 // FIXME: at some point need to make a template for these two functions
 // prime power solver
 // A is an n x n matrix, we compute its inverse mod p^r. An error is raised
-// if A is not inverible mod p. zz_p::modulus() is assumed to be p^r, for
+// if A is not invertible mod p. zz_p::modulus() is assumed to be p^r, for
 // p prime, r >= 1.
 void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r)
 {
@@ -1424,7 +1424,7 @@ void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r)
 
   // begin by inverting A modulo p
 
-  // convert to long for a safe transaltion to mod-p objects
+  // convert to long for a safe translation to mod-p objects
   NTL::Mat<long> tmp;
   conv(tmp, A);
   { // open a new block for mod-p computation
@@ -1435,8 +1435,8 @@ void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r)
     NTL::mat_zz_p A1, Inv1;
     conv(A1, tmp);   // Recover A as a mat_zz_pE object modulo p
     inv(Inv1, A1);   // Inv1 = A^{-1} (mod p)
-    conv(tmp, Inv1); // convert to long for transaltion to a mod-p^r object
-  } // mod-p^r moduli restored on desctuction of bak_pr and bak_prE
+    conv(tmp, Inv1); // convert to long for translation to a mod-p^r object
+  } // mod-p^r moduli restored on destruction of bak_pr and bak_prE
   NTL::mat_zz_p XX;
   conv(XX, tmp); // XX = A^{-1} (mod p)
 
@@ -1454,7 +1454,7 @@ void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r)
   conv(Z, tmp); // convert back to a mod-p^r object
 
   // The inverse of A is ( I+(pZ)+(pZ)^2+...+(pZ)^{r-1} )*XX (mod p^r). We use
-  // O(log r) products to copmute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* XX
+  // O(log r) products to compute it as (I+pZ)* (I+(pZ)^2)* (I+(pZ)^4)*...* XX
 
   long e = NTL::NextPowerOfTwo(r); // 2^e is smallest power of two >= r
 

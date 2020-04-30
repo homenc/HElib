@@ -210,13 +210,13 @@ void ColPerm::getBenesShiftAmounts(NTL::Vec<Permut>& out,
                  "Sum of benesLvls entries is different to number of levels");
       }
 
-      // Compute the layers of the collapased network for this column
+      // Compute the layers of the collapsed network for this column
       for (long lvl = 0, k = 0; k < benesLvls.length();
            lvl += benesLvls[k], k++) {
 
         // Returns in col the shift amounts for this layer in the network,
         // restricted to this column. Also returns true if the returned
-        // permutation is the idendity, false otherwise.
+        // permutation is the identity, false otherwise.
         bool id = collapseBenesLevels(col, net, lvl, benesLvls[k]);
         isID[k] = isID[k] && id;
 
@@ -303,7 +303,7 @@ void breakPermTo3(const HyperCube<long>& pi,
     // rho_3 is a permutation because rho_1,rho_2,pi are permutations, and
     // so is pi = rho_3 o rho_2 o rho_1.
     //
-    // Note that the edges are colored 1..n2 while our represenation above
+    // Note that the edges are colored 1..n2 while our representation above
     // has the second digits in the range 0..n2-1, so below we use sigma(i)-1
     // rather than sigma(i).
 

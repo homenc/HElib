@@ -201,12 +201,12 @@ public:
   //! unless the positive flag is set to true, in which case we get
   //! coefficients in [0,P-1] (P is the product of all moduli used).
   //! Using the optional IndexSet param we compute the polynomial
-  //! reduced modulo the product of only the ptimes in that set.
+  //! reduced modulo the product of only the primes in that set.
   void toPoly(NTL::ZZX& p, const IndexSet& s, bool positive = false) const;
   void toPoly(NTL::ZZX& p, bool positive = false) const;
 
   // The variant toPolyMod has another argument, which is a modulus Q, and it
-  // computes toPoly() mod Q. This is offerred as a separate function in the
+  // computes toPoly() mod Q. This is offered as a separate function in the
   // hope that one day we will figure out a more efficient method of computing
   // this. Right now it is not implemented
   //
@@ -387,7 +387,7 @@ public:
   void FFT(const zzX& poly, const IndexSet& s);
   // for internal use
 
-  void reduce() const {} // place-holder for consistenct with AltCRT
+  void reduce() const {} // place-holder for consistent with AltCRT
 
   // Raw I/O
   void read(std::istream& str);

@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
   std::vector<long> ords = {6, 4, 6};
 
   std::cout << "Initialising context object..." << std::endl;
-  // Intialise the context.
+  // Initialize the context.
   helib::Context context(m, p, r, gens, ords);
 
   // Modify the context, adding primes to the modulus chain.

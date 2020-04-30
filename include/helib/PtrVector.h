@@ -78,10 +78,10 @@ struct PtrVector
 // This header provides five implementations of these interfaces, but
 // users can define their own as needed. The ones defined here are:
 
-// struct PtrVector_VecT;    // constrcuted as PtrVector_VecT(NTL::Vec<T>)
-// struct PtrVector_VecPt;   // constrcuted as PtrVector_VecPt(NTL::Vec<T*>)
-// struct PtrVector_vectorT; // constrcuted as PtrVector_vectorT(std::vector<T>)
-// struct PtrVector_vectorPt;// constrcuted PtrVector_vectorPt(std::vector<T*>)
+// struct PtrVector_VecT;    // constructed as PtrVector_VecT(NTL::Vec<T>)
+// struct PtrVector_VecPt;   // constructed as PtrVector_VecPt(NTL::Vec<T*>)
+// struct PtrVector_vectorT; // constructed as PtrVector_vectorT(std::vector<T>)
+// struct PtrVector_vectorPt;// constructed PtrVector_vectorPt(std::vector<T*>)
 
 // struct PtrVector_slice;// A slice, PtrVector_slice(PtrVector, start, length)
 

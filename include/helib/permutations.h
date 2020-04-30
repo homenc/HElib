@@ -60,7 +60,7 @@ void randomPerm(Permut& perm, long n);
  * The cube is partitioned into columns of size n = getDim(dim):
  * a single column consists of the n entries whose indices i have the
  * same coordinates in all dimensions other than dim.  The entries
- * in any such column foem a permutation on [0..n).
+ * in any such column form a permutation on [0..n).
  *
  * For a given ColPerm perm, one way to access each column is as follows:
  *   for slice_index = [0..perm.getProd(0, dim))
@@ -70,7 +70,7 @@ void randomPerm(Permut& perm, long n);
  *
  * Another way is to use the getCoord and addCoord methods.
  *
- * For example, permuting a 2x3x2 cube along dim=1 (the 2nd dimention), we
+ * For example, permuting a 2x3x2 cube along dim=1 (the 2nd dimension), we
  * could have the data std::vector as  [ 1  1  0  2  2  0  2  0  1  1  0  2 ].
  * This means the four columns are
  * permuted by the permutations     [ 1     0     2                      ]
@@ -85,7 +85,7 @@ void randomPerm(Permut& perm, long n);
  *                                  [    2    -1    -1                   ]
  *                                  [                   2     0    -2    ]
  *                                  [                      0     0     0 ]
- * so we write the permutatation as [ 1  1 -1  1  0 -2  2  0  0  0 -2  0 ].
+ * so we write the permutation as [ 1  1 -1  1  0 -2  2  0  0  0 -2  0 ].
  **/
 class ColPerm : public HyperCube<long>
 {
@@ -106,7 +106,7 @@ public:
     assertInRange(_dim,
                   0l,
                   getNumDims(),
-                  "Algerbra does not have a dimension of index _dim: " +
+                  "Algebra does not have a dimension of index _dim: " +
                       std::to_string(_dim));
     dim = _dim;
   }
@@ -156,7 +156,7 @@ private:
   long k; // recursion depth, k = least integer k s/t 2^k >= n
 
   NTL::Vec<NTL::Vec<short>> level;
-  // there are 2*k - 1 levels, each wity n nodes.
+  // there are 2*k - 1 levels, each with n nodes.
   // level[i][j] is 0, 1, or -1,
   //   which designates an edge from node j at level i
   //   to node j + level[i][j]*shamt(i) at level i+1
@@ -429,7 +429,7 @@ public:
   long e;    // shift-by-1 in this sub-dim is done via X -> X^{g^e}
 
   // A Benes leaf corresponds to either one or two Benes networks, depending
-  // on whther or not it is in the middle. If this object is in the middle
+  // on whether or not it is in the middle. If this object is in the middle
   // then scndBenes.length()==0, else scndBenes.length()>=1. Each of the two
   // Benes network can be "trivial", i.e., collapsed to a single layer, which
   // is denoted by benes.length()==1.
@@ -473,7 +473,7 @@ public:
   // GeneratorTrees(const Vec<OneGeneratorTree>& _trees): trees(_trees)
   //  {depth=0;}
   //
-  // Initialze trees with only the roots.
+  // Initialize trees with only the roots.
   //  GeneratorTrees(const Vec<SubDimension>& dims);
 
   long numLayers() const { return depth; } // depth of permutation network
@@ -509,7 +509,7 @@ public:
 
   //! Compute the trees corresponding to the "optimal" way of breaking
   //! a permutation into dimensions, subject to some constraints. Returns
-  //! the cost (# of 1D shifts) of this colution.
+  //! the cost (# of 1D shifts) of this solution.
   //! Returns NTL_MAX_LONG if no solution
   long buildOptimalTrees(const NTL::Vec<GenDescriptor>& vec, long depthBound);
 

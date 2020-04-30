@@ -722,7 +722,7 @@ long DoubleCRT::getOneRow(NTL::zz_pX& row, long idx) const
 }
 
 // Get the row corresponding to the i'th moduli, in NTL::Vec<long> format.
-// For conveience, returns the modulus that was used for this row.
+// For convenience, returns the modulus that was used for this row.
 // If idx is not in the current primesSet then do nothing and return 0;
 long DoubleCRT::getOneRow(NTL::Vec<long>& row, long idx, bool positive) const
 {
@@ -807,7 +807,7 @@ void DoubleCRT::toPoly(NTL::ZZX& poly, const IndexSet& s, bool positive) const
       long i = ivec[j];
       context.ithModulus(i).iFFT(tmp, map[i]); // inverse FFT
 
-      long d = deg(tmp); // copy the coefficents, pad by zeros if needed
+      long d = deg(tmp); // copy the coefficients, pad by zeros if needed
       for (long h = 0; h <= d; h++)
         remtab[h][j] = rep(tmp.rep[h]);
       for (long h = d + 1; h < phim; h++)
@@ -1282,7 +1282,7 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s,
     return; // nothing to do
 
   // OLD: assert(ptxtSpace >= 1);
-  assertTrue(ptxtSpace >= 1, "ptxtSpacee must be at least 1");
+  assertTrue(ptxtSpace >= 1, "ptxtSpace must be at least 1");
   // OLD: assert(diff!=getIndexSet()); // cannot mod-down to the empty set
   assertNeq(diff,
             getIndexSet(),

@@ -90,7 +90,7 @@ public:
 
   // Get the i'th diagonal, encoded as a single constant.
   // MatMul1D_derived (below) supplies a default implementation,
-  // which can be overriden in special circumstances.
+  // which can be overridden in special circumstances.
   virtual void processDiagonal(RX& poly,
                                long i,
                                const EncryptedArrayDerived<type>& ea) const = 0;
@@ -140,7 +140,7 @@ public:
   // Get the i'th diagonal, encoded as a std::vector of d constants,
   // where d is the order of p.
   // BlockMatMul1D_derived (below) supplies a default implementation,
-  // which can be overriden in special circumstances.
+  // which can be overridden in special circumstances.
   virtual bool processDiagonal(std::vector<RX>& poly,
                                long i,
                                const EncryptedArrayDerived<type>& ea) const = 0;
@@ -198,7 +198,7 @@ public:
   // Upgrade zzX constants to DoubleCRT constants.
   virtual void upgrade() = 0;
 
-  // If ctxt enctrypts a row std::vector v, then this replaces ctxt
+  // If ctxt encrypts a row std::vector v, then this replaces ctxt
   // by an encryption of the row std::vector v*mat, where mat is
   // a matrix provided to the constructor of one of the
   // concrete subclasses MatMul1DExec, BlockMatMul1DExec,
@@ -231,7 +231,7 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the
-  // addMinimal{1D,Frb}Matrices routines decalred in helib.h.
+  // addMinimal{1D,Frb}Matrices routines declared in helib.h.
   // If the minimal flag is false, it is best to use the
   // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit MatMul1DExec(const MatMul1D& mat, bool minimal = false);
@@ -274,7 +274,7 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the
-  // addMinimal{1D,Frb}Matrices routines decalred in helib.h.
+  // addMinimal{1D,Frb}Matrices routines declared in helib.h.
   // If the minimal flag is false, it is best to use the
   // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit BlockMatMul1DExec(const BlockMatMul1D& mat, bool minimal = false);
@@ -311,7 +311,7 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the
-  // addMinimal{1D,Frb}Matrices routines decalred in helib.h.
+  // addMinimal{1D,Frb}Matrices routines declared in helib.h.
   // If the minimal flag is false, it is best to use the
   // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit MatMulFullExec(const MatMulFull& mat, bool minimal = false);
@@ -351,7 +351,7 @@ public:
   // If the minimal flag is set to true, a strategy that relies
   // on a minimal number of key switching matrices will be used;
   // this is intended for use in conjunction with the
-  // addMinimal{1D,Frb}Matrices routines decalred in helib.h.
+  // addMinimal{1D,Frb}Matrices routines declared in helib.h.
   // If the minimal flag is false, it is best to use the
   // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit BlockMatMulFullExec(const BlockMatMulFull& mat,

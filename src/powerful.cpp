@@ -9,8 +9,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-/* a prelimary test program for playing around with Peikert's "powerful" basis.
- * EXPERIMENTAL CODE, not usable yet
+/* a preliminary test program for playing around with Peikert's "powerful"
+ * basis. EXPERIMENTAL CODE, not usable yet
  */
 
 #include <helib/powerful.h>
@@ -52,7 +52,7 @@ inline void computeInvVec(NTL::Vec<long>& invVec,
 // computes polyToCubeMap[i] and cubeToPolyMap[i]
 //   where polyToCubeMap[i] is the index of (i_1, ..., i_k)
 //   in the cube with CubeSignature longSig = (m_1, ..., m_k),
-//   and (i_1, ..., i_k) is the unique tuple satistifying
+//   and (i_1, ..., i_k) is the unique tuple satisfying
 //   i = i_1 (m/m_1) + ... + i_k (m/m_k) mod m
 // and
 //   cubeToPolyMap is the inverse map.
@@ -234,7 +234,7 @@ long PowerfulConversion::powerfulToPoly(
   for (long i = 0; i < indexes->m; i++)
     tmp[i] = 0;
 
-  // copy the coefficienct from hypercube in the right order
+  // copy the coefficient from hypercube in the right order
   for (long i = 0; i < indexes->phim; i++)
     tmp[indexes->cubeToPolyMap[indexes->shortToLongMap[i]]] = powerful[i];
   // FIXME: these two maps could be composed into a single map

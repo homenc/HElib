@@ -184,7 +184,7 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
   for (long i = 0; i < (long)fg.size(); i++) {
     std::vector<long> missing;
     for (FNeighborList::iterator it = fg[i].begin(); it != fg[i].end(); ++it) {
-      long j = it->first; // found an endge i->j, look for edge j->i
+      long j = it->first; // found an edge i->j, look for edge j->i
 
       // ensure that we have a node j in the graph
       if (j >= (long)fg.size()) {
@@ -254,8 +254,8 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
   return flowVal;
 }
 
-/* The function augmenting_path performs a BFS on the netwrok
- * to find a shortest sugmenting path
+ /* The function augmenting_path performs a BFS on the network
+ * to find a shortest augmenting path
  */
 static long augmenting_path(std::vector<long>& path,
                             FlowGraph& fg,

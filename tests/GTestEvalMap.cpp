@@ -228,7 +228,7 @@ TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
   // in lexicographic order.
 
   // compute tables for converting between powerful and zz_pX
-  helib::PowerfulTranslationIndexes ind(mvec); // indpendent of p
+  helib::PowerfulTranslationIndexes ind(mvec); // independent of p
   helib::PowerfulConversion pConv(ind);        // depends on p
 
   helib::HyperCube<NTL::zz_p> cube(pConv.getShortSig());

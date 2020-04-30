@@ -99,10 +99,10 @@ public:
   //! variable X with variance sigma^2, then the probability that
   //! that X lies outside the interval [-scale*sigma, scale*sigma] is
   //! delta=erfc(scale/sqrt(2)). We will usually apply the union bound
-  //! to a vector of phi(m) such random varables (one for each primitive
+  //! to a vector of phi(m) such random variables (one for each primitive
   //! m-th root of unity), so that the probability that that the L-infty
   //! norm exceeds scale*sigma is at most epsilon=phim*delta. Thus,
-  //! scale*sigma will be used as a high-probabability bound on the
+  //! scale*sigma will be used as a high-probability bound on the
   //! L-infty norm of such vectors.
 
   //=======================================

@@ -40,7 +40,7 @@ class IndexSet
   // Invariant: if _card == 0, then _first = 0, _last = -1;
   // otherwise, _first (resp. _last) is the lowest (resp. highest)
   // index in the set.
-  // In any case, the std::vector rep always defines the characterstic
+  // In any case, the std::vector rep always defines the characteristic
   // function of the set.
 
   // private helper function
@@ -60,7 +60,7 @@ public:
 
   // copy constructor: use the built-in copy constructor
 
-  /*** asignment ***/
+  /*** assignment ***/
 
   // assignment: use the built-in assignment operator
 

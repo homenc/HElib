@@ -247,7 +247,7 @@ static void recursiveGeneralBenesInit(long n,
                             level,
                             ilevel);
 
-  // recurse on lower intrernal network
+  // recurse on lower internal network
   recursiveGeneralBenesInit(n,
                             k,
                             d + 1,

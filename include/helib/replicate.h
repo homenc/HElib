@@ -40,7 +40,7 @@ namespace helib {
 NTL_THREAD_LOCAL
 extern bool replicateVerboseFlag;
 
-class RepAux; // forward declerations
+class RepAux; // forward declarations
 class RepAuxDim;
 
 //! @brief The value in slot #pos is replicated in all other slots.
@@ -68,7 +68,7 @@ public:
 #pragma GCC diagnostic pop
 };
 // Applications will derive from this class a handler that actually
-// does something with the replicated cipehrtexts. But it can be used
+// does something with the replicated ciphertexts. But it can be used
 // by itself as a do-nothing replicator for debugging, or to calculate
 // the required automorphisms (see automorphVals in numbTh.h)
 
@@ -142,10 +142,10 @@ void replicate(const EncryptedArray&, Ptxt<Scheme>& ptxt, long i)
   ptxt.replicate(i);
 }
 
-// Structures to keep tables of maskign constants that are used in
+// Structures to keep tables of masking constants that are used in
 // replication. A calling application can either supply this structure
 // itself (if it is going to replicate the same tables in multiple
-// replicate operations), or is cal let the repliction code use its
+// replicate operations), or is cal let the replication code use its
 // own tables (in which case they are destroyed at the end of the
 // replication process)
 

@@ -108,7 +108,7 @@ void read_raw_vector(std::istream& str, std::vector<T>& v)
   read_raw_vector<T>(str, v, T());
 }
 
-// vector<long> has adifferent implementation, since long.read does not work
+// vector<long> has a different implementation, since long.read does not work
 template <>
 void read_raw_vector<long>(std::istream& str, std::vector<long>& v);
 

@@ -419,7 +419,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
   FHE_NTIMER_START(AAA_preProcess);
 
-  // Make sure that this ciphertxt is in canonical form
+  // Make sure that this ciphertext is in canonical form
   if (!ctxt.inCanonicalForm())
     ctxt.reLinearize();
 
@@ -441,7 +441,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   CheckCtxt(ctxt, "after key switching");
 #endif
 
-  // "raw mod-switch" to the bootstrapping mosulus q=p^e+1.
+  // "raw mod-switch" to the bootstrapping modulus q=p^e+1.
   std::vector<NTL::ZZX> zzParts; // the mod-switched parts, in ZZX format
 
   double mfac = ctxt.getContext().zMStar.getNormBnd();
@@ -731,7 +731,7 @@ void packedRecrypt(const CtPtrs& cPtrs,
   PubKey& pKey = (PubKey&)cPtrs[0]->getPubKey();
 
   // Allocate temporary ciphertexts for the recryption
-  int nPacked = divc(cPtrs.size(), ea.getDegree()); // ceil(totoalNum/d)
+  int nPacked = divc(cPtrs.size(), ea.getDegree()); // ceil(totalNum/d)
   std::vector<Ctxt> cts(nPacked, Ctxt(pKey));
 
   repack(CtPtrs_vectorCt(cts), cPtrs, ea); // pack ciphertexts
@@ -883,7 +883,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 
     extractDigits(scratch, unpacked, topHigh + 1);
 
-    // set upacked = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
+    // set unpacked = -\sum_{j=botHigh}^{topHigh} scratch[j] * p^{j-botHigh}
     if (topHigh >= LONG(scratch.size())) {
       topHigh = scratch.size() - 1;
       std::cerr << " @ suspect: not enough digits in extractDigitsPacked\n";
@@ -1019,7 +1019,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 
   FHE_NTIMER_START(AAA_bootKeySwitch);
 
-  // Make sure that this ciphertxt is in canonical form
+  // Make sure that this ciphertext is in canonical form
   if (!ctxt.inCanonicalForm())
     ctxt.reLinearize();
 

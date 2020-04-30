@@ -62,7 +62,7 @@ public:
   //! conversion between ZZX and Powerful
   std::shared_ptr<const PowerfulDCRT> p2dConv;
 
-  //! linPolys for uppacking the slots
+  //! linPolys for unpacking the slots
   std::vector<NTL::ZZX> unpackSlotEncoding;
 
   RecryptData()

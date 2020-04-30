@@ -472,7 +472,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
 
     // Make some noise!
     // This ensures that we do not start the sequence of squarings
-    // from a "fresh" ciphertext (which may not be representive).
+    // from a "fresh" ciphertext (which may not be representative).
     ea->rotate(c1, 1);
     ea->rotate(c1, -1);
 

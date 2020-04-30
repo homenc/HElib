@@ -20,14 +20,14 @@
 
 namespace helib {
 
-class PAlgebra; // forward decleration
+class PAlgebra; // forward declaration
 
 //! @class CubeSignature
 //! @brief Holds a vector of dimensions for a hypercube and some additional data
 class CubeSignature
 {
 private:
-  NTL::Vec<long> dims;  // dims[i] is the size along the i'th diemnsion
+  NTL::Vec<long> dims;  // dims[i] is the size along the i'th dimension
   NTL::Vec<long> prods; // prods[i] = \prod_{j=i}^{n-1} dims[i]
 
 public:
@@ -185,7 +185,7 @@ public:
     // OLD: assert(lsize(v)==getNumDims());
     assertEq(lsize(v),
              getNumDims(),
-             "Vector size is different to the number of dimentions");
+             "Vector size is different to the number of dimensions");
 
     long idx = 0;
     for (long i = 0; i < getNumDims(); i++) {
@@ -221,7 +221,7 @@ inline std::ostream& operator<<(std::ostream& s, const CubeSignature& sig)
 //! @class HyperCube
 //! @brief A multi-dimensional cube.
 //!
-//! Such an object is initialzied with a CubeSignature: a reference to the
+//! Such an object is initialized with a CubeSignature: a reference to the
 //! signature is stored with the cube, and so the signature must remain alive
 //! during the lifetime of the cube, to prevent dangling pointers.
 template <typename T>

@@ -28,7 +28,7 @@ namespace helib {
 void sampleSmall(zzX& poly, long n, double prob = 0.5);
 void sampleSmall(NTL::ZZX& poly, long n, double prob = 0.5);
 
-//! Sample a degree-(n-1) poly as bove, with only Hwt nonzero coefficients
+//! Sample a degree-(n-1) poly as above, with only Hwt nonzero coefficients
 void sampleHWt(zzX& poly, long n, long Hwt = 100);
 void sampleHWt(NTL::ZZX& poly, long n, long Hwt = 100);
 
@@ -50,7 +50,7 @@ double sampleHWt(zzX& poly, const Context& context, long Hwt = 100);
 double sampleHWtBounded(zzX& poly, const Context& context, long Hwt = 100);
 
 double sampleHWtBoundedEffectiveBound(const Context& context, long Hwt = 100);
-// This just returns the effective bound useda by sampleHWt bounded
+// This just returns the effective bound used by sampleHWt bounded
 
 // Return value is high-probability bound on L-infty norm of canonical embedding
 double sampleSmall(zzX& poly, const Context& context);

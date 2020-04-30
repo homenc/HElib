@@ -121,7 +121,7 @@ public:
   // y = FFT(x)
   void FFT(NTL::vec_long& y, const zzX& x) const;
 
-  // auxilliary routine used by above two routines
+  // auxiliary routine used by above two routines
   void FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const;
 
   // expects zp context to be set externally

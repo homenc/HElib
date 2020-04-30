@@ -154,7 +154,7 @@ void testCube(NTL::Vec<helib::GenDescriptor>& vec, long widthBound)
     helib::applyPermToVec(cube2.getData(),
                           cube1.getData(),
                           pi); // direct application
-    net.applyToCube(cube3);    // applying permutation netwrok
+    net.applyToCube(cube3);    // applying permutation network
 
     const auto getErrorMessage = [&cube1, &cube2, &cube3]() {
       std::ostringstream os;
@@ -247,7 +247,7 @@ void testCtxt(long m, long p, long widthBound, long L, long r)
       std::cout << "  ** applying permutation network to ciphertext... "
                 << std::flush;
     double t = NTL::GetTime();
-    net.applyToCtxt(ctxt, ea); // applying permutation netwrok
+    net.applyToCtxt(ctxt, ea); // applying permutation network
     t = NTL::GetTime() - t;
     if (!helib_test::noPrint)
       std::cout << "done in " << t << " seconds" << std::endl;

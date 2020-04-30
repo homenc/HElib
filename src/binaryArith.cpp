@@ -116,7 +116,7 @@ public:
  * a term either of the form p_{i,j} = \prod_{t=j}^i (a[t]+b[t]), or of the
  * form q_{i,j} = (a[j]*b[j]) * \prod_{t=j+1}^i (a[t]+b[t]). The source nodes
  * are of the forms (a[i]*b[i]) and (a[i]+b[i]), and each non-source node has
- * exactly two parents, whose product yeilds that node.
+ * exactly two parents, whose product yields that node.
  *
  * When building the DAG, we keep the level of each node as high as possible.
  * For example we can set q_{i,j}=p_{i,k}*q_{k-1,j} or q_{i,j}=p_{i,k+1}*q_{k,j}
@@ -135,7 +135,7 @@ class AddDAG
 
   Ctxt* allocateCtxtLike(const Ctxt& c); // Allocate a new ciphertext if needed
   void markAsAvailable(DAGnode* node);   // Mark temporary Ctxt object as unused
-  const Ctxt& getCtxt(DAGnode* node,     // Compute a new Ctxt if neeed
+  const Ctxt& getCtxt(DAGnode* node,     // Compute a new Ctxt if need
                       const CtPtrs& a,
                       const CtPtrs& b);
 
@@ -353,7 +353,7 @@ void AddDAG::apply(CtPtrs& sum,
   NTL_EXEC_RANGE_END
 }
 
-//! Get the ciphertext for a node, compiuting it as needed
+//! Get the ciphertext for a node, computing it as needed
 const Ctxt& AddDAG::getCtxt(DAGnode* node, const CtPtrs& a, const CtPtrs& b)
 {
   // NOTE: node->ct_mtx should be locked before calling this function
@@ -779,12 +779,12 @@ static long three4Two(Ctxt* lsb, Ctxt* msb, Ctxt* u, Ctxt* v, Ctxt* w)
   }
   if ((u == nullptr || u->isEmpty()) && (v == nullptr || v->isEmpty()) &&
       (w == nullptr || w->isEmpty())) { // if all are empty
-    lsb->clear();                       // result is emptry too
+    lsb->clear();                       // result is empty too
     msb->clear();
     return 0;
   }
 
-  // Some are empty, others are not, arrange so that emptys are at the end
+  // Some are empty, others are not, arrange so that empty are at the end
   if (u == nullptr || u->isEmpty()) {
     if (v == nullptr || v->isEmpty())
       u = w; // only w was non-empty
@@ -907,7 +907,7 @@ void addManyNumbers(CtPtrs& sum,
 #endif
   FHE_TIMER_START;
   const Ctxt* ct_ptr = numbers.ptr2nonNull();
-  if (lsize(numbers) < 1 || ct_ptr == nullptr) { // nothign to add
+  if (lsize(numbers) < 1 || ct_ptr == nullptr) { // nothing to add
     setLengthZero(sum);
     return;
   }
@@ -1110,7 +1110,7 @@ void multTwoNumbers(CtPtrs& product,
   }
   NTL_EXEC_RANGE_END
 
-  CtPtrMat_VecCt nums(numbers); // A wrapper aroune numbers
+  CtPtrMat_VecCt nums(numbers); // A wrapper around numbers
 #ifdef DEBUG_PRINTOUT
   long plaintext_lhs, plaintext_rhs;
   std::vector<long> slots;
@@ -1145,7 +1145,7 @@ static void seven4Three(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
   // we need 4 scratch ciphertexts
   std::vector<Ctxt> tmp(4, *out[0]);
 
-  // Aliasas, referring to the scheme above. Aliases for temporary
+  // Aliases, referring to the scheme above. Aliases for temporary
   // vars chosen so that inputs, outputs of three4two are distinct
 
   Ctxt& c1 = *out[0];
@@ -1213,7 +1213,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
   // we need 6 scratch ciphertexts
   std::vector<Ctxt> tmp(8, *out[0]);
 
-  // Aliasas, referring to the scheme above.
+  // Aliases, referring to the scheme above.
 
   Ctxt& d1 = *out[0];
   Ctxt& e1 = *out[1];
@@ -1322,7 +1322,7 @@ long fifteenOrLess4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     return 4;
   }
 
-  // At most 7 non-null pointers, collect them in the first entires of a vector
+  // At most 7 non-null pointers, collect them in the first entries of a vector
   long lastNonNull = -1;
   std::vector<Ctxt*> inPtrs(7, nullptr);
   for (long i = 0; i < 15; i++)

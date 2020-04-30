@@ -22,7 +22,7 @@ namespace helib {
 
 // Implementation classes for unpacking:
 // buildUnpackSlotEncoding_pa_impl prepares the constants for the linear
-// transformation, and unpack_pa_impl uses them to do the actual uppacking.
+// transformation, and unpack_pa_impl uses them to do the actual unpacking.
 
 //! \cond FALSE (make doxygen ignore this code)
 template <typename type>
@@ -95,7 +95,7 @@ public:
       frob[j] = ctxt;
       frob[j].frobeniusAutomorph(j);
       frob[j].cleanUp();
-      // NOTE: Why do we apply cleanup after the Frobenus?
+      // NOTE: Why do we apply cleanup after the Frobenius?
     }
     NTL_EXEC_RANGE_END
 
@@ -273,7 +273,7 @@ public:
     bak.save();
     ea.restoreContext(); // the NTL context for mod p^r
     RX acc_poly;
-    int2Poly(acc_poly, ea, data, nbits); // endoce data as a polynomial RX
+    int2Poly(acc_poly, ea, data, nbits); // encode data as a polynomial RX
     long nslots = ea.size();             // how many slots
     std::vector<RX> acc_poly_vec(nslots, acc_poly);
     ea.encode(result, acc_poly_vec);
@@ -296,7 +296,7 @@ public:
     std::vector<RX> vec(nslots, RX::zero());
     RX acc_poly;
     for (long i = 0; i < nslots; i++)
-      int2Poly(vec[i], ea, data[i], nbits); // endoce data as a polynomial RX
+      int2Poly(vec[i], ea, data[i], nbits); // encode data as a polynomial RX
 
     ea.encode(result, vec);
   }

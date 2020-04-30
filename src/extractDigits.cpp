@@ -19,7 +19,7 @@
 
 namespace helib {
 
-// Compute a degree-p polynomial poly(x) s.t. for any t<e and integr z of the
+// Compute a degree-p polynomial poly(x) s.t. for any t<e and integer z of the
 // form z = z0 + p^t*z1 (with 0<=z0<p), we have poly(z) = z0 (mod p^{t+1}).
 //
 // We get poly(x) by interpolating a degree-(p-1) polynomial poly'(x)
@@ -59,7 +59,7 @@ static void buildDigitPolynomial(NTL::ZZX& result, long p, long e)
 // i.e., that only the free terms are nonzero. (If that assumptions does
 // not hold then the result will not be a valid ciphertext anymore.)
 //
-// It returns in the slots of digits[j] the j'th-lowest gigits from the
+// It returns in the slots of digits[j] the j'th-lowest digits from the
 // integers in the slots of the input. Namely, the i'th slot of digits[j]
 // contains the j'th digit in the p-base expansion of the integer in the
 // i'th slot of the *this. The plaintext space of digits[j] is mod p^{r-j},

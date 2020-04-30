@@ -70,7 +70,7 @@ extern bool dryRun;
 
 //! @brief A list of required automorphisms
 //! When non-nullptr, causes Ctxt::smartAutomorphism to just record the
-//! requested automorphism rather than actualy performing it. This can
+//! requested automorphism rather than actually performing it. This can
 //! be used to get a list of needed automorphisms for certain operations
 //! and then generate all these key-switching matrices. Should only be
 //! used in conjunction with dryRun=true
@@ -169,7 +169,7 @@ void ppsolve(NTL::vec_GF2E& x,
 //!
 //! NTL's current smallint modulus zz_p::modulus() is assumed to be p^r for
 //! p prime, r >= 1 integer. For the zz_pE variant also zz_pE::modulus() must
-//! be initialized. An error is raised if A is not inverible mod p.
+//! be initialized. An error is raised if A is not invertible mod p.
 void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r);
 void ppInvert(NTL::mat_zz_pE& X, const NTL::mat_zz_pE& A, long p, long r);
 
@@ -458,7 +458,7 @@ bool intVecCRT(NTL::vec_ZZ& vp, const NTL::ZZ& p, const zzvec& vq, long q);
  *
  * These procedures are roughly just simpler variants of std::max_element and
  * std::min_element. argmin/argmax are implemented as a template, so the code
- * must be placed in the header file for the comiler to find it. The class T
+ * must be placed in the header file for the compiler to find it. The class T
  * must have an implementation of operator> and operator< for this template to
  * work.
  * @tparam maxFlag A boolean value: true - argmax, false - argmin
@@ -528,12 +528,12 @@ std::pair<NTL::ZZ, NTL::ZZ> rationalApprox(
 /**
  * @brief Facility for "restoring" the NTL PRG state.
  *
- * NTL's random number generation faciliity is pretty limited, and does not
+ * NTL's random number generation facility is pretty limited, and does not
  * provide a way to save/restore the state of a pseudo-random stream. This
  * class gives us that ability: Constructing a RandomState object uses the PRG
  * to generate 512 bits and stores them. Upon destruction (or an explicit call
  * to restore()), these bits are used to re-set the seed of the PRG. A typical
- * usage of thie class is as follows:
+ * usage of the class is as follows:
  * \code
  *   {
  *     RandomState r;      // save the random state
@@ -624,7 +624,7 @@ inline long lsize(const std::vector<T>& v)
   return (long)v.size();
 }
 
-//! NTL/std compatability
+//! NTL/std compatibility
 
 // Utility functions, release memory of std::vector and NTL::Vec
 template <typename T>
@@ -714,7 +714,7 @@ void interpolateMod(NTL::ZZX& poly,
 inline long divc(long a, long b) { return (a + b - 1) / b; }
 
 //! @class zz_pXModulus1
-//! @brief Auxiliary classes to facillitiate faster reduction mod Phi_m(X)
+//! @brief Auxiliary classes to facilitate faster reduction mod Phi_m(X)
 //!        when the input has degree less than m
 class zz_pXModulus1
 {
@@ -862,7 +862,7 @@ inline void Warning(const std::string& msg)
   std::cerr << "WARNING: " << msg << "\n";
 }
 
-// An array of inverce erfc values.
+// An array of inverse erfc values.
 // erfc_inverse[i] = x means 2^{-i} = erfc(x/sqrt(2))
 
 const double erfc_inverse[] = {0,

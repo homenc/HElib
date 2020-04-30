@@ -80,7 +80,7 @@ std::ostream& printVec(std::ostream& s, const VEC& v, long nCoeffs = 40)
   if (d < nCoeffs)
     return s << v; // just print the whole thing
 
-  // otherwise print only 1st nCoeffs coefficiants
+  // otherwise print only 1st nCoeffs coefficients
   s << '[';
   for (long i = 0; i < nCoeffs - 2; i++)
     s << v[i] << ' ';

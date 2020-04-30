@@ -26,7 +26,7 @@ namespace helib {
 
 // Assumes that c1 is already chosen by the caller
 double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT& s, long p)
-// Returns a high-probabiliy bound on the L-infty norm
+// Returns a high-probability bound on the L-infty norm
 // of the canonical embedding of the decryption of (c0, c1) w/r/to s
 {
   // OLD: assert (p>0); // Used with p=1 for CKKS, p>=2 for BGV
@@ -123,7 +123,7 @@ void PubKey::setKeySwitchMap(long keyId)
                 "No such key found"); // Sanity-check, do we have such a key?
   long m = context.zMStar.getM();
 
-  // Initialize an aray of "edges" (this is easier than searching through
+  // Initialize an array of "edges" (this is easier than searching through
   // all the matrices for every step). This is a list of all the powers n
   // for which we have a matrix W[s_i(X^n) => s_i(X)], as well as the index
   // of that matrix in the keySwitching array.
@@ -367,7 +367,7 @@ long PubKey::Encrypt(Ctxt& ctxt,
 
   // OLD: assert(this == &ctxt.pubKey);
   assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
-  if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mistamtch
+  if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mismatch
     ptxtSpace = NTL::GCD(ptxtSpace, pubEncrKey.ptxtSpace);
     if (ptxtSpace <= 1)
       throw RuntimeError("Plaintext-space mismatch on encryption");
@@ -518,9 +518,9 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   //                  + e0_bound + e1_bound*getSKeyBound()
   // Here, r_bound, e0_bound, and e1_bound are values returned by the
   // corresponding sampling routines.
-  // We also have ptxt_bound = ef*f*ptxtSize, which is tracked sparately.
+  // We also have ptxt_bound = ef*f*ptxtSize, which is tracked separately.
   //
-  // The input ptxt is already scaled by a factof f=scaling, and is being
+  // The input ptxt is already scaled by a factor f=scaling, and is being
   // further scaled by the extra factor ef, so ef*f is the new scaling
   // factor. The extra factor ef is set as ceil(error_bound*prec/f),
   // so that we have ef*f >= error_bound*prec.
@@ -939,7 +939,7 @@ void SecKey::GenKeySWmatrix(long fromSPower,
     }
     // FIXME: We use context.isBootstrappable() rather than
     //   this->isBootstrappable(). So we get the larger bootstrapping
-    //   plaintext space even if *this is not currently bootstrapppable,
+    //   plaintext space even if *this is not currently bootstrappable,
     //   in case the calling application will make it bootstrappable later.
 
     // OLD: assert(p>=2);
@@ -1066,8 +1066,8 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
     long keyIdx = part.skHandle.getSecretKeyID();
     DoubleCRT key = sKeys.at(keyIdx); // copy object, not a reference
     key.setPrimes(ptxtPrimes);
-    // need to equalize the prime sets without changing prime set of ciphertxt.
-    // Note that ciphertxt may contain small primes, which are not in key.
+    // need to equalize the prime sets without changing prime set of ciphertext.
+    // Note that ciphertext may contain small primes, which are not in key.
 
     long xPower = part.skHandle.getPowerOfX();
     long sPower = part.skHandle.getPowerOfS();
@@ -1089,7 +1089,7 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
 
   pwfl_converter.dcrtToPowerful(pwfl, ptxt);
   // convert to powerful basis, reduced mod product of primes in prime chain.
-  // the reduction mod Q is done on the poweful basis, as the
+  // the reduction mod Q is done on the powerful basis, as the
   // coefficients tend to be smaller there
 
   pwfl_converter.powerfulToZZX(plaintxt, pwfl);

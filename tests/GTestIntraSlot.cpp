@@ -9,7 +9,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
-// testPacking.cxx - testing uppack/repack functionality
+// testPacking.cxx - testing unpack/repack functionality
 #include <helib/intraSlot.h>
 #include <helib/debugging.h>
 
@@ -103,7 +103,7 @@ TEST_P(GTestIntraSlot, packingAndUnpackingWorks)
 
   std::vector<helib::Ctxt> unpacked(d * n - 1, helib::Ctxt(publicKey));
 
-  // generate (almost) d*n ciphertexts, with only integrs in the slots
+  // generate (almost) d*n ciphertexts, with only integers in the slots
   std::vector<helib::PlaintextArray> p1(helib::lsize(unpacked),
                                         helib::PlaintextArray(ea));
   for (long i = 0; i < helib::lsize(unpacked); i++) {
@@ -113,7 +113,7 @@ TEST_P(GTestIntraSlot, packingAndUnpackingWorks)
     ea.encrypt(unpacked[i], publicKey, p1[i]);
   }
 
-  // Pack (almost) d*n ciphetexts into only n of them
+  // Pack (almost) d*n ciphertexts into only n of them
   std::vector<helib::Ctxt> ct(n, helib::Ctxt(publicKey));
   repack(helib::CtPtrs_vectorCt(ct), helib::CtPtrs_vectorCt(unpacked), ea);
 

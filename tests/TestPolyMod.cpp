@@ -373,10 +373,10 @@ TEST(TestPolyMod, canBeSerialisedAndDeserialised)
 
   std::stringstream ss;
   ss << pre_serialised_poly;
-  helib::PolyMod deserialised(ring);
-  ss >> deserialised;
+  helib::PolyMod deserialized(ring);
+  ss >> deserialized;
 
-  EXPECT_EQ(pre_serialised_poly, deserialised);
+  EXPECT_EQ(pre_serialised_poly, deserialized);
 }
 
 TEST(TestPolyMod, minusOperatorCorrectlyNegates)

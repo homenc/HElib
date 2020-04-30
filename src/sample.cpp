@@ -128,7 +128,7 @@ void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
     double r2 = (1 + NTL::RandomBnd(LONG_MAX)) / (bignum + 1);
     double theta = 2 * Pi * r1;
     double rr = sqrt(-2.0 * log(r2)) * stdev;
-    if (rr > 8 * stdev) // sanity-check, trancate at 8 standard deviations
+    if (rr > 8 * stdev) // sanity-check, truncate at 8 standard deviations
       rr = 8 * stdev;
 
     // Generate two Gaussians RV's
@@ -541,7 +541,7 @@ double boundFreshNoise(long m, long phim, double sigma, double epsilon)
    *      Pr[|f(zeta)| > 6*stdev] = 2.16e-3
    *      Pr[|f(zeta)| > n*stdev] = 2.16e-3 * 4^{6-n} for n>6
    *
-   * We return the smallest number of standard deviations n satifying
+   * We return the smallest number of standard deviations n satisfying
    *      Pr[|f(zeta)|>(n stdev)] = epsilon / phi(m)
    */
   epsilon /= phim;
@@ -588,7 +588,7 @@ double boundRoundingNoise(UNUSED long m, long phim, long p2r, double epsilon)
    *      Pr[|f(zeta)| > 7*stdev] = 7.25e-4
    *      Pr[|f(zeta)| > n*stdev] = 7.25e-4 * 3.3^{7-n} for n>5
    *
-   * We return the smallest number of standard deviations n satifying
+   * We return the smallest number of standard deviations n satisfying
    *      Pr[|f(zeta)|>(n stdev)] = epsilon / phi(m)
    */
   epsilon /= phim;

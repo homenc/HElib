@@ -215,7 +215,7 @@ public:
   /**
    * @brief Generic slot vector constructor.
    * @param context `Context` to use.
-   * @param data Data to populate the slots, must be convertable to `SlotType`.
+   * @param data Data to populate the slots, must be convertible to `SlotType`.
    **/
   template <typename T>
   Ptxt(const Context& context, const std::vector<T>& data) :
@@ -724,7 +724,7 @@ public:
     assertTrue<RuntimeError>(ptxt.isValid(),
                              "Cannot operate on invalid "
                              "(default constructed) Ptxt");
-    // Use desctructor to make sure stream precision is reset
+    // Use destructor to make sure stream precision is reset
     struct stream_modifier
     {
       explicit stream_modifier(std::ostream& os) : os(os), ss(os.precision())

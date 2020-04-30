@@ -112,7 +112,7 @@ bool Ctxt::verifyPrimeSet() const
 // The vector of digits is modified in place.
 void Ctxt::keySwitchDigits(const KeySwitch& W, std::vector<DoubleCRT>& digits)
 { // An object to hold the pseudorandom ai's, note that it must be defined
-  // with the maximum number of levels, else the PRG will go out of synch.
+  // with the maximum number of levels, else the PRG will go out of sync.
   // FIXME: This is a bug waiting to happen.
 
   DoubleCRT ai(context, context.ctxtPrimes | context.specialPrimes);
@@ -338,7 +338,7 @@ void Ctxt::modDownToSet(const IndexSet& s)
 
   // Scale down all the parts: use either a simple "drop down" (just removing
   // primes, i.e., reducing the ctxt modulo the smaller modulus), or a "real
-  // modulus switching" with rounding, basically whichever yeilds smaller
+  // modulus switching" with rounding, basically whichever yields smaller
   // noise.
 
   // Get an estimate for the added noise term for modulus switching
@@ -360,7 +360,7 @@ void Ctxt::modDownToSet(const IndexSet& s)
         part *= factorZZ;
       noiseBound *= xf; // Increase noiseBound
       ratFactor *= xf;  // Increase the factor
-      std::cerr << "** sanity-check trigerred in Ctxt::modDownToSet()\n";
+      std::cerr << "** sanity-check triggered in Ctxt::modDownToSet()\n";
     }
   }
 
@@ -1045,7 +1045,7 @@ static NTL::xdouble NoiseNorm(NTL::xdouble noise1,
   return noise1 * abs(balRem(e1, p)) + noise2 * abs(balRem(e2, p));
 }
 
-// Add/subtract another ciphertxt (depending on the negative flag)
+// Add/subtract another ciphertext (depending on the negative flag)
 void Ctxt::addCtxt(const Ctxt& other, bool negative)
 {
   FHE_TIMER_START;
@@ -1547,7 +1547,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
     return;
   }
 
-  // If the size is not given, we use the default value coreesponding
+  // If the size is not given, we use the default value corresponding
   // to uniform distribution on [-ptxtSpace/2, ptxtSpace/2].
   if (size < 0.0) {
     size = context.noiseBoundForMod(ptxtSpace, getContext().zMStar.getPhiM());
@@ -1631,7 +1631,7 @@ void Ctxt::multByConstantCKKS(const Ptxt<CKKS>& ptxt)
   multByConstantCKKS(ptxt.getSlotRepr());
 }
 
-// Divide a cipehrtext by 2. It is assumed that the ciphertext
+// Divide a ciphertext by 2. It is assumed that the ciphertext
 // encrypts an even polynomial and has plaintext space 2^r for r>1.
 // As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
 // If these assumptions are not met then the result will not be a
@@ -1660,7 +1660,7 @@ void Ctxt::divideBy2()
   intFactor %= ptxtSpace; // adjust intFactor
 }
 
-// Divide a cipehrtext by p, for plaintext space p^r, r>1. It is assumed
+// Divide a ciphertext by p, for plaintext space p^r, r>1. It is assumed
 // that the ciphertext encrypts a polynomial which is zero mod p. If this
 // is not the case then the result will not be a valid ciphertext anymore.
 // As a side-effect, the plaintext space is reduced from p^r to p^{r-1}.
@@ -1725,7 +1725,7 @@ void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
   } // no change in noise bound
 }
 
-// Apply F(X)->F(X^k) followed by re-liearization. The automorphism is possibly
+// Apply F(X)->F(X^k) followed by re-linearization. The automorphism is possibly
 // evaluated via a sequence of steps, to ensure that we can re-linearize the
 // result of every step.
 void Ctxt::smartAutomorph(long k)
@@ -2173,7 +2173,7 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
         throw RuntimeError(ss.str());
       }
 
-      // reduce symetrically mod q, randomizing if necessary for even q
+      // reduce symmetrically mod q, randomizing if necessary for even q
       if (x > q / 2 || (q % 2 == 0 && x == q / 2 && NTL::RandomBnd(2)))
         x -= q;
       else if (x < -q / 2 || (q % 2 == 0 && x == -q / 2 && NTL::RandomBnd(2)))
@@ -2182,7 +2182,7 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
       pwrfl[j] = x; // store back in the powerful vector
     }
 
-    p2d_conv.powerfulToZZX(zzParts[i], pwrfl); // conver to ZZX
+    p2d_conv.powerfulToZZX(zzParts[i], pwrfl); // convert to ZZX
   }
 
   // Return an estimate for the noise

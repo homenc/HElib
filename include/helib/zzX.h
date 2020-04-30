@@ -12,8 +12,8 @@
 #ifndef HELIB_ZZX_H
 #define HELIB_ZZX_H
 /**
- * @file zzX.h - manipulating polynomials with single-percision coefficient
- *               It is assumed that the result is also single-percision
+ * @file zzX.h - manipulating polynomials with single-precision coefficient
+ *               It is assumed that the result is also single-precision
  **/
 #include <NTL/vector.h>
 #include <NTL/lzz_pX.h>

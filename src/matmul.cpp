@@ -735,7 +735,7 @@ Then for each k in [0..ceil(D/g)), we compute
    giant_steps[k] = \rot^{g*k}[ rot^{-g*k}(const_{j+g*k}) baby_steps[j] ]
 Then we add up all the giant_steps.
 
-In bad dimesnions:
+In bad dimensions:
 
 We need to compute
 \[
@@ -1213,7 +1213,7 @@ struct BlockMatMul1D_derived_impl
         for (long k : range(d))
           conv(entry1[k], entry[k]);
 
-        // compute the linearlized polynomial coefficients
+        // compute the linearized polynomial coefficients
         ea.buildLinPolyCoeffs(tmpDiag[j], entry1);
       }
     }
@@ -1268,7 +1268,7 @@ struct BlockMatMul1D_derived_impl
     // Get the slots in this diagonal one at a time
     long blockIdx, rowIdx, colIdx;
     for (long j : range(nslots)) { // process entry j
-      if (dim == ea.dimension()) { // "special" last dimenssion of size 1
+      if (dim == ea.dimension()) { // "special" last dimension of size 1
         rowIdx = colIdx = 0;
         blockIdx = j;
       } else {
@@ -1298,7 +1298,7 @@ struct BlockMatMul1D_derived_impl
         for (long k : range(d))
           conv(entry1[k], entry[k]);
 
-        // compute the linearlized polynomial coefficients
+        // compute the linearized polynomial coefficients
         ea.buildLinPolyCoeffs(diag[j], entry1);
       }
     }
@@ -1913,7 +1913,7 @@ struct MatMulFullExec_construct
   }
 
   // helper class to sort dimensions, so that
-  //  - small dimensions come before large dimesnions
+  //  - small dimensions come before large dimensions
   //  - we break ties by putting good dimensions before
   //    bad dimensions...by doing so, we may save on
   //    some noise if the last dimension is bad (as it gets
@@ -2176,7 +2176,7 @@ public:
         for (long k : range(d))
           conv(entry1[k], entry[k]);
 
-        // compute the linearlized polynomial coefficients
+        // compute the linearized polynomial coefficients
         ea.buildLinPolyCoeffs(diag[j], entry1);
       }
     }
@@ -2252,7 +2252,7 @@ struct BlockMatMulFullExec_construct
   }
 
   // helper class to sort dimensions, so that
-  //  - small dimensions come before large dimesnions
+  //  - small dimensions come before large dimensions
   //  - we break ties by putting good dimensions before
   //    bad dimensions...by doing so, we may save on
   //    some noise if the last dimension is bad (as it gets

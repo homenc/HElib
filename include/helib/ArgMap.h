@@ -52,7 +52,7 @@ namespace helib {
  *       .arg("m", m, "doc for m", "undefined")  // special default info.
  *     .optional()                               // swap to optional args (*).
  *     .named()                                  // named args (*) e.g.k=v.
- *     .separator(ArgMap::Separator::WHITESPACE) // change seperator to
+ *     .separator(ArgMap::Separator::WHITESPACE) // change separator to
  *       .arg("-k", k, "doc for k", "")          // whitespace ('=' is (*)).
  *       .note("an extra note")                  // no default value info.
  *     .toggle()                                 // add extra doc/note.
@@ -371,7 +371,7 @@ public:
   /**
    * @brief Adds variable number of positional arg types after defined arg types
    * are exhausted. These are treated as optional.
-   * @param container holds the varaible positional args. It must have a
+   * @param container holds the variable positional args. It must have a
    * push_back method for insertion
    * @return A reference to the ArgMap object
    */

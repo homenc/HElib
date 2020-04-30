@@ -11,7 +11,7 @@
  */
 /**
  * @file matmul.h
- * @brief some matrix / linear algenra stuff
+ * @brief some matrix / linear algebra stuff
  */
 #include <helib/matmul.h>
 #include <helib/fhe_stats.h>
@@ -292,7 +292,7 @@ struct MatrixTypeAndParams
 Parameters oneDimensionalMatrixParams     (18631, 2, 1, 300, 0, 1, 0, 0, std::vector<long>{}            , std::vector<long>{}      , 0, 0, 0);
 Parameters oneDimensionalBlockMatrixParams(24295, 2, 1, 300, 0, 1, 0, 1, std::vector<long>{16386, 16427}, std::vector<long>{42, 16}, 0, 0, 0);
 
-// The above commented-out parameters were used before the newnoise was brought in - it is too slow now.
+// The above commented-out parameters were used before the new noise was brought in - it is too slow now.
 //FAST
 // Parameters oneDimensionalMatrixParams(91, 2, 1, 300, 0, 1, 0, 0, std::vector<long>{9, 3}, std::vector<long>{3, -2}, 0, 0, 0);
 // clang-format on

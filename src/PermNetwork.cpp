@@ -118,7 +118,7 @@ void PermNetwork::buildNetwork(const Permut& pi, const GeneratorTrees& trees)
     for (long leaf = T.firstLeaf(); leaf >= 0; leaf = T.nextLeaf(leaf)) {
       const SubDimension& leafData = T[leaf].getData();
 
-      // This leaf determines layers frntLyer...frntLey+frst.length()-1, and
+      // This leaf determines layers frntLyr...frntLyr+frst.length()-1, and
       // if it isn't the middle then also backLyr-scnd.length()...backLyr-1
 
       // handle the first Benes network
@@ -255,7 +255,7 @@ void PermNetwork::applyToCtxt(Ctxt& c, const EncryptedArray& ea) const
       else
         break; // unused is all-zero, done with this layer
     }
-    c = sum; // update the cipehrtext c before the next layer
+    c = sum; // update the ciphertext c before the next layer
   }
 }
 

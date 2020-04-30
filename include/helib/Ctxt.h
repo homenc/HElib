@@ -142,8 +142,8 @@ public:
    * which is represented using a key-ID of -1 and returning false. Also,
    * note that inputs may alias outputs.
    *
-   * To detremine if the resulting handle canbe re-liearized using
-   * some key-switchingmatrices from the public key, use the method
+   * To determine if the resulting handle can be re-linearized using
+   * some key-switching matrices from the public key, use the method
    * pubKey.haveKeySWmatrix(handle,handle.secretKeyID), from the class
    * PubKey in keys.h
    */
@@ -274,7 +274,7 @@ class Ctxt
 
   const Context& context;      // points to the parameters of this FHE instance
   const PubKey& pubKey;        // points to the public encryption key;
-  std::vector<CtxtPart> parts; // the ciphertexe parts
+  std::vector<CtxtPart> parts; // the ciphertext parts
   IndexSet primeSet; // the primes relative to which the parts are defined
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
 
@@ -304,7 +304,7 @@ class Ctxt
     return *this;
   }
 
-  // Procedureal versions with additional parameter
+  // Procedural versions with additional parameter
   void subPart(const CtxtPart& part, bool matchPrimeSet = false)
   {
     subPart(part, part.skHandle, matchPrimeSet);
@@ -333,10 +333,10 @@ class Ctxt
   // internal procedure used in key-switching
   void keySwitchDigits(const KeySwitch& W, std::vector<DoubleCRT>& digits);
 
-  long getPartIndexByHandle(const SKHandle& hanle) const
+  long getPartIndexByHandle(const SKHandle& handle) const
   {
     for (size_t i = 0; i < parts.size(); i++)
-      if (parts[i].skHandle == hanle)
+      if (parts[i].skHandle == handle)
         return i;
     return -1;
   }
@@ -420,13 +420,13 @@ public:
   }
   void complexConj(); // Complex conjugate, same as automorph(m-1)
 
-  //! @brief automorphism with re-lienarization
+  //! @brief automorphism with re-linearization
   void smartAutomorph(long k);
-  // Apply F(X)->F(X^k) followed by re-liearization. The automorphism is
+  // Apply F(X)->F(X^k) followed by re-linearization. The automorphism is
   // possibly evaluated via a sequence of steps, to ensure that we can
   // re-linearize the result of every step.
 
-  //! @brief applies the automorphsim p^j using smartAutomorphism
+  //! @brief applies the automorphism p^j using smartAutomorphism
   void frobeniusAutomorph(long j);
 
   // Operators acting between ciphertexts and plaintext objects
@@ -483,7 +483,7 @@ public:
   Ctxt& operator*=(const NTL::ZZX& poly);
 
   /**
-   * @brief Times equals oeprator with a `long`.
+   * @brief Times equals operator with a `long`.
    * @param scalar Constant by which to multiply.
    * @return Reference to `*this` post multiplication.
    **/
@@ -512,7 +512,7 @@ public:
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
   void addConstantCKKS(double x)
-  { // FIXME: not enough percision when x is large
+  { // FIXME: not enough precision when x is large
     addConstantCKKS(
         rationalApprox(x, /*denomBound=*/1 << getContext().alMod.getR()));
   }
@@ -620,7 +620,7 @@ public:
   //! As a side-effect, the plaintext space is reduced from p^r to p^{r-1}.
   void divideByP();
 
-  //! Mulitply ciphretext by p^e, for plaintext space p^r. This also has
+  //! Multiply ciphertext by p^e, for plaintext space p^r. This also has
   //! the side-effect of increasing the plaintext space to p^{r+e}.
   void multByP(long e = 1)
   {
@@ -686,7 +686,7 @@ public:
   void bringToSet(const IndexSet& s);
 
   // Finding the "natural" state of a ciphertext
-  double naturalSize() const;       //! "natural size" is size before suqaring
+  double naturalSize() const;       //! "natural size" is size before squaring
   IndexSet naturalPrimeSet() const; //! the corresponding primeSet
 
   //! @brief drop all smallPrimes and specialPrimes, adding ctxtPrimes
@@ -717,7 +717,7 @@ public:
   //! the moduli-chain in the context, and does not even need to be a prime.
   //! The ciphertext *this is not affected, instead the result is returned in
   //! the zzParts std::vector, as a std::vector of ZZX'es.
-  //! Returns an extimate for the scaled noise (not including the
+  //! Returns an estimate for the scaled noise (not including the
   //! additive mod switching noise)
   double rawModSwitch(std::vector<NTL::ZZX>& zzParts, long toModulus) const;
 

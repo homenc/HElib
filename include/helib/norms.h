@@ -116,7 +116,7 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
                              const PAlgebra& palg);
 
 //! Requires p==-1 and m==2^k where k >=2.
-//! Computes the inverse of canonical embdding, scaled by scaling
+//! Computes the inverse of canonical embedding, scaled by scaling
 //! and then rounded to nearest integer.
 void CKKS_embedInSlots(zzX& f,
                        const std::vector<cx_double>& v,

@@ -27,7 +27,7 @@ namespace helib {
 void buildUnpackSlotEncoding(std::vector<zzX>& unpackSlotEncoding,
                              const EncryptedArray& ea);
 
-// Low-level unpack of one ciphertext using pre-copmuted constants
+// Low-level unpack of one ciphertext using pre-computed constants
 void unpack(const CtPtrs& unpacked,
             const Ctxt& packed,
             const EncryptedArray& ea,

@@ -1354,18 +1354,18 @@ TEST_P(TestPtxtCKKS, minusOperatorWithOtherPtxtWorks)
 TEST_P(TestPtxtCKKS, timesOperatorWithOtherPtxtWorks)
 {
   std::vector<std::complex<double>> multiplier_data(context.ea->size());
-  std::vector<std::complex<double>> multicand_data(context.ea->size());
+  std::vector<std::complex<double>> multiplicand_data(context.ea->size());
   std::vector<std::complex<double>> expected_product_data(context.ea->size());
   for (long i = 0; i < helib::lsize(multiplier_data); ++i) {
     multiplier_data[i] = {i / 10.0, -i * i / 3.0};
-    multicand_data[i] = {-i / 20.0, i * i * i * 42.6};
-    expected_product_data[i] = multiplier_data[i] * multicand_data[i];
+    multiplicand_data[i] = {-i / 20.0, i * i * i * 42.6};
+    expected_product_data[i] = multiplier_data[i] * multiplicand_data[i];
   }
   helib::Ptxt<helib::CKKS> multiplier(context, multiplier_data);
-  helib::Ptxt<helib::CKKS> multicand(context, multicand_data);
+  helib::Ptxt<helib::CKKS> multiplicand(context, multiplicand_data);
   helib::Ptxt<helib::CKKS> product;
 
-  product = multiplier * multicand;
+  product = multiplier * multiplicand;
 
   EXPECT_EQ(expected_product_data.size(), product.size());
   for (std::size_t i = 0; i < product.size(); ++i) {

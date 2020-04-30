@@ -21,7 +21,7 @@
  **/
 /*
  * This seems like a very useful template class for smart
- * pointers with "deep cloning" semantics and class heirarchies.
+ * pointers with "deep cloning" semantics and class hierarchies.
  *
  * To work, a class needs a "clone" method that creates a new copy.
  *
@@ -161,7 +161,7 @@ public:
 // declare the template class cloned_ptr<X>
 CLONED_PTR_DECLARE(cloned_ptr, deep_clone)
 
-// declare the template class coppied_ptr<X>
+// declare the template class copied_ptr<X>
 CLONED_PTR_DECLARE(copied_ptr, shallow_clone)
 
 // template <class X> using copied_ptr = cloned_ptr<X, noclone<X> >;

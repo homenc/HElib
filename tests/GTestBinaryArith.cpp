@@ -336,7 +336,7 @@ TEST_P(GTestBinaryArith, product)
   // encrypt them in binary representation. Then use multTwoNumbers to
   // multiply the two positive binary numbers and then check against the
   // plaintext calculation. Next, use multTwoNumbers with binary numbers in
-  // 2's complement to calculate the product where the multplier is negative
+  // 2's complement to calculate the product where the multiplier is negative
   // and then check against the plaintext calculation.
   //
   // In this case each ciphertext is considered to be the encryption of one
@@ -355,7 +355,7 @@ TEST_P(GTestBinaryArith, product)
   NTL::Vec<helib::Ctxt> encrypted_product, encrypted_multiplicand,
       encrypted_multiplier;
 
-  // Resizes the vector of ciphertexts (encrypted_bits) to match the input size.
+  // Resize the vector of ciphertexts (encrypted_bits) to match the input size.
   helib::resize(encrypted_multiplicand, bitSize, helib::Ctxt(secKey));
   for (long i = 0; i < bitSize; i++) {
     secKey.Encrypt(encrypted_multiplicand[i],
@@ -498,7 +498,7 @@ TEST_P(GTestBinaryArith, add)
   // Encrypt the individual bits.
   NTL::Vec<helib::Ctxt> encrypted_sum, encrypted_addend, encrypted_augend;
 
-  // Resizes the vector of ciphertexts (encrypted_bits) to match the input size.
+  // Resize the vector of ciphertexts (encrypted_bits) to match the input size.
   helib::resize(encrypted_addend, bitSize, helib::Ctxt(secKey));
   for (long i = 0; i < bitSize; i++) {
     secKey.Encrypt(encrypted_addend[i], NTL::ZZX((addend_data >> i) & 1));
@@ -506,7 +506,7 @@ TEST_P(GTestBinaryArith, add)
       encrypted_addend[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
-  // Resizes the vector of ciphertexts (encrypted_bits) to match the input size.
+  // Resize the vector of ciphertexts (encrypted_bits) to match the input size.
   helib::resize(encrypted_augend, bitSize2, helib::Ctxt(secKey));
   for (long i = 0; i < bitSize2; i++) {
     secKey.Encrypt(encrypted_augend[i], NTL::ZZX((augend_data >> i) & 1));
@@ -601,7 +601,7 @@ TEST_P(GTestBinaryArith, addManyNumbers)
   const auto encrypt_binary_number =
       [&](const long num) -> std::vector<helib::Ctxt> {
     std::vector<helib::Ctxt> encrypted_num;
-    // Resizes the vector of ciphertexts (encrypted_bits) to match the input
+    // Resize the vector of ciphertexts (encrypted_bits) to match the input
     // size.
     helib::resize(encrypted_num, bitSize, helib::Ctxt(secKey));
     for (long i = 0; i < bitSize; i++) {

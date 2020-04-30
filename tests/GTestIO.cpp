@@ -302,7 +302,7 @@ TEST_P(GTestIO, importantClassesRemainConsistentUnderIo)
       }
       // std::cerr << "   ea2.decode(poly1)==ptxts[i] okay\n";
 
-      // Read ciperhtext from file
+      // Read ciphertext from file
       helib::Ctxt ctxt(publicKey);
       helib::Ctxt ctxt2(publicKey2);
       keyFile >> ctxt;
