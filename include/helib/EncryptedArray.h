@@ -154,38 +154,18 @@ public:
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
+  // These methods are working for some of the derived classes (throwing
+  // otherwise)
+  virtual void encode(zzX& ptxt, const std::vector<long>& array) const = 0;
+  virtual void encode(NTL::ZZX& ptxt, const std::vector<long>& array) const = 0;
 
-  // FIXME: This needs to be refactored and made pure virtual.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-  // These methods are only defined for some of the derived classes
-  virtual void encode(zzX& ptxt, const std::vector<long>& array) const
-  {
-    throw LogicError("EncryptedArrayBase::encode for undefined type");
-  }
-  virtual void encode(NTL::ZZX& ptxt, const std::vector<long>& array) const
-  {
-    throw LogicError("EncryptedArrayBase::encode for undefined type");
-  }
+  virtual void encode(zzX& ptxt, const std::vector<zzX>& array) const = 0;
+  virtual void encode(zzX& ptxt, const PlaintextArray& array) const = 0;
 
-  virtual void encode(zzX& ptxt, const std::vector<zzX>& array) const
-  {
-    throw LogicError("EncryptedArrayBase::encode for undefined type");
-  }
-  virtual void encode(zzX& ptxt, const PlaintextArray& array) const
-  {
-    throw LogicError("EncryptedArrayBase::encode for undefined type");
-  }
+  virtual void encode(NTL::ZZX& ptxt,
+                      const std::vector<NTL::ZZX>& array) const = 0;
+  virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const = 0;
 
-  virtual void encode(NTL::ZZX& ptxt, const std::vector<NTL::ZZX>& array) const
-  {
-    throw LogicError("EncryptedArrayBase::encode for undefined type");
-  }
-  virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const
-  {
-    throw LogicError("EncryptedArrayBase::encode for undefined type");
-  }
-#pragma GCC diagnostic pop
   void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const
   {
     NTL::ZZX tmp;
@@ -193,35 +173,18 @@ public:
     convert(ptxt, tmp);
   }
 
-  // FIXME: This needs to be refactored and made pure virtual.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-  // These methods are only defined for some of the derived classes
-  virtual void decode(std::vector<long>& array, const NTL::ZZX& ptxt) const
-  {
-    throw LogicError("EncryptedArrayBase::decode for undefined type");
-  }
-  virtual void decode(std::vector<NTL::ZZX>& array, const NTL::ZZX& ptxt) const
-  {
-    throw LogicError("EncryptedArrayBase::decode for undefined type");
-  }
-  virtual void decode(PlaintextArray& array, const NTL::ZZX& ptxt) const
-  {
-    throw LogicError("EncryptedArrayBase::decode for undefined type");
-  }
-#pragma GCC diagnostic pop
+  // These methods are working for some of the derived classes (throwing
+  // otherwise)
+  virtual void decode(std::vector<long>& array, const NTL::ZZX& ptxt) const = 0;
+  virtual void decode(std::vector<NTL::ZZX>& array,
+                      const NTL::ZZX& ptxt) const = 0;
+  virtual void decode(PlaintextArray& array, const NTL::ZZX& ptxt) const = 0;
 
   virtual void random(std::vector<long>& array) const = 0; // must be defined
 
-  // FIXME: This needs to be refactored and made pure virtual.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-  // These methods are only defined for some of the derived classes
-  virtual void random(std::vector<NTL::ZZX>& array) const
-  {
-    throw LogicError("EncryptedArrayBase::decode for undefined type");
-  }
-#pragma GCC diagnostic pop
+  // These methods are working for some of the derived classes (throwing
+  // otherwise)
+  virtual void random(std::vector<NTL::ZZX>& array) const = 0;
 
   // FIXME: Inefficient implementation, calls usual decode and returns one slot
   long decode1Slot(const NTL::ZZX& ptxt, long i) const
@@ -258,40 +221,23 @@ public:
     // FIXME: the "false" param forces the PK version
   }
 
-  // FIXME: This needs to be refactored and made pure virtual.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+  // These methods are working for some of the derived calsses (throwing
+  // otherwise)
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       std::vector<long>& ptxt) const
-  {
-    throw LogicError("EncryptedArrayBase::decrypt for undefined type");
-  }
+                       std::vector<long>& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       std::vector<NTL::ZZX>& ptxt) const
-  {
-    throw LogicError("EncryptedArrayBase::decrypt for undefined type");
-  }
+                       std::vector<NTL::ZZX>& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       PlaintextArray& ptxt) const
-  {
-    throw LogicError("EncryptedArrayBase::decrypt for undefined type");
-  }
+                       PlaintextArray& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       std::vector<double>& ptxt) const
-  {
-    throw LogicError("EncryptedArrayBase::decrypt for undefined type");
-  }
+                       std::vector<double>& ptxt) const = 0;
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
-                       std::vector<cx_double>& ptxt) const
-  {
-    throw LogicError("EncryptedArrayBase::decrypt for undefined type");
-  }
-#pragma GCC diagnostic pop
+                       std::vector<cx_double>& ptxt) const = 0;
 
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const SecKey& sKey, long i) const
@@ -319,13 +265,10 @@ public:
   //! \f[
   //!  M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
   //! \f]
-  // FIXME: This needs to be refactored and made pure virtual.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+  // These methods are working for some of the derived calsses (throwing
+  // otherwise)
   virtual void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
-                                  const std::vector<NTL::ZZX>& L) const
-  {}
-#pragma GCC diagnostic pop
+                                  const std::vector<NTL::ZZX>& L) const = 0;
 
   // restore contexts mod p and mod G
   virtual void restoreContext() const {}
@@ -514,6 +457,37 @@ public:
     EncryptedArrayBase::rotate1D(out, in, i, offset);
   }
   virtual void shift1D(Ctxt& ctxt, long i, long k) const override;
+
+  /* Begin CKKS functions. They will simply throw here. */
+  /**
+   * @brief Unimplemented decrypt function for CKKS. It will always
+   * throw helib::LogicError
+   * @param ctxt Unused.
+   * @param sKey Unused.
+   * @param ptxt Unused.
+   */
+  void decrypt(UNUSED const Ctxt& ctxt,
+               UNUSED const SecKey& sKey,
+               UNUSED std::vector<double>& ptxt) const override
+  {
+    throw LogicError("Unimplemented: "
+                     "EncryptedArrayDerived::decrypt for CKKS type");
+  }
+  /**
+   * @brief Unimplemented decrypt function for CKKS. It will always
+   * throw helib::LogicError
+   * @param ctxt Unused.
+   * @param sKey Unused.
+   * @param ptxt Unused.
+   */
+  void decrypt(UNUSED const Ctxt& ctxt,
+               UNUSED const SecKey& sKey,
+               UNUSED std::vector<cx_double>& ptxt) const override
+  {
+    throw LogicError("Unimplemented: "
+                     "EncryptedArrayDerived::decrypt for CKKS type");
+  }
+  /* End CKKS functions. */
 
   virtual void encode(NTL::ZZX& ptxt,
                       const std::vector<long>& array) const override
@@ -781,6 +755,177 @@ public:
   void shift1D(Ctxt& ctxt, long i, long k) const override;
 
   long getP2R() const override { return alMod.getPPowR(); }
+
+  /* Begin BGV functions. They will simply throw here. */
+  // encode
+  /**
+   * @brief Unimplemented encode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ptxt Unused.
+   * @param array Unused.
+   */
+  void encode(UNUSED zzX& ptxt,
+              UNUSED const std::vector<long>& array) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
+  }
+  /**
+   * @brief Unimplemented encode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ptxt Unused.
+   * @param array Unused.
+   */
+  void encode(UNUSED NTL::ZZX& ptxt,
+              UNUSED const std::vector<long>& array) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
+  }
+  /**
+   * @brief Unimplemented encode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ptxt Unused.
+   * @param array Unused.
+   */
+  void encode(UNUSED zzX& ptxt,
+              UNUSED const std::vector<zzX>& array) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
+  }
+  /**
+   * @brief Unimplemented encode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ptxt Unused.
+   * @param array Unused.
+   */
+  void encode(UNUSED zzX& ptxt,
+              UNUSED const PlaintextArray& array) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
+  }
+  /**
+   * @brief Unimplemented encode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ptxt Unused.
+   * @param array Unused.
+   */
+  void encode(UNUSED NTL::ZZX& ptxt,
+              UNUSED const std::vector<NTL::ZZX>& array) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
+  }
+  /**
+   * @brief Unimplemented encode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ptxt Unused.
+   * @param array Unused.
+   */
+  void encode(UNUSED NTL::ZZX& ptxt,
+              UNUSED const PlaintextArray& array) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
+  }
+
+  // decode
+  /**
+   * @brief Unimplemented decode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param array Unused.
+   * @param ptxt Unused.
+   */
+  void decode(UNUSED std::vector<long>& array,
+              UNUSED const NTL::ZZX& ptxt) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::decode for BGV type");
+  }
+  /**
+   * @brief Unimplemented decode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param array Unused.
+   * @param ptxt Unused.
+   */
+  void decode(UNUSED std::vector<NTL::ZZX>& array,
+              UNUSED const NTL::ZZX& ptxt) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::decode for BGV type");
+  }
+  /**
+   * @brief Unimplemented decode function for BGV. It will always throw
+   * helib::LogicError.
+   * @param array Unused.
+   * @param ptxt Unused.
+   */
+  void decode(UNUSED PlaintextArray& array,
+              UNUSED const NTL::ZZX& ptxt) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::decode for BGV type");
+  }
+
+  // random
+  /**
+   * @brief Unimplemented random function for BGV. It will always throw
+   * helib::LogicError.
+   * @param array Unused.
+   */
+  void random(UNUSED std::vector<NTL::ZZX>& array) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::decode for BGV type");
+  }
+
+  // decrypt
+  /**
+   * @brief Unimplemented decrypt function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ctxt Unused.
+   * @param sKey Unused.
+   * @param ptxt Unused.
+   */
+  void decrypt(UNUSED const Ctxt& ctxt,
+               UNUSED const SecKey& sKey,
+               UNUSED std::vector<long>& ptxt) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::decrypt for BGV type");
+  }
+  /**
+   * @brief Unimplemented decrypt function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ctxt Unused.
+   * @param sKey Unused.
+   * @param ptxt Unused.
+   */
+  void decrypt(UNUSED const Ctxt& ctxt,
+               UNUSED const SecKey& sKey,
+               UNUSED std::vector<NTL::ZZX>& ptxt) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::decrypt for BGV type");
+  }
+  /**
+   * @brief Unimplemented decrypt function for BGV. It will always throw
+   * helib::LogicError.
+   * @param ctxt Unused.
+   * @param sKey Unused.
+   * @param ptxt Unused.
+   */
+  void decrypt(UNUSED const Ctxt& ctxt,
+               UNUSED const SecKey& sKey,
+               UNUSED PlaintextArray& ptxt) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::decrypt for BGV type");
+  }
+
+  // buildLinPolyCoeffs
+  /**
+   * @brief Unimplemented buildLinPolyCoeffs function for BGV. It will always
+   * throw helib::LogicError.
+   * @param C Unused.
+   * @param L Unused.
+   */
+  void buildLinPolyCoeffs(UNUSED std::vector<NTL::ZZX>& C,
+                          UNUSED const std::vector<NTL::ZZX>& L) const override
+  {
+    throw LogicError("Unimplemented: "
+                     "EncryptedArrayCx::buildLinPolyCoeffs for BGV type");
+  }
+  /* End BGV functions. */
 
   // These EaCx-specific encoding routines return the
   // scaling factor that was used in the encoding routine
