@@ -47,7 +47,6 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
                  bool normal_basis) :
     ea(_ea), invert(_invert)
 {
-  const Context& context = ea.getContext();
   const PAlgebra& zMStar = ea.getPAlgebra();
 
   long p = zMStar.getP();
@@ -524,7 +523,6 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
                          bool build_cache) :
     ea(_ea), invert(_invert)
 {
-  const Context& context = ea.getContext();
   const PAlgebra& zMStar = ea.getPAlgebra();
 
   long p = zMStar.getP();

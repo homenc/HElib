@@ -99,7 +99,7 @@ static void newMakeDivisible(NTL::ZZX& poly,
 
   for (long i : range(pwrfl.length())) {
     NTL::ZZ& z = pwrfl[i];
-    long u, v;
+    long v;
 
     // What to add to z to make it divisible by p2e?
     long zMod = rem(z, p2e); // zMod is in [0,p2e-1]
@@ -307,7 +307,6 @@ void RecryptData::init(const Context& context,
   }
 
   skHwt = setAE(e, ePrime, context, t);
-  long p = context.zMStar.getP();
   long r = context.alMod.getR();
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
@@ -1211,8 +1210,6 @@ static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
   long ePrime = rcData.ePrime;
   long p2ePrime = NTL::power_long(p, ePrime);
   long phim = context.zMStar.getPhiM();
-  long k = context.zMStar.getNFactors();
-  long skHwt = rcData.skHwt;
 
   double fudge = compute_fudge(p2ePrime, p2e);
 

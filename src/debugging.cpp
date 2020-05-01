@@ -150,8 +150,6 @@ void rawDecrypt(NTL::ZZX& plaintxt,
                 const DoubleCRT& sKey,
                 long q)
 {
-  const Context& context = sKey.getContext();
-
   // Set to zzParts[0] + sKey * zzParts[1] "over the integers"
   DoubleCRT ptxt = sKey;
   ptxt *= zzParts[1];

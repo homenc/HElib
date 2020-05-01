@@ -37,7 +37,14 @@ typedef std::complex<double> cx_double;
 
 // these are used to implement PlaintextArray stuff routines
 
+// NOTE: _Pragmas have been added to silence the unused variables warnings due
+// to unused injected variables. It was required to use the _Pragma instead of
+// #pragmas as #pragmas requires new line after them and so cannot be used in
+// macros. Also the semicolon after _Pragma is not required, but improves the
+// formatting.
 #define PA_BOILER                                                              \
+  _Pragma("GCC diagnostic push");                                              \
+  _Pragma("GCC diagnostic ignored \"-Wunused-variable\"");                     \
   const PAlgebraModDerived<type>& tab = ea.getTab();                           \
   const RX& G = ea.getG();                                                     \
   long n = ea.size();                                                          \
@@ -45,9 +52,17 @@ typedef std::complex<double> cx_double;
   std::vector<RX>& data = pa.getData<type>();                                  \
   RBak bak;                                                                    \
   bak.save();                                                                  \
-  tab.restoreContext();
+  tab.restoreContext();                                                        \
+  _Pragma("GCC diagnostic pop");
 
+// NOTE: _Pragmas have been added to silence the unused variables warnings due
+// to unused injected variables. It was required to use the _Pragma instead of
+// #pragmas as #pragmas requires new line after them and so cannot be used in
+// macros. Also the semicolon after _Pragma is not required, but improves the
+// formatting.
 #define CPA_BOILER                                                             \
+  _Pragma("GCC diagnostic push");                                              \
+  _Pragma("GCC diagnostic ignored \"-Wunused-variable\"");                     \
   const PAlgebraModDerived<type>& tab = ea.getTab();                           \
   const RX& G = ea.getG();                                                     \
   long n = ea.size();                                                          \
@@ -55,7 +70,8 @@ typedef std::complex<double> cx_double;
   const std::vector<RX>& data = pa.getData<type>();                            \
   RBak bak;                                                                    \
   bak.save();                                                                  \
-  tab.restoreContext();
+  tab.restoreContext();                                                        \
+  _Pragma("GCC diagnostic pop");
 
 class PlaintextArray; // forward reference
 class EncryptedArray; // forward reference

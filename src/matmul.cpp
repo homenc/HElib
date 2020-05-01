@@ -2586,7 +2586,6 @@ struct mul_MatMulFull_impl
   {
     const MatMulFull_derived<type>& mat =
         dynamic_cast<const MatMulFull_derived<type>&>(mat_basetype);
-    const PAlgebra& zMStar = ea.getPAlgebra();
     long n = ea.size();
     const RX& G = ea.getG();
     std::vector<RX>& data = pa.getData<type>();
@@ -2631,7 +2630,6 @@ struct mul_BlockMatMulFull_impl
   {
     const BlockMatMulFull_derived<type>& mat =
         dynamic_cast<const BlockMatMulFull_derived<type>&>(mat_basetype);
-    const PAlgebra& zMStar = ea.getPAlgebra();
     long n = ea.size();
     long d = ea.getDegree();
     std::vector<RX>& data = pa.getData<type>();
@@ -2700,7 +2698,7 @@ void traceMap(Ctxt& ctxt)
       // simple iterative procedure
 
       Ctxt acc(ctxt);
-      for (long i : range(1, d)) {
+      for (long i = 1; i < d; ++i) {
         acc.frobeniusAutomorph(1);
         acc += ctxt;
       }
@@ -2715,13 +2713,13 @@ void traceMap(Ctxt& ctxt)
 
         // compute baby_sum = sum_{i=0}^{g-1} \sigma^i(ctxt)
         Ctxt baby_sum(ctxt);
-        for (long i : range(1, g)) {
+        for (long i = 1; i < g; ++i) {
           baby_sum.frobeniusAutomorph(1);
           baby_sum += ctxt;
         }
 
         Ctxt acc(baby_sum);
-        for (long i : range(1, q)) {
+        for (long i = 1; i < q; ++i) {
           acc.frobeniusAutomorph(g);
           acc += baby_sum;
         }
@@ -2742,7 +2740,7 @@ void traceMap(Ctxt& ctxt)
         }
 
         Ctxt acc(rem_sum);
-        for (long i : range(q)) {
+        for (long i = 0; i < q; ++i) {
           acc.frobeniusAutomorph(g);
           acc += baby_sum;
         }

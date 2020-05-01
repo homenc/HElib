@@ -344,7 +344,6 @@ double sampleSmall(zzX& poly, const Context& context)
 double sampleSmallBounded(zzX& poly, const Context& context)
 {
   const PAlgebra& palg = context.zMStar;
-  long m = palg.getM();
   long phim = palg.getPhiM();
 
   double bound = sqrt(phim * log(phim) / 2.0);

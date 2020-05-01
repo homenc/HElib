@@ -38,7 +38,6 @@ public:
     RBak bak;
     bak.save();
     ea.getAlMod().restoreContext();
-    long n = ea.size();
     long d = ea.getDegree();
     long D = ea.sizeOfDimension(dim);
 
@@ -154,7 +153,6 @@ public:
     RBak bak;
     bak.save();
     _ea.getAlMod().restoreContext();
-    long n = _ea.size();
     long d = _ea.getDegree();
     long D = _ea.sizeOfDimension(dim);
 
@@ -270,7 +268,6 @@ public:
   {
     long n = ea.size();
     long d = ea.getDegree();
-    long bnd = 2 * n; // non-zero with probability 1/bnd
 
     RBak bak;
     bak.save();
@@ -278,14 +275,8 @@ public:
     data.resize(n);
     for (long i : range(n)) {
       data[i].resize(n);
-      for (long j : range(n)) {
-        // bool zEntry = (RandomBnd(bnd) > 0);
-        bool zEntry = false;
-        if (zEntry)
-          clear(data[i][j]);
-        else
-          random(data[i][j], d);
-      }
+      for (long j : range(n))
+        random(data[i][j], d);
     }
   }
 
@@ -318,7 +309,6 @@ public:
   {
     long n = ea.size();
     long d = ea.getDegree();
-    long bnd = 2 * n; // non-zero with probability 1/bnd
 
     RBak bak;
     bak.save();
@@ -327,17 +317,10 @@ public:
     for (long i : range(n)) {
       data[i].resize(n);
       for (long j : range(n)) {
-        // bool zEntry = (RandomBnd(bnd) > 0);
-        bool zEntry = false;
-
         data[i][j].SetDims(d, d);
-        if (zEntry)
-          clear(data[i][j]);
-        else {
-          for (long u = 0; u < d; u++)
-            for (long v = 0; v < d; v++)
-              random(data[i][j][u][v]);
-        }
+        for (long u = 0; u < d; u++)
+          for (long v = 0; v < d; v++)
+            random(data[i][j][u][v]);
       }
     }
   }

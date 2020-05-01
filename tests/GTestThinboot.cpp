@@ -524,7 +524,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
       helib::CheckCtxt(c2, "after recryption");
 
     for (auto& x : val0) {
-      for (long i : helib::range(sqr_count))
+      for (long i = 0; i < sqr_count; ++i)
         x = x * x;
     }
 

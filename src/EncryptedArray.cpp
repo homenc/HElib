@@ -112,7 +112,6 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt,
   bak.save();
   tab.restoreContext();
 
-  const std::vector<std::vector<RX>>& maskTable = tab.getMaskTable();
   const PAlgebra& zMStar = getPAlgebra();
   long ord = sizeOfDimension(i);
   amt %= ord; // DIRT: assumes division w/ remainder follows C++11

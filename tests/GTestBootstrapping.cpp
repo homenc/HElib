@@ -39,7 +39,6 @@ extern helib::SecKey* dbgKey;
 
 namespace {
 
-static bool debug = 0; // a debug flag
 static int scale = 0;
 
 struct Parameters
@@ -223,7 +222,6 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
   std::vector<long> gens;
   std::vector<long> ords;
 
-  long phim = mValues[idx][1];
   long m = mValues[idx][2];
   ASSERT_TRUE(NTL::GCD(p, m) == 1);
 

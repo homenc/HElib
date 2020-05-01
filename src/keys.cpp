@@ -1132,7 +1132,6 @@ long SecKey::skEncrypt(Ctxt& ctxt,
            &ctxt.pubKey,
            "Key does not match context's public key");
 
-  long m = getContext().zMStar.getM();
   double ptxtSize = 1.0;
   if (isCKKS()) {
     if (ptxtSpace > 0)

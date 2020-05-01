@@ -770,7 +770,6 @@ void DoubleCRT::toPoly(NTL::ZZX& poly, const IndexSet& s, bool positive) const
 
   // For readability, call them by names without the tls_
   NTL::Vec<long>& ivec = tls_ivec; // the indexes of the active primes
-  NTL::Vec<long>& pvec = tls_pvec;
   // remtab[*][i] = coeffs of tmpvec[i]
   NTL::Vec<NTL::Vec<long>>& remtab = tls_remtab;
   // tmpvec[i] = current poly in i'th thread

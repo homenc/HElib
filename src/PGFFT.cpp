@@ -10,6 +10,8 @@ See below for more details.
 
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 
 #define PGFFT_USE_TRUNCATED_BLUE (1)
 // set to 0 to disable the truncated Bluestein
@@ -1630,3 +1632,4 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ****************************************************************************/
 
+#pragma GCC diagnostic pop

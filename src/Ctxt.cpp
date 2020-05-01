@@ -520,7 +520,6 @@ void Ctxt::dropSmallAndSpecialPrimes()
 
     // The target set contains only the ctxtPrimes, and its size
     IndexSet target = primeSet & context.ctxtPrimes;
-    double log_target = context.logOfProduct(target);
 
     // Compute the set of dropped primes and its total size
     IndexSet dropping = primeSet / target;
@@ -1250,8 +1249,6 @@ void computeIntervalForMul(double& lo,
 {
   const double slack = 4 * log(2.0);
   // FIXME: 4 bits of slack...could be something more dynamic
-
-  const Context& context = ctxt1.getContext();
 
   double cap1 = ctxt1.capacity();
   double cap2 = ctxt2.capacity();

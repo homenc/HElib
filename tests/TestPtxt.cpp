@@ -1046,7 +1046,6 @@ TEST_P(TestPtxtCKKS, imagExtractsImaginaryPart)
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithKeys)
 {
   helib::buildModChain(context, 100, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1071,7 +1070,6 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithKeys)
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithKeys)
 {
   helib::buildModChain(context, 100, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1097,7 +1095,6 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithKeys)
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithEa)
 {
   helib::buildModChain(context, 100, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1148,7 +1145,6 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithEa)
 TEST_P(TestPtxtCKKS, plusEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1180,7 +1176,6 @@ TEST_P(TestPtxtCKKS, plusEqualsWithCiphertextWorks)
 TEST_P(TestPtxtCKKS, addConstantCKKSWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1212,7 +1207,6 @@ TEST_P(TestPtxtCKKS, addConstantCKKSWithCiphertextWorks)
 TEST_P(TestPtxtCKKS, minusEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1244,7 +1238,6 @@ TEST_P(TestPtxtCKKS, minusEqualsWithCiphertextWorks)
 TEST_P(TestPtxtCKKS, multByConstantCKKSFromCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1277,7 +1270,6 @@ TEST_P(TestPtxtCKKS, multByConstantCKKSFromCiphertextWorks)
 TEST_P(TestPtxtCKKS, timesEqualsFromCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -2261,9 +2253,6 @@ TEST(TestPtxtBGV, rotate1DRotatesCorrectly)
   const helib::Context context(45, 19, 1);
   std::vector<long> data(context.ea->size());
   std::vector<long> left_rotated_data(context.ea->size());
-  const auto non_neg_mod = [](int x, int mod) {
-    return ((x % mod) + mod) % mod;
-  };
   const auto rotate_first_dim = [](long amount, std::vector<long>& data) {
     amount = helib::mcMod(amount, 12);
     std::vector<long> new_data(data);

@@ -322,7 +322,6 @@ TEST_P(GTestTableLookup, lookupFunctionsCorrectly)
 
 TEST_P(GTestTableLookup, writeinFunctionsCorrectly)
 {
-  const helib::EncryptedArray& ea = *(secretKey.getContext().ea);
   long tSize = 1L << bitSize; // table size
 
   // encrypt a random table
