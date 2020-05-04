@@ -365,7 +365,7 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
     helib::printAllTimers();
     std::cout << std::endl;
   }
-};
+}
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(variousParameters, GTestGeneral, ::testing::Values(

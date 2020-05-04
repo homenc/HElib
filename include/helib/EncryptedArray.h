@@ -37,41 +37,39 @@ typedef std::complex<double> cx_double;
 
 // these are used to implement PlaintextArray stuff routines
 
-// NOTE: _Pragmas have been added to silence the unused variables warnings due
-// to unused injected variables. It was required to use the _Pragma instead of
-// #pragmas as #pragmas requires new line after them and so cannot be used in
-// macros. Also the semicolon after _Pragma is not required, but improves the
-// formatting.
+// NOTE: Variables have been marked as UNUSED to silence the unused variable
+// warnings due to unused injected variables. It has not been possible to mark
+// the whole section with:
+// _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") because GCC 5.4 does
+// not honor such _Pragma.
+// NOTE: Consider marking the section with _Pragma removing the UNUSED tag when
+// GCC 5.4 won't be supported anymore.
 #define PA_BOILER                                                              \
-  _Pragma("GCC diagnostic push");                                              \
-  _Pragma("GCC diagnostic ignored \"-Wunused-variable\"");                     \
   const PAlgebraModDerived<type>& tab = ea.getTab();                           \
-  const RX& G = ea.getG();                                                     \
-  long n = ea.size();                                                          \
-  long d = ea.getDegree();                                                     \
+  UNUSED const RX& G = ea.getG();                                              \
+  UNUSED long n = ea.size();                                                   \
+  UNUSED long d = ea.getDegree();                                              \
   std::vector<RX>& data = pa.getData<type>();                                  \
   RBak bak;                                                                    \
   bak.save();                                                                  \
-  tab.restoreContext();                                                        \
-  _Pragma("GCC diagnostic pop");
+  tab.restoreContext();
 
-// NOTE: _Pragmas have been added to silence the unused variables warnings due
-// to unused injected variables. It was required to use the _Pragma instead of
-// #pragmas as #pragmas requires new line after them and so cannot be used in
-// macros. Also the semicolon after _Pragma is not required, but improves the
-// formatting.
+// NOTE: Variables have been marked as UNUSED to silence the unused variable
+// warnings due to unused injected variables. It has not been possible to mark
+// the whole section with:
+// _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") because GCC 5.4 does
+// not honor such _Pragma.
+// NOTE: Consider marking the section with _Pragma removing the UNUSED tag when
+// GCC 5.4 won't be supported anymore.
 #define CPA_BOILER                                                             \
-  _Pragma("GCC diagnostic push");                                              \
-  _Pragma("GCC diagnostic ignored \"-Wunused-variable\"");                     \
   const PAlgebraModDerived<type>& tab = ea.getTab();                           \
-  const RX& G = ea.getG();                                                     \
-  long n = ea.size();                                                          \
-  long d = ea.getDegree();                                                     \
+  UNUSED const RX& G = ea.getG();                                              \
+  UNUSED long n = ea.size();                                                   \
+  UNUSED long d = ea.getDegree();                                              \
   const std::vector<RX>& data = pa.getData<type>();                            \
   RBak bak;                                                                    \
   bak.save();                                                                  \
-  tab.restoreContext();                                                        \
-  _Pragma("GCC diagnostic pop");
+  tab.restoreContext();
 
 class PlaintextArray; // forward reference
 class EncryptedArray; // forward reference

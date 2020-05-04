@@ -326,7 +326,7 @@ TEST_P(GTestThinEvalMap, thinEvalMapIsCorrect)
 #endif
 
   FHE_NTIMER_STOP(ALL);
-};
+}
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(variousParameters, GTestThinEvalMap, ::testing::Values(

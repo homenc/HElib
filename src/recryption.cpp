@@ -201,10 +201,8 @@ long RecryptData::setAE(long& e,
                         const Context& context,
                         long targetWeight)
 {
-  bool default_target = false;
   if (targetWeight <= 0) {
     targetWeight = RecryptData::defSkHwt;
-    default_target = true;
   }
 
   double coeff_bound = context.boundForRecryption(targetWeight);

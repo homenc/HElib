@@ -36,6 +36,6 @@ std::vector<std::pair<long, long>> getGoodDimensionParams(
     long max_p,
     long m_sparseness = 1,
     long p_sparseness = 1);
-}; // namespace helib_test
+} // namespace helib_test
 
 #endif /* ifndef TEST_COMMON_H */

@@ -254,7 +254,7 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
   return flowVal;
 }
 
- /* The function augmenting_path performs a BFS on the network
+/* The function augmenting_path performs a BFS on the network
  * to find a shortest augmenting path
  */
 static long augmenting_path(std::vector<long>& path,

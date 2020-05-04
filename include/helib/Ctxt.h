@@ -358,6 +358,9 @@ public:
   //__attribute__((deprecated))
   explicit Ctxt(const PubKey& newPubKey, long newPtxtSpace = 0); // constructor
 
+  // Default copy-constructor
+  Ctxt(const Ctxt& other) = default;
+
   Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt);
   // constructs a zero ciphertext with same public key and
   // plaintext space as ctxt

@@ -305,16 +305,14 @@ if (ENABLE_LEGACY_TEST)
     foreach(TEST_FILE ${LEGACY_TEST_SRCS})
       string(REPLACE "\.cpp" "" TEST_NAME "${TEST_FILE}")
       add_executable(${TEST_NAME} ${TEST_FILE})
-      target_compile_options(${TEST_NAME}
-                               PRIVATE
-                                 ${PRIVATE_HELIB_CXX_FLAGS}
-                              )
+      # NOTE: Legacy tests depend only on HElib.
+      # HElib's PUBLIC attributes will be added automatically when setting HElib as a dependency.
       target_link_libraries(${TEST_NAME} helib)
     endforeach(TEST_FILE)
 endif(ENABLE_LEGACY_TEST)
 
 if (ENABLE_TEST)
-  add_subdirectory("${PROJECT_TESTS_DIR}" 
+  add_subdirectory("${PROJECT_TESTS_DIR}"
                    tests)
 endif(ENABLE_TEST)
 

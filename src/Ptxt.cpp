@@ -725,7 +725,7 @@ Ptxt<CKKS>& Ptxt<CKKS>::complexConj()
   for (auto& x : this->slots)
     x = std::conj(x);
   return *this;
-};
+}
 
 template <>
 template <>

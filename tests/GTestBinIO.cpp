@@ -95,7 +95,7 @@ void cleanupFiles(const char* file, Files... files)
     }
   }
   return ::testing::AssertionSuccess(); // Files are the same!
-};
+}
 
 struct Parameters
 {

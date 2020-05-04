@@ -12,9 +12,9 @@ There are two different ways to build and install HElib. The first one will auto
 - cmake >= 3.5.1
 - GNU make >= 3.82
 - g++ >= 5.4.0 (for Linux environments)
-- mac OS Apple clang >= 11.0.0  (macOS environments)
+- mac OS Apple clang >= 11.0.0 (macOS environments)
 - pthreads
-- git >= 1.8.3       (required to build and run the HElib test suite)
+- git >= 1.8.3 (required to build and run the HElib test suite)
 
 
 ## Option 1: package build (recommended for most users)
@@ -168,7 +168,7 @@ You can install NTL as follows:
 3. NTL is configured, built and installed in the standard Unix way (but
 remember to specify the following flags to `configure`):
 ```
-      ./configure NTL_GMP_LIP=ON SHARED=on
+      ./configure NTL_GMP_LIP=ON SHARED=on  NTL_THREADS=on NTL_THREAD_BOOST=on
       make
       sudo make install
 ```
@@ -195,8 +195,8 @@ RelWithDebInfo, Release, MinSizeRel.
   release (googletest v1.10.0)
 - `ENABLE_THREADS=ON/OFF` (default is ON): Enable threading support. This must
   be on if and only if NTL was built with `NTL_THREADS=ON`.
-- `PEDANTIC_BUILD=ON/OFF` (default is OFF): Use `-Wall -Wpedantic -Wextra -Werror`
-  during build. HElib currently will not build with these flags.
+- `PEDANTIC_BUILD=ON/OFF` (default is ON): Use `-Wall -Wpedantic -Wextra -Werror`
+  during build.
 
 ### Parameters specific to option 1 (package build)
 - `PACKAGE_DIR`: Location that a package build will be installed to.  Defaults

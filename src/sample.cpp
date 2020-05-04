@@ -112,7 +112,7 @@ void sampleSmall(NTL::ZZX& poly, long n, double prob)
 void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
 {
   static double const Pi = 4.0 * atan(1.0); // Pi=3.1415..
-  static double const bignum = LONG_MAX;    // convert to double
+  static double const bignum = static_cast<double>(LONG_MAX);
   // THREADS: C++11 guarantees these are initialized only once
 
   if (n <= 0)

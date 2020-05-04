@@ -328,7 +328,7 @@ TEST_P(GTestBinaryArith, fifteenForFour)
     std::cout << "15to4 succeeded, sum" << inputBits << "=" << sum2
               << std::endl;
   }
-};
+}
 
 TEST_P(GTestBinaryArith, product)
 {
@@ -475,7 +475,7 @@ TEST_P(GTestBinaryArith, product)
                   0);
   std::cout << std::endl;
 #endif
-};
+}
 
 TEST_P(GTestBinaryArith, add)
 {
@@ -571,7 +571,7 @@ TEST_P(GTestBinaryArith, add)
   decryptAndPrint((std::cout << " after addition: "), *minCtxt, secKey, ea, 0);
   std::cout << std::endl;
 #endif
-};
+}
 
 TEST_P(GTestBinaryArith, addManyNumbers)
 {

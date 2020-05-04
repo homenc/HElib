@@ -432,7 +432,7 @@ void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
   }
 
   FFT_aux(y, tmp);
-};
+}
 
 void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
 {
@@ -448,7 +448,7 @@ void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
   }
 
   FFT_aux(y, tmp);
-};
+}
 
 void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 {

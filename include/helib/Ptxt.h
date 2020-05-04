@@ -818,6 +818,6 @@ private:
   template <typename type>
   NTL::ZZX automorph_internal(long k);
 };
-}; // namespace helib
+} // namespace helib
 
 #endif // HELIB_PTXT_H

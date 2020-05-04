@@ -389,7 +389,7 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
   if (!helib_test::noPrint)
     std::cout << "  rusage.ru_maxrss=" << rusage.ru_maxrss << std::endl;
 #endif
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(nonConservativeRepresentativeParameters,
                          GTestBootstrapping,

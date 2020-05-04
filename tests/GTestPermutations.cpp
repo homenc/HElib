@@ -297,10 +297,13 @@ TEST_P(GTestPermutations, ciphertextPermutations)
     switch (nGens) {
     case 4:
       vec[3] = helib::GenDescriptor(ord4, good4, /*genIdx=*/3);
+      // FALLTHROUGH
     case 3:
       vec[2] = helib::GenDescriptor(ord3, good3, /*genIdx=*/2);
+      // FALLTHROUGH
     case 2:
       vec[1] = helib::GenDescriptor(ord2, good2, /*genIdx=*/1);
+      // FALLTHROUGH
     default:
       vec[0] = helib::GenDescriptor(ord1, good1, /*genIdx=*/0);
     }
@@ -321,7 +324,7 @@ TEST_P(GTestPermutations, ciphertextPermutations)
     }
     ASSERT_NO_FATAL_FAILURE(testCtxt(m, p, depth, L, r));
   }
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(
     defaultParameters,

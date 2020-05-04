@@ -326,7 +326,7 @@ TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
     helib::printAllTimers();
     std::cout << std::endl;
   }
-};
+}
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(someParameters, GTestEvalMap, ::testing::Values(

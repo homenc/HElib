@@ -798,7 +798,7 @@ std::vector<T> atovector(const char* a)
 inline void TofftRep_trunc(NTL::fftRep& y,
                            const NTL::zz_pX& x,
                            long k,
-                           long len,
+                           UNUSED long len,
                            long lo,
                            long hi)
 {

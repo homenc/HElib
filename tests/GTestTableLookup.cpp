@@ -318,7 +318,7 @@ TEST_P(GTestTableLookup, lookupFunctionsCorrectly)
     helib::convert(poly2, poly); // convert to zzX
     EXPECT_EQ(poly2, T[i]) << "testLookup error: decrypted T[" << i << "]\n";
   }
-};
+}
 
 TEST_P(GTestTableLookup, writeinFunctionsCorrectly)
 {
@@ -357,7 +357,7 @@ TEST_P(GTestTableLookup, writeinFunctionsCorrectly)
         << "testWritein error: decrypted T[" << i << "]=" << decrypted
         << " but should be " << pT[i] << " (mod " << p << ")\n";
   }
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          GTestTableLookup,

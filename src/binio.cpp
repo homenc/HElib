@@ -221,7 +221,7 @@ void read_raw_vector<long>(std::istream& str, std::vector<long>& v)
 
   for (long i = 0; i < sz; i++)
     v[i] = read_raw_int(str);
-};
+}
 
 template <>
 void write_raw_vector<long>(std::ostream& str, const std::vector<long>& v)
@@ -231,7 +231,7 @@ void write_raw_vector<long>(std::ostream& str, const std::vector<long>& v)
 
   for (long n : v)
     write_raw_int(str, n);
-};
+}
 
 template <>
 void read_raw_vector<double>(std::istream& str, std::vector<double>& v)
@@ -242,7 +242,7 @@ void read_raw_vector<double>(std::istream& str, std::vector<double>& v)
 
   for (long i = 0; i < sz; i++)
     v[i] = read_raw_double(str);
-};
+}
 
 template <>
 void write_raw_vector<double>(std::ostream& str, const std::vector<double>& v)
@@ -252,6 +252,6 @@ void write_raw_vector<double>(std::ostream& str, const std::vector<double>& v)
 
   for (double n : v)
     write_raw_double(str, n);
-};
+}
 
 } // namespace helib

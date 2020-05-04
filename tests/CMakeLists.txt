@@ -94,6 +94,10 @@ set(TEST_NAMES
     "TestPtxt"
     )
 
+# NOTE: Adding all PRIVATE_HELIB_CXX_FLAGS to the tests will add -fPIC too.
+# At the moment this does not affect compilation of the tests and does not change their running time.
+target_compile_options(runTests PRIVATE ${PRIVATE_HELIB_CXX_FLAGS})
+
 foreach(TEST_NAME ${TEST_NAMES})
   add_test(NAME "${TEST_NAME}" COMMAND runTests --gtest_filter=*${TEST_NAME}*)
 endforeach(TEST_NAME)

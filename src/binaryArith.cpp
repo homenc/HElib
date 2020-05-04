@@ -1248,10 +1248,12 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     three4Two(&b1, &b2, in[0], in[1], in[2]); // b2 b1 = 3for2(in[0..2])
     if (nThreads > 1)
       break;
+    // FALLTHROUGH
   case 1:
     three4Two(&b3, &b4, in[3], in[4], in[5]); // b4 b3 = 3for2(in[3..5])
     if (nThreads > 2)
       break;
+    // FALLTHROUGH
   default:
     three4Two(&b5, &b6, in[6], in[7], in[8]); // b6 b5 = 3for2(in[6..8])
   }
@@ -1268,6 +1270,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     three4Two(&b7, &b8, in[9], in[10], in[11]); // b8 b7 = 3for2(in[9..11])
     if (nThreads > 1)
       break;
+    // FALLTHROUGH
   default:
     three4Two(&b9, &b10, in[12], in[13], in[14]); // b10 b9 = 3for2(in[12..14])
   }
@@ -1279,6 +1282,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     three4Two(d1, d2, b7, b9, c1); // d2 d1 = 3for2(b7,b9,c1)
     if (nThreads > 1)
       break;
+    // FALLTHROUGH
   default:
     if (sizeLimit >= 2)
       three4Two(d3, d4, b8, b10, c2); // d4 d3 = 3for2(b8,b10,c2)
@@ -1293,6 +1297,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     three4Two(e1, e2, c3, d2, d3); // e2 e1 = 3for2(c3,d2,d3)
     if (nThreads > 1)
       break;
+    // FALLTHROUGH
   default:
     if (sizeLimit >= 3) {
       e3 = c4;

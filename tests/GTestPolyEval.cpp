@@ -141,7 +141,7 @@ TEST_P(GTestPolyEval, encryptedPolynomialsEvaluateAtEncryptedPointCorrectly)
   secretKey.Decrypt(ret, cX);
   NTL::zz_pX cres = NTL::conv<NTL::zz_pX>(ret);
   EXPECT_EQ(cres, pres) << "encrypted poly MISMATCH";
-};
+}
 
 TEST_P(GTestPolyEval, evaluatePolynomialOnCiphertext)
 {
@@ -170,7 +170,7 @@ TEST_P(GTestPolyEval, evaluatePolynomialOnCiphertext)
     EXPECT_EQ(helib::polyEvalMod(poly, x[i], p2r), y[i])
         << "plaintext poly MISMATCH\n";
   }
-};
+}
 
 std::vector<Parameters> getParameters()
 {
@@ -217,7 +217,7 @@ std::vector<Parameters> getParameters()
       allParams.emplace_back(Parameters{p, r, m, d, k, max_d, L, true});
   }
   return allParams;
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(manyDegrees,
                          GTestPolyEval,

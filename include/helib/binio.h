@@ -80,7 +80,7 @@ void write_raw_vector(std::ostream& str, const std::vector<T>& v)
   for (const T& n : v) {
     n.write(str);
   }
-};
+}
 
 // vector<long> has a different implementation, since long.write does not work
 template <>
@@ -100,7 +100,7 @@ void read_raw_vector(std::istream& str, std::vector<T>& v, T& init)
   for (auto& n : v) {
     n.read(str);
   }
-};
+}
 
 template <typename T>
 void read_raw_vector(std::istream& str, std::vector<T>& v)

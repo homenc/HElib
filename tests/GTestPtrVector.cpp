@@ -214,6 +214,6 @@ TEST_F(GTestPtrVector, pointerVectorsRemainConsistent)
     // Tidy up newline-free previous output
     std::cout << std::endl;
   }
-};
+}
 
 } // namespace

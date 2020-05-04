@@ -1155,7 +1155,13 @@ void DoubleCRT::randomize(const NTL::ZZ* seed)
           // This is gcc non-standard. Works also on clang and icc.
           // The pragma below disables the gcc warning temporarily.
 #pragma GCC diagnostic push
+#ifdef __GNUC__
+#ifdef __clang__
 #pragma GCC diagnostic ignored "-Wgnu-label-as-value"
+#else
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
+#endif
           static void* dispatch_table[] =
               {&&L0, &&L1, &&L2, &&L3, &&L4, &&L5, &&L6, &&L7, &&L8};
 

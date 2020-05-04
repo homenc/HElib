@@ -234,6 +234,9 @@ private:
   HyperCube(); // disable default constructor
 
 public:
+  // Default copy-constructor
+  HyperCube(const HyperCube& other) = default;
+
   //! initialize a HyperCube with a CubeSignature
   HyperCube(const CubeSignature& _sig) : sig(_sig)
   {

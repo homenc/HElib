@@ -12,6 +12,11 @@ See below for more details.
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
+#ifdef __GNUC__
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+#endif
 
 #define PGFFT_USE_TRUNCATED_BLUE (1)
 // set to 0 to disable the truncated Bluestein

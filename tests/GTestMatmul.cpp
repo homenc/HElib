@@ -127,7 +127,7 @@ std::unique_ptr<helib::MatMul1D> buildMat(const helib::EncryptedArray& ea,
                                           long dim)
 {
   return std::unique_ptr<helib::MatMul1D>{buildRandomMatrix(ea, dim)};
-};
+}
 // template<> std::unique_ptr<helib::BlockMatMul1D> buildMat(const
 // helib::EncryptedArray &ea, long dim)
 //{
@@ -305,7 +305,9 @@ using TypesToTest = ::testing::Types<
 // this does not conform to the C++ standard. Until gtest changes, we need a
 // pragma to ignore this warning.
 #pragma GCC diagnostic push
+#ifdef __clang__
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
 TYPED_TEST_SUITE(GTestMatmul, TypesToTest);
 #pragma GCC diagnostic pop
 
@@ -335,6 +337,6 @@ TYPED_TEST(GTestMatmul, multipliesWithoutErrors)
   this->ea.decrypt(ctxt, this->secretKey, v1); // decrypt the ciphertext vector
 
   EXPECT_TRUE(equals(this->ea, v, v1)); // check that we've got the right answer
-};
+}
 
 } // namespace

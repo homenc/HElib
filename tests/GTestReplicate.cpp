@@ -146,7 +146,7 @@ protected:
     return ::testing::AssertionSuccess();
   else
     return ::testing::AssertionFailure() << "Replication failed";
-};
+}
 
 class StopReplicate
 {};
@@ -216,7 +216,7 @@ TEST_P(GTestReplicate, replicateWorks)
   EXPECT_TRUE(replicationSucceeds(xc1, xc0, ea.size() / 2, secretKey, ea));
   if (!helib_test::noPrint)
     CheckCtxt(xc1, "after replicate");
-};
+}
 
 TEST_P(GTestReplicate, repeatedReplicationWorks)
 {
@@ -231,7 +231,7 @@ TEST_P(GTestReplicate, repeatedReplicationWorks)
   if (!helib_test::noPrint) {
     helib::printAllTimers();
   }
-};
+}
 
 TEST_P(GTestReplicate, replicateAllReplicatesAccurately)
 {
@@ -254,7 +254,7 @@ TEST_P(GTestReplicate, replicateAllReplicatesAccurately)
     std::cout << "total time=" << handler.t_total << " ("
               << ((B > 0) ? B : ea.size()) << " vectors)\n";
   }
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          GTestReplicate,

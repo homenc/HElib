@@ -434,7 +434,7 @@ TEST_P(GTestThinBootstrapping, correctlyPerformsThinBootstrapping)
   ea->decrypt(c2, secretKey, val2);
 
   EXPECT_EQ(val1, val2);
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          GTestThinBootstrapping,

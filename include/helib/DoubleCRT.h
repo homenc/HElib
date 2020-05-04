@@ -127,7 +127,8 @@ public:
   // the context. If the coefficients of poly are larger than the product of
   // the used primes, they are effectively reduced modulo that product
 
-  // copy constructor: default
+  // Default copy-constructor:
+  DoubleCRT(const DoubleCRT& other) = default;
 
   //! @brief Initializing DoubleCRT from a ZZX polynomial
   //! @param poly The ring element itself, zero if not specified

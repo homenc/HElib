@@ -118,7 +118,7 @@ TEST_P(GTestPAlgebra, readsAndWritesContextsAsStrings)
   s3 >> c1;
 
   EXPECT_EQ(context, c1);
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(
     smallParameters,
