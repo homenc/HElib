@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 
   activeContext = &context; // make things a little easier sometimes
 #ifdef DEBUG_PRINTOUT
-  dbgEa = (EncryptedArray*) context.ea;
+  dbgEa = context.ea;
   dbgKey = &secKey;
 #endif
 
@@ -176,9 +176,9 @@ void testCompare(SecKey& secKey, long bitSize, bool bootstrap)
 
   vector<long> slotsMin, slotsMax, slotsMu, slotsNi;
 
-  //cmp only
-  compareTwoNumbers(mu, ni, CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
-                      &unpackSlotEncoding);
+  //cmp only (as unsigned integer)
+  compareTwoNumbers(mu, ni, CtPtrs_VecCt(enca), CtPtrs_VecCt(encb), false,
+                    &unpackSlotEncoding);
   ea.decrypt(mu, secKey, slotsMu);
   ea.decrypt(ni, secKey, slotsNi);
   if (slotsMu[0]!=pMu || slotsNi[0]!=pNi) {
@@ -195,9 +195,9 @@ void testCompare(SecKey& secKey, long bitSize, bool bootstrap)
 
   {CtPtrs_VecCt wMin(eMin), wMax(eMax); // A wrappers around output vectors
 
-  //cmp with max and min
+  //cmp with max and min (as unsigned integer)
   compareTwoNumbers(wMax, wMin, mu, ni,
-                    CtPtrs_VecCt(enca), CtPtrs_VecCt(encb),
+                    CtPtrs_VecCt(enca), CtPtrs_VecCt(encb), false,
                     &unpackSlotEncoding);
   decryptBinaryNums(slotsMax, wMax, secKey, ea);
   decryptBinaryNums(slotsMin, wMin, secKey, ea);

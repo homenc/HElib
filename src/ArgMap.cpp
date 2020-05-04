@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,8 +22,8 @@ namespace helib {
 // Three functions strip whitespaces before and after strings.
 static void lstrip(std::string& s)
 {
-  auto it =
-      std::find_if(s.begin(), s.end(), [](int c) { return !std::isspace(c); });
+  auto it = std::find_if(
+      s.begin(), s.end(), [](unsigned char c) { return !std::isspace(c); });
 
   s.erase(s.begin(), it);
 }
@@ -31,7 +31,7 @@ static void lstrip(std::string& s)
 static void rstrip(std::string& s)
 {
   auto it = std::find_if(
-      s.rbegin(), s.rend(), [](int c) { return !std::isspace(c); });
+      s.rbegin(), s.rend(), [](unsigned char c) { return !std::isspace(c); });
 
   s.erase(it.base(), s.end());
 }
@@ -44,17 +44,44 @@ static void strip(std::string& s)
 
 ArgMap& ArgMap::note(const std::string& s)
 {
-  docStream << "\t\t   " << s << "\n";
+  docStream << "\t\t" << s << "\n";
   return *this;
+}
+
+static const std::string str_if_cond(bool cond, const char sep, const char* txt)
+{
+  std::string ext;
+  if (cond)
+    ext.append(1, sep).append(txt);
+
+  return ext;
 }
 
 void ArgMap::usage(const std::string& msg) const
 {
   if (!msg.empty())
     std::cerr << msg << std::endl;
-  std::cerr << "Usage: " << this->progname << " [ name" << this->kv_separator
-            << "value ]...\n";
-  std::cerr << doc();
+
+  std::cerr << "Usage: " << this->progname;
+  for (const auto& n : this->optional_set) {
+    bool named = (this->map.at(n)->getArgType() == ArgType::NAMED);
+    std::cerr << " [" << n << str_if_cond(named, this->kv_separator, "<v>")
+              << "]";
+  }
+
+  for (const auto& n : this->required_set) {
+    bool named = (this->map.at(n)->getArgType() == ArgType::NAMED);
+    std::cerr << " " << n << str_if_cond(named, this->kv_separator, "<v>");
+  }
+
+  if (this->dots_enabled)
+    std::cerr << " [" << this->dots_name << " ...]"
+              << "\n";
+  else
+    std::cerr << "\n";
+
+  std::cerr << doc() << std::endl;
+
   exit(EXIT_FAILURE);
 }
 
@@ -131,21 +158,23 @@ ArgMap& ArgMap::diagnostics(std::ostream& ostrm)
   return *this;
 }
 
-static void
-printDiagnostics(std::ostream* ostrm_ptr,
-                 const std::forward_list<std::string>& args,
-                 const std::unordered_set<std::string>& required_set)
+void ArgMap::printDiagnostics(const std::forward_list<std::string>& args) const
 {
-  if (ostrm_ptr != nullptr) {
+  if (this->diagnostics_strm != nullptr) {
     // argv as seen by ArgMap
-    *ostrm_ptr << "Args pre-parse:\n";
+    *this->diagnostics_strm << "Args pre-parse:\n";
     for (const auto& e : args) {
-      *ostrm_ptr << e << std::endl;
+      *this->diagnostics_strm << e << std::endl;
     }
     // required set
-    *ostrm_ptr << "Required args set:\n";
+    *this->diagnostics_strm << "Required args set:\n";
     for (const auto& e : required_set) {
-      *ostrm_ptr << e << std::endl;
+      *this->diagnostics_strm << e << std::endl;
+    }
+    // optional set
+    *this->diagnostics_strm << "Optional args set:\n";
+    for (const auto& e : optional_set) {
+      *this->diagnostics_strm << e << std::endl;
     }
   }
 }
@@ -242,11 +271,18 @@ void ArgMap::simpleParse(const std::forward_list<std::string>& args,
       // never a recognised token.
       std::shared_ptr<ArgProcessor> pos_ap = map[*pos_args_it];
       if (!pos_ap->process(*it))
-        throw helib::RuntimeError(
+        throw helib::LogicError(
             "Positional name does not match a ArgMap name.");
+      // Remove from required_set (if it is there)
+      this->required_set.erase(*pos_args_it);
       ++pos_args_it;
+    } else if (this->dots_enabled) {
+      this->dots_ap->process(token);
     } else {
-      stop("Unrecognised argument \'" + token + "\'");
+      std::string msg = "Unrecognised argument \'" + token + "\'";
+      if (!this->positional_args_list.empty())
+        msg += "\nThere could be too many positional arguments";
+      stop(msg);
     }
   }
 }
@@ -263,7 +299,7 @@ ArgMap& ArgMap::parse(int argc, char** argv)
   // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
 
-  printDiagnostics(this->diagnostics_strm, args, this->required_set);
+  printDiagnostics(args);
 
   simpleParse(args);
 
@@ -314,7 +350,7 @@ ArgMap& ArgMap::parse(const std::string& filepath)
   // Take any leading and trailing whitespace away.
   std::for_each(args.begin(), args.end(), strip);
 
-  printDiagnostics(this->diagnostics_strm, args, this->required_set);
+  printDiagnostics(args);
 
   simpleParse(args, false, [&filepath](const std::string& msg) {
     throw helib::RuntimeError("Could not parse params file: " + filepath +

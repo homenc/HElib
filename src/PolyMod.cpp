@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -34,7 +34,8 @@ PolyMod::PolyMod(const std::vector<long>& input,
 }
 PolyMod::PolyMod(const NTL::ZZX& input,
                  const std::shared_ptr<PolyModRing>& ringDescriptor) :
-    data(input), ringDescriptor(ringDescriptor)
+    ringDescriptor(ringDescriptor),
+    data(input)
 {
   this->modularReduce();
 }
@@ -83,7 +84,7 @@ PolyMod::operator long() const
 PolyMod::operator std::vector<long>() const
 {
   assertValidity(*this);
-  std::vector<long> ret(NTL::deg(data) + 1);
+  std::vector<long> ret(NTL::deg(ringDescriptor->G));
   for (std::size_t i = 0; i < ret.size(); ++i)
     NTL::conv(ret[i], NTL::coeff(data, i));
   return ret;

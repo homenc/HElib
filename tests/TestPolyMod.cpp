@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -348,10 +348,11 @@ TEST(TestPolyMod, canBeConvertedToCoeffVector)
   auto ring = std::make_shared<helib::PolyModRing>(p2r, 1, G);
   helib::PolyMod poly(ring);
 
-  std::vector<long> coeffs{0, 1, 2, 3};
+  std::vector<long> coeffs{0, 1, 2, 0};
   poly = coeffs;
   std::vector<long> result = static_cast<std::vector<long>>(poly);
   ASSERT_EQ(coeffs.size(), result.size());
+  ASSERT_EQ(NTL::deg(G), result.size());
   for (std::size_t i = 0; i < coeffs.size(); ++i) {
     EXPECT_EQ(coeffs[i], result[i]);
   }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -241,101 +241,169 @@ long PowerfulConversion::powerfulToPoly(NTL::zz_pX& poly,
   return NTL::zz_p::modulus();
 }
 
+
 PowerfulDCRT::PowerfulDCRT(const Context& _context, const NTL::Vec<long>& mvec):
   context(_context), indexes(mvec)
 {
-  NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
+  triv = (mvec.length() == 1);
+  // triv means poly and pwfl bases are identical
 
-  // initialize the modulus-dependent tables for all the moduli in the chain
-  long n = context.numPrimes();
+  if (triv) return;
+
+
+  double polyNormBnd = context.zMStar.getPolyNormBnd();
+
+  // double normBnd = context.zMStar.getNormBnd();
+  // we compute this from the given factorization, just in case
+  // it is not a prime-power factorization
+  double normBnd = 1.0;
+  for (long fac: mvec) normBnd *= calcPolyNormBnd(fac);
+
+
+  long phim = context.zMStar.getPhiM();
+
+  to_pwfl_excess_bits = long( (log(normBnd) + log(double(phim)))/log(2.0) ) + 5;
+  to_poly_excess_bits = long( (log(polyNormBnd) + log(double(phim)))/log(2.0) ) + 5;
+  // NOTE: we are using the following:
+  //   |poly(a)| <= polyNormBnd*|canon(a)| <= polyNormBnd*phim*|pwfl(a)|
+  //   |pwfl(a)| <= normBnd*|canon(a)| <= normBnd*phim*|poly(a)|
+  // where |.| is the infty norm.
+
+  // Why +5?  +1 to get the ceiling, +1 for rounding errors, +1 for the extra
+  // factor of 2 needed to CRT, +1 because NumBits(product) is not quite right,
+  // and another +1 for good measure
+
+  NTL::ZZ prod = context.productOfPrimes(context.allPrimes());
+  long max_bits = (prod.size()+1)*NTL_ZZ_NBITS; // +1 to be safe
+  if (max_bits < 256) max_bits = 256; // just to make sure we can handle
+                                      // various smallish values
+
+  long target_bits = max_bits + to_pwfl_excess_bits + to_poly_excess_bits;
+  // we can afford back and forth conversions
+
+  NTL::zz_pPush push; // backup NTL's current modulus
+
+  long n = 0;  // number of primes we need
+  NTL::ZZ prod1 {1};
+
+  do {
+    NTL::zz_p::FFTInit(n);
+    long p = NTL::zz_p::modulus();
+    prod1 *= p;
+    product_bits.append(NumBits(prod1));
+    n++;
+  } while (product_bits[n-1] < target_bits);
+
+  // initialize the modulus-dependent tables for all the moduli 
   pConvVec.SetLength(n);     // allocate space
   for (long i=0; i<n; i++) { // initialize
-    context.ithModulus(i).restoreModulus(); // set current mod to i'th prime
+    NTL::zz_p::FFTInit(i);
     pConvVec[i].initPConv(indexes);         // initialize tables
   }
-} // NTL's modulus restored upon exit
+}
 
 
-void PowerfulDCRT::dcrtToPowerful(NTL::Vec<NTL::ZZ>& out, const DoubleCRT& dcrt) const
+void 
+PowerfulDCRT::ZZXtoPowerful(
+  NTL::Vec<NTL::ZZ>& out, 
+  const NTL::ZZX& poly) const
 {
-  const IndexSet& set = dcrt.getIndexSet();
-  if (empty(set)) { // sanity check
-    clear(out);
+  long phim = context.zMStar.getPhiM();
+
+  if (triv) {
+    NTL::VectorCopy(out, poly, phim);
     return;
   }
-  NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
 
-  NTL::ZZ product = NTL::conv<NTL::ZZ>(1L);
-  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+  long max_sz = 0;
+  for (const NTL::ZZ& coeff: poly.rep) {
+    long sz = coeff.size();
+    if (max_sz < sz) max_sz = sz;
+  }
+
+  long target_bits = max_sz*NTL_ZZ_NBITS + to_pwfl_excess_bits;
+
+  long n = product_bits.length();
+  long m = 1;
+  while (m <= n && product_bits[m-1] < target_bits) m++;
+
+  if (m > n) throw helib::LogicError("ZZXtoPowerful: not enough primes");
+ 
+
+  NTL::zz_pPush push; // backup NTL's current modulus
+  NTL::ZZ product { 1 };
+
+  NTL::Vec<NTL::ZZ> res;
+  res.SetLength(phim);
+
+  for (long i: range(m)) {
     pConvVec[i].restoreModulus();
     NTL::zz_pX oneRowPoly;
-    long newPrime = dcrt.getOneRow(oneRowPoly,i);
-
+    NTL::conv(oneRowPoly, poly); 
     HyperCube<NTL::zz_p> oneRowPwrfl(indexes.shortSig);
     pConvVec[i].polyToPowerful(oneRowPwrfl, oneRowPoly);
-    if (i == set.first()) // just copy
-      NTL::conv(out, oneRowPwrfl.getData());
-    else                  // CRT
-      intVecCRT(out, product, oneRowPwrfl.getData(), newPrime); // in NumbTh
-    product *= newPrime;
+    NTL::CRT(res, product, oneRowPwrfl.getData());
   }
+
+  out = res;
 }
 
-void PowerfulDCRT::powerfulToDCRT(DoubleCRT& dcrt, const NTL::Vec<NTL::ZZ>& in) const
+void 
+PowerfulDCRT::powerfulToZZX(
+  NTL::ZZX& poly, 
+  const NTL::Vec<NTL::ZZ>& powerful) const
 {
-  throw helib::LogicError("powerfulToDCRT not implemented yet");
-}
-
-// If the IndexSet is omitted, default to all the primes in the chain
-void PowerfulDCRT::ZZXtoPowerful(NTL::Vec<NTL::ZZ>& out, const NTL::ZZX& poly,
-				 IndexSet set) const
-{
-  if (empty(set))
-    set = IndexSet(0, pConvVec.length()-1);
-
-  NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
-
-  NTL::ZZ product = NTL::conv<NTL::ZZ>(1L);
-  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
-    pConvVec[i].restoreModulus();
-    long newPrime = NTL::zz_p::modulus();
-    NTL::zz_pX oneRowPoly;
-    NTL::conv(oneRowPoly, poly);  // reduce mod p and convert to NTL::zz_pX
-
-    HyperCube<NTL::zz_p> oneRowPwrfl(indexes.shortSig);
-    pConvVec[i].polyToPowerful(oneRowPwrfl, oneRowPoly);
-    if (i == set.first()) // just copy
-      NTL::conv(out, oneRowPwrfl.getData());
-    else                  // CRT
-      intVecCRT(out, product, oneRowPwrfl.getData(), newPrime); // in NumbTh
-    product *= newPrime;
+  if (triv) {
+    NTL::conv(poly, powerful);
+    return;
   }
-}
 
-//FIXME: both the reduction from powerful to the individual primes and
-//  the CRT back to poly can be made more efficient
-void PowerfulDCRT::powerfulToZZX(NTL::ZZX& poly, const NTL::Vec<NTL::ZZ>& powerful,
-				 IndexSet set) const
-{
-  NTL::zz_pBak bak; bak.save(); // backup NTL's current modulus
+  long max_sz = 0;
+  for (const NTL::ZZ& coeff: powerful) {
+    long sz = coeff.size();
+    if (max_sz < sz) max_sz = sz;
+  }
 
-  if (empty(set)) set = IndexSet(0, pConvVec.length()-1);
+  long target_bits = max_sz*NTL_ZZ_NBITS + to_poly_excess_bits;
 
+  long n = product_bits.length();
+  long m = 1;
+  while (m <= n && product_bits[m-1] < target_bits) m++;
+
+  if (m > n) throw helib::LogicError("powerfulToZZX: not enough primes");
+
+  NTL::zz_pPush push; // backup NTL's current modulus
   clear(poly);
-  //  poly.SetLength(powerful.length());
-  NTL::ZZ product = NTL::conv<NTL::ZZ>(1L);
-  for (long i = set.first(); i <= set.last(); i = set.next(i)) {
+  NTL::ZZ product { 1 };
+
+  for (long i: range(m)) {
     pConvVec[i].restoreModulus();
-    //    long newPrime = NTL::zz_p::modulus();
-
     HyperCube<NTL::zz_p> oneRowPwrfl(indexes.shortSig);
-    NTL::conv(oneRowPwrfl.getData(), powerful); // reduce and convert to NTL::Vec<NTL::zz_p>
-
+    NTL::conv(oneRowPwrfl.getData(), powerful); 
     NTL::zz_pX oneRowPoly;
     pConvVec[i].powerfulToPoly(oneRowPoly, oneRowPwrfl);
-    CRT(poly, product, oneRowPoly);                   // NTL :-)
+    NTL::CRT(poly, product, oneRowPoly); 
   }
-  poly.normalize();
+}
+
+void 
+PowerfulDCRT::dcrtToPowerful(
+   NTL::Vec<NTL::ZZ>& powerful, const DoubleCRT& dcrt) const
+{
+  NTL::ZZX poly;
+  dcrt.toPoly(poly);
+
+  if (triv) {
+    long phim = context.zMStar.getPhiM();
+    NTL::VectorCopy(powerful, poly, phim);
+    return;
+  }
+ 
+  NTL::Vec<NTL::ZZ> pwfl;
+  this->ZZXtoPowerful(pwfl, poly);
+  NTL::ZZ Q = context.productOfPrimes(dcrt.getIndexSet());
+  vecRed(powerful, pwfl, Q, /*abs=*/false); 
+  // reduce to interval [-Q/2,+Q/2]
 }
 
 /********************************************************************/

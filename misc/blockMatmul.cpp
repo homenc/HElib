@@ -183,9 +183,9 @@ public:
 	} // if (i>0)
 
 	// Depending on zzxPtr, dcrtPtr, update the accumulated sums
-	for (long k=0; k<d; k++) if (dcrtPtr[k]!=NULL || zzxPtr[k]!=NULL) {
+	for (long k=0; k<d; k++) if (dcrtPtr[k]!=nullptr || zzxPtr[k]!=nullptr) {
             Ctxt tmp1(*shCtxt);
-            if (dcrtPtr[k] != NULL) tmp1.multByConstant(*(dcrtPtr[k]));
+            if (dcrtPtr[k] != nullptr) tmp1.multByConstant(*(dcrtPtr[k]));
             else                    tmp1.multByConstant(*(zzxPtr[k]));
             acc[k] += tmp1;
           }

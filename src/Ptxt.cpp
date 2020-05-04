@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -12,6 +12,7 @@
 
 #include <random>
 #include <helib/Ptxt.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -24,8 +25,7 @@ helib::PolyMod Ptxt<helib::BGV>::convertToSlot(const Context& context,
 }
 
 template <>
-std::complex<double> Ptxt<helib::CKKS>::convertToSlot(const Context&,
-                                                      long slot)
+std::complex<double> Ptxt<helib::CKKS>::convertToSlot(const Context&, long slot)
 {
   return {static_cast<double>(slot), 0};
 }
@@ -72,8 +72,7 @@ Ptxt<BGV>::Ptxt(const Context& context, const NTL::ZZX& value) :
 }
 
 template <typename Scheme>
-Ptxt<Scheme>::Ptxt(const Context& context,
-                   const std::vector<SlotType>& data) :
+Ptxt<Scheme>::Ptxt(const Context& context, const std::vector<SlotType>& data) :
     context(std::addressof(context)),
     slots(context.ea->size(),
           SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)})
@@ -109,14 +108,14 @@ void Ptxt<Scheme>::setData(const std::vector<SlotType>& data)
   helib::assertTrue<helib::RuntimeError>(
       isValid(), "Cannot call setData on default-constructed Ptxt");
   helib::assertTrue<helib::RuntimeError>(
-      data.size() <= context->ea->size(),
+      helib::lsize(data) <= context->ea->size(),
       "Cannot setData to Ptxt: not enough slots");
 
   // Need to verify that they all match
   assertSlotsCompatible(data);
 
   slots = data;
-  if (slots.size() < context->ea->size()) {
+  if (helib::lsize(slots) < context->ea->size()) {
     slots.resize(context->ea->size(),
                  SlotType{Ptxt<Scheme>::convertToSlot(*(this->context), 0L)});
   }
@@ -166,7 +165,7 @@ BGV::SlotType randomSlot<BGV>(const Context& context)
 }
 
 template <>
-CKKS::SlotType randomSlot<CKKS>(const Context& context)
+CKKS::SlotType randomSlot<CKKS>(UNUSED const Context& context)
 {
   std::mt19937 gen{std::random_device{}()};
   std::uniform_real_distribution<> dist{-1e10, 1e10};
@@ -476,7 +475,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::cube()
 }
 
 template <typename Scheme>
-Ptxt<Scheme>& Ptxt<Scheme>::power(unsigned long e)
+Ptxt<Scheme>& Ptxt<Scheme>::power(long e)
 {
   helib::assertTrue<helib::RuntimeError>(
       isValid(), "Cannot call power on default-constructed Ptxt");
@@ -510,7 +509,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::rotate(long amount)
   if (amount == 0)
     return *this;
   std::vector<SlotType> rotated_slots(size());
-  for (int i = 0; i < size(); ++i) {
+  for (long i = 0; i < lsize(); ++i) {
     rotated_slots[i] = slots[mcMod(i - amount, size())];
   }
   slots = std::move(rotated_slots);
@@ -545,7 +544,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::rotate1D(long dim, long amount)
   // After the conversion the relevant generator (specified by dim) is
   // incremented by amount.  This new set of coordinates is then converted back
   // to the new index of the slot.
-  for (long index = 0; index < size(); ++index) {
+  for (long index = 0; index < lsize(); ++index) {
     // Vector to hold the coordinate representaiton of the current index.
     std::vector<long> coord(indexToCoord(index));
     // Increments the coordinate of the specific dimension (dim) by amount
@@ -567,7 +566,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift(long amount)
       isValid(), "Cannot call shift on default-constructed Ptxt");
   if (amount == 0)
     return *this;
-  if (std::abs(amount) >= size()) {
+  if (std::abs(amount) >= lsize()) {
     clear();
     return *this;
   }
@@ -609,7 +608,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift1D(long dim, long amount)
   // representation.
   // An extra check is then performed to see if the shift operation caused an
   // element to wrap around in which case it is replaced with 0.
-  for (long new_index = 0; new_index < size(); ++new_index) {
+  for (long new_index = 0; new_index < lsize(); ++new_index) {
     // Vector to hold the coordinate representaiton of the current index.
     std::vector<long> coord(indexToCoord(new_index));
     // Perform the shift backwards to obtain the locations of the 0 values
@@ -670,7 +669,9 @@ Ptxt<BGV>& Ptxt<BGV>::frobeniusAutomorph(long j)
   long d = context->zMStar.getOrdP();
   if (d == 1)
     return *this; // Nothing to do.
-  return power(std::pow(context->slotRing->p, j % d));
+  long exponent =
+      NTL::PowerMod(context->slotRing->p, mcMod(j, d), context->zMStar.getM());
+  return automorph(exponent);
 }
 
 template <typename Scheme>
@@ -799,7 +800,7 @@ long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)
   // Zm*<p> group and e is the respective order of each generator.
   for (long i = coords.size() - 1; i >= 0; --i) {
     long product = 1;
-    for (long j = i + 1; j <= coords.size() - 1; ++j) {
+    for (std::size_t j = i + 1; j <= coords.size() - 1; ++j) {
       product *= zMStar.OrderOf(j);
     }
     index += coords.at(i) * product;
@@ -807,6 +808,8 @@ long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)
   return index;
 }
 
+// TODO: Refactor this out into a free function, also see the Ctxt version for
+// refactoring.
 template <typename Scheme>
 std::vector<long> Ptxt<Scheme>::indexToCoord(long index)
 {
@@ -838,7 +841,9 @@ template <>
 PA_GF2::RX Ptxt<BGV>::slotsToRX<PA_GF2>() const
 {
   helib::assertEq<helib::LogicError>(
-      context->zMStar.getP(), 2l, "Plaintext modulus p must be equal to 2");
+      context->alMod.getPPowR(),
+      2l,
+      "Plaintext modulus p^r must be equal to 2^1");
   return NTL::conv<NTL::GF2X>(getPolyRepr());
 }
 
@@ -847,7 +852,9 @@ template <>
 PA_zz_p::RX Ptxt<BGV>::slotsToRX<PA_zz_p>() const
 {
   helib::assertNeq<helib::LogicError>(
-      context->zMStar.getP(), 2l, "Plaintext modulus p most not be equal to 2");
+      context->alMod.getPPowR(),
+      2l,
+      "Plaintext modulus p^r must not be equal to 2^1");
   return NTL::conv<NTL::zz_pX>(getPolyRepr());
 }
 

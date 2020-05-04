@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -359,6 +359,8 @@ void readContextBinary(std::istream& str, Context& context)
     }
   }
 
+  endBuildModChain(context);
+
   // Read in the partition of m into co-prime factors (if bootstrappable)
   NTL::Vec<long> mv;
   read_ntl_vec_long(str, mv);
@@ -369,7 +371,6 @@ void readContextBinary(std::istream& str, Context& context)
     context.makeBootstrappable(mv, t);
   }
 
-  context.setModSizeTable();
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
   //OLD: assert(eyeCatcherFound == 0);
   helib::assertEq(eyeCatcherFound, 0, "Could not find post-context eye catcher");
@@ -497,6 +498,8 @@ std::istream& operator>> (std::istream &str, Context& context)
   for (long i=0; i<(long)context.digits.size(); i++)
     str >> context.digits[i];
 
+  endBuildModChain(context);
+
   // Read in the partition of m into co-prime factors (if bootstrappable)
   NTL::Vec<long> mv;
   long t;
@@ -507,15 +510,10 @@ std::istream& operator>> (std::istream &str, Context& context)
   if (mv.length()>0) {
     context.makeBootstrappable(mv, t, build_cache);
   }
-  context.setModSizeTable();
   seekPastChar(str, ']');
   return str;
 }
 
-Context::~Context()
-{
-  delete ea;
-}
 
 NTL::ZZX getG(const EncryptedArray& ea)
 {
@@ -540,12 +538,17 @@ NTL::ZZX getG(const EncryptedArray& ea)
 // rcEA (if set) points to rcAlmod which points to zMStar
 Context::Context(unsigned long m, unsigned long p, unsigned long r,
    const std::vector<long>& gens, const std::vector<long>& ords):
-  stdev(3.2), scale(10.0), zMStar(m, p, gens, ords), alMod(zMStar, r)
+  zMStar(m, p, gens, ords), alMod(zMStar, r), stdev(3.2), scale(10.0) 
 {
-  ea = new EncryptedArray(*this, alMod);
+  ea = std::make_shared<EncryptedArray>(*this, alMod);
+
+  pwfl_converter = nullptr;
+  // NOTE: pwfl_converter will be set in buildModChain (or endBuildModChain),
+  // after the prime chain has been built, as it depends
+  // on the primeChain
+
   if (this->alMod.getTag() != PA_cx_tag) {
-    slotRing = std::shared_ptr<PolyModRing>(
-        new PolyModRing(zMStar.getP(), alMod.getR(), getG(*ea)));
+    slotRing = std::make_shared<PolyModRing>(zMStar.getP(), alMod.getR(), getG(*ea));
   }
 }
 

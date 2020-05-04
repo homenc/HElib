@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -57,6 +57,7 @@
 
 #include <helib/range.h>
 #include <helib/assertions.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -69,7 +70,7 @@ namespace FHEglobals
   extern bool dryRun;
 
   //! @brief A list of required automorphisms
-  //! When non-NULL, causes Ctxt::smartAutomorphism to just record the
+  //! When non-nullptr, causes Ctxt::smartAutomorphism to just record the
   //! requested automorphism rather than actualy performing it. This can
   //! be used to get a list of needed automorphisms for certain operations
   //! and then generate all these key-switching matrices. Should only be
@@ -82,16 +83,27 @@ inline bool isDryRun() { return FHEglobals::dryRun; }
 
 inline void setAutomorphVals(std::set<long>* aVals)
 { FHEglobals::automorphVals=aVals; }
-inline bool isSetAutomorphVals() { return FHEglobals::automorphVals!=NULL; }
+inline bool isSetAutomorphVals() { return FHEglobals::automorphVals!=nullptr; }
 inline void recordAutomorphVal(long k) { FHEglobals::automorphVals->insert(k); }
 
 inline void setAutomorphVals2(std::set<long>* aVals)
 { FHEglobals::automorphVals2=aVals; }
-inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=NULL; }
+inline bool isSetAutomorphVals2() { return FHEglobals::automorphVals2!=nullptr; }
 inline void recordAutomorphVal2(long k) { FHEglobals::automorphVals2->insert(k); }
 
 typedef long LONG; // using this to identify casts that we should
                    // really get rid of at some point in the future
+
+/**
+ * @brief Considers `bits` as a vector of bits and returns the value it
+ * represents when interpreted as a n-bit 2's complement number, where n is
+ * given by `bitSize`. 
+ * @param bits The value containing the bits to be reinterpreted.
+ * @param bitSize The number of bits to use, taken from the least significant
+ * end of `bits`.
+ * @return The value of the reinterpreted number as a long.
+ **/
+long bitSetToLong(long bits, long bitSize);
 
 //! @brief Routines for computing mathematically correct mod and div.
 //! 
@@ -118,7 +130,7 @@ long multOrd(long p, long m);
 //!
 //! A is an n x n matrix, b is a length n (row) vector, this function finds a
 //! solution for the matrix-vector equation x A = b. An error is raised if A
-//! is not inverible mod p.
+//! is not invertible mod p.
 //!
 //! NTL's current smallint modulus, zz_p::modulus(), is assumed to be p^r,
 //! for p prime, r >= 1 integer.
@@ -138,9 +150,9 @@ void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r);
 void ppInvert(NTL::mat_zz_pE& X, const NTL::mat_zz_pE& A, long p, long r);
 
 // variants for GF2/GF2E to help with template code
-inline void ppInvert(NTL::mat_GF2& X, const NTL::mat_GF2& A, long p, long r)
+inline void ppInvert(NTL::mat_GF2& X, const NTL::mat_GF2& A, UNUSED long p, UNUSED long r)
 { NTL::inv(X, A); }
-inline void ppInvert(NTL::mat_GF2E& X, const NTL::mat_GF2E& A, long p, long r)
+inline void ppInvert(NTL::mat_GF2E& X, const NTL::mat_GF2E& A, UNUSED long p, UNUSED long r)
 { NTL::inv(X, A); }
 
 void buildLinPolyMatrix(NTL::mat_zz_pE& M, long p);
@@ -622,7 +634,7 @@ void rem(NTL::zz_pX& r, const NTL::zz_pX& a, const zz_pXModulus1& ff);
 //! placeholder for pXModulus ...no optimizations
 class ZZ_pXModulus1 : public NTL::ZZ_pXModulus {
 public:
-   ZZ_pXModulus1(long _m, const NTL::ZZ_pX& _f) : NTL::ZZ_pXModulus(_f) { }
+   ZZ_pXModulus1(UNUSED long _m, const NTL::ZZ_pX& _f) : NTL::ZZ_pXModulus(_f) { }
    const NTL::ZZ_pXModulus& upcast() const { return *this; }
 };
 

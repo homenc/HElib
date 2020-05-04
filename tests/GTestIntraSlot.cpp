@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,127 +16,124 @@
 #include "gtest/gtest.h"
 #include "test_common.h"
 
-namespace{
+namespace {
 
-struct Parameters {
+struct Parameters
+{
+  long p;    // plaintext base
+  long n;    // number of packed ciphertexts
+  long r;    // lifting
+  long L;    // # of levels in the modulus chain
+  long m;    // use specified value as modulus
+  long seed; // PRG seed
 
-    Parameters(long p, long n, long r, long L, long m, long seed) :
-        p(p),
-        n(n),
-        r(r),
-        L(L),
-        m(m),
-        seed(seed)
-    {};
-    long p; // plaintext base
-    long n; // number of packed ciphertexts
-    long r; // lifting
-    long L; // # of levels in the modulus chain
-    long m; // use specified value as modulus
-    long seed; // PRG seed
-    
-    // Let googletest know how to print the Parameters
-    friend std::ostream& operator<<(std::ostream& os, const Parameters& params) {
-        return os << "{"
-            << "p=" << params.p << ","
-            << "n=" << params.n << ","
-            << "r=" << params.r << ","
-            << "L=" << params.L << ","
-            << "m=" << params.m << ","
-            << "seed=" << params.seed
-            << "}";
-    };
+  Parameters(long p, long n, long r, long L, long m, long seed) :
+      p(p), n(n), r(r), L(L), m(m), seed(seed){};
+
+  // Let googletest know how to print the Parameters
+  friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
+  {
+    return os << "{"
+              << "p=" << params.p << ","
+              << "n=" << params.n << ","
+              << "r=" << params.r << ","
+              << "L=" << params.L << ","
+              << "m=" << params.m << ","
+              << "seed=" << params.seed << "}";
+  };
 };
 
-class GTestIntraSlot : public ::testing::TestWithParam<Parameters> {
+class GTestIntraSlot : public ::testing::TestWithParam<Parameters>
+{
 
-    static helib::Context& setupContext(helib::Context& context, long L)
-    {
-        if(helib_test::verbose) {
-            context.zMStar.printout();
-        }
-        buildModChain(context, L, 3);
-        return context;
-    };
+  static helib::Context& setupContext(helib::Context& context, long L)
+  {
+    if (helib_test::verbose) {
+      context.zMStar.printout();
+    }
+    buildModChain(context, L, 3);
+    return context;
+  };
 
-    protected:
-        GTestIntraSlot () :
-            p(GetParam().p),
-            n(GetParam().n),
-            r(GetParam().r),
-            L(GetParam().L),
-            m(GetParam().m),
-            seed(GetParam().seed),
-            context(m, p, r),
-            secretKey(setupContext(context, L)),
-            publicKey(secretKey)
-    {};
+protected:
+  GTestIntraSlot() :
+      p(GetParam().p),
+      n(GetParam().n),
+      r(GetParam().r),
+      L(GetParam().L),
+      m(GetParam().m),
+      seed(GetParam().seed),
+      context(m, p, r),
+      secretKey(setupContext(context, L)),
+      publicKey(secretKey){};
 
-        long p;
-        long n;
-        long r;
-        long L;
-        long m;
-        long seed;
-        helib::Context context;
-        helib::SecKey secretKey;
-        const helib::PubKey& publicKey;
+  long p;
+  long n;
+  long r;
+  long L;
+  long m;
+  long seed;
+  helib::Context context;
+  helib::SecKey secretKey;
+  const helib::PubKey& publicKey;
 
-        void SetUp() override
-        {
-            SetSeed(NTL::ZZ(seed));
-            secretKey.GenSecKey(); // A +-1/0 secret key
-            helib::addSome1DMatrices(secretKey); // compute key-switching matrices that we need
-            helib::addFrbMatrices(secretKey);
+  void SetUp() override
+  {
+    SetSeed(NTL::ZZ(seed));
+    secretKey.GenSecKey(); // A +-1/0 secret key
+    helib::addSome1DMatrices(
+        secretKey); // compute key-switching matrices that we need
+    helib::addFrbMatrices(secretKey);
 
 #ifdef DEBUG_PRINTOUT
-            helib::dbgKey = &secretKey;
-            helib::dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
+    helib::dbgKey = &secretKey;
+    helib::dbgEa = context.ea;
 #endif // DEBUG_PRINTOUT
-        };
+  };
 
-        virtual void TearDown() override
-        {
-          helib::cleanupGlobals();
-        }
+  virtual void TearDown() override { helib::cleanupGlobals(); }
 };
 
 TEST_P(GTestIntraSlot, packingAndUnpackingWorks)
 {
-    NTL::ZZX G = context.alMod.getFactorsOverZZ()[0];
-    helib::EncryptedArray ea(context, G);
+  NTL::ZZX G = context.alMod.getFactorsOverZZ()[0];
+  helib::EncryptedArray ea(context, G);
 
-    long d = ea.getDegree(); // size of each slot
+  long d = ea.getDegree(); // size of each slot
 
-    std::vector<helib::Ctxt> unpacked(d*n -1, helib::Ctxt(publicKey));
+  std::vector<helib::Ctxt> unpacked(d * n - 1, helib::Ctxt(publicKey));
 
-    // generate (almost) d*n ciphertexts, with only integrs in the slots
-    std::vector<helib::PlaintextArray> p1(helib::lsize(unpacked), helib::PlaintextArray(ea));
-    for (long i=0; i<helib::lsize(unpacked); i++) {
-        std::vector<long> slots;
-        ea.random(slots);
-        encode(ea, p1[i] ,slots);
-        ea.encrypt(unpacked[i], publicKey, p1[i]);
-    }
+  // generate (almost) d*n ciphertexts, with only integrs in the slots
+  std::vector<helib::PlaintextArray> p1(helib::lsize(unpacked),
+                                        helib::PlaintextArray(ea));
+  for (long i = 0; i < helib::lsize(unpacked); i++) {
+    std::vector<long> slots;
+    ea.random(slots);
+    encode(ea, p1[i], slots);
+    ea.encrypt(unpacked[i], publicKey, p1[i]);
+  }
 
-    // Pack (almost) d*n ciphetexts into only n of them
-    std::vector<helib::Ctxt> ct(n, helib::Ctxt(publicKey));
-    repack(helib::CtPtrs_vectorCt(ct), helib::CtPtrs_vectorCt(unpacked), ea);
+  // Pack (almost) d*n ciphetexts into only n of them
+  std::vector<helib::Ctxt> ct(n, helib::Ctxt(publicKey));
+  repack(helib::CtPtrs_vectorCt(ct), helib::CtPtrs_vectorCt(unpacked), ea);
 
-    // Unpack them back
-    std::vector<helib::zzX> unpackSlotEncoding;
-    helib::buildUnpackSlotEncoding(unpackSlotEncoding, ea);
-    unpack(helib::CtPtrs_vectorCt(unpacked), helib::CtPtrs_vectorCt(ct), ea, unpackSlotEncoding);
+  // Unpack them back
+  std::vector<helib::zzX> unpackSlotEncoding;
+  helib::buildUnpackSlotEncoding(unpackSlotEncoding, ea);
+  unpack(helib::CtPtrs_vectorCt(unpacked),
+         helib::CtPtrs_vectorCt(ct),
+         ea,
+         unpackSlotEncoding);
 
-    helib::PlaintextArray p2(ea);
-    for (long i=0; i<helib::lsize(unpacked); i++) {
-        ea.decrypt(unpacked[i], secretKey, p2);
-        ASSERT_TRUE(equals(ea, p1[i], p2)) <<
-            "p2["<<i<<"]="<<p2;
-    }
+  helib::PlaintextArray p2(ea);
+  for (long i = 0; i < helib::lsize(unpacked); i++) {
+    ea.decrypt(unpacked[i], secretKey, p2);
+    ASSERT_TRUE(equals(ea, p1[i], p2)) << "p2[" << i << "]=" << p2;
+  }
 }
-INSTANTIATE_TEST_SUITE_P(someParameters, GTestIntraSlot, ::testing::Values(
-            //FAST
-            Parameters(2, 2, 1, 10, 91, 0)
-            ));
+INSTANTIATE_TEST_SUITE_P(someParameters,
+                         GTestIntraSlot,
+                         ::testing::Values(
+                             // FAST
+                             Parameters(2, 2, 1, 10, 91, 0)));
 } // namespace

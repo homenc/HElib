@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -13,9 +13,10 @@
 
 #include <helib/helib.h>
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[])
+{
   /*  Example of BGV scheme  */
-  
+
   // Plaintext prime modulus
   unsigned long p = 4999;
   // Cyclotomic polynomial - defines phi(m)
@@ -23,24 +24,24 @@ int main(int argc, char *argv[]) {
   // Hensel lifting (default = 1)
   unsigned long r = 1;
   // Number of bits of the modulus chain
-  unsigned long bits = 300;
-  // Number of columns of Key-Switching matix (default = 2 or 3)
+  unsigned long bits = 500;
+  // Number of columns of Key-Switching matrix (default = 2 or 3)
   unsigned long c = 2;
-  
+
   std::cout << "Initialising context object..." << std::endl;
   // Intialise context
   helib::Context context(m, p, r);
   // Modify the context, adding primes to the modulus chain
-  std::cout  << "Building modulus chain..." << std::endl;
+  std::cout << "Building modulus chain..." << std::endl;
   buildModChain(context, bits, c);
 
   // Print the context
   context.zMStar.printout();
   std::cout << std::endl;
-  
+
   // Print the security level
   std::cout << "Security: " << context.securityLevel() << std::endl;
-  
+
   // Secret key management
   std::cout << "Creating secret key..." << std::endl;
   // Create a secret key associated with the context
@@ -50,44 +51,93 @@ int main(int argc, char *argv[]) {
   std::cout << "Generating key-switching matrices..." << std::endl;
   // Compute key-switching matrices that we need
   helib::addSome1DMatrices(secret_key);
-  
+
   // Public key management
   // Set the secret key (upcast: SecKey is a subclass of PubKey)
   const helib::PubKey& public_key = secret_key;
-  
+
   // Get the EncryptedArray of the context
   const helib::EncryptedArray& ea = *(context.ea);
-  
+
   // Get the number of slot (phi(m))
   long nslots = ea.size();
   std::cout << "Number of slots: " << nslots << std::endl;
-  
+
   // Create a vector of long with nslots elements
-  std::vector<long> ptxt(nslots);
+  helib::Ptxt<helib::BGV> ptxt(context);
   // Set it with numbers 0..nslots - 1
-  for (int i = 0; i < nslots; ++i) {
+  for (int i = 0; i < ptxt.size(); ++i) {
     ptxt[i] = i;
   }
+
   // Print the plaintext
-  std::cout << "Initial Ptxt: " << helib::vecToStr(ptxt) << std::endl;
-  
+  std::cout << "Initial Plaintext: " << ptxt << std::endl;
+
   // Create a ciphertext
   helib::Ctxt ctxt(public_key);
   // Encrypt the plaintext using the public_key
-  ea.encrypt(ctxt, public_key, ptxt);
-  
+  public_key.Encrypt(ctxt, ptxt);
+
   // Square the ciphertext
-  ctxt *= ctxt;
+  ctxt.multiplyBy(ctxt);
+  // Plaintext version
+  ptxt.multiplyBy(ptxt);
+
+  // Divide the ciphertext by itself
+  // To do this we must calculate the multiplicative inverse using Fermat's
+  // Little Theorem.  We calculate a^{-1} = a^{p-2} mod p, where a is non-zero
+  // and p is our plaintext prime.
+  // First make a copy of the ctxt using copy constructor
+  helib::Ctxt ctxt_divisor(ctxt);
+  // Raise the copy to the exponenet p-2
+  ctxt_divisor.power(p - 2);
+  // a^{p-2}*a = a^{-1}*a = a / a = 1;
+  ctxt.multiplyBy(ctxt_divisor);
+
+  // Plaintext version
+  helib::Ptxt<helib::BGV> ptxt_divisor(ptxt);
+  ptxt_divisor.power(p - 2);
+  ptxt.multiplyBy(ptxt_divisor);
+
   // Double it (using additions)
   ctxt += ctxt;
-  
+  // Plaintext version
+  ptxt += ptxt;
+
+  // Subtract it from itself (result should be 0)
+  ctxt -= ctxt;
+  // Plaintext version
+  ptxt -= ptxt;
+
   // Create a plaintext for decryption
-  std::vector<long> decrypted(nslots);
+  helib::Ptxt<helib::BGV> plaintext_result(context);
   // Decrypt the modified ciphertext
-  ea.decrypt(ctxt, secret_key, decrypted);
-  
+  secret_key.Decrypt(plaintext_result, ctxt);
+
   // Print the decrypted plaintext
-  std::cout << "Decrypted Ptxt: " << helib::vecToStr(decrypted) << std::endl;
-  
+  std::cout << "Decrypted Plaintext: " << plaintext_result << std::endl;
+  // Print the plaintext version result, should be the same as the ctxt version
+  std::cout << "Plaintext version: " << ptxt << std::endl;
+
+  // We can also add constants
+  ctxt.addConstant(NTL::ZZX(1l));
+  // Plaintext version
+  ptxt.addConstant(NTL::ZZX(1l));
+
+  // And multiply by constants
+  ctxt *= NTL::ZZX(1l);
+  // Plaintext version
+  ptxt *= NTL::ZZX(1l);
+
+  // We can also perform ciphertext-plaintext operations
+  ctxt += ptxt;
+
+  // Decrypt the modified ciphertext into a new plaintext
+  helib::Ptxt<helib::BGV> new_plaintext_result(context);
+  secret_key.Decrypt(new_plaintext_result, ctxt);
+
+  // Print the decrypted plaintext
+  std::cout << "Decrypted Plaintext: " << new_plaintext_result << std::endl;
+
   return 0;
 }

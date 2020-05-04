@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -132,15 +132,6 @@ static void newMakeDivisible(NTL::ZZX& poly, long p2e, long q,
 
 /*********************************************************************/
 /*********************************************************************/
-
-RecryptData::~RecryptData()
-{
-  if (alMod!=NULL)     delete alMod;
-  if (ea!=NULL)        delete ea;
-  if (firstMap!=NULL)  delete firstMap;
-  if (secondMap!=NULL) delete secondMap;
-  if (p2dConv!=NULL)   delete p2dConv;
-}
 
 
 /**
@@ -287,7 +278,7 @@ bool RecryptData::operator==(const RecryptData& other) const
 void RecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
                   bool enableThick, long t, bool build_cache_, bool minimal)
 {
-  if (alMod != NULL) { // were we called for a second time?
+  if (alMod != nullptr) { // were we called for a second time?
     std::cerr << "@Warning: multiple calls to RecryptData::init\n";
     return;
   }
@@ -314,11 +305,11 @@ void RecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
   long r = context.alMod.getR();
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
-  alMod = new PAlgebraMod(context.zMStar, e-ePrime+r);
-  ea = new EncryptedArray(context, *alMod);
+  alMod = std::make_shared<PAlgebraMod>(context.zMStar, e-ePrime+r);
+  ea = std::make_shared<EncryptedArray>(context, *alMod);
          // Polynomial defaults to F0, PAlgebraMod explicitly given
 
-  p2dConv = new PowerfulDCRT(context, mvec);
+  p2dConv = std::make_shared<PowerfulDCRT>(context, mvec);
 
   if (!enableThick) return;
 
@@ -344,8 +335,8 @@ void RecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
     for (long k = 0; k < nslots; k++) v[k] = C[j];
     ea->encode(unpackSlotEncoding[j], v);
   }
-  firstMap = new EvalMap(*ea, minimal, mvec, true, build_cache);
-  secondMap = new EvalMap(*context.ea, minimal, mvec, false, build_cache);
+  firstMap = std::make_shared<EvalMap>(*ea, minimal, mvec, true, build_cache);
+  secondMap = std::make_shared<EvalMap>(*context.ea, minimal, mvec, false, build_cache);
 }
 
 /********************************************************************/
@@ -561,8 +552,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
 
     FHE_NTIMER_START(unpack1);
     for (long i = 0; i < d; i++) {
-      coeff_vector[i] = std::shared_ptr<DoubleCRT>(new
-        DoubleCRT(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet()) );
+      coeff_vector[i] =
+          std::make_shared<DoubleCRT>(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet());
       coeff_vector_sz[i] = 
         NTL::conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i],
                                             ctxt.getContext().zMStar) );
@@ -652,8 +643,8 @@ void extractDigitsPacked(Ctxt& ctxt, long botHigh, long r, long ePrime,
     coeff_vector.resize(d);
     coeff_vector_sz.resize(d);
     for (long i = 0; i < d; i++) {
-      coeff_vector[i] = std::shared_ptr<DoubleCRT>(new
-        DoubleCRT(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet()) );
+      coeff_vector[i] =
+          std::make_shared<DoubleCRT>(unpackSlotEncoding[i], ctxt.getContext(), ctxt.getPrimeSet());
       coeff_vector_sz[i] = 
         NTL::conv<double>( embeddingLargestCoeff(unpackSlotEncoding[i],
                                             ctxt.getContext().zMStar) );
@@ -757,12 +748,6 @@ void packedRecrypt(const CtPtrMat& m,
 
 //===================== Thin Bootstrapping stuff ==================
 
-ThinRecryptData::~ThinRecryptData()
-{
-  if (coeffToSlot!=NULL)  delete coeffToSlot;
-  if (slotToCoeff!=NULL) delete slotToCoeff;
-}
-
 
 // This code was copied from RecryptData::init, and is mostly
 // the same, except for the linear-map-related stuff.
@@ -771,8 +756,8 @@ void ThinRecryptData::init(const Context& context, const NTL::Vec<long>& mvec_,
                       bool alsoThick, long t, bool build_cache_, bool minimal)
 {
   RecryptData::init(context, mvec_, alsoThick, t, build_cache_, minimal);
-  coeffToSlot = new ThinEvalMap(*ea, minimal, mvec, true, build_cache);
-  slotToCoeff = new ThinEvalMap(*context.ea, minimal, mvec, false, build_cache);
+  coeffToSlot = std::make_shared<ThinEvalMap>(*ea, minimal, mvec, true, build_cache);
+  slotToCoeff = std::make_shared<ThinEvalMap>(*context.ea, minimal, mvec, false, build_cache);
 }
 
 

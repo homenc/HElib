@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -177,10 +177,11 @@ void PermNetwork::applyToCube(HyperCube<long>& cube) const
   }
 }
 
-void PermNetwork::applyToPtxt(NTL::ZZX& p, const EncryptedArray& ea) const
-{
-  throw helib::LogicError("PermNetwork::applyToPtxt is not implemented");
-}
+// TODO: Implement this method.
+// void PermNetwork::applyToPtxt(NTL::ZZX& p, const EncryptedArray& ea) const
+// {
+//   throw helib::LogicError("PermNetwork::applyToPtxt is not implemented");
+// }
 
 // Upon return, mask[i]=1 if haystack[i]=needle, 0 otherwise.
 // Also set to 0 all the entries in haystack where mask[i]=1.

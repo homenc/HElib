@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -20,6 +20,8 @@
 #include <helib/IndexSet.h>
 #include <helib/recryption.h>
 #include <helib/primeChain.h>
+#include <helib/powerful.h>
+#include <helib/apiAttributes.h>
 
 #include <NTL/Lazy.h>
 
@@ -41,7 +43,7 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
 
 
 class EncryptedArray;
-class PolyModRing;
+struct PolyModRing;
 /**
  * @class Context
  * @brief Maintaining the parameters
@@ -62,8 +64,9 @@ public:
   PAlgebraMod alMod;
 
   //! @brief A default EncryptedArray
-  const EncryptedArray* ea;
-  // FIXME: should this be a unique_ptr??
+  std::shared_ptr<const EncryptedArray> ea;
+
+  std::shared_ptr<const PowerfulDCRT> pwfl_converter;
 
   /** @brief The structure of a single slot of the plaintext space.
    *
@@ -220,7 +223,7 @@ public:
   // for consistency with the other noiseBound routines
 
 
-  double noiseBoundForHWt(long hwt, long degBound) const
+  double noiseBoundForHWt(long hwt, UNUSED long degBound) const
   {
     return scale * std::sqrt(double(hwt));
   }
@@ -308,7 +311,6 @@ public:
   ThinRecryptData rcData; // includes both thin and think
 
   /******************************************************************/
-  ~Context(); // destructor
   Context(unsigned long m, unsigned long p, unsigned long r,
              const std::vector<long>& gens = std::vector<long>(), 
              const std::vector<long>& ords = std::vector<long>() );  // constructor
@@ -320,7 +322,7 @@ public:
   }
 
   bool isBootstrappable() const 
-    { return rcData.alMod != NULL; }
+    { return rcData.alMod != nullptr; }
 
   IndexSet fullPrimes() const 
   {
@@ -503,6 +505,9 @@ void buildModChain(Context& context, long nBits, long nDgts=3,
                       bool willBeBootstrappable=false, long skHwt=0, 
                       long resolution=3,
                       long bitsInSpecialPrimes=0);
+// should be called if after you build the mod chain in some way
+// *other* than calling buildModChain.
+void endBuildModChain(Context& context);
 
 ///@}
 extern Context* activeContext; // Should point to the "current" context

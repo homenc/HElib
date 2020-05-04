@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -18,6 +18,7 @@
 #include <helib/Context.h>
 #include <helib/sample.h>
 #include <helib/norms.h>
+#include <helib/apiAttributes.h>
 
 #include <helib/powerful.h>
 // only used in experimental Hwt sampler
@@ -559,7 +560,7 @@ double boundFreshNoise(long m, long phim, double sigma, double epsilon)
 
   return stdev * num;
 }
-double boundRoundingNoise(long m, long phim, long p2r, double epsilon)
+double boundRoundingNoise(UNUSED long m, long phim, long p2r, double epsilon)
 {
   // The various constants in this function were determined experimentally.
 

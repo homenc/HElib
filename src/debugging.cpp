@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -16,14 +16,13 @@
 #include <helib/Context.h>
 #include <helib/Ctxt.h>
 #include <helib/EncryptedArray.h>
-#include <helib/powerful.h>
+//#include <helib/powerful.h>
 
 namespace helib {
 
-SecKey* dbgKey = 0;
-EncryptedArray* dbgEa = 0;
+SecKey* dbgKey = nullptr;
+std::shared_ptr<const EncryptedArray> dbgEa = nullptr;
 NTL::ZZX dbg_ptxt;
-NTL::Vec<NTL::ZZ> ptxt_pwr; // powerful basis
 
 // return the ratio between the real noise <sk,ct> and the estimated one
 double realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
@@ -33,7 +32,7 @@ double realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
     noiseEst += ctxt.getRatFactor() * ctxt.getPtxtMag();
   NTL::xdouble actualNoise = embeddingLargestCoeff(ctxt, sk);
 
-  return NTL::conv<double>(actualNoise/noiseEst);
+  return NTL::conv<double>(actualNoise / noiseEst);
 }
 
 double log2_realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
@@ -43,16 +42,19 @@ double log2_realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
     noiseEst += ctxt.getRatFactor() * ctxt.getPtxtMag();
   NTL::xdouble actualNoise = embeddingLargestCoeff(ctxt, sk);
 
-  return log(actualNoise/noiseEst)/log(2.0);
+  return log(actualNoise / noiseEst) / log(2.0);
 }
 
 // check that real-to-estimated ratio is not too large, print warning otherwise
-void checkNoise(const Ctxt& ctxt, const SecKey& sk, const std::string& msg, double thresh)
+void checkNoise(const Ctxt& ctxt,
+                const SecKey& sk,
+                const std::string& msg,
+                double thresh)
 {
-   double ratio;
-   if ((ratio=realToEstimatedNoise(ctxt, sk)) > thresh) {
-      std::cerr << "\n*** too much noise: " << msg << ": " << ratio << "\n";
-   }
+  double ratio;
+  if ((ratio = realToEstimatedNoise(ctxt, sk)) > thresh) {
+    std::cerr << "\n*** too much noise: " << msg << ": " << ratio << "\n";
+  }
 }
 
 // Decrypt and find the l-infinity norm of the result in canonical embedding
@@ -64,9 +66,11 @@ NTL::xdouble embeddingLargestCoeff(const Ctxt& ctxt, const SecKey& sk)
   return embeddingLargestCoeff(pp, context.zMStar);
 }
 
-
-void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const SecKey& sk,
-		     const EncryptedArray& ea, long flags)
+void decryptAndPrint(std::ostream& s,
+                     const Ctxt& ctxt,
+                     const SecKey& sk,
+                     const EncryptedArray& ea,
+                     long flags)
 {
   const Context& context = ctxt.getContext();
   std::vector<NTL::ZZX> ptxt;
@@ -74,64 +78,64 @@ void decryptAndPrint(std::ostream& s, const Ctxt& ctxt, const SecKey& sk,
   sk.Decrypt(p, ctxt, pp);
 
   NTL::xdouble modulus = NTL::xexp(context.logOfProduct(ctxt.getPrimeSet()));
-  NTL::xdouble actualNoise = embeddingLargestCoeff(pp, ctxt.getContext().zMStar);
+  NTL::xdouble actualNoise =
+      embeddingLargestCoeff(pp, ctxt.getContext().zMStar);
   NTL::xdouble noiseEst = ctxt.getNoiseBound();
   if (ctxt.isCKKS())
     noiseEst += ctxt.getRatFactor() * ctxt.getPtxtMag();
 
-  s << "plaintext space mod "<<ctxt.getPtxtSpace()
-    << ", bitCapacity="<<ctxt.bitCapacity()
-    << ", \n           |noise|=q*" << (actualNoise/modulus)
-    << ", |noiseBound|=q*" << (noiseEst/modulus);
+  s << "plaintext space mod " << ctxt.getPtxtSpace()
+    << ", bitCapacity=" << ctxt.bitCapacity() << ", \n           |noise|=q*"
+    << (actualNoise / modulus) << ", |noiseBound|=q*" << (noiseEst / modulus);
   if (ctxt.isCKKS()) {
-    s << ", \n           ratFactor="<<ctxt.getRatFactor()
-      << ", ptxtMag="<<ctxt.getPtxtMag()
-      << ", realMag="<<(actualNoise/ ctxt.getRatFactor());
+    s << ", \n           ratFactor=" << ctxt.getRatFactor()
+      << ", ptxtMag=" << ctxt.getPtxtMag()
+      << ", realMag=" << (actualNoise / ctxt.getRatFactor());
   }
   s << std::endl;
 
   if (flags & FLAG_PRINT_ZZX) {
     s << "   before mod-p reduction=";
-    printZZX(s,pp) <<std::endl;
+    printZZX(s, pp) << std::endl;
   }
   if (flags & FLAG_PRINT_POLY) {
     s << "   after mod-p reduction=";
-    printZZX(s,p) <<std::endl;
+    printZZX(s, p) << std::endl;
   }
   if (flags & FLAG_PRINT_VEC) { // decode to a vector of ZZX
     ea.decode(ptxt, p);
-    if (ea.getAlMod().getTag() == PA_zz_p_tag
-	&& ctxt.getPtxtSpace() != ea.getAlMod().getPPowR()) {
+    if (ea.getAlMod().getTag() == PA_zz_p_tag &&
+        ctxt.getPtxtSpace() != ea.getAlMod().getPPowR()) {
       long g = NTL::GCD(ctxt.getPtxtSpace(), ea.getAlMod().getPPowR());
-      for (long i=0; i<ea.size(); i++)
-	PolyRed(ptxt[i], g, true);
+      for (long i = 0; i < ea.size(); i++)
+        PolyRed(ptxt[i], g, true);
     }
     s << "   decoded to ";
     if (deg(p) < 40) // just pring the whole thing
       s << ptxt << std::endl;
-    else if (ptxt.size()==1) // a single slot
-      printZZX(s, ptxt[0]) <<std::endl;
+    else if (ptxt.size() == 1) // a single slot
+      printZZX(s, ptxt[0]) << std::endl;
     else { // print first and last slots
-      printZZX(s, ptxt[0],20) << "--";
-      printZZX(s, ptxt[ptxt.size()-1], 20) <<std::endl;
+      printZZX(s, ptxt[0], 20) << "--";
+      printZZX(s, ptxt[ptxt.size() - 1], 20) << std::endl;
     }
-  }
-  else if (flags & FLAG_PRINT_DVEC) { // decode to a vector of doubles
+  } else if (flags & FLAG_PRINT_DVEC) { // decode to a vector of doubles
     const EncryptedArrayCx& eacx = ea.getCx();
     std::vector<double> v;
     eacx.decrypt(ctxt, sk, v);
-    printVec(s<<"           ", v,20)<<std::endl;
-  }
-  else if (flags & FLAG_PRINT_XVEC) { // decode to a vector of complex
+    printVec(s << "           ", v, 20) << std::endl;
+  } else if (flags & FLAG_PRINT_XVEC) { // decode to a vector of complex
     const EncryptedArrayCx& eacx = ea.getCx();
     std::vector<cx_double> v;
     eacx.decrypt(ctxt, sk, v);
-    printVec(s<<"           ", v,20)<<std::endl;
+    printVec(s << "           ", v, 20) << std::endl;
   }
 }
 
-bool decryptAndCompare(const Ctxt& ctxt, const SecKey& sk,
-		       const EncryptedArray& ea, const PlaintextArray& pa)
+bool decryptAndCompare(const Ctxt& ctxt,
+                       const SecKey& sk,
+                       const EncryptedArray& ea,
+                       const PlaintextArray& pa)
 {
   PlaintextArray ppa(ea);
   ea.decrypt(ctxt, sk, ppa);
@@ -141,8 +145,10 @@ bool decryptAndCompare(const Ctxt& ctxt, const SecKey& sk,
 
 // Compute decryption with.without mod-q on a vector of ZZX'es,
 // useful when debugging bootstrapping (after "raw mod-switch")
-void rawDecrypt(NTL::ZZX& plaintxt, const std::vector<NTL::ZZX>& zzParts,
-                const DoubleCRT& sKey, long q)
+void rawDecrypt(NTL::ZZX& plaintxt,
+                const std::vector<NTL::ZZX>& zzParts,
+                const DoubleCRT& sKey,
+                long q)
 {
   const Context& context = sKey.getContext();
 
@@ -154,21 +160,25 @@ void rawDecrypt(NTL::ZZX& plaintxt, const std::vector<NTL::ZZX>& zzParts,
   // convert to coefficient representation
   ptxt.toPoly(plaintxt);
 
-  if (q>1)
-    PolyRed(plaintxt, q, false/*reduce to [-q/2,1/2]*/);
+  if (q > 1)
+    PolyRed(plaintxt, q, false /*reduce to [-q/2,1/2]*/);
 }
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  std::cerr << "  "<<label
-       << ", log2(modulus/noise)=" << (-c.log_of_ratio()/log(2.0)) 
-       << ", p^r=" << c.getPtxtSpace();
+  std::cerr << "  " << label
+            << ", log2(modulus/noise)=" << (-c.log_of_ratio() / log(2.0))
+            << ", p^r=" << c.getPtxtSpace();
 
   if (dbgKey) {
     double ratio = log2_realToEstimatedNoise(c, *dbgKey);
     std::cerr << ", log2(noise/bound)=" << ratio;
-    if (ratio > 0) std::cerr << " BAD-BOUND";
+    if (ratio > 0)
+      std::cerr << " BAD-BOUND";
   }
+
+#if 0
+  // This is not really a useful test
 
   if (dbgKey && c.getContext().isBootstrappable()) {
     Ctxt c1(c);
@@ -201,7 +211,9 @@ void CheckCtxt(const Ctxt& c, const char* label)
     std::cerr << ", log2(max_pwrfl/max_canon)=" << ratio;
     if (ratio > 0) std::cerr << " BAD-BOUND";
   }
+#endif
+
   std::cerr << std::endl;
 }
 
-}
+} // namespace helib

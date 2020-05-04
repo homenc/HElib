@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -11,12 +11,17 @@
  */
 
 #include <cstring> // strcpy
+#include <set>
+#include <array>
 #include <algorithm>
+#include <iterator>
 #include <string>
 #include <sstream>
 #include <vector>
 #include <fstream>
 #include <cstdio>
+#include <chrono>
+#include <random>
 #include "test_common.h"
 #include "gtest/gtest.h"
 #include <helib/assertions.h>
@@ -67,7 +72,7 @@ public:
     this->argv = new char*[argc + 1];
 
     // Copy strings to argv
-    for (size_t i = 0; i < this->argc; i++) {
+    for (int i = 0; i < this->argc; i++) {
       this->argv[i] = new char[words[i].length() + 1];
       strcpy(this->argv[i], words[i].c_str());
     }
@@ -129,26 +134,56 @@ public:
 // For death tests naming convention
 using DeathTestArgMapCmdLine = TestArgMapCmdLine;
 
-TEST_F(DeathTestArgMapCmdLine, documentationShownIfHelpSelectedCmdLine)
+TEST_F(DeathTestArgMapCmdLine, documentationShownIfDefaultHelpSelectedCmdLine)
+{
+  mockCmdLineArgs("./prog --help");
+
+  helib::ArgMap amap1;
+
+  EXPECT_EXIT(amap1.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              "^Usage");
+
+  // And again got '-h'
+  mockCmdLineArgs("./prog -h");
+
+  helib::ArgMap amap2;
+
+  EXPECT_EXIT(amap2.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              "^Usage.*");
+}
+
+TEST_F(DeathTestArgMapCmdLine, documentationCheckCmdLine)
 {
   mockCmdLineArgs("./prog -h");
 
   struct Opts
   {
-    int arg1 = 5;
-    float arg2 = 34.5;
-    std::string arg3 = "Hello World";
+    int i = 0;
+    bool a = false;
+    bool b = true;
+    std::string s;
+    std::vector<std::string> v;
   } opts;
 
   helib::ArgMap amap;
-  amap.arg("alice", opts.arg1, "message string")
-      .arg("bob", opts.arg2, "message string")
-      // This now should not show default
-      .arg("chris", opts.arg3, "message string", "");
+  amap.named()
+      .arg("i", opts.i, "an int to place.")
+      .toggle()
+      .arg("-a", opts.a, "a bool to set true.")
+      .toggle(false)
+      .arg("-b", opts.b, "b bool to set false.")
+      .required()
+      .positional()
+      .arg("string", opts.s, "a string to set.")
+      .note("A small note.")
+      .dots(opts.v, "file");
 
-  EXPECT_EXIT(amap.parse(argc, argv),
-              ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Usage.*");
+  EXPECT_EXIT(
+      amap.parse(argc, argv),
+      ::testing::ExitedWithCode(EXIT_FAILURE),
+      R"(^Usage: \./prog \[-a\] \[-b\] \[i=<v>\] string \[file \.\.\.\].)");
 }
 
 TEST_F(DeathTestArgMapCmdLine, documentationShownIfCustomHelpSelectedCmdLine)
@@ -171,7 +206,7 @@ TEST_F(DeathTestArgMapCmdLine, documentationShownIfCustomHelpSelectedCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Usage.*");
+              "^Usage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine,
@@ -195,7 +230,7 @@ TEST_F(DeathTestArgMapCmdLine,
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Usage.*");
+              "^Usage.*");
 }
 
 TEST_F(TestArgMapSampleFile, documentationShownIfHelpSelectedFromFile)
@@ -289,7 +324,7 @@ TEST_F(DeathTestArgMapCmdLine, illFormedCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument 'alic'\nUsage.*");
+              "^Unrecognised argument 'alic'\nUsage.*");
 }
 
 TEST_F(DeathTestArgMapCmdLine, danglingSeparatorCmdLine)
@@ -309,7 +344,7 @@ TEST_F(DeathTestArgMapCmdLine, danglingSeparatorCmdLine)
   EXPECT_EXIT(
       amap.parse(argc, argv),
       ::testing::ExitedWithCode(EXIT_FAILURE),
-      "Dangling value for named argument 'alice' after separator.\nUsage.*");
+      "^Dangling value for named argument 'alice' after separator.\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, danglingSeparatorFromFile)
@@ -366,12 +401,12 @@ TEST_F(DeathTestArgMapCmdLine, nullptrAndEmptyStringsForNoDefaultsCmdLine)
   } opts;
 
   helib::ArgMap amap;
-  amap.arg("alice", opts.arg1, "message string", "")
-      .arg("bob", opts.arg2, "message string", nullptr);
+  amap.arg("alice", opts.arg1, "message string1", "")
+      .arg("bob", opts.arg2, "message string2", nullptr);
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Usage.*\n.*string\n.*bob.*string\n$");
+              "^Usage.*string1\n.*string2\n");
 }
 
 TEST_F(TestArgMapCmdLine, namedArgsCmdLine)
@@ -526,8 +561,7 @@ TEST(TestArgMap, settingSameVariableTwice)
   helib::ArgMap amap;
   amap.arg("alice", opts.arg1, "message string");
 
-  EXPECT_THROW(amap.arg("bob", opts.arg1, "message string"),
-               helib::RuntimeError);
+  EXPECT_THROW(amap.arg("bob", opts.arg1, "message string"), helib::LogicError);
 }
 
 TEST_F(TestArgMapCmdLine, spacedArgsCmdLine)
@@ -598,7 +632,7 @@ TEST_F(DeathTestArgMapCmdLine, unrecognisedArgsCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument 'lice'\nUsage.*");
+              "^Unrecognised argument 'lice'\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, unrecognisedArgsFromFile)
@@ -691,10 +725,10 @@ TEST_F(DeathTestArgMapCmdLine, wrongSeparatorNonWhitespaceCaseCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument 'alice:1'\nUsage.*");
+              "^Unrecognised argument 'alice:1'\nUsage.*");
 }
 
-TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseiCmdLine)
+TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseCmdLine)
 {
   mockCmdLineArgs("./prog alice=1 bob=7.5 chris=Hi");
 
@@ -713,7 +747,7 @@ TEST_F(DeathTestArgMapCmdLine, wrongSeparatorWhitespaceCaseiCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              "Unrecognised argument 'alice=1'\nUsage.*");
+              "^Unrecognised argument 'alice=1'\nUsage.*");
 }
 
 TEST_F(TestArgMapSampleFile, changingSeparatorFromFile)
@@ -745,7 +779,7 @@ TEST_F(TestArgMapSampleFile, changingSeparatorFromFile)
   EXPECT_EQ(opts.arg3, "Hi");
 }
 
-TEST_F(TestArgMapCmdLine, compulsoryArgumentGivenCmdLine)
+TEST_F(TestArgMapCmdLine, requiredNamedArgumentGivenCmdLine)
 {
   mockCmdLineArgs("./prog alice=1 bob=7.5");
 
@@ -769,7 +803,7 @@ TEST_F(TestArgMapCmdLine, compulsoryArgumentGivenCmdLine)
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(TestArgMapSampleFile, compulsoryArgumentGivenFromFile)
+TEST_F(TestArgMapSampleFile, requiredNamedArgumentGivenFromFile)
 {
   std::ostringstream oss;
   oss << "alice=1\n"
@@ -798,7 +832,47 @@ TEST_F(TestArgMapSampleFile, compulsoryArgumentGivenFromFile)
   EXPECT_EQ(opts.arg3, "");
 }
 
-TEST_F(DeathTestArgMapCmdLine, compulsoryArgumentNotGivenCmdLine)
+TEST_F(DeathTestArgMapCmdLine, requiredPositionalNotGivenArgsCmdLine)
+{
+  mockCmdLineArgs("./prog");
+
+  struct Opts
+  {
+    std::string dave;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.required().positional().arg("dave", opts.dave, "message string", "");
+
+  EXPECT_EXIT(amap.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              R"(^Required argument\(s\) not given:.*)");
+}
+
+TEST_F(DeathTestArgMapCmdLine, tooManyPositionalArgsCmdLine)
+{
+  mockCmdLineArgs("./prog dave1 notEve bob5");
+
+  struct Opts
+  {
+    std::string dave;
+    std::string eve;
+  } opts;
+
+  helib::ArgMap amap;
+  amap.required()
+      .positional()
+      .arg("dave", opts.dave, "message string", "")
+      .arg("eve", opts.eve, "message string", "");
+
+  EXPECT_EXIT(amap.parse(argc, argv),
+              ::testing::ExitedWithCode(EXIT_FAILURE),
+              ("^Unrecognised argument 'bob5'\n"
+               "There could be too many positional arguments\n"
+               "Usage.*"));
+}
+
+TEST_F(DeathTestArgMapCmdLine, requiredNamedArgumentNotGivenCmdLine)
 {
   mockCmdLineArgs("./prog alice=1");
 
@@ -818,10 +892,10 @@ TEST_F(DeathTestArgMapCmdLine, compulsoryArgumentNotGivenCmdLine)
 
   EXPECT_EXIT(amap.parse(argc, argv),
               ::testing::ExitedWithCode(EXIT_FAILURE),
-              R"(Required argument\(s\) not given:.*)");
+              R"(^Required argument\(s\) not given:.*)");
 }
 
-TEST_F(TestArgMapSampleFile, compulsoryArgumentNotGivenFromFile)
+TEST_F(TestArgMapSampleFile, requiredArgumentNotGivenFromFile)
 {
   std::ostringstream oss;
   oss << "alice=1\n";
@@ -1031,6 +1105,29 @@ TEST_F(TestArgMapCmdLine, toggleArgsCmdLine)
   EXPECT_FALSE(opts.toggle_f);
 }
 
+TEST_F(TestArgMapCmdLine, requiredToggleArgsAreOptionalCmdLine)
+{
+  mockCmdLineArgs("./prog");
+
+  struct Opts
+  {
+    bool toggle_t = true;
+    bool toggle_f = false;
+  } opts;
+
+  helib::ArgMap amap1;
+  amap1.required().toggle();
+
+  // For TOGGLE_TRUE
+  EXPECT_THROW(amap1.arg("-t", opts.toggle_t), helib::LogicError);
+
+  helib::ArgMap amap2;
+  amap2.required().toggle(false);
+
+  // For TOGGLE_FALSE
+  EXPECT_THROW(amap2.arg("-f", opts.toggle_f), helib::LogicError);
+}
+
 TEST_F(TestArgMapCmdLine, positionalArgsCmdLine)
 {
   mockCmdLineArgs("./prog -alice=1 -bob=2.2 -t dave1 -chris=NotIn eve2");
@@ -1142,9 +1239,182 @@ TEST_F(TestArgMapCmdLine, requiredThenOptionalPositionalArgsCmdLine)
   EXPECT_EQ(opts.eve, "");
 }
 
-TEST(TestArgMap, secondTimeOptionalPositionalArgs)
+TEST_F(TestArgMapCmdLine, positionalArgsPassedWithNameOfArgCmdLine)
+{
+  mockCmdLineArgs("./prog dave notEve");
+
+  struct Opts
+  {
+    std::string dave;
+    std::string eve;
+  } opts;
+
+  helib::ArgMap()
+      .required()
+      .positional()
+      .arg("dave", opts.dave, "message string", "")
+      .arg("eve", opts.eve, "message string", "")
+      .parse(argc, argv);
+
+  EXPECT_EQ(opts.dave, "dave");
+  EXPECT_EQ(opts.eve, "notEve");
+}
+
+// Create from 1 to 10 inclusive random order list for testing variable
+// positional args.
+struct VariablePositionalArgs
 {
 
+  static const int upto = 10;
+  unsigned seed;
+  int random = 0;
+  std::array<std::string, upto> default_word_list{{"apple.txt",
+                                                   "banana.txt",
+                                                   "cat.dat",
+                                                   "dog.dat",
+                                                   "eagle.md",
+                                                   "fox.sh",
+                                                   "gorilla.dat",
+                                                   "herring",
+                                                   "imp.cpp",
+                                                   "jaguar.car"}};
+
+  std::vector<std::string> word_list;
+
+  VariablePositionalArgs()
+  {
+    // between 1 and 10 inclusive is good enough.
+    seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::uniform_int_distribution<int> distribution(1, upto);
+    std::default_random_engine generator(seed);
+    random = distribution(generator);
+
+    std::shuffle(default_word_list.begin(),
+                 default_word_list.end(),
+                 std::default_random_engine(seed));
+  }
+
+  std::string genStr(std::string first,
+                     std::multiset<std::string> priority_mixin = {})
+  {
+
+    // Random number of positional dots args form default_word_list
+    std::ostringstream string_list;
+    string_list << first;
+
+    std::size_t max_size = random + priority_mixin.size();
+    word_list.resize(max_size);
+
+    // In case this isn't our first call.
+    if (word_list.size() > max_size) {
+      word_list.resize(max_size);
+    }
+
+    // random [1, upto]
+    std::copy(default_word_list.begin(),
+              default_word_list.begin() + random,
+              word_list.begin());
+
+    if (priority_mixin.size() > 0) {
+      std::copy(priority_mixin.begin(),
+                priority_mixin.end(),
+                word_list.begin() + random);
+      // Need to mix them.
+      std::shuffle(
+          word_list.begin(), word_list.end(), std::default_random_engine(seed));
+    }
+
+    for (const auto& word : word_list)
+      string_list << ' ' << word;
+
+    return string_list.str();
+  }
+
+  int getRandom() const { return random; }
+
+  const std::vector<std::string>& getWordList() const { return word_list; }
+};
+
+TEST_F(TestArgMapCmdLine, onlyVariableNumbersOfOptionalPositional)
+{
+
+  VariablePositionalArgs var_pos;
+
+  mockCmdLineArgs(var_pos.genStr("./prog"));
+
+  struct Opts
+  {
+    std::vector<std::string> dots;
+  } opts;
+
+  helib::ArgMap().dots(opts.dots, "file").parse(argc, argv);
+
+  // Has it been populated first?
+  ASSERT_TRUE(opts.dots.size() > 0);
+  // Now check the entries.
+  for (size_t i = 0; i < opts.dots.size(); ++i)
+    EXPECT_EQ(opts.dots[i], var_pos.getWordList()[i])
+        << "i = " << i << std::endl;
+}
+
+TEST_F(TestArgMapCmdLine,
+       variableNumbersOfOptionalPositionalWithMixedInOtherArgTypes)
+{
+
+  VariablePositionalArgs var_pos;
+
+  std::multiset<std::string> otherArgs = {"-t", "-t", "k = v", "-f"};
+
+  std::string cmdline = var_pos.genStr("./prog", otherArgs);
+
+  mockCmdLineArgs(cmdline);
+
+  struct Opts
+  {
+    bool t = false;
+    bool f = true;
+    std::string value;
+    std::string bob;
+    std::vector<std::string> dots;
+  } opts;
+
+  helib::ArgMap()
+      .optional()
+      .toggle()
+      .arg("-t", opts.t, "")
+      .toggle(false)
+      .arg("-f", opts.f, "")
+      .required()
+      .named()
+      .arg("k", opts.value, "")
+      .positional()
+      .arg("bob", opts.bob, "")
+      .dots(opts.dots, "file")
+      .parse(argc, argv);
+
+  std::vector<std::string> word_list;
+  std::remove_copy_if(
+      begin(var_pos.getWordList()),
+      end(var_pos.getWordList()),
+      std::back_inserter(word_list),
+      [&otherArgs](const std::string& s) { return otherArgs.count(s) > 0; });
+
+  ASSERT_TRUE(word_list.size() > 0);
+  ASSERT_EQ(opts.dots.size(), word_list.size() - 1);
+  // Now check the entries.
+  EXPECT_TRUE(opts.t);
+  EXPECT_FALSE(opts.f);
+  EXPECT_EQ(opts.value, "v");
+  EXPECT_EQ(opts.bob, word_list.front());
+  // and the dots.
+
+  // Start form 1 as zeroth is the normal positonal arg.
+  for (size_t i = 1; i < opts.dots.size(); ++i)
+    EXPECT_EQ(opts.dots[i], word_list[i + 1]) << "i = " << i << std::endl;
+}
+
+TEST(TestArgMap, secondTimeOptionalPositionalArgs)
+{
   struct Opts
   {
     int arg1;
@@ -1172,6 +1442,32 @@ TEST(TestArgMap, secondTimeOptionalPositionalArgs)
 
   EXPECT_THROW(amap.arg("freya", opts.freya, "message string", ""),
                helib::LogicError);
+}
+
+TEST(TestArgMap, emptyNameOfArg)
+{
+  int i;
+
+  helib::ArgMap amap;
+
+  EXPECT_THROW(amap.arg("", i, ""), helib::LogicError);
+}
+
+TEST(TestArgMap, whitespaceInNameOfArg)
+{
+  int i;
+
+  helib::ArgMap amap1;
+  // At beginning
+  EXPECT_THROW(amap1.arg(" alice", i, ""), helib::LogicError);
+
+  helib::ArgMap amap2;
+  // In middle
+  EXPECT_THROW(amap2.arg("ali ce", i, ""), helib::LogicError);
+
+  helib::ArgMap amap3;
+  // At end
+  EXPECT_THROW(amap3.arg("alice ", i, ""), helib::LogicError);
 }
 
 } // namespace

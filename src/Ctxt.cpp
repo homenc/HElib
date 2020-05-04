@@ -45,8 +45,8 @@ void SKHandle::write(std::ostream& str) const
 }
 
 // A hack for recording required automorphisms (see NumbTh.h)
-std::set<long>* FHEglobals::automorphVals = NULL;
-std::set<long>* FHEglobals::automorphVals2 = NULL;
+std::set<long>* FHEglobals::automorphVals = nullptr;
+std::set<long>* FHEglobals::automorphVals2 = nullptr;
 
 // Dummy encryption, just encodes the plaintext in a Ctxt object.
 // NOTE: for now, it leaves the intFactor field of *this alone.
@@ -1651,12 +1651,14 @@ void Ctxt::smartAutomorph(long k)
     recordAutomorphVal(k);
     return;
   }
-  // Special case: if *this is empty then do nothing
-  if (this->isEmpty()) return;
 
   // Sanity check: verify that k \in Zm*
   long m = context.zMStar.getM();
   k = mcMod(k, m);
+
+  // Special cases
+  if (this->isEmpty() || k==1) return;
+
   //OLD: assert (context.zMStar.inZmStar(k));
   helib::assertTrue(context.zMStar.inZmStar(k), "k must be in Zm*");
 
@@ -1688,7 +1690,6 @@ void Ctxt::smartAutomorph(long k)
   FHE_TIMER_STOP;
 }
 
-
 // applies the Frobenius automorphism p^j
 void Ctxt::frobeniusAutomorph(long j) 
 {
@@ -1705,7 +1706,7 @@ void Ctxt::frobeniusAutomorph(long j)
     long d = context.zMStar.getOrdP();
 
     j = mcMod(j, d);
-    long val = NTL::PowerMod(p, j, m);
+    long val = NTL::PowerMod(p % m, j, m);
     smartAutomorph(val);
   }
 }
@@ -2001,14 +2002,6 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
   helib::assertTrue(p2r>1, "Plaintext space must be greater than 1 for mod switching");
   helib::assertEq(NTL::GCD(q,p2r), 1l, "New modulus and current plaintext space must be co-prime");
 
-  // this will trigger a warning if any operations that were
-  // previously performed on the polynomial basis were invalid
-  // because of excess noise
-  NTL::xdouble xQ = NTL::xexp(context.logOfProduct(getPrimeSet()));
-  double polyNormBnd = context.zMStar.getPolyNormBnd();
-  if (noiseBound*polyNormBnd > 0.48*xQ)
-    Warning("bootstrapping with too much noise");
-
   // Compute the ratio between the current modulus and the new one.
   // NOTE: q is a long int, so a double for the logarithms and
   //       NTL::xdouble for the ratio itself is sufficient
@@ -2036,8 +2029,9 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
     NTL::Vec<NTL::ZZ> pwrfl;
     p2d_conv.dcrtToPowerful(pwrfl, parts[i]); // convert to powerful rep
 
-    vecRed(pwrfl, pwrfl, Q, false);
+    // vecRed(pwrfl, pwrfl, Q, false);
     // reduce to interval [-Q/2,+Q/2]
+    // FIXME: it looks like the coefficients should already be reduced
 
     NTL::ZZ c, X, Y, cq;
 

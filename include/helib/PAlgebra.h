@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -44,13 +44,15 @@
  */
 #include <exception>
 #include <utility>
+#include <vector>
+#include <complex>
+
 #include <helib/NumbTh.h>
 #include <helib/zzX.h>
 #include <helib/hypercube.h>
 #include <helib/PGFFT.h>
 #include <helib/clonedPtr.h>
-#include <vector>
-#include <complex>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -711,7 +713,7 @@ private:
 
   //! Same as above, but embeds relative to Ft rather than F1. The
   //! optional rF1 contains the output of mapToF1, to speed this operation.
-  void mapToFt(RX& w, const RX& G, long t, const RX* rF1=NULL) const;
+  void mapToFt(RX& w, const RX& G, long t, const RX* rF1=nullptr) const;
 
   void buildTree(std::shared_ptr< TNode<RX> >& res, long offset, long extent) const;
 
@@ -746,7 +748,7 @@ public:
   // These function make no sense for PAlgebraModCx
   const std::vector<NTL::ZZX>& getFactorsOverZZ() const override
   { throw helib::LogicError("PAlgebraModCx::getFactorsOverZZ undefined"); }
-  zzX getMask_zzX(long i, long j) const override
+  zzX getMask_zzX(UNUSED long i, UNUSED long j) const override
   { throw helib::LogicError("PAlgebraModCx::getMask_zzX undefined"); }
 };
 
@@ -820,6 +822,9 @@ public:
 bool comparePAlgebra(const PAlgebra& palg,
                      unsigned long m, unsigned long p, unsigned long r,
                      const std::vector<long>& gens, const std::vector<long>& ords);
+
+// for internal consumption only
+double calcPolyNormBnd(long m);
 
 }
 

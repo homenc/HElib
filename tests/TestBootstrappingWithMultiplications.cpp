@@ -1,4 +1,4 @@
-/* Copyright (C) 2019 IBM Corp.
+/* Copyright (C) 2019-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -17,38 +17,49 @@
 #include <random>
 
 namespace {
-struct Parameters {
-  Parameters(long m, long p, long r, long c, long bits,
-             long t, int c_m, long n, std::vector<long> mvec,
-             std::vector<long> gens, std::vector<long> ords) :
-    m(m),
-    p(p),
-    r(r),
-    c(c),
-    bits(bits),
-    t(t),
-    c_m(c_m),
-    n(n),
-    mvec(helib::convert<NTL::Vec<long>>(mvec)),
-    gens(gens),
-    ords(ords) {
-  if (mvec.empty(), gens.empty() || ords.empty())
+struct Parameters
+{
+  Parameters(long m,
+             long p,
+             long r,
+             long c,
+             long bits,
+             long t,
+             int c_m,
+             long n,
+             std::vector<long> mvec,
+             std::vector<long> gens,
+             std::vector<long> ords) :
+      m(m),
+      p(p),
+      r(r),
+      c(c),
+      bits(bits),
+      t(t),
+      c_m(c_m),
+      n(n),
+      mvec(helib::convert<NTL::Vec<long>>(mvec)),
+      gens(gens),
+      ords(ords)
+  {
+    if (mvec.empty(), gens.empty() || ords.empty())
       throw helib::LogicError("mvec, gens, and ords must be non-empty");
-    };
+  };
 
-    const long m;
-    const long p;
-    const long r;
-    const long c;
-    const long bits;
-    const long t;
-    const int c_m;
-    const long n;
-    const NTL::Vec<long> mvec;
-    const std::vector<long> gens;
-    const std::vector<long> ords;
+  const long m;
+  const long p;
+  const long r;
+  const long c;
+  const long bits;
+  const long t;
+  const int c_m;
+  const long n;
+  const NTL::Vec<long> mvec;
+  const std::vector<long> gens;
+  const std::vector<long> ords;
 
-  friend std::ostream &operator<<(std::ostream &os, const Parameters &params) {
+  friend std::ostream& operator<<(std::ostream& os, const Parameters& params)
+  {
     return os << "{"
               << "m=" << params.m << ","
               << "p=" << params.p << ","
@@ -60,86 +71,97 @@ struct Parameters {
               << "ords=" << helib::vecToStr(params.ords) << ","
               << "mvec=" << params.mvec << ","
               << "c_m=" << params.c_m << ","
-              << "computation depth=" << params.n
-              << "}";
+              << "computation depth=" << params.n << "}";
   }
-
 };
 
-class TestFatBootstrappingWithMultiplications : public ::testing::TestWithParam<Parameters> {
-  protected:
-    const long n; // Number of multiplications to perform
+class TestFatBootstrappingWithMultiplications :
+    public ::testing::TestWithParam<Parameters>
+{
+protected:
+  const long n; // Number of multiplications to perform
 
-    helib::Context context;
-    helib::SecKey secretKey;
-    helib::PubKey publicKey;
-    const helib::EncryptedArray& ea;
+  helib::Context context;
+  helib::SecKey secretKey;
+  helib::PubKey publicKey;
+  const helib::EncryptedArray& ea;
 
-    TestFatBootstrappingWithMultiplications () :
+  TestFatBootstrappingWithMultiplications() :
       n(GetParam().n),
-      context(GetParam().m, GetParam().p, GetParam().r,
-              GetParam().gens, GetParam().ords),
-      secretKey(postContextSetup(context, GetParam().c_m, GetParam().bits, GetParam().c,
-                                 GetParam().t, GetParam().mvec)),
+      context(GetParam().m,
+              GetParam().p,
+              GetParam().r,
+              GetParam().gens,
+              GetParam().ords),
+      secretKey(postContextSetup(context,
+                                 GetParam().c_m,
+                                 GetParam().bits,
+                                 GetParam().c,
+                                 GetParam().t,
+                                 GetParam().mvec)),
       publicKey(keySetup(secretKey)),
       ea(*(context.ea))
-    {}
+  {}
 
-    static helib::Context& postContextSetup(helib::Context& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
-      context.zMStar.set_cM(c_m / 100);
-      helib::buildModChain(context, bits, c, true, t);
-      context.makeBootstrappable(mvec, t, 0);
-      return context;
+  static helib::Context& postContextSetup(helib::Context& context,
+                                          int c_m,
+                                          long bits,
+                                          long c,
+                                          long t,
+                                          NTL::Vec<long> mvec)
+  {
+    context.zMStar.set_cM(c_m / 100);
+    helib::buildModChain(context, bits, c, true, t);
+    context.makeBootstrappable(mvec, t, 0);
+    return context;
+  }
+
+  static helib::SecKey& keySetup(helib::SecKey& secretKey)
+  {
+    secretKey.GenSecKey();
+    helib::addSome1DMatrices(secretKey);
+    helib::addFrbMatrices(secretKey);
+    secretKey.genRecryptData();
+    return secretKey;
+  }
+
+  virtual void SetUp() override
+  {
+    if (helib_test::verbose) {
+      std::cout << "m=" << GetParam().m << ", p=" << GetParam().p
+                << ", r=" << GetParam().r << ", bits=" << GetParam().bits
+                << ", c=" << GetParam().c << ", skHwt=" << GetParam().t
+                << ", c_m=" << GetParam().c_m
+                << ", depth to compute=" << GetParam().n
+                << ", mvec=" << GetParam().mvec
+                << ", gens=" << helib::vecToStr(GetParam().gens)
+                << ", ords=" << helib::vecToStr(GetParam().ords) << std::endl;
+      ea.getPAlgebra().printout();
+      std::cout << "ctxtPrimes=" << context.ctxtPrimes
+                << ", specialPrimes=" << context.specialPrimes << std::endl
+                << std::endl;
     }
-
-    static helib::SecKey& keySetup(helib::SecKey& secretKey) {
-      secretKey.GenSecKey();
-      helib::addSome1DMatrices(secretKey);
-      helib::addFrbMatrices(secretKey);
-      secretKey.genRecryptData();
-      return secretKey;
-    }
-
-    virtual void SetUp() override
-    {
-      if(helib_test::verbose) {
-        std::cout << "m=" << GetParam().m
-                  << ", p=" << GetParam().p
-                  << ", r=" << GetParam().r
-                  << ", bits=" << GetParam().bits
-                  << ", c=" << GetParam().c
-                  << ", skHwt=" << GetParam().t
-                  << ", c_m=" << GetParam().c_m 
-                  << ", depth to compute=" << GetParam().n
-                  << ", mvec=" << GetParam().mvec
-                  << ", gens=" << helib::vecToStr(GetParam().gens)
-                  << ", ords=" << helib::vecToStr(GetParam().ords)
-                  << std::endl;
-        ea.getPAlgebra().printout();
-        std::cout << "ctxtPrimes="<<context.ctxtPrimes
-                  << ", specialPrimes="<<context.specialPrimes<<std::endl<<std::endl;
-      }
 #ifdef DEBUG_PRINTOUT
-      helib::dbgEa = (helib::EncryptedArray*) context.ea;
-      helib::dbgKey = &secretKey;
+    helib::dbgEa = context.ea;
+    helib::dbgKey = &secretKey;
 #endif
-    }
+  }
 
-    virtual void TearDown() override
-    {
-      if(helib_test::verbose) {
-        helib::printAllTimers();
-      }
-      helib::cleanupGlobals();
+  virtual void TearDown() override
+  {
+    if (helib_test::verbose) {
+      helib::printAllTimers();
     }
+    helib::cleanupGlobals();
+  }
 };
 
 std::vector<long> generateRandomBinaryVector(long nslots)
 {
   std::vector<long> ptxt(nslots);
   std::mt19937 gen(helib_test::random_seed);
-  std::uniform_int_distribution<int> coinFlipDist(0,1);
-  for(auto& num : ptxt)
+  std::uniform_int_distribution<int> coinFlipDist(0, 1);
+  for (auto& num : ptxt)
     num = coinFlipDist(gen);
   return ptxt;
 }
@@ -154,14 +176,14 @@ long multiplyWithRecryption(helib::Ctxt& ctxt,
   long count = 0; // number of multiplications
   FHE_NTIMER_START(Multiplications);
   while (ctxt.bitCapacity() >= 40 && depth + count < n) {
-    if(helib_test::verbose) {
-      std::cout << "multiplication " << count+1 << std::endl;
+    if (helib_test::verbose) {
+      std::cout << "multiplication " << count + 1 << std::endl;
     }
     ctxt.multiplyBy(tmp_ctxt);
     count += 1;
   }
   FHE_NTIMER_STOP(Multiplications);
-  if(!helib_test::noPrint) {
+  if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "Before recryption");
   }
   if (depth + count < n) {
@@ -175,16 +197,13 @@ long multiplyWithRecryption(helib::Ctxt& ctxt,
     }
     FHE_NTIMER_STOP(Bootstrap);
   }
-  if(!helib_test::noPrint) {
+  if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "After recryption");
   }
   return count;
 }
 
-void multiplyPtxt(std::vector<long> ptxt,
-                  long count,
-                  long nslots,
-                  long p2r)
+void multiplyPtxt(std::vector<long> ptxt, long count, long nslots, long p2r)
 {
   std::vector<long> tmp_ptxt(ptxt);
   for (int j = 0; j < count; j++) {
@@ -195,12 +214,15 @@ void multiplyPtxt(std::vector<long> ptxt,
   }
 }
 
-TEST_P(TestFatBootstrappingWithMultiplications, correctlyPerformsFatBootstrappingWithNoMultiplications) {
+TEST_P(TestFatBootstrappingWithMultiplications,
+       correctlyPerformsFatBootstrappingWithNoMultiplications)
+{
   const long nslots = ea.size();
-  std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
+  std::vector<long> ptxt(
+      generateRandomBinaryVector(nslots)); // Random 0s and 1s
   helib::Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, ptxt);
-  if(!helib_test::noPrint) {
+  if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "Before recryption");
   }
   // Time the recryption step
@@ -208,7 +230,7 @@ TEST_P(TestFatBootstrappingWithMultiplications, correctlyPerformsFatBootstrappin
   // Recrypt/Bootstrap the ctxt
   publicKey.reCrypt(ctxt);
   FHE_NTIMER_STOP(Bootstrap);
-  if(!helib_test::noPrint) {
+  if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "After recryption");
   }
   std::vector<long> decrypted(nslots);
@@ -217,10 +239,13 @@ TEST_P(TestFatBootstrappingWithMultiplications, correctlyPerformsFatBootstrappin
   EXPECT_EQ(decrypted, ptxt);
 }
 
-TEST_P(TestFatBootstrappingWithMultiplications, correctlyPerformsFatBootstrappingWithMultiplications) {
+TEST_P(TestFatBootstrappingWithMultiplications,
+       correctlyPerformsFatBootstrappingWithMultiplications)
+{
   const long nslots = ea.size();
   const long p2r = context.alMod.getPPowR();
-  std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
+  std::vector<long> ptxt(
+      generateRandomBinaryVector(nslots)); // Random 0s and 1s
   helib::Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, ptxt);
   helib::Ctxt tmp_ctxt(ctxt);
@@ -228,10 +253,10 @@ TEST_P(TestFatBootstrappingWithMultiplications, correctlyPerformsFatBootstrappin
   long depth = 0; // count to keep track of number of multiplications
   long round = 0; // count for number of bootstraps
   while (depth < n) {
-    if(helib_test::verbose) {
+    if (helib_test::verbose) {
       std::cout << "Round " << round << std::endl;
     }
-    if(!helib_test::noPrint) {
+    if (!helib_test::noPrint) {
       helib::CheckCtxt(ctxt, "Before multiplication");
     }
     long count = 0; // count for number of multiplications this round
@@ -251,97 +276,116 @@ TEST_P(TestFatBootstrappingWithMultiplications, correctlyPerformsFatBootstrappin
 
   EXPECT_EQ(decrypted, ptxt);
 
-  if(!helib_test::noPrint) {
-    for(const auto& timerName : {"Setup", "Multiplications", "Bootstrap", "RoundTotal"}) {
+  if (!helib_test::noPrint) {
+    for (const auto& timerName :
+         {"Setup", "Multiplications", "Bootstrap", "RoundTotal"}) {
       helib::printNamedTimer(std::cout << std::endl, timerName);
     }
   }
 }
 
+// clang-format off
 INSTANTIATE_TEST_SUITE_P(typicalParameters, TestFatBootstrappingWithMultiplications, ::testing::Values(
-  //FAST
-  Parameters(31*41, 2, 1, 2, 380, 64, 100, 30, {31, 41}, {1026, 249}, {30, -2}),
-  Parameters(7*5*37, 17, 1, 3, 600, 64, 100, 40, {7, 5, 37}, {556, 1037}, {6, 4})
-  //SLOW
-  //Parameters(31775, 2, 1, 2, 580, 64, 100, 50, {41, 775}, {6976, 24806}, {40, 30}),
-  //Parameters(35113, 2, 1, 2, 580, 64, 100, 50, {37, 949}, {16134, 8548}, {36, 24})
+    // Using fast parameters as slow ones takes too long to converge.
+    //FAST
+    Parameters( 31*41,  2, 1, 2, 380, 64, 100, 30, {  31, 41}, { 1026,  249}, {30, -2}),
+    Parameters(7*5*37, 17, 1, 3, 600, 64, 100, 40, {7, 5, 37}, {  556, 1037}, { 6,  4})
+    //SLOW
+    //Parameters( 31775,  2, 1, 2, 580, 64, 100, 50, {  41,775}, { 6976,24806}, {40, 30}),
+    //Parameters( 35113,  2, 1, 2, 580, 64, 100, 50, {  37,949}, {16134, 8548}, {36, 24})
 ));
+// clang-format on
 
+class TestThinBootstrappingWithMultiplications :
+    public ::testing::TestWithParam<Parameters>
+{
+protected:
+  const long n; // Number of multiplications to perform
 
-class TestThinBootstrappingWithMultiplications : public ::testing::TestWithParam<Parameters> {
-  protected:
-    const long n; // Number of multiplications to perform
+  helib::Context context;
+  helib::SecKey secretKey;
+  helib::PubKey publicKey;
+  const helib::EncryptedArray& ea;
 
-    helib::Context context;
-    helib::SecKey secretKey;
-    helib::PubKey publicKey;
-    const helib::EncryptedArray& ea;
-
-    TestThinBootstrappingWithMultiplications () :
+  TestThinBootstrappingWithMultiplications() :
       n(GetParam().n),
-      context(GetParam().m, GetParam().p, GetParam().r,
-              GetParam().gens, GetParam().ords),
-      secretKey(postContextSetup(context, GetParam().c_m, GetParam().bits, GetParam().c,
-                                 GetParam().t, GetParam().mvec)),
+      context(GetParam().m,
+              GetParam().p,
+              GetParam().r,
+              GetParam().gens,
+              GetParam().ords),
+      secretKey(postContextSetup(context,
+                                 GetParam().c_m,
+                                 GetParam().bits,
+                                 GetParam().c,
+                                 GetParam().t,
+                                 GetParam().mvec)),
       publicKey(keySetup(secretKey)),
       ea(*(context.ea))
-    {}
+  {}
 
-    static helib::Context& postContextSetup(helib::Context& context, int c_m, long bits, long c, long t, NTL::Vec<long> mvec) {
-      context.zMStar.set_cM(c_m / 100);
-      helib::buildModChain(context, bits, c, true, t);
-      context.makeBootstrappable(mvec, t, 0, false);
-      return context;
+  static helib::Context& postContextSetup(helib::Context& context,
+                                          int c_m,
+                                          long bits,
+                                          long c,
+                                          long t,
+                                          NTL::Vec<long> mvec)
+  {
+    context.zMStar.set_cM(c_m / 100);
+    helib::buildModChain(context, bits, c, true, t);
+    context.makeBootstrappable(mvec, t, 0, false);
+    return context;
+  }
+
+  static helib::SecKey& keySetup(helib::SecKey& secretKey)
+  {
+    secretKey.GenSecKey();
+    helib::addSome1DMatrices(secretKey);
+    helib::addFrbMatrices(secretKey);
+    secretKey.genRecryptData();
+    return secretKey;
+  }
+
+  virtual void SetUp() override
+  {
+    if (helib_test::verbose) {
+      std::cout << "m=" << GetParam().m << ", p=" << GetParam().p
+                << ", r=" << GetParam().r << ", bits=" << GetParam().bits
+                << ", c=" << GetParam().c << ", skHwt=" << GetParam().t
+                << ", c_m=" << GetParam().c_m
+                << ", depth to compute=" << GetParam().n
+                << ", mvec=" << GetParam().mvec
+                << ", gens=" << helib::vecToStr(GetParam().gens)
+                << ", ords=" << helib::vecToStr(GetParam().ords) << std::endl;
+      ea.getPAlgebra().printout();
+      std::cout << "ctxtPrimes=" << context.ctxtPrimes
+                << ", specialPrimes=" << context.specialPrimes << std::endl
+                << std::endl;
     }
-
-    static helib::SecKey& keySetup(helib::SecKey& secretKey) {
-      secretKey.GenSecKey();
-      helib::addSome1DMatrices(secretKey);
-      helib::addFrbMatrices(secretKey);
-      secretKey.genRecryptData();
-      return secretKey;
-    }
-
-    virtual void SetUp() override
-    {
-      if(helib_test::verbose) {
-        std::cout << "m=" << GetParam().m
-                  << ", p=" << GetParam().p
-                  << ", r=" << GetParam().r
-                  << ", bits=" << GetParam().bits
-                  << ", c=" << GetParam().c
-                  << ", skHwt=" << GetParam().t
-                  << ", c_m=" << GetParam().c_m 
-                  << ", depth to compute=" << GetParam().n
-                  << ", mvec=" << GetParam().mvec
-                  << ", gens=" << helib::vecToStr(GetParam().gens)
-                  << ", ords=" << helib::vecToStr(GetParam().ords)
-                  << std::endl;
-        ea.getPAlgebra().printout();
-        std::cout << "ctxtPrimes="<<context.ctxtPrimes
-                  << ", specialPrimes="<<context.specialPrimes<<std::endl<<std::endl;
-      }
 #ifdef DEBUG_PRINTOUT
-      helib::dbgEa = (helib::EncryptedArray*) context.ea;
-      helib::dbgKey = &secretKey;
+    helib::dbgEa = context.ea;
+    helib::dbgKey = &secretKey;
 #endif
-    }
+  }
 
-    virtual void TearDown() override
-    {
-      if(helib_test::verbose) {
-        helib::printAllTimers();
-      }
-      helib::cleanupGlobals();
+  virtual void TearDown() override
+  {
+    if (helib_test::verbose) {
+      helib::printAllTimers();
     }
+    helib::cleanupGlobals();
+  }
 };
 
-TEST_P(TestThinBootstrappingWithMultiplications, correctlyPerformsThinBootstrappingWithNoMultiplications) {
+TEST_P(TestThinBootstrappingWithMultiplications,
+       correctlyPerformsThinBootstrappingWithNoMultiplications)
+{
   const long nslots = ea.size();
-  std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
+  std::vector<long> ptxt(
+      generateRandomBinaryVector(nslots)); // Random 0s and 1s
   helib::Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, ptxt);
-  if(!helib_test::noPrint) {
+  if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "Before recryption");
   }
   // Time the recryption step
@@ -349,7 +393,7 @@ TEST_P(TestThinBootstrappingWithMultiplications, correctlyPerformsThinBootstrapp
   // Recrypt/Bootstrap the ctxt
   publicKey.thinReCrypt(ctxt);
   FHE_NTIMER_STOP(Bootstrap);
-  if(!helib_test::noPrint) {
+  if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "After recryption");
   }
   std::vector<long> decrypted(nslots);
@@ -358,10 +402,13 @@ TEST_P(TestThinBootstrappingWithMultiplications, correctlyPerformsThinBootstrapp
   EXPECT_EQ(decrypted, ptxt);
 }
 
-TEST_P(TestThinBootstrappingWithMultiplications, correctlyPerformsThinBootstrappingWithMultiplications) {
+TEST_P(TestThinBootstrappingWithMultiplications,
+       correctlyPerformsThinBootstrappingWithMultiplications)
+{
   const long nslots = ea.size();
   const long p2r = context.alMod.getPPowR();
-  std::vector<long> ptxt(generateRandomBinaryVector(nslots)); // Random 0s and 1s
+  std::vector<long> ptxt(
+      generateRandomBinaryVector(nslots)); // Random 0s and 1s
   helib::Ctxt ctxt(publicKey);
   ea.encrypt(ctxt, publicKey, ptxt);
   helib::Ctxt tmp_ctxt(ctxt);
@@ -369,10 +416,10 @@ TEST_P(TestThinBootstrappingWithMultiplications, correctlyPerformsThinBootstrapp
   long depth = 0; // count to keep track of number of multiplications
   long round = 0; // count for number of bootstraps
   while (depth < n) {
-    if(helib_test::verbose) {
+    if (helib_test::verbose) {
       std::cout << "Round " << round << std::endl;
     }
-    if(!helib_test::noPrint) {
+    if (!helib_test::noPrint) {
       helib::CheckCtxt(ctxt, "Before multiplication");
     }
     long count = 0; // count for number of multiplications this round
@@ -392,20 +439,24 @@ TEST_P(TestThinBootstrappingWithMultiplications, correctlyPerformsThinBootstrapp
 
   EXPECT_EQ(decrypted, ptxt);
 
-  if(!helib_test::noPrint) {
-    for(const auto& timerName : {"Setup", "Multiplications", "Bootstrap", "RoundTotal"}) {
+  if (!helib_test::noPrint) {
+    for (const auto& timerName :
+         {"Setup", "Multiplications", "Bootstrap", "RoundTotal"}) {
       helib::printNamedTimer(std::cout << std::endl, timerName);
     }
   }
 }
 
+// clang-format off
 INSTANTIATE_TEST_SUITE_P(typicalParameters, TestThinBootstrappingWithMultiplications, ::testing::Values(
-  //FAST
-  Parameters(31*41, 2, 1, 2, 320, 64, 100, 25, {31, 41}, {1026, 249}, {30, -2}),
-  Parameters(7*5*37, 17, 1, 3, 500, 64, 100, 30, {7, 5, 37}, {556, 1037}, {6, 4})
-  //SLOW
-  //Parameters(31775, 2, 1, 2, 580, 64, 100, 50, {41, 775}, {6976, 24806}, {40, 30}),
-  //Parameters(35113, 2, 1, 2, 580, 64, 100, 50, {37, 949}, {16134, 8548}, {36, 24})
+    // Using fast parameters as slow ones takes too long to converge.
+    //FAST
+    Parameters( 31*41,  2, 1, 2, 320, 64, 100, 25,   {31, 41}, { 1026,  249}, {30, -2}),
+    Parameters(7*5*37, 17, 1, 3, 500, 64, 100, 30, {7, 5, 37}, {  556, 1037}, { 6,  4})
+    //SLOW
+    //Parameters( 31775,  2, 1, 2, 580, 64, 100, 50,   {41,775}, { 6976,24806}, {40, 30}),
+    //Parameters( 35113,  2, 1, 2, 580, 64, 100, 50,   {37,949}, {16134, 8548}, {36, 24})
 ));
+// clang-format on
 
 } // namespace

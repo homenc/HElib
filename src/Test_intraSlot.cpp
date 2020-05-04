@@ -30,7 +30,7 @@ int main(int argc, char **argv)
   long L=10;
   amap.arg("L", L, "# of levels in the modulus chain");
   long m=91;
-  amap.arg("m", m, "use specified value as modulus", NULL);
+  amap.arg("m", m, "use specified value as modulus", nullptr);
   long seed=0;
   amap.arg("seed", seed, "PRG seed");
   amap.arg("verbose", verbose, "suppress printouts");

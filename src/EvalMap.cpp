@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -10,6 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <helib/EvalMap.h>
+#include <helib/apiAttributes.h>
 
 // needed to get NTL's TraceMap functions...needed for ThinEvalMap
 #include <NTL/lzz_pXFactoring.h>
@@ -115,14 +116,13 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
 
   NTL::Vec< std::shared_ptr<CubeSignature> > sig_sequence;
   sig_sequence.SetLength(nfactors+1);
-  sig_sequence[nfactors] = std::shared_ptr<CubeSignature>(new CubeSignature(phivec));
+  sig_sequence[nfactors] = std::make_shared<CubeSignature>(phivec);
 
   NTL::Vec<long> reduced_phivec = phivec;
 
   for (long dim = nfactors-1; dim >= 0; dim--) {
     reduced_phivec[dim] /= dvec[dim];
-    sig_sequence[dim] = 
-      std::shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
+    sig_sequence[dim] = std::make_shared<CubeSignature>(reduced_phivec);
   }
 
   long dim = nfactors - 1;
@@ -244,7 +244,7 @@ public:
     }
   }
 
-  bool get(RX& out, long i, long j, long k) const override {
+  bool get(RX& out, long i, long j, UNUSED long k) const override {
     out = A[i][j];
     return false;
   }
@@ -348,7 +348,7 @@ public:
     } // if (invert)
   } // constructor
 
-  bool get(mat_R& out, long i, long j, long k) const override {
+  bool get(mat_R& out, long i, long j, UNUSED long k) const override {
     out = A[i][j];
     return false;
   }
@@ -531,14 +531,13 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
 
   NTL::Vec< std::shared_ptr<CubeSignature> > sig_sequence;
   sig_sequence.SetLength(nfactors+1);
-  sig_sequence[nfactors] = std::shared_ptr<CubeSignature>(new CubeSignature(phivec));
+  sig_sequence[nfactors] = std::make_shared<CubeSignature>(phivec);
 
   NTL::Vec<long> reduced_phivec = phivec;
 
   for (long dim = nfactors-1; dim >= 0; dim--) {
     reduced_phivec[dim] /= dvec[dim];
-    sig_sequence[dim] = 
-      std::shared_ptr<CubeSignature>(new CubeSignature(reduced_phivec));
+    sig_sequence[dim] = std::make_shared<CubeSignature>(reduced_phivec);
   }
 
   matvec.SetLength(nfactors);
@@ -646,7 +645,7 @@ public:
     }
   }
 
-  bool get(RX& out, long i, long j, long k) const override {
+  bool get(RX& out, long i, long j, UNUSED long k) const override {
     out = A[i][j];
     return false;
   }
@@ -779,7 +778,7 @@ public:
       }
   } // constructor
 
-  bool get(RX& out, long i, long j, long k) const override {
+  bool get(RX& out, long i, long j, UNUSED long k) const override {
     out = A_deflated[i][j];
     return false;
   }

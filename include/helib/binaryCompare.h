@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -20,17 +20,49 @@
 
 namespace helib {
 
-//! Compares two integers in binary a,b.
-//! Returns max(a,b), min(a,b) and indicator bits mu=(a>b) and ni=(a<b)
-void compareTwoNumbers(CtPtrs& max, CtPtrs& min, Ctxt& mu, Ctxt& ni,
-                       const CtPtrs& a, const CtPtrs& b,
-                       std::vector<zzX>* unpackSlotEncoding=nullptr);
+/**
+ * @brief Compares two integers in binary `a`, `b`. Returns `max(a, b)`, `min(a,
+ *b)` and indicator bits `mu`=(`a`>`b`) and `ni`=(`a`<`b`)
+ * @param max Maximum of `a` and `b`.
+ * @param min Minimum of `a` and `b`.
+ * @param mu Indicator bits `mu`=(`a`>`b`).
+ * @param ni Indicator bits `ni`=(`a`<`b`).
+ * @param a First number to compare.
+ * @param b Second number to compare.
+ * @param twosComplement When set to `true`, the inputs are signed integers in
+ *2's complement. If set to `false` (default), unsigned comparison is performed.
+ * @param unpackSlotEncoding Vector of constants for unpacking, as used in
+ *bootstrapping.
+ * @note If `a`=`b` then `mu`=`ni`=`0`
+ **/
+void compareTwoNumbers(CtPtrs& max,
+                       CtPtrs& min,
+                       Ctxt& mu,
+                       Ctxt& ni,
+                       const CtPtrs& a,
+                       const CtPtrs& b,
+                       bool twosComplement = false,
+                       std::vector<zzX>* unpackSlotEncoding = nullptr);
 
-//! Compares two integers in binary a,b.
-//! Returns only indicator bits mu=(a>b) and ni=(a<b).
-void compareTwoNumbers(Ctxt& mu, Ctxt& ni,
-                       const CtPtrs& a, const CtPtrs& b,
-                       std::vector<zzX>* unpackSlotEncoding=nullptr);
+/**
+ * @brief Compares two integers in binary `a`, `b`. Returns only indicator bits
+ * `mu`=(`a`>`b`) and `ni`=(`a`<`b`).
+ * @param mu Indicator bits `mu`=(`a`>`b`).
+ * @param ni Indicator bits `ni`=(`a`<`b`).
+ * @param a First number to compare.
+ * @param b Second number to compare.
+ * @param twosComplement When set to `true`, the inputs are signed integers in
+ *2's complement. If set to `false` (default), unsigned comparison is performed.
+ * @param unpackSlotEncoding Vector of constants for unpacking, as used in
+ *bootstrapping.
+ * @note If `a`=`b` then `mu`=`ni`=`0`
+ **/
+void compareTwoNumbers(Ctxt& mu,
+                       Ctxt& ni,
+                       const CtPtrs& a,
+                       const CtPtrs& b,
+                       bool twosComplement = false,
+                       std::vector<zzX>* unpackSlotEncoding = nullptr);
 
-}
+} // namespace helib
 #endif // ifndef HELIB_BINARYCOMPARE_H

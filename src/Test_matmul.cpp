@@ -217,10 +217,10 @@ int main(int argc, char *argv[])
   amap.arg("block", block, "0: normal, 1: block");
 
   NTL::Vec<long> gens;
-  amap.arg("gens", gens, "use specified vector of generators", NULL);
+  amap.arg("gens", gens, "use specified vector of generators", nullptr);
   amap.note("e.g., gens='[420 1105 1425]'");
   NTL::Vec<long> ords;
-  amap.arg("ords", ords, "use specified vector of orders", NULL);
+  amap.arg("ords", ords, "use specified vector of orders", nullptr);
   amap.note("e.g., ords='[11 8 2]', negative means 'bad'");
 
   amap.parse(argc, argv);

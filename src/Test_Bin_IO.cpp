@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -123,10 +123,10 @@ int main(int argc, char *argv[])
   amap.parse(argc, argv);
 
   // FIXME: this is wrong!
-  const char* asciiFile1 = "misc/iotest_ascii1.txt"; 
-  const char* asciiFile2 = "misc/iotest_ascii2.txt"; 
-  const char* binFile1 = "misc/iotest_bin.bin"; 
-  const char* otherEndianFileOut = "misc/iotest_ascii3.txt";  
+  const char* asciiFile1 = "../misc/iotest_ascii1.txt"; 
+  const char* asciiFile2 = "../misc/iotest_ascii2.txt"; 
+  const char* binFile1 = "../misc/iotest_bin.bin"; 
+  const char* otherEndianFileOut = "../misc/iotest_ascii3.txt";  
 
   { // 1. Write ASCII and bin files. 
     ofstream asciiFile(asciiFile1);
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     addFrbMatrices(*secKey);
 
 #ifdef DEBUG_PRINTOUT
-        dbgEa = (EncryptedArray*) context->ea;
+        dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
 
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
     std::unique_ptr<SecKey> secKey(new SecKey(*context));
 
 #ifdef DEBUG_PRINTOUT
-        dbgEa = (EncryptedArray*) context->ea;
+        dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
 
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
     PubKey* pubKey = (PubKey*) secKey.get();
 
 #ifdef DEBUG_PRINTOUT
-        dbgEa = (EncryptedArray*) context->ea;
+        dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
 
@@ -319,7 +319,7 @@ int main(int argc, char *argv[])
       PubKey* pubKey = (PubKey*) secKey.get();
 
 #ifdef DEBUG_PRINTOUT
-        dbgEa = (EncryptedArray*) context->ea;
+        dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
 

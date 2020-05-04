@@ -103,6 +103,7 @@ set(HELIB_SRCS
 set(HELIB_HEADER_DIR "${PROJECT_INCLUDE_DIR}/helib")
 set(HELIB_HEADERS
         "${HELIB_HEADER_DIR}/helib.h"
+        "${HELIB_HEADER_DIR}/apiAttributes.h"
         "${HELIB_HEADER_DIR}/ArgMap.h"
         "${HELIB_HEADER_DIR}/binaryArith.h"
         "${HELIB_HEADER_DIR}/binaryCompare.h"
@@ -234,8 +235,12 @@ target_include_directories(helib
     # Headers used from source/build location:
     "$<BUILD_INTERFACE:${PROJECT_INCLUDE_DIR}>"
     # Headers used from the installed location:
-    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 
+target_include_directories(helib
+  SYSTEM
+  PRIVATE
+  PUBLIC
     "$<BUILD_INTERFACE:${NTL_INCLUDE_PATHS}>"
     "$<INSTALL_INTERFACE:${NTL_INCLUDE_EXPORTED_PATH}>")
 

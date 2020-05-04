@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2020 IBM Corp.
+/* Copyright (C) 2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -10,14 +10,28 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include "gtest/gtest.h"
-#include "test_common.h"
+#ifndef HELIB_APIATTRIBUTES_H
+#define HELIB_APIATTRIBUTES_H
 
-int main(int argc, char* argv[])
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  // Now argc and argv will have had their gtest_* entries
-  // processed and removed.  Parse for our own purposes.
-  helib_test::parse_common_args(argc, argv);
-  return RUN_ALL_TESTS();
-}
+/**
+ * @file api_attributes.h
+ * @brief Contains pre-processor macros
+ **/
+
+namespace helib {
+
+#ifndef UNUSED
+#if __clang__ || __GNUC__
+/**
+ * @brief Mark a parameter or function as not used.
+ * This suppresses the -Wunused related warnings.
+ **/
+#define UNUSED __attribute__((unused))
+#else
+#define UNUSED
+#endif
+#endif
+
+} // namespace helib
+
+#endif // ifndef HELIB_APIATTRIBUTES_H

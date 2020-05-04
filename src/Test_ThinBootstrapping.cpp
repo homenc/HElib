@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -176,11 +176,14 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   // GG defines the plaintext space Z_p[X]/GG(X)
   ZZX GG;
   GG = context.alMod.getFactorsOverZZ()[0];
-  EncryptedArray ea(context, GG);
+  std::shared_ptr<EncryptedArray> ea_ptr(std::make_shared<EncryptedArray>(context, GG));
+  // Alias to avoid issues with previous code
+  EncryptedArray& ea = *ea_ptr;
 
-  if (debug) {
+
+    if (debug) {
     dbgKey = &secretKey;
-    dbgEa = &ea;
+    dbgEa = ea_ptr;
   }
 
   zz_p::init(p2r);

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -124,10 +124,20 @@ public:
   //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0; 
 
+  /** @brief Correct an automorphism in a bad dimension.
+    * @param ctxt `Ctxt` to perform the correction on.
+    * @param i Dimension of which to correct.
+    * @param amt Exponent of the automorphism.
+  **/
+  virtual void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long amt) const = 0;
+
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
 
+  // FIXME: This needs to be refactored and made pure virtual.
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   // These methods are only defined for some of the derived calsses
   virtual void encode(zzX& ptxt, const std::vector< long >& array) const
   {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
@@ -143,10 +153,13 @@ public:
   {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
   virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const
   {throw helib::LogicError("EncryptedArrayBase::encode for undefined type");}
-
+#pragma GCC diagnostic pop
   void encode(zzX& ptxt, const std::vector< NTL::ZZX >& array) const
   { NTL::ZZX tmp; encode(tmp, array); convert(ptxt, tmp); }
 
+  // FIXME: This needs to be refactored and made pure virtual.
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   // These methods are only defined for some of the derived calsses
   virtual void decode(std::vector< long  >& array, const NTL::ZZX& ptxt) const
   {throw helib::LogicError("EncryptedArrayBase::decode for undefined type");}
@@ -154,12 +167,17 @@ public:
   {throw helib::LogicError("EncryptedArrayBase::decode for undefined type");}
   virtual void decode(PlaintextArray& array, const NTL::ZZX& ptxt) const
   {throw helib::LogicError("EncryptedArrayBase::decode for undefined type");}
+#pragma GCC diagnostic pop
 
   virtual void random(std::vector< long >& array) const = 0; // must be defined
 
+  // FIXME: This needs to be refactored and made pure virtual.
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   // These methods are only defined for some of the derived calsses
   virtual void random(std::vector< NTL::ZZX >& array) const
   {throw helib::LogicError("EncryptedArrayBase::decode for undefined type");}
+#pragma GCC diagnostic pop
 
   // FIXME: Inefficient implementation, calls usual decode and returns one slot
   long decode1Slot(const NTL::ZZX& ptxt, long i) const
@@ -185,6 +203,9 @@ public:
     // FIXME: the "false" param forces the PK version
   }
 
+  // FIXME: This needs to be refactored and made pure virtual.
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   virtual void decrypt(const Ctxt& ctxt, const SecKey& sKey, std::vector< long >& ptxt) const
   {throw helib::LogicError("EncryptedArrayBase::decrypt for undefined type");}
   virtual void decrypt(const Ctxt& ctxt, const SecKey& sKey, std::vector< NTL::ZZX >& ptxt) const
@@ -195,6 +216,7 @@ public:
   {throw helib::LogicError("EncryptedArrayBase::decrypt for undefined type");}
   virtual void decrypt(const Ctxt& ctxt, const SecKey& sKey, std::vector<cx_double>& ptxt) const
   {throw helib::LogicError("EncryptedArrayBase::decrypt for undefined type");}
+#pragma GCC diagnostic pop 
 
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const SecKey& sKey, long i) const
@@ -211,7 +233,11 @@ public:
   //! \f[
   //!  M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
   //! \f]
+  // FIXME: This needs to be refactored and made pure virtual.
+#pragma GCC diagnostic push 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
   virtual void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, const std::vector<NTL::ZZX>& L) const {}
+#pragma GCC diagnostic pop 
 
   // restore contexts mod p and mod G
   virtual void restoreContext() const {}
@@ -354,6 +380,8 @@ public:
   virtual void rotate(Ctxt& ctxt, long k) const override;
   virtual void shift(Ctxt& ctxt, long k) const override;
   virtual void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const override;
+
+  virtual void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long k) const override;
 
   long getP2R() const override {return getTab().getPPowR();}
 
@@ -757,6 +785,8 @@ public:
                           const std::vector<cx_double>&iImages,
                           long precision=0) const;
   ///@}
+
+  void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long k) const override;
 };
 
 
@@ -874,6 +904,9 @@ public:
   void shift(Ctxt& ctxt, long k) const { rep->shift(ctxt, k); }
   void rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) const { rep->rotate1D(ctxt, i, k, dc); }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
+
+  void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long amt) const
+    { rep->badDimensionAutomorphCorrection(ctxt, i, amt); }
 
   template<class PTXT, class ARRAY>
   void encode(PTXT& ptxt, const ARRAY& array) const 

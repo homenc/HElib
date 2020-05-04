@@ -78,8 +78,8 @@ public:
     // Convert the unpack constants to doubleCRT
     std::vector< std::shared_ptr<DoubleCRT> > coeff_vector(d);
     for (long i = 0; i < d; i++) {
-      coeff_vector[i] = std::shared_ptr<DoubleCRT>(new
-        DoubleCRT(unpackSlotEncoding[i],ctxt.getContext(),ctxt.getPrimeSet()));
+      coeff_vector[i] =
+          std::make_shared<DoubleCRT>(unpackSlotEncoding[i],ctxt.getContext(),ctxt.getPrimeSet());
     }
     // Compute the d Frobenius automorphisms of ctxt (use multi-threading)
     std::vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));

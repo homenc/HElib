@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include <NTL/vector.h>
 
 #include <helib/assertions.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -32,7 +33,7 @@ struct PtrVector {
     // NOTE: the PtrVector is const, but the pointer T* is not
   virtual long size() const =0;
 
-  virtual void resize(long newSize, const PtrVector* another=nullptr)
+  virtual void resize(long newSize, UNUSED const PtrVector* another=nullptr)
   { if (size()!=newSize)
       throw helib::LogicError("Cannot resize a generic PtrVector");
   }
@@ -153,7 +154,7 @@ struct PtrVector_VecPt : PtrVector<T> {
   T* operator[](long i) const override {return v[i];}
   long size() const override     { return v.length(); }
 
-  void resize(long newSize, const PtrVector<T>* another=nullptr) override
+  void resize(long newSize, UNUSED const PtrVector<T>* another=nullptr) override
   { v.SetLength(newSize, nullptr); }
 };
 
@@ -165,7 +166,7 @@ struct PtrVector_vectorPt : PtrVector<T> {
   T* operator[](long i) const override {return v[i];}
   long size() const     override { return long(v.size()); }
 
-  void resize(long newSize, const PtrVector<T>* another=nullptr) override
+  void resize(long newSize, UNUSED const PtrVector<T>* another=nullptr) override
   { v.resize(newSize, nullptr); }
 };
 

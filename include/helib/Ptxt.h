@@ -119,7 +119,7 @@ void innerProduct(helib::Ptxt<Scheme>& result,
   }
   result = first_vec[0];
   result *= second_vec[0];
-  for (std::size_t i = 1; i < n; ++i)
+  for (long i = 1; i < n; ++i)
     result += (first_vec[i] * second_vec[i]);
 }
 
@@ -547,7 +547,7 @@ public:
    * @param e Exponent to raise the `Ptxt` by.
    * @return Reference to `*this` post raising to the power e.
    **/
-  Ptxt<Scheme>& power(unsigned long e);
+  Ptxt<Scheme>& power(long e);
 
   /**
    * @brief Rotate slots right by specified amount (slot `i` goes to slot

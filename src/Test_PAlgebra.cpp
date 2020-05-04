@@ -36,11 +36,11 @@ int main(int argc, char *argv[])
   amap.arg("r", r,  "lifting");
 
   Vec<long> gens0;
-  amap.arg("gens", gens0, "use specified vector of generators", NULL);
+  amap.arg("gens", gens0, "use specified vector of generators", nullptr);
   amap.note("e.g., gens='[562 1871 751]'");
 
   Vec<long> ords0;
-  amap.arg("ords", ords0, "use specified vector of orders", NULL);
+  amap.arg("ords", ords0, "use specified vector of orders", nullptr);
   amap.note("e.g., ords='[4 2 -4]', negative means 'bad'");
 
   bool noPrint = true;

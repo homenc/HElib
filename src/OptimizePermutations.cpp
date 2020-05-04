@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -22,6 +22,7 @@
 #include <helib/NumbTh.h>
 #include <helib/EncryptedArray.h>
 #include <helib/permutations.h>
+#include <helib/apiAttributes.h>
 
 namespace helib {
 
@@ -57,7 +58,7 @@ void removeDups(std::list<long>& x, bool *aux)
 // Creates a new list with the old values and old values +/- offset.
 // results outside the range -n+1 .. n-1 are discarded
 //   and all resulting duplicates are removed
-void addOffset(std::list<long>& x, long offset, long n, bool *aux, bool good=false)
+void addOffset(std::list<long>& x, long offset, long n, bool *aux, UNUSED bool good=false)
 {
   for (std::list<long>::iterator i = x.begin(); i != x.end(); i++) {
     long val = *i;
@@ -174,7 +175,7 @@ public:
 static long length(LongNodePtr ptr)
 {
   long res = 0;
-  for (LongNodePtr p = ptr; p != NULL; p = p->next) res++;
+  for (LongNodePtr p = ptr; p != nullptr; p = p->next) res++;
   return res;
 }
 
@@ -185,7 +186,7 @@ static long listToVec(NTL::Vec<long>& vec, LongNodePtr ptr)
 
   vec.SetLength(len);
   long i = 0;
-  for (LongNodePtr p = ptr; p != NULL; p = p->next) {
+  for (LongNodePtr p = ptr; p != nullptr; p = p->next) {
     vec[i] = p->count; 
     i++;
   }
@@ -195,10 +196,10 @@ static long listToVec(NTL::Vec<long>& vec, LongNodePtr ptr)
 // Prints out a list of integers
 std::ostream& operator<<(std::ostream& s, LongNodePtr p)
 {
-  if (p == NULL) return s << "[]";
+  if (p == nullptr) return s << "[]";
 
   s << "[" << p->count;
-  for (p = p->next; p != NULL; p = p->next)
+  for (p = p->next; p != nullptr; p = p->next)
     s << " " << p->count;
   return s << "]";
 }
@@ -387,7 +388,7 @@ public:
     left = _left; right = _right;
   }
 
-  bool isLeaf() const { return left == NULL && right == NULL; }    
+  bool isLeaf() const { return left == nullptr && right == nullptr; }    
 };
 //! \endcond
 
@@ -482,21 +483,21 @@ public:
 long length(GenNodePtr ptr)
 {
   long res = 0;
-  for (GenNodePtr p = ptr; p != NULL; p = p->next) res++;
+  for (GenNodePtr p = ptr; p != nullptr; p = p->next) res++;
   return res;
 }
 
 
 std::ostream& operator<<(std::ostream& s, GenNodePtr p)
 {
-  if (p == NULL) {
+  if (p == nullptr) {
     s << "[]";
     return s;
   }
 
   s << "[" << p->solution;
   p = p->next;
-  while (p != NULL) {
+  while (p != nullptr) {
     s << " " << p->solution;
     p = p->next;
   }
@@ -894,7 +895,7 @@ long GeneratorTrees::buildOptimalTrees(const NTL::Vec<GenDescriptor>& gens,
   long i=0, treeIdx=0, midIdx=0;
   depth = 0; // Also compute the depth of the permutation network
   for (GenNodePtr genPtr = t.solution;
-       genPtr!=NULL; genPtr = genPtr->next, i++) {
+       genPtr!=nullptr; genPtr = genPtr->next, i++) {
     if (genPtr->solution->mid) { // Keep the "middle tree" for last
       midPtr = genPtr;
       midIdx = i;

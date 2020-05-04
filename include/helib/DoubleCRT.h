@@ -138,7 +138,7 @@ public:
 #endif
 
   //! @brief Context is not specified, use the "active context"
-  //  (run-time error if active context is NULL)
+  //  (run-time error if active context is nullptr)
   //  declared "explicit" to avoid implicit type conversion
 
 // FIXME-IndexSet
@@ -363,7 +363,7 @@ public:
   // coefficients. 
 
   //! @brief Fills each row i with random ints mod pi, uses NTL's PRG
-  void randomize(const NTL::ZZ* seed=NULL);
+  void randomize(const NTL::ZZ* seed=nullptr);
 
 
 
