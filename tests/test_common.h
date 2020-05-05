@@ -15,6 +15,7 @@
 #include <helib/ArgMap.h>
 
 namespace helib_test {
+
 extern char* path_of_executable;
 extern bool noPrint;
 extern bool verbose;

@@ -36,7 +36,7 @@ void PermNetwork::setLayers4Leaf(long lyrIdx,
                                  const SubDimension& leafData,
                                  const Permut& map2cube)
 {
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cerr << "Layer " << lyrIdx << ", column-permutation=" << p << std::endl;
 #endif
   // Compute the shift amounts for all the layers in this network
@@ -57,7 +57,7 @@ void PermNetwork::setLayers4Leaf(long lyrIdx,
     lyr.isID = isID[i];
     lyr.e = leafData.e;
     if (!lyr.isID) {
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       std::cerr << "layer " << lyrIdx + i << ": " << shifts[i] << std::endl;
 #endif
       if (leafData.good) // For good leaves, shift by -x is the same as size-x
@@ -65,7 +65,7 @@ void PermNetwork::setLayers4Leaf(long lyrIdx,
           if (shifts[i][k] < 0)
             shifts[i][k] += leafData.size;
       applyPermToVec(lyr.shifts, shifts[i], map2cube); // do the renaming
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       std::cerr << "       : " << lyr.shifts << std::endl;
 #endif
     }
@@ -176,7 +176,7 @@ void PermNetwork::applyToCube(HyperCube<long>& cube) const
     // Copy back to cube
     for (long j = 0; j < n; j++)
       cube[j] = tmp[j];
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
     std::cerr << " after layer " << i << ", cube=" << cube.getData()
               << std::endl;
 #endif

@@ -91,16 +91,14 @@ protected:
 
   virtual void SetUp() override
   {
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = ea; // for debugging purposes
-    helib::dbgKey = &secretKey;
-#endif
+    helib::setupDebugGlobals(&secretKey, ea);
+
     if (!helib_test::noPrint)
       std::cout << (helib::isDryRun() ? "* dry run, " : "* ") << "degree-" << d
                 << ", m=" << m << ", L=" << L << ", p^r=" << p2r << std::endl;
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestPolyEval, encryptedPolynomialsEvaluateAtEncryptedPointCorrectly)

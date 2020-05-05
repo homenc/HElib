@@ -33,7 +33,7 @@ void sampleHWt(zzX& poly, long n, long Hwt)
   if (n <= 0)
     return;
   if (Hwt >= n) {
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
     std::cerr << "Hwt=" << Hwt << ">=n=" << n << ", is this ok?\n";
 #endif
     Hwt = n - 1;

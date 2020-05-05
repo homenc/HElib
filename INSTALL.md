@@ -183,20 +183,27 @@ to the `./configure` step.
 ## HElib build options
 
 ### Generic options
-- `BUILD_SHARED=ON/OFF` (default is OFF): Build as shared library.
-  Note that building HElib (regardless of BUILD_SHARED) will fail if NTL
+- `BUILD_SHARED=ON/OFF` (default is `OFF`): Build as a shared library.
+  Note that building HElib (regardless of `BUILD_SHARED`) will fail if NTL
   is not built as a shared library. The default for NTL is static library,
   to build NTL as a shared library use `./configure SHARED=on` in step 1. 
-- `CMAKE_BUILD_TYPE`: Choose the type of build, options are: Debug,
-RelWithDebInfo, Release, MinSizeRel.
+- `CMAKE_BUILD_TYPE`: (default is `RelWithDebInfo`): Choose the type of build, options are: `Debug`,
+`RelWithDebInfo`, `Release`, `MinSizeRel`.
 - `CMAKE_INSTALL_PREFIX`: Desired installation directory for HElib.
-- `ENABLE_TEST=ON/OFF` (default is OFF): Enable building of tests. This will
+- `ENABLE_TEST=ON/OFF` (default is `OFF`): Enable building of tests. This will
   include an automatic download step for the google test framework stable 
   release (googletest v1.10.0)
-- `ENABLE_THREADS=ON/OFF` (default is ON): Enable threading support. This must
+- `ENABLE_THREADS=ON/OFF` (default is `ON`): Enable threading support. This must
   be on if and only if NTL was built with `NTL_THREADS=ON`.
 - `PEDANTIC_BUILD=ON/OFF` (default is ON): Use `-Wall -Wpedantic -Wextra -Werror`
   during build.
+- `HELIB_DEBUG=ON/OFF` (default is `OFF`): Activate the debug module when
+  building HElib (by defining the `HELIB_DEBUG` macro). When the debug module
+  is active, this generates extra information used for debugging purposes.
+  `HELIB_DEBUG` will propogate to programs using HElib, when using cmake. When this
+  is enabled, programs using HElib will generate a warning during
+  configuration.  This is to remind the user that use of the debug module can
+  cause issues, such as `sigsegv`, if initialized incorrectly.
 
 ### Parameters specific to option 1 (package build)
 - `PACKAGE_DIR`: Location that a package build will be installed to.  Defaults
@@ -207,7 +214,7 @@ set to `OFF`, there should either exist a system-installed GMP library, or
 - `GMP_DIR`: Prefix of the GMP library.  Ignored if `FETCH_GMP=ON`.
 
 ### Parameters specific to option 2 (library build)
-- `ENABLE_LEGACY_TEST=ON/OFF` (default is OFF): Build old test system (deprecated).
+- `ENABLE_LEGACY_TEST=ON/OFF` (default is `OFF`): Build old test system (deprecated).
 - `GMP_DIR`: Prefix of the GMP library.
 - `NTL_DIR`: Prefix of the NTL library.
 

@@ -1009,7 +1009,7 @@ long GeneratorTrees::buildOptimalTrees(const NTL::Vec<GenDescriptor>& gens,
   // Compute the mapping from array to cube and back
   ComputeCubeMapping();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   NTL::Vec<long> dims; // The "crude" cube dimensions, one dimension per tree
   getCubeDims(dims);
   std::cerr << " dims=" << dims << std::endl;

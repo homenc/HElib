@@ -26,9 +26,8 @@
 #include "gtest/gtest.h"
 #include "test_common.h"
 
-#ifdef DEBUG_PRINTOUT
 #include <helib/debugging.h>
-#endif
+
 // define flags FLAG_PRINT_ZZX, FLAG_PRINT_POLY, FLAG_PRINT_VEC, functions
 //        decryptAndPrint(ostream, ctxt, sk, ea, flags)
 //        decryptAndCompare(ctxt, sk, ea, pa);
@@ -249,16 +248,14 @@ protected:
     prepareSecKey(secKey);
 
     helib::activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context.ea;
-    helib::dbgKey = &secKey;
-#endif
+
+    helib::setupDebugGlobals(&secKey, context.ea);
   }
 
   virtual void TearDown() override
   {
-#ifdef DEBUG_PRINTOUT
-    helib::cleanupGlobals();
+#ifdef HELIB_DEBUG
+    helib::cleanupDebugGlobals();
 #endif
   }
 
@@ -456,9 +453,9 @@ TEST_P(GTestBinaryArith, product)
               << std::endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   // Print out the ciphertext with the lowest level after multiplication
-  // if DEBUG_PRINTOUT is defined.
+  // if HELIB_DEBUG is defined.
   const helib::Ctxt* minCtxt = nullptr;
   long minLvl = 10000000;
   for (const helib::Ctxt& c : encrypted_product) {
@@ -556,9 +553,9 @@ TEST_P(GTestBinaryArith, add)
               << std::endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   // Print out the ciphertext with the lowest level after addition if
-  // DEBUG_PRINTOUT is defined.
+  // HELIB_DEBUG is defined.
   const helib::Ctxt* minCtxt = nullptr;
   long minLvl = 1000;
   for (const helib::Ctxt& c : encrypted_sum) {

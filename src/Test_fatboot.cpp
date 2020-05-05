@@ -143,7 +143,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   PolyRed(ptxt_poly1, ptxt_poly, p2r, true);  
   // this is the format produced by decryption
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       dbgEa = context.ea;
       dbgKey = &secretKey;
 #endif

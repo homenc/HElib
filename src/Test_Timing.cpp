@@ -130,7 +130,7 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     FHE_NTIMER_STOP(keyGen);
 
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       dbgEa = context.ea;
       dbgKey = &secretKey;
 #endif
@@ -524,7 +524,7 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   data.other.decode4 = tp->getTime() / tp->getNumCalls();
   resetAllTimers();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
     dbgEa = context.ea;
     dbgKey = &secretKey;
 #endif

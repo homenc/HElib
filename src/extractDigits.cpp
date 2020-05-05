@@ -84,7 +84,7 @@ void extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r)
   Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
   digits.resize(r, tmp); // allocate space
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   fprintf(stderr, "***\n");
 #endif
   for (long i = 0; i < r; i++) {
@@ -99,7 +99,7 @@ void extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r)
         polyEval(digits[j], x2p, digits[j]);
         // "in spirit" digits[j] = digits[j]^p
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       fprintf(stderr, "%5ld", digits[j].bitCapacity());
 #endif
 
@@ -108,7 +108,7 @@ void extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r)
     }
     digits[i] = tmp; // needed in the next round
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
     if (dbgKey) {
       double ratio = log(embeddingLargestCoeff(digits[i], *dbgKey) /
                          digits[i].getNoiseBound()) /
@@ -123,7 +123,7 @@ void extractDigits(std::vector<Ctxt>& digits, const Ctxt& c, long r)
 #endif
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   fprintf(stderr, "***\n");
 #endif
 }
@@ -250,7 +250,7 @@ void extendExtractDigits(std::vector<Ctxt>& digits,
   digits.resize(r, tmp); // allocate space
   digits0.resize(r, tmp);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   fprintf(stderr, "***\n");
 #endif
   for (long i : range(r)) {
@@ -261,7 +261,7 @@ void extendExtractDigits(std::vector<Ctxt>& digits,
         // so just use it
 
         tmp -= digits[j];
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         fprintf(stderr, "%5ld*", digits[j].bitCapacity());
 #endif
       } else {
@@ -275,7 +275,7 @@ void extendExtractDigits(std::vector<Ctxt>& digits,
                    digits0[j]); // "in spirit" digits0[j] = digits0[j]^p
 
         tmp -= digits0[j];
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         fprintf(stderr, "%5ld ", digits0[j].bitCapacity());
 #endif
       }
@@ -284,7 +284,7 @@ void extendExtractDigits(std::vector<Ctxt>& digits,
     digits0[i] = tmp; // needed in the next round
     polyEval(digits[i], G[i], tmp);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
     if (dbgKey) {
       double ratio = log(embeddingLargestCoeff(digits[i], *dbgKey) /
                          digits[i].getNoiseBound()) /

@@ -21,7 +21,7 @@
 #define BPL_ESTIMATE (30)
 // FIXME: this should really be dynamic
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #endif
 
@@ -45,7 +45,7 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
   long n = lsize(e);
   if (n <= 1)
     return; // nothing to do
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cout << "compProducts(g[" << g.start << ".." << (g.start + g.sz - 1)
             << "],e[" << e.start << ".." << (e.start + e.sz - 1) << "])"
             << std::endl;
@@ -71,7 +71,7 @@ static void compProducts(const CtPtrs_slice& e, const CtPtrs_slice& g)
       g[i - 1]->multiplyBy(*e[n1]);
   }
   NTL_EXEC_RANGE_END
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cout << " g[" << g.start << ".." << (g.start + g.sz - 1) << "], "
             << " e[" << e.start << ".." << (e.start + e.sz - 1)
             << "]:" << std::endl;
@@ -140,7 +140,7 @@ static void compEqGt(CtPtrs& aeqb,
   }
   FHE_NTIMER_STOP(compEqGt2);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   for (long i = 0; i < lsize(b); i++)
     decryptAndPrint((std::cout << " e[" << i << "]: "),
                     *aeqb[i],

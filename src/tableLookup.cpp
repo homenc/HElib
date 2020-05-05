@@ -21,7 +21,7 @@
 #include <helib/intraSlot.h>
 #include <helib/tableLookup.h>
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #endif
 

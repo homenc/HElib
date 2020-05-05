@@ -194,17 +194,11 @@ protected:
                 << ", specialPrimes=" << context.specialPrimes << std::endl
                 << std::endl;
     }
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
-       //          if (helib_test::debug) {
-       //            dbgKey = &secretKey;
-       //            dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
-       //          }
+
+    helib::setupDebugGlobals(&secretKey, context.ea);
   }
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestApproxNums, basicArithmeticWorks)
@@ -272,7 +266,7 @@ TEST_P(GTestApproxNums, basicArithmeticWorks)
 
   // Diff between approxNums HE scheme and plaintext floating
   ea.decrypt(c1, secretKey, vd);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "res=", vd, 10) << std::endl;
   helib::printVec(std::cout << "vec=", vd1, 10) << std::endl;
 #endif
@@ -306,7 +300,7 @@ TEST_P(GTestApproxNums, complexArithmeticWorks)
   });
   c1.complexConj();
   ea.decrypt(c1, secretKey, vd);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "vd1=", vd1, 10) << std::endl;
   helib::printVec(std::cout << "res=", vd, 10) << std::endl;
 #endif
@@ -337,7 +331,7 @@ TEST_P(GTestApproxNums, complexArithmeticWorks)
   ea.extractImPart(imCtxt);
   ea.decrypt(imCtxt, secretKey, im_dec);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "vd2=", vd2, 10) << std::endl;
   helib::printVec(std::cout << "real=", realParts, 10) << std::endl;
   helib::printVec(std::cout << "res=", real_dec, 10) << std::endl;
@@ -373,14 +367,14 @@ TEST_P(GTestApproxNums, rotatesAndShiftsWork)
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "vd1=", vd1, 10) << std::endl;
 #endif
   std::rotate(vd1.begin(), vd1.end() - nplaces, vd1.end());
   ea.rotate(c1, nplaces);
   c1.reLinearize();
   ea.decrypt(c1, secretKey, vd_dec);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "vd1(rot)=", vd1, 10) << std::endl;
   helib::printVec(std::cout << "res: ", vd_dec, 10) << std::endl;
 #endif

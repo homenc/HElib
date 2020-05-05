@@ -182,13 +182,10 @@ protected:
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
+    helib::setupDebugGlobals(&secretKey, context.ea);
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
@@ -231,8 +228,7 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
   long nslots = ea.size();
 
   // Debugging additions
-  helib::dbgKey = &secretKey;
-  helib::dbgEa = ea_ptr;
+  helib::setupDebugGlobals(&secretKey, ea_ptr);
 
   helib::PlaintextArray p0(ea);
   helib::PlaintextArray p1(ea);

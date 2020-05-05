@@ -76,7 +76,7 @@ protected:
     helib::buildModChain(context, /*L=*/100, /*c=*/3);
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestPowerful, simpleConversionWorks)

@@ -24,7 +24,7 @@
 #include <NTL/BasicThreadPool.h>
 #include <helib/binaryArith.h>
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <cstdio>
 #include <helib/debugging.h>
 #endif
@@ -34,7 +34,7 @@
 
 namespace helib {
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 void decryptAndSum(std::ostream& s,
                    const CtPtrMat& numbers,
                    bool twosComplement = false);
@@ -185,7 +185,7 @@ public:
     }
     return (DAGnode*)&(it->second);
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   void printAddDAG(bool printCT = false);
 #endif
 };
@@ -663,7 +663,7 @@ void addTwoNumbers(CtPtrs& sum,
   // Work out the order of multiplications to compute all the carry bits
   AddDAG addPlan(lhs, rhs);
 
-#ifdef DEBUG_PRINTOUT // print plan
+#ifdef HELIB_DEBUG // print plan
   addPlan.printAddDAG();
 #endif
 
@@ -901,7 +901,7 @@ void addManyNumbers(CtPtrs& sum,
                     long sizeLimit,
                     std::vector<zzX>* unpackSlotEncoding)
 {
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cout << " addManyNumbers: " << numbers.size()
             << " numbers with size-limit=" << sizeLimit << std::endl;
 #endif
@@ -1012,7 +1012,7 @@ static void multByNegative(CtPtrs& product,
     }
 
   CtPtrMat_VecCt nums(numbers); // Wrapper around numbers
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   long pa, pb;
   std::vector<long> slots;
   decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
@@ -1048,7 +1048,7 @@ void multTwoNumbers(CtPtrs& product,
     return; // return 0
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cout << " before multiplication, capacity="
             << findMinBitCapacity({&lhs, &rhs}) << std::endl;
 #endif
@@ -1111,7 +1111,7 @@ void multTwoNumbers(CtPtrs& product,
   NTL_EXEC_RANGE_END
 
   CtPtrMat_VecCt nums(numbers); // A wrapper around numbers
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   long plaintext_lhs, plaintext_rhs;
   std::vector<long> slots;
   decryptBinaryNums(slots, lhs, *dbgKey, *dbgEa, false);
@@ -1381,7 +1381,7 @@ void decryptBinaryNums(std::vector<long>& pNums,
 }
 
 /********************************************************************/
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 
 void AddDAG::printAddDAG(bool printCT)
 {
@@ -1461,6 +1461,6 @@ void decryptAndSum(std::ostream& s,
   s << ")=" << sum << std::endl;
 }
 
-#endif // ifdef DEBUG_PRINTOUT
+#endif // ifdef HELIB_DEBUG
 
 } // namespace helib

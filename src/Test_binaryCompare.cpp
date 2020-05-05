@@ -25,7 +25,7 @@ NTL_CLIENT
 #include <helib/binaryCompare.h>
 #include <helib/ArgMap.h>
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #endif
 
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
   if (verbose) cout << " done\n";
 
   activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgEa = context.ea;
   dbgKey = &secKey;
 #endif
@@ -170,7 +170,7 @@ void testCompare(SecKey& secKey, long bitSize, bool bootstrap)
       encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   decryptAndPrint((cout<<" before comparison: "), encb[0], secKey, ea,0);
 #endif
 
@@ -220,7 +220,7 @@ void testCompare(SecKey& secKey, long bitSize, bool bootstrap)
          <<"), mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   const Ctxt* minLvlCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eMax) {

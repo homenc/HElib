@@ -77,7 +77,7 @@ void testIt(long d, long k, long p, long r, long m, long L,
   secretKey.GenSecKey();// A +-1/0 secret key
   //  addSome1DMatrices(secretKey); // compute key-switching matrices
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgEa = ea_ptr;        // for debugging purposes
   dbgKey = &secretKey;
 #endif

@@ -272,7 +272,7 @@ protected:
 #endif
       helib::print_stats(std::cout);
     }
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   };
 };
 

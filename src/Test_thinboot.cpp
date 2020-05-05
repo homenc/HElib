@@ -226,7 +226,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   t += GetTime();
   if (!noPrint) cout << " done in "<<t<<" seconds\n";
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       dbgEa = context.ea;
       dbgKey = &secretKey;
 #endif

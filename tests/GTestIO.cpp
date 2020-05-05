@@ -105,7 +105,7 @@ protected:
   std::vector<std::unique_ptr<helib::EncryptedArray>> eas;
   std::vector<std::vector<NTL::ZZX>> ptxts;
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 
 public:
   static void SetUpTestCase()

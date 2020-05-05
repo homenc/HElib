@@ -157,7 +157,7 @@ void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k)
     if ((k == 16 && deg(poly) > 167) || (k > 16 && k > (1.44 * kk)))
       k /= 2;
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cerr << "  k=" << k;
 #endif
 

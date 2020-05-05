@@ -154,10 +154,10 @@ obj: $(OBJ)
 
 
 #extractDigits.o: extractDigits.cpp
-#	$(CC) $(CFLAGS) -DDEBUG_PRINTOUT -c extractDigits.cpp
+#	$(CC) $(CFLAGS) -DHELIB_DEBUG -c extractDigits.cpp
 #
 recryption.o: recryption.cpp
-	$(CC) $(CFLAGS) -DDEBUG_PRINTOUT -c recryption.cpp
+	$(CC) $(CFLAGS) -DHELIB_DEBUG -c recryption.cpp
 
 PGFFT.o: PGFFT.cpp
 	$(CC) $(CFLAGS) -c PGFFT.cpp

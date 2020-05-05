@@ -351,10 +351,10 @@ int main(int argc, char *argv[])
         dbgKey = & secretKey;
         dbgEa = context.ea;
     }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
           dbgKey = & secretKey;
           dbgEa = context.ea;
-#endif //DEBUG_PRINTOUT
+#endif //HELIB_DEBUG
 
     // Run the tests.
     testBasicArith(publicKey, secretKey, ea, epsilon);
@@ -431,7 +431,7 @@ void testBasicArith(const PubKey& publicKey,
 
   // Diff between approxNums HE scheme and plaintext floating  
   ea.decrypt(c1, secretKey, vd);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<<"res=", vd, 10)<<endl;
   printVec(cout<<"vec=", vd1, 10)<<endl;
 #endif
@@ -470,7 +470,7 @@ void testComplexArith(const PubKey& publicKey,
   for_each(vd1.begin(), vd1.end(), [](cx_double& d){d=std::conj(d);});
   c1.complexConj();  
   ea.decrypt(c1, secretKey, vd);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<<"vd1=", vd1, 10)<<endl;
   printVec(cout<<"res=", vd, 10)<<endl;
 #endif
@@ -499,7 +499,7 @@ void testComplexArith(const PubKey& publicKey,
   ea.extractImPart(imCtxt);
   ea.decrypt(imCtxt, secretKey, im_dec);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<<"vd2=", vd2, 10)<<endl;
   printVec(cout<<"real=", realParts, 10)<<endl;
   printVec(cout<<"res=", real_dec, 10)<<endl;
@@ -537,14 +537,14 @@ void testRotsNShifts(const PubKey& publicKey,
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<< "vd1=", vd1, 10)<<endl;
 #endif
   std::rotate(vd1.begin(), vd1.end()-nplaces, vd1.end());
   ea.rotate(c1, nplaces);
   c1.reLinearize();
   ea.decrypt(c1, secretKey, vd_dec);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<< "vd1(rot)=", vd1, 10)<<endl;
   printVec(cout<<"res: ", vd_dec, 10)<<endl;
 #endif

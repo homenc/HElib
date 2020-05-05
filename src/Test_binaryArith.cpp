@@ -24,7 +24,7 @@ NTL_CLIENT
 #include <helib/binaryArith.h>
 #include <helib/ArgMap.h>
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #endif
 
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
   if (verbose) cout << " done\n";
 
   activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgEa = context.ea;
   dbgKey = &secKey;
 #endif
@@ -308,7 +308,7 @@ void testProduct(SecKey& secKey, long bitSize, long bitSize2,
     cout << pa<<"*"<<pb<<"="<<slots[0]<<endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   const Ctxt* minCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eProduct) {
@@ -382,7 +382,7 @@ void testAdd(SecKey& secKey, long bitSize1, long bitSize2,
     cout << pa<<"+"<<pb<<"="<<slots[0]<<endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   const Ctxt* minCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eSum) {

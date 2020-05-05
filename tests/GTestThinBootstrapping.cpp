@@ -26,7 +26,6 @@ extern long fhe_force_chen_han;
 
 namespace {
 
-static bool debug = 0; // a debug flag
 static int scale = 0;
 
 struct Parameters
@@ -362,17 +361,11 @@ protected:
   virtual void TearDown() override
   {
     cleanupBootstrappingGlobals();
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 
 public:
-  void SetUp() override
-  {
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
-  }
+  void SetUp() override { helib::setupDebugGlobals(&secretKey, context.ea); }
 
   static void TearDownTestCase()
   {
@@ -393,14 +386,7 @@ TEST_P(GTestThinBootstrapping, correctlyPerformsThinBootstrapping)
   std::shared_ptr<helib::EncryptedArray> ea(
       std::make_shared<helib::EncryptedArray>(context, GG));
 
-  if (debug) {
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = ea;
-  }
-#ifdef DEBUG_PRINTOUT
-  helib::dbgKey = &secretKey;
-  helib::dbgEa = ea;
-#endif // DEBUG_PRINTOUT
+  helib::setupDebugGlobals(&secretKey, ea);
 
   NTL::zz_p::init(p2r);
   NTL::Vec<NTL::zz_p> val0(NTL::INIT_SIZE, nslots);

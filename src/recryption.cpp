@@ -22,7 +22,7 @@
 #include <helib/debugging.h>
 #include <helib/fhe_stats.h>
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 
 #include <helib/debugging.h>
 
@@ -48,7 +48,7 @@ static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
                                  long q);
 } // namespace helib
 
-#endif // DEBUG_PRINTOUT
+#endif // HELIB_DEBUG
 
 namespace helib {
 
@@ -93,7 +93,7 @@ static void newMakeDivisible(NTL::ZZX& poly,
   NTL::Vec<NTL::ZZ> pwrfl;
   p2d_conv.ZZXtoPowerful(pwrfl, poly);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   NTL::Vec<NTL::ZZ> vvec(NTL::INIT_SIZE, pwrfl.length());
 #endif
 
@@ -122,14 +122,14 @@ static void newMakeDivisible(NTL::ZZX& poly,
       exit(1);
     }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
     vvec[i] = v;
 #endif
   }
 
   p2d_conv.powerfulToZZX(poly, pwrfl);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   p2d_conv.powerfulToZZX(vpoly, vvec);
 #endif
 }
@@ -255,7 +255,7 @@ long RecryptData::setAE(long& e,
     ePrimeTry++;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cerr << "RecryptData::setAE(): e=" << e << ", e'=" << ePrime
             << std::endl;
 #endif
@@ -398,7 +398,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   // OLD: assert(e>=r);
   assertTrue(e >= r, "rcData.e must be at least alMod.r");
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cerr << "reCrypt: p=" << p << ", r=" << r << ", e=" << e
             << " ePrime=" << ePrime << ", q=" << q << std::endl;
   CheckCtxt(ctxt, "init");
@@ -410,7 +410,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
   ctxt.dropSmallAndSpecialPrimes();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after mod down");
 #endif
 
@@ -434,7 +434,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   // key-switch to the bootstrapping key
   ctxt.reLinearize(recryptKeyID);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after key switching");
 #endif
 
@@ -462,7 +462,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
            (std::size_t)2,
            "Exactly 2 parts required for mod-switching in thin bootstrapping");
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   if (dbgKey) {
     checkRecryptBounds(zzParts,
                        dbgKey->sKeys[recryptKeyID],
@@ -481,7 +481,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
     newMakeDivisible(zzParts[i], p2ePrime, q, ctxt.getContext(), v[i]);
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   if (dbgKey) {
     checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID], ctxt.getContext(), q);
     checkCriticalValue(zzParts,
@@ -502,7 +502,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   ctxt.multByConstant(zzParts[1]);
   ctxt.addConstant(zzParts[0]);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after preProcess");
 #endif
   FHE_NTIMER_STOP(AAA_preProcess);
@@ -512,7 +512,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   ctxt.getContext().rcData.firstMap->apply(ctxt);
   FHE_NTIMER_STOP(AAA_LinearTransform1);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after LinearTransform1");
 #endif
 
@@ -525,7 +525,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
                       context.rcData.unpackSlotEncoding);
   FHE_NTIMER_STOP(AAA_extractDigitsPacked);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after extractDigitsPacked");
 #endif
 
@@ -534,7 +534,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   ctxt.getContext().rcData.secondMap->apply(ctxt);
   FHE_NTIMER_STOP(AAA_LinearTransform2);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after linearTransform2");
 #endif
 
@@ -608,7 +608,7 @@ void extractDigitsPacked(Ctxt& ctxt,
   }
   FHE_NTIMER_STOP(unpack);
 
-  //#ifdef DEBUG_PRINTOUT
+  //#ifdef HELIB_DEBUG
   //  CheckCtxt(unpacked[0], "after unpack");
   //#endif
 
@@ -618,7 +618,7 @@ void extractDigitsPacked(Ctxt& ctxt,
   }
   NTL_EXEC_RANGE_END
 
-  //#ifdef DEBUG_PRINTOUT
+  //#ifdef HELIB_DEBUG
   // CheckCtxt(unpacked[0], "before repack");
   //#endif
 
@@ -634,7 +634,7 @@ void extractDigitsPacked(Ctxt& ctxt,
     ctxt += unpacked[i];
   }
   FHE_NTIMER_STOP(repack);
-  //#ifdef DEBUG_PRINTOUT
+  //#ifdef HELIB_DEBUG
   // CheckCtxt(ctxt, "after repack");
   //#endif
 }
@@ -692,7 +692,7 @@ void extractDigitsPacked(Ctxt& ctxt,
   }
   FHE_NTIMER_STOP(unpack);
 
-  //#ifdef DEBUG_PRINTOUT
+  //#ifdef HELIB_DEBUG
   //  CheckCtxt(unpacked[0], "after unpack");
   //#endif
 
@@ -700,7 +700,7 @@ void extractDigitsPacked(Ctxt& ctxt,
     extractDigitsThin(unpacked[i], botHigh, r, ePrime);
   }
 
-  //#ifdef DEBUG_PRINTOUT
+  //#ifdef HELIB_DEBUG
   //  CheckCtxt(unpacked[0], "before repack");
   //#endif
 
@@ -984,7 +984,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
            0l,
            "ptxtSpace must divide p^r when thin bootstrapping");
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "init");
 #endif
 
@@ -1001,7 +1001,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   ctxt.bringToSet(IndexSet(first, last));
 #endif
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after mod down");
 #endif
 
@@ -1010,7 +1010,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   trcData.slotToCoeff->apply(ctxt);
   FHE_NTIMER_STOP(AAA_slotToCoeff);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after slotToCoeff");
 #endif
 
@@ -1034,7 +1034,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   // key-switch to the bootstrapping key
   ctxt.reLinearize(recryptKeyID);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after key switching");
 #endif
 
@@ -1062,7 +1062,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
            (std::size_t)2,
            "Exactly 2 parts required for mod-switching in thin bootstrapping");
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   if (dbgKey) {
     checkRecryptBounds(zzParts,
                        dbgKey->sKeys[recryptKeyID],
@@ -1081,7 +1081,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
     newMakeDivisible(zzParts[i], p2ePrime, q, ctxt.getContext(), v[i]);
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   if (dbgKey) {
     checkRecryptBounds_v(v, dbgKey->sKeys[recryptKeyID], ctxt.getContext(), q);
     checkCriticalValue(zzParts,
@@ -1102,7 +1102,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   ctxt.multByConstant(zzParts[1]);
   ctxt.addConstant(zzParts[0]);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after bootKeySwitch");
 #endif
 
@@ -1113,7 +1113,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   trcData.coeffToSlot->apply(ctxt);
   FHE_NTIMER_STOP(AAA_coeffToSlot);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after coeffToSlot");
 #endif
 
@@ -1122,7 +1122,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   extractDigitsThin(ctxt, e - ePrime, r, ePrime);
   FHE_NTIMER_STOP(AAA_extractDigitsThin);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after extractDigitsThin");
 #endif
 
@@ -1131,7 +1131,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
     ctxt.intFactor = NTL::MulMod(ctxt.intFactor, intFactor, ptxtSpace);
 }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 
 static void checkCriticalValue(const std::vector<NTL::ZZX>& zzParts,
                                const DoubleCRT& sKey,

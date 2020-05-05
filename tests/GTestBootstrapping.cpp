@@ -23,7 +23,6 @@
 #include <helib/powerful.h>
 #include <helib/matmul.h>
 
-// #define DEBUG_PRINTOUT
 #include <helib/debugging.h>
 
 #define OUTER_REP (1)
@@ -209,7 +208,7 @@ protected:
   virtual void TearDown() override
   {
     cleanupBootstrappingGlobals();
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 };
 
@@ -328,10 +327,9 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
     NTL::ZZX ptxt_poly = NTL::conv<NTL::ZZX>(poly_p);
     helib::PolyRed(ptxt_poly, p2r, true); // reduce to the symmetric interval
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;       // debugging key and ea
-    helib::dbgEa = context.rcData.ea; // EA for plaintext space p^{e+r-e'}
-    helib::dbg_ptxt = ptxt_poly;
+#ifdef HELIB_DEBUG
+    // debugging key and ea // EA for plaintext space p^{e+r-e'}
+    helib::setupDebugGlobals(&secretKey, context.rcData.ea, ptxt_poly);
     if (helib::dbgEa->size() > 100)
       helib::printFlag = 0; // don't print too many slots
 #endif
@@ -353,7 +351,7 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
 
       EXPECT_EQ(ptxt_poly, poly2);
       if (HasFailure() && !helib::isDryRun()) {
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         conv(poly_p, poly2);
         helib::HyperCube<NTL::zz_p> powerful2(pConv.getShortSig());
         std::cout << "decryption error, encrypted ";

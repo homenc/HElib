@@ -37,9 +37,31 @@ extern SecKey* dbgKey;
 extern std::shared_ptr<const EncryptedArray> dbgEa;
 extern NTL::ZZX dbg_ptxt;
 
-// Cleanup method for using the above debug variables several times in one
-// process
-inline void cleanupGlobals()
+/**
+ * @brief Setup function for setting up the global debug variables.
+ * @note Works only if `HELIB_DEBUG` is defined. It does not do anything
+ * otherwise
+ */
+inline void setupDebugGlobals(
+    SecKey* debug_key,
+    const std::shared_ptr<const EncryptedArray>& debug_ea,
+    NTL::ZZX debug_ptxt = NTL::ZZX{})
+{
+#ifdef HELIB_DEBUG
+  dbgKey = debug_key;
+  dbgEa = debug_ea;
+  dbg_ptxt = debug_ptxt;
+#else
+  (void)debug_key;
+  (void)debug_ea;
+  (void)debug_ptxt;
+#endif
+}
+
+/**
+ * @brief Cleanup function for clearing the global debug variables.
+ */
+inline void cleanupDebugGlobals()
 {
   dbgKey = nullptr;
   dbgEa = nullptr;

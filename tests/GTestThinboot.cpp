@@ -282,7 +282,7 @@ protected:
     }
 
     cleanupBootstrappingGlobals();
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 
   void dump_v_values()
@@ -447,14 +447,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
     std::shared_ptr<helib::EncryptedArray> ea(
         std::make_shared<helib::EncryptedArray>(context, GG));
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = ea;
-    helib::dbgKey = &secretKey;
-#endif
-    if (debug) {
-      helib::dbgKey = &secretKey;
-      helib::dbgEa = ea;
-    }
+    helib::setupDebugGlobals(&secretKey, ea);
 
     NTL::zz_p::init(p2r);
     NTL::Vec<NTL::zz_p> val0(NTL::INIT_SIZE, nslots);

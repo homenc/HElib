@@ -125,7 +125,7 @@ protected:
 
   virtual void SetUp() override { helib::setDryRun(helib_test::dry); };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 void testCube(NTL::Vec<helib::GenDescriptor>& vec, long widthBound)

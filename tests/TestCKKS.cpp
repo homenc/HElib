@@ -184,13 +184,10 @@ protected:
                 << std::endl;
     }
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
+    helib::setupDebugGlobals(&secretKey, context.ea);
   }
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(TestCKKS, negatingCiphertextWorks)

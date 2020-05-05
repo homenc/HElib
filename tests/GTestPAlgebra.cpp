@@ -93,7 +93,7 @@ protected:
     }
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestPAlgebra, readsAndWritesContextsAsStrings)

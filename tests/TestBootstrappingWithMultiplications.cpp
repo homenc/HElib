@@ -141,10 +141,7 @@ protected:
                 << ", specialPrimes=" << context.specialPrimes << std::endl
                 << std::endl;
     }
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context.ea;
-    helib::dbgKey = &secretKey;
-#endif
+    helib::setupDebugGlobals(&secretKey, context.ea);
   }
 
   virtual void TearDown() override
@@ -152,7 +149,7 @@ protected:
     if (helib_test::verbose) {
       helib::printAllTimers();
     }
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 };
 
@@ -362,10 +359,8 @@ protected:
                 << ", specialPrimes=" << context.specialPrimes << std::endl
                 << std::endl;
     }
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context.ea;
-    helib::dbgKey = &secretKey;
-#endif
+
+    helib::setupDebugGlobals(&secretKey, context.ea);
   }
 
   virtual void TearDown() override
@@ -373,7 +368,7 @@ protected:
     if (helib_test::verbose) {
       helib::printAllTimers();
     }
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 };
 

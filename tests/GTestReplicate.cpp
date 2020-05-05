@@ -104,13 +104,10 @@ protected:
     ea.encode(poly_xp1, xp1);
     xc1 = xc0;
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
+    helib::setupDebugGlobals(&secretKey, context.ea);
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 
   const long m;
   const long p;
@@ -238,7 +235,7 @@ TEST_P(GTestReplicate, replicateAllReplicatesAccurately)
   if (!helib_test::noPrint) {
     std::cout << "\n** Testing replicateAll()... " << std::flush;
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::replicateVerboseFlag = true;
 #else
   helib::replicateVerboseFlag = false;

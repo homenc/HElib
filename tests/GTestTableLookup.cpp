@@ -14,10 +14,8 @@
 #include <NTL/BasicThreadPool.h>
 #include <helib/intraSlot.h>
 #include <helib/tableLookup.h>
-
-#ifdef DEBUG_PRINTOUT
 #include <helib/debugging.h>
-#endif
+
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -264,16 +262,13 @@ protected:
   void SetUp() override
   {
     helib::activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context.ea;
-    helib::dbgKey = &secretKey;
-#endif
+    helib::setupDebugGlobals(&secretKey, context.ea);
   };
 
   virtual void TearDown() override
   {
-#ifdef DEBUG_PRINTOUT
-    helib::cleanupGlobals();
+#ifdef HELIB_DEBUG
+    helib::cleanupDebugGlobals();
 #endif
   }
 

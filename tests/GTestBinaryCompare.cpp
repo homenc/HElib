@@ -26,9 +26,8 @@
 #include "gtest/gtest.h"
 #include "test_common.h"
 
-#ifdef DEBUG_PRINTOUT
 #include <helib/debugging.h>
-#endif
+
 // define flags FLAG_PRINT_ZZX, FLAG_PRINT_POLY, FLAG_PRINT_VEC, functions
 //        decryptAndPrint(ostream, ctxt, sk, ea, flags)
 //        decryptAndCompare(ctxt, sk, ea, pa);
@@ -218,16 +217,14 @@ protected:
     prepareSecKey(secKey);
 
     helib::activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context.ea;
-    helib::dbgKey = &secKey;
-#endif
+
+    helib::setupDebugGlobals(&secKey, context.ea);
   };
 
   virtual void TearDown() override
   {
-#ifdef DEBUG_PRINTOUT
-    helib::cleanupGlobals();
+#ifdef HELIB_DEBUG
+    helib::cleanupDebugGlobals();
 #endif
   }
 
@@ -270,7 +267,7 @@ TEST_P(GTestBinaryCompare, comparison)
       encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   decryptAndPrint((std::cout << " before comparison: "),
                   encb[0],
                   secKey,
@@ -329,7 +326,7 @@ TEST_P(GTestBinaryCompare, comparison)
               << std::endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   const helib::Ctxt* minLvlCtxt = nullptr;
   long minLvl = 1000;
   for (const helib::Ctxt& c : eMax) {

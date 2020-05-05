@@ -158,7 +158,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
     printAllTimers();
     cout << "\n** Testing replicateAll()... " << std::flush;
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   replicateVerboseFlag = true;
 #else
   replicateVerboseFlag = false;

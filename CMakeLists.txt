@@ -49,6 +49,7 @@ option(PACKAGE_BUILD "Download dependencies and build as a self-contained packag
 
 option(ENABLE_THREADS "Enable threads support. Requires NTL built with NTL_THREADS=on" ON)
 
+option(HELIB_DEBUG "Build with HELIB_DEBUG (enables extra debugging info, but needs to be initialized)" OFF)
 option(ENABLE_TEST "Enable tests" OFF)
 option(PEDANTIC_BUILD "Use -Wall -Wpedantic -Wextra -Werror during build" ON)
 
@@ -245,6 +246,7 @@ if (PACKAGE_BUILD)
       -DPACKAGE_BUILD=${PACKAGE_BUILD}
       -DFETCH_GMP=${FETCH_GMP}
       -DENABLE_TEST=${ENABLE_TEST}
+      -DHELIB_DEBUG=${HELIB_DEBUG}
       -DENABLE_LEGACY_TEST=OFF
     BUILD_ALWAYS ON
   )

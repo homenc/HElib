@@ -25,9 +25,9 @@
 NTL_CLIENT
 using namespace helib;
 
-//#define DEBUG_PRINTOUT
+//#define HELIB_DEBUG
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #define debugCompare(ea,sk,p,c) {\
   PlaintextArray pp(ea);\
@@ -116,7 +116,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   // Alias to avoid issues with previous code
   EncryptedArray& ea = *ea_ptr;
   long nslots = ea.size();
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgKey = &secretKey;
   dbgEa  = ea_ptr;
 #endif

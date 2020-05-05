@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
     addSome1DMatrices(*secKey);
     addFrbMatrices(*secKey);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
     // Read in SecKey and PubKey.
     std::unique_ptr<SecKey> secKey(new SecKey(*context));
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
     std::unique_ptr<SecKey> secKey(new SecKey(*context));
     PubKey* pubKey = (PubKey*) secKey.get();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
@@ -318,7 +318,7 @@ int main(int argc, char *argv[])
       std::unique_ptr<SecKey> secKey(new SecKey(*context));
       PubKey* pubKey = (PubKey*) secKey.get();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif

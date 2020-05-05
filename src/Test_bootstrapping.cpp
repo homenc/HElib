@@ -36,7 +36,7 @@ static bool debug = 0;   // a debug flag
 static int scale = 0;
 
 
-// #define DEBUG_PRINTOUT
+// #define HELIB_DEBUG
 #include <helib/debugging.h>
 
 static long mValues[][14] = { 
@@ -191,7 +191,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   ZZX ptxt_poly = conv<ZZX>(poly_p);
   PolyRed(ptxt_poly, p2r, true); // reduce to the symmetric interval
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgKey = &secretKey; // debugging key and ea
   dbgEa = context.rcData.ea; // EA for plaintext space p^{e+r-e'}
   dbg_ptxt = ptxt_poly;
@@ -216,7 +216,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
     if (ptxt_poly == poly2) cout << "GOOD\n";
     else if (!isDryRun()) { // bootsrtapping error
       cout << "BAD\n";
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       conv(poly_p,poly2);
       HyperCube<zz_p> powerful2(pConv.getShortSig());
       cout << "decryption error, encrypted ";

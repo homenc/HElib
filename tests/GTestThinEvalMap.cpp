@@ -210,7 +210,7 @@ protected:
       helib::printAllTimers();
       std::cout << std::endl;
     }
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 };
 

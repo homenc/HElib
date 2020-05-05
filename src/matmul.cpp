@@ -618,7 +618,7 @@ struct MatMul1DExec_construct
       vec.resize(D);
 
       for (long i : range(D)) {
-         // i == j + g * k (where j = (g != 0) ? i % g : i)
+        // i == j + g * k (where j = (g != 0) ? i % g : i)
         long k;
 
         if (g) {
@@ -636,7 +636,7 @@ struct MatMul1DExec_construct
       vec1.resize(D);
 
       for (long i : range(D)) {
-         // i == j + g * k (where j = (g != 0) ? i % g : i)
+        // i == j + g * k (where j = (g != 0) ? i % g : i)
         long k;
 
         if (g) {

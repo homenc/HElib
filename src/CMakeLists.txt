@@ -213,6 +213,7 @@ target_compile_options(helib
 target_compile_definitions(helib
   PUBLIC
     $<$<BOOL:${ENABLE_THREADS}>:HELIB_THREADS>
+    $<$<BOOL:${HELIB_DEBUG}>:HELIB_DEBUG>
     # NOTE: this should be in a generated configure.h rather than being public
 )
 

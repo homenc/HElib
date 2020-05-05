@@ -1395,7 +1395,7 @@ void Ctxt::multiplyBy(const Ctxt& other)
 
   *this *= other; // perform the multiplication
   reLinearize();  // re-linearize
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   checkNoise(*this, *dbgKey, "reLinearize " + std::to_string(size_t(this)));
 #endif
 }
