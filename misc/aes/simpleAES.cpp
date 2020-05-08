@@ -33,6 +33,7 @@ http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
 // Used for giving output to the screen.
 #include<cstdlib>
 #include<cstdio>
+#include<helib/helib.h>
 
 // The number of columns comprising a state in AES. This is a constant in AES.
 // Value=4

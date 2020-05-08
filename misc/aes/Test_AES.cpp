@@ -7,9 +7,11 @@
 
 namespace std {} using namespace std;
 namespace NTL {} using namespace NTL;
+namespace helib{} using namespace helib;
 #include <cstring>
 #include "homAES.h"
-#include "Ctxt.h"
+#include "helib/Ctxt.h"
+#include "helib/ArgMap.h"
 
 static long mValues[][14] = { 
 //{ p, phi(m),  m,   d, m1, m2, m3,   g1,    g2,   g3,ord1,ord2,ord3, c_m}
@@ -39,7 +41,7 @@ extern void Cipher(unsigned char out[16],
 
 int main(int argc, char **argv)
 {
-  ArgMapping amap;
+  ArgMap amap;
 
   long idx = 0;
   amap.arg("sz", idx, "parameter-sets: toy=0 through huge=5");
@@ -47,8 +49,8 @@ int main(int argc, char **argv)
   long c=3;
   amap.arg("c", c, "number of columns in the key-switching matrices");
 
-  long L=0;
-  amap.arg("L", L, "# of levels in the modulus chain",  "heuristic");
+  long N=0;
+  amap.arg("N", N, "# of bits of the modulus chain");
 
   long B=23;
   amap.arg("B", B, "# of bits per level (only 64-bit machines)");
@@ -65,17 +67,6 @@ int main(int argc, char **argv)
   Vec<long> mvec;
   vector<long> gens;
   vector<long> ords;
-
-  if (boot) { 
-    if (L<23) L=23;
-    if (idx<1) idx=1; // the sz=0 params are incompatible with bootstrapping
-  } else { 
-#if (NTL_SP_NBITS<50)
-    if (L<46) L=46; 
-#else
-    if (L<42) L=42; 
-#endif
-  }
 
   long p = mValues[idx][0];
   //  long phim = mValues[idx][1];
@@ -94,8 +85,7 @@ int main(int argc, char **argv)
   if (abs(mValues[idx][12])>1) ords.push_back(mValues[idx][12]);
 
   cout << "*** Test_AES: c=" << c
-       << ", L=" << L
-       << ", B=" << B
+       << ", N=" << N
        << ", boot=" << boot
        << ", packed=" << packed
        << ", m=" << m
@@ -107,10 +97,10 @@ int main(int argc, char **argv)
   cout << "computing key-independent tables..." << std::flush;
   Context context(m, p, /*r=*/1, gens, ords);
 #if (NTL_SP_NBITS>=50) // 64-bit machines
-  context.bitsPerLevel = B;
+  //context.bitsPerLevel = B;
 #endif
   context.zMStar.set_cM(mValues[idx][13]/100.0); // the ring constant
-  buildModChain(context, L, c);
+  buildModChain(context, N, c);
 
   if (boot) context.makeBootstrappable(mvec);
   tm += GetTime();
