@@ -71,10 +71,27 @@ public:
   static void apply(const EncryptedArrayDerived<type>& ea, const CtPtrs& unpacked,
                     const Ctxt&ctxt,const std::vector<zzX>& unpackSlotEncoding)
   {
-    long d = ea.getDegree(); // size of each slot
-
-    //ctxt.cleanUp();
-
+    const long d = ea.getDegree(); // size of each slot
+    const long t = ea.getPAlgebra().getP();
+    const long m = ea.getPAlgebra().getM();
+    DoubleCRT coeff(unpackSlotEncoding.front(), ctxt.getContext(), ctxt.getPrimeSet());
+    Ctxt tmp1(ZeroCtxtLike, ctxt);
+    for (long i = 0; i < unpacked.size(); i++) {
+        /// accumulative frobenius: frobenius(v, 2) = frobenius(frobenius(v, 1), 1)
+        if (i > 0)
+            coeff.automorph(t % m); 
+        *(unpacked[i]) = ctxt;
+        unpacked[i]->multByConstant(coeff);
+        Ctxt origin(*unpacked[i]);
+        /// TODO use hoisting here
+        for (long j = 1; j < d; j++) {
+            tmp1 = origin;
+            tmp1.frobeniusAutomorph(j);
+            tmp1.cleanUp();
+            *(unpacked[i]) += tmp1;
+        }
+    }
+#if 0
     // Convert the unpack constants to doubleCRT
     std::vector< std::shared_ptr<DoubleCRT> > coeff_vector(d);
     for (long i = 0; i < d; i++) {
@@ -104,6 +121,7 @@ public:
 	*(unpacked[i]) += tmp1;
       }
     } // NOTE: why aren't we using multi-threading here?
+#endif
   }
 };
 //! \endcond
