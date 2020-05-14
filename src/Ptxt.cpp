@@ -589,8 +589,8 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift(long amount)
   }
 
   rotate(amount);
-  for (std::size_t i = 0; i < size(); ++i)
-    if ((i - amount) < 0 || (i - amount) >= size())
+  for (long i = 0; i < lsize(); ++i)
+    if ((i - amount) < 0 || (i - amount) >= lsize())
       slots[i] = 0;
 
   return *this;
