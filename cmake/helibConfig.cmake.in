@@ -19,11 +19,16 @@ include("${CMAKE_CURRENT_LIST_DIR}/helibTargets.cmake")
 
 check_required_components("helib")
 
-get_target_property(helib_public_compile_definitions "helib" INTERFACE_COMPILE_DEFINITIONS)
-LIST(FIND helib_public_compile_definitions "$<$<BOOL:ON>:HELIB_DEBUG>" helib_debug_defined)
+get_target_property(helib_public_compile_definitions
+                    "helib"
+                    INTERFACE_COMPILE_DEFINITIONS)
+LIST(FIND helib_public_compile_definitions
+          "$<$<BOOL:ON>:HELIB_DEBUG>"
+          helib_debug_defined)
 
 if(NOT ${helib_debug_defined} EQUAL -1)
-    message(WARNING "HElib has been built with HELIB_DEBUG. This can cause issues (sigsegv) if the debugging module is not initialized properly. Use with care.")
+  message(WARNING
+          "HElib has been built with HELIB_DEBUG.\nThis can cause issues (sigsegv) if the debugging module is not initialized properly.\nUse with care.\n")
 endif(NOT ${helib_debug_defined} EQUAL -1)
 
 unset(helib_public_compile_definitions)
