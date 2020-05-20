@@ -308,6 +308,26 @@ TEST_F(TestArgMapSampleFile,
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
 }
 
+TEST_F(TestArgMapSampleFile, emptyLinesFromFile)
+{
+  std::ostringstream oss;
+  oss << "alice=3\n\n\n";
+
+  // Cannot perform test without file.
+  ASSERT_TRUE(createSampleTestFile(oss.str()));
+
+  struct Opts
+  {
+    int arg1;
+    int arg2;
+  } opts;
+
+  helib::ArgMap()
+      .arg("alice", opts.arg1, "message string")
+      .arg("bob", opts.arg2, "message string")
+      .parse(filepath);
+}
+
 TEST_F(DeathTestArgMapCmdLine, illFormedCmdLine)
 {
   mockCmdLineArgs("./prog alic");

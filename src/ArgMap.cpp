@@ -77,8 +77,7 @@ void ArgMap::usage(const std::string& msg) const
   }
 
   if (this->dots_enabled)
-    std::cerr << " [" << this->dots_name << " ...]"
-              << "\n";
+    std::cerr << " [" << this->dots_name << " ...]\n";
   else
     std::cerr << "\n";
 
@@ -340,7 +339,7 @@ ArgMap& ArgMap::parse(const std::string& filepath)
   std::regex re_comment_lines(R"((^\s*\#)|(^\s+$))");
   std::string line;
   while (getline(file, line)) {
-    if (std::regex_search(line, re_comment_lines)) {
+    if (line.empty() || std::regex_search(line, re_comment_lines)) {
       continue; // ignore comment lines and empties.
     }
     it = args.insert_after(it, line);
