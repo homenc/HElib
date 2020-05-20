@@ -79,6 +79,12 @@ TEST_P(TestContext, hasCorrectSlotRingWhenConstructed)
   EXPECT_EQ(context->slotRing->G, helib::getG(*(context->ea)));
 }
 
+TEST_P(TestContext, buildModChainThrowsWhenBitsIsZero)
+{
+  EXPECT_THROW(helib::buildModChain(*context, /*bits=*/0, /*c=*/2),
+               helib::InvalidArgument);
+}
+
 INSTANTIATE_TEST_SUITE_P(variousParameters,
                          TestContext,
                          ::testing::Values(BGVParameters(17, 2, 1)));

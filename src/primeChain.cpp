@@ -661,6 +661,9 @@ void buildModChain(Context& context,
                    long resolution,
                    long bitsInSpecialPrimes)
 {
+  // Cannot build modulus chain with nBits < 0
+  assertTrue<InvalidArgument>(nBits > 0,
+                              "Cannot initialise modulus chain with nBits < 1");
   long pSize = ctxtPrimeSize(nBits);
   addSmallPrimes(context, resolution, pSize);
   addCtxtPrimes(context, nBits, pSize);
