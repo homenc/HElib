@@ -515,6 +515,11 @@ TEST_P(
       << std::endl;
 }
 
+TEST(TestCKKS, buildingCKKSContextWithMAsNotAPowerOfTwoThrows)
+{
+  EXPECT_THROW(helib::Context context(99, -1, 20), helib::InvalidArgument);
+}
+
 INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          TestCKKS,
                          ::testing::Values(

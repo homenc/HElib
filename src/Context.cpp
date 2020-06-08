@@ -575,14 +575,15 @@ Context::Context(unsigned long m,
                  unsigned long r,
                  const std::vector<long>& gens,
                  const std::vector<long>& ords) :
-    zMStar(m, p, gens, ords), alMod(zMStar, r), stdev(3.2), scale(10.0)
+    zMStar(m, p, gens, ords),
+    alMod(zMStar, r),
+    ea(std::make_shared<EncryptedArray>(*this, alMod)),
+    pwfl_converter(nullptr),
+    stdev(3.2),
+    scale(10.0)
 {
-  ea = std::make_shared<EncryptedArray>(*this, alMod);
-
-  pwfl_converter = nullptr;
   // NOTE: pwfl_converter will be set in buildModChain (or endBuildModChain),
-  // after the prime chain has been built, as it depends
-  // on the primeChain
+  // after the prime chain has been built, as it depends on the primeChain
 
   if (this->alMod.getTag() != PA_cx_tag) {
     slotRing =

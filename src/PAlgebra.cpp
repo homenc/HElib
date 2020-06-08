@@ -434,16 +434,14 @@ double calcPolyNormBnd(long m)
 PAlgebra::PAlgebra(long mm,
                    long pp,
                    const std::vector<long>& _gens,
-                   const std::vector<long>& _ords)
+                   const std::vector<long>& _ords) :
+    m(mm), p(pp), cM(1.0) // default value for the ring constant
 {
   // OLD: assert( mm < NTL_SP_BOUND && mm > 1 );
   assertInRange<InvalidArgument>(mm,
                                  2l,
                                  NTL_SP_BOUND,
                                  "mm is not in [2, NTL_SP_BOUND)");
-  cM = 1.0; // default value for the ring constant
-  m = mm;
-  p = pp;
   if (pp == -1) // pp==-1 signals using the complex field for plaintext
     pp = m - 1;
   else {
@@ -457,8 +455,10 @@ PAlgebra::PAlgebra(long mm,
   long k = NTL::NextPowerOfTwo(mm);
   if (static_cast<unsigned long>(mm) == (1UL << k)) // m is a power of two
     pow2 = k;
-  else // is not power of two, set to zero (even if m is even!)
+  else if (p != -1) // is not power of two, set to zero (even if m is even!)
     pow2 = 0;
+  else // CKKS requires m to be a power of two.  Throw if not.
+    throw InvalidArgument("CKKS scheme only supports m as a power of two.");
 
   // For dry-run, use a tiny m value for the PAlgebra tables
   if (isDryRun())
