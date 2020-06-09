@@ -19,6 +19,7 @@
 #include <helib/sample.h>
 #include <helib/norms.h>
 #include <helib/apiAttributes.h>
+#include <helib/fhe_stats.h>
 
 namespace helib {
 
@@ -351,6 +352,7 @@ void PubKey::setKSStrategy(long dim, int val)
 //     elements that are encoded in ptxt (before scaling), it is assumed
 //     that they are scaled by eacx.encodeScalingFactor(). The
 //     returned value is the same as the argument ptxtSpace.
+
 long PubKey::Encrypt(Ctxt& ctxt,
                      const NTL::ZZX& ptxt,
                      long ptxtSpace,
@@ -397,7 +399,7 @@ long PubKey::Encrypt(Ctxt& ctxt,
 
   DoubleCRT e(context, context.ctxtPrimes);
   DoubleCRT r(context, context.ctxtPrimes);
-  double r_bound = r.sampleSmall();
+  double r_bound = r.sampleSmallBounded();
 
   ctxt.noiseBound += r_bound * pubEncrKey.noiseBound;
 
@@ -421,7 +423,8 @@ long PubKey::Encrypt(Ctxt& ctxt,
       B /= (ptxtSpace * 8);
 
       e_bound = e.sampleUniform(B);
-      // FIXME: why not bounded sampling?
+      // FIXME: should we use a bounded version of this?
+      // We haven't implemented this yet
     } else {
       e_bound = e.sampleGaussianBounded(stdev);
     }
@@ -444,23 +447,30 @@ long PubKey::Encrypt(Ctxt& ctxt,
   //    has expected value 0
   // NOTE: This relies on the first part, ctxt[0], to have handle to 1
 
-  if (ptxtSpace == 2) {
-    ctxt.parts[0] += ptxt;
-  } else { // The general case of ptxtSpace>2: for a ciphertext
-           // relative to modulus Q, we add ptxt * Q mod ptxtSpace.
-    long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
-    ctxt.parts[0] +=
-        MulMod(ptxt, QmodP, ptxtSpace); // MulMod from module NumbTh
-  }
+  // This code sequence could be optimized, but there is no point
+  long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
+  NTL::ZZX ptxt_fixed;
+  balanced_MulMod(ptxt_fixed, ptxt, QmodP, ptxtSpace);
+  ctxt.parts[0] += ptxt_fixed;
 
-  // NOTE: this is a heuristic
+  // NOTE: this is a heuristic, as the ptxt is not really random.
+  // although, when ptxtSpace == 2, the balanced_MulMod will
+  // randomize it
   double ptxt_bound =
       context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+
+  // FIXME: for now, we print out a warning, but we can consider
+  // implementing a more robust randomization and rejection sampling
+  // strategy.
   double ptxt_sz =
-      NTL::conv<double>(embeddingLargestCoeff(ptxt, context.zMStar));
+      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+
   if (ptxt_sz > ptxt_bound) {
     Warning("noise bound exceeded in encryption");
   }
+
+  double ptxt_rat = ptxt_sz / ptxt_bound;
+  FHE_STATS_UPDATE("ptxt_rat", ptxt_rat);
 
   ctxt.noiseBound += ptxt_bound;
 
@@ -529,15 +539,27 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   DoubleCRT r(context, context.ctxtPrimes);
 
   double r_bound = r.sampleSmall(); // r is a {0,+-1} polynomial
+  // FIXME: I changed this to sampleSmallBounded,
+  // and then some tests failed, but I don't see why this
+  // should be the case.  Need to investigate.
+
   NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
 
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2() == 0) // not power of two
     stdev *= sqrt(m);
 
-  for (size_t i = 0; i < ctxt.parts.size(); i++) { // add noise to all the parts
+  for (size_t i = 0; i < ctxt.parts.size(); i++) {
+    // add noise to all the parts
+
     ctxt.parts[i] *= r;
-    double e_bound = e.sampleGaussian(stdev); // zero-mean Gaussian, sigma=stdev
+
+    double e_bound = e.sampleGaussian(stdev);
+    // zero-mean Gaussian, sigma=stdev
+    // FIXME: I changed this to sampleGaussianBounded,
+    // and then some tests failed, but I don't see why this
+    // should be the case.  Need to investigate.
+
     ctxt.parts[i] += e;
     if (i == 1) {
       e_bound *= getSKeyBound(ctxt.parts[i].skHandle.getSecretKeyID());
@@ -1113,7 +1135,7 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
     factor = NTL::MulMod(factor, ciphertxt.intFactor, ciphertxt.ptxtSpace);
     if (factor != 1) {
       factor = NTL::InvMod(factor, ciphertxt.ptxtSpace);
-      MulMod(plaintxt, plaintxt, factor, ciphertxt.ptxtSpace);
+      MulMod(plaintxt, plaintxt, factor, ciphertxt.ptxtSpace, /*abs=*/true);
     }
   }
 }
@@ -1152,7 +1174,7 @@ long SecKey::skEncrypt(Ctxt& ctxt,
   } // allocate space
 
   // Set Ctxt bookeeping parameters
-  ctxt.intFactor = 1; // FIXME: is this necessary?
+  ctxt.intFactor = 1;
 
   // make parts[0],parts[1] point to (1,s)
   ctxt.parts[0].skHandle.setOne();
@@ -1168,6 +1190,7 @@ long SecKey::skEncrypt(Ctxt& ctxt,
   ctxt.noiseBound = RLWE(ctxt.parts[0], ctxt.parts[1], sKey, ptxtSpace);
 
   if (isCKKS()) {
+
     double f = getContext().ea->getCx().encodeScalingFactor() / ptxtSize;
     long prec = getContext().alMod.getPPowR();
     long ef = NTL::conv<long>(ceil(prec * ctxt.noiseBound / (f * ptxtSize)));
@@ -1182,20 +1205,43 @@ long SecKey::skEncrypt(Ctxt& ctxt,
     ctxt.ratFactor = f;
     ctxt.noiseBound += ptxtSize * ctxt.ratFactor;
     return long(f);
-  } else { // BGV
-    double sz_est =
-        context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
-    ctxt.addConstant(ptxt, sz_est);
-    // add in the plaintext
-    // NOTE: we explicitly include a size estimate, as addConstant explicitly
-    // computes the size, which could lead to information leakage.
-    // We check that the size estimate is correct here, and give a warning if
-    // it's not
 
-    double sz = NTL::conv<double>(embeddingLargestCoeff(ptxt, context.zMStar));
-    if (sz > sz_est) {
+  } else { // BGV
+
+    // The logic here has changed to be identical
+    // to that used in public key encryption
+
+    // add in the plaintext
+    // FIXME: we should really randomize ptxt, so that each coefficient
+    //    has expected value 0
+    // NOTE: This relies on the first part, ctxt[0], to have handle to 1
+
+    // This code sequence could be optimized, but there is no point
+    long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
+    NTL::ZZX ptxt_fixed;
+    balanced_MulMod(ptxt_fixed, ptxt, QmodP, ptxtSpace);
+    ctxt.parts[0] += ptxt_fixed;
+
+    // NOTE: this is a heuristic, as the ptxt is not really random,
+    // although, when ptxtSpace == 2, the balanced_MulMod will
+    // randomize it
+    double ptxt_bound =
+        context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+
+    // FIXME: for now, we print out a warning, but we can consider
+    // implementing a more robust randomization and rejection sampling
+    // strategy.
+    double ptxt_sz =
+        NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+
+    if (ptxt_sz > ptxt_bound) {
       Warning("noise bound exceeded in encryption");
     }
+
+    double ptxt_rat = ptxt_sz / ptxt_bound;
+    FHE_STATS_UPDATE("ptxt_rat_sk", ptxt_rat);
+
+    ctxt.noiseBound += ptxt_bound;
 
     return ctxt.ptxtSpace;
   }

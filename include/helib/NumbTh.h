@@ -313,14 +313,37 @@ void vecRed(NTL::Vec<NTL::ZZ>& out,
             bool abs);
 ///@}
 
-//! Multiply the polynomial f by the integer a modulo q
-void MulMod(NTL::ZZX& out, const NTL::ZZX& f, long a, long q, bool abs = true);
-inline NTL::ZZX MulMod(const NTL::ZZX& f, long a, long q, bool abs = true)
+// The interface has changed so that abs defaults to false,
+// which is more consistent with the other interfaces.
+// Calls without any explicit value for abs should generate a
+// "deprecated" warning.
+
+void MulMod(NTL::ZZX& out, const NTL::ZZX& f, long a, long q, bool abs);
+
+[[deprecated("Please use MulMod with explicit abs argument.")]] inline void
+MulMod(NTL::ZZX& out, const NTL::ZZX& f, long a, long q)
+{
+  MulMod(out, f, a, q, false);
+}
+
+inline NTL::ZZX MulMod(const NTL::ZZX& f, long a, long q, bool abs)
 {
   NTL::ZZX res;
   MulMod(res, f, a, q, abs);
   return res;
 }
+
+[[deprecated("Please use MulMod with explicit abs argument.")]] inline NTL::ZZX
+MulMod(const NTL::ZZX& f, long a, long q)
+{
+  NTL::ZZX res;
+  MulMod(res, f, a, q, false);
+  return res;
+}
+
+//! Multiply the polynomial f by the integer a modulo q
+//! output coefficients are balanced (appropriately randomized for even q)
+void balanced_MulMod(NTL::ZZX& out, const NTL::ZZX& f, long a, long q);
 
 ///@{
 //! @name Some enhanced conversion routines

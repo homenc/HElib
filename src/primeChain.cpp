@@ -94,6 +94,15 @@ void ModuliSizes::init(const std::vector<Cmodulus>& chain,
 
   // Finally, sort the 'sizes' array
   std::sort(sizes.begin(), sizes.end());
+
+#if 0
+  // Useful for debug.
+  std::cout << "\n*** sizes:" << sizes.size() << "\n";
+  for (auto size : sizes) {
+    std::cout << size.second << "\n";
+  }
+  std::cout << "\n";
+#endif
 }
 
 // Find a suitable IndexSet of primes whose total size is in the

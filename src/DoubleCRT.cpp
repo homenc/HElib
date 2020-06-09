@@ -1120,40 +1120,23 @@ void DoubleCRT::randomize(const NTL::ZZ* seed)
       }
 
       for (long pos = 0; pos <= bufsz - nb; pos += nb) {
-#if 0
-        unsigned long utmp = 0;
-        for (long cnt = nb-1;  cnt >= 0; cnt--)
-          utmp = (utmp << 8) | buf[pos+cnt];
-#elif 0
 
-        // "Duff's device" to avoid loops
-        // It's a bit faster...but not much
+      // "Duff's device" used to avoid loops
+      // Commented out. Reference of the operation done as loop.
+      //  unsigned long utmp = 0;
+      //  for (long cnt = nb-1;  cnt >= 0; cnt--)
+      //    utmp = (utmp << 8) | buf[pos+cnt];
 
-        unsigned long utmp = buf[pos + nb - 1];
-        switch (nb) {
-        case 8:
-          utmp = (utmp << 8) | buf[pos + 6];
-        case 7:
-          utmp = (utmp << 8) | buf[pos + 5];
-        case 6:
-          utmp = (utmp << 8) | buf[pos + 4];
-        case 5:
-          utmp = (utmp << 8) | buf[pos + 3];
-        case 4:
-          utmp = (utmp << 8) | buf[pos + 2];
-        case 3:
-          utmp = (utmp << 8) | buf[pos + 1];
-        case 2:
-          utmp = (utmp << 8) | buf[pos + 0];
-        }
-
-#else
+#if (defined(__GNUC__) || defined(__clang__))
         unsigned long utmp = buf[pos + nb - 1];
 
         {
 
           // This is gcc non-standard. Works also on clang and icc.
+          // It's only about 2-3% faster than Duff.
+
           // The pragma below disables the gcc warning temporarily.
+
 #pragma GCC diagnostic push
 #ifdef __GNUC__
 #ifdef __clang__
@@ -1186,7 +1169,27 @@ void DoubleCRT::randomize(const NTL::ZZ* seed)
         L0:;
         }
 
+#else
+        // Duff's device about 25% faster
+        unsigned long utmp = buf[pos + nb - 1];
+        switch (nb) {
+        case 8:
+          utmp = (utmp << 8) | buf[pos + 6];
+        case 7:
+          utmp = (utmp << 8) | buf[pos + 5];
+        case 6:
+          utmp = (utmp << 8) | buf[pos + 4];
+        case 5:
+          utmp = (utmp << 8) | buf[pos + 3];
+        case 4:
+          utmp = (utmp << 8) | buf[pos + 2];
+        case 3:
+          utmp = (utmp << 8) | buf[pos + 1];
+        case 2:
+          utmp = (utmp << 8) | buf[pos + 0];
+        }
 #endif
+
         utmp = (utmp & mask);
 
         long tmp = utmp;

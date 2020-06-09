@@ -825,26 +825,42 @@ void vecRed(NTL::Vec<NTL::ZZ>& out,
   }
 }
 
-// multiply the polynomial f by the integer a modulo q
 void MulMod(NTL::ZZX& out,
             const NTL::ZZX& f,
             long a,
             long q,
-            bool abs /*default=true*/)
+            bool abs /*default=false*/)
 {
-  // ensure that out has the same degree as f
-  out.SetMaxLength(deg(f) + 1); // allocate space if needed
-  if (deg(out) > deg(f))
-    trunc(out, out, deg(f) + 1); // remove high degrees
+  long n = f.rep.length();
+  out.rep.SetLength(n);
 
   NTL::mulmod_precon_t aqinv = NTL::PrepMulModPrecon(a, q);
-  for (long i = 0; i <= deg(f); i++) {
-    long c = rem(coeff(f, i), q);
+  for (long i : range(n)) {
+    long c = rem(f.rep[i], q);
     c = NTL::MulModPrecon(c, a, q, aqinv); // returns c \in [0,q-1]
     if (!abs && c >= q / 2)
       c -= q;
-    SetCoeff(out, i, c);
+    out.rep[i] = c;
   }
+
+  out.normalize();
+}
+
+void balanced_MulMod(NTL::ZZX& out, const NTL::ZZX& f, long a, long q)
+{
+  long n = f.rep.length();
+  out.rep.SetLength(n);
+
+  NTL::mulmod_precon_t aqinv = NTL::PrepMulModPrecon(a, q);
+  for (long i : range(n)) {
+    long c = rem(f.rep[i], q);
+    c = NTL::MulModPrecon(c, a, q, aqinv); // returns c \in [0,q-1]
+    if (c > q / 2 || (q % 2 == 0 && c == q / 2 && NTL::RandomBnd(2)))
+      c -= q;
+    out.rep[i] = c;
+  }
+
+  out.normalize();
 }
 
 long is_in(long x, int* X, long sz)
@@ -1708,9 +1724,11 @@ zz_pXModulus1::zz_pXModulus1(long _m, const NTL::zz_pX& _f) :
   assertTrue<InvalidArgument>(m > n, "_m is less or equal than _f's degree");
 
   specialLogic = (m - n > 10 && m < 2 * n);
+
   build(fm, f);
 
   if (specialLogic) {
+    //std::cout << "*** special\n";
     NTL::zz_pX P1, P2, P3;
 
     LocalCopyReverse(P3, f, 0, n);
@@ -1723,6 +1741,7 @@ zz_pXModulus1::zz_pXModulus1(long _m, const NTL::zz_pX& _f) :
     TofftRep(R0, P1, k);
     TofftRep(R1, f, k1);
   }
+  //else { std::cout << "=== non-special\n"; }
 }
 
 void rem(NTL::zz_pX& r, const NTL::zz_pX& a, const zz_pXModulus1& ff)
