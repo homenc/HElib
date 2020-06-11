@@ -533,10 +533,7 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   DoubleCRT e(context, context.ctxtPrimes);
   DoubleCRT r(context, context.ctxtPrimes);
 
-  double r_bound = r.sampleSmall(); // r is a {0,+-1} polynomial
-  // FIXME: I changed this to sampleSmallBounded,
-  // and then some tests failed, but I don't see why this
-  // should be the case.  Need to investigate.
+  double r_bound = r.sampleSmallBounded(); // r is a {0,+-1} polynomial
 
   NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
 
@@ -549,11 +546,8 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
 
     ctxt.parts[i] *= r;
 
-    double e_bound = e.sampleGaussian(stdev);
+    double e_bound = e.sampleGaussianBounded(stdev);
     // zero-mean Gaussian, sigma=stdev
-    // FIXME: I changed this to sampleGaussianBounded,
-    // and then some tests failed, but I don't see why this
-    // should be the case.  Need to investigate.
 
     ctxt.parts[i] += e;
     if (i == 1) {
