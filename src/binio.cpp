@@ -12,9 +12,7 @@
 #include <helib/binio.h>
 #include <helib/assertions.h>
 #include <cstring>
-#include <sys/types.h>
-// NOTE: including sys/types.h for the purpose of bringing in
-// the byte order macros in a platform-independent way.
+#include <sys/types.h> // byte order macros in a platform-independent way.
 
 namespace helib {
 
@@ -108,7 +106,6 @@ void write_ntl_vec_long(std::ostream& str,
                         const NTL::vec_long& vl,
                         long intSize)
 {
-  // OLD: assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
   assertTrue<InvalidArgument>(intSize == BINIO_64BIT || intSize == BINIO_32BIT,
                               "intSize must be 32 or 64 bit for binary IO");
   write_raw_int32(str, vl.length());
@@ -129,7 +126,6 @@ void read_ntl_vec_long(std::istream& str, NTL::vec_long& vl)
 {
   int sizeOfVL = read_raw_int32(str);
   int intSize = read_raw_int32(str);
-  // OLD: assert(intSize == BINIO_64BIT || intSize == BINIO_32BIT);
   assertTrue<InvalidArgument>(intSize == BINIO_64BIT || intSize == BINIO_32BIT,
                               "intSize must be 32 or 64 bit for binary IO");
 
@@ -184,7 +180,6 @@ NTL::xdouble read_raw_xdouble(std::istream& str)
 void write_raw_ZZ(std::ostream& str, const NTL::ZZ& zz)
 {
   long noBytes = NumBytes(zz);
-  // OLD: assert(noBytes > 0);
   assertTrue<InvalidArgument>(noBytes > 0,
                               "Number of bytes to write must be non-negative");
   unsigned char* zzBytes = new unsigned char[noBytes];
@@ -198,7 +193,6 @@ void write_raw_ZZ(std::ostream& str, const NTL::ZZ& zz)
 void read_raw_ZZ(std::istream& str, NTL::ZZ& zz)
 {
   long noBytes = read_raw_int(str);
-  // OLD: assert(noBytes > 0);
   assertTrue<InvalidArgument>(noBytes > 0,
                               "Number of bytes to write must be non-negative");
   unsigned char* zzBytes = new unsigned char[noBytes];

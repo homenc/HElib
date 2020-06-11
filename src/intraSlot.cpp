@@ -136,8 +136,7 @@ long unpack(const CtPtrs& unpacked,
 {
   long d = ea.getDegree(); // size of each slot
   long num2unpack = unpacked.size();
-  // OLD: assert(packed.size()*d >= num2unpack); // we must have enough
-  // ciphertexts
+  // We must have enough ciphertexts
   assertTrue(packed.size() * d >= num2unpack,
              "Not enough ciphertexts. (Packed size * d < unpacked size)");
   long offset = 0;
@@ -206,8 +205,7 @@ long repack(const CtPtrs& packed,
 {
   long d = ea.getDegree(); // size of each slot
   long num2pack = unpacked.size();
-  // OLD: assert(packed.size()*d >= num2pack); // we must have enough
-  // ciphertexts
+  // We must have enough ciphertexts
   assertTrue(packed.size() * d >= num2pack,
              "Not enough ciphertexts. (Packed size * d < unpacked size)");
   long offset = 0;
@@ -240,7 +238,6 @@ public:
   {
     long d = ea.getDegree(); // size of each slot
 
-    // OLD: assert(nbits >= 0 && nbits <= d);
     assertInRange(
         nbits,
         0l,
@@ -286,7 +283,6 @@ public:
                     zzX& result)
   {
     long nslots = ea.size(); // how many slots
-    // OLD: assert(lsize(data)==nslots);
     assertEq(lsize(data),
              nslots,
              "Cannot encode when data size is different to number of slots");

@@ -72,7 +72,6 @@ void polyEval(Ctxt& ret, const NTL::Vec<Ctxt>& poly, const Ctxt& x)
   long d = 1L << logD;
 
   // We have d <= deg(poly) < 3d
-  // OLD: assert(d <= deg && deg < 3*d);
   assertInRange(deg, d, 3l * d, "Poly degree not in [d, 3d)");
 
   NTL::Vec<Ctxt> powers(NTL::INIT_SIZE, logD + 1, x);
@@ -229,8 +228,7 @@ static void simplePolyEval(Ctxt& ret,
   if (deg(poly) < 0)
     return; // the zero polynomial always returns zero
 
-  // OLD: assert(deg(poly)<=babyStep.size()); // ensure that we have enough
-  // powers
+  // Ensure that we have enough powers
 
   // ensure that we have enough powers
   assertTrue(deg(poly) <= babyStep.size(),
@@ -283,9 +281,7 @@ static void PatersonStockmeyer(Ctxt& ret,
   DivRem(c, s, r, q); // r' = c*q + s
   // deg(s)<deg(q), and if c!= 0 then deg(c)<k-delta
 
-  // OLD: assert(deg(s)<deg(q));
   assertTrue(deg(s) < deg(q), "Degree of s is not less than degree of q");
-  // OLD: assert(IsZero(c) || deg(c)<k-delta);
   assertTrue(IsZero(c) || deg(c) < k - delta,
              "Nonzero c has not degree smaller than k - delta");
   SetCoeff(s, deg(q)); // s' = s + X^{deg(q)}, deg(s)==deg(q)
@@ -431,8 +427,8 @@ private:
 public:
   DynamicPtxtPowers(long _x, long _p, long nPowers, long _d=1) : p(_p)
   {
-    //OLD: assert(_x>=0 && _p>1 && nPowers>0); // Sanity check
-    assertTrue<InvalidArgument>(_x >= 0l, "_x must be greater equal than 0"); // Sanity check
+    // Sanity check
+    assertTrue<InvalidArgument>(_x >= 0l, "_x must be greater equal than 0");
     assertTrue<InvalidArgument>(_p > 1l, "_p must be greater than 1"); // Sanity check
     assertTrue<InvalidArgument>(nPowers > 0l, "nPowers must be greater than 0"); // Sanity check
     v.SetLength(nPowers);
@@ -492,7 +488,7 @@ PatersonStockmeyer(const NTL::ZZX& poly, long k, long t, long delta,
 
 long simplePolyEval(const NTL::ZZX& poly, DynamicPtxtPowers& babyStep, long mod)
 {
-  //OLD: assert (deg(poly)<=(long)babyStep.size());// ensure that we have enough powers
+  // ensure that we have enough powers
   assertTrue(deg(poly)<=(long)babyStep.size(), "BabyStep has not enough powers (required more than deg(poly))");
 
   long ret = rem(ConstTerm(poly), mod);
@@ -584,9 +580,7 @@ PatersonStockmeyer(const NTL::ZZX& poly, long k, long t, long delta,
 
   if (verbose) std::cerr << ", c="<<c<< ", s ="<<s<<std::endl;
 
-  //OLD: assert(deg(s)<deg(q));
   assertTrue(deg(s)<deg(q), "Degree of s is not less than degree of q");
-  //OLD: assert(IsZero(c) || deg(c)<k-delta);
   assertTrue(IsZero(c) || deg(c)<k - delta, "Nonzero c has not degree smaller than k - delta");
   
   SetCoeff(s,deg(q)); // s' = s + X^{deg(q)}, deg(s)==deg(q)

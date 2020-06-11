@@ -100,9 +100,7 @@ long computeProd(const std::vector<long>& vec)
 // return a degree-d irreducible polynomial mod p
 NTL::ZZX makeIrredPoly(long p, long d)
 {
-  // OLD: assert(d >= 1);
   assertTrue<InvalidArgument>(d >= 1l, "polynomial degree is less than 1");
-  // OLD: assert(NTL::ProbPrime(p));
   assertTrue<InvalidArgument>((bool)NTL::ProbPrime(p),
                               "modulus p is not prime");
 
@@ -435,7 +433,6 @@ void FindPrimRootT(zp& root, unsigned long e)
 {
   zz qm1 = zp::modulus() - 1;
 
-  // OLD: assert(qm1 % e == 0);
   assertEq(static_cast<long>(qm1 % e), 0l, "e does not divide zp::modulus()-1");
 
   std::vector<long> facts;
@@ -943,7 +940,6 @@ void ModComp(NTL::ZZX& res,
              const NTL::ZZX& h,
              const NTL::ZZX& f)
 {
-  // OLD: assert(LeadCoeff(f) == 1);
   assertEq<InvalidArgument>(LeadCoeff(f),
                             NTL::ZZ(1l),
                             "polynomial is not monic");
@@ -1088,11 +1084,10 @@ void buildLinPolyMatrix(NTL::mat_zz_pE& M, long p)
 
 void buildLinPolyMatrix(NTL::mat_GF2E& M, long p)
 {
-  // OLD: assert(p == 2);
-  assertEq<InvalidArgument>(
-      p,
+  assertEq<InvalidArgument>( p,
       2l,
-      "p is not 2 when building a mat_GF2E (Galois field 2)");
+      "p is not 2 when building "
+      "a mat_GF2E (Galois field 2)");
 
   long d = NTL::GF2E::degree();
 
@@ -1339,7 +1334,6 @@ void ppsolve(NTL::vec_zz_pE& x,
 
   convert(x, yy);
 
-  // OLD: assert(x*A == b);
   assertEq(x * A, b, "Failed to found solution x to matrix equation x*A == b");
 }
 
@@ -1349,14 +1343,13 @@ void ppsolve(NTL::vec_GF2E& x,
              long p,
              long r)
 {
-  // OLD: assert(p == 2 && r == 1);
   assertEq<InvalidArgument>(p,
                             2l,
                             "modulus p is not 2 with GF2E (Galois field 2)");
-  assertEq<InvalidArgument>(
-      r,
+  assertEq<InvalidArgument>( r,
       1l,
-      "Hensel lifting r is not 2 with GF2E (Galois field 2)");
+      "Hensel lifting r is not 2 with"
+      " GF2E (Galois field 2)");
 
   NTL::GF2E det;
   solve(det, x, A, b);
@@ -1423,7 +1416,6 @@ void ppInvert(NTL::mat_zz_pE& X, const NTL::mat_zz_pE& A, long p, long r)
     prod *= (I + Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
   }
   mul(X, prod, XX); // X = A^{-1} mod p^r
-  // OLD: assert(X*A == I);
   assertEq(X * A,
            I,
            "Failed to found solution X to matrix equation X*A == I "
@@ -1485,7 +1477,6 @@ void ppInvert(NTL::mat_zz_p& X, const NTL::mat_zz_p& A, long p, long r)
     prod *= (I + Z); // = sum_{j=0}^{2^{i+1}-1} (pZ)^j
   }
   mul(X, prod, XX); // X = A^{-1} mod p^r
-  // OLD: assert(X*A == I);
   assertEq(X * A,
            I,
            "Failed to found solution X to matrix equation X*A == I "
@@ -1514,14 +1505,13 @@ void buildLinPolyCoeffs(NTL::vec_GF2E& C_out,
                         long r)
 {
   FHE_TIMER_START;
-  // OLD: assert(p == 2 && r == 1);
   assertEq<InvalidArgument>(p,
                             2l,
                             "modulus p is not 2 with GF2E (Galois field 2)");
-  assertEq<InvalidArgument>(
-      r,
+  assertEq<InvalidArgument>( r,
       1l,
-      "Hensel lifting r is not 2 with GF2E (Galois field 2)");
+      "Hensel lifting r is not 2 "
+      "with GF2E (Galois field 2)");
 
   NTL::mat_GF2E M;
   buildLinPolyMatrix(M, p);
@@ -1539,7 +1529,6 @@ void applyLinPoly(NTL::zz_pE& beta,
                   long p)
 {
   long d = NTL::zz_pE::degree();
-  // OLD: assert(d == C.length());
   assertEq<InvalidArgument>(d,
                             C.length(),
                             "C length is not equal to NTL::zz_pE::degree()");
@@ -1563,7 +1552,6 @@ void applyLinPoly(NTL::GF2E& beta,
                   long p)
 {
   long d = NTL::GF2E::degree();
-  // OLD: assert(d == C.length());
   assertEq<InvalidArgument>(d,
                             C.length(),
                             "C length is not equal to GF2E::degree()");
@@ -1612,7 +1600,6 @@ std::pair<long, long> rationalApprox(double x, long denomBound)
     denom = tmpDenom;
     //    cout << "  ai="<<ai<<", xi="<<xi<<", denominator="<<denom<<endl;
   }
-  // OLD: assert(denom*x < NTL_SP_BOUND);
   assertTrue<RuntimeError>(denom * x < NTL_SP_BOUND,
                            "Single-precision bound exceeded");
   long numer = long(round(denom * x)) * sign;
@@ -1724,7 +1711,6 @@ static void LocalCyclicReduce(NTL::zz_pX& x, const NTL::zz_pX& a, long m)
 zz_pXModulus1::zz_pXModulus1(long _m, const NTL::zz_pX& _f) :
     m(_m), f(_f), n(deg(f))
 {
-  // OLD: assert(m > n);
   assertTrue<InvalidArgument>(m > n, "_m is less or equal than _f's degree");
 
   specialLogic = (m - n > 10 && m < 2 * n);

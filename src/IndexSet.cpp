@@ -24,7 +24,6 @@ const IndexSet& IndexSet::emptySet()
 // constructs an interval, low to high
 void IndexSet::intervalConstructor(long low, long high)
 {
-  // OLD: assert(low >= 0);
   assertTrue<InvalidArgument>(
       low >= 0,
       "Cannot construct interval with negative lower bound");
@@ -128,7 +127,6 @@ void IndexSet::clear()
 
 void IndexSet::insert(long j)
 {
-  // OLD: assert(j >= 0);
   assertTrue<InvalidArgument>(j >= 0, "Cannot insert in negative index");
 
   long oldSize = rep.size();
@@ -155,7 +153,6 @@ void IndexSet::insert(long j)
 
 void IndexSet::remove(long j)
 {
-  // OLD: assert(j >= 0);
   assertTrue<InvalidArgument>(j >= 0, "Cannot remove from negative index");
 
   if (j >= (long)rep.size())

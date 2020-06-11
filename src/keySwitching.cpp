@@ -234,7 +234,6 @@ void KeySwitch::write(std::ostream& str) const
 void KeySwitch::read(std::istream& str, const Context& context)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_BEGIN);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find pre-secret key eyecatcher");
 
   fromKey.read(str);
@@ -246,13 +245,11 @@ void KeySwitch::read(std::istream& str, const Context& context)
   noiseBound = read_raw_xdouble(str);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SKM_END);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
 }
 
 long KSGiantStepSize(long D)
 {
-  // OLD: assert(D > 0);
   assertTrue<InvalidArgument>(D > 0l, "Step size must be positive");
   long g = NTL::SqrRoot(D);
   if (g * g < D)

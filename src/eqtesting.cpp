@@ -63,7 +63,6 @@ template void mapTo01(const EncryptedArray&, Ptxt<CKKS>& ptxt);
 // O(log d) automorphisms and multiplications
 void fastPower(Ctxt& ctxt, long d)
 {
-  // OLD: assert(ctxt.getPtxtSpace()==2);
   assertEq(ctxt.getPtxtSpace(), 2l, "ptxtSpace must be 2");
   if (d <= 1)
     return;

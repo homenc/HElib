@@ -259,7 +259,6 @@ void readContextBaseBinary(std::istream& str,
                            std::vector<long>& ords)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find pre-context-base eye catcher");
 
   p = read_raw_int(str);
@@ -271,7 +270,6 @@ void readContextBaseBinary(std::istream& str,
   read_raw_vector(str, ords);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find post-context-base eye catcher");
 }
 
@@ -334,7 +332,6 @@ void writeContextBinary(std::ostream& str, const Context& context)
 void readContextBinary(std::istream& str, Context& context)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find pre-context eye catcher");
 
   // Get the standard deviation
@@ -402,7 +399,6 @@ void readContextBinary(std::istream& str, Context& context)
   }
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find post-context eye catcher");
 }
 

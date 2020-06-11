@@ -289,13 +289,11 @@ BenesMemoEntry optimalBenesAux(long i,
                                const NTL::Vec<NTL::Vec<long>>& costTab,
                                BenesMemoTable& memoTab)
 {
-  // OLD: assert(i >= 0 && i <= nlev);
   assertInRange<InvalidArgument>(i,
                                  0l,
                                  nlev,
                                  "Level to collapse index out of bound",
                                  true);
-  // OLD: assert(budget > 0);
   assertTrue<InvalidArgument>(budget > 0, "No budget left");
 
   // Did we already solve this problem? If so just return the solution.
@@ -630,11 +628,8 @@ LowerMemoEntry optimalLower(long order,
                             long mid,
                             LowerMemoTable& lowerMemoTable)
 {
-  // OLD: assert(order > 1);
   assertTrue<InvalidArgument>(order > 1, "Order must be greater than 1");
-  // OLD: assert(mid == 0 || mid == 1);
   assertTrue<InvalidArgument>(mid == 0 || mid == 1, "mid value is not 1 or 2");
-  // OLD: assert(budget > 0);
   assertTrue<InvalidArgument>(budget > 0, "No budget left");
 
   // Did we already solve this problem? If so just return the solution.
@@ -750,19 +745,16 @@ UpperMemoEntry optimalUpperAux(const NTL::Vec<GenDescriptor>& vec,
                                UpperMemoTable& upperMemoTable,
                                LowerMemoTable& lowerMemoTable)
 {
-  // OLD: assert(i >= 0 && i <= vec.length());
-  assertInRange<InvalidArgument>(
-      i,
-      0l,
-      (long)vec.length(),
-      "Index i does not point to a tree (index out of range)",
-      true);
-  // OLD: assert(budget >= 0);
+  assertInRange<InvalidArgument>(i,
+                                 0l,
+                                 (long)vec.length(),
+                                 "Index i does not point to "
+                                 "a tree (index out of range)",
+                                 true);
   assertTrue<InvalidArgument>(budget >= 0, "Negative budget");
-  // OLD: assert(mid == 0 || mid == 1);
   assertTrue<InvalidArgument>(mid == 0 || mid == 1, "mid value is not 1 or 2");
 
-  // Did we already solve this problem? If so just return the solution.
+  // FIXME: Did we already solve this problem? If so just return the solution.
   UpperMemoTable::iterator find =
       upperMemoTable.find(UpperMemoKey(i, budget, mid));
   if (find != upperMemoTable.end()) {
@@ -951,7 +943,6 @@ static long copyToGenTree(OneGeneratorTree& gTree, SplitNodePtr& solution)
 long GeneratorTrees::buildOptimalTrees(const NTL::Vec<GenDescriptor>& gens,
                                        long depthBound)
 {
-  // OLD: assert(gens.length() >= 0);
   // TODO: is this check necessary?
   assertTrue<InvalidArgument>(gens.length() >= 0, "negative gens size");
   trees.SetLength(gens.length()); // allocate space if needed
@@ -961,7 +952,6 @@ long GeneratorTrees::buildOptimalTrees(const NTL::Vec<GenDescriptor>& gens,
     map2array.SetLength(1, 0);
     return 0;
   }
-  // OLD: assert(depthBound > 0);
   assertTrue<InvalidArgument>(depthBound > 0, "Zero or negative depthBound");
 
   // reset the trees, starting from only the roots

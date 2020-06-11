@@ -102,7 +102,6 @@ public:
   long getPermDim() const { return dim; }
   void setPermDim(long _dim)
   {
-    // OLD: assert(_dim >= 0 && _dim < getNumDims());
     assertInRange(_dim,
                   0l,
                   getNumDims(),
@@ -178,7 +177,6 @@ public:
   //! using the formula d = (k-1)-|(k-1)-i|
   static long levelToDepthMap(UNUSED long n, long k, long i)
   {
-    // OLD: assert(i >= 0 && i < 2*k-1);
     assertInRange<InvalidArgument>(i,
                                    0l,
                                    2 * k - 1,
@@ -200,7 +198,6 @@ public:
 
   const NTL::Vec<short>& getLevel(long i) const
   {
-    // OLD: assert(i >= 0 && i < 2*k-1);
     assertInRange<InvalidArgument>(i,
                                    0l,
                                    2 * k - 1,
@@ -353,7 +350,6 @@ long FullBinaryTree<T>::addChildren(long prntIdx,
                                     const T& leftData,
                                     const T& rightData)
 {
-  // OLD: assert(prntIdx >= 0 && prntIdx < (long)(nodes.size()));
   assertInRange(prntIdx, 0l, (long)nodes.size(), "Parent node does not exist");
 
   // If parent is a leaf, add to it two children
@@ -392,7 +388,6 @@ long FullBinaryTree<T>::addChildren(long prntIdx,
     nLeaves++; // we replaced a leaf by a parent w/ two leaves
   } else {     // parent is not a leaf, update the two children
     TreeNode<T>& parent = nodes[prntIdx];
-    // OLD: assert(parent.leftChild>=0 && parent.rightChild>=0);
     assertTrue(parent.leftChild >= 0, "Left child does not exist");
     assertTrue(parent.rightChild >= 0, "Right child does not exist");
 

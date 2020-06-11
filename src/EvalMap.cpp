@@ -60,12 +60,10 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
   // could certainly be greatly simplified
 
   nfactors = mvec.length();
-  // OLD: assert(nfactors > 0);
   assertTrue(nfactors > 0, "Invalid argument: mvec must not be empty");
 
   for (long i = 0; i < nfactors; i++) {
     for (long j = i + 1; j < nfactors; j++) {
-      // OLD: assert(NTL::GCD(mvec[i], mvec[j]) == 1);
       assertEq(NTL::GCD(mvec[i], mvec[j]),
                1l,
                "Invalid argument: mvec elements must be pairwise co-prime");
@@ -73,7 +71,6 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
   }
 
   long m = computeProd(mvec);
-  // OLD: assert(m == long(zMStar.getM()));
   assertEq(m,
            (long)zMStar.getM(),
            "Invalid argument: Product of mvec elements does not match "
@@ -97,9 +94,7 @@ EvalMap::EvalMap(const EncryptedArray& _ea,
     dvec[i] = dprodvec[i] / dprodvec[i + 1];
 
   long nslots = phim / d;
-  // OLD: assert(d == dprodvec[0]);
   assertEq(d, dprodvec[0], "dprodvec must start with d");
-  // OLD: assert(nslots == long(zMStar.getNSlots()));
   assertEq(nslots,
            (long)zMStar.getNSlots(),
            "Slot count mismatch between ea and phi(m)/d");
@@ -193,7 +188,6 @@ static void init_representatives(NTL::Vec<long>& representatives,
                                  const NTL::Vec<long>& mvec,
                                  const PAlgebra& zMStar)
 {
-  // OLD: assert(dim >= 0 && dim < mvec.length());
   assertInRange(dim,
                 0l,
                 mvec.length(),
@@ -239,7 +233,6 @@ public:
       base_ea(_ea), sig(_sig), dim(_dim)
   {
     long sz = sig->getDim(dim);
-    // OLD: assert(sz == reps.length());
     assertEq(sz,
              reps.length(),
              "Invalid argument: sig->getDim(dim) must equal reps.length()");
@@ -337,15 +330,12 @@ public:
     long d = deg(G);
 
     long sz = sig->getDim(dim);
-    // OLD: assert(sz == reps.length());
     assertEq(sz,
              reps.length(),
              "Invalid argument: sig->getDim(dim) must equal reps.length()");
-    // OLD: assert(dim == sig->getNumDims() - 1);
     assertEq(dim,
              sig->getNumDims() - 1,
              "Invalid argument: dim must be one less than sig->getNumDims()");
-    // OLD: assert(sig->getSize() == ea.size());
     assertEq(sig->getSize(), ea.size(), "sig and ea do not have matching size");
 
     // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
@@ -537,7 +527,6 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
   // could certainly be greatly simplified
 
   nfactors = mvec.length();
-  // OLD: assert(nfactors > 0);
   assertTrue(nfactors > 0, "Invalid argument: mvec must have positive length");
 
   for (long i = 0; i < nfactors; i++) {
@@ -549,7 +538,6 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
   }
 
   long m = computeProd(mvec);
-  // OLD: assert(m == long(zMStar.getM()));
   assertEq(m,
            (long)zMStar.getM(),
            "Invalid argument: mvec's product does not match ea's m");
@@ -572,9 +560,7 @@ ThinEvalMap::ThinEvalMap(const EncryptedArray& _ea,
     dvec[i] = dprodvec[i] / dprodvec[i + 1];
 
   long nslots = phim / d;
-  // OLD: assert(d == dprodvec[0]);
   assertEq(d, dprodvec[0], "d must match the first entry of dprodvec");
-  // OLD: assert(nslots == long(zMStar.getNSlots()));
   assertEq(nslots,
            (long)zMStar.getNSlots(),
            "Invalid argument: mismatch of number of slots");
@@ -698,7 +684,6 @@ public:
       base_ea(_ea), sig(_sig), dim(_dim)
   {
     long sz = sig->getDim(dim);
-    // OLD: assert(sz == reps.length());
     assertEq(sz,
              reps.length(),
              "Invalid argument: sig and reps have inconsistent "
@@ -815,17 +800,14 @@ public:
     long r = _ea.getAlMod().getR();
 
     long sz = sig->getDim(dim);
-    // OLD: assert(sz == reps.length());
     assertEq(sz,
              reps.length(),
              "Invalid argument: sig and reps have inconsistent "
              "dimension");
-    // OLD: assert(dim == sig->getNumDims() - 1);
     assertEq(dim,
              sig->getNumDims() - 1,
              "Invalid argument: dim must be one less than "
              "sig->getNumDims()");
-    // OLD: assert(sig->getSize() == ea.size());
     assertEq(sig->getSize(), ea.size(), "sig and ea do not have matching size");
 
     // so sz == phi(m_last)/d, where d = deg(G) = order of p mod m
@@ -880,7 +862,6 @@ public:
     for (long i = 0; i < 2 * d - 1; i++) {
       RX trace_val;
       TraceMap(trace_val, (RX(i, 1) % G), d, G, h);
-      // OLD: assert(deg(trace_val) <= 0);
       assertTrue(deg(trace_val) <= 0, "trace_val is positive");
       trace_vec[i] = ConstTerm(trace_val);
     }

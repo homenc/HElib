@@ -30,7 +30,7 @@ double RLWE1(DoubleCRT& c0, const DoubleCRT& c1, const DoubleCRT& s, long p)
 // Returns a high-probability bound on the L-infty norm
 // of the canonical embedding of the decryption of (c0, c1) w/r/to s
 {
-  // OLD: assert (p>0); // Used with p=1 for CKKS, p>=2 for BGV
+  // Used with p=1 for CKKS, p>=2 for BGV
   assertTrue<InvalidArgument>(
       p > 0,
       "Cannot generate RLWE instance with nonpositive p"); // Used with p=1 for
@@ -116,8 +116,7 @@ void PubKey::clear()
 
 void PubKey::setKeySwitchMap(long keyId)
 {
-  // OLD: assert(keyId>=0 && keyId<(long)skBounds.size()); // Sanity-check, do
-  // we have such a key?
+  // Sanity-check, do we have such a key?
   assertInRange(keyId,
                 0l,
                 (long)skBounds.size(),
@@ -317,7 +316,6 @@ bool PubKey::isReachable(long k, long keyID) const
 long PubKey::getKSStrategy(long dim) const
 {
   long index = dim + 1;
-  // OLD: assert(index >= 0);
   assertTrue<InvalidArgument>(index >= 0l,
                               "Invalid dimension (dim must be at least -1)");
   if (index >= KS_strategy.length()) {
@@ -332,7 +330,6 @@ long PubKey::getKSStrategy(long dim) const
 void PubKey::setKSStrategy(long dim, int val)
 {
   long index = dim + 1;
-  // OLD: assert(index >= 0);
   assertTrue<InvalidArgument>(index >= 0l,
                               "Invalid dimension (dim must be at least -1)");
   if (index >= KS_strategy.length())
@@ -367,7 +364,6 @@ long PubKey::Encrypt(Ctxt& ctxt,
     return ptxtSpace;
   }
 
-  // OLD: assert(this == &ctxt.pubKey);
   assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
   if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mismatch
     ptxtSpace = NTL::GCD(ptxtSpace, pubEncrKey.ptxtSpace);
@@ -503,7 +499,6 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
                          double ptxtSize,
                          double scaling) const
 {
-  // OLD: assert(this == &ctxt.pubKey);
   assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
 
   if (ptxtSize <= 0)
@@ -687,7 +682,6 @@ std::istream& operator>>(std::istream& str, PubKey& pk)
   unsigned long m, p, r;
   std::vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
-  // OLD: assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
   assertTrue(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords),
              "PAlgebra mismatch");
 
@@ -771,7 +765,6 @@ void writePubKeyBinary(std::ostream& str, const PubKey& pk)
 void readPubKeyBinary(std::istream& str, PubKey& pk)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_BEGIN);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find pre-public key eyecatcher");
 
   // TODO code to check context object is what it should be same as the text IO.
@@ -780,7 +773,6 @@ void readPubKeyBinary(std::istream& str, PubKey& pk)
   unsigned long m, p, r;
   std::vector<long> gens, ords;
   readContextBaseBinary(str, m, p, r, gens, ords);
-  // OLD: assert(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords));
   assertTrue(comparePAlgebra(pk.getContext().zMStar, m, p, r, gens, ords),
              "PAlgebra mismatch");
 
@@ -803,7 +795,6 @@ void readPubKeyBinary(std::istream& str, PubKey& pk)
   pk.recryptEkey.read(str);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_PK_END);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find post-public key eyecatcher");
 }
 
@@ -964,7 +955,6 @@ void SecKey::GenKeySWmatrix(long fromSPower,
     //   plaintext space even if *this is not currently bootstrappable,
     //   in case the calling application will make it bootstrappable later.
 
-    // OLD: assert(p>=2);
     assertTrue(p >= 2,
                "Invalid p value found generating BGV key-switching matrix");
   }
@@ -1054,7 +1044,6 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
 {
   FHE_TIMER_START;
 
-  // OLD: assert(getContext()==ciphertxt.getContext());
   assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
 
   // this will trigger a warning if any operations that were
@@ -1149,7 +1138,6 @@ long SecKey::skEncrypt(Ctxt& ctxt,
 {
   FHE_TIMER_START;
 
-  // OLD: assert(((PubKey*)this) == &ctxt.pubKey);
   assertEq(((const PubKey*)this),
            &ctxt.pubKey,
            "Key does not match context's public key");
@@ -1162,7 +1150,6 @@ long SecKey::skEncrypt(Ctxt& ctxt,
   } else { // BGV
     if (ptxtSpace < 2)
       ptxtSpace = pubEncrKey.ptxtSpace; // default plaintext space is p^r
-    // OLD: assert(ptxtSpace >= 2);
     assertTrue(ptxtSpace >= 2, "Found invalid p value in BGV encryption");
   }
   ctxt.ptxtSpace = ptxtSpace;
@@ -1275,7 +1262,6 @@ long SecKey::genRecryptData()
     return recryptKeyID;
 
   // Make sure that the context has the bootstrapping EA and PAlgMod
-  // OLD: assert(context.isBootstrappable());
   assertTrue(context.isBootstrappable(),
              "Cannot generate recrypt data for non-bootstrappable context");
 
@@ -1349,7 +1335,6 @@ void writeSecKeyBinary(std::ostream& str, const SecKey& sk)
 void readSecKeyBinary(std::istream& str, SecKey& sk)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_BEGIN);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find pre-secret key eyecatcher");
 
   // Read in the public key part first.
@@ -1359,7 +1344,6 @@ void readSecKeyBinary(std::istream& str, SecKey& sk)
   read_raw_vector<DoubleCRT>(str, sk.sKeys, blankDCRT);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_SK_END);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find post-secret key eyecatcher");
 }
 

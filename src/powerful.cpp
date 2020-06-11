@@ -118,7 +118,6 @@ static void recursiveReduce(const CubeSlice<NTL::zz_p>& s,
                             NTL::zz_pX& tmp2)
 {
   long numDims = s.getNumDims();
-  // OLD: assert(numDims > 0);
   assertTrue(numDims > 0l, "CubeSlice s has negative number of dimensions");
 
   long deg0 = deg(cycVec[d]);
@@ -203,7 +202,6 @@ long PowerfulConversion::polyToPowerful(HyperCube<NTL::zz_p>& powerful,
   HyperCube<NTL::zz_p> tmpCube(getLongSig());
 
   long n = deg(poly);
-  // OLD: assert(n < indexes->m);
   assertTrue(n < indexes->m,
              "Degree of polynomial poly is greater or equal than indexes->m");
 
@@ -427,7 +425,6 @@ static void convertPolyToPowerful(HyperCube<NTL::zz_p>& cube,
    long phim = cube.getSize();
    long n = deg(poly);
  
-   //OLD: assert(n < m);
    assertTrue(n < m, "Degree of polynomial poly must be less than size of the hypercube tmpCube");
 
    for (long i = 0; i <= n; i++)
@@ -501,7 +498,6 @@ void mapIndexToPowerful(NTL::Vec<long>& pow, long j, const NTL::Vec<long>& phiVe
 {
   long k = phiVec.length();
   long phim = computeProd(phiVec);
-  //OLD: assert(j >= 0 && j < phim);
   assertInRange(j, 0l, phim, "Index j is not in [0, computeProd(phiVec))");
 
   pow.SetLength(k);
@@ -520,7 +516,6 @@ void mapPowerfulToPoly(NTL::ZZX& poly,
                        const NTL::ZZX& phimX)
 {
   long k = pow.length();
-  //OLD: assert(divVec.length() == k);
   assertEq(divVec.length(), k, "pow and divVec have different sizes");
 
   long j = 0;
@@ -704,7 +699,6 @@ void recursiveEval(const CubeSlice<NTL::zz_p>& s,
                    NTL::Vec<NTL::zz_p>& tmp2)
 {
    long numDims = s.getNumDims();
-   //OLD: assert(numDims > 0);
    assertTrue(numDims > 0, "CubeSlice s has negative dimension number");
 
    if (numDims > 1) {
@@ -801,7 +795,6 @@ void recursiveEval(const CubeSlice<NTL::zz_p>& s,
                    NTL::Vec<NTL::zz_p>& tmp2)
 {
    long numDims = s.getNumDims();
-   //OLD: assert(numDims > 0);
    assertTrue(numDims > 0, "CubeSlice s has negative dimension number");
 
    if (numDims > 1) {
@@ -827,7 +820,6 @@ void recursiveInterp(const CubeSlice<NTL::zz_p>& s,
                      NTL::Vec<NTL::zz_p>& tmp2)
 {
   long numDims = s.getNumDims();
-  //OLD: assert(numDims > 0);
   assertTrue(numDims > 0, "CubeSlice s has negative dimension number");
 
   long posBnd = s.getProd(1);

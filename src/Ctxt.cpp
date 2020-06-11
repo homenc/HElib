@@ -205,7 +205,6 @@ Ctxt::Ctxt(const PubKey& newPubKey, long newPtxtSpace) :
   if (ptxtSpace < 2) {
     ptxtSpace = pubKey.getPtxtSpace();
   } else {
-    // OLD: assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
     // sanity check
     assertTrue(NTL::GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1,
                "Ptxt spaces from ciphertext and public key are coprime");
@@ -226,7 +225,6 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt) :
   if (ptxtSpace < 2) {
     ptxtSpace = pubKey.getPtxtSpace();
   } else {
-    // OLD: assert (GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1); // sanity check
     // sanity check
     assertTrue(NTL::GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1,
                "Ptxt spaces from ciphertext and public key are coprime");
@@ -294,8 +292,6 @@ void Ctxt::modUpToSet(const IndexSet& s)
   ratFactor *= NTL::xexp(f);
 
   primeSet.insert(setDiff); // add setDiff to primeSet
-  // OLD: assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still
-  // valid
 
   // sanity-check: ensure primeSet is still valid
   assertTrue(verifyPrimeSet(), "primeSet is no longer valid");
@@ -476,8 +472,6 @@ void Ctxt::modDownToSet(const IndexSet& s)
 #endif
   }
   primeSet.remove(setDiff); // remove the primes not in s
-  // OLD: assert(verifyPrimeSet()); // sanity-check: ensure primeSet is still
-  // valid
 
   // sanity-check: ensure primeSet is still valid
   assertTrue(verifyPrimeSet(), "primeSet is no longer valid");
@@ -498,7 +492,6 @@ void Ctxt::blindCtxt(const NTL::ZZX& poly)
 void Ctxt::reducePtxtSpace(long newPtxtSpace)
 {
   long g = NTL::GCD(ptxtSpace, newPtxtSpace);
-  // OLD: assert (g>1); // NOTE: Will trigger if called for CKKS ciphertext
 
   // NOTE: Will trigger an error if called for CKKS ciphertext
   assertTrue(g > 1, "New and old plaintext spaces are coprime");
@@ -619,12 +612,11 @@ void Ctxt::reLinearize(long keyID)
                              ? pubKey.getKeySWmatrix(part.skHandle, keyID)
                              : pubKey.getAnyKeySWmatrix(part.skHandle);
 
-    // OLD: assert(W.toKeyID>=0);      // verify that a switching matrix exists
+    // verify that a switching matrix exists
     assertTrue(W.toKeyID >= 0, "No key-switching matrix exists");
 
     if (g > 1) {                    // g==1 for CKKS, g>1 for BGV
       g = NTL::GCD(W.ptxtSpace, g); // verify that the plaintext spaces match
-      // OLD: assert (g>1);
       assertTrue(g > 1, "Plaintext spaces do not match");
       tmp.ptxtSpace = g;
     }
@@ -654,7 +646,6 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   FHE_TIMER_START;
 
   // no special primes in the input part
-  // OLD: assert(context.specialPrimes.disjointFrom(p.getIndexSet()));
   assertTrue(
       context.specialPrimes.disjointFrom(p.getIndexSet()),
       "Special primes and CtxtPart's index set have non-empty intersection");
@@ -668,7 +659,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   }
 
   // some sanity checks
-  // OLD: assert(W.fromKey == p.skHandle);  // the handles must match
+  // the handles must match
   assertEq(W.fromKey, p.skHandle, "Secret key handles do not match");
 
   std::vector<DoubleCRT> polyDigits;
@@ -699,7 +690,6 @@ void Ctxt::addPart(const DoubleCRT& part,
 {
   FHE_TIMER_START;
 
-  // OLD: assert (&part.getContext() == &context);
   assertEq(&part.getContext(), &context, "Context mismatch");
 
   if (parts.size() == 0) { // inserting 1st part
@@ -985,7 +975,6 @@ void addSomePrimes(Ctxt& c)
   IndexSet s = c.getPrimeSet();
 
   // Sanity check: there should be something left to add
-  // OLD: assert(s != context.allPrimes());
   assertNeq(s, context.allPrimes(), "Nothing left to add");
 
   // Add a ctxt prime if possible
@@ -1052,7 +1041,6 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   FHE_TIMER_START;
 
   // Sanity check: same context and public key
-  // OLD: assert (&context==&other.context && &pubKey==&other.pubKey);
   assertEq(&context, &other.context, "Context mismatch");
   assertEq(&pubKey, &other.pubKey, "Public key mismatch");
 
@@ -1066,7 +1054,6 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
 
   // Verify that the plaintext spaces are compatible
   if (isCKKS()) {
-    // OLD: assert(getPtxtSpace()==1 && other.getPtxtSpace()==1);
     assertEq(getPtxtSpace(), 1l, "Plaintext spaces incompatible");
     assertEq(other.getPtxtSpace(), 1l, "Plaintext spaces incompatible");
   } else // BGV
@@ -1152,11 +1139,9 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     e1 = e1_best;
     e2 = e2_best;
 
-    // OLD: assert(MulMod(e1, f1, ptxtSpace) == MulMod(e2, f2, ptxtSpace));
     assertEq(NTL::MulMod(e1, f1, ptxtSpace),
              NTL::MulMod(e2, f2, ptxtSpace),
              "e1f1 not equivalent to e2f2 mod p");
-    // OLD: assert(GCD(e1, ptxtSpace) == 1 && GCD(e2, ptxtSpace) == 1);
     assertEq(NTL::GCD(e1, ptxtSpace), 1l, "e1 and ptxtSpace not co-prime");
     assertEq(NTL::GCD(e2, ptxtSpace), 1l, "e2 and ptxtSpace not co-prime");
   }
@@ -1319,13 +1304,9 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     return;
   }
 
-  // OLD: assert(isCKKS() == other_orig.isCKKS());
   assertEq(isCKKS(), other_orig.isCKKS(), "Scheme mismatch");
-  // OLD: assert(&context==&other_orig.context && &pubKey==&other_orig.pubKey);
   assertEq(&context, &other_orig.context, "Context mismatch");
   assertEq(&pubKey, &other_orig.pubKey, "Public key mismatch");
-  // OLD: assert(!isCKKS() || (getPtxtSpace() == 1 && other_orig.getPtxtSpace()
-  // == 1));
   if (isCKKS()) {
     assertEq(getPtxtSpace(), 1l, "Plaintext spaces incompatible");
     assertEq(other_orig.getPtxtSpace(), 1l, "Plaintext spaces incompatible");
@@ -1349,7 +1330,6 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     // equalize plaintext spaces
     if (!isCKKS()) {
       long g = NTL::GCD(ptxtSpace, other_pt->ptxtSpace);
-      // OLD: assert (g>1);
       assertTrue(g > 1, "Plaintext spaces are co-prime");
       ptxtSpace = other_pt->ptxtSpace = g;
     }
@@ -1642,7 +1622,6 @@ void Ctxt::divideBy2()
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
-  // OLD: assert (ptxtSpace % 2 == 0 && ptxtSpace>2);
   assertEq(ptxtSpace % 2, 0l, "Plaintext space is not even");
   assertTrue(ptxtSpace > 2, "Plaintext space must be greater than 2");
 
@@ -1670,7 +1649,6 @@ void Ctxt::divideByP()
     return;
 
   long p = getContext().zMStar.getP();
-  // OLD: assert (ptxtSpace % p == 0 && ptxtSpace>p);
   assertEq(ptxtSpace % p, 0l, "p must divide ptxtSpace");
   assertTrue(ptxtSpace > p, "ptxtSpace must be strictly greater than p");
 
@@ -1694,7 +1672,6 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
     return;
 
   // Sanity check: verify that k \in Zm*
-  // OLD: assert (context.zMStar.inZmStar(k));
   assertTrue(context.zMStar.inZmStar(k), "k must be in Zm*");
   long m = context.zMStar.getM();
 
@@ -1745,7 +1722,6 @@ void Ctxt::smartAutomorph(long k)
   if (this->isEmpty() || k == 1)
     return;
 
-  // OLD: assert (context.zMStar.inZmStar(k));
   assertTrue(context.zMStar.inZmStar(k), "k must be in Zm*");
 
   long keyID = getKeyID();
@@ -1757,8 +1733,7 @@ void Ctxt::smartAutomorph(long k)
 
   if (!inCanonicalForm(keyID)) { // Re-linearize the input, if needed
     reLinearize(keyID);
-    // OLD: assert (inCanonicalForm(keyID)); // ensure that re-linearization
-    // succeeded
+    // ensure that re-linearization succeeded
     assertTrue(inCanonicalForm(keyID),
                "Re-linearization failed: not in canonical form");
   }
@@ -1862,7 +1837,6 @@ void Ctxt::write(std::ostream& str) const
 void Ctxt::read(std::istream& str)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_BEGIN);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find pre-ciphertext eye catcher");
 
   ptxtSpace = read_raw_int(str);
@@ -1875,7 +1849,6 @@ void Ctxt::read(std::istream& str)
   read_raw_vector(str, parts, blankCtxtPart);
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CTXT_END);
-  // OLD: assert(eyeCatcherFound == 0);
   assertEq(eyeCatcherFound, 0, "Could not find post-ciphertext eye catcher");
 }
 
@@ -1935,7 +1908,7 @@ std::istream& operator>>(std::istream& str, Ctxt& ctxt)
   ctxt.parts.resize(nParts, CtxtPart(ctxt.context, IndexSet::emptySet()));
   for (auto& part : ctxt.parts) {
     str >> part;
-    // OLD: assert (part.getIndexSet()==ctxt.primeSet); // sanity-check
+    // sanity-check
     assertEq(
         part.getIndexSet(),
         ctxt.primeSet,
@@ -2092,7 +2065,6 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
 {
   // Ensure that new modulus is co-prime with plaintext space
   const long p2r = getPtxtSpace();
-  // OLD: assert(q>1 && p2r>1 && GCD(q,p2r)==1);
   assertTrue<InvalidArgument>(q > 1, "q must be greater than 1");
   assertTrue(p2r > 1,
              "Plaintext space must be greater than 1 for mod switching");

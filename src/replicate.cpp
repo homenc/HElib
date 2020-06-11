@@ -26,7 +26,6 @@ bool replicateVerboseFlag = false;
 void replicate(const EncryptedArray& ea, Ctxt& ctxt, long pos)
 {
   long nSlots = ea.size();
-  // OLD: assert(pos >= 0 && pos < nSlots);
   assertInRange(pos,
                 0l,
                 nSlots,
@@ -82,7 +81,6 @@ void replicate0(const EncryptedArray& ea, Ctxt& ctxt, long pos)
 // returns greatest integer k such that 2^k <= n
 static long GreatestPowerOfTwo(long n)
 {
-  // OLD: assert(n >0);
   assertTrue<InvalidArgument>(n > 0l, "Cannot take log of negative number");
 
   long k;
@@ -102,7 +100,6 @@ static void SelectRange(const EncryptedArray& ea,
 {
   long nSlots = ea.size();
 
-  // OLD: assert(lo >= 0 && lo <= hi && hi <= nSlots);
   assertInRange<InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
   assertTrue<InvalidArgument>(hi <= nSlots, "Interval exceeds number of slots");
 
@@ -271,12 +268,10 @@ static void SelectRangeDim(const EncryptedArray& ea,
 {
   long nSlots = ea.size();
 
-  // OLD: assert(d >= 0 && d < ea.dimension());
   assertInRange(d,
                 0l,
                 ea.dimension(),
                 "dimension d must be within [0, ea.dimension())");
-  // OLD: assert(lo >= 0 && lo <= hi && hi <= ea.sizeOfDimension(d));
   assertInRange<InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
   assertTrue(hi <= ea.sizeOfDimension(d), "Interval exceeds dimension of d");
 
@@ -509,7 +504,6 @@ void replicateAllNextDim(const EncryptedArray& ea,
                          ReplicateHandler* handler)
 
 {
-  // OLD: assert(d >= 0);
   assertTrue<InvalidArgument>(d >= 0l, "dimension must be non-negative");
 
   // If already fully replicated (or we need to stop early), call the handler
@@ -732,7 +726,6 @@ public:
   {
     PA_BOILER
 
-    // OLD: assert(i >= 0 && i < n);
     assertInRange(i, 0l, n, "Attempted to access out-of-range data");
     for (long j = 0; j < n; j++) {
       if (j != i)

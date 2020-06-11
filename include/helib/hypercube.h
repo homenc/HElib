@@ -35,22 +35,18 @@ public:
 
   void initSignature(const long _dims[], long _ndims)
   {
-    // OLD: assert(dims.length() == 0); // can only initialize a nullptr
-    // signature
 
     // can only initialize a nullptr signature
     assertEq(dims.length(),
              0l,
              "Can only initialize an un-initialized signature");
 
-    // OLD: assert(_ndims >= 0);
     assertTrue<InvalidArgument>(_ndims >= 0l, "Dimension count is negative");
 
     dims.SetLength(_ndims);
     prods.SetLength(_ndims + 1);
     prods[_ndims] = 1;
     for (long i = _ndims - 1; i >= 0; i--) {
-      // OLD: assert(_dims[i] > 0);
       assertTrue<InvalidArgument>(
           _dims[i] > 0,
           "Bad (non-positive) cube signature dimension");
@@ -107,7 +103,6 @@ public:
   //! get coordinate in dimension d of index i
   long getCoord(long i, long d) const
   {
-    // OLD: assert(i >= 0 && i < getSize());
     assertInRange(i,
                   0l,
                   getSize(),
@@ -119,7 +114,6 @@ public:
   //! add offset to coordinate in dimension d of index i
   long addCoord(long i, long d, long offset) const
   {
-    // OLD: assert(i >= 0 && i < getSize());
     assertInRange(i,
                   0l,
                   getSize(),
@@ -164,7 +158,6 @@ public:
   template <typename VecType>
   void getAllCoords(VecType& v, long i) const
   {
-    // OLD: assert(i >= 0 && i < getSize());
     assertInRange(i,
                   0l,
                   getSize(),
@@ -182,7 +175,6 @@ public:
   template <typename VecType>
   long assembleCoords(VecType& v) const
   {
-    // OLD: assert(lsize(v)==getNumDims());
     assertEq(lsize(v),
              getNumDims(),
              "Vector size is different to the number of dimensions");
@@ -248,7 +240,6 @@ public:
   //! assignment: signatures must be the same
   HyperCube& operator=(const HyperCube<T>& other)
   {
-    // OLD: assert(&this->sig == &other.sig);
     assertEq(&this->sig,
              &other.sig,
              "Cannot assign HyperCubes with different signatures");
@@ -259,7 +250,6 @@ public:
   //! equality testing: signatures must be the same
   bool operator==(const HyperCube<T>& other) const
   {
-    // OLD: assert(&this->sig == &other.sig);
     assertEq(&this->sig,
              &other.sig,
              "Cannot compare HyperCubes with different signatures");
@@ -366,7 +356,6 @@ public:
 
   ConstCubeSlice(const NTL::Vec<T>& _data, const CubeSignature& _sig)
   {
-    // OLD: assert(_data.length() == _sig.getSize());
     assertEq<InvalidArgument>(_data.length(),
                               _sig.getSize(),
                               "Data and signature sizes are different");
@@ -411,7 +400,6 @@ public:
   //! get coordinate in dimension d of index i
   long getCoord(long i, long d) const
   {
-    // OLD: assert(i >= 0 && i < getSize());
     assertInRange(i,
                   0l,
                   getSize(),
@@ -422,7 +410,6 @@ public:
   //! add offset to coordinate in dimension d of index i
   long addCoord(long i, long d, long offset) const
   {
-    // OLD: assert(i >= 0 && i < getSize());
     assertInRange(i,
                   0l,
                   getSize(),
@@ -442,7 +429,6 @@ public:
   //! read-only reference to element at position i, with bounds check
   const T& at(long i) const
   {
-    // OLD: assert(i >= 0 && i < getSize());
     assertInRange(i,
                   0l,
                   getSize(),

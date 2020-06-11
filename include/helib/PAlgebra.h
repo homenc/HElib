@@ -363,7 +363,6 @@ struct GenericModulus<NTL::GF2>
 {
   static void init(long p)
   {
-    // OLD: assert(p == 2);
     assertEq<InvalidArgument>(p, 2l, "Cannot init NTL::GF2 with p not 2");
   }
 };
@@ -579,7 +578,6 @@ public:
     if (this == &other)
       return *this;
 
-    // OLD: assert(&zMStar == &other.zMStar);
     assertEq(&zMStar,
              &other.zMStar,
              "Cannot assign PAlgebras with different zMStar values");
@@ -763,7 +761,6 @@ class PAlgebraModCx : public PAlgebraModBase
 public:
   PAlgebraModCx(const PAlgebra& palg, long _r) : zMStar(palg), r(_r)
   {
-    // OLD: assert(r>0 || r<NTL_SP_NBITS);
     assertInRange<InvalidArgument>(r,
                                    1l,
                                    (long)NTL_SP_NBITS,

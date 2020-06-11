@@ -90,8 +90,6 @@ void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
 // moduli chain an error is raised if they are not consistent
 void DoubleCRT::verify()
 {
-  // OLD: assert(map.getIndexSet() <= (context.smallPrimes |
-  // context.specialPrimes | context.ctxtPrimes));
   assertTrue(map.getIndexSet() <= (context.smallPrimes | context.specialPrimes |
                                    context.ctxtPrimes),
              "Index set must be a subset of the union of small primes, special "
@@ -315,13 +313,11 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
 
   IndexSet allPrimes = getIndexSet() | context.specialPrimes;
 
-  // OLD: assert(getIndexSet() <= context.ctxtPrimes);
   assertTrue(getIndexSet() <= context.ctxtPrimes,
              "Index set must be a subset of ctxt primes");
   // the calling routine should ensure that the index set
   // contains only ctxt primes
 
-  // OLD: assert(n <= (long)context.digits.size());
   assertTrue(n <= (long)context.digits.size(),
              "n cannot be larger than the size of context.digits");
 
@@ -393,7 +389,7 @@ void DoubleCRT::addPrimes(const IndexSet& s1, NTL::ZZX* poly_p)
     assertTrue(poly_p == 0, "poly_p must be null here");
     return; // nothing to do
   }
-  // OLD: assert( disjoint(s1,map.getIndexSet()) ); // s1 is disjoint from *this
+  // s1 is disjoint from *this
   assertTrue(disjoint(s1, map.getIndexSet()),
              "addPrimes can only be called on a disjoint set");
 
@@ -427,7 +423,7 @@ double DoubleCRT::addPrimesAndScale(const IndexSet& s1)
 {
   if (empty(s1))
     return 0.0; // nothing to do
-  // OLD: assert(empty(s1 & map.getIndexSet())); // s1 is disjoint from *this
+  // s1 is disjoint from *this
   assertTrue(empty(s1 & map.getIndexSet()),
              "addPrimes can only be called on a disjoint set");
 
@@ -481,7 +477,6 @@ DoubleCRT::DoubleCRT(const NTL::ZZX& poly,
     context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
-  // OLD: assert(s.last() < context.numPrimes());
   assertTrue(s.last() < context.numPrimes(),
              "s must end with a smaller element than context.numPrimes()");
 
@@ -542,7 +537,6 @@ DoubleCRT::DoubleCRT(const zzX& poly,
     context(_context), map(new DoubleCRTHelper(_context))
 {
   FHE_TIMER_START;
-  // OLD: assert(s.last() < context.numPrimes());
   assertTrue(s.last() < context.numPrimes(),
              "s must end with a smaller element than context.numPrimes()");
 
@@ -599,7 +593,6 @@ DoubleCRT::DoubleCRT(const zzX& poly)
 DoubleCRT::DoubleCRT(const Context& _context, const IndexSet& s) :
     context(_context), map(new DoubleCRTHelper(_context))
 {
-  // OLD: assert(s.last() < context.numPrimes());
   assertTrue(s.last() < context.numPrimes(),
              "s must end with a smaller element than context.numPrimes()");
 
@@ -1289,9 +1282,8 @@ void DoubleCRT::scaleDownToSet(const IndexSet& s,
   if (empty(diff))
     return; // nothing to do
 
-  // OLD: assert(ptxtSpace >= 1);
   assertTrue(ptxtSpace >= 1, "ptxtSpace must be at least 1");
-  // OLD: assert(diff!=getIndexSet()); // cannot mod-down to the empty set
+  // cannot mod-down to the empty set
   assertNeq(diff,
             getIndexSet(),
             "s and the index set must have some intersection");
@@ -1359,8 +1351,6 @@ std::istream& operator>>(std::istream& str, DoubleCRT& d)
   long phim = context.zMStar.getPhiM();
 
   str >> set; // read in the indexSet
-  // OLD: assert(set <= (context.smallPrimes | context.specialPrimes |
-  // context.ctxtPrimes));
   assertTrue(
       set <= (context.smallPrimes | context.specialPrimes | context.ctxtPrimes),
       "Stream does not contain subset of the context's primes");
@@ -1371,12 +1361,10 @@ std::istream& operator>>(std::istream& str, DoubleCRT& d)
     str >> d.map[i]; // read the actual data
 
     // verify that the data is valid
-    // OLD: assert (d.map[i].length() == phim);
     assertEq(d.map[i].length(),
              phim,
              "Data not valid: d.map[i].length() != phim");
     for (long j : range(phim))
-      // OLD: assert(d.map[i][j]>=0 && d.map[i][j]<context.ithPrime(i));
       assertInRange(
           d.map[i][j],
           0l,

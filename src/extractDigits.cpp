@@ -48,8 +48,8 @@ static void buildDigitPolynomial(NTL::ZZX& result, long p, long e)
       y[j] += p2e;
   }
   interpolateMod(result, x, y, p, e);
-  // OLD: assert(deg(result)<p); // interpolating p points, should get deg<=p-1
-  assertTrue(deg(result) < p, "Interpolation error - degree too high");
+  // interpolating p points, should get deg<=p-1
+  assertTrue(deg(result) < p, "Interpolation error.  Degree too high.");
   SetCoeff(result, p); // return result = x^p + poly'(x)
   //  cerr << "# digitExt mod "<<p<<"^"<<e<<"="<<result<<endl;
   FHE_TIMER_STOP;

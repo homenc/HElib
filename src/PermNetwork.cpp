@@ -159,7 +159,6 @@ void PermNetwork::applyToCube(HyperCube<long>& cube) const
     if (lyr.isID)
       continue; // this layer is the identity permutation
 
-    // OLD: assert(lyr.shifts.length()==n);
     assertEq(lyr.shifts.length(), n, "layer has incorrect size");
 
     // This layer shift elements along the dimension lyr.genIdx

@@ -70,8 +70,6 @@ static void recursiveGeneralBenesInit(long n,
   long sz0 = GeneralBenesNetwork::shamt(n, k, d);
   long sz1 = sz - sz0;
 
-  // OLD: assert(labs(sz0-sz1) <= 1);
-  // TODO: why not just labs(sz)?
   assertTrue(labs(sz0 - sz1) <= 1l, "sz1 must be within 1 of sz0");
 
   // id_perm: the identity permutation on {0,...,sz-1}
@@ -263,7 +261,6 @@ GeneralBenesNetwork::GeneralBenesNetwork(const Permut& perm)
   n = perm.length();
 
   // check that n > 1
-  // OLD: assert(n > 1);
   assertTrue<InvalidArgument>(n > 1l,
                               "permutation length must be greater than one");
 
@@ -281,14 +278,12 @@ GeneralBenesNetwork::GeneralBenesNetwork(const Permut& perm)
 
   for (long j = 0; j < n; j++) {
     long j1 = perm[j];
-    // OLD: assert(j1 >= 0 && j1 < n);
     assertInRange(j1, 0l, n, "permutation element out of range");
     iperm[j1] = j;
   }
 
   for (long j = 0; j < n; j++) {
-    // OLD: assert(iperm[j] != -1);
-    assertTrue(iperm[j] == -1l, "permutation element not processed");
+    assertTrue(iperm[j] != -1l, "permutation element not processed");
   }
 
   // allocate space for the levels graph

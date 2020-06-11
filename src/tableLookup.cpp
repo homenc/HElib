@@ -47,7 +47,7 @@ void computeAllProducts(/*Output*/ CtPtrs& products,
   }
   if (nBits < 1)
     return; // do nothing
-  // OLD: assert(nBits <= 16); // Output cannot be bigger than 2^16
+  // Output cannot be bigger than 2^16
   assertTrue(nBits <= 16, "Output cannot be bigger than 2^16");
 
   if (lsize(products) == 0) // try to set the output size
@@ -56,17 +56,13 @@ void computeAllProducts(/*Output*/ CtPtrs& products,
     products[i]->clear();
 
   // Check that we have enough levels, try to bootstrap otherwise
-  // OLD: assert(array.ptr2nonNull() != nullptr);
   assertNotNull(array.ptr2nonNull(),
                 "Invalid array (could not find non-null Ctxt)");
   long bpl = array.ptr2nonNull()->getContext().BPL();
   if (findMinBitCapacity(array) < (NTL::NumBits(nBits) + 1) * bpl) {
     const Ctxt* ct = array.ptr2nonNull(); // find some non-null Ctxt
-    // OLD: assert(unpackSlotEncoding!=nullptr);
     assertNotNull(unpackSlotEncoding,
                   "unpackSlotEncoding must not be null when bootstrapping");
-    // OLD: assert(ct!=nullptr); // Looks redundant as already checked above
-    // OLD: assert(ct->getPubKey().isBootstrappable());
     assertTrue(ct->getPubKey().isBootstrappable(),
                "Cannot bootstrap with non-bootstrappable public key");
     packedRecrypt(array,
@@ -151,7 +147,7 @@ void buildLookupTable(std::vector<zzX>& T, // encoded result is returned in T
                       const EncryptedArray& ea)
 {
   FHE_TIMER_START;
-  // OLD: assert(nbits_in <= 16); // tables of size > 2^{16} are not supported
+  // tables of size > 2^{16} are not supported
   assertTrue(nbits_in <= 16, "tables of size > 2^{16} are not supported");
   long sz = 1L << nbits_in;
   T.resize(sz);

@@ -613,7 +613,6 @@ template <typename T>
 void reverse(NTL::Vec<T>& v, long lo, long hi)
 {
   long n = v.length();
-  // OLD: assert(lo >= 0 && lo <= hi && hi < n);
   assertInRange(lo, 0l, hi, "Invalid argument: Bad interval", true);
   assertTrue(hi < n, "Invalid argument: Interval exceeds vector size");
 

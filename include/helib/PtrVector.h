@@ -220,7 +220,6 @@ struct PtrVector_VecT : PtrVector<T>
       if (another == nullptr)
         another = this;
       const T* pt = another->ptr2nonNull();
-      // OLD: assert(pt!=nullptr);
       assertNotNull(pt, "another->ptr2nonNull() returned a null ptr");
       v.SetLength(newSize, *pt); // Do the actual resize
     }
@@ -258,7 +257,6 @@ struct PtrVector_vectorT : PtrVector<T>
       if (another == nullptr)
         another = this;
       const T* pt = another->ptr2nonNull();
-      // OLD: assert(pt!=nullptr);
       assertNotNull(pt, "another->ptr2nonNull() returned a null ptr");
       v.resize(newSize, *pt); // do the actual resize
     }

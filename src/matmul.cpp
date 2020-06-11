@@ -67,7 +67,6 @@ public:
   BasicAutomorphPrecon(const Ctxt& _ctxt) : ctxt(_ctxt), noise(1.0)
   {
     FHE_TIMER_START;
-    // OLD: if (ctxt.parts.size() >= 1) assert(ctxt.parts[0].skHandle.isOne());
     if (ctxt.parts.size() >= 1)
       assertTrue(
           ctxt.parts[0].skHandle.isOne(),
@@ -81,7 +80,6 @@ public:
     long keyID = ctxt.getKeyID();
 
     // The call to cleanUp() should ensure that this assertion passes.
-    // OLD: assert(ctxt.inCanonicalForm(keyID));
     assertTrue(ctxt.inCanonicalForm(keyID),
                "Ciphertext is not in canonical form");
 
@@ -261,7 +259,6 @@ public:
 
   std::shared_ptr<Ctxt> automorph(long i) const override
   {
-    // OLD: assert(i >= 0 && i < D);
     assertInRange(i, 0l, D, "Automorphism index i is not in [0, D)");
     long j = i % g;
     long k = i / g;
@@ -277,10 +274,9 @@ std::shared_ptr<GeneralAutomorphPrecon> buildGeneralAutomorphPrecon(
 {
   // allow dim == -1 (Frobenius)
   // allow dim == #gens (the dummy generator of order 1)
-  // OLD: assert(dim >= -1 && dim <= ea.dimension());
   assertInRange(dim,
                 -1l,
-                ea.dimension(),
+                 ea.dimension(),
                 "Dimension dim is not in [-1, ea.dimension()] (-1 Frobenius)",
                 true);
 
@@ -452,7 +448,6 @@ struct MatMul1D_derived_impl
       bool zEntry = mat.get(entry, mcMod(j - i, D), j, 0);
       // entry [j-i mod D, j]
 
-      // OLD: assert(zEntry || deg(entry) < ea.getDegree());
       assertTrue(zEntry || deg(entry) < ea.getDegree(),
                  "Entry is non zero and degree of entry greater or "
                  "equal than ea.getDegree()");
@@ -526,7 +521,6 @@ struct MatMul1D_derived_impl
       // get(...) returns true if the entry is empty, false otherwise
 
       // If non-zero, make sure the degree is not too large
-      // OLD: assert(zEntry || deg(entry) < ea.getDegree());
       assertTrue(zEntry || deg(entry) < ea.getDegree(),
                  "Entry is non zero and degree of entry greater or "
                  "equal than ea.getDegree()");
@@ -694,10 +688,9 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal) :
   FHE_NTIMER_START(MatMul1DExec);
 
   dim = mat.getDim();
-  // OLD: assert(dim >= 0 && dim <= ea.dimension());
   assertInRange(dim,
                 0l,
-                ea.dimension(),
+                 ea.dimension(),
                 "Matrix dimension not in [0, ea.dimension()]",
                 true);
 
@@ -767,7 +760,6 @@ void GenBabySteps(std::vector<std::shared_ptr<Ctxt>>& v,
                   bool clean)
 {
   long n = v.size();
-  // OLD: assert(n > 0);
   assertTrue<InvalidArgument>(n > 0, "Empty vector v");
 
   if (n == 1) {
@@ -813,7 +805,6 @@ void MatMul1DExec::mul(Ctxt& ctxt) const
 {
   FHE_NTIMER_START(mul_MatMul1DExec);
 
-  // OLD: assert(&ea.getContext() == &ctxt.getContext());
   assertEq(&ea.getContext(),
            &ctxt.getContext(),
            "Cannot multiply ciphertexts with context different to "
@@ -1192,7 +1183,6 @@ struct BlockMatMul1D_derived_impl
 
       if (!zEntry && IsZero(entry))
         zEntry = true; // zero is an empty entry too
-      // OLD: assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
       assertTrue(zEntry || (entry.NumRows() == d && entry.NumCols() == d),
                  "Non zero entry and number of entry rows and columns "
                  "are not equal to d");
@@ -1277,7 +1267,6 @@ struct BlockMatMul1D_derived_impl
 
       if (!zEntry && IsZero(entry))
         zEntry = true; // zero is an empty entry too
-      // OLD: assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
       assertTrue(zEntry || (entry.NumRows() == d && entry.NumCols() == d),
                  "Non zero entry and number of entry rows and columns "
                  "are not equal to d");
@@ -1506,10 +1495,9 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
   FHE_TIMER_START;
 
   dim = mat.getDim();
-  // OLD: assert(dim >= 0 && dim <= ea.dimension());
   assertInRange(dim,
                 0l,
-                ea.dimension(),
+                 ea.dimension(),
                 "Matrix dimension not in [0, ea.dimension()]",
                 true);
   D = dimSz(ea, dim);
@@ -1530,7 +1518,6 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
 void BlockMatMul1DExec::mul(Ctxt& ctxt) const
 {
   FHE_NTIMER_START(mul_BlockMatMul1DExec);
-  // OLD: assert(&ea.getContext() == &ctxt.getContext());
   assertEq(&ea.getContext(),
            &ctxt.getContext(),
            "Cannot multiply ciphertexts with context different to "
@@ -2086,13 +2073,11 @@ long MatMulFullExec::rec_mul(Ctxt& acc,
 void MatMulFullExec::mul(Ctxt& ctxt) const
 {
   FHE_NTIMER_START(mul_MatMulFullExec);
-  // OLD: assert(&ea.getContext() == &ctxt.getContext());
   assertEq(&ea.getContext(),
            &ctxt.getContext(),
            "Cannot multiply ciphertexts with context different to "
            "encrypted array one");
 
-  // OLD: assert(ea.size() > 1);
   assertTrue(ea.size() > 1l, "Number of slots is less than 2");
   // FIXME: right now, the code does not work if ea.size() == 1
   // (which means that # dimensions == 0).  This is a corner case
@@ -2155,7 +2140,6 @@ public:
 
       if (!zEntry && IsZero(entry))
         zEntry = true; // zero is an empty entry too
-      // OLD: assert(zEntry || (entry.NumRows() == d && entry.NumCols() == d));
       assertTrue(zEntry || (entry.NumRows() == d && entry.NumCols() == d),
                  "Non zero entry and number of entry rows and columns "
                  "are not equal to d");
@@ -2430,13 +2414,11 @@ long BlockMatMulFullExec::rec_mul(Ctxt& acc,
 void BlockMatMulFullExec::mul(Ctxt& ctxt) const
 {
   FHE_NTIMER_START(mul_BlockMatMulFullExec);
-  // OLD: assert(&ea.getContext() == &ctxt.getContext());
   assertEq(&ea.getContext(),
            &ctxt.getContext(),
            "Cannot multiply ciphertexts with context different to "
            "encrypted array one");
 
-  // OLD: assert(ea.size() > 1);
   assertTrue(ea.size() > 1l, "Number of slots is less than 2");
   // FIXME: right now, the code does not work if ea.size() == 1
   // (which means that # dimensions == 0).  This is a corner case

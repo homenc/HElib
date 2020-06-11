@@ -433,7 +433,6 @@ PAlgebra::PAlgebra(long mm,
                    const std::vector<long>& _ords) :
     m(mm), p(pp), cM(1.0) // default value for the ring constant
 {
-  // OLD: assert( mm < NTL_SP_BOUND && mm > 1 );
   assertInRange<InvalidArgument>(mm,
                                  2l,
                                  NTL_SP_BOUND,
@@ -441,10 +440,8 @@ PAlgebra::PAlgebra(long mm,
   if (pp == -1) // pp==-1 signals using the complex field for plaintext
     pp = m - 1;
   else {
-    // OLD: assert( ProbPrime(pp) );
     assertTrue<InvalidArgument>((bool)NTL::ProbPrime(pp),
                                 "Modulus pp is not prime (nor -1)");
-    // OLD: assert( (mm % pp) != 0 );
     assertNeq<InvalidArgument>(mm % pp, 0l, "Modulus pp divides mm");
   }
 
@@ -547,9 +544,8 @@ PAlgebra::PAlgebra(long mm,
     ctr++;
     long t = exponentiate(buffer);
 
-    // OLD: assert(GCD(t,mm) == 1); // sanity check for user-supplied gens
+    // sanity check for user-supplied gens
     assertEq(NTL::GCD(t, mm), 1l, "Bad user-supplied generator");
-    // OLD: assert(Tidx[t] == -1);
     assertEq(Tidx[t], -1l, "Slot at index t has already been assigned");
 
     T[i] = t;      // The i'th element in T it t
@@ -558,7 +554,7 @@ PAlgebra::PAlgebra(long mm,
     // increment buffer by one (in lexicographic order)
   } while (nextExpVector(buffer)); // until we cover all the group
 
-  // OLD: assert(ctr == getNSlots()); // sanity check for user-supplied gens
+  // sanity check for user-supplied gens
   assertEq(ctr, getNSlots(), "Bad user-supplied generator set");
 
   PhimX = Cyclotomic(mm); // compute and store Phi_m(X)
@@ -639,7 +635,6 @@ PAlgebraModBase* buildPAlgebraMod(const PAlgebra& zMStar, long r)
   if (p == -1) // complex plaintext space
     return new PAlgebraModCx(zMStar, r);
 
-  // OLD: assert(p>=2 && r > 0);
   assertTrue<InvalidArgument>(p >= 2,
                               "Modulus p is less than 2 (nor -1 for CKKS)");
   assertTrue<InvalidArgument>(r > 0, "Hensel lifting r is less than 1");
@@ -680,11 +675,9 @@ PAlgebraModDerived<type>::PAlgebraModDerived(const PAlgebra& _zMStar, long _r) :
   if (isDryRun())
     m = (p == 3) ? 4 : 3;
 
-  // OLD: assert(r > 0);
   assertTrue<InvalidArgument>(r > 0l, "Hensel lifting r is less than 1");
 
   NTL::ZZ BigPPowR = NTL::power_ZZ(p, r);
-  // OLD: assert(BigPPowR.SinglePrecision());
   assertTrue((bool)BigPPowR.SinglePrecision(),
              "BigPPowR is not SinglePrecision");
   pPowR = to_long(BigPPowR);
@@ -786,7 +779,6 @@ void InvModpr(NTL::zz_pX& S,
   g = to_zz_pX(gg);
   s = InvMod(f, g);
   t = (1 - s * f) / g;
-  // OLD: assert(s*f + t*g == 1);
   assertTrue(static_cast<bool>(s * f + t * g == 1l),
              "Arithmetic error during Hensel lifting");
   ss = to_ZZX(s);
@@ -798,7 +790,6 @@ void InvModpr(NTL::zz_pX& S,
     // lift from p^k to p^{k+1}
     pk = pk * p;
 
-    // OLD: assert(divide(ss*ff + tt*gg - 1, pk));
     assertTrue((bool)divide(ss * ff + tt * gg - 1, pk),
                "Arithmetic error during Hensel lifting");
 
@@ -814,7 +805,6 @@ void InvModpr(NTL::zz_pX& S,
 
   S = to_zz_pX(ss);
 
-  // OLD: assert((S*F) % G == 1);
   assertTrue(static_cast<bool>((S * F) % G == 1),
              "Hensel lifting failed to find solutions");
 }
@@ -950,7 +940,6 @@ void PAlgebraModDerived<type>::embedInSlots(
       "Cannot embed in slots: alphas size is different than number of slots");
 
   long d = mappingData.degG;
-  // OLD: for (long i = 0; i < nSlots; i++) assert(deg(alphas[i]) < d);
   for (long i = 0; i < nSlots; i++)
     assertTrue(deg(alphas[i]) < d,
                "Bad alpha element at index i: its degree is greater or "
@@ -1068,7 +1057,6 @@ void PAlgebraModDerived<type>::mapToFt(RX& w,
     }
 
     // the general case: currently only works when r == 1
-    // OLD: assert(r == 1);
     assertEq(r, 1l, "Bad Hensel lifting value in general case: r is not 1");
 
     REBak bak;
@@ -1112,14 +1100,12 @@ template <typename type>
 void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData,
                                           const RX& G) const
 {
-  // OLD: assert(deg(G) > 0 && zMStar.getOrdP() % deg(G) == 0);
   assertTrue<InvalidArgument>(
       deg(G) > 0,
       "Polynomial G is constant (has degree less than one)");
   assertEq(zMStar.getOrdP() % deg(G),
            0l,
            "Degree of polynomial G does not divide zMStar.getOrdP()");
-  // OLD: assert(LeadCoeff(G) == 1);
   assertTrue<InvalidArgument>(static_cast<bool>(LeadCoeff(G) == 1l),
                               "Polynomial G is not monic");
   mappingData.G = G;
@@ -1185,7 +1171,6 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData,
   } else {
     // the general case: currently only works when r == 1
 
-    // OLD: assert(r == 1);
     assertEq(r, 1l, "Bad Hensel lifting value in general case: r is not 1");
 
     vec_REX FRts;
@@ -1230,7 +1215,6 @@ void PAlgebraModDerived<type>::mapToSlots(MappingData<type>& mappingData,
         } // If this does not happen then move to the next factor of Fi
       }
 
-      // OLD: assert(j < lsize(FRts));
       assertTrue(j < lsize(FRts),
                  "Cannot find the right factor Qi. Loop did not "
                  "terminate before visiting all elements");
@@ -1290,7 +1274,6 @@ void PAlgebraModDerived<type>::buildLinPolyCoeffs(
   long d = RE::degree();
   long p = zMStar.getP();
 
-  // OLD: assert(lsize(L) == d);
   assertEq(lsize(L), d, "Vector L size is different than RE::degree()");
 
   vec_RE LL;

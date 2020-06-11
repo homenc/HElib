@@ -45,7 +45,6 @@ NTL::zz_pContext BuildContext(long p, long maxroot)
 // If q == 0, then the current context is used
 Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt)
 {
-  // OLD: assert(zms.getM()>1);
   assertTrue<InvalidArgument>(zms.getM() > 1,
                               "Bad Z_m^* modulus m (must be greater than 1)");
   bool explicitModulus = true;
@@ -70,7 +69,6 @@ Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt)
   if (zms.getPow2()) {
     // special case when m is a power of 2
 
-    // OLD: assert( explicitModulus );
     assertTrue(explicitModulus,
                "bad non explicit q value (cannot be non explicit when m "
                "is a power of 2)");
@@ -92,7 +90,6 @@ Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt)
     long k = zms.getPow2();
     long phim = 1L << (k - 1);
 
-    // OLD: assert(k <= zz_pInfo->MaxRoot);
     assertTrue(k <= NTL::zz_pInfo->MaxRoot,
                "Roots count exceeds maximum rootTables size (m = 2^k && k > "
                "zz_pInfo->Maxroot && rootTables are 0..zz_pInfo->Maxroot)");

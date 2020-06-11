@@ -70,11 +70,13 @@ void sampleSmall(zzX& poly, long n, double prob)
     n = lsize(poly);
   if (n <= 0)
     return;
-  // OLD: assert(prob>3.05e-5 && prob<=1); // prob must be in [2^{-15},1/2]
-  assertTrue<InvalidArgument>(prob > 3.05e-5,
-                              "prob must be greater than 2^{-15}");
-  assertTrue<InvalidArgument>(prob <= 1,
-                              "prob must be less than or equal to 1");
+  // prob must be in [2^{-15}, 1]
+  assertInRange<InvalidArgument>(prob,
+                                 3.05e-5,
+                                 1.0,
+                                 "prob must be between 2^{-15}"
+                                 " and 1 inclusive",
+                                 true);
   poly.SetLength(n);
 
   constexpr long bitSize = 16;
@@ -178,7 +180,7 @@ void sampleGaussian(NTL::ZZX &poly, long n, double stdev)
     double theta = 2.0L * PI * r1;
     double rr= sqrt(-2.0*log(r2))*stdev;
 
-    //OLD: assert(rr < 8*stdev); // sanity-check, no more than 8 standard deviations
+    // sanity-check, no more than 8 standard deviations
     assertTrue(rr < 8*stdev, "no more than 8 standard deviations");
 
     // Generate two Gaussians RV's, rounded to integers
@@ -196,7 +198,6 @@ void sampleGaussian(NTL::ZZX &poly, long n, double stdev)
 // Sample a degree-(n-1) zzX, with coefficients uniform in [-B,B]
 void sampleUniform(zzX& poly, long n, long B)
 {
-  // OLD: assert (B>0);
   assertTrue<InvalidArgument>(B > 0l, "Invalid coefficient interval");
   if (n <= 0)
     n = lsize(poly);
@@ -211,7 +212,6 @@ void sampleUniform(zzX& poly, long n, long B)
 // Sample a degree-(n-1) NTL::ZZX, with coefficients uniform in [-B,B]
 void sampleUniform(NTL::ZZX& poly, long n, const NTL::ZZ& B)
 {
-  // OLD: assert (B>0);
   assertTrue<InvalidArgument>(static_cast<bool>(B > 0l),
                               "Invalid coefficient interval");
   if (n <= 0)

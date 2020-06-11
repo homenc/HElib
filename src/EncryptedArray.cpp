@@ -71,7 +71,6 @@ void EncryptedArrayDerived<type>::badDimensionAutomorphCorrection(
   long ord = sizeOfDimension(i);
   if (amt < 0)
     amt += ord; // Make sure amt is in the range [1,ord-1]
-  // OLD: assert(maskTable[i].size() > 0);
   assertTrue(maskTable[i].size() > 0,
              "Found non-positive sized mask table entry");
 
@@ -103,9 +102,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt,
                                            bool dc) const
 {
   FHE_TIMER_START;
-  // OLD: assert(&context == &ctxt.getContext());
   assertEq(&context, &ctxt.getContext(), "Context mismatch");
-  // OLD: assert(i >= 0 && i < dimension());
   assertInRange(i, 0l, dimension(), "i must be between 0 and dimension()");
 
   RBak bak;
@@ -141,9 +138,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   bak.save();
   tab.restoreContext();
 
-  // OLD: assert(&context == &ctxt.getContext());
   assertEq(&context, &ctxt.getContext(), "Context mismatch");
-  // OLD: assert(i >= 0 && i < long(al.numOfGens()));
   assertInRange(i,
                 0l,
                 (long)(al.numOfGens()),
@@ -195,7 +190,6 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   bak.save();
   tab.restoreContext();
 
-  // OLD: assert(&context == &ctxt.getContext());
   assertEq(&context, &ctxt.getContext(), "Context mismatch");
 
   // Simple case: just one generator
@@ -304,7 +298,6 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
   bak.save();
   tab.restoreContext();
 
-  // OLD: assert(&context == &ctxt.getContext());
   assertEq(&context, &ctxt.getContext(), "Context mismatch");
 
   // Simple case: just one generator
@@ -424,7 +417,6 @@ void EncryptedArrayDerived<type>::decode(PlaintextArray& array,
 template <typename type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
 {
-  // OLD: assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
   assertInRange(
       i,
       0l,
@@ -667,10 +659,8 @@ void applyLinPoly1(const EncryptedArray& ea,
                    Ctxt& ctxt,
                    const std::vector<NTL::ZZX>& C)
 {
-  // OLD: assert(&ea.getContext() == &ctxt.getContext());
   assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
   long d = ea.getDegree();
-  // OLD: assert(d == lsize(C));
   assertEq(d, lsize(C), "ea's degree does not match the size of C");
 
   long nslots = ea.size();
@@ -693,15 +683,12 @@ void applyLinPolyMany(const EncryptedArray& ea,
                       Ctxt& ctxt,
                       const std::vector<std::vector<NTL::ZZX>>& Cvec)
 {
-  // OLD: assert(&ea.getContext() == &ctxt.getContext());
   assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
   long d = ea.getDegree();
   long nslots = ea.size();
 
-  // OLD: assert(nslots == lsize(Cvec));
   assertEq(nslots, lsize(Cvec), "Number of slots does not match size of Cvec");
   for (long i = 0; i < nslots; i++) {
-    // OLD: assert(d == lsize(Cvec[i]));
     assertEq(d,
              lsize(Cvec[i]),
              "Found entry of Cvec with size unequal to degree of ea");
@@ -723,7 +710,6 @@ void applyLinPolyMany(const EncryptedArray& ea,
 template <typename P>
 void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d)
 {
-  // OLD: assert(d == lsize(encodedC));
   assertEq(d, lsize(encodedC), "d does not match size of encodedC");
 
   ctxt.cleanUp(); // not sure, but this may be a good idea
@@ -820,7 +806,6 @@ public:
   {
     PA_BOILER
 
-    // OLD: assert(lsize(array) == n);
     assertEq(lsize(array), n, "Size of array does not match n");
     convert(data, array);
   }
@@ -831,7 +816,6 @@ public:
   {
     PA_BOILER
 
-    // OLD: assert(lsize(array) == n);
     assertEq(lsize(array), n, "Size of array does not match n");
     convert(data, array);
     for (long i = 0; i < n; i++) {
@@ -1135,7 +1119,6 @@ public:
   {
     PA_BOILER
 
-    // OLD: assert(vec.length() == n);
     assertEq(vec.length(), n, "vec has incorrect length");
 
     long p = ea.getPAlgebra().getP();
@@ -1189,7 +1172,6 @@ public:
   {
     PA_BOILER
 
-    // OLD: assert(pi.length() == n);
     assertEq(pi.length(), n, "pi has incorrect length");
 
     std::vector<RX> tmp;

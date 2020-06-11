@@ -380,7 +380,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
     return;
   }
 
-  // OLD: assert(recryptKeyID>=0); // check that we have bootstrapping data
+  // check that we have bootstrapping data
   assertTrue(recryptKeyID >= 0l, "No bootstrapping data");
 
   long p = getContext().zMStar.getP();
@@ -395,7 +395,6 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   long ePrime = rcData.ePrime;
   long p2ePrime = NTL::power_long(p, ePrime);
   long q = NTL::power_long(p, e) + 1;
-  // OLD: assert(e>=r);
   assertTrue(e >= r, "rcData.e must be at least alMod.r");
 
 #ifdef HELIB_DEBUG
@@ -405,7 +404,6 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 #endif
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  // OLD: assert(p2r % ptxtSpace == 0);
   assertEq(p2r % ptxtSpace, 0l, "ptxtSpace must divide p^r when bootstrapping");
 
   ctxt.dropSmallAndSpecialPrimes();
@@ -422,7 +420,6 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 
   // Mod-switch down if needed
   IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
-  // OLD: assert(s <= context.ctxtPrimes);
   assertTrue(s <= context.ctxtPrimes, "prime set is messed up");
   if (s.card() > 3) { // leave only first three ciphertext primes
     long first = s.first();
@@ -457,7 +454,6 @@ void PubKey::reCrypt(Ctxt& ctxt) const
             std::to_string(noise_rat));
   }
 
-  // OLD: assert(zzParts.size() == 2);
   assertEq(zzParts.size(),
            (std::size_t)2,
            "Exactly 2 parts required for mod-switching in thin bootstrapping");
@@ -959,7 +955,7 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
     return;
   }
 
-  // OLD: assert(recryptKeyID>=0); // check that we have bootstrapping data
+  // check that we have bootstrapping data
   assertTrue(recryptKeyID >= 0l, "Bootstrapping data not present");
 
   long p = ctxt.getContext().zMStar.getP();
@@ -975,11 +971,9 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   long ePrime = trcData.ePrime;
   long p2ePrime = NTL::power_long(p, ePrime);
   long q = NTL::power_long(p, e) + 1;
-  // OLD: assert(e>=r);
   assertTrue(e >= r, "trcData.e must be at least alMod.r");
 
   // can only bootstrap ciphertext with plaintext-space dividing p^r
-  // OLD: assert(p2r % ptxtSpace == 0);
   assertEq(p2r % ptxtSpace,
            0l,
            "ptxtSpace must divide p^r when thin bootstrapping");
@@ -1022,7 +1016,6 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 
   // Mod-switch down if needed
   IndexSet s = ctxt.getPrimeSet() / context.specialPrimes;
-  // OLD: assert(s <= context.ctxtPrimes);
   assertTrue(s <= context.ctxtPrimes, "prime set is messed up");
   if (s.card() > 3) { // leave only first three ciphertext primes
     long first = s.first();
@@ -1057,7 +1050,6 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
             std::to_string(noise_rat));
   }
 
-  // OLD: assert(zzParts.size() == 2);
   assertEq(zzParts.size(),
            (std::size_t)2,
            "Exactly 2 parts required for mod-switching in thin bootstrapping");

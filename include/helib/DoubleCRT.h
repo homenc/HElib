@@ -215,7 +215,6 @@ public:
 
   bool operator==(const DoubleCRT& other) const
   {
-    // OLD: assert(&context == &other.context);
     assertEq(&context,
              &other.context,
              "Cannot compare DoubleCRTs with different context");

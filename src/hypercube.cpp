@@ -41,7 +41,6 @@ long CubeSignature::assembleIndexByDim(std::pair<long, long> idx,
 template <typename T>
 void HyperCube<T>::rotate1D(long d, long k)
 {
-  // OLD: assert(d >=0 && d < getNumDims());
   assertInRange(d,
                 0l,
                 getNumDims(),
@@ -67,7 +66,6 @@ void HyperCube<T>::rotate1D(long d, long k)
 template <typename T>
 void HyperCube<T>::shift1D(long d, long k)
 {
-  // OLD: assert(d >=0 && d < getNumDims());
   assertInRange(d,
                 0l,
                 getNumDims(),
@@ -107,7 +105,6 @@ ConstCubeSlice<T>::ConstCubeSlice(const ConstCubeSlice<T>& bigger,
                                   long i,
                                   long dOffset)
 {
-  // OLD: assert(dOffset >= 0 && dOffset <= bigger.getNumDims());
   assertInRange(dOffset,
                 0l,
                 bigger.getNumDims(),
@@ -115,7 +112,6 @@ ConstCubeSlice<T>::ConstCubeSlice(const ConstCubeSlice<T>& bigger,
                 true);
   // allow zero-dimensional slice
 
-  // OLD: assert(i >= 0 && i < bigger.getProd(0, dOffset));
   assertInRange(i,
                 0l,
                 bigger.getProd(0, dOffset),
@@ -132,15 +128,13 @@ ConstCubeSlice<T>::ConstCubeSlice(const HyperCube<T>& _cube,
                                   long i,
                                   long dOffset)
 {
-  // OLD: assert(dOffset >= 0 && dOffset <= _cube.getNumDims()); // allow
-  // zero-dimensional slice
+  // Allow zero-dimensional slice
   assertInRange(dOffset,
                 0l,
                 _cube.getNumDims(),
                 "dOffset must be non-negative and at most "
                 "_cube.getNumDims()",
                 true);
-  // OLD: assert(i >= 0 && i < _cube.getProd(0,dOffset));
   assertInRange(i,
                 0l,
                 _cube.getProd(0, dOffset),
@@ -160,7 +154,6 @@ void CubeSlice<T>::copy(const ConstCubeSlice<T>& other) const
   long n = this->getSize();
 
   // we only check that the sizes match
-  // OLD: assert(n == other.getSize());
   assertEq(n, other.getSize(), "Cube sizes do not match");
 
   T* dst = &(*this)[0];
@@ -183,7 +176,6 @@ void getHyperColumn(NTL::Vec<T>& v, const ConstCubeSlice<T>& s, long pos)
   long m = s.getProd(1);
   long n = s.getDim(0);
 
-  // OLD: assert(pos >= 0 && pos < m);
   assertInRange(pos, 0l, m, "pos must be between 0 and s.getProd(1)");
   v.SetLength(n);
 
@@ -203,7 +195,6 @@ void setHyperColumn(const NTL::Vec<T>& v, const CubeSlice<T>& s, long pos)
   long m = s.getProd(1);
   long n = s.getDim(0);
 
-  // OLD: assert(pos >= 0 && pos < m);
   assertInRange(pos, 0l, m, "pos must be between 0 and s.getProd(1)");
   if (v.length() < n)
     n = v.length();
@@ -228,7 +219,6 @@ void setHyperColumn(const NTL::Vec<T>& v,
   long n = s.getDim(0);
   long n1 = n;
 
-  // OLD: assert(pos >= 0 && pos < m);
   assertInRange(pos, 0l, m, "pos must be between 0 and s.getProd(1)");
   if (v.length() < n)
     n1 = v.length();
@@ -246,7 +236,6 @@ void setHyperColumn(const NTL::Vec<T>& v,
 template <typename T>
 void print3D(const HyperCube<T>& c)
 {
-  // OLD: assert(c.getNumDims() == 3);
   assertEq(c.getNumDims(),
            3l,
            "Cube must be 3-dimensional for call to print3D");

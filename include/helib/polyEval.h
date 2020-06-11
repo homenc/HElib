@@ -50,7 +50,7 @@ private:
 public:
   DynamicCtxtPowers(const Ctxt& c, long nPowers)
   {
-    // OLD: assert (!c.isEmpty() && nPowers>0); // Sanity-check
+    // Sanity-check
     assertFalse<InvalidArgument>(c.isEmpty(), "Ciphertext cannot be empty");
     assertTrue<InvalidArgument>(nPowers > 0, "Must have positive nPowers");
 

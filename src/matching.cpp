@@ -104,8 +104,7 @@ void BipartitleGraph::partitionToMatchings()
           }
           ++(range.first); // next edge in range
         }
-        // OLD: assert (flow==0); // sanity check, we must have enough edges to
-        // color
+        // Sanity check, we must have enough edges to color
         assertEq(flow, 0l, "Not enough edges to colour");
       }
       // Remove flow edges that are marked for removal
@@ -218,11 +217,9 @@ long maximum_flow(FlowGraph& fg, long src, long sink)
       long prev = path[next]; // path is pointing back from sink to source
 
       // Ensure that fg[prev][next] and fg[next][prev] exist
-      // OLD: assert(fg[prev].find(next) != fg[prev].end());
       assertNeq(fg[prev].find(next),
                 fg[prev].end(),
                 "Bad flow graph. fg[prev][next] does not exist");
-      // OLD: assert(fg[next].find(prev) != fg[next].end());
       assertNeq(fg[next].find(prev),
                 fg[next].end(),
                 "Bad flow graph. fg[next][prev] does not exist");
@@ -262,12 +259,10 @@ static long augmenting_path(std::vector<long>& path,
                             long src,
                             long sink)
 {
-  // OLD: assert(src >=0 && src <(long)fg.size());
   assertInRange(src,
                 0l,
                 (long)fg.size(),
                 "Bad source index (Index out of range)");
-  // OLD: assert(sink>=0 && sink<(long)fg.size());
   assertInRange(sink,
                 0l,
                 (long)fg.size(),

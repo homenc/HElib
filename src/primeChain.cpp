@@ -297,19 +297,17 @@ struct PrimeGenerator
 
   PrimeGenerator(long _len, long _m) : len(_len), m(_m)
   {
-    // OLD: if (len > NTL_SP_NBITS || len < 2 || m >= NTL_SP_BOUND || m <= 0)
-    // OLD: throw InvalidArgument("PrimeGenerator: bad args");
-    assertInRange<InvalidArgument>(
-        len,
-        2l,
-        (long)NTL_SP_NBITS,
-        "PrimeGenerator: len is not in [2, NTL_SP_NBITS]",
-        true);
-    assertInRange<InvalidArgument>(
-        m,
-        1l,
-        (long)NTL_SP_BOUND,
-        "PrimeGenerator: m is not in [1, NTL_SP_BOUND)");
+    assertInRange<InvalidArgument>(len,
+                                   2l,
+                                   (long)NTL_SP_NBITS,
+                                   "PrimeGenerator: len is not "
+                                   "in [2, NTL_SP_NBITS]",
+                                   true);
+    assertInRange<InvalidArgument>(m,
+                                   1l,
+                                   (long)NTL_SP_BOUND,
+                                   "PrimeGenerator: m is "
+                                   "not in [1, NTL_SP_BOUND)");
 
     // compute k as smallest non-negative integer such that
     // 2^{len-2} < 2^k*m
@@ -365,7 +363,6 @@ struct PrimeGenerator
       long cand = ((t * m) << k) + 1; // = 2^k*t*m + 1
 
       // double check that cand is in the prescribed interval
-      // OLD: assert(cand >= (1L << (len-2))*3 && cand < (1L << len));
       assertInRange(cand,
                     (1L << (len - 2)) * 3,
                     1L << len,
@@ -380,7 +377,6 @@ struct PrimeGenerator
 
 void Context::AddSmallPrime(long q)
 {
-  // OLD: assert(!inChain(q));
   assertFalse(inChain(q), "Small prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back(Cmodulus(zMStar, q, 0));
@@ -389,7 +385,6 @@ void Context::AddSmallPrime(long q)
 
 void Context::AddCtxtPrime(long q)
 {
-  // OLD: assert(!inChain(q));
   assertFalse(inChain(q), "Prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back(Cmodulus(zMStar, q, 0));
@@ -398,7 +393,6 @@ void Context::AddCtxtPrime(long q)
 
 void Context::AddSpecialPrime(long q)
 {
-  // OLD: assert(!inChain(q));
   assertFalse(inChain(q), "Special prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
   moduli.push_back(Cmodulus(zMStar, q, 0));
@@ -410,8 +404,6 @@ void addSmallPrimes(Context& context, long resolution, long cpSize)
 {
   // cpSize is the size of the ciphertext primes
   // Sanity-checks, cpSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
-  // OLD: assert((cpSize >= 30) && (cpSize <= NTL_SP_NBITS) && (cpSize*10 >=
-  // NTL_SP_NBITS*9));
   assertTrue(cpSize >= 30, "cpSize is too small (minimum is 30)");
   assertInRange(cpSize * 10,
                 9l * NTL_SP_NBITS,
@@ -436,8 +428,6 @@ void addSmallPrimes(Context& context, long resolution, long cpSize)
   else if (cpSize >= 45)
     smallest = divc(7 * cpSize, 10);
   else { // Make the smallest ones at least 22-bit primes
-    // OLD: assert(cpSize >=30);
-    // Repeated assertion
     smallest = divc(11 * cpSize, 15);
     sizes.push_back(smallest); // need three of them
   }
@@ -509,8 +499,6 @@ void addCtxtPrimes(Context& context, long nBits, long targetSize)
   // at least 2^{nBits}
 
   // Sanity-checks, targetSize \in [0.9*NTL_SP_NBITS, NTL_SP_NBITS]
-  // OLD: assert((targetSize >= 30) && (targetSize <= NTL_SP_NBITS) &&
-  // (targetSize*10 >= NTL_SP_NBITS*9));
   assertTrue(targetSize >= 30,
              "Target prime is too small (minimum size is 30)");
   assertInRange(targetSize * 10,

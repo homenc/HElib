@@ -22,7 +22,7 @@ const NTL::Vec<long> SubDimension::dummyBenes; // global variable
 template <typename T>
 void applyPermToVec(NTL::Vec<T>& out, const NTL::Vec<T>& in, const Permut& p1)
 {
-  // OLD: assert(&out != &in); // NOT an in-place procedure
+  // NOT an in-place procedure
   assertNeq<InvalidArgument>(
       static_cast<const NTL::Vec<T>*>(&out),
       &in,
@@ -48,12 +48,11 @@ void applyPermsToVec(NTL::Vec<T>& out,
                      const Permut& p2,
                      const Permut& p1)
 {
-  // OLD: assert(&out != &in); // NOT an in-place procedure
+  // NOT an in-place procedure
   assertNeq<InvalidArgument>(
       static_cast<const NTL::Vec<T>*>(&out),
       &in,
       "Cannot have equal in and out addresses (Not an in-place procedure)");
-  // OLD: assert(p1.length() == p2.length());
   assertEq(p1.length(), p2.length(), "Permutation p1 and p2 sizes differ");
   out.SetLength(p1.length());
   for (long i = 0; i < p1.length(); i++)
@@ -65,7 +64,6 @@ void applyPermsToVec(std::vector<T>& out,
                      const Permut& p2,
                      const Permut& p1)
 {
-  // OLD: assert(p1.length() == p2.length());
   assertEq(p1.length(), p2.length(), "Permutation p1 and p2 sizes differ");
   out.resize(p1.length());
   for (long i = 0; i < p1.length(); i++)
@@ -198,13 +196,11 @@ void ColPerm::getBenesShiftAmounts(NTL::Vec<Permut>& out,
 
       // Sanity checks: width of network == n,
       //                and sum of benesLvls entries == # of levels
-      // OLD: assert(net.getSize()==n);
       assertEq(net.getSize(), n, "Network width is different to n");
       {
         long sum = 0;
         for (long k = 0; k < benesLvls.length(); k++)
           sum += benesLvls[k];
-        // OLD: assert(net.getNumLevels()==sum);
         assertEq(net.getNumLevels(),
                  sum,
                  "Sum of benesLvls entries is different to number of levels");
@@ -239,11 +235,8 @@ void breakPermTo3(const HyperCube<long>& pi,
                   HyperCube<long>& rho2,
                   ColPerm& rho3)
 {
-  // OLD: assert(&rho1.getSig()==&pi.getSig());
   assertEq(&rho1.getSig(), &pi.getSig(), "rho1 and pi signatures differ");
-  // OLD: assert(&rho2.getSig()==&pi.getSig());
   assertEq(&rho2.getSig(), &pi.getSig(), "rho2 and pi signatures differ");
-  // OLD: assert(&rho3.getSig()==&pi.getSig());
   assertEq(&rho3.getSig(), &pi.getSig(), "rho3 and pi signatures differ");
 
   // pi consists of separate permutations over [0,n-1], and each
@@ -341,7 +334,6 @@ void breakPermByDim(std::vector<ColPerm>& out,
                     const Permut& pi,
                     const CubeSignature& sig)
 {
-  // OLD: assert(sig.getSize()==pi.length());
   assertEq(sig.getSize(),
            pi.length(),
            "Signature sig size is different to pi.length");
@@ -463,7 +455,6 @@ void ComputeOneGenMapping(Permut& genMap, const OneGeneratorTree& T)
 // corresponding to all the trees.
 void GeneratorTrees::ComputeCubeMapping()
 {
-  // OLD: assert(trees.length()>=1);
   assertTrue(trees.length() >= 1, "Trees length is less than 1");
 
   if (trees.length() == 1) { // A single tree

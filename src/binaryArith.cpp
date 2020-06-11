@@ -216,7 +216,6 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
 
   aSize = lsize(a);
   bSize = lsize(b);
-  // OLD: assert (aSize>=1);
   assertTrue<InvalidArgument>(aSize >= 1, "a must not be empty");
 
   // Initialize the p[i,i]'s and q[i,i]'s
@@ -399,7 +398,6 @@ const Ctxt& AddDAG::getCtxt(DAGnode* node, const CtPtrs& a, const CtPtrs& b)
       long i = node->idx.first;
       long j = node->idx.second; // we expect i==j
       const Ctxt* ct_ptr = b.ptr2nonNull();
-      // OLD: assert(ct_ptr != nullptr);
       assertNotNull(ct_ptr, "ct_ptr must not be null");
       node->ct = allocateCtxtLike(*ct_ptr);
 
@@ -470,10 +468,8 @@ void packedRecrypt(const CtPtrs& a,
   if (ct == nullptr)
     return; // nothing to do
 
-  // OLD: assert(unpackSlotEncoding!=nullptr);
   assertNotNull<InvalidArgument>(unpackSlotEncoding,
                                  "unpackSlotEncoding must not be null");
-  // OLD: assert(ct->getPubKey().isBootstrappable());
   assertTrue(ct->getPubKey().isBootstrappable(),
              "public key must be bootstrappable for recryption");
 
@@ -929,7 +925,6 @@ void addManyNumbers(CtPtrs& sum,
     // If any number is too low level, then bootstrap everything
     PtrMatrix_PtPtrVector<Ctxt> wrapper(numPtrs);
     if (findMinBitCapacity(wrapper) < 3 * ct_ptr->getContext().BPL()) {
-      // OLD: assert(bootstrappable && unpackSlotEncoding!=nullptr);
       assertNotNull<InvalidArgument>(unpackSlotEncoding,
                                      "unpackSlotEncoding must not be null");
       assertTrue(bootstrappable,

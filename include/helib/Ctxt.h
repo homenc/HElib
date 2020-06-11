@@ -372,11 +372,9 @@ public:
 
   Ctxt& operator=(const Ctxt& other)
   { // public assignment operator
-    // OLD: assert(&context == &other.context);
     assertEq(&context,
              &other.context,
              "Cannot assign Ctxts with different context");
-    // OLD: assert(&pubKey == &other.pubKey);
     assertEq(&pubKey,
              &other.pubKey,
              "Cannot assign Ctxts with different pubKey");

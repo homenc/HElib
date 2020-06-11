@@ -61,9 +61,7 @@ public:
   {
     long D = ea.sizeOfDimension(dim);
 
-    // OLD: assert(i >= 0 && i < D);
     assertInRange(i, 0l, D, "Matrix index out of range");
-    // OLD: assert(j >= 0 && j < D);
     assertInRange(j, 0l, D, "Matrix index out of range");
     if (IsZero(data[i][j]))
       return true;
@@ -120,11 +118,8 @@ public:
     long n = ea.size();
     long D = ea.sizeOfDimension(dim);
 
-    // OLD: assert(i >= 0 && i < D);
     assertInRange(i, 0l, D, "Matrix index out of range");
-    // OLD: assert(j >= 0 && j < D);
     assertInRange(j, 0l, D, "Matrix index out of range");
-    // OLD: assert(k >= 0 && k < n/D);
     assertInRange(k, 0l, n / D, "Matrix index out of range");
     if (IsZero(data[k][i][j]))
       return true;
@@ -174,9 +169,7 @@ public:
   bool get(mat_R& out, long i, long j, UNUSED long k) const override
   {
     long D = ea.sizeOfDimension(dim);
-    // OLD: assert(i >= 0 && i < D);
     assertInRange(i, 0l, D, "Matrix index out of range");
-    // OLD: assert(j >= 0 && j < D);
     assertInRange(j, 0l, D, "Matrix index out of range");
     if (IsZero(data[i][j]))
       return true;
@@ -237,11 +230,8 @@ public:
     long n = ea.size();
     long D = ea.sizeOfDimension(dim);
 
-    // OLD: assert(i >= 0 && i < D);
     assertInRange(i, 0l, D, "Matrix index out of range");
-    // OLD: assert(j >= 0 && j < D);
     assertInRange(j, 0l, D, "Matrix index out of range");
-    // OLD: assert(k >= 0 && k < n/D);
     assertInRange(k, 0l, n / D, "Matrix index out of range");
     if (IsZero(data[k][i][j]))
       return true;
@@ -282,9 +272,7 @@ public:
 
   bool get(RX& out, long i, long j) const override
   {
-    // OLD: assert(i >= 0 && i < ea.size());
     assertInRange(i, 0l, ea.size(), "Matrix index out of range");
-    // OLD: assert(j >= 0 && j < ea.size());
     assertInRange(j, 0l, ea.size(), "Matrix index out of range");
     if (IsZero(data[i][j]))
       return true;
@@ -327,9 +315,7 @@ public:
 
   bool get(mat_R& out, long i, long j) const override
   {
-    // OLD: assert(i >= 0 && i < ea.size());
     assertInRange(i, 0l, ea.size(), "Matrix index out of range");
-    // OLD: assert(j >= 0 && j < ea.size());
     assertInRange(j, 0l, ea.size(), "Matrix index out of range");
     if (IsZero(data[i][j]))
       return true;

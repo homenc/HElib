@@ -207,7 +207,6 @@ public:
   template <typename PTXT>
   void encrypt(Ctxt& ctxt, const PubKey& key, const PTXT& ptxt) const
   {
-    // OLD: assert(&getContext() == &ctxt.getContext());
     assertEq(&getContext(),
              &ctxt.getContext(),
              "Cannot encrypt when ciphertext has different context than "
@@ -306,7 +305,6 @@ public:
                 long i,
                 long offset) const
   {
-    // OLD: assert(lsize(in) == size());
     assertEq(lsize(in),
              size(),
              "Input vector has wrong size (must equal EncryptedArray::size())");
@@ -368,11 +366,9 @@ public:
   {
     if (this == &other)
       return *this;
-    // OLD: assert(&context == &other.context);
     assertEq(&context,
              &other.context,
              "Cannot assign a EncryptedArrays with different contexts");
-    // OLD: assert(&tab == &other.tab);
     assertEq(&tab,
              &other.tab,
              "Cannot assign a EncryptedArrays with different tabs");
@@ -668,7 +664,6 @@ private:
   template <typename T>
   void genericDecrypt(const Ctxt& ctxt, const SecKey& sKey, T& array) const
   {
-    // OLD: assert(&context == &ctxt.getContext());
     assertEq(&context,
              &ctxt.getContext(),
              "Cannot decrypt when ciphertext has different context than "
@@ -991,7 +986,6 @@ public:
                      double useThisSize = -1,
                      long precision = -1) const
   {
-    // OLD: assert(&getContext() == &ctxt.getContext());
     assertEq(&getContext(),
              &ctxt.getContext(),
              "Cannot decrypt when ciphertext has different context than "
@@ -1011,7 +1005,6 @@ public:
                double useThisSize,
                long precision = -1) const
   {
-    // OLD: assert(&getContext() == &ctxt.getContext());
     assertEq(&getContext(),
              &ctxt.getContext(),
              "Cannot decrypt when ciphertext has different context than "
@@ -1048,7 +1041,6 @@ public:
   // The scaling factor to use when encoding/decoding plaintext elements
   long encodeScalingFactor(long precision = -1, double roundErr = -1.0) const
   {
-    // OLD: assert(precision<NTL_SP_BOUND);
     assertTrue<InvalidArgument>(precision < NTL_SP_BOUND,
                                 "Precision exceeds max single precision bound");
     if (precision <= 0)
@@ -1262,7 +1254,6 @@ public:
   {
     if (this == &other)
       return *this;
-    // OLD: assert(&alMod== &other.alMod);
     assertEq(&alMod,
              &other.alMod,
              "Cannot assign EncryptedArrays with different algebras");

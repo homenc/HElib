@@ -31,7 +31,6 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
                                const SecKey& sKey,
                                std::vector<cx_double>& ptxt) const
 {
-  // OLD: assert(&getContext() == &ctxt.getContext());
   assertEq(&getContext(),
            &ctxt.getContext(),
            "Cannot decrypt with non-matching context");
@@ -94,11 +93,9 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
                                 long amt,
                                 UNUSED bool dc) const
 {
-  // OLD: assert(&getContext() == &ctxt.getContext());
   assertEq(&getContext(),
            &ctxt.getContext(),
            "Cannot decrypt with non-matching context");
-  // OLD: assert(nativeDimension(i));
   assertTrue(nativeDimension(i),
              "Rotation in " + std::to_string(i) + " is not a native operation");
 
@@ -186,7 +183,6 @@ void EncryptedArrayCx::decode(std::vector<cx_double>& array,
                               const zzX& ptxt,
                               double scaling) const
 {
-  // OLD: assert (scaling>0);
   assertTrue<InvalidArgument>(scaling > 0,
                               "Scaling must be positive to decode");
   CKKS_canonicalEmbedding(array, ptxt, getPAlgebra());

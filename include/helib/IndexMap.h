@@ -68,13 +68,11 @@ public:
   //! if j does not belong to the current index set
   T& operator[](long j)
   {
-    // OLD: assert(indexSet.contains(j));
     assertTrue(indexSet.contains(j), "Key not found");
     return map[j];
   }
   const T& operator[](long j) const
   {
-    // OLD: assert(indexSet.contains(j));
     assertTrue(indexSet.contains(j), "Key not found");
     // unordered_map does not support a const [] operator,
     // so we have to artificially strip away the const-ness here
