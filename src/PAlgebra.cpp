@@ -485,7 +485,7 @@ PAlgebra::PAlgebra(long mm,
   for (long i = 1, p2i = pmodm; p2i != 1; i++, p2i = NTL::MulMod(p2i, pmodm, m))
     p_subgp[p2i] = i;
   for (long j : range(tmpOrds.size())) {
-    tmpOrds[j] = abs(tmpOrds[j]);
+    tmpOrds[j] = std::abs(tmpOrds[j]);
     // for backward compatibility, a user supplied
     // ords value could be negative, but we ignore that here.
     // For testing and debugging, we may want to not ignore this...

@@ -265,7 +265,7 @@ void Ctxt::mulIntFactor(long e)
   long bal_e = balRem(e, ptxtSpace);
   for (auto& part : parts)
     part *= bal_e;
-  noiseBound *= abs(bal_e); // because every part was scaled by bal_e
+  noiseBound *= std::abs(bal_e); // because every part was scaled by bal_e
 }
 
 // Ciphertext maintenance
@@ -399,9 +399,9 @@ void Ctxt::modDownToSet(const IndexSet& s)
             NTL::conv<double>(NTL::conv<NTL::xdouble>(delta.rep[j]) / xdiff);
 
         // sanity check: |fdelta[j]| <= ptxtSpace/2
-        if (fabs(fdelta[j]) > double(ptxtSpace) / 2.0 + 0.0001) {
+        if (std::fabs(fdelta[j]) > double(ptxtSpace) / 2.0 + 0.0001) {
           std::stringstream ss;
-          ss << "\n***Bad modSwitch: diff =" << fabs(fdelta[j])
+          ss << "\n***Bad modSwitch: diff =" << std::fabs(fdelta[j])
              << ", ptxtSpace=" << ptxtSpace;
           throw RuntimeError(ss.str());
         }
@@ -771,7 +771,7 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
     f = balRem(f, ptxtSpace);
   }
 
-  noiseBound += size * abs(f);
+  noiseBound += size * std::abs(f);
 
   IndexSet delta = dcrt.getIndexSet() / primeSet; // set minus
   if (f == 1 && empty(delta)) {                   // just add it
@@ -829,8 +829,10 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
   if (factor <= 0)
     conv(factor, getContext().ea->getCx().encodeScalingFactor() / size);
 
-  NTL::xdouble ratio = floor((ratFactor / factor) + 0.5); // round to integer
-  double inaccuracy = abs(NTL::conv<double>(ratio * factor / ratFactor) - 1.0);
+  NTL::xdouble ratio =
+      NTL::floor((ratFactor / factor) + 0.5); // round to integer
+  double inaccuracy =
+      std::abs(NTL::conv<double>(ratio * factor / ratFactor) - 1.0);
 
   // Check if you need to scale up to get target accuracy of 2^{-r}
   if ((inaccuracy * getContext().alMod.getPPowR()) > 1.0) {
@@ -954,7 +956,7 @@ void Ctxt::addConstantCKKS(std::pair<long, long> num)
   NTL::xdouble xb = NTL::to_xdouble(num.second); // denominator
 
   NTL::xdouble ratio = floor((ratFactor / xb) + 0.5); // round to integer
-  double inaccuracy = abs(NTL::conv<double>(ratio * xb / ratFactor) - 1.0);
+  double inaccuracy = std::abs(NTL::conv<double>(ratio * xb / ratFactor) - 1.0);
   if ((inaccuracy * getContext().alMod.getPPowR()) > 1.0) {
     addSomePrimes(*this); // This increases ratFactor
   }
@@ -1041,7 +1043,7 @@ static NTL::xdouble NoiseNorm(NTL::xdouble noise1,
                               long e2,
                               long p)
 {
-  return noise1 * abs(balRem(e1, p)) + noise2 * abs(balRem(e2, p));
+  return noise1 * std::abs(balRem(e1, p)) + noise2 * std::abs(balRem(e2, p));
 }
 
 // Add/subtract another ciphertext (depending on the negative flag)
@@ -1464,7 +1466,7 @@ void Ctxt::multByConstant(const NTL::ZZ& c)
   FHE_TIMER_START;
 
   if (isCKKS()) { // multiply by dividing the scaling factor
-    NTL::xdouble size = fabs(NTL::to_xdouble(c));
+    NTL::xdouble size = NTL::fabs(NTL::to_xdouble(c));
     ptxtMag *= size;
     ratFactor /= size;
     if (c < 0)
@@ -1494,7 +1496,7 @@ void Ctxt::multByConstant(const NTL::ZZ& c)
     return;
 
   long cc = balRem(d, ptxtSpace);
-  noiseBound *= abs(cc);
+  noiseBound *= std::abs(cc);
 
   // multiply all the parts by this constant
   NTL::ZZ c_copy(cc);
@@ -1510,7 +1512,7 @@ void Ctxt::multByConstant(const NTL::ZZ& c)
   FHE_TIMER_START;
 
   if (isCKKS()) { // multiply by dividing the scaling factor
-    NTL::xdouble size = fabs(NTL::to_xdouble(c));
+    NTL::xdouble size = NTL::fabs(NTL::to_xdouble(c));
     ptxtMag *= size;
     ratFactor /= size;
     if (c < 0)
@@ -1519,7 +1521,7 @@ void Ctxt::multByConstant(const NTL::ZZ& c)
   }
   // for BGV, need to do real multiplication
   long cc = balRem(rem(c, ptxtSpace), ptxtSpace); // reduce modulo ptxt space
-  noiseBound *= abs(cc);
+  noiseBound *= std::abs(cc);
 
   // multiply all the parts by this constant
   NTL::ZZ c_copy(cc);
@@ -2161,9 +2163,9 @@ double Ctxt::rawModSwitch(std::vector<NTL::ZZX>& zzParts, long q) const
 
       // sanity check: |c*q/Q - x| <= p^r/2
       NTL::xdouble diff =
-          fabs(NTL::conv<NTL::xdouble>(c) * NTL::conv<NTL::xdouble>(q) /
-                   NTL::conv<NTL::xdouble>(Q) -
-               NTL::conv<NTL::xdouble>(x));
+          NTL::fabs(NTL::conv<NTL::xdouble>(c) * NTL::conv<NTL::xdouble>(q) /
+                        NTL::conv<NTL::xdouble>(Q) -
+                    NTL::conv<NTL::xdouble>(x));
       if (diff > NTL::conv<NTL::xdouble>(p2r) / 2.0 + 0.0001) {
         std::stringstream ss;
         ss << "\n***BAD rawModSwitch: diff=" << diff << ", p2r=" << p2r;
