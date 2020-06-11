@@ -111,7 +111,6 @@ void sampleSmall(NTL::ZZX& poly, long n, double prob)
 // Choose a vector of continuous Gaussians
 void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
 {
-  static double const Pi = 4.0 * atan(1.0); // Pi=3.1415..
   static double const bignum = static_cast<double>(LONG_MAX);
   // THREADS: C++11 guarantees these are initialized only once
 
@@ -126,7 +125,7 @@ void sampleGaussian(std::vector<double>& dvec, long n, double stdev)
     // r1, r2 are "uniform in (0,1)"
     double r1 = (1 + NTL::RandomBnd(LONG_MAX)) / (bignum + 1);
     double r2 = (1 + NTL::RandomBnd(LONG_MAX)) / (bignum + 1);
-    double theta = 2 * Pi * r1;
+    double theta = 2.0L * PI * r1;
     double rr = sqrt(-2.0 * log(r2)) * stdev;
     if (rr > 8 * stdev) // sanity-check, truncate at 8 standard deviations
       rr = 8 * stdev;
@@ -165,7 +164,6 @@ void sampleGaussian(NTL::ZZX& poly, long n, double stdev)
 #if 0
 void sampleGaussian(NTL::ZZX &poly, long n, double stdev)
 {
-  static double const Pi=4.0*atan(1.0); // Pi=3.1415..
   static long const bignum = 0xfffffff;
   // THREADS: C++11 guarantees these are initialized only once
 
@@ -177,7 +175,7 @@ void sampleGaussian(NTL::ZZX &poly, long n, double stdev)
   for (long i=0; i<n; i+=2) {
     double r1 = (1+RandomBnd(bignum))/((double)bignum+1);
     double r2 = (1+RandomBnd(bignum))/((double)bignum+1);
-    double theta=2*Pi*r1;
+    double theta = 2.0L * PI * r1;
     double rr= sqrt(-2.0*log(r2))*stdev;
 
     //OLD: assert(rr < 8*stdev); // sanity-check, no more than 8 standard deviations

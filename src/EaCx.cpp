@@ -197,7 +197,6 @@ void EncryptedArrayCx::decode(std::vector<cx_double>& array,
 // return an array of random complex numbers in a circle of radius rad
 void EncryptedArrayCx::random(std::vector<cx_double>& array, double rad) const
 {
-  const double twoPi = 8 * std::atan(1);
   if (rad == 0)
     rad = 1.0; // radius
 
@@ -205,7 +204,7 @@ void EncryptedArrayCx::random(std::vector<cx_double>& array, double rad) const
   for (auto& x : array) {
     long bits = NTL::RandomLen_long(32);         // 32 random bits
     double r = std::sqrt(bits & 0xffff) / 256.0; // sqrt(uniform[0,1])
-    double theta = twoPi * ((bits >> 16) & 0xffff) / 65536.0; // uniform(0,2pi)
+    double theta = 2.0L * PI * ((bits >> 16) & 0xffff) / 65536.0; // uniform(0,2pi)
     x = std::polar(rad * r, theta);
   }
 }

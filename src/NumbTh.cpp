@@ -19,6 +19,10 @@
 
 namespace helib {
 
+// First 70 odd decimal places of Pi == 4.0 * atan(1).
+const long double PI =
+    3.1415926535897932384626433832795028841971693993751058209749445923078164L;
+
 bool FHEglobals::dryRun = false;
 
 // Considering bits as a vector of bits, return the value it represents when
@@ -1728,7 +1732,7 @@ zz_pXModulus1::zz_pXModulus1(long _m, const NTL::zz_pX& _f) :
   build(fm, f);
 
   if (specialLogic) {
-    //std::cout << "*** special\n";
+    // std::cout << "*** special\n";
     NTL::zz_pX P1, P2, P3;
 
     LocalCopyReverse(P3, f, 0, n);
@@ -1741,7 +1745,7 @@ zz_pXModulus1::zz_pXModulus1(long _m, const NTL::zz_pX& _f) :
     TofftRep(R0, P1, k);
     TofftRep(R1, f, k1);
   }
-  //else { std::cout << "=== non-special\n"; }
+  // else { std::cout << "=== non-special\n"; }
 }
 
 void rem(NTL::zz_pX& r, const NTL::zz_pX& a, const zz_pXModulus1& ff)

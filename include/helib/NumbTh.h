@@ -61,6 +61,8 @@
 
 namespace helib {
 
+extern const long double PI;
+
 namespace FHEglobals {
 //! @brief A dry-run flag
 //! The dry-run option disables most operations, to save time. This lets
@@ -77,30 +79,36 @@ extern bool dryRun;
 extern std::set<long>* automorphVals;
 extern std::set<long>* automorphVals2;
 } // namespace FHEglobals
+
 inline bool setDryRun(bool toWhat = true)
 {
   return (FHEglobals::dryRun = toWhat);
 }
+
 inline bool isDryRun() { return FHEglobals::dryRun; }
 
 inline void setAutomorphVals(std::set<long>* aVals)
 {
   FHEglobals::automorphVals = aVals;
 }
+
 inline bool isSetAutomorphVals()
 {
   return FHEglobals::automorphVals != nullptr;
 }
+
 inline void recordAutomorphVal(long k) { FHEglobals::automorphVals->insert(k); }
 
 inline void setAutomorphVals2(std::set<long>* aVals)
 {
   FHEglobals::automorphVals2 = aVals;
 }
+
 inline bool isSetAutomorphVals2()
 {
   return FHEglobals::automorphVals2 != nullptr;
 }
+
 inline void recordAutomorphVal2(long k)
 {
   FHEglobals::automorphVals2->insert(k);

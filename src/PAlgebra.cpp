@@ -170,12 +170,11 @@ half_FFT::half_FFT(long m) : fft(m / 2)
 {
   typedef std::complex<double> cmplx_t;
   typedef long double ldbl;
-  const ldbl pi = std::atan(ldbl(1)) * 4.0;
 
   pow.resize(m / 2);
   for (long i : range(m / 2)) {
     // pow[i] = 2^{2*pi*I*(i/m)}
-    ldbl angle = -((2 * pi) * (ldbl(i) / ldbl(m)));
+    ldbl angle = -((2.0L * PI) * (ldbl(i) / ldbl(m)));
     pow[i] = cmplx_t(std::cos(angle), std::sin(angle));
   }
 }
@@ -184,13 +183,12 @@ quarter_FFT::quarter_FFT(long m) : fft(m / 4)
 {
   typedef std::complex<double> cmplx_t;
   typedef long double ldbl;
-  const ldbl pi = std::atan(ldbl(1)) * 4.0;
 
   pow1.resize(m / 4);
   pow2.resize(m / 4);
   for (long i : range(m / 2)) {
     // pow[i] = 2^{2*pi*I*(i/m)}
-    ldbl angle = -((2 * pi) * (ldbl(i) / ldbl(m)));
+    ldbl angle = -((2.0L * PI) * (ldbl(i) / ldbl(m)));
     if (i % 2)
       pow1[i >> 1] = cmplx_t(std::cos(angle), std::sin(angle));
     else
@@ -218,8 +216,6 @@ double calcPolyNormBnd(long m)
   typedef std::complex<double> cmplx_t;
   typedef long double ldbl;
 
-  ldbl pi = std::atan(ldbl(1)) * 4;
-
   // first, remove 2's
   while (m % 2 == 0)
     m /= 2;
@@ -237,7 +233,7 @@ double calcPolyNormBnd(long m)
 
   if (fac.size() == 1) {
     long u = fac[0];
-    return 2 * cotan(pi / (2 * u)) / u;
+    return 2.0L * cotan(PI / (2.0L * u)) / u;
   }
 
   m = radm;
@@ -258,8 +254,8 @@ double calcPolyNormBnd(long m)
   std::vector<cmplx_t> x(n);
 
   for (long i : range(m)) {
-    ldbl re = std::cos(2.0 * pi * (ldbl(i) / ldbl(m)));
-    ldbl im = std::sin(2.0 * pi * (ldbl(i) / ldbl(m)));
+    ldbl re = std::cos(2.0L * PI * (ldbl(i) / ldbl(m)));
+    ldbl im = std::sin(2.0L * PI * (ldbl(i) / ldbl(m)));
     roots[i] = cmplx_t(re, im);
   }
 
@@ -284,7 +280,7 @@ double calcPolyNormBnd(long m)
   constexpr long FREXP_ITER = 1600;
 
   for (long i : range(1, m)) {
-    dist_tab[i] = std::frexp(double(2 * std::sin(pi * (ldbl(i) / ldbl(m)))),
+    dist_tab[i] = std::frexp(double(2.0L * std::sin(PI * (ldbl(i) / ldbl(m)))),
                              &dist_exp_tab[i]);
 
     if (dist_tab[i] < sqrt2_inv) {
@@ -512,11 +508,10 @@ PAlgebra::PAlgebra(long mm,
   for (long i : range(nfactors))
     radm *= factors[i].a;
 
-  double pi = atan(1) * 4;
-  normBnd = 1;
+  normBnd = 1.0;
   for (long i : range(nfactors)) {
     long u = factors[i].a;
-    normBnd *= 2 * cotan(pi / (2 * u)) / u;
+    normBnd *= 2.0L * cotan(PI / (2.0L * u)) / u;
   }
 
   polyNormBnd = calcPolyNormBnd(mm);
