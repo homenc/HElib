@@ -70,7 +70,6 @@ if (ENABLE_TEST)
 endif (ENABLE_TEST)
 
 set(HELIB_SRCS
-    "ArgMap.cpp"
     "BenesNetwork.cpp"
     "binaryArith.cpp"
     "binaryCompare.cpp"

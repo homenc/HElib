@@ -1,7 +1,7 @@
 # Building and installing HElib
 
 HElib's build, install and regression tests suite have been built and tested on 
-Ubuntu 16.04, Ubuntu 18.04, Ubuntu 20.04, Fedora 31, Fedora 32, CentOS 7.7, 
+Ubuntu 18.04, Ubuntu 20.04, Fedora 31, Fedora 32, CentOS 7.7, 
 CentOS 8.1, and macOS Mojave 10.14.
 
 There are two different ways to build and install HElib. The first one will 
@@ -14,13 +14,15 @@ dependencies to be installed by you and available in the system.
 
 ## General prerequisites
 
-- cmake >= 3.5.1
+- cmake >= 3.10.2 (*)
 - GNU make >= 3.82
-- g++ >= 5.4.0 (for Linux environments)
+- g++ >= 7.3.1 (for Linux environments)
 - mac OS Apple clang >= 11.0.0 (macOS environments)
 - pthreads
 - git >= 1.8.3 (required to build and run the HElib test suite)
 
+(*) On macOS, ideally use cmake 3.17.3+ as it fixes many issues on certain builds on Mojave
+onwards.
 
 ## Option 1: package build (recommended for most users)
 
@@ -205,7 +207,7 @@ to the `./configure` step.
 - `HELIB_DEBUG=ON/OFF` (default is `OFF`): Activate the debug module when
   building HElib (by defining the `HELIB_DEBUG` macro). When the debug module
   is active, this generates extra information used for debugging purposes.
-  `HELIB_DEBUG` will propogate to programs using HElib, when using cmake. When 
+  `HELIB_DEBUG` will propagate to programs using HElib, when using cmake. When 
   this is enabled, programs using HElib will generate a warning during
   configuration.  This is to remind the user that use of the debug module can
   cause issues, such as `sigsegv`, if initialized incorrectly.

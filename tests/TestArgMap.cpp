@@ -164,26 +164,29 @@ TEST_F(DeathTestArgMapCmdLine, documentationCheckCmdLine)
     bool a = false;
     bool b = true;
     std::string s;
+    std::string file;
     std::vector<std::string> v;
   } opts;
 
   helib::ArgMap amap;
-  amap.named()
+  amap.required()
+      .positional()
+      .arg("string", opts.s, "a string to set.")
+      .optional()
+      .arg("file", opts.file, "a string to set.")
+      .note("A small note.")
+      .named()
       .arg("i", opts.i, "an int to place.")
       .toggle()
       .arg("-a", opts.a, "a bool to set true.")
       .toggle(false)
       .arg("-b", opts.b, "b bool to set false.")
-      .required()
-      .positional()
-      .arg("string", opts.s, "a string to set.")
-      .note("A small note.")
       .dots(opts.v, "file");
 
   EXPECT_EXIT(
       amap.parse(argc, argv),
       ::testing::ExitedWithCode(EXIT_FAILURE),
-      R"(^Usage: \./prog \[-a\] \[-b\] \[i=<v>\] string \[file \.\.\.\].)");
+      R"(^Usage: \./prog \[i=<arg>\] \[-a\] \[-b\] string \[file\] \[file \.\.\.\].)");
 }
 
 TEST_F(DeathTestArgMapCmdLine, documentationShownIfCustomHelpSelectedCmdLine)
