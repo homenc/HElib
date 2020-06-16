@@ -537,18 +537,15 @@ ArgMap& ArgMap::arg(const std::string& name, T& value, const std::string& doc)
 
 template <typename T>
 ArgMap& ArgMap::arg(const std::string& name,
-            T& value,
-            const std::string& doc,
-            const char* info)
+                    T& value,
+                    const std::string& doc,
+                    const char* info)
 {
   arg(name, value);
 
   docVec.push_back({name, doc, required_mode});
   if (info != nullptr && info[0] != '\0')
-    std::get<1>(docVec.back())
-        .append(" [ default=")
-        .append(info)
-        .append(" ]");
+    std::get<1>(docVec.back()).append(" [ default=").append(info).append(" ]");
 
   return *this;
 }

@@ -27,7 +27,7 @@ INC_HELIB=-I../include/
 include $(wildcard local-defs)
 
 #
-CFLAGS = -pthread $(COPT) $(INC_NTL) $(INC_GMP) $(INC_HELIB) -DFHE_THREADS -DFHE_BOOT_THREADS -fmax-errors=1 -Werror=return-type -std=c++14
+CFLAGS = -pthread $(COPT) $(INC_NTL) $(INC_GMP) $(INC_HELIB) -DHELIB_THREADS -DHELIB_BOOT_THREADS -fmax-errors=1 -Werror=return-type -std=c++14
 
 # NOTE: NTL and GMP are distributed under LGPL (v2.1), so you can link
 #       against them as dynamic libraries.
@@ -35,12 +35,12 @@ LDLIBS = $(LIB_NTL) $(LIB_GMP) $(NTL) $(GMP) -lm
 
 
 # useful flags:
-#   -DFHE_THREADS  tells helib to enable generic multithreading capabilities;
-#                  must be used with a thread-enabled NTL and the -pthread
-#                  flag should be passed to gcc
+#   -DHELIB_THREADS  tells helib to enable generic multithreading capabilities;
+#                    must be used with a thread-enabled NTL and the -pthread
+#                    flag should be passed to gcc
 #
-#   -DFHE_BOOT_THREADS  tells helib to use a multithreading strategy for
-#                       bootstrapping; requires -DFHE_THREADS (see above)
+#   -DHELIB_BOOT_THREADS  tells helib to use a multithreading strategy for
+#                         bootstrapping; requires -DHELIB_THREADS (see above)
 
 $(info HElib requires NTL version 10.0.0 or higher, see http://shoup.net/ntl)
 $(info )

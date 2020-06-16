@@ -417,7 +417,7 @@ TEST_P(GTestApproxNums, generalOpsWorks)
   ea.encrypt(c3, publicKey, p3, /*size=*/1.0);
 
   helib::resetAllTimers();
-  FHE_NTIMER_START(Circuit);
+  HELIB_NTIMER_START(Circuit);
 
   for (long i = 0; i < R; i++) {
 
@@ -512,7 +512,7 @@ TEST_P(GTestApproxNums, generalOpsWorks)
   c2.cleanUp();
   c3.cleanUp();
 
-  FHE_NTIMER_STOP(Circuit);
+  HELIB_NTIMER_STOP(Circuit);
 
   std::vector<std::complex<double>> pp0, pp1, pp2, pp3;
 

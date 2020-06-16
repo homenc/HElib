@@ -24,16 +24,16 @@
 
 namespace helib {
 
-#define FHE_KSS_UNKNOWN (0)
+#define HELIB_KSS_UNKNOWN (0)
 // unknown KS strategy
 
-#define FHE_KSS_FULL (1)
+#define HELIB_KSS_FULL (1)
 // all KS matrices
 
-#define FHE_KSS_BSGS (2)
+#define HELIB_KSS_BSGS (2)
 // baby step/giant step strategy
 
-#define FHE_KSS_MIN (3)
+#define HELIB_KSS_MIN (3)
 // minimal strategy (for g_i, and for g_i^{-ord_i} for bad dims)
 
 void writePubKeyBinary(std::ostream& str, const PubKey& pk);

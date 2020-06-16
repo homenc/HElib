@@ -240,12 +240,12 @@ bool PubKey::operator==(const PubKey& other) const
         return false;
   }
 
-  // compare KS_strategy, ignoring trailing FHE_KSS_UNKNOWN
+  // compare KS_strategy, ignoring trailing HELIB_KSS_UNKNOWN
   long n = KS_strategy.length();
-  while (n > 0 && KS_strategy[n - 1] == FHE_KSS_UNKNOWN)
+  while (n > 0 && KS_strategy[n - 1] == HELIB_KSS_UNKNOWN)
     n--;
   long n1 = other.KS_strategy.length();
-  while (n1 > 0 && other.KS_strategy[n1 - 1] == FHE_KSS_UNKNOWN)
+  while (n1 > 0 && other.KS_strategy[n1 - 1] == HELIB_KSS_UNKNOWN)
     n1--;
   if (n != n1)
     return false;
@@ -319,7 +319,7 @@ long PubKey::getKSStrategy(long dim) const
   assertTrue<InvalidArgument>(index >= 0l,
                               "Invalid dimension (dim must be at least -1)");
   if (index >= KS_strategy.length()) {
-    return FHE_KSS_UNKNOWN;
+    return HELIB_KSS_UNKNOWN;
   }
   // HERE
   // std::cout << "*** getKSSStrategy for dim " << dim << " = " <<
@@ -333,7 +333,7 @@ void PubKey::setKSStrategy(long dim, int val)
   assertTrue<InvalidArgument>(index >= 0l,
                               "Invalid dimension (dim must be at least -1)");
   if (index >= KS_strategy.length())
-    KS_strategy.SetLength(index + 1, FHE_KSS_UNKNOWN);
+    KS_strategy.SetLength(index + 1, HELIB_KSS_UNKNOWN);
   KS_strategy[index] = val;
   // HERE
   // std::cout << "*** setKSSStrategy for dim " << dim << " = " << val << "\n";
@@ -355,7 +355,7 @@ long PubKey::Encrypt(Ctxt& ctxt,
                      long ptxtSpace,
                      bool highNoise) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // NOTE: isCKKS() checks the tag in the alMod  the context
   if (isCKKS()) {
     double pSize = (ptxtSpace <= 0) ? 1.0 : double(ptxtSpace);
@@ -466,7 +466,7 @@ long PubKey::Encrypt(Ctxt& ctxt,
   }
 
   double ptxt_rat = ptxt_sz / ptxt_bound;
-  FHE_STATS_UPDATE("ptxt_rat", ptxt_rat);
+  HELIB_STATS_UPDATE("ptxt_rat", ptxt_rat);
 
   ctxt.noiseBound += ptxt_bound;
 
@@ -889,7 +889,7 @@ void SecKey::GenKeySWmatrix(long fromSPower,
                             long toIdx,
                             long p)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // sanity checks
   if (fromSPower <= 0 || fromXPower <= 0)
@@ -1036,7 +1036,7 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
                      const Ctxt& ciphertxt,
                      NTL::ZZX& f) const // plaintext before modular reduction
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   assertEq(getContext(), ciphertxt.getContext(), "Context mismatch");
 
@@ -1130,7 +1130,7 @@ long SecKey::skEncrypt(Ctxt& ctxt,
                        long ptxtSpace,
                        long skIdx) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   assertEq(((const PubKey*)this),
            &ctxt.pubKey,
@@ -1220,7 +1220,7 @@ long SecKey::skEncrypt(Ctxt& ctxt,
     }
 
     double ptxt_rat = ptxt_sz / ptxt_bound;
-    FHE_STATS_UPDATE("ptxt_rat_sk", ptxt_rat);
+    HELIB_STATS_UPDATE("ptxt_rat_sk", ptxt_rat);
 
     ctxt.noiseBound += ptxt_bound;
 

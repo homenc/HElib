@@ -171,7 +171,7 @@ long multiplyWithRecryption(helib::Ctxt& ctxt,
                             bool thin)
 {
   long count = 0; // number of multiplications
-  FHE_NTIMER_START(Multiplications);
+  HELIB_NTIMER_START(Multiplications);
   while (ctxt.bitCapacity() >= 40 && depth + count < n) {
     if (helib_test::verbose) {
       std::cout << "multiplication " << count + 1 << std::endl;
@@ -179,20 +179,20 @@ long multiplyWithRecryption(helib::Ctxt& ctxt,
     ctxt.multiplyBy(tmp_ctxt);
     count += 1;
   }
-  FHE_NTIMER_STOP(Multiplications);
+  HELIB_NTIMER_STOP(Multiplications);
   if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "Before recryption");
   }
   if (depth + count < n) {
     // Time the recryption step
-    FHE_NTIMER_START(Bootstrap);
+    HELIB_NTIMER_START(Bootstrap);
     // Recrypt/Bootstrap the ctxt
     if (thin) {
       publicKey.thinReCrypt(ctxt);
     } else {
       publicKey.reCrypt(ctxt);
     }
-    FHE_NTIMER_STOP(Bootstrap);
+    HELIB_NTIMER_STOP(Bootstrap);
   }
   if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "After recryption");
@@ -223,10 +223,10 @@ TEST_P(TestFatBootstrappingWithMultiplications,
     helib::CheckCtxt(ctxt, "Before recryption");
   }
   // Time the recryption step
-  FHE_NTIMER_START(Bootstrap);
+  HELIB_NTIMER_START(Bootstrap);
   // Recrypt/Bootstrap the ctxt
   publicKey.reCrypt(ctxt);
-  FHE_NTIMER_STOP(Bootstrap);
+  HELIB_NTIMER_STOP(Bootstrap);
   if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "After recryption");
   }
@@ -259,9 +259,9 @@ TEST_P(TestFatBootstrappingWithMultiplications,
     long count = 0; // count for number of multiplications this round
     // Multiply the ciphertext with itself n times
     // until number of bits falls below threshold
-    FHE_NTIMER_START(RoundTotal);
+    HELIB_NTIMER_START(RoundTotal);
     count = multiplyWithRecryption(ctxt, tmp_ctxt, publicKey, depth, n, false);
-    FHE_NTIMER_STOP(RoundTotal);
+    HELIB_NTIMER_STOP(RoundTotal);
     // Plaintext operation
     // Multiply with itself n times
     multiplyPtxt(ptxt, count, nslots, p2r);
@@ -384,10 +384,10 @@ TEST_P(TestThinBootstrappingWithMultiplications,
     helib::CheckCtxt(ctxt, "Before recryption");
   }
   // Time the recryption step
-  FHE_NTIMER_START(Bootstrap);
+  HELIB_NTIMER_START(Bootstrap);
   // Recrypt/Bootstrap the ctxt
   publicKey.thinReCrypt(ctxt);
-  FHE_NTIMER_STOP(Bootstrap);
+  HELIB_NTIMER_STOP(Bootstrap);
   if (!helib_test::noPrint) {
     helib::CheckCtxt(ctxt, "After recryption");
   }
@@ -420,9 +420,9 @@ TEST_P(TestThinBootstrappingWithMultiplications,
     long count = 0; // count for number of multiplications this round
     // Multiply the ciphertext with itself n times
     // until number of bits falls below threshold
-    FHE_NTIMER_START(RoundTotal);
+    HELIB_NTIMER_START(RoundTotal);
     count = multiplyWithRecryption(ctxt, tmp_ctxt, publicKey, depth, n, true);
-    FHE_NTIMER_STOP(RoundTotal);
+    HELIB_NTIMER_STOP(RoundTotal);
     // Plaintext operation
     // Multiply with itself n times
     multiplyPtxt(ptxt, count, nslots, p2r);

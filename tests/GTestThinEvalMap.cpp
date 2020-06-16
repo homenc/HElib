@@ -237,7 +237,7 @@ TEST_P(GTestThinEvalMap, thinEvalMapIsCorrect)
   ea.encrypt(ctxt, publicKey, val1);
 
   helib::resetAllTimers();
-  FHE_NTIMER_START(ALL);
+  HELIB_NTIMER_START(ALL);
 
   // Compute homomorphically the transformation that takes the
   // coefficients packed in the slots and produces the polynomial
@@ -325,7 +325,7 @@ TEST_P(GTestThinEvalMap, thinEvalMapIsCorrect)
   EXPECT_EQ(val1, dirty_val2);
 #endif
 
-  FHE_NTIMER_STOP(ALL);
+  HELIB_NTIMER_STOP(ALL);
 }
 
 // clang-format off

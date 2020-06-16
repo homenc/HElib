@@ -17,30 +17,33 @@
 #ifndef HELIB_MULTICORE_H
 #define HELIB_MULTICORE_H
 
-#ifdef FHE_THREADS
+#ifdef HELIB_THREADS
 
 #include <atomic>
 #include <mutex>
 
 namespace helib {
 
-#define FHE_atomic_long std::atomic_long
-#define FHE_atomic_ulong std::atomic_ulong
+#define HELIB_atomic_long std::atomic_long
+#define HELIB_atomic_ulong std::atomic_ulong
 
-#define FHE_MUTEX_TYPE std::mutex
-#define FHE_MUTEX_GUARD(mx) std::lock_guard<std::mutex> _lock##__LINE__(mx)
+#define HELIB_MUTEX_TYPE std::mutex
+#define HELIB_MUTEX_GUARD(mx) std::lock_guard<std::mutex> _lock##__LINE__(mx)
+
+} // namespace helib
 
 #else
 
 namespace helib {
 
-#define FHE_atomic_long long
-#define FHE_atomic_ulong unsigned long
+#define HELIB_atomic_long long
+#define HELIB_atomic_ulong unsigned long
 
-#define FHE_MUTEX_TYPE int
-#define FHE_MUTEX_GUARD(mx) ((void)mx)
+#define HELIB_MUTEX_TYPE int
+#define HELIB_MUTEX_GUARD(mx) ((void)mx)
 
-#endif
-}
+} // namespace helib
+
+#endif // ifdef HELIB_THREADS
 
 #endif // ifndef HELIB_MULTICORE_H

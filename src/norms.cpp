@@ -245,7 +245,7 @@ static double quarter_embeddingLargestCoeff(const std::vector<double>& f,
 
 double embeddingLargestCoeff(const std::vector<double>& f, const PAlgebra& palg)
 {
-  FHE_NTIMER_START(AAA_embeddingLargest);
+  HELIB_NTIMER_START(AAA_embeddingLargest);
 
   long m = palg.getM();
   if (USE_HALF_FFT && m % 2 == 0) {
@@ -329,7 +329,7 @@ static void basic_embeddingLargestCoeff_x2(double& norm1,
       relerr = abs(xx[i]-yy[i])/xx[i];
     }
 
-    FHE_STATS_UPDATE("embeddingLargestCoeff_x2", relerr);
+    HELIB_STATS_UPDATE("embeddingLargestCoeff_x2", relerr);
   }
 #endif
 }
@@ -407,7 +407,7 @@ static void half_embeddingLargestCoeff_x2(double& norm1,
       relerr = abs(xx[i]-yy[i])/xx[i];
     }
 
-    FHE_STATS_UPDATE("embeddingLargestCoeff_x2", relerr);
+    HELIB_STATS_UPDATE("embeddingLargestCoeff_x2", relerr);
   }
 #endif
 }
@@ -418,7 +418,7 @@ void embeddingLargestCoeff_x2(double& norm1,
                               const std::vector<double>& f2,
                               const PAlgebra& palg)
 {
-  FHE_NTIMER_START(AAA_embeddingLargest_x2);
+  HELIB_NTIMER_START(AAA_embeddingLargest_x2);
 
   long m = palg.getM();
   if (USE_HALF_FFT && m % 2 == 0) {
@@ -494,7 +494,7 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
                              const std::vector<double>& in,
                              const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   long sz = in.size();
   long m = palg.getM();
@@ -521,7 +521,7 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
                              const zzX& f,
                              const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   std::vector<double> x;
   convert(x, f);
@@ -533,7 +533,7 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
                              const NTL::ZZX& f,
                              const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   std::vector<double> x;
   convert(x, f.rep);
@@ -572,7 +572,7 @@ void CKKS_embedInSlots(zzX& f,
                        double scaling)
 
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   long v_sz = v.size();
   long m = palg.getM();
@@ -634,7 +634,7 @@ canonicalEmbedding(std::vector<cx_double>& v,
 		   const std::vector<double>& in,
 		   const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long m = palg.getM();
 
   if (long(in.size()) > m)
@@ -655,7 +655,7 @@ canonicalEmbedding(std::vector<cx_double>& v,
 void canonicalEmbedding(std::vector<cx_double>& v,
                         const zzX& f, const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   vector<double> x;
   convert(x, f);
@@ -668,7 +668,7 @@ void canonicalEmbedding(std::vector<cx_double>& v,
 void canonicalEmbedding(std::vector<cx_double>& v,
                         const ZZX& f, const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   vector<double> x;
   convert(x, f.rep);
@@ -687,7 +687,7 @@ void canonicalEmbedding(std::vector<cx_double>& v,
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
                   const PAlgebra& palg, double scaling, bool strictInverse)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long m = palg.getM();
   long phimBy2 = divc(palg.getPhiM(),2);
   vector<cx_double> avv(m);

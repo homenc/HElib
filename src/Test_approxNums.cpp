@@ -160,7 +160,7 @@ void testGeneralOps(const PubKey& publicKey, const SecKey& secretKey,
   ea.encrypt(c3, publicKey, p3, /*size=*/1.0);
 
   resetAllTimers();
-  FHE_NTIMER_START(Circuit);
+  HELIB_NTIMER_START(Circuit);
 
   for (long i = 0; i < nRounds; i++) {
 
@@ -246,7 +246,7 @@ void testGeneralOps(const PubKey& publicKey, const SecKey& secretKey,
   c2.cleanUp();
   c3.cleanUp();
 
-  FHE_NTIMER_STOP(Circuit);
+  HELIB_NTIMER_STOP(Circuit);
 
   vector<cx_double> pp0, pp1, pp2, pp3;
    

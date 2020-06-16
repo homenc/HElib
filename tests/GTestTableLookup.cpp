@@ -16,7 +16,6 @@
 #include <helib/tableLookup.h>
 #include <helib/debugging.h>
 
-
 #include "gtest/gtest.h"
 #include "test_common.h"
 

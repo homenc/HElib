@@ -121,13 +121,13 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     EncryptedArray ea(context, G);
     _init_timer.stop();
 
-    FHE_NTIMER_START(keyGen);
+    HELIB_NTIMER_START(keyGen);
     SecKey secretKey(context);
     const PubKey& publicKey = secretKey;
     secretKey.GenSecKey(); // A +-1/0 secret key
     addSome1DMatrices(secretKey); // compute key-switching matrices
     addSomeFrbMatrices(secretKey);
-    FHE_NTIMER_STOP(keyGen);
+    HELIB_NTIMER_STOP(keyGen);
 
 
 #ifdef HELIB_DEBUG
@@ -143,42 +143,42 @@ void timeInit(long m, long p, long r, long d, long L, long nTests)
     Ctxt cc(publicKey);
 
     if (r==1 && d==1) {
-      FHE_NTIMER_START(encode2);
+      HELIB_NTIMER_START(encode2);
       ea.encode(poly, pp);
-      FHE_NTIMER_STOP(encode2);
+      HELIB_NTIMER_STOP(encode2);
     }
     else if (r==1 && d!=1) {
-      FHE_NTIMER_START(encode2d);
+      HELIB_NTIMER_START(encode2d);
       ea.encode(poly, pp);
-      FHE_NTIMER_STOP(encode2d);
+      HELIB_NTIMER_STOP(encode2d);
     }
     else if (r!=1 && d==1) {
-      FHE_NTIMER_START(encode4);
+      HELIB_NTIMER_START(encode4);
       ea.encode(poly, pp);
-      FHE_NTIMER_STOP(encode4);
+      HELIB_NTIMER_STOP(encode4);
     }
     else {
-      FHE_NTIMER_START(encode4d);
+      HELIB_NTIMER_START(encode4d);
       ea.encode(poly, pp);
-      FHE_NTIMER_STOP(encode4d);
+      HELIB_NTIMER_STOP(encode4d);
     }
 
-    FHE_NTIMER_START(encrypt);
+    HELIB_NTIMER_START(encrypt);
     publicKey.Encrypt(cc, poly);
-    FHE_NTIMER_STOP(encrypt);
+    HELIB_NTIMER_STOP(encrypt);
 
-    FHE_NTIMER_START(decrypt);
+    HELIB_NTIMER_START(decrypt);
     secretKey.Decrypt(poly, cc);
-    FHE_NTIMER_STOP(decrypt);
+    HELIB_NTIMER_STOP(decrypt);
 
     if (r>1) {
-      FHE_NTIMER_START(decode4);
+      HELIB_NTIMER_START(decode4);
       ea.decode(pp, poly);
-      FHE_NTIMER_STOP(decode4);
+      HELIB_NTIMER_STOP(decode4);
     } else {
-      FHE_NTIMER_START(decode2);
+      HELIB_NTIMER_START(decode2);
       ea.decode(pp, poly);
-      FHE_NTIMER_STOP(decode2);
+      HELIB_NTIMER_STOP(decode2);
     }
   }
 }
@@ -216,19 +216,19 @@ void timeOps(const EncryptedArray& ea, const PubKey& publicKey, Ctxt& ret,
 
   // inner-product of vectors
   cerr << "." << std::flush;
-  FHE_NTIMER_START(innerProduct);
+  HELIB_NTIMER_START(innerProduct);
   innerProduct(ret,cc,cc);
   modDownToLevel(ret,findBaseLevel(ret));
-  FHE_NTIMER_STOP(innerProduct);
+  HELIB_NTIMER_STOP(innerProduct);
 
   // Multiplication with 2,3 arguments
   cerr << "." << std::flush;
   for (long i=0; i<nTests; i++) {
     Ctxt c0 = cc[0];
-    FHE_NTIMER_START(multiplyBy);
+    HELIB_NTIMER_START(multiplyBy);
     c0.multiplyBy(cc[1]);
     modDownToLevel(c0,findBaseLevel(c0));
-    FHE_NTIMER_STOP(multiplyBy);
+    HELIB_NTIMER_STOP(multiplyBy);
     ret += c0; // Just so the compiler doesn't optimize it away
   }
 
@@ -236,10 +236,10 @@ void timeOps(const EncryptedArray& ea, const PubKey& publicKey, Ctxt& ret,
     cerr << "." << std::flush;
     for (long i=0; i<nTests; i++) {
       Ctxt c0 = cc[0];
-      FHE_NTIMER_START(multiplyBy2);
+      HELIB_NTIMER_START(multiplyBy2);
       c0.multiplyBy2(cc[1],cc[2]);
       modDownToLevel(c0,findBaseLevel(c0)); // mod-down if needed
-      FHE_NTIMER_STOP(multiplyBy2);
+      HELIB_NTIMER_STOP(multiplyBy2);
       ret += c0; // Just so the compiler doesn't optimize it away
     }
   }
@@ -248,9 +248,9 @@ void timeOps(const EncryptedArray& ea, const PubKey& publicKey, Ctxt& ret,
   cerr << "." << std::flush;
   for (long i=0; i<4*nTests; i++) {
     Ctxt c0 = cc[0];
-    FHE_NTIMER_START(multByConstant);
+    HELIB_NTIMER_START(multByConstant);
     c0.multByConstant(p);
-    FHE_NTIMER_STOP(multByConstant);
+    HELIB_NTIMER_STOP(multByConstant);
     ret -= c0; // Just so the compiler doesn't optimize it away
   }
 
@@ -258,18 +258,18 @@ void timeOps(const EncryptedArray& ea, const PubKey& publicKey, Ctxt& ret,
   cerr << "." << std::flush;
   for (long i=0; i<10*nTests; i++) {
     Ctxt c0 = cc[0];
-    FHE_NTIMER_START(addConstant);
+    HELIB_NTIMER_START(addConstant);
     c0.addConstant(p);
-    FHE_NTIMER_STOP(addConstant);
+    HELIB_NTIMER_STOP(addConstant);
     ret += c0; // Just so the compiler doesn't optimize it away
   }
 
   // Addition
   cerr << "." << std::flush;
   for (long i=0; i<10*nTests; i++) {
-    FHE_NTIMER_START(add);
+    HELIB_NTIMER_START(add);
     ret += cc[0];
-    FHE_NTIMER_STOP(add);
+    HELIB_NTIMER_STOP(add);
   }
 
   // Rotation by an amount k for which we have a key-switching matrix
@@ -277,10 +277,10 @@ void timeOps(const EncryptedArray& ea, const PubKey& publicKey, Ctxt& ret,
   for (long i=0; i<nTests; i++) {
     Ctxt c0 = cc[0];
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/true);
-    FHE_NTIMER_START(nativeAutomorph);
+    HELIB_NTIMER_START(nativeAutomorph);
     c0.smartAutomorph(k);
     modDownToLevel(c0,findBaseLevel(c0));
-    FHE_NTIMER_STOP(nativeAutomorph);    
+    HELIB_NTIMER_STOP(nativeAutomorph);
     ret += c0; // Just so the compiler doesn't optimize it away
   }
   // Rotation by a random amount k
@@ -288,10 +288,10 @@ void timeOps(const EncryptedArray& ea, const PubKey& publicKey, Ctxt& ret,
   for (long i=0; i<nTests; i++) {
     Ctxt c0 = cc[0];
     long k = rotationAmount(ea,publicKey,/*withMatrix=*/false);
-    FHE_NTIMER_START(automorph);
+    HELIB_NTIMER_START(automorph);
     c0.smartAutomorph(k);
     modDownToLevel(c0,findBaseLevel(c0)); // mod-down if needed
-    FHE_NTIMER_STOP(automorph);
+    HELIB_NTIMER_STOP(automorph);
     ret += c0; // Just so the compiler doesn't optimize it away
   }
 
@@ -366,15 +366,15 @@ void timeHighLvl(const EncryptedArray& ea, const PubKey& publicKey,
   if (ea.getTag()==PA_GF2_tag) {
     RandomFullMatrix<PA_GF2>::ExecType mat_exec(*ptr);
     mat_exec.upgrade();
-    FHE_NTIMER_START(MatMul);
+    HELIB_NTIMER_START(MatMul);
     mat_exec.mul(tmp);
-    FHE_NTIMER_STOP(MatMul);
+    HELIB_NTIMER_STOP(MatMul);
   } else {
     RandomFullMatrix<PA_zz_p>::ExecType mat_exec(*ptr);
     mat_exec.upgrade();
-    FHE_NTIMER_START(MatMul);
+    HELIB_NTIMER_START(MatMul);
     mat_exec.mul(tmp);
-    FHE_NTIMER_STOP(MatMul);
+    HELIB_NTIMER_STOP(MatMul);
   }
   ret = tmp;
 
@@ -385,14 +385,14 @@ void timeHighLvl(const EncryptedArray& ea, const PubKey& publicKey,
     tmp = c[i % c.size()];
     modDownToLevel(tmp, td.lvl);
     // time rotation
-    FHE_NTIMER_START(rotate);
+    HELIB_NTIMER_START(rotate);
     ea.rotate(tmp, r);
-    FHE_NTIMER_STOP(rotate);
+    HELIB_NTIMER_STOP(rotate);
     // time shift, amount between -nSlots/2 and +nSlots/2
     if (r>nSlots/2) r -= nSlots;
-    FHE_NTIMER_START(shift);
+    HELIB_NTIMER_START(shift);
     ea.shift(tmp, r);
-    FHE_NTIMER_STOP(shift);
+    HELIB_NTIMER_STOP(shift);
     ret += tmp; // just so the compiler will not optimize it out
   }
 
@@ -400,9 +400,9 @@ void timeHighLvl(const EncryptedArray& ea, const PubKey& publicKey,
   for (long i=0; i<nTests && i<ea.size(); i++) {
     tmp = c[i % c.size()];
     modDownToLevel(tmp, td.lvl);
-    FHE_NTIMER_START(replicate);
+    HELIB_NTIMER_START(replicate);
     replicate(ea, tmp, i);
-    FHE_NTIMER_STOP(replicate);    
+    HELIB_NTIMER_STOP(replicate);
     ret += tmp; // just so the compiler will not optimize it out
   }
 
@@ -410,9 +410,9 @@ void timeHighLvl(const EncryptedArray& ea, const PubKey& publicKey,
   ReplicateDummy handler;
   tmp = c[1];
   modDownToLevel(tmp, td.lvl);
-  FHE_NTIMER_START(replicateAll);
+  HELIB_NTIMER_START(replicateAll);
   replicateAll(ea, tmp, &handler);
-  FHE_NTIMER_STOP(replicateAll);
+  HELIB_NTIMER_STOP(replicateAll);
   ret += tmp;
 
   cerr << "." << std::flush;
@@ -422,10 +422,10 @@ void timeHighLvl(const EncryptedArray& ea, const PubKey& publicKey,
   modDownToLevel(tmp, td.lvl);
 
   PermNetwork net;
-  FHE_NTIMER_START(permutation);
+  HELIB_NTIMER_START(permutation);
   net.buildNetwork(pi, trees);  // Build a permutation network for pi
   net.applyToCtxt(tmp, ea);         // Apply permutation netwrok
-  FHE_NTIMER_STOP(permutation);
+  HELIB_NTIMER_STOP(permutation);
   ret +=tmp; // just so the compiler will not optimize it out
 
   // record the timing data
@@ -469,12 +469,12 @@ void  TimeIt(long m, long p, TimingData& data, bool high=false)
   EncryptedArray ea(context, G);
   _init_timer.stop();
 
-  FHE_NTIMER_START(keyGen);
+  HELIB_NTIMER_START(keyGen);
   SecKey secretKey(context);
   const PubKey& publicKey = secretKey;
   secretKey.GenSecKey(); // A +-1/0 secret key
   addSome1DMatrices(secretKey); // compute key-switching matrices
-  FHE_NTIMER_STOP(keyGen);
+  HELIB_NTIMER_STOP(keyGen);
 
   // record timing results for init/geygen, etc.
   data.m = m;

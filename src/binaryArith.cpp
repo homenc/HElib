@@ -647,7 +647,7 @@ void addTwoNumbers(CtPtrs& sum,
                    long sizeLimit,
                    std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   if (lsize(lhs) < 1) {
     vecCopy(sum, rhs, sizeLimit);
     return;
@@ -818,7 +818,7 @@ static void three4Two(CtPtrs& lsb,
                       const CtPtrs& w,
                       long sizeLimit)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Arrange u,v,w by size from smallest to largest
   const CtPtrs *p1, *p2, *p3;
   std::tie(p1, p2, p3) = orderBySize(u, v, w); // size(p3)>=size(p2)>=size(p1)
@@ -901,7 +901,7 @@ void addManyNumbers(CtPtrs& sum,
   std::cout << " addManyNumbers: " << numbers.size()
             << " numbers with size-limit=" << sizeLimit << std::endl;
 #endif
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   const Ctxt* ct_ptr = numbers.ptr2nonNull();
   if (lsize(numbers) < 1 || ct_ptr == nullptr) { // nothing to add
     setLengthZero(sum);
@@ -972,7 +972,7 @@ static void multByNegative(CtPtrs& product,
                            long sizeLimit,
                            std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long resSize = lsize(a) + lsize(b);
   if (sizeLimit > 0 && sizeLimit < resSize)
     resSize = sizeLimit;
@@ -1031,7 +1031,7 @@ void multTwoNumbers(CtPtrs& product,
                     long sizeLimit,
                     std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long lhsSize = lsize(lhs);
   long rhsSize = lsize(rhs);
   long resSize = lhsSize + rhsSize;
@@ -1315,7 +1315,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
 // Returns number of output bits that are not identically zero.
 long fifteenOrLess4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long numNonNull = in.numNonNull();
   if (numNonNull > 7) {
     fifteen4Four(out, in, sizeLimit);

@@ -29,7 +29,7 @@ static void buildDigitPolynomial(NTL::ZZX& result, long p, long e)
 {
   if (p < 2 || e <= 1)
     return; // nothing to do
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long p2e = NTL::power_long(p, e); // the integer p^e
 
   // Compute x - x^p (mod p^e), for x=0,1,...,p-1
@@ -52,7 +52,7 @@ static void buildDigitPolynomial(NTL::ZZX& result, long p, long e)
   assertTrue(deg(result) < p, "Interpolation error.  Degree too high.");
   SetCoeff(result, p); // return result = x^p + poly'(x)
   //  cerr << "# digitExt mod "<<p<<"^"<<e<<"="<<result<<endl;
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 // extractDigits assumes that the slots of *this contains integers mod p^r
@@ -172,7 +172,7 @@ static void compute_a_vals(NTL::Vec<NTL::ZZ>& a, long p, long e)
 // and otherwise, is in the interval (-p/2, p/2).
 static void compute_magic_poly(NTL::ZZX& poly1, long p, long e)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   NTL::Vec<NTL::ZZ> a;
 

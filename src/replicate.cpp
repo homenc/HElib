@@ -669,7 +669,7 @@ void replicateAll(const EncryptedArray& ea,
                   long recBound,
                   RepAuxDim* repAuxPtr)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   Ctxt ctxt = ctxt_orig;
   ctxt.cleanUp();

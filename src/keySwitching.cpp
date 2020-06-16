@@ -353,7 +353,7 @@ static void add1Dmats4dim(SecKey& sKey, long i, long keyID)
   if (!native)
     sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
 
-  sKey.setKSStrategy(i, FHE_KSS_FULL);
+  sKey.setKSStrategy(i, HELIB_KSS_FULL);
 }
 
 #endif
@@ -510,7 +510,7 @@ static void addSome1Dmats4dim(SecKey& sKey,
   if (!native)
     sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
 
-  sKey.setKSStrategy(i, FHE_KSS_BSGS);
+  sKey.setKSStrategy(i, HELIB_KSS_BSGS);
 
   // NOTE: the old code also added matrices for ord-2^k for small k,
   // in the case of (native && i<context.zMStar.numOfGens()).
@@ -591,12 +591,12 @@ static void addMinimal1Dmats4dim(SecKey& sKey, long i, long keyID)
   if (!native)
     sKey.GenKeySWmatrix(1, zMStar.genToPow(i, -ord), keyID, keyID);
 
-  if (ord > FHE_KEYSWITCH_MIN_THRESH) {
+  if (ord > HELIB_KEYSWITCH_MIN_THRESH) {
     long g = KSGiantStepSize(ord);
     sKey.GenKeySWmatrix(1, zMStar.genToPow(i, g), keyID, keyID);
   }
 
-  sKey.setKSStrategy(i, FHE_KSS_MIN);
+  sKey.setKSStrategy(i, HELIB_KSS_MIN);
 }
 
 void addMinimal1DMatrices(SecKey& sKey, long keyID)

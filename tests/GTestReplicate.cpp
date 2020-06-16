@@ -220,10 +220,10 @@ TEST_P(GTestReplicate, repeatedReplicationWorks)
   // Get some timing results
   for (long i = 0; i < 20 && i < ea.size(); i++) {
     xc1 = xc0;
-    FHE_NTIMER_START(replicate);
+    HELIB_NTIMER_START(replicate);
     helib::replicate(ea, xc1, i);
     EXPECT_TRUE(replicationSucceeds(xc1, xc0, i, secretKey, ea));
-    FHE_NTIMER_STOP(replicate);
+    HELIB_NTIMER_STOP(replicate);
   }
   if (!helib_test::noPrint) {
     helib::printAllTimers();
@@ -242,7 +242,7 @@ TEST_P(GTestReplicate, replicateAllReplicatesAccurately)
 #endif
   ReplicateTester handler(secretKey, ea, xp0, B);
   try {
-    FHE_NTIMER_START(replicateAll);
+    HELIB_NTIMER_START(replicateAll);
     helib::replicateAll(ea, xc0, &handler, bnd);
   } catch (StopReplicate) {
   }

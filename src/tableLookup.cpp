@@ -38,7 +38,7 @@ void computeAllProducts(/*Output*/ CtPtrs& products,
                         /*Index*/ const CtPtrs& array,
                         std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long nBits = array.size();
   if (lsize(products) > 0) {
     long nBits2 = NTL::NumBits(lsize(products) - 1); // ceil(log_2(size))
@@ -85,7 +85,7 @@ void tableLookup(Ctxt& out,
                  const CtPtrs& idx,
                  std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   out.clear();
   std::vector<Ctxt> products(lsize(table),
                              out); // to hold subset products of idx
@@ -110,7 +110,7 @@ void tableWriteIn(const CtPtrs& table,
                   const CtPtrs& idx,
                   std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   const Ctxt* ct = table.ptr2nonNull(); // find some non-null Ctxt
   long size = lsize(table);
   if (size == 0)
@@ -146,7 +146,7 @@ void buildLookupTable(std::vector<zzX>& T, // encoded result is returned in T
                       long sign_out,
                       const EncryptedArray& ea)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // tables of size > 2^{16} are not supported
   assertTrue(nbits_in <= 16, "tables of size > 2^{16} are not supported");
   long sz = 1L << nbits_in;

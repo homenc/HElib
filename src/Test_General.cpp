@@ -140,7 +140,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   resetAllTimers();
 
-  FHE_NTIMER_START(Circuit);
+  HELIB_NTIMER_START(Circuit);
 
   for (long i = 0; i < R; i++) {
 
@@ -217,7 +217,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   c2.cleanUp();
   c3.cleanUp();
 
-  FHE_NTIMER_STOP(Circuit);
+  HELIB_NTIMER_STOP(Circuit);
 
   if (!noPrint) {
     std::cout << endl;
@@ -225,7 +225,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     std::cout << endl;
   }
   resetAllTimers();
-  FHE_NTIMER_START(Check);
+  HELIB_NTIMER_START(Check);
    
   PlaintextArray pp0(ea);
   PlaintextArray pp1(ea);
@@ -242,7 +242,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
        std::cout << "GOOD\n";
   else std::cout << "BAD\n";
 
-  FHE_NTIMER_STOP(Check);
+  HELIB_NTIMER_STOP(Check);
    
   if (!noPrint) {
     printAllTimers();

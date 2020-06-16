@@ -101,7 +101,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt,
                                            long amt,
                                            bool dc) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   assertEq(&context, &ctxt.getContext(), "Context mismatch");
   assertInRange(i, 0l, dimension(), "i must be between 0 and dimension()");
 
@@ -129,7 +129,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt,
 template <typename type>
 void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   const PAlgebra& al = getPAlgebra();
 
   const std::vector<std::vector<RX>>& maskTable = tab.getMaskTable();
@@ -170,7 +170,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   }
   ctxt.multByConstant(balanced_zzX(mask)); // zero out slots where mask=0
   ctxt.smartAutomorph(val);                // shift left by val
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 // NOTE: masking depth: if there are N dimensions, and if for i = 1..N
@@ -180,7 +180,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 template <typename type>
 void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   const PAlgebra& al = getPAlgebra();
 
@@ -282,13 +282,13 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
              maskTable[i][v + 1]; // update the mask for next iteration
     }
   }
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 template <typename type>
 void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   const PAlgebra& al = getPAlgebra();
 
@@ -352,7 +352,7 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
       ctxt += tmp;
     }
   }
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 template <typename type>
@@ -373,11 +373,11 @@ template <typename type>
 void EncryptedArrayDerived<type>::decode(std::vector<RX>& array,
                                          const NTL::ZZX& ptxt) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   RX pp;
   conv(pp, ptxt);
   tab.decodePlaintext(array, pp, mappingData);
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 template <typename type>
@@ -458,11 +458,11 @@ template <typename type>
 void EncryptedArrayDerived<type>::decode(std::vector<RX>& array,
                                          const NTL::Vec<long>& ptxt) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   RX pp;
   convert(pp, ptxt);
   tab.decodePlaintext(array, pp, mappingData);
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 template <typename type>
@@ -617,7 +617,7 @@ void EncryptedArrayDerived<type>::buildLinPolyCoeffs(
     std::vector<RX>& C,
     const std::vector<RX>& L) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   RBak bak;
   bak.save();
@@ -631,7 +631,7 @@ void EncryptedArrayDerived<type>::buildLinPolyCoeffs(
     if (!builder())
       break;
 
-    FHE_NTIMER_START(buildLinPolyCoeffs_invert);
+    HELIB_NTIMER_START(buildLinPolyCoeffs_invert);
 
     long p = getPAlgebra().getP();
     long r = tab.getR();

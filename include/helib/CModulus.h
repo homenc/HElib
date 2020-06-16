@@ -77,7 +77,7 @@ class Cmodulus
   void privateInit(const PAlgebra&, long rt);
 
 public:
-#ifdef FHE_OPENCL
+#ifdef HELIB_OPENCL
   SmartPtr<AltFFTPrimeInfo> altFFTInfo;
   // We need to allow copying...the underlying object
   // is immutable

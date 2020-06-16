@@ -118,7 +118,7 @@ NTL::ZZX makeIrredPoly(long p, long d)
 template <typename zz>
 static void factorT(std::vector<zz>& factors, const zz& N)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   factors.resize(0); // reset the factors
 
@@ -1084,10 +1084,10 @@ void buildLinPolyMatrix(NTL::mat_zz_pE& M, long p)
 
 void buildLinPolyMatrix(NTL::mat_GF2E& M, long p)
 {
-  assertEq<InvalidArgument>( p,
-      2l,
-      "p is not 2 when building "
-      "a mat_GF2E (Galois field 2)");
+  assertEq<InvalidArgument>(p,
+                            2l,
+                            "p is not 2 when building "
+                            "a mat_GF2E (Galois field 2)");
 
   long d = NTL::GF2E::degree();
 
@@ -1346,10 +1346,10 @@ void ppsolve(NTL::vec_GF2E& x,
   assertEq<InvalidArgument>(p,
                             2l,
                             "modulus p is not 2 with GF2E (Galois field 2)");
-  assertEq<InvalidArgument>( r,
-      1l,
-      "Hensel lifting r is not 2 with"
-      " GF2E (Galois field 2)");
+  assertEq<InvalidArgument>(r,
+                            1l,
+                            "Hensel lifting r is not 2 with"
+                            " GF2E (Galois field 2)");
 
   NTL::GF2E det;
   solve(det, x, A, b);
@@ -1488,7 +1488,7 @@ void buildLinPolyCoeffs(NTL::vec_zz_pE& C_out,
                         long p,
                         long r)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   NTL::mat_zz_pE M;
   buildLinPolyMatrix(M, p);
 
@@ -1496,7 +1496,7 @@ void buildLinPolyCoeffs(NTL::vec_zz_pE& C_out,
   ppsolve(C, M, L, p, r);
 
   C_out = C;
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 void buildLinPolyCoeffs(NTL::vec_GF2E& C_out,
@@ -1504,14 +1504,14 @@ void buildLinPolyCoeffs(NTL::vec_GF2E& C_out,
                         long p,
                         long r)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   assertEq<InvalidArgument>(p,
                             2l,
                             "modulus p is not 2 with GF2E (Galois field 2)");
-  assertEq<InvalidArgument>( r,
-      1l,
-      "Hensel lifting r is not 2 "
-      "with GF2E (Galois field 2)");
+  assertEq<InvalidArgument>(r,
+                            1l,
+                            "Hensel lifting r is not 2 "
+                            "with GF2E (Galois field 2)");
 
   NTL::mat_GF2E M;
   buildLinPolyMatrix(M, p);
@@ -1520,7 +1520,7 @@ void buildLinPolyCoeffs(NTL::vec_GF2E& C_out,
   ppsolve(C, M, L, p, r);
 
   C_out = C;
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 void applyLinPoly(NTL::zz_pE& beta,

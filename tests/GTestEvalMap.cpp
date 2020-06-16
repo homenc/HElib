@@ -250,7 +250,7 @@ TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
   ea.encrypt(ctxt, publicKey, pa1);
 
   helib::resetAllTimers();
-  FHE_NTIMER_START(ALL);
+  HELIB_NTIMER_START(ALL);
 
   // Compute homomorphically the transformation that takes the
   // coefficients packed in the slots and produces the polynomial
@@ -316,7 +316,7 @@ TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
 
   EXPECT_TRUE(equals(ea, pa1, pa2));
 
-  FHE_NTIMER_STOP(ALL);
+  HELIB_NTIMER_STOP(ALL);
 
   if (!helib_test::noPrint) {
     std::cout << "\n*********\n";

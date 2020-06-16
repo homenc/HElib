@@ -138,7 +138,7 @@ void BluesteinFFT(NTL::zz_pX& x,
                   const NTL::Vec<NTL::mulmod_precon_t>& powers_aux,
                   const NTL::fftRep& Rb)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (IsZero(x))
     return;

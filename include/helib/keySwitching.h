@@ -134,12 +134,12 @@ std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix);
 
 //! @brief Constant defining threshold above which a baby-set/giant-step
 //! strategy is used
-#define FHE_KEYSWITCH_THRESH (50)
+#define HELIB_KEYSWITCH_THRESH (50)
 
 //! @brief Constant defining threshold above which a single
-//! giant step matrix is added even in FHE_KSS_MIN mode.
+//! giant step matrix is added even in HELIB_KSS_MIN mode.
 //! This helps in the matmul routines.
-#define FHE_KEYSWITCH_MIN_THRESH (8)
+#define HELIB_KEYSWITCH_MIN_THRESH (8)
 
 //! @brief Function that returns number of baby steps.  Used to keep
 //! this and matmul routines "in sync".
@@ -157,7 +157,7 @@ void addFewMatrices(SecKey& sKey, long keyID = 0);
 //! For a generator g whose order is larger than bound, generate only enough
 //! matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
 void addSome1DMatrices(SecKey& sKey,
-                       long bound = FHE_KEYSWITCH_THRESH,
+                       long bound = HELIB_KEYSWITCH_THRESH,
                        long keyID = 0);
 
 //! @brief Generate all matrices s(X^{g^i})->s(X) for generators g of
@@ -169,7 +169,7 @@ void addBSGS1DMatrices(SecKey& sKey, long keyID = 0);
 
 //! Generate all/some Frobenius matrices of the form s(X^{p^i})->s(X)
 void addSomeFrbMatrices(SecKey& sKey,
-                        long bound = FHE_KEYSWITCH_THRESH,
+                        long bound = HELIB_KEYSWITCH_THRESH,
                         long keyID = 0);
 
 void addFrbMatrices(SecKey& sKey, long keyID = 0);

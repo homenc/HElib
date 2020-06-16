@@ -313,12 +313,12 @@ TYPED_TEST_SUITE(GTestMatmul, TypesToTest);
 
 TYPED_TEST(GTestMatmul, multipliesWithoutErrors)
 {
-  FHE_NTIMER_START(EncodeMartix_MatMul);
+  HELIB_NTIMER_START(EncodeMartix_MatMul);
   // Templated class so explicit 'this' necessary
   const typename TypeParam::MatrixType& mat = *(this->matrixPtr);
   typename TypeParam::MatrixType::ExecType mat_exec(mat, (this->minimal));
   mat_exec.upgrade();
-  FHE_NTIMER_STOP(EncodeMartix_MatMul);
+  HELIB_NTIMER_STOP(EncodeMartix_MatMul);
 
   // choose a random plaintext vector and encrypt it
   helib::PlaintextArray v(this->ea);

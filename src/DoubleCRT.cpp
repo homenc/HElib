@@ -49,7 +49,7 @@ static long MakeIndexVector(const IndexSet& s, NTL::Vec<long>& v)
 
 void DoubleCRT::FFT(const NTL::ZZX& poly, const IndexSet& s)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (empty(s))
     return;
@@ -69,7 +69,7 @@ void DoubleCRT::FFT(const NTL::ZZX& poly, const IndexSet& s)
 // FIXME: "code bloat": this just replicates the above with NTL::ZZX -> zzX
 void DoubleCRT::FFT(const zzX& poly, const IndexSet& s)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (empty(s))
     return;
@@ -128,7 +128,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT& other, Fun fun, bool matchIndexSets)
 
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
-    FHE_NTIMER_START(addPrimes_1);
+    HELIB_NTIMER_START(addPrimes_1);
     Warning("addPrimes called (1) in DoubleCRT::op");
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
   }
@@ -137,7 +137,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT& other, Fun fun, bool matchIndexSets)
   DoubleCRT tmp(context, IndexSet());
   const IndexMap<NTL::vec_long>* other_map = &other.map;
   if (!(map.getIndexSet() <= other.map.getIndexSet())) { // Even more expensive
-    FHE_NTIMER_START(addPrimes_2);
+    HELIB_NTIMER_START(addPrimes_2);
     tmp = other;
     Warning("addPrimes called (2) in DoubleCRT::op");
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
@@ -164,7 +164,7 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT& other, Fun fun, bool matchIndexSets)
 
 DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (isDryRun())
     return *this;
@@ -174,7 +174,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
 
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
-    FHE_NTIMER_START(addPrimes_3);
+    HELIB_NTIMER_START(addPrimes_3);
     Warning("addPrimes called (1) in DoubleCRT::mul");
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
   }
@@ -183,7 +183,7 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
   DoubleCRT tmp(context, IndexSet());
   const IndexMap<NTL::vec_long>* other_map = &other.map;
   if (!(map.getIndexSet() <= other.map.getIndexSet())) { // Even more expensive
-    FHE_NTIMER_START(addPrimes_4);
+    HELIB_NTIMER_START(addPrimes_4);
     tmp = other;
     Warning("addPrimes called (2) in DoubleCRT::mul");
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
@@ -296,7 +296,7 @@ template DoubleCRT& DoubleCRT::Op<DoubleCRT::SubFun>(const NTL::ZZX& poly,
 // returns the sum of the canonical embedding norms of the digits
 NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   const PAlgebra& palg = context.zMStar;
   long phim = palg.getPhiM();
@@ -334,7 +334,7 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
   NTL::xdouble noise(0.0);
 
   for (long i : range(digits.size())) {
-    FHE_NTIMER_START(addPrimes_5);
+    HELIB_NTIMER_START(addPrimes_5);
     IndexSet notInDigit = allPrimes / digits[i].getIndexSet();
 
 #if 0
@@ -357,14 +357,14 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
     NTL::ZZX poly;
     digits[i].addPrimes(notInDigit, &poly); // add back all the primes
 
-    FHE_NTIMER_START(NORM_VAL);
+    HELIB_NTIMER_START(NORM_VAL);
     NTL::xdouble norm_val = embeddingLargestCoeff(poly, palg);
-    FHE_NTIMER_STOP(NORM_VAL);
+    HELIB_NTIMER_STOP(NORM_VAL);
 
     noise += norm_val;
 
     double ratio = NTL::conv<double>(norm_val / norm_bnd);
-    FHE_STATS_UPDATE("break-into-digits-ratio", ratio);
+    HELIB_STATS_UPDATE("break-into-digits-ratio", ratio);
 
 #endif
 
@@ -374,7 +374,7 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
       digits[j] /= pi;
     }
   }
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 
   return noise;
 }
@@ -383,7 +383,7 @@ NTL::xdouble DoubleCRT::breakIntoDigits(std::vector<DoubleCRT>& digits) const
 // it is assumed that s1 is disjoint from the current index set.
 void DoubleCRT::addPrimes(const IndexSet& s1, NTL::ZZX* poly_p)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (empty(s1)) {
     assertTrue(poly_p == 0, "poly_p must be null here");
@@ -476,7 +476,7 @@ DoubleCRT::DoubleCRT(const NTL::ZZX& poly,
                      const IndexSet& s) :
     context(_context), map(new DoubleCRTHelper(_context))
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   assertTrue(s.last() < context.numPrimes(),
              "s must end with a smaller element than context.numPrimes()");
 
@@ -496,7 +496,7 @@ DoubleCRT::DoubleCRT(const NTL::ZZX& poly,
 DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const Context &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   IndexSet s = IndexSet(0, context.numPrimes()-1);
   // FIXME: maybe the default index set should be determined by context?
 
@@ -513,7 +513,7 @@ DoubleCRT::DoubleCRT(const NTL::ZZX& poly, const Context &_context)
 DoubleCRT::DoubleCRT(const NTL::ZZX& poly)
 : context(*activeContext), map(new DoubleCRTHelper(*activeContext))
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   IndexSet s = IndexSet(0, context.numPrimes()-1);
   // FIXME: maybe the default index set should be determined by context?
 
@@ -536,7 +536,7 @@ DoubleCRT::DoubleCRT(const zzX& poly,
                      const IndexSet& s) :
     context(_context), map(new DoubleCRTHelper(_context))
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   assertTrue(s.last() < context.numPrimes(),
              "s must end with a smaller element than context.numPrimes()");
 
@@ -556,7 +556,7 @@ DoubleCRT::DoubleCRT(const zzX& poly,
 DoubleCRT::DoubleCRT(const zzX& poly, const Context &_context)
 : context(_context), map(new DoubleCRTHelper(_context))
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   IndexSet s = IndexSet(0, context.numPrimes()-1);
   // FIXME: maybe the default index set should be determined by context?
 
@@ -574,7 +574,7 @@ DoubleCRT::DoubleCRT(const zzX& poly, const Context &_context)
 DoubleCRT::DoubleCRT(const zzX& poly)
 : context(*activeContext), map(new DoubleCRTHelper(*activeContext))
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   IndexSet s = IndexSet(0, context.numPrimes()-1);
   // FIXME: maybe the default index set should be determined by context?
 
@@ -743,7 +743,7 @@ long DoubleCRT::getOneRow(NTL::Vec<long>& row, long idx, bool positive) const
 // A parallelizable implementation of toPoly
 void DoubleCRT::toPoly(NTL::ZZX& poly, const IndexSet& s, bool positive) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   if (isDryRun())
     return;
 
@@ -788,7 +788,7 @@ void DoubleCRT::toPoly(NTL::ZZX& poly, const IndexSet& s, bool positive) const
 
   // Run the inverse FFT modulo the different primes in parallel
   {
-    FHE_NTIMER_START(toPoly_FFT);
+    HELIB_NTIMER_START(toPoly_FFT);
     NTL_EXEC_INDEX(cnt, index)
     long first, last;
     pinfo.interval(first, last, index);
@@ -810,7 +810,7 @@ void DoubleCRT::toPoly(NTL::ZZX& poly, const IndexSet& s, bool positive) const
 
   // Run the integer CRT in parallel for the different coefficients
   {
-    FHE_NTIMER_START(toPoly_CRT);
+    HELIB_NTIMER_START(toPoly_CRT);
     NTL::PartitionInfo pinfo1(phim);
     long cnt1 = pinfo1.NumIntervals();
 
@@ -1078,7 +1078,7 @@ void DoubleCRT::complexConj()
 // fills each row i with random integers mod pi
 void DoubleCRT::randomize(const NTL::ZZ* seed)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (isDryRun())
     return;
@@ -1108,17 +1108,17 @@ void DoubleCRT::randomize(const NTL::ZZ* seed)
 
     for (;;) {
       {
-        FHE_NTIMER_START(randomize_stream);
+        HELIB_NTIMER_START(randomize_stream);
         stream.get(buf, bufsz);
       }
 
       for (long pos = 0; pos <= bufsz - nb; pos += nb) {
 
-      // "Duff's device" used to avoid loops
-      // Commented out. Reference of the operation done as loop.
-      //  unsigned long utmp = 0;
-      //  for (long cnt = nb-1;  cnt >= 0; cnt--)
-      //    utmp = (utmp << 8) | buf[pos+cnt];
+        // "Duff's device" used to avoid loops
+        // Commented out. Reference of the operation done as loop.
+        //  unsigned long utmp = 0;
+        //  for (long cnt = nb-1;  cnt >= 0; cnt--)
+        //    utmp = (utmp << 8) | buf[pos+cnt];
 
 #if (defined(__GNUC__) || defined(__clang__))
         unsigned long utmp = buf[pos + nb - 1];

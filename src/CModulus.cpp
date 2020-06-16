@@ -95,7 +95,7 @@ Cmodulus::Cmodulus(const PAlgebra& zms, long qq, long rt)
                "zz_pInfo->Maxroot && rootTables are 0..zz_pInfo->Maxroot)");
     // rootTables get initialized 0..zz_pInfo->Maxroot
 
-#ifdef FHE_OPENCL
+#ifdef HELIB_OPENCL
     altFFTInfo = MakeSmart<AltFFTPrimeInfo>();
     InitAltFFTPrimeInfo(*altFFTInfo, *zz_pInfo->p_info, k - 1);
 #endif
@@ -201,7 +201,7 @@ Cmodulus& Cmodulus::operator=(const Cmodulus& other)
   iRb = other.iRb;
   phimx = other.phimx;
 
-#ifdef FHE_OPENCL
+#ifdef HELIB_OPENCL
   altFFTInfo = other.altFFTInfo;
 #endif
 
@@ -344,7 +344,7 @@ static void BitReverseCopy(long* NTL_RESTRICT B,
 
 void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (zMStar->getPow2()) {
     // special case when m is a power of 2
@@ -370,7 +370,7 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
     for (long i = dx + 1; i < phim; i++)
       yp[i] = 0;
 
-#ifdef FHE_OPENCL
+#ifdef HELIB_OPENCL
     AltFFTFwd(yp, yp, k - 1, *altFFTInfo);
 #else
 
@@ -417,14 +417,14 @@ void Cmodulus::FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const
 
 void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   NTL::zz_pBak bak;
   bak.save();
   context.restore();
 
   NTL::zz_pX& tmp = Cmodulus::getScratch_zz_pX();
   {
-    FHE_NTIMER_START(FFT_remainder);
+    HELIB_NTIMER_START(FFT_remainder);
     convert(tmp, x); // convert input to zpx format
   }
 
@@ -433,14 +433,14 @@ void Cmodulus::FFT(NTL::vec_long& y, const NTL::ZZX& x) const
 
 void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   NTL::zz_pBak bak;
   bak.save();
   context.restore();
 
   NTL::zz_pX& tmp = Cmodulus::getScratch_zz_pX();
   {
-    FHE_NTIMER_START(FFT_remainder);
+    HELIB_NTIMER_START(FFT_remainder);
     convert(tmp, x); // convert input to zpx format
   }
 
@@ -449,7 +449,7 @@ void Cmodulus::FFT(NTL::vec_long& y, const zzX& x) const
 
 void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   NTL::zz_pBak bak;
   bak.save();
   context.restore();
@@ -470,7 +470,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
     tmp.SetLength(phim);
     long* tmp_p = tmp.elts();
 
-#ifdef FHE_OPENCL
+#ifdef HELIB_OPENCL
     AltFFTRev1(tmp_p, yp, k - 1, *altFFTInfo);
 #else
 
@@ -515,7 +515,7 @@ void Cmodulus::iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const
 
   // reduce the result mod (Phi_m(X),q) and copy to the output polynomial x
   {
-    FHE_NTIMER_START(iFFT_division);
+    HELIB_NTIMER_START(iFFT_division);
     rem(x, x, *phimx); // out %= (Phi_m(X),q)
   }
 

@@ -147,10 +147,10 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   // Get some timing results
   for (long i=0; i<20 && i<ea.size(); i++) {
     xc1 = xc0;
-    FHE_NTIMER_START(replicate);
+    HELIB_NTIMER_START(replicate);
     replicate(ea, xc1, i);
     if (!check_replicate(xc1, xc0, i, secretKey, ea)) error = true;
-    FHE_NTIMER_STOP(replicate);
+    HELIB_NTIMER_STOP(replicate);
   }
   cout << (error? "BAD" : "GOOD") << endl;
 
@@ -167,7 +167,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   error = false;
   ReplicateTester *handler = new ReplicateTester(secretKey, ea, xp0, B);
   try {
-    FHE_NTIMER_START(replicateAll);
+    HELIB_NTIMER_START(replicateAll);
     replicateAll(ea, xc0, handler, bnd);
   }
   catch (StopReplicate) {

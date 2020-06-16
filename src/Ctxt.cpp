@@ -124,7 +124,7 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, std::vector<DoubleCRT>& digits)
   // Add the columns in, one by one
   DoubleCRT tmpDCRT(context, IndexSet::emptySet());
   for (size_t i = 0; i < digits.size(); i++) {
-    FHE_NTIMER_START(KS_loop);
+    HELIB_NTIMER_START(KS_loop);
     ai.randomize();
     tmpDCRT = digits[i];
 
@@ -132,20 +132,20 @@ void Ctxt::keySwitchDigits(const KeySwitch& W, std::vector<DoubleCRT>& digits)
 
     // add digit*a[i] with a handle pointing to base of W.toKeyID
     {
-      FHE_NTIMER_START(KS_loop_1);
+      HELIB_NTIMER_START(KS_loop_1);
       tmpDCRT.Mul(ai, /*matchIndexSet=*/false);
     }
     {
-      FHE_NTIMER_START(KS_loop_2);
+      HELIB_NTIMER_START(KS_loop_2);
       this->addPart(tmpDCRT, SKHandle(1, 1, W.toKeyID), /*matchPrimeSet=*/true);
     }
     // add digit*b[i] with a handle pointing to one
     {
-      FHE_NTIMER_START(KS_loop_3);
+      HELIB_NTIMER_START(KS_loop_3);
       digits[i].Mul(W.b[i], /*matchIndexSet=*/false);
     }
     {
-      FHE_NTIMER_START(KS_loop_4);
+      HELIB_NTIMER_START(KS_loop_4);
       this->addPart(digits[i], SKHandle(), /*matchPrimeSet=*/true);
     }
   }
@@ -239,7 +239,7 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt) :
 // between different public keys.
 Ctxt& Ctxt::privateAssign(const Ctxt& other)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   if (this == &other)
     return *this; // both point to the same object
 
@@ -321,7 +321,7 @@ void Ctxt::bringToSet(const IndexSet& s)
 // primeSet<=s. s must contain either all special primes or none of them.
 void Ctxt::modDownToSet(const IndexSet& s)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   IndexSet intersection = primeSet & s;
   if (empty(intersection)) {
     std::stringstream ss;
@@ -405,7 +405,7 @@ void Ctxt::modDownToSet(const IndexSet& s)
     }
 
     std::vector<double> norms(nparts);
-    FHE_NTIMER_START(AAA_modDownEnbeddings);
+    HELIB_NTIMER_START(AAA_modDownEnbeddings);
 #if 1
     for (long i : range(nparts / 2)) {
       // compute two for the price of one!
@@ -423,7 +423,7 @@ void Ctxt::modDownToSet(const IndexSet& s)
     for (long i : range(nparts))
       norms[i] = embeddingLargestCoeff(fdeltas[i], context.zMStar);
 #endif
-    FHE_NTIMER_STOP(AAA_modDownEnbeddings);
+    HELIB_NTIMER_STOP(AAA_modDownEnbeddings);
 
     NTL::xdouble addedNoise(0.0);
 
@@ -450,7 +450,7 @@ void Ctxt::modDownToSet(const IndexSet& s)
 
     double ratio = NTL::conv<double>(addedNoise / addedNoiseBound);
 
-    FHE_STATS_UPDATE("mod-switch-added-noise", ratio);
+    HELIB_STATS_UPDATE("mod-switch-added-noise", ratio);
 
     if (addedNoise > addedNoiseBound) {
       Warning("addedNoiseBound too big");
@@ -567,7 +567,7 @@ void Ctxt::dropSmallAndSpecialPrimes()
 // keyID<0 then re-linearize to any key for which a switching matrix exists
 void Ctxt::reLinearize(long keyID)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Special case: if *this is empty or already re-linearized then do nothing
   if (this->isEmpty() || this->inCanonicalForm(keyID))
     return;
@@ -643,7 +643,7 @@ void Ctxt::cleanUp()
 // primeSet is p.getIndexSet() \union context.specialPrimes
 void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // no special primes in the input part
   assertTrue(
@@ -669,8 +669,8 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // Finally we multiply the vector of digits by the key-switching matrix
   keySwitchDigits(W, polyDigits);
 
-  FHE_STATS_UPDATE("KS-noise-ratio",
-                   NTL::conv<double>(addedNoise / noiseBound));
+  HELIB_STATS_UPDATE("KS-noise-ratio",
+                     NTL::conv<double>(addedNoise / noiseBound));
   // HERE
   // fprintf(stderr, "   KS-log-noise-ratio: %f\n",
   // log(addedNoise/noiseBound)/log(2.0));
@@ -688,7 +688,7 @@ void Ctxt::addPart(const DoubleCRT& part,
                    bool matchPrimeSet,
                    bool negative)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   assertEq(&part.getContext(), &context, "Context mismatch");
 
@@ -1038,7 +1038,7 @@ static NTL::xdouble NoiseNorm(NTL::xdouble noise1,
 // Add/subtract another ciphertext (depending on the negative flag)
 void Ctxt::addCtxt(const Ctxt& other, bool negative)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // Sanity check: same context and public key
   assertEq(&context, &other.context, "Context mismatch");
@@ -1293,7 +1293,7 @@ IndexSet Ctxt::naturalPrimeSet() const
 // This is essentially operator*=, but with an extra parameter
 void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
@@ -1365,7 +1365,7 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
 
 void Ctxt::multiplyBy(const Ctxt& other)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
@@ -1384,7 +1384,7 @@ void Ctxt::multiplyBy(const Ctxt& other)
 
 void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
@@ -1443,7 +1443,7 @@ void Ctxt::multByConstant(const NTL::ZZ& c)
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (isCKKS()) { // multiply by dividing the scaling factor
     NTL::xdouble size = NTL::fabs(NTL::to_xdouble(c));
@@ -1489,7 +1489,7 @@ void Ctxt::multByConstant(const NTL::ZZ& c)
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   if (isCKKS()) { // multiply by dividing the scaling factor
     NTL::xdouble size = NTL::fabs(NTL::to_xdouble(c));
@@ -1515,7 +1515,7 @@ void Ctxt::multByConstant(const NTL::ZZ& c)
 // constant fits in a double float
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
@@ -1541,7 +1541,7 @@ void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
 
 void Ctxt::multByConstant(const NTL::ZZX& poly, double size)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   if (this->isEmpty())
     return;
   if (size < 0 && !isCKKS()) {
@@ -1553,7 +1553,7 @@ void Ctxt::multByConstant(const NTL::ZZX& poly, double size)
 
 void Ctxt::multByConstant(const zzX& poly, double size)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   if (this->isEmpty())
     return;
   if (size < 0 && !isCKKS()) {
@@ -1666,7 +1666,7 @@ void Ctxt::divideByP()
 
 void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
@@ -1683,11 +1683,11 @@ void Ctxt::automorph(long k) // Apply automorphism F(X)->F(X^k) (gcd(k,m)=1)
     }
   }
   // no change in noise bound
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
@@ -1706,7 +1706,7 @@ void Ctxt::complexConj() //  Complex conjugate, same as automorph(m-1)
 // result of every step.
 void Ctxt::smartAutomorph(long k)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // A hack: record this automorphism rather than actually performing it
   if (isSetAutomorphVals()) { // defined in NumbTh.h
@@ -1751,13 +1751,13 @@ void Ctxt::smartAutomorph(long k)
     reLinearize(keyID);
     k = NTL::MulMod(k, NTL::InvMod(amt, m), m);
   }
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 // applies the Frobenius automorphism p^j
 void Ctxt::frobeniusAutomorph(long j)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Special case: if *this is empty then do nothing
   if (this->isEmpty() || j == 0)
     return;

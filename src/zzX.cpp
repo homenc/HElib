@@ -23,7 +23,7 @@ namespace helib {
 
 void MulMod(zzX& res, const zzX& a, const zzX& b, const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   NTL::zz_pPush push; // backup the NTL current modulus
   const NTL::zz_pXModulus& phimX = getPhimXMod(palg);
 
@@ -36,7 +36,7 @@ void MulMod(zzX& res, const zzX& a, const zzX& b, const PAlgebra& palg)
 
 void add(zzX& res, const zzX& a, const zzX& b)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // The shorter one is aa, the longer is bb
   const zzX& aa = (lsize(a) < lsize(b)) ? a : b;
   const zzX& bb = (lsize(a) < lsize(b)) ? b : a;

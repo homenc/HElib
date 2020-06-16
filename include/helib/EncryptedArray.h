@@ -33,7 +33,8 @@ typedef std::complex<double> cx_double;
 
 // DIRT: we're using undocumented NTL interfaces here
 //   also...this probably should be defined in NTL, anyway....
-#define FHE_MORE_UNWRAPARGS(n) NTL_SEPARATOR_##n NTL_REPEATER_##n(NTL_UNWRAPARG)
+#define HELIB_MORE_UNWRAPARGS(n)                                               \
+  NTL_SEPARATOR_##n NTL_REPEATER_##n(NTL_UNWRAPARG)
 
 // these are used to implement PlaintextArray stuff routines
 

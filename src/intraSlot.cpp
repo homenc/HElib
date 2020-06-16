@@ -34,7 +34,7 @@ public:
   static void apply(const EncryptedArrayDerived<type>& ea,
                     std::vector<zzX>& unpackSlotEncoding)
   {
-    FHE_NTIMER_START(buildUnpackSlotEncoding);
+    HELIB_NTIMER_START(buildUnpackSlotEncoding);
     RBak bak;
     bak.save();
     ea.restoreContext(); // the NTL context for mod p^r

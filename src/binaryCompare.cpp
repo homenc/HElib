@@ -30,7 +30,7 @@ namespace helib {
 // returns new v[i] = \sum_{j>=i} old v[i]
 void runningSums(CtPtrs& v)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   for (long i = lsize(v) - 1; i > 0; i--)
     *v[i - 1] += *v[i];
 }
@@ -101,7 +101,7 @@ static void compEqGt(CtPtrs& aeqb,
                      const CtPtrs& a,
                      const CtPtrs& b)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   const Ctxt zeroCtxt(ZeroCtxtLike, *(b.ptr2nonNull()));
   const Context& context = zeroCtxt.getContext();
   DoubleCRT one(context, context.allPrimes());
@@ -111,7 +111,7 @@ static void compEqGt(CtPtrs& aeqb,
   resize(agtb, lsize(a), zeroCtxt);
 
   // First compute the local bits e[i]=(a[i]==b[i]), gt[i]=(a[i]>b[i])
-  FHE_NTIMER_START(compEqGt1);
+  HELIB_NTIMER_START(compEqGt1);
   long aSize = lsize(a);
   NTL_EXEC_RANGE(aSize, first, last)
   for (long i = first; i < last; i++) {
@@ -122,11 +122,11 @@ static void compEqGt(CtPtrs& aeqb,
     agtb[i]->multiplyBy(*a[i]);     // a(b+1)
   }
   NTL_EXEC_RANGE_END
-  FHE_NTIMER_STOP(compEqGt1);
+  HELIB_NTIMER_STOP(compEqGt1);
 
   // NOTE: Usually there isn't much gain in multi-threading the loop below,
   //    but computing b[i] can be expensive in some implementations of CtPtrs
-  FHE_NTIMER_START(compEqGt2);
+  HELIB_NTIMER_START(compEqGt2);
   if (lsize(b) - aSize > 1) {
     NTL_EXEC_RANGE(lsize(b) - aSize, first, last)
     for (long i = first; i < last; i++) {
@@ -138,7 +138,7 @@ static void compEqGt(CtPtrs& aeqb,
     *aeqb[aSize] = *b[aSize];           // b
     aeqb[aSize]->addConstant(one, 1.0); // b+1
   }
-  FHE_NTIMER_STOP(compEqGt2);
+  HELIB_NTIMER_STOP(compEqGt2);
 
 #ifdef HELIB_DEBUG
   for (long i = 0; i < lsize(b); i++)
@@ -158,10 +158,10 @@ static void compEqGt(CtPtrs& aeqb,
 
   // Call a recursive function to compute:
   // e*_i = \prod_{j>=i} aeqb_i, g*_i = aeqb*_{i+1} \cdot agtb_i
-  FHE_NTIMER_START(compEqGt3);
+  HELIB_NTIMER_START(compEqGt3);
   compProducts(CtPtrs_slice(aeqb, 0), CtPtrs_slice(agtb, 0));
   runningSums(agtb); // now ag[i] = (a>b upto bit i)
-  FHE_NTIMER_STOP(compEqGt3);
+  HELIB_NTIMER_STOP(compEqGt3);
 }
 
 // Compares two integers in binary a,b.
@@ -176,7 +176,7 @@ void compareTwoNumbersImplementation(CtPtrs& max,
                                      std::vector<zzX>* unpackSlotEncoding,
                                      bool cmp_only)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // make sure that lsize(b) >= lsize(a)
   const CtPtrs& a = (lsize(bb) >= lsize(aa)) ? aa : bb;
   const CtPtrs& b = (lsize(bb) >= lsize(aa)) ? bb : aa;
@@ -215,7 +215,7 @@ void compareTwoNumbersImplementation(CtPtrs& max,
 
   // We are now ready to compute the bits of the result.
 
-  FHE_NTIMER_START(compResults);
+  HELIB_NTIMER_START(compResults);
   mu = *ag[0]; // a > b
   ni = *ag[0];
   ni.addConstant(NTL::ZZ(1L)); // a <= b
@@ -249,7 +249,7 @@ void compareTwoNumbersImplementation(CtPtrs& max,
   NTL_EXEC_RANGE_END
   for (long i = aSize; i < bSize; i++)
     *max[i] = *b[i];
-  FHE_NTIMER_STOP(compResults);
+  HELIB_NTIMER_STOP(compResults);
 }
 
 void compareTwoNumbers(CtPtrs& max,

@@ -364,7 +364,7 @@ void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime);
 // bootstrap a ciphertext to reduce noise
 void PubKey::reCrypt(Ctxt& ctxt) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // Some sanity checks for dummy ciphertext
   long ptxtSpace = ctxt.getPtxtSpace();
@@ -412,7 +412,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   CheckCtxt(ctxt, "after mod down");
 #endif
 
-  FHE_NTIMER_START(AAA_preProcess);
+  HELIB_NTIMER_START(AAA_preProcess);
 
   // Make sure that this ciphertext is in canonical form
   if (!ctxt.inCanonicalForm())
@@ -443,11 +443,11 @@ void PubKey::reCrypt(Ctxt& ctxt) const
   // noise_est is an upper bound on the L-infty norm of the scaled noise
   // in the pwrfl basis
   double noise_bnd =
-      FHE_MIN_CAP_FRAC * p2r * ctxt.getContext().boundForRecryption();
+      HELIB_MIN_CAP_FRAC * p2r * ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters
   double noise_rat = noise_est / noise_bnd;
 
-  FHE_STATS_UPDATE("raw-mod-switch-noise", noise_rat);
+  HELIB_STATS_UPDATE("raw-mod-switch-noise", noise_rat);
 
   if (noise_rat > 1) {
     Warning("rawModSwitch scaled noise exceeds bound: " +
@@ -501,34 +501,34 @@ void PubKey::reCrypt(Ctxt& ctxt) const
 #ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after preProcess");
 #endif
-  FHE_NTIMER_STOP(AAA_preProcess);
+  HELIB_NTIMER_STOP(AAA_preProcess);
 
   // Move the powerful-basis coefficients to the plaintext slots
-  FHE_NTIMER_START(AAA_LinearTransform1);
+  HELIB_NTIMER_START(AAA_LinearTransform1);
   ctxt.getContext().rcData.firstMap->apply(ctxt);
-  FHE_NTIMER_STOP(AAA_LinearTransform1);
+  HELIB_NTIMER_STOP(AAA_LinearTransform1);
 
 #ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after LinearTransform1");
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
-  FHE_NTIMER_START(AAA_extractDigitsPacked);
+  HELIB_NTIMER_START(AAA_extractDigitsPacked);
   extractDigitsPacked(ctxt,
                       e - ePrime,
                       r,
                       ePrime,
                       context.rcData.unpackSlotEncoding);
-  FHE_NTIMER_STOP(AAA_extractDigitsPacked);
+  HELIB_NTIMER_STOP(AAA_extractDigitsPacked);
 
 #ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after extractDigitsPacked");
 #endif
 
   // Move the slots back to powerful-basis coefficients
-  FHE_NTIMER_START(AAA_LinearTransform2);
+  HELIB_NTIMER_START(AAA_LinearTransform2);
   ctxt.getContext().rcData.secondMap->apply(ctxt);
-  FHE_NTIMER_STOP(AAA_LinearTransform2);
+  HELIB_NTIMER_STOP(AAA_LinearTransform2);
 
 #ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after linearTransform2");
@@ -539,7 +539,7 @@ void PubKey::reCrypt(Ctxt& ctxt) const
     ctxt.intFactor = NTL::MulMod(ctxt.intFactor, intFactor, ptxtSpace);
 }
 
-#ifdef FHE_BOOT_THREADS
+#ifdef HELIB_BOOT_THREADS
 
 // Extract digits from fully packed slots, multithreaded version
 void extractDigitsPacked(Ctxt& ctxt,
@@ -548,10 +548,10 @@ void extractDigitsPacked(Ctxt& ctxt,
                          long ePrime,
                          const std::vector<NTL::ZZX>& unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // Step 1: unpack the slots of ctxt
-  FHE_NTIMER_START(unpack);
+  HELIB_NTIMER_START(unpack);
   ctxt.cleanUp();
 
   // Apply the d automorphisms and store them in scratch area
@@ -564,7 +564,7 @@ void extractDigitsPacked(Ctxt& ctxt,
     coeff_vector.resize(d);
     coeff_vector_sz.resize(d);
 
-    FHE_NTIMER_START(unpack1);
+    HELIB_NTIMER_START(unpack1);
     for (long i = 0; i < d; i++) {
       coeff_vector[i] = std::make_shared<DoubleCRT>(unpackSlotEncoding[i],
                                                     ctxt.getContext(),
@@ -573,9 +573,9 @@ void extractDigitsPacked(Ctxt& ctxt,
           NTL::conv<double>(embeddingLargestCoeff(unpackSlotEncoding[i],
                                                   ctxt.getContext().zMStar));
     }
-    FHE_NTIMER_STOP(unpack1);
+    HELIB_NTIMER_STOP(unpack1);
 
-    FHE_NTIMER_START(unpack2);
+    HELIB_NTIMER_START(unpack2);
     std::vector<Ctxt> frob(d, Ctxt(ZeroCtxtLike, ctxt));
 
     NTL_EXEC_RANGE(d, first, last)
@@ -588,9 +588,9 @@ void extractDigitsPacked(Ctxt& ctxt,
     }
     NTL_EXEC_RANGE_END
 
-    FHE_NTIMER_STOP(unpack2);
+    HELIB_NTIMER_STOP(unpack2);
 
-    FHE_NTIMER_START(unpack3);
+    HELIB_NTIMER_START(unpack3);
     Ctxt tmp1(ZeroCtxtLike, ctxt);
     for (long i = 0; i < d; i++) {
       for (long j = 0; j < d; j++) {
@@ -600,9 +600,9 @@ void extractDigitsPacked(Ctxt& ctxt,
         unpacked[i] += tmp1;
       }
     }
-    FHE_NTIMER_STOP(unpack3);
+    HELIB_NTIMER_STOP(unpack3);
   }
-  FHE_NTIMER_STOP(unpack);
+  HELIB_NTIMER_STOP(unpack);
 
   //#ifdef HELIB_DEBUG
   //  CheckCtxt(unpacked[0], "after unpack");
@@ -619,7 +619,7 @@ void extractDigitsPacked(Ctxt& ctxt,
   //#endif
 
   // Step 3: re-pack the slots
-  FHE_NTIMER_START(repack);
+  HELIB_NTIMER_START(repack);
   const EncryptedArray& ea2 = *ctxt.getContext().ea;
   NTL::ZZX xInSlots;
   std::vector<NTL::ZZX> xVec(ea2.size());
@@ -629,7 +629,7 @@ void extractDigitsPacked(Ctxt& ctxt,
     unpacked[i].multByConstant(xInSlots);
     ctxt += unpacked[i];
   }
-  FHE_NTIMER_STOP(repack);
+  HELIB_NTIMER_STOP(repack);
   //#ifdef HELIB_DEBUG
   // CheckCtxt(ctxt, "after repack");
   //#endif
@@ -644,10 +644,10 @@ void extractDigitsPacked(Ctxt& ctxt,
                          long ePrime,
                          const std::vector<NTL::ZZX>& unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // Step 1: unpack the slots of ctxt
-  FHE_NTIMER_START(unpack);
+  HELIB_NTIMER_START(unpack);
   ctxt.cleanUp();
 
   // Apply the d automorphisms and store them in scratch area
@@ -686,7 +686,7 @@ void extractDigitsPacked(Ctxt& ctxt,
       }
     }
   }
-  FHE_NTIMER_STOP(unpack);
+  HELIB_NTIMER_STOP(unpack);
 
   //#ifdef HELIB_DEBUG
   //  CheckCtxt(unpacked[0], "after unpack");
@@ -701,7 +701,7 @@ void extractDigitsPacked(Ctxt& ctxt,
   //#endif
 
   // Step 3: re-pack the slots
-  FHE_NTIMER_START(repack);
+  HELIB_NTIMER_START(repack);
   const EncryptedArray& ea2 = *ctxt.getContext().ea;
   NTL::ZZX xInSlots;
   std::vector<NTL::ZZX> xVec(ea2.size());
@@ -711,7 +711,7 @@ void extractDigitsPacked(Ctxt& ctxt,
     unpacked[i].multByConstant(xInSlots);
     ctxt += unpacked[i];
   }
-  FHE_NTIMER_STOP(repack);
+  HELIB_NTIMER_STOP(repack);
 }
 
 #endif
@@ -791,7 +791,7 @@ long fhe_force_chen_han = 0;
 
 void extractDigitsThin(Ctxt& ctxt, long botHigh, long r, long ePrime)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   Ctxt unpacked(ctxt);
   unpacked.cleanUp();
@@ -938,7 +938,7 @@ struct PubKeyHack
 // bootstrap a ciphertext to reduce noise
 void PubKey::thinReCrypt(Ctxt& ctxt) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   // Some sanity checks for dummy ciphertext
   long ptxtSpace = ctxt.getPtxtSpace();
@@ -1000,15 +1000,15 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
 #endif
 
   // Move the slots to powerful-basis coefficients
-  FHE_NTIMER_START(AAA_slotToCoeff);
+  HELIB_NTIMER_START(AAA_slotToCoeff);
   trcData.slotToCoeff->apply(ctxt);
-  FHE_NTIMER_STOP(AAA_slotToCoeff);
+  HELIB_NTIMER_STOP(AAA_slotToCoeff);
 
 #ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after slotToCoeff");
 #endif
 
-  FHE_NTIMER_START(AAA_bootKeySwitch);
+  HELIB_NTIMER_START(AAA_bootKeySwitch);
 
   // Make sure that this ciphertext is in canonical form
   if (!ctxt.inCanonicalForm())
@@ -1039,11 +1039,11 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   // noise_est is an upper bound on the L-infty norm of the scaled noise
   // in the pwrfl basis
   double noise_bnd =
-      FHE_MIN_CAP_FRAC * p2r * ctxt.getContext().boundForRecryption();
+      HELIB_MIN_CAP_FRAC * p2r * ctxt.getContext().boundForRecryption();
   // noise_bnd is the bound assumed in selecting the parameters
   double noise_rat = noise_est / noise_bnd;
 
-  FHE_STATS_UPDATE("raw-mod-switch-noise", noise_rat);
+  HELIB_STATS_UPDATE("raw-mod-switch-noise", noise_rat);
 
   if (noise_rat > 1) {
     Warning("rawModSwitch scaled noise exceeds bound: " +
@@ -1098,21 +1098,21 @@ void PubKey::thinReCrypt(Ctxt& ctxt) const
   CheckCtxt(ctxt, "after bootKeySwitch");
 #endif
 
-  FHE_NTIMER_STOP(AAA_bootKeySwitch);
+  HELIB_NTIMER_STOP(AAA_bootKeySwitch);
 
   // Move the powerful-basis coefficients to the plaintext slots
-  FHE_NTIMER_START(AAA_coeffToSlot);
+  HELIB_NTIMER_START(AAA_coeffToSlot);
   trcData.coeffToSlot->apply(ctxt);
-  FHE_NTIMER_STOP(AAA_coeffToSlot);
+  HELIB_NTIMER_STOP(AAA_coeffToSlot);
 
 #ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after coeffToSlot");
 #endif
 
   // Extract the digits e-e'+r-1,...,e-e' (from fully packed slots)
-  FHE_NTIMER_START(AAA_extractDigitsThin);
+  HELIB_NTIMER_START(AAA_extractDigitsThin);
   extractDigitsThin(ctxt, e - ePrime, r, ePrime);
-  FHE_NTIMER_STOP(AAA_extractDigitsThin);
+  HELIB_NTIMER_STOP(AAA_extractDigitsThin);
 
 #ifdef HELIB_DEBUG
   CheckCtxt(ctxt, "after extractDigitsThin");
@@ -1142,7 +1142,7 @@ static void checkCriticalValue(const std::vector<NTL::ZZX>& zzParts,
   max_pwrfl = NTL::conv<NTL::xdouble>(largestCoeff(powerful));
   critical_value += NTL::conv<double>(max_pwrfl / q);
 
-  FHE_STATS_UPDATE("critical-value", critical_value);
+  HELIB_STATS_UPDATE("critical-value", critical_value);
 
   std::cerr << "=== critical_value=" << critical_value;
   if (critical_value > 0.5)
@@ -1168,7 +1168,7 @@ static void checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts,
   double max_pwrfl = NTL::conv<double>(largestCoeff(powerful));
   double ratio = max_pwrfl / (2 * q * coeff_bound);
 
-  FHE_STATS_UPDATE("|x|/bound", ratio);
+  HELIB_STATS_UPDATE("|x|/bound", ratio);
 
   std::cerr << "=== |x|/bound=" << ratio;
   if (ratio > 1.0)
@@ -1178,7 +1178,7 @@ static void checkRecryptBounds(const std::vector<NTL::ZZX>& zzParts,
   max_pwrfl = NTL::conv<double>(largestCoeff(powerful));
   ratio = max_pwrfl / (2 * p2r * coeff_bound);
 
-  FHE_STATS_UPDATE("|x%q|/bound", ratio);
+  HELIB_STATS_UPDATE("|x%q|/bound", ratio);
 
   std::cerr << ", (|x%q|)/bound=" << ratio;
   if (ratio > 1.0)
@@ -1217,7 +1217,7 @@ static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
   double denom = p2ePrime * coeff_bound;
   double ratio = max_pwrfl / denom;
 
-  FHE_STATS_UPDATE("|v|/bound", ratio);
+  HELIB_STATS_UPDATE("|v|/bound", ratio);
 
   std::cerr << "=== |v|/bound=" << ratio;
   if (ratio > 1.0)
@@ -1236,22 +1236,23 @@ static void checkRecryptBounds_v(const std::vector<NTL::ZZX>& v,
   // number of standard deviations away from mean
 
   // update various indicator variables
-  FHE_STATS_UPDATE("sigma_0_5", double(std_devs <= 0.5)); // 0.383
-  FHE_STATS_UPDATE("sigma_1_0", double(std_devs <= 1.0)); // 0.683
-  FHE_STATS_UPDATE("sigma_1_5", double(std_devs <= 1.5)); // 0.866
-  FHE_STATS_UPDATE("sigma_2_0", double(std_devs <= 2.0)); // 0.954
-  FHE_STATS_UPDATE("sigma_2_5", double(std_devs <= 2.5)); // 0.988
-  FHE_STATS_UPDATE("sigma_3_0", double(std_devs <= 3.0)); // 0.997, 1 in 370
-  FHE_STATS_UPDATE("sigma_3_5", double(std_devs <= 3.5)); // 0.999535, 1 in 2149
-  FHE_STATS_UPDATE("sigma_4_0",
-                   double(std_devs <= 4.0)); // 0.999937, 1 in 15787
+  HELIB_STATS_UPDATE("sigma_0_5", double(std_devs <= 0.5)); // 0.383
+  HELIB_STATS_UPDATE("sigma_1_0", double(std_devs <= 1.0)); // 0.683
+  HELIB_STATS_UPDATE("sigma_1_5", double(std_devs <= 1.5)); // 0.866
+  HELIB_STATS_UPDATE("sigma_2_0", double(std_devs <= 2.0)); // 0.954
+  HELIB_STATS_UPDATE("sigma_2_5", double(std_devs <= 2.5)); // 0.988
+  HELIB_STATS_UPDATE("sigma_3_0", double(std_devs <= 3.0)); // 0.997, 1 in 370
+  HELIB_STATS_UPDATE("sigma_3_5",
+                     double(std_devs <= 3.5)); // 0.999535, 1 in 2149
+  HELIB_STATS_UPDATE("sigma_4_0",
+                     double(std_devs <= 4.0)); // 0.999937, 1 in 15787
 
   // compute sample variance, and scale by the variance we expect
-  FHE_STATS_UPDATE("sigma_calc",
-                   fsquare(ran_pwrfl) / fsquare(p2ePrime * sigma));
+  HELIB_STATS_UPDATE("sigma_calc",
+                     fsquare(ran_pwrfl) / fsquare(p2ePrime * sigma));
 
   // save the scaled value for application of other tests
-  FHE_STATS_SAVE("v_values", ran_pwrfl / (p2ePrime * sigma));
+  HELIB_STATS_SAVE("v_values", ran_pwrfl / (p2ePrime * sigma));
 }
 
 #endif

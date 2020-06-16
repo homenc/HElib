@@ -21,19 +21,19 @@ namespace helib {
 bool fhe_stats = false;
 
 static std::vector<fhe_stats_record*> stats_map;
-static FHE_MUTEX_TYPE stats_mutex;
+static HELIB_MUTEX_TYPE stats_mutex;
 
 fhe_stats_record::fhe_stats_record(const char* _name) :
     name(_name), count(0), sum(0), max(0)
 // FIXME: maybe max should be -infty?
 {
-  FHE_MUTEX_GUARD(stats_mutex);
+  HELIB_MUTEX_GUARD(stats_mutex);
   stats_map.push_back(this);
 }
 
 void fhe_stats_record::update(double val)
 {
-  FHE_MUTEX_GUARD(stats_mutex);
+  HELIB_MUTEX_GUARD(stats_mutex);
   count++;
   sum += val;
   if (val > max)
@@ -42,7 +42,7 @@ void fhe_stats_record::update(double val)
 
 void fhe_stats_record::save(double val)
 {
-  FHE_MUTEX_GUARD(stats_mutex);
+  HELIB_MUTEX_GUARD(stats_mutex);
   saved_values.push_back(val);
 }
 

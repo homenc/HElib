@@ -66,7 +66,7 @@ class BasicAutomorphPrecon
 public:
   BasicAutomorphPrecon(const Ctxt& _ctxt) : ctxt(_ctxt), noise(1.0)
   {
-    FHE_TIMER_START;
+    HELIB_TIMER_START;
     if (ctxt.parts.size() >= 1)
       assertTrue(
           ctxt.parts[0].skHandle.isOne(),
@@ -97,8 +97,8 @@ public:
     double logProd = context.logOfProduct(context.specialPrimes);
     noise = ctxt.getNoiseBound() * NTL::xexp(logProd);
 
-    FHE_STATS_UPDATE("KS-noise-ratio-hoist",
-                     NTL::conv<double>(addedNoise / noise));
+    HELIB_STATS_UPDATE("KS-noise-ratio-hoist",
+                       NTL::conv<double>(addedNoise / noise));
     // HERE
     // std::cout << "*** HOIST INIT\n";
     // fprintf(stderr, "   KS-log-noise-ratio-hoist: %f\n",
@@ -109,7 +109,7 @@ public:
 
   std::shared_ptr<Ctxt> automorph(long k) const
   {
-    FHE_TIMER_START;
+    HELIB_TIMER_START;
 
     // A hack: record this automorphism rather than actually performing it
     if (isSetAutomorphVals()) { // defined in NumbTh.h
@@ -276,16 +276,16 @@ std::shared_ptr<GeneralAutomorphPrecon> buildGeneralAutomorphPrecon(
   // allow dim == #gens (the dummy generator of order 1)
   assertInRange(dim,
                 -1l,
-                 ea.dimension(),
+                ea.dimension(),
                 "Dimension dim is not in [-1, ea.dimension()] (-1 Frobenius)",
                 true);
 
   if (fhe_test_force_hoist >= 0) {
     switch (ctxt.getPubKey().getKSStrategy(dim)) {
-    case FHE_KSS_BSGS:
+    case HELIB_KSS_BSGS:
       return std::make_shared<GeneralAutomorphPrecon_BSGS>(ctxt, dim, ea);
 
-    case FHE_KSS_FULL:
+    case HELIB_KSS_FULL:
       return std::make_shared<GeneralAutomorphPrecon_FULL>(ctxt, dim, ea);
 
     default:
@@ -393,7 +393,7 @@ void DestMulAdd(Ctxt& x, const std::shared_ptr<ConstMultiplier>& a, Ctxt& b)
 
 void ConstMultiplierCache::upgrade(const Context& context)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   long n = multiplier.size();
   NTL_EXEC_RANGE(n, first, last)
@@ -673,11 +673,11 @@ struct MatMul1DExec_construct
   }
 };
 
-#define FHE_BSGS_MUL_THRESH FHE_KEYSWITCH_THRESH
-// uses a BSGS multiplication strategy if sizeof(dim) > FHE_BSGS_MUL_THRESH;
+#define HELIB_BSGS_MUL_THRESH HELIB_KEYSWITCH_THRESH
+// uses a BSGS multiplication strategy if sizeof(dim) > HELIB_BSGS_MUL_THRESH;
 // otherwise uses the old strategy (but potentially with hoisting)
 
-// For performance purposes, should not exceed FHE_KEYSWITCH_THRESH
+// For performance purposes, should not exceed HELIB_KEYSWITCH_THRESH
 // For testing purposes:
 //    set to 1 to always use BSGS
 //    set to infty to never use BSGS
@@ -685,20 +685,20 @@ struct MatMul1DExec_construct
 MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal) :
     ea(mat.getEA()), minimal(_minimal)
 {
-  FHE_NTIMER_START(MatMul1DExec);
+  HELIB_NTIMER_START(MatMul1DExec);
 
   dim = mat.getDim();
   assertInRange(dim,
                 0l,
-                 ea.dimension(),
+                ea.dimension(),
                 "Matrix dimension not in [0, ea.dimension()]",
                 true);
 
   D = dimSz(ea, dim);
   native = dimNative(ea, dim);
 
-  bool bsgs = comp_bsgs(D > FHE_BSGS_MUL_THRESH ||
-                        (minimal && D > FHE_KEYSWITCH_MIN_THRESH));
+  bool bsgs = comp_bsgs(D > HELIB_BSGS_MUL_THRESH ||
+                        (minimal && D > HELIB_KEYSWITCH_MIN_THRESH));
 
   if (!bsgs)
     g = 0; // do not use BSGS
@@ -776,7 +776,7 @@ void GenBabySteps(std::vector<std::shared_ptr<Ctxt>>& v,
   // ctxt.getPubKey().getKSStrategy(dim) << "\n";
 
   if (fhe_test_force_hoist >= 0 &&
-      ctxt.getPubKey().getKSStrategy(dim) != FHE_KSS_UNKNOWN) {
+      ctxt.getPubKey().getKSStrategy(dim) != HELIB_KSS_UNKNOWN) {
     BasicAutomorphPrecon precon(ctxt);
 
     NTL_EXEC_RANGE(n, first, last)
@@ -803,7 +803,7 @@ void GenBabySteps(std::vector<std::shared_ptr<Ctxt>>& v,
 
 void MatMul1DExec::mul(Ctxt& ctxt) const
 {
-  FHE_NTIMER_START(mul_MatMul1DExec);
+  HELIB_NTIMER_START(mul_MatMul1DExec);
 
   assertEq(&ea.getContext(),
            &ctxt.getContext(),
@@ -814,7 +814,7 @@ void MatMul1DExec::mul(Ctxt& ctxt) const
   ctxt.cleanUp();
 
   bool iterative = false;
-  if (ctxt.getPubKey().getKSStrategy(dim) == FHE_KSS_MIN)
+  if (ctxt.getPubKey().getKSStrategy(dim) == HELIB_KSS_MIN)
     iterative = true;
 
   if (g != 0) {
@@ -1492,12 +1492,12 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
                                      UNUSED bool minimal) :
     ea(mat.getEA())
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   dim = mat.getDim();
   assertInRange(dim,
                 0l,
-                 ea.dimension(),
+                ea.dimension(),
                 "Matrix dimension not in [0, ea.dimension()]",
                 true);
   D = dimSz(ea, dim);
@@ -1517,7 +1517,7 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
 
 void BlockMatMul1DExec::mul(Ctxt& ctxt) const
 {
-  FHE_NTIMER_START(mul_BlockMatMul1DExec);
+  HELIB_NTIMER_START(mul_BlockMatMul1DExec);
   assertEq(&ea.getContext(),
            &ctxt.getContext(),
            "Cannot multiply ciphertexts with context different to "
@@ -1590,13 +1590,13 @@ void BlockMatMul1DExec::mul(Ctxt& ctxt) const
   const long par_buf_max = 50;
 
   bool iterative0 = false;
-  if (ctxt.getPubKey().getKSStrategy(dim0) == FHE_KSS_MIN)
+  if (ctxt.getPubKey().getKSStrategy(dim0) == HELIB_KSS_MIN)
     iterative0 = true;
 
   bool iterative1 = false;
-  if (ctxt.getPubKey().getKSStrategy(dim1) == FHE_KSS_MIN)
+  if (ctxt.getPubKey().getKSStrategy(dim1) == HELIB_KSS_MIN)
     iterative1 = true;
-  if (ctxt.getPubKey().getKSStrategy(dim1) != FHE_KSS_FULL &&
+  if (ctxt.getPubKey().getKSStrategy(dim1) != HELIB_KSS_FULL &&
       NTL::AvailableThreads() == 1)
     iterative1 = true;
 
@@ -1951,7 +1951,7 @@ struct MatMulFullExec_construct
 MatMulFullExec::MatMulFullExec(const MatMulFull& mat, bool _minimal) :
     ea(mat.getEA()), minimal(_minimal)
 {
-  FHE_NTIMER_START(MatMulFullExec);
+  HELIB_NTIMER_START(MatMulFullExec);
 
   ea.dispatch<MatMulFullExec_construct>(ea, mat, transforms, minimal, dims);
 }
@@ -1977,7 +1977,7 @@ long MatMulFullExec::rec_mul(Ctxt& acc,
     const PAlgebra& zMStar = ea.getPAlgebra();
 
     bool iterative = false;
-    if (ctxt.getPubKey().getKSStrategy(dim) == FHE_KSS_MIN)
+    if (ctxt.getPubKey().getKSStrategy(dim) == HELIB_KSS_MIN)
       iterative = true;
 
     if (!iterative) {
@@ -2072,7 +2072,7 @@ long MatMulFullExec::rec_mul(Ctxt& acc,
 
 void MatMulFullExec::mul(Ctxt& ctxt) const
 {
-  FHE_NTIMER_START(mul_MatMulFullExec);
+  HELIB_NTIMER_START(mul_MatMulFullExec);
   assertEq(&ea.getContext(),
            &ctxt.getContext(),
            "Cannot multiply ciphertexts with context different to "
@@ -2288,7 +2288,7 @@ BlockMatMulFullExec::BlockMatMulFullExec(const BlockMatMulFull& mat,
                                          bool _minimal) :
     ea(mat.getEA()), minimal(_minimal)
 {
-  FHE_NTIMER_START(BlockMatMulFullExec);
+  HELIB_NTIMER_START(BlockMatMulFullExec);
 
   ea.dispatch<BlockMatMulFullExec_construct>(ea,
                                              mat,
@@ -2318,7 +2318,7 @@ long BlockMatMulFullExec::rec_mul(Ctxt& acc,
     const PAlgebra& zMStar = ea.getPAlgebra();
 
     bool iterative = false;
-    if (ctxt.getPubKey().getKSStrategy(dim) == FHE_KSS_MIN)
+    if (ctxt.getPubKey().getKSStrategy(dim) == HELIB_KSS_MIN)
       iterative = true;
 
     if (!iterative) {
@@ -2413,7 +2413,7 @@ long BlockMatMulFullExec::rec_mul(Ctxt& acc,
 
 void BlockMatMulFullExec::mul(Ctxt& ctxt) const
 {
-  FHE_NTIMER_START(mul_BlockMatMulFullExec);
+  HELIB_NTIMER_START(mul_BlockMatMulFullExec);
   assertEq(&ea.getContext(),
            &ctxt.getContext(),
            "Cannot multiply ciphertexts with context different to "
@@ -2644,8 +2644,8 @@ void mul(PlaintextArray& pa, const BlockMatMulFull& mat)
 
 //================= traceMap ====================
 
-#define FHE_TRACE_THRESH (50)
-// This should probably just be the same as FHE_KEYSWITCH_THRESH,
+#define HELIB_TRACE_THRESH (50)
+// This should probably just be the same as HELIB_KEYSWITCH_THRESH,
 // but it can be adjusted.
 
 void traceMap(Ctxt& ctxt)
@@ -2661,7 +2661,7 @@ void traceMap(Ctxt& ctxt)
 
   long strategy = ctxt.getPubKey().getKSStrategy(-1);
 
-  if (strategy == FHE_KSS_FULL && d <= FHE_TRACE_THRESH) {
+  if (strategy == HELIB_KSS_FULL && d <= HELIB_TRACE_THRESH) {
     BasicAutomorphPrecon precon(ctxt);
     Ctxt acc(ctxt);
 
@@ -2671,8 +2671,8 @@ void traceMap(Ctxt& ctxt)
     }
 
     ctxt = acc;
-  } else if (strategy == FHE_KSS_MIN) {
-    if (d <= FHE_KEYSWITCH_MIN_THRESH) {
+  } else if (strategy == HELIB_KSS_MIN) {
+    if (d <= HELIB_KEYSWITCH_MIN_THRESH) {
       // simple iterative procedure
 
       Ctxt acc(ctxt);

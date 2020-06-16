@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#ifndef FHE_STATS_H
-#define FHE_STATS_H
+#ifndef HELIB_STATS_H
+#define HELIB_STATS_H
 
 #include <vector>
 #include <iostream>
@@ -35,7 +35,7 @@ struct fhe_stats_record
   void save(double val);
 };
 
-#define FHE_STATS_UPDATE(name, val)                                            \
+#define HELIB_STATS_UPDATE(name, val)                                          \
   do {                                                                         \
     if (fhe_stats) {                                                           \
       static fhe_stats_record _local_stats_record(name);                       \
@@ -43,7 +43,7 @@ struct fhe_stats_record
     }                                                                          \
   } while (0)
 
-#define FHE_STATS_SAVE(name, val)                                              \
+#define HELIB_STATS_SAVE(name, val)                                            \
   do {                                                                         \
     if (fhe_stats) {                                                           \
       static fhe_stats_record _local_stats_record(name);                       \

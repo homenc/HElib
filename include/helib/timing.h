@@ -15,8 +15,8 @@
  *
  * This module contains some utility functions for measuring the time that
  * various methods take to execute. To use it, we insert the macro
- * FHE_TIMER_START at the beginning of the method(s) that we want to time and
- * FHE_TIMER_STOP at the end, then the main program needs to call the function
+ * HELIB_TIMER_START at the beginning of the method(s) that we want to time and
+ * HELIB_TIMER_STOP at the end, then the main program needs to call the function
  * setTimersOn() to activate the timers and setTimersOff() to pause them.
  * To obtain the value of a given timer (in seconds), the application can
  * use the function getTime4func(const char *fncName), and the function
@@ -48,8 +48,8 @@ public:
   const char* loc;
 
   // THREADS: these need to be atomic
-  FHE_atomic_ulong counter;
-  FHE_atomic_long numCalls;
+  HELIB_atomic_ulong counter;
+  HELIB_atomic_long numCalls;
 
   FHEtimer(const char* _name, const char* _loc) :
       name(_name), loc(_loc), counter(0), numCalls(0)
@@ -108,24 +108,24 @@ public:
 // NOTE: the STOP functions below are not really needed,
 // but are provided for backward compatibility
 
-#define FHE_STRINGIFY(x) #x
-#define FHE_TOSTRING(x) FHE_STRINGIFY(x)
-#define FHE_AT __FILE__ ":" FHE_TOSTRING(__LINE__)
+#define HELIB_STRINGIFY(x) #x
+#define HELIB_TOSTRING(x) HELIB_STRINGIFY(x)
+#define HELIB_AT __FILE__ ":" HELIB_TOSTRING(__LINE__)
 
-#define FHE_stringify_aux(s) #s
-#define FHE_stringify(s) FHE_stringify_aux(s)
+#define HELIB_stringify_aux(s) #s
+#define HELIB_stringify(s) HELIB_stringify_aux(s)
 
-#define FHE_TIMER_START                                                        \
-  static helib::FHEtimer _local_timer(__func__, FHE_AT);                       \
+#define HELIB_TIMER_START                                                      \
+  static helib::FHEtimer _local_timer(__func__, HELIB_AT);                     \
   helib::auto_timer _local_auto_timer(&_local_timer)
 
-#define FHE_TIMER_STOP _local_auto_timer.stop()
+#define HELIB_TIMER_STOP _local_auto_timer.stop()
 
-#define FHE_NTIMER_START(n)                                                    \
-  static helib::FHEtimer _named_local_timer##n(#n, FHE_AT);                    \
+#define HELIB_NTIMER_START(n)                                                  \
+  static helib::FHEtimer _named_local_timer##n(#n, HELIB_AT);                  \
   helib::auto_timer _named_local_auto_timer##n(&_named_local_timer##n)
 
-#define FHE_NTIMER_STOP(n) _named_local_auto_timer##n.stop();
+#define HELIB_NTIMER_STOP(n) _named_local_auto_timer##n.stop();
 
 } // namespace helib
 

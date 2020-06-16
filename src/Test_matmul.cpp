@@ -53,10 +53,10 @@ template<class Matrix>
 bool DoTest(const Matrix& mat, const EncryptedArray& ea, 
             const SecKey& secretKey, bool minimal, bool verbose)
 {
-  FHE_NTIMER_START(EncodeMartix_MatMul);
+  HELIB_NTIMER_START(EncodeMartix_MatMul);
   typename Matrix::ExecType mat_exec(mat, minimal);
   mat_exec.upgrade();
-  FHE_NTIMER_STOP(EncodeMartix_MatMul);
+  HELIB_NTIMER_STOP(EncodeMartix_MatMul);
 
   // choose a random plaintext vector and encrypt it
   PlaintextArray v(ea);

@@ -97,7 +97,7 @@ void incrementalZeroTest(Ctxt* res[],
                          const Ctxt& ctxt,
                          long n)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long nslots = ea.size();
   long d = ea.getDegree();
 
@@ -152,7 +152,7 @@ void incrementalZeroTest(Ctxt* res[],
 
     fastPower(*res[i], d);
   }
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
 } // namespace helib

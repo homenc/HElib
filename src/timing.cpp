@@ -49,11 +49,11 @@ bool timer_compare(const FHEtimer* a, const FHEtimer* b)
 }
 
 static std::vector<FHEtimer*> timerMap;
-static FHE_MUTEX_TYPE timerMapMx;
+static HELIB_MUTEX_TYPE timerMapMx;
 
 void registerTimer(FHEtimer* timer)
 {
-  FHE_MUTEX_GUARD(timerMapMx);
+  HELIB_MUTEX_GUARD(timerMapMx);
   timerMap.push_back(timer);
 }
 

@@ -104,7 +104,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   ea.encrypt(ctxt, publicKey, val1);
 
   resetAllTimers();
-  FHE_NTIMER_START(ALL);
+  HELIB_NTIMER_START(ALL);
 
   // Compute homomorphically the transformation that takes the
   // coefficients packed in the slots and produces the polynomial
@@ -172,7 +172,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   cout << ((val1 == dirty_val2)? "GOOD\n" : "BAD\n");
 
 
-  FHE_NTIMER_STOP(ALL);
+  HELIB_NTIMER_STOP(ALL);
 
   if (!noPrint) {
     cout << "\n*********\n";

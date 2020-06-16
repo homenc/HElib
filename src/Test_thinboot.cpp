@@ -290,7 +290,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
     long q = power_long(p, e) + 1;
     double Bnd = context.boundForRecryption();
     double mfac = context.zMStar.getNormBnd();
-    double min_bit_cap = log(  mfac*q / (p2r*Bnd*FHE_MIN_CAP_FRAC) )/log(2.0);
+    double min_bit_cap = log(  mfac*q / (p2r*Bnd*HELIB_MIN_CAP_FRAC) )/log(2.0);
 
     cout << "min_bit_cap=" << min_bit_cap << "\n";
 
@@ -306,7 +306,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
   resetAllTimers();
 
-  { FHE_NTIMER_START(AAA_thinRecrypt);
+  { HELIB_NTIMER_START(AAA_thinRecrypt);
 
   publicKey.thinReCrypt(c2);
  

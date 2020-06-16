@@ -39,8 +39,8 @@ endif ()
 if (ENABLE_TEST)
   # Download and unpack googletest at configure time
   message(STATUS "Setting up googletest framework")
-  configure_file(${PROJECT_SOURCE_DIR}/../cmake/gtest.cmake
-                 ${CMAKE_CURRENT_BINARY_DIR}/googletest-download/CMakeLists.txt)
+  configure_file("${PROJECT_SOURCE_DIR}/../cmake/gtest.cmake"
+                 "${CMAKE_CURRENT_BINARY_DIR}/googletest-download/CMakeLists.txt")
   execute_process(
       COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
       RESULT_VARIABLE result
@@ -215,6 +215,7 @@ target_compile_options(helib
 target_compile_definitions(helib
                            PUBLIC
                                $<$<BOOL:${ENABLE_THREADS}>:HELIB_THREADS>
+                               $<$<BOOL:${ENABLE_THREADS}>:HELIB_BOOT_THREADS>
                                $<$<BOOL:${HELIB_DEBUG}>:HELIB_DEBUG>)
 
 if (PACKAGE_BUILD)

@@ -489,7 +489,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
       double Bnd = context.boundForRecryption();
       double mfac = context.zMStar.getNormBnd();
       double min_bit_cap =
-          log(mfac * q / (p2r * Bnd * FHE_MIN_CAP_FRAC)) / log(2.0);
+          log(mfac * q / (p2r * Bnd * HELIB_MIN_CAP_FRAC)) / log(2.0);
 
       std::cout << "min_bit_cap=" << min_bit_cap << std::endl;
 
@@ -508,7 +508,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
     helib::resetAllTimers();
 
     {
-      FHE_NTIMER_START(AAA_thinRecrypt);
+      HELIB_NTIMER_START(AAA_thinRecrypt);
 
       publicKey.thinReCrypt(c2);
     }
