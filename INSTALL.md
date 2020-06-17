@@ -13,6 +13,7 @@ There are two different ways to build and install HElib. The first one will auto
 - GNU make >= 3.82
 - g++ >= 5.4.0 (for Linux environments)
 - mac OS Apple clang >= 11.0.0  (macOS environments)
+- mac OS requires XCode, and Command Line Tools for XCode will not work (use `xcode-select -p` to check current xcode setting)
 - pthreads
 - git >= 1.8.3       (required to build and run the HElib test suite)
 
