@@ -3,7 +3,7 @@
 see [INSTALL.md](INSTALL.md).  The google test library will then be downloaded
 and the correct targets will be defined for cmake.  2. To compile them, `make`
 as normal from a build directory.  3. The entire set of tests  can be run with
-`./bin/runTests`.  The parameters `noPrint`, `dry` and `verbose` can be
+`./dependencies/Build/helib_external/tests/runTests`.  The parameters `noPrint`, `dry` and `verbose` can be
 specified as before, but they will apply to all tests which are run.  One can
 also run `make test`, which will run the tests through `ctest`, but the output
 will be significantly less verbose and therefore less helpful in the case of a
@@ -13,7 +13,7 @@ failure.
 set of tests.  This is achieved using google test's built-in 'filtering'
 system.  To run only the `PolyEval` tests, for example, one simply runs 
 ```
-./bin/runTests --gtest_filter='*PolyEval*'
+./dependencies/Build/helib_external/tests/runTests --gtest_filter='*PolyEval*'
 ```
 More details on this filtering can be found in Google's documentation
 [here][1].
