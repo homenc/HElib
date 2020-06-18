@@ -1,3 +1,15 @@
+HElib 1.0.2, June 2020
+===============================
+(tagged as v1.0.2)
+
+April-June 2020
+------------------
+* Source code contribution policy
+* HElib now builds with compiler pedantic flags
+* Consistent C++ format style adopted
+* Improved sampling functions
+* Bug fixes
+
 HElib 1.0.1, April 2020
 ===============================
 (tagged as v1.0.1)

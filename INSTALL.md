@@ -14,15 +14,21 @@ dependencies to be installed by you and available in the system.
 
 ## General prerequisites
 
-- cmake >= 3.10.2 (*)
 - GNU make >= 3.82
-- g++ >= 7.3.1 (for Linux environments)
-- mac OS Apple clang >= 11.0.0 (macOS environments)
 - pthreads
 - git >= 1.8.3 (required to build and run the HElib test suite)
 
-(*) On macOS, ideally use cmake 3.17.3+ as it fixes many issues on certain builds on Mojave
-onwards.
+**Linux environment:**
+- g++ >= 7.3.1
+- cmake >= 3.10.2
+
+**macOS environment:**
+- Apple clang >= 11.0.0 (available with Xcode >= 11.0)
+- Xcode Command Line Tools (can be installed with the command `xcode-select --install` in a teminal)
+- cmake >= 3.17.3 (available from [CMake](https://cmake.org/) or [MacPorts Project](https://www.macports.org/) and [Homebrew](https://brew.sh/) as packages)
+
+**For development:**
+- clang-format >= 9.0.0 (available with your linux distribution and for macOS from [MacPorts Project](https://www.macports.org/) and [Homebrew](https://brew.sh/) as packages)
 
 ## Option 1: package build (recommended for most users)
 
