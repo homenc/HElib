@@ -3,7 +3,7 @@
 see [INSTALL.md](INSTALL.md).  The google test library will then be downloaded
 and the correct targets will be defined for cmake.
 2. To compile them, `make` as normal from a build directory.
-3. The entire set of tests  can be run with `./dependencies/Build/helib_external/tests/runTests`.
+3. The entire set of tests can be run with `./dependencies/Build/helib_external/tests/runTests`.
 The parameters `noPrint`, `dry` and `verbose` can be
 specified as before, but they will apply to all tests which are run.  One can
 also run `make test`, which will run the tests through `ctest`, but the output
