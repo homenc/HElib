@@ -117,7 +117,7 @@ library, currently these are:
                     flag should be passed to gcc
 
    -DHELIB_BOOT_THREADS  tells HElib to use a multithreading strategy for
-                         bootstrapping; requires -DHELIB_THREADS (see above) 
+                         bootstrapping; requires -DHELIB_THREADS (see above)
 
 
   -DDEBUG_PRINTOUT

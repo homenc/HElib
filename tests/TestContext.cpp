@@ -85,6 +85,29 @@ TEST_P(TestContext, buildModChainThrowsWhenBitsIsZero)
                helib::InvalidArgument);
 }
 
+TEST_P(TestContext, calculateBitSizeOfQ)
+{
+
+  long bits = 1016;
+  buildModChain(*context, bits, /*c=*/2);
+  long bitsize = context->bitSizeOfQ();
+
+  // Get the primes used by HElib.
+  helib::IndexSet fullPrimes = context->fullPrimes();
+  long calcFullPrimesBitSize =
+      ceil(context->logOfProduct(fullPrimes) / log(2.0));
+
+  long calcCtxtPrimesBitSize =
+      ceil(context->logOfProduct(context->ctxtPrimes) / log(2.0));
+
+  // Check if the ctxtPrimes are the bits we asked for.
+  // Will be close but not exact.
+  EXPECT_NEAR(calcCtxtPrimesBitSize, bits, 0.04 * bits);
+
+  // Check if total primes bitsize is same as calulated here.
+  EXPECT_EQ(calcFullPrimesBitSize, bitsize);
+}
+
 INSTANTIATE_TEST_SUITE_P(variousParameters,
                          TestContext,
                          ::testing::Values(BGVParameters(17, 2, 1)));

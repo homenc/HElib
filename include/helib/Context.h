@@ -412,6 +412,13 @@ public:
     return ans;
   }
 
+  //! @brief Size in bits of Q.
+  long bitSizeOfQ() const
+  {
+    IndexSet primes = ctxtPrimes | specialPrimes;
+    return std::ceil(logOfProduct(primes) / log(2.0));
+  }
+
   //! @brief An estimate for the security-level
   double securityLevel() const
   {
@@ -426,6 +433,9 @@ public:
     double bitsize = logOfProduct(primes) / log(2.0);
     return (7.2 * phim / bitsize - 110);
   }
+
+  //! @brief print out algebra and other important info
+  void printout(std::ostream& out = std::cout) const;
 
   //! @brief Just add the given prime to the chain
   void AddSmallPrime(long q);

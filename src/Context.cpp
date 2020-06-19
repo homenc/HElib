@@ -587,4 +587,14 @@ Context::Context(unsigned long m,
   }
 }
 
+void Context::printout(std::ostream& out) const
+{
+  ea->getPAlgebra().printout(out);
+  out << "r = " << alMod.getR() << "\n"
+      << "nslots = " << ea->size() << "\n"
+      << "ctxtPrimes = " << ctxtPrimes << "\n"
+      << "specialPrimes = " << specialPrimes << "\n\n"
+      << "security level = " << securityLevel() << std::endl;
+}
+
 } // namespace helib

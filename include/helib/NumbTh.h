@@ -608,6 +608,53 @@ private:
 //! the char cc
 void seekPastChar(std::istream& str, int cc);
 
+/**
+ * @brief Advance the input stream `str` beyond white spaces and a single
+ * `separator` in the region-of-interest delimited by `begin_char` and
+ * `end_char`.
+ * @param str The stream to be advanced.
+ * @param begin_char The character determining the beginning of the
+ * region-of-interest (to advance beyond of).
+ * @param separator The separator character to advance beyond of.
+ * @param end_char The character determining the end of the region-of-interest
+ * (to advance beyond of).
+ * @return `true` if the region-of-interest is not completed (i.e.: `end_char`
+ * is not reached). `false` otherwise.
+ * @note Throws `helib::RuntimeError` if after spaces there is a character
+ * different from `begin_char`, `beyond`, or `end_char`.
+ */
+bool iterateInterestRegion(std::istream& str,
+                           int begin_char,
+                           int separator,
+                           int end_char);
+
+/**
+ * @brief Advance the input stream `istr` beyond white spaces.  Then split the
+ * region delimited by `begin_char` and `end_char` at each occurrence of
+ * `separator` that is not contained in an inner `begin_char` - `end_char`
+ * section.  The function returns a `std::vector<std::stringstream>` with the
+ * stream of every section of the input region.
+ * @param istr The stream to be advanced.
+ * @param begin_char The character determining the beginning of the
+ * region-of-interest.
+ * @param end_char The character determining the end of the
+ * region-of-interest
+ * @param separator The separator character to split at.
+ * @param skip_space Boolean value determining whether to skip spaces when
+ * extracting the sub-streams (default = `true`).
+ * @return A `std::vector<std::stringstream>` with the stream of every section
+ * of the input region.
+ * @throws IOError If the stream is badly formatted (i.e. it does not start with
+ * `begin_char` or it does not end with `end_char`).
+ * @note Requires `begin_char`, `end_char` and `separator` to be distinct and
+ * different from ` ` (space).
+ */
+std::vector<std::stringstream> extractTokenizeRegion(std::istream& istr,
+                                                     char begin_char,
+                                                     char end_char,
+                                                     char separator,
+                                                     bool skip_space = true);
+
 //! @brief Reverse a vector in place
 template <typename T>
 void reverse(NTL::Vec<T>& v, long lo, long hi)

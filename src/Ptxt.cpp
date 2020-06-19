@@ -16,6 +16,52 @@
 
 namespace helib {
 
+void deserialize(std::istream& is, std::complex<double>& num)
+{
+  std::vector<std::stringstream> parts =
+      extractTokenizeRegion(is, '[', ']', ',');
+  if (parts.empty()) {
+    // Empty section. Use default value.
+    num = 0;
+    return;
+  }
+
+  if (parts.size() > 2) {
+    // Too many elements.
+    throw IOError(
+        "CKKS expects maximum of 2 values per slot (real, imag). Got " +
+        std::to_string(parts.size()) + " instead.");
+  }
+
+  // Actual parsing and setup
+  double tmp;
+  parts[0] >> tmp;
+  num.real(tmp);
+  if (parts.size() == 2) {
+    // If more than 1 part, set also real value;
+    parts[1] >> tmp;
+    num.imag(tmp);
+  }
+}
+
+void serialize(std::ostream& os, const std::complex<double>& num)
+{
+  struct stream_modifier
+  {
+    explicit stream_modifier(std::ostream& os) : os(os), ss(os.precision())
+    {
+      os << std::setprecision(std::numeric_limits<double>::digits10);
+    };
+    ~stream_modifier() { os << std::setprecision(ss); };
+    std::ostream& os;
+    std::streamsize ss;
+  };
+
+  stream_modifier sm(os);
+
+  os << "[" << num.real() << ", " << num.imag() << "]";
+}
+
 template <>
 PolyMod Ptxt<BGV>::convertToSlot(const Context& context, long slot)
 {
@@ -914,6 +960,86 @@ NTL::ZZX Ptxt<BGV>::automorph_internal(long k)
   pContext.restore();
   return ret;
 }
+
+template <typename Scheme>
+void deserialize(std::istream& is, Ptxt<Scheme>& ptxt)
+{
+  assertTrue<RuntimeError>(ptxt.isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+  std::vector<std::stringstream> parts =
+      extractTokenizeRegion(is, '[', ']', ',');
+
+  if (helib::lsize(parts) > ptxt.context->ea->size()) {
+    std::stringstream err_msg;
+    err_msg << "Cannot deserialize to Ptxt: not enough slots.  "
+            << "Trying to deserialize " << parts.size() << " elements.  "
+            << "Got " << ptxt.context->ea->size() << " slots.";
+    throw IOError(err_msg.str());
+  }
+
+  std::vector<typename Scheme::SlotType> data(parts.size());
+  for (std::size_t i = 0; i < parts.size(); ++i) {
+    typename Scheme::SlotType slot(
+        Ptxt<Scheme>::convertToSlot(*ptxt.context, 0L));
+    deserialize(parts[i], slot);
+    data[i] = std::move(slot);
+  }
+
+  is.clear();
+  ptxt.setData(data);
+}
+
+// Explicit function instantiation
+template void deserialize<BGV>(std::istream& is, Ptxt<BGV>& ptxt);
+template void deserialize<CKKS>(std::istream& is, Ptxt<CKKS>& ptxt);
+
+template <typename Scheme>
+void serialize(std::ostream& os, const Ptxt<Scheme>& ptxt)
+{
+  os << "[";
+  for (std::size_t i = 0; i < ptxt.slots.size(); ++i) {
+    serialize(os, ptxt.slots[i]);
+    if (i != ptxt.slots.size() - 1) {
+      os << ", ";
+    }
+  }
+  os << "]";
+}
+
+// Explicit function instantiation
+template void serialize<BGV>(std::ostream& os, const Ptxt<BGV>& ptxt);
+template void serialize<CKKS>(std::ostream& os, const Ptxt<CKKS>& ptxt);
+
+template <typename Scheme>
+std::istream& operator>>(std::istream& is, Ptxt<Scheme>& ptxt)
+{
+  assertTrue<RuntimeError>(ptxt.isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+  deserialize(is, ptxt);
+  return is;
+}
+
+// Explicit operator << instantiation
+template std::istream& operator>><BGV>(std::istream& is, Ptxt<BGV>& ptxt);
+template std::istream& operator>><CKKS>(std::istream& is, Ptxt<CKKS>& ptxt);
+
+template <typename Scheme>
+std::ostream& operator<<(std::ostream& os, const Ptxt<Scheme>& ptxt)
+{
+  assertTrue<RuntimeError>(ptxt.isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+
+  serialize(os, ptxt);
+  return os;
+}
+
+// Explicit operator << instantiation
+template std::ostream& operator<<<BGV>(std::ostream& os, const Ptxt<BGV>& ptxt);
+template std::ostream& operator<<<CKKS>(std::ostream& os,
+                                        const Ptxt<CKKS>& ptxt);
 
 // Explicit class instantiation.
 template class Ptxt<BGV>;

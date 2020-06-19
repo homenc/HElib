@@ -153,8 +153,8 @@ public:
   /* I/O methods */
 
   //! Prints the structure in a readable form
-  void printout() const;
-  void printAll() const; // print even more
+  void printout(std::ostream& out = std::cout) const;
+  void printAll(std::ostream& out = std::cout) const; // print even more
 
   /* Access methods */
 

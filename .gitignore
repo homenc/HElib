@@ -1,6 +1,14 @@
 gh-pages/
 build/
 
+__pycache__/
+
+**.sk
+**.pk
+**.out
+**.ptxt
+**.ctxt
+
 src/fhe.a
 src/*.o
 src/*_x
@@ -12,8 +20,6 @@ src/*_x.dSYM
 src/*.sh
 src/*.bin
 src/*.txt
-src/misc/*.bin
-src/misc/*.txt
 
 **.bak
 **.swp
