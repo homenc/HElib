@@ -49,23 +49,23 @@ not been done yet.
   the end specifying which tests failed, with which parameters they failed,
   etc.
 
-## Summary of how to write a google test test 1. Create a new file for the
-tests, let's say called `GTest_foo.cpp`.  2. Add `GTest_foo.cpp` and
-`GTest_foo` to the appropriate lists in `tests/CMakeLists.txt`.  3. In
-`GTest_foo.cpp`, be sure to include both `"gtest/gtest.h"` and
+## Summary of how to write a google test test
+1. Create a new file for the tests, let's say called `GTest_foo.cpp`.
+2. Add `GTest_foo.cpp` and `GTest_foo` to the appropriate lists in `tests/CMakeLists.txt`.
+3. In `GTest_foo.cpp`, be sure to include both `"gtest/gtest.h"` and
 `"test_common.h`.  The latter will give access to the parameters
-`helib_test::noPrint`, `helib_test::dry` and `helib_test::verbose`.  4. Create
-an anonymous namespace in which to put everything, so that the global namespace
-for the test runner is not polluted.  5. Create a class called `GTest_foo`,
-inheriting from `::testing::Test` or `::testing::TestWithParam<some_type>` for
+`helib_test::noPrint`, `helib_test::dry` and `helib_test::verbose`.
+4. Createan anonymous namespace in which to put everything, so that the global namespace
+for the test runner is not polluted.
+5. Create a class called `GTest_foo`, inheriting from `::testing::Test` or `::testing::TestWithParam<some_type>` for
 non-parameterized or parameterized tests (respectively).  Common setup and
-teardown code/data should be placed in this class.  6. Create actual test code
-inside a `TEST_F` or `TEST_P` for non-parameterized or parameterized tests
-(respectively).  7. If using parameterized tests, create some parameters to run
+teardown code/data should be placed in this class.
+6. Create actual test code inside a `TEST_F` or `TEST_P` for non-parameterized or parameterized tests (respectively).
+7. If using parameterized tests, create some parameters to run
 the tests with using the `INSTANTIATE_TEST_CASE_P` macro.
 
-## Futher reading More details on how to use these google test utilities can be
-found by the helpful google test documentation:
+## Futher reading
+More details on how to use these google test utilities can be found by the helpful google test documentation:
 
 - Basic overview: https://github.com/google/googletest/
 - Introduction to using google test:
