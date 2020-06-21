@@ -23,4 +23,7 @@ WORKDIR /root/HElib/examples/BGV_binary_arithmetic
 
 RUN mkdir build && \
     cd build && \
-    cmake -DCMAKE_PREFIX_PATH=/usr/local ..
+    cmake -DCMAKE_PREFIX_PATH=/usr/local .. && \
+    make -j4
+
+ENTRYPOINT [ "/root/HElib/examples/BGV_binary_arithmetic/build/BGV_binary_arithmetic" ]
