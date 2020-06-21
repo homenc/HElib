@@ -5,7 +5,7 @@ There are two ways to build and run this example.
 
 ## build and run the example on a local machine
 1. assume the HElib is installed
-2. run the following command
+2. assume in the current folder and run the following command
 
         $ mkdir build && cd build
         $ cmake -DCMAKE_PREFIX_PATH="helib installed root" ..
