@@ -9,6 +9,8 @@ There are two ways to build and run this example.
 
         $ mkdir build && cd build
         $ cmake -DCMAKE_PREFIX_PATH="helib installed root" ..
+        $ make
+        $ ./BGV_binary_arithmetic
 
 ## build and run the example in a docker container
 1. go to the root folder of HElib
