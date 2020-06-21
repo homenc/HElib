@@ -12,4 +12,7 @@ There are two ways to build and run this example.
 
 ## build and run the example in a docker container
 1. go to the root folder of HElib
-2. run `docker build -f examples/BGV_binary_arithmetic/Dockerfile .`
+2. run the following commands
+
+        $ docker build -t bgv-binary-arithmetic -f examples/BGV_binary_arithmetic/Dockerfile .
+        $ docker run bgv-binary-arithmetic
