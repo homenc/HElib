@@ -7,9 +7,8 @@ There are two ways to build and run this example.
 1. assume the HElib is installed
 2. run the following command
 
-    $ mkdir build && cd build
-
-    $ cmake -DCMAKE_PREFIX_PATH="helib installed root" ..
+        $ mkdir build && cd build
+        $ cmake -DCMAKE_PREFIX_PATH="helib installed root" ..
 
 ## build and run the example in a docker container
 1. go to the root folder of HElib
