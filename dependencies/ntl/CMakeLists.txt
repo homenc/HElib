@@ -61,7 +61,7 @@ ExternalProject_Add(ntl_fetched
       "NTL_THREADS=${build_threads}"
       "NTL_THREAD_BOOST=${build_threads}"
       "GMP_PREFIX=${gmp_prefix}"
-      "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
+      # "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
   BUILD_IN_SOURCE ON
   BUILD_COMMAND
     # TODO: add -j to make command. (Not done since not known at compile time)

@@ -24,8 +24,8 @@ ExternalProject_Add(gmp_fetched
       "--enable-shared=yes"
       "--disable-static"
       "--with-readline=no"
-      "CC=${CMAKE_C_COMPILER}" # propagate cmake chosen C compiler
-      "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
+      # "CC=${CMAKE_C_COMPILER}" # propagate cmake chosen C compiler
+      # "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
   BUILD_IN_SOURCE ON
   TEST_AFTER_INSTALL OFF
   TEST_EXCLUDE_FROM_MAIN ON
