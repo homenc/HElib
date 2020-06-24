@@ -79,11 +79,14 @@ ExternalProject_Add(
                       "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
     BUILD_IN_SOURCE ON
     BUILD_COMMAND
-        # TODO: add -j to make command. (Not done since not known at compile time)
         cd src &&
-        # See above note re: workaround
-        eval "${ntl_make_libpath_tweak_cmd}" && ${CMAKE_MAKE_PROGRAM}
-    INSTALL_COMMAND cd src && ${CMAKE_MAKE_PROGRAM} install
+        # Adding ${gmp_lib_dir} to LD_LIBRARY_PATH (on Linux) to run program
+        # testing GMP during make phase (see note at line 41)
+        eval "${ntl_make_libpath_tweak_cmd}" &&
+        # Using $(MAKE) set this build as sub-task, so all make
+        # arguments (including -j) are forwarded
+        $(MAKE)
+    INSTALL_COMMAND cd src && $(MAKE) install
     TEST_AFTER_INSTALL OFF
     TEST_EXCLUDE_FROM_MAIN ON
     # Turn LOG_BUILD ON will log the build step to a file in the stamp directory
