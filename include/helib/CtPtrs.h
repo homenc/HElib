@@ -51,13 +51,14 @@ void packedRecrypt(const CtPtrs& array, // vector of Ctxts
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea,
                    long belowLvl);
+
 void packedRecrypt(const CtPtrMat& m, // matrix of Ctxts
                    const std::vector<zzX>& unpackConsts,
                    const EncryptedArray& ea,
                    long belowLvl = LONG_MAX);
 
 // Find the lowest level among many ciphertexts
-// FIXME: using bitCapacity isn't really the right thing...
+// FIXME: using bitCapacity isn't really the right thing.
 // this could break some code
 inline long findMinBitCapacity(const CtPtrs& v)
 {
@@ -67,6 +68,7 @@ inline long findMinBitCapacity(const CtPtrs& v)
       lvl = std::min(lvl, v[i]->bitCapacity());
   return lvl;
 }
+
 inline long findMinBitCapacity(const CtPtrMat& m)
 {
   long lvl = LONG_MAX;

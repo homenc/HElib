@@ -2007,6 +2007,7 @@ void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2)
   }
   result.reLinearize();
 }
+
 void innerProduct(Ctxt& result,
                   const std::vector<Ctxt>& v1,
                   const std::vector<Ctxt>& v2)

@@ -186,6 +186,7 @@ public:
   void read(std::istream& str);
   void write(std::ostream& str) const;
 };
+
 inline std::ostream& operator<<(std::ostream& s, const SKHandle& handle)
 {
   return s << "[" << handle.getPowerOfS() << " " << handle.getPowerOfX() << " "
@@ -234,12 +235,14 @@ public:
   void read(std::istream& str);
   void write(std::ostream& str) const;
 };
+
 std::istream& operator>>(std::istream& s, CtxtPart& p);
 std::ostream& operator<<(std::ostream& s, const CtxtPart& p);
 
 //! \cond FALSE (make doxygen ignore this code)
 struct ZeroCtxtLike_type
 {}; // used to select a constructor
+
 const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
 //! \endcond
 
@@ -298,6 +301,7 @@ class Ctxt
     subPart(part);
     return *this;
   }
+
   Ctxt& operator+=(const CtxtPart& part)
   {
     addPart(part);
@@ -309,6 +313,7 @@ class Ctxt
   {
     subPart(part, part.skHandle, matchPrimeSet);
   }
+
   void addPart(const CtxtPart& part, bool matchPrimeSet = false)
   {
     addPart(part, part.skHandle, matchPrimeSet);
@@ -320,6 +325,7 @@ class Ctxt
   {
     addPart(part, handle, matchPrimeSet, true);
   }
+
   void addPart(const DoubleCRT& part,
                const SKHandle& handle,
                bool matchPrimeSet = false,
@@ -399,11 +405,13 @@ public:
     addCtxt(other);
     return *this;
   }
+
   Ctxt& operator-=(const Ctxt& other)
   {
     addCtxt(other, true);
     return *this;
   }
+
   void addCtxt(const Ctxt& other, bool negative = false);
 
   // Multiply by another ciphertext
@@ -413,12 +421,14 @@ public:
     multLowLvl(other);
     return *this;
   }
+
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
   Ctxt& operator>>=(long k)
   {
     automorph(k);
     return *this;
   }
+
   void complexConj(); // Complex conjugate, same as automorph(m-1)
 
   //! @brief automorphism with re-linearization
@@ -509,6 +519,7 @@ public:
   {
     addConstant(ptxt.getPolyRepr());
   }
+
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
@@ -517,12 +528,15 @@ public:
     addConstantCKKS(
         rationalApprox(x, /*denomBound=*/1 << getContext().alMod.getR()));
   }
+
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size = NTL::xdouble(-1.0),
                        NTL::xdouble factor = NTL::xdouble(-1.0));
+
   void addConstantCKKS(const NTL::ZZX& poly,
                        NTL::xdouble size = NTL::xdouble(-1.0),
                        NTL::xdouble factor = NTL::xdouble(-1.0));
+
   void addConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
   /**
@@ -558,6 +572,7 @@ public:
     ratFactor /= x;
     ptxtMag *= std::abs(x);
   }
+
   void multByConstantCKKS(std::pair<long, long> num) // rational number
   {
     multByConstantCKKS(double(num.first) / num.second);
@@ -567,6 +582,7 @@ public:
                           NTL::xdouble size = NTL::xdouble(-1.0),
                           NTL::xdouble factor = NTL::xdouble(-1.0),
                           double roundingErr = -1.0);
+
   void multByConstantCKKS(const NTL::ZZX& poly,
                           NTL::xdouble size = NTL::xdouble(-1.0),
                           NTL::xdouble factor = NTL::xdouble(-1.0),
@@ -596,6 +612,7 @@ public:
     multByConstant(tmp);
     addConstant(poly);
   }
+
   void xorConstant(const NTL::ZZX& poly, double size = -1.0)
   {
     xorConstant(DoubleCRT(poly, context, primeSet), size);
@@ -610,6 +627,7 @@ public:
     multByConstant(tmp);           // (b-1)(2a-1)
     addConstant(poly);             // (b-1)(2a-1)+a = 1-a-b+2ab
   }
+
   void nxorConstant(const NTL::ZZX& poly, double size = -1.0)
   {
     nxorConstant(DoubleCRT(poly, context, primeSet), size);

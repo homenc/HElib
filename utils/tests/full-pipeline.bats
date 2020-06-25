@@ -56,3 +56,27 @@ function teardown {
   ${diff_threshold} ${prefix_ckks}.dat ${prefix_ckks}.decoded
 }
 
+@test "BGV: matrix full-pipeline encode->encrypt->decrypt->decode" {
+  run bash -c "$encode ${prefix_bgv}.dat ${prefix_bgv}.info BGV --dims 2,3 > ${prefix_bgv}.ptxt"
+  assert [ "$status" -eq 0 ]
+  run $encrypt "$pk_file_bgv" "${prefix_bgv}.ptxt"
+  assert [ "$status" -eq 0 ]
+  run $decrypt "$sk_file_bgv" "${prefix_bgv}.ctxt" -o "$prefix_bgv.dec.ptxt"
+  assert [ "$status" -eq 0 ]
+  run bash -c "$decode ${prefix_bgv}.dec.ptxt ${prefix_bgv}.info BGV --nelements 12 > ${prefix_bgv}.decoded"
+  assert [ "$status" -eq 0 ]
+  diff "${prefix_bgv}.dat" "${prefix_bgv}.decoded"
+}
+
+@test "CKKS: matrix full-pipeline encode->encrypt->decrypt->decode" {
+  run bash -c "$encode ${prefix_ckks}.dat ${prefix_ckks}.info CKKS --dims 2,3 > ${prefix_ckks}.ptxt"
+  assert [ "$status" -eq 0 ]
+  run $encrypt "$pk_file_ckks" "${prefix_ckks}.ptxt"
+  assert [ "$status" -eq 0 ]
+  run $decrypt "$sk_file_ckks" "${prefix_ckks}.ctxt" -o "$prefix_ckks.dec.ptxt"
+  assert [ "$status" -eq 0 ]
+  run bash -c "$decode ${prefix_ckks}.dec.ptxt ${prefix_ckks}.info CKKS --nelements 12 > ${prefix_ckks}.decoded"
+  assert [ "$status" -eq 0 ]
+  ${diff_threshold} ${prefix_ckks}.dat ${prefix_ckks}.decoded
+}
+

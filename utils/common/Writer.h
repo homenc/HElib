@@ -76,7 +76,7 @@ public:
     // Set the TOC
     for (uint64_t j = 0; j < cols; ++j)
       for (uint64_t i = 0; i < rows; ++i)
-        toc->setIdx(i, j, (i * recordSizeInBytes * cols + j) + tocSize);
+        toc->setIdx(i, j, (i + j * rows) * recordSizeInBytes  + tocSize);
 
     // Write it to file
     writeStream.open(fpath, std::ios::in | std::ios::out | std::ios::binary);

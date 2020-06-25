@@ -65,6 +65,22 @@ function teardown {
   assert [ "$status" -eq 0 ]
 }
 
+@test "BGV: matrix data == decode(encode(data))" {
+  run bash -c "$encode ${prefix_bgv}.dat ${prefix_bgv}.info BGV --dims 2,3 > ${prefix_bgv}.encoded"
+  assert [ "$status" -eq 0 ]
+  # Number of lines should be 1 for header and 2 * 3 for data.
+  assert [ "$(cat ${prefix_bgv}.encoded | wc -l)" -eq 7 ]
+  run bash -c "$decode ${prefix_bgv}.encoded ${prefix_bgv}.info BGV --nelements 12 > ${prefix_bgv}.decoded"
+  assert [ "$status" -eq 0 ]
+  diff "${prefix_bgv}.dat" "${prefix_bgv}.decoded"
+}
+
+@test "BGV: matrix encode(data) does not fit" {
+  run bash -c "$encode ${prefix_bgv}.dat ${prefix_bgv}.info BGV --dims 1,3 > ${prefix_bgv}.encoded"
+  assert [ "$status" -ne 0 ]
+  assert [ "$output" == "Number of ptxts 4 > capacity of Matrix: 3 (dims: (1, 3))" ]
+}
+
 @test "CKKS: data == decode(encode(data))" {
   run bash -c "$encode ${prefix_ckks}.dat ${prefix_ckks}.info CKKS > ${prefix_ckks}.encoded"
   assert [ "$status" -eq 0 ]
@@ -97,3 +113,20 @@ function teardown {
   run diff "${prefix_ckks}.pad" "${prefix_ckks}.decoded"
   assert [ "$status" -eq 0 ]
 }
+
+@test "CKKS: matrix data == decode(encode(data))" {
+  run bash -c "$encode ${prefix_ckks}.dat ${prefix_ckks}.info CKKS --dims 2,3 > ${prefix_ckks}.encoded"
+  assert [ "$status" -eq 0 ]
+  # Number of lines should be 1 for header and 2 * 3 for data.
+  assert [ "$(cat ${prefix_ckks}.encoded | wc -l)" -eq 7 ]
+  run bash -c "$decode ${prefix_ckks}.encoded ${prefix_ckks}.info CKKS --nelements 12 > ${prefix_ckks}.decoded"
+  assert [ "$status" -eq 0 ]
+  diff "${prefix_ckks}.dat" "${prefix_ckks}.decoded"
+}
+
+@test "CKKS: matrix encode(data) does not fit" {
+  run bash -c "$encode ${prefix_ckks}.dat ${prefix_ckks}.info CKKS --dims 1,3 > ${prefix_ckks}.encoded"
+  assert [ "$status" -ne 0 ]
+  assert [ "$output" == "Number of ptxts 6 > capacity of Matrix: 3 (dims: (1, 3))" ]
+}
+

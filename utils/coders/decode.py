@@ -52,7 +52,7 @@ def main():
 
     with open(args.infile) as data:
         header = data.readline()
-        # Set to nelements if nelements is set otherwise calc from info file.
+        # Set if nelements is set otherwise calculate from info file.
         nelements = args.nelements if args.nelements is not None \
             else reduce((lambda x, y: x * y), map(int, header.split())) * nslots
         print(nelements)
