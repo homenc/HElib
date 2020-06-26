@@ -78,6 +78,7 @@ extern bool dryRun;
 //! used in conjunction with dryRun=true
 extern std::set<long>* automorphVals;
 extern std::set<long>* automorphVals2;
+
 } // namespace FHEglobals
 
 inline bool setDryRun(bool toWhat = true)
@@ -927,16 +928,6 @@ void make_lazy_with_fun(const NTL::Lazy<T, P>& obj, F f, Args&&... args)
   ptr.make();
   f(*ptr, std::forward<Args>(args)...);
   builder.move(ptr);
-}
-
-inline void Warning(const char* msg)
-{
-  std::cerr << "WARNING: " << msg << "\n";
-}
-
-inline void Warning(const std::string& msg)
-{
-  std::cerr << "WARNING: " << msg << "\n";
 }
 
 // An array of inverse erfc values.

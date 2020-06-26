@@ -20,6 +20,7 @@ set(GTEST_SRC
     "TestBootstrappingWithMultiplications.cpp"
     "TestContext.cpp"
     "TestCtxt.cpp"
+    "TestLogging.cpp"
     "TestPolyMod.cpp"
     "TestPtxt.cpp"
     "TestPolyModRing.cpp")
@@ -87,6 +88,7 @@ set(TEST_NAMES
     "TestCtxt"
     "TestErrorHandling"
     "TestFatBootstrappingWithMultiplications"
+    "TestLogging"
     "TestThinBootstrappingWithMultiplications"
     "TestPolyMod"
     "TestPolyModRing"

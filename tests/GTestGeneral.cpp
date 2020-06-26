@@ -21,6 +21,7 @@
 #include "test_common.h"
 
 #include <helib/debugging.h>
+#include <helib/fhe_stats.h>
 
 /**************
 
@@ -170,7 +171,15 @@ protected:
       gens(helib::convert<std::vector<long>, NTL::Vec<long>>(GetParam().gens)),
       ords(helib::convert<std::vector<long>, NTL::Vec<long>>(GetParam().ords)),
       context(m, p, r, gens, ords),
-      secretKey((buildModChain(context, L, c), context)),
+      secretKey(
+          (buildModChain(context,
+                         L,
+                         c,
+                         /*willBeBootstrappable=*/false,
+                         /*skHwt=*/0,
+                         /*resolution=*/3,
+                         /*bitsInSpecialPrimes=*/helib_test::special_bits),
+           context)),
       publicKey(secretKey)
   {}
 
@@ -183,6 +192,9 @@ protected:
         secretKey); // compute key-switching matrices that we need
 
     helib::setupDebugGlobals(&secretKey, context.ea);
+    if (!helib_test::noPrint) {
+      helib::fhe_stats = true;
+    }
   };
 
   virtual void TearDown() override { helib::cleanupDebugGlobals(); }

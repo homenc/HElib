@@ -291,7 +291,7 @@ public:
 
   //! A helper table to map required modulo-sizes to primeSets
   ModuliSizes modSizes;
-  void setModSizeTable() { modSizes.init(moduli, ctxtPrimes, smallPrimes); }
+  void setModSizeTable() { modSizes.init(*this); }
 
   /**
    * @brief The set of primes for the digits.

@@ -28,6 +28,7 @@
 #include <helib/Context.h>
 #include <helib/norms.h>
 #include <helib/fhe_stats.h>
+#include <helib/log.h>
 
 namespace helib {
 

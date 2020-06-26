@@ -24,6 +24,7 @@
 #include <helib/norms.h>
 #include <helib/fhe_stats.h>
 #include <helib/powerful.h>
+#include <helib/log.h>
 
 namespace helib {
 
@@ -545,6 +546,11 @@ void Ctxt::dropSmallAndSpecialPrimes()
     // In either BGV or CKKS, try to ensure that the scaled noise
     // remains not much smaller than the mod-switch added noise.
     // This is done so as not to waste too much capacity.
+
+    // Actually, despite what the above comment says, the following code
+    // ensures that the scaled noise remains a bit *larger* than the mod-switch
+    // added noise.  However, it seems safer to keep the scaled noise a bit
+    // larger than the mod-switch added noise, so this should be fine.
 
     log_modswitch_noise += 3 * log(2.0); // 3 bits of elbow room
     if (log_noise - log_dropping + log_compensation < log_modswitch_noise) {
@@ -1240,8 +1246,9 @@ void computeIntervalForMul(double& lo,
   double cap1 = ctxt1.capacity();
   double cap2 = ctxt2.capacity();
 
-  double adn = log(ctxt1.modSwitchAddedNoiseBound());
-  // should be the same for both ciphertexts
+  double adn1 = log(ctxt1.modSwitchAddedNoiseBound());
+  double adn2 = log(ctxt2.modSwitchAddedNoiseBound());
+  // The added noise (adn) should be the same for both ciphertexts
 
   // Compute the interval into which we want to mod-switch.
   // For a given ctxt with modulus q and noise bound n, we want to
@@ -1261,10 +1268,10 @@ void computeIntervalForMul(double& lo,
   // bits.
 
   if (ctxt1.isCKKS()) {
-    lo = std::max(cap1, cap2) + adn + safety;
+    lo = std::max(cap1 + adn1, cap2 + adn2) + safety;
     hi = lo + slack;
   } else { // BGV
-    hi = std::min(cap1, cap2) + adn - safety;
+    hi = std::min(cap1 + adn1, cap2 + adn2) - safety;
     lo = hi - slack;
   }
 }

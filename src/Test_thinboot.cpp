@@ -159,6 +159,8 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   setTimersOn();
   setDryRun(false); // Need to get a "real context" to test bootstrapping
 
+  if (!noPrint) fhe_stats = true;
+
   double t = -GetTime();
   Context context(m, p, r, gens, ords);
   if (scale) {
@@ -203,7 +205,6 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
   long p2r = context.alMod.getPPowR();
 
-  if (!noPrint) fhe_stats = true;
 
   for (long numkey=0; numkey<OUTER_REP; numkey++) { // test with 3 keys
   if (1 && fhe_stats && numkey > 0 && numkey%100 == 0) {

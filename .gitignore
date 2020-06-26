@@ -3,6 +3,7 @@ build/
 
 __pycache__/
 
+**.log
 **.sk
 **.pk
 **.out

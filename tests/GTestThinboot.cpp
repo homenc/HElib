@@ -50,7 +50,6 @@ struct Parameters
   int chen_han;
   bool debug; // generate debugging output
   int scale;  // scale parameter
-  long special_bits;
   NTL::Vec<long> global_gens;
   NTL::Vec<long> global_ords;
   NTL::Vec<long> global_mvec;
@@ -72,7 +71,6 @@ struct Parameters
              int chen_han,
              bool debug,
              int scale,
-             long special_bits,
              const std::vector<long>& global_gens,
              const std::vector<long>& global_ords,
              const std::vector<long>& global_mvec,
@@ -91,7 +89,6 @@ struct Parameters
       chen_han(chen_han),
       debug(debug),
       scale(scale),
-      special_bits(special_bits),
       global_gens(helib::convert<NTL::Vec<long>>(global_gens)),
       global_ords(helib::convert<NTL::Vec<long>>(global_ords)),
       global_mvec(helib::convert<NTL::Vec<long>>(global_mvec)),
@@ -119,7 +116,6 @@ struct Parameters
               << "chen_han" << params.chen_han << ","
               << "debug" << params.debug << ","
               << "scale" << params.scale << ","
-              << "special_bits" << params.special_bits << ","
               << "global_gens" << params.global_gens << ","
               << "global_ords" << params.global_ords << ","
               << "global_mvec" << params.global_mvec << ","
@@ -157,6 +153,9 @@ private:
     helib::setTimersOn();
     helib::setDryRun(
         false); // Need to get a "real context" to test bootstrapping
+    if (!helib_test::noPrint) {
+      helib::fhe_stats = true;
+    }
     time = -NTL::GetTime();
   }
 
@@ -211,7 +210,6 @@ protected:
   const int chen_han;
   const bool debug;
   const int scale;
-  const long special_bits;
   const NTL::Vec<long> mvec;
   const std::vector<long> gens;
   const std::vector<long> ords;
@@ -244,7 +242,6 @@ protected:
       chen_han(GetParam().chen_han),
       debug(GetParam().debug),
       scale(GetParam().scale),
-      special_bits(GetParam().special_bits),
       mvec(GetParam().global_mvec),
       gens(helib::convert<std::vector<long>>(GetParam().global_gens)),
       ords(helib::convert<std::vector<long>>(GetParam().global_ords)),
@@ -369,7 +366,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
                        /*willBeBootstrappable=*/true,
                        /*skHwt=*/skHwt,
                        /*resolution=*/3,
-                       /*bitsInSpecialPrimes=*/special_bits);
+                       /*bitsInSpecialPrimes=*/helib_test::special_bits);
 
   if (!helib_test::noPrint) {
     std::cout << "security=" << context.securityLevel() << std::endl;
@@ -404,9 +401,6 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
       helib_test::dry); // Now we can set the dry-run flag if desired
 
   long p2r = context.alMod.getPPowR();
-
-  if (!helib_test::noPrint)
-    helib::fhe_stats = true;
 
   for (long numkey = 0; numkey < iter; numkey++) { // test with 3 keys
     if (helib::fhe_stats && numkey > 0 && numkey % 100 == 0) {
@@ -546,10 +540,10 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(typicalParameters, GTestThinboot, ::testing::Values(
     //SLOW
-    Parameters( 2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, 0l, {1026,  249}, {30, -2}, {  31, 41}, 1, ""),
-    Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, 0l, { 556, 1037}, { 6,  4}, {7, 5, 37}, 1, "")
+    Parameters( 2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026,  249}, {30, -2}, {  31, 41}, 1, ""),
+    Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, { 556, 1037}, { 6,  4}, {7, 5, 37}, 1, "")
     //FAST
-    //Parameters( 2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, 0l, {1026,  249}, {30, -2}, {  31, 41}, 1, "")
+    //Parameters( 2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026,  249}, {30, -2}, {  31, 41}, 1, "")
     ));
 // clang-format on
 } // namespace

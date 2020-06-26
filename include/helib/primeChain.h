@@ -21,6 +21,7 @@
 namespace helib {
 
 class Cmodulus;
+class Context;
 
 //! A helper class to map required modulo-sizes to primeSets
 class ModuliSizes
@@ -30,9 +31,7 @@ public:
   // each table entry is a pair<double,IndexSet>=(size, set-of-primes)
 
   //! initialize helper table for a given chain
-  void init(const std::vector<Cmodulus>& chain,
-            const IndexSet& ctxtPrimes,
-            const IndexSet& smallPrimes);
+  void init(const Context& context);
 
   //! Find a suitable IndexSet of primes whose total size is in the
   //! target interval [low,high], trying to minimize the number of
@@ -66,6 +65,7 @@ public:
 
 private:
   std::vector<Entry> sizes;
+  long iFFT_cost = -1;
 };
 
 std::ostream& operator<<(std::ostream& s, const ModuliSizes::Entry& e);

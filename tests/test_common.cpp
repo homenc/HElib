@@ -22,6 +22,7 @@ bool noPrint = false;
 bool verbose = false;
 bool dry = false;
 unsigned int random_seed = 0U;
+long special_bits = 0L;
 
 void parse_common_args(int argc, char* argv[])
 {
@@ -29,6 +30,7 @@ void parse_common_args(int argc, char* argv[])
   path_of_executable = argv[0];
   amap.arg("dry", dry, "dry=1 for a dry-run");
   amap.arg("noPrint", noPrint, "suppress printouts");
+  amap.arg("special_bits", special_bits, "# of bits in special primes");
   amap.arg("verbose", verbose, "print more information");
   amap.arg("seed", random_seed, "specify random seed for test data");
   amap.parse(argc, argv);

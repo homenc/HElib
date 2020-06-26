@@ -10,8 +10,8 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <helib/NumbTh.h>
-
 #include <helib/timing.h>
+#include <helib/log.h>
 
 #include <fstream>
 #include <cctype>

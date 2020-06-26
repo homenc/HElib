@@ -286,6 +286,7 @@ public:
 
   //! The largest FFT we need to handle degree-m polynomials
   long fftSizeNeeded() const { return NTL::NextPowerOfTwo(getM()) + 1; }
+  // TODO: should have a special case when m is power of two
 
   const PGFFT& getFFTInfo() const { return *fftInfo; }
   const half_FFT& getHalfFFTInfo() const { return *half_fftInfo; }

@@ -20,6 +20,7 @@
 #include <helib/norms.h>
 #include <helib/apiAttributes.h>
 #include <helib/fhe_stats.h>
+#include <helib/log.h>
 
 namespace helib {
 

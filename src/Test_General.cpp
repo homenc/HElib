@@ -57,6 +57,7 @@ using namespace helib;
 **************/
 
 static bool noPrint = true;
+static long special_bits;
 
 void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
                long L, long m, const Vec<long>& gens, const Vec<long>& ords)
@@ -81,8 +82,14 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   convert(gens1, gens);
   convert(ords1, ords);
 
+  if (!noPrint) fhe_stats = true;
+
   Context context(m, p, r, gens1, ords1);
-  buildModChain(context, L, c);
+  buildModChain(context, L, c,
+    /*willBeBootstrappable=*/false,
+    /*t=*/0,
+    /*resolution=*/3,
+    /*bitsInSpecialPrimes=*/special_bits);
 
   ZZX G;
   if (d == 0)
@@ -104,7 +111,6 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
     std::cout << "G = " << G << "\n";
 
-    fhe_stats=true;
   }
 
   SecKey secretKey(context);
@@ -332,6 +338,8 @@ int main(int argc, char **argv)
   amap.arg("nt", nt, "num threads");
 
   amap.arg("noPrint", noPrint, "suppress printouts");
+
+  amap.arg("special_bits", special_bits, "# of bits in special primes");
 
   amap.parse(argc, argv);
 
