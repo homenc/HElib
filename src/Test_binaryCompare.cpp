@@ -25,7 +25,7 @@ NTL_CLIENT
 #include <helib/binaryCompare.h>
 #include <helib/ArgMap.h>
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #endif
 
@@ -38,7 +38,7 @@ using namespace helib;
 static std::vector<zzX> unpackSlotEncoding; // a global variable
 static bool verbose=false;
 
-static long mValues[][15] = { 
+static long mValues[][15] = {
 // { p, phi(m),   m,   d, m1, m2, m3,    g1,   g2,   g3, ord1,ord2,ord3, B,c}
   {  2,    48,   105, 12,  3, 35,  0,    71,    76,    0,   2,  2,   0, 25, 2},
   {  2 ,  600,  1023, 10, 11, 93,  0,   838,   584,    0,  10,  6,   0, 25, 2},
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
   if (verbose) cout << " done\n";
 
   activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgEa = context.ea;
   dbgKey = &secKey;
 #endif
@@ -170,7 +170,7 @@ void testCompare(SecKey& secKey, long bitSize, bool bootstrap)
       encb[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   decryptAndPrint((cout<<" before comparison: "), encb[0], secKey, ea,0);
 #endif
 
@@ -204,7 +204,7 @@ void testCompare(SecKey& secKey, long bitSize, bool bootstrap)
   } // get rid of the wrapper
   ea.decrypt(mu, secKey, slotsMu);
   ea.decrypt(ni, secKey, slotsNi);
-  
+
   if (slotsMax[0]!=pMax || slotsMin[0]!=pMin
       || slotsMu[0]!=pMu || slotsNi[0]!=pNi) {
     cout << "BAD\n";
@@ -220,7 +220,7 @@ void testCompare(SecKey& secKey, long bitSize, bool bootstrap)
          <<"), mu="<<slotsMu[0]<<", ni="<<slotsNi[0]<<endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   const Ctxt* minLvlCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eMax) {

@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -15,40 +15,52 @@
 
 namespace helib {
 
-template<class T>
-class general_range {
- public:
-   class iterator {
-      friend class general_range;
-    public:
-      T operator *() const { return i_; }
-      iterator& operator ++() { ++i_; return *this; }
+template <typename T>
+class general_range
+{
+public:
+  class iterator
+  {
+    friend class general_range;
 
-      bool operator ==(const iterator &other) const { return i_ == other.i_; }
-      bool operator !=(const iterator &other) const { return i_ != other.i_; }
+  public:
+    T operator*() const { return i_; }
+    iterator& operator++()
+    {
+      ++i_;
+      return *this;
+    }
 
-    protected:
-      iterator(T start) : i_ (start) { }
+    bool operator==(const iterator& other) const { return i_ == other.i_; }
+    bool operator!=(const iterator& other) const { return i_ != other.i_; }
 
-    private:
-      T i_;
-   };
+  protected:
+    iterator(T start) : i_(start) {}
 
-   iterator begin() const { return begin_; }
-   iterator end() const { return end_; }
-   general_range(T  begin, T end) : begin_(begin), end_(end) 
-   { if (end < begin) end = begin; }
+  private:
+    T i_;
+  };
+
+  iterator begin() const { return begin_; }
+  iterator end() const { return end_; }
+  general_range(T begin, T end) : begin_(begin), end_(end)
+  {
+    if (end < begin)
+      end = begin;
+  }
+
 private:
-   iterator begin_;
-   iterator end_;
+  iterator begin_;
+  iterator end_;
 };
 
-inline
-general_range<long> range(long n) { return general_range<long>(0, n); }
+inline general_range<long> range(long n) { return general_range<long>(0, n); }
 
-inline
-general_range<long> range(long m, long n) { return general_range<long>(m, n); }
-
+inline general_range<long> range(long m, long n)
+{
+  return general_range<long>(m, n);
 }
+
+} // namespace helib
 
 #endif // ifndef HELIB_RANGE_H

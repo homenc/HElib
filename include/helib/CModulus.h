@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -25,50 +25,59 @@
 namespace helib {
 
 /**
-* @class Cmodulus
-* @brief Provides FFT and iFFT routines modulo a single-precision prime
-*
-* On initialization, it initizlies NTL's zz_pContext for this q
-* and computes a 2m-th root of unity r mod q and also r^{-1} mod q.
-* Thereafter this class provides FFT and iFFT routines that converts between
-* time & frequency domains. Some tables are computed the first time that
-* each directions is called, which are then used in subsequent computations.
-* 
-* The "time domain" polynomials are represented as ZZX, which are reduced
-* modulo Phi_m(X). The "frequency domain" are just vectors of integers
-* (vec_long), that store only the evaluation in primitive m-th
-* roots of unity.
-**/
-class Cmodulus {
-  long          q;       // the modulus
-  NTL::mulmod_t      qinv;    // PrepMulMod(q);
+ * @class Cmodulus
+ * @brief Provides FFT and iFFT routines modulo a single-precision prime
+ *
+ * On initialization, it initializes NTL's zz_pContext for this q
+ * and computes a 2m-th root of unity r mod q and also r^{-1} mod q.
+ * Thereafter this class provides FFT and iFFT routines that converts between
+ * time & frequency domains. Some tables are computed the first time that
+ * each directions is called, which are then used in subsequent computations.
+ *
+ * The "time domain" polynomials are represented as ZZX, which are reduced
+ * modulo Phi_m(X). The "frequency domain" are just vectors of integers
+ * (vec_long), that store only the evaluation in primitive m-th
+ * roots of unity.
+ **/
+class Cmodulus
+{
+  //! The modulus
+  long q;
+  //! PrepMulMod(q);
+  NTL::mulmod_t qinv;
 
-  NTL::zz_pContext   context; // NTL's tables for this modulus
+  //! NTL's tables for this modulus
+  NTL::zz_pContext context;
 
-  const PAlgebra* zMStar;  // points to the Zm* structure, m is FFT size
+  //! Points to the Zm* structure, m is FFT size
+  const PAlgebra* zMStar;
 
-  long        m_inv;   // m^{-1} mod q
+  //! m^{-1} mod q
+  long m_inv;
 
-  long        root;    // 2m-th root of unity modulo q
-  long        rInv;    // root^{-1} mod q
+  //! 2m-th root of unity modulo q
+  long root;
+  //! root^{-1} mod q
+  long rInv;
 
-  copied_ptr<NTL::zz_pX>    powers;  // tables for forward FFT
+  // tables for forward FFT
+  copied_ptr<NTL::zz_pX> powers;
   NTL::Vec<NTL::mulmod_precon_t> powers_aux;
-  copied_ptr<NTL::fftRep>   Rb;
+  copied_ptr<NTL::fftRep> Rb;
 
-  copied_ptr<NTL::zz_pX>    ipowers; // tables for backward FFT
+  // tables for backward FFT
+  copied_ptr<NTL::zz_pX> ipowers;
   NTL::Vec<NTL::mulmod_precon_t> ipowers_aux;
-  copied_ptr<NTL::fftRep>   iRb;
+  copied_ptr<NTL::fftRep> iRb;
 
-  copied_ptr<zz_pXModulus1> phimx; // PhimX modulo q, for faster division w/ remainder
-
+  // PhimX modulo q, for faster division w/ remainder
+  copied_ptr<zz_pXModulus1> phimx;
 
   // Allocate memory and compute roots
   void privateInit(const PAlgebra&, long rt);
 
- public:
-
-#ifdef FHE_OPENCL
+public:
+#ifdef HELIB_OPENCL
   SmartPtr<AltFFTPrimeInfo> altFFTInfo;
   // We need to allow copying...the underlying object
   // is immutable
@@ -76,44 +85,48 @@ class Cmodulus {
 
   // Destructor and constructors
 
-  // Default constructor
+  //! Default constructor
   Cmodulus() {}
 
-  Cmodulus(const Cmodulus &other) { *this = other; }
+  Cmodulus(const Cmodulus& other) { *this = other; }
 
-  // Specify m and q, and optionally also the root
-  // if q == 0, then the current context is used
-  Cmodulus(const PAlgebra &zms, long qq, long rt);
+  /**
+   * @brief Constructor
+   * @note Specify m and q, and optionally also the root if q == 0, then the
+   * current context is used
+   */
+  Cmodulus(const PAlgebra& zms, long qq, long rt);
 
-  // Copy operator
-  Cmodulus& operator=(const Cmodulus &other);
+  //! Copy assignment operator
+  Cmodulus& operator=(const Cmodulus& other);
 
   // utility methods
 
-  const PAlgebra &getZMStar() const { return *zMStar; }
-  unsigned long getM() const    { return zMStar->getM(); }
+  const PAlgebra& getZMStar() const { return *zMStar; }
+  unsigned long getM() const { return zMStar->getM(); }
   unsigned long getPhiM() const { return zMStar->getPhiM(); }
-  long getQ() const          { return q; }
-  NTL::mulmod_t getQInv() const          { return qinv; }
-  long getRoot() const       { return root; }
-  const zz_pXModulus1& getPhimX() const  { return *phimx; }
+  long getQ() const { return q; }
+  NTL::mulmod_t getQInv() const { return qinv; }
+  long getRoot() const { return root; }
+  const zz_pXModulus1& getPhimX() const { return *phimx; }
 
   //! @brief Restore NTL's current modulus
-  void restoreModulus() const {context.restore();}
+  void restoreModulus() const { context.restore(); }
 
   // FFT routines
 
   // sets zp context internally
-  void FFT(NTL::vec_long &y, const NTL::ZZX& x) const;  // y = FFT(x)
-  void FFT(NTL::vec_long &y, const zzX& x) const;  // y = FFT(x)
+  // y = FFT(x)
+  void FFT(NTL::vec_long& y, const NTL::ZZX& x) const;
+  // y = FFT(x)
+  void FFT(NTL::vec_long& y, const zzX& x) const;
 
-  // auxilliary routine used by above two routines
-  void FFT_aux(NTL::vec_long &y, NTL::zz_pX& tmp) const;  
-
-
+  // auxiliary routine used by above two routines
+  void FFT_aux(NTL::vec_long& y, NTL::zz_pX& tmp) const;
 
   // expects zp context to be set externally
-  void iFFT(NTL::zz_pX &x, const NTL::vec_long& y) const; // x = FFT^{-1}(y)
+  // x = FFT^{-1}(y)
+  void iFFT(NTL::zz_pX& x, const NTL::vec_long& y) const;
 
   // returns thread-local scratch space
   // DIRT: this zz_pX is used for several zz_p moduli,
@@ -128,6 +141,6 @@ class Cmodulus {
   static NTL::fftRep& getScratch_fftRep(long k);
 };
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_CMODULUS_H

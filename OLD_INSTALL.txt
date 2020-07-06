@@ -1,6 +1,5 @@
-===> NOTE: This guide refers to the old Makefile installation, <===
-===> which is now DEPRECATED. Refer to INSTALL.md for the      <===
-===> supported cmake-based installation.                       <===
+===> NOTE: This guide refers to an old style Makefile installation. <===
+===>       refer to INSTALL.md for newer cmake-based installation.  <===
 
 HElib Installation Notes, October 2015
 ---------------------------------------
@@ -110,18 +109,15 @@ library, currently these are:
      DoubleCRT's with every recryption operation. 
 
      EVALMAP_CACHED=1 caches these constants directly as DoubleCRT's,
-     this may take a significant amount of memeory.
+     this may take a significant amount of memory.
 
 
-   -DFHE_THREADS  tells HElib to enable generic multithreading capabilities;
-                  must be used with a thread-enabled NTL and the -pthread
-                  flag should be passed to gcc
+   -DHELIB_THREADS  tells HElib to enable generic multithreading capabilities;
+                    must be used with a thread-enabled NTL and the -pthread
+                    flag should be passed to gcc
 
-   -DFHE_DCRT_THREADS  tells HElib to use a multithreading strategy at the
-                       DoubleCRT level; requires -DFHE_THREADS (see above)
-
-   -DFHE_BOOT_THREADS  tells HElib to use a multithreading strategy for
-                       bootstrapping; requires -DFHE_THREADS (see above)
+   -DHELIB_BOOT_THREADS  tells HElib to use a multithreading strategy for
+                         bootstrapping; requires -DHELIB_THREADS (see above) 
 
 
   -DDEBUG_PRINTOUT

@@ -71,7 +71,7 @@ void test2(MyClass* array[], int length, const MyPtrVec& ptrs)
     std::cout <<"test2 "<<std::flush;
   for (int i=0; i<length; i++) assert(ptrs[i]==array[i]);
   assert (ptrs.size()==length);
-  
+
   assert (ptrs.numNonNull()==std::min(4,length));
   assert (ptrs.ptr2nonNull() != nullptr);
 }
@@ -98,7 +98,7 @@ void test3(MyPtrVec& ptrs)
   int length = ptrs.size();
   ptrs.resize(length+1);
   ptrs[length]->set(length+1);
-  
+
   std::cout << "\n After resize: ";
   printPtrVector(ptrs);
   std::cout << std::endl;

@@ -24,7 +24,7 @@ NTL_CLIENT
 #include <helib/binaryArith.h>
 #include <helib/ArgMap.h>
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #endif
 
@@ -37,7 +37,7 @@ using namespace helib;
 static std::vector<zzX> unpackSlotEncoding; // a global variable
 static bool verbose=false;
 
-static long mValues[][15] = { 
+static long mValues[][15] = {
 // { p, phi(m),   m,   d, m1, m2, m3,    g1,   g2,   g3, ord1,ord2,ord3, B,c}
   {  2,    48,   105, 12,   3, 35,  0,    71,    76,    0,   2,  2,   0, 25, 2},
   {  2 ,  600,  1023, 10,  11, 93,  0,   838,   584,    0,  10,  6,   0, 25, 2},
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
     double add2NumsLvls = log(nBits) / log(2.0);
     L = (5 + ceil(three4twoLvls + add2NumsLvls))*30;
   }
-  
+
   if (verbose) {
     cout <<"input bitSizes="<<bitSize<<','<<bitSize2
          <<", output size bound="<<outSize
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
   if (verbose) cout << " done\n";
 
   activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgEa = context.ea;
   dbgKey = &secKey;
 #endif
@@ -308,7 +308,7 @@ void testProduct(SecKey& secKey, long bitSize, long bitSize2,
     cout << pa<<"*"<<pb<<"="<<slots[0]<<endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   const Ctxt* minCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eProduct) {
@@ -382,7 +382,7 @@ void testAdd(SecKey& secKey, long bitSize1, long bitSize2,
     cout << pa<<"+"<<pb<<"="<<slots[0]<<endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   const Ctxt* minCtxt = nullptr;
   long minLvl=1000;
   for (const Ctxt& c: eSum) {

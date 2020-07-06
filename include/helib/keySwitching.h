@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -51,9 +51,9 @@ namespace helib {
  * t columns.
  *
  * A key-switch matrix W[s'->s] converts a ciphertext-part with respect to
- * secret-key polynomial s' into a canonical cipehrtext (i.e. a two-part
+ * secret-key polynomial s' into a canonical ciphertext (i.e. a two-part
  * ciphertext with respect to (1,s)). The matrix W is a 2-by-t matrix of
- * DoubleCRT objects. The bottom row are just (psudo)random elements. Then
+ * DoubleCRT objects. The bottom row are just (pseudo)random elements. Then
  * for column j, if the bottom element is aj then the top element is set as
  *     bj = P*Bj*s' + p*ej - s * aj mod P*q0,
  * where p is the plaintext space (i.e. 2 or 2^r, or 1 for CKKS) and Bj
@@ -66,7 +66,7 @@ namespace helib {
  * In this implementation we save some space, by keeping only a PRG seed for
  * generating the pseudo-random elements, rather than the elements themselves.
  *
- * To convert a cipehrtext part R, we break R into digits R = sum_j Bj Rj,
+ * To convert a ciphertext part R, we break R into digits R = sum_j Bj Rj,
  * then set (q0,q1)^T = sum_j Rj * column-j. Note that we have
  * <(1,s),(q0,q1)> = sum_j Rj*(s*aj - s*aj + p*ej +P*Bj*s')
  *       = P * sum_j Bj*Rj * s' + p sum_j Rj*ej
@@ -74,7 +74,7 @@ namespace helib {
  * where the last element is small since the ej's are small and |Rj|<B.
  * Note that if the ciphertext is encrypted relative to plaintext space p'
  * and then key-switched with matrices W relative to plaintext space p,
- * then we get a mew ciphertxt with noise p'*small+p*small, so it is valid
+ * then we get a mew ciphertext with noise p'*small+p*small, so it is valid
  * relative to plaintext space GCD(p',p).
  *
  * The matrix W is defined modulo Q>t*B*sigma*q0 (with sigma a bound on the
@@ -83,58 +83,63 @@ namespace helib {
  * use W mod Qi with Qi a smaller modulus, Q>p*sigma*q0. Also note that if
  * p<Br then we will be using only first r columns of the matrix W.
  ********************************************************************/
-class KeySwitch {
+class KeySwitch
+{
 public:
-    SKHandle fromKey;  // A handle for the key s'
-    long     toKeyID;  // Index of the key s that we are switching into
-    long     ptxtSpace;// either p or p^r
+  SKHandle fromKey; // A handle for the key s'
+  long toKeyID;     // Index of the key s that we are switching into
+  long ptxtSpace;   // either p or p^r
 
-    std::vector<DoubleCRT> b;// The top row, consisting of the bi's
-    NTL::ZZ prgSeed;         // a seed to generate the random ai's in the bottom row
-    NTL::xdouble noiseBound;  // high probability bound on noise magnitude
-    // in each column
+  std::vector<DoubleCRT> b; // The top row, consisting of the bi's
+  NTL::ZZ prgSeed; // a seed to generate the random ai's in the bottom row
+  NTL::xdouble noiseBound; // high probability bound on noise magnitude
+  // in each column
 
-    explicit
-    KeySwitch(long sPow=0, long xPow=0, long fromID=0, long toID=0, long p=0);
-    explicit
-    KeySwitch(const SKHandle& _fromKey, long fromID=0, long toID=0, long p=0);
+  explicit KeySwitch(long sPow = 0,
+                     long xPow = 0,
+                     long fromID = 0,
+                     long toID = 0,
+                     long p = 0);
+  explicit KeySwitch(const SKHandle& _fromKey,
+                     long fromID = 0,
+                     long toID = 0,
+                     long p = 0);
 
-    bool operator==(const KeySwitch& other) const;
-    bool operator!=(const KeySwitch& other) const;
+  bool operator==(const KeySwitch& other) const;
+  bool operator!=(const KeySwitch& other) const;
 
-    unsigned long NumCols() const;
+  unsigned long NumCols() const;
 
-    //! @brief returns a dummy static matrix with toKeyId == -1
-    static const KeySwitch& dummy();
-    bool isDummy() const;
+  //! @brief returns a dummy static matrix with toKeyId == -1
+  static const KeySwitch& dummy();
+  bool isDummy() const;
 
-    //! A debugging method
-    void verify(SecKey& sk);
+  //! A debugging method
+  void verify(SecKey& sk);
 
-    //! @brief Read a key-switching matrix from input
-    void readMatrix(std::istream& str, const Context& context);
+  //! @brief Read a key-switching matrix from input
+  void readMatrix(std::istream& str, const Context& context);
 
-    //! Raw IO
-    void read(std::istream& str, const Context& context);
-    void write(std::ostream& str) const;
-
+  //! Raw IO
+  void read(std::istream& str, const Context& context);
+  void write(std::ostream& str) const;
 };
 std::ostream& operator<<(std::ostream& str, const KeySwitch& matrix);
-// We DO NOT have std::istream& operator>>(std::istream& str, KeySwitch& matrix);
-// instead must use the readMatrix method above, where you can specify context
-
+// We DO NOT have std::istream& operator>>(std::istream& str, KeySwitch&
+// matrix); instead must use the readMatrix method above, where you can specify
+// context
 
 //! @name Strategies for generating key-switching matrices
 //! These functions are implemented in KeySwitching.cpp
 
 //! @brief Constant defining threshold above which a baby-set/giant-step
 //! strategy is used
-#define FHE_KEYSWITCH_THRESH (50)
+#define HELIB_KEYSWITCH_THRESH (50)
 
 //! @brief Constant defining threshold above which a single
-//! giant step matrix is added even in FHE_KSS_MIN mode.
+//! giant step matrix is added even in HELIB_KSS_MIN mode.
 //! This helps in the matmul routines.
-#define FHE_KEYSWITCH_MIN_THRESH (8)
+#define HELIB_KEYSWITCH_MIN_THRESH (8)
 
 //! @brief Function that returns number of baby steps.  Used to keep
 //! this and matmul routines "in sync".
@@ -142,43 +147,48 @@ long KSGiantStepSize(long D);
 
 //! @brief Maximalistic approach:
 //! generate matrices s(X^e)->s(X) for all e in Zm*
-void addAllMatrices(SecKey& sKey, long keyID=0);
+void addAllMatrices(SecKey& sKey, long keyID = 0);
 
 //! @brief Generate matrices so every s(X^e) can be reLinearized
 //! in at most two steps
-void addFewMatrices(SecKey& sKey, long keyID=0);
+void addFewMatrices(SecKey& sKey, long keyID = 0);
 
 //! @brief Generate some matrices of the form s(X^{g^i})->s(X), but not all.
 //! For a generator g whose order is larger than bound, generate only enough
 //! matrices for the giant-step/baby-step procedures (2*sqrt(ord(g))of them).
-void addSome1DMatrices(SecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
+void addSome1DMatrices(SecKey& sKey,
+                       long bound = HELIB_KEYSWITCH_THRESH,
+                       long keyID = 0);
 
 //! @brief Generate all matrices s(X^{g^i})->s(X) for generators g of
 //! Zm* /(p) and i<ord(g). If g has different orders in Zm* and Zm* /(p)
 //! then generate also matrices of the form s(X^{g^{-i}})->s(X)
-void add1DMatrices(SecKey& sKey, long keyID=0);
+void add1DMatrices(SecKey& sKey, long keyID = 0);
 
-void addBSGS1DMatrices(SecKey& sKey, long keyID=0);
+void addBSGS1DMatrices(SecKey& sKey, long keyID = 0);
 
 //! Generate all/some Frobenius matrices of the form s(X^{p^i})->s(X)
-void addSomeFrbMatrices(SecKey& sKey, long bound=FHE_KEYSWITCH_THRESH, long keyID=0);
+void addSomeFrbMatrices(SecKey& sKey,
+                        long bound = HELIB_KEYSWITCH_THRESH,
+                        long keyID = 0);
 
-void addFrbMatrices(SecKey& sKey, long keyID=0);
+void addFrbMatrices(SecKey& sKey, long keyID = 0);
 
-void addBSGSFrbMatrices(SecKey& sKey, long keyID=0);
+void addBSGSFrbMatrices(SecKey& sKey, long keyID = 0);
 
 //! These routines just add a single matrix (or two, for bad dimensions)
-void addMinimal1DMatrices(SecKey& sKey, long keyID=0);
-void addMinimalFrbMatrices(SecKey& sKey, long keyID=0);
+void addMinimal1DMatrices(SecKey& sKey, long keyID = 0);
+void addMinimalFrbMatrices(SecKey& sKey, long keyID = 0);
 
 //! Generate all key-switching matrices for a given permutation network
 class PermNetwork;
-void addMatrices4Network(SecKey& sKey, const PermNetwork& net, long keyID=0);
+void addMatrices4Network(SecKey& sKey, const PermNetwork& net, long keyID = 0);
 
-//! Generate specific key-swicthing matrices, described by the given set
+//! Generate specific key-switching matrices, described by the given set
 void addTheseMatrices(SecKey& sKey,
-                      const std::set<long>& automVals, long keyID=0);
+                      const std::set<long>& automVals,
+                      long keyID = 0);
 
-}
+} // namespace helib
 
-#endif //HELIB_KEY_SWITCHING_H
+#endif // HELIB_KEY_SWITCHING_H

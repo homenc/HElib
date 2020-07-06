@@ -24,13 +24,13 @@ using namespace helib;
 bool verbose=false;
 
 // Compute the L-infinity distance between two vectors
-double calcMaxDiff(const vector<cx_double>& v1, 
+double calcMaxDiff(const vector<cx_double>& v1,
                    const vector<cx_double>& v2){
 
   if(lsize(v1)!=lsize(v2))
     NTL::Error("Vector sizes differ.\nFAILED\n");
 
-  double maxDiff = 0.0;  
+  double maxDiff = 0.0;
   for (long i=0; i<lsize(v1); i++) {
     double diffAbs = std::abs(v1[i]-v2[i]);
     if (diffAbs > maxDiff)
@@ -65,21 +65,21 @@ double calcMaxRelDiff(const vector<cx_double>& v1,
     return maxDiff;
 }
 
-inline bool cx_equals(const vector<cx_double>& v1, 
-                      const vector<cx_double>& v2, 
+inline bool cx_equals(const vector<cx_double>& v1,
+                      const vector<cx_double>& v2,
                       double epsilon)
 {
   return (calcMaxRelDiff(v1,v2) < epsilon);
 }
 
-void testBasicArith(const PubKey& publicKey, 
-                    const SecKey& secretKey, 
+void testBasicArith(const PubKey& publicKey,
+                    const SecKey& secretKey,
                     const EncryptedArrayCx& ea, double epsilon);
-void testComplexArith(const PubKey& publicKey, 
-                      const SecKey& secretKey, 
+void testComplexArith(const PubKey& publicKey,
+                      const SecKey& secretKey,
                       const EncryptedArrayCx& ea, double epsilon);
-void testRotsNShifts(const PubKey& publicKey, 
-                     const SecKey& secretKey, 
+void testRotsNShifts(const PubKey& publicKey,
+                     const SecKey& secretKey,
                      const EncryptedArrayCx& ea, double epsilon);
 
 void debugCompare(const EncryptedArrayCx& ea, const SecKey& sk,
@@ -137,7 +137,7 @@ void rotate(vector<cx_double>& p, long amt)
 6. c2 += tmp
 7. ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
 8. c1.negate()
-9. c3.multiplyBy(c2) 
+9. c3.multiplyBy(c2)
 10. c0 -= c3
 **************/
 void testGeneralOps(const PubKey& publicKey, const SecKey& secretKey,
@@ -160,7 +160,7 @@ void testGeneralOps(const PubKey& publicKey, const SecKey& secretKey,
   ea.encrypt(c3, publicKey, p3, /*size=*/1.0);
 
   resetAllTimers();
-  FHE_NTIMER_START(Circuit);
+  HELIB_NTIMER_START(Circuit);
 
   for (long i = 0; i < nRounds; i++) {
 
@@ -227,7 +227,7 @@ void testGeneralOps(const PubKey& publicKey, const SecKey& secretKey,
        CheckCtxt(c1, "c1=-c1");
        debugCompare(ea, secretKey, p1, c1, epsilon);
      }
-     mul(p3, p2); // c3.multiplyBy(c2) 
+     mul(p3, p2); // c3.multiplyBy(c2)
      c3.multiplyBy(c2);
      if (verbose) {
        CheckCtxt(c3, "c3*=c2");
@@ -246,10 +246,10 @@ void testGeneralOps(const PubKey& publicKey, const SecKey& secretKey,
   c2.cleanUp();
   c3.cleanUp();
 
-  FHE_NTIMER_STOP(Circuit);
+  HELIB_NTIMER_STOP(Circuit);
 
   vector<cx_double> pp0, pp1, pp2, pp3;
-   
+
   ea.decrypt(c0, secretKey, pp0);
   ea.decrypt(c1, secretKey, pp1);
   ea.decrypt(c2, secretKey, pp2);
@@ -285,7 +285,7 @@ void testGeneralOps(const PubKey& publicKey, const SecKey& secretKey,
   resetAllTimers();
    }
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
 
   // Commandline setup
@@ -351,20 +351,20 @@ int main(int argc, char *argv[])
         dbgKey = & secretKey;
         dbgEa = context.ea;
     }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
           dbgKey = & secretKey;
           dbgEa = context.ea;
-#endif //DEBUG_PRINTOUT
+#endif //HELIB_DEBUG
 
     // Run the tests.
     testBasicArith(publicKey, secretKey, ea, epsilon);
     testComplexArith(publicKey, secretKey, ea, epsilon);
     testRotsNShifts(publicKey, secretKey, ea, epsilon);
     testGeneralOps(publicKey, secretKey, ea, epsilon*R, R);
-  } 
+  }
   catch (exception& e) {
     cerr << e.what() << endl;
-    cerr << "***Major FAIL***" << endl;  
+    cerr << "***Major FAIL***" << endl;
   }
 
   return 0;
@@ -379,7 +379,7 @@ void testBasicArith(const PubKey& publicKey,
   // Test objects
 
   Ctxt c1(publicKey), c2(publicKey), c3(publicKey);
-  
+
   vector<cx_double> vd;
   vector<cx_double> vd1, vd2, vd3;
   ea.random(vd1);
@@ -429,9 +429,9 @@ void testBasicArith(const PubKey& publicKey,
   c1.addConstant(to_ZZ(1));
   for (long i=0; i<lsize(vd1); i++) vd1[i] = 1.0 - vd1[i];
 
-  // Diff between approxNums HE scheme and plaintext floating  
+  // Diff between approxNums HE scheme and plaintext floating
   ea.decrypt(c1, secretKey, vd);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<<"res=", vd, 10)<<endl;
   printVec(cout<<"vec=", vd1, 10)<<endl;
 #endif
@@ -461,16 +461,16 @@ void testComplexArith(const PubKey& publicKey,
   vector<cx_double> vd1, vd2;
   ea.random(vd1);
   ea.random(vd2);
-   
+
   ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
   ea.encrypt(c2, publicKey, vd2, /*size=*/1.0);
 
   if (verbose)
     cout << "Test Conjugate: ";
   for_each(vd1.begin(), vd1.end(), [](cx_double& d){d=std::conj(d);});
-  c1.complexConj();  
+  c1.complexConj();
   ea.decrypt(c1, secretKey, vd);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<<"vd1=", vd1, 10)<<endl;
   printVec(cout<<"res=", vd, 10)<<endl;
 #endif
@@ -499,7 +499,7 @@ void testComplexArith(const PubKey& publicKey,
   ea.extractImPart(imCtxt);
   ea.decrypt(imCtxt, secretKey, im_dec);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<<"vd2=", vd2, 10)<<endl;
   printVec(cout<<"real=", realParts, 10)<<endl;
   printVec(cout<<"res=", real_dec, 10)<<endl;
@@ -520,7 +520,7 @@ void testComplexArith(const PubKey& publicKey,
   }
 }
 
-void testRotsNShifts(const PubKey& publicKey, 
+void testRotsNShifts(const PubKey& publicKey,
                      const SecKey& secretKey,
                      const EncryptedArrayCx& ea, double epsilon)
 {
@@ -529,7 +529,7 @@ void testRotsNShifts(const PubKey& publicKey,
   int nplaces = rand() % static_cast<int>(ea.size()/2.0) + 1;
 
   if (verbose)
-    cout << "Test Rotation of " << nplaces << ": ";  
+    cout << "Test Rotation of " << nplaces << ": ";
 
   Ctxt c1(publicKey);
   vector<cx_double> vd1;
@@ -537,14 +537,14 @@ void testRotsNShifts(const PubKey& publicKey,
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<< "vd1=", vd1, 10)<<endl;
 #endif
   std::rotate(vd1.begin(), vd1.end()-nplaces, vd1.end());
   ea.rotate(c1, nplaces);
   c1.reLinearize();
   ea.decrypt(c1, secretKey, vd_dec);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   printVec(cout<< "vd1(rot)=", vd1, 10)<<endl;
   printVec(cout<<"res: ", vd_dec, 10)<<endl;
 #endif

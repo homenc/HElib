@@ -38,14 +38,14 @@ public:
    // Apply n-point FFT to src[0..n-1], storing result in dst[0..n-1].
    // That is,
    //   dst[i] = \sum_{j=0}^{n-1} src[j] W^{ij}
-   // and where W is the nth root of unity polar(1, -2*pi/n). 
+   // and where W is the nth root of unity polar(1, -2*pi/n).
    // src and dst may be equal, but should not otherwise overlap
 
    void apply(std::complex<double>* v) const { apply(v, v); }
    // same as apply(v, v)
 
    // Copy/move constructors/assignment ops deleted, as future implementations
-   // may not support them.  
+   // may not support them.
    PGFFT(const PGFFT&) = delete;
    PGFFT(PGFFT&&) = delete;
    PGFFT& operator=(const PGFFT&) = delete;
@@ -70,10 +70,10 @@ public:
    public:
        using value_type    = T;
 
-       aligned_allocator() noexcept {} 
+       aligned_allocator() noexcept {}
        template <class U> aligned_allocator(aligned_allocator<U> const&) noexcept {}
 
-       value_type*  
+       value_type*
        allocate(std::size_t n)
        {
            void *p = aligned_allocate(n, sizeof(T));
@@ -85,7 +85,7 @@ public:
        }
 
        void
-       deallocate(value_type* p, std::size_t) noexcept  
+       deallocate(value_type* p, std::size_t) noexcept
        {
 	   aligned_deallocate(p);
        }

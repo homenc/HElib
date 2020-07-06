@@ -28,7 +28,7 @@ static bool noPrint = true;
 void testCtxt(long m, long p, long widthBound=0, long L=0, long r=1);
 
 // OLD CODE
-//void usage(char *prog) 
+//void usage(char *prog)
 //{
 //  cout << "Usage: "<<prog<<" [test=? [optional parameters...]]\n";
 //  cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";

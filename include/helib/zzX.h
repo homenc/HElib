@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -12,8 +12,8 @@
 #ifndef HELIB_ZZX_H
 #define HELIB_ZZX_H
 /**
- * @file zzX.h - manipulating polynomials with single-percision coefficient
- *               It is assumed that the result is also single-percision
+ * @file zzX.h - manipulating polynomials with single-precision coefficient
+ *               It is assumed that the result is also single-precision
  **/
 #include <NTL/vector.h>
 #include <NTL/lzz_pX.h>
@@ -85,12 +85,11 @@ inline zzX MulMod(const zzX& a, const zzX& b, const PAlgebra& palg)
   return tmp;
 }
 
-
 // these produce properly balanced residues, with randomization
 // if necessary
 zzX balanced_zzX(const NTL::zz_pX& f);
 zzX balanced_zzX(const NTL::GF2X& f);
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_ZZX_H

@@ -45,7 +45,7 @@ static Vec<long> global_mvec, global_gens, global_ords;
 static int c_m = 100;
 
 
-static void 
+static void
 dump_v_values()
 {
   const vector<double> *v_values = fetch_saved_values("v_values");
@@ -62,7 +62,7 @@ dump_v_values()
 }
 
 static void
-anderson_darling(const vector<double>& X, double& AD, double& p_val) 
+anderson_darling(const vector<double>& X, double& AD, double& p_val)
 {
   long N = X.size();
 
@@ -79,7 +79,7 @@ anderson_darling(const vector<double>& X, double& AD, double& p_val)
   double SM = 0;
   for (long i: range(N)) SM += Y[i];
   SM /= N;
-  
+
 
   // compute the sample variance
   double SV = 0;
@@ -87,35 +87,35 @@ anderson_darling(const vector<double>& X, double& AD, double& p_val)
   SV /= (N-1);
 
   // replace Y[i] by CDF of Y[i]
-  for (long i: range(N)) 
+  for (long i: range(N))
     Y[i] = 0.5*(1 + erf((Y[i]-SM)/sqrt(2*SV)));
 
   double S = 0;
   for (long i: range(N)) {
     S += (2*i+1)*(log(Y[i]) + log1p(-Y[N-1-i]));
-  } 
+  }
   AD = -N - S/N;
 
   AD *= (1 + 0.75/N + 2.25/N/N);
   // This adjustment and the p-values below come from:
-  // R.B. D'Augostino and M.A. Stephens, Eds., 1986, 
+  // R.B. D'Augostino and M.A. Stephens, Eds., 1986,
   // Goodness-of-Fit Techniques, Marcel Dekker.
 
-  if (AD >= 0.6) 
+  if (AD >= 0.6)
     p_val = exp(1.2937 - 5.709*(AD)+ 0.0186*fsquare(AD));
   else if (AD > 0.34)
     p_val = exp(0.9177 - 4.279*(AD) - 1.38*fsquare(AD));
-  else if (AD > 0.2) 
+  else if (AD > 0.2)
     p_val = 1 - exp(-8.318 + 42.796*(AD)- 59.938*fsquare(AD));
   else
     p_val = 1 - exp(-13.436 + 101.14*(AD)- 223.73*fsquare(AD));
 }
 
-static void 
+static void
 print_anderson_darling()
 {
   const vector<double> *v_values = fetch_saved_values("v_values");
-  if (v_values) { 
+  if (v_values) {
     double AD, p_val;
     anderson_darling(*v_values, AD, p_val);
     cout << "AD=" << AD << ", p_val=" << p_val << "\n";
@@ -141,7 +141,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
     m = computeProd(mvec);
     phim = phi_N(m);
-    helib::assertTrue(GCD(p, m) == 1, "GCD(p, m) == 1");
+    assertTrue(GCD(p, m) == 1, "GCD(p, m) == 1");
 
   if (!noPrint) {
     cout << "*** TestIt";
@@ -166,8 +166,8 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   }
 
   context.zMStar.set_cM(c_m/100.0);
-  buildModChain(context, L, c, 
-    /*willBeBootstrappable=*/true, 
+  buildModChain(context, L, c,
+    /*willBeBootstrappable=*/true,
     /*t=*/skHwt,
     /*resolution=*/3,
     /*bitsInSpecialPrimes=*/special_bits);
@@ -226,7 +226,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   t += GetTime();
   if (!noPrint) cout << " done in "<<t<<" seconds\n";
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       dbgEa = context.ea;
       dbgKey = &secretKey;
 #endif
@@ -280,7 +280,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
     c2 = next_c2;
     next_c2.multiplyBy(next_c2);
     sqr_count++;
-  } 
+  }
   while (next_c2.bitCapacity() >= 100);
 
 
@@ -290,15 +290,15 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
     long q = power_long(p, e) + 1;
     double Bnd = context.boundForRecryption();
     double mfac = context.zMStar.getNormBnd();
-    double min_bit_cap = log(  mfac*q / (p2r*Bnd*FHE_MIN_CAP_FRAC) )/log(2.0);
+    double min_bit_cap = log(  mfac*q / (p2r*Bnd*HELIB_MIN_CAP_FRAC) )/log(2.0);
 
     cout << "min_bit_cap=" << min_bit_cap << "\n";
 
-    cout << "log2(modSwitchAddedNoiseBound)=" 
+    cout << "log2(modSwitchAddedNoiseBound)="
          << log(c1.modSwitchAddedNoiseBound())/log(2.0) << "\n";
     cout << "sqr_count=" << sqr_count << "\n";
     if (sqr_count > 0) {
-      cout << "BITS-PER-LEVEL: " 
+      cout << "BITS-PER-LEVEL: "
            << ((c1.bitCapacity()-c2.bitCapacity())/double(sqr_count)) << "\n";
     }
     CheckCtxt(c2, "before recryption");
@@ -306,10 +306,10 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
   resetAllTimers();
 
-  { FHE_NTIMER_START(AAA_thinRecrypt);
+  { HELIB_NTIMER_START(AAA_thinRecrypt);
 
   publicKey.thinReCrypt(c2);
- 
+
   }
 
 
@@ -326,13 +326,13 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   vector<ZZX> val2;
   ea.decrypt(c2, secretKey, val2);
 
-  if (val1 == val2) 
+  if (val1 == val2)
     cout << "GOOD\n";
   else
     cout << "BAD\n";
   }
 
- 
+
   if (!noPrint) printAllTimers();
 
 #if (defined(__unix__) || defined(__unix) || defined(unix))
@@ -357,7 +357,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
 /********************************************************************
  ********************************************************************/
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMap amap;
 
@@ -410,7 +410,7 @@ int main(int argc, char *argv[])
   if (global_gens.length() == 0 || global_ords.length() == 0 || global_mvec.length() == 0)
     Error("gens, ords, and mvec must be initialized");
 
-  if (seed) 
+  if (seed)
     SetSeed(ZZ(seed));
 
   SetNumThreads(nthreads);

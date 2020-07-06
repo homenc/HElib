@@ -249,14 +249,17 @@ protected:
       helib::print_stats(std::cout);
 
     cleanupBootstrappingGlobals();
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 };
 
 TEST_P(GTestFatboot, correctlyPerformsFatboot)
 {
-  helib::buildModChain(
-      context, bits, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+  helib::buildModChain(context,
+                       bits,
+                       c,
+                       /*willBeBootstrappable=*/true,
+                       /*t=*/skHwt);
 
   if (!helib_test::noPrint) {
     std::cout << "security=" << context.securityLevel() << std::endl;
@@ -315,14 +318,7 @@ TEST_P(GTestFatboot, correctlyPerformsFatboot)
     helib::PolyRed(ptxt_poly1, ptxt_poly, p2r, true);
     // this is the format produced by decryption
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context.ea;
-    helib::dbgKey = &secretKey;
-#endif
-
-    if (debug) {
-      helib::dbgKey = &secretKey; // debugging key
-    }
+    helib::setupDebugGlobals(&secretKey, context.ea);
 
     NTL::ZZX poly2;
     helib::Ctxt c1(publicKey);

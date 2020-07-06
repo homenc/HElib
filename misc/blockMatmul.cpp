@@ -101,7 +101,7 @@ public:
       } // now diag[j] contains the lin poly coeffs
     }
 
-    if (!zDiag) // clear trailing zero entries    
+    if (!zDiag) // clear trailing zero entries
       for (long jj = nzLast+1; jj < nslots; jj++)
 	for (long k = 0; k < d; k++)
 	  clear(diag[jj][k]);
@@ -112,13 +112,13 @@ public:
   // This code has a complexity of N+d (instead of N*d) where N is the
   // number of nonzero diagonal blocks. However, it requires space for
   // d extra ciphertexts
-  void multiply(Ctxt* ctxt) 
+  void multiply(Ctxt* ctxt)
   {
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
     const RXModulus& F = ea.getTab().getPhimXMod();
     const PAlgebra& zMStar = ea.getContext().zMStar;
-    long p = zMStar.getP(); 
+    long p = zMStar.getP();
     long m = zMStar.getM();
     long nslots = ea.size();
     long d = ea.getDegree();
@@ -283,7 +283,7 @@ public:
     }
     data = res;
   }
-}; 
+};
 void blockMatMul(NewPlaintextArray& pa, MatMulBase& mat)
 {
   switch (mat.getEA().getTag()) {

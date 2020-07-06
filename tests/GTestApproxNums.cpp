@@ -95,12 +95,12 @@ inline bool cx_equals(const std::vector<std::complex<double>>& v1,
   return (calcMaxRelDiff(v1, v2) < epsilon);
 }
 
-::testing::AssertionResult
-ciphertextMatches(const helib::EncryptedArrayCx& ea,
-                  const helib::SecKey& sk,
-                  const std::vector<std::complex<double>>& p,
-                  const helib::Ctxt& c,
-                  double epsilon)
+::testing::AssertionResult ciphertextMatches(
+    const helib::EncryptedArrayCx& ea,
+    const helib::SecKey& sk,
+    const std::vector<std::complex<double>>& p,
+    const helib::Ctxt& c,
+    double epsilon)
 {
   std::vector<std::complex<double>> pp;
   ea.decrypt(c, sk, pp);
@@ -194,17 +194,11 @@ protected:
                 << ", specialPrimes=" << context.specialPrimes << std::endl
                 << std::endl;
     }
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
-       //          if (helib_test::debug) {
-       //            dbgKey = &secretKey;
-       //            dbgEa = const_cast<helib::EncryptedArray*>(context.ea);
-       //          }
+
+    helib::setupDebugGlobals(&secretKey, context.ea);
   }
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestApproxNums, basicArithmeticWorks)
@@ -272,7 +266,7 @@ TEST_P(GTestApproxNums, basicArithmeticWorks)
 
   // Diff between approxNums HE scheme and plaintext floating
   ea.decrypt(c1, secretKey, vd);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "res=", vd, 10) << std::endl;
   helib::printVec(std::cout << "vec=", vd1, 10) << std::endl;
 #endif
@@ -306,7 +300,7 @@ TEST_P(GTestApproxNums, complexArithmeticWorks)
   });
   c1.complexConj();
   ea.decrypt(c1, secretKey, vd);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "vd1=", vd1, 10) << std::endl;
   helib::printVec(std::cout << "res=", vd, 10) << std::endl;
 #endif
@@ -337,20 +331,22 @@ TEST_P(GTestApproxNums, complexArithmeticWorks)
   ea.extractImPart(imCtxt);
   ea.decrypt(imCtxt, secretKey, im_dec);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "vd2=", vd2, 10) << std::endl;
   helib::printVec(std::cout << "real=", realParts, 10) << std::endl;
   helib::printVec(std::cout << "res=", real_dec, 10) << std::endl;
   helib::printVec(std::cout << "im=", imParts, 10) << std::endl;
   helib::printVec(std::cout << "res=", im_dec, 10) << std::endl;
 #endif
-  EXPECT_TRUE(cx_equals(
-      realParts, real_dec, NTL::conv<double>(epsilon * realCtxt.getPtxtMag())))
+  EXPECT_TRUE(cx_equals(realParts,
+                        real_dec,
+                        NTL::conv<double>(epsilon * realCtxt.getPtxtMag())))
       << "  max(re)=" << helib::largestCoeff(realParts)
       << ", max(re1)=" << helib::largestCoeff(real_dec)
       << ", maxDiff=" << calcMaxDiff(realParts, real_dec) << std::endl;
-  EXPECT_TRUE(cx_equals(
-      imParts, im_dec, NTL::conv<double>(epsilon * imCtxt.getPtxtMag())))
+  EXPECT_TRUE(cx_equals(imParts,
+                        im_dec,
+                        NTL::conv<double>(epsilon * imCtxt.getPtxtMag())))
       << "  max(im)=" << helib::largestCoeff(imParts)
       << ", max(im1)=" << helib::largestCoeff(im_dec)
       << ", maxDiff=" << calcMaxDiff(imParts, im_dec) << std::endl
@@ -371,14 +367,14 @@ TEST_P(GTestApproxNums, rotatesAndShiftsWork)
   ea.random(vd1);
   ea.encrypt(c1, publicKey, vd1, /*size=*/1.0);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "vd1=", vd1, 10) << std::endl;
 #endif
   std::rotate(vd1.begin(), vd1.end() - nplaces, vd1.end());
   ea.rotate(c1, nplaces);
   c1.reLinearize();
   ea.decrypt(c1, secretKey, vd_dec);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::printVec(std::cout << "vd1(rot)=", vd1, 10) << std::endl;
   helib::printVec(std::cout << "res: ", vd_dec, 10) << std::endl;
 #endif
@@ -421,7 +417,7 @@ TEST_P(GTestApproxNums, generalOpsWorks)
   ea.encrypt(c3, publicKey, p3, /*size=*/1.0);
 
   helib::resetAllTimers();
-  FHE_NTIMER_START(Circuit);
+  HELIB_NTIMER_START(Circuit);
 
   for (long i = 0; i < R; i++) {
 
@@ -516,7 +512,7 @@ TEST_P(GTestApproxNums, generalOpsWorks)
   c2.cleanUp();
   c3.cleanUp();
 
-  FHE_NTIMER_STOP(Circuit);
+  HELIB_NTIMER_STOP(Circuit);
 
   std::vector<std::complex<double>> pp0, pp1, pp2, pp3;
 

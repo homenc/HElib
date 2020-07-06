@@ -111,7 +111,7 @@ void decryptAndPrint(std::ostream& s,
         PolyRed(ptxt[i], g, true);
     }
     s << "   decoded to ";
-    if (deg(p) < 40) // just pring the whole thing
+    if (deg(p) < 40) // just print the whole thing
       s << ptxt << std::endl;
     else if (ptxt.size() == 1) // a single slot
       printZZX(s, ptxt[0]) << std::endl;
@@ -150,8 +150,6 @@ void rawDecrypt(NTL::ZZX& plaintxt,
                 const DoubleCRT& sKey,
                 long q)
 {
-  const Context& context = sKey.getContext();
-
   // Set to zzParts[0] + sKey * zzParts[1] "over the integers"
   DoubleCRT ptxt = sKey;
   ptxt *= zzParts[1];

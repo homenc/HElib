@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -37,18 +37,19 @@ namespace helib {
 // This is only used in embeddingLargestCoeff_x2.
 // Experimentally, one half FFT seems a bit better, so setting to 0 is best.
 
-
 long sumOfCoeffs(const zzX& f) // = f(1)
 {
   long sum = 0;
-  for (long i=0; i<lsize(f); i++) sum += f[i];
+  for (long i = 0; i < lsize(f); i++)
+    sum += f[i];
   return sum;
 }
 
 NTL::ZZ sumOfCoeffs(const NTL::ZZX& f) // = f(1)
 {
   NTL::ZZ sum = NTL::ZZ::zero();
-  for (long i=0; i<=deg(f); i++) sum += coeff(f,i);
+  for (long i = 0; i <= deg(f); i++)
+    sum += coeff(f, i);
   return sum;
 }
 
@@ -62,9 +63,9 @@ NTL::ZZ sumOfCoeffs(const DoubleCRT& f)
 NTL::ZZ largestCoeff(const NTL::ZZX& f)
 {
   NTL::ZZ mx = NTL::ZZ::zero();
-  for (long i=0; i<=deg(f); i++) {
-    if (mx < abs(coeff(f,i)))
-      mx = abs(coeff(f,i));
+  for (long i = 0; i <= deg(f); i++) {
+    if (mx < abs(coeff(f, i)))
+      mx = abs(coeff(f, i));
   }
   return mx;
 }
@@ -89,7 +90,7 @@ NTL::ZZ largestCoeff(const DoubleCRT& f)
 double coeffsL2NormSquared(const zzX& f) // l_2 norm square
 {
   double s = 0.0;
-  for (long i=0; i<lsize(f); i++) {
+  for (long i = 0; i < lsize(f); i++) {
     double coef = f[i];
     s += coef * coef;
   }
@@ -99,8 +100,8 @@ double coeffsL2NormSquared(const zzX& f) // l_2 norm square
 NTL::xdouble coeffsL2NormSquared(const NTL::ZZX& f) // l_2 norm square
 {
   NTL::xdouble s(0.0);
-  for (long i=0; i<=deg(f); i++) {
-    NTL::xdouble coef(NTL::conv<NTL::xdouble>(coeff(f,i)));
+  for (long i = 0; i <= deg(f); i++) {
+    NTL::xdouble coef(NTL::conv<NTL::xdouble>(coeff(f, i)));
     s += coef * coef;
   }
   return s;
@@ -113,54 +114,45 @@ NTL::xdouble coeffsL2NormSquared(const DoubleCRT& f) // l2 norm^2
   return coeffsL2NormSquared(poly);
 }
 
-
-
-
-
-
 // ===  Computing the L-infinity norm of the canonical embedding ===
 
 // The built-in complex mul has a lot of extra tests related to
 // infinites and NaNs that slows it down considerably
-static inline cx_double
-MUL(cx_double a, cx_double b)
+static inline cx_double MUL(cx_double a, cx_double b)
 {
-   double x = a.real(), y = a.imag(), u = b.real(), v = b.imag();
-   return cx_double(x*u-y*v, x*v+y*u);
+  double x = a.real(), y = a.imag(), u = b.real(), v = b.imag();
+  return cx_double(x * u - y * v, x * v + y * u);
 }
 
-
-static double
-basic_embeddingLargestCoeff(const std::vector<double>& f,
-                      const PAlgebra& palg)
+static double basic_embeddingLargestCoeff(const std::vector<double>& f,
+                                          const PAlgebra& palg)
 {
 
   long m = palg.getM();
   long sz = f.size();
 
   if (sz > m)
-    helib::LogicError("vector too big f canonicalEmbedding");
+    LogicError("vector too big f canonicalEmbedding");
 
   std::vector<cx_double> buf(m);
-  for (long i: range(0, sz)) buf[i] = f[i];
-  for (long i: range(sz, m)) buf[i] = 0;
+  for (long i : range(0, sz))
+    buf[i] = f[i];
+  for (long i : range(sz, m))
+    buf[i] = 0;
   palg.getFFTInfo().apply(&buf[0]);
 
-  double mx=0;
+  double mx = 0;
 
-  for (long i = 1; i <= m/2; i++) {
+  for (long i = 1; i <= m / 2; i++) {
     if (palg.inZmStar(i)) {
       double n = std::norm(buf[i]);
-      if (mx < n) mx = n;
+      if (mx < n)
+        mx = n;
     }
   }
 
   return sqrt(mx);
 }
-
-
-
-
 
 // Odd-Power Trick.  Suppose m is even and deg(f) < m/2,
 // and we want to compute f(W^(2j+1)) =  \sum_{i < m/2} f_i W^{i(2j+1)})
@@ -170,117 +162,110 @@ basic_embeddingLargestCoeff(const std::vector<double>& f,
 // then f(W^(2j+1)) = \sum_{i < m/2} g_i V^{ij}.  So this
 // reduces the original problem to a single (m/2)-point DFT.
 
-static double
-half_embeddingLargestCoeff(const std::vector<double>& f,
-                             const PAlgebra& palg)
+static double half_embeddingLargestCoeff(const std::vector<double>& f,
+                                         const PAlgebra& palg)
 {
 
   long m = palg.getM();
   long sz = f.size();
 
-  if (sz > m/2)
-    helib::LogicError("vector too big f canonicalEmbedding");
+  if (sz > m / 2)
+    LogicError("vector too big f canonicalEmbedding");
 
   const half_FFT& hfft = palg.getHalfFFTInfo();
   const cx_double* pow = &hfft.pow[0];
 
-  std::vector<cx_double> buf(m/2);
-  for (long i: range(0, sz)) buf[i] = f[i] * pow[i];
-  for (long i: range(sz, m/2)) buf[i] = 0;
+  std::vector<cx_double> buf(m / 2);
+  for (long i : range(0, sz))
+    buf[i] = f[i] * pow[i];
+  for (long i : range(sz, m / 2))
+    buf[i] = 0;
   hfft.fft.apply(&buf[0]);
 
-  double mx=0;
+  double mx = 0;
 
-  for (long i = 1; i <= m/2; i += 2) {
+  for (long i = 1; i <= m / 2; i += 2) {
     if (palg.inZmStar(i)) {
       double n = std::norm(buf[i >> 1]);
-      if (mx < n) mx = n;
+      if (mx < n)
+        mx = n;
     }
   }
 
   return sqrt(mx);
 }
-
-
-
-
 
 // This combines the Odd-Power Trick (see above) with the standard technique
 // for cutting the cost of a real DFT in half.  Provided m is a multiple of 4,
 // we can reduce to a single complex (m/4)-point DFT.
 
-static double
-quarter_embeddingLargestCoeff(const std::vector<double>& f, const PAlgebra& palg)
+static double quarter_embeddingLargestCoeff(const std::vector<double>& f,
+                                            const PAlgebra& palg)
 {
 
   long m = palg.getM();
   long sz = f.size();
 
-  if (sz > m/2)
-    helib::LogicError("vector too big f canonicalEmbedding");
+  if (sz > m / 2)
+    LogicError("vector too big f canonicalEmbedding");
 
   const quarter_FFT& qfft = palg.getQuarterFFTInfo();
   const cx_double* pow1 = &qfft.pow1[0];
   const cx_double* pow2 = &qfft.pow2[0];
 
-  std::vector<cx_double> buf(m/4);
-  for (long i: range(0, sz/2))
-    buf[i] = MUL(cx_double(f[2*i], f[2*i+1]), pow2[i]);
-  for (long i: range(sz/2, m/4)) buf[i] = 0;
-  if (sz%2)
-    buf[sz/2] = MUL(cx_double(f[sz-1], 0), pow2[sz/2]);
+  std::vector<cx_double> buf(m / 4);
+  for (long i : range(0, sz / 2))
+    buf[i] = MUL(cx_double(f[2 * i], f[2 * i + 1]), pow2[i]);
+  for (long i : range(sz / 2, m / 4))
+    buf[i] = 0;
+  if (sz % 2)
+    buf[sz / 2] = MUL(cx_double(f[sz - 1], 0), pow2[sz / 2]);
   qfft.fft.apply(&buf[0]);
 
   double mx = 0;
 
-  for (long i = 1; i <= m/2; i += 2) {
+  for (long i = 1; i <= m / 2; i += 2) {
     if (palg.inZmStar(i)) {
-      cx_double z1 = buf[i>>1];
-      cx_double z2 = std::conj(buf[(m/2-i)>>1]);
-      cx_double Xe = 0.5*(z1+z2);
-      cx_double tmp = 0.5*(z1-z2);
+      cx_double z1 = buf[i >> 1];
+      cx_double z2 = std::conj(buf[(m / 2 - i) >> 1]);
+      cx_double Xe = 0.5 * (z1 + z2);
+      cx_double tmp = 0.5 * (z1 - z2);
       cx_double Xo = cx_double(tmp.imag(), -tmp.real());
       // Xo = -I*tmp
 
-      cx_double Y = Xe + MUL(Xo, pow1[i>>1]);
+      cx_double Y = Xe + MUL(Xo, pow1[i >> 1]);
       double n = std::norm(Y);
-      if (mx < n) mx = n;
+      if (mx < n)
+        mx = n;
     }
   }
 
   return sqrt(mx);
 }
 
-double
-embeddingLargestCoeff(const std::vector<double>& f,
-                      const PAlgebra& palg)
+double embeddingLargestCoeff(const std::vector<double>& f, const PAlgebra& palg)
 {
-  FHE_NTIMER_START(AAA_embeddingLargest);
+  HELIB_NTIMER_START(AAA_embeddingLargest);
 
   long m = palg.getM();
-  if (USE_HALF_FFT && m%2 == 0) {
-    if (USE_QUARTER_FFT && m%4 == 0)
+  if (USE_HALF_FFT && m % 2 == 0) {
+    if (USE_QUARTER_FFT && m % 4 == 0)
       return quarter_embeddingLargestCoeff(f, palg);
     else
       return half_embeddingLargestCoeff(f, palg);
-  }
-  else
+  } else
     return basic_embeddingLargestCoeff(f, palg);
 }
-
-
-
-
 
 // Computes two for the price of one!
 // This is a standard technique for computing the two real DFT's
 // using one complex DFT.
 
-static void
-basic_embeddingLargestCoeff_x2(double& norm1, double& norm2,
-			 const std::vector<double>& f1,
-			 const std::vector<double>& f2,
-			 const PAlgebra& palg)
+static void basic_embeddingLargestCoeff_x2(double& norm1,
+                                           double& norm2,
+                                           const std::vector<double>& f1,
+                                           const std::vector<double>& f2,
+                                           const PAlgebra& palg)
 {
 
   long m = palg.getM();
@@ -288,33 +273,39 @@ basic_embeddingLargestCoeff_x2(double& norm1, double& norm2,
   long sz2 = f2.size();
 
   if (sz1 > m || sz2 > m)
-    helib::LogicError("vector too big in canonicalEmbedding");
+    LogicError("vector too big in canonicalEmbedding");
 
   long sz_max = std::max(sz1, sz2);
   long sz_min = std::min(sz1, sz2);
 
   std::vector<cx_double> buf(m);
-  for (long i: range(0, sz_min))    buf[i] = cx_double(f1[i], f2[i]);
-  for (long i: range(sz_min, sz1))  buf[i] = cx_double(f1[i], 0);
-  for (long i: range(sz_min, sz2))  buf[i] = cx_double(0, f2[i]);
-  for (long i: range(sz_max, m))    buf[i] = 0;
+  for (long i : range(0, sz_min))
+    buf[i] = cx_double(f1[i], f2[i]);
+  for (long i : range(sz_min, sz1))
+    buf[i] = cx_double(f1[i], 0);
+  for (long i : range(sz_min, sz2))
+    buf[i] = cx_double(0, f2[i]);
+  for (long i : range(sz_max, m))
+    buf[i] = 0;
 
   palg.getFFTInfo().apply(&buf[0]);
 
-  double mx1=0, mx2=0;
+  double mx1 = 0, mx2 = 0;
 
-  for (long i = 1; i <= m/2; i++) {
+  for (long i = 1; i <= m / 2; i++) {
     if (palg.inZmStar(i)) {
-      cx_double x1 = 0.5*(buf[i] + std::conj(buf[m-i]));
-      cx_double x2 = 0.5*(buf[i] - std::conj(buf[m-i]));
+      cx_double x1 = 0.5 * (buf[i] + std::conj(buf[m - i]));
+      cx_double x2 = 0.5 * (buf[i] - std::conj(buf[m - i]));
       // should multiply by -sqrt(-1) to get the right value
       // of x2, but we only need its norm, so we don't bother
 
       double n1 = std::norm(x1);
       double n2 = std::norm(x2);
 
-      if (mx1 < n1) mx1 = n1;
-      if (mx2 < n2) mx2 = n2;
+      if (mx1 < n1)
+        mx1 = n1;
+      if (mx2 < n2)
+        mx2 = n2;
     }
   }
 
@@ -338,25 +329,24 @@ basic_embeddingLargestCoeff_x2(double& norm1, double& norm2,
       relerr = abs(xx[i]-yy[i])/xx[i];
     }
 
-    FHE_STATS_UPDATE("embeddingLargestCoeff_x2", relerr);
+    HELIB_STATS_UPDATE("embeddingLargestCoeff_x2", relerr);
   }
 #endif
 }
 
-
-static void
-half_embeddingLargestCoeff_x2(double& norm1, double& norm2,
-			 const std::vector<double>& f1,
-			 const std::vector<double>& f2,
-			 const PAlgebra& palg)
+static void half_embeddingLargestCoeff_x2(double& norm1,
+                                          double& norm2,
+                                          const std::vector<double>& f1,
+                                          const std::vector<double>& f2,
+                                          const PAlgebra& palg)
 {
 
   long m = palg.getM();
   long sz1 = f1.size();
   long sz2 = f2.size();
 
-  if (sz1 > m/2 || sz2 > m/2)
-    helib::LogicError("vector too big in canonicalEmbedding");
+  if (sz1 > m / 2 || sz2 > m / 2)
+    LogicError("vector too big in canonicalEmbedding");
 
   long sz_max = std::max(sz1, sz2);
   long sz_min = std::min(sz1, sz2);
@@ -366,28 +356,34 @@ half_embeddingLargestCoeff_x2(double& norm1, double& norm2,
 
   // Odd-Power Trick.  See above.
 
-  std::vector<cx_double> buf(m/2);
-  for (long i: range(0, sz_min))    buf[i] = MUL(cx_double(f1[i], f2[i]), pow[i]);
-  for (long i: range(sz_min, sz1))  buf[i] = MUL(cx_double(f1[i], 0), pow[i]);
-  for (long i: range(sz_min, sz2))  buf[i] = MUL(cx_double(0, f2[i]), pow[i]);
-  for (long i: range(sz_max, m/2))  buf[i] = 0;
+  std::vector<cx_double> buf(m / 2);
+  for (long i : range(0, sz_min))
+    buf[i] = MUL(cx_double(f1[i], f2[i]), pow[i]);
+  for (long i : range(sz_min, sz1))
+    buf[i] = MUL(cx_double(f1[i], 0), pow[i]);
+  for (long i : range(sz_min, sz2))
+    buf[i] = MUL(cx_double(0, f2[i]), pow[i]);
+  for (long i : range(sz_max, m / 2))
+    buf[i] = 0;
 
   hfft.fft.apply(&buf[0]);
 
-  double mx1=0, mx2=0;
+  double mx1 = 0, mx2 = 0;
 
-  for (long i = 1; i <= m/2; i += 2) {
+  for (long i = 1; i <= m / 2; i += 2) {
     if (palg.inZmStar(i)) {
-      cx_double x1 = 0.5*(buf[i >> 1] + std::conj(buf[(m-i) >> 1]));
-      cx_double x2 = 0.5*(buf[i >> 1] - std::conj(buf[(m-i) >> 1]));
+      cx_double x1 = 0.5 * (buf[i >> 1] + std::conj(buf[(m - i) >> 1]));
+      cx_double x2 = 0.5 * (buf[i >> 1] - std::conj(buf[(m - i) >> 1]));
       // should multiply by -I to get the right value
       // of x2, but we only need its norm, so we don't bother
 
       double n1 = std::norm(x1);
       double n2 = std::norm(x2);
 
-      if (mx1 < n1) mx1 = n1;
-      if (mx2 < n2) mx2 = n2;
+      if (mx1 < n1)
+        mx1 = n1;
+      if (mx2 < n2)
+        mx2 = n2;
     }
   }
 
@@ -411,37 +407,29 @@ half_embeddingLargestCoeff_x2(double& norm1, double& norm2,
       relerr = abs(xx[i]-yy[i])/xx[i];
     }
 
-    FHE_STATS_UPDATE("embeddingLargestCoeff_x2", relerr);
+    HELIB_STATS_UPDATE("embeddingLargestCoeff_x2", relerr);
   }
 #endif
 }
 
-
-
-
-void
-embeddingLargestCoeff_x2(double& norm1, double& norm2,
-			 const std::vector<double>& f1,
-			 const std::vector<double>& f2,
-			 const PAlgebra& palg)
+void embeddingLargestCoeff_x2(double& norm1,
+                              double& norm2,
+                              const std::vector<double>& f1,
+                              const std::vector<double>& f2,
+                              const PAlgebra& palg)
 {
-  FHE_NTIMER_START(AAA_embeddingLargest_x2);
+  HELIB_NTIMER_START(AAA_embeddingLargest_x2);
 
   long m = palg.getM();
-  if (USE_HALF_FFT && m%2 == 0) {
-    if (USE_QUARTER_FFT && USE_TWO_QUARTERS &&  m%4 == 0) {
+  if (USE_HALF_FFT && m % 2 == 0) {
+    if (USE_QUARTER_FFT && USE_TWO_QUARTERS && m % 4 == 0) {
       norm1 = quarter_embeddingLargestCoeff(f1, palg);
       norm2 = quarter_embeddingLargestCoeff(f2, palg);
-    }
-    else
+    } else
       half_embeddingLargestCoeff_x2(norm1, norm2, f1, f2, palg);
-  }
-  else
+  } else
     basic_embeddingLargestCoeff_x2(norm1, norm2, f1, f2, palg);
-
 }
-
-
 
 double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg)
 {
@@ -450,12 +438,10 @@ double embeddingLargestCoeff(const zzX& f, const PAlgebra& palg)
   return embeddingLargestCoeff(ff, palg);
 }
 
-
-static NTL::xdouble
-scale(std::vector<double>& ff, const NTL::ZZX& f)
+static NTL::xdouble scale(std::vector<double>& ff, const NTL::ZZX& f)
 {
   // max allowed bits to avoid double overflow in computations.
-  // Note that the implementation of the L-infty norms naiveley
+  // Note that the implementation of the L-infty norms naively
   // computes the complex norm and then takes a sqrt of that.
   // Given that an IEEE double can handle numbers only less than 1024
   // bits in length, this limits the bit lengths that are input
@@ -474,15 +460,14 @@ scale(std::vector<double>& ff, const NTL::ZZX& f)
     ff.resize(m);
 
     NTL::ZZ scaled;
-    for (long i: range(m)) {
+    for (long i : range(m)) {
       // NOTE: too bad NTL does not provide a scale and convert routine
-      RightShift(scaled, f.rep[i], size-MAX_BITS);
+      RightShift(scaled, f.rep[i], size - MAX_BITS);
       ff[i] = NTL::conv<double>(scaled);
     }
 
-    retval = NTL::power2_xdouble(size-MAX_BITS);
-  }
-  else {
+    retval = NTL::power2_xdouble(size - MAX_BITS);
+  } else {
     convert(ff, f.rep);
     retval = 1.0;
   }
@@ -497,16 +482,7 @@ NTL::xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
   return embeddingLargestCoeff(ff, palg) * factor;
 }
 
-
-
-
-
-
-
-
 // === Computing the canonical embedding and inverse ===
-
-
 
 // Odd-Power Trick. See above.
 
@@ -514,36 +490,38 @@ NTL::xdouble embeddingLargestCoeff(const NTL::ZZX& f, const PAlgebra& palg)
 // logic.  We can revisit this if this code ever becomes a bottleneck,
 // but this does not seem to be a significant issue at the moment.
 
-void
-CKKS_canonicalEmbedding(std::vector<cx_double>& v,
-                   const std::vector<double>& in,
-                   const PAlgebra& palg)
+void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
+                             const std::vector<double>& in,
+                             const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   long sz = in.size();
   long m = palg.getM();
 
-  if (!(palg.getP() == -1 && palg.getPow2() >= 2 && sz < m/2))
-    helib::LogicError("bad args to CKKS_canonicalEmbedding");
+  if (!(palg.getP() == -1 && palg.getPow2() >= 2 && sz < m / 2))
+    LogicError("bad args to CKKS_canonicalEmbedding");
 
   const half_FFT& hfft = palg.getHalfFFTInfo();
   const cx_double* pow = &hfft.pow[0];
 
-  std::vector<cx_double> buf(m/2);
-  for (long i: range(0, sz)) buf[i] = in[i] * pow[i];
-  for (long i: range(sz, m/2)) buf[i] = 0;
+  std::vector<cx_double> buf(m / 2);
+  for (long i : range(0, sz))
+    buf[i] = in[i] * pow[i];
+  for (long i : range(sz, m / 2))
+    buf[i] = 0;
   hfft.fft.apply(&buf[0]);
 
-  v.resize(m/4);
-  for (long i: range(m/4))
-    v[m/4-i-1] = buf[palg.ith_rep(i) >> 1];
+  v.resize(m / 4);
+  for (long i : range(m / 4))
+    v[m / 4 - i - 1] = buf[palg.ith_rep(i) >> 1];
 }
 
 void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
-                        const zzX& f, const PAlgebra& palg)
+                             const zzX& f,
+                             const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   std::vector<double> x;
   convert(x, f);
@@ -552,9 +530,10 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
 }
 
 void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
-                        const NTL::ZZX& f, const PAlgebra& palg)
+                             const NTL::ZZX& f,
+                             const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   std::vector<double> x;
   convert(x, f.rep);
@@ -562,16 +541,14 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
   CKKS_canonicalEmbedding(v, x, palg);
 }
 
-
-
-// The forward transorm (as computed by CKKS_canonicalEmbedding)
+// The forward transform (as computed by CKKS_canonicalEmbedding)
 // is computing the linear transformation:
 //    DFT * D
 // where D is a diagonal matrix with W^i on the diagonal in the i-th row,
-// and DFT is an (m/2)-point DFT matrix for a evalaution at powers of V=W^2.
+// and DFT is an (m/2)-point DFT matrix for an evaluation at powers of V=W^2.
 // D is applied first, and DFT is applied second.
 //
-// Here, we want to compute the inverse transormation:
+// Here, we want to compute the inverse transformation:
 //   D^{-1} * DFT^{-1}
 // Now, DFT^{-1} = 1/(m/2) times a DFT matrix for conj(V).
 // So this computation effectively maps a polynomial g of degree < m/2
@@ -589,41 +566,41 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
 // then applies D^{-1} * DFT^{-1}, and then reverses the expanding
 // step by dropping the complex part.
 
-void CKKS_embedInSlots(zzX& f, const std::vector<cx_double>& v,
-                  const PAlgebra& palg, double scaling)
+void CKKS_embedInSlots(zzX& f,
+                       const std::vector<cx_double>& v,
+                       const PAlgebra& palg,
+                       double scaling)
 
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   long v_sz = v.size();
   long m = palg.getM();
 
   if (!(palg.getP() == -1 && palg.getPow2() >= 2))
-    helib::LogicError("bad args to CKKS_canonicalEmbedding");
+    LogicError("bad args to CKKS_canonicalEmbedding");
 
-  std::vector<cx_double> buf(m/2, cx_double(0));
-  for (long i: range(m/4)) {
+  std::vector<cx_double> buf(m / 2, cx_double(0));
+  for (long i : range(m / 4)) {
     long j = palg.ith_rep(i);
-    long ii = m/4-i-1;
+    long ii = m / 4 - i - 1;
     if (ii < v_sz) {
       buf[j >> 1] = std::conj(v[ii]);
-      buf[(m-j) >> 1] = v[ii];
+      buf[(m - j) >> 1] = v[ii];
     }
   }
 
   const half_FFT& hfft = palg.getHalfFFTInfo();
   const cx_double* pow = &hfft.pow[0];
 
-  scaling /= (m/2);
+  scaling /= (m / 2);
   hfft.fft.apply(&buf[0]);
-  f.SetLength(m/2);
-  for (long i: range(m/2))
+  f.SetLength(m / 2);
+  for (long i : range(m / 2))
     f[i] = std::round(MUL(buf[i], pow[i]).real() * scaling);
 
   normalize(f);
 }
-
-
 
 // === obsolete versions of canonical embedding and inverse ===
 
@@ -657,11 +634,11 @@ canonicalEmbedding(std::vector<cx_double>& v,
 		   const std::vector<double>& in,
 		   const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long m = palg.getM();
 
   if (long(in.size()) > m)
-    helib::LogicError("std::vector too big in canonicalEmbedding");
+    LogicError("std::vector too big in canonicalEmbedding");
 
   vector<cx_double> buf(m);
   for (long i: range(in.size())) buf[i] = in[i];
@@ -678,7 +655,7 @@ canonicalEmbedding(std::vector<cx_double>& v,
 void canonicalEmbedding(std::vector<cx_double>& v,
                         const zzX& f, const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   vector<double> x;
   convert(x, f);
@@ -691,7 +668,7 @@ void canonicalEmbedding(std::vector<cx_double>& v,
 void canonicalEmbedding(std::vector<cx_double>& v,
                         const ZZX& f, const PAlgebra& palg)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   vector<double> x;
   convert(x, f.rep);
@@ -710,7 +687,7 @@ void canonicalEmbedding(std::vector<cx_double>& v,
 void embedInSlots(zzX& f, const std::vector<cx_double>& v,
                   const PAlgebra& palg, double scaling, bool strictInverse)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long m = palg.getM();
   long phimBy2 = divc(palg.getPhiM(),2);
   vector<cx_double> avv(m);
@@ -781,4 +758,4 @@ void embedInSlots(zzX& f, const std::vector<cx_double>& v,
 
 #endif
 
-}
+} // namespace helib

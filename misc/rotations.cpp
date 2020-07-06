@@ -36,7 +36,7 @@ public:
       long n = dims.size();
       assert(n > 0);
 
-      
+
       prods.resize(n+1);
       prods[n] = 1;
       for (long i = n-1; i >= 0; i--) {
@@ -47,7 +47,7 @@ public:
 
       size = prods[0];
       data.resize(size);
-      for (long i = 0; i < size; i++) data[i] = 0; 
+      for (long i = 0; i < size; i++) data[i] = 0;
    }
 
    bool operator==(const Cube& that) const {
@@ -68,13 +68,13 @@ public:
 
    long getCoord(long i, long d) const {
       assert(i >= 0 && i < size);
-   
-      return (i % prods.at(d)) / prods.at(d+1); 
+
+      return (i % prods.at(d)) / prods.at(d+1);
    }
 
    long addCoord(long i, long d, long offset) const {
       assert(i >= 0 && i < size);
-      
+
       offset = offset % dims.at(d);
       if (offset < 0) offset += dims.at(d);
 
@@ -129,9 +129,9 @@ Cube operator+(const Cube& c1, const Cube& c2) {
    Cube c(dims1);
    long size = c.getSize();
 
-   for (long i = 0; i < size; i++) 
-      c.at(i) = c1.at(i) + c2.at(i); 
-   
+   for (long i = 0; i < size; i++)
+      c.at(i) = c1.at(i) + c2.at(i);
+
    return c;
 }
 
@@ -143,9 +143,9 @@ Cube operator*(const Cube& c1, const Cube& c2) {
    Cube c(dims1);
    long size = c.getSize();
 
-   for (long i = 0; i < size; i++) 
-      c.at(i) = c1.at(i) * c2.at(i); 
-   
+   for (long i = 0; i < size; i++)
+      c.at(i) = c1.at(i) * c2.at(i);
+
    return c;
 }
 
@@ -155,9 +155,9 @@ Cube operator!(const Cube& c1) {
    Cube c(dims1);
    long size = c.getSize();
 
-   for (long i = 0; i < size; i++) 
+   for (long i = 0; i < size; i++)
       c.at(i) = c1.at(i) == 0 ? 1 : 0;
-   
+
    return c;
 }
 
@@ -200,7 +200,7 @@ Cube fancyRotate(const Cube& c, long offset) {
       long k = c.getCoord(offset, d);
 
       c1 = (rotate1D(c1, d, k)*mask) + (rotate1D(c1, d, k+1)*(!mask));
-      mask = computeMask(dims, d, k)*mask + computeMask(dims, d, k+1)*(!mask); 
+      mask = computeMask(dims, d, k)*mask + computeMask(dims, d, k+1)*(!mask);
    }
 
    return c1;
@@ -223,7 +223,7 @@ int main()
    for (long offset = 1; offset < size; offset++) {
       Cube c1 = simpleRotate(c, offset);
       Cube c2 = fancyRotate(c, offset);
-      if (c1 != c2) { 
+      if (c1 != c2) {
 	cout << offset << ": BOO HOO\n";
 	fail = true;
       }

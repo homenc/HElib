@@ -282,7 +282,7 @@ protected:
     }
 
     cleanupBootstrappingGlobals();
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 
   void dump_v_values()
@@ -447,14 +447,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
     std::shared_ptr<helib::EncryptedArray> ea(
         std::make_shared<helib::EncryptedArray>(context, GG));
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = ea;
-    helib::dbgKey = &secretKey;
-#endif
-    if (debug) {
-      helib::dbgKey = &secretKey;
-      helib::dbgEa = ea;
-    }
+    helib::setupDebugGlobals(&secretKey, ea);
 
     NTL::zz_p::init(p2r);
     NTL::Vec<NTL::zz_p> val0(NTL::INIT_SIZE, nslots);
@@ -472,7 +465,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
 
     // Make some noise!
     // This ensures that we do not start the sequence of squarings
-    // from a "fresh" ciphertext (which may not be representive).
+    // from a "fresh" ciphertext (which may not be representative).
     ea->rotate(c1, 1);
     ea->rotate(c1, -1);
 
@@ -496,7 +489,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
       double Bnd = context.boundForRecryption();
       double mfac = context.zMStar.getNormBnd();
       double min_bit_cap =
-          log(mfac * q / (p2r * Bnd * FHE_MIN_CAP_FRAC)) / log(2.0);
+          log(mfac * q / (p2r * Bnd * HELIB_MIN_CAP_FRAC)) / log(2.0);
 
       std::cout << "min_bit_cap=" << min_bit_cap << std::endl;
 
@@ -515,7 +508,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
     helib::resetAllTimers();
 
     {
-      FHE_NTIMER_START(AAA_thinRecrypt);
+      HELIB_NTIMER_START(AAA_thinRecrypt);
 
       publicKey.thinReCrypt(c2);
     }
@@ -524,7 +517,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
       helib::CheckCtxt(c2, "after recryption");
 
     for (auto& x : val0) {
-      for (long i : helib::range(sqr_count))
+      for (long i = 0; i < sqr_count; ++i)
         x = x * x;
     }
 

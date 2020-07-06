@@ -25,9 +25,9 @@
 NTL_CLIENT
 using namespace helib;
 
-//#define DEBUG_PRINTOUT
+//#define HELIB_DEBUG
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #define debugCompare(ea,sk,p,c) {\
   PlaintextArray pp(ea);\
@@ -51,20 +51,20 @@ using namespace helib;
 6. c2 += tmp
 7. ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
 8. c1.negate()
-9. c3.multiplyBy(c2) 
+9. c3.multiplyBy(c2)
 10. c0 -= c3
 
 **************/
 
 static bool noPrint = true;
 
-void  TestIt(long R, long p, long r, long d, long c, long k, long w, 
+void  TestIt(long R, long p, long r, long d, long c, long k, long w,
                long L, long m, const Vec<long>& gens, const Vec<long>& ords)
 {
   char buffer[32];
   if (!noPrint) {
     std::cout << "\n\n******** TestIt" << (isDryRun()? "(dry run):" : ":");
-    std::cout << " R=" << R 
+    std::cout << " R=" << R
 	      << ", p=" << p
 	      << ", r=" << r
 	      << ", d=" << d
@@ -88,7 +88,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   if (d == 0)
     G = context.alMod.getFactorsOverZZ()[0];
   else
-    G = makeIrredPoly(p, d); 
+    G = makeIrredPoly(p, d);
 
   if (!noPrint) {
     context.zMStar.printout();
@@ -97,10 +97,10 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     std::cout << "security=" << context.securityLevel()<<endl;
     std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
     std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
-    std::cout << "# bits in ctxt primes = " 
+    std::cout << "# bits in ctxt primes = "
 	 << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
     std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
-    std::cout << "# bits in special primes = " 
+    std::cout << "# bits in special primes = "
 	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
     std::cout << "G = " << G << "\n";
 
@@ -116,7 +116,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   // Alias to avoid issues with previous code
   EncryptedArray& ea = *ea_ptr;
   long nslots = ea.size();
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgKey = &secretKey;
   dbgEa  = ea_ptr;
 #endif
@@ -140,7 +140,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   resetAllTimers();
 
-  FHE_NTIMER_START(Circuit);
+  HELIB_NTIMER_START(Circuit);
 
   for (long i = 0; i < R; i++) {
 
@@ -200,7 +200,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      if (!noPrint) CheckCtxt(c1, "c1=-c1");
      debugCompare(ea,secretKey,p1,c1);
 
-     mul(ea, p3, p2); // c3.multiplyBy(c2) 
+     mul(ea, p3, p2); // c3.multiplyBy(c2)
      c3.multiplyBy(c2);
      if (!noPrint) CheckCtxt(c3, "c3*=c2");
      debugCompare(ea,secretKey,p3,c3);
@@ -217,7 +217,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
   c2.cleanUp();
   c3.cleanUp();
 
-  FHE_NTIMER_STOP(Circuit);
+  HELIB_NTIMER_STOP(Circuit);
 
   if (!noPrint) {
     std::cout << endl;
@@ -225,25 +225,25 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
     std::cout << endl;
   }
   resetAllTimers();
-  FHE_NTIMER_START(Check);
-   
+  HELIB_NTIMER_START(Check);
+
   PlaintextArray pp0(ea);
   PlaintextArray pp1(ea);
   PlaintextArray pp2(ea);
   PlaintextArray pp3(ea);
-   
+
   ea.decrypt(c0, secretKey, pp0);
   ea.decrypt(c1, secretKey, pp1);
   ea.decrypt(c2, secretKey, pp2);
   ea.decrypt(c3, secretKey, pp3);
-   
+
   if (equals(ea, pp0, p0) && equals(ea, pp1, p1)
       && equals(ea, pp2, p2) && equals(ea, pp3, p3))
        std::cout << "GOOD\n";
   else std::cout << "BAD\n";
 
-  FHE_NTIMER_STOP(Check);
-   
+  HELIB_NTIMER_STOP(Check);
+
   if (!noPrint) {
     printAllTimers();
     print_stats(cout);
@@ -272,7 +272,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
  *   ords    use specified vector of orders
  *              e.g., ords='[4 2 -4]', negative means 'bad'
  */
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
   setTimersOn();
 
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
   long c=2;
   amap.arg("c", c, "number of columns in the key-switching matrices");
 
-  
+
   long k=80;
   amap.arg("k", k, "security parameter");
 
@@ -337,7 +337,7 @@ int main(int argc, char **argv)
 
   SetSeed(ZZ(seed));
   SetNumThreads(nt);
-  
+
 
   long w = 64; // Hamming weight of secret key
 

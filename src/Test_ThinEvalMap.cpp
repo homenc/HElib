@@ -25,7 +25,7 @@ static bool dry = false; // a dry-run flag
 static bool noPrint = true;
 
 void  TestIt(long p, long r, long c, long _k, long w,
-             long L, Vec<long>& mvec, 
+             long L, Vec<long>& mvec,
              Vec<long>& gens, Vec<long>& ords, long useCache)
 {
   if (lsize(mvec)<1) { // use default values
@@ -104,7 +104,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   ea.encrypt(ctxt, publicKey, val1);
 
   resetAllTimers();
-  FHE_NTIMER_START(ALL);
+  HELIB_NTIMER_START(ALL);
 
   // Compute homomorphically the transformation that takes the
   // coefficients packed in the slots and produces the polynomial
@@ -113,8 +113,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
   if (!noPrint) CheckCtxt(ctxt, "init");
 
   if (!noPrint) cout << "build ThinEvalMap\n";
-  ThinEvalMap map(ea, /*minimal=*/false, mvec, 
-    /*invert=*/false, /*build_cache=*/false); 
+  ThinEvalMap map(ea, /*minimal=*/false, mvec,
+    /*invert=*/false, /*build_cache=*/false);
   // compute the transformation to apply
 
   if (!noPrint) cout << "apply ThinEvalMap\n";
@@ -124,8 +124,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
   if (!noPrint) cout << "check results\n";
 
   if (!noPrint) cout << "build ThinEvalMap\n";
-  ThinEvalMap imap(ea, /*minimal=*/false, mvec, 
-    /*invert=*/true, /*build_cache=*/false); 
+  ThinEvalMap imap(ea, /*minimal=*/false, mvec,
+    /*invert=*/true, /*build_cache=*/false);
   // compute the transformation to apply
   if (!noPrint) cout << "apply ThinEvalMap\n";
   if (useCache) imap.upgrade();
@@ -144,7 +144,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
     random(dirty_val0[i], d);
     SetCoeff(dirty_val0[i], 0, val0[i]);
   }
-  
+
   vector<ZZX> dirty_val1;
   dirty_val1.resize(nslots);
   for (long i = 0; i < nslots; i++) {
@@ -155,8 +155,8 @@ void  TestIt(long p, long r, long c, long _k, long w,
   ea.encrypt(dirty_ctxt, publicKey, dirty_val1);
 
 
-  EvalMap dirty_map(ea, /*minimal=*/false, mvec, 
-    /*invert=*/false, /*build_cache=*/false); 
+  EvalMap dirty_map(ea, /*minimal=*/false, mvec,
+    /*invert=*/false, /*build_cache=*/false);
 
   dirty_map.apply(dirty_ctxt);
   imap.apply(dirty_ctxt);
@@ -172,7 +172,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
   cout << ((val1 == dirty_val2)? "GOOD\n" : "BAD\n");
 
 
-  FHE_NTIMER_STOP(ALL);
+  HELIB_NTIMER_STOP(ALL);
 
   if (!noPrint) {
     cout << "\n*********\n";
@@ -187,7 +187,7 @@ void  TestIt(long p, long r, long c, long _k, long w,
  *  r       lifting  [ default=1 ]
  *  c       number of columns in the key-switching matrices  [ default=2 ]
  *  k       security parameter  [ default=80 ]
- *  L       # of bits in the modulus chain 
+ *  L       # of bits in the modulus chain
  *  s       minimum number of slots  [ default=0 ]
  *  seed    PRG seed  [ default=0 ]
  *  mvec    use specified factorization of m
@@ -209,7 +209,7 @@ int main(int argc, char *argv[])
 
   long c=2;
   amap.arg("c", c, "number of columns in the key-switching matrices");
-  
+
   long k=80;
   amap.arg("k", k, "security parameter");
 

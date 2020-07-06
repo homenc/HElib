@@ -11,14 +11,14 @@ namespace NTL {} using namespace NTL;
 #include "homAES.h"
 #include "Ctxt.h"
 
-static long mValues[][14] = { 
+static long mValues[][14] = {
 //{ p, phi(m),  m,   d, m1, m2, m3,   g1,    g2,   g3,ord1,ord2,ord3, c_m}
   { 2,  512,    771, 16,771,  0,  0,     5,    0,    0,-32,  0,  0, 100}, // m=(3)*{257} :-( m/phim(m)=1.5 C=77 D=2 E=4
   { 2, 4096,   4369, 16, 17, 257, 0,   258, 4115,    0, 16,-16,  0, 100}, // m=17*(257) :-( m/phim(m)=1.06 C=61 D=3 E=4
   { 2, 16384, 21845, 16, 17, 5, 257,  8996,17477,21591, 16,  4,-16,1600}, // m=5*17*(257) :-( m/phim(m)=1.33 C=65 D=4 E=4
   { 2, 23040, 28679, 24, 17, 7, 241, 15184, 4098,28204, 16,  6,-10,1500}, // m=7*17*(241) m/phim(m)=1.24    C=63  D=4 E=3
   { 2, 46080, 53261, 24, 17,13, 241, 43863,28680,15913, 16, 12,-10, 100}, // m=13*17*(241) m/phim(m)=1.15   C=69  D=4 E=3
-  { 2, 64512, 65281, 48, 97,673,  0, 43073,22214,    0, 96,-14,  0, 100}  // m=97*(673) :-( m/phim(m)=1.01  C=169 D=3 E=4 
+  { 2, 64512, 65281, 48, 97,673,  0, 43073,22214,    0, 96,-14,  0, 100}  // m=97*(673) :-( m/phim(m)=1.01  C=169 D=3 E=4
 };
 
 #ifdef DEBUG_PRINTOUT
@@ -66,14 +66,14 @@ int main(int argc, char **argv)
   vector<long> gens;
   vector<long> ords;
 
-  if (boot) { 
+  if (boot) {
     if (L<23) L=23;
     if (idx<1) idx=1; // the sz=0 params are incompatible with bootstrapping
-  } else { 
+  } else {
 #if (NTL_SP_NBITS<50)
-    if (L<46) L=46; 
+    if (L<46) L=46;
 #else
-    if (L<42) L=42; 
+    if (L<42) L=42;
 #endif
   }
 
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
   cout << "done in "<<tm<<" seconds\n";
 
   // Perform homomorphic AES
-  cout << "AES encryption "<< std::flush; 
+  cout << "AES encryption "<< std::flush;
   vector< Ctxt > doublyEncrypted;
   tm = -GetTime();
   hAES.homAESenc(doublyEncrypted, encryptedAESkey, ptxt);
@@ -235,7 +235,7 @@ int main(int argc, char **argv)
   resetAllTimers();
 
   // Decrypt and check that you have the same thing as before
-  cout << "AES decryption "<< std::flush; 
+  cout << "AES decryption "<< std::flush;
   tm = -GetTime();
   hAES.homAESdec(doublyEncrypted, encryptedAESkey, aesCtxt);
   tm += GetTime();
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
     }
   }
   else {
-    cout << "in "<<tm<<" seconds\n"; 
+    cout << "in "<<tm<<" seconds\n";
     printNamedTimer(cout, "batchRecrypt");
     printNamedTimer(cout, "recryption");
   }
@@ -266,7 +266,7 @@ int main(int argc, char **argv)
 #endif
 }
 
-#include <iomanip> 
+#include <iomanip>
 void printState(Vec<uint8_t>& st)
 {
   cerr << "[";

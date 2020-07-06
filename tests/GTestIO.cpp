@@ -105,7 +105,7 @@ protected:
   std::vector<std::unique_ptr<helib::EncryptedArray>> eas;
   std::vector<std::vector<NTL::ZZX>> ptxts;
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 
 public:
   static void SetUpTestCase()
@@ -189,7 +189,8 @@ TEST_P(GTestIO, importantClassesRemainConsistentUnderIo)
       std::vector<NTL::ZZX> b;
       long p2r = eas[i]->getContext().alMod.getPPowR();
       NTL::ZZX poly = helib::RandPoly(
-          0, NTL::to_ZZ(p2r)); // choose a random constant polynomial
+          0,
+          NTL::to_ZZ(p2r)); // choose a random constant polynomial
       eas[i]->decode(ptxts[i], poly);
 
       ctxts[i].reset(new helib::Ctxt(publicKey));
@@ -301,7 +302,7 @@ TEST_P(GTestIO, importantClassesRemainConsistentUnderIo)
       }
       // std::cerr << "   ea2.decode(poly1)==ptxts[i] okay\n";
 
-      // Read ciperhtext from file
+      // Read ciphertext from file
       helib::Ctxt ctxt(publicKey);
       helib::Ctxt ctxt2(publicKey2);
       keyFile >> ctxt;

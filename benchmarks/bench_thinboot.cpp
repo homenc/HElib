@@ -42,7 +42,7 @@ static void BM_thinboot(benchmark::State& state,
             << ", bits=" << bits
             << ", c=" << c
             << ", skHwt=" << t
-            << ", c_m=" << c_m 
+            << ", c_m=" << c_m
             << ", mvec=" << mvec
             << ", gens=" << gens
             << ", ords=" << ords
@@ -61,7 +61,7 @@ static void BM_thinboot(benchmark::State& state,
   context.zMStar.printout();
   std::cout << std::endl;
   std::cout << "Security: " << context.securityLevel() << std::endl;
-  
+
   std::cout << "Creating secret key..." << std::endl;
   FHESecKey secret_key(context);
   secret_key.GenSecKey();
@@ -71,12 +71,12 @@ static void BM_thinboot(benchmark::State& state,
 
   // Generate bootstrapping data
   secret_key.genRecryptData();
-  
+
   // NOTE: For some reason the reCrypt method is not marked const so
   //       I had to remove the const from the public key
   FHEPubKey& public_key = secret_key;
   const EncryptedArray& ea = *(context.ea);
-  
+
   long nslots = ea.size();
   std::cout << "Number of slots: " << nslots << std::endl;
 
@@ -84,10 +84,10 @@ static void BM_thinboot(benchmark::State& state,
   for (int i = 0; i < nslots; ++i) {
     ptxt[i] = std::rand() % 2; // Random 0s and 1s
   }
-  
+
   Ctxt ctxt(public_key);
   ea.encrypt(ctxt, public_key, ptxt);
-  for (auto _ : state) 
+  for (auto _ : state)
     squareWithThinBoot(public_key, ctxt);
   std::cout << "Multiplications performed = " << state.iterations() <<std::endl;
 }
@@ -97,12 +97,12 @@ BENCHMARK_CAPTURE(BM_thinboot, tiny_params,
                   /*m =*/ 31*41,
                   /*p =*/ 2,
                   /*r =*/ 1,
-                  /*c =*/	2, 
-                  /*bits =*/ 580, 
-                  /*t =*/ 64, 
-                  /*c_m =*/ 100, 
+                  /*c =*/	2,
+                  /*bits =*/ 580,
+                  /*t =*/ 64,
+                  /*c_m =*/ 100,
                   /*mvec =*/ std::vector<long> {31, 41},
-                  /*gens =*/ std::vector<long> {1026, 249}, 
+                  /*gens =*/ std::vector<long> {1026, 249},
                   /*ords =*/ std::vector<long> {30, -2}
                   )->Unit(benchmark::kMillisecond)->Iterations(200);
 
@@ -114,8 +114,8 @@ BENCHMARK_CAPTURE(BM_thinboot, small_params,
                   /*bits =*/ 580,
                   /*t =*/ 64,
                   /*c_m =*/ 100,
-                  /*mvec =*/ std::vector<long> {41, 775}, 
-                  /*gens =*/ std::vector<long> {6976, 24806}, 
+                  /*mvec =*/ std::vector<long> {41, 775},
+                  /*gens =*/ std::vector<long> {6976, 24806},
                   /*ords =*/ std::vector<long> {40, 30}
                   )->Unit(benchmark::kMillisecond)->MinTime(200);
 
@@ -127,7 +127,7 @@ BENCHMARK_CAPTURE(BM_thinboot, big_params,
                   /*bits =*/ 580,
                   /*t =*/ 64,
                   /*c_m =*/ 100,
-                  /*mvec =*/ std::vector<long> {37, 949}, 
-                  /*gens =*/ std::vector<long> {16134, 8548}, 
+                  /*mvec =*/ std::vector<long> {37, 949},
+                  /*gens =*/ std::vector<long> {16134, 8548},
                   /*ords =*/ std::vector<long> {36, 24}
                   )->Unit(benchmark::kMillisecond)->MinTime(200);

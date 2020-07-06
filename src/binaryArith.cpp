@@ -24,7 +24,7 @@
 #include <NTL/BasicThreadPool.h>
 #include <helib/binaryArith.h>
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <cstdio>
 #include <helib/debugging.h>
 #endif
@@ -34,7 +34,7 @@
 
 namespace helib {
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 void decryptAndSum(std::ostream& s,
                    const CtPtrMat& numbers,
                    bool twosComplement = false);
@@ -116,7 +116,7 @@ public:
  * a term either of the form p_{i,j} = \prod_{t=j}^i (a[t]+b[t]), or of the
  * form q_{i,j} = (a[j]*b[j]) * \prod_{t=j+1}^i (a[t]+b[t]). The source nodes
  * are of the forms (a[i]*b[i]) and (a[i]+b[i]), and each non-source node has
- * exactly two parents, whose product yeilds that node.
+ * exactly two parents, whose product yields that node.
  *
  * When building the DAG, we keep the level of each node as high as possible.
  * For example we can set q_{i,j}=p_{i,k}*q_{k-1,j} or q_{i,j}=p_{i,k+1}*q_{k,j}
@@ -135,7 +135,7 @@ class AddDAG
 
   Ctxt* allocateCtxtLike(const Ctxt& c); // Allocate a new ciphertext if needed
   void markAsAvailable(DAGnode* node);   // Mark temporary Ctxt object as unused
-  const Ctxt& getCtxt(DAGnode* node,     // Compute a new Ctxt if neeed
+  const Ctxt& getCtxt(DAGnode* node,     // Compute a new Ctxt if need
                       const CtPtrs& a,
                       const CtPtrs& b);
 
@@ -185,7 +185,7 @@ public:
     }
     return (DAGnode*)&(it->second);
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   void printAddDAG(bool printCT = false);
 #endif
 };
@@ -216,7 +216,6 @@ void AddDAG::init(const CtPtrs& aa, const CtPtrs& bb)
 
   aSize = lsize(a);
   bSize = lsize(b);
-  // OLD: assert (aSize>=1);
   assertTrue<InvalidArgument>(aSize >= 1, "a must not be empty");
 
   // Initialize the p[i,i]'s and q[i,i]'s
@@ -353,7 +352,7 @@ void AddDAG::apply(CtPtrs& sum,
   NTL_EXEC_RANGE_END
 }
 
-//! Get the ciphertext for a node, compiuting it as needed
+//! Get the ciphertext for a node, computing it as needed
 const Ctxt& AddDAG::getCtxt(DAGnode* node, const CtPtrs& a, const CtPtrs& b)
 {
   // NOTE: node->ct_mtx should be locked before calling this function
@@ -399,7 +398,6 @@ const Ctxt& AddDAG::getCtxt(DAGnode* node, const CtPtrs& a, const CtPtrs& b)
       long i = node->idx.first;
       long j = node->idx.second; // we expect i==j
       const Ctxt* ct_ptr = b.ptr2nonNull();
-      // OLD: assert(ct_ptr != nullptr);
       assertNotNull(ct_ptr, "ct_ptr must not be null");
       node->ct = allocateCtxtLike(*ct_ptr);
 
@@ -470,10 +468,8 @@ void packedRecrypt(const CtPtrs& a,
   if (ct == nullptr)
     return; // nothing to do
 
-  // OLD: assert(unpackSlotEncoding!=nullptr);
   assertNotNull<InvalidArgument>(unpackSlotEncoding,
                                  "unpackSlotEncoding must not be null");
-  // OLD: assert(ct->getPubKey().isBootstrappable());
   assertTrue(ct->getPubKey().isBootstrappable(),
              "public key must be bootstrappable for recryption");
 
@@ -563,8 +559,9 @@ void splitBinaryNums(CtPtrs& leftSplit, CtPtrs& rightSplit, const CtPtrs& input)
 void leftBitwiseShift(CtPtrs& output, const CtPtrs& input, const long shamt)
 {
   assertTrue(shamt >= 0, "Shift amount must be positive.");
-  assertEq(
-      output.size(), input.size(), "output and input must have the same size.");
+  assertEq(output.size(),
+           input.size(),
+           "output and input must have the same size.");
   for (long i = 0; i < output.size() - shamt; ++i)
     *output[i + shamt] = *input[i];
   for (long i = 0; i < shamt; ++i)
@@ -574,8 +571,9 @@ void leftBitwiseShift(CtPtrs& output, const CtPtrs& input, const long shamt)
 //! Rotate binary numbers by `rotamt`.
 void bitwiseRotate(CtPtrs& output, const CtPtrs& input, long rotamt)
 {
-  assertEq(
-      output.size(), input.size(), "output and input must be the same size.");
+  assertEq(output.size(),
+           input.size(),
+           "output and input must be the same size.");
   long bitSize = input.size();
   rotamt = mcMod(rotamt, bitSize);
   for (long i = 0; i < output.size(); ++i)
@@ -622,8 +620,9 @@ void bitwiseAnd(CtPtrs& output,
                 const CtPtrs& input,
                 const std::vector<long> mask)
 {
-  assertEq(
-      output.size(), input.size(), "output and input must be the same size.");
+  assertEq(output.size(),
+           input.size(),
+           "output and input must be the same size.");
   vecCopy(output, input);
   for (long i = 0; i < output.size(); ++i)
     if (!mask[i])
@@ -633,8 +632,9 @@ void bitwiseAnd(CtPtrs& output,
 //! Compute a bitwise NOT of `input`.
 void bitwiseNot(CtPtrs& output, const CtPtrs& input)
 {
-  assertEq(
-      output.size(), input.size(), "input and output must have the same size");
+  assertEq(output.size(),
+           input.size(),
+           "input and output must have the same size");
   vecCopy(output, input);
   for (long i = 0; i < output.size(); ++i)
     output[i]->addConstant(NTL::ZZ(1L));
@@ -647,7 +647,7 @@ void addTwoNumbers(CtPtrs& sum,
                    long sizeLimit,
                    std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   if (lsize(lhs) < 1) {
     vecCopy(sum, rhs, sizeLimit);
     return;
@@ -659,7 +659,7 @@ void addTwoNumbers(CtPtrs& sum,
   // Work out the order of multiplications to compute all the carry bits
   AddDAG addPlan(lhs, rhs);
 
-#ifdef DEBUG_PRINTOUT // print plan
+#ifdef HELIB_DEBUG // print plan
   addPlan.printAddDAG();
 #endif
 
@@ -710,13 +710,18 @@ void subtractBinary(CtPtrs& difference,
   std::vector<Ctxt> negated_rhs(rhs.size(), *rhs[0]);
   CtPtrs_vectorCt negated_wrapper(negated_rhs);
   negateBinary(negated_wrapper, rhs);
-  addTwoNumbers(
-      difference, lhs, negated_wrapper, lhs.size(), unpackSlotEncoding);
+  addTwoNumbers(difference,
+                lhs,
+                negated_wrapper,
+                lhs.size(),
+                unpackSlotEncoding);
 }
 
 // Return pointers to the three inputs, ordered by size
-static std::tuple<const CtPtrs*, const CtPtrs*, const CtPtrs*>
-orderBySize(const CtPtrs& a, const CtPtrs& b, const CtPtrs& c)
+static std::tuple<const CtPtrs*, const CtPtrs*, const CtPtrs*> orderBySize(
+    const CtPtrs& a,
+    const CtPtrs& b,
+    const CtPtrs& c)
 {
   if (lsize(a) <= lsize(b)) {
     if (lsize(b) <= lsize(c))
@@ -737,8 +742,11 @@ orderBySize(const CtPtrs& a, const CtPtrs& b, const CtPtrs& c)
 
 // Implementing the basic 3-for-2 trick: u,v,w encrypt bits, return two bits
 // x,y such that x+2y = u+v+w over the integers. Outputs can alias the inputs.
-static void
-three4Two(Ctxt& lsb, Ctxt& msb, const Ctxt& u, const Ctxt& v, const Ctxt& w)
+static void three4Two(Ctxt& lsb,
+                      Ctxt& msb,
+                      const Ctxt& u,
+                      const Ctxt& v,
+                      const Ctxt& w)
 {
   Ctxt tmp_v = v;
   Ctxt tmp_w = w;
@@ -767,12 +775,12 @@ static long three4Two(Ctxt* lsb, Ctxt* msb, Ctxt* u, Ctxt* v, Ctxt* w)
   }
   if ((u == nullptr || u->isEmpty()) && (v == nullptr || v->isEmpty()) &&
       (w == nullptr || w->isEmpty())) { // if all are empty
-    lsb->clear();                       // result is emptry too
+    lsb->clear();                       // result is empty too
     msb->clear();
     return 0;
   }
 
-  // Some are empty, others are not, arrange so that emptys are at the end
+  // Some are empty, others are not, arrange so that empty are at the end
   if (u == nullptr || u->isEmpty()) {
     if (v == nullptr || v->isEmpty())
       u = w; // only w was non-empty
@@ -810,7 +818,7 @@ static void three4Two(CtPtrs& lsb,
                       const CtPtrs& w,
                       long sizeLimit)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   // Arrange u,v,w by size from smallest to largest
   const CtPtrs *p1, *p2, *p3;
   std::tie(p1, p2, p3) = orderBySize(u, v, w); // size(p3)>=size(p2)>=size(p1)
@@ -889,13 +897,13 @@ void addManyNumbers(CtPtrs& sum,
                     long sizeLimit,
                     std::vector<zzX>* unpackSlotEncoding)
 {
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cout << " addManyNumbers: " << numbers.size()
             << " numbers with size-limit=" << sizeLimit << std::endl;
 #endif
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   const Ctxt* ct_ptr = numbers.ptr2nonNull();
-  if (lsize(numbers) < 1 || ct_ptr == nullptr) { // nothign to add
+  if (lsize(numbers) < 1 || ct_ptr == nullptr) { // nothing to add
     setLengthZero(sum);
     return;
   }
@@ -917,7 +925,6 @@ void addManyNumbers(CtPtrs& sum,
     // If any number is too low level, then bootstrap everything
     PtrMatrix_PtPtrVector<Ctxt> wrapper(numPtrs);
     if (findMinBitCapacity(wrapper) < 3 * ct_ptr->getContext().BPL()) {
-      // OLD: assert(bootstrappable && unpackSlotEncoding!=nullptr);
       assertNotNull<InvalidArgument>(unpackSlotEncoding,
                                      "unpackSlotEncoding must not be null");
       assertTrue(bootstrappable,
@@ -965,7 +972,7 @@ static void multByNegative(CtPtrs& product,
                            long sizeLimit,
                            std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long resSize = lsize(a) + lsize(b);
   if (sizeLimit > 0 && sizeLimit < resSize)
     resSize = sizeLimit;
@@ -1000,7 +1007,7 @@ static void multByNegative(CtPtrs& product,
     }
 
   CtPtrMat_VecCt nums(numbers); // Wrapper around numbers
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   long pa, pb;
   std::vector<long> slots;
   decryptBinaryNums(slots, a, *dbgKey, *dbgEa, false);
@@ -1024,7 +1031,7 @@ void multTwoNumbers(CtPtrs& product,
                     long sizeLimit,
                     std::vector<zzX>* unpackSlotEncoding)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long lhsSize = lsize(lhs);
   long rhsSize = lsize(rhs);
   long resSize = lhsSize + rhsSize;
@@ -1036,7 +1043,7 @@ void multTwoNumbers(CtPtrs& product,
     return; // return 0
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cout << " before multiplication, capacity="
             << findMinBitCapacity({&lhs, &rhs}) << std::endl;
 #endif
@@ -1098,8 +1105,8 @@ void multTwoNumbers(CtPtrs& product,
   }
   NTL_EXEC_RANGE_END
 
-  CtPtrMat_VecCt nums(numbers); // A wrapper aroune numbers
-#ifdef DEBUG_PRINTOUT
+  CtPtrMat_VecCt nums(numbers); // A wrapper around numbers
+#ifdef HELIB_DEBUG
   long plaintext_lhs, plaintext_rhs;
   std::vector<long> slots;
   decryptBinaryNums(slots, lhs, *dbgKey, *dbgEa, false);
@@ -1133,7 +1140,7 @@ static void seven4Three(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
   // we need 4 scratch ciphertexts
   std::vector<Ctxt> tmp(4, *out[0]);
 
-  // Aliasas, referring to the scheme above. Aliases for temporary
+  // Aliases, referring to the scheme above. Aliases for temporary
   // vars chosen so that inputs, outputs of three4two are distinct
 
   Ctxt& c1 = *out[0];
@@ -1201,7 +1208,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
   // we need 6 scratch ciphertexts
   std::vector<Ctxt> tmp(8, *out[0]);
 
-  // Aliasas, referring to the scheme above.
+  // Aliases, referring to the scheme above.
 
   Ctxt& d1 = *out[0];
   Ctxt& e1 = *out[1];
@@ -1236,10 +1243,12 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     three4Two(&b1, &b2, in[0], in[1], in[2]); // b2 b1 = 3for2(in[0..2])
     if (nThreads > 1)
       break;
+    // FALLTHROUGH
   case 1:
     three4Two(&b3, &b4, in[3], in[4], in[5]); // b4 b3 = 3for2(in[3..5])
     if (nThreads > 2)
       break;
+    // FALLTHROUGH
   default:
     three4Two(&b5, &b6, in[6], in[7], in[8]); // b6 b5 = 3for2(in[6..8])
   }
@@ -1256,6 +1265,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     three4Two(&b7, &b8, in[9], in[10], in[11]); // b8 b7 = 3for2(in[9..11])
     if (nThreads > 1)
       break;
+    // FALLTHROUGH
   default:
     three4Two(&b9, &b10, in[12], in[13], in[14]); // b10 b9 = 3for2(in[12..14])
   }
@@ -1267,6 +1277,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     three4Two(d1, d2, b7, b9, c1); // d2 d1 = 3for2(b7,b9,c1)
     if (nThreads > 1)
       break;
+    // FALLTHROUGH
   default:
     if (sizeLimit >= 2)
       three4Two(d3, d4, b8, b10, c2); // d4 d3 = 3for2(b8,b10,c2)
@@ -1281,6 +1292,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
     three4Two(e1, e2, c3, d2, d3); // e2 e1 = 3for2(c3,d2,d3)
     if (nThreads > 1)
       break;
+    // FALLTHROUGH
   default:
     if (sizeLimit >= 3) {
       e3 = c4;
@@ -1303,14 +1315,14 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
 // Returns number of output bits that are not identically zero.
 long fifteenOrLess4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   long numNonNull = in.numNonNull();
   if (numNonNull > 7) {
     fifteen4Four(out, in, sizeLimit);
     return 4;
   }
 
-  // At most 7 non-null pointers, collect them in the first entires of a vector
+  // At most 7 non-null pointers, collect them in the first entries of a vector
   long lastNonNull = -1;
   std::vector<Ctxt*> inPtrs(7, nullptr);
   for (long i = 0; i < 15; i++)
@@ -1364,7 +1376,7 @@ void decryptBinaryNums(std::vector<long>& pNums,
 }
 
 /********************************************************************/
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 
 void AddDAG::printAddDAG(bool printCT)
 {
@@ -1390,8 +1402,11 @@ void AddDAG::printAddDAG(bool printCT)
         std::cout << ", prnt1=" << node->parent1->nodeName();
       std::cout << " }\n";
       if (printCT && node->ct != nullptr)
-        decryptAndPrint(
-            std::cout, *(node->ct), *dbgKey, *dbgEa, FLAG_PRINT_VEC);
+        decryptAndPrint(std::cout,
+                        *(node->ct),
+                        *dbgKey,
+                        *dbgEa,
+                        FLAG_PRINT_VEC);
     }
   }
   std::cout << "\nThe q[i,j]'s\n============\n";
@@ -1415,8 +1430,11 @@ void AddDAG::printAddDAG(bool printCT)
         std::cout << ", prnt1=" << node->parent1->nodeName();
       std::cout << " }\n";
       if (printCT && node->ct != nullptr)
-        decryptAndPrint(
-            std::cout, *(node->ct), *dbgKey, *dbgEa, FLAG_PRINT_VEC);
+        decryptAndPrint(std::cout,
+                        *(node->ct),
+                        *dbgKey,
+                        *dbgEa,
+                        FLAG_PRINT_VEC);
     }
   }
   std::cout << std::endl;
@@ -1438,6 +1456,6 @@ void decryptAndSum(std::ostream& s,
   s << ")=" << sum << std::endl;
 }
 
-#endif // ifdef DEBUG_PRINTOUT
+#endif // ifdef HELIB_DEBUG
 
 } // namespace helib

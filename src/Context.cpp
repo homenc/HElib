@@ -21,14 +21,21 @@
 
 namespace helib {
 
-long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose)
+long FindM(long k,
+           long nBits,
+           long c,
+           long p,
+           long d,
+           long s,
+           long chosen_m,
+           bool verbose)
 {
   // get a lower-bound on the parameter N=phi(m):
   // 1. Each level in the modulus chain corresponds to pSize=p2Size/2
   //    bits (where we have one prime of this size, and all the others are of
   //    size p2Size).
   //    When using DoubleCRT, we need 2m to divide q-1 for every prime q.
-  // 2. With nBits of ctxt primes, 
+  // 2. With nBits of ctxt primes,
   //    the largest modulus for "fresh ciphertexts" has size
   //          Q0 ~ 2^{nBits}
   // 3. We break each ciphertext into upto c digits, do each digit is as large
@@ -45,22 +52,23 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
   //          N > nBits*(1+1/c)(k+110) / 7.2
 
   // Compute a bound on m, and make sure that it is not too large
-  double cc = 1.0+(1.0/(double)c);
+  double cc = 1.0 + (1.0 / (double)c);
 
-  double dN = ceil(nBits*cc*(k+110)/7.2);
+  double dN = ceil(nBits * cc * (k + 110) / 7.2);
   // FIXME: the bound for dN is not conservative enough...
   // this should be re-worked.
 
   long N = NTL_SP_BOUND;
-  if (N > dN) N = dN;
+  if (N > dN)
+    N = dN;
   else {
     std::stringstream ss;
     ss << "Cannot support a bound of " << dN;
-    throw helib::RuntimeError(ss.str());
+    throw RuntimeError(ss.str());
   }
 
   long m = 0;
-  size_t i=0;
+  size_t i = 0;
 
   // find the first m satisfying phi(m)>=N and d | ord(p) in Z_m^*
   // and phi(m)/ord(p) >= s
@@ -72,55 +80,60 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
         m = chosen_m;
       }
     }
-  }
-  else if (p==2) { // use pre-computed table, divisors of 2^n-1 for some n's
+  } else if (p == 2) { // use pre-computed table, divisors of 2^n-1 for some n's
 
-    static long ms[][4] = {  // pre-computed values of [phi(m),m,d]
-      //phi(m), m, ord(2),c_m*1000 (not used anymore)
-      { 1176,  1247, 28,  3736}, // gens=5(42)
-      { 2880,  3133, 24,  3254}, // gens=6(60), 7(!2)
-      { 4050,  4051, 50, 0},     // gens=130(81)
-      { 4096,  4369, 16,  3422}, // gens=129(16),3(!16)
-      { 4704,  4859, 28, 0},     // gens=7(42),3(!4)
-      { 5292,  5461, 14,  4160}, // gens=3(126),509(3)
-      { 5760,  8435, 24,  8935}, // gens=58(60),1686(2),11(!2)
-      { 7500,  7781, 50, 0},     // gens=353(30),3(!5)
-      { 8190,  8191, 13,  1273}, // gens=39(630)
-      { 9900, 10261, 30, 0},     // gens=3(330)
-      {10752, 11441, 48,  3607}, // gens=7(112),5(!2)
-      {10800, 11023, 45, 0},     // gens=270(24),2264(2),3(!5)
-      {12000, 13981, 20,  2467}, // gens=10(30),23(10),3(!2)
-      {11520, 15665, 24, 14916}, // gens=6(60),177(4),7(!2)
-      {14112, 14351, 18, 0},     // gens=7(126),3(!4)
-      {15004, 15709, 22,  3867}, // gens=5(682)
-      {18000, 18631, 25,  4208}, // gens=17(120),1177(6)
-      {15360, 20485, 24, 12767}, // gens=6(80),242(4),7(2)
-      {16384, 21845, 16, 12798}, // gens=129(16),273(4),3(!16)
-      {17280 ,21931, 24, 18387}, // gens=6(60),467(6),11(!2)
-      {19200, 21607, 40, 35633}, // gens=13(120),2789(2),3(!2)
-      {21168, 27305, 28, 15407}, // gens=6(126),781(6)
-      {23040, 23377, 48,  5292}, // gens=35(240),5(!2)
-      {23310, 23311, 45, 0},     // gens=489(518)
-      {24576, 24929, 48,  5612}, // gens=12(256),5(!2)
-      {27000, 32767, 15, 20021}, // gens=3(150),873(6),6945(2)
-      {31104, 31609, 72,  5149}, // gens=11(216),5(!2)
-      {43690, 43691, 34, 0},     // gens=69(1285)
-      {49500, 49981, 30, 0},     // gens=3(1650)
-      {46080, 53261, 24, 33409}, // gens=3(240),242(4),7(!2)
-      {54000, 55831, 25, 0},     // gens=22(360),3529(6)
-      {49140, 57337, 39,  2608}, // gens=39(630),40956(2)
-      {51840, 59527, 72, 21128}, // gens=58(60),1912(6),7(!2)
-      {61680, 61681, 40,  1273}, // gens=33(771),17(!2)
-      {65536, 65537, 32,  1273}, // gens=2(32),3(!2048)
-      {75264, 82603, 56, 36484}, // gens=3(336),24294(2),7(!2)
-      {84672, 92837, 56, 38520}  // gens=18(126),1886(6),3(!2)
+    // clang-format off
+    static long ms[][4] = {
+        // pre-computed values of [phi(m),m,d]
+        // phi(m),     m, ord(2),c_m*1000 (not used anymore)
+          {  1176,  1247,     28,  3736}, // gens=5(42)
+          {  2880,  3133,     24,  3254}, // gens=6(60), 7(!2)
+          {  4050,  4051,     50,     0}, // gens=130(81)
+          {  4096,  4369,     16,  3422}, // gens=129(16),3(!16)
+          {  4704,  4859,     28,     0}, // gens=7(42),3(!4)
+          {  5292,  5461,     14,  4160}, // gens=3(126),509(3)
+          {  5760,  8435,     24,  8935}, // gens=58(60),1686(2),11(!2)
+          {  7500,  7781,     50,     0}, // gens=353(30),3(!5)
+          {  8190,  8191,     13,  1273}, // gens=39(630)
+          {  9900, 10261,     30,     0}, // gens=3(330)
+          { 10752, 11441,     48,  3607}, // gens=7(112),5(!2)
+          { 10800, 11023,     45,     0}, // gens=270(24),2264(2),3(!5)
+          { 12000, 13981,     20,  2467}, // gens=10(30),23(10),3(!2)
+          { 11520, 15665,     24, 14916}, // gens=6(60),177(4),7(!2)
+          { 14112, 14351,     18,     0}, // gens=7(126),3(!4)
+          { 15004, 15709,     22,  3867}, // gens=5(682)
+          { 18000, 18631,     25,  4208}, // gens=17(120),1177(6)
+          { 15360, 20485,     24, 12767}, // gens=6(80),242(4),7(2)
+          { 16384, 21845,     16, 12798}, // gens=129(16),273(4),3(!16)
+          { 17280, 21931,     24, 18387}, // gens=6(60),467(6),11(!2)
+          { 19200, 21607,     40, 35633}, // gens=13(120),2789(2),3(!2)
+          { 21168, 27305,     28, 15407}, // gens=6(126),781(6)
+          { 23040, 23377,     48,  5292}, // gens=35(240),5(!2)
+          { 23310, 23311,     45,     0}, // gens=489(518)
+          { 24576, 24929,     48,  5612}, // gens=12(256),5(!2)
+          { 27000, 32767,     15, 20021}, // gens=3(150),873(6),6945(2)
+          { 31104, 31609,     72,  5149}, // gens=11(216),5(!2)
+          { 43690, 43691,     34,     0}, // gens=69(1285)
+          { 49500, 49981,     30,     0}, // gens=3(1650)
+          { 46080, 53261,     24, 33409}, // gens=3(240),242(4),7(!2)
+          { 54000, 55831,     25,     0}, // gens=22(360),3529(6)
+          { 49140, 57337,     39,  2608}, // gens=39(630),40956(2)
+          { 51840, 59527,     72, 21128}, // gens=58(60),1912(6),7(!2)
+          { 61680, 61681,     40,  1273}, // gens=33(771),17(!2)
+          { 65536, 65537,     32,  1273}, // gens=2(32),3(!2048)
+          { 75264, 82603,     56, 36484}, // gens=3(336),24294(2),7(!2)
+          { 84672, 92837,     56, 38520}  // gens=18(126),1886(6),3(!2)
     };
-    for (i=0; i<sizeof(ms)/sizeof(long[4]); i++) { 
-      if (ms[i][0] < N || NTL::GCD(p, ms[i][1]) != 1) continue;
+    // clang-format on
+    for (i = 0; i < sizeof(ms) / sizeof(long[4]); i++) {
+      if (ms[i][0] < N || NTL::GCD(p, ms[i][1]) != 1)
+        continue;
       long ordP = multOrd(p, ms[i][1]);
-      long nSlots = ms[i][0]/ordP;
-      if (d != 0 && ordP % d != 0) continue;
-      if (nSlots < s) continue;
+      long nSlots = ms[i][0] / ordP;
+      if (d != 0 && ordP % d != 0)
+        continue;
+      if (nSlots < s)
+        continue;
 
       m = ms[i][1];
       break;
@@ -130,26 +143,30 @@ long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bo
   // If m is not set yet, just set it close to N. This may be a lousy
   // choice of m for this p, since you will get a small number of slots.
 
-  if (m==0) {
+  if (m == 0) {
     // search only for odd values of m, to make phi(m) a little closer to m
-    for (long candidate=N|1; candidate<10*N; candidate+=2) {
-      if (NTL::GCD(p,candidate)!=1) continue;
+    for (long candidate = N | 1; candidate < 10 * N; candidate += 2) {
+      if (NTL::GCD(p, candidate) != 1)
+        continue;
 
-      long ordP = multOrd(p,candidate); // the multiplicative order of p mod m
-      if (d>1 && ordP%d!=0 ) continue;
-      if (ordP > 100) continue;  // order too big, we will get very few slots
+      long ordP = multOrd(p, candidate); // the multiplicative order of p mod m
+      if (d > 1 && ordP % d != 0)
+        continue;
+      if (ordP > 100)
+        continue; // order too big, we will get very few slots
 
       long n = phi_N(candidate); // compute phi(m)
-      if (n < N) continue;       // phi(m) too small
+      if (n < N)
+        continue; // phi(m) too small
 
-      m = candidate;  // all tests passed, return this value of m
+      m = candidate; // all tests passed, return this value of m
       break;
     }
   }
 
   if (verbose) {
-    std::cerr << "*** Bound N="<<N<<", choosing m="<<m <<", phi(m)="<< phi_N(m)
-         << std::endl;
+    std::cerr << "*** Bound N=" << N << ", choosing m=" << m
+              << ", phi(m)=" << phi_N(m) << std::endl;
   }
 
   return m;
@@ -161,38 +178,49 @@ Context* activeContext = nullptr;
 void Context::productOfPrimes(NTL::ZZ& p, const IndexSet& s) const
 {
   p = 1;
-  for (long i: s)
+  for (long i : s)
     p *= ithPrime(i);
 }
 
 bool Context::operator==(const Context& other) const
 {
-  if (zMStar != other.zMStar) return false;
-  if (alMod != other.alMod) return false;
+  if (zMStar != other.zMStar)
+    return false;
+  if (alMod != other.alMod)
+    return false;
 
-  if (moduli.size() != other.moduli.size()) return false;
-  for (size_t i=0; i<moduli.size(); i++) {
+  if (moduli.size() != other.moduli.size())
+    return false;
+  for (size_t i = 0; i < moduli.size(); i++) {
     const Cmodulus& m1 = moduli[i];
     const Cmodulus& m2 = other.moduli[i];
-    if (m1.getQ() != m2.getQ()) return false;
+    if (m1.getQ() != m2.getQ())
+      return false;
   }
 
-  if (smallPrimes != other.smallPrimes) return false;
-  if (ctxtPrimes != other.ctxtPrimes) return false;
-  if (specialPrimes != other.specialPrimes) return false;
+  if (smallPrimes != other.smallPrimes)
+    return false;
+  if (ctxtPrimes != other.ctxtPrimes)
+    return false;
+  if (specialPrimes != other.specialPrimes)
+    return false;
 
-  if (digits.size() != other.digits.size()) return false;
-  for (size_t i=0; i<digits.size(); i++)
-    if (digits[i] != other.digits[i]) return false;
+  if (digits.size() != other.digits.size())
+    return false;
+  for (size_t i = 0; i < digits.size(); i++)
+    if (digits[i] != other.digits[i])
+      return false;
 
-  if (stdev != other.stdev) return false;
+  if (stdev != other.stdev)
+    return false;
 
-  if (scale != other.scale) return false;
+  if (scale != other.scale)
+    return false;
 
-  if (rcData != other.rcData) return false;
+  if (rcData != other.rcData)
+    return false;
   return true;
 }
-
 
 void writeContextBaseBinary(std::ostream& str, const Context& context)
 {
@@ -203,34 +231,36 @@ void writeContextBaseBinary(std::ostream& str, const Context& context)
   write_raw_int(str, context.zMStar.getM());
 
   write_raw_int(str, context.zMStar.numOfGens());
-  
+
   // There aren't simple getters to get the gens and ords vectors
-  for(long i=0; i<context.zMStar.numOfGens(); i++) {
+  for (long i = 0; i < context.zMStar.numOfGens(); i++) {
     write_raw_int(str, context.zMStar.ZmStarGen(i));
   }
 
   write_raw_int(str, context.zMStar.numOfGens());
- 
-  // Copying the way it is done in ASCII IO. 
-  // Bad dimensions are represented as a negated ord 
-  for(long i=0; i<context.zMStar.numOfGens(); i++) {
-    if(context.zMStar.SameOrd(i))
+
+  // Copying the way it is done in ASCII IO.
+  // Bad dimensions are represented as a negated ord
+  for (long i = 0; i < context.zMStar.numOfGens(); i++) {
+    if (context.zMStar.SameOrd(i))
       write_raw_int(str, context.zMStar.OrderOf(i));
-    else 
+    else
       write_raw_int(str, -context.zMStar.OrderOf(i));
   }
 
   writeEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
 }
 
-void readContextBaseBinary(std::istream& str, unsigned long& m,
-                           unsigned long& p, unsigned long& r,
-                           std::vector<long>& gens, std::vector<long>& ords)
+void readContextBaseBinary(std::istream& str,
+                           unsigned long& m,
+                           unsigned long& p,
+                           unsigned long& r,
+                           std::vector<long>& gens,
+                           std::vector<long>& ords)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_BEGIN);
-  //OLD: assert(eyeCatcherFound == 0);
-  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-context-base eye catcher");
-    
+  assertEq(eyeCatcherFound, 0, "Could not find pre-context-base eye catcher");
+
   p = read_raw_int(str);
   r = read_raw_int(str);
   m = read_raw_int(str);
@@ -238,10 +268,9 @@ void readContextBaseBinary(std::istream& str, unsigned long& m,
   // Number of gens and ords saved in front of vectors
   read_raw_vector(str, gens);
   read_raw_vector(str, ords);
-  
+
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXTBASE_END);
-  //OLD: assert(eyeCatcherFound == 0);
-  helib::assertEq(eyeCatcherFound, 0, "Could not find post-context-base eye catcher");
+  assertEq(eyeCatcherFound, 0, "Could not find post-context-base eye catcher");
 }
 
 std::unique_ptr<Context> buildContextFromBinary(std::istream& str)
@@ -249,45 +278,46 @@ std::unique_ptr<Context> buildContextFromBinary(std::istream& str)
   unsigned long m, p, r;
   std::vector<long> gens, ords;
   readContextBaseBinary(str, m, p, r, gens, ords);
-  return std::unique_ptr<Context>(new Context(m,p,r,gens,ords));
+  return std::unique_ptr<Context>(new Context(m, p, r, gens, ords));
 }
 
 void writeContextBinary(std::ostream& str, const Context& context)
 {
-  
+
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
 
-  // standard-deviation 
+  // standard-deviation
   write_raw_xdouble(str, context.stdev);
 
   // scale
   write_raw_double(str, context.scale);
-   
-  // the "small" index 
+
+  // the "small" index
   write_raw_int(str, context.smallPrimes.card());
-  for(long tmp: context.smallPrimes) {;
+  for (long tmp : context.smallPrimes) {
+    ;
     write_raw_int(str, tmp);
   }
-   
-  // the "special" index 
+
+  // the "special" index
   write_raw_int(str, context.specialPrimes.card());
-  for(long tmp: context.specialPrimes) {
+  for (long tmp : context.specialPrimes) {
     write_raw_int(str, tmp);
   }
 
   // output the primes in the chain
   write_raw_int(str, context.moduli.size());
 
-  for (long i=0; i<(long)context.moduli.size(); i++){
+  for (long i = 0; i < (long)context.moduli.size(); i++) {
     write_raw_int(str, context.moduli[i].getQ());
   }
 
   // output the digits
   write_raw_int(str, context.digits.size());
 
-  for(long i=0; i<(long)context.digits.size(); i++){
+  for (long i = 0; i < (long)context.digits.size(); i++) {
     write_raw_int(str, context.digits[i].card());
-    for(long tmp: context.digits[i]) {
+    for (long tmp : context.digits[i]) {
       write_raw_int(str, tmp);
     }
   }
@@ -299,12 +329,10 @@ void writeContextBinary(std::ostream& str, const Context& context)
   writeEyeCatcher(str, BINIO_EYE_CONTEXT_END);
 }
 
-
 void readContextBinary(std::istream& str, Context& context)
 {
   int eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_BEGIN);
-  //OLD: assert(eyeCatcherFound == 0);
-  helib::assertEq(eyeCatcherFound, 0, "Could not find pre-context eye catcher");
+  assertEq(eyeCatcherFound, 0, "Could not find pre-context eye catcher");
 
   // Get the standard deviation
   context.stdev = read_raw_xdouble(str);
@@ -312,17 +340,16 @@ void readContextBinary(std::istream& str, Context& context)
   // Get the scale
   context.scale = read_raw_double(str);
 
-
   IndexSet smallPrimes;
   long smallPrimes_sz = read_raw_int(str);
-  for(long tmp, i=0; i<smallPrimes_sz; i++){
+  for (long tmp, i = 0; i < smallPrimes_sz; i++) {
     tmp = read_raw_int(str);
     smallPrimes.insert(tmp);
   }
 
   IndexSet specialPrimes;
   long specialPrimes_sz = read_raw_int(str);
-  for(long tmp, i=0; i<specialPrimes_sz; i++){
+  for (long tmp, i = 0; i < specialPrimes_sz; i++) {
     tmp = read_raw_int(str);
     specialPrimes.insert(tmp);
   }
@@ -334,26 +361,26 @@ void readContextBinary(std::istream& str, Context& context)
 
   long nPrimes = read_raw_int(str);
 
-  for (long p,i=0; i<nPrimes; i++) {
+  for (long p, i = 0; i < nPrimes; i++) {
     p = read_raw_int(str);
 
-    context.moduli.push_back(Cmodulus(context.zMStar,p,0));
+    context.moduli.push_back(Cmodulus(context.zMStar, p, 0));
 
     if (smallPrimes.contains(i))
-      context.smallPrimes.insert(i);   // small prime
+      context.smallPrimes.insert(i); // small prime
     else if (specialPrimes.contains(i))
       context.specialPrimes.insert(i); // special prime
     else
-      context.ctxtPrimes.insert(i);    // ciphertext prime
+      context.ctxtPrimes.insert(i); // ciphertext prime
   }
-  
+
   long nDigits = read_raw_int(str);
 
   context.digits.resize(nDigits);
-  for(long i=0; i<(long)context.digits.size(); i++){
+  for (long i = 0; i < (long)context.digits.size(); i++) {
     long sizeOfS = read_raw_int(str);
 
-    for(long tmp, n=0; n<sizeOfS; n++){
+    for (long tmp, n = 0; n < sizeOfS; n++) {
       tmp = read_raw_int(str);
       context.digits[i].insert(tmp);
     }
@@ -367,36 +394,36 @@ void readContextBinary(std::istream& str, Context& context)
 
   long t = read_raw_int(str);
 
-  if (mv.length()>0) {
+  if (mv.length() > 0) {
     context.makeBootstrappable(mv, t);
   }
 
   eyeCatcherFound = readEyeCatcher(str, BINIO_EYE_CONTEXT_END);
-  //OLD: assert(eyeCatcherFound == 0);
-  helib::assertEq(eyeCatcherFound, 0, "Could not find post-context eye catcher");
+  assertEq(eyeCatcherFound, 0, "Could not find post-context eye catcher");
 }
 
 void writeContextBase(std::ostream& str, const Context& context)
 {
-  str << "[" << context.zMStar.getM()
-      << " " << context.zMStar.getP()
-      << " " << context.alMod.getR()
-      << " [";
-  for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
+  str << "[" << context.zMStar.getM() << " " << context.zMStar.getP() << " "
+      << context.alMod.getR() << " [";
+  for (long i = 0; i < (long)context.zMStar.numOfGens(); i++) {
     str << context.zMStar.ZmStarGen(i)
-	<< ((i==(long)context.zMStar.numOfGens()-1)? "]" : " ");
+        << ((i == (long)context.zMStar.numOfGens() - 1) ? "]" : " ");
   }
   str << " [";
-  for (long i=0; i<(long) context.zMStar.numOfGens(); i++) {
+  for (long i = 0; i < (long)context.zMStar.numOfGens(); i++) {
     long ord = context.zMStar.OrderOf(i);
-    if (context.zMStar.SameOrd(i)) str << ord;
-    else                           str << (-ord);
-    if (i<(long)context.zMStar.numOfGens()-1) str << ' ';
+    if (context.zMStar.SameOrd(i))
+      str << ord;
+    else
+      str << (-ord);
+    if (i < (long)context.zMStar.numOfGens() - 1)
+      str << ' ';
   }
   str << "]]";
 }
 
-std::ostream& operator<< (std::ostream &str, const Context& context)
+std::ostream& operator<<(std::ostream& str, const Context& context)
 {
   str << "[\n";
 
@@ -406,24 +433,24 @@ std::ostream& operator<< (std::ostream &str, const Context& context)
   // scale
   str << context.scale << "\n";
 
-  // the "small" index 
+  // the "small" index
   str << context.smallPrimes << "\n ";
 
-  // the "special" index 
+  // the "special" index
   str << context.specialPrimes << "\n ";
 
   // output the primes in the chain
   str << context.moduli.size() << "\n";
-  for (long i=0; i<(long)context.moduli.size(); i++)
+  for (long i = 0; i < (long)context.moduli.size(); i++)
     str << context.moduli[i].getQ() << " ";
   str << "\n ";
 
   // output the digits
   str << context.digits.size() << "\n";
-  for (long i=0; i<(long)context.digits.size(); i++)
+  for (long i = 0; i < (long)context.digits.size(); i++)
     str << context.digits[i] << " ";
 
-  str <<"\n";
+  str << "\n";
 
   str << context.rcData.mvec;
   str << " " << context.rcData.skHwt;
@@ -434,11 +461,15 @@ std::ostream& operator<< (std::ostream &str, const Context& context)
   return str;
 }
 
-void readContextBase(std::istream& str, unsigned long& m, unsigned long& p,
-		     unsigned long& r, std::vector<long>& gens, std::vector<long>& ords)
+void readContextBase(std::istream& str,
+                     unsigned long& m,
+                     unsigned long& p,
+                     unsigned long& r,
+                     std::vector<long>& gens,
+                     std::vector<long>& ords)
 {
-  // Advance str beyond first '[' 
-  seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
+  // Advance str beyond first '['
+  seekPastChar(str, '['); // this function is defined in NumbTh.cpp
 
   str >> m >> p >> r;
   str >> gens;
@@ -451,12 +482,12 @@ std::unique_ptr<Context> buildContextFromAscii(std::istream& str)
   unsigned long m, p, r;
   std::vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
-  return std::unique_ptr<Context>(new Context(m,p,r,gens,ords));
+  return std::unique_ptr<Context>(new Context(m, p, r, gens, ords));
 }
 
-std::istream& operator>> (std::istream &str, Context& context)
+std::istream& operator>>(std::istream& str, Context& context)
 {
-  seekPastChar(str, '[');  // this function is defined in NumbTh.cpp
+  seekPastChar(str, '['); // this function is defined in NumbTh.cpp
 
   // Get the standard deviation
   str >> context.stdev;
@@ -465,10 +496,10 @@ std::istream& operator>> (std::istream &str, Context& context)
   str >> context.scale;
 
   IndexSet smallPrimes;
-  str >> smallPrimes; 
+  str >> smallPrimes;
 
   IndexSet specialPrimes;
-  str >> specialPrimes; 
+  str >> specialPrimes;
 
   context.moduli.clear();
   context.smallPrimes.clear();
@@ -477,25 +508,25 @@ std::istream& operator>> (std::istream &str, Context& context)
 
   long nPrimes;
   str >> nPrimes;
-  for (long i=0; i<nPrimes; i++) {
+  for (long i = 0; i < nPrimes; i++) {
     long p;
-    str >> p; 
+    str >> p;
 
-    context.moduli.push_back(Cmodulus(context.zMStar,p,0));
+    context.moduli.push_back(Cmodulus(context.zMStar, p, 0));
 
     if (smallPrimes.contains(i))
-      context.smallPrimes.insert(i);   // small prime
+      context.smallPrimes.insert(i); // small prime
     else if (specialPrimes.contains(i))
       context.specialPrimes.insert(i); // special prime
     else
-      context.ctxtPrimes.insert(i);    // ciphertext prime
+      context.ctxtPrimes.insert(i); // ciphertext prime
   }
 
   // read in the partition to digits
   long nDigits;
   str >> nDigits;
   context.digits.resize(nDigits);
-  for (long i=0; i<(long)context.digits.size(); i++)
+  for (long i = 0; i < (long)context.digits.size(); i++)
     str >> context.digits[i];
 
   endBuildModChain(context);
@@ -507,13 +538,12 @@ std::istream& operator>> (std::istream &str, Context& context)
   str >> mv;
   str >> t;
   str >> build_cache;
-  if (mv.length()>0) {
+  if (mv.length() > 0) {
     context.makeBootstrappable(mv, t, build_cache);
   }
   seekPastChar(str, ']');
   return str;
 }
-
 
 NTL::ZZX getG(const EncryptedArray& ea)
 {
@@ -526,30 +556,35 @@ NTL::ZZX getG(const EncryptedArray& ea)
     convert(G, ea.getDerived(PA_zz_p()).getG());
     break;
   case PA_cx_tag:
-    throw helib::LogicError("Cannot get polynomial modulus G when scheme is CKKS");
+    throw LogicError("Cannot get polynomial modulus G when scheme is CKKS");
     break;
   default:
-    throw helib::LogicError("No valid tag found in EncryptedArray");
+    throw LogicError("No valid tag found in EncryptedArray");
   }
   return G;
 }
 
 // Constructors must ensure that alMod points to zMStar, and
 // rcEA (if set) points to rcAlmod which points to zMStar
-Context::Context(unsigned long m, unsigned long p, unsigned long r,
-   const std::vector<long>& gens, const std::vector<long>& ords):
-  zMStar(m, p, gens, ords), alMod(zMStar, r), stdev(3.2), scale(10.0) 
+Context::Context(unsigned long m,
+                 unsigned long p,
+                 unsigned long r,
+                 const std::vector<long>& gens,
+                 const std::vector<long>& ords) :
+    zMStar(m, p, gens, ords),
+    alMod(zMStar, r),
+    ea(std::make_shared<EncryptedArray>(*this, alMod)),
+    pwfl_converter(nullptr),
+    stdev(3.2),
+    scale(10.0)
 {
-  ea = std::make_shared<EncryptedArray>(*this, alMod);
-
-  pwfl_converter = nullptr;
   // NOTE: pwfl_converter will be set in buildModChain (or endBuildModChain),
-  // after the prime chain has been built, as it depends
-  // on the primeChain
+  // after the prime chain has been built, as it depends on the primeChain
 
   if (this->alMod.getTag() != PA_cx_tag) {
-    slotRing = std::make_shared<PolyModRing>(zMStar.getP(), alMod.getR(), getG(*ea));
+    slotRing =
+        std::make_shared<PolyModRing>(zMStar.getP(), alMod.getR(), getG(*ea));
   }
 }
 
-}
+} // namespace helib

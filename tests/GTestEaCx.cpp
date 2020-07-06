@@ -13,9 +13,7 @@
 #include <helib/norms.h>
 #include <helib/helib.h>
 
-#ifdef DEBUG_PRINTOUT
 #include <helib/debugging.h>
-#endif
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -63,7 +61,7 @@ protected:
 
       eacx.getPAlgebra().printout();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       std::vector<std::complex<double>> vc1;
       eacx.random(vc1);
       std::cout << "random complex vc1=";
@@ -79,8 +77,8 @@ protected:
 
   virtual void TearDown() override
   {
-#ifdef DEBUG_PRINTOUT
-    helib::cleanupGlobals();
+#ifdef HELIB_DEBUG
+    helib::cleanupDebugGlobals();
 #endif
   }
 };
@@ -90,7 +88,7 @@ TEST_P(GTestEaCx, encodingWorksCorrectly)
   std::vector<double> vl;
   eacx.random(vl);
   vl[1] = -1; // ensure that this is not the zero vector
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cout << "random int v=";
   helib::printVec(std::cout, vl, 8) << std::endl;
 #endif
@@ -106,7 +104,7 @@ TEST_P(GTestEaCx, encodingWorksCorrectly)
 
   std::vector<double> vd2;
   eacx.decode(vd2, poly, factor);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   std::cout << "  decoded into vd2=";
   helib::printVec(std::cout, vd2, 8) << std::endl;
 #endif

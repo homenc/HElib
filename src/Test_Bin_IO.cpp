@@ -33,7 +33,7 @@ bool isLittleEndian()
 }
 
 void cleanupFiles(const char* file){
-  if(unlink(file)) cerr<< "Delete of "<< file <<" failed."<<endl; 
+  if(unlink(file)) cerr<< "Delete of "<< file <<" failed."<<endl;
 }
 
 template<class... Files>
@@ -50,13 +50,13 @@ long compareFiles(string filename1, string filename2)
 
   ifstream file1(filename1);
   ifstream file2(filename2);
- 
+
   if(!file1.is_open() && !file2.is_open()){
     cerr << "Could not open one of the following files:" << endl;
     cerr << filename1 << " and/or " << filename2 << endl;
     exit(EXIT_FAILURE);
   }
- 
+
   fstream::pos_type file1size, file2size;
 
   file1size = file1.seekg(0, ifstream::end).tellg();
@@ -66,7 +66,7 @@ long compareFiles(string filename1, string filename2)
   file2.seekg(0, ifstream::beg);
 
   // Quick compare sizes.
-  if(file1size != file2size){ 
+  if(file1size != file2size){
     file1.close();
     file2.close();
     cerr << "Files "<<filename1<<" and "<<filename2<<" not the same size :("<< endl;
@@ -91,15 +91,15 @@ long compareFiles(string filename1, string filename2)
       cerr << "Block "
            <<cnt<<" (block size: "<<BLOCKSIZE<<" bytes) "
            <<cnt<<" does not match :("<<endl;
-      return 1; 
+      return 1;
     }
-  }  
+  }
   return 0; // Files are the same!
 }
 
 
 int main(int argc, char *argv[])
-{ 
+{
   ArgMap amap;
 
   bool noPrint=true;
@@ -110,8 +110,8 @@ int main(int argc, char *argv[])
   long w=64;
   long L=300;
   long cleanup=1;
-  string sampleFilePrefix; 
- 
+  string sampleFilePrefix;
+
   amap.arg("m", m, "order of cyclotomic polynomial");
   amap.arg("p", p, "plaintext base");
   amap.arg("r", r, "lifting");
@@ -123,15 +123,15 @@ int main(int argc, char *argv[])
   amap.parse(argc, argv);
 
   // FIXME: this is wrong!
-  const char* asciiFile1 = "../misc/iotest_ascii1.txt"; 
-  const char* asciiFile2 = "../misc/iotest_ascii2.txt"; 
-  const char* binFile1 = "../misc/iotest_bin.bin"; 
-  const char* otherEndianFileOut = "../misc/iotest_ascii3.txt";  
+  const char* asciiFile1 = "../misc/iotest_ascii1.txt";
+  const char* asciiFile2 = "../misc/iotest_ascii2.txt";
+  const char* binFile1 = "../misc/iotest_bin.bin";
+  const char* otherEndianFileOut = "../misc/iotest_ascii3.txt";
 
-  { // 1. Write ASCII and bin files. 
+  { // 1. Write ASCII and bin files.
     ofstream asciiFile(asciiFile1);
     ofstream binFile(binFile1, ios::binary);
-    assert(asciiFile.is_open());  
+    assert(asciiFile.is_open());
 
     std::unique_ptr<Context> context(new Context(m, p, r));
     buildModChain(*context, L, c);  // Set the modulus chain
@@ -147,12 +147,12 @@ int main(int argc, char *argv[])
     addSome1DMatrices(*secKey);
     addFrbMatrices(*secKey);
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
 
-    // ASCII 
+    // ASCII
     if (!noPrint)
       cout << "\tWriting ASCII1 file " << asciiFile1 << endl;
     writeContextBase(asciiFile, *context);
@@ -175,28 +175,28 @@ int main(int argc, char *argv[])
   { // 2. Read in bin files and write out ASCII.
     if (!noPrint)
       cout << "Test to read binary file and write it out as ASCII" << endl;
-  
+
     ifstream inFile(binFile1, ios::binary);
     ofstream outFile(asciiFile2);
-  
+
     // Read in context,
-    std::unique_ptr<Context> context = buildContextFromBinary(inFile);  
-    readContextBinary(inFile, *context);  
+    std::unique_ptr<Context> context = buildContextFromBinary(inFile);
+    readContextBinary(inFile, *context);
 
     // Read in SecKey and PubKey.
     std::unique_ptr<SecKey> secKey(new SecKey(*context));
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
 
     PubKey* pubKey = (PubKey*) secKey.get();
-  
+
     readPubKeyBinary(inFile, *pubKey);
     readSecKeyBinary(inFile, *secKey);
- 
-    // ASCII 
+
+    // ASCII
     if (!noPrint)
       cout << "\tWriting ASCII2 file." << endl;
     writeContextBase(outFile, *context);
@@ -211,9 +211,9 @@ int main(int argc, char *argv[])
   }
   { // 3. Compare byte-wise the two ASCII files
     if (!noPrint)
-      cout << "Comparing the two ASCII files\n"; 
-  
-    long differ = compareFiles(asciiFile1, asciiFile2); 
+      cout << "Comparing the two ASCII files\n";
+
+    long differ = compareFiles(asciiFile1, asciiFile2);
 
     if(differ != 0){
       cout << "BAD\n";
@@ -225,30 +225,30 @@ int main(int argc, char *argv[])
   }
   { // 4. Read in binary and perform operation.
     if (!noPrint)
-      cout << "Test reading in Binary files and performing an operation between two ctxts\n";  
+      cout << "Test reading in Binary files and performing an operation between two ctxts\n";
 
     ifstream inFile(binFile1, ios::binary);
 
     // Read in context,
     std::unique_ptr<Context> context = buildContextFromBinary(inFile);
-    readContextBinary(inFile, *context);  
+    readContextBinary(inFile, *context);
 
     // Read in PubKey.
     std::unique_ptr<SecKey> secKey(new SecKey(*context));
     PubKey* pubKey = (PubKey*) secKey.get();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
 
         readPubKeyBinary(inFile, *pubKey);
     readSecKeyBinary(inFile, *secKey);
-    inFile.close(); 
+    inFile.close();
 
     // Get the ea
     const EncryptedArray& ea = *context->ea;
- 
+
     // Setup some ptxts and ctxts.
     Ctxt c1(*pubKey), c2(*pubKey);
     PlaintextArray p1(ea),  p2(ea);
@@ -266,8 +266,8 @@ int main(int argc, char *argv[])
 
     // Decrypt and Compare.
     PlaintextArray pp1(ea);
-    ea.decrypt(c1, *secKey, pp1);     
-	
+    ea.decrypt(c1, *secKey, pp1);
+
     if(!equals(ea, p1, pp1)) {
       cout << "BAD\n";
       exit(EXIT_FAILURE);
@@ -277,11 +277,11 @@ int main(int argc, char *argv[])
     if(cleanup) {
       if (!noPrint)
         cout << "Clean up. Deleting created files." << endl;
-      cleanupFiles(asciiFile1, asciiFile2, binFile1);     
+      cleanupFiles(asciiFile1, asciiFile2, binFile1);
     }
   }
   { // 5. Read in binary from opposite little endian and print ASCII and compare
-    bool littleEndian = isLittleEndian(); 
+    bool littleEndian = isLittleEndian();
 
     string otherEndianFileIn
       = sampleFilePrefix + (littleEndian? "_BE.bin" : "_LE.bin");
@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
       = sampleFilePrefix + (littleEndian? "_BE.txt" : "_LE.txt");
 
     if (!noPrint)
-      cout << "Test to read in" << (littleEndian? " BE ":" LE ") 
+      cout << "Test to read in" << (littleEndian? " BE ":" LE ")
            << "binary file and write it out as ASCII" << endl;
 
     if(sampleFilePrefix.empty()) {
@@ -304,21 +304,21 @@ int main(int argc, char *argv[])
       if(!inFile.is_open()) {
         cout << "BAD boo!\n";
         if (!noPrint)
-          cout << "  file " << otherEndianFileIn 
+          cout << "  file " << otherEndianFileIn
                << " could not be opened.\n";
         exit(EXIT_FAILURE);
       }
       ofstream outFile(otherEndianFileOut);
-    
+
       // Read in context,
       std::unique_ptr<Context> context = buildContextFromBinary(inFile);
-      readContextBinary(inFile, *context);  
+      readContextBinary(inFile, *context);
 
       // Read in SecKey and PubKey.
       std::unique_ptr<SecKey> secKey(new SecKey(*context));
       PubKey* pubKey = (PubKey*) secKey.get();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
         dbgEa = context->ea;
         dbgKey = secKey.get();
 #endif
@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
         readPubKeyBinary(inFile, *pubKey);
       readSecKeyBinary(inFile, *secKey);
       inFile.close();
-   
+
       // ASCII
       if (!noPrint)
         cout << "\tWriting other endian file." << endl;
@@ -338,9 +338,9 @@ int main(int argc, char *argv[])
 
       // Compare byte-wise the two ASCII files
       if (!noPrint)
-        cout << "Comparing the two ASCII files\n"; 
-    
-      long differ = compareFiles(otherEndianASCII, otherEndianFileOut); 
+        cout << "Comparing the two ASCII files\n";
+
+      long differ = compareFiles(otherEndianASCII, otherEndianFileOut);
 
       if(differ != 0) {
         cout << "BAD\n";
@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
       if(cleanup) {
         if (!noPrint)
           cout << "Clean up. Deleting created files." << endl;
-        cleanupFiles(otherEndianFileOut); 
+        cleanupFiles(otherEndianFileOut);
       }
     }
   }

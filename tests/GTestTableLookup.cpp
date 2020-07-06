@@ -14,10 +14,7 @@
 #include <NTL/BasicThreadPool.h>
 #include <helib/intraSlot.h>
 #include <helib/tableLookup.h>
-
-#ifdef DEBUG_PRINTOUT
 #include <helib/debugging.h>
-#endif
 
 #include "gtest/gtest.h"
 #include "test_common.h"
@@ -264,16 +261,13 @@ protected:
   void SetUp() override
   {
     helib::activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context.ea;
-    helib::dbgKey = &secretKey;
-#endif
+    helib::setupDebugGlobals(&secretKey, context.ea);
   };
 
   virtual void TearDown() override
   {
-#ifdef DEBUG_PRINTOUT
-    helib::cleanupGlobals();
+#ifdef HELIB_DEBUG
+    helib::cleanupDebugGlobals();
 #endif
   }
 
@@ -308,8 +302,9 @@ TEST_P(GTestTableLookup, lookupFunctionsCorrectly)
     helib::Ctxt c(secretKey);
     std::vector<helib::Ctxt> ei(bitSize, c);
     encryptIndex(ei, i, secretKey); // encrypt the index
-    helib::tableLookup(
-        c, T, helib::CtPtrs_vectorCt(ei)); // get the encrypted entry
+    helib::tableLookup(c,
+                       T,
+                       helib::CtPtrs_vectorCt(ei)); // get the encrypted entry
     // decrypt and compare
     NTL::ZZX poly;
     secretKey.Decrypt(poly, c); // decrypt
@@ -317,11 +312,10 @@ TEST_P(GTestTableLookup, lookupFunctionsCorrectly)
     helib::convert(poly2, poly); // convert to zzX
     EXPECT_EQ(poly2, T[i]) << "testLookup error: decrypted T[" << i << "]\n";
   }
-};
+}
 
 TEST_P(GTestTableLookup, writeinFunctionsCorrectly)
 {
-  const helib::EncryptedArray& ea = *(secretKey.getContext().ea);
   long tSize = 1L << bitSize; // table size
 
   // encrypt a random table
@@ -357,7 +351,7 @@ TEST_P(GTestTableLookup, writeinFunctionsCorrectly)
         << "testWritein error: decrypted T[" << i << "]=" << decrypted
         << " but should be " << pT[i] << " (mod " << p << ")\n";
   }
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          GTestTableLookup,

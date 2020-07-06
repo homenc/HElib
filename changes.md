@@ -1,3 +1,15 @@
+HElib 1.0.2, June 2020
+===============================
+(tagged as v1.0.2)
+
+April-June 2020
+------------------
+* Source code contribution policy
+* HElib now builds with compiler pedantic flags
+* Consistent C++ format style adopted
+* Improved sampling functions
+* Bug fixes
+
 HElib 1.0.1, April 2020
 ===============================
 (tagged as v1.0.1)
@@ -20,7 +32,7 @@ HElib 1.0.0, January 2020
 ===============================
 (tagged as v1.0.0)
 
-December 2019 - January 2020
+December 2019
 -------------
 * C++14 Standard (minimum level)
 * New `Ptxt` Plaintext class that implements the same functionality of the `Ctxt` ciphertext class.  
@@ -40,7 +52,7 @@ September-November 2019
 * New `helib` namespace.  
 * New `examples` and `benchmarks` directory trees.  
 * Improvements to bootstrapping.  
-* Better tests for bootsrapping and binary arithmetic in BGV.   
+* Better tests for bootstrapping and binary arithmetic in BGV.   
 * Docs and example code for binary arithmetic.  
 * Overall code and performance improvements in `NumbTh.cpp`.   
 * HElib now avoids *very bad* generators.   
@@ -108,7 +120,7 @@ Included in this version is a draft implementation of the CKKS approximate-numbe
 ```c++
   FHEcontext context(/*m=*/4096, /*p=*/-1, /*r=*/8);
 ```
-will set up an instance of CKKS over the 2^12 cyclotomic ring, requesting to keep precision of 1/256 (i.e., 8 bits to the right of the binary point). The implementaiton includes a `EncryptedArrayCx` class that handles the encoding and decoding of these instances, see EncryptedArray.h.
+will set up an instance of CKKS over the 2^12 cyclotomic ring, requesting to keep precision of 1/256 (i.e., 8 bits to the right of the binary point). The implementation includes a `EncryptedArrayCx` class that handles the encoding and decoding of these instances, see EncryptedArray.h.
 
 We use the same chassis for CKKS as for BGV, and in particular we support arbitrary cyclotomics (not just powers of two). But not everything is implemented for this case yet. (For instance `EncryptedArray::shift1D` is not implemented for CKKS ciphertexts.)
 
@@ -142,9 +154,9 @@ In this version we added a `long intFactor` data member to ciphertexts, and we n
 This is just as convenient as before for modulus switching, but it allows us to just modify the `intFactor` (without changing the noise) after multiplication. When we add two ciphertexts we still need to make sure that they both have the same `intFactor`, but it is easy to see that this can be done while increasing the noise of the result by at most a sqrt(p) factor.
 
 ### 4b. Wider noise sampling for non-power-of-two ring-LWE
-Fixed a security bug, related to the ring-LWE assumption in non-power-of-two cyclotomic rings. Before we always sampled the noise with a constant width in the coefficient representation (sigma=3.2 by default). This is an acceptable choice for power-of-two cyclotomics, but not otherwise. In the new version, for the m'th cyclotomic (with m not a power of two), we sample a *degree-m polynomial* in coefficient representation using Gaussian width sigma*sqrt(m), and then reduce the result modulo Phi_m(X). This yeilds somewhat larger noise terms.
+Fixed a security bug, related to the ring-LWE assumption in non-power-of-two cyclotomic rings. Before we always sampled the noise with a constant width in the coefficient representation (sigma=3.2 by default). This is an acceptable choice for power-of-two cyclotomics, but not otherwise. In the new version, for the m'th cyclotomic (with m not a power of two), we sample a *degree-m polynomial* in coefficient representation using Gaussian width sigma*sqrt(m), and then reduce the result modulo Phi_m(X). This yields somewhat larger noise terms.
 
-On the other hand, when sampling noise terms during key-generation, we check the canonical-embedding norm of the result and re-sample if it is too large. (Specifically we set the parameters so that the probability of re-sampling is below 1/2.) This very often yeilds smaller noise terms for the keys.
+On the other hand, when sampling noise terms during key-generation, we check the canonical-embedding norm of the result and re-sample if it is too large. (Specifically we set the parameters so that the probability of re-sampling is below 1/2.) This very often yields smaller noise terms for the keys.
 
 ### 4c. Implemented the Chen-Han "thin" bootstrapping procedure
 Implemented the faster procedure for bootstrapping lightly packed ciphertexts (where the slots contain only integers), from [[Chen-Han, Eurocrypt 2018]](https://ia.cr/2018/067). Integrated this procedure with the improved linear algebra methods of HElib.

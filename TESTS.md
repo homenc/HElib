@@ -63,7 +63,7 @@ inside a `TEST_F` or `TEST_P` for non-parameterized or parameterized tests
 (respectively).  7. If using parameterized tests, create some parameters to run
 the tests with using the `INSTANTIATE_TEST_CASE_P` macro.
 
-## Futher reading More details on how to use these google test utilities can be
+## Further reading More details on how to use these google test utilities can be
 found by the helpful google test documentation:
 
 - Basic overview: https://github.com/google/googletest/

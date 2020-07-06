@@ -72,10 +72,10 @@ int main(int argc, char *argv[])
       dbgKey = &secretKey; // debugging key and ea
       dbgEa = context.ea;
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgKey = &secretKey; // debugging key and ea
   dbgEa = context.ea;
-#endif //DEBUG_PRINTOUT
+#endif //HELIB_DEBUG
 
   EncryptedArray ea(context);
   vector<long> v;

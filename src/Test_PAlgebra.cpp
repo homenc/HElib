@@ -20,7 +20,7 @@ NTL_CLIENT
 
 using namespace helib;
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMap amap;
 

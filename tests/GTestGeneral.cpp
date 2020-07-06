@@ -182,13 +182,10 @@ protected:
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
+    helib::setupDebugGlobals(&secretKey, context.ea);
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
@@ -231,8 +228,7 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
   long nslots = ea.size();
 
   // Debugging additions
-  helib::dbgKey = &secretKey;
-  helib::dbgEa = ea_ptr;
+  helib::setupDebugGlobals(&secretKey, ea_ptr);
 
   helib::PlaintextArray p0(ea);
   helib::PlaintextArray p1(ea);
@@ -253,7 +249,7 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
 
   helib::resetAllTimers();
 
-  FHE_NTIMER_START(Circuit);
+  HELIB_NTIMER_START(Circuit);
 
   for (long i = 0; i < R; i++) {
 
@@ -311,8 +307,9 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
     EXPECT_TRUE(ciphertextMatches(ea, secretKey, p2, c2));
 
     sprintf(buffer, "c2>>>=%d", (int)rotamt);
-    rotate(
-        ea, p2, rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
+    rotate(ea,
+           p2,
+           rotamt); // ea.rotate(c2, random amount in [1-nSlots, nSlots-1])
     ea.rotate(c2, rotamt);
     if (!helib_test::noPrint)
       CheckCtxt(c2, buffer);
@@ -342,7 +339,7 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
   c2.cleanUp();
   c3.cleanUp();
 
-  FHE_NTIMER_STOP(Circuit);
+  HELIB_NTIMER_STOP(Circuit);
 
   if (!helib_test::noPrint) {
     std::cout << std::endl;
@@ -350,21 +347,21 @@ TEST_P(GTestGeneral, correctlyImplementsMixOfOperationsOverFourCiphertexts)
     std::cout << std::endl;
   }
   helib::resetAllTimers();
-  FHE_NTIMER_START(Check);
+  HELIB_NTIMER_START(Check);
 
   EXPECT_TRUE(ciphertextMatches(ea, secretKey, p0, c0));
   EXPECT_TRUE(ciphertextMatches(ea, secretKey, p1, c1));
   EXPECT_TRUE(ciphertextMatches(ea, secretKey, p2, c2));
   EXPECT_TRUE(ciphertextMatches(ea, secretKey, p3, c3));
 
-  FHE_NTIMER_STOP(Check);
+  HELIB_NTIMER_STOP(Check);
 
   std::cout << std::endl;
   if (!helib_test::noPrint) {
     helib::printAllTimers();
     std::cout << std::endl;
   }
-};
+}
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(variousParameters, GTestGeneral, ::testing::Values(

@@ -38,7 +38,7 @@ void parse_common_args(int argc, char* argv[])
   // parameter of parameterised tests.  This will only be possible once
   // we parse the command-line args before gtest does.
   std::cout << "random seed: " << random_seed << std::endl;
-};
+}
 
 // TODO: Should be a member of EncryptedArray?
 bool hasBadDimension(const helib::Context& context)
@@ -91,7 +91,7 @@ std::vector<std::pair<long, long>> getParams(bool good,
       }
     }
   return params;
-};
+}
 
 std::vector<std::pair<long, long>> getBadDimensionParams(long min_m,
                                                          long max_m,
@@ -100,9 +100,14 @@ std::vector<std::pair<long, long>> getBadDimensionParams(long min_m,
                                                          long m_sparseness,
                                                          long p_sparseness)
 {
-  return getParams(
-      false, min_m, max_m, min_p, max_p, m_sparseness, p_sparseness);
-};
+  return getParams(false,
+                   min_m,
+                   max_m,
+                   min_p,
+                   max_p,
+                   m_sparseness,
+                   p_sparseness);
+}
 
 std::vector<std::pair<long, long>> getGoodDimensionParams(long min_m,
                                                           long max_m,
@@ -111,7 +116,12 @@ std::vector<std::pair<long, long>> getGoodDimensionParams(long min_m,
                                                           long m_sparseness,
                                                           long p_sparseness)
 {
-  return getParams(
-      true, min_m, max_m, min_p, max_p, m_sparseness, p_sparseness);
-};
-}; // namespace helib_test
+  return getParams(true,
+                   min_m,
+                   max_m,
+                   min_p,
+                   max_p,
+                   m_sparseness,
+                   p_sparseness);
+}
+} // namespace helib_test

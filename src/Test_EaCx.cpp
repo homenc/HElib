@@ -18,13 +18,13 @@
 NTL_CLIENT
 using namespace helib;
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #endif
 
 bool noPrint = true;
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMap amap;
   amap.arg("noPrint", noPrint, "suppress printouts");
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
   if (!noPrint)
     ea.getPAlgebra().printout();
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   vector<cx_double> vc1;
   ea.random(vc1);
   cout << "random complex vc1=";
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
   vector<double> vl;
   ea.random(vl);
   vl[1] = -1; // ensure that this is not the zero vector
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   cout << "random int v=";
   printVec(cout,vl,8)<<endl;
 #endif
@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 
   vector<double> vd2;
   ea.decode(vd2, poly, factor);
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   cout << "  decoded into vd2=";
   printVec(cout,vd2,8)<<endl;
 #endif

@@ -11,7 +11,7 @@
  */
 /**
  * @file matmul.h
- * @brief some matrix / linear algenra stuff
+ * @brief some matrix / linear algebra stuff
  */
 #include <helib/matmul.h>
 #include <helib/fhe_stats.h>
@@ -119,7 +119,7 @@ struct Parameters
   //};
 };
 
-template <class Mat>
+template <typename Mat>
 std::unique_ptr<Mat> buildMat(const helib::EncryptedArray& ea, long dim);
 
 template <>
@@ -127,7 +127,7 @@ std::unique_ptr<helib::MatMul1D> buildMat(const helib::EncryptedArray& ea,
                                           long dim)
 {
   return std::unique_ptr<helib::MatMul1D>{buildRandomMatrix(ea, dim)};
-};
+}
 // template<> std::unique_ptr<helib::BlockMatMul1D> buildMat(const
 // helib::EncryptedArray &ea, long dim)
 //{
@@ -272,13 +272,13 @@ protected:
 #endif
       helib::print_stats(std::cout);
     }
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   };
 };
 
 // This is how we pack a matrix type and a reference to a Parameters object into
 // a single type for gtest
-template <class T, const Parameters& params>
+template <typename T, const Parameters& params>
 struct MatrixTypeAndParams
 {
   typedef T MatrixType;
@@ -292,7 +292,7 @@ struct MatrixTypeAndParams
 Parameters oneDimensionalMatrixParams     (18631, 2, 1, 300, 0, 1, 0, 0, std::vector<long>{}            , std::vector<long>{}      , 0, 0, 0);
 Parameters oneDimensionalBlockMatrixParams(24295, 2, 1, 300, 0, 1, 0, 1, std::vector<long>{16386, 16427}, std::vector<long>{42, 16}, 0, 0, 0);
 
-// The above commented-out parameters were used before the newnoise was brought in - it is too slow now.
+// The above commented-out parameters were used before the new noise was brought in - it is too slow now.
 //FAST
 // Parameters oneDimensionalMatrixParams(91, 2, 1, 300, 0, 1, 0, 0, std::vector<long>{9, 3}, std::vector<long>{3, -2}, 0, 0, 0);
 // clang-format on
@@ -305,18 +305,20 @@ using TypesToTest = ::testing::Types<
 // this does not conform to the C++ standard. Until gtest changes, we need a
 // pragma to ignore this warning.
 #pragma GCC diagnostic push
+#ifdef __clang__
 #pragma GCC diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
+#endif
 TYPED_TEST_SUITE(GTestMatmul, TypesToTest);
 #pragma GCC diagnostic pop
 
 TYPED_TEST(GTestMatmul, multipliesWithoutErrors)
 {
-  FHE_NTIMER_START(EncodeMartix_MatMul);
+  HELIB_NTIMER_START(EncodeMartix_MatMul);
   // Templated class so explicit 'this' necessary
   const typename TypeParam::MatrixType& mat = *(this->matrixPtr);
   typename TypeParam::MatrixType::ExecType mat_exec(mat, (this->minimal));
   mat_exec.upgrade();
-  FHE_NTIMER_STOP(EncodeMartix_MatMul);
+  HELIB_NTIMER_STOP(EncodeMartix_MatMul);
 
   // choose a random plaintext vector and encrypt it
   helib::PlaintextArray v(this->ea);
@@ -335,6 +337,6 @@ TYPED_TEST(GTestMatmul, multipliesWithoutErrors)
   this->ea.decrypt(ctxt, this->secretKey, v1); // decrypt the ciphertext vector
 
   EXPECT_TRUE(equals(this->ea, v, v1)); // check that we've got the right answer
-};
+}
 
 } // namespace

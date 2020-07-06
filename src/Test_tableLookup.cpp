@@ -20,14 +20,14 @@
 NTL_CLIENT
 using namespace helib;
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
 #include <helib/debugging.h>
 #endif
 
 static std::vector<zzX> unpackSlotEncoding; // a global variable
 static bool verbose=false;
 
-static long mValues[][15] = { 
+static long mValues[][15] = {
 // { p, phi(m),   m,   d, m1, m2, m3,    g1,   g2,   g3, ord1,ord2,ord3, B,c}
   {  2,    48,   105, 12,  3, 35,  0,    71,    76,    0,   2,  2,   0, 25, 2},
   {  2 ,  600,  1023, 10, 11, 93,  0,   838,   584,    0,  10,  6,   0, 25, 2},
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
   long L;
   if (bootstrap) L=900; // that should be enough
   else           L = 30*(5 +bitSize);
-  
+
   if (verbose) {
     cout <<"input bitSize="<<bitSize<<", output size bound="<<outSize
          <<", running "<<nTests<<" tests for each function\n";
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
   if (verbose) cout << " done\n";
 
   activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgEa = context.ea;
   dbgKey = &secKey;
 #endif

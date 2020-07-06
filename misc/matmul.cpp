@@ -94,7 +94,7 @@ template<class type> class matmul_impl {
     const EncryptedArrayDerived<type> *ea;
     MatMulDimComp(const EncryptedArrayDerived<type> *_ea) : ea(_ea) {}
 
-    bool operator()(long i, long j) { 
+    bool operator()(long i, long j) {
       return (!ea->nativeDimension(i) && ea->nativeDimension(j)) ||
              (  (ea->nativeDimension(i) == ea->nativeDimension(j)) &&
                 (ea->sizeOfDimension(i) < ea->sizeOfDimension(j))  );
@@ -187,7 +187,7 @@ public:
       else if (buildCache==cacheDCRT) {
         (*dCache)[idx].reset(new DoubleCRT(*zxPtr, ea.getContext()));
       }
-      return idx+1;      
+      return idx+1;
     }
 
     // not the last dimension, make a recursive call
@@ -214,7 +214,7 @@ public:
 
   // Multiply a ciphertext vector by a plaintext dense matrix
   // and/or build a cache with the multiplication constants
-  void multilpy(Ctxt* ctxt) 
+  void multilpy(Ctxt* ctxt)
   {
     RBak bak; bak.save(); ea.getTab().restoreContext();
     // idxes describes a genealized diagonal, {(i,idx[i])}_i
@@ -326,7 +326,7 @@ public:
     return zDiag;
   }
 
-  void multiply(Ctxt* ctxt) 
+  void multiply(Ctxt* ctxt)
   {
     RBak bak; bak.save(); ea.getTab().restoreContext();
 
@@ -457,7 +457,7 @@ public:
     vector<RX> res;
     res.resize(n);
     for (long j = 0; j < n; j++) {
-      RX acc, val, tmp; 
+      RX acc, val, tmp;
       acc = 0;
       for (long i = 0; i < n; i++) {
         if (!mat.get(val, i, j)) {

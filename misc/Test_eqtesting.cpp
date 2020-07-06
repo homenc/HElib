@@ -13,7 +13,7 @@
 #include "timing.h"
 #include "EncryptedArray.h"
 
-void printBits(const vector<ZZX>& v, long n) 
+void printBits(const vector<ZZX>& v, long n)
 {
   long len = v.size();
   if (n>50 || len>32) return;
@@ -29,7 +29,7 @@ void printBits(const vector<ZZX>& v, long n)
 void  TestIt(long c, long k, long w, long L, long m, long n)
 {
   Context context(m, 2, 1); // p = 2, r = 1
-  long d = context.zMStar.getOrdP(); 
+  long d = context.zMStar.getOrdP();
 
   buildModChain(context, L, c);
 
@@ -46,7 +46,7 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
 
   ZZX G;
 
-  G = makeIrredPoly(2, d); 
+  G = makeIrredPoly(2, d);
   // G = context.alMod.getFactorsOverZZ()[0];
 
   cerr << "generating key-switching matrices... ";
@@ -86,14 +86,14 @@ void  TestIt(long c, long k, long w, long L, long m, long n)
 
   for (long j = 0; j < n; j++) {
     vector<ZZX> v1;
-    ea.decrypt(*res[j], secretKey, v1); 
+    ea.decrypt(*res[j], secretKey, v1);
     printBits(v1, n);
   }
 
   for (long j = 0; j < n; j++) delete res[j]; // cleanup
 }
 
-void usage(char *prog) 
+void usage(char *prog)
 {
   cerr << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cerr << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
@@ -106,7 +106,7 @@ void usage(char *prog)
   exit(0);
 }
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   argmap_t argmap;
   argmap["c"] = "2";
@@ -138,5 +138,5 @@ int main(int argc, char *argv[])
 
 }
 // call to get our running test case:
-// Test_eqtesting_x m=20485 
+// Test_eqtesting_x m=20485
 // Test_eqtesting_x m=105 for quick testing

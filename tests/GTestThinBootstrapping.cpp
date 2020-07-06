@@ -26,7 +26,6 @@ extern long fhe_force_chen_han;
 
 namespace {
 
-static bool debug = 0; // a debug flag
 static int scale = 0;
 
 struct Parameters
@@ -235,8 +234,11 @@ protected:
       context.scale = scale;
     }
     context.zMStar.set_cM(mValues[idx][13] / 100.0);
-    helib::buildModChain(
-        context, L, c, /*willBeBootstrappable=*/true, /*t=*/skHwt);
+    helib::buildModChain(context,
+                         L,
+                         c,
+                         /*willBeBootstrappable=*/true,
+                         /*t=*/skHwt);
 
     if (!helib_test::noPrint) {
       std::cout << "security=" << context.securityLevel() << std::endl;
@@ -255,8 +257,10 @@ protected:
       std::cout << "scale=" << context.scale << std::endl;
     }
 
-    context.makeBootstrappable(
-        mvec, /*t=*/skHwt, useCache, /*alsoThick=*/false);
+    context.makeBootstrappable(mvec,
+                               /*t=*/skHwt,
+                               useCache,
+                               /*alsoThick=*/false);
     // save time...disable some fat boot precomputation
 
     // if (skHwt>0) context.rcData.skHwt = skHwt;
@@ -357,17 +361,11 @@ protected:
   virtual void TearDown() override
   {
     cleanupBootstrappingGlobals();
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 
 public:
-  void SetUp() override
-  {
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
-  }
+  void SetUp() override { helib::setupDebugGlobals(&secretKey, context.ea); }
 
   static void TearDownTestCase()
   {
@@ -388,14 +386,7 @@ TEST_P(GTestThinBootstrapping, correctlyPerformsThinBootstrapping)
   std::shared_ptr<helib::EncryptedArray> ea(
       std::make_shared<helib::EncryptedArray>(context, GG));
 
-  if (debug) {
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = ea;
-  }
-#ifdef DEBUG_PRINTOUT
-  helib::dbgKey = &secretKey;
-  helib::dbgEa = ea;
-#endif // DEBUG_PRINTOUT
+  helib::setupDebugGlobals(&secretKey, ea);
 
   NTL::zz_p::init(p2r);
   NTL::Vec<NTL::zz_p> val0(NTL::INIT_SIZE, nslots);
@@ -429,7 +420,7 @@ TEST_P(GTestThinBootstrapping, correctlyPerformsThinBootstrapping)
   ea->decrypt(c2, secretKey, val2);
 
   EXPECT_EQ(val1, val2);
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          GTestThinBootstrapping,

@@ -52,7 +52,7 @@ struct BGV
    * @brief Slot type used for BGV plaintexts: `helib::PolyMod` i.e. an integer
    * polynomial modulo p^r and G.
    **/
-  using SlotType = helib::PolyMod;
+  using SlotType = PolyMod;
 };
 
 // Utility functions
@@ -66,8 +66,9 @@ struct BGV
  * @note Only exists for `BGV` and `CKKS`.
  **/
 template <typename From, typename Scheme>
-inline std::vector<typename Scheme::SlotType>
-convertDataToSlotVector(const std::vector<From>& data, const Context& context)
+inline std::vector<typename Scheme::SlotType> convertDataToSlotVector(
+    const std::vector<From>& data,
+    const Context& context)
 {
   static_assert(std::is_same<Scheme, CKKS>::value ||
                     std::is_same<Scheme, BGV>::value,
@@ -91,26 +92,24 @@ convertDataToSlotVector(const std::vector<From>& data, const Context& context)
  * zeroes.
  **/
 template <typename Scheme>
-void innerProduct(helib::Ptxt<Scheme>& result,
-                  const std::vector<helib::Ptxt<Scheme>>& first_vec,
-                  const std::vector<helib::Ptxt<Scheme>>& second_vec)
+void innerProduct(Ptxt<Scheme>& result,
+                  const std::vector<Ptxt<Scheme>>& first_vec,
+                  const std::vector<Ptxt<Scheme>>& second_vec)
 {
   static_assert(std::is_same<Scheme, CKKS>::value ||
                     std::is_same<Scheme, BGV>::value,
                 "Can only call innerProduct with Scheme equals to CKKS or BGV");
   for (std::size_t i = 0; i < first_vec.size(); ++i) {
-    helib::assertTrue<helib::RuntimeError>(
-        first_vec[i].isValid(),
-        "Cannot call innerProduct on default-constructed"
-        " Ptxt as first argument at index " +
-            std::to_string(i));
+    assertTrue<RuntimeError>(first_vec[i].isValid(),
+                             "Cannot call innerProduct on default-constructed"
+                             " Ptxt as first argument at index " +
+                                 std::to_string(i));
   }
   for (std::size_t i = 0; i < second_vec.size(); ++i) {
-    helib::assertTrue<helib::RuntimeError>(
-        second_vec[i].isValid(),
-        "Cannot call innerProduct on default-constructed"
-        " Ptxt as second argument at index " +
-            std::to_string(i));
+    assertTrue<RuntimeError>(second_vec[i].isValid(),
+                             "Cannot call innerProduct on default-constructed"
+                             " Ptxt as second argument at index " +
+                                 std::to_string(i));
   }
   long n = std::min(first_vec.size(), second_vec.size());
   if (n <= 0) {
@@ -184,13 +183,13 @@ public:
 
   /**
    * @brief Context only constructor, defaults all slots to `0`.
-   * @param context `FHEContext` to use.
+   * @param context `Context` to use.
    **/
   explicit Ptxt(const Context& context);
 
   /**
    * @brief Single slot constructor, set all slots to `value`.
-   * @param context `FHEContext` to use.
+   * @param context `Context` to use.
    * @param value Value to set all slots to.
    **/
   Ptxt(const Context& context, const SlotType& value);
@@ -198,7 +197,7 @@ public:
   /**
    * @brief BGV plaintext polynomial constructor, set all slots to the `value`
    * polynomial.
-   * @param context `FHEContext` to use.
+   * @param context `Context` to use.
    * @param data Polynomial to be converted into slot representation.
    * @note Only exists for `BGV`.
    **/
@@ -208,15 +207,15 @@ public:
 
   /**
    * @brief Slot vector constructor.
-   * @param context `FHEContext` to use.
+   * @param context `Context` to use.
    * @param data Data to populate the slots.
    **/
   Ptxt(const Context& context, const std::vector<SlotType>& data);
 
   /**
    * @brief Generic slot vector constructor.
-   * @param context `FHEContext` to use.
-   * @param data Data to populate the slots, must be convertable to `SlotType`.
+   * @param context `Context` to use.
+   * @param data Data to populate the slots, must be convertible to `SlotType`.
    **/
   template <typename T>
   Ptxt(const Context& context, const std::vector<T>& data) :
@@ -413,8 +412,9 @@ public:
   template <typename Scalar>
   Ptxt<Scheme>& operator*=(const Scalar& scalar)
   {
-    helib::assertTrue<helib::RuntimeError>(
-        isValid(), "Cannot call operator*= on default-constructed Ptxt");
+    assertTrue<RuntimeError>(isValid(),
+                             "Cannot call operator*= on "
+                             "default-constructed Ptxt");
     for (std::size_t i = 0; i < this->slots.size(); i++) {
       this->slots[i] *= scalar;
     }
@@ -443,8 +443,9 @@ public:
   template <typename Scalar>
   Ptxt<Scheme>& operator+=(const Scalar& scalar)
   {
-    helib::assertTrue<helib::RuntimeError>(
-        isValid(), "Cannot call operator+= on default-constructed Ptxt");
+    assertTrue<RuntimeError>(isValid(),
+                             "Cannot call operator+= on "
+                             "default-constructed Ptxt");
     for (std::size_t i = 0; i < this->slots.size(); i++) {
       this->slots[i] += scalar;
     }
@@ -473,8 +474,9 @@ public:
   template <typename Scalar>
   Ptxt<Scheme>& operator-=(const Scalar& scalar)
   {
-    helib::assertTrue<helib::RuntimeError>(
-        isValid(), "Cannot call operator-= on default-constructed Ptxt");
+    assertTrue<RuntimeError>(isValid(),
+                             "Cannot call operator-= on "
+                             "default-constructed Ptxt");
     for (std::size_t i = 0; i < this->slots.size(); i++) {
       this->slots[i] -= scalar;
     }
@@ -693,8 +695,9 @@ public:
    **/
   friend std::istream& operator>>(std::istream& is, Ptxt<Scheme>& ptxt)
   {
-    assertTrue<RuntimeError>(
-        ptxt.isValid(), "Cannot operate on invalid (default constructed) Ptxt");
+    assertTrue<RuntimeError>(ptxt.isValid(),
+                             "Cannot operate on invalid "
+                             "(default constructed) Ptxt");
     seekPastChar(is, '[');
     std::vector<typename Scheme::SlotType> data;
     for (typename Scheme::SlotType slot(
@@ -718,9 +721,10 @@ public:
    **/
   friend std::ostream& operator<<(std::ostream& os, const Ptxt<Scheme>& ptxt)
   {
-    assertTrue<RuntimeError>(
-        ptxt.isValid(), "Cannot operate on invalid (default constructed) Ptxt");
-    // Use desctructor to make sure stream precision is reset
+    assertTrue<RuntimeError>(ptxt.isValid(),
+                             "Cannot operate on invalid "
+                             "(default constructed) Ptxt");
+    // Use destructor to make sure stream precision is reset
     struct stream_modifier
     {
       explicit stream_modifier(std::ostream& os) : os(os), ss(os.precision())
@@ -794,7 +798,7 @@ private:
    * @brief Verify that all slots have G and p^r which are compatible with
    * those inside `context`.
    * @param slots Slots to be checked against `context`.
-   * @throws helib::RuntimeError If `slots` contains anything incompatible with
+   * @throws RuntimeError If `slots` contains anything incompatible with
    * the current `Ptxt` object.
    *
    * @note Does nothing in the CKKS case, since a std::complex<double> is
@@ -814,6 +818,6 @@ private:
   template <typename type>
   NTL::ZZX automorph_internal(long k);
 };
-}; // namespace helib
+} // namespace helib
 
 #endif // HELIB_PTXT_H

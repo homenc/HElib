@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
   unsigned long c = 2;
 
   std::cout << "Initialising context object..." << std::endl;
-  // Intialise context
+  // Initialize context
   helib::Context context(m, p, r);
   // Modify the context, adding primes to the modulus chain
   std::cout << "Building modulus chain..." << std::endl;
@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
   // and p is our plaintext prime.
   // First make a copy of the ctxt using copy constructor
   helib::Ctxt ctxt_divisor(ctxt);
-  // Raise the copy to the exponenet p-2
+  // Raise the copy to the exponent p-2
   ctxt_divisor.power(p - 2);
   // a^{p-2}*a = a^{-1}*a = a / a = 1;
   ctxt.multiplyBy(ctxt_divisor);

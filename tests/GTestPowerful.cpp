@@ -76,7 +76,7 @@ protected:
     helib::buildModChain(context, /*L=*/100, /*c=*/3);
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestPowerful, simpleConversionWorks)
@@ -124,7 +124,7 @@ INSTANTIATE_TEST_SUITE_P(standardParameters,
 
   for (long k = 1; q = 2*k*m + 1, !ProbPrime(q, 20); k++);
   cout << "q=" << q << "\n";
-  
+
 
   Vec< Pair<long, long> > factors;
 
@@ -162,7 +162,7 @@ INSTANTIATE_TEST_SUITE_P(standardParameters,
 
   Vec<long> longToShortMap;
   computeLongToShortMap(longToShortMap, m, shortToLongMap);
-  
+
 
   zz_p::init(q);
 
@@ -182,7 +182,7 @@ INSTANTIATE_TEST_SUITE_P(standardParameters,
 
   zz_pX tmp1, tmp2;
 
-  convertPolyToPowerful(cube, tmpCube, poly, cycVec, 
+  convertPolyToPowerful(cube, tmpCube, poly, cycVec,
                         polyToCubeMap, shortToLongMap);
 
   zz_pX poly1;
@@ -216,11 +216,11 @@ INSTANTIATE_TEST_SUITE_P(standardParameters,
   computeCompressedIndex(compressedIndex, powVec);
 
   Vec<long> powToCompressedIndexMap;
-  helib::computePowToCompressedIndexMap(powToCompressedIndexMap, m, powVec, 
+  helib::computePowToCompressedIndexMap(powToCompressedIndexMap, m, powVec,
                                  compressedIndex, shortSig);
 
 
-  
+
   HyperCube<zz_p> cube1 = cube;
 
   eval(cube1, multiEvalPoints);
@@ -234,7 +234,7 @@ INSTANTIATE_TEST_SUITE_P(standardParameters,
     if (GCD(i, m) == 1) {
       if (cube1[powToCompressedIndexMap[i]] != res[j++]) eval_ok = false;
     }
-  } 
+  }
 
 
   if (eval_ok)
@@ -249,15 +249,15 @@ INSTANTIATE_TEST_SUITE_P(standardParameters,
     cout << "interp OK\n";
   else
     cout << "interp NOT OK\n";
-  
+
 
   FFTHelper fftHelper(m, base);
- 
+
   Vec<zz_p> res1;
 
   fftHelper.FFT(poly, res1);
 
-  if (res1 == res) 
+  if (res1 == res)
     cout << "fast eval OK\n";
   else
     cout << "fast eval NOT OK\n";
@@ -292,7 +292,7 @@ INSTANTIATE_TEST_SUITE_P(standardParameters,
 
 
   cout << "time for linear eval...";
-  
+
   t = GetTime();
   for (long i = 0; i < iter; i++) {
     fftHelper.FFT(poly, res1);

@@ -77,7 +77,7 @@ void testIt(long d, long k, long p, long r, long m, long L,
   secretKey.GenSecKey();// A +-1/0 secret key
   //  addSome1DMatrices(secretKey); // compute key-switching matrices
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   dbgEa = ea_ptr;        // for debugging purposes
   dbgKey = &secretKey;
 #endif
@@ -118,7 +118,7 @@ void testIt(long d, long k, long p, long r, long m, long L,
 }
 
 // OLD CODE
-//void usage(char *prog) 
+//void usage(char *prog)
 //{
 //  std::cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
 //  std::cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";

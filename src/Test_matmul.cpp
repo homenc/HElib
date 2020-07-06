@@ -50,13 +50,13 @@ using namespace helib;
  */
 
 template<class Matrix>
-bool DoTest(const Matrix& mat, const EncryptedArray& ea, 
+bool DoTest(const Matrix& mat, const EncryptedArray& ea,
             const SecKey& secretKey, bool minimal, bool verbose)
 {
-  FHE_NTIMER_START(EncodeMartix_MatMul);
+  HELIB_NTIMER_START(EncodeMartix_MatMul);
   typename Matrix::ExecType mat_exec(mat, minimal);
   mat_exec.upgrade();
-  FHE_NTIMER_STOP(EncodeMartix_MatMul);
+  HELIB_NTIMER_STOP(EncodeMartix_MatMul);
 
   // choose a random plaintext vector and encrypt it
   PlaintextArray v(ea);
@@ -91,10 +91,10 @@ void TestIt(Context& context, long dim, bool verbose, long full, long block)
     context.zMStar.printout();
     std::cout << "# small primes = " << context.smallPrimes.card() << "\n";
     std::cout << "# ctxt primes = " << context.ctxtPrimes.card() << "\n";
-    std::cout << "# bits in ctxt primes = " 
+    std::cout << "# bits in ctxt primes = "
 	 << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n";
     std::cout << "# special primes = " << context.specialPrimes.card() << "\n";
-    std::cout << "# bits in special primes = " 
+    std::cout << "# bits in special primes = "
 	 << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
 
     fhe_stats = true;
@@ -109,19 +109,19 @@ void TestIt(Context& context, long dim, bool verbose, long full, long block)
   // we call addSomeFrbMatrices for all strategies except minimal
 
   switch (ks_strategy) {
-  case 0: 
+  case 0:
     addSome1DMatrices(secretKey);
     addSomeFrbMatrices(secretKey);
     break;
-  case 1: 
+  case 1:
     add1DMatrices(secretKey);
     addSomeFrbMatrices(secretKey);
     break;
-  case 2: 
+  case 2:
     addBSGS1DMatrices(secretKey);
     addSomeFrbMatrices(secretKey);
     break;
-  case 3: 
+  case 3:
     addMinimal1DMatrices(secretKey);
     addMinimalFrbMatrices(secretKey);
     break;
@@ -184,7 +184,7 @@ void TestIt(Context& context, long dim, bool verbose, long full, long block)
 }
 
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMap amap;
 
@@ -203,17 +203,17 @@ int main(int argc, char *argv[])
   long nt=1;
   amap.arg("nt", nt, "# threads");
 
-  amap.arg("force_bsgs", fhe_test_force_bsgs, 
-           "1 to force on, -1 to force off"); 
-  amap.arg("force_hoist", fhe_test_force_hoist, 
-           "-1 to force off"); 
+  amap.arg("force_bsgs", fhe_test_force_bsgs,
+           "1 to force on, -1 to force off");
+  amap.arg("force_hoist", fhe_test_force_hoist,
+           "-1 to force off");
   amap.arg("ks_strategy", ks_strategy,
-           "0: default, 1:full, 2:bsgs, 3:minimal"); 
+           "0: default, 1:full, 2:bsgs, 3:minimal");
 
-  long full = 0; 
+  long full = 0;
   amap.arg("full", full, "0: 1D, 1: full");
 
-  long block = 0; 
+  long block = 0;
   amap.arg("block", block, "0: normal, 1: block");
 
   NTL::Vec<long> gens;

@@ -69,7 +69,7 @@ int main(int argc, char **argv)
 
    poly = 0;
    term = 1;
-   
+
    for (long m = 0; m < p; m++) {
       term *= (X-m);
    }

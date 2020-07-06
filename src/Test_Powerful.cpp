@@ -40,8 +40,8 @@ void testHighLvlConversion(const Context& context, const Vec<long>& mvec)
   ZZX poly1, poly2;
   Vec<ZZ> pwfl;
 
-  dcrt.randomize(); 
-  dcrt.toPoly(poly1); 
+  dcrt.randomize();
+  dcrt.toPoly(poly1);
 
   p2d.ZZXtoPowerful(pwfl, poly1);
   p2d.powerfulToZZX(poly2, pwfl);
@@ -58,9 +58,9 @@ int main(int argc, char *argv[])
   long m3 = 17;
   long p = 2;
   long r = 1;
-  
+
   ArgMap amap;
-  amap.arg("m1", m1, "Factor of m"); 
+  amap.arg("m1", m1, "Factor of m");
   amap.arg("m2", m2, "Factor of m");
   amap.arg("m3", m3, "Factor of m");
   amap.arg("p",  p,  "Plaintext base");
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 
   for (long k = 1; q = 2*k*m + 1, !ProbPrime(q, 20); k++);
   cout << "q=" << q << "\n";
-  
+
 
   Vec< Pair<long, long> > factors;
 
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 
   Vec<long> longToShortMap;
   computeLongToShortMap(longToShortMap, m, shortToLongMap);
-  
+
 
   zz_p::init(q);
 
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
   zz_pX tmp1, tmp2;
 
-  convertPolyToPowerful(cube, tmpCube, poly, cycVec, 
+  convertPolyToPowerful(cube, tmpCube, poly, cycVec,
                         polyToCubeMap, shortToLongMap);
 
   zz_pX poly1;
@@ -188,11 +188,11 @@ int main(int argc, char *argv[])
   computeCompressedIndex(compressedIndex, powVec);
 
   Vec<long> powToCompressedIndexMap;
-  computePowToCompressedIndexMap(powToCompressedIndexMap, m, powVec, 
+  computePowToCompressedIndexMap(powToCompressedIndexMap, m, powVec,
                                  compressedIndex, shortSig);
 
 
-  
+
   HyperCube<zz_p> cube1 = cube;
 
   eval(cube1, multiEvalPoints);
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
     if (GCD(i, m) == 1) {
       if (cube1[powToCompressedIndexMap[i]] != res[j++]) eval_ok = false;
     }
-  } 
+  }
 
 
   if (eval_ok)
@@ -221,15 +221,15 @@ int main(int argc, char *argv[])
     cout << "interp OK\n";
   else
     cout << "interp NOT OK\n";
-  
+
 
   FFTHelper fftHelper(m, base);
- 
+
   Vec<zz_p> res1;
 
   fftHelper.FFT(poly, res1);
 
-  if (res1 == res) 
+  if (res1 == res)
     cout << "fast eval OK\n";
   else
     cout << "fast eval NOT OK\n";
@@ -264,12 +264,12 @@ int main(int argc, char *argv[])
 
 
   cout << "time for linear eval...";
-  
+
   t = GetTime();
   for (long i = 0; i < iter; i++) {
     fftHelper.FFT(poly, res1);
   }
   t = GetTime()-t;
   cout << t << "\n";
-#endif  
+#endif
 }

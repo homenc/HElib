@@ -62,7 +62,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 
     m = computeProd(mvec);
     phim = phi_N(m);
-    helib::assertTrue(GCD(p, m) == 1, "GCD(p, m) == 1");
+    assertTrue(GCD(p, m) == 1, "GCD(p, m) == 1");
 
   if (!noPrint) fhe_stats = true;
 
@@ -140,16 +140,16 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
   zzX poly_p1 = balanced_zzX(poly_p);
   ZZX ptxt_poly = convert<ZZX>(poly_p1);
   ZZX ptxt_poly1;
-  PolyRed(ptxt_poly1, ptxt_poly, p2r, true);  
+  PolyRed(ptxt_poly1, ptxt_poly, p2r, true);
   // this is the format produced by decryption
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
       dbgEa = context.ea;
       dbgKey = &secretKey;
 #endif
 
   if (debug) {
-    dbgKey = &secretKey; // debugging key 
+    dbgKey = &secretKey; // debugging key
   }
 
   ZZX poly2;
@@ -163,7 +163,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
     publicKey.reCrypt(c1);
     secretKey.Decrypt(poly2,c1);
 
-    if (ptxt_poly1 == poly2) 
+    if (ptxt_poly1 == poly2)
       cout << "GOOD\n";
     else
       cout << "BAD\n";
@@ -184,7 +184,7 @@ void TestIt(long p, long r, long L, long c, long skHwt, int build_cache=0)
 //extern long fhe_disable_intFactor;
 // extern long fhe_force_chen_han;
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMap amap;
 
@@ -236,7 +236,7 @@ int main(int argc, char *argv[])
   if (global_gens.length() == 0 || global_ords.length() == 0 || global_mvec.length() == 0)
     Error("gens, ords, and mvec must be initialized");
 
-  if (seed) 
+  if (seed)
     SetSeed(ZZ(seed));
 
   SetNumThreads(nthreads);

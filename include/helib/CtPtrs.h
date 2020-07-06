@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -13,7 +13,7 @@
 #define HELIB_CTPTRS_H
 /**
  * @file CtPtrs.h
- * @brief Cnified interface for vector of pointers to ciphertexts
+ * @brief Unified interface for vector of pointers to ciphertexts
  **/
 #include <initializer_list>
 #include <helib/Ctxt.h>
@@ -23,12 +23,17 @@
 namespace helib {
 
 typedef PtrVector<Ctxt> CtPtrs;
-typedef PtrVector_VecT<Ctxt> CtPtrs_VecCt;      // CtPtrs_VecCt(NTL::Vec<Ctxt>)
-typedef PtrVector_vectorT<Ctxt> CtPtrs_vectorCt;//CtPtrs_vectorCt(std::vector<Ctxt>)
-typedef PtrVector_VecPt<Ctxt> CtPtrs_VecPt;     // CtPtrs_VecPt(NTL::Vec<Ctxt*>)
-typedef PtrVector_vectorPt<Ctxt> CtPtrs_vectorPt;//CtPtrs_vectorPt(std::vector<Ctxt*>)
+// CtPtrs_VecCt(NTL::Vec<Ctxt>)
+typedef PtrVector_VecT<Ctxt> CtPtrs_VecCt;
+// CtPtrs_vectorCt(std::vector<Ctxt>)
+typedef PtrVector_vectorT<Ctxt> CtPtrs_vectorCt;
+// CtPtrs_VecPt(NTL::Vec<Ctxt*>)
+typedef PtrVector_VecPt<Ctxt> CtPtrs_VecPt;
+// CtPtrs_vectorPt(std::vector<Ctxt*>)
+typedef PtrVector_vectorPt<Ctxt> CtPtrs_vectorPt;
 
-typedef PtrVector_slice<Ctxt>  CtPtrs_slice;    // A slice of CtPtrs
+// A slice of CtPtrs
+typedef PtrVector_slice<Ctxt> CtPtrs_slice;
 
 typedef PtrMatrix<Ctxt> CtPtrMat;
 typedef PtrMatrix_Vec<Ctxt> CtPtrMat_VecCt;
@@ -44,10 +49,12 @@ void packedRecrypt(const CtPtrs& cPtrs,
 // recrypt all ctxt below level 'belowLvl'
 void packedRecrypt(const CtPtrs& array, // vector of Ctxts
                    const std::vector<zzX>& unpackConsts,
-                   const EncryptedArray& ea, long belowLvl);
-void packedRecrypt(const CtPtrMat& m,   // matrix of Ctxts
+                   const EncryptedArray& ea,
+                   long belowLvl);
+void packedRecrypt(const CtPtrMat& m, // matrix of Ctxts
                    const std::vector<zzX>& unpackConsts,
-                   const EncryptedArray& ea, long belowLvl=LONG_MAX);
+                   const EncryptedArray& ea,
+                   long belowLvl = LONG_MAX);
 
 // Find the lowest level among many ciphertexts
 // FIXME: using bitCapacity isn't really the right thing...
@@ -55,7 +62,7 @@ void packedRecrypt(const CtPtrMat& m,   // matrix of Ctxts
 inline long findMinBitCapacity(const CtPtrs& v)
 {
   long lvl = LONG_MAX;
-  for (long i=0; i<v.size(); i++)
+  for (long i = 0; i < v.size(); i++)
     if (v.isSet(i) && !v[i]->isEmpty())
       lvl = std::min(lvl, v[i]->bitCapacity());
   return lvl;
@@ -63,7 +70,7 @@ inline long findMinBitCapacity(const CtPtrs& v)
 inline long findMinBitCapacity(const CtPtrMat& m)
 {
   long lvl = LONG_MAX;
-  for (long i=0; i<m.size(); i++)
+  for (long i = 0; i < m.size(); i++)
     lvl = std::min(lvl, findMinBitCapacity(m[i]));
   return lvl;
 }
@@ -78,12 +85,12 @@ inline long findMinBitCapacity(std::initializer_list<const CtPtrs*> list)
 
 void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2);
 inline Ctxt innerProduct(const CtPtrs& v1, const CtPtrs& v2)
-{ 
+{
   Ctxt ret(ZeroCtxtLike, *v1[0]);
   innerProduct(ret, v1, v2);
-  return ret; 
+  return ret;
 }
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_CTPTRS_H

@@ -24,7 +24,7 @@ static bool dry = false; // a dry-run flag
 static bool debug = 0;   // a debug flag
 static int scale = 0;
 
-static long mValues[][14] = { 
+static long mValues[][14] = {
 //{ p, phi(m),  m,    d, m1,  m2, m3,   g1,    g2,    g3,ord1,ord2,ord3, c_m}
   {  2,    48,   105, 12,  3,  35,  0,    71,    76,    0,  2,  2,   0, 200},
   {  2,   600,  1023, 10, 11,  93,  0,   838,   584,    0, 10,  6,   0, 100}, // m=(3)*11*{31} m/phim(m)=1.7    C=24  D=2 E=1
@@ -55,7 +55,7 @@ static long mValues[][14] = {
 
   { 17,    48,   105, 12,  3,  35,  0,    71,    76,    0,  2,  2,   0, 100}, // m=3*(5)*{7} m/phim(m)=2.18 C=14 D=2 E=2
   { 17,   576,  1365, 12,  7,   3, 65,   976,   911,  463,  6,  2,   4, 100}, // m=3*(5)*7*{13} m/phim(m)=2.36  C=22  D=3
-  { 17, 18000, 21917, 30, 101, 217, 0,  5860,  5455,    0, 100, 6,   0, 100}, // m=(7)*{31}*101 m/phim(m)=1.21  C=134 D=2 
+  { 17, 18000, 21917, 30, 101, 217, 0,  5860,  5455,    0, 100, 6,   0, 100}, // m=(7)*{31}*101 m/phim(m)=1.21  C=134 D=2
   { 17, 30000, 34441, 30, 101, 341, 0,  2729, 31715,    0, 100, 10,  0, 100}, // m=(11)*{31}*101 m/phim(m)=1.14 C=138 D=2
   { 17, 40000, 45551, 40, 101, 451, 0, 19394,  7677,    0, 100, 10,  0, 200}, // m=(11)*{41}*101 m/phim(m)=1.13 C=148 D=2
   { 17, 46656, 52429, 36, 109, 481, 0, 46658,  5778,    0, 108, 12,  0, 100}, // m=(13)*{37}*109 m/phim(m)=1.12 C=154 D=2
@@ -215,7 +215,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
   vector<ZZX> val2;
   ea.decrypt(c2, secretKey, val2);
 
-  if (val1 == val2) 
+  if (val1 == val2)
     cout << "GOOD\n";
   else
     cout << "BAD\n";
@@ -229,7 +229,7 @@ void TestIt(long idx, long p, long r, long L, long c, long skHwt, int build_cach
 
 /********************************************************************
  ********************************************************************/
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMap amap;
 
@@ -271,7 +271,7 @@ int main(int argc, char *argv[])
 
   amap.parse(argc, argv);
 
-  if (seed) 
+  if (seed)
     SetSeed(ZZ(seed));
 
   SetNumThreads(nthreads);

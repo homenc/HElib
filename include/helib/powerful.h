@@ -26,10 +26,11 @@ namespace helib {
 
 //! @class PowerfulTranslationIndexes
 //! @brief Holds index tables for translation between powerful and zz_pX
-class PowerfulTranslationIndexes {
- public:
-  long m;     // product of mi's
-  long phim;  // phi(m) = product of phi(mi)'s
+class PowerfulTranslationIndexes
+{
+public:
+  long m;                // product of mi's
+  long phim;             // phi(m) = product of phi(mi)'s
   NTL::Vec<long> mvec;   // mvec[i] = mi
   NTL::Vec<long> phivec; // phivec[i] = phi(mi)
   NTL::Vec<long> divvec; // divvec[i] = m/mi
@@ -79,28 +80,33 @@ class PowerfulTranslationIndexes {
  *    pConv.restoreModulus(); // restore  zz_p::modulus
  *    pConv.polyToPowerful(powerful, poly);
  **/
-class PowerfulConversion {
+class PowerfulConversion
+{
   const PowerfulTranslationIndexes* indexes;
   NTL::zz_pContext zzpContext;
   NTL::Vec<NTL::zz_pXModulus> cycVec_p; // cycvec[i] = Phi_mi(X)
   NTL::zz_pXModulus phimX_p;
 
 public:
+  PowerfulConversion() : indexes(nullptr) {}
 
-  PowerfulConversion(): indexes(nullptr) {}
-
-  explicit PowerfulConversion(const PowerfulTranslationIndexes& ind):
-  indexes(nullptr) { initPConv(ind); }
+  explicit PowerfulConversion(const PowerfulTranslationIndexes& ind) :
+      indexes(nullptr)
+  {
+    initPConv(ind);
+  }
 
   void initPConv(const PowerfulTranslationIndexes& ind)
   {
-    if (indexes!=nullptr) return; // cannot re-initialize a non-nullptr object
+    if (indexes != nullptr)
+      return; // cannot re-initialize a non-nullptr object
     indexes = &ind;
 
     cycVec_p.SetLength(ind.cycVec.length());
     zzpContext.save(); // store the current modulus
-    for (long i=0; i<ind.cycVec.length(); i++) {
-      cycVec_p[i] = NTL::conv<NTL::zz_pX>(ind.cycVec[i]); // convert to zz_pXModulus
+    for (long i = 0; i < ind.cycVec.length(); i++) {
+      cycVec_p[i] =
+          NTL::conv<NTL::zz_pX>(ind.cycVec[i]); // convert to zz_pXModulus
     }
     phimX_p = NTL::conv<NTL::zz_pX>(ind.phimX); // convert to zz_pXModulus
   }
@@ -111,15 +117,18 @@ public:
 
   //! The conversion routines return the value of the modulus q.
   //! It is assumed that the modulus is already set before calling them
-  long powerfulToPoly(NTL::zz_pX& poly, const HyperCube<NTL::zz_p>& powerful) const;
-  long polyToPowerful(HyperCube<NTL::zz_p>& powerful, const NTL::zz_pX& poly) const;
+  long powerfulToPoly(NTL::zz_pX& poly,
+                      const HyperCube<NTL::zz_p>& powerful) const;
+  long polyToPowerful(HyperCube<NTL::zz_p>& powerful,
+                      const NTL::zz_pX& poly) const;
 };
 
 /**
  * @class PowerfulDCRT
  * @brief Conversion between powerful representation, DoubleCRT, and ZZX
  **/
-class PowerfulDCRT {
+class PowerfulDCRT
+{
   const Context& context; // points to the context for the DoubleCRT's
 
   PowerfulTranslationIndexes indexes; // modulus-independent tables
@@ -140,9 +149,10 @@ public:
   PowerfulDCRT(const Context& _context, const NTL::Vec<long>& mvec);
 
   const PowerfulTranslationIndexes& getIndexTranslation() const
-  { return indexes; }
-  const PowerfulConversion& getPConv(long i) const
-  { return pConvVec.at(i); }
+  {
+    return indexes;
+  }
+  const PowerfulConversion& getPConv(long i) const { return pConvVec.at(i); }
 
   // coefficients are reduced to the interval [-Q/2,Q/2], where
   // Q = product of primes in dcrt.getIndexSet();
@@ -186,11 +196,11 @@ void computeInvVec(Vec<long>& invVec,
 
 //! shortSig is a CubeSignature for (phi(m_1), .., phi(m_k)),
 //! longSig is a CubeSignature for (m_1, ..., m_k).
-//! computes shortToLongMap[i] that maps an index i 
+//! computes shortToLongMap[i] that maps an index i
 //! with respect to shortSig to the corresponding index
 //! with respect to longSig.
-void computeShortToLongMap(Vec<long>& shortToLongMap, 
-                           const CubeSignature& shortSig, 
+void computeShortToLongMap(Vec<long>& shortToLongMap,
+                           const CubeSignature& shortSig,
                            const CubeSignature& longSig);
 
 //! Computes the inverse of the shortToLongMap, computed above.
@@ -206,8 +216,8 @@ void computeLongToShortMap(Vec<long>& longToShortMap,
 //! phi(m_1, ..., m_k). Viewed as an element of the ring
 //! F_p[X_1,...,X_k]/(Phi_{m_1}(X_1), ..., Phi_{m_k}(X_k)),
 //! the cube remains unchanged.
-void recursiveReduce(const CubeSlice<zz_p>& s, 
-                     const Vec<zz_pXModulus>& cycVec, 
+void recursiveReduce(const CubeSlice<zz_p>& s,
+                     const Vec<zz_pXModulus>& cycVec,
                      long d,
                      zz_pX& tmp1,
                      zz_pX& tmp2);
@@ -218,8 +228,8 @@ void recursiveReduce(const CubeSlice<zz_p>& s,
 //! output is cube, which is a HyperCube of dimension (phi(m_1), ..., phi(m_k)).
 //! The caller is responsible to supply "scratch space" in the
 //! form of a HyperCube tmpCube of dimension (m_1, ..., m_k).
-void convertPolyToPowerful(HyperCube<zz_p>& cube, 
-                           HyperCube<zz_p>& tmpCube, 
+void convertPolyToPowerful(HyperCube<zz_p>& cube,
+                           HyperCube<zz_p>& tmpCube,
                            const zz_pX& poly,
                            const Vec<zz_pXModulus>& cycVec,
                            const Vec<long>& polyToCubeMap,
@@ -244,7 +254,7 @@ inline long computePow(const Pair<long, long>& x)
 }
 
 //! For factors[d] = (p_d, e_d), computes powVec[d] = p_d^{e_d}
-void computePowVec(Vec<long>& powVec, 
+void computePowVec(Vec<long>& powVec,
                    const Vec< Pair<long, long> >& factors);
 
 //! this maps an index j in [phi(m)] to a vector
@@ -254,10 +264,10 @@ void mapIndexToPowerful(Vec<long>& pow, long j, const Vec<long>& phiVec);
 //! @deprecated For powVec[d]=p_d^{e_d}, cycVec[d] = Phi_{p_d^{e_d}}(X) mod p
 void computeCycVec(Vec<zz_pXModulus>& cycVec, const Vec<long>& powVec);
 
-//! m = m_1 ... m_k, m_d = p_d^{e_d} 
+//! m = m_1 ... m_k, m_d = p_d^{e_d}
 //! powVec[d] = m_d
 //! invVec[d] = (m/m_d)^{-1} mod m_d
-//! computes polyToCubeMap[i] and cubeToPolyMap[i] 
+//! computes polyToCubeMap[i] and cubeToPolyMap[i]
 //!   where polyToCubeMap[i] is the index of (i_1, ..., i_k)
 //!   in the cube with CubeSignature longSig = (m_1, ..., m_k),
 //!   and (i_1, ..., i_k) is the unique tuple satistifying
@@ -293,7 +303,7 @@ void computeLinearEvalPoints(Vec<zz_p>& linearEvalPoints,
 void computeCompressedIndex(Vec< Vec<long> >& compressedIndex,
                             const Vec<long>& powVec);
 
-//! computes powToCompressedIndexMap[i] as -1 if GCD(i, m) != 1, 
+//! computes powToCompressedIndexMap[i] as -1 if GCD(i, m) != 1,
 //!   and otherwise as the index of the point (j_1, ..., j_k)
 //!   relative to a a cube of dimension (phi(m_1), ..., phi(m_k)),
 //!   where each j_d is the compressed index of i_d = i mod m_d.
@@ -316,10 +326,10 @@ inline void eval(HyperCube<zz_p>& cube,
    Vec<zz_p> tmp2;
 
    recursiveEval(CubeSlice<zz_p>(cube), multiEvalPoints, 0, tmp1, tmp2);
-} 
+}
 
-void mapPowerfulToPoly(ZZX& poly, 
-                       const Vec<long>& pow, 
+void mapPowerfulToPoly(ZZX& poly,
+                       const Vec<long>& pow,
                        const Vec<long>& divVec,
                        long m,
                        const ZZX& phimX);
@@ -351,7 +361,7 @@ private:
   mutable Vec<mulmod_precon_t> powers_aux, ipowers_aux;
   mutable fftRep Rb, iRb;
   mutable fftrep_aux Rb_aux, iRb_aux;
-  mutable fftRep Ra; 
+  mutable fftRep Ra;
   mutable zz_pX tmp;
 
 public:
@@ -389,7 +399,7 @@ inline void eval(HyperCube<zz_p>& cube,
    Vec<zz_p> tmp2;
 
    recursiveEval(CubeSlice<zz_p>(cube), multiEvalPoints, 0, tmp1, tmp2);
-} 
+}
 
 void recursiveInterp(const CubeSlice<zz_p>& s,
                      const Vec< copied_ptr<FFTHelper> >& multiEvalPoints,
@@ -401,6 +411,6 @@ void interp(HyperCube<zz_p>& cube,
 	    const Vec< copied_ptr<FFTHelper> >& multiEvalPoints);
 #endif
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_POWERFUL_H

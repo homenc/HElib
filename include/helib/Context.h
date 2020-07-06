@@ -30,7 +30,7 @@ namespace helib {
 /**
  * @brief Returns smallest parameter m satisfying various constraints:
  * @param k security parameter
- * @param L number of levels 
+ * @param L number of levels
  * @param c number of columns in key switching matrices
  * @param p characteristic of plaintext space
  * @param d embedding degree (d ==0 or d==1 => no constraint)
@@ -39,8 +39,14 @@ namespace helib {
  * Fails with an error message if no suitable m is found
  * prints an informative message if verbose == true
  **/
-long FindM(long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose=false);
-
+long FindM(long k,
+           long nBits,
+           long c,
+           long p,
+           long d,
+           long s,
+           long chosen_m,
+           bool verbose = false);
 
 class EncryptedArray;
 struct PolyModRing;
@@ -48,8 +54,9 @@ struct PolyModRing;
  * @class Context
  * @brief Maintaining the parameters
  **/
-class Context {
-  std::vector<Cmodulus> moduli;    // Cmodulus objects for the different primes
+class Context
+{
+  std::vector<Cmodulus> moduli; // Cmodulus objects for the different primes
   // This is private since the implementation assumes that the list of
   // primes only grows and no prime is ever modified or removed.
 
@@ -78,7 +85,7 @@ public:
   NTL::xdouble stdev;
 
   //======================= high probability bounds ================
-  double scale;  // default = 10
+  double scale; // default = 10
 
   //! erfc(scale/sqrt(2)) * phi(m) should be less than some negligible
   //! parameter epsilon.
@@ -92,10 +99,10 @@ public:
   //! variable X with variance sigma^2, then the probability that
   //! that X lies outside the interval [-scale*sigma, scale*sigma] is
   //! delta=erfc(scale/sqrt(2)). We will usually apply the union bound
-  //! to a vector of phi(m) such random varables (one for each primitive
+  //! to a vector of phi(m) such random variables (one for each primitive
   //! m-th root of unity), so that the probability that that the L-infty
   //! norm exceeds scale*sigma is at most epsilon=phim*delta. Thus,
-  //! scale*sigma will be used as a high-probabability bound on the
+  //! scale*sigma will be used as a high-probability bound on the
   //! L-infty norm of such vectors.
 
   //=======================================
@@ -104,7 +111,7 @@ public:
   //! that each f_i is chosen uniformly and independently from the
   //! interval [-magBound, magBound], and that k = degBound.
   //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most 
+  //! of the canonical embedding exceeds B with probability at most
   //! epsilon.
 
   // NOTE: this is a bit heuristic: we assume that if we evaluate
@@ -125,14 +132,13 @@ public:
     return scale * std::sqrt(double(degBound) / 3.0) * magBound;
   }
 
-
   //=======================================
 
   //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen so
   //! that each f_i is chosen uniformly and independently from the
   //! from the set of balanced residues modulo the given modulus.
   //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most 
+  //! of the canonical embedding exceeds B with probability at most
   //! epsilon.
 
   // NOTE: for odd modulus, this means each f_i is uniformly distributed
@@ -154,25 +160,25 @@ public:
   // NOTE: this is slightly more accurate that just calling
   // noiseBoundForUniform with magBound=modulus/2.
 
-
   double noiseBoundForMod(long modulus, long degBound) const
   {
-    double var = fsquare(modulus)/12.0;
-    if (modulus%2 == 0) var += 1.0/6.0;
- 
+    double var = fsquare(modulus) / 12.0;
+    if (modulus % 2 == 0)
+      var += 1.0 / 6.0;
+
     return scale * std::sqrt(degBound * var);
   }
 
   //=======================================
 
   //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
-  //! so that each f_i is chosen uniformly and independently from 
+  //! so that each f_i is chosen uniformly and independently from
   //! N(0, sigma^2), and that k = degBound.
   //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most 
+  //! of the canonical embedding exceeds B with probability at most
   //! epsilon.
 
-  // NOTE: if we evaluate f at a primitive root of unity, 
+  // NOTE: if we evaluate f at a primitive root of unity,
   // then we get a normal random variable variance degBound * sigma^2.
   // We then multiply the sqrt of the variance by scale to get
   // the high probability bound.
@@ -188,7 +194,7 @@ public:
   //! so that each f_i is zero with probability 1-prob, 1 with probability
   //! prob/2, and -1 with probability prob/2.
   //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most 
+  //! of the canonical embedding exceeds B with probability at most
   //! epsilon.
 
   // NOTE: this is a bit heuristic: we assume that if we evaluate
@@ -209,7 +215,7 @@ public:
   //! Assume the polynomial f(x) = sum_{i < k} f_i x^i is chosen
   //! hwt coefficients are chosen to \pm 1, and the remainder zero.
   //! This returns a bound B such that the L-infty norm
-  //! of the canonical embedding exceeds B with probability at most 
+  //! of the canonical embedding exceeds B with probability at most
   //! epsilon.
 
   // NOTE: this is a bit heuristic: we assume that if we evaluate
@@ -222,12 +228,10 @@ public:
   // NOTE: degBound is not used here, but I include it
   // for consistency with the other noiseBound routines
 
-
   double noiseBoundForHWt(long hwt, UNUSED long degBound) const
   {
     return scale * std::sqrt(double(hwt));
   }
-
 
   //=======================================
 
@@ -245,26 +249,27 @@ public:
 
   double stdDevForRecryption(long skHwt = 0) const
   {
-    if (!skHwt) skHwt = rcData.skHwt; 
+    if (!skHwt)
+      skHwt = rcData.skHwt;
     // the default reverts to rcData.skHwt, *not* rcData.defSkHwt
 
-    long k = zMStar.getNFactors(); 
+    long k = zMStar.getNFactors();
     // number of prime factors of m
 
     long m = zMStar.getM();
     long phim = zMStar.getPhiM();
 
-    double mrat = double(phim)/double(m);
+    double mrat = double(phim) / double(m);
 
-    return std::sqrt( mrat * double(skHwt) * double(1L << k)  / 3.0 ) * 0.5;
+    return std::sqrt(mrat * double(skHwt) * double(1L << k) / 3.0) * 0.5;
   }
 
-  double boundForRecryption(long skHwt = 0) const 
+  double boundForRecryption(long skHwt = 0) const
   {
     double c_m = zMStar.get_cM();
     // multiply by this fudge factor
 
-    return 0.5 + c_m*scale*stdDevForRecryption(skHwt);
+    return 0.5 + c_m * scale * stdDevForRecryption(skHwt);
   }
 
   /**
@@ -286,8 +291,7 @@ public:
 
   //! A helper table to map required modulo-sizes to primeSets
   ModuliSizes modSizes;
-  void setModSizeTable()
-       { modSizes.init(moduli, ctxtPrimes, smallPrimes); }
+  void setModSizeTable() { modSizes.init(moduli, ctxtPrimes, smallPrimes); }
 
   /**
    * @brief The set of primes for the digits.
@@ -304,37 +308,40 @@ public:
    * not participate in any Bi (so digits.size() is the same as the number
    * of columns in the key switching matrices).
    * See section 3.1.6 in the design document (key-switching).
-  **/
-  std::vector<IndexSet> digits; // digits of ctxt/columns of key-switching matrix
+   **/
+  // Digits of ctxt/columns of key-switching matrix
+  std::vector<IndexSet> digits;
 
   //! Bootstrapping-related data in the context
-  ThinRecryptData rcData; // includes both thin and think
+  // includes both thin and thick
+  ThinRecryptData rcData;
 
   /******************************************************************/
-  Context(unsigned long m, unsigned long p, unsigned long r,
-             const std::vector<long>& gens = std::vector<long>(), 
-             const std::vector<long>& ords = std::vector<long>() );  // constructor
+  // constructor
+  Context(unsigned long m,
+          unsigned long p,
+          unsigned long r,
+          const std::vector<long>& gens = std::vector<long>(),
+          const std::vector<long>& ords = std::vector<long>());
 
-  void makeBootstrappable(const NTL::Vec<long>& mvec, long skWht=0,
-			  bool build_cache=false, bool alsoThick=true)
+  void makeBootstrappable(const NTL::Vec<long>& mvec,
+                          long skWht = 0,
+                          bool build_cache = false,
+                          bool alsoThick = true)
   {
     rcData.init(*this, mvec, alsoThick, skWht, build_cache);
   }
 
-  bool isBootstrappable() const 
-    { return rcData.alMod != nullptr; }
+  bool isBootstrappable() const { return rcData.alMod != nullptr; }
 
-  IndexSet fullPrimes() const 
-  {
-    return ctxtPrimes | specialPrimes;
-  }
+  IndexSet fullPrimes() const { return ctxtPrimes | specialPrimes; }
 
   IndexSet allPrimes() const
   {
     return smallPrimes | ctxtPrimes | specialPrimes;
   }
 
-  // retuens first nprimes ctxtPrimes
+  // returns first nprimes ctxtPrimes
   IndexSet getCtxtPrimes(long nprimes) const
   {
     long first = ctxtPrimes.first();
@@ -346,11 +353,13 @@ public:
   long BPL() const { return 30; }
 
   bool operator==(const Context& other) const;
-  bool operator!=(const Context& other) const { return !(*this==other); }
+  bool operator!=(const Context& other) const { return !(*this == other); }
 
   //! @brief The ith small prime in the modulus chain
-  long ithPrime(unsigned long i) const 
-  { return (i<moduli.size())? moduli[i].getQ() :0; }
+  long ithPrime(unsigned long i) const
+  {
+    return (i < moduli.size()) ? moduli[i].getQ() : 0;
+  }
 
   //! @brief Cmodulus object corresponding to ith small prime in the chain
   const Cmodulus& ithModulus(unsigned long i) const { return moduli[i]; }
@@ -359,25 +368,30 @@ public:
   long numPrimes() const { return moduli.size(); }
 
   //! @brief Is num divisible by any of the primes in the chain?
-  bool isZeroDivisor(const NTL::ZZ& num) const {
-    for (long i: range(moduli.size())) 
-      if (divide(num,moduli[i].getQ())) return true;
+  bool isZeroDivisor(const NTL::ZZ& num) const
+  {
+    for (long i : range(moduli.size()))
+      if (divide(num, moduli[i].getQ()))
+        return true;
     return false;
   }
 
   //! @brief Is p already in the chain?
-  bool inChain(long p) const {
-    for (long i: range(moduli.size())) 
-      if (p==moduli[i].getQ()) return true;
+  bool inChain(long p) const
+  {
+    for (long i : range(moduli.size()))
+      if (p == moduli[i].getQ())
+        return true;
     return false;
   }
 
   ///@{
   //! @brief The product of all the primes in the given set
   void productOfPrimes(NTL::ZZ& p, const IndexSet& s) const;
-  NTL::ZZ productOfPrimes(const IndexSet& s) const {
+  NTL::ZZ productOfPrimes(const IndexSet& s) const
+  {
     NTL::ZZ p;
-    productOfPrimes(p,s);
+    productOfPrimes(p, s);
     return p;
   }
   ///@}
@@ -387,35 +401,36 @@ public:
   double logOfPrime(unsigned long i) const { return log(ithPrime(i)); }
 
   //! @brief Returns the natural logarithm of productOfPrimes(s)
-  double logOfProduct(const IndexSet& s) const {
+  double logOfProduct(const IndexSet& s) const
+  {
     if (s.last() >= numPrimes())
-      throw helib::RuntimeError("Context::logOfProduct: IndexSet has too many rows");
+      throw RuntimeError("Context::logOfProduct: IndexSet has too many rows");
 
     double ans = 0.0;
-    for (long i: s) 
+    for (long i : s)
       ans += logOfPrime(i);
     return ans;
   }
 
   //! @brief An estimate for the security-level
-  double securityLevel() const {
+  double securityLevel() const
+  {
     long phim = zMStar.getPhiM();
     IndexSet primes = ctxtPrimes | specialPrimes;
 
-    if(primes.card() == 0){
-      throw helib::LogicError(
-        "Security level cannot be determined as modulus chain is empty.");
+    if (primes.card() == 0) {
+      throw LogicError(
+          "Security level cannot be determined as modulus chain is empty.");
     }
 
-    double bitsize = logOfProduct(primes)/log(2.0);
-    return (7.2*phim/bitsize -110);
+    double bitsize = logOfProduct(primes) / log(2.0);
+    return (7.2 * phim / bitsize - 110);
   }
 
   //! @brief Just add the given prime to the chain
   void AddSmallPrime(long q);
   void AddCtxtPrime(long q);
   void AddSpecialPrime(long q);
-
 
   ///@{
   /**
@@ -440,7 +455,7 @@ public:
   \code
     unsigned long m, p, r;
     std::vector<long> gens, ords;
-    
+
     readContextBase(str, m, p, r, gens, ords);
 
     Context context(m, p, r, gens, ords);
@@ -457,27 +472,33 @@ public:
   friend void writeContextBase(std::ostream& str, const Context& context);
 
   //! @brief Write all other data
-  friend std::ostream& operator<< (std::ostream &str, const Context& context);
+  friend std::ostream& operator<<(std::ostream& str, const Context& context);
 
   //! @brief read [m p r] data, needed to construct context
-  friend void readContextBase(std::istream& str, unsigned long& m, unsigned long& p, unsigned long& r,
-			      std::vector<long>& gens, std::vector<long>& ords);
+  friend void readContextBase(std::istream& str,
+                              unsigned long& m,
+                              unsigned long& p,
+                              unsigned long& r,
+                              std::vector<long>& gens,
+                              std::vector<long>& ords);
 
   //! @brief read all other data associated with context
-  friend std::istream& operator>> (std::istream &str, Context& context);
+  friend std::istream& operator>>(std::istream& str, Context& context);
   ///@}
 
   friend void writeContextBinary(std::ostream& str, const Context& context);
   friend void readContextBinary(std::istream& str, Context& context);
-
 };
 
 //! @brief write [m p r gens ords] data
 void writeContextBase(std::ostream& s, const Context& context);
 //! @brief read [m p r gens ords] data, needed to construct context
-void readContextBase(std::istream& s, unsigned long& m,
-                     unsigned long& p, unsigned long& r,
-		     std::vector<long>& gens, std::vector<long>& ords);
+void readContextBase(std::istream& s,
+                     unsigned long& m,
+                     unsigned long& p,
+                     unsigned long& r,
+                     std::vector<long>& gens,
+                     std::vector<long>& ords);
 std::unique_ptr<Context> buildContextFromAscii(std::istream& str);
 
 //! @brief write [m p r gens ords] data
@@ -485,13 +506,16 @@ void writeContextBaseBinary(std::ostream& str, const Context& context);
 void writeContextBinary(std::ostream& str, const Context& context);
 
 //! @brief read [m p r gens ords] data, needed to construct context
-void readContextBaseBinary(std::istream& s, unsigned long& m,
-                           unsigned long& p, unsigned long& r,
-                           std::vector<long>& gens, std::vector<long>& ords);
+void readContextBaseBinary(std::istream& s,
+                           unsigned long& m,
+                           unsigned long& p,
+                           unsigned long& r,
+                           std::vector<long>& gens,
+                           std::vector<long>& ords);
 std::unique_ptr<Context> buildContextFromBinary(std::istream& str);
 void readContextBinary(std::istream& str, Context& context);
 
-// Build modulus chain with nBits worth of ctxt primes, 
+// Build modulus chain with nBits worth of ctxt primes,
 // using nDgts digits in key-switching.
 // The willBeBootstrappable and skHwt parameters are needed to get around some
 // some circularity when making the context boostrappable.
@@ -501,17 +525,21 @@ void readContextBinary(std::istream& str, Context& context);
 // FIXME: We should really have a simpler way to do this.
 // resolution ... FIXME
 
-void buildModChain(Context& context, long nBits, long nDgts=3,
-                      bool willBeBootstrappable=false, long skHwt=0, 
-                      long resolution=3,
-                      long bitsInSpecialPrimes=0);
+void buildModChain(Context& context,
+                   long nBits,
+                   long nDgts = 3,
+                   bool willBeBootstrappable = false,
+                   long skHwt = 0,
+                   long resolution = 3,
+                   long bitsInSpecialPrimes = 0);
 // should be called if after you build the mod chain in some way
 // *other* than calling buildModChain.
 void endBuildModChain(Context& context);
 
 ///@}
-extern Context* activeContext; // Should point to the "current" context
+// Should point to the "current" context
+extern Context* activeContext;
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_CONTEXT_H

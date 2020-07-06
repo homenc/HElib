@@ -54,12 +54,12 @@ SetSeed()
 // Here is the original copyright notice:
 
 
-/* 
+/*
  * Free FFT and convolution (C++)
- * 
+ *
  * Copyright (c) 2017 Project Nayuki. (MIT License)
  * https://www.nayuki.io/page/free-small-fft-in-multiple-languages
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
@@ -81,44 +81,44 @@ typedef long double ldbl;
 typedef std::complex<ldbl> lcx;
 
 namespace Fft {
-   
-   /* 
+
+   /*
     * Computes the discrete Fourier transform (DFT) of the given complex vector, storing the result back into the vector.
     * The vector can have any length. This is a wrapper function.
     */
    void transform(std::vector<lcx> &vec);
-   
-   
-   /* 
+
+
+   /*
     * Computes the inverse discrete Fourier transform (IDFT) of the given complex vector, storing the result back into the vector.
     * The vector can have any length. This is a wrapper function. This transform does not perform scaling, so the inverse is not a true inverse.
     */
    void inverseTransform(std::vector<lcx> &vec);
-   
-   
-   /* 
+
+
+   /*
     * Computes the discrete Fourier transform (DFT) of the given complex vector, storing the result back into the vector.
     * The vector's length must be a power of 2. Uses the Cooley-Tukey decimation-in-time radix-2 algorithm.
     */
    void transformRadix2(std::vector<lcx> &vec);
-   
-   
-   /* 
+
+
+   /*
     * Computes the discrete Fourier transform (DFT) of the given complex vector, storing the result back into the vector.
     * The vector can have any length. This requires the convolution function, which in turn requires the radix-2 FFT function.
     * Uses Bluestein's chirp z-transform algorithm.
     */
    void transformBluestein(std::vector<lcx> &vec);
-   
-   
-   /* 
+
+
+   /*
     * Computes the circular convolution of the given complex vectors. Each vector's length must be the same.
     */
    void convolve(
       const std::vector<lcx> &vecx,
       const std::vector<lcx> &vecy,
       std::vector<lcx> &vecout);
-   
+
 }
 
 
@@ -162,7 +162,7 @@ void Fft::transformRadix2(vector<lcx> &vec) {
       throw std::domain_error("Length is not a power of 2");
 
    const ldbl pi = atan(ldbl(1)) * 4.0;
-   
+
    // Trignometric table
    vector<lcx> expTable(n / 2);
    for (size_t i = 0; i < n / 2; i++) {
@@ -170,14 +170,14 @@ void Fft::transformRadix2(vector<lcx> &vec) {
       ldbl angle = -2 * pi * i / n;
       expTable[i] = lcx(std::cos(angle), std::sin(angle));
    }
-   
+
    // Bit-reversed addressing permutation
    for (size_t i = 0; i < n; i++) {
       size_t j = reverseBits(i, levels);
       if (j > i)
          std::swap(vec[i], vec[j]);
    }
-   
+
    // Cooley-Tukey decimation-in-time radix-2 FFT
    for (size_t size = 2; size <= n; size *= 2) {
       size_t halfsize = size / 2;
@@ -206,7 +206,7 @@ void Fft::transformBluestein(vector<lcx> &vec) {
    }
 
    const ldbl pi = atan(ldbl(1)) * 4.0;
-   
+
    // Trignometric table
    vector<lcx> expTable(n);
    for (size_t i = 0; i < n; i++) {
@@ -216,7 +216,7 @@ void Fft::transformBluestein(vector<lcx> &vec) {
       // Less accurate alternative if long long is unavailable: double angle = M_PI * i * i / n;
       expTable[i] = lcx(std::cos(-angle), std::sin(-angle));
    }
-   
+
    // Temporary vectors and preprocessing
    vector<lcx> av(m);
    for (size_t i = 0; i < n; i++)
@@ -225,11 +225,11 @@ void Fft::transformBluestein(vector<lcx> &vec) {
    bv[0] = expTable[0];
    for (size_t i = 1; i < n; i++)
       bv[i] = bv[m - i] = std::conj(expTable[i]);
-   
+
    // Convolution
    vector<lcx> cv(m);
    convolve(av, bv, cv);
-   
+
    // Postprocessing
    for (size_t i = 0; i < n; i++)
       vec[i] = cv[i] * expTable[i];
@@ -240,7 +240,7 @@ void Fft::convolve(
       const vector<lcx> &xvec,
       const vector<lcx> &yvec,
       vector<lcx> &outvec) {
-   
+
    size_t n = xvec.size();
    if (n != yvec.size() || n != outvec.size())
       throw std::domain_error("Mismatched lengths");

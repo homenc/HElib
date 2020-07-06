@@ -38,7 +38,7 @@ void cleanupFiles(const char* file)
   }
 }
 
-template <class... Files>
+template <typename... Files>
 void cleanupFiles(const char* file, Files... files)
 {
   cleanupFiles(file);
@@ -95,7 +95,7 @@ void cleanupFiles(const char* file, Files... files)
     }
   }
   return ::testing::AssertionSuccess(); // Files are the same!
-};
+}
 
 struct Parameters
 {
@@ -180,7 +180,7 @@ protected:
       // Nothing clear to do here for now the way the test is written
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 
 public:
   static void SetUpTestCase()
@@ -221,10 +221,7 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
     helib::addSome1DMatrices(*secKey);
     helib::addFrbMatrices(*secKey);
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context->ea;
-    helib::dbgKey = secKey.get();
-#endif
+    helib::setupDebugGlobals(secKey.get(), context->ea);
 
     // ASCII
     if (!helib_test::noPrint) {
@@ -265,10 +262,7 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
     std::unique_ptr<helib::SecKey> secKey(new helib::SecKey(*context));
     helib::PubKey* pubKey = (helib::PubKey*)secKey.get();
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context->ea;
-    helib::dbgKey = secKey.get();
-#endif
+    helib::setupDebugGlobals(secKey.get(), context->ea);
 
     helib::readPubKeyBinary(inFile, *pubKey);
     helib::readSecKeyBinary(inFile, *secKey);
@@ -312,10 +306,7 @@ TEST_P(GTestBinIO, implementsBinaryFileIoCorrectly)
     helib::readSecKeyBinary(inFile, *secKey);
     inFile.close();
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context->ea;
-    helib::dbgKey = secKey.get();
-#endif
+    helib::setupDebugGlobals(secKey.get(), context->ea);
 
     // Get the ea
     const helib::EncryptedArray& ea = *context->ea;

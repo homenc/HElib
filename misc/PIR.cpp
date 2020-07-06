@@ -59,7 +59,7 @@ static void decodeDBentry(vector<uint8_t>& entry,
                           const vector<GF2X>& encoded, long d)
 {
   long dbSize = divc(lsize(encoded)*d, 8); // size in bytes
-  
+
 }
 
 
@@ -102,7 +102,7 @@ public:
      *  (X1 X2 X3 | X4 X5 X6)  // database entry X
      *  (Y1 Y2 Y3 | Y4 Y5 Y6)  // database entry Y
      *  (Z1 Z2 Z3 | Z4 Z5 Z6)  // database entry Z
-     * 
+     *
      *  For example, the database entry Z is encoded in the two row vectors
      *  (Z1 Z2 Z3), (Z4 Z5 Z6). Each Zi is a degree-d binary polynomial.
      */
@@ -110,7 +110,7 @@ public:
     for (long k=0; k<n/D; k++) { // go over row vectors
 
       // Encode the next d*D bits of each entry db[i]
-      for (long i=0; i<D; i++) {  
+      for (long i=0; i<D; i++) {
 	for (long j=0; j<D; j++) { // encode next d bit of db[i]
           long dataIdx= (k*D+j)*d; // how many bits were already encoded
           if (dataIdx < 8*lsize(db[i])) { // more bits to encode
@@ -167,7 +167,7 @@ buildRandomDB(const EncryptedArray& ea)
   return v;
 }
 
-bool DoTest(const EncryptedArray& ea, 
+bool DoTest(const EncryptedArray& ea,
             const SecKey& secretKey, bool minimal, bool verbose)
 {
   // choose a random database that fits in one ciphertext
@@ -254,19 +254,19 @@ void  TestIt(Context& context, bool verbose)
   // we call addSomeFrbMatrices for all strategies except minimal
 
   switch (ks_strategy) {
-  case 0: 
+  case 0:
     addSome1DMatrices(secretKey);
     addSomeFrbMatrices(secretKey);
     break;
-  case 1: 
+  case 1:
     add1DMatrices(secretKey);
     addSomeFrbMatrices(secretKey);
     break;
-  case 2: 
+  case 2:
     addBSGS1DMatrices(secretKey);
     addSomeFrbMatrices(secretKey);
     break;
-  case 3: 
+  case 3:
     addMinimal1DMatrices(secretKey);
     addMinimalFrbMatrices(secretKey);
     break;
@@ -299,7 +299,7 @@ void  TestIt(Context& context, bool verbose)
 }
 
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMapping amap;
 
@@ -313,12 +313,12 @@ int main(int argc, char *argv[])
   long nt=1;
   amap.arg("nt", nt, "# threads");
 
-  amap.arg("force_bsgs", fhe_test_force_bsgs, 
-           "1 to force on, -1 to force off"); 
-  amap.arg("force_hoist", fhe_test_force_hoist, 
-           "-1 to force off"); 
+  amap.arg("force_bsgs", fhe_test_force_bsgs,
+           "1 to force on, -1 to force off");
+  amap.arg("force_hoist", fhe_test_force_hoist,
+           "-1 to force off");
   amap.arg("ks_strategy", ks_strategy,
-           "0: default, 1:full, 2:bsgs, 3:minimal"); 
+           "0: default, 1:full, 2:bsgs, 3:minimal");
 
   NTL::Vec<long> gens;
   amap.arg("gens", gens, "use specified vector of generators", nullptr);

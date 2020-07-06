@@ -1,21 +1,34 @@
 # Building and installing HElib
 
-HElib's build, install and regression tests suit have been built and tested on Ubuntu 16.04, Ubuntu 18.04, 
-CentOS 7.6, and macOS Mojave 10.14.
+HElib's build, install and regression tests suite have been built and tested on 
+Ubuntu 18.04, Ubuntu 20.04, Fedora 31, Fedora 32, CentOS 7.7, 
+CentOS 8.1, and macOS Mojave 10.14.
 
-There are two different ways to build and install HElib. The first one will automatically download and build the GMP and NTL dependencies and pack the libraries in a relocatable folder. The second way, instead, requires the dependencies to be installed by you and available in the system.
+There are two different ways to build and install HElib. The first one will 
+automatically download and build the GMP and NTL dependencies and pack the 
+libraries in a relocatable folder. The second way, instead, requires the 
+dependencies to be installed by you and available in the system.
 
-**Please read these instructions in full to better choose the type of build that is better for you.**
+**Please read these instructions in full to better choose the type of build that
+ is better for you.**
 
 ## General prerequisites
 
-- cmake >= 3.5.1
 - GNU make >= 3.82
-- g++ >= 5.4.0 (for Linux environments)
-- mac OS Apple clang >= 11.0.0  (macOS environments)
 - pthreads
-- git >= 1.8.3       (required to build and run the HElib test suite)
+- git >= 1.8.3 (required to build and run the HElib test suite)
 
+**Linux environment:**
+- g++ >= 7.3.1
+- cmake >= 3.10.2
+
+**macOS environment:**
+- Apple clang >= 11.0.0 (available with Xcode >= 11.0)
+- Xcode Command Line Tools (can be installed with the command `xcode-select --install` in a teminal)
+- cmake >= 3.17.3 (available from [CMake](https://cmake.org/) or [MacPorts Project](https://www.macports.org/) and [Homebrew](https://brew.sh/) as packages)
+
+**For development:**
+- clang-format >= 9.0.0 (available with your linux distribution and for macOS from [MacPorts Project](https://www.macports.org/) and [Homebrew](https://brew.sh/) as packages)
 
 ## Option 1: package build (recommended for most users)
 
@@ -27,8 +40,8 @@ specified, but this should only be done with caution as existing versions of
 NTL, GMP, or HElib will be overwritten.  These additional two prerequisites
 are required in this case:
 
-- patchelf >= 0.9 (if building on Linux)
 - m4 >= 1.4.16
+- patchelf >= 0.9 (if building on Linux)
 
 Please note that if changing from library build to package build, it is safer 
 to use a clean build directory.
@@ -85,8 +98,8 @@ be moved around, but its dependencies (NTL and GMP) cannot, as they are
 absolute paths.  For this option, you must build GMP >=6.0.0 and NTL >=11.4.3
 yourself.  For details on how to do this, please see the section on building
 dependencies later.  It is assumed throughout this installation option that the 
-environment variables `$GMPDIR` and `$NTLDIR` are set to point to the installation
-directories of GMP and NTL respectively.
+environment variables `$GMPDIR` and `$NTLDIR` are set to point to the 
+installation directories of GMP and NTL respectively.
 
 Please note that if changing from package build to library build, it is safer 
 to use a clean build directory.
@@ -168,7 +181,7 @@ You can install NTL as follows:
 3. NTL is configured, built and installed in the standard Unix way (but
 remember to specify the following flags to `configure`):
 ```
-      ./configure NTL_GMP_LIP=ON SHARED=on
+      ./configure NTL_GMP_LIP=ON SHARED=on  NTL_THREADS=on NTL_THREAD_BOOST=on
       make
       sudo make install
 ```
@@ -183,20 +196,27 @@ to the `./configure` step.
 ## HElib build options
 
 ### Generic options
-- `BUILD_SHARED=ON/OFF` (default is OFF): Build as shared library.
-  Note that building HElib (regardless of BUILD_SHARED) will fail if NTL
+- `BUILD_SHARED=ON/OFF` (default is `OFF`): Build as a shared library.
+  Note that building HElib (regardless of `BUILD_SHARED`) will fail if NTL
   is not built as a shared library. The default for NTL is static library,
   to build NTL as a shared library use `./configure SHARED=on` in step 1. 
-- `CMAKE_BUILD_TYPE`: Choose the type of build, options are: Debug,
-RelWithDebInfo, Release, MinSizeRel.
+- `CMAKE_BUILD_TYPE`: (default is `RelWithDebInfo`): Choose the type of build, 
+  options are: `Debug`, `RelWithDebInfo`, `Release`, `MinSizeRel`.
 - `CMAKE_INSTALL_PREFIX`: Desired installation directory for HElib.
-- `ENABLE_TEST=ON/OFF` (default is OFF): Enable building of tests. This will
+- `ENABLE_TEST=ON/OFF` (default is `OFF`): Enable building of tests. This will
   include an automatic download step for the google test framework stable 
   release (googletest v1.10.0)
-- `ENABLE_THREADS=ON/OFF` (default is ON): Enable threading support. This must
+- `ENABLE_THREADS=ON/OFF` (default is `ON`): Enable threading support. This must
   be on if and only if NTL was built with `NTL_THREADS=ON`.
-- `PEDANTIC_BUILD=ON/OFF` (default is OFF): Use `-Wall -Wpedantic -Wextra -Werror`
-  during build. HElib currently will not build with these flags.
+- `PEDANTIC_BUILD=ON/OFF` (default is `ON`): Use 
+  `-Wall -Wpedantic -Wextra -Werror` during build.
+- `HELIB_DEBUG=ON/OFF` (default is `OFF`): Activate the debug module when
+  building HElib (by defining the `HELIB_DEBUG` macro). When the debug module
+  is active, this generates extra information used for debugging purposes.
+  `HELIB_DEBUG` will propagate to programs using HElib, when using cmake. When 
+  this is enabled, programs using HElib will generate a warning during
+  configuration.  This is to remind the user that use of the debug module can
+  cause issues, such as `sigsegv`, if initialized incorrectly.
 
 ### Parameters specific to option 1 (package build)
 - `PACKAGE_DIR`: Location that a package build will be installed to.  Defaults
@@ -207,7 +227,8 @@ set to `OFF`, there should either exist a system-installed GMP library, or
 - `GMP_DIR`: Prefix of the GMP library.  Ignored if `FETCH_GMP=ON`.
 
 ### Parameters specific to option 2 (library build)
-- `ENABLE_LEGACY_TEST=ON/OFF` (default is OFF): Build old test system (deprecated).
+- `ENABLE_LEGACY_TEST=ON/OFF` (default is `OFF`): Build old test system 
+  (deprecated).
 - `GMP_DIR`: Prefix of the GMP library.
 - `NTL_DIR`: Prefix of the NTL library.
 
@@ -228,9 +249,10 @@ Another, easier way is possible if you are using HElib in a cmake project.
 ```
 find_package(helib)
 ```
-2. Run your `cmake` step with `-Dhelib_DIR=<helib install prefix>/share/cmake/helib`.
+2. Run your `cmake` step with 
+  `-Dhelib_DIR=<helib install prefix>/share/cmake/helib`.
 
 ## Example
 
-A full working example of a cmake-based project which uses HElib can be found 
-in the `examples/example_program` directory.
+Full working examples of cmake-based projects which uses HElib can be found 
+in the `examples` directory.

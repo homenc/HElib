@@ -34,7 +34,7 @@ static bool check_replicate(const Ctxt& c1, const Ctxt& c0, long i,
   ea.decrypt(c0, sKey, pa0);
   ea.decrypt(c1, sKey, pa1);
   replicate(ea, pa0, i);
-  
+
   return equals(ea, pa1, pa0); // returns true if replication succeeded
 }
 
@@ -53,7 +53,7 @@ public:
   long pos;
   bool error;
 
-  ReplicateTester(const SecKey& _sKey, const EncryptedArray& _ea, 
+  ReplicateTester(const SecKey& _sKey, const EncryptedArray& _ea,
                   const PlaintextArray& _pa, long _B)
   : sKey(_sKey), ea(_ea), pa(_pa), B(_B)
   {
@@ -147,10 +147,10 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   // Get some timing results
   for (long i=0; i<20 && i<ea.size(); i++) {
     xc1 = xc0;
-    FHE_NTIMER_START(replicate);
+    HELIB_NTIMER_START(replicate);
     replicate(ea, xc1, i);
     if (!check_replicate(xc1, xc0, i, secretKey, ea)) error = true;
-    FHE_NTIMER_STOP(replicate);
+    HELIB_NTIMER_STOP(replicate);
   }
   cout << (error? "BAD" : "GOOD") << endl;
 
@@ -158,7 +158,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
     printAllTimers();
     cout << "\n** Testing replicateAll()... " << std::flush;
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   replicateVerboseFlag = true;
 #else
   replicateVerboseFlag = false;
@@ -167,7 +167,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   error = false;
   ReplicateTester *handler = new ReplicateTester(secretKey, ea, xp0, B);
   try {
-    FHE_NTIMER_START(replicateAll);
+    HELIB_NTIMER_START(replicateAll);
     replicateAll(ea, xc0, handler, bnd);
   }
   catch (StopReplicate) {
@@ -179,7 +179,7 @@ void  TestIt(long m, long p, long r, long d, long L, long bnd, long B)
   delete handler;
 }
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMap amap;
 

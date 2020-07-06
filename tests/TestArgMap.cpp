@@ -164,26 +164,29 @@ TEST_F(DeathTestArgMapCmdLine, documentationCheckCmdLine)
     bool a = false;
     bool b = true;
     std::string s;
+    std::string file;
     std::vector<std::string> v;
   } opts;
 
   helib::ArgMap amap;
-  amap.named()
+  amap.required()
+      .positional()
+      .arg("string", opts.s, "a string to set.")
+      .optional()
+      .arg("file", opts.file, "a string to set.")
+      .note("A small note.")
+      .named()
       .arg("i", opts.i, "an int to place.")
       .toggle()
       .arg("-a", opts.a, "a bool to set true.")
       .toggle(false)
       .arg("-b", opts.b, "b bool to set false.")
-      .required()
-      .positional()
-      .arg("string", opts.s, "a string to set.")
-      .note("A small note.")
       .dots(opts.v, "file");
 
   EXPECT_EXIT(
       amap.parse(argc, argv),
       ::testing::ExitedWithCode(EXIT_FAILURE),
-      R"(^Usage: \./prog \[-a\] \[-b\] \[i=<v>\] string \[file \.\.\.\].)");
+      R"(^Usage: \./prog \[i=<arg>\] \[-a\] \[-b\] string \[file\] \[file \.\.\.\].)");
 }
 
 TEST_F(DeathTestArgMapCmdLine, documentationShownIfCustomHelpSelectedCmdLine)
@@ -306,6 +309,26 @@ TEST_F(TestArgMapSampleFile,
       .helpArgs("--bar");
 
   EXPECT_THROW(amap.parse(filepath), helib::RuntimeError);
+}
+
+TEST_F(TestArgMapSampleFile, emptyLinesFromFile)
+{
+  std::ostringstream oss;
+  oss << "alice=3\n\n\n";
+
+  // Cannot perform test without file.
+  ASSERT_TRUE(createSampleTestFile(oss.str()));
+
+  struct Opts
+  {
+    int arg1;
+    int arg2;
+  } opts;
+
+  helib::ArgMap()
+      .arg("alice", opts.arg1, "message string")
+      .arg("bob", opts.arg2, "message string")
+      .parse(filepath);
 }
 
 TEST_F(DeathTestArgMapCmdLine, illFormedCmdLine)
@@ -1320,8 +1343,9 @@ struct VariablePositionalArgs
                 priority_mixin.end(),
                 word_list.begin() + random);
       // Need to mix them.
-      std::shuffle(
-          word_list.begin(), word_list.end(), std::default_random_engine(seed));
+      std::shuffle(word_list.begin(),
+                   word_list.end(),
+                   std::default_random_engine(seed));
     }
 
     for (const auto& word : word_list)
@@ -1408,7 +1432,7 @@ TEST_F(TestArgMapCmdLine,
   EXPECT_EQ(opts.bob, word_list.front());
   // and the dots.
 
-  // Start form 1 as zeroth is the normal positonal arg.
+  // Start form 1 as zeroth is the normal positional arg.
   for (size_t i = 1; i < opts.dots.size(); ++i)
     EXPECT_EQ(opts.dots[i], word_list[i + 1]) << "i = " << i << std::endl;
 }
