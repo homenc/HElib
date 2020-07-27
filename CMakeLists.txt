@@ -10,7 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 
 project(helib_superbuild LANGUAGES C CXX)
 
@@ -33,6 +33,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(GMP_MINIMAL_VERSION "6.0.0")
 # NTL minimal version to be used if NOT PACKAGE_BUILD
 set(NTL_MINIMAL_VERSION "11.0.0")
+
+# The -isysroot flag needs set.
+if (APPLE OR (CMAKE_CXX_PLATFORM_ID STREQUAL "Darwin"))
+  set(macos_isysroot_flag "-isysroot ${CMAKE_OSX_SYSROOT}")
+else()
+  set(macos_isysroot_flag "")
+endif()
 
 # Setting up RelWithDebInfo as default CMAKE_BUILD_TYPE
 if (NOT CMAKE_BUILD_TYPE)

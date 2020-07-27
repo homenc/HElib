@@ -70,13 +70,16 @@ ExternalProject_Add(
     # SOURCE_SUBDIR <SOURCE_DIR>/src
     CONFIGURE_COMMAND
         cd src && <SOURCE_DIR>/src/configure
-                      "PREFIX=${PACKAGE_DIR}"
-                      "SHARED=on"
-                      "NTL_GMP_LIP=on"
-                      "NTL_THREADS=${build_threads}"
-                      "NTL_THREAD_BOOST=${build_threads}"
-                      "GMP_PREFIX=${gmp_prefix}"
-                      "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
+            "PREFIX=${PACKAGE_DIR}"
+            "SHARED=on"
+            "NTL_GMP_LIP=on"
+            "NTL_THREADS=${build_threads}"
+            "NTL_THREAD_BOOST=${build_threads}"
+            "GMP_PREFIX=${gmp_prefix}"
+            # Propagate cmake chosen compiler. 
+            # Note must add the macOS isysroot flag here instead of passing
+            # CXXFLAGS as that overrides the external project optimize flags.
+            "CXX=${CMAKE_CXX_COMPILER} ${macos_isysroot_flag}"
     BUILD_IN_SOURCE ON
     BUILD_COMMAND
         cd src &&
