@@ -202,5 +202,70 @@ function teardown {
   create-bootstrap-toy-params
   run "${create_context}" "${prefix_bootstrap}.params" --bootstrap INVALID
   assert [ "$status" -ne 0 ]
-  assert [ "$output" == "Unrecognized option for bootstrap." ]
+  assert [ "$output" == "Bad boostrap option: INVALID.  Allowed options are NONE, THIN, THICK." ]
+}
+
+@test "bootstrap fails when --no-skm is specified" {
+  create-bootstrap-toy-params
+  run "${create_context}" "${prefix_bootstrap}.params" --bootstrap THIN --no-skm
+  assert [ "$status" -ne 0 ]
+  assert [ "$output" == "Cannot generate bootstrappable context without switch-key and frobenius matrices." ]
+  run "${create_context}" "${prefix_bootstrap}.params" --bootstrap THICK --no-skm
+  assert [ "$status" -ne 0 ]
+  assert [ "$output" == "Cannot generate bootstrappable context without switch-key and frobenius matrices." ]
+}
+
+@test "bootstrap fails when missing parameters (mvec, gens, ords)" {
+  create-bootstrap-toy-params
+  awk '!/mvec/' "${prefix_bootstrap}.params" > "${prefix_bootstrap}_mvec.params"
+  run "${create_context}" "${prefix_bootstrap}_mvec.params" --bootstrap THICK
+  assert [ "$status" -ne 0 ]
+  assert [ "$output" == "Missing mvec parameter for bootstrapping in ${prefix_bootstrap}_mvec.params." ]
+  awk '!/gens/' "${prefix_bootstrap}.params" > "${prefix_bootstrap}_gens.params"
+  run "${create_context}" "${prefix_bootstrap}_gens.params" --bootstrap THICK
+  assert [ "$status" -ne 0 ]
+  assert [ "$output" == "Missing gens parameter for bootstrapping in ${prefix_bootstrap}_gens.params." ]
+  awk '!/ords/' "${prefix_bootstrap}.params" > "${prefix_bootstrap}_ords.params"
+  run "${create_context}" "${prefix_bootstrap}_ords.params" --bootstrap THICK
+  assert [ "$status" -ne 0 ]
+  assert [ "$output" == "Missing ords parameter for bootstrapping in ${prefix_bootstrap}_ords.params." ]
+}
+# bootstrapping creates SKM and frobenius
+@test "bootstrap creates SKM, Frobenius matrices and recrypt data and indicates it to cmd line" {
+  create-bootstrap-toy-params
+  run "${create_context}" "${prefix_bootstrap}.params" --bootstrap THICK -o defg
+  assert [ "$status" -eq 0 ]
+  assert [ "${lines[0]}" == "Key switching matrices created." ]
+  assert [ "${lines[1]}" == "Frobenius matrices created." ]
+  assert [ "${lines[2]}" == "Recrypt data created." ]
+}
+
+@test "bootstrap creates SKM, Frobenius matrices and recrypt data and indicates it to the info-file" {
+  create-bootstrap-toy-params
+  run "${create_context}" "${prefix_bootstrap}.params" --info-file --bootstrap THICK -o defg
+  assert [ "$status" -eq 0 ]
+  assert [ -f "defg.info" ]
+  line="$(sed '1q;d' defg.info)"
+  assert [ "$line" == "Key switching matrices created." ]
+  line="$(sed '2q;d' defg.info)"
+  assert [ "$line" == "Frobenius matrices created." ]
+  line="$(sed '3q;d' defg.info)"
+  assert [ "$line" == "Recrypt data created." ]
+}
+
+@test "bootstrap thick context can perform bootstrapping" {
+  create-bootstrap-toy-params
+  cat "${prefix_bootstrap}.params"
+  run "${create_context}" "${prefix_bootstrap}.params" --bootstrap THICK -o boots
+  assert [ "$status" -eq 0 ]
+  run "${test_bootstrap}" --thick boots.sk --quiet
+  assert [ "$status" -eq 0 ]
+}
+
+@test "bootstrap thin context can perform bootstrapping" {
+ create-bootstrap-toy-params
+ run "${create_context}" "${prefix_bootstrap}.params" --bootstrap THIN -o boots
+ assert [ "$status" -eq 0 ]
+ run "${test_bootstrap}" boots.sk --quiet
+ assert [ "$status" -eq 0 ]
 }

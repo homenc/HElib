@@ -18,23 +18,19 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 ## Require full C++ standard
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(utils
-        LANGUAGES CXX)
-
-# Define standard installation directories (GNU)
-include(GNUInstallDirs)
-
-# Set default output folder
+project(test_bootstrap LANGUAGES CXX)
+				 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
+    "${CMAKE_BINARY_DIR}/test/${CMAKE_INSTALL_LIBDIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
+    "${CMAKE_BINARY_DIR}/test/${CMAKE_INSTALL_LIBDIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
+    "${CMAKE_BINARY_DIR}/test/${CMAKE_INSTALL_BINDIR}")
 
 find_package(helib 1.0.0 REQUIRED)
 
-add_subdirectory(create-context)
-add_subdirectory(crypto)
+add_executable(test_bootstrap test_bootstrap.cpp)
 
-add_subdirectory(test_bootstrapping)
+target_include_directories(test_bootstrap PRIVATE "../common")
+
+target_link_libraries(test_bootstrap helib)

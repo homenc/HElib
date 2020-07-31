@@ -21,6 +21,7 @@ decode="../../coders/decode.py"
 create_context="../../build/bin/create-context"
 encrypt="../../build/bin/encrypt"
 decrypt="../../build/bin/decrypt"
+test_bootstrap="../../build/test/bin/test_bootstrap"
 tmp_folder="tmp_$(random-char-string)"
 prefix="test"
 prefix_bgv="test_bgv"
@@ -117,7 +118,7 @@ function create-bootstrap-toy-params {
   echo "m=105" >> "${prefix_bootstrap}".params
   echo "r=1" >> "${prefix_bootstrap}".params
   echo "c=2" >> "${prefix_bootstrap}".params
-  echo "Qbits=10" >> "${prefix_bootstrap}".params
+  echo "Qbits=500" >> "${prefix_bootstrap}".params
   echo "c_m=100" >> "${prefix_bootstrap}".params
   echo "mvec=[3 35]" >> "${prefix_bootstrap}".params
   echo "gens=[71 76]" >> "${prefix_bootstrap}".params

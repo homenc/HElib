@@ -989,7 +989,7 @@ public:
   {
     assertEq(&getContext(),
              &ctxt.getContext(),
-             "Cannot decrypt when ciphertext has different context than "
+             "Cannot encrypt when ciphertext has different context than "
              "EncryptedArray");
     if (useThisSize <= 0.0)
       useThisSize = roundedSize(num); // rounded to power of two
@@ -1008,7 +1008,7 @@ public:
   {
     assertEq(&getContext(),
              &ctxt.getContext(),
-             "Cannot decrypt when ciphertext has different context than "
+             "Cannot encrypt when ciphertext has different context than "
              "EncryptedArray");
     zzX pp;
     double f = encode(pp, ptxt, useThisSize, precision);

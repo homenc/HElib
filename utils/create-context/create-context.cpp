@@ -51,12 +51,15 @@ struct ParamsFileOpts
 void printoutToStream(const helib::Context& context,
                       std::ostream& out,
                       bool noSKM,
-                      bool frobSKM)
+                      bool frobSKM,
+                      bool bootstrappable)
 {
-  if (!noSKM)
+  if (!noSKM || bootstrappable)
     out << "Key switching matrices created.\n";
-  if (frobSKM)
+  if (frobSKM || bootstrappable)
     out << "Frobenius matrices created.\n";
+  if (bootstrappable)
+    out << "Recrypt data created.\n";
 
   // write the algebra info
   context.printout(out);
@@ -173,10 +176,35 @@ int main(int argc, char* argv[])
   }
 
   if (cmdLineOpts.bootstrappable != "NONE" &&
-      (paramsOpts.mvec.length() == 0 || paramsOpts.gens.length() == 0 ||
-       paramsOpts.ords.length() == 0)) {
-    std::cerr << "Missing parameters for bootstrapping." << std::endl;
+      cmdLineOpts.bootstrappable != "THIN" &&
+      cmdLineOpts.bootstrappable != "THICK") {
+    std::cerr << "Bad boostrap option: " << cmdLineOpts.bootstrappable
+              << ".  Allowed options are NONE, THIN, THICK." << std::endl;
     return EXIT_FAILURE;
+  }
+
+  if (cmdLineOpts.bootstrappable != "NONE") {
+    if (cmdLineOpts.noSKM) {
+      std::cerr << "Cannot generate bootstrappable context without switch-key "
+                   "and frobenius matrices."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (paramsOpts.mvec.length() == 0) {
+      std::cerr << "Missing mvec parameter for bootstrapping in "
+                << cmdLineOpts.paramFileName << "." << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (paramsOpts.gens.length() == 0) {
+      std::cerr << "Missing gens parameter for bootstrapping in "
+                << cmdLineOpts.paramFileName << "." << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (paramsOpts.ords.length() == 0) {
+      std::cerr << "Missing ords parameter for bootstrapping in "
+                << cmdLineOpts.paramFileName << "." << std::endl;
+      return EXIT_FAILURE;
+    }
   }
 
   try {
@@ -187,20 +215,22 @@ int main(int argc, char* argv[])
                            helib::convert<std::vector<long>>(paramsOpts.ords));
     if (cmdLineOpts.bootstrappable == "NONE") {
       helib::buildModChain(context, paramsOpts.Qbits, paramsOpts.c);
-    } else if (cmdLineOpts.bootstrappable == "THICK" ||
-               cmdLineOpts.bootstrappable == "THIN") {
+    } else {
       context.zMStar.set_cM(paramsOpts.c_m / 100.0);
       helib::buildModChain(context,
                            paramsOpts.Qbits,
                            paramsOpts.c,
                            /*willBeBootstrappable=*/true);
       if (cmdLineOpts.bootstrappable == "THICK")
-        context.makeBootstrappable(paramsOpts.mvec, /*alsoThick=*/true);
+        context.makeBootstrappable(paramsOpts.mvec,
+                                   /*skWht=*/0,
+                                   /*build_cache=*/false,
+                                   /*alsoThick=*/true);
       else if (cmdLineOpts.bootstrappable == "THIN")
-        context.makeBootstrappable(paramsOpts.mvec, /*alsoThick=*/false);
-    } else {
-      std::cerr << "Unrecognized option for bootstrap." << std::endl;
-      return EXIT_FAILURE;
+        context.makeBootstrappable(paramsOpts.mvec,
+                                   /*skWht=*/0,
+                                   /*build_cache=*/false,
+                                   /*alsoThick=*/false);
     }
 
     if (p == -1)
@@ -211,11 +241,15 @@ int main(int argc, char* argv[])
     secretKey.GenSecKey(); // A +-1/0 secret key
 
     // compute key-switching matrices
-    if (!cmdLineOpts.noSKM) {
+    if (!cmdLineOpts.noSKM || cmdLineOpts.bootstrappable != "NONE") {
       helib::addSome1DMatrices(secretKey);
-      if (cmdLineOpts.frobSKM) {
+      if (cmdLineOpts.frobSKM || cmdLineOpts.bootstrappable != "NONE") {
         helib::addFrbMatrices(secretKey);
       }
+    }
+
+    if (cmdLineOpts.bootstrappable != "NONE") {
+      secretKey.genRecryptData();
     }
 
     // If not set by user, returns params file name with truncated UTC
@@ -235,12 +269,17 @@ int main(int argc, char* argv[])
         throw std::runtime_error("Cannot write keys to file at '" + path +
                                  "'.");
       }
-      printoutToStream(context, out, cmdLineOpts.noSKM, cmdLineOpts.frobSKM);
+      printoutToStream(context,
+                       out,
+                       cmdLineOpts.noSKM,
+                       cmdLineOpts.frobSKM,
+                       cmdLineOpts.bootstrappable != "NONE");
     } else {
       printoutToStream(context,
                        std::cout,
                        cmdLineOpts.noSKM,
-                       cmdLineOpts.frobSKM);
+                       cmdLineOpts.frobSKM,
+                       cmdLineOpts.bootstrappable != "NONE");
     }
 
     NTL::SetNumThreads(2);
