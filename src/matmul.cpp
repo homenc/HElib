@@ -99,8 +99,7 @@ public:
 
     HELIB_STATS_UPDATE("KS-noise-ratio-hoist",
                        NTL::conv<double>(addedNoise / noise));
-    // HERE
-    // std::cout << "*** HOIST INIT\n";
+    // std::stderr << "*** HOIST INIT\n";
     // fprintf(stderr, "   KS-log-noise-ratio-hoist: %f\n",
     // log(addedNoise/noise)/log(2.0));
 
@@ -126,6 +125,12 @@ public:
     std::shared_ptr<Ctxt> result = std::make_shared<Ctxt>(ZeroCtxtLike, ctxt);
     result->noiseBound = noise; // noise estimate
     result->intFactor = ctxt.intFactor;
+
+    if (ctxt.isCKKS()) {
+      result->ptxtMag = ctxt.ptxtMag;
+      double logProd = context.logOfProduct(context.specialPrimes);
+      result->ratFactor = ctxt.ratFactor * NTL::xexp(logProd);
+    }
 
     if (ctxt.parts.size() == 1) { // only constant part, no need to key-switch
       CtxtPart tmpPart = ctxt.parts[0];
@@ -341,6 +346,7 @@ struct ConstMultiplier_zzX : ConstMultiplier
       const Context& context) const override
   {
     double sz = embeddingLargestCoeff(data, context.zMStar);
+
     return std::make_shared<ConstMultiplier_DoubleCRT>(
         DoubleCRT(data, context, context.fullPrimes()),
         sz);
@@ -673,6 +679,175 @@ struct MatMul1DExec_construct
   }
 };
 
+// HERE
+void MatMul1D_CKKS::processDiagonal(zzX& poly,
+                                    double& size,
+                                    double& factor,
+                                    long i,
+                                    const EncryptedArrayCx& ea) const
+{
+  long D = ea.size();
+
+  std::vector<std::complex<double>> diag(D);
+
+  bool zDiag = true; // is this a zero diagonal?
+
+  // Process the entries in this diagonal one at a time
+  for (long j = 0; j < D; j++) { // process entry j
+    diag[j] = this->get(mcMod(j - i, D), j);
+    // entry [j-i mod D, j]
+
+    if (diag[j] != 0.0)
+      zDiag = false; // mark diagonal as non-empty
+  }
+
+  size = factor = 0;
+  if (zDiag)
+    clear(poly);
+  else {
+    size = max_abs(diag);
+    factor = ea.encode(poly, diag, 1.0);
+    // VJS-FIXME: we are using size=1.0.
+    // Maybe we should allow this to be parameterized?
+    // We could also allow a more general precision parameter??
+  }
+}
+
+void plaintextAutomorph_CKKS(zzX& b,
+                             const zzX& a,
+                             long j,
+                             const EncryptedArrayCx& ea)
+{
+  const PAlgebra& zMStar = ea.getPAlgebra();
+  long k = zMStar.genToPow(0, j);
+  long m = zMStar.getM();
+  long d = a.length() - 1;
+
+  // compute b(X) = a(X^k) mod (X^{m/2}+1)
+  if (k == 1 || d <= 0) {
+    b = a;
+    return;
+  }
+
+  b.SetLength(m / 2);
+  NTL::mulmod_precon_t precon = NTL::PrepMulModPrecon(k, m);
+
+  for (long j = 0; j <= d; j++) {
+    long pos = NTL::MulModPrecon(j, k, m, precon);
+    long c = a[j];
+    if (pos >= m / 2) {
+      c = -c;
+      pos -= m / 2;
+    }
+    b[pos] = c;
+  }
+
+  normalize(b);
+}
+
+struct ConstMultiplier_DoubleCRT_CKKS : ConstMultiplier
+{
+  DoubleCRT data;
+  double size, factor;
+
+  ConstMultiplier_DoubleCRT_CKKS(const DoubleCRT& _data,
+                                 double _size,
+                                 double _factor) :
+      data(_data), size(_size), factor(_factor)
+  {}
+
+  void mul(Ctxt& ctxt) const override
+  {
+    ctxt.multByConstantCKKS(data,
+                            NTL::to_xdouble(size),
+                            NTL::to_xdouble(factor));
+  }
+  // we use the default RoundingError parameter
+
+  std::shared_ptr<ConstMultiplier> upgrade(
+      UNUSED const Context& context) const override
+  {
+    return nullptr;
+  }
+};
+
+struct ConstMultiplier_zzX_CKKS : ConstMultiplier
+{
+  zzX data;
+  double size, factor;
+
+  ConstMultiplier_zzX_CKKS(const zzX& _data, double _size, double _factor) :
+      data(_data), size(_size), factor(_factor)
+  {}
+
+  void mul(Ctxt& ctxt) const override
+  {
+    DoubleCRT dcrt(data, ctxt.getContext(), ctxt.getPrimeSet());
+    ctxt.multByConstantCKKS(dcrt,
+                            NTL::to_xdouble(size),
+                            NTL::to_xdouble(factor));
+  }
+
+  std::shared_ptr<ConstMultiplier> upgrade(
+      const Context& context) const override
+  {
+    return std::make_shared<ConstMultiplier_DoubleCRT_CKKS>(
+        DoubleCRT(data, context, context.fullPrimes()),
+        size,
+        factor);
+  }
+};
+
+static std::shared_ptr<ConstMultiplier> build_ConstMultiplier_CKKS(
+    const zzX& poly,
+    long amt,
+    double size,
+    double factor,
+    const EncryptedArrayCx& ea)
+{
+  if (IsZero(poly))
+    return nullptr;
+  else {
+    zzX poly1;
+    plaintextAutomorph_CKKS(poly1, poly, amt, ea);
+    return std::make_shared<ConstMultiplier_zzX_CKKS>(poly1, size, factor);
+  }
+}
+
+static void MatMul1DExec_construct_CKKS(
+    const EncryptedArrayCx& ea,
+    const MatMul1D& mat_basetype,
+    std::vector<std::shared_ptr<ConstMultiplier>>& vec,
+    long g)
+{
+  const MatMul1D_CKKS& mat = dynamic_cast<const MatMul1D_CKKS&>(mat_basetype);
+
+  long dim = mat.getDim();
+  long D = dimSz(ea, dim);
+  bool native = dimNative(ea, dim);
+
+  if (dim != 0 || D != ea.size() || !native)
+    throw LogicError("MatMul1DExec_construct_CKKS: bad params");
+
+  vec.resize(D);
+
+  for (long i : range(D)) {
+    // i == j + g * k (where j = (g != 0) ? i % g : i)
+    long k;
+
+    if (g) {
+      k = i / g;
+    } else {
+      k = 1;
+    }
+
+    zzX poly;
+    double size, factor;
+    mat.processDiagonal(poly, size, factor, i, ea);
+    vec[i] = build_ConstMultiplier_CKKS(poly, -g * k, size, factor, ea);
+  }
+}
+
 #define HELIB_BSGS_MUL_THRESH HELIB_KEYSWITCH_THRESH
 // uses a BSGS multiplication strategy if sizeof(dim) > HELIB_BSGS_MUL_THRESH;
 // otherwise uses the old strategy (but potentially with hoisting)
@@ -705,10 +880,14 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal) :
   else
     g = KSGiantStepSize(D); // use BSGS
 
-  ea.dispatch<MatMul1DExec_construct>(mat,
-                                      cache.multiplier,
-                                      cache1.multiplier,
-                                      g);
+  if (ea.getTag() == PA_cx_tag) {
+    MatMul1DExec_construct_CKKS(ea.getCx(), mat, cache.multiplier, g);
+  } else {
+    ea.dispatch<MatMul1DExec_construct>(mat,
+                                        cache.multiplier,
+                                        cache1.multiplier,
+                                        g);
+  }
 }
 
 /***************************************************************************
@@ -771,8 +950,7 @@ void GenBabySteps(std::vector<std::shared_ptr<Ctxt>>& v,
 
   const PAlgebra& zMStar = ctxt.getContext().zMStar;
 
-  // HERE
-  // std::cout << "*** STRATEGY FOR dim " << dim << " = " <<
+  // std::cerr << "*** STRATEGY FOR dim " << dim << " = " <<
   // ctxt.getPubKey().getKSStrategy(dim) << "\n";
 
   if (fhe_test_force_hoist >= 0 &&
@@ -1078,8 +1256,9 @@ void MatMul1DExec::mul(Ctxt& ctxt) const
       NTL_EXEC_INDEX_END
 
       ctxt = acc[0];
-      for (long i : range(1, cnt))
+      for (long i : range(1, cnt)) {
         ctxt += acc[i];
+      }
     } else {
       std::shared_ptr<GeneralAutomorphPrecon> precon =
           buildGeneralAutomorphPrecon(ctxt, dim, ea);

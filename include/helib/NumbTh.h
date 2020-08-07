@@ -902,6 +902,31 @@ std::unique_ptr<T> build_unique(Args&&... args)
 }
 #endif
 
+//! Simple routine for computing the max-abs of a vector
+//! of complex numbers and real numbers
+
+inline double max_abs(const std::vector<std::complex<double>>& vec)
+{
+  double res = 0;
+  for (auto x : vec) {
+    double t = std::abs(x);
+    if (res < t)
+      res = t;
+  }
+  return res;
+}
+
+inline double max_abs(const std::vector<double>& vec)
+{
+  double res = 0;
+  for (auto x : vec) {
+    double t = std::abs(x);
+    if (res < t)
+      res = t;
+  }
+  return res;
+}
+
 //! This should go in NTL some day...
 //! Just call as make_lazy(obj, ...) to initialize a lazy object
 //! via a call to a constructor T(...)

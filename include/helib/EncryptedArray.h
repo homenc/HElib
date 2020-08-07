@@ -964,6 +964,10 @@ public:
     return encode(out, ptxt.getSlotRepr(), useThisSize, precision);
   }
 
+  // VJS-FIXME: why do some encode functions have a
+  // default value for useThisSize and others do not???
+  // It's very confusing
+
   double encode(zzX& ptxt,
                 double aSingleNumber,
                 double useThisSize = -1,
@@ -1037,6 +1041,12 @@ public:
   {
     const Context& context = getContext();
     long m = context.zMStar.getM();
+
+    // VJS-FIXME: it seems to me that the m should be phi(m),
+    // or m/2 if m is assumed to be a power of two.
+    // Also, for the power of two case, noiseBoundForUniform
+    // is a bit too pessimistic, as this is the circularly symmetric
+    // case.
     return context.noiseBoundForUniform(0.5, m);
   }
   // The scaling factor to use when encoding/decoding plaintext elements
@@ -1048,6 +1058,9 @@ public:
       precision = (1L << alMod.getR());
     if (roundErr < 0)
       roundErr = encodeRoundingError();
+
+    // VJS-FIXME: the computation of f and/or return value could overflow
+
     long f = ceil(precision * roundErr);
     // We round the factor up to the next power of two
     return (1L << NTL::NextPowerOfTwo(f));

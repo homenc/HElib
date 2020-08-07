@@ -501,8 +501,8 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
   long sz = in.size();
   long m = palg.getM();
 
-  if (!(palg.getP() == -1 && palg.getPow2() >= 2 && sz < m / 2))
-    LogicError("bad args to CKKS_canonicalEmbedding");
+  if (!(palg.getP() == -1 && palg.getPow2() >= 2 && sz <= m / 2))
+    throw LogicError("bad args to CKKS_canonicalEmbedding");
 
   const half_FFT& hfft = palg.getHalfFFTInfo();
   const cx_double* pow = &hfft.pow[0];
@@ -550,6 +550,9 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
 // and DFT is an (m/2)-point DFT matrix for an evaluation at powers of V=W^2.
 // D is applied first, and DFT is applied second.
 //
+// As described above in the odd-power trick, the j-th entry is
+// f(W^{2j+1}).
+//
 // Here, we want to compute the inverse transformation:
 //   D^{-1} * DFT^{-1}
 // Now, DFT^{-1} = 1/(m/2) times a DFT matrix for conj(V).
@@ -596,6 +599,8 @@ void CKKS_embedInSlots(zzX& f,
   const cx_double* pow = &hfft.pow[0];
 
   scaling /= (m / 2);
+  // This is becuase DFT^{-1} = 1/(m/2) times a DFT matrix for conj(V)
+
   hfft.fft.apply(&buf[0]);
   f.SetLength(m / 2);
   for (long i : range(m / 2))

@@ -66,6 +66,7 @@ int main(int argc, char *argv[])
 #endif
 
   vector<double> vl;
+  // VJS-FIXME: I would have guessed this should be long rather than double
   ea.random(vl);
   vl[1] = -1; // ensure that this is not the zero vector
 #ifdef HELIB_DEBUG

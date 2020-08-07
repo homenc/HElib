@@ -116,6 +116,19 @@ public:
                        const EncryptedArrayDerived<type>& ea) const override;
 };
 
+class MatMul1D_CKKS : public MatMul1D
+{
+public:
+  // Get coordinate (i, j)
+  virtual std::complex<double> get(long i, long j) const = 0;
+
+  void processDiagonal(zzX& poly,
+                       double& size,
+                       double& factor,
+                       long i,
+                       const EncryptedArrayCx& ea) const;
+};
+
 //====================================
 
 class BlockMatMul1DExec;

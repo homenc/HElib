@@ -1757,6 +1757,7 @@ std::pair<NTL::ZZ, NTL::ZZ> rationalApprox(NTL::xdouble x,
 
   NTL::xdouble epsilon = 0.125 / denomBound; // "smudge factor"
   NTL::xdouble a = floor(x + epsilon);
+
   NTL::xdouble xi = x - a;
   NTL::xdouble prevDenom(0.0);
   NTL::xdouble xdenom(1.0);
@@ -1775,7 +1776,8 @@ std::pair<NTL::ZZ, NTL::ZZ> rationalApprox(NTL::xdouble x,
     prevDenom = xdenom;
     xdenom = tmpDenom;
   }
-  NTL::ZZ numer = NTL::conv<NTL::ZZ>(floor(xdenom * x)) * sign;
+
+  NTL::ZZ numer = NTL::conv<NTL::ZZ>(xdenom * x + 0.5) * sign;
   NTL::ZZ denom = NTL::conv<NTL::ZZ>(xdenom);
 
   return std::make_pair(numer, denom);

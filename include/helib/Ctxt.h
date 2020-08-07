@@ -308,6 +308,14 @@ class Ctxt
     return *this;
   }
 
+  // NOTE: the matchPrimeSets business in the following routines
+  // is DEPRECATED.  The requirement is that the prime set of part
+  // must contain the prime set of *this, unless *this is empty
+  // (in which case *this takes on the prime set of part).
+  // If not, an exception is raised.
+  // Also, if matchPrimeSets == true and the prime set of *this does
+  // not contain the prime set of part, an exception is also raised.
+
   // Procedural versions with additional parameter
   void subPart(const CtxtPart& part, bool matchPrimeSet = false)
   {
@@ -361,12 +369,17 @@ class Ctxt
   void mulIntFactor(long e);
 
 public:
-  //__attribute__((deprecated))
-  explicit Ctxt(const PubKey& newPubKey, long newPtxtSpace = 0); // constructor
-
   // Default copy-constructor
   Ctxt(const Ctxt& other) = default;
 
+  // VJS-FIXME: this was really a messy design choice to not
+  // have ciphertext cosntructors that specify prime sets.
+  // The default value of ctxtPrimes is kind of pointless.
+
+  //__attribute__((deprecated))
+  explicit Ctxt(const PubKey& newPubKey, long newPtxtSpace = 0); // constructor
+
+  //__attribute__((deprecated))
   Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt);
   // constructs a zero ciphertext with same public key and
   // plaintext space as ctxt
@@ -724,6 +737,13 @@ public:
       return context.logOfProduct(getPrimeSet()) - log(noiseBound);
   }
 
+  // VJS-FIXME:
+  // For CKKS, the "total noise" for a Ctxt is
+  // ptxtMag * ratFactor + noiseBound.  We should define a function
+  // totalNoiseBound() that returns this value for CKKS, and
+  // noiseBound o/w.  We might also define a function netCapacity
+  // (or something) that is defined in terms of totalNoiseBound().
+
   //! @brief the capacity in bits, returned as an integer
   long bitCapacity() const { return long(capacity() / log(2.0)); }
 
@@ -755,6 +775,8 @@ public:
     primeSet = context.ctxtPrimes;
     parts.clear();
     noiseBound = NTL::to_xdouble(0.0);
+    // VJS-FIXME: we should also make sure the other fields
+    // are set to their default values for a new, empty ctxt.
   }
 
   //! @brief Is this an empty ciphertext without any parts

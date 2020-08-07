@@ -21,10 +21,10 @@
 namespace helib {
 
 /**
- * @class SumRegister 
+ * @class SumRegister
  * @brief Class to do a binary tree summation as results appear to keep memory
  * usage to a minimum.
- * @tparam T The type of object to be summed. 
+ * @tparam T The type of object to be summed.
  **/
 template <typename T>
 class SumRegister
@@ -41,7 +41,7 @@ private:
 public:
   /**
    * @brief Constructor
-   * @param _maxNumOfInputs The maximum number expected to be summed together. 
+   * @param _maxNumOfInputs The maximum number expected to be summed together.
    **/
   SumRegister(unsigned int _maxNumOfInputs) :
       maxNumOfInputs(_maxNumOfInputs), remainingInputs(_maxNumOfInputs)
@@ -100,9 +100,9 @@ public:
   }
 
   /**
-   * @brief Get the result of the summation. 
+   * @brief Get the result of the summation.
    * @return The result of the summation as a `std::unique_ptr<T>`.
-   * @note This is destructive on the result, thus should only be called once. 
+   * @note This is destructive on the result, thus should only be called once.
    **/
   std::unique_ptr<T> getResult()
   {

@@ -280,9 +280,8 @@ TEST_P(GTestBinaryArith, fifteenForFour)
   // bit, however packing more into the slots is possible.
   // LSB is at the start (left) of the vector.
 
-  // Note: fifteenOrLess4Four is not entirely thread safe so this test will only be
-  // ran single-threaded.
-  // Save current number of threads and set to 1.
+  // Note: fifteenOrLess4Four is not entirely thread safe so this test will only
+  // be ran single-threaded. Save current number of threads and set to 1.
   auto numThreads = NTL::AvailableThreads();
   NTL::SetNumThreads(1);
 
