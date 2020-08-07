@@ -24,11 +24,9 @@
 #include <cmath>
 #include <iostream>
 #include <fstream>
-#include <istream>
 #include <sstream>
 #include <ctime>
 #include <memory>
-#include <unordered_map>
 
 #include <NTL/version.h>
 #include <NTL/ZZ.h>
@@ -55,7 +53,6 @@
 #error "This version of HElib requires NTL version 11.0.0 or above"
 #endif
 
-#include <helib/range.h>
 #include <helib/assertions.h>
 #include <helib/apiAttributes.h>
 
@@ -190,6 +187,7 @@ inline void ppInvert(NTL::mat_GF2& X,
 {
   NTL::inv(X, A);
 }
+
 inline void ppInvert(NTL::mat_GF2E& X,
                      const NTL::mat_GF2E& A,
                      UNUSED long p,
@@ -304,18 +302,22 @@ void PolyRed(NTL::ZZX& out,
              const NTL::ZZX& in,
              const NTL::ZZ& q,
              bool abs = false);
+
 inline void PolyRed(NTL::ZZX& F, long q, bool abs = false)
 {
   PolyRed(F, F, q, abs);
 }
+
 inline void PolyRed(NTL::ZZX& F, const NTL::ZZ& q, bool abs = false)
 {
   PolyRed(F, F, q, abs);
 }
+
 void vecRed(NTL::Vec<NTL::ZZ>& out,
             const NTL::Vec<NTL::ZZ>& in,
             long q,
             bool abs);
+
 void vecRed(NTL::Vec<NTL::ZZ>& out,
             const NTL::Vec<NTL::ZZ>& in,
             const NTL::ZZ& q,
@@ -693,8 +695,8 @@ void rotate(NTL::Vec<T>& v, long k)
   reverse(v, k, n - 1);
 }
 
-// An experimental facility...it is annoying that vector::size() is an
-// unsigned quantity...this leads to all kinds of annoying warning messages...
+// An experimental facility as it is annoying that vector::size() is an
+// unsigned quantity. This leads to all kinds of annoying warning messages.
 //! @brief Size of STL vector as a long (rather than unsigned long)
 template <typename T>
 inline long lsize(const std::vector<T>& v)
@@ -710,6 +712,7 @@ void killVec(std::vector<T>& vec)
 {
   std::vector<T>().swap(vec);
 }
+
 template <typename T>
 void killVec(NTL::Vec<T>& vec)
 {
@@ -723,6 +726,7 @@ void setLengthZero(std::vector<T>& vec)
   if (vec.size() > 0)
     vec.resize(0, vec[0]);
 }
+
 template <typename T>
 void setLengthZero(NTL::Vec<T>& vec)
 {
@@ -735,9 +739,6 @@ inline long lsize(const NTL::Vec<T>& v)
 {
   return v.length();
 }
-
-// VJS: I changed the resize functions so that the
-// optional arg is handled as in C++11
 
 template <typename T>
 void resize(NTL::Vec<T>& v, long sz, const T& val)

@@ -15,11 +15,13 @@
 #include <complex>
 #include <cmath>
 #include <algorithm>
+
 #include <helib/NumbTh.h>
 #include <helib/DoubleCRT.h>
 #include <helib/norms.h>
 #include <helib/PAlgebra.h>
 #include <helib/fhe_stats.h>
+#include <helib/range.h>
 
 namespace helib {
 

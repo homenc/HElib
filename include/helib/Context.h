@@ -22,6 +22,7 @@
 #include <helib/primeChain.h>
 #include <helib/powerful.h>
 #include <helib/apiAttributes.h>
+#include <helib/range.h>
 
 #include <NTL/Lazy.h>
 

@@ -14,14 +14,16 @@ function random-char-string {
   echo $(head /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9 | head -c $N)
 }
 
+utils_dir=${utils_dir:-"../.."}
+
 diff_threshold="../diff-threshold.py"
-generate_data="../gen-data.py"
-encode="../../coders/encode.py"
-decode="../../coders/decode.py"
-create_context="../../build/bin/create-context"
-encrypt="../../build/bin/encrypt"
-decrypt="../../build/bin/decrypt"
-test_bootstrap="../../build/test/bin/test_bootstrap"
+generate_data="$utils_dir/tests/gen-data.py"
+encode="$utils_dir/coders/encode.py"
+decode="$utils_dir/coders/decode.py"
+create_context="$utils_dir/build/bin/create-context"
+encrypt="$utils_dir/build/bin/encrypt"
+decrypt="$utils_dir/build/bin/decrypt"
+test_bootstrap="$utils_dir/build/test/bin/test_bootstrap"
 tmp_folder="tmp_$(random-char-string)"
 prefix="test"
 prefix_bgv="test_bgv"
@@ -57,10 +59,10 @@ function remove-test-directory {
   if [ "$DEBUG" == "true" ] || [ "$DEBUG" == "1" ]; then
     : # Don't delete.
   elif [ -z "$DEBUG" ] || [ "$DEBUG" == "false" ] || [ "$DEBUG" == "0" ]; then
-    rm -r $1
+    rm -rf ./$1
   else            
     techo "Teardown: unrecognized value for DEBUG ${DEBUG}, assume false."
-    rm -r $1
+    rm -rf ./$1
   fi
 }
 
@@ -142,7 +144,8 @@ function createContext {
   local src=$2
   local dest=$3
   local boot="$4"
-  "$create_context" "$src" -o "$dest" --info-file $boot --scheme "$scheme"
+  local other_args="$5"
+  "$create_context" "$src" -o "$dest" --info-file $boot --scheme "$scheme" $other_args
 }
 
 function genData {

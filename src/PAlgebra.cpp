@@ -10,17 +10,18 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include <algorithm> // defines count(...), min(...)
-#include <cmath>
-
 #include <helib/PAlgebra.h>
 #include <helib/hypercube.h>
 #include <helib/timing.h>
+#include <helib/range.h>
 
 #include <NTL/ZZXFactoring.h>
 #include <NTL/GF2EXFactoring.h>
 #include <NTL/lzz_pEXFactoring.h>
 #include <NTL/BasicThreadPool.h>
+
+#include <algorithm> // defines count(...), min(...)
+#include <cmath>
 #include <mutex> // std::mutex, std::unique_lock
 
 namespace helib {

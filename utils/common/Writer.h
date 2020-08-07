@@ -33,7 +33,8 @@ private:
   {
     if (sizeInBytes < 0)
       throw std::invalid_argument("Cannot allocate negative sized file. "
-                        "Size requested is " + std::to_string(sizeInBytes));
+                                  "Size requested is " +
+                                  std::to_string(sizeInBytes));
 
     std::ostringstream oss;
 #if __linux__
@@ -51,9 +52,9 @@ private:
     long actualFileSize = test.tellg();
     if (actualFileSize != sizeInBytes) {
       std::ostringstream err_msg;
-      err_msg << "Could not allocate file '" << filepath 
-              << "'.\nRequested size " << sizeInBytes 
-              << ", actual size " << actualFileSize;
+      err_msg << "Could not allocate file '" << filepath
+              << "'.\nRequested size " << sizeInBytes << ", actual size "
+              << actualFileSize;
       throw std::runtime_error(err_msg.str());
     }
   }
@@ -76,7 +77,7 @@ public:
     // Set the TOC
     for (uint64_t j = 0; j < cols; ++j)
       for (uint64_t i = 0; i < rows; ++i)
-        toc->setIdx(i, j, (i + j * rows) * recordSizeInBytes  + tocSize);
+        toc->setIdx(i, j, (i + j * rows) * recordSizeInBytes + tocSize);
 
     // Write it to file
     writeStream.open(fpath, std::ios::in | std::ios::out | std::ios::binary);

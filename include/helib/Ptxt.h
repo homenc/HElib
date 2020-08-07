@@ -386,6 +386,12 @@ public:
   long lsize() const;
 
   /**
+   * @brief Returns the `context` used to initialize the `Ptxt`
+   * @return The `context`.
+   **/
+  const Context& getContext() const { return *context; }
+
+  /**
    * @brief Set the data.
    * @param data Vector of `SlotType` to populate the slots.
    **/
@@ -812,6 +818,13 @@ public:
    * @return Converted slot.
    **/
   static SlotType convertToSlot(const Context& context, long slot);
+
+  /**
+   * @brief To be inline with the `Ctxt` interface. However for `Ptxt` this
+   * means do nothing.
+   * @return Reference to `*this`.
+   **/
+  Ptxt<Scheme>& cleanUp() { return *this; }
 
 private:
   const Context* context;

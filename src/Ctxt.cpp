@@ -631,7 +631,7 @@ void Ctxt::reLinearize(long keyID)
   *this = tmp;
 }
 
-void Ctxt::cleanUp()
+Ctxt& Ctxt::cleanUp()
 {
   reLinearize();
   // reduce();
@@ -639,6 +639,7 @@ void Ctxt::cleanUp()
       !primeSet.disjointFrom(context.smallPrimes)) {
     dropSmallAndSpecialPrimes();
   }
+  return *this;
 }
 
 // Takes as arguments a key-switching matrix W = W[s'->s] and a

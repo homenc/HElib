@@ -679,8 +679,8 @@ public:
   void reLinearize(long keyIdx = 0);
   // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
-  void cleanUp();
-  // relinearize, then reduce, then drop special primes
+  Ctxt& cleanUp();
+  // relinearize, then reduce, then drop special primes and small primes.
 
   // void reduce() const;
 

@@ -14,16 +14,20 @@
 
 set(GTEST_SRC
     "test_common.cpp"
-    "TestErrorHandling.cpp"
-    "TestCKKS.cpp"
     "TestArgMap.cpp"
     "TestBootstrappingWithMultiplications.cpp"
+    "TestCKKS.cpp"
     "TestContext.cpp"
     "TestCtxt.cpp"
+    "TestErrorHandling.cpp"
     "TestLogging.cpp"
+    "TestMatrix.cpp"
+    "TestPartialMatch.cpp"
     "TestPolyMod.cpp"
+    "TestPolyModRing.cpp"
     "TestPtxt.cpp"
-    "TestPolyModRing.cpp")
+    "TestSet.cpp"
+    )
 
 set(PORTED_LEGACY_TEST_SRC
     "GTestApproxNums.cpp"
@@ -89,10 +93,14 @@ set(TEST_NAMES
     "TestErrorHandling"
     "TestFatBootstrappingWithMultiplications"
     "TestLogging"
-    "TestThinBootstrappingWithMultiplications"
+    "TestMatrix"
+    "TestPartialMatch"
     "TestPolyMod"
     "TestPolyModRing"
-    "TestPtxt")
+    "TestPtxt"
+    "TestSet"
+    "TestThinBootstrappingWithMultiplications"
+    )
 
 # NOTE: Adding all PRIVATE_HELIB_CXX_FLAGS to the tests will add -fPIC too.
 # At the moment this does not affect compilation of the tests and does not

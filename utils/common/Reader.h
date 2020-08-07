@@ -79,8 +79,8 @@ public:
       readStream.clear();
 
     auto m_ptr = std::make_unique<std::vector<std::vector<D>>>(
-                  toc->getRows(),
-                  std::vector<D>(toc->getCols(), scratch));
+        toc->getRows(),
+        std::vector<D>(toc->getCols(), scratch));
 
     for (int i = 0; i < toc->getRows(); i++) {
       for (int j = 0; j < toc->getCols(); j++) {

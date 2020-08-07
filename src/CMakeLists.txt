@@ -143,10 +143,12 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/intraSlot.h"
     "${HELIB_HEADER_DIR}/matching.h"
     "${HELIB_HEADER_DIR}/matmul.h"
+    "${HELIB_HEADER_DIR}/Matrix.h"
     "${HELIB_HEADER_DIR}/multicore.h"
     "${HELIB_HEADER_DIR}/norms.h"
     "${HELIB_HEADER_DIR}/NumbTh.h"
     "${HELIB_HEADER_DIR}/PAlgebra.h"
+    "${HELIB_HEADER_DIR}/partialMatch.h"
     "${HELIB_HEADER_DIR}/permutations.h"
     "${HELIB_HEADER_DIR}/polyEval.h"
     "${HELIB_HEADER_DIR}/PolyMod.h"
@@ -161,13 +163,15 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/recryption.h"
     "${HELIB_HEADER_DIR}/replicate.h"
     "${HELIB_HEADER_DIR}/sample.h"
+    "${HELIB_HEADER_DIR}/set.h"
     "${HELIB_HEADER_DIR}/tableLookup.h"
     "${HELIB_HEADER_DIR}/timing.h"
     "${HELIB_HEADER_DIR}/zzX.h"
     "${HELIB_HEADER_DIR}/assertions.h"
     "${HELIB_HEADER_DIR}/exceptions.h"
     "${HELIB_HEADER_DIR}/PGFFT.h"
-    "${HELIB_HEADER_DIR}/fhe_stats.h")
+    "${HELIB_HEADER_DIR}/fhe_stats.h"
+    "${HELIB_HEADER_DIR}/zeroValue.h")
 
 set(LEGACY_TEST_SRCS
     "Test_approxNums.cpp"

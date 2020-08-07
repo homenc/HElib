@@ -11,6 +11,7 @@
  */
 #include <helib/NumbTh.h>
 #include <helib/timing.h>
+#include <helib/range.h>
 #include <helib/log.h>
 
 #include <fstream>
@@ -155,6 +156,7 @@ void factorize(std::vector<long>& factors, long N)
 {
   factorT<long>(factors, N);
 }
+
 void factorize(std::vector<NTL::ZZ>& factors, const NTL::ZZ& N)
 {
   factorT<NTL::ZZ>(factors, N);

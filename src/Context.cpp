@@ -593,7 +593,8 @@ void Context::printout(std::ostream& out) const
   out << "r = " << alMod.getR() << "\n"
       << "nslots = " << ea->size() << "\n"
       << "ctxtPrimes = " << ctxtPrimes << "\n"
-      << "specialPrimes = " << specialPrimes << "\n\n"
+      << "specialPrimes = " << specialPrimes << "\n"
+      << "number of bits = " << bitSizeOfQ() << "\n\n"
       << "security level = " << securityLevel() << std::endl;
 }
 

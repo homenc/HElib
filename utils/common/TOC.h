@@ -28,10 +28,8 @@ private:
 public:
   TOC() = default;
 
-  TOC(uint64_t r, uint64_t c) : 
-    rows(r), 
-    cols(c),
-    idx(std::make_unique<uint64_t[]>(r * c))
+  TOC(uint64_t r, uint64_t c) :
+      rows(r), cols(c), idx(std::make_unique<uint64_t[]>(r * c))
   {}
 
   void print(std::ostream& out = std::cout) const
