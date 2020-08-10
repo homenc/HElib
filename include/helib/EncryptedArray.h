@@ -141,15 +141,6 @@ public:
   //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0;
 
-  /** @brief Correct an automorphism in a bad dimension.
-   * @param ctxt `Ctxt` to perform the correction on.
-   * @param i Dimension of which to correct.
-   * @param amt Exponent of the automorphism.
-   **/
-  virtual void badDimensionAutomorphCorrection(Ctxt& ctxt,
-                                               long i,
-                                               long amt) const = 0;
-
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
@@ -435,10 +426,6 @@ public:
                         long i,
                         long k,
                         bool dc = false) const override;
-
-  virtual void badDimensionAutomorphCorrection(Ctxt& ctxt,
-                                               long i,
-                                               long k) const override;
 
   long getP2R() const override { return getTab().getPPowR(); }
 
@@ -1190,10 +1177,6 @@ public:
                           const std::vector<cx_double>& iImages,
                           long precision = 0) const;
   ///@}
-
-  void badDimensionAutomorphCorrection(Ctxt& ctxt,
-                                       long i,
-                                       long k) const override;
 };
 
 // plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
@@ -1326,11 +1309,6 @@ public:
     rep->rotate1D(ctxt, i, k, dc);
   }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
-
-  void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long amt) const
-  {
-    rep->badDimensionAutomorphCorrection(ctxt, i, amt);
-  }
 
   template <typename PTXT, typename ARRAY>
   void encode(PTXT& ptxt, const ARRAY& array) const

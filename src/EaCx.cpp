@@ -294,15 +294,4 @@ void EncryptedArrayCx::buildLinPolyCoeffs(
   encode(C[1], y, msize, precision);
 }
 
-// TODO: Implement the CKKS version
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-void EncryptedArrayCx::badDimensionAutomorphCorrection(Ctxt& ctxt,
-                                                       long i,
-                                                       long k) const
-{
-  throw LogicError("badDimensionAutomorphCorrection for CKKS not implemented");
-}
-#pragma GCC diagnostic pop
-
 } // namespace helib
