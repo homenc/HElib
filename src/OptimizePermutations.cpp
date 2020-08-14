@@ -165,7 +165,14 @@ void buildBenesCostTable(long n,
 //! \cond FALSE (make doxygen ignore these classes)
 class LongNode;
 typedef std::shared_ptr<LongNode> LongNodePtr;
-// A "shared_ptr" is a pointer with (some) garbage collection
+// A "std::shared_ptr" is a pointer with (some) garbage collection
+
+template <typename... Args>
+LongNodePtr MakeLongNodePtr(Args&&... args)
+{
+  return std::make_shared<LongNode>(std::forward<Args>(args)...);
+}
+// Thin wrapper around "std::make_shared" for LongNodePtr
 
 // A LongNode is an implementation of std::list<long>, i.e. a linked list of
 // counters, representing a particular way of "collapsing levels" in a Benes
@@ -315,7 +322,7 @@ BenesMemoEntry optimalBenesAux(long i,
     // all remaining levels together.
 
     cost = costTab[i][nlev - i - 1];
-    solution = LongNodePtr(new LongNode(nlev - i, LongNodePtr()));
+    solution = MakeLongNodePtr(nlev - i, LongNodePtr());
   } else {
     // We consider collapsing levels i..i+j, for all j in [0..nlev-i),
     // then choose the option that gives the best cost.
@@ -339,7 +346,7 @@ BenesMemoEntry optimalBenesAux(long i,
     }
 
     cost = bestCost;
-    solution = LongNodePtr(new LongNode(bestJ + 1, bestT.solution));
+    solution = MakeLongNodePtr(bestJ + 1, bestT.solution);
   }
 
   return memoTab[BenesMemoKey(i, budget)] = BenesMemoEntry(cost, solution);
@@ -388,6 +395,13 @@ void optimalBenes(long n,
 class SplitNode;
 typedef std::shared_ptr<SplitNode> SplitNodePtr;
 // A "std::shared_ptr" is a pointer with (some) garbage collection
+
+template <typename... Args>
+SplitNodePtr MakeSplitNodePtr(Args&&... args)
+{
+  return std::make_shared<SplitNode>(std::forward<Args>(args)...);
+}
+// Thin wrapper around "std::make_shared" for SplitNodePtr
 
 class SplitNode
 {
@@ -521,7 +535,14 @@ typedef std::
 
 class GenNode;
 typedef std::shared_ptr<GenNode> GenNodePtr;
-// A "shared_ptr" is a pointer with (some) garbage collection
+// A "std::shared_ptr" is a pointer with (some) garbage collection
+
+template <typename... Args>
+GenNodePtr MakeGenNodePtr(Args&&... args)
+{
+  return std::make_shared<GenNode>(std::forward<Args>(args)...);
+}
+// Thin wrapper around "std::make_shared" for GenNodePtr
 
 class GenNode
 {
@@ -674,8 +695,8 @@ LowerMemoEntry optimalLower(long order,
     }
 
     // The initial solution corresponds to this being a leaf node
-    solution = SplitNodePtr(
-        new SplitNode(order, mid, good, benesSolution1, benesSolution2));
+    solution = MakeSplitNodePtr(
+        order, mid, good, benesSolution1, benesSolution2);
 
     // Recursively try all the ways of splitting order = order1 * order2
 
@@ -722,8 +743,8 @@ LowerMemoEntry optimalLower(long order,
               s1.cost + s2.cost < cost) {
             cost = s1.cost + s2.cost;
             // Record the new best solution
-            solution = SplitNodePtr(
-                new SplitNode(order, mid, good, s1.solution, s2.solution));
+            solution = MakeSplitNodePtr(
+                order, mid, good, s1.solution, s2.solution);
           }
         }
       }
@@ -812,7 +833,7 @@ UpperMemoEntry optimalUpperAux(const NTL::Vec<GenDescriptor>& vec,
     if (cost == NTL_MAX_LONG)
       solution = GenNodePtr();
     else
-      solution = GenNodePtr(new GenNode(bestS.solution, bestT.solution));
+      solution = MakeGenNodePtr(bestS.solution, bestT.solution);
   }
 
   // Record the best solution in the upperMemoTable and return it

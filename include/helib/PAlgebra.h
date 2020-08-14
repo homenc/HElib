@@ -519,7 +519,7 @@ std::shared_ptr<TNode<T>> buildTNode(std::shared_ptr<TNode<T>> left,
                                      std::shared_ptr<TNode<T>> right,
                                      const T& data)
 {
-  return std::shared_ptr<TNode<T>>(new TNode<T>(left, right, data));
+  return std::make_shared<TNode<T>>(left, right, data);
 }
 
 template <typename T>

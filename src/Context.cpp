@@ -278,7 +278,7 @@ std::unique_ptr<Context> buildContextFromBinary(std::istream& str)
   unsigned long m, p, r;
   std::vector<long> gens, ords;
   readContextBaseBinary(str, m, p, r, gens, ords);
-  return std::unique_ptr<Context>(new Context(m, p, r, gens, ords));
+  return std::make_unique<Context>(m, p, r, gens, ords);
 }
 
 void writeContextBinary(std::ostream& str, const Context& context)
@@ -482,7 +482,7 @@ std::unique_ptr<Context> buildContextFromAscii(std::istream& str)
   unsigned long m, p, r;
   std::vector<long> gens, ords;
   readContextBase(str, m, p, r, gens, ords);
-  return std::unique_ptr<Context>(new Context(m, p, r, gens, ords));
+  return std::make_unique<Context>(m, p, r, gens, ords);
 }
 
 std::istream& operator>>(std::istream& str, Context& context)
