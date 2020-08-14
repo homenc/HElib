@@ -501,7 +501,7 @@ void CKKS_canonicalEmbedding(std::vector<cx_double>& v,
   long sz = in.size();
   long m = palg.getM();
 
-  if (!(palg.getP() == -1 && palg.getPow2() >= 2 && sz <= m / 2))
+  if (!(palg.getP() == -1 && palg.getPow2() >= 2 && sz < m / 2))
     throw LogicError("bad args to CKKS_canonicalEmbedding");
 
   const half_FFT& hfft = palg.getHalfFFTInfo();
