@@ -1216,9 +1216,8 @@ void BasicBitReverseCopy(cmplx_t *B,
                          const cmplx_t *A, long k, const vector<long>& rev)
 {
    long n = 1L << k;
-   long i, j;
 
-   for (i = 0; i < n; i++)
+   for (long i = 0; i < n; i++)
       B[rev[i]] = A[i];
 }
 
