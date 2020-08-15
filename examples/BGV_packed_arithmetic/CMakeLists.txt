@@ -20,7 +20,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 project(BGV_packed_arithmetic LANGUAGES CXX)
 
-find_package(helib 1.0.0 REQUIRED)
+find_package(helib 1.1.0 EXACT REQUIRED)
 
 add_executable(BGV_packed_arithmetic BGV_packed_arithmetic.cpp)
 

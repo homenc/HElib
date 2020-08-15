@@ -18,10 +18,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 ## Require full C++ standard
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(crypto
-       	LANGUAGES CXX)
+project(crypto LANGUAGES CXX)
 
-find_package(helib 1.0.0 REQUIRED)
+find_package(helib 1.1.0 EXACT REQUIRED)
 
 # Check if the system has fallocate or mkfile (to pre-allocate the ctxt file)
 set(alloc_file_name "")

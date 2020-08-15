@@ -18,10 +18,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 ## Require full C++ standard
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-project(create-context
-       	LANGUAGES CXX)
+project(create-context LANGUAGES CXX)
 
-find_package(helib 1.0.0 REQUIRED)
+find_package(helib 1.1.0 EXACT REQUIRED)
 
 add_executable(create-context create-context.cpp)
 

@@ -420,7 +420,7 @@ public:
     return std::ceil(logOfProduct(primes) / log(2.0));
   }
 
-  //! @brief An estimate for the security-level
+  //! @brief An estimate for the security-level. This has a lower bound of 0.
   double securityLevel() const
   {
     long phim = zMStar.getPhiM();
@@ -432,7 +432,8 @@ public:
     }
 
     double bitsize = logOfProduct(primes) / log(2.0);
-    return (7.2 * phim / bitsize - 110);
+    double ret = (7.2 * phim / bitsize - 110);
+    return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
   }
 
   //! @brief print out algebra and other important info

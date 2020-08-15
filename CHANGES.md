@@ -1,3 +1,23 @@
+HElib 1.1.0, August 2020
+===============================
+(tagged as v1.1.0)
+
+June-August 2020
+------------------
+* Utils
+  * create-context
+  * encrypt/decrypt
+  * encode/decode examples
+* Improvements to noise management
+* Move to CMake >= 3.10.2
+* Doxygen improved look and feel
+* Improved docs
+* New examples and mini-tutorial on private preserving db query
+* Configurable PSI/PIR beta
+* Some tools in `misc/` for code formatting and algebra generation
+* `Warning` messages are now logged (default `helib.log`)
+* Bug fixes
+
 HElib 1.0.2, June 2020
 ===============================
 (tagged as v1.0.2)

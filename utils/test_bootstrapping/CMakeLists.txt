@@ -27,7 +27,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
     "${CMAKE_BINARY_DIR}/test/${CMAKE_INSTALL_BINDIR}")
 
-find_package(helib 1.0.0 REQUIRED)
+find_package(helib 1.1.0 EXACT REQUIRED)
 
 add_executable(test_bootstrap test_bootstrap.cpp)
 
