@@ -105,7 +105,8 @@ int main(int argc, char* argv[])
   // "entry-wise".
 
   // Square the ciphertext
-  // [0] [1] [2] [3] [4] ... [nslots-1] -> [0] [1] [4] [9] [16] ... [(nslots-1)*(nslots-1)]
+  // [0] [1] [2] [3] [4] ... [nslots-1]
+  // -> [0] [1] [4] [9] [16] ... [(nslots-1)*(nslots-1)]
   ctxt.multiplyBy(ctxt);
   // Plaintext version
   ptxt.multiplyBy(ptxt);
@@ -158,7 +159,8 @@ int main(int argc, char* argv[])
   ptxt.addConstant(NTL::ZZX(1l));
 
   // And multiply by constants
-  // [1] [1] [1] ... [1] [1] -> [1*1] [1*1] [1*1] ... [1*1] [1*1] = [1] [1] [1] ... [1] [1]
+  // [1] [1] [1] ... [1] [1]
+  // -> [1*1] [1*1] [1*1] ... [1*1] [1*1] = [1] [1] [1] ... [1] [1]
   ctxt *= NTL::ZZX(1l);
   // Plaintext version
   ptxt *= NTL::ZZX(1l);

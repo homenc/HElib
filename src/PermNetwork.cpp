@@ -197,7 +197,7 @@ static std::pair<long, bool> makeMask(std::vector<long>& mask,
                                       NTL::Vec<long>& haystack,
                                       long needle)
 {
-  long found = false;
+  bool found = false;
   long fstNonZeroIdx = -1;
   for (long i = 0; i < (long)mask.size(); i++) {
     if (haystack[i] == needle) { // found a needle

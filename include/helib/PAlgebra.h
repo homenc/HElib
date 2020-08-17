@@ -828,7 +828,7 @@ public:
 
   bool operator==(const PAlgebraMod& other) const
   {
-    return getZMStar() == getZMStar() && getR() == other.getR();
+    return getZMStar() == other.getZMStar() && getR() == other.getR();
   }
   // comparison
 

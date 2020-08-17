@@ -134,7 +134,7 @@ static double basic_embeddingLargestCoeff(const std::vector<double>& f,
   long sz = f.size();
 
   if (sz > m)
-    LogicError("vector too big f canonicalEmbedding");
+    throw LogicError("vector too big f canonicalEmbedding");
 
   std::vector<cx_double> buf(m);
   for (long i : range(0, sz))
@@ -172,7 +172,7 @@ static double half_embeddingLargestCoeff(const std::vector<double>& f,
   long sz = f.size();
 
   if (sz > m / 2)
-    LogicError("vector too big f canonicalEmbedding");
+    throw LogicError("vector too big f canonicalEmbedding");
 
   const half_FFT& hfft = palg.getHalfFFTInfo();
   const cx_double* pow = &hfft.pow[0];
@@ -209,7 +209,7 @@ static double quarter_embeddingLargestCoeff(const std::vector<double>& f,
   long sz = f.size();
 
   if (sz > m / 2)
-    LogicError("vector too big f canonicalEmbedding");
+    throw LogicError("vector too big f canonicalEmbedding");
 
   const quarter_FFT& qfft = palg.getQuarterFFTInfo();
   const cx_double* pow1 = &qfft.pow1[0];
@@ -275,7 +275,7 @@ static void basic_embeddingLargestCoeff_x2(double& norm1,
   long sz2 = f2.size();
 
   if (sz1 > m || sz2 > m)
-    LogicError("vector too big in canonicalEmbedding");
+    throw LogicError("vector too big in canonicalEmbedding");
 
   long sz_max = std::max(sz1, sz2);
   long sz_min = std::min(sz1, sz2);
@@ -348,7 +348,7 @@ static void half_embeddingLargestCoeff_x2(double& norm1,
   long sz2 = f2.size();
 
   if (sz1 > m / 2 || sz2 > m / 2)
-    LogicError("vector too big in canonicalEmbedding");
+    throw LogicError("vector too big in canonicalEmbedding");
 
   long sz_max = std::max(sz1, sz2);
   long sz_min = std::min(sz1, sz2);
@@ -583,7 +583,7 @@ void CKKS_embedInSlots(zzX& f,
   long m = palg.getM();
 
   if (!(palg.getP() == -1 && palg.getPow2() >= 2))
-    LogicError("bad args to CKKS_canonicalEmbedding");
+    throw LogicError("bad args to CKKS_canonicalEmbedding");
 
   std::vector<cx_double> buf(m / 2, cx_double(0));
   for (long i : range(m / 4)) {
@@ -645,7 +645,7 @@ canonicalEmbedding(std::vector<cx_double>& v,
   long m = palg.getM();
 
   if (long(in.size()) > m)
-    LogicError("std::vector too big in canonicalEmbedding");
+    throw LogicError("std::vector too big in canonicalEmbedding");
 
   vector<cx_double> buf(m);
   for (long i: range(in.size())) buf[i] = in[i];

@@ -264,7 +264,7 @@ public:
     solution = _solution;
   }
 
-  BenesMemoEntry() {}
+  BenesMemoEntry() : cost(0) {}
 };
 
 typedef std::
@@ -510,7 +510,7 @@ public:
     solution = _solution;
   }
 
-  LowerMemoEntry() {}
+  LowerMemoEntry() : cost(0) {}
 };
 
 typedef std::
@@ -611,7 +611,7 @@ public:
     solution = _solution;
   }
 
-  UpperMemoEntry() {}
+  UpperMemoEntry() : cost(0) {}
 };
 
 typedef std::

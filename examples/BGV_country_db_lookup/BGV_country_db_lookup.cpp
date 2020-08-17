@@ -14,8 +14,8 @@
 // It implements a very simple homomorphic encryption based
 // db search algorithm for demonstration purposes.
 
-// This country lookup example is derived from the BGV database demo 
-// code originally written by Jack Crawford for a lunch and learn 
+// This country lookup example is derived from the BGV database demo
+// code originally written by Jack Crawford for a lunch and learn
 // session at IBM Research (Hursley) in 2019.
 // The original example code ships with HElib and can be found at
 // https://github.com/homenc/HElib/tree/master/examples/BGV_database_lookup
@@ -40,26 +40,29 @@ void printPoly(NTL::ZZX& poly)
 }
 
 // Utility function to read <K,V> CSV data from file
-std::vector<std::pair<std::string, std::string>> read_csv(std::string filename) {
+std::vector<std::pair<std::string, std::string>> read_csv(std::string filename)
+{
   std::vector<std::pair<std::string, std::string>> dataset;
   std::ifstream data_file(filename);
 
-  if(!data_file.is_open()) throw std::runtime_error("Error: This example failed trying to open the data file: " + filename + "\n           Please check this file exists and try again.");
+  if (!data_file.is_open())
+    throw std::runtime_error(
+        "Error: This example failed trying to open the data file: " + filename +
+        "\n           Please check this file exists and try again.");
 
-  std::vector<std::string> row; 
-	std::string line, entry, temp;
+  std::vector<std::string> row;
+  std::string line, entry, temp;
 
-  if(data_file.good())
-  {
+  if (data_file.good()) {
     // Read each line of file
-    while(std::getline(data_file, line)){
+    while (std::getline(data_file, line)) {
       row.clear();
       std::stringstream ss(line);
       while (getline(ss, entry, ',')) {
         row.push_back(entry);
       }
       // Add key value pairs to dataset
-      dataset.push_back(std::make_pair(row[0],row[1]));
+      dataset.push_back(std::make_pair(row[0], row[1]));
     }
   }
 
@@ -88,7 +91,7 @@ int main(int argc, char* argv[])
   // Size of NTL thread pool (default =1)
   unsigned long nthreads = 1;
   // input database file name
-  std::string db_filename="./countries_dataset.csv";
+  std::string db_filename = "./countries_dataset.csv";
   // debug output (default no debug output)
   bool debug = false;
 
@@ -99,7 +102,9 @@ int main(int argc, char* argv[])
   amap.arg("bits", bits, "# of bits in the modulus chain");
   amap.arg("c", c, "# fo columns of Key-Switching matrix");
   amap.arg("nthreads", nthreads, "Size of NTL thread pool");
-  amap.arg("db_filename", db_filename, "Qualified name for the database filename");
+  amap.arg("db_filename",
+           db_filename,
+           "Qualified name for the database filename");
   amap.toggle().arg("-debug", debug, "Toggle debug output", "");
   amap.parse(argc, argv);
 
@@ -125,14 +130,13 @@ int main(int argc, char* argv[])
   HELIB_NTIMER_START(timer_Context);
   helib::Context context(m, p, r);
   HELIB_NTIMER_STOP(timer_Context);
-  
+
   // Modify the context, adding primes to the modulus chain
   // This defines the ciphertext space
   std::cout << "\nBuilding modulus chain ... ";
   HELIB_NTIMER_START(timer_CHAIN);
   helib::buildModChain(context, bits, c);
   HELIB_NTIMER_STOP(timer_CHAIN);
-
 
   // Secret key management
   std::cout << "\nCreating Secret Key ...";
@@ -154,27 +158,28 @@ int main(int argc, char* argv[])
   HELIB_NTIMER_START(timer_PubKey);
   const helib::PubKey& public_key = secret_key;
   HELIB_NTIMER_STOP(timer_PubKey);
-    
+
   // Get the EncryptedArray of the context
   const helib::EncryptedArray& ea = *(context.ea);
 
   // Print the context
   std::cout << std::endl;
   if (debug)
-      context.zMStar.printout();
+    context.zMStar.printout();
 
   // Print the security level
   // Note: This will be negligible to improve performance time.
   std::cout << "\n***Security Level: " << context.securityLevel()
             << " *** Negligible for this example ***" << std::endl;
-  
+
   // Get the number of slot (phi(m))
   long nslots = ea.size();
   std::cout << "\nNumber of slots: " << nslots << std::endl;
 
   /************ Read in the database ************/
-  std::vector<std::pair<std::string, std::string>> country_db = read_csv(db_filename);
-  
+  std::vector<std::pair<std::string, std::string>> country_db =
+      read_csv(db_filename);
+
   // Convert strings into numerical vectors
   std::cout << "\n---Initializing the encrypted key,value pair database ("
             << country_db.size() << " entries)...";
@@ -187,27 +192,26 @@ int main(int argc, char* argv[])
   std::vector<std::pair<helib::Ptxt<helib::BGV>, helib::Ptxt<helib::BGV>>>
       country_db_ptxt;
   for (const auto& country_capital_pair : country_db) {
-  if (debug) {
+    if (debug) {
       std::cout << "\t\tname_addr_pair.first size = "
-                << country_capital_pair.first.size() << " (" << country_capital_pair.first
-                << ")"
+                << country_capital_pair.first.size() << " ("
+                << country_capital_pair.first << ")"
                 << "\tname_addr_pair.second size = "
-                << country_capital_pair.second.size() << " (" << country_capital_pair.second
-                << ")" << std::endl;
-  }
+                << country_capital_pair.second.size() << " ("
+                << country_capital_pair.second << ")" << std::endl;
+    }
 
-  helib::Ptxt<helib::BGV> country(context);
-  // std::cout << "\tname size = " << country.size() << std::endl;
-  for (long i = 0; i < country_capital_pair.first.size(); ++i)
+    helib::Ptxt<helib::BGV> country(context);
+    // std::cout << "\tname size = " << country.size() << std::endl;
+    for (long i = 0; i < country_capital_pair.first.size(); ++i)
       country.at(i) = country_capital_pair.first[i];
 
-  helib::Ptxt<helib::BGV> capital(context);
-  for (long i = 0; i < country_capital_pair.second.size(); ++i)
+    helib::Ptxt<helib::BGV> capital(context);
+    for (long i = 0; i < country_capital_pair.second.size(); ++i)
       capital.at(i) = country_capital_pair.second[i];
-      country_db_ptxt.emplace_back(std::move(country), std::move(capital));
+    country_db_ptxt.emplace_back(std::move(country), std::move(capital));
   }
   HELIB_NTIMER_STOP(timer_PtxtCountryDB);
-
 
   // Encrypt the Country DB
   std::cout << "Encrypting the database..." << std::endl;
@@ -218,9 +222,10 @@ int main(int argc, char* argv[])
     helib::Ctxt encrypted_capital(public_key);
     public_key.Encrypt(encrypted_country, country_capital_pair.first);
     public_key.Encrypt(encrypted_capital, country_capital_pair.second);
-    encrypted_country_db.emplace_back(std::move(encrypted_country), std::move(encrypted_capital));
+    encrypted_country_db.emplace_back(std::move(encrypted_country),
+                                      std::move(encrypted_capital));
   }
-  
+
   HELIB_NTIMER_STOP(timer_CtxtCountryDB);
 
   // Print DB Creation Timers
@@ -260,8 +265,6 @@ int main(int argc, char* argv[])
   public_key.Encrypt(query, query_ptxt);
   HELIB_NTIMER_STOP(timer_EncryptQuery);
 
-
-
   /************ Perform the database search ************/
 
   HELIB_NTIMER_START(timer_QuerySearch);
@@ -287,7 +290,7 @@ int main(int argc, char* argv[])
   // from using the STL and do not use std::accumulate
   helib::Ctxt value = mask[0];
   for (int i = 1; i < mask.size(); i++)
-      value += mask[i];
+    value += mask[i];
 
   HELIB_NTIMER_STOP(timer_QuerySearch);
 
@@ -314,7 +317,10 @@ int main(int argc, char* argv[])
   }
 
   if (string_result.at(0) == 0x00) {
-    string_result = "Country name not in the database.\n*** Please make sure to enter the name of a European Country\n*** with the first letter in upper case.";
+    string_result =
+        "Country name not in the database."
+        "\n*** Please make sure to enter the name of a European Country"
+        "\n*** with the first letter in upper case.";
   }
   std::cout << "\nQuery result: " << string_result << std::endl;
   helib::printNamedTimer(std::cout, "timer_TotalQuery");

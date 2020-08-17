@@ -574,7 +574,7 @@ NTL::ZZX Cyclotomic(long n)
     // less than 2^27 in absolute value.
     // So we compute the coefficients using 32-bit arithmetic.
 
-    // NOTE: _ntl_uint32 is either int or long.
+    // NOTE: _ntl_uint32 is either unsigned int or unsigned long.
 
     NTL::Vec<_ntl_uint32> A;
     A.SetLength(D + 1);

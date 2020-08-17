@@ -861,7 +861,7 @@ long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)
 {
   const PAlgebra& zMStar = context->zMStar;
   assertEq<LogicError>(coords.size(),
-                       static_cast<unsigned long>(zMStar.numOfGens()),
+                       static_cast<std::size_t>(zMStar.numOfGens()),
                        "Coord must have same size as hypercube structure");
   long index = 0;
   // Convert the coordinates into its corresponding index by computing the
