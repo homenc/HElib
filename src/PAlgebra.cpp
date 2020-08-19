@@ -582,8 +582,8 @@ bool comparePAlgebra(const PAlgebra& palg,
 {
   if (static_cast<unsigned long>(palg.getM()) != m ||
       static_cast<unsigned long>(palg.getP()) != p ||
-      static_cast<unsigned long>(palg.numOfGens()) != gens.size() ||
-      static_cast<unsigned long>(palg.numOfGens()) != ords.size())
+      static_cast<std::size_t>(palg.numOfGens()) != gens.size() ||
+      static_cast<std::size_t>(palg.numOfGens()) != ords.size())
     return false;
 
   for (long i = 0; i < (long)gens.size(); i++) {
