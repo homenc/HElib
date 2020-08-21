@@ -311,6 +311,12 @@ public:
 
   DoubleCRT& operator*=(long num) { return Op(NTL::to_ZZ(num), MulFun()); }
 
+  // NOTE: the matchIndexSets business in the following routines
+  // is DEPRECATED.  The requirement is that the prime set of other
+  // must contain the prime set of *this.  If not, an exception is raised.
+  // Also, if matchIndexSets == true and the prime set of *this does
+  // not contain the prime set of other, an exception is also raised.
+
   // Procedural equivalents, supporting also the matchIndexSets flag
   void Add(const DoubleCRT& other, bool matchIndexSets = true)
   {

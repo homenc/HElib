@@ -28,6 +28,7 @@
 #include <helib/Context.h>
 #include <helib/norms.h>
 #include <helib/fhe_stats.h>
+#include <helib/log.h>
 
 namespace helib {
 
@@ -126,22 +127,35 @@ DoubleCRT& DoubleCRT::Op(const DoubleCRT& other, Fun fun, bool matchIndexSets)
   if (&context != &other.context)
     throw RuntimeError("DoubleCRT::Op: incompatible objects");
 
+  // VJS-FIXME: experiment to ignore matchIndexSets
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
+#if 0
     HELIB_NTIMER_START(addPrimes_1);
     Warning("addPrimes called (1) in DoubleCRT::op");
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
+#else
+    throw RuntimeError("DoubleCRT::Op: matchIndexSets not honored");
+#endif
   }
 
   // If you need to mod-up the other, do it on a temporary scratch copy
   DoubleCRT tmp(context, IndexSet());
   const IndexMap<NTL::vec_long>* other_map = &other.map;
+
+  // VJS-FIXME: experiment to insist that
+  // map.getIndexSet() <= other.map.getIndexSet()
   if (!(map.getIndexSet() <= other.map.getIndexSet())) { // Even more expensive
+#if 0
     HELIB_NTIMER_START(addPrimes_2);
     tmp = other;
     Warning("addPrimes called (2) in DoubleCRT::op");
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
     other_map = &tmp.map;
+#else
+    throw RuntimeError(
+        "DoubleCRT::Op: !(map.getIndexSet() <= other.map.getIndexSet())");
+#endif
   }
 
   const IndexSet& s = map.getIndexSet();
@@ -172,22 +186,35 @@ DoubleCRT& DoubleCRT::do_mul(const DoubleCRT& other, bool matchIndexSets)
   if (&context != &other.context)
     throw RuntimeError("DoubleCRT::Op: incompatible objects");
 
+  // VJS-FIXME: experiment to ignore matchIndexSets
   // Match the index sets, if needed
   if (matchIndexSets && !(map.getIndexSet() >= other.map.getIndexSet())) {
+#if 0
     HELIB_NTIMER_START(addPrimes_3);
     Warning("addPrimes called (1) in DoubleCRT::mul");
     addPrimes(other.map.getIndexSet() / map.getIndexSet()); // This is expensive
+#else
+    throw RuntimeError("DoubleCRT::mul: matchIndexSets not honored");
+#endif
   }
 
   // If you need to mod-up the other, do it on a temporary scratch copy
   DoubleCRT tmp(context, IndexSet());
   const IndexMap<NTL::vec_long>* other_map = &other.map;
+
+  // VJS-FIXME: experiment to insist that
+  // map.getIndexSet() <= other.map.getIndexSet()
   if (!(map.getIndexSet() <= other.map.getIndexSet())) { // Even more expensive
+#if 0
     HELIB_NTIMER_START(addPrimes_4);
     tmp = other;
     Warning("addPrimes called (2) in DoubleCRT::mul");
     tmp.addPrimes(map.getIndexSet() / other.map.getIndexSet());
     other_map = &tmp.map;
+#else
+    throw RuntimeError(
+        "DoubleCRT::mul: !(map.getIndexSet() <= other.map.getIndexSet())");
+#endif
   }
 
   const IndexSet& s = map.getIndexSet();

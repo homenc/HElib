@@ -16,12 +16,16 @@
 #include <iostream>
 #include <random>
 
+#include <NTL/BasicThreadPool.h>
+
 namespace helib_test {
+
 char* path_of_executable = nullptr;
 bool noPrint = false;
 bool verbose = false;
 bool dry = false;
 unsigned int random_seed = 0U;
+long special_bits = 0L;
 
 void parse_common_args(int argc, char* argv[])
 {
@@ -29,6 +33,7 @@ void parse_common_args(int argc, char* argv[])
   path_of_executable = argv[0];
   amap.arg("dry", dry, "dry=1 for a dry-run");
   amap.arg("noPrint", noPrint, "suppress printouts");
+  amap.arg("special_bits", special_bits, "# of bits in special primes");
   amap.arg("verbose", verbose, "print more information");
   amap.arg("seed", random_seed, "specify random seed for test data");
   amap.parse(argc, argv);
@@ -38,7 +43,30 @@ void parse_common_args(int argc, char* argv[])
   // parameter of parameterised tests.  This will only be possible once
   // we parse the command-line args before gtest does.
   std::cout << "random seed: " << random_seed << std::endl;
+  // TODO: Add in number of threads as an argument.
 }
+
+static inline long howManyThreads(long max = 0)
+{
+  if (max < 0)
+    throw std::logic_error(std::string(__func__) + ": max number of threads (" +
+                           std::to_string(max) +
+                           ") cannot be less than zero."
+                           " Zero means use the maximum available on system.");
+
+  // Get system threads and clip to max
+  long threads = std::thread::hardware_concurrency();
+  if (max != 0)
+    threads = (threads > max) ? max : threads;
+
+  return threads ? threads : 1;
+}
+
+// Setting threads globally
+long setThreads = []() -> long {
+  NTL::SetNumThreads(howManyThreads(2));
+  return NTL::AvailableThreads();
+}();
 
 // TODO: Should be a member of EncryptedArray?
 bool hasBadDimension(const helib::Context& context)

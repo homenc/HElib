@@ -123,6 +123,122 @@ void innerProduct(Ptxt<Scheme>& result,
 }
 
 /**
+ * @brief Deserialize a `std::complex<double>` from the input stream `is`
+ * delimited by '[' and ']' (instead of the default '(', ')').
+ * @param is The input stream reference.
+ * @param num The complex number to deserialize.
+ * @throws IOError if the stream contains more than 2 parts.
+ *
+ * The input stream has to be formatted as '['number']' (this will be
+ * deserialized as (number, 0)) or '['real_part', 'imag_part']' (this will be
+ * deserialized as (real_part, imag_part)).
+ */
+void deserialize(std::istream& is, std::complex<double>& num);
+
+/**
+ * @brief Serialize a `std::complex<double>` to the output stream `os`
+ * delimited by '[' and ']' (instead of the default '(', ')').
+ * @param os The output stream reference.
+ * @param num The complex number to serialize.
+ *
+ * The output will be formatted as '['`num.real()`', '`num.imag()`']'.
+ */
+void serialize(std::ostream& os, const std::complex<double>& num);
+
+// Forward declaration as function is a friend of the templated `Ptxt` class.
+/**
+ * @brief Function to deserialize a `Ptxt<Scheme>`.
+ * @tparam Scheme The `Ptxt` object scheme.  Can be only be `BGV` or `CKKS`.
+ * @param is Input `std::istream`.
+ * @param ptxt Destination `Ptxt` object.
+ * @throws IOError if the stream is badly formatted (i.e. it is not delimited by
+ * '[' and ']').
+ * @note `ptxt` must be constructed with an appropriate context @b BEFORE
+ * calling this function. For example,
+ * @code
+ * Ptxt my_ptxt(context);
+ * deserialize(std::cin, my_ptxt);
+ * @endcode
+ *
+ * The input stream has to be formatted as a comma-separated list surrounded by
+ * '[' and ']'.\n
+ * Each element of the list will be deserialized as a slot of the
+ * type determined by the scheme.\n
+ * If the number of tokens in the list is less
+ * than the number of slots, the remaining slots will be padded by 0.\n
+ * For example '['slot0', 'slot1', 'slot2']' will be deserialized as a
+ * plaintext `ptxt` where `ptxt[0]=slot0`, `ptxt[1]=slot1`,
+ * `ptxt[2]=slot2` and `ptxt[i]=0` for `i>2`.
+ */
+template <typename Scheme>
+void deserialize(std::istream& is, Ptxt<Scheme>& ptxt);
+
+// Forward declaration as function is a friend of the templated `Ptxt` class.
+/**
+ * @brief Function to serialize a `Ptxt<Scheme>`.
+ * @tparam Scheme The `Ptxt` object scheme.  Can be only be `BGV` or `CKKS`.
+ * @param os Output `std::ostream`.
+ * @param ptxt `Ptxt` object to be written.
+ * @return Input `std::ostream` post serializing.
+ * @note `Ptxt` `context` is not serialized, see note of `deserialize`.
+ *
+ * The output stream will be formatted as a comma-separated list surrounded by
+ * '[' and ']'.\n
+ * Each slot of `ptxt` will be serialized in an element of such list by the
+ * `serialize` function determined by the scheme.\n
+ * For example if we have a plaintext `ptxt` such that `ptxt[0]=slot0`,
+ * `ptxt[1]=slot1`, `ptxt[2]=slot2`, and `ptxt[i]=0` for `i>2`, it will be
+ * serialized as '['slot0', 'slot1', 'slot2', `0`, `0` ...]'.
+ */
+template <typename Scheme>
+void serialize(std::ostream& os, const Ptxt<Scheme>& ptxt);
+
+// Forward declaration as function is a friend of the templated `Ptxt` class.
+/**
+ * @brief Input shift operator.  Uses the `deserialize` function internally.
+ * @param is Input `std::istream`.
+ * @param ptxt Destination `Ptxt` object.
+ * @return Input `std::istream` post reading.
+ * @note `ptxt` must be constructed with an appropriate context @b BEFORE
+ * calling this function. For example,
+ * @code
+ * Ptxt my_ptxt(context);
+ * std::cin >> my_ptxt;
+ * @endcode
+ *
+ * The input stream has to be formatted as a comma-separated list surrounded by
+ * '[' and ']'.\n
+ * Each element of the list will be deserialized as a slot of the
+ * type determined by the scheme.\n
+ * If the number of tokens in the list is less
+ * than the number of slots, the remaining slots will be padded by 0.\n
+ * For example '['slot0', 'slot1', 'slot2']' will be deserialized as a
+ * plaintext `ptxt` where `ptxt[0]=slot0`, `ptxt[1]=slot1`,
+ * `ptxt[2]=slot2` and `ptxt[i]=0` for `i>2`.
+ **/
+template <typename Scheme>
+std::istream& operator>>(std::istream& is, Ptxt<Scheme>& ptxt);
+
+// Forward declaration as function is a friend of the templated `Ptxt` class.
+/**
+ * @brief Output shift operator.  Uses the `serialize` function internally.
+ * @param os Output `std::ostream`.
+ * @param ptxt `Ptxt` object to be written.
+ * @return Input `std::ostream` post writing.
+ * @note `Ptxt` `context` is not serialized, see note of `operator>>`.
+ *
+ * The output stream will be formatted as a comma-separated list surrounded by
+ * '[' and ']'.\n
+ * Each slot of `ptxt` will be serialized in an element of such list by the
+ * `serialize` function determined by the scheme.\n
+ * For example if we have a plaintext `ptxt` such that `ptxt[0]=slot0`,
+ * `ptxt[1]=slot1`, `ptxt[2]=slot2`, and `ptxt[i]=0` for `i>2`, it will be
+ * serialized as '['slot0', 'slot1', 'slot2', `0`, `0` ...]'.
+ **/
+template <typename Scheme>
+std::ostream& operator<<(std::ostream& is, const Ptxt<Scheme>& ptxt);
+
+/**
  * @class Ptxt
  * @brief An object that mimics the functionality of the `Ctxt` object, and
  * acts as a convenient entry point for inputting/encoding data which is to be
@@ -268,6 +384,12 @@ public:
    * @return Number of slots of the `Ptxt`.
    **/
   long lsize() const;
+
+  /**
+   * @brief Returns the `context` used to initialize the `Ptxt`
+   * @return The `context`.
+   **/
+  const Context& getContext() const { return *context; }
 
   /**
    * @brief Set the data.
@@ -680,73 +802,14 @@ public:
    **/
   Ptxt<Scheme>& mapTo01();
 
-  // NOTE: Seem to get linker errors when moving this to the cpp
-  /**
-   * @brief Input shift operator.
-   * @param is Input `std::istream`.
-   * @param ptxt Destination `Ptxt` object.
-   * @return Input `std::istream` post reading.
-   * @note `ptxt` must be constructed with an appropriate context @b BEFORE
-   * calling this function. For example,
-   * @code
-   * Ptxt my_ptxt(context);
-   * std::cin >> my_ptxt;
-   * @endcode
-   **/
-  friend std::istream& operator>>(std::istream& is, Ptxt<Scheme>& ptxt)
-  {
-    assertTrue<RuntimeError>(ptxt.isValid(),
-                             "Cannot operate on invalid "
-                             "(default constructed) Ptxt");
-    seekPastChar(is, '[');
-    std::vector<typename Scheme::SlotType> data;
-    for (typename Scheme::SlotType slot(
-             Ptxt<Scheme>::convertToSlot(*ptxt.context, 0L));
-         is >> slot;
-         data.push_back(slot))
-      ; // Do nothing.
-    is.clear();
-    seekPastChar(is, ']');
-    ptxt.setData(std::move(data));
-    return is;
-  }
+  // No docs as the four functions have been forward-declared with docs.
+  friend void deserialize<Scheme>(std::istream& is, Ptxt& ptxt);
 
-  // NOTE: Seem to get linker errors when moving this to the cpp
-  /**
-   * @brief Output shift operator.
-   * @param os Output `std::ostream`.
-   * @param ptxt `Ptxt` object to be written.
-   * @return Input `std::ostream` post writing.
-   * @note `Ptxt` `context` is not serialised, see note of `operator>>`.
-   **/
-  friend std::ostream& operator<<(std::ostream& os, const Ptxt<Scheme>& ptxt)
-  {
-    assertTrue<RuntimeError>(ptxt.isValid(),
-                             "Cannot operate on invalid "
-                             "(default constructed) Ptxt");
-    // Use destructor to make sure stream precision is reset
-    struct stream_modifier
-    {
-      explicit stream_modifier(std::ostream& os) : os(os), ss(os.precision())
-      {
-        os << std::setprecision(std::numeric_limits<double>::digits10);
-      };
-      ~stream_modifier() { os << std::setprecision(ss); };
-      std::ostream& os;
-      std::streamsize ss;
-    };
+  friend void serialize<Scheme>(std::ostream& os, const Ptxt& ptxt);
 
-    stream_modifier sm(os);
+  friend std::istream& operator>><Scheme>(std::istream& is, Ptxt& ptxt);
 
-    os << "[";
-    for (std::size_t i = 0; i < ptxt.slots.size(); ++i) {
-      os << ptxt.slots[i];
-      if (i != ptxt.slots.size() - 1) {
-        os << " ";
-      }
-    }
-    return os << "]";
-  }
+  friend std::ostream& operator<<<Scheme>(std::ostream& os, const Ptxt& ptxt);
 
   /**
    * @brief Conversion function from `long` to `SlotType`.
@@ -755,6 +818,13 @@ public:
    * @return Converted slot.
    **/
   static SlotType convertToSlot(const Context& context, long slot);
+
+  /**
+   * @brief To be inline with the `Ctxt` interface. However for `Ptxt` this
+   * means do nothing.
+   * @return Reference to `*this`.
+   **/
+  Ptxt<Scheme>& cleanUp() { return *this; }
 
 private:
   const Context* context;

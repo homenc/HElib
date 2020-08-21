@@ -278,7 +278,7 @@ public:
 
   // encode different integers in the different slots
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    const std::vector<unsigned long>& data,
+                    const std::vector<std::size_t>& data,
                     long nbits,
                     zzX& result)
   {
@@ -312,7 +312,7 @@ void packConstant(zzX& result,
 // this packs the low-order nbits of the entries of data into slots,
 // where the bits get mapped to coefficients on the normal basis
 void packConstants(zzX& result,
-                   const std::vector<unsigned long>& data,
+                   const std::vector<std::size_t>& data,
                    long nbits,
                    const EncryptedArray& ea)
 {
@@ -328,7 +328,7 @@ public:
 
   static void apply(const EncryptedArrayDerived<type>& ea,
                     PlaintextArray& pa,
-                    std::vector<unsigned long>& value)
+                    std::vector<std::size_t>& value)
   {
     PA_BOILER
     const NTL::Mat<R>& CBi = ea.getNormalBasisMatrixInverse();
@@ -352,7 +352,7 @@ public:
 // Sets value to be a vector of size nslots.
 // The bits of value[i] are equal to the coeffs of pa[i],
 // as represented on the normal basis
-void unpackSlots(std::vector<unsigned long>& value,
+void unpackSlots(std::vector<std::size_t>& value,
                  PlaintextArray& pa,
                  const EncryptedArray& ea)
 {

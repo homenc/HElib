@@ -134,6 +134,10 @@ double EncryptedArrayCx::encode(zzX& ptxt,
                                 double useThisSize,
                                 long precision) const
 {
+  // VJS-FIXME: does it really make sense to use the *largest*
+  // size in determining the factor?
+  // It might make sense to use the *smallest* size.
+
   if (useThisSize < 0)
     for (auto& x : array) {
       if (useThisSize < std::abs(x))
@@ -198,8 +202,11 @@ void EncryptedArrayCx::random(std::vector<cx_double>& array, double rad) const
 
   resize(array, size()); // allocate space
   for (auto& x : array) {
+    // VJS-FIXME: on 32-bit machines, this probably does not work correctly
     long bits = NTL::RandomLen_long(32);         // 32 random bits
     double r = std::sqrt(bits & 0xffff) / 256.0; // sqrt(uniform[0,1])
+    // VJS-FIXME: Should use RandomBits_long?? should be unsigned long?
+    // VJS-FIXME: why use 16 bits and take a square root?
     double theta =
         2.0L * PI * ((bits >> 16) & 0xffff) / 65536.0; // uniform(0,2pi)
     x = std::polar(rad * r, theta);
@@ -286,16 +293,5 @@ void EncryptedArrayCx::buildLinPolyCoeffs(
   encode(C[0], x, msize, precision);
   encode(C[1], y, msize, precision);
 }
-
-// TODO: Implement the CKKS version
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-void EncryptedArrayCx::badDimensionAutomorphCorrection(Ctxt& ctxt,
-                                                       long i,
-                                                       long k) const
-{
-  throw LogicError("badDimensionAutomorphCorrection for CKKS not implemented");
-}
-#pragma GCC diagnostic pop
 
 } // namespace helib

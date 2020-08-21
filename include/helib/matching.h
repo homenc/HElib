@@ -16,6 +16,7 @@
 #ifndef HELIB_MATCHING_H
 #define HELIB_MATCHING_H
 
+#include <unordered_map>
 #include <helib/NumbTh.h>
 
 namespace helib {

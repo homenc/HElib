@@ -16,7 +16,8 @@
 #include <helib/helib.h>
 #include <helib/debugging.h>
 
-void squareWithThinBoot(FHEPubKey& pk, Ctxt& c) {
+void squareWithThinBoot(FHEPubKey& pk, Ctxt& c)
+{
   if (c.bitCapacity() <= 50) {
     pk.thinReCrypt(c);
   }
@@ -36,6 +37,7 @@ static void BM_thinboot(benchmark::State& state,
                         std::vector<long> ords)
 {
   NTL::Vec<long> mvec = convert<NTL::Vec<long>>(mvector);
+  // clang-format off
   std::cout << "m=" << m
             << ", p=" << p
             << ", r=" << r
@@ -47,12 +49,13 @@ static void BM_thinboot(benchmark::State& state,
             << ", gens=" << gens
             << ", ords=" << ords
             << std::endl;
+  // clang-format on
   std::cout << "Initialising context object..." << std::endl;
   FHEcontext context(m, p, r, gens, ords);
-  context.zMStar.set_cM(c_m/100.0);
+  context.zMStar.set_cM(c_m / 100.0);
 
-  std::cout  << "Building modulus chain..." << std::endl;
-  buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*skHwt*/t);
+  std::cout << "Building modulus chain..." << std::endl;
+  buildModChain(context, bits, c, /*willBeBootstrappable=*/true, /*skHwt*/ t);
 
   // Make bootstrappable (saves time by disabling some fat boot precomputation)
   context.makeBootstrappable(mvec, t, /*build_cache=*/0, /*alsoThick=*/false);
@@ -89,45 +92,51 @@ static void BM_thinboot(benchmark::State& state,
   ea.encrypt(ctxt, public_key, ptxt);
   for (auto _ : state)
     squareWithThinBoot(public_key, ctxt);
-  std::cout << "Multiplications performed = " << state.iterations() <<std::endl;
+  std::cout << "Multiplications performed = " << state.iterations()
+            << std::endl;
 }
 
+BENCHMARK_CAPTURE(BM_thinboot,
+                  tiny_params,
+                  /*m =*/31 * 41,
+                  /*p =*/2,
+                  /*r =*/1,
+                  /*c =*/2,
+                  /*bits =*/580,
+                  /*t =*/64,
+                  /*c_m =*/100,
+                  /*mvec =*/std::vector<long>{31, 41},
+                  /*gens =*/std::vector<long>{1026, 249},
+                  /*ords =*/std::vector<long>{30, -2})
+    ->Unit(benchmark::kMillisecond)
+    ->Iterations(200);
 
-BENCHMARK_CAPTURE(BM_thinboot, tiny_params,
-                  /*m =*/ 31*41,
-                  /*p =*/ 2,
-                  /*r =*/ 1,
-                  /*c =*/	2,
-                  /*bits =*/ 580,
-                  /*t =*/ 64,
-                  /*c_m =*/ 100,
-                  /*mvec =*/ std::vector<long> {31, 41},
-                  /*gens =*/ std::vector<long> {1026, 249},
-                  /*ords =*/ std::vector<long> {30, -2}
-                  )->Unit(benchmark::kMillisecond)->Iterations(200);
+BENCHMARK_CAPTURE(BM_thinboot,
+                  small_params,
+                  /*m =*/31775,
+                  /*p =*/2,
+                  /*r =*/1,
+                  /*c =*/2,
+                  /*bits =*/580,
+                  /*t =*/64,
+                  /*c_m =*/100,
+                  /*mvec =*/std::vector<long>{41, 775},
+                  /*gens =*/std::vector<long>{6976, 24806},
+                  /*ords =*/std::vector<long>{40, 30})
+    ->Unit(benchmark::kMillisecond)
+    ->MinTime(200);
 
-BENCHMARK_CAPTURE(BM_thinboot, small_params,
-                  /*m =*/ 31775,
-                  /*p =*/ 2,
-                  /*r =*/ 1,
-                  /*c =*/ 2,
-                  /*bits =*/ 580,
-                  /*t =*/ 64,
-                  /*c_m =*/ 100,
-                  /*mvec =*/ std::vector<long> {41, 775},
-                  /*gens =*/ std::vector<long> {6976, 24806},
-                  /*ords =*/ std::vector<long> {40, 30}
-                  )->Unit(benchmark::kMillisecond)->MinTime(200);
-
-BENCHMARK_CAPTURE(BM_thinboot, big_params,
-                  /*m =*/ 35113,
-                  /*p =*/ 2,
-                  /*r =*/ 1,
-                  /*c =*/ 2,
-                  /*bits =*/ 580,
-                  /*t =*/ 64,
-                  /*c_m =*/ 100,
-                  /*mvec =*/ std::vector<long> {37, 949},
-                  /*gens =*/ std::vector<long> {16134, 8548},
-                  /*ords =*/ std::vector<long> {36, 24}
-                  )->Unit(benchmark::kMillisecond)->MinTime(200);
+BENCHMARK_CAPTURE(BM_thinboot,
+                  big_params,
+                  /*m =*/35113,
+                  /*p =*/2,
+                  /*r =*/1,
+                  /*c =*/2,
+                  /*bits =*/580,
+                  /*t =*/64,
+                  /*c_m =*/100,
+                  /*mvec =*/std::vector<long>{37, 949},
+                  /*gens =*/std::vector<long>{16134, 8548},
+                  /*ords =*/std::vector<long>{36, 24})
+    ->Unit(benchmark::kMillisecond)
+    ->MinTime(200);

@@ -16,6 +16,7 @@
  * @brief Implementation of a map indexed by a dynamic set of integers.
  **/
 
+#include <unordered_map>
 #include <helib/IndexSet.h>
 #include <helib/clonedPtr.h>
 

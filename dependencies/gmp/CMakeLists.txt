@@ -37,8 +37,11 @@ ExternalProject_Add(
         "--enable-shared=yes"
         "--disable-static"
         "--with-readline=no"
-        "CC=${CMAKE_C_COMPILER}" # propagate cmake chosen C compiler
-        "CXX=${CMAKE_CXX_COMPILER}" # propagate cmake chosen CXX compiler
+        # Propagate cmake chosen compiler. 
+        # Note must add the macOS isysroot flag here instead of passing
+        # CXXFLAGS as that overrides the external project optimize flags.
+        "CXX=${CMAKE_CXX_COMPILER} ${macos_isysroot_flag}"
+        "CC=${CMAKE_C_COMPILER} ${macos_isysroot_flag}" 
     BUILD_IN_SOURCE ON
     TEST_AFTER_INSTALL OFF
     TEST_EXCLUDE_FROM_MAIN ON

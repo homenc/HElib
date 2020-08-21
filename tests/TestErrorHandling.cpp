@@ -324,6 +324,138 @@ TEST(TestErrorHandling,
   }
 }
 
+// IOError tests
+
+TEST(TestErrorHandling, helibIOErrorCanBeCaughtAsHelibIOError)
+{
+  EXPECT_THROW(throw helib::IOError("Some IO error message"), helib::IOError);
+}
+
+TEST(TestErrorHandling, helibIOErrorReturnsWhatStringThroughHelibIOError)
+{
+  const std::string what("Some IO error message");
+  try {
+    throw helib::IOError(what);
+  } catch (const helib::IOError& err) {
+    EXPECT_STREQ(err.what(), what.c_str());
+  }
+}
+
+TEST(TestErrorHandling, helibIOErrorReturnsCStyleWhatStringThroughHelibIOError)
+{
+  const char* what = "Some IO error message";
+  try {
+    throw helib::IOError(what);
+  } catch (const helib::IOError& err) {
+    EXPECT_STREQ(err.what(), what);
+  }
+}
+
+TEST(TestErrorHandling, helibIOErrorCanBeCaughtAsHelibException)
+{
+  EXPECT_THROW(throw helib::IOError("Some IO error message"), helib::Exception);
+}
+
+TEST(TestErrorHandling, helibIOErrorReturnsWhatStringThroughHelibException)
+{
+  const std::string what("Some IO error message");
+  try {
+    throw helib::IOError(what);
+  } catch (const helib::Exception& err) {
+    EXPECT_STREQ(err.what(), what.c_str());
+  }
+}
+
+TEST(TestErrorHandling,
+     helibIOErrorReturnsCStyleWhatStringThroughHelibException)
+{
+  const char* what = "Some IO error message";
+  try {
+    throw helib::IOError(what);
+  } catch (const helib::Exception& err) {
+    EXPECT_STREQ(err.what(), what);
+  }
+}
+
+TEST(TestErrorHandling, helibIOErrorCanBeCaughtAsStdException)
+{
+  EXPECT_THROW(throw helib::IOError("Some IO error message"), std::exception);
+}
+
+TEST(TestErrorHandling, helibIOErrorReturnsWhatStringThroughStdException)
+{
+  const std::string what("Some IO error message");
+  try {
+    throw helib::IOError(what);
+  } catch (const std::exception& err) {
+    EXPECT_STREQ(err.what(), what.c_str());
+  }
+}
+
+TEST(TestErrorHandling, helibIOErrorReturnsCStyleWhatStringThroughStdException)
+{
+  const char* what = "Some IO error message";
+  try {
+    throw helib::IOError(what);
+  } catch (const std::exception& err) {
+    EXPECT_STREQ(err.what(), what);
+  }
+}
+
+TEST(TestErrorHandling, helibIOErrorCanBeCaughtAsStdRuntimeError)
+{
+  EXPECT_THROW(throw helib::IOError("Some IO error message"),
+               std::runtime_error);
+}
+
+TEST(TestErrorHandling, helibIOErrorReturnsWhatStringThroughStdRuntimeError)
+{
+  const std::string what("Some IO error message");
+  try {
+    throw helib::IOError(what);
+  } catch (const std::runtime_error& err) {
+    EXPECT_STREQ(err.what(), what.c_str());
+  }
+}
+
+TEST(TestErrorHandling,
+     helibIOErrorReturnsCStyleWhatStringThroughStdRuntimeError)
+{
+  const char* what = "Some IO error message";
+  try {
+    throw helib::IOError(what);
+  } catch (const std::runtime_error& err) {
+    EXPECT_STREQ(err.what(), what);
+  }
+}
+
+TEST(TestErrorHandling, helibIOErrorCanBeCaughtAsHelibRuntimeError)
+{
+  EXPECT_THROW(throw helib::IOError("Some IO error message"),
+               helib::RuntimeError);
+}
+
+TEST(TestErrorHandling, helibIOErrorReturnsWhatStringThroughHelibRuntimeError)
+{
+  const std::string what("Some IO error message");
+  try {
+    throw helib::IOError(what);
+  } catch (const helib::RuntimeError& err) {
+    EXPECT_STREQ(err.what(), what.c_str());
+  }
+}
+
+TEST(TestErrorHandling,
+     helibIOErrorReturnsCStyleWhatStringThroughHelibRuntimeError)
+{
+  const char* what = "Some IO error message";
+  try {
+    throw helib::IOError(what);
+  } catch (const helib::RuntimeError& err) {
+    EXPECT_STREQ(err.what(), what);
+  }
+}
+
 // InvalidArgument tests
 
 TEST(TestErrorHandling, helibInvalidArgumentCanBeCaughtAsHelibInvalidArgument)
@@ -497,6 +629,42 @@ TEST(TestErrorHandling, helibRuntimeErrorCannotBeCaughtAsLogicError)
       helib::RuntimeError);
 }
 
+TEST(TestErrorHandling, helibIOErrorCannotBeCaughtAsLogicError)
+{
+  EXPECT_THROW(
+      try {
+        throw helib::IOError("Some IO error message");
+      } catch (const helib::LogicError& err){},
+      helib::RuntimeError);
+}
+
+TEST(TestErrorHandling, helibIOErrorCannotBeCaughtAsInvalidArgument)
+{
+  EXPECT_THROW(
+      try {
+        throw helib::IOError("Some IO error message");
+      } catch (const helib::InvalidArgument& err){},
+      helib::RuntimeError);
+}
+
+TEST(TestErrorHandling, helibInvalidArgumentCannotBeCaughtAsRuntimeError)
+{
+  EXPECT_THROW(
+      try {
+        throw helib::InvalidArgument("Some invalid argument message");
+      } catch (const helib::RuntimeError& err){},
+      helib::InvalidArgument);
+}
+
+TEST(TestErrorHandling, helibInvalidArgumentCannotBeCaughtAsIOError)
+{
+  EXPECT_THROW(
+      try {
+        throw helib::InvalidArgument("Some invalid argument message");
+      } catch (const helib::IOError& err){},
+      helib::InvalidArgument);
+}
+
 TEST(TestErrorHandling, helibRuntimeErrorCannotBeCaughtAsStdLogicError)
 {
   EXPECT_THROW(
@@ -504,6 +672,15 @@ TEST(TestErrorHandling, helibRuntimeErrorCannotBeCaughtAsStdLogicError)
         throw helib::RuntimeError("Some runtime error message");
       } catch (const std::logic_error& err){},
       helib::RuntimeError);
+}
+
+TEST(TestErrorHandling, helibIOErrorCannotBeCaughtAsStdLogicError)
+{
+  EXPECT_THROW(
+      try {
+        throw helib::IOError("Some IO error message");
+      } catch (const std::logic_error& err){},
+      helib::IOError);
 }
 
 TEST(TestErrorHandling, helibInvalidArgumentCannotBeCaughtAsStdRuntimeError)

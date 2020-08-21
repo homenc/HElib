@@ -24,6 +24,7 @@
 #include <helib/norms.h>
 #include <helib/fhe_stats.h>
 #include <helib/powerful.h>
+#include <helib/log.h>
 
 namespace helib {
 
@@ -182,6 +183,7 @@ bool Ctxt::equalsTo(const Ctxt& other, bool comparePkeys) const
     return false;
 
   // compare ratFactor, ignoring small deviations
+  // VJS-FIXME: maybe skip this if not CKKS?
   if (ratFactor == 0.0 && other.ratFactor != 0.0)
     return false;
   NTL::xdouble ratio = other.ratFactor / ratFactor;
@@ -301,6 +303,7 @@ void Ctxt::bringToSet(const IndexSet& s)
 {
   auto cap = capacity();
   if (cap < 1) {
+    // VJS-FIXME: make this a warning? What are we testing here?
     std::cerr << "Ctxt::bringToSet called with capacity=" << cap
               << ", likely decryption error\n";
   }
@@ -309,6 +312,7 @@ void Ctxt::bringToSet(const IndexSet& s)
     modUpToSet(tmp);
     modDownToSet(tmp);
     if (cap >= 1)
+      // VJS-FIXME: make this a warning? What are we testing here?
       std::cerr << "Ctxt::bringToSet called with empty set and capacity=" << cap
                 << ", this is likely a bug\n";
   } else {
@@ -341,6 +345,12 @@ void Ctxt::modDownToSet(const IndexSet& s)
   NTL::xdouble addedNoiseBound = modSwitchAddedNoiseBound();
 
   // For approximate nums, make sure that scaling factor is large enough
+
+  // VJS-FIXME: I'm skeptical that this special processing is
+  // a good idea.  It increases the total noise in the ctxt.
+  // Generally speaking, all calls to to modDownToSet should
+  // anyway be making their own choices.
+
   if (isCKKS()) {
     // Sanity check: ensuring that we don't lose too much on precision.
     // We check that log(addedNoise) <= log(noiseBound/scaleFactor)-safety,
@@ -357,6 +367,7 @@ void Ctxt::modDownToSet(const IndexSet& s)
       noiseBound *= xf; // Increase noiseBound
       ratFactor *= xf;  // Increase the factor
       std::cerr << "** sanity-check triggered in Ctxt::modDownToSet()\n";
+      // VJS-FIXME: this should probably be a Warning.
     }
   }
 
@@ -526,6 +537,13 @@ void Ctxt::dropSmallAndSpecialPrimes()
 
     // For CKKS, try to ensure that the scaling factor is at least as large
     // as the mod-switch added noise times a factor of getPPowR()/ptxtMag
+
+    // VJS-FIXME: I'm skeptical that this special-case processing
+    // is really a goof idea.  Indeed, the general processing ensures
+    // adn < noise/8, and ptxMag is just an *upper bound* on the size
+    // of ptx, so it's not clear what this is possibly achieving.
+    // That said, the only *harm* in using more ctxtPrimes is performance.
+
     if (isCKKS()) {
       double log_bound =
           log_modswitch_noise + log(context.alMod.getPPowR()) - log(ptxtMag);
@@ -545,6 +563,11 @@ void Ctxt::dropSmallAndSpecialPrimes()
     // In either BGV or CKKS, try to ensure that the scaled noise
     // remains not much smaller than the mod-switch added noise.
     // This is done so as not to waste too much capacity.
+
+    // Actually, despite what the above comment says, the following code
+    // ensures that the scaled noise remains a bit *larger* than the mod-switch
+    // added noise.  However, it seems safer to keep the scaled noise a bit
+    // larger than the mod-switch added noise, so this should be fine.
 
     log_modswitch_noise += 3 * log(2.0); // 3 bits of elbow room
     if (log_noise - log_dropping + log_compensation < log_modswitch_noise) {
@@ -575,7 +598,7 @@ void Ctxt::reLinearize(long keyID)
 
 #if 0
   // HERE
-  std::cout << "*** reLinearlize: " << primeSet;
+  std::cerr << "*** reLinearlize: " << primeSet;
 #endif
 
   dropSmallAndSpecialPrimes();
@@ -598,7 +621,9 @@ void Ctxt::reLinearize(long keyID)
   tmp.intFactor = intFactor;   // same intFactor, too
   tmp.ptxtMag = ptxtMag;       // same CKKS plaintext size
   tmp.noiseBound = noiseBound * NTL::xexp(logProd); // The noise after mod-up
-  tmp.ratFactor = ratFactor * NTL::xexp(logProd);   // CKKS factor after mod-up
+
+  tmp.ratFactor = ratFactor * NTL::xexp(logProd); // CKKS factor after mod-up
+  // std::cerr << "=== " << ratFactor << tmp.ratFactor << "\n";
 
   for (CtxtPart& part : parts) {
     // For a part relative to 1 or base,  only scale and add
@@ -623,9 +648,10 @@ void Ctxt::reLinearize(long keyID)
     tmp.keySwitchPart(part, W); // switch this part & update noiseBound
   }
   *this = tmp;
+  // std::cerr << "====== " << ratFactor << "\n";
 }
 
-void Ctxt::cleanUp()
+Ctxt& Ctxt::cleanUp()
 {
   reLinearize();
   // reduce();
@@ -633,6 +659,7 @@ void Ctxt::cleanUp()
       !primeSet.disjointFrom(context.smallPrimes)) {
     dropSmallAndSpecialPrimes();
   }
+  return *this;
 }
 
 // Takes as arguments a key-switching matrix W = W[s'->s] and a
@@ -690,32 +717,58 @@ void Ctxt::addPart(const DoubleCRT& part,
 {
   HELIB_TIMER_START;
 
+  // VJS-FIXME: the new requirement is that primeSet <= part.getIndexSet()
+
   assertEq(&part.getContext(), &context, "Context mismatch");
 
   if (parts.size() == 0) { // inserting 1st part
     primeSet = part.getIndexSet();
+    // note that primeSet gets set to part.getIndexSet(),
+    // meaning that the value of primeSet for an "empty" ciphertext
+    // is irrelevant.
+
     parts.push_back(CtxtPart(part, handle));
     if (negative)
-      parts.back().Negate(); // not thread-safe??
-  } else {                   // adding to a ciphertext with existing parts
+      parts.back().Negate();
+  } else { // adding to a ciphertext with existing parts
+    // VJS-FIXME: we are adding this as a new requiremennt
+    if (!(primeSet <= part.getIndexSet())) {
+#if 0
+	 std::cerr << "******** primeSet=" << primeSet
+		   << "part.getIndexSet()=" << part.getIndexSet()
+		   << "\n";
+#endif
+      throw RuntimeError("Ctxt::addPart: ctxt has primes not in part");
+    }
     if (!(part.getIndexSet() <= primeSet)) {
       // add to the the prime-set of *this, if needed (this is expensive)
       if (matchPrimeSet) {
+// VJS-FIXME: matchPrimeSet disabled
+#if 0
         IndexSet setDiff = part.getIndexSet() / primeSet; // set minus
         for (size_t i = 0; i < parts.size(); i++) {
           Warning("addPrimes called in addPart");
           parts[i].addPrimes(setDiff);
         }
         primeSet.insert(setDiff);
-      } else // this should never happen
+#else
+        throw RuntimeError("Ctxt::addPart: matchPrimeSet not honored");
+#endif
+      }
+
+// VJS-FIXME: we just ignore extra primes in part
+#if 0
+      else // this should never happen
         throw LogicError(
             "Ctxt::addPart: part has too many primes and matchPrimeSet==false");
+#endif
     }
 
     DoubleCRT tmp(context, IndexSet::emptySet());
     const DoubleCRT* ptr = &part;
 
     // mod-UP the part if needed
+    // VJS-FIXME: this will never happen
     IndexSet s = primeSet / part.getIndexSet();
     if (!empty(s)) { // if need to mod-UP, do it on a temporary copy
       tmp = part;
@@ -725,13 +778,13 @@ void Ctxt::addPart(const DoubleCRT& part,
     long j = getPartIndexByHandle(handle);
     if (j >= 0) { // found a matching part, add them up
       if (negative)
-        parts[j] -= *ptr;
+        parts[j].Sub(*ptr, /*matchIndexSets=*/false);
       else
-        parts[j] += *ptr;
+        parts[j].Add(*ptr, /*matchIndexSets=*/false);
     } else { // no matching part found, just append this part
       parts.push_back(CtxtPart(*ptr, handle));
       if (negative)
-        parts.back().Negate(); // not thread-safe??
+        parts.back().Negate();
     }
   }
 }
@@ -753,17 +806,22 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   if (size < 0.0)
     size = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
 
+  const IndexSet& s = isEmpty() ? dcrt.getIndexSet() : primeSet;
+  // If ctxt is empty, addPart will make its prime set equal to that of dcrt
+
   // Scale the constant, then add it to the part that points to one
   long f = 1;
   if (ptxtSpace > 2) {
-    f = rem(context.productOfPrimes(primeSet), ptxtSpace);
+    f = rem(context.productOfPrimes(s), ptxtSpace);
     f = NTL::MulMod(intFactor, f, ptxtSpace);
     f = balRem(f, ptxtSpace);
   }
 
   noiseBound += size * std::abs(f);
 
-  IndexSet delta = dcrt.getIndexSet() / primeSet; // set minus
+#if 0
+
+  IndexSet delta = dcrt.getIndexSet() / s;        // set minus
   if (f == 1 && empty(delta)) {                   // just add it
     addPart(dcrt, SKHandle(0, 1, 0));
     return;
@@ -776,6 +834,23 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   if (f != 1)
     tmp *= f;
   addPart(tmp, SKHandle(0, 1, 0));
+
+#else
+
+  // This version insists that if ctxt is non-empty, then
+  // the prime set of dcrt contains prime set of ctxt (if ctxt not empty).
+  // If not, addPart will raise an exception.
+
+  if (f == 1) {
+    addPart(dcrt, SKHandle(0, 1, 0));
+  } else {
+    // work with a local copy
+    DoubleCRT tmp = dcrt;
+    tmp *= f;
+    addPart(tmp, SKHandle(0, 1, 0));
+  }
+
+#endif
 }
 
 void Ctxt::addConstant(const NTL::ZZX& poly, double size)
@@ -813,11 +888,14 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
                            NTL::xdouble size,
                            NTL::xdouble factor)
 {
+  // VJS-FIXME: seems complicated...need to understand this better.
   if (size <= 0)
     size = 1.0;
 
   if (factor <= 0)
     conv(factor, getContext().ea->getCx().encodeScalingFactor() / size);
+
+  // VJS-FIXME: I think we need to special case an empty ciphertext
 
   NTL::xdouble ratio =
       NTL::floor((ratFactor / factor) + 0.5); // round to integer
@@ -826,14 +904,35 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
 
   // Check if you need to scale up to get target accuracy of 2^{-r}
   if ((inaccuracy * getContext().alMod.getPPowR()) > 1.0) {
+    Warning("addSomePrimes called in Ctxt::addConstantCKKS(DoubleCRT)");
     addSomePrimes(*this);                      // This increases ratFactor
     ratio = floor((ratFactor / factor) + 0.5); // re-compute the ratio
   }
 
-  ptxtMag += size;   // perhaps too conservative? size(x+y)<=size(x)+size(y)
+  // VJS-FIXME: this strategy of adding some primes to offset the
+  // rounding error kind of makes it difficult for the caller
+  // to ensure that the prime set of scrt contains the prime set
+  // of ctxt.  This means we will expand the prime set of dcrt if
+  // necessary.
+
+  ptxtMag += size; // perhaps too conservative? size(x+y)<=size(x)+size(y)
+
   noiseBound += 0.5; // FIXME: what's the noise of a fresh encoding?
+  // VJS-FIXME: This can't possibly be right.
+  // Shoudn't this be set to encodeRoundingError?
+  // Even better, shouldn't we have an optional parameter?
+  // Also, in addition to the encode rounding error, we should take
+  // into accoung the rounding error introduced by rounding ratio
+  // to an integer.
+  // Also, the addConstantCKKS routine that takes a complex vector
+  // as input should take into account the ratFactor of the given
+  // ctxt (if non-empty!) so as to only get a single rounding error.
 
   NTL::ZZ intRatio = NTL::conv<NTL::ZZ>(ratio);
+
+  // VJS-FIXME: I'm getting rid of this prime dropping logic.
+  // Extra primes in dcrt will be ignored in addPart.
+#if 0
   IndexSet delta = dcrt.getIndexSet() / getPrimeSet(); // set minus
 
   if (NTL::IsOne(intRatio) && empty(delta)) { // just add it
@@ -853,6 +952,31 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
   if (!NTL::IsOne(intRatio))
     tmp *= intRatio;
   addPart(tmp, SKHandle(0, 1, 0));
+#else
+
+  IndexSet delta = primeSet / dcrt.getIndexSet();
+  // VJS-FIXME: we don't want to do this if ctxt was empty,
+  // but we have other problems to deal with as well in that case.
+
+  if (NTL::IsOne(intRatio) && empty(delta)) { // just add it
+    addPart(dcrt, SKHandle(0, 1, 0));
+    return;
+  }
+
+  // work with a local copy
+  DoubleCRT tmp = dcrt;
+
+  if (!empty(delta))
+    tmp.addPrimes(delta);
+  // VJS-FIXME: we have to do this here because addPart requires
+  // that the prime set of dcrt contains that of ctxt
+
+  if (!NTL::IsOne(intRatio))
+    tmp *= intRatio;
+
+  addPart(tmp, SKHandle(0, 1, 0));
+
+#endif
 }
 
 void Ctxt::addConstantCKKS(const NTL::ZZX& poly,
@@ -918,19 +1042,23 @@ void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
 {
   NTL::ZZX poly;
   double factor = getContext().ea->getCx().encode(poly, other);
-  double size = 0;
-  for (const auto& x : other)
-    if (std::norm(x) > size)
-      size = std::norm(x);
+  // VJS-FIXME: maybe this encdoing routine should also return
+  // the rounding error...we kind of need this value
+
+  double size = max_abs(other);
+
   if (size == 0.0)
-    size = 1.0;
+    return;
+
   addConstantCKKS(poly, NTL::xdouble{size}, NTL::xdouble{factor});
 }
 
 void Ctxt::addConstantCKKS(const NTL::ZZ& c)
 {
+  // VJS-FIXME: need to review
   NTL::xdouble xc = NTL::to_xdouble(c);
   NTL::xdouble scaled = floor(ratFactor * xc + 0.5); // scaled up and rounded
+  // VJS-FIXME: why round to integer?
 
   DoubleCRT dcrt(getContext(), getPrimeSet());
   dcrt = to_ZZ(scaled);
@@ -941,6 +1069,7 @@ void Ctxt::addConstantCKKS(const NTL::ZZ& c)
 // Add the rational constant num.first / num.second
 void Ctxt::addConstantCKKS(std::pair<long, long> num)
 {
+  // VJS-FIXME: seems complicated...need to understand this better.
 #if 1
   // Check if you need to scale up to get target accuracy of 2^{-r}
   NTL::xdouble xb = NTL::to_xdouble(num.second); // denominator
@@ -948,6 +1077,7 @@ void Ctxt::addConstantCKKS(std::pair<long, long> num)
   NTL::xdouble ratio = floor((ratFactor / xb) + 0.5); // round to integer
   double inaccuracy = std::abs(NTL::conv<double>(ratio * xb / ratFactor) - 1.0);
   if ((inaccuracy * getContext().alMod.getPPowR()) > 1.0) {
+    Warning("addSomePrimes called in Ctxt::addConstantCKKS(pair<long,long>");
     addSomePrimes(*this); // This increases ratFactor
   }
   // scaled up and round the numerator
@@ -1003,14 +1133,176 @@ void Ctxt::negate()
 }
 
 // scale up c1, c2 so they have the same factor
+#if 1
+
+static NTL::xdouble calc_err(NTL::xdouble f,
+                             NTL::xdouble m1,
+                             NTL::xdouble f1,
+                             NTL::xdouble e1,
+                             NTL::xdouble m2,
+                             NTL::xdouble f2,
+                             NTL::xdouble e2)
+{
+  return m1 * NTL::fabs(f1 / f - 1.0) + m2 * NTL::fabs(f2 / f - 1.0) +
+         (e1 + e2) / f;
+}
+
+// NEW VERSION
 void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
 {
+  Ctxt& big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
+  Ctxt& small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
+
+  NTL::xdouble x = big.ratFactor / small.ratFactor;
+  long denomBound{c1.getContext().alMod.getPPowR() * 2};
+
+  double epsilon = 0.125 / denomBound;         // "smudge factor"
+  NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon); // floor function
+  // NOTE: epsilon is meant to counter rounding errors
+
+  NTL::xdouble xi = x - NTL::conv<NTL::xdouble>(a);
+
+  NTL::ZZ prevDenom{0};
+  NTL::ZZ denom{1};
+
+  NTL::ZZ numer = NTL::conv<NTL::ZZ>(NTL::conv<NTL::xdouble>(denom) * x + 0.5);
+
+  // in the following big is index 1 and small is index 2
+  NTL::xdouble m1 = big.ptxtMag;
+  NTL::xdouble of1 = big.ratFactor;
+  NTL::xdouble oe1 = big.noiseBound;
+
+  NTL::xdouble m2 = small.ptxtMag;
+  NTL::xdouble of2 = small.ratFactor;
+  NTL::xdouble oe2 = small.noiseBound;
+
+  NTL::xdouble target_error = oe1 / of1 + oe2 / of2;
+  // this is the error (scaled noise) without discretization errors
+
+  NTL::xdouble f, fe1, fe2;
+  // f represents the common rat factor we will eventually use for both
+  // fe1 represents the eventual noiseBound for big
+  // fe2 represents the eventual noiseBound for small
+
+  // Continued fractions: a_{i+1}=floor(1/xi), x_{i+1} = 1/xi - a_{i+1}
+  for (;;) {
+    // see if we can stop now
+
+    NTL::xdouble xnumer = NTL::conv<NTL::xdouble>(numer);
+    NTL::xdouble xdenom = NTL::conv<NTL::xdouble>(denom);
+
+    NTL::xdouble f1 = of1 * xdenom;
+    NTL::xdouble e1 = oe1 * xdenom;
+
+    NTL::xdouble f2 = of2 * xnumer;
+    NTL::xdouble e2 = oe2 * xnumer;
+
+    // We want to minimize the error (scaled noise) by choosing the optimal
+    // value for f, which represents the common rat factor we will
+    // eventually use.  Some calculus shows that the optimal value
+    // is either f=f1 or f=f2 (the relevant derivative never vanishes),
+    // so we just try both.
+
+    NTL::xdouble err1 = calc_err(f1, m1, f1, e1, m2, f2, e2);
+    // this is the error (scaled noise) if we use rat factor f = f1
+    // for both ciphertexts
+
+    NTL::xdouble err2 = calc_err(f2, m1, f1, e1, m2, f2, e2);
+    // this is the error (scaled noise) if we use rat factor f = f2
+    // for both ciphertexts
+
+    NTL::xdouble err;
+
+    if (err1 < err2) {
+      // use rat factor f = f1
+      f = f1;
+      fe1 = e1;
+      fe2 = e2 + m2 * NTL::fabs(f2 - f1);
+      err = err1;
+    } else {
+      // use rat factor f = f1
+      f = f2;
+      fe1 = e1 + m1 * NTL::fabs(f2 - f1);
+      fe2 = e2;
+      err = err2;
+    }
+
+    const double thresh = std::sqrt(2.0);
+    // this means we could lose half a bit of precision
+    // by stopping early
+
+    if (err < thresh * target_error) {
+      // std::cerr << "=== err/target_error=" << (err/target_error) << "\n";
+      break;
+    }
+    // close enough...let's stop now to reduce capacity loss at the
+    // expense of a little precision
+
+    if (xi <= 0)
+      break;
+
+    xi = 1.0 / xi;
+    NTL::ZZ ai = NTL::conv<NTL::ZZ>(xi + epsilon); // floor function
+    // NOTE: epsilon is meant to counter rounding errors
+    xi = xi - NTL::conv<NTL::xdouble>(ai);
+
+    NTL::ZZ tmpDenom = denom * ai + prevDenom;
+    if (tmpDenom > denomBound) // bound exceeded: return previous denominator
+      break;
+    // update denominator
+    prevDenom = denom;
+    denom = tmpDenom;
+    numer = NTL::conv<NTL::ZZ>(NTL::conv<NTL::xdouble>(denom) * x + 0.5);
+  }
+
+#if 0
+
+  std::cerr << "***** equalize: " << x << " "
+            << numer << " "
+            << denom << " "
+            << ((x - NTL::conv<NTL::xdouble>(numer)/
+                        NTL::conv<NTL::xdouble>(denom))/x) << "\n";
+  std::cerr << "   noise before: " << (oe1+oe2) << "=" << oe1 << "+" << oe2 << "\n";
+  std::cerr << "   noise after:  " << (fe1+fe2) << "\n";
+
+#endif
+
+  if (denom != 1) {
+    for (auto& part : big.parts)
+      part *= denom;
+  }
+  big.ratFactor = f;
+  big.noiseBound = fe1;
+
+  if (numer != 1) {
+    for (auto& part : small.parts)
+      part *= numer;
+  }
+  small.ratFactor = f;
+  small.noiseBound = fe2;
+}
+#else
+void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
+{
+  // VJS-FIXME: need to rethink this
   long targetPrecision = c1.getContext().alMod.getPPowR() * 2;
   Ctxt& big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
   Ctxt& small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
   NTL::xdouble ratio = big.ratFactor / small.ratFactor;
   std::pair<NTL::ZZ, NTL::ZZ> factors =
       rationalApprox(ratio, NTL::xdouble(targetPrecision));
+
+#if 0
+
+  std::cerr << "***** equalize: " << ratio << " "
+            << factors.first << " "
+            << factors.second << " "
+            << ((ratio - NTL::conv<NTL::xdouble>(factors.first)/
+                        NTL::conv<NTL::xdouble>(factors.second))/ratio) << "\n";
+  std::cerr << "   noise before: " << (small.noiseBound + big.noiseBound) << "=" << small.noiseBound << "+" << big.noiseBound << "\n";
+  std::cerr << "   noise after:  " << (small.noiseBound*NTL::to_xdouble(factors.first) + big.noiseBound*NTL::to_xdouble(factors.second)) << "\n";
+
+#endif
 
   if (factors.first != 1) {
     for (auto& part : small.parts)
@@ -1025,6 +1317,8 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
     big.noiseBound *= NTL::to_xdouble(factors.second);
   }
 }
+
+#endif
 
 static NTL::xdouble NoiseNorm(NTL::xdouble noise1,
                               NTL::xdouble noise2,
@@ -1043,6 +1337,9 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   // Sanity check: same context and public key
   assertEq(&context, &other.context, "Context mismatch");
   assertEq(&pubKey, &other.pubKey, "Public key mismatch");
+
+  // std::cerr << "*** " << ratFactor << " " << other.ratFactor << "\n";
+  // std::cerr << "*** " << primeSet << " " << other.primeSet << "\n";
 
   // Special case: if *this is empty then just copy other
   if (this->isEmpty()) {
@@ -1083,9 +1380,15 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     tmp.modUpToSet(s);
   }
 
+  // std::cerr << "*** " << ratFactor << " " << other_pt->ratFactor << "\n";
+
   // If approximate numbers, make sure the scaling factors are the same
-  if (isCKKS() && !closeToOne(ratFactor / other_pt->ratFactor,
-                              getContext().alMod.getPPowR() * 2)) {
+  // VJS-FIXME: I've re-implemented equalizeRationalFactors,
+  // and I also call it unconditionally, so as to ensure the
+  // noiseBound is actually computed accurately.
+  // if (isCKKS() && !closeToOne(ratFactor / other_pt->ratFactor,
+  // getContext().alMod.getPPowR() * 2)) {
+  if (isCKKS()) {
     if (other_pt != &tmp) {
       tmp = other;
       other_pt = &tmp;
@@ -1219,10 +1522,18 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 
   // Compute the noise estimate of the product
   if (isCKKS()) { // we have totalNoiseBound = factor*ptxt + noiseBound
+    // VJS-FIXME: this should be computed directly, WITHOUT subtraction
+    // In fact, it just seems plain wrong
+#if 0
     NTL::xdouble totalNoise1 = c1.ptxtMag * c1.ratFactor + c1.noiseBound;
     NTL::xdouble totalNoise2 = c2.ptxtMag * c2.ratFactor + c2.noiseBound;
     noiseBound = c1.noiseBound * totalNoise2 + c2.noiseBound * totalNoise1 -
                  c1.noiseBound * c2.noiseBound;
+#else
+    noiseBound = c1.noiseBound * c2.ptxtMag * c2.ratFactor +
+                 c2.noiseBound * c1.ptxtMag * c1.ratFactor +
+                 c1.noiseBound * c2.noiseBound;
+#endif
     ratFactor = c1.ratFactor * c2.ratFactor;
     ptxtMag = c1.ptxtMag * c2.ptxtMag;
   } else // BGV
@@ -1240,8 +1551,9 @@ void computeIntervalForMul(double& lo,
   double cap1 = ctxt1.capacity();
   double cap2 = ctxt2.capacity();
 
-  double adn = log(ctxt1.modSwitchAddedNoiseBound());
-  // should be the same for both ciphertexts
+  double adn1 = log(ctxt1.modSwitchAddedNoiseBound());
+  double adn2 = log(ctxt2.modSwitchAddedNoiseBound());
+  // The added noise (adn) should be the same for both ciphertexts
 
   // Compute the interval into which we want to mod-switch.
   // For a given ctxt with modulus q and noise bound n, we want to
@@ -1261,10 +1573,10 @@ void computeIntervalForMul(double& lo,
   // bits.
 
   if (ctxt1.isCKKS()) {
-    lo = std::max(cap1, cap2) + adn + safety;
+    lo = std::max(cap1 + adn1, cap2 + adn2) + safety;
     hi = lo + slack;
   } else { // BGV
-    hi = std::min(cap1, cap2) + adn - safety;
+    hi = std::min(cap1 + adn1, cap2 + adn2) - safety;
     lo = hi - slack;
   }
 }
@@ -1275,6 +1587,9 @@ void computeIntervalForSqr(double& lo, double& hi, const Ctxt& ctxt)
 }
 
 double Ctxt::naturalSize() const
+// VJS-FIXME: what is this function, really?
+// I'm not sure it makes sense...and it does not seem like
+// it is really used anywhere
 {
   double lo, hi;
   computeIntervalForSqr(lo, hi, *this);
@@ -1399,6 +1714,7 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
     return;
   }
 
+  // VJS-FIXME: should these be capacity or "net capacity" in CKKS?
   long cap = capacity();
   long cap1 = other1.capacity();
   long cap2 = other2.capacity();
@@ -1545,6 +1861,7 @@ void Ctxt::multByConstant(const NTL::ZZX& poly, double size)
   if (this->isEmpty())
     return;
   if (size < 0 && !isCKKS()) {
+    // VJS-FIXME: should this be done also for CKKS?
     size = NTL::conv<double>(embeddingLargestCoeff(poly, getContext().zMStar));
   }
   DoubleCRT dcrt(poly, context, primeSet);
@@ -1568,12 +1885,15 @@ void Ctxt::multByConstantCKKS(const std::vector<std::complex<double>>& other)
   // NOTE: some replicated logic here and in addConstantCKKS...
   NTL::ZZX poly;
   double factor = getContext().ea->getCx().encode(poly, other);
-  double size = 0;
-  for (const auto& x : other)
-    if (std::norm(x) > size)
-      size = std::norm(x);
+  // VJS-FIXME: why does encode with ZZX not require a size arg?
+
+  // VJS-FIXME: This code is reprated...make a function
+  double size = max_abs(other);
+
+  // VJS-FIXME: if size==0 we should just do thus->clear()
   if (size == 0.0)
     size = 1.0;
+
   multByConstantCKKS(poly, NTL::xdouble{size}, NTL::xdouble{factor});
 }
 
@@ -1582,6 +1902,8 @@ void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
                               NTL::xdouble factor,
                               double roundingErr)
 {
+  // VJS-FIXME: looks reasonable, but still needs review
+
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())
     return;
@@ -1595,10 +1917,12 @@ void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
   if (roundingErr < 0)
     roundingErr = getContext().ea->getCx().encodeRoundingError();
 
-  ptxtMag *= size;
-  ratFactor *= factor;
+  // This statement must come first!
   noiseBound = noiseBound * factor * size + roundingErr * ratFactor * ptxtMag +
                noiseBound * roundingErr;
+
+  ptxtMag *= size;
+  ratFactor *= factor;
 
   // multiply all the parts by this constant
   for (auto& part : parts)
@@ -2007,6 +2331,7 @@ void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2)
   }
   result.reLinearize();
 }
+
 void innerProduct(Ctxt& result,
                   const std::vector<Ctxt>& v1,
                   const std::vector<Ctxt>& v2)

@@ -21,6 +21,7 @@
 #include <helib/sample.h>
 #include <helib/debugging.h>
 #include <helib/fhe_stats.h>
+#include <helib/log.h>
 
 #ifdef HELIB_DEBUG
 

@@ -10,8 +10,9 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 #include <helib/NumbTh.h>
-
 #include <helib/timing.h>
+#include <helib/range.h>
+#include <helib/log.h>
 
 #include <fstream>
 #include <cctype>
@@ -155,6 +156,7 @@ void factorize(std::vector<long>& factors, long N)
 {
   factorT<long>(factors, N);
 }
+
 void factorize(std::vector<NTL::ZZ>& factors, const NTL::ZZ& N)
 {
   factorT<NTL::ZZ>(factors, N);
@@ -572,7 +574,7 @@ NTL::ZZX Cyclotomic(long n)
     // less than 2^27 in absolute value.
     // So we compute the coefficients using 32-bit arithmetic.
 
-    // NOTE: _ntl_uint32 is either int or long.
+    // NOTE: _ntl_uint32 is either unsigned int or unsigned long.
 
     NTL::Vec<_ntl_uint32> A;
     A.SetLength(D + 1);
@@ -1050,10 +1052,144 @@ void seekPastChar(std::istream& str, int cc)
     c = str.get();
   if (c != cc) {
     std::stringstream ss;
-    ss << "Searching for cc='" << (char)cc << "' (ascii " << cc << ")"
-       << ", found c='" << (char)c << "' (ascii " << c << ")";
-    throw RuntimeError(ss.str());
+    ss << "Seeking past character='" << static_cast<char>(cc) << "' (ascii "
+       << cc << ")"
+       << ", found an unknown character='" << static_cast<char>(c)
+       << "' (ascii " << c << ")";
+    throw IOError(ss.str());
   }
+}
+
+// Advance the input stream `str` beyond white spaces and a single
+// `separator` in the region-of-interest delimited by `begin_char` and
+// `end_char`.
+bool iterateInterestRegion(std::istream& str,
+                           int begin_char,
+                           int separator,
+                           int end_char)
+{
+  int c = str.get();
+  while (isspace(c)) {
+    c = str.get();
+  }
+  if (c == begin_char || c == separator) {
+    // Reached beginning of region or reached a separator. Return true
+    return true;
+  } else if (c == end_char) {
+    // Reached end_char. Return false
+    return false;
+  } else {
+    // Reached something different. Throw
+    std::stringstream ss;
+    ss << "Iterating on region found a non-delimiting "
+       << "character='" << static_cast<char>(c) << "' (ascii " << c << "). "
+       << "Delimiters: "
+       << "begin_char='" << static_cast<char>(begin_char) << "' (ascii "
+       << begin_char << "), "
+       << "separator='" << static_cast<char>(separator) << "' (ascii "
+       << separator << "), or "
+       << "end_char='" << static_cast<char>(end_char) << "' (ascii " << end_char
+       << ")";
+    throw IOError(ss.str());
+  }
+}
+
+// Advance the input stream `str` beyond white spaces and then split the
+// region-of-interest delimited by `begin_char` and `end_char` at every
+// top-level occurrence of `separator`.
+std::vector<std::stringstream> extractTokenizeRegion(std::istream& istr,
+                                                     char begin_char,
+                                                     char end_char,
+                                                     char separator,
+                                                     bool skip_space)
+{
+  // Check if the arguments are valid.
+  assertNeq<InvalidArgument>(begin_char,
+                             ' ',
+                             "Invalid begin_char. "
+                             "Should be different from ' ' (space).");
+  assertNeq<InvalidArgument>(begin_char,
+                             end_char,
+                             "Invalid begin_char. "
+                             "Should be different from end_char.");
+  assertNeq<InvalidArgument>(begin_char,
+                             separator,
+                             "Invalid begin_char. "
+                             "Should be different from separator.");
+  assertNeq<InvalidArgument>(end_char,
+                             ' ',
+                             "Invalid end_char. "
+                             "Should be different from ' ' (space).");
+  assertNeq<InvalidArgument>(end_char,
+                             separator,
+                             "Invalid end_char. "
+                             "Should be different from separator.");
+  assertNeq<InvalidArgument>(separator,
+                             ' ',
+                             "Invalid separator. "
+                             "Should be different from ' ' (space).");
+  int ch = istr.get();
+  // Skip leading whitespaces
+  while (isspace(ch)) {
+    ch = istr.get();
+  }
+  // Fail if the input is not starting with a '['
+  if (ch != begin_char) {
+    std::stringstream ss;
+    ss << "Extract and tokenization of stream failed with: Region beginning "
+          "with character='"
+       << static_cast<char>(ch) << "' (ascii " << ch << "). "
+       << "Delimiters: "
+       << "begin_char='" << static_cast<char>(begin_char) << "' (ascii "
+       << begin_char << "), "
+       << "separator='" << static_cast<char>(separator) << "' (ascii "
+       << separator << "), or "
+       << "end_char='" << static_cast<char>(end_char) << "' (ascii " << end_char
+       << ")";
+    throw IOError(ss.str());
+  }
+  std::vector<std::stringstream> res;
+  std::stringstream current_stream;
+  int depth = 0;
+
+  while (istr.peek() != EOF) {
+    ch = istr.get();
+    if (ch == ' ' && skip_space) {
+      // Skip whitespaces
+      continue;
+    } else if (ch == end_char && depth == 0) {
+      // We found the section closure
+      if (!current_stream.str().empty()) {
+        // If something is in the stream add it to the returns
+        res.emplace_back(std::move(current_stream));
+      }
+      return res;
+    } else if (ch == end_char && depth > 0) {
+      // We found the end of an inner section
+      depth--;
+      current_stream << static_cast<char>(ch);
+    } else if (ch == begin_char) {
+      // We found the begin of an inner section
+      depth++;
+      current_stream << static_cast<char>(ch);
+    } else if (ch == separator && depth == 0) {
+      res.emplace_back(std::move(current_stream));
+      current_stream = std::stringstream();
+    } else {
+      current_stream << static_cast<char>(ch);
+    }
+  }
+  // Throw as the section was not closed
+  std::stringstream ss;
+  ss << "Extract and tokenization of stream failed with: Region not closed. "
+     << "Delimiters: "
+     << "begin_char='" << static_cast<char>(begin_char) << "' (ascii "
+     << begin_char << "), "
+     << "separator='" << static_cast<char>(separator) << "' (ascii "
+     << separator << "), or "
+     << "end_char='" << static_cast<char>(end_char) << "' (ascii " << end_char
+     << ")";
+  throw IOError(ss.str());
 }
 
 // stuff added relating to linearized polynomials and support routines
@@ -1621,6 +1757,7 @@ std::pair<NTL::ZZ, NTL::ZZ> rationalApprox(NTL::xdouble x,
 
   NTL::xdouble epsilon = 0.125 / denomBound; // "smudge factor"
   NTL::xdouble a = floor(x + epsilon);
+
   NTL::xdouble xi = x - a;
   NTL::xdouble prevDenom(0.0);
   NTL::xdouble xdenom(1.0);
@@ -1639,7 +1776,8 @@ std::pair<NTL::ZZ, NTL::ZZ> rationalApprox(NTL::xdouble x,
     prevDenom = xdenom;
     xdenom = tmpDenom;
   }
-  NTL::ZZ numer = NTL::conv<NTL::ZZ>(floor(xdenom * x)) * sign;
+
+  NTL::ZZ numer = NTL::conv<NTL::ZZ>(xdenom * x + 0.5) * sign;
   NTL::ZZ denom = NTL::conv<NTL::ZZ>(xdenom);
 
   return std::make_pair(numer, denom);

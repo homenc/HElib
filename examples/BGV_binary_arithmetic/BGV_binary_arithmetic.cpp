@@ -9,6 +9,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License. See accompanying LICENSE file.
  */
+
+// This is a sample program for education purposes only.
+// It attempts to demonstrate the use of the API for the
+// binary arithmetic operations that can be performed.
+
 #include <iostream>
 
 #include <helib/helib.h>
@@ -44,15 +49,32 @@ int main(int argc, char* argv[])
   // Orders of the previous generators.
   std::vector<long> ords = {6, 4, 6};
 
+  std::cout << "\n*********************************************************";
+  std::cout << "\n*            Basic Binary Arithmetic Example            *";
+  std::cout << "\n*            ===============================            *";
+  std::cout << "\n*                                                       *";
+  std::cout << "\n* This is a sample program for education purposes only. *";
+  std::cout << "\n* It attempts to demonstrate the use of the API for the *";
+  std::cout << "\n* binary arithmetic operations that can be performed.   *";
+  std::cout << "\n*                                                       *";
+  std::cout << "\n*********************************************************";
+  std::cout << std::endl;
+
   std::cout << "Initialising context object..." << std::endl;
   // Initialize the context.
+  // This object will hold information about the algebra created from the
+  // previously set parameters.
   helib::Context context(m, p, r, gens, ords);
 
   // Modify the context, adding primes to the modulus chain.
+  // This defines the ciphertext space.
   std::cout << "Building modulus chain..." << std::endl;
   buildModChain(context, bits, c);
 
   // Make bootstrappable.
+  // Modify the context, providing bootstrapping capabilities.
+  // Boostrapping has the affect of 'refreshing' a ciphertext back to a higher
+  // level so more operations can be performed.
   context.makeBootstrappable(
       helib::convert<NTL::Vec<long>, std::vector<long>>(mvec));
 
@@ -94,9 +116,17 @@ int main(int argc, char* argv[])
   // the result.
   // Next, calculate a + b + c with HElib's binary arithmetic functions, then
   // decrypt the result.
-  // Finally, calculate popcnt(a) with HElib's binary arithmetic functions, then
-  // decrypt the result.  Note that popcnt, also known as hamming weight or bit
-  // summation, returns the count of non-zero bits.
+  // Finally, calculate popcnt(a) with HElib's binary arithmetic functions,
+  // then decrypt the result.  Note that popcnt, also known as hamming weight
+  // or bit summation, returns the count of non-zero bits.
+
+  // Each bit of the binary number is encoded into a single ciphertext. Thus
+  // for a 16 bit binary number, we will represent this as an array of 16
+  // unique ciphertexts.
+  // i.e. b0 = [0] [0] [0] ... [0] [0] [0]        ciphertext for bit 0
+  //      b1 = [1] [1] [1] ... [1] [1] [1]        ciphertext for bit 1
+  //      b2 = [1] [1] [1] ... [1] [1] [1]        ciphertext for bit 2
+  // These 3 ciphertexts represent the 3-bit binary number 110b = 6
 
   // Note: several numbers can be encoded across the slots of each ciphertext
   // which would result in several parallel slot-wise operations.
@@ -153,8 +183,8 @@ int main(int argc, char* argv[])
       product_wrapper,
       helib::CtPtrs_vectorCt(encrypted_a),
       helib::CtPtrs_vectorCt(encrypted_b),
-      /*rhsTwosComplement=*/false, // This means the rhs is unsigned rather than
-                                   // 2's complement.
+      /*rhsTwosComplement=*/false, // This means the rhs is unsigned rather
+                                   // than 2's complement.
       outSize, // Outsize is the limit on the number of bits in the output.
       &unpackSlotEncoding); // Information needed for bootstrapping.
 

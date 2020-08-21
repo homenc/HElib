@@ -1311,6 +1311,7 @@ static void fifteen4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)
   e2.multiplyBy(e3);
   f2 += e2; // f2 = e4^(e2*e3)  (f2 alias e4)
 }
+
 // Same as above, but some of the pointers may be null.
 // Returns number of output bits that are not identically zero.
 long fifteenOrLess4Four(const CtPtrs& out, const CtPtrs& in, long sizeLimit)

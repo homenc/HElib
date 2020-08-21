@@ -10,10 +10,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
 
 project(helib
-        VERSION 1.0.0
+        VERSION 1.1.0
         LANGUAGES CXX)
 
 # Location of the header files
@@ -91,6 +91,7 @@ set(HELIB_SRCS
     "intraSlot.cpp"
     "keys.cpp"
     "keySwitching.cpp"
+    "log.cpp"
     "matching.cpp"
     "matmul.cpp"
     "norms.cpp"
@@ -135,16 +136,19 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/FHE.h"
     "${HELIB_HEADER_DIR}/keys.h"
     "${HELIB_HEADER_DIR}/keySwitching.h"
+    "${HELIB_HEADER_DIR}/log.h"
     "${HELIB_HEADER_DIR}/hypercube.h"
     "${HELIB_HEADER_DIR}/IndexMap.h"
     "${HELIB_HEADER_DIR}/IndexSet.h"
     "${HELIB_HEADER_DIR}/intraSlot.h"
     "${HELIB_HEADER_DIR}/matching.h"
     "${HELIB_HEADER_DIR}/matmul.h"
+    "${HELIB_HEADER_DIR}/Matrix.h"
     "${HELIB_HEADER_DIR}/multicore.h"
     "${HELIB_HEADER_DIR}/norms.h"
     "${HELIB_HEADER_DIR}/NumbTh.h"
     "${HELIB_HEADER_DIR}/PAlgebra.h"
+    "${HELIB_HEADER_DIR}/partialMatch.h"
     "${HELIB_HEADER_DIR}/permutations.h"
     "${HELIB_HEADER_DIR}/polyEval.h"
     "${HELIB_HEADER_DIR}/PolyMod.h"
@@ -159,13 +163,15 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/recryption.h"
     "${HELIB_HEADER_DIR}/replicate.h"
     "${HELIB_HEADER_DIR}/sample.h"
+    "${HELIB_HEADER_DIR}/set.h"
     "${HELIB_HEADER_DIR}/tableLookup.h"
     "${HELIB_HEADER_DIR}/timing.h"
     "${HELIB_HEADER_DIR}/zzX.h"
     "${HELIB_HEADER_DIR}/assertions.h"
     "${HELIB_HEADER_DIR}/exceptions.h"
     "${HELIB_HEADER_DIR}/PGFFT.h"
-    "${HELIB_HEADER_DIR}/fhe_stats.h")
+    "${HELIB_HEADER_DIR}/fhe_stats.h"
+    "${HELIB_HEADER_DIR}/zeroValue.h")
 
 set(LEGACY_TEST_SRCS
     "Test_approxNums.cpp"

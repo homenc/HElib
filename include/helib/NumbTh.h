@@ -24,11 +24,9 @@
 #include <cmath>
 #include <iostream>
 #include <fstream>
-#include <istream>
 #include <sstream>
 #include <ctime>
 #include <memory>
-#include <unordered_map>
 
 #include <NTL/version.h>
 #include <NTL/ZZ.h>
@@ -55,7 +53,6 @@
 #error "This version of HElib requires NTL version 11.0.0 or above"
 #endif
 
-#include <helib/range.h>
 #include <helib/assertions.h>
 #include <helib/apiAttributes.h>
 
@@ -78,6 +75,7 @@ extern bool dryRun;
 //! used in conjunction with dryRun=true
 extern std::set<long>* automorphVals;
 extern std::set<long>* automorphVals2;
+
 } // namespace FHEglobals
 
 inline bool setDryRun(bool toWhat = true)
@@ -189,6 +187,7 @@ inline void ppInvert(NTL::mat_GF2& X,
 {
   NTL::inv(X, A);
 }
+
 inline void ppInvert(NTL::mat_GF2E& X,
                      const NTL::mat_GF2E& A,
                      UNUSED long p,
@@ -303,18 +302,22 @@ void PolyRed(NTL::ZZX& out,
              const NTL::ZZX& in,
              const NTL::ZZ& q,
              bool abs = false);
+
 inline void PolyRed(NTL::ZZX& F, long q, bool abs = false)
 {
   PolyRed(F, F, q, abs);
 }
+
 inline void PolyRed(NTL::ZZX& F, const NTL::ZZ& q, bool abs = false)
 {
   PolyRed(F, F, q, abs);
 }
+
 void vecRed(NTL::Vec<NTL::ZZ>& out,
             const NTL::Vec<NTL::ZZ>& in,
             long q,
             bool abs);
+
 void vecRed(NTL::Vec<NTL::ZZ>& out,
             const NTL::Vec<NTL::ZZ>& in,
             const NTL::ZZ& q,
@@ -608,6 +611,53 @@ private:
 //! the char cc
 void seekPastChar(std::istream& str, int cc);
 
+/**
+ * @brief Advance the input stream `str` beyond white spaces and a single
+ * `separator` in the region-of-interest delimited by `begin_char` and
+ * `end_char`.
+ * @param str The stream to be advanced.
+ * @param begin_char The character determining the beginning of the
+ * region-of-interest (to advance beyond of).
+ * @param separator The separator character to advance beyond of.
+ * @param end_char The character determining the end of the region-of-interest
+ * (to advance beyond of).
+ * @return `true` if the region-of-interest is not completed (i.e.: `end_char`
+ * is not reached). `false` otherwise.
+ * @note Throws `helib::RuntimeError` if after spaces there is a character
+ * different from `begin_char`, `beyond`, or `end_char`.
+ */
+bool iterateInterestRegion(std::istream& str,
+                           int begin_char,
+                           int separator,
+                           int end_char);
+
+/**
+ * @brief Advance the input stream `istr` beyond white spaces.  Then split the
+ * region delimited by `begin_char` and `end_char` at each occurrence of
+ * `separator` that is not contained in an inner `begin_char` - `end_char`
+ * section.  The function returns a `std::vector<std::stringstream>` with the
+ * stream of every section of the input region.
+ * @param istr The stream to be advanced.
+ * @param begin_char The character determining the beginning of the
+ * region-of-interest.
+ * @param end_char The character determining the end of the
+ * region-of-interest
+ * @param separator The separator character to split at.
+ * @param skip_space Boolean value determining whether to skip spaces when
+ * extracting the sub-streams (default = `true`).
+ * @return A `std::vector<std::stringstream>` with the stream of every section
+ * of the input region.
+ * @throws IOError If the stream is badly formatted (i.e. it does not start with
+ * `begin_char` or it does not end with `end_char`).
+ * @note Requires `begin_char`, `end_char` and `separator` to be distinct and
+ * different from ` ` (space).
+ */
+std::vector<std::stringstream> extractTokenizeRegion(std::istream& istr,
+                                                     char begin_char,
+                                                     char end_char,
+                                                     char separator,
+                                                     bool skip_space = true);
+
 //! @brief Reverse a vector in place
 template <typename T>
 void reverse(NTL::Vec<T>& v, long lo, long hi)
@@ -645,8 +695,8 @@ void rotate(NTL::Vec<T>& v, long k)
   reverse(v, k, n - 1);
 }
 
-// An experimental facility...it is annoying that vector::size() is an
-// unsigned quantity...this leads to all kinds of annoying warning messages...
+// An experimental facility as it is annoying that vector::size() is an
+// unsigned quantity. This leads to all kinds of annoying warning messages.
 //! @brief Size of STL vector as a long (rather than unsigned long)
 template <typename T>
 inline long lsize(const std::vector<T>& v)
@@ -662,6 +712,7 @@ void killVec(std::vector<T>& vec)
 {
   std::vector<T>().swap(vec);
 }
+
 template <typename T>
 void killVec(NTL::Vec<T>& vec)
 {
@@ -675,6 +726,7 @@ void setLengthZero(std::vector<T>& vec)
   if (vec.size() > 0)
     vec.resize(0, vec[0]);
 }
+
 template <typename T>
 void setLengthZero(NTL::Vec<T>& vec)
 {
@@ -687,9 +739,6 @@ inline long lsize(const NTL::Vec<T>& v)
 {
   return v.length();
 }
-
-// VJS: I changed the resize functions so that the
-// optional arg is handled as in C++11
 
 template <typename T>
 void resize(NTL::Vec<T>& v, long sz, const T& val)
@@ -853,6 +902,31 @@ std::unique_ptr<T> build_unique(Args&&... args)
 }
 #endif
 
+//! Simple routine for computing the max-abs of a vector
+//! of complex numbers and real numbers
+
+inline double max_abs(const std::vector<std::complex<double>>& vec)
+{
+  double res = 0;
+  for (auto x : vec) {
+    double t = std::abs(x);
+    if (res < t)
+      res = t;
+  }
+  return res;
+}
+
+inline double max_abs(const std::vector<double>& vec)
+{
+  double res = 0;
+  for (auto x : vec) {
+    double t = std::abs(x);
+    if (res < t)
+      res = t;
+  }
+  return res;
+}
+
 //! This should go in NTL some day...
 //! Just call as make_lazy(obj, ...) to initialize a lazy object
 //! via a call to a constructor T(...)
@@ -880,16 +954,6 @@ void make_lazy_with_fun(const NTL::Lazy<T, P>& obj, F f, Args&&... args)
   ptr.make();
   f(*ptr, std::forward<Args>(args)...);
   builder.move(ptr);
-}
-
-inline void Warning(const char* msg)
-{
-  std::cerr << "WARNING: " << msg << "\n";
-}
-
-inline void Warning(const std::string& msg)
-{
-  std::cerr << "WARNING: " << msg << "\n";
 }
 
 // An array of inverse erfc values.

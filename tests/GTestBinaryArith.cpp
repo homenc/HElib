@@ -280,6 +280,11 @@ TEST_P(GTestBinaryArith, fifteenForFour)
   // bit, however packing more into the slots is possible.
   // LSB is at the start (left) of the vector.
 
+  // Note: fifteenOrLess4Four is not entirely thread safe so this test will only
+  // be ran single-threaded. Save current number of threads and set to 1.
+  auto numThreads = NTL::AvailableThreads();
+  NTL::SetNumThreads(1);
+
   // vector of ciphertexts corresponding to encrypted input bit vectors.
   std::vector<helib::Ctxt> inBuf(15, helib::Ctxt(secKey));
   std::vector<helib::Ctxt*> inPtrs(15, nullptr);
@@ -310,8 +315,10 @@ TEST_P(GTestBinaryArith, fifteenForFour)
   // Add the encrypted bits.
   long numOutputs = fifteenOrLess4Four(helib::CtPtrs_vectorCt(outBuf),
                                        helib::CtPtrs_vectorPt(inPtrs));
-  if (helib_test::verbose)
+  if (helib_test::verbose) {
+    std::cout << "numOutputs: " << numOutputs << std::endl;
     helib::CheckCtxt(outBuf[helib::lsize(outBuf) - 1], "after 15for4");
+  }
 
   // Check the result.
   long sum2 = 0;
@@ -325,6 +332,9 @@ TEST_P(GTestBinaryArith, fifteenForFour)
     std::cout << "15to4 succeeded, sum" << inputBits << "=" << sum2
               << std::endl;
   }
+
+  // Restore the number of threads to original value.
+  NTL::SetNumThreads(numThreads);
 }
 
 TEST_P(GTestBinaryArith, product)

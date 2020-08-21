@@ -23,6 +23,7 @@
 #include <helib/keySwitching.h>
 #include <helib/keys.h>
 #include <helib/apiAttributes.h>
+#include <helib/log.h>
 
 namespace helib {
 

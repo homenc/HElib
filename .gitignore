@@ -20,15 +20,20 @@ src/makedep.d
 src/*_x.dSYM
 src/*.sh
 src/*.bin
+src/*.txt
 
 **.bak
 **.swp
 **.DS_Store
+
+# Exception for CMakeLists file
+!**/CMakeLists.txt
 
 # Exception for sample files
 !src/misc/iotest_asciiBE.txt
 !src/misc/iotest_asciiLE.txt
 !src/misc/iotest_binBE.bin
 !src/misc/iotest_binLE.bin
+
 /html/
 /latex/

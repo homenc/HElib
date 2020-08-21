@@ -15,9 +15,11 @@
  **/
 #include <mutex>
 #include <map>
+
 #include <helib/PAlgebra.h>
 #include <helib/timing.h>
 #include <helib/zzX.h>
+#include <helib/range.h>
 
 namespace helib {
 

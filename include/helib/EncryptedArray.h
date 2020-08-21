@@ -141,15 +141,6 @@ public:
   //! @brief Right shift k positions along the i'th dimension with zero fill
   virtual void shift1D(Ctxt& ctxt, long i, long k) const = 0;
 
-  /** @brief Correct an automorphism in a bad dimension.
-   * @param ctxt `Ctxt` to perform the correction on.
-   * @param i Dimension of which to correct.
-   * @param amt Exponent of the automorphism.
-   **/
-  virtual void badDimensionAutomorphCorrection(Ctxt& ctxt,
-                                               long i,
-                                               long amt) const = 0;
-
   ///@{
   //! @name Encoding/decoding methods
   // encode/decode arrays into plaintext polynomials
@@ -435,10 +426,6 @@ public:
                         long i,
                         long k,
                         bool dc = false) const override;
-
-  virtual void badDimensionAutomorphCorrection(Ctxt& ctxt,
-                                               long i,
-                                               long k) const override;
 
   long getP2R() const override { return getTab().getPPowR(); }
 
@@ -964,6 +951,10 @@ public:
     return encode(out, ptxt.getSlotRepr(), useThisSize, precision);
   }
 
+  // VJS-FIXME: why do some encode functions have a
+  // default value for useThisSize and others do not???
+  // It's very confusing
+
   double encode(zzX& ptxt,
                 double aSingleNumber,
                 double useThisSize = -1,
@@ -989,7 +980,7 @@ public:
   {
     assertEq(&getContext(),
              &ctxt.getContext(),
-             "Cannot decrypt when ciphertext has different context than "
+             "Cannot encrypt when ciphertext has different context than "
              "EncryptedArray");
     if (useThisSize <= 0.0)
       useThisSize = roundedSize(num); // rounded to power of two
@@ -1008,7 +999,7 @@ public:
   {
     assertEq(&getContext(),
              &ctxt.getContext(),
-             "Cannot decrypt when ciphertext has different context than "
+             "Cannot encrypt when ciphertext has different context than "
              "EncryptedArray");
     zzX pp;
     double f = encode(pp, ptxt, useThisSize, precision);
@@ -1037,6 +1028,12 @@ public:
   {
     const Context& context = getContext();
     long m = context.zMStar.getM();
+
+    // VJS-FIXME: it seems to me that the m should be phi(m),
+    // or m/2 if m is assumed to be a power of two.
+    // Also, for the power of two case, noiseBoundForUniform
+    // is a bit too pessimistic, as this is the circularly symmetric
+    // case.
     return context.noiseBoundForUniform(0.5, m);
   }
   // The scaling factor to use when encoding/decoding plaintext elements
@@ -1048,6 +1045,9 @@ public:
       precision = (1L << alMod.getR());
     if (roundErr < 0)
       roundErr = encodeRoundingError();
+
+    // VJS-FIXME: the computation of f and/or return value could overflow
+
     long f = ceil(precision * roundErr);
     // We round the factor up to the next power of two
     return (1L << NTL::NextPowerOfTwo(f));
@@ -1177,10 +1177,6 @@ public:
                           const std::vector<cx_double>& iImages,
                           long precision = 0) const;
   ///@}
-
-  void badDimensionAutomorphCorrection(Ctxt& ctxt,
-                                       long i,
-                                       long k) const override;
 };
 
 // plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
@@ -1313,11 +1309,6 @@ public:
     rep->rotate1D(ctxt, i, k, dc);
   }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
-
-  void badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long amt) const
-  {
-    rep->badDimensionAutomorphCorrection(ctxt, i, amt);
-  }
 
   template <typename PTXT, typename ARRAY>
   void encode(PTXT& ptxt, const ARRAY& array) const

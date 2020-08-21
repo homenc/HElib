@@ -15,6 +15,7 @@
 #include <NTL/ZZX.h>
 #include <NTL/ZZ_p.h>
 #include <vector>
+#include <helib/NumbTh.h>
 
 namespace helib {
 
@@ -101,7 +102,7 @@ long PolyMod::getp2r() const { return ringDescriptor->p2r; }
 
 NTL::ZZX PolyMod::getG() const { return ringDescriptor->G; }
 
-NTL::ZZX PolyMod::getData() const
+const NTL::ZZX& PolyMod::getData() const
 {
   assertValidity(*this);
   return this->data;
@@ -283,18 +284,69 @@ PolyMod& PolyMod::operator-=(const NTL::ZZX& otherPoly)
   return *this;
 }
 
+void deserialize(std::istream& is, PolyMod& poly)
+{
+  PolyMod::assertValidity(poly);
+  std::vector<std::stringstream> parts =
+      extractTokenizeRegion(is, '[', ']', ',');
+
+  long degree = NTL::deg(poly.ringDescriptor->G);
+  if (lsize(parts) > degree) {
+    // Too many elements. Raising an error.
+    std::stringstream err_msg;
+    err_msg << "Cannot deserialize to PolyMod: Degree is too small.  "
+            << "Trying to deserialize " << parts.size() << " coefficients.  "
+            << "Degree is " << degree << ".";
+    throw IOError(err_msg.str());
+  }
+
+  // Actual parsing and setup
+  NTL::clear(poly.data); // Make sure higher-degree terms don't remain
+  for (std::size_t i = 0; i < parts.size(); ++i) {
+    long tmp;
+    parts[i] >> tmp;
+    NTL::SetCoeff(poly.data, i, tmp);
+  }
+
+  // Normalization (removal of leading zeros) is done by modularReduce.
+  poly.modularReduce();
+}
+
+void serialize(std::ostream& os, const PolyMod& poly)
+{
+  PolyMod::assertValidity(poly);
+  if (poly.data == NTL::ZZX::zero()) {
+    // Avoid string "[]" for zero ZZX.
+    os << "[0]";
+    return;
+  }
+
+  // TODO: Add stream modifier option for separator
+  std::string sep = ", ";
+  os << "[";
+  for (auto ite = poly.data.rep.begin(); ite != poly.data.rep.end(); ++ite) {
+    os << *ite;
+    if (ite + 1 != poly.data.rep.end()) {
+      os << ", ";
+    }
+  }
+  os << "]";
+}
+
 std::istream& operator>>(std::istream& is, PolyMod& poly)
 {
   PolyMod::assertValidity(poly);
-  is >> poly.data;
-  poly.modularReduce();
+
+  deserialize(is, poly);
   return is;
 }
 
 std::ostream& operator<<(std::ostream& os, const PolyMod& poly)
 {
   PolyMod::assertValidity(poly);
-  return os << poly.data;
+
+  serialize(os, poly);
+  return os;
 }
 
 void PolyMod::modularReduce()
@@ -309,6 +361,7 @@ void PolyMod::modularReduce()
   poly_mod_p2r %= G_mod_p2r;
   NTL::conv(this->data, poly_mod_p2r);
   pContext.restore();
+  this->data.normalize();
 }
 
 void PolyMod::assertValidity(const PolyMod& poly)

@@ -22,6 +22,7 @@
 #include <helib/primeChain.h>
 #include <helib/powerful.h>
 #include <helib/apiAttributes.h>
+#include <helib/range.h>
 
 #include <NTL/Lazy.h>
 
@@ -291,7 +292,7 @@ public:
 
   //! A helper table to map required modulo-sizes to primeSets
   ModuliSizes modSizes;
-  void setModSizeTable() { modSizes.init(moduli, ctxtPrimes, smallPrimes); }
+  void setModSizeTable() { modSizes.init(*this); }
 
   /**
    * @brief The set of primes for the digits.
@@ -412,7 +413,14 @@ public:
     return ans;
   }
 
-  //! @brief An estimate for the security-level
+  //! @brief Size in bits of Q.
+  long bitSizeOfQ() const
+  {
+    IndexSet primes = ctxtPrimes | specialPrimes;
+    return std::ceil(logOfProduct(primes) / log(2.0));
+  }
+
+  //! @brief An estimate for the security-level. This has a lower bound of 0.
   double securityLevel() const
   {
     long phim = zMStar.getPhiM();
@@ -424,8 +432,12 @@ public:
     }
 
     double bitsize = logOfProduct(primes) / log(2.0);
-    return (7.2 * phim / bitsize - 110);
+    double ret = (7.2 * phim / bitsize - 110);
+    return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
   }
+
+  //! @brief print out algebra and other important info
+  void printout(std::ostream& out = std::cout) const;
 
   //! @brief Just add the given prime to the chain
   void AddSmallPrime(long q);

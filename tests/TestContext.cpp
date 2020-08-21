@@ -85,6 +85,56 @@ TEST_P(TestContext, buildModChainThrowsWhenBitsIsZero)
                helib::InvalidArgument);
 }
 
+TEST_P(TestContext, calculateBitSizeOfQ)
+{
+
+  long bits = 1016;
+  buildModChain(*context, bits, /*c=*/2);
+  long bitsize = context->bitSizeOfQ();
+
+  // Get the primes used by HElib.
+  helib::IndexSet fullPrimes = context->fullPrimes();
+  long calcFullPrimesBitSize =
+      ceil(context->logOfProduct(fullPrimes) / log(2.0));
+
+  long calcCtxtPrimesBitSize =
+      ceil(context->logOfProduct(context->ctxtPrimes) / log(2.0));
+
+  // Check if the ctxtPrimes are the bits we asked for.
+  // Will be close but not exact.
+  EXPECT_NEAR(calcCtxtPrimesBitSize, bits, 0.04 * bits);
+
+  // Check if total primes bitsize is same as calulated here.
+  EXPECT_EQ(calcFullPrimesBitSize, bitsize);
+}
+
+TEST(TestContext, securityHasLowerBoundOfZero)
+{
+  // Security = -109
+  helib::Context large_negative_sec_context(/*m=*/17, /*p=*/2, /*r=*/1);
+  buildModChain(large_negative_sec_context, /*bits=*/100, /*c=*/2);
+  double large_negative_result = large_negative_sec_context.securityLevel();
+  EXPECT_DOUBLE_EQ(large_negative_result, 0.0);
+
+  // Security = -6
+  helib::Context small_negative_sec_context(/*m=*/2501, /*p=*/2, /*r=*/1);
+  buildModChain(small_negative_sec_context, /*bits=*/100, /*c=*/2);
+  double small_negative_result = small_negative_sec_context.securityLevel();
+  EXPECT_DOUBLE_EQ(small_negative_result, 0.0);
+
+  // Security 0.6
+  helib::Context negligible_sec_context(/*m=*/3205, /*p=*/2, /*r=*/1);
+  buildModChain(negligible_sec_context, /*bits=*/100, /*c=*/2);
+  double negl_result = negligible_sec_context.securityLevel();
+  EXPECT_NEAR(negl_result, 0.656656, 0.000001);
+
+  // Security 43
+  helib::Context small_sec_context(/*m=*/5215, /*p=*/2, /*r=*/1);
+  buildModChain(small_sec_context, /*bits=*/100, /*c=*/2);
+  double small_result = small_sec_context.securityLevel();
+  EXPECT_NEAR(small_result, 43.4318, 0.0001);
+}
+
 INSTANTIATE_TEST_SUITE_P(variousParameters,
                          TestContext,
                          ::testing::Values(BGVParameters(17, 2, 1)));

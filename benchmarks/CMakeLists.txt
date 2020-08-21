@@ -10,10 +10,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License. See accompanying LICENSE file.
 
-cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
-
-## Use -std=c++11 as default.
-set(CMAKE_CXX_STANDARD 11)
+cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
+              
+## Use -std=c++14 as default.
+set(CMAKE_CXX_STANDARD 14)
 ## Disable C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 ## Require full C++ standard

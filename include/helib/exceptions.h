@@ -116,6 +116,23 @@ public:
 };
 
 /**
+ * @class IOError
+ * @brief Inherits from Exception and std::runtime_error.
+ */
+class IOError : public helib::RuntimeError
+{
+public:
+  explicit IOError(const std::string& what_arg) : RuntimeError(what_arg){};
+  explicit IOError(const char* what_arg) : RuntimeError(what_arg){};
+  virtual ~IOError(){};
+  /** @fn what returns a pointer to the string of the exception message */
+  virtual const char* what() const noexcept override
+  {
+    return std::runtime_error::what();
+  };
+};
+
+/**
  * @class InvalidArgument
  * @brief Inherits from Exception and std::invalid_argument.
  */

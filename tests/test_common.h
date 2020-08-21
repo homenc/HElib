@@ -21,6 +21,7 @@ extern bool noPrint;
 extern bool verbose;
 extern bool dry;
 extern unsigned int random_seed;
+extern long special_bits;
 
 void parse_common_args(int argc, char* argv[]);
 

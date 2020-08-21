@@ -153,8 +153,8 @@ public:
   /* I/O methods */
 
   //! Prints the structure in a readable form
-  void printout() const;
-  void printAll() const; // print even more
+  void printout(std::ostream& out = std::cout) const;
+  void printAll(std::ostream& out = std::cout) const; // print even more
 
   /* Access methods */
 
@@ -286,6 +286,7 @@ public:
 
   //! The largest FFT we need to handle degree-m polynomials
   long fftSizeNeeded() const { return NTL::NextPowerOfTwo(getM()) + 1; }
+  // TODO: should have a special case when m is power of two
 
   const PGFFT& getFFTInfo() const { return *fftInfo; }
   const half_FFT& getHalfFFTInfo() const { return *half_fftInfo; }
@@ -827,7 +828,7 @@ public:
 
   bool operator==(const PAlgebraMod& other) const
   {
-    return getZMStar() == getZMStar() && getR() == other.getR();
+    return getZMStar() == other.getZMStar() && getR() == other.getR();
   }
   // comparison
 

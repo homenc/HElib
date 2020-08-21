@@ -20,6 +20,7 @@
 #include <helib/norms.h>
 #include <helib/apiAttributes.h>
 #include <helib/fhe_stats.h>
+#include <helib/log.h>
 
 namespace helib {
 
@@ -536,6 +537,7 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   double r_bound = r.sampleSmallBounded(); // r is a {0,+-1} polynomial
 
   NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
+  // VJS-FIXME: why don't the error bounds include the encoding error?
 
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2() == 0) // not power of two
@@ -1052,6 +1054,8 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
 #else
   double bnd = getContext().zMStar.getPolyNormBnd();
 #endif
+
+  // VJS-FIXME: we should use totalNoiseBounde() here (for CKKS)
 
   if (ciphertxt.getNoiseBound() * bnd > 0.48 * xQ)
     Warning("decrypting with too much noise");

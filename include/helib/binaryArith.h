@@ -200,6 +200,7 @@ void subtractBinary(CtPtrs& difference,
  * input pointers may be null, but output pointers must point to
  * allocated Ctxt objects. If sizeLimit<4, only that many bits are
  * computed (taken from the least significant end).
+ * @note This function is currently not thread safe.
  **/
 long fifteenOrLess4Four(const CtPtrs& out,
                         const CtPtrs& in,

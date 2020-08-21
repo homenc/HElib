@@ -10,17 +10,18 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-#include <algorithm> // defines count(...), min(...)
-#include <cmath>
-
 #include <helib/PAlgebra.h>
 #include <helib/hypercube.h>
 #include <helib/timing.h>
+#include <helib/range.h>
 
 #include <NTL/ZZXFactoring.h>
 #include <NTL/GF2EXFactoring.h>
 #include <NTL/lzz_pEXFactoring.h>
 #include <NTL/BasicThreadPool.h>
+
+#include <algorithm> // defines count(...), min(...)
+#include <cmath>
 #include <mutex> // std::mutex, std::unique_lock
 
 namespace helib {
@@ -103,64 +104,64 @@ long PAlgebra::exponentiate(const std::vector<long>& exps,
   return t;
 }
 
-void PAlgebra::printout() const
+void PAlgebra::printout(std::ostream& out) const
 {
-  std::cout << "m = " << m << ", p = " << p;
+  out << "m = " << m << ", p = " << p;
   if (isDryRun()) {
-    std::cout << " (dry run)" << std::endl;
+    out << " (dry run)" << std::endl;
     return;
   }
-  std::cout << ", phi(m) = " << phiM << std::endl;
-  std::cout << "  ord(p)=" << ordP << std::endl;
-  std::cout << "  normBnd=" << normBnd << std::endl;
-  std::cout << "  polyNormBnd=" << polyNormBnd << std::endl;
+
+  out << ", phi(m) = " << phiM << std::endl;
+  out << "  ord(p) = " << ordP << std::endl;
+  out << "  normBnd = " << normBnd << std::endl;
+  out << "  polyNormBnd = " << polyNormBnd << std::endl;
 
   std::vector<long> facs;
   factorize(facs, m);
-  std::cout << "  factors=" << facs << std::endl;
+  out << "  factors = " << facs << std::endl;
 
-  std::size_t i;
-  for (i = 0; i < gens.size(); i++)
+  for (std::size_t i = 0; i < gens.size(); i++)
     if (gens[i]) {
       // FIXME: is it really possible that gens[i] can be 0?
       // There is very likely some code here and there that
       // would break if that happens.
 
-      std::cout << "  generator " << gens[i] << " has order (";
+      out << "  generator " << gens[i] << " has order (";
       if (FrobPerturb(i) == 0)
-        std::cout << "=";
+        out << "=";
       else if (FrobPerturb(i) > 0)
-        std::cout << "!";
+        out << "!";
       else
-        std::cout << "!!";
-      std::cout << "= Z_m^*) of ";
-      std::cout << OrderOf(i) << std::endl;
+        out << "!!";
+      out << "= Z_m^*) of ";
+      out << OrderOf(i) << std::endl;
     }
 
   if (cube.getSize() < 40) {
-    std::cout << "  T = [";
-    for (i = 0; i < T.size(); i++)
-      std::cout << T[i] << " ";
-    std::cout << "]" << std::endl;
+    out << "  T = [ ";
+    for (auto const& t : T)
+      out << t << " ";
+    out << "]" << std::endl;
   }
 }
 
-void PAlgebra::printAll() const
+void PAlgebra::printAll(std::ostream& out) const
 {
-  printout();
+  printout(out);
   if (cube.getSize() < 40) {
-    std::cout << "  Tidx = [";
+    out << "  Tidx = [ ";
     for (const auto& x : Tidx)
-      std::cout << x << " ";
-    std::cout << "]\n";
-    std::cout << "  zmsIdx = [";
+      out << x << " ";
+    out << "]\n";
+    out << "  zmsIdx = [ ";
     for (const auto& x : zmsIdx)
-      std::cout << x << " ";
-    std::cout << "]\n";
-    std::cout << "  zmsRep = [";
+      out << x << " ";
+    out << "]\n";
+    out << "  zmsRep = [ ";
     for (const auto& x : zmsRep)
-      std::cout << x << " ";
-    std::cout << "]\n";
+      out << x << " ";
+    out << "]\n";
   }
 }
 
@@ -581,8 +582,8 @@ bool comparePAlgebra(const PAlgebra& palg,
 {
   if (static_cast<unsigned long>(palg.getM()) != m ||
       static_cast<unsigned long>(palg.getP()) != p ||
-      static_cast<unsigned long>(palg.numOfGens()) != gens.size() ||
-      static_cast<unsigned long>(palg.numOfGens()) != ords.size())
+      static_cast<std::size_t>(palg.numOfGens()) != gens.size() ||
+      static_cast<std::size_t>(palg.numOfGens()) != ords.size())
     return false;
 
   for (long i = 0; i < (long)gens.size(); i++) {

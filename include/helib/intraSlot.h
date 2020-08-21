@@ -49,10 +49,10 @@ long repack(const CtPtrs& packed,
 
 // Returns in 'value' a vector of slot values. The bits of value[i] are
 // the content of the i'th slot pa[i], as represented on the normal basis
-void unpackSlots(std::vector<unsigned long>& value,
+void unpackSlots(std::vector<std::size_t>& value,
                  PlaintextArray& pa,
                  const EncryptedArray& ea);
-inline void unpackSlots(std::vector<unsigned long>& value,
+inline void unpackSlots(std::vector<std::size_t>& value,
                         NTL::ZZX& pa,
                         const EncryptedArray& ea)
 {
@@ -71,7 +71,7 @@ void packConstant(zzX& result,
 // Packs the low-order nbits of the entries of 'data' into each slot,
 // where the bits get mapped to coefficients on the normal basis
 void packConstants(zzX& result,
-                   const std::vector<unsigned long>& data,
+                   const std::vector<std::size_t>& data,
                    long nbits,
                    const EncryptedArray& ea);
 

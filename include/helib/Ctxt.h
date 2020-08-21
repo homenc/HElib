@@ -186,6 +186,7 @@ public:
   void read(std::istream& str);
   void write(std::ostream& str) const;
 };
+
 inline std::ostream& operator<<(std::ostream& s, const SKHandle& handle)
 {
   return s << "[" << handle.getPowerOfS() << " " << handle.getPowerOfX() << " "
@@ -234,12 +235,14 @@ public:
   void read(std::istream& str);
   void write(std::ostream& str) const;
 };
+
 std::istream& operator>>(std::istream& s, CtxtPart& p);
 std::ostream& operator<<(std::ostream& s, const CtxtPart& p);
 
 //! \cond FALSE (make doxygen ignore this code)
 struct ZeroCtxtLike_type
 {}; // used to select a constructor
+
 const ZeroCtxtLike_type ZeroCtxtLike = ZeroCtxtLike_type();
 //! \endcond
 
@@ -298,17 +301,27 @@ class Ctxt
     subPart(part);
     return *this;
   }
+
   Ctxt& operator+=(const CtxtPart& part)
   {
     addPart(part);
     return *this;
   }
 
+  // NOTE: the matchPrimeSets business in the following routines
+  // is DEPRECATED.  The requirement is that the prime set of part
+  // must contain the prime set of *this, unless *this is empty
+  // (in which case *this takes on the prime set of part).
+  // If not, an exception is raised.
+  // Also, if matchPrimeSets == true and the prime set of *this does
+  // not contain the prime set of part, an exception is also raised.
+
   // Procedural versions with additional parameter
   void subPart(const CtxtPart& part, bool matchPrimeSet = false)
   {
     subPart(part, part.skHandle, matchPrimeSet);
   }
+
   void addPart(const CtxtPart& part, bool matchPrimeSet = false)
   {
     addPart(part, part.skHandle, matchPrimeSet);
@@ -320,6 +333,7 @@ class Ctxt
   {
     addPart(part, handle, matchPrimeSet, true);
   }
+
   void addPart(const DoubleCRT& part,
                const SKHandle& handle,
                bool matchPrimeSet = false,
@@ -355,12 +369,17 @@ class Ctxt
   void mulIntFactor(long e);
 
 public:
-  //__attribute__((deprecated))
-  explicit Ctxt(const PubKey& newPubKey, long newPtxtSpace = 0); // constructor
-
   // Default copy-constructor
   Ctxt(const Ctxt& other) = default;
 
+  // VJS-FIXME: this was really a messy design choice to not
+  // have ciphertext cosntructors that specify prime sets.
+  // The default value of ctxtPrimes is kind of pointless.
+
+  //__attribute__((deprecated))
+  explicit Ctxt(const PubKey& newPubKey, long newPtxtSpace = 0); // constructor
+
+  //__attribute__((deprecated))
   Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt);
   // constructs a zero ciphertext with same public key and
   // plaintext space as ctxt
@@ -399,11 +418,13 @@ public:
     addCtxt(other);
     return *this;
   }
+
   Ctxt& operator-=(const Ctxt& other)
   {
     addCtxt(other, true);
     return *this;
   }
+
   void addCtxt(const Ctxt& other, bool negative = false);
 
   // Multiply by another ciphertext
@@ -413,12 +434,14 @@ public:
     multLowLvl(other);
     return *this;
   }
+
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
   Ctxt& operator>>=(long k)
   {
     automorph(k);
     return *this;
   }
+
   void complexConj(); // Complex conjugate, same as automorph(m-1)
 
   //! @brief automorphism with re-linearization
@@ -509,6 +532,7 @@ public:
   {
     addConstant(ptxt.getPolyRepr());
   }
+
   void addConstant(const NTL::ZZ& c);
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
@@ -517,12 +541,15 @@ public:
     addConstantCKKS(
         rationalApprox(x, /*denomBound=*/1 << getContext().alMod.getR()));
   }
+
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size = NTL::xdouble(-1.0),
                        NTL::xdouble factor = NTL::xdouble(-1.0));
+
   void addConstantCKKS(const NTL::ZZX& poly,
                        NTL::xdouble size = NTL::xdouble(-1.0),
                        NTL::xdouble factor = NTL::xdouble(-1.0));
+
   void addConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
   /**
@@ -558,6 +585,7 @@ public:
     ratFactor /= x;
     ptxtMag *= std::abs(x);
   }
+
   void multByConstantCKKS(std::pair<long, long> num) // rational number
   {
     multByConstantCKKS(double(num.first) / num.second);
@@ -567,6 +595,7 @@ public:
                           NTL::xdouble size = NTL::xdouble(-1.0),
                           NTL::xdouble factor = NTL::xdouble(-1.0),
                           double roundingErr = -1.0);
+
   void multByConstantCKKS(const NTL::ZZX& poly,
                           NTL::xdouble size = NTL::xdouble(-1.0),
                           NTL::xdouble factor = NTL::xdouble(-1.0),
@@ -596,6 +625,7 @@ public:
     multByConstant(tmp);
     addConstant(poly);
   }
+
   void xorConstant(const NTL::ZZX& poly, double size = -1.0)
   {
     xorConstant(DoubleCRT(poly, context, primeSet), size);
@@ -610,6 +640,7 @@ public:
     multByConstant(tmp);           // (b-1)(2a-1)
     addConstant(poly);             // (b-1)(2a-1)+a = 1-a-b+2ab
   }
+
   void nxorConstant(const NTL::ZZX& poly, double size = -1.0)
   {
     nxorConstant(DoubleCRT(poly, context, primeSet), size);
@@ -661,8 +692,8 @@ public:
   void reLinearize(long keyIdx = 0);
   // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
-  void cleanUp();
-  // relinearize, then reduce, then drop special primes
+  Ctxt& cleanUp();
+  // relinearize, then reduce, then drop special primes and small primes.
 
   // void reduce() const;
 
@@ -706,6 +737,13 @@ public:
       return context.logOfProduct(getPrimeSet()) - log(noiseBound);
   }
 
+  // VJS-FIXME:
+  // For CKKS, the "total noise" for a Ctxt is
+  // ptxtMag * ratFactor + noiseBound.  We should define a function
+  // totalNoiseBound() that returns this value for CKKS, and
+  // noiseBound o/w.  We might also define a function netCapacity
+  // (or something) that is defined in terms of totalNoiseBound().
+
   //! @brief the capacity in bits, returned as an integer
   long bitCapacity() const { return long(capacity() / log(2.0)); }
 
@@ -737,6 +775,8 @@ public:
     primeSet = context.ctxtPrimes;
     parts.clear();
     noiseBound = NTL::to_xdouble(0.0);
+    // VJS-FIXME: we should also make sure the other fields
+    // are set to their default values for a new, empty ctxt.
   }
 
   //! @brief Is this an empty ciphertext without any parts
