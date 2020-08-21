@@ -1,0 +1,208 @@
+===> CAUTION: This guide refers to an old style Makefile installation.  <===
+===>          Refer to INSTALL.md for newer cmake-based installation.   <===
+===>          We no longer recommend this method to install HElib.      <=== 
+
+HElib Installation Notes, August 2020
+---------------------------------------
+Much has changed since the note in 2015 and there are many updates. So this 
+is a refreshed note.
+
+To build HElib, you will need to have GMP and NTL libraries installed.
+
+Many distributions come with GMP pre-installed. If not, install GMP as follows:
+
+1. Download GMP from http://www.gmplib.org
+2. Uncompress and cd into the directory gmp-XXX
+3. On the command line:
+      ./configure
+      make
+      sudo make install
+4. This should install GMP into /usr/local
+
+Once GMP is installed, you can install NTL as follows:
+(NOTE: you will needs NTL v11.4.3 or higher)
+
+1. Download NTL from http://www.shoup.net/ntl/download.html
+2. Uncompress and cd into the directory ntl-XXX/src
+3. On the command line:
+      ./configure NTL_GMP_LIP=on
+      make
+      sudo make install
+4. This should install NTL into /usr/local
+
+Now that you have these libraries in place, cd to the HElib src directory to
+build HElib.
+
+This "build system" for HElib is very rudimentary: no configure script and just
+a Makefile (with no "make install").  The Makefile will build the static
+library fhe.a in the HElib src directory, and then one can build application
+programs based on fhe.a, also in the HElib src directory (or set the include
+and library parameters to include the right things). Hopefully, this build
+system will be improved in the future.
+
+Before building HElib, you may want to look at the Makefile, and consider
+adjusting some of the defaults for CC and CFLAGS. The defaults should be OK on
+most systems, but you can see the suggested options, which are documented in
+the Makefile.
+
+On the command line in the HElib src directory:
+
+   make
+
+will compile and build the library fhe.a. Once built, run
+
+   make check
+
+which will compile and runs a series of test programs.
+
+If you want to build your own program based on HElib, the easiest way
+to do it is to write the program in a file called myprog.cpp and then
+run
+
+   make myprog_x
+
+which will compile myprog.cpp and link in fhe.a and all required
+support libraries, and create the executable myprog_x.
+
+Take a look at the programs Test_*.cpp for examples of using HElib.
+These programs can be found in the misc/legacy_tests directory.
+
+Some comments:
+
+* HElib uses C++14, for gcc you may need to specify the flags '-std=c++14'
+to be able to compile (depending on the gcc version that you use).
+
+* There are compilation flags that control some aspects of the
+library, currently these are:
+
+  -DHELIB_THREADS  tells HElib to enable generic multithreading capabilities;
+                    must be used with a thread-enabled NTL and the -pthread
+                    flag should be passed to gcc
+
+  -DHELIB_BOOT_THREADS  tells HElib to use a multithreading strategy for
+                         bootstrapping; requires -DHELIB_THREADS (see above)
+
+  -DHELIB_DEBUG
+    Add some debugging printouts
+
+
+HElib Installation Notes, October 2015
+---------------------------------------
+To build HElib, you will need to have GMP and NTL libraries installed.
+
+Many distributions come with GMP pre-installed.
+If not, you can install GMP as follows.
+
+1. Download GMP from http://www.gmplib.org
+2. uncompress and cd into the directory gmp-XXX
+3. On the command line:
+      ./configure
+      make
+      sudo make install
+4. This should install GMP into /usr/local
+
+Once GMP is installed, you can install NTL as follows:
+(NOTE: you will needs NTL v9.4.0 or higher)
+
+1. Download NTL from http://www.shoup.net/ntl/download.html
+2. uncompress and cd into the directory ntl-XXX/src
+3. On the command line:
+      ./configure NTL_GMP_LIP=on
+      make
+      sudo make install
+4. This should install NTL into /usr/local
+
+
+Now that you have these libraries in place, you can cd to the HElib
+src directory to build HElib.
+
+Right now, the "build system" for HElib is very rudimentary: no
+configure script and just a Makefile (with no "make install").
+The Makefile will build the static library fhe.a in the HElib src
+directory, and then one can build applications programs based on
+fhe.a, also in the HElib src directory (or set the include and library
+parameters to include the right things). Hopefully, this build system
+will be improved in the future.
+
+Before building HElib, you may want to look at the Makefile, and
+consider adjusting some of the defaults for CC and CFLAGS. The
+defaults should be OK on most systems, but you can see the suggested
+options, which are documented in the Makefile.
+
+On the command line in the HElib src directory:
+
+   make
+
+will compile and build the library fhe.a. Once built, run
+
+   make check
+
+which will compile and runs a series of test programs.
+
+If you want to build your own program based on HElib, the easiest way
+to do it is to write the program in a file called myprog.cpp and then
+run
+
+   make myprog_x
+
+which will compile myprog.cpp and link in fhe.a and all required
+support libraries, and create the executable myprog_x.
+
+Take a look at the programs Test_*.cpp for examples of using HElib.
+
+Some comments:
+
+* HElib uses C++11, for gcc you may need to specify the flags '-std=c++11'
+to be able to compile (depending on the gcc version that you use).
+
+* There are compilation flags that control some aspects of the
+library, currently these are:
+
+  -DUSE_ALT_CRT
+    Tells HElib to use an alternative to the default DoubleCRT
+    representation of polynomials. The DoubleCRT class is described in
+    the (rather outdated) design document (Section 2.8). Specifying the
+    flag USE_ALT_CRT invokes a different implementation of the same
+    interfaces. This is an experimental feature, the alternative
+    implementation can be either faster or slower,  depending on the
+    operation mixture in use by the application.
+
+
+  -DNO_HALF_SIZE_PRIME
+    Tells HElib to not use the half size prime in the prime chain. By
+    default, the modulus-chain in HElib consists of many "full-size primes"
+    (of size n bits, typically n=50 or n=60 for 64-bit machines) and
+    one "half-size prime" of n/2 bits. A level corresponds to n/2 bits
+    in the size of the modulus, and dropping to a lower level is done
+    either by dropping the half-size prime (if it is part of the current
+    modulus) or by dropping a full-size prime and adding back the
+    half-size prime (if it is not part of the current modulus).
+
+    Specifying the flag NO_HALF_SIZE_PRIME makes all the primes the
+    same size, with each prime corresponding to a level (so dropping to
+    a lower level means dropping one of the primes).
+
+
+  -DEVALMAP_CACHED=0
+  -DEVALMAP_CACHED=1
+    This flag only affect bootstrapping, it tells HElib to cache some
+    constants that are used during recryption (rather than having to
+    encode then anew with every recryption operation).
+
+    EVALMAP_CACHED=0 caches these constants as ZZX'es, this takes
+    less space but it means that they still need to be converted to
+    DoubleCRT's with every recryption operation. 
+
+    EVALMAP_CACHED=1 caches these constants directly as DoubleCRT's,
+    this may take a significant amount of memory.
+
+
+  -DHELIB_THREADS  tells HElib to enable generic multithreading capabilities;
+                   must be used with a thread-enabled NTL and the -pthread
+                   flag should be passed to gcc
+
+  -DHELIB_BOOT_THREADS  tells HElib to use a multithreading strategy for
+                        bootstrapping; requires -DHELIB_THREADS (see above)
+
+  -DDEBUG_PRINTOUT
+    Add some debugging printouts

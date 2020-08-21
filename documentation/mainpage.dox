@@ -1,0 +1,35 @@
+/**
+@mainpage HElib Documentation
+
+HElib is an open-source (<a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License v2.0</a>) 
+software library that implements homomorphic encryption (HE).
+Currently available schemes are the implementations of the
+<a href="http://eprint.iacr.org/2011/277">Brakerski-Gentry-Vaikuntanathan</a>  (BGV) scheme and the Approximate Number 
+scheme of <a href="http://eprint.iacr.org/2016/421">Cheon-Kim-Kim-Song</a> (CKKS), along with many
+optimizations to make homomorphic evaluation runs faster, focusing mostly on
+effective use of the <a href="http://eprint.iacr.org/2011/133">Smart-Vercauteren</a> ciphertext packing techniques and
+the <a href="http://eprint.iacr.org/2012/099">Gentry-Halevi-Smart</a> optimizations. 
+
+Articles that describe some aspects of HElib include:
+
+  - A (somewhat outdated) <a href="http://people.csail.mit.edu/shaih/pubs/he-library.pdf">design document</a>, Shai Halevi and Victor Shoup, April 2013.
+  - <a href="http://eprint.iacr.org/2014/106">Algorithms in HElib</a>, Shai Halevi and Victor Shoup, published in <a href="http://www.iacr.org/conferences/crypto2014/">CRYPTO 2014</a>.
+  - <a href="http://eprint.iacr.org/2014/873">Bootstrapping for HElib</a>, Shai Halevi and Victor Shoup, <a href="https://www.cosic.esat.kuleuven.be/eurocrypt_2015/">EUROCRYPT 2015</a>.
+
+Since mid-2018 HElib has been under extensive refactoring for _Reliability_, 
+_Robustness & Serviceability_, _Performance_, and most importantly _Usability_ 
+for researchers and developers working on HE and its uses.
+
+HElib supports an <b>"assembly language for HE"</b>, providing low-level routines
+(set, add, multiply, shift, etc.), sophisticated automatic noise management,
+improved BGV bootstrapping, multi-threading, and also support for Ptxt (plaintext) 
+objects which mimics the functionality of Ctxt (ciphertext) objects.
+See <a href="https://github.com/homenc/HElib/changes.md">changes.md</a> for more details.
+
+HElib is written in C++14 and uses the <a href="http://www.shoup.net/ntl/">NTL</a> mathematical library.
+
+HElib is distributed under the terms of the <a href="http://www.apache.org/licenses/LICENSE-2.0">Apache License v2.0</a>.  
+
+For code downloads and full installation instructions, visit <a href="https://github.com/homenc/HElib">HElib GitHub Pages</a>.
+
+**/
