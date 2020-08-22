@@ -1,0 +1,15 @@
+Adding new features, improving documentation, fixing bugs, writing new tests, designing and coding new examples or writing tutorials are all examples of helpful contributions.
+
+A contribution to H\+Elib can be initiated through Git\+Hub pull request (PR). H\+Elib is written in C++14 and uses {\ttfamily clang-\/format} for the formatting of the code. Requiremens and installation instructions can be found in \mbox{\hyperlink{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l}{I\+N\+S\+T\+A\+LL.md}}. When making code contributions to H\+Elib, we ask that you follow the {\ttfamily C++14} coding standard and format your code using the \href{.clang-format}{\texttt{ clang format}} style file included in this distribution. Please provide unit/regression tests that are relevant to your code contribution.
+
+This project uses Developer Certificate of Origin \href{https://developercertificate.org/}{\texttt{ D\+CO}}. Be sure to sign off your commits using the {\ttfamily -\/s} flag or adding {\ttfamily Signed-\/off-\/\+By\+: Name$<$Email$>$} in the commit message.\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md1}{}\doxysubsection{Example commit message}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md1}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{git commit -\/s -\/m 'Informative commit message'}
+\end{DoxyCode}
+\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md2}{}\doxysubsection{Unit/\+Regression tests}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__c_o_n_t_r_i_b_u_t_i_n_g_autotoc_md2}
+Whether you are contributing a new feature, updating or bug fixing the code elsewhere, you need to ensure that your H\+Elib build passes the regression test suite.
+
+H\+Elib test suite uses the \href{https://github.com/google/googletest}{\texttt{ Google Test Framework}}. Additional information on H\+Elib\textquotesingle{}s test suite can be found in \mbox{\hyperlink{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__t_e_s_t_s}{T\+E\+S\+TS.md}}. Please remember to provide unit/regression tests that are relevant to your code contribution.
+
+Once all the tests have passed, and you are satisfied with your contribution, open a pull request into the {\ttfamily master} branch from {\bfseries{your fork of the repository}} to request adding your contributions into the main code base. 

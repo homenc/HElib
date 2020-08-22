@@ -1,0 +1,468 @@
+\hypertarget{classhelib_1_1_pub_key}{}\doxysection{helib\+::Pub\+Key Class Reference}
+\label{classhelib_1_1_pub_key}\index{helib::PubKey@{helib::PubKey}}
+
+
+The public key.  
+
+
+
+
+{\ttfamily \#include $<$keys.\+h$>$}
+
+Inheritance diagram for helib\+::Pub\+Key\+:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classhelib_1_1_pub_key}
+\end{center}
+\end{figure}
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classhelib_1_1_pub_key_aafaeff3bae5bac16d5a4bf127e2f6f2d}{Pub\+Key}} ()
+\begin{DoxyCompactList}\small\item\em This constructor thorws run-\/time error if active\+Context=nullptr. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classhelib_1_1_pub_key_a825712e884ac70538420e3cd3d553e22}{Pub\+Key}} (const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&\+\_\+context)
+\item 
+\mbox{\hyperlink{classhelib_1_1_pub_key_aa923dff5492cd91bbf8d24ab9258ce1a}{Pub\+Key}} (const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&other)
+\begin{DoxyCompactList}\small\item\em Copy constructor. \end{DoxyCompactList}\item 
+virtual \mbox{\hyperlink{classhelib_1_1_pub_key_aabd77762ff776bfbf3ae389b49fa7ac9}{$\sim$\+Pub\+Key}} ()=default
+\begin{DoxyCompactList}\small\item\em Default destructor. \end{DoxyCompactList}\item 
+virtual void \mbox{\hyperlink{classhelib_1_1_pub_key_aa13affb78adf902978fad938c8f56eae}{clear}} ()
+\begin{DoxyCompactList}\small\item\em Clear all public-\/key data. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_ae7a054c57be24207281e69608bed29b2}{operator==}} (const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&other) const
+\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_a014ede31ce4b686ddf491d30cd7a581a}{operator!=}} (const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&other) const
+\item 
+const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \& \mbox{\hyperlink{classhelib_1_1_pub_key_aa58d563a7ee4e27f2c46f97a3f5997dc}{get\+Context}} () const
+\item 
+long \mbox{\hyperlink{classhelib_1_1_pub_key_aa470fb7bc65e658efd02858188078384}{get\+Ptxt\+Space}} () const
+\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_aa19bebb6be7b4cedb58a1a045df68b3a}{key\+Exists}} (long key\+ID) const
+\item 
+double \mbox{\hyperlink{classhelib_1_1_pub_key_af00d3629c7dc16946cc48942edf797fb}{get\+S\+Key\+Bound}} (long key\+ID=0) const
+\begin{DoxyCompactList}\small\item\em The size of the secret key. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_a67598f5056cba7b1b94fcdd8482a947c}{is\+Reachable}} (long k, long key\+ID=0) const
+\begin{DoxyCompactList}\small\item\em Is it possible to re-\/linearize the automorphism X -\/$>$ X$^\wedge$k See Section 3.\+2.\+2 in the design document (Key\+Switch\+Map) \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classhelib_1_1_pub_key_a8abfcc223328521acf1976e5dd33ba53}{set\+Key\+Switch\+Map}} (long key\+Id=0)
+\begin{DoxyCompactList}\small\item\em Compute the reachability graph of key-\/switching matrices See Section 3.\+2.\+2 in the design document (Key\+Switch\+Map) \end{DoxyCompactList}\item 
+long \mbox{\hyperlink{classhelib_1_1_pub_key_a5b98b32c0ec476420d0d6f817cccd82c}{get\+K\+S\+Strategy}} (long dim) const
+\begin{DoxyCompactList}\small\item\em get KS strategy for dimension dim dim == -\/1 is Frobenius \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classhelib_1_1_pub_key_a448fbc74eecbdb3b369dcea9c5d85ce2}{set\+K\+S\+Strategy}} (long dim, int val)
+\begin{DoxyCompactList}\small\item\em set KS strategy for dimension dim dim == -\/1 is Frobenius \end{DoxyCompactList}\item 
+long \mbox{\hyperlink{classhelib_1_1_pub_key_a0346c2c214b648809f6b754de9e5d431}{Encrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const N\+T\+L\+::\+Z\+ZX \&plaintxt, long ptxt\+Space, bool high\+Noise) const
+\item 
+long \mbox{\hyperlink{classhelib_1_1_pub_key_a4daedf40ea1c65e1004289a6033d59b0}{Encrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const \mbox{\hyperlink{namespacehelib_a4d6002f36f1a61982fded09adf1331ca}{zzX}} \&plaintxt, long ptxt\+Space, bool high\+Noise) const
+\item 
+void \mbox{\hyperlink{classhelib_1_1_pub_key_aafbfc62d5d78c39aa7929d552b31ff03}{C\+K\+K\+Sencrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const N\+T\+L\+::\+Z\+ZX \&plaintxt, double ptxt\+Size=1.\+0, double scaling=0.\+0) const
+\item 
+void \mbox{\hyperlink{classhelib_1_1_pub_key_a13f6dfdd7645c35558ef906e8e1cfd69}{C\+K\+K\+Sencrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const \mbox{\hyperlink{namespacehelib_a4d6002f36f1a61982fded09adf1331ca}{zzX}} \&plaintxt, double ptxt\+Size=1.\+0, double scaling=0.\+0) const
+\item 
+virtual long \mbox{\hyperlink{classhelib_1_1_pub_key_a784412272e2ac12de357319b60c35f36}{Encrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const N\+T\+L\+::\+Z\+ZX \&plaintxt, long ptxt\+Space=0) const
+\item 
+virtual long \mbox{\hyperlink{classhelib_1_1_pub_key_a7fec47c6a84534ed1b359e3a64f54a83}{Encrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const \mbox{\hyperlink{namespacehelib_a4d6002f36f1a61982fded09adf1331ca}{zzX}} \&plaintxt, long ptxt\+Space=0) const
+\item 
+{\footnotesize template$<$typename Scheme $>$ }\\long \mbox{\hyperlink{classhelib_1_1_pub_key_ab26be749db4dd2b5d102a77bf70f4de3}{Encrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const \mbox{\hyperlink{classhelib_1_1_ptxt}{Ptxt}}$<$ Scheme $>$ \&plaintxt, long ptxt\+Space=0) const
+\begin{DoxyCompactList}\small\item\em Encrypts a plaintext into a ciphertext. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_ab8aed3e83355c67529fa2f53b2fb1ba5}{is\+C\+K\+KS}} () const
+\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_ad0ad65deb509b0e020dd603a4857492a}{is\+Bootstrappable}} () const
+\item 
+void \mbox{\hyperlink{classhelib_1_1_pub_key_a65479b612f5d28386fb1205858416957}{re\+Crypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ctxt) const
+\item 
+void \mbox{\hyperlink{classhelib_1_1_pub_key_ac442b7e06a49fde0d0cd067f00c259e8}{thin\+Re\+Crypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ctxt) const
+\item 
+friend \mbox{\hyperlink{classhelib_1_1_pub_key_a45c4f7b5816402ddaf16c7df1b60b9c6}{void \+::helib\+::write\+Pub\+Key\+Binary}} (std\+::ostream \&str, const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&pk)
+\item 
+friend \mbox{\hyperlink{classhelib_1_1_pub_key_a97b95f757398bed078ac7e01efd96ec3}{void \+::helib\+::read\+Pub\+Key\+Binary}} (std\+::istream \&str, \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&pk)
+\item 
+void \mbox{\hyperlink{classhelib_1_1_pub_key_ad607fc183a04a38ea758df7094957410}{hack\+Ptxt\+Space}} (long p2r)
+\item 
+template$<$$>$ long \mbox{\hyperlink{classhelib_1_1_pub_key_a5744e83be6175512dc561ad9276157da}{Encrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const \mbox{\hyperlink{classhelib_1_1_ptxt}{Ptxt}}$<$ \mbox{\hyperlink{structhelib_1_1_b_g_v}{B\+GV}} $>$ \&plaintxt, long ptxt\+Space) const
+\item 
+template$<$$>$ long \mbox{\hyperlink{classhelib_1_1_pub_key_afb5c65279c92fdecf07c34116a6854fd}{Encrypt}} (\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&ciphertxt, const \mbox{\hyperlink{classhelib_1_1_ptxt}{Ptxt}}$<$ \mbox{\hyperlink{structhelib_1_1_c_k_k_s}{C\+K\+KS}} $>$ \&plaintxt, U\+N\+U\+S\+ED long ptxt\+Space) const
+\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ Find key-\/switching matrices}\par
+\begin{DoxyCompactItemize}
+\item 
+const std\+::vector$<$ \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} $>$ \& \mbox{\hyperlink{classhelib_1_1_pub_key_adf27c278c7ae39ad8f7550774693fe2d}{key\+S\+Wlist}} () const
+\item 
+const \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} \& \mbox{\hyperlink{classhelib_1_1_pub_key_a36e271b46f74eb1f10deeb15f38ef612}{get\+Key\+S\+Wmatrix}} (const \mbox{\hyperlink{classhelib_1_1_s_k_handle}{S\+K\+Handle}} \&from, long to\+ID=0) const
+\begin{DoxyCompactList}\small\item\em Find a key-\/switching matrix by its indexes. If no such matrix exists it returns a dummy matrix with to\+Key\+ID==-\/1. \end{DoxyCompactList}\item 
+const \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} \& \mbox{\hyperlink{classhelib_1_1_pub_key_a1699dcc28066d1628d4924b00c03ff7f}{get\+Key\+S\+Wmatrix}} (long from\+S\+Power, long from\+X\+Power, long from\+ID=0, long to\+ID=0) const
+\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_aabf2e70d488f0e10604861d9d1d1b586}{have\+Key\+S\+Wmatrix}} (const \mbox{\hyperlink{classhelib_1_1_s_k_handle}{S\+K\+Handle}} \&from, long to\+ID=0) const
+\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_a802336b0a511ddfe07495d6386061041}{have\+Key\+S\+Wmatrix}} (long from\+S\+Power, long from\+X\+Power, long from\+ID=0, long to\+ID=0) const
+\item 
+const \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} \& \mbox{\hyperlink{classhelib_1_1_pub_key_a78cf90689deb41b4dcd2346722e22d9d}{get\+Any\+Key\+S\+Wmatrix}} (const \mbox{\hyperlink{classhelib_1_1_s_k_handle}{S\+K\+Handle}} \&from) const
+\begin{DoxyCompactList}\small\item\em Is there a matrix from this key to {\itshape any} base key? \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classhelib_1_1_pub_key_a85d422013d6854bd95947a75da4ccf63}{have\+Any\+Key\+S\+Wmatrix}} (const \mbox{\hyperlink{classhelib_1_1_s_k_handle}{S\+K\+Handle}} \&from) const
+\item 
+const \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} \& \mbox{\hyperlink{classhelib_1_1_pub_key_a0a9ef8dbc3d89b669b8b375352a64e0c}{get\+Next\+K\+S\+Wmatrix}} (long from\+X\+Power, long from\+ID=0) const
+\begin{DoxyCompactList}\small\item\em Get the next matrix to use for multi-\/hop automorphism See Section 3.\+2.\+2 in the design document. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\end{Indent}
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static long \mbox{\hyperlink{classhelib_1_1_pub_key_ac16ee4cbf52d86accf5f7e82a83f3991}{e\+PlusR}} (long p)
+\end{DoxyCompactItemize}
+\doxysubsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+class \mbox{\hyperlink{classhelib_1_1_pub_key_a5b5d89141b4d68c0830b9fe4468ac8f7}{Sec\+Key}}
+\item 
+std\+::ostream \& \mbox{\hyperlink{classhelib_1_1_pub_key_a963530e960d2799753da76e3f3495b10}{operator$<$$<$}} (std\+::ostream \&str, const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&pk)
+\item 
+std\+::istream \& \mbox{\hyperlink{classhelib_1_1_pub_key_a2bdb05bdd189940f7ed0b25ab89fa1ad}{operator$>$$>$}} (std\+::istream \&str, \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&pk)
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+The public key. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aafaeff3bae5bac16d5a4bf127e2f6f2d}\label{classhelib_1_1_pub_key_aafaeff3bae5bac16d5a4bf127e2f6f2d}} 
+\index{helib::PubKey@{helib::PubKey}!PubKey@{PubKey}}
+\index{PubKey@{PubKey}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{PubKey()}{PubKey()}\hspace{0.1cm}{\footnotesize\ttfamily [1/3]}}
+{\footnotesize\ttfamily helib\+::\+Pub\+Key\+::\+Pub\+Key (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})}
+
+
+
+This constructor thorws run-\/time error if active\+Context=nullptr. 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a825712e884ac70538420e3cd3d553e22}\label{classhelib_1_1_pub_key_a825712e884ac70538420e3cd3d553e22}} 
+\index{helib::PubKey@{helib::PubKey}!PubKey@{PubKey}}
+\index{PubKey@{PubKey}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{PubKey()}{PubKey()}\hspace{0.1cm}{\footnotesize\ttfamily [2/3]}}
+{\footnotesize\ttfamily helib\+::\+Pub\+Key\+::\+Pub\+Key (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&}]{\+\_\+context }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [explicit]}}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aa923dff5492cd91bbf8d24ab9258ce1a}\label{classhelib_1_1_pub_key_aa923dff5492cd91bbf8d24ab9258ce1a}} 
+\index{helib::PubKey@{helib::PubKey}!PubKey@{PubKey}}
+\index{PubKey@{PubKey}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{PubKey()}{PubKey()}\hspace{0.1cm}{\footnotesize\ttfamily [3/3]}}
+{\footnotesize\ttfamily helib\+::\+Pub\+Key\+::\+Pub\+Key (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&}]{other }\end{DoxyParamCaption})}
+
+
+
+Copy constructor. 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aabd77762ff776bfbf3ae389b49fa7ac9}\label{classhelib_1_1_pub_key_aabd77762ff776bfbf3ae389b49fa7ac9}} 
+\index{helib::PubKey@{helib::PubKey}!````~PubKey@{$\sim$PubKey}}
+\index{````~PubKey@{$\sim$PubKey}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{$\sim$PubKey()}{~PubKey()}}
+{\footnotesize\ttfamily virtual helib\+::\+Pub\+Key\+::$\sim$\+Pub\+Key (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [virtual]}, {\ttfamily [default]}}
+
+
+
+Default destructor. 
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aafbfc62d5d78c39aa7929d552b31ff03}\label{classhelib_1_1_pub_key_aafbfc62d5d78c39aa7929d552b31ff03}} 
+\index{helib::PubKey@{helib::PubKey}!CKKSencrypt@{CKKSencrypt}}
+\index{CKKSencrypt@{CKKSencrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{CKKSencrypt()}{CKKSencrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily void helib\+::\+Pub\+Key\+::\+C\+K\+K\+Sencrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const N\+T\+L\+::\+Z\+ZX \&}]{plaintxt,  }\item[{double}]{ptxt\+Size = {\ttfamily 1.0},  }\item[{double}]{scaling = {\ttfamily 0.0} }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a13f6dfdd7645c35558ef906e8e1cfd69}\label{classhelib_1_1_pub_key_a13f6dfdd7645c35558ef906e8e1cfd69}} 
+\index{helib::PubKey@{helib::PubKey}!CKKSencrypt@{CKKSencrypt}}
+\index{CKKSencrypt@{CKKSencrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{CKKSencrypt()}{CKKSencrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void helib\+::\+Pub\+Key\+::\+C\+K\+K\+Sencrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const \mbox{\hyperlink{namespacehelib_a4d6002f36f1a61982fded09adf1331ca}{zzX}} \&}]{plaintxt,  }\item[{double}]{ptxt\+Size = {\ttfamily 1.0},  }\item[{double}]{scaling = {\ttfamily 0.0} }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aa13affb78adf902978fad938c8f56eae}\label{classhelib_1_1_pub_key_aa13affb78adf902978fad938c8f56eae}} 
+\index{helib::PubKey@{helib::PubKey}!clear@{clear}}
+\index{clear@{clear}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{clear()}{clear()}}
+{\footnotesize\ttfamily void helib\+::\+Pub\+Key\+::clear (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [virtual]}}
+
+
+
+Clear all public-\/key data. 
+
+
+
+Reimplemented in \mbox{\hyperlink{classhelib_1_1_sec_key_ae51b00cb02aa6e958f19c8a27eb40204}{helib\+::\+Sec\+Key}}.
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a0346c2c214b648809f6b754de9e5d431}\label{classhelib_1_1_pub_key_a0346c2c214b648809f6b754de9e5d431}} 
+\index{helib::PubKey@{helib::PubKey}!Encrypt@{Encrypt}}
+\index{Encrypt@{Encrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{Encrypt()}{Encrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [1/7]}}
+{\footnotesize\ttfamily long helib\+::\+Pub\+Key\+::\+Encrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const N\+T\+L\+::\+Z\+ZX \&}]{plaintxt,  }\item[{long}]{ptxt\+Space,  }\item[{bool}]{high\+Noise }\end{DoxyParamCaption}) const}
+
+Encrypts plaintext, result returned in the ciphertext argument. When called with high\+Noise=true, returns a ciphertext with noise level approximately q/8. For \mbox{\hyperlink{structhelib_1_1_b_g_v}{B\+GV}}, ptxt\+Space is the intended plaintext space, which cannot be co-\/prime with pub\+Encr\+Key.\+ptxt\+Space. The returned value is the plaintext-\/space for the resulting ciphertext, which is G\+CD(ptxt\+Space, pub\+Encr\+Key.\+ptxt\+Space). For \mbox{\hyperlink{structhelib_1_1_c_k_k_s}{C\+K\+KS}}, ptxt\+Space is a bound on the size of the complex plaintext elements that are encoded in ptxt (before scaling), it is assumed that they are scaled by context.\+al\+Mod.\+encode\+Scaling\+Factor(). The V\+J\+S-\/\+F\+I\+X\+ME\+: this comment must mean al\+Mod.\+get\+Cx()...check returned value is the same as the argument ptxt\+Space. \mbox{\Hypertarget{classhelib_1_1_pub_key_a784412272e2ac12de357319b60c35f36}\label{classhelib_1_1_pub_key_a784412272e2ac12de357319b60c35f36}} 
+\index{helib::PubKey@{helib::PubKey}!Encrypt@{Encrypt}}
+\index{Encrypt@{Encrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{Encrypt()}{Encrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [2/7]}}
+{\footnotesize\ttfamily long helib\+::\+Pub\+Key\+::\+Encrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const N\+T\+L\+::\+Z\+ZX \&}]{plaintxt,  }\item[{long}]{ptxt\+Space = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [virtual]}}
+
+
+
+Reimplemented in \mbox{\hyperlink{classhelib_1_1_sec_key_a623e7afa711f904482381dd31476502d}{helib\+::\+Sec\+Key}}.
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a5744e83be6175512dc561ad9276157da}\label{classhelib_1_1_pub_key_a5744e83be6175512dc561ad9276157da}} 
+\index{helib::PubKey@{helib::PubKey}!Encrypt@{Encrypt}}
+\index{Encrypt@{Encrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{Encrypt()}{Encrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [3/7]}}
+{\footnotesize\ttfamily template$<$$>$ \\
+long helib\+::\+Pub\+Key\+::\+Encrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const \mbox{\hyperlink{classhelib_1_1_ptxt}{Ptxt}}$<$ \mbox{\hyperlink{structhelib_1_1_b_g_v}{B\+GV}} $>$ \&}]{plaintxt,  }\item[{long}]{ptxt\+Space }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_afb5c65279c92fdecf07c34116a6854fd}\label{classhelib_1_1_pub_key_afb5c65279c92fdecf07c34116a6854fd}} 
+\index{helib::PubKey@{helib::PubKey}!Encrypt@{Encrypt}}
+\index{Encrypt@{Encrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{Encrypt()}{Encrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [4/7]}}
+{\footnotesize\ttfamily template$<$$>$ \\
+long helib\+::\+Pub\+Key\+::\+Encrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const \mbox{\hyperlink{classhelib_1_1_ptxt}{Ptxt}}$<$ \mbox{\hyperlink{structhelib_1_1_c_k_k_s}{C\+K\+KS}} $>$ \&}]{plaintxt,  }\item[{U\+N\+U\+S\+ED long}]{ptxt\+Space }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_ab26be749db4dd2b5d102a77bf70f4de3}\label{classhelib_1_1_pub_key_ab26be749db4dd2b5d102a77bf70f4de3}} 
+\index{helib::PubKey@{helib::PubKey}!Encrypt@{Encrypt}}
+\index{Encrypt@{Encrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{Encrypt()}{Encrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [5/7]}}
+{\footnotesize\ttfamily template$<$typename Scheme $>$ \\
+long helib\+::\+Pub\+Key\+::\+Encrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const \mbox{\hyperlink{classhelib_1_1_ptxt}{Ptxt}}$<$ Scheme $>$ \&}]{plaintxt,  }\item[{long}]{ptxt\+Space = {\ttfamily 0} }\end{DoxyParamCaption}) const}
+
+
+
+Encrypts a plaintext into a ciphertext. 
+
+
+\begin{DoxyTemplParams}{Template Parameters}
+{\em Scheme} & Encryption scheme used (must be {\ttfamily \mbox{\hyperlink{structhelib_1_1_b_g_v}{B\+GV}}} or {\ttfamily \mbox{\hyperlink{structhelib_1_1_c_k_k_s}{C\+K\+KS}}}). \\
+\hline
+\end{DoxyTemplParams}
+
+\begin{DoxyParams}{Parameters}
+{\em ciphertxt} & Ciphertext into which to encrypt. \\
+\hline
+{\em plaintxt} & Plaintext to encrypt. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Plaintext space. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a4daedf40ea1c65e1004289a6033d59b0}\label{classhelib_1_1_pub_key_a4daedf40ea1c65e1004289a6033d59b0}} 
+\index{helib::PubKey@{helib::PubKey}!Encrypt@{Encrypt}}
+\index{Encrypt@{Encrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{Encrypt()}{Encrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [6/7]}}
+{\footnotesize\ttfamily long helib\+::\+Pub\+Key\+::\+Encrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const \mbox{\hyperlink{namespacehelib_a4d6002f36f1a61982fded09adf1331ca}{zzX}} \&}]{plaintxt,  }\item[{long}]{ptxt\+Space,  }\item[{bool}]{high\+Noise }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a7fec47c6a84534ed1b359e3a64f54a83}\label{classhelib_1_1_pub_key_a7fec47c6a84534ed1b359e3a64f54a83}} 
+\index{helib::PubKey@{helib::PubKey}!Encrypt@{Encrypt}}
+\index{Encrypt@{Encrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{Encrypt()}{Encrypt()}\hspace{0.1cm}{\footnotesize\ttfamily [7/7]}}
+{\footnotesize\ttfamily long helib\+::\+Pub\+Key\+::\+Encrypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ciphertxt,  }\item[{const \mbox{\hyperlink{namespacehelib_a4d6002f36f1a61982fded09adf1331ca}{zzX}} \&}]{plaintxt,  }\item[{long}]{ptxt\+Space = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [virtual]}}
+
+
+
+Reimplemented in \mbox{\hyperlink{classhelib_1_1_sec_key_a8173d4d2d15958e9ba7ceb0a28d21179}{helib\+::\+Sec\+Key}}.
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_ac16ee4cbf52d86accf5f7e82a83f3991}\label{classhelib_1_1_pub_key_ac16ee4cbf52d86accf5f7e82a83f3991}} 
+\index{helib::PubKey@{helib::PubKey}!ePlusR@{ePlusR}}
+\index{ePlusR@{ePlusR}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{ePlusR()}{ePlusR()}}
+{\footnotesize\ttfamily static long helib\+::\+Pub\+Key\+::e\+PlusR (\begin{DoxyParamCaption}\item[{long}]{p }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a78cf90689deb41b4dcd2346722e22d9d}\label{classhelib_1_1_pub_key_a78cf90689deb41b4dcd2346722e22d9d}} 
+\index{helib::PubKey@{helib::PubKey}!getAnyKeySWmatrix@{getAnyKeySWmatrix}}
+\index{getAnyKeySWmatrix@{getAnyKeySWmatrix}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{getAnyKeySWmatrix()}{getAnyKeySWmatrix()}}
+{\footnotesize\ttfamily const \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} \& helib\+::\+Pub\+Key\+::get\+Any\+Key\+S\+Wmatrix (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_s_k_handle}{S\+K\+Handle}} \&}]{from }\end{DoxyParamCaption}) const}
+
+
+
+Is there a matrix from this key to {\itshape any} base key? 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aa58d563a7ee4e27f2c46f97a3f5997dc}\label{classhelib_1_1_pub_key_aa58d563a7ee4e27f2c46f97a3f5997dc}} 
+\index{helib::PubKey@{helib::PubKey}!getContext@{getContext}}
+\index{getContext@{getContext}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{getContext()}{getContext()}}
+{\footnotesize\ttfamily const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \& helib\+::\+Pub\+Key\+::get\+Context (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a36e271b46f74eb1f10deeb15f38ef612}\label{classhelib_1_1_pub_key_a36e271b46f74eb1f10deeb15f38ef612}} 
+\index{helib::PubKey@{helib::PubKey}!getKeySWmatrix@{getKeySWmatrix}}
+\index{getKeySWmatrix@{getKeySWmatrix}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{getKeySWmatrix()}{getKeySWmatrix()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily const \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} \& helib\+::\+Pub\+Key\+::get\+Key\+S\+Wmatrix (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_s_k_handle}{S\+K\+Handle}} \&}]{from,  }\item[{long}]{to\+ID = {\ttfamily 0} }\end{DoxyParamCaption}) const}
+
+
+
+Find a key-\/switching matrix by its indexes. If no such matrix exists it returns a dummy matrix with to\+Key\+ID==-\/1. 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a1699dcc28066d1628d4924b00c03ff7f}\label{classhelib_1_1_pub_key_a1699dcc28066d1628d4924b00c03ff7f}} 
+\index{helib::PubKey@{helib::PubKey}!getKeySWmatrix@{getKeySWmatrix}}
+\index{getKeySWmatrix@{getKeySWmatrix}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{getKeySWmatrix()}{getKeySWmatrix()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily const \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} \& helib\+::\+Pub\+Key\+::get\+Key\+S\+Wmatrix (\begin{DoxyParamCaption}\item[{long}]{from\+S\+Power,  }\item[{long}]{from\+X\+Power,  }\item[{long}]{from\+ID = {\ttfamily 0},  }\item[{long}]{to\+ID = {\ttfamily 0} }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a5b98b32c0ec476420d0d6f817cccd82c}\label{classhelib_1_1_pub_key_a5b98b32c0ec476420d0d6f817cccd82c}} 
+\index{helib::PubKey@{helib::PubKey}!getKSStrategy@{getKSStrategy}}
+\index{getKSStrategy@{getKSStrategy}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{getKSStrategy()}{getKSStrategy()}}
+{\footnotesize\ttfamily long helib\+::\+Pub\+Key\+::get\+K\+S\+Strategy (\begin{DoxyParamCaption}\item[{long}]{dim }\end{DoxyParamCaption}) const}
+
+
+
+get KS strategy for dimension dim dim == -\/1 is Frobenius 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a0a9ef8dbc3d89b669b8b375352a64e0c}\label{classhelib_1_1_pub_key_a0a9ef8dbc3d89b669b8b375352a64e0c}} 
+\index{helib::PubKey@{helib::PubKey}!getNextKSWmatrix@{getNextKSWmatrix}}
+\index{getNextKSWmatrix@{getNextKSWmatrix}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{getNextKSWmatrix()}{getNextKSWmatrix()}}
+{\footnotesize\ttfamily const \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} \& helib\+::\+Pub\+Key\+::get\+Next\+K\+S\+Wmatrix (\begin{DoxyParamCaption}\item[{long}]{from\+X\+Power,  }\item[{long}]{from\+ID = {\ttfamily 0} }\end{DoxyParamCaption}) const}
+
+
+
+Get the next matrix to use for multi-\/hop automorphism See Section 3.\+2.\+2 in the design document. 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aa470fb7bc65e658efd02858188078384}\label{classhelib_1_1_pub_key_aa470fb7bc65e658efd02858188078384}} 
+\index{helib::PubKey@{helib::PubKey}!getPtxtSpace@{getPtxtSpace}}
+\index{getPtxtSpace@{getPtxtSpace}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{getPtxtSpace()}{getPtxtSpace()}}
+{\footnotesize\ttfamily long helib\+::\+Pub\+Key\+::get\+Ptxt\+Space (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_af00d3629c7dc16946cc48942edf797fb}\label{classhelib_1_1_pub_key_af00d3629c7dc16946cc48942edf797fb}} 
+\index{helib::PubKey@{helib::PubKey}!getSKeyBound@{getSKeyBound}}
+\index{getSKeyBound@{getSKeyBound}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{getSKeyBound()}{getSKeyBound()}}
+{\footnotesize\ttfamily double helib\+::\+Pub\+Key\+::get\+S\+Key\+Bound (\begin{DoxyParamCaption}\item[{long}]{key\+ID = {\ttfamily 0} }\end{DoxyParamCaption}) const}
+
+
+
+The size of the secret key. 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_ad607fc183a04a38ea758df7094957410}\label{classhelib_1_1_pub_key_ad607fc183a04a38ea758df7094957410}} 
+\index{helib::PubKey@{helib::PubKey}!hackPtxtSpace@{hackPtxtSpace}}
+\index{hackPtxtSpace@{hackPtxtSpace}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{hackPtxtSpace()}{hackPtxtSpace()}}
+{\footnotesize\ttfamily void helib\+::\+Pub\+Key\+::hack\+Ptxt\+Space (\begin{DoxyParamCaption}\item[{long}]{p2r }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a85d422013d6854bd95947a75da4ccf63}\label{classhelib_1_1_pub_key_a85d422013d6854bd95947a75da4ccf63}} 
+\index{helib::PubKey@{helib::PubKey}!haveAnyKeySWmatrix@{haveAnyKeySWmatrix}}
+\index{haveAnyKeySWmatrix@{haveAnyKeySWmatrix}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{haveAnyKeySWmatrix()}{haveAnyKeySWmatrix()}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::have\+Any\+Key\+S\+Wmatrix (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_s_k_handle}{S\+K\+Handle}} \&}]{from }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aabf2e70d488f0e10604861d9d1d1b586}\label{classhelib_1_1_pub_key_aabf2e70d488f0e10604861d9d1d1b586}} 
+\index{helib::PubKey@{helib::PubKey}!haveKeySWmatrix@{haveKeySWmatrix}}
+\index{haveKeySWmatrix@{haveKeySWmatrix}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{haveKeySWmatrix()}{haveKeySWmatrix()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::have\+Key\+S\+Wmatrix (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_s_k_handle}{S\+K\+Handle}} \&}]{from,  }\item[{long}]{to\+ID = {\ttfamily 0} }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a802336b0a511ddfe07495d6386061041}\label{classhelib_1_1_pub_key_a802336b0a511ddfe07495d6386061041}} 
+\index{helib::PubKey@{helib::PubKey}!haveKeySWmatrix@{haveKeySWmatrix}}
+\index{haveKeySWmatrix@{haveKeySWmatrix}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{haveKeySWmatrix()}{haveKeySWmatrix()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::have\+Key\+S\+Wmatrix (\begin{DoxyParamCaption}\item[{long}]{from\+S\+Power,  }\item[{long}]{from\+X\+Power,  }\item[{long}]{from\+ID = {\ttfamily 0},  }\item[{long}]{to\+ID = {\ttfamily 0} }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_ad0ad65deb509b0e020dd603a4857492a}\label{classhelib_1_1_pub_key_ad0ad65deb509b0e020dd603a4857492a}} 
+\index{helib::PubKey@{helib::PubKey}!isBootstrappable@{isBootstrappable}}
+\index{isBootstrappable@{isBootstrappable}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{isBootstrappable()}{isBootstrappable()}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::is\+Bootstrappable (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_ab8aed3e83355c67529fa2f53b2fb1ba5}\label{classhelib_1_1_pub_key_ab8aed3e83355c67529fa2f53b2fb1ba5}} 
+\index{helib::PubKey@{helib::PubKey}!isCKKS@{isCKKS}}
+\index{isCKKS@{isCKKS}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{isCKKS()}{isCKKS()}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::is\+C\+K\+KS (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a67598f5056cba7b1b94fcdd8482a947c}\label{classhelib_1_1_pub_key_a67598f5056cba7b1b94fcdd8482a947c}} 
+\index{helib::PubKey@{helib::PubKey}!isReachable@{isReachable}}
+\index{isReachable@{isReachable}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{isReachable()}{isReachable()}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::is\+Reachable (\begin{DoxyParamCaption}\item[{long}]{k,  }\item[{long}]{key\+ID = {\ttfamily 0} }\end{DoxyParamCaption}) const}
+
+
+
+Is it possible to re-\/linearize the automorphism X -\/$>$ X$^\wedge$k See Section 3.\+2.\+2 in the design document (Key\+Switch\+Map) 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_aa19bebb6be7b4cedb58a1a045df68b3a}\label{classhelib_1_1_pub_key_aa19bebb6be7b4cedb58a1a045df68b3a}} 
+\index{helib::PubKey@{helib::PubKey}!keyExists@{keyExists}}
+\index{keyExists@{keyExists}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{keyExists()}{keyExists()}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::key\+Exists (\begin{DoxyParamCaption}\item[{long}]{key\+ID }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_adf27c278c7ae39ad8f7550774693fe2d}\label{classhelib_1_1_pub_key_adf27c278c7ae39ad8f7550774693fe2d}} 
+\index{helib::PubKey@{helib::PubKey}!keySWlist@{keySWlist}}
+\index{keySWlist@{keySWlist}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{keySWlist()}{keySWlist()}}
+{\footnotesize\ttfamily const std\+::vector$<$ \mbox{\hyperlink{classhelib_1_1_key_switch}{Key\+Switch}} $>$ \& helib\+::\+Pub\+Key\+::key\+S\+Wlist (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a014ede31ce4b686ddf491d30cd7a581a}\label{classhelib_1_1_pub_key_a014ede31ce4b686ddf491d30cd7a581a}} 
+\index{helib::PubKey@{helib::PubKey}!operator"!=@{operator"!=}}
+\index{operator"!=@{operator"!=}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{operator"!=()}{operator!=()}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::operator!= (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&}]{other }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_ae7a054c57be24207281e69608bed29b2}\label{classhelib_1_1_pub_key_ae7a054c57be24207281e69608bed29b2}} 
+\index{helib::PubKey@{helib::PubKey}!operator==@{operator==}}
+\index{operator==@{operator==}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{operator==()}{operator==()}}
+{\footnotesize\ttfamily bool helib\+::\+Pub\+Key\+::operator== (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&}]{other }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a65479b612f5d28386fb1205858416957}\label{classhelib_1_1_pub_key_a65479b612f5d28386fb1205858416957}} 
+\index{helib::PubKey@{helib::PubKey}!reCrypt@{reCrypt}}
+\index{reCrypt@{reCrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{reCrypt()}{reCrypt()}}
+{\footnotesize\ttfamily void helib\+::\+Pub\+Key\+::re\+Crypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ctxt }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a8abfcc223328521acf1976e5dd33ba53}\label{classhelib_1_1_pub_key_a8abfcc223328521acf1976e5dd33ba53}} 
+\index{helib::PubKey@{helib::PubKey}!setKeySwitchMap@{setKeySwitchMap}}
+\index{setKeySwitchMap@{setKeySwitchMap}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{setKeySwitchMap()}{setKeySwitchMap()}}
+{\footnotesize\ttfamily void helib\+::\+Pub\+Key\+::set\+Key\+Switch\+Map (\begin{DoxyParamCaption}\item[{long}]{key\+Id = {\ttfamily 0} }\end{DoxyParamCaption})}
+
+
+
+Compute the reachability graph of key-\/switching matrices See Section 3.\+2.\+2 in the design document (Key\+Switch\+Map) 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a448fbc74eecbdb3b369dcea9c5d85ce2}\label{classhelib_1_1_pub_key_a448fbc74eecbdb3b369dcea9c5d85ce2}} 
+\index{helib::PubKey@{helib::PubKey}!setKSStrategy@{setKSStrategy}}
+\index{setKSStrategy@{setKSStrategy}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{setKSStrategy()}{setKSStrategy()}}
+{\footnotesize\ttfamily void helib\+::\+Pub\+Key\+::set\+K\+S\+Strategy (\begin{DoxyParamCaption}\item[{long}]{dim,  }\item[{int}]{val }\end{DoxyParamCaption})}
+
+
+
+set KS strategy for dimension dim dim == -\/1 is Frobenius 
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_ac442b7e06a49fde0d0cd067f00c259e8}\label{classhelib_1_1_pub_key_ac442b7e06a49fde0d0cd067f00c259e8}} 
+\index{helib::PubKey@{helib::PubKey}!thinReCrypt@{thinReCrypt}}
+\index{thinReCrypt@{thinReCrypt}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{thinReCrypt()}{thinReCrypt()}}
+{\footnotesize\ttfamily void helib\+::\+Pub\+Key\+::thin\+Re\+Crypt (\begin{DoxyParamCaption}\item[{\mbox{\hyperlink{classhelib_1_1_ctxt}{Ctxt}} \&}]{ctxt }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a97b95f757398bed078ac7e01efd96ec3}\label{classhelib_1_1_pub_key_a97b95f757398bed078ac7e01efd96ec3}} 
+\index{helib::PubKey@{helib::PubKey}!void ::helib::readPubKeyBinary@{void ::helib::readPubKeyBinary}}
+\index{void ::helib::readPubKeyBinary@{void ::helib::readPubKeyBinary}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{void ::helib::readPubKeyBinary()}{void ::helib::readPubKeyBinary()}}
+{\footnotesize\ttfamily helib\+::\+Pub\+Key\+::void \+::\mbox{\hyperlink{namespacehelib_adc9656603a03fba1b8720db0d2e5cee9}{helib\+::read\+Pub\+Key\+Binary}} (\begin{DoxyParamCaption}\item[{std\+::istream \&}]{str,  }\item[{\mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&}]{pk }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a45c4f7b5816402ddaf16c7df1b60b9c6}\label{classhelib_1_1_pub_key_a45c4f7b5816402ddaf16c7df1b60b9c6}} 
+\index{helib::PubKey@{helib::PubKey}!void ::helib::writePubKeyBinary@{void ::helib::writePubKeyBinary}}
+\index{void ::helib::writePubKeyBinary@{void ::helib::writePubKeyBinary}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{void ::helib::writePubKeyBinary()}{void ::helib::writePubKeyBinary()}}
+{\footnotesize\ttfamily helib\+::\+Pub\+Key\+::void \+::\mbox{\hyperlink{namespacehelib_a3fe91feb5d65b0afc826f181557a56e4}{helib\+::write\+Pub\+Key\+Binary}} (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{str,  }\item[{const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&}]{pk }\end{DoxyParamCaption})}
+
+
+
+\doxysubsection{Friends And Related Function Documentation}
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a963530e960d2799753da76e3f3495b10}\label{classhelib_1_1_pub_key_a963530e960d2799753da76e3f3495b10}} 
+\index{helib::PubKey@{helib::PubKey}!operator$<$$<$@{operator$<$$<$}}
+\index{operator$<$$<$@{operator$<$$<$}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{operator$<$$<$}{operator<<}}
+{\footnotesize\ttfamily std\+::ostream\& operator$<$$<$ (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{str,  }\item[{const \mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&}]{pk }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a2bdb05bdd189940f7ed0b25ab89fa1ad}\label{classhelib_1_1_pub_key_a2bdb05bdd189940f7ed0b25ab89fa1ad}} 
+\index{helib::PubKey@{helib::PubKey}!operator$>$$>$@{operator$>$$>$}}
+\index{operator$>$$>$@{operator$>$$>$}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{operator$>$$>$}{operator>>}}
+{\footnotesize\ttfamily std\+::istream\& operator$>$$>$ (\begin{DoxyParamCaption}\item[{std\+::istream \&}]{str,  }\item[{\mbox{\hyperlink{classhelib_1_1_pub_key}{Pub\+Key}} \&}]{pk }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+\mbox{\Hypertarget{classhelib_1_1_pub_key_a5b5d89141b4d68c0830b9fe4468ac8f7}\label{classhelib_1_1_pub_key_a5b5d89141b4d68c0830b9fe4468ac8f7}} 
+\index{helib::PubKey@{helib::PubKey}!SecKey@{SecKey}}
+\index{SecKey@{SecKey}!helib::PubKey@{helib::PubKey}}
+\doxysubsubsection{\texorpdfstring{SecKey}{SecKey}}
+{\footnotesize\ttfamily friend class \mbox{\hyperlink{classhelib_1_1_sec_key}{Sec\+Key}}\hspace{0.3cm}{\ttfamily [friend]}}
+

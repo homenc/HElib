@@ -1,0 +1,56 @@
+\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib_misc_psi__r_e_a_d_m_e_autotoc_md41}{}\doxysection{Prequisites}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib_misc_psi__r_e_a_d_m_e_autotoc_md41}
+
+\begin{DoxyItemize}
+\item You must have bats-\/core installed.
+\item Build and install H\+Elib.
+\item Build the utilities directory.
+\end{DoxyItemize}\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib_misc_psi__r_e_a_d_m_e_autotoc_md42}{}\doxysection{Build the tests}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib_misc_psi__r_e_a_d_m_e_autotoc_md42}
+
+\begin{DoxyEnumerate}
+\item In the directory {\ttfamily $<$path-\/to-\/\+H\+Elib$>$/\+H\+Elib/misc/psi} run 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{mkdir build}
+\DoxyCodeLine{cd build}
+\DoxyCodeLine{cmake -\/Dhelib\_DIR=<absolute-\/path-\/to-\/HElib-\/install-\/dir> ..}
+\DoxyCodeLine{make -\/j3}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib_misc_psi__r_e_a_d_m_e_autotoc_md43}{}\doxysection{Run the tests}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib_misc_psi__r_e_a_d_m_e_autotoc_md43}
+Make sure you are in the directory {\ttfamily $<$path-\/to-\/\+H\+Elib$>$/\+H\+Elib/misc/psi/test} directory.
+
+Make sure you set which tests you want to run by commenting out the skip in {\ttfamily lookup.\+bats} and {\ttfamily scoring.\+bats}.
+
+Pay particular attention to setting the correct {\ttfamily nslots}, {\ttfamily modulus}, {\ttfamily p}, and {\ttfamily m} in the files {\ttfamily lookup.\+bats}, {\ttfamily scoring.\+bats}, and {\ttfamily gen-\/params.\+batx}.
+
+
+\begin{DoxyEnumerate}
+\item Create the parameters 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./gen-\/params.batx -\/f "{}generate params"{}}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+This places the parameters, context, keys and encrypted database/query in the directory {\ttfamily data\+\_\+and\+\_\+params}.
+
+
+\begin{DoxyEnumerate}
+\item Run the tests 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{DEBUG=1 bats .}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+You should see a lot of tmp directories, one for each test.
+
+
+\begin{DoxyEnumerate}
+\item View the results 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./report.sh <number-\/of-\/threads-\/you-\/want-\/to-\/view>}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+Note\+: It scans the directories for the results you have asked for but you will be prompted to press enter to see the next result. 

@@ -1,0 +1,221 @@
+The H\+Elib build, install, and regression tests suite have been built and tested on Ubuntu 18.\+04, Ubuntu 20.\+04, Fedora 31, Fedora 32, Cent\+OS 7.\+7, Cent\+OS 8.\+1, and mac\+OS Mojave 10.\+14.
+
+There are two different ways to build and install H\+Elib. The first one will automatically download and build the G\+MP and N\+TL dependencies and pack the libraries in a relocatable folder. The second way, instead, requires the dependencies to be installed by you and available in the system.
+
+{\bfseries{Please read these instructions in full to better choose the type of build that is better for you.}}\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md12}{}\doxysection{General prerequisites}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md12}
+
+\begin{DoxyItemize}
+\item G\+NU make $>$= 3.\+82
+\item pthreads
+\item git $>$= 1.\+8.\+3 (required to build and run the H\+Elib test suite)
+\end{DoxyItemize}
+
+{\bfseries{Linux environment\+:}}
+\begin{DoxyItemize}
+\item g++ $>$= 7.\+3.\+1
+\item cmake $>$= 3.\+10.\+2
+\end{DoxyItemize}
+
+{\bfseries{mac\+OS environment\+:}}
+\begin{DoxyItemize}
+\item Apple clang $>$= 11.\+0.\+0 (available with Xcode $>$= 11.\+0)
+\item Xcode Command Line Tools (can be installed with the command {\ttfamily xcode-\/select -\/-\/install} in a teminal)
+\item cmake $>$= 3.\+17.\+3 (available from \href{https://cmake.org/}{\texttt{ C\+Make}} or \href{https://www.macports.org/}{\texttt{ Mac\+Ports Project}} and \href{https://brew.sh/}{\texttt{ Homebrew}} as packages)
+\end{DoxyItemize}
+
+{\bfseries{For development\+:}}
+\begin{DoxyItemize}
+\item clang-\/format $>$= 9.\+0.\+0 (available with your linux distribution and for mac\+OS from \href{https://www.macports.org/}{\texttt{ Mac\+Ports Project}} and \href{https://brew.sh/}{\texttt{ Homebrew}} as packages)
+\end{DoxyItemize}\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md13}{}\doxysection{Option 1\+: package build (recommended for most users)}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md13}
+This option bundles H\+Elib and its dependencies (N\+TL and G\+MP) in one directory which can then be moved around freely on the system. N\+TL and G\+MP will be automatically fetched and compiled. It can be installed globally (i.\+e. under {\ttfamily /usr/local}), which is the default option if no {\ttfamily C\+M\+A\+K\+E\+\_\+\+I\+N\+S\+T\+A\+L\+L\+\_\+\+P\+R\+E\+F\+IX} is specified, but this should only be done with caution as existing versions of N\+TL, G\+MP, or H\+Elib will be overwritten. These additional two prerequisites are required in this case\+:
+
+
+\begin{DoxyItemize}
+\item m4 $>$= 1.\+4.\+16
+\item patchelf $>$= 0.\+9 (if building on Linux)
+\end{DoxyItemize}
+
+Please note that if changing from library build to package build, it is safer to use a clean build directory.\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md14}{}\doxysubsection{Instructions}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md14}
+
+\begin{DoxyEnumerate}
+\item Create a build directory, typically as a sibling of {\ttfamily src}\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd HElib}
+\DoxyCodeLine{mkdir build}
+\DoxyCodeLine{cd build}
+\end{DoxyCode}
+
+\item Run the cmake configuration step, specifying that you want a package build (via -\/D\+P\+A\+C\+K\+A\+G\+E\+\_\+\+B\+U\+I\+LD=ON) and saying where you would like the installation to be. To install in {\ttfamily /home/alice/helib\+\_\+install}, for example\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cmake -\/DPACKAGE\_BUILD=ON -\/DCMAKE\_INSTALL\_PREFIX=/home/alice/helib\_install ..}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+Extra options can be specified here, such as enabling H\+Elib tests with {\ttfamily -\/D\+E\+N\+A\+B\+L\+E\+\_\+\+T\+E\+ST=ON}. See later section entitled \char`\"{}\+H\+Elib build
+options\char`\"{} for details.
+
+
+\begin{DoxyEnumerate}
+\item Compile, with an optional number of threads specified (16 in this example). The output of this will be in the relocatable folder {\ttfamily helib\+\_\+pack}\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{make -\/j16}
+\end{DoxyCode}
+
+\item (optional) If step 2 was performed with {\ttfamily -\/D\+E\+N\+A\+B\+L\+E\+\_\+\+T\+E\+ST=ON}, H\+Elib tests can be run as follows\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{ctest -\/R helib\_check}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+Detailed H\+Elib-\/specific test logs can be found in {\ttfamily dependencies/\+Build/helib\+\_\+external/\+Testing/\+Temporary/\+Last\+Test.\+log}.
+
+
+\begin{DoxyEnumerate}
+\item (optional) Run the install step, to copy the folder {\ttfamily helib\+\_\+pack} to {\ttfamily \$\{C\+M\+A\+K\+E\+\_\+\+I\+N\+S\+T\+A\+L\+L\+\_\+\+P\+R\+E\+F\+IX\}} (in this example {\ttfamily /home/alice/helib\+\_\+install})\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{make install}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+of course, if the {\ttfamily C\+M\+A\+K\+E\+\_\+\+I\+N\+S\+T\+A\+L\+L\+\_\+\+P\+R\+E\+F\+IX} was kept as the default {\ttfamily /usr/local} or some other system-\/wide path, step 5 may require {\ttfamily sudo} privileges.\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md15}{}\doxysection{Option 2\+: library build (advanced)}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md15}
+This option involves building H\+Elib on its own, linking against pre-\/existing dependencies (N\+TL and G\+MP) on the system. In this way, the H\+Elib library can be moved around, but its dependencies (N\+TL and G\+MP) cannot, as they are absolute paths. For this option, you must build G\+MP $>$=6.\+0.\+0 and N\+TL $>$=11.\+4.\+3 yourself. For details on how to do this, please see the section on building dependencies later. It is assumed throughout this installation option that the environment variables {\ttfamily \$\+G\+M\+P\+D\+IR} and {\ttfamily \$\+N\+T\+L\+D\+IR} are set to point to the installation directories of G\+MP and N\+TL respectively.
+
+Please note that if changing from package build to library build, it is safer to use a clean build directory.
+
+
+\begin{DoxyEnumerate}
+\item Create a build directory, typically as a sibling of {\ttfamily src}\+:
+\end{DoxyEnumerate}
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cd HElib}
+\DoxyCodeLine{mkdir build}
+\DoxyCodeLine{cd build}
+\end{DoxyCode}
+
+
+
+\begin{DoxyEnumerate}
+\item Run the cmake configuration step, specifying where to find N\+TL and G\+MP. If not specified, system-\/wide locations such as {\ttfamily /usr/local/lib} will be searched. To install in {\ttfamily /home/alice/helib\+\_\+install}, for example\+:
+\end{DoxyEnumerate}
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{cmake -\/DGMP\_DIR="{}\$\{GMPDIR\}"{} -\/DNTL\_DIR="{}\$\{NTLDIR\}"{} -\/DCMAKE\_INSTALL\_PREFIX=/home/alice/helib\_install ..}
+\end{DoxyCode}
+
+
+Extra options can be specified here, such as enabling H\+Elib tests with {\ttfamily -\/D\+E\+N\+A\+B\+L\+E\+\_\+\+T\+E\+ST=ON}. See later section entitled \char`\"{}\+H\+Elib build options\char`\"{} for details.
+
+
+\begin{DoxyEnumerate}
+\item Compile, with an optional number of threads specified (16 in this example)\+:
+\end{DoxyEnumerate}
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{make -\/j16}
+\end{DoxyCode}
+
+
+
+\begin{DoxyEnumerate}
+\item (optional) If step 2 was performed with {\ttfamily -\/D\+E\+N\+A\+B\+L\+E\+\_\+\+T\+E\+ST=ON}, tests can be run as follows\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{ctest}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+Detailed H\+Elib test logs can be found in {\ttfamily Testing/\+Temporary/\+Last\+Test.\+log}.
+
+
+\begin{DoxyEnumerate}
+\item Run the install step, to copy the files to {\ttfamily \$\{C\+M\+A\+K\+E\+\_\+\+I\+N\+S\+T\+A\+L\+L\+\_\+\+P\+R\+E\+F\+IX\}} (in this example {\ttfamily /home/alice/helib\+\_\+install})\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{make install}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+of course, if the {\ttfamily C\+M\+A\+K\+E\+\_\+\+I\+N\+S\+T\+A\+L\+L\+\_\+\+P\+R\+E\+F\+IX} was kept as the default {\ttfamily /usr/local} or some other system-\/wide path, step 5 may require {\ttfamily sudo} privileges.\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md16}{}\doxysection{Building dependencies (for option 2)}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md16}
+\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md17}{}\doxysubsection{G\+MP}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md17}
+Many distributions come with G\+MP pre-\/installed. If not, you can install G\+MP as follows.
+
+
+\begin{DoxyEnumerate}
+\item Download G\+MP from \href{http://www.gmplib.org}{\texttt{ http\+://www.\+gmplib.\+org}} -- make sure that you get G\+MP $>$=6.\+0.\+0 (current version is 6.\+2.\+0).
+\item Decompress and cd into the gmp directory (e.\+g., {\ttfamily gmp-\/6.\+2.\+0}).
+\item G\+MP is compiled in the standard unix way\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./configure}
+\DoxyCodeLine{make}
+\DoxyCodeLine{sudo make install}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+This will install G\+MP into {\ttfamily /usr/local} by default.
+
+{\bfseries{N\+O\+TE\+:}} For further options when building G\+MP, run {\ttfamily ./configure -\/-\/help} in step 3.\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md18}{}\doxysubsection{N\+TL}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md18}
+You can install N\+TL as follows\+:
+
+
+\begin{DoxyEnumerate}
+\item Download N\+TL $>$=11.\+4.\+3 (current version is 11.\+4.\+3) from \href{http://www.shoup.net/ntl/download.html}{\texttt{ http\+://www.\+shoup.\+net/ntl/download.\+html}}
+\item Decompress and cd into the directory, e.\+g., {\ttfamily ntl-\/11.\+4.\+3/src}
+\item N\+TL is configured, built and installed in the standard Unix way (but remember to specify the following flags to {\ttfamily configure})\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{./configure NTL\_GMP\_LIP=ON SHARED=on  NTL\_THREADS=on NTL\_THREAD\_BOOST=on}
+\DoxyCodeLine{make}
+\DoxyCodeLine{sudo make install}
+\end{DoxyCode}
+
+\end{DoxyEnumerate}
+
+This should install N\+TL into {\ttfamily /usr/local}.
+
+{\bfseries{N\+O\+TE\+:}} For further options when building N\+TL, run {\ttfamily ./configure -\/-\/help} in step 3.
+
+{\bfseries{N\+O\+TE}}\+: if linking against a non-\/system G\+MP, pass {\ttfamily G\+M\+P\+\_\+\+P\+R\+E\+F\+IX=$<$path/to/gmp$>$} to the {\ttfamily ./configure} step.\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md19}{}\doxysection{H\+Elib build options}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md19}
+\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md20}{}\doxysubsection{Generic options}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md20}
+
+\begin{DoxyItemize}
+\item {\ttfamily B\+U\+I\+L\+D\+\_\+\+S\+H\+A\+R\+ED=O\+N/\+O\+FF} (default is {\ttfamily O\+FF})\+: Build as a shared library. Note that building H\+Elib (regardless of {\ttfamily B\+U\+I\+L\+D\+\_\+\+S\+H\+A\+R\+ED}) will fail if N\+TL is not built as a shared library. The default for N\+TL is static library, to build N\+TL as a shared library use {\ttfamily ./configure S\+H\+A\+R\+ED=on} in step 1.
+\item {\ttfamily C\+M\+A\+K\+E\+\_\+\+B\+U\+I\+L\+D\+\_\+\+T\+Y\+PE}\+: (default is {\ttfamily Rel\+With\+Deb\+Info})\+: Choose the type of build, options are\+: {\ttfamily Debug}, {\ttfamily Rel\+With\+Deb\+Info}, {\ttfamily Release}, {\ttfamily Min\+Size\+Rel}.
+\item {\ttfamily C\+M\+A\+K\+E\+\_\+\+I\+N\+S\+T\+A\+L\+L\+\_\+\+P\+R\+E\+F\+IX}\+: Desired installation directory for H\+Elib.
+\item {\ttfamily E\+N\+A\+B\+L\+E\+\_\+\+T\+E\+ST=O\+N/\+O\+FF} (default is {\ttfamily O\+FF})\+: Enable building of tests. This will include an automatic download step for the google test framework stable release (googletest v1.\+10.\+0)
+\item {\ttfamily E\+N\+A\+B\+L\+E\+\_\+\+T\+H\+R\+E\+A\+DS=O\+N/\+O\+FF} (default is {\ttfamily ON})\+: Enable threading support. This must be on if and only if N\+TL was built with {\ttfamily N\+T\+L\+\_\+\+T\+H\+R\+E\+A\+DS=ON}.
+\item {\ttfamily P\+E\+D\+A\+N\+T\+I\+C\+\_\+\+B\+U\+I\+LD=O\+N/\+O\+FF} (default is {\ttfamily ON})\+: Use {\ttfamily -\/Wall -\/Wpedantic -\/Wextra -\/Werror} during build.
+\item {\ttfamily H\+E\+L\+I\+B\+\_\+\+D\+E\+B\+UG=O\+N/\+O\+FF} (default is {\ttfamily O\+FF})\+: Activate the debug module when building H\+Elib (by defining the {\ttfamily H\+E\+L\+I\+B\+\_\+\+D\+E\+B\+UG} macro). When the debug module is active, this generates extra information used for debugging purposes. {\ttfamily H\+E\+L\+I\+B\+\_\+\+D\+E\+B\+UG} will propagate to programs using H\+Elib, when using cmake. When this is enabled, programs using H\+Elib will generate a warning during configuration. This is to remind the user that use of the debug module can cause issues, such as {\ttfamily sigsegv}, if initialized incorrectly.
+\end{DoxyItemize}\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md21}{}\doxysubsection{Parameters specific to option 1 (package build)}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md21}
+
+\begin{DoxyItemize}
+\item {\ttfamily P\+A\+C\+K\+A\+G\+E\+\_\+\+D\+IR}\+: Location that a package build will be installed to. Defaults to {\ttfamily \$\{C\+M\+A\+K\+E\+\_\+\+I\+N\+S\+T\+A\+L\+L\+\_\+\+P\+R\+E\+F\+IX\}/helib\+\_\+pack}.
+\item {\ttfamily F\+E\+T\+C\+H\+\_\+\+G\+MP}\+: Whether or not to fetch and build G\+MP. Defaults to {\ttfamily ON}. If set to {\ttfamily O\+FF}, there should either exist a system-\/installed G\+MP library, or {\ttfamily G\+M\+P\+\_\+\+D\+IR} should point to a valid G\+MP prefix.
+\item {\ttfamily G\+M\+P\+\_\+\+D\+IR}\+: Prefix of the G\+MP library. Ignored if {\ttfamily F\+E\+T\+C\+H\+\_\+\+G\+MP=ON}.
+\end{DoxyItemize}\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md22}{}\doxysubsection{Parameters specific to option 2 (library build)}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md22}
+
+\begin{DoxyItemize}
+\item {\ttfamily E\+N\+A\+B\+L\+E\+\_\+\+L\+E\+G\+A\+C\+Y\+\_\+\+T\+E\+ST=O\+N/\+O\+FF} (default is {\ttfamily O\+FF})\+: Build old test system (deprecated).
+\item {\ttfamily G\+M\+P\+\_\+\+D\+IR}\+: Prefix of the G\+MP library.
+\item {\ttfamily N\+T\+L\+\_\+\+D\+IR}\+: Prefix of the N\+TL library.
+\end{DoxyItemize}\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md23}{}\doxysection{Using H\+Elib in a project}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md23}
+\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md24}{}\doxysubsection{Standard method}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md24}
+After {\ttfamily make install} has been run in either option 1 or option 2, one can find the required shared library files to link against in {\ttfamily lib} and the header files in {\ttfamily include}. These can be used in the preferred way with your build system of choice.\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md25}{}\doxysubsection{Package build with cmake}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md25}
+Another, easier way is possible if you are using H\+Elib in a cmake project.
+
+
+\begin{DoxyEnumerate}
+\item Include the following line in your {\ttfamily C\+Make\+Lists.\+txt}\+: 
+\begin{DoxyCode}{0}
+\DoxyCodeLine{find\_package(helib)}
+\end{DoxyCode}
+
+\item Run your {\ttfamily cmake} step with {\ttfamily -\/Dhelib\+\_\+\+D\+IR=$<$helib install prefix$>$/share/cmake/helib}.
+\end{DoxyEnumerate}\hypertarget{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md26}{}\doxysubsection{Example}\label{md___users__projects__f_h_e__h_elib__repos__public_staging_homenc__h_elib__i_n_s_t_a_l_l_autotoc_md26}
+Full working examples of cmake-\/based projects which uses H\+Elib can be found in the {\ttfamily examples} directory. 
