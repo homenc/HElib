@@ -1310,6 +1310,8 @@ public:
   }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
 
+  // VJS-FIXME: I *really* don't like the level of templating madness
+  // here...it makes it really hard to understand what is going on...
   template <typename PTXT, typename ARRAY>
   void encode(PTXT& ptxt, const ARRAY& array) const
   {

@@ -623,6 +623,139 @@ long PubKey::Encrypt(Ctxt& ciphertxt,
             // CKKS does not have one
 }
 
+long PubKey::Encrypt(Ctxt& ctxt, const EncodedConstant& ec) const
+{
+  HELIB_TIMER_START;
+
+  assertTrue(!isCKKS(), "Encrypt: mismatched BGV constant / CKKS ctxt");
+  assertTrue(ec.initialized(), "Encrypt: uninitialized BGV constant");
+  assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
+  
+  long ptxtSpace = ec.getPtxtSpace();
+  NTL::ZZX ptxt;
+  
+  convert(ptxt, ec.getPoly());
+
+  // The rest of the code is copy/pasted from the
+  // original Encrypt code, except that for now, highNoise
+  // is not implemented.  We can put it back if necessary.
+  // We may eventually want to completely deprecate the original
+  // Encrypt code, which is why it is copy/pasted for now.
+  // We could also just invoke 
+  //    Encrypt(ctxt, ptxt, ptxtSpace, /*highNoise=*/false);
+  // at this point for the same effect.
+
+  // VJS-FIXME: I really should get rid of the unnecessary
+  // connversions from zzX to ZZX...I've added a zzX version
+  // of balanced_mulMod...but I also need zzX versions
+  // of DoubleCRT += and friends.
+
+
+  if (ptxtSpace != pubEncrKey.ptxtSpace) { // plaintext-space mismatch
+    ptxtSpace = NTL::GCD(ptxtSpace, pubEncrKey.ptxtSpace);
+    if (ptxtSpace <= 1)
+      throw RuntimeError("Plaintext-space mismatch on encryption");
+  }
+
+  // generate a random encryption of zero from the public encryption key
+  ctxt = pubEncrKey; // already an encryption of zero, just not a random one
+                     // ctxt with two parts, each with all the ctxtPrimes
+  ctxt.noiseBound = 0;
+
+  // choose a random small scalar r and a small random error vector (e0,e1),
+  // then set ctxt = r*pk + p*(e0,e1) + (ptxt,0),
+  // where pk = pubEncrKey, and p = ptxtSpace.
+
+  // The resulting ciphertext decrypts to
+  //   r*<sk,pk> + p*(e0 + sk1*e1) + ptxt,
+  // where sk = (1, sk1) is the secret key.
+  // This leads to a noise bound of:
+  //   r_bound*pubEncrKey.noiseBound
+  //     + p*e0_bound + p*e1_bound*getSKeyBound()
+  //     + ptxt_bound
+  //  Here, r_bound, e0_bound, and e1_bound are values
+  //  returned by the corresponding sampling routines.
+  //  ptxt_bound is somewhat heuristically set assuming
+  //  that the coefficients of the ciphertext are uniformly
+  //  and independently chosen from the interval [-p/2, p/2].
+
+  DoubleCRT e(context, context.ctxtPrimes);
+  DoubleCRT r(context, context.ctxtPrimes);
+  double r_bound = r.sampleSmallBounded();
+
+  ctxt.noiseBound += r_bound * pubEncrKey.noiseBound;
+
+  // std::cerr << "*** r_bound*pubEncrKey.noiseBound " << r_bound *
+  // pubEncrKey.noiseBound << "\n";
+
+  double stdev = to_double(context.stdev);
+  if (context.zMStar.getPow2() == 0) // not power of two
+    stdev *= sqrt(context.zMStar.getM());
+
+  for (size_t i = 0; i < ctxt.parts.size(); i++) { // add noise to all the parts
+    ctxt.parts[i] *= r;
+    NTL::xdouble e_bound;
+
+    e_bound = e.sampleGaussianBounded(stdev);
+
+    e *= ptxtSpace;
+    e_bound *= ptxtSpace;
+
+    if (i == 1) {
+      e_bound *= getSKeyBound(ctxt.parts[i].skHandle.getSecretKeyID());
+    }
+
+    ctxt.parts[i] += e;
+    ctxt.noiseBound += e_bound;
+
+    // std::cerr << "*** e_bound " << e_bound << "\n";
+  }
+
+  // add in the plaintext
+  // FIXME: we should really randomize ptxt, so that each coefficient
+  //    has expected value 0
+  // NOTE: This relies on the first part, ctxt[0], to have handle to 1
+
+  // This code sequence could be optimized, but there is no point
+  long QmodP = rem(context.productOfPrimes(ctxt.primeSet), ptxtSpace);
+  NTL::ZZX ptxt_fixed;
+  balanced_MulMod(ptxt_fixed, ptxt, QmodP, ptxtSpace);
+  ctxt.parts[0] += ptxt_fixed;
+
+  // NOTE: this is a heuristic, as the ptxt is not really random.
+  // although, when ptxtSpace == 2, the balanced_MulMod will
+  // randomize it
+  double ptxt_bound =
+      context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
+
+  // FIXME: for now, we print out a warning, but we can consider
+  // implementing a more robust randomization and rejection sampling
+  // strategy.
+  double ptxt_sz =
+      NTL::conv<double>(embeddingLargestCoeff(ptxt_fixed, context.zMStar));
+
+  if (ptxt_sz > ptxt_bound) {
+    Warning("noise bound exceeded in encryption");
+  }
+
+  double ptxt_rat = ptxt_sz / ptxt_bound;
+  HELIB_STATS_UPDATE("ptxt_rat", ptxt_rat);
+
+  ctxt.noiseBound += ptxt_bound;
+
+  // std::cerr << "*** ptxt_bound " << ptxt_bound << "\n";
+
+  // fill in the other ciphertext data members
+  ctxt.ptxtSpace = ptxtSpace;
+  ctxt.intFactor = 1;
+
+  // std::cerr << "*** ctxt.noiseBound " << ctxt.noiseBound << "\n";
+
+  // CheckCtxt(ctxt, "after encryption");
+
+  return ptxtSpace;
+}
+
 bool PubKey::isCKKS() const
 {
   return (getContext().alMod.getTag() == PA_cx_tag);

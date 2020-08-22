@@ -153,4 +153,21 @@ zzX balanced_zzX(const NTL::GF2X& f)
   return out;
 }
 
+void balanced_MulMod(zzX& out, const zzX& f, long a, long q)
+{
+  long n = f.length();
+  out.SetLength(n);
+
+  NTL::mulmod_precon_t aqinv = NTL::PrepMulModPrecon(a, q);
+  for (long i : range(n)) {
+    long c = mcMod(f[i], q);
+    c = NTL::MulModPrecon(c, a, q, aqinv); // returns c \in [0,q-1]
+    if (c > q / 2 || (q % 2 == 0 && c == q / 2 && NTL::RandomBnd(2)))
+      c -= q;
+    out[i] = c;
+  }
+
+  normalize(out);
+}
+
 } // namespace helib
