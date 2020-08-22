@@ -582,6 +582,7 @@ void PubKey::CKKSencrypt(Ctxt& ciphertxt,
   CKKSencrypt(ciphertxt, tmp, ptxtSize, scaling);
 }
 
+
 // These methods are overridden by secret-key Encrypt
 long PubKey::Encrypt(Ctxt& ciphertxt,
                      const NTL::ZZX& plaintxt,
