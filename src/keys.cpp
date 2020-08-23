@@ -623,18 +623,18 @@ long PubKey::Encrypt(Ctxt& ciphertxt,
             // CKKS does not have one
 }
 
-long PubKey::Encrypt(Ctxt& ctxt, const EncodedConstant& ec) const
+long PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
 {
   HELIB_TIMER_START;
 
-  assertTrue(!isCKKS(), "Encrypt: mismatched BGV constant / CKKS ctxt");
-  assertTrue(ec.initialized(), "Encrypt: uninitialized BGV constant");
-  assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
+  assertTrue(!isCKKS(), "Encrypt: mismatched BGV ptxt / CKKS ctxt");
+  assertTrue(eptxt.initialized(), "Encrypt: uninitialized BGV ptxt");
+  assertEq(this, &ctxt.pubKey, "Encrypt: public key mismatch");
   
-  long ptxtSpace = ec.getPtxtSpace();
+  long ptxtSpace = eptxt.getPtxtSpace();
   NTL::ZZX ptxt;
   
-  convert(ptxt, ec.getPoly());
+  convert(ptxt, eptxt.getPoly());
 
   // The rest of the code is copy/pasted from the
   // original Encrypt code, except that for now, highNoise

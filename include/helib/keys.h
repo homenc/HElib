@@ -21,7 +21,7 @@
  */
 
 #include <helib/keySwitching.h>
-#include <helib/EncodedConstant.h>
+#include <helib/EncodedPtxt.h>
 
 namespace helib {
 
@@ -196,14 +196,14 @@ public:
 
 
   /**
-   *  Encrypts an EncodedConstant object.
+   *  Encrypts an EncodedPtxt_BGV object.
    *  Returns the ptxtSpace of the resulting ctxt,
-   *  which is the GCD of the ptxtSpace of the public key and ec.
+   *  which is the GCD of the ptxtSpace of the public key and eptxt.
    *  We may eventually want to make this virtual so that
    *  it may be overriden by secret-key encrypt
    */
 
-  long Encrypt(Ctxt& ctxt, const EncodedConstant& ec) const;
+  long Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const;
 
   bool isCKKS() const;
   // NOTE: Is taking the alMod from the context the right thing to do?

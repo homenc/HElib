@@ -104,6 +104,8 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
   amt %= ord; // DIRT: assumes division w/ remainder follows C++11 and C99 rules
   if (amt == 0)
     return;
+  if (amt < 0)
+    amt += ord; // Make sure amt is in the range [1,ord-1]
 
   ctxt.smartAutomorph(palg.genToPow(i, amt));
 }
@@ -114,6 +116,7 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 {
+  // VJS-FIXME: we need to implement a corresponding mask table
   throw LogicError("EncryptedArrayCx::shift1D not implemented");
 }
 #pragma GCC diagnostic pop

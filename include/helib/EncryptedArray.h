@@ -163,6 +163,16 @@ public:
     convert(ptxt, tmp);
   }
 
+  void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const
+  {
+    zzX poly;
+    encode(poly, array);  // this will fail if this is not BGV
+    EncodedPtxt_BGV& eptxt_bgv = eptxt.resetBGV();
+    eptxt_bgv.poly = poly;
+    eptxt_bgv.ptxtSpace = getP2R();
+  }
+
+
   // These methods are working for some of the derived classes (throwing
   // otherwise)
   virtual void decode(std::vector<long>& array, const NTL::ZZX& ptxt) const = 0;
