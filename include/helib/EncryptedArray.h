@@ -172,6 +172,15 @@ public:
     eptxt_bgv.ptxtSpace = getP2R();
   }
 
+  void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const
+  {
+    zzX poly;
+    encode(poly, array);  
+    EncodedPtxt_BGV& eptxt_bgv = eptxt.resetBGV();
+    eptxt_bgv.poly = poly;
+    eptxt_bgv.ptxtSpace = getP2R();
+  }
+
 
   // These methods are working for some of the derived classes (throwing
   // otherwise)
