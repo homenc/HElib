@@ -628,7 +628,6 @@ long PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
   HELIB_TIMER_START;
 
   assertTrue(!isCKKS(), "Encrypt: mismatched BGV ptxt / CKKS ctxt");
-  assertTrue(eptxt.initialized(), "Encrypt: uninitialized BGV ptxt");
   assertEq(this, &ctxt.pubKey, "Encrypt: public key mismatch");
   
   long ptxtSpace = eptxt.getPtxtSpace();

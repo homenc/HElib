@@ -163,22 +163,60 @@ public:
     convert(ptxt, tmp);
   }
 
+  //=============== new EncodedPtxt interfaces
+
   void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const
   {
     zzX poly;
     encode(poly, array);  // this will fail if this is not BGV
-    EncodedPtxt_BGV& eptxt_bgv = eptxt.resetBGV();
-    eptxt_bgv.poly = poly;
-    eptxt_bgv.ptxtSpace = getP2R();
+    eptxt.resetBGV(poly, getP2R());
+  }
+
+  void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const
+  {
+    zzX poly;
+    encode(poly, array);  // this will fail if this is not BGV
+    eptxt.resetBGV(poly, getP2R());
   }
 
   void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const
   {
+    // VJS-FIXME: if we enhance PlaintextArray, then this
+    // has to be re-written as a virtual method to deal with 
+    // both BGV and CKKS as
     zzX poly;
     encode(poly, array);  
-    EncodedPtxt_BGV& eptxt_bgv = eptxt.resetBGV();
-    eptxt_bgv.poly = poly;
-    eptxt_bgv.ptxtSpace = getP2R();
+    eptxt.resetBGV(poly, getP2R());
+  }
+
+  virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const
+  {
+    // VJS-FIXME: implement this...should work for both BGV and CKKS
+    throw LogicError("NOT IMPLEMENTED: encodeUnitSelector(EncodedPtxt& eptxt, long i)");
+  }
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
+  {
+    // VJS-FIXME: implement this...should work for both BGV and CKKS
+    throw LogicError("NOT IMPLEMENTED: encode(EncodedPtxt& eptxt, const std::vector<bool>)& array");
+  }
+
+  // The following are CKKS-only encodings. 
+  // mag: default sets mag to maximum magnitude
+  // rescale: divide computed scale factor by rescale
+  // NOTE: the absolute error of the encoding (after scaling) is guaranteed
+  // to be at most 2^{-r} * rescale.
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
+                      double mag = -1, double rescale = 1) const
+  {
+    throw LogicError("NOT IMPLEMENTED: encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array");
+  }
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
+                      double mag = -1, double rescale = -1) const
+  {
+    throw LogicError("NOT IMPLEMENTED: encode(EncodedPtxt& eptxt, const std::vector<double>& array");
   }
 
 
@@ -711,6 +749,12 @@ public:
   }
 
   // conversion between std::vectors of complex, real, and integers
+
+  // VJS-FIXME: I don't think you need most of these...
+  // all you really need to do is specify (probably best in NumbTh.h)
+  // routines covert(X, Y) for scalar types long / double / cx_double,
+  // and the template mechanism will take are of itself
+  
   static void convert(std::vector<cx_double>& out,
                       const std::vector<double>& in)
   {
@@ -952,6 +996,7 @@ public:
     return encode(ptxt, tmp, useThisSize, precision);
   }
 
+
   /**
    * @brief Encode a `Ptxt` object into a `zzX`.
    * @tparam Scheme Encryption scheme to be used (either `BGV` or `CKKS`).
@@ -990,6 +1035,14 @@ public:
     ::helib::convert(ptxt, tmp);
     return f;
   }
+
+  //========= new EncodedPtxt interface
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
+                      double mag = -1, double rescale = 1) const override;
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
+                      double mag = -1, double rescale = 1) const override;
 
   void encryptOneNum(Ctxt& ctxt,
                      const PubKey& key,
@@ -1046,14 +1099,13 @@ public:
   double encodeRoundingError() const
   {
     const Context& context = getContext();
-    long m = context.zMStar.getM();
+    long phim = context.zMStar.getPhiM();
 
-    // VJS-FIXME: it seems to me that the m should be phi(m),
-    // or m/2 if m is assumed to be a power of two.
+    // VJS-FIXME: I changed m to phi(m).
     // Also, for the power of two case, noiseBoundForUniform
     // is a bit too pessimistic, as this is the circularly symmetric
     // case.
-    return context.noiseBoundForUniform(0.5, m);
+    return context.noiseBoundForUniform(0.5, phim);
   }
   // The scaling factor to use when encoding/decoding plaintext elements
   long encodeScalingFactor(long precision = -1, double roundErr = -1.0) const

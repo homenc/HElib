@@ -22,6 +22,7 @@
 #include <helib/norms.h>
 #include <helib/debugging.h>
 #include <helib/apiAttributes.h>
+#include <helib/log.h>
 
 namespace helib {
 
@@ -156,6 +157,35 @@ double EncryptedArrayCx::encode(zzX& ptxt,
   return factor;
 }
 
+
+void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
+                              double mag, double rescale) const 
+{
+  double actual_mag = max_abs(array);
+  if (mag < 0) 
+    mag = actual_mag;
+  else {
+    if (actual_mag > mag) 
+      Warning("EncryptedArrayCx::encode: actual magnitudee exceeds mag parameter");
+  }
+  
+  double scale =  encodeScalingFactor()/rescale;
+  double err = encodeRoundingError();
+  zzX poly;
+  CKKS_embedInSlots(poly, array, getPAlgebra(), scale);
+  eptxt.resetCKKS(poly, mag, scale, err);
+}
+
+void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<double>& array,
+                              double mag, double rescale) const 
+{
+  std::vector<cx_double> array1;
+  convert(array1, array);
+  encode(eptxt, array1, mag, rescale);
+}
+
+
+
 double EncryptedArrayCx::encode(zzX& ptxt,
                                 double num,
                                 double useThisSize,
@@ -181,6 +211,9 @@ double EncryptedArrayCx::encodei(zzX& ptxt, long precision) const
 
 const zzX& EncryptedArrayCx::getiEncoded() const
 {
+  // VJS-FIXME: this is NOT thread-safe
+  // It also seems like it is not used anywhere, so I suggest we
+  // get rid of it...
   if (lsize(iEncoded) <= 0)              // encoded-i not yet initialized
     encodei(const_cast<zzX&>(iEncoded)); // temporarily suspend cont-ness
   return iEncoded;

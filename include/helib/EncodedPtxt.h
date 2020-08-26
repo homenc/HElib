@@ -23,42 +23,36 @@ namespace helib {
 class EncodedPtxt_BGV {
 
 private:
-  long ptxtSpace = -1; // ptxtSpace < 0 signifies an "uninitialized"
   zzX poly;
+  long ptxtSpace; 
 
 
 public:
-  bool initialized() const { return ptxtSpace >= 0; }
 
-  long getPtxtSpace() const { return ptxtSpace; }
   const zzX& getPoly() const { return poly; }
+  long getPtxtSpace() const { return ptxtSpace; }
 
+  EncodedPtxt_BGV(const zzX& poly_, long ptxtSpace_)
+    : poly(poly_), ptxtSpace(ptxtSpace_) { }
 
-  friend class EncryptedArrayBase;
 };
 
 class EncodedPtxt_CKKS {
 
 private:
-  double mag = -1.0, scale = -1.0, err = -1.0;
-  // mag < 0 signifies an "uninitialized"
-
   zzX poly;
-
+  double mag, scale, err;
 
 public:
 
-  bool initialized() const { return mag >= 0; }
-  
-
+  const zzX& getPoly() const { return poly; }
   double getMag() const { return mag; }
   double getScale() const { return scale; }
   double getErr() const { return err; }
 
-  const zzX& getPoly() const { return poly; }
+  EncodedPtxt_CKKS(const zzX& poly_, double mag_, double scale_, double err_)
+    : poly(poly_), mag(mag_), scale(scale_), err(err_) { }
 
-
-  friend class EncryptedArrayCx;
 };
 
 
@@ -81,11 +75,11 @@ or nothing at all.
 * eptxt.getCKKS() returns a read-only reference to the contained
      EncodedPtxt_CKKS object (or throws a std::bad_cast exception)
 
-* eptxt.resetBGV() replaces the contents of eptxt with a new
-     EncodedPtxt_BGV object and returns a reference to that object
+* eptxt.resetBGV(poly, ptxtSpace) replaces the contents of eptxt with a new
+     EncodedPtxt_BGV object
 
-* eptxt.resetCKKS() replaces the contents of eptxt with a new
-     EncodedPtxt_CKKS object and returns a reference to that object
+* eptxt.resetCKKS(poly, mag, scale, err) replaces the contents of eptxt 
+     with a new EncodedPtxt_CKKS object
 
 The default contructor creates an empty container.
 Copy contructors and assignmemnt operators are available,
@@ -120,6 +114,8 @@ public:
   virtual bool isBGV() const override { return true; }
 
   virtual const EncodedPtxt_BGV& getBGV() const override { return *this; }
+
+  using EncodedPtxt_BGV::EncodedPtxt_BGV;
 };
 
 
@@ -133,6 +129,8 @@ public:
   virtual bool isCKKS() const override { return true; }
 
   virtual const EncodedPtxt_CKKS& getCKKS() const override { return *this; }
+
+  using EncodedPtxt_CKKS::EncodedPtxt_CKKS;
 };
 
 
@@ -150,18 +148,14 @@ public:
   const EncodedPtxt_CKKS& getCKKS() const 
   { if (rep.null()) throw std::bad_cast(); return rep->getCKKS(); }
 
-  EncodedPtxt_BGV& resetBGV() 
+  void resetBGV(const zzX& poly, long ptxtSpace) 
   { 
-    EncodedPtxt_derived_BGV *p = new EncodedPtxt_derived_BGV();
-    rep.set_ptr(p);
-    return *p;
+    rep.set_ptr(new EncodedPtxt_derived_BGV(poly, ptxtSpace));
   }
 
-  EncodedPtxt_CKKS& resetCKKS() 
+  void resetCKKS(const zzX& poly, double mag, double scale, double err) 
   { 
-    EncodedPtxt_derived_CKKS *p = new EncodedPtxt_derived_CKKS();
-    rep.set_ptr(p);
-    return *p;
+    rep.set_ptr(new EncodedPtxt_derived_CKKS(poly, mag, scale, err));
   }
 
 };
