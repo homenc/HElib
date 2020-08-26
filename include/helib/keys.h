@@ -203,7 +203,8 @@ public:
    *  it may be overriden by secret-key encrypt
    */
 
-  long Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const;
+  void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const;
+  void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const;
 
   bool isCKKS() const;
   // NOTE: Is taking the alMod from the context the right thing to do?

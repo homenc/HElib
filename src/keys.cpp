@@ -623,7 +623,7 @@ long PubKey::Encrypt(Ctxt& ciphertxt,
             // CKKS does not have one
 }
 
-long PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
+void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
 {
   HELIB_TIMER_START;
 
@@ -751,9 +751,99 @@ long PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
   // std::cerr << "*** ctxt.noiseBound " << ctxt.noiseBound << "\n";
 
   // CheckCtxt(ctxt, "after encryption");
-
-  return ptxtSpace;
 }
+
+
+
+void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
+{
+  assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
+
+
+  NTL::ZZX ptxt;
+  convert(ptxt, eptxt.getPoly());
+  double mag = eptxt.getMag();
+  double scale = eptxt.getScale();
+  double err = eptxt.getErr();
+
+  long m = context.zMStar.getM();
+
+  // generate a random encryption of zero from the public encryption key
+  ctxt = pubEncrKey; // already an encryption of zero, just not a random one
+
+  // choose a random small scalar r and a small random error vector
+  // (e0,e1), then set ctxt = r*pk + (e0,e1) + (ef*ptxt,0), where
+  // pk = pubEncrKey, and ef (the "extra factor") is described below
+
+  // The resulting ciphertext decrypts to
+  //   r*<sk,pk> + e0 + sk1*e1 + ef*ptxt,
+  // where sk = (1,s) is the secret key. 
+  // So the noise added to ptxt by the encryption process is
+  //    error_bound = r_bound*pubEncrKey.noiseBound
+  //                  + e0_bound + e1_bound*getSKeyBound()
+  // Here, r_bound, e0_bound, and e1_bound are values returned by the
+  // corresponding sampling routines.
+  //
+  // The input ptxt is already scaled by a factor f=scale, and is being
+  // further scaled by the extra factor ef, so ef*f is the new scaling
+  // factor. The extra factor ef is set as ceil(error_bound/err),
+  // so that we have error_bound/(ef*f) < err/fac....that is,
+  // the scaled noise added by encryption is less than the scaled
+  // noise already present in the encoded ptxt.
+
+  DoubleCRT e(context, context.ctxtPrimes);
+  DoubleCRT r(context, context.ctxtPrimes);
+
+  double r_bound = r.sampleSmallBounded(); // r is a {0,+-1} polynomial
+
+  NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
+
+  double stdev = to_double(context.stdev);
+
+  // VJS-FIXME: this should never happen for CKKS
+  if (context.zMStar.getPow2() == 0) // not power of two
+    stdev *= sqrt(m);
+
+  for (size_t i = 0; i < ctxt.parts.size(); i++) {
+    // add noise to all the parts
+
+    ctxt.parts[i] *= r;
+
+    double e_bound = e.sampleGaussianBounded(stdev);
+    // zero-mean Gaussian, sigma=stdev
+
+    ctxt.parts[i] += e;
+    if (i == 1) {
+      e_bound *= getSKeyBound(ctxt.parts[i].skHandle.getSecretKeyID());
+    }
+    error_bound += e_bound;
+  }
+
+  // Compute the extra scaling factor, if needed
+
+  // VJS-FIXME: note the new logic for computing ef...
+  // see comment above.
+  long ef = NTL::conv<long>(ceil(error_bound/err));
+
+  if (ef > 1) { // scale up some more
+    ctxt.parts[0] += ptxt * ef;
+    scale *= ef;
+    err *= ef;
+  } else { // no need for extra scaling
+    ctxt.parts[0] += ptxt;
+  }
+
+  // VJS-FIXME: we no longer round to the next power of two:
+  // Then encoding routine should take care of setting mag correctly.
+  ctxt.ptxtMag = mag;
+  ctxt.ratFactor = scale;
+  ctxt.noiseBound = error_bound + err;
+  ctxt.ptxtSpace = 1;
+}
+
+
+
+
 
 bool PubKey::isCKKS() const
 {
