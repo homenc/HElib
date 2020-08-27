@@ -1228,7 +1228,7 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
       fe2 = e2 + m2 * NTL::fabs(f2 - f1);
       err = err1;
     } else {
-      // use rat factor f = f1
+      // use rat factor f = f2
       f = f2;
       fe1 = e1 + m1 * NTL::fabs(f2 - f1);
       fe2 = e2;
