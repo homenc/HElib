@@ -911,7 +911,7 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
 
   // VJS-FIXME: this strategy of adding some primes to offset the
   // rounding error kind of makes it difficult for the caller
-  // to ensure that the prime set of scrt contains the prime set
+  // to ensure that the prime set of dcrt contains the prime set
   // of ctxt.  This means we will expand the prime set of dcrt if
   // necessary.
 
@@ -973,6 +973,8 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
 
   if (!NTL::IsOne(intRatio))
     tmp *= intRatio;
+  // VJS-FIXME: whatever noise is in dcrt also needs to
+  // be scaled by intRatio and added to the noise bound
 
   addPart(tmp, SKHandle(0, 1, 0));
 
@@ -984,6 +986,12 @@ void Ctxt::addConstantCKKS(const NTL::ZZX& poly,
                            NTL::xdouble factor)
 {
   // just call the DoubleCRT version
+
+  // VJS-FIXME: this may not be the most sensible thing to
+  // do because the addSomePrimes logic.
+  // It may be best to delay coversion to dcrt until after
+  // we know if we need to do that...otherwise, we'll do
+  // an unnecessary round trip between poly and dcrt 
   addConstantCKKS(DoubleCRT(poly, context, primeSet), size, factor);
 }
 
