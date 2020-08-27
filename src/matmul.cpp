@@ -679,6 +679,8 @@ struct MatMul1DExec_construct
   }
 };
 
+HELIB_NO_CKKS_IMPL(MatMul1DExec_construct)
+
 // HERE
 void MatMul1D_CKKS::processDiagonal(zzX& poly,
                                     double& size,
@@ -1667,6 +1669,9 @@ struct BlockMatMul1DExec_construct
   }
 };
 
+HELIB_NO_CKKS_IMPL(BlockMatMul1DExec_construct)
+
+
 BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
                                      UNUSED bool minimal) :
     ea(mat.getEA())
@@ -2127,6 +2132,8 @@ struct MatMulFullExec_construct
   }
 };
 
+HELIB_NO_CKKS_IMPL(MatMulFullExec_construct)
+
 MatMulFullExec::MatMulFullExec(const MatMulFull& mat, bool _minimal) :
     ea(mat.getEA()), minimal(_minimal)
 {
@@ -2463,6 +2470,8 @@ struct BlockMatMulFullExec_construct
   }
 };
 
+HELIB_NO_CKKS_IMPL(BlockMatMulFullExec_construct)
+
 BlockMatMulFullExec::BlockMatMulFullExec(const BlockMatMulFull& mat,
                                          bool _minimal) :
     ea(mat.getEA()), minimal(_minimal)
@@ -2666,6 +2675,8 @@ struct mul_MatMul1D_impl
   }
 };
 
+HELIB_NO_CKKS_IMPL(mul_MatMul1D_impl)
+
 void mul(PlaintextArray& pa, const MatMul1D& mat)
 {
   const EncryptedArray& ea = mat.getEA();
@@ -2726,6 +2737,8 @@ struct mul_BlockMatMul1D_impl
   }
 };
 
+HELIB_NO_CKKS_IMPL(mul_BlockMatMul1D_impl)
+
 void mul(PlaintextArray& pa, const BlockMatMul1D& mat)
 {
   const EncryptedArray& ea = mat.getEA();
@@ -2769,6 +2782,8 @@ struct mul_MatMulFull_impl
     data = res;
   }
 };
+
+HELIB_NO_CKKS_IMPL(mul_MatMulFull_impl)
 
 void mul(PlaintextArray& pa, const MatMulFull& mat)
 {
@@ -2814,6 +2829,8 @@ struct mul_BlockMatMulFull_impl
     data = res;
   }
 };
+
+HELIB_NO_CKKS_IMPL(mul_BlockMatMulFull_impl)
 
 void mul(PlaintextArray& pa, const BlockMatMulFull& mat)
 {

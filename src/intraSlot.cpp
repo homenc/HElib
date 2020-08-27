@@ -59,6 +59,9 @@ public:
     }
   }
 };
+
+HELIB_NO_CKKS_IMPL(buildUnpackSlotEncoding_pa_impl)
+
 // A wrapper function, calls the apply method of the class above
 void buildUnpackSlotEncoding(std::vector<zzX>& unpackSlotEncoding,
                              const EncryptedArray& ea)
@@ -113,6 +116,8 @@ public:
     } // NOTE: why aren't we using multi-threading here?
   }
 };
+
+HELIB_NO_CKKS_IMPL(unpack_pa_impl)
 //! \endcond
 
 // A wrapper function, calls the apply method of the class above
@@ -190,6 +195,10 @@ public:
     }
   }
 };
+
+
+HELIB_NO_CKKS_IMPL(repack_pa_impl)
+
 //! \endcond
 
 // A wrapper function, calls the apply method of the class above
@@ -297,6 +306,8 @@ public:
     ea.encode(result, vec);
   }
 };
+
+HELIB_NO_CKKS_IMPL(packConstant_pa_impl)
 //! \endcond
 
 // this packs the low-order nbits of data into each slot,
@@ -330,7 +341,8 @@ public:
                     PlaintextArray& pa,
                     std::vector<std::size_t>& value)
   {
-    PA_BOILER
+    PA_BOILER(type)
+
     const NTL::Mat<R>& CBi = ea.getNormalBasisMatrixInverse();
 
     value.resize(n);
@@ -347,6 +359,8 @@ public:
     }
   }
 };
+
+HELIB_NO_CKKS_IMPL(unpackSlots_pa_impl)
 //! \endcond
 
 // Sets value to be a vector of size nslots.

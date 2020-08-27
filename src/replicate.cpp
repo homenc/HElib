@@ -724,7 +724,7 @@ public:
                     PlaintextArray& pa,
                     long i)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     assertInRange(i, 0l, n, "Attempted to access out-of-range data");
     for (long j = 0; j < n; j++) {

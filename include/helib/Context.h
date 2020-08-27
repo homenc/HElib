@@ -72,6 +72,7 @@ public:
   PAlgebraMod alMod;
 
   //! @brief A default EncryptedArray
+  // VJS-FIXME: should this really be public?
   std::shared_ptr<const EncryptedArray> ea;
 
   std::shared_ptr<const PowerfulDCRT> pwfl_converter;

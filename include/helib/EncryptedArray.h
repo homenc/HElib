@@ -26,6 +26,7 @@
 #include <helib/Context.h>
 #include <helib/Ctxt.h>
 #include <helib/keys.h>
+#include <helib/exceptions.h>
 
 namespace helib {
 
@@ -45,7 +46,7 @@ typedef std::complex<double> cx_double;
 // not honor such _Pragma.
 // NOTE: Consider marking the section with _Pragma removing the UNUSED tag when
 // GCC 5.4 won't be supported anymore.
-#define PA_BOILER                                                              \
+#define PA_BOILER(type)                                                        \
   const PAlgebraModDerived<type>& tab = ea.getTab();                           \
   UNUSED const RX& G = ea.getG();                                              \
   UNUSED long n = ea.size();                                                   \
@@ -62,7 +63,7 @@ typedef std::complex<double> cx_double;
 // not honor such _Pragma.
 // NOTE: Consider marking the section with _Pragma removing the UNUSED tag when
 // GCC 5.4 won't be supported anymore.
-#define CPA_BOILER                                                             \
+#define CPA_BOILER(type)                                                       \
   const PAlgebraModDerived<type>& tab = ea.getTab();                           \
   UNUSED const RX& G = ea.getG();                                              \
   UNUSED long n = ea.size();                                                   \
@@ -720,11 +721,14 @@ private:
 };
 
 //! A different derived class to be used for the approximate-numbers scheme
-class EncryptedArrayCx : public EncryptedArrayBase
+template<>
+class EncryptedArrayDerived<PA_cx> : public EncryptedArrayBase
 {
   const Context& context;
   const PAlgebraModCx& alMod;
+
   zzX iEncoded; // an encoded plaintext with i in all the slots
+  // VJS-FIXME: this is a bad idea...
 
 public:
   static double roundedSize(double x)
@@ -737,12 +741,12 @@ public:
 
   double encodei(zzX& ptxt, long precision = -1) const; // encode i in all slots
 
-  explicit EncryptedArrayCx(const Context& _context) :
+  explicit EncryptedArrayDerived(const Context& _context) :
       context(_context), alMod(context.alMod.getCx())
   {
     clear(iEncoded);
   }
-  EncryptedArrayCx(const Context& _context, const PAlgebraModCx& _alMod) :
+  EncryptedArrayDerived(const Context& _context, const PAlgebraModCx& _alMod) :
       context(_context), alMod(_alMod)
   {
     clear(iEncoded);
@@ -784,7 +788,7 @@ public:
 
   EncryptedArrayBase* clone() const override
   {
-    return new EncryptedArrayCx(*this);
+    return new EncryptedArrayDerived(*this);
   }
 
   const zzX& getiEncoded() const;
@@ -799,6 +803,17 @@ public:
   void shift1D(Ctxt& ctxt, long i, long k) const override;
 
   long getP2R() const override { return alMod.getPPowR(); }
+
+  // the following help with some template code
+  cx_double getG() const { return 0.0; }
+  const PAlgebraModCx getTab() const { return alMod; }
+
+  template <template <typename> class T, typename... Args>
+  void dispatch(Args&&... args) const
+  {
+    T<PA_cx>::apply(*this, std::forward<Args>(args)...);
+  }
+  
 
   /* Begin BGV functions. They will simply throw here. */
   // encode
@@ -1250,6 +1265,8 @@ public:
   ///@}
 };
 
+typedef EncryptedArrayDerived<PA_cx> EncryptedArrayCx;
+
 // plaintextAutomorph: Compute b(X) = a(X^k) mod Phi_m(X).
 template <typename RX, typename RXModulus>
 void plaintextAutomorph(RX& bb,
@@ -1316,6 +1333,12 @@ public:
       alMod(_alMod), rep(buildEncryptedArray(context, _alMod))
   {}
 
+  // NOTES: 
+  //  (1) the second constructor is provided mainly for BGV bootstrapping
+  //  (2) we do not currently provide a constructor that allows
+  //      the user to select both G and alMod, but this could be added
+
+
   // copy constructor:
 
   EncryptedArray& operator=(const EncryptedArray& other)
@@ -1361,6 +1384,12 @@ public:
     case PA_zz_p_tag: {
       const EncryptedArrayDerived<PA_zz_p>* p =
           static_cast<const EncryptedArrayDerived<PA_zz_p>*>(rep.get_ptr());
+      p->dispatch<T>(std::forward<Args>(args)...);
+      break;
+    }
+    case PA_cx_tag: {
+      const EncryptedArrayDerived<PA_cx>* p =
+          static_cast<const EncryptedArrayDerived<PA_cx>*>(rep.get_ptr());
       p->dispatch<T>(std::forward<Args>(args)...);
       break;
     }
@@ -1655,5 +1684,19 @@ void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d);
 ///@}
 
 } // namespace helib
+
+
+// Helper class for unimplemented pa_impl classes
+
+template <typename type>
+struct pa_no_impl
+{
+  template<typename... Args>
+  static void apply(Args&&... args)
+  { throw helib::LogicError("function not implemented"); }
+};
+
+#define HELIB_NO_CKKS_IMPL(impl) template<> class impl<PA_cx> : public pa_no_impl<PA_cx> {};
+
 
 #endif // ifndef HELIB_ENCRYPTEDARRAY_H
