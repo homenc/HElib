@@ -1,0 +1,5 @@
+# A local cmake cache will affect the docker image build
+CMakeCache.txt
+# Typical build directory name - if copied in from the host, the image will 
+# be very bloated and could interfere with the build process
+build

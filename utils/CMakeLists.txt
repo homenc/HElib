@@ -1,0 +1,39 @@
+# Copyright (C) 2020 IBM Corp.
+# This program is Licensed under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at
+#   http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License. See accompanying LICENSE file.
+
+cmake_minimum_required(VERSION 3.10.2 FATAL_ERROR)
+
+## Use -std=c++14 as default.
+set(CMAKE_CXX_STANDARD 14)
+## Disable C++ extensions
+set(CMAKE_CXX_EXTENSIONS OFF)
+## Require full C++ standard
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(utils LANGUAGES CXX)
+
+# Define standard installation directories (GNU)
+include(GNUInstallDirs)
+
+# Set default output folder
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
+
+find_package(helib 1.1.0 EXACT REQUIRED)
+
+add_subdirectory(create-context)
+add_subdirectory(crypto)
+
+add_subdirectory(test_bootstrapping)
