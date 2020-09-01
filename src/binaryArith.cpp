@@ -987,7 +987,7 @@ static void multByNegative(CtPtrs& product,
     for (long j = i; j < resSize; j++)
       if (j < i + lsize(b) && a.isSet(i) && !a[i]->isEmpty() &&
           b.isSet(j - i) && !b[j - i]->isEmpty()) {
-        pairs.push_back(std::pair<long, long>(i, j));
+        pairs.emplace_back(i, j);
       }
   long nPairs = lsize(pairs);
 
@@ -1093,7 +1093,7 @@ void multTwoNumbers(CtPtrs& product,
     for (long j = i; j < lsize(numbers[i]); j++) {
       if (lhs.isSet(j - i) && !(lhs[j - i]->isEmpty()) && rhs.isSet(i) &&
           !(rhs[i]->isEmpty()))
-        pairs.push_back(std::pair<long, long>(i, j));
+        pairs.emplace_back(i, j);
     }
   long nPairs = lsize(pairs);
   NTL_EXEC_RANGE(nPairs, first, last)

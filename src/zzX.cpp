@@ -95,7 +95,7 @@ const NTL::zz_pXModulus& getPhimXMod(const PAlgebra& palg)
         new NTL::zz_pXModulus(phimX); // will "never" be deleted
 
     // insert returns a pair (iterator, bool)
-    auto ret = moduli.insert(std::pair<long, NTL::zz_pXModulus*>(m, ptr));
+    auto ret = moduli.emplace(m, ptr);
     if (ret.second == false) // Another thread inserted it, delete your copy
       delete ptr;
     // FIXME: Could leak memory if insert throws an exception

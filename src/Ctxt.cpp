@@ -727,7 +727,7 @@ void Ctxt::addPart(const DoubleCRT& part,
     // meaning that the value of primeSet for an "empty" ciphertext
     // is irrelevant.
 
-    parts.push_back(CtxtPart(part, handle));
+    parts.emplace_back(part, handle);
     if (negative)
       parts.back().Negate();
   } else { // adding to a ciphertext with existing parts
@@ -782,7 +782,7 @@ void Ctxt::addPart(const DoubleCRT& part,
       else
         parts[j].Add(*ptr, /*matchIndexSets=*/false);
     } else { // no matching part found, just append this part
-      parts.push_back(CtxtPart(*ptr, handle));
+      parts.emplace_back(*ptr, handle);
       if (negative)
         parts.back().Negate();
     }

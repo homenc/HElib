@@ -72,7 +72,7 @@ void ModuliSizes::init(const Context& context)
 
   // Get all subsets of smallPrimes
 
-  sizes.push_back(std::make_pair(0.0, IndexSet::emptySet())); // the empty set
+  sizes.emplace_back(0.0, IndexSet::emptySet()); // the empty set
   long idx = 1; // first index that's still not set
 
   for (long i : context.smallPrimes) { // add i to all sets upto idx-1
@@ -451,7 +451,7 @@ void Context::AddSmallPrime(long q)
 {
   assertFalse(inChain(q), "Small prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
-  moduli.push_back(Cmodulus(zMStar, q, 0));
+  moduli.emplace_back(zMStar, q, 0);
   smallPrimes.insert(i);
 }
 
@@ -459,7 +459,7 @@ void Context::AddCtxtPrime(long q)
 {
   assertFalse(inChain(q), "Prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
-  moduli.push_back(Cmodulus(zMStar, q, 0));
+  moduli.emplace_back(zMStar, q, 0);
   ctxtPrimes.insert(i);
 }
 
@@ -467,7 +467,7 @@ void Context::AddSpecialPrime(long q)
 {
   assertFalse(inChain(q), "Special prime q is already in the prime chain");
   long i = moduli.size(); // The index of the new prime in the list
-  moduli.push_back(Cmodulus(zMStar, q, 0));
+  moduli.emplace_back(zMStar, q, 0);
   specialPrimes.insert(i);
 }
 

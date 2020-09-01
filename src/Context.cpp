@@ -364,7 +364,7 @@ void readContextBinary(std::istream& str, Context& context)
   for (long p, i = 0; i < nPrimes; i++) {
     p = read_raw_int(str);
 
-    context.moduli.push_back(Cmodulus(context.zMStar, p, 0));
+    context.moduli.emplace_back(context.zMStar, p, 0);
 
     if (smallPrimes.contains(i))
       context.smallPrimes.insert(i); // small prime
@@ -512,7 +512,7 @@ std::istream& operator>>(std::istream& str, Context& context)
     long p;
     str >> p;
 
-    context.moduli.push_back(Cmodulus(context.zMStar, p, 0));
+    context.moduli.emplace_back(context.zMStar, p, 0);
 
     if (smallPrimes.contains(i))
       context.smallPrimes.insert(i); // small prime

@@ -134,7 +134,7 @@ void PubKey::setKeySwitchMap(long keyId)
     const KeySwitch& mat = keySwitching.at(i);
     if (mat.toKeyID == keyId && mat.fromKey.getPowerOfS() == 1 &&
         mat.fromKey.getSecretKeyID() == keyId)
-      edges.push_back(keySwitchingEdge(mat.fromKey.getPowerOfX(), i));
+      edges.emplace_back(mat.fromKey.getPowerOfX(), i);
   }
   if (keyId >= (long)keySwitchMap.size()) // allocate more space if needed
     keySwitchMap.resize(keyId + 1);
