@@ -499,7 +499,7 @@ ArgMap& ArgMap::arg(const std::string& name, T& value)
 
   // have we seen this addr before?
   assertEq<LogicError>(addresses_used.count(&value),
-                       0ul,
+                       static_cast<std::size_t>(0),
                        "Attempting to register variable twice");
 
   addresses_used.insert(&value);
