@@ -11,6 +11,9 @@ suited place in the codebase.
 The majority of files contained in `misc` are old code and tests, however some
 files and directories of note are
 
+### `estimator`
+A script that runs the lwe-estimator (https://bitbucket.org/malb/lwe-estimator) and provides approximations of it via linear functions
+
 ### `params1a` 
 An experimental program used to generate various BGV parameters.  This version
 only generates `m`s that are products of distinct prime powers.
