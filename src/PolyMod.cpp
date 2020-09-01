@@ -322,12 +322,12 @@ void serialize(std::ostream& os, const PolyMod& poly)
   }
 
   // TODO: Add stream modifier option for separator
-  std::string sep = ", ";
+  constexpr char sep[] = ", ";
   os << "[";
   for (auto ite = poly.data.rep.begin(); ite != poly.data.rep.end(); ++ite) {
     os << *ite;
     if (ite + 1 != poly.data.rep.end()) {
-      os << ", ";
+      os << sep;
     }
   }
   os << "]";
