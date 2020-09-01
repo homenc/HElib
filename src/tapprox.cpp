@@ -411,7 +411,7 @@ int main(int argc, char* argv[])
     secretKey.GenSecKey();        // A +-1/0 secret key
     addSome1DMatrices(secretKey); // compute key-switching matrices
 
-    const PubKey publicKey = secretKey;
+    const PubKey &publicKey = secretKey;
     const EncryptedArrayCx& ea = context.ea->getCx();
 
     if (verbose) {
