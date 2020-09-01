@@ -822,22 +822,8 @@ public:
   }
 };
 
-template<>
-class encode_pa_impl<PA_cx>
-{
-public:
-  PA_INJECT(PA_cx)
+HELIB_NO_CKKS_IMPL(encode_pa_impl)
 
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    PlaintextArray& pa,
-                    const std::vector<long>& array)
-  { throw LogicError("encoding of vector<long>& array not supported for CKKS"); }
-
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    PlaintextArray& pa,
-                    const std::vector<NTL::ZZX>& array)
-  { throw LogicError("encoding of vector<ZZX>& array not supported for CKKS"); }
-};
 
 
 void encode(const EncryptedArray& ea,
@@ -899,7 +885,10 @@ public:
 
   static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
   {
-    throw LogicError("not yet implemented");
+    PA_BOILER(PA_cx)
+
+    for (long i = 0; i < n; i++)
+      data[i] = RandomComplex();
   }
 };
 
@@ -931,21 +920,8 @@ public:
   }
 };
 
-template<>
-class decode_pa_impl<PA_cx>
-{
-public:
-  PA_INJECT(PA_cx)
+HELIB_NO_CKKS_IMPL(decode_pa_impl)
 
-  template <typename T>
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    std::vector<T>& array,
-                    const PlaintextArray& pa)
-  {
-    throw LogicError("function not implemented");
-  }
-
-};
 
 void decode(const EncryptedArray& ea,
             std::vector<long>& array,
@@ -1008,36 +984,8 @@ public:
   }
 };
 
-template<>
-class equals_pa_impl<PA_cx>
-{
-public:
-  PA_INJECT(PA_cx)
+HELIB_NO_CKKS_IMPL(equals_pa_impl)
 
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const PlaintextArray& other)
-  {
-    throw LogicError("function not implemented");
-  }
-
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const std::vector<long>& other)
-  {
-    throw LogicError("function not implemented");
-  }
-
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const std::vector<NTL::ZZX>& other)
-  {
-    throw LogicError("function not implemented");
-  }
-};
 
 bool equals(const EncryptedArray& ea,
             const PlaintextArray& pa,
@@ -1326,7 +1274,6 @@ void applyPerm(const EncryptedArray& ea,
 
 //=============================================================================
 
-// VJS-FIXME: printing of zeros is not quite right
 template <typename type>
 class print_pa_impl
 {
@@ -1340,24 +1287,6 @@ public:
     CPA_BOILER(type)
 
     s << data;
-
-#if 0
-
-    if (n == 0)
-      s << "[]";
-    else {
-      if (IsZero(data[0]))
-        s << "[[0]";
-      else
-        s << "[" << data[0];
-      for (long i = 1; i < lsize(data); i++)
-        if (IsZero(data[i]))
-          s << " [0]";
-        else
-          s << " " << data[i];
-      s << "]";
-    }
-#endif
   }
 };
 

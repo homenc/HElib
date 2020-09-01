@@ -1479,7 +1479,7 @@ public:
   ///@}
 };
 
-// NewPlaintextArray
+// PlaintextArray
 
 class PlaintextArrayBase
 { // purely abstract interface
@@ -1605,6 +1605,123 @@ void applyPerm(const EncryptedArray& ea,
                const NTL::Vec<long>& pi);
 
 void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
+
+//=====================================
+
+// PtxtArray is a somewhat "friendlier" interface than
+// PlaintextArray, as it carries with it a reference to
+// an EncryptedArray.  It is recommended that PlaintextArray
+// is deprecated in favor of PtxtArray.
+
+class PtxtArray {
+public:
+  const EncryptedArray& ea;
+  PlaintextArray pa;
+
+  PtxtArray(const EncryptedArray& ea_) : ea(ea_), pa(ea) { } 
+  PtxtArray(const Context& context) : ea(*context.ea), pa(ea) { }
+
+  // copy constructor: default
+
+  PtxtArray& operator=(const PtxtArray& other) 
+  {
+    assertTrue(&ea == &other.ea, "PtxtArray: inconsidtent assignment");
+    pa = other.pa;
+    return *this;
+  }
+};
+
+
+inline std::ostream& operator<<(std::ostream& s, const PtxtArray& a)
+{
+  return s << a.pa;
+}
+
+inline void rotate(PtxtArray& a, long k)
+{
+  rotate(a.ea, a.pa, k);
+}
+
+inline void shift(PtxtArray& a, long k)
+{
+  shift(a.ea, a.pa, k);
+}
+
+inline void encode(PtxtArray& a, const std::vector<long>& array)
+{
+  encode(a.ea, a.pa, array);
+}
+
+inline void encode(PtxtArray& a, const std::vector<NTL::ZZX>& array)
+{
+  encode(a.ea, a.pa, array);
+}
+
+inline void random(PtxtArray& a)
+{
+  random(a.ea, a.pa);
+}
+
+
+inline void decode(std::vector<long>& array, const PtxtArray& a)
+{ decode(a.ea, array, a.pa); }
+
+inline void decode(std::vector<NTL::ZZX>& array, const PtxtArray& a)
+{ decode(a.ea, array, a.pa); }
+
+inline bool operator==(const PtxtArray& a, const PtxtArray& b)
+{
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  return equals(a.ea, a.pa, b.pa);
+}
+
+inline bool operator!=(const PtxtArray& a, const PtxtArray& b)
+{
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  return !equals(a.ea, a.pa, b.pa);
+}
+
+inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)
+{
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  add(a.ea, a.pa, b.pa);
+  return a;
+}
+
+inline PtxtArray& operator-=(PtxtArray& a, const PtxtArray& b)
+{
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  sub(a.ea, a.pa, b.pa);
+  return a;
+}
+
+inline PtxtArray& operator*=(PtxtArray& a, const PtxtArray& b)
+{
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  mul(a.ea, a.pa, b.pa);
+  return a;
+}
+
+inline void negate(PtxtArray& a)
+{
+  negate(a.ea, a.pa);
+}
+
+inline void frobeniusAutomorph(PtxtArray& a, long j) 
+{ frobeniusAutomorph(a.ea, a.pa, j); }
+
+inline void frobeniusAutomorph(PtxtArray& a, const NTL::Vec<long>& vec)
+{ frobeniusAutomorph(a.ea, a.pa, vec); }
+
+inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
+{ applyPerm(a.ea, a.pa, pi); }
+
+inline void power(PtxtArray& a, long e)
+{ power(a.ea, a.pa, e); }
+
+
+//=====================================
+
 
 // Following are functions for performing "higher level"
 // operations on "encrypted arrays".  There is really no

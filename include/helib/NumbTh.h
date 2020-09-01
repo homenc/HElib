@@ -287,6 +287,14 @@ inline bool is2power(long m)
   return (((unsigned long)m) == (1UL << k));
 }
 
+//! returns a pseudo-random number in uniform in [0, 1)
+double RandomReal();
+
+//! returns a pseudo-random number comomlex number z with |z| < 1
+std::complex<double> RandomComplex();
+
+
+
 // Returns a random mod p polynomial of degree < n
 NTL::ZZX RandPoly(long n, const NTL::ZZ& p);
 
