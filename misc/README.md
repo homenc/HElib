@@ -12,7 +12,8 @@ The majority of files contained in `misc` are old code and tests, however some
 files and directories of note are
 
 ### `estimator`
-A script that runs the lwe-estimator (https://bitbucket.org/malb/lwe-estimator) and provides approximations of it via linear functions
+A script that runs the lwe-estimator (https://bitbucket.org/malb/lwe-estimator) and provides approximations of it via linear functions.
+Requires `sage` runtime (https://www.sagemath.org/).  
 
 ### `params1a` 
 An experimental program used to generate various BGV parameters.  This version
