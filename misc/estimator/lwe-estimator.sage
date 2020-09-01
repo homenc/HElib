@@ -1,17 +1,12 @@
-# bootstrapping-lwe-estimator.sage
+# lwe-estimator.sage
 #
 # A script that uses the lwe-estimator to estimate the security levels
-# for various bootstrapping parameters. This file prints the results
-# to stdout in CSV format, where the columns are:
-#    m, n, |q|, X=n/log2(1/alpha), Y=security
+# for various parameters. This script saves the data in CSV format,
+# where the columns are:
+#    n, |q|, log2(1/alpha), X=n/log2(1/alpha), Y=security
 #
-# The script also print *to stderr* the linear regression line for
-# all the X,Y values.
-#
-# The bootsrapping parameters are specified by the ms, ns, and qs
-# lists below, where n[i]=phi(m[i]) and q[i] is the bit-length of
-# the modulus in the key-switching matrices, namely
-#   |q| = log2(ctxtPrimes)+log2(specialPrimes).
+# The script also print to stdout the linear regression line for
+# all the X,Y values, and plots the data in PDF files.
 
 import sys
 import itertools as it
