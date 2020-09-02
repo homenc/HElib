@@ -984,7 +984,50 @@ public:
   }
 };
 
-HELIB_NO_CKKS_IMPL(equals_pa_impl)
+template <>
+class equals_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other)
+  {
+    CPA_BOILER(PA_cx)
+
+    const std::vector<std::complex<double>>& odata = other.getData<PA_cx>();
+    
+    // VJS-FIXME: this detects whether the absolute difference
+    // is at most 0.01. I'm not sure if this makes complete
+    // sense, but I also don't know if any alternatives
+    // make sense.
+    for (long i = 0; i < n; i++) {
+       double diff = std::abs(data[i]-odata[i]);
+       if (diff > 0.01) { res = false; return; }
+    }
+    res = true;
+    return;
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const std::vector<long>& other)
+  {
+    throw LogicError("function not implemented");
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const std::vector<NTL::ZZX>& other)
+  {
+    throw LogicError("function not implemented");
+  }
+};
+
 
 
 bool equals(const EncryptedArray& ea,

@@ -74,6 +74,7 @@ typedef std::complex<double> cx_double;
   tab.restoreContext();
 
 class PlaintextArray; // forward reference
+class PtxtArray;      // forward reference
 class EncryptedArray; // forward reference
 
 /**
@@ -215,7 +216,7 @@ public:
   }
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag = -1, double rescale = -1) const
+                      double mag = -1, double rescale = 1) const
   {
     throw LogicError("NOT IMPLEMENTED: encode(EncodedPtxt& eptxt, const std::vector<double>& array");
   }
@@ -254,6 +255,7 @@ public:
 
   ///@{
   //! @name Encoding+encryption/decryption+decoding
+  // VJS-FIXME: this interface does not support CKKS encryption
   template <typename PTXT>
   void encrypt(Ctxt& ctxt, const PubKey& key, const PTXT& ptxt) const
   {
@@ -713,6 +715,10 @@ private:
     assertEq(&context,
              &ctxt.getContext(),
              "Cannot decrypt when ciphertext has different context than "
+
+
+
+
              "EncryptedArray");
     NTL::ZZX pp;
     sKey.Decrypt(pp, ctxt);
@@ -1418,6 +1424,8 @@ public:
     rep->encode(ptxt, array);
   }
 
+  void encode(EncodedPtxt& eptxt, const PtxtArray& array) const;
+
   void encodeUnitSelector(zzX& ptxt, long i) const
   {
     rep->encodeUnitSelector(ptxt, i);
@@ -1428,6 +1436,8 @@ public:
   {
     rep->decode(array, ptxt);
   }
+
+  void decode(PtxtArray& array, const NTL::ZZX& ptxt) const;
 
   template <typename T>
   void random(std::vector<T>& array) const
@@ -1441,11 +1451,15 @@ public:
     rep->encrypt(ctxt, pKey, ptxt);
   }
 
+  inline void encrypt(Ctxt& ctxt, const PubKey& pKey, const PtxtArray& ptxt) const;
+
   template <typename T>
   void decrypt(const Ctxt& ctxt, const SecKey& sKey, T& ptxt) const
   {
     rep->decrypt(ctxt, sKey, ptxt);
   }
+
+  inline void decrypt(const Ctxt& ctxt, const SecKey& sKey, PtxtArray& ptxt) const;
 
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
                           const std::vector<NTL::ZZX>& L) const
@@ -1618,14 +1632,14 @@ public:
   const EncryptedArray& ea;
   PlaintextArray pa;
 
-  PtxtArray(const EncryptedArray& ea_) : ea(ea_), pa(ea) { } 
-  PtxtArray(const Context& context) : ea(*context.ea), pa(ea) { }
+  explicit PtxtArray(const EncryptedArray& ea_) : ea(ea_), pa(ea) { } 
+  explicit PtxtArray(const Context& context) : ea(*context.ea), pa(ea) { }
 
   // copy constructor: default
 
   PtxtArray& operator=(const PtxtArray& other) 
   {
-    assertTrue(&ea == &other.ea, "PtxtArray: inconsidtent assignment");
+    assertTrue(&ea == &other.ea, "PtxtArray: inconsistent assignment");
     pa = other.pa;
     return *this;
   }
@@ -1647,12 +1661,12 @@ inline void shift(PtxtArray& a, long k)
   shift(a.ea, a.pa, k);
 }
 
-inline void encode(PtxtArray& a, const std::vector<long>& array)
+inline void convert(PtxtArray& a, const std::vector<long>& array)
 {
   encode(a.ea, a.pa, array);
 }
 
-inline void encode(PtxtArray& a, const std::vector<NTL::ZZX>& array)
+inline void convert(PtxtArray& a, const std::vector<NTL::ZZX>& array)
 {
   encode(a.ea, a.pa, array);
 }
@@ -1663,41 +1677,41 @@ inline void random(PtxtArray& a)
 }
 
 
-inline void decode(std::vector<long>& array, const PtxtArray& a)
+inline void convert(std::vector<long>& array, const PtxtArray& a)
 { decode(a.ea, array, a.pa); }
 
-inline void decode(std::vector<NTL::ZZX>& array, const PtxtArray& a)
+inline void convert(std::vector<NTL::ZZX>& array, const PtxtArray& a)
 { decode(a.ea, array, a.pa); }
 
 inline bool operator==(const PtxtArray& a, const PtxtArray& b)
 {
-  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   return equals(a.ea, a.pa, b.pa);
 }
 
 inline bool operator!=(const PtxtArray& a, const PtxtArray& b)
 {
-  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   return !equals(a.ea, a.pa, b.pa);
 }
 
 inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)
 {
-  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   add(a.ea, a.pa, b.pa);
   return a;
 }
 
 inline PtxtArray& operator-=(PtxtArray& a, const PtxtArray& b)
 {
-  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   sub(a.ea, a.pa, b.pa);
   return a;
 }
 
 inline PtxtArray& operator*=(PtxtArray& a, const PtxtArray& b)
 {
-  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsidtent operation");
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   mul(a.ea, a.pa, b.pa);
   return a;
 }
@@ -1718,6 +1732,37 @@ inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
 
 inline void power(PtxtArray& a, long e)
 { power(a.ea, a.pa, e); }
+
+
+inline void
+EncryptedArray::encode(EncodedPtxt& eptxt, const PtxtArray& array) const
+{
+  assertTrue(this == &array.ea, "PtxtArray: inconsistent operation");
+  encode(eptxt, array.pa);
+}
+
+inline void EncryptedArray::decode(PtxtArray& array, const NTL::ZZX& ptxt) const
+{
+  assertTrue(this == &array.ea, "PtxtArray: inconsistent operation");
+  decode(array.pa, ptxt);
+}
+
+inline void
+EncryptedArray::decrypt(const Ctxt& ctxt, const SecKey& sKey, PtxtArray& ptxt) const
+{
+  assertTrue(this == &ptxt.ea, "PtxtArray: inconsistent operation");
+  decrypt(ctxt, sKey, ptxt.pa);
+}
+
+inline void 
+EncryptedArray::encrypt(Ctxt& ctxt, const PubKey& pKey, const PtxtArray& ptxt) const
+{
+  // VJS-FIXME: without a mag argument, this should be CKKS only
+  assertTrue(this == &ptxt.ea, "PtxtArray: inconsistent operation");
+  encrypt(ctxt, pKey, ptxt.pa);
+}
+
+
 
 
 //=====================================
