@@ -426,7 +426,11 @@ void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
   RX res;
   div(res, tab.getPhimXMod(), tab.getFactors()[i]);
   mul(res, res, tab.getCrtCoeffs()[i]);
-  convert(ptxt, res);
+
+  ptxt = balanced_zzX(res);
+  // NOTE: previous version was
+  //   convert(ptxt, res);
+  // which did not do properly balanced remainders in some cases
 }
 
 template <typename type>
