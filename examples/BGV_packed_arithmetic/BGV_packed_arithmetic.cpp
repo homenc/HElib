@@ -146,11 +146,12 @@ int main(int argc, char* argv[])
   // Decrypt the modified ciphertext
   secret_key.Decrypt(plaintext_result, ctxt);
 
+  std::cout << "Operation: 2(a*a)/(a*a) - 2(a*a)/(a*a) = 0" << std::endl;
   // Print the decrypted plaintext
   // Should be [0] [0] [0] ... [0] [0]
-  std::cout << "Decrypted Plaintext: " << plaintext_result << std::endl;
+  std::cout << "Decrypted Result: " << plaintext_result << std::endl;
   // Print the plaintext version result, should be the same as the ctxt version
-  std::cout << "Plaintext version: " << ptxt << std::endl;
+  std::cout << "Plaintext Result: " << ptxt << std::endl;
 
   // We can also add constants
   // [0] [0] [0] ... [0] [0] -> [1] [1] [1] ... [1] [1]
@@ -175,9 +176,10 @@ int main(int argc, char* argv[])
   helib::Ptxt<helib::BGV> new_plaintext_result(context);
   secret_key.Decrypt(new_plaintext_result, ctxt);
 
+  std::cout << "Operation: Enc{(0 + 1)*1} + (0 + 1)*1" << std::endl;
   // Print the decrypted plaintext
   // Should be [2] [2] [2] ... [2] [2]
-  std::cout << "Decrypted Plaintext: " << new_plaintext_result << std::endl;
+  std::cout << "Decrypted Result: " << new_plaintext_result << std::endl;
 
   return 0;
 }

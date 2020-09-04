@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
   std::cout << "\n* based db search algorithm for demonstration purposes. *";
   std::cout << "\n*                                                       *";
   std::cout << "\n*********************************************************";
-  std::cout << std::endl;
+  std::cout << "\n" << std::endl;
 
   std::cout << "---Initialising HE Environment ... ";
   // Initialize context
@@ -177,8 +177,13 @@ int main(int argc, char* argv[])
   std::cout << "\nNumber of slots: " << nslots << std::endl;
 
   /************ Read in the database ************/
-  std::vector<std::pair<std::string, std::string>> country_db =
-      read_csv(db_filename);
+  std::vector<std::pair<std::string, std::string>> country_db;
+  try {
+    country_db = read_csv(db_filename);
+  } catch (std::runtime_error& e) {
+    std::cerr << "\n" << e.what() << std::endl;
+    exit(1);
+  }
 
   // Convert strings into numerical vectors
   std::cout << "\n---Initializing the encrypted key,value pair database ("

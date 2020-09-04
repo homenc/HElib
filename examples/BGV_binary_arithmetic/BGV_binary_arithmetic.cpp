@@ -132,6 +132,7 @@ int main(int argc, char* argv[])
   // which would result in several parallel slot-wise operations.
   // For simplicity we place the same data into each slot of each ciphertext,
   // printing out only the back of each vector.
+  // NB: fifteenOrLess4Four max is 15 bits. Later in the code we pop the MSB.
   long bitSize = 16;
   long outSize = 2 * bitSize;
   long a_data = NTL::RandomBits_long(bitSize);
