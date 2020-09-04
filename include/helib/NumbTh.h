@@ -15,6 +15,7 @@
  * @file NumbTh.h
  * @brief Miscellaneous utility functions.
  **/
+#include <algorithm>
 #include <vector>
 #include <set>
 #include <cmath>
@@ -933,6 +934,108 @@ inline double max_abs(const std::vector<double>& vec)
       res = t;
   }
   return res;
+}
+
+inline double max_diff(const std::vector<double>& a, const std::vector<double>& b)
+{
+  assertTrue(a.size() == b.size(), "max_diff: unequal vector sizes");
+  long n = a.size();
+  double res = 0;
+  for (long i = 0; i < n; i++)
+    res = std::max(res, std::abs(a[i]-b[i]));
+  return res;
+}
+
+inline double max_diff(const std::vector<std::complex<double>>& a, const std::vector<std::complex<double>>& b)
+{
+  assertTrue(a.size() == b.size(), "max_diff: unequal vector sizes");
+  long n = a.size();
+  double res = 0;
+  for (long i = 0; i < n; i++)
+    res = std::max(res, std::abs(a[i]-b[i]));
+  return res;
+}
+
+inline double max_diff(const std::vector<double>& a, const std::vector<std::complex<double>>& b)
+{
+  assertTrue(a.size() == b.size(), "max_diff: unequal vector sizes");
+  long n = a.size();
+  double res = 0;
+  for (long i = 0; i < n; i++)
+    res = std::max(res, std::abs(a[i]-b[i]));
+  return res;
+}
+
+inline double max_diff(const std::vector<std::complex<double>>& a, const std::vector<double>& b)
+{
+  assertTrue(a.size() == b.size(), "max_diff: unequal vector sizes");
+  long n = a.size();
+  double res = 0;
+  for (long i = 0; i < n; i++)
+    res = std::max(res, std::abs(a[i]-b[i]));
+  return res;
+}
+
+// General mechanisms for comparing approximate numbers
+
+
+// returns true iff |a-b| < tolerance*max(|b|,floor)
+// scalar versions:
+inline bool approx_equal(double a, double b, 
+                         double tolerance=0.01, double floor=1.0)
+{ return std::abs(a-b) <= tolerance*std::max(std::abs(b), floor); }
+
+inline bool approx_equal(std::complex<double> a, std::complex<double> b, 
+                         double tolerance=0.01, double floor=1.0)
+{ return std::abs(a-b) <= tolerance*std::max(std::abs(b), floor); }
+
+inline bool approx_equal(std::complex<double> a, double b, 
+                         double tolerance=0.01, double floor=1.0)
+{ return std::abs(a-b) <= tolerance*std::max(std::abs(b), floor); }
+
+// vector versions:
+// (1) based on infty norm
+// (2) vector lengths must match (or exception is thrown)
+// (3) zero-length vectors always yield true
+inline bool approx_equal(std::vector<double>& a, std::vector<double>& b, 
+                         double tolerance=0.01, double floor=1.0)
+{ return max_diff(a, b) <= tolerance*std::max(max_abs(b), floor); }
+
+inline bool approx_equal(std::vector<std::complex<double>>& a, std::vector<std::complex<double>>& b, 
+                         double tolerance=0.01, double floor=1.0)
+{ return max_diff(a, b) <= tolerance*std::max(max_abs(b), floor); }
+
+inline bool approx_equal(std::vector<std::complex<double>>& a, std::vector<double>& b, 
+                         double tolerance=0.01, double floor=1.0)
+{ return max_diff(a, b) <= tolerance*std::max(max_abs(b), floor); }
+  
+
+template<class T>
+struct ApproxClass {
+  const T& val;
+  double tolerance;
+  double floor;
+
+  ApproxClass(const T& val_, double tolerance_, double floor_)
+    : val(val_), tolerance(tolerance_), floor(floor_) { }
+};
+
+template<class T>
+ApproxClass<T> Approx(const T& val, double tolerance=0.01, double floor=1.0)
+{
+  return ApproxClass<T>(val, tolerance, floor);
+}
+
+template<class S, class T>
+bool operator==(const S& a, const ApproxClass<T>& b)
+{
+  return approx_equal(a, b.val, b.tolerance, b.floor);
+}
+
+template<class S, class T>
+bool operator!=(const S& a, const ApproxClass<T>& b)
+{
+  return !approx_equal(a, b.val, b.tolerance, b.floor);
 }
 
 //! This should go in NTL some day...
