@@ -161,7 +161,7 @@ double EncryptedArrayCx::encode(zzX& ptxt,
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
                               double mag, double rescale) const 
 {
-  double actual_mag = max_abs(array);
+  double actual_mag = RealAbs(array);
   if (mag < 0) 
     mag = actual_mag;
   else {

@@ -707,7 +707,7 @@ void MatMul1D_CKKS::processDiagonal(zzX& poly,
   if (zDiag)
     clear(poly);
   else {
-    size = max_abs(diag);
+    size = RealAbs(diag);
     factor = ea.encode(poly, diag, 1.0);
     // VJS-FIXME: we are using size=1.0.
     // Maybe we should allow this to be parameterized?

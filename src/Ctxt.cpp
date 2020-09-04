@@ -1053,7 +1053,7 @@ void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
   // VJS-FIXME: maybe this encdoing routine should also return
   // the rounding error...we kind of need this value
 
-  double size = max_abs(other);
+  double size = RealAbs(other);
 
   if (size == 0.0)
     return;
@@ -1896,7 +1896,7 @@ void Ctxt::multByConstantCKKS(const std::vector<std::complex<double>>& other)
   // VJS-FIXME: why does encode with ZZX not require a size arg?
 
   // VJS-FIXME: This code is reprated...make a function
-  double size = max_abs(other);
+  double size = RealAbs(other);
 
   // VJS-FIXME: if size==0 we should just do thus->clear()
   if (size == 0.0)

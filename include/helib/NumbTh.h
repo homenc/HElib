@@ -911,104 +911,73 @@ std::unique_ptr<T> build_unique(Args&&... args)
 }
 #endif
 
-//! Simple routine for computing the max-abs of a vector
-//! of complex numbers and real numbers
+// Generic routines for domputing absolute values and distances
+// on real and complex numbers
 
-inline double max_abs(const std::vector<std::complex<double>>& vec)
+template<typename T>
+void AssertRealOrComplex()
 {
+  static_assert(std::is_same<T,double>::value ||
+                std::is_same<T,std::complex<double>>::value);
+}
+
+template<typename T>
+double RealAbs(const T& x)
+{
+  AssertRealOrComplex<T>();
+  return std::abs(x);
+}
+
+template<typename T, typename U>
+double RealDist(const T& x, const U& y)
+{
+  AssertRealOrComplex<T>();
+  AssertRealOrComplex<U>();
+  return RealAbs(x-y);
+}
+
+// for vectors, we us the infty norm
+template<typename T>
+double RealAbs(const std::vector<T>& x)
+{
+  long n = x.size();
   double res = 0;
-  for (auto x : vec) {
-    double t = std::abs(x);
-    if (res < t)
-      res = t;
-  }
+  for (long i = 0; i < n; i++) 
+    res = std::max(res, RealAbs(x[i]));
   return res;
 }
 
-inline double max_abs(const std::vector<double>& vec)
+// we require same-length vectors
+template<typename T, typename U>
+double RealDist(const std::vector<T>& x, const std::vector<U>& y)
 {
+  assertTrue(x.size() == y.size(), "RealDist: mismatched vector sizes");
+  long n = x.size();
   double res = 0;
-  for (auto x : vec) {
-    double t = std::abs(x);
-    if (res < t)
-      res = t;
-  }
+  for (long i = 0; i < n; i++) 
+    res = std::max(res, RealDist(x[i], y[i]));
   return res;
 }
 
-inline double max_diff(const std::vector<double>& a, const std::vector<double>& b)
-{
-  assertTrue(a.size() == b.size(), "max_diff: unequal vector sizes");
-  long n = a.size();
-  double res = 0;
-  for (long i = 0; i < n; i++)
-    res = std::max(res, std::abs(a[i]-b[i]));
-  return res;
-}
 
-inline double max_diff(const std::vector<std::complex<double>>& a, const std::vector<std::complex<double>>& b)
-{
-  assertTrue(a.size() == b.size(), "max_diff: unequal vector sizes");
-  long n = a.size();
-  double res = 0;
-  for (long i = 0; i < n; i++)
-    res = std::max(res, std::abs(a[i]-b[i]));
-  return res;
-}
 
-inline double max_diff(const std::vector<double>& a, const std::vector<std::complex<double>>& b)
-{
-  assertTrue(a.size() == b.size(), "max_diff: unequal vector sizes");
-  long n = a.size();
-  double res = 0;
-  for (long i = 0; i < n; i++)
-    res = std::max(res, std::abs(a[i]-b[i]));
-  return res;
-}
 
-inline double max_diff(const std::vector<std::complex<double>>& a, const std::vector<double>& b)
-{
-  assertTrue(a.size() == b.size(), "max_diff: unequal vector sizes");
-  long n = a.size();
-  double res = 0;
-  for (long i = 0; i < n; i++)
-    res = std::max(res, std::abs(a[i]-b[i]));
-  return res;
-}
 
 // General mechanisms for comparing approximate numbers
 
+// returns true iff |x-y| < tolerance*max(|y|,floor)
 
-// returns true iff |a-b| < tolerance*max(|b|,floor)
-// scalar versions:
-inline bool approx_equal(double a, double b, 
-                         double tolerance=0.01, double floor=1.0)
-{ return std::abs(a-b) <= tolerance*std::max(std::abs(b), floor); }
+// the template mechanism will allow comparisons
+// between real or complex numbers or vectors of real or complex numbers.
+// For vectors, sizes must be equal and the infty norm is used
 
-inline bool approx_equal(std::complex<double> a, std::complex<double> b, 
-                         double tolerance=0.01, double floor=1.0)
-{ return std::abs(a-b) <= tolerance*std::max(std::abs(b), floor); }
+template<typename T, typename U>
+inline bool approx_equal(const T& x, const U& y, 
+                         double tolerance, double floor)
+{
+  return RealDist(x, y) <= tolerance*std::max(RealAbs(y), floor);
+}
 
-inline bool approx_equal(std::complex<double> a, double b, 
-                         double tolerance=0.01, double floor=1.0)
-{ return std::abs(a-b) <= tolerance*std::max(std::abs(b), floor); }
-
-// vector versions:
-// (1) based on infty norm
-// (2) vector lengths must match (or exception is thrown)
-// (3) zero-length vectors always yield true
-inline bool approx_equal(std::vector<double>& a, std::vector<double>& b, 
-                         double tolerance=0.01, double floor=1.0)
-{ return max_diff(a, b) <= tolerance*std::max(max_abs(b), floor); }
-
-inline bool approx_equal(std::vector<std::complex<double>>& a, std::vector<std::complex<double>>& b, 
-                         double tolerance=0.01, double floor=1.0)
-{ return max_diff(a, b) <= tolerance*std::max(max_abs(b), floor); }
-
-inline bool approx_equal(std::vector<std::complex<double>>& a, std::vector<double>& b, 
-                         double tolerance=0.01, double floor=1.0)
-{ return max_diff(a, b) <= tolerance*std::max(max_abs(b), floor); }
-  
 
 template<class T>
 struct ApproxClass {
@@ -1026,16 +995,16 @@ ApproxClass<T> Approx(const T& val, double tolerance=0.01, double floor=1.0)
   return ApproxClass<T>(val, tolerance, floor);
 }
 
-template<class S, class T>
-bool operator==(const S& a, const ApproxClass<T>& b)
+template<class T, class U>
+bool operator==(const T& x, const ApproxClass<U>& y)
 {
-  return approx_equal(a, b.val, b.tolerance, b.floor);
+  return approx_equal(x, y.val, y.tolerance, y.floor);
 }
 
-template<class S, class T>
-bool operator!=(const S& a, const ApproxClass<T>& b)
+template<class T, class U>
+bool operator!=(const T& x, const ApproxClass<U>& y)
 {
-  return !approx_equal(a, b.val, b.tolerance, b.floor);
+  return !approx_equal(x, y.val, y.tolerance, y.floor);
 }
 
 //! This should go in NTL some day...
