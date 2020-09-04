@@ -457,6 +457,15 @@ void EncryptedArrayDerived<type>::encode(zzX& ptxt,
 }
 
 template <typename type>
+void EncryptedArrayDerived<type>::encode(EncodedPtxt& eptxt,
+                                         const PlaintextArray& array) const
+{
+  zzX poly;
+  encode(poly, array);
+  eptxt.resetBGV(poly, getP2R());
+}
+
+template <typename type>
 void EncryptedArrayDerived<type>::decode(std::vector<RX>& array,
                                          const NTL::Vec<long>& ptxt) const
 {

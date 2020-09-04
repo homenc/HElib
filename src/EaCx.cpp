@@ -133,30 +133,7 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
   shift1D(ctxt, 0, amt);
 }
 
-double EncryptedArrayCx::encode(zzX& ptxt,
-                                const std::vector<cx_double>& array,
-                                double useThisSize,
-                                long precision) const
-{
-  // VJS-FIXME: does it really make sense to use the *largest*
-  // size in determining the factor?
-  // It might make sense to use the *smallest* size.
-
-  if (useThisSize < 0)
-    for (auto& x : array) {
-      if (useThisSize < std::abs(x))
-        useThisSize = std::abs(x);
-    }
-  if (useThisSize <= 0)
-    useThisSize = 1.0;
-
-  // This factor ensures that encode/decode introduce less than 1/precision
-  // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}
-  double factor = encodeScalingFactor(precision) / useThisSize;
-  CKKS_embedInSlots(ptxt, array, getPAlgebra(), factor);
-  return factor;
-}
-
+//====== New Encoding Functions ====
 
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
                               double mag, double rescale) const 
@@ -185,6 +162,39 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<double>& arr
 }
 
 
+void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const PlaintextArray& array) const
+{
+  encode(eptxt, array.getData<PA_cx>());
+}
+
+//======================
+
+
+
+
+double EncryptedArrayCx::encode(zzX& ptxt,
+                                const std::vector<cx_double>& array,
+                                double useThisSize,
+                                long precision) const
+{
+  // VJS-FIXME: does it really make sense to use the *largest*
+  // size in determining the factor?
+  // It might make sense to use the *smallest* size.
+
+  if (useThisSize < 0)
+    for (auto& x : array) {
+      if (useThisSize < std::abs(x))
+        useThisSize = std::abs(x);
+    }
+  if (useThisSize <= 0)
+    useThisSize = 1.0;
+
+  // This factor ensures that encode/decode introduce less than 1/precision
+  // error. If precision=0 then the error bound defaults to 2^{-almod.getR()}
+  double factor = encodeScalingFactor(precision) / useThisSize;
+  CKKS_embedInSlots(ptxt, array, getPAlgebra(), factor);
+  return factor;
+}
 
 double EncryptedArrayCx::encode(zzX& ptxt,
                                 double num,

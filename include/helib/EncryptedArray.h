@@ -181,15 +181,7 @@ public:
     eptxt.resetBGV(poly, getP2R());
   }
 
-  void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const
-  {
-    // VJS-FIXME: if we enhance PlaintextArray, then this
-    // has to be re-written as a virtual method to deal with 
-    // both BGV and CKKS as
-    zzX poly;
-    encode(poly, array);  
-    eptxt.resetBGV(poly, getP2R());
-  }
+  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const = 0;
 
   virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const
   {
@@ -220,7 +212,6 @@ public:
   {
     throw LogicError("NOT IMPLEMENTED: encode(EncodedPtxt& eptxt, const std::vector<double>& array");
   }
-
 
   // These methods are working for some of the derived classes (throwing
   // otherwise)
@@ -530,6 +521,8 @@ public:
                      "EncryptedArrayDerived::decrypt for CKKS type");
   }
   /* End CKKS functions. */
+
+  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const override;
 
   virtual void encode(NTL::ZZX& ptxt,
                       const std::vector<long>& array) const override
@@ -1064,6 +1057,8 @@ public:
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
                       double mag = -1, double rescale = 1) const override;
+
+  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const override;
 
   void encryptOneNum(Ctxt& ctxt,
                      const PubKey& key,
