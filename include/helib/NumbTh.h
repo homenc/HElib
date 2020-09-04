@@ -933,7 +933,7 @@ double RealDist(const T& x, const U& y)
 {
   AssertRealOrComplex<T>();
   AssertRealOrComplex<U>();
-  return RealAbs(x-y);
+  return std::abs(x-y);
 }
 
 // for vectors, we us the infty norm
@@ -968,7 +968,8 @@ double RealDist(const std::vector<T>& x, const std::vector<U>& y)
 // returns true iff |x-y| < tolerance*max(|y|,floor)
 
 // the template mechanism will allow comparisons
-// between real or complex numbers or vectors of real or complex numbers.
+// between scalars of real/complex types, or between vectors
+// of real/complex types. 
 // For vectors, sizes must be equal and the infty norm is used
 
 template<typename T, typename U>
