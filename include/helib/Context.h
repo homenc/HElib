@@ -65,6 +65,8 @@ public:
   // Context is meant for convenience, not encapsulation: Most data
   // members are public and can be initialized by the application program.
 
+  Context& operator=(const Context&) = delete;
+
   //! @brief The structure of Zm*
   PAlgebra zMStar;
 

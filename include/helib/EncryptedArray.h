@@ -404,26 +404,7 @@ public:
     normalBasisMatrices = other.normalBasisMatrices;
   }
 
-  EncryptedArrayDerived& operator=(
-      const EncryptedArrayDerived& other) // assignment
-  {
-    if (this == &other)
-      return *this;
-    assertEq(&context,
-             &other.context,
-             "Cannot assign a EncryptedArrays with different contexts");
-    assertEq(&tab,
-             &other.tab,
-             "Cannot assign a EncryptedArrays with different tabs");
-
-    RBak bak;
-    bak.save();
-    tab.restoreContext();
-    mappingData = other.mappingData;
-    linPolyMatrix = other.linPolyMatrix;
-    normalBasisMatrices = other.normalBasisMatrices;
-    return *this;
-  }
+  EncryptedArrayDerived& operator=(const EncryptedArrayDerived&) = delete; 
 
   virtual EncryptedArrayBase* clone() const override
   {
@@ -1342,6 +1323,9 @@ public:
 
   // copy constructor:
 
+#if 1
+  EncryptedArray& operator=(const EncryptedArray& other) = delete;
+#else
   EncryptedArray& operator=(const EncryptedArray& other)
   {
     if (this == &other)
@@ -1352,6 +1336,7 @@ public:
     rep = other.rep;
     return *this;
   }
+#endif
 
   //! @brief downcast operator
   //! example: const EncryptedArrayDerived<PA_GF2>& rep =

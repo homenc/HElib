@@ -141,6 +141,8 @@ class PAlgebra
   // an optimization for FFT's with m = 0 (mod 4)
 
 public:
+  PAlgebra& operator=(const PAlgebra&) = delete;
+
   PAlgebra(long mm,
            long pp = 2,
            const std::vector<long>& _gens = std::vector<long>(),
@@ -588,6 +590,8 @@ private:
   void genCrtTable();
 
 public:
+  PAlgebraModDerived& operator=(const PAlgebraModDerived&) = delete;
+
   PAlgebraModDerived(const PAlgebra& zMStar, long r);
 
   PAlgebraModDerived(const PAlgebraModDerived& other) // copy constructor
@@ -605,30 +609,6 @@ public:
     maskTable = other.maskTable;
     crtTable = other.crtTable;
     crtTree = other.crtTree;
-  }
-
-  PAlgebraModDerived& operator=(const PAlgebraModDerived& other) // assignment
-  {
-    if (this == &other)
-      return *this;
-
-    assertEq(&zMStar,
-             &other.zMStar,
-             "Cannot assign PAlgebras with different zMStar values");
-    r = other.r;
-    pPowR = other.pPowR;
-    pPowRContext = other.pPowRContext;
-
-    RBak bak;
-    bak.save();
-    restoreContext();
-    PhimXMod = other.PhimXMod;
-    factors = other.factors;
-    maskTable = other.maskTable;
-    crtTable = other.crtTable;
-    crtTree = other.crtTree;
-
-    return *this;
   }
 
   //! Returns a pointer to a "clone"
@@ -839,10 +819,13 @@ private:
 
 public:
   // copy constructor: default
-  // assignment: default
+  // assignment: deleted
   // destructor: default
-  // NOTE: the use of cloned_ptr ensures that the default copy constructor,
-  // assignment operator, and destructor will work correctly.
+  // NOTE: the use of cloned_ptr ensures that the default copy constructor
+  // and destructor will work correctly.
+
+  PAlgebraMod& operator=(const PAlgebraMod&) = delete;
+  
 
   explicit PAlgebraMod(const PAlgebra& zMStar, long r) :
       rep(buildPAlgebraMod(zMStar, r))
