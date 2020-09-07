@@ -9,6 +9,7 @@ __pycache__/
 **.out
 **.ptxt
 **.ctxt
+**/CMakeCache.txt
 
 src/fhe.a
 src/*.o

@@ -95,6 +95,7 @@ function check_locations {
 }
 
 function techo {
+  local line=
   while IFS= read -r line; do
     echo "# $line" >&3
   done <<< "$1"
