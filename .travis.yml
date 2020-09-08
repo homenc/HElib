@@ -1,0 +1,40 @@
+language: cpp
+notifications:
+  email: false
+sudo: required
+before_script:
+  # 
+  - curl -O "https://www.shoup.net/ntl/ntl-11.4.3.tar.gz"
+  - tar --no-same-owner -xf ntl-11.4.3.tar.gz
+  - cd ntl-11.4.3/src
+  - ./configure PREFIX=~/ntl SHARED=on NTL_GMP_LIP=on NTL_THREADS=on NTL_THREAD_BOOST=on
+  - make -j4
+  - make install
+  - cd ../..
+
+  # Build Folder
+  #
+  - mkdir build
+  - cd build
+
+matrix:
+  include:
+  - os: linux
+    dist: bionic
+    env:
+      - TEST="Build test"
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+          - gcc
+          - g++
+          - m4
+          - patchelf
+
+
+script:
+      - cmake -DPACKAGE_BUILD=OFF -DNTL_DIR="/home/travis/ntl/" -DENABLE_TEST=ON .. 
+      - make -j4
+      - ctest -j4
