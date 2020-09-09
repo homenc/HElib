@@ -374,7 +374,11 @@ void convert(NTL::mat_zz_pE& X, const std::vector<std::vector<NTL::ZZX>>& A);
 void convert(std::vector<NTL::ZZX>& X, const NTL::vec_zz_pE& A);
 void convert(std::vector<std::vector<NTL::ZZX>>& X, const NTL::mat_zz_pE& A);
 void convert(NTL::Vec<long>& out, const NTL::ZZX& in);
+
 void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric = true);
+// VJS-FIXME: make symmetric=false the default, as otherwise this is
+// incosnistent
+
 void convert(NTL::Vec<long>& out, const NTL::GF2X& in);
 void convert(NTL::ZZX& out, const NTL::Vec<long>& in);
 void convert(NTL::GF2X& out, const NTL::Vec<long>& in);
@@ -389,6 +393,10 @@ void convert(T1& x1, const T2& x2)
 {
   NTL::conv(x1, x2);
 }
+
+//! Additional helpful conversion base cases
+inline void convert(long& x1, bool x2) { x1 = x2; }
+inline void convert(double& x1, bool x2) { x1 = x2; }
 
 //! generic vector conversion routines
 template <typename T1, typename T2>

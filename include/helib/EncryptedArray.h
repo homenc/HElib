@@ -181,18 +181,29 @@ public:
     eptxt.resetBGV(poly, getP2R());
   }
 
-  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const = 0;
+  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
+                      double mag = -1, double rescale = 1) const 
+  {
+    // BGV-only behavior: overridden for CKKS
+    assertTrue(mag < 0 && rescale == 1, "encoding of BGV plaintext with mag/rescale set");
+    zzX poly;
+    encode(poly, array);  // this will fail if this is not BGV
+    eptxt.resetBGV(poly, getP2R());
+  }
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
+  { 
+    // BGV-only behavior: overridden for CKKS
+    zzX poly;
+    std::vector<long> array1;
+    convert(array1, array);
+    encode(eptxt, array1);
+  }
 
   virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const
   {
     // VJS-FIXME: implement this...should work for both BGV and CKKS
     throw LogicError("NOT IMPLEMENTED: encodeUnitSelector(EncodedPtxt& eptxt, long i)");
-  }
-
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
-  {
-    // VJS-FIXME: implement this...should work for both BGV and CKKS
-    throw LogicError("NOT IMPLEMENTED: encode(EncodedPtxt& eptxt, const std::vector<bool>)& array");
   }
 
   // The following are CKKS-only encodings. 
@@ -503,7 +514,6 @@ public:
   }
   /* End CKKS functions. */
 
-  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const override;
 
   virtual void encode(NTL::ZZX& ptxt,
                       const std::vector<long>& array) const override
@@ -1039,7 +1049,8 @@ public:
   virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
                       double mag = -1, double rescale = 1) const override;
 
-  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array) const override;
+  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
+                      double mag = -1, double rescale = 1) const override;
 
   void encryptOneNum(Ctxt& ctxt,
                      const PubKey& key,
@@ -1396,15 +1407,57 @@ public:
   }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
 
-  // VJS-FIXME: I *really* don't like the level of templating madness
-  // here...it makes it really hard to understand what is going on...
-  template <typename PTXT, typename ARRAY>
-  void encode(PTXT& ptxt, const ARRAY& array) const
-  {
-    rep->encode(ptxt, array);
-  }
+  void encode(zzX& ptxt, const std::vector<long>& array) const 
+  { rep->encode(ptxt, array); }
 
-  void encode(EncodedPtxt& eptxt, const PtxtArray& array) const;
+  void encode(NTL::ZZX& ptxt, const std::vector<long>& array) const 
+  { rep->encode(ptxt, array); }
+
+  void encode(zzX& ptxt, const std::vector<zzX>& array) const 
+  { rep->encode(ptxt, array); }
+
+  void encode(zzX& ptxt, const PlaintextArray& array) const 
+  { rep->encode(ptxt, array); }
+
+  void encode(NTL::ZZX& ptxt, const std::vector<NTL::ZZX>& array) const 
+  { rep->encode(ptxt, array); }
+
+  void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const 
+  { rep->encode(ptxt, array); }
+
+  void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const
+  { rep->encode(ptxt, array); }
+
+  void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const
+  { rep->encode(eptxt, array); }
+
+  void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const
+  { rep->encode(eptxt, array); }
+
+  void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
+                      double mag = -1, double rescale = 1) const 
+  { rep->encode(eptxt, array); }
+
+  void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
+  { rep->encode(eptxt, array); }
+
+  void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
+                      double mag = -1, double rescale = 1) const
+  { rep->encode(eptxt, array); }
+
+  void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
+                      double mag = -1, double rescale = 1) const
+  { rep->encode(eptxt, array); }
+
+  void encodeUnitSelector(EncodedPtxt& eptxt, long i) const
+  { rep->encodeUnitSelector(eptxt, i); }
+
+
+  void encode(EncodedPtxt& eptxt, const PtxtArray& array,
+              double mag = -1, double rescale = 1) const;
+
+
+
 
   void encodeUnitSelector(zzX& ptxt, long i) const
   {
@@ -1715,10 +1768,11 @@ inline void power(PtxtArray& a, long e)
 
 
 inline void
-EncryptedArray::encode(EncodedPtxt& eptxt, const PtxtArray& array) const
+EncryptedArray::encode(EncodedPtxt& eptxt, const PtxtArray& array,
+                       double mag, double rescale) const
 {
   assertTrue(this == &array.ea, "PtxtArray: inconsistent operation");
-  encode(eptxt, array.pa);
+  encode(eptxt, array.pa, mag, rescale);
 }
 
 inline void EncryptedArray::decode(PtxtArray& array, const NTL::ZZX& ptxt) const

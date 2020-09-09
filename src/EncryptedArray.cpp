@@ -456,6 +456,7 @@ void EncryptedArrayDerived<type>::encode(zzX& ptxt,
   encode(ptxt, array.getData<type>());
 }
 
+#if 0
 template <typename type>
 void EncryptedArrayDerived<type>::encode(EncodedPtxt& eptxt,
                                          const PlaintextArray& array) const
@@ -464,6 +465,7 @@ void EncryptedArrayDerived<type>::encode(EncodedPtxt& eptxt,
   encode(poly, array);
   eptxt.resetBGV(poly, getP2R());
 }
+#endif
 
 template <typename type>
 void EncryptedArrayDerived<type>::decode(std::vector<RX>& array,
