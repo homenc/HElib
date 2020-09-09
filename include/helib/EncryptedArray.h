@@ -194,7 +194,6 @@ public:
   virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
   { 
     // BGV-only behavior: overridden for CKKS
-    zzX poly;
     std::vector<long> array1;
     convert(array1, array);
     encode(eptxt, array1);
@@ -749,27 +748,14 @@ public:
   // routines covert(X, Y) for scalar types long / double / cx_double,
   // and the template mechanism will take are of itself
   
-  static void convert(std::vector<cx_double>& out,
-                      const std::vector<double>& in)
-  {
-    resize(out, lsize(in));
-    for (long i = 0; i < lsize(in); i++)
-      out[i] = in[i];
-  }
-  static void convert(std::vector<double>& out,
+  static void project(std::vector<double>& out,
                       const std::vector<cx_double>& in)
   {
     resize(out, lsize(in));
     for (long i = 0; i < lsize(in); i++)
       out[i] = in[i].real();
   }
-  static void convert(std::vector<cx_double>& out, const std::vector<long>& in)
-  {
-    resize(out, lsize(in));
-    for (long i = 0; i < lsize(in); i++)
-      out[i] = in[i];
-  }
-  static void convert(std::vector<long>& out, const std::vector<cx_double>& in)
+  static void project_and_round(std::vector<long>& out, const std::vector<cx_double>& in)
   {
     resize(out, lsize(in));
     for (long i = 0; i < lsize(in); i++)
@@ -1037,7 +1023,7 @@ public:
   {
     zzX tmp;
     double f = encode(tmp, pt, useThisSize, precision);
-    ::helib::convert(ptxt, tmp);
+    convert(ptxt, tmp);
     return f;
   }
 
@@ -1051,6 +1037,8 @@ public:
 
   virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
                       double mag = -1, double rescale = 1) const override;
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const override;
 
   void encryptOneNum(Ctxt& ctxt,
                      const PubKey& key,
@@ -1141,7 +1129,7 @@ public:
               double scaling) const
   {
     zzX tmp;
-    ::helib::convert(tmp, ptxt);
+    convert(tmp, ptxt);
     decode(array, tmp, scaling);
   }
 
@@ -1149,7 +1137,7 @@ public:
   {
     std::vector<cx_double> v;
     decode(v, ptxt, scaling);
-    convert(array, v);
+    project(array, v);
   }
 
   void decode(std::vector<double>& array,
@@ -1158,7 +1146,7 @@ public:
   {
     std::vector<cx_double> v;
     decode(v, ptxt, scaling);
-    convert(array, v);
+    project(array, v);
   }
 
   void random(std::vector<cx_double>& array, double rad = 1.0) const;
@@ -1166,13 +1154,13 @@ public:
   {
     std::vector<cx_double> v;
     random(v, rad);
-    convert(array, v);
+    project(array, v);
   }
   void random(std::vector<long>& array) const override
   {
     std::vector<cx_double> v;
     random(v, 1.0);
-    convert(array, v);
+    project_and_round(array, v);
   }
 
   void decrypt(const Ctxt& ctxt,
@@ -1184,7 +1172,7 @@ public:
   {
     std::vector<cx_double> v;
     decrypt(ctxt, sKey, v);
-    convert(ptxt, v);
+    project(ptxt, v);
   }
 
   /**

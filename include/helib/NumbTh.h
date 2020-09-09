@@ -397,6 +397,9 @@ void convert(T1& x1, const T2& x2)
 //! Additional helpful conversion base cases
 inline void convert(long& x1, bool x2) { x1 = x2; }
 inline void convert(double& x1, bool x2) { x1 = x2; }
+inline void convert(std::complex<double>& x1, bool x2) { x1 = x2; }
+inline void convert(std::complex<double>& x1, long x2) { x1 = x2; }
+inline void convert(std::complex<double>& x1, double x2) { x1 = x2; }
 
 //! generic vector conversion routines
 template <typename T1, typename T2>

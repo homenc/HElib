@@ -168,6 +168,13 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const PlaintextArray& array,
   encode(eptxt, array.getData<PA_cx>(), mag, rescale);
 }
 
+void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
+{
+  std::vector<cx_double> array1;
+  convert(array1, array);
+  encode(eptxt, array1);
+}
+
 //======================
 
 
