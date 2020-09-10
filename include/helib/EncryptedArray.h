@@ -148,80 +148,51 @@ public:
   // encode/decode arrays into plaintext polynomials
   // These methods are working for some of the derived classes (throwing
   // otherwise)
-  virtual void encode(zzX& ptxt, const std::vector<long>& array) const = 0;
+  virtual void encode(zzX& ptxt,      const std::vector<long>& array) const = 0;
   virtual void encode(NTL::ZZX& ptxt, const std::vector<long>& array) const = 0;
 
-  virtual void encode(zzX& ptxt, const std::vector<zzX>& array) const = 0;
-  virtual void encode(zzX& ptxt, const PlaintextArray& array) const = 0;
 
-  virtual void encode(NTL::ZZX& ptxt,
-                      const std::vector<NTL::ZZX>& array) const = 0;
+  virtual void encode(zzX& ptxt,      const std::vector<NTL::ZZX>& array) const = 0;
+  virtual void encode(NTL::ZZX& ptxt, const std::vector<NTL::ZZX>& array) const = 0;
+
+  virtual void encode(zzX& ptxt,      const PlaintextArray& array) const = 0;
   virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const = 0;
 
-  void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const
-  {
-    NTL::ZZX tmp;
-    encode(tmp, array);
-    convert(ptxt, tmp);
-  }
+  virtual void encode(zzX& ptxt, const std::vector<zzX>& array) const = 0;
+
 
   //=============== new EncodedPtxt interfaces
 
-  void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const
-  {
-    zzX poly;
-    encode(poly, array);  // this will fail if this is not BGV
-    eptxt.resetBGV(poly, getP2R());
-  }
+  // BGV only
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const = 0;
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const = 0;
 
-  void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const
-  {
-    zzX poly;
-    encode(poly, array);  // this will fail if this is not BGV
-    eptxt.resetBGV(poly, getP2R());
-  }
-
-  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag = -1, double rescale = 1) const 
-  {
-    // BGV-only behavior: overridden for CKKS
-    assertTrue(mag < 0 && rescale == 1, "encoding of BGV plaintext with mag/rescale set");
-    zzX poly;
-    encode(poly, array);  // this will fail if this is not BGV
-    eptxt.resetBGV(poly, getP2R());
-  }
-
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
-  { 
-    // BGV-only behavior: overridden for CKKS
-    std::vector<long> array1;
-    convert(array1, array);
-    encode(eptxt, array1);
-  }
-
-  virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const
-  {
-    // VJS-FIXME: implement this...should work for both BGV and CKKS
-    throw LogicError("NOT IMPLEMENTED: encodeUnitSelector(EncodedPtxt& eptxt, long i)");
-  }
-
-  // The following are CKKS-only encodings. 
+  // CKKS only 
   // mag: default sets mag to maximum magnitude
   // rescale: divide computed scale factor by rescale
   // NOTE: the absolute error of the encoding (after scaling) is guaranteed
   // to be at most 2^{-r} * rescale.
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag = -1, double rescale = 1) const
-  {
-    throw LogicError("NOT IMPLEMENTED: encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array");
-  }
+                      double mag = -1, double rescale = 1) const = 0;
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag = -1, double rescale = 1) const
-  {
-    throw LogicError("NOT IMPLEMENTED: encode(EncodedPtxt& eptxt, const std::vector<double>& array");
-  }
+                      double mag = -1, double rescale = 1) const = 0;
+
+
+
+  // BGV and CKKS
+  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
+                      double mag = -1, double rescale = 1) const = 0;
+  // NOTE: for BGV, mag and rescale must be defaulted
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const = 0;
+  // NOTE: for CKKS, mag and rescale are defaulted
+
+  virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const = 0;
+  // NOTE: for CKKS, mag and rescale are defaulted
+
+  //================================
 
   // These methods are working for some of the derived classes (throwing
   // otherwise)
@@ -542,6 +513,64 @@ public:
 
   virtual void encodeUnitSelector(zzX& ptxt, long i) const override;
 
+  virtual void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const override
+  {
+    NTL::ZZX tmp;
+    encode(tmp, array);
+    convert(ptxt, tmp);
+  }
+
+
+//================ new EncodedPtxt interfaces
+
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const override
+  {
+    zzX poly;
+    encode(poly, array); 
+    eptxt.resetBGV(poly, getP2R());
+  }
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const override
+  {
+    zzX poly;
+    encode(poly, array); 
+    eptxt.resetBGV(poly, getP2R());
+  }
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
+                      double mag = -1, double rescale = 1) const override
+  { throw LogicError("function not implemented for BGV"); }
+
+  void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
+              double mag = -1, double rescale = 1) const override
+  { throw LogicError("function not implemented for BGV"); }
+
+  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
+                      double mag = -1, double rescale = 1) const override
+  {
+    assertTrue(mag < 0 && rescale == 1, "BGV encoding: mag/rescale set must be defaulted");
+    zzX poly;
+    encode(poly, array); 
+    eptxt.resetBGV(poly, getP2R());
+  }
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const override
+  { 
+    std::vector<long> array1;
+    convert(array1, array);
+    encode(eptxt, array1);
+  }
+
+  virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const override
+  {
+    zzX poly;
+    encodeUnitSelector(poly, i);
+    eptxt.resetBGV(poly, getP2R());
+  }
+
+//===========================================
+
   virtual void decode(std::vector<long>& array,
                       const NTL::ZZX& ptxt) const override
   {
@@ -860,6 +889,11 @@ public:
     throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
   }
 
+  void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const override
+  {
+    throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
+  }
+
   // decode
   /**
    * @brief Unimplemented decode function for BGV. It will always throw
@@ -1029,16 +1063,45 @@ public:
 
   //========= new EncodedPtxt interface
 
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const override
+  { throw LogicError("function not implemented for CKKS"); }
+
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const override
+  { throw LogicError("function not implemented for CKKS"); }
+
   virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
                       double mag = -1, double rescale = 1) const override;
+  // implemented in EaCx.cpp
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag = -1, double rescale = 1) const override;
+                      double mag = -1, double rescale = 1) const override
+  {
+    std::vector<cx_double> array1;
+    convert(array1, array);
+    encode(eptxt, array1, mag, rescale);
+  }
 
   virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
                       double mag = -1, double rescale = 1) const override;
+  // implemented in EaCx.cpp
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const override;
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const override
+  {
+    std::vector<cx_double> array1;
+    convert(array1, array);
+    encode(eptxt, array1);
+  }
+
+  virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const override
+  {
+    std::vector<cx_double> array(this->size(), cx_double(0.0));
+    array.at(i) = 1.0;
+    encode(eptxt, array);
+    // VJS-FIXME: this could be much more efficient
+  }
+
+
+//==========================================
 
   void encryptOneNum(Ctxt& ctxt,
                      const PubKey& key,
@@ -1089,6 +1152,7 @@ public:
     std::vector<cx_double> v(this->size(), cx_double(0.0));
     v.at(i) = cx_double(1.0, 0.0);
     encode(ptxt, v, /*size=*/1.0, /*default precision*/ -1);
+    // VJS-FIXME: this could be much more efficient
   } // The implicit scaling factor is encodeScalingFactor() below
 
   // A bound on the rounding error for encoding
@@ -1416,25 +1480,28 @@ public:
   void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const
   { rep->encode(ptxt, array); }
 
+  //=============== new EncodedPtxt interfaces
+
   void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const
   { rep->encode(eptxt, array); }
 
   void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const
   { rep->encode(eptxt, array); }
 
-  void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag = -1, double rescale = 1) const 
-  { rep->encode(eptxt, array); }
-
-  void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
-  { rep->encode(eptxt, array); }
-
   void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
                       double mag = -1, double rescale = 1) const
-  { rep->encode(eptxt, array); }
+  { rep->encode(eptxt, array, mag, rescale); }
 
   void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
                       double mag = -1, double rescale = 1) const
+  { rep->encode(eptxt, array, mag, rescale); }
+
+
+  void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
+                      double mag = -1, double rescale = 1) const 
+  { rep->encode(eptxt, array, mag, rescale); }
+
+  void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
   { rep->encode(eptxt, array); }
 
   void encodeUnitSelector(EncodedPtxt& eptxt, long i) const
@@ -1443,8 +1510,9 @@ public:
 
   void encode(EncodedPtxt& eptxt, const PtxtArray& array,
               double mag = -1, double rescale = 1) const;
+  // implemented below, after definition of PtxtArray class
 
-
+  //================================
 
 
   void encodeUnitSelector(zzX& ptxt, long i) const

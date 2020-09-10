@@ -153,27 +153,12 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& 
   eptxt.resetCKKS(poly, mag, scale, err);
 }
 
-void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                              double mag, double rescale) const 
-{
-  std::vector<cx_double> array1;
-  convert(array1, array);
-  encode(eptxt, array1, mag, rescale);
-}
-
-
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                               double mag, double rescale) const
+		    double mag, double rescale) const 
 {
   encode(eptxt, array.getData<PA_cx>(), mag, rescale);
 }
 
-void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
-{
-  std::vector<cx_double> array1;
-  convert(array1, array);
-  encode(eptxt, array1);
-}
 
 //======================
 
