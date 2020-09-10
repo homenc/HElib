@@ -160,6 +160,14 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const PlaintextArray& array,
 }
 
 
+void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
+               const SecKey& sKey,
+               PlaintextArray& ptxt) const 
+{
+  decrypt(ctxt, sKey, ptxt.getData<PA_cx>());
+}
+
+
 //======================
 
 

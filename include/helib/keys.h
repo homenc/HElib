@@ -195,16 +195,13 @@ public:
                long ptxtSpace = 0) const;
 
 
-  /**
-   *  Encrypts an EncodedPtxt_BGV object.
-   *  Returns the ptxtSpace of the resulting ctxt,
-   *  which is the GCD of the ptxtSpace of the public key and eptxt.
-   *  We may eventually want to make this virtual so that
-   *  it may be overriden by secret-key encrypt
-   */
+  //=============== new EncodedPtxt interface
 
   void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const;
   void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const;
+
+  void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const;
+  
 
   bool isCKKS() const;
   // NOTE: Is taking the alMod from the context the right thing to do?

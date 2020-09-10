@@ -27,6 +27,7 @@
 #include <helib/Ctxt.h>
 #include <helib/keys.h>
 #include <helib/exceptions.h>
+#include <helib/log.h>
 
 namespace helib {
 
@@ -226,21 +227,6 @@ public:
   ///@}
 
   ///@{
-  //! @name Encoding+encryption/decryption+decoding
-  // VJS-FIXME: this interface does not support CKKS encryption
-  template <typename PTXT>
-  void encrypt(Ctxt& ctxt, const PubKey& key, const PTXT& ptxt) const
-  {
-    assertEq(&getContext(),
-             &ctxt.getContext(),
-             "Cannot encrypt when ciphertext has different context than "
-             "EncryptedArray");
-    zzX pp;
-    encode(pp, ptxt); // Convert array of slots into a plaintext polynomial
-    key.Encrypt(ctxt, pp, getP2R()); // encrypt the plaintext polynomial
-    // NOTE: If secret key, will call the overridden SecKey::Encrypt
-    // FIXME: the "false" param forces the PK version
-  }
 
   // These methods are working for some of the derived calsses (throwing
   // otherwise)
@@ -605,6 +591,8 @@ public:
   {
     genericDecrypt(ctxt, sKey, ptxt);
     if (ctxt.getPtxtSpace() < getP2R()) {
+      // VJS-FIXME: do we really want to do this????
+      helib::Warning("EncryptedArray::decrypt: reducing plaintext modulus");
       for (long i = 0; i < (long)ptxt.size(); i++)
         ptxt[i] %= ctxt.getPtxtSpace();
     }
@@ -616,6 +604,8 @@ public:
   {
     genericDecrypt(ctxt, sKey, ptxt);
     if (ctxt.getPtxtSpace() < getP2R()) {
+      // VJS-FIXME: do we really want to do this????
+      helib::Warning("EncryptedArray::decrypt: reducing plaintext modulus");
       for (long i = 0; i < (long)ptxt.size(); i++)
         PolyRed(ptxt[i], ctxt.getPtxtSpace(), /*abs=*/true);
     }
@@ -626,7 +616,15 @@ public:
                        PlaintextArray& ptxt) const override
   {
     genericDecrypt(ctxt, sKey, ptxt);
-    // FIXME: Reduce mod the ciphertext plaintext space as above
+    if (ctxt.getPtxtSpace() < getP2R()) {
+      throw LogicError("EncryptedArray::decrypt: bad plaintext modulus");
+      // FIXME: Reduce mod the ciphertext plaintext space as above
+      // What we would have to do is: 
+      //   1. convert the PlaintextArray to a vector of ZZX's
+      //   2. call PolyRed as above to reduce coefficients
+      //   3. convert the vector of ZZX's back to a PlaintextArray
+      // But do we *really* want to do this?
+    }
   }
 
   virtual void buildLinPolyCoeffs(
@@ -726,12 +724,7 @@ private:
   {
     assertEq(&context,
              &ctxt.getContext(),
-             "Cannot decrypt when ciphertext has different context than "
-
-
-
-
-             "EncryptedArray");
+             "Cannot decrypt when ciphertext has different context than EncryptedArray");
     NTL::ZZX pp;
     sKey.Decrypt(pp, ctxt);
     decode(array, pp);
@@ -964,19 +957,6 @@ public:
   void decrypt(UNUSED const Ctxt& ctxt,
                UNUSED const SecKey& sKey,
                UNUSED std::vector<NTL::ZZX>& ptxt) const override
-  {
-    throw LogicError("Unimplemented: EncryptedArrayCx::decrypt for BGV type");
-  }
-  /**
-   * @brief Unimplemented decrypt function for BGV. It will always throw
-   * helib::LogicError.
-   * @param ctxt Unused.
-   * @param sKey Unused.
-   * @param ptxt Unused.
-   */
-  void decrypt(UNUSED const Ctxt& ctxt,
-               UNUSED const SecKey& sKey,
-               UNUSED PlaintextArray& ptxt) const override
   {
     throw LogicError("Unimplemented: EncryptedArrayCx::decrypt for BGV type");
   }
@@ -1238,6 +1218,11 @@ public:
     decrypt(ctxt, sKey, v);
     project(ptxt, v);
   }
+
+  void decrypt(const Ctxt& ctxt,
+               const SecKey& sKey,
+               PlaintextArray& ptxt) const override;
+  // implemented in EaCx.cpp
 
   /**
    * @brief Decrypt ciphertext to a plaintext relative to a specific scheme.
@@ -1534,13 +1519,52 @@ public:
     rep->random(array);
   }
 
-  template <typename T>
-  void encrypt(Ctxt& ctxt, const PubKey& pKey, const T& ptxt) const
+  //========= new encryption interfaces
+
+
+  // BGV only
+  // NOTE: mag must be set to non-default value
+  void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<NTL::ZZX>& array) const
+  { EncodedPtxt eptxt; encode(eptxt, array); key.Encrypt(ctxt, eptxt); }
+
+  void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<long>& array) const
+  { EncodedPtxt eptxt; encode(eptxt, array); key.Encrypt(ctxt, eptxt); }
+
+  // CKKS only
+  void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<cx_double>& array,
+               double mag, double rescale = 1) const
   {
-    rep->encrypt(ctxt, pKey, ptxt);
+    if (mag < 0) throw LogicError("CKKS encryption: mag must be set to non-default");
+    EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
   }
 
-  inline void encrypt(Ctxt& ctxt, const PubKey& pKey, const PtxtArray& ptxt) const;
+  void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<double>& array,
+               double mag, double rescale = 1) const
+  {
+    if (mag < 0) throw LogicError("CKKS encryption: mag must be set to non-default");
+    EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
+  }
+
+
+  // BGV and CKKS
+  void encrypt(Ctxt& ctxt, const PubKey& key, const PlaintextArray& array,
+               double mag = -1, double rescale = 1) const
+  // NOTES: (1) for BGV, mag/rescale mus be defaulted; 
+  // (2) for CKKS, mag must be set to non-default value
+  {
+    if (getTag() == PA_cx_tag && mag < 0) 
+      throw LogicError("CKKS encryption: mag must be set to non-default");
+    EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
+  }
+
+
+  inline void encrypt(Ctxt& ctxt, const PubKey& pKey, const PtxtArray& ptxt,
+                      double mag = -1, double rescale = 1) const;
+  // defined below, after PtxtArray definition
+
+
+
+  //=========================
 
   template <typename T>
   void decrypt(const Ctxt& ctxt, const SecKey& sKey, T& ptxt) const
@@ -1844,10 +1868,10 @@ EncryptedArray::decrypt(const Ctxt& ctxt, const SecKey& sKey, PtxtArray& ptxt) c
   decrypt(ctxt, sKey, ptxt.pa);
 }
 
-inline void 
-EncryptedArray::encrypt(Ctxt& ctxt, const PubKey& pKey, const PtxtArray& ptxt) const
+inline void
+EncryptedArray::encrypt(Ctxt& ctxt, const PubKey& pKey, const PtxtArray& ptxt,
+                        double mag, double rescale) const
 {
-  // VJS-FIXME: without a mag argument, this should be CKKS only
   assertTrue(this == &ptxt.ea, "PtxtArray: inconsistent operation");
   encrypt(ctxt, pKey, ptxt.pa);
 }

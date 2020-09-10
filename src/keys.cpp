@@ -841,6 +841,15 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
   ctxt.ptxtSpace = 1;
 }
 
+void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const
+{
+  if (eptxt.isBGV()) 
+    Encrypt(ctxt, eptxt.getBGV());
+  else if (eptxt.isCKKS())
+    Encrypt(ctxt, eptxt.getCKKS());
+  else
+    throw LogicError("Encrypt: bad EncodedPtxt");
+}
 
 
 
