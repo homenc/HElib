@@ -12,6 +12,11 @@
 
 # Gtests configuration file
 
+# TestVersion will be generated in CMAKE_CURRENT_BINARY_DIR.
+configure_file(TestVersion.in.cpp
+               ${CMAKE_CURRENT_BINARY_DIR}/TestVersion.cpp
+               @ONLY)
+
 set(GTEST_SRC
     "test_common.cpp"
     "TestArgMap.cpp"
@@ -27,6 +32,7 @@ set(GTEST_SRC
     "TestPolyModRing.cpp"
     "TestPtxt.cpp"
     "TestSet.cpp"
+    "${CMAKE_CURRENT_BINARY_DIR}/TestVersion.cpp" # TestVersion.cpp is auto-generated in CMAKE_CURRENT_BINARY_DIR
     )
 
 set(PORTED_LEGACY_TEST_SRC
@@ -100,12 +106,16 @@ set(TEST_NAMES
     "TestPtxt"
     "TestSet"
     "TestThinBootstrappingWithMultiplications"
+    "TestVersion"
     )
 
 # NOTE: Adding all PRIVATE_HELIB_CXX_FLAGS to the tests will add -fPIC too.
 # At the moment this does not affect compilation of the tests and does not
 # change their running time.
 target_compile_options(runTests PRIVATE ${PRIVATE_HELIB_CXX_FLAGS})
+
+# Adding CMAKE_CURRENT_SOURCE_DIR to include files to access test_common.h.
+target_include_directories(runTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 foreach (TEST_NAME ${TEST_NAMES})
   add_test(NAME "${TEST_NAME}" COMMAND runTests --gtest_filter=*${TEST_NAME}*)
