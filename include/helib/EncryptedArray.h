@@ -1493,9 +1493,6 @@ public:
   { rep->encodeUnitSelector(eptxt, i); }
 
 
-  void encode(EncodedPtxt& eptxt, const PtxtArray& array,
-              double mag = -1, double rescale = 1) const;
-  // implemented below, after definition of PtxtArray class
 
   //================================
 
@@ -1511,7 +1508,6 @@ public:
     rep->decode(array, ptxt);
   }
 
-  void decode(PtxtArray& array, const NTL::ZZX& ptxt) const;
 
   template <typename T>
   void random(std::vector<T>& array) const
@@ -1520,15 +1516,25 @@ public:
   }
 
   //========= new encryption interfaces
+  // NOTE: I provide both a "legacy" interface that includes
+  // Ctxt and PubKey, and a cleaner interface that includes
+  // only Ctxt.
 
 
   // BGV only
-  // NOTE: mag must be set to non-default value
   void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<NTL::ZZX>& array) const
   { EncodedPtxt eptxt; encode(eptxt, array); key.Encrypt(ctxt, eptxt); }
 
+  void encrypt(Ctxt& ctxt, const std::vector<NTL::ZZX>& array) const
+  { encrypt(ctxt, ctxt.getPubKey(), array); }
+
+
   void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<long>& array) const
   { EncodedPtxt eptxt; encode(eptxt, array); key.Encrypt(ctxt, eptxt); }
+
+  void encrypt(Ctxt& ctxt, const std::vector<long>& array) const
+  { encrypt(ctxt, ctxt.getPubKey(), array); }
+
 
   // CKKS only
   void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<cx_double>& array,
@@ -1538,12 +1544,23 @@ public:
     EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
   }
 
+  void encrypt(Ctxt& ctxt, const std::vector<cx_double>& array,
+               double mag, double rescale = 1) const
+  { encrypt(ctxt, ctxt.getPubKey(), array, mag, rescale); }
+
+
+
   void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<double>& array,
                double mag, double rescale = 1) const
   {
     if (mag < 0) throw LogicError("CKKS encryption: mag must be set to non-default");
     EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
   }
+
+  void encrypt(Ctxt& ctxt, const std::vector<double>& array,
+               double mag, double rescale = 1) const
+  { encrypt(ctxt, ctxt.getPubKey(), array, mag, rescale); }
+  
 
 
   // BGV and CKKS
@@ -1557,10 +1574,10 @@ public:
     EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
   }
 
+  void encrypt(Ctxt& ctxt, const PlaintextArray& array,
+               double mag = -1, double rescale = 1) const
+  { encrypt(ctxt, ctxt.getPubKey(), array, mag, rescale); }
 
-  inline void encrypt(Ctxt& ctxt, const PubKey& pKey, const PtxtArray& ptxt,
-                      double mag = -1, double rescale = 1) const;
-  // defined below, after PtxtArray definition
 
 
 
@@ -1572,7 +1589,6 @@ public:
     rep->decrypt(ctxt, sKey, ptxt);
   }
 
-  inline void decrypt(const Ctxt& ctxt, const SecKey& sKey, PtxtArray& ptxt) const;
 
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
                           const std::vector<NTL::ZZX>& L) const
@@ -1756,6 +1772,17 @@ public:
     pa = other.pa;
     return *this;
   }
+ 
+  // direct encode, encrypt, and decrypt methods
+  void encode(EncodedPtxt& eptxt, double mag = -1, double rescale = 1) const
+  { ea.encode(eptxt, pa, mag, rescale); }
+
+  void encrypt(Ctxt& ctxt, double mag = -1, double rescale = 1) const
+  { ea.encrypt(ctxt, pa, mag, rescale); }
+
+  void decrypt(const Ctxt& ctxt, const SecKey& sKey) 
+  { ea.decrypt(ctxt, sKey, pa); }
+  
 };
 
 
@@ -1845,36 +1872,6 @@ inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
 
 inline void power(PtxtArray& a, long e)
 { power(a.ea, a.pa, e); }
-
-
-inline void
-EncryptedArray::encode(EncodedPtxt& eptxt, const PtxtArray& array,
-                       double mag, double rescale) const
-{
-  assertTrue(this == &array.ea, "PtxtArray: inconsistent operation");
-  encode(eptxt, array.pa, mag, rescale);
-}
-
-inline void EncryptedArray::decode(PtxtArray& array, const NTL::ZZX& ptxt) const
-{
-  assertTrue(this == &array.ea, "PtxtArray: inconsistent operation");
-  decode(array.pa, ptxt);
-}
-
-inline void
-EncryptedArray::decrypt(const Ctxt& ctxt, const SecKey& sKey, PtxtArray& ptxt) const
-{
-  assertTrue(this == &ptxt.ea, "PtxtArray: inconsistent operation");
-  decrypt(ctxt, sKey, ptxt.pa);
-}
-
-inline void
-EncryptedArray::encrypt(Ctxt& ctxt, const PubKey& pKey, const PtxtArray& ptxt,
-                        double mag, double rescale) const
-{
-  assertTrue(this == &ptxt.ea, "PtxtArray: inconsistent operation");
-  encrypt(ctxt, pKey, ptxt.pa);
-}
 
 
 
