@@ -110,29 +110,17 @@ TEST_P(TestContext, calculateBitSizeOfQ)
 
 TEST(TestContext, securityHasLowerBoundOfZero)
 {
-  // Security = -109
-  helib::Context large_negative_sec_context(/*m=*/17, /*p=*/2, /*r=*/1);
-  buildModChain(large_negative_sec_context, /*bits=*/100, /*c=*/2);
-  double large_negative_result = large_negative_sec_context.securityLevel();
-  EXPECT_DOUBLE_EQ(large_negative_result, 0.0);
-
-  // Security = -6
-  helib::Context small_negative_sec_context(/*m=*/2501, /*p=*/2, /*r=*/1);
+  // Security = -14
+  helib::Context small_negative_sec_context(/*m=*/17, /*p=*/2, /*r=*/1);
   buildModChain(small_negative_sec_context, /*bits=*/100, /*c=*/2);
   double small_negative_result = small_negative_sec_context.securityLevel();
   EXPECT_DOUBLE_EQ(small_negative_result, 0.0);
 
-  // Security 0.6
-  helib::Context negligible_sec_context(/*m=*/3205, /*p=*/2, /*r=*/1);
-  buildModChain(negligible_sec_context, /*bits=*/100, /*c=*/2);
-  double negl_result = negligible_sec_context.securityLevel();
-  EXPECT_NEAR(negl_result, 0.656656, 0.000001);
-
-  // Security 43
-  helib::Context small_sec_context(/*m=*/5215, /*p=*/2, /*r=*/1);
-  buildModChain(small_sec_context, /*bits=*/100, /*c=*/2);
+  // Security = 13
+  helib::Context small_sec_context(/*m=*/2501, /*p=*/2, /*r=*/1);
+  buildModChain(small_sec_context, /*bits=*/200, /*c=*/2);
   double small_result = small_sec_context.securityLevel();
-  EXPECT_NEAR(small_result, 43.4318, 0.0001);
+  EXPECT_NEAR(small_result, 13.31563, 0.0001);
 }
 
 INSTANTIATE_TEST_SUITE_P(variousParameters,

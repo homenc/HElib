@@ -28,6 +28,52 @@
 
 namespace helib {
 
+  /**
+   * @brief An estimate for the security-level. This has a lower bound of 0.
+   *
+   * This function uses experimental affine approximations to the lwe-estimator from
+   * https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from Aug-2020
+   * (see script in misc/estimator/lwe-estimator.sage). Let X = n / log(1/alpha),
+   * the security level is estimated as follows:
+   * 
+   *   + dense {-1,0,1} keys:      security ~ 3.8 *X - 15
+   *   + sparse keys (weight=460): security ~ 3.55*X  - 8
+   *   + sparse keys (weight=350): security ~ 3.44*X  - 6
+   *   + sparse keys (weight=240): security ~ 3.18*X  + 2
+   *   + sparse keys (weight=120): security ~ 2.53*X + 19
+   */
+inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt) {
+  if (hwt<0 || (hwt>0 && hwt<120)) {
+    throw LogicError("Cannot estimate security for keys of weight<120");
+  }
+  double slope=0, consterm=0;
+  if (hwt==0) { // dense keys
+    slope = 3.8;
+    consterm = -15;
+  }
+  else if (hwt<240) { // estimate prms on a line from 120 to 240
+    slope = 2.53 + double(3.18-2.53)*(hwt-120)/(240-120);
+    consterm = 19 + double(2-19)*(hwt-120)/(240-120);
+  }
+  else if (hwt<350) { // estimate prms on a line from 240 to 350
+    slope = 3.18 + double(3.44-3.18)*(hwt-240)/(350-240);
+    consterm = 2 + double(-6-2)*(hwt-240)/(350-240);
+  }
+  else if (hwt<460) { // estimate prms on a line from 350 to 460
+    slope = 3.44 + double(3.55-3.44)*(hwt-350)/(460-350);
+    consterm = -6 + double(-8+6)*(hwt-350)/(240-120);
+  }
+  else { // just use the hwt=460 params
+    slope = 3.55;
+    consterm = -8;
+  }
+
+  double x = n / log2AlphaInv;
+  double ret = slope * x + consterm;
+
+  return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
+}
+
 /**
  * @brief Returns smallest parameter m satisfying various constraints:
  * @param k security parameter
@@ -420,20 +466,30 @@ public:
     return std::ceil(logOfProduct(primes) / log(2.0));
   }
 
-  //! @brief An estimate for the security-level. This has a lower bound of 0.
-  double securityLevel() const
+  /**
+   * @brief An estimate for the security-level. This has a lower bound of 0.
+   *
+   * This function uses experimental affine approximations to the lwe-estimator from
+   * https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from Aug-2020
+   * (see script in misc/estimator/lwe-estimator.sage).
+   * 
+   * Let s=3.2 if m is a power of two, or s=3.2*sqrt(m) otherwise. For the estimator
+   * we use alpha=s/q (so log2AlphaInv = log_2(q/s)), and n=phi(m).
+   */
+  double securityLevel(int hwt=0) const
   {
-    long phim = zMStar.getPhiM();
     IndexSet primes = ctxtPrimes | specialPrimes;
-
     if (primes.card() == 0) {
       throw LogicError(
           "Security level cannot be determined as modulus chain is empty.");
     }
 
-    double bitsize = logOfProduct(primes) / log(2.0);
-    double ret = (7.2 * phim / bitsize - 110);
-    return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
+    double s = to_double(stdev);
+    if (zMStar.getPow2() == 0) { // not power of two
+      s *= sqrt(zMStar.getM());
+    }
+    double log2AlphaInv = (logOfProduct(primes)-log(s)) / log(2.0);
+    return lweEstimateSecurity(zMStar.getPhiM(), log2AlphaInv, hwt);
   }
 
   //! @brief print out algebra and other important info
