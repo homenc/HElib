@@ -120,7 +120,7 @@ TEST(TestContext, securityHasLowerBoundOfZero)
   helib::Context small_sec_context(/*m=*/2501, /*p=*/2, /*r=*/1);
   buildModChain(small_sec_context, /*bits=*/200, /*c=*/2);
   double small_result = small_sec_context.securityLevel();
-  EXPECT_NEAR(small_result, 13.31563, 0.0001);
+  EXPECT_NEAR(small_result, 8.31563, 0.0001);
 }
 
 INSTANTIATE_TEST_SUITE_P(variousParameters,

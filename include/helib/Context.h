@@ -36,36 +36,44 @@ namespace helib {
    * (see script in misc/estimator/lwe-estimator.sage). Let X = n / log(1/alpha),
    * the security level is estimated as follows:
    * 
-   *   + dense {-1,0,1} keys:      security ~ 3.8 *X - 15
-   *   + sparse keys (weight=460): security ~ 3.55*X  - 8
-   *   + sparse keys (weight=350): security ~ 3.44*X  - 6
-   *   + sparse keys (weight=240): security ~ 3.18*X  + 2
-   *   + sparse keys (weight=120): security ~ 2.53*X + 19
+   *   + dense {-1,0,1} keys:      security ~ 3.8*X  -20
+   *   + sparse keys (weight=450): security ~ 3.55*X -12
+   *   + sparse keys (weight=420): security ~ 3.5*X  -10
+   *   + sparse keys (weight=390): security ~ 3.45*X -7
+   *   + sparse keys (weight=360): security ~ 3.4*X  -5
+   *   + sparse keys (weight=330): security ~ 3.35*X -4
+   *   + sparse keys (weight=300): security ~ 3.3*X  -3
+   *   + sparse keys (weight=270): security ~ 3.2*X  +1
+   *   + sparse keys (weight=240): security ~ 3.1*X  +3
+   *   + sparse keys (weight=210): security ~ 3*X    +6
+   *   + sparse keys (weight=180): security ~ 2.83*X +10
+   *   + sparse keys (weight=150): security ~ 2.67*X +13
+   *   + sparse keys (weight=120): security ~ 2.4*X  +19
    */
 inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt) {
   if (hwt<0 || (hwt>0 && hwt<120)) {
     throw LogicError("Cannot estimate security for keys of weight<120");
   }
+  const double hwgts[]  = {120,  150,  180, 210, 240, 270, 300,  330, 360,  390, 420, 450};
+  const double slopes[] = {2.4, 2.67, 2.83, 3.0, 3.1, 3.3, 3.3, 3.35, 3.4, 3.45, 3.5, 3.55};
+  const double cnstrms[]= { 19,   13,   10,   6,   3,   1,   -3,  -4,  -5,   -7, -10,  -12};
+  const size_t numWghts = sizeof(hwgts)/sizeof(hwgts[0]);
+
+  size_t idx = (hwt - 120)/30; // index into the array above
   double slope=0, consterm=0;
   if (hwt==0) { // dense keys
     slope = 3.8;
-    consterm = -15;
+    consterm = -20;
   }
-  else if (hwt<240) { // estimate prms on a line from 120 to 240
-    slope = 2.53 + double(3.18-2.53)*(hwt-120)/(240-120);
-    consterm = 19 + double(2-19)*(hwt-120)/(240-120);
+  else if (idx<numWghts-1) { // estimate prms on a line from prms[i] to prms[i+1]
+  // how far into this interval
+    double a = double(hwt-hwgts[idx]) / (hwgts[idx+1]-hwgts[idx]);
+    slope = slopes[idx] + a*(slopes[idx+1]-slopes[idx]);
+    consterm = cnstrms[idx] + a*(cnstrms[idx+1]-cnstrms[idx]);
   }
-  else if (hwt<350) { // estimate prms on a line from 240 to 350
-    slope = 3.18 + double(3.44-3.18)*(hwt-240)/(350-240);
-    consterm = 2 + double(-6-2)*(hwt-240)/(350-240);
-  }
-  else if (hwt<460) { // estimate prms on a line from 350 to 460
-    slope = 3.44 + double(3.55-3.44)*(hwt-350)/(460-350);
-    consterm = -6 + double(-8+6)*(hwt-350)/(240-120);
-  }
-  else { // just use the hwt=460 params
-    slope = 3.55;
-    consterm = -8;
+  else { // Use the params corresponding to largest weight (450 above)
+    slope = slopes[numWghts-1];
+    consterm = cnstrms[numWghts-1];
   }
 
   double x = n / log2AlphaInv;

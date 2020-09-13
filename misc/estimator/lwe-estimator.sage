@@ -34,7 +34,7 @@ def estimate(hw):
     with open(f"lwe-estimate-{hw}.csv", "w") as csvfile:
         print(f"n,|q|,log2(1/alpha),x=n/log2(1/alpha),security ({hw})", file=csvfile)
 
-        for n in range(2049, 30000, 2048):
+        for n in range(4097, 30000, 2048):
             # some data points with sigma*sqrt(2\pi)=8, others with 8*sqrt(n)
             fromLogq = int(round(n/80, 0))
             toLogq = int(round(n/20, 0))
