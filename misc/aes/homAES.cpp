@@ -133,7 +133,7 @@ void HomAES::encryptAESkey(vector<Ctxt>& eKey, Vec<uint8_t>& aesKey,
 
   // Compute the key expansion
   uint8_t roundKeySchedule[240];
-  long nRoundKeys = 
+  long nRoundKeys =
     AESKeyExpansion(roundKeySchedule, aesKey.data(), aesKey.length()*8);
 
   long blocksPerCtxt = ea2.size() / 16;
@@ -397,7 +397,7 @@ void HomAES::batchRecrypt(vector<Ctxt>& data) const
   if (dSize != (long)data.size()) {
     cerr << " size mismatch after pack/unpack\n";
     exit(0);
-  }  
+  }
   for (long i=0; i<(long)data.size(); i++) {
     ZZX ptxt2;
     dbgKey->Decrypt(ptxt2, data[i]);
@@ -658,7 +658,7 @@ static void decRowColTran(Ctxt& c, const vector<PolyType>& decLinTran,
   sum += tmpF; sum += tmpE; sum += tmpD;
 
   // Compute the 2nd row of the AES matrix
-  Ctxt tmp(c); tmpF = cf; tmpE = ce; tmpD = cd; 
+  Ctxt tmp(c); tmpF = cf; tmpE = ce; tmpD = cd;
   tmp.multByConstant(p9);
   tmpF.multByConstant(pE);
   tmpE.multByConstant(pB);
@@ -668,7 +668,7 @@ static void decRowColTran(Ctxt& c, const vector<PolyType>& decLinTran,
   sum += tmp;
 
   // Compute the 3rd row of the AES matrix
-  tmp = c; tmpF = cf; tmpE = ce; tmpD = cd; 
+  tmp = c; tmpF = cf; tmpE = ce; tmpD = cd;
   tmp.multByConstant(pD);
   tmpF.multByConstant(p9);
   tmpE.multByConstant(pE);

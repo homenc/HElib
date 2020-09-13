@@ -209,7 +209,7 @@ static bool testTrunc(SPX& a)
     }
 
     if (coeff(c,0)==0) {
-      SetCoeff(c,0);  SetCoeff(c_p,0); 
+      SetCoeff(c,0);  SetCoeff(c_p,0);
     }
     InvTrunc(c,  c,  40);        InvTrunc(c_p,c_p,40);
     if (c != SPX(c_p,mod)) {

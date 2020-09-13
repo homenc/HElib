@@ -188,9 +188,10 @@ public:
   NTL::ZZX getG() const;
 
   /**
-   * @brief Getter function that returns the data of `PolyMod` as an `NTL::ZZX`.
+   * @brief Getter function that returns the data of `PolyMod` as an
+   * `NTL::ZZX` const reference.
    **/
-  NTL::ZZX getData() const;
+  const NTL::ZZX& getData() const;
 
   /**
    * @brief Equals operator between two `PolyMod` objects.
@@ -374,6 +375,46 @@ public:
   PolyMod& operator-=(const NTL::ZZX& otherPoly);
 
   /**
+   * @brief Deserialize a `PolyMod` object from the input stream `is`.
+   * @param is Input `std::istream`.
+   * @param poly Destination `PolyMod` object.
+   * @throws IOError if the stream is badly formatted (i.e. it is not delimited
+   * by '[' and ']').
+   * @note `poly` must be constructed with an appropriate p2r and G @b BEFORE
+   * calling this function. For example,
+   * @code
+   * PolyMod my_poly(p2r, G);
+   * deserialize(std::cin, my_poly);
+   * @endcode
+   *
+   * The input stream has to be formatted as a comma-separated list surrounded
+   * by '[' and ']'.\n
+   * Each element of the list will be deserialized as a coefficient of the
+   * polynomial.\n
+   * For example '['coef0', 'coef1', 'coef2']' will be deserialized as a
+   * `PolyMod` object `poly` where `poly[0]=coef0`, `poly[1]=coef1`,
+   * `poly[2]=coef2` and `poly[i]=0` for `i>2`.
+   **/
+  friend void deserialize(std::istream& is, PolyMod& poly);
+
+  /**
+   * @brief Serialize a `PolyMod` to the output stream `os`.
+   * @param os Output `std::ostream`.
+   * @param poly `PolyMod` object to be written.
+   * @return Input `std::ostream` post writing.
+   * @note p2r and G are not serialized, see note of `deserialize`.
+   *
+   * The output stream will be formatted as a comma-separated list surrounded by
+   * '[' and ']'.\n
+   * Each coefficient of `poly` will be serialized in an element of such list by
+   * the `>>` operator.\n
+   * For example if we have a `PolyMod` object `poly` such that `poly[0]=coef0`,
+   * `poly[1]=coef1`, `poly[2]=coef2`, and `poly[i]=0` for `i>2`, it will be
+   * serialized as '['coef0', 'coef1', 'coef2']'.
+   **/
+  friend void serialize(std::ostream& os, const PolyMod& slot);
+
+  /**
    * @brief Input shift operator.
    * @param is Input `std::istream`.
    * @param poly Destination `PolyMod` object.
@@ -384,6 +425,16 @@ public:
    * PolyMod my_poly(p2r, G);
    * std::cin >> my_poly;
    * @endcode
+   *
+   * The input stream has to be formatted as a comma-separated list surrounded
+   * by '[' and ']'.\n
+   * Each element of the list will be deserialized as a coefficient of the
+   * polynomial.\n
+   * If the number of tokens in the list is less than the number of
+   * coefficients, the higher-degree coefficients will be padded by 0.\n
+   * For example '['coef0', 'coef1', 'coef2']' will be deserialized as a
+   * `PolyMod` object `poly` where `poly[0]=coef0`, `poly[1]=coef1`,
+   * `poly[2]=coef2` and `poly[i]=0` for `i>2`.
    **/
   friend std::istream& operator>>(std::istream& is, PolyMod& poly);
 
@@ -392,7 +443,15 @@ public:
    * @param os Output `std::ostream`.
    * @param poly `PolyMod` object to be written.
    * @return Input `std::ostream` post writing.
-   * @note p2r and G are not serialised, see note of `operator>>`.
+   * @note p2r and G are not serialized, see note of `operator>>`.
+   *
+   * The output stream will be formatted as a comma-separated list surrounded by
+   * '[' and ']'.\n
+   * Each coefficient of `poly` will be serialized in an element of such list by
+   * the `>>` operator.\n
+   * For example if we have a `PolyMod` object `poly` such that `poly[0]=coef0`,
+   * `poly[1]=coef1`, `poly[2]=coef2`, and `poly[i]=0` for `i>2`, it will be
+   * serialized as '['coef0', 'coef1', 'coef2']'.
    **/
   friend std::ostream& operator<<(std::ostream& os, const PolyMod& poly);
 

@@ -21,60 +21,99 @@
 namespace helib {
 
 EncryptedArrayBase* buildEncryptedArray(const Context& context,
-                                        const PAlgebraMod& alMod, const NTL::ZZX& G)
+                                        const PAlgebraMod& alMod,
+                                        const NTL::ZZX& G)
 {
-  if (alMod.getTag()==PA_cx_tag)
+  if (alMod.getTag() == PA_cx_tag)
     return new EncryptedArrayCx(context, alMod.getCx());
 
-  // By defualt use the 1st factor F0
-  const NTL::ZZX& GG = NTL::IsZero(G)? alMod.getFactorsOverZZ()[0]: G;
+  // By default
+  // use the 1st factor F0
+  const NTL::ZZX& GG = NTL::IsZero(G) ? alMod.getFactorsOverZZ()[0] : G;
 
   switch (alMod.getTag()) {
-    case PA_GF2_tag: {
-      return new EncryptedArrayDerived<PA_GF2>(context, NTL::conv<NTL::GF2X>(GG), alMod);
-    }
-    case PA_zz_p_tag: {
-      NTL::zz_pBak bak; bak.save(); alMod.restoreContext();
-      return new EncryptedArrayDerived<PA_zz_p>(context, NTL::conv<NTL::zz_pX>(GG), alMod);
-    }
-    default: return nullptr;
+  case PA_GF2_tag: {
+    return new EncryptedArrayDerived<PA_GF2>(context,
+                                             NTL::conv<NTL::GF2X>(GG),
+                                             alMod);
+  }
+  case PA_zz_p_tag: {
+    NTL::zz_pBak bak;
+    bak.save();
+    alMod.restoreContext();
+    return new EncryptedArrayDerived<PA_zz_p>(context,
+                                              NTL::conv<NTL::zz_pX>(GG),
+                                              alMod);
+  }
+  default:
+    return nullptr;
   }
 }
 
-
-template<class type>
-EncryptedArrayDerived<type>::EncryptedArrayDerived(
-   const Context& _context, const RX& _G, const PAlgebraMod& alMod)
-  : context(_context), tab(alMod.getDerived(type()))
+template <typename type>
+EncryptedArrayDerived<type>::EncryptedArrayDerived(const Context& _context,
+                                                   const RX& _G,
+                                                   const PAlgebraMod& alMod) :
+    context(_context), tab(alMod.getDerived(type()))
 {
   tab.mapToSlots(mappingData, _G); // Compute the base-G representation maps
 }
 
-// Correction function for automorph in bad dimensions
-template<typename type>
-void EncryptedArrayDerived<type>::badDimensionAutomorphCorrection(Ctxt& ctxt, long i, long amt) const
+// rotate ciphertext in dimension i by amt
+template <typename type>
+void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt,
+                                           long i,
+                                           long amt,
+                                           bool dc) const
 {
-  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
+  HELIB_TIMER_START;
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  helib::assertInRange(i,
+                       0l,
+                       dimension(),
+                       "i must be between 0 and dimension()");
+
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
+
+  const std::vector<std::vector<RX>>& maskTable = tab.getMaskTable();
   const PAlgebra& zMStar = getPAlgebra();
   long ord = sizeOfDimension(i);
-  if (amt < 0) amt += ord;  // Make sure amt is in the range [1,ord-1]
-  //OLD: assert(maskTable[i].size() > 0);
-  helib::assertTrue(maskTable[i].size() > 0, "Found non-positive sized mask table entry");
+
+  amt %= ord; // assumes division w/ remainder follows C++11
+  if (amt == 0)
+    return;
+  if (amt < 0)
+    amt += ord; // Make sure amt is in the range [1,ord-1]
+
+  if (dc || nativeDimension(i)) { // native dimension or don't-care
+    // For don't-care, we assume that any shifts "off the end" are zero
+    ctxt.smartAutomorph(zMStar.genToPow(i, amt));
+    return;
+  }
+
+  // more expensive "non-native" rotation
+
+  helib::assertTrue(maskTable[i].size() > 0,
+                    "Found non-positive sized mask table entry");
+
+  ctxt.smartAutomorph(zMStar.genToPow(i, amt));
+  // ctxt = \rho_i^{amt}(originalCtxt)
 
   Ctxt T(ctxt);
   T.smartAutomorph(zMStar.genToPow(i, -ord));
   // T = \rho_i^{amt-ord}(originalCtxt).
   // This strategy assumes is geared toward the
-  // assumption that we have the key switch matrix 
+  // assumption that we have the key switch matrix
   // for \rho_i^{-ord}
 
   const RX& mask = maskTable[i][amt];
   zzX mask_poly = balanced_zzX(mask);
   double sz = embeddingLargestCoeff(mask_poly, zMStar);
-  DoubleCRT m1(mask_poly, context, 
-               ctxt.getPrimeSet() | T.getPrimeSet());
+  DoubleCRT m1(mask_poly, context, ctxt.getPrimeSet() | T.getPrimeSet());
   // m1 will be used to multiply both ctxt and T
-  
+
   // Compute ctxt = ctxt*m1 + T - T*m1
   ctxt.multByConstant(m1, sz);
   ctxt += T;
@@ -82,49 +121,26 @@ void EncryptedArrayDerived<type>::badDimensionAutomorphCorrection(Ctxt& ctxt, lo
   ctxt -= T;
 }
 
-// rotate ciphertext in dimension i by amt
-template<class type>
-void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt, long i, long amt, bool dc) const
-{
-  FHE_TIMER_START;
-  //OLD: assert(&context == &ctxt.getContext());
-  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
-  //OLD: assert(i >= 0 && i < dimension());
-  helib::assertInRange(i, 0l, dimension(), "i must be between 0 and dimension()");
-
-  RBak bak; bak.save(); tab.restoreContext();
-
-  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
-  const PAlgebra& zMStar = getPAlgebra();
-  long ord = sizeOfDimension(i);
-  amt %= ord;// DIRT: assumes division w/ remainder follows C++11
-  if (amt == 0) return;
-
-  // ctxt = \rho_i^{amt}(originalCtxt)
-  ctxt.smartAutomorph(zMStar.genToPow(i, amt));
-
-  // For don't-care, we assume that any shifts "off the end" are zero
-  // More expensive "non-native" rotation
-  if (!dc && !nativeDimension(i))
-    badDimensionAutomorphCorrection(ctxt, i, amt);
-}
-
 // Shift k positions along the i'th dimension with zero fill.
 // Negative shift amount denotes shift in the opposite direction.
-template<class type>
+template <typename type>
 void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   const PAlgebra& al = getPAlgebra();
 
-  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
+  const std::vector<std::vector<RX>>& maskTable = tab.getMaskTable();
 
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
 
-  //OLD: assert(&context == &ctxt.getContext());
-  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
-  //OLD: assert(i >= 0 && i < long(al.numOfGens()));
-  helib::assertInRange(i, 0l, (long)(al.numOfGens()), "i must be non-negative and less than the PAlgebra's generator count");
+  assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  assertInRange(i,
+                0l,
+                (long)(al.numOfGens()),
+                "i must be non-negative and less than the PAlgebra's "
+                "generator count");
 
   long ord = al.OrderOf(i);
 
@@ -135,55 +151,60 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
 
   // Make sure amt is in the range [1,ord-1]
   long amt = k % ord;
-  if (amt == 0) return;
-  if (amt < 0) amt += ord;
+  if (amt == 0)
+    return;
+  if (amt < 0)
+    amt += ord;
 
-  RX mask = maskTable[i][ord-amt];
+  RX mask = maskTable[i][ord - amt];
 
   long val;
   if (k < 0)
-    val = al.genToPow(i, amt-ord);
+    val = al.genToPow(i, amt - ord);
   else {
     mask = 1 - mask;
     val = al.genToPow(i, amt);
   }
-  ctxt.multByConstant(balanced_zzX(mask));   // zero out slots where mask=0
-  ctxt.smartAutomorph(val);  // shift left by val
-  FHE_TIMER_STOP;
+  ctxt.multByConstant(balanced_zzX(mask)); // zero out slots where mask=0
+  ctxt.smartAutomorph(val);                // shift left by val
+  HELIB_TIMER_STOP;
 }
-
 
 // NOTE: masking depth: if there are N dimensions, and if for i = 1..N
 // we define c_i = 1 if dimension i is bad and 0 o/w, then the masking
-// depth is N - 1 + \sum_{i=1} c_i.  
+// depth is N - 1 + \sum_{i=1} c_i.
 
-template<class type>
+template <typename type>
 void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
   const PAlgebra& al = getPAlgebra();
 
-  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
+  const std::vector<std::vector<RX>>& maskTable = tab.getMaskTable();
 
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
 
-  //OLD: assert(&context == &ctxt.getContext());
-  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  assertEq(&context, &ctxt.getContext(), "Context mismatch");
 
   // Simple case: just one generator
-  if (al.numOfGens()==1) { // VJS: bug fix: <= must be ==
+  if (al.numOfGens() == 1) { // VJS: bug fix: <= must be ==
     rotate1D(ctxt, 0, amt);
     return;
   }
 
   // Make sure that amt is in [1,nslots-1]
-  amt %= (long) al.getNSlots();
-  if (amt == 0) { return; }
-  if (amt < 0) amt += al.getNSlots();
+  amt %= (long)al.getNSlots();
+  if (amt == 0) {
+    return;
+  }
+  if (amt < 0)
+    amt += al.getNSlots();
 
   // rotate the ciphertext, one dimension at a time
-  long i = al.numOfGens()-1;
+  long i = al.numOfGens() - 1;
   long v = al.coordinate(i, amt);
   RX mask = maskTable[i][v];
   Ctxt tmp(ctxt.getPubKey());
@@ -195,9 +216,9 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
   // rotation. This saves one mult-by-constant, since we use the same mask
   // inside rotate1D as in the loop below.
 
-  if (al.SameOrd(i) || v==0) rotate1D(ctxt, i, v); // no need to optimize
+  if (al.SameOrd(i) || v == 0)
+    rotate1D(ctxt, i, v); // no need to optimize
   else {
-
 
     long ord = al.OrderOf(i);
 
@@ -208,16 +229,15 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     tmp.smartAutomorph(al.genToPow(i, -ord));
     // tmp = \rho_i^{v-ord}(originalCtxt).
     // This strategy assumes is geared toward the
-    // assumption that we have the key switch matrix 
+    // assumption that we have the key switch matrix
     // for \rho_i^{-ord}
 
     zzX mask_poly = balanced_zzX(mask);
     double sz = embeddingLargestCoeff(mask_poly, al);
 
-    DoubleCRT m1(mask_poly, context, 
-		 ctxt.getPrimeSet() | tmp.getPrimeSet());
+    DoubleCRT m1(mask_poly, context, ctxt.getPrimeSet() | tmp.getPrimeSet());
     // m1 will be used to multiply both ctxt and tmp
-    
+
     // Compute ctxt = ctxt*m1, tmp = tmp*(1-m1)
     ctxt.multByConstant(m1, sz);
 
@@ -225,18 +245,20 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     tmp1.multByConstant(m1, sz);
     tmp -= tmp1;
 
-
     // apply rotation relative to next generator before combining the parts
     --i;
     v = al.coordinate(i, amt);
-    rotate1D(ctxt, i, v); 
-    rotate1D(tmp, i, v+1);
-    ctxt += tmp;         // combine the two parts
+    rotate1D(ctxt, i, v);
+    rotate1D(tmp, i, v + 1);
+    ctxt += tmp; // combine the two parts
 
-    if (i <= 0) { return; }  // no more generators
+    if (i <= 0) {
+      return;
+    } // no more generators
 
-    mask = ((mask * (maskTable[i][v] - maskTable[i][v+1])) % PhimXmod)
-             + maskTable[i][v+1];  // update the mask for next iteration
+    // update the mask for next iteration
+    mask = ((mask * (maskTable[i][v] - maskTable[i][v + 1])) % PhimXmod) +
+           maskTable[i][v + 1];
   }
 
   // Handle rotation relative to all the other generators (if any)
@@ -249,41 +271,41 @@ void EncryptedArrayDerived<type>::rotate(Ctxt& ctxt, long amt) const
     tmp.multByConstant(mask_poly); // only the slots in which mask=1
     ctxt -= tmp;                   // only the slots in which mask=0
 
-    rotate1D(tmp, i, v); 
-    rotate1D(ctxt, i, v+1);
+    rotate1D(tmp, i, v);
+    rotate1D(ctxt, i, v + 1);
     ctxt += tmp;
-    if (i>0) {
-      mask = ((mask * (maskTable[i][v] - maskTable[i][v+1])) % PhimXmod)
-             + maskTable[i][v+1];  // update the mask for next iteration
+    if (i > 0) {
+      mask = ((mask * (maskTable[i][v] - maskTable[i][v + 1])) % PhimXmod) +
+             maskTable[i][v + 1]; // update the mask for next iteration
     }
   }
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
-template<class type>
+template <typename type>
 void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 {
-  FHE_TIMER_START;
-
+  HELIB_TIMER_START;
 
   const PAlgebra& al = getPAlgebra();
 
-  const std::vector< std::vector< RX > >& maskTable = tab.getMaskTable();
+  const std::vector<std::vector<RX>>& maskTable = tab.getMaskTable();
 
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
 
-  //OLD: assert(&context == &ctxt.getContext());
-  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  assertEq(&context, &ctxt.getContext(), "Context mismatch");
 
   // Simple case: just one generator
-  if (al.numOfGens()==1) {
+  if (al.numOfGens() == 1) {
     shift1D(ctxt, 0, k);
     return;
   }
 
   long nSlots = al.getNSlots();
 
-  // Shifting by more than the number of slots gives an all-zero cipehrtext
+  // Shifting by more than the number of slots gives an all-zero ciphertext
   if (k <= -nSlots || k >= nSlots) {
     ctxt.multByConstant(NTL::to_ZZ(0));
     return;
@@ -291,11 +313,13 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
 
   // Make sure that amt is in [1,nslots-1]
   long amt = k % nSlots;
-  if (amt == 0) return;
-  if (amt < 0) amt += nSlots;
+  if (amt == 0)
+    return;
+  if (amt < 0)
+    amt += nSlots;
 
   // rotate the ciphertext, one dimension at a time
-  long i = al.numOfGens()-1;
+  long i = al.numOfGens() - 1;
   long v = al.coordinate(i, amt);
   RX mask = maskTable[i][v];
   Ctxt tmp(ctxt.getPubKey());
@@ -310,29 +334,30 @@ void EncryptedArrayDerived<type>::shift(Ctxt& ctxt, long k) const
     tmp = ctxt;
     tmp.multByConstant(mask_poly); // only the slots in which mask=1
     ctxt -= tmp;                   // only the slots in which mask=0
-    if (i>0) {
-      rotate1D(ctxt, i, v+1);
-      rotate1D(tmp, i, v); 
-      ctxt += tmp;                    // combine the two parts
+    if (i > 0) {
+      rotate1D(ctxt, i, v + 1);
+      rotate1D(tmp, i, v);
+      ctxt += tmp; // combine the two parts
 
-      mask = ((mask * (maskTable[i][v] - maskTable[i][v+1])) % PhimXmod)
-             + maskTable[i][v+1];  // update the mask before next iteration
-    }
-    else { // i == 0
-      if (k < 0) v -= al.OrderOf(0);
+      mask = ((mask * (maskTable[i][v] - maskTable[i][v + 1])) % PhimXmod) +
+             maskTable[i][v + 1]; // update the mask before next iteration
+    } else {                      // i == 0
+      if (k < 0)
+        v -= al.OrderOf(0);
       shift1D(tmp, 0, v);
-      shift1D(ctxt, 0, v+1);
+      shift1D(ctxt, 0, v + 1);
       ctxt += tmp;
-    } 
+    }
   }
-  FHE_TIMER_STOP;
+  HELIB_TIMER_STOP;
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::encode(NTL::ZZX& ptxt, const std::vector< RX >& array) const
+template <typename type>
+void EncryptedArrayDerived<type>::encode(NTL::ZZX& ptxt,
+                                         const std::vector<RX>& array) const
 {
   RX pp;
-  tab.embedInSlots(pp, array, mappingData); 
+  tab.embedInSlots(pp, array, mappingData);
 
   // NOTE: previous version was
   //   ptxt = conv<NTL::ZZX>(pp);
@@ -341,60 +366,74 @@ void EncryptedArrayDerived<type>::encode(NTL::ZZX& ptxt, const std::vector< RX >
   convert(ptxt, pp1);
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::decode(std::vector< RX >& array, const NTL::ZZX& ptxt) const
+template <typename type>
+void EncryptedArrayDerived<type>::decode(std::vector<RX>& array,
+                                         const NTL::ZZX& ptxt) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   RX pp;
   conv(pp, ptxt);
-  tab.decodePlaintext(array, pp, mappingData); 
-  FHE_TIMER_STOP;
+  tab.decodePlaintext(array, pp, mappingData);
+  HELIB_TIMER_STOP;
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::encode(RX& ptxt, const std::vector< RX >& array) const
+template <typename type>
+void EncryptedArrayDerived<type>::encode(RX& ptxt,
+                                         const std::vector<RX>& array) const
 {
-  tab.embedInSlots(ptxt, array, mappingData); 
+  tab.embedInSlots(ptxt, array, mappingData);
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::decode(std::vector< RX >& array, const RX& ptxt) const
+template <typename type>
+void EncryptedArrayDerived<type>::decode(std::vector<RX>& array,
+                                         const RX& ptxt) const
 {
-  tab.decodePlaintext(array, ptxt, mappingData); 
+  tab.decodePlaintext(array, ptxt, mappingData);
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::encode(NTL::ZZX& ptxt, const PlaintextArray& array) const
+template <typename type>
+void EncryptedArrayDerived<type>::encode(NTL::ZZX& ptxt,
+                                         const PlaintextArray& array) const
 {
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
   encode(ptxt, array.getData<type>());
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const NTL::ZZX& ptxt) const
+template <typename type>
+void EncryptedArrayDerived<type>::decode(PlaintextArray& array,
+                                         const NTL::ZZX& ptxt) const
 {
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
   decode(array.getData<type>(), ptxt);
 }
 
-
-template<class type>
+template <typename type>
 void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
 {
-  //OLD: assert(i >= 0 && i < (long)getPAlgebra().getNSlots());
-  helib::assertInRange(i, 0l, (long)getPAlgebra().getNSlots(), "i must be non-negative and less than the PAlgebra's slot count");
-  RBak bak; bak.save(); tab.restoreContext();
+  assertInRange(
+      i,
+      0l,
+      (long)getPAlgebra().getNSlots(),
+      "i must be non-negative and less than the PAlgebra's slot count");
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
   RX res;
-  div(res, tab.getPhimXMod(), tab.getFactors()[i]); 
+  div(res, tab.getPhimXMod(), tab.getFactors()[i]);
   mul(res, res, tab.getCrtCoeffs()[i]);
   convert(ptxt, res);
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::encode(zzX& ptxt, const std::vector< RX >& array) const
+template <typename type>
+void EncryptedArrayDerived<type>::encode(zzX& ptxt,
+                                         const std::vector<RX>& array) const
 {
   RX pp;
-  tab.embedInSlots(pp, array, mappingData); 
+  tab.embedInSlots(pp, array, mappingData);
 
   // NOTE: previous version was
   //   convert(ptxt, pp);
@@ -402,30 +441,36 @@ void EncryptedArrayDerived<type>::encode(zzX& ptxt, const std::vector< RX >& arr
   ptxt = balanced_zzX(pp);
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::encode(zzX& ptxt, const PlaintextArray& array) const
+template <typename type>
+void EncryptedArrayDerived<type>::encode(zzX& ptxt,
+                                         const PlaintextArray& array) const
 {
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
   encode(ptxt, array.getData<type>());
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::decode(std::vector< RX >& array, const NTL::Vec<long>& ptxt) const
+template <typename type>
+void EncryptedArrayDerived<type>::decode(std::vector<RX>& array,
+                                         const NTL::Vec<long>& ptxt) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
   RX pp;
   convert(pp, ptxt);
-  tab.decodePlaintext(array, pp, mappingData); 
-  FHE_TIMER_STOP;
+  tab.decodePlaintext(array, pp, mappingData);
+  HELIB_TIMER_STOP;
 }
 
-template<class type>
-void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const NTL::Vec<long>& ptxt) const
+template <typename type>
+void EncryptedArrayDerived<type>::decode(PlaintextArray& array,
+                                         const NTL::Vec<long>& ptxt) const
 {
-  RBak bak; bak.save(); tab.restoreContext();
+  RBak bak;
+  bak.save();
+  tab.restoreContext();
   decode(array.getData<type>(), ptxt);
 }
-
 
 // this routine generates a "random" normal element and initializes a
 // matrix mapping from polynomial to normal basis and its inverse. It
@@ -433,19 +478,24 @@ void EncryptedArrayDerived<type>::decode(PlaintextArray& array, const NTL::Vec<l
 // the PRG seed deterministically to ensure that we always get the
 // same one (for a given set of parameters)
 
-template<class type>
+template <typename type>
 void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
 {
   RandomState state;
   SetSeed(NTL::to_ZZ(1));
   do {
-    typename NTL::Lazy< NTL::Pair< NTL::Mat<R>, NTL::Mat<R> > >::Builder 
-      builder(normalBasisMatrices); 
+    typename NTL::Lazy<NTL::Pair<NTL::Mat<R>, NTL::Mat<R>>>::Builder builder(
+        normalBasisMatrices);
 
-    if (!builder()) break;
+    if (!builder())
+      break;
 
-    RBak bak; bak.save(); restoreContext();
-    REBak ebak; ebak.save(); restoreContextForG();
+    RBak bak;
+    bak.save();
+    restoreContext();
+    REBak ebak;
+    ebak.save();
+    restoreContextForG();
 
     long d = RE::degree();
     long p = getPAlgebra().getP();
@@ -459,13 +509,12 @@ void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
     bool got_it = false;
 
     H = power(NTL::conv<RE>(RX(1, 1)), p);
-    
 
     do {
       NTL::random(normal_element);
-   
+
       RE pow;
-      pow = normal_element; 
+      pow = normal_element;
       VectorCopy(CB[0], rep(pow), d);
       for (long i = 1; i < d; i++) {
         pow = eval(rep(pow), H);
@@ -476,23 +525,23 @@ void EncryptedArrayDerived<type>::initNormalBasisMatrix() const
       conv(CB1, CB);
 
       {
-        NTL::zz_pBak bak1; bak1.save(); NTL::zz_p::init(p);
-         NTL::Mat<NTL::zz_p> CB2;
-         conv(CB2, CB1);
-         got_it = determinant(CB2) != 0;
+        NTL::zz_pBak bak1;
+        bak1.save();
+        NTL::zz_p::init(p);
+        NTL::Mat<NTL::zz_p> CB2;
+        conv(CB2, CB1);
+        got_it = determinant(CB2) != 0;
       }
     } while (!got_it);
 
     NTL::Mat<R> CBi;
     ppInvert(CBi, CB, p, r);
 
-    NTL::UniquePtr< NTL::Pair< NTL::Mat<R>, NTL::Mat<R> > > ptr;
+    NTL::UniquePtr<NTL::Pair<NTL::Mat<R>, NTL::Mat<R>>> ptr;
     ptr.make(CB, CBi);
     builder.move(ptr);
-  } while(0);
+  } while (0);
 }
-
-
 
 // Other functions...
 
@@ -505,7 +554,7 @@ void runningSums(const EncryptedArray& ea, Ctxt& ctxt)
     Ctxt tmp = ctxt;
     ea.shift(tmp, shamt);
     ctxt += tmp; // ctxt = ctxt + (ctxt >> shamt)
-    shamt = 2*shamt;
+    shamt = 2 * shamt;
   }
 }
 
@@ -513,18 +562,19 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
 {
   long n = ea.size();
 
-  if (n == 1) return;
+  if (n == 1)
+    return;
 
   Ctxt orig = ctxt;
 
   long k = NTL::NumBits(n);
   long e = 1;
 
-  for (long i = k-2; i >= 0; i--) {
+  for (long i = k - 2; i >= 0; i--) {
     Ctxt tmp1 = ctxt;
     ea.rotate(tmp1, e);
     ctxt += tmp1; // ctxt = ctxt + (ctxt >>> e)
-    e = 2*e;
+    e = 2 * e;
 
     if (NTL::bit(n, i)) {
       Ctxt tmp2 = orig;
@@ -538,43 +588,48 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt)
   }
 }
 
-
-
-
 // Linearized polynomials.
 // L describes a linear map M by describing its action on the standard
-// power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.  
+// power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.
 // The result is a coefficient vector C for the linearized polynomial
-// representing M: a polynoamial h in Z/(p^r)[X] of degree < d is sent to
+// representing M: a polynomial h in Z/(p^r)[X] of degree < d is sent to
 //
 //    M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
-template<class type> void
-EncryptedArrayDerived<type>::buildLinPolyCoeffs(std::vector<NTL::ZZX>& C, 
-						const std::vector<NTL::ZZX>& L) const
+template <typename type>
+void EncryptedArrayDerived<type>::buildLinPolyCoeffs(
+    std::vector<NTL::ZZX>& C,
+    const std::vector<NTL::ZZX>& L) const
 {
-  RBak bak; bak.save(); restoreContext();
+  RBak bak;
+  bak.save();
+  restoreContext();
   std::vector<RX> CC, LL;
   convert(LL, L);
   buildLinPolyCoeffs(CC, LL);
   convert(C, CC);
 }
 
-template<class type> void
-EncryptedArrayDerived<type>::buildLinPolyCoeffs(std::vector<RX>& C, 
-						const std::vector<RX>& L) const
+template <typename type>
+void EncryptedArrayDerived<type>::buildLinPolyCoeffs(
+    std::vector<RX>& C,
+    const std::vector<RX>& L) const
 {
-  FHE_TIMER_START;
+  HELIB_TIMER_START;
 
-  RBak bak; bak.save(); restoreContext();  // the NTL context for mod p^r
-  REBak ebak; ebak.save(); restoreContextForG(); // The NTL context for mod G
+  RBak bak;
+  bak.save();
+  restoreContext(); // the NTL context for mod p^r
+  REBak ebak;
+  ebak.save();
+  restoreContextForG(); // The NTL context for mod G
 
   do {
-    typename NTL::Lazy< NTL::Mat<RE> >::Builder builder(linPolyMatrix);
-    if (!builder()) break;
+    typename NTL::Lazy<NTL::Mat<RE>>::Builder builder(linPolyMatrix);
+    if (!builder())
+      break;
 
-    FHE_NTIMER_START(buildLinPolyCoeffs_invert);
+    HELIB_NTIMER_START(buildLinPolyCoeffs_invert);
 
-   
     long p = getPAlgebra().getP();
     long r = tab.getR();
 
@@ -584,7 +639,7 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(std::vector<RX>& C,
     NTL::Mat<RE> M2;
     ppInvert(M2, M1, p, r); // invert modulo prime-power p^r
 
-    NTL::UniquePtr< NTL::Mat<RE> > ptr;
+    NTL::UniquePtr<NTL::Mat<RE>> ptr;
     ptr.make(M2);
     builder.move(ptr);
   } while (0);
@@ -595,53 +650,53 @@ EncryptedArrayDerived<type>::buildLinPolyCoeffs(std::vector<RX>& C,
   convert(C, CC);
 }
 
-
 // Apply the same linear transformation to all the slots.
 // C[0...d-1] is the output of ea.buildLinPolyCoeffs
-void applyLinPoly1(const EncryptedArray& ea, Ctxt& ctxt, const std::vector<NTL::ZZX>& C)
+void applyLinPoly1(const EncryptedArray& ea,
+                   Ctxt& ctxt,
+                   const std::vector<NTL::ZZX>& C)
 {
-  //OLD: assert(&ea.getContext() == &ctxt.getContext());
-  helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
+  assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
   long d = ea.getDegree();
-  //OLD: assert(d == lsize(C));
-  helib::assertEq(d, lsize(C), "ea's degree does not match the size of C");
+  assertEq(d, lsize(C), "ea's degree does not match the size of C");
 
   long nslots = ea.size();
 
   std::vector<NTL::ZZX> encodedC(d);
   for (long j = 0; j < d; j++) {
     std::vector<NTL::ZZX> v(nslots); // all the slots of v equal C[j]
-    for (long i = 0; i < nslots; i++) v[i] = C[j];
+    for (long i = 0; i < nslots; i++)
+      v[i] = C[j];
     ea.encode(encodedC[j], v);
   }
 
   applyLinPolyLL(ctxt, encodedC, ea.getDegree());
 }
 
-
 // Apply different transformations to different slots. Each row in
 // the matrix Cvec[0...nslots-1][0...d-1] is a length-d vector which
 // is the output of ea.buildLinPolyCoeffs
-void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt, 
-                      const std::vector< std::vector<NTL::ZZX> >& Cvec)
+void applyLinPolyMany(const EncryptedArray& ea,
+                      Ctxt& ctxt,
+                      const std::vector<std::vector<NTL::ZZX>>& Cvec)
 {
-  //OLD: assert(&ea.getContext() == &ctxt.getContext());
-  helib::assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
+  assertEq(&ea.getContext(), &ctxt.getContext(), "Context mismatch");
   long d = ea.getDegree();
   long nslots = ea.size();
 
-  //OLD: assert(nslots == lsize(Cvec));
-  helib::assertEq(nslots, lsize(Cvec), "Number of slots does not match size of Cvec");
+  assertEq(nslots, lsize(Cvec), "Number of slots does not match size of Cvec");
   for (long i = 0; i < nslots; i++) {
-    //OLD: assert(d == lsize(Cvec[i]));
-    helib::assertEq(d, lsize(Cvec[i]), "Found entry of Cvec with size unequal to degree of ea");
+    assertEq(d,
+             lsize(Cvec[i]),
+             "Found entry of Cvec with size unequal to degree of ea");
   }
 
   std::vector<NTL::ZZX> encodedC(d);
-  for (long j = 0; j < d; j++) { // encodedC[j] encodes j'th column in Cvec
-    std::vector<NTL::ZZX> v(nslots);       // copy j'th column to v
-    for (long i = 0; i < nslots; i++) v[i] = Cvec[i][j];
-    ea.encode(encodedC[j], v);   // then encode it
+  for (long j = 0; j < d; j++) {     // encodedC[j] encodes j'th column in Cvec
+    std::vector<NTL::ZZX> v(nslots); // copy j'th column to v
+    for (long i = 0; i < nslots; i++)
+      v[i] = Cvec[i][j];
+    ea.encode(encodedC[j], v); // then encode it
   }
 
   applyLinPolyLL(ctxt, encodedC, ea.getDegree());
@@ -649,13 +704,12 @@ void applyLinPolyMany(const EncryptedArray& ea, Ctxt& ctxt,
 
 // A low-level variant: encodedCoeffs has all the linPoly coeffs encoded
 // in slots; different transformations can be encoded in different slots
-template<class P>
+template <typename P>
 void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d)
 {
-  //OLD: assert(d == lsize(encodedC));
-  helib::assertEq(d, lsize(encodedC), "d does not match size of encodedC");
+  assertEq(d, lsize(encodedC), "d does not match size of encodedC");
 
-  ctxt.cleanUp();  // not sure, but this may be a good idea
+  ctxt.cleanUp(); // not sure, but this may be a good idea
 
   Ctxt tmp(ctxt);
 
@@ -667,30 +721,37 @@ void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d)
     ctxt += tmp1;
   }
 }
-template void applyLinPolyLL(Ctxt& ctxt, const std::vector<zzX>& encodedC, long d);
-template void applyLinPolyLL(Ctxt& ctxt, const std::vector<NTL::ZZX>& encodedC, long d);
-template void applyLinPolyLL(Ctxt& ctxt, const std::vector<DoubleCRT>& encodedC, long d);
+template void applyLinPolyLL(Ctxt& ctxt,
+                             const std::vector<zzX>& encodedC,
+                             long d);
+template void applyLinPolyLL(Ctxt& ctxt,
+                             const std::vector<NTL::ZZX>& encodedC,
+                             long d);
+template void applyLinPolyLL(Ctxt& ctxt,
+                             const std::vector<DoubleCRT>& encodedC,
+                             long d);
 
 /****************** End linear transformation code ******************/
 /********************************************************************/
 
-
 // PlaintextArray
 
-
-template<class type>
-class rotate_pa_impl {
+template <typename type>
+class rotate_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long k)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    long k)
   {
     PA_BOILER
 
-    std::vector<RX> tmp(n); 
+    std::vector<RX> tmp(n);
 
     for (long i = 0; i < n; i++)
-      tmp[((i+k)%n + n)%n] = data[i];
+      tmp[((i + k) % n + n) % n] = data[i];
 
     data = tmp;
   }
@@ -698,17 +759,20 @@ public:
 
 void rotate(const EncryptedArray& ea, PlaintextArray& pa, long k)
 {
-  ea.dispatch<rotate_pa_impl>(pa, k); 
+  ea.dispatch<rotate_pa_impl>(pa, k);
 }
 
 //=============================================================================
 
-template<class type>
-class shift_pa_impl {
+template <typename type>
+class shift_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long k)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    long k)
   {
     PA_BOILER
 
@@ -716,81 +780,86 @@ public:
       if (i + k >= n || i + k < 0)
         clear(data[i]);
 
-    rotate_pa_impl<type>::apply(ea, pa, k); 
+    rotate_pa_impl<type>::apply(ea, pa, k);
   }
 };
 
 void shift(const EncryptedArray& ea, PlaintextArray& pa, long k)
 {
-  ea.dispatch<shift_pa_impl>(pa, k); 
+  ea.dispatch<shift_pa_impl>(pa, k);
 }
 
 //=============================================================================
 
-template<class type>
-class encode_pa_impl {
+template <typename type>
+class encode_pa_impl
+{
 public:
   PA_INJECT(type)
 
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    PlaintextArray& pa, const std::vector<long>& array)
+                    PlaintextArray& pa,
+                    const std::vector<long>& array)
   {
     PA_BOILER
 
-    //OLD: assert(lsize(array) == n);
-    helib::assertEq(lsize(array), n, "Size of array does not match n");
+    assertEq(lsize(array), n, "Size of array does not match n");
     convert(data, array);
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    PlaintextArray& pa, const std::vector<NTL::ZZX>& array)
+                    PlaintextArray& pa,
+                    const std::vector<NTL::ZZX>& array)
   {
     PA_BOILER
 
-    //OLD: assert(lsize(array) == n);
-    helib::assertEq(lsize(array), n, "Size of array does not match n");
+    assertEq(lsize(array), n, "Size of array does not match n");
     convert(data, array);
     for (long i = 0; i < n; i++) {
-      helib::assertTrue(deg(data[i]) < d, "Found data entry with too-large degree");
+      assertTrue(deg(data[i]) < d, "Found data entry with too-large degree");
     }
   }
-
 };
 
-
-
-void encode(const EncryptedArray& ea, PlaintextArray& pa, const std::vector<long>& array)
+void encode(const EncryptedArray& ea,
+            PlaintextArray& pa,
+            const std::vector<long>& array)
 {
-  ea.dispatch<encode_pa_impl>(pa, array); 
+  ea.dispatch<encode_pa_impl>(pa, array);
 }
 
-void encode(const EncryptedArray& ea, PlaintextArray& pa, const std::vector<NTL::ZZX>& array)
+void encode(const EncryptedArray& ea,
+            PlaintextArray& pa,
+            const std::vector<NTL::ZZX>& array)
 {
-  ea.dispatch<encode_pa_impl>(pa, array); 
+  ea.dispatch<encode_pa_impl>(pa, array);
 }
 
 void encode(const EncryptedArray& ea, PlaintextArray& pa, long val)
 {
-   long n = ea.size();
-   std::vector<long> array;
-   array.resize(n);
-   for (long i = 0; i < n; i++) array[i] = val;
-   encode(ea, pa, array);
+  long n = ea.size();
+  std::vector<long> array;
+  array.resize(n);
+  for (long i = 0; i < n; i++)
+    array[i] = val;
+  encode(ea, pa, array);
 }
 
 void encode(const EncryptedArray& ea, PlaintextArray& pa, const NTL::ZZX& val)
 {
-   long n = ea.size();
-   std::vector<NTL::ZZX> array;
-   array.resize(n);
-   for (long i = 0; i < n; i++) array[i] = val;
-   encode(ea, pa, array);
+  long n = ea.size();
+  std::vector<NTL::ZZX> array;
+  array.resize(n);
+  for (long i = 0; i < n; i++)
+    array[i] = val;
+  encode(ea, pa, array);
 }
 
 //=============================================================================
 
-template<class type>
-class random_pa_impl {
+template <typename type>
+class random_pa_impl
+{
 public:
   PA_INJECT(type)
 
@@ -801,213 +870,234 @@ public:
     for (long i = 0; i < n; i++)
       random(data[i], d);
   }
-}; 
-
+};
 
 void random(const EncryptedArray& ea, PlaintextArray& pa)
 {
-  ea.dispatch<random_pa_impl>(pa); 
+  ea.dispatch<random_pa_impl>(pa);
 }
 
 //=============================================================================
 
-template<class type>
-class decode_pa_impl {
+template <typename type>
+class decode_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  template<class T>
-  static void apply(const EncryptedArrayDerived<type>& ea, 
-    std::vector<T>& array, const PlaintextArray& pa)
+  template <typename T>
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    std::vector<T>& array,
+                    const PlaintextArray& pa)
   {
     CPA_BOILER
 
     convert(array, data);
   }
-
-}; 
-
-
-void decode(const EncryptedArray& ea, std::vector<long>& array, const PlaintextArray& pa)
-{
-  ea.dispatch<decode_pa_impl>(array, pa); 
-}
-
-
-void decode(const EncryptedArray& ea, std::vector<NTL::ZZX>& array, const PlaintextArray& pa)
-{
-  ea.dispatch<decode_pa_impl>(array, pa); 
-}
-
-//=============================================================================
-
-template<class type>
-class equals_pa_impl {
-public:
-  PA_INJECT(type)
-
-  static void apply(const EncryptedArrayDerived<type>& ea, bool& res, 
-    const PlaintextArray& pa, const  PlaintextArray& other)
-  {
-    CPA_BOILER
-
-    const std::vector<RX>& odata = other.getData<type>(); 
-    res = (data == odata);
-  }
-
-
-  static void apply(const EncryptedArrayDerived<type>& ea, bool& res, 
-    const PlaintextArray& pa, const std::vector<long>& other)
-  {
-    CPA_BOILER
-
-    std::vector<RX> odata;
-    convert(odata, other);
-    res = (data == odata);
-  }
-
-
-  static void apply(const EncryptedArrayDerived<type>& ea, bool& res,
-    const PlaintextArray& pa, const std::vector<NTL::ZZX>& other)
-  {
-    CPA_BOILER
-
-    std::vector<RX> odata;
-    convert(odata, other);
-    res = (data == odata);
-  }
-
 };
 
+void decode(const EncryptedArray& ea,
+            std::vector<long>& array,
+            const PlaintextArray& pa)
+{
+  ea.dispatch<decode_pa_impl>(array, pa);
+}
 
+void decode(const EncryptedArray& ea,
+            std::vector<NTL::ZZX>& array,
+            const PlaintextArray& pa)
+{
+  ea.dispatch<decode_pa_impl>(array, pa);
+}
 
-bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const PlaintextArray& other)
+//=============================================================================
+
+template <typename type>
+class equals_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other)
+  {
+    CPA_BOILER
+
+    const std::vector<RX>& odata = other.getData<type>();
+    res = (data == odata);
+  }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const std::vector<long>& other)
+  {
+    CPA_BOILER
+
+    std::vector<RX> odata;
+    convert(odata, other);
+    res = (data == odata);
+  }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const std::vector<NTL::ZZX>& other)
+  {
+    CPA_BOILER
+
+    std::vector<RX> odata;
+    convert(odata, other);
+    res = (data == odata);
+  }
+};
+
+bool equals(const EncryptedArray& ea,
+            const PlaintextArray& pa,
+            const PlaintextArray& other)
 {
   bool res;
-  ea.dispatch<equals_pa_impl>(res, pa, other); 
+  ea.dispatch<equals_pa_impl>(res, pa, other);
   return res;
 }
 
-bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const std::vector<long>& other)
+bool equals(const EncryptedArray& ea,
+            const PlaintextArray& pa,
+            const std::vector<long>& other)
 {
   bool res;
-  ea.dispatch<equals_pa_impl>(res, pa, other); 
+  ea.dispatch<equals_pa_impl>(res, pa, other);
   return res;
 }
 
-
-bool equals(const EncryptedArray& ea, const PlaintextArray& pa, const std::vector<NTL::ZZX>& other)
+bool equals(const EncryptedArray& ea,
+            const PlaintextArray& pa,
+            const std::vector<NTL::ZZX>& other)
 {
   bool res;
-  ea.dispatch<equals_pa_impl>(res, pa, other); 
+  ea.dispatch<equals_pa_impl>(res, pa, other);
   return res;
 }
 
 //=============================================================================
 
-template<class type>
-class add_pa_impl {
+template <typename type>
+class add_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, 
-    const PlaintextArray& other)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    const PlaintextArray& other)
   {
     PA_BOILER
 
-    const std::vector<RX>& odata = other.getData<type>(); 
+    const std::vector<RX>& odata = other.getData<type>();
 
     for (long i = 0; i < n; i++)
       data[i] += odata[i];
   }
-}; 
+};
 
-
-void add(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other)
+void add(const EncryptedArray& ea,
+         PlaintextArray& pa,
+         const PlaintextArray& other)
 {
-  ea.dispatch<add_pa_impl>(pa, other); 
+  ea.dispatch<add_pa_impl>(pa, other);
 }
 
 //=============================================================================
 
-template<class type>
-class sub_pa_impl {
+template <typename type>
+class sub_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, 
-    const PlaintextArray& other)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    const PlaintextArray& other)
   {
     PA_BOILER
 
-    const std::vector<RX>& odata = other.getData<type>(); 
+    const std::vector<RX>& odata = other.getData<type>();
 
     for (long i = 0; i < n; i++)
       data[i] -= odata[i];
   }
-}; 
+};
 
-
-void sub(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other)
+void sub(const EncryptedArray& ea,
+         PlaintextArray& pa,
+         const PlaintextArray& other)
 {
-  ea.dispatch<sub_pa_impl>(pa, other); 
+  ea.dispatch<sub_pa_impl>(pa, other);
 }
 
 //=============================================================================
 
-template<class type>
-class mul_pa_impl {
+template <typename type>
+class mul_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, 
-    const PlaintextArray& other)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    const PlaintextArray& other)
   {
     PA_BOILER
 
-    const std::vector<RX>& odata = other.getData<type>(); 
+    const std::vector<RX>& odata = other.getData<type>();
 
     for (long i = 0; i < n; i++)
       data[i] = (data[i] * odata[i]) % G;
   }
-}; 
+};
 
-
-void mul(const EncryptedArray& ea, PlaintextArray& pa, const PlaintextArray& other)
+void mul(const EncryptedArray& ea,
+         PlaintextArray& pa,
+         const PlaintextArray& other)
 {
-  ea.dispatch<mul_pa_impl>(pa, other); 
+  ea.dispatch<mul_pa_impl>(pa, other);
 }
 
 //=============================================================================
 
-template<class type>
-class negate_pa_impl {
+template <typename type>
+class negate_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa) 
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa)
   {
     PA_BOILER
 
     for (long i = 0; i < n; i++)
       NTL::negate(data[i], data[i]);
   }
-}; 
-
+};
 
 void negate(const EncryptedArray& ea, PlaintextArray& pa)
 {
-  ea.dispatch<negate_pa_impl>(pa); 
+  ea.dispatch<negate_pa_impl>(pa);
 }
 
 //=============================================================================
 
-template<class type>
-class frobeniusAutomorph_pa_impl {
+template <typename type>
+class frobeniusAutomorph_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa, long j)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    long j)
   {
     PA_BOILER
 
@@ -1020,13 +1110,13 @@ public:
       data[i] = NTL::CompMod(data[i], H, G);
   }
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa,
-    const NTL::Vec<long>& vec) 
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    const NTL::Vec<long>& vec)
   {
     PA_BOILER
 
-    //OLD: assert(vec.length() == n);
-    helib::assertEq(vec.length(), n, "vec has incorrect length");
+    assertEq(vec.length(), n, "vec has incorrect length");
 
     long p = ea.getPAlgebra().getP();
 
@@ -1038,48 +1128,48 @@ public:
   }
 };
 
-
-
-
 void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, long j)
 {
-  ea.dispatch<frobeniusAutomorph_pa_impl>(pa, j); 
+  ea.dispatch<frobeniusAutomorph_pa_impl>(pa, j);
 }
 
-
-void frobeniusAutomorph(const EncryptedArray& ea, PlaintextArray& pa, const NTL::Vec<long>& vec)
+void frobeniusAutomorph(const EncryptedArray& ea,
+                        PlaintextArray& pa,
+                        const NTL::Vec<long>& vec)
 {
-  ea.dispatch<frobeniusAutomorph_pa_impl>(pa, vec); 
+  ea.dispatch<frobeniusAutomorph_pa_impl>(pa, vec);
 }
 
 void power(const EncryptedArray& ea, PlaintextArray& pa, long e)
 {
-  if (e<=1) return;
+  if (e <= 1)
+    return;
 
   PlaintextArray pwr = pa; // holds x^{2^i} in i+1'st iteration
-  encode(ea, pa, 1L); // set pa =1 in every slot
-  while(e > 0) {
+  encode(ea, pa, 1L);      // set pa =1 in every slot
+  while (e > 0) {
     if (e & 1)
       mul(ea, pa, pwr); // multiply if needed
-    mul(ea, pwr, pwr);  // squre
+    mul(ea, pwr, pwr);  // square
     e >>= 1;
   }
 }
 
 //=============================================================================
 
-template<class type>
-class applyPerm_pa_impl {
+template <typename type>
+class applyPerm_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa,
-    const NTL::Vec<long>& pi) 
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    const NTL::Vec<long>& pi)
   {
     PA_BOILER
 
-    //OLD: assert(pi.length() == n);
-    helib::assertEq(pi.length(), n, "pi has incorrect length");
+    assertEq(pi.length(), n, "pi has incorrect length");
 
     std::vector<RX> tmp;
     tmp.resize(n);
@@ -1090,55 +1180,55 @@ public:
   }
 };
 
-
-
-
-void applyPerm(const EncryptedArray& ea, PlaintextArray& pa, const NTL::Vec<long>& pi)
+void applyPerm(const EncryptedArray& ea,
+               PlaintextArray& pa,
+               const NTL::Vec<long>& pi)
 {
-  ea.dispatch<applyPerm_pa_impl>(pa, pi); 
+  ea.dispatch<applyPerm_pa_impl>(pa, pi);
 }
 
 //=============================================================================
 
-template<class type>
-class print_pa_impl {
+template <typename type>
+class print_pa_impl
+{
 public:
   PA_INJECT(type)
 
-  static void apply(const EncryptedArrayDerived<type>& ea, 
-    std::ostream& s, const PlaintextArray& pa)
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    std::ostream& s,
+                    const PlaintextArray& pa)
   {
     CPA_BOILER
 
-
-    if (n == 0) 
+    if (n == 0)
       s << "[]";
     else {
-      if (IsZero(data[0])) s << "[[0]";
-      else                 s << "[" << data[0];
+      if (IsZero(data[0]))
+        s << "[[0]";
+      else
+        s << "[" << data[0];
       for (long i = 1; i < lsize(data); i++)
-        if (IsZero(data[i])) s << " [0]";
-	else                 s << " " << data[i];
+        if (IsZero(data[i]))
+          s << " [0]";
+        else
+          s << " " << data[i];
       s << "]";
     }
   }
-
-}; 
-
+};
 
 void print(const EncryptedArray& ea, std::ostream& s, const PlaintextArray& pa)
 {
-  ea.dispatch<print_pa_impl>(s, pa); 
+  ea.dispatch<print_pa_impl>(s, pa);
 }
-
 
 // Explicit instantiation
 
 template class EncryptedArrayDerived<PA_GF2>;
 template class EncryptedArrayDerived<PA_zz_p>;
 
-
 template class PlaintextArrayDerived<PA_GF2>;
 template class PlaintextArrayDerived<PA_zz_p>;
 
-}
+} // namespace helib

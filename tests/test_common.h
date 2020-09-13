@@ -15,11 +15,13 @@
 #include <helib/ArgMap.h>
 
 namespace helib_test {
+
 extern char* path_of_executable;
 extern bool noPrint;
 extern bool verbose;
 extern bool dry;
 extern unsigned int random_seed;
+extern long special_bits;
 
 void parse_common_args(int argc, char* argv[]);
 
@@ -29,13 +31,13 @@ std::vector<std::pair<long, long>> getBadDimensionParams(long min_m,
                                                          long max_p,
                                                          long m_sparseness = 1,
                                                          long p_sparseness = 1);
-std::vector<std::pair<long, long>>
-getGoodDimensionParams(long min_m,
-                       long max_m,
-                       long min_p,
-                       long max_p,
-                       long m_sparseness = 1,
-                       long p_sparseness = 1);
-}; // namespace helib_test
+std::vector<std::pair<long, long>> getGoodDimensionParams(
+    long min_m,
+    long max_m,
+    long min_p,
+    long max_p,
+    long m_sparseness = 1,
+    long p_sparseness = 1);
+} // namespace helib_test
 
 #endif /* ifndef TEST_COMMON_H */

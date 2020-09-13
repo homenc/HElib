@@ -202,13 +202,10 @@ protected:
     helib::addFrbMatrices(
         secretKey); // compute key-switching matrices that we need
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
+    helib::setupDebugGlobals(&secretKey, context.ea);
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
@@ -228,7 +225,7 @@ TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
   // in lexicographic order.
 
   // compute tables for converting between powerful and zz_pX
-  helib::PowerfulTranslationIndexes ind(mvec); // indpendent of p
+  helib::PowerfulTranslationIndexes ind(mvec); // independent of p
   helib::PowerfulConversion pConv(ind);        // depends on p
 
   helib::HyperCube<NTL::zz_p> cube(pConv.getShortSig());
@@ -253,7 +250,7 @@ TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
   ea.encrypt(ctxt, publicKey, pa1);
 
   helib::resetAllTimers();
-  FHE_NTIMER_START(ALL);
+  HELIB_NTIMER_START(ALL);
 
   // Compute homomorphically the transformation that takes the
   // coefficients packed in the slots and produces the polynomial
@@ -319,14 +316,14 @@ TEST_P(GTestEvalMap, evalMapBehavesCorrectly)
 
   EXPECT_TRUE(equals(ea, pa1, pa2));
 
-  FHE_NTIMER_STOP(ALL);
+  HELIB_NTIMER_STOP(ALL);
 
   if (!helib_test::noPrint) {
     std::cout << "\n*********\n";
     helib::printAllTimers();
     std::cout << std::endl;
   }
-};
+}
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(someParameters, GTestEvalMap, ::testing::Values(

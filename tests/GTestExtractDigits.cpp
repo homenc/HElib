@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-/* GTestextractDigits.cpp - extracting digits.
+/* GTestExtractDigits.cpp - extracting digits.
  *   For a plaintext space modulo a prime-power $p^e$, extracting
  *   the base-$p$ representation of an encrypted values.
  */
@@ -106,18 +106,11 @@ protected:
         secretKey); // compute key-switching matrices that we need
     // On legacy test is debug, but used verbose for consistency with other
     // tests
-    if (helib_test::verbose) {
-      helib::dbgKey = &secretKey; // debugging key and ea
-      helib::dbgEa = context.ea;
-    }
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
+    helib::setupDebugGlobals(&secretKey, context.ea);
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestExtractDigits, correctlyExtractsDigits)

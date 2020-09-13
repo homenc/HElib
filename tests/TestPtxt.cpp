@@ -51,6 +51,9 @@ protected:
   const unsigned long m;
 
   helib::Context context;
+
+  const double pre_encryption_epsilon = 1E-8;
+  const double post_encryption_epsilon = 1E-3;
 };
 
 TEST_P(TestPtxtCKKS, canBeConstructedWithCKKSContext)
@@ -184,9 +187,9 @@ TEST_P(TestPtxtCKKS, writesDataCorrectlyToOstream)
   ss << "[";
   ss << std::setprecision(std::numeric_limits<double>::digits10);
   for (auto it = data.begin(); it != data.end(); it++) {
-    ss << *it;
+    ss << "[" << it->real() << ", " << it->imag() << "]";
     if (it != data.end() - 1) {
-      ss << " ";
+      ss << ", ";
     }
   }
   ss << "]";
@@ -208,9 +211,9 @@ TEST_P(TestPtxtCKKS, readsDataCorrectlyFromIstream)
   ss << "[";
   ss << std::setprecision(std::numeric_limits<double>::digits10);
   for (auto it = data.begin(); it != data.end(); it++) {
-    ss << *it;
+    helib::serialize(ss, *it);
     if (it != data.end() - 1) {
-      ss << " ";
+      ss << ", ";
     }
   }
   ss << "]";
@@ -218,7 +221,262 @@ TEST_P(TestPtxtCKKS, readsDataCorrectlyFromIstream)
   is >> ptxt;
 
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_NEAR(std::abs(ptxt[i] - data[i]), 0, 1E-8);
+    EXPECT_NEAR(std::abs(ptxt[i] - data[i]), 0, pre_encryption_epsilon);
+  }
+}
+
+TEST_P(TestPtxtCKKS, readsSquareBracketsDataCorrectly)
+{
+  std::vector<std::complex<double>> data(context.ea->size());
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
+  }
+  helib::Ptxt<helib::CKKS> ptxt(context);
+  std::stringstream ss;
+  ss << "[";
+  ss << std::setprecision(std::numeric_limits<double>::digits10);
+  for (auto it = data.begin(); it != data.end(); it++) {
+    ss << "[" << it->real() << ", " << it->imag() << "]";
+    if (it != data.end() - 1) {
+      ss << ", ";
+    }
+  }
+  ss << "]";
+  std::istringstream is(ss.str());
+  is >> ptxt;
+
+  for (std::size_t i = 0; i < ptxt.size(); ++i) {
+    EXPECT_NEAR(std::abs(ptxt[i] - data[i]), 0, pre_encryption_epsilon);
+  }
+}
+
+TEST_P(TestPtxtCKKS, serializeFunctionSerializesStdComplexCorrectly)
+{
+  // TODO: This test may be removed from the fixture and put as standalone
+  std::stringstream ss;
+  std::complex<double> num;
+
+  num = 0.0;
+  helib::serialize(ss, num);
+  EXPECT_EQ(ss.str(), "[0, 0]");
+  ss.str("");
+
+  num = 10.3;
+  helib::serialize(ss, num);
+  EXPECT_EQ(ss.str(), "[10.3, 0]");
+  ss.str("");
+
+  num = {0, 10.3};
+  helib::serialize(ss, num);
+  EXPECT_EQ(ss.str(), "[0, 10.3]");
+  ss.str("");
+
+  num = {3.3, 16.6};
+  helib::serialize(ss, num);
+  EXPECT_EQ(ss.str(), "[3.3, 16.6]");
+  ss.str("");
+}
+
+TEST_P(TestPtxtCKKS, deserializeFunctionDeserializesStdComplexCorrectly)
+{
+  // TODO: This test may be removed from the fixture and put as standalone
+  std::complex<double> num, expected;
+  std::stringstream ss;
+
+  num = 0.0;
+  ss << "[1,2,3]";
+  expected = 0.0;
+  EXPECT_THROW(helib::deserialize(ss, num), helib::IOError);
+  ss.str("");
+
+  num = 0.0;
+  ss << "[]";
+  expected = 0.0;
+  helib::deserialize(ss, num);
+  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
+  ss.str("");
+
+  num = 0.0;
+  ss << "[0.0]";
+  expected = 0.0;
+  helib::deserialize(ss, num);
+  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
+  ss.str("");
+
+  num = 0.0;
+  ss << "[0.0,0.0]";
+  expected = 0.0;
+  helib::deserialize(ss, num);
+  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
+  ss.str("");
+
+  num = 0.0;
+  ss << "[5.3,0]";
+  expected = 5.3;
+  helib::deserialize(ss, num);
+  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
+  ss.str("");
+
+  num = 0.0;
+  ss << "[0,8.16]";
+  expected = {0.0, 8.16};
+  helib::deserialize(ss, num);
+  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
+  ss.str("");
+
+  num = 0.0;
+  ss << "[3.4,9.99]";
+  expected = {3.4, 9.99};
+  helib::deserialize(ss, num);
+  EXPECT_NEAR(std::abs(num - expected), 0.0, pre_encryption_epsilon);
+  ss.str("");
+}
+
+TEST_P(TestPtxtCKKS, serializeFunctionSerializesCorrectly)
+{
+  std::vector<std::complex<double>> data(context.ea->size());
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
+  }
+  helib::Ptxt<helib::CKKS> ptxt(context, data);
+  std::stringstream ss;
+  ss << "[";
+  ss << std::setprecision(std::numeric_limits<double>::digits10);
+  for (auto it = data.begin(); it != data.end(); it++) {
+    ss << "[" << it->real() << ", " << it->imag() << "]";
+    if (it != data.end() - 1) {
+      ss << ", ";
+    }
+  }
+  ss << "]";
+  std::stringstream serialized_ptxt;
+  helib::serialize(serialized_ptxt, ptxt);
+
+  EXPECT_EQ(serialized_ptxt.str(), ss.str());
+}
+
+TEST_P(TestPtxtCKKS, deserializeWorksCorrectly)
+{
+  std::vector<std::complex<double>> data(context.ea->size());
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
+  }
+  helib::Ptxt<helib::CKKS> ptxt(context);
+  std::stringstream ss;
+  ss << "[";
+  ss << std::setprecision(std::numeric_limits<double>::digits10);
+  for (auto it = data.begin(); it != data.end(); it++) {
+    ss << "[" << it->real() << ", " << it->imag() << "]";
+    if (it != data.end() - 1) {
+      ss << ", ";
+    }
+  }
+  ss << "]";
+  std::istringstream is(ss.str());
+  is >> ptxt;
+
+  for (std::size_t i = 0; i < ptxt.size(); ++i) {
+    EXPECT_NEAR(std::abs(ptxt[i] - data[i]), 0, pre_encryption_epsilon);
+  }
+}
+
+TEST_P(TestPtxtCKKS, deserializeFunctionThrowsIfMoreElementsThanSlots)
+{
+  std::vector<std::complex<double>> data(context.ea->size() + 1);
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
+  }
+  helib::Ptxt<helib::CKKS> ptxt(context);
+  std::stringstream ss;
+  ss << "[";
+  ss << std::setprecision(std::numeric_limits<double>::digits10);
+  for (auto it = data.begin(); it != data.end(); it++) {
+    ss << "[" << it->real() << ", " << it->imag() << "]";
+    if (it != data.end() - 1) {
+      ss << ", ";
+    }
+  }
+  ss << "]";
+  std::istringstream is(ss.str());
+  EXPECT_THROW(helib::deserialize(is, ptxt), helib::IOError);
+}
+
+TEST_P(TestPtxtCKKS, rightShiftOperatorThrowsIfMoreElementsThanSlots)
+{
+  std::vector<std::complex<double>> data(context.ea->size() + 1);
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
+  }
+  helib::Ptxt<helib::CKKS> ptxt(context);
+  std::stringstream ss;
+  ss << "[";
+  ss << std::setprecision(std::numeric_limits<double>::digits10);
+  for (auto it = data.begin(); it != data.end(); it++) {
+    ss << "[" << it->real() << ", " << it->imag() << "]";
+    if (it != data.end() - 1) {
+      ss << ", ";
+    }
+  }
+  ss << "]";
+  std::istringstream is(ss.str());
+  EXPECT_THROW(is >> ptxt, helib::IOError);
+}
+
+TEST_P(TestPtxtCKKS, deserializeIsInverseOfSerialize)
+{
+  std::vector<std::complex<double>> data(context.ea->size());
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    data[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
+  }
+  helib::Ptxt<helib::CKKS> ptxt(context, data);
+
+  std::stringstream str;
+  str << ptxt;
+
+  helib::Ptxt<helib::CKKS> deserialized(context);
+  str >> deserialized;
+
+  for (std::size_t i = 0; i < ptxt.size(); ++i) {
+    EXPECT_NEAR(std::abs(ptxt[i] - deserialized[i]), 0, pre_encryption_epsilon);
+  }
+}
+
+TEST_P(TestPtxtCKKS, readsManyPtxtsFromStream)
+{
+  std::vector<std::complex<double>> data1(context.ea->size());
+  std::vector<std::complex<double>> data2(context.ea->size());
+  std::vector<std::complex<double>> data3(context.ea->size());
+  for (std::size_t i = 0; i < data1.size(); ++i) {
+    data1[i] = {(i * i) / 10.0, (i * i * i) / 7.5};
+    data2[i] = data1[i] * 2.0;
+    data3[i] = data1[i] * 3.5;
+  }
+  helib::Ptxt<helib::CKKS> ptxt1(context, data1);
+  helib::Ptxt<helib::CKKS> ptxt2(context, data2);
+  helib::Ptxt<helib::CKKS> ptxt3(context, data3);
+
+  std::stringstream ss;
+  ss << ptxt1 << std::endl;
+  ss << ptxt2 << std::endl;
+  ss << ptxt3 << std::endl;
+
+  helib::Ptxt<helib::CKKS> deserialized1(context);
+  helib::Ptxt<helib::CKKS> deserialized2(context);
+  helib::Ptxt<helib::CKKS> deserialized3(context);
+  ss >> deserialized1;
+  ss >> deserialized2;
+  ss >> deserialized3;
+
+  for (std::size_t i = 0; i < ptxt1.size(); ++i) {
+    EXPECT_NEAR(std::abs(ptxt1[i] - deserialized1[i]),
+                0,
+                pre_encryption_epsilon);
+    EXPECT_NEAR(std::abs(ptxt2[i] - deserialized2[i]),
+                0,
+                pre_encryption_epsilon);
+    EXPECT_NEAR(std::abs(ptxt3[i] - deserialized3[i]),
+                0,
+                pre_encryption_epsilon);
   }
 }
 
@@ -709,7 +967,9 @@ TEST_P(TestPtxtCKKS, powerCorrectlyRaisesToPowers)
     helib::Ptxt<helib::CKKS> ptxt(context, data);
     ptxt.power(exponent);
     for (std::size_t i = 0; i < ptxt.size(); ++i) {
-      EXPECT_NEAR(std::norm(ptxt[i] - expected_result[i]), 0, 1E-8);
+      EXPECT_NEAR(std::norm(ptxt[i] - expected_result[i]),
+                  0,
+                  pre_encryption_epsilon);
     }
   }
 
@@ -1046,7 +1306,6 @@ TEST_P(TestPtxtCKKS, imagExtractsImaginaryPart)
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithKeys)
 {
   helib::buildModChain(context, 100, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1064,14 +1323,15 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithKeys)
   secret_key.Decrypt(post_decryption, ctxt);
   EXPECT_EQ(pre_encryption.size(), post_decryption.size());
   for (std::size_t i = 0; i < pre_encryption.size(); ++i) {
-    EXPECT_NEAR(std::norm(pre_encryption[i] - post_decryption[i]), 0, 1E-3);
+    EXPECT_NEAR(std::norm(pre_encryption[i] - post_decryption[i]),
+                0,
+                post_encryption_epsilon);
   }
 }
 
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithKeys)
 {
   helib::buildModChain(context, 100, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1089,15 +1349,18 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithKeys)
   secret_key.Decrypt(post_decryption, ctxt);
   EXPECT_EQ(pre_encryption.size(), post_decryption.size());
   for (std::size_t i = 0; i < pre_encryption.size(); ++i) {
-    EXPECT_NEAR(pre_encryption[i].real(), post_decryption[i].real(), 1E-3);
-    EXPECT_NEAR(pre_encryption[i].imag(), post_decryption[i].imag(), 1E-3);
+    EXPECT_NEAR(pre_encryption[i].real(),
+                post_decryption[i].real(),
+                post_encryption_epsilon);
+    EXPECT_NEAR(pre_encryption[i].imag(),
+                post_decryption[i].imag(),
+                post_encryption_epsilon);
   }
 }
 
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithEa)
 {
   helib::buildModChain(context, 100, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1115,7 +1378,9 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithEa)
   secret_key.Decrypt(post_decryption, ctxt);
   EXPECT_EQ(pre_encryption.size(), post_decryption.size());
   for (std::size_t i = 0; i < pre_encryption.size(); ++i) {
-    EXPECT_NEAR(std::norm(pre_encryption[i] - post_decryption[i]), 0, 1E-3);
+    EXPECT_NEAR(std::norm(pre_encryption[i] - post_decryption[i]),
+                0,
+                post_encryption_epsilon);
   }
 }
 
@@ -1140,15 +1405,18 @@ TEST_P(TestPtxtCKKS, canEncryptAndDecryptRealPtxtsWithEa)
   ea.decrypt(ctxt, secret_key, post_decryption);
   EXPECT_EQ(pre_encryption.size(), post_decryption.size());
   for (std::size_t i = 0; i < pre_encryption.size(); ++i) {
-    EXPECT_NEAR(pre_encryption[i].real(), post_decryption[i].real(), 1E-3);
-    EXPECT_NEAR(pre_encryption[i].imag(), post_decryption[i].imag(), 1E-3);
+    EXPECT_NEAR(pre_encryption[i].real(),
+                post_decryption[i].real(),
+                post_encryption_epsilon);
+    EXPECT_NEAR(pre_encryption[i].imag(),
+                post_decryption[i].imag(),
+                post_encryption_epsilon);
   }
 }
 
 TEST_P(TestPtxtCKKS, plusEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1173,14 +1441,15 @@ TEST_P(TestPtxtCKKS, plusEqualsWithCiphertextWorks)
   secret_key.Decrypt(result, augend);
   EXPECT_EQ(result.size(), augend_ptxt.size());
   for (std::size_t i = 0; i < result.size(); ++i) {
-    EXPECT_NEAR(std::norm(result[i] - augend_ptxt[i]), 0, 1E-3);
+    EXPECT_NEAR(std::norm(result[i] - augend_ptxt[i]),
+                0,
+                post_encryption_epsilon);
   }
 }
 
 TEST_P(TestPtxtCKKS, addConstantCKKSWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1205,14 +1474,15 @@ TEST_P(TestPtxtCKKS, addConstantCKKSWithCiphertextWorks)
   secret_key.Decrypt(result, augend);
   EXPECT_EQ(result.size(), augend_ptxt.size());
   for (std::size_t i = 0; i < result.size(); ++i) {
-    EXPECT_NEAR(std::norm(result[i] - augend_ptxt[i]), 0, 1E-3);
+    EXPECT_NEAR(std::norm(result[i] - augend_ptxt[i]),
+                0,
+                post_encryption_epsilon);
   }
 }
 
 TEST_P(TestPtxtCKKS, minusEqualsWithCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1237,14 +1507,15 @@ TEST_P(TestPtxtCKKS, minusEqualsWithCiphertextWorks)
   secret_key.Decrypt(result, minuend);
   EXPECT_EQ(result.size(), minuend_ptxt.size());
   for (std::size_t i = 0; i < result.size(); ++i) {
-    EXPECT_NEAR(std::norm(result[i] - minuend_ptxt[i]), 0, 1E-3);
+    EXPECT_NEAR(std::norm(result[i] - minuend_ptxt[i]),
+                0,
+                post_encryption_epsilon);
   }
 }
 
 TEST_P(TestPtxtCKKS, multByConstantCKKSFromCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1270,14 +1541,15 @@ TEST_P(TestPtxtCKKS, multByConstantCKKSFromCiphertextWorks)
   secret_key.Decrypt(result, multiplier);
   EXPECT_EQ(result.size(), multiplier_ptxt.size());
   for (std::size_t i = 0; i < result.size(); ++i) {
-    EXPECT_NEAR(std::norm(result[i] - multiplier_ptxt[i]), 0, 1E-3);
+    EXPECT_NEAR(std::norm(result[i] - multiplier_ptxt[i]),
+                0,
+                post_encryption_epsilon);
   }
 }
 
 TEST_P(TestPtxtCKKS, timesEqualsFromCiphertextWorks)
 {
   helib::buildModChain(context, 150, 2);
-  const helib::EncryptedArrayCx& ea = context.ea->getCx();
   helib::SecKey secret_key(context);
   secret_key.GenSecKey();
   const helib::PubKey& public_key(secret_key);
@@ -1303,7 +1575,9 @@ TEST_P(TestPtxtCKKS, timesEqualsFromCiphertextWorks)
   secret_key.Decrypt(result, multiplier);
   EXPECT_EQ(result.size(), multiplier_ptxt.size());
   for (std::size_t i = 0; i < result.size(); ++i) {
-    EXPECT_NEAR(std::norm(result[i] - multiplier_ptxt[i]), 0, 1E-3);
+    EXPECT_NEAR(std::norm(result[i] - multiplier_ptxt[i]),
+                0,
+                post_encryption_epsilon);
   }
 }
 
@@ -1354,18 +1628,18 @@ TEST_P(TestPtxtCKKS, minusOperatorWithOtherPtxtWorks)
 TEST_P(TestPtxtCKKS, timesOperatorWithOtherPtxtWorks)
 {
   std::vector<std::complex<double>> multiplier_data(context.ea->size());
-  std::vector<std::complex<double>> multicand_data(context.ea->size());
+  std::vector<std::complex<double>> multiplicand_data(context.ea->size());
   std::vector<std::complex<double>> expected_product_data(context.ea->size());
   for (long i = 0; i < helib::lsize(multiplier_data); ++i) {
     multiplier_data[i] = {i / 10.0, -i * i / 3.0};
-    multicand_data[i] = {-i / 20.0, i * i * i * 42.6};
-    expected_product_data[i] = multiplier_data[i] * multicand_data[i];
+    multiplicand_data[i] = {-i / 20.0, i * i * i * 42.6};
+    expected_product_data[i] = multiplier_data[i] * multiplicand_data[i];
   }
   helib::Ptxt<helib::CKKS> multiplier(context, multiplier_data);
-  helib::Ptxt<helib::CKKS> multicand(context, multicand_data);
+  helib::Ptxt<helib::CKKS> multiplicand(context, multiplicand_data);
   helib::Ptxt<helib::CKKS> product;
 
-  product = multiplier * multicand;
+  product = multiplier * multiplicand;
 
   EXPECT_EQ(expected_product_data.size(), product.size());
   for (std::size_t i = 0; i < product.size(); ++i) {
@@ -1477,7 +1751,8 @@ TEST_P(TestPtxtBGV, writesDataCorrectlyToOstream)
       NTL::SetCoeff(input, 1, (i + 2) % p2r);
     }
     data[i] = input;
-    ss << input << (i != helib::lsize(data) - 1 ? " " : "");
+    // Serialisation of data[i] (i.e. PolyMod) is tested in `TestPolyMod.cpp`
+    ss << data[i] << (i != helib::lsize(data) - 1 ? ", " : "");
   }
   ss << "]";
   helib::Ptxt<helib::BGV> ptxt(context, data);
@@ -1501,16 +1776,154 @@ TEST_P(TestPtxtBGV, readsDataCorrectlyFromIstream)
   for (auto it = data.begin(); it != data.end(); it++) {
     ss << *it;
     if (it != data.end() - 1) {
-      ss << " ";
+      ss << ", ";
     }
   }
   ss << "]";
-  std::istringstream is(ss.str());
-  is >> ptxt;
+
+  ss >> ptxt;
 
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     EXPECT_EQ(ptxt[i], data[i]);
   }
+}
+
+TEST_P(TestPtxtBGV, deserializeIsInverseOfSerialize)
+{
+  helib::PolyMod poly(context.slotRing);
+  std::vector<helib::PolyMod> data(context.ea->size(), poly);
+  for (long i = 0; i < helib::lsize(data); ++i) {
+    data[i] = {i, i + 2};
+  }
+  helib::Ptxt<helib::BGV> ptxt(context);
+
+  std::stringstream str;
+  str << ptxt;
+
+  helib::Ptxt<helib::BGV> deserialized(context);
+  str >> deserialized;
+
+  EXPECT_EQ(ptxt, deserialized);
+}
+
+TEST_P(TestPtxtBGV, serializeFunctionSerializesCorrectly)
+{
+  helib::PolyMod poly(context.slotRing);
+  std::vector<helib::PolyMod> data(context.ea->size(), poly);
+  std::stringstream ptxt_string_stream;
+  ptxt_string_stream << "[";
+  for (long i = 0; i < helib::lsize(data); ++i) {
+    data[i] = 2 * i;
+    ptxt_string_stream << "[" << helib::mcMod(2 * i, ppowr) << "]";
+    if (i < helib::lsize(data) - 1)
+      ptxt_string_stream << ", ";
+  }
+  ptxt_string_stream << "]";
+  helib::Ptxt<helib::BGV> ptxt(context, data);
+
+  std::stringstream ss;
+  helib::serialize(ss, ptxt);
+
+  EXPECT_EQ(ss.str(), ptxt_string_stream.str());
+}
+
+TEST_P(TestPtxtBGV, deserializeFunctionDeserializesCorrectly)
+{
+  helib::PolyMod poly(context.slotRing);
+  std::vector<helib::PolyMod> data(context.ea->size(), poly);
+  std::stringstream ptxt_string_stream;
+  ptxt_string_stream << "[";
+  for (long i = 0; i < helib::lsize(data); ++i) {
+    NTL::ZZX tmp;
+    ptxt_string_stream << "[";
+    for (long j = 0; j < context.zMStar.getOrdP(); ++j) {
+      NTL::SetCoeff(tmp, j, j * j);
+      ptxt_string_stream << j * j;
+      if (j < context.zMStar.getOrdP() - 1)
+        ptxt_string_stream << ",";
+    }
+    data[i] = tmp;
+    ptxt_string_stream << "]";
+    if (i < helib::lsize(data) - 1)
+      ptxt_string_stream << ", ";
+  }
+  ptxt_string_stream << "]";
+  helib::Ptxt<helib::BGV> ptxt(context, data);
+
+  helib::Ptxt<helib::BGV> deserialized_ptxt(context);
+  helib::deserialize(ptxt_string_stream, deserialized_ptxt);
+
+  EXPECT_EQ(ptxt, deserialized_ptxt);
+}
+
+TEST_P(TestPtxtBGV, deserializeFunctionThrowsIfMoreElementsThanSlots)
+{
+  helib::PolyMod poly(context.slotRing);
+  std::vector<helib::PolyMod> data(context.ea->size() + 1, poly);
+  std::stringstream ptxt_string_stream;
+  ptxt_string_stream << "[";
+  for (long i = 0; i < helib::lsize(data); ++i) {
+    data[i] = {i, i * i};
+    ptxt_string_stream << "[" << i << ", " << i * i << "]";
+    if (i < helib::lsize(data) - 1)
+      ptxt_string_stream << ", ";
+  }
+  ptxt_string_stream << "]";
+
+  helib::Ptxt<helib::BGV> deserialized_ptxt(context);
+
+  EXPECT_THROW(helib::deserialize(ptxt_string_stream, deserialized_ptxt),
+               helib::IOError);
+}
+
+TEST_P(TestPtxtBGV, rightShiftOperatorThrowsIfMoreElementsThanSlots)
+{
+  helib::PolyMod poly(context.slotRing);
+  std::vector<helib::PolyMod> data(context.ea->size() + 1, poly);
+  std::stringstream ptxt_string_stream;
+  ptxt_string_stream << "[";
+  for (long i = 0; i < helib::lsize(data); ++i) {
+    data[i] = {i, i * i};
+    ptxt_string_stream << "[" << i << ", " << i * i << "]";
+    if (i < helib::lsize(data) - 1)
+      ptxt_string_stream << ", ";
+  }
+  ptxt_string_stream << "]";
+
+  helib::Ptxt<helib::BGV> deserialized_ptxt(context);
+  EXPECT_THROW(ptxt_string_stream >> deserialized_ptxt, helib::IOError);
+}
+
+TEST_P(TestPtxtBGV, readsManyPtxtsFromStream)
+{
+  helib::PolyMod poly(context.slotRing);
+  std::vector<helib::PolyMod> data1(context.ea->size(), poly);
+  std::vector<helib::PolyMod> data2(context.ea->size(), poly);
+  std::vector<helib::PolyMod> data3(context.ea->size(), poly);
+  for (long i = 0; i < helib::lsize(data1); ++i) {
+    data1[i] = {i, i + 2};
+    data2[i] = {2 * i, 2 * (i + 2)};
+    data3[i] = {3 * i, 3 * (i + 2)};
+  }
+  helib::Ptxt<helib::BGV> ptxt1(context, data1);
+  helib::Ptxt<helib::BGV> ptxt2(context, data2);
+  helib::Ptxt<helib::BGV> ptxt3(context, data3);
+
+  std::stringstream ss;
+  ss << ptxt1 << std::endl;
+  ss << ptxt2 << std::endl;
+  ss << ptxt3 << std::endl;
+
+  helib::Ptxt<helib::BGV> deserialized1(context);
+  helib::Ptxt<helib::BGV> deserialized2(context);
+  helib::Ptxt<helib::BGV> deserialized3(context);
+  ss >> deserialized1;
+  ss >> deserialized2;
+  ss >> deserialized3;
+
+  EXPECT_EQ(ptxt1, deserialized1);
+  EXPECT_EQ(ptxt2, deserialized2);
+  EXPECT_EQ(ptxt3, deserialized3);
 }
 
 TEST_P(TestPtxtBGV, preservesPolyModDataPassedIntoConstructor)
@@ -2059,8 +2472,9 @@ TEST_P(TestPtxtBGV, cubeCubesCorrectly)
 TEST_P(TestPtxtBGV, powerCorrectlyRaisesToPowers)
 {
   std::vector<long> data(context.ea->size());
-  std::iota(
-      data.begin(), data.end(), -(static_cast<long>(context.ea->size()) / 2));
+  std::iota(data.begin(),
+            data.end(),
+            -(static_cast<long>(context.ea->size()) / 2));
   std::vector<long> exponents{1, 3, 4, 5, 300};
 
   const auto naive_powermod =
@@ -2260,9 +2674,6 @@ TEST(TestPtxtBGV, rotate1DRotatesCorrectly)
   const helib::Context context(45, 19, 1);
   std::vector<long> data(context.ea->size());
   std::vector<long> left_rotated_data(context.ea->size());
-  const auto non_neg_mod = [](int x, int mod) {
-    return ((x % mod) + mod) % mod;
-  };
   const auto rotate_first_dim = [](long amount, std::vector<long>& data) {
     amount = helib::mcMod(amount, 12);
     std::vector<long> new_data(data);

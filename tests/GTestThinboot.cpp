@@ -50,7 +50,6 @@ struct Parameters
   int chen_han;
   bool debug; // generate debugging output
   int scale;  // scale parameter
-  long special_bits;
   NTL::Vec<long> global_gens;
   NTL::Vec<long> global_ords;
   NTL::Vec<long> global_mvec;
@@ -72,7 +71,6 @@ struct Parameters
              int chen_han,
              bool debug,
              int scale,
-             long special_bits,
              const std::vector<long>& global_gens,
              const std::vector<long>& global_ords,
              const std::vector<long>& global_mvec,
@@ -91,7 +89,6 @@ struct Parameters
       chen_han(chen_han),
       debug(debug),
       scale(scale),
-      special_bits(special_bits),
       global_gens(helib::convert<NTL::Vec<long>>(global_gens)),
       global_ords(helib::convert<NTL::Vec<long>>(global_ords)),
       global_mvec(helib::convert<NTL::Vec<long>>(global_mvec)),
@@ -119,7 +116,6 @@ struct Parameters
               << "chen_han" << params.chen_han << ","
               << "debug" << params.debug << ","
               << "scale" << params.scale << ","
-              << "special_bits" << params.special_bits << ","
               << "global_gens" << params.global_gens << ","
               << "global_ords" << params.global_ords << ","
               << "global_mvec" << params.global_mvec << ","
@@ -157,6 +153,9 @@ private:
     helib::setTimersOn();
     helib::setDryRun(
         false); // Need to get a "real context" to test bootstrapping
+    if (!helib_test::noPrint) {
+      helib::fhe_stats = true;
+    }
     time = -NTL::GetTime();
   }
 
@@ -211,7 +210,6 @@ protected:
   const int chen_han;
   const bool debug;
   const int scale;
-  const long special_bits;
   const NTL::Vec<long> mvec;
   const std::vector<long> gens;
   const std::vector<long> ords;
@@ -244,7 +242,6 @@ protected:
       chen_han(GetParam().chen_han),
       debug(GetParam().debug),
       scale(GetParam().scale),
-      special_bits(GetParam().special_bits),
       mvec(GetParam().global_mvec),
       gens(helib::convert<std::vector<long>>(GetParam().global_gens)),
       ords(helib::convert<std::vector<long>>(GetParam().global_ords)),
@@ -282,7 +279,7 @@ protected:
     }
 
     cleanupBootstrappingGlobals();
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 
   void dump_v_values()
@@ -369,7 +366,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
                        /*willBeBootstrappable=*/true,
                        /*skHwt=*/skHwt,
                        /*resolution=*/3,
-                       /*bitsInSpecialPrimes=*/special_bits);
+                       /*bitsInSpecialPrimes=*/helib_test::special_bits);
 
   if (!helib_test::noPrint) {
     std::cout << "security=" << context.securityLevel() << std::endl;
@@ -404,9 +401,6 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
       helib_test::dry); // Now we can set the dry-run flag if desired
 
   long p2r = context.alMod.getPPowR();
-
-  if (!helib_test::noPrint)
-    helib::fhe_stats = true;
 
   for (long numkey = 0; numkey < iter; numkey++) { // test with 3 keys
     if (helib::fhe_stats && numkey > 0 && numkey % 100 == 0) {
@@ -447,14 +441,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
     std::shared_ptr<helib::EncryptedArray> ea(
         std::make_shared<helib::EncryptedArray>(context, GG));
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = ea;
-    helib::dbgKey = &secretKey;
-#endif
-    if (debug) {
-      helib::dbgKey = &secretKey;
-      helib::dbgEa = ea;
-    }
+    helib::setupDebugGlobals(&secretKey, ea);
 
     NTL::zz_p::init(p2r);
     NTL::Vec<NTL::zz_p> val0(NTL::INIT_SIZE, nslots);
@@ -472,7 +459,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
 
     // Make some noise!
     // This ensures that we do not start the sequence of squarings
-    // from a "fresh" ciphertext (which may not be representive).
+    // from a "fresh" ciphertext (which may not be representative).
     ea->rotate(c1, 1);
     ea->rotate(c1, -1);
 
@@ -496,7 +483,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
       double Bnd = context.boundForRecryption();
       double mfac = context.zMStar.getNormBnd();
       double min_bit_cap =
-          log(mfac * q / (p2r * Bnd * FHE_MIN_CAP_FRAC)) / log(2.0);
+          log(mfac * q / (p2r * Bnd * HELIB_MIN_CAP_FRAC)) / log(2.0);
 
       std::cout << "min_bit_cap=" << min_bit_cap << std::endl;
 
@@ -515,7 +502,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
     helib::resetAllTimers();
 
     {
-      FHE_NTIMER_START(AAA_thinRecrypt);
+      HELIB_NTIMER_START(AAA_thinRecrypt);
 
       publicKey.thinReCrypt(c2);
     }
@@ -524,7 +511,7 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
       helib::CheckCtxt(c2, "after recryption");
 
     for (auto& x : val0) {
-      for (long i : helib::range(sqr_count))
+      for (long i = 0; i < sqr_count; ++i)
         x = x * x;
     }
 
@@ -553,10 +540,10 @@ TEST_P(GTestThinboot, correctlyPerformsThinboot)
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(typicalParameters, GTestThinboot, ::testing::Values(
     //SLOW
-    Parameters( 2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, 0l, {1026,  249}, {30, -2}, {  31, 41}, 1, ""),
-    Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, 0l, { 556, 1037}, { 6,  4}, {7, 5, 37}, 1, "")
+    Parameters( 2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026,  249}, {30, -2}, {  31, 41}, 1, ""),
+    Parameters(17, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, { 556, 1037}, { 6,  4}, {7, 5, 37}, 1, "")
     //FAST
-    //Parameters( 2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, 0l, {1026,  249}, {30, -2}, {  31, 41}, 1, "")
+    //Parameters( 2, 1, 3, 600, 64, 1, 0, 1, 100, 0, 0, 0, 0, 0, {1026,  249}, {30, -2}, {  31, 41}, 1, "")
     ));
 // clang-format on
 } // namespace

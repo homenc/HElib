@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -25,9 +25,10 @@ namespace helib {
 //! @param[out] res  to hold the return value
 //! @param[in]  poly the degree-d polynomial to evaluate
 //! @param[in]  x    the point on which to evaluate
-//! @param[in]  k    optional optimization parameter, defaults to sqrt(d/2) rounded up or down to a power of two
-void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k=0);
-     // Note: poly is passed by value, so caller keeps the original
+//! @param[in]  k    optional optimization parameter, defaults to sqrt(d/2)
+//! rounded up or down to a power of two
+void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k = 0);
+// Note: poly is passed by value, so caller keeps the original
 
 //! @brief Evaluate an encrypted polynomial on an encrypted input
 //! @param[out] res  to hold the return value
@@ -35,26 +36,26 @@ void polyEval(Ctxt& ret, NTL::ZZX poly, const Ctxt& x, long k=0);
 //! @param[in]  x    the point on which to evaluate
 void polyEval(Ctxt& ret, const NTL::Vec<Ctxt>& poly, const Ctxt& x);
 
-
 // A useful helper class
 
 //! @brief Store powers of X, compute them dynamically as needed.
 // This implementation assumes that the size (# of powers) is determined
 // at initialization time, it is not hard to grow the std::vector as needed,
 // but not clear if there is any application that needs it.
-class DynamicCtxtPowers {
+class DynamicCtxtPowers
+{
 private:
-  std::vector<Ctxt> v;   // A std::vector storing the powers themselves
+  std::vector<Ctxt> v; // A std::vector storing the powers themselves
 
 public:
   DynamicCtxtPowers(const Ctxt& c, long nPowers)
   {
-    //OLD: assert (!c.isEmpty() && nPowers>0); // Sanity-check
-    helib::assertFalse<helib::InvalidArgument>(c.isEmpty(), "Ciphertext cannot be empty");
-    helib::assertTrue<helib::InvalidArgument>(nPowers > 0, "Must have positive nPowers");
+    // Sanity-check
+    assertFalse<InvalidArgument>(c.isEmpty(), "Ciphertext cannot be empty");
+    assertTrue<InvalidArgument>(nPowers > 0, "Must have positive nPowers");
 
     Ctxt tmp(c.getPubKey(), c.getPtxtSpace());
-    v.resize(nPowers, tmp); // Initializes nPowers empty cipehrtexts
+    v.resize(nPowers, tmp); // Initializes nPowers empty ciphertexts
     v[0] = c;               // store X itself in v[0]
   }
 
@@ -62,15 +63,17 @@ public:
   Ctxt& getPower(long e); // must use e >= 1, else throws an exception
 
   //! dp.at(i) and dp[i] both return the i+1st power
-  Ctxt& at(long i) { return getPower(i+1); }
-  Ctxt& operator[](long i) { return getPower(i+1); }
+  Ctxt& at(long i) { return getPower(i + 1); }
+  Ctxt& operator[](long i) { return getPower(i + 1); }
 
   const std::vector<Ctxt>& getVector() const { return v; }
   long size() const { return v.size(); }
   bool isPowerComputed(long i)
-  { return (i>0 && i<=(long)v.size() && !v[i-1].isEmpty()); }
+  {
+    return (i > 0 && i <= (long)v.size() && !v[i - 1].isEmpty());
+  }
 };
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_POLYEVAL_H

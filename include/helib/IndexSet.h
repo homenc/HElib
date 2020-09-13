@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -23,11 +23,12 @@ namespace helib {
 //! @brief A dynamic set of non-negative integers.
 //!
 //! You can iterate through a set as follows:
-//! \code 
+//! \code
 //!    for (long i = s.first(); i <= s.last(); i = s.next(i)) ...
 //!    for (long i = s.last(); i >= s.first(); i = s.prev(i)) ...
 //! \endcode
-class IndexSet {
+class IndexSet
+{
 
   std::vector<bool> rep;
   // NOTE: modern versions of C++ are supposed
@@ -39,35 +40,27 @@ class IndexSet {
   // Invariant: if _card == 0, then _first = 0, _last = -1;
   // otherwise, _first (resp. _last) is the lowest (resp. highest)
   // index in the set.
-  // In any case, the std::vector rep always defines the characterstic
+  // In any case, the std::vector rep always defines the characteristic
   // function of the set.
 
   // private helper function
   void intervalConstructor(long low, long high);
 
 public:
-
   /*** constructors ***/
 
   // @brief No-argument constructor, creates empty set
-  IndexSet() {
-    _first = 0;  _last = -1; _card = 0;
-  }
+  IndexSet() : _first(0), _last(-1), _card(0) {}
 
   // @brief Constructs an interval, low to high
-  IndexSet(long low, long high) {
-    intervalConstructor(low, high);
-  }
+  IndexSet(long low, long high) { intervalConstructor(low, high); }
 
   // @brief Constructs a singleton set
-  explicit
-  IndexSet(long j) {
-    intervalConstructor(j, j);
-  }
+  explicit IndexSet(long j) { intervalConstructor(j, j); }
 
   // copy constructor: use the built-in copy constructor
 
-  /*** asignment ***/
+  /*** assignment ***/
 
   // assignment: use the built-in assignment operator
 
@@ -99,9 +92,7 @@ public:
 
   bool operator==(const IndexSet& s) const;
 
-  bool operator!=(const IndexSet& s) const {
-    return !(*this == s);
-  }
+  bool operator!=(const IndexSet& s) const { return !(*this == s); }
 
   /*** update methods ***/
 
@@ -127,37 +118,43 @@ public:
   static const IndexSet& emptySet();
 
   //! @brief Is this set a contiguous interval?
-  bool isInterval() const {return (_card==(1+_last-_first));}
+  bool isInterval() const { return (_card == (1 + _last - _first)); }
 
-  /*** raw IO ***/ 
-  void read(std::istream& str);  
+  /*** raw IO ***/
+  void read(std::istream& str);
   void write(std::ostream& str) const;
 
   /*** code to allow one to write "for (long i: set)" ***/
 
-  class iterator  {
-  friend class IndexSet;
+  class iterator
+  {
+    friend class IndexSet;
+
   public:
-    long operator *() const { return i_; }
-    iterator& operator ++() { i_ = s_.next(i_); return *this; } 
+    long operator*() const { return i_; }
+    iterator& operator++()
+    {
+      i_ = s_.next(i_);
+      return *this;
+    }
 
-    bool operator ==(const iterator &other) const 
-    { return &s_ == &other.s_ && i_ == other.i_; }
+    bool operator==(const iterator& other) const
+    {
+      return &s_ == &other.s_ && i_ == other.i_;
+    }
 
-    bool operator !=(const iterator &other) const { return !(*this == other); }
+    bool operator!=(const iterator& other) const { return !(*this == other); }
 
   protected:
-    iterator(const IndexSet& s, long i) : s_(s),  i_(i) { }
+    iterator(const IndexSet& s, long i) : s_(s), i_(i) {}
 
   private:
-
     const IndexSet& s_;
     long i_;
   };
 
   iterator begin() const { return iterator(*this, this->first()); }
-  iterator end() const { return iterator(*this, this->last()+1); }
-
+  iterator end() const { return iterator(*this, this->last() + 1); }
 };
 
 // some high-level convenience methods...not very efficient...
@@ -176,13 +173,13 @@ IndexSet operator^(const IndexSet& s, const IndexSet& t);
 IndexSet operator/(const IndexSet& s, const IndexSet& t);
 
 // I/O operator
-std::ostream& operator << (std::ostream& str, const IndexSet& set);
-std::istream& operator >> (std::istream& str, IndexSet& set);
+std::ostream& operator<<(std::ostream& str, const IndexSet& set);
+std::istream& operator>>(std::istream& str, IndexSet& set);
 
 //! @brief Functional cardinality
 long card(const IndexSet& s);
 
-inline bool empty(const IndexSet& s) { return s.card()==0; }
+inline bool empty(const IndexSet& s) { return s.card() == 0; }
 
 //! @brief Is s1 subset or equal to s2
 bool operator<=(const IndexSet& s1, const IndexSet& s2);
@@ -198,8 +195,10 @@ bool operator>(const IndexSet& s1, const IndexSet& s2);
 
 //! @brief Functional disjoint
 inline bool disjoint(const IndexSet& s1, const IndexSet& s2)
-{ return s1.disjointFrom(s2); }
-
+{
+  return s1.disjointFrom(s2);
 }
+
+} // namespace helib
 
 #endif // ifndef HELIB_INDEXSET_H

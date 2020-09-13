@@ -31,7 +31,7 @@ static
 long val2index(const PAlgebra& zMStar, long dim, long x)
 {
   FHE_TIMER_START;
- 
+
   long m = zMStar.getM();
   long g = zMStar.ZmStarGen(dim);
   long ord = zMStar.OrderOf(dim);
@@ -85,7 +85,7 @@ public:
   {
     long D = ea.sizeOfDimension(dim);
     long sz = ea.nativeDimension(dim) ? D : (2*D-1);
-   
+
     if (buildCache==cachezzX)
       zCache.reset(new CachedzzxMatrix(NTL::INIT_SIZE,sz));
     else if (buildCache==cacheDCRT)
@@ -96,7 +96,7 @@ public:
   // single constant. All blocks use the same transofmration.
   // Returns true if this is a zero diagonal, false otherwise
   bool processDiagonal1(zzX& cPoly, long dim, long i, long D)
-  {  
+  {
     vector<RX> tmpDiag(D);
     bool zDiag = true; // is this a zero diagonal?
     long nzLast = -1;  // index of last non-zero entry
@@ -118,12 +118,12 @@ public:
         tmpDiag[j] = entry;
         nzLast = j;
       }
-    }    
+    }
     if (zDiag) return true; // zero diagonal, nothing to do
 
     // clear trailing zero entries
     for (long jj = nzLast+1; jj < D; jj++) clear(tmpDiag[jj]);
-    
+
     vector<RX> diag(ea.size());
     if (D==1) diag.assign(ea.size(), tmpDiag[0]); // dimension of size one
     else for (long j = 0; j < ea.size(); j++)
@@ -173,7 +173,7 @@ public:
 	nzLast = j;
 	diag[j] = entry;
       }
-    }    
+    }
     if (zDiag) return true; // zero diagonal, nothing to do
 
     // clear trailing zero entries
@@ -204,7 +204,7 @@ public:
     }
   }
 
-  void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
+  void multiply(Ctxt* ctxt, long dim, bool oneTransform)
   {
     FHE_TIMER_START;
 
@@ -236,7 +236,7 @@ public:
       zzX cpoly;
       long D = ea.sizeOfDimension(dim);
 
-      for (long cnt = 0; cnt < D; cnt++) { // process one diagonal 
+      for (long cnt = 0; cnt < D; cnt++) { // process one diagonal
 	long i; //process diagonal i
 
 
@@ -300,12 +300,12 @@ public:
       if (!dcp && !zcp) {
         local_cache.resize(D);
       }
-     
 
-      for (long cnt = 0; cnt < 2*D-1; cnt++) { // process one diagonal 
+
+      for (long cnt = 0; cnt < 2*D-1; cnt++) { // process one diagonal
 	long i; //process diagonal i
         long signed_i;
-        
+
 
 	if (!ctxt) {
           if (cnt == 0) {
@@ -468,7 +468,7 @@ public:
 	std::pair<long,long> p(k,j);
 	long idx = ea.getContext().zMStar.assembleIndexByDim(p, dim);
 
-	RX acc, val, tmp; 
+	RX acc, val, tmp;
 	acc = 0;
         for (long i = 0; i < D; i++) {
           bool zero = oneTrans? mat.get(val, i, j) : mat.multiGet(val,i,j,k);
@@ -574,12 +574,12 @@ public:
         tmpDiag[j] = entry;
         nzLast = j;
       }
-    }    
+    }
     if (zDiag) return true; // zero diagonal, nothing to do
 
     // clear trailing zero entries
     for (long jj = nzLast+1; jj < D; jj++) clear(tmpDiag[jj]);
-    
+
     vector<RX> diag(ea.size());
     if (D==1) diag.assign(ea.size(), tmpDiag[0]); // dimension of size one
     else for (long j = 0; j < ea.size(); j++)
@@ -630,7 +630,7 @@ public:
 	nzLast = j;
 	diag[j] = entry;
       }
-    }    
+    }
     if (zDiag) return true; // zero diagonal, nothing to do
 
     // clear trailing zero entries
@@ -674,7 +674,7 @@ public:
     return typ;
   }
 
-  void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
+  void multiply(Ctxt* ctxt, long dim, bool oneTransform)
   {
     assert(dim >= 0 && dim <= ea.dimension());
     RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
@@ -856,7 +856,7 @@ public:
 	std::pair<long,long> p(k,j);
 	long idx = ea.getContext().zMStar.assembleIndexByDim(p, dim);
 
-	RX acc, val, tmp; 
+	RX acc, val, tmp;
 	acc = 0;
         for (long i = 0; i < D; i++) {
           bool zero = oneTrans? mat.get(val, i, j) : mat.multiGet(val,i,j,k);

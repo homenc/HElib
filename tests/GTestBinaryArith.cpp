@@ -26,9 +26,8 @@
 #include "gtest/gtest.h"
 #include "test_common.h"
 
-#ifdef DEBUG_PRINTOUT
 #include <helib/debugging.h>
-#endif
+
 // define flags FLAG_PRINT_ZZX, FLAG_PRINT_POLY, FLAG_PRINT_VEC, functions
 //        decryptAndPrint(ostream, ctxt, sk, ea, flags)
 //        decryptAndCompare(ctxt, sk, ea, pa);
@@ -249,16 +248,14 @@ protected:
     prepareSecKey(secKey);
 
     helib::activeContext = &context; // make things a little easier sometimes
-#ifdef DEBUG_PRINTOUT
-    helib::dbgEa = context.ea;
-    helib::dbgKey = &secKey;
-#endif
+
+    helib::setupDebugGlobals(&secKey, context.ea);
   }
 
   virtual void TearDown() override
   {
-#ifdef DEBUG_PRINTOUT
-    helib::cleanupGlobals();
+#ifdef HELIB_DEBUG
+    helib::cleanupDebugGlobals();
 #endif
   }
 
@@ -282,6 +279,11 @@ TEST_P(GTestBinaryArith, fifteenForFour)
   // In this case each ciphertext is considered to be the encryption of one
   // bit, however packing more into the slots is possible.
   // LSB is at the start (left) of the vector.
+
+  // Note: fifteenOrLess4Four is not entirely thread safe so this test will only
+  // be ran single-threaded. Save current number of threads and set to 1.
+  auto numThreads = NTL::AvailableThreads();
+  NTL::SetNumThreads(1);
 
   // vector of ciphertexts corresponding to encrypted input bit vectors.
   std::vector<helib::Ctxt> inBuf(15, helib::Ctxt(secKey));
@@ -313,8 +315,10 @@ TEST_P(GTestBinaryArith, fifteenForFour)
   // Add the encrypted bits.
   long numOutputs = fifteenOrLess4Four(helib::CtPtrs_vectorCt(outBuf),
                                        helib::CtPtrs_vectorPt(inPtrs));
-  if (helib_test::verbose)
+  if (helib_test::verbose) {
+    std::cout << "numOutputs: " << numOutputs << std::endl;
     helib::CheckCtxt(outBuf[helib::lsize(outBuf) - 1], "after 15for4");
+  }
 
   // Check the result.
   long sum2 = 0;
@@ -328,7 +332,10 @@ TEST_P(GTestBinaryArith, fifteenForFour)
     std::cout << "15to4 succeeded, sum" << inputBits << "=" << sum2
               << std::endl;
   }
-};
+
+  // Restore the number of threads to original value.
+  NTL::SetNumThreads(numThreads);
+}
 
 TEST_P(GTestBinaryArith, product)
 {
@@ -336,7 +343,7 @@ TEST_P(GTestBinaryArith, product)
   // encrypt them in binary representation. Then use multTwoNumbers to
   // multiply the two positive binary numbers and then check against the
   // plaintext calculation. Next, use multTwoNumbers with binary numbers in
-  // 2's complement to calculate the product where the multplier is negative
+  // 2's complement to calculate the product where the multiplier is negative
   // and then check against the plaintext calculation.
   //
   // In this case each ciphertext is considered to be the encryption of one
@@ -355,7 +362,7 @@ TEST_P(GTestBinaryArith, product)
   NTL::Vec<helib::Ctxt> encrypted_product, encrypted_multiplicand,
       encrypted_multiplier;
 
-  // Resizes the vector of ciphertexts (encrypted_bits) to match the input size.
+  // Resize the vector of ciphertexts (encrypted_bits) to match the input size.
   helib::resize(encrypted_multiplicand, bitSize, helib::Ctxt(secKey));
   for (long i = 0; i < bitSize; i++) {
     secKey.Encrypt(encrypted_multiplicand[i],
@@ -456,9 +463,9 @@ TEST_P(GTestBinaryArith, product)
               << std::endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   // Print out the ciphertext with the lowest level after multiplication
-  // if DEBUG_PRINTOUT is defined.
+  // if HELIB_DEBUG is defined.
   const helib::Ctxt* minCtxt = nullptr;
   long minLvl = 10000000;
   for (const helib::Ctxt& c : encrypted_product) {
@@ -468,11 +475,14 @@ TEST_P(GTestBinaryArith, product)
       minLvl = lvl;
     }
   }
-  decryptAndPrint(
-      (std::cout << " after multiplication: "), *minCtxt, secKey, ea, 0);
+  decryptAndPrint((std::cout << " after multiplication: "),
+                  *minCtxt,
+                  secKey,
+                  ea,
+                  0);
   std::cout << std::endl;
 #endif
-};
+}
 
 TEST_P(GTestBinaryArith, add)
 {
@@ -495,7 +505,7 @@ TEST_P(GTestBinaryArith, add)
   // Encrypt the individual bits.
   NTL::Vec<helib::Ctxt> encrypted_sum, encrypted_addend, encrypted_augend;
 
-  // Resizes the vector of ciphertexts (encrypted_bits) to match the input size.
+  // Resize the vector of ciphertexts (encrypted_bits) to match the input size.
   helib::resize(encrypted_addend, bitSize, helib::Ctxt(secKey));
   for (long i = 0; i < bitSize; i++) {
     secKey.Encrypt(encrypted_addend[i], NTL::ZZX((addend_data >> i) & 1));
@@ -503,7 +513,7 @@ TEST_P(GTestBinaryArith, add)
       encrypted_addend[i].bringToSet(context.getCtxtPrimes(5));
     }
   }
-  // Resizes the vector of ciphertexts (encrypted_bits) to match the input size.
+  // Resize the vector of ciphertexts (encrypted_bits) to match the input size.
   helib::resize(encrypted_augend, bitSize2, helib::Ctxt(secKey));
   for (long i = 0; i < bitSize2; i++) {
     secKey.Encrypt(encrypted_augend[i], NTL::ZZX((augend_data >> i) & 1));
@@ -553,9 +563,9 @@ TEST_P(GTestBinaryArith, add)
               << std::endl;
   }
 
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   // Print out the ciphertext with the lowest level after addition if
-  // DEBUG_PRINTOUT is defined.
+  // HELIB_DEBUG is defined.
   const helib::Ctxt* minCtxt = nullptr;
   long minLvl = 1000;
   for (const helib::Ctxt& c : encrypted_sum) {
@@ -568,7 +578,7 @@ TEST_P(GTestBinaryArith, add)
   decryptAndPrint((std::cout << " after addition: "), *minCtxt, secKey, ea, 0);
   std::cout << std::endl;
 #endif
-};
+}
 
 TEST_P(GTestBinaryArith, addManyNumbers)
 {
@@ -598,7 +608,7 @@ TEST_P(GTestBinaryArith, addManyNumbers)
   const auto encrypt_binary_number =
       [&](const long num) -> std::vector<helib::Ctxt> {
     std::vector<helib::Ctxt> encrypted_num;
-    // Resizes the vector of ciphertexts (encrypted_bits) to match the input
+    // Resize the vector of ciphertexts (encrypted_bits) to match the input
     // size.
     helib::resize(encrypted_num, bitSize, helib::Ctxt(secKey));
     for (long i = 0; i < bitSize; i++) {
@@ -627,8 +637,10 @@ TEST_P(GTestBinaryArith, addManyNumbers)
         encrypted_sum); // A wrapper around the output vector.
     helib::CtPtrMat_vectorCt summands_wrapper(
         encrypted_summands); // A wrapper around the output vector.
-    helib::addManyNumbers(
-        output_wrapper, summands_wrapper, outSize, &unpackSlotEncoding);
+    helib::addManyNumbers(output_wrapper,
+                          summands_wrapper,
+                          outSize,
+                          &unpackSlotEncoding);
     helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
   } // output_wrapper is deleted once out of scope.
 
@@ -637,8 +649,10 @@ TEST_P(GTestBinaryArith, addManyNumbers)
                      "after addition");
 
   // Calculate the summation in the plain.
-  long plaintext_sum = std::accumulate(
-      summands_data.begin(), summands_data.end(), 0l, std::plus<long>());
+  long plaintext_sum = std::accumulate(summands_data.begin(),
+                                       summands_data.end(),
+                                       0l,
+                                       std::plus<long>());
   EXPECT_EQ(decrypted_result[0], plaintext_sum & mask);
   if (helib_test::verbose) {
     std::cout << "addManyNums succeeded: ";
@@ -850,8 +864,9 @@ TEST_P(GTestBinaryArith, concatBinaryNumsConcatsCorrectly)
 
   std::vector<helib::Ctxt> output(bitSize * 2, helib::Ctxt(secKey));
   helib::CtPtrs_vectorCt output_wrapper(output);
-  helib::concatBinaryNums(
-      output_wrapper, helib::CtPtrs_vectorCt(lhs), helib::CtPtrs_vectorCt(rhs));
+  helib::concatBinaryNums(output_wrapper,
+                          helib::CtPtrs_vectorCt(lhs),
+                          helib::CtPtrs_vectorCt(rhs));
 
   std::vector<long> decrypted_result;
   helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);
@@ -900,8 +915,9 @@ TEST_P(GTestBinaryArith, splitBinaryNumsSplitsCorrectly)
   std::vector<helib::Ctxt> rhs_output(bitSize, helib::Ctxt(secKey));
   helib::CtPtrs_vectorCt lhs_output_wrapper(lhs_output);
   helib::CtPtrs_vectorCt rhs_output_wrapper(rhs_output);
-  helib::splitBinaryNums(
-      lhs_output_wrapper, rhs_output_wrapper, concatenation_wrapper);
+  helib::splitBinaryNums(lhs_output_wrapper,
+                         rhs_output_wrapper,
+                         concatenation_wrapper);
 
   std::vector<long> decrypted_lhs;
   std::vector<long> decrypted_rhs;
@@ -917,8 +933,9 @@ TEST_P(GTestBinaryArith, splitBinaryNumsSplitsCorrectly)
 
   // Make sure it throws if the sizes don't line up
   const auto do_split = [&]() {
-    helib::splitBinaryNums(
-        lhs_output_wrapper, rhs_output_wrapper, concatenation_wrapper);
+    helib::splitBinaryNums(lhs_output_wrapper,
+                           rhs_output_wrapper,
+                           concatenation_wrapper);
   };
   lhs_output.emplace_back(secKey);
   EXPECT_THROW(do_split(), helib::LogicError);
@@ -941,8 +958,9 @@ TEST_P(GTestBinaryArith, bitwiseShiftShiftsCorrectly)
     std::vector<helib::Ctxt> output(bitSize, helib::Ctxt(secKey));
     helib::CtPtrs_vectorCt output_wrapper(output);
 
-    helib::leftBitwiseShift(
-        output_wrapper, helib::CtPtrs_vectorCt(eNums), shamt);
+    helib::leftBitwiseShift(output_wrapper,
+                            helib::CtPtrs_vectorCt(eNums),
+                            shamt);
 
     std::vector<long> decrypted_result;
     helib::decryptBinaryNums(decrypted_result, output_wrapper, secKey, ea);

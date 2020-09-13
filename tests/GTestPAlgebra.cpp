@@ -29,8 +29,11 @@ struct Parameters
   const std::vector<long> gens;
   const std::vector<long> ords;
 
-  Parameters(
-      long m, long p, long r, std::vector<long> gens, std::vector<long> ords) :
+  Parameters(long m,
+             long p,
+             long r,
+             std::vector<long> gens,
+             std::vector<long> ords) :
       m(m),       // Cyclotomic index
                   // e.g., m=1024, m=2047
       p(p),       // plaintext base
@@ -90,7 +93,7 @@ protected:
     }
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(GTestPAlgebra, readsAndWritesContextsAsStrings)
@@ -115,7 +118,7 @@ TEST_P(GTestPAlgebra, readsAndWritesContextsAsStrings)
   s3 >> c1;
 
   EXPECT_EQ(context, c1);
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(
     smallParameters,

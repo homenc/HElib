@@ -46,7 +46,7 @@ void  TestIt(long m, long p, long r, long d, long L, bool verbose)
   if (d == 0)
     G = context.alMod.getFactorsOverZZ()[0];
   else
-    G = makeIrredPoly(p, d); 
+    G = makeIrredPoly(p, d);
 
   if (verbose) {
     context.zMStar.printout();
@@ -246,7 +246,7 @@ void  TestIt(long m, long p, long r, long d, long L, bool verbose)
 }
 
 
-void usage(char *prog) 
+void usage(char *prog)
 {
   cout << "Usage: "<<prog<<" [ optional parameters ]...\n";
   cout << "  optional parameters have the form 'attr1=val1 attr2=val2 ...'\n";
@@ -264,7 +264,7 @@ void usage(char *prog)
 /* Testing the functionality of multiplying an encrypted vector by a plaintext
  * matrix, either over the extension- or the base-field/ring.
  */
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   argmap_t argmap;
   argmap["m"] = "2047";
@@ -298,7 +298,7 @@ int main(int argc, char *argv[])
 
 
 template<class type> class RandomMatrix : public MatMul<type> {
-  PA_INJECT(type) 
+  PA_INJECT(type)
   vector< vector< RX > > data;
 
 public:
@@ -346,7 +346,7 @@ template<class type> class RandomBlockMatrix : public BlockMatMul<type> {
 public:
   virtual ~RandomBlockMatrix() {}
   RandomBlockMatrix(const EncryptedArray& _ea): BlockMatMul<type>(_ea)
-  { 
+  {
     RBak bak; bak.save(); _ea.getAlMod().restoreContext();
     long n = _ea.size();
     long d = _ea.getDegree();
@@ -361,8 +361,8 @@ public:
         bool zEntry = (RandomBnd(bnd) > 0);
 
         for (long u = 0; u < d; u++)
-          for (long v = 0; v < d; v++) 
-            if (zEntry) 
+          for (long v = 0; v < d; v++)
+            if (zEntry)
               clear(data[i][j][u][v]);
             else
               random(data[i][j][u][v]);

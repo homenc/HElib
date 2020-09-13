@@ -21,7 +21,7 @@ class HomAES {
 
   vector<PolyType> encAffMat, decAffMat; // The GF2 affine map constants
   PolyType affVec;
-  
+
   vector<PolyType> encLinTran, decLinTran; // The rowShift/colMix constants
 
   GF2X XinSlots; // "Fully packed" poly with X in all the slots, for packing

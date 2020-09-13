@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2019 IBM Corp.
+/* Copyright (C) 2012-2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -21,7 +21,7 @@
 namespace helib {
 
 //! @class EvalMap
-//! @brief Class that provides the functionality for the 
+//! @brief Class that provides the functionality for the
 //! linear transforms used in boostrapping.
 //! The constructor is invoked with three arguments:
 //!   - an EncryptedArray object ea
@@ -41,7 +41,7 @@ namespace helib {
 //! inverse transformation a transformation that moves
 //! the coefficients in each slot into a normal-basis representation,
 //! which helps with the unpacking procedure.
-//! 
+//!
 //! The constructor precomputes certain values, and the linear
 //! transformation itself is effected using the apply method.
 //!
@@ -49,20 +49,21 @@ namespace helib {
 //! generators used in PAlgebra.  The best way to ensure this is
 //! to directly use the output of the program in  params.cpp: that
 //! program computes values for mvec (to be used here), and gens
-//! and ords (to be used in initialize the Context).
+//! and ords (to be used in initialization of the Context).
 
-class EvalMap {
+class EvalMap
+{
 private:
   const EncryptedArray& ea;
-  bool invert;   // apply transformation in inverser order?
+  bool invert;   // apply transformation in inverse order?
   long nfactors; // how many factors of m
-  std::unique_ptr<BlockMatMul1DExec>       mat1;   // one block matrix
-  NTL::Vec<std::unique_ptr<MatMul1DExec>>  matvec; // regular matrices
+  std::unique_ptr<BlockMatMul1DExec> mat1;        // one block matrix
+  NTL::Vec<std::unique_ptr<MatMul1DExec>> matvec; // regular matrices
 
 public:
-  EvalMap(const EncryptedArray& _ea, 
-          bool minimal, 
-          const NTL::Vec<long>& mvec, 
+  EvalMap(const EncryptedArray& _ea,
+          bool minimal,
+          const NTL::Vec<long>& mvec,
           bool _invert,
           bool build_cache,
           bool normal_basis = true);
@@ -75,7 +76,6 @@ public:
   void apply(Ctxt& ctxt) const;
 };
 
-
 //! @class ThinEvalMap
 //! @brief Class that provides the functionality for the
 //! linear transforms used in "thin" boostrapping,
@@ -84,24 +84,25 @@ public:
 //! except that the constructor does not have a normal_basis
 //! parameter.
 
-class ThinEvalMap {
+class ThinEvalMap
+{
 private:
   const EncryptedArray& ea;
-  bool invert;   // apply transformation in inverser order?
+  bool invert;   // apply transformation in inverse order?
   long nfactors; // how many factors of m
-  NTL::Vec<std::unique_ptr<MatMulExecBase>>  matvec; // regular matrices
+  NTL::Vec<std::unique_ptr<MatMulExecBase>> matvec; // regular matrices
 
 public:
-  ThinEvalMap(const EncryptedArray& _ea, 
-          bool minimal, 
-          const NTL::Vec<long>& mvec, 
-          bool _invert,
-          bool build_cache);
+  ThinEvalMap(const EncryptedArray& _ea,
+              bool minimal,
+              const NTL::Vec<long>& mvec,
+              bool _invert,
+              bool build_cache);
 
   void upgrade();
   void apply(Ctxt& ctxt) const;
 };
 
-}
+} // namespace helib
 
 #endif // ifndef HELIB_EVALMAP_H

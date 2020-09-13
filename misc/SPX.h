@@ -177,7 +177,7 @@ public:
     else                zzpx.SetMaxLength(n);
   }
 
-  // f.kill() sets f to 0 and frees all memory held by f.  
+  // f.kill() sets f to 0 and frees all memory held by f.
   void kill()
   {
     if (modulus.null()) return; // uninitialized, nothing to do
@@ -326,7 +326,7 @@ inline long deg(const SPX& a) { return a.deg(); }
 inline long coeff(const SPX& x, long i)
 {
   if (isGF2(x.getMod())) return NTL::conv<long>(NTL::coeff(x.gf2x, i));
-  else { 
+  else {
     NTL::zz_pPush push(getContext(x.getMod()));
     return NTL::conv<long>(NTL::coeff(x.zzpx,i));
   }
@@ -531,7 +531,7 @@ SPX GCD(const SPX& a, const SPX& b)
 { SPX x; GCD(x, a, b); return x; }
 // x = GCD(a, b) (zero if a==b==0).
 
-// d = gcd(a,b), a s + b t = d 
+// d = gcd(a,b), a s + b t = d
 inline void XGCD(SPX& d, SPX& s, SPX& t,
 		 const SPX& a, const SPX& b)
 {
@@ -753,7 +753,7 @@ void product(SPX& x, const vec_SPX& v, const SPX& f)
    res = 1;
    long i;
    for (i = 0; i < v.length(); i++)
-      MulMod(res, res, v[i], F); 
+      MulMod(res, res, v[i], F);
    x = res;
 }
 
@@ -956,7 +956,7 @@ inline void Comp2Mod(SPX& x1, SPX& x2, const SPX& g1, const SPX& g2,
 }
 // xi = gi(h) mod f (i=1,2), deg(h) < n.
 
-inline void Comp3Mod(SPX& x1, SPX& x2, SPX& x3, 
+inline void Comp3Mod(SPX& x1, SPX& x2, SPX& x3,
 		     const SPX& g1, const SPX& g2, const SPX& g3,
 		     const SPX& h, const SPXModulus& F)
 {
@@ -1026,7 +1026,7 @@ inline void build(SPXArgument& H,
     NTL::build(H.gf2x, h.gf2x, F.gf2x, m);
   else {
     NTL::zz_pPush push(getContext(h.getMod()));
-    NTL::build(H.zzpx, h.zzpx, F.zzpx, m);    
+    NTL::build(H.zzpx, h.zzpx, F.zzpx, m);
   }
 }
 // Pre-Computes information about h.  m > 0, deg(h) < n
@@ -1044,7 +1044,7 @@ inline void CompMod(SPX& x, const SPX& g,
   }
 }
 
-inline SPX CompMod(const SPX& g, const SPXArgument& H, 
+inline SPX CompMod(const SPX& g, const SPXArgument& H,
 		      const SPXModulus& F)
 { SPX x; CompMod(x,g,H,F); return x; }
 
@@ -1113,12 +1113,12 @@ inline NTL::Vec<long> ProjectPowers(const NTL::Vec<long>& a, long k,
                    const T& h, const SPXModulus& F)
 { NTL::Vec<long> x; ProjectPowers(x,a,k,h,F); return x; }
 
-// Computes the vector 
+// Computes the vector
 
-//   (project(a, 1), project(a, h), ..., project(a, h^{k-1} % f).  
+//   (project(a, 1), project(a, h), ..., project(a, h^{k-1} % f).
 
 // Restriction: must have a.length <= deg(F) and deg(h) < deg(F).
-// This operation is really the "transpose" of the modular composition 
+// This operation is really the "transpose" of the modular composition
 // operation.
 
 /**************************************************************************\
@@ -1265,7 +1265,7 @@ inline void sppolyOnePoly(set)
 //void set(SPX& x);   // x = 1
 
 inline void sppolyTwoPoly(swap, SPX)
-//void swap(SPX& x, SPX& y); 
+//void swap(SPX& x, SPX& y);
 // swap (via "pointer swapping" -- if possible)
 
 
@@ -1316,7 +1316,7 @@ inline void EDF(vec_SPX& factors, const SPX& f, long d, long verbose=0)
     NTL::EDF(facp, f.zzpx, PowerXMod(NTL::zz_p::modulus(),f.zzpx), d, verbose);
     factors.SetLength(facp.length(), tmp); // allocate space
     for (long i=0; i<factors.length(); i++)
-      factors[i].zzpx = facp[i];    
+      factors[i].zzpx = facp[i];
   }
 }
 inline vec_SPX EDF(const SPX& f, long d, long verbose=0)
@@ -1342,7 +1342,7 @@ inline void SFCanZass(vec_SPX& factors, const SPX& f, long verbose=0)
     NTL::SFCanZass(facp, f.zzpx, verbose);
     factors.SetLength(facp.length(), tmp); // allocate space
     for (long i=0; i<factors.length(); i++)
-      factors[i].zzpx = facp[i];    
+      factors[i].zzpx = facp[i];
   }
 }
 inline vec_SPX SFCanZass(const SPX& f, long verbose=0)
@@ -1476,7 +1476,7 @@ inline SPX BuildIrred_SPX(long n, const SPmodulus& mod)
 // Build a monic irreducible poly of degree n.  The polynomial
 // constructed is "canonical" in the sense that it is of the form
 // f=X^n + g, where the bits of g are the those of the smallest
-// non-negative integer that make f irreducible.  
+// non-negative integer that make f irreducible.
 
 // The SPXModulus data structure and routines (and indirectly GF2E)
 // are optimized to deal with the output from BuildIrred.

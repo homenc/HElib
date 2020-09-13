@@ -11,4 +11,8 @@ SortIncludes: false # Changed from true - TRY to make it true, might not work
 SortUsingDeclarations: false # Changed from true - TRY to make it true, might not work
 PointerAlignment: Left # Changed from Right
 BreakBeforeBraces: Mozilla # Changed to break after class/struct/function/..., but not after statement (if/while/for)
+PenaltyReturnTypeOnItsOwnLine: 1000 # Changed from 60 to avoid break after return type
+AllowAllArgumentsOnNextLine: false # Changed to avoid all call arguments on next line
+AllowAllParametersOfDeclarationOnNextLine: false # Changed to avoid all function parameters on next line
+#Standard: c++14 # This should validate the input to c++14 standard, but it is not supported in clang-9. For future use.
 ...

@@ -10,7 +10,7 @@
  * limitations under the License. See accompanying LICENSE file.
  */
 
-/* Test_ThinEvalMap.cpp - Testing the evalution map for thin bootstrapping
+/* Test_ThinEvalMap.cpp - Testing the evaluation map for thin bootstrapping
  */
 #include <helib/helib.h>
 #include <helib/EvalMap.h>
@@ -146,8 +146,9 @@ protected:
     return mvec;
   };
 
-  static helib::Context&
-  prepareContext(helib::Context& context, const long L, const long c)
+  static helib::Context& prepareContext(helib::Context& context,
+                                        const long L,
+                                        const long c)
   {
     helib::buildModChain(context, L, c);
     if (!helib_test::noPrint) {
@@ -209,7 +210,7 @@ protected:
       helib::printAllTimers();
       std::cout << std::endl;
     }
-    helib::cleanupGlobals();
+    helib::cleanupDebugGlobals();
   }
 };
 
@@ -236,7 +237,7 @@ TEST_P(GTestThinEvalMap, thinEvalMapIsCorrect)
   ea.encrypt(ctxt, publicKey, val1);
 
   helib::resetAllTimers();
-  FHE_NTIMER_START(ALL);
+  HELIB_NTIMER_START(ALL);
 
   // Compute homomorphically the transformation that takes the
   // coefficients packed in the slots and produces the polynomial
@@ -324,8 +325,8 @@ TEST_P(GTestThinEvalMap, thinEvalMapIsCorrect)
   EXPECT_EQ(val1, dirty_val2);
 #endif
 
-  FHE_NTIMER_STOP(ALL);
-};
+  HELIB_NTIMER_STOP(ALL);
+}
 
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(variousParameters, GTestThinEvalMap, ::testing::Values(

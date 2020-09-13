@@ -34,7 +34,7 @@ static string v_values_name = "";
 
 
 
-static void 
+static void
 dump_v_values()
 {
   const vector<double> *v_values = fetch_saved_values("v_values");
@@ -51,7 +51,7 @@ dump_v_values()
 }
 
 static void
-anderson_darling(const vector<double>& X, double& AD, double& p_val) 
+anderson_darling(const vector<double>& X, double& AD, double& p_val)
 {
   long N = X.size();
 
@@ -68,7 +68,7 @@ anderson_darling(const vector<double>& X, double& AD, double& p_val)
   double SM = 0;
   for (long i: range(N)) SM += Y[i];
   SM /= N;
-  
+
 
   // compute the sample variance
   double SV = 0;
@@ -76,43 +76,43 @@ anderson_darling(const vector<double>& X, double& AD, double& p_val)
   SV /= (N-1);
 
   // replace Y[i] by CDF of Y[i]
-  for (long i: range(N)) 
+  for (long i: range(N))
     Y[i] = 0.5*(1 + erf((Y[i]-SM)/sqrt(2*SV)));
 
   double S = 0;
   for (long i: range(N)) {
     S += (2*i+1)*(log(Y[i]) + log1p(-Y[N-1-i]));
-  } 
+  }
   AD = -N - S/N;
 
   AD *= (1 + 0.75/N + 2.25/N/N);
   // This adjustment and the p-values below come from:
-  // R.B. D'Augostino and M.A. Stephens, Eds., 1986, 
+  // R.B. D'Augostino and M.A. Stephens, Eds., 1986,
   // Goodness-of-Fit Techniques, Marcel Dekker.
 
   p_val;
-  if (AD >= 0.6) 
+  if (AD >= 0.6)
     p_val = exp(1.2937 - 5.709*(AD)+ 0.0186*fsquare(AD));
   else if (AD > 0.34)
     p_val = exp(0.9177 - 4.279*(AD) - 1.38*fsquare(AD));
-  else if (AD > 0.2) 
+  else if (AD > 0.2)
     p_val = 1 - exp(-8.318 + 42.796*(AD)- 59.938*fsquare(AD));
   else
     p_val = 1 - exp(-13.436 + 101.14*(AD)- 223.73*fsquare(AD));
 }
 
-static void 
+static void
 print_anderson_darling()
 {
   const vector<double> *v_values = fetch_saved_values("v_values");
-  if (v_values) { 
+  if (v_values) {
     double AD, p_val;
     anderson_darling(*v_values, AD, p_val);
     printf("AD=%6.4f, p_val=%8.6f", AD, p_val);
   }
 }
 
-static void 
+static void
 print_sigma_info()
 {
   const vector<double> *v_values = fetch_saved_values("v_values");
@@ -131,7 +131,7 @@ print_sigma_info()
 
 
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMap amap;
 
@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
   amap.parse(argc, argv);
 
-  if (seed) 
+  if (seed)
     SetSeed(ZZ(seed));
 
   SetNumThreads(nthreads);
@@ -292,9 +292,9 @@ int main(int argc, char *argv[])
   // using union bound
 
   max_pwrfl_prob0 = double(phim)*erfc(max_pwrfl/sqrt(2));
-  if (max_pwrfl_prob0 > 1) 
+  if (max_pwrfl_prob0 > 1)
     max_pwrfl_prob1 = 1;
-  else 
+  else
     max_pwrfl_prob1 = 1 - exp(double(iter)*log(1-max_pwrfl_prob0));
 
 

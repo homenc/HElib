@@ -1,5 +1,6 @@
 HElib
 =====
+[![Build Status](https://travis-ci.com/homenc/HElib.svg?branch=master)](https://travis-ci.com/homenc/HElib)
 
 HElib is an open-source ([Apache License v2.0][5]) software library that 
 implements [homomorphic encryption][6] (HE). Currently available schemes 
@@ -23,6 +24,9 @@ See [changes.md](changes.md) for more details.
 
 Full installation instructions and a list of the required dependencies can be found 
 in [INSTALL.md](INSTALL.md).
+
+If you are interested in contributing to HElib, please read our 
+[Contributing Guidelines](CONTRIBUTING.md).
 
 HElib is written in C++14 and uses the [NTL mathematical library][4].  
 HElib is distributed under the terms of the [Apache License v2.0][5].  

@@ -24,10 +24,7 @@ namespace {
 struct Parameters
 {
   Parameters(long m, long r, long L, double epsilon) :
-      m(m),
-      r(r),
-      L(L),
-      epsilon(epsilon){};
+      m(m), r(r), L(L), epsilon(epsilon){};
 
   const long m;
   const long r;
@@ -187,13 +184,10 @@ protected:
                 << std::endl;
     }
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
+    helib::setupDebugGlobals(&secretKey, context.ea);
   }
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 };
 
 TEST_P(TestCKKS, negatingCiphertextWorks)
@@ -519,6 +513,11 @@ TEST_P(
       << ", max(vd4)=" << helib::largestCoeff(vd4) << std::endl
       << ", maxDiff=" << calcMaxDiff(vd1, vd4) << std::endl
       << std::endl;
+}
+
+TEST(TestCKKS, buildingCKKSContextWithMAsNotAPowerOfTwoThrows)
+{
+  EXPECT_THROW(helib::Context context(99, -1, 20), helib::InvalidArgument);
 }
 
 INSTANTIATE_TEST_SUITE_P(typicalParameters,

@@ -118,7 +118,7 @@ void  TestIt2(SecKey& secretKey, EncryptedArray& ea, bool verbose=false)
  *  L is the # of primes in the modulus chain [default=4]
  *  verbose print extra info [default=0]
  */
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
   ArgMapping amap;
 
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 
   Context context(m, p, 1);
   buildModChain(context, L, /*c=*/3);
-    
+
   SecKey secretKey(context);
   secretKey.GenSecKey(/*w=*/64); // A Hamming-weight-w secret key
 
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  resetAllTimers();  
+  resetAllTimers();
   TestIt1(secretKey, ea, verbose);
   if (verbose) {
     printAllTimers();

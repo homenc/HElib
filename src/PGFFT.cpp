@@ -10,17 +10,24 @@ See below for more details.
 
 
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#ifdef __GNUC__
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+#endif
 
 #define PGFFT_USE_TRUNCATED_BLUE (1)
 // set to 0 to disable the truncated Bluestein
 
 #define PGFFT_USE_EXPLICIT_MUL (1)
 // Set to 0 to disable explict complex multiplication.
-// The built-in complex multiplication routines are 
+// The built-in complex multiplication routines are
 // incredibly slow, because the standard requires special handling
 // of non-finite complex values.
 // To fix the problem, by default, PGFFT will override these routines
-// with explicitly defined multiplication functions. 
+// with explicitly defined multiplication functions.
 // Another way to solve this problem is to compile with the -ffast-math
 // option (at least, on gcc, that's the right flag).
 
@@ -78,14 +85,14 @@ bool PGFFT::simd_enabled() { return false; }
 
 #if (PGFFT_USE_EXPLICIT_MUL)
 
-static inline cmplx_t 
+static inline cmplx_t
 MUL(cmplx_t a, cmplx_t b)
 {
    double x = a.real(), y = a.imag(), u = b.real(), v = b.imag();
    return cmplx_t(x*u-y*v, x*v+y*u);
 }
 
-static inline cmplx_t 
+static inline cmplx_t
 CMUL(cmplx_t a, cmplx_t b)
 {
    double x = a.real(), y = a.imag(), u = b.real(), v = b.imag();
@@ -151,7 +158,7 @@ PGFFT::aligned_deallocate(void *p)
 {
    if (!p) return;
    char *cp = (char *) p;
-   int offset = cp[-1]; 
+   int offset = cp[-1];
    std::free(cp - offset);
 }
 
@@ -176,7 +183,7 @@ PGFFT::aligned_deallocate(void *p)
 
 /**************************************************************
 
-   Packed Double abstraction layer 
+   Packed Double abstraction layer
 
 **************************************************************/
 
@@ -200,50 +207,50 @@ struct PD4 {
    PD4(double d0, double d1, double d2, double d3)
       : data(_mm256_set_pd(d3, d2, d1, d0)) { }
 
-   static PD4 load(const double *p) { return _mm256_load_pd(p); } 
+   static PD4 load(const double *p) { return _mm256_load_pd(p); }
 
    // load from unaligned address
-   static PD4 loadu(const double *p) { return _mm256_loadu_pd(p); } 
+   static PD4 loadu(const double *p) { return _mm256_loadu_pd(p); }
 };
 
 inline void
-load(PD4& x, const double *p) 
+load(PD4& x, const double *p)
 { x = PD4::load(p); }
 
 // load from unaligned address
 inline void
-loadu(PD4& x, const double *p) 
+loadu(PD4& x, const double *p)
 { x = PD4::loadu(p); }
 
-inline void 
-store(double *p, PD4 a) 
+inline void
+store(double *p, PD4 a)
 { _mm256_store_pd(p, a.data); }
 
 // store to unaligned address
-inline void 
-storeu(double *p, PD4 a) 
+inline void
+storeu(double *p, PD4 a)
 { _mm256_storeu_pd(p, a.data); }
 
 
 // swap even/odd slots
 // e.g., 0123 -> 1032
-inline PD4 
-swap2(PD4 a) 
+inline PD4
+swap2(PD4 a)
 { return _mm256_permute_pd(a.data, 0x5); }
 
 // 0123 -> 0022
-inline PD4 
+inline PD4
 dup2even(PD4 a)
 { return _mm256_permute_pd(a.data, 0);   }
 
 // 0123 -> 1133
-inline PD4 
+inline PD4
 dup2odd(PD4 a)
 { return _mm256_permute_pd(a.data, 0xf);   }
 
 // blend even/odd slots
 // 0123, 4567 -> 0527
-inline PD4 
+inline PD4
 blend2(PD4 a, PD4 b)
 { return _mm256_blend_pd(a.data, b.data, 0xa); }
 
@@ -259,24 +266,24 @@ blend_odd(PD4 a, PD4 b)
 { return _mm256_unpackhi_pd(a.data, b.data); }
 
 
-inline void 
-clear(PD4& x) 
+inline void
+clear(PD4& x)
 { x.data = _mm256_setzero_pd(); }
 
-inline PD4 
-operator+(PD4 a, PD4 b) 
+inline PD4
+operator+(PD4 a, PD4 b)
 { return _mm256_add_pd(a.data, b.data); }
 
-inline PD4 
-operator-(PD4 a, PD4 b) 
+inline PD4
+operator-(PD4 a, PD4 b)
 { return _mm256_sub_pd(a.data, b.data); }
 
-inline PD4 
-operator*(PD4 a, PD4 b) 
+inline PD4
+operator*(PD4 a, PD4 b)
 { return _mm256_mul_pd(a.data, b.data); }
 
-inline PD4 
-operator/(PD4 a, PD4 b) 
+inline PD4
+operator/(PD4 a, PD4 b)
 { return _mm256_div_pd(a.data, b.data); }
 
 inline PD4&
@@ -298,24 +305,24 @@ operator/=(PD4& a, PD4 b)
 #ifdef HAVE_AVX2
 
 // a*b+c (fused)
-inline PD4 
-fused_muladd(PD4 a, PD4 b, PD4 c) 
+inline PD4
+fused_muladd(PD4 a, PD4 b, PD4 c)
 { return _mm256_fmadd_pd(a.data, b.data, c.data); }
 // NEEDS: FMA
 
 // a*b-c (fused)
-inline PD4 
-fused_mulsub(PD4 a, PD4 b, PD4 c) 
+inline PD4
+fused_mulsub(PD4 a, PD4 b, PD4 c)
 { return _mm256_fmsub_pd(a.data, b.data, c.data); }
 // NEEDS: FMA
 
 // -a*b+c (fused)
-inline PD4 
-fused_negmuladd(PD4 a, PD4 b, PD4 c) 
+inline PD4
+fused_negmuladd(PD4 a, PD4 b, PD4 c)
 { return _mm256_fnmadd_pd(a.data, b.data, c.data); }
 // NEEDS: FMA
 
-// (a0,a1,a2,a3), (b0,b1,b2,b3), (c0,c1,c2,c3) -> 
+// (a0,a1,a2,a3), (b0,b1,b2,b3), (c0,c1,c2,c3) ->
 // (a0*b0-c0, a1*b1+c1, a2*b2-c2, a3*b3+c3)
 inline PD4
 fmaddsub(PD4 a, PD4 b, PD4 c)
@@ -323,7 +330,7 @@ fmaddsub(PD4 a, PD4 b, PD4 c)
 // NEEDS: FMA
 // (plain addsub only needs AVX)
 
-// (a0,a1,a2,a3), (b0,b1,b2,b3), (c0,c1,c2,c3) -> 
+// (a0,a1,a2,a3), (b0,b1,b2,b3), (c0,c1,c2,c3) ->
 // (a0*b0+c0, a1*b1-c1, a2*b2+c2, a3*b3-c3)
 inline PD4
 fmsubadd(PD4 a, PD4 b, PD4 c)
@@ -429,7 +436,7 @@ NOTE: the code has been re-written and simplified so that
 // loop unrolling in the FFT implementation
 
 
-static inline long 
+static inline long
 FFTRoundUp(long xn, long k)
 {
    long n = 1L << k;
@@ -575,11 +582,11 @@ do { \
 
 
 
-static inline void 
+static inline void
 fwd_butterfly_loop_simd(
    long size,
-   double * RESTRICT xp0, 
-   double * RESTRICT xp1, 
+   double * RESTRICT xp0,
+   double * RESTRICT xp1,
    const double * RESTRICT wtab)
 {
   for (long j = 0; j < size; j += 4) {
@@ -598,7 +605,7 @@ fwd_butterfly_loop_simd(
 
     PD4 xx1_0, xx1_1;
     MUL2(xx1_0, xx1_1, diff_0, diff_1, w_0, w_1);
-   
+
     store(xp0+2*(j+0), xx0_0);
     store(xp0+2*(j+2), xx0_1);
     store(xp1+2*(j+0), xx1_0);
@@ -606,26 +613,26 @@ fwd_butterfly_loop_simd(
   }
 }
 
-static inline void 
+static inline void
 fwd_butterfly_loop(
    long size,
-   cmplx_t * RESTRICT xp0, 
-   cmplx_t * RESTRICT xp1, 
+   cmplx_t * RESTRICT xp0,
+   cmplx_t * RESTRICT xp1,
    const cmplx_t * RESTRICT wtab)
 {
    // NOTE: C++11 guarantees that these reinterpret_cast's work as expected
    fwd_butterfly_loop_simd(
-      size, 
-      reinterpret_cast<double*>(xp0), 
-      reinterpret_cast<double*>(xp1), 
+      size,
+      reinterpret_cast<double*>(xp0),
+      reinterpret_cast<double*>(xp1),
       reinterpret_cast<const double*>(wtab));
 }
 
-static inline void 
+static inline void
 inv_butterfly_loop_simd(
    long size,
-   double * RESTRICT xp0, 
-   double * RESTRICT xp1, 
+   double * RESTRICT xp0,
+   double * RESTRICT xp1,
    const double * RESTRICT wtab)
 {
   for (long j = 0; j < size; j += 4) {
@@ -652,28 +659,28 @@ inv_butterfly_loop_simd(
   }
 }
 
-static inline void 
+static inline void
 inv_butterfly_loop(
    long size,
-   cmplx_t * RESTRICT xp0, 
-   cmplx_t * RESTRICT xp1, 
+   cmplx_t * RESTRICT xp0,
+   cmplx_t * RESTRICT xp1,
    const cmplx_t * RESTRICT wtab)
 {
    // NOTE: C++11 guarantees that these reinterpret_cast's work as expected
    inv_butterfly_loop_simd(
-      size, 
-      reinterpret_cast<double*>(xp0), 
-      reinterpret_cast<double*>(xp1), 
+      size,
+      reinterpret_cast<double*>(xp0),
+      reinterpret_cast<double*>(xp1),
       reinterpret_cast<const double*>(wtab));
 }
 
 #else
 
-static inline void 
+static inline void
 fwd_butterfly_loop(
    long size,
-   cmplx_t * RESTRICT xp0, 
-   cmplx_t * RESTRICT xp1, 
+   cmplx_t * RESTRICT xp0,
+   cmplx_t * RESTRICT xp1,
    const cmplx_t * RESTRICT wtab)
 {
    fwd_butterfly0(xp0[0+0], xp1[0+0]);
@@ -688,11 +695,11 @@ fwd_butterfly_loop(
    }
 }
 
-static inline void 
+static inline void
 inv_butterfly_loop(
    long size,
-   cmplx_t * RESTRICT xp0, 
-   cmplx_t * RESTRICT xp1, 
+   cmplx_t * RESTRICT xp0,
+   cmplx_t * RESTRICT xp1,
    const cmplx_t * RESTRICT wtab)
 {
    inv_butterfly0(xp0[0+0], xp1[0+0]);
@@ -801,18 +808,18 @@ new_fft_last_two_layers(cmplx_t* xp, long blocks, const cmplx_t* wtab)
 
       cmplx_t v0 = u0 + u2;
       cmplx_t v2 = u0 - u2;
-      cmplx_t v1 = u1 + u3; 
-      cmplx_t t  = u1 - u3; 
+      cmplx_t v1 = u1 + u3;
+      cmplx_t t  = u1 - u3;
 
       //cmplx_t v3 = MUL(t, w);
       // DIRT: relies on w == (0,-1)
-      cmplx_t v3(t.imag(), -t.real()); 
+      cmplx_t v3(t.imag(), -t.real());
 
 
       xp[0] = v0 + v1;
       xp[1] = v0 - v1;
       xp[2] = v2 + v3;
-      xp[3] = v2 - v3; 
+      xp[3] = v2 - v3;
 
       xp += 4;
     }
@@ -820,7 +827,7 @@ new_fft_last_two_layers(cmplx_t* xp, long blocks, const cmplx_t* wtab)
 }
 
 
-static void 
+static void
 new_fft_base(cmplx_t* xp, long lgN, const vector<aligned_vector<cmplx_t>>& tab)
 {
   if (lgN == 0) return;
@@ -846,14 +853,14 @@ new_fft_base(cmplx_t* xp, long lgN, const vector<aligned_vector<cmplx_t>>& tab)
 
 
 // Implements the truncated FFT interface, described above.
-// All computations done in place, and xp should point to 
+// All computations done in place, and xp should point to
 // an array of size N, all of which may be overwitten
 // during the computation.
 
 #define PGFFT_NEW_FFT_THRESH (10)
 
 static
-void new_fft_short(cmplx_t* xp, long yn, long xn, long lgN, 
+void new_fft_short(cmplx_t* xp, long yn, long xn, long lgN,
                    const vector<aligned_vector<cmplx_t>>& tab)
 {
   long N = 1L << lgN;
@@ -892,7 +899,7 @@ void new_fft_short(cmplx_t* xp, long yn, long xn, long lgN,
   else
     {
       yn -= half;
-      
+
       cmplx_t* RESTRICT xp0 = xp;
       cmplx_t* RESTRICT xp1 = xp + half;
       const cmplx_t* RESTRICT wtab = &tab[lgN][0];
@@ -936,7 +943,7 @@ static void new_fft(cmplx_t* xp, long lgN, const vector<aligned_vector<cmplx_t>>
 
 // requires size divisible by 8
 static void
-new_ifft_layer(cmplx_t* xp, long blocks, long size, 
+new_ifft_layer(cmplx_t* xp, long blocks, long size,
                const cmplx_t* RESTRICT wtab)
 {
 
@@ -976,12 +983,12 @@ new_ifft_first_two_layers(cmplx_t* xp, long blocks, const cmplx_t* wtab)
 
       //cmplx_t v3 = CMUL(t, w);
       // DIRT: relies on w == (0,1)
-      cmplx_t v3(-t.imag(), t.real()); 
+      cmplx_t v3(-t.imag(), t.real());
 
       xp[0] = v0 + v2;
       xp[2] = v0 - v2;
-      xp[1] = v1 + v3; 
-      xp[3] = v1 - v3; 
+      xp[1] = v1 + v3;
+      xp[3] = v1 - v3;
 
       xp += 4;
     }
@@ -1143,7 +1150,7 @@ void new_ifft_short2(cmplx_t* xp, long yn, long lgN, const vector<aligned_vector
 
 
 
-static void 
+static void
 new_ifft(cmplx_t* xp, long lgN, const vector<aligned_vector<cmplx_t>>& tab)
 {
    long N = 1L << lgN;
@@ -1169,7 +1176,7 @@ compute_table(vector<aligned_vector<cmplx_t>>& tab, long k)
   }
 }
 
-static long 
+static long
 RevInc(long a, long k)
 {
    long j, m;
@@ -1205,7 +1212,7 @@ BRC_init(long k, vector<long>& rev)
 
 
 static
-void BasicBitReverseCopy(cmplx_t *B, 
+void BasicBitReverseCopy(cmplx_t *B,
                          const cmplx_t *A, long k, const vector<long>& rev)
 {
    long n = 1L << k;
@@ -1215,7 +1222,7 @@ void BasicBitReverseCopy(cmplx_t *B,
       B[rev[i]] = A[i];
 }
 
-static void 
+static void
 COBRA(cmplx_t * RESTRICT B, const cmplx_t * RESTRICT A, long k,
       const vector<long>& rev, const vector<long> rev1)
 {
@@ -1227,12 +1234,12 @@ COBRA(cmplx_t * RESTRICT B, const cmplx_t * RESTRICT A, long k,
    cmplx_t * RESTRICT T = &BRC_temp[0];
    const long * RESTRICT rev_k1 = &rev[0];
    const long * RESTRICT rev_q = &rev1[0];
-   
+
 
    for (long b = 0; b < (1L << k1); b++) {
-      long b1 = rev_k1[b]; 
+      long b1 = rev_k1[b];
       for (long a = 0; a < (1L << q); a++) {
-         long a1 = rev_q[a]; 
+         long a1 = rev_q[a];
          cmplx_t *T_p = &T[a1 << q];
          const cmplx_t *A_p = &A[(a << (k1+q)) + (b << q)];
 #ifdef USE_PD4
@@ -1251,14 +1258,14 @@ COBRA(cmplx_t * RESTRICT B, const cmplx_t * RESTRICT A, long k,
          long c1 = rev_q[c];
          cmplx_t *B_p = &B[(c1 << (k1+q)) + (b1 << q)];
          cmplx_t *T_p = &T[c];
-         for (long a1 = 0; a1 < (1l << q); a1++) 
+         for (long a1 = 0; a1 < (1l << q); a1++)
             B_p[a1] = T_p[a1 << q];
       }
    }
 }
 
 
-static long 
+static long
 pow2_precomp(long n, vector<long>& rev, vector<long>& rev1, vector<aligned_vector<cmplx_t>>& tab)
 {
    // k = least k such that 2^k >= n
@@ -1267,7 +1274,7 @@ pow2_precomp(long n, vector<long>& rev, vector<long>& rev1, vector<aligned_vecto
 
    compute_table(tab, k);
 
-   
+
    if (k <= PGFFT_BRC_THRESH) {
       BRC_init(k, rev);
    }
@@ -1277,7 +1284,7 @@ pow2_precomp(long n, vector<long>& rev, vector<long>& rev1, vector<aligned_vecto
       BRC_init(k1, rev);
       BRC_init(q, rev1);
    }
-   
+
 
    return k;
 }
@@ -1302,8 +1309,8 @@ pow2_comp(const cmplx_t* src, cmplx_t* dst,
 }
 
 static long
-bluestein_precomp(long n, aligned_vector<cmplx_t>& powers, 
-                  aligned_vector<cmplx_t>& Rb, 
+bluestein_precomp(long n, aligned_vector<cmplx_t>& powers,
+                  aligned_vector<cmplx_t>& Rb,
                   vector<aligned_vector<cmplx_t>>& tab)
 {
    // k = least k such that 2^k >= 2*n-1
@@ -1336,9 +1343,9 @@ bluestein_precomp(long n, aligned_vector<cmplx_t>& powers,
       ldbl angle = (2 * pi) * (ldbl(i_sqr)/ldbl(2*n));
       Rb[n-1+i] = Rb[n-1-i] = cmplx_t(std::cos(angle), std::sin(angle));
    }
-  
+
    new_fft(&Rb[0], k, tab);
-    
+
    double Ninv = 1/double(N);
    for (long i = 0; i < N; i++)
       Rb[i] *= Ninv;
@@ -1350,15 +1357,15 @@ bluestein_precomp(long n, aligned_vector<cmplx_t>& powers,
 
 static void
 bluestein_comp(const cmplx_t* src, cmplx_t* dst,
-                  long n, long k, const aligned_vector<cmplx_t>& powers, 
-                  const aligned_vector<cmplx_t>& Rb, 
+                  long n, long k, const aligned_vector<cmplx_t>& powers,
+                  const aligned_vector<cmplx_t>& Rb,
                   const vector<aligned_vector<cmplx_t>>& tab)
 {
    long N = 1L << k;
 
    aligned_vector<cmplx_t> x(N);
 
-   for (long i = 0; i < n; i++) 
+   for (long i = 0; i < n; i++)
       x[i] = MUL(src[i], powers[i]);
 
    for (long i = n; i < N; i++)
@@ -1372,8 +1379,8 @@ bluestein_comp(const cmplx_t* src, cmplx_t* dst,
    new_ifft(&x[0], k, tab);
 
    double Ninv = 1/double(N);
-   
-   for (long i = 0; i < n; i++) 
+
+   for (long i = 0; i < n; i++)
       dst[i] = MUL(x[n-1+i], powers[i]);
 
 }
@@ -1382,8 +1389,8 @@ bluestein_comp(const cmplx_t* src, cmplx_t* dst,
 
 
 static long
-bluestein_precomp1(long n, aligned_vector<cmplx_t>& powers, 
-                  aligned_vector<cmplx_t>& Rb, 
+bluestein_precomp1(long n, aligned_vector<cmplx_t>& powers,
+                  aligned_vector<cmplx_t>& Rb,
                   vector<aligned_vector<cmplx_t>>& tab)
 {
    // k = least k such that 2^k >= 2*n-1
@@ -1438,9 +1445,9 @@ bluestein_precomp1(long n, aligned_vector<cmplx_t>& powers,
 	 Rb[i] = cmplx_t(std::cos(angle), std::sin(angle));
       }
    }
-  
+
    new_fft(&Rb[0], k, tab);
-    
+
    double Ninv = 1/double(N);
    for (long i = 0; i < N; i++)
       Rb[i] *= Ninv;
@@ -1451,16 +1458,16 @@ bluestein_precomp1(long n, aligned_vector<cmplx_t>& powers,
 
 
 static void
-bluestein_comp1(const cmplx_t* src, cmplx_t* dst, 
-                  long n, long k, const aligned_vector<cmplx_t>& powers, 
-                  const aligned_vector<cmplx_t>& Rb, 
+bluestein_comp1(const cmplx_t* src, cmplx_t* dst,
+                  long n, long k, const aligned_vector<cmplx_t>& powers,
+                  const aligned_vector<cmplx_t>& Rb,
                   const vector<aligned_vector<cmplx_t>>& tab)
 {
    long N = 1L << k;
 
    aligned_vector<cmplx_t> x(N);
 
-   for (long i = 0; i < n; i++) 
+   for (long i = 0; i < n; i++)
       x[i] = MUL(src[i], powers[i]);
 
    long len = FFTRoundUp(2*n-1, k);
@@ -1477,8 +1484,8 @@ bluestein_comp1(const cmplx_t* src, cmplx_t* dst,
    new_ifft_short1(&x[0], len, k, tab);
 
    double Ninv = 1/double(N);
-   
-   for (long i = 0; i < n-1; i++) 
+
+   for (long i = 0; i < n-1; i++)
       dst[i] = MUL(x[i] + x[n+i], powers[i]);
 
    dst[n-1] = MUL(x[n-1], powers[n-1]);
@@ -1492,9 +1499,9 @@ bluestein_comp1(const cmplx_t* src, cmplx_t* dst,
 
 static long choose_strategy(long n)
 {
-   if (n == 1) return PGFFT_STRATEGY_NULL; 
+   if (n == 1) return PGFFT_STRATEGY_NULL;
 
-   if ((n & (n - 1)) == 0) return PGFFT_STRATEGY_POW2; 
+   if ((n & (n - 1)) == 0) return PGFFT_STRATEGY_POW2;
 
    if (!PGFFT_USE_TRUNCATED_BLUE) return PGFFT_STRATEGY_BLUE;
 
@@ -1521,7 +1528,7 @@ PGFFT::PGFFT(long n_)
 
    switch (strategy) {
 
-   case PGFFT_STRATEGY_NULL: 
+   case PGFFT_STRATEGY_NULL:
       break;
 
    case PGFFT_STRATEGY_POW2:
@@ -1545,7 +1552,7 @@ void PGFFT::apply(const cmplx_t* src, cmplx_t* dst) const
 {
    switch (strategy) {
 
-   case PGFFT_STRATEGY_NULL: 
+   case PGFFT_STRATEGY_NULL:
       break;
 
    case PGFFT_STRATEGY_POW2:
@@ -1630,3 +1637,4 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ****************************************************************************/
 
+#pragma GCC diagnostic pop

@@ -176,7 +176,7 @@ public:
     return false; // a nonzero diagonal
   }
 
-  void multiply(Ctxt* ctxt, long dim, bool oneTransform) 
+  void multiply(Ctxt* ctxt, long dim, bool oneTransform)
   {
     assert(dim >= 0 && dim <= ea.dimension());
     RBak bak; bak.save(); ea.getTab().restoreContext(); // backup NTL modulus
@@ -186,7 +186,7 @@ public:
     long D = (dim == ea.dimension()) ? 1 : ea.sizeOfDimension(dim);
 
     const PAlgebra& zMStar = ea.getContext().zMStar;
-    long p = zMStar.getP(); 
+    long p = zMStar.getP();
     long m = zMStar.getM();
 
     std::vector< std::vector<RX> > diag(nslots); // scratch space
@@ -260,7 +260,7 @@ public:
             acc[f] += tmp1;
           }
       } // if (ctxt!=nullptr)
- 
+
       // allocate constants and store in the cache, if needed
      if (buildCache==cachezzX) for (long f=0; f<d; f++) {
           (*zCache)[d*e +f].reset( new zzX(*(zzxPtr[f])) );
@@ -377,7 +377,7 @@ public:
       }
     }
   }
-}; 
+};
 void blockMatMul1D(NewPlaintextArray& pa, MatMulBase& mat, long dim)
 {
   switch (mat.getEA().getTag()) {

@@ -16,16 +16,61 @@
 
 namespace helib {
 
-template <>
-helib::PolyMod Ptxt<helib::BGV>::convertToSlot(const Context& context,
-                                               long slot)
+void deserialize(std::istream& is, std::complex<double>& num)
 {
-  helib::PolyMod data(NTL::ZZX(slot), context.slotRing);
+  std::vector<std::stringstream> parts =
+      extractTokenizeRegion(is, '[', ']', ',');
+  if (parts.empty()) {
+    // Empty section. Use default value.
+    num = 0;
+    return;
+  }
+
+  if (parts.size() > 2) {
+    // Too many elements.
+    throw IOError(
+        "CKKS expects maximum of 2 values per slot (real, imag). Got " +
+        std::to_string(parts.size()) + " instead.");
+  }
+
+  // Actual parsing and setup
+  double tmp;
+  parts[0] >> tmp;
+  num.real(tmp);
+  if (parts.size() == 2) {
+    // If more than 1 part, set also real value;
+    parts[1] >> tmp;
+    num.imag(tmp);
+  }
+}
+
+void serialize(std::ostream& os, const std::complex<double>& num)
+{
+  struct stream_modifier
+  {
+    explicit stream_modifier(std::ostream& os) : os(os), ss(os.precision())
+    {
+      os << std::setprecision(std::numeric_limits<double>::digits10);
+    };
+    ~stream_modifier() { os << std::setprecision(ss); };
+    std::ostream& os;
+    std::streamsize ss;
+  };
+
+  stream_modifier sm(os);
+
+  os << "[" << num.real() << ", " << num.imag() << "]";
+}
+
+template <>
+PolyMod Ptxt<BGV>::convertToSlot(const Context& context, long slot)
+{
+  PolyMod data(NTL::ZZX(slot), context.slotRing);
   return data;
 }
 
 template <>
-std::complex<double> Ptxt<helib::CKKS>::convertToSlot(const Context&, long slot)
+std::complex<double> Ptxt<CKKS>::convertToSlot(const Context&, long slot)
 {
   return {static_cast<double>(slot), 0};
 }
@@ -52,12 +97,12 @@ Ptxt<Scheme>::Ptxt(const Context& context, const SlotType& value) :
 
 template <>
 template <>
-void Ptxt<helib::BGV>::setData(const NTL::ZZX& value)
+void Ptxt<BGV>::setData(const NTL::ZZX& value)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call setData on default-constructed Ptxt");
-  helib::PolyMod poly(value, context->slotRing);
-  std::vector<helib::PolyMod> poly_vec(context->ea->size(), poly);
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call setData on default-constructed Ptxt");
+  PolyMod poly(value, context->slotRing);
+  std::vector<PolyMod> poly_vec(context->ea->size(), poly);
   setData(poly_vec);
 }
 
@@ -89,27 +134,26 @@ bool Ptxt<Scheme>::isValid() const
 template <typename Scheme>
 size_t Ptxt<Scheme>::size() const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call size on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call size on default-constructed Ptxt");
   return this->slots.size();
 }
 
 template <typename Scheme>
 long Ptxt<Scheme>::lsize() const
 {
-  helib::assertTrue<helib::LogicError>(
-      isValid(), "Cannot call lsize on default-constructed Ptxt");
+  assertTrue<LogicError>(isValid(),
+                         "Cannot call lsize on default-constructed Ptxt");
   return this->size();
 }
 
 template <typename Scheme>
 void Ptxt<Scheme>::setData(const std::vector<SlotType>& data)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call setData on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
-      helib::lsize(data) <= context->ea->size(),
-      "Cannot setData to Ptxt: not enough slots");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call setData on default-constructed Ptxt");
+  assertTrue<RuntimeError>(helib::lsize(data) <= context->ea->size(),
+                           "Cannot setData to Ptxt: not enough slots");
 
   // Need to verify that they all match
   assertSlotsCompatible(data);
@@ -124,19 +168,20 @@ void Ptxt<Scheme>::setData(const std::vector<SlotType>& data)
 template <typename Scheme>
 void Ptxt<Scheme>::setData(const SlotType& value)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call setData on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call setData on default-constructed Ptxt");
   setData(std::vector<SlotType>(context->ea->size(), value));
 }
 
 template <>
 template <>
-void Ptxt<helib::BGV>::decodeSetData(const NTL::ZZX& data)
+void Ptxt<BGV>::decodeSetData(const NTL::ZZX& data)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call decodeSetData on default-constructed Ptxt");
-  helib::PolyMod poly(context->slotRing);
-  std::vector<helib::PolyMod> poly_vec(context->ea->size(), poly);
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call decodeSetData on default-constructed Ptxt");
+  PolyMod poly(context->slotRing);
+  std::vector<PolyMod> poly_vec(context->ea->size(), poly);
   std::vector<NTL::ZZX> ptxt(context->ea->size());
   context->ea->decode(ptxt, data);
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
@@ -182,11 +227,12 @@ Ptxt<Scheme>& Ptxt<Scheme>::random()
 }
 
 template <typename Scheme>
-const std::vector<typename Ptxt<Scheme>::SlotType>&
-Ptxt<Scheme>::getSlotRepr() const
+const std::vector<typename Ptxt<Scheme>::SlotType>& Ptxt<Scheme>::getSlotRepr()
+    const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call getSlotRepr on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call getSlotRepr on default-constructed Ptxt");
   return slots;
 }
 
@@ -196,10 +242,10 @@ Ptxt<Scheme>::getSlotRepr() const
  * @note Only enabled for the `BGV` scheme.
  **/
 template <>
-NTL::ZZX Ptxt<helib::BGV>::getPolyRepr() const
+NTL::ZZX Ptxt<BGV>::getPolyRepr() const
 {
-  helib::assertTrue<helib::LogicError>(
-      isValid(), "Cannot call getPolyRepr on default-constructed Ptxt");
+  assertTrue<LogicError>(isValid(),
+                         "Cannot call getPolyRepr on default-constructed Ptxt");
   NTL::ZZX repr;
   std::vector<NTL::ZZX> slots_data(context->ea->size());
   for (std::size_t i = 0; i < slots_data.size(); ++i) {
@@ -215,10 +261,10 @@ NTL::ZZX Ptxt<helib::BGV>::getPolyRepr() const
  * @note Only enabled for the `CKKS` scheme.
  **/
 template <>
-NTL::ZZX Ptxt<helib::CKKS>::getPolyRepr() const
+NTL::ZZX Ptxt<CKKS>::getPolyRepr() const
 {
-  helib::assertTrue<helib::LogicError>(
-      isValid(), "Cannot call getPolyRepr on default-constructed Ptxt");
+  assertTrue<LogicError>(isValid(),
+                         "Cannot call getPolyRepr on default-constructed Ptxt");
   NTL::ZZX repr;
   context->ea->getCx().encode(repr, slots);
   return repr;
@@ -227,30 +273,32 @@ NTL::ZZX Ptxt<helib::CKKS>::getPolyRepr() const
 template <typename Scheme>
 typename Ptxt<Scheme>::SlotType& Ptxt<Scheme>::operator[](long i)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot access elements of default-constructed Ptxt");
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot access elements of default-constructed Ptxt");
   return this->slots[i];
 }
 
 template <typename Scheme>
 typename Ptxt<Scheme>::SlotType Ptxt<Scheme>::operator[](long i) const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot access elements of default-constructed Ptxt");
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot access elements of default-constructed Ptxt");
   return this->slots[i];
 }
 
 template <typename Scheme>
 typename Ptxt<Scheme>::SlotType& Ptxt<Scheme>::at(long i)
 {
-  helib::assertInRange(i, 0l, lsize(), "Index out of range");
+  assertInRange(i, 0l, lsize(), "Index out of range");
   return operator[](i);
 }
 
 template <typename Scheme>
 typename Ptxt<Scheme>::SlotType Ptxt<Scheme>::at(long i) const
 {
-  helib::assertInRange(i, 0l, lsize(), "Index out of range");
+  assertInRange(i, 0l, lsize(), "Index out of range");
   return operator[](i);
 }
 
@@ -270,14 +318,15 @@ bool Ptxt<Scheme>::operator!=(const Ptxt<Scheme>& other) const
 template <typename Scheme>
 Ptxt<Scheme> Ptxt<Scheme>::operator*(const Ptxt<Scheme>& rhs) const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator* on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call operator* on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
       rhs.isValid(),
       "Cannot call operator* with a default-constructed Ptxt as the right "
       "operand");
-  helib::assertEq<helib::LogicError>(
-      *context, *(rhs.context), "Ptxts must have matching contexts");
+  assertEq<LogicError>(*context,
+                       *(rhs.context),
+                       "Ptxts must have matching contexts");
   Ptxt<Scheme> result = *this;
   result *= rhs;
   return result;
@@ -286,14 +335,15 @@ Ptxt<Scheme> Ptxt<Scheme>::operator*(const Ptxt<Scheme>& rhs) const
 template <typename Scheme>
 Ptxt<Scheme> Ptxt<Scheme>::operator+(const Ptxt<Scheme>& rhs) const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator+ on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call operator+ on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
       rhs.isValid(),
       "Cannot call operator+ with a default-constructed Ptxt as the right "
       "operand");
-  helib::assertEq<helib::LogicError>(
-      *context, *(rhs.context), "Ptxts must have matching contexts");
+  assertEq<LogicError>(*context,
+                       *(rhs.context),
+                       "Ptxts must have matching contexts");
   Ptxt<Scheme> result = *this;
   result += rhs;
   return result;
@@ -302,14 +352,15 @@ Ptxt<Scheme> Ptxt<Scheme>::operator+(const Ptxt<Scheme>& rhs) const
 template <typename Scheme>
 Ptxt<Scheme> Ptxt<Scheme>::operator-(const Ptxt<Scheme>& rhs) const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator- on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call operator- on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
       rhs.isValid(),
       "Cannot call operator- with a default-constructed Ptxt as the right "
       "operand");
-  helib::assertEq<helib::LogicError>(
-      *context, *(rhs.context), "Ptxts must have matching contexts");
+  assertEq<LogicError>(*context,
+                       *(rhs.context),
+                       "Ptxts must have matching contexts");
   Ptxt<Scheme> result = *this;
   result -= rhs;
   return result;
@@ -318,14 +369,16 @@ Ptxt<Scheme> Ptxt<Scheme>::operator-(const Ptxt<Scheme>& rhs) const
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::operator*=(const Ptxt<Scheme>& otherPtxt)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator*= on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call operator*= on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
       otherPtxt.isValid(),
       "Cannot call operator*= with a default-constructed Ptxt as the right "
       "operand");
-  helib::assertEq<helib::LogicError>(
-      *context, *(otherPtxt.context), "Ptxts must have matching contexts");
+  assertEq<LogicError>(*context,
+                       *(otherPtxt.context),
+                       "Ptxts must have matching contexts");
   for (unsigned i = 0; i < this->slots.size(); i++) {
     this->slots[i] *= otherPtxt.slots[i];
   }
@@ -335,8 +388,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::operator*=(const Ptxt<Scheme>& otherPtxt)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::operator*=(const SlotType& scalar)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator*= on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call operator*= on default-constructed Ptxt");
   for (auto& x : this->slots)
     x *= scalar;
   return *this;
@@ -345,14 +399,16 @@ Ptxt<Scheme>& Ptxt<Scheme>::operator*=(const SlotType& scalar)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::operator+=(const Ptxt<Scheme>& otherPtxt)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator+= on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call operator+= on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
       otherPtxt.isValid(),
       "Cannot call operator+= with a default-constructed Ptxt as the right "
       "operand");
-  helib::assertEq<helib::LogicError>(
-      *context, *(otherPtxt.context), "Ptxts must have matching contexts");
+  assertEq<LogicError>(*context,
+                       *(otherPtxt.context),
+                       "Ptxts must have matching contexts");
   for (unsigned i = 0; i < this->slots.size(); i++) {
     this->slots[i] += otherPtxt.slots[i];
   }
@@ -362,8 +418,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::operator+=(const Ptxt<Scheme>& otherPtxt)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::operator+=(const SlotType& scalar)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator+= on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call operator+= on default-constructed Ptxt");
   for (auto& x : this->slots)
     x += scalar;
   return *this;
@@ -372,14 +429,16 @@ Ptxt<Scheme>& Ptxt<Scheme>::operator+=(const SlotType& scalar)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::operator-=(const Ptxt<Scheme>& otherPtxt)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator-= on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call operator-= on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
       otherPtxt.isValid(),
       "Cannot call operator-= with a default-constructed Ptxt as the right "
       "operand");
-  helib::assertEq<helib::LogicError>(
-      *context, *(otherPtxt.context), "Ptxts must have matching contexts");
+  assertEq<LogicError>(*context,
+                       *(otherPtxt.context),
+                       "Ptxts must have matching contexts");
   for (unsigned i = 0; i < this->slots.size(); i++) {
     this->slots[i] -= otherPtxt.slots[i];
   }
@@ -389,8 +448,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::operator-=(const Ptxt<Scheme>& otherPtxt)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::operator-=(const SlotType& scalar)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call operator-= on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call operator-= on default-constructed Ptxt");
   for (auto& x : this->slots)
     x -= scalar;
   return *this;
@@ -399,8 +459,8 @@ Ptxt<Scheme>& Ptxt<Scheme>::operator-=(const SlotType& scalar)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::negate()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call negate on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call negate on default-constructed Ptxt");
   for (auto& slot : slots) {
     slot = -slot;
   }
@@ -410,16 +470,17 @@ Ptxt<Scheme>& Ptxt<Scheme>::negate()
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::multiplyBy(const Ptxt<Scheme>& otherPtxt)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call multiplyBy on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call multiplyBy on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
       otherPtxt.isValid(),
       "Cannot call multiplyBy with default-constructed Ptxt as argument");
-  helib::assertEq<helib::LogicError>(
-      *context, *(otherPtxt.context), "Ptxts must have matching contexts");
+  assertEq<LogicError>(*context,
+                       *(otherPtxt.context),
+                       "Ptxts must have matching contexts");
   if (size() != otherPtxt.size()) {
-    throw ::helib::RuntimeError(
-        "Cannot multiply by plaintext of different size");
+    throw RuntimeError("Cannot multiply by plaintext of different size");
   }
   return *this *= otherPtxt;
 }
@@ -428,30 +489,31 @@ template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::multiplyBy2(const Ptxt& otherPtxt1,
                                         const Ptxt& otherPtxt2)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call multiplyBy2 on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(
+      isValid(),
+      "Cannot call multiplyBy2 on default-constructed Ptxt");
+  assertTrue<RuntimeError>(
       otherPtxt1.isValid(),
       "Cannot call multiplyBy2 with default-constructed Ptxt as first "
       "argument");
-  helib::assertTrue<helib::RuntimeError>(
+  assertTrue<RuntimeError>(
       otherPtxt2.isValid(),
       "Cannot call multiplyBy2 with default-constructed Ptxt as second "
       "argument");
-  helib::assertEq<helib::LogicError>(
-      *context, *(otherPtxt1.context), "Ptxts must have matching contexts");
-  helib::assertEq<helib::LogicError>(
-      *context, *(otherPtxt2.context), "Ptxts must have matching contexts");
-  helib::assertEq<helib::RuntimeError>(
-      size(),
-      otherPtxt1.size(),
-      "Cannot multiply by plaintext of different size - "
-      "first argument has wrong size");
-  helib::assertEq<helib::RuntimeError>(
-      size(),
-      otherPtxt2.size(),
-      "Cannot multiply by plaintext of different size - "
-      "second argument has wrong size");
+  assertEq<LogicError>(*context,
+                       *(otherPtxt1.context),
+                       "Ptxts must have matching contexts");
+  assertEq<LogicError>(*context,
+                       *(otherPtxt2.context),
+                       "Ptxts must have matching contexts");
+  assertEq<RuntimeError>(size(),
+                         otherPtxt1.size(),
+                         "Cannot multiply by plaintext of different size - "
+                         "first argument has wrong size");
+  assertEq<RuntimeError>(size(),
+                         otherPtxt2.size(),
+                         "Cannot multiply by plaintext of different size - "
+                         "second argument has wrong size");
   for (std::size_t i = 0; i < size(); ++i)
     slots[i] *= otherPtxt1.slots[i] * otherPtxt2.slots[i];
 
@@ -461,32 +523,33 @@ Ptxt<Scheme>& Ptxt<Scheme>::multiplyBy2(const Ptxt& otherPtxt1,
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::square()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call square on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call square on default-constructed Ptxt");
   return multiplyBy(*this);
 }
 
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::cube()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call cube on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call cube on default-constructed Ptxt");
   return multiplyBy2(*this, *this);
 }
 
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::power(long e)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call power on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call power on default-constructed Ptxt");
   if (e < 1) {
-    throw helib::InvalidArgument("Cannot raise a Ptxt to a non positive "
-                                 "exponent");
+    throw InvalidArgument("Cannot raise a Ptxt to a non positive "
+                          "exponent");
   } else if (e > 1) {
     // exponentiation through squaring.
     std::vector<SlotType> multiplier(slots);
     std::vector<SlotType> result(
-        multiplier.size(), Ptxt<Scheme>::convertToSlot(*(this->context), 1l));
+        multiplier.size(),
+        Ptxt<Scheme>::convertToSlot(*(this->context), 1l));
     for (; e; e >>= 1u) {
       if (e & 1u)
         for (std::size_t i = 0; i < size(); ++i)
@@ -503,8 +566,8 @@ Ptxt<Scheme>& Ptxt<Scheme>::power(long e)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::rotate(long amount)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call rotate on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call rotate on default-constructed Ptxt");
   amount = mcMod(amount, size());
   if (amount == 0)
     return *this;
@@ -519,17 +582,17 @@ Ptxt<Scheme>& Ptxt<Scheme>::rotate(long amount)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::rotate1D(long dim, long amount)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call rotate1D on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call rotate1D on default-constructed Ptxt");
   if (slots.size() == 1)
     return *this; // Nothing to do (only one slot)
   const PAlgebra& zMStar = context->zMStar;
   long num_gens = zMStar.numOfGens();
-  helib::assertInRange<helib::LogicError>(
-      dim,
-      0l,
-      num_gens,
-      "Dimension must be between 0 and number of generators");
+  assertInRange<LogicError>(dim,
+                            0l,
+                            num_gens,
+                            "Dimension must be between 0 and "
+                            "number of generators");
   // Copying in slots to avoid default PolyMod issues.
   std::vector<SlotType> new_slots(slots);
   long ord = context->ea->sizeOfDimension(dim);
@@ -545,7 +608,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::rotate1D(long dim, long amount)
   // incremented by amount.  This new set of coordinates is then converted back
   // to the new index of the slot.
   for (long index = 0; index < lsize(); ++index) {
-    // Vector to hold the coordinate representaiton of the current index.
+    // Vector to hold the coordinate representation of the current index.
     std::vector<long> coord(indexToCoord(index));
     // Increments the coordinate of the specific dimension (dim) by amount
     // and reduces it modulo the order of the dimension.
@@ -562,8 +625,8 @@ Ptxt<Scheme>& Ptxt<Scheme>::rotate1D(long dim, long amount)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::shift(long amount)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call shift on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call shift on default-constructed Ptxt");
   if (amount == 0)
     return *this;
   if (std::abs(amount) >= lsize()) {
@@ -572,8 +635,8 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift(long amount)
   }
 
   rotate(amount);
-  for (std::size_t i = 0; i < size(); ++i)
-    if ((i - amount) < 0 || (i - amount) >= size())
+  for (long i = 0; i < lsize(); ++i)
+    if ((i - amount) < 0 || (i - amount) >= lsize())
       slots[i] = 0;
 
   return *this;
@@ -582,8 +645,8 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift(long amount)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::shift1D(long dim, long amount)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call shift1D on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call shift1D on default-constructed Ptxt");
   if (amount == 0)
     return *this;
   if (slots.size() == 1 ||
@@ -594,11 +657,11 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift1D(long dim, long amount)
   // NOTE: There is some code duplication here and in rotate1D
   const PAlgebra& zMStar = context->zMStar;
   long num_gens = zMStar.numOfGens();
-  helib::assertInRange<helib::LogicError>(
-      dim,
-      0l,
-      num_gens,
-      "Dimension must be between 0 and number of generators");
+  assertInRange<LogicError>(dim,
+                            0l,
+                            num_gens,
+                            "Dimension must be between 0 and "
+                            "number of generators");
   // Copying in slots to avoid default PolyMod issues.
   std::vector<SlotType> new_slots(slots);
   long ord = context->ea->sizeOfDimension(dim);
@@ -609,7 +672,7 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift1D(long dim, long amount)
   // An extra check is then performed to see if the shift operation caused an
   // element to wrap around in which case it is replaced with 0.
   for (long new_index = 0; new_index < lsize(); ++new_index) {
-    // Vector to hold the coordinate representaiton of the current index.
+    // Vector to hold the coordinate representation of the current index.
     std::vector<long> coord(indexToCoord(new_index));
     // Perform the shift backwards to obtain the locations of the 0 values
     // first.
@@ -630,10 +693,10 @@ Ptxt<Scheme>& Ptxt<Scheme>::shift1D(long dim, long amount)
 template <>
 Ptxt<BGV>& Ptxt<BGV>::automorph(long k)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call automorph on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(context->zMStar.inZmStar(k),
-                                         "k must be an element in Zm*");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call automorph on default-constructed Ptxt");
+  assertTrue<RuntimeError>(context->zMStar.inZmStar(k),
+                           "k must be an element in Zm*");
   NTL::ZZX poly;
   switch (context->ea->getTag()) {
   case PA_GF2_tag: {
@@ -645,7 +708,7 @@ Ptxt<BGV>& Ptxt<BGV>::automorph(long k)
     break;
   }
   default:
-    throw helib::LogicError("Could not find valid tag for BGV automorphism");
+    throw LogicError("Could not find valid tag for BGV automorphism");
   }
   return *this;
 }
@@ -653,10 +716,10 @@ Ptxt<BGV>& Ptxt<BGV>::automorph(long k)
 template <>
 Ptxt<CKKS>& Ptxt<CKKS>::automorph(long k)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call automorph on default-constructed Ptxt");
-  helib::assertTrue<helib::RuntimeError>(context->zMStar.inZmStar(k),
-                                         "k must be an element in Zm*");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call automorph on default-constructed Ptxt");
+  assertTrue<RuntimeError>(context->zMStar.inZmStar(k),
+                           "k must be an element in Zm*");
   return rotate(context->zMStar.indexOfRep(k));
 }
 
@@ -664,8 +727,9 @@ template <>
 template <>
 Ptxt<BGV>& Ptxt<BGV>::frobeniusAutomorph(long j)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call frobeniusAutomorph on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call frobeniusAutomorph on "
+                           "default-constructed Ptxt");
   long d = context->zMStar.getOrdP();
   if (d == 1)
     return *this; // Nothing to do.
@@ -677,8 +741,8 @@ Ptxt<BGV>& Ptxt<BGV>::frobeniusAutomorph(long j)
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::replicate(long pos)
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call replicate on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call replicate on default-constructed Ptxt");
   for (auto& slot : slots)
     slot = slots[pos];
   return *this;
@@ -687,8 +751,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::replicate(long pos)
 template <typename Scheme>
 std::vector<Ptxt<Scheme>> Ptxt<Scheme>::replicateAll() const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call replicateAll on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call replicateAll on "
+                           "default-constructed Ptxt");
   std::vector<Ptxt<Scheme>> ret(size(), *this);
   for (std::size_t i = 0; i < size(); ++i) {
     ret[i].replicate(i);
@@ -700,19 +765,20 @@ template <>
 template <>
 Ptxt<CKKS>& Ptxt<CKKS>::complexConj()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call complexConj on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call complexConj on "
+                           "default-constructed Ptxt");
   for (auto& x : this->slots)
     x = std::conj(x);
   return *this;
-};
+}
 
 template <>
 template <>
 Ptxt<CKKS> Ptxt<CKKS>::real() const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call real on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call real on default-constructed Ptxt");
   Ptxt<CKKS> real(*this);
   for (auto& x : real.slots)
     x = x.real();
@@ -723,8 +789,8 @@ template <>
 template <>
 Ptxt<CKKS> Ptxt<CKKS>::imag() const
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call imag on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call imag on default-constructed Ptxt");
   Ptxt<CKKS> imag(*this);
   for (auto& x : imag.slots)
     x = x.imag();
@@ -734,8 +800,9 @@ Ptxt<CKKS> Ptxt<CKKS>::imag() const
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::runningSums()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call runningSums on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call runningSums on "
+                           "default-constructed Ptxt");
   for (std::size_t i = 1; i < size(); ++i)
     slots[i] += slots[i - 1];
   return *this;
@@ -744,8 +811,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::runningSums()
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::totalSums()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call totalSums on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call totalSums on "
+                           "default-constructed Ptxt");
   SlotType sum = slots[0];
   for (std::size_t i = 1; i < size(); ++i)
     sum += slots[i];
@@ -756,8 +824,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::totalSums()
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::incrementalProduct()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call incrementalProduct on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call incrementalProduct on "
+                           "default-constructed Ptxt");
   for (std::size_t i = 1; i < size(); ++i)
     slots[i] *= slots[i - 1];
   return *this;
@@ -766,8 +835,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::incrementalProduct()
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::totalProduct()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call totalProduct on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call totalProduct on "
+                           "default-constructed Ptxt");
   SlotType product = slots[0];
   for (std::size_t i = 1; i < size(); ++i)
     product *= slots[i];
@@ -778,8 +848,8 @@ Ptxt<Scheme>& Ptxt<Scheme>::totalProduct()
 template <typename Scheme>
 Ptxt<Scheme>& Ptxt<Scheme>::mapTo01()
 {
-  helib::assertTrue<helib::RuntimeError>(
-      isValid(), "Cannot call mapTo01 on default-constructed Ptxt");
+  assertTrue<RuntimeError>(isValid(),
+                           "Cannot call mapTo01 on default-constructed Ptxt");
   for (auto& slot : slots)
     if (slot != Ptxt<Scheme>::convertToSlot(*context, 0l))
       slot = 1;
@@ -790,10 +860,9 @@ template <typename Scheme>
 long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)
 {
   const PAlgebra& zMStar = context->zMStar;
-  helib::assertEq<helib::LogicError>(
-      coords.size(),
-      static_cast<unsigned long>(zMStar.numOfGens()),
-      "Coord must have same size as hypercube structure");
+  assertEq<LogicError>(coords.size(),
+                       static_cast<std::size_t>(zMStar.numOfGens()),
+                       "Coord must have same size as hypercube structure");
   long index = 0;
   // Convert the coordinates into its corresponding index by computing the
   // expression Sum_{i} (g_i Prod_{j} e_j), where g is the generator of the
@@ -815,8 +884,7 @@ std::vector<long> Ptxt<Scheme>::indexToCoord(long index)
 {
   const PAlgebra& zMStar = context->zMStar;
   long num_gens = zMStar.numOfGens();
-  helib::assertInRange<helib::LogicError>(
-      index, 0l, lsize(), "Index out of range");
+  assertInRange<LogicError>(index, 0l, lsize(), "Index out of range");
   std::vector<long> coords(num_gens);
   long coord = 0;
   long product = 1;
@@ -840,10 +908,9 @@ template <>
 template <>
 PA_GF2::RX Ptxt<BGV>::slotsToRX<PA_GF2>() const
 {
-  helib::assertEq<helib::LogicError>(
-      context->alMod.getPPowR(),
-      2l,
-      "Plaintext modulus p^r must be equal to 2^1");
+  assertEq<LogicError>(context->alMod.getPPowR(),
+                       2l,
+                       "Plaintext modulus p^r must be equal to 2^1");
   return NTL::conv<NTL::GF2X>(getPolyRepr());
 }
 
@@ -851,10 +918,9 @@ template <>
 template <>
 PA_zz_p::RX Ptxt<BGV>::slotsToRX<PA_zz_p>() const
 {
-  helib::assertNeq<helib::LogicError>(
-      context->alMod.getPPowR(),
-      2l,
-      "Plaintext modulus p^r must not be equal to 2^1");
+  assertNeq<LogicError>(context->alMod.getPPowR(),
+                        2l,
+                        "Plaintext modulus p^r must not be equal to 2^1");
   return NTL::conv<NTL::zz_pX>(getPolyRepr());
 }
 
@@ -863,9 +929,9 @@ void Ptxt<BGV>::assertSlotsCompatible(const std::vector<SlotType>& slots) const
 {
   for (const auto& slot : slots) {
     if (slot.getp2r() != context->slotRing->p2r)
-      throw helib::RuntimeError("Mismatching p^r found");
+      throw RuntimeError("Mismatching p^r found");
     if (slot.getG() != context->slotRing->G)
-      throw helib::RuntimeError("Mismatching G found");
+      throw RuntimeError("Mismatching G found");
   }
 }
 
@@ -894,6 +960,86 @@ NTL::ZZX Ptxt<BGV>::automorph_internal(long k)
   pContext.restore();
   return ret;
 }
+
+template <typename Scheme>
+void deserialize(std::istream& is, Ptxt<Scheme>& ptxt)
+{
+  assertTrue<RuntimeError>(ptxt.isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+  std::vector<std::stringstream> parts =
+      extractTokenizeRegion(is, '[', ']', ',');
+
+  if (helib::lsize(parts) > ptxt.context->ea->size()) {
+    std::stringstream err_msg;
+    err_msg << "Cannot deserialize to Ptxt: not enough slots.  "
+            << "Trying to deserialize " << parts.size() << " elements.  "
+            << "Got " << ptxt.context->ea->size() << " slots.";
+    throw IOError(err_msg.str());
+  }
+
+  std::vector<typename Scheme::SlotType> data(parts.size());
+  for (std::size_t i = 0; i < parts.size(); ++i) {
+    typename Scheme::SlotType slot(
+        Ptxt<Scheme>::convertToSlot(*ptxt.context, 0L));
+    deserialize(parts[i], slot);
+    data[i] = std::move(slot);
+  }
+
+  is.clear();
+  ptxt.setData(data);
+}
+
+// Explicit function instantiation
+template void deserialize<BGV>(std::istream& is, Ptxt<BGV>& ptxt);
+template void deserialize<CKKS>(std::istream& is, Ptxt<CKKS>& ptxt);
+
+template <typename Scheme>
+void serialize(std::ostream& os, const Ptxt<Scheme>& ptxt)
+{
+  os << "[";
+  for (std::size_t i = 0; i < ptxt.slots.size(); ++i) {
+    serialize(os, ptxt.slots[i]);
+    if (i != ptxt.slots.size() - 1) {
+      os << ", ";
+    }
+  }
+  os << "]";
+}
+
+// Explicit function instantiation
+template void serialize<BGV>(std::ostream& os, const Ptxt<BGV>& ptxt);
+template void serialize<CKKS>(std::ostream& os, const Ptxt<CKKS>& ptxt);
+
+template <typename Scheme>
+std::istream& operator>>(std::istream& is, Ptxt<Scheme>& ptxt)
+{
+  assertTrue<RuntimeError>(ptxt.isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+  deserialize(is, ptxt);
+  return is;
+}
+
+// Explicit operator << instantiation
+template std::istream& operator>><BGV>(std::istream& is, Ptxt<BGV>& ptxt);
+template std::istream& operator>><CKKS>(std::istream& is, Ptxt<CKKS>& ptxt);
+
+template <typename Scheme>
+std::ostream& operator<<(std::ostream& os, const Ptxt<Scheme>& ptxt)
+{
+  assertTrue<RuntimeError>(ptxt.isValid(),
+                           "Cannot operate on invalid "
+                           "(default constructed) Ptxt");
+
+  serialize(os, ptxt);
+  return os;
+}
+
+// Explicit operator << instantiation
+template std::ostream& operator<<<BGV>(std::ostream& os, const Ptxt<BGV>& ptxt);
+template std::ostream& operator<<<CKKS>(std::ostream& os,
+                                        const Ptxt<CKKS>& ptxt);
 
 // Explicit class instantiation.
 template class Ptxt<BGV>;

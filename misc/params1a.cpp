@@ -11,22 +11,24 @@
  */
 
 
-// This version generates only m's that are products of distinct primes:
-// no prime powers are allowed, and no "coalescing" of distinct prime 
-// factors is allowed.  This comports with the new analysis of
-// bootstrapping.
+// This version generates only m's that are products of distinct prime powers,
+// and no "coalescing" of distinct prime factors is allowed.
+// This comports with the new analysis of bootstrapping.
 
 
 namespace std {}
 namespace NTL {}
 
-using namespace std;
-using namespace NTL;
 
-#include "NumbTh.h"
-#include "PAlgebra.h"
+#include "helib/NumbTh.h"
+#include "helib/PAlgebra.h"
+#include "helib/ArgMap.h"
 #include <iomanip>
 #include <cassert>
+
+using namespace std;
+using namespace NTL;
+using namespace helib;
 
 // A heuristic measure for how good a certain (depth,cost) is
 long weighted_cost(long cost, long depth)
@@ -35,7 +37,7 @@ long weighted_cost(long cost, long depth)
 }
 
 // Reverse a vector
-Vec<long> rev(const Vec<long>& v) 
+Vec<long> rev(const Vec<long>& v)
 {
    long n = v.length();
    Vec<long> w;
@@ -65,7 +67,7 @@ long computePhi(const Pair<long,long>& x)
 bool comparePhi(const Pair<long,long>& x, const Pair<long,long>& y)
 {
    return computePhi(x) < computePhi(y);
-} 
+}
 
 /* Usage: params_x.exe [ name=value ]...
  *  gens flag to output mvec, gens, and ords  [ default=0 ]
@@ -77,7 +79,7 @@ bool comparePhi(const Pair<long,long>& x, const Pair<long,long>& y)
  */
 int main(int argc, char *argv[])
 {
-   ArgMapping amap;
+   ArgMap amap;
 
    long gens_flag = 0;
    amap.arg("gens", gens_flag, "flag to output mvec, gens, and ords");
@@ -164,7 +166,7 @@ int main(int argc, char *argv[])
          PAlgebra pal1(m1, p);
          if (pal1.numOfGens() > 1) continue;
 
-         bool good = (pal1.numOfGens() == 0 || 
+         bool good = (pal1.numOfGens() == 0 ||
                       (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
 
          long cost = phisum - phivec[i] + d-1;
@@ -197,7 +199,7 @@ int main(int argc, char *argv[])
             PAlgebra pal1(m1, p);
             if (pal1.numOfGens() > 1) continue;
 
-            bool good = (pal1.numOfGens() == 0 || 
+            bool good = (pal1.numOfGens() == 0 ||
                          (pal1.numOfGens() == 1 && pal1.SameOrd(0)));
 
             long cost = phisum - (phivec[i] + phivec[j]) + d-1;
@@ -253,7 +255,7 @@ int main(int argc, char *argv[])
       for (long i = 1; i < k2; i++) {
          vector<long> gens, ords;
          findGenerators(gens, ords, fac2[i], 1);
-         
+
          assert(gens.size() == 1);
          assert(ords.size() == 1);
          assert(ords[0] > 0);
@@ -282,8 +284,8 @@ int main(int argc, char *argv[])
          cout << setw(6) << phim << "  ";
          cout << setw(4) << d << "  ";
          cout << setw(6) << m << "  ";
-   
-   
+
+
          cout << "m=";
          for (long i = 0; i < k; i++) {
            if (i > 0) cout << "*";
@@ -295,13 +297,13 @@ int main(int argc, char *argv[])
            if (i == gen_index2) cout << "}";
          }
          cout << " ";
-   
-         if (!good_gen) 
+
+         if (!good_gen)
             cout << ":-( ";
-   
-         cout << "m/phim(m)=" 
+
+         cout << "m/phim(m)="
               << double(long(100*double(m)/double(phim)))/100.0 << " ";
-   
+
          cout << "C=" << best_cost << " ";
          cout << "D=" << best_depth << " ";
          cout << "E=" << NumTwos(conv<ZZ>(d)) << " ";
@@ -309,8 +311,8 @@ int main(int argc, char *argv[])
 
       if (gens_flag) {
          cout << " mvec=" << "\"" << rev(fac2) << "\"" << " ";
-         cout << "gens=" << "\"" << trunc(rev(global_gen)) << "\"" << " "; 
-         cout << "ords=" << "\"" << trunc(rev(ordvec)) << "\"" << " "; 
+         cout << "gens=" << "\"" << trunc(rev(global_gen)) << "\"" << " ";
+         cout << "ords=" << "\"" << trunc(rev(ordvec)) << "\"" << " ";
       }
 
 

@@ -1,5 +1,6 @@
 # Building and running the new tests
-1. To build and run the new tests, one must pass `-DENABLE_TEST=on` to cmake -
+
+To build and run the new tests, one must pass `-DENABLE_TEST=on` to cmake -
 see [INSTALL.md](INSTALL.md).  The google test library will then be downloaded
 and the correct targets will be defined for cmake.
 2. To compile them, `make` as normal from a build directory.
@@ -64,8 +65,8 @@ teardown code/data should be placed in this class.
 7. If using parameterized tests, create some parameters to run
 the tests with using the `INSTANTIATE_TEST_CASE_P` macro.
 
-## Futher reading
-More details on how to use these google test utilities can be found by the helpful google test documentation:
+## Further reading More details on how to use these google test utilities can be
+found by the helpful google test documentation:
 
 - Basic overview: https://github.com/google/googletest/
 - Introduction to using google test:

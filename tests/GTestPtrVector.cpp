@@ -37,7 +37,7 @@ class GTestPtrVector : public ::testing::Test
 protected:
   GTestPtrVector() : vLength(6), zero(0){};
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 
   const int vLength;
   MyClass zero;
@@ -214,6 +214,6 @@ TEST_F(GTestPtrVector, pointerVectorsRemainConsistent)
     // Tidy up newline-free previous output
     std::cout << std::endl;
   }
-};
+}
 
 } // namespace

@@ -11,8 +11,8 @@
  */
 
 /* GTestReplicate.cpp - Testing the functionality of replicating one
- * slot from a vector acress the whole vector (or replicating each slot
- * to a full cipehrtext)
+ * slot from a vector access the whole vector (or replicating each slot
+ * to a full ciphertext)
  */
 
 #include <cassert>
@@ -80,8 +80,9 @@ protected:
       L(GetParam().L),
       bnd(GetParam().bnd),
       B(GetParam().B),
-      context(
-          (helib::setDryRun(helib_test::dry), helib::setTimersOn(), m), p, r),
+      context((helib::setDryRun(helib_test::dry), helib::setTimersOn(), m),
+              p,
+              r),
       secretKey((buildModChain(context, L, /*c=*/2), context)),
       G(createG(context, p, d)),
       publicKey((printContextAndG(context, G),
@@ -103,13 +104,10 @@ protected:
     ea.encode(poly_xp1, xp1);
     xc1 = xc0;
 
-#ifdef DEBUG_PRINTOUT
-    helib::dbgKey = &secretKey;
-    helib::dbgEa = context.ea;
-#endif // DEBUG_PRINTOUT
+    helib::setupDebugGlobals(&secretKey, context.ea);
   };
 
-  virtual void TearDown() override { helib::cleanupGlobals(); }
+  virtual void TearDown() override { helib::cleanupDebugGlobals(); }
 
   const long m;
   const long p;
@@ -145,7 +143,7 @@ protected:
     return ::testing::AssertionSuccess();
   else
     return ::testing::AssertionFailure() << "Replication failed";
-};
+}
 
 class StopReplicate
 {};
@@ -176,9 +174,9 @@ public:
   }
 
   // This method is called for every replicated ciphertext: in the i'th time
-  // that it is called, the cipehrtext will have in all the slots the content
+  // that it is called, the ciphertext will have in all the slots the content
   // of the i'th input slot. In this test program we only decrypt and check
-  // the result, in a real program it will do something with the cipehrtext.
+  // the result, in a real program it will do something with the ciphertext.
   virtual void handle(const helib::Ctxt& ctxt)
   {
 
@@ -215,36 +213,36 @@ TEST_P(GTestReplicate, replicateWorks)
   EXPECT_TRUE(replicationSucceeds(xc1, xc0, ea.size() / 2, secretKey, ea));
   if (!helib_test::noPrint)
     CheckCtxt(xc1, "after replicate");
-};
+}
 
 TEST_P(GTestReplicate, repeatedReplicationWorks)
 {
   // Get some timing results
   for (long i = 0; i < 20 && i < ea.size(); i++) {
     xc1 = xc0;
-    FHE_NTIMER_START(replicate);
+    HELIB_NTIMER_START(replicate);
     helib::replicate(ea, xc1, i);
     EXPECT_TRUE(replicationSucceeds(xc1, xc0, i, secretKey, ea));
-    FHE_NTIMER_STOP(replicate);
+    HELIB_NTIMER_STOP(replicate);
   }
   if (!helib_test::noPrint) {
     helib::printAllTimers();
   }
-};
+}
 
 TEST_P(GTestReplicate, replicateAllReplicatesAccurately)
 {
   if (!helib_test::noPrint) {
     std::cout << "\n** Testing replicateAll()... " << std::flush;
   }
-#ifdef DEBUG_PRINTOUT
+#ifdef HELIB_DEBUG
   helib::replicateVerboseFlag = true;
 #else
   helib::replicateVerboseFlag = false;
 #endif
   ReplicateTester handler(secretKey, ea, xp0, B);
   try {
-    FHE_NTIMER_START(replicateAll);
+    HELIB_NTIMER_START(replicateAll);
     helib::replicateAll(ea, xc0, &handler, bnd);
   } catch (StopReplicate) {
   }
@@ -253,7 +251,7 @@ TEST_P(GTestReplicate, replicateAllReplicatesAccurately)
     std::cout << "total time=" << handler.t_total << " ("
               << ((B > 0) ? B : ea.size()) << " vectors)\n";
   }
-};
+}
 
 INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          GTestReplicate,

@@ -80,7 +80,7 @@ void freshCtxtNoise(zzX& f, const Context& context,
     sampleGaussianBounded(e2, context, sigma);
     sampleGaussian(e3, context, sigma);
   }
-  f = MulMod(s, e1, palg) + MulMod(r, e2, palg) + e3;  
+  f = MulMod(s, e1, palg) + MulMod(r, e2, palg) + e3;
 }
 
 void roundingNoise(zzX& f, const Context& context,
