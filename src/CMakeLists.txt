@@ -186,33 +186,6 @@ set(HELIB_HEADERS
     "${CMAKE_CURRENT_BINARY_DIR}/helib/version.h" # version.h is auto-generated in CMAKE_CURRENT_BINARY_DIR
     )
 
-set(LEGACY_TEST_SRCS
-    "Test_approxNums.cpp"
-    "Test_binaryArith.cpp"
-    "Test_binaryCompare.cpp"
-    "Test_Bin_IO.cpp"
-    "Test_bootstrapping.cpp"
-    "Test_EaCx.cpp"
-    "Test_EvalMap.cpp"
-    "Test_extractDigits.cpp"
-    "Test_General.cpp"
-    "Test_intraSlot.cpp"
-    "Test_IO.cpp"
-    "Test_matmul.cpp"
-    "Test_PAlgebra.cpp"
-    "Test_Permutations.cpp"
-    "Test_PolyEval.cpp"
-    "Test_Powerful.cpp"
-    "Test_PtrVector.cpp"
-    "Test_Replicate.cpp"
-    "Test_tableLookup.cpp"
-    "Test_ThinBootstrapping.cpp"
-    "Test_ThinEvalMap.cpp"
-    "Test_Timing.cpp"
-    "Test_thinboot.cpp"
-    "Test_fatboot.cpp"
-    "Test_PGFFT.cpp")
-
 # Add helib target as a shared/static library
 if (BUILD_SHARED)
   add_library(helib SHARED ${HELIB_SRCS} ${HELIB_HEADERS})
@@ -326,17 +299,6 @@ if (BUILD_SHARED)
                             SKIP_BUILD_RPATH OFF
                             BUILD_WITH_INSTALL_RPATH OFF)
 endif (BUILD_SHARED)
-
-if (ENABLE_LEGACY_TEST)
-  foreach (TEST_FILE ${LEGACY_TEST_SRCS})
-    string(REPLACE "\.cpp" "" TEST_NAME "${TEST_FILE}")
-    add_executable(${TEST_NAME} ${TEST_FILE})
-    # NOTE: Legacy tests depend only on HElib.
-    # HElib's PUBLIC attributes will be added automatically when setting HElib
-    # as a dependency.
-    target_link_libraries(${TEST_NAME} helib)
-  endforeach (TEST_FILE)
-endif (ENABLE_LEGACY_TEST)
 
 if (ENABLE_TEST)
   add_subdirectory("${PROJECT_TESTS_DIR}" tests)

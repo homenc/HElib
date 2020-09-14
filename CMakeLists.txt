@@ -87,9 +87,6 @@ if (PACKAGE_BUILD)
   option(FETCH_GMP "Fetch and compile the GMP library (DEFAULT: ON)" ON)
 else (PACKAGE_BUILD)
   # Properties to be enabled when not using PACKAGE_BUILD
-  option(ENABLE_LEGACY_TEST
-         "Build the legacy test files (does not work with PACKAGE_BUILD)"
-         OFF)
 endif (PACKAGE_BUILD)
 
 # Allow GMP_DIR and search in it if not using PACKAGE_BUILD or using
@@ -296,7 +293,6 @@ if (PACKAGE_BUILD)
                -DFETCH_GMP=${FETCH_GMP}
                -DENABLE_TEST=${ENABLE_TEST}
                -DHELIB_DEBUG=${HELIB_DEBUG}
-               -DENABLE_LEGACY_TEST=OFF
     BUILD_ALWAYS ON)
 
   if (ENABLE_TEST)
