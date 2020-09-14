@@ -35,7 +35,9 @@ set(GMP_MINIMAL_VERSION "6.0.0")
 set(NTL_MINIMAL_VERSION "11.0.0")
 
 # The -isysroot flag needs set.
-if (APPLE OR (CMAKE_CXX_PLATFORM_ID STREQUAL "Darwin"))
+if ((APPLE OR (CMAKE_CXX_PLATFORM_ID STREQUAL "Darwin")) AND
+    # This addresses the problem when CMAKE_OSX_SYSROOT is "" (e.g. when /usr/include/sys/types.h exists)
+    NOT CMAKE_OSX_SYSROOT STREQUAL "")
   set(macos_isysroot_flag "-isysroot ${CMAKE_OSX_SYSROOT}")
 else()
   set(macos_isysroot_flag "")
