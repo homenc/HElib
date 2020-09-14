@@ -16,12 +16,8 @@ project(helib
         VERSION 1.1.0
         LANGUAGES CXX)
 
-# Location of the header files
-set(PROJECT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../include")
-# Location of the google tests
-set(PROJECT_TESTS_DIR "${PROJECT_SOURCE_DIR}/../tests")
-# Location of helib headers
-set(HELIB_HEADER_DIR "${PROJECT_INCLUDE_DIR}/helib")
+# Globals HELIB_CMAKE_EXTRA_DIR, HELIB_INCLUDE_DIR, HELIB_HEADER_DIR,
+# HELIB_SOURCE_DIR and HELIB_TESTS_DIR are previously set and forwarded here.
 
 # We assume enable threads is passed correctly (already checked)
 if (HELIB_REQUIRES_PTHREADS)
@@ -49,7 +45,7 @@ configure_file(version.in.cpp
 if (ENABLE_TEST)
   # Download and unpack googletest at configure time
   message(STATUS "Setting up googletest framework")
-  configure_file("${PROJECT_SOURCE_DIR}/../cmake/gtest.cmake"
+  configure_file("${HELIB_CMAKE_EXTRA_DIR}/gtest.cmake"
                  "${CMAKE_CURRENT_BINARY_DIR}/googletest-download/CMakeLists.txt")
   execute_process(
       COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -274,7 +270,7 @@ target_include_directories(
     PUBLIC # NOTE: The includes must be kept in this order to avoid cmake
            # looking for HElib in /usr/local/include
            # Headers used from source/build location:
-           "$<BUILD_INTERFACE:${PROJECT_INCLUDE_DIR}>"
+           "$<BUILD_INTERFACE:${HELIB_INCLUDE_DIR}>"
            # Adding CMAKE_CURRENT_BINARY_DIR to include files to access the
            # auto-generated version.h file.
            "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
@@ -370,7 +366,7 @@ write_basic_package_version_file(
 
 # Generating the basic helibConfig.cmake file
 configure_package_config_file(
-    ${PROJECT_SOURCE_DIR}/../cmake/helibConfig.cmake.in
+    ${HELIB_CMAKE_EXTRA_DIR}/helibConfig.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/helibConfig.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_CMAKEDIR})
 

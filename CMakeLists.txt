@@ -29,6 +29,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Require full C++ standard
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Location of the cmake extra files
+set(HELIB_CMAKE_EXTRA_DIR "${PROJECT_SOURCE_DIR}/cmake")
+# Prefix of the header files (directory to be added to the include list)
+set(HELIB_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
+# Location of helib header files
+set(HELIB_HEADER_DIR "${HELIB_INCLUDE_DIR}/helib")
+# Location of the source files
+set(HELIB_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
+# Location of the google tests
+set(HELIB_TESTS_DIR "${PROJECT_SOURCE_DIR}/tests")
+
 # GMP minimal version to be used if not PACKAGE_BUILD
 set(GMP_MINIMAL_VERSION "6.0.0")
 # NTL minimal version to be used if NOT PACKAGE_BUILD
@@ -60,7 +71,7 @@ set_property(CACHE
              STRINGS "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
 # Path containing FindGMP.cmake and FindNTL.cmake
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${HELIB_CMAKE_EXTRA_DIR}")
 
 option(BUILD_SHARED "Build as shared library" OFF)
 
@@ -299,6 +310,11 @@ if (PACKAGE_BUILD)
                -DENABLE_TEST=${ENABLE_TEST}
                -DHELIB_DEBUG=${HELIB_DEBUG}
                -DENABLE_LEGACY_TEST=OFF
+               -DHELIB_CMAKE_EXTRA_DIR=${HELIB_CMAKE_EXTRA_DIR}
+               -DHELIB_INCLUDE_DIR=${HELIB_INCLUDE_DIR}
+               -DHELIB_HEADER_DIR=${HELIB_HEADER_DIR}
+               -DHELIB_SOURCE_DIR=${HELIB_SOURCE_DIR}
+               -DHELIB_TESTS_DIR=${HELIB_TESTS_DIR}
     BUILD_ALWAYS ON)
 
   if (ENABLE_TEST)
