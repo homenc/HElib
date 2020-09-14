@@ -100,13 +100,7 @@ ExternalProject_Add(
     # LOG_TEST ON
 )
 
-if (ENABLE_TEST)
-  set(test_path "${DEPENDENCIES_FOLDER}/Source/ntl_fetched/src")
-  add_test(NAME ntl_check
-           COMMAND ${CMAKE_MAKE_PROGRAM} check
-           WORKING_DIRECTORY ${test_path})
-  unset(test_path)
-endif (ENABLE_TEST)
+# No tests will be performed for NTL
 
 # Removing static library libntl.a.
 set(ntl_static_lib
