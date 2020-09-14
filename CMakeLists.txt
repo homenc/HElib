@@ -39,6 +39,8 @@ set(HELIB_HEADER_DIR "${HELIB_INCLUDE_DIR}/helib")
 set(HELIB_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
 # Location of the google tests
 set(HELIB_TESTS_DIR "${PROJECT_SOURCE_DIR}/tests")
+# Location of the directory containing the test binary (runTests)
+set(HELIB_TEST_BIN_DIR "tests")
 
 # GMP minimal version to be used if not PACKAGE_BUILD
 set(GMP_MINIMAL_VERSION "6.0.0")
@@ -317,11 +319,17 @@ if (PACKAGE_BUILD)
                -DHELIB_TESTS_DIR=${HELIB_TESTS_DIR}
     BUILD_ALWAYS ON)
 
-  if (ENABLE_TEST)
-    add_test(NAME helib_check
-             COMMAND ${CMAKE_MAKE_PROGRAM} test
-             WORKING_DIRECTORY "${DEPENDENCIES_FOLDER}/Build/helib_external")
-  endif (ENABLE_TEST)
+    if (ENABLE_TEST)
+      # Tests for PACKAGE_BUILD are located in
+      # ${DEPENDENCIES_FOLDER}/Build/helib_external/${HELIB_TEST_BIN_DIR}.
+      # So Update its location and add the tests to cmake avoiding creating
+      # their targets (as they are already built by ExternalProject_Add)
+      set(HELIB_TEST_BIN_DIR
+          "${DEPENDENCIES_FOLDER}/Build/helib_external/${HELIB_TEST_BIN_DIR}")
+      set(ONLY_ADD_TEST ON)
+      add_subdirectory("${HELIB_TESTS_DIR}" tests)
+      unset(ONLY_ADD_TEST)
+    endif (ENABLE_TEST)
 
   # To install copy the whole PACKAGE_DIR directory to the defined prefix
   install(

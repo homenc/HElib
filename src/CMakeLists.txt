@@ -335,7 +335,10 @@ if (ENABLE_LEGACY_TEST)
 endif (ENABLE_LEGACY_TEST)
 
 if (ENABLE_TEST)
-  add_subdirectory("${PROJECT_TESTS_DIR}" tests)
+  # Add tests targets (so thy will be built) and also all tests to cmake.
+  set(ONLY_ADD_TEST OFF)
+  add_subdirectory("${HELIB_TESTS_DIR}" tests)
+  unset(ONLY_ADD_TEST)
 endif (ENABLE_TEST)
 
 # Installing helib
