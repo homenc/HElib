@@ -20,6 +20,8 @@ project(helib
 set(PROJECT_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../include")
 # Location of the google tests
 set(PROJECT_TESTS_DIR "${PROJECT_SOURCE_DIR}/../tests")
+# Location of helib headers
+set(HELIB_HEADER_DIR "${PROJECT_INCLUDE_DIR}/helib")
 
 # We assume enable threads is passed correctly (already checked)
 if (HELIB_REQUIRES_PTHREADS)
@@ -35,6 +37,14 @@ else ()
   set(CMAKE_INSTALL_CMAKEDIR
       "${CMAKE_INSTALL_DATAROOTDIR}/cmake/${PROJECT_NAME}")
 endif ()
+
+# Generate version.{h,cpp}
+configure_file(${HELIB_HEADER_DIR}/version.in.h
+               ${CMAKE_CURRENT_BINARY_DIR}/helib/version.h
+               @ONLY)
+configure_file(version.in.cpp
+               ${CMAKE_CURRENT_BINARY_DIR}/version.cpp
+               @ONLY)
 
 if (ENABLE_TEST)
   # Download and unpack googletest at configure time
@@ -113,9 +123,10 @@ set(HELIB_SRCS
     "sample.cpp"
     "tableLookup.cpp"
     "timing.cpp"
-    "zzX.cpp")
+    "zzX.cpp"
+    "${CMAKE_CURRENT_BINARY_DIR}/version.cpp" # version.cpp is auto-generated in CMAKE_CURRENT_BINARY_DIR
+    )
 
-set(HELIB_HEADER_DIR "${PROJECT_INCLUDE_DIR}/helib")
 set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/helib.h"
     "${HELIB_HEADER_DIR}/apiAttributes.h"
@@ -171,34 +182,9 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/exceptions.h"
     "${HELIB_HEADER_DIR}/PGFFT.h"
     "${HELIB_HEADER_DIR}/fhe_stats.h"
-    "${HELIB_HEADER_DIR}/zeroValue.h")
-
-set(LEGACY_TEST_SRCS
-    "Test_approxNums.cpp"
-    "Test_binaryArith.cpp"
-    "Test_binaryCompare.cpp"
-    "Test_Bin_IO.cpp"
-    "Test_bootstrapping.cpp"
-    "Test_EaCx.cpp"
-    "Test_EvalMap.cpp"
-    "Test_extractDigits.cpp"
-    "Test_General.cpp"
-    "Test_intraSlot.cpp"
-    "Test_IO.cpp"
-    "Test_matmul.cpp"
-    "Test_PAlgebra.cpp"
-    "Test_Permutations.cpp"
-    "Test_PolyEval.cpp"
-    "Test_Powerful.cpp"
-    "Test_PtrVector.cpp"
-    "Test_Replicate.cpp"
-    "Test_tableLookup.cpp"
-    "Test_ThinBootstrapping.cpp"
-    "Test_ThinEvalMap.cpp"
-    "Test_Timing.cpp"
-    "Test_thinboot.cpp"
-    "Test_fatboot.cpp"
-    "Test_PGFFT.cpp")
+    "${HELIB_HEADER_DIR}/zeroValue.h"
+    "${CMAKE_CURRENT_BINARY_DIR}/helib/version.h" # version.h is auto-generated in CMAKE_CURRENT_BINARY_DIR
+    )
 
 # Add helib target as a shared/static library
 if (BUILD_SHARED)
@@ -262,6 +248,9 @@ target_include_directories(
            # looking for HElib in /usr/local/include
            # Headers used from source/build location:
            "$<BUILD_INTERFACE:${PROJECT_INCLUDE_DIR}>"
+           # Adding CMAKE_CURRENT_BINARY_DIR to include files to access the
+           # auto-generated version.h file.
+           "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>"
            # Headers used from the installed location:
            "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>")
 
@@ -310,17 +299,6 @@ if (BUILD_SHARED)
                             SKIP_BUILD_RPATH OFF
                             BUILD_WITH_INSTALL_RPATH OFF)
 endif (BUILD_SHARED)
-
-if (ENABLE_LEGACY_TEST)
-  foreach (TEST_FILE ${LEGACY_TEST_SRCS})
-    string(REPLACE "\.cpp" "" TEST_NAME "${TEST_FILE}")
-    add_executable(${TEST_NAME} ${TEST_FILE})
-    # NOTE: Legacy tests depend only on HElib.
-    # HElib's PUBLIC attributes will be added automatically when setting HElib
-    # as a dependency.
-    target_link_libraries(${TEST_NAME} helib)
-  endforeach (TEST_FILE)
-endif (ENABLE_LEGACY_TEST)
 
 if (ENABLE_TEST)
   add_subdirectory("${PROJECT_TESTS_DIR}" tests)

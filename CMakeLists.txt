@@ -35,7 +35,9 @@ set(GMP_MINIMAL_VERSION "6.0.0")
 set(NTL_MINIMAL_VERSION "11.0.0")
 
 # The -isysroot flag needs set.
-if (APPLE OR (CMAKE_CXX_PLATFORM_ID STREQUAL "Darwin"))
+if ((APPLE OR (CMAKE_CXX_PLATFORM_ID STREQUAL "Darwin")) AND
+    # This addresses the problem when CMAKE_OSX_SYSROOT is "" (e.g. when /usr/include/sys/types.h exists)
+    NOT CMAKE_OSX_SYSROOT STREQUAL "")
   set(macos_isysroot_flag "-isysroot ${CMAKE_OSX_SYSROOT}")
 else()
   set(macos_isysroot_flag "")
@@ -87,9 +89,6 @@ if (PACKAGE_BUILD)
   option(FETCH_GMP "Fetch and compile the GMP library (DEFAULT: ON)" ON)
 else (PACKAGE_BUILD)
   # Properties to be enabled when not using PACKAGE_BUILD
-  option(ENABLE_LEGACY_TEST
-         "Build the legacy test files (does not work with PACKAGE_BUILD)"
-         OFF)
 endif (PACKAGE_BUILD)
 
 # Allow GMP_DIR and search in it if not using PACKAGE_BUILD or using
@@ -296,7 +295,6 @@ if (PACKAGE_BUILD)
                -DFETCH_GMP=${FETCH_GMP}
                -DENABLE_TEST=${ENABLE_TEST}
                -DHELIB_DEBUG=${HELIB_DEBUG}
-               -DENABLE_LEGACY_TEST=OFF
     BUILD_ALWAYS ON)
 
   if (ENABLE_TEST)

@@ -24,7 +24,7 @@ LEGACY_TESTS=../misc/legacy_tests/
 # Put these definitions in the file local-defs, which will be included
 # if found.  ====> PUT ONLY *ABSOLUTE PATHS* IN local-defs <====
 # You can also overwrite COPT in this local file.
-# See local-def.example for an example.
+# See local-defs.example for an example.
 include $(wildcard local-defs)
 
 #

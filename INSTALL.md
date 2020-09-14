@@ -232,8 +232,6 @@ set to `OFF`, there should either exist a system-installed GMP library, or
 - `GMP_DIR`: Prefix of the GMP library.  Ignored if `FETCH_GMP=ON`.
 
 ### Parameters specific to option 2 (library build)
-- `ENABLE_LEGACY_TEST=ON/OFF` (default is `OFF`): Build old test system 
-  (deprecated).
 - `GMP_DIR`: Prefix of the GMP library.
 - `NTL_DIR`: Prefix of the NTL library.
 
