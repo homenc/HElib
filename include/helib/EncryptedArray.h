@@ -1727,6 +1727,12 @@ bool equals(const EncryptedArray& ea,
             const PlaintextArray& pa,
             const std::vector<NTL::ZZX>& other);
 
+bool equals(const EncryptedArray& ea, 
+	    const PlaintextArray& pa,
+	    const PlaintextArray& other,
+	    double tolerance, double floor);
+
+
 void add(const EncryptedArray& ea,
          PlaintextArray& pa,
          const PlaintextArray& other);
@@ -1748,6 +1754,7 @@ void applyPerm(const EncryptedArray& ea,
                const NTL::Vec<long>& pi);
 
 void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
+
 
 //=====================================
 
@@ -1833,6 +1840,15 @@ inline bool operator!=(const PtxtArray& a, const PtxtArray& b)
 {
   assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   return !equals(a.ea, a.pa, b.pa);
+}
+
+// this function enables the syntax a == Approx(b),
+// defined in NumbTh.h.
+inline bool approx_equal(const PtxtArray& a, const PtxtArray& b,
+                         double tolerance, double floor)
+{
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
+  return equals(a.ea, a.pa, b.pa, tolerance, floor);
 }
 
 inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)

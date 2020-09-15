@@ -987,6 +987,20 @@ public:
     convert(odata, other);
     res = (data == odata);
   }
+
+
+  // exact comparison...not very usefule
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other,
+                    double tolerance, double floor)
+  {
+    CPA_BOILER(type)
+
+    const std::vector<RX>& odata = other.getData<type>();
+    res = (data == odata);
+  }
 };
 
 template <>
@@ -995,6 +1009,7 @@ class equals_pa_impl<PA_cx>
 public:
   PA_INJECT(PA_cx)
 
+  // exact comparison...nor very useful
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
                     bool& res,
                     const PlaintextArray& pa,
@@ -1002,18 +1017,8 @@ public:
   {
     CPA_BOILER(PA_cx)
 
-    const std::vector<std::complex<double>>& odata = other.getData<PA_cx>();
-    
-    // VJS-FIXME: this detects whether the absolute difference
-    // is at most 0.01. I'm not sure if this makes complete
-    // sense, but I also don't know if any alternatives
-    // make sense.
-    for (long i = 0; i < n; i++) {
-       double diff = std::abs(data[i]-odata[i]);
-       if (diff > 0.01) { res = false; return; }
-    }
-    res = true;
-    return;
+    const std::vector<RX>& odata = other.getData<PA_cx>();
+    res = (data == odata);
   }
 
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
@@ -1030,6 +1035,19 @@ public:
                     const std::vector<NTL::ZZX>& other)
   {
     throw LogicError("function not implemented");
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other,
+                    double tolerance, double floor)
+  {
+    CPA_BOILER(PA_cx)
+
+    const std::vector<RX>& odata = other.getData<PA_cx>();
+    res = approx_equal(data, odata, tolerance, floor);
+          // defined in NumTh.h
   }
 };
 
@@ -1059,6 +1077,26 @@ bool equals(const EncryptedArray& ea,
 {
   bool res;
   ea.dispatch<equals_pa_impl>(res, pa, other);
+  return res;
+}
+
+bool approx_equal(const EncryptedArray& ea,
+                  const PlaintextArray& pa,
+                  const PlaintextArray& other,
+                  double tolerance, double floor)
+{
+  bool res;
+  ea.dispatch<equals_pa_impl>(res, pa, other, tolerance, floor);
+  return res;
+}
+
+bool equals(const EncryptedArray& ea,
+            const PlaintextArray& pa,
+            const PlaintextArray& other,
+            double tolerance, double floor)
+{
+  bool res;
+  ea.dispatch<equals_pa_impl>(res, pa, other, tolerance, floor);
   return res;
 }
 

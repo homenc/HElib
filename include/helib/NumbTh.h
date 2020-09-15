@@ -976,7 +976,7 @@ double RealDist(const std::vector<T>& x, const std::vector<U>& y)
 
 // General mechanisms for comparing approximate numbers
 
-// returns true iff |x-y| < tolerance*max(|y|,floor)
+// returns true iff |x-y| <= tolerance*max(|y|,floor)
 
 // the template mechanism will allow comparisons
 // between scalars of real/complex types, or between vectors
