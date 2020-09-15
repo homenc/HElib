@@ -59,10 +59,10 @@ jobs:
       os: osx
       osx_image: xcode12
       env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
-    # - name: "MacOS Catalina package build"
-    #   os: osx
-    #   osx_image: xcode12
-    #   env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "MacOS Catalina package build"
+      os: osx
+      osx_image: xcode12
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
       
 
 addons:
