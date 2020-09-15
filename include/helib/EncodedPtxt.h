@@ -86,6 +86,8 @@ or nothing at all.
 * eptxt.resetCKKS(poly, mag, scale, err, context) replaces the contents 
      of eptxt with a new EncodedPtxt_CKKS object
 
+* eptxt.reset() empties the contents
+
 The default contructor creates an empty container.
 Copy contructors and assignmemnt operators are available,
    and provide "deep" copy semantics
@@ -163,7 +165,15 @@ public:
     rep.set_ptr(new EncodedPtxt_derived_CKKS(poly, mag, scale, err, context));
   }
 
+  void reset() 
+  {
+    rep.set_ptr(0);
+  }
+
 };
+
+
+
 
 
 // "fat" encodings...same as above, but with DCRT's instead.
@@ -205,6 +215,103 @@ public:
   FatEncodedPtxt_CKKS(const EncodedPtxt_CKKS& eptxt, const IndexSet& s)
     : dcrt(eptxt.getPoly(), eptxt.getContext(), s),
       mag(eptxt.getMag()), scale(eptxt.getScale()), err(eptxt.getErr()) { }
+
+};
+
+class FatEncodedPtxt_base {
+public:
+
+  virtual ~FatEncodedPtxt_base() {}
+
+  virtual FatEncodedPtxt_base* clone() const = 0;
+  // makes this usable with cloned_ptr
+
+  virtual bool isBGV() const { return false; }
+  virtual bool isCKKS() const { return false; }
+
+  virtual const FatEncodedPtxt_BGV& getBGV() const { throw std::bad_cast(); }
+  virtual const FatEncodedPtxt_CKKS& getCKKS() const { throw std::bad_cast(); }
+
+};
+
+class FatEncodedPtxt_derived_BGV : public FatEncodedPtxt_base, 
+                                public FatEncodedPtxt_BGV {
+public:
+
+  virtual FatEncodedPtxt_base* clone() const override 
+  { return new FatEncodedPtxt_derived_BGV(*this); }
+
+  virtual bool isBGV() const override { return true; }
+
+  virtual const FatEncodedPtxt_BGV& getBGV() const override { return *this; }
+
+  using FatEncodedPtxt_BGV::FatEncodedPtxt_BGV;
+};
+
+
+class FatEncodedPtxt_derived_CKKS : public FatEncodedPtxt_base, 
+                                public FatEncodedPtxt_CKKS {
+public:
+
+  virtual FatEncodedPtxt_base* clone() const override 
+  { return new FatEncodedPtxt_derived_CKKS(*this); }
+
+  virtual bool isCKKS() const override { return true; }
+
+  virtual const FatEncodedPtxt_CKKS& getCKKS() const override { return *this; }
+
+  using FatEncodedPtxt_CKKS::FatEncodedPtxt_CKKS;
+};
+
+
+/*
+
+Usage:
+
+  FatEncryptedPtxt feptxt;
+  EncryptedPtxt eptxt;
+  IndexSet s;
+
+  feptxt.expand(eptxt, s);
+  // sets feptxt to an expanded (DCRT) version of eptxt
+  // withthe given IndexSet
+
+  feptxt.reset(); 
+  // empties out feptxt
+
+  // Also supports methods isBGV(), isCKKS(), getBGV(), and getCKKS(),
+  // analogous to EncodedPtxt.
+
+*/
+
+class FatEncodedPtxt {
+  cloned_ptr<FatEncodedPtxt_base> rep;
+
+public:
+
+  bool isBGV() const { return !rep.null() && rep->isBGV(); }
+  bool isCKKS() const { return !rep.null() && rep->isCKKS(); }
+
+  const FatEncodedPtxt_BGV& getBGV() const 
+  { if (rep.null()) throw std::bad_cast(); return rep->getBGV(); }
+
+  const FatEncodedPtxt_CKKS& getCKKS() const 
+  { if (rep.null()) throw std::bad_cast(); return rep->getCKKS(); }
+
+  void expand(const EncodedPtxt& eptxt, const IndexSet& s)
+  {
+    if (eptxt.isBGV())
+      rep.set_ptr(new FatEncodedPtxt_derived_BGV(eptxt.getBGV(), s));
+    else if (eptxt.isCKKS())
+      rep.set_ptr(new FatEncodedPtxt_derived_CKKS(eptxt.getCKKS(), s));
+    else
+      rep.set_ptr(0);
+  }
+
+  void reset() 
+  {
+    rep.set_ptr(0);
+  }
 
 };
 
