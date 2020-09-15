@@ -17,44 +17,44 @@ jobs:
       dist: focal
       compiler: gcc
       env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
-    # - name: "Ubuntu 18.04 lib build clang"
-    #   os: linux
-    #   dist: bionic
-    #   compiler: clang
-    #   env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
-    # - name: "Ubuntu 20.04 lib build clang"
-    #   os: linux
-    #   dist: focal
-    #   compiler: clang
-    #   env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
-    # - name: "Ubuntu 18.04 package build gcc"
-    #   os: linux
-    #   dist: bionic
-    #   compiler: gcc
-    #   env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "Ubuntu 18.04 lib build clang"
+      os: linux
+      dist: bionic
+      compiler: clang
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
+    - name: "Ubuntu 20.04 lib build clang"
+      os: linux
+      dist: focal
+      compiler: clang
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
+    - name: "Ubuntu 18.04 package build gcc"
+      os: linux
+      dist: bionic
+      compiler: gcc
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
     - name: "Ubuntu 20.04 package build gcc"
       os: linux
       dist: focal
       compiler: gcc
       env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
-    # - name: "Ubuntu 18.04 package build clang"
-    #   os: linux
-    #   dist: bionic
-    #   compiler: clang
-    #   env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
-    # - name: "Ubuntu 20.04 package build clang"
-    #   os: linux
-    #   dist: focal
-    #   compiler: clang
-    #   env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "Ubuntu 18.04 package build clang"
+      os: linux
+      dist: bionic
+      compiler: clang
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "Ubuntu 20.04 package build clang"
+      os: linux
+      dist: focal
+      compiler: clang
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
     - name: "MacOS Mojave lib build"
       os: osx
       osx_image: xcode11.3
       env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
-    # - name: "MacOS Mojave package build"
-    #   os: osx
-    #   osx_image: xcode11.3
-    #   env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "MacOS Mojave package build"
+      os: osx
+      osx_image: xcode11.3
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
     - name: "MacOS Catalina lib build"
       os: osx
       osx_image: xcode12
@@ -85,6 +85,6 @@ install:
 
 script:
   - ./ci/build_install_lib.sh "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
-  # - ./ci/test_lib.sh
+  - ./ci/test_lib.sh
   - ./ci/build_test_consumer.sh "examples" "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
   - ./ci/build_test_consumer.sh "utils" "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
