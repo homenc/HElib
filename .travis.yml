@@ -47,18 +47,18 @@ jobs:
     #   dist: focal
     #   compiler: clang
     #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=ON
-    # - name: "MacOS Mojave lib build"
-    #   os: osx
-    #   osx_image: xcode11.3
-    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
+    - name: "MacOS Mojave lib build"
+      os: osx
+      osx_image: xcode11.3
+      env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
     # - name: "MacOS Mojave package build"
     #   os: osx
     #   osx_image: xcode11.3
     #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=ON
-    # - name: "MacOS Catalina lib build"
-    #   os: osx
-    #   osx_image: xcode12
-    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
+    - name: "MacOS Catalina lib build"
+      os: osx
+      osx_image: xcode12
+      env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
     # - name: "MacOS Catalina package build"
     #   os: osx
     #   osx_image: xcode12
@@ -92,4 +92,5 @@ install:
 script:
   - ./ci/build_install_lib.sh "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
   - ./ci/test_lib.sh
-  - ./ci/build_test_consumer.sh "example" "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
+  - ./ci/build_test_consumer.sh "examples" "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
+  - ./ci/build_test_consumer.sh "utils" "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
