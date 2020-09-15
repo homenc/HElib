@@ -1,45 +1,95 @@
 language: cpp
 notifications:
   email: false
-sudo: required
 
-branches:
-  only:
-  - master
-
-before_script:
-  # 
-  - curl -O "https://www.shoup.net/ntl/ntl-11.4.3.tar.gz"
-  - tar --no-same-owner -xf ntl-11.4.3.tar.gz
-  - cd ntl-11.4.3/src
-  - ./configure PREFIX=~/ntl SHARED=on NTL_GMP_LIP=on NTL_THREADS=on NTL_THREAD_BOOST=on
-  - make -j4
-  - make install
-  - cd ../..
-
-  # Build Folder
-  #
-  - mkdir build
-  - cd build
-
-matrix:
+# branches:
+#   only:
+#   - master
+jobs:
   include:
-  - os: linux
-    dist: bionic
-    env:
-      - TEST="Build test"
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - gcc
-          - g++
-          - m4
-          - patchelf
+    - name: "Ubuntu 18.04 lib build gcc"
+      os: linux
+      dist: bionic
+      compiler: gcc
+      env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
+    - name: "Ubuntu 20.04 lib build gcc"
+      os: linux
+      dist: focal
+      compiler: gcc
+      env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
+    # - name: "Ubuntu 18.04 lib build clang"
+    #   os: linux
+    #   dist: bionic
+    #   compiler: clang
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
+    # - name: "Ubuntu 20.04 lib build clang"
+    #   os: linux
+    #   dist: focal
+    #   compiler: clang
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
+    # - name: "Ubuntu 18.04 package build gcc"
+    #   os: linux
+    #   dist: bionic
+    #   compiler: gcc
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=ON
+    # - name: "Ubuntu 20.04 package build gcc"
+    #   os: linux
+    #   dist: focal
+    #   compiler: gcc
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=ON
+    # - name: "Ubuntu 18.04 package build clang"
+    #   os: linux
+    #   dist: bionic
+    #   compiler: clang
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=ON
+    # - name: "Ubuntu 20.04 package build clang"
+    #   os: linux
+    #   dist: focal
+    #   compiler: clang
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=ON
+    # - name: "MacOS Mojave lib build"
+    #   os: osx
+    #   osx_image: xcode11.3
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
+    # - name: "MacOS Mojave package build"
+    #   os: osx
+    #   osx_image: xcode11.3
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=ON
+    # - name: "MacOS Catalina lib build"
+    #   os: osx
+    #   osx_image: xcode12
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=OFF
+    # - name: "MacOS Catalina package build"
+    #   os: osx
+    #   osx_image: xcode12
+    #   env: INSTALL_PREFIX="~/ci_test" PACKAGE_BUILD=ON
+      
 
+addons:
+  apt:
+    packages:
+    - g++
+    - clang
+    - patchelf
+    - cmake
+    - bats
+    update: true
+  homebrew:
+    packages:
+    - cmake
+    - bats-core
+    update: true
+
+# before_install:
+#   - skip
+
+install:
+  - ./ci/install_deps.sh
+
+# before_script:
+#   - skip
 
 script:
-      - cmake -DPACKAGE_BUILD=OFF -DNTL_DIR="/home/travis/ntl/" -DENABLE_TEST=ON .. 
-      - make -j4
-      - ctest -j4
+  - ./ci/build_install_lib.sh "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
+  - ./ci/test_lib.sh
+  - ./ci/build_test_consumer.sh "example" "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
