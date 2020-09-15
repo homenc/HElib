@@ -29,10 +29,10 @@ cd build
 
 # This test is quite brittle, but we can assume PACKAGE_BUILD is ON or OFF
 if [ "${PACKAGE_BUILD}" == "ON" ]; then
-  CMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}/ci_test"
+  CMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}/helib_pack"
 fi
 
-cmake -Dci_test_DIR="${CMAKE_INSTALL_PREFIX}/share/cmake/ci_test" ..
+cmake -Dhelib_DIR="${CMAKE_INSTALL_PREFIX}/share/cmake/helib" ..
 make -j4 VERBOSE=1
 cd "${ROOT_DIR}/${CONSUMER_FOLDER}/tests"
 bats -t .
