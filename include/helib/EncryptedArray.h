@@ -514,14 +514,14 @@ public:
   {
     zzX poly;
     encode(poly, array); 
-    eptxt.resetBGV(poly, getP2R());
+    eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const override
   {
     zzX poly;
     encode(poly, array); 
-    eptxt.resetBGV(poly, getP2R());
+    eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
@@ -538,7 +538,7 @@ public:
     assertTrue(mag < 0 && rescale == 1, "BGV encoding: mag/rescale set must be defaulted");
     zzX poly;
     encode(poly, array); 
-    eptxt.resetBGV(poly, getP2R());
+    eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const override
@@ -552,7 +552,7 @@ public:
   {
     zzX poly;
     encodeUnitSelector(poly, i);
-    eptxt.resetBGV(poly, getP2R());
+    eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
 //===========================================

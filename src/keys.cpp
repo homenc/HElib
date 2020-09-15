@@ -629,6 +629,7 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
 
   assertTrue(!isCKKS(), "Encrypt: mismatched BGV ptxt / CKKS ctxt");
   assertEq(this, &ctxt.pubKey, "Encrypt: public key mismatch");
+  assertEq(&context, &eptxt.getContext(), "Encrypt: context mismatch");
   
   long ptxtSpace = eptxt.getPtxtSpace();
   NTL::ZZX ptxt;
@@ -757,8 +758,9 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const
 
 void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
 {
+  assertTrue(isCKKS(), "Encrypt: mismatched CKKS ptxt / BGV ctxt");
   assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
-
+  assertEq(&context, &eptxt.getContext(), "Encrypt: context mismatch");
 
   NTL::ZZX ptxt;
   convert(ptxt, eptxt.getPoly());

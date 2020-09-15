@@ -150,7 +150,7 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& 
   double err = encodeRoundingError();
   zzX poly;
   CKKS_embedInSlots(poly, array, getPAlgebra(), scale);
-  eptxt.resetCKKS(poly, mag, scale, err);
+  eptxt.resetCKKS(poly, mag, scale, err, getContext());
 }
 
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const PlaintextArray& array,

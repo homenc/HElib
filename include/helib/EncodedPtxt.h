@@ -25,15 +25,17 @@ class EncodedPtxt_BGV {
 private:
   zzX poly;
   long ptxtSpace; 
+  const Context& context;
 
 
 public:
 
   const zzX& getPoly() const { return poly; }
   long getPtxtSpace() const { return ptxtSpace; }
+  const Context& getContext() const { return context; }
 
-  EncodedPtxt_BGV(const zzX& poly_, long ptxtSpace_)
-    : poly(poly_), ptxtSpace(ptxtSpace_) { }
+  EncodedPtxt_BGV(const zzX& poly_, long ptxtSpace_, const Context& context_)
+    : poly(poly_), ptxtSpace(ptxtSpace_), context(context_) { }
 
 };
 
@@ -42,6 +44,7 @@ class EncodedPtxt_CKKS {
 private:
   zzX poly;
   double mag, scale, err;
+  const Context& context;
 
 public:
 
@@ -49,9 +52,11 @@ public:
   double getMag() const { return mag; }
   double getScale() const { return scale; }
   double getErr() const { return err; }
+  const Context& getContext() const { return context; }
 
-  EncodedPtxt_CKKS(const zzX& poly_, double mag_, double scale_, double err_)
-    : poly(poly_), mag(mag_), scale(scale_), err(err_) { }
+  EncodedPtxt_CKKS(const zzX& poly_, double mag_, double scale_, double err_,
+                   const Context& context_)
+    : poly(poly_), mag(mag_), scale(scale_), err(err_), context(context_) { }
 
 };
 
@@ -75,11 +80,11 @@ or nothing at all.
 * eptxt.getCKKS() returns a read-only reference to the contained
      EncodedPtxt_CKKS object (or throws a std::bad_cast exception)
 
-* eptxt.resetBGV(poly, ptxtSpace) replaces the contents of eptxt with a new
-     EncodedPtxt_BGV object
+* eptxt.resetBGV(poly, ptxtSpace, context) replaces the contents 
+     of eptxt with a new EncodedPtxt_BGV object
 
-* eptxt.resetCKKS(poly, mag, scale, err) replaces the contents of eptxt 
-     with a new EncodedPtxt_CKKS object
+* eptxt.resetCKKS(poly, mag, scale, err, context) replaces the contents 
+     of eptxt with a new EncodedPtxt_CKKS object
 
 The default contructor creates an empty container.
 Copy contructors and assignmemnt operators are available,
@@ -148,15 +153,58 @@ public:
   const EncodedPtxt_CKKS& getCKKS() const 
   { if (rep.null()) throw std::bad_cast(); return rep->getCKKS(); }
 
-  void resetBGV(const zzX& poly, long ptxtSpace) 
+  void resetBGV(const zzX& poly, long ptxtSpace, const Context& context) 
   { 
-    rep.set_ptr(new EncodedPtxt_derived_BGV(poly, ptxtSpace));
+    rep.set_ptr(new EncodedPtxt_derived_BGV(poly, ptxtSpace, context));
   }
 
-  void resetCKKS(const zzX& poly, double mag, double scale, double err) 
+  void resetCKKS(const zzX& poly, double mag, double scale, double err, const Context& context) 
   { 
-    rep.set_ptr(new EncodedPtxt_derived_CKKS(poly, mag, scale, err));
+    rep.set_ptr(new EncodedPtxt_derived_CKKS(poly, mag, scale, err, context));
   }
+
+};
+
+
+// "fat" encodings...same as above, but with DCRT's instead.
+
+
+class FatEncodedPtxt_BGV {
+
+private:
+  DoubleCRT dcrt;
+  long ptxtSpace; 
+
+
+public:
+
+  const DoubleCRT& getDCRT() const { return dcrt; }
+  long getPtxtSpace() const { return ptxtSpace; }
+  const Context& getContext() const { return dcrt.getContext(); }
+
+  FatEncodedPtxt_BGV(const EncodedPtxt_BGV& eptxt, const IndexSet& s)
+    : dcrt(eptxt.getPoly(), eptxt.getContext(), s), 
+      ptxtSpace(eptxt.getPtxtSpace()) { }
+
+};
+
+class FatEncodedPtxt_CKKS {
+
+private:
+  DoubleCRT dcrt;
+  double mag, scale, err;
+
+public:
+
+  const DoubleCRT& getDCRT() const { return dcrt; }
+  double getMag() const { return mag; }
+  double getScale() const { return scale; }
+  double getErr() const { return err; }
+  const Context& getContext() const { return dcrt.getContext(); }
+
+  FatEncodedPtxt_CKKS(const EncodedPtxt_CKKS& eptxt, const IndexSet& s)
+    : dcrt(eptxt.getPoly(), eptxt.getContext(), s),
+      mag(eptxt.getMag()), scale(eptxt.getScale()), err(eptxt.getErr()) { }
 
 };
 
