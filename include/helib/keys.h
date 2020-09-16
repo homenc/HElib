@@ -194,16 +194,18 @@ public:
                long ptxtSpace = 0) const;
 
   /**
-   * @brief An estimate for the security level
-   * Returns the estimated security level for the "worst" secret-key associated with
-   * this public-key object. The security estimate is determined by the key's weight
-   * and the context parameters.
+   * @brief An estimate for the security level. The estimated security level
+   * for the "worst" secret-key associated with this public-key object. The
+   * security estimate is determined by the key's weight and the context
+   * parameters.
+   * @return The estimate for the security level.
    **/
-  double securityLevel() const {
+  double securityLevel() const
+  {
     if (isBootstrappable())
       return context.securityLevel(context.rcData.skHwt); // a sparse key
     else
-      return context.securityLevel();  // security level of a "dense" key
+      return context.securityLevel(); // security level of a "dense" key
   }
 
   bool isCKKS() const;
