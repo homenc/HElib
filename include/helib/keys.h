@@ -196,7 +196,7 @@ public:
   /**
    * @brief An estimate for the security level
    * Returns the estimated security level for the "worst" secret-key associated with
-   * this public-key object. Ths security estimate is determined by the key's weight
+   * this public-key object. The security estimate is determined by the key's weight
    * and the context parameters.
    **/
   double securityLevel() const {
