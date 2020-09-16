@@ -48,9 +48,9 @@ $(info )
 
 HEADER = helib.h FHE.h EncryptedArray.h keys.h keySwitching.h Ctxt.h CModulus.h Context.h PAlgebra.h DoubleCRT.h NumbTh.h bluestein.h IndexSet.h timing.h IndexMap.h replicate.h hypercube.h matching.h powerful.h permutations.h polyEval.h multicore.h EvalMap.h matmul.h PtrVector.h PtrMatrix.h intraSlot.h recryption.h debugging.h binaryArith.h binaryCompare.h tableLookup.h binio.h sample.h norms.h zzX.h primeChain.h PGFFT.h fhe_stats.h ArgMap.h randomMatrices.h Ptxt.h PolyMod.h PolyModRing.h log.h
 
-SRC = keys.cpp keySwitching.cpp EncryptedArray.cpp EaCx.cpp Ctxt.cpp CModulus.cpp Context.cpp PAlgebra.cpp DoubleCRT.cpp NumbTh.cpp bluestein.cpp IndexSet.cpp timing.cpp replicate.cpp hypercube.cpp matching.cpp powerful.cpp BenesNetwork.cpp permutations.cpp PermNetwork.cpp OptimizePermutations.cpp eqtesting.cpp polyEval.cpp extractDigits.cpp EvalMap.cpp recryption.cpp debugging.cpp matmul.cpp intraSlot.cpp binaryArith.cpp binaryCompare.cpp tableLookup.cpp binio.cpp sample.cpp norms.cpp zzX.cpp primeChain.cpp PGFFT.cpp fhe_stats.cpp randomMatrices.cpp Ptxt.cpp PolyMod.cpp PolyModRing.cpp log.cpp
+SRC = BenesNetwork.cpp CModulus.cpp Context.cpp Ctxt.cpp DoubleCRT.cpp EaCx.cpp EncryptedArray.cpp EvalMap.cpp IndexSet.cpp NumbTh.cpp OptimizePermutations.cpp PAlgebra.cpp PGFFT.cpp PermNetwork.cpp PolyMod.cpp PolyModRing.cpp Ptxt.cpp binaryArith.cpp binaryCompare.cpp binio.cpp bluestein.cpp debugging.cpp eqtesting.cpp extractDigits.cpp fhe_stats.cpp hypercube.cpp intraSlot.cpp keySwitching.cpp keys.cpp log.cpp matching.cpp matmul.cpp norms.cpp permutations.cpp polyEval.cpp powerful.cpp primeChain.cpp randomMatrices.cpp recryption.cpp replicate.cpp sample.cpp tableLookup.cpp timing.cpp zzX.cpp
 
-OBJ = NumbTh.o timing.o bluestein.o PAlgebra.o  CModulus.o Context.o IndexSet.o DoubleCRT.o keys.o keySwitching.o Ctxt.o EncryptedArray.o EaCx.o replicate.o hypercube.o matching.o powerful.o BenesNetwork.o permutations.o PermNetwork.o OptimizePermutations.o eqtesting.o polyEval.o extractDigits.o EvalMap.o recryption.o debugging.o matmul.o intraSlot.o tableLookup.o binio.o sample.o norms.o zzX.o primeChain.o binaryArith.o binaryCompare.o PGFFT.o fhe_stats.o randomMatrices.o Ptxt.o PolyMod.o PolyModRing.o log.o
+OBJ = BenesNetwork.o CModulus.o Context.o Ctxt.o DoubleCRT.o EaCx.o EncryptedArray.o EvalMap.o IndexSet.o NumbTh.o OptimizePermutations.o PAlgebra.o PGFFT.o PermNetwork.o PolyMod.o PolyModRing.o Ptxt.o binaryArith.o binaryCompare.o binio.o bluestein.o debugging.o eqtesting.o extractDigits.o fhe_stats.o hypercube.o intraSlot.o keySwitching.o keys.o log.o matching.o matmul.o norms.o permutations.o polyEval.o powerful.o primeChain.o randomMatrices.o recryption.o replicate.o sample.o tableLookup.o timing.o zzX.o
 
 TESTPROGS = Test_General_t Test_PAlgebra_t Test_IO_t Test_Bin_IO_t Test_Replicate_t Test_matmul_t Test_Powerful_t Test_Permutations_t Test_Timing_t Test_PolyEval_t Test_extractDigits_t Test_EvalMap_t Test_ThinEvalMap_t Test_bootstrapping_t Test_ThinBootstrapping_t Test_PtrVector_t Test_intraSlot_t Test_binaryArith_t Test_binaryCompare_t Test_tableLookup_t Test_approxNums_t Test_fatboot_t Test_thinboot_t
 
@@ -167,9 +167,9 @@ PGFFT.o: PGFFT.cpp
 %.o: %.cpp
 	$(CC) $(CFLAGS) -c $<
 
-fhe.a: $(OBJ)
+fhe.a: $(OBJ) $(SRC)
 	$(AR) $(ARFLAGS) fhe.a $(OBJ)
-	g++ $(CFLAGS) -MM *.cpp > makedep.d
+	g++ $(CFLAGS) -MM $(SRC) > makedep.d
 
 ./%_t: $(LEGACY_TESTS)%.cpp fhe.a
 	$(CC) $(CFLAGS) -o $@ $< fhe.a $(LDLIBS)
@@ -184,7 +184,7 @@ clean:
 
 # old-style make depend (FIXME: change to modern style?)
 makedep:
-	g++ $(INC_GMP) $(INC_NTL) -std=c++14 -MM *.cpp > makedep.d
+	g++ $(INC_GMP) $(INC_NTL) -std=c++14 -MM $(SRC) > makedep.d
 
 info:
 	: HElib require NTL version 11.4.3 or higher
