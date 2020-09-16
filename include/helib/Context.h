@@ -29,6 +29,68 @@
 namespace helib {
 
 /**
+ * @brief An estimate for the security-level. This has a lower bound of 0.
+ *
+ * This function uses experimental affine approximations to the lwe-estimator
+ * from https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from
+ * Aug-2020 (see script in misc/estimator/lwe-estimator.sage). Let X = n /
+ * log(1/alpha), the security level is estimated as follows:
+ *
+ *   + dense {-1,0,1} keys:      security ~ 3.8*X  -20
+ *   + sparse keys (weight=450): security ~ 3.55*X -12
+ *   + sparse keys (weight=420): security ~ 3.5*X  -10
+ *   + sparse keys (weight=390): security ~ 3.45*X -7
+ *   + sparse keys (weight=360): security ~ 3.4*X  -5
+ *   + sparse keys (weight=330): security ~ 3.35*X -4
+ *   + sparse keys (weight=300): security ~ 3.3*X  -3
+ *   + sparse keys (weight=270): security ~ 3.2*X  +1
+ *   + sparse keys (weight=240): security ~ 3.1*X  +3
+ *   + sparse keys (weight=210): security ~ 3*X    +6
+ *   + sparse keys (weight=180): security ~ 2.83*X +10
+ *   + sparse keys (weight=150): security ~ 2.67*X +13
+ *   + sparse keys (weight=120): security ~ 2.4*X  +19
+ */
+inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
+{
+  if (hwt < 0 || (hwt > 0 && hwt < 120)) {
+    throw LogicError("Cannot estimate security for keys of weight<120");
+  }
+
+  // clang-format off
+  constexpr double hwgts[] =
+      {120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450};
+  constexpr double slopes[] =
+      {2.4, 2.67, 2.83, 3.0, 3.1, 3.3, 3.3, 3.35, 3.4, 3.45, 3.5, 3.55};
+  constexpr double cnstrms[] =
+      {19, 13, 10, 6, 3, 1, -3, -4, -5, -7, -10, -12};
+  // clang-format on
+
+  constexpr size_t numWghts = sizeof(hwgts) / sizeof(hwgts[0]);
+
+  const size_t idx = (hwt - 120) / 30; // index into the array above
+  double slope = 0, consterm = 0;
+  if (hwt == 0) { // dense keys
+    slope = 3.8;
+    consterm = -20;
+  } else if (idx < numWghts - 1) { 
+    // estimate prms on a line from prms[i] to prms[i+1]
+    // how far into this interval
+    double a = double(hwt - hwgts[idx]) / (hwgts[idx + 1] - hwgts[idx]);
+    slope = slopes[idx] + a * (slopes[idx + 1] - slopes[idx]);
+    consterm = cnstrms[idx] + a * (cnstrms[idx + 1] - cnstrms[idx]);
+  } else { 
+    // Use the params corresponding to largest weight (450 above)
+    slope = slopes[numWghts - 1];
+    consterm = cnstrms[numWghts - 1];
+  }
+
+  double x = n / log2AlphaInv;
+  double ret = slope * x + consterm;
+
+  return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
+}
+
+/**
  * @brief Returns smallest parameter m satisfying various constraints:
  * @param k security parameter
  * @param L number of levels
@@ -420,20 +482,30 @@ public:
     return std::ceil(logOfProduct(primes) / log(2.0));
   }
 
-  //! @brief An estimate for the security-level. This has a lower bound of 0.
-  double securityLevel() const
+  /**
+   * @brief An estimate for the security-level. This has a lower bound of 0.
+   *
+   * This function uses experimental affine approximations to the lwe-estimator
+   * from https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from
+   * Aug-2020 (see script in misc/estimator/lwe-estimator.sage).
+   *
+   * Let s=3.2 if m is a power of two, or s=3.2*sqrt(m) otherwise. For the
+   * estimator we use alpha=s/q (so log2AlphaInv = log_2(q/s)), and n=phi(m).
+   */
+  double securityLevel(int hwt = 0) const
   {
-    long phim = zMStar.getPhiM();
     IndexSet primes = ctxtPrimes | specialPrimes;
-
     if (primes.card() == 0) {
       throw LogicError(
           "Security level cannot be determined as modulus chain is empty.");
     }
 
-    double bitsize = logOfProduct(primes) / log(2.0);
-    double ret = (7.2 * phim / bitsize - 110);
-    return ret < 0.0 ? 0.0 : ret; // If ret is negative then return 0.0
+    double s = to_double(stdev);
+    if (zMStar.getPow2() == 0) { // not power of two
+      s *= sqrt(zMStar.getM());
+    }
+    double log2AlphaInv = (logOfProduct(primes) - log(s)) / log(2.0);
+    return lweEstimateSecurity(zMStar.getPhiM(), log2AlphaInv, hwt);
   }
 
   //! @brief print out algebra and other important info
