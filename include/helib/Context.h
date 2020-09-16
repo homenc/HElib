@@ -57,17 +57,17 @@ inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
   }
 
   // clang-format off
-  const double hwgts[] =
+  constexpr double hwgts[] =
       {120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450};
-  const double slopes[] =
+  constexpr double slopes[] =
       {2.4, 2.67, 2.83, 3.0, 3.1, 3.3, 3.3, 3.35, 3.4, 3.45, 3.5, 3.55};
-  const double cnstrms[] = 
+  constexpr double cnstrms[] =
       {19, 13, 10, 6, 3, 1, -3, -4, -5, -7, -10, -12};
   // clang-format on
 
-  const size_t numWghts = sizeof(hwgts) / sizeof(hwgts[0]);
+  constexpr size_t numWghts = sizeof(hwgts) / sizeof(hwgts[0]);
 
-  size_t idx = (hwt - 120) / 30; // index into the array above
+  const size_t idx = (hwt - 120) / 30; // index into the array above
   double slope = 0, consterm = 0;
   if (hwt == 0) { // dense keys
     slope = 3.8;
