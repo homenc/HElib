@@ -35,7 +35,7 @@ namespace helib {
    * https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from Aug-2020
    * (see script in misc/estimator/lwe-estimator.sage). Let X = n / log(1/alpha),
    * the security level is estimated as follows:
-   * 
+   *
    *   + dense {-1,0,1} keys:      security ~ 3.8*X  -20
    *   + sparse keys (weight=450): security ~ 3.55*X -12
    *   + sparse keys (weight=420): security ~ 3.5*X  -10
@@ -480,7 +480,7 @@ public:
    * This function uses experimental affine approximations to the lwe-estimator from
    * https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from Aug-2020
    * (see script in misc/estimator/lwe-estimator.sage).
-   * 
+   *
    * Let s=3.2 if m is a power of two, or s=3.2*sqrt(m) otherwise. For the estimator
    * we use alpha=s/q (so log2AlphaInv = log_2(q/s)), and n=phi(m).
    */
