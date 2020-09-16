@@ -197,10 +197,12 @@ public:
 
   //=============== new EncodedPtxt interface
 
+  void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const;
+
+private: // impl only
   void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const;
   void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const;
-
-  void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const;
+public:
   
 
   bool isCKKS() const;

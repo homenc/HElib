@@ -56,6 +56,7 @@
  **/
 #include <cfloat> // DBL_MAX
 #include <helib/DoubleCRT.h>
+#include <helib/EncodedPtxt.h>
 #include <helib/apiAttributes.h>
 
 namespace helib {
@@ -68,6 +69,8 @@ class Ptxt;
 class KeySwitch;
 class PubKey;
 class SecKey;
+
+class PtxtArray;
 
 /**
  * @class SKHandle
@@ -565,9 +568,32 @@ public:
   //! mod ptxtSpace, while for the other variants, we use
   //! explicitly computed bounds (if not CKKS).
   void multByConstant(const DoubleCRT& dcrt, double size = -1.0);
+
   void multByConstant(const NTL::ZZX& poly, double size = -1.0);
   void multByConstant(const zzX& poly, double size = -1.0);
   void multByConstant(const NTL::ZZ& c);
+
+//=========== new multByConstant interface =========
+
+  void multByConstant(const PtxtArray& ptxt);
+  void multByConstant(const EncodedPtxt& ptxt);
+  void multByConstant(const FatEncodedPtxt& ptxt);
+
+  void operator*=(const PtxtArray& ptxt) 
+  { multByConstant(ptxt); }
+
+  void operator*=(const EncodedPtxt& ptxt) 
+  { multByConstant(ptxt); }
+
+  void operator*=(const FatEncodedPtxt& ptxt) 
+  { multByConstant(ptxt); }
+
+private: // impl only
+  void multByConstant(const FatEncodedPtxt_BGV& ptxt);
+  void multByConstant(const FatEncodedPtxt_CKKS& ptxt);
+public:
+
+//==================================================
 
   /**
    * @brief Multiply a `BGV` plaintext to this `Ctxt`.

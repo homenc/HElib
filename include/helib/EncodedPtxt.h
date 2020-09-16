@@ -13,6 +13,7 @@
 #define HELIB_ENCODED_PTXT_H
 
 #include <helib/DoubleCRT.h>
+#include <helib/norms.h>
 
 namespace helib {
 
@@ -176,6 +177,8 @@ public:
 
 
 
+//=========================================================
+//
 // "fat" encodings...same as above, but with DCRT's instead.
 
 
@@ -184,6 +187,7 @@ class FatEncodedPtxt_BGV {
 private:
   DoubleCRT dcrt;
   long ptxtSpace; 
+  double size;
 
 
 public:
@@ -191,10 +195,13 @@ public:
   const DoubleCRT& getDCRT() const { return dcrt; }
   long getPtxtSpace() const { return ptxtSpace; }
   const Context& getContext() const { return dcrt.getContext(); }
+  double getSize() const { return size; }
 
   FatEncodedPtxt_BGV(const EncodedPtxt_BGV& eptxt, const IndexSet& s)
     : dcrt(eptxt.getPoly(), eptxt.getContext(), s), 
-      ptxtSpace(eptxt.getPtxtSpace()) { }
+      ptxtSpace(eptxt.getPtxtSpace()),
+      size(embeddingLargestCoeff(eptxt.getPoly(), eptxt.getContext().zMStar)) 
+  { }
 
 };
 

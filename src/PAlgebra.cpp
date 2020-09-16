@@ -1014,6 +1014,8 @@ void PAlgebraModDerived<type>::CRT_reconstruct(RX& H,
     }
 
   if (easy) {
+    // VJS-FIXME: this looks easy, but could
+    // be slower asymptotically
     for (long i = 0; i < nslots; i++)
       if (!IsZero(crt[i]))
         H += ctab[i];
@@ -1292,7 +1294,11 @@ void PAlgebraModDerived<type>::buildLinPolyCoeffs(
 }
 
 // code for generating mask tables
-// the tables are generated "on demand"
+// currently, this is done when the PAlgebraMod
+// object is constructed.
+
+// VJS-FIXME: what were we thinking? these tables
+// can be huge
 
 template <typename type>
 void PAlgebraModDerived<type>::genMaskTable()
@@ -1319,7 +1325,11 @@ void PAlgebraModDerived<type>::genMaskTable()
 }
 
 // code for generating crt tables
-// the tables are generated "on demand"
+// currently, this is done when the PAlgebraMod
+// object is constructed.
+
+// VJS-FIXME: what were we thinking? these tables
+// can be huge
 
 template <typename type>
 void PAlgebraModDerived<type>::genCrtTable()

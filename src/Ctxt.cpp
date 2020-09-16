@@ -1942,6 +1942,93 @@ void Ctxt::multByConstantCKKS(const Ptxt<CKKS>& ptxt)
   multByConstantCKKS(ptxt.getSlotRepr());
 }
 
+//=========== new multByConstant interface =========
+
+void Ctxt::multByConstant(const PtxtArray& ptxt)
+{
+  EncodedPtxt eptxt;
+  ptxt.encode(eptxt);
+  multByConstant(eptxt);
+}
+
+void Ctxt::multByConstant(const EncodedPtxt& eptxt)
+{
+  FatEncodedPtxt feptxt;
+  feptxt.expand(eptxt, primeSet);
+  multByConstant(feptxt);
+}
+
+void Ctxt::multByConstant(const FatEncodedPtxt& feptxt)
+{
+  if (feptxt.isBGV())
+    multByConstant(feptxt.getBGV());
+  else if (feptxt.isCKKS())
+    multByConstant(feptxt.getCKKS());
+  else
+    throw LogicError("multByConstant: bad FatEncodedPtxt");
+}
+
+void Ctxt::multByConstant(const FatEncodedPtxt_BGV& ptxt)
+{
+  HELIB_TIMER_START;
+
+  assertTrue(&getContext() == &ptxt.getContext(), "multByConstant: inconsistent contexts");
+
+  // NOTE: the following check may be redundant
+  assertTrue(!isCKKS(), "multByConstant: inconsistent encoding");
+
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty())
+    return;
+
+  const DoubleCRT& dcrt = ptxt.getDCRT();
+  double size = ptxt.getSize();
+
+  if (ptxtSpace != ptxt.getPtxtSpace()) {
+   ptxtSpace = NTL::GCD(ptxtSpace, ptxt.getPtxtSpace());
+   assertTrue(ptxtSpace > 1, "Plaintext-space mismatch");
+  }
+
+  // multiply all the parts by this constant
+  for (long i : range(parts.size()))
+    parts[i].Mul(dcrt, /*matchIndexSets=*/false);
+
+  noiseBound *= size;
+}
+
+void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
+{
+  HELIB_TIMER_START;
+
+  assertTrue(&getContext() == &ptxt.getContext(), "multByConstant: inconsistent contexts");
+
+  // NOTE: the following check may be redundant
+  assertTrue(isCKKS(), "multByConstant: inconsistent encoding");
+
+  // Special case: if *this is empty then do nothing
+  if (this->isEmpty())
+    return;
+
+  const DoubleCRT& dcrt = ptxt.getDCRT();
+  double mag = ptxt.getMag();
+  double scale = ptxt.getScale();
+  double err = ptxt.getErr();
+
+  // This statement must come first!
+  noiseBound = noiseBound * scale * mag + err * ratFactor * ptxtMag +
+               noiseBound * err;
+
+  ptxtMag *= mag;
+  ratFactor *= scale;
+
+  // multiply all the parts by this constant
+  for (auto& part : parts)
+    part.Mul(dcrt, /*matchIndexSets=*/false);
+}
+
+//==================================================
+
+
 // Divide a ciphertext by 2. It is assumed that the ciphertext
 // encrypts an even polynomial and has plaintext space 2^r for r>1.
 // As a side-effect, the plaintext space is halved from 2^r to 2^{r-1}
