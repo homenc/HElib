@@ -1044,6 +1044,7 @@ Ctxt& Ctxt::operator*=(const NTL::ZZX& poly)
   return *this;
 }
 
+// VJS-FIXME: this should instead call NTL::ZZ(scalar)
 Ctxt& Ctxt::operator*=(const long scalar) { return *this *= NTL::ZZX(scalar); }
 
 void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
