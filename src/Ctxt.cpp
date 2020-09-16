@@ -1071,6 +1071,8 @@ void Ctxt::addConstantCKKS(const NTL::ZZ& c)
 
   DoubleCRT dcrt(getContext(), getPrimeSet());
   dcrt = to_ZZ(scaled);
+  // VJS-FIXME: the rounding error is not taken into account here
+  // at all
 
   addConstantCKKS(dcrt, /*size=*/xc, /*factor=*/scaled / xc);
 }
@@ -1159,15 +1161,24 @@ static NTL::xdouble calc_err(NTL::xdouble f,
 // NEW VERSION
 void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
 {
+  //std::cerr << "=== equalize\n";
+
   Ctxt& big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
   Ctxt& small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
 
   NTL::xdouble x = big.ratFactor / small.ratFactor;
-  long denomBound{c1.getContext().alMod.getPPowR() * 2};
+
+  long denomBound = (1L << std::min(NTL_BITS_PER_LONG-2,NTL_DOUBLE_PRECISION-8));
+  // long denomBound{c1.getContext().alMod.getPPowR() * 2};
+  // VJS-FIXME: I  want to get rid of the above reference
+  // to getContext().alMod.getPPowR().  With the new early termination
+  // logic, it is very unlikely that we will ever stop by exceeding
+  // denomBound.
 
   double epsilon = 0.125 / denomBound;         // "smudge factor"
   NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon); // floor function
   // NOTE: epsilon is meant to counter rounding errors
+  // VJS-FIXME: I don't understand this.
 
   NTL::xdouble xi = x - NTL::conv<NTL::xdouble>(a);
 
@@ -1196,6 +1207,7 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
   // Continued fractions: a_{i+1}=floor(1/xi), x_{i+1} = 1/xi - a_{i+1}
   for (;;) {
     // see if we can stop now
+    //std::cerr << "*********\n";
 
     NTL::xdouble xnumer = NTL::conv<NTL::xdouble>(numer);
     NTL::xdouble xdenom = NTL::conv<NTL::xdouble>(denom);
@@ -1241,14 +1253,16 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
     // by stopping early
 
     if (err < thresh * target_error) {
-      // std::cerr << "=== err/target_error=" << (err/target_error) << "\n";
+      //std::cerr << "=== err/target_error=" << (err/target_error) << "\n";
       break;
     }
     // close enough...let's stop now to reduce capacity loss at the
     // expense of a little precision
 
-    if (xi <= 0)
+    if (xi <= 0) {
+      //std::cerr << "=== exit by xi <= 0\n";
       break;
+    }
 
     xi = 1.0 / xi;
     NTL::ZZ ai = NTL::conv<NTL::ZZ>(xi + epsilon); // floor function
@@ -1256,8 +1270,10 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
     xi = xi - NTL::conv<NTL::xdouble>(ai);
 
     NTL::ZZ tmpDenom = denom * ai + prevDenom;
-    if (tmpDenom > denomBound) // bound exceeded: return previous denominator
+    if (tmpDenom > denomBound) { // bound exceeded: return previous denominator
+      //std::cerr << "=== exit by tmpDenom > denonBound\n";
       break;
+    }
     // update denominator
     prevDenom = denom;
     denom = tmpDenom;
