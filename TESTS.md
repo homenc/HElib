@@ -5,15 +5,19 @@
    downloaded and the correct targets will be defined for cmake.
 2. To compile them, `make` as normal from a build directory.
 3. The entire set of tests can be run with:
-    - `./bin/runTests`.  The parameters `noPrint`, `dry` and `verbose` can be
-       specified as before, but they will apply to all tests which are run.
+    - `./bin/runTests` or `./dependencies/Build/helib_external/bin/runTests` if
+      `PACKAGE_BUILD=ON`.  The parameters `noPrint`, `dry` and `verbose` can be
+      specified as before, but they will apply to all tests which are run.
     - `ctest`.  In this case the output will be significantly less verbose and
-       therefore less helpful in the case of a failure.  The parameter
-       `--output-on-failure` will display the output of each test that happened
-       to fail.  It's possible to run tests in parallel by using
-       `-j<number of concurrent tests>`
+      therefore less helpful in the case of a failure.  The parameter
+      `--output-on-failure` can be added to display the output of each test that
+      happened to fail.  It is also possible to run tests in parallel by using
+      `-j<number of concurrent tests>`.  Detailed output of the tests (as if run
+      directly with `runTests`) can be found in
+      `Testing/Temporary/LastTest.log`.
     - `make test`, which will run the tests through `ctest`.  In this case no
-      arguments can be passed.
+      arguments can be passed.  Detailed output of the tests (as if run directly
+      with `runTests`) can be found in `Testing/Temporary/LastTest.log`.
 
 ## Running a subset of the tests
 
@@ -23,7 +27,7 @@ tests, for example, one simply runs
 ```
 ./bin/runTests --gtest_filter='*PolyEval*'
 ```
-To list all the tests, use `./bin/runTests --gtest_list_tests`. More details
+To list all the tests, use `./bin/runTests --gtest_list_tests`.  More details
 on this filtering can be found in Google's documentation [here][1].
 
 It is also possible to run a specific test using `ctest` by adding the argument
@@ -32,8 +36,8 @@ simply runs
 ```
 ctest -R "PolyEval"
 ```
-More details on this filtering can be found in `ctest` documentation
-`ctest --help`.
+To list all the tests, use `ctest -N`.  More details on this filtering can be
+found in the `ctest` documentation `ctest --help`.
 
 ## Changing parameters
 

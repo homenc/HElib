@@ -19,15 +19,43 @@ if (NOT (CMAKE_SIZEOF_VOID_P EQUAL 8))
   message(FATAL_ERROR "HElib requires a 64-bit architecture.")
 endif ()
 
-# Define standard installation directories (GNU)
-include(GNUInstallDirs)
-
 # Use -std=c++14 as default.
 set(CMAKE_CXX_STANDARD 14)
 # Disable C++ extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 # Require full C++ standard
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+################################################################################
+#                                                                              #
+#                             FOLDER DEFINITIONS                               #
+#                                                                              #
+################################################################################
+
+# Define standard installation directories (GNU)
+include(GNUInstallDirs)
+
+# Location of the cmake extra files
+set(HELIB_CMAKE_EXTRA_DIR "${PROJECT_SOURCE_DIR}/cmake")
+# Prefix of the header files (directory to be added to the include list)
+set(HELIB_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
+# Location of helib header files
+set(HELIB_HEADER_DIR "${HELIB_INCLUDE_DIR}/helib")
+# Location of the source files
+set(HELIB_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
+# Location of the google tests
+set(HELIB_TESTS_DIR "${PROJECT_SOURCE_DIR}/tests")
+# Location of the directory containing the test binary (runTests).
+# Keeping this location relative as it will be changed if PACKAGE_BUILD=ON.
+set(HELIB_TEST_BIN_DIR "bin")
+
+# Setting compiler output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
 
 # GMP minimal version to be used if not PACKAGE_BUILD
 set(GMP_MINIMAL_VERSION "6.0.0")
@@ -60,7 +88,7 @@ set_property(CACHE
              STRINGS "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
 # Path containing FindGMP.cmake and FindNTL.cmake
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${HELIB_CMAKE_EXTRA_DIR}")
 
 option(BUILD_SHARED "Build as shared library" OFF)
 
@@ -224,16 +252,6 @@ else (PACKAGE_BUILD)
   # Checks that at least version NTL_MINIMAL_VERSION is available
   find_package(NTL "${NTL_MINIMAL_VERSION}" REQUIRED)
 
-  # Setting compiler output directories
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-
   # Thread enabling checks
   # Checking if NTL is built with NTL_THREADS=on
   set(ntl_config_file "${NTL_INCLUDE_PATHS}/NTL/config.h")
@@ -295,13 +313,24 @@ if (PACKAGE_BUILD)
                -DFETCH_GMP=${FETCH_GMP}
                -DENABLE_TEST=${ENABLE_TEST}
                -DHELIB_DEBUG=${HELIB_DEBUG}
+               -DHELIB_CMAKE_EXTRA_DIR=${HELIB_CMAKE_EXTRA_DIR}
+               -DHELIB_INCLUDE_DIR=${HELIB_INCLUDE_DIR}
+               -DHELIB_HEADER_DIR=${HELIB_HEADER_DIR}
+               -DHELIB_SOURCE_DIR=${HELIB_SOURCE_DIR}
+               -DHELIB_TESTS_DIR=${HELIB_TESTS_DIR}
     BUILD_ALWAYS ON)
 
-  if (ENABLE_TEST)
-    add_test(NAME helib_check
-             COMMAND ${CMAKE_MAKE_PROGRAM} test
-             WORKING_DIRECTORY "${DEPENDENCIES_FOLDER}/Build/helib_external")
-  endif (ENABLE_TEST)
+    if (ENABLE_TEST)
+      # Tests for PACKAGE_BUILD are located in
+      # ${DEPENDENCIES_FOLDER}/Build/helib_external/${HELIB_TEST_BIN_DIR}.
+      # Update its location and add the tests to cmake to avoid re-creating
+      # their targets (as they are already built by ExternalProject_Add)
+      set(HELIB_TEST_BIN_DIR
+          "${DEPENDENCIES_FOLDER}/Build/helib_external/${HELIB_TEST_BIN_DIR}")
+      set(ONLY_ADD_TEST ON)
+      add_subdirectory("${HELIB_TESTS_DIR}" tests)
+      unset(ONLY_ADD_TEST)
+    endif (ENABLE_TEST)
 
   # To install copy the whole PACKAGE_DIR directory to the defined prefix
   install(

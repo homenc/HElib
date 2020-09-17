@@ -25,7 +25,7 @@ namespace {
 std::tuple<int, int, int, std::string> readVersionFromCmakeFile()
 {
   // File will be in src/, we are in tests/
-  const std::string cmakeFilePath = "@CMAKE_SOURCE_DIR@/src/CMakeLists.txt";
+  const std::string cmakeFilePath = "@HELIB_SOURCE_DIR@/CMakeLists.txt";
 
   // Slurp the file. It isn't a large file.
   std::string fileStr;
