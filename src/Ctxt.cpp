@@ -1169,11 +1169,13 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
   NTL::xdouble x = big.ratFactor / small.ratFactor;
 
   long denomBound = (1L << std::min(NTL_BITS_PER_LONG-2,NTL_DOUBLE_PRECISION-8));
+  // VJS-FIXME: need to think about if he above bound makes sense.
+  // With the new early termination logic, it is very unlikely that 
+  // we will ever stop by exceeding denomBound.
+
   // long denomBound{c1.getContext().alMod.getPPowR() * 2};
   // VJS-FIXME: I  want to get rid of the above reference
-  // to getContext().alMod.getPPowR().  With the new early termination
-  // logic, it is very unlikely that we will ever stop by exceeding
-  // denomBound.
+  // to getContext().alMod.getPPowR().  
 
   double epsilon = 0.125 / denomBound;         // "smudge factor"
   NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon); // floor function
