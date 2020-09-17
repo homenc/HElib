@@ -5,6 +5,9 @@ notifications:
 # branches:
 #   only:
 #   - master
+
+cache: ccache
+
 jobs:
   include:
     - name: "Ubuntu 18.04 lib build gcc"
@@ -78,7 +81,14 @@ addons:
     packages:
     - cmake
     - bats-core
-    update: true
+    - ccache
+    # update: true # Disabled as it was adding several minutes (and timeout failure) to build.
+
+# activating ccache on MacOS.
+before_install:
+  - if [ "${TRAVIS_OS_NAME}" == "osx" ]; then 
+        export PATH="/usr/local/opt/ccache/libexec:$PATH";
+    fi
 
 install:
   - ./ci/install_deps.sh
