@@ -1161,21 +1161,16 @@ static NTL::xdouble calc_err(NTL::xdouble f,
 // NEW VERSION
 void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
 {
-  //std::cerr << "=== equalize\n";
 
   Ctxt& big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
   Ctxt& small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
 
   NTL::xdouble x = big.ratFactor / small.ratFactor;
+  //std::cerr << "=== equalize: " << x << "\n";
 
-  long denomBound = (1L << std::min(NTL_BITS_PER_LONG-2,NTL_DOUBLE_PRECISION-8));
-  // VJS-FIXME: need to think about if he above bound makes sense.
-  // With the new early termination logic, it is very unlikely that 
+  long denomBound = (1L << std::min(NTL_BITS_PER_LONG-2,NTL_DOUBLE_PRECISION-10));
+  // NOTE: With the new early termination logic, it is very unlikely that 
   // we will ever stop by exceeding denomBound.
-
-  // long denomBound{c1.getContext().alMod.getPPowR() * 2};
-  // VJS-FIXME: I  want to get rid of the above reference
-  // to getContext().alMod.getPPowR().  
 
   double epsilon = 0.125 / denomBound;         // "smudge factor"
   NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon); // floor function
@@ -2044,6 +2039,159 @@ void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
   for (auto& part : parts)
     part.Mul(dcrt, /*matchIndexSets=*/false);
 }
+
+
+//============ new addConstant interface ===========
+
+void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt)
+{
+  HELIB_TIMER_START;
+
+  assertTrue(&getContext() == &ptxt.getContext(), "addConstant: inconsistent contexts");
+
+  // NOTE: the following check may be redundant
+  assertTrue(isCKKS(), "addConstant: inconsistent encoding");
+
+  NTL::xdouble m = ptxtMag;
+  NTL::xdouble f = ratFactor; 
+  NTL::xdouble e = noiseBound;
+
+  double m0 = ptxt.getMag();
+  double f0 = ptxt.getScale();
+  double e0 = ptxt.getErr();
+
+/*============================================
+
+ctxt decrypts to m*f + e
+ptxt is m0*f0 + e0
+
+we equalize factors by multiplying ptxt by r = round(f/f0) = f/f0 + e1,
+  where |e1| <= 1/2
+
+so the new ptxt is
+
+  ptxt' = r*(m0*f0+e0) = m0*f0*r + e0*r = m0*f0*(f/f0+e1) + e0*r
+	= m0*f + m0*f0*e1 + e0*r
+	= m0*f + e2, where e2 = m0*f0*e1 + e0*r
+
+Now, if e2 > e, we can try to fix this by scaling the ciphertext
+up by a factor s, by adding some primes.  When we do this,
+e and f scale up by a factor s and r also scales up by a factor
+close to s.  The term m0*f0*e1 does not scale up, and so
+this is where we can hope reduce the error of ptxt relative to 
+ctxt.
+
+There is a corner case where r = 0, which happens in
+the case where f << f0. Is that possible? Likely?
+If adding some primes does not resolve that case, then
+then it seems like we have to do something else.
+
+Maybe instead of all of this craziness, if the initial
+strategy of multiplying ptxt by r soes not work,
+we should instead revert to the idea of converting ptxt
+to a Ctxt object, and then using the Ctxt addition routine,
+which is guaranteed to preserve errors at the cost
+of losing some capacity.
+
+=================================================*/
+
+#if 0
+
+  // VJS-FIXME: seems complicated...need to understand this better.
+  if (size <= 0)
+    size = 1.0;
+
+  if (factor <= 0)
+    conv(factor, getContext().ea->getCx().encodeScalingFactor() / size);
+
+  // VJS-FIXME: I think we need to special case an empty ciphertext
+
+  NTL::xdouble ratio =
+      NTL::floor((ratFactor / factor) + 0.5); // round to integer
+  double inaccuracy =
+      std::abs(NTL::conv<double>(ratio * factor / ratFactor) - 1.0);
+
+  // Check if you need to scale up to get target accuracy of 2^{-r}
+  if ((inaccuracy * getContext().alMod.getPPowR()) > 1.0) {
+    Warning("addSomePrimes called in Ctxt::addConstantCKKS(DoubleCRT)");
+    addSomePrimes(*this);                      // This increases ratFactor
+    ratio = floor((ratFactor / factor) + 0.5); // re-compute the ratio
+  }
+
+  // VJS-FIXME: this strategy of adding some primes to offset the
+  // rounding error kind of makes it difficult for the caller
+  // to ensure that the prime set of dcrt contains the prime set
+  // of ctxt.  This means we will expand the prime set of dcrt if
+  // necessary.
+
+  ptxtMag += size; // perhaps too conservative? size(x+y)<=size(x)+size(y)
+
+  noiseBound += 0.5; // FIXME: what's the noise of a fresh encoding?
+  // VJS-FIXME: This can't possibly be right.
+  // Shoudn't this be set to encodeRoundingError?
+  // Even better, shouldn't we have an optional parameter?
+  // Also, in addition to the encode rounding error, we should take
+  // into accoung the rounding error introduced by rounding ratio
+  // to an integer.
+  // Also, the addConstantCKKS routine that takes a complex vector
+  // as input should take into account the ratFactor of the given
+  // ctxt (if non-empty!) so as to only get a single rounding error.
+
+  NTL::ZZ intRatio = NTL::conv<NTL::ZZ>(ratio);
+
+  // VJS-FIXME: I'm getting rid of this prime dropping logic.
+  // Extra primes in dcrt will be ignored in addPart.
+#if 0
+  IndexSet delta = dcrt.getIndexSet() / getPrimeSet(); // set minus
+
+  if (NTL::IsOne(intRatio) && empty(delta)) { // just add it
+    addPart(dcrt, SKHandle(0, 1, 0));
+    return;
+  }
+
+  // work with a local copy
+  DoubleCRT tmp = dcrt;
+  if (!empty(delta))
+    tmp.removePrimes(delta);
+
+  delta = getPrimeSet() / tmp.getIndexSet(); // set minus
+  if (!empty(delta))
+    tmp.addPrimes(delta); // that's expensive
+
+  if (!NTL::IsOne(intRatio))
+    tmp *= intRatio;
+  addPart(tmp, SKHandle(0, 1, 0));
+#else
+
+  IndexSet delta = primeSet / dcrt.getIndexSet();
+  // VJS-FIXME: we don't want to do this if ctxt was empty,
+  // but we have other problems to deal with as well in that case.
+
+  if (NTL::IsOne(intRatio) && empty(delta)) { // just add it
+    addPart(dcrt, SKHandle(0, 1, 0));
+    return;
+  }
+
+  // work with a local copy
+  DoubleCRT tmp = dcrt;
+
+  if (!empty(delta))
+    tmp.addPrimes(delta);
+  // VJS-FIXME: we have to do this here because addPart requires
+  // that the prime set of dcrt contains that of ctxt
+
+  if (!NTL::IsOne(intRatio))
+    tmp *= intRatio;
+  // VJS-FIXME: whatever noise is in dcrt also needs to
+  // be scaled by intRatio and added to the noise bound
+
+  addPart(tmp, SKHandle(0, 1, 0));
+
+#endif
+#endif
+}
+
+
 
 //==================================================
 

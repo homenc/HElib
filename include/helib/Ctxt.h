@@ -593,6 +593,13 @@ private: // impl only
   void multByConstant(const FatEncodedPtxt_CKKS& ptxt);
 public:
 
+//=========== new addConstant interface ============
+
+private: // impl only
+  void addConstant(const FatEncodedPtxt_BGV& ptxt);
+  void addConstant(const FatEncodedPtxt_CKKS& ptxt);
+public:
+
 //==================================================
 
   /**
