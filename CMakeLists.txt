@@ -87,6 +87,18 @@ set_property(CACHE
              PROPERTY
              STRINGS "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
+# Creating and documenting TARGET_ARCHITECTURE cmake property
+set(TARGET_ARCHITECTURE "${TARGET_ARCHITECTURE}"
+    CACHE
+    STRING "Target architecture used for -march (default is native)")
+# If TARGET_ARCHITECTURE is not set use default
+if (NOT TARGET_ARCHITECTURE)
+  set(TARGET_ARCHITECTURE "native"
+      CACHE
+      STRING "Target architecture used for -march (default is native)"
+      FORCE)
+endif (NOT TARGET_ARCHITECTURE)
+
 # Path containing FindGMP.cmake and FindNTL.cmake
 list(APPEND CMAKE_MODULE_PATH "${HELIB_CMAKE_EXTRA_DIR}")
 
@@ -138,7 +150,7 @@ endif (NOT PACKAGE_BUILD)
 
 # Setting flag lists to avoid polluting CMAKE_CXX_FLAGS.
 # PUBLIC_HELIB_CXX_FLAGS will be exported to the installed target.
-set(PRIVATE_HELIB_CXX_FLAGS "")
+set(PRIVATE_HELIB_CXX_FLAGS "-march=${TARGET_ARCHITECTURE}")
 set(PUBLIC_HELIB_CXX_FLAGS "")
 # Add extra checks during build
 if (PEDANTIC_BUILD)
