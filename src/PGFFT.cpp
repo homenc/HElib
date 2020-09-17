@@ -12,6 +12,7 @@ See below for more details.
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
 #ifdef __GNUC__
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
