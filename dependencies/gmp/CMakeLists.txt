@@ -61,13 +61,7 @@ ExternalProject_Add(
     # LOG_TEST ON
 )
 
-if (ENABLE_TEST)
-  set(test_path "${DEPENDENCIES_FOLDER}/Source/gmp_fetched")
-  add_test(NAME gmp_check
-           COMMAND ${CMAKE_MAKE_PROGRAM} check
-           WORKING_DIRECTORY ${test_path})
-  unset(test_path)
-endif (ENABLE_TEST)
+# No tests will be performed for GMP
 
 # Removed due to rpath delay
 # add_dependencies(gmp_external gmp_fetched)

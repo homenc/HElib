@@ -80,10 +80,10 @@ make -j16
 4. (optional) If step 2 was performed with `-DENABLE_TEST=ON`, HElib tests can 
 be run as follows:
 ```
-ctest -R helib_check
+ctest
 ```
 Detailed HElib-specific test logs can be found in 
-`dependencies/Build/helib_external/Testing/Temporary/LastTest.log`.
+`Testing/Temporary/LastTest.log`.
 
 5. (optional) Run the install step, to copy the folder `helib_pack` to
 `${CMAKE_INSTALL_PREFIX}` (in this example `/home/alice/helib_install`):
