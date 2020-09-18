@@ -313,11 +313,11 @@ class Ctxt
 
   // NOTE: the matchPrimeSets business in the following routines
   // is DEPRECATED.  The requirement is that the prime set of part
-  // must contain the prime set of *this, unless *this is empty
-  // (in which case *this takes on the prime set of part).
+  // must contain the prime set of *this.
   // If not, an exception is raised.
   // Also, if matchPrimeSets == true and the prime set of *this does
   // not contain the prime set of part, an exception is also raised.
+  // Also, note that the prime set of *this will not change.
 
   // Procedural versions with additional parameter
   void subPart(const CtxtPart& part, bool matchPrimeSet = false)
@@ -597,6 +597,8 @@ public:
 
 private: // impl only
   void addConstant(const FatEncodedPtxt_BGV& ptxt);
+  void addConstant(const EncodedPtxt_BGV& ptxt);
+
   void addConstant(const FatEncodedPtxt_CKKS& ptxt);
 public:
 

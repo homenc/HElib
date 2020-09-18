@@ -121,10 +121,14 @@ public:
 
     const Context& context = ctxt.getContext();
     const PubKey& pubKey = ctxt.getPubKey();
+
     // empty ctxt
     std::shared_ptr<Ctxt> result = std::make_shared<Ctxt>(ZeroCtxtLike, ctxt);
     result->noiseBound = noise; // noise estimate
     result->intFactor = ctxt.intFactor;
+
+    result->primeSet = ctxt.primeSet | context.specialPrimes;
+    // VJS-NOTE: added this to make addPart work
 
     if (ctxt.isCKKS()) {
       result->ptxtMag = ctxt.ptxtMag;

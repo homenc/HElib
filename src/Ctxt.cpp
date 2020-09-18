@@ -622,6 +622,9 @@ void Ctxt::reLinearize(long keyID)
   tmp.ptxtMag = ptxtMag;       // same CKKS plaintext size
   tmp.noiseBound = noiseBound * NTL::xexp(logProd); // The noise after mod-up
 
+  tmp.primeSet = primeSet | context.specialPrimes;
+  // VJS-NOTE: added this to make addPart work
+
   tmp.ratFactor = ratFactor * NTL::xexp(logProd); // CKKS factor after mod-up
   // std::cerr << "=== " << ratFactor << tmp.ratFactor << "\n";
 
@@ -641,9 +644,9 @@ void Ctxt::reLinearize(long keyID)
     assertTrue(W.toKeyID >= 0, "No key-switching matrix exists");
 
     if (g > 1) {                    // g==1 for CKKS, g>1 for BGV
-      g = NTL::GCD(W.ptxtSpace, g); // verify that the plaintext spaces match
-      assertTrue(g > 1, "Plaintext spaces do not match");
-      tmp.ptxtSpace = g;
+      tmp.reducePtxtSpace(W.ptxtSpace);
+      g = tmp.ptxtSpace;
+      // VJS-NOTE: fixes a bug where intFactor was not corrected
     }
     tmp.keySwitchPart(part, W); // switch this part & update noiseBound
   }
@@ -710,6 +713,7 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 
 // Add/subtract a ciphertext part to a ciphertext.
 // With negative=true we subtract, otherwise we add.
+
 void Ctxt::addPart(const DoubleCRT& part,
                    const SKHandle& handle,
                    bool matchPrimeSet,
@@ -717,75 +721,41 @@ void Ctxt::addPart(const DoubleCRT& part,
 {
   HELIB_TIMER_START;
 
-  // VJS-FIXME: the new requirement is that primeSet <= part.getIndexSet()
-
   assertEq(&part.getContext(), &context, "Context mismatch");
 
-  if (parts.size() == 0) { // inserting 1st part
-    primeSet = part.getIndexSet();
-    // note that primeSet gets set to part.getIndexSet(),
-    // meaning that the value of primeSet for an "empty" ciphertext
-    // is irrelevant.
+  // VJS-NOTE: we are adding this as a new requiremennt
+  if (!(primeSet <= part.getIndexSet())) {
+    throw RuntimeError("Ctxt::addPart: ctxt has primes not in part");
+  }
+
+  if (!(part.getIndexSet() <= primeSet)) {
+    if (matchPrimeSet) {
+      // VJS-NOTE: matchPrimeSet disabled, so we raise an error 
+      // if it is requested...this is provided mainly as a transitory 
+      // debug feature
+      throw RuntimeError("Ctxt::addPart: matchPrimeSet not honored");
+    }
+  }
+
+  long j = getPartIndexByHandle(handle);
+  if (j >= 0) { // found a matching part, add them up
+    if (negative)
+      parts[j].Sub(part, /*matchIndexSets=*/false);
+    else
+      parts[j].Add(part, /*matchIndexSets=*/false);
+  } else { 
+    // no matching part found, just append this part
+    // NOTE: this also handles the corner case of an
+    // empty ctxt
 
     parts.push_back(CtxtPart(part, handle));
+
+    // part could contain excess primes, so we remove them here
+    if (part.getIndexSet() != primeSet)
+      parts.back().removePrimes(part.getIndexSet() / primeSet);
+
     if (negative)
       parts.back().Negate();
-  } else { // adding to a ciphertext with existing parts
-    // VJS-FIXME: we are adding this as a new requiremennt
-    if (!(primeSet <= part.getIndexSet())) {
-#if 0
-	 std::cerr << "******** primeSet=" << primeSet
-		   << "part.getIndexSet()=" << part.getIndexSet()
-		   << "\n";
-#endif
-      throw RuntimeError("Ctxt::addPart: ctxt has primes not in part");
-    }
-    if (!(part.getIndexSet() <= primeSet)) {
-      // add to the the prime-set of *this, if needed (this is expensive)
-      if (matchPrimeSet) {
-// VJS-FIXME: matchPrimeSet disabled
-#if 0
-        IndexSet setDiff = part.getIndexSet() / primeSet; // set minus
-        for (size_t i = 0; i < parts.size(); i++) {
-          Warning("addPrimes called in addPart");
-          parts[i].addPrimes(setDiff);
-        }
-        primeSet.insert(setDiff);
-#else
-        throw RuntimeError("Ctxt::addPart: matchPrimeSet not honored");
-#endif
-      }
-
-// VJS-FIXME: we just ignore extra primes in part
-#if 0
-      else // this should never happen
-        throw LogicError(
-            "Ctxt::addPart: part has too many primes and matchPrimeSet==false");
-#endif
-    }
-
-    DoubleCRT tmp(context, IndexSet::emptySet());
-    const DoubleCRT* ptr = &part;
-
-    // mod-UP the part if needed
-    // VJS-FIXME: this will never happen
-    IndexSet s = primeSet / part.getIndexSet();
-    if (!empty(s)) { // if need to mod-UP, do it on a temporary copy
-      tmp = part;
-      tmp.addPrimesAndScale(s);
-      ptr = &tmp;
-    }
-    long j = getPartIndexByHandle(handle);
-    if (j >= 0) { // found a matching part, add them up
-      if (negative)
-        parts[j].Sub(*ptr, /*matchIndexSets=*/false);
-      else
-        parts[j].Add(*ptr, /*matchIndexSets=*/false);
-    } else { // no matching part found, just append this part
-      parts.push_back(CtxtPart(*ptr, handle));
-      if (negative)
-        parts.back().Negate();
-    }
   }
 }
 
@@ -806,40 +776,21 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   if (size < 0.0)
     size = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
 
-  const IndexSet& s = isEmpty() ? dcrt.getIndexSet() : primeSet;
-  // If ctxt is empty, addPart will make its prime set equal to that of dcrt
 
   // Scale the constant, then add it to the part that points to one
   long f = 1;
   if (ptxtSpace > 2) {
-    f = rem(context.productOfPrimes(s), ptxtSpace);
+    f = rem(context.productOfPrimes(primeSet), ptxtSpace);
     f = NTL::MulMod(intFactor, f, ptxtSpace);
     f = balRem(f, ptxtSpace);
   }
 
   noiseBound += size * std::abs(f);
 
-#if 0
-
-  IndexSet delta = dcrt.getIndexSet() / s;        // set minus
-  if (f == 1 && empty(delta)) {                   // just add it
-    addPart(dcrt, SKHandle(0, 1, 0));
-    return;
-  }
-
-  // work with a local copy
-  DoubleCRT tmp = dcrt;
-  if (!empty(delta))
-    tmp.removePrimes(delta);
-  if (f != 1)
-    tmp *= f;
-  addPart(tmp, SKHandle(0, 1, 0));
-
-#else
-
-  // This version insists that if ctxt is non-empty, then
-  // the prime set of dcrt contains prime set of ctxt (if ctxt not empty).
-  // If not, addPart will raise an exception.
+  // VJS-NOTE: addPart will raise an exception
+  // if the prime set of dcrt does not contain
+  // the prime set of *this.  It is up to the
+  // caller to ensure that this is the case
 
   if (f == 1) {
     addPart(dcrt, SKHandle(0, 1, 0));
@@ -850,7 +801,6 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
     addPart(tmp, SKHandle(0, 1, 0));
   }
 
-#endif
 }
 
 void Ctxt::addConstant(const NTL::ZZX& poly, double size)
@@ -901,6 +851,15 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
       NTL::floor((ratFactor / factor) + 0.5); // round to integer
   double inaccuracy =
       std::abs(NTL::conv<double>(ratio * factor / ratFactor) - 1.0);
+
+#if 0
+  std::cerr << "=== ratFactor=" << ratFactor 
+            << " factor=" << factor
+            << "\n";
+  std::cerr << "*** ratio=" << ratio 
+            << " log2(inaccuracy)=" << std::log2(inaccuracy)
+            << "\n";
+#endif
 
   // Check if you need to scale up to get target accuracy of 2^{-r}
   if ((inaccuracy * getContext().alMod.getPPowR()) > 1.0) {
@@ -1668,7 +1627,10 @@ void Ctxt::multLowLvl(const Ctxt& other_orig, bool destructive)
     if (!isCKKS()) {
       long g = NTL::GCD(ptxtSpace, other_pt->ptxtSpace);
       assertTrue(g > 1, "Plaintext spaces are co-prime");
-      ptxtSpace = other_pt->ptxtSpace = g;
+
+      reducePtxtSpace(g);
+      other_pt->reducePtxtSpace(g);
+      // VJS-NOTE: fixes bug where intFactor was not reduced
     }
 
     // Compute commonPrimeSet, which defines the modulus q of the product
@@ -1999,8 +1961,7 @@ void Ctxt::multByConstant(const FatEncodedPtxt_BGV& ptxt)
   double size = ptxt.getSize();
 
   if (ptxtSpace != ptxt.getPtxtSpace()) {
-   ptxtSpace = NTL::GCD(ptxtSpace, ptxt.getPtxtSpace());
-   assertTrue(ptxtSpace > 1, "Plaintext-space mismatch");
+    reducePtxtSpace(ptxt.getPtxtSpace());
   }
 
   // multiply all the parts by this constant
@@ -2042,6 +2003,85 @@ void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
 
 
 //============ new addConstant interface ===========
+
+void Ctxt::addConstant(const FatEncodedPtxt_BGV& ptxt)
+{
+  HELIB_TIMER_START;
+
+  assertTrue(&getContext() == &ptxt.getContext(), "addConstant: inconsistent contexts");
+
+  // NOTE: the following check may be redundant
+  assertTrue(!isCKKS(), "addConstant: inconsistent encoding");
+
+  const DoubleCRT& dcrt = ptxt.getDCRT();
+  double size = ptxt.getSize();
+
+  if (ptxtSpace != ptxt.getPtxtSpace()) {
+    reducePtxtSpace(ptxt.getPtxtSpace());
+  }
+
+  // Scale the constant, then add it to the part that points to one
+  long f = 1;
+  if (ptxtSpace > 2) {
+    f = rem(context.productOfPrimes(primeSet), ptxtSpace);
+    f = NTL::MulMod(intFactor, f, ptxtSpace);
+    f = balRem(f, ptxtSpace);
+  }
+
+  noiseBound += size * std::abs(f);
+
+  // VJS-NOTE: addPart will raise an exception
+  // if the prime set of dcrt does not contain
+  // the prime set of *this.  It is up to the
+  // caller to ensure that this is the case
+
+  if (f == 1) {
+    addPart(dcrt, SKHandle(0, 1, 0));
+  } else {
+    // work with a local copy
+    DoubleCRT tmp = dcrt;
+    tmp *= f;
+    addPart(tmp, SKHandle(0, 1, 0));
+  }
+}
+
+void Ctxt::addConstant(const EncodedPtxt_BGV& ptxt)
+{
+  HELIB_TIMER_START;
+
+  assertTrue(&getContext() == &ptxt.getContext(), "addConstant: inconsistent contexts");
+
+  // NOTE: the following check may be redundant
+  assertTrue(!isCKKS(), "addConstant: inconsistent encoding");
+
+  // In this version, we do the scaling in the plaintext space
+  // so the noise does not increase
+
+  if (ptxtSpace != ptxt.getPtxtSpace()) {
+    reducePtxtSpace(ptxt.getPtxtSpace());
+  }
+
+  long f = 1;
+  if (ptxtSpace > 2) {
+    f = rem(context.productOfPrimes(primeSet), ptxtSpace);
+    f = NTL::MulMod(intFactor, f, ptxtSpace);
+  }
+  
+  NTL::ZZX poly;
+  convert(poly, ptxt.getPoly());
+
+  // NOTE: if f == 1 but ptxtSpace != ptxt.getPtxtSpace(),
+  // then this will perform balanced remaindering mod ptxtSpace
+  if (f != 1 || ptxtSpace != ptxt.getPtxtSpace())
+    balanced_MulMod(poly, poly, f, ptxtSpace);
+
+  DoubleCRT dcrt(poly, context, primeSet);
+  NTL::xdouble size = embeddingLargestCoeff(poly, context.zMStar);
+
+  noiseBound += size;
+
+  addPart(dcrt, SKHandle(0, 1, 0));
+}
 
 void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt)
 {
