@@ -595,6 +595,20 @@ public:
 
 //=========== new addConstant interface ============
 
+  void addConstant(const PtxtArray& ptxt);
+  void addConstant(const EncodedPtxt& ptxt);
+  void addConstant(const FatEncodedPtxt& ptxt);
+
+  void operator+=(const PtxtArray& ptxt) 
+  { addConstant(ptxt); }
+
+  void operator+=(const EncodedPtxt& ptxt) 
+  { addConstant(ptxt); }
+
+  void operator+=(const FatEncodedPtxt& ptxt) 
+  { addConstant(ptxt); }
+
+
 private: // impl only
   void addConstant(const FatEncodedPtxt_BGV& ptxt);
   void addConstant(const EncodedPtxt_BGV& ptxt);

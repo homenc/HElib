@@ -464,6 +464,25 @@ std::vector<T> Vec_replicate(const T& a, long n)
   return res;
 }
 
+
+// some unsafe conversions
+inline void project(std::vector<double>& out,
+		    const std::vector<std::complex<double>>& in)
+{
+  long n = in.size();
+  out.resize(n);
+  for (long i = 0; i < n; i++)
+    out[i] = in[i].real();
+}
+
+inline void project_and_round(std::vector<long>& out, const std::vector<std::complex<double>>& in)
+{
+  long n = in.size();
+  out.resize(n);
+  for (long i = 0; i < n; i++)
+    out[i] = std::round(in[i].real());
+}
+
 //! returns \prod_d vec[d]
 long computeProd(const NTL::Vec<long>& vec);
 long computeProd(const std::vector<long>& vec);

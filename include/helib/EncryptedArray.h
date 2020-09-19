@@ -528,7 +528,7 @@ public:
                       double mag = -1, double rescale = 1) const override
   { throw LogicError("function not implemented for BGV"); }
 
-  void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
+  virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
               double mag = -1, double rescale = 1) const override
   { throw LogicError("function not implemented for BGV"); }
 
@@ -763,26 +763,6 @@ public:
     clear(iEncoded);
   }
 
-  // conversion between std::vectors of complex, real, and integers
-
-  // VJS-FIXME: I don't think you need most of these...
-  // all you really need to do is specify (probably best in NumbTh.h)
-  // routines covert(X, Y) for scalar types long / double / cx_double,
-  // and the template mechanism will take are of itself
-  
-  static void project(std::vector<double>& out,
-                      const std::vector<cx_double>& in)
-  {
-    resize(out, lsize(in));
-    for (long i = 0; i < lsize(in); i++)
-      out[i] = in[i].real();
-  }
-  static void project_and_round(std::vector<long>& out, const std::vector<cx_double>& in)
-  {
-    resize(out, lsize(in));
-    for (long i = 0; i < lsize(in); i++)
-      out[i] = std::round(in[i].real());
-  }
 
   EncryptedArrayBase* clone() const override
   {
@@ -1622,6 +1602,16 @@ public:
   ///@}
 };
 
+// Convenience routines to avoid EncryptedArray's
+
+inline
+void rotate(Ctxt& ctxt, long k)
+{
+  ctxt.getContext().getView().rotate(ctxt, k);
+}
+
+// VJS-FIXME: add more...
+
 // PlaintextArray
 
 class PlaintextArrayBase
@@ -1705,10 +1695,16 @@ void encode(const EncryptedArray& ea,
 void encode(const EncryptedArray& ea,
             PlaintextArray& pa,
             const std::vector<NTL::ZZX>& array);
+void encode(const EncryptedArray& ea,
+            PlaintextArray& pa,
+            const std::vector<cx_double>& array);
+void encode(const EncryptedArray& ea,
+            PlaintextArray& pa,
+            const std::vector<double>& array);
+
 void encode(const EncryptedArray& ea, PlaintextArray& pa, long val);
 void encode(const EncryptedArray& ea, PlaintextArray& pa, const NTL::ZZX& val);
 
-void random(const EncryptedArray& ea, PlaintextArray& pa);
 
 void decode(const EncryptedArray& ea,
             std::vector<long>& array,
@@ -1716,6 +1712,14 @@ void decode(const EncryptedArray& ea,
 void decode(const EncryptedArray& ea,
             std::vector<NTL::ZZX>& array,
             const PlaintextArray& pa);
+void decode(const EncryptedArray& ea,
+            std::vector<cx_double>& array,
+            const PlaintextArray& pa);
+void decode(const EncryptedArray& ea,
+            std::vector<double>& array,
+            const PlaintextArray& pa);
+
+void random(const EncryptedArray& ea, PlaintextArray& pa);
 
 bool equals(const EncryptedArray& ea,
             const PlaintextArray& pa,
@@ -1779,6 +1783,9 @@ public:
     pa = other.pa;
     return *this;
   }
+
+  const EncryptedArray& getView() const { return ea; }
+  const EncryptedArray& getEA() const   { return ea; }
  
   // direct encode, encrypt, and decrypt methods
   void encode(EncodedPtxt& eptxt, double mag = -1, double rescale = 1) const
@@ -1818,10 +1825,16 @@ inline void convert(PtxtArray& a, const std::vector<NTL::ZZX>& array)
   encode(a.ea, a.pa, array);
 }
 
-inline void random(PtxtArray& a)
+inline void convert(PtxtArray& a, const std::vector<cx_double>& array)
 {
-  random(a.ea, a.pa);
+  encode(a.ea, a.pa, array);
 }
+
+inline void convert(PtxtArray& a, const std::vector<double>& array)
+{
+  encode(a.ea, a.pa, array);
+}
+
 
 
 inline void convert(std::vector<long>& array, const PtxtArray& a)
@@ -1829,6 +1842,20 @@ inline void convert(std::vector<long>& array, const PtxtArray& a)
 
 inline void convert(std::vector<NTL::ZZX>& array, const PtxtArray& a)
 { decode(a.ea, array, a.pa); }
+
+inline void convert(std::vector<cx_double>& array, const PtxtArray& a)
+{ decode(a.ea, array, a.pa); }
+
+inline void convert(std::vector<double>& array, const PtxtArray& a)
+{ decode(a.ea, array, a.pa); }
+
+
+
+
+inline void random(PtxtArray& a)
+{
+  random(a.ea, a.pa);
+}
 
 inline bool operator==(const PtxtArray& a, const PtxtArray& b)
 {

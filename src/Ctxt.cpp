@@ -1322,13 +1322,18 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   // std::cerr << "*** " << ratFactor << " " << other.ratFactor << "\n";
   // std::cerr << "*** " << primeSet << " " << other.primeSet << "\n";
 
-  // Special case: if *this is empty then just copy other
-  if (this->isEmpty()) {
+  if (other.isEmpty()) {
+    // Special case: if other is empty then do nothing
+    return;
+  }
+  else if (this->isEmpty()) {
+    // Special case: if *this is empty then just copy other
     *this = other;
     if (negative)
       negate();
     return;
   }
+
 
   // Verify that the plaintext spaces are compatible
   if (isCKKS()) {
@@ -1453,7 +1458,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     } else { // no matching part found, just append this part
       parts.push_back(part);
       if (negative)
-        parts.back().Negate(); // not thread safe??
+        parts.back().Negate(); 
     }
   }
   ptxtMag += other_pt->ptxtMag;
@@ -2004,6 +2009,36 @@ void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
 
 //============ new addConstant interface ===========
 
+void Ctxt::addConstant(const PtxtArray& ptxt)
+{
+  EncodedPtxt eptxt;
+  ptxt.encode(eptxt);
+  addConstant(eptxt);
+}
+
+void Ctxt::addConstant(const EncodedPtxt& eptxt)
+{
+  if (eptxt.isBGV()) {
+    // optimzed logic for EncodedPtxt_BGV
+    addConstant(eptxt.getBGV());
+  }
+  else {
+    FatEncodedPtxt feptxt;
+    feptxt.expand(eptxt, primeSet);
+    addConstant(feptxt);
+  }
+}
+
+void Ctxt::addConstant(const FatEncodedPtxt& feptxt)
+{
+  if (feptxt.isBGV())
+    addConstant(feptxt.getBGV());
+  else if (feptxt.isCKKS())
+    addConstant(feptxt.getCKKS());
+  else
+    throw LogicError("addConstant: bad FatEncodedPtxt");
+}
+
 void Ctxt::addConstant(const FatEncodedPtxt_BGV& ptxt)
 {
   HELIB_TIMER_START;
@@ -2092,143 +2127,32 @@ void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt)
   // NOTE: the following check may be redundant
   assertTrue(isCKKS(), "addConstant: inconsistent encoding");
 
-  NTL::xdouble m = ptxtMag;
-  NTL::xdouble f = ratFactor; 
-  NTL::xdouble e = noiseBound;
+  Ctxt tmp(ZeroCtxtLike, *this);
+  tmp.primeSet = primeSet;
+  tmp.ptxtMag = ptxt.getMag();
+  tmp.ratFactor = ptxt.getScale();
+  tmp.noiseBound = ptxt.getErr();
 
-  double m0 = ptxt.getMag();
-  double f0 = ptxt.getScale();
-  double e0 = ptxt.getErr();
+  tmp.addPart(ptxt.getDCRT(), SKHandle(0, 1, 0));
+  // this will raise an error if prime set of ptxt
+  // does not contain prime set of *this, and any
+  // excess primes will be discarded. 
 
-/*============================================
+  // So now tmp is a ctxt with constant part equal to ptxt,
+  // and prime set equal to that of *this.
+  // We just add it to *this.
+  // The addition logic will take care of everything else,
+  // including (most crucially) equalization or ratFactor's.
 
-ctxt decrypts to m*f + e
-ptxt is m0*f0 + e0
+  this->addCtxt(tmp);
 
-we equalize factors by multiplying ptxt by r = round(f/f0) = f/f0 + e1,
-  where |e1| <= 1/2
+  // NOTE: one optimization that we could add is to
+  // make the prime set of ptxt a little bit bigger than
+  // that of *this. The ctxt addition logic will then scale
+  // of the prime set of *this, scaling of its ratFactor as well.
+  // This can prime the ratFactor equalization logic more effective,
+  // in terms of capacity loss
 
-so the new ptxt is
-
-  ptxt' = r*(m0*f0+e0) = m0*f0*r + e0*r = m0*f0*(f/f0+e1) + e0*r
-	= m0*f + m0*f0*e1 + e0*r
-	= m0*f + e2, where e2 = m0*f0*e1 + e0*r
-
-Now, if e2 > e, we can try to fix this by scaling the ciphertext
-up by a factor s, by adding some primes.  When we do this,
-e and f scale up by a factor s and r also scales up by a factor
-close to s.  The term m0*f0*e1 does not scale up, and so
-this is where we can hope reduce the error of ptxt relative to 
-ctxt.
-
-There is a corner case where r = 0, which happens in
-the case where f << f0. Is that possible? Likely?
-If adding some primes does not resolve that case, then
-then it seems like we have to do something else.
-
-Maybe instead of all of this craziness, if the initial
-strategy of multiplying ptxt by r soes not work,
-we should instead revert to the idea of converting ptxt
-to a Ctxt object, and then using the Ctxt addition routine,
-which is guaranteed to preserve errors at the cost
-of losing some capacity.
-
-=================================================*/
-
-#if 0
-
-  // VJS-FIXME: seems complicated...need to understand this better.
-  if (size <= 0)
-    size = 1.0;
-
-  if (factor <= 0)
-    conv(factor, getContext().ea->getCx().encodeScalingFactor() / size);
-
-  // VJS-FIXME: I think we need to special case an empty ciphertext
-
-  NTL::xdouble ratio =
-      NTL::floor((ratFactor / factor) + 0.5); // round to integer
-  double inaccuracy =
-      std::abs(NTL::conv<double>(ratio * factor / ratFactor) - 1.0);
-
-  // Check if you need to scale up to get target accuracy of 2^{-r}
-  if ((inaccuracy * getContext().alMod.getPPowR()) > 1.0) {
-    Warning("addSomePrimes called in Ctxt::addConstantCKKS(DoubleCRT)");
-    addSomePrimes(*this);                      // This increases ratFactor
-    ratio = floor((ratFactor / factor) + 0.5); // re-compute the ratio
-  }
-
-  // VJS-FIXME: this strategy of adding some primes to offset the
-  // rounding error kind of makes it difficult for the caller
-  // to ensure that the prime set of dcrt contains the prime set
-  // of ctxt.  This means we will expand the prime set of dcrt if
-  // necessary.
-
-  ptxtMag += size; // perhaps too conservative? size(x+y)<=size(x)+size(y)
-
-  noiseBound += 0.5; // FIXME: what's the noise of a fresh encoding?
-  // VJS-FIXME: This can't possibly be right.
-  // Shoudn't this be set to encodeRoundingError?
-  // Even better, shouldn't we have an optional parameter?
-  // Also, in addition to the encode rounding error, we should take
-  // into accoung the rounding error introduced by rounding ratio
-  // to an integer.
-  // Also, the addConstantCKKS routine that takes a complex vector
-  // as input should take into account the ratFactor of the given
-  // ctxt (if non-empty!) so as to only get a single rounding error.
-
-  NTL::ZZ intRatio = NTL::conv<NTL::ZZ>(ratio);
-
-  // VJS-FIXME: I'm getting rid of this prime dropping logic.
-  // Extra primes in dcrt will be ignored in addPart.
-#if 0
-  IndexSet delta = dcrt.getIndexSet() / getPrimeSet(); // set minus
-
-  if (NTL::IsOne(intRatio) && empty(delta)) { // just add it
-    addPart(dcrt, SKHandle(0, 1, 0));
-    return;
-  }
-
-  // work with a local copy
-  DoubleCRT tmp = dcrt;
-  if (!empty(delta))
-    tmp.removePrimes(delta);
-
-  delta = getPrimeSet() / tmp.getIndexSet(); // set minus
-  if (!empty(delta))
-    tmp.addPrimes(delta); // that's expensive
-
-  if (!NTL::IsOne(intRatio))
-    tmp *= intRatio;
-  addPart(tmp, SKHandle(0, 1, 0));
-#else
-
-  IndexSet delta = primeSet / dcrt.getIndexSet();
-  // VJS-FIXME: we don't want to do this if ctxt was empty,
-  // but we have other problems to deal with as well in that case.
-
-  if (NTL::IsOne(intRatio) && empty(delta)) { // just add it
-    addPart(dcrt, SKHandle(0, 1, 0));
-    return;
-  }
-
-  // work with a local copy
-  DoubleCRT tmp = dcrt;
-
-  if (!empty(delta))
-    tmp.addPrimes(delta);
-  // VJS-FIXME: we have to do this here because addPart requires
-  // that the prime set of dcrt contains that of ctxt
-
-  if (!NTL::IsOne(intRatio))
-    tmp *= intRatio;
-  // VJS-FIXME: whatever noise is in dcrt also needs to
-  // be scaled by intRatio and added to the noise bound
-
-  addPart(tmp, SKHandle(0, 1, 0));
-
-#endif
-#endif
 }
 
 

@@ -825,10 +825,55 @@ public:
     }
     convert(data, array);
   }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    const std::vector<cx_double>& array)
+  { throw LogicError("function not implemented"); }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    const std::vector<double>& array)
+  { throw LogicError("function not implemented"); }
 };
 
-HELIB_NO_CKKS_IMPL(encode_pa_impl)
 
+template <>
+class encode_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const std::vector<long>& array)
+  { throw LogicError("function not implemented"); }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const std::vector<NTL::ZZX>& array)
+  { throw LogicError("function not implemented"); }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const std::vector<cx_double>& array)
+  {
+    PA_BOILER(PA_cx)
+
+    assertEq(lsize(array), n, "Size of array does not match n");
+    convert(data, array);
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const std::vector<double>& array)
+  {
+    PA_BOILER(PA_cx)
+
+    assertEq(lsize(array), n, "Size of array does not match n");
+    convert(data, array);
+  }
+};
 
 
 void encode(const EncryptedArray& ea,
@@ -844,6 +889,21 @@ void encode(const EncryptedArray& ea,
 {
   ea.dispatch<encode_pa_impl>(pa, array);
 }
+
+void encode(const EncryptedArray& ea,
+            PlaintextArray& pa,
+            const std::vector<cx_double>& array)
+{
+  ea.dispatch<encode_pa_impl>(pa, array);
+}
+
+void encode(const EncryptedArray& ea,
+            PlaintextArray& pa,
+            const std::vector<double>& array)
+{
+  ea.dispatch<encode_pa_impl>(pa, array);
+}
+
 
 void encode(const EncryptedArray& ea, PlaintextArray& pa, long val)
 {
@@ -904,28 +964,75 @@ void random(const EncryptedArray& ea, PlaintextArray& pa)
 
 //=============================================================================
 
-// VJS-FIXME: not sure what to do with these...maybe leave as is?
-// I eventually want to have more selective interface, similar to
-// the encoding functions
-
 template <typename type>
 class decode_pa_impl
 {
 public:
   PA_INJECT(type)
 
-  template <typename T>
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    std::vector<T>& array,
+                    std::vector<NTL::ZZX>& array,
                     const PlaintextArray& pa)
   {
     CPA_BOILER(type)
 
     convert(array, data);
   }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    std::vector<long>& array,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(type)
+
+    convert(array, data);
+  }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    std::vector<cx_double>& array,
+                    const PlaintextArray& pa)
+  { throw LogicError("function not implemented"); }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    std::vector<double>& array,
+                    const PlaintextArray& pa)
+  { throw LogicError("function not implemented"); }
 };
 
-HELIB_NO_CKKS_IMPL(decode_pa_impl)
+template<>
+class decode_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    std::vector<NTL::ZZX>& array,
+                    const PlaintextArray& pa)
+  { throw LogicError("function not implemented"); }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    std::vector<long>& array,
+                    const PlaintextArray& pa)
+  { throw LogicError("function not implemented"); }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    std::vector<cx_double>& array,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(PA_cx)
+
+    convert(array, data);
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    std::vector<double>& array,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(PA_cx)
+
+    project(array, data);
+  }
+};
 
 
 void decode(const EncryptedArray& ea,
@@ -942,10 +1049,22 @@ void decode(const EncryptedArray& ea,
   ea.dispatch<decode_pa_impl>(array, pa);
 }
 
+void decode(const EncryptedArray& ea,
+            std::vector<cx_double>& array,
+            const PlaintextArray& pa)
+{
+  ea.dispatch<decode_pa_impl>(array, pa);
+}
+
+void decode(const EncryptedArray& ea,
+            std::vector<double>& array,
+            const PlaintextArray& pa)
+{
+  ea.dispatch<decode_pa_impl>(array, pa);
+}
+
 //=============================================================================
 
-// VJS-FIXME: equality tests for complex vectors
-// need some approximation...not sure how to deal with that...
 
 template <typename type>
 class equals_pa_impl

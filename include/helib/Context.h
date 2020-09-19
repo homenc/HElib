@@ -77,6 +77,9 @@ public:
   // VJS-FIXME: should this really be public?
   std::shared_ptr<const EncryptedArray> ea;
 
+  const EncryptedArray& getView() const { return *ea; } // preferred name
+  const EncryptedArray& getEA() const   { return *ea; } // legacy name
+
   std::shared_ptr<const PowerfulDCRT> pwfl_converter;
 
   /** @brief The structure of a single slot of the plaintext space.
