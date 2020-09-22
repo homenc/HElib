@@ -90,7 +90,7 @@ addons:
     - cmake
     - bats-core
     - ccache
-    # update: true # Disabled as it was adding several minutes (and timeout failure) to build.
+    update: true
 
 # activating ccache on MacOS.
 before_install:
