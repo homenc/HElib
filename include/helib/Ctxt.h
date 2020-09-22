@@ -536,7 +536,8 @@ public:
     addConstant(ptxt.getPolyRepr());
   }
 
-  void addConstant(const NTL::ZZ& c);
+
+
   //! add a rational number in the form a/b, a,b are long
   void addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
   void addConstantCKKS(double x)
@@ -599,15 +600,31 @@ public:
   void addConstant(const EncodedPtxt& ptxt);
   void addConstant(const FatEncodedPtxt& ptxt);
 
-  void operator+=(const PtxtArray& ptxt) 
-  { addConstant(ptxt); }
+  void addConstant(const NTL::ZZ& ptxt);
+  void addConstant(long ptxt);
+  void addConstant(double ptxt);
+  void addConstant(NTL::xdouble ptxt);
 
-  void operator+=(const EncodedPtxt& ptxt) 
-  { addConstant(ptxt); }
+  Ctxt& operator+=(const PtxtArray& ptxt) 
+  { addConstant(ptxt); return *this; }
 
-  void operator+=(const FatEncodedPtxt& ptxt) 
-  { addConstant(ptxt); }
+  Ctxt& operator+=(const EncodedPtxt& ptxt) 
+  { addConstant(ptxt); return *this; }
 
+  Ctxt& operator+=(const FatEncodedPtxt& ptxt) 
+  { addConstant(ptxt); return *this; }
+
+  Ctxt& operator+=(const NTL::ZZ& ptxt) 
+  { addConstant(ptxt); return *this; }
+
+  Ctxt& operator+=(long ptxt) 
+  { addConstant(ptxt); return *this; }
+
+  Ctxt& operator+=(double ptxt) 
+  { addConstant(ptxt); return *this; }
+
+  Ctxt& operator+=(NTL::xdouble ptxt) 
+  { addConstant(ptxt); return *this; }
 
 private: // impl only
   void addConstant(const FatEncodedPtxt_BGV& ptxt);

@@ -812,22 +812,109 @@ void Ctxt::addConstant(const NTL::ZZX& poly, double size)
   addConstant(DoubleCRT(poly, context, primeSet), size);
 }
 
-// Add a constant polynomial
+// Add a scalar constant 
 void Ctxt::addConstant(const NTL::ZZ& c)
 {
   if (isCKKS()) {
-    addConstantCKKS(c);
-    return;
+    addConstant(NTL::to_xdouble(c));
   }
-  DoubleCRT dcrt(getContext(), getPrimeSet());
-  long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
-  if (cc > ptxtSpace / 2)
-    cc -= ptxtSpace;
-  dcrt = cc;
+  else {
+    long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
+    if (cc > ptxtSpace / 2)
+      cc -= ptxtSpace;
 
-  double size = NTL::to_double(cc);
+    double size = NTL::to_double(cc);
 
-  addConstant(dcrt, size);
+    addConstant(FatEncodedPtxt_BGV(DoubleCRT(cc, context, primeSet),
+                                   ptxtSpace, size));
+  }
+}
+
+void Ctxt::addConstant(long c)
+{
+  if (isCKKS()) {
+    addConstant(NTL::to_xdouble(c));
+  }
+  else {
+    addConstant(NTL::to_ZZ(c));
+  }
+}
+
+void Ctxt::addConstant(double c)
+{
+  if (isCKKS()) {
+    addConstant(NTL::to_xdouble(c));
+  }
+  else {
+    throw LogicError("addConstant(double) not supported for GGV");
+  }
+}
+
+void Ctxt::addConstant(NTL::xdouble c)
+{
+  if (isCKKS()) {
+    // we want to choose a factor f such that 
+    //   |round(f*c) - f*c| = e and e/f is <= thresh,
+    // where thresh = max(2^{-43, noiseBound/ratFactor).
+    // f is to chosen to be of the form 2^k*ratFactor,
+    // where k >= 0 is as small as possible.
+
+    NTL::xdouble thresh { std::ldexp(2.0, NTL_DOUBLE_PRECISION-10) };
+    if (thresh < ratFactor/noiseBound) thresh = ratFactor/noiseBound;
+
+    NTL::xdouble f = ratFactor;
+    NTL::xdouble fc, rfc, e;
+
+    fc = f*c; rfc = NTL::floor(fc+0.5); e = NTL::fabs(rfc-fc);
+    if (e > 0.5) e = 0.5; // kind of paranoid...
+
+    while (e > thresh) {
+      f *= 2;
+      fc = f*c; rfc = NTL::floor(fc+0.5); e = NTL::fabs(rfc-fc);
+      if (e > 0.5) e = 0.5; 
+    }
+
+    // The following logic is essentially the same
+    // as in addConstant(FatEncodedPtxt_CKKS).
+    // Unfortunatly, we can't just call it directly,
+    // because we would have to create a FatEncodedPtxt_CKKS
+    // object with xdouble mag and scale parameters.
+
+    Ctxt tmp(ZeroCtxtLike, *this);
+    tmp.primeSet = primeSet;
+    tmp.ptxtMag = NTL::fabs(c);
+    tmp.ratFactor = f;
+    tmp.noiseBound = e;
+
+    tmp.addPart(DoubleCRT(NTL::to_ZZ(rfc), context, primeSet), 
+		SKHandle(0, 1, 0));
+
+    // So now tmp is a ctxt with constant part equal to c,
+    // and prime set equal to that of *this.
+    // We just add it to *this.
+    // The addition logic will take care of everything else,
+    // including (most crucially) equalization of ratFactor's.
+    // In the most typical case, the ratFactor's will be equal,
+    // and there is nothing to do, and this will degenerate
+    // into a simple addPart.
+    // More generally, f = 2^k*ratFactor, we will
+    // end up scaling *this by 2^k.
+
+    this->addCtxt(tmp);
+
+    // NOTE: the above approach is a bit heavy handed,
+    // but a lot of corner cases are taken care of
+    // (like an empty ctxt, or a nonempty ctxt with
+    // an unusually small (or even 0) noiseBound
+
+    // NOTE: instead of scaling *this, we could have tried
+    // adding made the prime set of tmp a bit bigger than that
+    // of *this, and force the scaling to happen this way.
+
+  }
+  else {
+    throw LogicError("addConstant(xdouble) not supported for BGV");
+  }
 }
 
 // Add a constant polynomial for CKKS encryption. The 'size' argument is
@@ -2150,7 +2237,7 @@ void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt)
   // make the prime set of ptxt a little bit bigger than
   // that of *this. The ctxt addition logic will then scale
   // of the prime set of *this, scaling of its ratFactor as well.
-  // This can prime the ratFactor equalization logic more effective,
+  // This can can make the ratFactor equalization logic more effective,
   // in terms of capacity loss
 
 }

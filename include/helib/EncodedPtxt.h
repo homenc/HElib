@@ -203,6 +203,9 @@ public:
       size(embeddingLargestCoeff(eptxt.getPoly(), eptxt.getContext().zMStar)) 
   { }
 
+  FatEncodedPtxt_BGV(const DoubleCRT& dcrt_, long ptxtSpace_, double size_)
+    : dcrt(dcrt_), ptxtSpace(ptxtSpace_), size(size_) 
+  { }
 };
 
 class FatEncodedPtxt_CKKS {
@@ -222,6 +225,11 @@ public:
   FatEncodedPtxt_CKKS(const EncodedPtxt_CKKS& eptxt, const IndexSet& s)
     : dcrt(eptxt.getPoly(), eptxt.getContext(), s),
       mag(eptxt.getMag()), scale(eptxt.getScale()), err(eptxt.getErr()) { }
+
+  FatEncodedPtxt_CKKS(const DoubleCRT& dcrt_, double mag_, double scale_,
+                      double err_)
+    : dcrt(dcrt_), mag(mag_), scale(scale_), err(err_)
+  { }
 
 };
 
