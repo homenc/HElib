@@ -342,6 +342,15 @@ class Ctxt
                bool matchPrimeSet = false,
                bool negative = false);
 
+  // convenient to avoid dealng with the deprecated matchPrimeSet
+  // parameter
+  void addSignedPart(const DoubleCRT& part,
+                     const SKHandle& handle,
+                     bool negative = false)
+  {
+    addPart(part, handle, false, negative);
+  }
+
   // Takes as arguments a ciphertext-part p relative to s' and a key-switching
   // matrix W = W[s'->s], use W to switch p relative to (1,s), and add the
   // result to *this.
@@ -595,6 +604,9 @@ private: // impl only
 public:
 
 //=========== new addConstant interface ============
+
+  // VJS-FIXME: add optional negate parameter
+  // to all of these, and add -= operators
 
   void addConstant(const PtxtArray& ptxt);
   void addConstant(const EncodedPtxt& ptxt);
