@@ -583,6 +583,8 @@ public:
   void multByConstant(const zzX& poly, double size = -1.0);
   void multByConstant(const NTL::ZZ& c);
 
+  // VJS-FIXME: fix up the scalar versions
+
 //=========== new multByConstant interface =========
 
   void multByConstant(const PtxtArray& ptxt);
