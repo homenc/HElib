@@ -375,9 +375,7 @@ void convert(std::vector<NTL::ZZX>& X, const NTL::vec_zz_pE& A);
 void convert(std::vector<std::vector<NTL::ZZX>>& X, const NTL::mat_zz_pE& A);
 void convert(NTL::Vec<long>& out, const NTL::ZZX& in);
 
-void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric = true);
-// VJS-FIXME: make symmetric=false the default, as otherwise this is
-// incosnistent
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric = false);
 
 void convert(NTL::Vec<long>& out, const NTL::GF2X& in);
 void convert(NTL::ZZX& out, const NTL::Vec<long>& in);

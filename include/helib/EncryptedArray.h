@@ -1704,6 +1704,8 @@ void encode(const EncryptedArray& ea,
 
 void encode(const EncryptedArray& ea, PlaintextArray& pa, long val);
 void encode(const EncryptedArray& ea, PlaintextArray& pa, const NTL::ZZX& val);
+void encode(const EncryptedArray& ea, PlaintextArray& pa, double val);
+void encode(const EncryptedArray& ea, PlaintextArray& pa, cx_double val);
 
 
 void decode(const EncryptedArray& ea,
@@ -1776,6 +1778,17 @@ public:
   explicit PtxtArray(const Context& context) : ea(*context.ea), pa(ea) { }
 
   // copy constructor: default
+  PtxtArray(const PtxtArray&) = default;
+
+  // templates that allows construction via convert:
+  // T can be any type supported by convert(PtxtArray,T)
+  template<class T>
+  PtxtArray(const EncryptedArray& ea, const T& t) : PtxtArray(ea)
+  { convert(*this, t); }
+
+  template<class T>
+  PtxtArray(const Context& context, const T& t) : PtxtArray(context)
+  { convert(*this, t); }
 
   PtxtArray& operator=(const PtxtArray& other) 
   {
@@ -1835,6 +1848,26 @@ inline void convert(PtxtArray& a, const std::vector<double>& array)
   encode(a.ea, a.pa, array);
 }
 
+inline void convert(PtxtArray& a, long val)
+{
+  encode(a.ea, a.pa, val);
+}
+
+inline void convert(PtxtArray& a, const NTL::ZZX& val)
+{
+  encode(a.ea, a.pa, val);
+}
+
+inline void convert(PtxtArray& a, double val)
+{
+  encode(a.ea, a.pa, val);
+}
+
+
+inline void convert(PtxtArray& a, cx_double val)
+{
+  encode(a.ea, a.pa, val);
+}
 
 
 inline void convert(std::vector<long>& array, const PtxtArray& a)
@@ -1885,6 +1918,19 @@ inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)
   return a;
 }
 
+inline PtxtArray& operator+=(PtxtArray& a, long b) 
+{ return a += PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator+=(PtxtArray& a, double b)  
+{ return a += PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator+=(PtxtArray& a, cx_double b) 
+{ return a += PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator+=(PtxtArray& a, const NTL::ZZX& b)
+{ return a += PtxtArray(a.ea, b); }
+
+
 inline PtxtArray& operator-=(PtxtArray& a, const PtxtArray& b)
 {
   assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
@@ -1892,12 +1938,38 @@ inline PtxtArray& operator-=(PtxtArray& a, const PtxtArray& b)
   return a;
 }
 
+inline PtxtArray& operator-=(PtxtArray& a, long b) 
+{ return a -= PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator-=(PtxtArray& a, double b)  
+{ return a -= PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator-=(PtxtArray& a, cx_double b) 
+{ return a -= PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator-=(PtxtArray& a, const NTL::ZZX& b)
+{ return a -= PtxtArray(a.ea, b); }
+
+
 inline PtxtArray& operator*=(PtxtArray& a, const PtxtArray& b)
 {
   assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   mul(a.ea, a.pa, b.pa);
   return a;
 }
+
+inline PtxtArray& operator*=(PtxtArray& a, long b) 
+{ return a *= PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator*=(PtxtArray& a, double b)  
+{ return a *= PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator*=(PtxtArray& a, cx_double b) 
+{ return a *= PtxtArray(a.ea, b); }
+
+inline PtxtArray& operator*=(PtxtArray& a, const NTL::ZZX& b)
+{ return a *= PtxtArray(a.ea, b); }
+
 
 inline void negate(PtxtArray& a)
 {

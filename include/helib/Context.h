@@ -62,8 +62,39 @@ class Context
   // primes only grows and no prime is ever modified or removed.
 
 public:
+
   // Context is meant for convenience, not encapsulation: Most data
   // members are public and can be initialized by the application program.
+  // VJS-FIXME: it is time to move away from this philosophy
+
+  //============================================================
+  // Here are some "getter" methods that give direct 
+  // access to important parameters.  These are for convenience,
+  // as well as allowing for future re-organization.
+
+  // parameters stored in zMStar.
+  // these are invariant for any computations
+  // involving this Context
+  long getM() const { return zMStar.getM(); }
+  long getP() const { return zMStar.getP(); }
+  long getPhiM() const { return zMStar.getPhiM(); }
+  long getOrdP() const { return zMStar.getOrdP(); }
+
+  // parameters stored in alMod.
+  // these are NOT invariant: it is possible to work
+  // with EncryptedArray objects that use a different
+  // PAlgebra object.
+  long getR() const { return alMod.getR(); }
+  long getPPowR() const { return alMod.getPPowR(); }
+  
+  // synonymn for getR().
+  // this is used in various corner cases in CKKS where
+  // we really need some default precisiion parameter.
+  // It is also possible to define this differently 
+  // in the future.
+  long getDefaultPrecision() const { return alMod.getR(); }
+ 
+  //============================================================
 
   Context& operator=(const Context&) = delete;
 

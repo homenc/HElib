@@ -847,7 +847,12 @@ public:
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
                     PlaintextArray& pa,
                     const std::vector<long>& array)
-  { throw LogicError("function not implemented"); }
+  {
+    PA_BOILER(PA_cx)
+
+    assertEq(lsize(array), n, "Size of array does not match n");
+    convert(data, array);
+  }
 
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
                     PlaintextArray& pa,
@@ -919,6 +924,26 @@ void encode(const EncryptedArray& ea, PlaintextArray& pa, const NTL::ZZX& val)
 {
   long n = ea.size();
   std::vector<NTL::ZZX> array;
+  array.resize(n);
+  for (long i = 0; i < n; i++)
+    array[i] = val;
+  encode(ea, pa, array);
+}
+
+void encode(const EncryptedArray& ea, PlaintextArray& pa, cx_double val)
+{
+  long n = ea.size();
+  std::vector<cx_double> array;
+  array.resize(n);
+  for (long i = 0; i < n; i++)
+    array[i] = val;
+  encode(ea, pa, array);
+}
+
+void encode(const EncryptedArray& ea, PlaintextArray& pa, double val)
+{
+  long n = ea.size();
+  std::vector<cx_double> array;
   array.resize(n);
   for (long i = 0; i < n; i++)
     array[i] = val;

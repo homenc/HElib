@@ -1110,11 +1110,12 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
   NTL::xdouble x = big.ratFactor / small.ratFactor;
   //std::cerr << "=== equalize: " << x << "\n";
 
-  long denomBound = (1L << std::min(NTL_BITS_PER_LONG-2,NTL_DOUBLE_PRECISION-10));
+  long r = c1.getContext().getDefaultPrecision();
+  NTL::ZZ denomBound = NTL::ZZ(1L) << (r+1);
   // NOTE: With the new early termination logic, it is very unlikely that 
   // we will ever stop by exceeding denomBound.
 
-  double epsilon = 0.125 / denomBound;         // "smudge factor"
+  double epsilon = 0.125 / to_double(denomBound); // "smudge factor"
   NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon); // floor function
   // NOTE: epsilon is meant to counter rounding errors
   // VJS-FIXME: I don't understand this.
@@ -1992,37 +1993,37 @@ void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
 
 //============ new addConstant interface ===========
 
-void Ctxt::addConstant(const PtxtArray& ptxt)
+void Ctxt::addConstant(const PtxtArray& ptxt, bool neg)
 {
   EncodedPtxt eptxt;
   ptxt.encode(eptxt);
-  addConstant(eptxt);
+  addConstant(eptxt, neg);
 }
 
-void Ctxt::addConstant(const EncodedPtxt& eptxt)
+void Ctxt::addConstant(const EncodedPtxt& eptxt, bool neg)
 {
   if (eptxt.isBGV()) {
     // optimzed logic for EncodedPtxt_BGV
-    addConstant(eptxt.getBGV());
+    addConstant(eptxt.getBGV(), neg);
   }
   else {
     FatEncodedPtxt feptxt;
     feptxt.expand(eptxt, primeSet);
-    addConstant(feptxt);
+    addConstant(feptxt, neg);
   }
 }
 
-void Ctxt::addConstant(const FatEncodedPtxt& feptxt)
+void Ctxt::addConstant(const FatEncodedPtxt& feptxt, bool neg)
 {
   if (feptxt.isBGV())
-    addConstant(feptxt.getBGV());
+    addConstant(feptxt.getBGV(), neg);
   else if (feptxt.isCKKS())
-    addConstant(feptxt.getCKKS());
+    addConstant(feptxt.getCKKS(), neg);
   else
     throw LogicError("addConstant: bad FatEncodedPtxt");
 }
 
-void Ctxt::addConstant(const FatEncodedPtxt_BGV& ptxt)
+void Ctxt::addConstant(const FatEncodedPtxt_BGV& ptxt, bool neg)
 {
   HELIB_TIMER_START;
 
@@ -2054,16 +2055,16 @@ void Ctxt::addConstant(const FatEncodedPtxt_BGV& ptxt)
   // caller to ensure that this is the case
 
   if (f == 1) {
-    addPart(dcrt, SKHandle(0, 1, 0));
+    addSignedPart(dcrt, SKHandle(0, 1, 0), neg);
   } else {
     // work with a local copy
     DoubleCRT tmp = dcrt;
     tmp *= f;
-    addPart(tmp, SKHandle(0, 1, 0));
+    addSignedPart(tmp, SKHandle(0, 1, 0), neg);
   }
 }
 
-void Ctxt::addConstant(const EncodedPtxt_BGV& ptxt)
+void Ctxt::addConstant(const EncodedPtxt_BGV& ptxt, bool neg)
 {
   HELIB_TIMER_START;
 
@@ -2098,10 +2099,10 @@ void Ctxt::addConstant(const EncodedPtxt_BGV& ptxt)
 
   noiseBound += size;
 
-  addPart(dcrt, SKHandle(0, 1, 0));
+  addSignedPart(dcrt, SKHandle(0, 1, 0), neg);
 }
 
-void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt)
+void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt, bool neg)
 {
   HELIB_TIMER_START;
 
@@ -2127,7 +2128,7 @@ void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt)
   // The addition logic will take care of everything else,
   // including (most crucially) equalization or ratFactor's.
 
-  this->addCtxt(tmp);
+  this->addCtxt(tmp, neg);
 
   // NOTE: one optimization that we could add is to
   // make the prime set of ptxt a little bit bigger than
@@ -2139,10 +2140,10 @@ void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt)
 }
 
 // Add a scalar constant 
-void Ctxt::addConstant(const NTL::ZZ& c)
+void Ctxt::addConstant(const NTL::ZZ& c, bool neg)
 {
   if (isCKKS()) {
-    addConstant(NTL::to_xdouble(c));
+    addConstant(NTL::to_xdouble(c), neg);
   }
   else {
     long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
@@ -2152,40 +2153,43 @@ void Ctxt::addConstant(const NTL::ZZ& c)
     double size = NTL::to_double(cc);
 
     addConstant(FatEncodedPtxt_BGV(DoubleCRT(cc, context, primeSet),
-                                   ptxtSpace, size));
+                                   ptxtSpace, size), neg);
   }
 }
 
-void Ctxt::addConstant(long c)
+void Ctxt::addConstant(long c, bool neg)
 {
   if (isCKKS()) {
-    addConstant(NTL::to_xdouble(c));
+    addConstant(NTL::to_xdouble(c), neg);
   }
   else {
-    addConstant(NTL::to_ZZ(c));
+    addConstant(NTL::to_ZZ(c), neg);
   }
 }
 
-void Ctxt::addConstant(double c)
+void Ctxt::addConstant(double c, bool neg)
 {
   if (isCKKS()) {
-    addConstant(NTL::to_xdouble(c));
+    addConstant(NTL::to_xdouble(c), neg);
   }
   else {
     throw LogicError("addConstant(double) not supported for GGV");
   }
 }
 
-void Ctxt::addConstant(NTL::xdouble c)
+void Ctxt::addConstant(NTL::xdouble c, bool neg)
 {
   if (isCKKS()) {
     // we want to choose a factor f such that 
     //   |round(f*c) - f*c| = e and e/f is <= thresh,
-    // where thresh = max(2^{-43, noiseBound/ratFactor).
+    // where thresh = max(2^{-(r+1), noiseBound/ratFactor).
+    // Here, r is the "default precision".
     // f is to chosen to be of the form 2^k*ratFactor,
     // where k >= 0 is as small as possible.
 
-    NTL::xdouble thresh { std::ldexp(2.0, NTL_DOUBLE_PRECISION-10) };
+    long r = context.getDefaultPrecision();
+
+    NTL::xdouble thresh { std::ldexp(1.0, -(r+1)) };
     if (thresh < ratFactor/noiseBound) thresh = ratFactor/noiseBound;
 
     NTL::xdouble f = ratFactor;
@@ -2226,7 +2230,7 @@ void Ctxt::addConstant(NTL::xdouble c)
     // More generally, f = 2^k*ratFactor, we will
     // end up scaling *this by 2^k.
 
-    this->addCtxt(tmp);
+    this->addCtxt(tmp, neg);
 
     // NOTE: the above approach is a bit heavy handed,
     // but a lot of corner cases are taken care of

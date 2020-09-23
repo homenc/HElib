@@ -605,17 +605,15 @@ public:
 
 //=========== new addConstant interface ============
 
-  // VJS-FIXME: add optional negate parameter
-  // to all of these, and add -= operators
 
-  void addConstant(const PtxtArray& ptxt);
-  void addConstant(const EncodedPtxt& ptxt);
-  void addConstant(const FatEncodedPtxt& ptxt);
+  void addConstant(const PtxtArray& ptxt, bool neg=false);
+  void addConstant(const EncodedPtxt& ptxt, bool neg=false);
+  void addConstant(const FatEncodedPtxt& ptxt, bool neg=false);
 
-  void addConstant(const NTL::ZZ& ptxt);
-  void addConstant(long ptxt);
-  void addConstant(double ptxt);
-  void addConstant(NTL::xdouble ptxt);
+  void addConstant(const NTL::ZZ& ptxt, bool neg=false);
+  void addConstant(long ptxt, bool neg=false);
+  void addConstant(double ptxt, bool neg=false);
+  void addConstant(NTL::xdouble ptxt, bool neg=false);
 
   Ctxt& operator+=(const PtxtArray& ptxt) 
   { addConstant(ptxt); return *this; }
@@ -638,11 +636,33 @@ public:
   Ctxt& operator+=(NTL::xdouble ptxt) 
   { addConstant(ptxt); return *this; }
 
-private: // impl only
-  void addConstant(const FatEncodedPtxt_BGV& ptxt);
-  void addConstant(const EncodedPtxt_BGV& ptxt);
 
-  void addConstant(const FatEncodedPtxt_CKKS& ptxt);
+  Ctxt& operator-=(const PtxtArray& ptxt) 
+  { addConstant(ptxt, true); return *this; }
+
+  Ctxt& operator-=(const EncodedPtxt& ptxt) 
+  { addConstant(ptxt, true); return *this; }
+
+  Ctxt& operator-=(const FatEncodedPtxt& ptxt) 
+  { addConstant(ptxt, true); return *this; }
+
+  Ctxt& operator-=(const NTL::ZZ& ptxt) 
+  { addConstant(ptxt, true); return *this; }
+
+  Ctxt& operator-=(long ptxt) 
+  { addConstant(ptxt, true); return *this; }
+
+  Ctxt& operator-=(double ptxt) 
+  { addConstant(ptxt, true); return *this; }
+
+  Ctxt& operator-=(NTL::xdouble ptxt) 
+  { addConstant(ptxt, true); return *this; }
+
+private: // impl only
+  void addConstant(const FatEncodedPtxt_BGV& ptxt, bool neg=false);
+  void addConstant(const EncodedPtxt_BGV& ptxt, bool neg=false);
+
+  void addConstant(const FatEncodedPtxt_CKKS& ptxt, bool neg=false);
 public:
 
 //==================================================
