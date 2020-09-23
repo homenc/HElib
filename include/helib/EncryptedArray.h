@@ -1869,6 +1869,32 @@ inline void convert(PtxtArray& a, cx_double val)
   encode(a.ea, a.pa, val);
 }
 
+// additional convenience conversions from NTL types (BGV only)
+// NTL vectors of NTL ring types 
+// Implementation note: these all go via conversion to 
+// std::vector<NTL::ZZX> to enforce BGV
+inline void convert(PtxtArray& a, const NTL::Vec<NTL::GF2>& vec)
+{ std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
+inline void convert(PtxtArray& a, const NTL::Vec<NTL::GF2X>& vec)
+{ std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
+inline void convert(PtxtArray& a, const NTL::Vec<NTL::zz_p>& vec)
+{ std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
+inline void convert(PtxtArray& a, const NTL::Vec<NTL::zz_pX>& vec)
+{ std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
+
+// NTL scalar ring types
+// Implementation note: these all go via conversion to 
+// NTL::ZZX to enforce BGV
+inline void convert(PtxtArray& a, NTL::GF2 scalar)
+{ NTL::ZZX s; convert(s, scalar); convert(a, s); }
+inline void convert(PtxtArray& a, const NTL::GF2X& scalar)
+{ NTL::ZZX s; convert(s, scalar); convert(a, s); }
+inline void convert(PtxtArray& a, NTL::zz_p scalar)
+{ NTL::ZZX s; convert(s, scalar); convert(a, s); }
+inline void convert(PtxtArray& a, const NTL::zz_pX& scalar)
+{ NTL::ZZX s; convert(s, scalar); convert(a, s); }
+
+
 
 inline void convert(std::vector<long>& array, const PtxtArray& a)
 { decode(a.ea, array, a.pa); }
@@ -1918,16 +1944,8 @@ inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)
   return a;
 }
 
-inline PtxtArray& operator+=(PtxtArray& a, long b) 
-{ return a += PtxtArray(a.ea, b); }
-
-inline PtxtArray& operator+=(PtxtArray& a, double b)  
-{ return a += PtxtArray(a.ea, b); }
-
-inline PtxtArray& operator+=(PtxtArray& a, cx_double b) 
-{ return a += PtxtArray(a.ea, b); }
-
-inline PtxtArray& operator+=(PtxtArray& a, const NTL::ZZX& b)
+template<class T>
+PtxtArray& operator+=(PtxtArray& a, const T& b) 
 { return a += PtxtArray(a.ea, b); }
 
 
@@ -1938,16 +1956,8 @@ inline PtxtArray& operator-=(PtxtArray& a, const PtxtArray& b)
   return a;
 }
 
-inline PtxtArray& operator-=(PtxtArray& a, long b) 
-{ return a -= PtxtArray(a.ea, b); }
-
-inline PtxtArray& operator-=(PtxtArray& a, double b)  
-{ return a -= PtxtArray(a.ea, b); }
-
-inline PtxtArray& operator-=(PtxtArray& a, cx_double b) 
-{ return a -= PtxtArray(a.ea, b); }
-
-inline PtxtArray& operator-=(PtxtArray& a, const NTL::ZZX& b)
+template<class T>
+PtxtArray& operator-=(PtxtArray& a, const T& b) 
 { return a -= PtxtArray(a.ea, b); }
 
 
@@ -1958,17 +1968,10 @@ inline PtxtArray& operator*=(PtxtArray& a, const PtxtArray& b)
   return a;
 }
 
-inline PtxtArray& operator*=(PtxtArray& a, long b) 
+template<class T>
+PtxtArray& operator*=(PtxtArray& a, const T& b) 
 { return a *= PtxtArray(a.ea, b); }
 
-inline PtxtArray& operator*=(PtxtArray& a, double b)  
-{ return a *= PtxtArray(a.ea, b); }
-
-inline PtxtArray& operator*=(PtxtArray& a, cx_double b) 
-{ return a *= PtxtArray(a.ea, b); }
-
-inline PtxtArray& operator*=(PtxtArray& a, const NTL::ZZX& b)
-{ return a *= PtxtArray(a.ea, b); }
 
 
 inline void negate(PtxtArray& a)

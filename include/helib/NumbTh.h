@@ -399,6 +399,9 @@ inline void convert(std::complex<double>& x1, bool x2) { x1 = x2; }
 inline void convert(std::complex<double>& x1, long x2) { x1 = x2; }
 inline void convert(std::complex<double>& x1, double x2) { x1 = x2; }
 
+inline void convert(NTL::ZZX& x1, NTL::GF2 x2) { x1 = rep(x2); }
+inline void convert(NTL::ZZX& x1, NTL::zz_p x2) { x1 = rep(x2); }
+
 //! generic vector conversion routines
 template <typename T1, typename T2>
 void convert(std::vector<T1>& v1, const std::vector<T2>& v2)
