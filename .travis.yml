@@ -1,45 +1,112 @@
+# Copyright (C) 2020 IBM Corp.
+# This program is Licensed under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at
+#   http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License. See accompanying LICENSE file.
+
 language: cpp
 notifications:
   email: false
-sudo: required
 
 branches:
   only:
   - master
 
-before_script:
-  # 
-  - curl -O "https://www.shoup.net/ntl/ntl-11.4.3.tar.gz"
-  - tar --no-same-owner -xf ntl-11.4.3.tar.gz
-  - cd ntl-11.4.3/src
-  - ./configure PREFIX=~/ntl SHARED=on NTL_GMP_LIP=on NTL_THREADS=on NTL_THREAD_BOOST=on
-  - make -j4
-  - make install
-  - cd ../..
+cache: ccache
 
-  # Build Folder
-  #
-  - mkdir build
-  - cd build
-
-matrix:
+jobs:
   include:
-  - os: linux
-    dist: bionic
-    env:
-      - TEST="Build test"
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-          - gcc
-          - g++
-          - m4
-          - patchelf
+    - name: "Ubuntu 18.04 lib build gcc"
+      os: linux
+      dist: bionic
+      compiler: gcc
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
+    - name: "Ubuntu 20.04 lib build gcc"
+      os: linux
+      dist: focal
+      compiler: gcc
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
+    - name: "Ubuntu 18.04 lib build clang"
+      os: linux
+      dist: bionic
+      compiler: clang
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
+    - name: "Ubuntu 20.04 lib build clang"
+      os: linux
+      dist: focal
+      compiler: clang
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
+    - name: "Ubuntu 18.04 package build gcc"
+      os: linux
+      dist: bionic
+      compiler: gcc
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "Ubuntu 20.04 package build gcc"
+      os: linux
+      dist: focal
+      compiler: gcc
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "Ubuntu 18.04 package build clang"
+      os: linux
+      dist: bionic
+      compiler: clang
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "Ubuntu 20.04 package build clang"
+      os: linux
+      dist: focal
+      compiler: clang
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "MacOS Mojave lib build"
+      os: osx
+      osx_image: xcode11.3
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
+    - name: "MacOS Mojave package build"
+      os: osx
+      osx_image: xcode11.3
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+    - name: "MacOS Catalina lib build"
+      os: osx
+      osx_image: xcode12
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=OFF
+    - name: "MacOS Catalina package build"
+      os: osx
+      osx_image: xcode12
+      env: INSTALL_PREFIX="~/helib_install" PACKAGE_BUILD=ON
+      
 
+addons:
+  apt:
+    packages:
+    - g++
+    - clang
+    - patchelf
+    - cmake
+    - bats
+    update: true
+  homebrew:
+    packages:
+    - cmake
+    - bats-core
+    - ccache
+    update: true
+
+# activating ccache on MacOS.
+before_install:
+  - if [ "${TRAVIS_OS_NAME}" == "osx" ]; then 
+        export PATH="/usr/local/opt/ccache/libexec:$PATH";
+    fi
+
+install:
+  - ./ci/install_deps.sh
 
 script:
-      - cmake -DPACKAGE_BUILD=OFF -DNTL_DIR="/home/travis/ntl/" -DENABLE_TEST=ON .. 
-      - make -j4
-      - ctest -j4
+  - ./ci/build_install_lib.sh "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
+  - ./ci/test_lib.sh
+  - ./ci/build_test_consumer.sh "examples" "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
+  - ./ci/build_test_consumer.sh "utils" "${PACKAGE_BUILD}" "${INSTALL_PREFIX}"
+
