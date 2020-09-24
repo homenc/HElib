@@ -13,9 +13,9 @@ language: cpp
 notifications:
   email: false
 
-# branches:
-#   only:
-#   - master
+branches:
+  only:
+  - master
 
 cache: ccache
 
