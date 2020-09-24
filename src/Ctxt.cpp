@@ -986,8 +986,6 @@ Ctxt& Ctxt::operator*=(const NTL::ZZX& poly)
   return *this;
 }
 
-// VJS-FIXME: this should instead call NTL::ZZ(scalar)
-Ctxt& Ctxt::operator*=(const long scalar) { return *this *= NTL::ZZX(scalar); }
 
 void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
 {
@@ -1725,80 +1723,6 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   reLinearize(); // re-linearize after all the multiplications
 }
 
-#if 1
-// Multiply-by-constant
-void Ctxt::multByConstant(const NTL::ZZ& c)
-{
-  // Special case: if *this is empty then do nothing
-  if (this->isEmpty())
-    return;
-  HELIB_TIMER_START;
-
-  if (isCKKS()) { // multiply by dividing the scaling factor
-    NTL::xdouble size = NTL::fabs(NTL::to_xdouble(c));
-    ptxtMag *= size;
-    ratFactor /= size;
-    if (c < 0)
-      this->negate();
-    return;
-  }
-
-  // BGV
-
-  long c0 = rem(c, ptxtSpace);
-
-  if (c0 == 1)
-    return;
-  if (c0 == 0) {
-    clear();
-    return;
-  }
-
-  long d = NTL::GCD(c0, ptxtSpace);
-  long c1 = c0 / d;
-  long c1_inv = NTL::InvMod(c1, ptxtSpace);
-  // write c0 = c1 * d, mul ctxt by d, and intFactor by c1_inv
-
-  intFactor = NTL::MulMod(intFactor, c1_inv, ptxtSpace);
-
-  if (d == 1)
-    return;
-
-  long cc = balRem(d, ptxtSpace);
-  noiseBound *= std::abs(cc);
-
-  // multiply all the parts by this constant
-  NTL::ZZ c_copy(cc);
-  for (auto& part : parts)
-    part *= c_copy;
-}
-#else
-void Ctxt::multByConstant(const NTL::ZZ& c)
-{
-  // Special case: if *this is empty then do nothing
-  if (this->isEmpty())
-    return;
-  HELIB_TIMER_START;
-
-  if (isCKKS()) { // multiply by dividing the scaling factor
-    NTL::xdouble size = NTL::fabs(NTL::to_xdouble(c));
-    ptxtMag *= size;
-    ratFactor /= size;
-    if (c < 0)
-      this->negate();
-    return;
-  }
-  // for BGV, need to do real multiplication
-  long cc = balRem(rem(c, ptxtSpace), ptxtSpace); // reduce modulo ptxt space
-  noiseBound *= std::abs(cc);
-
-  // multiply all the parts by this constant
-  NTL::ZZ c_copy(cc);
-  for (auto& part : parts)
-    part *= c_copy;
-}
-
-#endif
 
 // Multiply-by-constant, it is assumed that the size of this
 // constant fits in a double float
@@ -1991,6 +1915,97 @@ void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
 }
 
 
+// Mul by a scalar constant 
+void Ctxt::multByConstant(const NTL::ZZ& c)
+{
+  if (isCKKS()) {
+    multByConstant(NTL::to_xdouble(c));
+  }
+  else { // BGV
+    // Special case: if *this is empty then do nothing
+    if (this->isEmpty())
+      return;
+
+    long c0 = rem(c, ptxtSpace);
+
+    if (c0 == 1)
+      return;
+    if (c0 == 0) {
+      clear();
+      return;
+    }
+
+    long d = NTL::GCD(c0, ptxtSpace);
+    long c1 = c0 / d;
+    long c1_inv = NTL::InvMod(c1, ptxtSpace);
+    // write c0 = c1 * d, mul ctxt by d, and intFactor by c1_inv
+
+    intFactor = NTL::MulMod(intFactor, c1_inv, ptxtSpace);
+
+    if (d == 1)
+      return;
+
+    long cc = balRem(d, ptxtSpace);
+    noiseBound *= std::abs(cc);
+
+    // multiply all the parts by this constant
+    NTL::ZZ c_copy(cc);
+    for (auto& part : parts)
+      part *= c_copy;
+  }
+}
+
+void Ctxt::multByConstant(long c)
+{
+  if (isCKKS()) {
+    multByConstant(NTL::to_xdouble(c));
+  }
+  else {
+    multByConstant(NTL::to_ZZ(c));
+  }
+}
+
+void Ctxt::multByConstant(double c)
+{
+  if (isCKKS()) {
+    multByConstant(NTL::to_xdouble(c));
+  }
+  else {
+    throw LogicError("multByConstant(double) not supported for BGV");
+  }
+}
+
+void Ctxt::multByConstant(NTL::xdouble c)
+{
+  if (isCKKS()) {
+    // Special case: if *this is empty then do nothing
+    if (this->isEmpty())
+      return;
+
+    if (c == 1)
+      return;
+
+    if (c == 0) {
+      clear();
+      return;
+    }
+
+    NTL::xdouble size = NTL::fabs(c);
+    ptxtMag *= size;
+    ratFactor /= size;
+    if (c < 0)
+      this->negate();
+  }
+  else {
+    throw LogicError("multByConstant(xdouble) not supported for BGV");
+  }
+}
+
+
+
+
+
+
 //============ new addConstant interface ===========
 
 void Ctxt::addConstant(const PtxtArray& ptxt, bool neg)
@@ -2150,6 +2165,8 @@ void Ctxt::addConstant(const NTL::ZZ& c, bool neg)
     if (cc > ptxtSpace / 2)
       cc -= ptxtSpace;
 
+    if (cc == 0) return;
+
     double size = NTL::to_double(cc);
 
     addConstant(FatEncodedPtxt_BGV(DoubleCRT(cc, context, primeSet),
@@ -2173,13 +2190,15 @@ void Ctxt::addConstant(double c, bool neg)
     addConstant(NTL::to_xdouble(c), neg);
   }
   else {
-    throw LogicError("addConstant(double) not supported for GGV");
+    throw LogicError("addConstant(double) not supported for BGV");
   }
 }
 
 void Ctxt::addConstant(NTL::xdouble c, bool neg)
 {
   if (isCKKS()) {
+    if (c == 0) return;
+
     // we want to choose a factor f such that 
     //   |round(f*c) - f*c| = e and e/f is <= thresh,
     // where thresh = max(2^{-(r+1), noiseBound/ratFactor).

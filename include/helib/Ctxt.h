@@ -516,14 +516,8 @@ public:
    * @param poly Element by which to multiply.
    * @return Reference to `*this` post multiplication.
    **/
+  // VJS-FIXME: deprecate
   Ctxt& operator*=(const NTL::ZZX& poly);
-
-  /**
-   * @brief Times equals operator with a `long`.
-   * @param scalar Constant by which to multiply.
-   * @return Reference to `*this` post multiplication.
-   **/
-  Ctxt& operator*=(const long scalar);
 
   //! Add a constant polynomial.
   //! If provided, size should be a high-probability bound
@@ -581,7 +575,6 @@ public:
 
   void multByConstant(const NTL::ZZX& poly, double size = -1.0);
   void multByConstant(const zzX& poly, double size = -1.0);
-  void multByConstant(const NTL::ZZ& c);
 
   // VJS-FIXME: fix up the scalar versions
 
@@ -591,14 +584,31 @@ public:
   void multByConstant(const EncodedPtxt& ptxt);
   void multByConstant(const FatEncodedPtxt& ptxt);
 
-  void operator*=(const PtxtArray& ptxt) 
-  { multByConstant(ptxt); }
+  void multByConstant(const NTL::ZZ& ptxt);
+  void multByConstant(long ptxt);
+  void multByConstant(double ptxt);
+  void multByConstant(NTL::xdouble ptxt);
 
-  void operator*=(const EncodedPtxt& ptxt) 
-  { multByConstant(ptxt); }
+  Ctxt& operator*=(const PtxtArray& ptxt) 
+  { multByConstant(ptxt); return *this; }
 
-  void operator*=(const FatEncodedPtxt& ptxt) 
-  { multByConstant(ptxt); }
+  Ctxt& operator*=(const EncodedPtxt& ptxt) 
+  { multByConstant(ptxt); return *this; }
+
+  Ctxt& operator*=(const FatEncodedPtxt& ptxt) 
+  { multByConstant(ptxt); return *this; }
+
+  Ctxt& operator*=(const NTL::ZZ& ptxt) 
+  { multByConstant(ptxt); return *this; }
+
+  Ctxt& operator*=(long ptxt) 
+  { multByConstant(ptxt); return *this; }
+
+  Ctxt& operator*=(double ptxt) 
+  { multByConstant(ptxt); return *this; }
+
+  Ctxt& operator*=(NTL::xdouble ptxt) 
+  { multByConstant(ptxt); return *this; }
 
 private: // impl only
   void multByConstant(const FatEncodedPtxt_BGV& ptxt);

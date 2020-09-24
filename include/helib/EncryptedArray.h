@@ -1797,6 +1797,17 @@ public:
     return *this;
   }
 
+  // template that allows assignment via convert:
+  // T can be any type supported by convert(PtxtArray,T)
+  template<class T>
+  PtxtArray& operator=(const T& t)
+  { convert(*this, t); return *this; }
+
+  // export: alternative (preferred?) syntax for conversion from PtxtArray.
+  //  T can be any type supported by convert(T,PtxtArray)
+  template<class T> void output(T& t) const
+  { convert(t, *this); }
+
   const EncryptedArray& getView() const { return ea; }
   const EncryptedArray& getEA() const   { return ea; }
  
@@ -1809,6 +1820,8 @@ public:
 
   void decrypt(const Ctxt& ctxt, const SecKey& sKey) 
   { ea.decrypt(ctxt, sKey, pa); }
+
+  void random() { helib::random(ea, pa); }
   
 };
 
