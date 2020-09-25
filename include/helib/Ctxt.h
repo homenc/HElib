@@ -692,6 +692,17 @@ public:
   //! multiply by a rational number or floating point
   void multByConstantCKKS(double x)
   {
+    if (this->isEmpty())
+      return;
+
+    if (x == 1)
+      return;
+
+    if (x == 0) {
+      clear();
+      return;
+    }
+
     ratFactor /= x;
     ptxtMag *= std::abs(x);
   }

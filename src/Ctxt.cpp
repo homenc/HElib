@@ -1156,6 +1156,9 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
     NTL::xdouble f2 = of2 * xnumer;
     NTL::xdouble e2 = oe2 * xnumer;
 
+    // VJS-FIXME: we are seeing f2==0 sometimes, which leads
+    // to div by 0.
+
     // We want to minimize the error (scaled noise) by choosing the optimal
     // value for f, which represents the common rat factor we will
     // eventually use.  Some calculus shows that the optimal value
