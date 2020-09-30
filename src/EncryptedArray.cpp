@@ -1038,7 +1038,11 @@ public:
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
                     std::vector<long>& array,
                     const PlaintextArray& pa)
-  { throw LogicError("function not implemented"); }
+  { 
+    CPA_BOILER(PA_cx)
+
+    project_and_round(array, data);
+  }
 
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
                     std::vector<cx_double>& array,
