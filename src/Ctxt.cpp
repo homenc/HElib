@@ -223,14 +223,8 @@ Ctxt::Ctxt(ZeroCtxtLike_type, const Ctxt& ctxt) :
     ptxtSpace(ctxt.getPtxtSpace()),
     noiseBound(NTL::to_xdouble(0.0))
 {
-  // same body as previous constructor
-  if (ptxtSpace < 2) {
-    ptxtSpace = pubKey.getPtxtSpace();
-  } else {
-    // sanity check
-    assertTrue(NTL::GCD(ptxtSpace, pubKey.getPtxtSpace()) > 1,
-               "Ptxt spaces from ciphertext and public key are coprime");
-  }
+  // VJS-FIXME: should we set primeSet = ctxt.primeSet instead?
+  // It probably does not matter
   primeSet = context.ctxtPrimes;
   intFactor = 1;
   ratFactor = ptxtMag = 1.0;
@@ -349,7 +343,10 @@ void Ctxt::modDownToSet(const IndexSet& s)
   // VJS-FIXME: I'm skeptical that this special processing is
   // a good idea.  It increases the total noise in the ctxt.
   // Generally speaking, all calls to to modDownToSet should
-  // anyway be making their own choices.
+  // anyway be making their own choices.  Worse, this function
+  // gets called when we we want to equalize prime sets in the
+  // multiplication logic. If we do this, we run the
+  // risk of ending up wit unequal prime sets.
 
   if (0 && isCKKS()) {
     // VJS-FIXME: I'm disabling this for the time being.

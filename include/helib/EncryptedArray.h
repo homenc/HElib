@@ -1846,6 +1846,13 @@ inline void shift(PtxtArray& a, long k)
   shift(a.ea, a.pa, k);
 }
 
+inline void convert(PtxtArray& a, const std::vector<int>& array)
+{
+  std::vector<long> array1;
+  convert(array1, array);
+  encode(a.ea, a.pa, array1);
+}
+
 inline void convert(PtxtArray& a, const std::vector<long>& array)
 {
   encode(a.ea, a.pa, array);
@@ -1864,6 +1871,11 @@ inline void convert(PtxtArray& a, const std::vector<cx_double>& array)
 inline void convert(PtxtArray& a, const std::vector<double>& array)
 {
   encode(a.ea, a.pa, array);
+}
+
+inline void convert(PtxtArray& a, int val)
+{
+  encode(a.ea, a.pa, long(val));
 }
 
 inline void convert(PtxtArray& a, long val)

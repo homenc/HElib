@@ -202,6 +202,7 @@ IndexSet ModuliSizes::getSet4Size(double low,
   // size is within 1 bit of the closest.
 
   if (bestOption == -1) {
+    Warning("sub-optimal modulus (1)");
     if (reverse) {
       if (ii < n) {
         double upperBound = sizes[ii].first + 1.0 * std::log(2.0);
@@ -283,6 +284,7 @@ IndexSet ModuliSizes::getSet4Size(double low,
   // whose size is within 1 bit of the closest.
 
   if (bestOption == -1) {
+    Warning("sub-optimal modulus (2)");
     if (reverse) {
       if (ii < n) {
         double upperBound = sizes[ii].first + 1.0 * std::log(2.0);

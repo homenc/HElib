@@ -910,9 +910,11 @@ public:
 
   void clear()
   { // set as an empty ciphertext
-    primeSet = context.ctxtPrimes;
     parts.clear();
-    noiseBound = NTL::to_xdouble(0.0);
+    primeSet = context.ctxtPrimes;
+    noiseBound = 0.0;
+    intFactor = 1;
+    ratFactor = ptxtMag = 1.0;
     // VJS-FIXME: we should also make sure the other fields
     // are set to their default values for a new, empty ctxt.
   }

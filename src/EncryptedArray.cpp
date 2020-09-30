@@ -809,8 +809,9 @@ public:
   {
     PA_BOILER(type)
 
-    assertEq(lsize(array), n, "Size of array does not match n");
-    convert(data, array);
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++) data[i] = array[i];
+    for (long i = m; i < n; i++) data[i] = 0;
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea,
@@ -819,11 +820,13 @@ public:
   {
     PA_BOILER(type)
 
-    assertEq(lsize(array), n, "Size of array does not match n");
-    for (long i = 0; i < n; i++) {
-      assertTrue(deg(data[i]) < d, "Found data entry with too-large degree");
+
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++) {
+      assertTrue(deg(array[i]) < d, "Found data entry with too-large degree");
+      convert(data[i], array[i]);
     }
-    convert(data, array);
+    for (long i = m; i < n; i++) data[i] = 0;
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea,
@@ -850,8 +853,9 @@ public:
   {
     PA_BOILER(PA_cx)
 
-    assertEq(lsize(array), n, "Size of array does not match n");
-    convert(data, array);
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++) data[i] = array[i];
+    for (long i = m; i < n; i++) data[i] = 0;
   }
 
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
@@ -865,8 +869,9 @@ public:
   {
     PA_BOILER(PA_cx)
 
-    assertEq(lsize(array), n, "Size of array does not match n");
-    convert(data, array);
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++) data[i] = array[i];
+    for (long i = m; i < n; i++) data[i] = 0;
   }
 
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
@@ -875,8 +880,9 @@ public:
   {
     PA_BOILER(PA_cx)
 
-    assertEq(lsize(array), n, "Size of array does not match n");
-    convert(data, array);
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++) data[i] = array[i];
+    for (long i = m; i < n; i++) data[i] = 0;
   }
 };
 
