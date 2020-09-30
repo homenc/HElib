@@ -1810,7 +1810,7 @@ public:
 
   // load: alternative (preferred?) syntax for conversion to PtxtArray.
   //  T can be any type supported by convert(PtxtArray,T)
-  template<class T> void store(T& t) 
+  template<class T> void load(const T& t) 
   { convert(*this, t); }
 
   const EncryptedArray& getView() const { return ea; }

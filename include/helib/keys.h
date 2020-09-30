@@ -195,14 +195,13 @@ public:
                long ptxtSpace = 0) const;
 
 
-  //=============== new EncodedPtxt interface
+  //=============== new EncodedPtxt interface ==================
 
-  void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const;
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const;
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const;
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const;
 
-private: // impl only
-  void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const;
-  void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const;
-public:
+  //============================================================
   
 
   bool isCKKS() const;
@@ -312,6 +311,14 @@ public:
   long Encrypt(Ctxt& ciphertxt,
                const zzX& plaintxt,
                long ptxtSpace = 0) const override;
+
+  //=============== new EncodedPtxt interface ==================
+
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const override;
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const override;
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const override;
+
+  //============================================================
 
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();

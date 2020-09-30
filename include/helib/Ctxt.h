@@ -516,7 +516,7 @@ public:
    * @param poly Element by which to multiply.
    * @return Reference to `*this` post multiplication.
    **/
-  // VJS-FIXME: deprecate
+  // [[deprecated]]
   Ctxt& operator*=(const NTL::ZZX& poly);
 
   //! Add a constant polynomial.
@@ -542,28 +542,35 @@ public:
 
 
   //! add a rational number in the form a/b, a,b are long
+  // [[deprecated]]
   void addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
+  // [[deprecated]]
   void addConstantCKKS(double x)
   { // FIXME: not enough precision when x is large
     addConstantCKKS(
         rationalApprox(x, /*denomBound=*/1 << getContext().alMod.getR()));
   }
 
+  // [[deprecated]]
   void addConstantCKKS(const DoubleCRT& dcrt,
                        NTL::xdouble size = NTL::xdouble(-1.0),
                        NTL::xdouble factor = NTL::xdouble(-1.0));
 
+  // [[deprecated]]
   void addConstantCKKS(const NTL::ZZX& poly,
                        NTL::xdouble size = NTL::xdouble(-1.0),
                        NTL::xdouble factor = NTL::xdouble(-1.0));
 
+  // [[deprecated]]
   void addConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
   /**
    * @brief Add a `CKKS` plaintext to this `Ctxt`.
    * @param ptxt Plaintext `Ptxt` object with which to add.
    **/
+  // [[deprecated]]
   void addConstantCKKS(const Ptxt<CKKS>& ptxt);
+  // [[deprecated]]
   void addConstantCKKS(const NTL::ZZ& c);
 
   //! Multiply-by-constant.
@@ -690,6 +697,7 @@ public:
   }
 
   //! multiply by a rational number or floating point
+  // [[deprecated]]
   void multByConstantCKKS(double x)
   {
     if (this->isEmpty())
@@ -703,20 +711,27 @@ public:
       return;
     }
 
-    ratFactor /= x;
-    ptxtMag *= std::abs(x);
+    double size = std::abs(x);
+    ptxtMag *= size;
+    ratFactor /= size;
+    if (x < 0)
+      this->negate();
   }
 
+
+  // [[deprecated]]
   void multByConstantCKKS(std::pair<long, long> num) // rational number
   {
     multByConstantCKKS(double(num.first) / num.second);
   }
 
+  // [[deprecated]]
   void multByConstantCKKS(const DoubleCRT& dcrt,
                           NTL::xdouble size = NTL::xdouble(-1.0),
                           NTL::xdouble factor = NTL::xdouble(-1.0),
                           double roundingErr = -1.0);
 
+  // [[deprecated]]
   void multByConstantCKKS(const NTL::ZZX& poly,
                           NTL::xdouble size = NTL::xdouble(-1.0),
                           NTL::xdouble factor = NTL::xdouble(-1.0),
@@ -732,7 +747,9 @@ public:
    * @brief Multiply a `CKKS` plaintext to this `Ctxt`.
    * @param ptxt Plaintext `Ptxt` object polynomial with which to multiply.
    **/
+  // [[deprecated]]
   void multByConstantCKKS(const Ptxt<CKKS>& ptxt);
+  // [[deprecated]]
   void multByConstantCKKS(const std::vector<std::complex<double>>& ptxt);
 
   //! Convenience method: XOR and nXOR with arbitrary plaintext space:

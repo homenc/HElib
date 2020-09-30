@@ -351,7 +351,10 @@ void Ctxt::modDownToSet(const IndexSet& s)
   // Generally speaking, all calls to to modDownToSet should
   // anyway be making their own choices.
 
-  if (isCKKS()) {
+  if (0 && isCKKS()) {
+    // VJS-FIXME: I'm disabling this for the time being.
+    // See comment above.
+
     // Sanity check: ensuring that we don't lose too much on precision.
     // We check that log(addedNoise) <= log(noiseBound/scaleFactor)-safety,
     // (safety=log 2 defined at top of the file). This ensures that we are
@@ -539,12 +542,14 @@ void Ctxt::dropSmallAndSpecialPrimes()
     // as the mod-switch added noise times a factor of getPPowR()/ptxtMag
 
     // VJS-FIXME: I'm skeptical that this special-case processing
-    // is really a goof idea.  Indeed, the general processing ensures
+    // is really a good idea.  Indeed, the general processing ensures
     // adn < noise/8, and ptxMag is just an *upper bound* on the size
     // of ptx, so it's not clear what this is possibly achieving.
     // That said, the only *harm* in using more ctxtPrimes is performance.
 
-    if (isCKKS()) {
+    if (0 && isCKKS()) {
+      // VJS-FIXME: I'm disabling this for now.  See comment above
+      // std::cerr  << "*** special processing in dropSmallAndSpecialPrimes\n"; 
       double log_bound =
           log_modswitch_noise + log(context.alMod.getPPowR()) - log(ptxtMag);
       double log_rf = log(getRatFactor()) // log(factor) after scaling
@@ -1116,7 +1121,7 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
   double epsilon = 0.125 / to_double(denomBound); // "smudge factor"
   NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon); // floor function
   // NOTE: epsilon is meant to counter rounding errors
-  // VJS-FIXME: I don't understand this.
+  // VJS-FIXME: I don't really understand this.
 
   NTL::xdouble xi = x - NTL::conv<NTL::xdouble>(a);
 
@@ -1155,9 +1160,6 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
 
     NTL::xdouble f2 = of2 * xnumer;
     NTL::xdouble e2 = oe2 * xnumer;
-
-    // VJS-FIXME: we are seeing f2==0 sometimes, which leads
-    // to div by 0.
 
     // We want to minimize the error (scaled noise) by choosing the optimal
     // value for f, which represents the common rat factor we will
@@ -1493,18 +1495,9 @@ void Ctxt::tensorProduct(const Ctxt& c1, const Ctxt& c2)
 
   // Compute the noise estimate of the product
   if (isCKKS()) { // we have totalNoiseBound = factor*ptxt + noiseBound
-    // VJS-FIXME: this should be computed directly, WITHOUT subtraction
-    // In fact, it just seems plain wrong
-#if 0
-    NTL::xdouble totalNoise1 = c1.ptxtMag * c1.ratFactor + c1.noiseBound;
-    NTL::xdouble totalNoise2 = c2.ptxtMag * c2.ratFactor + c2.noiseBound;
-    noiseBound = c1.noiseBound * totalNoise2 + c2.noiseBound * totalNoise1 -
-                 c1.noiseBound * c2.noiseBound;
-#else
     noiseBound = c1.noiseBound * c2.ptxtMag * c2.ratFactor +
                  c2.noiseBound * c1.ptxtMag * c1.ratFactor +
                  c1.noiseBound * c2.noiseBound;
-#endif
     ratFactor = c1.ratFactor * c2.ratFactor;
     ptxtMag = c1.ptxtMag * c2.ptxtMag;
   } else // BGV
