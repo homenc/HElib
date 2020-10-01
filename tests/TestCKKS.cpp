@@ -337,7 +337,7 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
   ea.decrypt(c1, secretKey, vd2);
 
   mul(vd1, vd[0]);
-  rf /= vd[0];
+  rf /= std::abs(vd[0]);
   pm *= std::abs(vd[0]);
 
   EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
@@ -512,6 +512,41 @@ TEST_P(
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd4)=" << helib::largestCoeff(vd4) << std::endl
       << ", maxDiff=" << calcMaxDiff(vd1, vd4) << std::endl
+      << std::endl;
+}
+
+TEST_P(TestCKKS, multiplyingByConstantNeverProducesNegativeRatFactor)
+{
+  helib::Ctxt c1(publicKey);
+  std::vector<std::complex<double>> vd1;
+
+  ea.random(vd1);
+  ea.encrypt(c1, publicKey, vd1);
+  c1.multByConstantCKKS(-2.0);
+
+  EXPECT_GT(c1.getRatFactor(), 0);
+}
+
+TEST_P(TestCKKS, multiplyBySmallNegativeConstantFollowedByOperationWorks)
+{
+  helib::Ctxt c1(publicKey), c2(publicKey);
+  std::vector<std::complex<double>> vd1, vd2, vd3;
+
+  ea.random(vd1);
+  ea.random(vd2);
+  ea.encrypt(c1, publicKey, vd1);
+  ea.encrypt(c2, publicKey, vd2);
+  c1.multByConstantCKKS(-2.0 / 10.0);
+  c1 -= c2;
+  ea.decrypt(c1, secretKey, vd3);
+
+  mul(vd1, -2.0 / 10.0);
+  sub(vd1, vd2);
+
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
+      << "  max(vd1)=" << helib::largestCoeff(vd1)
+      << ", max(vd3)=" << helib::largestCoeff(vd3) << std::endl
+      << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
       << std::endl;
 }
 
