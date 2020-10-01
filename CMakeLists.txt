@@ -35,6 +35,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Define standard installation directories (GNU)
 include(GNUInstallDirs)
 
+# Setting compiler output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+
 # Location of the cmake extra files
 set(HELIB_CMAKE_EXTRA_DIR "${PROJECT_SOURCE_DIR}/cmake")
 # Prefix of the header files (directory to be added to the include list)
@@ -45,17 +53,9 @@ set(HELIB_HEADER_DIR "${HELIB_INCLUDE_DIR}/helib")
 set(HELIB_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
 # Location of the google tests
 set(HELIB_TESTS_DIR "${PROJECT_SOURCE_DIR}/tests")
-# Location of the directory containing the test binary (runTests).
-# Keeping this location relative as it will be changed if PACKAGE_BUILD=ON.
-set(HELIB_TEST_BIN_DIR "bin")
-
-# Setting compiler output directories
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+# Location of the directory containing the test binary (runTests). If
+# PACKAGE_BUILD=ON, this location will be changed to reflect the tests location.
+set(HELIB_TEST_BIN_DIR "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
 
 # GMP minimal version to be used if not PACKAGE_BUILD
 set(GMP_MINIMAL_VERSION "6.0.0")
@@ -334,11 +334,11 @@ if (PACKAGE_BUILD)
 
     if (ENABLE_TEST)
       # Tests for PACKAGE_BUILD are located in
-      # ${DEPENDENCIES_FOLDER}/Build/helib_external/${HELIB_TEST_BIN_DIR}.
+      # ${DEPENDENCIES_FOLDER}/Build/helib_external/${CMAKE_INSTALL_BINDIR}.
       # Update its location and add the tests to cmake to avoid re-creating
       # their targets (as they are already built by ExternalProject_Add)
       set(HELIB_TEST_BIN_DIR
-          "${DEPENDENCIES_FOLDER}/Build/helib_external/${HELIB_TEST_BIN_DIR}")
+          "${DEPENDENCIES_FOLDER}/Build/helib_external/${CMAKE_INSTALL_BINDIR}")
       set(ONLY_ADD_TEST ON)
       add_subdirectory("${HELIB_TESTS_DIR}" tests)
       unset(ONLY_ADD_TEST)
