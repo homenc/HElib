@@ -169,29 +169,34 @@ public:
   virtual void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const = 0;
 
   // CKKS only 
-  // mag: default sets mag to maximum magnitude
-  // rescale: divide computed scale factor by rescale
-  // NOTE: the absolute error of the encoding (after scaling) is guaranteed
-  // to be at most 2^{-r} * rescale.
+  // mag: default sets mag to maximum magnitude of array
+  // scale: default sets scale to defaultScale(err)
+  // err: default sets err to defaultErr()
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag = -1, double rescale = 1) const = 0;
+                      double mag=-1, double scale=-1, double err=-1) const = 0;
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag = -1, double rescale = 1) const = 0;
+                      double mag=-1, double scale=-1, double err=-1) const = 0;
 
 
 
   // BGV and CKKS
   virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag = -1, double rescale = 1) const = 0;
-  // NOTE: for BGV, mag and rescale must be defaulted
+                      double mag=-1, double scale=-1, double err=-1) const = 0;
+  // NOTE: for BGV, mag,scale,err must be defaulted
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const = 0;
-  // NOTE: for CKKS, mag and rescale are defaulted
+  // NOTE: for CKKS, mag,scale,err are default
 
   virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const = 0;
-  // NOTE: for CKKS, mag and rescale are defaulted
+  // NOTE: for CKKS, mag,scale,err are defaulted
+
+  virtual double defaultScale(double err) const 
+  { throw LogicError("function not implemented"); }
+
+  virtual double defaultErr() const 
+  { throw LogicError("function not implemented"); }
 
   //================================
 
@@ -525,17 +530,18 @@ public:
   }
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag = -1, double rescale = 1) const override
+                      double mag=-1, double scale=-1, double err=-1) const override
   { throw LogicError("function not implemented for BGV"); }
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-              double mag = -1, double rescale = 1) const override
+              double mag=-1, double scale=-1, double err=-1) const override
   { throw LogicError("function not implemented for BGV"); }
 
   virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag = -1, double rescale = 1) const override
+                      double mag=-1, double scale=-1, double err=-1) const override
   {
-    assertTrue(mag < 0 && rescale == 1, "BGV encoding: mag/rescale set must be defaulted");
+    assertTrue(mag < 0 && scale < 0 && err < 0, 
+               "BGV encoding: mag,scale,err set must be defaulted");
     zzX poly;
     encode(poly, array); 
     eptxt.resetBGV(poly, getP2R(), getContext());
@@ -744,7 +750,7 @@ class EncryptedArrayDerived<PA_cx> : public EncryptedArrayBase
 public:
   static double roundedSize(double x)
   {
-    long rounded = ceil(fabs(x));
+    long rounded = std::ceil(fabs(x));
     if (rounded < 1)
       rounded = 1;
     return double(1L << NTL::NumBits(rounded - 1));
@@ -1030,19 +1036,19 @@ public:
   { throw LogicError("function not implemented for CKKS"); }
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag = -1, double rescale = 1) const override;
+                      double mag=-1, double scale=-1, double err=-1) const override;
   // implemented in EaCx.cpp
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag = -1, double rescale = 1) const override
+                      double mag=-1, double scale=-1, double err=-1) const override
   {
     std::vector<cx_double> array1;
     convert(array1, array);
-    encode(eptxt, array1, mag, rescale);
+    encode(eptxt, array1, mag, scale, err);
   }
 
   virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag = -1, double rescale = 1) const override;
+                      double mag=-1, double scale=-1, double err=-1) const override;
   // implemented in EaCx.cpp
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const override
@@ -1139,10 +1145,42 @@ public:
 
     // VJS-FIXME: the computation of f and/or return value could overflow
 
-    long f = ceil(precision * roundErr);
+    long f = std::ceil(precision * roundErr);
     // We round the factor up to the next power of two
     return (1L << NTL::NextPowerOfTwo(f));
   }
+
+  virtual double defaultErr() const override
+  {
+    const Context& context = getContext();
+    long phim = context.zMStar.getPhiM();
+
+    // VJS-FIXME: For the power of two case, noiseBoundForUniform
+    // is a bit too pessimistic, as this is the circularly symmetric
+    // case.
+
+    // VJS-FIXME: this is extremey heuristic: we are assuming 
+    // that the coefficients mod 1 are modeled as uniform
+    // on [0,1].
+
+    return context.noiseBoundForUniform(0.5, phim);
+  }
+
+  virtual double defaultScale(double err) const override 
+  {
+    if (err < 1.0) err = 1.0;
+    long r = alMod.getR();
+    // we want to compute 
+    //   2^(ceil(log2(err*2^r))) = 2^(ceil(log2(err) + r))
+    //                           = 2^(r + ceil(log2(err)))
+    int e;
+    std::frexp(1/err, &e);
+    // we have 2^{e-1} <= 1/err < 2^e, i.e.,
+    //         2^{-e} < err <= 2^{-e+1}
+    // so ceil(log2(err)) = -e+1
+    return std::ldexp(1.0, r-e+1);
+  }
+
 
   void decode(std::vector<cx_double>& array,
               const zzX& ptxt,
@@ -1454,17 +1492,17 @@ public:
   { rep->encode(eptxt, array); }
 
   void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag = -1, double rescale = 1) const
-  { rep->encode(eptxt, array, mag, rescale); }
+                      double mag=-1, double scale=-1, double err=-1) const
+  { rep->encode(eptxt, array, mag, scale, err); }
 
   void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag = -1, double rescale = 1) const
-  { rep->encode(eptxt, array, mag, rescale); }
+                      double mag=-1, double scale=-1, double err=-1) const
+  { rep->encode(eptxt, array, mag, scale, err); }
 
 
   void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag = -1, double rescale = 1) const 
-  { rep->encode(eptxt, array, mag, rescale); }
+                      double mag=-1, double scale=-1, double err=-1) const 
+  { rep->encode(eptxt, array, mag, scale, err); }
 
   void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
   { rep->encode(eptxt, array); }
@@ -1518,45 +1556,45 @@ public:
 
   // CKKS only
   void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<cx_double>& array,
-               double mag, double rescale = 1) const
+               double mag, double scale=-1, double err=-1) const
   {
     if (mag < 0) throw LogicError("CKKS encryption: mag must be set to non-default");
-    EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
+    EncodedPtxt eptxt; encode(eptxt, array, mag, scale, err); key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt, const std::vector<cx_double>& array,
-               double mag, double rescale = 1) const
-  { encrypt(ctxt, ctxt.getPubKey(), array, mag, rescale); }
+               double mag, double scale=-1, double err=-1) const
+  { encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err); }
 
 
 
   void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<double>& array,
-               double mag, double rescale = 1) const
+               double mag, double scale=-1, double err=-1) const
   {
     if (mag < 0) throw LogicError("CKKS encryption: mag must be set to non-default");
-    EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
+    EncodedPtxt eptxt; encode(eptxt, array, mag, scale, err); key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt, const std::vector<double>& array,
-               double mag, double rescale = 1) const
-  { encrypt(ctxt, ctxt.getPubKey(), array, mag, rescale); }
+               double mag, double scale=-1, double err=-1) const
+  { encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err); }
   
 
 
   // BGV and CKKS
   void encrypt(Ctxt& ctxt, const PubKey& key, const PlaintextArray& array,
-               double mag = -1, double rescale = 1) const
-  // NOTES: (1) for BGV, mag/rescale mus be defaulted; 
+               double mag=-1, double scale=-1, double err=-1) const
+  // NOTES: (1) for BGV, mag,scale,err must be defaulted; 
   // (2) for CKKS, mag must be set to non-default value
   {
     if (getTag() == PA_cx_tag && mag < 0) 
       throw LogicError("CKKS encryption: mag must be set to non-default");
-    EncodedPtxt eptxt; encode(eptxt, array, mag, rescale); key.Encrypt(ctxt, eptxt);
+    EncodedPtxt eptxt; encode(eptxt, array, mag, scale, err); key.Encrypt(ctxt, eptxt);
   }
 
   void encrypt(Ctxt& ctxt, const PlaintextArray& array,
-               double mag = -1, double rescale = 1) const
-  { encrypt(ctxt, ctxt.getPubKey(), array, mag, rescale); }
+               double mag=-1, double scale=-1, double err=-1) const
+  { encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err); }
 
 
 
@@ -1817,11 +1855,11 @@ public:
   const EncryptedArray& getEA() const   { return ea; }
  
   // direct encode, encrypt, and decrypt methods
-  void encode(EncodedPtxt& eptxt, double mag = -1, double rescale = 1) const
-  { ea.encode(eptxt, pa, mag, rescale); }
+  void encode(EncodedPtxt& eptxt, double mag=-1, double scale=-1, double err=-1) const
+  { ea.encode(eptxt, pa, mag, scale, err); }
 
-  void encrypt(Ctxt& ctxt, double mag = -1, double rescale = 1) const
-  { ea.encrypt(ctxt, pa, mag, rescale); }
+  void encrypt(Ctxt& ctxt, double mag=-1, double scale=-1, double err=-1) const
+  { ea.encrypt(ctxt, pa, mag, scale, err); }
 
   void decrypt(const Ctxt& ctxt, const SecKey& sKey) 
   { ea.decrypt(ctxt, sKey, pa); }

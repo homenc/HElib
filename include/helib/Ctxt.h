@@ -864,29 +864,31 @@ public:
   //! modulus-switching added noise term.
   void dropSmallAndSpecialPrimes();
 
-  //! @brief returns the "capacity" of a ciphertext,
-  //! which is the log of the ratio of the modulus to the
-  //! noise bound
-  double capacity() const
+  //! @brief returns the *total* noise bound, which for CKKS
+  //! is ptxtMag*ratFactor + noiseBound
+  NTL::xdouble totalNoiseBound() const
   {
-    if (noiseBound <= 1.0)
-      return context.logOfProduct(getPrimeSet());
+    if (isCKKS())
+      return ptxtMag*ratFactor + noiseBound;
     else
-      return context.logOfProduct(getPrimeSet()) - log(noiseBound);
+      return noiseBound;
   }
 
-  // VJS-FIXME:
-  // For CKKS, the "total noise" for a Ctxt is
-  // ptxtMag * ratFactor + noiseBound.  We should define a function
-  // totalNoiseBound() that returns this value for CKKS, and
-  // noiseBound o/w.  We might also define a function netCapacity
-  // (or something) that is defined in terms of totalNoiseBound().
-
-  //! @brief the capacity in bits, returned as an integer
-  long bitCapacity() const { return long(capacity() / log(2.0)); }
+  //! @brief returns the "capacity" of a ciphertext,
+  //! which is the log2 of the ratio of the modulus to the
+  //! *total* noise bound
+  double capacity() const
+  {
+    return ( logOfPrimeSet() - 
+		NTL::log(std::max(totalNoiseBound(),
+				  NTL::to_xdouble(1.0))) ) / std::log(2.0);
+  }
 
   //! @brief returns the log of the prime set
   double logOfPrimeSet() const { return context.logOfProduct(getPrimeSet()); }
+
+  //! @brief the capacity in bits, returned as an integer
+  long bitCapacity() const { return long(capacity()); }
 
   //! @brief Special-purpose modulus-switching for bootstrapping.
   //!
@@ -968,6 +970,7 @@ public:
   }
 
   //! @brief Returns log(noiseBound) - log(q)
+  // [[deprecated]] // use capacity()
   double log_of_ratio() const
   {
     double logNoise =

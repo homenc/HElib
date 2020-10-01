@@ -823,8 +823,14 @@ public:
 
     long m = std::min(n, lsize(array));
     for (long i = 0; i < m; i++) {
-      assertTrue(deg(array[i]) < d, "Found data entry with too-large degree");
-      convert(data[i], array[i]);
+      if (deg(array[i]) < d) {
+        convert(data[i], array[i]);
+      }
+      else {
+         RX a;
+         convert(a, array[i]);
+         data[i] = a % G;
+      }
     }
     for (long i = m; i < n; i++) data[i] = 0;
   }

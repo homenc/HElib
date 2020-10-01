@@ -1291,9 +1291,7 @@ void SecKey::Decrypt(NTL::ZZX& plaintxt,
   double bnd = getContext().zMStar.getPolyNormBnd();
 #endif
 
-  // VJS-FIXME: we should use totalNoiseBounde() here (for CKKS)
-
-  if (ciphertxt.getNoiseBound() * bnd > 0.48 * xQ)
+  if (ciphertxt.totalNoiseBound() * bnd > 0.48 * xQ)
     Warning("decrypting with too much noise");
 
   const IndexSet& ptxtPrimes = ciphertxt.primeSet;

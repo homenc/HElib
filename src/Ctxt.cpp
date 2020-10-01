@@ -295,21 +295,18 @@ void Ctxt::modUpToSet(const IndexSet& s)
 
 void Ctxt::bringToSet(const IndexSet& s)
 {
-  auto cap = capacity();
-  if (cap < 1) {
-    // VJS-FIXME: make this a warning? What are we testing here?
-    std::cerr << "Ctxt::bringToSet called with capacity=" << cap
-              << ", likely decryption error\n";
+  double cap = capacity();
+  if (cap < 1.0) {
+    Warning("Ctxt::bringToSet called with capacity=" + std::to_string(cap) +
+            ", likely decryption error");
   }
+
   if (empty(s)) { // If empty, use a singleton with 1st ctxt prime
     IndexSet tmp(getContext().ctxtPrimes.first());
     modUpToSet(tmp);
     modDownToSet(tmp);
-    if (cap >= 1)
-      // VJS-FIXME: make this a warning? What are we testing here?
-      std::cerr << "Ctxt::bringToSet called with empty set and capacity=" << cap
-                << ", this is likely a bug\n";
-  } else {
+  } 
+  else {
     modUpToSet(s);
     modDownToSet(s);
   }
@@ -1509,8 +1506,15 @@ void computeIntervalForMul(double& lo,
   const double slack = 4 * log(2.0);
   // FIXME: 4 bits of slack...could be something more dynamic
 
-  double cap1 = ctxt1.capacity();
-  double cap2 = ctxt2.capacity();
+  // We no longer use the capacity function, as the definition has
+  // changed. Notice that here, we use getNoiseBound(), and *not*
+  // getTotalNoiseBound().
+
+  double cap1 = ctxt1.logOfPrimeSet() -
+              NTL::log(std::max(ctxt1.getNoiseBound(),NTL::to_xdouble(1.0)));
+
+  double cap2 = ctxt2.logOfPrimeSet() -
+              NTL::log(std::max(ctxt2.getNoiseBound(),NTL::to_xdouble(1.0)));
 
   double adn1 = log(ctxt1.modSwitchAddedNoiseBound());
   double adn2 = log(ctxt2.modSwitchAddedNoiseBound());
@@ -1520,7 +1524,7 @@ void computeIntervalForMul(double& lo,
   // For a given ctxt with modulus q and noise bound n, we want to
   // switch to a new modulus q' s.t. n*q'/q \approx AddedNoiseBound.
   // Taking logs, this is the same as saying that
-  // log(q') \approx adn + (log(q) - log(n)) = adn + ctxt.capacity()
+  // log(q') \approx adn + (log(q) - log(n)) = adn + cap
 
   // When we have two ciphertexts, we can e.g., set hi to the minimum
   // for both ciphertexts, and set lo a few bits lower, so that we
@@ -1678,10 +1682,9 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
     return;
   }
 
-  // VJS-FIXME: should these be capacity or "net capacity" in CKKS?
-  long cap = capacity();
-  long cap1 = other1.capacity();
-  long cap2 = other2.capacity();
+  double cap = capacity();
+  double cap1 = other1.capacity();
+  double cap2 = other2.capacity();
 
   if (cap < cap1 && cap < cap2) { // if both others at higher levels than this,
     Ctxt tmp = other1;            // multiply others by each other, then by this

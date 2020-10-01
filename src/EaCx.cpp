@@ -23,6 +23,7 @@
 #include <helib/debugging.h>
 #include <helib/apiAttributes.h>
 #include <helib/log.h>
+#include <helib/fhe_stats.h>
 
 namespace helib {
 
@@ -136,27 +137,50 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 //====== New Encoding Functions ====
 
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                              double mag, double rescale) const 
+                              double mag, double scale, double err) const 
 {
   double actual_mag = RealAbs(array);
   if (mag < 0) 
     mag = actual_mag;
   else {
     if (actual_mag > mag) 
-      Warning("EncryptedArrayCx::encode: actual magnitudee exceeds mag parameter");
+      Warning("EncryptedArrayCx::encode: actual magnitude exceeds mag parameter");
   }
   
-  double scale =  encodeScalingFactor()/rescale;
-  double err = encodeRoundingError();
+  if (err < 0) 
+    err = defaultErr(); // default err
+
+  if (err < 1.0)
+    err = 1.0;  // enforce some sanity
+
+  if (scale < 0) 
+    scale = defaultScale(err); // default scale
+
+  if (scale < 1.0)
+    scale = 1.0; // enforce some sanity
+
   zzX poly;
   CKKS_embedInSlots(poly, array, getPAlgebra(), scale);
   eptxt.resetCKKS(poly, mag, scale, err, getContext());
+
+  // Check that error is actually bounded.
+  // If this is too costly, we can consider only
+  // running it in "debug mode".
+  std::vector<cx_double> array1;
+  decode(array1, poly, scale);
+  double dist = RealDist(array1, array);
+  double scaled_err = err/scale;
+  double ratio = dist/scaled_err;
+  if (ratio > 1) {
+    Warning("CKKS encode: error exceeds bound");
+  }
+  HELIB_STATS_UPDATE("CKKS_encode_ratio", ratio);
 }
 
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-		    double mag, double rescale) const 
+		    double mag, double scale, double err) const 
 {
-  encode(eptxt, array.getData<PA_cx>(), mag, rescale);
+  encode(eptxt, array.getData<PA_cx>(), mag, scale, err);
 }
 
 

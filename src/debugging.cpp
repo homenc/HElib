@@ -27,9 +27,7 @@ NTL::ZZX dbg_ptxt;
 // return the ratio between the real noise <sk,ct> and the estimated one
 double realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
 {
-  NTL::xdouble noiseEst = ctxt.getNoiseBound();
-  if (ctxt.isCKKS())
-    noiseEst += ctxt.getRatFactor() * ctxt.getPtxtMag();
+  NTL::xdouble noiseEst = ctxt.totalNoiseBound();
   NTL::xdouble actualNoise = embeddingLargestCoeff(ctxt, sk);
 
   return NTL::conv<double>(actualNoise / noiseEst);
@@ -37,12 +35,10 @@ double realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
 
 double log2_realToEstimatedNoise(const Ctxt& ctxt, const SecKey& sk)
 {
-  NTL::xdouble noiseEst = ctxt.getNoiseBound();
-  if (ctxt.isCKKS())
-    noiseEst += ctxt.getRatFactor() * ctxt.getPtxtMag();
+  NTL::xdouble noiseEst = ctxt.totalNoiseBound();
   NTL::xdouble actualNoise = embeddingLargestCoeff(ctxt, sk);
 
-  return log(actualNoise / noiseEst) / log(2.0);
+  return NTL::log(actualNoise / noiseEst) / std::log(2.0);
 }
 
 // check that real-to-estimated ratio is not too large, print warning otherwise
@@ -80,17 +76,15 @@ void decryptAndPrint(std::ostream& s,
   NTL::xdouble modulus = NTL::xexp(context.logOfProduct(ctxt.getPrimeSet()));
   NTL::xdouble actualNoise =
       embeddingLargestCoeff(pp, ctxt.getContext().zMStar);
-  NTL::xdouble noiseEst = ctxt.getNoiseBound();
-  if (ctxt.isCKKS())
-    noiseEst += ctxt.getRatFactor() * ctxt.getPtxtMag();
+  NTL::xdouble noiseEst = ctxt.totalNoiseBound();
 
   s << "plaintext space mod " << ctxt.getPtxtSpace()
-    << ", bitCapacity=" << ctxt.bitCapacity() << ", \n           |noise|=q*"
+    << ", capacity=" << ctxt.capacity() << ", \n           |noise|=q*"
     << (actualNoise / modulus) << ", |noiseBound|=q*" << (noiseEst / modulus);
   if (ctxt.isCKKS()) {
     s << ", \n           ratFactor=" << ctxt.getRatFactor()
       << ", ptxtMag=" << ctxt.getPtxtMag()
-      << ", realMag=" << (actualNoise / ctxt.getRatFactor());
+      << ", scaledErr=" << (actualNoise / ctxt.getRatFactor());
   }
   s << std::endl;
 
@@ -165,8 +159,10 @@ void rawDecrypt(NTL::ZZX& plaintxt,
 void CheckCtxt(const Ctxt& c, const char* label)
 {
   std::cerr << "  " << label
-            << ", log2(modulus/noise)=" << (-c.log_of_ratio() / log(2.0))
-            << ", p^r=" << c.getPtxtSpace();
+            << ", capacity=" << c.capacity();
+
+  if (!c.isCKKS()) 
+    std::cerr << ", p^r=" << c.getPtxtSpace();
 
   if (dbgKey) {
     double ratio = log2_realToEstimatedNoise(c, *dbgKey);
