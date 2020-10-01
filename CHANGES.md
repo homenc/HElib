@@ -6,7 +6,7 @@ Augst-October 2020
 ------------------
 * Updated & enhanced security level estimation
 * Experimental Tool for computing sample parameters for CKKS
-* Improved testing procedures and documentation to tests documentation
+* Improved testing procedures and documentation
 * Multi platform and multi configuration Travis-CI pipeline
 * Added version.{h,cpp)
 * Bug Fixes:
