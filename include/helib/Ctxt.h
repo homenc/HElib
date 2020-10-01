@@ -580,10 +580,25 @@ public:
   }
 
   //! multiply by a rational number or floating point
+  // [[deprecated]]
   void multByConstantCKKS(double x)
   {
-    ratFactor /= x;
-    ptxtMag *= std::abs(x);
+    if (this->isEmpty())
+      return;
+
+    if (x == 1)
+      return;
+
+    if (x == 0) {
+      clear();
+      return;
+    }
+
+    double size = std::abs(x);
+    ptxtMag *= size;
+    ratFactor /= size;
+    if (x < 0)
+      this->negate();
   }
 
   void multByConstantCKKS(std::pair<long, long> num) // rational number
