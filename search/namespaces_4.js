@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['increase_2dslots_1444',['increase-slots',['../namespaceincrease-slots.html',1,'']]]
+  ['increase_2dslots_1453',['increase-slots',['../namespaceincrease-slots.html',1,'']]]
 ];

@@ -158,6 +158,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ab26be749db4dd2b5d102a77bf70f4de3"><td class="memTemplItemLeft" align="right" valign="top">long&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="classhelib_1_1_pub_key.html#ab26be749db4dd2b5d102a77bf70f4de3">Encrypt</a> (<a class="el" href="classhelib_1_1_ctxt.html">Ctxt</a> &amp;ciphertxt, const <a class="el" href="classhelib_1_1_ptxt.html">Ptxt</a>&lt; Scheme &gt; &amp;plaintxt, long ptxtSpace=0) const</td></tr>
 <tr class="memdesc:ab26be749db4dd2b5d102a77bf70f4de3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Encrypts a plaintext into a ciphertext.  <a href="classhelib_1_1_pub_key.html#ab26be749db4dd2b5d102a77bf70f4de3">More...</a><br /></td></tr>
 <tr class="separator:ab26be749db4dd2b5d102a77bf70f4de3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af0f5b6474d80e931b9d91bfea6dd5e12"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1_pub_key.html#af0f5b6474d80e931b9d91bfea6dd5e12">securityLevel</a> () const</td></tr>
+<tr class="memdesc:af0f5b6474d80e931b9d91bfea6dd5e12"><td class="mdescLeft">&#160;</td><td class="mdescRight">An estimate for the security level. The estimated security level for the "worst" secret-key associated with this public-key object. The security estimate is determined by the key's weight and the context parameters.  <a href="classhelib_1_1_pub_key.html#af0f5b6474d80e931b9d91bfea6dd5e12">More...</a><br /></td></tr>
+<tr class="separator:af0f5b6474d80e931b9d91bfea6dd5e12"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ab8aed3e83355c67529fa2f53b2fb1ba5"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1_pub_key.html#ab8aed3e83355c67529fa2f53b2fb1ba5">isCKKS</a> () const</td></tr>
 <tr class="separator:ab8aed3e83355c67529fa2f53b2fb1ba5"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ad0ad65deb509b0e020dd603a4857492a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1_pub_key.html#ad0ad65deb509b0e020dd603a4857492a">isBootstrappable</a> () const</td></tr>
@@ -1193,6 +1196,34 @@ template&lt;typename Scheme &gt; </div>
         </tr>
       </table>
 </div><div class="memdoc">
+
+</div>
+</div>
+<a id="af0f5b6474d80e931b9d91bfea6dd5e12"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#af0f5b6474d80e931b9d91bfea6dd5e12">&#9670;&nbsp;</a></span>securityLevel()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double helib::PubKey::securityLevel </td>
+          <td>(</td>
+          <td class="paramname"></td><td>)</td>
+          <td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>An estimate for the security level. The estimated security level for the "worst" secret-key associated with this public-key object. The security estimate is determined by the key's weight and the context parameters. </p>
+<dl class="section return"><dt>Returns</dt><dd>The estimate for the security level. </dd></dl>
 
 </div>
 </div>

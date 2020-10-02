@@ -155,9 +155,9 @@ Public Member Functions</h2></td></tr>
 <tr class="memitem:ad1bc85a67042ff1785da72aa29290402"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1_context.html#ad1bc85a67042ff1785da72aa29290402">bitSizeOfQ</a> () const</td></tr>
 <tr class="memdesc:ad1bc85a67042ff1785da72aa29290402"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size in bits of Q.  <a href="classhelib_1_1_context.html#ad1bc85a67042ff1785da72aa29290402">More...</a><br /></td></tr>
 <tr class="separator:ad1bc85a67042ff1785da72aa29290402"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a065f668db1a4712692fdd2ea9c70dc47"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1_context.html#a065f668db1a4712692fdd2ea9c70dc47">securityLevel</a> () const</td></tr>
-<tr class="memdesc:a065f668db1a4712692fdd2ea9c70dc47"><td class="mdescLeft">&#160;</td><td class="mdescRight">An estimate for the security-level. This has a lower bound of 0.  <a href="classhelib_1_1_context.html#a065f668db1a4712692fdd2ea9c70dc47">More...</a><br /></td></tr>
-<tr class="separator:a065f668db1a4712692fdd2ea9c70dc47"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad3ea5a9ef3393d3a8fb0212170561add"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1_context.html#ad3ea5a9ef3393d3a8fb0212170561add">securityLevel</a> (int hwt=0) const</td></tr>
+<tr class="memdesc:ad3ea5a9ef3393d3a8fb0212170561add"><td class="mdescLeft">&#160;</td><td class="mdescRight">An estimate for the security-level. This has a lower bound of 0.  <a href="classhelib_1_1_context.html#ad3ea5a9ef3393d3a8fb0212170561add">More...</a><br /></td></tr>
+<tr class="separator:ad3ea5a9ef3393d3a8fb0212170561add"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a68ac515e2cba3642262ea3796a96e8e0"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1_context.html#a68ac515e2cba3642262ea3796a96e8e0">printout</a> (std::ostream &amp;out=std::cout) const</td></tr>
 <tr class="memdesc:a68ac515e2cba3642262ea3796a96e8e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">print out algebra and other important info  <a href="classhelib_1_1_context.html#a68ac515e2cba3642262ea3796a96e8e0">More...</a><br /></td></tr>
 <tr class="separator:a68ac515e2cba3642262ea3796a96e8e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -1117,8 +1117,8 @@ Friends</h2></td></tr>
 
 </div>
 </div>
-<a id="a065f668db1a4712692fdd2ea9c70dc47"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a065f668db1a4712692fdd2ea9c70dc47">&#9670;&nbsp;</a></span>securityLevel()</h2>
+<a id="ad3ea5a9ef3393d3a8fb0212170561add"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad3ea5a9ef3393d3a8fb0212170561add">&#9670;&nbsp;</a></span>securityLevel()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -1129,7 +1129,8 @@ Friends</h2></td></tr>
         <tr>
           <td class="memname">double helib::Context::securityLevel </td>
           <td>(</td>
-          <td class="paramname"></td><td>)</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>hwt</em> = <code>0</code></td><td>)</td>
           <td> const</td>
         </tr>
       </table>
@@ -1141,6 +1142,8 @@ Friends</h2></td></tr>
 </div><div class="memdoc">
 
 <p>An estimate for the security-level. This has a lower bound of 0. </p>
+<p>This function uses experimental affine approximations to the lwe-estimator from <a href="https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py">https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py</a>, from Aug-2020 (see script in misc/estimator/lwe-estimator.sage).</p>
+<p>Let s=3.2 if m is a power of two, or s=3.2*sqrt(m) otherwise. For the estimator we use alpha=s/q (so log2AlphaInv = log_2(q/s)), and n=phi(m). </p>
 
 </div>
 </div>

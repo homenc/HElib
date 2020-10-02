@@ -512,6 +512,9 @@ Classes</h2></td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1_tree_node.html">TreeNode</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A node in a full binary tree.  <a href="classhelib_1_1_tree_node.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structhelib_1_1version.html">version</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">The class acts as a namespace with all members static. Holds the version number for this code of HElib.  <a href="structhelib_1_1version.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classhelib_1_1zz__p_x_modulus1.html">zz_pXModulus1</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Auxiliary classes to facilitate faster reduction mod Phi_m(X) when the input has degree less than m.  <a href="classhelib_1_1zz__p_x_modulus1.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -741,6 +744,9 @@ Functions</h2></td></tr>
 <tr class="memitem:ad420c276576021ed7278823e82771b6b"><td class="memTemplParams" colspan="2">template&lt;typename X , typename Cloner &gt; </td></tr>
 <tr class="memitem:ad420c276576021ed7278823e82771b6b"><td class="memTemplItemLeft" align="right" valign="top">void&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespacehelib.html#ad420c276576021ed7278823e82771b6b">swap</a> (copied_ptr&lt; X, Cloner &gt; &amp;x, copied_ptr&lt; X, Cloner &gt; &amp;y)</td></tr>
 <tr class="separator:ad420c276576021ed7278823e82771b6b"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acd21b28ce9fd73962e1bec7d50c2f5fb"><td class="memItemLeft" align="right" valign="top">double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehelib.html#acd21b28ce9fd73962e1bec7d50c2f5fb">lweEstimateSecurity</a> (int n, double log2AlphaInv, int hwt)</td></tr>
+<tr class="memdesc:acd21b28ce9fd73962e1bec7d50c2f5fb"><td class="mdescLeft">&#160;</td><td class="mdescRight">An estimate for the security-level. This has a lower bound of 0.  <a href="namespacehelib.html#acd21b28ce9fd73962e1bec7d50c2f5fb">More...</a><br /></td></tr>
+<tr class="separator:acd21b28ce9fd73962e1bec7d50c2f5fb"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abbf9f5de032fca82af2ce94a97041bc6"><td class="memItemLeft" align="right" valign="top">long&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespacehelib.html#abbf9f5de032fca82af2ce94a97041bc6">FindM</a> (long k, long nBits, long c, long p, long d, long s, long chosen_m, bool verbose=false)</td></tr>
 <tr class="memdesc:abbf9f5de032fca82af2ce94a97041bc6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns smallest parameter m satisfying various constraints:  <a href="namespacehelib.html#abbf9f5de032fca82af2ce94a97041bc6">More...</a><br /></td></tr>
 <tr class="separator:abbf9f5de032fca82af2ce94a97041bc6"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -12010,6 +12016,66 @@ template&lt;typename T &gt; </div>
 </div><div class="memdoc">
 
 <p>Size of STL vector as a long (rather than unsigned long) </p>
+
+</div>
+</div>
+<a id="acd21b28ce9fd73962e1bec7d50c2f5fb"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acd21b28ce9fd73962e1bec7d50c2f5fb">&#9670;&nbsp;</a></span>lweEstimateSecurity()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">double helib::lweEstimateSecurity </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>n</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">double&#160;</td>
+          <td class="paramname"><em>log2AlphaInv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>hwt</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>An estimate for the security-level. This has a lower bound of 0. </p>
+<p>This function uses experimental affine approximations to the lwe-estimator from <a href="https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py">https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py</a>, from Aug-2020 (see script in misc/estimator/lwe-estimator.sage). Let X = n / log(1/alpha), the security level is estimated as follows:</p>
+<ul>
+<li>dense {-1,0,1} keys: security ~ 3.8*X -20</li>
+<li>sparse keys (weight=450): security ~ 3.55*X -12</li>
+<li>sparse keys (weight=420): security ~ 3.5*X -10</li>
+<li>sparse keys (weight=390): security ~ 3.45*X -7</li>
+<li>sparse keys (weight=360): security ~ 3.4*X -5</li>
+<li>sparse keys (weight=330): security ~ 3.35*X -4</li>
+<li>sparse keys (weight=300): security ~ 3.3*X -3</li>
+<li>sparse keys (weight=270): security ~ 3.2*X +1</li>
+<li>sparse keys (weight=240): security ~ 3.1*X +3</li>
+<li>sparse keys (weight=210): security ~ 3*X +6</li>
+<li>sparse keys (weight=180): security ~ 2.83*X +10</li>
+<li>sparse keys (weight=150): security ~ 2.67*X +13</li>
+<li>sparse keys (weight=120): security ~ 2.4*X +19 </li>
+</ul>
 
 </div>
 </div>
