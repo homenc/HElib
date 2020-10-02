@@ -1,0 +1,591 @@
+\hypertarget{classhelib_1_1_context}{}\doxysection{helib\+::Context Class Reference}
+\label{classhelib_1_1_context}\index{helib::Context@{helib::Context}}
+
+
+Maintaining the parameters.  
+
+
+
+
+{\ttfamily \#include $<$Context.\+h$>$}
+
+\doxysubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+double \mbox{\hyperlink{classhelib_1_1_context_ab79e1f941d6043131a14404c68bf538c}{noise\+Bound\+For\+Uniform}} (double mag\+Bound, long deg\+Bound) const
+\item 
+N\+T\+L\+::xdouble \mbox{\hyperlink{classhelib_1_1_context_ab25e83e61a64ed721a1b710a3b2df82d}{noise\+Bound\+For\+Uniform}} (N\+T\+L\+::xdouble mag\+Bound, long deg\+Bound) const
+\item 
+double \mbox{\hyperlink{classhelib_1_1_context_a93ce4564b2ec97c85c50e732c04a1b22}{noise\+Bound\+For\+Mod}} (long modulus, long deg\+Bound) const
+\item 
+double \mbox{\hyperlink{classhelib_1_1_context_ac2b4477cbc59e744b735544b60bb4f87}{noise\+Bound\+For\+Gaussian}} (double sigma, long deg\+Bound) const
+\item 
+double \mbox{\hyperlink{classhelib_1_1_context_a1eae4b3032d34226da9b04897b414179}{noise\+Bound\+For\+Small}} (double prob, long deg\+Bound) const
+\item 
+double \mbox{\hyperlink{classhelib_1_1_context_aca4f48776f48a323315928889c64f0d1}{noise\+Bound\+For\+H\+Wt}} (long hwt, U\+N\+U\+S\+ED long deg\+Bound) const
+\item 
+double \mbox{\hyperlink{classhelib_1_1_context_a30037bfeed9ef5a4282e10b92c149801}{std\+Dev\+For\+Recryption}} (long sk\+Hwt=0) const
+\begin{DoxyCompactList}\small\item\em N\+O\+TE\+: this is a bit heuristic. See design document for details. \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classhelib_1_1_context_a6d1a18803b7a39ff477bf3318aa98be5}{bound\+For\+Recryption}} (long sk\+Hwt=0) const
+\item 
+void \mbox{\hyperlink{classhelib_1_1_context_a400f1f138bef615ed0b8f19bdc2bd8ce}{set\+Mod\+Size\+Table}} ()
+\item 
+\mbox{\hyperlink{classhelib_1_1_context_a08ad8299f225b9f8603f8936a98c2453}{Context}} (unsigned long m, unsigned long p, unsigned long r, const std\+::vector$<$ long $>$ \&gens=std\+::vector$<$ long $>$(), const std\+::vector$<$ long $>$ \&ords=std\+::vector$<$ long $>$())
+\item 
+void \mbox{\hyperlink{classhelib_1_1_context_aeb97afc7e74b0b7522c4168d8db2b374}{make\+Bootstrappable}} (const N\+T\+L\+::\+Vec$<$ long $>$ \&mvec, long sk\+Wht=0, bool build\+\_\+cache=false, bool also\+Thick=true)
+\item 
+bool \mbox{\hyperlink{classhelib_1_1_context_abb8f32691d102e0390b5770526c8d4fd}{is\+Bootstrappable}} () const
+\item 
+\mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \mbox{\hyperlink{classhelib_1_1_context_a8f143c4d8e8fde51e2fce121a904eb0a}{full\+Primes}} () const
+\item 
+\mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \mbox{\hyperlink{classhelib_1_1_context_acb3ebd14d55203e09b351b88eca17a44}{all\+Primes}} () const
+\item 
+\mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \mbox{\hyperlink{classhelib_1_1_context_abfe778f83df73ee943f9fc25741efa2e}{get\+Ctxt\+Primes}} (long nprimes) const
+\item 
+long \mbox{\hyperlink{classhelib_1_1_context_a3feef5466cf8ed4878446d0142ac0be4}{B\+PL}} () const
+\item 
+bool \mbox{\hyperlink{classhelib_1_1_context_ae6f113ef16d2e6c1ca451411e34eed42}{operator==}} (const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&other) const
+\item 
+bool \mbox{\hyperlink{classhelib_1_1_context_a3d08d9248d0d3165fa5914b95bd60fdf}{operator!=}} (const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&other) const
+\item 
+long \mbox{\hyperlink{classhelib_1_1_context_aa2da1bad87f9c90f15b70cb14777685d}{ith\+Prime}} (unsigned long i) const
+\begin{DoxyCompactList}\small\item\em The ith small prime in the modulus chain. \end{DoxyCompactList}\item 
+const \mbox{\hyperlink{classhelib_1_1_cmodulus}{Cmodulus}} \& \mbox{\hyperlink{classhelib_1_1_context_ad066ba083a3ba9f4b9627fde8bfa17fe}{ith\+Modulus}} (unsigned long i) const
+\begin{DoxyCompactList}\small\item\em \mbox{\hyperlink{classhelib_1_1_cmodulus}{Cmodulus}} object corresponding to ith small prime in the chain. \end{DoxyCompactList}\item 
+long \mbox{\hyperlink{classhelib_1_1_context_a552e300656dfae6eaacace769c03655a}{num\+Primes}} () const
+\begin{DoxyCompactList}\small\item\em Total number of small prime in the chain. \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classhelib_1_1_context_a2b87d5f0041ad5abe2bcf358cb818343}{is\+Zero\+Divisor}} (const N\+T\+L\+::\+ZZ \&num) const
+\begin{DoxyCompactList}\small\item\em Is num divisible by any of the primes in the chain? \end{DoxyCompactList}\item 
+bool \mbox{\hyperlink{classhelib_1_1_context_a9dea4625a64c673ad3147bf18a1d231f}{in\+Chain}} (long p) const
+\begin{DoxyCompactList}\small\item\em Is p already in the chain? \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classhelib_1_1_context_abd63a1dac045b9e1225e9b42b7506e64}{log\+Of\+Prime}} (unsigned long i) const
+\begin{DoxyCompactList}\small\item\em Returns the natural logarithm of the ith prime. \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classhelib_1_1_context_a237f432913ec39edc41af03384d4475d}{log\+Of\+Product}} (const \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \&s) const
+\begin{DoxyCompactList}\small\item\em Returns the natural logarithm of product\+Of\+Primes(s) \end{DoxyCompactList}\item 
+long \mbox{\hyperlink{classhelib_1_1_context_ad1bc85a67042ff1785da72aa29290402}{bit\+Size\+OfQ}} () const
+\begin{DoxyCompactList}\small\item\em Size in bits of Q. \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classhelib_1_1_context_ad3ea5a9ef3393d3a8fb0212170561add}{security\+Level}} (int hwt=0) const
+\begin{DoxyCompactList}\small\item\em An estimate for the security-\/level. This has a lower bound of 0. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classhelib_1_1_context_a68ac515e2cba3642262ea3796a96e8e0}{printout}} (std\+::ostream \&out=std\+::cout) const
+\begin{DoxyCompactList}\small\item\em print out algebra and other important info \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classhelib_1_1_context_aa65a6f2210ee990f8f3d4cbc60a6060a}{Add\+Small\+Prime}} (long q)
+\begin{DoxyCompactList}\small\item\em Just add the given prime to the chain. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classhelib_1_1_context_af915dcf0e80c5014ef2dc6911891262d}{Add\+Ctxt\+Prime}} (long q)
+\item 
+void \mbox{\hyperlink{classhelib_1_1_context_acc2c4b8400734e630cebe544fbf01cc1}{Add\+Special\+Prime}} (long q)
+\end{DoxyCompactItemize}
+\textbf{ }\par
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classhelib_1_1_context_afc6a3c91d2488abe71e82849653b2c40}{product\+Of\+Primes}} (N\+T\+L\+::\+ZZ \&p, const \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \&s) const
+\begin{DoxyCompactList}\small\item\em The product of all the primes in the given set. \end{DoxyCompactList}\item 
+N\+T\+L\+::\+ZZ \mbox{\hyperlink{classhelib_1_1_context_aa10cb4160e67f8fc94dbbcd14be3a7c5}{product\+Of\+Primes}} (const \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \&s) const
+\end{DoxyCompactItemize}
+
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\mbox{\hyperlink{classhelib_1_1_p_algebra}{P\+Algebra}} \mbox{\hyperlink{classhelib_1_1_context_ab261446cf0a635a7bf1edf081df48d81}{z\+M\+Star}}
+\begin{DoxyCompactList}\small\item\em The structure of Zm$\ast$. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classhelib_1_1_p_algebra_mod}{P\+Algebra\+Mod}} \mbox{\hyperlink{classhelib_1_1_context_a9a8689e8a591a15fdf4f1b5eb7b0b80c}{al\+Mod}}
+\begin{DoxyCompactList}\small\item\em The structure of Z\mbox{[}X\mbox{]}/(Phi\+\_\+m(\+X),p$^\wedge$r) \end{DoxyCompactList}\item 
+std\+::shared\+\_\+ptr$<$ const \mbox{\hyperlink{classhelib_1_1_encrypted_array}{Encrypted\+Array}} $>$ \mbox{\hyperlink{classhelib_1_1_context_a8319e609dbde819ac81130b035711fee}{ea}}
+\begin{DoxyCompactList}\small\item\em A default \mbox{\hyperlink{classhelib_1_1_encrypted_array}{Encrypted\+Array}}. \end{DoxyCompactList}\item 
+std\+::shared\+\_\+ptr$<$ const \mbox{\hyperlink{classhelib_1_1_powerful_d_c_r_t}{Powerful\+D\+C\+RT}} $>$ \mbox{\hyperlink{classhelib_1_1_context_a26f5e8b08576bf2ab4632bc8234243e2}{pwfl\+\_\+converter}}
+\item 
+std\+::shared\+\_\+ptr$<$ \mbox{\hyperlink{structhelib_1_1_poly_mod_ring}{Poly\+Mod\+Ring}} $>$ \mbox{\hyperlink{classhelib_1_1_context_a1a9dbcc75c6cf5116b8114dccc1f1ab7}{slot\+Ring}}
+\begin{DoxyCompactList}\small\item\em The structure of a single slot of the plaintext space. \end{DoxyCompactList}\item 
+N\+T\+L\+::xdouble \mbox{\hyperlink{classhelib_1_1_context_ad2eaf7ce504e725b8e6be631ff276efc}{stdev}}
+\begin{DoxyCompactList}\small\item\em sqrt(variance) of the L\+WE error (default=3.\+2) \end{DoxyCompactList}\item 
+double \mbox{\hyperlink{classhelib_1_1_context_a86b3d6e90031da9bc9cef6f46e9e9bda}{scale}}
+\item 
+\mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \mbox{\hyperlink{classhelib_1_1_context_a09e894a14a98620a7f129c992468072f}{ctxt\+Primes}}
+\item 
+\mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \mbox{\hyperlink{classhelib_1_1_context_a4237638ccaec9233a0c7edaf334343b2}{special\+Primes}}
+\item 
+\mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \mbox{\hyperlink{classhelib_1_1_context_a9d52169353df3e667210c59c1643e316}{small\+Primes}}
+\item 
+\mbox{\hyperlink{classhelib_1_1_moduli_sizes}{Moduli\+Sizes}} \mbox{\hyperlink{classhelib_1_1_context_a739f1b2cb1d0738bcdd8e5474fb05922}{mod\+Sizes}}
+\begin{DoxyCompactList}\small\item\em A helper table to map required modulo-\/sizes to prime\+Sets. \end{DoxyCompactList}\item 
+std\+::vector$<$ \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} $>$ \mbox{\hyperlink{classhelib_1_1_context_a221facd004b3ace6f11367d6766f9b78}{digits}}
+\begin{DoxyCompactList}\small\item\em The set of primes for the digits. \end{DoxyCompactList}\item 
+\mbox{\hyperlink{classhelib_1_1_thin_recrypt_data}{Thin\+Recrypt\+Data}} \mbox{\hyperlink{classhelib_1_1_context_af6b7e88d642f51a00c08263aebaa2e20}{rc\+Data}}
+\begin{DoxyCompactList}\small\item\em Bootstrapping-\/related data in the context. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Friends}
+\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classhelib_1_1_context_a83165f2f0d0a6dd8bb3c3f227e7da1a3}{write\+Context\+Binary}} (std\+::ostream \&str, const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&context)
+\item 
+void \mbox{\hyperlink{classhelib_1_1_context_ad1e445830c6007a7f725e100f19dfe6a}{read\+Context\+Binary}} (std\+::istream \&str, \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&context)
+\end{DoxyCompactItemize}
+\begin{Indent}\textbf{ I/O routines}\par
+{\em To write out all the data associated with a context, do the following\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\mbox{\hyperlink{classhelib_1_1_context_a3a9a7a348aecd453c92d1c077a9af03d}{writeContextBase}}(str, context);}
+\DoxyCodeLine{\mbox{\hyperlink{namespacegen-data_aa9961c248ce1cc2aa7a0c25091d781cd}{str}} << context;}
+\end{DoxyCode}
+
+
+The first function call writes out just \mbox{[}m p r gens ords\mbox{]}, which is the data needed to invoke the context constructor.
+
+The second call writes out all other information, including the stdev field, the prime sequence (including which primes are \char`\"{}special\char`\"{}), and the digits info.
+
+To read in all the data associated with a context, do the following\+:
+
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{\textcolor{keywordtype}{unsigned} \textcolor{keywordtype}{long} m, p, r;}
+\DoxyCodeLine{std::vector<long> gens, ords;}
+\DoxyCodeLine{}
+\DoxyCodeLine{\mbox{\hyperlink{classhelib_1_1_context_a40d28a7b77f5735cc6d082452e7126a9}{readContextBase}}(str, m, p, r, gens, ords);}
+\DoxyCodeLine{}
+\DoxyCodeLine{\mbox{\hyperlink{classhelib_1_1_context_a08ad8299f225b9f8603f8936a98c2453}{Context}} context(m, p, r, gens, ords);}
+\DoxyCodeLine{}
+\DoxyCodeLine{\mbox{\hyperlink{namespacegen-data_aa9961c248ce1cc2aa7a0c25091d781cd}{str}} >> context;}
+\end{DoxyCode}
+
+
+The call to read\+Context\+Base just reads the values m, p, r and the set of generators in Zm$\ast$ /(p) and their order. Then, after constructing the context, the $>$$>$ operator reads in and attaches all other information. }\begin{DoxyCompactItemize}
+\item 
+void \mbox{\hyperlink{classhelib_1_1_context_a3a9a7a348aecd453c92d1c077a9af03d}{write\+Context\+Base}} (std\+::ostream \&str, const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&context)
+\begin{DoxyCompactList}\small\item\em write \mbox{[}m p r\mbox{]} data \end{DoxyCompactList}\item 
+std\+::ostream \& \mbox{\hyperlink{classhelib_1_1_context_a3f25fcb8f7047c32e2929d9ffbf4ac11}{operator$<$$<$}} (std\+::ostream \&str, const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&context)
+\begin{DoxyCompactList}\small\item\em Write all other data. \end{DoxyCompactList}\item 
+void \mbox{\hyperlink{classhelib_1_1_context_a40d28a7b77f5735cc6d082452e7126a9}{read\+Context\+Base}} (std\+::istream \&str, unsigned long \&m, unsigned long \&p, unsigned long \&r, std\+::vector$<$ long $>$ \&gens, std\+::vector$<$ long $>$ \&ords)
+\begin{DoxyCompactList}\small\item\em read \mbox{[}m p r\mbox{]} data, needed to construct context \end{DoxyCompactList}\item 
+std\+::istream \& \mbox{\hyperlink{classhelib_1_1_context_a717438f68d2a050214ee4a8a933a7bba}{operator$>$$>$}} (std\+::istream \&str, \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&context)
+\begin{DoxyCompactList}\small\item\em read all other data associated with context \end{DoxyCompactList}\end{DoxyCompactItemize}
+\end{Indent}
+
+
+\doxysubsection{Detailed Description}
+Maintaining the parameters. 
+
+\doxysubsection{Constructor \& Destructor Documentation}
+\mbox{\Hypertarget{classhelib_1_1_context_a08ad8299f225b9f8603f8936a98c2453}\label{classhelib_1_1_context_a08ad8299f225b9f8603f8936a98c2453}} 
+\index{helib::Context@{helib::Context}!Context@{Context}}
+\index{Context@{Context}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{Context()}{Context()}}
+{\footnotesize\ttfamily helib\+::\+Context\+::\+Context (\begin{DoxyParamCaption}\item[{unsigned long}]{m,  }\item[{unsigned long}]{p,  }\item[{unsigned long}]{r,  }\item[{const std\+::vector$<$ long $>$ \&}]{gens = {\ttfamily std\+:\+:vector$<$long$>$()},  }\item[{const std\+::vector$<$ long $>$ \&}]{ords = {\ttfamily std\+:\+:vector$<$long$>$()} }\end{DoxyParamCaption})}
+
+
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{classhelib_1_1_context_af915dcf0e80c5014ef2dc6911891262d}\label{classhelib_1_1_context_af915dcf0e80c5014ef2dc6911891262d}} 
+\index{helib::Context@{helib::Context}!AddCtxtPrime@{AddCtxtPrime}}
+\index{AddCtxtPrime@{AddCtxtPrime}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{AddCtxtPrime()}{AddCtxtPrime()}}
+{\footnotesize\ttfamily void helib\+::\+Context\+::\+Add\+Ctxt\+Prime (\begin{DoxyParamCaption}\item[{long}]{q }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{classhelib_1_1_context_aa65a6f2210ee990f8f3d4cbc60a6060a}\label{classhelib_1_1_context_aa65a6f2210ee990f8f3d4cbc60a6060a}} 
+\index{helib::Context@{helib::Context}!AddSmallPrime@{AddSmallPrime}}
+\index{AddSmallPrime@{AddSmallPrime}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{AddSmallPrime()}{AddSmallPrime()}}
+{\footnotesize\ttfamily void helib\+::\+Context\+::\+Add\+Small\+Prime (\begin{DoxyParamCaption}\item[{long}]{q }\end{DoxyParamCaption})}
+
+
+
+Just add the given prime to the chain. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_acc2c4b8400734e630cebe544fbf01cc1}\label{classhelib_1_1_context_acc2c4b8400734e630cebe544fbf01cc1}} 
+\index{helib::Context@{helib::Context}!AddSpecialPrime@{AddSpecialPrime}}
+\index{AddSpecialPrime@{AddSpecialPrime}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{AddSpecialPrime()}{AddSpecialPrime()}}
+{\footnotesize\ttfamily void helib\+::\+Context\+::\+Add\+Special\+Prime (\begin{DoxyParamCaption}\item[{long}]{q }\end{DoxyParamCaption})}
+
+\mbox{\Hypertarget{classhelib_1_1_context_acb3ebd14d55203e09b351b88eca17a44}\label{classhelib_1_1_context_acb3ebd14d55203e09b351b88eca17a44}} 
+\index{helib::Context@{helib::Context}!allPrimes@{allPrimes}}
+\index{allPrimes@{allPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{allPrimes()}{allPrimes()}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} helib\+::\+Context\+::all\+Primes (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_ad1bc85a67042ff1785da72aa29290402}\label{classhelib_1_1_context_ad1bc85a67042ff1785da72aa29290402}} 
+\index{helib::Context@{helib::Context}!bitSizeOfQ@{bitSizeOfQ}}
+\index{bitSizeOfQ@{bitSizeOfQ}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{bitSizeOfQ()}{bitSizeOfQ()}}
+{\footnotesize\ttfamily long helib\+::\+Context\+::bit\+Size\+OfQ (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Size in bits of Q. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a6d1a18803b7a39ff477bf3318aa98be5}\label{classhelib_1_1_context_a6d1a18803b7a39ff477bf3318aa98be5}} 
+\index{helib::Context@{helib::Context}!boundForRecryption@{boundForRecryption}}
+\index{boundForRecryption@{boundForRecryption}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{boundForRecryption()}{boundForRecryption()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::bound\+For\+Recryption (\begin{DoxyParamCaption}\item[{long}]{sk\+Hwt = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a3feef5466cf8ed4878446d0142ac0be4}\label{classhelib_1_1_context_a3feef5466cf8ed4878446d0142ac0be4}} 
+\index{helib::Context@{helib::Context}!BPL@{BPL}}
+\index{BPL@{BPL}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{BPL()}{BPL()}}
+{\footnotesize\ttfamily long helib\+::\+Context\+::\+B\+PL (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a8f143c4d8e8fde51e2fce121a904eb0a}\label{classhelib_1_1_context_a8f143c4d8e8fde51e2fce121a904eb0a}} 
+\index{helib::Context@{helib::Context}!fullPrimes@{fullPrimes}}
+\index{fullPrimes@{fullPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{fullPrimes()}{fullPrimes()}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} helib\+::\+Context\+::full\+Primes (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_abfe778f83df73ee943f9fc25741efa2e}\label{classhelib_1_1_context_abfe778f83df73ee943f9fc25741efa2e}} 
+\index{helib::Context@{helib::Context}!getCtxtPrimes@{getCtxtPrimes}}
+\index{getCtxtPrimes@{getCtxtPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{getCtxtPrimes()}{getCtxtPrimes()}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} helib\+::\+Context\+::get\+Ctxt\+Primes (\begin{DoxyParamCaption}\item[{long}]{nprimes }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a9dea4625a64c673ad3147bf18a1d231f}\label{classhelib_1_1_context_a9dea4625a64c673ad3147bf18a1d231f}} 
+\index{helib::Context@{helib::Context}!inChain@{inChain}}
+\index{inChain@{inChain}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{inChain()}{inChain()}}
+{\footnotesize\ttfamily bool helib\+::\+Context\+::in\+Chain (\begin{DoxyParamCaption}\item[{long}]{p }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Is p already in the chain? 
+
+\mbox{\Hypertarget{classhelib_1_1_context_abb8f32691d102e0390b5770526c8d4fd}\label{classhelib_1_1_context_abb8f32691d102e0390b5770526c8d4fd}} 
+\index{helib::Context@{helib::Context}!isBootstrappable@{isBootstrappable}}
+\index{isBootstrappable@{isBootstrappable}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{isBootstrappable()}{isBootstrappable()}}
+{\footnotesize\ttfamily bool helib\+::\+Context\+::is\+Bootstrappable (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a2b87d5f0041ad5abe2bcf358cb818343}\label{classhelib_1_1_context_a2b87d5f0041ad5abe2bcf358cb818343}} 
+\index{helib::Context@{helib::Context}!isZeroDivisor@{isZeroDivisor}}
+\index{isZeroDivisor@{isZeroDivisor}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{isZeroDivisor()}{isZeroDivisor()}}
+{\footnotesize\ttfamily bool helib\+::\+Context\+::is\+Zero\+Divisor (\begin{DoxyParamCaption}\item[{const N\+T\+L\+::\+ZZ \&}]{num }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Is num divisible by any of the primes in the chain? 
+
+\mbox{\Hypertarget{classhelib_1_1_context_ad066ba083a3ba9f4b9627fde8bfa17fe}\label{classhelib_1_1_context_ad066ba083a3ba9f4b9627fde8bfa17fe}} 
+\index{helib::Context@{helib::Context}!ithModulus@{ithModulus}}
+\index{ithModulus@{ithModulus}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{ithModulus()}{ithModulus()}}
+{\footnotesize\ttfamily const \mbox{\hyperlink{classhelib_1_1_cmodulus}{Cmodulus}}\& helib\+::\+Context\+::ith\+Modulus (\begin{DoxyParamCaption}\item[{unsigned long}]{i }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+\mbox{\hyperlink{classhelib_1_1_cmodulus}{Cmodulus}} object corresponding to ith small prime in the chain. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_aa2da1bad87f9c90f15b70cb14777685d}\label{classhelib_1_1_context_aa2da1bad87f9c90f15b70cb14777685d}} 
+\index{helib::Context@{helib::Context}!ithPrime@{ithPrime}}
+\index{ithPrime@{ithPrime}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{ithPrime()}{ithPrime()}}
+{\footnotesize\ttfamily long helib\+::\+Context\+::ith\+Prime (\begin{DoxyParamCaption}\item[{unsigned long}]{i }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+The ith small prime in the modulus chain. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_abd63a1dac045b9e1225e9b42b7506e64}\label{classhelib_1_1_context_abd63a1dac045b9e1225e9b42b7506e64}} 
+\index{helib::Context@{helib::Context}!logOfPrime@{logOfPrime}}
+\index{logOfPrime@{logOfPrime}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{logOfPrime()}{logOfPrime()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::log\+Of\+Prime (\begin{DoxyParamCaption}\item[{unsigned long}]{i }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Returns the natural logarithm of the ith prime. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a237f432913ec39edc41af03384d4475d}\label{classhelib_1_1_context_a237f432913ec39edc41af03384d4475d}} 
+\index{helib::Context@{helib::Context}!logOfProduct@{logOfProduct}}
+\index{logOfProduct@{logOfProduct}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{logOfProduct()}{logOfProduct()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::log\+Of\+Product (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \&}]{s }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Returns the natural logarithm of product\+Of\+Primes(s) 
+
+\mbox{\Hypertarget{classhelib_1_1_context_aeb97afc7e74b0b7522c4168d8db2b374}\label{classhelib_1_1_context_aeb97afc7e74b0b7522c4168d8db2b374}} 
+\index{helib::Context@{helib::Context}!makeBootstrappable@{makeBootstrappable}}
+\index{makeBootstrappable@{makeBootstrappable}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{makeBootstrappable()}{makeBootstrappable()}}
+{\footnotesize\ttfamily void helib\+::\+Context\+::make\+Bootstrappable (\begin{DoxyParamCaption}\item[{const N\+T\+L\+::\+Vec$<$ long $>$ \&}]{mvec,  }\item[{long}]{sk\+Wht = {\ttfamily 0},  }\item[{bool}]{build\+\_\+cache = {\ttfamily false},  }\item[{bool}]{also\+Thick = {\ttfamily true} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_ac2b4477cbc59e744b735544b60bb4f87}\label{classhelib_1_1_context_ac2b4477cbc59e744b735544b60bb4f87}} 
+\index{helib::Context@{helib::Context}!noiseBoundForGaussian@{noiseBoundForGaussian}}
+\index{noiseBoundForGaussian@{noiseBoundForGaussian}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{noiseBoundForGaussian()}{noiseBoundForGaussian()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::noise\+Bound\+For\+Gaussian (\begin{DoxyParamCaption}\item[{double}]{sigma,  }\item[{long}]{deg\+Bound }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Assume the polynomial f(x) = sum\+\_\+\{i $<$ k\} f\+\_\+i x$^\wedge$i is chosen so that each f\+\_\+i is chosen uniformly and independently from N(0, sigma$^\wedge$2), and that k = deg\+Bound. This returns a bound B such that the L-\/infty norm of the canonical embedding exceeds B with probability at most epsilon. \mbox{\Hypertarget{classhelib_1_1_context_aca4f48776f48a323315928889c64f0d1}\label{classhelib_1_1_context_aca4f48776f48a323315928889c64f0d1}} 
+\index{helib::Context@{helib::Context}!noiseBoundForHWt@{noiseBoundForHWt}}
+\index{noiseBoundForHWt@{noiseBoundForHWt}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{noiseBoundForHWt()}{noiseBoundForHWt()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::noise\+Bound\+For\+H\+Wt (\begin{DoxyParamCaption}\item[{long}]{hwt,  }\item[{U\+N\+U\+S\+ED long}]{deg\+Bound }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Assume the polynomial f(x) = sum\+\_\+\{i $<$ k\} f\+\_\+i x$^\wedge$i is chosen hwt coefficients are chosen to \textbackslash{}pm 1, and the remainder zero. This returns a bound B such that the L-\/infty norm of the canonical embedding exceeds B with probability at most epsilon. \mbox{\Hypertarget{classhelib_1_1_context_a93ce4564b2ec97c85c50e732c04a1b22}\label{classhelib_1_1_context_a93ce4564b2ec97c85c50e732c04a1b22}} 
+\index{helib::Context@{helib::Context}!noiseBoundForMod@{noiseBoundForMod}}
+\index{noiseBoundForMod@{noiseBoundForMod}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{noiseBoundForMod()}{noiseBoundForMod()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::noise\+Bound\+For\+Mod (\begin{DoxyParamCaption}\item[{long}]{modulus,  }\item[{long}]{deg\+Bound }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Assume the polynomial f(x) = sum\+\_\+\{i $<$ k\} f\+\_\+i x$^\wedge$i is chosen so that each f\+\_\+i is chosen uniformly and independently from the from the set of balanced residues modulo the given modulus. This returns a bound B such that the L-\/infty norm of the canonical embedding exceeds B with probability at most epsilon. \mbox{\Hypertarget{classhelib_1_1_context_a1eae4b3032d34226da9b04897b414179}\label{classhelib_1_1_context_a1eae4b3032d34226da9b04897b414179}} 
+\index{helib::Context@{helib::Context}!noiseBoundForSmall@{noiseBoundForSmall}}
+\index{noiseBoundForSmall@{noiseBoundForSmall}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{noiseBoundForSmall()}{noiseBoundForSmall()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::noise\+Bound\+For\+Small (\begin{DoxyParamCaption}\item[{double}]{prob,  }\item[{long}]{deg\+Bound }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+Assume the polynomial f(x) = sum\+\_\+\{i $<$ k\} f\+\_\+i x$^\wedge$i is chosen so that each f\+\_\+i is zero with probability 1-\/prob, 1 with probability prob/2, and -\/1 with probability prob/2. This returns a bound B such that the L-\/infty norm of the canonical embedding exceeds B with probability at most epsilon. \mbox{\Hypertarget{classhelib_1_1_context_ab79e1f941d6043131a14404c68bf538c}\label{classhelib_1_1_context_ab79e1f941d6043131a14404c68bf538c}} 
+\index{helib::Context@{helib::Context}!noiseBoundForUniform@{noiseBoundForUniform}}
+\index{noiseBoundForUniform@{noiseBoundForUniform}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{noiseBoundForUniform()}{noiseBoundForUniform()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::noise\+Bound\+For\+Uniform (\begin{DoxyParamCaption}\item[{double}]{mag\+Bound,  }\item[{long}]{deg\+Bound }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+erfc(scale/sqrt(2)) $\ast$ phi(m) should be less than some negligible parameter epsilon. The default value of 10 should be good enough for most applications. N\+O\+TE\+: -\/log(erfc(8/sqrt(2)))/log(2) = 49.\+5 -\/log(erfc(10/sqrt(2)))/log(2) = 75.\+8 -\/log(erfc(11/sqrt(2)))/log(2) = 91.\+1 -\/log(erfc(12/sqrt(2)))/log(2) =107.\+8 The way this is used is as follows. If we have a normal random variable X with variance sigma$^\wedge$2, then the probability that that X lies outside the interval \mbox{[}-\/scale$\ast$sigma, scale$\ast$sigma\mbox{]} is delta=erfc(scale/sqrt(2)). We will usually apply the union bound to a vector of phi(m) such random variables (one for each primitive m-\/th root of unity), so that the probability that that the L-\/infty norm exceeds scale$\ast$sigma is at most epsilon=phim$\ast$delta. Thus, scale$\ast$sigma will be used as a high-\/probability bound on the L-\/infty norm of such vectors. Assume the polynomial f(x) = sum\+\_\+\{i $<$ k\} f\+\_\+i x$^\wedge$i is chosen so that each f\+\_\+i is chosen uniformly and independently from the interval \mbox{[}-\/mag\+Bound, mag\+Bound\mbox{]}, and that k = deg\+Bound. This returns a bound B such that the L-\/infty norm of the canonical embedding exceeds B with probability at most epsilon. \mbox{\Hypertarget{classhelib_1_1_context_ab25e83e61a64ed721a1b710a3b2df82d}\label{classhelib_1_1_context_ab25e83e61a64ed721a1b710a3b2df82d}} 
+\index{helib::Context@{helib::Context}!noiseBoundForUniform@{noiseBoundForUniform}}
+\index{noiseBoundForUniform@{noiseBoundForUniform}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{noiseBoundForUniform()}{noiseBoundForUniform()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily N\+T\+L\+::xdouble helib\+::\+Context\+::noise\+Bound\+For\+Uniform (\begin{DoxyParamCaption}\item[{N\+T\+L\+::xdouble}]{mag\+Bound,  }\item[{long}]{deg\+Bound }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a552e300656dfae6eaacace769c03655a}\label{classhelib_1_1_context_a552e300656dfae6eaacace769c03655a}} 
+\index{helib::Context@{helib::Context}!numPrimes@{numPrimes}}
+\index{numPrimes@{numPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{numPrimes()}{numPrimes()}}
+{\footnotesize\ttfamily long helib\+::\+Context\+::num\+Primes (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+Total number of small prime in the chain. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a3d08d9248d0d3165fa5914b95bd60fdf}\label{classhelib_1_1_context_a3d08d9248d0d3165fa5914b95bd60fdf}} 
+\index{helib::Context@{helib::Context}!operator"!=@{operator"!=}}
+\index{operator"!=@{operator"!=}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{operator"!=()}{operator!=()}}
+{\footnotesize\ttfamily bool helib\+::\+Context\+::operator!= (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&}]{other }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_ae6f113ef16d2e6c1ca451411e34eed42}\label{classhelib_1_1_context_ae6f113ef16d2e6c1ca451411e34eed42}} 
+\index{helib::Context@{helib::Context}!operator==@{operator==}}
+\index{operator==@{operator==}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{operator==()}{operator==()}}
+{\footnotesize\ttfamily bool helib\+::\+Context\+::operator== (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&}]{other }\end{DoxyParamCaption}) const}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a68ac515e2cba3642262ea3796a96e8e0}\label{classhelib_1_1_context_a68ac515e2cba3642262ea3796a96e8e0}} 
+\index{helib::Context@{helib::Context}!printout@{printout}}
+\index{printout@{printout}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{printout()}{printout()}}
+{\footnotesize\ttfamily void helib\+::\+Context\+::printout (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{out = {\ttfamily std\+:\+:cout} }\end{DoxyParamCaption}) const}
+
+
+
+print out algebra and other important info 
+
+\mbox{\Hypertarget{classhelib_1_1_context_aa10cb4160e67f8fc94dbbcd14be3a7c5}\label{classhelib_1_1_context_aa10cb4160e67f8fc94dbbcd14be3a7c5}} 
+\index{helib::Context@{helib::Context}!productOfPrimes@{productOfPrimes}}
+\index{productOfPrimes@{productOfPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{productOfPrimes()}{productOfPrimes()}\hspace{0.1cm}{\footnotesize\ttfamily [1/2]}}
+{\footnotesize\ttfamily N\+T\+L\+::\+ZZ helib\+::\+Context\+::product\+Of\+Primes (\begin{DoxyParamCaption}\item[{const \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \&}]{s }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_afc6a3c91d2488abe71e82849653b2c40}\label{classhelib_1_1_context_afc6a3c91d2488abe71e82849653b2c40}} 
+\index{helib::Context@{helib::Context}!productOfPrimes@{productOfPrimes}}
+\index{productOfPrimes@{productOfPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{productOfPrimes()}{productOfPrimes()}\hspace{0.1cm}{\footnotesize\ttfamily [2/2]}}
+{\footnotesize\ttfamily void helib\+::\+Context\+::product\+Of\+Primes (\begin{DoxyParamCaption}\item[{N\+T\+L\+::\+ZZ \&}]{p,  }\item[{const \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} \&}]{s }\end{DoxyParamCaption}) const}
+
+
+
+The product of all the primes in the given set. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_ad3ea5a9ef3393d3a8fb0212170561add}\label{classhelib_1_1_context_ad3ea5a9ef3393d3a8fb0212170561add}} 
+\index{helib::Context@{helib::Context}!securityLevel@{securityLevel}}
+\index{securityLevel@{securityLevel}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{securityLevel()}{securityLevel()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::security\+Level (\begin{DoxyParamCaption}\item[{int}]{hwt = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+An estimate for the security-\/level. This has a lower bound of 0. 
+
+This function uses experimental affine approximations to the lwe-\/estimator from \href{https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py}{\texttt{ https\+://bitbucket.\+org/malb/lwe-\/estimator/raw/\+H\+E\+A\+D/estimator.\+py}}, from Aug-\/2020 (see script in misc/estimator/lwe-\/estimator.\+sage).
+
+Let s=3.\+2 if m is a power of two, or s=3.\+2$\ast$sqrt(m) otherwise. For the estimator we use alpha=s/q (so log2\+Alpha\+Inv = log\+\_\+2(q/s)), and n=phi(m). \mbox{\Hypertarget{classhelib_1_1_context_a400f1f138bef615ed0b8f19bdc2bd8ce}\label{classhelib_1_1_context_a400f1f138bef615ed0b8f19bdc2bd8ce}} 
+\index{helib::Context@{helib::Context}!setModSizeTable@{setModSizeTable}}
+\index{setModSizeTable@{setModSizeTable}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{setModSizeTable()}{setModSizeTable()}}
+{\footnotesize\ttfamily void helib\+::\+Context\+::set\+Mod\+Size\+Table (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a30037bfeed9ef5a4282e10b92c149801}\label{classhelib_1_1_context_a30037bfeed9ef5a4282e10b92c149801}} 
+\index{helib::Context@{helib::Context}!stdDevForRecryption@{stdDevForRecryption}}
+\index{stdDevForRecryption@{stdDevForRecryption}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{stdDevForRecryption()}{stdDevForRecryption()}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::std\+Dev\+For\+Recryption (\begin{DoxyParamCaption}\item[{long}]{sk\+Hwt = {\ttfamily 0} }\end{DoxyParamCaption}) const\hspace{0.3cm}{\ttfamily [inline]}}
+
+
+
+N\+O\+TE\+: this is a bit heuristic. See design document for details. 
+
+This computes a high probability bound on the L-\/infty norm of x0+s$\ast$x1 in the pwrfl basis, assuming is chosen with coeffs in the pwrfl basis uniformly and independently dist\textquotesingle{}d over \mbox{[}-\/1/2,1/2\mbox{]}, x0 has arbitrary coeffs over \mbox{[}-\/1/2,1/2\mbox{]} in the pwrfl basis, and assuming s is chosen with sk\+Hwt nonzero coeffs mod X$^\wedge$m-\/1 in the power basis (uniformly and independently over \{-\/1,1\}). The bound should be satisfied with probability epsilon. N\+O\+TE\+: this is still valid even when m is a power of 2 
+
+\doxysubsection{Friends And Related Function Documentation}
+\mbox{\Hypertarget{classhelib_1_1_context_a3f25fcb8f7047c32e2929d9ffbf4ac11}\label{classhelib_1_1_context_a3f25fcb8f7047c32e2929d9ffbf4ac11}} 
+\index{helib::Context@{helib::Context}!operator$<$$<$@{operator$<$$<$}}
+\index{operator$<$$<$@{operator$<$$<$}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{operator$<$$<$}{operator<<}}
+{\footnotesize\ttfamily std\+::ostream\& operator$<$$<$ (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{str,  }\item[{const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&}]{context }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+
+
+Write all other data. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a717438f68d2a050214ee4a8a933a7bba}\label{classhelib_1_1_context_a717438f68d2a050214ee4a8a933a7bba}} 
+\index{helib::Context@{helib::Context}!operator$>$$>$@{operator$>$$>$}}
+\index{operator$>$$>$@{operator$>$$>$}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{operator$>$$>$}{operator>>}}
+{\footnotesize\ttfamily std\+::istream\& operator$>$$>$ (\begin{DoxyParamCaption}\item[{std\+::istream \&}]{str,  }\item[{\mbox{\hyperlink{classhelib_1_1_context}{Context}} \&}]{context }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+
+
+read all other data associated with context 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a40d28a7b77f5735cc6d082452e7126a9}\label{classhelib_1_1_context_a40d28a7b77f5735cc6d082452e7126a9}} 
+\index{helib::Context@{helib::Context}!readContextBase@{readContextBase}}
+\index{readContextBase@{readContextBase}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{readContextBase}{readContextBase}}
+{\footnotesize\ttfamily void read\+Context\+Base (\begin{DoxyParamCaption}\item[{std\+::istream \&}]{str,  }\item[{unsigned long \&}]{m,  }\item[{unsigned long \&}]{p,  }\item[{unsigned long \&}]{r,  }\item[{std\+::vector$<$ long $>$ \&}]{gens,  }\item[{std\+::vector$<$ long $>$ \&}]{ords }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+
+
+read \mbox{[}m p r\mbox{]} data, needed to construct context 
+
+\mbox{\Hypertarget{classhelib_1_1_context_ad1e445830c6007a7f725e100f19dfe6a}\label{classhelib_1_1_context_ad1e445830c6007a7f725e100f19dfe6a}} 
+\index{helib::Context@{helib::Context}!readContextBinary@{readContextBinary}}
+\index{readContextBinary@{readContextBinary}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{readContextBinary}{readContextBinary}}
+{\footnotesize\ttfamily void read\+Context\+Binary (\begin{DoxyParamCaption}\item[{std\+::istream \&}]{str,  }\item[{\mbox{\hyperlink{classhelib_1_1_context}{Context}} \&}]{context }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a3a9a7a348aecd453c92d1c077a9af03d}\label{classhelib_1_1_context_a3a9a7a348aecd453c92d1c077a9af03d}} 
+\index{helib::Context@{helib::Context}!writeContextBase@{writeContextBase}}
+\index{writeContextBase@{writeContextBase}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{writeContextBase}{writeContextBase}}
+{\footnotesize\ttfamily void write\+Context\+Base (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{str,  }\item[{const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&}]{context }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+
+
+write \mbox{[}m p r\mbox{]} data 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a83165f2f0d0a6dd8bb3c3f227e7da1a3}\label{classhelib_1_1_context_a83165f2f0d0a6dd8bb3c3f227e7da1a3}} 
+\index{helib::Context@{helib::Context}!writeContextBinary@{writeContextBinary}}
+\index{writeContextBinary@{writeContextBinary}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{writeContextBinary}{writeContextBinary}}
+{\footnotesize\ttfamily void write\+Context\+Binary (\begin{DoxyParamCaption}\item[{std\+::ostream \&}]{str,  }\item[{const \mbox{\hyperlink{classhelib_1_1_context}{Context}} \&}]{context }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [friend]}}
+
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{classhelib_1_1_context_a9a8689e8a591a15fdf4f1b5eb7b0b80c}\label{classhelib_1_1_context_a9a8689e8a591a15fdf4f1b5eb7b0b80c}} 
+\index{helib::Context@{helib::Context}!alMod@{alMod}}
+\index{alMod@{alMod}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{alMod}{alMod}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_p_algebra_mod}{P\+Algebra\+Mod}} helib\+::\+Context\+::al\+Mod}
+
+
+
+The structure of Z\mbox{[}X\mbox{]}/(Phi\+\_\+m(\+X),p$^\wedge$r) 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a09e894a14a98620a7f129c992468072f}\label{classhelib_1_1_context_a09e894a14a98620a7f129c992468072f}} 
+\index{helib::Context@{helib::Context}!ctxtPrimes@{ctxtPrimes}}
+\index{ctxtPrimes@{ctxtPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{ctxtPrimes}{ctxtPrimes}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} helib\+::\+Context\+::ctxt\+Primes}
+
+The \char`\"{}ciphertext primes\char`\"{} are the \char`\"{}normal\char`\"{} primes that are used to represent the public encryption key and ciphertexts. These are all \char`\"{}large\char`\"{} single=precision primes, or bit-\/size roughly N\+T\+L\+\_\+\+S\+P\+\_\+\+S\+I\+ZE bits. \mbox{\Hypertarget{classhelib_1_1_context_a221facd004b3ace6f11367d6766f9b78}\label{classhelib_1_1_context_a221facd004b3ace6f11367d6766f9b78}} 
+\index{helib::Context@{helib::Context}!digits@{digits}}
+\index{digits@{digits}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{digits}{digits}}
+{\footnotesize\ttfamily std\+::vector$<$\mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}}$>$ helib\+::\+Context\+::digits}
+
+
+
+The set of primes for the digits. 
+
+The different columns in any key-\/switching matrix contain encryptions of multiplies of the secret key, sk, B1$\ast$sk, B2$\ast$\+B1$\ast$sk, B3$\ast$\+B2$\ast$\+B1$\ast$sk,... with each Bi a product of a few \char`\"{}non-\/special\char`\"{} primes in the chain. The digits data member indicate which primes correspond to each of the Bi\textquotesingle{}s. These are all \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} objects, whose union is the subset ctxt\+Primes.
+
+The number of Bi\textquotesingle{}s is one less than the number of columns in the key switching matrices (since the 1st column encrypts sk, without any Bi\textquotesingle{}s), but we keep in the digits std\+::vector also an entry for the primes that do not participate in any Bi (so digits.\+size() is the same as the number of columns in the key switching matrices). See section 3.\+1.\+6 in the design document (key-\/switching). \mbox{\Hypertarget{classhelib_1_1_context_a8319e609dbde819ac81130b035711fee}\label{classhelib_1_1_context_a8319e609dbde819ac81130b035711fee}} 
+\index{helib::Context@{helib::Context}!ea@{ea}}
+\index{ea@{ea}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{ea}{ea}}
+{\footnotesize\ttfamily std\+::shared\+\_\+ptr$<$const \mbox{\hyperlink{classhelib_1_1_encrypted_array}{Encrypted\+Array}}$>$ helib\+::\+Context\+::ea}
+
+
+
+A default \mbox{\hyperlink{classhelib_1_1_encrypted_array}{Encrypted\+Array}}. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a739f1b2cb1d0738bcdd8e5474fb05922}\label{classhelib_1_1_context_a739f1b2cb1d0738bcdd8e5474fb05922}} 
+\index{helib::Context@{helib::Context}!modSizes@{modSizes}}
+\index{modSizes@{modSizes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{modSizes}{modSizes}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_moduli_sizes}{Moduli\+Sizes}} helib\+::\+Context\+::mod\+Sizes}
+
+
+
+A helper table to map required modulo-\/sizes to prime\+Sets. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a26f5e8b08576bf2ab4632bc8234243e2}\label{classhelib_1_1_context_a26f5e8b08576bf2ab4632bc8234243e2}} 
+\index{helib::Context@{helib::Context}!pwfl\_converter@{pwfl\_converter}}
+\index{pwfl\_converter@{pwfl\_converter}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{pwfl\_converter}{pwfl\_converter}}
+{\footnotesize\ttfamily std\+::shared\+\_\+ptr$<$const \mbox{\hyperlink{classhelib_1_1_powerful_d_c_r_t}{Powerful\+D\+C\+RT}}$>$ helib\+::\+Context\+::pwfl\+\_\+converter}
+
+\mbox{\Hypertarget{classhelib_1_1_context_af6b7e88d642f51a00c08263aebaa2e20}\label{classhelib_1_1_context_af6b7e88d642f51a00c08263aebaa2e20}} 
+\index{helib::Context@{helib::Context}!rcData@{rcData}}
+\index{rcData@{rcData}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{rcData}{rcData}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_thin_recrypt_data}{Thin\+Recrypt\+Data}} helib\+::\+Context\+::rc\+Data}
+
+
+
+Bootstrapping-\/related data in the context. 
+
+\mbox{\Hypertarget{classhelib_1_1_context_a86b3d6e90031da9bc9cef6f46e9e9bda}\label{classhelib_1_1_context_a86b3d6e90031da9bc9cef6f46e9e9bda}} 
+\index{helib::Context@{helib::Context}!scale@{scale}}
+\index{scale@{scale}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{scale}{scale}}
+{\footnotesize\ttfamily double helib\+::\+Context\+::scale}
+
+\mbox{\Hypertarget{classhelib_1_1_context_a1a9dbcc75c6cf5116b8114dccc1f1ab7}\label{classhelib_1_1_context_a1a9dbcc75c6cf5116b8114dccc1f1ab7}} 
+\index{helib::Context@{helib::Context}!slotRing@{slotRing}}
+\index{slotRing@{slotRing}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{slotRing}{slotRing}}
+{\footnotesize\ttfamily std\+::shared\+\_\+ptr$<$\mbox{\hyperlink{structhelib_1_1_poly_mod_ring}{Poly\+Mod\+Ring}}$>$ helib\+::\+Context\+::slot\+Ring}
+
+
+
+The structure of a single slot of the plaintext space. 
+
+This will be Z\mbox{[}X\mbox{]}/(G(x),p$^\wedge$r) for some irreducible factor G of Phi\+\_\+m(\+X). \mbox{\Hypertarget{classhelib_1_1_context_a9d52169353df3e667210c59c1643e316}\label{classhelib_1_1_context_a9d52169353df3e667210c59c1643e316}} 
+\index{helib::Context@{helib::Context}!smallPrimes@{smallPrimes}}
+\index{smallPrimes@{smallPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{smallPrimes}{smallPrimes}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} helib\+::\+Context\+::small\+Primes}
+
+Yet a third set of primes, aimed at allowing modulus-\/switching with higher resolution. These are somewhat smaller single-\/precision primes, of size from N\+T\+L\+\_\+\+S\+P\+\_\+\+S\+I\+Z\+E-\/20 to N\+T\+L\+\_\+\+S\+P\+\_\+\+S\+I\+Z\+E-\/1. \mbox{\Hypertarget{classhelib_1_1_context_a4237638ccaec9233a0c7edaf334343b2}\label{classhelib_1_1_context_a4237638ccaec9233a0c7edaf334343b2}} 
+\index{helib::Context@{helib::Context}!specialPrimes@{specialPrimes}}
+\index{specialPrimes@{specialPrimes}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{specialPrimes}{specialPrimes}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_index_set}{Index\+Set}} helib\+::\+Context\+::special\+Primes}
+
+A disjoint set of primes, used for key switching. See section 3.\+1.\+6 in the design document (key-\/switching). These too are \char`\"{}large\char`\"{} single=precision primes, or bit-\/size close to N\+T\+L\+\_\+\+S\+P\+\_\+\+S\+I\+ZE bits. \mbox{\Hypertarget{classhelib_1_1_context_ad2eaf7ce504e725b8e6be631ff276efc}\label{classhelib_1_1_context_ad2eaf7ce504e725b8e6be631ff276efc}} 
+\index{helib::Context@{helib::Context}!stdev@{stdev}}
+\index{stdev@{stdev}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{stdev}{stdev}}
+{\footnotesize\ttfamily N\+T\+L\+::xdouble helib\+::\+Context\+::stdev}
+
+
+
+sqrt(variance) of the L\+WE error (default=3.\+2) 
+
+\mbox{\Hypertarget{classhelib_1_1_context_ab261446cf0a635a7bf1edf081df48d81}\label{classhelib_1_1_context_ab261446cf0a635a7bf1edf081df48d81}} 
+\index{helib::Context@{helib::Context}!zMStar@{zMStar}}
+\index{zMStar@{zMStar}!helib::Context@{helib::Context}}
+\doxysubsubsection{\texorpdfstring{zMStar}{zMStar}}
+{\footnotesize\ttfamily \mbox{\hyperlink{classhelib_1_1_p_algebra}{P\+Algebra}} helib\+::\+Context\+::z\+M\+Star}
+
+
+
+The structure of Zm$\ast$. 
+

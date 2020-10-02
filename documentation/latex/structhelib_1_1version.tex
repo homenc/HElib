@@ -1,0 +1,113 @@
+\hypertarget{structhelib_1_1version}{}\doxysection{helib\+::version Class Reference}
+\label{structhelib_1_1version}\index{helib::version@{helib::version}}
+
+
+The class acts as a namespace with all members static. Holds the version number for this code of H\+Elib.  
+
+
+
+
+{\ttfamily \#include $<$version.\+in.\+h$>$}
+
+\doxysubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+static constexpr bool \mbox{\hyperlink{structhelib_1_1version_ab58cbd3af4fa18fb248ef52effb5872b}{greater\+Equals}} (long major\+\_\+, long minor\+\_\+=0, long patch\+\_\+=0)
+\begin{DoxyCompactList}\small\item\em Function that returns whether this version of H\+Elib is equal to or higher than a specified version. \end{DoxyCompactList}\item 
+static const char $\ast$ \mbox{\hyperlink{structhelib_1_1version_a2ca20c416ef6ff15a8eb3c8707be7525}{lib\+String}} ()
+\begin{DoxyCompactList}\small\item\em Get the string version from the H\+Elib compiled library instead of the one defined in the header. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\doxysubsection*{Static Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+static constexpr long \mbox{\hyperlink{structhelib_1_1version_a8343a39ace6791c5a92834cf5b9ff9fb}{major}} = @P\+R\+O\+J\+E\+C\+T\+\_\+\+V\+E\+R\+S\+I\+O\+N\+\_\+\+M\+A\+J\+OR@
+\begin{DoxyCompactList}\small\item\em The major number of this version of H\+Elib. \end{DoxyCompactList}\item 
+static constexpr long \mbox{\hyperlink{structhelib_1_1version_a227a0347ff6f84086ff6284e51be8fc0}{minor}} = @P\+R\+O\+J\+E\+C\+T\+\_\+\+V\+E\+R\+S\+I\+O\+N\+\_\+\+M\+I\+N\+OR@
+\begin{DoxyCompactList}\small\item\em The minor number of this version of H\+Elib. \end{DoxyCompactList}\item 
+static constexpr long \mbox{\hyperlink{structhelib_1_1version_a728dec3e037cddf954efb5b9092659aa}{patch}} = @P\+R\+O\+J\+E\+C\+T\+\_\+\+V\+E\+R\+S\+I\+O\+N\+\_\+\+P\+A\+T\+CH@
+\begin{DoxyCompactList}\small\item\em The patch number of this version of H\+Elib. \end{DoxyCompactList}\item 
+static constexpr auto \mbox{\hyperlink{structhelib_1_1version_ab22afd160ff9b50b4025f9eb9af35b05}{as\+String}} = \char`\"{}v@P\+R\+O\+J\+E\+C\+T\+\_\+\+V\+E\+R\+S\+I\+ON@\char`\"{}
+\begin{DoxyCompactList}\small\item\em The string representation of this version of H\+Elib. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+The class acts as a namespace with all members static. Holds the version number for this code of H\+Elib. 
+
+\doxysubsection{Member Function Documentation}
+\mbox{\Hypertarget{structhelib_1_1version_ab58cbd3af4fa18fb248ef52effb5872b}\label{structhelib_1_1version_ab58cbd3af4fa18fb248ef52effb5872b}} 
+\index{helib::version@{helib::version}!greaterEquals@{greaterEquals}}
+\index{greaterEquals@{greaterEquals}!helib::version@{helib::version}}
+\doxysubsubsection{\texorpdfstring{greaterEquals()}{greaterEquals()}}
+{\footnotesize\ttfamily static constexpr bool helib\+::version\+::greater\+Equals (\begin{DoxyParamCaption}\item[{long}]{major\+\_\+,  }\item[{long}]{minor\+\_\+ = {\ttfamily 0},  }\item[{long}]{patch\+\_\+ = {\ttfamily 0} }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [inline]}, {\ttfamily [static]}, {\ttfamily [constexpr]}}
+
+
+
+Function that returns whether this version of H\+Elib is equal to or higher than a specified version. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em major} & The major version number. \\
+\hline
+{\em minor} & The minor version number. \\
+\hline
+{\em patch} & The patch version number. \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+{\ttfamily true} if current H\+Elib version is greater than or equal to the specified version version. 
+\end{DoxyReturn}
+\mbox{\Hypertarget{structhelib_1_1version_a2ca20c416ef6ff15a8eb3c8707be7525}\label{structhelib_1_1version_a2ca20c416ef6ff15a8eb3c8707be7525}} 
+\index{helib::version@{helib::version}!libString@{libString}}
+\index{libString@{libString}!helib::version@{helib::version}}
+\doxysubsubsection{\texorpdfstring{libString()}{libString()}}
+{\footnotesize\ttfamily const char $\ast$ helib\+::version\+::lib\+String (\begin{DoxyParamCaption}{ }\end{DoxyParamCaption})\hspace{0.3cm}{\ttfamily [static]}}
+
+
+
+Get the string version from the H\+Elib compiled library instead of the one defined in the header. 
+
+\begin{DoxyReturn}{Returns}
+A string representing the version of H\+Elib stored in the compiled library instead of from the one defined in the header. 
+\end{DoxyReturn}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{structhelib_1_1version_ab22afd160ff9b50b4025f9eb9af35b05}\label{structhelib_1_1version_ab22afd160ff9b50b4025f9eb9af35b05}} 
+\index{helib::version@{helib::version}!asString@{asString}}
+\index{asString@{asString}!helib::version@{helib::version}}
+\doxysubsubsection{\texorpdfstring{asString}{asString}}
+{\footnotesize\ttfamily constexpr auto helib\+::version\+::as\+String = \char`\"{}v@P\+R\+O\+J\+E\+C\+T\+\_\+\+V\+E\+R\+S\+I\+ON@\char`\"{}\hspace{0.3cm}{\ttfamily [static]}, {\ttfamily [constexpr]}}
+
+
+
+The string representation of this version of H\+Elib. 
+
+\mbox{\Hypertarget{structhelib_1_1version_a8343a39ace6791c5a92834cf5b9ff9fb}\label{structhelib_1_1version_a8343a39ace6791c5a92834cf5b9ff9fb}} 
+\index{helib::version@{helib::version}!major@{major}}
+\index{major@{major}!helib::version@{helib::version}}
+\doxysubsubsection{\texorpdfstring{major}{major}}
+{\footnotesize\ttfamily constexpr long helib\+::version\+::major = @P\+R\+O\+J\+E\+C\+T\+\_\+\+V\+E\+R\+S\+I\+O\+N\+\_\+\+M\+A\+J\+OR@\hspace{0.3cm}{\ttfamily [static]}, {\ttfamily [constexpr]}}
+
+
+
+The major number of this version of H\+Elib. 
+
+\mbox{\Hypertarget{structhelib_1_1version_a227a0347ff6f84086ff6284e51be8fc0}\label{structhelib_1_1version_a227a0347ff6f84086ff6284e51be8fc0}} 
+\index{helib::version@{helib::version}!minor@{minor}}
+\index{minor@{minor}!helib::version@{helib::version}}
+\doxysubsubsection{\texorpdfstring{minor}{minor}}
+{\footnotesize\ttfamily constexpr long helib\+::version\+::minor = @P\+R\+O\+J\+E\+C\+T\+\_\+\+V\+E\+R\+S\+I\+O\+N\+\_\+\+M\+I\+N\+OR@\hspace{0.3cm}{\ttfamily [static]}, {\ttfamily [constexpr]}}
+
+
+
+The minor number of this version of H\+Elib. 
+
+\mbox{\Hypertarget{structhelib_1_1version_a728dec3e037cddf954efb5b9092659aa}\label{structhelib_1_1version_a728dec3e037cddf954efb5b9092659aa}} 
+\index{helib::version@{helib::version}!patch@{patch}}
+\index{patch@{patch}!helib::version@{helib::version}}
+\doxysubsubsection{\texorpdfstring{patch}{patch}}
+{\footnotesize\ttfamily constexpr long helib\+::version\+::patch = @P\+R\+O\+J\+E\+C\+T\+\_\+\+V\+E\+R\+S\+I\+O\+N\+\_\+\+P\+A\+T\+CH@\hspace{0.3cm}{\ttfamily [static]}, {\ttfamily [constexpr]}}
+
+
+
+The patch number of this version of H\+Elib. 
+
