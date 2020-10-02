@@ -768,6 +768,37 @@ void rotate(const EncryptedArray& ea, PlaintextArray& pa, long k)
   ea.dispatch<rotate_pa_impl>(pa, k);
 }
 
+
+//=============================================================================
+
+template <typename type>
+class rotate1D_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    long i, long k)
+  {
+    PA_BOILER(type)
+
+    helib::assertInRange(i,
+			 0l,
+			 ea.dimension(),
+			 "i must be between 0 and dimension()");
+
+    std::vector<RX> tmp(n);
+    ea.EncryptedArrayBase::rotate1D(tmp, data, i, k);
+    data = tmp;
+  }
+};
+
+void rotate1D(const EncryptedArray& ea, PlaintextArray& pa, long i, long k)
+{
+  ea.dispatch<rotate1D_pa_impl>(pa, i, k);
+}
+
 //=============================================================================
 
 template <typename type>
@@ -782,9 +813,9 @@ public:
   {
     PA_BOILER(type)
 
-    for (long i = 0; i < n; i++)
-      if (i + k >= n || i + k < 0)
-        data[i] = 0;
+    for (long j: range(n))
+      if (j + k >= n || j + k < 0)
+        data[j] = 0;
 
     rotate_pa_impl<type>::apply(ea, pa, k);
   }
@@ -793,6 +824,42 @@ public:
 void shift(const EncryptedArray& ea, PlaintextArray& pa, long k)
 {
   ea.dispatch<shift_pa_impl>(pa, k);
+}
+
+//=============================================================================
+
+template <typename type>
+class shift1D_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    long i, long k)
+  {
+    PA_BOILER(type)
+
+    helib::assertInRange(i,
+			 0l,
+			 ea.dimension(),
+			 "i must be between 0 and dimension()");
+
+    long sz = ea.sizeOfDimension(i);
+
+    for (long j: range(n)) {
+      long c = ea.coordinate(i, j);
+      if (c + k >= sz || c + k < 0)
+        data[j] = 0;
+    }
+
+    rotate1D_pa_impl<type>::apply(ea, pa, i, k);
+  }
+};
+
+void shift1D(const EncryptedArray& ea, PlaintextArray& pa, long i, long k)
+{
+  ea.dispatch<shift1D_pa_impl>(pa, i, k);
 }
 
 //=============================================================================

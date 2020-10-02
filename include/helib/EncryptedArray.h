@@ -78,6 +78,10 @@ class PlaintextArray; // forward reference
 class PtxtArray;      // forward reference
 class EncryptedArray; // forward reference
 
+typedef EncryptedArray View; 
+// New and improved name for EncryptedArray.
+// Documentation should use this name.
+
 /**
  * @class EncryptedArrayBase
  * @brief virtual class for data-movement operations on arrays of slots
@@ -324,7 +328,7 @@ public:
              size(),
              "Input vector has wrong size (must equal EncryptedArray::size())");
     out.resize(in.size());
-    for (long j = 0; j < size(); j++)
+    for (long j: range(size())) 
       out[addCoord(i, j, offset)] = in[j];
   }
 };
@@ -1640,15 +1644,25 @@ public:
   ///@}
 };
 
-// Convenience routines to avoid EncryptedArray's
+// Convenience routines to avoid EncryptedArray's when
+// using the "default" one in Context
 
-inline
-void rotate(Ctxt& ctxt, long k)
-{
-  ctxt.getContext().getView().rotate(ctxt, k);
-}
+inline void 
+rotate(Ctxt& ctxt, long k) 
+{ ctxt.getContext().getDefaultView().rotate(ctxt, k); }
 
-// VJS-FIXME: add more...
+inline void 
+shift(Ctxt& ctxt, long k) 
+{ ctxt.getContext().getDefaultView().shift(ctxt, k); }
+
+inline void 
+rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) 
+{ ctxt.getContext().getDefaultView().rotate1D(ctxt, i, k, dc); }
+
+inline void 
+shift1D(Ctxt& ctxt, long i, long k) 
+{ ctxt.getContext().getDefaultView().shift1D(ctxt, i, k); }
+
 
 // PlaintextArray
 
@@ -1726,6 +1740,9 @@ inline std::ostream& operator<<(std::ostream& s, const PlaintextArray& pa)
 
 void rotate(const EncryptedArray& ea, PlaintextArray& pa, long k);
 void shift(const EncryptedArray& ea, PlaintextArray& pa, long k);
+
+void rotate1D(const EncryptedArray& ea, PlaintextArray& pa, long i, long k);
+void shift1D(const EncryptedArray& ea, PlaintextArray& pa, long i, long k);
 
 void encode(const EncryptedArray& ea,
             PlaintextArray& pa,
@@ -1809,6 +1826,8 @@ void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
 
 class PtxtArray {
 public:
+  // These two data fields should really be private, but there are 
+  // a lot of internal functions that need to access them
   const EncryptedArray& ea;
   PlaintextArray pa;
 
@@ -1884,6 +1903,16 @@ inline void shift(PtxtArray& a, long k)
   shift(a.ea, a.pa, k);
 }
 
+inline void rotate1D(PtxtArray& a, long i, long k)
+{
+  rotate1D(a.ea, a.pa, i, k);
+}
+
+inline void shift1D(PtxtArray& a, long i, long k)
+{
+  shift1D(a.ea, a.pa, i, k);
+}
+
 inline void convert(PtxtArray& a, const std::vector<int>& array)
 {
   std::vector<long> array1;
@@ -1940,7 +1969,10 @@ inline void convert(PtxtArray& a, cx_double val)
 // additional convenience conversions from NTL types (BGV only)
 // NTL vectors of NTL ring types 
 // Implementation note: these all go via conversion to 
-// std::vector<NTL::ZZX> to enforce BGV
+// std::vector<NTL::ZZX> to enforce BGV.  This is not
+// the most efficient way to do this, and if it
+// becomes a bottleneck, we can revisit this implementation
+// (without changing semantics).
 inline void convert(PtxtArray& a, const NTL::Vec<NTL::GF2>& vec)
 { std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
 inline void convert(PtxtArray& a, const NTL::Vec<NTL::GF2X>& vec)

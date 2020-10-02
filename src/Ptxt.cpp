@@ -14,6 +14,56 @@
 #include <helib/Ptxt.h>
 #include <helib/apiAttributes.h>
 
+
+// VJS-FIXME: General comments about the Ptxt class.
+/*
+
+Although I was somewhat involved in the design discussions, I admit I was not
+well focused, as I was quite busy with other things at the time.
+
+I'm not sure why we didn't just build off of the existing PlaintextArray
+implementation, as this already did at least half of what Ptxt was supposed to
+do.  Moreover, for actually doing arithmetic on ptxt objects, PlaintextArray is
+much more efficient. 
+
+I have implemented a new class, PtxtArray, which is a light wrapper around
+PlaintextArray, and which sports a more convenient and natural interface than
+PlaintextArray.  This is my own personal vision for what Ptxt array should have
+been.
+
+Some differences between PtxtArray and Ptxt:
+
+Ptxt allows direct access to individual slots, while PtxtArray does not.
+Rather, PtxtArray provides a plethora of *conversion* routines, which allows a
+user to convert vectors and scalars of a variety of types to a PtxtArray (and a
+somewhat more limited number of conversions in the other direction). My sense
+is that for most applications, users will want to *create* PtxtArray objects
+using vectors/scalars computed by some other type of computation altogether
+(the library does this now, in fact, in various places, i.e., using linear
+algebra routines).  Once such a vector/scalar is converted to a PtxtArray, they
+can perform operations of the PtxtArray object that correspond to homomorphic
+Ctxt operations: this allows users to develop code working on ptxt objects and
+ten later convert to ctxt objects with little effort (this is where Ptxt and
+PtxtArray share a similar design philosophy).
+
+A Ptxt works with the default EA/View in Context, while really, it should work
+with an arbitrary EA/View object.
+
+PtxtArray objects are "dynamically" polymorphic while Ptxt objects are
+"statically"  polymorphic.  What this means in practice is that type
+consistencty checs for PtxtArray objects are enforced by run-time checks,
+rather than compile-time checks.  While that is perhaps less than ideal, it is
+also consistent with the way Ctxt objects are dealt with.
+
+I admit, some of my opinions are probably influenced by some form of the "not
+invented here syndrome".
+
+So for now, we have two competing classes: Ptxt and PtxtArray.  I'm not sure
+what, if anything, to do about that right now.  We will muddle forward and see
+what happens.  There are larger problems in the world.
+
+*/
+
 namespace helib {
 
 void deserialize(std::istream& is, std::complex<double>& num)
@@ -212,6 +262,8 @@ BGV::SlotType randomSlot<BGV>(const Context& context)
 template <>
 CKKS::SlotType randomSlot<CKKS>(UNUSED const Context& context)
 {
+  // VJS-FIXME: see new function RandomComplex in NumbTh.h
+  // for an alternative
   std::mt19937 gen{std::random_device{}()};
   std::uniform_real_distribution<> dist{-1e10, 1e10};
 
@@ -241,6 +293,11 @@ const std::vector<typename Ptxt<Scheme>::SlotType>& Ptxt<Scheme>::getSlotRepr()
  * @return Single encoded polynomial.
  * @note Only enabled for the `BGV` scheme.
  **/
+
+// VJS-FIXME: if we want to maintain support for the Ptxt class,
+// we really need to deprecate or replace these getPolyRep functions
+// with functions that return an EncodedPtxt object, as this is 
+// now the preferred way to represent encodings.
 template <>
 NTL::ZZX Ptxt<BGV>::getPolyRepr() const
 {
@@ -855,6 +912,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::mapTo01()
       slot = 1;
   return *this;
 }
+
+// VJS-FIXME: all of this logic for coordToIndex and indexToCoord
+// duplicates logic already implemented in EncryptedArrayBase.
 
 template <typename Scheme>
 long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)

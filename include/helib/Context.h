@@ -82,12 +82,12 @@ public:
 
   // parameters stored in alMod.
   // these are NOT invariant: it is possible to work
-  // with EncryptedArray objects that use a different
+  // with View objects that use a different
   // PAlgebra object.
-  long getR() const { return alMod.getR(); }
-  long getPPowR() const { return alMod.getPPowR(); }
+  long getDefaultR() const { return alMod.getR(); }
+  long getDefaultPPowR() const { return alMod.getPPowR(); }
   
-  // synonymn for getR().
+  // synonymn for getDefaultR().
   // this is used in various corner cases in CKKS where
   // we really need some default precisiion parameter.
   // It is also possible to define this differently 
@@ -108,7 +108,7 @@ public:
   // VJS-FIXME: should this really be public?
   std::shared_ptr<const EncryptedArray> ea;
 
-  const EncryptedArray& getView() const { return *ea; } // preferred name
+  const EncryptedArray& getDefaultView() const { return *ea; } // preferred name
   const EncryptedArray& getEA() const   { return *ea; } // legacy name
 
   std::shared_ptr<const PowerfulDCRT> pwfl_converter;
