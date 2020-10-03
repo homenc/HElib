@@ -110,7 +110,7 @@ public:
   std::shared_ptr<const EncryptedArray> ea;
 
   const EncryptedArray& getDefaultView() const { return *ea; } // preferred name
-  const EncryptedArray& getEA() const   { return *ea; } // legacy name
+  const EncryptedArray& getDefaultEA() const   { return *ea; } // legacy name
 
   std::shared_ptr<const PowerfulDCRT> pwfl_converter;
 

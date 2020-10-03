@@ -2653,7 +2653,30 @@ struct mul_MatMul1D_impl
   }
 };
 
-HELIB_NO_CKKS_IMPL(mul_MatMul1D_impl)
+template <>
+struct mul_MatMul1D_impl<PA_cx>
+{
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const MatMul1D& mat_basetype)
+  {
+    const MatMul1D_derived<PA_cx>& mat =
+        dynamic_cast<const MatMul1D_derived<PA_cx>&>(mat_basetype);
+
+    long n = ea.size();
+    std::vector<std::complex<double>>& data = pa.getData<PA_cx>();
+    std::vector<std::complex<double>> data1(n);
+
+    // compute data1 = data*mat
+    for (long i: range(n))
+      for (long j: range(n))
+	data1[j] += mat.get(i,j)*data[i];
+
+    data = data1;
+  }
+};
 
 void mul(PlaintextArray& pa, const MatMul1D& mat)
 {

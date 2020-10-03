@@ -13,6 +13,7 @@
 #define HELIB_MATMUL_H
 
 #include <helib/EncryptedArray.h>
+#include <functional>
 
 namespace helib {
 
@@ -116,7 +117,9 @@ public:
                        const EncryptedArrayDerived<type>& ea) const override;
 };
 
-class MatMul1D_CKKS : public MatMul1D
+
+template<>
+class MatMul1D_derived<PA_cx> : public MatMul1D
 {
 public:
   // Get coordinate (i, j)
@@ -125,6 +128,47 @@ public:
   void processDiagonal(std::vector<std::complex<double>>& diag,
                        long i,
                        const EncryptedArrayCx& ea) const;
+};
+
+typedef MatMul1D_derived<PA_cx> MatMul1D_CKKS;
+
+// a more convenient user interface
+class MatMul_CKKS : public MatMul1D_CKKS {
+public:
+  typedef std::function<std::complex<double>(long,long)> get_fun_type;
+
+private:
+
+  const EncryptedArray& ea;
+
+  get_fun_type get_fun;
+  // get_fun(i,j) returns matrix entry (i,j)
+  // see get_fun_type definitions below
+
+public:
+
+
+  MatMul_CKKS(const EncryptedArray& _ea, get_fun_type _get_fun)
+    : ea(_ea), get_fun(_get_fun) { }
+
+  MatMul_CKKS(const Context& context, get_fun_type _get_fun)
+    : ea(context.getDefaultEA()), get_fun(_get_fun) { }
+
+  virtual const EncryptedArray& getEA() const override
+  {
+    return ea;
+  }
+
+  virtual long getDim() const override
+  {
+    return 0;
+  }
+
+  virtual std::complex<double> get(long i, long j) const override
+  {
+    return get_fun(i, j);
+  }
+
 };
 
 //====================================
@@ -399,6 +443,34 @@ void mul(PlaintextArray& pa, const MatMul1D& mat);
 void mul(PlaintextArray& pa, const BlockMatMul1D& mat);
 void mul(PlaintextArray& pa, const MatMulFull& mat);
 void mul(PlaintextArray& pa, const BlockMatMulFull& mat);
+
+// VJS-FIXME: these should be documented
+
+inline void mul(PtxtArray& a, const MatMul1D& mat)
+{
+  assertTrue(&a.ea == &mat.getEA(), "PtxtArray: inconsistent operation");
+  mul(a.pa, mat);
+}
+
+
+inline void mul(PtxtArray& a, const BlockMatMul1D& mat)
+{
+  assertTrue(&a.ea == &mat.getEA(), "PtxtArray: inconsistent operation");
+  mul(a.pa, mat);
+}
+
+inline void mul(PtxtArray& a, const MatMulFull& mat)
+{
+  assertTrue(&a.ea == &mat.getEA(), "PtxtArray: inconsistent operation");
+  mul(a.pa, mat);
+}
+
+inline void mul(PtxtArray& a, const BlockMatMulFull& mat)
+{
+  assertTrue(&a.ea == &mat.getEA(), "PtxtArray: inconsistent operation");
+  mul(a.pa, mat);
+}
+
 
 // These are used mainly for performance evaluation.
 
