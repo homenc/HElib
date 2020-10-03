@@ -79,6 +79,7 @@ public:
   long getP() const { return zMStar.getP(); }
   long getPhiM() const { return zMStar.getPhiM(); }
   long getOrdP() const { return zMStar.getOrdP(); }
+  long getNSlots() const { return zMStar.getNSlots(); }
 
   // parameters stored in alMod.
   // these are NOT invariant: it is possible to work

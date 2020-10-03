@@ -122,9 +122,7 @@ public:
   // Get coordinate (i, j)
   virtual std::complex<double> get(long i, long j) const = 0;
 
-  void processDiagonal(zzX& poly,
-                       double& size,
-                       double& factor,
+  void processDiagonal(std::vector<std::complex<double>>& diag,
                        long i,
                        const EncryptedArrayCx& ea) const;
 };

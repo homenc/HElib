@@ -686,39 +686,22 @@ struct MatMul1DExec_construct
 HELIB_NO_CKKS_IMPL(MatMul1DExec_construct)
 
 // HERE
-void MatMul1D_CKKS::processDiagonal(zzX& poly,
-                                    double& size,
-                                    double& factor,
+void MatMul1D_CKKS::processDiagonal(std::vector<std::complex<double>>& diag,
                                     long i,
                                     const EncryptedArrayCx& ea) const
 {
   long D = ea.size();
 
-  std::vector<std::complex<double>> diag(D);
-
-  bool zDiag = true; // is this a zero diagonal?
+  diag.resize(D);
 
   // Process the entries in this diagonal one at a time
-  for (long j = 0; j < D; j++) { // process entry j
+  for (long j: range(D)) { // process entry j
     diag[j] = this->get(mcMod(j - i, D), j);
-    // entry [j-i mod D, j]
-
-    if (diag[j] != 0.0)
-      zDiag = false; // mark diagonal as non-empty
-  }
-
-  size = factor = 0;
-  if (zDiag)
-    clear(poly);
-  else {
-    size = RealAbs(diag);
-    factor = ea.encode(poly, diag, 1.0);
-    // VJS-FIXME: we are using size=1.0.
-    // Maybe we should allow this to be parameterized?
-    // We could also allow a more general precision parameter??
   }
 }
 
+#if 0
+// This is no longer needed. We can eventually get rid of it
 void plaintextAutomorph_CKKS(zzX& b,
                              const zzX& a,
                              long j,
@@ -750,25 +733,19 @@ void plaintextAutomorph_CKKS(zzX& b,
 
   normalize(b);
 }
+#endif
 
 struct ConstMultiplier_DoubleCRT_CKKS : ConstMultiplier
 {
-  DoubleCRT data;
-  double size, factor;
+  FatEncodedPtxt feptxt;
 
-  ConstMultiplier_DoubleCRT_CKKS(const DoubleCRT& _data,
-                                 double _size,
-                                 double _factor) :
-      data(_data), size(_size), factor(_factor)
-  {}
+  ConstMultiplier_DoubleCRT_CKKS(const EncodedPtxt& eptxt, const IndexSet& s)
+  { feptxt.expand(eptxt, s); }
 
   void mul(Ctxt& ctxt) const override
   {
-    ctxt.multByConstantCKKS(data,
-                            NTL::to_xdouble(size),
-                            NTL::to_xdouble(factor));
+    ctxt *= feptxt;
   }
-  // we use the default RoundingError parameter
 
   std::shared_ptr<ConstMultiplier> upgrade(
       UNUSED const Context& context) const override
@@ -779,44 +756,42 @@ struct ConstMultiplier_DoubleCRT_CKKS : ConstMultiplier
 
 struct ConstMultiplier_zzX_CKKS : ConstMultiplier
 {
-  zzX data;
-  double size, factor;
+  EncodedPtxt eptxt;
 
-  ConstMultiplier_zzX_CKKS(const zzX& _data, double _size, double _factor) :
-      data(_data), size(_size), factor(_factor)
-  {}
+  ConstMultiplier_zzX_CKKS(const std::vector<std::complex<double>>& diag, 
+                           const EncryptedArrayCx& ea)
+  { ea.encode(eptxt, diag); }
 
   void mul(Ctxt& ctxt) const override
   {
-    DoubleCRT dcrt(data, ctxt.getContext(), ctxt.getPrimeSet());
-    ctxt.multByConstantCKKS(dcrt,
-                            NTL::to_xdouble(size),
-                            NTL::to_xdouble(factor));
+    ctxt *= eptxt;
   }
 
   std::shared_ptr<ConstMultiplier> upgrade(
-      const Context& context) const override
+          const Context& context) const override
   {
     return std::make_shared<ConstMultiplier_DoubleCRT_CKKS>(
-        DoubleCRT(data, context, context.fullPrimes()),
-        size,
-        factor);
+        eptxt, context.fullPrimes());
   }
 };
 
 static std::shared_ptr<ConstMultiplier> build_ConstMultiplier_CKKS(
-    const zzX& poly,
+    const std::vector<std::complex<double>>& diag,
     long amt,
-    double size,
-    double factor,
     const EncryptedArrayCx& ea)
 {
-  if (IsZero(poly))
+  double size = RealAbs(diag);
+  if (size == 0.0)
     return nullptr;
   else {
-    zzX poly1;
-    plaintextAutomorph_CKKS(poly1, poly, amt, ea);
-    return std::make_shared<ConstMultiplier_zzX_CKKS>(poly1, size, factor);
+    long n = ea.size();
+
+    // diag1 = diag rotated by amt...could be optimized for amt==0
+    std::vector<std::complex<double>> diag1(n);
+    for (long i: range(n))
+      diag1[((i + amt) % n + n) % n] = diag[i];
+
+    return std::make_shared<ConstMultiplier_zzX_CKKS>(diag1, ea);
   }
 }
 
@@ -847,10 +822,9 @@ static void MatMul1DExec_construct_CKKS(
       k = 1;
     }
 
-    zzX poly;
-    double size, factor;
-    mat.processDiagonal(poly, size, factor, i, ea);
-    vec[i] = build_ConstMultiplier_CKKS(poly, -g * k, size, factor, ea);
+    std::vector<std::complex<double>> diag;
+    mat.processDiagonal(diag, i, ea);
+    vec[i] = build_ConstMultiplier_CKKS(diag, -g * k, ea);
   }
 }
 
