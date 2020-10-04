@@ -105,7 +105,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt,
   Ctxt T(ctxt);
   T.smartAutomorph(zMStar.genToPow(i, -ord));
   // T = \rho_i^{amt-ord}(originalCtxt).
-  // This strategy assumes is geared toward the
+  // This strategy is geared toward the
   // assumption that we have the key switch matrix
   // for \rho_i^{-ord}
 
@@ -146,7 +146,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   long ord = al.OrderOf(i);
 
   if (k <= -ord || k >= ord) {
-    ctxt.multByConstant(NTL::to_ZZ(0));
+    ctxt.clear();
     return;
   }
 

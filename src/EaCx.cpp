@@ -95,9 +95,11 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
                                 long amt,
                                 UNUSED bool dc) const
 {
-  assertEq(&getContext(),
-           &ctxt.getContext(),
-           "Cannot decrypt with non-matching context");
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  helib::assertInRange(i,
+                       0l,
+                       dimension(),
+                       "i must be between 0 and dimension()");
   assertTrue(nativeDimension(i),
              "Rotation in " + std::to_string(i) + " is not a native operation");
 
@@ -118,8 +120,53 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 {
-  // VJS-FIXME: we need to implement a corresponding mask table
-  throw LogicError("EncryptedArrayCx::shift1D not implemented");
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  helib::assertInRange(i,
+                       0l,
+                       dimension(),
+                       "i must be between 0 and dimension()");
+
+  // NOTE: this works even in a non-native dimension, but
+  // this is a bit academic
+
+  const PAlgebra& al = getPAlgebra();
+
+  long ord = al.OrderOf(i);
+
+  if (k <= -ord || k >= ord) {
+    ctxt.clear();
+    return;
+  }
+
+  // Make sure amt is in the range [1,ord-1]
+  long amt = k % ord;
+  if (amt == 0)
+    return;
+  if (amt < 0)
+    amt += ord;
+
+  long val;
+  if (k < 0)
+    val = al.genToPow(i, amt - ord);
+  else 
+    val = al.genToPow(i, amt);
+
+  long n = size();
+  std::vector<bool> maskArray(n);
+
+  for (long j: range(n)) {
+    long c = coordinate(i, j);
+    if (c + k >= ord || c + k < 0)
+      maskArray[j] = false;
+    else
+      maskArray[j] = true;
+  }
+
+  EncodedPtxt mask;
+  encode(mask, maskArray);
+  ctxt.multByConstant(mask); 
+  ctxt.smartAutomorph(val);
+
 }
 #pragma GCC diagnostic pop
 
@@ -127,10 +174,14 @@ void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 // so rotate,shift are the same as rotate1D, shift1D
 void EncryptedArrayCx::rotate(Ctxt& ctxt, long amt) const
 {
+  assertTrue(dimension()==1, 
+             "CKKS rotation not supported in multi-dimensional hypercube");
   rotate1D(ctxt, 0, amt, true);
 }
 void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 {
+  assertTrue(dimension()==1, 
+             "CKKS rotation not supported in multi-dimensional hypercube");
   shift1D(ctxt, 0, amt);
 }
 
