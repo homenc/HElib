@@ -953,14 +953,14 @@ void AssertRealOrComplex()
 }
 
 template<typename T>
-double RealAbs(const T& x)
+double Norm(const T& x)
 {
   AssertRealOrComplex<T>();
   return std::abs(x);
 }
 
 template<typename T, typename U>
-double RealDist(const T& x, const U& y)
+double Distance(const T& x, const U& y)
 {
   AssertRealOrComplex<T>();
   AssertRealOrComplex<U>();
@@ -969,24 +969,24 @@ double RealDist(const T& x, const U& y)
 
 // for vectors, we us the infty norm
 template<typename T>
-double RealAbs(const std::vector<T>& x)
+double Norm(const std::vector<T>& x)
 {
   long n = x.size();
   double res = 0;
   for (long i = 0; i < n; i++) 
-    res = std::max(res, RealAbs(x[i]));
+    res = std::max(res, Norm(x[i]));
   return res;
 }
 
 // we require same-length vectors
 template<typename T, typename U>
-double RealDist(const std::vector<T>& x, const std::vector<U>& y)
+double Distance(const std::vector<T>& x, const std::vector<U>& y)
 {
-  assertTrue(x.size() == y.size(), "RealDist: mismatched vector sizes");
+  assertTrue(x.size() == y.size(), "Distance: mismatched vector sizes");
   long n = x.size();
   double res = 0;
   for (long i = 0; i < n; i++) 
-    res = std::max(res, RealDist(x[i], y[i]));
+    res = std::max(res, Distance(x[i], y[i]));
   return res;
 }
 
@@ -1007,7 +1007,7 @@ template<typename T, typename U>
 inline bool approx_equal(const T& x, const U& y, 
                          double tolerance, double floor)
 {
-  return RealDist(x, y) <= tolerance*std::max(RealAbs(y), floor);
+  return Distance(x, y) <= tolerance*std::max(Norm(y), floor);
 }
 
 

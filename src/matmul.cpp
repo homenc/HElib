@@ -780,7 +780,7 @@ static std::shared_ptr<ConstMultiplier> build_ConstMultiplier_CKKS(
     long amt,
     const EncryptedArrayCx& ea)
 {
-  double size = RealAbs(diag);
+  double size = Norm(diag);
   if (size == 0.0)
     return nullptr;
   else {

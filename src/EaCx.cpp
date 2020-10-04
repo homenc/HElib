@@ -190,7 +190,7 @@ void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
                               double mag, double scale, double err) const 
 {
-  double actual_mag = RealAbs(array);
+  double actual_mag = Norm(array);
   if (mag < 0) 
     mag = actual_mag;
   else {
@@ -219,7 +219,7 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& 
   // running it in "debug mode".
   std::vector<cx_double> array1;
   decode(array1, poly, scale);
-  double dist = RealDist(array1, array);
+  double dist = Distance(array1, array);
   double scaled_err = err/scale;
   double ratio = dist/scaled_err;
   if (ratio > 1) {
