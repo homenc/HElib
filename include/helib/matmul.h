@@ -128,11 +128,18 @@ public:
   void processDiagonal(std::vector<std::complex<double>>& diag,
                        long i,
                        const EncryptedArrayCx& ea) const;
+
+  // final: ensures that dim==0 is the only possible dimension
+  virtual long getDim() const final
+  {
+    return 0;
+  }
 };
 
 typedef MatMul1D_derived<PA_cx> MatMul1D_CKKS;
 
 // a more convenient user interface
+// VJS-FIXME: document some of this stuff
 class MatMul_CKKS : public MatMul1D_CKKS {
 public:
   typedef std::function<std::complex<double>(long,long)> get_fun_type;
@@ -157,11 +164,6 @@ public:
   virtual const EncryptedArray& getEA() const override
   {
     return ea;
-  }
-
-  virtual long getDim() const override
-  {
-    return 0;
   }
 
   virtual std::complex<double> get(long i, long j) const override
