@@ -297,12 +297,19 @@ Usage:
   // Also supports methods isBGV(), isCKKS(), getBGV(), and getCKKS(),
   // analogous to EncodedPtxt.
 
+  // One can also construct and expand in one step:
+  FatEncryptedPtxt feptxt(eptxt, s);
+
 */
 
 class FatEncodedPtxt {
   cloned_ptr<FatEncodedPtxt_base> rep;
 
 public:
+
+  FatEncodedPtxt() { }
+  FatEncodedPtxt(const EncodedPtxt& eptxt, const IndexSet& s)
+  { expand(eptxt, s); }
 
   bool isBGV() const { return !rep.null() && rep->isBGV(); }
   bool isCKKS() const { return !rep.null() && rep->isCKKS(); }

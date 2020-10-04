@@ -1841,11 +1841,11 @@ public:
   // T can be any type supported by convert(PtxtArray,T)
   template<class T>
   PtxtArray(const EncryptedArray& ea, const T& t) : PtxtArray(ea)
-  { convert(*this, t); }
+  { load(t); }
 
   template<class T>
   PtxtArray(const Context& context, const T& t) : PtxtArray(context)
-  { convert(*this, t); }
+  { load(t); }
 
   PtxtArray& operator=(const PtxtArray& other) 
   {
@@ -1855,20 +1855,10 @@ public:
   }
 
   // template that allows assignment via convert:
-  // T can be any type supported by convert(PtxtArray,T)
+  // T can be any type supported by PxtArray::load(T)
   template<class T>
   PtxtArray& operator=(const T& t)
-  { convert(*this, t); return *this; }
-
-  // store: alternative (preferred?) syntax for conversion from PtxtArray.
-  //  T can be any type supported by convert(T,PtxtArray)
-  template<class T> void store(T& t) const
-  { convert(t, *this); }
-
-  // load: alternative (preferred?) syntax for conversion to PtxtArray.
-  //  T can be any type supported by convert(PtxtArray,T)
-  template<class T> void load(const T& t) 
-  { convert(*this, t); }
+  { load(t); return *this; }
 
   const EncryptedArray& getView() const { return ea; }
   const EncryptedArray& getEA() const   { return ea; }
@@ -1884,6 +1874,104 @@ public:
   { ea.decrypt(ctxt, sKey, pa); }
 
   void random() { helib::random(ea, pa); }
+
+  //======== load ========
+
+  void load(const std::vector<int>& array)
+  {
+    std::vector<long> array1;
+    convert(array1, array);
+    helib::encode(ea, pa, array1);
+  }
+
+  void load(const std::vector<long>& array)
+  {
+    helib::encode(ea, pa, array);
+  }
+
+  void load(const std::vector<NTL::ZZX>& array)
+  {
+    helib::encode(ea, pa, array);
+  }
+
+  void load(const std::vector<cx_double>& array)
+  {
+    helib::encode(ea, pa, array);
+  }
+
+  void load(const std::vector<double>& array)
+  {
+    helib::encode(ea, pa, array);
+  }
+
+  void load(int val)
+  {
+    helib::encode(ea, pa, long(val));
+  }
+
+  void load(long val)
+  {
+    helib::encode(ea, pa, val);
+  }
+
+  void load(const NTL::ZZX& val)
+  {
+    helib::encode(ea, pa, val);
+  }
+
+  void load(double val)
+  {
+    helib::encode(ea, pa, val);
+  }
+
+
+  void load(cx_double val)
+  {
+    helib::encode(ea, pa, val);
+  }
+
+  // additional convenience conversions from NTL types (BGV only)
+  // NTL vectors of NTL ring types 
+  // Implementation note: these all go via conversion to 
+  // std::vector<NTL::ZZX> to enforce BGV.  This is not
+  // the most efficient way to do this, and if it
+  // becomes a bottleneck, we can revisit this implementation
+  // (without changing semantics).
+  void load(const NTL::Vec<NTL::GF2>& vec)
+  { std::vector<NTL::ZZX> v; convert(v, vec); load(v); }
+  void load(const NTL::Vec<NTL::GF2X>& vec)
+  { std::vector<NTL::ZZX> v; convert(v, vec); load(v); }
+  void load(const NTL::Vec<NTL::zz_p>& vec)
+  { std::vector<NTL::ZZX> v; convert(v, vec); load(v); }
+  void load(const NTL::Vec<NTL::zz_pX>& vec)
+  { std::vector<NTL::ZZX> v; convert(v, vec); load(v); }
+
+  // NTL scalar ring types
+  // Implementation note: these all go via conversion to 
+  // NTL::ZZX to enforce BGV
+  void load(NTL::GF2 scalar)
+  { NTL::ZZX s; convert(s, scalar); load(s); }
+  void load(const NTL::GF2X& scalar)
+  { NTL::ZZX s; convert(s, scalar); load(s); }
+  void load(NTL::zz_p scalar)
+  { NTL::ZZX s; convert(s, scalar); load(s); }
+  void load(const NTL::zz_pX& scalar)
+  { NTL::ZZX s; convert(s, scalar); load(s); }
+
+  //============== store ============
+
+  void store(std::vector<long>& array) const
+  { decode(ea, array, pa); }
+
+  void store(std::vector<NTL::ZZX>& array) const
+  { decode(ea, array, pa); }
+
+  void store(std::vector<cx_double>& array) const
+  { decode(ea, array, pa); }
+
+  void store(std::vector<double>& array) const
+  { decode(ea, array, pa); }
+
   
 };
 
@@ -1913,108 +2001,8 @@ inline void shift1D(PtxtArray& a, long i, long k)
   shift1D(a.ea, a.pa, i, k);
 }
 
-inline void convert(PtxtArray& a, const std::vector<int>& array)
-{
-  std::vector<long> array1;
-  convert(array1, array);
-  encode(a.ea, a.pa, array1);
-}
-
-inline void convert(PtxtArray& a, const std::vector<long>& array)
-{
-  encode(a.ea, a.pa, array);
-}
-
-inline void convert(PtxtArray& a, const std::vector<NTL::ZZX>& array)
-{
-  encode(a.ea, a.pa, array);
-}
-
-inline void convert(PtxtArray& a, const std::vector<cx_double>& array)
-{
-  encode(a.ea, a.pa, array);
-}
-
-inline void convert(PtxtArray& a, const std::vector<double>& array)
-{
-  encode(a.ea, a.pa, array);
-}
-
-inline void convert(PtxtArray& a, int val)
-{
-  encode(a.ea, a.pa, long(val));
-}
-
-inline void convert(PtxtArray& a, long val)
-{
-  encode(a.ea, a.pa, val);
-}
-
-inline void convert(PtxtArray& a, const NTL::ZZX& val)
-{
-  encode(a.ea, a.pa, val);
-}
-
-inline void convert(PtxtArray& a, double val)
-{
-  encode(a.ea, a.pa, val);
-}
 
 
-inline void convert(PtxtArray& a, cx_double val)
-{
-  encode(a.ea, a.pa, val);
-}
-
-// additional convenience conversions from NTL types (BGV only)
-// NTL vectors of NTL ring types 
-// Implementation note: these all go via conversion to 
-// std::vector<NTL::ZZX> to enforce BGV.  This is not
-// the most efficient way to do this, and if it
-// becomes a bottleneck, we can revisit this implementation
-// (without changing semantics).
-inline void convert(PtxtArray& a, const NTL::Vec<NTL::GF2>& vec)
-{ std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
-inline void convert(PtxtArray& a, const NTL::Vec<NTL::GF2X>& vec)
-{ std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
-inline void convert(PtxtArray& a, const NTL::Vec<NTL::zz_p>& vec)
-{ std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
-inline void convert(PtxtArray& a, const NTL::Vec<NTL::zz_pX>& vec)
-{ std::vector<NTL::ZZX> v; convert(v, vec); convert(a, v); }
-
-// NTL scalar ring types
-// Implementation note: these all go via conversion to 
-// NTL::ZZX to enforce BGV
-inline void convert(PtxtArray& a, NTL::GF2 scalar)
-{ NTL::ZZX s; convert(s, scalar); convert(a, s); }
-inline void convert(PtxtArray& a, const NTL::GF2X& scalar)
-{ NTL::ZZX s; convert(s, scalar); convert(a, s); }
-inline void convert(PtxtArray& a, NTL::zz_p scalar)
-{ NTL::ZZX s; convert(s, scalar); convert(a, s); }
-inline void convert(PtxtArray& a, const NTL::zz_pX& scalar)
-{ NTL::ZZX s; convert(s, scalar); convert(a, s); }
-
-
-
-inline void convert(std::vector<long>& array, const PtxtArray& a)
-{ decode(a.ea, array, a.pa); }
-
-inline void convert(std::vector<NTL::ZZX>& array, const PtxtArray& a)
-{ decode(a.ea, array, a.pa); }
-
-inline void convert(std::vector<cx_double>& array, const PtxtArray& a)
-{ decode(a.ea, array, a.pa); }
-
-inline void convert(std::vector<double>& array, const PtxtArray& a)
-{ decode(a.ea, array, a.pa); }
-
-
-
-
-inline void random(PtxtArray& a)
-{
-  random(a.ea, a.pa);
-}
 
 inline bool operator==(const PtxtArray& a, const PtxtArray& b)
 {
@@ -2045,7 +2033,9 @@ inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)
 }
 
 template<class T>
-PtxtArray& operator+=(PtxtArray& a, const T& b) 
+auto operator+=(PtxtArray& a, const T& b) -> decltype(a.load(b), a)
+// SFINAE: this allows operator+= to be more easily overloaded
+//PtxtArray& operator+=(PtxtArray& a, const T& b) 
 { return a += PtxtArray(a.ea, b); }
 
 
@@ -2057,7 +2047,9 @@ inline PtxtArray& operator-=(PtxtArray& a, const PtxtArray& b)
 }
 
 template<class T>
-PtxtArray& operator-=(PtxtArray& a, const T& b) 
+auto operator-=(PtxtArray& a, const T& b) -> decltype(a.load(b), a)
+// SFINAE: this allows operator-= to be more easily overloaded
+//PtxtArray& operator-=(PtxtArray& a, const T& b) 
 { return a -= PtxtArray(a.ea, b); }
 
 
@@ -2069,7 +2061,9 @@ inline PtxtArray& operator*=(PtxtArray& a, const PtxtArray& b)
 }
 
 template<class T>
-PtxtArray& operator*=(PtxtArray& a, const T& b) 
+auto operator*=(PtxtArray& a, const T& b) -> decltype(a.load(b), a)
+// SFINAE: this allows operator*= to be more easily overloaded
+//PtxtArray& operator*=(PtxtArray& a, const T& b) 
 { return a *= PtxtArray(a.ea, b); }
 
 
@@ -2174,7 +2168,6 @@ template <typename P> // P can be ZZX or DoubleCRT
 void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d);
 ///@}
 
-} // namespace helib
 
 
 // Helper class for unimplemented pa_impl classes
@@ -2189,5 +2182,7 @@ struct pa_no_impl
 
 #define HELIB_NO_CKKS_IMPL(impl) template<> class impl<PA_cx> : public pa_no_impl<PA_cx> {};
 
+
+} // namespace helib
 
 #endif // ifndef HELIB_ENCRYPTEDARRAY_H

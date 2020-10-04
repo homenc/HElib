@@ -478,6 +478,49 @@ inline void mul(PtxtArray& a, const BlockMatMulFull& mat)
   mul(a.pa, mat);
 }
 
+// more interface conviences, both for PtxtArray and Ctxt
+
+inline PtxtArray& operator*=(PtxtArray& a, const MatMul1D& mat) 
+{ mul(a, mat); return a; }
+
+inline PtxtArray& operator*=(PtxtArray& a, const BlockMatMul1D& mat) 
+{ mul(a, mat); return a; }
+
+inline PtxtArray& operator*=(PtxtArray& a, const MatMulFull& mat) 
+{ mul(a, mat); return a; }
+
+inline PtxtArray& operator*=(PtxtArray& a, const BlockMatMulFull& mat) 
+{ mul(a, mat); return a; }
+
+// For ctxt's, these functions don't do any pre-computation
+
+inline Ctxt& operator*=(Ctxt& a, const MatMul1D& mat) 
+{ MatMul1DExec mat_exec(mat); mat_exec.mul(a); return a; }
+
+inline Ctxt& operator*=(Ctxt& a, const BlockMatMul1D& mat) 
+{ BlockMatMul1DExec mat_exec(mat); mat_exec.mul(a); return a; }
+
+inline Ctxt& operator*=(Ctxt& a, const MatMulFull& mat) 
+{ MatMulFullExec mat_exec(mat); mat_exec.mul(a); return a; }
+
+inline Ctxt& operator*=(Ctxt& a, const BlockMatMulFull& mat) 
+{ BlockMatMulFullExec mat_exec(mat); mat_exec.mul(a); return a; }
+
+//  For ctxt's, these functions do allow pre-computation
+
+inline Ctxt& operator*=(Ctxt& a, const MatMul1DExec& mat) 
+{ mat.mul(a); return a; }
+
+inline Ctxt& operator*=(Ctxt& a, const BlockMatMul1DExec& mat) 
+{ mat.mul(a); return a; }
+
+inline Ctxt& operator*=(Ctxt& a, const MatMulFullExec& mat) 
+{ mat.mul(a); return a; }
+
+inline Ctxt& operator*=(Ctxt& a, const BlockMatMulFullExec& mat) 
+{ mat.mul(a); return a; }
+
+
 
 // These are used mainly for performance evaluation.
 

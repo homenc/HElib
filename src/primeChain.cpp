@@ -193,7 +193,7 @@ IndexSet ModuliSizes::getSet4Size(double low,
     }
   }
 
-  HELIB_STATS_UPDATE("window1-in", (bestOption != -1));
+  HELIB_STATS_UPDATE("window1-out", (bestOption == -1));
   HELIB_STATS_UPDATE("window1-nchoices", nchoices);
 
   // If nothing was found, use the closest set below 'low' (or
@@ -202,7 +202,6 @@ IndexSet ModuliSizes::getSet4Size(double low,
   // size is within 1 bit of the closest.
 
   if (bestOption == -1) {
-    Warning("sub-optimal modulus (1)");
     if (reverse) {
       if (ii < n) {
         double upperBound = sizes[ii].first + 1.0 * std::log(2.0);
@@ -275,7 +274,7 @@ IndexSet ModuliSizes::getSet4Size(double low,
     }
   }
 
-  HELIB_STATS_UPDATE("window2-in", (bestOption != -1));
+  HELIB_STATS_UPDATE("window2-out", (bestOption == -1));
   HELIB_STATS_UPDATE("window2-nchoices", nchoices);
 
   // If nothing was found, use the closest set below 'low'
@@ -284,7 +283,6 @@ IndexSet ModuliSizes::getSet4Size(double low,
   // whose size is within 1 bit of the closest.
 
   if (bestOption == -1) {
-    Warning("sub-optimal modulus (2)");
     if (reverse) {
       if (ii < n) {
         double upperBound = sizes[ii].first + 1.0 * std::log(2.0);
