@@ -293,6 +293,11 @@ public:
   // addSome{1D,Frb}Matrices routines declared in helib.h.
   explicit MatMul1DExec(const MatMul1D& mat, bool minimal = false);
 
+  // VJS-FIXME: it seems that the minimal flag is currently
+  // redundant, as the decision is essentially based on
+  // ctxt.getPubKey().getKSStrategy(dim0). Need to look into this
+  // and re-assess.
+
   // Replaces an encryption of row std::vector v by encryption of v*mat
   void mul(Ctxt& ctxt) const override;
 

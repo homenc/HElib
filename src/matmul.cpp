@@ -849,6 +849,12 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal) :
                 "Matrix dimension not in [0, ea.dimension()]",
                 true);
 
+  // VJS-FIXME: we actually do use dim==ea.dimension() in bootstrapping.
+  // We should document this feature, at least for internal purposes.
+  // The basic idea is that this dimension is treated as a dimension
+  // of size 1.
+  // if (dim == ea.dimension()) std::cerr << "*** MatMul1DExec: big dim\n";
+
   D = dimSz(ea, dim);
   native = dimNative(ea, dim);
 
@@ -1662,6 +1668,13 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
                 ea.dimension(),
                 "Matrix dimension not in [0, ea.dimension()]",
                 true);
+
+  // VJS-FIXME: we actually do use dim==ea.dimension() in bootstrapping.
+  // We should document this feature, at least for internal purposes.
+  // The basic idea is that this dimension is treated as a dimension
+  // of size 1.
+  // if (dim == ea.dimension()) std::cerr << "*** BlockMatMul1DExec: big dim\n";
+
   D = dimSz(ea, dim);
   d = ea.getDegree();
   native = dimNative(ea, dim);
