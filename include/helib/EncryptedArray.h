@@ -276,10 +276,10 @@ public:
   //! @brief Linearized polynomials.
   //! L describes a linear map M by describing its action on the standard
   //! power basis: M(x^j mod G) = (L[j] mod G), for j = 0..d-1.
-  //! The result is a coefficient std::vector C for the linearized polynomial
+  //! The result is a coefficient vector C for the linearized polynomial
   //! representing M: a polynomial h in Z/(p^r)[X] of degree < d is sent to
   //! \f[
-  //!  M(h(X) \bmod G)= \sum_{i=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
+  //!  M(h(X) \bmod G)= \sum_{j=0}^{d-1}(C[j] \cdot h(X^{p^j}))\bmod G).
   //! \f]
   // These methods are working for some of the derived calsses (throwing
   // otherwise)
@@ -601,7 +601,6 @@ public:
   {
     genericDecrypt(ctxt, sKey, ptxt);
     if (ctxt.getPtxtSpace() < getP2R()) {
-      // VJS-FIXME: do we really want to do this????
       helib::Warning("EncryptedArray::decrypt: reducing plaintext modulus");
       for (long i = 0; i < (long)ptxt.size(); i++)
         ptxt[i] %= ctxt.getPtxtSpace();
@@ -614,7 +613,6 @@ public:
   {
     genericDecrypt(ctxt, sKey, ptxt);
     if (ctxt.getPtxtSpace() < getP2R()) {
-      // VJS-FIXME: do we really want to do this????
       helib::Warning("EncryptedArray::decrypt: reducing plaintext modulus");
       for (long i = 0; i < (long)ptxt.size(); i++)
         PolyRed(ptxt[i], ctxt.getPtxtSpace(), /*abs=*/true);
@@ -749,7 +747,7 @@ class EncryptedArrayDerived<PA_cx> : public EncryptedArrayBase
   const PAlgebraModCx& alMod;
 
   zzX iEncoded; // an encoded plaintext with i in all the slots
-  // VJS-FIXME: this is a bad idea...
+  // VJS-FIXME: this is a bad idea...see commenets in EaCx.cpp
 
 public:
   static double roundedSize(double x)
@@ -1014,6 +1012,9 @@ public:
   // default value for useThisSize and others do not???
   // It's very confusing
 
+  // VJS-FIXME: these routine have a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   double encode(zzX& ptxt,
                 double aSingleNumber,
                 double useThisSize = -1,
@@ -1131,8 +1132,8 @@ public:
     const Context& context = getContext();
     long phim = context.zMStar.getPhiM();
 
-    // VJS-FIXME: I changed m to phi(m).
-    // Also, for the power of two case, noiseBoundForUniform
+    // VJS-NOTE: I changed m to phi(m).
+    // VJS-FIXME: for the power of two case, noiseBoundForUniform
     // is a bit too pessimistic, as this is the circularly symmetric
     // case.
     return context.noiseBoundForUniform(0.5, phim);
@@ -1163,7 +1164,7 @@ public:
     // is a bit too pessimistic, as this is the circularly symmetric
     // case.
 
-    // VJS-FIXME: this is extremey heuristic: we are assuming 
+    // VJS-NOTE: this is extremey heuristic: we are assuming 
     // that the coefficients mod 1 are modeled as uniform
     // on [0,1].
 

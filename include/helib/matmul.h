@@ -508,16 +508,7 @@ inline Ctxt& operator*=(Ctxt& a, const BlockMatMulFull& mat)
 
 //  For ctxt's, these functions do allow pre-computation
 
-inline Ctxt& operator*=(Ctxt& a, const MatMul1DExec& mat) 
-{ mat.mul(a); return a; }
-
-inline Ctxt& operator*=(Ctxt& a, const BlockMatMul1DExec& mat) 
-{ mat.mul(a); return a; }
-
-inline Ctxt& operator*=(Ctxt& a, const MatMulFullExec& mat) 
-{ mat.mul(a); return a; }
-
-inline Ctxt& operator*=(Ctxt& a, const BlockMatMulFullExec& mat) 
+inline Ctxt& operator*=(Ctxt& a, const MatMulExecBase& mat) 
 { mat.mul(a); return a; }
 
 

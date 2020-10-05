@@ -153,9 +153,11 @@ public:
    * For CKKS, ptxtSpace is a bound on the size of the complex plaintext
    *     elements that are encoded in ptxt (before scaling), it is assumed
    *     that they are scaled by context.alMod.encodeScalingFactor(). The
-   *     VJS-FIXME: this comment must mean alMod.getCx()...check
-   *     returned value is the same as the argument ptxtSpace.
    **/
+
+  // VJS-FIXME: these routine have a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   long Encrypt(Ctxt& ciphertxt,
                const NTL::ZZX& plaintxt,
                long ptxtSpace,

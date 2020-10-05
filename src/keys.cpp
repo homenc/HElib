@@ -500,6 +500,9 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
                          double ptxtSize,
                          double scaling) const
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   assertEq(this, &ctxt.pubKey, "Public key and context public key mismatch");
 
   if (ptxtSize <= 0)
@@ -537,7 +540,7 @@ void PubKey::CKKSencrypt(Ctxt& ctxt,
   double r_bound = r.sampleSmallBounded(); // r is a {0,+-1} polynomial
 
   NTL::xdouble error_bound = r_bound * pubEncrKey.noiseBound;
-  // VJS-FIXME: why don't the error bounds include the encoding error?
+  // VJS-NOTE: why don't the error bounds include the encoding error?
 
   double stdev = to_double(context.stdev);
   if (context.zMStar.getPow2() == 0) // not power of two
@@ -803,7 +806,7 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
 
   double stdev = to_double(context.stdev);
 
-  // VJS-FIXME: this should never happen for CKKS
+  // VJS-NOTE: this should never happen for CKKS
   if (context.zMStar.getPow2() == 0) // not power of two
     stdev *= sqrt(m);
 
@@ -824,7 +827,7 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
 
   // Compute the extra scaling factor, if needed
 
-  // VJS-FIXME: note the new logic for computing ef...
+  // VJS-NOTE: note the new logic for computing ef...
   // see comment above.
   long ef = NTL::conv<long>(ceil(error_bound/err));
 
@@ -836,7 +839,7 @@ void PubKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
     ctxt.parts[0] += ptxt;
   }
 
-  // VJS-FIXME: we no longer round to the next power of two:
+  // VJS-NOTE: we no longer round to the next power of two:
   // Then encoding routine should take care of setting mag correctly.
   ctxt.ptxtMag = mag;
   ctxt.ratFactor = scale;
@@ -1368,6 +1371,9 @@ long SecKey::skEncrypt(Ctxt& ctxt,
                        long ptxtSpace,
                        long skIdx) const
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   HELIB_TIMER_START;
 
   assertEq(((const PubKey*)this),
@@ -1423,7 +1429,7 @@ long SecKey::skEncrypt(Ctxt& ctxt,
     ctxt.ptxtMag = EncryptedArrayCx::roundedSize(ptxtSize);
     ctxt.ratFactor = f;
     ctxt.noiseBound += ptxtSize * ctxt.ratFactor;
-    // VJS-FIXME: the above noise calculation makes no sense to me
+    // VJS-NOTE: the above noise calculation makes no sense to me
     return long(f);
 
   } else { // BGV
@@ -1608,7 +1614,7 @@ void SecKey::Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const
     ctxt.parts[0] += ptxt;
   }
 
-  // VJS-FIXME: we no longer round to the next power of two:
+  // VJS-NOTE: we no longer round to the next power of two:
   // Then encoding routine should take care of setting mag correctly.
   ctxt.primeSet = context.ctxtPrimes;
   ctxt.ptxtMag = mag;

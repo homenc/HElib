@@ -253,7 +253,10 @@ double EncryptedArrayCx::encode(zzX& ptxt,
                                 double useThisSize,
                                 long precision) const
 {
-  // VJS-FIXME: does it really make sense to use the *largest*
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
+  // VJS-NOTE: does it really make sense to use the *largest*
   // size in determining the factor?
   // It might make sense to use the *smallest* size.
 
@@ -300,6 +303,7 @@ const zzX& EncryptedArrayCx::getiEncoded() const
   // VJS-FIXME: this is NOT thread-safe
   // It also seems like it is not used anywhere, so I suggest we
   // get rid of it...
+
   if (lsize(iEncoded) <= 0)              // encoded-i not yet initialized
     encodei(const_cast<zzX&>(iEncoded)); // temporarily suspend cont-ness
   return iEncoded;
@@ -319,6 +323,10 @@ void EncryptedArrayCx::decode(std::vector<cx_double>& array,
 // return an array of random complex numbers in a circle of radius rad
 void EncryptedArrayCx::random(std::vector<cx_double>& array, double rad) const
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of either the RandomComplex() routine
+  // in NumbTh.h or PtxtArray::random().
+
   if (rad == 0)
     rad = 1.0; // radius
 

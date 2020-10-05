@@ -43,7 +43,7 @@ using vectors/scalars computed by some other type of computation altogether
 algebra routines).  Once such a vector/scalar is converted to a PtxtArray, they
 can perform operations of the PtxtArray object that correspond to homomorphic
 Ctxt operations: this allows users to develop code working on ptxt objects and
-ten later convert to ctxt objects with little effort (this is where Ptxt and
+then later convert to ctxt objects with little effort (this is where Ptxt and
 PtxtArray share a similar design philosophy).
 
 A Ptxt works with the default EA/View in Context, while really, it should work

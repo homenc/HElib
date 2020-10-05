@@ -337,7 +337,7 @@ void Ctxt::modDownToSet(const IndexSet& s)
 
   // For approximate nums, make sure that scaling factor is large enough
 
-  // VJS-FIXME: I'm skeptical that this special processing is
+  // VJS-NOTE: I'm skeptical that this special processing is
   // a good idea.  It increases the total noise in the ctxt.
   // Generally speaking, all calls to to modDownToSet should
   // anyway be making their own choices.  Worse, this function
@@ -346,7 +346,7 @@ void Ctxt::modDownToSet(const IndexSet& s)
   // risk of ending up wit unequal prime sets.
 
   if (0 && isCKKS()) {
-    // VJS-FIXME: I'm disabling this for the time being.
+    // VJS-NOTE: I'm disabling this for the time being.
     // See comment above.
 
     // Sanity check: ensuring that we don't lose too much on precision.
@@ -535,14 +535,14 @@ void Ctxt::dropSmallAndSpecialPrimes()
     // For CKKS, try to ensure that the scaling factor is at least as large
     // as the mod-switch added noise times a factor of getPPowR()/ptxtMag
 
-    // VJS-FIXME: I'm skeptical that this special-case processing
+    // VJS-NOTE: I'm skeptical that this special-case processing
     // is really a good idea.  Indeed, the general processing ensures
     // adn < noise/8, and ptxMag is just an *upper bound* on the size
     // of ptx, so it's not clear what this is possibly achieving.
     // That said, the only *harm* in using more ctxtPrimes is performance.
 
     if (0 && isCKKS()) {
-      // VJS-FIXME: I'm disabling this for now.  See comment above
+      // VJS-NOTE: I'm disabling this for now.  See comment above
       // std::cerr  << "*** special processing in dropSmallAndSpecialPrimes\n"; 
       double log_bound =
           log_modswitch_noise + log(context.alMod.getPPowR()) - log(ptxtMag);
@@ -820,14 +820,15 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
                            NTL::xdouble size,
                            NTL::xdouble factor)
 {
-  // VJS-FIXME: seems complicated...need to understand this better.
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
   if (size <= 0)
     size = 1.0;
 
   if (factor <= 0)
     conv(factor, getContext().ea->getCx().encodeScalingFactor() / size);
 
-  // VJS-FIXME: I think we need to special case an empty ciphertext
+  // VJS-NOTE: I think we need to special case an empty ciphertext
 
   NTL::xdouble ratio =
       NTL::floor((ratFactor / factor) + 0.5); // round to integer
@@ -850,7 +851,7 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
     ratio = floor((ratFactor / factor) + 0.5); // re-compute the ratio
   }
 
-  // VJS-FIXME: this strategy of adding some primes to offset the
+  // VJS-NOTE: this strategy of adding some primes to offset the
   // rounding error kind of makes it difficult for the caller
   // to ensure that the prime set of dcrt contains the prime set
   // of ctxt.  This means we will expand the prime set of dcrt if
@@ -859,7 +860,7 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
   ptxtMag += size; // perhaps too conservative? size(x+y)<=size(x)+size(y)
 
   noiseBound += 0.5; // FIXME: what's the noise of a fresh encoding?
-  // VJS-FIXME: This can't possibly be right.
+  // VJS-NOTE: This can't possibly be right.
   // Shoudn't this be set to encodeRoundingError?
   // Even better, shouldn't we have an optional parameter?
   // Also, in addition to the encode rounding error, we should take
@@ -871,7 +872,7 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
 
   NTL::ZZ intRatio = NTL::conv<NTL::ZZ>(ratio);
 
-  // VJS-FIXME: I'm getting rid of this prime dropping logic.
+  // VJS-NOTE: I'm getting rid of this prime dropping logic.
   // Extra primes in dcrt will be ignored in addPart.
 #if 0
   IndexSet delta = dcrt.getIndexSet() / getPrimeSet(); // set minus
@@ -896,7 +897,7 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
 #else
 
   IndexSet delta = primeSet / dcrt.getIndexSet();
-  // VJS-FIXME: we don't want to do this if ctxt was empty,
+  // VJS-NOTE: we don't want to do this if ctxt was empty,
   // but we have other problems to deal with as well in that case.
 
   if (NTL::IsOne(intRatio) && empty(delta)) { // just add it
@@ -909,12 +910,12 @@ void Ctxt::addConstantCKKS(const DoubleCRT& dcrt,
 
   if (!empty(delta))
     tmp.addPrimes(delta);
-  // VJS-FIXME: we have to do this here because addPart requires
+  // VJS-NOTE: we have to do this here because addPart requires
   // that the prime set of dcrt contains that of ctxt
 
   if (!NTL::IsOne(intRatio))
     tmp *= intRatio;
-  // VJS-FIXME: whatever noise is in dcrt also needs to
+  // VJS-NOTE: whatever noise is in dcrt also needs to
   // be scaled by intRatio and added to the noise bound
 
   addPart(tmp, SKHandle(0, 1, 0));
@@ -926,9 +927,12 @@ void Ctxt::addConstantCKKS(const NTL::ZZX& poly,
                            NTL::xdouble size,
                            NTL::xdouble factor)
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   // just call the DoubleCRT version
 
-  // VJS-FIXME: this may not be the most sensible thing to
+  // VJS-NOTE: this may not be the most sensible thing to
   // do because the addSomePrimes logic.
   // It may be best to delay coversion to dcrt until after
   // we know if we need to do that...otherwise, we'll do
@@ -988,9 +992,12 @@ Ctxt& Ctxt::operator*=(const NTL::ZZX& poly)
 
 void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   NTL::ZZX poly;
   double factor = getContext().ea->getCx().encode(poly, other);
-  // VJS-FIXME: maybe this encdoing routine should also return
+  // VJS-NOTE: maybe this encdoing routine should also return
   // the rounding error...we kind of need this value
 
   double size = Norm(other);
@@ -1003,14 +1010,17 @@ void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
 
 void Ctxt::addConstantCKKS(const NTL::ZZ& c)
 {
-  // VJS-FIXME: need to review
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
+  // VJS-NOTE: need to review
   NTL::xdouble xc = NTL::to_xdouble(c);
   NTL::xdouble scaled = floor(ratFactor * xc + 0.5); // scaled up and rounded
-  // VJS-FIXME: why round to integer?
+  // VJS-NOTE: why round to integer?
 
   DoubleCRT dcrt(getContext(), getPrimeSet());
   dcrt = to_ZZ(scaled);
-  // VJS-FIXME: the rounding error is not taken into account here
+  // VJS-NOTE: the rounding error is not taken into account here
   // at all
 
   addConstantCKKS(dcrt, /*size=*/xc, /*factor=*/scaled / xc);
@@ -1019,7 +1029,10 @@ void Ctxt::addConstantCKKS(const NTL::ZZ& c)
 // Add the rational constant num.first / num.second
 void Ctxt::addConstantCKKS(std::pair<long, long> num)
 {
-  // VJS-FIXME: seems complicated...need to understand this better.
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
+  // VJS-NOTE: seems complicated...need to understand this better.
 #if 1
   // Check if you need to scale up to get target accuracy of 2^{-r}
   NTL::xdouble xb = NTL::to_xdouble(num.second); // denominator
@@ -1115,7 +1128,7 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
   double epsilon = 0.125 / to_double(denomBound); // "smudge factor"
   NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon); // floor function
   // NOTE: epsilon is meant to counter rounding errors
-  // VJS-FIXME: I don't really understand this.
+  // VJS-NOTE: I don't really understand this.
 
   NTL::xdouble xi = x - NTL::conv<NTL::xdouble>(a);
 
@@ -1246,7 +1259,7 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
 #else
 void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
 {
-  // VJS-FIXME: need to rethink this
+  // VJS-NOTE: need to rethink this
   long targetPrecision = c1.getContext().alMod.getPPowR() * 2;
   Ctxt& big = (c1.ratFactor > c2.ratFactor) ? c1 : c2;
   Ctxt& small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
@@ -1350,7 +1363,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   // std::cerr << "*** " << ratFactor << " " << other_pt->ratFactor << "\n";
 
   // If approximate numbers, make sure the scaling factors are the same
-  // VJS-FIXME: I've re-implemented equalizeRationalFactors,
+  // VJS-NOTE: I've re-implemented equalizeRationalFactors,
   // and I also call it unconditionally, so as to ensure the
   // noiseBound is actually computed accurately.
   // if (isCKKS() && !closeToOne(ratFactor / other_pt->ratFactor,
@@ -1552,7 +1565,7 @@ void computeIntervalForSqr(double& lo, double& hi, const Ctxt& ctxt)
 }
 
 double Ctxt::naturalSize() const
-// VJS-FIXME: what is this function, really?
+// VJS-NOTE: what is this function, really?
 // I'm not sure it makes sense...and it does not seem like
 // it is really used anywhere
 {
@@ -1754,7 +1767,7 @@ void Ctxt::multByConstant(const NTL::ZZX& poly, double size)
   if (this->isEmpty())
     return;
   if (size < 0 && !isCKKS()) {
-    // VJS-FIXME: should this be done also for CKKS?
+    // VJS-NOTE: should this be done also for CKKS?
     size = NTL::conv<double>(embeddingLargestCoeff(poly, getContext().zMStar));
   }
   DoubleCRT dcrt(poly, context, primeSet);
@@ -1775,15 +1788,17 @@ void Ctxt::multByConstant(const zzX& poly, double size)
 
 void Ctxt::multByConstantCKKS(const std::vector<std::complex<double>>& other)
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   // NOTE: some replicated logic here and in addConstantCKKS...
   NTL::ZZX poly;
   double factor = getContext().ea->getCx().encode(poly, other);
-  // VJS-FIXME: why does encode with ZZX not require a size arg?
+  // VJS-NOTE: why does encode with ZZX not require a size arg?
 
-  // VJS-FIXME: This code is reprated...make a function
   double size = Norm(other);
 
-  // VJS-FIXME: if size==0 we should just do thus->clear()
+  // VJS-NOTE: if size==0 we should just do thus->clear()
   if (size == 0.0)
     size = 1.0;
 
@@ -1795,7 +1810,10 @@ void Ctxt::multByConstantCKKS(const DoubleCRT& dcrt,
                               NTL::xdouble factor,
                               double roundingErr)
 {
-  // VJS-FIXME: looks reasonable, but still needs review
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
+  // VJS-NOTE: looks reasonable, but still needs review
 
   // Special case: if *this is empty then do nothing
   if (this->isEmpty())

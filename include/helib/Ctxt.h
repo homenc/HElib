@@ -583,7 +583,6 @@ public:
   void multByConstant(const NTL::ZZX& poly, double size = -1.0);
   void multByConstant(const zzX& poly, double size = -1.0);
 
-  // VJS-FIXME: fix up the scalar versions
 
 //=========== new multByConstant interface =========
 
@@ -917,8 +916,6 @@ public:
     noiseBound = 0.0;
     intFactor = 1;
     ratFactor = ptxtMag = 1.0;
-    // VJS-FIXME: we should also make sure the other fields
-    // are set to their default values for a new, empty ctxt.
   }
 
   //! @brief Is this an empty ciphertext without any parts
