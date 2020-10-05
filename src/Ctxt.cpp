@@ -2412,7 +2412,11 @@ void Ctxt::smartAutomorph(long k)
                "Re-linearization failed: not in canonical form");
   }
 
+  // Please leave these print statements in (but commented out).
+  // They are useful for debugging.
+  //std::cerr << "*** smartAutomorph:";
   while (k != 1) {
+    //std::cerr << " " << k;
     const KeySwitch& matrix = pubKey.getNextKSWmatrix(k, keyID);
     long amt = matrix.fromKey.getPowerOfX();
 
@@ -2425,6 +2429,7 @@ void Ctxt::smartAutomorph(long k)
     reLinearize(keyID);
     k = NTL::MulMod(k, NTL::InvMod(amt, m), m);
   }
+  //std::cerr << "\n";
   HELIB_TIMER_STOP;
 }
 

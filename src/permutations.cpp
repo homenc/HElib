@@ -529,6 +529,10 @@ std::ostream& operator<<(std::ostream& s, const GeneratorTrees& trees)
 }
 
 
+PermIndepPrecomp::PermIndepPrecomp(const Context& context, long depthBound)
+  : PermIndepPrecomp(context.getDefaultView(), depthBound)
+{ }
+
 PermIndepPrecomp::PermIndepPrecomp(const EncryptedArray& _ea, long depthBound)
   : ea(_ea)
 {
@@ -537,15 +541,9 @@ PermIndepPrecomp::PermIndepPrecomp(const EncryptedArray& _ea, long depthBound)
     vec[i] = GenDescriptor(/*order=*/ea.sizeOfDimension(i),
                            /*good=*/ ea.nativeDimension(i), /*genIdx=*/i);
 
-  long cost = trees.buildOptimalTrees(vec, depthBound);
-
-  if (cost == NTL_MAX_LONG) 
-    throw LogicError("buildOptimalTrees failed");
+  cost = trees.buildOptimalTrees(vec, depthBound);
 }
 
-PermIndepPrecomp::PermIndepPrecomp(const Context& context, long depthBound)
-  : PermIndepPrecomp(context.getDefaultView(), depthBound)
-{ }
 
 
 

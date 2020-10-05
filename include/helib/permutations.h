@@ -602,11 +602,20 @@ class PermIndepPrecomp {
 
   const EncryptedArray& ea;
   GeneratorTrees trees;
+  long cost;
 
 public:
 
+  PermIndepPrecomp(const PermIndepPrecomp&) = delete;
+  PermIndepPrecomp& operator=(const PermIndepPrecomp&) = delete;
+
   PermIndepPrecomp(const Context& context, long depthBound);
   PermIndepPrecomp(const EncryptedArray& ea, long depthBound);
+
+  long getCost() const { return cost; }
+  // cost == NTL_MAX_LONG means contruction failed
+
+  long getDepth() const { return trees.numLayers(); }
 
   friend class PermPrecomp;
 
@@ -620,9 +629,17 @@ class PermPrecomp {
 
 public:
 
+  PermPrecomp(const PermPrecomp&) = delete;
+  PermPrecomp& operator=(const PermPrecomp&) = delete;
+
   PermPrecomp(const PermIndepPrecomp& pip, Permut pi) 
     : ea(pip.ea)
-  { net.buildNetwork(pi, pip.trees); }
+  { 
+    if (pip.cost == NTL_MAX_LONG)
+      throw LogicError("buildOptimalTrees failed");
+
+    net.buildNetwork(pi, pip.trees); 
+  }
 
   void apply(Ctxt& ctxt) const
   { net.applyToCtxt(ctxt, ea); }
