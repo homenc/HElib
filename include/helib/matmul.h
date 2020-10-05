@@ -311,6 +311,18 @@ public:
   const EncryptedArray& getEA() const override { return ea; }
 };
 
+// A more convenient and naturally-named interface for CKKS
+// VJS-FIXME: document some of this stuff
+
+class EncodedMatMul_CKKS : public MatMul1DExec
+{
+public:
+  EncodedMatMul_CKKS(const MatMul1D_CKKS& mat)
+    : MatMul1DExec(mat) { }
+
+};
+
+
 //====================================
 
 // Class used to multiply an encrypted row std::vector by a block 1D linear

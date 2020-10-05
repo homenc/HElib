@@ -2149,6 +2149,15 @@ void incrementalZeroTest(Ctxt* res[],
  * \endcode
  */
 
+// VJS-FIXME: we plan on re-implementing this logic in matmul.{h,cpp}.
+// The reasons are two-fold:
+//   (1) the interfaces should look a lot more like the matmul interfaces,
+//       instead of a completely different interface
+//   (2) we want to exploit better algorithms, like BS/GS and hoisting,
+//       which we don't do now.
+
+
+
 //! @brief Apply the same linear transformation to all the slots
 //! @param C is the output of ea.buildLinPolyCoeffs;
 void applyLinPoly1(const EncryptedArray& ea,

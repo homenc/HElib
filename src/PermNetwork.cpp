@@ -193,7 +193,7 @@ void PermNetwork::applyToCube(HyperCube<long>& cube) const
 // Return the index of the first nonzero entry in haystack at the end
 // of the pass (-1 if they are all zero). Also return a flag saying if
 // any entries of the mask are nonzero.
-static std::pair<long, bool> makeMask(std::vector<long>& mask,
+static std::pair<long, bool> makeMask(std::vector<bool>& mask,
                                       NTL::Vec<long>& haystack,
                                       long needle)
 {
@@ -202,10 +202,10 @@ static std::pair<long, bool> makeMask(std::vector<long>& mask,
   for (long i = 0; i < (long)mask.size(); i++) {
     if (haystack[i] == needle) { // found a needle
       found = true;
-      mask[i] = 1;
+      mask[i] = true;
       haystack[i] = 0; // remove this needle from haystack
     } else {           // no needle here
-      mask[i] = 0;
+      mask[i] = false;
       if (haystack[i] != 0 && fstNonZeroIdx < 0)
         fstNonZeroIdx = i; // first nonzero entry in haystack
     }
@@ -228,7 +228,7 @@ void PermNetwork::applyToCtxt(Ctxt& c, const EncryptedArray& ea) const
     long g2e = NTL::PowerMod(al.ZmStarGen(lyr.genIdx), lyr.e, al.getM());
 
     NTL::Vec<long> unused = lyr.shifts;          // copy to a new vector
-    std::vector<long> mask(lyr.shifts.length()); // buffer to hold masks
+    std::vector<bool> mask(lyr.shifts.length()); // buffer to hold masks
     Ctxt sum(c.getPubKey(), c.getPtxtSpace());   // an empty ciphertext
 
     long shamt = 0;
@@ -237,7 +237,7 @@ void PermNetwork::applyToCtxt(Ctxt& c, const EncryptedArray& ea) const
       std::pair<long, bool> ret = makeMask(mask, unused, shamt); // compute mask
       if (ret.second) { // non-empty mask
         Ctxt tmp = c;
-        NTL::ZZX maskPoly;
+        EncodedPtxt maskPoly;
         ea.encode(maskPoly, mask);    // encode mask as polynomial
         tmp.multByConstant(maskPoly); // multiply by mask
         if (shamt != 0)               // rotate if the shift amount is nonzero

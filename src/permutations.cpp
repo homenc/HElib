@@ -11,6 +11,7 @@
  */
 
 #include <helib/permutations.h>
+#include <helib/EncryptedArray.h>
 
 namespace helib {
 
@@ -526,5 +527,26 @@ std::ostream& operator<<(std::ostream& s, const GeneratorTrees& trees)
   }
   return s << "]";
 }
+
+
+PermIndepPrecomp::PermIndepPrecomp(const EncryptedArray& _ea, long depthBound)
+  : ea(_ea)
+{
+  NTL::Vec<GenDescriptor> vec(NTL::INIT_SIZE, ea.dimension());
+  for (long i: range(ea.dimension()))
+    vec[i] = GenDescriptor(/*order=*/ea.sizeOfDimension(i),
+                           /*good=*/ ea.nativeDimension(i), /*genIdx=*/i);
+
+  long cost = trees.buildOptimalTrees(vec, depthBound);
+
+  if (cost == NTL_MAX_LONG) 
+    throw LogicError("buildOptimalTrees failed");
+}
+
+PermIndepPrecomp::PermIndepPrecomp(const Context& context, long depthBound)
+  : PermIndepPrecomp(context.getDefaultView(), depthBound)
+{ }
+
+
 
 } // namespace helib

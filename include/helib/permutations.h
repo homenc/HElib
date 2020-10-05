@@ -533,6 +533,7 @@ public:
 
 class Ctxt;
 class EncryptedArray;
+class Context;
 class PermNetwork;
 
 //! @class PermNetLayer
@@ -593,6 +594,66 @@ public:
 
   friend std::ostream& operator<<(std::ostream& s, const PermNetwork& net);
 };
+
+// some convenience classes that are easier to work with
+// VJS-FIXME: document these
+
+class PermIndepPrecomp {
+
+  const EncryptedArray& ea;
+  GeneratorTrees trees;
+
+public:
+
+  PermIndepPrecomp(const Context& context, long depthBound);
+  PermIndepPrecomp(const EncryptedArray& ea, long depthBound);
+
+  friend class PermPrecomp;
+
+};
+
+
+class PermPrecomp {
+
+  const EncryptedArray& ea;
+  PermNetwork net;
+
+public:
+
+  PermPrecomp(const PermIndepPrecomp& pip, Permut pi) 
+    : ea(pip.ea)
+  { net.buildNetwork(pi, pip.trees); }
+
+  void apply(Ctxt& ctxt) const
+  { net.applyToCtxt(ctxt, ea); }
+
+  // VJS-FIXME: add support for addMatrices4Network?
+  // VJS-FIXME: add support for PtxtArray operations?
+
+};
+
+/* EXAMPLE USE:
+
+  // do some permutation-independent pre-computations
+  PermIndepPrecomp pip(context, depthBound);
+
+  // initialize some arbitrary permutation pi
+  Permut pi;  // This is just an NTL::Vec<long>
+  pi.SetLength(nslots); 
+    ...
+
+  // now do a permutation-dependent pre-computation
+  PermPrecomp pp(pip, pi);
+
+  // apply the permutation 
+  pp.apply(ctxt); 
+
+
+  // if the slots are originally [a_0,a_1,a_2,...]
+  // then they become [a_pi[0],a_pi[1],a_pi[2],...]
+
+
+*/
 
 } // namespace helib
 
