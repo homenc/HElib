@@ -80,10 +80,10 @@ make -j16
 4. (optional) If step 2 was performed with `-DENABLE_TEST=ON`, HElib tests can 
 be run as follows:
 ```
-ctest -R helib_check
+ctest
 ```
 Detailed HElib-specific test logs can be found in 
-`dependencies/Build/helib_external/Testing/Temporary/LastTest.log`.
+`Testing/Temporary/LastTest.log`.
 
 5. (optional) Run the install step, to copy the folder `helib_pack` to
 `${CMAKE_INSTALL_PREFIX}` (in this example `/home/alice/helib_install`):
@@ -186,7 +186,7 @@ You can install NTL as follows:
 3. NTL is configured, built and installed in the standard Unix way (but
 remember to specify the following flags to `configure`):
 ```
-      ./configure NTL_GMP_LIP=ON SHARED=on  NTL_THREADS=on NTL_THREAD_BOOST=on
+      ./configure NTL_GMP_LIP=on SHARED=on  NTL_THREADS=on NTL_THREAD_BOOST=on
       make
       sudo make install
 ```
@@ -232,8 +232,6 @@ set to `OFF`, there should either exist a system-installed GMP library, or
 - `GMP_DIR`: Prefix of the GMP library.  Ignored if `FETCH_GMP=ON`.
 
 ### Parameters specific to option 2 (library build)
-- `ENABLE_LEGACY_TEST=ON/OFF` (default is `OFF`): Build old test system 
-  (deprecated).
 - `GMP_DIR`: Prefix of the GMP library.
 - `NTL_DIR`: Prefix of the NTL library.
 

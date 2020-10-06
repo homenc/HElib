@@ -11,7 +11,7 @@
 
 function random-char-string {
   local N=${1:-8}
-  echo $(head /dev/urandom | LC_CTYPE=C tr -dc A-Za-z0-9 | head -c $N)
+  echo $(head /dev/urandom | LC_ALL=C tr -dc A-Za-z0-9 | head -c $N)
 }
 
 utils_dir=${utils_dir:-"../.."}
@@ -95,6 +95,7 @@ function check_locations {
 }
 
 function techo {
+  local line=
   while IFS= read -r line; do
     echo "# $line" >&3
   done <<< "$1"

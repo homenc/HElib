@@ -2,6 +2,15 @@
 ===>          Refer to INSTALL.md for newer cmake-based installation.   <===
 ===>          We no longer recommend this method to install HElib.      <=== 
 
+Additional Notes, September 2020
+--------------------------------
+version.in.h header and some source code (version.in.cpp and
+TestVersion.in.cpp) has been added so that HElib can introspect on its version.
+These are template files that cmake fills in the version numbers for us during
+a build. The old Makefile does not compile these. So, if you wish to use them
+we recommend moving to the cmake build.
+
+
 HElib Installation Notes, August 2020
 ---------------------------------------
 Much has changed since the note in 2015 and there are many updates. So this 

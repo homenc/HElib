@@ -19,9 +19,6 @@ if (NOT (CMAKE_SIZEOF_VOID_P EQUAL 8))
   message(FATAL_ERROR "HElib requires a 64-bit architecture.")
 endif ()
 
-# Define standard installation directories (GNU)
-include(GNUInstallDirs)
-
 # Use -std=c++14 as default.
 set(CMAKE_CXX_STANDARD 14)
 # Disable C++ extensions
@@ -29,13 +26,46 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Require full C++ standard
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+################################################################################
+#                                                                              #
+#                             FOLDER DEFINITIONS                               #
+#                                                                              #
+################################################################################
+
+# Define standard installation directories (GNU)
+include(GNUInstallDirs)
+
+# Setting compiler output directories
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+
+# Location of the cmake extra files
+set(HELIB_CMAKE_EXTRA_DIR "${PROJECT_SOURCE_DIR}/cmake")
+# Prefix of the header files (directory to be added to the include list)
+set(HELIB_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include")
+# Location of helib header files
+set(HELIB_HEADER_DIR "${HELIB_INCLUDE_DIR}/helib")
+# Location of the source files
+set(HELIB_SOURCE_DIR "${PROJECT_SOURCE_DIR}/src")
+# Location of the google tests
+set(HELIB_TESTS_DIR "${PROJECT_SOURCE_DIR}/tests")
+# Location of the directory containing the test binary (runTests). If
+# PACKAGE_BUILD=ON, this location will be changed to reflect the tests location.
+set(HELIB_TEST_BIN_DIR "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
+
 # GMP minimal version to be used if not PACKAGE_BUILD
 set(GMP_MINIMAL_VERSION "6.0.0")
 # NTL minimal version to be used if NOT PACKAGE_BUILD
 set(NTL_MINIMAL_VERSION "11.0.0")
 
 # The -isysroot flag needs set.
-if (APPLE OR (CMAKE_CXX_PLATFORM_ID STREQUAL "Darwin"))
+if ((APPLE OR (CMAKE_CXX_PLATFORM_ID STREQUAL "Darwin")) AND
+    # This addresses the problem when CMAKE_OSX_SYSROOT is "" (e.g. when /usr/include/sys/types.h exists)
+    NOT CMAKE_OSX_SYSROOT STREQUAL "")
   set(macos_isysroot_flag "-isysroot ${CMAKE_OSX_SYSROOT}")
 else()
   set(macos_isysroot_flag "")
@@ -57,8 +87,20 @@ set_property(CACHE
              PROPERTY
              STRINGS "Debug" "RelWithDebInfo" "Release" "MinSizeRel")
 
+# Creating and documenting TARGET_ARCHITECTURE cmake property
+set(TARGET_ARCHITECTURE "${TARGET_ARCHITECTURE}"
+    CACHE
+    STRING "Target architecture used for -march (default is native)")
+# If TARGET_ARCHITECTURE is not set use default
+if (NOT TARGET_ARCHITECTURE)
+  set(TARGET_ARCHITECTURE "native"
+      CACHE
+      STRING "Target architecture used for -march (default is native)"
+      FORCE)
+endif (NOT TARGET_ARCHITECTURE)
+
 # Path containing FindGMP.cmake and FindNTL.cmake
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${HELIB_CMAKE_EXTRA_DIR}")
 
 option(BUILD_SHARED "Build as shared library" OFF)
 
@@ -87,9 +129,6 @@ if (PACKAGE_BUILD)
   option(FETCH_GMP "Fetch and compile the GMP library (DEFAULT: ON)" ON)
 else (PACKAGE_BUILD)
   # Properties to be enabled when not using PACKAGE_BUILD
-  option(ENABLE_LEGACY_TEST
-         "Build the legacy test files (does not work with PACKAGE_BUILD)"
-         OFF)
 endif (PACKAGE_BUILD)
 
 # Allow GMP_DIR and search in it if not using PACKAGE_BUILD or using
@@ -111,7 +150,7 @@ endif (NOT PACKAGE_BUILD)
 
 # Setting flag lists to avoid polluting CMAKE_CXX_FLAGS.
 # PUBLIC_HELIB_CXX_FLAGS will be exported to the installed target.
-set(PRIVATE_HELIB_CXX_FLAGS "")
+set(PRIVATE_HELIB_CXX_FLAGS "-march=${TARGET_ARCHITECTURE}")
 set(PUBLIC_HELIB_CXX_FLAGS "")
 # Add extra checks during build
 if (PEDANTIC_BUILD)
@@ -225,16 +264,6 @@ else (PACKAGE_BUILD)
   # Checks that at least version NTL_MINIMAL_VERSION is available
   find_package(NTL "${NTL_MINIMAL_VERSION}" REQUIRED)
 
-  # Setting compiler output directories
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-      ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-
   # Thread enabling checks
   # Checking if NTL is built with NTL_THREADS=on
   set(ntl_config_file "${NTL_INCLUDE_PATHS}/NTL/config.h")
@@ -296,14 +325,24 @@ if (PACKAGE_BUILD)
                -DFETCH_GMP=${FETCH_GMP}
                -DENABLE_TEST=${ENABLE_TEST}
                -DHELIB_DEBUG=${HELIB_DEBUG}
-               -DENABLE_LEGACY_TEST=OFF
+               -DHELIB_CMAKE_EXTRA_DIR=${HELIB_CMAKE_EXTRA_DIR}
+               -DHELIB_INCLUDE_DIR=${HELIB_INCLUDE_DIR}
+               -DHELIB_HEADER_DIR=${HELIB_HEADER_DIR}
+               -DHELIB_SOURCE_DIR=${HELIB_SOURCE_DIR}
+               -DHELIB_TESTS_DIR=${HELIB_TESTS_DIR}
     BUILD_ALWAYS ON)
 
-  if (ENABLE_TEST)
-    add_test(NAME helib_check
-             COMMAND ${CMAKE_MAKE_PROGRAM} test
-             WORKING_DIRECTORY "${DEPENDENCIES_FOLDER}/Build/helib_external")
-  endif (ENABLE_TEST)
+    if (ENABLE_TEST)
+      # Tests for PACKAGE_BUILD are located in
+      # ${DEPENDENCIES_FOLDER}/Build/helib_external/${CMAKE_INSTALL_BINDIR}.
+      # Update its location and add the tests to cmake to avoid re-creating
+      # their targets (as they are already built by ExternalProject_Add)
+      set(HELIB_TEST_BIN_DIR
+          "${DEPENDENCIES_FOLDER}/Build/helib_external/${CMAKE_INSTALL_BINDIR}")
+      set(ONLY_ADD_TEST ON)
+      add_subdirectory("${HELIB_TESTS_DIR}" tests)
+      unset(ONLY_ADD_TEST)
+    endif (ENABLE_TEST)
 
   # To install copy the whole PACKAGE_DIR directory to the defined prefix
   install(

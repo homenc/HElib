@@ -1,5 +1,6 @@
 HElib
 =====
+[![Build Status](https://travis-ci.com/homenc/HElib.svg?branch=master)](https://travis-ci.com/homenc/HElib)
 
 HElib is an open-source ([Apache License v2.0][5]) software library that 
 implements [homomorphic encryption][6] (HE). Currently available schemes 

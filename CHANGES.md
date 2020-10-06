@@ -1,6 +1,22 @@
-HElib 1.1.0, August 2020
-===============================
+HElib 1.1.0, October 2020
+=========================
 (tagged as v1.1.0)
+
+Augst-October 2020
+------------------
+* Updated & enhanced security level estimation
+* Experimental Tool for computing sample parameters for CKKS
+* Improved testing procedures and documentation
+* Multi platform and multi configuration Travis-CI pipeline
+* Added version.{h,cpp)
+* Bug Fixes:
+  * CKKS divide by zero
+  * version.h
+  * compatibility with cmake 3.10.x
+
+HElib 1.1.0 Beta 0, August 2020
+===============================
+(tagged as v1.1.0-beta.0)
 
 June-August 2020
 ------------------
