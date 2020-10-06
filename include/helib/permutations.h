@@ -643,7 +643,6 @@ public:
   void apply(PtxtArray& a) const;
 
   // VJS-FIXME: add support for addMatrices4Network?
-  // VJS-FIXME: add support for PtxtArray operations?
 
 };
 
