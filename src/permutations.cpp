@@ -545,6 +545,47 @@ PermIndepPrecomp::PermIndepPrecomp(const EncryptedArray& _ea, long depthBound)
 }
 
 
+PermPrecomp::PermPrecomp(const PermIndepPrecomp& pip, const Permut& _pi)
+  : ea(pip.ea), pi(_pi)
+{
+  if (pi.length() != ea.size()) 
+    throw LogicError("pi wrong size");
+
+  if (pip.cost == NTL_MAX_LONG)
+    throw LogicError("buildOptimalTrees failed");
+
+  net.buildNetwork(pi, pip.trees);
+}
+
+template <typename type>
+class perm_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    const Permut& pi)
+  {
+    PA_BOILER(type)
+
+    std::vector<RX> tmp(n);
+
+    for (long i = 0; i < n; i++)
+      tmp[i] = data[pi[i]];
+
+    data = tmp;
+  }
+};
+
+
+void PermPrecomp::apply(PtxtArray& a) const
+{
+  assertTrue(&a.ea == &ea, "PtxtArray: inconsistent operation");
+  ea.dispatch<perm_pa_impl>(a.pa, pi);
+}
+
+
 
 
 } // namespace helib

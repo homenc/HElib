@@ -535,6 +535,7 @@ class Ctxt;
 class EncryptedArray;
 class Context;
 class PermNetwork;
+class PtxtArray;
 
 //! @class PermNetLayer
 //! @brief The information needed to apply one layer of a permutation network
@@ -625,24 +626,21 @@ public:
 class PermPrecomp {
 
   const EncryptedArray& ea;
+  Permut pi;
   PermNetwork net;
+  
 
 public:
 
   PermPrecomp(const PermPrecomp&) = delete;
   PermPrecomp& operator=(const PermPrecomp&) = delete;
 
-  PermPrecomp(const PermIndepPrecomp& pip, Permut pi) 
-    : ea(pip.ea)
-  { 
-    if (pip.cost == NTL_MAX_LONG)
-      throw LogicError("buildOptimalTrees failed");
-
-    net.buildNetwork(pi, pip.trees); 
-  }
+  PermPrecomp(const PermIndepPrecomp& pip, const Permut& _pi); 
 
   void apply(Ctxt& ctxt) const
   { net.applyToCtxt(ctxt, ea); }
+
+  void apply(PtxtArray& a) const;
 
   // VJS-FIXME: add support for addMatrices4Network?
   // VJS-FIXME: add support for PtxtArray operations?
