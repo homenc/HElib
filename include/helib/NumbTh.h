@@ -408,8 +408,12 @@ void convert(std::vector<T1>& v1, const std::vector<T2>& v2)
 {
   long n = v2.size();
   v1.resize(n);
-  for (long i = 0; i < n; i++)
-    convert(v1[i], v2[i]);
+  for (long i = 0; i < n; i++) {
+    // Applying static_cast<const T2&> to avoid issues when std::vector<T2>
+    // operator[] returns a non-T2 object (this happens for std::vector<bool>
+    // that returns a __bit_const_reference object).
+    convert(v1[i], static_cast<const T2&>(v2[i]));
+  }
 }
 
 template <typename T1, typename T2>
@@ -426,8 +430,12 @@ void convert(NTL::Vec<T1>& v1, const std::vector<T2>& v2)
 {
   long n = v2.size();
   v1.SetLength(n);
-  for (long i = 0; i < n; i++)
-    convert(v1[i], v2[i]);
+  for (long i = 0; i < n; i++) {
+    // Applying static_cast<const T2&> to avoid issues when std::vector<T2>
+    // operator[] returns a non-T2 object (this happens for std::vector<bool>
+    // that returns a __bit_const_reference object).
+    convert(v1[i], static_cast<const T2&>(v2[i]));
+  }
 }
 
 //! Trivial type conversion, useful for generic code
