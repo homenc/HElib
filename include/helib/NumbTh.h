@@ -949,7 +949,8 @@ template<typename T>
 void AssertRealOrComplex()
 {
   static_assert(std::is_same<T,double>::value ||
-                std::is_same<T,std::complex<double>>::value);
+                std::is_same<T,std::complex<double>>::value,
+                "Error: type T is not double or std::complex<double>.");
 }
 
 template<typename T>

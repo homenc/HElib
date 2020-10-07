@@ -196,7 +196,7 @@ public:
   virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const = 0;
   // NOTE: for CKKS, mag,scale,err are defaulted
 
-  virtual double defaultScale(double err) const 
+  virtual double defaultScale(UNUSED double err) const
   { throw LogicError("function not implemented"); }
 
   virtual double defaultErr() const 
@@ -533,12 +533,12 @@ public:
     eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag=-1, double scale=-1, double err=-1) const override
+  virtual void encode(UNUSED EncodedPtxt& eptxt, UNUSED const std::vector<cx_double>& array,
+                      UNUSED double mag=-1, UNUSED double scale=-1, UNUSED double err=-1) const override
   { throw LogicError("function not implemented for BGV"); }
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-              double mag=-1, double scale=-1, double err=-1) const override
+  virtual void encode(UNUSED EncodedPtxt& eptxt, UNUSED const std::vector<double>& array,
+              UNUSED double mag=-1, UNUSED double scale=-1, UNUSED double err=-1) const override
   { throw LogicError("function not implemented for BGV"); }
 
   virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
@@ -870,7 +870,7 @@ public:
     throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
   }
 
-  void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const override
+  void encode(UNUSED zzX& ptxt, UNUSED const std::vector<NTL::ZZX>& array) const override
   {
     throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
   }
@@ -1034,10 +1034,10 @@ public:
 
   //========= new EncodedPtxt interface
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const override
+  virtual void encode(UNUSED EncodedPtxt& eptxt, UNUSED const std::vector<NTL::ZZX>& array) const override
   { throw LogicError("function not implemented for CKKS"); }
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const override
+  virtual void encode(UNUSED EncodedPtxt& eptxt, UNUSED const std::vector<long>& array) const override
   { throw LogicError("function not implemented for CKKS"); }
 
   virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
@@ -2186,7 +2186,7 @@ template <typename type>
 struct pa_no_impl
 {
   template<typename... Args>
-  static void apply(Args&&... args)
+  static void apply(UNUSED Args&&... args)
   { throw helib::LogicError("function not implemented"); }
 };
 

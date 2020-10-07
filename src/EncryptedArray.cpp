@@ -902,14 +902,14 @@ public:
     for (long i = m; i < n; i++) data[i] = 0;
   }
 
-  static void apply(const EncryptedArrayDerived<type>& ea,
-                    PlaintextArray& pa,
-                    const std::vector<cx_double>& array)
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED PlaintextArray& pa,
+                    UNUSED const std::vector<cx_double>& array)
   { throw LogicError("function not implemented"); }
 
-  static void apply(const EncryptedArrayDerived<type>& ea,
-                    PlaintextArray& pa,
-                    const std::vector<double>& array)
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED PlaintextArray& pa,
+                    UNUSED const std::vector<double>& array)
   { throw LogicError("function not implemented"); }
 };
 
@@ -931,14 +931,14 @@ public:
     for (long i = m; i < n; i++) data[i] = 0;
   }
 
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    PlaintextArray& pa,
-                    const std::vector<NTL::ZZX>& array)
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED PlaintextArray& pa,
+                    UNUSED const std::vector<NTL::ZZX>& array)
   { throw LogicError("function not implemented"); }
 
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    PlaintextArray& pa,
-                    const std::vector<cx_double>& array)
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED PlaintextArray& pa,
+                    UNUSED const std::vector<cx_double>& array)
   {
     PA_BOILER(PA_cx)
 
@@ -1092,14 +1092,14 @@ public:
     convert(array, data);
   }
 
-  static void apply(const EncryptedArrayDerived<type>& ea,
-                    std::vector<cx_double>& array,
-                    const PlaintextArray& pa)
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED std::vector<cx_double>& array,
+                    UNUSED const PlaintextArray& pa)
   { throw LogicError("function not implemented"); }
 
-  static void apply(const EncryptedArrayDerived<type>& ea,
-                    std::vector<double>& array,
-                    const PlaintextArray& pa)
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED std::vector<double>& array,
+                    UNUSED const PlaintextArray& pa)
   { throw LogicError("function not implemented"); }
 };
 
@@ -1109,9 +1109,9 @@ class decode_pa_impl<PA_cx>
 public:
   PA_INJECT(PA_cx)
 
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    std::vector<NTL::ZZX>& array,
-                    const PlaintextArray& pa)
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED std::vector<NTL::ZZX>& array,
+                    UNUSED const PlaintextArray& pa)
   { throw LogicError("function not implemented"); }
 
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
@@ -1216,12 +1216,13 @@ public:
   }
 
 
-  // exact comparison...not very usefule
+  // exact comparison...not very useful
   static void apply(const EncryptedArrayDerived<type>& ea,
                     bool& res,
                     const PlaintextArray& pa,
                     const PlaintextArray& other,
-                    double tolerance, double floor)
+                    UNUSED double tolerance, 
+                    UNUSED double floor)
   {
     CPA_BOILER(type)
 
@@ -1248,18 +1249,18 @@ public:
     res = (data == odata);
   }
 
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const std::vector<long>& other)
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED bool& res,
+                    UNUSED const PlaintextArray& pa,
+                    UNUSED const std::vector<long>& other)
   {
     throw LogicError("function not implemented");
   }
 
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const std::vector<NTL::ZZX>& other)
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED bool& res,
+                    UNUSED const PlaintextArray& pa,
+                    UNUSED const std::vector<NTL::ZZX>& other)
   {
     throw LogicError("function not implemented");
   }
