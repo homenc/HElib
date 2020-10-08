@@ -189,6 +189,7 @@ set(HELIB_HEADERS
     "${HELIB_HEADER_DIR}/PGFFT.h"
     "${HELIB_HEADER_DIR}/fhe_stats.h"
     "${HELIB_HEADER_DIR}/zeroValue.h"
+    "${HELIB_HEADER_DIR}/EncodedPtxt.h"
     "${CMAKE_CURRENT_BINARY_DIR}/helib/version.h" # version.h is auto-generated in CMAKE_CURRENT_BINARY_DIR
     )
 
