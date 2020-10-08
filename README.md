@@ -20,7 +20,7 @@ HElib supports an *"assembly language for HE"*, providing low-level routines
 (set, add, multiply, shift, etc.), sophisticated automatic noise management,
 improved BGV bootstrapping, multi-threading, and also support for Ptxt (plaintext) 
 objects which mimics the functionality of Ctxt (ciphertext) objects. 
-See [changes.md](changes.md) for more details.
+See [CHANGES.md](CHANGES.md) for more details.
 
 Full installation instructions and a list of the required dependencies can be found 
 in [INSTALL.md](INSTALL.md).
