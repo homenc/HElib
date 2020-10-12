@@ -23,6 +23,7 @@
 #include <helib/powerful.h>
 #include <helib/apiAttributes.h>
 #include <helib/range.h>
+#include <helib/scheme.h>
 
 #include <NTL/Lazy.h>
 
@@ -72,13 +73,13 @@ inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
   if (hwt == 0) { // dense keys
     slope = 3.8;
     consterm = -20;
-  } else if (idx < numWghts - 1) { 
+  } else if (idx < numWghts - 1) {
     // estimate prms on a line from prms[i] to prms[i+1]
     // how far into this interval
     double a = double(hwt - hwgts[idx]) / (hwgts[idx + 1] - hwgts[idx]);
     slope = slopes[idx] + a * (slopes[idx + 1] - slopes[idx]);
     consterm = cnstrms[idx] + a * (cnstrms[idx + 1] - cnstrms[idx]);
-  } else { 
+  } else {
     // Use the params corresponding to largest weight (450 above)
     slope = slopes[numWghts - 1];
     consterm = cnstrms[numWghts - 1];
@@ -387,6 +388,17 @@ public:
           const std::vector<long>& gens = std::vector<long>(),
           const std::vector<long>& ords = std::vector<long>());
 
+  // FIXME: This is a temporary fix to allow proper copy of the context.
+  // Without the fixes there would be discrepancies between context's zMStar and
+  // alMod const reference one.
+  // TODO: Add doxygen comments to the following methods.
+  ~Context() = default;
+  Context(const Context& other);
+  Context(Context&& other);
+  // Deleted assignment operators.
+  Context& operator=(const Context& other) = delete;
+  Context& operator=(Context&& other) = delete;
+
   void makeBootstrappable(const NTL::Vec<long>& mvec,
                           long skWht = 0,
                           bool build_cache = false,
@@ -596,6 +608,7 @@ void readContextBaseBinary(std::istream& s,
                            unsigned long& r,
                            std::vector<long>& gens,
                            std::vector<long>& ords);
+
 std::unique_ptr<Context> buildContextFromBinary(std::istream& str);
 void readContextBinary(std::istream& str, Context& context);
 
@@ -616,9 +629,314 @@ void buildModChain(Context& context,
                    long skHwt = 0,
                    long resolution = 3,
                    long bitsInSpecialPrimes = 0);
+
 // should be called if after you build the mod chain in some way
 // *other* than calling buildModChain.
 void endBuildModChain(Context& context);
+
+// Forward declaration of ContextBuilder
+template <typename SCHEME>
+class ContextBuilder;
+
+/**
+ * @brief `ostream` operator for serializing the `ContextBuilder` object.
+ * @tparam SCHEME The encryption scheme to be used, must be `BGV` or `CKKS`.
+ * @param os Reference to the output stream.
+ * @param cb The `ContextBuilder` object to serialize.
+ * @return Reference to the `std::ostream`
+ **/
+template <typename SCHEME>
+std::ostream& operator<<(std::ostream& os, const ContextBuilder<SCHEME>& cb);
+
+/**
+ * @class ContextBuilder
+ * @brief Builder to help construct a context.
+ * @tparam SCHEME The encryption scheme to be used, must be `BGV` or `CKKS`.
+ **/
+template <typename SCHEME>
+class ContextBuilder
+{
+  static_assert(std::is_same<SCHEME, CKKS>::value ||
+                    std::is_same<SCHEME, BGV>::value,
+                "Can only create context object parameterized by the crypto "
+                "scheme (CKKS or BGV)");
+
+private:
+  // Default values by scheme.
+  struct default_values;
+
+  // General parameters
+  std::vector<long> gens_;
+  std::vector<long> ords_;
+  long m_ = default_values::m; // BGV: 3, CKKS: 4
+  long p_ = default_values::p; // BGV: 2, CKKS: -1
+  long r_ = default_values::r; // BGV: Hensel lifting = 1,
+                               // CKKS: Precision = 20
+  long c_ = 3;
+
+  // Modulus chain params
+  long bits_ = 300;
+  long skHwt_ = 0;
+  long resolution_ = 3;
+  long bitsInSpecialPrimes_ = 0;
+  bool buildModChainFlag_ = true; // Default build the modchain.
+
+  // Boostrap params (BGV only)
+  NTL::Vec<long> mvec_;
+  bool buildCacheFlag_ = false;
+  bool thickFlag_ = false;
+  bool bootstrappableFlag_ = false; // Default not boostrappable.
+
+public:
+  /**
+   * @brief Sets `m` the order of the cyclotomic polynomial.
+   * @param m The order of the cyclotomic polynomial.
+   * @return Reference to this `ContextBuilder` object.
+   **/
+  ContextBuilder& m(long m)
+  {
+    m_ = m;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `p` the prime number of the ciphertext space.
+   * @param p The prime number of the plaintext space.
+   * @return Reference to the `ContextBuilder` object.
+   * @note Only exists when the `SCHEME` is `BGV`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
+  ContextBuilder& p(long p)
+  {
+    p_ = p;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `r` the Hensel lifting parameter.
+   * @param r The Hensel lifting parameter.
+   * @return Reference to the `ContextBuilder` object.
+   * @note Only exists when the `SCHEME` is `BGV`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
+  ContextBuilder& r(long r)
+  {
+    r_ = r;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `precision` the bit precision parameter.
+   * @param precision The bit precision parameter.
+   * @return Reference to the `ContextBuilder` object.
+   * @note Only exists when the `SCHEME` is `CKKS`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, CKKS>::value>* = nullptr>
+  ContextBuilder& precision(long precision)
+  {
+    r_ = precision;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `c` the number of columns (a.k.a. digits) in the key switching
+   * matrices.
+   * @param c The number of columns in the key switching matrix.
+   * @return Reference to the `ContextBuilder` object.
+   **/
+  ContextBuilder& c(long c)
+  {
+    c_ = c;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `gens` the generators of the `ZMStar` group.
+   * @param gens A `std::vector` containing the generators.
+   * @return Reference to the `ContextBuilder` object.
+   **/
+  ContextBuilder& gens(const std::vector<long>& gens)
+  {
+    gens_ = gens;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `ords` the order of the corresponding generators in `gens` in
+   * `ZmStar`.
+   * @param ords A `std::vector` containing the orders of `gens`. The order
+   * taken is the absolute value; a negative in `ords` represents a bad
+   * dimension.
+   * @return Reference to the `ContextBuilder` object.
+   **/
+  ContextBuilder& ords(const std::vector<long>& ords)
+  {
+    ords_ = ords;
+    return *this;
+  }
+
+  /**
+   * @brief Sets the bit size of the primes in the modulus chain.
+   * @param bits How many bits to make the modulus chain.
+   * @return Reference to the `ContextBuilder` object.
+   * @note The actual bit size that is set is typically higher than requested.
+   **/
+  ContextBuilder& bits(long bits)
+  {
+    bits_ = bits;
+    return *this;
+  }
+
+  /**
+   * @brief Sets the secret key Hamming weight.
+   * @param bits The secret key Hamming weight.
+   * @return Reference to the `ContextBuilder` object.
+   * @note If the Hamming weight is `0` (default) then a "dense" key will be
+   * generated.
+   **/
+  ContextBuilder& skHwt(long skHwt)
+  {
+    skHwt_ = skHwt;
+    return *this;
+  }
+
+  /**
+   * @brief Sets the resolution for the modulus chain.
+   * @param bits How many bit size of resolution.
+   * @return Reference to the `ContextBuilder` object.
+   **/
+  ContextBuilder& resolution(long bits)
+  {
+    resolution_ = bits;
+    return *this;
+  }
+
+  /**
+   * @brief Sets the bit size of the special primes in the modulus chain.
+   * @param bits The bit size of the special primes in the modulus chain.
+   * @return Reference to this `ContextBuilder` object.
+   **/
+  ContextBuilder& bitsInSpecialPrimes(long bits)
+  {
+    bitsInSpecialPrimes_ = bits;
+    return *this;
+  }
+
+  /**
+   * @brief Sets a flag determining whether the modulus chain will be built.
+   * @param `yesno` A `bool` to determine whether the modulus chain should be
+   * built.
+   * @return Reference to the `ContextBuilder` object.
+   * @note `ContextBuilder` by default will build the modulus chain.
+   **/
+  ContextBuilder& buildModChain(bool yesno)
+  {
+    buildModChainFlag_ = yesno;
+    return *this;
+  }
+
+  /**
+   * @brief Sets `mvec` the unique primes which are factors of `m`.
+   * @param mvec An `NTL::Vec` of primes factors.
+   * @return Reference to the `ContextBuilder` object.
+   * @note Only exists when the `SCHEME` is `BGV`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
+  ContextBuilder& mvec(const NTL::Vec<long>& mvec)
+  {
+    mvec_ = mvec;
+    return *this;
+  }
+
+  /**
+   * @brief Sets boostrapping to be `thin`.
+   * @return Reference to the `ContextBuilder` object.
+   * @note Only exists when the `SCHEME` is `BGV`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
+  ContextBuilder& thinboot()
+  {
+    thickFlag_ = false;
+    return *this;
+  }
+
+  /**
+   * @brief Sets boostrapping to be `thick`.
+   * @return Reference to the `ContextBuilder` object.
+   * @note Only exists when the `SCHEME` is `BGV`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
+  ContextBuilder& thickboot()
+  {
+    thickFlag_ = true;
+    return *this;
+  }
+
+  /**
+   * @brief Sets flag to choose that the cache for boostrapping will be
+   * built.
+   * @param yesno A `bool` to determine whether the cache is built.
+   * @return Reference to the `ContextBuilder` object.
+   * @note @note Only exists when the `SCHEME` is `BGV`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
+  ContextBuilder& buildCache(bool yesno)
+  {
+    buildCacheFlag_ = yesno;
+    return *this;
+  }
+
+  /**
+   * @brief Sets a flag determining if the context will be bootstrappable.
+   * @param yesno A `bool` to determine whether the context will be
+   * bootstrappable.
+   * @return Reference to this `ContextBuilder` object.
+   * @note `ContextBuilder` by default will not be bootstrappable.
+   * @note Only exists when the `SCHEME` is `BGV`.
+   **/
+  template <typename S = SCHEME,
+            std::enable_if_t<std::is_same<S, BGV>::value>* = nullptr>
+  ContextBuilder& bootstrappable(bool yesno)
+  {
+    bootstrappableFlag_ = yesno;
+    return *this;
+  }
+
+  /**
+   * @brief Builds a `Context` object from the arguments stored in the
+   * `ContextBuilder` object.
+   * @return A `Context` object.
+   **/
+  Context build() const;
+
+  friend std::ostream& operator<<<SCHEME>(std::ostream& os,
+                                          const ContextBuilder& cb);
+};
+
+// Default BGV values
+template <>
+struct ContextBuilder<BGV>::default_values
+{
+  static constexpr long m = 3;
+  static constexpr long p = 2;
+  static constexpr long r = 1;
+};
+
+// Default CKKS values
+template <>
+struct ContextBuilder<CKKS>::default_values
+{
+  static constexpr long m = 4;
+  static constexpr long p = -1;
+  static constexpr long r = 20;
+};
 
 ///@}
 // Should point to the "current" context

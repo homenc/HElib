@@ -110,7 +110,7 @@ public:
   public:                                                                      \
     typedef X element_type;                                                    \
                                                                                \
-    explicit CLONED_PTR_TYPE(X* p = 0) : ptr(p) {}                             \
+    explicit CLONED_PTR_TYPE(X* p = nullptr) : ptr(p) {}                       \
     ~CLONED_PTR_TYPE() { delete ptr; }                                         \
     CLONED_PTR_TYPE(const CLONED_PTR_TYPE& r) { copy(r.ptr); }                 \
                                                                                \
@@ -139,7 +139,7 @@ public:
     const X* operator->() const { return ptr; }                                \
     X* operator->() { return ptr; }                                            \
                                                                                \
-    bool null() const { return ptr == 0; }                                     \
+    bool null() const { return ptr == nullptr; }                               \
                                                                                \
     const X* get_ptr() const { return ptr; }                                   \
     X* get_ptr() { return ptr; }                                               \
@@ -153,9 +153,9 @@ public:
     }                                                                          \
                                                                                \
   private:                                                                     \
-    X* ptr;                                                                    \
+    X* ptr = nullptr;                                                          \
                                                                                \
-    void copy(X* p) { ptr = (p ? Cloner::apply(p) : 0); }                      \
+    void copy(X* p) { ptr = (p ? Cloner::apply(p) : nullptr); }                \
   };
 
 // declare the template class cloned_ptr<X>
