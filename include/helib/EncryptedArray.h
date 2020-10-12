@@ -2003,8 +2003,6 @@ inline void shift1D(PtxtArray& a, long i, long k)
 }
 
 
-
-
 inline bool operator==(const PtxtArray& a, const PtxtArray& b)
 {
   assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
@@ -2085,7 +2083,6 @@ inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
 
 inline void power(PtxtArray& a, long e)
 { power(a.ea, a.pa, e); }
-
 
 
 

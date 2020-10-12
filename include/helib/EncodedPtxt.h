@@ -17,10 +17,6 @@
 
 namespace helib {
 
-
-
-
-
 class EncodedPtxt_BGV {
 
 private:
@@ -175,8 +171,6 @@ public:
 
 
 
-
-
 //=========================================================
 //
 // "fat" encodings...same as above, but with DCRT's instead.
@@ -238,8 +232,8 @@ public:
 
   virtual ~FatEncodedPtxt_base() {}
 
+ // TODO make this usable with cloned_ptr
   virtual FatEncodedPtxt_base* clone() const = 0;
-  // makes this usable with cloned_ptr
 
   virtual bool isBGV() const { return false; }
   virtual bool isCKKS() const { return false; }
