@@ -117,8 +117,7 @@ public:
                        const EncryptedArrayDerived<type>& ea) const override;
 };
 
-
-template<>
+template <>
 class MatMul1D_derived<PA_cx> : public MatMul1D
 {
 public:
@@ -130,22 +129,19 @@ public:
                        const EncryptedArrayCx& ea) const;
 
   // final: ensures that dim==0 is the only possible dimension
-  virtual long getDim() const final
-  {
-    return 0;
-  }
+  virtual long getDim() const final { return 0; }
 };
 
 typedef MatMul1D_derived<PA_cx> MatMul1D_CKKS;
 
 // a more convenient user interface
 // VJS-FIXME: document some of this stuff
-class MatMul_CKKS : public MatMul1D_CKKS {
+class MatMul_CKKS : public MatMul1D_CKKS
+{
 public:
-  typedef std::function<std::complex<double>(long,long)> get_fun_type;
+  typedef std::function<std::complex<double>(long, long)> get_fun_type;
 
 private:
-
   const EncryptedArray& ea;
 
   get_fun_type get_fun;
@@ -153,24 +149,20 @@ private:
   // see get_fun_type definitions below
 
 public:
+  MatMul_CKKS(const EncryptedArray& _ea, get_fun_type _get_fun) :
+      ea(_ea), get_fun(_get_fun)
+  {}
 
+  MatMul_CKKS(const Context& context, get_fun_type _get_fun) :
+      ea(context.getDefaultEA()), get_fun(_get_fun)
+  {}
 
-  MatMul_CKKS(const EncryptedArray& _ea, get_fun_type _get_fun)
-    : ea(_ea), get_fun(_get_fun) { }
-
-  MatMul_CKKS(const Context& context, get_fun_type _get_fun)
-    : ea(context.getDefaultEA()), get_fun(_get_fun) { }
-
-  virtual const EncryptedArray& getEA() const override
-  {
-    return ea;
-  }
+  virtual const EncryptedArray& getEA() const override { return ea; }
 
   virtual std::complex<double> get(long i, long j) const override
   {
     return get_fun(i, j);
   }
-
 };
 
 //====================================
@@ -317,11 +309,8 @@ public:
 class EncodedMatMul_CKKS : public MatMul1DExec
 {
 public:
-  EncodedMatMul_CKKS(const MatMul1D_CKKS& mat)
-    : MatMul1DExec(mat) { }
-
+  EncodedMatMul_CKKS(const MatMul1D_CKKS& mat) : MatMul1DExec(mat) {}
 };
-
 
 //====================================
 
@@ -471,7 +460,6 @@ inline void mul(PtxtArray& a, const MatMul1D& mat)
   mul(a.pa, mat);
 }
 
-
 inline void mul(PtxtArray& a, const BlockMatMul1D& mat)
 {
   assertTrue(&a.ea == &mat.getEA(), "PtxtArray: inconsistent operation");
@@ -492,38 +480,67 @@ inline void mul(PtxtArray& a, const BlockMatMulFull& mat)
 
 // more interface conviences, both for PtxtArray and Ctxt
 
-inline PtxtArray& operator*=(PtxtArray& a, const MatMul1D& mat) 
-{ mul(a, mat); return a; }
+inline PtxtArray& operator*=(PtxtArray& a, const MatMul1D& mat)
+{
+  mul(a, mat);
+  return a;
+}
 
-inline PtxtArray& operator*=(PtxtArray& a, const BlockMatMul1D& mat) 
-{ mul(a, mat); return a; }
+inline PtxtArray& operator*=(PtxtArray& a, const BlockMatMul1D& mat)
+{
+  mul(a, mat);
+  return a;
+}
 
-inline PtxtArray& operator*=(PtxtArray& a, const MatMulFull& mat) 
-{ mul(a, mat); return a; }
+inline PtxtArray& operator*=(PtxtArray& a, const MatMulFull& mat)
+{
+  mul(a, mat);
+  return a;
+}
 
-inline PtxtArray& operator*=(PtxtArray& a, const BlockMatMulFull& mat) 
-{ mul(a, mat); return a; }
+inline PtxtArray& operator*=(PtxtArray& a, const BlockMatMulFull& mat)
+{
+  mul(a, mat);
+  return a;
+}
 
 // For ctxt's, these functions don't do any pre-computation
 
-inline Ctxt& operator*=(Ctxt& a, const MatMul1D& mat) 
-{ MatMul1DExec mat_exec(mat); mat_exec.mul(a); return a; }
+inline Ctxt& operator*=(Ctxt& a, const MatMul1D& mat)
+{
+  MatMul1DExec mat_exec(mat);
+  mat_exec.mul(a);
+  return a;
+}
 
-inline Ctxt& operator*=(Ctxt& a, const BlockMatMul1D& mat) 
-{ BlockMatMul1DExec mat_exec(mat); mat_exec.mul(a); return a; }
+inline Ctxt& operator*=(Ctxt& a, const BlockMatMul1D& mat)
+{
+  BlockMatMul1DExec mat_exec(mat);
+  mat_exec.mul(a);
+  return a;
+}
 
-inline Ctxt& operator*=(Ctxt& a, const MatMulFull& mat) 
-{ MatMulFullExec mat_exec(mat); mat_exec.mul(a); return a; }
+inline Ctxt& operator*=(Ctxt& a, const MatMulFull& mat)
+{
+  MatMulFullExec mat_exec(mat);
+  mat_exec.mul(a);
+  return a;
+}
 
-inline Ctxt& operator*=(Ctxt& a, const BlockMatMulFull& mat) 
-{ BlockMatMulFullExec mat_exec(mat); mat_exec.mul(a); return a; }
+inline Ctxt& operator*=(Ctxt& a, const BlockMatMulFull& mat)
+{
+  BlockMatMulFullExec mat_exec(mat);
+  mat_exec.mul(a);
+  return a;
+}
 
 //  For ctxt's, these functions do allow pre-computation
 
-inline Ctxt& operator*=(Ctxt& a, const MatMulExecBase& mat) 
-{ mat.mul(a); return a; }
-
-
+inline Ctxt& operator*=(Ctxt& a, const MatMulExecBase& mat)
+{
+  mat.mul(a);
+  return a;
+}
 
 // These are used mainly for performance evaluation.
 

@@ -305,8 +305,7 @@ void Ctxt::bringToSet(const IndexSet& s)
     IndexSet tmp(getContext().ctxtPrimes.first());
     modUpToSet(tmp);
     modDownToSet(tmp);
-  } 
-  else {
+  } else {
     modUpToSet(s);
     modDownToSet(s);
   }
@@ -543,7 +542,7 @@ void Ctxt::dropSmallAndSpecialPrimes()
 
     if (0 && isCKKS()) {
       // VJS-NOTE: I'm disabling this for now.  See comment above
-      // std::cerr  << "*** special processing in dropSmallAndSpecialPrimes\n"; 
+      // std::cerr  << "*** special processing in dropSmallAndSpecialPrimes\n";
       double log_bound =
           log_modswitch_noise + log(context.alMod.getPPowR()) - log(ptxtMag);
       double log_rf = log(getRatFactor()) // log(factor) after scaling
@@ -642,7 +641,7 @@ void Ctxt::reLinearize(long keyID)
     // verify that a switching matrix exists
     assertTrue(W.toKeyID >= 0, "No key-switching matrix exists");
 
-    if (g > 1) {                    // g==1 for CKKS, g>1 for BGV
+    if (g > 1) { // g==1 for CKKS, g>1 for BGV
       tmp.reducePtxtSpace(W.ptxtSpace);
       g = tmp.ptxtSpace;
       // VJS-NOTE: fixes a bug where intFactor was not corrected
@@ -729,8 +728,8 @@ void Ctxt::addPart(const DoubleCRT& part,
 
   if (!(part.getIndexSet() <= primeSet)) {
     if (matchPrimeSet) {
-      // VJS-NOTE: matchPrimeSet disabled, so we raise an error 
-      // if it is requested...this is provided mainly as a transitory 
+      // VJS-NOTE: matchPrimeSet disabled, so we raise an error
+      // if it is requested...this is provided mainly as a transitory
       // debug feature
       throw RuntimeError("Ctxt::addPart: matchPrimeSet not honored");
     }
@@ -742,7 +741,7 @@ void Ctxt::addPart(const DoubleCRT& part,
       parts[j].Sub(part, /*matchIndexSets=*/false);
     else
       parts[j].Add(part, /*matchIndexSets=*/false);
-  } else { 
+  } else {
     // no matching part found, just append this part
     // NOTE: this also handles the corner case of an
     // empty ctxt
@@ -775,7 +774,6 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
   if (size < 0.0)
     size = context.noiseBoundForMod(ptxtSpace, context.zMStar.getPhiM());
 
-
   // Scale the constant, then add it to the part that points to one
   long f = 1;
   if (ptxtSpace > 2) {
@@ -799,7 +797,6 @@ void Ctxt::addConstant(const DoubleCRT& dcrt, double size)
     tmp *= f;
     addPart(tmp, SKHandle(0, 1, 0));
   }
-
 }
 
 void Ctxt::addConstant(const NTL::ZZX& poly, double size)
@@ -810,7 +807,6 @@ void Ctxt::addConstant(const NTL::ZZX& poly, double size)
 
   addConstant(DoubleCRT(poly, context, primeSet), size);
 }
-
 
 // Add a constant polynomial for CKKS encryption. The 'size' argument is
 // a bound on the size of the content of the slots. If the factor is not
@@ -936,7 +932,7 @@ void Ctxt::addConstantCKKS(const NTL::ZZX& poly,
   // do because the addSomePrimes logic.
   // It may be best to delay coversion to dcrt until after
   // we know if we need to do that...otherwise, we'll do
-  // an unnecessary round trip between poly and dcrt 
+  // an unnecessary round trip between poly and dcrt
   addConstantCKKS(DoubleCRT(poly, context, primeSet), size, factor);
 }
 
@@ -988,7 +984,6 @@ Ctxt& Ctxt::operator*=(const NTL::ZZX& poly)
     multByConstant(poly);
   return *this;
 }
-
 
 void Ctxt::addConstantCKKS(const std::vector<std::complex<double>>& other)
 {
@@ -1118,15 +1113,15 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
   Ctxt& small = (c1.ratFactor > c2.ratFactor) ? c2 : c1;
 
   NTL::xdouble x = big.ratFactor / small.ratFactor;
-  //std::cerr << "=== equalize: " << x << "\n";
+  // std::cerr << "=== equalize: " << x << "\n";
 
   long r = c1.getContext().getDefaultPrecision();
-  NTL::ZZ denomBound = NTL::ZZ(1L) << (r+1);
-  // NOTE: With the new early termination logic, it is very unlikely that 
+  NTL::ZZ denomBound = NTL::ZZ(1L) << (r + 1);
+  // NOTE: With the new early termination logic, it is very unlikely that
   // we will ever stop by exceeding denomBound.
 
   double epsilon = 0.125 / to_double(denomBound); // "smudge factor"
-  NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon); // floor function
+  NTL::ZZ a = NTL::conv<NTL::ZZ>(x + epsilon);    // floor function
   // NOTE: epsilon is meant to counter rounding errors
   // VJS-NOTE: I don't really understand this.
 
@@ -1157,7 +1152,7 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
   // Continued fractions: a_{i+1}=floor(1/xi), x_{i+1} = 1/xi - a_{i+1}
   for (;;) {
     // see if we can stop now
-    //std::cerr << "*********\n";
+    // std::cerr << "*********\n";
 
     NTL::xdouble xnumer = NTL::conv<NTL::xdouble>(numer);
     NTL::xdouble xdenom = NTL::conv<NTL::xdouble>(denom);
@@ -1203,14 +1198,14 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
     // by stopping early
 
     if (err < thresh * target_error) {
-      //std::cerr << "=== err/target_error=" << (err/target_error) << "\n";
+      // std::cerr << "=== err/target_error=" << (err/target_error) << "\n";
       break;
     }
     // close enough...let's stop now to reduce capacity loss at the
     // expense of a little precision
 
     if (xi <= 0) {
-      //std::cerr << "=== exit by xi <= 0\n";
+      // std::cerr << "=== exit by xi <= 0\n";
       break;
     }
 
@@ -1221,7 +1216,7 @@ void Ctxt::equalizeRationalFactors(Ctxt& c1, Ctxt& c2)
 
     NTL::ZZ tmpDenom = denom * ai + prevDenom;
     if (tmpDenom > denomBound) { // bound exceeded: return previous denominator
-      //std::cerr << "=== exit by tmpDenom > denonBound\n";
+      // std::cerr << "=== exit by tmpDenom > denonBound\n";
       break;
     }
     // update denominator
@@ -1319,15 +1314,13 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
   if (other.isEmpty()) {
     // Special case: if other is empty then do nothing
     return;
-  }
-  else if (this->isEmpty()) {
+  } else if (this->isEmpty()) {
     // Special case: if *this is empty then just copy other
     *this = other;
     if (negative)
       negate();
     return;
   }
-
 
   // Verify that the plaintext spaces are compatible
   if (isCKKS()) {
@@ -1452,7 +1445,7 @@ void Ctxt::addCtxt(const Ctxt& other, bool negative)
     } else { // no matching part found, just append this part
       parts.push_back(part);
       if (negative)
-        parts.back().Negate(); 
+        parts.back().Negate();
     }
   }
   ptxtMag += other_pt->ptxtMag;
@@ -1524,10 +1517,10 @@ void computeIntervalForMul(double& lo,
   // getTotalNoiseBound().
 
   double cap1 = ctxt1.logOfPrimeSet() -
-              NTL::log(std::max(ctxt1.getNoiseBound(),NTL::to_xdouble(1.0)));
+                NTL::log(std::max(ctxt1.getNoiseBound(), NTL::to_xdouble(1.0)));
 
   double cap2 = ctxt2.logOfPrimeSet() -
-              NTL::log(std::max(ctxt2.getNoiseBound(),NTL::to_xdouble(1.0)));
+                NTL::log(std::max(ctxt2.getNoiseBound(), NTL::to_xdouble(1.0)));
 
   double adn1 = log(ctxt1.modSwitchAddedNoiseBound());
   double adn2 = log(ctxt2.modSwitchAddedNoiseBound());
@@ -1732,7 +1725,6 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   reLinearize(); // re-linearize after all the multiplications
 }
 
-
 // Multiply-by-constant, it is assumed that the size of this
 // constant fits in a double float
 void Ctxt::multByConstant(const DoubleCRT& dcrt, double size)
@@ -1875,7 +1867,8 @@ void Ctxt::multByConstant(const FatEncodedPtxt_BGV& ptxt)
 {
   HELIB_TIMER_START;
 
-  assertTrue(&getContext() == &ptxt.getContext(), "multByConstant: inconsistent contexts");
+  assertTrue(&getContext() == &ptxt.getContext(),
+             "multByConstant: inconsistent contexts");
 
   // NOTE: the following check may be redundant
   assertTrue(!isCKKS(), "multByConstant: inconsistent encoding");
@@ -1902,7 +1895,8 @@ void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
 {
   HELIB_TIMER_START;
 
-  assertTrue(&getContext() == &ptxt.getContext(), "multByConstant: inconsistent contexts");
+  assertTrue(&getContext() == &ptxt.getContext(),
+             "multByConstant: inconsistent contexts");
 
   // NOTE: the following check may be redundant
   assertTrue(isCKKS(), "multByConstant: inconsistent encoding");
@@ -1917,8 +1911,8 @@ void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
   double err = ptxt.getErr();
 
   // This statement must come first!
-  noiseBound = noiseBound * scale * mag + err * ratFactor * ptxtMag +
-               noiseBound * err;
+  noiseBound =
+      noiseBound * scale * mag + err * ratFactor * ptxtMag + noiseBound * err;
 
   ptxtMag *= mag;
   ratFactor *= scale;
@@ -1928,14 +1922,12 @@ void Ctxt::multByConstant(const FatEncodedPtxt_CKKS& ptxt)
     part.Mul(dcrt, /*matchIndexSets=*/false);
 }
 
-
-// Mul by a scalar constant 
+// Mul by a scalar constant
 void Ctxt::multByConstant(const NTL::ZZ& c)
 {
   if (isCKKS()) {
     multByConstant(NTL::to_xdouble(c));
-  }
-  else { // BGV
+  } else { // BGV
     // Special case: if *this is empty then do nothing
     if (this->isEmpty())
       return;
@@ -1973,8 +1965,7 @@ void Ctxt::multByConstant(long c)
 {
   if (isCKKS()) {
     multByConstant(NTL::to_xdouble(c));
-  }
-  else {
+  } else {
     multByConstant(NTL::to_ZZ(c));
   }
 }
@@ -1983,8 +1974,7 @@ void Ctxt::multByConstant(double c)
 {
   if (isCKKS()) {
     multByConstant(NTL::to_xdouble(c));
-  }
-  else {
+  } else {
     throw LogicError("multByConstant(double) not supported for BGV");
   }
 }
@@ -2009,16 +1999,10 @@ void Ctxt::multByConstant(NTL::xdouble c)
     ratFactor /= size;
     if (c < 0)
       this->negate();
-  }
-  else {
+  } else {
     throw LogicError("multByConstant(xdouble) not supported for BGV");
   }
 }
-
-
-
-
-
 
 //============ new addConstant interface ===========
 
@@ -2034,8 +2018,7 @@ void Ctxt::addConstant(const EncodedPtxt& eptxt, bool neg)
   if (eptxt.isBGV()) {
     // optimzed logic for EncodedPtxt_BGV
     addConstant(eptxt.getBGV(), neg);
-  }
-  else {
+  } else {
     FatEncodedPtxt feptxt;
     feptxt.expand(eptxt, primeSet);
     addConstant(feptxt, neg);
@@ -2056,7 +2039,8 @@ void Ctxt::addConstant(const FatEncodedPtxt_BGV& ptxt, bool neg)
 {
   HELIB_TIMER_START;
 
-  assertTrue(&getContext() == &ptxt.getContext(), "addConstant: inconsistent contexts");
+  assertTrue(&getContext() == &ptxt.getContext(),
+             "addConstant: inconsistent contexts");
 
   // NOTE: the following check may be redundant
   assertTrue(!isCKKS(), "addConstant: inconsistent encoding");
@@ -2097,7 +2081,8 @@ void Ctxt::addConstant(const EncodedPtxt_BGV& ptxt, bool neg)
 {
   HELIB_TIMER_START;
 
-  assertTrue(&getContext() == &ptxt.getContext(), "addConstant: inconsistent contexts");
+  assertTrue(&getContext() == &ptxt.getContext(),
+             "addConstant: inconsistent contexts");
 
   // NOTE: the following check may be redundant
   assertTrue(!isCKKS(), "addConstant: inconsistent encoding");
@@ -2114,7 +2099,7 @@ void Ctxt::addConstant(const EncodedPtxt_BGV& ptxt, bool neg)
     f = rem(context.productOfPrimes(primeSet), ptxtSpace);
     f = NTL::MulMod(intFactor, f, ptxtSpace);
   }
-  
+
   NTL::ZZX poly;
   convert(poly, ptxt.getPoly());
 
@@ -2135,7 +2120,8 @@ void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt, bool neg)
 {
   HELIB_TIMER_START;
 
-  assertTrue(&getContext() == &ptxt.getContext(), "addConstant: inconsistent contexts");
+  assertTrue(&getContext() == &ptxt.getContext(),
+             "addConstant: inconsistent contexts");
 
   // NOTE: the following check may be redundant
   assertTrue(isCKKS(), "addConstant: inconsistent encoding");
@@ -2149,7 +2135,7 @@ void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt, bool neg)
   tmp.addPart(ptxt.getDCRT(), SKHandle(0, 1, 0));
   // this will raise an error if prime set of ptxt
   // does not contain prime set of *this, and any
-  // excess primes will be discarded. 
+  // excess primes will be discarded.
 
   // So now tmp is a ctxt with constant part equal to ptxt,
   // and prime set equal to that of *this.
@@ -2165,26 +2151,26 @@ void Ctxt::addConstant(const FatEncodedPtxt_CKKS& ptxt, bool neg)
   // of the prime set of *this, scaling of its ratFactor as well.
   // This can can make the ratFactor equalization logic more effective,
   // in terms of capacity loss
-
 }
 
-// Add a scalar constant 
+// Add a scalar constant
 void Ctxt::addConstant(const NTL::ZZ& c, bool neg)
 {
   if (isCKKS()) {
     addConstant(NTL::to_xdouble(c), neg);
-  }
-  else {
+  } else {
     long cc = rem(c, ptxtSpace); // reduce modulo plaintext space
     if (cc > ptxtSpace / 2)
       cc -= ptxtSpace;
 
-    if (cc == 0) return;
+    if (cc == 0)
+      return;
 
     double size = NTL::to_double(cc);
 
-    addConstant(FatEncodedPtxt_BGV(DoubleCRT(cc, context, primeSet),
-                                   ptxtSpace, size), neg);
+    addConstant(
+        FatEncodedPtxt_BGV(DoubleCRT(cc, context, primeSet), ptxtSpace, size),
+        neg);
   }
 }
 
@@ -2192,8 +2178,7 @@ void Ctxt::addConstant(long c, bool neg)
 {
   if (isCKKS()) {
     addConstant(NTL::to_xdouble(c), neg);
-  }
-  else {
+  } else {
     addConstant(NTL::to_ZZ(c), neg);
   }
 }
@@ -2202,8 +2187,7 @@ void Ctxt::addConstant(double c, bool neg)
 {
   if (isCKKS()) {
     addConstant(NTL::to_xdouble(c), neg);
-  }
-  else {
+  } else {
     throw LogicError("addConstant(double) not supported for BGV");
   }
 }
@@ -2211,9 +2195,10 @@ void Ctxt::addConstant(double c, bool neg)
 void Ctxt::addConstant(NTL::xdouble c, bool neg)
 {
   if (isCKKS()) {
-    if (c == 0) return;
+    if (c == 0)
+      return;
 
-    // we want to choose a factor f such that 
+    // we want to choose a factor f such that
     //   |round(f*c) - f*c| = e and e/f is <= thresh,
     // where thresh = max(2^{-(r+1), noiseBound/ratFactor).
     // Here, r is the "default precision".
@@ -2222,19 +2207,26 @@ void Ctxt::addConstant(NTL::xdouble c, bool neg)
 
     long r = context.getDefaultPrecision();
 
-    NTL::xdouble thresh { std::ldexp(1.0, -(r+1)) };
-    if (thresh < ratFactor/noiseBound) thresh = ratFactor/noiseBound;
+    NTL::xdouble thresh{std::ldexp(1.0, -(r + 1))};
+    if (thresh < ratFactor / noiseBound)
+      thresh = ratFactor / noiseBound;
 
     NTL::xdouble f = ratFactor;
     NTL::xdouble fc, rfc, e;
 
-    fc = f*c; rfc = NTL::floor(fc+0.5); e = NTL::fabs(rfc-fc);
-    if (e > 0.5) e = 0.5; // kind of paranoid...
+    fc = f * c;
+    rfc = NTL::floor(fc + 0.5);
+    e = NTL::fabs(rfc - fc);
+    if (e > 0.5)
+      e = 0.5; // kind of paranoid...
 
-    while (e/f > thresh) {
+    while (e / f > thresh) {
       f *= 2;
-      fc = f*c; rfc = NTL::floor(fc+0.5); e = NTL::fabs(rfc-fc);
-      if (e > 0.5) e = 0.5; 
+      fc = f * c;
+      rfc = NTL::floor(fc + 0.5);
+      e = NTL::fabs(rfc - fc);
+      if (e > 0.5)
+        e = 0.5;
     }
 
     // The following logic is essentially the same
@@ -2249,8 +2241,8 @@ void Ctxt::addConstant(NTL::xdouble c, bool neg)
     tmp.ratFactor = f;
     tmp.noiseBound = e;
 
-    tmp.addPart(DoubleCRT(NTL::to_ZZ(rfc), context, primeSet), 
-		SKHandle(0, 1, 0));
+    tmp.addPart(DoubleCRT(NTL::to_ZZ(rfc), context, primeSet),
+                SKHandle(0, 1, 0));
 
     // So now tmp is a ctxt with constant part equal to c,
     // and prime set equal to that of *this.
@@ -2274,15 +2266,12 @@ void Ctxt::addConstant(NTL::xdouble c, bool neg)
     // adding made the prime set of tmp a bit bigger than that
     // of *this, and force the scaling to happen this way.
 
-  }
-  else {
+  } else {
     throw LogicError("addConstant(xdouble) not supported for BGV");
   }
 }
 
-
 //==================================================
-
 
 // Divide a ciphertext by 2. It is assumed that the ciphertext
 // encrypts an even polynomial and has plaintext space 2^r for r>1.
@@ -2414,9 +2403,9 @@ void Ctxt::smartAutomorph(long k)
 
   // Please leave these print statements in (but commented out).
   // They are useful for debugging.
-  //std::cerr << "*** smartAutomorph:";
+  // std::cerr << "*** smartAutomorph:";
   while (k != 1) {
-    //std::cerr << " " << k;
+    // std::cerr << " " << k;
     const KeySwitch& matrix = pubKey.getNextKSWmatrix(k, keyID);
     long amt = matrix.fromKey.getPowerOfX();
 
@@ -2429,7 +2418,7 @@ void Ctxt::smartAutomorph(long k)
     reLinearize(keyID);
     k = NTL::MulMod(k, NTL::InvMod(amt, m), m);
   }
-  //std::cerr << "\n";
+  // std::cerr << "\n";
   HELIB_TIMER_STOP;
 }
 

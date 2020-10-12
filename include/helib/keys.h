@@ -196,7 +196,6 @@ public:
                const Ptxt<Scheme>& plaintxt,
                long ptxtSpace = 0) const;
 
-
   //=============== new EncodedPtxt interface ==================
 
   virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const;
@@ -204,7 +203,7 @@ public:
   virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const;
 
   //============================================================
-  
+
   /**
    * @brief An estimate for the security level. The estimated security level
    * for the "worst" secret-key associated with this public-key object. The
@@ -332,7 +331,8 @@ public:
 
   virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const override;
   virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const override;
-  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const override;
+  virtual void Encrypt(Ctxt& ctxt,
+                       const EncodedPtxt_CKKS& eptxt) const override;
 
   //============================================================
 

@@ -294,8 +294,6 @@ double RandomReal();
 //! returns a pseudo-random number comomlex number z with |z| < 1
 std::complex<double> RandomComplex();
 
-
-
 // Returns a random mod p polynomial of degree < n
 NTL::ZZX RandPoly(long n, const NTL::ZZ& p);
 
@@ -473,10 +471,9 @@ std::vector<T> Vec_replicate(const T& a, long n)
   return res;
 }
 
-
 // some unsafe conversions
 inline void project(std::vector<double>& out,
-		    const std::vector<std::complex<double>>& in)
+                    const std::vector<std::complex<double>>& in)
 {
   long n = in.size();
   out.resize(n);
@@ -484,7 +481,8 @@ inline void project(std::vector<double>& out,
     out[i] = in[i].real();
 }
 
-inline void project_and_round(std::vector<long>& out, const std::vector<std::complex<double>>& in)
+inline void project_and_round(std::vector<long>& out,
+                              const std::vector<std::complex<double>>& in)
 {
   long n = in.size();
   out.resize(n);
@@ -953,55 +951,51 @@ std::unique_ptr<T> build_unique(Args&&... args)
 // Generic routines for domputing absolute values and distances
 // on real and complex numbers
 
-template<typename T>
+template <typename T>
 void AssertRealOrComplex()
 {
-  static_assert(std::is_same<T,double>::value ||
-                std::is_same<T,std::complex<double>>::value,
+  static_assert(std::is_same<T, double>::value ||
+                    std::is_same<T, std::complex<double>>::value,
                 "Error: type T is not double or std::complex<double>.");
 }
 
-template<typename T>
+template <typename T>
 double Norm(const T& x)
 {
   AssertRealOrComplex<T>();
   return std::abs(x);
 }
 
-template<typename T, typename U>
+template <typename T, typename U>
 double Distance(const T& x, const U& y)
 {
   AssertRealOrComplex<T>();
   AssertRealOrComplex<U>();
-  return std::abs(x-y);
+  return std::abs(x - y);
 }
 
 // for vectors, we us the infty norm
-template<typename T>
+template <typename T>
 double Norm(const std::vector<T>& x)
 {
   long n = x.size();
   double res = 0;
-  for (long i = 0; i < n; i++) 
+  for (long i = 0; i < n; i++)
     res = std::max(res, Norm(x[i]));
   return res;
 }
 
 // we require same-length vectors
-template<typename T, typename U>
+template <typename T, typename U>
 double Distance(const std::vector<T>& x, const std::vector<U>& y)
 {
   assertTrue(x.size() == y.size(), "Distance: mismatched vector sizes");
   long n = x.size();
   double res = 0;
-  for (long i = 0; i < n; i++) 
+  for (long i = 0; i < n; i++)
     res = std::max(res, Distance(x[i], y[i]));
   return res;
 }
-
-
-
-
 
 // General mechanisms for comparing approximate numbers
 
@@ -1009,40 +1003,40 @@ double Distance(const std::vector<T>& x, const std::vector<U>& y)
 
 // the template mechanism will allow comparisons
 // between scalars of real/complex types, or between vectors
-// of real/complex types. 
+// of real/complex types.
 // For vectors, sizes must be equal and the infty norm is used
 
-template<typename T, typename U>
-inline bool approx_equal(const T& x, const U& y, 
-                         double tolerance, double floor)
+template <typename T, typename U>
+inline bool approx_equal(const T& x, const U& y, double tolerance, double floor)
 {
-  return Distance(x, y) <= tolerance*std::max(Norm(y), floor);
+  return Distance(x, y) <= tolerance * std::max(Norm(y), floor);
 }
 
-
-template<class T>
-struct ApproxClass {
+template <class T>
+struct ApproxClass
+{
   const T& val;
   double tolerance;
   double floor;
 
-  ApproxClass(const T& val_, double tolerance_, double floor_)
-    : val(val_), tolerance(tolerance_), floor(floor_) { }
+  ApproxClass(const T& val_, double tolerance_, double floor_) :
+      val(val_), tolerance(tolerance_), floor(floor_)
+  {}
 };
 
-template<class T>
-ApproxClass<T> Approx(const T& val, double tolerance=0.01, double floor=1.0)
+template <class T>
+ApproxClass<T> Approx(const T& val, double tolerance = 0.01, double floor = 1.0)
 {
   return ApproxClass<T>(val, tolerance, floor);
 }
 
-template<class T, class U>
+template <class T, class U>
 bool operator==(const T& x, const ApproxClass<U>& y)
 {
   return approx_equal(x, y.val, y.tolerance, y.floor);
 }
 
-template<class T, class U>
+template <class T, class U>
 bool operator!=(const T& x, const ApproxClass<U>& y)
 {
   return !approx_equal(x, y.val, y.tolerance, y.floor);

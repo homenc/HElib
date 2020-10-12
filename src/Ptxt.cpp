@@ -14,7 +14,6 @@
 #include <helib/Ptxt.h>
 #include <helib/apiAttributes.h>
 
-
 // VJS-FIXME: General comments about the Ptxt class.
 /*
 
@@ -24,7 +23,7 @@ well focused, as I was quite busy with other things at the time.
 I'm not sure why we didn't just build off of the existing PlaintextArray
 implementation, as this already did at least half of what Ptxt was supposed to
 do.  Moreover, for actually doing arithmetic on ptxt objects, PlaintextArray is
-much more efficient. 
+much more efficient.
 
 I have implemented a new class, PtxtArray, which is a light wrapper around
 PlaintextArray, and which sports a more convenient and natural interface than
@@ -296,7 +295,7 @@ const std::vector<typename Ptxt<Scheme>::SlotType>& Ptxt<Scheme>::getSlotRepr()
 
 // VJS-FIXME: if we want to maintain support for the Ptxt class,
 // we really need to deprecate or replace these getPolyRep functions
-// with functions that return an EncodedPtxt object, as this is 
+// with functions that return an EncodedPtxt object, as this is
 // now the preferred way to represent encodings.
 template <>
 NTL::ZZX Ptxt<BGV>::getPolyRepr() const

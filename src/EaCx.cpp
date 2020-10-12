@@ -148,13 +148,13 @@ void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
   long val;
   if (k < 0)
     val = al.genToPow(i, amt - ord);
-  else 
+  else
     val = al.genToPow(i, amt);
 
   long n = size();
   std::vector<bool> maskArray(n);
 
-  for (long j: range(n)) {
+  for (long j : range(n)) {
     long c = coordinate(i, j);
     if (c + k >= ord || c + k < 0)
       maskArray[j] = false;
@@ -164,9 +164,8 @@ void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 
   EncodedPtxt mask;
   encode(mask, maskArray);
-  ctxt.multByConstant(mask); 
+  ctxt.multByConstant(mask);
   ctxt.smartAutomorph(val);
-
 }
 #pragma GCC diagnostic pop
 
@@ -174,37 +173,41 @@ void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 // so rotate,shift are the same as rotate1D, shift1D
 void EncryptedArrayCx::rotate(Ctxt& ctxt, long amt) const
 {
-  assertTrue(dimension()==1, 
+  assertTrue(dimension() == 1,
              "CKKS rotation not supported in multi-dimensional hypercube");
   rotate1D(ctxt, 0, amt, true);
 }
 void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 {
-  assertTrue(dimension()==1, 
+  assertTrue(dimension() == 1,
              "CKKS rotation not supported in multi-dimensional hypercube");
   shift1D(ctxt, 0, amt);
 }
 
 //====== New Encoding Functions ====
 
-void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                              double mag, double scale, double err) const 
+void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
+                              const std::vector<cx_double>& array,
+                              double mag,
+                              double scale,
+                              double err) const
 {
   double actual_mag = Norm(array);
-  if (mag < 0) 
+  if (mag < 0)
     mag = actual_mag;
   else {
-    if (actual_mag > mag) 
-      Warning("EncryptedArrayCx::encode: actual magnitude exceeds mag parameter");
+    if (actual_mag > mag)
+      Warning(
+          "EncryptedArrayCx::encode: actual magnitude exceeds mag parameter");
   }
-  
-  if (err < 0) 
+
+  if (err < 0)
     err = defaultErr(); // default err
 
   if (err < 1.0)
-    err = 1.0;  // enforce some sanity
+    err = 1.0; // enforce some sanity
 
-  if (scale < 0) 
+  if (scale < 0)
     scale = defaultScale(err); // default scale
 
   if (scale < 1.0)
@@ -220,33 +223,31 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const std::vector<cx_double>& 
   std::vector<cx_double> array1;
   decode(array1, poly, scale);
   double dist = Distance(array1, array);
-  double scaled_err = err/scale;
-  double ratio = dist/scaled_err;
+  double scaled_err = err / scale;
+  double ratio = dist / scaled_err;
   if (ratio > 1) {
     Warning("CKKS encode: error exceeds bound");
   }
   HELIB_STATS_UPDATE("CKKS_encode_ratio", ratio);
 }
 
-void EncryptedArrayCx::encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-		    double mag, double scale, double err) const 
+void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
+                              const PlaintextArray& array,
+                              double mag,
+                              double scale,
+                              double err) const
 {
   encode(eptxt, array.getData<PA_cx>(), mag, scale, err);
 }
 
-
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
-               const SecKey& sKey,
-               PlaintextArray& ptxt) const 
+                               const SecKey& sKey,
+                               PlaintextArray& ptxt) const
 {
   decrypt(ctxt, sKey, ptxt.getData<PA_cx>());
 }
 
-
 //======================
-
-
-
 
 double EncryptedArrayCx::encode(zzX& ptxt,
                                 const std::vector<cx_double>& array,

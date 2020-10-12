@@ -92,7 +92,6 @@ static long GreatestPowerOfTwo(long n)
   return k;
 }
 
-
 // selects range of slots [lo..hi)
 static void SelectRange(const EncryptedArray& ea,
                         EncodedPtxt& mask,
@@ -259,7 +258,6 @@ void replicateAllOrig(const EncryptedArray& ea,
 // recursive, O(1)-amortized algorithm, but works one
 // dimension at a time, which allows us to use "native"
 // rotations
-
 
 // selects range of slots [lo..hi) in dimension d
 static void SelectRangeDim(const EncryptedArray& ea,

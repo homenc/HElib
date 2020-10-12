@@ -158,10 +158,9 @@ void rawDecrypt(NTL::ZZX& plaintxt,
 
 void CheckCtxt(const Ctxt& c, const char* label)
 {
-  std::cerr << "  " << label
-            << ", capacity=" << c.capacity();
+  std::cerr << "  " << label << ", capacity=" << c.capacity();
 
-  if (!c.isCKKS()) 
+  if (!c.isCKKS())
     std::cerr << ", p^r=" << c.getPtxtSpace();
 
   if (dbgKey) {

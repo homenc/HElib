@@ -72,13 +72,13 @@ inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
   if (hwt == 0) { // dense keys
     slope = 3.8;
     consterm = -20;
-  } else if (idx < numWghts - 1) { 
+  } else if (idx < numWghts - 1) {
     // estimate prms on a line from prms[i] to prms[i+1]
     // how far into this interval
     double a = double(hwt - hwgts[idx]) / (hwgts[idx + 1] - hwgts[idx]);
     slope = slopes[idx] + a * (slopes[idx + 1] - slopes[idx]);
     consterm = cnstrms[idx] + a * (cnstrms[idx + 1] - cnstrms[idx]);
-  } else { 
+  } else {
     // Use the params corresponding to largest weight (450 above)
     slope = slopes[numWghts - 1];
     consterm = cnstrms[numWghts - 1];
@@ -124,13 +124,12 @@ class Context
   // primes only grows and no prime is ever modified or removed.
 
 public:
-
   // Context is meant for convenience, not encapsulation: Most data
   // members are public and can be initialized by the application program.
   // VJS-FIXME: it is time to move away from this philosophy
 
   //============================================================
-  // Here are some "getter" methods that give direct 
+  // Here are some "getter" methods that give direct
   // access to important parameters.  These are for convenience,
   // as well as allowing for future re-organization.
 
@@ -149,14 +148,14 @@ public:
   // PAlgebra object.
   long getDefaultR() const { return alMod.getR(); }
   long getDefaultPPowR() const { return alMod.getPPowR(); }
-  
+
   // synonymn for getDefaultR().
   // this is used in various corner cases in CKKS where
   // we really need some default precisiion parameter.
-  // It is also possible to define this differently 
+  // It is also possible to define this differently
   // in the future.
   long getDefaultPrecision() const { return alMod.getR(); }
- 
+
   //============================================================
 
   Context& operator=(const Context&) = delete;
@@ -172,7 +171,7 @@ public:
   std::shared_ptr<const EncryptedArray> ea;
 
   const EncryptedArray& getDefaultView() const { return *ea; } // preferred name
-  const EncryptedArray& getDefaultEA() const   { return *ea; } // legacy name
+  const EncryptedArray& getDefaultEA() const { return *ea; }   // legacy name
 
   std::shared_ptr<const PowerfulDCRT> pwfl_converter;
 

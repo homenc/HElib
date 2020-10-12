@@ -599,14 +599,14 @@ public:
 // some convenience classes that are easier to work with
 // VJS-FIXME: document these
 
-class PermIndepPrecomp {
+class PermIndepPrecomp
+{
 
   const EncryptedArray& ea;
   GeneratorTrees trees;
   long cost;
 
 public:
-
   PermIndepPrecomp(const PermIndepPrecomp&) = delete;
   PermIndepPrecomp& operator=(const PermIndepPrecomp&) = delete;
 
@@ -619,31 +619,26 @@ public:
   long getDepth() const { return trees.numLayers(); }
 
   friend class PermPrecomp;
-
 };
 
-
-class PermPrecomp {
+class PermPrecomp
+{
 
   const EncryptedArray& ea;
   Permut pi;
   PermNetwork net;
-  
 
 public:
-
   PermPrecomp(const PermPrecomp&) = delete;
   PermPrecomp& operator=(const PermPrecomp&) = delete;
 
-  PermPrecomp(const PermIndepPrecomp& pip, const Permut& _pi); 
+  PermPrecomp(const PermIndepPrecomp& pip, const Permut& _pi);
 
-  void apply(Ctxt& ctxt) const
-  { net.applyToCtxt(ctxt, ea); }
+  void apply(Ctxt& ctxt) const { net.applyToCtxt(ctxt, ea); }
 
   void apply(PtxtArray& a) const;
 
   // VJS-FIXME: add support for addMatrices4Network?
-
 };
 
 /* EXAMPLE USE:
@@ -653,14 +648,14 @@ public:
 
   // initialize some arbitrary permutation pi
   Permut pi;  // This is just an NTL::Vec<long>
-  pi.SetLength(nslots); 
+  pi.SetLength(nslots);
     ...
 
   // now do a permutation-dependent pre-computation
   PermPrecomp pp(pip, pi);
 
-  // apply the permutation 
-  pp.apply(ctxt); 
+  // apply the permutation
+  pp.apply(ctxt);
 
 
   // if the slots are originally [a_0,a_1,a_2,...]

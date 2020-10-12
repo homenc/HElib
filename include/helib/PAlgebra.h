@@ -350,7 +350,8 @@ public:
   DummyContext(long) {}
 };
 
-class DummyModulus {};
+class DummyModulus
+{};
 // placeholder class for CKKS
 
 // some stuff to help with template code
@@ -432,7 +433,7 @@ public:
   typedef DummyBak RBak;
   typedef DummyContext RContext;
 
-  // the other typedef's should not ever be used...they 
+  // the other typedef's should not ever be used...they
   // are all defined as void, so that PA_INJECT still works
   typedef void RE;
   typedef void vec_RE;
@@ -444,9 +445,6 @@ public:
   typedef void mat_R;
   typedef void vec_R;
 };
-
-
-
 
 //! \endcond
 
@@ -767,7 +765,7 @@ private:
 //! A different derived class to be used for the approximate-numbers scheme
 //! This is mostly a dummy class, but needed since the context always has a
 //! PAlgebraMod data member.
-template<>
+template <>
 class PAlgebraModDerived<PA_cx> : public PAlgebraModBase
 {
   const PAlgebra& zMStar;
@@ -782,7 +780,10 @@ public:
                                    "Invalid bit precision r");
   }
 
-  PAlgebraModBase* clone() const override { return new PAlgebraModDerived(*this); }
+  PAlgebraModBase* clone() const override
+  {
+    return new PAlgebraModDerived(*this);
+  }
   PA_tag getTag() const override { return PA_cx_tag; }
 
   const PAlgebra& getZMStar() const override { return zMStar; }
@@ -825,7 +826,6 @@ public:
   // and destructor will work correctly.
 
   PAlgebraMod& operator=(const PAlgebraMod&) = delete;
-  
 
   explicit PAlgebraMod(const PAlgebra& zMStar, long r) :
       rep(buildPAlgebraMod(zMStar, r))

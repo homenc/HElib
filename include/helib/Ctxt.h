@@ -539,8 +539,6 @@ public:
     addConstant(ptxt.getPolyRepr());
   }
 
-
-
   //! add a rational number in the form a/b, a,b are long
   // [[deprecated]]
   void addConstantCKKS(std::pair</*numerator=*/long, /*denominator=*/long>);
@@ -583,8 +581,7 @@ public:
   void multByConstant(const NTL::ZZX& poly, double size = -1.0);
   void multByConstant(const zzX& poly, double size = -1.0);
 
-
-//=========== new multByConstant interface =========
+  //=========== new multByConstant interface =========
 
   void multByConstant(const PtxtArray& ptxt);
   void multByConstant(const EncodedPtxt& ptxt);
@@ -595,95 +592,156 @@ public:
   void multByConstant(double ptxt);
   void multByConstant(NTL::xdouble ptxt);
 
-  Ctxt& operator*=(const PtxtArray& ptxt) 
-  { multByConstant(ptxt); return *this; }
+  Ctxt& operator*=(const PtxtArray& ptxt)
+  {
+    multByConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator*=(const EncodedPtxt& ptxt) 
-  { multByConstant(ptxt); return *this; }
+  Ctxt& operator*=(const EncodedPtxt& ptxt)
+  {
+    multByConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator*=(const FatEncodedPtxt& ptxt) 
-  { multByConstant(ptxt); return *this; }
+  Ctxt& operator*=(const FatEncodedPtxt& ptxt)
+  {
+    multByConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator*=(const NTL::ZZ& ptxt) 
-  { multByConstant(ptxt); return *this; }
+  Ctxt& operator*=(const NTL::ZZ& ptxt)
+  {
+    multByConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator*=(long ptxt) 
-  { multByConstant(ptxt); return *this; }
+  Ctxt& operator*=(long ptxt)
+  {
+    multByConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator*=(double ptxt) 
-  { multByConstant(ptxt); return *this; }
+  Ctxt& operator*=(double ptxt)
+  {
+    multByConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator*=(NTL::xdouble ptxt) 
-  { multByConstant(ptxt); return *this; }
+  Ctxt& operator*=(NTL::xdouble ptxt)
+  {
+    multByConstant(ptxt);
+    return *this;
+  }
 
 private: // impl only
   void multByConstant(const FatEncodedPtxt_BGV& ptxt);
   void multByConstant(const FatEncodedPtxt_CKKS& ptxt);
+
 public:
+  //=========== new addConstant interface ============
 
-//=========== new addConstant interface ============
+  void addConstant(const PtxtArray& ptxt, bool neg = false);
+  void addConstant(const EncodedPtxt& ptxt, bool neg = false);
+  void addConstant(const FatEncodedPtxt& ptxt, bool neg = false);
 
+  void addConstant(const NTL::ZZ& ptxt, bool neg = false);
+  void addConstant(long ptxt, bool neg = false);
+  void addConstant(double ptxt, bool neg = false);
+  void addConstant(NTL::xdouble ptxt, bool neg = false);
 
-  void addConstant(const PtxtArray& ptxt, bool neg=false);
-  void addConstant(const EncodedPtxt& ptxt, bool neg=false);
-  void addConstant(const FatEncodedPtxt& ptxt, bool neg=false);
+  Ctxt& operator+=(const PtxtArray& ptxt)
+  {
+    addConstant(ptxt);
+    return *this;
+  }
 
-  void addConstant(const NTL::ZZ& ptxt, bool neg=false);
-  void addConstant(long ptxt, bool neg=false);
-  void addConstant(double ptxt, bool neg=false);
-  void addConstant(NTL::xdouble ptxt, bool neg=false);
+  Ctxt& operator+=(const EncodedPtxt& ptxt)
+  {
+    addConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator+=(const PtxtArray& ptxt) 
-  { addConstant(ptxt); return *this; }
+  Ctxt& operator+=(const FatEncodedPtxt& ptxt)
+  {
+    addConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator+=(const EncodedPtxt& ptxt) 
-  { addConstant(ptxt); return *this; }
+  Ctxt& operator+=(const NTL::ZZ& ptxt)
+  {
+    addConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator+=(const FatEncodedPtxt& ptxt) 
-  { addConstant(ptxt); return *this; }
+  Ctxt& operator+=(long ptxt)
+  {
+    addConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator+=(const NTL::ZZ& ptxt) 
-  { addConstant(ptxt); return *this; }
+  Ctxt& operator+=(double ptxt)
+  {
+    addConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator+=(long ptxt) 
-  { addConstant(ptxt); return *this; }
+  Ctxt& operator+=(NTL::xdouble ptxt)
+  {
+    addConstant(ptxt);
+    return *this;
+  }
 
-  Ctxt& operator+=(double ptxt) 
-  { addConstant(ptxt); return *this; }
+  Ctxt& operator-=(const PtxtArray& ptxt)
+  {
+    addConstant(ptxt, true);
+    return *this;
+  }
 
-  Ctxt& operator+=(NTL::xdouble ptxt) 
-  { addConstant(ptxt); return *this; }
+  Ctxt& operator-=(const EncodedPtxt& ptxt)
+  {
+    addConstant(ptxt, true);
+    return *this;
+  }
 
+  Ctxt& operator-=(const FatEncodedPtxt& ptxt)
+  {
+    addConstant(ptxt, true);
+    return *this;
+  }
 
-  Ctxt& operator-=(const PtxtArray& ptxt) 
-  { addConstant(ptxt, true); return *this; }
+  Ctxt& operator-=(const NTL::ZZ& ptxt)
+  {
+    addConstant(ptxt, true);
+    return *this;
+  }
 
-  Ctxt& operator-=(const EncodedPtxt& ptxt) 
-  { addConstant(ptxt, true); return *this; }
+  Ctxt& operator-=(long ptxt)
+  {
+    addConstant(ptxt, true);
+    return *this;
+  }
 
-  Ctxt& operator-=(const FatEncodedPtxt& ptxt) 
-  { addConstant(ptxt, true); return *this; }
+  Ctxt& operator-=(double ptxt)
+  {
+    addConstant(ptxt, true);
+    return *this;
+  }
 
-  Ctxt& operator-=(const NTL::ZZ& ptxt) 
-  { addConstant(ptxt, true); return *this; }
-
-  Ctxt& operator-=(long ptxt) 
-  { addConstant(ptxt, true); return *this; }
-
-  Ctxt& operator-=(double ptxt) 
-  { addConstant(ptxt, true); return *this; }
-
-  Ctxt& operator-=(NTL::xdouble ptxt) 
-  { addConstant(ptxt, true); return *this; }
+  Ctxt& operator-=(NTL::xdouble ptxt)
+  {
+    addConstant(ptxt, true);
+    return *this;
+  }
 
 private: // impl only
-  void addConstant(const FatEncodedPtxt_BGV& ptxt, bool neg=false);
-  void addConstant(const EncodedPtxt_BGV& ptxt, bool neg=false);
+  void addConstant(const FatEncodedPtxt_BGV& ptxt, bool neg = false);
+  void addConstant(const EncodedPtxt_BGV& ptxt, bool neg = false);
 
-  void addConstant(const FatEncodedPtxt_CKKS& ptxt, bool neg=false);
+  void addConstant(const FatEncodedPtxt_CKKS& ptxt, bool neg = false);
+
 public:
-
-//==================================================
+  //==================================================
 
   /**
    * @brief Multiply a `BGV` plaintext to this `Ctxt`.
@@ -716,7 +774,6 @@ public:
     if (x < 0)
       this->negate();
   }
-
 
   // [[deprecated]]
   void multByConstantCKKS(std::pair<long, long> num) // rational number
@@ -868,7 +925,7 @@ public:
   NTL::xdouble totalNoiseBound() const
   {
     if (isCKKS())
-      return ptxtMag*ratFactor + noiseBound;
+      return ptxtMag * ratFactor + noiseBound;
     else
       return noiseBound;
   }
@@ -878,9 +935,9 @@ public:
   //! *total* noise bound
   double capacity() const
   {
-    return ( logOfPrimeSet() - 
-		NTL::log(std::max(totalNoiseBound(),
-				  NTL::to_xdouble(1.0))) ) / std::log(2.0);
+    return (logOfPrimeSet() -
+            NTL::log(std::max(totalNoiseBound(), NTL::to_xdouble(1.0)))) /
+           std::log(2.0);
   }
 
   //! @brief returns the log of the prime set

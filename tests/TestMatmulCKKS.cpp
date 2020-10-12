@@ -42,13 +42,13 @@ struct Parameters
              int force_bsgs,
              int force_hoist,
              int ks_strategy) :
-    m(m),
-    r(r),
-    bits(bits),
-    nt(nt),
-    force_bsgs(force_bsgs),
-    force_hoist(force_hoist),
-    ks_strategy(ks_strategy) {};
+      m(m),
+      r(r),
+      bits(bits),
+      nt(nt),
+      force_bsgs(force_bsgs),
+      force_hoist(force_hoist),
+      ks_strategy(ks_strategy){};
 
   const long m;          // defines the cyclotomic polynomial Phi_m(X)
   const long r;          // Bit precision
@@ -91,14 +91,14 @@ protected:
   const helib::EncryptedArray& ea;
 
   TestMatmulCKKS() :
-    m(GetParam().m),
-    r(GetParam().r),
-    bits(GetParam().bits),
-    nt(GetParam().nt),
-    context(m, /*p=*/-1, r),
-    secretKey((buildModChain(context, bits), context)),
-    publicKey(keySetup(secretKey, GetParam().ks_strategy)),
-    ea(*(context.ea))
+      m(GetParam().m),
+      r(GetParam().r),
+      bits(GetParam().bits),
+      nt(GetParam().nt),
+      context(m, /*p=*/-1, r),
+      secretKey((buildModChain(context, bits), context)),
+      publicKey(keySetup(secretKey, GetParam().ks_strategy)),
+      ea(*(context.ea))
   {}
 
   static helib::SecKey& keySetup(helib::SecKey& secretKey, int ks_strategy)
@@ -106,25 +106,25 @@ protected:
     secretKey.GenSecKey();
     // We call addSomeFrbMatrices for all strategies except minimal
     switch (ks_strategy) {
-      case 0: 
-        addSome1DMatrices(secretKey);
-        addSomeFrbMatrices(secretKey);
-        break;
-      case 1: 
-        add1DMatrices(secretKey);
-        addSomeFrbMatrices(secretKey);
-        break;
-      case 2: 
-        addBSGS1DMatrices(secretKey);
-        addSomeFrbMatrices(secretKey);
-        break;
-      case 3: 
-        addMinimal1DMatrices(secretKey);
-        addMinimalFrbMatrices(secretKey);
-        break;
+    case 0:
+      addSome1DMatrices(secretKey);
+      addSomeFrbMatrices(secretKey);
+      break;
+    case 1:
+      add1DMatrices(secretKey);
+      addSomeFrbMatrices(secretKey);
+      break;
+    case 2:
+      addBSGS1DMatrices(secretKey);
+      addSomeFrbMatrices(secretKey);
+      break;
+    case 3:
+      addMinimal1DMatrices(secretKey);
+      addMinimalFrbMatrices(secretKey);
+      break;
 
-      default:
-        NTL::Error("bad ks_strategy");
+    default:
+      NTL::Error("bad ks_strategy");
     }
     return secretKey;
   }
@@ -132,14 +132,20 @@ protected:
   virtual void SetUp() override
   {
     if (helib_test::verbose) {
-    context.zMStar.printout();
-    std::cout << "# small primes = " << context.smallPrimes.card() << "\n"
-              << "# ctxt primes = " << context.ctxtPrimes.card() << "\n"
-              << "# bits in ctxt primes = " << long(context.logOfProduct(context.ctxtPrimes)/log(2.0) + 0.5) << "\n"
-              << "# special primes = " << context.specialPrimes.card() << "\n"
-              << "# bits in special primes = " << long(context.logOfProduct(context.specialPrimes)/log(2.0) + 0.5) << "\n";
+      context.zMStar.printout();
+      std::cout << "# small primes = " << context.smallPrimes.card() << "\n"
+                << "# ctxt primes = " << context.ctxtPrimes.card() << "\n"
+                << "# bits in ctxt primes = "
+                << long(context.logOfProduct(context.ctxtPrimes) / log(2.0) +
+                        0.5)
+                << "\n"
+                << "# special primes = " << context.specialPrimes.card() << "\n"
+                << "# bits in special primes = "
+                << long(context.logOfProduct(context.specialPrimes) / log(2.0) +
+                        0.5)
+                << "\n";
 
-    helib::fhe_stats = true;
+      helib::fhe_stats = true;
     }
     helib::setupDebugGlobals(&secretKey, context.ea);
   }
@@ -150,8 +156,8 @@ protected:
       helib::printAllTimers();
 #if (defined(__unix__) || defined(__unix) || defined(unix))
       struct rusage rusage;
-      getrusage( RUSAGE_SELF, &rusage );
-      cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+      getrusage(RUSAGE_SELF, &rusage);
+      cout << "  rusage.ru_maxrss=" << rusage.ru_maxrss << endl;
 #endif
       helib::print_stats(std::cout);
     }
@@ -164,10 +170,12 @@ TEST_P(TestMatmulCKKS, vectorToMatrixMultiplication)
   std::vector<double> v(ea.size());
   std::iota(v.begin(), v.end(), 1);
 
-  helib::MatMul_CKKS mat(context, [&v](long i, long j)->std::complex<double>{ return i * v.size() + j; });
+  helib::MatMul_CKKS mat(context, [&v](long i, long j) -> std::complex<double> {
+    return i * v.size() + j;
+  });
   // Note the use of a "lambda": this allows for quite
   // general ways to describe a matrix with minimal fuss
-  
+
   helib::Ctxt ctxt(publicKey);
   // Initialize ptxt with the vector v
   helib::PtxtArray ptxt(context, v);

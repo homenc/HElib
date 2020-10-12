@@ -528,27 +528,26 @@ std::ostream& operator<<(std::ostream& s, const GeneratorTrees& trees)
   return s << "]";
 }
 
+PermIndepPrecomp::PermIndepPrecomp(const Context& context, long depthBound) :
+    PermIndepPrecomp(context.getDefaultView(), depthBound)
+{}
 
-PermIndepPrecomp::PermIndepPrecomp(const Context& context, long depthBound)
-  : PermIndepPrecomp(context.getDefaultView(), depthBound)
-{ }
-
-PermIndepPrecomp::PermIndepPrecomp(const EncryptedArray& _ea, long depthBound)
-  : ea(_ea)
+PermIndepPrecomp::PermIndepPrecomp(const EncryptedArray& _ea, long depthBound) :
+    ea(_ea)
 {
   NTL::Vec<GenDescriptor> vec(NTL::INIT_SIZE, ea.dimension());
-  for (long i: range(ea.dimension()))
+  for (long i : range(ea.dimension()))
     vec[i] = GenDescriptor(/*order=*/ea.sizeOfDimension(i),
-                           /*good=*/ ea.nativeDimension(i), /*genIdx=*/i);
+                           /*good=*/ea.nativeDimension(i),
+                           /*genIdx=*/i);
 
   cost = trees.buildOptimalTrees(vec, depthBound);
 }
 
-
-PermPrecomp::PermPrecomp(const PermIndepPrecomp& pip, const Permut& _pi)
-  : ea(pip.ea), pi(_pi)
+PermPrecomp::PermPrecomp(const PermIndepPrecomp& pip, const Permut& _pi) :
+    ea(pip.ea), pi(_pi)
 {
-  if (pi.length() != ea.size()) 
+  if (pi.length() != ea.size())
     throw LogicError("pi wrong size");
 
   if (pip.cost == NTL_MAX_LONG)
@@ -578,14 +577,10 @@ public:
   }
 };
 
-
 void PermPrecomp::apply(PtxtArray& a) const
 {
   assertTrue(&a.ea == &ea, "PtxtArray: inconsistent operation");
   ea.dispatch<perm_pa_impl>(a.pa, pi);
 }
-
-
-
 
 } // namespace helib

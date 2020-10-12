@@ -196,7 +196,6 @@ public:
   }
 };
 
-
 HELIB_NO_CKKS_IMPL(repack_pa_impl)
 
 //! \endcond

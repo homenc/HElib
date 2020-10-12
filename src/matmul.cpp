@@ -695,7 +695,7 @@ void MatMul1D_CKKS::processDiagonal(std::vector<std::complex<double>>& diag,
   diag.resize(D);
 
   // Process the entries in this diagonal one at a time
-  for (long j: range(D)) { // process entry j
+  for (long j : range(D)) { // process entry j
     diag[j] = this->get(mcMod(j - i, D), j);
   }
 }
@@ -740,12 +740,11 @@ struct ConstMultiplier_DoubleCRT_CKKS : ConstMultiplier
   FatEncodedPtxt feptxt;
 
   ConstMultiplier_DoubleCRT_CKKS(const EncodedPtxt& eptxt, const IndexSet& s)
-  { feptxt.expand(eptxt, s); }
-
-  void mul(Ctxt& ctxt) const override
   {
-    ctxt *= feptxt;
+    feptxt.expand(eptxt, s);
   }
+
+  void mul(Ctxt& ctxt) const override { ctxt *= feptxt; }
 
   std::shared_ptr<ConstMultiplier> upgrade(
       UNUSED const Context& context) const override
@@ -758,20 +757,20 @@ struct ConstMultiplier_zzX_CKKS : ConstMultiplier
 {
   EncodedPtxt eptxt;
 
-  ConstMultiplier_zzX_CKKS(const std::vector<std::complex<double>>& diag, 
+  ConstMultiplier_zzX_CKKS(const std::vector<std::complex<double>>& diag,
                            const EncryptedArrayCx& ea)
-  { ea.encode(eptxt, diag); }
-
-  void mul(Ctxt& ctxt) const override
   {
-    ctxt *= eptxt;
+    ea.encode(eptxt, diag);
   }
 
+  void mul(Ctxt& ctxt) const override { ctxt *= eptxt; }
+
   std::shared_ptr<ConstMultiplier> upgrade(
-          const Context& context) const override
+      const Context& context) const override
   {
     return std::make_shared<ConstMultiplier_DoubleCRT_CKKS>(
-        eptxt, context.fullPrimes());
+        eptxt,
+        context.fullPrimes());
   }
 };
 
@@ -788,7 +787,7 @@ static std::shared_ptr<ConstMultiplier> build_ConstMultiplier_CKKS(
 
     // diag1 = diag rotated by amt...could be optimized for amt==0
     std::vector<std::complex<double>> diag1(n);
-    for (long i: range(n))
+    for (long i : range(n))
       diag1[((i + amt) % n + n) % n] = diag[i];
 
     return std::make_shared<ConstMultiplier_zzX_CKKS>(diag1, ea);
@@ -1654,7 +1653,6 @@ struct BlockMatMul1DExec_construct
 };
 
 HELIB_NO_CKKS_IMPL(BlockMatMul1DExec_construct)
-
 
 BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
                                      UNUSED bool minimal) :
@@ -2683,9 +2681,9 @@ struct mul_MatMul1D_impl<PA_cx>
     std::vector<std::complex<double>> data1(n);
 
     // compute data1 = data*mat
-    for (long i: range(n))
-      for (long j: range(n))
-	data1[j] += mat.get(i,j)*data[i];
+    for (long i : range(n))
+      for (long j : range(n))
+        data1[j] += mat.get(i, j) * data[i];
 
     data = data1;
   }

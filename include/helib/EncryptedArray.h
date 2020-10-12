@@ -78,7 +78,7 @@ class PlaintextArray; // forward reference
 class PtxtArray;      // forward reference
 class EncryptedArray; // forward reference
 
-typedef EncryptedArray View; 
+typedef EncryptedArray View;
 // New and improved name for EncryptedArray.
 // Documentation should use this name.
 
@@ -153,54 +153,67 @@ public:
   // encode/decode arrays into plaintext polynomials
   // These methods are working for some of the derived classes (throwing
   // otherwise)
-  virtual void encode(zzX& ptxt,      const std::vector<long>& array) const = 0;
+  virtual void encode(zzX& ptxt, const std::vector<long>& array) const = 0;
   virtual void encode(NTL::ZZX& ptxt, const std::vector<long>& array) const = 0;
 
+  virtual void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const = 0;
+  virtual void encode(NTL::ZZX& ptxt,
+                      const std::vector<NTL::ZZX>& array) const = 0;
 
-  virtual void encode(zzX& ptxt,      const std::vector<NTL::ZZX>& array) const = 0;
-  virtual void encode(NTL::ZZX& ptxt, const std::vector<NTL::ZZX>& array) const = 0;
-
-  virtual void encode(zzX& ptxt,      const PlaintextArray& array) const = 0;
+  virtual void encode(zzX& ptxt, const PlaintextArray& array) const = 0;
   virtual void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const = 0;
 
   virtual void encode(zzX& ptxt, const std::vector<zzX>& array) const = 0;
 
-
   //=============== new EncodedPtxt interfaces
 
   // BGV only
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const = 0;
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const = 0;
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<NTL::ZZX>& array) const = 0;
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<long>& array) const = 0;
 
-  // CKKS only 
+  // CKKS only
   // mag: default sets mag to maximum magnitude of array
   // scale: default sets scale to defaultScale(err)
   // err: default sets err to defaultErr()
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag=-1, double scale=-1, double err=-1) const = 0;
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<cx_double>& array,
+                      double mag = -1,
+                      double scale = -1,
+                      double err = -1) const = 0;
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag=-1, double scale=-1, double err=-1) const = 0;
-
-
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<double>& array,
+                      double mag = -1,
+                      double scale = -1,
+                      double err = -1) const = 0;
 
   // BGV and CKKS
-  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag=-1, double scale=-1, double err=-1) const = 0;
+  virtual void encode(EncodedPtxt& eptxt,
+                      const PlaintextArray& array,
+                      double mag = -1,
+                      double scale = -1,
+                      double err = -1) const = 0;
   // NOTE: for BGV, mag,scale,err must be defaulted
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const = 0;
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<bool>& array) const = 0;
   // NOTE: for CKKS, mag,scale,err are default
 
   virtual void encodeUnitSelector(EncodedPtxt& eptxt, long i) const = 0;
   // NOTE: for CKKS, mag,scale,err are defaulted
 
   virtual double defaultScale(UNUSED double err) const
-  { throw LogicError("function not implemented"); }
+  {
+    throw LogicError("function not implemented");
+  }
 
-  virtual double defaultErr() const 
-  { throw LogicError("function not implemented"); }
+  virtual double defaultErr() const
+  {
+    throw LogicError("function not implemented");
+  }
 
   //================================
 
@@ -328,7 +341,7 @@ public:
              size(),
              "Input vector has wrong size (must equal EncryptedArray::size())");
     out.resize(in.size());
-    for (long j: range(size())) 
+    for (long j : range(size()))
       out[addCoord(i, j, offset)] = in[j];
   }
 };
@@ -380,7 +393,7 @@ public:
     normalBasisMatrices = other.normalBasisMatrices;
   }
 
-  EncryptedArrayDerived& operator=(const EncryptedArrayDerived&) = delete; 
+  EncryptedArrayDerived& operator=(const EncryptedArrayDerived&) = delete;
 
   virtual EncryptedArrayBase* clone() const override
   {
@@ -479,7 +492,6 @@ public:
   }
   /* End CKKS functions. */
 
-
   virtual void encode(NTL::ZZX& ptxt,
                       const std::vector<long>& array) const override
   {
@@ -508,51 +520,66 @@ public:
 
   virtual void encodeUnitSelector(zzX& ptxt, long i) const override;
 
-  virtual void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const override
+  virtual void encode(zzX& ptxt,
+                      const std::vector<NTL::ZZX>& array) const override
   {
     NTL::ZZX tmp;
     encode(tmp, array);
     convert(ptxt, tmp);
   }
 
+  //================ new EncodedPtxt interfaces
 
-//================ new EncodedPtxt interfaces
-
-
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const override
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<NTL::ZZX>& array) const override
   {
     zzX poly;
-    encode(poly, array); 
+    encode(poly, array);
     eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const override
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<long>& array) const override
   {
     zzX poly;
-    encode(poly, array); 
+    encode(poly, array);
     eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
-  virtual void encode(UNUSED EncodedPtxt& eptxt, UNUSED const std::vector<cx_double>& array,
-                      UNUSED double mag=-1, UNUSED double scale=-1, UNUSED double err=-1) const override
-  { throw LogicError("function not implemented for BGV"); }
-
-  virtual void encode(UNUSED EncodedPtxt& eptxt, UNUSED const std::vector<double>& array,
-              UNUSED double mag=-1, UNUSED double scale=-1, UNUSED double err=-1) const override
-  { throw LogicError("function not implemented for BGV"); }
-
-  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag=-1, double scale=-1, double err=-1) const override
+  virtual void encode(UNUSED EncodedPtxt& eptxt,
+                      UNUSED const std::vector<cx_double>& array,
+                      UNUSED double mag = -1,
+                      UNUSED double scale = -1,
+                      UNUSED double err = -1) const override
   {
-    assertTrue(mag < 0 && scale < 0 && err < 0, 
+    throw LogicError("function not implemented for BGV");
+  }
+
+  virtual void encode(UNUSED EncodedPtxt& eptxt,
+                      UNUSED const std::vector<double>& array,
+                      UNUSED double mag = -1,
+                      UNUSED double scale = -1,
+                      UNUSED double err = -1) const override
+  {
+    throw LogicError("function not implemented for BGV");
+  }
+
+  virtual void encode(EncodedPtxt& eptxt,
+                      const PlaintextArray& array,
+                      double mag = -1,
+                      double scale = -1,
+                      double err = -1) const override
+  {
+    assertTrue(mag < 0 && scale < 0 && err < 0,
                "BGV encoding: mag,scale,err set must be defaulted");
     zzX poly;
-    encode(poly, array); 
+    encode(poly, array);
     eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const override
-  { 
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<bool>& array) const override
+  {
     std::vector<long> array1;
     convert(array1, array);
     encode(eptxt, array1);
@@ -565,7 +592,7 @@ public:
     eptxt.resetBGV(poly, getP2R(), getContext());
   }
 
-//===========================================
+  //===========================================
 
   virtual void decode(std::vector<long>& array,
                       const NTL::ZZX& ptxt) const override
@@ -627,7 +654,7 @@ public:
     if (ctxt.getPtxtSpace() < getP2R()) {
       throw LogicError("EncryptedArray::decrypt: bad plaintext modulus");
       // FIXME: Reduce mod the ciphertext plaintext space as above
-      // What we would have to do is: 
+      // What we would have to do is:
       //   1. convert the PlaintextArray to a vector of ZZX's
       //   2. call PolyRed as above to reduce coefficients
       //   3. convert the vector of ZZX's back to a PlaintextArray
@@ -732,7 +759,8 @@ private:
   {
     assertEq(&context,
              &ctxt.getContext(),
-             "Cannot decrypt when ciphertext has different context than EncryptedArray");
+             "Cannot decrypt when ciphertext has different context than "
+             "EncryptedArray");
     NTL::ZZX pp;
     sKey.Decrypt(pp, ctxt);
     decode(array, pp);
@@ -740,7 +768,7 @@ private:
 };
 
 //! A different derived class to be used for the approximate-numbers scheme
-template<>
+template <>
 class EncryptedArrayDerived<PA_cx> : public EncryptedArrayBase
 {
   const Context& context;
@@ -771,7 +799,6 @@ public:
     clear(iEncoded);
   }
 
-
   EncryptedArrayBase* clone() const override
   {
     return new EncryptedArrayDerived(*this);
@@ -799,7 +826,6 @@ public:
   {
     T<PA_cx>::apply(*this, std::forward<Args>(args)...);
   }
-  
 
   /* Begin BGV functions. They will simply throw here. */
   // encode
@@ -870,7 +896,8 @@ public:
     throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
   }
 
-  void encode(UNUSED zzX& ptxt, UNUSED const std::vector<NTL::ZZX>& array) const override
+  void encode(UNUSED zzX& ptxt,
+              UNUSED const std::vector<NTL::ZZX>& array) const override
   {
     throw LogicError("Unimplemented: EncryptedArrayCx::encode for BGV type");
   }
@@ -989,7 +1016,6 @@ public:
     return encode(ptxt, tmp, useThisSize, precision);
   }
 
-
   /**
    * @brief Encode a `Ptxt` object into a `zzX`.
    * @tparam Scheme Encryption scheme to be used (either `BGV` or `CKKS`).
@@ -1034,29 +1060,45 @@ public:
 
   //========= new EncodedPtxt interface
 
-  virtual void encode(UNUSED EncodedPtxt& eptxt, UNUSED const std::vector<NTL::ZZX>& array) const override
-  { throw LogicError("function not implemented for CKKS"); }
+  virtual void encode(UNUSED EncodedPtxt& eptxt,
+                      UNUSED const std::vector<NTL::ZZX>& array) const override
+  {
+    throw LogicError("function not implemented for CKKS");
+  }
 
-  virtual void encode(UNUSED EncodedPtxt& eptxt, UNUSED const std::vector<long>& array) const override
-  { throw LogicError("function not implemented for CKKS"); }
+  virtual void encode(UNUSED EncodedPtxt& eptxt,
+                      UNUSED const std::vector<long>& array) const override
+  {
+    throw LogicError("function not implemented for CKKS");
+  }
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag=-1, double scale=-1, double err=-1) const override;
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<cx_double>& array,
+                      double mag = -1,
+                      double scale = -1,
+                      double err = -1) const override;
   // implemented in EaCx.cpp
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag=-1, double scale=-1, double err=-1) const override
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<double>& array,
+                      double mag = -1,
+                      double scale = -1,
+                      double err = -1) const override
   {
     std::vector<cx_double> array1;
     convert(array1, array);
     encode(eptxt, array1, mag, scale, err);
   }
 
-  virtual void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag=-1, double scale=-1, double err=-1) const override;
+  virtual void encode(EncodedPtxt& eptxt,
+                      const PlaintextArray& array,
+                      double mag = -1,
+                      double scale = -1,
+                      double err = -1) const override;
   // implemented in EaCx.cpp
 
-  virtual void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const override
+  virtual void encode(EncodedPtxt& eptxt,
+                      const std::vector<bool>& array) const override
   {
     std::vector<cx_double> array1;
     convert(array1, array);
@@ -1071,8 +1113,7 @@ public:
     // VJS-FIXME: this could be much more efficient
   }
 
-
-//==========================================
+  //==========================================
 
   void encryptOneNum(Ctxt& ctxt,
                      const PubKey& key,
@@ -1164,28 +1205,28 @@ public:
     // is a bit too pessimistic, as this is the circularly symmetric
     // case.
 
-    // VJS-NOTE: this is extremey heuristic: we are assuming 
+    // VJS-NOTE: this is extremey heuristic: we are assuming
     // that the coefficients mod 1 are modeled as uniform
     // on [0,1].
 
     return context.noiseBoundForUniform(0.5, phim);
   }
 
-  virtual double defaultScale(double err) const override 
+  virtual double defaultScale(double err) const override
   {
-    if (err < 1.0) err = 1.0;
+    if (err < 1.0)
+      err = 1.0;
     long r = alMod.getR();
-    // we want to compute 
+    // we want to compute
     //   2^(ceil(log2(err*2^r))) = 2^(ceil(log2(err) + r))
     //                           = 2^(r + ceil(log2(err)))
     int e;
-    std::frexp(1/err, &e);
+    std::frexp(1 / err, &e);
     // we have 2^{e-1} <= 1/err < 2^e, i.e.,
     //         2^{-e} < err <= 2^{-e+1}
     // so ceil(log2(err)) = -e+1
-    return std::ldexp(1.0, r-e+1);
+    return std::ldexp(1.0, r - e + 1);
   }
-
 
   void decode(std::vector<cx_double>& array,
               const zzX& ptxt,
@@ -1386,11 +1427,10 @@ public:
       alMod(_alMod), rep(buildEncryptedArray(context, _alMod))
   {}
 
-  // NOTES: 
+  // NOTES:
   //  (1) the second constructor is provided mainly for BGV bootstrapping
   //  (2) we do not currently provide a constructor that allows
   //      the user to select both G and alMod, but this could be added
-
 
   // copy constructor:
 
@@ -1467,58 +1507,91 @@ public:
   }
   void shift1D(Ctxt& ctxt, long i, long k) const { rep->shift1D(ctxt, i, k); }
 
-  void encode(zzX& ptxt, const std::vector<long>& array) const 
-  { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const std::vector<long>& array) const
+  {
+    rep->encode(ptxt, array);
+  }
 
-  void encode(NTL::ZZX& ptxt, const std::vector<long>& array) const 
-  { rep->encode(ptxt, array); }
+  void encode(NTL::ZZX& ptxt, const std::vector<long>& array) const
+  {
+    rep->encode(ptxt, array);
+  }
 
-  void encode(zzX& ptxt, const std::vector<zzX>& array) const 
-  { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const std::vector<zzX>& array) const
+  {
+    rep->encode(ptxt, array);
+  }
 
-  void encode(zzX& ptxt, const PlaintextArray& array) const 
-  { rep->encode(ptxt, array); }
+  void encode(zzX& ptxt, const PlaintextArray& array) const
+  {
+    rep->encode(ptxt, array);
+  }
 
-  void encode(NTL::ZZX& ptxt, const std::vector<NTL::ZZX>& array) const 
-  { rep->encode(ptxt, array); }
+  void encode(NTL::ZZX& ptxt, const std::vector<NTL::ZZX>& array) const
+  {
+    rep->encode(ptxt, array);
+  }
 
-  void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const 
-  { rep->encode(ptxt, array); }
+  void encode(NTL::ZZX& ptxt, const PlaintextArray& array) const
+  {
+    rep->encode(ptxt, array);
+  }
 
   void encode(zzX& ptxt, const std::vector<NTL::ZZX>& array) const
-  { rep->encode(ptxt, array); }
+  {
+    rep->encode(ptxt, array);
+  }
 
   //=============== new EncodedPtxt interfaces
 
   void encode(EncodedPtxt& eptxt, const std::vector<NTL::ZZX>& array) const
-  { rep->encode(eptxt, array); }
+  {
+    rep->encode(eptxt, array);
+  }
 
   void encode(EncodedPtxt& eptxt, const std::vector<long>& array) const
-  { rep->encode(eptxt, array); }
+  {
+    rep->encode(eptxt, array);
+  }
 
-  void encode(EncodedPtxt& eptxt, const std::vector<cx_double>& array,
-                      double mag=-1, double scale=-1, double err=-1) const
-  { rep->encode(eptxt, array, mag, scale, err); }
+  void encode(EncodedPtxt& eptxt,
+              const std::vector<cx_double>& array,
+              double mag = -1,
+              double scale = -1,
+              double err = -1) const
+  {
+    rep->encode(eptxt, array, mag, scale, err);
+  }
 
-  void encode(EncodedPtxt& eptxt, const std::vector<double>& array,
-                      double mag=-1, double scale=-1, double err=-1) const
-  { rep->encode(eptxt, array, mag, scale, err); }
+  void encode(EncodedPtxt& eptxt,
+              const std::vector<double>& array,
+              double mag = -1,
+              double scale = -1,
+              double err = -1) const
+  {
+    rep->encode(eptxt, array, mag, scale, err);
+  }
 
-
-  void encode(EncodedPtxt& eptxt, const PlaintextArray& array,
-                      double mag=-1, double scale=-1, double err=-1) const 
-  { rep->encode(eptxt, array, mag, scale, err); }
+  void encode(EncodedPtxt& eptxt,
+              const PlaintextArray& array,
+              double mag = -1,
+              double scale = -1,
+              double err = -1) const
+  {
+    rep->encode(eptxt, array, mag, scale, err);
+  }
 
   void encode(EncodedPtxt& eptxt, const std::vector<bool>& array) const
-  { rep->encode(eptxt, array); }
+  {
+    rep->encode(eptxt, array);
+  }
 
   void encodeUnitSelector(EncodedPtxt& eptxt, long i) const
-  { rep->encodeUnitSelector(eptxt, i); }
-
-
+  {
+    rep->encodeUnitSelector(eptxt, i);
+  }
 
   //================================
-
 
   void encodeUnitSelector(zzX& ptxt, long i) const
   {
@@ -1531,7 +1604,6 @@ public:
     rep->decode(array, ptxt);
   }
 
-
   template <typename T>
   void random(std::vector<T>& array) const
   {
@@ -1543,66 +1615,107 @@ public:
   // Ctxt and PubKey, and a cleaner interface that includes
   // only Ctxt.
 
-
   // BGV only
-  void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<NTL::ZZX>& array) const
-  { EncodedPtxt eptxt; encode(eptxt, array); key.Encrypt(ctxt, eptxt); }
+  void encrypt(Ctxt& ctxt,
+               const PubKey& key,
+               const std::vector<NTL::ZZX>& array) const
+  {
+    EncodedPtxt eptxt;
+    encode(eptxt, array);
+    key.Encrypt(ctxt, eptxt);
+  }
 
   void encrypt(Ctxt& ctxt, const std::vector<NTL::ZZX>& array) const
-  { encrypt(ctxt, ctxt.getPubKey(), array); }
+  {
+    encrypt(ctxt, ctxt.getPubKey(), array);
+  }
 
-
-  void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<long>& array) const
-  { EncodedPtxt eptxt; encode(eptxt, array); key.Encrypt(ctxt, eptxt); }
+  void encrypt(Ctxt& ctxt,
+               const PubKey& key,
+               const std::vector<long>& array) const
+  {
+    EncodedPtxt eptxt;
+    encode(eptxt, array);
+    key.Encrypt(ctxt, eptxt);
+  }
 
   void encrypt(Ctxt& ctxt, const std::vector<long>& array) const
-  { encrypt(ctxt, ctxt.getPubKey(), array); }
-
+  {
+    encrypt(ctxt, ctxt.getPubKey(), array);
+  }
 
   // CKKS only
-  void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<cx_double>& array,
-               double mag, double scale=-1, double err=-1) const
+  void encrypt(Ctxt& ctxt,
+               const PubKey& key,
+               const std::vector<cx_double>& array,
+               double mag,
+               double scale = -1,
+               double err = -1) const
   {
-    if (mag < 0) throw LogicError("CKKS encryption: mag must be set to non-default");
-    EncodedPtxt eptxt; encode(eptxt, array, mag, scale, err); key.Encrypt(ctxt, eptxt);
+    if (mag < 0)
+      throw LogicError("CKKS encryption: mag must be set to non-default");
+    EncodedPtxt eptxt;
+    encode(eptxt, array, mag, scale, err);
+    key.Encrypt(ctxt, eptxt);
   }
 
-  void encrypt(Ctxt& ctxt, const std::vector<cx_double>& array,
-               double mag, double scale=-1, double err=-1) const
-  { encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err); }
-
-
-
-  void encrypt(Ctxt& ctxt, const PubKey& key, const std::vector<double>& array,
-               double mag, double scale=-1, double err=-1) const
+  void encrypt(Ctxt& ctxt,
+               const std::vector<cx_double>& array,
+               double mag,
+               double scale = -1,
+               double err = -1) const
   {
-    if (mag < 0) throw LogicError("CKKS encryption: mag must be set to non-default");
-    EncodedPtxt eptxt; encode(eptxt, array, mag, scale, err); key.Encrypt(ctxt, eptxt);
+    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
   }
 
-  void encrypt(Ctxt& ctxt, const std::vector<double>& array,
-               double mag, double scale=-1, double err=-1) const
-  { encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err); }
-  
+  void encrypt(Ctxt& ctxt,
+               const PubKey& key,
+               const std::vector<double>& array,
+               double mag,
+               double scale = -1,
+               double err = -1) const
+  {
+    if (mag < 0)
+      throw LogicError("CKKS encryption: mag must be set to non-default");
+    EncodedPtxt eptxt;
+    encode(eptxt, array, mag, scale, err);
+    key.Encrypt(ctxt, eptxt);
+  }
 
+  void encrypt(Ctxt& ctxt,
+               const std::vector<double>& array,
+               double mag,
+               double scale = -1,
+               double err = -1) const
+  {
+    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
+  }
 
   // BGV and CKKS
-  void encrypt(Ctxt& ctxt, const PubKey& key, const PlaintextArray& array,
-               double mag=-1, double scale=-1, double err=-1) const
-  // NOTES: (1) for BGV, mag,scale,err must be defaulted; 
+  void encrypt(Ctxt& ctxt,
+               const PubKey& key,
+               const PlaintextArray& array,
+               double mag = -1,
+               double scale = -1,
+               double err = -1) const
+  // NOTES: (1) for BGV, mag,scale,err must be defaulted;
   // (2) for CKKS, mag must be set to non-default value
   {
-    if (getTag() == PA_cx_tag && mag < 0) 
+    if (getTag() == PA_cx_tag && mag < 0)
       throw LogicError("CKKS encryption: mag must be set to non-default");
-    EncodedPtxt eptxt; encode(eptxt, array, mag, scale, err); key.Encrypt(ctxt, eptxt);
+    EncodedPtxt eptxt;
+    encode(eptxt, array, mag, scale, err);
+    key.Encrypt(ctxt, eptxt);
   }
 
-  void encrypt(Ctxt& ctxt, const PlaintextArray& array,
-               double mag=-1, double scale=-1, double err=-1) const
-  { encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err); }
-
-
-
+  void encrypt(Ctxt& ctxt,
+               const PlaintextArray& array,
+               double mag = -1,
+               double scale = -1,
+               double err = -1) const
+  {
+    encrypt(ctxt, ctxt.getPubKey(), array, mag, scale, err);
+  }
 
   //=========================
 
@@ -1611,7 +1724,6 @@ public:
   {
     rep->decrypt(ctxt, sKey, ptxt);
   }
-
 
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
                           const std::vector<NTL::ZZX>& L) const
@@ -1648,22 +1760,25 @@ public:
 // Convenience routines to avoid EncryptedArray's when
 // using the "default" one in Context
 
-inline void 
-rotate(Ctxt& ctxt, long k) 
-{ ctxt.getContext().getDefaultView().rotate(ctxt, k); }
+inline void rotate(Ctxt& ctxt, long k)
+{
+  ctxt.getContext().getDefaultView().rotate(ctxt, k);
+}
 
-inline void 
-shift(Ctxt& ctxt, long k) 
-{ ctxt.getContext().getDefaultView().shift(ctxt, k); }
+inline void shift(Ctxt& ctxt, long k)
+{
+  ctxt.getContext().getDefaultView().shift(ctxt, k);
+}
 
-inline void 
-rotate1D(Ctxt& ctxt, long i, long k, bool dc=false) 
-{ ctxt.getContext().getDefaultView().rotate1D(ctxt, i, k, dc); }
+inline void rotate1D(Ctxt& ctxt, long i, long k, bool dc = false)
+{
+  ctxt.getContext().getDefaultView().rotate1D(ctxt, i, k, dc);
+}
 
-inline void 
-shift1D(Ctxt& ctxt, long i, long k) 
-{ ctxt.getContext().getDefaultView().shift1D(ctxt, i, k); }
-
+inline void shift1D(Ctxt& ctxt, long i, long k)
+{
+  ctxt.getContext().getDefaultView().shift1D(ctxt, i, k);
+}
 
 // PlaintextArray
 
@@ -1763,7 +1878,6 @@ void encode(const EncryptedArray& ea, PlaintextArray& pa, const NTL::ZZX& val);
 void encode(const EncryptedArray& ea, PlaintextArray& pa, double val);
 void encode(const EncryptedArray& ea, PlaintextArray& pa, cx_double val);
 
-
 void decode(const EncryptedArray& ea,
             std::vector<long>& array,
             const PlaintextArray& pa);
@@ -1789,11 +1903,11 @@ bool equals(const EncryptedArray& ea,
             const PlaintextArray& pa,
             const std::vector<NTL::ZZX>& other);
 
-bool equals(const EncryptedArray& ea, 
-	    const PlaintextArray& pa,
-	    const PlaintextArray& other,
-	    double tolerance, double floor);
-
+bool equals(const EncryptedArray& ea,
+            const PlaintextArray& pa,
+            const PlaintextArray& other,
+            double tolerance,
+            double floor);
 
 void add(const EncryptedArray& ea,
          PlaintextArray& pa,
@@ -1817,7 +1931,6 @@ void applyPerm(const EncryptedArray& ea,
 
 void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
 
-
 //=====================================
 
 // PtxtArray is a somewhat "friendlier" interface than
@@ -1825,30 +1938,35 @@ void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
 // an EncryptedArray.  It is recommended that PlaintextArray
 // is deprecated in favor of PtxtArray.
 
-class PtxtArray {
+class PtxtArray
+{
 public:
-  // These two data fields should really be private, but there are 
+  // These two data fields should really be private, but there are
   // a lot of internal functions that need to access them
   const EncryptedArray& ea;
   PlaintextArray pa;
 
-  explicit PtxtArray(const EncryptedArray& ea_) : ea(ea_), pa(ea) { } 
-  explicit PtxtArray(const Context& context) : ea(*context.ea), pa(ea) { }
+  explicit PtxtArray(const EncryptedArray& ea_) : ea(ea_), pa(ea) {}
+  explicit PtxtArray(const Context& context) : ea(*context.ea), pa(ea) {}
 
   // copy constructor: default
   PtxtArray(const PtxtArray&) = default;
 
   // templates that allows construction via convert:
   // T can be any type supported by convert(PtxtArray,T)
-  template<class T>
+  template <class T>
   PtxtArray(const EncryptedArray& ea, const T& t) : PtxtArray(ea)
-  { load(t); }
+  {
+    load(t);
+  }
 
-  template<class T>
+  template <class T>
   PtxtArray(const Context& context, const T& t) : PtxtArray(context)
-  { load(t); }
+  {
+    load(t);
+  }
 
-  PtxtArray& operator=(const PtxtArray& other) 
+  PtxtArray& operator=(const PtxtArray& other)
   {
     assertTrue(&ea == &other.ea, "PtxtArray: inconsistent assignment");
     pa = other.pa;
@@ -1857,22 +1975,37 @@ public:
 
   // template that allows assignment via convert:
   // T can be any type supported by PxtArray::load(T)
-  template<class T>
+  template <class T>
   PtxtArray& operator=(const T& t)
-  { load(t); return *this; }
+  {
+    load(t);
+    return *this;
+  }
 
   const EncryptedArray& getView() const { return ea; }
-  const EncryptedArray& getEA() const   { return ea; }
- 
+  const EncryptedArray& getEA() const { return ea; }
+
   // direct encode, encrypt, and decrypt methods
-  void encode(EncodedPtxt& eptxt, double mag=-1, double scale=-1, double err=-1) const
-  { ea.encode(eptxt, pa, mag, scale, err); }
+  void encode(EncodedPtxt& eptxt,
+              double mag = -1,
+              double scale = -1,
+              double err = -1) const
+  {
+    ea.encode(eptxt, pa, mag, scale, err);
+  }
 
-  void encrypt(Ctxt& ctxt, double mag=-1, double scale=-1, double err=-1) const
-  { ea.encrypt(ctxt, pa, mag, scale, err); }
+  void encrypt(Ctxt& ctxt,
+               double mag = -1,
+               double scale = -1,
+               double err = -1) const
+  {
+    ea.encrypt(ctxt, pa, mag, scale, err);
+  }
 
-  void decrypt(const Ctxt& ctxt, const SecKey& sKey) 
-  { ea.decrypt(ctxt, sKey, pa); }
+  void decrypt(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.decrypt(ctxt, sKey, pa);
+  }
 
   void random() { helib::random(ea, pa); }
 
@@ -1885,10 +2018,7 @@ public:
     helib::encode(ea, pa, array1);
   }
 
-  void load(const std::vector<long>& array)
-  {
-    helib::encode(ea, pa, array);
-  }
+  void load(const std::vector<long>& array) { helib::encode(ea, pa, array); }
 
   void load(const std::vector<NTL::ZZX>& array)
   {
@@ -1900,108 +2030,104 @@ public:
     helib::encode(ea, pa, array);
   }
 
-  void load(const std::vector<double>& array)
-  {
-    helib::encode(ea, pa, array);
-  }
+  void load(const std::vector<double>& array) { helib::encode(ea, pa, array); }
 
-  void load(int val)
-  {
-    helib::encode(ea, pa, long(val));
-  }
+  void load(int val) { helib::encode(ea, pa, long(val)); }
 
-  void load(long val)
-  {
-    helib::encode(ea, pa, val);
-  }
+  void load(long val) { helib::encode(ea, pa, val); }
 
-  void load(const NTL::ZZX& val)
-  {
-    helib::encode(ea, pa, val);
-  }
+  void load(const NTL::ZZX& val) { helib::encode(ea, pa, val); }
 
-  void load(double val)
-  {
-    helib::encode(ea, pa, val);
-  }
+  void load(double val) { helib::encode(ea, pa, val); }
 
-
-  void load(cx_double val)
-  {
-    helib::encode(ea, pa, val);
-  }
+  void load(cx_double val) { helib::encode(ea, pa, val); }
 
   // additional convenience conversions from NTL types (BGV only)
-  // NTL vectors of NTL ring types 
-  // Implementation note: these all go via conversion to 
+  // NTL vectors of NTL ring types
+  // Implementation note: these all go via conversion to
   // std::vector<NTL::ZZX> to enforce BGV.  This is not
   // the most efficient way to do this, and if it
   // becomes a bottleneck, we can revisit this implementation
   // (without changing semantics).
   void load(const NTL::Vec<NTL::GF2>& vec)
-  { std::vector<NTL::ZZX> v; convert(v, vec); load(v); }
+  {
+    std::vector<NTL::ZZX> v;
+    convert(v, vec);
+    load(v);
+  }
   void load(const NTL::Vec<NTL::GF2X>& vec)
-  { std::vector<NTL::ZZX> v; convert(v, vec); load(v); }
+  {
+    std::vector<NTL::ZZX> v;
+    convert(v, vec);
+    load(v);
+  }
   void load(const NTL::Vec<NTL::zz_p>& vec)
-  { std::vector<NTL::ZZX> v; convert(v, vec); load(v); }
+  {
+    std::vector<NTL::ZZX> v;
+    convert(v, vec);
+    load(v);
+  }
   void load(const NTL::Vec<NTL::zz_pX>& vec)
-  { std::vector<NTL::ZZX> v; convert(v, vec); load(v); }
+  {
+    std::vector<NTL::ZZX> v;
+    convert(v, vec);
+    load(v);
+  }
 
   // NTL scalar ring types
-  // Implementation note: these all go via conversion to 
+  // Implementation note: these all go via conversion to
   // NTL::ZZX to enforce BGV
   void load(NTL::GF2 scalar)
-  { NTL::ZZX s; convert(s, scalar); load(s); }
+  {
+    NTL::ZZX s;
+    convert(s, scalar);
+    load(s);
+  }
   void load(const NTL::GF2X& scalar)
-  { NTL::ZZX s; convert(s, scalar); load(s); }
+  {
+    NTL::ZZX s;
+    convert(s, scalar);
+    load(s);
+  }
   void load(NTL::zz_p scalar)
-  { NTL::ZZX s; convert(s, scalar); load(s); }
+  {
+    NTL::ZZX s;
+    convert(s, scalar);
+    load(s);
+  }
   void load(const NTL::zz_pX& scalar)
-  { NTL::ZZX s; convert(s, scalar); load(s); }
+  {
+    NTL::ZZX s;
+    convert(s, scalar);
+    load(s);
+  }
 
   //============== store ============
 
-  void store(std::vector<long>& array) const
-  { decode(ea, array, pa); }
+  void store(std::vector<long>& array) const { decode(ea, array, pa); }
 
-  void store(std::vector<NTL::ZZX>& array) const
-  { decode(ea, array, pa); }
+  void store(std::vector<NTL::ZZX>& array) const { decode(ea, array, pa); }
 
-  void store(std::vector<cx_double>& array) const
-  { decode(ea, array, pa); }
+  void store(std::vector<cx_double>& array) const { decode(ea, array, pa); }
 
-  void store(std::vector<double>& array) const
-  { decode(ea, array, pa); }
-
-  
+  void store(std::vector<double>& array) const { decode(ea, array, pa); }
 };
-
 
 inline std::ostream& operator<<(std::ostream& s, const PtxtArray& a)
 {
   return s << a.pa;
 }
 
-inline void rotate(PtxtArray& a, long k)
-{
-  rotate(a.ea, a.pa, k);
-}
+inline void rotate(PtxtArray& a, long k) { rotate(a.ea, a.pa, k); }
 
-inline void shift(PtxtArray& a, long k)
-{
-  shift(a.ea, a.pa, k);
-}
+inline void shift(PtxtArray& a, long k) { shift(a.ea, a.pa, k); }
 
 inline void rotate1D(PtxtArray& a, long i, long k)
 {
   rotate1D(a.ea, a.pa, i, k);
 }
 
-inline void shift1D(PtxtArray& a, long i, long k)
-{
-  shift1D(a.ea, a.pa, i, k);
-}
-
+inline void shift1D(PtxtArray& a, long i, long k) { shift1D(a.ea, a.pa, i, k); }
 
 inline bool operator==(const PtxtArray& a, const PtxtArray& b)
 {
@@ -2017,8 +2143,10 @@ inline bool operator!=(const PtxtArray& a, const PtxtArray& b)
 
 // this function enables the syntax a == Approx(b),
 // defined in NumbTh.h.
-inline bool approx_equal(const PtxtArray& a, const PtxtArray& b,
-                         double tolerance, double floor)
+inline bool approx_equal(const PtxtArray& a,
+                         const PtxtArray& b,
+                         double tolerance,
+                         double floor)
 {
   assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
   return equals(a.ea, a.pa, b.pa, tolerance, floor);
@@ -2031,12 +2159,13 @@ inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)
   return a;
 }
 
-template<class T>
+template <class T>
 auto operator+=(PtxtArray& a, const T& b) -> decltype(a.load(b), a)
 // SFINAE: this allows operator+= to be more easily overloaded
-//PtxtArray& operator+=(PtxtArray& a, const T& b) 
-{ return a += PtxtArray(a.ea, b); }
-
+// PtxtArray& operator+=(PtxtArray& a, const T& b)
+{
+  return a += PtxtArray(a.ea, b);
+}
 
 inline PtxtArray& operator-=(PtxtArray& a, const PtxtArray& b)
 {
@@ -2045,12 +2174,13 @@ inline PtxtArray& operator-=(PtxtArray& a, const PtxtArray& b)
   return a;
 }
 
-template<class T>
+template <class T>
 auto operator-=(PtxtArray& a, const T& b) -> decltype(a.load(b), a)
 // SFINAE: this allows operator-= to be more easily overloaded
-//PtxtArray& operator-=(PtxtArray& a, const T& b) 
-{ return a -= PtxtArray(a.ea, b); }
-
+// PtxtArray& operator-=(PtxtArray& a, const T& b)
+{
+  return a -= PtxtArray(a.ea, b);
+}
 
 inline PtxtArray& operator*=(PtxtArray& a, const PtxtArray& b)
 {
@@ -2059,35 +2189,34 @@ inline PtxtArray& operator*=(PtxtArray& a, const PtxtArray& b)
   return a;
 }
 
-template<class T>
+template <class T>
 auto operator*=(PtxtArray& a, const T& b) -> decltype(a.load(b), a)
 // SFINAE: this allows operator*= to be more easily overloaded
-//PtxtArray& operator*=(PtxtArray& a, const T& b) 
-{ return a *= PtxtArray(a.ea, b); }
-
-
-
-inline void negate(PtxtArray& a)
+// PtxtArray& operator*=(PtxtArray& a, const T& b)
 {
-  negate(a.ea, a.pa);
+  return a *= PtxtArray(a.ea, b);
 }
 
-inline void frobeniusAutomorph(PtxtArray& a, long j) 
-{ frobeniusAutomorph(a.ea, a.pa, j); }
+inline void negate(PtxtArray& a) { negate(a.ea, a.pa); }
+
+inline void frobeniusAutomorph(PtxtArray& a, long j)
+{
+  frobeniusAutomorph(a.ea, a.pa, j);
+}
 
 inline void frobeniusAutomorph(PtxtArray& a, const NTL::Vec<long>& vec)
-{ frobeniusAutomorph(a.ea, a.pa, vec); }
+{
+  frobeniusAutomorph(a.ea, a.pa, vec);
+}
 
 inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
-{ applyPerm(a.ea, a.pa, pi); }
+{
+  applyPerm(a.ea, a.pa, pi);
+}
 
-inline void power(PtxtArray& a, long e)
-{ power(a.ea, a.pa, e); }
-
-
+inline void power(PtxtArray& a, long e) { power(a.ea, a.pa, e); }
 
 //=====================================
-
 
 // Following are functions for performing "higher level"
 // operations on "encrypted arrays".  There is really no
@@ -2153,8 +2282,6 @@ void incrementalZeroTest(Ctxt* res[],
 //   (2) we want to exploit better algorithms, like BS/GS and hoisting,
 //       which we don't do now.
 
-
-
 //! @brief Apply the same linear transformation to all the slots
 //! @param C is the output of ea.buildLinPolyCoeffs;
 void applyLinPoly1(const EncryptedArray& ea,
@@ -2175,20 +2302,22 @@ template <typename P> // P can be ZZX or DoubleCRT
 void applyLinPolyLL(Ctxt& ctxt, const std::vector<P>& encodedC, long d);
 ///@}
 
-
-
 // Helper class for unimplemented pa_impl classes
 
 template <typename type>
 struct pa_no_impl
 {
-  template<typename... Args>
+  template <typename... Args>
   static void apply(UNUSED Args&&... args)
-  { throw helib::LogicError("function not implemented"); }
+  {
+    throw helib::LogicError("function not implemented");
+  }
 };
 
-#define HELIB_NO_CKKS_IMPL(impl) template<> class impl<PA_cx> : public pa_no_impl<PA_cx> {};
-
+#define HELIB_NO_CKKS_IMPL(impl)                                               \
+  template <>                                                                  \
+  class impl<PA_cx> : public pa_no_impl<PA_cx>                                 \
+  {};
 
 } // namespace helib
 
