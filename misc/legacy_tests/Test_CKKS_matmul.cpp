@@ -135,7 +135,7 @@ void TestIt(Context& context, bool verbose)
 #if (defined(__unix__) || defined(__unix) || defined(unix))
       struct rusage rusage;
       getrusage( RUSAGE_SELF, &rusage );
-      cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << endl;
+      std::cout << "  rusage.ru_maxrss="<<rusage.ru_maxrss << std::endl;
 #endif
     print_stats(cout);
   }
@@ -168,14 +168,14 @@ int main(int argc, char *argv[])
   amap.parse(argc, argv);
 
   if (verbose) {
-    cout << "*** Test_MatMul: m=" << m
+    std::cout << "*** Test_MatMul: m=" << m
 	 << ", r=" << r
 	 << ", L=" << L
 	 << ", nt=" << nt
 	 << ", force_bsgs=" << fhe_test_force_bsgs
 	 << ", force_hoist=" << fhe_test_force_hoist
 	 << ", ks_strategy=" << ks_strategy
-	 << endl;
+	 << std::endl;
 
    }
 

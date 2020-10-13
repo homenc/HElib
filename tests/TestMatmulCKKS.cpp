@@ -157,7 +157,7 @@ protected:
 #if (defined(__unix__) || defined(__unix) || defined(unix))
       struct rusage rusage;
       getrusage(RUSAGE_SELF, &rusage);
-      cout << "  rusage.ru_maxrss=" << rusage.ru_maxrss << endl;
+      std::cout << "  rusage.ru_maxrss=" << rusage.ru_maxrss << std::endl;
 #endif
       helib::print_stats(std::cout);
     }

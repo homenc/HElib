@@ -28,7 +28,7 @@ static bool noPrint = true;
 void testCtxt(long m, long p, long depthBound, long L, long r)
 {
   if (!noPrint)
-    cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<depthBound<< ",r="<<r<<")\n";
+    std::cout << "@testCtxt(m="<<m<<",p="<<p<<",depth="<<depthBound<< ",r="<<r<<")\n";
 
   Context context(m,p,r);
   buildModChain(context, /*nLevels=*/L);
@@ -45,8 +45,8 @@ void testCtxt(long m, long p, long depthBound, long L, long r)
 
   PermIndepPrecomp pip(context, depthBound);
 
-  cout << "depth=" << pip.getDepth() << "\n";;
-  cout << "cost=" << pip.getCost() << "\n";;
+  std::cout << "depth=" << pip.getDepth() << "\n";;
+  std::cout << "cost=" << pip.getCost() << "\n";;
 
   Permut pi;
   randomPerm(pi, n);
@@ -110,4 +110,3 @@ int main(int argc, char *argv[])
 
   testCtxt(m,p,depth,L,r);
 }
-

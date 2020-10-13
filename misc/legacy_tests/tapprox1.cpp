@@ -118,7 +118,7 @@ void testGeneralOps(const PubKey& publicKey,
   for (long i = 0; i < nRounds; i++) {
 
     if (verbose)
-      std::cout << "*** round " << i << "..." << endl;
+      std::cout << "*** round " << i << "..." << std::endl;
 
     if (reset) {
       resetPtxtMag(c0, p0);
@@ -245,9 +245,9 @@ void testGeneralOps(const PubKey& publicKey,
 
 
   if (verbose) {
-    std::cout << endl;
+    std::cout << std::endl;
     // printAllTimers();
-    std::cout << endl;
+    std::cout << std::endl;
   }
   resetAllTimers();
 }
@@ -294,8 +294,8 @@ int main(int argc, char* argv[])
   }
 
   if (verbose) {
-    cout << "** m=" << m << ", #rounds=" << R << ", |q|=" << L
-         << ", epsilon=" << epsilon << endl;
+    std::cout << "** m=" << m << ", #rounds=" << R << ", |q|=" << L
+              << ", epsilon=" << epsilon << std::endl;
   }
 
   if (verbose) fhe_stats = true;
@@ -313,12 +313,12 @@ int main(int argc, char* argv[])
   const PubKey& publicKey = secretKey;
 
   if (verbose) {
-    std::cout << "security=" << context.securityLevel() << endl;
+    std::cout << "security=" << context.securityLevel() << std::endl;
     context.zMStar.printout();
-    cout << "r = " << context.alMod.getR() << endl;
-    cout << "ctxtPrimes=" << context.ctxtPrimes
-	 << ", specialPrimes=" << context.specialPrimes << endl
-	 << endl;
+    std::cout << "r = " << context.alMod.getR() << std::endl;
+    std::cout << "ctxtPrimes=" << context.ctxtPrimes
+	 << ", specialPrimes=" << context.specialPrimes << std::endl
+	 << std::endl;
   }
   if (debug) {
     dbgKey = &secretKey;
@@ -336,4 +336,3 @@ int main(int argc, char* argv[])
 
   return 0;
 }
-
