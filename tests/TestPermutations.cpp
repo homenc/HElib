@@ -29,7 +29,7 @@ namespace {
 struct BGVParameters
 {
   BGVParameters(long m, long p, long r, long bits, long depth) :
-    m(m), p(p), r(r), bits(bits), depth(depth){};
+      m(m), p(p), r(r), bits(bits), depth(depth){};
 
   const long m;
   const long p;
@@ -51,7 +51,7 @@ struct BGVParameters
 struct CKKSParameters : public BGVParameters
 {
   CKKSParameters(long m, long r, long bits, long depth) :
-    BGVParameters(m, /*p=*/-1, r, bits, depth){};
+      BGVParameters(m, /*p=*/-1, r, bits, depth){};
 };
 
 class TestPermutationsBGV : public ::testing::TestWithParam<BGVParameters>
@@ -76,9 +76,10 @@ protected:
       depth(GetParam().depth),
       context(m, p, r),
       secretKey((buildModChain(context, bits), context)),
-      publicKey((secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
+      publicKey(
+          (secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
       ea(*(context.ea))
-    {}
+  {}
 
   virtual void SetUp() override
   {
@@ -108,9 +109,10 @@ protected:
       depth(GetParam().depth),
       context(m, /*p=*/-1, r),
       secretKey((buildModChain(context, bits), context)),
-      publicKey((secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
+      publicKey(
+          (secretKey.GenSecKey(), addSome1DMatrices(secretKey), secretKey)),
       ea(context.ea->getCx())
-    {}
+  {}
 
   virtual void SetUp() override
   {
@@ -180,10 +182,17 @@ TEST_P(TestPermutationsCKKS, ciphertextPermutationsWithNewAPI)
 
 INSTANTIATE_TEST_SUITE_P(variousParameters,
                          TestPermutationsBGV,
-                         ::testing::Values(BGVParameters(/*m=*/4369, /*p=*/2, /*r=*/1, /*bits=*/1000, /*depth=*/5)));
+                         ::testing::Values(BGVParameters(/*m=*/4369,
+                                                         /*p=*/2,
+                                                         /*r=*/1,
+                                                         /*bits=*/1000,
+                                                         /*depth=*/5)));
 
 INSTANTIATE_TEST_SUITE_P(variousParameters,
                          TestPermutationsCKKS,
-                         ::testing::Values(CKKSParameters(/*m=*/8192, /*r=*/20, /*bits=*/1000, /*depth=*/5)));
+                         ::testing::Values(CKKSParameters(/*m=*/8192,
+                                                          /*r=*/20,
+                                                          /*bits=*/1000,
+                                                          /*depth=*/5)));
 
 } // namespace
