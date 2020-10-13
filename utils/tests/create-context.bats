@@ -115,19 +115,19 @@ function teardown {
   assert [ "$output" == "Frobenius matrices reqires switch-key matrices to be generated." ]
 }
 
-@test "default scheme fails if p < 2" {
+@test "default scheme fails if p is less than 2" {
   run "${create_context}" "${prefix_ckks}.params"
   assert [ "$status" -ne 0 ]
   assert [ "$output" == "BGV invalid plaintext modulus. In BGV it must be a prime number greater than 1." ]
 }
 
-@test "BGV: fails if p < 2" {
+@test "BGV: fails if p is less than 2" {
   run "${create_context}" "${prefix_ckks}.params" --scheme BGV
   assert [ "$status" -ne 0 ]
   assert [ "$output" == "BGV invalid plaintext modulus. In BGV it must be a prime number greater than 1." ]
 }
 
-@test "CKKS: fails if p != -1" {
+@test "CKKS: fails if p does not equal -1" {
   run "${create_context}" "${prefix_bgv}.params" --scheme CKKS
   assert [ "$status" -ne 0 ]
   assert [ "$output" == "CKKS invalid plaintext modulus. In CKKS it must be set to -1." ]

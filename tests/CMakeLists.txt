@@ -152,12 +152,14 @@ set(TEST_NAMES
     "TestThinBootstrappingWithMultiplications"
     "TestVersion"
     )
-
+  message(STATUS "${CMAKE_BINARY_DIR}")
 foreach (TEST_NAME ${TEST_NAMES})
     # Tests will be run in ${HELIB_TEST_BIN_DIR} that is the test folder if
     # library build, ${DEPENDENCIES_FOLDER}/Build/helib_external/${HELIB_TEST_BIN_DIR}
     # otherwise.
+    # Test output in the XUnit format will be generated in
+    # ${CMAKE_BINARY_DIR}/xunit_test_result/TestResult-${TEST_NAME}.xml
     add_test(NAME "${TEST_NAME}"
-             COMMAND runTests --gtest_filter=*${TEST_NAME}*
+      COMMAND runTests --gtest_output=xml:${CMAKE_BINARY_DIR}/xunit_test_result/TestResult-${TEST_NAME}.xml --gtest_filter=*${TEST_NAME}*
              WORKING_DIRECTORY ${HELIB_TEST_BIN_DIR})
 endforeach (TEST_NAME)

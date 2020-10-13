@@ -32,7 +32,7 @@ function teardown {
   remove-test-directory "$tmp_folder"
 }
 
-@test "BGV: data == decode(encode(data))" {
+@test "BGV: data equals decode(encode(data))" {
   run bash -c "$encode ${prefix_bgv}.dat ${prefix_bgv}.info BGV > ${prefix_bgv}.encoded"
   assert [ "$status" -eq 0 ]
   run bash -c "$decode ${prefix_bgv}.encoded ${prefix_bgv}.info BGV > ${prefix_bgv}.decoded"
@@ -40,7 +40,7 @@ function teardown {
   diff "${prefix_bgv}.dat" "${prefix_bgv}.decoded"
 }
 
-@test "BGV: data != decode(encode(data)) with padding" {
+@test "BGV: data does not equal decode(encode(data)) with padding" {
   # Odd number to create padding
   genData "${prefix_bgv}.pad" 11 "BGV"
   run bash -c "$encode ${prefix_bgv}.pad ${prefix_bgv}.info BGV > ${prefix_bgv}.pad.encoded"
@@ -52,7 +52,7 @@ function teardown {
   assert [ "$status" -ne 0 ]
 }
 
-@test "BGV: data == decode(encode(data), nelements) with padding" {
+@test "BGV: data equals decode(encode(data), nelements) with padding" {
   # Odd number to create padding
   nelements=11
   genData "${prefix_bgv}.pad" ${nelements} "BGV"
@@ -65,7 +65,7 @@ function teardown {
   assert [ "$status" -eq 0 ]
 }
 
-@test "BGV: matrix data == decode(encode(data))" {
+@test "BGV: matrix data equals decode(encode(data))" {
   run bash -c "$encode ${prefix_bgv}.dat ${prefix_bgv}.info BGV --dims 2,3 > ${prefix_bgv}.encoded"
   assert [ "$status" -eq 0 ]
   # Number of lines should be 1 for header and 2 * 3 for data.
@@ -81,7 +81,7 @@ function teardown {
   assert [ "$output" == "Number of ptxts 4 > capacity of Matrix: 3 (dims: (1, 3))" ]
 }
 
-@test "CKKS: data == decode(encode(data))" {
+@test "CKKS: data equals decode(encode(data))" {
   run bash -c "$encode ${prefix_ckks}.dat ${prefix_ckks}.info CKKS > ${prefix_ckks}.encoded"
   assert [ "$status" -eq 0 ]
   run bash -c "$decode ${prefix_ckks}.encoded ${prefix_ckks}.info CKKS > ${prefix_ckks}.decoded"
@@ -89,7 +89,7 @@ function teardown {
   diff "${prefix_ckks}.dat" "${prefix_ckks}.decoded"
 }
 
-@test "CKKS: data != decode(encode(data)) with padding" {
+@test "CKKS: data does not equal decode(encode(data)) with padding" {
   # Odd number to create padding
   genData "${prefix_ckks}.pad" 11 "CKKS"
   run bash -c "$encode ${prefix_ckks}.pad ${prefix_ckks}.info CKKS > ${prefix_ckks}.pad.encoded"
@@ -101,7 +101,7 @@ function teardown {
   assert [ "$status" -ne 0 ]
 }
 
-@test "CKKS: data == decode(encode(data), nelements) with padding" {
+@test "CKKS: data equals decode(encode(data), nelements) with padding" {
   # Odd number to create padding
   nelements=11
   genData "${prefix_ckks}.pad" ${nelements} "CKKS"
@@ -114,7 +114,7 @@ function teardown {
   assert [ "$status" -eq 0 ]
 }
 
-@test "CKKS: matrix data == decode(encode(data))" {
+@test "CKKS: matrix data equals decode(encode(data))" {
   run bash -c "$encode ${prefix_ckks}.dat ${prefix_ckks}.info CKKS --dims 2,3 > ${prefix_ckks}.encoded"
   assert [ "$status" -eq 0 ]
   # Number of lines should be 1 for header and 2 * 3 for data.
@@ -129,4 +129,3 @@ function teardown {
   assert [ "$status" -ne 0 ]
   assert [ "$output" == "Number of ptxts 6 > capacity of Matrix: 3 (dims: (1, 3))" ]
 }
-
