@@ -159,8 +159,6 @@ public:
 
   //============================================================
 
-  Context& operator=(const Context&) = delete;
-
   //! @brief The structure of Zm*
   PAlgebra zMStar;
 
