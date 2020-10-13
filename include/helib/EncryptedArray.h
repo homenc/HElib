@@ -780,7 +780,7 @@ class EncryptedArrayDerived<PA_cx> : public EncryptedArrayBase
 public:
   static double roundedSize(double x)
   {
-    long rounded = std::ceil(fabs(x));
+    long rounded = std::ceil(std::fabs(x));
     if (rounded < 1)
       rounded = 1;
     return double(1L << NTL::NumBits(rounded - 1));
