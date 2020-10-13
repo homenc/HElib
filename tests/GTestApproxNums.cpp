@@ -190,12 +190,13 @@ void debugCompare(const helib::SecKey& sk,
   double rel_err = abs_err / helib::Norm(p_vec);
   if (helib_test::verbose) {
     std::cout << "   "
-              << " abs_err=" << abs_err 
-              << " scaled_err=" << (c.getNoiseBound()/c.getRatFactor())
-              << " rel_err=" << rel_err
+              << " abs_err=" << abs_err
+              << " scaled_err=" << (c.getNoiseBound() / c.getRatFactor())
+              << " rel_err="
+              << rel_err
               //<< "   "
-              << " mag_est=" << c.getPtxtMag()
-              << " mag_act=" << helib::Norm(p_vec)
+              << " mag_est=" << c.getPtxtMag() << " mag_act="
+              << helib::Norm(p_vec)
               //<< " scale=" << c.getRatFactor()
               << "\n";
   }
@@ -247,7 +248,7 @@ protected:
   }
 
   virtual void TearDown() override
-  { 
+  {
     if (helib_test::verbose) {
       helib::print_stats(std::cout);
     }
@@ -729,7 +730,12 @@ INSTANTIATE_TEST_SUITE_P(typicalParameters,
                          GTestApproxNums,
                          ::testing::Values(
                              // SLOW
-                             Parameters(/*R=*/1, /*m=*/1024, /*r=*/8, /*L=*/150, /*epsilon=*/0.01, /*seed=*/0)
+                             Parameters(/*R=*/1,
+                                        /*m=*/1024,
+                                        /*r=*/8,
+                                        /*L=*/150,
+                                        /*epsilon=*/0.01,
+                                        /*seed=*/0)
                              // FAST
                              // Parameters(1, 128, 8, 150, 0.01, 0)
                              ));

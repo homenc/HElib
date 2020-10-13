@@ -241,7 +241,7 @@ class FatEncodedPtxt_base
 public:
   virtual ~FatEncodedPtxt_base() {}
 
- // TODO make this usable with cloned_ptr
+  // TODO make this usable with cloned_ptr
   virtual FatEncodedPtxt_base* clone() const = 0;
 
   virtual bool isBGV() const { return false; }
