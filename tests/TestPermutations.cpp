@@ -28,7 +28,8 @@ namespace {
 
 struct Parameters
 {
-  Parameters(std::vector<long> orders, std::vector<long> good, long depth) : depth(depth)
+  Parameters(std::vector<long> orders, std::vector<long> good, long depth) :
+      depth(depth)
   {
     gens.SetLength(orders.size());
     for (std::size_t i = 0; i < orders.size(); ++i) {
@@ -166,7 +167,9 @@ TEST_P(TestPermutationsBGV, ciphertextPermutations)
   NTL::Vec<helib::GenDescriptor> gens;
   gens.SetLength(ea.dimension());
   for (long i = 0; i < ea.dimension(); ++i) {
-    gens[i] = helib::GenDescriptor(/*order=*/ea.sizeOfDimension(i), /*good=*/ea.nativeDimension(i), /*genIdx=*/i);
+    gens[i] = helib::GenDescriptor(/*order=*/ea.sizeOfDimension(i),
+                                   /*good=*/ea.nativeDimension(i),
+                                   /*genIdx=*/i);
   }
 
   // Get the gnerator-tree structures and the corresponding hypercube
@@ -199,7 +202,8 @@ TEST_P(TestPermutationsBGV, ciphertextPermutations)
     helib::Ctxt ctxt(publicKey);
     ea.encrypt(ctxt, publicKey, in);
     if (helib_test::verbose) {
-      std::cout << "  ** Applying permutation network to ciphertext... " << std::flush;
+      std::cout << "  ** Applying permutation network to ciphertext... "
+                << std::flush;
     }
 
     double t = NTL::GetTime();
@@ -302,9 +306,8 @@ TEST_P(TestPermutationsGeneral, testCube)
     net.applyToCube(cube3);
 
     EXPECT_EQ(cube2, cube3)
-      << "input = " << cube1.getData()
-      << "\noutput1 = " << cube2.getData()
-      << "\noutput2 = " << cube2.getData();
+        << "input = " << cube1.getData() << "\noutput1 = " << cube2.getData()
+        << "\noutput2 = " << cube2.getData();
   }
 }
 
