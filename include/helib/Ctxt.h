@@ -284,7 +284,7 @@ class Ctxt
   IndexSet primeSet; // the primes relative to which the parts are defined
   long ptxtSpace;    // plaintext space for this ciphertext (either p or p^r)
 
-  // a high-probability bound on the the noise magnitude
+  // a high-probability bound on the noise magnitude
   NTL::xdouble noiseBound;
 
   long intFactor; // an integer factor to divide by on decryption (for BGV)
@@ -342,7 +342,7 @@ class Ctxt
                bool matchPrimeSet = false,
                bool negative = false);
 
-  // convenient to avoid dealng with the deprecated matchPrimeSet
+  // convenient to avoid dealing with the deprecated matchPrimeSet
   // parameter
   void addSignedPart(const DoubleCRT& part,
                      const SKHandle& handle,
@@ -385,7 +385,7 @@ public:
   Ctxt(const Ctxt& other) = default;
 
   // VJS-FIXME: this was really a messy design choice to not
-  // have ciphertext cosntructors that specify prime sets.
+  // have ciphertext constructors that specify prime sets.
   // The default value of ctxtPrimes is kind of pointless.
 
   //__attribute__((deprecated))
@@ -583,51 +583,120 @@ public:
 
   //=========== new multByConstant interface =========
 
+  /**
+   * @brief Multiply a `Ctxt` with a specified plaintext constant.
+   * @param ptxt The constant to multiply as a `PtxtArray` object.
+   **/
   void multByConstant(const PtxtArray& ptxt);
+  /**
+   * @brief Multiply a `Ctxt` with a specified plaintext constant.
+   * @param ptxt The constant to multiply as an `EncodedPtxt` object.
+   * @note `EncodedPtxt` is a plaintext object containing `NTL::ZZX` data.
+   **/
   void multByConstant(const EncodedPtxt& ptxt);
+  /**
+   * @brief Multiply a `Ctxt` with a specified plaintext constant.
+   * @param ptxt The constant to multiply as a `FatEncodedPtxt` object.
+   * @note `FatEncodedPtxt` is a plaintext object containing
+   * `helib::DoubleCRT` data.
+   **/
   void multByConstant(const FatEncodedPtxt& ptxt);
 
+  /**
+   * @brief Multiply a `Ctxt` with an `NTL::ZZ` scalar.
+   * @param ptxt Scalar to multiply.
+   **/
   void multByConstant(const NTL::ZZ& ptxt);
+  /**
+   * @brief Multiply a `Ctxt` with a `long` scalar.
+   * @param ptxt Scalar to multiply.
+   **/
   void multByConstant(long ptxt);
+  /**
+   * @brief Multiply a `Ctxt` with a `double` scalar.
+   * @param ptxt Scalar to multiply.
+   **/
   void multByConstant(double ptxt);
+  /**
+   * @brief Multiply a `Ctxt` with an `NTL::xdouble` scalar.
+   * @param ptxt Scalar to multiply.
+   **/
   void multByConstant(NTL::xdouble ptxt);
 
+  /**
+   * @brief Times equals operator with a plaintext constant.
+   * @param ptxt Right hand side of multiplication.
+   * @return Reference to `*this` post multiplication.
+   **/
   Ctxt& operator*=(const PtxtArray& ptxt)
   {
     multByConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Times equals operator with a plaintext constant.
+   * @param ptxt Right hand side of multiplication.
+   * @return Reference to `*this` post multiplication.
+   * @note `EncodedPtxt` is a plaintext object containing `NTL::ZZX` data.
+   **/
   Ctxt& operator*=(const EncodedPtxt& ptxt)
   {
     multByConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Times equals operator with a plaintext constant.
+   * @param ptxt Right hand side of multiplication.
+   * @return Reference to `*this` post multiplication.
+   * @note `FatEncodedPtxt` is a plaintext object containing
+   * `helib::DoubleCRT` data.
+   **/
   Ctxt& operator*=(const FatEncodedPtxt& ptxt)
   {
     multByConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Times equals operator with an `NTL::ZZ` scalar.
+   * @param ptxt Right hand side of multiplication.
+   * @return Reference to `*this` post multiplication.
+   **/
   Ctxt& operator*=(const NTL::ZZ& ptxt)
   {
     multByConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Times equals operator with a `long` scalar.
+   * @param ptxt Right hand side of multiplication.
+   * @return Reference to `*this` post multiplication.
+   **/
   Ctxt& operator*=(long ptxt)
   {
     multByConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Times equals operator with a `double` scalar.
+   * @param ptxt Right hand side of multiplication.
+   * @return Reference to `*this` post multiplication.
+   **/
   Ctxt& operator*=(double ptxt)
   {
     multByConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Times equals operator with an `NTL::xdouble` scalar.
+   * @param ptxt Right hand side of multiplication.
+   * @return Reference to `*this` post multiplication.
+   **/
   Ctxt& operator*=(NTL::xdouble ptxt)
   {
     multByConstant(ptxt);
@@ -641,93 +710,214 @@ private: // impl only
 public:
   //=========== new addConstant interface ============
 
+  /**
+   * @brief Add to a `Ctxt` a specified plaintext constant.
+   * @param ptxt The constant to add as a `PtxtArray` object.
+   * @param neg Flag to specify if the constant is negative. Default is
+   * `false`.
+   **/
   void addConstant(const PtxtArray& ptxt, bool neg = false);
+  /**
+   * @brief Add to a `Ctxt` a specified plaintext constant.
+   * @param ptxt The constant to add as an `EncodedPtxt` object.
+   * @param neg Flag to specify if the constant is negative. Default is
+   * `false`.
+   * @note `EncodedPtxt` is a plaintext object containing `NTL::ZZX` data.
+   **/
   void addConstant(const EncodedPtxt& ptxt, bool neg = false);
+  /**
+   * @brief Add to a `Ctxt` a specified plaintext constant.
+   * @param ptxt The constant to add as a `FatEncodedPtxt` object.
+   * @param neg Flag to specify if the constant is negative. Default is
+   * `false`.
+   * @note `FatEncodedPtxt` is a plaintext object containing
+   * `helib::DoubleCRT` data.
+   **/
   void addConstant(const FatEncodedPtxt& ptxt, bool neg = false);
 
+  /**
+   * @brief Add to a `Ctxt` an `NTL::ZZ` scalar.
+   * @param ptxt The scalar to add.
+   * @param neg Flag to specify if the constant is negative. Default is
+   * `false`.
+   **/
   void addConstant(const NTL::ZZ& ptxt, bool neg = false);
+  /**
+   * @brief Add to a `Ctxt` a `long` scalar.
+   * @param ptxt The scalar to add.
+   * @param neg Flag to specify if the constant is negative. Default is
+   * `false`.
+   **/
   void addConstant(long ptxt, bool neg = false);
+  /**
+   * @brief Add to a `Ctxt` a `double` scalar.
+   * @param ptxt The scalar to add.
+   * @param neg Flag to specify if the constant is negative. Default is
+   * `false`.
+   **/
   void addConstant(double ptxt, bool neg = false);
+  /**
+   * @brief Add to a `Ctxt` an `NTL::xdouble` scalar.
+   * @param ptxt The scalar to add.
+   * @param neg Flag to specify if the constant is negative. Default is
+   * `false`.
+   **/
   void addConstant(NTL::xdouble ptxt, bool neg = false);
 
+  /**
+   * @brief Plus equals operator with plaintext constant.
+   * @param ptxt Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   **/
   Ctxt& operator+=(const PtxtArray& ptxt)
   {
     addConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Plus equals operator with plaintext constant.
+   * @param ptxt Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   * @note `EncodedPtxt` is a plaintext object containing `NTL::ZZX` data.
+   **/
   Ctxt& operator+=(const EncodedPtxt& ptxt)
   {
     addConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Plus equals operator with plaintext constant.
+   * @param ptxt Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   * @note `FatEncodedPtxt` is a plaintext object containing
+   * `helib::DoubleCRT` data.
+   **/
   Ctxt& operator+=(const FatEncodedPtxt& ptxt)
   {
     addConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Plus equals operator with an `NTL::ZZ` scalar.
+   * @param ptxt Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   **/
   Ctxt& operator+=(const NTL::ZZ& ptxt)
   {
     addConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Plus equals operator with a `long` scalar.
+   * @param ptxt Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   **/
   Ctxt& operator+=(long ptxt)
   {
     addConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Plus equals operator with a `double` scalar.
+   * @param ptxt Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   **/
   Ctxt& operator+=(double ptxt)
   {
     addConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Plus equals operator with an `NTL::xdouble` scalar.
+   * @param ptxt Right hand side of addition.
+   * @return Reference to `*this` post addition.
+   **/
   Ctxt& operator+=(NTL::xdouble ptxt)
   {
     addConstant(ptxt);
     return *this;
   }
 
+  /**
+   * @brief Minus equals operator with plaintext constant.
+   * @param ptxt Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   **/
   Ctxt& operator-=(const PtxtArray& ptxt)
   {
     addConstant(ptxt, true);
     return *this;
   }
 
+  /**
+   * @brief Minus equals operator with plaintext constant.
+   * @param ptxt Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   * @note `EncodedPtxt` is a plaintext object containing `NTL::ZZX` data.
+   **/
   Ctxt& operator-=(const EncodedPtxt& ptxt)
   {
     addConstant(ptxt, true);
     return *this;
   }
 
+  /**
+   * @brief Minus equals operator with plaintext constant.
+   * @param ptxt Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   * @note `FatEncodedPtxt` is a plaintext object containing
+   * `helib::DoubleCRT` data.
+   **/
   Ctxt& operator-=(const FatEncodedPtxt& ptxt)
   {
     addConstant(ptxt, true);
     return *this;
   }
 
+  /**
+   * @brief Minus equals operator with an `NTL::ZZ` scalar.
+   * @param ptxt Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   **/
   Ctxt& operator-=(const NTL::ZZ& ptxt)
   {
     addConstant(ptxt, true);
     return *this;
   }
 
+  /**
+   * @brief Minus equals operator with a `long` scalar.
+   * @param ptxt Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   **/
   Ctxt& operator-=(long ptxt)
   {
     addConstant(ptxt, true);
     return *this;
   }
 
+  /**
+   * @brief Minus equals operator with a `double` scalar.
+   * @param ptxt Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   **/
   Ctxt& operator-=(double ptxt)
   {
     addConstant(ptxt, true);
     return *this;
   }
 
+  /**
+   * @brief Minus equals operator with an `NTL::xdouble` scalar.
+   * @param ptxt Right hand side of subtraction.
+   * @return Reference to `*this` post subtraction.
+   **/
   Ctxt& operator-=(NTL::xdouble ptxt)
   {
     addConstant(ptxt, true);

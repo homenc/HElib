@@ -1,4 +1,4 @@
-/* Copyright (C) 2012-2020 IBM Corp.
+/* Copyright (C) 2020 IBM Corp.
  * This program is Licensed under the Apache License, Version 2.0
  * (the "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
@@ -86,8 +86,8 @@ or nothing at all.
 
 * eptxt.reset() empties the contents
 
-The default contructor creates an empty container.
-Copy contructors and assignmemnt operators are available,
+The default constructor creates an empty container.
+Copy constructors and assignment operators are available,
    and provide "deep" copy semantics
 
 */
@@ -295,7 +295,7 @@ Usage:
 
   feptxt.expand(eptxt, s);
   // sets feptxt to an expanded (DCRT) version of eptxt
-  // withthe given IndexSet
+  // with the given IndexSet
 
   feptxt.reset();
   // empties out feptxt
