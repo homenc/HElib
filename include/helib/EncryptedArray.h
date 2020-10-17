@@ -2157,16 +2157,6 @@ inline bool operator!=(const PtxtArray& a, const PtxtArray& b)
   return !equals(a.ea, a.pa, b.pa);
 }
 
-// this function enables the syntax a == Approx(b),
-// defined in NumbTh.h.
-inline bool approx_equal(const PtxtArray& a,
-                         const PtxtArray& b,
-                         double tolerance,
-                         double floor)
-{
-  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
-  return equals(a.ea, a.pa, b.pa, tolerance, floor);
-}
 
 inline PtxtArray& operator+=(PtxtArray& a, const PtxtArray& b)
 {
@@ -2232,7 +2222,8 @@ inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
 
 inline void power(PtxtArray& a, long e) { power(a.ea, a.pa, e); }
 
-// For CKKS, returns max norm of slots, for BGV returns Hamming weight
+// For CKKS, returns max norm of slots, for BGV the trivial norm
+// (i.e., 0 if zero, 1 otherwise)
 inline double Norm(const PtxtArray& a) 
 { return Norm(a.ea, a.pa); }
 

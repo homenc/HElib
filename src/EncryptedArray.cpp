@@ -1229,19 +1229,6 @@ public:
     res = (data == odata);
   }
 
-  // exact comparison...not very useful
-  static void apply(const EncryptedArrayDerived<type>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const PlaintextArray& other,
-                    UNUSED double tolerance,
-                    UNUSED double floor)
-  {
-    CPA_BOILER(type)
-
-    const std::vector<RX>& odata = other.getData<type>();
-    res = (data == odata);
-  }
 };
 
 template <>
@@ -1278,19 +1265,6 @@ public:
     throw LogicError("function not implemented");
   }
 
-  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
-                    bool& res,
-                    const PlaintextArray& pa,
-                    const PlaintextArray& other,
-                    double tolerance,
-                    double floor)
-  {
-    CPA_BOILER(PA_cx)
-
-    const std::vector<RX>& odata = other.getData<PA_cx>();
-    res = approx_equal(data, odata, tolerance, floor);
-    // defined in NumTh.h
-  }
 };
 
 bool equals(const EncryptedArray& ea,
@@ -1320,27 +1294,6 @@ bool equals(const EncryptedArray& ea,
   return res;
 }
 
-bool approx_equal(const EncryptedArray& ea,
-                  const PlaintextArray& pa,
-                  const PlaintextArray& other,
-                  double tolerance,
-                  double floor)
-{
-  bool res;
-  ea.dispatch<equals_pa_impl>(res, pa, other, tolerance, floor);
-  return res;
-}
-
-bool equals(const EncryptedArray& ea,
-            const PlaintextArray& pa,
-            const PlaintextArray& other,
-            double tolerance,
-            double floor)
-{
-  bool res;
-  ea.dispatch<equals_pa_impl>(res, pa, other, tolerance, floor);
-  return res;
-}
 
 //=============================================================================
 
@@ -1635,11 +1588,12 @@ public:
   {
     CPA_BOILER(type)
 
-    long wt = 0;
+    res = 0;
     for (long i = 0; i < n; i++)
-      if (data[i] != 0) wt++;
-
-    res = wt;
+      if (data[i] != 0) { 
+        res = 1;
+        return;
+      }
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea, 
@@ -1649,11 +1603,12 @@ public:
 
     const std::vector<RX>& odata = other.getData<type>();
 
-    long wt = 0;
+    res = 0;
     for (long i = 0; i < n; i++)
-      if (data[i] != odata[i]) wt++;
-
-    res = wt;
+      if (data[i] != odata[i]) {
+        res = 1;
+        return;
+      }
   }
 };
 
