@@ -31,17 +31,7 @@ bool reset = false;
 
 void resetPtxtMag(Ctxt& c, const PtxtArray& p)
 {
-  vector<cx_double> pp;
-  p.store(pp);
-  double maxAbs = Norm(pp);
-
-  if (maxAbs < 1.0)
-    maxAbs = 1.0;
-  else
-    maxAbs = std::pow(
-        2,
-        std::ceil(std::log(maxAbs) / std::log(2))); // next power of two
-
+  double maxAbs = NextPow2(Norm(p));
   c.setPtxtMag(NTL::xdouble(maxAbs));
 }
 
@@ -70,18 +60,15 @@ void debugCompare(const SecKey& sk,
   PtxtArray pp(p.getView());
   pp.decrypt(c, sk);
 
-  vector<cx_double> pp_vec, p_vec;
-  pp.store(pp_vec);
-  p.store(p_vec);
-  double abs_err = Distance(pp_vec, p_vec);
-  double rel_err = abs_err / Norm(p_vec);
+  double abs_err = Distance(pp, p);
+  double rel_err = abs_err / Norm(p);
   std::cout << "   "
             << " abs_err=" << abs_err 
             << " scaled_err=" << (c.getNoiseBound()/c.getRatFactor())
             << " rel_err=" << rel_err
             //<< "   "
             << " mag_est=" << c.getPtxtMag()
-            << " mag_act=" << Norm(p_vec)
+            << " mag_act=" << Norm(p)
             //<< " scale=" << c.getRatFactor()
             << "\n";
 }
@@ -108,10 +95,10 @@ void testGeneralOps(const PubKey& publicKey,
   p3.random();
 
   Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
-  p0.encrypt(c0, /*mag=*/1.0);
-  p1.encrypt(c1, /*mag=*/1.0);
-  p2.encrypt(c2, /*mag=*/1.0);
-  p3.encrypt(c3, /*mag=*/1.0);
+  p0.encrypt(c0);
+  p1.encrypt(c1);
+  p2.encrypt(c2);
+  p3.encrypt(c3);
 
   HELIB_NTIMER_START(Circuit);
 
