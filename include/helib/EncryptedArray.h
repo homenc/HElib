@@ -1467,6 +1467,8 @@ public:
   //! @name Direct access to EncryptedArrayBase methods
 
   PA_tag getTag() const { return rep->getTag(); }
+  bool isCKKS() const { return getTag() == PA_cx_tag; }
+
 
   template <template <typename> class T, typename... Args>
   void dispatch(Args&&... args) const
@@ -1931,6 +1933,9 @@ void applyPerm(const EncryptedArray& ea,
 
 void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
 
+double Norm(const EncryptedArray& ea, const PlaintextArray& pa);
+double Distance(const EncryptedArray& ea, const PlaintextArray& pa, const PlaintextArray& other);
+
 //=====================================
 
 // PtxtArray is a somewhat "friendlier" interface than
@@ -1991,7 +1996,10 @@ public:
               double scale = -1,
               double err = -1) const
   {
-    ea.encode(eptxt, pa, mag, scale, err);
+    if (ea.isCKKS())
+      ea.encode(eptxt, pa, mag, scale, err);
+    else
+      ea.encode(eptxt, pa); // ignore mag,scale,err for BGV
   }
 
   void encrypt(Ctxt& ctxt,
@@ -1999,7 +2007,14 @@ public:
                double scale = -1,
                double err = -1) const
   {
-    ea.encrypt(ctxt, pa, mag, scale, err);
+    if (ea.isCKKS()) {
+      if (mag < 0) mag = NextPow2(Norm(pa.getData<PA_cx>()));
+      // if mag is defaulted, set it to 2^(ceil(log2(max(Norm(pa),1))))
+      ea.encrypt(ctxt, pa, mag, scale, err);
+    }
+    else {
+      ea.encrypt(ctxt, pa); // ignore mag,scale,err for BGV
+    }
   }
 
   void decrypt(const Ctxt& ctxt, const SecKey& sKey)
@@ -2111,6 +2126,7 @@ public:
   void store(std::vector<cx_double>& array) const { decode(ea, array, pa); }
 
   void store(std::vector<double>& array) const { decode(ea, array, pa); }
+
 };
 
 inline std::ostream& operator<<(std::ostream& s, const PtxtArray& a)
@@ -2215,6 +2231,17 @@ inline void applyPerm(PtxtArray& a, const NTL::Vec<long>& pi)
 }
 
 inline void power(PtxtArray& a, long e) { power(a.ea, a.pa, e); }
+
+// For CKKS, returns max norm of slots, for BGV returns Hamming weight
+inline double Norm(const PtxtArray& a) 
+{ return Norm(a.ea, a.pa); }
+
+inline double Distance(const PtxtArray& a, const PtxtArray& b)
+{
+  assertTrue(&a.ea == &b.ea, "PtxtArray: inconsistent operation");
+  return Distance(a.ea, a.pa, b.pa); 
+}
+
 
 //=====================================
 

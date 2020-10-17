@@ -1250,7 +1250,7 @@ class equals_pa_impl<PA_cx>
 public:
   PA_INJECT(PA_cx)
 
-  // exact comparison...nor very useful
+  // exact comparison...not very useful
   static void apply(const EncryptedArrayDerived<PA_cx>& ea,
                     bool& res,
                     const PlaintextArray& pa,
@@ -1621,6 +1621,82 @@ void print(const EncryptedArray& ea, std::ostream& s, const PlaintextArray& pa)
 {
   ea.dispatch<print_pa_impl>(s, pa);
 }
+
+//=============================================================================
+
+template <typename type>
+class Norm_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, 
+                    double& res, const PlaintextArray& pa)
+  {
+    CPA_BOILER(type)
+
+    long wt = 0;
+    for (long i = 0; i < n; i++)
+      if (data[i] != 0) wt++;
+
+    res = wt;
+  }
+
+  static void apply(const EncryptedArrayDerived<type>& ea, 
+                    double& res, const PlaintextArray& pa, const PlaintextArray& other)
+  {
+    CPA_BOILER(type)
+
+    const std::vector<RX>& odata = other.getData<type>();
+
+    long wt = 0;
+    for (long i = 0; i < n; i++)
+      if (data[i] != odata[i]) wt++;
+
+    res = wt;
+  }
+};
+
+template <>
+class Norm_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea, 
+                    double& res, const PlaintextArray& pa)
+  {
+    CPA_BOILER(PA_cx)
+
+    res = Norm(data);
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea, 
+                    double& res, const PlaintextArray& pa, const PlaintextArray& other)
+  {
+    CPA_BOILER(PA_cx)
+
+    const std::vector<RX>& odata = other.getData<PA_cx>();
+
+    res = Distance(data, odata);
+  }
+};
+
+double Norm(const EncryptedArray& ea, const PlaintextArray& pa)
+{
+  double res;
+  ea.dispatch<Norm_pa_impl>(res, pa);
+  return res;
+}
+
+double Distance(const EncryptedArray& ea, const PlaintextArray& pa, const PlaintextArray& other)
+{
+  double res;
+  ea.dispatch<Norm_pa_impl>(res, pa, other);
+  return res;
+}
+
+//=============================================================================
 
 // Explicit instantiation
 
