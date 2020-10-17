@@ -25,9 +25,9 @@ small dataset was needed to ensure timely responses and that it was relevant
 for all users.
 
 ## Walk-through of How This Example Works
-Here we present a detailed description of the algorithm used to performed a
-privacy preserving database lookup. This simple algorith also demonstrates
-many of the basic constructs utilized in more comples homomorphic encryption
+Here we present a detailed description of the algorithm used to perform a
+privacy preserving database lookup. This simple algorithm also demonstrates
+many of the basic constructs utilized in more complex homomorphic encryption
 based applications.
 
 Before we begin, we note the boxes shown in the images below represent
@@ -86,7 +86,7 @@ one, `E(1)`, otherwise.
 Next we use the previously calculated results of the FLT operation and minus
 this value from `1`. This value of `1` can be in the clear as any operation
 between a ciphertext and a plaintext results in a ciphertext. This has the
-affect of mapping any non-zero value to zero and zero to one. Thus we obtain
+effect of mapping any non-zero value to zero and zero to one. Thus we obtain
 the masks that we require from the comparison algorithm. Consider the 3rd entry
 of the database matched the query then applying `f(x)` to the differences would
 produce the results as shown below.
