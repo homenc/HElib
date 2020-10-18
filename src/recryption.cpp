@@ -197,16 +197,11 @@ static double compute_fudge(long p2ePrime, long p2e)
   return 1 + eps;
 }
 
-long RecryptData::setAE(long& e,
+void RecryptData::setAE(long& e,
                         long& ePrime,
-                        const Context& context,
-                        long targetWeight)
+                        const Context& context)
 {
-  if (targetWeight <= 0) {
-    targetWeight = RecryptData::defSkHwt;
-  }
-
-  double coeff_bound = context.boundForRecryption(targetWeight);
+  double coeff_bound = context.boundForRecryption();
   // coeff_bound is ultimately a high prob bound on |w0+w1*s|,
   // the coeffs of w0, w1 are chosen uniformly on [-1/2,1/2]
 
@@ -260,13 +255,13 @@ long RecryptData::setAE(long& e,
   std::cerr << "RecryptData::setAE(): e=" << e << ", e'=" << ePrime
             << std::endl;
 #endif
-  return targetWeight;
 }
 
 bool RecryptData::operator==(const RecryptData& other) const
 {
   if (mvec != other.mvec)
     return false;
+
   if (skHwt != other.skHwt)
     return false;
 
@@ -277,7 +272,6 @@ bool RecryptData::operator==(const RecryptData& other) const
 void RecryptData::init(const Context& context,
                        const NTL::Vec<long>& mvec_,
                        bool enableThick,
-                       long t,
                        bool build_cache_,
                        bool minimal)
 {
@@ -305,7 +299,12 @@ void RecryptData::init(const Context& context,
     Warning("prime power factorization recommended for bootstrapping");
   }
 
-  skHwt = setAE(e, ePrime, context, t);
+
+  
+  skHwt = context.hwt_param;
+  e = context.e_param;
+  ePrime = context.ePrime_param;
+
   long r = context.alMod.getR();
 
   // First part of Bootstrapping works wrt plaintext space p^{r'}
@@ -766,17 +765,13 @@ void packedRecrypt(const CtPtrMat& m,
 
 //===================== Thin Bootstrapping stuff ==================
 
-// This code was copied from RecryptData::init, and is mostly
-// the same, except for the linear-map-related stuff.
-// FIXME: There is really too much code (and data!) duplication here.
 void ThinRecryptData::init(const Context& context,
                            const NTL::Vec<long>& mvec_,
                            bool alsoThick,
-                           long t,
                            bool build_cache_,
                            bool minimal)
 {
-  RecryptData::init(context, mvec_, alsoThick, t, build_cache_, minimal);
+  RecryptData::init(context, mvec_, alsoThick, build_cache_, minimal);
   coeffToSlot =
       std::make_shared<ThinEvalMap>(*ea, minimal, mvec, true, build_cache);
   slotToCoeff = std::make_shared<ThinEvalMap>(*context.ea,

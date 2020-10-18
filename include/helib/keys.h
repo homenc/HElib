@@ -204,20 +204,6 @@ public:
 
   //============================================================
 
-  /**
-   * @brief An estimate for the security level. The estimated security level
-   * for the "worst" secret-key associated with this public-key object. The
-   * security estimate is determined by the key's weight and the context
-   * parameters.
-   * @return The estimate for the security level.
-   **/
-  double securityLevel() const
-  {
-    if (isBootstrappable())
-      return context.securityLevel(context.rcData.skHwt); // a sparse key
-    else
-      return context.securityLevel(); // security level of a "dense" key
-  }
 
   bool isCKKS() const;
   // NOTE: Is taking the alMod from the context the right thing to do?
@@ -282,7 +268,7 @@ public:
 
   //! Key generation: This procedure generates a single secret key,
   //! pushes it onto the sKeys list using ImportSecKey from above.
-  long GenSecKey(long hwt = 0, long ptxtSpace = 0, long maxDegKswitch = 3);
+  long GenSecKey(long ptxtSpace = 0, long maxDegKswitch = 3);
 
   //! Generate a key-switching matrix and store it in the public key. The i'th
   //! column of the matrix encrypts fromKey*B1*B2*...*B{i-1}*Q under toKey,

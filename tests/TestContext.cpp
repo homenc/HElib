@@ -137,7 +137,7 @@ TEST_P(TestContextBGV, contextNotEquals)
   NTL::Vec<long> mvec;
   mvec.SetLength(1);
   mvec[0] = 13;
-  someOtherContext.makeBootstrappable(mvec);
+  someOtherContext.enableBootStrapping(mvec);
 
   EXPECT_NE(*context, someOtherContext);
   EXPECT_NE(context->numPrimes(), someOtherContext.numPrimes());

@@ -285,7 +285,7 @@ TEST_P(GTestBootstrapping, bootstrappingWorksCorrectly)
   //   issue that buildModChain must be called BEFORE the context is made
   //   bootstrappable (else the "powerful" basis is not initialized correctly.)
 
-  context.makeBootstrappable(mvec, /*t=*/skHwt, /*build_cache=*/0);
+  context.enableBootStrapping(mvec, /*build_cache=*/0);
   t += NTL::GetTime();
 
   // if (skHwt>0) context.rcData.skHwt = skHwt;

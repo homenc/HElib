@@ -188,7 +188,7 @@ protected:
   {
     NTL::SetSeed(NTL::ZZ(GetParam().seed));
     NTL::SetNumThreads(GetParam().nt);
-    secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+    secretKey.GenSecKey(); 
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
 

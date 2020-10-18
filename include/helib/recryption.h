@@ -36,9 +36,6 @@ class PubKey;
 class RecryptData
 {
 public:
-  //! default Hamming weight of recryption key
-  static constexpr long defSkHwt = 100;
-
   //! Some data members that are only used for I/O
   NTL::Vec<long> mvec; //! partition of m into co-prime factors
 
@@ -76,7 +73,6 @@ public:
   void init(const Context& context,
             const NTL::Vec<long>& mvec_,
             bool enableThick, /*init linear transforms for non-thin*/
-            long t = 0 /*min Hwt for sk*/,
             bool build_cache = false,
             bool minimal = false);
 
@@ -87,33 +83,10 @@ public:
   }
 
   //! Helper function for computing the recryption parameters
-  static long setAE(long& e, long& ePrime, const Context& context, long t = 0);
-  /**
-   * Fix the "ring constant" cM, a target norm s for the secret key,
-   * and plaintext space mod p^r. We want to find e,e' that minimize
-   * e-e', subject to the constraint
-   *
-   *    (1) (p^{e'}/2 + 2*p^r+1)(s+1)*cM <= (q-1)/2  = p^e/2
-   *
-   * Note that as we let e,e' tend to infinity the constraint above
-   * degenerates to (s+1)*cM < p^{e-e'}, so the smallest value
-   * of e-e' that we can hope for is
-   *
-   *    (2) e-e' = 1 + floor( log_p( (s+1)*cM) )
-   *
-   * The setAE procedure tries to minimize e-e' subject to (1), and
-   * in addition subject to the constraint that e is "not too big".
-   * Specifically, it tries to ensure p^e<2^{30}, and failing that it
-   * uses the smallest e for which (2*p^r+1)(s+1)*cM*2 <= p^e, and the
-   * largest e' for that value of e.
-   *
-   * Once e,e' are set, it splits p^{e'}/2=a+b with a,b about equal and
-   * a divisible by p^r. Then it computes and returns the largest Hamming
-   * weight for the key (that implies the norm s') for which constraint
-   * (1) still holds.
-   * NOTE: setAE returns the Hamming weight, *not* the norm s'. The norm
-   * can be computed from the weight using sampleHWtBoundedEffectiveBound.
-   **/
+  static void setAE(long& e, long& ePrime, const Context& context);
+  // VJS-FIXME: this needs to be documented.
+  // It is based on the most recent version of our bootstrapping
+  // paper (see Section 6.2)
 };
 
 //! @class ThinRecryptData
@@ -129,7 +102,6 @@ public:
   void init(const Context& context,
             const NTL::Vec<long>& mvec_,
             bool alsoThick, /*init linear transforms also for non-thin*/
-            long t = 0 /*min Hwt for sk*/,
             bool build_cache = false,
             bool minimal = false);
 };

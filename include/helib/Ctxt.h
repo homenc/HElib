@@ -1197,7 +1197,7 @@ public:
   void setPtxtMag(const NTL::xdouble& z) { ptxtMag = z; }
   long getKeyID() const;
 
-  bool isCKKS() const { return (getContext().alMod.getTag() == PA_cx_tag); }
+  bool isCKKS() const { return getContext().isCKKS(); }
 
   // Return r such that p^r = ptxtSpace
   long effectiveR() const

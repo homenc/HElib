@@ -612,13 +612,18 @@ static void addSpecialPrimes(Context& context,
   const PAlgebra& palg = context.zMStar;
   long p = palg.getP();
   long m = palg.getM();
-  long p2r = context.alMod.getPPowR();
+  long p2r = context.isCKKS() ? 1 : context.alMod.getPPowR();
 
   long p2e = p2r;
-  if (willBeBootstrappable) { // bigger p^e for bootstrapping
+  if (willBeBootstrappable) { 
+    // bigger p^e for bootstrapping
     long e, ePrime;
-    RecryptData::setAE(e, ePrime, context, skHwt);
+    RecryptData::setAE(e, ePrime, context);
     p2e *= NTL::power_long(p, e - ePrime);
+
+    // initialize e and ePrime parameters in the context
+    context.e_param = e;
+    context.ePrime_param = ePrime;
   }
 
   long nCtxtPrimes = context.ctxtPrimes.card();
@@ -756,6 +761,22 @@ void buildModChain(Context& context,
   // Cannot build modulus chain with nBits < 0
   assertTrue<InvalidArgument>(nBits > 0,
                               "Cannot initialise modulus chain with nBits < 1");
+
+  assertTrue(skHwt >= 0, "invalid skHwt parameter");
+
+  if (context.isCKKS()) willBeBootstrappable = false;
+  // ignore for CKKS
+
+
+  if (skHwt == 0) {
+    // default skHwt: if bootstrapping, set to BOOT_DFLT_SK_HWT
+    if (willBeBootstrappable) skHwt = BOOT_DFLT_SK_HWT;
+  }
+
+
+  // initialize hwt param in context
+  context.hwt_param = skHwt;
+
   long pSize = ctxtPrimeSize(nBits);
   addSmallPrimes(context, resolution, pSize);
   addCtxtPrimes(context, nBits, pSize);

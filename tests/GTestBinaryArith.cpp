@@ -173,7 +173,7 @@ protected:
     }
     buildModChain(context, L, c, /*willBeBootstrappable=*/bootstrap);
     if (bootstrap) {
-      context.makeBootstrappable(mvec, /*t=*/0);
+      context.enableBootStrapping(mvec);
     }
     buildUnpackSlotEncoding(unpackSlotEncoding, *context.ea);
     if (helib_test::verbose) {

@@ -160,7 +160,7 @@ protected:
 
   static helib::SecKey& prepareSecretKey(helib::SecKey& secretKey, const long w)
   {
-    secretKey.GenSecKey(w); // A Hamming-weight-w secret key
+    secretKey.GenSecKey(); 
     helib::addSome1DMatrices(
         secretKey); // compute key-switching matrices that we need
     helib::addFrbMatrices(

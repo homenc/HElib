@@ -1100,8 +1100,10 @@ long SecKey::ImportSecKey(const DoubleCRT& sKey,
   return keyID; // return the index where this key is stored
 }
 
-long SecKey::GenSecKey(long hwt, long ptxtSpace, long maxDegKswitch)
+long SecKey::GenSecKey(long ptxtSpace, long maxDegKswitch)
 {
+  long hwt = context.hwt_param;
+
   DoubleCRT newSk(context, context.ctxtPrimes | context.specialPrimes);
 
   if (hwt > 0) {
