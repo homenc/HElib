@@ -78,7 +78,7 @@ function create-serious-lookup-params {
 #  create-toy-lookup-params
   create-serious-lookup-params
   createContext BGV "${prefix_bgv}.params" "$prefix_bgv" "--frob-skm"
-  techo "$(cat ${prefix_bgv}.info)"
+  echo "$(cat ${prefix_bgv}.info)"
 }
 
 @test "generate params and encrypt query and database" {
