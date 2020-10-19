@@ -1120,6 +1120,16 @@ public:
       return noiseBound;
   }
 
+  //! @brief for CKKS, returns a bound on the absolute error
+  //! (which is noiseBound/ratFactor); for BGV, returns noiseBound.
+  NTL::xdouble errorBound() const
+  {
+    if (isCKKS())
+      return noiseBound/ratFactor;
+    else
+      return noiseBound;
+  }
+
   //! @brief returns the "capacity" of a ciphertext,
   //! which is the log2 of the ratio of the modulus to the
   //! *total* noise bound

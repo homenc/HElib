@@ -60,17 +60,19 @@ void debugCompare(const SecKey& sk,
   PtxtArray pp(p.getView());
   pp.decrypt(c, sk);
 
-  double abs_err = Distance(pp, p);
-  double rel_err = abs_err / Norm(p);
+  double err = Distance(pp, p);
+  double err_bound = convert<double>(c.errorBound());
+  //double rel_err = abs_err / Norm(p);
   std::cout << "   "
-            << " abs_err=" << abs_err 
-            << " scaled_err=" << (c.getNoiseBound()/c.getRatFactor())
-            << " rel_err=" << rel_err
+            << " err=" << err 
+            << " err_bound=" << err_bound
+            //<< " rel_err=" << rel_err
             //<< "   "
-            << " mag_est=" << c.getPtxtMag()
-            << " mag_act=" << Norm(p)
+            //<< " mag=" << Norm(p)
+            //<< " mag_bound=" << c.getPtxtMag()
             //<< " scale=" << c.getRatFactor()
             << "\n";
+  if (err > err_bound) std::cout << "**** BAD BOUND\n";
 }
 
 #define DEBUG_COMPARE(C, P, M)                                                 \

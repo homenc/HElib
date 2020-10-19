@@ -525,13 +525,13 @@ public:
    * @brief Default copy constructor.
    * @param other `Context` to copy.
    **/
-  Context(const Context& other);
+  Context(const Context& other) = delete;
 
   /**
    * @brief Default move constructor.
    * @param other `Context` to copy.
    **/
-  Context(Context&& other);
+  Context(Context&& other) = delete;
   // Deleted assignment operators.
   Context& operator=(const Context& other) = delete;
   Context& operator=(Context&& other) = delete;

@@ -603,6 +603,7 @@ Context::Context(unsigned long m,
         std::make_shared<PolyModRing>(zMStar.getP(), alMod.getR(), getG(*ea));
   }
 }
+#if 0
 
 Context::Context(const Context& other) :
     moduli(other.moduli),
@@ -646,6 +647,8 @@ Context::Context(Context&& other) :
   std::move(other.alMod);
 }
 
+#endif
+
 void Context::printout(std::ostream& out) const
 {
   ea->getPAlgebra().printout(out);
@@ -658,6 +661,7 @@ void Context::printout(std::ostream& out) const
       << "security level = " << securityLevel() << std::endl;
 }
 
+#if 0
 template <typename SCHEME>
 Context ContextBuilder<SCHEME>::build() const
 {
@@ -679,6 +683,7 @@ Context ContextBuilder<SCHEME>::build() const
     return Context(m_, p_, r_, gens_, ords_);
   }
 }
+#endif
 
 template <>
 std::ostream& operator<<<BGV>(std::ostream& os, const ContextBuilder<BGV>& cb)
