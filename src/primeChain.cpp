@@ -610,12 +610,13 @@ static void addSpecialPrimes(Context& context,
                              long bitsInSpecialPrimes)
 {
   const PAlgebra& palg = context.zMStar;
-  long p = palg.getP();
+  long p = std::abs(palg.getP()); // for CKKS, palg.getP() == -1
   long m = palg.getM();
+  long phim = palg.getPhiM();
   long p2r = context.isCKKS() ? 1 : context.alMod.getPPowR();
 
   long p2e = p2r;
-  if (willBeBootstrappable) { 
+  if (willBeBootstrappable && !context.isCKKS()) { 
     // bigger p^e for bootstrapping
     long e, ePrime;
     RecryptData::setAE(e, ePrime, context);
@@ -672,11 +673,43 @@ static void addSpecialPrimes(Context& context,
 
   if (bitsInSpecialPrimes)
     nBits = bitsInSpecialPrimes;
-  else
+  else {
+#if 0
     nBits = (maxDigitLog + std::log(nDgts) + NTL::log(context.stdev * 2) +
              std::log(p2e)) /
             std::log(2.0);
-  // FIXME: Victor says: the above calculation does not make much sense to me
+    // FIXME: Victor says: the above calculation does not make much sense to me
+#else
+    double h;
+    if (context.hwt_param == 0)
+      h = phim/2.0;
+    else
+      h = context.hwt_param;
+
+    double log_phim = std::log(phim);
+    if (log_phim < 1) log_phim = 1;
+
+    if (palg.getPow2()) {
+      nBits = ( maxDigitLog + std::log(p2e) + NTL::log(context.stdev) 
+                + 0.5*std::log(12.0) + std::log(nDgts)
+                - 0.5*std::log(log_phim) 
+                - 2*std::log(p) - std::log(h)  ) / std::log(2.0);
+    }
+    else {
+      nBits = ( maxDigitLog + std::log(m) + std::log(p2e) + NTL::log(context.stdev) 
+                + 0.5*std::log(12.0) + std::log(nDgts)
+                - 0.5*log_phim - 0.5*std::log(log_phim) 
+                - 2*std::log(p) - std::log(h)  ) / std::log(2.0);
+    }
+
+    // Both of the above over-estimate nBits by a factor of log2(context.scale).
+    // That should provide a sufficient safety margin.
+    // See design document
+
+#endif
+  }
+
+  if (nBits < 1) nBits = 1;
 
   double bit_loss =
       -std::log1p(-1.0 / double(1L << PrimeGenerator::B)) / std::log(2.0);
