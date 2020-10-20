@@ -90,7 +90,7 @@ void TestIt(Context& context, bool verbose)
 
   MatMul_CKKS mat(context, 
                 [n](long i, long j) -> std::complex<double>
-                { return i*n+j; } );
+                { return (i*n+j)/double(n); } );
   // Note the use of a "lambda": this allows for quite
   // general ways to describe a matrix with minimal fuss
 
@@ -100,7 +100,7 @@ void TestIt(Context& context, bool verbose)
   PtxtArray ptxt(context, v); 
   // initialze ptxt with the vector v
 
-  ptxt.encrypt(ctxt, /*mag=*/Norm(v));
+  ptxt.encrypt(ctxt);
   // Encrypt ptxt. We have to supply *some* upper bound on the magnitude
   // of the slots.
 
@@ -117,6 +117,8 @@ void TestIt(Context& context, bool verbose)
 
   PtxtArray ptxt1(context);
   ptxt1.decrypt(ctxt, secretKey);
+
+#if 0
   std::vector<double> w1;
   ptxt1.store(w1);
   // w1 is the result of performing the transformation on
@@ -129,6 +131,11 @@ void TestIt(Context& context, bool verbose)
 
   std::cout << w << "\n";
   std::cout << w1 << "\n";
+#endif
+
+  std::cout << Distance(ptxt, ptxt1) << "\n";
+  //std::cout << Norm(ptxt) << "\n";
+  //std::cout << Norm(ptxt1) << "\n";
 
   if (verbose) {
     printAllTimers(cout);
@@ -144,6 +151,8 @@ void TestIt(Context& context, bool verbose)
 
 int main(int argc, char *argv[]) 
 {
+  helog.setLogToStderr();
+
   ArgMap amap;
 
   long m=16;

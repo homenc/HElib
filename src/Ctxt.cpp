@@ -755,7 +755,9 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
 
   HELIB_STATS_UPDATE("KS-noise-ratio", ratio);
                      
-  if (ratio > 1) std::cerr << "*** KS-noise-ratio=" << ratio << "\n";
+  if (ratio > 1) {
+    Warning("KS-noise-ratio=" + std::to_string(ratio) + "\n");
+  }
 
   noiseBound += addedNoise; // update the noise estimate
 }
