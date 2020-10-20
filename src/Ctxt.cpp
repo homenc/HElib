@@ -612,6 +612,58 @@ void Ctxt::reLinearize(long keyID)
 
 #endif
 
+  if (isCKKS()) {
+    // we have to increase the noise if it's too small,
+    // in order to protect against loss of precision
+
+    const PAlgebra& palg = context.zMStar;
+    long m = palg.getM();
+    long phim = palg.getPhiM();
+    long k = context.scale;
+
+    double h;
+    if (context.hwt_param == 0)
+      h = phim/2.0;
+    else
+      h = context.hwt_param;
+
+    double log_phim = std::log(phim);
+    if (log_phim < 1) log_phim = 1;
+
+    double beta = k * sqrt( phim * log_phim * h / 12.0 );
+    // beta is the noise estimate implicitly used for mod 
+    // switch added noise in the routine addSpecialPrimes in primeChain.cpp.
+    // This is also the amount of noise used to estimate the number
+    // of bits needed in the special primes.
+    // If the current cipherext has noise spaller than this,
+    // we have to do something...
+
+    // VJS-FIXME: if the user specified bitsInSpecialPrimes explcitly,
+    // then this may not be the right thing to do.
+
+    // VJS-FIXME: we could also try adding a ctxtPrime if possible...
+    // this would preserve capacity.
+
+
+    constexpr double fudge_factor = 4;
+    // increase bound by fudge_factor, based on experimentation
+
+    double gamma = beta*fudge_factor;
+
+
+    if (gamma > noiseBound) {
+      // xf = ceil(beta/noiseBound)
+      long xf = long( std::ceil(gamma / convert<double>(noiseBound)) );
+      for (auto& part : parts) part *= xf;
+      noiseBound *= xf; // Increase noiseBound
+      ratFactor *= xf;  // Increase the factor
+      std::string message = 
+        "extra factor hack invoked in reLinearize with xf=" +
+        std::to_string(xf);
+      Warning(message);
+    }
+  }
+
   long g = ptxtSpace;
   double logProd = context.logOfProduct(context.specialPrimes);
 
@@ -697,11 +749,12 @@ void Ctxt::keySwitchPart(const CtxtPart& p, const KeySwitch& W)
   // Finally we multiply the vector of digits by the key-switching matrix
   keySwitchDigits(W, polyDigits);
 
-  HELIB_STATS_UPDATE("KS-noise-ratio",
-                     NTL::conv<double>(addedNoise / noiseBound));
-  // HERE
-  // fprintf(stderr, "   KS-log-noise-ratio: %f\n",
-  // log(addedNoise/noiseBound)/log(2.0));
+  double ratio = NTL::conv<double>(addedNoise / noiseBound);
+
+
+  HELIB_STATS_UPDATE("KS-noise-ratio", ratio);
+                     
+  if (ratio > 1) std::cerr << "*** KS-noise-ratio=" << ratio << "\n";
 
   noiseBound += addedNoise; // update the noise estimate
 }

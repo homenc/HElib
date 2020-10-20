@@ -300,6 +300,7 @@ int main(int argc, char* argv[])
   addSome1DMatrices(secretKey); // compute key-switching matrices
 
   const PubKey& publicKey = secretKey;
+  //const PubKey publicKey = secretKey;
 
   if (verbose) {
     std::cout << "security=" << context.securityLevel() << std::endl;

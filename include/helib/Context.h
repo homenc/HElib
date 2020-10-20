@@ -845,6 +845,24 @@ public:
 
   friend void writeContextBinary(std::ostream& str, const Context& context);
   friend void readContextBinary(std::istream& str, Context& context);
+
+  // internal function to undo buldModChain...used for parameter
+  // generation programs
+
+  void clearModChain()
+  {
+    moduli.clear();
+    ctxtPrimes.clear();
+    specialPrimes.clear();
+    smallPrimes.clear();
+    modSizes.clear();
+    digits.clear();
+    hwt_param = 0;
+    e_param = 0;
+    ePrime_param = 0;
+  }
+
+
 };
 
 //! @brief write [m p r gens ords] data
