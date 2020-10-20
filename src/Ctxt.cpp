@@ -639,7 +639,8 @@ void Ctxt::reLinearize(long keyID)
     // we have to do something...
 
     // VJS-FIXME: if the user specified bitsInSpecialPrimes explcitly,
-    // then this may not be the right thing to do.
+    // then this may not be the right thing to do.  However, it is not
+    // clear how to address this.
 
     // VJS-FIXME: we could also try adding a ctxtPrime if possible...
     // this would preserve capacity.
