@@ -61,7 +61,7 @@ void debugCompare(const SecKey& sk,
   pp.decrypt(c, sk);
 
   double err = Distance(pp, p);
-  double err_bound = convert<double>(c.errorBound());
+  double err_bound = c.errorBound();
   //double rel_err = abs_err / Norm(p);
   std::cout << "   "
             << " err=" << err 

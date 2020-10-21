@@ -693,7 +693,7 @@ static void addSpecialPrimes(Context& context,
       // This is based on a smaller noise estimate so as
       // to better protext precision...this is based on
       // a noise level equal to the mod switch added noise.
-      // Note that the reLinearize function in Ctxt.cpp
+      // Note that the relin_CKKS_adjust function in Ctxt.cpp
       // depends on this estimate.
       nBits = ( maxDigitLog + NTL::log(context.stdev) + std::log(nDgts)
                 - 0.5*std::log(h)  ) / std::log(2.0);

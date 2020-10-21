@@ -83,6 +83,8 @@ public:
     assertTrue(ctxt.inCanonicalForm(keyID),
                "Ciphertext is not in canonical form");
 
+    ctxt.relin_CKKS_adjust();
+
     // Compute the number of digits that we need and the estimated
     // added noise from switching this ciphertext.
 

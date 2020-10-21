@@ -456,7 +456,7 @@ TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
   ea.encrypt(c1, publicKey, vd1);
   ea.encrypt(c2, publicKey, vd2);
   NTL::xdouble expectedPtxtMag = c1.getPtxtMag() * c2.getPtxtMag();
-  c1 *= c2;
+  c1.multiplyBy(c2);
   ea.decrypt(c1, secretKey, vd3);
 
   mul(vd1, vd2);

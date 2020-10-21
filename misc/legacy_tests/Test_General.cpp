@@ -85,12 +85,33 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
 
   if (!noPrint) fhe_stats = true;
 
+  
+  Context context { ContextBuilder<BGV>()
+
+      .m(m).p(p).r(r)
+      .gens(gens1).ords(ords1)
+      .bits(L).c(c).bitsInSpecialPrimes(special_bits)
+
+  };
+
+#if 0
+  // This works in C++17, but not earlier, as it then
+  // requires a copy or move constructor
+  Context context =
+    ContextBuilder<BGV>()
+      .m(m).p(p).r(r)
+      .gens(gens1).ords(ords1)
+      .bits(L).c(c).bitsInSpecialPrimes(special_bits);
+#endif
+
+#if 0
   Context context(m, p, r, gens1, ords1);
   buildModChain(context, L, c,
     /*willBeBootstrappable=*/false,
     /*t=*/0,
     /*resolution=*/3,
     /*bitsInSpecialPrimes=*/special_bits);
+#endif
 
   ZZX G;
   if (d == 0)

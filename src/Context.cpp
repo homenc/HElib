@@ -661,7 +661,27 @@ void Context::printout(std::ostream& out) const
       << "security level = " << securityLevel() << std::endl;
 }
 
-#if 0
+
+#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
+template <typename SCHEME>
+Context::Context(const ContextBuilder<SCHEME>& b) 
+  : Context(b.m_, b.p_, b.r_, b.gens_, b.ords_) // delegation
+{
+  if (b.buildModChainFlag_) {
+    // Not the builder's setter method.
+    ::helib::buildModChain(*this,
+                           b.bits_,
+                           b.c_,
+                           b.bootstrappableFlag_,
+                           b.skHwt_,
+                           b.resolution_,
+                           b.bitsInSpecialPrimes_);
+    if (b.bootstrappableFlag_) {
+      this->enableBootStrapping(b.mvec_, b.buildCacheFlag_, b.thickFlag_);
+    }
+  }
+}
+#else
 template <typename SCHEME>
 Context ContextBuilder<SCHEME>::build() const
 {
@@ -732,5 +752,10 @@ std::ostream& operator<<<CKKS>(std::ostream& os, const ContextBuilder<CKKS>& cb)
 
 template class ContextBuilder<BGV>;
 template class ContextBuilder<CKKS>;
+
+#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
+template Context::Context(const ContextBuilder<BGV>&);
+template Context::Context(const ContextBuilder<CKKS>&);
+#endif
 
 } // namespace helib

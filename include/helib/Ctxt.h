@@ -441,11 +441,24 @@ public:
 
   // Multiply by another ciphertext
   void multLowLvl(const Ctxt& other, bool destructive = false);
+
+#if 0
+  [[deprecated]]
   Ctxt& operator*=(const Ctxt& other)
   {
     multLowLvl(other);
     return *this;
   }
+#else
+  // we now do the high-level mul
+  Ctxt& operator*=(const Ctxt& other)
+  {
+    multiplyBy(other);
+    return *this;
+  }
+
+#endif
+
 
   void automorph(long k); // Apply automorphism F(X) -> F(X^k) (gcd(k,m)=1)
   Ctxt& operator>>=(long k)
@@ -1073,6 +1086,9 @@ public:
 
   void bumpNoiseBound(double factor) { noiseBound *= factor; }
 
+  // CKKS adjustment to protect precision 
+  void relin_CKKS_adjust();
+
   void reLinearize(long keyIdx = 0);
   // key-switch to (1,s_i), s_i is the base key with index keyIdx
 
@@ -1121,13 +1137,13 @@ public:
   }
 
   //! @brief for CKKS, returns a bound on the absolute error
-  //! (which is noiseBound/ratFactor); for BGV, returns noiseBound.
-  NTL::xdouble errorBound() const
+  //! (which is noiseBound/ratFactor); for BGV, returns 0.
+  double errorBound() const
   {
     if (isCKKS())
-      return noiseBound/ratFactor;
+      return convert<double>(noiseBound/ratFactor);
     else
-      return noiseBound;
+      return 0;
   }
 
   //! @brief returns the "capacity" of a ciphertext,

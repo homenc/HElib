@@ -2830,7 +2830,7 @@ TEST_P(TestPtxtBGV, defaultConstructedContextCannotBeRightOperand)
 
 TEST_P(TestPtxtBGV, cannotOperateBetweenPtxtsWithDifferentContexts)
 {
-  helib::Context different_context = helib::Context(m, p, 2 * r);
+  helib::Context different_context(m, p, 2 * r);
   std::vector<long> data(context.ea->size(), 1);
   helib::Ptxt<helib::BGV> ptxt1(context, data);
   helib::Ptxt<helib::BGV> ptxt2(different_context, data);

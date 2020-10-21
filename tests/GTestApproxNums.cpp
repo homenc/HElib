@@ -277,7 +277,7 @@ TEST_P(GTestApproxNums, basicArithmeticWorks)
   ea.encrypt(c2, publicKey, vd2, /*size=*/1.0);
 
   // Test - Multiplication
-  c1 *= c2;
+  c1.multiplyBy(c2);
   for (long i = 0; i < helib::lsize(vd1); i++)
     vd1[i] *= vd2[i];
 

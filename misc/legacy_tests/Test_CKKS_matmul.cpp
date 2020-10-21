@@ -94,7 +94,8 @@ void TestIt(Context& context, bool verbose)
   // Note the use of a "lambda": this allows for quite
   // general ways to describe a matrix with minimal fuss
 
-  const PubKey publicKey = secretKey;
+  //const PubKey publicKey = secretKey;
+  const PubKey& publicKey = secretKey;
 
   Ctxt ctxt(publicKey);
   PtxtArray ptxt(context, v); 

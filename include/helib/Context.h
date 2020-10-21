@@ -27,6 +27,8 @@
 
 #include <NTL/Lazy.h>
 
+#define FHE_DISABLE_CONTEXT_CONSTRUCTOR
+
 namespace helib {
 
 constexpr int MIN_SK_HWT = 120;
@@ -124,6 +126,11 @@ long FindM(long k,
 
 class EncryptedArray;
 struct PolyModRing;
+
+// Forward declaration of ContextBuilder
+template <typename SCHEME>
+class ContextBuilder;
+
 /**
  * @class Context
  * @brief Maintaining the parameters
@@ -521,6 +528,7 @@ public:
    **/
   ~Context() = default;
 
+#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
   /**
    * @brief Default copy constructor.
    * @param other `Context` to copy.
@@ -531,7 +539,35 @@ public:
    * @brief Default move constructor.
    * @param other `Context` to copy.
    **/
+
   Context(Context&& other) = delete;
+
+  template <typename SCHEME>
+  Context(const ContextBuilder<SCHEME>&);
+  // NOTE this is not declared explicit, to allow 
+  // Context context = blah...well, at least in C++17
+  // this works...earlier versions will require
+  // a copy/move constructor. So, we must write
+  // Context context { blah };
+
+#else
+
+  /**
+   * @brief Default copy constructor.
+   * @param other `Context` to copy.
+   **/
+  Context(const Context& other);
+
+  /**
+   * @brief Default move constructor.
+   * @param other `Context` to copy.
+   **/
+
+  Context(Context&& other);
+#endif
+
+
+
   // Deleted assignment operators.
   Context& operator=(const Context& other) = delete;
   Context& operator=(Context&& other) = delete;
@@ -919,9 +955,6 @@ void buildModChain(Context& context,
 // *other* than calling buildModChain.
 void endBuildModChain(Context& context);
 
-// Forward declaration of ContextBuilder
-template <typename SCHEME>
-class ContextBuilder;
 
 /**
  * @brief `ostream` operator for serializing the `ContextBuilder` object.
@@ -1199,7 +1232,15 @@ public:
    * `ContextBuilder` object.
    * @return A `Context` object.
    **/
+#ifdef FHE_DISABLE_CONTEXT_CONSTRUCTOR
+
+  // compatibility interface
+  ContextBuilder& build() { return *this; }
+
+  friend class Context; 
+#else
   Context build() const;
+#endif
 
   friend std::ostream& operator<<<SCHEME>(std::ostream& os,
                                           const ContextBuilder& cb);

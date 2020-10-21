@@ -584,34 +584,8 @@ void Ctxt::dropSmallAndSpecialPrimes()
   }
 }
 
-// key-switch to (1,s_i), s_i is the base key with index keyID. If
-// keyID<0 then re-linearize to any key for which a switching matrix exists
-void Ctxt::reLinearize(long keyID)
+void Ctxt::relin_CKKS_adjust()
 {
-  HELIB_TIMER_START;
-  // Special case: if *this is empty or already re-linearized then do nothing
-  if (this->isEmpty() || this->inCanonicalForm(keyID))
-    return;
-    // this->reduce();
-
-#if 0
-  // HERE
-  std::cerr << "*** reLinearlize: " << primeSet;
-#endif
-
-  dropSmallAndSpecialPrimes();
-
-#if 0
-  // HERE
-  std:: cout
-       << " " << primeSet
-       << " " <<  (context.logOfProduct(primeSet)/log(2.0))
-       << " " <<  (log(noiseBound)/log(2.0))
-       << " " <<  (log(modSwitchAddedNoiseBound())/log(2.0))
-       << "\n";
-
-#endif
-
   if (isCKKS()) {
     // we have to increase the noise if it's too small,
     // in order to protect against loss of precision
@@ -664,6 +638,38 @@ void Ctxt::reLinearize(long keyID)
       Warning(message);
     }
   }
+}
+
+// key-switch to (1,s_i), s_i is the base key with index keyID. If
+// keyID<0 then re-linearize to any key for which a switching matrix exists
+void Ctxt::reLinearize(long keyID)
+{
+  HELIB_TIMER_START;
+  // Special case: if *this is empty or already re-linearized then do nothing
+  if (this->isEmpty() || this->inCanonicalForm(keyID))
+    return;
+    // this->reduce();
+
+#if 0
+  // HERE
+  std::cerr << "*** reLinearlize: " << primeSet;
+#endif
+
+  dropSmallAndSpecialPrimes();
+
+#if 0
+  // HERE
+  std:: cout
+       << " " << primeSet
+       << " " <<  (context.logOfProduct(primeSet)/log(2.0))
+       << " " <<  (log(noiseBound)/log(2.0))
+       << " " <<  (log(modSwitchAddedNoiseBound())/log(2.0))
+       << "\n";
+
+#endif
+
+  relin_CKKS_adjust();
+
 
   long g = ptxtSpace;
   double logProd = context.logOfProduct(context.specialPrimes);
@@ -1720,7 +1726,7 @@ void Ctxt::multiplyBy(const Ctxt& other)
     return;
   }
 
-  *this *= other; // perform the multiplication
+  this->multLowLvl(other); // perform the multiplication
   reLinearize();  // re-linearize
 #ifdef HELIB_DEBUG
   checkNoise(*this, *dbgKey, "reLinearize " + std::to_string(size_t(this)));
@@ -1751,11 +1757,11 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
   if (cap < cap1 && cap < cap2) { // if both others at higher levels than this,
     Ctxt tmp = other1;            // multiply others by each other, then by this
     if (&other1 == &other2)
-      tmp *= tmp; // squaring rather than multiplication
+      tmp.multLowLvl(tmp); // squaring rather than multiplication
     else
-      tmp *= other2;
+      tmp.multLowLvl(other2);
 
-    *this *= tmp;
+    this->multLowLvl(tmp);
     reLinearize(); // re-linearize after all the multiplications
     return;
   }
@@ -1772,11 +1778,11 @@ void Ctxt::multiplyBy2(const Ctxt& other1, const Ctxt& other2)
 
   if (this == second) { // handle pointer collision
     Ctxt tmp = *second;
-    *this *= *first;
-    *this *= tmp;
+    this->multLowLvl(*first);
+    this->multLowLvl(tmp);
   } else {
-    *this *= *first;
-    *this *= *second;
+    this->multLowLvl(*first);
+    this->multLowLvl(*second);
   }
   reLinearize(); // re-linearize after all the multiplications
 }
@@ -2723,10 +2729,10 @@ void innerProduct(Ctxt& result, const CtPtrs& v1, const CtPtrs& v2)
     return;
   }
   result = *v1[0];
-  result *= *v2[0];
+  result.multLowLvl(*v2[0]);
   for (long i = 1; i < n; i++) {
     Ctxt tmp = *v1[i];
-    tmp *= *v2[i];
+    tmp.multLowLvl(*v2[i]);
     result += tmp;
   }
   result.reLinearize();
