@@ -268,6 +268,18 @@ public:
                        const SecKey& sKey,
                        std::vector<cx_double>& ptxt) const = 0;
 
+  virtual void rawDecrypt(const Ctxt& ctxt,
+                          const SecKey& sKey,
+                          std::vector<cx_double>& ptxt) const = 0;
+
+  virtual void rawDecrypt(const Ctxt& ctxt,
+                          const SecKey& sKey,
+                          std::vector<double>& ptxt) const = 0;
+
+  virtual void rawDecrypt(const Ctxt& ctxt,
+                          const SecKey& sKey,
+                          PlaintextArray& ptxt) const = 0;
+
   // FIXME: Inefficient implementation, calls usual decrypt and returns one slot
   long decrypt1Slot(const Ctxt& ctxt, const SecKey& sKey, long i) const
   {
@@ -489,6 +501,29 @@ public:
   {
     throw LogicError("Unimplemented: "
                      "EncryptedArrayDerived::decrypt for CKKS type");
+  }
+
+  void rawDecrypt(UNUSED const Ctxt& ctxt,
+		  UNUSED const SecKey& sKey,
+		  UNUSED std::vector<cx_double>& ptxt) const override
+  {
+    throw LogicError("Unimplemented: function only available for CKKS");
+  }
+
+  void rawDecrypt(UNUSED const Ctxt& ctxt,
+		  UNUSED const SecKey& sKey,
+		  UNUSED std::vector<double>& ptxt) const override
+  {
+    throw LogicError("Unimplemented: function only available for CKKS");
+  }
+
+  
+  void rawDecrypt(const Ctxt& ctxt,
+		  const SecKey& sKey,
+		  PlaintextArray& ptxt) const override
+  {
+    // we could thow a logic error instead...
+    decrypt(ctxt, sKey, ptxt);
   }
   /* End CKKS functions. */
 
@@ -1276,17 +1311,25 @@ public:
                std::vector<cx_double>& ptxt) const override;
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
-               std::vector<double>& ptxt) const override
-  {
-    std::vector<cx_double> v;
-    decrypt(ctxt, sKey, v);
-    project(ptxt, v);
-  }
+               std::vector<double>& ptxt) const override;
 
   void decrypt(const Ctxt& ctxt,
                const SecKey& sKey,
                PlaintextArray& ptxt) const override;
   // implemented in EaCx.cpp
+
+  void rawDecrypt(const Ctxt& ctxt,
+		  const SecKey& sKey,
+		  std::vector<cx_double>& ptxt) const override;
+
+  void rawDecrypt(const Ctxt& ctxt,
+		  const SecKey& sKey,
+		  std::vector<double>& ptxt) const override;
+
+  void rawDecrypt(const Ctxt& ctxt,
+		  const SecKey& sKey,
+		  PlaintextArray& ptxt) const override;
+  
 
   /**
    * @brief Decrypt ciphertext to a plaintext relative to a specific scheme.
@@ -1727,6 +1770,12 @@ public:
     rep->decrypt(ctxt, sKey, ptxt);
   }
 
+  template <typename T>
+  void rawDecrypt(const Ctxt& ctxt, const SecKey& sKey, T& ptxt) const
+  {
+    rep->rawDecrypt(ctxt, sKey, ptxt);
+  }
+
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
                           const std::vector<NTL::ZZX>& L) const
   {
@@ -2020,6 +2069,11 @@ public:
   void decrypt(const Ctxt& ctxt, const SecKey& sKey)
   {
     ea.decrypt(ctxt, sKey, pa);
+  }
+
+  void rawDecrypt(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.rawDecrypt(ctxt, sKey, pa);
   }
 
   void random() { helib::random(ea, pa); }

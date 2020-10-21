@@ -24,7 +24,7 @@
 NTL_CLIENT
 using namespace helib;
 
-bool verbose = false;
+bool verbose = true;
 
 bool reset = false;
 
@@ -58,15 +58,17 @@ void debugCompare(const SecKey& sk,
                   const Ctxt& c)
 {
   PtxtArray pp(p.getView());
-  pp.decrypt(c, sk);
+  pp.rawDecrypt(c, sk);
 
   double err = Distance(pp, p);
   double err_bound = c.errorBound();
+  double rel_err = err/Norm(p);
   //double rel_err = abs_err / Norm(p);
   std::cout << "   "
             << " err=" << err 
             << " err_bound=" << err_bound
-            //<< " rel_err=" << rel_err
+            << " err_bound/err=" << (err_bound/err)
+            << " rel_err=" << rel_err
             //<< "   "
             //<< " mag=" << Norm(p)
             //<< " mag_bound=" << c.getPtxtMag()
@@ -204,10 +206,10 @@ void testGeneralOps(const PubKey& publicKey,
       // Check correctness after each round
       PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
 
-      pp0.decrypt(c0, secretKey);
-      pp1.decrypt(c1, secretKey);
-      pp2.decrypt(c2, secretKey);
-      pp3.decrypt(c3, secretKey);
+      pp0.rawDecrypt(c0, secretKey);
+      pp1.rawDecrypt(c1, secretKey);
+      pp2.rawDecrypt(c2, secretKey);
+      pp3.rawDecrypt(c3, secretKey);
 
       if (!(pp0 == Approx(p0) && pp1 == Approx(p1) && pp2 == Approx(p2) &&
           pp3 == Approx(p3))) {
@@ -219,12 +221,36 @@ void testGeneralOps(const PubKey& publicKey,
 
   HELIB_NTIMER_STOP(Circuit);
 
+  if (verbose) {
+    std::cout << "===============\n";
+
+    DEBUG_COMPARE(c0, p0, "c0");
+    DEBUG_COMPARE(c1, p1, "c1");
+    DEBUG_COMPARE(c2, p2, "c2");
+    DEBUG_COMPARE(c3, p3, "c3");
+  }
+
   PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
+  PtxtArray ppp0(context), ppp1(context), ppp2(context), ppp3(context);
 
   pp0.decrypt(c0, secretKey);
   pp1.decrypt(c1, secretKey);
   pp2.decrypt(c2, secretKey);
   pp3.decrypt(c3, secretKey);
+
+  ppp0.rawDecrypt(c0, secretKey);
+  ppp1.rawDecrypt(c1, secretKey);
+  ppp2.rawDecrypt(c2, secretKey);
+  ppp3.rawDecrypt(c3, secretKey);
+
+  if (verbose) {
+    std::cout << "======== raw/rounded differences\n";
+    std::cout << Distance(pp0, ppp0) << "\n";
+    std::cout << Distance(pp1, ppp1) << "\n";
+    std::cout << Distance(pp2, ppp2) << "\n";
+    std::cout << Distance(pp3, ppp3) << "\n";
+  }
+
 
   if (pp0 == Approx(p0) && pp1 == Approx(p1) && pp2 == Approx(p2) &&
       pp3 == Approx(p3)) 

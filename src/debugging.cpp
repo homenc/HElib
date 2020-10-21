@@ -116,12 +116,12 @@ void decryptAndPrint(std::ostream& s,
   } else if (flags & FLAG_PRINT_DVEC) { // decode to a vector of doubles
     const EncryptedArrayCx& eacx = ea.getCx();
     std::vector<double> v;
-    eacx.decrypt(ctxt, sk, v);
+    eacx.rawDecrypt(ctxt, sk, v);
     printVec(s << "           ", v, 20) << std::endl;
   } else if (flags & FLAG_PRINT_XVEC) { // decode to a vector of complex
     const EncryptedArrayCx& eacx = ea.getCx();
     std::vector<cx_double> v;
-    eacx.decrypt(ctxt, sk, v);
+    eacx.rawDecrypt(ctxt, sk, v);
     printVec(s << "           ", v, 20) << std::endl;
   }
 }

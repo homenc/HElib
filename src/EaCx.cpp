@@ -29,7 +29,7 @@ namespace helib {
 
 static constexpr cx_double the_imaginary_i = cx_double(0.0, 1.0);
 
-void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
+void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
                                const SecKey& sKey,
                                std::vector<cx_double>& ptxt) const
 {
@@ -88,6 +88,57 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 
 #endif
 }
+
+void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
+		       const SecKey& sKey,
+		       std::vector<double>& ptxt) const 
+{
+  std::vector<cx_double> v;
+  rawDecrypt(ctxt, sKey, v);
+  project(ptxt, v);
+}
+
+
+void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
+                               const SecKey& sKey,
+                               std::vector<cx_double>& ptxt) const
+{
+  // This mitigates against the attack in 
+  // "On the Security of Homomorphic Encryption on Approximate Numbers",
+  // by Baiyu Li and Daniele Micciancio.
+
+  rawDecrypt(ctxt, sKey, ptxt);
+
+  constexpr double fudge_factor = 4.0;
+  double B = ctxt.errorBound() * fudge_factor;
+
+  // Idea: we round real and imaginary parts to the
+  // nearest integer multiple of B.
+  
+  for (cx_double& c : ptxt) {
+    double re = c.real();
+    re = B*std::round(re/B);
+    double im = c.imag();
+    im = B*std::round(im/B);
+    c = cx_double(re, im);
+  }
+}
+
+void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
+	                       const SecKey& sKey,
+	                       std::vector<double>& ptxt) const
+{
+  // NOTE: we may wish to consider an alternative implementation,
+  // where we (a) assume the imaginary parts are supposd to be zero,
+  // and (b) use the noise in the imaginary parts as a tighter
+  // error bound.  This is what Yuriy implemented in PALISADE,
+  // but I'm not sure how much sense it makes. --VJS
+  std::vector<cx_double> v;
+  decrypt(ctxt, sKey, v);
+  project(ptxt, v);
+}
+
+
 
 // rotate ciphertext in dimension 0 by amt
 void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
@@ -245,6 +296,13 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
                                PlaintextArray& ptxt) const
 {
   decrypt(ctxt, sKey, ptxt.getData<PA_cx>());
+}
+
+void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
+                                  const SecKey& sKey,
+                                  PlaintextArray& ptxt) const
+{
+  rawDecrypt(ctxt, sKey, ptxt.getData<PA_cx>());
 }
 
 //======================
