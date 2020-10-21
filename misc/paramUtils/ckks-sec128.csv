@@ -1,5 +1,5 @@
+nohup: ignoring input
 sec,m,c,L,bits
-128,16384,3,164,165
 128,16384,2,119,120
 128,32768,6,358,359
 128,32768,3,299,300
@@ -19,7 +19,13 @@ sec,m,c,L,bits
 128,131072,4,1329,1332
 128,131072,3,1255,1258
 128,131072,2,1098,1100
+** weird: L=3293 gives more real bits than L=3295 (m=262144, c=100)
+** weird: L=3293 gives more real bits than L=3295 (m=262144, c=56)
+** weird: L=3234 gives more real bits than L=3235 (m=262144, c=48)
 128,262144,56,3293,3298
+** weird: L=3234 gives more real bits than L=3235 (m=262144, c=41)
+** weird: L=3234 gives more real bits than L=3235 (m=262144, c=35)
+** weird: L=3234 gives more real bits than L=3235 (m=262144, c=30)
 128,262144,30,3234,3239
 128,262144,18,3175,3181
 128,262144,15,3116,3122
