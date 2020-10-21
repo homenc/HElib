@@ -93,10 +93,10 @@ void testGeneralOps(const PubKey& publicKey,
 
 
   PtxtArray p0(context), p1(context), p2(context), p3(context);
-  p0.random();
-  p1.random();
-  p2.random();
-  p3.random();
+  p0.randomReal();
+  p1.randomReal();
+  p2.randomReal();
+  p3.randomReal();
 
   Ctxt c0(publicKey), c1(publicKey), c2(publicKey), c3(publicKey);
   p0.encrypt(c0);
@@ -130,8 +130,8 @@ void testGeneralOps(const PubKey& publicKey,
 
     // two random constants
     PtxtArray const1(context), const2(context);
-    const1.random();
-    const2.random();
+    const1.randomReal();
+    const2.randomReal();
 
     PtxtArray tmp1_p(p0);
     rotate(tmp1_p, rotamt);
@@ -233,22 +233,30 @@ void testGeneralOps(const PubKey& publicKey,
   PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
   PtxtArray ppp0(context), ppp1(context), ppp2(context), ppp3(context);
 
-  pp0.decrypt(c0, secretKey);
-  pp1.decrypt(c1, secretKey);
-  pp2.decrypt(c2, secretKey);
-  pp3.decrypt(c3, secretKey);
+  pp0.realDecrypt(c0, secretKey);
+  pp1.realDecrypt(c1, secretKey);
+  pp2.realDecrypt(c2, secretKey);
+  pp3.realDecrypt(c3, secretKey);
 
-  ppp0.rawDecrypt(c0, secretKey);
-  ppp1.rawDecrypt(c1, secretKey);
-  ppp2.rawDecrypt(c2, secretKey);
-  ppp3.rawDecrypt(c3, secretKey);
+  ppp0.rawRealDecrypt(c0, secretKey);
+  ppp1.rawRealDecrypt(c1, secretKey);
+  ppp2.rawRealDecrypt(c2, secretKey);
+  ppp3.rawRealDecrypt(c3, secretKey);
 
   if (verbose) {
-    std::cout << "======== raw/rounded differences\n";
+    std::cout << "======== rounded/raw differences\n";
     std::cout << Distance(pp0, ppp0) << "\n";
     std::cout << Distance(pp1, ppp1) << "\n";
     std::cout << Distance(pp2, ppp2) << "\n";
     std::cout << Distance(pp3, ppp3) << "\n";
+  }
+
+  if (verbose) {
+    std::cout << "======== actual/raw differences\n";
+    std::cout << Distance(p0, ppp0) << "\n";
+    std::cout << Distance(p1, ppp1) << "\n";
+    std::cout << Distance(p2, ppp2) << "\n";
+    std::cout << Distance(p3, ppp3) << "\n";
   }
 
 

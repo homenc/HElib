@@ -127,6 +127,7 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 	                       const SecKey& sKey,
 	                       std::vector<double>& ptxt) const
+#if 0
 {
   // NOTE: we may wish to consider an alternative implementation,
   // where we (a) assume the imaginary parts are supposd to be zero,
@@ -137,6 +138,39 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   decrypt(ctxt, sKey, v);
   project(ptxt, v);
 }
+#else
+{
+  // NOTE: this version implements Yuriy's proposed strategy
+
+  std::vector<cx_double> v;
+
+  rawDecrypt(ctxt, sKey, v);
+  long n = v.size();
+
+  double max_mag = 0;
+  for (long i : range(n))
+    max_mag = std::max(max_mag, std::fabs(v[i].imag()));
+
+  constexpr double fudge_factor = 8.0;
+
+  double B = max_mag * fudge_factor;
+
+  // round B up to the next power of 2
+  B = pow(2.0, std::ceil(std::log2(B)));
+
+  // Idea: we round real part to the
+  // nearest integer multiple of B.
+
+  ptxt.resize(n);
+  
+  for (long i : range(n)) {
+    double re = v[i].real();
+    re = B*std::round(re/B);
+    ptxt[i] = re;
+  }
+}
+
+#endif
 
 
 
@@ -303,6 +337,24 @@ void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
                                   PlaintextArray& ptxt) const
 {
   rawDecrypt(ctxt, sKey, ptxt.getData<PA_cx>());
+}
+
+void EncryptedArrayCx::realDecrypt(const Ctxt& ctxt,
+                                  const SecKey& sKey,
+                                  PlaintextArray& ptxt) const
+{
+  std::vector<double> v;
+  decrypt(ctxt, sKey, v);
+  convert(ptxt.getData<PA_cx>(), v);
+}
+
+void EncryptedArrayCx::rawRealDecrypt(const Ctxt& ctxt,
+                                      const SecKey& sKey,
+                                      PlaintextArray& ptxt) const
+{
+  std::vector<double> v;
+  rawDecrypt(ctxt, sKey, v);
+  convert(ptxt.getData<PA_cx>(), v);
 }
 
 //======================

@@ -268,6 +268,10 @@ public:
                        const SecKey& sKey,
                        std::vector<cx_double>& ptxt) const = 0;
 
+  virtual void realDecrypt(const Ctxt& ctxt,
+                       const SecKey& sKey,
+                       PlaintextArray& ptxt) const = 0;
+
   virtual void rawDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
                           std::vector<cx_double>& ptxt) const = 0;
@@ -277,6 +281,10 @@ public:
                           std::vector<double>& ptxt) const = 0;
 
   virtual void rawDecrypt(const Ctxt& ctxt,
+                          const SecKey& sKey,
+                          PlaintextArray& ptxt) const = 0;
+
+  virtual void rawRealDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
                           PlaintextArray& ptxt) const = 0;
 
@@ -519,6 +527,22 @@ public:
 
   
   void rawDecrypt(const Ctxt& ctxt,
+		  const SecKey& sKey,
+		  PlaintextArray& ptxt) const override
+  {
+    // we could thow a logic error instead...
+    decrypt(ctxt, sKey, ptxt);
+  }
+
+  void realDecrypt(const Ctxt& ctxt,
+		  const SecKey& sKey,
+		  PlaintextArray& ptxt) const override
+  {
+    // we could thow a logic error instead...
+    decrypt(ctxt, sKey, ptxt);
+  }
+
+  void rawRealDecrypt(const Ctxt& ctxt,
 		  const SecKey& sKey,
 		  PlaintextArray& ptxt) const override
   {
@@ -1329,6 +1353,14 @@ public:
   void rawDecrypt(const Ctxt& ctxt,
 		  const SecKey& sKey,
 		  PlaintextArray& ptxt) const override;
+
+  void realDecrypt(const Ctxt& ctxt,
+		   const SecKey& sKey,
+		   PlaintextArray& ptxt) const override;
+
+  void rawRealDecrypt(const Ctxt& ctxt,
+		   const SecKey& sKey,
+		   PlaintextArray& ptxt) const override;
   
 
   /**
@@ -1776,6 +1808,16 @@ public:
     rep->rawDecrypt(ctxt, sKey, ptxt);
   }
 
+  void realDecrypt(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
+  {
+    rep->realDecrypt(ctxt, sKey, ptxt);
+  }
+
+  void rawRealDecrypt(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
+  {
+    rep->rawRealDecrypt(ctxt, sKey, ptxt);
+  }
+
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
                           const std::vector<NTL::ZZX>& L) const
   {
@@ -1943,6 +1985,7 @@ void decode(const EncryptedArray& ea,
             const PlaintextArray& pa);
 
 void random(const EncryptedArray& ea, PlaintextArray& pa);
+void randomReal(const EncryptedArray& ea, PlaintextArray& pa);
 
 bool equals(const EncryptedArray& ea,
             const PlaintextArray& pa,
@@ -2076,7 +2119,19 @@ public:
     ea.rawDecrypt(ctxt, sKey, pa);
   }
 
+  void realDecrypt(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.realDecrypt(ctxt, sKey, pa);
+  }
+
+  void rawRealDecrypt(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.rawRealDecrypt(ctxt, sKey, pa);
+  }
+
   void random() { helib::random(ea, pa); }
+
+  void randomReal() { helib::randomReal(ea, pa); }
 
   //======== load ========
 
