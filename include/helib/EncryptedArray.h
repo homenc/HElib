@@ -281,7 +281,7 @@ public:
                        const SecKey& sKey,
                        PlaintextArray& ptxt) const = 0;
 
-  virtual void complexDecrypt(const Ctxt& ctxt,
+  virtual void decryptComplex(const Ctxt& ctxt,
                        const SecKey& sKey,
                        PlaintextArray& ptxt) const = 0;
 
@@ -289,7 +289,7 @@ public:
                           const SecKey& sKey,
                           PlaintextArray& ptxt) const = 0;
 
-  virtual void rawComplexDecrypt(const Ctxt& ctxt,
+  virtual void rawDecryptComplex(const Ctxt& ctxt,
                           const SecKey& sKey,
                           PlaintextArray& ptxt) const = 0;
 
@@ -539,17 +539,17 @@ public:
     decrypt(ctxt, sKey, ptxt);
   }
 
-  void complexDecrypt(const Ctxt& ctxt,
-		  const SecKey& sKey,
-		  PlaintextArray& ptxt) const override
+  void decryptComplex(const Ctxt& ctxt,
+		      const SecKey& sKey,
+		      PlaintextArray& ptxt) const override
   {
     // we could thow a logic error instead...
     decrypt(ctxt, sKey, ptxt);
   }
 
-  void rawComplexDecrypt(const Ctxt& ctxt,
-		  const SecKey& sKey,
-		  PlaintextArray& ptxt) const override
+  void rawDecryptComplex(const Ctxt& ctxt,
+		         const SecKey& sKey,
+		         PlaintextArray& ptxt) const override
   {
     // we could thow a logic error instead...
     decrypt(ctxt, sKey, ptxt);
@@ -1359,11 +1359,11 @@ public:
 		  const SecKey& sKey,
 		  PlaintextArray& ptxt) const override;
 
-  void complexDecrypt(const Ctxt& ctxt,
+  void decryptComplex(const Ctxt& ctxt,
 		   const SecKey& sKey,
 		   PlaintextArray& ptxt) const override;
 
-  void rawComplexDecrypt(const Ctxt& ctxt,
+  void rawDecryptComplex(const Ctxt& ctxt,
 		   const SecKey& sKey,
 		   PlaintextArray& ptxt) const override;
   
@@ -1813,14 +1813,14 @@ public:
     rep->rawDecrypt(ctxt, sKey, ptxt);
   }
 
-  void complexDecrypt(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
+  void decryptComplex(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
   {
-    rep->complexDecrypt(ctxt, sKey, ptxt);
+    rep->decryptComplex(ctxt, sKey, ptxt);
   }
 
-  void rawComplexDecrypt(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
+  void rawDecryptComplex(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
   {
-    rep->rawComplexDecrypt(ctxt, sKey, ptxt);
+    rep->rawDecryptComplex(ctxt, sKey, ptxt);
   }
 
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
@@ -2124,14 +2124,14 @@ public:
     ea.rawDecrypt(ctxt, sKey, pa);
   }
 
-  void complexDecrypt(const Ctxt& ctxt, const SecKey& sKey)
+  void decryptComplex(const Ctxt& ctxt, const SecKey& sKey)
   {
-    ea.complexDecrypt(ctxt, sKey, pa);
+    ea.decryptComplex(ctxt, sKey, pa);
   }
 
-  void rawComplexDecrypt(const Ctxt& ctxt, const SecKey& sKey)
+  void rawDecryptComplex(const Ctxt& ctxt, const SecKey& sKey)
   {
-    ea.rawComplexDecrypt(ctxt, sKey, pa);
+    ea.rawDecryptComplex(ctxt, sKey, pa);
   }
 
   void random() { helib::random(ea, pa); }

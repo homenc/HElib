@@ -58,7 +58,7 @@ void debugCompare(const SecKey& sk,
                   const Ctxt& c)
 {
   PtxtArray pp(p.getView());
-  pp.rawComplexDecrypt(c, sk);
+  pp.rawDecryptComplex(c, sk);
 
   double err = Distance(pp, p);
   double err_bound = c.errorBound();
@@ -206,10 +206,10 @@ void testGeneralOps(const PubKey& publicKey,
       // Check correctness after each round
       PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
 
-      pp0.rawComplexDecrypt(c0, secretKey);
-      pp1.rawComplexDecrypt(c1, secretKey);
-      pp2.rawComplexDecrypt(c2, secretKey);
-      pp3.rawComplexDecrypt(c3, secretKey);
+      pp0.rawDecryptComplex(c0, secretKey);
+      pp1.rawDecryptComplex(c1, secretKey);
+      pp2.rawDecryptComplex(c2, secretKey);
+      pp3.rawDecryptComplex(c3, secretKey);
 
       if (!(pp0 == Approx(p0) && pp1 == Approx(p1) && pp2 == Approx(p2) &&
           pp3 == Approx(p3))) {
