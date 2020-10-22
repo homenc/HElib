@@ -325,30 +325,30 @@ void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
   encode(eptxt, array.getData<PA_cx>(), mag, scale, err);
 }
 
-void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
-                               const SecKey& sKey,
-                               PlaintextArray& ptxt) const
+void EncryptedArrayCx::complexDecrypt(const Ctxt& ctxt,
+                                      const SecKey& sKey,
+                                      PlaintextArray& ptxt) const
 {
   decrypt(ctxt, sKey, ptxt.getData<PA_cx>());
 }
 
-void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
-                                  const SecKey& sKey,
-                                  PlaintextArray& ptxt) const
+void EncryptedArrayCx::rawComplexDecrypt(const Ctxt& ctxt,
+                                         const SecKey& sKey,
+                                         PlaintextArray& ptxt) const
 {
   rawDecrypt(ctxt, sKey, ptxt.getData<PA_cx>());
 }
 
-void EncryptedArrayCx::realDecrypt(const Ctxt& ctxt,
-                                  const SecKey& sKey,
-                                  PlaintextArray& ptxt) const
+void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
+                               const SecKey& sKey,
+                               PlaintextArray& ptxt) const
 {
   std::vector<double> v;
   decrypt(ctxt, sKey, v);
   convert(ptxt.getData<PA_cx>(), v);
 }
 
-void EncryptedArrayCx::rawRealDecrypt(const Ctxt& ctxt,
+void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
                                       const SecKey& sKey,
                                       PlaintextArray& ptxt) const
 {

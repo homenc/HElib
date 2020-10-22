@@ -1067,7 +1067,7 @@ public:
     PA_BOILER(PA_cx)
 
     for (long i = 0; i < n; i++)
-      data[i] = RandomComplex();
+      data[i] = RandomReal();
   }
 };
 
@@ -1079,7 +1079,7 @@ void random(const EncryptedArray& ea, PlaintextArray& pa)
 //=============================================================================
 
 template <typename type>
-class randomReal_pa_impl
+class randomComplex_pa_impl
 {
 public:
   PA_INJECT(type)
@@ -1094,7 +1094,7 @@ public:
 };
 
 template <>
-class randomReal_pa_impl<PA_cx>
+class randomComplex_pa_impl<PA_cx>
 {
 public:
   PA_INJECT(PA_cx)
@@ -1104,13 +1104,13 @@ public:
     PA_BOILER(PA_cx)
 
     for (long i = 0; i < n; i++)
-      data[i] = RandomReal();
+      data[i] = RandomComplex();
   }
 };
 
-void randomReal(const EncryptedArray& ea, PlaintextArray& pa)
+void randomComplex(const EncryptedArray& ea, PlaintextArray& pa)
 {
-  ea.dispatch<randomReal_pa_impl>(pa);
+  ea.dispatch<randomComplex_pa_impl>(pa);
 }
 
 //=============================================================================

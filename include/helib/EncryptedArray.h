@@ -255,22 +255,19 @@ public:
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
                        std::vector<long>& ptxt) const = 0;
+
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
                        std::vector<NTL::ZZX>& ptxt) const = 0;
-  virtual void decrypt(const Ctxt& ctxt,
-                       const SecKey& sKey,
-                       PlaintextArray& ptxt) const = 0;
+
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
                        std::vector<double>& ptxt) const = 0;
+
   virtual void decrypt(const Ctxt& ctxt,
                        const SecKey& sKey,
                        std::vector<cx_double>& ptxt) const = 0;
 
-  virtual void realDecrypt(const Ctxt& ctxt,
-                       const SecKey& sKey,
-                       PlaintextArray& ptxt) const = 0;
 
   virtual void rawDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
@@ -280,11 +277,19 @@ public:
                           const SecKey& sKey,
                           std::vector<double>& ptxt) const = 0;
 
+  virtual void decrypt(const Ctxt& ctxt,
+                       const SecKey& sKey,
+                       PlaintextArray& ptxt) const = 0;
+
+  virtual void complexDecrypt(const Ctxt& ctxt,
+                       const SecKey& sKey,
+                       PlaintextArray& ptxt) const = 0;
+
   virtual void rawDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
                           PlaintextArray& ptxt) const = 0;
 
-  virtual void rawRealDecrypt(const Ctxt& ctxt,
+  virtual void rawComplexDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
                           PlaintextArray& ptxt) const = 0;
 
@@ -534,7 +539,7 @@ public:
     decrypt(ctxt, sKey, ptxt);
   }
 
-  void realDecrypt(const Ctxt& ctxt,
+  void complexDecrypt(const Ctxt& ctxt,
 		  const SecKey& sKey,
 		  PlaintextArray& ptxt) const override
   {
@@ -542,7 +547,7 @@ public:
     decrypt(ctxt, sKey, ptxt);
   }
 
-  void rawRealDecrypt(const Ctxt& ctxt,
+  void rawComplexDecrypt(const Ctxt& ctxt,
 		  const SecKey& sKey,
 		  PlaintextArray& ptxt) const override
   {
@@ -1354,11 +1359,11 @@ public:
 		  const SecKey& sKey,
 		  PlaintextArray& ptxt) const override;
 
-  void realDecrypt(const Ctxt& ctxt,
+  void complexDecrypt(const Ctxt& ctxt,
 		   const SecKey& sKey,
 		   PlaintextArray& ptxt) const override;
 
-  void rawRealDecrypt(const Ctxt& ctxt,
+  void rawComplexDecrypt(const Ctxt& ctxt,
 		   const SecKey& sKey,
 		   PlaintextArray& ptxt) const override;
   
@@ -1808,14 +1813,14 @@ public:
     rep->rawDecrypt(ctxt, sKey, ptxt);
   }
 
-  void realDecrypt(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
+  void complexDecrypt(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
   {
-    rep->realDecrypt(ctxt, sKey, ptxt);
+    rep->complexDecrypt(ctxt, sKey, ptxt);
   }
 
-  void rawRealDecrypt(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
+  void rawComplexDecrypt(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
   {
-    rep->rawRealDecrypt(ctxt, sKey, ptxt);
+    rep->rawComplexDecrypt(ctxt, sKey, ptxt);
   }
 
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
@@ -1985,7 +1990,7 @@ void decode(const EncryptedArray& ea,
             const PlaintextArray& pa);
 
 void random(const EncryptedArray& ea, PlaintextArray& pa);
-void randomReal(const EncryptedArray& ea, PlaintextArray& pa);
+void randomComplex(const EncryptedArray& ea, PlaintextArray& pa);
 
 bool equals(const EncryptedArray& ea,
             const PlaintextArray& pa,
@@ -2119,19 +2124,19 @@ public:
     ea.rawDecrypt(ctxt, sKey, pa);
   }
 
-  void realDecrypt(const Ctxt& ctxt, const SecKey& sKey)
+  void complexDecrypt(const Ctxt& ctxt, const SecKey& sKey)
   {
-    ea.realDecrypt(ctxt, sKey, pa);
+    ea.complexDecrypt(ctxt, sKey, pa);
   }
 
-  void rawRealDecrypt(const Ctxt& ctxt, const SecKey& sKey)
+  void rawComplexDecrypt(const Ctxt& ctxt, const SecKey& sKey)
   {
-    ea.rawRealDecrypt(ctxt, sKey, pa);
+    ea.rawComplexDecrypt(ctxt, sKey, pa);
   }
 
   void random() { helib::random(ea, pa); }
 
-  void randomReal() { helib::randomReal(ea, pa); }
+  void randomComplex() { helib::randomComplex(ea, pa); }
 
   //======== load ========
 
@@ -2355,9 +2360,17 @@ inline double Distance(const PtxtArray& a, const PtxtArray& b)
 void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 // The implementation uses O(log n) shift operations.
 
+inline void runningSums(Ctxt& ctxt)
+{ runningSums(ctxt.getContext().getDefaultView(), ctxt); }
+// VJS-FIXME: implement PtxtArray operation
+
 //! @brief A ctxt that encrypts \f$(x_1, ..., x_n)\f$ is replaced by an
 //! encryption of \f$(y, ..., y)\$, where \f$y = sum_{j=1}^n x_j.\f$
 void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
+
+inline void totalSums(Ctxt& ctxt)
+{ totalSums(ctxt.getContext().getDefaultView(), ctxt); }
+// VJS-FIXME: implement PtxtArray operation
 
 //! @brief Map all non-zero slots to 1, leaving zero slots as zero.
 //! Assumes that r=1, and that all the slots contain elements from GF(p^d).
