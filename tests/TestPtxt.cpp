@@ -96,9 +96,7 @@ TEST_P(TestPtxtCKKS, preservesDataPassedIntoConstructor)
     data[i] = i / 10.0;
   helib::Ptxt<helib::CKKS> ptxt(context, data);
 
-  EXPECT_EQ(ptxt.size(), data.size());
-  for (std::size_t i = 0; i < data.size(); ++i)
-    EXPECT_EQ(ptxt[i], data[i]);
+  COMPARE_CXDOUBLE_VECS(ptxt, data)
 }
 
 TEST_P(TestPtxtCKKS, hasSameNumberOfSlotsAsContextWhenCreatedWithData)
@@ -114,7 +112,8 @@ TEST_P(TestPtxtCKKS, replicateValueWhenPassingASingleSlotTypeNumber)
 
   helib::Ptxt<helib::CKKS> ptxt(context, num);
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_EQ(ptxt[i], num);
+    EXPECT_DOUBLE_EQ(ptxt[i].real(), num.real());
+    EXPECT_DOUBLE_EQ(ptxt[i].imag(), num.imag());
   }
 }
 
@@ -124,7 +123,8 @@ TEST_P(TestPtxtCKKS, replicateValueWhenPassingASingleNonSlotTypeNumber)
 
   helib::Ptxt<helib::CKKS> ptxt(context, num);
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_EQ(ptxt[i], num);
+    EXPECT_DOUBLE_EQ(ptxt[i].real(), num);
+    EXPECT_DOUBLE_EQ(ptxt[i].imag(), 0.0);
   }
 }
 
@@ -139,7 +139,8 @@ TEST_P(TestPtxtCKKS, atMethodThrowsOrReturnsCorrectly)
     EXPECT_THROW(ptxt.at(i), helib::OutOfRangeError);
   }
   for (long i = 0; i < helib::lsize(data); ++i) {
-    EXPECT_EQ(ptxt.at(i), data.at(i));
+    EXPECT_DOUBLE_EQ(ptxt.at(i).real(), data.at(i).real());
+    EXPECT_DOUBLE_EQ(ptxt.at(i).imag(), data.at(i).imag());
   }
   for (std::size_t i = data.size(); i < data.size() + 5; ++i) {
     EXPECT_THROW(ptxt.at(i), helib::OutOfRangeError);
@@ -154,10 +155,12 @@ TEST_P(TestPtxtCKKS, padsWithZerosWhenPassingInSmallDataVector)
   }
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   for (std::size_t i = 0; i < data.size(); ++i) {
-    EXPECT_EQ(ptxt[i], data[i]);
+    EXPECT_DOUBLE_EQ(ptxt[i].real(), data[i].real());
+    EXPECT_DOUBLE_EQ(ptxt[i].imag(), data[i].imag());
   }
   for (std::size_t i = data.size(); i < ptxt.size(); ++i) {
-    EXPECT_EQ(ptxt[i], 0.0);
+    EXPECT_DOUBLE_EQ(ptxt[i].real(), 0.0);
+    EXPECT_DOUBLE_EQ(ptxt[i].imag(), 0.0);
   }
 }
 
@@ -169,10 +172,12 @@ TEST_P(TestPtxtCKKS, preservesDataPassedIntoConstructorAsDouble)
   }
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   for (std::size_t i = 0; i < data.size(); ++i) {
-    EXPECT_EQ(ptxt[i], data[i]);
+    EXPECT_DOUBLE_EQ(ptxt[i].real(), data[i]);
+    EXPECT_DOUBLE_EQ(ptxt[i].imag(), 0.0);
   }
   for (std::size_t i = data.size(); i < ptxt.size(); ++i) {
-    EXPECT_EQ(ptxt[i], 0.0);
+    EXPECT_DOUBLE_EQ(ptxt[i].real(), 0.0);
+    EXPECT_DOUBLE_EQ(ptxt[i].imag(), 0.0);
   }
 }
 
@@ -491,7 +496,7 @@ TEST_P(TestPtxtCKKS, getSlotReprReturnsData)
   for (std::size_t i = 0; i < ptxt.size(); ++i) {
     expected_repr[i] = i < data.size() ? data[i] : 0;
   }
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_repr);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_repr);
 }
 
 TEST_P(TestPtxtCKKS, runningSumsWorksCorrectly)
@@ -509,7 +514,7 @@ TEST_P(TestPtxtCKKS, runningSumsWorksCorrectly)
     expected_result[i] = {(i * (i + 1)) / 2.0,
                           (i * (i + 1) * (2 * i + 1)) / 6.0};
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, totalSumsWorksCorrectly)
@@ -528,7 +533,7 @@ TEST_P(TestPtxtCKKS, totalSumsWorksCorrectly)
         ((data.size() - 1) * data.size()) / 2.0,
         ((data.size() - 1) * data.size() * (2 * (data.size() - 1) + 1)) / 6.0};
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, incrementalProductWorksCorrectly)
@@ -545,7 +550,7 @@ TEST_P(TestPtxtCKKS, incrementalProductWorksCorrectly)
   for (std::size_t i = 1; i < data.size(); ++i)
     expected_result[i] *= expected_result[i - 1];
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result)
 }
 
 TEST_P(TestPtxtCKKS, totalProductWorksCorrectly)
@@ -564,7 +569,7 @@ TEST_P(TestPtxtCKKS, totalProductWorksCorrectly)
   std::vector<std::complex<double>> expected_result(context.ea->size(),
                                                     product);
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, innerProductWorksCorrectly)
@@ -589,7 +594,7 @@ TEST_P(TestPtxtCKKS, innerProductWorksCorrectly)
         expected_result[i]; // expected_result = 2*expected_result
   }
 
-  EXPECT_EQ(result.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(result.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, mapTo01MapsSlotsCorrectly)
@@ -610,8 +615,8 @@ TEST_P(TestPtxtCKKS, mapTo01MapsSlotsCorrectly)
     expected_result[i] = {1, 0};
   }
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
-  EXPECT_EQ(ptxt2.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt2.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, timesEqualsOtherPlaintextWorks)
@@ -633,7 +638,7 @@ TEST_P(TestPtxtCKKS, timesEqualsOtherPlaintextWorks)
 
   product *= multiplier;
 
-  EXPECT_EQ(product.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(product.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, minusEqualsOtherPlaintextWorks)
@@ -655,7 +660,7 @@ TEST_P(TestPtxtCKKS, minusEqualsOtherPlaintextWorks)
 
   difference -= subtrahend;
 
-  EXPECT_EQ(difference.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(difference.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, minusEqualsComplexScalarWorks)
@@ -674,7 +679,7 @@ TEST_P(TestPtxtCKKS, minusEqualsComplexScalarWorks)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt -= scalar;
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, minusEqualsNonComplexScalarWorks)
@@ -696,7 +701,7 @@ TEST_P(TestPtxtCKKS, minusEqualsNonComplexScalarWorks)
   ptxt -= scalar;
   ptxt -= int_scalar;
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, plusEqualsOtherPlaintextWorks)
@@ -715,7 +720,7 @@ TEST_P(TestPtxtCKKS, plusEqualsOtherPlaintextWorks)
   helib::Ptxt<helib::CKKS> addend(context, addend_data);
   sum += addend;
 
-  EXPECT_EQ(sum.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(sum.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, plusEqualsComplexScalarWorks)
@@ -734,7 +739,7 @@ TEST_P(TestPtxtCKKS, plusEqualsComplexScalarWorks)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt += scalar;
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, plusEqualsNonComplexScalarWorks)
@@ -833,7 +838,7 @@ TEST_P(TestPtxtCKKS, negateNegatesCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt.negate();
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, addConstantWorksCorrectly)
@@ -849,7 +854,7 @@ TEST_P(TestPtxtCKKS, addConstantWorksCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt.addConstantCKKS(5).addConstantCKKS(std::complex<double>{0, 0.5});
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, multiplyByMultipliesCorrectly)
@@ -871,7 +876,9 @@ TEST_P(TestPtxtCKKS, multiplyByMultipliesCorrectly)
 
   product.multiplyBy(multiplier);
 
-  EXPECT_EQ(product.getSlotRepr(), expected_result);
+  // We use EXPECT_FLOAT_EQ as opposed to EXPECT_DOUBLE_EQ here to have a
+  // higher default threshold for precision.
+  COMPARE_CXFLOAT_VECS(product.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, multiplyBy2MultipliesCorrectly)
@@ -904,7 +911,7 @@ TEST_P(TestPtxtCKKS, multiplyBy2MultipliesCorrectly)
 
   product.multiplyBy2(multiplier1, multiplier2);
 
-  EXPECT_EQ(product.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(product.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, squareSquaresCorrectly)
@@ -920,7 +927,7 @@ TEST_P(TestPtxtCKKS, squareSquaresCorrectly)
     num *= num;
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt.square();
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, cubeCubesCorrectly)
@@ -936,7 +943,7 @@ TEST_P(TestPtxtCKKS, cubeCubesCorrectly)
     num = num * num * num;
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt.cube();
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, powerCorrectlyRaisesToPowers)
@@ -996,7 +1003,7 @@ TEST_P(TestPtxtCKKS, shiftShiftsRightCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
 
   ptxt.shift(3);
-  EXPECT_EQ(ptxt.getSlotRepr(), right_shifted_data);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), right_shifted_data);
 }
 
 TEST_P(TestPtxtCKKS, shiftShiftsLeftCorrectly)
@@ -1017,7 +1024,7 @@ TEST_P(TestPtxtCKKS, shiftShiftsLeftCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
 
   ptxt.shift(-3);
-  EXPECT_EQ(ptxt.getSlotRepr(), left_shifted_data);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), left_shifted_data);
 }
 
 TEST_P(TestPtxtCKKS, shift1DShiftsRightCorrectly)
@@ -1038,7 +1045,7 @@ TEST_P(TestPtxtCKKS, shift1DShiftsRightCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
 
   ptxt.shift1D(0, 3);
-  EXPECT_EQ(ptxt.getSlotRepr(), right_shifted_data);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), right_shifted_data);
 }
 
 TEST_P(TestPtxtCKKS, shift1DShiftsLeftCorrectly)
@@ -1059,7 +1066,7 @@ TEST_P(TestPtxtCKKS, shift1DShiftsLeftCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
 
   ptxt.shift1D(0, -3);
-  EXPECT_EQ(ptxt.getSlotRepr(), left_shifted_data);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), left_shifted_data);
 }
 
 // These tests are disabled since the methods are private.
@@ -1108,10 +1115,10 @@ TEST_P(TestPtxtCKKS, rotate1DRotatesCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
 
   ptxt.rotate1D(0, -3);
-  EXPECT_EQ(ptxt.getSlotRepr(), left_rotated_data);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), left_rotated_data);
   ptxt.rotate1D(0, 3);
   // Rotating back and forth gives the original data back
-  EXPECT_EQ(ptxt.getSlotRepr(), data);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), data);
 }
 
 TEST_P(TestPtxtCKKS, rotateRotatesCorrectly)
@@ -1129,10 +1136,10 @@ TEST_P(TestPtxtCKKS, rotateRotatesCorrectly)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
 
   ptxt.rotate(-3);
-  EXPECT_EQ(ptxt.getSlotRepr(), left_rotated_data);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), left_rotated_data);
   ptxt.rotate(3);
   // Rotating back and forth gives the original data back
-  EXPECT_EQ(ptxt.getSlotRepr(), data);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), data);
 }
 
 TEST_P(TestPtxtCKKS, automorphWorksCorrectly)
@@ -1152,11 +1159,11 @@ TEST_P(TestPtxtCKKS, automorphWorksCorrectly)
   long k = context.zMStar.ith_rep(1) ? context.zMStar.ith_rep(1) : 1;
   ptxt.automorph(k);
   expected_result.rotate(1);
-  EXPECT_EQ(ptxt, expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt, expected_result);
 
   ptxt.automorph(context.zMStar.ith_rep(context.ea->size() - 1));
   expected_result.rotate(-1);
-  EXPECT_EQ(ptxt, expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt, expected_result);
 }
 
 TEST_P(TestPtxtCKKS, replicateReplicatesCorrectly)
@@ -1169,9 +1176,7 @@ TEST_P(TestPtxtCKKS, replicateReplicatesCorrectly)
   helib::replicate(*context.ea, ptxt, data.size() - 1);
   std::vector<std::complex<double>> replicated_data(context.ea->size(),
                                                     data[data.size() - 1]);
-  for (std::size_t i = 0; i < ptxt.size(); ++i) {
-    EXPECT_EQ(ptxt[i], replicated_data[i]);
-  }
+  COMPARE_CXDOUBLE_VECS(ptxt, replicated_data);
 }
 
 TEST_P(TestPtxtCKKS, replicateAllWorksCorrectly)
@@ -1184,7 +1189,8 @@ TEST_P(TestPtxtCKKS, replicateAllWorksCorrectly)
   std::vector<helib::Ptxt<helib::CKKS>> replicated_ptxts = ptxt.replicateAll();
   for (long i = 0; i < helib::lsize(data); ++i) {
     for (const auto& slot : replicated_ptxts[i].getSlotRepr()) {
-      EXPECT_EQ(data[i], slot);
+      EXPECT_DOUBLE_EQ(data[i].real(), slot.real());
+      EXPECT_DOUBLE_EQ(data[i].imag(), slot.imag());
     }
   }
 }
@@ -1224,7 +1230,7 @@ TEST_P(TestPtxtCKKS, complexConjCorrectlyConjugates)
   for (auto& num : expected_result)
     num = std::conj(num);
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, extractRealPartIsCorrect)
@@ -1243,7 +1249,7 @@ TEST_P(TestPtxtCKKS, extractRealPartIsCorrect)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   context.ea->getCx().extractRealPart(ptxt);
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, extractImPartIsCorrect)
@@ -1262,7 +1268,7 @@ TEST_P(TestPtxtCKKS, extractImPartIsCorrect)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   context.ea->getCx().extractImPart(ptxt);
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, realExtractsRealPart)
@@ -1281,7 +1287,7 @@ TEST_P(TestPtxtCKKS, realExtractsRealPart)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt = ptxt.real();
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, imagExtractsImaginaryPart)
@@ -1300,7 +1306,7 @@ TEST_P(TestPtxtCKKS, imagExtractsImaginaryPart)
   helib::Ptxt<helib::CKKS> ptxt(context, data);
   ptxt = ptxt.imag();
 
-  EXPECT_EQ(ptxt.getSlotRepr(), expected_result);
+  COMPARE_CXDOUBLE_VECS(ptxt.getSlotRepr(), expected_result);
 }
 
 TEST_P(TestPtxtCKKS, canEncryptAndDecryptComplexPtxtsWithKeys)
@@ -1597,10 +1603,7 @@ TEST_P(TestPtxtCKKS, plusOperatorWithOtherPtxtWorks)
 
   sum = augend + addend;
 
-  EXPECT_EQ(expected_sum_data.size(), sum.size());
-  for (std::size_t i = 0; i < sum.size(); ++i) {
-    EXPECT_EQ(expected_sum_data[i], sum[i]);
-  }
+  COMPARE_CXDOUBLE_VECS(expected_sum_data, sum);
 }
 
 TEST_P(TestPtxtCKKS, minusOperatorWithOtherPtxtWorks)
@@ -1619,10 +1622,7 @@ TEST_P(TestPtxtCKKS, minusOperatorWithOtherPtxtWorks)
 
   diff = minuend - subtrahend;
 
-  EXPECT_EQ(expected_diff_data.size(), diff.size());
-  for (std::size_t i = 0; i < diff.size(); ++i) {
-    EXPECT_EQ(expected_diff_data[i], diff[i]);
-  }
+  COMPARE_CXDOUBLE_VECS(expected_diff_data, diff);
 }
 
 TEST_P(TestPtxtCKKS, timesOperatorWithOtherPtxtWorks)
@@ -1641,10 +1641,7 @@ TEST_P(TestPtxtCKKS, timesOperatorWithOtherPtxtWorks)
 
   product = multiplier * multiplicand;
 
-  EXPECT_EQ(expected_product_data.size(), product.size());
-  for (std::size_t i = 0; i < product.size(); ++i) {
-    EXPECT_EQ(expected_product_data[i], product[i]);
-  }
+  COMPARE_CXDOUBLE_VECS(expected_product_data, product);
 }
 
 class TestPtxtBGV : public ::testing::TestWithParam<BGVParameters>

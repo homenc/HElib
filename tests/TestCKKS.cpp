@@ -207,7 +207,7 @@ TEST_P(TestCKKS, negatingCiphertextWorks)
 
   negateVec(vd1);
 
-  EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd2, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd2)=" << helib::largestCoeff(vd2)
       << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
@@ -234,7 +234,7 @@ TEST_P(TestCKKS, addingPolyConstantToCiphertextWorks)
 
   add(vd1, vd2);
 
-  EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd3)=" << helib::largestCoeff(vd3)
       << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
@@ -260,7 +260,7 @@ TEST_P(TestCKKS, addingNegatedPolyConstantToCiphertextWorks)
 
   add(vd1, vd2);
 
-  EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd3)=" << helib::largestCoeff(vd3) << std::endl
       << ", maxDiff=" << calcMaxDiff(vd1, vd3)
@@ -287,7 +287,7 @@ TEST_P(TestCKKS, multiplyingPolyConstantToCiphertextWorks)
   mul(vd1, vd2);
   rf *= ea.encodeScalingFactor();
 
-  EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd3)=" << helib::largestCoeff(vd3)
       << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
@@ -313,7 +313,7 @@ TEST_P(TestCKKS, addingDoubleToCiphertextWorks)
 
   add(vd1, vd[0]);
 
-  EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd2, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd2)=" << helib::largestCoeff(vd2)
       << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
@@ -340,7 +340,7 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
   rf /= std::abs(vd[0]);
   pm *= std::abs(vd[0]);
 
-  EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd2, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd2)=" << helib::largestCoeff(vd2)
       << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
@@ -367,7 +367,7 @@ TEST_P(TestCKKS, gettingTheComplexConjugateWorks)
 
   conjVec(vd1);
 
-  EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd2, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd2)=" << helib::largestCoeff(vd2)
       << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
@@ -393,7 +393,7 @@ TEST_P(TestCKKS, rotatingCiphertextWorks)
   rotate(vd1, 3);
   // vd1 is now the expected result
 
-  EXPECT_TRUE(cx_equals(vd2, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd2, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd2)=" << helib::largestCoeff(vd2)
       << ", maxDiff=" << calcMaxDiff(vd1, vd2) << std::endl
@@ -415,7 +415,7 @@ TEST_P(TestCKKS, addingCiphertextsWorks)
 
   add(vd1, vd2);
 
-  EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd3)=" << helib::largestCoeff(vd3)
       << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
@@ -436,7 +436,7 @@ TEST_P(TestCKKS, subtractingCiphertextsWorks)
 
   sub(vd1, vd2);
 
-  EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd3)=" << helib::largestCoeff(vd3)
       << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
@@ -458,7 +458,7 @@ TEST_P(TestCKKS, rawMultiplicationOfCiphertextsWorks)
 
   mul(vd1, vd2);
 
-  EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd3)=" << helib::largestCoeff(vd3)
       << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl
@@ -481,7 +481,7 @@ TEST_P(TestCKKS, highLevelMultiplicationOfCiphertextsWorks)
 
   mul(vd1, vd2);
 
-  EXPECT_TRUE(cx_equals(vd3, vd1, NTL::conv<double>(epsilon)))
+  EXPECT_TRUE(cx_equals(vd3, vd1, epsilon))
       << "  max(vd1)=" << helib::largestCoeff(vd1)
       << ", max(vd3)=" << helib::largestCoeff(vd3)
       << ", maxDiff=" << calcMaxDiff(vd1, vd3) << std::endl

@@ -16,6 +16,22 @@
 
 namespace helib_test {
 
+// Compare std::vector<std::complex<double>>
+#define COMPARE_CXDOUBLE_VECS(vec1, vec2)                                      \
+  EXPECT_EQ(vec1.size(), vec2.size());                                         \
+  for (std::size_t i = 0; i < vec2.size(); ++i) {                              \
+    EXPECT_DOUBLE_EQ(vec1[i].real(), vec2[i].real()) << "Slot " << i;          \
+    EXPECT_DOUBLE_EQ(vec1[i].imag(), vec2[i].imag()) << "Slot " << i;          \
+  }
+
+// Compare std::vector<std::complex<float>>
+#define COMPARE_CXFLOAT_VECS(vec1, vec2)                                       \
+  EXPECT_EQ(vec1.size(), vec2.size());                                         \
+  for (std::size_t i = 0; i < vec2.size(); ++i) {                              \
+    EXPECT_FLOAT_EQ(vec1[i].real(), vec2[i].real()) << "Slot " << i;           \
+    EXPECT_FLOAT_EQ(vec1[i].imag(), vec2[i].imag()) << "Slot " << i;           \
+  }
+
 extern char* path_of_executable;
 extern bool noPrint;
 extern bool verbose;

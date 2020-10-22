@@ -299,7 +299,7 @@ static void TestIt(long n)
     if (vv_norm == 0) {
       // vv has norm = 0. Cheching if the fft is correct looking only the
       // enumerator.
-      EXPECT_EQ(diff_norm, 0);
+      EXPECT_DOUBLE_EQ(diff_norm, 0);
     } else {
       // Check if the fft relative error is smaller than the treshold.
       ldbl rel_err = diff_norm / vv_norm;
