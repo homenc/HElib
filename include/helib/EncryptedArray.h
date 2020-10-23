@@ -2246,6 +2246,13 @@ public:
 
   void store(std::vector<double>& array) const { decode(ea, array, pa); }
 
+//===============================
+
+  
+
+  // this is here for consistency with Ctxt class
+  void negate() { helib::negate(ea, pa); }
+
 };
 
 inline std::ostream& operator<<(std::ostream& s, const PtxtArray& a)
@@ -2322,7 +2329,6 @@ auto operator*=(PtxtArray& a, const T& b) -> decltype(a.load(b), a)
   return a *= PtxtArray(a.ea, b);
 }
 
-inline void negate(PtxtArray& a) { negate(a.ea, a.pa); }
 
 inline void frobeniusAutomorph(PtxtArray& a, long j)
 {

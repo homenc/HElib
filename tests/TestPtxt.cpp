@@ -51,6 +51,8 @@ protected:
       // and the test was not passing.
       // This may be somethng that needs further investigation,
       // but later...
+      // This probably has something to do with the slightly
+      // different logic in the new encoding functions
   {}
 
   const unsigned long m;
