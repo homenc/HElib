@@ -23,37 +23,14 @@
 #include <helib/EncryptedArray.h>
 #include <helib/assertions.h>
 #include <helib/PolyMod.h>
+#include <helib/scheme.h>
 
 /**
  * @file Ptxt.h
- * @brief Plaintext object parameterised on CKKS and BGV schemes. Also contains
- * definition of `CKKS` and `BGV` structs.
+ * @brief Plaintext object parameterised on CKKS and BGV schemes.
  **/
 
 namespace helib {
-
-/**
- * @brief Type for CKKS scheme, to be used as template parameter.
- **/
-struct CKKS
-{
-  /**
-   * @brief Slot type used for CKKS plaintexts: `std::complex<double>`.
-   **/
-  using SlotType = std::complex<double>;
-};
-
-/**
- * @brief Type for BGV scheme, to be used as template parameter.
- **/
-struct BGV
-{
-  /**
-   * @brief Slot type used for BGV plaintexts: `helib::PolyMod` i.e. an integer
-   * polynomial modulo p^r and G.
-   **/
-  using SlotType = PolyMod;
-};
 
 // Utility functions
 

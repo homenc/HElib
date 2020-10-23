@@ -55,19 +55,19 @@ function teardown {
 }
 
 # Common parameter-related tests
-@test "encrypt works with batch size > 1" {
+@test "encrypt works with batch size greater than 1" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt" -b 10
   assert [ "$status" -eq 0 ]
   assert [ -f "${prefix_bgv}.ctxt" ]
 }
 
-@test "encrypt works with nthreads > 1" {
+@test "encrypt works with nthreads greater than 1" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt" -n 4
   assert [ "$status" -eq 0 ]
   assert [ -f "${prefix_bgv}.ctxt" ]
 }
 
-@test "decrypt works with batch size > 1" {
+@test "decrypt works with batch size greater than 1" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt"
   assert [ "$status" -eq 0 ]
   run $decrypt "${sk_file_bgv}" "${prefix_bgv}.ctxt" -o result_bgv.decrypt -b 10
@@ -75,7 +75,7 @@ function teardown {
   assert [ -f "result_bgv.decrypt" ]
 }
 
-@test "decrypt works with nthreads size > 1" {
+@test "decrypt works with nthreads size greater than 1" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt"
   assert [ "$status" -eq 0 ]
   run $decrypt "${sk_file_bgv}" "${prefix_bgv}.ctxt" -o result_bgv.decrypt -n 4
@@ -83,13 +83,13 @@ function teardown {
   assert [ -f "result_bgv.decrypt" ]
 }
 
-@test "encrypt fails with invalid nthreads < 0" {
+@test "encrypt fails with invalid nthreads less than 0" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt" -n -1
   assert [ "$status" -ne 0 ]
   assert [ "$output" == "Number of threads must be a positive integer." ]
 }
 
-@test "decrypt fails with invalid nthreads < 0" {
+@test "decrypt fails with invalid nthreads less than 0" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt"
   assert [ "$status" -eq 0 ]
   run $decrypt "${sk_file_bgv}" "${prefix_bgv}.ctxt" -o result_bgv.decrypt -n -1
@@ -97,20 +97,20 @@ function teardown {
   assert [ "$output" == "Number of threads must a be positive integer." ]
 }
 
-@test "encrypt fails with invalid batch size = -1" {
+@test "encrypt fails with invalid batch size equal to -1" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt" -b -1
   assert [ "$status" -ne 0 ]
   assert [ "$output" == "Batch size must be a positive integer." ]
 }
 
-@test "encrypt warns if batch size < nthreads" {
+@test "encrypt warns if batch size is less than nthreads" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt" -b 1 -n 2
   assert [ "$status" -eq 0 ]
   assert [ "${lines[0]}" == "WARNING: Not enough elements in the batch (1) to run with 2 threads." ]
   assert [ "${lines[1]}" == "To achieve better performance set batch size (-b) to be equal to or more than the number of threads (-n). Ideally the batch size should be a multiple of the number of threads." ]
 }
 
-@test "decrypt fails with invalid batch size = -1" {
+@test "decrypt fails with invalid batch size equal to -1" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt"
   assert [ "$status" -eq 0 ]
   run $decrypt "${sk_file_bgv}" "${prefix_bgv}.ctxt" -o result_bgv.decrypt -b -1
@@ -118,7 +118,7 @@ function teardown {
   assert [ "$output" == "Batch size must be a positive integer." ]
 }
 
-@test "decrypt warns if batch size < nthreads" {
+@test "decrypt warns if batch size is less than nthreads" {
   run $encrypt "${pk_file_bgv}" "${prefix_bgv}.ptxt"
   assert [ "$status" -eq 0 ]
   run $decrypt "${sk_file_bgv}" "${prefix_bgv}.ctxt" -o result_bgv.decrypt -b 1 -n 2

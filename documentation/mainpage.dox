@@ -12,7 +12,7 @@ the <a href="http://eprint.iacr.org/2012/099">Gentry-Halevi-Smart</a> optimizati
 
 Articles that describe some aspects of HElib include:
 
-  - A (somewhat outdated) <a href="http://people.csail.mit.edu/shaih/pubs/he-library.pdf">design document</a>, Shai Halevi and Victor Shoup, April 2013.
+  - <a href="https://homenc.github.io/HElib/documentation/Design_Document/HElib-design.pdf">HElib Design Principles</a>, Shai Halevi and Victor Shoup, August 2020.
   - <a href="http://eprint.iacr.org/2014/106">Algorithms in HElib</a>, Shai Halevi and Victor Shoup, published in <a href="http://www.iacr.org/conferences/crypto2014/">CRYPTO 2014</a>.
   - <a href="http://eprint.iacr.org/2014/873">Bootstrapping for HElib</a>, Shai Halevi and Victor Shoup, <a href="https://www.cosic.esat.kuleuven.be/eurocrypt_2015/">EUROCRYPT 2015</a>.
 

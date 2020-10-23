@@ -184,6 +184,9 @@ void Context::productOfPrimes(NTL::ZZ& p, const IndexSet& s) const
 
 bool Context::operator==(const Context& other) const
 {
+  if (&other == this)
+    return true;
+
   if (zMStar != other.zMStar)
     return false;
   if (alMod != other.alMod)
@@ -295,7 +298,6 @@ void writeContextBinary(std::ostream& str, const Context& context)
   // the "small" index
   write_raw_int(str, context.smallPrimes.card());
   for (long tmp : context.smallPrimes) {
-    ;
     write_raw_int(str, tmp);
   }
 
@@ -587,6 +589,42 @@ Context::Context(unsigned long m,
   }
 }
 
+Context::Context(const Context& other) :
+    moduli(other.moduli),
+    zMStar(other.zMStar),
+    alMod(zMStar, other.alMod.getR()),
+    ea(other.ea),
+    pwfl_converter(other.pwfl_converter),
+    slotRing(other.slotRing),
+    stdev(other.stdev),
+    scale(other.scale),
+    ctxtPrimes(other.ctxtPrimes),
+    specialPrimes(other.specialPrimes),
+    smallPrimes(other.smallPrimes),
+    modSizes(other.modSizes),
+    digits(other.digits),
+    rcData(other.rcData)
+{}
+
+Context::Context(Context&& other) :
+    moduli(std::move(other.moduli)),
+    zMStar(std::move(other.zMStar)),
+    alMod(zMStar, other.alMod.getR()),
+    ea(std::move(other.ea)),
+    pwfl_converter(std::move(other.pwfl_converter)),
+    slotRing(std::move(other.slotRing)),
+    stdev(std::move(other.stdev)),
+    scale(std::move(other.scale)),
+    ctxtPrimes(std::move(other.ctxtPrimes)),
+    specialPrimes(std::move(other.specialPrimes)),
+    smallPrimes(std::move(other.smallPrimes)),
+    modSizes(std::move(other.modSizes)),
+    digits(std::move(other.digits)),
+    rcData(std::move(other.rcData))
+{
+  std::move(other.alMod);
+}
+
 void Context::printout(std::ostream& out) const
 {
   ea->getPAlgebra().printout(out);
@@ -597,5 +635,75 @@ void Context::printout(std::ostream& out) const
       << "number of bits = " << bitSizeOfQ() << "\n\n"
       << "security level = " << securityLevel() << std::endl;
 }
+
+template <typename SCHEME>
+Context ContextBuilder<SCHEME>::build() const
+{
+  if (buildModChainFlag_) {
+    Context context(m_, p_, r_, gens_, ords_);
+    // Not the builder's setter method.
+    ::helib::buildModChain(context,
+                           bits_,
+                           c_,
+                           bootstrappableFlag_,
+                           skHwt_,
+                           resolution_,
+                           bitsInSpecialPrimes_);
+    if (bootstrappableFlag_) {
+      context.makeBootstrappable(mvec_, skHwt_, buildCacheFlag_, thickFlag_);
+    }
+    return context;
+  } else {
+    return Context(m_, p_, r_, gens_, ords_);
+  }
+}
+
+template <>
+std::ostream& operator<<<BGV>(std::ostream& os, const ContextBuilder<BGV>& cb)
+{
+  os << "{\n"
+     << "  scheme: BGV\n"
+     << "  m: " << cb.m_ << "\n"
+     << "  p: " << cb.p_ << "\n"
+     << "  r: " << cb.r_ << "\n"
+     << "  c: " << cb.c_ << "\n"
+     << "  gens: " << vecToStr(cb.gens_) << "\n"
+     << "  ords: " << vecToStr(cb.ords_) << "\n"
+     << "  buildModChainFlag: " << cb.buildModChainFlag_ << "\n"
+     << "  bits: " << cb.bits_ << "\n"
+     << "  skHwt: " << cb.skHwt_ << "\n"
+     << "  resolution: " << cb.resolution_ << "\n"
+     << "  bitsInSpecialPrimes: " << cb.bitsInSpecialPrimes_ << "\n"
+     << "  bootstrappableFlag: " << cb.bootstrappableFlag_ << "\n"
+     << "  mvec: " << cb.mvec_ << "\n"
+     << "  buildCacheFlag: " << cb.buildCacheFlag_ << "\n"
+     << "  thickFlag: " << cb.thickFlag_ << "\n"
+     << "}" << std::endl;
+
+  return os;
+}
+
+template <>
+std::ostream& operator<<<CKKS>(std::ostream& os, const ContextBuilder<CKKS>& cb)
+{
+  os << "{\n"
+     << "  scheme: CKKS\n"
+     << "  m: " << cb.m_ << ",\n"
+     << "  precision: " << cb.r_ << ",\n"
+     << "  c: " << cb.c_ << ",\n"
+     << "  gens: " << vecToStr(cb.gens_) << ",\n"
+     << "  ords: " << vecToStr(cb.ords_) << ",\n"
+     << "  buildModChainFlag: " << cb.buildModChainFlag_ << ",\n"
+     << "  bits: " << cb.bits_ << ",\n"
+     << "  skHwt: " << cb.skHwt_ << ",\n"
+     << "  resolution: " << cb.resolution_ << ",\n"
+     << "  bitsInSpecialPrimes: " << cb.bitsInSpecialPrimes_ << "\n"
+     << "}" << std::endl;
+
+  return os;
+}
+
+template class ContextBuilder<BGV>;
+template class ContextBuilder<CKKS>;
 
 } // namespace helib

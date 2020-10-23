@@ -32,7 +32,7 @@ function teardown {
   remove-test-directory "$tmp_folder"
 }
 
-@test "BGV: full-pipeline encode->encrypt->decrypt->decode" {
+@test "BGV: full-pipeline encode - encrypt - decrypt - decode" {
   run bash -c "$encode ${prefix_bgv}.dat ${prefix_bgv}.info BGV > ${prefix_bgv}.ptxt"
   assert [ "$status" -eq 0 ]
   run $encrypt "$pk_file_bgv" "${prefix_bgv}.ptxt"
@@ -44,7 +44,7 @@ function teardown {
   diff "${prefix_bgv}.dat" "${prefix_bgv}.decoded"
 }
 
-@test "CKKS: full-pipeline encode->encrypt->decrypt->decode" {
+@test "CKKS: full-pipeline encode - encrypt - decrypt - decode" {
   run bash -c "$encode ${prefix_ckks}.dat ${prefix_ckks}.info CKKS > ${prefix_ckks}.ptxt"
   assert [ "$status" -eq 0 ]
   run $encrypt "$pk_file_ckks" "${prefix_ckks}.ptxt"
@@ -56,7 +56,7 @@ function teardown {
   ${diff_threshold} ${prefix_ckks}.dat ${prefix_ckks}.decoded
 }
 
-@test "BGV: matrix full-pipeline encode->encrypt->decrypt->decode" {
+@test "BGV: matrix full-pipeline encode - encrypt - decrypt - decode" {
   run bash -c "$encode ${prefix_bgv}.dat ${prefix_bgv}.info BGV --dims 2,3 > ${prefix_bgv}.ptxt"
   assert [ "$status" -eq 0 ]
   run $encrypt "$pk_file_bgv" "${prefix_bgv}.ptxt"
@@ -68,7 +68,7 @@ function teardown {
   diff "${prefix_bgv}.dat" "${prefix_bgv}.decoded"
 }
 
-@test "CKKS: matrix full-pipeline encode->encrypt->decrypt->decode" {
+@test "CKKS: matrix full-pipeline encode - encrypt - decrypt - decode" {
   run bash -c "$encode ${prefix_ckks}.dat ${prefix_ckks}.info CKKS --dims 2,3 > ${prefix_ckks}.ptxt"
   assert [ "$status" -eq 0 ]
   run $encrypt "$pk_file_ckks" "${prefix_ckks}.ptxt"

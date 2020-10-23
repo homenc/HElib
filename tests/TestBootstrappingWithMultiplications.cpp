@@ -42,7 +42,7 @@ struct Parameters
       gens(gens),
       ords(ords)
   {
-    if (mvec.empty(), gens.empty() || ords.empty())
+    if (mvec.empty() || gens.empty() || ords.empty())
       throw helib::LogicError("mvec, gens, and ords must be non-empty");
   };
 
