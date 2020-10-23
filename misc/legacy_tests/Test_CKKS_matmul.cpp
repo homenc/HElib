@@ -14,6 +14,7 @@
  * @brief some matrix / linear algenra stuff
  */
 #include <helib/matmul.h>
+#include <helib/NumbTh.h>
 #include <NTL/BasicThreadPool.h>
 #include <helib/fhe_stats.h>
 
@@ -86,11 +87,11 @@ void TestIt(Context& context, bool verbose)
   long n = context.getNSlots();
 
   std::vector<double> v(n);
-  for (long j: range(n)) v[j] = j+1;
+  for (long j: range(n)) v[j] = RandomReal();
 
-  MatMul_CKKS mat(context, 
-                [n](long i, long j) -> std::complex<double>
-                { return (i*n+j)/double(n); } );
+  MatMul_CKKS_Complex mat(context, 
+                [n](long i, long j) 
+                { return ((i+j)% n)/double(n); } );
   // Note the use of a "lambda": this allows for quite
   // general ways to describe a matrix with minimal fuss
 
@@ -107,7 +108,7 @@ void TestIt(Context& context, bool verbose)
 
   // perform the linear transformation on encrypted data
   EncodedMatMul_CKKS emat(mat);
-  emat.upgrade();
+  //emat.upgrade();
   ctxt *= emat;
 
   // we can also just do it this way:

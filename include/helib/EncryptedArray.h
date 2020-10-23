@@ -2033,6 +2033,10 @@ void power(const EncryptedArray& ea, PlaintextArray& pa, long e);
 double Norm(const EncryptedArray& ea, const PlaintextArray& pa);
 double Distance(const EncryptedArray& ea, const PlaintextArray& pa, const PlaintextArray& other);
 
+
+void totalSums(const EncryptedArray& ea, PlaintextArray& pa);
+
+
 //=====================================
 
 // PtxtArray is a somewhat "friendlier" interface than
@@ -2347,6 +2351,7 @@ inline double Distance(const PtxtArray& a, const PtxtArray& b)
   return Distance(a.ea, a.pa, b.pa); 
 }
 
+inline void totalSums(PtxtArray& a) { totalSums(a.ea, a.pa); }
 
 //=====================================
 
