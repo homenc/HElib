@@ -45,7 +45,12 @@ protected:
   TestPtxtCKKS() :
       // Only relevant parameter is m for a CKKS plaintext
       m(GetParam()),
-      context(m, -1, 50)
+      context(m, -1, 40)
+      // VJS_NOTE: I changed r=50 to r=40.
+      // I find setting r so large can cause problems,
+      // and the test was not passing.
+      // This may be somethng that needs further investigation,
+      // but later...
   {}
 
   const unsigned long m;

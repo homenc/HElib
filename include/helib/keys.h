@@ -192,9 +192,8 @@ public:
    * @return Plaintext space.
    **/
   template <typename Scheme>
-  long Encrypt(Ctxt& ciphertxt,
-               const Ptxt<Scheme>& plaintxt,
-               long ptxtSpace = 0) const;
+  void Encrypt(Ctxt& ciphertxt,
+               const Ptxt<Scheme>& plaintxt) const;
 
   //=============== new EncodedPtxt interface ==================
 

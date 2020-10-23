@@ -170,7 +170,7 @@ TEST_P(TestMatmulCKKS, vectorToMatrixMultiplication)
   std::vector<double> v(ea.size());
   std::iota(v.begin(), v.end(), 1);
 
-  helib::MatMul_CKKS mat(context, [&v](long i, long j) -> std::complex<double> {
+  helib::MatMul_CKKS mat(context, [&v](long i, long j) {
     return i * v.size() + j;
   });
   // Note the use of a "lambda": this allows for quite

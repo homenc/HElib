@@ -109,6 +109,8 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 
   rawDecrypt(ctxt, sKey, ptxt);
 
+#if 0
+
   constexpr double fudge_factor = 4.0;
   double B = ctxt.errorBound() * fudge_factor;
 
@@ -122,12 +124,13 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
     im = B*std::round(im/B);
     c = cx_double(re, im);
   }
+#endif
 }
 
 void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
 	                       const SecKey& sKey,
 	                       std::vector<double>& ptxt) const
-#if 0
+#if 1
 {
   // NOTE: we may wish to consider an alternative implementation,
   // where we (a) assume the imaginary parts are supposd to be zero,

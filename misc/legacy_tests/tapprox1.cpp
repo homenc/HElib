@@ -88,41 +88,6 @@ void debugCompare(const SecKey& sk,
 
 
 
-void totalSums_(const EncryptedArray& ea, Ctxt& ctxt)
-{
-  long n = ea.size();
-
-  if (n == 1)
-    return;
-
-  Ctxt orig = ctxt;
-
-  long k = NTL::NumBits(n);
-  long e = 1;
-
-  ctxt.cleanUp();
-
-  for (long i = k - 2; i >= 0; i--) {
-    Ctxt tmp1 = ctxt;
-    ea.rotate(tmp1, e);
-    tmp1.cleanUp();
-    CheckCtxt(tmp1, "*** rotate");
-    ctxt += tmp1; // ctxt = ctxt + (ctxt >>> e)
-    CheckCtxt(ctxt, "*** add");
-    e = 2 * e;
-
-    if (NTL::bit(n, i)) {
-      Ctxt tmp2 = orig;
-      ea.rotate(tmp2, e);
-      ctxt += tmp2; // ctxt = ctxt + (orig >>> e)
-                    // NOTE: we could have also computed
-                    // ctxt =  (ctxt >>> e) + orig, however,
-                    // this would give us greater depth/noise
-      e += 1;
-    }
-  }
-}
-
 
 void testGeneralOps(const PubKey& publicKey,
                     const SecKey& secretKey,
@@ -191,8 +156,8 @@ void testGeneralOps(const PubKey& publicKey,
     DEBUG_COMPARE(c0, p0, "c0 *= tmp1");
 
 #if 1
-    totalSums(p0);
-    totalSums_(context.getDefaultEA(), c0);
+    runningSums(p0);
+    runningSums(c0);
     DEBUG_COMPARE(c0, p0, "totalSums");
 #endif
 

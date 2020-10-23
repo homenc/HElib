@@ -1687,6 +1687,7 @@ double Distance(const EncryptedArray& ea, const PlaintextArray& pa, const Plaint
   ea.dispatch<Norm_pa_impl>(res, pa, other);
   return res;
 }
+
 //=============================================================================
 
 template <typename type>
@@ -1715,6 +1716,31 @@ void totalSums(const EncryptedArray& ea,
 {
   ea.dispatch<totalSums_pa_impl>(pa);
 }
+
+//=============================================================================
+
+template <typename type>
+class runningSums_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa)
+  {
+    PA_BOILER(type)
+
+    for (long i = 1; i < n; i++)
+      data[i] += data[i-1];
+  }
+};
+
+void runningSums(const EncryptedArray& ea,
+         PlaintextArray& pa)
+{
+  ea.dispatch<runningSums_pa_impl>(pa);
+}
+
 
 
 //=============================================================================

@@ -2035,6 +2035,7 @@ double Distance(const EncryptedArray& ea, const PlaintextArray& pa, const Plaint
 
 
 void totalSums(const EncryptedArray& ea, PlaintextArray& pa);
+void runningSums(const EncryptedArray& ea, PlaintextArray& pa);
 
 
 //=====================================
@@ -2352,6 +2353,7 @@ inline double Distance(const PtxtArray& a, const PtxtArray& b)
 }
 
 inline void totalSums(PtxtArray& a) { totalSums(a.ea, a.pa); }
+inline void runningSums(PtxtArray& a) { runningSums(a.ea, a.pa); }
 
 //=====================================
 
@@ -2367,7 +2369,6 @@ void runningSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 inline void runningSums(Ctxt& ctxt)
 { runningSums(ctxt.getContext().getDefaultView(), ctxt); }
-// VJS-FIXME: implement PtxtArray operation
 
 //! @brief A ctxt that encrypts \f$(x_1, ..., x_n)\f$ is replaced by an
 //! encryption of \f$(y, ..., y)\$, where \f$y = sum_{j=1}^n x_j.\f$
@@ -2375,7 +2376,6 @@ void totalSums(const EncryptedArray& ea, Ctxt& ctxt);
 
 inline void totalSums(Ctxt& ctxt)
 { totalSums(ctxt.getContext().getDefaultView(), ctxt); }
-// VJS-FIXME: implement PtxtArray operation
 
 //! @brief Map all non-zero slots to 1, leaving zero slots as zero.
 //! Assumes that r=1, and that all the slots contain elements from GF(p^d).
