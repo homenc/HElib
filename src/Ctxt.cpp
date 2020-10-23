@@ -2553,6 +2553,7 @@ void Ctxt::write(std::ostream& str) const
     4.  std::vector<CtxtPart> parts;
   */
 
+
   write_raw_int(str, ptxtSpace);
   write_raw_int(str, intFactor);
   write_raw_xdouble(str, ptxtMag);
