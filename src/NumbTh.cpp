@@ -704,6 +704,28 @@ long ord(long N, long p)
   return o;
 }
 
+double RandomReal()
+{
+  NTL::ZZ num;
+  NTL::RandomBits(num, 53);
+  // assumes 53 bits of mantissa
+  // we could also write this as std::numeric_limits<double>::digits
+
+  double denom = std::ldexp(1.0, 53); // 2^53
+
+  return NTL::conv<double>(num) / denom;
+}
+
+std::complex<double> RandomComplex()
+{
+  double r = std::sqrt(RandomReal());
+  double theta = RandomReal() * 2 * PI;
+
+  return std::polar(r, theta);
+  // See:
+  // https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly/50746409#50746409
+}
+
 NTL::ZZX RandPoly(long n, const NTL::ZZ& p)
 {
   NTL::ZZX F;

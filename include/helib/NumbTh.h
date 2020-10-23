@@ -15,6 +15,7 @@
  * @file NumbTh.h
  * @brief Miscellaneous utility functions.
  **/
+#include <algorithm>
 #include <vector>
 #include <set>
 #include <cmath>
@@ -287,6 +288,12 @@ inline bool is2power(long m)
   return (((unsigned long)m) == (1UL << k));
 }
 
+//! returns a pseudo-random number in uniform in [0, 1)
+double RandomReal();
+
+//! returns a pseudo-random number comomlex number z with |z| < 1
+std::complex<double> RandomComplex();
+
 // Returns a random mod p polynomial of degree < n
 NTL::ZZX RandPoly(long n, const NTL::ZZ& p);
 
@@ -365,7 +372,9 @@ void convert(NTL::mat_zz_pE& X, const std::vector<std::vector<NTL::ZZX>>& A);
 void convert(std::vector<NTL::ZZX>& X, const NTL::vec_zz_pE& A);
 void convert(std::vector<std::vector<NTL::ZZX>>& X, const NTL::mat_zz_pE& A);
 void convert(NTL::Vec<long>& out, const NTL::ZZX& in);
-void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric = true);
+
+void convert(NTL::Vec<long>& out, const NTL::zz_pX& in, bool symmetric = false);
+
 void convert(NTL::Vec<long>& out, const NTL::GF2X& in);
 void convert(NTL::ZZX& out, const NTL::Vec<long>& in);
 void convert(NTL::GF2X& out, const NTL::Vec<long>& in);
@@ -381,14 +390,28 @@ void convert(T1& x1, const T2& x2)
   NTL::conv(x1, x2);
 }
 
+//! Additional helpful conversion base cases
+inline void convert(long& x1, bool x2) { x1 = x2; }
+inline void convert(double& x1, bool x2) { x1 = x2; }
+inline void convert(std::complex<double>& x1, bool x2) { x1 = x2; }
+inline void convert(std::complex<double>& x1, long x2) { x1 = x2; }
+inline void convert(std::complex<double>& x1, double x2) { x1 = x2; }
+
+inline void convert(NTL::ZZX& x1, NTL::GF2 x2) { x1 = rep(x2); }
+inline void convert(NTL::ZZX& x1, NTL::zz_p x2) { x1 = rep(x2); }
+
 //! generic vector conversion routines
 template <typename T1, typename T2>
 void convert(std::vector<T1>& v1, const std::vector<T2>& v2)
 {
   long n = v2.size();
   v1.resize(n);
-  for (long i = 0; i < n; i++)
-    convert(v1[i], v2[i]);
+  for (long i = 0; i < n; i++) {
+    // Applying static_cast<const T2&> to avoid issues when std::vector<T2>
+    // operator[] returns a non-T2 object (this happens for std::vector<bool>
+    // that returns a __bit_const_reference object).
+    convert(v1[i], static_cast<const T2&>(v2[i]));
+  }
 }
 
 template <typename T1, typename T2>
@@ -405,8 +428,12 @@ void convert(NTL::Vec<T1>& v1, const std::vector<T2>& v2)
 {
   long n = v2.size();
   v1.SetLength(n);
-  for (long i = 0; i < n; i++)
-    convert(v1[i], v2[i]);
+  for (long i = 0; i < n; i++) {
+    // Applying static_cast<const T2&> to avoid issues when std::vector<T2>
+    // operator[] returns a non-T2 object (this happens for std::vector<bool>
+    // that returns a __bit_const_reference object).
+    convert(v1[i], static_cast<const T2&>(v2[i]));
+  }
 }
 
 //! Trivial type conversion, useful for generic code
@@ -442,6 +469,25 @@ std::vector<T> Vec_replicate(const T& a, long n)
   for (long i = 0; i < n; i++)
     res[i] = a;
   return res;
+}
+
+// some unsafe conversions
+inline void project(std::vector<double>& out,
+                    const std::vector<std::complex<double>>& in)
+{
+  long n = in.size();
+  out.resize(n);
+  for (long i = 0; i < n; i++)
+    out[i] = in[i].real();
+}
+
+inline void project_and_round(std::vector<long>& out,
+                              const std::vector<std::complex<double>>& in)
+{
+  long n = in.size();
+  out.resize(n);
+  for (long i = 0; i < n; i++)
+    out[i] = std::round(in[i].real());
 }
 
 //! returns \prod_d vec[d]
@@ -902,29 +948,98 @@ std::unique_ptr<T> build_unique(Args&&... args)
 }
 #endif
 
-//! Simple routine for computing the max-abs of a vector
-//! of complex numbers and real numbers
+// Generic routines for domputing absolute values and distances
+// on real and complex numbers
 
-inline double max_abs(const std::vector<std::complex<double>>& vec)
+template <typename T>
+void AssertRealOrComplex()
 {
+  static_assert(std::is_same<T, double>::value ||
+                    std::is_same<T, std::complex<double>>::value,
+                "Error: type T is not double or std::complex<double>.");
+}
+
+template <typename T>
+double Norm(const T& x)
+{
+  AssertRealOrComplex<T>();
+  return std::abs(x);
+}
+
+template <typename T, typename U>
+double Distance(const T& x, const U& y)
+{
+  AssertRealOrComplex<T>();
+  AssertRealOrComplex<U>();
+  return std::abs(x - y);
+}
+
+// for vectors, we us the infty norm
+template <typename T>
+double Norm(const std::vector<T>& x)
+{
+  long n = x.size();
   double res = 0;
-  for (auto x : vec) {
-    double t = std::abs(x);
-    if (res < t)
-      res = t;
-  }
+  for (long i = 0; i < n; i++)
+    res = std::max(res, Norm(x[i]));
   return res;
 }
 
-inline double max_abs(const std::vector<double>& vec)
+// we require same-length vectors
+template <typename T, typename U>
+double Distance(const std::vector<T>& x, const std::vector<U>& y)
 {
+  assertTrue(x.size() == y.size(), "Distance: mismatched vector sizes");
+  long n = x.size();
   double res = 0;
-  for (auto x : vec) {
-    double t = std::abs(x);
-    if (res < t)
-      res = t;
-  }
+  for (long i = 0; i < n; i++)
+    res = std::max(res, Distance(x[i], y[i]));
   return res;
+}
+
+// General mechanisms for comparing approximate numbers
+
+// returns true iff |x-y| <= tolerance*max(|y|,floor)
+
+// the template mechanism will allow comparisons
+// between scalars of real/complex types, or between vectors
+// of real/complex types.
+// For vectors, sizes must be equal and the infty norm is used
+
+template <typename T, typename U>
+inline bool approx_equal(const T& x, const U& y, double tolerance, double floor)
+{
+  return Distance(x, y) <= tolerance * std::max(Norm(y), floor);
+}
+
+template <class T>
+struct ApproxClass
+{
+  const T& val;
+  double tolerance;
+  double floor;
+
+  ApproxClass(const T& val_, double tolerance_, double floor_) :
+      val(val_), tolerance(tolerance_), floor(floor_)
+  {}
+};
+
+template <class T>
+ApproxClass<T> Approx(const T& val, double tolerance = 0.01, double floor = 1.0)
+{
+  return ApproxClass<T>(val, tolerance, floor);
+}
+
+template <class T, class U>
+bool operator==(const T& x, const ApproxClass<U>& y)
+{
+  return approx_equal(x, y.val, y.tolerance, y.floor);
+}
+
+template <class T, class U>
+bool operator!=(const T& x, const ApproxClass<U>& y)
+{
+  return !approx_equal(x, y.val, y.tolerance, y.floor);
 }
 
 //! This should go in NTL some day...

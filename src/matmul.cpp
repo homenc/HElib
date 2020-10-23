@@ -121,10 +121,14 @@ public:
 
     const Context& context = ctxt.getContext();
     const PubKey& pubKey = ctxt.getPubKey();
+
     // empty ctxt
     std::shared_ptr<Ctxt> result = std::make_shared<Ctxt>(ZeroCtxtLike, ctxt);
     result->noiseBound = noise; // noise estimate
     result->intFactor = ctxt.intFactor;
+
+    result->primeSet = ctxt.primeSet | context.specialPrimes;
+    // VJS-NOTE: added this to make addPart work
 
     if (ctxt.isCKKS()) {
       result->ptxtMag = ctxt.ptxtMag;
@@ -679,40 +683,25 @@ struct MatMul1DExec_construct
   }
 };
 
+HELIB_NO_CKKS_IMPL(MatMul1DExec_construct)
+
 // HERE
-void MatMul1D_CKKS::processDiagonal(zzX& poly,
-                                    double& size,
-                                    double& factor,
+void MatMul1D_CKKS::processDiagonal(std::vector<std::complex<double>>& diag,
                                     long i,
                                     const EncryptedArrayCx& ea) const
 {
   long D = ea.size();
 
-  std::vector<std::complex<double>> diag(D);
-
-  bool zDiag = true; // is this a zero diagonal?
+  diag.resize(D);
 
   // Process the entries in this diagonal one at a time
-  for (long j = 0; j < D; j++) { // process entry j
+  for (long j : range(D)) { // process entry j
     diag[j] = this->get(mcMod(j - i, D), j);
-    // entry [j-i mod D, j]
-
-    if (diag[j] != 0.0)
-      zDiag = false; // mark diagonal as non-empty
-  }
-
-  size = factor = 0;
-  if (zDiag)
-    clear(poly);
-  else {
-    size = max_abs(diag);
-    factor = ea.encode(poly, diag, 1.0);
-    // VJS-FIXME: we are using size=1.0.
-    // Maybe we should allow this to be parameterized?
-    // We could also allow a more general precision parameter??
   }
 }
 
+#if 0
+// This is no longer needed. We can eventually get rid of it
 void plaintextAutomorph_CKKS(zzX& b,
                              const zzX& a,
                              long j,
@@ -744,25 +733,18 @@ void plaintextAutomorph_CKKS(zzX& b,
 
   normalize(b);
 }
+#endif
 
 struct ConstMultiplier_DoubleCRT_CKKS : ConstMultiplier
 {
-  DoubleCRT data;
-  double size, factor;
+  FatEncodedPtxt feptxt;
 
-  ConstMultiplier_DoubleCRT_CKKS(const DoubleCRT& _data,
-                                 double _size,
-                                 double _factor) :
-      data(_data), size(_size), factor(_factor)
-  {}
-
-  void mul(Ctxt& ctxt) const override
+  ConstMultiplier_DoubleCRT_CKKS(const EncodedPtxt& eptxt, const IndexSet& s)
   {
-    ctxt.multByConstantCKKS(data,
-                            NTL::to_xdouble(size),
-                            NTL::to_xdouble(factor));
+    feptxt.expand(eptxt, s);
   }
-  // we use the default RoundingError parameter
+
+  void mul(Ctxt& ctxt) const override { ctxt *= feptxt; }
 
   std::shared_ptr<ConstMultiplier> upgrade(
       UNUSED const Context& context) const override
@@ -773,44 +755,42 @@ struct ConstMultiplier_DoubleCRT_CKKS : ConstMultiplier
 
 struct ConstMultiplier_zzX_CKKS : ConstMultiplier
 {
-  zzX data;
-  double size, factor;
+  EncodedPtxt eptxt;
 
-  ConstMultiplier_zzX_CKKS(const zzX& _data, double _size, double _factor) :
-      data(_data), size(_size), factor(_factor)
-  {}
-
-  void mul(Ctxt& ctxt) const override
+  ConstMultiplier_zzX_CKKS(const std::vector<std::complex<double>>& diag,
+                           const EncryptedArrayCx& ea)
   {
-    DoubleCRT dcrt(data, ctxt.getContext(), ctxt.getPrimeSet());
-    ctxt.multByConstantCKKS(dcrt,
-                            NTL::to_xdouble(size),
-                            NTL::to_xdouble(factor));
+    ea.encode(eptxt, diag);
   }
+
+  void mul(Ctxt& ctxt) const override { ctxt *= eptxt; }
 
   std::shared_ptr<ConstMultiplier> upgrade(
       const Context& context) const override
   {
     return std::make_shared<ConstMultiplier_DoubleCRT_CKKS>(
-        DoubleCRT(data, context, context.fullPrimes()),
-        size,
-        factor);
+        eptxt,
+        context.fullPrimes());
   }
 };
 
 static std::shared_ptr<ConstMultiplier> build_ConstMultiplier_CKKS(
-    const zzX& poly,
+    const std::vector<std::complex<double>>& diag,
     long amt,
-    double size,
-    double factor,
     const EncryptedArrayCx& ea)
 {
-  if (IsZero(poly))
+  double size = Norm(diag);
+  if (size == 0.0)
     return nullptr;
   else {
-    zzX poly1;
-    plaintextAutomorph_CKKS(poly1, poly, amt, ea);
-    return std::make_shared<ConstMultiplier_zzX_CKKS>(poly1, size, factor);
+    long n = ea.size();
+
+    // diag1 = diag rotated by amt...could be optimized for amt==0
+    std::vector<std::complex<double>> diag1(n);
+    for (long i : range(n))
+      diag1[((i + amt) % n + n) % n] = diag[i];
+
+    return std::make_shared<ConstMultiplier_zzX_CKKS>(diag1, ea);
   }
 }
 
@@ -841,10 +821,9 @@ static void MatMul1DExec_construct_CKKS(
       k = 1;
     }
 
-    zzX poly;
-    double size, factor;
-    mat.processDiagonal(poly, size, factor, i, ea);
-    vec[i] = build_ConstMultiplier_CKKS(poly, -g * k, size, factor, ea);
+    std::vector<std::complex<double>> diag;
+    mat.processDiagonal(diag, i, ea);
+    vec[i] = build_ConstMultiplier_CKKS(diag, -g * k, ea);
   }
 }
 
@@ -868,6 +847,12 @@ MatMul1DExec::MatMul1DExec(const MatMul1D& mat, bool _minimal) :
                 ea.dimension(),
                 "Matrix dimension not in [0, ea.dimension()]",
                 true);
+
+  // VJS-FIXME: we actually do use dim==ea.dimension() in bootstrapping.
+  // We should document this feature, at least for internal purposes.
+  // The basic idea is that this dimension is treated as a dimension
+  // of size 1.
+  // if (dim == ea.dimension()) std::cerr << "*** MatMul1DExec: big dim\n";
 
   D = dimSz(ea, dim);
   native = dimNative(ea, dim);
@@ -1667,6 +1652,8 @@ struct BlockMatMul1DExec_construct
   }
 };
 
+HELIB_NO_CKKS_IMPL(BlockMatMul1DExec_construct)
+
 BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
                                      UNUSED bool minimal) :
     ea(mat.getEA())
@@ -1679,6 +1666,13 @@ BlockMatMul1DExec::BlockMatMul1DExec(const BlockMatMul1D& mat,
                 ea.dimension(),
                 "Matrix dimension not in [0, ea.dimension()]",
                 true);
+
+  // VJS-FIXME: we actually do use dim==ea.dimension() in bootstrapping.
+  // We should document this feature, at least for internal purposes.
+  // The basic idea is that this dimension is treated as a dimension
+  // of size 1.
+  // if (dim == ea.dimension()) std::cerr << "*** BlockMatMul1DExec: big dim\n";
+
   D = dimSz(ea, dim);
   d = ea.getDegree();
   native = dimNative(ea, dim);
@@ -2127,6 +2121,8 @@ struct MatMulFullExec_construct
   }
 };
 
+HELIB_NO_CKKS_IMPL(MatMulFullExec_construct)
+
 MatMulFullExec::MatMulFullExec(const MatMulFull& mat, bool _minimal) :
     ea(mat.getEA()), minimal(_minimal)
 {
@@ -2463,6 +2459,8 @@ struct BlockMatMulFullExec_construct
   }
 };
 
+HELIB_NO_CKKS_IMPL(BlockMatMulFullExec_construct)
+
 BlockMatMulFullExec::BlockMatMulFullExec(const BlockMatMulFull& mat,
                                          bool _minimal) :
     ea(mat.getEA()), minimal(_minimal)
@@ -2666,6 +2664,31 @@ struct mul_MatMul1D_impl
   }
 };
 
+template <>
+struct mul_MatMul1D_impl<PA_cx>
+{
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const MatMul1D& mat_basetype)
+  {
+    const MatMul1D_derived<PA_cx>& mat =
+        dynamic_cast<const MatMul1D_derived<PA_cx>&>(mat_basetype);
+
+    long n = ea.size();
+    std::vector<std::complex<double>>& data = pa.getData<PA_cx>();
+    std::vector<std::complex<double>> data1(n);
+
+    // compute data1 = data*mat
+    for (long i : range(n))
+      for (long j : range(n))
+        data1[j] += mat.get(i, j) * data[i];
+
+    data = data1;
+  }
+};
+
 void mul(PlaintextArray& pa, const MatMul1D& mat)
 {
   const EncryptedArray& ea = mat.getEA();
@@ -2726,6 +2749,8 @@ struct mul_BlockMatMul1D_impl
   }
 };
 
+HELIB_NO_CKKS_IMPL(mul_BlockMatMul1D_impl)
+
 void mul(PlaintextArray& pa, const BlockMatMul1D& mat)
 {
   const EncryptedArray& ea = mat.getEA();
@@ -2769,6 +2794,8 @@ struct mul_MatMulFull_impl
     data = res;
   }
 };
+
+HELIB_NO_CKKS_IMPL(mul_MatMulFull_impl)
 
 void mul(PlaintextArray& pa, const MatMulFull& mat)
 {
@@ -2814,6 +2841,8 @@ struct mul_BlockMatMulFull_impl
     data = res;
   }
 };
+
+HELIB_NO_CKKS_IMPL(mul_BlockMatMulFull_impl)
 
 void mul(PlaintextArray& pa, const BlockMatMulFull& mat)
 {

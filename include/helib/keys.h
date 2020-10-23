@@ -21,6 +21,7 @@
  */
 
 #include <helib/keySwitching.h>
+#include <helib/EncodedPtxt.h>
 
 namespace helib {
 
@@ -152,9 +153,11 @@ public:
    * For CKKS, ptxtSpace is a bound on the size of the complex plaintext
    *     elements that are encoded in ptxt (before scaling), it is assumed
    *     that they are scaled by context.alMod.encodeScalingFactor(). The
-   *     VJS-FIXME: this comment must mean alMod.getCx()...check
-   *     returned value is the same as the argument ptxtSpace.
    **/
+
+  // VJS-FIXME: these routine have a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
   long Encrypt(Ctxt& ciphertxt,
                const NTL::ZZX& plaintxt,
                long ptxtSpace,
@@ -192,6 +195,14 @@ public:
   long Encrypt(Ctxt& ciphertxt,
                const Ptxt<Scheme>& plaintxt,
                long ptxtSpace = 0) const;
+
+  //=============== new EncodedPtxt interface ==================
+
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const;
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const;
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_CKKS& eptxt) const;
+
+  //============================================================
 
   /**
    * @brief An estimate for the security level. The estimated security level
@@ -315,6 +326,15 @@ public:
   long Encrypt(Ctxt& ciphertxt,
                const zzX& plaintxt,
                long ptxtSpace = 0) const override;
+
+  //=============== new EncodedPtxt interface ==================
+
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt& eptxt) const override;
+  virtual void Encrypt(Ctxt& ctxt, const EncodedPtxt_BGV& eptxt) const override;
+  virtual void Encrypt(Ctxt& ctxt,
+                       const EncodedPtxt_CKKS& eptxt) const override;
+
+  //============================================================
 
   //! @brief Generate bootstrapping data if needed, returns index of key
   long genRecryptData();

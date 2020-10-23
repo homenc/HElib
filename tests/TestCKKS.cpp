@@ -334,6 +334,7 @@ TEST_P(TestCKKS, multiplyingDoubleToCiphertextWorks)
   rf = c1.getRatFactor();
   pm = c1.getPtxtMag();
   c1.multByConstantCKKS(vd[0]);
+  // c1 *= vd[0];
   ea.decrypt(c1, secretKey, vd2);
 
   mul(vd1, vd[0]);

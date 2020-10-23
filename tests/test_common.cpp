@@ -24,6 +24,7 @@ char* path_of_executable = nullptr;
 bool noPrint = false;
 bool verbose = false;
 bool dry = false;
+bool reset = false;
 unsigned int random_seed = 0U;
 long special_bits = 0L;
 
@@ -36,6 +37,7 @@ void parse_common_args(int argc, char* argv[])
   amap.arg("special_bits", special_bits, "# of bits in special primes");
   amap.arg("verbose", verbose, "print more information");
   amap.arg("seed", random_seed, "specify random seed for test data");
+  amap.arg("reset", reset, "reset plaintexts between rounds");
   amap.parse(argc, argv);
   if (random_seed == 0U) // Not specified: use random seed
     random_seed = std::random_device{}();

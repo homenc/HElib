@@ -31,12 +31,17 @@ namespace helib {
 
 /**
  * @brief An estimate for the security-level. This has a lower bound of 0.
- *
- * This function uses experimental affine approximations to the lwe-estimator
- * from https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from
+ * @param n LWE dimension.
+ * @param log2AlphaInv Variable containing the value of `log(1/alpha)` where
+ * `alpha` is the noise.
+ * @param hwt The Hamming weight.
+ * @return The estimated security level.
+ * @note This function uses experimental affine approximations to the
+ * lwe-estimator from
+ * https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from
  * Aug-2020 (see script in misc/estimator/lwe-estimator.sage). Let X = n /
  * log(1/alpha), the security level is estimated as follows:
- *
+ * ```
  *   + dense {-1,0,1} keys:      security ~ 3.8*X  -20
  *   + sparse keys (weight=450): security ~ 3.55*X -12
  *   + sparse keys (weight=420): security ~ 3.5*X  -10
@@ -50,6 +55,7 @@ namespace helib {
  *   + sparse keys (weight=180): security ~ 2.83*X +10
  *   + sparse keys (weight=150): security ~ 2.67*X +13
  *   + sparse keys (weight=120): security ~ 2.4*X  +19
+ * ```
  */
 inline double lweEstimateSecurity(int n, double log2AlphaInv, int hwt)
 {
@@ -127,25 +133,116 @@ class Context
 public:
   // Context is meant for convenience, not encapsulation: Most data
   // members are public and can be initialized by the application program.
+  // VJS-FIXME: it is time to move away from this philosophy
 
-  //! @brief The structure of Zm*
+  //============================================================
+  // Here are some "getter" methods that give direct
+  // access to important parameters.  These are for convenience,
+  // as well as allowing for future re-organization.
+
+  // Parameters stored in zMStar.
+  // These are invariant for any computations involving this Context
+
+  /**
+   * @brief Getter method for the `m` used to create this `context`.
+   * @return The cyclotomic index `m`.
+   **/
+  long getM() const { return zMStar.getM(); }
+
+  /**
+   * @brief Getter method for the `p` used to create this `context`.
+   * @return The plaintext modulus `p`.
+   **/
+  long getP() const { return zMStar.getP(); }
+
+  /**
+   * @brief Getter method for the `phi(m)` of the created `context`.
+   * @return The degree of the cyclotomic polynomial `Phi_m(X)`.
+   **/
+  long getPhiM() const { return zMStar.getPhiM(); }
+
+  /**
+   * @brief Getter method for the `ord(p)` of the created `context`.
+   * @return The order of `p` in `(Z/mZ)^*`.
+   **/
+  long getOrdP() const { return zMStar.getOrdP(); }
+
+  /**
+   * @brief Getter method for the number of plaintext slots of the created
+   * `context`.
+   * @return The number of plaintext slots `phi(m)/ord(p)`.
+   **/
+  long getNSlots() const { return zMStar.getNSlots(); }
+
+  // Parameters stored in alMod.
+  // These are NOT invariant: it is possible to work
+  // with View objects that use a different PAlgebra object.
+
+  // FIXME: This should be disabled for CKKS.
+  /**
+   * @brief Getter method for the default `r` value of the created `context`.
+   * @return The `r` value representing the Hensel lifting for `BGV` or the bit
+   * precision for `CKKS`.
+   * @note This value is not invariant: it is possible to work "view" objects
+   * that use different `PAlgebra` objects.
+   **/
+  long getDefaultR() const { return alMod.getR(); }
+
+  // FIXME: This should be disabled for CKKS.
+  /**
+   * @brief Getter method for the default `p^r` value of the created `context`.
+   * @return The raised plaintext modulus `p^r`.
+   * @note This value is not invariant: it is possible to work "view" objects
+   * that use different `PAlgebra` objects.
+   **/
+  long getDefaultPPowR() const { return alMod.getPPowR(); }
+
+  // FIXME: This should be disabled for BGV.
+  // synonymn for getDefaultR().
+  // this is used in various corner cases in CKKS where
+  // we really need some default precisiion parameter.
+  // It is also possible to define this differently
+  // in the future.
+  /**
+   * @brief Getter method for the default `precision` value of the created
+   * `CKKS` `context`.
+   * @return The bit `precision` value.
+   * @note This value is not invariant: it is possible to work "view" objects
+   * that use different `PAlgebra` objects.
+   **/
+  long getDefaultPrecision() const { return alMod.getR(); }
+
+  //============================================================
+
+  //! @brief The structure of Zm*.
   PAlgebra zMStar;
 
-  //! @brief The structure of Z[X]/(Phi_m(X),p^r)
+  //! @brief The structure of Z[X]/(Phi_m(X),p^r).
   PAlgebraMod alMod;
 
-  //! @brief A default EncryptedArray
+  //! @brief A default EncryptedArray.
+  // VJS-FIXME: should this really be public?
   std::shared_ptr<const EncryptedArray> ea;
+
+  /**
+   * @brief Getter method returning the default `view` object of the created
+   * `context`.
+   * @return A reference to the `view` object.
+   **/
+  const EncryptedArray& getDefaultView() const { return *ea; } // preferred name
+  // FIXME: This is deprecated and superseded by the above.
+  const EncryptedArray& getDefaultEA() const { return *ea; } // legacy name
 
   std::shared_ptr<const PowerfulDCRT> pwfl_converter;
 
-  /** @brief The structure of a single slot of the plaintext space.
-   *
-   * This will be Z[X]/(G(x),p^r) for some irreducible factor G of Phi_m(X).
+  /**
+   * @brief The structure of a single slot of the plaintext space.
+   * @note This will be Z[X]/(G(x),p^r) for some irreducible factor G of
+   * Phi_m(X).
    **/
   std::shared_ptr<PolyModRing> slotRing;
 
-  //! @brief sqrt(variance) of the LWE error (default=3.2)
+  //! @brief The `sqrt(variance)` of the LWE error (default=3.2).
   NTL::xdouble stdev;
 
   //======================= high probability bounds ================
@@ -382,6 +479,14 @@ public:
 
   /******************************************************************/
   // constructor
+  /**
+   * @brief Constructor for the `Context` object.
+   * @param m The index of the cyclotomic polynomial.
+   * @param p The plaintext modulus.
+   * @param r BGV: The Hensel lifting parameter. CKKS: The bit precision.
+   * @param gens The generators of `(Z/mZ)^*` (other than `p`).
+   * @param ords The orders of each of the generators of `(Z/mZ)^*`.
+   **/
   Context(unsigned long m,
           unsigned long p,
           unsigned long r,
@@ -392,13 +497,37 @@ public:
   // Without the fixes there would be discrepancies between context's zMStar and
   // alMod const reference one.
   // TODO: Add doxygen comments to the following methods.
+  /**
+   * @brief Default destructor.
+   **/
   ~Context() = default;
+
+  /**
+   * @brief Default copy constructor.
+   * @param other `Context` to copy.
+   **/
   Context(const Context& other);
+
+  /**
+   * @brief Default move constructor.
+   * @param other `Context` to copy.
+   **/
   Context(Context&& other);
   // Deleted assignment operators.
   Context& operator=(const Context& other) = delete;
   Context& operator=(Context&& other) = delete;
 
+  // FIXME: Description for build_cache. I've dug through the code and all I
+  // can see is it is used in EvalMap to decide on if we want to upgrade
+  // encoded constants from zzX for DoubleCRT. What this does I do not know.
+  /**
+   * @brief Initialises the recryption data.
+   * @param mvec A `std::vector` of unique prime factors of `m`.
+   * @param skWht The Hamming weight for the secret key.
+   * @param build_cache Default is false.
+   * @param alsoThick Flag for initialising additional information needed for
+   * thick bootstrapping. Default is true.
+   **/
   void makeBootstrappable(const NTL::Vec<long>& mvec,
                           long skWht = 0,
                           bool build_cache = false,
@@ -407,16 +536,37 @@ public:
     rcData.init(*this, mvec, alsoThick, skWht, build_cache);
   }
 
+  /**
+   * @brief Check if a `Context` is bootstrappable.
+   * @return `true` if recryption data is found, `false` otherwise.
+   **/
   bool isBootstrappable() const { return rcData.alMod != nullptr; }
 
+  /**
+   * @brief Getter method that returns the handles of both the `ctxtPrimes` and
+   * `specialPrimes` associated with this `Context`.
+   * @return `IndexSet` of the handles to the `ctxtPrimes` and `specialPrimes`.
+   **/
   IndexSet fullPrimes() const { return ctxtPrimes | specialPrimes; }
 
+  /**
+   * @brief Getter method that returns the handles of all primes associated with
+   * this `Context`.
+   * @return `IndexSet` of handles to the `ctxtPrimes`, `specialPrimes` and
+   * `smallPrimes`.
+   **/
   IndexSet allPrimes() const
   {
     return smallPrimes | ctxtPrimes | specialPrimes;
   }
 
   // returns first nprimes ctxtPrimes
+  /**
+   * @brief Getter method that returns the first `nprimes` `ctxtPrimes`
+   * associated with this `Context`.
+   * @param nprimes The number of desired `ctxtPrimes`.
+   * @return `IndexSet` of handles to the first `nprimes` `ctxtPrimes`.
+   **/
   IndexSet getCtxtPrimes(long nprimes) const
   {
     long first = ctxtPrimes.first();
@@ -427,22 +577,52 @@ public:
   // FIXME: replacement for bitsPerLevel...placeholder for now
   long BPL() const { return 30; }
 
+  /**
+   * @brief Equals operator between two `Context` objects.
+   * @param other `Context` to compare to.
+   * @return `true` if identical, `false` otherwise.
+   **/
   bool operator==(const Context& other) const;
+
+  /**
+   * @brief Not equals operator between two `Context` objects.
+   * @param other `Context` to compare to.
+   * @return `true` if differ, `false` otherwise.
+   **/
   bool operator!=(const Context& other) const { return !(*this == other); }
 
-  //! @brief The ith small prime in the modulus chain
+  /**
+   * @brief Getter method for the small prime of the modulus chain at index
+   * `i` as a `long`.
+   * @param i Index of the desired small prime.
+   * @return The small prime of the modulus chain at index `i`.
+   **/
   long ithPrime(unsigned long i) const
   {
     return (i < moduli.size()) ? moduli[i].getQ() : 0;
   }
 
-  //! @brief Cmodulus object corresponding to ith small prime in the chain
+  /**
+   * @brief Getter method for the small prime of the modulus chain at index
+   * `i` as a `Cmodulus`.
+   * @param i Index of the desired small prime.
+   * @return Reference to the small prime modulus at index `i`.
+   **/
   const Cmodulus& ithModulus(unsigned long i) const { return moduli[i]; }
 
-  //! @brief Total number of small prime in the chain
+  /**
+   * @brief Return the total number of small primes in the modulus chain.
+   * @return The total number of small primes in the modulus chain.
+   **/
   long numPrimes() const { return moduli.size(); }
 
-  //! @brief Is num divisible by any of the primes in the chain?
+  /**
+   * @brief Check if a number is divisible by any of the primes in the modulus
+   * chain.
+   * @param num The number to check.
+   * @return `true` if the modulus chain contains at least one divisor of
+   * `num`, false otherwise.
+   **/
   bool isZeroDivisor(const NTL::ZZ& num) const
   {
     for (long i : range(moduli.size()))
@@ -451,7 +631,12 @@ public:
     return false;
   }
 
-  //! @brief Is p already in the chain?
+  /**
+   * @brief Check if value is already contained within the modulus chain.
+   * @param p The number to check.
+   * @return `true` if `p` is already contained within the modulus chain,
+   * `false` otherwise.
+   **/
   bool inChain(long p) const
   {
     for (long i : range(moduli.size()))
@@ -461,7 +646,11 @@ public:
   }
 
   ///@{
-  //! @brief The product of all the primes in the given set
+  /**
+   * @brief Calculate the product of all primes in the given set.
+   * @param p The product of the input primes.
+   * @param s The set of input primes to the product.
+   **/
   void productOfPrimes(NTL::ZZ& p, const IndexSet& s) const;
   NTL::ZZ productOfPrimes(const IndexSet& s) const
   {
@@ -472,10 +661,20 @@ public:
   ///@}
 
   // FIXME: run-time error when ithPrime(i) returns 0
-  //! @brief Returns the natural logarithm of the ith prime
+  /**
+   * @brief Calculate the natural logarithm of the `i`th prime of the modulus
+   * chain.
+   * @param i Index of the desired prime.
+   * @return The natural logarithm of the `i`th prime of the modulus chain.
+   **/
   double logOfPrime(unsigned long i) const { return log(ithPrime(i)); }
 
-  //! @brief Returns the natural logarithm of productOfPrimes(s)
+  /**
+   * @brief Calculate the natural logarithm of `productOfPrimes(s)` for a given
+   * set of primes `s`.
+   * @param s The set of input primes.
+   * @return The natural logarithm of the product of the input primes.
+   **/
   double logOfProduct(const IndexSet& s) const
   {
     if (s.last() >= numPrimes())
@@ -487,7 +686,11 @@ public:
     return ans;
   }
 
-  //! @brief Size in bits of Q.
+  /**
+   * @brief Calculate the size of the ciphertext modulus `Q` in bits.
+   * @return The bit size of the ciphertext modulus `Q = ctxtPrimes |
+   * specialPrimes`.
+   **/
   long bitSizeOfQ() const
   {
     IndexSet primes = ctxtPrimes | specialPrimes;
@@ -496,9 +699,11 @@ public:
 
   /**
    * @brief An estimate for the security-level. This has a lower bound of 0.
+   * @param hwt The Hamming weight of the secret key.
    *
-   * This function uses experimental affine approximations to the lwe-estimator
-   * from https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from
+   * @note This function uses experimental affine approximations to the
+   * lwe-estimator from
+   * https://bitbucket.org/malb/lwe-estimator/raw/HEAD/estimator.py, from
    * Aug-2020 (see script in misc/estimator/lwe-estimator.sage).
    *
    * Let s=3.2 if m is a power of two, or s=3.2*sqrt(m) otherwise. For the
@@ -520,12 +725,28 @@ public:
     return lweEstimateSecurity(zMStar.getPhiM(), log2AlphaInv, hwt);
   }
 
-  //! @brief print out algebra and other important info
+  /**
+   * @brief Print out algebra and other important info
+   * @param out Output `std::ostream`.
+   **/
   void printout(std::ostream& out = std::cout) const;
 
-  //! @brief Just add the given prime to the chain
+  /**
+   * @brief Add the given prime to the `smallPrimes` set.
+   * @param q The prime to add.
+   **/
   void AddSmallPrime(long q);
+
+  /**
+   * @brief Add the given prime to the `ctxtPrimes` set.
+   * @param q The prime to add.
+   **/
   void AddCtxtPrime(long q);
+
+  /**
+   * @brief Add the given prime to the `specialPrimes` set.
+   * @param q The prime to add.
+   **/
   void AddSpecialPrime(long q);
 
   ///@{
@@ -564,13 +785,34 @@ public:
   context, the >> operator reads in and attaches all other information.
   **/
 
-  //! @brief write [m p r] data
+  /**
+   * @brief Write out the basic information `m`, `p` and `r` of the given
+   * `Context` object.
+   * @param str Output `std::ostream`.
+   * @param context The `Context` to write.
+   **/
   friend void writeContextBase(std::ostream& str, const Context& context);
 
-  //! @brief Write all other data
+  /**
+   * @brief Write out all other data associated with a given `Context` object.
+   * @param str Output `std::ostream`.
+   * @param context The `Context` to write.
+   * @return Input `std::ostream` post writing.
+   **/
   friend std::ostream& operator<<(std::ostream& str, const Context& context);
 
-  //! @brief read [m p r] data, needed to construct context
+  /**
+   * @brief Read in the basic information `m`, `p` and `r` required to
+   * construct a `Context` object.
+   * @param str Input `std::istream`.
+   * @param m Destination of the index of the cyclotomic polynomial.
+   * @param p Destination of the plaintext modulus.
+   * @param r Destination of `BGV`: The Hensel lifting parameter. `CKKS`: The
+   * bit precision.
+   * @param gens Destination of the generators of `(Z/mZ)^*` (other than `p`).
+   * @param ords Destination of the orders of each of the generators of
+   * `(Z/mZ)^*`.
+   **/
   friend void readContextBase(std::istream& str,
                               unsigned long& m,
                               unsigned long& p,
@@ -578,7 +820,12 @@ public:
                               std::vector<long>& gens,
                               std::vector<long>& ords);
 
-  //! @brief read all other data associated with context
+  /**
+   * @brief Read in all other data associated with a given `Context` object.
+   * @param str Input `std::istream`.
+   * @param context Destination `Context` object.
+   * @return Input `std::istream` post reading.
+   **/
   friend std::istream& operator>>(std::istream& str, Context& context);
   ///@}
 
@@ -622,6 +869,19 @@ void readContextBinary(std::istream& str, Context& context);
 // FIXME: We should really have a simpler way to do this.
 // resolution ... FIXME
 
+/**
+ * @brief Build the modulus chain for given `Context` object.
+ * @param nBits Total number of bits required for the modulus chain.
+ * @param nDgts Number of digits/columns in the key-switching matrix. Default
+ * is 3.
+ * @param willBeBoostrappable Flag for initializing bootstrapping data. Default
+ * is `false`.
+ * @param skHwt The Hamming weight of the secret key. Default is 0.
+ * @param resolution The bit size of resolution of the modulus chain. Default
+ * is 3.
+ * @param bitsInSpecialPrimes The bit size of the special primes in the modulus
+ * chain. Default is 0.
+ **/
 void buildModChain(Context& context,
                    long nBits,
                    long nDgts = 3,

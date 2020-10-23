@@ -17,6 +17,7 @@
 #include <helib/timing.h>
 #include <helib/clonedPtr.h>
 #include <helib/norms.h>
+#include <helib/exceptions.h>
 
 namespace helib {
 
@@ -104,7 +105,7 @@ void EncryptedArrayDerived<type>::rotate1D(Ctxt& ctxt,
   Ctxt T(ctxt);
   T.smartAutomorph(zMStar.genToPow(i, -ord));
   // T = \rho_i^{amt-ord}(originalCtxt).
-  // This strategy assumes is geared toward the
+  // This strategy is geared toward the
   // assumption that we have the key switch matrix
   // for \rho_i^{-ord}
 
@@ -145,7 +146,7 @@ void EncryptedArrayDerived<type>::shift1D(Ctxt& ctxt, long i, long k) const
   long ord = al.OrderOf(i);
 
   if (k <= -ord || k >= ord) {
-    ctxt.multByConstant(NTL::to_ZZ(0));
+    ctxt.clear();
     return;
   }
 
@@ -425,7 +426,11 @@ void EncryptedArrayDerived<type>::encodeUnitSelector(zzX& ptxt, long i) const
   RX res;
   div(res, tab.getPhimXMod(), tab.getFactors()[i]);
   mul(res, res, tab.getCrtCoeffs()[i]);
-  convert(ptxt, res);
+
+  ptxt = balanced_zzX(res);
+  // NOTE: previous version was
+  //   convert(ptxt, res);
+  // which did not do properly balanced remainders in some cases
 }
 
 template <typename type>
@@ -746,7 +751,7 @@ public:
                     PlaintextArray& pa,
                     long k)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     std::vector<RX> tmp(n);
 
@@ -765,6 +770,37 @@ void rotate(const EncryptedArray& ea, PlaintextArray& pa, long k)
 //=============================================================================
 
 template <typename type>
+class rotate1D_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    long i,
+                    long k)
+  {
+    PA_BOILER(type)
+
+    helib::assertInRange(i,
+                         0l,
+                         ea.dimension(),
+                         "i must be between 0 and dimension()");
+
+    std::vector<RX> tmp(n);
+    ea.EncryptedArrayBase::rotate1D(tmp, data, i, k);
+    data = tmp;
+  }
+};
+
+void rotate1D(const EncryptedArray& ea, PlaintextArray& pa, long i, long k)
+{
+  ea.dispatch<rotate1D_pa_impl>(pa, i, k);
+}
+
+//=============================================================================
+
+template <typename type>
 class shift_pa_impl
 {
 public:
@@ -774,11 +810,11 @@ public:
                     PlaintextArray& pa,
                     long k)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
-    for (long i = 0; i < n; i++)
-      if (i + k >= n || i + k < 0)
-        clear(data[i]);
+    for (long j : range(n))
+      if (j + k >= n || j + k < 0)
+        data[j] = 0;
 
     rotate_pa_impl<type>::apply(ea, pa, k);
   }
@@ -787,6 +823,43 @@ public:
 void shift(const EncryptedArray& ea, PlaintextArray& pa, long k)
 {
   ea.dispatch<shift_pa_impl>(pa, k);
+}
+
+//=============================================================================
+
+template <typename type>
+class shift1D_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    PlaintextArray& pa,
+                    long i,
+                    long k)
+  {
+    PA_BOILER(type)
+
+    helib::assertInRange(i,
+                         0l,
+                         ea.dimension(),
+                         "i must be between 0 and dimension()");
+
+    long sz = ea.sizeOfDimension(i);
+
+    for (long j : range(n)) {
+      long c = ea.coordinate(i, j);
+      if (c + k >= sz || c + k < 0)
+        data[j] = 0;
+    }
+
+    rotate1D_pa_impl<type>::apply(ea, pa, i, k);
+  }
+};
+
+void shift1D(const EncryptedArray& ea, PlaintextArray& pa, long i, long k)
+{
+  ea.dispatch<shift1D_pa_impl>(pa, i, k);
 }
 
 //=============================================================================
@@ -801,23 +874,100 @@ public:
                     PlaintextArray& pa,
                     const std::vector<long>& array)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
-    assertEq(lsize(array), n, "Size of array does not match n");
-    convert(data, array);
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++)
+      data[i] = array[i];
+    for (long i = m; i < n; i++)
+      data[i] = 0;
   }
 
   static void apply(const EncryptedArrayDerived<type>& ea,
                     PlaintextArray& pa,
                     const std::vector<NTL::ZZX>& array)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
-    assertEq(lsize(array), n, "Size of array does not match n");
-    convert(data, array);
-    for (long i = 0; i < n; i++) {
-      assertTrue(deg(data[i]) < d, "Found data entry with too-large degree");
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++) {
+      if (deg(array[i]) < d) {
+        convert(data[i], array[i]);
+      } else {
+        RX a;
+        convert(a, array[i]);
+        data[i] = a % G;
+      }
     }
+    for (long i = m; i < n; i++)
+      data[i] = 0;
+  }
+
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED PlaintextArray& pa,
+                    UNUSED const std::vector<cx_double>& array)
+  {
+    throw LogicError("function not implemented");
+  }
+
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED PlaintextArray& pa,
+                    UNUSED const std::vector<double>& array)
+  {
+    throw LogicError("function not implemented");
+  }
+};
+
+template <>
+class encode_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const std::vector<long>& array)
+  {
+    PA_BOILER(PA_cx)
+
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++)
+      data[i] = array[i];
+    for (long i = m; i < n; i++)
+      data[i] = 0;
+  }
+
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED PlaintextArray& pa,
+                    UNUSED const std::vector<NTL::ZZX>& array)
+  {
+    throw LogicError("function not implemented");
+  }
+
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED PlaintextArray& pa,
+                    UNUSED const std::vector<cx_double>& array)
+  {
+    PA_BOILER(PA_cx)
+
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++)
+      data[i] = array[i];
+    for (long i = m; i < n; i++)
+      data[i] = 0;
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const std::vector<double>& array)
+  {
+    PA_BOILER(PA_cx)
+
+    long m = std::min(n, lsize(array));
+    for (long i = 0; i < m; i++)
+      data[i] = array[i];
+    for (long i = m; i < n; i++)
+      data[i] = 0;
   }
 };
 
@@ -831,6 +981,20 @@ void encode(const EncryptedArray& ea,
 void encode(const EncryptedArray& ea,
             PlaintextArray& pa,
             const std::vector<NTL::ZZX>& array)
+{
+  ea.dispatch<encode_pa_impl>(pa, array);
+}
+
+void encode(const EncryptedArray& ea,
+            PlaintextArray& pa,
+            const std::vector<cx_double>& array)
+{
+  ea.dispatch<encode_pa_impl>(pa, array);
+}
+
+void encode(const EncryptedArray& ea,
+            PlaintextArray& pa,
+            const std::vector<double>& array)
 {
   ea.dispatch<encode_pa_impl>(pa, array);
 }
@@ -855,6 +1019,26 @@ void encode(const EncryptedArray& ea, PlaintextArray& pa, const NTL::ZZX& val)
   encode(ea, pa, array);
 }
 
+void encode(const EncryptedArray& ea, PlaintextArray& pa, cx_double val)
+{
+  long n = ea.size();
+  std::vector<cx_double> array;
+  array.resize(n);
+  for (long i = 0; i < n; i++)
+    array[i] = val;
+  encode(ea, pa, array);
+}
+
+void encode(const EncryptedArray& ea, PlaintextArray& pa, double val)
+{
+  long n = ea.size();
+  std::vector<cx_double> array;
+  array.resize(n);
+  for (long i = 0; i < n; i++)
+    array[i] = val;
+  encode(ea, pa, array);
+}
+
 //=============================================================================
 
 template <typename type>
@@ -865,10 +1049,25 @@ public:
 
   static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     for (long i = 0; i < n; i++)
       random(data[i], d);
+  }
+};
+
+template <>
+class random_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(PA_cx)
+
+    for (long i = 0; i < n; i++)
+      data[i] = RandomComplex();
   }
 };
 
@@ -885,14 +1084,77 @@ class decode_pa_impl
 public:
   PA_INJECT(type)
 
-  template <typename T>
   static void apply(const EncryptedArrayDerived<type>& ea,
-                    std::vector<T>& array,
+                    std::vector<NTL::ZZX>& array,
                     const PlaintextArray& pa)
   {
-    CPA_BOILER
+    CPA_BOILER(type)
 
     convert(array, data);
+  }
+
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    std::vector<long>& array,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(type)
+
+    convert(array, data);
+  }
+
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED std::vector<cx_double>& array,
+                    UNUSED const PlaintextArray& pa)
+  {
+    throw LogicError("function not implemented");
+  }
+
+  static void apply(UNUSED const EncryptedArrayDerived<type>& ea,
+                    UNUSED std::vector<double>& array,
+                    UNUSED const PlaintextArray& pa)
+  {
+    throw LogicError("function not implemented");
+  }
+};
+
+template <>
+class decode_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED std::vector<NTL::ZZX>& array,
+                    UNUSED const PlaintextArray& pa)
+  {
+    throw LogicError("function not implemented");
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    std::vector<long>& array,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(PA_cx)
+
+    project_and_round(array, data);
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    std::vector<cx_double>& array,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(PA_cx)
+
+    convert(array, data);
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    std::vector<double>& array,
+                    const PlaintextArray& pa)
+  {
+    CPA_BOILER(PA_cx)
+
+    project(array, data);
   }
 };
 
@@ -905,6 +1167,20 @@ void decode(const EncryptedArray& ea,
 
 void decode(const EncryptedArray& ea,
             std::vector<NTL::ZZX>& array,
+            const PlaintextArray& pa)
+{
+  ea.dispatch<decode_pa_impl>(array, pa);
+}
+
+void decode(const EncryptedArray& ea,
+            std::vector<cx_double>& array,
+            const PlaintextArray& pa)
+{
+  ea.dispatch<decode_pa_impl>(array, pa);
+}
+
+void decode(const EncryptedArray& ea,
+            std::vector<double>& array,
             const PlaintextArray& pa)
 {
   ea.dispatch<decode_pa_impl>(array, pa);
@@ -923,7 +1199,7 @@ public:
                     const PlaintextArray& pa,
                     const PlaintextArray& other)
   {
-    CPA_BOILER
+    CPA_BOILER(type)
 
     const std::vector<RX>& odata = other.getData<type>();
     res = (data == odata);
@@ -934,7 +1210,7 @@ public:
                     const PlaintextArray& pa,
                     const std::vector<long>& other)
   {
-    CPA_BOILER
+    CPA_BOILER(type)
 
     std::vector<RX> odata;
     convert(odata, other);
@@ -946,11 +1222,74 @@ public:
                     const PlaintextArray& pa,
                     const std::vector<NTL::ZZX>& other)
   {
-    CPA_BOILER
+    CPA_BOILER(type)
 
     std::vector<RX> odata;
     convert(odata, other);
     res = (data == odata);
+  }
+
+  // exact comparison...not very useful
+  static void apply(const EncryptedArrayDerived<type>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other,
+                    UNUSED double tolerance,
+                    UNUSED double floor)
+  {
+    CPA_BOILER(type)
+
+    const std::vector<RX>& odata = other.getData<type>();
+    res = (data == odata);
+  }
+};
+
+template <>
+class equals_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  // exact comparison...nor very useful
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other)
+  {
+    CPA_BOILER(PA_cx)
+
+    const std::vector<RX>& odata = other.getData<PA_cx>();
+    res = (data == odata);
+  }
+
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED bool& res,
+                    UNUSED const PlaintextArray& pa,
+                    UNUSED const std::vector<long>& other)
+  {
+    throw LogicError("function not implemented");
+  }
+
+  static void apply(UNUSED const EncryptedArrayDerived<PA_cx>& ea,
+                    UNUSED bool& res,
+                    UNUSED const PlaintextArray& pa,
+                    UNUSED const std::vector<NTL::ZZX>& other)
+  {
+    throw LogicError("function not implemented");
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    bool& res,
+                    const PlaintextArray& pa,
+                    const PlaintextArray& other,
+                    double tolerance,
+                    double floor)
+  {
+    CPA_BOILER(PA_cx)
+
+    const std::vector<RX>& odata = other.getData<PA_cx>();
+    res = approx_equal(data, odata, tolerance, floor);
+    // defined in NumTh.h
   }
 };
 
@@ -981,6 +1320,28 @@ bool equals(const EncryptedArray& ea,
   return res;
 }
 
+bool approx_equal(const EncryptedArray& ea,
+                  const PlaintextArray& pa,
+                  const PlaintextArray& other,
+                  double tolerance,
+                  double floor)
+{
+  bool res;
+  ea.dispatch<equals_pa_impl>(res, pa, other, tolerance, floor);
+  return res;
+}
+
+bool equals(const EncryptedArray& ea,
+            const PlaintextArray& pa,
+            const PlaintextArray& other,
+            double tolerance,
+            double floor)
+{
+  bool res;
+  ea.dispatch<equals_pa_impl>(res, pa, other, tolerance, floor);
+  return res;
+}
+
 //=============================================================================
 
 template <typename type>
@@ -993,7 +1354,7 @@ public:
                     PlaintextArray& pa,
                     const PlaintextArray& other)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     const std::vector<RX>& odata = other.getData<type>();
 
@@ -1021,7 +1382,7 @@ public:
                     PlaintextArray& pa,
                     const PlaintextArray& other)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     const std::vector<RX>& odata = other.getData<type>();
 
@@ -1049,12 +1410,31 @@ public:
                     PlaintextArray& pa,
                     const PlaintextArray& other)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     const std::vector<RX>& odata = other.getData<type>();
 
     for (long i = 0; i < n; i++)
       data[i] = (data[i] * odata[i]) % G;
+  }
+};
+
+template <>
+class mul_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const PlaintextArray& other)
+  {
+    PA_BOILER(PA_cx)
+
+    const std::vector<RX>& odata = other.getData<PA_cx>();
+
+    for (long i = 0; i < n; i++)
+      data[i] = data[i] * odata[i];
   }
 };
 
@@ -1075,10 +1455,10 @@ public:
 
   static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     for (long i = 0; i < n; i++)
-      NTL::negate(data[i], data[i]);
+      data[i] = -data[i];
   }
 };
 
@@ -1099,7 +1479,7 @@ public:
                     PlaintextArray& pa,
                     long j)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     long p = ea.getPAlgebra().getP();
 
@@ -1114,7 +1494,7 @@ public:
                     PlaintextArray& pa,
                     const NTL::Vec<long>& vec)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     assertEq(vec.length(), n, "vec has incorrect length");
 
@@ -1124,6 +1504,38 @@ public:
       long j = mcMod(vec[i], d);
       RX H = NTL::PowerMod(RX(1, 1), NTL::power_ZZ(p, j), G);
       data[i] = NTL::CompMod(data[i], H, G);
+    }
+  }
+};
+
+template <>
+class frobeniusAutomorph_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    long j)
+  {
+    PA_BOILER(PA_cx)
+
+    if (j % 2 != 0)
+      for (long i = 0; i < n; i++)
+        data[i] = std::conj(data[i]);
+  }
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea,
+                    PlaintextArray& pa,
+                    const NTL::Vec<long>& vec)
+  {
+    PA_BOILER(PA_cx)
+
+    assertEq(vec.length(), n, "vec has incorrect length");
+
+    for (long i = 0; i < n; i++) {
+      if (vec[i] % 2 != 0)
+        data[i] = std::conj(data[i]);
     }
   }
 };
@@ -1167,7 +1579,7 @@ public:
                     PlaintextArray& pa,
                     const NTL::Vec<long>& pi)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     assertEq(pi.length(), n, "pi has incorrect length");
 
@@ -1199,22 +1611,9 @@ public:
                     std::ostream& s,
                     const PlaintextArray& pa)
   {
-    CPA_BOILER
+    CPA_BOILER(type)
 
-    if (n == 0)
-      s << "[]";
-    else {
-      if (IsZero(data[0]))
-        s << "[[0]";
-      else
-        s << "[" << data[0];
-      for (long i = 1; i < lsize(data); i++)
-        if (IsZero(data[i]))
-          s << " [0]";
-        else
-          s << " " << data[i];
-      s << "]";
-    }
+    s << data;
   }
 };
 
@@ -1230,5 +1629,6 @@ template class EncryptedArrayDerived<PA_zz_p>;
 
 template class PlaintextArrayDerived<PA_GF2>;
 template class PlaintextArrayDerived<PA_zz_p>;
+template class PlaintextArrayDerived<PA_cx>;
 
 } // namespace helib

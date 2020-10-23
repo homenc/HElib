@@ -193,7 +193,7 @@ IndexSet ModuliSizes::getSet4Size(double low,
     }
   }
 
-  HELIB_STATS_UPDATE("window1-in", (bestOption != -1));
+  HELIB_STATS_UPDATE("window1-out", (bestOption == -1));
   HELIB_STATS_UPDATE("window1-nchoices", nchoices);
 
   // If nothing was found, use the closest set below 'low' (or
@@ -274,7 +274,7 @@ IndexSet ModuliSizes::getSet4Size(double low,
     }
   }
 
-  HELIB_STATS_UPDATE("window2-in", (bestOption != -1));
+  HELIB_STATS_UPDATE("window2-out", (bestOption == -1));
   HELIB_STATS_UPDATE("window2-nchoices", nchoices);
 
   // If nothing was found, use the closest set below 'low'

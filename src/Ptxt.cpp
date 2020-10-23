@@ -14,6 +14,7 @@
 #include <helib/Ptxt.h>
 #include <helib/apiAttributes.h>
 
+
 namespace helib {
 
 void deserialize(std::istream& is, std::complex<double>& num)
@@ -212,6 +213,8 @@ BGV::SlotType randomSlot<BGV>(const Context& context)
 template <>
 CKKS::SlotType randomSlot<CKKS>(UNUSED const Context& context)
 {
+  // VJS-FIXME: see new function RandomComplex in NumbTh.h
+  // for an alternative
   std::mt19937 gen{std::random_device{}()};
   std::uniform_real_distribution<> dist{-1e10, 1e10};
 
@@ -241,6 +244,11 @@ const std::vector<typename Ptxt<Scheme>::SlotType>& Ptxt<Scheme>::getSlotRepr()
  * @return Single encoded polynomial.
  * @note Only enabled for the `BGV` scheme.
  **/
+
+// VJS-FIXME: if we want to maintain support for the Ptxt class,
+// we really need to deprecate or replace these getPolyRep functions
+// with functions that return an EncodedPtxt object, as this is
+// now the preferred way to represent encodings.
 template <>
 NTL::ZZX Ptxt<BGV>::getPolyRepr() const
 {
@@ -855,6 +863,9 @@ Ptxt<Scheme>& Ptxt<Scheme>::mapTo01()
       slot = 1;
   return *this;
 }
+
+// VJS-FIXME: all of this logic for coordToIndex and indexToCoord
+// duplicates logic already implemented in EncryptedArrayBase.
 
 template <typename Scheme>
 long Ptxt<Scheme>::coordToIndex(const std::vector<long>& coords)

@@ -31,7 +31,7 @@ void replicate(const EncryptedArray& ea, Ctxt& ctxt, long pos)
                 nSlots,
                 "replication failed (pos must be in [0, nSlots))");
 
-  zzX mask;
+  EncodedPtxt mask;
   ea.encodeUnitSelector(mask, pos);
   ctxt.multByConstant(mask);
   replicate0(ea, ctxt, pos);
@@ -94,7 +94,7 @@ static long GreatestPowerOfTwo(long n)
 
 // selects range of slots [lo..hi)
 static void SelectRange(const EncryptedArray& ea,
-                        NTL::ZZX& mask,
+                        EncodedPtxt& mask,
                         long lo,
                         long hi)
 {
@@ -103,12 +103,12 @@ static void SelectRange(const EncryptedArray& ea,
   assertInRange<InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
   assertTrue<InvalidArgument>(hi <= nSlots, "Interval exceeds number of slots");
 
-  std::vector<long> maskArray;
+  std::vector<bool> maskArray;
   maskArray.resize(nSlots);
   for (long i = 0; i < nSlots; i++)
-    maskArray[i] = 0;
+    maskArray[i] = false;
   for (long i = lo; i < hi; i++)
-    maskArray[i] = 1;
+    maskArray[i] = true;
 
   ea.encode(mask, maskArray);
 }
@@ -116,7 +116,7 @@ static void SelectRange(const EncryptedArray& ea,
 // selects range of slots [lo..hi)
 static void SelectRange(const EncryptedArray& ea, Ctxt& ctxt, long lo, long hi)
 {
-  NTL::ZZX mask;
+  EncodedPtxt mask;
   SelectRange(ea, mask, lo, hi);
   ctxt.multByConstant(mask);
 }
@@ -157,10 +157,10 @@ static void recursiveReplicate(const EncryptedArray& ea,
     // need to replicate to fill positions [ (1L << n) .. nSlots )
     if (repAux.tab(0).null()) {
       // need to generate mask
-      NTL::ZZX mask;
+      EncodedPtxt mask;
       SelectRange(ea, mask, 0, nSlots - (1L << n));
       repAux.tab(0).set_ptr(
-          new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+          new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
     }
 
     Ctxt ctxt_tmp = ctxt;
@@ -186,17 +186,17 @@ static void recursiveReplicate(const EncryptedArray& ea,
       if (repAux.tab(k + 1).null()) {
         // need to generate mask
 
-        std::vector<long> maskArray;
+        std::vector<bool> maskArray;
         maskArray.resize(nSlots);
         for (long i = 0; i < (1L << n); i++)
-          maskArray[i] = 1 - NTL::bit(i, k); // the reverse of bit k of i
+          maskArray[i] = !NTL::bit(i, k); // the reverse of bit k of i
         for (long i = (1L << n); i < nSlots; i++)
-          maskArray[i] = 0;
+          maskArray[i] = false;
 
-        NTL::ZZX mask;
+        EncodedPtxt mask;
         ea.encode(mask, maskArray);
         repAux.tab(k + 1).set_ptr(
-            new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+            new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
       }
 
       ctxt_masked.multByConstant(*repAux.tab(k + 1));
@@ -261,7 +261,7 @@ void replicateAllOrig(const EncryptedArray& ea,
 
 // selects range of slots [lo..hi) in dimension d
 static void SelectRangeDim(const EncryptedArray& ea,
-                           NTL::ZZX& mask,
+                           EncodedPtxt& mask,
                            long lo,
                            long hi,
                            long d)
@@ -275,14 +275,14 @@ static void SelectRangeDim(const EncryptedArray& ea,
   assertInRange<InvalidArgument>(lo, 0l, hi, "Ill-formed interval", true);
   assertTrue(hi <= ea.sizeOfDimension(d), "Interval exceeds dimension of d");
 
-  std::vector<long> maskArray;
+  std::vector<bool> maskArray;
   maskArray.resize(nSlots);
   for (long i = 0; i < nSlots; i++) {
     long c = ea.coordinate(d, i);
     if (c >= lo && c < hi)
-      maskArray[i] = 1;
+      maskArray[i] = true;
     else
-      maskArray[i] = 0;
+      maskArray[i] = false;
   }
 
   ea.encode(mask, maskArray);
@@ -295,7 +295,7 @@ static void SelectRangeDim(const EncryptedArray& ea,
                            long hi,
                            long d)
 {
-  NTL::ZZX mask;
+  EncodedPtxt mask;
   SelectRangeDim(ea, mask, lo, hi, d);
   ctxt.multByConstant(mask);
 }
@@ -402,10 +402,10 @@ static void recursiveReplicateDim(const EncryptedArray& ea,
     // need to replicate to fill positions [ (1L << n) .. dSize-1 ]
 
     if (repAux.tab(d, 0).null()) { // generate mask if not there already
-      NTL::ZZX mask;
+      EncodedPtxt mask;
       SelectRangeDim(ea, mask, 0, dSize - extent, d);
       repAux.tab(d, 0).set_ptr(
-          new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+          new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
     }
 
     Ctxt ctxt_tmp = ctxt;
@@ -438,17 +438,17 @@ static void recursiveReplicateDim(const EncryptedArray& ea,
       // generate mask at index k+1, if not there yet
 
       if (repAux.tab(d, k + 1).null()) { // need to generate
-        std::vector<long> maskArray(nSlots, 0);
+        std::vector<bool> maskArray(nSlots, false);
         for (long i = 0; i < nSlots; i++) {
           long c = ea.coordinate(d, i);
           if (c < extent && NTL::bit(c, k) == 0)
-            maskArray[i] = 1;
+            maskArray[i] = true;
         }
         // store this mask in the repAux table
-        NTL::ZZX mask;
+        EncodedPtxt mask;
         ea.encode(mask, maskArray);
         repAux.tab(d, k + 1).set_ptr(
-            new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+            new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
       }
 
       // Apply mask to zero out slots in ctxt
@@ -578,10 +578,10 @@ void replicateAllNextDim(const EncryptedArray& ea,
 
   if (extent < dSize) { // select only the slots 0..extent-1 in this dimension
     if (repAux.tab1(d, 0).null()) { // generate mask if not already there
-      NTL::ZZX mask;
+      EncodedPtxt mask;
       SelectRangeDim(ea, mask, 0, extent, d);
       repAux.tab1(d, 0).set_ptr(
-          new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+          new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
       // store mask in 2nd table (tab1)
     }
     ctxt1.multByConstant(*repAux.tab1(d, 0)); // mult by mask to zero out slots
@@ -630,10 +630,10 @@ void replicateAllNextDim(const EncryptedArray& ea,
     // zero-out the slots from before, leaving only the leftover slots
     ctxt1 = ctxt;
     if (repAux.tab1(d, 1).null()) { // generate mask if not already there
-      NTL::ZZX mask;
+      EncodedPtxt mask;
       SelectRangeDim(ea, mask, extent, dSize, d);
       repAux.tab1(d, 1).set_ptr(
-          new DoubleCRT(mask, ea.getContext(), ea.getContext().fullPrimes()));
+          new FatEncodedPtxt(mask, ea.getContext().fullPrimes()));
     }
     ctxt1.multByConstant(*repAux.tab1(d, 1)); // mult by mask to zero out slots
 
@@ -724,7 +724,7 @@ public:
                     PlaintextArray& pa,
                     long i)
   {
-    PA_BOILER
+    PA_BOILER(type)
 
     assertInRange(i, 0l, n, "Attempted to access out-of-range data");
     for (long j = 0; j < n; j++) {

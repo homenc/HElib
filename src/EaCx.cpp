@@ -22,6 +22,8 @@
 #include <helib/norms.h>
 #include <helib/debugging.h>
 #include <helib/apiAttributes.h>
+#include <helib/log.h>
+#include <helib/fhe_stats.h>
 
 namespace helib {
 
@@ -93,9 +95,11 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
                                 long amt,
                                 UNUSED bool dc) const
 {
-  assertEq(&getContext(),
-           &ctxt.getContext(),
-           "Cannot decrypt with non-matching context");
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  helib::assertInRange(i,
+                       0l,
+                       dimension(),
+                       "i must be between 0 and dimension()");
   assertTrue(nativeDimension(i),
              "Rotation in " + std::to_string(i) + " is not a native operation");
 
@@ -104,6 +108,8 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
   amt %= ord; // DIRT: assumes division w/ remainder follows C++11 and C99 rules
   if (amt == 0)
     return;
+  if (amt < 0)
+    amt += ord; // Make sure amt is in the range [1,ord-1]
 
   ctxt.smartAutomorph(palg.genToPow(i, amt));
 }
@@ -114,7 +120,52 @@ void EncryptedArrayCx::rotate1D(Ctxt& ctxt,
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 {
-  throw LogicError("EncryptedArrayCx::shift1D not implemented");
+  helib::assertEq(&context, &ctxt.getContext(), "Context mismatch");
+  helib::assertInRange(i,
+                       0l,
+                       dimension(),
+                       "i must be between 0 and dimension()");
+
+  // NOTE: this works even in a non-native dimension, but
+  // this is a bit academic
+
+  const PAlgebra& al = getPAlgebra();
+
+  long ord = al.OrderOf(i);
+
+  if (k <= -ord || k >= ord) {
+    ctxt.clear();
+    return;
+  }
+
+  // Make sure amt is in the range [1,ord-1]
+  long amt = k % ord;
+  if (amt == 0)
+    return;
+  if (amt < 0)
+    amt += ord;
+
+  long val;
+  if (k < 0)
+    val = al.genToPow(i, amt - ord);
+  else
+    val = al.genToPow(i, amt);
+
+  long n = size();
+  std::vector<bool> maskArray(n);
+
+  for (long j : range(n)) {
+    long c = coordinate(i, j);
+    if (c + k >= ord || c + k < 0)
+      maskArray[j] = false;
+    else
+      maskArray[j] = true;
+  }
+
+  EncodedPtxt mask;
+  encode(mask, maskArray);
+  ctxt.multByConstant(mask);
+  ctxt.smartAutomorph(val);
 }
 #pragma GCC diagnostic pop
 
@@ -122,19 +173,91 @@ void EncryptedArrayCx::shift1D(Ctxt& ctxt, long i, long k) const
 // so rotate,shift are the same as rotate1D, shift1D
 void EncryptedArrayCx::rotate(Ctxt& ctxt, long amt) const
 {
+  assertTrue(dimension() == 1,
+             "CKKS rotation not supported in multi-dimensional hypercube");
   rotate1D(ctxt, 0, amt, true);
 }
 void EncryptedArrayCx::shift(Ctxt& ctxt, long amt) const
 {
+  assertTrue(dimension() == 1,
+             "CKKS rotation not supported in multi-dimensional hypercube");
   shift1D(ctxt, 0, amt);
 }
+
+//====== New Encoding Functions ====
+
+void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
+                              const std::vector<cx_double>& array,
+                              double mag,
+                              double scale,
+                              double err) const
+{
+  double actual_mag = Norm(array);
+  if (mag < 0)
+    mag = actual_mag;
+  else {
+    if (actual_mag > mag)
+      Warning(
+          "EncryptedArrayCx::encode: actual magnitude exceeds mag parameter");
+  }
+
+  if (err < 0)
+    err = defaultErr(); // default err
+
+  if (err < 1.0)
+    err = 1.0; // enforce some sanity
+
+  if (scale < 0)
+    scale = defaultScale(err); // default scale
+
+  if (scale < 1.0)
+    scale = 1.0; // enforce some sanity
+
+  zzX poly;
+  CKKS_embedInSlots(poly, array, getPAlgebra(), scale);
+  eptxt.resetCKKS(poly, mag, scale, err, getContext());
+
+  // Check that error is actually bounded.
+  // If this is too costly, we can consider only
+  // running it in "debug mode".
+  std::vector<cx_double> array1;
+  decode(array1, poly, scale);
+  double dist = Distance(array1, array);
+  double scaled_err = err / scale;
+  double ratio = dist / scaled_err;
+  if (ratio > 1) {
+    Warning("CKKS encode: error exceeds bound");
+  }
+  HELIB_STATS_UPDATE("CKKS_encode_ratio", ratio);
+}
+
+void EncryptedArrayCx::encode(EncodedPtxt& eptxt,
+                              const PlaintextArray& array,
+                              double mag,
+                              double scale,
+                              double err) const
+{
+  encode(eptxt, array.getData<PA_cx>(), mag, scale, err);
+}
+
+void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
+                               const SecKey& sKey,
+                               PlaintextArray& ptxt) const
+{
+  decrypt(ctxt, sKey, ptxt.getData<PA_cx>());
+}
+
+//======================
 
 double EncryptedArrayCx::encode(zzX& ptxt,
                                 const std::vector<cx_double>& array,
                                 double useThisSize,
                                 long precision) const
 {
-  // VJS-FIXME: does it really make sense to use the *largest*
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of the new EncodedPtxt-based routines
+
+  // VJS-NOTE: does it really make sense to use the *largest*
   // size in determining the factor?
   // It might make sense to use the *smallest* size.
 
@@ -178,6 +301,10 @@ double EncryptedArrayCx::encodei(zzX& ptxt, long precision) const
 
 const zzX& EncryptedArrayCx::getiEncoded() const
 {
+  // VJS-FIXME: this is NOT thread-safe
+  // It also seems like it is not used anywhere, so I suggest we
+  // get rid of it...
+
   if (lsize(iEncoded) <= 0)              // encoded-i not yet initialized
     encodei(const_cast<zzX&>(iEncoded)); // temporarily suspend cont-ness
   return iEncoded;
@@ -197,6 +324,10 @@ void EncryptedArrayCx::decode(std::vector<cx_double>& array,
 // return an array of random complex numbers in a circle of radius rad
 void EncryptedArrayCx::random(std::vector<cx_double>& array, double rad) const
 {
+  // VJS-FIXME: this routine has a number of issues and should
+  // be deprecated in favor of either the RandomComplex() routine
+  // in NumbTh.h or PtxtArray::random().
+
   if (rad == 0)
     rad = 1.0; // radius
 

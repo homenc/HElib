@@ -33,7 +33,7 @@ void MulMod(zzX& res, const zzX& a, const zzX& b, const PAlgebra& palg)
   convert(aa, a); // convert to zz_pX
   convert(bb, b); // convert to zz_pX
   NTL::MulMod(aa, aa, bb, phimX);
-  convert(res, aa);
+  convert(res, aa, /*symmetric=*/true); // HERE
 }
 
 void add(zzX& res, const zzX& a, const zzX& b)
@@ -116,7 +116,7 @@ void reduceModPhimX(zzX& poly, const PAlgebra& palg)
   NTL::zz_pX pp;
   convert(pp, poly); // convert to zz_pX
   rem(pp, pp, phimX);
-  convert(poly, pp);
+  convert(poly, pp, /*symmetric=*/true); // HERE
 }
 
 zzX balanced_zzX(const NTL::zz_pX& f)
@@ -151,6 +151,23 @@ zzX balanced_zzX(const NTL::GF2X& f)
   }
 
   return out;
+}
+
+void balanced_MulMod(zzX& out, const zzX& f, long a, long q)
+{
+  long n = f.length();
+  out.SetLength(n);
+
+  NTL::mulmod_precon_t aqinv = NTL::PrepMulModPrecon(a, q);
+  for (long i : range(n)) {
+    long c = mcMod(f[i], q);
+    c = NTL::MulModPrecon(c, a, q, aqinv); // returns c \in [0,q-1]
+    if (c > q / 2 || (q % 2 == 0 && c == q / 2 && NTL::RandomBnd(2)))
+      c -= q;
+    out[i] = c;
+  }
+
+  normalize(out);
 }
 
 } // namespace helib

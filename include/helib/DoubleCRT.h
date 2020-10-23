@@ -193,6 +193,22 @@ public:
     return *this;
   }
 
+  // more constructors to round out the interface
+  // implemented by delegation and assignment
+  DoubleCRT(const NTL::ZZ& num,
+            const Context& context,
+            const IndexSet& indexSet) :
+      DoubleCRT(context, indexSet)
+  {
+    *this = num;
+  }
+
+  DoubleCRT(long num, const Context& context, const IndexSet& indexSet) :
+      DoubleCRT(context, indexSet)
+  {
+    *this = num;
+  }
+
   //! Get one row of a polynomial
   long getOneRow(NTL::Vec<long>& row, long idx, bool positive = false) const;
   long getOneRow(NTL::zz_pX& row, long idx) const; // This affects NTL's modulus
