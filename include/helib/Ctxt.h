@@ -478,52 +478,6 @@ public:
   //! @brief applies the automorphism p^j using smartAutomorphism
   void frobeniusAutomorph(long j);
 
-  // Operators acting between ciphertexts and plaintext objects
-
-  // BGV case
-  /**
-   * @brief Plus equals operator with a `BGV` `Ptxt`.
-   * @param other Right hand side of addition.
-   * @return Reference to `*this` post addition.
-   **/
-  Ctxt& operator+=(const Ptxt<BGV>& other);
-
-  /**
-   * @brief Minus equals operator with a `BGV` `Ptxt`.
-   * @param other Right hand side of subtraction.
-   * @return Reference to `*this` post subtraction.
-   **/
-  Ctxt& operator-=(const Ptxt<BGV>& other);
-
-  /**
-   * @brief Times equals operator with a `BGV` `Ptxt`.
-   * @param other Right hand side of multiplication.
-   * @return reference to `*this` post multiplication.
-   **/
-  Ctxt& operator*=(const Ptxt<BGV>& other);
-
-  // CKKS case
-  /**
-   * @brief Plus equals operator with a `CKKS` `Ptxt`.
-   * @param other Right hand side of addition.
-   * @return Reference to `*this` post addition.
-   **/
-  Ctxt& operator+=(const Ptxt<CKKS>& other);
-
-  /**
-   * @brief Minus equals operator with a `CKKS` `Ptxt`.
-   * @param other Right hand side of subtraction.
-   * @return Reference to `*this` post subtraction.
-   **/
-  Ctxt& operator-=(const Ptxt<CKKS>& other);
-
-  /**
-   * @brief Times equals operator with a `CKKS` `Ptxt`.
-   * @param other Right hand side of multiplication.
-   * @return Reference to `*this` post multiplication.
-   **/
-  Ctxt& operator*=(const Ptxt<CKKS>& other);
-
   /**
    * @brief Times equals operator with a `ZZX`.
    * @param poly Element by which to multiply.
@@ -543,14 +497,25 @@ public:
   void addConstant(const NTL::ZZX& poly, double size = -1.0);
 
   /**
-   * @brief Add a `BGV` plaintext to this `Ctxt`.
+   * @brief Add a plaintext to this `Ctxt`.
    * @param ptxt Plaintext `Ptxt` object with which to add.
    **/
   template <typename Scheme>
-  void addConstant(const Ptxt<Scheme>& ptxt)
+  void addConstant(const Ptxt<Scheme>& ptxt, bool neg=false)
   {
-    addConstant(ptxt.getPolyRepr());
+    EncodedPtxt eptxt;
+    ptxt.encode(eptxt);
+    addConstant(eptxt, neg);
   }
+
+  template <typename Scheme>
+  Ctxt& operator+=(const Ptxt<Scheme>& ptxt)
+  { addConstant(ptxt); return *this; }
+
+  template <typename Scheme>
+  Ctxt& operator-=(const Ptxt<Scheme>& ptxt)
+  { addConstant(ptxt, true); return *this; }
+
 
   //! add a rational number in the form a/b, a,b are long
   // [[deprecated]]
@@ -947,14 +912,20 @@ public:
   //==================================================
 
   /**
-   * @brief Multiply a `BGV` plaintext to this `Ctxt`.
+   * @brief Multiply a plaintext to this `Ctxt`.
    * @param ptxt Plaintext `Ptxt` object with which to multiply.
    **/
   template <typename Scheme>
   void multByConstant(const Ptxt<Scheme>& ptxt)
   {
-    multByConstant(ptxt.getPolyRepr());
+    EncodedPtxt eptxt;
+    ptxt.encode(eptxt);
+    multByConstant(eptxt);
   }
+
+  template <typename Scheme>
+  Ctxt& operator*=(const Ptxt<Scheme>& ptxt)
+  { multByConstant(ptxt); return *this; }
 
   //! multiply by a rational number or floating point
   // [[deprecated]]

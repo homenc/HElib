@@ -1236,6 +1236,21 @@ void SecKey::Decrypt<BGV>(Ptxt<BGV>& plaintxt, const Ctxt& ciphertxt) const
 template <>
 void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
 {
+  const Context& context = ciphertxt.getContext();
+  assertTrue(&context == &plaintxt.getContext(), 
+             "Decrypt: inconsistent contexts");
+
+  const View& view = context.getDefaultView();
+  std::vector<std::complex<double>> ptxt;
+  view.decrypt(ciphertxt, *this, ptxt);
+  plaintxt.setData(ptxt);
+}
+
+
+// VJS-NOTE: this is duplicated code...moroever, we
+// eventually need to modify to mitigate against CKKS vulnerability.
+#if 0
+{
   std::vector<std::complex<double>> ptxt;
   NTL::ZZX pp;
   Decrypt(pp, ciphertxt);
@@ -1265,10 +1280,8 @@ void SecKey::Decrypt<CKKS>(Ptxt<CKKS>& plaintxt, const Ctxt& ciphertxt) const
     cx /= factor;
 
   plaintxt.setData(ptxt);
-
-  // VJS-FIXME: this is re-impementing decryption and needs
-  // to mitigate againt te new vulnerability as well
 }
+#endif
 
 #define DECRYPT_ON_PWFL_BASIS
 

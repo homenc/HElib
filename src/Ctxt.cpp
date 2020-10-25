@@ -998,45 +998,6 @@ void Ctxt::addConstantCKKS(const NTL::ZZX& poly,
   addConstantCKKS(DoubleCRT(poly, context, primeSet), size, factor);
 }
 
-Ctxt& Ctxt::operator+=(const Ptxt<BGV>& other)
-{
-  addConstant(other.getPolyRepr());
-  return *this;
-}
-
-Ctxt& Ctxt::operator+=(const Ptxt<CKKS>& other)
-{
-  addConstantCKKS(other);
-  return *this;
-}
-
-Ctxt& Ctxt::operator-=(const Ptxt<BGV>& other)
-{
-  Ptxt<BGV> subtrahend(other);
-  subtrahend.negate();
-  addConstant(subtrahend.getPolyRepr());
-  return *this;
-}
-
-Ctxt& Ctxt::operator-=(const Ptxt<CKKS>& other)
-{
-  Ptxt<CKKS> subtrahend(other);
-  subtrahend.negate();
-  addConstantCKKS(subtrahend);
-  return *this;
-}
-
-Ctxt& Ctxt::operator*=(const Ptxt<BGV>& other)
-{
-  multByConstant(other.getPolyRepr());
-  return *this;
-}
-
-Ctxt& Ctxt::operator*=(const Ptxt<CKKS>& other)
-{
-  multByConstantCKKS(other);
-  return *this;
-}
 
 Ctxt& Ctxt::operator*=(const NTL::ZZX& poly)
 {
