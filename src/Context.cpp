@@ -590,7 +590,18 @@ Context::Context(unsigned long m,
                  const std::vector<long>& ords) :
     zMStar(m, p, gens, ords),
     alMod(zMStar, r),
+
+    // VJS-FIXME: I'm not sure this makes sense.
+    // This constrictor was provided mainly for bootstrapping.
+    // Most BGV applications wil *not* use fully packed slots
     ea(std::make_shared<EncryptedArray>(*this, alMod)),
+
+    // This constructor uses the polynomial X, which 
+    // corresponds to thinly packed slots for BGV.
+    // Unfortunately, this makes several tests in the test
+    // suite fail.  
+    // ea(std::make_shared<EncryptedArray>(*this)),
+
     pwfl_converter(nullptr),
     stdev(3.2),
     scale(10.0)
@@ -598,7 +609,7 @@ Context::Context(unsigned long m,
   // NOTE: pwfl_converter will be set in buildModChain (or endBuildModChain),
   // after the prime chain has been built, as it depends on the primeChain
 
-  if (this->alMod.getTag() != PA_cx_tag) {
+  if (!isCKKS()) {
     slotRing =
         std::make_shared<PolyModRing>(zMStar.getP(), alMod.getR(), getG(*ea));
   }

@@ -229,7 +229,7 @@ void  TestIt(long R, long p, long r, long d, long c, long k, long w,
      if (!noPrint) CheckCtxt(c2, buffer);
      debugCompare(ea,secretKey,p2,c2);
 
-     helib::negate(p1); // c1.negate()
+     p1.negate(); // c1.negate()
      c1.negate();
      if (!noPrint) CheckCtxt(c1, "c1=-c1");
      debugCompare(ea,secretKey,p1,c1);

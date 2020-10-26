@@ -1990,6 +1990,7 @@ void decode(const EncryptedArray& ea,
             const PlaintextArray& pa);
 
 void random(const EncryptedArray& ea, PlaintextArray& pa);
+void randomReal(const EncryptedArray& ea, PlaintextArray& pa);
 void randomComplex(const EncryptedArray& ea, PlaintextArray& pa);
 
 bool equals(const EncryptedArray& ea,
@@ -2139,9 +2140,12 @@ public:
     ea.rawDecryptComplex(ctxt, sKey, pa);
   }
 
-  void random() { helib::random(ea, pa); }
+
+  void randomReal() { helib::randomReal(ea, pa); }
 
   void randomComplex() { helib::randomComplex(ea, pa); }
+
+  void random() { helib::random(ea, pa); }
 
   //======== load ========
 

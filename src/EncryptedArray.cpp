@@ -1042,6 +1042,42 @@ void encode(const EncryptedArray& ea, PlaintextArray& pa, double val)
 //=============================================================================
 
 template <typename type>
+class randomReal_pa_impl
+{
+public:
+  PA_INJECT(type)
+
+  static void apply(const EncryptedArrayDerived<type>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(type)
+
+    throw LogicError("function not implemented");
+  }
+};
+
+template <>
+class randomReal_pa_impl<PA_cx>
+{
+public:
+  PA_INJECT(PA_cx)
+
+  static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
+  {
+    PA_BOILER(PA_cx)
+
+    for (long i = 0; i < n; i++)
+      data[i] = RandomReal();
+  }
+};
+
+void randomReal(const EncryptedArray& ea, PlaintextArray& pa)
+{
+  ea.dispatch<randomReal_pa_impl>(pa);
+}
+
+//=============================================================================
+
+template <typename type>
 class random_pa_impl
 {
 public:
@@ -1062,6 +1098,7 @@ class random_pa_impl<PA_cx>
 public:
   PA_INJECT(PA_cx)
 
+  // same as randomReal
   static void apply(const EncryptedArrayDerived<PA_cx>& ea, PlaintextArray& pa)
   {
     PA_BOILER(PA_cx)
@@ -1088,8 +1125,7 @@ public:
   {
     PA_BOILER(type)
 
-    for (long i = 0; i < n; i++)
-      random(data[i], d);
+    throw LogicError("function not implemented");
   }
 };
 
