@@ -596,11 +596,16 @@ Context::Context(unsigned long m,
     // Most BGV applications wil *not* use fully packed slots
     ea(std::make_shared<EncryptedArray>(*this, alMod)),
 
+    // ea(std::make_shared<EncryptedArray>(*this)),
     // This constructor uses the polynomial X, which 
     // corresponds to thinly packed slots for BGV.
-    // Unfortunately, this makes several tests in the test
-    // suite fail.  
-    // ea(std::make_shared<EncryptedArray>(*this)),
+    // Unfortunately, this doesn't work...the problem is that
+    // the bootstrapping rountines, even thin bootstrapping,
+    // require G=F0 here.  What we really need to do is
+    // put an EA wit G=F0 in rcData, separate from the
+    // default EA.  They could, in fact, be the same if default
+    // EA has G=F0 (if we allow the default EA G-value to be set 
+    // by the user.
 
     pwfl_converter(nullptr),
     stdev(3.2),

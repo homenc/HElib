@@ -131,7 +131,8 @@ TEST_P(TestContextBGV, contextNotEquals)
 {
   helib::Context someOtherContext(/*m=*/13, /*p=*/3, /*r=*/2);
   buildModChain(*context, /*bits=*/100, /*c=*/3);
-  buildModChain(someOtherContext, /*bits=*/200, /*c=*/2);
+  buildModChain(someOtherContext, /*bits=*/200, /*c=*/2, 
+                /*willBeBootstrappable =*/true);
   someOtherContext.scale = 6;
   someOtherContext.stdev = 3.0;
   NTL::Vec<long> mvec;

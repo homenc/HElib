@@ -583,6 +583,10 @@ public:
                            bool build_cache = false,
                            bool alsoThick = true)
   {
+    assertTrue(e_param > 0, 
+               "enableBootStrapping invoked but willBeBootstrappable "
+               "not set in buildModChain");
+
     rcData.init(*this, mvec, alsoThick, build_cache);
   }
 
