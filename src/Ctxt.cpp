@@ -620,7 +620,7 @@ void Ctxt::relin_CKKS_adjust()
     // this would preserve capacity.
 
 
-    constexpr double fudge_factor = 4;
+    constexpr double fudge_factor = 8;
     // increase bound by fudge_factor, based on experimentation
 
     double gamma = beta*fudge_factor;
