@@ -342,7 +342,7 @@ void EncryptedArrayCx::rawDecryptComplex(const Ctxt& ctxt,
   rawDecrypt(ctxt, sKey, ptxt.getData<PA_cx>());
 }
 
-void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
+void EncryptedArrayCx::decryptReal(const Ctxt& ctxt,
                                const SecKey& sKey,
                                PlaintextArray& ptxt) const
 {
@@ -351,7 +351,7 @@ void EncryptedArrayCx::decrypt(const Ctxt& ctxt,
   convert(ptxt.getData<PA_cx>(), v);
 }
 
-void EncryptedArrayCx::rawDecrypt(const Ctxt& ctxt,
+void EncryptedArrayCx::rawDecryptReal(const Ctxt& ctxt,
                                   const SecKey& sKey,
                                   PlaintextArray& ptxt) const
 {

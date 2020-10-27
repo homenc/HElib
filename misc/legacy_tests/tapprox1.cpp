@@ -155,7 +155,7 @@ void testGeneralOps(const PubKey& publicKey,
     c0.multiplyBy(tmp1);
     DEBUG_COMPARE(c0, p0, "c0 *= tmp1");
 
-#if 1
+#if 0
     runningSums(p0);
     runningSums(c0);
     DEBUG_COMPARE(c0, p0, "totalSums");
@@ -243,15 +243,15 @@ void testGeneralOps(const PubKey& publicKey,
   PtxtArray pp0(context), pp1(context), pp2(context), pp3(context);
   PtxtArray ppp0(context), ppp1(context), ppp2(context), ppp3(context);
 
-  pp0.decrypt(c0, secretKey);
-  pp1.decrypt(c1, secretKey);
-  pp2.decrypt(c2, secretKey);
-  pp3.decrypt(c3, secretKey);
+  pp0.decryptReal(c0, secretKey);
+  pp1.decryptReal(c1, secretKey);
+  pp2.decryptReal(c2, secretKey);
+  pp3.decryptReal(c3, secretKey);
 
-  ppp0.rawDecrypt(c0, secretKey);
-  ppp1.rawDecrypt(c1, secretKey);
-  ppp2.rawDecrypt(c2, secretKey);
-  ppp3.rawDecrypt(c3, secretKey);
+  ppp0.rawDecryptReal(c0, secretKey);
+  ppp1.rawDecryptReal(c1, secretKey);
+  ppp2.rawDecryptReal(c2, secretKey);
+  ppp3.rawDecryptReal(c3, secretKey);
 
   if (verbose) {
     std::cout << "======== rounded/raw differences\n";

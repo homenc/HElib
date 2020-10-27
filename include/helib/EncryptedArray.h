@@ -285,11 +285,19 @@ public:
                        const SecKey& sKey,
                        PlaintextArray& ptxt) const = 0;
 
+  virtual void decryptReal(const Ctxt& ctxt,
+                       const SecKey& sKey,
+                       PlaintextArray& ptxt) const = 0;
+
   virtual void rawDecrypt(const Ctxt& ctxt,
                           const SecKey& sKey,
                           PlaintextArray& ptxt) const = 0;
 
   virtual void rawDecryptComplex(const Ctxt& ctxt,
+                          const SecKey& sKey,
+                          PlaintextArray& ptxt) const = 0;
+
+  virtual void rawDecryptReal(const Ctxt& ctxt,
                           const SecKey& sKey,
                           PlaintextArray& ptxt) const = 0;
 
@@ -535,24 +543,35 @@ public:
 		  const SecKey& sKey,
 		  PlaintextArray& ptxt) const override
   {
-    // we could thow a logic error instead...
-    decrypt(ctxt, sKey, ptxt);
+    throw LogicError("function not implemented");
   }
 
   void decryptComplex(const Ctxt& ctxt,
 		      const SecKey& sKey,
 		      PlaintextArray& ptxt) const override
   {
-    // we could thow a logic error instead...
-    decrypt(ctxt, sKey, ptxt);
+    throw LogicError("function not implemented");
   }
 
   void rawDecryptComplex(const Ctxt& ctxt,
 		         const SecKey& sKey,
 		         PlaintextArray& ptxt) const override
   {
-    // we could thow a logic error instead...
-    decrypt(ctxt, sKey, ptxt);
+    throw LogicError("function not implemented");
+  }
+
+  void decryptReal(const Ctxt& ctxt,
+		      const SecKey& sKey,
+		      PlaintextArray& ptxt) const override
+  {
+    throw LogicError("function not implemented");
+  }
+
+  void rawDecryptReal(const Ctxt& ctxt,
+		         const SecKey& sKey,
+		         PlaintextArray& ptxt) const override
+  {
+    throw LogicError("function not implemented");
   }
   /* End CKKS functions. */
 
@@ -1342,11 +1361,6 @@ public:
                const SecKey& sKey,
                std::vector<double>& ptxt) const override;
 
-  void decrypt(const Ctxt& ctxt,
-               const SecKey& sKey,
-               PlaintextArray& ptxt) const override;
-  // implemented in EaCx.cpp
-
   void rawDecrypt(const Ctxt& ctxt,
 		  const SecKey& sKey,
 		  std::vector<cx_double>& ptxt) const override;
@@ -1355,9 +1369,18 @@ public:
 		  const SecKey& sKey,
 		  std::vector<double>& ptxt) const override;
 
+
+
+  void decrypt(const Ctxt& ctxt,
+               const SecKey& sKey,
+               PlaintextArray& ptxt) const override
+  { decryptReal(ctxt, sKey, ptxt); }
+
+
   void rawDecrypt(const Ctxt& ctxt,
 		  const SecKey& sKey,
-		  PlaintextArray& ptxt) const override;
+		  PlaintextArray& ptxt) const override
+  { rawDecryptReal(ctxt, sKey, ptxt); }
 
   void decryptComplex(const Ctxt& ctxt,
 		   const SecKey& sKey,
@@ -1366,6 +1389,15 @@ public:
   void rawDecryptComplex(const Ctxt& ctxt,
 		   const SecKey& sKey,
 		   PlaintextArray& ptxt) const override;
+
+  void decryptReal(const Ctxt& ctxt,
+		   const SecKey& sKey,
+		   PlaintextArray& ptxt) const override;
+
+  void rawDecryptReal(const Ctxt& ctxt,
+		   const SecKey& sKey,
+		   PlaintextArray& ptxt) const override;
+  
   
 
   /**
@@ -1823,6 +1855,16 @@ public:
     rep->rawDecryptComplex(ctxt, sKey, ptxt);
   }
 
+  void decryptReal(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
+  {
+    rep->decryptReal(ctxt, sKey, ptxt);
+  }
+
+  void rawDecryptReal(const Ctxt& ctxt, const SecKey& sKey, PlaintextArray& ptxt) const
+  {
+    rep->rawDecryptReal(ctxt, sKey, ptxt);
+  }
+
   void buildLinPolyCoeffs(std::vector<NTL::ZZX>& C,
                           const std::vector<NTL::ZZX>& L) const
   {
@@ -2140,6 +2182,15 @@ public:
     ea.rawDecryptComplex(ctxt, sKey, pa);
   }
 
+  void decryptReal(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.decryptReal(ctxt, sKey, pa);
+  }
+
+  void rawDecryptReal(const Ctxt& ctxt, const SecKey& sKey)
+  {
+    ea.rawDecryptReal(ctxt, sKey, pa);
+  }
 
   void randomReal() { helib::randomReal(ea, pa); }
 
